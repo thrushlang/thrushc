@@ -5,9 +5,9 @@ use {
             diagnostic::Diagnostic,
             error::{ThrushError, ThrushErrorKind},
             logging::{self, LogType},
+            CORE_LIBRARY_PATH,
         }, lexer::{DataTypes, Token, TokenKind}, objects::ParserObjects, scoper::ThrushScoper, type_checking
-    },
-    std::{mem, process},
+    }, std::{mem, path::Path, process}
 };
 
 pub struct Parser<'instr> {
@@ -18,12 +18,12 @@ pub struct Parser<'instr> {
     in_type_function: DataTypes,
     in_var_type: DataTypes,
     current: usize,
-    objects: ParserObjects<'instr>,
     scope: usize,
-    scoper: ThrushScoper<'instr>,
-    diagnostic: Diagnostic,
     has_entry_point: bool,
     is_main: bool,
+    scoper: ThrushScoper<'instr>,
+    diagnostic: Diagnostic,
+    objects: ParserObjects<'instr>,
 }
 
 impl<'instr> Parser<'instr> {
@@ -45,10 +45,19 @@ impl<'instr> Parser<'instr> {
         }
     }
 
-    pub fn start(&mut self) -> &[Instruction<'instr>] {
-        self.forward_declare_functions();
+    pub fn start(&mut self) -> &[Instruction<'instr>]{
+        self.declare_functions_previous();
 
         while !self.end() {
+            if let TokenKind::Import = self.peek().kind {
+                if let Err(e) = self.import() {
+                    self.errors.push(e);
+                    self.sync();
+                }
+
+                continue;
+            }
+
             match self.parse() {
                 Ok(instr) => {
                     self.stmts.push(instr);
@@ -59,8 +68,9 @@ impl<'instr> Parser<'instr> {
                 }
             }
         }
+
         if !self.errors.is_empty() {
-            self.errors.iter().for_each(|error| {
+            self.errors.iter().for_each(|error: &ThrushError| {
                 self.diagnostic.report(error, LogType::ERROR);
             });
 
@@ -80,6 +90,9 @@ impl<'instr> Parser<'instr> {
     }
 
     fn parse(&mut self) -> Result<Instruction<'instr>, ThrushError> {
+
+        self.objects.decrease_local_references(self.scope);
+
         match &self.peek().kind {
             TokenKind::Println => Ok(self.println()?),
             TokenKind::Print => Ok(self.print()?),
@@ -89,9 +102,96 @@ impl<'instr> Parser<'instr> {
             TokenKind::Public => Ok(self.public()?),
             TokenKind::Var => Ok(self.variable(false)?),
             TokenKind::For => Ok(self.for_loop()?),
-            TokenKind::External => Ok(self.external()?),
+            TokenKind::Extern => Ok(self.external()?),
             _ => Ok(self.expression()?),
         }
+    }
+
+    fn import(&mut self) -> Result<(), ThrushError> {
+        if self.scope != 0 {
+            self.errors.push(ThrushError::Parse(
+                ThrushErrorKind::SyntaxError,
+                String::from("Syntax Error"),
+                String::from(
+                    "The imports must go in the global scope. Rewrite it in the global scope.",
+                ),
+                self.previous().line,
+            ));
+        }
+
+        self.only_advance()?;
+
+        let line: usize = self.previous().line;
+
+        self.consume(
+            TokenKind::LParen,
+            ThrushErrorKind::SyntaxError,
+            String::from("Syntax Error"),
+            String::from("Expected '('."),
+            line,
+        )?;
+
+        let path: &str = self.consume(
+            TokenKind::String,
+            ThrushErrorKind::SyntaxError,
+            String::from("Syntax Error"),
+            String::from("Expected a String literal for @import(\"PATH\")."),
+            line,
+        )?.lexeme.as_ref().unwrap();
+
+        self.consume(
+            TokenKind::RParen,
+            ThrushErrorKind::SyntaxError,
+            String::from("Syntax Error"),
+            String::from("Expected ')'."),
+            line,
+        )?;
+
+        self.consume(
+            TokenKind::SemiColon,
+            ThrushErrorKind::SyntaxError,
+            String::from("Syntax Error"),
+            String::from("Expected ';'."),
+            line,
+        )?;
+
+        let path_converted: &Path =  Path::new(path);
+
+        if path.starts_with("core") && path.split("").filter(|c| *c == ".").count() >= 1 && !path_converted.exists() {
+
+            if !CORE_LIBRARY_PATH.contains_key(path) {
+                self.errors.push(ThrushError::Parse(ThrushErrorKind::SyntaxError, String::from("Import Error"), String::from("This module don't existe in Thrush Core Library."), line));
+            }
+
+
+            return Ok(());
+        }
+
+        if path_converted.exists() {
+            if path_converted.is_dir() {
+                self.errors.push(ThrushError::Parse(ThrushErrorKind::SyntaxError, String::from("Import Error"), String::from("A path to directory is don't able to import."), line));
+                return Ok(());
+            }
+
+            if path_converted.extension().is_none() {
+                self.errors.push(ThrushError::Parse(ThrushErrorKind::SyntaxError, String::from("Import Error"), String::from("The file should contain a extension (*.th)."), line));
+                return Ok(()); 
+            }
+
+            if path_converted.extension().unwrap() != "th" {
+                self.errors.push(ThrushError::Parse(ThrushErrorKind::SyntaxError, String::from("Import Error"), String::from("Only Thrush File are allowed to been imported."), line));
+                return Ok(());
+            }
+
+            if path_converted.file_name().is_none() {
+                self.errors.push(ThrushError::Parse(ThrushErrorKind::SyntaxError, String::from("Import Error"), String::from("The file should contain a name (<mythfile>.th)."), line));
+                return Ok(());
+            }
+
+            return Ok(());
+        }
+
+        todo!()
     }
 
     fn external(&mut self) -> Result<Instruction<'instr>, ThrushError> {
@@ -113,7 +213,7 @@ impl<'instr> Parser<'instr> {
             TokenKind::String,
             ThrushErrorKind::SyntaxError,
             String::from("Syntax Error"),
-            String::from("Expected String literal for @external(\"NAME\")."),
+            String::from("Expected a String literal for @extern(\"NAME\")."),
             line,
         )?;
 
@@ -289,7 +389,7 @@ impl<'instr> Parser<'instr> {
 
         if let Instruction::RefVar { kind, .. } = &value {
             if kind == &DataTypes::String {
-                self.objects.modify_deallocation(name.lexeme.as_ref().unwrap(), true, false);
+                self.objects.modify_object_deallocation(name.lexeme.as_ref().unwrap(), (false, true));
             }
         }
 
@@ -317,7 +417,7 @@ impl<'instr> Parser<'instr> {
 
         match &self.peek().kind {
             TokenKind::Fn => Ok(self.function(true, false, "")?),
-            TokenKind::External => Ok(self.external()?),
+            TokenKind::Extern => Ok(self.external()?),
             _ => unimplemented!(),
         }
     }
@@ -364,7 +464,7 @@ impl<'instr> Parser<'instr> {
 
         if let Instruction::RefVar { name, kind, .. } = value {
             if kind == DataTypes::String {
-                self.objects.modify_deallocation(name, false, true);
+                self.objects.modify_object_deallocation(name, (true, false));
             }
         }
 
@@ -480,6 +580,7 @@ impl<'instr> Parser<'instr> {
         )?;
 
         if name.lexeme.as_ref().unwrap() == "main" && self.is_main {
+
             if self.has_entry_point {
                 self.errors.push(ThrushError::Parse(
                     ThrushErrorKind::SyntaxError,
@@ -714,8 +815,6 @@ impl<'instr> Parser<'instr> {
     fn expression(&mut self) -> Result<Instruction<'instr>, ThrushError> {
         let instr: Instruction = self.or()?;
 
-        self.objects.decrease_local_references();
-
         Ok(instr)
     }
 
@@ -867,7 +966,9 @@ impl<'instr> Parser<'instr> {
     }
 
     fn unary(&mut self) -> Result<Instruction<'instr>, ThrushError> {
+
         if self.match_token(TokenKind::Bang)? {
+
             let line: usize = self.previous().line;
 
             let op: &TokenKind = &self.previous().kind;
@@ -976,6 +1077,7 @@ impl<'instr> Parser<'instr> {
                     if self.match_token(TokenKind::PlusPlus)?
                         | self.match_token(TokenKind::MinusMinus)?
                     {
+
                         type_checking::check_unary_instr(
                             &self.previous().kind,
                             kind,
@@ -1147,6 +1249,9 @@ impl<'instr> Parser<'instr> {
                     if self.match_token(TokenKind::PlusPlus)?
                         | self.match_token(TokenKind::MinusMinus)?
                     {
+
+                        let op: &TokenKind = &self.previous().kind;
+
                         type_checking::check_unary_instr(
                             &current.kind,
                             &refvar.get_data_type(),
@@ -1154,7 +1259,7 @@ impl<'instr> Parser<'instr> {
                         )?;
 
                         let expr: Instruction<'_> = Instruction::Unary {
-                            op: &current.kind,
+                            op,
                             value: Box::from(refvar),
                             kind: DataTypes::I64,
                             line,
@@ -1372,7 +1477,7 @@ impl<'instr> Parser<'instr> {
     }
 
 
-    fn forward_declare_functions(&mut self) {
+    fn declare_functions_previous(&mut self) {
         let mut functions_positions: Vec<usize> = Vec::new();
         let mut pos: usize = 0;
 
@@ -1398,7 +1503,7 @@ impl<'instr> Parser<'instr> {
         let is_external: bool = if self.current < 4 {
             false
         } else {
-            self.tokens[self.current - 4].kind == TokenKind::External
+            self.tokens[self.current - 4].kind == TokenKind::Extern
         };
 
         if is_external {

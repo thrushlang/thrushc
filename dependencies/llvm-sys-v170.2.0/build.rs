@@ -22,7 +22,7 @@ use semver::Version;
 lazy_static! {
     /// A single path to search for LLVM in (containing bin/llvm-config)
     static ref ENV_LLVM_PREFIX: String =
-        String::from("/home/linuxu/thrushlang/backends/llvm/backend/");
+        String::from("/home/linuxu/thrushlang/backends/llvm/backend/bin/");
 
     /// If exactly "YES", ignore the version blocklist
     static ref ENV_IGNORE_BLOCKLIST: String =
@@ -81,7 +81,7 @@ fn target_os_is(name: &str) -> bool {
 ///
 /// Returns None on failure.
 fn locate_llvm_config() -> Option<PathBuf> {
-    let prefix = PathBuf::from("/home/linuxu/thrushlang/backends/llvm/backend/bin");
+    let prefix = PathBuf::from("/home/linuxu/thrushlang/backends/llvm/backend/bin/");
 
     if let Some(x) = llvm_compatible_binary_name(&prefix) {
         return Some(x);

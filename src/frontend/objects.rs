@@ -36,6 +36,7 @@ type FoundObject = (
     usize,          // Number the references
 );
 
+#[derive(Clone, Debug)]
 pub struct ParserObjects<'instr> {
     locals: Locals<'instr>,
     globals: Globals<'instr>,
@@ -69,20 +70,12 @@ impl<'instr> ParserObjects<'instr> {
         if self.globals.contains_key(name) {
             let global: &(DataTypes, Vec<DataTypes>, bool, bool) = self.globals.get(name).unwrap();
 
-            let mut possible_params: Vec<DataTypes> = Vec::new();
+            let mut params: Vec<DataTypes> = Vec::with_capacity(global.1.len());
 
-            possible_params.clone_from(&global.1);
+            params.clone_from(&global.1);
 
             // type, //is null, //is_function  //ignore_params  //params
-            return Ok((
-                global.0,
-                false,
-                false,
-                global.2,
-                global.3,
-                possible_params,
-                0,
-            ));
+            return Ok((global.0, false, false, global.2, global.3, params, 0));
         }
 
         Err(ThrushError::Parse(
@@ -124,16 +117,14 @@ impl<'instr> ParserObjects<'instr> {
     }
 
     #[inline]
-    pub fn modify_deallocation(&mut self, name: &'instr str, free_only: bool, freeded: bool) {
+    pub fn modify_object_deallocation(&mut self, name: &'instr str, modifications: (bool, bool)) {
         for scope in self.locals.iter_mut().rev() {
             if scope.contains_key(name) {
-                // DataTypes, bool <- (is_null), bool <- (is_freeded), bool <- (free_only), usize <- (number of references)
-
                 let mut local_object: (DataTypes, bool, bool, bool, usize) =
                     *scope.get(name).unwrap();
 
-                local_object.1 = freeded;
-                local_object.3 = free_only;
+                local_object.2 = modifications.0;
+                local_object.3 = modifications.1;
 
                 scope.insert(name, local_object);
 
@@ -146,7 +137,7 @@ impl<'instr> ParserObjects<'instr> {
         let mut frees: Vec<Instruction> = Vec::new();
 
         self.locals[in_scope_pos].iter_mut().for_each(|stmt| {
-            if let (_, (DataTypes::String, false, false, free_only, 0)) = stmt {
+            if let (_, (DataTypes::String, false, false, free_only, 0..10)) = stmt {
                 frees.push(Instruction::Free {
                     name: stmt.0,
                     is_string: true,
@@ -160,13 +151,13 @@ impl<'instr> ParserObjects<'instr> {
         frees
     }
 
-    pub fn decrease_local_references(&mut self) {
-        self.locals.iter_mut().for_each(|scope| {
-            scope.values_mut().for_each(|variable| {
-                if variable.4 > 0 {
-                    variable.4 -= 1;
-                }
-            });
+    pub fn decrease_local_references(&mut self, in_scope_pos: usize) {
+        // self.locals.iter_mut().for_each(|scope| {
+        self.locals[in_scope_pos].values_mut().for_each(|variable| {
+            if variable.4 > 0 {
+                variable.4 -= 1;
+            }
         });
+        //});
     }
 }

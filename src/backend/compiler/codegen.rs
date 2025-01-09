@@ -545,8 +545,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
         if only_define && self.module.get_function(name).is_none() {
             let kind: FunctionType = utils::datatype_to_fn_type(self.context, return_kind, params);
 
-            let function: FunctionValue<'_> =
-                self.module.add_function(name, kind, Some(Linkage::Common));
+            let function: FunctionValue<'_> = self.module.add_function(name, kind, None);
 
             if !is_public {
                 function.set_linkage(Linkage::LinkerPrivate);
@@ -844,11 +843,15 @@ pub fn compile_instr_as_basic_value_enum<'ctx>(
                 .unwrap();
         }
 
-        return builder
-            .build_call(module.get_function("Vec.clone").unwrap(), &[var.into()], "")
-            .unwrap()
-            .try_as_basic_value()
-            .unwrap_left();
+        if *kind == DataTypes::String {
+            return builder
+                .build_call(module.get_function("Vec.clone").unwrap(), &[var.into()], "")
+                .unwrap()
+                .try_as_basic_value()
+                .unwrap_left();
+        }
+
+        unreachable!()
     }
 
     unreachable!()

@@ -157,7 +157,7 @@ impl<'a> Lexer<'a> {
             "public" => self.make(TokenKind::Public),
             "builtin" => self.make(TokenKind::Builtin),
             "@import" => self.make(TokenKind::Import),
-            "@external" => self.make(TokenKind::External),
+            "@extern" => self.make(TokenKind::Extern),
             "null" => self.make(TokenKind::Null),
 
             "i8" => self.make(TokenKind::DataType(DataTypes::I8)),
@@ -461,7 +461,7 @@ pub enum TokenKind {
 
     // --- Keywords ---
     Import,
-    External,
+    Extern,
     Builtin,
     Public,
     And,
@@ -548,7 +548,7 @@ impl std::fmt::Display for TokenKind {
             TokenKind::String => write!(f, "string"),
             TokenKind::Char => write!(f, "char"),
             TokenKind::Builtin => write!(f, "built-in"),
-            TokenKind::External => write!(f, "external"),
+            TokenKind::Extern => write!(f, "@extern"),
             TokenKind::Import => write!(f, "@import"),
             TokenKind::Pass => write!(f, "..."),
             TokenKind::Eof => write!(f, "EOF"),

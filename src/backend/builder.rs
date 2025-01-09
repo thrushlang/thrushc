@@ -2,11 +2,117 @@
 
 use {
     super::{
-        super::{logging, LLVM_BACKEND_COMPILER},
-        compiler::options::CompilerOptions,
+        super::{logging, Lexer, Parser, Token, LLVM_BACKEND_COMPILER},
+        compiler::{
+            options::{CompilerOptions, ThrushFile},
+            Compiler,
+        },
+        instruction::Instruction,
     },
-    std::{fs, path::PathBuf, process::Command},
+    inkwell::{
+        builder::Builder,
+        context::Context,
+        module::Module,
+        targets::{Target, TargetMachine},
+        OptimizationLevel,
+    },
+    std::{
+        fs,
+        path::{Path, PathBuf},
+        process::Command,
+    },
+    stylic::{style, Color, Stylize},
 };
+
+pub struct ThrushCompiler<'a> {
+    compiled: Vec<PathBuf>,
+    files: &'a [ThrushFile],
+    options: &'a CompilerOptions,
+}
+
+impl<'a> ThrushCompiler<'a> {
+    pub fn new(files: &'a [ThrushFile], options: &'a CompilerOptions) -> Self {
+        Self {
+            compiled: Vec::new(),
+            files,
+            options,
+        }
+    }
+
+    pub fn compile(&mut self) {
+        self.files.iter().for_each(|file| {
+            self.compile_file(file);
+        });
+
+        Clang::new(&self.compiled, self.options).compile();
+
+        let _ = fs::copy(
+            &self.options.output,
+            format!("output/{}", self.options.output),
+        );
+
+        let _ = fs::remove_file(&self.options.output);
+
+        self.compiled.iter().for_each(|path| {
+            let _ = fs::remove_file(path);
+        });
+
+        let _ = fs::remove_file("output/vector.o");
+        let _ = fs::remove_file("output/debug.o");
+    }
+
+    fn compile_file(&mut self, file: &'a ThrushFile) {
+        println!(
+            "{} {}",
+            style("Compiling").bold().fg(Color::Rgb(141, 141, 142)),
+            &file.path.to_string_lossy()
+        );
+
+        let content: String = fs::read_to_string(&file.path).unwrap();
+
+        let mut lexer: Lexer = Lexer::new(content.as_bytes(), file);
+        let tokens: &[Token] = lexer.lex();
+
+        let mut parser: Parser = Parser::new(tokens, file);
+        let instructions: &[Instruction] = parser.start();
+
+        let context: Context = Context::create();
+        let builder: Builder<'_> = context.create_builder();
+        let module: Module<'_> = context.create_module(&file.name);
+
+        module.set_triple(&self.options.target_triple);
+
+        let opt: OptimizationLevel = self.options.optimization.to_llvm_opt();
+
+        let machine: TargetMachine = Target::from_triple(&self.options.target_triple)
+            .unwrap()
+            .create_target_machine(
+                &self.options.target_triple,
+                "",
+                "",
+                opt,
+                self.options.reloc_mode,
+                self.options.code_model,
+            )
+            .unwrap();
+
+        module.set_data_layout(&machine.get_target_data().get_data_layout());
+
+        Compiler::compile(&module, &builder, &context, self.options, instructions);
+
+        let compiled_path: &str = &format!("output/{}.bc", &file.name);
+
+        module.write_bitcode_to_path(Path::new(compiled_path));
+
+        LLVMOptimizator::optimize(
+            compiled_path,
+            self.options.optimization.to_llvm_17_passes(),
+            self.options.optimization.to_str(true, false),
+        );
+
+        self.compiled.push(PathBuf::from(compiled_path));
+    }
+}
 
 pub struct Clang<'a> {
     files: &'a [PathBuf],
@@ -101,7 +207,7 @@ impl<'a> LLC<'a> {
     }
 }
 
-pub struct LLVMDissambler<'a> {
+struct LLVMDissambler<'a> {
     files: &'a [PathBuf],
 }
 

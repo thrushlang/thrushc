@@ -10,29 +10,16 @@ use {
     ahash::AHashMap as HashMap,
     backend::{
         apis::{debug, vector},
-        builder::{Clang, LLVMOptimizator},
-        compiler::Compiler,
-        instruction::Instruction,
+        builder::ThrushCompiler,
     },
     cli::Cli,
     frontend::{
         lexer::{Lexer, Token},
         parser::Parser,
     },
-    inkwell::{
-        builder::Builder,
-        context::Context,
-        module::Module,
-        targets::{InitializationConfig, Target, TargetMachine},
-        OptimizationLevel,
-    },
+    inkwell::targets::{InitializationConfig, Target},
     lazy_static::lazy_static,
-    std::{
-        env, fs,
-        path::{Path, PathBuf},
-        process,
-        time::Instant,
-    },
+    std::{env, path::PathBuf, process, time::Instant},
     stylic::{style, Color, Stylize},
 };
 
@@ -206,72 +193,7 @@ fn main() {
 
     let start_time: Instant = Instant::now();
 
-    let mut compiled: Vec<PathBuf> = Vec::new();
-
-    for file in cli.options.files.iter() {
-        println!(
-            "{} {}",
-            style("Compiling").bold().fg(Color::Rgb(141, 141, 142)),
-            &file.path.to_string_lossy()
-        );
-
-        let content: String = fs::read_to_string(&file.path).unwrap();
-
-        let mut lexer: Lexer = Lexer::new(content.as_bytes(), file);
-        let tokens: &[Token] = lexer.lex();
-
-        let mut parser: Parser = Parser::new(tokens, file);
-        let instructions: &[Instruction] = parser.start();
-
-        let context: Context = Context::create();
-        let builder: Builder<'_> = context.create_builder();
-        let module: Module<'_> = context.create_module(&file.name);
-
-        // println!("{:#?}", instructions);
-
-        module.set_triple(&cli.options.target_triple);
-
-        let opt: OptimizationLevel = cli.options.optimization.to_llvm_opt();
-
-        let machine: TargetMachine = Target::from_triple(&cli.options.target_triple)
-            .unwrap()
-            .create_target_machine(
-                &cli.options.target_triple,
-                "",
-                "",
-                opt,
-                cli.options.reloc_mode,
-                cli.options.code_model,
-            )
-            .unwrap();
-
-        module.set_data_layout(&machine.get_target_data().get_data_layout());
-
-        Compiler::compile(&module, &builder, &context, &cli.options, instructions);
-
-        let compiled_path: &str = &format!("output/{}.bc", &file.name);
-
-        module.write_bitcode_to_path(Path::new(compiled_path));
-
-        LLVMOptimizator::optimize(
-            compiled_path,
-            cli.options.optimization.to_llvm_17_passes(),
-            cli.options.optimization.to_str(true, false),
-        );
-
-        compiled.push(PathBuf::from(compiled_path));
-    }
-
-    compiled.sort_by_key(|path| *path != PathBuf::from("output/main.th.bc"));
-
-    Clang::new(&compiled, &cli.options).compile();
-
-    let _ = fs::copy(
-        &cli.options.output,
-        format!("output/{}", cli.options.output),
-    );
-
-    let _ = fs::remove_file(&cli.options.output);
+    ThrushCompiler::new(&cli.options.files, &cli.options).compile();
 
     println!(
         "\r{} {}",
@@ -284,11 +206,4 @@ fn main() {
         .bold()
         .fg(Color::Rgb(141, 141, 142))
     );
-
-    compiled.iter().for_each(|path| {
-        let _ = fs::remove_file(path);
-    });
-
-    let _ = fs::remove_file("output/vector.o");
-    let _ = fs::remove_file("output/debug.o");
 }
