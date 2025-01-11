@@ -128,37 +128,9 @@ impl<'a> Clang<'a> {
         if self.options.emit_llvm_ir {
             LLVMDissambler::new(self.files).dissamble();
 
-            if self.options.emit_llvm_ir {
-                let natives: &[[PathBuf; 2]; 2] = &[
-                    [
-                        PathBuf::from("output/vector.ll"),
-                        PathBuf::from("natives/vector.ll"),
-                    ],
-                    [
-                        PathBuf::from("output/debug.ll"),
-                        PathBuf::from("natives/debug.ll"),
-                    ],
-                ];
-
-                natives.iter().for_each(|native| {
-                    if !native[1].exists() {
-                        let _ = fs::create_dir_all("natives");
-                    }
-
-                    if native[0].exists() {
-                        let raw_content: String = fs::read_to_string(&native[0]).unwrap();
-                        let content: &[u8] = raw_content.as_bytes();
-
-                        let _ = write(&native[1], content);
-                    }
-                });
-            }
-
             self.files.iter().for_each(|path| {
                 let _ = fs::remove_file(path);
             });
-
-            return;
         }
 
         if self.options.emit_asm {
@@ -169,7 +141,11 @@ impl<'a> Clang<'a> {
             });
         }
 
-        if self.options.emit_llvm_bitcode {
+        if self.options.emit_natives_apart {
+            self.emit_natives_apart()
+        }
+
+        if self.options.emit_llvm_bitcode || self.options.emit_asm || self.options.emit_llvm_ir {
             return;
         }
 
@@ -205,6 +181,45 @@ impl<'a> Clang<'a> {
         clang_command.args(["-o", &self.options.output]);
 
         handle_command(&mut clang_command);
+    }
+
+    fn emit_natives_apart(&self) {
+        let natives: [[PathBuf; 2]; 2] = if self.options.emit_llvm_ir {
+            [
+                [
+                    PathBuf::from("output/vector.ll"),
+                    PathBuf::from("natives/llvm-ir/vector.ll"),
+                ],
+                [
+                    PathBuf::from("output/debug.ll"),
+                    PathBuf::from("natives/llvm-ir/debug.ll"),
+                ],
+            ]
+        } else {
+            [
+                [
+                    PathBuf::from("output/vector.s"),
+                    PathBuf::from("natives/asm/vector.s"),
+                ],
+                [
+                    PathBuf::from("output/debug.s"),
+                    PathBuf::from("natives/asm/debug.s"),
+                ],
+            ]
+        };
+
+        natives.iter().for_each(|native| {
+            if !native[1].exists() {
+                let _ = fs::create_dir_all(native[1].parent().unwrap());
+            }
+
+            if native[0].exists() {
+                let raw_content: String = fs::read_to_string(&native[0]).unwrap();
+                let content: &[u8] = raw_content.as_bytes();
+
+                let _ = write(&native[1], content);
+            }
+        });
     }
 }
 

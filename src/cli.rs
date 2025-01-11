@@ -118,10 +118,10 @@ impl Cli {
                 *index += 1;
             }
 
-            "--emit-natives-ir-apart" | "-emit-natives-ir-apart" => {
+            "--emit-natives-apart" | "-emit-natives-apart" => {
                 *index += 1;
 
-                self.options.emit_natives_ir_apart = true;
+                self.options.emit_natives_apart = true;
             }
 
             "--library" | "-lib" => {
@@ -494,13 +494,13 @@ impl Cli {
         println!(
             "{} ({} | {}) {}",
             style("•").bold(),
-            style("--emit-natives-ir-apart")
+            style("--emit-natives-apart")
                 .bold()
                 .fg(Color::Rgb(141, 141, 142)),
-            style("-emit-natives-ir-apart")
+            style("-emit-natives-apart")
                 .bold()
                 .fg(Color::Rgb(141, 141, 142)),
-            style("Emit the LLVM IR of the Natives APIs in another folter called \"/natives/\".")
+            style("Emit the LLVM IR or Assembler output of the Natives APIs in another folter called \"/natives/\".")
                 .bold()
         );
 
