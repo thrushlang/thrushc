@@ -360,10 +360,10 @@ impl<'a> Lexer<'a> {
     }
 
     fn advance(&mut self) -> u8 {
-        let c: u8 = self.code[self.current];
+        let ch: u8 = self.code[self.current];
         self.current += 1;
 
-        c
+        ch
     }
 
     fn peek_next(&self) -> u8 {
@@ -382,8 +382,8 @@ impl<'a> Lexer<'a> {
         self.code[self.current]
     }
 
-    fn char_match(&mut self, c: u8) -> bool {
-        if !self.end() && self.code[self.current] == c {
+    fn char_match(&mut self, ch: u8) -> bool {
+        if !self.end() && self.code[self.current] == ch {
             self.current += 1;
             return true;
         }

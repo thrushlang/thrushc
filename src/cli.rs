@@ -15,14 +15,14 @@ pub struct Cli {
 
 impl Cli {
     pub fn parse(args: Vec<String>) -> Cli {
-        let mut args_parsed: Cli = Self {
+        let mut cli: Cli = Self {
             options: CompilerOptions::default(),
             args,
         };
 
-        args_parsed._parse();
+        cli._parse();
 
-        args_parsed
+        cli
     }
 
     fn _parse(&mut self) {
@@ -116,6 +116,12 @@ impl Cli {
                 }
 
                 *index += 1;
+            }
+
+            "--emit-natives-ir-apart" | "-emit-natives-ir-apart" => {
+                *index += 1;
+
+                self.options.emit_natives_ir_apart = true;
             }
 
             "--library" | "-lib" => {
@@ -327,7 +333,7 @@ impl Cli {
             style("[--flags] [file]").bold()
         );
 
-        println!("{}", style("Available Commands:\n").bold());
+        println!("{}", style("Compiler Commands:\n").bold());
 
         println!(
             "{} ({} | {} | {}) {}",
@@ -362,7 +368,7 @@ impl Cli {
             style("Print the native target of this machine.").bold()
         );
 
-        println!("{}", style("\nAvailable Flags:\n").bold());
+        println!("{}", style("\nCompiler Flags:\n").bold());
 
         println!(
             "{} ({} | {}) {}",
@@ -481,6 +487,21 @@ impl Cli {
             style("--args [str]").bold().fg(Color::Rgb(141, 141, 142)),
             style("-args [str]").bold().fg(Color::Rgb(141, 141, 142)),
             style("Pass more arguments to the Backend Compiler.").bold()
+        );
+
+        println!("{}", style("\nUseful Flags:\n").bold());
+
+        println!(
+            "{} ({} | {}) {}",
+            style("•").bold(),
+            style("--emit-natives-ir-apart")
+                .bold()
+                .fg(Color::Rgb(141, 141, 142)),
+            style("-emit-natives-ir-apart")
+                .bold()
+                .fg(Color::Rgb(141, 141, 142)),
+            style("Emit the LLVM IR of the Natives APIs in another folter called \"/natives/\".")
+                .bold()
         );
 
         process::exit(1);

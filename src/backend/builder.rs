@@ -17,7 +17,8 @@ use {
         OptimizationLevel,
     },
     std::{
-        fs,
+        fs::{self, write, File},
+        io::{self, BufReader, Read},
         path::{Path, PathBuf},
         process::Command,
     },
@@ -126,6 +127,32 @@ impl<'a> Clang<'a> {
     pub fn compile(&self) {
         if self.options.emit_llvm_ir {
             LLVMDissambler::new(self.files).dissamble();
+
+            if self.options.emit_llvm_ir {
+                let natives: &[[PathBuf; 2]; 2] = &[
+                    [
+                        PathBuf::from("output/vector.ll"),
+                        PathBuf::from("natives/vector.ll"),
+                    ],
+                    [
+                        PathBuf::from("output/debug.ll"),
+                        PathBuf::from("natives/debug.ll"),
+                    ],
+                ];
+
+                natives.iter().for_each(|native| {
+                    if !native[1].exists() {
+                        let _ = fs::create_dir_all("natives");
+                    }
+
+                    if native[0].exists() {
+                        let raw_content: String = fs::read_to_string(&native[0]).unwrap();
+                        let content: &[u8] = raw_content.as_bytes();
+
+                        let _ = write(&native[1], content);
+                    }
+                });
+            }
 
             self.files.iter().for_each(|path| {
                 let _ = fs::remove_file(path);
