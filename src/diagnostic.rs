@@ -1,19 +1,20 @@
 use {
-    super::backend::compiler::options::ThrushFile,
     super::{
+        backend::compiler::options::ThrushFile,
         error::{ThrushError, ThrushErrorKind},
         logging::LogType,
     },
     std::{
         fs::File,
         io::{BufRead, BufReader},
+        path::PathBuf,
     },
     stylic::{style, Stylize},
 };
 
 #[derive(Debug)]
 pub struct Diagnostic {
-    pub thrush_file: ThrushFile,
+    path: PathBuf,
     buffer: String,
     drawer: String,
     lines: Vec<String>,
@@ -28,7 +29,7 @@ impl Diagnostic {
             .collect();
 
         Self {
-            thrush_file: thrush_file.clone(),
+            path: thrush_file.path.clone(),
             buffer: String::new(),
             drawer: String::new(),
             lines,
@@ -109,7 +110,10 @@ impl Diagnostic {
     fn print_header(&mut self, line: usize, title: &str, log_type: LogType) {
         println!(
             "{} - {}\n",
-            format_args!("{}", style(&self.thrush_file.name).bold().bright_red()),
+            format_args!(
+                "{}",
+                style(&self.path.to_string_lossy()).bold().bright_red()
+            ),
             line
         );
 

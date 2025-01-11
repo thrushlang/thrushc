@@ -1,7 +1,7 @@
 use {
     super::{
         super::{
-            super::frontend::lexer::DataTypes,
+            super::frontend::lexer::{DataTypes, TokenKind},
             apis::{debug::DebugAPI, vector::VectorAPI},
             instruction::Instruction,
         },
@@ -160,22 +160,18 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                 Instruction::Null
             }
 
+            Instruction::Extern { .. } => Instruction::Null,
+
             Instruction::Function {
                 name,
-                external_name,
                 params,
                 body,
                 return_kind,
                 is_public,
-                is_external,
             } => {
                 if let Some(body) = body {
                     self.compile_function(name, params, body, return_kind, *is_public, false);
                     return Instruction::Null;
-                }
-
-                if *is_external {
-                    self.compile_external_function(name, params, return_kind, external_name);
                 }
 
                 Instruction::Null
@@ -518,19 +514,23 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
         todo!()
     }
 
-    fn compile_external_function(
-        &mut self,
-        name: &'ctx str,
-        params: &[Instruction<'ctx>],
-        return_kind: &Option<DataTypes>,
-        external_name: &str,
-    ) {
-        let kind: FunctionType<'_> = utils::datatype_to_fn_type(self.context, return_kind, params);
-        let function: FunctionValue<'_> =
+    fn compile_external(&mut self, external_name: &str, instr: &'ctx Instruction) {
+        let function: (
+            &str,
+            &[Instruction<'_>],
+            &Option<Box<Instruction<'_>>>,
+            &Option<DataTypes>,
+            bool,
+        ) = instr.as_function();
+
+        let kind: FunctionType<'_> =
+            utils::datatype_to_fn_type(self.context, function.3, function.1);
+
+        let llvm_function: FunctionValue<'_> =
             self.module
                 .add_function(external_name, kind, Some(Linkage::External));
 
-        self.objects.insert_function(name, function);
+        self.objects.insert_function(function.0, llvm_function);
     }
 
     fn compile_function(
@@ -598,25 +598,29 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
 
     fn predefine_functions(&mut self) {
         self.instructions.iter().for_each(|instr| {
-            if let Instruction::Function {
-                name,
-                params,
-                body,
-                return_kind,
-                is_public,
-                ..
-            } = instr
-            {
-                if body.is_some() {
-                    self.compile_function(
-                        name,
-                        params,
-                        body.as_ref().unwrap(),
-                        return_kind,
-                        *is_public,
-                        true,
-                    );
-                }
+            if instr.is_function() {
+                let function: (
+                    &str,
+                    &[Instruction<'_>],
+                    &Option<Box<Instruction<'_>>>,
+                    &Option<DataTypes>,
+                    bool,
+                ) = instr.as_function();
+
+                self.compile_function(
+                    function.0,
+                    function.1,
+                    function.2.as_ref().unwrap(),
+                    function.3,
+                    function.4,
+                    true,
+                );
+            } else if instr.is_extern() {
+                let external: (&str, &Instruction, TokenKind) = instr.as_extern();
+
+                // CHECK IF TOKENKIND IS FUNCTION KIND, (REMEMBER)
+
+                self.compile_external(external.0, external.1);
             }
         });
     }

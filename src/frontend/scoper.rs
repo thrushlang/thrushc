@@ -21,7 +21,7 @@ struct ThrushBlock<'ctx> {
 }
 
 impl<'ctx> ThrushScoper<'ctx> {
-    pub fn new(file: &ThrushFile) -> Self {
+    pub fn new(file: &'ctx ThrushFile) -> Self {
         Self {
             blocks: Vec::new(),
             errors: Vec::new(),

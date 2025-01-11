@@ -499,7 +499,7 @@ pub fn build_overflow<'ctx>(
                 module
                     .get_function(&format!(
                         "llvm.s{}.with.overflow.i8",
-                        op.to_llvm_intrinsic_identifier()
+                        op.as_llvm_intrinsic_identifier()
                     ))
                     .unwrap(),
                 &[left_num.into(), right_num.into()],
@@ -513,7 +513,7 @@ pub fn build_overflow<'ctx>(
                 module
                     .get_function(&format!(
                         "llvm.s{}.with.overflow.i16",
-                        op.to_llvm_intrinsic_identifier()
+                        op.as_llvm_intrinsic_identifier()
                     ))
                     .unwrap(),
                 &[left_num.into(), right_num.into()],
@@ -527,7 +527,7 @@ pub fn build_overflow<'ctx>(
                 module
                     .get_function(&format!(
                         "llvm.s{}.with.overflow.i32",
-                        op.to_llvm_intrinsic_identifier()
+                        op.as_llvm_intrinsic_identifier()
                     ))
                     .unwrap(),
                 &[left_num.into(), right_num.into()],
@@ -541,7 +541,7 @@ pub fn build_overflow<'ctx>(
                 module
                     .get_function(&format!(
                         "llvm.s{}.with.overflow.i64",
-                        op.to_llvm_intrinsic_identifier()
+                        op.as_llvm_intrinsic_identifier()
                     ))
                     .unwrap(),
                 &[left_num.into(), right_num.into()],

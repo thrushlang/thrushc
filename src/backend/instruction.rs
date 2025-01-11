@@ -33,17 +33,15 @@ pub enum Instruction<'ctx> {
         body: Box<Instruction<'ctx>>,
     },
     Param {
-        name: &'ctx str,
+        name: String,
         kind: DataTypes,
     },
     Function {
-        name: &'ctx str,
-        external_name: &'ctx str,
+        name: String,
         params: Vec<Instruction<'ctx>>,
         body: Option<Box<Instruction<'ctx>>>,
         return_kind: Option<DataTypes>,
         is_public: bool,
-        is_external: bool,
     },
     Return(Box<Instruction<'ctx>>, DataTypes),
     Var {
@@ -95,9 +93,13 @@ pub enum Instruction<'ctx> {
         free_only: bool,
         is_string: bool,
     },
+    Extern {
+        name: String,
+        data: Box<Instruction<'ctx>>,
+        kind: TokenKind,
+    },
     Boolean(bool),
     Pass,
-
     #[default]
     Null,
 }
@@ -123,6 +125,24 @@ impl PartialEq for Instruction<'_> {
 }
 
 impl<'ctx> Instruction<'ctx> {
+    #[inline]
+    pub fn is_extern(&self) -> bool {
+        if let Instruction::Extern { .. } = self {
+            return true;
+        }
+
+        false
+    }
+
+    #[inline]
+    pub fn is_function(&self) -> bool {
+        if let Instruction::Function { .. } = self {
+            return true;
+        }
+
+        false
+    }
+
     #[inline]
     pub fn is_binary(&self) -> bool {
         if let Instruction::Binary { .. } = self {
@@ -169,6 +189,37 @@ impl<'ctx> Instruction<'ctx> {
         }
 
         false
+    }
+
+    pub fn as_extern(&self) -> (&str, &Instruction, TokenKind) {
+        if let Instruction::Extern { name, data, kind } = self {
+            return (name, data, *kind);
+        }
+
+        unreachable!()
+    }
+
+    pub fn as_function(
+        &self,
+    ) -> (
+        &str,
+        &[Instruction],
+        &Option<Box<Instruction>>,
+        &Option<DataTypes>,
+        bool,
+    ) {
+        if let Instruction::Function {
+            name,
+            params,
+            body,
+            return_kind,
+            is_public,
+        } = self
+        {
+            return (name, params, body, return_kind, *is_public);
+        }
+
+        unreachable!()
     }
 
     pub fn as_binary(&self) -> (&Instruction, &TokenKind, &Instruction, &DataTypes) {

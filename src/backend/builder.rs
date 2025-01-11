@@ -70,10 +70,9 @@ impl<'a> ThrushCompiler<'a> {
 
         let content: String = fs::read_to_string(&file.path).unwrap();
 
-        let mut lexer: Lexer = Lexer::new(content.as_bytes(), file);
-        let tokens: &[Token] = lexer.lex();
+        let tokens: Vec<Token> = Lexer::lex(content.as_bytes(), file);
 
-        let mut parser: Parser = Parser::new(tokens, file);
+        let mut parser: Parser = Parser::new(&tokens, file);
         let instructions: &[Instruction] = parser.start();
 
         let context: Context = Context::create();

@@ -1,7 +1,7 @@
 use {
     super::super::{
         backend::compiler::options::ThrushFile, diagnostic::Diagnostic, error::{ThrushError, ThrushErrorKind}, logging::LogType
-    }, ahash::{HashMap, HashMapExt}, core::str, inkwell::{FloatPredicate, IntPredicate}, std::{num::ParseFloatError, process::exit}
+    }, ahash::{HashMap, HashMapExt}, core::str, inkwell::{FloatPredicate, IntPredicate}, std::{num::ParseFloatError, process::exit, mem}
 };
 
 pub struct Lexer<'a> {
@@ -15,8 +15,8 @@ pub struct Lexer<'a> {
 }
 
 impl<'a> Lexer<'a> {
-    pub fn new(code: &'a [u8], file: &ThrushFile) -> Self {
-        Self {
+    pub fn lex(code: &'a [u8], file: &ThrushFile) -> Vec<Token> {
+        let mut lexer: Lexer = Self {
             tokens: Vec::new(),
             errors: Vec::new(),
             code,
@@ -24,10 +24,12 @@ impl<'a> Lexer<'a> {
             current: 0,
             line: 1,
             diagnostic: Diagnostic::new(file)
-        }
+        };
+
+        lexer._lex()
     }
 
-    pub fn lex(&mut self) -> &[Token] {
+    fn _lex(&mut self) -> Vec<Token> {
         while !self.end() {
             self.start = self.current;
 
@@ -51,7 +53,7 @@ impl<'a> Lexer<'a> {
             line: self.line
         });
 
-        self.tokens.as_slice()
+        mem::take(&mut self.tokens)
     }
 
     fn scan(&mut self) -> Result<(), ThrushError> {
@@ -420,7 +422,7 @@ pub struct Token {
     pub line: usize,
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub enum TokenKind {
     // --- Operators ---
     LParen,       // ' ( '
@@ -576,7 +578,7 @@ impl TokenKind {
     }
 
     #[inline]
-    pub fn to_llvm_intrinsic_identifier(&self) -> &str {
+    pub fn as_llvm_intrinsic_identifier(&self) -> &str {
         match self {
             TokenKind::Plus => "add",
             TokenKind::Minus => "sub",
