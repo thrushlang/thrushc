@@ -2,6 +2,9 @@
   <img src= "https://github.com/thrushlang/.github/blob/main/assets/Thrush.png" alt= "logo" style= "width: 2hv; height: 2hv;"> </img>
 </p>
 
+> [!WARNING]  
+> **The Compiler is still under development and is unfinished, please be peaceful if exists some bug.**
+
 # The Thrush Compiler 
 
 This compiler compile target to **LLVM IR** and coming soon to anothers backend infraestructures; This compile for native **Optimized Machine Code** with object files or executables.
@@ -13,5 +16,3 @@ This compiler compile target to **LLVM IR** and coming soon to anothers backend 
 ## External Requirements for build the Compiler
 
 - **Clang** && **LLVM** 17.0.2 (Linux Binaries with statically linked libraries)
-
-
