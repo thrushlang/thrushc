@@ -9,10 +9,15 @@
 
 This compiler compile target to **LLVM IR** and coming soon to anothers backend infraestructures; This compile for native **Optimized Machine Code** with object files or executables.
 
-## Compiler Dependencies
+## Build Dependencies for the Compiler 
 
-- **Clang** && **LLVM** 17.0.2 in the future **Thrush Toolchain**, located in `%HOME%/thrushlang/backends/llvm`
+**Important Crates:**
 
-## External Requirements for build the Compiler
+- **llvm-sys** (v170)
+- **inkwell** (v0.50)
+  
+## External Requirements for create executables with the Compiler
 
-- **Clang** && **LLVM** 17.0.2 (Linux Binaries with statically linked libraries)
+- **Clang** && **LLVM** 17.0.2 (Linux Binaries with included statically linked libraries)
+
+~ **NOTE:** In the theoretically toolchain of thrush (under development), is ready contain the toolchain for each Operating System in than language is available. The Default Installed location gived by the package manager `throium` in `%HOMEUSER%/thrushlang/backend/llvm/`. This process is going to be automatized by `throium`.
