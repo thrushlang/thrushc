@@ -24,7 +24,7 @@ use {
 */
 
 type Locals<'instr> = Vec<HashMap<&'instr str, (DataTypes, bool, bool, bool, usize)>>;
-type Globals<'instr> = HashMap<&'instr str, (DataTypes, Vec<DataTypes>, bool, bool)>;
+type Globals = HashMap<String, (DataTypes, Vec<DataTypes>, bool, bool)>;
 
 type FoundObject = (
     DataTypes,      // Main Type
@@ -36,10 +36,10 @@ type FoundObject = (
     usize,          // Number the references
 );
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct ParserObjects<'instr> {
     locals: Locals<'instr>,
-    globals: Globals<'instr>,
+    globals: Globals,
 }
 
 impl<'instr> ParserObjects<'instr> {
@@ -110,7 +110,7 @@ impl<'instr> ParserObjects<'instr> {
 
     pub fn insert_new_global(
         &mut self,
-        name: &'instr str,
+        name: String,
         value: (DataTypes, Vec<DataTypes>, bool, bool),
     ) {
         self.globals.insert(name, value);
@@ -149,6 +149,10 @@ impl<'instr> ParserObjects<'instr> {
         });
 
         frees
+    }
+
+    pub fn merge(&mut self, other_objects: ParserObjects<'instr>) {
+        self.globals.extend(other_objects.globals);
     }
 
     pub fn decrease_local_references(&mut self, in_scope_pos: usize) {

@@ -1,4 +1,4 @@
-pub const TARGETS: [&str; 240] = [
+pub const TARGETS: [&str; 233] = [
     "aarch64-apple-darwin",
     "aarch64-apple-ios",
     "aarch64-apple-ios-macabi",
@@ -196,13 +196,6 @@ pub const TARGETS: [&str; 240] = [
     "thumbv8m.base-none-eabi",
     "thumbv8m.main-none-eabi",
     "thumbv8m.main-none-eabihf",
-    "wasm32-unknown-emscripten",
-    "wasm32-unknown-unknown",
-    "wasm32-wasi",
-    "wasm32-wasip1",
-    "wasm32-wasip1-threads",
-    "wasm32-wasip2",
-    "wasm64-unknown-unknown",
     "x86_64-apple-darwin",
     "x86_64-apple-ios",
     "x86_64-apple-ios-macabi",

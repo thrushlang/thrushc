@@ -21,15 +21,15 @@ pub struct Diagnostic {
 }
 
 impl Diagnostic {
-    pub fn new(thrush_file: &ThrushFile) -> Self {
-        let file: File = File::open(&thrush_file.path).unwrap();
+    pub fn new(thrushfile: &ThrushFile) -> Self {
+        let file: File = File::open(&thrushfile.path).unwrap();
         let lines: Vec<String> = BufReader::new(file)
             .lines()
             .map(|line| line.unwrap().to_string())
             .collect();
 
         Self {
-            path: thrush_file.path.clone(),
+            path: thrushfile.path.clone(),
             buffer: String::new(),
             drawer: String::new(),
             lines,
@@ -37,7 +37,13 @@ impl Diagnostic {
     }
 
     pub fn report(&mut self, error: &ThrushError, log_type: LogType) {
-        if let ThrushError::Parse(
+        if let ThrushError::Scope(
+            ThrushErrorKind::UnreachableVariable | ThrushErrorKind::ObjectNotDefined,
+            title,
+            help,
+            line,
+        )
+        | ThrushError::Parse(
             ThrushErrorKind::ParsedNumber
             | ThrushErrorKind::UnreachableNumber
             | ThrushErrorKind::SyntaxError
@@ -47,22 +53,12 @@ impl Diagnostic {
             title,
             help,
             line,
-        ) = error
-        {
-            self.print_report(title, help, *line, log_type);
-        } else if let ThrushError::Lex(
+        )
+        | ThrushError::Lex(
             ThrushErrorKind::SyntaxError
             | ThrushErrorKind::ParsedNumber
             | ThrushErrorKind::UnreachableNumber
             | ThrushErrorKind::UnknownChar,
-            title,
-            help,
-            line,
-        ) = error
-        {
-            self.print_report(title, help, *line, log_type);
-        } else if let ThrushError::Scope(
-            ThrushErrorKind::UnreachableVariable | ThrushErrorKind::ObjectNotDefined,
             title,
             help,
             line,

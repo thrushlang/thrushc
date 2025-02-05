@@ -2,7 +2,7 @@
 
 use {
     super::{
-        super::super::frontend::lexer::DataTypes, codegen, functions, general,
+        super::super::frontend::lexer::DataTypes, codegen, function, general,
         objects::CompilerObjects, utils, Instruction,
     },
     inkwell::{
@@ -281,7 +281,7 @@ fn compile_string_var<'ctx>(
     {
         objects.insert(
             name.to_string(),
-            functions::compile_call(
+            function::compile_call(
                 module, builder, context, call_name, args, kind_call, objects,
             )
             .unwrap()
@@ -440,7 +440,7 @@ fn compile_integer_var<'ctx>(
     } = value
     {
         let value: BasicValueEnum<'_> =
-            functions::compile_call(module, builder, context, call_name, args, kind, objects)
+            function::compile_call(module, builder, context, call_name, args, kind, objects)
                 .unwrap();
 
         if utils::integer_autocast(kind_call, kind, Some(ptr), value, builder, context).is_none() {

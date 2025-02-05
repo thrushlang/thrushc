@@ -3,6 +3,7 @@
 use {
     super::{
         super::{logging, Lexer, Parser, Token, LLVM_BACKEND_COMPILER},
+        apis::{debug::DebugAPI, vector::VectorAPI},
         compiler::{
             options::{CompilerOptions, ThrushFile},
             Compiler,
@@ -17,8 +18,7 @@ use {
         OptimizationLevel,
     },
     std::{
-        fs::{self, write, File},
-        io::{self, BufReader, Read},
+        fs::{self, write},
         path::{Path, PathBuf},
         process::Command,
     },
@@ -98,7 +98,19 @@ impl<'a> ThrushCompiler<'a> {
 
         module.set_data_layout(&machine.get_target_data().get_data_layout());
 
-        Compiler::compile(&module, &builder, &context, self.options, instructions);
+        if self.options.include_vector_api {
+            VectorAPI::include(&module, &builder, &context);
+        } else {
+            VectorAPI::define(&module, &builder, &context);
+        }
+
+        if self.options.include_debug_api {
+            DebugAPI::include(&module, &builder, &context);
+        } else {
+            DebugAPI::define(&module, &builder, &context);
+        }
+
+        Compiler::compile(&module, &builder, &context, instructions);
 
         let compiled_path: &str = &format!("output/{}.bc", &file.name);
 
@@ -151,10 +163,16 @@ impl<'a> Clang<'a> {
 
         let mut clang_command: Command = Command::new(LLVM_BACKEND_COMPILER.join("clang-17"));
 
+        let target_triple_string: String = self.options.target_triple.to_string();
+
+        let parsed_target_tripe_for_clang: String =
+            target_triple_string.split("-").collect::<Vec<_>>()[0].replace("TargetTriple(\"", "");
+
         if self.options.executable {
             clang_command.args([
                 "-v",
                 "-opaque-pointers",
+                &format!("--target={}", parsed_target_tripe_for_clang),
                 self.options.linking.to_str(),
                 self.options.optimization.to_str(true, false),
             ]);
@@ -168,6 +186,7 @@ impl<'a> Clang<'a> {
             clang_command.args([
                 "-v",
                 "-opaque-pointers",
+                &format!("--target={}", parsed_target_tripe_for_clang),
                 self.options.linking.to_str(),
                 self.options.optimization.to_str(true, false),
                 library_variant,
@@ -175,9 +194,7 @@ impl<'a> Clang<'a> {
         }
 
         clang_command.args(self.files);
-
         clang_command.args(&self.options.args);
-
         clang_command.args(["-o", &self.options.output]);
 
         handle_command(&mut clang_command);

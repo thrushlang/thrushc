@@ -479,9 +479,7 @@ Details:
         .unwrap();
 
     builder.build_unreachable().unwrap();
-
     builder.position_at_end(false_block);
-
     builder.build_extract_value(result, 0, "").unwrap()
 }
 

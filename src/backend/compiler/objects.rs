@@ -3,7 +3,7 @@ use {
     inkwell::values::{FunctionValue, PointerValue},
 };
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct CompilerObjects<'ctx> {
     pub functions: HashMap<&'ctx str, FunctionValue<'ctx>>,
     pub blocks: Vec<HashMap<String, PointerValue<'ctx>>>,

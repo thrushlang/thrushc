@@ -7,32 +7,38 @@ use {
             logging::LogType,
         },
         lexer::{DataTypes, Token, TokenKind},
+        objects::ParserObjects,
     },
     std::{mem, process},
 };
 
-pub struct Imports<'instr> {
+pub struct Import<'instr> {
     tokens: Vec<Token>,
     stmts: Vec<Instruction<'instr>>,
     errors: Vec<ThrushError>,
     current: usize,
     diagnostic: Diagnostic,
+    parser_objects: ParserObjects<'instr>,
 }
 
-impl<'instr> Imports<'instr> {
-    pub fn parse(tokens: Vec<Token>, file: &ThrushFile) -> Vec<Instruction<'instr>> {
-        let mut imports: Imports = Self {
+impl<'instr> Import<'instr> {
+    pub fn generate(
+        tokens: Vec<Token>,
+        file: &ThrushFile,
+    ) -> (Vec<Instruction<'instr>>, ParserObjects<'instr>) {
+        let mut imports: Import = Self {
             tokens,
             stmts: Vec::new(),
             errors: Vec::new(),
             current: 0,
             diagnostic: Diagnostic::new(file),
+            parser_objects: ParserObjects::new(),
         };
 
         imports._parse()
     }
 
-    fn _parse(&mut self) -> Vec<Instruction<'instr>> {
+    fn _parse(&mut self) -> (Vec<Instruction<'instr>>, ParserObjects<'instr>) {
         while !self.end() {
             if self.match_token(TokenKind::Public) {
                 if let Err(e) = self.public() {
@@ -51,7 +57,10 @@ impl<'instr> Imports<'instr> {
             process::exit(1);
         }
 
-        mem::take(&mut self.stmts)
+        (
+            mem::take(&mut self.stmts),
+            mem::take(&mut self.parser_objects),
+        )
     }
 
     fn public(&mut self) -> Result<(), ThrushError> {
@@ -93,6 +102,7 @@ impl<'instr> Imports<'instr> {
         )?;
 
         let mut params: Vec<Instruction> = Vec::new();
+        let mut params_types: Vec<DataTypes> = Vec::new();
 
         while !self.match_token(TokenKind::RParen) {
             if self.match_token(TokenKind::Comma) {
@@ -141,7 +151,8 @@ impl<'instr> Imports<'instr> {
                 }
             };
 
-            params.push(Instruction::Param { name: ident, kind })
+            params.push(Instruction::Param { name: ident, kind });
+            params_types.push(kind);
         }
 
         if self.peek().kind == TokenKind::Colon {
@@ -162,6 +173,12 @@ impl<'instr> Imports<'instr> {
             _ => None,
         };
 
+        self.add_function(
+            name.clone(),
+            return_kind.unwrap_or(DataTypes::Void),
+            params_types,
+        );
+
         self.stmts.push(Instruction::Extern {
             name: name.clone(),
             data: Box::new(Instruction::Function {
@@ -175,6 +192,11 @@ impl<'instr> Imports<'instr> {
         });
 
         Ok(())
+    }
+
+    fn add_function(&mut self, name: String, kind: DataTypes, datatypes: Vec<DataTypes>) {
+        self.parser_objects
+            .insert_new_global(name, (kind, datatypes, true, false));
     }
 
     fn consume(

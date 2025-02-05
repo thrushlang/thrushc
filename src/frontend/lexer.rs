@@ -172,7 +172,7 @@ impl<'a> Lexer<'a> {
 
             "bool" => self.make(TokenKind::DataType(DataTypes::Bool)),
 
-            "string" => self.make(TokenKind::DataType(DataTypes::String)),
+            "String" => self.make(TokenKind::DataType(DataTypes::String)),
             "char" => self.make(TokenKind::DataType(DataTypes::Char)),
 
             "void" => self.make(TokenKind::DataType(DataTypes::Void)),

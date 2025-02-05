@@ -6,12 +6,11 @@ use {
             error::{ThrushError, ThrushErrorKind},
             logging::{self, LogType},
             CORE_LIBRARY_PATH,
-        }, imports::Imports, lexer::{DataTypes, Lexer, Token, TokenKind}, objects::ParserObjects, scoper::ThrushScoper, type_checking
+        }, preproccesadors::Import, lexer::{DataTypes, Lexer, Token, TokenKind}, objects::ParserObjects, scoper::ThrushScoper, type_checking
     }, std::{fs, mem, path::{Path, PathBuf}, process}
 };
 
-
-type Object = (
+type ParserObject = (
     DataTypes,      // Main Type
     bool,           // is null?
     bool,           // is freeded?
@@ -34,7 +33,7 @@ pub struct Parser<'instr> {
     is_main: bool,
     scoper: ThrushScoper<'instr>,
     diagnostic: Diagnostic,
-    objects: ParserObjects<'instr>,
+    parser_objects: ParserObjects<'instr>,
 }
 
 impl<'instr> Parser<'instr> {
@@ -52,7 +51,7 @@ impl<'instr> Parser<'instr> {
             is_main: file.is_main,
             scoper: ThrushScoper::new(file),
             diagnostic: Diagnostic::new(file),
-            objects: ParserObjects::new(),
+            parser_objects: ParserObjects::new(),
         }
     }
 
@@ -102,7 +101,7 @@ impl<'instr> Parser<'instr> {
 
     fn parse(&mut self) -> Result<Instruction<'instr>, ThrushError> {
 
-        self.objects.decrease_local_references(self.scope);
+        self.parser_objects.decrease_local_references(self.scope);
 
         match &self.peek().kind {
             TokenKind::Println => Ok(self.println()?),
@@ -186,9 +185,10 @@ impl<'instr> Parser<'instr> {
             let content: String = fs::read_to_string(&file.path).unwrap();
 
             let tokens: Vec<Token> = Lexer::lex(content.as_bytes(), &file);
-            let imports: Vec<Instruction<'_>> = Imports::parse(tokens, &file);
+            let imports: (Vec<Instruction<'_>>, ParserObjects<'_>) = Import::generate(tokens, &file);
 
-            self.stmts.extend_from_slice(&imports);
+            self.stmts.extend_from_slice(&imports.0);
+            self.parser_objects.merge(imports.1);
 
             return Ok(());
         }
@@ -200,7 +200,7 @@ impl<'instr> Parser<'instr> {
             }
 
             if path_converted.extension().is_none() {
-                self.errors.push(ThrushError::Parse(ThrushErrorKind::SyntaxError, String::from("Import Error"), String::from("The file should contain a extension (*.thh)."), line));
+                self.errors.push(ThrushError::Parse(ThrushErrorKind::SyntaxError, String::from("Import Error"), String::from("The file should contain a extension (*.th)."), line));
                 return Ok(()); 
             }
 
@@ -210,7 +210,7 @@ impl<'instr> Parser<'instr> {
             }
 
             if path_converted.file_name().is_none() {
-                self.errors.push(ThrushError::Parse(ThrushErrorKind::SyntaxError, String::from("Import Error"), String::from("The file should contain a name (<mythhfile>.thh)."), line));
+                self.errors.push(ThrushError::Parse(ThrushErrorKind::SyntaxError, String::from("Import Error"), String::from("The file should contain a name (<mythfile>.th)."), line));
                 return Ok(());
             }
 
@@ -219,9 +219,10 @@ impl<'instr> Parser<'instr> {
             let content: String = fs::read_to_string(&file.path).unwrap();
 
             let tokens: Vec<Token> = Lexer::lex(content.as_bytes(), &file);
-            let imports: Vec<Instruction<'_>> = Imports::parse(tokens, &file);
+            let imports: (Vec<Instruction<'_>>, ParserObjects<'_>) = Import::generate(tokens, &file);
 
-            self.stmts.extend_from_slice(&imports);
+            self.stmts.extend_from_slice(&imports.0);
+            self.parser_objects.merge(imports.1);
 
             return Ok(());
         }
@@ -366,7 +367,7 @@ impl<'instr> Parser<'instr> {
                 line,
             )?;
 
-            self.objects.insert_new_local(self.scope, name.lexeme.as_ref().unwrap(), (kind, true, false, false,  0));
+            self.parser_objects.insert_new_local(self.scope, name.lexeme.as_ref().unwrap(), (kind, true, false, false,  0));
 
             return Ok(Instruction::Var {
                 name: name.lexeme.as_ref().unwrap(),
@@ -403,7 +404,7 @@ impl<'instr> Parser<'instr> {
             self.errors.push(e);
         }
 
-        self.objects.insert_new_local(
+        self.parser_objects.insert_new_local(
             self.scope,
             name.lexeme.as_ref().unwrap(),
             (kind, false, false, false, 0),
@@ -411,7 +412,7 @@ impl<'instr> Parser<'instr> {
 
         if let Instruction::RefVar { kind, .. } = &value {
             if kind == &DataTypes::String {
-                self.objects.modify_object_deallocation(name.lexeme.as_ref().unwrap(), (false, true));
+                self.parser_objects.modify_object_deallocation(name.lexeme.as_ref().unwrap(), (false, true));
             }
         }
 
@@ -486,7 +487,7 @@ impl<'instr> Parser<'instr> {
 
         if let Instruction::RefVar { name, kind, .. } = value {
             if kind == DataTypes::String {
-                self.objects.modify_object_deallocation(name, (true, false));
+                self.parser_objects.modify_object_deallocation(name, (true, false));
             }
         }
 
@@ -528,7 +529,7 @@ impl<'instr> Parser<'instr> {
     ) -> Result<Instruction<'instr>, ThrushError> {
         self.only_advance()?;
 
-        self.objects.begin_local_scope();
+        self.parser_objects.begin_local_scope();
 
         let mut stmts: Vec<Instruction> = Vec::new();
         let mut was_emited_deallocators: bool = false;
@@ -551,7 +552,7 @@ impl<'instr> Parser<'instr> {
                     ));
                 }
 
-                let deallocators: Vec<Instruction<'_>> = self.objects.create_deallocators(self.scope);
+                let deallocators: Vec<Instruction<'_>> = self.parser_objects.create_deallocators(self.scope);
 
                 stmts.extend(deallocators);
 
@@ -562,10 +563,10 @@ impl<'instr> Parser<'instr> {
         }
 
         if !was_emited_deallocators {
-            stmts.extend(self.objects.create_deallocators(self.scope));
+            stmts.extend(self.parser_objects.create_deallocators(self.scope));
         }
 
-        self.objects.end_local_scope();
+        self.parser_objects.end_local_scope();
 
         self.scoper.add_scope(stmts.clone());
 
@@ -1143,8 +1144,8 @@ impl<'instr> Parser<'instr> {
                     let current: &Token = self.peek();
                     let line: usize = self.peek().line;
 
-                    let object: Object =
-                        self.objects.get_object(current.lexeme.as_ref().unwrap(), line)?;
+                    let object: ParserObject =
+                        self.parser_objects.get_object(current.lexeme.as_ref().unwrap(), line)?;
 
                     let name: &str = current.lexeme.as_ref().unwrap();
 
@@ -1226,7 +1227,7 @@ impl<'instr> Parser<'instr> {
                             line,
                         )?;
 
-                        self.objects.insert_new_local(self.scope, name, (object.0, false, false, false, 0));
+                        self.parser_objects.insert_new_local(self.scope, name, (object.0, false, false, false, 0));
 
                         return Ok(Instruction::MutVar {
                             name,
@@ -1353,7 +1354,7 @@ impl<'instr> Parser<'instr> {
     fn call(
         &mut self,
         name: &'instr str,
-        object: Object,
+        object: ParserObject,
         line: usize,
     ) -> Result<Instruction<'instr>, ThrushError> {
         if !object.3 {
@@ -1626,7 +1627,7 @@ impl<'instr> Parser<'instr> {
 
         self.current = 0;
 
-        self.objects.insert_new_global(name.lexeme.as_ref().unwrap(), (return_kind, params, true, ignore_more_params));
+        self.parser_objects.insert_new_global(name.lexeme.clone().unwrap(), (return_kind, params, true, ignore_more_params));
 
         Ok(())
     }

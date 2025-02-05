@@ -68,7 +68,7 @@ impl Cli {
                 *index += 2;
 
                 if *index > self.args.len() {
-                    self.report_error(&format!("Missing argument for {}", arg));
+                    self.report_error(&format!("Missing argument for \"{}\" flag.", arg));
                 }
 
                 self.options.output = self.args[self.extract_relative_index(*index)].to_string();
@@ -78,7 +78,7 @@ impl Cli {
                 *index += 1;
 
                 if *index > self.args.len() {
-                    self.report_error(&format!("Missing argument for {}", arg));
+                    self.report_error(&format!("Missing argument for \"{}\" flag.", arg));
                 }
 
                 self.options.optimization =
@@ -88,7 +88,7 @@ impl Cli {
                         "O2" => Opt::Mid,
                         "mcqueen" => Opt::Mcqueen,
                         any => {
-                            self.report_error(&format!("Unknown optimization level \"{}\"", any));
+                            self.report_error(&format!("Unknown optimization level \"{}\".", any));
                             Opt::default()
                         }
                     };
@@ -100,7 +100,7 @@ impl Cli {
                 *index += 1;
 
                 if *index > self.args.len() {
-                    self.report_error(&format!("Missing argument for {}", arg));
+                    self.report_error(&format!("Missing argument for \"{}\" flag.", arg));
                 }
 
                 match self.args[self.extract_relative_index(*index)].as_str() {
@@ -120,7 +120,6 @@ impl Cli {
 
             "--emit-natives-apart" | "-emit-natives-apart" => {
                 *index += 1;
-
                 self.options.emit_natives_apart = true;
             }
 
@@ -154,7 +153,7 @@ impl Cli {
                 *index += 1;
 
                 if *index > self.args.len() {
-                    self.report_error(&format!("Missing argument for {}", arg));
+                    self.report_error(&format!("Missing argument for \"{}\" flag.", arg));
                 }
 
                 match self.args[self.extract_relative_index(*index)].as_str() {
@@ -188,7 +187,7 @@ impl Cli {
                 *index += 1;
 
                 if *index > self.args.len() {
-                    self.report_error(&format!("Missing argument for \"{}\".", arg));
+                    self.report_error(&format!("Missing argument for \"{}\" flag.", arg));
                 }
 
                 self.options.reloc_mode =
@@ -206,7 +205,7 @@ impl Cli {
                 *index += 1;
 
                 if *index > self.args.len() {
-                    self.report_error(&format!("Missing argument for \"{}\".", arg));
+                    self.report_error(&format!("Missing argument for \"{}\" flag.", arg));
                 }
 
                 self.options.code_model =
@@ -226,7 +225,7 @@ impl Cli {
 
                 if *index > self.args.len() {
                     self.report_error(&format!(
-                        "Missing built-in API specification for \"{}\".",
+                        "Missing built-in API specification for \"{}\" flag.",
                         arg
                     ));
                 }

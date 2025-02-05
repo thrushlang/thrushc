@@ -2,12 +2,10 @@ use {
     super::{
         super::{
             super::frontend::lexer::{DataTypes, TokenKind},
-            apis::{debug::DebugAPI, vector::VectorAPI},
             instruction::Instruction,
         },
-        functions, general,
+        function, general,
         objects::CompilerObjects,
-        options::CompilerOptions,
         utils, variable,
     },
     inkwell::{
@@ -18,7 +16,7 @@ use {
         types::{FunctionType, StructType},
         values::{
             BasicMetadataValueEnum, BasicValueEnum, FloatValue, FunctionValue, GlobalValue,
-            InstructionOpcode, InstructionValue, IntValue, PointerValue,
+            InstructionOpcode, IntValue, PointerValue,
         },
         AddressSpace,
     },
@@ -30,8 +28,7 @@ pub struct Codegen<'a, 'ctx> {
     context: &'ctx Context,
     instructions: &'ctx [Instruction<'ctx>],
     current: usize,
-    objects: CompilerObjects<'ctx>,
-    options: &'a CompilerOptions,
+    compiler_objects: CompilerObjects<'ctx>,
     function: Option<FunctionValue<'ctx>>,
 }
 
@@ -40,7 +37,6 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
         module: &'a Module<'ctx>,
         builder: &'a Builder<'ctx>,
         context: &'ctx Context,
-        options: &'a CompilerOptions,
         instructions: &'ctx [Instruction<'ctx>],
     ) {
         Self {
@@ -49,8 +45,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
             context,
             instructions,
             current: 0,
-            objects: CompilerObjects::new(),
-            options,
+            compiler_objects: CompilerObjects::new(),
             function: None,
         }
         .start();
@@ -59,19 +54,6 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
     fn start(&mut self) {
         self.declare_basics();
         self.define_math_functions();
-
-        if self.options.include_vector_api {
-            VectorAPI::include(self.module, self.builder, self.context);
-        } else {
-            VectorAPI::define(self.module, self.builder, self.context);
-        }
-
-        if self.options.include_debug_api {
-            DebugAPI::include(self.module, self.builder, self.context);
-        } else {
-            DebugAPI::define(self.module, self.builder, self.context);
-        }
-
         self.predefine_functions();
 
         while !self.is_end() {
@@ -83,13 +65,13 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
     fn codegen(&mut self, instr: &'ctx Instruction<'ctx>) -> Instruction<'ctx> {
         match instr {
             Instruction::Block { stmts, .. } => {
-                self.objects.push();
+                self.compiler_objects.push();
 
                 stmts.iter().for_each(|instr| {
                     self.codegen(instr);
                 });
 
-                self.objects.pop();
+                self.compiler_objects.pop();
 
                 Instruction::Null
             }
@@ -99,7 +81,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                 is_string,
                 free_only,
             } => {
-                let var: PointerValue<'ctx> = self.objects.find_and_get(name).unwrap();
+                let var: PointerValue<'ctx> = self.compiler_objects.find_and_get(name).unwrap();
 
                 if *is_string && !free_only {
                     self.builder
@@ -190,7 +172,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                     instr,
                     &[],
                     false,
-                    &self.objects,
+                    &self.compiler_objects,
                 );
                 Instruction::Null
             }
@@ -223,7 +205,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                     name,
                     kind,
                     value,
-                    &mut self.objects,
+                    &mut self.compiler_objects,
                     self.function.unwrap(),
                 );
 
@@ -235,7 +217,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                     self.module,
                     self.builder,
                     self.context,
-                    &mut self.objects,
+                    &mut self.compiler_objects,
                     name,
                     kind,
                     value,
@@ -250,7 +232,8 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                 index,
                 ..
             } => {
-                let variable: PointerValue<'ctx> = self.objects.find_and_get(origin_name).unwrap();
+                let variable: PointerValue<'ctx> =
+                    self.compiler_objects.find_and_get(origin_name).unwrap();
 
                 let value: IntValue<'_> = self
                     .builder
@@ -286,7 +269,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                 op,
                 right,
                 kind,
-                &self.objects,
+                &self.compiler_objects,
                 self.function.unwrap(),
             )),
 
@@ -295,7 +278,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                 self.builder,
                 self.context,
                 instr,
-                &self.objects,
+                &self.compiler_objects,
                 self.function.unwrap(),
             )),
 
@@ -312,14 +295,14 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
             }
 
             Instruction::Call { name, args, kind } => {
-                functions::compile_call(
+                function::compile_call(
                     self.module,
                     self.builder,
                     self.context,
                     name,
                     args,
                     kind,
-                    &self.objects,
+                    &self.compiler_objects,
                 );
 
                 Instruction::Null
@@ -369,7 +352,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                         instr,
                         instrs,
                         false,
-                        &self.objects,
+                        &self.compiler_objects,
                     )
                     .into(),
                 );
@@ -380,7 +363,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                     self.context,
                     name,
                     kind,
-                    &mut self.objects,
+                    &mut self.compiler_objects,
                 ));
             }
 
@@ -413,7 +396,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
         }
 
         if let Instruction::Indexe { origin, index, .. } = instr {
-            let var: PointerValue<'ctx> = self.objects.find_and_get(origin).unwrap();
+            let var: PointerValue<'ctx> = self.compiler_objects.find_and_get(origin).unwrap();
 
             let char: IntValue<'_> = self
                 .builder
@@ -444,7 +427,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                     instr,
                     &[],
                     true,
-                    &self.objects,
+                    &self.compiler_objects,
                 )))
                 .unwrap();
 
@@ -472,7 +455,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
         if let Instruction::RefVar { name, .. } = instr {
             if let DataTypes::String = kind {
                 self.builder
-                    .build_return(Some(&self.objects.find_and_get(name).unwrap()))
+                    .build_return(Some(&self.compiler_objects.find_and_get(name).unwrap()))
                     .unwrap();
 
                 return;
@@ -483,7 +466,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                     .builder
                     .build_load(
                         utils::datatype_integer_to_llvm_type(self.context, kind),
-                        self.objects.find_and_get(name).unwrap(),
+                        self.compiler_objects.find_and_get(name).unwrap(),
                         "",
                     )
                     .unwrap()
@@ -499,7 +482,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                     .builder
                     .build_load(
                         utils::datatype_float_to_llvm_type(self.context, kind),
-                        self.objects.find_and_get(name).unwrap(),
+                        self.compiler_objects.find_and_get(name).unwrap(),
                         "",
                     )
                     .unwrap()
@@ -530,7 +513,8 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
             self.module
                 .add_function(external_name, kind, Some(Linkage::External));
 
-        self.objects.insert_function(function.0, llvm_function);
+        self.compiler_objects
+            .insert_function(function.0, llvm_function);
     }
 
     fn compile_function(
@@ -563,14 +547,12 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
 
             self.function = Some(function);
 
-            self.objects.insert_function(name, function);
+            self.compiler_objects.insert_function(name, function);
 
             return;
         }
 
         let function: FunctionValue<'ctx> = self.module.get_function(name).unwrap();
-
-        // self.function = Some(function);
 
         let entry: BasicBlock = self.context.append_basic_block(function, "");
 
@@ -589,9 +571,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
             .build_alloca(self.context.i8_type(), "")
             .unwrap();
 
-        let store: InstructionValue<'ctx> = self.builder.build_store(char, value).unwrap();
-
-        store.set_alignment(4).unwrap();
+        self.builder.build_store(char, value).unwrap();
 
         char
     }
