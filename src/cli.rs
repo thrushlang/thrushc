@@ -411,7 +411,7 @@ impl Cli {
             style("•").bold(),
             style("--include").bold().fg(Color::Rgb(141, 141, 142)),
             style("-include").bold().fg(Color::Rgb(141, 141, 142)),
-            style("Include a Native API Code in the IR.").bold()
+            style("Include a native api code in the IR.").bold()
         );
 
         println!(
@@ -486,7 +486,7 @@ impl Cli {
             style("•").bold(),
             style("--args [str]").bold().fg(Color::Rgb(141, 141, 142)),
             style("-args [str]").bold().fg(Color::Rgb(141, 141, 142)),
-            style("Pass more arguments to the Backend Compiler.").bold()
+            style("Pass more arguments to the backend compiler.").bold()
         );
 
         println!("{}", style("\nUseful Flags:\n").bold());
@@ -500,7 +500,7 @@ impl Cli {
             style("-emit-natives-apart")
                 .bold()
                 .fg(Color::Rgb(141, 141, 142)),
-            style("Emit the LLVM IR or Assembler output of the Natives APIs in another folter called \"/natives/\".")
+            style("Emit the llvm ir or assembler output of the Natives APIs in another folter called \"natives\".")
                 .bold()
         );
 
