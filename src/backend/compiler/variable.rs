@@ -2,7 +2,7 @@
 
 use {
     super::{
-        super::super::frontend::lexer::DataTypes, codegen, function, general,
+        super::super::frontend::lexer::DataTypes, binaryop, codegen, function,
         objects::CompilerObjects, utils, Instruction,
     },
     inkwell::{
@@ -27,23 +27,20 @@ pub fn compile<'ctx>(
 ) {
     let ptr: PointerValue<'_> = utils::build_ptr(context, builder, *kind);
 
-    match kind {
-        kind if kind.is_integer() => {
-            compile_integer_var(
-                module, builder, context, value, kind, name, objects, function, ptr,
-            );
-        }
-        kind if kind.is_float() => {
-            compile_float_var(
-                module, builder, context, value, kind, name, objects, function, ptr,
-            );
-        }
+    if kind.is_integer() {
+        compile_integer_var(
+            module, builder, context, value, kind, name, objects, function, ptr,
+        );
+    }
 
-        DataTypes::String => {
-            compile_string_var(module, builder, context, name, value, objects, function);
-        }
+    if kind.is_float() {
+        compile_float_var(
+            module, builder, context, value, kind, name, objects, function, ptr,
+        );
+    }
 
-        _ => todo!(),
+    if *kind == DataTypes::String {
+        compile_string_var(module, builder, context, name, value, objects, function);
     }
 }
 
@@ -299,7 +296,7 @@ fn compile_string_var<'ctx>(
     {
         objects.insert(
             name.to_string(),
-            general::compile_binary_op(
+            binaryop::compile_binary_op(
                 module, builder, context, left, op, right, kind, objects, function,
             )
             .into_pointer_value(),
@@ -413,7 +410,7 @@ fn compile_integer_var<'ctx>(
         left, op, right, ..
     } = value
     {
-        let mut result: BasicValueEnum<'_> = general::compile_binary_op(
+        let mut result: BasicValueEnum<'_> = binaryop::compile_binary_op(
             module, builder, context, left, op, right, kind, objects, function,
         );
 
@@ -425,6 +422,7 @@ fn compile_integer_var<'ctx>(
                 result.into_struct_value(),
                 value.get_binary_data_types(),
                 function,
+                None,
             )
         }
 
@@ -517,7 +515,7 @@ fn compile_float_var<'ctx>(
         left, op, right, ..
     } = value
     {
-        let result: FloatValue<'_> = general::compile_binary_op(
+        let result: FloatValue<'_> = binaryop::compile_binary_op(
             module, builder, context, left, op, right, kind, objects, function,
         )
         .into_float_value();

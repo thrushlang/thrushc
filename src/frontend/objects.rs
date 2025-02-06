@@ -86,6 +86,7 @@ impl<'instr> ParserObjects<'instr> {
                 name
             ),
             line,
+            String::new(),
         ))
     }
 
@@ -133,10 +134,10 @@ impl<'instr> ParserObjects<'instr> {
         }
     }
 
-    pub fn create_deallocators(&mut self, in_scope_pos: usize) -> Vec<Instruction<'instr>> {
+    pub fn create_deallocators(&mut self, at_scope_pos: usize) -> Vec<Instruction<'instr>> {
         let mut frees: Vec<Instruction> = Vec::new();
 
-        self.locals[in_scope_pos].iter_mut().for_each(|stmt| {
+        self.locals[at_scope_pos].iter_mut().for_each(|stmt| {
             if let (_, (DataTypes::String, false, false, free_only, 0..10)) = stmt {
                 frees.push(Instruction::Free {
                     name: stmt.0,
@@ -151,17 +152,15 @@ impl<'instr> ParserObjects<'instr> {
         frees
     }
 
-    pub fn merge(&mut self, other_objects: ParserObjects<'instr>) {
+    pub fn merge_globals(&mut self, other_objects: ParserObjects<'instr>) {
         self.globals.extend(other_objects.globals);
     }
 
-    pub fn decrease_local_references(&mut self, in_scope_pos: usize) {
-        // self.locals.iter_mut().for_each(|scope| {
-        self.locals[in_scope_pos].values_mut().for_each(|variable| {
+    pub fn decrease_local_references(&mut self, at_scope_pos: usize) {
+        self.locals[at_scope_pos].values_mut().for_each(|variable| {
             if variable.4 > 0 {
                 variable.4 -= 1;
             }
         });
-        //});
     }
 }

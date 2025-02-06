@@ -79,16 +79,6 @@ pub struct ThrushFile {
     pub is_main: bool,
 }
 
-impl ThrushFile {
-    pub fn new(name: String, path: PathBuf, is_main: bool) -> Self {
-        Self {
-            name,
-            path,
-            is_main,
-        }
-    }
-}
-
 #[derive(Debug)]
 pub struct CompilerOptions {
     pub output: String,

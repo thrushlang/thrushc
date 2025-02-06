@@ -36,20 +36,9 @@ impl Diagnostic {
         }
     }
 
-    pub fn report(&mut self, error: &ThrushError, log_type: LogType) {
+    pub fn report(&mut self, error: &ThrushError, logtype: LogType, show_only_example: bool) {
         if let ThrushError::Scope(
             ThrushErrorKind::UnreachableVariable | ThrushErrorKind::ObjectNotDefined,
-            title,
-            help,
-            line,
-        )
-        | ThrushError::Parse(
-            ThrushErrorKind::ParsedNumber
-            | ThrushErrorKind::UnreachableNumber
-            | ThrushErrorKind::SyntaxError
-            | ThrushErrorKind::UnreachableVariable
-            | ThrushErrorKind::ObjectNotDefined
-            | ThrushErrorKind::VariableNotDeclared,
             title,
             help,
             line,
@@ -64,36 +53,102 @@ impl Diagnostic {
             line,
         ) = error
         {
-            self.print_report(title, help, *line, log_type);
+            self.print_report(title, help, *line, logtype, None, show_only_example);
+        }
+
+        if let ThrushError::Parse(
+            ThrushErrorKind::ParsedNumber
+            | ThrushErrorKind::UnreachableNumber
+            | ThrushErrorKind::SyntaxError
+            | ThrushErrorKind::UnreachableVariable
+            | ThrushErrorKind::ObjectNotDefined
+            | ThrushErrorKind::VariableNotDeclared
+            | ThrushErrorKind::MissingEntryPoint,
+            title,
+            help,
+            line,
+            example,
+        ) = error
+        {
+            self.print_report(
+                title,
+                help,
+                *line,
+                logtype,
+                (!example.is_empty()).then_some(example),
+                show_only_example,
+            );
         }
     }
 
-    fn print_report(&mut self, title: &str, help: &str, line: usize, log_type: LogType) {
-        self.print_header(line, title, log_type);
+    fn print_report(
+        &mut self,
+        title: &str,
+        help: &str,
+        line: usize,
+        logtype: LogType,
+        example: Option<&String>,
+        show_only_example: bool,
+    ) {
+        self.print_header(line, title, logtype, show_only_example);
 
-        let content: &str = if line > self.lines.len() - 1 {
-            self.lines.last().unwrap().trim()
-        } else {
-            self.lines[line - 1].trim()
-        };
+        if !show_only_example {
+            let content: &str = if line > self.lines.len() - 1 {
+                self.lines.last().unwrap().trim()
+            } else {
+                self.lines[line - 1].trim()
+            };
 
-        self.buffer.push_str("  ");
-        self.drawer.push_str(&format!("{} | ^ ", line));
-        self.buffer.push_str(&format!("{}\n", content));
+            self.buffer.push_str(" > ");
+            self.drawer.push_str(&format!("{} | ^ ", line));
+            self.buffer.push_str(&format!("{}\n", content));
 
-        println!("|\n|");
+            println!("|\n|");
 
-        for _ in 0..content.len() + 6 {
-            self.drawer
-                .push_str(style("─").bright_red().to_string().as_str());
+            for _ in 0..content.len() + 6 {
+                self.drawer
+                    .push_str(style("─").bright_red().to_string().as_str());
+            }
+
+            self.buffer.push_str(&self.drawer);
+
+            println!("{}", self.buffer);
+
+            self.drawer.clear();
+            self.buffer.clear();
         }
 
-        self.buffer.push_str(&self.drawer);
+        if let Some(example) = example {
+            if !show_only_example {
+                println!("\n{}\n", style("Example").bold().bright_green());
+            } else {
+                println!("{}\n", style("Example").bold().bright_green());
+            }
 
-        println!("{}", self.buffer);
+            self.buffer.push_str(" > ");
 
-        self.drawer.clear();
-        self.buffer.clear();
+            if !show_only_example {
+                self.drawer.push_str(&format!("{} | ", line));
+            } else {
+                self.drawer.push_str("  | ");
+            }
+
+            self.buffer.push_str(&format!("{}\n", example));
+
+            println!("|\n|");
+
+            for _ in 0..example.len() + 6 {
+                self.drawer
+                    .push_str(style("─").bright_green().to_string().as_str());
+            }
+
+            self.buffer.push_str(&self.drawer);
+
+            println!("{}", self.buffer);
+
+            self.drawer.clear();
+            self.buffer.clear();
+        }
 
         println!(
             "\n{}{} {}\n",
@@ -103,17 +158,33 @@ impl Diagnostic {
         );
     }
 
-    fn print_header(&mut self, line: usize, title: &str, log_type: LogType) {
-        println!(
-            "{} - {}\n",
-            format_args!(
+    fn print_header(
+        &mut self,
+        line: usize,
+        title: &str,
+        logtype: LogType,
+        show_only_example: bool,
+    ) {
+        if !show_only_example {
+            println!(
+                "{} - {}",
+                format_args!(
+                    "{}",
+                    style(&self.path.to_string_lossy()).bold().bright_red()
+                ),
+                line
+            );
+        } else {
+            println!(
                 "{}",
-                style(&self.path.to_string_lossy()).bold().bright_red()
-            ),
-            line
-        );
+                format_args!(
+                    "{}",
+                    style(&self.path.to_string_lossy()).bold().bright_red()
+                )
+            );
+        }
 
-        println!("{} {}\n", log_type.to_styled(), title);
+        println!("\n{} {}\n", logtype.to_styled(), title);
     }
 }
 

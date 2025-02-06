@@ -1,7 +1,7 @@
 use {
     super::{
         super::frontend::lexer::{DataTypes, TokenKind},
-        compiler::{general, objects::CompilerObjects},
+        compiler::{binaryop, objects::CompilerObjects},
     },
     inkwell::{
         builder::Builder,
@@ -296,11 +296,12 @@ impl<'ctx> Instruction<'ctx> {
         context: &'ctx Context,
         locals: &CompilerObjects<'ctx>,
         function: FunctionValue<'ctx>,
+        kind: &'ctx DataTypes,
     ) -> BasicValueEnum<'ctx> {
         let instr: (&Instruction<'_>, &TokenKind, &Instruction<'_>, &DataTypes) = self.as_binary();
 
-        general::compile_binary_op(
-            module, builder, context, instr.0, instr.1, instr.2, instr.3, locals, function,
+        binaryop::compile_binary_op(
+            module, builder, context, instr.0, instr.1, instr.2, kind, locals, function,
         )
     }
 

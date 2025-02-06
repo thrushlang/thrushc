@@ -10,7 +10,7 @@ use {
         builder::Builder,
         context::Context,
         module::Module,
-        values::{BasicValueEnum, FloatValue, FunctionValue, IntValue, PointerValue, StructValue},
+        values::{BasicValueEnum, FloatValue, FunctionValue, IntValue, PointerValue},
     },
 };
 
@@ -50,15 +50,13 @@ pub fn compile_binary_op<'ctx>(
             }
 
             if let TokenKind::Slash = op {
-                if *signed_one || *signed_two {
-                    return builder
-                        .build_int_signed_div(left_num, right_num, "")
-                        .unwrap()
-                        .into();
-                }
+                return builder
+                    .build_int_signed_div(left_num, right_num, "")
+                    .unwrap()
+                    .into();
             }
 
-            utils::build_overflow(module, builder, kind, op, left_num, right_num)
+            utils::build_overflow_structure(module, builder, kind, op, left_num, right_num)
         }
 
         (
@@ -376,7 +374,7 @@ pub fn compile_binary_op<'ctx>(
                     .into();
             }
 
-            utils::build_overflow(module, builder, kind, op, left_num, right_num)
+            utils::build_overflow_structure(module, builder, kind, op, left_num, right_num)
         }
 
         (
@@ -437,6 +435,7 @@ pub fn compile_binary_op<'ctx>(
                     left_num.into_struct_value(),
                     left.get_binary_data_types(),
                     function,
+                    None,
                 )
             }
 
@@ -450,14 +449,16 @@ pub fn compile_binary_op<'ctx>(
             }
 
             match op {
-                TokenKind::Plus | TokenKind::Minus | TokenKind::Arith => utils::build_overflow(
-                    module,
-                    builder,
-                    kind,
-                    op,
-                    left_num.into_int_value(),
-                    right_num,
-                ),
+                TokenKind::Plus | TokenKind::Minus | TokenKind::Arith => {
+                    utils::build_overflow_structure(
+                        module,
+                        builder,
+                        kind,
+                        op,
+                        left_num.into_int_value(),
+                        right_num,
+                    )
+                }
                 TokenKind::EqEq
                 | TokenKind::BangEq
                 | TokenKind::Less
@@ -540,7 +541,7 @@ pub fn compile_binary_op<'ctx>(
             | DataTypes::F64,
         ) => {
             let mut left: BasicValueEnum<'ctx> =
-                left.compile_group_as_binary(module, builder, context, objects, function);
+                left.compile_group_as_binary(module, builder, context, objects, function, kind);
 
             if left.is_struct_value() {
                 left = utils::build_possible_overflow(
@@ -550,11 +551,12 @@ pub fn compile_binary_op<'ctx>(
                     left.into_struct_value(),
                     instr_one.get_binary_data_types(),
                     function,
+                    Some(kind),
                 )
             }
 
             let mut right: BasicValueEnum<'ctx> =
-                right.compile_group_as_binary(module, builder, context, objects, function);
+                right.compile_group_as_binary(module, builder, context, objects, function, kind);
 
             if right.is_struct_value() {
                 right = utils::build_possible_overflow(
@@ -564,6 +566,7 @@ pub fn compile_binary_op<'ctx>(
                     right.into_struct_value(),
                     instr_two.get_binary_data_types(),
                     function,
+                    Some(kind),
                 )
             }
 
@@ -606,14 +609,16 @@ pub fn compile_binary_op<'ctx>(
                     .unwrap()
                     .into(),
 
-                TokenKind::Plus | TokenKind::Minus | TokenKind::Arith => utils::build_overflow(
-                    module,
-                    builder,
-                    kind,
-                    op,
-                    left.into_int_value(),
-                    right.into_int_value(),
-                ),
+                TokenKind::Plus | TokenKind::Minus | TokenKind::Arith => {
+                    utils::build_overflow_structure(
+                        module,
+                        builder,
+                        kind,
+                        op,
+                        left.into_int_value(),
+                        right.into_int_value(),
+                    )
+                }
                 _ => unreachable!(),
             }
         }
@@ -633,7 +638,7 @@ pub fn compile_binary_op<'ctx>(
             DataTypes::Bool,
         ) => {
             let mut left_compiled: BasicValueEnum<'ctx> =
-                right.compile_group_as_binary(module, builder, context, objects, function);
+                right.compile_group_as_binary(module, builder, context, objects, function, kind);
 
             if left_compiled.is_struct_value() {
                 left_compiled = utils::build_possible_overflow(
@@ -643,6 +648,7 @@ pub fn compile_binary_op<'ctx>(
                     left_compiled.into_struct_value(),
                     instr_two.get_binary_data_types(),
                     function,
+                    None,
                 )
             }
 
@@ -658,20 +664,25 @@ pub fn compile_binary_op<'ctx>(
                     right.into_struct_value(),
                     left.get_binary_data_types(),
                     function,
+                    None,
                 )
             }
 
-            match op {
-                TokenKind::And => builder
+            if let TokenKind::And = op {
+                return builder
                     .build_and(left_compiled.into_int_value(), right.into_int_value(), "")
                     .unwrap()
-                    .into(),
-                TokenKind::Or => builder
+                    .into();
+            }
+
+            if let TokenKind::Or = op {
+                return builder
                     .build_or(left_compiled.into_int_value(), right.into_int_value(), "")
                     .unwrap()
-                    .into(),
-                _ => unreachable!(),
+                    .into();
             }
+
+            unreachable!()
         }
 
         (
@@ -689,7 +700,7 @@ pub fn compile_binary_op<'ctx>(
             DataTypes::Bool,
         ) => {
             let mut left_compiled: BasicValueEnum<'ctx> =
-                left.compile_group_as_binary(module, builder, context, objects, function);
+                left.compile_group_as_binary(module, builder, context, objects, function, kind);
 
             if left_compiled.is_struct_value() {
                 left_compiled = utils::build_possible_overflow(
@@ -699,6 +710,7 @@ pub fn compile_binary_op<'ctx>(
                     left_compiled.into_struct_value(),
                     instr_one.get_binary_data_types(),
                     function,
+                    Some(kind),
                 )
             }
 
@@ -714,28 +726,33 @@ pub fn compile_binary_op<'ctx>(
                     right_compiled.into_struct_value(),
                     right.get_binary_data_types(),
                     function,
+                    Some(kind),
                 )
             }
 
-            match op {
-                TokenKind::And => builder
+            if let TokenKind::And = op {
+                return builder
                     .build_and(
                         left_compiled.into_int_value(),
                         right_compiled.into_int_value(),
                         "",
                     )
                     .unwrap()
-                    .into(),
-                TokenKind::Or => builder
+                    .into();
+            }
+
+            if let TokenKind::Or = op {
+                return builder
                     .build_or(
                         left_compiled.into_int_value(),
                         right_compiled.into_int_value(),
                         "",
                     )
                     .unwrap()
-                    .into(),
-                _ => unreachable!(),
+                    .into();
             }
+
+            unreachable!()
         }
 
         a => {
@@ -743,92 +760,4 @@ pub fn compile_binary_op<'ctx>(
             todo!()
         }
     }
-}
-
-pub fn compile_unary_op<'ctx>(
-    module: &Module<'ctx>,
-    builder: &Builder<'ctx>,
-    context: &'ctx Context,
-    instr: &Instruction<'ctx>,
-    objects: &CompilerObjects<'ctx>,
-    function: FunctionValue<'ctx>,
-) -> BasicValueEnum<'ctx> {
-    if let Instruction::Unary {
-        op, value, kind, ..
-    } = instr
-    {
-        if let (TokenKind::PlusPlus, Instruction::RefVar { name, kind, .. }, _) =
-            (op, &**value, kind)
-        {
-            let variable: PointerValue<'ctx> = objects.find_and_get(name).unwrap();
-
-            if kind.is_integer() {
-                let left_num: IntValue<'ctx> = builder
-                    .build_load(
-                        utils::datatype_integer_to_llvm_type(context, kind),
-                        variable,
-                        "",
-                    )
-                    .unwrap()
-                    .into_int_value();
-
-                let right_num: IntValue<'ctx> =
-                    utils::datatype_integer_to_llvm_type(context, kind).const_int(1, false);
-
-                let result: StructValue<'_> = match kind {
-                    DataTypes::I8 | DataTypes::I16 | DataTypes::I32 | DataTypes::I64 => builder
-                        .build_call(
-                            module
-                                .get_function(&format!(
-                                    "llvm.sadd.with.overflow.{}",
-                                    kind.as_llvm_identifier()
-                                ))
-                                .unwrap(),
-                            &[left_num.into(), right_num.into()],
-                            "",
-                        )
-                        .unwrap()
-                        .try_as_basic_value()
-                        .unwrap_left(),
-
-                    _ => unreachable!(),
-                }
-                .into_struct_value();
-
-                let result = utils::build_possible_overflow(
-                    module,
-                    context,
-                    builder,
-                    result,
-                    instr.get_unary_data_for_overflow(),
-                    function,
-                );
-
-                builder.build_store(variable, result).unwrap();
-
-                return result;
-            }
-
-            let left_num: FloatValue<'ctx> = builder
-                .build_load(
-                    utils::datatype_float_to_llvm_type(context, kind),
-                    variable,
-                    "",
-                )
-                .unwrap()
-                .into_float_value();
-
-            let right_num: FloatValue<'ctx> =
-                utils::datatype_float_to_llvm_type(context, kind).const_float(1.0);
-
-            let result: FloatValue<'ctx> =
-                builder.build_float_add(left_num, right_num, "").unwrap();
-
-            builder.build_store(variable, result).unwrap();
-
-            return result.into();
-        }
-    }
-
-    unreachable!()
 }

@@ -3,7 +3,7 @@ use {
     stylic::{style, Styled, Stylize},
 };
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Clone, Copy)]
 pub enum LogType {
     INFO,
     WARN,

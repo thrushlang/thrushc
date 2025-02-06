@@ -1,8 +1,9 @@
+pub mod binaryop;
 pub mod codegen;
 pub mod function;
-pub mod general;
 pub mod objects;
 pub mod options;
+pub mod unaryop;
 pub mod utils;
 pub mod variable;
 

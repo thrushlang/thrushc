@@ -4,7 +4,7 @@ use {
             backend::{compiler::options::ThrushFile, instruction::Instruction},
             diagnostic::Diagnostic,
             error::{ThrushError, ThrushErrorKind},
-            logging::{self, LogType},
+            logging::LogType,
             CORE_LIBRARY_PATH,
         }, preproccesadors::Import, lexer::{DataTypes, Lexer, Token, TokenKind}, objects::ParserObjects, scoper::ThrushScoper, type_checking
     }, std::{fs, mem, path::{Path, PathBuf}, process}
@@ -56,7 +56,7 @@ impl<'instr> Parser<'instr> {
     }
 
     pub fn start(&mut self) -> &[Instruction<'instr>]{
-        self.declare_functions_previous();
+        self.declare_functions();
 
         while !self.end() {
             if let TokenKind::Import = self.peek().kind {
@@ -81,16 +81,12 @@ impl<'instr> Parser<'instr> {
 
         if !self.errors.is_empty() {
             self.errors.iter().for_each(|error: &ThrushError| {
-                self.diagnostic.report(error, LogType::ERROR);
+                self.diagnostic.report(error, LogType::ERROR, false);
             });
 
             process::exit(1);
         } else if self.is_main && !self.has_entry_point {
-            logging::log(
-                logging::LogType::ERROR,
-                "Missing entrypoint \"fn main() {}\" in main.th file. Write \"fn main() {}\" in the line one first.",
-            );
-
+            self.diagnostic.report(&ThrushError::Parse(ThrushErrorKind::MissingEntryPoint, String::from("Missing EntryPoint"), String::from("Write the entrypoint for this thrush main file."), 0, String::from("fn main() { ... }")), LogType::ERROR, true);
             process::exit(1);
         }
 
@@ -126,6 +122,7 @@ impl<'instr> Parser<'instr> {
                     "The imports must go in the global scope. Rewrite it in the global scope.",
                 ),
                 self.previous().line,
+                String::new()
             ));
         }
 
@@ -169,7 +166,8 @@ impl<'instr> Parser<'instr> {
 
         if path.starts_with("core") && path.split("").filter(|c| *c == ".").count() >= 1 && !path_converted.exists() {
             if !CORE_LIBRARY_PATH.contains_key(path) {
-                self.errors.push(ThrushError::Parse(ThrushErrorKind::SyntaxError, String::from("Import Error"), String::from("This module don't exist in Thrush Core Library."), line));
+                self.errors.push(ThrushError::Parse(ThrushErrorKind::SyntaxError, String::from("Import Error"), String::from("This module not exist in Thrush Core Library."), line, String::new()));
+                return Ok(());
             }
 
             let library: &(String, String) = CORE_LIBRARY_PATH.get(path).unwrap();
@@ -180,7 +178,7 @@ impl<'instr> Parser<'instr> {
             name.clone_from(&library.0);
             path.clone_from(&library.1);
 
-            let file: ThrushFile = ThrushFile::new(name, PathBuf::from(path), false);
+            let file: ThrushFile = ThrushFile { name, path: PathBuf::from(path), is_main: false};
 
             let content: String = fs::read_to_string(&file.path).unwrap();
 
@@ -188,33 +186,37 @@ impl<'instr> Parser<'instr> {
             let imports: (Vec<Instruction<'_>>, ParserObjects<'_>) = Import::generate(tokens, &file);
 
             self.stmts.extend_from_slice(&imports.0);
-            self.parser_objects.merge(imports.1);
+            self.parser_objects.merge_globals(imports.1);
 
             return Ok(());
         }
 
         if path_converted.exists() {
             if path_converted.is_dir() {
-                self.errors.push(ThrushError::Parse(ThrushErrorKind::SyntaxError, String::from("Import Error"), String::from("A path to directory is don't able to import."), line));
+                self.errors.push(ThrushError::Parse(ThrushErrorKind::SyntaxError, String::from("Import Error"), String::from("A path to directory is don't able to import."), line, String::from("@import(\"dir/to/file.th\");")));
                 return Ok(());
             }
 
             if path_converted.extension().is_none() {
-                self.errors.push(ThrushError::Parse(ThrushErrorKind::SyntaxError, String::from("Import Error"), String::from("The file should contain a extension (*.th)."), line));
+                self.errors.push(ThrushError::Parse(ThrushErrorKind::SyntaxError, String::from("Import Error"), String::from("The file should contain a extension (*.th)."), line, String::from("@import(\"only/th/extension/file.th\");")));
                 return Ok(()); 
             }
 
             if path_converted.extension().unwrap() != "th" {
-                self.errors.push(ThrushError::Parse(ThrushErrorKind::SyntaxError, String::from("Import Error"), String::from("Only Thrush Header Files are allowed to been imported."), line));
+                self.errors.push(ThrushError::Parse(ThrushErrorKind::SyntaxError, String::from("Import Error"), String::from("Only thrush files (*.th) are allowed to been imported."), line, String::from("@import(\"only/thrush/files/file.th\");")));
                 return Ok(());
             }
 
             if path_converted.file_name().is_none() {
-                self.errors.push(ThrushError::Parse(ThrushErrorKind::SyntaxError, String::from("Import Error"), String::from("The file should contain a name (<mythfile>.th)."), line));
+                self.errors.push(ThrushError::Parse(ThrushErrorKind::SyntaxError, String::from("Import Error"), String::from("The file should contain a name (<mythfile>.th)."), line, String::from("@import(\"only/valid/files/file.th\");")));
                 return Ok(());
             }
 
-            let file: ThrushFile = ThrushFile::new(path_converted.file_name().unwrap().to_string_lossy().to_string(), path_converted.to_path_buf(), false);
+            let file: ThrushFile = ThrushFile {
+                name: path_converted.file_name().unwrap().to_string_lossy().to_string(), 
+                path: path_converted.to_path_buf(), 
+                is_main: false
+            };
 
             let content: String = fs::read_to_string(&file.path).unwrap();
 
@@ -222,18 +224,19 @@ impl<'instr> Parser<'instr> {
             let imports: (Vec<Instruction<'_>>, ParserObjects<'_>) = Import::generate(tokens, &file);
 
             self.stmts.extend_from_slice(&imports.0);
-            self.parser_objects.merge(imports.1);
+            self.parser_objects.merge_globals(imports.1);
 
             return Ok(());
         }
 
         Err(ThrushError::Parse(
             ThrushErrorKind::SyntaxError,
-            String::from("Import don't found"),
+            String::from("Import not found"),
             String::from(
-                "The import don't found in the system or std or core library.",
+                "The import not found in the system or std or core library.",
             ),
             line,
+            String::new()
         ))
     }
 
@@ -343,6 +346,7 @@ impl<'instr> Parser<'instr> {
                     String::from("Expected Variable Type"),
                     String::from("Write the type: \"var name: --> type <-- = value;\"."),
                     line,
+                    format!("var {}: String = \"\";", name.lexeme.as_ref().unwrap())
                 ));
             }
         };
@@ -357,6 +361,7 @@ impl<'instr> Parser<'instr> {
                     "Variable type is undefined. Did you forget to specify the variable type to undefined variable? Like \"var thrush: --> string <--;\".",
                 ),
                 line,
+                format!("var {}: String;", name.lexeme.as_ref().unwrap())
             ));
         } else if self.peek().kind == TokenKind::SemiColon {
             self.consume(
@@ -455,7 +460,8 @@ impl<'instr> Parser<'instr> {
                 ThrushErrorKind::SyntaxError,
                 String::from("Syntax Error"),
                 String::from("Return statement outside of function. Invoke this keyword in scope of function."),
-                line
+                line,
+                String::from("fn myfunction(): i32 {\n return 0;\n}")
             ));
         }
 
@@ -474,6 +480,7 @@ impl<'instr> Parser<'instr> {
                     String::from("Syntax Error"),
                     format!("Missing return statement with correctly type '{}', you should rewrite for return with type '{}'.", self.in_type_function, self.in_type_function),
                     line,
+                    String::new()
                 ));
             }
 
@@ -497,6 +504,7 @@ impl<'instr> Parser<'instr> {
                 String::from("Syntax Error"),
                 format!("Missing function type indicator with type '{}', you should add a correct function type indicator with type '{}'.", value.get_data_type(), value.get_data_type()),
                 line,
+                String::new()
             ));
         }
 
@@ -549,6 +557,7 @@ impl<'instr> Parser<'instr> {
                         String::from("Unreacheable Deallocation"),
                         String::from("The char should be stored in a variable and pass it variable to the return."),
                         line,
+                        String::from("var a: String = \"hello\";\nvar b: char = a[0];\nreturn b;"),
                     ));
                 }
 
@@ -587,6 +596,7 @@ impl<'instr> Parser<'instr> {
                     "The functions must go in the global scope. Rewrite it in the global scope.",
                 ),
                 self.previous().line,
+                String::new()
             ));
         }
 
@@ -601,13 +611,13 @@ impl<'instr> Parser<'instr> {
         )?;
 
         if name.lexeme.as_ref().unwrap() == "main" && self.is_main {
-
             if self.has_entry_point {
                 self.errors.push(ThrushError::Parse(
                     ThrushErrorKind::SyntaxError,
                     String::from("Duplicated EntryPoint"),
                     String::from("The language not support two entrypoints, remove one."),
                     name.line,
+                    String::from("fn main() { ... }"),
                 ));
             }
 
@@ -633,6 +643,7 @@ impl<'instr> Parser<'instr> {
                     String::from("Syntax Error"),
                     String::from("Expected '{'."),
                     self.peek().line,
+                    String::new()
                 ));
             }
 
@@ -648,6 +659,7 @@ impl<'instr> Parser<'instr> {
                     String::from("Syntax Error"),
                     String::from("Expected 'block ({ ... })' for the function body."),
                     self.peek().line,
+                    String::new(),
                 ));
             }
         }
@@ -677,6 +689,7 @@ impl<'instr> Parser<'instr> {
                     String::from("Syntax Error"),
                     String::from("Expected argument name."),
                     name.line,
+                    String::from("hello :: type, "),
                 ));
             }
 
@@ -688,6 +701,7 @@ impl<'instr> Parser<'instr> {
                     String::from("Syntax Error"),
                     String::from("Expected '::'."),
                     name.line,
+                    format!("{} :: type, ", ident),
                 ));
             }
 
@@ -697,15 +711,18 @@ impl<'instr> Parser<'instr> {
 
                     *kind
                 }
-                _ => {
+                kind => {
                     self.errors.push(ThrushError::Parse(
                         ThrushErrorKind::SyntaxError,
                         String::from("Syntax Error"),
-                        String::from("Expected argument type."),
+                        format!("Expected valid argument type not \"{}\".", kind),
                         name.line,
+                        format!("{} :: String, ", ident),
                     ));
 
-                    DataTypes::Void
+                    self.only_advance()?;
+
+                    continue;
                 }
             };
 
@@ -730,11 +747,7 @@ impl<'instr> Parser<'instr> {
             _ => None,
         };
 
-        self.in_type_function = if let Some(kind) = return_kind {
-            kind
-        } else {
-            DataTypes::Void
-        };
+        self.in_type_function = return_kind.unwrap_or(DataTypes::Void);
 
         let mut function: Instruction<'_> =  Instruction::Function {
             name: name.lexeme.clone().unwrap(),
@@ -743,6 +756,7 @@ impl<'instr> Parser<'instr> {
             return_kind,
             is_public,
         };
+
 
         if self.match_token(TokenKind::SemiColon)? {
             self.in_function = false;
@@ -1049,6 +1063,7 @@ impl<'instr> Parser<'instr> {
                             "Group the expressions \"(...)\" is only allowed if contain binary expressions.",
                         ),
                         line,
+                        String::from("(T + T)")
                     ));
                 }
 
@@ -1179,6 +1194,7 @@ impl<'instr> Parser<'instr> {
                                     self.previous().lexeme.as_ref().unwrap(),
                                 ),
                                 line,
+                                String::new()
                             ));
                         }
 
@@ -1201,6 +1217,7 @@ impl<'instr> Parser<'instr> {
                             String::from("Syntax Error"),
                             String::from("Expected unsigned number for the build an indexe."),
                             self.previous().line,
+                            String::new()
                         ));
                     } else if self.match_token(TokenKind::Eq)? {
                         let expr: Instruction<'instr> = self.expression()?;
@@ -1257,7 +1274,8 @@ impl<'instr> Parser<'instr> {
                                 "Variable `{}` is not declared for are use it. Declare the variable before of the use.",
                                 name,
                             ),
-                            line
+                            line,
+                            String::new()
                         ));
                     }
 
@@ -1326,6 +1344,7 @@ impl<'instr> Parser<'instr> {
                             self.previous().lexeme.as_ref().unwrap(),
                         ),
                         self.previous().line,
+                        String::new(),
                     ));
 
                     Instruction::Null
@@ -1348,7 +1367,7 @@ impl<'instr> Parser<'instr> {
             return self.advance();
         }
 
-        Err(ThrushError::Parse(error_kind, error_title, help, line))
+        Err(ThrushError::Parse(error_kind, error_title, help, line, String::new()))
     }
 
     fn call(
@@ -1365,6 +1384,7 @@ impl<'instr> Parser<'instr> {
                     "The object called is don't a function. Call is only allowed for functions.",
                 ),
                 line,
+                String::from("fn myfunction() { ... }\n fn main() { myfunction(); }"),
             ));
         }
 
@@ -1412,6 +1432,7 @@ impl<'instr> Parser<'instr> {
                     args_types,
                 ),
                 line,
+                String::new(),
             ));
         }
 
@@ -1428,6 +1449,7 @@ impl<'instr> Parser<'instr> {
                             object.5[index], index, arg_kind
                         ),
                         line,
+                        String::new()
                     ));
                 }
     
@@ -1451,6 +1473,7 @@ impl<'instr> Parser<'instr> {
                     "Expected at least 1 argument for 'println' call. Like 'println(\"Hi!\");'",
                 ),
                 line,
+                String::new()
             ));
         } else if let Instruction::String(str, _) = &args[0] {
             let mut formats: usize = 0;
@@ -1467,6 +1490,7 @@ impl<'instr> Parser<'instr> {
                     String::from("Expected format"),
                     String::from("Missing format for argument or an argument. Should be like this println(\"{}\", arguments.size() == formatters.size());"),
                     line,
+                    String::new()
                 ));
             }
         }
@@ -1482,6 +1506,7 @@ impl<'instr> Parser<'instr> {
                                 "You can't print strings that contain newlines. Use 'println' instead.",
                             ),
                             self.peek().line,
+                            String::new()
                         ));
                     }
                 }
@@ -1490,7 +1515,7 @@ impl<'instr> Parser<'instr> {
     }
 
 
-    fn declare_functions_previous(&mut self) {
+    fn declare_functions(&mut self) {
         let mut functions_positions: Vec<usize> = Vec::new();
         let mut pos: usize = 0;
 
@@ -1506,11 +1531,11 @@ impl<'instr> Parser<'instr> {
         });
 
         functions_positions.iter().for_each(|index| {
-            let _ = self.predefine_function(*index);
+            let _ = self.declare_function(*index);
         });
     }
 
-    fn predefine_function(&mut self, index: usize) -> Result<(), ThrushError> {
+    fn declare_function(&mut self, index: usize) -> Result<(), ThrushError> {
         self.current = index;
 
         let is_external: bool = if self.current < 4 {
@@ -1557,23 +1582,8 @@ impl<'instr> Parser<'instr> {
                 continue;
             }
 
-            if !self.match_token(TokenKind::Identifier)? {
-                self.errors.push(ThrushError::Parse(
-                    ThrushErrorKind::SyntaxError,
-                    String::from("Syntax Error"),
-                    String::from("Expected argument name."),
-                    name.line,
-                ));
-            }
-
-            if !self.match_token(TokenKind::ColonColon)? {
-                self.errors.push(ThrushError::Parse(
-                    ThrushErrorKind::SyntaxError,
-                    String::from("Syntax Error"),
-                    String::from("Expected '::'."),
-                    name.line,
-                ));
-            }
+            self.match_token(TokenKind::Identifier)?;
+            self.match_token(TokenKind::ColonColon)?;
 
             let kind: DataTypes = match &self.peek().kind {
                 TokenKind::DataType(kind) => {
@@ -1582,14 +1592,9 @@ impl<'instr> Parser<'instr> {
                     *kind
                 }
                 _ => {
-                    self.errors.push(ThrushError::Parse(
-                        ThrushErrorKind::SyntaxError,
-                        String::from("Syntax Error"),
-                        String::from("Expected argument type."),
-                        name.line,
-                    ));
+                    self.only_advance()?;
 
-                    DataTypes::Void
+                    continue;
                 }
             };
 
@@ -1601,9 +1606,10 @@ impl<'instr> Parser<'instr> {
                 ThrushErrorKind::SyntaxError,
                 String::from("Syntax Error"),
                 String::from(
-                    "Pass statement \"(...)\" in functions is only allowed in external funtions.",
+                    "Ignore statement \"...\" in functions is only allowed for external functions.",
                 ),
                 name.line,
+                String::new()
             ));
         }
 
@@ -1654,8 +1660,8 @@ impl<'instr> Parser<'instr> {
             ThrushErrorKind::SyntaxError,
             String::from("Undeterminated Code"),
             String::from("The code has ended abruptly and without any order, review the code and write the syntax correctly."),
-
             self.previous().line,
+            String::new()
         ))
     }
 
@@ -1669,8 +1675,8 @@ impl<'instr> Parser<'instr> {
             ThrushErrorKind::SyntaxError,
             String::from("Undeterminated Code"),
             String::from("The code has ended abruptly and without any order, review the code and write the syntax correctly."),
-
             self.previous().line,
+            String::new()
         ))
     }
 

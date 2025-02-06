@@ -42,7 +42,6 @@ pub fn datatype_float_to_llvm_type<'ctx>(
     match kind {
         DataTypes::F32 => context.f32_type(),
         DataTypes::F64 => context.f64_type(),
-
         _ => unreachable!(),
     }
 }
@@ -55,7 +54,6 @@ pub fn build_const_float<'ctx>(
     match kind {
         DataTypes::F32 => context.f32_type().const_float(num),
         DataTypes::F64 => context.f64_type().const_float(num),
-
         _ => unreachable!(),
     }
 }
@@ -77,7 +75,6 @@ pub fn build_const_integer<'ctx>(
         DataTypes::I64 if is_signed => context.i64_type().const_int(num, is_signed).const_neg(),
         DataTypes::I64 => context.i64_type().const_int(num, is_signed),
         DataTypes::Bool => context.bool_type().const_int(num, false),
-
         _ => unreachable!(),
     }
 }
@@ -229,7 +226,8 @@ pub fn integer_autocast<'ctx>(
     builder: &Builder<'ctx>,
     context: &'ctx Context,
 ) -> Option<BasicValueEnum<'ctx>> {
-    if kind == target {
+    if kind == target || (*target == DataTypes::Bool && (target.is_float() || target.is_integer()))
+    {
         return None;
     }
 
@@ -262,7 +260,15 @@ pub fn integer_autocast<'ctx>(
                 "",
             )
             .unwrap();
-    } else {
+    }
+    /* else if kind != target && from.is_struct_value() {
+        let extracted_integer: BasicValueEnum<'ctx> = builder
+            .build_extract_value(from.into_struct_value(), 0, "")
+            .unwrap();
+
+        return integer_autocast(kind, target, ptr, extracted_integer, builder, context);
+    } */
+    else {
         builder.build_store(ptr.unwrap(), from).unwrap();
         return None;
     }
@@ -422,6 +428,7 @@ pub fn build_possible_overflow<'ctx>(
     result: StructValue<'ctx>,
     instr_data_types: (DataTypes, &TokenKind, DataTypes, usize),
     current_function: FunctionValue<'ctx>,
+    target: Option<&DataTypes>,
 ) -> BasicValueEnum<'ctx> {
     let overflowed: IntValue<'_> = builder
         .build_extract_value(result, 1, "")
@@ -480,10 +487,41 @@ Details:
 
     builder.build_unreachable().unwrap();
     builder.position_at_end(false_block);
-    builder.build_extract_value(result, 0, "").unwrap()
+
+    let mut extracted: BasicValueEnum<'ctx> = builder.build_extract_value(result, 0, "").unwrap();
+
+    if let Some(target) = target {
+        if instr_data_types.0.is_integer() {
+            if let Some(new_compiled) = integer_autocast(
+                &instr_data_types.0,
+                target,
+                None,
+                extracted,
+                builder,
+                context,
+            ) {
+                extracted = new_compiled;
+            }
+        }
+
+        if instr_data_types.0.is_float() {
+            if let Some(new_compiled) = float_autocast(
+                &instr_data_types.0,
+                target,
+                None,
+                extracted,
+                builder,
+                context,
+            ) {
+                extracted = new_compiled;
+            }
+        }
+    }
+
+    extracted
 }
 
-pub fn build_overflow<'ctx>(
+pub fn build_overflow_structure<'ctx>(
     module: &Module<'ctx>,
     builder: &Builder<'ctx>,
     kind: &DataTypes,

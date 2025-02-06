@@ -41,7 +41,7 @@ impl<'a> Lexer<'a> {
 
         if !self.errors.is_empty() {
             self.errors.iter().for_each(|error| {
-                self.diagnostic.report(error, LogType::ERROR);
+                self.diagnostic.report(error, LogType::ERROR, false);
             });
        
             exit(1);
@@ -203,6 +203,9 @@ impl<'a> Lexer<'a> {
         let num: Result<f64, ParseFloatError> = self.lexeme().parse::<f64>();
 
         if num.is_err() {
+            let mut lexeme: String = self.lexeme();
+            lexeme.truncate(18);
+
             return Err(ThrushError::Parse(
                 ThrushErrorKind::ParsedNumber,
                 String::from("The number is too big for an integer or float."),
@@ -210,6 +213,7 @@ impl<'a> Lexer<'a> {
                     "Did you provide a valid number with the correct format and not out of bounds?",
                 ),
                 self.line,
+                format!("{};", lexeme),
             ));
         }
 
@@ -308,7 +312,7 @@ impl<'a> Lexer<'a> {
 
     pub fn eval_integer_or_float_type(
         &mut self,
-        lexeme: String,
+        mut lexeme: String,
     ) -> Result<(DataTypes, bool), ThrushError> {
 
         if lexeme.contains(".") {
@@ -326,11 +330,14 @@ impl<'a> Lexer<'a> {
                 return Ok((DataTypes::F64, false));
             } 
 
+            lexeme.truncate(18);
+
             return Err(ThrushError::Parse(
                 ThrushErrorKind::ParsedNumber,
                 String::from("The number is too big for an float."),
                 String::from("Did you provide a valid number with the correct format and not out of bounds?"),
                 self.line,
+                format!("{};", lexeme),
             ));
             
         }
@@ -341,21 +348,31 @@ impl<'a> Lexer<'a> {
                 -32728isize..=32767isize => Ok((DataTypes::I16, false)),
                 -2147483648isize..=2147483647isize => Ok((DataTypes::I32, false)),
                 -9223372036854775808isize..= 9223372036854775807isize => Ok((DataTypes::I64, false)),
-                _ => Err(ThrushError::Parse(
-                    ThrushErrorKind::UnreachableNumber,
-                    String::from("Unreacheable Number."),
-                    String::from("The size is out of bounds of an isize (0 to n)."),
-                    self.line,
-                )),
+                _ => {
+                    lexeme.truncate(18);
+                    
+                    Err(ThrushError::Parse(
+                        ThrushErrorKind::UnreachableNumber,
+                        String::from("Unreacheable Number."),
+                        String::from("The size is out of bounds of an isize (0 to n)."),
+                        self.line,
+                        format!("{};", lexeme),
+                    ))
+                }
             },
-            Err(_) => Err(ThrushError::Parse(
-                ThrushErrorKind::ParsedNumber,
-                String::from("Unreacheable Number"),
-                String::from(
-                    "Did you provide a valid number with the correct format and not out of bounds?",
-                ),
-                self.line,
-            )),
+            Err(_) => {
+                lexeme.truncate(18);
+
+                Err(ThrushError::Parse(
+                    ThrushErrorKind::ParsedNumber,
+                    String::from("Unreacheable Number"),
+                    String::from(
+                        "Did you provide a valid number with the correct format and not out of bounds?",
+                    ),
+                    self.line,
+                    format!("{};", lexeme),
+                ))
+            },
         }
     }
 

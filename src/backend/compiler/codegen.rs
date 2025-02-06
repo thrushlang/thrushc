@@ -4,9 +4,9 @@ use {
             super::frontend::lexer::{DataTypes, TokenKind},
             instruction::Instruction,
         },
-        function, general,
+        binaryop, function,
         objects::CompilerObjects,
-        utils, variable,
+        unaryop, utils, variable,
     },
     inkwell::{
         basic_block::BasicBlock,
@@ -261,7 +261,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                 right,
                 kind,
                 ..
-            } => Instruction::BasicValueEnum(general::compile_binary_op(
+            } => Instruction::BasicValueEnum(binaryop::compile_binary_op(
                 self.module,
                 self.builder,
                 self.context,
@@ -273,7 +273,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                 self.function.unwrap(),
             )),
 
-            Instruction::Unary { .. } => Instruction::BasicValueEnum(general::compile_unary_op(
+            Instruction::Unary { .. } => Instruction::BasicValueEnum(unaryop::compile_unary_op(
                 self.module,
                 self.builder,
                 self.context,

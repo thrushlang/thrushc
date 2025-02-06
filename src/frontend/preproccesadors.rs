@@ -51,7 +51,7 @@ impl<'instr> Import<'instr> {
 
         if !self.errors.is_empty() {
             self.errors.iter().for_each(|error: &ThrushError| {
-                self.diagnostic.report(error, LogType::ERROR);
+                self.diagnostic.report(error, LogType::ERROR, false);
             });
 
             process::exit(1);
@@ -88,6 +88,7 @@ impl<'instr> Import<'instr> {
                 String::from("Expected function name"),
                 String::from("Expected a name to the function."),
                 self.previous().line,
+                String::from("fn hello() {}"),
             )?
             .lexeme
             .clone()
@@ -99,6 +100,7 @@ impl<'instr> Import<'instr> {
             String::from("Syntax Error"),
             String::from("Expected '('."),
             line,
+            format!("{}(", name),
         )?;
 
         let mut params: Vec<Instruction> = Vec::new();
@@ -119,6 +121,7 @@ impl<'instr> Import<'instr> {
                     String::from("Syntax Error"),
                     String::from("Expected argument name."),
                     line,
+                    String::from("hello :: type, "),
                 ));
             }
 
@@ -130,6 +133,7 @@ impl<'instr> Import<'instr> {
                     String::from("Syntax Error"),
                     String::from("Expected '::'."),
                     line,
+                    format!("{} :: type, ", ident),
                 ));
             }
 
@@ -145,6 +149,7 @@ impl<'instr> Import<'instr> {
                         String::from("Syntax Error"),
                         String::from("Expected argument type."),
                         line,
+                        format!("{} :: type, ", ident),
                     ));
 
                     DataTypes::Void
@@ -162,6 +167,7 @@ impl<'instr> Import<'instr> {
                 String::from("Syntax Error"),
                 String::from("Missing return type. Expected ':' followed by return type."),
                 line,
+                format!("fn {}(...): type", name),
             )?;
         }
 
@@ -206,12 +212,19 @@ impl<'instr> Import<'instr> {
         error_title: String,
         help: String,
         line: usize,
+        suggest_code: String,
     ) -> Result<&Token, ThrushError> {
         if self.peek().kind == kind {
             return self.advance();
         }
 
-        Err(ThrushError::Parse(error_kind, error_title, help, line))
+        Err(ThrushError::Parse(
+            error_kind,
+            error_title,
+            help,
+            line,
+            suggest_code,
+        ))
     }
 
     fn match_token(&mut self, kind: TokenKind) -> bool {
@@ -247,6 +260,7 @@ impl<'instr> Import<'instr> {
             String::from("Undeterminated Code"),
             String::from("The code has ended abruptly and without any order, review the code and write the syntax correctly."),
             self.previous().line,
+            String::new()
         ))
     }
 

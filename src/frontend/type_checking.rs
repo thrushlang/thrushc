@@ -31,6 +31,7 @@ fn check_binary_instr_add(a: &DataTypes, b: &DataTypes, line: usize) -> Result<(
                 a, b
             ),
             line,
+            String::new(),
         )),
     }
 }
@@ -55,6 +56,7 @@ fn check_binary_instr_sub(a: &DataTypes, b: &DataTypes, line: usize) -> Result<(
             a, b
         ),
         line,
+        String::new(),
     ))
 }
 
@@ -78,6 +80,7 @@ fn check_binary_instr_div(a: &DataTypes, b: &DataTypes, line: usize) -> Result<(
             a, b
         ),
         line,
+        String::new(),
     ))
 }
 
@@ -101,6 +104,7 @@ fn check_binary_instr_mul(a: &DataTypes, b: &DataTypes, line: usize) -> Result<(
             a, b
         ),
         line,
+        String::new(),
     ))
 }
 
@@ -130,6 +134,7 @@ fn check_binary_instr_eqeq(a: &DataTypes, b: &DataTypes, line: usize) -> Result<
             a, b
         ),
         line,
+        String::new(),
     ))
 }
 
@@ -159,6 +164,7 @@ fn check_binary_instr_bangeq(a: &DataTypes, b: &DataTypes, line: usize) -> Resul
             a, b
         ),
         line,
+        String::new(),
     ))
 }
 
@@ -186,6 +192,7 @@ fn check_binary_instr_greater(
             a, b
         ),
         line,
+        String::new(),
     ))
 }
 
@@ -213,6 +220,7 @@ fn check_binary_instr_greatereq(
             a, b
         ),
         line,
+        String::new(),
     ))
 }
 
@@ -236,6 +244,7 @@ fn check_binary_instr_less(a: &DataTypes, b: &DataTypes, line: usize) -> Result<
             a, b
         ),
         line,
+        String::new(),
     ))
 }
 
@@ -259,6 +268,7 @@ fn check_binary_instr_lesseq(a: &DataTypes, b: &DataTypes, line: usize) -> Resul
             a, b
         ),
         line,
+        String::new(),
     ))
 }
 
@@ -276,6 +286,7 @@ fn check_binary_instr_and(a: &DataTypes, b: &DataTypes, line: usize) -> Result<(
             a, b
         ),
         line,
+        String::new(),
     ))
 }
 
@@ -301,6 +312,7 @@ fn check_binary_instr_or(a: &DataTypes, b: &DataTypes, line: usize) -> Result<()
             a, b
         ),
         line,
+        String::new(),
     ))
 }
 
@@ -357,6 +369,7 @@ fn check_unary_instr_negate(a: &DataTypes, line: usize) -> Result<(), ThrushErro
             a
         ),
         line,
+        String::new(),
     ))
 }
 
@@ -380,6 +393,7 @@ fn check_unary_instr_minusminus(a: &DataTypes, line: usize) -> Result<(), Thrush
             a, a
         ),
         line,
+        String::new(),
     ))
 }
 
@@ -403,6 +417,7 @@ fn check_unary_instr_plusplus(a: &DataTypes, line: usize) -> Result<(), ThrushEr
             a, a
         ),
         line,
+        String::new(),
     ))
 }
 
@@ -420,6 +435,7 @@ fn check_unary_instr_bang(a: &DataTypes, line: usize) -> Result<(), ThrushError>
             a
         ),
         line,
+        String::new(),
     ))
 }
 
@@ -457,6 +473,7 @@ pub fn check_type(
             title,
             desc,
             line,
+            String::new(),
         )),
     }
 }
