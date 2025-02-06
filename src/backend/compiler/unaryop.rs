@@ -1,26 +1,21 @@
 use {
     super::{
-        super::super::frontend::lexer::{DataTypes, TokenKind},
-        objects::CompilerObjects,
-        utils, Instruction,
+        super::super::frontend::lexer::TokenKind, objects::CompilerObjects, utils, Instruction,
     },
     inkwell::{
         builder::Builder,
         context::Context,
-        module::Module,
-        values::{BasicValueEnum, FloatValue, FunctionValue, IntValue, PointerValue, StructValue},
+        values::{BasicValueEnum, FloatValue, IntValue, PointerValue},
     },
 };
 
 pub fn compile_unary_op<'ctx>(
-    module: &Module<'ctx>,
     builder: &Builder<'ctx>,
     context: &'ctx Context,
     instr: &Instruction<'ctx>,
     objects: &CompilerObjects<'ctx>,
-    function: FunctionValue<'ctx>,
 ) -> BasicValueEnum<'ctx> {
-    if let Instruction::Unary {
+    if let Instruction::UnaryOp {
         op, value, kind, ..
     } = instr
     {
@@ -42,39 +37,12 @@ pub fn compile_unary_op<'ctx>(
                 let right_num: IntValue<'ctx> =
                     utils::datatype_integer_to_llvm_type(context, kind).const_int(1, false);
 
-                let result: StructValue<'_> = match kind {
-                    DataTypes::I8 | DataTypes::I16 | DataTypes::I32 | DataTypes::I64 => builder
-                        .build_call(
-                            module
-                                .get_function(&format!(
-                                    "llvm.sadd.with.overflow.{}",
-                                    kind.as_llvm_identifier()
-                                ))
-                                .unwrap(),
-                            &[left_num.into(), right_num.into()],
-                            "",
-                        )
-                        .unwrap()
-                        .try_as_basic_value()
-                        .unwrap_left(),
-
-                    _ => unreachable!(),
-                }
-                .into_struct_value();
-
-                let result = utils::build_possible_overflow(
-                    module,
-                    context,
-                    builder,
-                    result,
-                    instr.get_unary_data_for_overflow(),
-                    function,
-                    None,
-                );
+                let result: IntValue<'ctx> =
+                    builder.build_int_nsw_add(left_num, right_num, "").unwrap();
 
                 builder.build_store(variable, result).unwrap();
 
-                return result;
+                return result.into();
             }
 
             let left_num: FloatValue<'ctx> = builder

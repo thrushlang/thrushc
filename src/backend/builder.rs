@@ -76,7 +76,7 @@ impl<'a> ThrushCompiler<'a> {
         let mut parser: Parser = Parser::new(&tokens, file);
         let instructions: &[Instruction] = parser.start();
 
-        println!("{:?}", instructions);
+        println!("{:#?}", instructions);
 
         let context: Context = Context::create();
         let builder: Builder<'_> = context.create_builder();

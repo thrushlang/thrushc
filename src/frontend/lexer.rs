@@ -654,6 +654,15 @@ impl TokenKind {
         false
     }
 
+    #[inline]
+    pub fn is_logical_type(&self) -> bool {
+        if let TokenKind::BangEq | TokenKind::EqEq | TokenKind::LessEq | TokenKind::Less | TokenKind::Greater | TokenKind::GreaterEq = self {
+            return true;
+        }
+
+        false
+    }
+
 }
 
 #[derive(Debug, PartialEq, Copy, Clone)]
@@ -747,20 +756,6 @@ impl DataTypes {
         }
 
         false
-    }
-
-
-    #[inline]
-    pub fn as_llvm_identifier(&self) -> &str {
-        match self {
-            DataTypes::I8 => "i8",
-            DataTypes::I16 => "i16",
-            DataTypes::I32 => "i32",
-            DataTypes::I64 => "i64",
-            DataTypes::F32 => "f32",
-            DataTypes::F64 => "f64",
-            _ => unreachable!()
-        }
     }
 
     #[inline]

@@ -1,7 +1,7 @@
 use {
     super::{
         super::frontend::lexer::{DataTypes, TokenKind},
-        compiler::{binaryop, objects::CompilerObjects},
+        compiler::{binaryop, objects::CompilerObjects, types::BinaryOp, utils},
     },
     inkwell::{
         builder::Builder,
@@ -71,14 +71,14 @@ pub enum Instruction<'ctx> {
         args: Vec<Instruction<'ctx>>,
         kind: DataTypes,
     },
-    Binary {
+    BinaryOp {
         left: Box<Instruction<'ctx>>,
         op: &'ctx TokenKind,
         right: Box<Instruction<'ctx>>,
         kind: DataTypes,
         line: usize,
     },
-    Unary {
+    UnaryOp {
         op: &'ctx TokenKind,
         value: Box<Instruction<'ctx>>,
         kind: DataTypes,
@@ -145,7 +145,7 @@ impl<'ctx> Instruction<'ctx> {
 
     #[inline]
     pub fn is_binary(&self) -> bool {
-        if let Instruction::Binary { .. } = self {
+        if let Instruction::BinaryOp { .. } = self {
             return true;
         }
 
@@ -222,8 +222,8 @@ impl<'ctx> Instruction<'ctx> {
         unreachable!()
     }
 
-    pub fn as_binary(&self) -> (&Instruction, &TokenKind, &Instruction, &DataTypes) {
-        if let Instruction::Binary {
+    pub fn as_binary(&self) -> BinaryOp {
+        if let Instruction::BinaryOp {
             left,
             op,
             right,
@@ -242,7 +242,7 @@ impl<'ctx> Instruction<'ctx> {
     }
 
     pub fn get_binary_data_types(&self) -> (DataTypes, &TokenKind, DataTypes, usize) {
-        if let Instruction::Binary {
+        if let Instruction::BinaryOp {
             left,
             op,
             right,
@@ -253,11 +253,15 @@ impl<'ctx> Instruction<'ctx> {
             return (left.get_data_type(), op, right.get_data_type(), *line);
         }
 
+        if let Instruction::Group { instr, .. } = self {
+            return instr.get_binary_data_types();
+        }
+
         unreachable!()
     }
 
     pub fn get_unary_data_for_overflow(&self) -> (DataTypes, &TokenKind, DataTypes, usize) {
-        if let Instruction::Unary {
+        if let Instruction::UnaryOp {
             op, value, line, ..
         } = self
         {
@@ -276,8 +280,8 @@ impl<'ctx> Instruction<'ctx> {
             Instruction::Char(_) => DataTypes::Char,
             Instruction::RefVar { kind, .. } => *kind,
             Instruction::Group { kind, .. } => *kind,
-            Instruction::Binary { kind, .. } => *kind,
-            Instruction::Unary { value, .. } => value.get_data_type(),
+            Instruction::BinaryOp { kind, .. } => *kind,
+            Instruction::UnaryOp { value, .. } => value.get_data_type(),
             Instruction::Param { kind, .. } => *kind,
             Instruction::Call { kind, .. } => *kind,
             Instruction::Indexe { kind, .. } => *kind,
@@ -287,22 +291,6 @@ impl<'ctx> Instruction<'ctx> {
                 unimplemented!()
             }
         }
-    }
-
-    pub fn compile_group_as_binary(
-        &'ctx self,
-        module: &Module<'ctx>,
-        builder: &Builder<'ctx>,
-        context: &'ctx Context,
-        locals: &CompilerObjects<'ctx>,
-        function: FunctionValue<'ctx>,
-        kind: &'ctx DataTypes,
-    ) -> BasicValueEnum<'ctx> {
-        let instr: (&Instruction<'_>, &TokenKind, &Instruction<'_>, &DataTypes) = self.as_binary();
-
-        binaryop::compile_binary_op(
-            module, builder, context, instr.0, instr.1, instr.2, kind, locals, function,
-        )
     }
 
     pub fn as_basic_value(&self) -> &BasicValueEnum<'ctx> {

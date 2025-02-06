@@ -3,6 +3,7 @@ pub mod codegen;
 pub mod function;
 pub mod objects;
 pub mod options;
+pub mod types;
 pub mod unaryop;
 pub mod utils;
 pub mod variable;

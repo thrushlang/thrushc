@@ -206,7 +206,6 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                     kind,
                     value,
                     &mut self.compiler_objects,
-                    self.function.unwrap(),
                 );
 
                 Instruction::Null
@@ -255,31 +254,30 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                 Instruction::BasicValueEnum(char.into())
             }
 
-            Instruction::Binary {
+            Instruction::BinaryOp {
                 op,
                 left,
                 right,
                 kind,
                 ..
-            } => Instruction::BasicValueEnum(binaryop::compile_binary_op(
-                self.module,
-                self.builder,
-                self.context,
-                left,
-                op,
-                right,
-                kind,
-                &self.compiler_objects,
-                self.function.unwrap(),
-            )),
+            } => {
+                if kind.is_integer() {
+                    return Instruction::BasicValueEnum(binaryop::integer_binaryop(
+                        self.builder,
+                        self.context,
+                        (left, op, right, kind),
+                        &self.compiler_objects,
+                    ));
+                }
 
-            Instruction::Unary { .. } => Instruction::BasicValueEnum(unaryop::compile_unary_op(
-                self.module,
+                unimplemented!()
+            }
+
+            Instruction::UnaryOp { .. } => Instruction::BasicValueEnum(unaryop::compile_unary_op(
                 self.builder,
                 self.context,
                 instr,
                 &self.compiler_objects,
-                self.function.unwrap(),
             )),
 
             Instruction::EntryPoint { body } => {

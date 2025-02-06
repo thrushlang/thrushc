@@ -1,21 +1,11 @@
 use {
-    super::super::{
-        super::{
-            diagnostic,
-            frontend::lexer::{DataTypes, TokenKind},
-        },
-        instruction::Instruction,
-    },
+    super::super::{super::frontend::lexer::DataTypes, instruction::Instruction},
     inkwell::{
-        basic_block::BasicBlock,
         builder::Builder,
         context::Context,
         module::{Linkage, Module},
         types::{ArrayType, BasicMetadataTypeEnum, FloatType, FunctionType, IntType},
-        values::{
-            BasicValueEnum, FloatValue, FunctionValue, GlobalValue, IntValue, PointerValue,
-            StructValue,
-        },
+        values::{BasicValueEnum, FloatValue, GlobalValue, IntValue, PointerValue},
         AddressSpace,
     },
 };
@@ -226,8 +216,7 @@ pub fn integer_autocast<'ctx>(
     builder: &Builder<'ctx>,
     context: &'ctx Context,
 ) -> Option<BasicValueEnum<'ctx>> {
-    if kind == target || (*target == DataTypes::Bool && (target.is_float() || target.is_integer()))
-    {
+    if kind == target || (*target == DataTypes::Bool && (kind.is_float() || kind.is_integer())) {
         return None;
     }
 
@@ -419,176 +408,6 @@ pub fn build_dynamic_string<'ctx>(
     }
 
     string
-}
-
-pub fn build_possible_overflow<'ctx>(
-    module: &Module<'ctx>,
-    context: &'ctx Context,
-    builder: &Builder<'ctx>,
-    result: StructValue<'ctx>,
-    instr_data_types: (DataTypes, &TokenKind, DataTypes, usize),
-    current_function: FunctionValue<'ctx>,
-    target: Option<&DataTypes>,
-) -> BasicValueEnum<'ctx> {
-    let overflowed: IntValue<'_> = builder
-        .build_extract_value(result, 1, "")
-        .unwrap()
-        .into_int_value();
-
-    let true_block: BasicBlock<'_> = context.append_basic_block(current_function, "");
-    let false_block: BasicBlock<'_> = context.append_basic_block(current_function, "");
-
-    builder
-        .build_conditional_branch(overflowed, true_block, false_block)
-        .unwrap();
-
-    builder.position_at_end(true_block);
-
-    builder
-        .build_call(
-            module.get_function("panic").unwrap(),
-            &[
-                module
-                    .get_global("stderr")
-                    .unwrap()
-                    .as_pointer_value()
-                    .into(),
-                build_string_constant(module, builder, context, "%s\0").into(),
-                build_string_constant(
-                    module,
-                    builder,
-                    context,
-                    &format!(
-                        "{}
-
-Details:
-
-    ● Line: {}
-    ● Instruction: {} {} {}
-    ● Operation: {}
-
-{} \n\0",
-                        diagnostic::create_panic_message("Integer / Float Overflow"),
-                        instr_data_types.3,
-                        instr_data_types.0,
-                        instr_data_types.1,
-                        instr_data_types.2,
-                        instr_data_types.1,
-                        diagnostic::create_help_message(
-                            "Check that the limit of a primitive type has not been overflowed."
-                        )
-                    ),
-                )
-                .into(),
-            ],
-            "",
-        )
-        .unwrap();
-
-    builder.build_unreachable().unwrap();
-    builder.position_at_end(false_block);
-
-    let mut extracted: BasicValueEnum<'ctx> = builder.build_extract_value(result, 0, "").unwrap();
-
-    if let Some(target) = target {
-        if instr_data_types.0.is_integer() {
-            if let Some(new_compiled) = integer_autocast(
-                &instr_data_types.0,
-                target,
-                None,
-                extracted,
-                builder,
-                context,
-            ) {
-                extracted = new_compiled;
-            }
-        }
-
-        if instr_data_types.0.is_float() {
-            if let Some(new_compiled) = float_autocast(
-                &instr_data_types.0,
-                target,
-                None,
-                extracted,
-                builder,
-                context,
-            ) {
-                extracted = new_compiled;
-            }
-        }
-    }
-
-    extracted
-}
-
-pub fn build_overflow_structure<'ctx>(
-    module: &Module<'ctx>,
-    builder: &Builder<'ctx>,
-    kind: &DataTypes,
-    op: &TokenKind,
-    left_num: IntValue<'ctx>,
-    right_num: IntValue<'ctx>,
-) -> BasicValueEnum<'ctx> {
-    match kind {
-        DataTypes::I8 => builder
-            .build_call(
-                module
-                    .get_function(&format!(
-                        "llvm.s{}.with.overflow.i8",
-                        op.as_llvm_intrinsic_identifier()
-                    ))
-                    .unwrap(),
-                &[left_num.into(), right_num.into()],
-                "",
-            )
-            .unwrap()
-            .try_as_basic_value()
-            .unwrap_left(),
-        DataTypes::I16 => builder
-            .build_call(
-                module
-                    .get_function(&format!(
-                        "llvm.s{}.with.overflow.i16",
-                        op.as_llvm_intrinsic_identifier()
-                    ))
-                    .unwrap(),
-                &[left_num.into(), right_num.into()],
-                "",
-            )
-            .unwrap()
-            .try_as_basic_value()
-            .unwrap_left(),
-        DataTypes::I32 => builder
-            .build_call(
-                module
-                    .get_function(&format!(
-                        "llvm.s{}.with.overflow.i32",
-                        op.as_llvm_intrinsic_identifier()
-                    ))
-                    .unwrap(),
-                &[left_num.into(), right_num.into()],
-                "",
-            )
-            .unwrap()
-            .try_as_basic_value()
-            .unwrap_left(),
-        DataTypes::I64 => builder
-            .build_call(
-                module
-                    .get_function(&format!(
-                        "llvm.s{}.with.overflow.i64",
-                        op.as_llvm_intrinsic_identifier()
-                    ))
-                    .unwrap(),
-                &[left_num.into(), right_num.into()],
-                "",
-            )
-            .unwrap()
-            .try_as_basic_value()
-            .unwrap_left(),
-
-        _ => unreachable!(),
-    }
 }
 
 pub fn build_ptr<'ctx>(

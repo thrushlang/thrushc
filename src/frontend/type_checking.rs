@@ -461,7 +461,10 @@ pub fn check_type(
     match (kind, target) {
         (DataTypes::Char, DataTypes::Char) => Ok(()),
         (DataTypes::String, DataTypes::String) => Ok(()),
-        (DataTypes::Bool, DataTypes::Bool) => Ok(()),
+        (
+            DataTypes::Bool | DataTypes::I8 | DataTypes::I16 | DataTypes::I32 | DataTypes::I64,
+            DataTypes::Bool,
+        ) => Ok(()),
         (DataTypes::I8, DataTypes::I8 | DataTypes::I16 | DataTypes::I32 | DataTypes::I64) => Ok(()),
         (DataTypes::I16, DataTypes::I16 | DataTypes::I32 | DataTypes::I64) => Ok(()),
         (DataTypes::I32, DataTypes::I32 | DataTypes::I64) => Ok(()),

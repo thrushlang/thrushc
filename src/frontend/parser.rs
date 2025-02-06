@@ -862,7 +862,7 @@ impl<'instr> Parser<'instr> {
                 self.previous().line,
             )?;
 
-            instr = Instruction::Binary {
+            instr = Instruction::BinaryOp {
                 left: Box::new(instr),
                 op,
                 right: Box::new(right),
@@ -888,7 +888,7 @@ impl<'instr> Parser<'instr> {
                 self.previous().line,
             )?;
 
-            instr = Instruction::Binary {
+            instr = Instruction::BinaryOp {
                 left: Box::new(instr),
                 op,
                 right: Box::new(right),
@@ -907,6 +907,15 @@ impl<'instr> Parser<'instr> {
             let op: &TokenKind = &self.previous().kind;
             let right: Instruction<'_> = self.comparison()?;
 
+            let left_type: DataTypes = instr.get_data_type();
+            let right_type: DataTypes = right.get_data_type();
+
+            let kind: DataTypes = if left_type.is_integer() && right_type.is_integer() {
+                left_type.calculate_integer_datatype(right_type)
+            } else {
+                self.in_var_type
+            };
+
             type_checking::check_binary_instr(
                 op,
                 &instr.get_data_type(),
@@ -914,11 +923,11 @@ impl<'instr> Parser<'instr> {
                 self.previous().line,
             )?;
 
-            instr = Instruction::Binary {
+            instr = Instruction::BinaryOp {
                 left: Box::from(instr),
                 op,
                 right: Box::from(right),
-                kind: DataTypes::Bool,
+                kind,
                 line: self.previous().line,
             }
         }
@@ -937,6 +946,15 @@ impl<'instr> Parser<'instr> {
             let op: &TokenKind = &self.previous().kind;
             let right: Instruction<'_> = self.term()?;
 
+            let left_type: DataTypes = instr.get_data_type();
+            let right_type: DataTypes = right.get_data_type();
+
+            let kind: DataTypes = if left_type.is_integer() && right_type.is_integer() {
+                left_type.calculate_integer_datatype(right_type)
+            } else {
+                self.in_var_type
+            };
+
             type_checking::check_binary_instr(
                 op,
                 &instr.get_data_type(),
@@ -944,11 +962,11 @@ impl<'instr> Parser<'instr> {
                 self.previous().line,
             )?;
 
-            instr = Instruction::Binary {
+            instr = Instruction::BinaryOp {
                 left: Box::from(instr),
                 op,
                 right: Box::from(right),
-                kind: DataTypes::Bool,
+                kind,
                 line: self.previous().line,
             };
         }
@@ -957,11 +975,46 @@ impl<'instr> Parser<'instr> {
     }
 
     fn term(&mut self) -> Result<Instruction<'instr>, ThrushError> {
-        let mut instr: Instruction<'_> = self.unary()?;
+        let mut instr: Instruction<'_> = self.factor()?;
 
         while self.match_token(TokenKind::Plus)?
             || self.match_token(TokenKind::Minus)?
-            || self.match_token(TokenKind::Slash)?
+        {
+            let op: &TokenKind = &self.previous().kind;
+            let right: Instruction<'_> = self.factor()?;
+
+            let left_type: DataTypes = instr.get_data_type();
+            let right_type: DataTypes = right.get_data_type();
+
+            let kind: DataTypes = if left_type.is_integer() && right_type.is_integer() {
+                left_type.calculate_integer_datatype(right_type)
+            } else {
+                self.in_var_type
+            };
+
+            type_checking::check_binary_instr(
+                op,
+                &instr.get_data_type(),
+                &right.get_data_type(),
+                self.previous().line,
+            )?;
+
+            instr = Instruction::BinaryOp {
+                left: Box::from(instr),
+                op,
+                right: Box::from(right),
+                kind,
+                line: self.previous().line,
+            };
+        }
+
+        Ok(instr)
+    }
+
+    fn factor(&mut self) -> Result<Instruction<'instr>, ThrushError>{
+        let mut instr: Instruction<'_> = self.unary()?;
+
+        while self.match_token(TokenKind::Slash)?
             || self.match_token(TokenKind::Star)?
         {
             let op: &TokenKind = &self.previous().kind;
@@ -983,7 +1036,7 @@ impl<'instr> Parser<'instr> {
                 self.previous().line,
             )?;
 
-            instr = Instruction::Binary {
+            instr = Instruction::BinaryOp {
                 left: Box::from(instr),
                 op,
                 right: Box::from(right),
@@ -1006,7 +1059,7 @@ impl<'instr> Parser<'instr> {
 
             type_checking::check_unary_instr(op, &value.get_data_type(), self.previous().line)?;
 
-            return Ok(Instruction::Unary {
+            return Ok(Instruction::UnaryOp {
                 op,
                 value: Box::from(value),
                 kind: DataTypes::Bool,
@@ -1032,7 +1085,7 @@ impl<'instr> Parser<'instr> {
 
             type_checking::check_unary_instr(op, value_type, self.previous().line)?;
 
-            return Ok(Instruction::Unary {
+            return Ok(Instruction::UnaryOp {
                 op,
                 value: Box::from(value),
                 kind: *value_type,
@@ -1115,7 +1168,7 @@ impl<'instr> Parser<'instr> {
                             self.previous().line,
                         )?;
 
-                        return Ok(Instruction::Unary {
+                        return Ok(Instruction::UnaryOp {
                             op: &self.previous().kind,
                             value: Box::from(instr),
                             kind: *kind,
@@ -1144,7 +1197,7 @@ impl<'instr> Parser<'instr> {
                             self.previous().line,
                         )?;
 
-                        return Ok(Instruction::Unary {
+                        return Ok(Instruction::UnaryOp {
                             op: &self.previous().kind,
                             value: Box::from(instr),
                             kind: *kind,
@@ -1297,7 +1350,7 @@ impl<'instr> Parser<'instr> {
                             line,
                         )?;
 
-                        let expr: Instruction<'_> = Instruction::Unary {
+                        let expr: Instruction<'_> = Instruction::UnaryOp {
                             op,
                             value: Box::from(refvar),
                             kind: DataTypes::I64,
