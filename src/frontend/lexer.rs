@@ -579,32 +579,6 @@ impl std::fmt::Display for TokenKind {
 impl TokenKind {
 
     #[inline]
-    pub fn get_possible_datatype(&self) -> DataTypes {
-        if self.is_possible_unary() {
-            if let TokenKind::PlusPlus | TokenKind::MinusMinus = self {
-                return DataTypes::I64;
-            }
-
-            if let TokenKind::Bang = self {
-                return DataTypes::Bool;
-            }
-
-        }
-
-        DataTypes::Void
-    }
-
-    #[inline]
-    pub fn as_llvm_intrinsic_identifier(&self) -> &str {
-        match self {
-            TokenKind::Plus => "add",
-            TokenKind::Minus => "sub",
-            TokenKind::Star => "mul",
-            _ => "",
-        }
-    }
-
-    #[inline]
     pub fn as_int_predicate(&self, left_signed: bool, right_signed: bool) -> IntPredicate {
         match self {
             TokenKind::EqEq => IntPredicate::EQ,
@@ -646,8 +620,8 @@ impl TokenKind {
     }
 
     #[inline]
-    fn is_possible_unary(&self) -> bool {
-        if let TokenKind::PlusPlus | TokenKind::MinusMinus | TokenKind::Bang = self {
+    pub fn is_logical_type(&self) -> bool {
+        if let TokenKind::BangEq | TokenKind::EqEq | TokenKind::LessEq | TokenKind::Less | TokenKind::Greater | TokenKind::GreaterEq = self {
             return true;
         }
 
@@ -655,8 +629,8 @@ impl TokenKind {
     }
 
     #[inline]
-    pub fn is_logical_type(&self) -> bool {
-        if let TokenKind::BangEq | TokenKind::EqEq | TokenKind::LessEq | TokenKind::Less | TokenKind::Greater | TokenKind::GreaterEq = self {
+    pub fn is_logical_gate(&self) -> bool {
+        if let TokenKind::And | TokenKind::Or = self {
             return true;
         }
 

@@ -187,23 +187,3 @@ impl Diagnostic {
         println!("\n{} {}\n", logtype.to_styled(), title);
     }
 }
-
-#[inline]
-pub fn create_panic_message(subject: &str) -> String {
-    format!(
-        "{} {} {}",
-        style("PANIC").bold().bright_red(),
-        style("-").bold(),
-        subject
-    )
-}
-
-#[inline]
-pub fn create_help_message(msg: &str) -> String {
-    format!(
-        "● {}{} {}",
-        style("Help").bold().bright_green(),
-        style(":").bold(),
-        msg
-    )
-}

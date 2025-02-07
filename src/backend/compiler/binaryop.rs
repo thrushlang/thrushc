@@ -15,6 +15,7 @@ use {
 };
 
 fn build_int_op<'ctx>(
+    context: &'ctx Context,
     builder: &Builder<'ctx>,
     mut left: IntValue<'ctx>,
     mut right: IntValue<'ctx>,
@@ -42,8 +43,6 @@ fn build_int_op<'ctx>(
                     .unwrap()
             }
 
-            println!("{:?}", signatures);
-
             builder
                 .build_int_compare(
                     op.as_int_predicate(signatures.0, signatures.1),
@@ -53,6 +52,30 @@ fn build_int_op<'ctx>(
                 )
                 .unwrap()
                 .into()
+        }
+
+        op if op.is_logical_gate() => {
+            if left.get_type() != context.bool_type() {
+                left = builder
+                    .build_int_cast_sign_flag(left, context.bool_type(), signatures.0, "")
+                    .unwrap()
+            }
+
+            if right.get_type() != context.bool_type() {
+                right = builder
+                    .build_int_cast_sign_flag(right, context.bool_type(), signatures.0, "")
+                    .unwrap()
+            }
+
+            if let TokenKind::And = op {
+                return builder.build_and(left, right, "").unwrap().into();
+            }
+
+            if let TokenKind::Or = op {
+                return builder.build_or(left, right, "").unwrap().into();
+            }
+
+            unimplemented!()
         }
         _ => unreachable!(),
     }
@@ -77,7 +100,9 @@ pub fn integer_binaryop<'ctx>(
         | TokenKind::LessEq
         | TokenKind::Less
         | TokenKind::Greater
-        | TokenKind::GreaterEq,
+        | TokenKind::GreaterEq
+        | TokenKind::And
+        | TokenKind::Or,
         Instruction::Integer(right_type, right_num, right_signed),
         _,
     ) = binary
@@ -111,6 +136,7 @@ pub fn integer_binaryop<'ctx>(
         }
 
         return build_int_op(
+            context,
             builder,
             left_compiled,
             right_compiled,
@@ -134,7 +160,9 @@ pub fn integer_binaryop<'ctx>(
         | TokenKind::LessEq
         | TokenKind::Less
         | TokenKind::Greater
-        | TokenKind::GreaterEq,
+        | TokenKind::GreaterEq
+        | TokenKind::And
+        | TokenKind::Or,
         Instruction::RefVar {
             name: right_name,
             kind: right_type,
@@ -184,6 +212,7 @@ pub fn integer_binaryop<'ctx>(
         }
 
         return build_int_op(
+            context,
             builder,
             left_compiled,
             right_compiled,
@@ -203,7 +232,9 @@ pub fn integer_binaryop<'ctx>(
         | TokenKind::LessEq
         | TokenKind::Less
         | TokenKind::Greater
-        | TokenKind::GreaterEq,
+        | TokenKind::GreaterEq
+        | TokenKind::And
+        | TokenKind::Or,
         Instruction::RefVar { name, kind, .. },
         _,
     ) = binary
@@ -243,6 +274,7 @@ pub fn integer_binaryop<'ctx>(
         }
 
         return build_int_op(
+            context,
             builder,
             left_compiled,
             right_compiled,
@@ -262,7 +294,9 @@ pub fn integer_binaryop<'ctx>(
         | TokenKind::LessEq
         | TokenKind::Less
         | TokenKind::Greater
-        | TokenKind::GreaterEq,
+        | TokenKind::GreaterEq
+        | TokenKind::And
+        | TokenKind::Or,
         Instruction::Integer(right_type, right_num, right_signed),
         _,
     ) = binary
@@ -302,6 +336,7 @@ pub fn integer_binaryop<'ctx>(
         }
 
         return build_int_op(
+            context,
             builder,
             left_compiled,
             right_compiled,
@@ -321,7 +356,9 @@ pub fn integer_binaryop<'ctx>(
         | TokenKind::LessEq
         | TokenKind::Less
         | TokenKind::Greater
-        | TokenKind::GreaterEq,
+        | TokenKind::GreaterEq
+        | TokenKind::And
+        | TokenKind::Or,
         Instruction::BinaryOp {
             kind: right_type, ..
         },
@@ -331,10 +368,10 @@ pub fn integer_binaryop<'ctx>(
         let mut left_compiled: IntValue<'_> =
             utils::build_const_integer(context, left_type, *left_num as u64, *left_signed);
 
-        let right_dissambled: BinaryOp = binary.2.as_binary();
+        let right_dissasembled: BinaryOp = binary.2.as_binary();
 
         let mut right_compiled: IntValue<'_> =
-            integer_binaryop(builder, context, right_dissambled, objects).into_int_value();
+            integer_binaryop(builder, context, right_dissasembled, objects).into_int_value();
 
         if let Some(new_left_compiled) = utils::integer_autocast(
             left_type,
@@ -359,6 +396,7 @@ pub fn integer_binaryop<'ctx>(
         }
 
         return build_int_op(
+            context,
             builder,
             left_compiled,
             right_compiled,
@@ -380,15 +418,17 @@ pub fn integer_binaryop<'ctx>(
         | TokenKind::LessEq
         | TokenKind::Less
         | TokenKind::Greater
-        | TokenKind::GreaterEq,
+        | TokenKind::GreaterEq
+        | TokenKind::And
+        | TokenKind::Or,
         Instruction::Integer(right_type, right_num, right_signed),
         _,
     ) = binary
     {
-        let left_dissambled: BinaryOp = binary.0.as_binary();
+        let left_dissasembled: BinaryOp = binary.0.as_binary();
 
         let mut left_compiled: IntValue<'_> =
-            integer_binaryop(builder, context, left_dissambled, objects).into_int_value();
+            integer_binaryop(builder, context, left_dissasembled, objects).into_int_value();
 
         let mut right_compiled: IntValue<'_> =
             utils::build_const_integer(context, right_type, *right_num as u64, *right_signed);
@@ -416,6 +456,7 @@ pub fn integer_binaryop<'ctx>(
         }
 
         return build_int_op(
+            context,
             builder,
             left_compiled,
             right_compiled,
@@ -426,15 +467,26 @@ pub fn integer_binaryop<'ctx>(
 
     if let (
         Instruction::Group { instr, kind },
-        TokenKind::Plus | TokenKind::Slash | TokenKind::Minus | TokenKind::Star,
+        TokenKind::Plus
+        | TokenKind::Slash
+        | TokenKind::Minus
+        | TokenKind::Star
+        | TokenKind::BangEq
+        | TokenKind::EqEq
+        | TokenKind::LessEq
+        | TokenKind::Less
+        | TokenKind::Greater
+        | TokenKind::GreaterEq
+        | TokenKind::And
+        | TokenKind::Or,
         Instruction::Integer(right_type, right_num, right_signed),
         _,
     ) = binary
     {
-        let left_dissambled: BinaryOp = instr.as_binary();
+        let left_dissasembled: BinaryOp = instr.as_binary();
 
         let mut left_compiled: IntValue<'_> =
-            integer_binaryop(builder, context, left_dissambled, objects).into_int_value();
+            integer_binaryop(builder, context, left_dissasembled, objects).into_int_value();
 
         let mut right_compiled: IntValue<'_> =
             utils::build_const_integer(context, right_type, *right_num as u64, *right_signed);
@@ -462,6 +514,7 @@ pub fn integer_binaryop<'ctx>(
         }
 
         return build_int_op(
+            context,
             builder,
             left_compiled,
             right_compiled,
@@ -472,7 +525,18 @@ pub fn integer_binaryop<'ctx>(
 
     if let (
         Instruction::Integer(left_type, left_num, left_signed),
-        TokenKind::Plus | TokenKind::Slash | TokenKind::Minus | TokenKind::Star,
+        TokenKind::Plus
+        | TokenKind::Slash
+        | TokenKind::Minus
+        | TokenKind::Star
+        | TokenKind::BangEq
+        | TokenKind::EqEq
+        | TokenKind::LessEq
+        | TokenKind::Less
+        | TokenKind::Greater
+        | TokenKind::GreaterEq
+        | TokenKind::And
+        | TokenKind::Or,
         Instruction::Group { instr, kind },
         _,
     ) = binary
@@ -480,10 +544,10 @@ pub fn integer_binaryop<'ctx>(
         let mut left_compiled: IntValue<'_> =
             utils::build_const_integer(context, left_type, *left_num as u64, *left_signed);
 
-        let right_dissambled: BinaryOp = instr.as_binary();
+        let right_dissasembled: BinaryOp = instr.as_binary();
 
         let mut right_compiled: IntValue<'_> =
-            integer_binaryop(builder, context, right_dissambled, objects).into_int_value();
+            integer_binaryop(builder, context, right_dissasembled, objects).into_int_value();
 
         if let Some(new_left_compiled) = utils::integer_autocast(
             left_type,
@@ -508,6 +572,7 @@ pub fn integer_binaryop<'ctx>(
         }
 
         return build_int_op(
+            context,
             builder,
             left_compiled,
             right_compiled,
@@ -520,15 +585,26 @@ pub fn integer_binaryop<'ctx>(
         Instruction::BinaryOp {
             kind: left_type, ..
         },
-        TokenKind::Plus | TokenKind::Slash | TokenKind::Minus | TokenKind::Star,
+        TokenKind::Plus
+        | TokenKind::Slash
+        | TokenKind::Minus
+        | TokenKind::Star
+        | TokenKind::BangEq
+        | TokenKind::EqEq
+        | TokenKind::LessEq
+        | TokenKind::Less
+        | TokenKind::Greater
+        | TokenKind::GreaterEq
+        | TokenKind::And
+        | TokenKind::Or,
         Instruction::RefVar { name, kind, .. },
         _,
     ) = binary
     {
-        let left_dissambled: BinaryOp = binary.0.as_binary();
+        let left_dissasembled: BinaryOp = binary.0.as_binary();
 
         let mut left_compiled: IntValue<'_> =
-            integer_binaryop(builder, context, left_dissambled, objects).into_int_value();
+            integer_binaryop(builder, context, left_dissasembled, objects).into_int_value();
 
         let mut right_compiled: IntValue<'_> = builder
             .build_load(
@@ -562,6 +638,7 @@ pub fn integer_binaryop<'ctx>(
         }
 
         return build_int_op(
+            context,
             builder,
             left_compiled,
             right_compiled,
@@ -574,22 +651,33 @@ pub fn integer_binaryop<'ctx>(
         Instruction::BinaryOp {
             kind: left_type, ..
         },
-        TokenKind::Plus | TokenKind::Slash | TokenKind::Minus | TokenKind::Star,
+        TokenKind::Plus
+        | TokenKind::Slash
+        | TokenKind::Minus
+        | TokenKind::Star
+        | TokenKind::BangEq
+        | TokenKind::EqEq
+        | TokenKind::LessEq
+        | TokenKind::Less
+        | TokenKind::Greater
+        | TokenKind::GreaterEq
+        | TokenKind::And
+        | TokenKind::Or,
         Instruction::BinaryOp {
             kind: right_type, ..
         },
         _,
     ) = binary
     {
-        let left_dissambled: BinaryOp = binary.0.as_binary();
+        let left_dissasembled: BinaryOp = binary.0.as_binary();
 
         let mut left_compiled: IntValue<'_> =
-            integer_binaryop(builder, context, left_dissambled, objects).into_int_value();
+            integer_binaryop(builder, context, left_dissasembled, objects).into_int_value();
 
-        let right_dissambled: BinaryOp = binary.2.as_binary();
+        let right_dissasembled: BinaryOp = binary.2.as_binary();
 
         let mut right_compiled: IntValue<'_> =
-            integer_binaryop(builder, context, right_dissambled, objects).into_int_value();
+            integer_binaryop(builder, context, right_dissasembled, objects).into_int_value();
 
         if let Some(new_left_compiled) = utils::integer_autocast(
             left_type,
@@ -614,6 +702,7 @@ pub fn integer_binaryop<'ctx>(
         }
 
         return build_int_op(
+            context,
             builder,
             left_compiled,
             right_compiled,
@@ -627,22 +716,33 @@ pub fn integer_binaryop<'ctx>(
             instr,
             kind: left_type,
         },
-        TokenKind::Plus | TokenKind::Slash | TokenKind::Minus | TokenKind::Star,
+        TokenKind::Plus
+        | TokenKind::Slash
+        | TokenKind::Minus
+        | TokenKind::Star
+        | TokenKind::BangEq
+        | TokenKind::EqEq
+        | TokenKind::LessEq
+        | TokenKind::Less
+        | TokenKind::Greater
+        | TokenKind::GreaterEq
+        | TokenKind::And
+        | TokenKind::Or,
         Instruction::BinaryOp {
             kind: right_type, ..
         },
         _,
     ) = binary
     {
-        let left_dissambled: BinaryOp = instr.as_binary();
+        let left_dissasembled: BinaryOp = instr.as_binary();
 
         let mut left_compiled: IntValue<'_> =
-            integer_binaryop(builder, context, left_dissambled, objects).into_int_value();
+            integer_binaryop(builder, context, left_dissasembled, objects).into_int_value();
 
-        let right_dissambled: BinaryOp = binary.2.as_binary();
+        let right_dissasembled: BinaryOp = binary.2.as_binary();
 
         let mut right_compiled: IntValue<'_> =
-            integer_binaryop(builder, context, right_dissambled, objects).into_int_value();
+            integer_binaryop(builder, context, right_dissasembled, objects).into_int_value();
 
         if let Some(new_left_compiled) = utils::integer_autocast(
             left_type,
@@ -667,6 +767,7 @@ pub fn integer_binaryop<'ctx>(
         }
 
         return build_int_op(
+            context,
             builder,
             left_compiled,
             right_compiled,
@@ -679,7 +780,18 @@ pub fn integer_binaryop<'ctx>(
         Instruction::BinaryOp {
             kind: left_type, ..
         },
-        TokenKind::Plus | TokenKind::Slash | TokenKind::Minus | TokenKind::Star,
+        TokenKind::Plus
+        | TokenKind::Slash
+        | TokenKind::Minus
+        | TokenKind::Star
+        | TokenKind::BangEq
+        | TokenKind::EqEq
+        | TokenKind::LessEq
+        | TokenKind::Less
+        | TokenKind::Greater
+        | TokenKind::GreaterEq
+        | TokenKind::And
+        | TokenKind::Or,
         Instruction::Group {
             instr,
             kind: right_type,
@@ -687,15 +799,15 @@ pub fn integer_binaryop<'ctx>(
         _,
     ) = binary
     {
-        let left_dissambled: BinaryOp = binary.0.as_binary();
+        let left_dissasembled: BinaryOp = binary.0.as_binary();
 
         let mut left_compiled: IntValue<'_> =
-            integer_binaryop(builder, context, left_dissambled, objects).into_int_value();
+            integer_binaryop(builder, context, left_dissasembled, objects).into_int_value();
 
-        let right_dissambled: BinaryOp = instr.as_binary();
+        let right_dissasembled: BinaryOp = instr.as_binary();
 
         let mut right_compiled: IntValue<'_> =
-            integer_binaryop(builder, context, right_dissambled, objects).into_int_value();
+            integer_binaryop(builder, context, right_dissasembled, objects).into_int_value();
 
         if let Some(new_left_compiled) = utils::integer_autocast(
             left_type,
@@ -720,6 +832,7 @@ pub fn integer_binaryop<'ctx>(
         }
 
         return build_int_op(
+            context,
             builder,
             left_compiled,
             right_compiled,

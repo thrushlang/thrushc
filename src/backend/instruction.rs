@@ -1,14 +1,9 @@
 use {
     super::{
         super::frontend::lexer::{DataTypes, TokenKind},
-        compiler::{binaryop, objects::CompilerObjects, types::BinaryOp, utils},
+        compiler::types::BinaryOp,
     },
-    inkwell::{
-        builder::Builder,
-        context::Context,
-        module::Module,
-        values::{BasicValueEnum, FunctionValue},
-    },
+    inkwell::values::BasicValueEnum,
 };
 
 #[derive(Debug, Clone, Default)]
@@ -76,13 +71,11 @@ pub enum Instruction<'ctx> {
         op: &'ctx TokenKind,
         right: Box<Instruction<'ctx>>,
         kind: DataTypes,
-        line: usize,
     },
     UnaryOp {
         op: &'ctx TokenKind,
         value: Box<Instruction<'ctx>>,
         kind: DataTypes,
-        line: usize,
     },
     Group {
         instr: Box<Instruction<'ctx>>,
@@ -146,6 +139,15 @@ impl<'ctx> Instruction<'ctx> {
     #[inline]
     pub fn is_binary(&self) -> bool {
         if let Instruction::BinaryOp { .. } = self {
+            return true;
+        }
+
+        false
+    }
+
+    #[inline]
+    pub fn is_group(&self) -> bool {
+        if let Instruction::Group { .. } = self {
             return true;
         }
 
@@ -236,36 +238,6 @@ impl<'ctx> Instruction<'ctx> {
 
         if let Instruction::Group { instr, .. } = self {
             return instr.as_binary();
-        }
-
-        unreachable!()
-    }
-
-    pub fn get_binary_data_types(&self) -> (DataTypes, &TokenKind, DataTypes, usize) {
-        if let Instruction::BinaryOp {
-            left,
-            op,
-            right,
-            line,
-            ..
-        } = self
-        {
-            return (left.get_data_type(), op, right.get_data_type(), *line);
-        }
-
-        if let Instruction::Group { instr, .. } = self {
-            return instr.get_binary_data_types();
-        }
-
-        unreachable!()
-    }
-
-    pub fn get_unary_data_for_overflow(&self) -> (DataTypes, &TokenKind, DataTypes, usize) {
-        if let Instruction::UnaryOp {
-            op, value, line, ..
-        } = self
-        {
-            return (value.get_data_type(), op, op.get_possible_datatype(), *line);
         }
 
         unreachable!()

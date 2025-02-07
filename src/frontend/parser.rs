@@ -394,20 +394,8 @@ impl<'instr> Parser<'instr> {
         self.in_var_type = kind;
 
         let value: Instruction<'instr> = self.expression()?;
-        let value_type: DataTypes = value.get_data_type();
 
-        if let Err(e) = type_checking::check_type(
-            value_type,
-            kind,
-            name.line,
-            String::from("Type Mismatch"),
-            format!(
-                "Type mismatch. Expected '{}' but found '{}'.",
-                kind, value_type
-            ),
-        ) {
-            self.errors.push(e);
-        }
+        self.check_types(kind, value.get_data_type(), &value, name.line);
 
         self.parser_objects.insert_new_local(
             self.scope,
@@ -508,17 +496,7 @@ impl<'instr> Parser<'instr> {
             ));
         }
 
-        type_checking::check_type(
-            value.get_data_type(),
-            self.in_type_function,
-            line,
-            String::from("Type Mismatch"),
-            format!(
-                "Type mismatch. Expected '{}' but found '{}'.",
-                self.in_type_function,
-                value.get_data_type(),
-            ),
-        )?;
+        self.check_types(self.in_type_function, value.get_data_type(), &value, line);
 
         self.consume(
             TokenKind::SemiColon,
@@ -867,7 +845,6 @@ impl<'instr> Parser<'instr> {
                 op,
                 right: Box::new(right),
                 kind: DataTypes::Bool,
-                line: self.previous().line,
             }
         }
 
@@ -893,7 +870,6 @@ impl<'instr> Parser<'instr> {
                 op,
                 right: Box::new(right),
                 kind: DataTypes::Bool,
-                line: self.previous().line,
             }
         }
 
@@ -928,7 +904,6 @@ impl<'instr> Parser<'instr> {
                 op,
                 right: Box::from(right),
                 kind,
-                line: self.previous().line,
             }
         }
 
@@ -967,7 +942,6 @@ impl<'instr> Parser<'instr> {
                 op,
                 right: Box::from(right),
                 kind,
-                line: self.previous().line,
             };
         }
 
@@ -1004,7 +978,6 @@ impl<'instr> Parser<'instr> {
                 op,
                 right: Box::from(right),
                 kind,
-                line: self.previous().line,
             };
         }
 
@@ -1041,7 +1014,6 @@ impl<'instr> Parser<'instr> {
                 op,
                 right: Box::from(right),
                 kind,
-                line: self.previous().line,
             };
         }
 
@@ -1051,9 +1023,6 @@ impl<'instr> Parser<'instr> {
     fn unary(&mut self) -> Result<Instruction<'instr>, ThrushError> {
 
         if self.match_token(TokenKind::Bang)? {
-
-            let line: usize = self.previous().line;
-
             let op: &TokenKind = &self.previous().kind;
             let value: Instruction<'instr> = self.primary()?;
 
@@ -1063,14 +1032,11 @@ impl<'instr> Parser<'instr> {
                 op,
                 value: Box::from(value),
                 kind: DataTypes::Bool,
-                line,
             });
         } else if self.match_token(TokenKind::PlusPlus)?
             | self.match_token(TokenKind::MinusMinus)?
             | self.match_token(TokenKind::Minus)?
         {
-            let line: usize = self.previous().line;
-
             let op: &TokenKind = &self.previous().kind;
             let mut value: Instruction<'instr> = self.primary()?;
 
@@ -1089,7 +1055,6 @@ impl<'instr> Parser<'instr> {
                 op,
                 value: Box::from(value),
                 kind: *value_type,
-                line,
             });
         }
 
@@ -1172,7 +1137,6 @@ impl<'instr> Parser<'instr> {
                             op: &self.previous().kind,
                             value: Box::from(instr),
                             kind: *kind,
-                            line: self.previous().line,
                         });
                     }
 
@@ -1201,7 +1165,6 @@ impl<'instr> Parser<'instr> {
                             op: &self.previous().kind,
                             value: Box::from(instr),
                             kind: *kind,
-                            line: self.previous().line,
                         });
                     }
 
@@ -1275,19 +1238,7 @@ impl<'instr> Parser<'instr> {
                     } else if self.match_token(TokenKind::Eq)? {
                         let expr: Instruction<'instr> = self.expression()?;
 
-                        if let Err(err) = type_checking::check_type(
-                            expr.get_data_type(),
-                            object.0,
-                            line,
-                            String::from("Type Mismatch"),
-                            format!(
-                                "Type mismatch. Expected '{}' but found '{}'.",
-                                object.0,
-                                expr.get_data_type()
-                            ),
-                        ) {
-                            self.errors.push(err);
-                        }
+                        self.check_types(object.0, expr.get_data_type(), &expr, line);
 
                         self.consume(
                             TokenKind::SemiColon,
@@ -1354,7 +1305,6 @@ impl<'instr> Parser<'instr> {
                             op,
                             value: Box::from(refvar),
                             kind: DataTypes::I64,
-                            line,
                         };
 
                         self.consume(
@@ -1387,25 +1337,51 @@ impl<'instr> Parser<'instr> {
                 }
 
                 _ => {
-                    self.only_advance()?;
-
-                    self.errors.push(ThrushError::Parse(
+                    return Err(ThrushError::Parse(
                         ThrushErrorKind::SyntaxError,
                         String::from("Syntax Error"),
                         format!(
-                            "Statement `{}` don't allowed.",
+                            "Statement \"{}\" don't allowed.",
                             self.previous().lexeme.as_ref().unwrap(),
                         ),
                         self.previous().line,
                         String::new(),
-                    ));
-
-                    Instruction::Null
+                    ))
                 }
             },
         };
 
         Ok(primary)
+    }
+
+    fn check_types(&mut self, target: DataTypes, value_type: DataTypes, value: &Instruction, line: usize) {
+        if value.is_binary() || value.is_group() {
+            if let Err(err) = type_checking::check_types(target, None, Some(value), None, line,
+                String::from("Type Mismatch"),
+                format!(
+                    "Type mismatch. Expected '{}' but found '{}'.",
+                    target, value_type
+                )) {
+
+                self.errors.push(err);
+                return;
+            }
+        } 
+        
+        if let Err(e) = type_checking::check_types(
+            target,
+            Some(value_type),
+            None,
+            None,
+            line,
+            String::from("Type Mismatch"),
+            format!(
+                "Type mismatch. Expected '{}' but found '{}'.",
+                target, value_type
+            ),
+        ) {
+            self.errors.push(e);
+        }
     }
 
     fn consume(

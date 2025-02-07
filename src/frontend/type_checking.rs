@@ -1,4 +1,5 @@
 use super::super::{
+    backend::instruction::Instruction,
     error::{ThrushError, ThrushErrorKind},
     frontend::lexer::{DataTypes, TokenKind},
 };
@@ -274,7 +275,19 @@ fn check_binary_instr_lesseq(a: &DataTypes, b: &DataTypes, line: usize) -> Resul
 
 #[inline]
 fn check_binary_instr_and(a: &DataTypes, b: &DataTypes, line: usize) -> Result<(), ThrushError> {
-    if let (DataTypes::Bool, DataTypes::Bool) = (a, b) {
+    if let (
+        DataTypes::Bool,
+        DataTypes::Bool | DataTypes::I8 | DataTypes::I16 | DataTypes::I32 | DataTypes::I64,
+    ) = (a, b)
+    {
+        return Ok(());
+    }
+
+    if let (
+        DataTypes::I8 | DataTypes::I16 | DataTypes::I32 | DataTypes::I64,
+        DataTypes::I8 | DataTypes::I16 | DataTypes::I32 | DataTypes::I64,
+    ) = (a, b)
+    {
         return Ok(());
     }
 
@@ -450,27 +463,82 @@ pub fn check_unary_instr(op: &TokenKind, a: &DataTypes, line: usize) -> Result<(
     }
 }
 
-#[inline]
-pub fn check_type(
-    kind: DataTypes,
+pub fn check_types(
     target: DataTypes,
+    kind: Option<DataTypes>,
+    value: Option<&Instruction>,
+    op: Option<TokenKind>,
     line: usize,
     title: String,
     desc: String,
 ) -> Result<(), ThrushError> {
-    match (kind, target) {
-        (DataTypes::Char, DataTypes::Char) => Ok(()),
-        (DataTypes::String, DataTypes::String) => Ok(()),
+    if let Some(Instruction::BinaryOp { op, kind, .. }) = value {
+        return check_types(target, Some(*kind), None, Some(**op), line, title, desc);
+    }
+
+    if let Some(Instruction::Group { .. }) = value {
+        let dissambled_binary: (&Instruction<'_>, &TokenKind, &Instruction<'_>, &DataTypes) =
+            value.unwrap().as_binary();
+
+        return check_types(
+            target,
+            Some(*dissambled_binary.3),
+            None,
+            Some(*dissambled_binary.1),
+            line,
+            title,
+            desc,
+        );
+    }
+
+    match (kind.unwrap(), target, op) {
+        (DataTypes::Char, DataTypes::Char, None) => Ok(()),
+        (DataTypes::String, DataTypes::String, Some(TokenKind::Plus) | None) => Ok(()),
         (
             DataTypes::Bool | DataTypes::I8 | DataTypes::I16 | DataTypes::I32 | DataTypes::I64,
             DataTypes::Bool,
+            Some(
+                TokenKind::BangEq
+                | TokenKind::EqEq
+                | TokenKind::LessEq
+                | TokenKind::Less
+                | TokenKind::Greater
+                | TokenKind::GreaterEq
+                | TokenKind::And
+                | TokenKind::Or,
+            )
+            | None,
         ) => Ok(()),
-        (DataTypes::I8, DataTypes::I8 | DataTypes::I16 | DataTypes::I32 | DataTypes::I64) => Ok(()),
-        (DataTypes::I16, DataTypes::I16 | DataTypes::I32 | DataTypes::I64) => Ok(()),
-        (DataTypes::I32, DataTypes::I32 | DataTypes::I64) => Ok(()),
-        (DataTypes::I64, DataTypes::I64) => Ok(()),
-        (DataTypes::F32, DataTypes::F32 | DataTypes::F64) => Ok(()),
-        (DataTypes::F64, DataTypes::F64) => Ok(()),
+        (
+            DataTypes::I8,
+            DataTypes::I8 | DataTypes::I16 | DataTypes::I32 | DataTypes::I64,
+            Some(TokenKind::Plus | TokenKind::Minus | TokenKind::Slash | TokenKind::Star) | None,
+        ) => Ok(()),
+        (
+            DataTypes::I16,
+            DataTypes::I16 | DataTypes::I32 | DataTypes::I64,
+            Some(TokenKind::Plus | TokenKind::Minus | TokenKind::Slash | TokenKind::Star) | None,
+        ) => Ok(()),
+        (
+            DataTypes::I32,
+            DataTypes::I32 | DataTypes::I64,
+            Some(TokenKind::Plus | TokenKind::Minus | TokenKind::Slash | TokenKind::Star) | None,
+        ) => Ok(()),
+        (
+            DataTypes::I64,
+            DataTypes::I64,
+            Some(TokenKind::Plus | TokenKind::Minus | TokenKind::Slash | TokenKind::Star) | None,
+        ) => Ok(()),
+        (
+            DataTypes::F32,
+            DataTypes::F32 | DataTypes::F64,
+            Some(TokenKind::Plus | TokenKind::Minus | TokenKind::Slash | TokenKind::Star) | None,
+        ) => Ok(()),
+        (
+            DataTypes::F64,
+            DataTypes::F64,
+            Some(TokenKind::Plus | TokenKind::Minus | TokenKind::Slash | TokenKind::Star) | None,
+        ) => Ok(()),
         _ => Err(ThrushError::Parse(
             ThrushErrorKind::SyntaxError,
             title,

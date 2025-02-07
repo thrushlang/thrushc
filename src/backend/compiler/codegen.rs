@@ -202,9 +202,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                     self.module,
                     self.builder,
                     self.context,
-                    name,
-                    kind,
-                    value,
+                    (name, kind, value),
                     &mut self.compiler_objects,
                 );
 
@@ -217,9 +215,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                     self.builder,
                     self.context,
                     &mut self.compiler_objects,
-                    name,
-                    kind,
-                    value,
+                    (name, kind, value),
                     self.function.unwrap(),
                 );
 
@@ -273,12 +269,14 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                 unimplemented!()
             }
 
-            Instruction::UnaryOp { .. } => Instruction::BasicValueEnum(unaryop::compile_unary_op(
-                self.builder,
-                self.context,
-                instr,
-                &self.compiler_objects,
-            )),
+            Instruction::UnaryOp { op, value, kind } => {
+                Instruction::BasicValueEnum(unaryop::compile_unary_op(
+                    self.builder,
+                    self.context,
+                    (op, value, kind),
+                    &self.compiler_objects,
+                ))
+            }
 
             Instruction::EntryPoint { body } => {
                 self.function = Some(self.build_main());

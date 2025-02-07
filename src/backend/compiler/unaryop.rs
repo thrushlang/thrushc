@@ -1,6 +1,7 @@
 use {
     super::{
-        super::super::frontend::lexer::TokenKind, objects::CompilerObjects, utils, Instruction,
+        super::super::frontend::lexer::TokenKind, objects::CompilerObjects, types::UnaryOp, utils,
+        Instruction,
     },
     inkwell::{
         builder::Builder,
@@ -12,58 +13,104 @@ use {
 pub fn compile_unary_op<'ctx>(
     builder: &Builder<'ctx>,
     context: &'ctx Context,
-    instr: &Instruction<'ctx>,
-    objects: &CompilerObjects<'ctx>,
+    unary: UnaryOp,
+    compiler_objects: &CompilerObjects<'ctx>,
 ) -> BasicValueEnum<'ctx> {
-    if let Instruction::UnaryOp {
-        op, value, kind, ..
-    } = instr
+    if let (
+        TokenKind::PlusPlus,
+        Instruction::RefVar {
+            name,
+            kind: refvar_type,
+            ..
+        },
+        _,
+    ) = unary
     {
-        if let (TokenKind::PlusPlus, Instruction::RefVar { name, kind, .. }, _) =
-            (op, &**value, kind)
-        {
-            let variable: PointerValue<'ctx> = objects.find_and_get(name).unwrap();
+        let variable: PointerValue<'ctx> = compiler_objects.find_and_get(name).unwrap();
 
-            if kind.is_integer() {
-                let left_num: IntValue<'ctx> = builder
-                    .build_load(
-                        utils::datatype_integer_to_llvm_type(context, kind),
-                        variable,
-                        "",
-                    )
-                    .unwrap()
-                    .into_int_value();
-
-                let right_num: IntValue<'ctx> =
-                    utils::datatype_integer_to_llvm_type(context, kind).const_int(1, false);
-
-                let result: IntValue<'ctx> =
-                    builder.build_int_nsw_add(left_num, right_num, "").unwrap();
-
-                builder.build_store(variable, result).unwrap();
-
-                return result.into();
-            }
-
-            let left_num: FloatValue<'ctx> = builder
+        if refvar_type.is_integer() {
+            let left_num: IntValue<'ctx> = builder
                 .build_load(
-                    utils::datatype_float_to_llvm_type(context, kind),
+                    utils::datatype_integer_to_llvm_type(context, refvar_type),
                     variable,
                     "",
                 )
                 .unwrap()
-                .into_float_value();
+                .into_int_value();
 
-            let right_num: FloatValue<'ctx> =
-                utils::datatype_float_to_llvm_type(context, kind).const_float(1.0);
+            let right_num: IntValue<'ctx> =
+                utils::datatype_integer_to_llvm_type(context, refvar_type).const_int(1, false);
 
-            let result: FloatValue<'ctx> =
-                builder.build_float_add(left_num, right_num, "").unwrap();
+            let result: IntValue<'ctx> =
+                builder.build_int_nsw_add(left_num, right_num, "").unwrap();
 
             builder.build_store(variable, result).unwrap();
 
             return result.into();
         }
+
+        let left_num: FloatValue<'ctx> = builder
+            .build_load(
+                utils::datatype_float_to_llvm_type(context, refvar_type),
+                variable,
+                "",
+            )
+            .unwrap()
+            .into_float_value();
+
+        let right_num: FloatValue<'ctx> =
+            utils::datatype_float_to_llvm_type(context, refvar_type).const_float(1.0);
+
+        let result: FloatValue<'ctx> = builder.build_float_add(left_num, right_num, "").unwrap();
+
+        builder.build_store(variable, result).unwrap();
+
+        return result.into();
+    }
+
+    if let (
+        TokenKind::Bang,
+        Instruction::RefVar {
+            name,
+            kind: refvar_type,
+            ..
+        },
+        _,
+    ) = unary
+    {
+        let variable: PointerValue<'ctx> = compiler_objects.find_and_get(name).unwrap();
+
+        if refvar_type.is_integer() {
+            let left: IntValue<'ctx> = builder
+                .build_load(
+                    utils::datatype_integer_to_llvm_type(context, refvar_type),
+                    variable,
+                    "",
+                )
+                .unwrap()
+                .into_int_value();
+
+            let result: IntValue<'ctx> = builder.build_not(left, "").unwrap();
+
+            builder.build_store(variable, result).unwrap();
+
+            return result.into();
+        }
+
+        let left: FloatValue<'ctx> = builder
+            .build_load(
+                utils::datatype_float_to_llvm_type(context, refvar_type),
+                variable,
+                "",
+            )
+            .unwrap()
+            .into_float_value();
+
+        let result: FloatValue<'ctx> = builder.build_float_neg(left, "").unwrap();
+
+        builder.build_store(variable, result).unwrap();
+
+        return result.into();
     }
 
     unreachable!()
