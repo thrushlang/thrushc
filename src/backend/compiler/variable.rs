@@ -1,6 +1,6 @@
 use {
     super::{
-        super::super::frontend::lexer::DataTypes, binaryop, codegen, function,
+        super::super::frontend::lexer::DataTypes, binaryop, call, codegen,
         objects::CompilerObjects, types::Variable, unaryop, utils, Instruction,
     },
     inkwell::{
@@ -291,18 +291,16 @@ fn compile_string_var<'ctx>(
     if let Instruction::Call {
         name: call_name,
         args,
-        kind: kind_call,
+        kind: call_type,
     } = value
     {
         compiler_objects.insert(
             name.to_string(),
-            function::compile_call(
+            call::build_call(
                 module,
                 builder,
                 context,
-                call_name,
-                args,
-                kind_call,
+                (call_name, call_type, args),
                 compiler_objects,
             )
             .unwrap()
@@ -442,7 +440,8 @@ fn compile_integer_var<'ctx>(
         let result: BasicValueEnum<'_> = binaryop::integer_binaryop(
             builder,
             context,
-            (left, op, right, var_type),
+            (left, op, right),
+            var_type,
             compiler_objects,
         );
 
@@ -454,21 +453,19 @@ fn compile_integer_var<'ctx>(
     if let Instruction::Call {
         name: call_name,
         args,
-        kind: kind_call,
+        kind: call_type,
     } = var_value
     {
-        let result: BasicValueEnum<'_> = function::compile_call(
+        let result: BasicValueEnum<'_> = call::build_call(
             module,
             builder,
             context,
-            call_name,
-            args,
-            var_type,
+            (call_name, call_type, args),
             compiler_objects,
         )
         .unwrap();
 
-        if utils::integer_autocast(kind_call, var_type, Some(ptr), result, builder, context)
+        if utils::integer_autocast(call_type, var_type, Some(ptr), result, builder, context)
             .is_none()
         {
             builder.build_store(ptr, result).unwrap();

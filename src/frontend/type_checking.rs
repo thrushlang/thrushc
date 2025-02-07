@@ -476,19 +476,12 @@ pub fn check_types(
         return check_types(target, Some(*kind), None, Some(**op), line, title, desc);
     }
 
-    if let Some(Instruction::Group { .. }) = value {
-        let dissambled_binary: (&Instruction<'_>, &TokenKind, &Instruction<'_>, &DataTypes) =
-            value.unwrap().as_binary();
+    if let Some(Instruction::UnaryOp { op, kind, .. }) = value {
+        return check_types(target, Some(*kind), None, Some(**op), line, title, desc);
+    }
 
-        return check_types(
-            target,
-            Some(*dissambled_binary.3),
-            None,
-            Some(*dissambled_binary.1),
-            line,
-            title,
-            desc,
-        );
+    if let Some(Instruction::Group { instr, .. }) = value {
+        return check_types(target, None, Some(instr), None, line, title, desc);
     }
 
     match (kind.unwrap(), target, op) {
@@ -505,7 +498,8 @@ pub fn check_types(
                 | TokenKind::Greater
                 | TokenKind::GreaterEq
                 | TokenKind::And
-                | TokenKind::Or,
+                | TokenKind::Or
+                | TokenKind::Bang,
             )
             | None,
         ) => Ok(()),

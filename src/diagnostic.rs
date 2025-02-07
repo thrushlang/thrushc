@@ -105,7 +105,7 @@ impl Diagnostic {
 
             println!("|\n|");
 
-            for _ in 0..content.len() + 6 {
+            for _ in 0..content.len() + 5 {
                 self.drawer
                     .push_str(style("─").bright_red().to_string().as_str());
             }
@@ -137,7 +137,7 @@ impl Diagnostic {
 
             println!("|\n|");
 
-            for _ in 0..example.len() + 6 {
+            for _ in 0..example.len() + 5 {
                 self.drawer
                     .push_str(style("─").bright_green().to_string().as_str());
             }

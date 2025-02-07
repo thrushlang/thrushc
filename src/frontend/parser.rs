@@ -1073,7 +1073,7 @@ impl<'instr> Parser<'instr> {
                 let instr: Instruction<'instr> = self.expression()?;
                 let kind: DataTypes = instr.get_data_type();
 
-                if !instr.is_binary() {
+                /* if !instr.is_binary() {
                     self.errors.push(ThrushError::Parse(
                         ThrushErrorKind::SyntaxError,
                         String::from("Syntax Error"),
@@ -1083,7 +1083,7 @@ impl<'instr> Parser<'instr> {
                         line,
                         String::from("(T + T)")
                     ));
-                }
+                } */
 
                 self.consume(
                     TokenKind::RParen,
@@ -1115,13 +1115,7 @@ impl<'instr> Parser<'instr> {
                 TokenKind::Integer(kind, num, is_signed) => {
                     self.only_advance()?;
 
-                    let instr: Instruction<'instr> = match kind {
-                        DataTypes::I8 => Instruction::Integer(DataTypes::I8, *num, *is_signed),
-                        DataTypes::I16 => Instruction::Integer(DataTypes::I16, *num, *is_signed),
-                        DataTypes::I32 => Instruction::Integer(DataTypes::I32, *num, *is_signed),
-                        DataTypes::I64 => Instruction::Integer(DataTypes::I64, *num, *is_signed),
-                        _ => unreachable!(),
-                    };
+                    let instr: Instruction<'_> = Instruction::Integer(*kind, *num, *is_signed);
 
                     if self.match_token(TokenKind::PlusPlus)?
                         | self.match_token(TokenKind::MinusMinus)?
@@ -1146,11 +1140,7 @@ impl<'instr> Parser<'instr> {
                 TokenKind::Float(kind, num, is_signed) => {
                     self.only_advance()?;
 
-                    let instr: Instruction<'instr> = match kind {
-                        DataTypes::F32 => Instruction::Float(DataTypes::F32, *num, *is_signed),
-                        DataTypes::F64 => Instruction::Float(DataTypes::F64, *num, *is_signed),
-                        _ => unreachable!(),
-                    };
+                    let instr: Instruction<'instr> = Instruction::Float(*kind, *num, *is_signed);
 
                     if self.match_token(TokenKind::PlusPlus)?
                         | self.match_token(TokenKind::MinusMinus)?
@@ -1258,18 +1248,8 @@ impl<'instr> Parser<'instr> {
 
                     } else if self.match_token(TokenKind::LParen)? {
                         return self.call(name, object, line);
-                    } else if self.match_token(TokenKind::Dot)? {
-                        self.consume(
-                            TokenKind::Identifier,
-                            ThrushErrorKind::SyntaxError,
-                            String::from("Syntax Error"),
-                            String::from("Expected a name to property. Like \"thrush. --> thrushc <--;\""),
-                            line,
-                        )?;
-
-                        todo!()
-                    }
-
+                    } 
+                    
                     if object.1 {
                         self.errors.push(ThrushError::Parse(
                             ThrushErrorKind::VariableNotDeclared,
@@ -1548,13 +1528,12 @@ impl<'instr> Parser<'instr> {
         let mut functions_positions: Vec<usize> = Vec::new();
         let mut pos: usize = 0;
 
-        self.tokens.iter().for_each(|tok| match tok.kind {
-            TokenKind::Fn => {
+        self.tokens.iter().for_each(|tok| {
+            if let TokenKind::Fn = tok.kind {
                 functions_positions.push(pos);
-
                 pos += 1;
             }
-            _ => {
+            else {
                 pos += 1;
             }
         });

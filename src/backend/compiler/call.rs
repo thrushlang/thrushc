@@ -1,6 +1,7 @@
 use {
     super::{
-        super::super::frontend::lexer::DataTypes, codegen, objects::CompilerObjects, Instruction,
+        super::super::frontend::lexer::DataTypes, codegen, objects::CompilerObjects, types::Call,
+        Instruction,
     },
     inkwell::{
         builder::Builder,
@@ -10,18 +11,20 @@ use {
     },
 };
 
-pub fn compile_call<'ctx>(
+pub fn build_call<'ctx>(
     module: &Module<'ctx>,
     builder: &Builder<'ctx>,
     context: &'ctx Context,
-    name: &str,
-    args: &'ctx [Instruction<'ctx>],
-    kind: &DataTypes,
+    call: Call<'ctx>,
     objects: &CompilerObjects<'ctx>,
 ) -> Option<BasicValueEnum<'ctx>> {
-    let mut compiled_args: Vec<BasicMetadataValueEnum> = Vec::with_capacity(args.len());
+    let call_name: &str = call.0;
+    let call_args: &[Instruction<'ctx>] = call.2;
+    let call_type: &DataTypes = call.1;
 
-    args.iter().for_each(|arg| {
+    let mut compiled_args: Vec<BasicMetadataValueEnum> = Vec::with_capacity(call_args.len());
+
+    call_args.iter().for_each(|arg| {
         compiled_args.push(
             codegen::compile_instr_as_basic_value_enum(
                 module,
@@ -36,11 +39,11 @@ pub fn compile_call<'ctx>(
         );
     });
 
-    if *kind != DataTypes::Void {
+    if *call_type != DataTypes::Void {
         Some(
             builder
                 .build_call(
-                    objects.find_and_get_function(name).unwrap(),
+                    objects.find_and_get_function(call_name).unwrap(),
                     &compiled_args,
                     "",
                 )
@@ -51,7 +54,7 @@ pub fn compile_call<'ctx>(
     } else {
         builder
             .build_call(
-                objects.find_and_get_function(name).unwrap(),
+                objects.find_and_get_function(call_name).unwrap(),
                 &compiled_args,
                 "",
             )

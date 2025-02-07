@@ -1,7 +1,7 @@
 use {
     super::super::{
         backend::compiler::options::ThrushFile, diagnostic::Diagnostic, error::{ThrushError, ThrushErrorKind}, logging::LogType
-    }, ahash::{HashMap, HashMapExt}, core::str, inkwell::{FloatPredicate, IntPredicate}, std::{num::ParseFloatError, process::exit, mem}
+    }, core::str, inkwell::{FloatPredicate, IntPredicate}, std::{num::ParseFloatError, process::exit, mem}
 };
 
 pub struct Lexer<'a> {
@@ -321,7 +321,7 @@ impl<'a> Lexer<'a> {
                 return Err(ThrushError::Lex(
                     ThrushErrorKind::SyntaxError, 
                     String::from("Float Violated Syntax"), 
-                    String::from("Float's values should be only contain one dot."), 
+                    String::from("Floats values should be only contain one dot."), 
                     self.line
                 ));
             } else if lexeme.parse::<f32>().is_ok() {
@@ -577,7 +577,6 @@ impl std::fmt::Display for TokenKind {
 }
 
 impl TokenKind {
-
     #[inline]
     pub fn as_int_predicate(&self, left_signed: bool, right_signed: bool) -> IntPredicate {
         match self {
@@ -681,10 +680,9 @@ impl std::fmt::Display for DataTypes {
 }
 
 impl DataTypes {
-
     #[inline]
     pub fn calculate_integer_datatype(self, other: DataTypes) -> DataTypes {
-        let mut types: HashMap<u8, DataTypes> = HashMap::with_capacity(4);
+        /* let mut types: HashMap<u8, DataTypes> = HashMap::with_capacity(4);
 
         types.insert(4, DataTypes::I8);
         types.insert(8, DataTypes::I16);
@@ -701,7 +699,14 @@ impl DataTypes {
             return *types.get(&calc).unwrap();
         }
 
-        DataTypes::I64
+        DataTypes::I64 */
+
+        match (self, other) {
+            (DataTypes::I64, _) | (_, DataTypes::I64) => DataTypes::I64,
+            (DataTypes::I32, _) | (_, DataTypes::I32) => DataTypes::I32,
+            (DataTypes::I16, _) | (_, DataTypes::I16) => DataTypes::I16,
+            _ => DataTypes::I8,
+        }
     }
 
     #[inline]

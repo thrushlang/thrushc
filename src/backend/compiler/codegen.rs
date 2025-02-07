@@ -4,7 +4,7 @@ use {
             super::frontend::lexer::{DataTypes, TokenKind},
             instruction::Instruction,
         },
-        binaryop, function,
+        binaryop, call,
         objects::CompilerObjects,
         unaryop, utils, variable,
     },
@@ -261,7 +261,8 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                     return Instruction::BasicValueEnum(binaryop::integer_binaryop(
                         self.builder,
                         self.context,
-                        (left, op, right, kind),
+                        (left, op, right),
+                        kind,
                         &self.compiler_objects,
                     ));
                 }
@@ -291,13 +292,11 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
             }
 
             Instruction::Call { name, args, kind } => {
-                function::compile_call(
+                call::build_call(
                     self.module,
                     self.builder,
                     self.context,
-                    name,
-                    args,
-                    kind,
+                    (name, kind, args),
                     &self.compiler_objects,
                 );
 

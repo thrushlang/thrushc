@@ -226,14 +226,10 @@ impl<'ctx> Instruction<'ctx> {
 
     pub fn as_binary(&self) -> BinaryOp {
         if let Instruction::BinaryOp {
-            left,
-            op,
-            right,
-            kind,
-            ..
+            left, op, right, ..
         } = self
         {
-            return (&**left, op, &**right, kind);
+            return (&**left, op, &**right);
         }
 
         if let Instruction::Group { instr, .. } = self {

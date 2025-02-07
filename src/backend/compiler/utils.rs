@@ -216,7 +216,9 @@ pub fn integer_autocast<'ctx>(
     builder: &Builder<'ctx>,
     context: &'ctx Context,
 ) -> Option<BasicValueEnum<'ctx>> {
-    if kind == target || (*target == DataTypes::Bool && (kind.is_float() || kind.is_integer())) {
+    if kind == target
+    /*|| (*target == DataTypes::Bool && (kind.is_float() || kind.is_integer()))*/
+    {
         return None;
     }
 
