@@ -3,21 +3,21 @@
 </p>
 
 > [!WARNING]  
-> **The Compiler is still under development and is unfinished, please be peaceful if exists some bug.**
+> **The compiler is still under development and is unfinished, please be peaceful if exists some bug.**
 
 # The Thrush Compiler 
 
-This compiler compile target to **LLVM IR** and coming soon to anothers backend infraestructures; This compile for native **Optimized Machine Code** with object files or executables.
+This compiler compile target to **LLVM IR** and coming soon to anothers backend infraestructures; This compile for native **optimized machine code** with object files or executables.
 
-## Build Dependencies for the Compiler 
+## Build dependencies for the compiler 
 
-**Important Crates:**
+**Important rust crates:**
 
 - **llvm-sys** (v170)
 - **inkwell** (v0.50)
   
-## External Requirements for create executables with the Compiler
+## External requirements for create executables with the compiler
 
-- **Clang** 17.0.6 (Linux Binaries)
+- **clang** 17.0.6 (Linux binaries)
 
 ~ **NOTE:** In the theoretically toolchain of thrush (under development), is ready contain the toolchain for each operating system in than language is available. The default Installed location gived by the package manager `throium` in `%HOMEUSER%/thrushlang/backend/llvm/`. This process is going to be automatized by `throium`.
