@@ -1317,6 +1317,8 @@ impl<'instr> Parser<'instr> {
                 }
 
                 _ => {
+                    self.only_advance()?;
+
                     return Err(ThrushError::Parse(
                         ThrushErrorKind::SyntaxError,
                         String::from("Syntax Error"),
