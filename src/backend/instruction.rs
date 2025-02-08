@@ -9,7 +9,7 @@ use {
 #[derive(Debug, Clone, Default)]
 pub enum Instruction<'ctx> {
     BasicValueEnum(BasicValueEnum<'ctx>),
-    String(String, bool),
+    String(String),
     Char(u8),
     ForLoop {
         variable: Option<Box<Instruction<'ctx>>>,
@@ -106,8 +106,8 @@ impl PartialEq for Instruction<'_> {
                 matches!(other, Instruction::Float(_, _, _))
             }
 
-            Instruction::String(_, _) => {
-                matches!(other, Instruction::String(_, _))
+            Instruction::String(_) => {
+                matches!(other, Instruction::String(_))
             }
 
             _ => self == other,
@@ -261,7 +261,7 @@ impl<'ctx> Instruction<'ctx> {
             return DataTypes::Char;
         }
 
-        if let Instruction::String(_, _) = self {
+        if let Instruction::String(_) = self {
             return DataTypes::String;
         }
 
@@ -276,7 +276,7 @@ impl<'ctx> Instruction<'ctx> {
         match self {
             Instruction::Integer(datatype, _, _) => *datatype,
             Instruction::Float(datatype, _, _) => *datatype,
-            Instruction::String(_, _) => DataTypes::String,
+            Instruction::String(_) => DataTypes::String,
             Instruction::Boolean(_) => DataTypes::Bool,
             Instruction::Char(_) => DataTypes::Char,
             Instruction::RefVar { kind, .. } => *kind,

@@ -10,6 +10,7 @@ use {
         context::Context,
         values::{BasicValueEnum, FloatValue, IntValue},
     },
+    std::cmp::Ordering,
 };
 
 fn build_int_op<'ctx>(
@@ -29,16 +30,22 @@ fn build_int_op<'ctx>(
             .unwrap()
             .into(),
         op if op.is_logical_type() => {
-            if left.get_type() != right.get_type() {
-                left = builder
-                    .build_int_cast_sign_flag(left, right.get_type(), signatures.0, "")
-                    .unwrap()
-            }
-
-            if right.get_type() != left.get_type() {
-                right = builder
-                    .build_int_cast_sign_flag(right, left.get_type(), signatures.0, "")
-                    .unwrap()
+            match left
+                .get_type()
+                .get_bit_width()
+                .cmp(&right.get_type().get_bit_width())
+            {
+                Ordering::Greater => {
+                    right = builder
+                        .build_int_cast_sign_flag(right, left.get_type(), signatures.0, "")
+                        .unwrap();
+                }
+                Ordering::Less => {
+                    left = builder
+                        .build_int_cast_sign_flag(left, right.get_type(), signatures.1, "")
+                        .unwrap();
+                }
+                Ordering::Equal => {}
             }
 
             builder
@@ -92,15 +99,15 @@ fn build_float_op<'ctx>(
         TokenKind::Star => builder.build_float_mul(left, right, "").unwrap().into(),
         TokenKind::Slash => builder.build_float_div(left, right, "").unwrap().into(),
         op if op.is_logical_type() => {
-            if left.get_type() != right.get_type() {
+            if left.get_type() != context.f64_type() {
                 left = builder
-                    .build_float_cast(left, right.get_type(), "")
+                    .build_float_cast(left, context.f64_type(), "")
                     .unwrap()
             }
 
-            if right.get_type() != left.get_type() {
+            if right.get_type() != context.f64_type() {
                 right = builder
-                    .build_float_cast(right, left.get_type(), "")
+                    .build_float_cast(right, context.f64_type(), "")
                     .unwrap()
             }
 

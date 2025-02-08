@@ -175,6 +175,11 @@ fn main() {
 
     let mut cli: Cli = Cli::parse(env::args().collect());
 
+    if cli.options.files.is_empty() {
+        logging::log(logging::LogType::ERROR, "No files to compile!");
+        process::exit(1);
+    }
+
     if !cli.options.include_vector_api {
         vector::compile_vector_api(&mut cli.options);
     }

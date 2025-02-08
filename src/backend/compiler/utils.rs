@@ -88,21 +88,6 @@ pub fn build_alloca_float<'ctx>(
     builder.build_alloca(kind, "").unwrap()
 }
 
-pub fn build_int_array_type_from_size(
-    context: &'_ Context,
-    kind: DataTypes,
-    size: u32,
-) -> ArrayType<'_> {
-    match kind {
-        DataTypes::I8 => context.i8_type().array_type(size),
-        DataTypes::I16 => context.i16_type().array_type(size),
-        DataTypes::I32 => context.i32_type().array_type(size),
-        DataTypes::I64 => context.i64_type().array_type(size),
-
-        _ => unreachable!(),
-    }
-}
-
 pub fn datatype_to_fn_type<'ctx>(
     context: &'ctx Context,
     kind: &Option<DataTypes>,
@@ -163,6 +148,10 @@ pub fn float_autocast<'ctx>(
     builder: &Builder<'ctx>,
     context: &'ctx Context,
 ) -> Option<BasicValueEnum<'ctx>> {
+    if *target == DataTypes::Bool {
+        return None;
+    }
+
     if kind == target {
         return None;
     }
@@ -213,9 +202,11 @@ pub fn integer_autocast<'ctx>(
     builder: &Builder<'ctx>,
     context: &'ctx Context,
 ) -> Option<BasicValueEnum<'ctx>> {
-    if kind == target
-    /*|| (*target == DataTypes::Bool && (kind.is_float() || kind.is_integer()))*/
-    {
+    if *target == DataTypes::Bool && kind.is_integer() {
+        return None;
+    }
+
+    if kind == target {
         return None;
     }
 
@@ -291,57 +282,6 @@ pub fn build_string_constant<'ctx>(
     global.set_initializer(&context.const_string(string.as_ref(), true));
     global.set_constant(true);
     global.set_unnamed_addr(true);
-
-    builder
-        .build_pointer_cast(
-            global.as_pointer_value(),
-            context.ptr_type(AddressSpace::default()),
-            "",
-        )
-        .unwrap()
-}
-
-pub fn build_formatter_string<'ctx>(
-    module: &Module<'ctx>,
-    builder: &Builder<'ctx>,
-    context: &'ctx Context,
-    str: &str,
-    args: &[Instruction],
-) -> PointerValue<'ctx> {
-    let mut string: String = str.to_string();
-
-    let mut instr_pos: usize = 1;
-
-    let parsed_fmts: Vec<String> = string
-        .split_inclusive("{}")
-        .filter(|substr| substr.contains("{}"))
-        .map(|substr| {
-            let fmt: String = substr.replace("{}", args[instr_pos].get_data_type().as_fmt());
-
-            instr_pos += 1;
-
-            fmt
-        })
-        .collect();
-
-    let mut fmts: Vec<u8> = Vec::new();
-
-    for arg in parsed_fmts {
-        fmts.extend(arg.bytes());
-    }
-
-    string = String::from_utf8_lossy(&fmts).to_string();
-
-    let kind: ArrayType<'_> =
-        build_int_array_type_from_size(context, DataTypes::I8, string.len() as u32 + 1);
-    let global: GlobalValue<'_> = module.add_global(kind, Some(AddressSpace::default()), "");
-
-    global.set_initializer(&context.const_string(string.as_ref(), true));
-
-    global.set_linkage(Linkage::LinkerPrivate);
-    global.set_constant(true);
-    global.set_unnamed_addr(true);
-    global.set_alignment(4);
 
     builder
         .build_pointer_cast(

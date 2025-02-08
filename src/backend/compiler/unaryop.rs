@@ -17,7 +17,7 @@ pub fn compile_unary_op<'ctx>(
     compiler_objects: &CompilerObjects<'ctx>,
 ) -> BasicValueEnum<'ctx> {
     if let (
-        TokenKind::PlusPlus,
+        TokenKind::PlusPlus | TokenKind::MinusMinus,
         Instruction::RefVar {
             name,
             kind: refvar_type,
@@ -41,8 +41,11 @@ pub fn compile_unary_op<'ctx>(
             let right_num: IntValue<'ctx> =
                 utils::datatype_integer_to_llvm_type(context, refvar_type).const_int(1, false);
 
-            let result: IntValue<'ctx> =
-                builder.build_int_nsw_add(left_num, right_num, "").unwrap();
+            let result: IntValue<'ctx> = if *unary.0 == TokenKind::PlusPlus {
+                builder.build_int_nsw_add(left_num, right_num, "").unwrap()
+            } else {
+                builder.build_int_nsw_sub(left_num, right_num, "").unwrap()
+            };
 
             builder.build_store(variable, result).unwrap();
 
@@ -61,7 +64,11 @@ pub fn compile_unary_op<'ctx>(
         let right_num: FloatValue<'ctx> =
             utils::datatype_float_to_llvm_type(context, refvar_type).const_float(1.0);
 
-        let result: FloatValue<'ctx> = builder.build_float_add(left_num, right_num, "").unwrap();
+        let result: FloatValue<'ctx> = if *unary.0 == TokenKind::PlusPlus {
+            builder.build_float_add(left_num, right_num, "").unwrap()
+        } else {
+            builder.build_float_sub(left_num, right_num, "").unwrap()
+        };
 
         builder.build_store(variable, result).unwrap();
 

@@ -76,7 +76,6 @@ impl Linking {
 pub struct ThrushFile {
     pub name: String,
     pub path: PathBuf,
-    pub is_main: bool,
 }
 
 #[derive(Debug)]

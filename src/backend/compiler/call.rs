@@ -26,16 +26,8 @@ pub fn build_call<'ctx>(
 
     call_args.iter().for_each(|arg| {
         compiled_args.push(
-            codegen::build_basic_value_enum(
-                module,
-                builder,
-                context,
-                arg,
-                &[],
-                arg.is_var(),
-                objects,
-            )
-            .into(),
+            codegen::build_basic_value_enum(module, builder, context, arg, arg.is_var(), objects)
+                .into(),
         );
     });
 

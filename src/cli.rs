@@ -62,6 +62,7 @@ impl Cli {
             "version" | "-v" | "--version" => {
                 *index += 1;
                 println!("v{}", env!("CARGO_PKG_VERSION"));
+                process::exit(0);
             }
 
             "-o" | "--output" => {
@@ -173,13 +174,11 @@ impl Cli {
 
             "--static" | "-s" => {
                 *index += 1;
-
                 self.options.linking = Linking::Static;
             }
 
             "--dynamic" | "-d" => {
                 *index += 1;
-
                 self.options.linking = Linking::Dynamic;
             }
 
@@ -263,7 +262,7 @@ impl Cli {
                 } else if file.extension().is_none() {
                     self.report_error(&format!("\"{}\" does not have extension.", path));
                 } else if file.extension().unwrap() != "th" {
-                    self.report_error(&format!("\"{}\" is not a Thrush file.", path));
+                    self.report_error(&format!("\"{}\" is not a thrush file.", path));
                 } else if file.file_name().is_none() {
                     self.report_error(&format!("\"{}\" does not have a name.", path));
                 }
@@ -272,23 +271,9 @@ impl Cli {
                     file = file.canonicalize().unwrap();
                 }
 
-                if self
-                    .options
-                    .files
-                    .iter()
-                    .filter(|file| file.is_main)
-                    .count()
-                    > 1
-                {
-                    self.report_error("Compile two or more \"main.th\" file don't allowed.");
-                }
-
-                let is_main: bool = file.file_name().unwrap().to_string_lossy().trim() == "main.th";
-
                 self.options.files.push(ThrushFile {
                     name: file.file_name().unwrap().to_string_lossy().to_string(),
                     path: file,
-                    is_main,
                 });
             }
 

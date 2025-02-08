@@ -30,7 +30,6 @@ pub struct Parser<'instr> {
     current: usize,
     scope: usize,
     has_entry_point: bool,
-    is_main: bool,
     scoper: ThrushScoper<'instr>,
     diagnostic: Diagnostic,
     parser_objects: ParserObjects<'instr>,
@@ -48,7 +47,6 @@ impl<'instr> Parser<'instr> {
             in_var_type: DataTypes::Void,
             scope: 0,
             has_entry_point: false,
-            is_main: file.is_main,
             scoper: ThrushScoper::new(file),
             diagnostic: Diagnostic::new(file),
             parser_objects: ParserObjects::new(),
@@ -84,9 +82,6 @@ impl<'instr> Parser<'instr> {
                 self.diagnostic.report(error, LogType::ERROR, false);
             });
 
-            process::exit(1);
-        } else if self.is_main && !self.has_entry_point {
-            self.diagnostic.report(&ThrushError::Parse(ThrushErrorKind::MissingEntryPoint, String::from("Missing EntryPoint"), String::from("Write the entrypoint for this thrush main file."), 0, String::from("fn main() { ... }")), LogType::ERROR, true);
             process::exit(1);
         }
 
@@ -176,7 +171,7 @@ impl<'instr> Parser<'instr> {
             name.clone_from(&library.0);
             path.clone_from(&library.1);
 
-            let file: ThrushFile = ThrushFile { name, path: PathBuf::from(path), is_main: false};
+            let file: ThrushFile = ThrushFile { name, path: PathBuf::from(path)};
 
             let content: String = fs::read_to_string(&file.path).unwrap();
 
@@ -213,7 +208,6 @@ impl<'instr> Parser<'instr> {
             let file: ThrushFile = ThrushFile {
                 name: path_converted.file_name().unwrap().to_string_lossy().to_string(), 
                 path: path_converted.to_path_buf(), 
-                is_main: false
             };
 
             let content: String = fs::read_to_string(&file.path).unwrap();
@@ -298,6 +292,16 @@ impl<'instr> Parser<'instr> {
 
         if let Instruction::Var { only_comptime, .. } = &mut variable_clone {
             *only_comptime = true;
+        }
+
+        if !self.check_kind(TokenKind::RBrace) {
+            return Err(ThrushError::Parse(
+                ThrushErrorKind::SyntaxError,
+                String::from("Syntax Error"),
+                String::from("Expected body \"{ ... }\" for the loop."),
+                start_line,
+                String::from("{ ... }")
+            ));
         }
 
         let body: Instruction<'instr> = self.block(&mut [variable_clone])?;
@@ -586,7 +590,7 @@ impl<'instr> Parser<'instr> {
             self.previous().line,
         )?;
 
-        if name.lexeme.as_ref().unwrap() == "main" && self.is_main {
+        if name.lexeme.as_ref().unwrap() == "main" {
             if self.has_entry_point {
                 self.errors.push(ThrushError::Parse(
                     ThrushErrorKind::SyntaxError,
@@ -1089,11 +1093,8 @@ impl<'instr> Parser<'instr> {
             }
 
             TokenKind::String => {
-                let current: &Token = self.advance()?;
-
                 Instruction::String(
-                    current.lexeme.as_ref().unwrap().to_string(),
-                    current.lexeme.as_ref().unwrap().contains("{}"),
+                    self.advance()?.lexeme.as_ref().unwrap().to_string(),
                 )
             }
             TokenKind::Char => {
@@ -1634,6 +1635,14 @@ impl<'instr> Parser<'instr> {
         self.parser_objects.insert_new_global(name.lexeme.clone().unwrap(), (return_kind, params, true, ignore_more_params));
 
         Ok(())
+    }
+
+    fn check_kind(&self, other_type: TokenKind) -> bool {
+        if self.end() {
+            return false;
+        }
+
+        self.peek().kind == other_type
     }
 
     fn match_token(&mut self, kind: TokenKind) -> Result<bool, ThrushError> {

@@ -164,18 +164,14 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                 Instruction::Null
             }
 
-            Instruction::String(_, _) => {
-                build_basic_value_enum(
-                    self.module,
-                    self.builder,
-                    self.context,
-                    instr,
-                    &[],
-                    false,
-                    &self.compiler_objects,
-                );
-                Instruction::Null
-            }
+            Instruction::String(_) => Instruction::BasicValueEnum(build_basic_value_enum(
+                self.module,
+                self.builder,
+                self.context,
+                instr,
+                false,
+                &self.compiler_objects,
+            )),
 
             Instruction::Var {
                 name,
@@ -386,17 +382,9 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
             return;
         }
 
-        if let Instruction::String(_, _) = instr {
+        if let Instruction::String(_) = instr {
             self.builder
-                .build_return(Some(&build_basic_value_enum(
-                    self.module,
-                    self.builder,
-                    self.context,
-                    instr,
-                    &[],
-                    true,
-                    &self.compiler_objects,
-                )))
+                .build_return(Some(self.codegen(instr).as_basic_value()))
                 .unwrap();
 
             return;
@@ -591,15 +579,10 @@ pub fn build_basic_value_enum<'ctx>(
     builder: &Builder<'ctx>,
     context: &'ctx Context,
     instr: &'ctx Instruction,
-    extra: &[Instruction],
     is_var: bool,
     objects: &CompilerObjects<'ctx>,
 ) -> BasicValueEnum<'ctx> {
-    if let Instruction::String(str, is_fmt) = instr {
-        if *is_fmt {
-            return utils::build_formatter_string(module, builder, context, str, extra).into();
-        }
-
+    if let Instruction::String(str) = instr {
         if !is_var {
             return utils::build_string_constant(module, builder, context, str).into();
         }

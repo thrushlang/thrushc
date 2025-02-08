@@ -711,18 +711,4 @@ impl DataTypes {
 
         false
     }
-
-    #[inline]
-    pub fn as_fmt(&self) -> &str {
-        match self {
-            DataTypes::I8 | DataTypes::Bool => "%d",
-            DataTypes::I16 => "%d",
-            DataTypes::I32 => "%d",
-          | DataTypes::I64 => "%ld",
-            DataTypes::Char => "%c",
-            DataTypes::String => "%s",
-            DataTypes::F32 | DataTypes::F64 => "%f",
-            _ => unreachable!()
-        }
-    }
 }

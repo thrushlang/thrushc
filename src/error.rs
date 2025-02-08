@@ -15,5 +15,4 @@ pub enum ThrushErrorKind {
     ObjectNotDefined,
     VariableNotDefined,
     VariableNotDeclared,
-    MissingEntryPoint,
 }

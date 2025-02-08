@@ -62,8 +62,7 @@ impl Diagnostic {
             | ThrushErrorKind::SyntaxError
             | ThrushErrorKind::UnreachableVariable
             | ThrushErrorKind::ObjectNotDefined
-            | ThrushErrorKind::VariableNotDeclared
-            | ThrushErrorKind::MissingEntryPoint,
+            | ThrushErrorKind::VariableNotDeclared,
             title,
             help,
             line,
@@ -99,7 +98,7 @@ impl Diagnostic {
                 self.lines[line - 1].trim()
             };
 
-            self.buffer.push_str(" > ");
+            self.buffer.push_str(" >> ");
             self.drawer.push_str(&format!("{} | ^ ", line));
             self.buffer.push_str(&format!("{}\n", content));
 

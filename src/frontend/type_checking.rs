@@ -293,15 +293,7 @@ fn check_binary_instr_and(a: &DataTypes, b: &DataTypes, line: usize) -> Result<(
 
 #[inline]
 fn check_binary_instr_or(a: &DataTypes, b: &DataTypes, line: usize) -> Result<(), ThrushError> {
-    if let (
-        DataTypes::I8 | DataTypes::I16 | DataTypes::I32 | DataTypes::I64,
-        DataTypes::I8 | DataTypes::I16 | DataTypes::I32 | DataTypes::I64,
-    ) = (a, b)
-    {
-        return Ok(());
-    } else if let (DataTypes::F32 | DataTypes::F64, DataTypes::F32 | DataTypes::F64) = (a, b) {
-        return Ok(());
-    } else if let (DataTypes::Bool, DataTypes::Bool) = (a, b) {
+    if let (DataTypes::Bool, DataTypes::Bool) = (a, b) {
         return Ok(());
     }
 

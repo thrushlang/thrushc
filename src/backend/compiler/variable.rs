@@ -112,7 +112,7 @@ pub fn compile_mut<'ctx>(
     }
 
     if *var_type == DataTypes::String {
-        if let Instruction::String(str, _) = var_value {
+        if let Instruction::String(str) = var_value {
             builder
                 .build_call(
                     module.get_function("Vec.realloc").unwrap(),
@@ -281,7 +281,7 @@ fn compile_string_var<'ctx>(
         compiler_objects.insert(name.to_string(), ptr);
     }
 
-    if let Instruction::String(_, _) = value {
+    if let Instruction::String(_) = value {
         compiler_objects.insert(
             name.to_string(),
             codegen::build_basic_value_enum(
@@ -289,7 +289,6 @@ fn compile_string_var<'ctx>(
                 builder,
                 context,
                 value,
-                &[],
                 true,
                 compiler_objects,
             )
@@ -305,7 +304,6 @@ fn compile_string_var<'ctx>(
                 builder,
                 context,
                 value,
-                &[],
                 true,
                 compiler_objects,
             )
