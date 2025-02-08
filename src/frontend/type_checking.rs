@@ -275,19 +275,7 @@ fn check_binary_instr_lesseq(a: &DataTypes, b: &DataTypes, line: usize) -> Resul
 
 #[inline]
 fn check_binary_instr_and(a: &DataTypes, b: &DataTypes, line: usize) -> Result<(), ThrushError> {
-    if let (
-        DataTypes::Bool,
-        DataTypes::Bool | DataTypes::I8 | DataTypes::I16 | DataTypes::I32 | DataTypes::I64,
-    ) = (a, b)
-    {
-        return Ok(());
-    }
-
-    if let (
-        DataTypes::I8 | DataTypes::I16 | DataTypes::I32 | DataTypes::I64,
-        DataTypes::I8 | DataTypes::I16 | DataTypes::I32 | DataTypes::I64,
-    ) = (a, b)
-    {
+    if let (DataTypes::Bool, DataTypes::Bool) = (a, b) {
         return Ok(());
     }
 
@@ -484,11 +472,13 @@ pub fn check_types(
         return check_types(target, None, Some(instr), None, line, title, desc);
     }
 
+    println!("{:?}", (kind.unwrap(), target, op));
+
     match (kind.unwrap(), target, op) {
         (DataTypes::Char, DataTypes::Char, None) => Ok(()),
         (DataTypes::String, DataTypes::String, Some(TokenKind::Plus) | None) => Ok(()),
         (
-            DataTypes::Bool | DataTypes::I8 | DataTypes::I16 | DataTypes::I32 | DataTypes::I64,
+            DataTypes::Bool,
             DataTypes::Bool,
             Some(
                 TokenKind::BangEq
@@ -525,7 +515,7 @@ pub fn check_types(
         ) => Ok(()),
         (
             DataTypes::F32,
-            DataTypes::F32 | DataTypes::F64,
+            DataTypes::F32,
             Some(TokenKind::Plus | TokenKind::Minus | TokenKind::Slash | TokenKind::Star) | None,
         ) => Ok(()),
         (

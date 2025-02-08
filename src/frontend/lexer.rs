@@ -495,8 +495,6 @@ pub enum TokenKind {
     Elif,
     Null,
     Or,
-    Println,
-    Print,
     Return,
     Super,
     This,
@@ -552,8 +550,6 @@ impl std::fmt::Display for TokenKind {
             TokenKind::Public => write!(f, "public"),
             TokenKind::Null => write!(f, "null"),
             TokenKind::Or => write!(f, "or"),
-            TokenKind::Println => write!(f, "println"),
-            TokenKind::Print => write!(f, "print"),
             TokenKind::Return => write!(f, "return"),
             TokenKind::Super => write!(f, "super"),
             TokenKind::This => write!(f, "this"),
@@ -606,10 +602,9 @@ impl TokenKind {
     pub fn as_float_predicate(&self) -> FloatPredicate {
 
         // ESTABILIZAR ESTA COSA EN EL FUTURO IGUAL QUE LOS INTEGER PREDICATE (DETERMINAR SI TIENE SIGNO Y CAMBIAR EL PREDICATE A CONVENIR)
-
         match self {
             TokenKind::EqEq => FloatPredicate::OEQ,
-            TokenKind::BangEq => FloatPredicate::ONE,
+            TokenKind::BangEq | TokenKind::And | TokenKind::Or => FloatPredicate::ONE,
             TokenKind::Greater => FloatPredicate::OGT,
             TokenKind::GreaterEq => FloatPredicate::OGE,
             TokenKind::Less => FloatPredicate::OLT,
@@ -682,25 +677,6 @@ impl std::fmt::Display for DataTypes {
 impl DataTypes {
     #[inline]
     pub fn calculate_integer_datatype(self, other: DataTypes) -> DataTypes {
-        /* let mut types: HashMap<u8, DataTypes> = HashMap::with_capacity(4);
-
-        types.insert(4, DataTypes::I8);
-        types.insert(8, DataTypes::I16);
-        types.insert(16, DataTypes::I32);
-        types.insert(32, DataTypes::I64);
-
-        let calc: u8 = self as u8 + other as u8;
-
-        if calc == 12 {
-            return DataTypes::I16;
-        } else if calc == 25 {
-            return DataTypes::I32;
-        } else if types.contains_key(&calc) {
-            return *types.get(&calc).unwrap();
-        }
-
-        DataTypes::I64 */
-
         match (self, other) {
             (DataTypes::I64, _) | (_, DataTypes::I64) => DataTypes::I64,
             (DataTypes::I32, _) | (_, DataTypes::I32) => DataTypes::I32,
@@ -710,14 +686,13 @@ impl DataTypes {
     }
 
     #[inline]
-    pub fn is_signed(&self) -> bool {
-        if let DataTypes::I64 | DataTypes::I32  | DataTypes::I16  | DataTypes::I8 = self {
-            return true;
+    pub fn calculate_float_datatype(self, other: DataTypes) -> DataTypes {
+        match (self, other) {
+            (DataTypes::F64, _) | (_, DataTypes::F64) => DataTypes::F64,
+            (DataTypes::F32, _) | (_, DataTypes::F32) => DataTypes::F32,
+            _ => DataTypes::F64,
         }
-
-        false
     }
-
 
     #[inline]
     pub fn is_float(&self) -> bool {
@@ -730,7 +705,7 @@ impl DataTypes {
 
     #[inline]
     pub fn is_integer(&self) -> bool {
-        if let DataTypes::I8 | DataTypes::I16 | DataTypes::I32 | DataTypes::I64 | DataTypes::Bool | DataTypes::Char = self {
+        if let DataTypes::I8 | DataTypes::I16 | DataTypes::I32 | DataTypes::I64 | DataTypes::Char = self {
             return true;
         }
 

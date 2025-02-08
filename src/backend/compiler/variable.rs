@@ -45,6 +45,31 @@ pub fn compile<'ctx>(
         );
     }
 
+    if *var_type == DataTypes::Bool {
+        if variable.2.get_data_type_recursive().is_integer() {
+            return compile_integer_var(
+                module,
+                builder,
+                context,
+                (variable.0, var_type, variable.2),
+                ptr,
+                compiler_objects,
+            );
+        }
+
+        if variable.2.get_data_type_recursive().is_float() {
+            return compile_float_var(
+                builder,
+                context,
+                (variable.0, var_type, variable.2),
+                ptr,
+                compiler_objects,
+            );
+        }
+        //ptmr me falta bool == bool
+        unimplemented!()
+    }
+
     if *var_type == DataTypes::String {
         compile_string_var(
             module,
@@ -259,7 +284,7 @@ fn compile_string_var<'ctx>(
     if let Instruction::String(_, _) = value {
         compiler_objects.insert(
             name.to_string(),
-            codegen::compile_instr_as_basic_value_enum(
+            codegen::build_basic_value_enum(
                 module,
                 builder,
                 context,
@@ -275,7 +300,7 @@ fn compile_string_var<'ctx>(
     if let Instruction::RefVar { .. } = value {
         compiler_objects.insert(
             name.to_string(),
-            codegen::compile_instr_as_basic_value_enum(
+            codegen::build_basic_value_enum(
                 module,
                 builder,
                 context,
@@ -410,7 +435,7 @@ fn compile_integer_var<'ctx>(
 
     if let Instruction::RefVar {
         name: refvar_name,
-        kind: kind_refvar,
+        kind: refvar_type,
         ..
     } = var_value
     {
@@ -418,13 +443,13 @@ fn compile_integer_var<'ctx>(
 
         let load: BasicValueEnum<'_> = builder
             .build_load(
-                utils::datatype_integer_to_llvm_type(context, kind_refvar),
+                utils::datatype_integer_to_llvm_type(context, refvar_type),
                 var,
                 "",
             )
             .unwrap();
 
-        if utils::integer_autocast(kind_refvar, var_type, Some(ptr), load, builder, context)
+        if utils::integer_autocast(refvar_type, var_type, Some(ptr), load, builder, context)
             .is_none()
         {
             builder.build_store(ptr, load).unwrap();
@@ -508,7 +533,10 @@ fn compile_float_var<'ctx>(
 
     if let Instruction::Null = var_value {
         builder
-            .build_store(ptr, utils::build_const_float(context, var_type, 0.0))
+            .build_store(
+                ptr,
+                utils::build_const_float(builder, context, var_type, 0.0, false),
+            )
             .unwrap();
 
         compiler_objects.insert(var_name.to_string(), ptr);
@@ -516,9 +544,12 @@ fn compile_float_var<'ctx>(
         return;
     }
 
-    if let Instruction::Float(_, num, _) = var_value {
+    if let Instruction::Float(_, num, is_signed) = var_value {
         builder
-            .build_store(ptr, utils::build_const_float(context, var_type, *num))
+            .build_store(
+                ptr,
+                utils::build_const_float(builder, context, var_type, *num, *is_signed),
+            )
             .unwrap();
 
         compiler_objects.insert(var_name.to_string(), ptr);
@@ -562,16 +593,29 @@ fn compile_float_var<'ctx>(
         left, op, right, ..
     } = var_value
     {
-        todo!()
+        let mut result: BasicValueEnum<'_> = binaryop::float_binaryop(
+            builder,
+            context,
+            (left, op, right),
+            var_type,
+            compiler_objects,
+        );
 
-        /*let result: FloatValue<'_> = binaryop::compile_binary_op(
-            module, builder, context, left, op, right, kind, compiler_objects, function,
-        )
-        .into_float_value();
+        if *var_type == DataTypes::Bool {
+            result = builder
+                .build_float_compare(
+                    op.as_float_predicate(),
+                    result.into_float_value(),
+                    context.f64_type().const_float(0.0),
+                    "",
+                )
+                .unwrap()
+                .into();
+        }
 
         builder.build_store(ptr, result).unwrap();
 
-        compiler_objects.insert(name.to_string(), ptr);*/
+        compiler_objects.insert(var_name.to_string(), ptr);
     }
 
     if let Instruction::Group { instr, .. } = var_value {

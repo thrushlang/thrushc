@@ -26,7 +26,7 @@ pub fn build_call<'ctx>(
 
     call_args.iter().for_each(|arg| {
         compiled_args.push(
-            codegen::compile_instr_as_basic_value_enum(
+            codegen::build_basic_value_enum(
                 module,
                 builder,
                 context,

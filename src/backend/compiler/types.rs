@@ -14,3 +14,11 @@ pub type UnaryOp<'ctx> = (&'ctx TokenKind, &'ctx Instruction<'ctx>, &'ctx DataTy
 pub type Variable<'ctx> = (&'ctx str, &'ctx DataTypes, &'ctx Instruction<'ctx>);
 
 pub type Call<'ctx> = (&'ctx str, &'ctx DataTypes, &'ctx [Instruction<'ctx>]);
+
+pub type Function<'ctx> = (
+    &'ctx str,
+    &'ctx [Instruction<'ctx>],
+    Option<&'ctx Box<Instruction<'ctx>>>,
+    &'ctx Option<DataTypes>,
+    bool,
+);

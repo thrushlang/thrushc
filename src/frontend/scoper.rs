@@ -82,15 +82,6 @@ impl<'ctx> ThrushScoper<'ctx> {
             self.analyze_instruction(body, depth)?;
         }
 
-        if let Instruction::Println(params) = instr {
-            params
-                .iter()
-                .try_for_each(|instr| match self.analyze_instruction(instr, depth) {
-                    Ok(()) => Ok(()),
-                    Err(e) => Err(e),
-                })?;
-        }
-
         match instr {
             Instruction::RefVar { name, line, .. } => {
                 if !self.is_at_current_scope(name, None, depth) {
@@ -115,28 +106,6 @@ impl<'ctx> ThrushScoper<'ctx> {
                         *line,
                     ));
                 }
-
-                Ok(())
-            }
-
-            Instruction::Println(params) => {
-                params.iter().try_for_each(|instr| {
-                    match self.analyze_instruction(instr, depth) {
-                        Ok(()) => Ok(()),
-                        Err(e) => Err(e),
-                    }
-                })?;
-
-                Ok(())
-            }
-
-            Instruction::Print(params) => {
-                params.iter().try_for_each(|instr| {
-                    match self.analyze_instruction(instr, depth) {
-                        Ok(()) => Ok(()),
-                        Err(e) => Err(e),
-                    }
-                })?;
 
                 Ok(())
             }

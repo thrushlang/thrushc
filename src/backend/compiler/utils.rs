@@ -31,18 +31,26 @@ pub fn datatype_float_to_llvm_type<'ctx>(
 ) -> FloatType<'ctx> {
     match kind {
         DataTypes::F32 => context.f32_type(),
-        DataTypes::F64 => context.f64_type(),
+        DataTypes::F64 | DataTypes::Bool => context.f64_type(),
         _ => unreachable!(),
     }
 }
 
 pub fn build_const_float<'ctx>(
+    builder: &Builder<'ctx>,
     context: &'ctx Context,
     kind: &'ctx DataTypes,
     num: f64,
+    is_signed: bool,
 ) -> FloatValue<'ctx> {
     match kind {
+        DataTypes::F32 if is_signed => builder
+            .build_float_neg(context.f32_type().const_float(num), "")
+            .unwrap(),
         DataTypes::F32 => context.f32_type().const_float(num),
+        DataTypes::F64 if is_signed => builder
+            .build_float_neg(context.f64_type().const_float(num), "")
+            .unwrap(),
         DataTypes::F64 => context.f64_type().const_float(num),
         _ => unreachable!(),
     }
@@ -69,26 +77,15 @@ pub fn build_const_integer<'ctx>(
     }
 }
 
-pub fn build_alloca_int<'a, 'ctx>(
-    builder: &'a Builder<'ctx>,
-    kind: IntType<'ctx>,
-) -> PointerValue<'ctx> {
-    let alloca: PointerValue<'ctx> = builder.build_alloca(kind, "").unwrap();
-
-    alloca.as_instruction().unwrap().set_alignment(4).unwrap();
-
-    alloca
+pub fn build_alloca_int<'ctx>(builder: &Builder<'ctx>, kind: IntType<'ctx>) -> PointerValue<'ctx> {
+    builder.build_alloca(kind, "").unwrap()
 }
 
-pub fn build_alloca_float<'a, 'ctx>(
-    builder: &'a Builder<'ctx>,
+pub fn build_alloca_float<'ctx>(
+    builder: &Builder<'ctx>,
     kind: FloatType<'ctx>,
 ) -> PointerValue<'ctx> {
-    let alloca: PointerValue<'ctx> = builder.build_alloca(kind, "").unwrap();
-
-    alloca.as_instruction().unwrap().set_alignment(4).unwrap();
-
-    alloca
+    builder.build_alloca(kind, "").unwrap()
 }
 
 pub fn build_int_array_type_from_size(
@@ -421,6 +418,8 @@ pub fn build_ptr<'ctx>(
         kind if kind.is_integer() => {
             build_alloca_int(builder, datatype_integer_to_llvm_type(context, &kind))
         }
+
+        DataTypes::Bool => build_alloca_int(builder, context.bool_type()),
 
         DataTypes::F64 | DataTypes::F32 => {
             build_alloca_float(builder, datatype_float_to_llvm_type(context, &kind))

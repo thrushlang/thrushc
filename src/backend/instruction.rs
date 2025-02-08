@@ -1,7 +1,7 @@
 use {
     super::{
         super::frontend::lexer::{DataTypes, TokenKind},
-        compiler::types::BinaryOp,
+        compiler::types::{BinaryOp, Function},
     },
     inkwell::values::BasicValueEnum,
 };
@@ -9,8 +9,6 @@ use {
 #[derive(Debug, Clone, Default)]
 pub enum Instruction<'ctx> {
     BasicValueEnum(BasicValueEnum<'ctx>),
-    Println(Vec<Instruction<'ctx>>),
-    Print(Vec<Instruction<'ctx>>),
     String(String, bool),
     Char(u8),
     ForLoop {
@@ -201,15 +199,7 @@ impl<'ctx> Instruction<'ctx> {
         unreachable!()
     }
 
-    pub fn as_function(
-        &self,
-    ) -> (
-        &str,
-        &[Instruction],
-        &Option<Box<Instruction>>,
-        &Option<DataTypes>,
-        bool,
-    ) {
+    pub fn as_function(&self) -> Function {
         if let Instruction::Function {
             name,
             params,
@@ -218,7 +208,7 @@ impl<'ctx> Instruction<'ctx> {
             is_public,
         } = self
         {
-            return (name, params, body, return_kind, *is_public);
+            return (name, params, body.as_ref(), return_kind, *is_public);
         }
 
         unreachable!()
@@ -237,6 +227,49 @@ impl<'ctx> Instruction<'ctx> {
         }
 
         unreachable!()
+    }
+
+    pub fn get_data_type_recursive(&self) -> DataTypes {
+        if let Instruction::BinaryOp { left, .. } = self {
+            return left.get_data_type_recursive();
+        }
+
+        if let Instruction::UnaryOp { value, .. } = self {
+            return value.get_data_type_recursive();
+        }
+
+        if let Instruction::Group { instr, .. } = self {
+            return instr.get_data_type_recursive();
+        }
+
+        if let Instruction::RefVar {
+            kind: refvar_type, ..
+        } = self
+        {
+            return *refvar_type;
+        }
+
+        if let Instruction::Integer(integer_type, _, _) = self {
+            return *integer_type;
+        }
+
+        if let Instruction::Float(float_type, _, _) = self {
+            return *float_type;
+        }
+
+        if let Instruction::Char(_) = self {
+            return DataTypes::Char;
+        }
+
+        if let Instruction::String(_, _) = self {
+            return DataTypes::String;
+        }
+
+        if let Instruction::Boolean(_) = self {
+            return DataTypes::Bool;
+        }
+
+        unimplemented!()
     }
 
     pub fn get_data_type(&self) -> DataTypes {

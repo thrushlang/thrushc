@@ -100,8 +100,6 @@ impl<'instr> Parser<'instr> {
         self.parser_objects.decrease_local_references(self.scope);
 
         match &self.peek().kind {
-            TokenKind::Println => Ok(self.println()?),
-            TokenKind::Print => Ok(self.print()?),
             TokenKind::Fn => Ok(self.function(false)?),
             TokenKind::LBrace => Ok(self.block(&mut [])?),
             TokenKind::Return => Ok(self.ret()?),
@@ -752,7 +750,7 @@ impl<'instr> Parser<'instr> {
         Ok(function)
     }
 
-    fn print(&mut self) -> Result<Instruction<'instr>, ThrushError> {
+    /* fn print(&mut self) -> Result<Instruction<'instr>, ThrushError> {
         self.only_advance()?;
 
         let start: &Token = self.consume(
@@ -784,7 +782,7 @@ impl<'instr> Parser<'instr> {
         )?;
 
         Ok(Instruction::Print(args))
-    }
+    } 
 
     fn println(&mut self) -> Result<Instruction<'instr>, ThrushError> {
         self.only_advance()?;
@@ -818,7 +816,7 @@ impl<'instr> Parser<'instr> {
         )?;
 
         Ok(Instruction::Println(args))
-    }
+    } */
 
     fn expression(&mut self) -> Result<Instruction<'instr>, ThrushError> {
         let instr: Instruction = self.or()?;
@@ -882,16 +880,7 @@ impl<'instr> Parser<'instr> {
         while self.match_token(TokenKind::BangEq)? || self.match_token(TokenKind::EqEq)? {
             let op: &TokenKind = &self.previous().kind;
             let right: Instruction<'_> = self.comparison()?;
-
-            let left_type: DataTypes = instr.get_data_type();
-            let right_type: DataTypes = right.get_data_type();
-
-            let kind: DataTypes = if left_type.is_integer() && right_type.is_integer() {
-                left_type.calculate_integer_datatype(right_type)
-            } else {
-                self.in_var_type
-            };
-
+            
             type_checking::check_binary_instr(
                 op,
                 &instr.get_data_type(),
@@ -903,7 +892,7 @@ impl<'instr> Parser<'instr> {
                 left: Box::from(instr),
                 op,
                 right: Box::from(right),
-                kind,
+                kind: DataTypes::Bool,
             }
         }
 
@@ -921,15 +910,6 @@ impl<'instr> Parser<'instr> {
             let op: &TokenKind = &self.previous().kind;
             let right: Instruction<'_> = self.term()?;
 
-            let left_type: DataTypes = instr.get_data_type();
-            let right_type: DataTypes = right.get_data_type();
-
-            let kind: DataTypes = if left_type.is_integer() && right_type.is_integer() {
-                left_type.calculate_integer_datatype(right_type)
-            } else {
-                self.in_var_type
-            };
-
             type_checking::check_binary_instr(
                 op,
                 &instr.get_data_type(),
@@ -941,7 +921,7 @@ impl<'instr> Parser<'instr> {
                 left: Box::from(instr),
                 op,
                 right: Box::from(right),
-                kind,
+                kind: DataTypes::Bool,
             };
         }
 
@@ -962,6 +942,8 @@ impl<'instr> Parser<'instr> {
 
             let kind: DataTypes = if left_type.is_integer() && right_type.is_integer() {
                 left_type.calculate_integer_datatype(right_type)
+            } else if left_type.is_float() && right_type.is_float()  {
+                left_type.calculate_float_datatype(right_type)
             } else {
                 self.in_var_type
             };
@@ -1041,6 +1023,13 @@ impl<'instr> Parser<'instr> {
             let mut value: Instruction<'instr> = self.primary()?;
 
             if let Instruction::Integer(_, _, is_signed) = &mut value {
+                if *op == TokenKind::Minus {
+                    *is_signed = true;
+                    return Ok(value);
+                }
+            }
+
+            if let Instruction::Float(_, _, is_signed) = &mut value {
                 if *op == TokenKind::Minus {
                     *is_signed = true;
                     return Ok(value);
@@ -1475,7 +1464,7 @@ impl<'instr> Parser<'instr> {
         })
     }
 
-    fn parse_string_formatted(&mut self, args: &[Instruction], line: usize, scan_spaces: bool) {
+    /* fn parse_string_formatted(&mut self, args: &[Instruction], line: usize, scan_spaces: bool) {
         if args.is_empty() {
             self.errors.push(ThrushError::Parse(
                 ThrushErrorKind::SyntaxError,
@@ -1523,8 +1512,7 @@ impl<'instr> Parser<'instr> {
                 }
             });
         }
-    }
-
+    } */
 
     fn declare_functions(&mut self) {
         let mut functions_positions: Vec<usize> = Vec::new();
