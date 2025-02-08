@@ -18,8 +18,8 @@ This compiler compile target to **LLVM IR** and coming soon to anothers backend 
   
 ## External requirements for create executables with the Compiler
 
-- **Clang** 17.0.6 (Linux binaries)
+- **clang** 17.0.6 (Linux binaries)
 
 > [!NOTE]  
-> In the theoretically toolchain of thrush (under development), is ready contain the toolchain for each operating system in than language is available. The default Installed location gived by the package manager `throium` in `%HOMEUSER%/thrushlang/backend/llvm/`. This process is going to be automatized by `throium`.
+> The theoretically toolchain of thrush (under development), is ready contain the toolchain for each operating system in than language is available. The default Installed location gived by the package manager `throium` in `%HOMEUSER%/thrushlang/backend/llvm/`. This process is going to be automatized by `throium`.
 
