@@ -164,15 +164,6 @@ impl<'ctx> Instruction<'ctx> {
     }
 
     #[inline]
-    pub fn as_boolean(&self) -> bool {
-        if let Instruction::Boolean(bool) = self {
-            return *bool;
-        }
-
-        unreachable!()
-    }
-
-    #[inline]
     pub fn is_extern(&self) -> bool {
         if let Instruction::Extern { .. } = self {
             return true;
