@@ -148,7 +148,7 @@ pub fn float_autocast<'ctx>(
     builder: &Builder<'ctx>,
     context: &'ctx Context,
 ) -> Option<BasicValueEnum<'ctx>> {
-    if *target == DataTypes::Bool {
+    if *target == DataTypes::Bool && kind.is_float() {
         return None;
     }
 
@@ -358,9 +358,7 @@ pub fn build_ptr<'ctx>(
         kind if kind.is_integer() => {
             build_alloca_int(builder, datatype_integer_to_llvm_type(context, &kind))
         }
-
         DataTypes::Bool => build_alloca_int(builder, context.bool_type()),
-
         DataTypes::F64 | DataTypes::F32 => {
             build_alloca_float(builder, datatype_float_to_llvm_type(context, &kind))
         }

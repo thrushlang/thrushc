@@ -111,47 +111,41 @@ fn build_float_op<'ctx>(
                     .unwrap()
             }
 
-            let result: IntValue<'ctx> = builder
+            builder
                 .build_float_compare(op.as_float_predicate(), left, right, "")
-                .unwrap();
+                .unwrap()
+                .into()
 
-            builder.build_bit_cast(result, left.get_type(), "").unwrap()
+            // builder.build_bit_cast(result, left.get_type(), "").unwrap()
         }
 
+        _ => unreachable!(),
+    }
+}
+
+fn build_bool_op<'ctx>(
+    builder: &Builder<'ctx>,
+    left: IntValue<'ctx>,
+    right: IntValue<'ctx>,
+    op: TokenKind,
+) -> BasicValueEnum<'ctx> {
+    match op {
+        op if op.is_logical_type() => builder
+            .build_int_compare(op.as_int_predicate(false, false), left, right, "")
+            .unwrap()
+            .into(),
+
         op if op.is_logical_gate() => {
-            let left_bitcasted: IntValue<'_> = builder
-                .build_bit_cast(left, context.i64_type(), "")
-                .unwrap()
-                .into_int_value();
-
-            let right_bitcasted: IntValue<'_> = builder
-                .build_bit_cast(right, context.i64_type(), "")
-                .unwrap()
-                .into_int_value();
-
             if let TokenKind::And = op {
-                let and_result: IntValue<'_> = builder
-                    .build_and(left_bitcasted, right_bitcasted, "")
-                    .unwrap();
-
-                return builder
-                    .build_bit_cast(and_result, left.get_type(), "")
-                    .unwrap();
+                return builder.build_and(left, right, "").unwrap().into();
             }
 
             if let TokenKind::Or = op {
-                let or_result: IntValue<'_> = builder
-                    .build_or(left_bitcasted, right_bitcasted, "")
-                    .unwrap();
-
-                return builder
-                    .build_bit_cast(or_result, left.get_type(), "")
-                    .unwrap();
+                return builder.build_or(left, right, "").unwrap().into();
             }
 
             unimplemented!()
         }
-
         _ => unreachable!(),
     }
 }
@@ -163,6 +157,21 @@ pub fn integer_binaryop<'ctx>(
     target_type: &DataTypes,
     objects: &CompilerObjects<'ctx>,
 ) -> BasicValueEnum<'ctx> {
+    if let (
+        Instruction::Boolean(left),
+        TokenKind::BangEq | TokenKind::EqEq | TokenKind::And,
+        Instruction::Boolean(right),
+    ) = binary
+    {
+        let left_compiled: IntValue<'_> =
+            utils::build_const_integer(context, &DataTypes::Bool, *left as u64, false);
+
+        let right_compiled: IntValue<'_> =
+            utils::build_const_integer(context, &DataTypes::Bool, *right as u64, false);
+
+        return build_bool_op(builder, left_compiled, right_compiled, *binary.1);
+    }
+
     if let (
         Instruction::Char(left),
         TokenKind::BangEq | TokenKind::EqEq,
@@ -439,265 +448,13 @@ pub fn integer_binaryop<'ctx>(
     }
 
     if let (
-        Instruction::Integer(left_type, left_num, left_signed),
-        TokenKind::Plus
-        | TokenKind::Slash
-        | TokenKind::Minus
-        | TokenKind::Star
-        | TokenKind::BangEq
-        | TokenKind::EqEq
-        | TokenKind::LessEq
-        | TokenKind::Less
-        | TokenKind::Greater
-        | TokenKind::GreaterEq
-        | TokenKind::And
-        | TokenKind::Or,
-        Instruction::BinaryOp {
-            kind: right_type, ..
-        },
-    ) = binary
-    {
-        let mut left_compiled: IntValue<'_> =
-            utils::build_const_integer(context, left_type, *left_num as u64, *left_signed);
-
-        let right_dissasembled: BinaryOp = binary.2.as_binary();
-
-        let mut right_compiled: IntValue<'_> =
-            integer_binaryop(builder, context, right_dissasembled, target_type, objects)
-                .into_int_value();
-
-        if let Some(new_left_compiled) = utils::integer_autocast(
-            left_type,
-            target_type,
-            None,
-            left_compiled.into(),
-            builder,
-            context,
-        ) {
-            left_compiled = new_left_compiled.into_int_value();
-        }
-
-        if let Some(new_right_compiled) = utils::integer_autocast(
-            right_type,
-            target_type,
-            None,
-            right_compiled.into(),
-            builder,
-            context,
-        ) {
-            right_compiled = new_right_compiled.into_int_value();
-        }
-
-        return build_int_op(
-            context,
-            builder,
-            left_compiled,
-            right_compiled,
-            (*left_signed, false),
-            *binary.1,
-        );
-    }
-
-    if let (
-        Instruction::BinaryOp {
-            kind: left_type, ..
-        },
-        TokenKind::Plus
-        | TokenKind::Slash
-        | TokenKind::Minus
-        | TokenKind::Star
-        | TokenKind::BangEq
-        | TokenKind::EqEq
-        | TokenKind::LessEq
-        | TokenKind::Less
-        | TokenKind::Greater
-        | TokenKind::GreaterEq
-        | TokenKind::And
-        | TokenKind::Or,
-        Instruction::Integer(right_type, right_num, right_signed),
-    ) = binary
-    {
-        let left_dissasembled: BinaryOp = binary.0.as_binary();
-
-        let mut left_compiled: IntValue<'_> =
-            integer_binaryop(builder, context, left_dissasembled, target_type, objects)
-                .into_int_value();
-
-        let mut right_compiled: IntValue<'_> =
-            utils::build_const_integer(context, right_type, *right_num as u64, *right_signed);
-
-        if let Some(new_left_compiled) = utils::integer_autocast(
-            left_type,
-            target_type,
-            None,
-            left_compiled.into(),
-            builder,
-            context,
-        ) {
-            left_compiled = new_left_compiled.into_int_value();
-        }
-
-        if let Some(new_right_compiled) = utils::integer_autocast(
-            right_type,
-            target_type,
-            None,
-            right_compiled.into(),
-            builder,
-            context,
-        ) {
-            right_compiled = new_right_compiled.into_int_value();
-        }
-
-        return build_int_op(
-            context,
-            builder,
-            left_compiled,
-            right_compiled,
-            (false, *right_signed),
-            *binary.1,
-        );
-    }
-
-    if let (
-        Instruction::Group { instr, kind },
-        TokenKind::Plus
-        | TokenKind::Slash
-        | TokenKind::Minus
-        | TokenKind::Star
-        | TokenKind::BangEq
-        | TokenKind::EqEq
-        | TokenKind::LessEq
-        | TokenKind::Less
-        | TokenKind::Greater
-        | TokenKind::GreaterEq
-        | TokenKind::And
-        | TokenKind::Or,
-        Instruction::Integer(right_type, right_num, right_signed),
-    ) = binary
-    {
-        let left_dissasembled: BinaryOp = instr.as_binary();
-
-        let mut left_compiled: IntValue<'_> =
-            integer_binaryop(builder, context, left_dissasembled, target_type, objects)
-                .into_int_value();
-
-        let mut right_compiled: IntValue<'_> =
-            utils::build_const_integer(context, right_type, *right_num as u64, *right_signed);
-
-        if let Some(new_left_compiled) = utils::integer_autocast(
-            kind,
-            target_type,
-            None,
-            left_compiled.into(),
-            builder,
-            context,
-        ) {
-            left_compiled = new_left_compiled.into_int_value();
-        }
-
-        if let Some(new_right_compiled) = utils::integer_autocast(
-            right_type,
-            target_type,
-            None,
-            right_compiled.into(),
-            builder,
-            context,
-        ) {
-            right_compiled = new_right_compiled.into_int_value();
-        }
-
-        return build_int_op(
-            context,
-            builder,
-            left_compiled,
-            right_compiled,
-            (false, *right_signed),
-            *binary.1,
-        );
-    }
-
-    if let (
-        Instruction::Integer(left_type, left_num, left_signed),
-        TokenKind::Plus
-        | TokenKind::Slash
-        | TokenKind::Minus
-        | TokenKind::Star
-        | TokenKind::BangEq
-        | TokenKind::EqEq
-        | TokenKind::LessEq
-        | TokenKind::Less
-        | TokenKind::Greater
-        | TokenKind::GreaterEq
-        | TokenKind::And
-        | TokenKind::Or,
-        Instruction::Group { instr, kind },
-    ) = binary
-    {
-        let mut left_compiled: IntValue<'_> =
-            utils::build_const_integer(context, left_type, *left_num as u64, *left_signed);
-
-        let right_dissasembled: BinaryOp = instr.as_binary();
-
-        let mut right_compiled: IntValue<'_> =
-            integer_binaryop(builder, context, right_dissasembled, target_type, objects)
-                .into_int_value();
-
-        if let Some(new_left_compiled) = utils::integer_autocast(
-            left_type,
-            target_type,
-            None,
-            left_compiled.into(),
-            builder,
-            context,
-        ) {
-            left_compiled = new_left_compiled.into_int_value();
-        }
-
-        if let Some(new_right_compiled) = utils::integer_autocast(
-            kind,
-            target_type,
-            None,
-            right_compiled.into(),
-            builder,
-            context,
-        ) {
-            right_compiled = new_right_compiled.into_int_value();
-        }
-
-        return build_int_op(
-            context,
-            builder,
-            left_compiled,
-            right_compiled,
-            (*left_signed, false),
-            *binary.1,
-        );
-    }
-
-    if let (
-        Instruction::BinaryOp {
-            kind: left_type, ..
-        },
-        TokenKind::Plus
-        | TokenKind::Slash
-        | TokenKind::Minus
-        | TokenKind::Star
-        | TokenKind::BangEq
-        | TokenKind::EqEq
-        | TokenKind::LessEq
-        | TokenKind::Less
-        | TokenKind::Greater
-        | TokenKind::GreaterEq
-        | TokenKind::And
-        | TokenKind::Or,
+        Instruction::Boolean(left),
+        TokenKind::BangEq | TokenKind::EqEq | TokenKind::And | TokenKind::Or,
         Instruction::RefVar { name, kind, .. },
     ) = binary
     {
-        let left_dissasembled: BinaryOp = binary.0.as_binary();
-
         let mut left_compiled: IntValue<'_> =
-            integer_binaryop(builder, context, left_dissasembled, target_type, objects)
-                .into_int_value();
+            utils::build_const_integer(context, &DataTypes::Bool, *left as u64, false);
 
         let mut right_compiled: IntValue<'_> = builder
             .build_load(
@@ -709,7 +466,7 @@ pub fn integer_binaryop<'ctx>(
             .into_int_value();
 
         if let Some(new_left_compiled) = utils::integer_autocast(
-            left_type,
+            &DataTypes::Bool,
             target_type,
             None,
             left_compiled.into(),
@@ -721,6 +478,56 @@ pub fn integer_binaryop<'ctx>(
 
         if let Some(new_right_compiled) = utils::integer_autocast(
             kind,
+            target_type,
+            None,
+            right_compiled.into(),
+            builder,
+            context,
+        ) {
+            right_compiled = new_right_compiled.into_int_value();
+        }
+
+        return build_int_op(
+            context,
+            builder,
+            left_compiled,
+            right_compiled,
+            (false, false),
+            *binary.1,
+        );
+    }
+
+    if let (
+        Instruction::RefVar { name, kind, .. },
+        TokenKind::BangEq | TokenKind::EqEq | TokenKind::And | TokenKind::Or,
+        Instruction::Boolean(right),
+    ) = binary
+    {
+        let mut left_compiled: IntValue<'_> = builder
+            .build_load(
+                utils::datatype_integer_to_llvm_type(context, kind),
+                objects.find_and_get(name).unwrap(),
+                "",
+            )
+            .unwrap()
+            .into_int_value();
+
+        let mut right_compiled: IntValue<'_> =
+            utils::build_const_integer(context, &DataTypes::Bool, *right as u64, false);
+
+        if let Some(new_left_compiled) = utils::integer_autocast(
+            kind,
+            target_type,
+            None,
+            left_compiled.into(),
+            builder,
+            context,
+        ) {
+            left_compiled = new_left_compiled.into_int_value();
+        }
+
+        if let Some(new_right_compiled) = utils::integer_autocast(
+            &DataTypes::Bool,
             target_type,
             None,
             right_compiled.into(),
@@ -1236,263 +1043,6 @@ pub fn float_binaryop<'ctx>(
     }
 
     if let (
-        Instruction::Float(left_type, left_num, left_signed),
-        TokenKind::Plus
-        | TokenKind::Slash
-        | TokenKind::Minus
-        | TokenKind::Star
-        | TokenKind::BangEq
-        | TokenKind::EqEq
-        | TokenKind::LessEq
-        | TokenKind::Less
-        | TokenKind::Greater
-        | TokenKind::GreaterEq,
-        Instruction::BinaryOp {
-            kind: right_type, ..
-        },
-    ) = binary
-    {
-        let mut left_compiled: FloatValue<'_> =
-            utils::build_const_float(builder, context, left_type, *left_num, *left_signed);
-
-        let right_dissasembled: BinaryOp = binary.2.as_binary();
-
-        let mut right_compiled: FloatValue<'_> =
-            float_binaryop(builder, context, right_dissasembled, target_type, objects)
-                .into_float_value();
-
-        if let Some(new_left_compiled) = utils::float_autocast(
-            left_type,
-            target_type,
-            None,
-            left_compiled.into(),
-            builder,
-            context,
-        ) {
-            left_compiled = new_left_compiled.into_float_value();
-        }
-
-        if let Some(new_right_compiled) = utils::float_autocast(
-            right_type,
-            target_type,
-            None,
-            right_compiled.into(),
-            builder,
-            context,
-        ) {
-            right_compiled = new_right_compiled.into_float_value();
-        }
-
-        return build_float_op(context, builder, left_compiled, right_compiled, *binary.1);
-    }
-
-    if let (
-        Instruction::BinaryOp {
-            kind: left_type, ..
-        },
-        TokenKind::Plus
-        | TokenKind::Slash
-        | TokenKind::Minus
-        | TokenKind::Star
-        | TokenKind::BangEq
-        | TokenKind::EqEq
-        | TokenKind::LessEq
-        | TokenKind::Less
-        | TokenKind::Greater
-        | TokenKind::GreaterEq,
-        Instruction::Float(right_type, right_num, right_signed),
-    ) = binary
-    {
-        let left_dissasembled: BinaryOp = binary.0.as_binary();
-
-        let mut left_compiled: FloatValue<'_> =
-            float_binaryop(builder, context, left_dissasembled, target_type, objects)
-                .into_float_value();
-
-        let mut right_compiled: FloatValue<'_> =
-            utils::build_const_float(builder, context, right_type, *right_num, *right_signed);
-
-        if let Some(new_left_compiled) = utils::float_autocast(
-            left_type,
-            target_type,
-            None,
-            left_compiled.into(),
-            builder,
-            context,
-        ) {
-            left_compiled = new_left_compiled.into_float_value();
-        }
-
-        if let Some(new_right_compiled) = utils::float_autocast(
-            right_type,
-            target_type,
-            None,
-            right_compiled.into(),
-            builder,
-            context,
-        ) {
-            right_compiled = new_right_compiled.into_float_value();
-        }
-
-        return build_float_op(context, builder, left_compiled, right_compiled, *binary.1);
-    }
-
-    if let (
-        Instruction::Group { instr, kind },
-        TokenKind::Plus
-        | TokenKind::Slash
-        | TokenKind::Minus
-        | TokenKind::Star
-        | TokenKind::BangEq
-        | TokenKind::EqEq
-        | TokenKind::LessEq
-        | TokenKind::Less
-        | TokenKind::Greater
-        | TokenKind::GreaterEq,
-        Instruction::Float(right_type, right_num, right_signed),
-    ) = binary
-    {
-        let left_dissasembled: BinaryOp = instr.as_binary();
-
-        let mut left_compiled: FloatValue<'_> =
-            float_binaryop(builder, context, left_dissasembled, target_type, objects)
-                .into_float_value();
-
-        let mut right_compiled: FloatValue<'_> =
-            utils::build_const_float(builder, context, right_type, *right_num, *right_signed);
-
-        if let Some(new_left_compiled) = utils::float_autocast(
-            kind,
-            target_type,
-            None,
-            left_compiled.into(),
-            builder,
-            context,
-        ) {
-            left_compiled = new_left_compiled.into_float_value();
-        }
-
-        if let Some(new_right_compiled) = utils::integer_autocast(
-            right_type,
-            target_type,
-            None,
-            right_compiled.into(),
-            builder,
-            context,
-        ) {
-            right_compiled = new_right_compiled.into_float_value();
-        }
-
-        return build_float_op(context, builder, left_compiled, right_compiled, *binary.1);
-    }
-
-    if let (
-        Instruction::Float(left_type, left_num, left_signed),
-        TokenKind::Plus
-        | TokenKind::Slash
-        | TokenKind::Minus
-        | TokenKind::Star
-        | TokenKind::BangEq
-        | TokenKind::EqEq
-        | TokenKind::LessEq
-        | TokenKind::Less
-        | TokenKind::Greater
-        | TokenKind::GreaterEq,
-        Instruction::Group { instr, kind },
-    ) = binary
-    {
-        let mut left_compiled: FloatValue<'_> =
-            utils::build_const_float(builder, context, left_type, *left_num, *left_signed);
-
-        let right_dissasembled: BinaryOp = instr.as_binary();
-
-        let mut right_compiled: FloatValue<'_> =
-            float_binaryop(builder, context, right_dissasembled, target_type, objects)
-                .into_float_value();
-
-        if let Some(new_left_compiled) = utils::float_autocast(
-            left_type,
-            target_type,
-            None,
-            left_compiled.into(),
-            builder,
-            context,
-        ) {
-            left_compiled = new_left_compiled.into_float_value();
-        }
-
-        if let Some(new_right_compiled) = utils::float_autocast(
-            kind,
-            target_type,
-            None,
-            right_compiled.into(),
-            builder,
-            context,
-        ) {
-            right_compiled = new_right_compiled.into_float_value();
-        }
-
-        return build_float_op(context, builder, left_compiled, right_compiled, *binary.1);
-    }
-
-    if let (
-        Instruction::BinaryOp {
-            kind: left_type, ..
-        },
-        TokenKind::Plus
-        | TokenKind::Slash
-        | TokenKind::Minus
-        | TokenKind::Star
-        | TokenKind::BangEq
-        | TokenKind::EqEq
-        | TokenKind::LessEq
-        | TokenKind::Less
-        | TokenKind::Greater
-        | TokenKind::GreaterEq,
-        Instruction::RefVar { name, kind, .. },
-    ) = binary
-    {
-        let left_dissasembled: BinaryOp = binary.0.as_binary();
-
-        let mut left_compiled: FloatValue<'_> =
-            float_binaryop(builder, context, left_dissasembled, target_type, objects)
-                .into_float_value();
-
-        let mut right_compiled: FloatValue<'_> = builder
-            .build_load(
-                utils::datatype_float_to_llvm_type(context, kind),
-                objects.find_and_get(name).unwrap(),
-                "",
-            )
-            .unwrap()
-            .into_float_value();
-
-        if let Some(new_left_compiled) = utils::float_autocast(
-            left_type,
-            target_type,
-            None,
-            left_compiled.into(),
-            builder,
-            context,
-        ) {
-            left_compiled = new_left_compiled.into_float_value();
-        }
-
-        if let Some(new_right_compiled) = utils::float_autocast(
-            kind,
-            target_type,
-            None,
-            right_compiled.into(),
-            builder,
-            context,
-        ) {
-            right_compiled = new_right_compiled.into_float_value();
-        }
-
-        return build_float_op(context, builder, left_compiled, right_compiled, *binary.1);
-    }
-
-    if let (
         Instruction::BinaryOp {
             kind: left_type, ..
         },
@@ -1515,39 +1065,43 @@ pub fn float_binaryop<'ctx>(
     {
         let left_dissasembled: BinaryOp = binary.0.as_binary();
 
-        let mut left_compiled: FloatValue<'_> =
-            float_binaryop(builder, context, left_dissasembled, target_type, objects)
-                .into_float_value();
+        let mut left_compiled: BasicValueEnum<'_> =
+            float_binaryop(builder, context, left_dissasembled, target_type, objects);
 
         let right_dissasembled: BinaryOp = binary.2.as_binary();
 
-        let mut right_compiled: FloatValue<'_> =
-            float_binaryop(builder, context, right_dissasembled, target_type, objects)
-                .into_float_value();
+        let mut right_compiled: BasicValueEnum<'_> =
+            float_binaryop(builder, context, right_dissasembled, target_type, objects);
 
         if let Some(new_left_compiled) = utils::float_autocast(
             left_type,
             target_type,
             None,
-            left_compiled.into(),
+            left_compiled,
             builder,
             context,
         ) {
-            left_compiled = new_left_compiled.into_float_value();
+            left_compiled = new_left_compiled;
         }
 
         if let Some(new_right_compiled) = utils::float_autocast(
             right_type,
             target_type,
             None,
-            right_compiled.into(),
+            right_compiled,
             builder,
             context,
         ) {
-            right_compiled = new_right_compiled.into_float_value();
+            right_compiled = new_right_compiled;
         }
 
-        return build_float_op(context, builder, left_compiled, right_compiled, *binary.1);
+        return build_float_op(
+            context,
+            builder,
+            left_compiled.into_float_value(),
+            right_compiled.into_float_value(),
+            *binary.1,
+        );
     }
 
     if let (
@@ -1574,39 +1128,43 @@ pub fn float_binaryop<'ctx>(
     {
         let left_dissasembled: BinaryOp = left_instr.as_binary();
 
-        let mut left_compiled: FloatValue<'_> =
-            float_binaryop(builder, context, left_dissasembled, target_type, objects)
-                .into_float_value();
+        let mut left_compiled: BasicValueEnum<'_> =
+            float_binaryop(builder, context, left_dissasembled, target_type, objects);
 
         let right_dissasembled: BinaryOp = right_instr.as_binary();
 
-        let mut right_compiled: FloatValue<'_> =
-            float_binaryop(builder, context, right_dissasembled, target_type, objects)
-                .into_float_value();
+        let mut right_compiled: BasicValueEnum<'_> =
+            float_binaryop(builder, context, right_dissasembled, target_type, objects);
 
         if let Some(new_left_compiled) = utils::float_autocast(
             left_type,
             target_type,
             None,
-            left_compiled.into(),
+            left_compiled,
             builder,
             context,
         ) {
-            left_compiled = new_left_compiled.into_float_value();
+            left_compiled = new_left_compiled;
         }
 
         if let Some(new_right_compiled) = utils::float_autocast(
             right_type,
             target_type,
             None,
-            right_compiled.into(),
+            right_compiled,
             builder,
             context,
         ) {
-            right_compiled = new_right_compiled.into_float_value();
+            right_compiled = new_right_compiled;
         }
 
-        return build_float_op(context, builder, left_compiled, right_compiled, *binary.1);
+        return build_float_op(
+            context,
+            builder,
+            left_compiled.into_float_value(),
+            right_compiled.into_float_value(),
+            *binary.1,
+        );
     }
 
     if let (
@@ -1631,39 +1189,43 @@ pub fn float_binaryop<'ctx>(
     {
         let left_dissasembled: BinaryOp = instr.as_binary();
 
-        let mut left_compiled: FloatValue<'_> =
-            float_binaryop(builder, context, left_dissasembled, target_type, objects)
-                .into_float_value();
+        let mut left_compiled: BasicValueEnum<'_> =
+            float_binaryop(builder, context, left_dissasembled, target_type, objects);
 
         let right_dissasembled: BinaryOp = binary.2.as_binary();
 
-        let mut right_compiled: FloatValue<'_> =
-            float_binaryop(builder, context, right_dissasembled, target_type, objects)
-                .into_float_value();
+        let mut right_compiled: BasicValueEnum<'_> =
+            float_binaryop(builder, context, right_dissasembled, target_type, objects);
 
         if let Some(new_left_compiled) = utils::float_autocast(
             left_type,
             target_type,
             None,
-            left_compiled.into(),
+            left_compiled,
             builder,
             context,
         ) {
-            left_compiled = new_left_compiled.into_float_value();
+            left_compiled = new_left_compiled;
         }
 
         if let Some(new_right_compiled) = utils::float_autocast(
             right_type,
             target_type,
             None,
-            right_compiled.into(),
+            right_compiled,
             builder,
             context,
         ) {
-            right_compiled = new_right_compiled.into_float_value();
+            right_compiled = new_right_compiled;
         }
 
-        return build_float_op(context, builder, left_compiled, right_compiled, *binary.1);
+        return build_float_op(
+            context,
+            builder,
+            left_compiled.into_float_value(),
+            right_compiled.into_float_value(),
+            *binary.1,
+        );
     }
 
     if let (
@@ -1688,39 +1250,250 @@ pub fn float_binaryop<'ctx>(
     {
         let left_dissasembled: BinaryOp = binary.0.as_binary();
 
-        let mut left_compiled: FloatValue<'_> =
-            float_binaryop(builder, context, left_dissasembled, target_type, objects)
-                .into_float_value();
+        let mut left_compiled: BasicValueEnum<'_> =
+            float_binaryop(builder, context, left_dissasembled, target_type, objects);
 
         let right_dissasembled: BinaryOp = instr.as_binary();
 
-        let mut right_compiled: FloatValue<'_> =
-            float_binaryop(builder, context, right_dissasembled, target_type, objects)
-                .into_float_value();
+        let mut right_compiled: BasicValueEnum<'_> =
+            float_binaryop(builder, context, right_dissasembled, target_type, objects);
 
         if let Some(new_left_compiled) = utils::float_autocast(
             left_type,
             target_type,
             None,
-            left_compiled.into(),
+            left_compiled,
             builder,
             context,
         ) {
-            left_compiled = new_left_compiled.into_float_value();
+            left_compiled = new_left_compiled;
         }
 
         if let Some(new_right_compiled) = utils::float_autocast(
             right_type,
             target_type,
             None,
-            right_compiled.into(),
+            right_compiled,
             builder,
             context,
         ) {
-            right_compiled = new_right_compiled.into_float_value();
+            right_compiled = new_right_compiled;
         }
 
-        return build_float_op(context, builder, left_compiled, right_compiled, *binary.1);
+        return build_float_op(
+            context,
+            builder,
+            left_compiled.into_float_value(),
+            right_compiled.into_float_value(),
+            *binary.1,
+        );
+    }
+
+    println!("{:#?}", binary);
+
+    unimplemented!()
+}
+
+pub fn bool_binaryop<'ctx>(
+    builder: &Builder<'ctx>,
+    context: &'ctx Context,
+    binary: BinaryOp<'ctx>,
+    target_type: &DataTypes,
+    objects: &CompilerObjects<'ctx>,
+) -> BasicValueEnum<'ctx> {
+    if let (
+        Instruction::Integer(_, _, _) | Instruction::Float(_, _, _) | Instruction::Boolean(_),
+        TokenKind::BangEq
+        | TokenKind::EqEq
+        | TokenKind::LessEq
+        | TokenKind::Less
+        | TokenKind::Greater
+        | TokenKind::GreaterEq
+        | TokenKind::And
+        | TokenKind::Or,
+        Instruction::Integer(_, _, _) | Instruction::Float(_, _, _) | Instruction::Boolean(_),
+    ) = binary
+    {
+        if binary.0.get_data_type().is_float() {
+            return float_binaryop(builder, context, binary, target_type, objects);
+        } else if binary.0.get_data_type().is_integer()
+            || binary.0.get_data_type() == DataTypes::Bool
+        {
+            return integer_binaryop(builder, context, binary, target_type, objects);
+        }
+
+        unreachable!()
+    }
+
+    if let (
+        Instruction::RefVar { .. },
+        TokenKind::BangEq
+        | TokenKind::EqEq
+        | TokenKind::LessEq
+        | TokenKind::Less
+        | TokenKind::Greater
+        | TokenKind::GreaterEq
+        | TokenKind::And
+        | TokenKind::Or,
+        Instruction::RefVar { .. },
+    ) = binary
+    {
+        if binary.0.get_data_type().is_float() {
+            return float_binaryop(builder, context, binary, target_type, objects);
+        } else if binary.0.get_data_type().is_integer()
+            || binary.0.get_data_type() == DataTypes::Bool
+        {
+            return integer_binaryop(builder, context, binary, target_type, objects);
+        }
+
+        unreachable!()
+    }
+
+    if let (
+        Instruction::Integer(_, _, _) | Instruction::Float(_, _, _) | Instruction::Boolean(_),
+        TokenKind::BangEq
+        | TokenKind::EqEq
+        | TokenKind::LessEq
+        | TokenKind::Less
+        | TokenKind::Greater
+        | TokenKind::GreaterEq
+        | TokenKind::And
+        | TokenKind::Or,
+        Instruction::RefVar { .. },
+    ) = binary
+    {
+        if binary.0.get_data_type().is_float() {
+            return float_binaryop(builder, context, binary, target_type, objects);
+        } else if binary.0.get_data_type().is_integer()
+            || binary.0.get_data_type() == DataTypes::Bool
+        {
+            return integer_binaryop(builder, context, binary, target_type, objects);
+        }
+
+        unreachable!()
+    }
+
+    if let (
+        Instruction::RefVar { .. },
+        TokenKind::BangEq
+        | TokenKind::EqEq
+        | TokenKind::LessEq
+        | TokenKind::Less
+        | TokenKind::Greater
+        | TokenKind::GreaterEq
+        | TokenKind::And
+        | TokenKind::Or,
+        Instruction::Integer(_, _, _) | Instruction::Float(_, _, _) | Instruction::Boolean(_),
+    ) = binary
+    {
+        if binary.2.get_data_type().is_float() {
+            return float_binaryop(builder, context, binary, target_type, objects);
+        } else if binary.2.get_data_type().is_integer()
+            || binary.2.get_data_type() == DataTypes::Bool
+        {
+            return integer_binaryop(builder, context, binary, target_type, objects);
+        }
+    }
+
+    if let (
+        Instruction::BinaryOp { .. },
+        TokenKind::And | TokenKind::Or,
+        Instruction::BinaryOp { .. },
+    ) = binary
+    {
+        if binary.0.get_data_type_recursive().is_float() {
+            let left_compiled: BasicValueEnum<'_> =
+                float_binaryop(builder, context, binary.0.as_binary(), target_type, objects);
+
+            let right_compiled: BasicValueEnum<'_> =
+                float_binaryop(builder, context, binary.2.as_binary(), target_type, objects);
+
+            return build_int_op(
+                context,
+                builder,
+                left_compiled.into_int_value(),
+                right_compiled.into_int_value(),
+                (false, false),
+                *binary.1,
+            );
+        }
+
+        return integer_binaryop(builder, context, binary, target_type, objects);
+    }
+
+    if let (Instruction::Group { .. }, TokenKind::And | TokenKind::Or, Instruction::Group { .. }) =
+        binary
+    {
+        if binary.0.get_data_type_recursive().is_float() {
+            let left_compiled: BasicValueEnum<'_> =
+                float_binaryop(builder, context, binary.0.as_binary(), target_type, objects);
+
+            let right_compiled: BasicValueEnum<'_> =
+                float_binaryop(builder, context, binary.2.as_binary(), target_type, objects);
+
+            return build_int_op(
+                context,
+                builder,
+                left_compiled.into_int_value(),
+                right_compiled.into_int_value(),
+                (false, false),
+                *binary.1,
+            );
+        }
+
+        return integer_binaryop(builder, context, binary, target_type, objects);
+    }
+
+    if let (
+        Instruction::Group { .. },
+        TokenKind::And | TokenKind::Or,
+        Instruction::BinaryOp { .. },
+    ) = binary
+    {
+        if binary.0.get_data_type_recursive().is_float() {
+            let left_compiled: BasicValueEnum<'_> =
+                float_binaryop(builder, context, binary.0.as_binary(), target_type, objects);
+
+            let right_compiled: BasicValueEnum<'_> =
+                float_binaryop(builder, context, binary.2.as_binary(), target_type, objects);
+
+            return build_int_op(
+                context,
+                builder,
+                left_compiled.into_int_value(),
+                right_compiled.into_int_value(),
+                (false, false),
+                *binary.1,
+            );
+        }
+
+        return integer_binaryop(builder, context, binary, target_type, objects);
+    }
+
+    if let (
+        Instruction::BinaryOp { .. },
+        TokenKind::And | TokenKind::Or,
+        Instruction::Group { .. },
+    ) = binary
+    {
+        if binary.0.get_data_type_recursive().is_float() {
+            let left_compiled: BasicValueEnum<'_> =
+                float_binaryop(builder, context, binary.0.as_binary(), target_type, objects);
+
+            let right_compiled: BasicValueEnum<'_> =
+                float_binaryop(builder, context, binary.2.as_binary(), target_type, objects);
+
+            return build_int_op(
+                context,
+                builder,
+                left_compiled.into_int_value(),
+                right_compiled.into_int_value(),
+                (false, false),
+                *binary.1,
+            );
+        }
+
+        return integer_binaryop(builder, context, binary, target_type, objects);
     }
 
     println!("{:#?}", binary);

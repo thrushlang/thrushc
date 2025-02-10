@@ -883,14 +883,20 @@ impl<'instr> Parser<'instr> {
 
         while self.match_token(TokenKind::BangEq)? || self.match_token(TokenKind::EqEq)? {
             let op: &TokenKind = &self.previous().kind;
+            let line: usize = self.previous().line;
             let right: Instruction<'_> = self.comparison()?;
+
+            let left_type: DataTypes = instr.get_data_type_recursive();
+            let right_type: DataTypes = right.get_data_type_recursive();
             
             type_checking::check_binary_instr(
                 op,
-                &instr.get_data_type(),
-                &right.get_data_type(),
+                &left_type,
+                &right_type,
                 self.previous().line,
             )?;
+
+            instr.is_chained(&right, line)?;
 
             instr = Instruction::BinaryOp {
                 left: Box::from(instr),
@@ -912,14 +918,20 @@ impl<'instr> Parser<'instr> {
             || self.match_token(TokenKind::LessEq)?
         {
             let op: &TokenKind = &self.previous().kind;
+            let line: usize = self.previous().line;
             let right: Instruction<'_> = self.term()?;
+
+            let left_type: DataTypes = instr.get_data_type_recursive();
+            let right_type: DataTypes = right.get_data_type_recursive();
 
             type_checking::check_binary_instr(
                 op,
-                &instr.get_data_type(),
-                &right.get_data_type(),
+                &left_type,
+                &right_type,
                 self.previous().line,
             )?;
+
+            instr.is_chained(&right, line)?;
 
             instr = Instruction::BinaryOp {
                 left: Box::from(instr),
@@ -941,8 +953,8 @@ impl<'instr> Parser<'instr> {
             let op: &TokenKind = &self.previous().kind;
             let right: Instruction<'_> = self.factor()?;
 
-            let left_type: DataTypes = instr.get_data_type();
-            let right_type: DataTypes = right.get_data_type();
+            let left_type: DataTypes = instr.get_data_type_recursive();
+            let right_type: DataTypes = right.get_data_type_recursive();
 
             let kind: DataTypes = if left_type.is_integer() && right_type.is_integer() {
                 left_type.calculate_integer_datatype(right_type)
@@ -979,11 +991,13 @@ impl<'instr> Parser<'instr> {
             let op: &TokenKind = &self.previous().kind;
             let right: Instruction<'_> = self.unary()?;
 
-            let left_type: DataTypes = instr.get_data_type();
-            let right_type: DataTypes = right.get_data_type();
+            let left_type: DataTypes = instr.get_data_type_recursive();
+            let right_type: DataTypes = right.get_data_type_recursive();
 
             let kind: DataTypes = if left_type.is_integer() && right_type.is_integer() {
                 left_type.calculate_integer_datatype(right_type)
+            } else if left_type.is_float() && right_type.is_float()  {
+                left_type.calculate_float_datatype(right_type)
             } else {
                 self.in_var_type
             };
@@ -1066,17 +1080,17 @@ impl<'instr> Parser<'instr> {
                 let instr: Instruction<'instr> = self.expression()?;
                 let kind: DataTypes = instr.get_data_type();
 
-                /* if !instr.is_binary() {
+                if !instr.is_binary() && !instr.is_group() {
                     self.errors.push(ThrushError::Parse(
                         ThrushErrorKind::SyntaxError,
                         String::from("Syntax Error"),
                         String::from(
-                            "Group the expressions \"(...)\" is only allowed if contain binary expressions.",
+                            "Group the expressions \"(...)\" is only allowed if contain binary expressions or other group expressions.",
                         ),
                         line,
-                        String::from("(T + T)")
+                        String::from("(T + T) or ((T + T))")
                     ));
-                } */
+                }
 
                 self.consume(
                     TokenKind::RParen,

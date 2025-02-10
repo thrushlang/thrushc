@@ -1,6 +1,9 @@
 use {
     super::{
-        super::frontend::lexer::{DataTypes, TokenKind},
+        super::{
+            error::{ThrushError, ThrushErrorKind},
+            frontend::lexer::{DataTypes, TokenKind},
+        },
         compiler::types::{BinaryOp, Function},
     },
     inkwell::values::BasicValueEnum,
@@ -116,6 +119,59 @@ impl PartialEq for Instruction<'_> {
 }
 
 impl<'ctx> Instruction<'ctx> {
+    pub fn is_chained(&self, other: &Instruction, line: usize) -> Result<(), ThrushError> {
+        if let (Instruction::BinaryOp { .. }, Instruction::BinaryOp { .. }) = (self, other) {
+            return Ok(());
+        }
+
+        if let (Instruction::BinaryOp { .. }, Instruction::Group { .. }) = (self, other) {
+            return Ok(());
+        }
+
+        if let (Instruction::Group { .. }, Instruction::BinaryOp { .. }) = (self, other) {
+            return Ok(());
+        }
+
+        if let (Instruction::Group { .. }, Instruction::Group { .. }) = (self, other) {
+            return Ok(());
+        }
+
+        if let (
+            Instruction::RefVar { .. }
+            | Instruction::Char { .. }
+            | Instruction::Float { .. }
+            | Instruction::Integer { .. }
+            | Instruction::Boolean(_),
+            Instruction::Char { .. }
+            | Instruction::Float { .. }
+            | Instruction::Integer { .. }
+            | Instruction::RefVar { .. }
+            | Instruction::Boolean(_),
+        ) = (self, other)
+        {
+            return Ok(());
+        }
+
+        println!("{:?} {:?}", self, other);
+
+        Err(ThrushError::Parse(
+            ThrushErrorKind::SyntaxError,
+            String::from("Type Checking"),
+            String::from("Operators cannot be chained. Use logical gates as \"&&\" or \"||\"."),
+            line,
+            String::new(),
+        ))
+    }
+
+    #[inline]
+    pub fn as_boolean(&self) -> bool {
+        if let Instruction::Boolean(bool) = self {
+            return *bool;
+        }
+
+        unreachable!()
+    }
+
     #[inline]
     pub fn is_extern(&self) -> bool {
         if let Instruction::Extern { .. } = self {
@@ -229,6 +285,28 @@ impl<'ctx> Instruction<'ctx> {
         unreachable!()
     }
 
+    pub fn get_data_type(&self) -> DataTypes {
+        match self {
+            Instruction::Integer(datatype, _, _) => *datatype,
+            Instruction::Float(datatype, _, _) => *datatype,
+            Instruction::String(_) => DataTypes::String,
+            Instruction::Boolean(_) => DataTypes::Bool,
+            Instruction::Char(_) => DataTypes::Char,
+            Instruction::RefVar { kind, .. } => *kind,
+            Instruction::Group { kind, .. } => *kind,
+            Instruction::BinaryOp { kind, .. } => *kind,
+            Instruction::UnaryOp { value, .. } => value.get_data_type(),
+            Instruction::Param { kind, .. } => *kind,
+            Instruction::Call { kind, .. } => *kind,
+            Instruction::Indexe { kind, .. } => *kind,
+            e => {
+                println!("{:?}", e);
+
+                unimplemented!()
+            }
+        }
+    }
+
     pub fn get_data_type_recursive(&self) -> DataTypes {
         if let Instruction::BinaryOp { left, .. } = self {
             return left.get_data_type_recursive();
@@ -270,28 +348,6 @@ impl<'ctx> Instruction<'ctx> {
         }
 
         unimplemented!()
-    }
-
-    pub fn get_data_type(&self) -> DataTypes {
-        match self {
-            Instruction::Integer(datatype, _, _) => *datatype,
-            Instruction::Float(datatype, _, _) => *datatype,
-            Instruction::String(_) => DataTypes::String,
-            Instruction::Boolean(_) => DataTypes::Bool,
-            Instruction::Char(_) => DataTypes::Char,
-            Instruction::RefVar { kind, .. } => *kind,
-            Instruction::Group { kind, .. } => *kind,
-            Instruction::BinaryOp { kind, .. } => *kind,
-            Instruction::UnaryOp { value, .. } => value.get_data_type(),
-            Instruction::Param { kind, .. } => *kind,
-            Instruction::Call { kind, .. } => *kind,
-            Instruction::Indexe { kind, .. } => *kind,
-            e => {
-                println!("{:?}", e);
-
-                unimplemented!()
-            }
-        }
     }
 
     pub fn as_basic_value(&self) -> &BasicValueEnum<'ctx> {

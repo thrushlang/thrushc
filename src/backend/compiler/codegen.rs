@@ -264,25 +264,13 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                 }
 
                 if *kind == DataTypes::Bool {
-                    if instr.get_data_type_recursive().is_integer() {
-                        return Instruction::BasicValueEnum(binaryop::integer_binaryop(
-                            self.builder,
-                            self.context,
-                            (left, op, right),
-                            kind,
-                            &self.compiler_objects,
-                        ));
-                    }
-
-                    if instr.get_data_type_recursive().is_float() {
-                        return Instruction::BasicValueEnum(binaryop::float_binaryop(
-                            self.builder,
-                            self.context,
-                            (left, op, right),
-                            kind,
-                            &self.compiler_objects,
-                        ));
-                    }
+                    return Instruction::BasicValueEnum(binaryop::bool_binaryop(
+                        self.builder,
+                        self.context,
+                        (left, op, right),
+                        kind,
+                        &self.compiler_objects,
+                    ));
                 }
 
                 unimplemented!()
