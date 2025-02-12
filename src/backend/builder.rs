@@ -21,6 +21,7 @@ use {
         fs::{self, write},
         path::{Path, PathBuf},
         process::Command,
+        time::{Duration, Instant},
     },
     stylic::{style, Color, Stylize},
 };
@@ -29,6 +30,8 @@ pub struct ThrushCompiler<'a> {
     compiled: Vec<PathBuf>,
     files: &'a [ThrushFile],
     options: &'a CompilerOptions,
+    llvm_comptime: Duration,
+    thrushc_comptime: Duration,
 }
 
 impl<'a> ThrushCompiler<'a> {
@@ -37,15 +40,19 @@ impl<'a> ThrushCompiler<'a> {
             compiled: Vec::new(),
             files,
             options,
+            llvm_comptime: Duration::new(0, 0),
+            thrushc_comptime: Duration::new(0, 0),
         }
     }
 
-    pub fn compile(&mut self) {
+    pub fn compile(&mut self) -> (u128, u128) {
         self.files.iter().for_each(|file| {
             self.compile_file(file);
         });
 
-        Clang::new(&self.compiled, self.options).compile();
+        let llvm_time: Duration = Clang::new(&self.compiled, self.options).compile();
+
+        self.llvm_comptime += llvm_time;
 
         let _ = fs::copy(
             &self.options.output,
@@ -60,6 +67,11 @@ impl<'a> ThrushCompiler<'a> {
 
         let _ = fs::remove_file("output/vector.o");
         let _ = fs::remove_file("output/debug.o");
+
+        (
+            self.thrushc_comptime.as_millis(),
+            self.llvm_comptime.as_millis(),
+        )
     }
 
     fn compile_file(&mut self, file: &'a ThrushFile) {
@@ -68,6 +80,8 @@ impl<'a> ThrushCompiler<'a> {
             style("Compiling").bold().fg(Color::Rgb(141, 141, 142)),
             &file.path.to_string_lossy()
         );
+
+        let start_time: Instant = Instant::now();
 
         let content: String = fs::read_to_string(&file.path).unwrap();
 
@@ -114,15 +128,21 @@ impl<'a> ThrushCompiler<'a> {
 
         Compiler::compile(&module, &builder, &context, instructions);
 
+        self.thrushc_comptime += start_time.elapsed();
+
         let compiled_path: &str = &format!("output/{}.bc", &file.name);
 
         module.write_bitcode_to_path(Path::new(compiled_path));
+
+        let start_time: Instant = Instant::now();
 
         LLVMOptimizator::optimize(
             compiled_path,
             self.options.optimization.to_llvm_17_passes(),
             self.options.optimization.to_str(true, false),
         );
+
+        self.llvm_comptime += start_time.elapsed();
 
         self.compiled.push(PathBuf::from(compiled_path));
     }
@@ -138,7 +158,7 @@ impl<'a> Clang<'a> {
         Self { files, options }
     }
 
-    pub fn compile(&self) {
+    pub fn compile(&self) -> Duration {
         if self.options.emit_llvm_ir {
             LLVMDissambler::new(self.files).dissamble();
 
@@ -160,15 +180,18 @@ impl<'a> Clang<'a> {
         }
 
         if self.options.emit_llvm_bitcode || self.options.emit_asm || self.options.emit_llvm_ir {
-            return;
+            return Duration::new(0, 0);
         }
 
-        let mut clang_command: Command = Command::new(LLVM_BACKEND_COMPILER.join("clang-17"));
+        let mut clang_command: Command =
+            Command::new(LLVM_BACKEND_COMPILER.join("clang/bin/clang-17"));
 
         let target_triple_string: String = self.options.target_triple.to_string();
 
         let parsed_target_tripe_for_clang: String =
             target_triple_string.split("-").collect::<Vec<_>>()[0].replace("TargetTriple(\"", "");
+
+        let start_time: Instant = Instant::now();
 
         if self.options.executable {
             clang_command.args([
@@ -200,6 +223,8 @@ impl<'a> Clang<'a> {
         clang_command.args(["-o", &self.options.output]);
 
         handle_command(&mut clang_command);
+
+        start_time.elapsed()
     }
 
     fn emit_natives_apart(&self) {
@@ -253,7 +278,7 @@ impl<'a> LLC<'a> {
     }
 
     pub fn compile(&self) {
-        let mut llc_command: Command = Command::new(LLVM_BACKEND_COMPILER.join("llc"));
+        let mut llc_command: Command = Command::new(LLVM_BACKEND_COMPILER.join("llvm/llc"));
 
         llc_command.args([
             self.options.optimization.to_str(true, false),
@@ -277,7 +302,7 @@ impl<'a> LLVMDissambler<'a> {
     }
 
     pub fn dissamble(&self) {
-        handle_command(Command::new(LLVM_BACKEND_COMPILER.join("llvm-dis")).args(self.files));
+        handle_command(Command::new(LLVM_BACKEND_COMPILER.join("llvm/llvm-dis")).args(self.files));
     }
 }
 
@@ -286,7 +311,7 @@ pub struct LLVMOptimizator;
 impl LLVMOptimizator {
     pub fn optimize(path: &str, opt: &str, opt_lto: &str) {
         handle_command(
-            Command::new(LLVM_BACKEND_COMPILER.join("opt"))
+            Command::new(LLVM_BACKEND_COMPILER.join("llvm/opt"))
                 .arg(format!("-p={}", opt))
                 .arg(path)
                 .arg("-o")
@@ -294,7 +319,7 @@ impl LLVMOptimizator {
         );
 
         handle_command(
-            Command::new(LLVM_BACKEND_COMPILER.join("llvm-lto"))
+            Command::new(LLVM_BACKEND_COMPILER.join("llvm/llvm-lto"))
                 .arg(opt_lto)
                 .arg(path),
         );
