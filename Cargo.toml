@@ -4,7 +4,6 @@ description = "The AOT Compiler for Thrush Programming language."
 version = "1.0.0"
 edition = "2021"
 authors = ["DevCheckOG [https://github.com/DevCheckOG]"]
-build = "build.rs"
 
 [dependencies]
 stylic = "0.2.3"
