@@ -22,7 +22,36 @@ pub fn compile<'ctx>(
 ) {
     let var_type: &DataTypes = variable.1;
 
-    let ptr: PointerValue<'_> = utils::build_ptr(context, builder, *var_type);
+    if *var_type == DataTypes::Ptr {
+        compile_ptr_var(
+            module,
+            builder,
+            context,
+            (variable.0, var_type, variable.2),
+            compiler_objects,
+        );
+
+        return;
+    }
+
+    if *var_type == DataTypes::Str {
+        compile_str_var(
+            module,
+            builder,
+            context,
+            variable.0,
+            variable.2,
+            compiler_objects,
+        );
+
+        return;
+    }
+
+    let ptr: PointerValue<'_> = if *var_type != DataTypes::Struct {
+        utils::build_ptr(context, builder, *var_type)
+    } else {
+        utils::build_struct_ptr(context, builder, variable.2, compiler_objects)
+    };
 
     if var_type.is_integer() {
         compile_integer_var(
@@ -51,14 +80,14 @@ pub fn compile<'ctx>(
         //ptmr me falta bool == bool
     }
 
-    if *var_type == DataTypes::String {
-        compile_string_var(
+    if *var_type == DataTypes::Struct {
+        compile_struct_var(
             module,
             builder,
             context,
-            variable.0,
-            variable.2,
+            (variable.0, var_type, variable.2),
             compiler_objects,
+            ptr,
         );
     }
 }
@@ -92,8 +121,8 @@ pub fn compile_mut<'ctx>(
         compile_float_var(builder, context, variable, variable_ptr, compiler_objects);
     }
 
-    if *var_type == DataTypes::String {
-        if let Instruction::String(str) = var_value {
+    if *var_type == DataTypes::Str {
+        if let Instruction::Str(str) = var_value {
             builder
                 .build_call(
                     module.get_function("Vec.realloc").unwrap(),
@@ -248,7 +277,139 @@ pub fn compile_mut<'ctx>(
     }
 }
 
-fn compile_string_var<'ctx>(
+fn compile_ptr_var<'ctx>(
+    module: &Module<'ctx>,
+    builder: &Builder<'ctx>,
+    context: &'ctx Context,
+    variable: Variable<'ctx>,
+    compiler_objects: &mut CompilerObjects<'ctx>,
+) {
+    let var_name: &str = variable.0;
+    let var_value: &Instruction<'ctx> = variable.2;
+
+    if let Instruction::Call {
+        name: call_name,
+        args: call_arguments,
+        kind: call_type,
+    } = var_value
+    {
+        compiler_objects.insert(
+            var_name.to_string(),
+            call::build_call(
+                module,
+                builder,
+                context,
+                (call_name, call_type, call_arguments),
+                compiler_objects,
+            )
+            .unwrap()
+            .into_pointer_value(),
+        );
+
+        return;
+    }
+
+    if let Instruction::Str(_) = var_value {
+        compiler_objects.insert(
+            var_name.to_string(),
+            codegen::build_basic_value_enum(
+                module,
+                builder,
+                context,
+                var_value,
+                None,
+                compiler_objects,
+            )
+            .into_pointer_value(),
+        );
+
+        return;
+    }
+
+    unreachable!()
+}
+
+fn compile_struct_var<'ctx>(
+    module: &Module<'ctx>,
+    builder: &Builder<'ctx>,
+    context: &'ctx Context,
+    variable: Variable<'ctx>,
+    compiler_objects: &mut CompilerObjects<'ctx>,
+    ptr: PointerValue<'ctx>,
+) {
+    let var_name: &str = variable.0;
+    let var_value: &Instruction<'ctx> = variable.2;
+
+    if let Instruction::Struct { fields, .. } = var_value {
+        fields.iter().for_each(|field| {
+            let compiled_field: BasicValueEnum<'_> = codegen::build_basic_value_enum(
+                module,
+                builder,
+                context,
+                &field.1,
+                Some(field.2),
+                compiler_objects,
+            );
+
+            let field_in_struct: PointerValue<'ctx> = builder
+                .build_struct_gep(
+                    var_value.build_struct_type(context, None, compiler_objects),
+                    ptr,
+                    field.3,
+                    "",
+                )
+                .unwrap();
+
+            builder
+                .build_store(field_in_struct, compiled_field)
+                .unwrap();
+        });
+
+        compiler_objects.insert_struct(var_name, fields);
+        compiler_objects.insert(var_name.to_string(), ptr);
+
+        return;
+    }
+
+    if let Instruction::RefVar { name, .. } = var_value {
+        let original_ptr: PointerValue<'ctx> = compiler_objects.find_and_get(name).unwrap();
+        let fields: &Vec<(String, Instruction<'_>, DataTypes, u32)> =
+            compiler_objects.get_struct_fields(name);
+
+        builder.build_store(ptr, original_ptr).unwrap();
+
+        compiler_objects.insert_struct(var_name, fields);
+        compiler_objects.insert(var_name.to_string(), ptr);
+
+        return;
+    }
+
+    if let Instruction::Call {
+        name: call_name,
+        args: call_arguments,
+        kind: call_type,
+    } = var_value
+    {
+        compiler_objects.insert(
+            var_name.to_string(),
+            call::build_call(
+                module,
+                builder,
+                context,
+                (call_name, call_type, call_arguments),
+                compiler_objects,
+            )
+            .unwrap()
+            .into_pointer_value(),
+        );
+
+        return;
+    }
+
+    unreachable!()
+}
+
+fn compile_str_var<'ctx>(
     module: &Module<'ctx>,
     builder: &Builder<'ctx>,
     context: &'ctx Context,
@@ -256,14 +417,7 @@ fn compile_string_var<'ctx>(
     value: &'ctx Instruction<'ctx>,
     compiler_objects: &mut CompilerObjects<'ctx>,
 ) {
-    let ptr: PointerValue<'_> = utils::build_ptr(context, builder, DataTypes::String);
-
-    if let Instruction::Null = value {
-        compiler_objects.insert(name.to_string(), ptr);
-        return;
-    }
-
-    if let Instruction::String(_) = value {
+    if let Instruction::Str(_) = value {
         compiler_objects.insert(
             name.to_string(),
             codegen::build_basic_value_enum(
@@ -271,7 +425,7 @@ fn compile_string_var<'ctx>(
                 builder,
                 context,
                 value,
-                true,
+                None,
                 compiler_objects,
             )
             .into_pointer_value(),
@@ -287,7 +441,7 @@ fn compile_string_var<'ctx>(
                 builder,
                 context,
                 value,
-                true,
+                None,
                 compiler_objects,
             )
             .into_pointer_value(),
@@ -313,29 +467,7 @@ fn compile_string_var<'ctx>(
             .unwrap()
             .into_pointer_value(),
         );
-        return;
     }
-
-    if let Instruction::BinaryOp {
-        left,
-        op,
-        right,
-        kind,
-        ..
-    } = value
-    {
-        todo!()
-
-        /*compiler_objects.insert(
-            name.to_string(),
-            binaryop::compile_binary_op(
-                module, builder, context, left, op, right, kind, compiler_objects, function,
-            )
-            .into_pointer_value(),
-        ); */
-    }
-
-    unimplemented!()
 }
 
 fn compile_integer_var<'ctx>(
@@ -366,34 +498,6 @@ fn compile_integer_var<'ctx>(
                 utils::build_const_integer(context, var_type, *byte as u64, false),
             )
             .unwrap();
-
-        compiler_objects.insert(var_name.to_string(), ptr);
-        return;
-    }
-
-    if let Instruction::Indexe {
-        origin: from,
-        index,
-        ..
-    } = var_value
-    {
-        let var: PointerValue<'_> = compiler_objects.find_and_get(from).unwrap();
-
-        let char: IntValue<'_> = builder
-            .build_call(
-                module.get_function("Vec.get_i8").unwrap(),
-                &[
-                    var.into(),
-                    context.i64_type().const_int(*index, false).into(),
-                ],
-                "",
-            )
-            .unwrap()
-            .try_as_basic_value()
-            .unwrap_left()
-            .into_int_value();
-
-        builder.build_store(ptr, char).unwrap();
 
         compiler_objects.insert(var_name.to_string(), ptr);
         return;
@@ -573,6 +677,8 @@ fn compile_float_var<'ctx>(
         }
 
         compiler_objects.insert(var_name.to_string(), ptr);
+
+        return;
     }
 
     if let Instruction::BinaryOp {
@@ -590,6 +696,8 @@ fn compile_float_var<'ctx>(
         builder.build_store(ptr, result).unwrap();
 
         compiler_objects.insert(var_name.to_string(), ptr);
+
+        return;
     }
 
     if let Instruction::Group { instr, .. } = var_value {
@@ -669,6 +777,8 @@ fn compile_boolean_var<'ctx>(
         }
 
         compiler_objects.insert(var_name.to_string(), ptr);
+
+        return;
     }
 
     if let Instruction::BinaryOp {
@@ -686,6 +796,8 @@ fn compile_boolean_var<'ctx>(
         builder.build_store(ptr, result).unwrap();
 
         compiler_objects.insert(var_name.to_string(), ptr);
+
+        return;
     }
 
     if let Instruction::Group { instr, .. } = var_value {
@@ -697,4 +809,6 @@ fn compile_boolean_var<'ctx>(
             compiler_objects,
         );
     }
+
+    unreachable!()
 }

@@ -16,12 +16,12 @@ A OPERATOR B
 #[inline]
 fn check_binary_instr_add(a: &DataTypes, b: &DataTypes, line: usize) -> Result<(), ThrushError> {
     match (a, b) {
-        (DataTypes::String, DataTypes::String) => Ok(()),
+        // (DataTypes::String, DataTypes::String) => Ok(()),
         (
             DataTypes::I8 | DataTypes::I16 | DataTypes::I32 | DataTypes::I64,
             DataTypes::I8 | DataTypes::I16 | DataTypes::I32 | DataTypes::I64,
         ) => Ok(()),
-        (DataTypes::String, DataTypes::Char) => Ok(()),
+        // (DataTypes::String, DataTypes::Char) => Ok(()),
         (DataTypes::F32 | DataTypes::F64, DataTypes::F32 | DataTypes::F64) => Ok(()),
 
         _ => Err(ThrushError::Parse(
@@ -107,8 +107,6 @@ fn check_binary_instr_eqeq(a: &DataTypes, b: &DataTypes, line: usize) -> Result<
         return Ok(());
     } else if let (DataTypes::F32 | DataTypes::F64, DataTypes::F32 | DataTypes::F64) = (a, b) {
         return Ok(());
-    } else if let (DataTypes::String, DataTypes::String) = (a, b) {
-        return Ok(());
     } else if let (DataTypes::Bool, DataTypes::Bool) = (a, b) {
         return Ok(());
     } else if let (DataTypes::Char, DataTypes::Char) = (a, b) {
@@ -133,8 +131,6 @@ fn check_binary_instr_bangeq(a: &DataTypes, b: &DataTypes, line: usize) -> Resul
     {
         return Ok(());
     } else if let (DataTypes::F32 | DataTypes::F64, DataTypes::F32 | DataTypes::F64) = (a, b) {
-        return Ok(());
-    } else if let (DataTypes::String, DataTypes::String) = (a, b) {
         return Ok(());
     } else if let (DataTypes::Bool, DataTypes::Bool) = (a, b) {
         return Ok(());
@@ -416,11 +412,11 @@ pub fn check_types(
         return check_types(target, None, Some(instr), None, line, title, desc);
     }
 
-    println!("{:?}", (kind.unwrap(), target, op));
-
     match (target, kind.unwrap(), op) {
         (DataTypes::Char, DataTypes::Char, None) => Ok(()),
-        (DataTypes::String, DataTypes::String, Some(TokenKind::Plus) | None) => Ok(()),
+        (DataTypes::Str, DataTypes::Str, None) => Ok(()),
+        (DataTypes::Struct, DataTypes::Struct | DataTypes::Ptr, None) => Ok(()),
+        (DataTypes::Ptr, DataTypes::Ptr | DataTypes::Str, None) => Ok(()),
         (
             DataTypes::Bool,
             DataTypes::Bool,

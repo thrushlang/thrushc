@@ -19,6 +19,8 @@ pub type Function<'ctx> = (
     &'ctx str,
     &'ctx [Instruction<'ctx>],
     Option<&'ctx Box<Instruction<'ctx>>>,
-    &'ctx Option<DataTypes>,
+    &'ctx DataTypes,
     bool,
 );
+
+pub type StructFields<'ctx> = &'ctx Vec<(String, Instruction<'ctx>, DataTypes, u32)>;

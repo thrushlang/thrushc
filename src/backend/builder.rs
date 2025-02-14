@@ -130,6 +130,14 @@ impl<'a> ThrushCompiler<'a> {
 
         self.thrushc_comptime += start_time.elapsed();
 
+        if self.options.emit_raw_llvm_ir {
+            module
+                .print_to_file(Path::new(&format!("output/{}.ll", &file.name)))
+                .unwrap();
+
+            return;
+        }
+
         let compiled_path: &str = &format!("output/{}.bc", &file.name);
 
         module.write_bitcode_to_path(Path::new(compiled_path));

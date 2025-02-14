@@ -2,22 +2,40 @@ use {
     super::{
         super::{
             error::{ThrushError, ThrushErrorKind},
-            frontend::lexer::{DataTypes, TokenKind},
+            frontend::{
+                lexer::{DataTypes, TokenKind},
+                types::StructFields,
+            },
         },
-        compiler::types::{BinaryOp, Function},
+        compiler::{
+            objects::CompilerObjects,
+            types::{BinaryOp, Function},
+            utils,
+        },
     },
-    inkwell::values::BasicValueEnum,
+    inkwell::{
+        context::Context,
+        types::{BasicTypeEnum, StructType},
+        values::BasicValueEnum,
+        AddressSpace,
+    },
 };
 
 #[derive(Debug, Clone, Default)]
 pub enum Instruction<'ctx> {
     BasicValueEnum(BasicValueEnum<'ctx>),
-    String(String),
+    DataTypes(DataTypes),
+    Struct {
+        name: String,
+        fields: StructFields<'ctx>,
+        kind: DataTypes,
+    },
+    Str(String),
     Char(u8),
     ForLoop {
-        variable: Option<Box<Instruction<'ctx>>>,
-        cond: Option<Box<Instruction<'ctx>>>,
-        actions: Option<Box<Instruction<'ctx>>>,
+        variable: Box<Instruction<'ctx>>,
+        cond: Box<Instruction<'ctx>>,
+        actions: Box<Instruction<'ctx>>,
         block: Box<Instruction<'ctx>>,
     },
     Integer(DataTypes, f64, bool),
@@ -31,12 +49,14 @@ pub enum Instruction<'ctx> {
     Param {
         name: String,
         kind: DataTypes,
+        position: u32,
+        line: usize,
     },
     Function {
         name: String,
         params: Vec<Instruction<'ctx>>,
         body: Option<Box<Instruction<'ctx>>>,
-        return_kind: Option<DataTypes>,
+        return_type: DataTypes,
         is_public: bool,
     },
     Return(Box<Instruction<'ctx>>, DataTypes),
@@ -45,7 +65,7 @@ pub enum Instruction<'ctx> {
         kind: DataTypes,
         value: Box<Instruction<'ctx>>,
         line: usize,
-        only_comptime: bool,
+        exist_only_comptime: bool,
     },
     RefVar {
         name: &'ctx str,
@@ -56,11 +76,6 @@ pub enum Instruction<'ctx> {
         name: &'ctx str,
         kind: DataTypes,
         value: Box<Instruction<'ctx>>,
-    },
-    Indexe {
-        origin: &'ctx str,
-        index: u64,
-        kind: DataTypes,
     },
     Call {
         name: &'ctx str,
@@ -85,11 +100,10 @@ pub enum Instruction<'ctx> {
     Free {
         name: &'ctx str,
         free_only: bool,
-        is_string: bool,
     },
     Extern {
         name: String,
-        data: Box<Instruction<'ctx>>,
+        instr: Box<Instruction<'ctx>>,
         kind: TokenKind,
     },
     Boolean(bool),
@@ -109,8 +123,8 @@ impl PartialEq for Instruction<'_> {
                 matches!(other, Instruction::Float(_, _, _))
             }
 
-            Instruction::String(_) => {
-                matches!(other, Instruction::String(_))
+            Instruction::Str(_) => {
+                matches!(other, Instruction::Str(_))
             }
 
             _ => self == other,
@@ -119,6 +133,30 @@ impl PartialEq for Instruction<'_> {
 }
 
 impl<'ctx> Instruction<'ctx> {
+    pub fn build_struct_type(
+        &self,
+        context: &'ctx Context,
+        from_fields: Option<&StructFields>,
+        compiler_objects: &mut CompilerObjects<'ctx>,
+    ) -> StructType<'ctx> {
+        if let Some(from_fields) = from_fields {
+            return self.build_struct_from_fields(context, from_fields);
+        }
+
+        if let Instruction::Struct { fields, .. } = self {
+            return self.build_struct_from_fields(context, fields);
+        }
+
+        if let Instruction::RefVar { name, .. } = self {
+            let fields: &Vec<(String, Instruction<'_>, DataTypes, u32)> =
+                compiler_objects.get_struct_fields(name);
+
+            return self.build_struct_from_fields(context, fields);
+        }
+
+        unreachable!()
+    }
+
     pub fn is_chained(&self, other: &Instruction, line: usize) -> Result<(), ThrushError> {
         if let (Instruction::BinaryOp { .. }, Instruction::BinaryOp { .. }) = (self, other) {
             return Ok(());
@@ -200,36 +238,6 @@ impl<'ctx> Instruction<'ctx> {
     }
 
     #[inline]
-    pub fn is_var(&self) -> bool {
-        if let Instruction::Var { .. } | Instruction::RefVar { .. } = self {
-            return true;
-        }
-        false
-    }
-
-    #[inline]
-    pub fn is_indexe_return_of_string(&self) -> bool {
-        if self.is_return() {
-            if let Instruction::Return(indexe, DataTypes::Char) = self {
-                return indexe.is_indexe();
-            }
-
-            return false;
-        }
-
-        false
-    }
-
-    #[inline]
-    pub fn is_indexe(&self) -> bool {
-        if let Instruction::Indexe { .. } = self {
-            return true;
-        }
-
-        false
-    }
-
-    #[inline]
     pub fn is_return(&self) -> bool {
         if let Instruction::Return(_, _) = self {
             return true;
@@ -239,8 +247,8 @@ impl<'ctx> Instruction<'ctx> {
     }
 
     pub fn as_extern(&self) -> (&str, &Instruction, TokenKind) {
-        if let Instruction::Extern { name, data, kind } = self {
-            return (name, data, *kind);
+        if let Instruction::Extern { name, instr, kind } = self {
+            return (name, instr, *kind);
         }
 
         unreachable!()
@@ -251,11 +259,11 @@ impl<'ctx> Instruction<'ctx> {
             name,
             params,
             body,
-            return_kind,
+            return_type,
             is_public,
         } = self
         {
-            return (name, params, body.as_ref(), return_kind, *is_public);
+            return (name, params, body.as_ref(), return_type, *is_public);
         }
 
         unreachable!()
@@ -280,16 +288,17 @@ impl<'ctx> Instruction<'ctx> {
         match self {
             Instruction::Integer(datatype, _, _) => *datatype,
             Instruction::Float(datatype, _, _) => *datatype,
-            Instruction::String(_) => DataTypes::String,
+            Instruction::Str(_) => DataTypes::Str,
             Instruction::Boolean(_) => DataTypes::Bool,
             Instruction::Char(_) => DataTypes::Char,
+            Instruction::Struct { .. } => DataTypes::Struct,
             Instruction::RefVar { kind, .. } => *kind,
             Instruction::Group { kind, .. } => *kind,
             Instruction::BinaryOp { kind, .. } => *kind,
             Instruction::UnaryOp { value, .. } => value.get_data_type(),
             Instruction::Param { kind, .. } => *kind,
             Instruction::Call { kind, .. } => *kind,
-            Instruction::Indexe { kind, .. } => *kind,
+            Instruction::DataTypes(data_type) => *data_type,
             e => {
                 println!("{:?}", e);
 
@@ -330,8 +339,8 @@ impl<'ctx> Instruction<'ctx> {
             return DataTypes::Char;
         }
 
-        if let Instruction::String(_) = self {
-            return DataTypes::String;
+        if let Instruction::Str(_) = self {
+            return DataTypes::Str;
         }
 
         if let Instruction::Boolean(_) = self {
@@ -346,5 +355,39 @@ impl<'ctx> Instruction<'ctx> {
             Instruction::BasicValueEnum(value) => value,
             _ => unreachable!(),
         }
+    }
+
+    fn build_struct_from_fields(
+        &self,
+        context: &'ctx Context,
+        fields: &StructFields,
+    ) -> StructType<'ctx> {
+        let mut compiled_field_types: Vec<BasicTypeEnum> = Vec::new();
+
+        fields.iter().for_each(|field| {
+            if field.2.is_integer() {
+                compiled_field_types
+                    .push(utils::datatype_integer_to_llvm_type(context, &field.2).into());
+            }
+
+            if field.2.is_float() {
+                compiled_field_types
+                    .push(utils::datatype_float_to_llvm_type(context, &field.2).into());
+            }
+
+            if field.2 == DataTypes::Bool {
+                compiled_field_types.push(context.bool_type().into());
+            }
+
+            if field.2 == DataTypes::Str
+                || field.2 == DataTypes::Struct
+                || field.2 == DataTypes::Ptr
+                || field.2 == DataTypes::Void
+            {
+                compiled_field_types.push(context.ptr_type(AddressSpace::default()).into());
+            }
+        });
+
+        context.struct_type(&compiled_field_types, false)
     }
 }

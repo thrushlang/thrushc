@@ -1,7 +1,7 @@
 use {
     super::super::{
         backend::compiler::options::ThrushFile, diagnostic::Diagnostic, error::{ThrushError, ThrushErrorKind}, logging::LogType
-    }, core::str, inkwell::{FloatPredicate, IntPredicate}, std::{num::ParseFloatError, process::exit, mem}
+    }, core::str, inkwell::{FloatPredicate, IntPredicate}, std::{mem, num::ParseFloatError, process::exit}
 };
 
 pub struct Lexer<'a> {
@@ -58,8 +58,8 @@ impl<'a> Lexer<'a> {
 
     fn scan(&mut self) -> Result<(), ThrushError> {
         match self.advance() {
-            b'[' => self.make(TokenKind::LeftBracket),
-            b']' => self.make(TokenKind::RightBracket),
+            b'[' => self.make(TokenKind::LBracket),
+            b']' => self.make(TokenKind::RBracket),
             b'(' => self.make(TokenKind::LParen),
             b')' => self.make(TokenKind::RParen),
             b'{' => self.make(TokenKind::LBrace),
@@ -160,6 +160,8 @@ impl<'a> Lexer<'a> {
             "builtin" => self.make(TokenKind::Builtin),
             "@import" => self.make(TokenKind::Import),
             "@extern" => self.make(TokenKind::Extern),
+            "new" => self.make(TokenKind::New),
+
             "null" => self.make(TokenKind::Null),
 
             "i8" => self.make(TokenKind::DataType(DataTypes::I8)),
@@ -171,9 +173,9 @@ impl<'a> Lexer<'a> {
             "f64" => self.make(TokenKind::DataType(DataTypes::F64)),
 
             "bool" => self.make(TokenKind::DataType(DataTypes::Bool)),
-
-            "String" => self.make(TokenKind::DataType(DataTypes::String)),
             "char" => self.make(TokenKind::DataType(DataTypes::Char)),
+            "ptr" => self.make(TokenKind::DataType(DataTypes::Ptr)),
+            "str" => self.make(TokenKind::DataType(DataTypes::Str)),
 
             "void" => self.make(TokenKind::DataType(DataTypes::Void)),
 
@@ -246,7 +248,7 @@ impl<'a> Lexer<'a> {
                 ThrushErrorKind::SyntaxError,
                 String::from("Syntax Error"),
                 String::from(
-                    "Unterminated char. Did you forget to close the cjar with a '\''?",
+                    "Unterminated char. Did you forget to close the char with a '\''?",
                 ),
                 self.line,
             ));
@@ -302,7 +304,7 @@ impl<'a> Lexer<'a> {
         string = string.replace("\\t", "\t");
 
         self.tokens.push(Token {
-            kind: TokenKind::String,
+            kind: TokenKind::Str,
             lexeme: Some(string),
             line: self.line,
         });
@@ -454,8 +456,8 @@ pub enum TokenKind {
     Star,         // ' * '
     Colon,        // ' : '
     SemiColon,    // ' ; '
-    LeftBracket,  // ' ] '
-    RightBracket, // ' [ '
+    RBracket,  // ' ] '
+    LBracket, // ' [ '
     Arith,        // ' % ',
     Bang,         // ' ! '
     ColonColon,   // ' :: '
@@ -475,10 +477,11 @@ pub enum TokenKind {
     Integer(DataTypes, f64, bool),
     Float(DataTypes, f64, bool),
     DataType(DataTypes),
-    String,
+    Str,
     Char,
 
     // --- Keywords ---
+    New,
     Import,
     Extern,
     Builtin,
@@ -522,8 +525,8 @@ impl std::fmt::Display for TokenKind {
             TokenKind::Star => write!(f, "*"),
             TokenKind::Colon => write!(f, ":"),
             TokenKind::SemiColon => write!(f, ";"),
-            TokenKind::LeftBracket => write!(f, "["),
-            TokenKind::RightBracket => write!(f, "]"),
+            TokenKind::LBracket => write!(f, "["),
+            TokenKind::RBracket => write!(f, "]"),
             TokenKind::Arith => write!(f, "%"),
             TokenKind::Bang => write!(f, "!"),
             TokenKind::ColonColon => write!(f, "::"),
@@ -560,11 +563,12 @@ impl std::fmt::Display for TokenKind {
             TokenKind::Extends => write!(f, "extends"),
             TokenKind::Integer(datatype, _, _) => write!(f, "{}", datatype),
             TokenKind::Float(datatype, _, _) => write!(f, "{}", datatype),
-            TokenKind::String => write!(f, "string"),
+            TokenKind::Str => write!(f, "str"),
             TokenKind::Char => write!(f, "char"),
             TokenKind::Builtin => write!(f, "built-in"),
             TokenKind::Extern => write!(f, "@extern"),
             TokenKind::Import => write!(f, "@import"),
+            TokenKind::New => write!(f, "new"),
             TokenKind::Pass => write!(f, "..."),
             TokenKind::Eof => write!(f, "EOF"),
             TokenKind::DataType(datatype) => write!(f, "{}", datatype),
@@ -604,7 +608,7 @@ impl TokenKind {
         // ESTABILIZAR ESTA COSA EN EL FUTURO IGUAL QUE LOS INTEGER PREDICATE (DETERMINAR SI TIENE SIGNO Y CAMBIAR EL PREDICATE A CONVENIR)
         match self {
             TokenKind::EqEq => FloatPredicate::OEQ,
-            TokenKind::BangEq | TokenKind::And | TokenKind::Or => FloatPredicate::ONE,
+            TokenKind::BangEq => FloatPredicate::ONE,
             TokenKind::Greater => FloatPredicate::OGT,
             TokenKind::GreaterEq => FloatPredicate::OGE,
             TokenKind::Less => FloatPredicate::OLT,
@@ -633,29 +637,36 @@ impl TokenKind {
 
 }
 
-#[derive(Debug, PartialEq, Copy, Clone)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub enum DataTypes {
     // Integer DataTypes
-    I8 = 4,
-    I16 = 8,
-    I32 = 16,
-    I64 = 32,
+    I8,
+    I16,
+    I32,
+    I64,
 
     // Floating Point DataTypes
     F32,
     F64,
-    // Boolean DataTypes
+
+    // Boolean DataType
     Bool,
 
     // Char DataType
     Char,
-    // String DataTypes
-    String,
 
-    // Void Type
+    // Str DataType
+    Str,
+
+    // Pointer DataType
+    Ptr,
+
+    // Struct DataType
+    Struct,
+
+    // Void DataType
     Void,
 }
-
 
 impl std::fmt::Display for DataTypes {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -667,8 +678,10 @@ impl std::fmt::Display for DataTypes {
             DataTypes::F32 => write!(f, "f32"),
             DataTypes::F64 => write!(f, "f64"),
             DataTypes::Bool => write!(f, "bool"),
-            DataTypes::String => write!(f, "string"),
+            DataTypes::Str => write!(f, "String"),
             DataTypes::Char => write!(f, "char"),
+            DataTypes::Struct => write!(f, "struct"),
+            DataTypes::Ptr => write!(f, "ptr"),
             DataTypes::Void => write!(f, "()"),
         }
     }

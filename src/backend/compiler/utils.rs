@@ -1,10 +1,13 @@
 use {
-    super::super::{super::frontend::lexer::DataTypes, instruction::Instruction},
+    super::{
+        super::{super::frontend::lexer::DataTypes, instruction::Instruction},
+        objects::CompilerObjects,
+    },
     inkwell::{
         builder::Builder,
         context::Context,
         module::{Linkage, Module},
-        types::{ArrayType, BasicMetadataTypeEnum, FloatType, FunctionType, IntType},
+        types::{ArrayType, BasicMetadataTypeEnum, FloatType, FunctionType, IntType, StructType},
         values::{BasicValueEnum, FloatValue, GlobalValue, IntValue, PointerValue},
         AddressSpace,
     },
@@ -90,7 +93,7 @@ pub fn build_alloca_float<'ctx>(
 
 pub fn datatype_to_fn_type<'ctx>(
     context: &'ctx Context,
-    kind: &Option<DataTypes>,
+    kind: &DataTypes,
     params: &[Instruction<'_>],
 ) -> FunctionType<'ctx> {
     let mut param_types: Vec<BasicMetadataTypeEnum<'ctx>> = Vec::with_capacity(params.len());
@@ -104,21 +107,17 @@ pub fn datatype_to_fn_type<'ctx>(
     });
 
     match kind {
-        Some(kind) => match kind {
-            DataTypes::I8 | DataTypes::Char => context.i8_type().fn_type(&param_types, true),
-            DataTypes::I16 => context.i16_type().fn_type(&param_types, true),
-            DataTypes::I32 => context.i32_type().fn_type(&param_types, true),
-            DataTypes::I64 => context.i64_type().fn_type(&param_types, true),
-            DataTypes::Void => context.void_type().fn_type(&param_types, true),
-            DataTypes::String => context
-                .ptr_type(AddressSpace::default())
-                .fn_type(&param_types, true),
-            DataTypes::Bool => context.bool_type().fn_type(&param_types, true),
-            DataTypes::F32 => context.f32_type().fn_type(&param_types, true),
-            DataTypes::F64 => context.f64_type().fn_type(&param_types, true),
-        },
-
-        None => context.void_type().fn_type(&param_types, true),
+        DataTypes::I8 | DataTypes::Char => context.i8_type().fn_type(&param_types, true),
+        DataTypes::I16 => context.i16_type().fn_type(&param_types, true),
+        DataTypes::I32 => context.i32_type().fn_type(&param_types, true),
+        DataTypes::I64 => context.i64_type().fn_type(&param_types, true),
+        DataTypes::Str | DataTypes::Struct | DataTypes::Ptr => context
+            .ptr_type(AddressSpace::default())
+            .fn_type(&param_types, true),
+        DataTypes::Bool => context.bool_type().fn_type(&param_types, true),
+        DataTypes::F32 => context.f32_type().fn_type(&param_types, true),
+        DataTypes::F64 => context.f64_type().fn_type(&param_types, true),
+        DataTypes::Void => context.void_type().fn_type(&param_types, true),
     }
 }
 
@@ -133,7 +132,7 @@ pub fn datatype_to_basicmetadata_type_enum<'ctx>(
         DataTypes::I64 => context.i64_type().into(),
         DataTypes::F32 => context.f32_type().into(),
         DataTypes::F64 => context.f64_type().into(),
-        DataTypes::String => context.ptr_type(AddressSpace::default()).into(),
+        DataTypes::Str => context.ptr_type(AddressSpace::default()).into(),
 
         _ => unreachable!(),
     }
@@ -292,7 +291,7 @@ pub fn build_string_constant<'ctx>(
         .unwrap()
 }
 
-pub fn build_dynamic_string<'ctx>(
+/* pub fn build_dynamic_string<'ctx>(
     module: &Module<'ctx>,
     builder: &Builder<'ctx>,
     context: &'ctx Context,
@@ -347,7 +346,7 @@ pub fn build_dynamic_string<'ctx>(
     }
 
     string
-}
+} */
 
 pub fn build_ptr<'ctx>(
     context: &'ctx Context,
@@ -363,6 +362,16 @@ pub fn build_ptr<'ctx>(
             build_alloca_float(builder, datatype_float_to_llvm_type(context, &kind))
         }
 
-        _ => context.ptr_type(AddressSpace::default()).const_null(),
+        _ => unreachable!(),
     }
+}
+
+pub fn build_struct_ptr<'ctx>(
+    context: &'ctx Context,
+    builder: &Builder<'ctx>,
+    struct_instr: &Instruction<'ctx>,
+    _objects: &mut CompilerObjects<'ctx>,
+) -> PointerValue<'ctx> {
+    let struct_type: StructType<'_> = struct_instr.build_struct_type(context, None, _objects);
+    builder.build_malloc(struct_type, "").unwrap()
 }

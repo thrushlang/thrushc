@@ -9,6 +9,7 @@ use {
         lexer::{DataTypes, Token, TokenKind},
         objects::ParserObjects,
     },
+    ahash::AHashMap as HashMap,
     std::{mem, process},
 };
 
@@ -32,7 +33,7 @@ impl<'instr> Import<'instr> {
             errors: Vec::new(),
             current: 0,
             diagnostic: Diagnostic::new(file),
-            parser_objects: ParserObjects::new(),
+            parser_objects: ParserObjects::new(HashMap::new()),
         };
 
         imports._parse()
@@ -65,20 +66,109 @@ impl<'instr> Import<'instr> {
 
     fn public(&mut self) -> Result<(), ThrushError> {
         if self.peek().kind == TokenKind::Extern {
-            while self.peek().kind != TokenKind::Fn {
+            while self.peek().kind != TokenKind::Fn || self.peek().kind != TokenKind::Struct {
                 self.only_advance();
             }
         }
 
         if self.match_token(TokenKind::Fn) {
-            self.function()?;
+            self.build_function()?;
+            return Ok(());
+        }
+
+        if self.match_token(TokenKind::Struct) {
+            self.build_struct()?;
             return Ok(());
         }
 
         Ok(())
     }
 
-    fn function(&mut self) -> Result<(), ThrushError> {
+    fn build_struct(&mut self) -> Result<(), ThrushError> {
+        let name: String = self
+            .consume(
+                TokenKind::Identifier,
+                ThrushErrorKind::SyntaxError,
+                String::from("Expected struct name"),
+                String::from("Write the struct name: \"struct --> name <-- { ... };\"."),
+                self.previous().line,
+                String::new(),
+            )?
+            .lexeme
+            .clone()
+            .unwrap();
+
+        let line: usize = self.previous().line;
+
+        self.consume(
+            TokenKind::LBrace,
+            ThrushErrorKind::SyntaxError,
+            String::from("Syntax Error"),
+            String::from("Expected '{'."),
+            line,
+            String::new(),
+        )?;
+
+        let mut fields_types: HashMap<String, DataTypes> = HashMap::new();
+
+        while self.peek().kind != TokenKind::RBrace {
+            if self.match_token(TokenKind::Comma) {
+                continue;
+            }
+
+            if self.match_token(TokenKind::Identifier) {
+                let field_name: String = self.previous().lexeme.clone().unwrap();
+                let line: usize = self.previous().line;
+
+                let field_type: DataTypes = match self.peek().kind {
+                    TokenKind::DataType(kind) => {
+                        self.only_advance();
+                        kind
+                    }
+
+                    _ => {
+                        return Err(ThrushError::Parse(
+                            ThrushErrorKind::SyntaxError,
+                            String::from("Expected type of field"),
+                            format!("Write the field type: \"{} --> i64 <--\".", field_name),
+                            line,
+                            format!("struct {} {{\n   {} i64\n  }}", field_name, field_name),
+                        ));
+                    }
+                };
+
+                fields_types.insert(field_name, field_type);
+
+                continue;
+            }
+
+            self.only_advance();
+        }
+
+        self.consume(
+            TokenKind::RBrace,
+            ThrushErrorKind::SyntaxError,
+            String::from("Syntax Error"),
+            String::from("Expected '}'."),
+            line,
+            String::new(),
+        )?;
+
+        self.consume(
+            TokenKind::SemiColon,
+            ThrushErrorKind::SyntaxError,
+            String::from("Syntax Error"),
+            String::from("Expected ';'."),
+            line,
+            String::new(),
+        )?;
+
+        self.add_struct(name, fields_types);
+
+        Ok(())
+    }
+
+    fn build_function(&mut self) -> Result<(), ThrushError> {
         let line: usize = self.previous().line;
 
         let name: String = self
@@ -106,6 +196,8 @@ impl<'instr> Import<'instr> {
         let mut params: Vec<Instruction> = Vec::new();
         let mut params_types: Vec<DataTypes> = Vec::new();
 
+        let mut param_position: u32 = 0;
+
         while !self.match_token(TokenKind::RParen) {
             if self.match_token(TokenKind::Comma) {
                 continue;
@@ -126,6 +218,7 @@ impl<'instr> Import<'instr> {
             }
 
             let ident: String = self.previous().lexeme.clone().unwrap();
+            let line: usize = self.previous().line;
 
             if !self.match_token(TokenKind::ColonColon) {
                 self.errors.push(ThrushError::Parse(
@@ -156,8 +249,15 @@ impl<'instr> Import<'instr> {
                 }
             };
 
-            params.push(Instruction::Param { name: ident, kind });
+            params.push(Instruction::Param {
+                name: ident,
+                kind,
+                line,
+                position: param_position,
+            });
+
             params_types.push(kind);
+            param_position += 1;
         }
 
         if self.peek().kind == TokenKind::Colon {
@@ -171,27 +271,39 @@ impl<'instr> Import<'instr> {
             )?;
         }
 
-        let return_kind: Option<DataTypes> = match self.peek().kind {
+        let return_type: Option<(DataTypes, String)> = match self.peek().kind {
             TokenKind::DataType(kind) => {
                 self.only_advance();
-                Some(kind)
+                Some((kind, String::new()))
+            }
+
+            TokenKind::Identifier => {
+                if self
+                    .parser_objects
+                    .get_struct(self.peek().lexeme.as_ref().unwrap(), line)
+                    .is_ok()
+                {
+                    self.only_advance();
+                    Some((DataTypes::Struct, self.previous().lexeme.clone().unwrap()))
+                } else {
+                    None
+                }
             }
             _ => None,
         };
 
-        self.add_function(
-            name.clone(),
-            return_kind.unwrap_or(DataTypes::Void),
-            params_types,
-        );
+        let return_type: (DataTypes, String) =
+            return_type.unwrap_or((DataTypes::Void, String::new()));
+
+        self.add_build_function(name.clone(), return_type.0, params_types);
 
         self.stmts.push(Instruction::Extern {
             name: name.clone(),
-            data: Box::new(Instruction::Function {
+            instr: Box::new(Instruction::Function {
                 name,
                 params,
                 body: None,
-                return_kind,
+                return_type: return_type.0,
                 is_public: true,
             }),
             kind: TokenKind::Fn,
@@ -200,7 +312,11 @@ impl<'instr> Import<'instr> {
         Ok(())
     }
 
-    fn add_function(&mut self, name: String, kind: DataTypes, datatypes: Vec<DataTypes>) {
+    fn add_struct(&mut self, name: String, fields: HashMap<String, DataTypes>) {
+        self.parser_objects.insert_new_struct(name, fields);
+    }
+
+    fn add_build_function(&mut self, name: String, kind: DataTypes, datatypes: Vec<DataTypes>) {
         self.parser_objects
             .insert_new_global(name, (kind, datatypes, true, false));
     }

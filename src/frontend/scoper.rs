@@ -139,7 +139,22 @@ impl<'ctx> ThrushScoper<'ctx> {
         if block.is_some() {
             if let Instruction::Block { stmts, .. } = block.as_ref().unwrap() {
                 return stmts.iter().rev().any(|instr| match instr {
-                    Instruction::Var { name: n, line, .. } if *n == name => {
+                    Instruction::Var {
+                        name: var_name,
+                        line,
+                        ..
+                    } if *var_name == name => {
+                        if *line > refvar_line {
+                            return false;
+                        }
+
+                        true
+                    }
+                    Instruction::Param {
+                        name: param_name,
+                        line,
+                        ..
+                    } if *param_name == name => {
                         if *line > refvar_line {
                             return false;
                         }
@@ -159,7 +174,22 @@ impl<'ctx> ThrushScoper<'ctx> {
 
         if self.blocks.len() == 1 || depth == 0 {
             self.blocks[0].stmts.iter().rev().any(|instr| match instr {
-                Instruction::Var { name: n, line, .. } if **n == *name => {
+                Instruction::Var {
+                    name: var_name,
+                    line,
+                    ..
+                } if *var_name == name => {
+                    if *line > refvar_line {
+                        return false;
+                    }
+
+                    true
+                }
+                Instruction::Param {
+                    name: param_name,
+                    line,
+                    ..
+                } if *param_name == name => {
                     if *line > refvar_line {
                         return false;
                     }
@@ -180,7 +210,22 @@ impl<'ctx> ThrushScoper<'ctx> {
                 .iter()
                 .rev()
                 .any(|instr| match instr {
-                    Instruction::Var { name: n, line, .. } if **n == *name => {
+                    Instruction::Var {
+                        name: var_name,
+                        line,
+                        ..
+                    } if *var_name == name => {
+                        if *line > refvar_line {
+                            return false;
+                        }
+
+                        true
+                    }
+                    Instruction::Param {
+                        name: param_name,
+                        line,
+                        ..
+                    } if *param_name == name => {
                         if *line > refvar_line {
                             return false;
                         }
@@ -211,7 +256,10 @@ impl<'ctx> ThrushScoper<'ctx> {
         if block.is_some() {
             if let Instruction::Block { stmts, .. } = block.as_ref().unwrap() {
                 return stmts.iter().rev().any(|instr| match instr {
-                    Instruction::Var { name: n, .. } if *n == name => true,
+                    Instruction::Var { name: var_name, .. } if *var_name == name => true,
+                    Instruction::Param {
+                        name: param_name, ..
+                    } if *param_name == name => true,
                     Instruction::Block { .. } => self.is_at_current_scope(name, Some(instr), depth),
                     _ => {
                         depth += 1;
@@ -223,7 +271,10 @@ impl<'ctx> ThrushScoper<'ctx> {
 
         if self.blocks.len() == 1 || depth == 0 {
             self.blocks[0].stmts.iter().rev().any(|instr| match &instr {
-                Instruction::Var { name: n, .. } => *n == name,
+                Instruction::Var { name: var_name, .. } if *var_name == name => true,
+                Instruction::Param {
+                    name: param_name, ..
+                } if *param_name == name => true,
                 Instruction::Block { .. } => self.is_at_current_scope(name, Some(instr), depth),
                 _ => {
                     depth += 1;
@@ -236,7 +287,10 @@ impl<'ctx> ThrushScoper<'ctx> {
                 .iter()
                 .rev()
                 .any(|instr| match &instr {
-                    Instruction::Var { name: n, .. } => *n == name,
+                    Instruction::Var { name: var_name, .. } if *var_name == name => true,
+                    Instruction::Param {
+                        name: param_name, ..
+                    } if *param_name == name => true,
                     Instruction::Block { .. } => self.is_at_current_scope(name, Some(instr), depth),
                     _ => {
                         depth += 1;

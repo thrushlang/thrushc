@@ -4,3 +4,4 @@ pub mod parser;
 pub mod preproccesadors;
 mod scoper;
 mod type_checking;
+pub mod types;

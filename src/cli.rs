@@ -172,6 +172,11 @@ impl Cli {
                 }
             }
 
+            "--emit-raw-llvm-ir" | "-emit-raw-llvm-ir" => {
+                *index += 1;
+                self.options.emit_raw_llvm_ir = true;
+            }
+
             "--static" | "-s" => {
                 *index += 1;
                 self.options.linking = Linking::Static;
@@ -304,40 +309,74 @@ impl Cli {
 
     fn help(&self) {
         println!(
-            "\n{}\n\n{} {} {}\n\n{}\n{} ({} | {} | {}) {}\n{} ({} | {} | {}) {}\n{} ({}) {}\n{} ({} | {}) {}\n{}\n{} ({} | {}) {}\n{} ({} | {}) {}\n{} ({} | {}) {}\n{} ({} | {}) {}\n{} ({} | {}) {}\n{} ({} | {}) {}\n{} ({} | {}) {}\n{} ({} | {}) {}\n{} ({} | {}) {}\n{} ({} | {}) {}\n{} ({} | {}) {}\n{} ({} | {}) {}\n{} ({} | {}) {}\n{}\n{} ({} | {}) {}",
+            "\n{}\n",
             style("The Thrush Compiler")
                 .bold()
-                .fg(Color::Rgb(141, 141, 142)),
+                .fg(Color::Rgb(141, 141, 142))
+        );
+
+        println!(
+            "{} {} {}\n",
             style("Usage:").bold(),
             style("thrushc").bold().fg(Color::Rgb(141, 141, 142)),
-            style("[--flags] [file]").bold(),
-            style("Compiler Commands:\n").bold(),
+            style("[--flags] [file]").bold()
+        );
+
+        println!("{}", style("Compiler Commands:\n").bold());
+
+        println!(
+            "{} ({} | {} | {}) {}",
             style("•").bold(),
             style("help").bold().fg(Color::Rgb(141, 141, 142)),
             style("-h").bold().fg(Color::Rgb(141, 141, 142)),
             style("--help").bold().fg(Color::Rgb(141, 141, 142)),
-            style("Show help message.").bold(),
+            style("Show help message.").bold()
+        );
+
+        println!(
+            "{} ({} | {} | {}) {}",
             style("•").bold(),
             style("version").bold().fg(Color::Rgb(141, 141, 142)),
             style("-v").bold().fg(Color::Rgb(141, 141, 142)),
             style("--version").bold().fg(Color::Rgb(141, 141, 142)),
-            style("Show the version.").bold(),
+            style("Show the version.").bold()
+        );
+
+        println!(
+            "{} ({}) {}",
             style("•").bold(),
             style("targets").bold().fg(Color::Rgb(141, 141, 142)),
-            style("Print the list of supported targets machines.").bold(),
+            style("Print the list of supported targets machines.").bold()
+        );
+
+        println!(
+            "{} ({} | {}) {}",
             style("•").bold(),
             style("native-target").bold().fg(Color::Rgb(141, 141, 142)),
             style("-nt").bold().fg(Color::Rgb(141, 141, 142)),
-            style("Print the native target of this machine.").bold(),
-            style("\nCompiler Flags:\n").bold(),
+            style("Print the native target of this machine.").bold()
+        );
+
+        println!("{}", style("\nCompiler Flags:\n").bold());
+
+        println!(
+            "{} ({} | {}) {}",
             style("•").bold(),
             style("--output [str]").bold().fg(Color::Rgb(141, 141, 142)),
             style("-o [str]").bold().fg(Color::Rgb(141, 141, 142)),
-            style("Output file format.").bold(),
+            style("Output file format.").bold()
+        );
+
+        println!(
+            "{} ({} | {}) {}",
             style("•").bold(),
             style("--target [str]").bold().fg(Color::Rgb(141, 141, 142)),
             style("-t [str]").bold().fg(Color::Rgb(141, 141, 142)),
-            style("Target architecture for the executable or object file.").bold(),
+            style("Target architecture for the executable or object file.").bold()
+        );
+
+        println!(
+            "{} ({} | {}) {}",
             style("•").bold(),
             style("--optimization [opt-level]")
                 .bold()
@@ -345,37 +384,81 @@ impl Cli {
             style("-opt [opt-level]")
                 .bold()
                 .fg(Color::Rgb(141, 141, 142)),
-            style("Optimization level for the executable to emit or object file.").bold(),
-            style("•").bold(),
-            style("--emit").bold().fg(Color::Rgb(141, 141, 142)),
-            style("-emit").bold().fg(Color::Rgb(141, 141, 142)),
-            style("Compile the code to Assembler or LLVM IR.").bold(),
+            style("Optimization level for the executable to emit or object file.").bold()
+        );
+
+        println!(
+            "{} ({} | {}) {}",
             style("•").bold(),
             style("--include").bold().fg(Color::Rgb(141, 141, 142)),
             style("-include").bold().fg(Color::Rgb(141, 141, 142)),
-            style("Include a native api code in the IR.").bold(),
+            style("Include a native api code in the IR.").bold()
+        );
+
+        println!(
+            "{} ({} | {}) {}",
+            style("•").bold(),
+            style("--emit-raw-llvm-ir")
+                .bold()
+                .fg(Color::Rgb(141, 141, 142)),
+            style("-emit-raw-llvm-ir")
+                .bold()
+                .fg(Color::Rgb(141, 141, 142)),
+            style("Compile the code into llvm ir before of optimization.").bold()
+        );
+
+        println!(
+            "{} ({} | {}) {}",
+            style("•").bold(),
+            style("--include").bold().fg(Color::Rgb(141, 141, 142)),
+            style("-include").bold().fg(Color::Rgb(141, 141, 142)),
+            style("Include a native api code in the IR.").bold()
+        );
+
+        println!(
+            "{} ({} | {}) {}",
             style("•").bold(),
             style("--static").bold().fg(Color::Rgb(141, 141, 142)),
             style("-s").bold().fg(Color::Rgb(141, 141, 142)),
-            style("Link the executable statically.").bold(),
+            style("Link the executable statically.").bold()
+        );
+
+        println!(
+            "{} ({} | {}) {}",
             style("•").bold(),
             style("--dynamic").bold().fg(Color::Rgb(141, 141, 142)),
             style("-d").bold().fg(Color::Rgb(141, 141, 142)),
-            style("Link the executable dynamically.").bold(),
+            style("Link the executable dynamically.").bold()
+        );
+
+        println!(
+            "{} ({} | {}) {}",
             style("•").bold(),
             style("--executable").bold().fg(Color::Rgb(141, 141, 142)),
             style("-executable").bold().fg(Color::Rgb(141, 141, 142)),
-            style("Compile the code into native executable.").bold(),
+            style("Compile the code into native executable.").bold()
+        );
+
+        println!(
+            "{} ({} | {}) {}",
             style("•").bold(),
             style("--library").bold().fg(Color::Rgb(141, 141, 142)),
             style("-lib").bold().fg(Color::Rgb(141, 141, 142)),
-            style("Compile to an object file ('*.o').").bold(),
+            style("Compile to an object file ('*.o').").bold()
+        );
+
+        println!(
+            "{} ({} | {}) {}",
             style("•").bold(),
             style("--static-library")
                 .bold()
                 .fg(Color::Rgb(141, 141, 142)),
             style("-slib").bold().fg(Color::Rgb(141, 141, 142)),
-            style("Compile to an static library ('*.a').").bold(),
+            style("Compile to an static library ('*.a').").bold()
+        );
+
+        println!(
+            "{} ({} | {}) {}",
             style("•").bold(),
             style("--reloc [reloc-mode]")
                 .bold()
@@ -383,7 +466,11 @@ impl Cli {
             style("-reloc [reloc-mode]")
                 .bold()
                 .fg(Color::Rgb(141, 141, 142)),
-            style("Indicate how references to memory addresses are handled.").bold(),
+            style("Indicate how references to memory addresses are handled.").bold()
+        );
+
+        println!(
+            "{} ({} | {}) {}",
             style("•").bold(),
             style("--codemodel [model]")
                 .bold()
@@ -392,12 +479,21 @@ impl Cli {
                 .bold()
                 .fg(Color::Rgb(141, 141, 142)),
             style("Define how code is organized and accessed in the executable or object file.")
-                .bold(),
+                .bold()
+        );
+
+        println!(
+            "{} ({} | {}) {}",
             style("•").bold(),
             style("--args [str]").bold().fg(Color::Rgb(141, 141, 142)),
             style("-args [str]").bold().fg(Color::Rgb(141, 141, 142)),
-            style("Pass more arguments to the backend compiler.").bold(),
-            style("\nUseful Flags:\n").bold(),
+            style("Pass more arguments to the backend compiler.").bold()
+        );
+
+        println!("{}", style("\nUseful Flags:\n").bold());
+
+        println!(
+            "{} ({} | {}) {}",
             style("•").bold(),
             style("--emit-natives-apart")
                 .bold()

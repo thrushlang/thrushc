@@ -1,4 +1,5 @@
 use {
+    super::types::StructFields,
     ahash::AHashMap as HashMap,
     inkwell::values::{FunctionValue, PointerValue},
 };
@@ -6,6 +7,7 @@ use {
 #[derive(Debug, Clone)]
 pub struct CompilerObjects<'ctx> {
     pub functions: HashMap<&'ctx str, FunctionValue<'ctx>>,
+    pub structs: HashMap<&'ctx str, StructFields<'ctx>>,
     pub blocks: Vec<HashMap<String, PointerValue<'ctx>>>,
     pub scope: usize,
 }
@@ -14,6 +16,7 @@ impl<'ctx> CompilerObjects<'ctx> {
     pub fn new() -> Self {
         Self {
             functions: HashMap::new(),
+            structs: HashMap::new(),
             blocks: Vec::new(),
             scope: 0,
         }
@@ -39,6 +42,16 @@ impl<'ctx> CompilerObjects<'ctx> {
     #[inline]
     pub fn insert_function(&mut self, name: &'ctx str, function: FunctionValue<'ctx>) {
         self.functions.insert(name, function);
+    }
+
+    #[inline]
+    pub fn insert_struct(&mut self, name: &'ctx str, fields: StructFields<'ctx>) {
+        self.structs.insert(name, fields);
+    }
+
+    #[inline]
+    pub fn get_struct_fields(&mut self, name: &'ctx str) -> StructFields<'ctx> {
+        self.structs.get(name).unwrap()
     }
 
     /*  #[inline]
