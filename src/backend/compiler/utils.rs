@@ -132,7 +132,9 @@ pub fn datatype_to_basicmetadata_type_enum<'ctx>(
         DataTypes::I64 => context.i64_type().into(),
         DataTypes::F32 => context.f32_type().into(),
         DataTypes::F64 => context.f64_type().into(),
-        DataTypes::Str => context.ptr_type(AddressSpace::default()).into(),
+        DataTypes::Str | DataTypes::Struct | DataTypes::Ptr => {
+            context.ptr_type(AddressSpace::default()).into()
+        }
 
         _ => unreachable!(),
     }
@@ -290,63 +292,6 @@ pub fn build_string_constant<'ctx>(
         )
         .unwrap()
 }
-
-/* pub fn build_dynamic_string<'ctx>(
-    module: &Module<'ctx>,
-    builder: &Builder<'ctx>,
-    context: &'ctx Context,
-    from: &str,
-) -> PointerValue<'ctx> {
-    let string: PointerValue<'ctx> = builder
-        .build_malloc(
-            context.struct_type(
-                &[
-                    context.i64_type().into(),                        // size
-                    context.i64_type().into(),                        // capacity
-                    context.i64_type().into(),                        // element_size
-                    context.ptr_type(AddressSpace::default()).into(), // data
-                    context.i8_type().into(),                         // type
-                ],
-                false,
-            ),
-            "",
-        )
-        .unwrap();
-
-    builder
-        .build_call(
-            module.get_function("Vec.init").unwrap(),
-            &[
-                string.into(),
-                context
-                    .i64_type()
-                    .const_int(from.len() as u64, false)
-                    .into(),
-                context
-                    .i64_type()
-                    .const_int(context.i8_type().get_bit_width() as u64, false)
-                    .into(),
-                context.i8_type().const_int(1, false).into(),
-            ],
-            "",
-        )
-        .unwrap();
-
-    for i in from.as_bytes() {
-        builder
-            .build_call(
-                module.get_function("Vec.push_i8").unwrap(),
-                &[
-                    string.into(),
-                    context.i8_type().const_int(*i as u64, false).into(),
-                ],
-                "",
-            )
-            .unwrap();
-    }
-
-    string
-} */
 
 pub fn build_ptr<'ctx>(
     context: &'ctx Context,

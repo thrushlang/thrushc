@@ -1,9 +1,10 @@
 pub mod binaryop;
 pub mod call;
 pub mod codegen;
+pub mod generation;
 pub mod impls;
+pub mod misc;
 pub mod objects;
-pub mod options;
 pub mod types;
 pub mod unaryop;
 pub mod utils;

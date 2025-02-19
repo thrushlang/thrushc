@@ -1,9 +1,33 @@
-use std::path::PathBuf;
-
-use inkwell::{
-    targets::{CodeModel, RelocMode, TargetMachine, TargetTriple},
-    OptimizationLevel,
+use {
+    inkwell::{
+        targets::{CodeModel, RelocMode, TargetMachine, TargetTriple},
+        OptimizationLevel,
+    },
+    std::path::PathBuf,
 };
+
+#[derive(Debug)]
+pub struct CompilerOptions {
+    pub output: String,
+    pub target_triple: TargetTriple,
+    pub optimization: Opt,
+    pub emit_llvm_ir: bool,
+    pub emit_raw_llvm_ir: bool,
+    pub emit_llvm_bitcode: bool,
+    pub emit_asm: bool,
+    pub emit_thrush_ast: bool,
+    pub emit_natives_apart: bool,
+    pub library: bool,
+    pub static_library: bool,
+    pub executable: bool,
+    pub linking: Linking,
+    pub include_vector_api: bool,
+    pub include_debug_api: bool,
+    pub reloc_mode: RelocMode,
+    pub code_model: CodeModel,
+    pub files: Vec<ThrushFile>,
+    pub args: Vec<String>,
+}
 
 #[derive(Default, Debug)]
 pub enum Opt {
@@ -12,6 +36,19 @@ pub enum Opt {
     Low,
     Mid,
     Mcqueen,
+}
+
+#[derive(Default, Debug, PartialEq)]
+pub enum Linking {
+    #[default]
+    Static,
+    Dynamic,
+}
+
+#[derive(Debug, Clone)]
+pub struct ThrushFile {
+    pub name: String,
+    pub path: PathBuf,
 }
 
 impl Opt {
@@ -56,13 +93,6 @@ impl Opt {
     }
 }
 
-#[derive(Default, Debug, PartialEq)]
-pub enum Linking {
-    Static,
-    #[default]
-    Dynamic,
-}
-
 impl Linking {
     pub fn to_str(&self) -> &str {
         match self {
@@ -70,34 +100,6 @@ impl Linking {
             Linking::Dynamic => "-dynamic",
         }
     }
-}
-
-#[derive(Debug, Clone)]
-pub struct ThrushFile {
-    pub name: String,
-    pub path: PathBuf,
-}
-
-#[derive(Debug)]
-pub struct CompilerOptions {
-    pub output: String,
-    pub target_triple: TargetTriple,
-    pub optimization: Opt,
-    pub emit_llvm_ir: bool,
-    pub emit_raw_llvm_ir: bool,
-    pub emit_llvm_bitcode: bool,
-    pub emit_asm: bool,
-    pub emit_natives_apart: bool,
-    pub library: bool,
-    pub static_library: bool,
-    pub executable: bool,
-    pub linking: Linking,
-    pub include_vector_api: bool,
-    pub include_debug_api: bool,
-    pub reloc_mode: RelocMode,
-    pub code_model: CodeModel,
-    pub files: Vec<ThrushFile>,
-    pub args: Vec<String>,
 }
 
 impl Default for CompilerOptions {
@@ -111,6 +113,7 @@ impl Default for CompilerOptions {
             emit_llvm_bitcode: false,
             emit_natives_apart: false,
             emit_asm: false,
+            emit_thrush_ast: false,
             library: false,
             static_library: false,
             executable: false,

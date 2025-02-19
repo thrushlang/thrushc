@@ -1,8 +1,56 @@
 use {
     super::super::{
-        backend::compiler::options::ThrushFile, diagnostic::Diagnostic, error::{ThrushError, ThrushErrorKind}, logging::LogType
-    }, core::str, inkwell::{FloatPredicate, IntPredicate}, std::{mem, num::ParseFloatError, process::exit}
+        backend::compiler::misc::ThrushFile, diagnostic::Diagnostic, error::ThrushError,
+        logging::LogType,
+    },
+    ahash::{HashMap, HashMapExt},
+    inkwell::{FloatPredicate, IntPredicate},
+    lazy_static::lazy_static,
+    std::{mem, num::ParseFloatError, process::exit},
 };
+
+lazy_static! {
+    static ref KEYWORDS: HashMap<&'static [u8], TokenKind> = {
+        let mut keywords: HashMap<&'static [u8], TokenKind> = HashMap::with_capacity(34);
+
+        keywords.insert(b"var", TokenKind::Var);
+        keywords.insert(b"fn", TokenKind::Fn);
+        keywords.insert(b"if", TokenKind::If);
+        keywords.insert(b"elif", TokenKind::Elif);
+        keywords.insert(b"else", TokenKind::Else);
+        keywords.insert(b"for", TokenKind::For);
+        keywords.insert(b"while", TokenKind::While);
+        keywords.insert(b"true", TokenKind::True);
+        keywords.insert(b"false", TokenKind::False);
+        keywords.insert(b"or", TokenKind::Or);
+        keywords.insert(b"and", TokenKind::And);
+        keywords.insert(b"const", TokenKind::Const);
+        keywords.insert(b"struct", TokenKind::Struct);
+        keywords.insert(b"return", TokenKind::Return);
+        keywords.insert(b"break", TokenKind::Break);
+        keywords.insert(b"continue", TokenKind::Continue);
+        keywords.insert(b"this", TokenKind::This);
+        keywords.insert(b"public", TokenKind::Public);
+        keywords.insert(b"builtin", TokenKind::Builtin);
+        keywords.insert(b"@import", TokenKind::Import);
+        keywords.insert(b"@extern", TokenKind::Extern);
+        keywords.insert(b"new", TokenKind::New);
+        keywords.insert(b"null", TokenKind::Null);
+        keywords.insert(b"i8", TokenKind::DataType(DataTypes::I8));
+        keywords.insert(b"i16", TokenKind::DataType(DataTypes::I16));
+        keywords.insert(b"i32", TokenKind::DataType(DataTypes::I32));
+        keywords.insert(b"i64", TokenKind::DataType(DataTypes::I64));
+        keywords.insert(b"f32", TokenKind::DataType(DataTypes::F32));
+        keywords.insert(b"f64", TokenKind::DataType(DataTypes::F64));
+        keywords.insert(b"bool", TokenKind::DataType(DataTypes::Bool));
+        keywords.insert(b"char", TokenKind::DataType(DataTypes::Char));
+        keywords.insert(b"ptr", TokenKind::DataType(DataTypes::Ptr));
+        keywords.insert(b"str", TokenKind::DataType(DataTypes::Str));
+        keywords.insert(b"void", TokenKind::DataType(DataTypes::Void));
+
+        keywords
+    };
+}
 
 pub struct Lexer<'a> {
     tokens: Vec<Token>,
@@ -11,7 +59,7 @@ pub struct Lexer<'a> {
     start: usize,
     current: usize,
     line: usize,
-    diagnostic: Diagnostic
+    diagnostic: Diagnostic,
 }
 
 impl<'a> Lexer<'a> {
@@ -23,7 +71,7 @@ impl<'a> Lexer<'a> {
             start: 0,
             current: 0,
             line: 1,
-            diagnostic: Diagnostic::new(file)
+            diagnostic: Diagnostic::new(file),
         };
 
         lexer._lex()
@@ -43,14 +91,14 @@ impl<'a> Lexer<'a> {
             self.errors.iter().for_each(|error| {
                 self.diagnostic.report(error, LogType::ERROR, false);
             });
-       
+
             exit(1);
         };
 
         self.tokens.push(Token {
             lexeme: None,
             kind: TokenKind::Eof,
-            line: self.line
+            line: self.line,
         });
 
         mem::take(&mut self.tokens)
@@ -80,14 +128,13 @@ impl<'a> Lexer<'a> {
                 if self.char_match(b'*') && self.char_match(b'/') {
                     break;
                 } else if self.end() {
-                    return Err(ThrushError::Lex(
-                        ThrushErrorKind::SyntaxError,
-        
+                    return Err(ThrushError::Error(
                         String::from("Syntax Error"),
                         String::from(
-                            "Unterminated multiline comment. Did you forget to close the string with a '*/'?",
+                            "Unterminated multiline comment. Did you forget to close the comment with a '*/'?",
                         ),
                         self.line,
+                        String::new()
                     ));
                 }
 
@@ -116,13 +163,13 @@ impl<'a> Lexer<'a> {
             b'\'' => self.char()?,
             b'"' => self.string()?,
             b'0'..=b'9' => self.integer_or_float()?,
-            b'a'..=b'z' | b'A'..=b'Z' | b'_'  | b'@' => self.identifier()?,
+            b'a'..=b'z' | b'A'..=b'Z' | b'_' | b'@' => self.identifier()?,
             _ => {
-                return Err(ThrushError::Lex(
-                    ThrushErrorKind::UnknownChar,
+                return Err(ThrushError::Error(
                     String::from("Unknown character."),
                     String::from("Did you provide a valid character?"),
                     self.line,
+                    String::new(),
                 ));
             }
         }
@@ -131,61 +178,16 @@ impl<'a> Lexer<'a> {
     }
 
     fn identifier(&mut self) -> Result<(), ThrushError> {
-
         while self.is_alpha(self.peek()) || self.peek().is_ascii_digit() {
             self.advance();
         }
 
-        match str::from_utf8(&self.code[self.start..self.current]).unwrap() {
-            "var" => self.make(TokenKind::Var),
-            "fn" => self.make(TokenKind::Fn),
-            "if" => self.make(TokenKind::If),
-            "elif" => self.make(TokenKind::Elif),
-            "else" => self.make(TokenKind::Else),
-            "for" => self.make(TokenKind::For),
-            "while" => self.make(TokenKind::While),
-            "true" => self.make(TokenKind::True),
-            "false" => self.make(TokenKind::False),
-            "or" => self.make(TokenKind::Or),
-            "and" => self.make(TokenKind::And),
-            "const" => self.make(TokenKind::Const),
-            "struct" => self.make(TokenKind::Struct),
-            "return" => self.make(TokenKind::Return),
-            "break" => self.make(TokenKind::Break),
-            "continue" => self.make(TokenKind::Continue),
-            "super" => self.make(TokenKind::Super),
-            "this" => self.make(TokenKind::This),
-            "extends" => self.make(TokenKind::Extends),
-            "public" => self.make(TokenKind::Public),
-            "builtin" => self.make(TokenKind::Builtin),
-            "@import" => self.make(TokenKind::Import),
-            "@extern" => self.make(TokenKind::Extern),
-            "new" => self.make(TokenKind::New),
+        let code: &[u8] = &self.code[self.start..self.current];
 
-            "null" => self.make(TokenKind::Null),
-
-            "i8" => self.make(TokenKind::DataType(DataTypes::I8)),
-            "i16" => self.make(TokenKind::DataType(DataTypes::I16)),
-            "i32" => self.make(TokenKind::DataType(DataTypes::I32)),
-            "i64" => self.make(TokenKind::DataType(DataTypes::I64)),
-
-            "f32" => self.make(TokenKind::DataType(DataTypes::F32)),
-            "f64" => self.make(TokenKind::DataType(DataTypes::F64)),
-
-            "bool" => self.make(TokenKind::DataType(DataTypes::Bool)),
-            "char" => self.make(TokenKind::DataType(DataTypes::Char)),
-            "ptr" => self.make(TokenKind::DataType(DataTypes::Ptr)),
-            "str" => self.make(TokenKind::DataType(DataTypes::Str)),
-
-            "void" => self.make(TokenKind::DataType(DataTypes::Void)),
-
-            _ => {
-                self.tokens.push(Token {
-                    kind: TokenKind::Identifier,
-                    lexeme: Some(self.lexeme()),
-                    line: self.line,
-                });
-            }
+        if let Some(token_type) = KEYWORDS.get(code) {
+            self.make(*token_type);
+        } else {
+            self.make(TokenKind::Identifier);
         }
 
         Ok(())
@@ -199,17 +201,16 @@ impl<'a> Lexer<'a> {
             self.advance();
         }
 
-        let kind: (DataTypes, bool) =
-            self.eval_integer_or_float_type(self.lexeme())?;
+        let types: (DataTypes, bool) = self.parse_float_or_integer(self.lexeme())?;
 
-        let num: Result<f64, ParseFloatError> = self.lexeme().parse::<f64>();
+        let raw_parsed_number: Result<f64, ParseFloatError> = self.lexeme().parse::<f64>();
 
-        if num.is_err() {
+        if raw_parsed_number.is_err() {
             let mut lexeme: String = self.lexeme();
+
             lexeme.truncate(18);
 
-            return Err(ThrushError::Parse(
-                ThrushErrorKind::ParsedNumber,
+            return Err(ThrushError::Error(
                 String::from("The number is too big for an integer or float."),
                 String::from(
                     "Did you provide a valid number with the correct format and not out of bounds?",
@@ -219,20 +220,22 @@ impl<'a> Lexer<'a> {
             ));
         }
 
-        if kind.0.is_float() {
+        let parsed_number: f64 = raw_parsed_number.unwrap();
+
+        if types.0.is_float() {
             self.tokens.push(Token {
-                kind: TokenKind::Float(kind.0, *num.as_ref().unwrap(), kind.1),
+                kind: TokenKind::Float(types.0, parsed_number, types.1),
                 lexeme: None,
-                line: self.line
+                line: self.line,
             });
 
             return Ok(());
         }
 
         self.tokens.push(Token {
-            kind: TokenKind::Integer(kind.0, num.unwrap(), kind.1),
+            kind: TokenKind::Integer(types.0, parsed_number, types.1),
             lexeme: None,
-            line: self.line
+            line: self.line,
         });
 
         Ok(())
@@ -244,53 +247,49 @@ impl<'a> Lexer<'a> {
         }
 
         if self.peek() != b'\'' {
-            return Err(ThrushError::Lex(
-                ThrushErrorKind::SyntaxError,
+            return Err(ThrushError::Error(
                 String::from("Syntax Error"),
-                String::from(
-                    "Unterminated char. Did you forget to close the char with a '\''?",
-                ),
+                String::from("Unterminated char. Did you forget to close the char with a '\''?"),
                 self.line,
+                String::new(),
             ));
         }
 
         self.advance();
 
         if self.code[self.start + 1..self.current - 1].len() > 1 {
-            return Err(ThrushError::Lex(
-                ThrushErrorKind::SyntaxError,
+            return Err(ThrushError::Error(
                 String::from("Syntax Error"),
-                String::from(
-                    "A char data type only can contain one character.",
-                ),
+                String::from("A char data type only can contain one character."),
                 self.line,
-            ))
+                String::new(),
+            ));
         }
 
         self.tokens.push(Token {
             kind: TokenKind::Char,
-            lexeme: Some(String::from_utf8_lossy(&self.code[self.start + 1..self.current - 1]).to_string()),
+            lexeme: Some(
+                String::from_utf8_lossy(&self.code[self.start + 1..self.current - 1]).to_string(),
+            ),
             line: self.line,
         });
 
         Ok(())
-
     }
 
     fn string(&mut self) -> Result<(), ThrushError> {
-
         while self.peek() != b'"' && !self.end() {
             self.advance();
         }
 
         if self.peek() != b'"' {
-            return Err(ThrushError::Lex(
-                ThrushErrorKind::SyntaxError,
+            return Err(ThrushError::Error(
                 String::from("Syntax Error"),
                 String::from(
                     "Unterminated string. Did you forget to close the string with a '\"'?",
                 ),
                 self.line,
+                String::new(),
             ));
         }
 
@@ -312,69 +311,96 @@ impl<'a> Lexer<'a> {
         Ok(())
     }
 
-    pub fn eval_integer_or_float_type(
+    pub fn parse_float_or_integer(
         &mut self,
-        mut lexeme: String,
+        lexeme: String,
     ) -> Result<(DataTypes, bool), ThrushError> {
-
-        if lexeme.contains(".") {
-
-            if lexeme.chars().filter(|ch| *ch == '.').count() > 1 {
-                return Err(ThrushError::Lex(
-                    ThrushErrorKind::SyntaxError, 
-                    String::from("Float Violated Syntax"), 
-                    String::from("Floats values should be only contain one dot."), 
-                    self.line
-                ));
-            } else if lexeme.parse::<f32>().is_ok() {
-                return Ok((DataTypes::F32, false));
-            } else if lexeme.parse::<f64>().is_ok() {
-                return Ok((DataTypes::F64, false));
-            } 
-
-            lexeme.truncate(18);
-
-            return Err(ThrushError::Parse(
-                ThrushErrorKind::ParsedNumber,
-                String::from("The number is too big for an float."),
-                String::from("Did you provide a valid number with the correct format and not out of bounds?"),
-                self.line,
-                format!("{};", lexeme),
-            ));
-            
+        if lexeme.contains('.') {
+            return self.parse_float(&lexeme);
         }
 
+        self.parse_integer(&lexeme)
+    }
+
+    #[inline]
+    fn parse_float(&self, lexeme: &str) -> Result<(DataTypes, bool), ThrushError> {
+        let dot_count: usize = lexeme.bytes().filter(|&b| b == b'.').count();
+
+        if dot_count > 1 {
+            return Err(ThrushError::Error(
+                String::from("Float Violated Syntax"),
+                String::from("Float values should only contain one dot."),
+                self.line,
+                String::new(),
+            ));
+        }
+
+        if lexeme.parse::<f32>().is_ok() {
+            return Ok((DataTypes::F32, false));
+        }
+
+        if lexeme.parse::<f64>().is_ok() {
+            return Ok((DataTypes::F64, false));
+        }
+
+        let truncated: &str = if lexeme.len() > 18 {
+            &lexeme[..18]
+        } else {
+            lexeme
+        };
+
+        Err(ThrushError::Error(
+            String::from("The number is too big for a float."),
+            String::from(
+                "Did you provide a valid number with the correct format and not out of bounds?",
+            ),
+            self.line,
+            format!("{};", truncated),
+        ))
+    }
+
+    #[inline]
+    fn parse_integer(&self, lexeme: &str) -> Result<(DataTypes, bool), ThrushError> {
+        const I8_MIN: isize = -128;
+        const I8_MAX: isize = 127;
+        const I16_MIN: isize = -32768;
+        const I16_MAX: isize = 32767;
+        const I32_MIN: isize = -2147483648;
+        const I32_MAX: isize = 2147483647;
+
+        let truncated: &str = if lexeme.len() > 18 {
+            &lexeme[..18]
+        } else {
+            lexeme
+        };
+
         match lexeme.parse::<isize>() {
-            Ok(num) => match num {
-                -128isize..=127isize => Ok((DataTypes::I8, false)),
-                -32728isize..=32767isize => Ok((DataTypes::I16, false)),
-                -2147483648isize..=2147483647isize => Ok((DataTypes::I32, false)),
-                -9223372036854775808isize..= 9223372036854775807isize => Ok((DataTypes::I64, false)),
-                _ => {
-                    lexeme.truncate(18);
-                    
-                    Err(ThrushError::Parse(
-                        ThrushErrorKind::UnreachableNumber,
-                        String::from("Unreacheable Number."),
-                        String::from("The size is out of bounds of an isize (0 to n)."),
+            Ok(num) => {
+                if (I8_MIN..=I8_MAX).contains(&num) {
+                    Ok((DataTypes::I8, false))
+                } else if (I16_MIN..=I16_MAX).contains(&num) {
+                    Ok((DataTypes::I16, false))
+                } else if (I32_MIN..=I32_MAX).contains(&num) {
+                    Ok((DataTypes::I32, false))
+                } else if (isize::MIN..=isize::MAX).contains(&num) {
+                    Ok((DataTypes::I64, false))
+                } else {
+                    Err(ThrushError::Error(
+                        String::from("Unreachable Number."),
+                        String::from("The size is out of bounds of an isize."),
                         self.line,
-                        format!("{};", lexeme),
+                        format!("{};", truncated),
                     ))
                 }
-            },
-            Err(_) => {
-                lexeme.truncate(18);
-
-                Err(ThrushError::Parse(
-                    ThrushErrorKind::ParsedNumber,
-                    String::from("Unreacheable Number"),
-                    String::from(
-                        "Did you provide a valid number with the correct format and not out of bounds?",
-                    ),
-                    self.line,
-                    format!("{};", lexeme),
-                ))
-            },
+            }
+            Err(_) => Err(ThrushError::Error(
+                String::from("Unreachable Number"),
+                String::from(
+                    "Did you provide a valid number with the correct format and not out of bounds?",
+                ),
+                self.line,
+                format!("{};", truncated),
+            )),
         }
     }
 
@@ -444,33 +470,33 @@ pub struct Token {
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum TokenKind {
     // --- Operators ---
-    LParen,       // ' ( '
-    RParen,       // ' ) '
-    LBrace,       // ' { '
-    RBrace,       // ' } '
-    Comma,        // ' , '
-    Dot,          // ' . '
-    Minus,        // ' - '
-    Plus,         // ' + '
-    Slash,        // ' / '
-    Star,         // ' * '
-    Colon,        // ' : '
-    SemiColon,    // ' ; '
-    RBracket,  // ' ] '
-    LBracket, // ' [ '
-    Arith,        // ' % ',
-    Bang,         // ' ! '
-    ColonColon,   // ' :: '
-    BangEq,    // ' != '
-    Eq,           // ' = '
-    EqEq,         // ' == '
-    Greater,      // ' > '
-    GreaterEq, // ' >= '
-    Less,         // ' < '
-    LessEq,    // ' <= '
-    PlusPlus,     // ' ++ '
-    MinusMinus,   // ' -- '
-    Pass, // ...
+    LParen,     // ' ( '
+    RParen,     // ' ) '
+    LBrace,     // ' { '
+    RBrace,     // ' } '
+    Comma,      // ' , '
+    Dot,        // ' . '
+    Minus,      // ' - '
+    Plus,       // ' + '
+    Slash,      // ' / '
+    Star,       // ' * '
+    Colon,      // ' : '
+    SemiColon,  // ' ; '
+    RBracket,   // ' ] '
+    LBracket,   // ' [ '
+    Arith,      // ' % ',
+    Bang,       // ' ! '
+    ColonColon, // ' :: '
+    BangEq,     // ' != '
+    Eq,         // ' = '
+    EqEq,       // ' == '
+    Greater,    // ' > '
+    GreaterEq,  // ' >= '
+    Less,       // ' < '
+    LessEq,     // ' <= '
+    PlusPlus,   // ' ++ '
+    MinusMinus, // ' -- '
+    Pass,       // ...
 
     // --- Literals ---
     Identifier,
@@ -499,13 +525,11 @@ pub enum TokenKind {
     Null,
     Or,
     Return,
-    Super,
     This,
     True,
     Var,
     Const,
     While,
-    Extends,
 
     Eof,
 }
@@ -554,13 +578,11 @@ impl std::fmt::Display for TokenKind {
             TokenKind::Null => write!(f, "null"),
             TokenKind::Or => write!(f, "or"),
             TokenKind::Return => write!(f, "return"),
-            TokenKind::Super => write!(f, "super"),
             TokenKind::This => write!(f, "this"),
             TokenKind::True => write!(f, "true"),
             TokenKind::Var => write!(f, "var"),
             TokenKind::Const => write!(f, "const"),
             TokenKind::While => write!(f, "while"),
-            TokenKind::Extends => write!(f, "extends"),
             TokenKind::Integer(datatype, _, _) => write!(f, "{}", datatype),
             TokenKind::Float(datatype, _, _) => write!(f, "{}", datatype),
             TokenKind::Str => write!(f, "str"),
@@ -604,7 +626,6 @@ impl TokenKind {
 
     #[inline]
     pub fn as_float_predicate(&self) -> FloatPredicate {
-
         // ESTABILIZAR ESTA COSA EN EL FUTURO IGUAL QUE LOS INTEGER PREDICATE (DETERMINAR SI TIENE SIGNO Y CAMBIAR EL PREDICATE A CONVENIR)
         match self {
             TokenKind::EqEq => FloatPredicate::OEQ,
@@ -619,7 +640,13 @@ impl TokenKind {
 
     #[inline]
     pub fn is_logical_type(&self) -> bool {
-        if let TokenKind::BangEq | TokenKind::EqEq | TokenKind::LessEq | TokenKind::Less | TokenKind::Greater | TokenKind::GreaterEq = self {
+        if let TokenKind::BangEq
+        | TokenKind::EqEq
+        | TokenKind::LessEq
+        | TokenKind::Less
+        | TokenKind::Greater
+        | TokenKind::GreaterEq = self
+        {
             return true;
         }
 
@@ -634,7 +661,6 @@ impl TokenKind {
 
         false
     }
-
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -718,7 +744,9 @@ impl DataTypes {
 
     #[inline]
     pub fn is_integer(&self) -> bool {
-        if let DataTypes::I8 | DataTypes::I16 | DataTypes::I32 | DataTypes::I64 | DataTypes::Char = self {
+        if let DataTypes::I8 | DataTypes::I16 | DataTypes::I32 | DataTypes::I64 | DataTypes::Char =
+            self
+        {
             return true;
         }
 

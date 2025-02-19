@@ -1,7 +1,7 @@
 use {
     super::{
         super::{
-            error::{ThrushError, ThrushErrorKind},
+            error::ThrushError,
             frontend::{
                 lexer::{DataTypes, TokenKind},
                 types::StructFields,
@@ -114,20 +114,11 @@ pub enum Instruction<'ctx> {
 
 impl PartialEq for Instruction<'_> {
     fn eq(&self, other: &Self) -> bool {
-        match self {
-            Instruction::Integer(_, _, _) => {
-                matches!(other, Instruction::Integer(_, _, _))
-            }
-
-            Instruction::Float(_, _, _) => {
-                matches!(other, Instruction::Float(_, _, _))
-            }
-
-            Instruction::Str(_) => {
-                matches!(other, Instruction::Str(_))
-            }
-
-            _ => self == other,
+        match (self, other) {
+            (Instruction::Integer(_, _, _), Instruction::Integer(_, _, _))
+            | (Instruction::Float(_, _, _), Instruction::Float(_, _, _))
+            | (Instruction::Str(_), Instruction::Str(_)) => true,
+            (a, b) => std::mem::discriminant(a) == std::mem::discriminant(b),
         }
     }
 }
@@ -192,8 +183,7 @@ impl<'ctx> Instruction<'ctx> {
 
         println!("{:?} {:?}", self, other);
 
-        Err(ThrushError::Parse(
-            ThrushErrorKind::SyntaxError,
+        Err(ThrushError::Error(
             String::from("Type Checking"),
             String::from("Operators cannot be chained. Use logical gates as \"&&\" or \"||\"."),
             line,
@@ -286,22 +276,24 @@ impl<'ctx> Instruction<'ctx> {
 
     pub fn get_data_type(&self) -> DataTypes {
         match self {
-            Instruction::Integer(datatype, _, _) => *datatype,
-            Instruction::Float(datatype, _, _) => *datatype,
+            Instruction::Integer(datatype, ..)
+            | Instruction::Float(datatype, ..)
+            | Instruction::RefVar { kind: datatype, .. }
+            | Instruction::Group { kind: datatype, .. }
+            | Instruction::BinaryOp { kind: datatype, .. }
+            | Instruction::Param { kind: datatype, .. }
+            | Instruction::Call { kind: datatype, .. }
+            | Instruction::DataTypes(datatype) => *datatype,
+
             Instruction::Str(_) => DataTypes::Str,
             Instruction::Boolean(_) => DataTypes::Bool,
             Instruction::Char(_) => DataTypes::Char,
-            Instruction::Struct { .. } => DataTypes::Struct,
-            Instruction::RefVar { kind, .. } => *kind,
-            Instruction::Group { kind, .. } => *kind,
-            Instruction::BinaryOp { kind, .. } => *kind,
-            Instruction::UnaryOp { value, .. } => value.get_data_type(),
-            Instruction::Param { kind, .. } => *kind,
-            Instruction::Call { kind, .. } => *kind,
-            Instruction::DataTypes(data_type) => *data_type,
-            e => {
-                println!("{:?}", e);
+            Instruction::Struct { kind: datatype, .. } => *datatype,
 
+            Instruction::UnaryOp { value, .. } => value.get_data_type(),
+
+            e => {
+                debug_assert!(false, "Unexpected instruction: {:?}", e);
                 unimplemented!()
             }
         }

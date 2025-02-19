@@ -1,6 +1,6 @@
 use {
     super::{
-        super::super::frontend::lexer::DataTypes, binaryop, call, codegen,
+        super::super::frontend::lexer::DataTypes, binaryop, call, generation,
         objects::CompilerObjects, types::Variable, unaryop, utils, Instruction,
     },
     inkwell::{
@@ -312,7 +312,7 @@ fn compile_ptr_var<'ctx>(
     if let Instruction::Str(_) = var_value {
         compiler_objects.insert(
             var_name.to_string(),
-            codegen::build_basic_value_enum(
+            generation::build_basic_value_enum(
                 module,
                 builder,
                 context,
@@ -342,7 +342,7 @@ fn compile_struct_var<'ctx>(
 
     if let Instruction::Struct { fields, .. } = var_value {
         fields.iter().for_each(|field| {
-            let compiled_field: BasicValueEnum<'_> = codegen::build_basic_value_enum(
+            let compiled_field: BasicValueEnum<'_> = generation::build_basic_value_enum(
                 module,
                 builder,
                 context,
@@ -420,7 +420,7 @@ fn compile_str_var<'ctx>(
     if let Instruction::Str(_) = value {
         compiler_objects.insert(
             name.to_string(),
-            codegen::build_basic_value_enum(
+            generation::build_basic_value_enum(
                 module,
                 builder,
                 context,
@@ -436,7 +436,7 @@ fn compile_str_var<'ctx>(
     if let Instruction::RefVar { .. } = value {
         compiler_objects.insert(
             name.to_string(),
-            codegen::build_basic_value_enum(
+            generation::build_basic_value_enum(
                 module,
                 builder,
                 context,

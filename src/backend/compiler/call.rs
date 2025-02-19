@@ -1,6 +1,6 @@
 use {
     super::{
-        super::super::frontend::lexer::DataTypes, codegen, impls::BasicValueEnumExt,
+        super::super::frontend::lexer::DataTypes, generation, impls::BasicValueEnumExt,
         objects::CompilerObjects, types::Call, utils, Instruction,
     },
     inkwell::{
@@ -27,24 +27,26 @@ pub fn build_call<'ctx>(
         return build_sizeof(context, call, compiler_objects);
     }
 
-    let called_function: FunctionValue<'ctx> =
-        compiler_objects.find_and_get_function(call_name).unwrap();
+    let called_function: FunctionValue = compiler_objects.find_and_get_function(call_name).unwrap();
 
     let mut compiled_args: Vec<BasicMetadataValueEnum> = Vec::with_capacity(call_args.len());
 
-    let mut index: usize = 0;
-
-    call_args.iter().for_each(|instr| {
+    call_args.iter().enumerate().for_each(|instr| {
         let arg: Option<DataTypes> = called_function
-            .get_nth_param(index as u32)
+            .get_nth_param(instr.0 as u32)
             .map(|arg| arg.get_data_type(context));
 
         compiled_args.push(
-            codegen::build_basic_value_enum(module, builder, context, instr, arg, compiler_objects)
-                .into(),
+            generation::build_basic_value_enum(
+                module,
+                builder,
+                context,
+                instr.1,
+                arg,
+                compiler_objects,
+            )
+            .into(),
         );
-
-        index += 1;
     });
 
     if *call_type != DataTypes::Void {
@@ -86,7 +88,6 @@ fn build_sizeof<'ctx>(
                         .into(),
                 );
             }
-
             data_type if data_type.is_float() => {
                 return Some(
                     utils::datatype_float_to_llvm_type(context, data_type)
@@ -94,7 +95,6 @@ fn build_sizeof<'ctx>(
                         .into(),
                 );
             }
-
             data_type if *data_type == DataTypes::Ptr => {
                 return Some(context.ptr_type(AddressSpace::default()).size_of().into());
             }

@@ -5,7 +5,7 @@ use {
         super::{logging, Lexer, Parser, Token, LLVM_BACKEND_COMPILER},
         apis::{debug::DebugAPI, vector::VectorAPI},
         compiler::{
-            options::{CompilerOptions, ThrushFile},
+            misc::{CompilerOptions, ThrushFile},
             Compiler,
         },
         instruction::Instruction,
@@ -26,7 +26,7 @@ use {
     stylic::{style, Color, Stylize},
 };
 
-pub struct ThrushCompiler<'a> {
+pub struct Thrushc<'a> {
     compiled: Vec<PathBuf>,
     files: &'a [ThrushFile],
     options: &'a CompilerOptions,
@@ -34,7 +34,23 @@ pub struct ThrushCompiler<'a> {
     thrushc_comptime: Duration,
 }
 
-impl<'a> ThrushCompiler<'a> {
+pub struct Clang<'a> {
+    files: &'a [PathBuf],
+    options: &'a CompilerOptions,
+}
+
+pub struct LLC<'a> {
+    files: &'a [PathBuf],
+    options: &'a CompilerOptions,
+}
+
+pub struct LLVMOpt;
+
+struct LLVMDissambler<'a> {
+    files: &'a [PathBuf],
+}
+
+impl<'a> Thrushc<'a> {
     pub fn new(files: &'a [ThrushFile], options: &'a CompilerOptions) -> Self {
         Self {
             compiled: Vec::new(),
@@ -144,7 +160,7 @@ impl<'a> ThrushCompiler<'a> {
 
         let start_time: Instant = Instant::now();
 
-        LLVMOptimizator::optimize(
+        LLVMOpt::optimize(
             compiled_path,
             self.options.optimization.to_llvm_17_passes(),
             self.options.optimization.to_str(true, false),
@@ -154,11 +170,6 @@ impl<'a> ThrushCompiler<'a> {
 
         self.compiled.push(PathBuf::from(compiled_path));
     }
-}
-
-pub struct Clang<'a> {
-    files: &'a [PathBuf],
-    options: &'a CompilerOptions,
 }
 
 impl<'a> Clang<'a> {
@@ -275,11 +286,6 @@ impl<'a> Clang<'a> {
     }
 }
 
-pub struct LLC<'a> {
-    files: &'a [PathBuf],
-    options: &'a CompilerOptions,
-}
-
 impl<'a> LLC<'a> {
     pub fn new(files: &'a [PathBuf], options: &'a CompilerOptions) -> Self {
         Self { files, options }
@@ -300,23 +306,7 @@ impl<'a> LLC<'a> {
     }
 }
 
-struct LLVMDissambler<'a> {
-    files: &'a [PathBuf],
-}
-
-impl<'a> LLVMDissambler<'a> {
-    pub fn new(files: &'a [PathBuf]) -> Self {
-        Self { files }
-    }
-
-    pub fn dissamble(&self) {
-        handle_command(Command::new(LLVM_BACKEND_COMPILER.join("llvm/llvm-dis")).args(self.files));
-    }
-}
-
-pub struct LLVMOptimizator;
-
-impl LLVMOptimizator {
+impl LLVMOpt {
     pub fn optimize(path: &str, opt: &str, opt_lto: &str) {
         handle_command(
             Command::new(LLVM_BACKEND_COMPILER.join("llvm/opt"))
@@ -331,6 +321,16 @@ impl LLVMOptimizator {
                 .arg(opt_lto)
                 .arg(path),
         );
+    }
+}
+
+impl<'a> LLVMDissambler<'a> {
+    pub fn new(files: &'a [PathBuf]) -> Self {
+        Self { files }
+    }
+
+    pub fn dissamble(&self) {
+        handle_command(Command::new(LLVM_BACKEND_COMPILER.join("llvm/llvm-dis")).args(self.files));
     }
 }
 

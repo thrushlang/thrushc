@@ -1,7 +1,7 @@
 use {
     super::super::super::backend::{
-        builder::{Clang, LLVMOptimizator},
-        compiler::options::CompilerOptions,
+        builder::{Clang, LLVMOpt},
+        compiler::misc::CompilerOptions,
     },
     inkwell::{
         basic_block::BasicBlock,
@@ -1676,7 +1676,7 @@ pub fn compile_vector_api(options: &mut CompilerOptions) {
     if !PathBuf::from("output/dist/vector.o").exists() {
         vector_api_module.write_bitcode_to_path(Path::new("output/vector.bc"));
 
-        LLVMOptimizator::optimize(
+        LLVMOpt::optimize(
             "output/vector.bc",
             options.optimization.to_llvm_17_passes(),
             options.optimization.to_str(true, false),

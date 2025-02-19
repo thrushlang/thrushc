@@ -19,7 +19,7 @@ fn build_int_op<'ctx>(
     mut left: IntValue<'ctx>,
     mut right: IntValue<'ctx>,
     signatures: (bool, bool),
-    op: TokenKind,
+    op: &TokenKind,
 ) -> BasicValueEnum<'ctx> {
     match op {
         TokenKind::Plus => builder.build_int_nsw_add(left, right, "").unwrap().into(),
@@ -45,7 +45,7 @@ fn build_int_op<'ctx>(
                         .build_int_cast_sign_flag(left, right.get_type(), signatures.1, "")
                         .unwrap();
                 }
-                Ordering::Equal => {}
+                _ => {}
             }
 
             builder
@@ -91,7 +91,7 @@ fn build_float_op<'ctx>(
     builder: &Builder<'ctx>,
     mut left: FloatValue<'ctx>,
     mut right: FloatValue<'ctx>,
-    op: TokenKind,
+    op: &TokenKind,
 ) -> BasicValueEnum<'ctx> {
     match op {
         TokenKind::Plus => builder.build_float_add(left, right, "").unwrap().into(),
@@ -115,8 +115,6 @@ fn build_float_op<'ctx>(
                 .build_float_compare(op.as_float_predicate(), left, right, "")
                 .unwrap()
                 .into()
-
-            // builder.build_bit_cast(result, left.get_type(), "").unwrap()
         }
 
         _ => unreachable!(),
@@ -246,7 +244,7 @@ pub fn integer_binaryop<'ctx>(
             left_compiled,
             right_compiled,
             (*left_signed, *right_signed),
-            *binary.1,
+            binary.1,
         );
     }
 
@@ -321,7 +319,7 @@ pub fn integer_binaryop<'ctx>(
             left_compiled,
             right_compiled,
             (false, false),
-            *binary.1,
+            binary.1,
         );
     }
 
@@ -382,7 +380,7 @@ pub fn integer_binaryop<'ctx>(
             left_compiled,
             right_compiled,
             (*left_signed, false),
-            *binary.1,
+            binary.1,
         );
     }
 
@@ -443,7 +441,7 @@ pub fn integer_binaryop<'ctx>(
             left_compiled,
             right_compiled,
             (false, *right_signed),
-            *binary.1,
+            binary.1,
         );
     }
 
@@ -493,7 +491,7 @@ pub fn integer_binaryop<'ctx>(
             left_compiled,
             right_compiled,
             (false, false),
-            *binary.1,
+            binary.1,
         );
     }
 
@@ -543,7 +541,7 @@ pub fn integer_binaryop<'ctx>(
             left_compiled,
             right_compiled,
             (false, false),
-            *binary.1,
+            binary.1,
         );
     }
 
@@ -608,7 +606,7 @@ pub fn integer_binaryop<'ctx>(
             left_compiled,
             right_compiled,
             (false, false),
-            *binary.1,
+            binary.1,
         );
     }
 
@@ -676,7 +674,7 @@ pub fn integer_binaryop<'ctx>(
             left_compiled,
             right_compiled,
             (false, false),
-            *binary.1,
+            binary.1,
         );
     }
 
@@ -742,7 +740,7 @@ pub fn integer_binaryop<'ctx>(
             left_compiled,
             right_compiled,
             (false, false),
-            *binary.1,
+            binary.1,
         );
     }
 
@@ -808,7 +806,7 @@ pub fn integer_binaryop<'ctx>(
             left_compiled,
             right_compiled,
             (false, false),
-            *binary.1,
+            binary.1,
         );
     }
 
@@ -869,7 +867,7 @@ pub fn float_binaryop<'ctx>(
             right_compiled = new_right_compiled.into_float_value();
         }
 
-        return build_float_op(context, builder, left_compiled, right_compiled, *binary.1);
+        return build_float_op(context, builder, left_compiled, right_compiled, binary.1);
     }
 
     if let (
@@ -935,7 +933,7 @@ pub fn float_binaryop<'ctx>(
             right_compiled = new_right_compiled.into_float_value();
         }
 
-        return build_float_op(context, builder, left_compiled, right_compiled, *binary.1);
+        return build_float_op(context, builder, left_compiled, right_compiled, binary.1);
     }
 
     if let (
@@ -987,7 +985,7 @@ pub fn float_binaryop<'ctx>(
             right_compiled = new_right_compiled.into_float_value();
         }
 
-        return build_float_op(context, builder, left_compiled, right_compiled, *binary.1);
+        return build_float_op(context, builder, left_compiled, right_compiled, binary.1);
     }
 
     if let (
@@ -1039,7 +1037,7 @@ pub fn float_binaryop<'ctx>(
             right_compiled = new_right_compiled.into_float_value();
         }
 
-        return build_float_op(context, builder, left_compiled, right_compiled, *binary.1);
+        return build_float_op(context, builder, left_compiled, right_compiled, binary.1);
     }
 
     if let (
@@ -1100,7 +1098,7 @@ pub fn float_binaryop<'ctx>(
             builder,
             left_compiled.into_float_value(),
             right_compiled.into_float_value(),
-            *binary.1,
+            binary.1,
         );
     }
 
@@ -1163,7 +1161,7 @@ pub fn float_binaryop<'ctx>(
             builder,
             left_compiled.into_float_value(),
             right_compiled.into_float_value(),
-            *binary.1,
+            binary.1,
         );
     }
 
@@ -1224,7 +1222,7 @@ pub fn float_binaryop<'ctx>(
             builder,
             left_compiled.into_float_value(),
             right_compiled.into_float_value(),
-            *binary.1,
+            binary.1,
         );
     }
 
@@ -1285,7 +1283,7 @@ pub fn float_binaryop<'ctx>(
             builder,
             left_compiled.into_float_value(),
             right_compiled.into_float_value(),
-            *binary.1,
+            binary.1,
         );
     }
 
@@ -1414,7 +1412,7 @@ pub fn bool_binaryop<'ctx>(
                 left_compiled.into_int_value(),
                 right_compiled.into_int_value(),
                 (false, false),
-                *binary.1,
+                binary.1,
             );
         }
 
@@ -1437,7 +1435,7 @@ pub fn bool_binaryop<'ctx>(
                 left_compiled.into_int_value(),
                 right_compiled.into_int_value(),
                 (false, false),
-                *binary.1,
+                binary.1,
             );
         }
 
@@ -1463,7 +1461,7 @@ pub fn bool_binaryop<'ctx>(
                 left_compiled.into_int_value(),
                 right_compiled.into_int_value(),
                 (false, false),
-                *binary.1,
+                binary.1,
             );
         }
 
@@ -1489,7 +1487,7 @@ pub fn bool_binaryop<'ctx>(
                 left_compiled.into_int_value(),
                 right_compiled.into_int_value(),
                 (false, false),
-                *binary.1,
+                binary.1,
             );
         }
 

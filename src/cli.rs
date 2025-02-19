@@ -1,6 +1,6 @@
 use {
     super::{
-        backend::compiler::options::{CompilerOptions, Linking, Opt, ThrushFile},
+        backend::compiler::misc::{CompilerOptions, Linking, Opt, ThrushFile},
         constants::TARGETS,
     },
     inkwell::targets::{CodeModel, RelocMode, TargetMachine, TargetTriple},
@@ -47,6 +47,12 @@ impl Cli {
                 self.help();
             }
 
+            "version" | "-v" | "--version" => {
+                *index += 1;
+                println!("v{}", env!("CARGO_PKG_VERSION"));
+                process::exit(0);
+            }
+
             "targets" => {
                 *index += 1;
                 TARGETS.iter().for_each(|target| println!("{}", target));
@@ -56,12 +62,6 @@ impl Cli {
             "native-target" => {
                 *index += 1;
                 println!("{}", TargetMachine::get_default_triple());
-                process::exit(0);
-            }
-
-            "version" | "-v" | "--version" => {
-                *index += 1;
-                println!("v{}", env!("CARGO_PKG_VERSION"));
                 process::exit(0);
             }
 
@@ -107,10 +107,11 @@ impl Cli {
                 match self.args[self.extract_relative_index(*index)].as_str() {
                     "llvm-ir" => self.options.emit_llvm_ir = true,
                     "llvm-bc" => self.options.emit_llvm_bitcode = true,
+                    "thrush-ast" => self.options.emit_thrush_ast = true,
                     "asm" => self.options.emit_asm = true,
                     any => {
                         self.report_error(&format!(
-                            "\"{}\" is invalid target to emit raw compiled code. Maybe \"(--emit || -emit) llvm-ir || llvm-bc || asm\", is the command?",
+                            "\"{}\" is invalid target to emit raw compiled code. Maybe \"(--emit || -emit) llvm-ir || llvm-bc || thrush-ast || asm\", is the command?",
                             any
                         ));
                     }
@@ -362,17 +363,17 @@ impl Cli {
         println!(
             "{} ({} | {}) {}",
             style("•").bold(),
-            style("--output [str]").bold().fg(Color::Rgb(141, 141, 142)),
-            style("-o [str]").bold().fg(Color::Rgb(141, 141, 142)),
-            style("Output file format.").bold()
+            style("--executable").bold().fg(Color::Rgb(141, 141, 142)),
+            style("-executable").bold().fg(Color::Rgb(141, 141, 142)),
+            style("Compile to native executable.").bold()
         );
 
         println!(
             "{} ({} | {}) {}",
             style("•").bold(),
-            style("--target [str]").bold().fg(Color::Rgb(141, 141, 142)),
-            style("-t [str]").bold().fg(Color::Rgb(141, 141, 142)),
-            style("Target architecture for the executable or object file.").bold()
+            style("--output [str]").bold().fg(Color::Rgb(141, 141, 142)),
+            style("-o [str]").bold().fg(Color::Rgb(141, 141, 142)),
+            style("Output file format.").bold()
         );
 
         println!(
@@ -390,21 +391,28 @@ impl Cli {
         println!(
             "{} ({} | {}) {}",
             style("•").bold(),
-            style("--include").bold().fg(Color::Rgb(141, 141, 142)),
-            style("-include").bold().fg(Color::Rgb(141, 141, 142)),
-            style("Include a native api code in the IR.").bold()
+            style("--target [target-triple]")
+                .bold()
+                .fg(Color::Rgb(141, 141, 142)),
+            style("-t [target-triple]")
+                .bold()
+                .fg(Color::Rgb(141, 141, 142)),
+            style(
+                "Target architecture, operating system, and ABI for the executable or object file."
+            )
+            .bold()
         );
 
         println!(
             "{} ({} | {}) {}",
             style("•").bold(),
-            style("--emit-raw-llvm-ir")
+            style("--emit [llvm-ir | llvm-bitcode | thrush-ast | asm]")
                 .bold()
                 .fg(Color::Rgb(141, 141, 142)),
-            style("-emit-raw-llvm-ir")
+            style("-emit [llvm-ir | llvm-bitcode | thrush-ast | asm]")
                 .bold()
                 .fg(Color::Rgb(141, 141, 142)),
-            style("Compile the code into llvm ir before of optimization.").bold()
+            style("Compile the code into specified representation.").bold()
         );
 
         println!(
@@ -434,14 +442,6 @@ impl Cli {
         println!(
             "{} ({} | {}) {}",
             style("•").bold(),
-            style("--executable").bold().fg(Color::Rgb(141, 141, 142)),
-            style("-executable").bold().fg(Color::Rgb(141, 141, 142)),
-            style("Compile the code into native executable.").bold()
-        );
-
-        println!(
-            "{} ({} | {}) {}",
-            style("•").bold(),
             style("--library").bold().fg(Color::Rgb(141, 141, 142)),
             style("-lib").bold().fg(Color::Rgb(141, 141, 142)),
             style("Compile to an object file ('*.o').").bold()
@@ -454,7 +454,7 @@ impl Cli {
                 .bold()
                 .fg(Color::Rgb(141, 141, 142)),
             style("-slib").bold().fg(Color::Rgb(141, 141, 142)),
-            style("Compile to an static library ('*.a').").bold()
+            style("Compile to an static C library ('*.a').").bold()
         );
 
         println!(
@@ -482,14 +482,6 @@ impl Cli {
                 .bold()
         );
 
-        println!(
-            "{} ({} | {}) {}",
-            style("•").bold(),
-            style("--args [str]").bold().fg(Color::Rgb(141, 141, 142)),
-            style("-args [str]").bold().fg(Color::Rgb(141, 141, 142)),
-            style("Pass more arguments to the backend compiler.").bold()
-        );
-
         println!("{}", style("\nUseful Flags:\n").bold());
 
         println!(
@@ -501,7 +493,7 @@ impl Cli {
             style("-emit-natives-apart")
                 .bold()
                 .fg(Color::Rgb(141, 141, 142)),
-            style("Emit the llvm ir or assembler output of the Natives APIs in another folter called \"natives\".")
+            style("Emit the llvm ir or assembler output of the natives APIs in another folter called \"natives\".")
                 .bold()
         );
 

@@ -1,8 +1,8 @@
 use {
     super::super::{
-        backend::{compiler::options::ThrushFile, instruction::Instruction},
+        backend::{compiler::misc::ThrushFile, instruction::Instruction},
         diagnostic::Diagnostic,
-        error::{ThrushError, ThrushErrorKind},
+        error::ThrushError,
         logging::LogType,
     },
     std::process::exit,
@@ -85,25 +85,25 @@ impl<'ctx> ThrushScoper<'ctx> {
         match instr {
             Instruction::RefVar { name, line, .. } => {
                 if !self.is_at_current_scope(name, None, depth) {
-                    return Err(ThrushError::Scope(
-                        ThrushErrorKind::VariableNotDefined,
-                        String::from("Undefined Variable"),
-                        format!("The variable `{}` not found in this scope.", name),
+                    return Err(ThrushError::Error(
+                        String::from("Undefined variable"),
+                        format!("Local variable `{}` not found at current scope.", name),
                         *line,
+                        String::new(),
                     ));
                 }
 
                 if self.is_at_current_scope(name, None, depth)
                     && !self.is_reacheable_at_current_scope(name, *line, None, depth)
                 {
-                    return Err(ThrushError::Scope(
-                        ThrushErrorKind::UnreachableVariable,
-                        String::from("Unreacheable Variable"),
+                    return Err(ThrushError::Error(
+                        String::from("Unreacheable variable"),
                         format!(
-                            "The variable `{}` is unreacheable to the current scope.",
+                            "Local variable `{}` is unreacheable at current scope.",
                             name
                         ),
                         *line,
+                        String::new(),
                     ));
                 }
 

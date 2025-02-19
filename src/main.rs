@@ -10,7 +10,7 @@ use {
     ahash::AHashMap as HashMap,
     backend::{
         apis::{debug, vector},
-        builder::ThrushCompiler,
+        builder::Thrushc,
     },
     cli::Cli,
     frontend::{
@@ -184,8 +184,7 @@ fn main() {
 
     let start_time: Instant = Instant::now();
 
-    let all_compile_time: (u128, u128) =
-        ThrushCompiler::new(&cli.options.files, &cli.options).compile();
+    let compile_time: (u128, u128) = Thrushc::new(&cli.options.files, &cli.options).compile();
 
     println!(
         "\n{}\n{}\n\n{}\n{}\n{}",
@@ -195,8 +194,8 @@ fn main() {
         style("Compile time report")
             .bold()
             .fg(Color::Rgb(141, 141, 142)),
-        format_args!("Thrush Compiler: {}ms", style(all_compile_time.0).bold()),
-        format_args!("LLVM & Clang: {}ms", style(all_compile_time.1).bold()),
+        format_args!("Thrush Compiler: {}ms", style(compile_time.0).bold()),
+        format_args!("LLVM & Clang: {}ms", style(compile_time.1).bold()),
         style("─────────────────────────────────────────")
             .bold()
             .fg(Color::Rgb(141, 141, 142))

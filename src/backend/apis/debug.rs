@@ -1,7 +1,7 @@
 use {
     super::super::super::backend::{
-        builder::{Clang, LLVMOptimizator},
-        compiler::options::CompilerOptions,
+        builder::{Clang, LLVMOpt},
+        compiler::misc::CompilerOptions,
     },
     inkwell::{
         basic_block::BasicBlock,
@@ -151,7 +151,7 @@ pub fn compile_debug_api(options: &mut CompilerOptions) {
     if !PathBuf::from("output/debug.o").exists() {
         debug_api_module.write_bitcode_to_path(Path::new("output/debug.bc"));
 
-        LLVMOptimizator::optimize(
+        LLVMOpt::optimize(
             "output/debug.bc",
             options.optimization.to_llvm_17_passes(),
             options.optimization.to_str(true, false),

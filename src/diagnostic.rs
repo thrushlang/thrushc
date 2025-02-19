@@ -1,9 +1,5 @@
 use {
-    super::{
-        backend::compiler::options::ThrushFile,
-        error::{ThrushError, ThrushErrorKind},
-        logging::LogType,
-    },
+    super::{backend::compiler::misc::ThrushFile, error::ThrushError, logging::LogType},
     std::{
         fs::File,
         io::{BufRead, BufReader},
@@ -22,62 +18,42 @@ pub struct Diagnostic {
 
 impl Diagnostic {
     pub fn new(thrushfile: &ThrushFile) -> Self {
+        const TYPICAL_BUFFER_CAPACITY: usize = 256;
+        const TYPICAL_DRAWER_CAPACITY: usize = 512;
+
         let file: File = File::open(&thrushfile.path).unwrap();
-        let lines: Vec<String> = BufReader::new(file)
-            .lines()
-            .map(|line| line.unwrap().to_string())
-            .collect();
+
+        const BUFFER_SIZE: usize = 8192;
+        const INITIAL_LINES_CAPACITY: usize = 5000;
+
+        let mut lines: Vec<String> = Vec::with_capacity(INITIAL_LINES_CAPACITY);
+        let mut reader: BufReader<File> = BufReader::with_capacity(BUFFER_SIZE, file);
+        let mut line: String = String::with_capacity(256);
+
+        while reader.read_line(&mut line).unwrap() > 0 {
+            lines.push(line.clone());
+            line.clear();
+        }
 
         Self {
             path: thrushfile.path.clone(),
-            buffer: String::new(),
-            drawer: String::new(),
+            buffer: String::with_capacity(TYPICAL_BUFFER_CAPACITY),
+            drawer: String::with_capacity(TYPICAL_DRAWER_CAPACITY),
             lines,
         }
     }
 
     pub fn report(&mut self, error: &ThrushError, logtype: LogType, show_only_example: bool) {
-        if let ThrushError::Scope(
-            ThrushErrorKind::UnreachableVariable | ThrushErrorKind::ObjectNotDefined,
-            title,
-            help,
-            line,
-        )
-        | ThrushError::Lex(
-            ThrushErrorKind::SyntaxError
-            | ThrushErrorKind::ParsedNumber
-            | ThrushErrorKind::UnreachableNumber
-            | ThrushErrorKind::UnknownChar,
-            title,
-            help,
-            line,
-        ) = error
-        {
-            self.print_report(title, help, *line, logtype, None, show_only_example);
-        }
+        let ThrushError::Error(title, help, line, example) = error;
 
-        if let ThrushError::Parse(
-            ThrushErrorKind::ParsedNumber
-            | ThrushErrorKind::UnreachableNumber
-            | ThrushErrorKind::SyntaxError
-            | ThrushErrorKind::UnreachableVariable
-            | ThrushErrorKind::ObjectNotDefined
-            | ThrushErrorKind::VariableNotDeclared,
+        self.print_report(
             title,
             help,
-            line,
-            example,
-        ) = error
-        {
-            self.print_report(
-                title,
-                help,
-                *line,
-                logtype,
-                (!example.is_empty()).then_some(example),
-                show_only_example,
-            );
-        }
+            *line,
+            logtype,
+            (!example.is_empty()).then_some(example),
+            show_only_example,
+        );
     }
 
     fn print_report(
