@@ -311,12 +311,7 @@ impl Cli {
     fn help(&self) {
         println!(
             "\n{}\n",
-            style("The Thrush Compiler")
-                .bold()
-                .fg(Color::Rgb(141, 141, 142))
-        );
-
-        println!(
+            style("The Thrush Compiler")et _ =
             "{} {} {}\n",
             style("Usage:").bold(),
             style("thrushc").bold().fg(Color::Rgb(141, 141, 142)),

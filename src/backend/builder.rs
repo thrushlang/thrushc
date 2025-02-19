@@ -106,7 +106,13 @@ impl<'a> Thrushc<'a> {
         let mut parser: Parser = Parser::new(&tokens, file);
         let instructions: &[Instruction] = parser.start();
 
-        println!("{:#?}", instructions);
+        if self.options.emit_thrush_ast {
+            let _ = write(
+                format!("output/{}.ast", &file.name),
+                format!("{:#?}", instructions),
+            );
+            return;
+        }
 
         let context: Context = Context::create();
         let builder: Builder<'_> = context.create_builder();
