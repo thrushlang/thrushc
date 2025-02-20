@@ -434,7 +434,7 @@ impl<'instr> Parser<'instr> {
     fn build_for_loop(&mut self) -> Result<Instruction<'instr>, ThrushError> {
         self.only_advance()?;
 
-        let start_line: usize = self.previous().line;
+        let line: usize = self.previous().line;
 
         let variable: Instruction<'instr> = self.build_local_variable(false)?;
 
@@ -444,7 +444,7 @@ impl<'instr> Parser<'instr> {
             TokenKind::SemiColon,
             String::from("Syntax error"),
             String::from("Expected ';'."),
-            start_line,
+            line,
         )?;
 
         let actions: Instruction<'instr> = self.expression()?;
@@ -459,11 +459,18 @@ impl<'instr> Parser<'instr> {
             *exist_only_comptime = true;
         }
 
-        if !self.check_kind(TokenKind::RBrace) {
+        self.consume(
+            TokenKind::SemiColon,
+            String::from("Syntax error"),
+            String::from("Expected ';'."),
+            line,
+        )?;
+
+        if !self.check_kind(TokenKind::LBrace) {
             return Err(ThrushError::Error(
                 String::from("Syntax error"),
                 String::from("Expected for loop body \"{ ... }\"."),
-                start_line,
+                line,
                 String::from("{ ... }"),
             ));
         }
@@ -1376,13 +1383,6 @@ impl<'instr> Parser<'instr> {
                             value: Box::from(refvar),
                             kind: DataTypes::I64,
                         };
-
-                        self.consume(
-                            TokenKind::SemiColon,
-                            String::from("Syntax error"),
-                            String::from("Expected ';'."),
-                            line,
-                        )?;
 
                         return Ok(expr);
                     }
