@@ -125,7 +125,7 @@ fn build_bool_op<'ctx>(
     builder: &Builder<'ctx>,
     left: IntValue<'ctx>,
     right: IntValue<'ctx>,
-    op: TokenKind,
+    op: &TokenKind,
 ) -> BasicValueEnum<'ctx> {
     match op {
         op if op.is_logical_type() => builder
@@ -167,7 +167,7 @@ pub fn integer_binaryop<'ctx>(
         let right_compiled: IntValue<'_> =
             utils::build_const_integer(context, &DataTypes::Bool, *right as u64, false);
 
-        return build_bool_op(builder, left_compiled, right_compiled, *binary.1);
+        return build_bool_op(builder, left_compiled, right_compiled, binary.1);
     }
 
     if let (
@@ -1312,9 +1312,9 @@ pub fn bool_binaryop<'ctx>(
         Instruction::Integer(_, _, _) | Instruction::Float(_, _, _) | Instruction::Boolean(_),
     ) = binary
     {
-        if binary.0.get_data_type().is_float() {
+        if binary.0.get_data_type().is_float_type() {
             return float_binaryop(builder, context, binary, target_type, objects);
-        } else if binary.0.get_data_type().is_integer()
+        } else if binary.0.get_data_type().is_integer_type()
             || binary.0.get_data_type() == DataTypes::Bool
         {
             return integer_binaryop(builder, context, binary, target_type, objects);
@@ -1336,9 +1336,9 @@ pub fn bool_binaryop<'ctx>(
         Instruction::RefVar { .. },
     ) = binary
     {
-        if binary.0.get_data_type().is_float() {
+        if binary.0.get_data_type().is_float_type() {
             return float_binaryop(builder, context, binary, target_type, objects);
-        } else if binary.0.get_data_type().is_integer()
+        } else if binary.0.get_data_type().is_integer_type()
             || binary.0.get_data_type() == DataTypes::Bool
         {
             return integer_binaryop(builder, context, binary, target_type, objects);
@@ -1360,9 +1360,9 @@ pub fn bool_binaryop<'ctx>(
         Instruction::RefVar { .. },
     ) = binary
     {
-        if binary.0.get_data_type().is_float() {
+        if binary.0.get_data_type().is_float_type() {
             return float_binaryop(builder, context, binary, target_type, objects);
-        } else if binary.0.get_data_type().is_integer()
+        } else if binary.0.get_data_type().is_integer_type()
             || binary.0.get_data_type() == DataTypes::Bool
         {
             return integer_binaryop(builder, context, binary, target_type, objects);
@@ -1384,9 +1384,9 @@ pub fn bool_binaryop<'ctx>(
         Instruction::Integer(_, _, _) | Instruction::Float(_, _, _) | Instruction::Boolean(_),
     ) = binary
     {
-        if binary.2.get_data_type().is_float() {
+        if binary.2.get_data_type().is_float_type() {
             return float_binaryop(builder, context, binary, target_type, objects);
-        } else if binary.2.get_data_type().is_integer()
+        } else if binary.2.get_data_type().is_integer_type()
             || binary.2.get_data_type() == DataTypes::Bool
         {
             return integer_binaryop(builder, context, binary, target_type, objects);
@@ -1399,7 +1399,7 @@ pub fn bool_binaryop<'ctx>(
         Instruction::BinaryOp { .. },
     ) = binary
     {
-        if binary.0.get_data_type_recursive().is_float() {
+        if binary.0.get_data_type_recursive().is_float_type() {
             let left_compiled: BasicValueEnum<'_> =
                 float_binaryop(builder, context, binary.0.as_binary(), target_type, objects);
 
@@ -1422,7 +1422,7 @@ pub fn bool_binaryop<'ctx>(
     if let (Instruction::Group { .. }, TokenKind::And | TokenKind::Or, Instruction::Group { .. }) =
         binary
     {
-        if binary.0.get_data_type_recursive().is_float() {
+        if binary.0.get_data_type_recursive().is_float_type() {
             let left_compiled: BasicValueEnum<'_> =
                 float_binaryop(builder, context, binary.0.as_binary(), target_type, objects);
 
@@ -1448,7 +1448,7 @@ pub fn bool_binaryop<'ctx>(
         Instruction::BinaryOp { .. },
     ) = binary
     {
-        if binary.0.get_data_type_recursive().is_float() {
+        if binary.0.get_data_type_recursive().is_float_type() {
             let left_compiled: BasicValueEnum<'_> =
                 float_binaryop(builder, context, binary.0.as_binary(), target_type, objects);
 
@@ -1474,7 +1474,7 @@ pub fn bool_binaryop<'ctx>(
         Instruction::Group { .. },
     ) = binary
     {
-        if binary.0.get_data_type_recursive().is_float() {
+        if binary.0.get_data_type_recursive().is_float_type() {
             let left_compiled: BasicValueEnum<'_> =
                 float_binaryop(builder, context, binary.0.as_binary(), target_type, objects);
 

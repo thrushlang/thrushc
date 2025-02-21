@@ -23,4 +23,4 @@ pub type Function<'ctx> = (
     bool,
 );
 
-pub type StructFields<'ctx> = &'ctx Vec<(String, Instruction<'ctx>, DataTypes, u32)>;
+pub type StructFields<'ctx> = Vec<(DataTypes, u32)>;

@@ -51,7 +51,7 @@ impl<'ctx> ThrushScoper<'ctx> {
 
         if !self.errors.is_empty() {
             self.errors.iter().for_each(|error| {
-                self.diagnostic.report(error, LogType::ERROR, false);
+                self.diagnostic.report(error, LogType::ERROR);
             });
 
             exit(1);
@@ -89,7 +89,6 @@ impl<'ctx> ThrushScoper<'ctx> {
                         String::from("Undefined variable"),
                         format!("Local variable `{}` not found at current scope.", name),
                         *line,
-                        String::new(),
                     ));
                 }
 
@@ -103,7 +102,6 @@ impl<'ctx> ThrushScoper<'ctx> {
                             name
                         ),
                         *line,
-                        String::new(),
                     ));
                 }
 

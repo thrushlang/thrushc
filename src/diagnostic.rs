@@ -43,87 +43,38 @@ impl Diagnostic {
         }
     }
 
-    pub fn report(&mut self, error: &ThrushError, logtype: LogType, show_only_example: bool) {
-        let ThrushError::Error(title, help, line, example) = error;
+    pub fn report(&mut self, error: &ThrushError, logtype: LogType) {
+        let ThrushError::Error(title, help, line) = error;
 
-        self.print_report(
-            title,
-            help,
-            *line,
-            logtype,
-            (!example.is_empty()).then_some(example),
-            show_only_example,
-        );
+        self.print_report(title, help, *line, logtype);
     }
 
-    fn print_report(
-        &mut self,
-        title: &str,
-        help: &str,
-        line: usize,
-        logtype: LogType,
-        example: Option<&String>,
-        show_only_example: bool,
-    ) {
-        self.print_header(line, title, logtype, show_only_example);
+    fn print_report(&mut self, title: &str, help: &str, line: usize, logtype: LogType) {
+        self.print_header(line, title, logtype);
 
-        if !show_only_example {
-            let content: &str = if line > self.lines.len() - 1 {
-                self.lines.last().unwrap().trim()
-            } else {
-                self.lines[line - 1].trim()
-            };
+        let content: &str = if line > self.lines.len() - 1 {
+            self.lines.last().unwrap().trim()
+        } else {
+            self.lines[line - 1].trim()
+        };
 
-            self.buffer.push_str(" >> ");
-            self.drawer.push_str(&format!("{} | ^ ", line));
-            self.buffer.push_str(&format!("{}\n", content));
+        self.buffer.push_str(" >> ");
+        self.drawer.push_str(&format!("{} | ^ ", line));
+        self.buffer.push_str(&format!("{}\n", content));
 
-            println!("|\n|");
+        println!("|\n|");
 
-            for _ in 0..content.len() + 5 {
-                self.drawer
-                    .push_str(style("─").bright_red().to_string().as_str());
-            }
-
-            self.buffer.push_str(&self.drawer);
-
-            println!("{}", self.buffer);
-
-            self.drawer.clear();
-            self.buffer.clear();
+        for _ in 0..content.len() + 5 {
+            self.drawer
+                .push_str(style("─").bright_red().to_string().as_str());
         }
 
-        if let Some(example) = example {
-            if !show_only_example {
-                println!("\n{}\n", style("Example").bold().bright_green());
-            } else {
-                println!("{}\n", style("Example").bold().bright_green());
-            }
+        self.buffer.push_str(&self.drawer);
 
-            self.buffer.push_str(" > ");
+        println!("{}", self.buffer);
 
-            if !show_only_example {
-                self.drawer.push_str(&format!("{} | ", line));
-            } else {
-                self.drawer.push_str("  | ");
-            }
-
-            self.buffer.push_str(&format!("{}\n", example));
-
-            println!("|\n|");
-
-            for _ in 0..example.len() + 5 {
-                self.drawer
-                    .push_str(style("─").bright_green().to_string().as_str());
-            }
-
-            self.buffer.push_str(&self.drawer);
-
-            println!("{}", self.buffer);
-
-            self.drawer.clear();
-            self.buffer.clear();
-        }
+        self.drawer.clear();
+        self.buffer.clear();
 
         println!(
             "\n{}{} {}\n",
@@ -133,31 +84,15 @@ impl Diagnostic {
         );
     }
 
-    fn print_header(
-        &mut self,
-        line: usize,
-        title: &str,
-        logtype: LogType,
-        show_only_example: bool,
-    ) {
-        if !show_only_example {
-            println!(
-                "{} - {}",
-                format_args!(
-                    "{}",
-                    style(&self.path.to_string_lossy()).bold().bright_red()
-                ),
-                line
-            );
-        } else {
-            println!(
+    fn print_header(&mut self, line: usize, title: &str, logtype: LogType) {
+        println!(
+            "{} - {}",
+            format_args!(
                 "{}",
-                format_args!(
-                    "{}",
-                    style(&self.path.to_string_lossy()).bold().bright_red()
-                )
-            );
-        }
+                style(&self.path.to_string_lossy()).bold().bright_red()
+            ),
+            line
+        );
 
         println!("\n{} {}\n", logtype.to_styled(), title);
     }

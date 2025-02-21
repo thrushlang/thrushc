@@ -26,7 +26,6 @@ fn check_binary_instr_add(a: &DataTypes, b: &DataTypes, line: usize) -> Result<(
             String::from("Type Checking"),
             format!("Arithmatic addition ({} + {}) is not allowed.", a, b),
             line,
-            String::new(),
         )),
     }
 }
@@ -47,7 +46,6 @@ fn check_binary_instr_sub(a: &DataTypes, b: &DataTypes, line: usize) -> Result<(
         String::from("Type Checking"),
         format!("Arithmatic subtraction ({} - {}) is not allowed.", a, b),
         line,
-        String::new(),
     ))
 }
 
@@ -67,7 +65,6 @@ fn check_binary_instr_div(a: &DataTypes, b: &DataTypes, line: usize) -> Result<(
         String::from("Type Checking"),
         format!("Arithmatic division ({} / {}) is not allowed.", a, b),
         line,
-        String::new(),
     ))
 }
 
@@ -87,7 +84,6 @@ fn check_binary_instr_mul(a: &DataTypes, b: &DataTypes, line: usize) -> Result<(
         String::from("Type Checking"),
         format!("Arithmatic multiplication ({} * {}) is not allowed.", a, b),
         line,
-        String::new(),
     ))
 }
 
@@ -111,7 +107,6 @@ fn check_binary_instr_eqeq(a: &DataTypes, b: &DataTypes, line: usize) -> Result<
         String::from("Type Checking"),
         format!("Logical operation ({} == {}) is not allowed.", a, b),
         line,
-        String::new(),
     ))
 }
 
@@ -135,7 +130,6 @@ fn check_binary_instr_bangeq(a: &DataTypes, b: &DataTypes, line: usize) -> Resul
         String::from("Type Checking"),
         format!("Logical operation ({} != {}) is not allowed.", a, b),
         line,
-        String::new(),
     ))
 }
 
@@ -159,7 +153,6 @@ fn check_binary_instr_greater(
         String::from("Type Checking"),
         format!("Logical operation ({} > {}) is not allowed.", a, b),
         line,
-        String::new(),
     ))
 }
 
@@ -183,7 +176,6 @@ fn check_binary_instr_greatereq(
         String::from("Type Checking"),
         format!("Logical operation ({} >= {}) is not allowed.", a, b),
         line,
-        String::new(),
     ))
 }
 
@@ -203,7 +195,6 @@ fn check_binary_instr_less(a: &DataTypes, b: &DataTypes, line: usize) -> Result<
         String::from("Type Checking"),
         format!("Logical operation ({} < {}) is not allowed.", a, b),
         line,
-        String::new(),
     ))
 }
 
@@ -223,7 +214,6 @@ fn check_binary_instr_lesseq(a: &DataTypes, b: &DataTypes, line: usize) -> Resul
         String::from("Type Checking"),
         format!("Logical operation ({} <= {}) is not allowed.", a, b),
         line,
-        String::new(),
     ))
 }
 
@@ -237,7 +227,6 @@ fn check_binary_instr_and(a: &DataTypes, b: &DataTypes, line: usize) -> Result<(
         String::from("Type Checking"),
         format!("Logical operation ({} && {}) is not allowed.", a, b),
         line,
-        String::new(),
     ))
 }
 
@@ -251,7 +240,6 @@ fn check_binary_instr_or(a: &DataTypes, b: &DataTypes, line: usize) -> Result<()
         String::from("Type Checking"),
         format!("Logical operation ({} || {}) is not allowed.", a, b),
         line,
-        String::new(),
     ))
 }
 
@@ -304,7 +292,6 @@ fn check_unary_instr_negate(a: &DataTypes, line: usize) -> Result<(), ThrushErro
         String::from("Type Checking"),
         format!("Negative operation (-{}) is not allowed.", a),
         line,
-        String::new(),
     ))
 }
 
@@ -324,7 +311,6 @@ fn check_unary_instr_minusminus(a: &DataTypes, line: usize) -> Result<(), Thrush
         String::from("Type Checking"),
         format!("Subtractive operation ({}--) is not allowed.", a),
         line,
-        String::new(),
     ))
 }
 
@@ -344,7 +330,6 @@ fn check_unary_instr_plusplus(a: &DataTypes, line: usize) -> Result<(), ThrushEr
         String::from("Type Checking"),
         format!("Additive operation ({}++) is not allowed.", a),
         line,
-        String::new(),
     ))
 }
 
@@ -358,7 +343,6 @@ fn check_unary_instr_bang(a: &DataTypes, line: usize) -> Result<(), ThrushError>
         String::from("Type Checking"),
         format!("Logical operation (!{}) is not allowed.", a),
         line,
-        String::new(),
     ))
 }
 
@@ -377,17 +361,17 @@ pub fn check_types(
     target: DataTypes,
     from: Option<DataTypes>,
     value: Option<&Instruction>,
-    op: Option<TokenKind>,
+    op: Option<&TokenKind>,
     line: usize,
     title: String,
     desc: String,
 ) -> Result<(), ThrushError> {
     if let Some(Instruction::BinaryOp { op, kind, .. }) = value {
-        return check_types(target, Some(*kind), None, Some(**op), line, title, desc);
+        return check_types(target, Some(*kind), None, Some(op), line, title, desc);
     }
 
     if let Some(Instruction::UnaryOp { op, kind, .. }) = value {
-        return check_types(target, Some(*kind), None, Some(**op), line, title, desc);
+        return check_types(target, Some(*kind), None, Some(op), line, title, desc);
     }
 
     if let Some(Instruction::Group { instr, .. }) = value {
@@ -445,6 +429,6 @@ pub fn check_types(
             DataTypes::F64 | DataTypes::F32,
             Some(TokenKind::Plus | TokenKind::Minus | TokenKind::Slash | TokenKind::Star) | None,
         ) => Ok(()),
-        _ => Err(ThrushError::Error(title, desc, line, String::new())),
+        _ => Err(ThrushError::Error(title, desc, line)),
     }
 }

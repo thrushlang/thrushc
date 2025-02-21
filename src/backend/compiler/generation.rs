@@ -3,7 +3,7 @@ use {
         super::{super::frontend::lexer::DataTypes, instruction::Instruction},
         call,
         objects::CompilerObjects,
-        utils,
+        utils, variable,
     },
     inkwell::{
         builder::Builder,
@@ -19,7 +19,7 @@ pub fn build_basic_value_enum<'ctx>(
     context: &'ctx Context,
     instr: &'ctx Instruction,
     casting_target: Option<DataTypes>,
-    compiler_objects: &CompilerObjects<'ctx>,
+    compiler_objects: &mut CompilerObjects<'ctx>,
 ) -> BasicValueEnum<'ctx> {
     if let Instruction::Str(str) = instr {
         return utils::build_string_constant(module, builder, context, str).into();
@@ -76,13 +76,13 @@ pub fn build_basic_value_enum<'ctx>(
     if let Instruction::RefVar { name, kind, .. } = instr {
         let var: PointerValue<'ctx> = compiler_objects.find_and_get(name).unwrap();
 
-        if kind.is_float() {
+        if kind.is_float_type() {
             return builder
                 .build_load(utils::datatype_float_to_llvm_type(context, kind), var, "")
                 .unwrap();
         }
 
-        if kind.is_integer() || *kind == DataTypes::Bool {
+        if kind.is_integer_type() || *kind == DataTypes::Bool {
             return builder
                 .build_load(utils::datatype_integer_to_llvm_type(context, kind), var, "")
                 .unwrap();
@@ -92,6 +92,10 @@ pub fn build_basic_value_enum<'ctx>(
             return var.into();
         }
 
+        if *kind == DataTypes::Struct {
+            return builder.build_load(var.get_type(), var, "").unwrap();
+        }
+
         unreachable!()
     }
 
@@ -99,6 +103,7 @@ pub fn build_basic_value_enum<'ctx>(
         name: call_name,
         args: call_arguments,
         kind: call_type,
+        ..
     } = instr
     {
         return call::build_call(
@@ -109,6 +114,16 @@ pub fn build_basic_value_enum<'ctx>(
             compiler_objects,
         )
         .unwrap();
+    }
+
+    if let Instruction::InitStruct { name, kind, .. } = instr {
+        return variable::compile(
+            module,
+            builder,
+            context,
+            (name, kind, instr),
+            compiler_objects,
+        );
     }
 
     println!("{:?}", instr);

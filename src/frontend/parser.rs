@@ -12,7 +12,7 @@ use {
         preproccesadors::Import,
         scoper::ThrushScoper,
         type_checking,
-        types::StructFields,
+        types::StructFieldsParser,
     },
     ahash::AHashMap as HashMap,
     std::{
@@ -27,6 +27,7 @@ pub struct Parser<'instr> {
     errors: Vec<ThrushError>,
     tokens: &'instr [Token],
     inside_function: bool,
+    inside_local_variable: bool,
     at_typed_function: (DataTypes, String),
     at_typed_variable: DataTypes,
     current: usize,
@@ -49,15 +50,17 @@ impl<'instr> Parser<'instr> {
                 Vec::new(),
                 true,
                 false,
+                String::new(),
             ),
         );
 
         Self {
-            stmts: Vec::new(),
-            errors: Vec::new(),
+            stmts: Vec::with_capacity(50_000),
+            errors: Vec::with_capacity(100),
             tokens,
             current: 0,
             inside_function: false,
+            inside_local_variable: false,
             at_typed_function: (DataTypes::Void, String::new()),
             at_typed_variable: DataTypes::Void,
             scope: 0,
@@ -81,30 +84,6 @@ impl<'instr> Parser<'instr> {
                 continue;
             }
 
-            if let TokenKind::Public = self.peek().kind {
-                let _ = self.only_advance();
-
-                if self.check_kind(TokenKind::Struct) {
-                    if let Err(e) = self.check_struct() {
-                        self.errors.push(e);
-                        self.sync();
-                    }
-
-                    continue;
-                } else {
-                    self.current -= 1;
-                }
-            }
-
-            if let TokenKind::Struct = self.peek().kind {
-                if let Err(e) = self.check_struct() {
-                    self.errors.push(e);
-                    self.sync();
-                }
-
-                continue;
-            }
-
             match self.parse() {
                 Ok(instr) => {
                     self.stmts.push(instr);
@@ -118,7 +97,7 @@ impl<'instr> Parser<'instr> {
 
         if !self.errors.is_empty() {
             self.errors.iter().for_each(|error: &ThrushError| {
-                self.diagnostic.report(error, LogType::ERROR, false);
+                self.diagnostic.report(error, LogType::ERROR);
             });
             process::exit(1);
         }
@@ -129,10 +108,9 @@ impl<'instr> Parser<'instr> {
     }
 
     fn parse(&mut self) -> Result<Instruction<'instr>, ThrushError> {
-        self.parser_objects.decrease_local_references(self.scope);
-
         match &self.peek().kind {
-            TokenKind::Fn => Ok(self.build_function(false)?),
+            TokenKind::Struct => Ok(self.build_struct()?),
+            TokenKind::Fn => Ok(self.build_function(false, false)?),
             TokenKind::LBrace => Ok(self.build_block(&mut [], true)?),
             TokenKind::Return => Ok(self.build_return()?),
             TokenKind::Public => Ok(self.build_public_qualifier()?),
@@ -144,13 +122,150 @@ impl<'instr> Parser<'instr> {
         }
     }
 
+    fn build_entry_point(&mut self, line: usize) -> Result<Instruction<'instr>, ThrushError> {
+        if self.has_entry_point {
+            self.errors.push(ThrushError::Error(
+                String::from("Duplicated EntryPoint"),
+                String::from("The language not support two entrypoints, remove one."),
+                line,
+            ));
+        }
+
+        self.consume(
+            TokenKind::LParen,
+            String::from("Syntax error"),
+            String::from("Expected '('."),
+            line,
+        )?;
+
+        self.consume(
+            TokenKind::RParen,
+            String::from("Syntax error"),
+            String::from("Expected ')'."),
+            line,
+        )?;
+
+        if self.peek().kind != TokenKind::LBrace {
+            self.errors.push(ThrushError::Error(
+                String::from("Syntax error"),
+                String::from("Expected '{'."),
+                line,
+            ));
+        }
+
+        if self.peek().kind == TokenKind::LBrace {
+            self.has_entry_point = true;
+
+            let body: Box<Instruction<'instr>> = Box::new(self.build_block(&mut [], true)?);
+
+            self.inside_function = false;
+
+            return Ok(Instruction::EntryPoint { body });
+        }
+
+        Err(ThrushError::Error(
+            String::from("Syntax error"),
+            String::from("Expected block \"({ ... })\" for the function body."),
+            self.peek().line,
+        ))
+    }
+
+    fn build_struct(&mut self) -> Result<Instruction<'instr>, ThrushError> {
+        self.only_advance()?;
+
+        let name: &Token = self.consume(
+            TokenKind::Identifier,
+            String::from("Syntax error"),
+            String::from("Expected name for the struct."),
+            self.previous().line,
+        )?;
+
+        let line: usize = name.line;
+
+        self.consume(
+            TokenKind::LBrace,
+            String::from("Syntax error"),
+            String::from("Expected '{'."),
+            line,
+        )?;
+
+        let mut fields_types: Vec<(DataTypes, u32)> = Vec::with_capacity(10);
+        let mut field_position: u32 = 0;
+
+        while self.peek().kind != TokenKind::RBrace {
+            if self.match_token(TokenKind::Comma)? {
+                continue;
+            }
+
+            if self.match_token(TokenKind::Identifier)? {
+                let line: usize = self.previous().line;
+
+                let field_type: DataTypes = match &self.peek().kind {
+                    TokenKind::DataType(kind) => {
+                        self.only_advance()?;
+                        *kind
+                    }
+                    ident
+                        if *ident == TokenKind::Identifier
+                            && self
+                                .parser_objects
+                                .get_struct(self.peek().lexeme.as_ref().unwrap(), line)
+                                .is_ok()
+                            || name.lexeme.as_ref().unwrap()
+                                == self.peek().lexeme.as_ref().unwrap() =>
+                    {
+                        self.only_advance()?;
+                        DataTypes::Struct
+                    }
+                    _ => {
+                        return Err(ThrushError::Error(
+                            String::from("Undeterminated type"),
+                            format!(
+                                "Type \"{}\" not exist.",
+                                self.peek().lexeme.as_ref().unwrap()
+                            ),
+                            line,
+                        ));
+                    }
+                };
+
+                fields_types.push((field_type, field_position));
+
+                field_position += 1;
+
+                continue;
+            }
+
+            self.only_advance()?;
+        }
+
+        self.consume(
+            TokenKind::RBrace,
+            String::from("Syntax error"),
+            String::from("Expected '}'."),
+            line,
+        )?;
+
+        self.consume(
+            TokenKind::SemiColon,
+            String::from("Syntax error"),
+            String::from("Expected ';'."),
+            line,
+        )?;
+
+        Ok(Instruction::Struct {
+            name: name.lexeme.clone().unwrap(),
+            types: fields_types,
+        })
+    }
+
     fn build_struct_initializer(&mut self) -> Result<Instruction<'instr>, ThrushError> {
         self.only_advance()?;
 
         let name: &Token = self.consume(
             TokenKind::Identifier,
             String::from("Expected struct reference"),
-            String::from("Write the struct name: \"new --> name <-- { ... };\"."),
+            String::from("Write the struct name: \"new --> name <-- { ... }\"."),
             self.previous().line,
         )?;
 
@@ -167,8 +282,8 @@ impl<'instr> Parser<'instr> {
             line,
         )?;
 
-        let mut fields: StructFields = Vec::new();
-        let mut count: u32 = 0;
+        let mut fields: StructFieldsParser = Vec::new();
+        let mut field_index: u32 = 0;
 
         while self.peek().kind != TokenKind::RBrace {
             if self.match_token(TokenKind::Comma)? {
@@ -178,12 +293,11 @@ impl<'instr> Parser<'instr> {
             if self.match_token(TokenKind::Identifier)? {
                 let field_name: String = self.previous().lexeme.clone().unwrap();
 
-                if count as usize >= struct_found.len() {
+                if field_index as usize >= struct_found.len() {
                     return Err(ThrushError::Error(
                         String::from("Too many fields in struct"),
                         String::from("There are more fields in the structure than normal, they must be the exact amount."),
                         line,
-                        String::new(),
                     ));
                 }
 
@@ -192,27 +306,46 @@ impl<'instr> Parser<'instr> {
                         String::from("Field name not found"),
                         String::from("Write valid field name in the struct initialization."),
                         line,
-                        String::new(),
                     ));
                 }
 
                 let line: usize = self.previous().line;
 
-                let expr: Instruction = self.expression()?;
-                let field_type: DataTypes = expr.get_data_type();
+                let instruction: Instruction = self.expression()?;
 
+                self.throw_if_is_struct_initializer(&instruction, line)?;
+
+                let field_type: DataTypes = instruction.get_data_type();
                 let target_type: &DataTypes = struct_found.get(&field_name).unwrap();
 
-                self.check_possible_type_mismatch(*target_type, field_type, Some(&expr), line);
+                self.check_possible_type_mismatch(
+                    *target_type,
+                    field_type,
+                    Some(&instruction),
+                    line,
+                );
 
-                fields.push((field_name, expr, *target_type, count));
+                fields.push((field_name, instruction, *target_type, field_index));
 
-                count += 1;
-
+                field_index += 1;
                 continue;
             }
 
             self.only_advance()?;
+        }
+
+        let fields_size: usize = fields.len();
+        let fields_needed_size: usize = struct_found.len();
+
+        if fields_size != fields_needed_size {
+            return Err(ThrushError::Error(
+                String::from("Missing fields"),
+                format!(
+                    "Expected {} fields, but {} was gived.",
+                    fields_needed_size, fields_size
+                ),
+                line,
+            ));
         }
 
         self.consume(
@@ -222,7 +355,7 @@ impl<'instr> Parser<'instr> {
             line,
         )?;
 
-        Ok(Instruction::Struct {
+        Ok(Instruction::InitStruct {
             name: name.lexeme.clone().unwrap(),
             fields,
             kind: DataTypes::Struct,
@@ -235,7 +368,6 @@ impl<'instr> Parser<'instr> {
                 String::from("Syntax error"),
                 String::from("The imports must go in the global scope."),
                 self.previous().line,
-                String::new(),
             ));
         }
 
@@ -286,7 +418,6 @@ impl<'instr> Parser<'instr> {
                     String::from("Import error"),
                     String::from("This module not exist in core library."),
                     line,
-                    String::new(),
                 ));
                 return Ok(());
             }
@@ -322,7 +453,6 @@ impl<'instr> Parser<'instr> {
                     String::from("Import error"),
                     String::from("A path to directory is not able to import."),
                     line,
-                    String::from("@import(\"dir/to/file.th\");"),
                 ));
                 return Ok(());
             }
@@ -332,7 +462,6 @@ impl<'instr> Parser<'instr> {
                     String::from("Import error"),
                     String::from("The file should contain a extension (*.th)."),
                     line,
-                    String::from("@import(\"only/th/extension/file.th\");"),
                 ));
                 return Ok(());
             }
@@ -342,7 +471,6 @@ impl<'instr> Parser<'instr> {
                     String::from("Import error"),
                     String::from("Only files with extension (*.th) are allowed to been imported."),
                     line,
-                    String::from("@import(\"only/thrush/files/file.th\");"),
                 ));
                 return Ok(());
             }
@@ -352,7 +480,6 @@ impl<'instr> Parser<'instr> {
                     String::from("Import error"),
                     String::from("The file should contain a name."),
                     line,
-                    String::from("@import(\"only/valid/files/file.th\");"),
                 ));
                 return Ok(());
             }
@@ -382,7 +509,6 @@ impl<'instr> Parser<'instr> {
             String::from("Import not found"),
             String::from("The import not found in the system or std or core library."),
             line,
-            String::new(),
         ))
     }
 
@@ -412,14 +538,13 @@ impl<'instr> Parser<'instr> {
             line,
         )?;
 
-        let instr: Instruction<'instr> = match self.peek().kind {
-            TokenKind::Fn => self.build_function(true)?,
+        let instr: Instruction<'instr> = match &self.peek().kind {
+            TokenKind::Fn => self.build_function(true, true)?,
             what => {
                 return Err(ThrushError::Error(
                     String::from("Syntax error"),
                     format!("External qualifier is not applicable for \"{}\" .", what),
                     self.peek().line,
-                    String::new(),
                 ))
             }
         };
@@ -466,12 +591,11 @@ impl<'instr> Parser<'instr> {
             line,
         )?;
 
-        if !self.check_kind(TokenKind::LBrace) {
+        if !self.check_type(TokenKind::LBrace) {
             return Err(ThrushError::Error(
                 String::from("Syntax error"),
                 String::from("Expected for loop body \"{ ... }\"."),
                 line,
-                String::from("{ ... }"),
             ));
         }
 
@@ -489,12 +613,14 @@ impl<'instr> Parser<'instr> {
         &mut self,
         exist_only_comptime: bool,
     ) -> Result<Instruction<'instr>, ThrushError> {
+        self.inside_local_variable = true;
+
         self.only_advance()?;
 
         let name: &Token = self.consume(
             TokenKind::Identifier,
-            String::from("Expected name"),
-            String::from("Write the name for the variable."),
+            String::from("Syntax error"),
+            String::from("Expected name for the variable."),
             self.previous().line,
         )?;
 
@@ -502,8 +628,8 @@ impl<'instr> Parser<'instr> {
 
         self.consume(
             TokenKind::Colon,
-            String::from("Expected type indicator"),
-            String::from("Write the type indicator \":\"."),
+            String::from("Syntax error"),
+            String::from("Expected \":\"."),
             line,
         )?;
 
@@ -512,32 +638,23 @@ impl<'instr> Parser<'instr> {
                 self.only_advance()?;
                 (*kind, String::new())
             }
-
-            TokenKind::Identifier => {
-                if self
-                    .parser_objects
-                    .get_struct(self.peek().lexeme.as_ref().unwrap(), line)
-                    .is_ok()
-                {
-                    self.only_advance()?;
-
-                    (DataTypes::Struct, self.previous().lexeme.clone().unwrap())
-                } else {
-                    return Err(ThrushError::Error(
-                        String::from("Expected type"),
-                        String::from("Write the type for the variable."),
-                        line,
-                        format!("var {}: str = \"\";", name.lexeme.as_ref().unwrap()),
-                    ));
-                }
+            ident
+                if *ident == TokenKind::Identifier
+                    && self
+                        .parser_objects
+                        .get_struct(self.peek().lexeme.as_ref().unwrap(), line)
+                        .is_ok() =>
+            {
+                (DataTypes::Struct, self.advance()?.lexeme.clone().unwrap())
             }
-
             _ => {
                 return Err(ThrushError::Error(
-                    String::from("Expected variable type"),
-                    String::from("Write the type: \"var name: --> type <-- = value;\"."),
+                    String::from("Undeterminated type"),
+                    format!(
+                        "Type \"{}\" not exist.",
+                        self.peek().lexeme.as_ref().unwrap()
+                    ),
                     line,
-                    format!("var {}: str = \"\";", name.lexeme.as_ref().unwrap()),
                 ));
             }
         };
@@ -546,10 +663,9 @@ impl<'instr> Parser<'instr> {
             self.only_advance()?;
 
             self.errors.push(ThrushError::Error(
-                String::from("Missing Type"),
-                String::from("Type is undefined. Write some type available."),
+                String::from("Expected type"),
+                String::from("Expected explicit type."),
                 line,
-                format!("var {}: str;", name.lexeme.as_ref().unwrap()),
             ));
         } else if self.peek().kind == TokenKind::SemiColon {
             self.consume(
@@ -562,7 +678,7 @@ impl<'instr> Parser<'instr> {
             self.parser_objects.insert_new_local(
                 self.scope,
                 name.lexeme.as_ref().unwrap(),
-                (kind.0, true, false, false, 0, kind.1),
+                (kind.0, true, false, false, kind.1),
             );
 
             return Ok(Instruction::Var {
@@ -578,32 +694,23 @@ impl<'instr> Parser<'instr> {
             TokenKind::Eq,
             String::from("Syntax error"),
             String::from("Expected '='."),
-            name.line,
+            line,
         )?;
 
         self.at_typed_variable = kind.0;
 
-        let value: Instruction<'instr> = self.expression()?;
+        let value: Instruction = self.expression()?;
 
         self.check_possible_type_mismatch(kind.0, value.get_data_type(), Some(&value), name.line);
-
-        if self.at_typed_variable == DataTypes::Struct && value.get_data_type() == DataTypes::Struct
-        {
-            if let Instruction::Struct {
-                name: struct_name, ..
-            } = &value
-            {
-                self.check_possible_type_mismatch_for_struct_type(&kind.1, struct_name, line)?;
-            }
-        }
+        self.check_struct_type_mismatch(&kind.1, &value, line)?;
 
         self.parser_objects.insert_new_local(
             self.scope,
             name.lexeme.as_ref().unwrap(),
-            (kind.0, false, false, false, 0, kind.1),
+            (kind.0, false, false, false, kind.1),
         );
 
-        let var: Instruction<'_> = Instruction::Var {
+        let local_variable: Instruction = Instruction::Var {
             name: name.lexeme.as_ref().unwrap(),
             kind: kind.0,
             value: Box::new(value),
@@ -618,20 +725,22 @@ impl<'instr> Parser<'instr> {
             line,
         )?;
 
-        Ok(var)
+        self.inside_local_variable = false;
+
+        Ok(local_variable)
     }
 
     fn build_public_qualifier(&mut self) -> Result<Instruction<'instr>, ThrushError> {
         self.only_advance()?;
 
         match &self.peek().kind {
-            TokenKind::Fn => Ok(self.build_function(true)?),
+            TokenKind::Fn => Ok(self.build_function(true, false)?),
             TokenKind::Extern => Ok(self.build_external_qualifier()?),
+            TokenKind::Struct => Ok(self.build_struct()?),
             what => Err(ThrushError::Error(
                 String::from("Syntax error"),
                 format!("Public qualifier is not applicable for \"{}\".", what),
                 self.peek().line,
-                String::new(),
             )),
         }
     }
@@ -648,7 +757,6 @@ impl<'instr> Parser<'instr> {
                     "Return statement outside of function body. Invoke this, in function body.",
                 ),
                 line,
-                String::from("fn mybuild_function(): i32 {\n return 0;\n}"),
             ));
         }
 
@@ -675,16 +783,6 @@ impl<'instr> Parser<'instr> {
 
         let value: Instruction<'instr> = self.expression()?;
 
-        /* if self.at_typed_function.0 == DataTypes::Void && value.get_data_type() != DataTypes::Void {
-            self.errors.push(ThrushError::Error(
-
-                String::from("Syntax error"),
-                format!("Missing function type indicator with type '{}', you should add a correct function type indicator with type '{}'.", value.get_data_type(), value.get_data_type()),
-                line,
-                String::new()
-            ));
-        }*/
-
         self.check_possible_type_mismatch(
             self.at_typed_function.0,
             value.get_data_type(),
@@ -692,24 +790,7 @@ impl<'instr> Parser<'instr> {
             line,
         );
 
-        if self.at_typed_function.0 == DataTypes::Struct
-            && value.get_data_type() == DataTypes::Struct
-        {
-            if let Instruction::Struct {
-                name: struct_name, ..
-            } = &value
-            {
-                let mut inside_function_type_clone: String = String::new();
-
-                inside_function_type_clone.clone_from(&self.at_typed_function.1);
-
-                self.check_possible_type_mismatch_for_struct_type(
-                    &inside_function_type_clone,
-                    struct_name,
-                    line,
-                )?;
-            }
-        }
+        self.check_struct_type_mismatch(&self.at_typed_function.1, &value, line)?;
 
         self.consume(
             TokenKind::SemiColon,
@@ -746,6 +827,10 @@ impl<'instr> Parser<'instr> {
             let instr: Instruction<'instr> = self.parse()?;
 
             if instr.is_return() {
+                if let Some(name) = instr.return_with_ptr() {
+                    self.parser_objects.modify_object_deallocation(name, true);
+                }
+
                 let deallocators: Vec<Instruction<'_>> =
                     self.parser_objects.create_deallocators(self.scope);
 
@@ -768,18 +853,20 @@ impl<'instr> Parser<'instr> {
         Ok(Instruction::Block { stmts })
     }
 
-    fn build_function(&mut self, is_public: bool) -> Result<Instruction<'instr>, ThrushError> {
+    fn build_function(
+        &mut self,
+        is_public: bool,
+        is_external: bool,
+    ) -> Result<Instruction<'instr>, ThrushError> {
         self.only_advance()?;
 
         if self.scope != 0 {
             self.errors.push(ThrushError::Error(
-
                 String::from("Syntax error"),
                 String::from(
-                    "The build_functions must go in the global scope. Rewrite it in the global scope.",
+                    "The functions must go in the global scope. Rewrite it in the global scope.",
                 ),
                 self.previous().line,
-                String::new(),
             ));
         }
 
@@ -787,60 +874,15 @@ impl<'instr> Parser<'instr> {
 
         let name: &Token = self.consume(
             TokenKind::Identifier,
-            String::from("Expected function name"),
-            String::from("Expected a name to the function."),
+            String::from("Syntax error"),
+            String::from("Expected name to the function."),
             self.previous().line,
         )?;
 
         let line: usize = name.line;
 
         if name.lexeme.as_ref().unwrap() == "main" {
-            if self.has_entry_point {
-                self.errors.push(ThrushError::Error(
-                    String::from("Duplicated EntryPoint"),
-                    String::from("The language not support two entrypoints, remove one."),
-                    line,
-                    String::from("fn main() { ... }"),
-                ));
-            }
-
-            self.consume(
-                TokenKind::LParen,
-                String::from("Syntax error"),
-                String::from("Expected '('."),
-                line,
-            )?;
-
-            self.consume(
-                TokenKind::RParen,
-                String::from("Syntax error"),
-                String::from("Expected ')'."),
-                line,
-            )?;
-
-            if self.peek().kind != TokenKind::LBrace {
-                self.errors.push(ThrushError::Error(
-                    String::from("Syntax error"),
-                    String::from("Expected '{'."),
-                    line,
-                    String::new(),
-                ));
-            }
-
-            if self.peek().kind == TokenKind::LBrace {
-                self.has_entry_point = true;
-
-                return Ok(Instruction::EntryPoint {
-                    body: Box::new(self.build_block(&mut [], true)?),
-                });
-            } else {
-                self.errors.push(ThrushError::Error(
-                    String::from("Syntax error"),
-                    String::from("Expected block \"({ ... })\" for the function body."),
-                    self.peek().line,
-                    String::new(),
-                ));
-            }
+            return self.build_entry_point(line);
         }
 
         self.consume(
@@ -870,7 +912,6 @@ impl<'instr> Parser<'instr> {
                     String::from("Syntax error"),
                     String::from("Expected argument name."),
                     line,
-                    String::from("hello :: type, "),
                 ));
             }
 
@@ -881,62 +922,41 @@ impl<'instr> Parser<'instr> {
                     String::from("Syntax error"),
                     String::from("Expected '::'."),
                     line,
-                    format!("{} :: type, ", ident),
                 ));
             }
 
-            let kind: DataTypes = match &self.peek().kind {
+            let kind: (DataTypes, String) = match &self.peek().kind {
                 TokenKind::DataType(kind) => {
                     self.only_advance()?;
-                    *kind
+                    (*kind, String::new())
                 }
-                TokenKind::Identifier => {
-                    if self
-                        .parser_objects
-                        .get_struct(self.peek().lexeme.as_ref().unwrap(), line)
-                        .is_ok()
-                    {
-                        self.only_advance()?;
-                        DataTypes::Struct
-                    } else {
-                        self.errors.push(ThrushError::Error(
-                            String::from("Syntax error"),
-                            format!(
-                                "Expected valid argument type not \"{}\".",
-                                self.peek().lexeme.as_ref().unwrap()
-                            ),
-                            line,
-                            format!("{} :: str, ", ident),
-                        ));
-
-                        self.only_advance()?;
-                        continue;
-                    }
+                ident
+                    if *ident == TokenKind::Identifier
+                        && self
+                            .parser_objects
+                            .get_struct(self.peek().lexeme.as_ref().unwrap(), line)
+                            .is_ok() =>
+                {
+                    (DataTypes::Struct, self.advance()?.lexeme.clone().unwrap())
                 }
-
-                kind => {
-                    self.errors.push(ThrushError::Error(
-                        String::from("Syntax error"),
-                        format!("Expected valid argument type not \"{}\".", kind),
+                what => {
+                    return Err(ThrushError::Error(
+                        String::from("Undeterminated type"),
+                        format!("Type \"{}\" not exist.", what),
                         line,
-                        format!("{} :: str, ", ident),
                     ));
-
-                    self.only_advance()?;
-
-                    continue;
                 }
             };
 
             self.parser_objects.insert_new_local(
                 self.scope,
                 ident,
-                (kind, false, false, false, 0, String::new()),
+                (kind.0, false, false, true, kind.1),
             );
 
             params.push(Instruction::Param {
                 name: ident.to_string(),
-                kind,
+                kind: kind.0,
                 position,
                 line,
             });
@@ -944,41 +964,36 @@ impl<'instr> Parser<'instr> {
             position += 1;
         }
 
-        if self.peek().kind == TokenKind::Colon {
-            self.consume(
-                TokenKind::Colon,
-                String::from("Syntax error"),
-                String::from(
-                    "Missing return type indicator. Expected ':' followed by return type.",
-                ),
-                name.line,
-            )?;
-        }
+        self.consume(
+            TokenKind::Colon,
+            String::from("Syntax error"),
+            String::from("Expected ':'."),
+            name.line,
+        )?;
 
-        let return_type: Option<(DataTypes, String)> = match &self.peek().kind {
+        let return_type: (DataTypes, String) = match &self.peek().kind {
             TokenKind::DataType(kind) => {
                 self.only_advance()?;
-                Some((*kind, String::new()))
+                (*kind, String::new())
             }
-
-            TokenKind::Identifier => {
-                if self
-                    .parser_objects
-                    .get_struct(self.peek().lexeme.as_ref().unwrap(), line)
-                    .is_ok()
-                {
-                    self.only_advance()?;
-
-                    Some((DataTypes::Struct, self.previous().lexeme.clone().unwrap()))
-                } else {
-                    None
-                }
+            ident
+                if *ident == TokenKind::Identifier
+                    && self
+                        .parser_objects
+                        .get_struct(self.peek().lexeme.as_ref().unwrap(), line)
+                        .is_ok() =>
+            {
+                self.only_advance()?;
+                (DataTypes::Struct, self.previous().lexeme.clone().unwrap())
             }
-            _ => None,
+            what => {
+                return Err(ThrushError::Error(
+                    String::from("Undeterminated type"),
+                    format!("Type \"{}\" not exist.", what),
+                    line,
+                ))
+            }
         };
-
-        let return_type: (DataTypes, String) =
-            return_type.unwrap_or((DataTypes::Void, String::new()));
 
         self.at_typed_function = return_type.clone();
 
@@ -990,7 +1005,14 @@ impl<'instr> Parser<'instr> {
             is_public,
         };
 
-        if self.match_token(TokenKind::SemiColon)? {
+        if is_external {
+            self.consume(
+                TokenKind::SemiColon,
+                String::from("Syntax error"),
+                String::from("Expected ';'."),
+                name.line,
+            )?;
+
             self.inside_function = false;
             return Ok(function);
         }
@@ -1136,9 +1158,9 @@ impl<'instr> Parser<'instr> {
             let left_type: DataTypes = instr.get_data_type_recursive();
             let right_type: DataTypes = right.get_data_type_recursive();
 
-            let kind: DataTypes = if left_type.is_integer() && right_type.is_integer() {
+            let kind: DataTypes = if left_type.is_integer_type() && right_type.is_integer_type() {
                 left_type.calculate_integer_datatype(right_type)
-            } else if left_type.is_float() && right_type.is_float() {
+            } else if left_type.is_float_type() && right_type.is_float_type() {
                 left_type.calculate_float_datatype(right_type)
             } else {
                 self.at_typed_variable
@@ -1167,9 +1189,9 @@ impl<'instr> Parser<'instr> {
             let left_type: DataTypes = instr.get_data_type_recursive();
             let right_type: DataTypes = right.get_data_type_recursive();
 
-            let kind: DataTypes = if left_type.is_integer() && right_type.is_integer() {
+            let kind: DataTypes = if left_type.is_integer_type() && right_type.is_integer_type() {
                 left_type.calculate_integer_datatype(right_type)
-            } else if left_type.is_float() && right_type.is_float() {
+            } else if left_type.is_float_type() && right_type.is_float_type() {
                 left_type.calculate_float_datatype(right_type)
             } else {
                 self.at_typed_variable
@@ -1244,8 +1266,8 @@ impl<'instr> Parser<'instr> {
                 let line: usize = self.advance()?.line;
 
                 match dt {
-                    dt if dt.is_integer() => Instruction::DataTypes(*dt),
-                    dt if dt.is_float() => Instruction::DataTypes(*dt),
+                    dt if dt.is_integer_type() => Instruction::DataTypes(*dt),
+                    dt if dt.is_float_type() => Instruction::DataTypes(*dt),
                     dt if dt == &DataTypes::Bool => Instruction::DataTypes(*dt),
                     dt if dt == &DataTypes::Ptr => Instruction::DataTypes(*dt),
                     what_heck_dt => {
@@ -1256,7 +1278,6 @@ impl<'instr> Parser<'instr> {
                                 what_heck_dt
                             ),
                             line,
-                            String::new(),
                         ))
                     }
                 }
@@ -1273,7 +1294,6 @@ impl<'instr> Parser<'instr> {
                             "Group the expressions \"(...)\" is only allowed if contain binary expressions or other group expressions.",
                         ),
                         line,
-                        String::from("(T + T) or ((T + T))")
                     ));
                 }
 
@@ -1306,7 +1326,7 @@ impl<'instr> Parser<'instr> {
                 }
                 TokenKind::Identifier => {
                     let identifier_lexeme: Option<&String> = self.peek().lexeme.as_ref();
-                    let identifier_type: TokenKind = self.peek().kind;
+                    let identifier_type: &TokenKind = &self.peek().kind;
                     let line: usize = self.peek().line;
 
                     let object: FoundObject = self
@@ -1337,7 +1357,7 @@ impl<'instr> Parser<'instr> {
                         self.parser_objects.insert_new_local(
                             self.scope,
                             name,
-                            (object.0, false, false, false, 0, String::new()),
+                            (object.0, false, false, false, String::new()),
                         );
 
                         return Ok(Instruction::MutVar {
@@ -1357,7 +1377,6 @@ impl<'instr> Parser<'instr> {
                                 name,
                             ),
                             line,
-                            String::new()
                         ));
                     }
 
@@ -1365,6 +1384,7 @@ impl<'instr> Parser<'instr> {
                         name,
                         line,
                         kind: object.0,
+                        struct_type: object.7,
                     };
 
                     if self.match_token(TokenKind::PlusPlus)?
@@ -1373,7 +1393,7 @@ impl<'instr> Parser<'instr> {
                         let op: &TokenKind = &self.previous().kind;
 
                         type_checking::check_unary_instr(
-                            &identifier_type,
+                            identifier_type,
                             &refvar.get_data_type(),
                             line,
                         )?;
@@ -1402,9 +1422,7 @@ impl<'instr> Parser<'instr> {
                     Instruction::Boolean(false)
                 }
                 _ => {
-                    self.only_advance()?;
-
-                    let previous: &Token = self.previous();
+                    let previous: &Token = self.advance()?;
 
                     return Err(ThrushError::Error(
                         String::from("Syntax error"),
@@ -1413,7 +1431,6 @@ impl<'instr> Parser<'instr> {
                             previous.lexeme.as_ref().unwrap(),
                         ),
                         previous.line,
-                        String::new(),
                     ));
                 }
             },
@@ -1428,14 +1445,19 @@ impl<'instr> Parser<'instr> {
         object: FoundObject,
         line: usize,
     ) -> Result<Instruction<'instr>, ThrushError> {
+        if !self.inside_local_variable {
+            return Err(ThrushError::Error(
+                String::from("Syntax error"),
+                String::from("Function calls can only be made from local variables."),
+                line,
+            ));
+        }
+
         if !object.3 {
             return Err(ThrushError::Error(
                 String::from("Syntax error"),
-                String::from(
-                    "The object called is don't a function. Call is only allowed for functions.",
-                ),
+                String::from("Call is only allowed for functions."),
                 line,
-                String::from("fn mybuild_function() { ... }\n fn main() { mybuild_function() }"),
             ));
         }
 
@@ -1446,7 +1468,11 @@ impl<'instr> Parser<'instr> {
                 continue;
             }
 
-            args.push(self.expression()?);
+            let instruction: Instruction<'instr> = self.expression()?;
+
+            self.throw_if_is_struct_initializer(&instruction, line)?;
+
+            args.push(instruction);
         }
 
         self.consume(
@@ -1461,7 +1487,6 @@ impl<'instr> Parser<'instr> {
                 String::from("Syntax error"),
                 String::from("Function called with more arguments than expected."),
                 line,
-                String::new(),
             ));
         }
 
@@ -1488,7 +1513,6 @@ impl<'instr> Parser<'instr> {
                     represented_args_types,
                 ),
                 line,
-                String::new(),
             ));
         }
 
@@ -1500,29 +1524,10 @@ impl<'instr> Parser<'instr> {
                 self.check_possible_type_mismatch(target, argument_type, Some(argument), line);
 
                 if target == DataTypes::Struct {
-                    if let Instruction::Struct { name, .. } = argument {
-                        let original_struct_type: &(String, usize) =
-                            object.6.iter().find(|obj| obj.1 == index).unwrap();
-                        self.check_possible_type_mismatch_for_struct_type(
-                            &original_struct_type.0,
-                            name,
-                            line,
-                        )?;
-                    }
+                    let original_struct_type: &(String, usize) =
+                        object.6.iter().find(|obj| obj.1 == index).unwrap();
 
-                    if let Instruction::RefVar { name, .. } = argument {
-                        let original_struct_type: &(String, usize) =
-                            object.6.iter().find(|obj| obj.1 == index).unwrap();
-
-                        let refvar_struct_type: FoundObject =
-                            self.parser_objects.get_object(name, line).unwrap();
-
-                        self.check_possible_type_mismatch_for_struct_type(
-                            &original_struct_type.0,
-                            &refvar_struct_type.7,
-                            line,
-                        )?;
-                    }
+                    self.check_struct_type_mismatch(&original_struct_type.0, argument, line)?;
                 }
             }
         }
@@ -1531,6 +1536,7 @@ impl<'instr> Parser<'instr> {
             name,
             args,
             kind: object.0,
+            struct_type: object.7,
         })
     }
 
@@ -1573,9 +1579,10 @@ impl<'instr> Parser<'instr> {
 
         declarations
             .iter()
-            .filter(|(_, kind)| *kind == TokenKind::Struct)
+            .filter(|(_, kind)| kind == &TokenKind::Struct)
             .for_each(|(pos, _)| {
                 let _ = self.predeclare_struct(*pos);
+                self.current = 0;
             });
 
         declarations
@@ -1583,11 +1590,22 @@ impl<'instr> Parser<'instr> {
             .filter(|(_, kind)| *kind == TokenKind::Fn)
             .for_each(|(pos, _)| {
                 let _ = self.predeclare_function(*pos);
+                self.current = 0;
             });
     }
 
     fn predeclare_struct(&mut self, position: usize) -> Result<(), ThrushError> {
         self.current = position;
+
+        if self.scope != 0 {
+            self.errors.push(ThrushError::Error(
+                String::from("Syntax error"),
+                String::from(
+                    "The structs must go in the global scope. Rewrite it in the global scope.",
+                ),
+                self.previous().line,
+            ));
+        }
 
         let is_public_qualifer: bool = self.is_public_qualifier();
 
@@ -1599,25 +1617,25 @@ impl<'instr> Parser<'instr> {
 
         self.only_advance()?;
 
-        if self.scope != 0 {
-            self.errors.push(ThrushError::Error(
-                String::from("Syntax error"),
-                String::from(
-                    "The structs must go in the global scope. Rewrite it in the global scope.",
-                ),
-                self.previous().line,
-                String::new(),
-            ));
-        }
-
         let name: &Token = self.consume(
             TokenKind::Identifier,
-            String::from("Expected struct name"),
-            String::from("Write the struct name: \"struct --> name <-- { ... };\"."),
+            String::from("Syntax error"),
+            String::from("Expected name for the struct."),
             self.previous().line,
         )?;
 
         let line: usize = name.line;
+
+        if self
+            .parser_objects
+            .contains_struct(name.lexeme.as_ref().unwrap())
+        {
+            self.errors.push(ThrushError::Error(
+                String::from("Syntax error"),
+                String::from("The struct already exists."),
+                line,
+            ));
+        }
 
         self.consume(
             TokenKind::LBrace,
@@ -1642,36 +1660,31 @@ impl<'instr> Parser<'instr> {
                         self.only_advance()?;
                         *kind
                     }
-                    TokenKind::Identifier => {
-                        if self
-                            .parser_objects
-                            .get_struct(self.peek().lexeme.as_ref().unwrap(), line)
-                            .is_ok()
-                            || name.lexeme.as_ref().unwrap() == self.peek().lexeme.as_ref().unwrap()
-                        {
-                            self.only_advance()?;
-                            DataTypes::Struct
-                        } else {
-                            return Err(ThrushError::Error(
-                                String::from("Expected type of field"),
-                                format!("Write the field type: \"{} --> i64 <--\".", field_name),
-                                line,
-                                format!("struct {} {{\n   {} i64\n  }}", field_name, field_name),
-                            ));
-                        }
+                    ident
+                        if *ident == TokenKind::Identifier
+                            && self
+                                .parser_objects
+                                .get_struct(self.peek().lexeme.as_ref().unwrap(), line)
+                                .is_ok()
+                            || name.lexeme.as_ref().unwrap()
+                                == self.peek().lexeme.as_ref().unwrap() =>
+                    {
+                        self.only_advance()?;
+                        DataTypes::Struct
                     }
                     _ => {
                         return Err(ThrushError::Error(
-                            String::from("Expected type of field"),
-                            format!("Write the field type: \"{} --> i64 <--\".", field_name),
+                            String::from("Undeterminated type"),
+                            format!(
+                                "Type \"{}\" not exist.",
+                                self.peek().lexeme.as_ref().unwrap()
+                            ),
                             line,
-                            format!("struct {} {{\n   {} i64\n  }}", field_name, field_name),
                         ));
                     }
                 };
 
                 fields_types.insert(field_name, field_type);
-
                 continue;
             }
 
@@ -1692,21 +1705,6 @@ impl<'instr> Parser<'instr> {
             line,
         )?;
 
-        self.current = 0;
-
-        if self
-            .parser_objects
-            .structs
-            .contains_key(name.lexeme.as_ref().unwrap())
-        {
-            self.errors.push(ThrushError::Error(
-                String::from("Syntax error"),
-                String::from("The struct already exists."),
-                line,
-                String::new(),
-            ));
-        }
-
         self.parser_objects
             .insert_new_struct(name.lexeme.clone().unwrap(), fields_types);
 
@@ -1715,6 +1713,16 @@ impl<'instr> Parser<'instr> {
 
     fn predeclare_function(&mut self, position: usize) -> Result<(), ThrushError> {
         self.current = position;
+
+        if self.scope != 0 {
+            self.errors.push(ThrushError::Error(
+                String::from("Syntax error"),
+                String::from(
+                    "The functions must go in the global scope. Rewrite it in the global scope.",
+                ),
+                self.previous().line,
+            ));
+        }
 
         let is_external_qualifier: bool = self.is_external_qualifier();
 
@@ -1731,7 +1739,7 @@ impl<'instr> Parser<'instr> {
         let name: &Token = self.consume(
             TokenKind::Identifier,
             String::from("Expected function name"),
-            String::from("Expected fn < name >."),
+            String::from("Expected name for the function."),
             self.previous().line,
         )?;
 
@@ -1744,7 +1752,8 @@ impl<'instr> Parser<'instr> {
             line,
         )?;
 
-        let mut params: Vec<DataTypes> = Vec::new();
+        let mut parameters: Vec<DataTypes> = Vec::new();
+
         let mut parameters_struct_types: Vec<(String, usize)> = Vec::new();
         let mut parameter_position: usize = 0;
 
@@ -1766,28 +1775,30 @@ impl<'instr> Parser<'instr> {
                     self.only_advance()?;
                     *kind
                 }
-                TokenKind::Identifier => {
-                    if self
-                        .parser_objects
-                        .get_struct(self.peek().lexeme.as_ref().unwrap(), line)
-                        .is_ok()
-                    {
-                        parameters_struct_types
-                            .push((self.peek().lexeme.clone().unwrap(), parameter_position));
-                        self.only_advance()?;
-                        DataTypes::Struct
-                    } else {
-                        self.only_advance()?;
-                        continue;
-                    }
-                }
-                _ => {
+                ident
+                    if *ident == TokenKind::Identifier
+                        && self
+                            .parser_objects
+                            .get_struct(self.peek().lexeme.as_ref().unwrap(), line)
+                            .is_ok() =>
+                {
+                    parameters_struct_types
+                        .push((self.peek().lexeme.clone().unwrap(), parameter_position));
+
                     self.only_advance()?;
-                    continue;
+
+                    DataTypes::Struct
+                }
+                what => {
+                    return Err(ThrushError::Error(
+                        String::from("Undeterminated type"),
+                        format!("Type \"{}\" not exist.", what),
+                        line,
+                    ));
                 }
             };
 
-            params.push(kind);
+            parameters.push(kind);
 
             parameter_position += 1;
         }
@@ -1799,37 +1810,48 @@ impl<'instr> Parser<'instr> {
                     "Ignore statement \"...\" in functions is only allowed for external functions.",
                 ),
                 line,
-                String::new(),
             ));
         }
 
-        if self.peek().kind == TokenKind::Colon {
-            self.consume(
-                TokenKind::Colon,
-                String::from("Syntax error"),
-                String::from("Missing return type. Expected ':' followed by return type."),
-                line,
-            )?;
-        }
+        self.consume(
+            TokenKind::Colon,
+            String::from("Syntax error"),
+            String::from("Expected ':'."),
+            line,
+        )?;
 
-        let return_type: DataTypes = match &self.peek().kind {
+        let return_type: (DataTypes, String) = match &self.peek().kind {
             TokenKind::DataType(kind) => {
                 self.only_advance()?;
-                *kind
+                (*kind, String::new())
             }
-            _ => DataTypes::Void,
+            ident
+                if *ident == TokenKind::Identifier
+                    && self
+                        .parser_objects
+                        .get_struct(self.peek().lexeme.as_ref().unwrap(), line)
+                        .is_ok() =>
+            {
+                (DataTypes::Struct, self.advance()?.lexeme.clone().unwrap())
+            }
+            what => {
+                return Err(ThrushError::Error(
+                    String::from("Undeterminated type"),
+                    format!("Type \"{}\" not exist.", what),
+                    line,
+                ));
+            }
         };
-
-        self.current = 0;
 
         self.parser_objects.insert_new_global(
             name.lexeme.clone().unwrap(),
             (
-                return_type,
-                params,
+                return_type.0,
+                parameters,
                 parameters_struct_types,
                 true,
                 ignore_more_params,
+                return_type.1,
             ),
         );
 
@@ -1844,114 +1866,58 @@ impl<'instr> Parser<'instr> {
 
     ########################################################################*/
 
-    fn check_struct(&mut self) -> Result<(), ThrushError> {
-        self.only_advance()?;
-
-        if self.scope != 0 {
-            self.errors.push(ThrushError::Error(
+    fn throw_if_is_struct_initializer(
+        &self,
+        instruction: &Instruction,
+        line: usize,
+    ) -> Result<(), ThrushError> {
+        if let Instruction::InitStruct { .. } = instruction {
+            return Err(ThrushError::Error(
                 String::from("Syntax error"),
-                String::from(
-                    "The structs must go in the global scope. Rewrite it in the global scope.",
-                ),
-                self.previous().line,
-                String::new(),
+                String::from("A struct initializer should be stored a variable."),
+                line,
             ));
         }
-
-        let name: &Token = self.consume(
-            TokenKind::Identifier,
-            String::from("Expected struct name"),
-            String::from("Write the struct name: \"struct --> name <-- { ... };\"."),
-            self.previous().line,
-        )?;
-
-        let line: usize = name.line;
-
-        self.consume(
-            TokenKind::LBrace,
-            String::from("Syntax error"),
-            String::from("Expected '{'."),
-            line,
-        )?;
-
-        while self.peek().kind != TokenKind::RBrace {
-            if self.match_token(TokenKind::Comma)? {
-                continue;
-            }
-
-            if self.match_token(TokenKind::Identifier)? {
-                let field_name: String = self.previous().lexeme.clone().unwrap();
-                let line: usize = self.previous().line;
-
-                match &self.peek().kind {
-                    TokenKind::DataType(kind) => {
-                        self.only_advance()?;
-                        *kind
-                    }
-                    TokenKind::Identifier => {
-                        if self
-                            .parser_objects
-                            .get_struct(self.peek().lexeme.as_ref().unwrap(), line)
-                            .is_ok()
-                            || name.lexeme.as_ref().unwrap() == self.peek().lexeme.as_ref().unwrap()
-                        {
-                            self.only_advance()?;
-                            DataTypes::Struct
-                        } else {
-                            return Err(ThrushError::Error(
-                                String::from("Expected type of field"),
-                                format!("Write the field type: \"{} --> i64 <--\".", field_name),
-                                line,
-                                format!("struct {} {{\n   {} i64\n  }}", field_name, field_name),
-                            ));
-                        }
-                    }
-                    _ => {
-                        return Err(ThrushError::Error(
-                            String::from("Expected type of field"),
-                            format!("Write the field type: \"{} --> i64 <--\".", field_name),
-                            line,
-                            format!("struct {} {{\n   {} i64\n  }}", field_name, field_name),
-                        ));
-                    }
-                };
-
-                continue;
-            }
-
-            self.only_advance()?;
-        }
-
-        self.consume(
-            TokenKind::RBrace,
-            String::from("Syntax error"),
-            String::from("Expected '}'."),
-            line,
-        )?;
-
-        self.consume(
-            TokenKind::SemiColon,
-            String::from("Syntax error"),
-            String::from("Expected ';'."),
-            line,
-        )?;
 
         Ok(())
     }
 
-    fn check_possible_type_mismatch_for_struct_type(
+    fn check_struct_type_mismatch(
         &self,
-        target: &str,
-        from: &str,
+        target_type: &str,
+        value: &Instruction,
         line: usize,
     ) -> Result<(), ThrushError> {
-        if target.trim().to_lowercase() != from.trim().to_lowercase() {
-            return Err(ThrushError::Error(
-                String::from("Mismatched Types"),
-                format!("Struct '{}' and '{}' are not the same type.", target, from),
-                line,
-                String::new(),
-            ));
+        if self.at_typed_function.0 == DataTypes::Struct
+            || self.at_typed_variable == DataTypes::Struct
+        {
+            let mut from_type: &str = "unreacheable";
+
+            if let Instruction::InitStruct {
+                name: struct_name, ..
+            } = &value
+            {
+                from_type = struct_name;
+            }
+
+            if let Instruction::Call { struct_type, .. } = &value {
+                from_type = struct_type;
+            }
+
+            if let Instruction::RefVar { struct_type, .. } = &value {
+                from_type = struct_type;
+            }
+
+            if target_type.trim().to_lowercase() != from_type.trim().to_lowercase() {
+                return Err(ThrushError::Error(
+                    String::from("Mismatched Types"),
+                    format!(
+                        "'{}' and '{}' aren't same struct type.",
+                        target_type, from_type
+                    ),
+                    line,
+                ));
+            }
         }
 
         Ok(())
@@ -2008,10 +1974,10 @@ impl<'instr> Parser<'instr> {
             return self.advance();
         }
 
-        Err(ThrushError::Error(error_title, help, line, String::new()))
+        Err(ThrushError::Error(error_title, help, line))
     }
 
-    fn check_kind(&self, other_type: TokenKind) -> bool {
+    fn check_type(&self, other_type: TokenKind) -> bool {
         if self.end() {
             return false;
         }
@@ -2038,7 +2004,6 @@ impl<'instr> Parser<'instr> {
             String::from("Syntax error"),
             String::from("EOF has been reached."),
             self.previous().line,
-            String::new(),
         ))
     }
 
@@ -2052,7 +2017,6 @@ impl<'instr> Parser<'instr> {
             String::from("Syntax error"),
             String::from("EOF has been reached."),
             self.previous().line,
-            String::new(),
         ))
     }
 

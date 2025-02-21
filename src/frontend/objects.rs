@@ -1,6 +1,7 @@
 use {
     super::{
-        super::backend::instruction::Instruction, super::error::ThrushError, lexer::DataTypes,
+        super::{backend::instruction::Instruction, error::ThrushError},
+        lexer::DataTypes,
     },
     ahash::AHashMap as HashMap,
 };
@@ -11,13 +12,13 @@ use {
 
     LOCALS OBJECTS
 
-    (DataTypes, bool, bool, bool,        usize, String)---------> StructType
-     ^^^^^^^|   ^^^|    |____   |_______ ^^^^^ ---------> Number the References
-    Main Type - Is Null? - is_freeded - Free Only
+    (DataTypes, bool, bool,  bool,            usize, String)---------> StructType
+     ^^^^^^^|   ^^^^    |     |_______Is param ^^^^^ ---------> Number the References
+    Main Type - Is null |___ is freeded?
 
     GLOBALS OBJECTS
 
-    (DataTypes, Vec<DataTypes>, Vec<(String, HashMap<String, DataTypes>)> bool, bool)
+    (DataTypes, Vec<DataTypes>, Vec<(String, HashMap<String, DataTypes>)> bool, bool, String) -> Return types for list, structs and more.
      ^^^^^^^|   ^^^|^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^^                       ^^^^   ^^^ -------
     Main type - Param types? -  Structs Objects                         Is function? - Ignore params?
 
@@ -28,11 +29,19 @@ use {
 #########################################################################################################*/
 
 type Structs = HashMap<String, HashMap<String, DataTypes>>;
-type Locals<'instr> = Vec<HashMap<&'instr str, (DataTypes, bool, bool, bool, usize, String)>>;
+type Locals<'instr> = Vec<HashMap<&'instr str, (DataTypes, bool, bool, bool, String)>>;
 
 pub type StructTypesParameters = Vec<(String, usize)>;
+pub type ReturnType = String;
 
-pub type Global = (DataTypes, Vec<DataTypes>, Vec<(String, usize)>, bool, bool);
+pub type Global = (
+    DataTypes,
+    Vec<DataTypes>,
+    Vec<(String, usize)>,
+    bool,
+    bool,
+    ReturnType,
+);
 pub type Globals = HashMap<String, Global>;
 
 pub type FoundObject = (
@@ -44,14 +53,13 @@ pub type FoundObject = (
     Vec<DataTypes>,        // params types
     StructTypesParameters, // Possible structs types in function params
     String,                // Struct type
-    usize,                 // Number the references
 );
 
 #[derive(Clone, Debug, Default)]
 pub struct ParserObjects<'instr> {
     locals: Locals<'instr>,
     globals: Globals,
-    pub structs: Structs,
+    structs: Structs,
 }
 
 impl<'instr> ParserObjects<'instr> {
@@ -71,11 +79,7 @@ impl<'instr> ParserObjects<'instr> {
         for scope in self.locals.iter_mut().rev() {
             if scope.contains_key(name) {
                 // DataTypes, bool <- (is_null), bool <- (is_freeded), usize <- (number of references)
-                let mut var: (DataTypes, bool, bool, bool, usize, String) =
-                    scope.get(name).unwrap().clone();
-
-                var.4 += 1; // <---------------------- Update Reference Counter (+1)
-                scope.insert(name, var.clone()); // ------^^^^^^
+                let var: (DataTypes, bool, bool, bool, String) = scope.get(name).unwrap().clone();
 
                 return Ok((
                     var.0,
@@ -85,7 +89,6 @@ impl<'instr> ParserObjects<'instr> {
                     false,
                     Vec::new(),
                     Vec::new(),
-                    var.5,
                     var.4,
                 ));
             }
@@ -95,10 +98,12 @@ impl<'instr> ParserObjects<'instr> {
             let global: &Global = self.globals.get(name).unwrap();
 
             let mut params: Vec<DataTypes> = Vec::with_capacity(global.1.len());
-            let mut structs: StructTypesParameters = Vec::new();
+            let mut structs: StructTypesParameters = Vec::with_capacity(global.2.len());
+            let mut struct_type_return: ReturnType = String::with_capacity(global.5.len());
 
             params.clone_from(&global.1);
             structs.clone_from(&global.2);
+            struct_type_return.clone_from(&global.5);
 
             // type, //is null, //is_function  //ignore_params  //params
             return Ok((
@@ -109,8 +114,7 @@ impl<'instr> ParserObjects<'instr> {
                 global.4,
                 params,
                 structs,
-                String::new(),
-                0,
+                struct_type_return,
             ));
         }
 
@@ -118,7 +122,6 @@ impl<'instr> ParserObjects<'instr> {
             String::from("Object don't Found"),
             format!("Object \"{}\" is don't in declared.", name),
             line,
-            String::new(),
         ))
     }
 
@@ -139,7 +142,6 @@ impl<'instr> ParserObjects<'instr> {
             String::from("Struct don't found"),
             format!("Struct with name \"{}\" not found.", name),
             line,
-            String::new(),
         ))
     }
 
@@ -157,7 +159,7 @@ impl<'instr> ParserObjects<'instr> {
         &mut self,
         scope_pos: usize,
         name: &'instr str,
-        value: (DataTypes, bool, bool, bool, usize, String),
+        value: (DataTypes, bool, bool, bool, String),
     ) {
         self.locals[scope_pos].insert(name, value);
     }
@@ -170,33 +172,38 @@ impl<'instr> ParserObjects<'instr> {
         self.globals.insert(name, value);
     }
 
-    /* #[inline]
-    pub fn modify_object_deallocation(&mut self, name: &'instr str, modifications: (bool, bool)) {
+    pub fn contains_struct(&self, name: &str) -> bool {
+        self.structs.contains_key(name)
+    }
+
+    #[inline]
+    pub fn modify_object_deallocation(&mut self, name: &'instr str, is_freeded: bool) {
         for scope in self.locals.iter_mut().rev() {
             if scope.contains_key(name) {
-                let mut local_object: (DataTypes, bool, bool, bool, usize) =
-                    *scope.get(name).unwrap();
+                let mut local_object: (DataTypes, bool, bool, bool, String) =
+                    scope.get(name).unwrap().clone();
 
-                local_object.2 = modifications.0;
-                local_object.3 = modifications.1;
+                local_object.2 = is_freeded;
 
                 scope.insert(name, local_object);
 
                 return;
             }
         }
-    } */
+    }
 
     pub fn create_deallocators(&mut self, at_scope_pos: usize) -> Vec<Instruction<'instr>> {
         let mut frees: Vec<Instruction> = Vec::new();
 
         self.locals[at_scope_pos].iter_mut().for_each(|stmt| {
-            if let (_, (DataTypes::Struct, false, false, free_only, 0..10, _)) = stmt {
+            if let (_, (DataTypes::Struct, false, false, false, struct_type)) = stmt {
+                let mut struct_type_cloned: String = String::with_capacity(struct_type.len());
+                struct_type_cloned.clone_from(struct_type);
+
                 frees.push(Instruction::Free {
                     name: stmt.0,
-                    free_only: *free_only,
+                    struct_type: struct_type_cloned,
                 });
-
                 stmt.1 .2 = true;
             }
         });
@@ -207,13 +214,5 @@ impl<'instr> ParserObjects<'instr> {
     pub fn merge_globals(&mut self, other_objects: ParserObjects<'instr>) {
         self.globals.extend(other_objects.globals);
         self.structs.extend(other_objects.structs);
-    }
-
-    pub fn decrease_local_references(&mut self, at_scope_pos: usize) {
-        self.locals[at_scope_pos].values_mut().for_each(|variable| {
-            if variable.4 > 0 {
-                variable.4 -= 1;
-            }
-        });
     }
 }

@@ -17,7 +17,7 @@ pub fn build_call<'ctx>(
     builder: &Builder<'ctx>,
     context: &'ctx Context,
     call: Call<'ctx>,
-    compiler_objects: &CompilerObjects<'ctx>,
+    compiler_objects: &mut CompilerObjects<'ctx>,
 ) -> Option<BasicValueEnum<'ctx>> {
     let call_name: &str = call.0;
     let call_args: &[Instruction<'ctx>] = call.2;
@@ -81,14 +81,14 @@ fn build_sizeof<'ctx>(
 
     if let Instruction::DataTypes(data_type) = var_value {
         match data_type {
-            data_type if data_type.is_integer() || *data_type == DataTypes::Bool => {
+            data_type if data_type.is_integer_type() || *data_type == DataTypes::Bool => {
                 return Some(
                     utils::datatype_integer_to_llvm_type(context, data_type)
                         .size_of()
                         .into(),
                 );
             }
-            data_type if data_type.is_float() => {
+            data_type if data_type.is_float_type() => {
                 return Some(
                     utils::datatype_float_to_llvm_type(context, data_type)
                         .size_of()

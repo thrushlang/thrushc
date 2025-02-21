@@ -65,8 +65,8 @@ pub struct Lexer<'a> {
 impl<'a> Lexer<'a> {
     pub fn lex(code: &'a [u8], file: &ThrushFile) -> Vec<Token> {
         let mut lexer: Lexer = Self {
-            tokens: Vec::new(),
-            errors: Vec::new(),
+            tokens: Vec::with_capacity(100_000),
+            errors: Vec::with_capacity(100),
             code,
             start: 0,
             current: 0,
@@ -89,7 +89,7 @@ impl<'a> Lexer<'a> {
 
         if !self.errors.is_empty() {
             self.errors.iter().for_each(|error| {
-                self.diagnostic.report(error, LogType::ERROR, false);
+                self.diagnostic.report(error, LogType::ERROR);
             });
 
             exit(1);
@@ -134,7 +134,6 @@ impl<'a> Lexer<'a> {
                             "Unterminated multiline comment. Did you forget to close the comment with a '*/'?",
                         ),
                         self.line,
-                        String::new()
                     ));
                 }
 
@@ -169,7 +168,6 @@ impl<'a> Lexer<'a> {
                     String::from("Unknown character."),
                     String::from("Did you provide a valid character?"),
                     self.line,
-                    String::new(),
                 ));
             }
         }
@@ -178,7 +176,7 @@ impl<'a> Lexer<'a> {
     }
 
     fn identifier(&mut self) -> Result<(), ThrushError> {
-        while self.is_alpha(self.peek()) || self.peek().is_ascii_digit() {
+        while self.is_alpha(self.peek()) || self.peek().is_ascii_digit() && self.peek() != b':' {
             self.advance();
         }
 
@@ -206,23 +204,18 @@ impl<'a> Lexer<'a> {
         let raw_parsed_number: Result<f64, ParseFloatError> = self.lexeme().parse::<f64>();
 
         if raw_parsed_number.is_err() {
-            let mut lexeme: String = self.lexeme();
-
-            lexeme.truncate(18);
-
             return Err(ThrushError::Error(
                 String::from("The number is too big for an integer or float."),
                 String::from(
                     "Did you provide a valid number with the correct format and not out of bounds?",
                 ),
                 self.line,
-                format!("{};", lexeme),
             ));
         }
 
         let parsed_number: f64 = raw_parsed_number.unwrap();
 
-        if types.0.is_float() {
+        if types.0.is_float_type() {
             self.tokens.push(Token {
                 kind: TokenKind::Float(types.0, parsed_number, types.1),
                 lexeme: None,
@@ -249,9 +242,8 @@ impl<'a> Lexer<'a> {
         if self.peek() != b'\'' {
             return Err(ThrushError::Error(
                 String::from("Syntax Error"),
-                String::from("Unterminated char. Did you forget to close the char with a '\''?"),
+                String::from("Unterminated char. Did you forget to close the char with a \'?"),
                 self.line,
-                String::new(),
             ));
         }
 
@@ -262,7 +254,6 @@ impl<'a> Lexer<'a> {
                 String::from("Syntax Error"),
                 String::from("A char data type only can contain one character."),
                 self.line,
-                String::new(),
             ));
         }
 
@@ -289,7 +280,6 @@ impl<'a> Lexer<'a> {
                     "Unterminated string. Did you forget to close the string with a '\"'?",
                 ),
                 self.line,
-                String::new(),
             ));
         }
 
@@ -331,7 +321,6 @@ impl<'a> Lexer<'a> {
                 String::from("Float Violated Syntax"),
                 String::from("Float values should only contain one dot."),
                 self.line,
-                String::new(),
             ));
         }
 
@@ -343,19 +332,12 @@ impl<'a> Lexer<'a> {
             return Ok((DataTypes::F64, false));
         }
 
-        let truncated: &str = if lexeme.len() > 18 {
-            &lexeme[..18]
-        } else {
-            lexeme
-        };
-
         Err(ThrushError::Error(
             String::from("The number is too big for a float."),
             String::from(
                 "Did you provide a valid number with the correct format and not out of bounds?",
             ),
             self.line,
-            format!("{};", truncated),
         ))
     }
 
@@ -367,12 +349,6 @@ impl<'a> Lexer<'a> {
         const I16_MAX: isize = 32767;
         const I32_MIN: isize = -2147483648;
         const I32_MAX: isize = 2147483647;
-
-        let truncated: &str = if lexeme.len() > 18 {
-            &lexeme[..18]
-        } else {
-            lexeme
-        };
 
         match lexeme.parse::<isize>() {
             Ok(num) => {
@@ -389,7 +365,6 @@ impl<'a> Lexer<'a> {
                         String::from("Unreachable Number."),
                         String::from("The size is out of bounds of an isize."),
                         self.line,
-                        format!("{};", truncated),
                     ))
                 }
             }
@@ -399,7 +374,6 @@ impl<'a> Lexer<'a> {
                     "Did you provide a valid number with the correct format and not out of bounds?",
                 ),
                 self.line,
-                format!("{};", truncated),
             )),
         }
     }
@@ -715,7 +689,7 @@ impl std::fmt::Display for DataTypes {
 
 impl DataTypes {
     #[inline]
-    pub fn calculate_integer_datatype(self, other: DataTypes) -> DataTypes {
+    pub const fn calculate_integer_datatype(self, other: DataTypes) -> DataTypes {
         match (self, other) {
             (DataTypes::I64, _) | (_, DataTypes::I64) => DataTypes::I64,
             (DataTypes::I32, _) | (_, DataTypes::I32) => DataTypes::I32,
@@ -725,7 +699,7 @@ impl DataTypes {
     }
 
     #[inline]
-    pub fn calculate_float_datatype(self, other: DataTypes) -> DataTypes {
+    pub const fn calculate_float_datatype(self, other: DataTypes) -> DataTypes {
         match (self, other) {
             (DataTypes::F64, _) | (_, DataTypes::F64) => DataTypes::F64,
             (DataTypes::F32, _) | (_, DataTypes::F32) => DataTypes::F32,
@@ -734,22 +708,36 @@ impl DataTypes {
     }
 
     #[inline]
-    pub fn is_float(&self) -> bool {
+    pub const fn is_float_type(&self) -> bool {
         if let DataTypes::F32 | DataTypes::F64 = self {
             return true;
         }
-
         false
     }
 
     #[inline]
-    pub fn is_integer(&self) -> bool {
+    pub const fn is_ptr_type(&self) -> bool {
+        if let DataTypes::Struct | DataTypes::Str | DataTypes::Ptr = self {
+            return true;
+        }
+        false
+    }
+
+    #[inline]
+    pub const fn is_ptr_heaped(&self) -> bool {
+        if let DataTypes::Struct | DataTypes::Ptr = self {
+            return true;
+        }
+        false
+    }
+
+    #[inline]
+    pub const fn is_integer_type(&self) -> bool {
         if let DataTypes::I8 | DataTypes::I16 | DataTypes::I32 | DataTypes::I64 | DataTypes::Char =
             self
         {
             return true;
         }
-
         false
     }
 }

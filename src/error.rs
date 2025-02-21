@@ -1,4 +1,4 @@
 #[derive(Debug)]
 pub enum ThrushError {
-    Error(String, String, usize, String),
+    Error(String, String, usize),
 }

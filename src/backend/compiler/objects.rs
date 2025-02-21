@@ -7,7 +7,7 @@ use {
 #[derive(Debug, Clone)]
 pub struct CompilerObjects<'ctx> {
     pub functions: HashMap<&'ctx str, FunctionValue<'ctx>>,
-    pub structs: HashMap<&'ctx str, StructFields<'ctx>>,
+    pub structs: HashMap<&'ctx str, &'ctx StructFields<'ctx>>,
     pub blocks: Vec<HashMap<String, PointerValue<'ctx>>>,
     pub scope: usize,
 }
@@ -23,13 +23,13 @@ impl<'ctx> CompilerObjects<'ctx> {
     }
 
     #[inline]
-    pub fn push(&mut self) {
+    pub fn begin_scope(&mut self) {
         self.blocks.push(HashMap::new());
         self.scope += 1;
     }
 
     #[inline]
-    pub fn pop(&mut self) {
+    pub fn end_scope(&mut self) {
         self.blocks.pop();
         self.scope -= 1;
     }
@@ -45,12 +45,12 @@ impl<'ctx> CompilerObjects<'ctx> {
     }
 
     #[inline]
-    pub fn insert_struct(&mut self, name: &'ctx str, fields: StructFields<'ctx>) {
+    pub fn insert_struct(&mut self, name: &'ctx str, fields: &'ctx StructFields<'ctx>) {
         self.structs.insert(name, fields);
     }
 
     #[inline]
-    pub fn get_struct_fields(&mut self, name: &'ctx str) -> StructFields<'ctx> {
+    pub fn get_struct_fields(&mut self, name: &str) -> &StructFields<'ctx> {
         self.structs.get(name).unwrap()
     }
 

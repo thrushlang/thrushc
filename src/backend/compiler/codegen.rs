@@ -51,7 +51,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
 
     fn start(&mut self) {
         self.declare_basics();
-        self.predefine_functions();
+        self.predefine();
 
         while !self.is_end() {
             let instr: &Instruction<'_> = self.advance();
@@ -62,36 +62,38 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
     fn codegen(&mut self, instr: &'ctx Instruction<'ctx>) -> Instruction<'ctx> {
         match instr {
             Instruction::Block { stmts, .. } => {
-                self.compiler_objects.push();
+                self.compiler_objects.begin_scope();
 
                 stmts.iter().for_each(|instr| {
                     self.codegen(instr);
                 });
 
-                self.compiler_objects.pop();
+                self.compiler_objects.end_scope();
 
                 Instruction::Null
             }
 
-            Instruction::Free { name, .. } => {
+            Instruction::Free { name, struct_type } => {
                 let var: PointerValue<'ctx> = self.compiler_objects.find_and_get(name).unwrap();
 
-                if self.compiler_objects.structs.contains_key(name) {
-                    let struct_fields: StructFields = self.compiler_objects.get_struct_fields(name);
+                if self
+                    .compiler_objects
+                    .structs
+                    .contains_key(struct_type.as_str())
+                {
+                    let struct_fields: StructFields =
+                        self.compiler_objects.get_struct_fields(struct_type).clone();
                     let struct_type: StructType<'_> = instr.build_struct_type(
                         self.context,
-                        Some(struct_fields),
+                        Some(&struct_fields),
                         &mut self.compiler_objects,
                     );
 
                     struct_fields.iter().for_each(|field| {
-                        if field.2 == DataTypes::Ptr
-                            || field.2 == DataTypes::Str
-                            || field.2 == DataTypes::Struct
-                        {
+                        if field.0.is_ptr_type() {
                             let field_in_struct: PointerValue<'ctx> = self
                                 .builder
-                                .build_struct_gep(struct_type, var, field.3, "")
+                                .build_struct_gep(struct_type, var, field.1, "")
                                 .unwrap();
 
                             let loaded_field: PointerValue<'ctx> = self
@@ -193,7 +195,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                 self.context,
                 instr,
                 None,
-                &self.compiler_objects,
+                &mut self.compiler_objects,
             )),
 
             Instruction::Var {
@@ -225,7 +227,6 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                     self.context,
                     &mut self.compiler_objects,
                     (name, kind, value),
-                    self.function.unwrap(),
                 );
 
                 Instruction::Null
@@ -238,7 +239,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                 kind,
                 ..
             } => {
-                if kind.is_integer() {
+                if kind.is_integer_type() {
                     return Instruction::BasicValueEnum(binaryop::integer_binaryop(
                         self.builder,
                         self.context,
@@ -248,7 +249,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                     ));
                 }
 
-                if kind.is_float() {
+                if kind.is_float_type() {
                     return Instruction::BasicValueEnum(binaryop::float_binaryop(
                         self.builder,
                         self.context,
@@ -292,17 +293,21 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                 Instruction::Null
             }
 
-            Instruction::Call { name, args, kind } => {
+            Instruction::Call {
+                name, args, kind, ..
+            } => {
                 call::build_call(
                     self.module,
                     self.builder,
                     self.context,
                     (name, kind, args),
-                    &self.compiler_objects,
+                    &mut self.compiler_objects,
                 );
 
                 Instruction::Null
             }
+
+            Instruction::Struct { .. } => Instruction::Null,
 
             e => {
                 println!("{:?}", e);
@@ -323,11 +328,27 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
     }
 
     fn build_param(&mut self, name: &str, kind: DataTypes, position: u32) {
-        let allocated_ptr: PointerValue<'ctx> = utils::build_ptr(self.context, self.builder, kind);
+        let allocated_ptr: PointerValue<'ctx> = if !kind.is_ptr_type() {
+            utils::build_ptr(self.context, self.builder, kind)
+        } else {
+            self.function
+                .unwrap()
+                .get_nth_param(position)
+                .unwrap()
+                .into_pointer_value()
+        };
 
-        let param: BasicValueEnum<'ctx> = self.function.unwrap().get_nth_param(position).unwrap();
+        if !kind.is_ptr_type() {
+            let param: BasicValueEnum<'ctx> =
+                self.function.unwrap().get_nth_param(position).unwrap();
 
-        self.builder.build_store(allocated_ptr, param).unwrap();
+            self.builder.build_store(allocated_ptr, param).unwrap();
+
+            self.compiler_objects
+                .insert(name.to_string(), allocated_ptr);
+
+            return;
+        }
 
         self.compiler_objects
             .insert(name.to_string(), allocated_ptr);
@@ -336,7 +357,6 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
     fn build_return(&mut self, instr: &'ctx Instruction, kind: &DataTypes) {
         if *kind == DataTypes::Void {
             self.builder.build_return(None).unwrap();
-
             return;
         }
 
@@ -380,20 +400,14 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
         }
 
         if let Instruction::RefVar { name, .. } = instr {
-            if let DataTypes::Str = kind {
-                self.builder
-                    .build_return(Some(&self.compiler_objects.find_and_get(name).unwrap()))
-                    .unwrap();
+            let variable: PointerValue<'ctx> = self.compiler_objects.find_and_get(name).unwrap();
 
-                return;
-            }
-
-            if kind.is_integer() {
+            if kind.is_integer_type() || *kind == DataTypes::Bool {
                 let num: IntValue<'_> = self
                     .builder
                     .build_load(
                         utils::datatype_integer_to_llvm_type(self.context, kind),
-                        self.compiler_objects.find_and_get(name).unwrap(),
+                        variable,
                         "",
                     )
                     .unwrap()
@@ -404,12 +418,12 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                 return;
             }
 
-            if kind.is_float() {
+            if kind.is_float_type() {
                 let num: FloatValue<'_> = self
                     .builder
                     .build_load(
                         utils::datatype_float_to_llvm_type(self.context, kind),
-                        self.compiler_objects.find_and_get(name).unwrap(),
+                        variable,
                         "",
                     )
                     .unwrap()
@@ -419,9 +433,14 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
 
                 return;
             }
+
+            if kind.is_ptr_type() {
+                self.builder.build_return(Some(&variable)).unwrap();
+                return;
+            }
         }
 
-        todo!()
+        unreachable!()
     }
 
     fn build_external(&mut self, external_name: &str, instr: &'ctx Instruction) {
@@ -476,18 +495,20 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
         }
     }
 
-    fn predefine_functions(&mut self) {
+    fn predefine(&mut self) {
         self.instructions.iter().for_each(|instr| {
             if instr.is_function() {
                 let function: Function = instr.as_function();
 
                 self.build_function(function, true);
             } else if instr.is_extern() {
-                let external: (&str, &Instruction, TokenKind) = instr.as_extern();
+                let external: (&str, &Instruction, &TokenKind) = instr.as_extern();
 
                 // CHECK IF TOKENKIND IS FUNCTION KIND, (REMEMBER)
 
                 self.build_external(external.0, external.1);
+            } else if let Instruction::Struct { name, types } = instr {
+                self.compiler_objects.insert_struct(name, types);
             }
         });
     }

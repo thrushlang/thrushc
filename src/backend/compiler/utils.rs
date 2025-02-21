@@ -149,7 +149,7 @@ pub fn float_autocast<'ctx>(
     builder: &Builder<'ctx>,
     context: &'ctx Context,
 ) -> Option<BasicValueEnum<'ctx>> {
-    if *target == DataTypes::Bool && kind.is_float() {
+    if *target == DataTypes::Bool && kind.is_float_type() {
         return None;
     }
 
@@ -203,7 +203,7 @@ pub fn integer_autocast<'ctx>(
     builder: &Builder<'ctx>,
     context: &'ctx Context,
 ) -> Option<BasicValueEnum<'ctx>> {
-    if *target == DataTypes::Bool && kind.is_integer() {
+    if *target == DataTypes::Bool && kind.is_integer_type() {
         return None;
     }
 
@@ -299,7 +299,7 @@ pub fn build_ptr<'ctx>(
     kind: DataTypes,
 ) -> PointerValue<'ctx> {
     match kind {
-        kind if kind.is_integer() => {
+        kind if kind.is_integer_type() => {
             build_alloca_int(builder, datatype_integer_to_llvm_type(context, &kind))
         }
         DataTypes::Bool => build_alloca_int(builder, context.bool_type()),

@@ -284,18 +284,18 @@ impl Cli {
             }
 
             arg => {
-                self.options.args.push(arg.to_string());
                 *index += 1;
+                self.options.args.push(arg.to_owned());
             }
         }
     }
 
     fn extract_relative_index(&self, index: usize) -> usize {
         if index == self.args.len() {
-            return index - 1;
+            index - 1
+        } else {
+            index
         }
-
-        index
     }
 
     fn report_error(&self, msg: &str) {

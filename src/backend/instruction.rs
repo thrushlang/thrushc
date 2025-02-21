@@ -4,12 +4,12 @@ use {
             error::ThrushError,
             frontend::{
                 lexer::{DataTypes, TokenKind},
-                types::StructFields,
+                types::StructFieldsParser,
             },
         },
         compiler::{
             objects::CompilerObjects,
-            types::{BinaryOp, Function},
+            types::{BinaryOp, Function, StructFields},
             utils,
         },
     },
@@ -27,7 +27,11 @@ pub enum Instruction<'ctx> {
     DataTypes(DataTypes),
     Struct {
         name: String,
-        fields: StructFields<'ctx>,
+        types: StructFields<'ctx>,
+    },
+    InitStruct {
+        name: String,
+        fields: StructFieldsParser<'ctx>,
         kind: DataTypes,
     },
     Str(String),
@@ -71,6 +75,7 @@ pub enum Instruction<'ctx> {
         name: &'ctx str,
         line: usize,
         kind: DataTypes,
+        struct_type: String,
     },
     MutVar {
         name: &'ctx str,
@@ -81,6 +86,7 @@ pub enum Instruction<'ctx> {
         name: &'ctx str,
         args: Vec<Instruction<'ctx>>,
         kind: DataTypes,
+        struct_type: String,
     },
     BinaryOp {
         left: Box<Instruction<'ctx>>,
@@ -99,7 +105,7 @@ pub enum Instruction<'ctx> {
     },
     Free {
         name: &'ctx str,
-        free_only: bool,
+        struct_type: String,
     },
     Extern {
         name: String,
@@ -134,13 +140,24 @@ impl<'ctx> Instruction<'ctx> {
             return self.build_struct_from_fields(context, from_fields);
         }
 
-        if let Instruction::Struct { fields, .. } = self {
+        if let Instruction::InitStruct { fields, .. } = self {
+            let mut new_fields: Vec<(DataTypes, u32)> = Vec::with_capacity(fields.len());
+
+            fields.iter().for_each(|field| {
+                new_fields.push((field.2, field.3));
+            });
+
+            return self.build_struct_from_fields(context, &new_fields);
+        }
+
+        if let Instruction::RefVar { struct_type, .. } = self {
+            let fields: &StructFields = compiler_objects.get_struct_fields(struct_type);
+
             return self.build_struct_from_fields(context, fields);
         }
 
-        if let Instruction::RefVar { name, .. } = self {
-            let fields: &Vec<(String, Instruction<'_>, DataTypes, u32)> =
-                compiler_objects.get_struct_fields(name);
+        if let Instruction::Call { struct_type, .. } = self {
+            let fields: &StructFields = compiler_objects.get_struct_fields(struct_type);
 
             return self.build_struct_from_fields(context, fields);
         }
@@ -187,8 +204,20 @@ impl<'ctx> Instruction<'ctx> {
             String::from("Type Checking"),
             String::from("Operators cannot be chained. Use logical gates as \"&&\" or \"||\"."),
             line,
-            String::new(),
         ))
+    }
+
+    #[inline]
+    pub fn return_with_ptr(&self) -> Option<&'ctx str> {
+        if let Instruction::Return(instr, _) = self {
+            if let Instruction::RefVar { name, kind, .. } = instr.as_ref() {
+                if kind.is_ptr_type() {
+                    return Some(name);
+                }
+            }
+        }
+
+        None
     }
 
     #[inline]
@@ -236,9 +265,9 @@ impl<'ctx> Instruction<'ctx> {
         false
     }
 
-    pub fn as_extern(&self) -> (&str, &Instruction, TokenKind) {
+    pub fn as_extern(&self) -> (&str, &Instruction, &TokenKind) {
         if let Instruction::Extern { name, instr, kind } = self {
-            return (name, instr, *kind);
+            return (name, instr, kind);
         }
 
         unreachable!()
@@ -288,7 +317,7 @@ impl<'ctx> Instruction<'ctx> {
             Instruction::Str(_) => DataTypes::Str,
             Instruction::Boolean(_) => DataTypes::Bool,
             Instruction::Char(_) => DataTypes::Char,
-            Instruction::Struct { kind: datatype, .. } => *datatype,
+            Instruction::InitStruct { kind: datatype, .. } => *datatype,
 
             Instruction::UnaryOp { value, .. } => value.get_data_type(),
 
@@ -357,25 +386,21 @@ impl<'ctx> Instruction<'ctx> {
         let mut compiled_field_types: Vec<BasicTypeEnum> = Vec::new();
 
         fields.iter().for_each(|field| {
-            if field.2.is_integer() {
+            if field.0.is_integer_type() {
                 compiled_field_types
-                    .push(utils::datatype_integer_to_llvm_type(context, &field.2).into());
+                    .push(utils::datatype_integer_to_llvm_type(context, &field.0).into());
             }
 
-            if field.2.is_float() {
+            if field.0.is_float_type() {
                 compiled_field_types
-                    .push(utils::datatype_float_to_llvm_type(context, &field.2).into());
+                    .push(utils::datatype_float_to_llvm_type(context, &field.0).into());
             }
 
-            if field.2 == DataTypes::Bool {
+            if field.0 == DataTypes::Bool {
                 compiled_field_types.push(context.bool_type().into());
             }
 
-            if field.2 == DataTypes::Str
-                || field.2 == DataTypes::Struct
-                || field.2 == DataTypes::Ptr
-                || field.2 == DataTypes::Void
-            {
+            if field.0.is_ptr_type() {
                 compiled_field_types.push(context.ptr_type(AddressSpace::default()).into());
             }
         });
