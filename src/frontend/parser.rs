@@ -27,7 +27,6 @@ pub struct Parser<'instr> {
     errors: Vec<ThrushError>,
     tokens: &'instr [Token],
     inside_function: bool,
-    inside_local_variable: bool,
     at_typed_function: (DataTypes, String),
     at_typed_variable: DataTypes,
     current: usize,
@@ -60,7 +59,6 @@ impl<'instr> Parser<'instr> {
             tokens,
             current: 0,
             inside_function: false,
-            inside_local_variable: false,
             at_typed_function: (DataTypes::Void, String::new()),
             at_typed_variable: DataTypes::Void,
             scope: 0,
@@ -118,6 +116,7 @@ impl<'instr> Parser<'instr> {
             TokenKind::Var => Ok(self.build_local_variable(false)?),
             TokenKind::For => Ok(self.build_for_loop()?),
             TokenKind::New => Ok(self.build_struct_initializer()?),
+            TokenKind::If => Ok(self.build_if_elif_else()?),
             _ => Ok(self.expression()?),
         }
     }
@@ -168,6 +167,100 @@ impl<'instr> Parser<'instr> {
             String::from("Expected block \"({ ... })\" for the function body."),
             self.peek().line,
         ))
+    }
+
+    fn build_if_elif_else(&mut self) -> Result<Instruction<'instr>, ThrushError> {
+        let line: usize = self.advance()?.line;
+
+        if !self.inside_function {
+            self.errors.push(ThrushError::Error(
+                String::from("Syntax error"),
+                String::from("The if-elif-else must go inside the a function."),
+                line,
+            ));
+        }
+
+        let if_condition: Instruction<'instr> = self.expression()?;
+
+        if if_condition.get_data_type() != DataTypes::Bool {
+            return Err(ThrushError::Error(
+                String::from("Syntax error"),
+                String::from("Condition must be type boolean."),
+                line,
+            ));
+        }
+
+        if !self.check_type(TokenKind::LBrace) {
+            return Err(ThrushError::Error(
+                String::from("Syntax error"),
+                String::from("Expected '{'."),
+                line,
+            ));
+        }
+
+        let if_body: Box<Instruction<'instr>> = Box::new(self.build_block(&mut [], true)?);
+
+        let mut elfs: Option<Vec<Instruction<'instr>>> = None;
+
+        if self.check_type(TokenKind::Elif) {
+            elfs = Some(Vec::with_capacity(100));
+        }
+
+        while self.check_type(TokenKind::Elif) {
+            let line: usize = self.advance()?.line;
+
+            let elif_condition: Instruction<'instr> = self.expression()?;
+
+            if elif_condition.get_data_type() != DataTypes::Bool {
+                return Err(ThrushError::Error(
+                    String::from("Syntax error"),
+                    String::from("Condition must be type boolean."),
+                    line,
+                ));
+            }
+
+            if !self.check_type(TokenKind::LBrace) {
+                return Err(ThrushError::Error(
+                    String::from("Syntax error"),
+                    String::from("Expected '{'."),
+                    line,
+                ));
+            }
+
+            let elif_body: Instruction<'instr> = self.build_block(&mut [], true)?;
+
+            elfs.as_mut().unwrap().push(Instruction::Elif {
+                cond: Box::new(elif_condition),
+                block: Box::new(elif_body),
+            });
+        }
+
+        let mut otherwise: Option<Box<Instruction<'instr>>> = None;
+
+        if self.check_type(TokenKind::Else) {
+            let line: usize = self.advance()?.line;
+
+            if !self.check_type(TokenKind::LBrace) {
+                return Err(ThrushError::Error(
+                    String::from("Syntax error"),
+                    String::from("Expected '{'."),
+                    line,
+                ));
+            }
+
+            let else_body: Instruction<'instr> = self.build_block(&mut [], true)?;
+
+            otherwise = Some(Box::new(Instruction::Else {
+                block: Box::new(else_body),
+            }));
+        }
+
+        Ok(Instruction::If {
+            cond: Box::new(if_condition),
+            block: if_body,
+            elfs,
+            otherwise,
+        })
     }
 
     fn build_struct(&mut self) -> Result<Instruction<'instr>, ThrushError> {
@@ -613,8 +706,6 @@ impl<'instr> Parser<'instr> {
         &mut self,
         exist_only_comptime: bool,
     ) -> Result<Instruction<'instr>, ThrushError> {
-        self.inside_local_variable = true;
-
         self.only_advance()?;
 
         let name: &Token = self.consume(
@@ -724,8 +815,6 @@ impl<'instr> Parser<'instr> {
             String::from("Expected ';'."),
             line,
         )?;
-
-        self.inside_local_variable = false;
 
         Ok(local_variable)
     }
@@ -1445,14 +1534,6 @@ impl<'instr> Parser<'instr> {
         object: FoundObject,
         line: usize,
     ) -> Result<Instruction<'instr>, ThrushError> {
-        if !self.inside_local_variable {
-            return Err(ThrushError::Error(
-                String::from("Syntax error"),
-                String::from("Function calls can only be made from local variables."),
-                line,
-            ));
-        }
-
         if !object.3 {
             return Err(ThrushError::Error(
                 String::from("Syntax error"),

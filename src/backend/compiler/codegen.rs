@@ -112,6 +112,136 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                 Instruction::Null
             }
 
+            Instruction::If {
+                cond,
+                block,
+                elfs,
+                otherwise,
+            } => {
+                let compiled_if_cond: IntValue<'ctx> =
+                    self.codegen(cond).as_basic_value().into_int_value();
+
+                let then_block: BasicBlock<'_> =
+                    self.context.append_basic_block(self.function.unwrap(), "");
+
+                let else_if_cond: BasicBlock<'_> =
+                    self.context.append_basic_block(self.function.unwrap(), "");
+
+                let else_if_body: BasicBlock<'_> =
+                    self.context.append_basic_block(self.function.unwrap(), "");
+
+                let else_block: BasicBlock<'_> =
+                    self.context.append_basic_block(self.function.unwrap(), "");
+
+                let merge_block: BasicBlock<'_> =
+                    self.context.append_basic_block(self.function.unwrap(), "");
+
+                if elfs.is_some() {
+                    self.builder
+                        .build_conditional_branch(compiled_if_cond, then_block, else_if_cond)
+                        .unwrap();
+                } else if otherwise.is_some() && elfs.is_none() {
+                    self.builder
+                        .build_conditional_branch(compiled_if_cond, then_block, else_block)
+                        .unwrap();
+                } else {
+                    self.builder
+                        .build_conditional_branch(compiled_if_cond, then_block, merge_block)
+                        .unwrap();
+                }
+
+                self.builder.position_at_end(then_block);
+
+                self.codegen(block);
+
+                if !block.has_return() {
+                    self.builder
+                        .build_unconditional_branch(merge_block)
+                        .unwrap();
+                }
+
+                if elfs.is_some() {
+                    self.builder.position_at_end(else_if_cond);
+                } else {
+                    self.builder.position_at_end(merge_block);
+                }
+
+                if let Some(chained_elifs) = elfs {
+                    let mut current_block: BasicBlock<'_> = else_if_body;
+
+                    for (index, instr) in chained_elifs.iter().enumerate() {
+                        if let Instruction::Elif { cond, block } = instr {
+                            let compiled_else_if_cond: IntValue<'ctx> =
+                                self.codegen(cond).as_basic_value().into_int_value();
+
+                            let elif_body: BasicBlock<'_> = current_block;
+
+                            let next_block: BasicBlock<'_> = if index + 1 < chained_elifs.len() {
+                                self.context.append_basic_block(self.function.unwrap(), "")
+                            } else if otherwise.is_some() {
+                                else_block
+                            } else {
+                                merge_block
+                            };
+
+                            self.builder
+                                .build_conditional_branch(
+                                    compiled_else_if_cond,
+                                    elif_body,
+                                    next_block,
+                                )
+                                .unwrap();
+
+                            self.builder.position_at_end(elif_body);
+
+                            self.codegen(block);
+
+                            if !block.has_return() {
+                                self.builder
+                                    .build_unconditional_branch(merge_block)
+                                    .unwrap();
+                            }
+
+                            if index + 1 < chained_elifs.len() {
+                                self.builder.position_at_end(next_block);
+                                current_block =
+                                    self.context.append_basic_block(self.function.unwrap(), "");
+                            }
+                        }
+                    }
+                }
+
+                if let Some(otherwise) = otherwise {
+                    if let Instruction::Else { block } = &**otherwise {
+                        self.builder.position_at_end(else_block);
+
+                        self.codegen(block);
+
+                        if !block.has_return() {
+                            self.builder
+                                .build_unconditional_branch(merge_block)
+                                .unwrap();
+                        }
+                    }
+                }
+
+                if elfs.is_some() || otherwise.is_some() {
+                    self.builder.position_at_end(merge_block);
+                }
+
+                if elfs.is_none() {
+                    let _ = else_if_cond.remove_from_function();
+                    let _ = else_if_body.remove_from_function();
+                }
+
+                if otherwise.is_none() {
+                    let _ = else_block.remove_from_function();
+                }
+
+                Instruction::Null
+            }
+
+            Instruction::Else { block } => self.codegen(block),
             Instruction::ForLoop {
                 variable,
                 cond,

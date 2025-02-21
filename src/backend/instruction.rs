@@ -29,6 +29,19 @@ pub enum Instruction<'ctx> {
         name: String,
         types: StructFields<'ctx>,
     },
+    If {
+        cond: Box<Instruction<'ctx>>,
+        block: Box<Instruction<'ctx>>,
+        elfs: Option<Vec<Instruction<'ctx>>>,
+        otherwise: Option<Box<Instruction<'ctx>>>,
+    },
+    Elif {
+        cond: Box<Instruction<'ctx>>,
+        block: Box<Instruction<'ctx>>,
+    },
+    Else {
+        block: Box<Instruction<'ctx>>,
+    },
     InitStruct {
         name: String,
         fields: StructFieldsParser<'ctx>,
@@ -208,6 +221,15 @@ impl<'ctx> Instruction<'ctx> {
     }
 
     #[inline]
+    pub fn has_return(&self) -> bool {
+        if let Instruction::Block { stmts } = self {
+            stmts.iter().any(|stmt| stmt.is_return())
+        } else {
+            false
+        }
+    }
+
+    #[inline]
     pub fn return_with_ptr(&self) -> Option<&'ctx str> {
         if let Instruction::Return(instr, _) = self {
             if let Instruction::RefVar { name, kind, .. } = instr.as_ref() {
@@ -221,7 +243,7 @@ impl<'ctx> Instruction<'ctx> {
     }
 
     #[inline]
-    pub fn is_extern(&self) -> bool {
+    pub const fn is_extern(&self) -> bool {
         if let Instruction::Extern { .. } = self {
             return true;
         }
@@ -230,7 +252,7 @@ impl<'ctx> Instruction<'ctx> {
     }
 
     #[inline]
-    pub fn is_function(&self) -> bool {
+    pub const fn is_function(&self) -> bool {
         if let Instruction::Function { .. } = self {
             return true;
         }
@@ -239,7 +261,7 @@ impl<'ctx> Instruction<'ctx> {
     }
 
     #[inline]
-    pub fn is_binary(&self) -> bool {
+    pub const fn is_binary(&self) -> bool {
         if let Instruction::BinaryOp { .. } = self {
             return true;
         }
@@ -248,7 +270,7 @@ impl<'ctx> Instruction<'ctx> {
     }
 
     #[inline]
-    pub fn is_group(&self) -> bool {
+    pub const fn is_group(&self) -> bool {
         if let Instruction::Group { .. } = self {
             return true;
         }
@@ -257,7 +279,7 @@ impl<'ctx> Instruction<'ctx> {
     }
 
     #[inline]
-    pub fn is_return(&self) -> bool {
+    pub const fn is_return(&self) -> bool {
         if let Instruction::Return(_, _) = self {
             return true;
         }
