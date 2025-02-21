@@ -241,7 +241,6 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                 Instruction::Null
             }
 
-            Instruction::Else { block } => self.codegen(block),
             Instruction::ForLoop {
                 variable,
                 cond,
