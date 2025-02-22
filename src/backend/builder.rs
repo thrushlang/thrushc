@@ -5,7 +5,7 @@ use {
         super::{logging, Lexer, Parser, Token, LLVM_BACKEND_COMPILER},
         apis::{debug::DebugAPI, vector::VectorAPI},
         compiler::{
-            misc::{CompilerOptions, ThrushFile},
+            misc::{CompilerOptions, Linking, ThrushFile},
             Compiler,
         },
         instruction::Instruction,
@@ -219,9 +219,16 @@ impl<'a> Clang<'a> {
         let start_time: Instant = Instant::now();
 
         if self.options.executable {
+            let need_pie: &str = if self.options.linking == Linking::Dynamic {
+                "-fPIE"
+            } else {
+                ""
+            };
+
             clang_command.args([
                 "-v",
                 "-opaque-pointers",
+                need_pie,
                 &format!("--target={}", parsed_target_tripe_for_clang),
                 self.options.linking.to_str(),
                 self.options.optimization.to_str(true, false),
