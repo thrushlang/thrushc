@@ -154,7 +154,7 @@ pub fn compile_debug_api(options: &mut CompilerOptions) {
         LLVMOpt::optimize(
             "output/debug.bc",
             options.optimization.to_llvm_17_passes(),
-            options.optimization.to_str(true, false),
+            options.optimization.as_llvm_lto_opt(),
         );
 
         let previous_library: bool = options.library;

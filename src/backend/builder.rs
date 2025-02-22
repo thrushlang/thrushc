@@ -5,7 +5,7 @@ use {
         super::{logging, Lexer, Parser, Token, LLVM_BACKEND_COMPILER},
         apis::{debug::DebugAPI, vector::VectorAPI},
         compiler::{
-            misc::{CompilerOptions, Linking, ThrushFile},
+            misc::{CompilerOptions, ThrushFile},
             Compiler,
         },
         instruction::Instruction,
@@ -169,7 +169,7 @@ impl<'a> Thrushc<'a> {
         LLVMOpt::optimize(
             compiled_path,
             self.options.optimization.to_llvm_17_passes(),
-            self.options.optimization.to_str(true, false),
+            self.options.optimization.as_llvm_lto_opt(),
         );
 
         self.llvm_comptime += start_time.elapsed();
@@ -219,19 +219,12 @@ impl<'a> Clang<'a> {
         let start_time: Instant = Instant::now();
 
         if self.options.executable {
-            let need_pie: &str = if self.options.linking == Linking::Dynamic {
-                "-fPIE"
-            } else {
-                ""
-            };
-
             clang_command.args([
                 "-v",
                 "-opaque-pointers",
-                need_pie,
                 &format!("--target={}", parsed_target_tripe_for_clang),
                 self.options.linking.to_str(),
-                self.options.optimization.to_str(true, false),
+                self.options.optimization.to_str(true),
             ]);
         } else {
             let library_variant: &str = if self.options.library {
@@ -245,13 +238,13 @@ impl<'a> Clang<'a> {
                 "-opaque-pointers",
                 &format!("--target={}", parsed_target_tripe_for_clang),
                 self.options.linking.to_str(),
-                self.options.optimization.to_str(true, false),
+                self.options.optimization.to_str(true),
                 library_variant,
             ]);
         }
 
-        clang_command.args(self.files);
         clang_command.args(&self.options.args);
+        clang_command.args(self.files);
         clang_command.args(["-o", &self.options.output]);
 
         handle_command(&mut clang_command);
@@ -308,7 +301,7 @@ impl<'a> LLC<'a> {
         let mut llc_command: Command = Command::new(LLVM_BACKEND_COMPILER.join("llvm/llc"));
 
         llc_command.args([
-            self.options.optimization.to_str(true, false),
+            self.options.optimization.to_str(true),
             "--asm-verbose",
             "--filetype=asm",
         ]);

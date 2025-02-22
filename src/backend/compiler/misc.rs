@@ -33,6 +33,7 @@ pub struct CompilerOptions {
 pub enum Opt {
     #[default]
     None,
+    Size,
     Low,
     Mid,
     Mcqueen,
@@ -53,48 +54,57 @@ pub struct ThrushFile {
 
 impl Opt {
     #[inline]
-    pub fn to_str(&self, single_slash: bool, double_slash: bool) -> &str {
+    pub const fn to_str(&self, single_slash: bool) -> &str {
         match self {
-            Opt::None if !single_slash && !double_slash => "O0",
-            Opt::Low if !single_slash && !double_slash => "O1",
-            Opt::Mid if !single_slash && !double_slash => "O2",
-            Opt::Mcqueen if !single_slash && !double_slash => "O3",
+            Opt::None if !single_slash => "O0",
+            Opt::Low if !single_slash => "O1",
+            Opt::Mid if !single_slash => "O2",
+            Opt::Mcqueen if !single_slash => "O3",
+            Opt::Size if !single_slash => "Oz",
             Opt::None if single_slash => "-O0",
             Opt::Low if single_slash => "-O1",
             Opt::Mid if single_slash => "-O2",
             Opt::Mcqueen if single_slash => "-O3",
-            Opt::None if double_slash => "-O0",
-            Opt::Low if double_slash => "-O1",
-            Opt::Mid if double_slash => "-O2",
-            Opt::Mcqueen if double_slash => "-O3",
-            _ if single_slash => "-O0",
-            _ if double_slash => "--O0",
-            _ => "O0",
-        }
-    }
-
-    pub fn to_llvm_opt(&self) -> OptimizationLevel {
-        match self {
-            Opt::None => OptimizationLevel::None,
-            Opt::Low => OptimizationLevel::Default,
-            Opt::Mid => OptimizationLevel::Less,
-            Opt::Mcqueen => OptimizationLevel::Aggressive,
+            Opt::Size if single_slash => "-Oz",
+            _ => "-O0",
         }
     }
 
     #[inline]
-    pub fn to_llvm_17_passes(&self) -> &str {
+    pub const fn as_llvm_lto_opt(&self) -> &str {
+        match self {
+            Opt::None => "-O0",
+            Opt::Low => "-O1",
+            Opt::Mid => "-O2",
+            Opt::Mcqueen | Opt::Size => "-O3",
+        }
+    }
+
+    #[inline]
+    pub const fn to_llvm_opt(&self) -> OptimizationLevel {
+        match self {
+            Opt::None => OptimizationLevel::None,
+            Opt::Low => OptimizationLevel::Default,
+            Opt::Mid => OptimizationLevel::Less,
+            Opt::Mcqueen | Opt::Size => OptimizationLevel::Aggressive,
+        }
+    }
+
+    #[inline]
+    pub const fn to_llvm_17_passes(&self) -> &str {
         match self {
             Opt::None => "default<O0>",
             Opt::Low => "default<O1>",
             Opt::Mid => "default<O2>",
             Opt::Mcqueen => "default<O3>",
+            Opt::Size => "default<Oz>",
         }
     }
 }
 
 impl Linking {
-    pub fn to_str(&self) -> &str {
+    #[inline]
+    pub const fn to_str(&self) -> &str {
         match self {
             Linking::Static => "--static",
             Linking::Dynamic => "-dynamic",

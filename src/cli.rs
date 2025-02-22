@@ -87,6 +87,7 @@ impl Cli {
                         "O0" => Opt::None,
                         "O1" => Opt::Low,
                         "O2" => Opt::Mid,
+                        "size" => Opt::Size,
                         "mcqueen" => Opt::Mcqueen,
                         any => {
                             self.report_error(&format!("Unknown optimization level \"{}\".", any));
