@@ -1,7 +1,7 @@
 ---
 name: Proposal
-about: Describe the you proposal for the compiler && the language.
-title: ''
+about: Proposal or idea for the development of the foreground compiler.
+title: Proposal
 labels: Proposal
 assignees: Danixd12, DevCheckOG
 
