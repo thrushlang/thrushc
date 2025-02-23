@@ -11,12 +11,12 @@ The compiler is responsible for translating each code effectively into LLVM inte
 
 ## Build dependencies for the compiler 
 
-**Important rust crates:**
+**Important Rust crates:**
 
 - **llvm-sys** (v170)
 - **inkwell** (v0.50)
   
-## External requirements for create executables with the compiler
+## Requirements for create executables with the compiler
 
 ### Linux
 
