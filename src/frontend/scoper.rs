@@ -5,7 +5,7 @@ use {
         error::ThrushError,
         logging::LogType,
     },
-    std::process::exit,
+    std::process,
 };
 
 #[derive(Debug)]
@@ -23,8 +23,8 @@ struct ThrushBlock<'ctx> {
 impl<'ctx> ThrushScoper<'ctx> {
     pub fn new(file: &'ctx ThrushFile) -> Self {
         Self {
-            blocks: Vec::new(),
-            errors: Vec::new(),
+            blocks: Vec::with_capacity(25_000),
+            errors: Vec::with_capacity(100),
             diagnostic: Diagnostic::new(file),
         }
     }
@@ -54,7 +54,7 @@ impl<'ctx> ThrushScoper<'ctx> {
                 self.diagnostic.report(error, LogType::ERROR);
             });
 
-            exit(1);
+            process::exit(1);
         }
     }
 

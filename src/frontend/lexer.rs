@@ -35,7 +35,7 @@ lazy_static! {
         keywords.insert(b"@import", TokenKind::Import);
         keywords.insert(b"@extern", TokenKind::Extern);
         keywords.insert(b"new", TokenKind::New);
-        keywords.insert(b"null", TokenKind::Null);
+        keywords.insert(b"nullptr", TokenKind::NullPtr);
         keywords.insert(b"i8", TokenKind::DataType(DataTypes::I8));
         keywords.insert(b"i16", TokenKind::DataType(DataTypes::I16));
         keywords.insert(b"i32", TokenKind::DataType(DataTypes::I32));
@@ -81,9 +81,8 @@ impl<'a> Lexer<'a> {
         while !self.end() {
             self.start = self.current;
 
-            match self.scan() {
-                Ok(()) => {}
-                Err(e) => self.errors.push(e),
+            if let Err(error) = self.scan() {
+                self.errors.push(error)
             }
         }
 
@@ -318,7 +317,7 @@ impl<'a> Lexer<'a> {
 
         if dot_count > 1 {
             return Err(ThrushError::Error(
-                String::from("Float Violated Syntax"),
+                String::from("Syntax error"),
                 String::from("Float values should only contain one dot."),
                 self.line,
             ));
@@ -379,10 +378,10 @@ impl<'a> Lexer<'a> {
     }
 
     fn advance(&mut self) -> u8 {
-        let ch: u8 = self.code[self.current];
+        let char: u8 = self.code[self.current];
         self.current += 1;
 
-        ch
+        char
     }
 
     fn peek_next(&self) -> u8 {
@@ -411,16 +410,6 @@ impl<'a> Lexer<'a> {
     }
 
     #[inline]
-    fn end(&self) -> bool {
-        self.current >= self.code.len()
-    }
-
-    #[inline]
-    fn is_alpha(&self, ch: u8) -> bool {
-        ch.is_ascii_lowercase() || ch.is_ascii_uppercase() || ch == b'_'
-    }
-
-    #[inline]
     fn lexeme(&self) -> String {
         String::from_utf8_lossy(&self.code[self.start..self.current]).to_string()
     }
@@ -431,6 +420,16 @@ impl<'a> Lexer<'a> {
             lexeme: Some(self.lexeme()),
             line: self.line,
         });
+    }
+
+    #[inline]
+    const fn end(&self) -> bool {
+        self.current >= self.code.len()
+    }
+
+    #[inline]
+    const fn is_alpha(&self, char: u8) -> bool {
+        char.is_ascii_lowercase() || char.is_ascii_uppercase() || char == b'_'
     }
 }
 
@@ -496,7 +495,7 @@ pub enum TokenKind {
     Break,
     If,
     Elif,
-    Null,
+    NullPtr,
     Or,
     Return,
     This,
@@ -549,7 +548,7 @@ impl std::fmt::Display for TokenKind {
             TokenKind::If => write!(f, "if"),
             TokenKind::Elif => write!(f, "elif"),
             TokenKind::Public => write!(f, "public"),
-            TokenKind::Null => write!(f, "null"),
+            TokenKind::NullPtr => write!(f, "null"),
             TokenKind::Or => write!(f, "or"),
             TokenKind::Return => write!(f, "return"),
             TokenKind::This => write!(f, "this"),
@@ -705,6 +704,24 @@ impl DataTypes {
             (DataTypes::F32, _) | (_, DataTypes::F32) => DataTypes::F32,
             _ => DataTypes::F64,
         }
+    }
+
+    #[inline]
+    pub const fn is_void_type(&self) -> bool {
+        if let DataTypes::Void = self {
+            return true;
+        }
+
+        false
+    }
+
+    #[inline]
+    pub const fn is_struct_type(&self) -> bool {
+        if let DataTypes::Struct = self {
+            return true;
+        }
+
+        false
     }
 
     #[inline]

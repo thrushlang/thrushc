@@ -6,9 +6,10 @@ use {
         },
         binaryop, call, generation,
         objects::CompilerObjects,
-        types::{Function, StructFields},
+        types::{Function, Struct},
         unaryop, utils, variable,
     },
+    core::str,
     inkwell::{
         basic_block::BasicBlock,
         builder::Builder,
@@ -16,7 +17,7 @@ use {
         module::{Linkage, Module},
         types::{FunctionType, StructType},
         values::{BasicValueEnum, FloatValue, FunctionValue, GlobalValue, IntValue, PointerValue},
-        AddressSpace,
+        AddressSpace, IntPredicate,
     },
 };
 
@@ -53,13 +54,16 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
         self.declare_basics();
         self.predefine();
 
+        // Build recursive deallocators for structures.
+        self.build_structure_deallocators();
+
         while !self.is_end() {
-            let instr: &Instruction<'_> = self.advance();
-            self.codegen(instr);
+            let instruction: &Instruction = self.advance();
+            self.codegen(instruction);
         }
     }
 
-    fn codegen(&mut self, instr: &'ctx Instruction<'ctx>) -> Instruction<'ctx> {
+    fn codegen(&mut self, instr: &'ctx Instruction) -> Instruction<'ctx> {
         match instr {
             Instruction::Block { stmts, .. } => {
                 self.compiler_objects.begin_scope();
@@ -74,26 +78,22 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
             }
 
             Instruction::Free { name, struct_type } => {
-                let var: PointerValue<'ctx> = self.compiler_objects.find_and_get(name).unwrap();
+                let struct_type: &str = struct_type;
+                let variable: PointerValue<'ctx> = self.compiler_objects.get_local(name).unwrap();
 
-                if self
-                    .compiler_objects
-                    .structs
-                    .contains_key(struct_type.as_str())
-                {
-                    let struct_fields: StructFields =
-                        self.compiler_objects.get_struct_fields(struct_type).clone();
-                    let struct_type: StructType<'_> = instr.build_struct_type(
-                        self.context,
-                        Some(&struct_fields),
-                        &mut self.compiler_objects,
-                    );
+                if self.compiler_objects.structs.contains_key(struct_type) {
+                    let struct_fields: &Struct = self.compiler_objects.get_struct(struct_type);
+
+                    let struct_type: StructType =
+                        utils::build_struct_type_from_fields(self.context, struct_fields);
 
                     struct_fields.iter().for_each(|field| {
-                        if field.0.is_ptr_type() {
+                        if field.1.is_struct_type() {
+                            self.build_struct_dealloc(struct_type, variable, field);
+                        } else if field.1.is_ptr_type() {
                             let field_in_struct: PointerValue<'ctx> = self
                                 .builder
-                                .build_struct_gep(struct_type, var, field.1, "")
+                                .build_struct_gep(struct_type, variable, field.2, "")
                                 .unwrap();
 
                             let loaded_field: PointerValue<'ctx> = self
@@ -107,7 +107,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                     });
                 }
 
-                self.builder.build_free(var).unwrap();
+                self.builder.build_free(variable).unwrap();
 
                 Instruction::Null
             }
@@ -121,19 +121,19 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                 let compiled_if_cond: IntValue<'ctx> =
                     self.codegen(cond).as_basic_value().into_int_value();
 
-                let then_block: BasicBlock<'_> =
+                let then_block: BasicBlock =
                     self.context.append_basic_block(self.function.unwrap(), "");
 
-                let else_if_cond: BasicBlock<'_> =
+                let else_if_cond: BasicBlock =
                     self.context.append_basic_block(self.function.unwrap(), "");
 
-                let else_if_body: BasicBlock<'_> =
+                let else_if_body: BasicBlock =
                     self.context.append_basic_block(self.function.unwrap(), "");
 
-                let else_block: BasicBlock<'_> =
+                let else_block: BasicBlock =
                     self.context.append_basic_block(self.function.unwrap(), "");
 
-                let merge_block: BasicBlock<'_> =
+                let merge_block: BasicBlock =
                     self.context.append_basic_block(self.function.unwrap(), "");
 
                 if elfs.is_some() {
@@ -171,12 +171,12 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
 
                     for (index, instr) in chained_elifs.iter().enumerate() {
                         if let Instruction::Elif { cond, block } = instr {
-                            let compiled_else_if_cond: IntValue<'ctx> =
+                            let compiled_else_if_cond: IntValue =
                                 self.codegen(cond).as_basic_value().into_int_value();
 
-                            let elif_body: BasicBlock<'_> = current_block;
+                            let elif_body: BasicBlock = current_block;
 
-                            let next_block: BasicBlock<'_> = if index + 1 < chained_elifs.len() {
+                            let next_block: BasicBlock = if index + 1 < chained_elifs.len() {
                                 self.context.append_basic_block(self.function.unwrap(), "")
                             } else if otherwise.is_some() {
                                 else_block
@@ -247,11 +247,11 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                 actions,
                 block,
             } => {
-                let function: FunctionValue<'ctx> = self.function.unwrap();
+                let function: FunctionValue = self.function.unwrap();
 
                 self.codegen(variable.as_ref());
 
-                let start_block: BasicBlock<'ctx> = self.context.append_basic_block(function, "");
+                let start_block: BasicBlock = self.context.append_basic_block(function, "");
 
                 self.builder
                     .build_unconditional_branch(start_block)
@@ -259,16 +259,16 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
 
                 self.builder.position_at_end(start_block);
 
-                let cond: IntValue<'ctx> = self
+                let conditional: IntValue = self
                     .codegen(cond.as_ref())
                     .as_basic_value()
                     .into_int_value();
 
-                let then_block: BasicBlock<'ctx> = self.context.append_basic_block(function, "");
-                let exit_block: BasicBlock<'ctx> = self.context.append_basic_block(function, "");
+                let then_block: BasicBlock = self.context.append_basic_block(function, "");
+                let exit_block: BasicBlock = self.context.append_basic_block(function, "");
 
                 self.builder
-                    .build_conditional_branch(cond, then_block, exit_block)
+                    .build_conditional_branch(conditional, then_block, exit_block)
                     .unwrap();
 
                 self.builder.position_at_end(then_block);
@@ -294,7 +294,6 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                 ..
             } => {
                 self.build_param(name, *kind, *position);
-
                 Instruction::Null
             }
 
@@ -306,7 +305,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                 is_public,
             } => {
                 if let Some(body) = body {
-                    self.build_function((name, params, Some(body), return_type, *is_public), false);
+                    self.build_function((name, params, Some(body), return_type, is_public), false);
                     return Instruction::Null;
                 }
 
@@ -456,7 +455,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
         main
     }
 
-    fn build_param(&mut self, name: &str, kind: DataTypes, position: u32) {
+    fn build_param(&mut self, name: &'ctx str, kind: DataTypes, position: u32) {
         let allocated_ptr: PointerValue<'ctx> = if !kind.is_ptr_type() {
             utils::build_ptr(self.context, self.builder, kind)
         } else {
@@ -473,14 +472,12 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
 
             self.builder.build_store(allocated_ptr, param).unwrap();
 
-            self.compiler_objects
-                .insert(name.to_string(), allocated_ptr);
+            self.compiler_objects.insert(name, allocated_ptr);
 
             return;
         }
 
-        self.compiler_objects
-            .insert(name.to_string(), allocated_ptr);
+        self.compiler_objects.insert(name, allocated_ptr);
     }
 
     fn build_return(&mut self, instr: &'ctx Instruction, kind: &DataTypes) {
@@ -529,7 +526,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
         }
 
         if let Instruction::RefVar { name, .. } = instr {
-            let variable: PointerValue<'ctx> = self.compiler_objects.find_and_get(name).unwrap();
+            let variable: PointerValue<'ctx> = self.compiler_objects.get_local(name).unwrap();
 
             if kind.is_integer_type() || *kind == DataTypes::Bool {
                 let num: IntValue<'_> = self
@@ -572,32 +569,70 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
         unreachable!()
     }
 
+    fn build_struct_dealloc(
+        &self,
+        struct_type: StructType<'ctx>,
+        variable: PointerValue,
+        field: &(String, DataTypes, u32),
+    ) {
+        let dealloc_struct_name: String = format!("dealloc_{}_struct", field.0.to_lowercase());
+
+        if let Some(function) = self.module.get_function(dealloc_struct_name.as_str()) {
+            let gep_field_in_struct: PointerValue = self
+                .builder
+                .build_struct_gep(struct_type, variable, field.2, "")
+                .unwrap();
+
+            let loaded_field: PointerValue = self
+                .builder
+                .build_load(gep_field_in_struct.get_type(), gep_field_in_struct, "")
+                .unwrap()
+                .into_pointer_value();
+
+            self.builder
+                .build_call(function, &[loaded_field.into()], "")
+                .unwrap();
+        } else {
+            let gep_field_in_struct: PointerValue = self
+                .builder
+                .build_struct_gep(struct_type, variable, field.2, "")
+                .unwrap();
+
+            let loaded_field: PointerValue = self
+                .builder
+                .build_load(gep_field_in_struct.get_type(), gep_field_in_struct, "")
+                .unwrap()
+                .into_pointer_value();
+
+            self.builder.build_free(loaded_field).unwrap();
+        }
+    }
+
     fn build_external(&mut self, external_name: &str, instr: &'ctx Instruction) {
         let function: Function = instr.as_function();
 
-        let kind: FunctionType<'_> =
-            utils::datatype_to_fn_type(self.context, function.3, function.1);
+        let kind: FunctionType = utils::datatype_to_fn_type(self.context, function.3, function.1);
 
-        let llvm_function: FunctionValue<'_> =
+        let external_function: FunctionValue =
             self.module
                 .add_function(external_name, kind, Some(Linkage::External));
 
         self.compiler_objects
-            .insert_function(function.0, llvm_function);
+            .insert_function(function.0, (external_function, function.1));
     }
 
     fn build_function(&mut self, function: Function<'ctx>, only_define: bool) {
         let function_name: &str = function.0;
         let function_return_type: &DataTypes = function.3;
         let function_params: &[Instruction<'_>] = function.1;
-        let function_is_public: bool = function.4;
-        let function_body: Option<&Box<Instruction<'ctx>>> = function.2;
+        let function_is_public: &bool = function.4;
+        let function_body: Option<&Box<Instruction>> = function.2;
 
         if only_define && self.module.get_function(function_name).is_none() {
             let kind: FunctionType =
                 utils::datatype_to_fn_type(self.context, function_return_type, function_params);
 
-            let function: FunctionValue<'_> = self.module.add_function(function_name, kind, None);
+            let function: FunctionValue = self.module.add_function(function_name, kind, None);
 
             if !function_is_public {
                 function.set_linkage(Linkage::LinkerPrivate);
@@ -606,12 +641,12 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
             self.function = Some(function);
 
             self.compiler_objects
-                .insert_function(function_name, function);
+                .insert_function(function_name, (function, function_params));
 
             return;
         }
 
-        let function: FunctionValue<'ctx> = self.module.get_function(function_name).unwrap();
+        let function: FunctionValue = self.module.get_function(function_name).unwrap();
 
         let entry: BasicBlock = self.context.append_basic_block(function, "");
 
@@ -619,7 +654,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
 
         self.codegen(function_body.unwrap());
 
-        if *function_return_type == DataTypes::Void {
+        if function_return_type.is_void_type() {
             self.builder.build_return(None).unwrap();
         }
     }
@@ -642,6 +677,165 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
         });
     }
 
+    fn build_structure_deallocators(&self) {
+        self.compiler_objects
+            .structs
+            .iter()
+            .filter(|structure| {
+                structure
+                    .1
+                    .iter()
+                    .any(|structure_field| structure_field.1.is_struct_type())
+            })
+            .for_each(|structure| {
+                let dealloc_function_name: &str =
+                    &format!("dealloc_{}_struct", structure.0.to_lowercase());
+
+                let dealloc_function: FunctionValue = if let Some(dealloc_function_found) =
+                    self.module.get_function(dealloc_function_name)
+                {
+                    dealloc_function_found
+                } else {
+                    self.module.add_function(
+                        dealloc_function_name,
+                        self.context.void_type().fn_type(
+                            &[self.context.ptr_type(AddressSpace::default()).into()],
+                            true,
+                        ),
+                        Some(Linkage::LinkerPrivate),
+                    )
+                };
+
+                self.builder
+                    .position_at_end(self.context.append_basic_block(dealloc_function, ""));
+
+                let struct_pointer: PointerValue = dealloc_function
+                    .get_first_param()
+                    .unwrap()
+                    .into_pointer_value();
+
+                let cmp: IntValue = self
+                    .builder
+                    .build_int_compare(
+                        IntPredicate::EQ,
+                        dealloc_function
+                            .get_nth_param(0)
+                            .unwrap()
+                            .into_pointer_value(),
+                        self.context.ptr_type(AddressSpace::default()).const_null(),
+                        "",
+                    )
+                    .unwrap();
+
+                let recurse_block: BasicBlock =
+                    self.context.append_basic_block(dealloc_function, "");
+
+                let exit_block: BasicBlock = self.context.append_basic_block(dealloc_function, "");
+
+                self.builder
+                    .build_conditional_branch(cmp, exit_block, recurse_block)
+                    .unwrap();
+
+                self.builder.position_at_end(recurse_block);
+
+                structure
+                    .1
+                    .iter()
+                    .filter(|structure_field| structure_field.1.is_struct_type())
+                    .for_each(|structure_field| {
+                        if structure_field.0 == *structure.0 {
+                            let struct_type: StructType =
+                                utils::build_struct_type_from_fields(self.context, structure.1);
+
+                            let gep_field_in_struct: PointerValue<'ctx> = self
+                                .builder
+                                .build_struct_gep(
+                                    struct_type,
+                                    struct_pointer,
+                                    structure_field.2,
+                                    "",
+                                )
+                                .unwrap();
+
+                            let loaded_struct_from_field: PointerValue<'ctx> = self
+                                .builder
+                                .build_load(gep_field_in_struct.get_type(), gep_field_in_struct, "")
+                                .unwrap()
+                                .into_pointer_value();
+
+                            self.builder
+                                .build_call(
+                                    dealloc_function,
+                                    &[loaded_struct_from_field.into()],
+                                    "",
+                                )
+                                .unwrap();
+
+                            self.builder.build_free(struct_pointer).unwrap();
+                        } else {
+                            let struct_name: &str = &structure_field.0;
+
+                            let struct_fields: &Struct =
+                                self.compiler_objects.structs.get(struct_name).unwrap();
+
+                            let struct_type: StructType =
+                                utils::build_struct_type_from_fields(self.context, struct_fields);
+
+                            let gep_field_in_struct: PointerValue<'ctx> = self
+                                .builder
+                                .build_struct_gep(
+                                    struct_type,
+                                    struct_pointer,
+                                    structure_field.2,
+                                    "",
+                                )
+                                .unwrap();
+
+                            let loaded_struct_from_field: PointerValue<'ctx> = self
+                                .builder
+                                .build_load(gep_field_in_struct.get_type(), gep_field_in_struct, "")
+                                .unwrap()
+                                .into_pointer_value();
+
+                            let dealloc_function_name: &str =
+                                &format!("dealloc_{}_struct", struct_name.to_lowercase());
+
+                            let dealloc_function_parent: FunctionValue<'ctx> =
+                                if let Some(dealloc_function_found) =
+                                    self.module.get_function(dealloc_function_name)
+                                {
+                                    dealloc_function_found
+                                } else {
+                                    self.module.add_function(
+                                        dealloc_function_name,
+                                        self.context.void_type().fn_type(
+                                            &[self
+                                                .context
+                                                .ptr_type(AddressSpace::default())
+                                                .into()],
+                                            true,
+                                        ),
+                                        Some(Linkage::LinkerPrivate),
+                                    )
+                                };
+
+                            self.builder
+                                .build_call(
+                                    dealloc_function_parent,
+                                    &[loaded_struct_from_field.into()],
+                                    "",
+                                )
+                                .unwrap();
+                        }
+                    });
+
+                self.builder.build_unconditional_branch(exit_block).unwrap();
+
+                self.builder.position_at_end(exit_block);
+                self.builder.build_return(None).unwrap();
+            });
+    }
+
     fn declare_basics(&mut self) {
         let stderr: GlobalValue = self.module.add_global(
             self.context.ptr_type(AddressSpace::default()),
@@ -662,14 +856,14 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
 
     #[inline]
     fn advance(&mut self) -> &'ctx Instruction<'ctx> {
-        let c: &Instruction = &self.instructions[self.current];
+        let instr: &Instruction = &self.instructions[self.current];
         self.current += 1;
 
-        c
+        instr
     }
 
     #[inline]
-    fn is_end(&self) -> bool {
+    const fn is_end(&self) -> bool {
         self.current >= self.instructions.len()
     }
 }

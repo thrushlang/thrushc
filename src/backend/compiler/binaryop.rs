@@ -276,7 +276,7 @@ pub fn integer_binaryop<'ctx>(
         let mut left_compiled: IntValue<'_> = builder
             .build_load(
                 utils::datatype_integer_to_llvm_type(context, left_type),
-                objects.find_and_get(left_name).unwrap(),
+                objects.get_local(left_name).unwrap(),
                 "",
             )
             .unwrap()
@@ -285,7 +285,7 @@ pub fn integer_binaryop<'ctx>(
         let mut right_compiled: IntValue<'_> = builder
             .build_load(
                 utils::datatype_integer_to_llvm_type(context, right_type),
-                objects.find_and_get(right_name).unwrap(),
+                objects.get_local(right_name).unwrap(),
                 "",
             )
             .unwrap()
@@ -346,7 +346,7 @@ pub fn integer_binaryop<'ctx>(
         let mut right_compiled: IntValue<'_> = builder
             .build_load(
                 utils::datatype_integer_to_llvm_type(context, kind),
-                objects.find_and_get(name).unwrap(),
+                objects.get_local(name).unwrap(),
                 "",
             )
             .unwrap()
@@ -404,7 +404,7 @@ pub fn integer_binaryop<'ctx>(
         let mut left_compiled: IntValue<'_> = builder
             .build_load(
                 utils::datatype_integer_to_llvm_type(context, kind),
-                objects.find_and_get(name).unwrap(),
+                objects.get_local(name).unwrap(),
                 "",
             )
             .unwrap()
@@ -457,7 +457,7 @@ pub fn integer_binaryop<'ctx>(
         let mut right_compiled: IntValue<'_> = builder
             .build_load(
                 utils::datatype_integer_to_llvm_type(context, kind),
-                objects.find_and_get(name).unwrap(),
+                objects.get_local(name).unwrap(),
                 "",
             )
             .unwrap()
@@ -504,7 +504,7 @@ pub fn integer_binaryop<'ctx>(
         let mut left_compiled: IntValue<'_> = builder
             .build_load(
                 utils::datatype_integer_to_llvm_type(context, kind),
-                objects.find_and_get(name).unwrap(),
+                objects.get_local(name).unwrap(),
                 "",
             )
             .unwrap()
@@ -896,7 +896,7 @@ pub fn float_binaryop<'ctx>(
         let mut left_compiled: FloatValue<'_> = builder
             .build_load(
                 utils::datatype_float_to_llvm_type(context, left_type),
-                objects.find_and_get(left_name).unwrap(),
+                objects.get_local(left_name).unwrap(),
                 "",
             )
             .unwrap()
@@ -905,7 +905,7 @@ pub fn float_binaryop<'ctx>(
         let mut right_compiled: FloatValue<'_> = builder
             .build_load(
                 utils::datatype_float_to_llvm_type(context, right_type),
-                objects.find_and_get(right_name).unwrap(),
+                objects.get_local(right_name).unwrap(),
                 "",
             )
             .unwrap()
@@ -957,7 +957,7 @@ pub fn float_binaryop<'ctx>(
         let mut right_compiled: FloatValue<'_> = builder
             .build_load(
                 utils::datatype_float_to_llvm_type(context, kind),
-                objects.find_and_get(name).unwrap(),
+                objects.get_local(name).unwrap(),
                 "",
             )
             .unwrap()
@@ -1006,7 +1006,7 @@ pub fn float_binaryop<'ctx>(
         let mut left_compiled: FloatValue<'_> = builder
             .build_load(
                 utils::datatype_float_to_llvm_type(context, kind),
-                objects.find_and_get(name).unwrap(),
+                objects.get_local(name).unwrap(),
                 "",
             )
             .unwrap()
@@ -1495,6 +1495,5 @@ pub fn bool_binaryop<'ctx>(
     }
 
     println!("{:#?}", binary);
-
     unimplemented!()
 }

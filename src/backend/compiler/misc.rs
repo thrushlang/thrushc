@@ -39,7 +39,7 @@ pub enum Opt {
     Mcqueen,
 }
 
-#[derive(Default, Debug, PartialEq)]
+#[derive(Default, Debug)]
 pub enum Linking {
     #[default]
     Static,

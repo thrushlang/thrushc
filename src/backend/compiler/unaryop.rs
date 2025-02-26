@@ -26,7 +26,7 @@ pub fn compile_unary_op<'ctx>(
         _,
     ) = unary
     {
-        let variable: PointerValue<'ctx> = compiler_objects.find_and_get(name).unwrap();
+        let variable: PointerValue<'ctx> = compiler_objects.get_local(name).unwrap();
 
         if refvar_type.is_integer_type() {
             let left_num: IntValue<'ctx> = builder
@@ -85,7 +85,7 @@ pub fn compile_unary_op<'ctx>(
         _,
     ) = unary
     {
-        let variable: PointerValue<'ctx> = compiler_objects.find_and_get(name).unwrap();
+        let variable: PointerValue<'ctx> = compiler_objects.get_local(name).unwrap();
 
         if refvar_type.is_integer_type() {
             let left: IntValue<'ctx> = builder

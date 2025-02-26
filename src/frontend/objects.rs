@@ -155,6 +155,7 @@ impl<'instr> ParserObjects<'instr> {
         self.locals.pop();
     }
 
+    #[inline]
     pub fn insert_new_local(
         &mut self,
         scope_pos: usize,
@@ -164,31 +165,38 @@ impl<'instr> ParserObjects<'instr> {
         self.locals[scope_pos].insert(name, value);
     }
 
+    #[inline]
     pub fn insert_new_struct(&mut self, name: String, value: HashMap<String, DataTypes>) {
         self.structs.insert(name, value);
     }
 
+    #[inline]
     pub fn insert_new_global(&mut self, name: String, value: Global) {
         self.globals.insert(name, value);
     }
 
+    #[inline]
     pub fn contains_struct(&self, name: &str) -> bool {
         self.structs.contains_key(name)
     }
 
     #[inline]
-    pub fn modify_object_deallocation(&mut self, name: &'instr str, is_freeded: bool) {
-        for scope in self.locals.iter_mut().rev() {
-            if scope.contains_key(name) {
-                let mut local_object: (DataTypes, bool, bool, bool, String) =
-                    scope.get(name).unwrap().clone();
+    pub fn modify_object_deallocation(
+        &mut self,
+        at_scope_pos: usize,
+        name: &'instr str,
+        mark_as_freeded: bool,
+    ) {
+        let scope: &mut HashMap<&str, (DataTypes, bool, bool, bool, String)> =
+            self.locals.get_mut(at_scope_pos).unwrap();
 
-                local_object.2 = is_freeded;
+        if scope.contains_key(name) {
+            let mut local_object: (DataTypes, bool, bool, bool, String) =
+                scope.get(name).unwrap().clone();
 
-                scope.insert(name, local_object);
+            local_object.2 = mark_as_freeded;
 
-                return;
-            }
+            scope.insert(name, local_object);
         }
     }
 
@@ -211,6 +219,7 @@ impl<'instr> ParserObjects<'instr> {
         frees
     }
 
+    #[inline]
     pub fn merge_globals(&mut self, other_objects: ParserObjects<'instr>) {
         self.globals.extend(other_objects.globals);
         self.structs.extend(other_objects.structs);

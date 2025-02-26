@@ -4,21 +4,16 @@ use {
             error::ThrushError,
             frontend::{
                 lexer::{DataTypes, TokenKind},
-                types::StructFieldsParser,
+                types::StructFields,
             },
         },
         compiler::{
             objects::CompilerObjects,
-            types::{BinaryOp, Function, StructFields},
+            types::{BinaryOp, Function, Struct},
             utils,
         },
     },
-    inkwell::{
-        context::Context,
-        types::{BasicTypeEnum, StructType},
-        values::BasicValueEnum,
-        AddressSpace,
-    },
+    inkwell::{context::Context, types::StructType, values::BasicValueEnum},
 };
 
 #[derive(Debug, Clone, Default)]
@@ -27,7 +22,7 @@ pub enum Instruction<'ctx> {
     DataTypes(DataTypes),
     Struct {
         name: String,
-        types: StructFields<'ctx>,
+        types: Struct<'ctx>,
     },
     If {
         cond: Box<Instruction<'ctx>>,
@@ -44,7 +39,7 @@ pub enum Instruction<'ctx> {
     },
     InitStruct {
         name: String,
-        fields: StructFieldsParser<'ctx>,
+        fields: StructFields<'ctx>,
         kind: DataTypes,
     },
     Str(String),
@@ -128,6 +123,7 @@ pub enum Instruction<'ctx> {
     Boolean(bool),
     Pass,
     #[default]
+    NullPtr,
     Null,
 }
 
@@ -146,33 +142,35 @@ impl<'ctx> Instruction<'ctx> {
     pub fn build_struct_type(
         &self,
         context: &'ctx Context,
-        from_fields: Option<&StructFields>,
-        compiler_objects: &mut CompilerObjects<'ctx>,
+        struct_fields: Option<&Struct>,
+        compiler_objects: &CompilerObjects,
     ) -> StructType<'ctx> {
-        if let Some(from_fields) = from_fields {
-            return self.build_struct_from_fields(context, from_fields);
+        if let Some(from_fields) = struct_fields {
+            return utils::build_struct_type_from_fields(context, from_fields);
         }
 
         if let Instruction::InitStruct { fields, .. } = self {
-            let mut new_fields: Vec<(DataTypes, u32)> = Vec::with_capacity(fields.len());
+            let mut new_fields: Vec<(String, DataTypes, u32)> = Vec::with_capacity(fields.len());
 
             fields.iter().for_each(|field| {
-                new_fields.push((field.2, field.3));
+                if field.2 == DataTypes::Struct {
+                    new_fields.push((field.0.clone(), field.2, field.3));
+                } else {
+                    new_fields.push((String::new(), field.2, field.3));
+                }
             });
 
-            return self.build_struct_from_fields(context, &new_fields);
+            return utils::build_struct_type_from_fields(context, &new_fields);
         }
 
         if let Instruction::RefVar { struct_type, .. } = self {
-            let fields: &StructFields = compiler_objects.get_struct_fields(struct_type);
-
-            return self.build_struct_from_fields(context, fields);
+            let fields: &Struct = compiler_objects.get_struct(struct_type);
+            return utils::build_struct_type_from_fields(context, fields);
         }
 
         if let Instruction::Call { struct_type, .. } = self {
-            let fields: &StructFields = compiler_objects.get_struct_fields(struct_type);
-
-            return self.build_struct_from_fields(context, fields);
+            let fields: &Struct = compiler_objects.get_struct(struct_type);
+            return utils::build_struct_type_from_fields(context, fields);
         }
 
         unreachable!()
@@ -304,7 +302,7 @@ impl<'ctx> Instruction<'ctx> {
             is_public,
         } = self
         {
-            return (name, params, body.as_ref(), return_type, *is_public);
+            return (name, params, body.as_ref(), return_type, is_public);
         }
 
         unreachable!()
@@ -323,31 +321,6 @@ impl<'ctx> Instruction<'ctx> {
         }
 
         unreachable!()
-    }
-
-    pub fn get_data_type(&self) -> DataTypes {
-        match self {
-            Instruction::Integer(datatype, ..)
-            | Instruction::Float(datatype, ..)
-            | Instruction::RefVar { kind: datatype, .. }
-            | Instruction::Group { kind: datatype, .. }
-            | Instruction::BinaryOp { kind: datatype, .. }
-            | Instruction::Param { kind: datatype, .. }
-            | Instruction::Call { kind: datatype, .. }
-            | Instruction::DataTypes(datatype) => *datatype,
-
-            Instruction::Str(_) => DataTypes::Str,
-            Instruction::Boolean(_) => DataTypes::Bool,
-            Instruction::Char(_) => DataTypes::Char,
-            Instruction::InitStruct { kind: datatype, .. } => *datatype,
-
-            Instruction::UnaryOp { value, .. } => value.get_data_type(),
-
-            e => {
-                debug_assert!(false, "Unexpected instruction: {:?}", e);
-                unimplemented!()
-            }
-        }
     }
 
     pub fn get_data_type_recursive(&self) -> DataTypes {
@@ -390,7 +363,37 @@ impl<'ctx> Instruction<'ctx> {
             return DataTypes::Bool;
         }
 
+        if let Instruction::NullPtr = self {
+            return DataTypes::Ptr;
+        }
+
         unimplemented!()
+    }
+
+    pub fn get_data_type(&self) -> DataTypes {
+        match self {
+            Instruction::Integer(datatype, ..)
+            | Instruction::Float(datatype, ..)
+            | Instruction::RefVar { kind: datatype, .. }
+            | Instruction::Group { kind: datatype, .. }
+            | Instruction::BinaryOp { kind: datatype, .. }
+            | Instruction::Param { kind: datatype, .. }
+            | Instruction::Call { kind: datatype, .. }
+            | Instruction::DataTypes(datatype) => *datatype,
+
+            Instruction::Str(_) => DataTypes::Str,
+            Instruction::Boolean(_) => DataTypes::Bool,
+            Instruction::Char(_) => DataTypes::Char,
+            Instruction::NullPtr => DataTypes::Ptr,
+            Instruction::InitStruct { kind: datatype, .. } => *datatype,
+
+            Instruction::UnaryOp { value, .. } => value.get_data_type(),
+
+            e => {
+                debug_assert!(false, "Unexpected instruction: {:?}", e);
+                unimplemented!()
+            }
+        }
     }
 
     pub fn as_basic_value(&self) -> &BasicValueEnum<'ctx> {
@@ -398,35 +401,5 @@ impl<'ctx> Instruction<'ctx> {
             Instruction::BasicValueEnum(value) => value,
             _ => unreachable!(),
         }
-    }
-
-    fn build_struct_from_fields(
-        &self,
-        context: &'ctx Context,
-        fields: &StructFields,
-    ) -> StructType<'ctx> {
-        let mut compiled_field_types: Vec<BasicTypeEnum> = Vec::new();
-
-        fields.iter().for_each(|field| {
-            if field.0.is_integer_type() {
-                compiled_field_types
-                    .push(utils::datatype_integer_to_llvm_type(context, &field.0).into());
-            }
-
-            if field.0.is_float_type() {
-                compiled_field_types
-                    .push(utils::datatype_float_to_llvm_type(context, &field.0).into());
-            }
-
-            if field.0 == DataTypes::Bool {
-                compiled_field_types.push(context.bool_type().into());
-            }
-
-            if field.0.is_ptr_type() {
-                compiled_field_types.push(context.ptr_type(AddressSpace::default()).into());
-            }
-        });
-
-        context.struct_type(&compiled_field_types, false)
     }
 }

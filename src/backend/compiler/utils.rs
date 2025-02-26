@@ -2,12 +2,16 @@ use {
     super::{
         super::{super::frontend::lexer::DataTypes, instruction::Instruction},
         objects::CompilerObjects,
+        types::Struct,
     },
     inkwell::{
         builder::Builder,
         context::Context,
         module::{Linkage, Module},
-        types::{ArrayType, BasicMetadataTypeEnum, FloatType, FunctionType, IntType, StructType},
+        types::{
+            ArrayType, BasicMetadataTypeEnum, BasicTypeEnum, FloatType, FunctionType, IntType,
+            StructType,
+        },
         values::{BasicValueEnum, FloatValue, GlobalValue, IntValue, PointerValue},
         AddressSpace,
     },
@@ -319,4 +323,31 @@ pub fn build_struct_ptr<'ctx>(
 ) -> PointerValue<'ctx> {
     let struct_type: StructType<'_> = struct_instr.build_struct_type(context, None, _objects);
     builder.build_malloc(struct_type, "").unwrap()
+}
+
+pub fn build_struct_type_from_fields<'ctx>(
+    context: &'ctx Context,
+    struct_fields: &Struct,
+) -> StructType<'ctx> {
+    let mut compiled_field_types: Vec<BasicTypeEnum> = Vec::new();
+
+    struct_fields.iter().for_each(|field| {
+        if field.1.is_integer_type() {
+            compiled_field_types.push(datatype_integer_to_llvm_type(context, &field.1).into());
+        }
+
+        if field.1.is_float_type() {
+            compiled_field_types.push(datatype_float_to_llvm_type(context, &field.1).into());
+        }
+
+        if field.1 == DataTypes::Bool {
+            compiled_field_types.push(context.bool_type().into());
+        }
+
+        if field.1.is_ptr_type() {
+            compiled_field_types.push(context.ptr_type(AddressSpace::default()).into());
+        }
+    });
+
+    context.struct_type(&compiled_field_types, false)
 }

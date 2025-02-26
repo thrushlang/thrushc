@@ -12,7 +12,7 @@ use {
         preproccesadors::Import,
         scoper::ThrushScoper,
         type_checking,
-        types::StructFieldsParser,
+        types::StructFields,
     },
     ahash::AHashMap as HashMap,
     std::{
@@ -70,7 +70,7 @@ impl<'instr> Parser<'instr> {
     }
 
     pub fn start(&mut self) -> &[Instruction<'instr>] {
-        self.start_predeclaration();
+        self.predefine();
 
         while !self.end() {
             if let TokenKind::Import = self.peek().kind {
@@ -124,7 +124,7 @@ impl<'instr> Parser<'instr> {
     fn build_entry_point(&mut self, line: usize) -> Result<Instruction<'instr>, ThrushError> {
         if self.has_entry_point {
             self.errors.push(ThrushError::Error(
-                String::from("Duplicated EntryPoint"),
+                String::from("Duplicated Entrypoint"),
                 String::from("The language not support two entrypoints, remove one."),
                 line,
             ));
@@ -144,29 +144,21 @@ impl<'instr> Parser<'instr> {
             line,
         )?;
 
-        if self.peek().kind != TokenKind::LBrace {
-            self.errors.push(ThrushError::Error(
+        if !self.check_type(TokenKind::LBrace) {
+            return Err(ThrushError::Error(
                 String::from("Syntax error"),
                 String::from("Expected '{'."),
                 line,
             ));
         }
 
-        if self.peek().kind == TokenKind::LBrace {
-            self.has_entry_point = true;
+        self.has_entry_point = true;
 
-            let body: Box<Instruction<'instr>> = Box::new(self.build_block(&mut [], true)?);
+        let body: Box<Instruction<'instr>> = Box::new(self.build_block(&mut [], true)?);
 
-            self.inside_function = false;
+        self.inside_function = false;
 
-            return Ok(Instruction::EntryPoint { body });
-        }
-
-        Err(ThrushError::Error(
-            String::from("Syntax error"),
-            String::from("Expected block \"({ ... })\" for the function body."),
-            self.peek().line,
-        ))
+        Ok(Instruction::EntryPoint { body })
     }
 
     fn build_if_elif_else(&mut self) -> Result<Instruction<'instr>, ThrushError> {
@@ -282,7 +274,7 @@ impl<'instr> Parser<'instr> {
             line,
         )?;
 
-        let mut fields_types: Vec<(DataTypes, u32)> = Vec::with_capacity(10);
+        let mut fields_types: Vec<(String, DataTypes, u32)> = Vec::with_capacity(10);
         let mut field_position: u32 = 0;
 
         while self.peek().kind != TokenKind::RBrace {
@@ -293,10 +285,10 @@ impl<'instr> Parser<'instr> {
             if self.match_token(TokenKind::Identifier)? {
                 let line: usize = self.previous().line;
 
-                let field_type: DataTypes = match &self.peek().kind {
+                match &self.peek().kind {
                     TokenKind::DataType(kind) => {
                         self.only_advance()?;
-                        *kind
+                        fields_types.push((String::new(), *kind, field_position))
                     }
                     ident
                         if *ident == TokenKind::Identifier
@@ -307,8 +299,11 @@ impl<'instr> Parser<'instr> {
                             || name.lexeme.as_ref().unwrap()
                                 == self.peek().lexeme.as_ref().unwrap() =>
                     {
-                        self.only_advance()?;
-                        DataTypes::Struct
+                        fields_types.push((
+                            self.advance()?.lexeme.clone().unwrap(),
+                            DataTypes::Struct,
+                            field_position,
+                        ))
                     }
                     _ => {
                         return Err(ThrushError::Error(
@@ -322,10 +317,7 @@ impl<'instr> Parser<'instr> {
                     }
                 };
 
-                fields_types.push((field_type, field_position));
-
                 field_position += 1;
-
                 continue;
             }
 
@@ -375,7 +367,7 @@ impl<'instr> Parser<'instr> {
             line,
         )?;
 
-        let mut fields: StructFieldsParser = Vec::new();
+        let mut fields: StructFields = Vec::new();
         let mut field_index: u32 = 0;
 
         while self.peek().kind != TokenKind::RBrace {
@@ -384,7 +376,7 @@ impl<'instr> Parser<'instr> {
             }
 
             if self.match_token(TokenKind::Identifier)? {
-                let field_name: String = self.previous().lexeme.clone().unwrap();
+                let mut field_name: String = self.previous().lexeme.clone().unwrap();
 
                 if field_index as usize >= struct_found.len() {
                     return Err(ThrushError::Error(
@@ -396,7 +388,7 @@ impl<'instr> Parser<'instr> {
 
                 if !struct_found.contains_key(&field_name) {
                     return Err(ThrushError::Error(
-                        String::from("Field name not found"),
+                        String::from("Syntax error"),
                         String::from("Write valid field name in the struct initialization."),
                         line,
                     ));
@@ -417,6 +409,10 @@ impl<'instr> Parser<'instr> {
                     Some(&instruction),
                     line,
                 );
+
+                if *target_type == DataTypes::Struct {
+                    field_name = self.get_struct_type_from_initializer(&instruction);
+                }
 
                 fields.push((field_name, instruction, *target_type, field_index));
 
@@ -897,11 +893,11 @@ impl<'instr> Parser<'instr> {
     fn build_block(
         &mut self,
         with_instrs: &mut [Instruction<'instr>],
-        begin_scope: bool,
+        build_begin_scope: bool,
     ) -> Result<Instruction<'instr>, ThrushError> {
         self.only_advance()?;
 
-        if begin_scope {
+        if build_begin_scope {
             self.parser_objects.begin_local_scope();
         }
 
@@ -917,7 +913,8 @@ impl<'instr> Parser<'instr> {
 
             if instr.is_return() {
                 if let Some(name) = instr.return_with_ptr() {
-                    self.parser_objects.modify_object_deallocation(name, true);
+                    self.parser_objects
+                        .modify_object_deallocation(self.scope, name, true);
                 }
 
                 let deallocators: Vec<Instruction<'_>> =
@@ -1247,6 +1244,8 @@ impl<'instr> Parser<'instr> {
             let left_type: DataTypes = instr.get_data_type_recursive();
             let right_type: DataTypes = right.get_data_type_recursive();
 
+            type_checking::check_binary_instr(op, &left_type, &right_type, self.previous().line)?;
+
             let kind: DataTypes = if left_type.is_integer_type() && right_type.is_integer_type() {
                 left_type.calculate_integer_datatype(right_type)
             } else if left_type.is_float_type() && right_type.is_float_type() {
@@ -1254,8 +1253,6 @@ impl<'instr> Parser<'instr> {
             } else {
                 self.at_typed_variable
             };
-
-            type_checking::check_binary_instr(op, &left_type, &right_type, self.previous().line)?;
 
             instr = Instruction::BinaryOp {
                 left: Box::from(instr),
@@ -1278,6 +1275,8 @@ impl<'instr> Parser<'instr> {
             let left_type: DataTypes = instr.get_data_type_recursive();
             let right_type: DataTypes = right.get_data_type_recursive();
 
+            type_checking::check_binary_instr(op, &left_type, &right_type, self.previous().line)?;
+
             let kind: DataTypes = if left_type.is_integer_type() && right_type.is_integer_type() {
                 left_type.calculate_integer_datatype(right_type)
             } else if left_type.is_float_type() && right_type.is_float_type() {
@@ -1285,8 +1284,6 @@ impl<'instr> Parser<'instr> {
             } else {
                 self.at_typed_variable
             };
-
-            type_checking::check_binary_instr(op, &left_type, &right_type, self.previous().line)?;
 
             instr = Instruction::BinaryOp {
                 left: Box::from(instr),
@@ -1398,9 +1395,11 @@ impl<'instr> Parser<'instr> {
                     kind,
                 });
             }
-            TokenKind::Str => {
-                Instruction::Str(self.advance()?.lexeme.as_ref().unwrap().to_string())
+            TokenKind::NullPtr => {
+                self.only_advance()?;
+                Instruction::NullPtr
             }
+            TokenKind::Str => Instruction::Str(self.advance()?.lexeme.clone().unwrap()),
             TokenKind::Char => {
                 Instruction::Char(self.advance()?.lexeme.as_ref().unwrap().as_bytes()[0])
             }
@@ -1647,7 +1646,7 @@ impl<'instr> Parser<'instr> {
         }
     }
 
-    fn start_predeclaration(&mut self) {
+    fn predefine(&mut self) {
         let mut declarations: Vec<(usize, TokenKind)> = Vec::new();
 
         for (pos, token) in self.tokens.iter().enumerate() {
@@ -1662,7 +1661,7 @@ impl<'instr> Parser<'instr> {
             .iter()
             .filter(|(_, kind)| kind == &TokenKind::Struct)
             .for_each(|(pos, _)| {
-                let _ = self.predeclare_struct(*pos);
+                let _ = self.predefine_struct(*pos);
                 self.current = 0;
             });
 
@@ -1670,12 +1669,12 @@ impl<'instr> Parser<'instr> {
             .iter()
             .filter(|(_, kind)| *kind == TokenKind::Fn)
             .for_each(|(pos, _)| {
-                let _ = self.predeclare_function(*pos);
+                let _ = self.predefine_function(*pos);
                 self.current = 0;
             });
     }
 
-    fn predeclare_struct(&mut self, position: usize) -> Result<(), ThrushError> {
+    fn predefine_struct(&mut self, position: usize) -> Result<(), ThrushError> {
         self.current = position;
 
         if self.scope != 0 {
@@ -1792,7 +1791,7 @@ impl<'instr> Parser<'instr> {
         Ok(())
     }
 
-    fn predeclare_function(&mut self, position: usize) -> Result<(), ThrushError> {
+    fn predefine_function(&mut self, position: usize) -> Result<(), ThrushError> {
         self.current = position;
 
         if self.scope != 0 {
@@ -1946,6 +1945,21 @@ impl<'instr> Parser<'instr> {
 
 
     ########################################################################*/
+
+    fn get_struct_type_from_initializer(&self, instruction: &Instruction) -> String {
+        if let Instruction::RefVar { struct_type, .. } = instruction {
+            let mut cloned_struct_type: String = String::with_capacity(struct_type.len());
+            cloned_struct_type.clone_from(struct_type);
+
+            return cloned_struct_type;
+        }
+
+        if let Instruction::NullPtr = instruction {
+            return String::new();
+        }
+
+        unreachable!()
+    }
 
     fn throw_if_is_struct_initializer(
         &self,

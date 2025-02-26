@@ -1,7 +1,7 @@
 use {
     super::{
-        super::super::frontend::lexer::DataTypes, generation, impls::BasicValueEnumExt,
-        objects::CompilerObjects, types::Call, utils, Instruction,
+        super::super::frontend::lexer::DataTypes, generation, objects::CompilerObjects,
+        types::Call, utils, Instruction,
     },
     inkwell::{
         builder::Builder,
@@ -27,29 +27,33 @@ pub fn build_call<'ctx>(
         return build_sizeof(context, call, compiler_objects);
     }
 
-    let called_function: FunctionValue = compiler_objects.find_and_get_function(call_name).unwrap();
+    let function: (FunctionValue<'ctx>, &'ctx [Instruction<'ctx>]) =
+        compiler_objects.get_function(call_name).unwrap();
+
+    let called_function_arguments: &[Instruction] = function.1;
+    let called_function: FunctionValue = function.0;
 
     let mut compiled_args: Vec<BasicMetadataValueEnum> = Vec::with_capacity(call_args.len());
 
-    call_args.iter().enumerate().for_each(|instr| {
-        let arg: Option<DataTypes> = called_function
-            .get_nth_param(instr.0 as u32)
-            .map(|arg| arg.get_data_type(context));
+    call_args.iter().enumerate().for_each(|instruction| {
+        let casting_target: Option<DataTypes> = called_function_arguments
+            .get(instruction.0)
+            .map(|arg| arg.get_data_type());
 
         compiled_args.push(
             generation::build_basic_value_enum(
                 module,
                 builder,
                 context,
-                instr.1,
-                arg,
+                instruction.1,
+                casting_target,
                 compiler_objects,
             )
             .into(),
         );
     });
 
-    if *call_type != DataTypes::Void {
+    if !call_type.is_void_type() {
         Some(
             builder
                 .build_call(called_function, &compiled_args, "")
@@ -74,8 +78,7 @@ fn build_sizeof<'ctx>(
     let var_value: &Instruction<'ctx> = &call.2[0];
 
     if let Instruction::RefVar { name, .. } = var_value {
-        let ptr: PointerValue<'ctx> = compiler_objects.find_and_get(name).unwrap();
-
+        let ptr: PointerValue<'ctx> = compiler_objects.get_local(name).unwrap();
         return Some(ptr.get_type().size_of().into());
     }
 

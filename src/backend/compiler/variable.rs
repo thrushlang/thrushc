@@ -100,7 +100,7 @@ pub fn compile_mut<'ctx>(
     let var_name: &str = variable.0;
     let var_type: &DataTypes = variable.1;
 
-    let variable_ptr: PointerValue<'ctx> = compiler_objects.find_and_get(var_name).unwrap();
+    let variable_ptr: PointerValue<'ctx> = compiler_objects.get_local(var_name).unwrap();
 
     if var_type.is_integer_type() {
         compile_integer_var(
@@ -132,29 +132,8 @@ fn compile_ptr_var<'ctx>(
     let var_name: &str = variable.0;
     let var_value: &Instruction<'ctx> = variable.2;
 
-    if let Instruction::Call {
-        name: call_name,
-        args: call_arguments,
-        kind: call_type,
-        ..
-    } = var_value
-    {
-        let compiled_call: PointerValue<'_> = call::build_call(
-            module,
-            builder,
-            context,
-            (call_name, call_type, call_arguments),
-            compiler_objects,
-        )
-        .unwrap()
-        .into_pointer_value();
-
-        compiler_objects.insert(var_name.to_string(), compiled_call);
-        return compiled_call.into();
-    }
-
-    if let Instruction::Str(_) = var_value {
-        let compiled_str = generation::build_basic_value_enum(
+    if let Instruction::NullPtr = var_value {
+        let compiled_str: PointerValue = generation::build_basic_value_enum(
             module,
             builder,
             context,
@@ -164,7 +143,44 @@ fn compile_ptr_var<'ctx>(
         )
         .into_pointer_value();
 
-        compiler_objects.insert(var_name.to_string(), compiled_str);
+        compiler_objects.insert(var_name, compiled_str);
+
+        return compiled_str.into();
+    }
+
+    if let Instruction::Call {
+        name: call_name,
+        args: call_arguments,
+        kind: call_type,
+        ..
+    } = var_value
+    {
+        let compiled_call: PointerValue = call::build_call(
+            module,
+            builder,
+            context,
+            (call_name, call_type, call_arguments),
+            compiler_objects,
+        )
+        .unwrap()
+        .into_pointer_value();
+
+        compiler_objects.insert(var_name, compiled_call);
+        return compiled_call.into();
+    }
+
+    if let Instruction::Str(_) = var_value {
+        let compiled_str: PointerValue = generation::build_basic_value_enum(
+            module,
+            builder,
+            context,
+            var_value,
+            None,
+            compiler_objects,
+        )
+        .into_pointer_value();
+
+        compiler_objects.insert(var_name, compiled_str);
 
         return compiled_str.into();
     }
@@ -185,7 +201,7 @@ fn compile_struct_var<'ctx>(
 
     if let Instruction::InitStruct { fields, .. } = var_value {
         fields.iter().for_each(|field| {
-            let compiled_field: BasicValueEnum<'_> = generation::build_basic_value_enum(
+            let compiled_field: BasicValueEnum = generation::build_basic_value_enum(
                 module,
                 builder,
                 context,
@@ -208,18 +224,17 @@ fn compile_struct_var<'ctx>(
                 .unwrap();
         });
 
-        compiler_objects.insert(var_name.to_string(), ptr);
+        compiler_objects.insert(var_name, ptr);
 
         return ptr.into();
     }
 
     if let Instruction::RefVar { name, .. } = var_value {
-        let original_ptr: PointerValue<'ctx> = compiler_objects.find_and_get(name).unwrap();
+        let original_ptr: PointerValue<'ctx> = compiler_objects.get_local(name).unwrap();
 
         builder.build_store(ptr, original_ptr).unwrap();
 
-        // compiler_objects.insert_struct(var_name, fields);
-        compiler_objects.insert(var_name.to_string(), ptr);
+        compiler_objects.insert(var_name, ptr);
 
         return ptr.into();
     }
@@ -247,12 +262,12 @@ fn compile_struct_var<'ctx>(
             var_value.build_struct_type(context, None, compiler_objects);
 
         compiler_objects
-            .get_struct_fields(struct_name)
+            .get_struct(struct_name)
             .iter()
-            .filter(|field| field.0.is_ptr_heaped())
+            .filter(|field| field.1.is_ptr_heaped())
             .for_each(|field| {
                 let field_in_struct: PointerValue<'ctx> = builder
-                    .build_struct_gep(struct_type, compiled_value, field.1, "")
+                    .build_struct_gep(struct_type, compiled_value, field.2, "")
                     .unwrap();
 
                 let loaded_field: PointerValue<'ctx> = builder
@@ -265,7 +280,7 @@ fn compile_struct_var<'ctx>(
 
         builder.build_free(compiled_value).unwrap();
 
-        compiler_objects.insert(var_name.to_string(), ptr);
+        compiler_objects.insert(var_name, ptr);
 
         return ptr.into();
     }
@@ -277,7 +292,7 @@ fn compile_str_var<'ctx>(
     module: &Module<'ctx>,
     builder: &Builder<'ctx>,
     context: &'ctx Context,
-    name: &str,
+    name: &'ctx str,
     value: &'ctx Instruction<'ctx>,
     compiler_objects: &mut CompilerObjects<'ctx>,
 ) -> BasicValueEnum<'ctx> {
@@ -292,7 +307,7 @@ fn compile_str_var<'ctx>(
         )
         .into_pointer_value();
 
-        compiler_objects.insert(name.to_string(), compiled_str);
+        compiler_objects.insert(name, compiled_str);
 
         return compiled_str.into();
     }
@@ -308,7 +323,7 @@ fn compile_str_var<'ctx>(
         )
         .into_pointer_value();
 
-        compiler_objects.insert(name.to_string(), compiled_refvar);
+        compiler_objects.insert(name, compiled_refvar);
         return compiled_refvar.into();
     }
 
@@ -329,7 +344,7 @@ fn compile_str_var<'ctx>(
         .unwrap()
         .into_pointer_value();
 
-        compiler_objects.insert(name.to_string(), compiled_call);
+        compiler_objects.insert(name, compiled_call);
 
         return compiled_call.into();
     }
@@ -354,7 +369,7 @@ fn compile_integer_var<'ctx>(
             .build_store(ptr, utils::build_const_integer(context, var_type, 0, false))
             .unwrap();
 
-        compiler_objects.insert(var_name.to_string(), ptr);
+        compiler_objects.insert(var_name, ptr);
 
         return ptr.into();
     }
@@ -367,7 +382,7 @@ fn compile_integer_var<'ctx>(
             )
             .unwrap();
 
-        compiler_objects.insert(var_name.to_string(), ptr);
+        compiler_objects.insert(var_name, ptr);
 
         return ptr.into();
     }
@@ -380,7 +395,7 @@ fn compile_integer_var<'ctx>(
             )
             .unwrap();
 
-        compiler_objects.insert(var_name.to_string(), ptr);
+        compiler_objects.insert(var_name, ptr);
 
         return ptr.into();
     }
@@ -391,7 +406,7 @@ fn compile_integer_var<'ctx>(
         ..
     } = var_value
     {
-        let var: PointerValue<'ctx> = compiler_objects.find_and_get(refvar_name).unwrap();
+        let var: PointerValue<'ctx> = compiler_objects.get_local(refvar_name).unwrap();
 
         let load: BasicValueEnum<'_> = builder
             .build_load(
@@ -407,7 +422,7 @@ fn compile_integer_var<'ctx>(
             builder.build_store(ptr, load).unwrap();
         }
 
-        compiler_objects.insert(var_name.to_string(), ptr);
+        compiler_objects.insert(var_name, ptr);
 
         return ptr.into();
     }
@@ -426,7 +441,7 @@ fn compile_integer_var<'ctx>(
 
         builder.build_store(ptr, result.into_int_value()).unwrap();
 
-        compiler_objects.insert(var_name.to_string(), ptr);
+        compiler_objects.insert(var_name, ptr);
 
         return ptr.into();
     }
@@ -453,7 +468,7 @@ fn compile_integer_var<'ctx>(
             builder.build_store(ptr, result).unwrap();
         };
 
-        compiler_objects.insert(var_name.to_string(), ptr);
+        compiler_objects.insert(var_name, ptr);
 
         return ptr.into();
     }
@@ -464,7 +479,7 @@ fn compile_integer_var<'ctx>(
 
         builder.build_store(ptr, result).unwrap();
 
-        compiler_objects.insert(var_name.to_string(), ptr);
+        compiler_objects.insert(var_name, ptr);
 
         return ptr.into();
     }
@@ -504,7 +519,7 @@ fn compile_float_var<'ctx>(
             )
             .unwrap();
 
-        compiler_objects.insert(var_name.to_string(), ptr);
+        compiler_objects.insert(var_name, ptr);
 
         return ptr.into();
     }
@@ -517,7 +532,7 @@ fn compile_float_var<'ctx>(
             )
             .unwrap();
 
-        compiler_objects.insert(var_name.to_string(), ptr);
+        compiler_objects.insert(var_name, ptr);
 
         return ptr.into();
     }
@@ -528,7 +543,7 @@ fn compile_float_var<'ctx>(
         ..
     } = var_value
     {
-        let var: PointerValue<'ctx> = compiler_objects.find_and_get(name_refvar).unwrap();
+        let var: PointerValue<'ctx> = compiler_objects.get_local(name_refvar).unwrap();
 
         let load = builder
             .build_load(
@@ -551,7 +566,7 @@ fn compile_float_var<'ctx>(
             builder.build_store(ptr, load).unwrap();
         }
 
-        compiler_objects.insert(var_name.to_string(), ptr);
+        compiler_objects.insert(var_name, ptr);
 
         return ptr.into();
     }
@@ -570,7 +585,7 @@ fn compile_float_var<'ctx>(
 
         builder.build_store(ptr, result).unwrap();
 
-        compiler_objects.insert(var_name.to_string(), ptr);
+        compiler_objects.insert(var_name, ptr);
 
         return ptr.into();
     }
@@ -604,7 +619,7 @@ fn compile_boolean_var<'ctx>(
             .build_store(ptr, utils::build_const_integer(context, var_type, 0, false))
             .unwrap();
 
-        compiler_objects.insert(var_name.to_string(), ptr);
+        compiler_objects.insert(var_name, ptr);
 
         return ptr.into();
     }
@@ -617,7 +632,7 @@ fn compile_boolean_var<'ctx>(
             )
             .unwrap();
 
-        compiler_objects.insert(var_name.to_string(), ptr);
+        compiler_objects.insert(var_name, ptr);
 
         return ptr.into();
     }
@@ -628,7 +643,7 @@ fn compile_boolean_var<'ctx>(
         ..
     } = var_value
     {
-        let var: PointerValue<'ctx> = compiler_objects.find_and_get(name_refvar).unwrap();
+        let var: PointerValue<'ctx> = compiler_objects.get_local(name_refvar).unwrap();
 
         let load = builder
             .build_load(
@@ -651,7 +666,7 @@ fn compile_boolean_var<'ctx>(
             builder.build_store(ptr, load).unwrap();
         }
 
-        compiler_objects.insert(var_name.to_string(), ptr);
+        compiler_objects.insert(var_name, ptr);
 
         return ptr.into();
     }
@@ -670,7 +685,7 @@ fn compile_boolean_var<'ctx>(
 
         builder.build_store(ptr, result).unwrap();
 
-        compiler_objects.insert(var_name.to_string(), ptr);
+        compiler_objects.insert(var_name, ptr);
 
         return ptr.into();
     }
