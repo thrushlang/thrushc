@@ -74,8 +74,10 @@ impl<'instr> ParserObjects<'instr> {
     pub fn get_object(
         &mut self,
         name: &'instr str,
-        line: usize,
+        location: (usize, (usize, usize)),
     ) -> Result<FoundObject, ThrushError> {
+        // FIX THE SAME VARIABLE IN THE SCOPE ISSUE FOR STRUCTURE INSTRUCTION.
+
         for scope in self.locals.iter_mut().rev() {
             if scope.contains_key(name) {
                 // DataTypes, bool <- (is_null), bool <- (is_freeded), usize <- (number of references)
@@ -121,14 +123,15 @@ impl<'instr> ParserObjects<'instr> {
         Err(ThrushError::Error(
             String::from("Object don't Found"),
             format!("Object \"{}\" is don't in declared.", name),
-            line,
+            location.0,
+            Some(location.1),
         ))
     }
 
     pub fn get_struct(
         &self,
         name: &str,
-        line: usize,
+        location: (usize, (usize, usize)),
     ) -> Result<HashMap<String, DataTypes>, ThrushError> {
         if self.structs.contains_key(name) {
             let mut struct_fields_clone: HashMap<String, DataTypes> = HashMap::new();
@@ -141,7 +144,8 @@ impl<'instr> ParserObjects<'instr> {
         Err(ThrushError::Error(
             String::from("Struct don't found"),
             format!("Struct with name \"{}\" not found.", name),
-            line,
+            location.0,
+            Some(location.1),
         ))
     }
 

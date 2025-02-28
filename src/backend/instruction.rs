@@ -176,7 +176,11 @@ impl<'ctx> Instruction<'ctx> {
         unreachable!()
     }
 
-    pub fn is_chained(&self, other: &Instruction, line: usize) -> Result<(), ThrushError> {
+    pub fn is_chained(
+        &self,
+        other: &Instruction,
+        location: (usize, (usize, usize)),
+    ) -> Result<(), ThrushError> {
         if let (Instruction::BinaryOp { .. }, Instruction::BinaryOp { .. }) = (self, other) {
             return Ok(());
         }
@@ -214,7 +218,8 @@ impl<'ctx> Instruction<'ctx> {
         Err(ThrushError::Error(
             String::from("Type Checking"),
             String::from("Operators cannot be chained. Use logical gates as \"&&\" or \"||\"."),
-            line,
+            location.0,
+            Some(location.1),
         ))
     }
 

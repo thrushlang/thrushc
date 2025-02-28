@@ -127,6 +127,7 @@ impl<'instr> Parser<'instr> {
                 String::from("Duplicated Entrypoint"),
                 String::from("The language not support two entrypoints, remove one."),
                 line,
+                None,
             ));
         }
 
@@ -134,14 +135,12 @@ impl<'instr> Parser<'instr> {
             TokenKind::LParen,
             String::from("Syntax error"),
             String::from("Expected '('."),
-            line,
         )?;
 
         self.consume(
             TokenKind::RParen,
             String::from("Syntax error"),
             String::from("Expected ')'."),
-            line,
         )?;
 
         if !self.check_type(TokenKind::LBrace) {
@@ -149,6 +148,7 @@ impl<'instr> Parser<'instr> {
                 String::from("Syntax error"),
                 String::from("Expected '{'."),
                 line,
+                Some(self.peek().span),
             ));
         }
 
@@ -162,13 +162,16 @@ impl<'instr> Parser<'instr> {
     }
 
     fn build_if_elif_else(&mut self) -> Result<Instruction<'instr>, ThrushError> {
-        let line: usize = self.advance()?.line;
+        let if_keyword: &Token = self.advance()?;
+        let line: usize = if_keyword.line;
+        let span: (usize, usize) = if_keyword.span;
 
         if !self.inside_function {
             self.errors.push(ThrushError::Error(
                 String::from("Syntax error"),
                 String::from("The if-elif-else must go inside the a function."),
                 line,
+                Some(span),
             ));
         }
 
@@ -179,6 +182,7 @@ impl<'instr> Parser<'instr> {
                 String::from("Syntax error"),
                 String::from("Condition must be type boolean."),
                 line,
+                Some(span),
             ));
         }
 
@@ -187,12 +191,13 @@ impl<'instr> Parser<'instr> {
                 String::from("Syntax error"),
                 String::from("Expected '{'."),
                 line,
+                Some(self.peek().span),
             ));
         }
 
-        let if_body: Box<Instruction<'instr>> = Box::new(self.build_block(&mut [], true)?);
+        let if_body: Box<Instruction> = Box::new(self.build_block(&mut [], true)?);
 
-        let mut elfs: Option<Vec<Instruction<'instr>>> = None;
+        let mut elfs: Option<Vec<Instruction>> = None;
 
         if self.check_type(TokenKind::Elif) {
             elfs = Some(Vec::with_capacity(100));
@@ -208,6 +213,7 @@ impl<'instr> Parser<'instr> {
                     String::from("Syntax error"),
                     String::from("Condition must be type boolean."),
                     line,
+                    Some(self.peek().span),
                 ));
             }
 
@@ -216,6 +222,7 @@ impl<'instr> Parser<'instr> {
                     String::from("Syntax error"),
                     String::from("Expected '{'."),
                     line,
+                    Some(self.peek().span),
                 ));
             }
 
@@ -237,6 +244,7 @@ impl<'instr> Parser<'instr> {
                     String::from("Syntax error"),
                     String::from("Expected '{'."),
                     line,
+                    Some(self.peek().span),
                 ));
             }
 
@@ -262,16 +270,12 @@ impl<'instr> Parser<'instr> {
             TokenKind::Identifier,
             String::from("Syntax error"),
             String::from("Expected name for the struct."),
-            self.previous().line,
         )?;
-
-        let line: usize = name.line;
 
         self.consume(
             TokenKind::LBrace,
             String::from("Syntax error"),
             String::from("Expected '{'."),
-            line,
         )?;
 
         let mut fields_types: Vec<(String, DataTypes, u32)> = Vec::with_capacity(10);
@@ -284,6 +288,7 @@ impl<'instr> Parser<'instr> {
 
             if self.match_token(TokenKind::Identifier)? {
                 let line: usize = self.previous().line;
+                let span: (usize, usize) = self.previous().span;
 
                 match &self.peek().kind {
                     TokenKind::DataType(kind) => {
@@ -294,7 +299,7 @@ impl<'instr> Parser<'instr> {
                         if *ident == TokenKind::Identifier
                             && self
                                 .parser_objects
-                                .get_struct(self.peek().lexeme.as_ref().unwrap(), line)
+                                .get_struct(self.peek().lexeme.as_ref().unwrap(), (line, span))
                                 .is_ok()
                             || name.lexeme.as_ref().unwrap()
                                 == self.peek().lexeme.as_ref().unwrap() =>
@@ -313,6 +318,7 @@ impl<'instr> Parser<'instr> {
                                 self.peek().lexeme.as_ref().unwrap()
                             ),
                             line,
+                            Some(span),
                         ));
                     }
                 };
@@ -328,14 +334,12 @@ impl<'instr> Parser<'instr> {
             TokenKind::RBrace,
             String::from("Syntax error"),
             String::from("Expected '}'."),
-            line,
         )?;
 
         self.consume(
             TokenKind::SemiColon,
             String::from("Syntax error"),
             String::from("Expected ';'."),
-            line,
         )?;
 
         Ok(Instruction::Struct {
@@ -351,20 +355,19 @@ impl<'instr> Parser<'instr> {
             TokenKind::Identifier,
             String::from("Expected struct reference"),
             String::from("Write the struct name: \"new --> name <-- { ... }\"."),
-            self.previous().line,
         )?;
 
         let line: usize = name.line;
+        let span: (usize, usize) = name.span;
 
         let struct_found: HashMap<String, DataTypes> = self
             .parser_objects
-            .get_struct(name.lexeme.as_ref().unwrap(), line)?;
+            .get_struct(name.lexeme.as_ref().unwrap(), (line, span))?;
 
         self.consume(
             TokenKind::LBrace,
             String::from("Syntax error"),
             String::from("Expected '{'."),
-            line,
         )?;
 
         let mut fields: StructFields = Vec::new();
@@ -377,12 +380,14 @@ impl<'instr> Parser<'instr> {
 
             if self.match_token(TokenKind::Identifier)? {
                 let mut field_name: String = self.previous().lexeme.clone().unwrap();
+                let span: (usize, usize) = self.previous().span;
 
                 if field_index as usize >= struct_found.len() {
                     return Err(ThrushError::Error(
                         String::from("Too many fields in struct"),
                         String::from("There are more fields in the structure than normal, they must be the exact amount."),
                         line,
+                        Some(span)
                     ));
                 }
 
@@ -391,6 +396,7 @@ impl<'instr> Parser<'instr> {
                         String::from("Syntax error"),
                         String::from("Write valid field name in the struct initialization."),
                         line,
+                        Some(span),
                     ));
                 }
 
@@ -434,6 +440,7 @@ impl<'instr> Parser<'instr> {
                     fields_needed_size, fields_size
                 ),
                 line,
+                None,
             ));
         }
 
@@ -441,7 +448,6 @@ impl<'instr> Parser<'instr> {
             TokenKind::RBrace,
             String::from("Syntax error"),
             String::from("Expected '}'."),
-            line,
         )?;
 
         Ok(Instruction::InitStruct {
@@ -457,6 +463,7 @@ impl<'instr> Parser<'instr> {
                 String::from("Syntax error"),
                 String::from("The imports must go in the global scope."),
                 self.previous().line,
+                None,
             ));
         }
 
@@ -468,15 +475,13 @@ impl<'instr> Parser<'instr> {
             TokenKind::LParen,
             String::from("Syntax error"),
             String::from("Expected '('."),
-            line,
         )?;
 
         let path: &str = self
             .consume(
                 TokenKind::Str,
                 String::from("Syntax error"),
-                String::from("Expected a String literal for @import(\"PATH\")."),
-                line,
+                String::from("Expected a string literal for @import(\"PATH\")."),
             )?
             .lexeme
             .as_ref()
@@ -486,14 +491,12 @@ impl<'instr> Parser<'instr> {
             TokenKind::RParen,
             String::from("Syntax error"),
             String::from("Expected ')'."),
-            line,
         )?;
 
         self.consume(
             TokenKind::SemiColon,
             String::from("Syntax error"),
             String::from("Expected ';'."),
-            line,
         )?;
 
         let path_converted: &Path = Path::new(path);
@@ -507,6 +510,7 @@ impl<'instr> Parser<'instr> {
                     String::from("Import error"),
                     String::from("This module not exist in core library."),
                     line,
+                    None,
                 ));
                 return Ok(());
             }
@@ -542,7 +546,9 @@ impl<'instr> Parser<'instr> {
                     String::from("Import error"),
                     String::from("A path to directory is not able to import."),
                     line,
+                    None,
                 ));
+
                 return Ok(());
             }
 
@@ -551,7 +557,9 @@ impl<'instr> Parser<'instr> {
                     String::from("Import error"),
                     String::from("The file should contain a extension (*.th)."),
                     line,
+                    None,
                 ));
+
                 return Ok(());
             }
 
@@ -560,7 +568,9 @@ impl<'instr> Parser<'instr> {
                     String::from("Import error"),
                     String::from("Only files with extension (*.th) are allowed to been imported."),
                     line,
+                    None,
                 ));
+
                 return Ok(());
             }
 
@@ -569,7 +579,9 @@ impl<'instr> Parser<'instr> {
                     String::from("Import error"),
                     String::from("The file should contain a name."),
                     line,
+                    None,
                 ));
+
                 return Ok(());
             }
 
@@ -598,33 +610,29 @@ impl<'instr> Parser<'instr> {
             String::from("Import not found"),
             String::from("The import not found in the system or std or core library."),
             line,
+            None,
         ))
     }
 
     fn build_external_qualifier(&mut self) -> Result<Instruction<'instr>, ThrushError> {
         self.only_advance()?;
 
-        let line: usize = self.previous().line;
-
         self.consume(
             TokenKind::LParen,
             String::from("Syntax error"),
             String::from("Expected '('."),
-            line,
         )?;
 
         let name: &Token = self.consume(
             TokenKind::Str,
             String::from("Syntax error"),
             String::from("Expected a string literal for @extern(\"NAME\")."),
-            line,
         )?;
 
         self.consume(
             TokenKind::RParen,
             String::from("Syntax error"),
             String::from("Expected ')'."),
-            line,
         )?;
 
         let instr: Instruction<'instr> = match &self.peek().kind {
@@ -634,6 +642,7 @@ impl<'instr> Parser<'instr> {
                     String::from("Syntax error"),
                     format!("External qualifier is not applicable for \"{}\" .", what),
                     self.peek().line,
+                    Some(self.peek().span),
                 ))
             }
         };
@@ -648,22 +657,19 @@ impl<'instr> Parser<'instr> {
     fn build_for_loop(&mut self) -> Result<Instruction<'instr>, ThrushError> {
         self.only_advance()?;
 
-        let line: usize = self.previous().line;
+        let variable: Instruction = self.build_local_variable(false)?;
 
-        let variable: Instruction<'instr> = self.build_local_variable(false)?;
-
-        let cond: Instruction<'instr> = self.expression()?;
+        let cond: Instruction = self.expression()?;
 
         self.consume(
             TokenKind::SemiColon,
             String::from("Syntax error"),
             String::from("Expected ';'."),
-            line,
         )?;
 
-        let actions: Instruction<'instr> = self.expression()?;
+        let actions: Instruction = self.expression()?;
 
-        let mut variable_clone: Instruction<'instr> = variable.clone();
+        let mut variable_clone: Instruction = variable.clone();
 
         if let Instruction::Var {
             exist_only_comptime,
@@ -677,18 +683,18 @@ impl<'instr> Parser<'instr> {
             TokenKind::SemiColon,
             String::from("Syntax error"),
             String::from("Expected ';'."),
-            line,
         )?;
 
         if !self.check_type(TokenKind::LBrace) {
             return Err(ThrushError::Error(
                 String::from("Syntax error"),
                 String::from("Expected for loop body \"{ ... }\"."),
-                line,
+                self.peek().line,
+                Some(self.peek().span),
             ));
         }
 
-        let body: Instruction<'instr> = self.build_block(&mut [variable_clone], true)?;
+        let body: Instruction = self.build_block(&mut [variable_clone], true)?;
 
         Ok(Instruction::ForLoop {
             variable: Box::new(variable),
@@ -708,7 +714,6 @@ impl<'instr> Parser<'instr> {
             TokenKind::Identifier,
             String::from("Syntax error"),
             String::from("Expected name for the variable."),
-            self.previous().line,
         )?;
 
         let line: usize = name.line;
@@ -717,7 +722,6 @@ impl<'instr> Parser<'instr> {
             TokenKind::Colon,
             String::from("Syntax error"),
             String::from("Expected \":\"."),
-            line,
         )?;
 
         let kind: (DataTypes, String) = match &self.peek().kind {
@@ -729,7 +733,10 @@ impl<'instr> Parser<'instr> {
                 if *ident == TokenKind::Identifier
                     && self
                         .parser_objects
-                        .get_struct(self.peek().lexeme.as_ref().unwrap(), line)
+                        .get_struct(
+                            self.peek().lexeme.as_ref().unwrap(),
+                            (self.peek().line, self.peek().span),
+                        )
                         .is_ok() =>
             {
                 (DataTypes::Struct, self.advance()?.lexeme.clone().unwrap())
@@ -742,24 +749,28 @@ impl<'instr> Parser<'instr> {
                         self.peek().lexeme.as_ref().unwrap()
                     ),
                     line,
+                    Some(self.peek().span),
                 ));
             }
         };
 
-        if self.peek().kind == TokenKind::SemiColon && kind.0 == DataTypes::Void {
-            self.only_advance()?;
+        if self.check_type(TokenKind::SemiColon) && kind.0 == DataTypes::Void {
+            let previous: &Token = self.advance()?;
+
+            let line: usize = previous.line;
+            let span: (usize, usize) = previous.span;
 
             self.errors.push(ThrushError::Error(
                 String::from("Expected type"),
                 String::from("Expected explicit type."),
                 line,
+                Some(span),
             ));
-        } else if self.peek().kind == TokenKind::SemiColon {
+        } else if self.check_type(TokenKind::SemiColon) {
             self.consume(
                 TokenKind::SemiColon,
                 String::from("Syntax error"),
                 String::from("Expected ';'."),
-                line,
             )?;
 
             self.parser_objects.insert_new_local(
@@ -781,14 +792,14 @@ impl<'instr> Parser<'instr> {
             TokenKind::Eq,
             String::from("Syntax error"),
             String::from("Expected '='."),
-            line,
         )?;
 
         self.at_typed_variable = kind.0;
 
         let value: Instruction = self.expression()?;
 
-        self.check_possible_type_mismatch(kind.0, value.get_data_type(), Some(&value), name.line);
+        self.check_possible_type_mismatch(kind.0, value.get_data_type(), Some(&value), line);
+
         self.check_struct_type_mismatch(&kind.1, &value, line)?;
 
         self.parser_objects.insert_new_local(
@@ -809,7 +820,6 @@ impl<'instr> Parser<'instr> {
             TokenKind::SemiColon,
             String::from("Syntax error"),
             String::from("Expected ';'."),
-            line,
         )?;
 
         Ok(local_variable)
@@ -826,14 +836,13 @@ impl<'instr> Parser<'instr> {
                 String::from("Syntax error"),
                 format!("Public qualifier is not applicable for \"{}\".", what),
                 self.peek().line,
+                Some(self.peek().span),
             )),
         }
     }
 
     fn build_return(&mut self) -> Result<Instruction<'instr>, ThrushError> {
-        self.only_advance()?;
-
-        let line: usize = self.previous().line;
+        let line: usize = self.advance()?.line;
 
         if !self.inside_function {
             self.errors.push(ThrushError::Error(
@@ -842,6 +851,7 @@ impl<'instr> Parser<'instr> {
                     "Return statement outside of function body. Invoke this, in function body.",
                 ),
                 line,
+                None,
             ));
         }
 
@@ -850,7 +860,6 @@ impl<'instr> Parser<'instr> {
                 TokenKind::SemiColon,
                 String::from("Syntax error"),
                 String::from("Expected ';'."),
-                line,
             )?;
 
             self.check_possible_type_mismatch(
@@ -866,7 +875,7 @@ impl<'instr> Parser<'instr> {
             ));
         }
 
-        let value: Instruction<'instr> = self.expression()?;
+        let value: Instruction = self.expression()?;
 
         self.check_possible_type_mismatch(
             self.at_typed_function.0,
@@ -881,7 +890,6 @@ impl<'instr> Parser<'instr> {
             TokenKind::SemiColon,
             String::from("Syntax error"),
             String::from("Expected ';'."),
-            line,
         )?;
 
         Ok(Instruction::Return(
@@ -909,7 +917,7 @@ impl<'instr> Parser<'instr> {
         }
 
         while !self.match_token(TokenKind::RBrace)? {
-            let instr: Instruction<'instr> = self.parse()?;
+            let instr: Instruction = self.parse()?;
 
             if instr.is_return() {
                 if let Some(name) = instr.return_with_ptr() {
@@ -917,7 +925,7 @@ impl<'instr> Parser<'instr> {
                         .modify_object_deallocation(self.scope, name, true);
                 }
 
-                let deallocators: Vec<Instruction<'_>> =
+                let deallocators: Vec<Instruction> =
                     self.parser_objects.create_deallocators(self.scope);
 
                 stmts.extend(deallocators);
@@ -953,6 +961,7 @@ impl<'instr> Parser<'instr> {
                     "The functions must go in the global scope. Rewrite it in the global scope.",
                 ),
                 self.previous().line,
+                None,
             ));
         }
 
@@ -962,7 +971,6 @@ impl<'instr> Parser<'instr> {
             TokenKind::Identifier,
             String::from("Syntax error"),
             String::from("Expected name to the function."),
-            self.previous().line,
         )?;
 
         let line: usize = name.line;
@@ -975,10 +983,9 @@ impl<'instr> Parser<'instr> {
             TokenKind::LParen,
             String::from("Syntax error"),
             String::from("Expected '('."),
-            name.line,
         )?;
 
-        let mut params: Vec<Instruction<'instr>> = Vec::new();
+        let mut params: Vec<Instruction<'instr>> = Vec::with_capacity(10);
 
         self.parser_objects.begin_local_scope();
 
@@ -997,7 +1004,8 @@ impl<'instr> Parser<'instr> {
                 self.errors.push(ThrushError::Error(
                     String::from("Syntax error"),
                     String::from("Expected argument name."),
-                    line,
+                    self.peek().line,
+                    Some(self.peek().span),
                 ));
             }
 
@@ -1007,7 +1015,8 @@ impl<'instr> Parser<'instr> {
                 self.errors.push(ThrushError::Error(
                     String::from("Syntax error"),
                     String::from("Expected '::'."),
-                    line,
+                    self.peek().line,
+                    Some(self.peek().span),
                 ));
             }
 
@@ -1020,7 +1029,10 @@ impl<'instr> Parser<'instr> {
                     if *ident == TokenKind::Identifier
                         && self
                             .parser_objects
-                            .get_struct(self.peek().lexeme.as_ref().unwrap(), line)
+                            .get_struct(
+                                self.peek().lexeme.as_ref().unwrap(),
+                                (self.peek().line, self.peek().span),
+                            )
                             .is_ok() =>
                 {
                     (DataTypes::Struct, self.advance()?.lexeme.clone().unwrap())
@@ -1029,7 +1041,8 @@ impl<'instr> Parser<'instr> {
                     return Err(ThrushError::Error(
                         String::from("Undeterminated type"),
                         format!("Type \"{}\" not exist.", what),
-                        line,
+                        self.peek().line,
+                        Some(self.peek().span),
                     ));
                 }
             };
@@ -1054,7 +1067,6 @@ impl<'instr> Parser<'instr> {
             TokenKind::Colon,
             String::from("Syntax error"),
             String::from("Expected ':'."),
-            name.line,
         )?;
 
         let return_type: (DataTypes, String) = match &self.peek().kind {
@@ -1066,7 +1078,10 @@ impl<'instr> Parser<'instr> {
                 if *ident == TokenKind::Identifier
                     && self
                         .parser_objects
-                        .get_struct(self.peek().lexeme.as_ref().unwrap(), line)
+                        .get_struct(
+                            self.peek().lexeme.as_ref().unwrap(),
+                            (self.peek().line, self.peek().span),
+                        )
                         .is_ok() =>
             {
                 self.only_advance()?;
@@ -1076,7 +1091,8 @@ impl<'instr> Parser<'instr> {
                 return Err(ThrushError::Error(
                     String::from("Undeterminated type"),
                     format!("Type \"{}\" not exist.", what),
-                    line,
+                    self.peek().line,
+                    Some(self.peek().span),
                 ))
             }
         };
@@ -1096,7 +1112,6 @@ impl<'instr> Parser<'instr> {
                 TokenKind::SemiColon,
                 String::from("Syntax error"),
                 String::from("Expected ';'."),
-                name.line,
             )?;
 
             self.inside_function = false;
@@ -1124,7 +1139,6 @@ impl<'instr> Parser<'instr> {
 
     fn expression(&mut self) -> Result<Instruction<'instr>, ThrushError> {
         let instr: Instruction = self.or()?;
-
         Ok(instr)
     }
 
@@ -1133,13 +1147,13 @@ impl<'instr> Parser<'instr> {
 
         while self.match_token(TokenKind::Or)? {
             let op: &TokenKind = &self.previous().kind;
-            let right: Instruction<'instr> = self.and()?;
+            let right: Instruction = self.and()?;
 
             type_checking::check_binary_instr(
                 op,
                 &instr.get_data_type(),
                 &right.get_data_type(),
-                self.previous().line,
+                (self.previous().line, self.previous().span),
             )?;
 
             instr = Instruction::BinaryOp {
@@ -1154,17 +1168,17 @@ impl<'instr> Parser<'instr> {
     }
 
     fn and(&mut self) -> Result<Instruction<'instr>, ThrushError> {
-        let mut instr: Instruction<'_> = self.equality()?;
+        let mut instr: Instruction = self.equality()?;
 
         while self.match_token(TokenKind::And)? {
             let op: &TokenKind = &self.previous().kind;
-            let right: Instruction<'_> = self.equality()?;
+            let right: Instruction = self.equality()?;
 
             type_checking::check_binary_instr(
                 op,
                 &instr.get_data_type(),
                 &right.get_data_type(),
-                self.previous().line,
+                (self.previous().line, self.previous().span),
             )?;
 
             instr = Instruction::BinaryOp {
@@ -1179,19 +1193,23 @@ impl<'instr> Parser<'instr> {
     }
 
     fn equality(&mut self) -> Result<Instruction<'instr>, ThrushError> {
-        let mut instr: Instruction<'_> = self.comparison()?;
+        let mut instr: Instruction = self.comparison()?;
 
         while self.match_token(TokenKind::BangEq)? || self.match_token(TokenKind::EqEq)? {
             let op: &TokenKind = &self.previous().kind;
-            let line: usize = self.previous().line;
-            let right: Instruction<'_> = self.comparison()?;
+            let right: Instruction = self.comparison()?;
 
             let left_type: DataTypes = instr.get_data_type_recursive();
             let right_type: DataTypes = right.get_data_type_recursive();
 
-            type_checking::check_binary_instr(op, &left_type, &right_type, self.previous().line)?;
+            type_checking::check_binary_instr(
+                op,
+                &left_type,
+                &right_type,
+                (self.previous().line, self.previous().span),
+            )?;
 
-            instr.is_chained(&right, line)?;
+            instr.is_chained(&right, (self.previous().line, self.previous().span))?;
 
             instr = Instruction::BinaryOp {
                 left: Box::from(instr),
@@ -1205,7 +1223,7 @@ impl<'instr> Parser<'instr> {
     }
 
     fn comparison(&mut self) -> Result<Instruction<'instr>, ThrushError> {
-        let mut instr: Instruction<'_> = self.term()?;
+        let mut instr: Instruction = self.term()?;
 
         while self.match_token(TokenKind::Greater)?
             || self.match_token(TokenKind::GreaterEq)?
@@ -1213,15 +1231,19 @@ impl<'instr> Parser<'instr> {
             || self.match_token(TokenKind::LessEq)?
         {
             let op: &TokenKind = &self.previous().kind;
-            let line: usize = self.previous().line;
-            let right: Instruction<'_> = self.term()?;
+            let right: Instruction = self.term()?;
 
             let left_type: DataTypes = instr.get_data_type_recursive();
             let right_type: DataTypes = right.get_data_type_recursive();
 
-            type_checking::check_binary_instr(op, &left_type, &right_type, self.previous().line)?;
+            type_checking::check_binary_instr(
+                op,
+                &left_type,
+                &right_type,
+                (self.previous().line, self.previous().span),
+            )?;
 
-            instr.is_chained(&right, line)?;
+            instr.is_chained(&right, (self.previous().line, self.previous().span))?;
 
             instr = Instruction::BinaryOp {
                 left: Box::from(instr),
@@ -1238,13 +1260,18 @@ impl<'instr> Parser<'instr> {
         let mut instr: Instruction = self.factor()?;
 
         while self.match_token(TokenKind::Plus)? || self.match_token(TokenKind::Minus)? {
-            let op: &TokenKind = &self.previous().kind;
+            let op: &Token = self.previous();
             let right: Instruction = self.factor()?;
 
             let left_type: DataTypes = instr.get_data_type_recursive();
             let right_type: DataTypes = right.get_data_type_recursive();
 
-            type_checking::check_binary_instr(op, &left_type, &right_type, self.previous().line)?;
+            type_checking::check_binary_instr(
+                &op.kind,
+                &left_type,
+                &right_type,
+                (op.line, op.span),
+            )?;
 
             let kind: DataTypes = if left_type.is_integer_type() && right_type.is_integer_type() {
                 left_type.calculate_integer_datatype(right_type)
@@ -1256,7 +1283,7 @@ impl<'instr> Parser<'instr> {
 
             instr = Instruction::BinaryOp {
                 left: Box::from(instr),
-                op,
+                op: &op.kind,
                 right: Box::from(right),
                 kind,
             };
@@ -1275,7 +1302,12 @@ impl<'instr> Parser<'instr> {
             let left_type: DataTypes = instr.get_data_type_recursive();
             let right_type: DataTypes = right.get_data_type_recursive();
 
-            type_checking::check_binary_instr(op, &left_type, &right_type, self.previous().line)?;
+            type_checking::check_binary_instr(
+                op,
+                &left_type,
+                &right_type,
+                (self.previous().line, self.previous().span),
+            )?;
 
             let kind: DataTypes = if left_type.is_integer_type() && right_type.is_integer_type() {
                 left_type.calculate_integer_datatype(right_type)
@@ -1301,7 +1333,11 @@ impl<'instr> Parser<'instr> {
             let op: &TokenKind = &self.previous().kind;
             let value: Instruction = self.primary()?;
 
-            type_checking::check_unary_instr(op, &value.get_data_type(), self.previous().line)?;
+            type_checking::check_unary_instr(
+                op,
+                &value.get_data_type(),
+                (self.previous().line, self.previous().span),
+            )?;
 
             return Ok(Instruction::UnaryOp {
                 op,
@@ -1331,7 +1367,11 @@ impl<'instr> Parser<'instr> {
 
             let value_type: &DataTypes = &value.get_data_type();
 
-            type_checking::check_unary_instr(op, value_type, self.previous().line)?;
+            type_checking::check_unary_instr(
+                op,
+                value_type,
+                (self.previous().line, self.previous().span),
+            )?;
 
             return Ok(Instruction::UnaryOp {
                 op,
@@ -1349,12 +1389,14 @@ impl<'instr> Parser<'instr> {
         let primary: Instruction = match &self.peek().kind {
             TokenKind::New => self.build_struct_initializer()?,
             TokenKind::DataType(dt) => {
-                let line: usize = self.advance()?.line;
+                let datatype: &Token = self.advance()?;
+                let line: usize = datatype.line;
+                let span: (usize, usize) = datatype.span;
 
                 match dt {
                     dt if dt.is_integer_type() => Instruction::DataTypes(*dt),
                     dt if dt.is_float_type() => Instruction::DataTypes(*dt),
-                    dt if dt == &DataTypes::Bool => Instruction::DataTypes(*dt),
+                    dt if dt.is_bool_type() => Instruction::DataTypes(*dt),
                     dt if dt == &DataTypes::Ptr => Instruction::DataTypes(*dt),
                     what_heck_dt => {
                         return Err(ThrushError::Error(
@@ -1364,22 +1406,26 @@ impl<'instr> Parser<'instr> {
                                 what_heck_dt
                             ),
                             line,
+                            Some(span),
                         ))
                     }
                 }
             }
             TokenKind::LParen => {
-                let line: usize = self.advance()?.line;
+                let lparen: &Token = self.advance()?;
+                let lparen_line: usize = lparen.line;
+
                 let instr: Instruction = self.expression()?;
                 let kind: DataTypes = instr.get_data_type();
 
                 if !instr.is_binary() && !instr.is_group() {
-                    self.errors.push(ThrushError::Error(
+                    return Err(ThrushError::Error(
                         String::from("Syntax error"),
                         String::from(
                             "Group the expressions \"(...)\" is only allowed if contain binary expressions or other group expressions.",
                         ),
-                        line,
+                        lparen_line,
+                        Some((lparen.span.0, self.peek().span.1))
                     ));
                 }
 
@@ -1387,7 +1433,6 @@ impl<'instr> Parser<'instr> {
                     TokenKind::RParen,
                     String::from("Syntax error"),
                     String::from("Expected ')'."),
-                    line,
                 )?;
 
                 return Ok(Instruction::Group {
@@ -1399,9 +1444,17 @@ impl<'instr> Parser<'instr> {
                 self.only_advance()?;
                 Instruction::NullPtr
             }
-            TokenKind::Str => Instruction::Str(self.advance()?.lexeme.clone().unwrap()),
+            TokenKind::Str => {
+                let str: &Token = self.advance()?;
+                let mut str_buffered: String = String::with_capacity(256);
+
+                str_buffered.clone_from(str.lexeme.as_ref().unwrap());
+
+                Instruction::Str(str_buffered)
+            }
             TokenKind::Char => {
-                Instruction::Char(self.advance()?.lexeme.as_ref().unwrap().as_bytes()[0])
+                let char: &Token = self.advance()?;
+                Instruction::Char(char.lexeme.as_ref().unwrap().as_bytes()[0])
             }
             kind => match kind {
                 TokenKind::Integer(kind, num, is_signed) => {
@@ -1413,17 +1466,15 @@ impl<'instr> Parser<'instr> {
                     Instruction::Float(*kind, *num, *is_signed)
                 }
                 TokenKind::Identifier => {
-                    let identifier_lexeme: Option<&String> = self.peek().lexeme.as_ref();
-                    let identifier_type: &TokenKind = &self.peek().kind;
-                    let line: usize = self.peek().line;
+                    let object_identifier_token: &Token = self.advance()?;
+                    let object_name: &str = object_identifier_token.lexeme.as_ref().unwrap();
+                    let object_type: TokenKind = object_identifier_token.kind;
+                    let object_location: (usize, (usize, usize)) =
+                        (object_identifier_token.line, object_identifier_token.span);
 
                     let object: FoundObject = self
                         .parser_objects
-                        .get_object(identifier_lexeme.unwrap(), line)?;
-
-                    let name: &str = identifier_lexeme.unwrap();
-
-                    self.only_advance()?;
+                        .get_object(object_name, object_location)?;
 
                     if self.match_token(TokenKind::Eq)? {
                         let expr: Instruction = self.expression()?;
@@ -1432,45 +1483,45 @@ impl<'instr> Parser<'instr> {
                             object.0,
                             expr.get_data_type(),
                             Some(&expr),
-                            line,
+                            self.previous().line,
                         );
 
                         self.consume(
                             TokenKind::SemiColon,
                             String::from("Syntax error"),
                             String::from("Expected ';'."),
-                            line,
                         )?;
 
                         self.parser_objects.insert_new_local(
                             self.scope,
-                            name,
+                            object_name,
                             (object.0, false, false, false, String::new()),
                         );
 
                         return Ok(Instruction::MutVar {
-                            name,
+                            name: object_name,
                             value: Box::new(expr),
                             kind: object.0,
                         });
                     } else if self.match_token(TokenKind::LParen)? {
-                        return self.call(name, object, line);
+                        return self.call(object_name, object, object_location);
                     }
 
                     if object.1 {
-                        self.errors.push(ThrushError::Error(
-                            String::from("Undefined variable usage"),
+                        return Err(ThrushError::Error(
+                            String::from("Syntax error"),
                             format!(
                                 "Variable `{}` is not defined for are use it. Define the variable with value before of the use.",
-                                name,
+                                object_name,
                             ),
-                            line,
+                            object_location.0,
+                            Some(object_location.1)
                         ));
                     }
 
                     let refvar: Instruction = Instruction::RefVar {
-                        name,
-                        line,
+                        name: object_name,
+                        line: object_location.0,
                         kind: object.0,
                         struct_type: object.7,
                     };
@@ -1481,9 +1532,9 @@ impl<'instr> Parser<'instr> {
                         let op: &TokenKind = &self.previous().kind;
 
                         type_checking::check_unary_instr(
-                            identifier_type,
+                            &object_type,
                             &refvar.get_data_type(),
-                            line,
+                            object_location,
                         )?;
 
                         let expr: Instruction = Instruction::UnaryOp {
@@ -1519,6 +1570,7 @@ impl<'instr> Parser<'instr> {
                             previous.lexeme.as_ref().unwrap(),
                         ),
                         previous.line,
+                        Some(previous.span),
                     ));
                 }
             },
@@ -1531,13 +1583,14 @@ impl<'instr> Parser<'instr> {
         &mut self,
         name: &'instr str,
         object: FoundObject,
-        line: usize,
+        location: (usize, (usize, usize)),
     ) -> Result<Instruction<'instr>, ThrushError> {
         if !object.3 {
             return Err(ThrushError::Error(
                 String::from("Syntax error"),
                 String::from("Call is only allowed for functions."),
-                line,
+                location.0,
+                Some(location.1),
             ));
         }
 
@@ -1550,7 +1603,7 @@ impl<'instr> Parser<'instr> {
 
             let instruction: Instruction<'instr> = self.expression()?;
 
-            self.throw_if_is_struct_initializer(&instruction, line)?;
+            self.throw_if_is_struct_initializer(&instruction, location.0)?;
 
             args.push(instruction);
         }
@@ -1559,14 +1612,14 @@ impl<'instr> Parser<'instr> {
             TokenKind::RParen,
             String::from("Syntax error"),
             String::from("Expected ')'."),
-            line,
         )?;
 
         if args.len() > object.5.len() && !object.4 {
             return Err(ThrushError::Error(
                 String::from("Syntax error"),
                 String::from("Function called with more arguments than expected."),
-                line,
+                location.0,
+                None,
             ));
         }
 
@@ -1592,7 +1645,8 @@ impl<'instr> Parser<'instr> {
                         .join(", "),
                     represented_args_types,
                 ),
-                line,
+                location.0,
+                None,
             ));
         }
 
@@ -1601,13 +1655,18 @@ impl<'instr> Parser<'instr> {
                 let argument_type: DataTypes = argument.get_data_type();
                 let target: DataTypes = object.5[index];
 
-                self.check_possible_type_mismatch(target, argument_type, Some(argument), line);
+                self.check_possible_type_mismatch(
+                    target,
+                    argument_type,
+                    Some(argument),
+                    location.0,
+                );
 
                 if target == DataTypes::Struct {
                     let original_struct_type: &(String, usize) =
                         object.6.iter().find(|obj| obj.1 == index).unwrap();
 
-                    self.check_struct_type_mismatch(&original_struct_type.0, argument, line)?;
+                    self.check_struct_type_mismatch(&original_struct_type.0, argument, location.0)?;
                 }
             }
         }
@@ -1684,6 +1743,7 @@ impl<'instr> Parser<'instr> {
                     "The structs must go in the global scope. Rewrite it in the global scope.",
                 ),
                 self.previous().line,
+                None,
             ));
         }
 
@@ -1701,7 +1761,6 @@ impl<'instr> Parser<'instr> {
             TokenKind::Identifier,
             String::from("Syntax error"),
             String::from("Expected name for the struct."),
-            self.previous().line,
         )?;
 
         let line: usize = name.line;
@@ -1714,6 +1773,7 @@ impl<'instr> Parser<'instr> {
                 String::from("Syntax error"),
                 String::from("The struct already exists."),
                 line,
+                None,
             ));
         }
 
@@ -1721,7 +1781,6 @@ impl<'instr> Parser<'instr> {
             TokenKind::LBrace,
             String::from("Syntax error"),
             String::from("Expected '{'."),
-            line,
         )?;
 
         let mut fields_types: HashMap<String, DataTypes> = HashMap::new();
@@ -1732,8 +1791,10 @@ impl<'instr> Parser<'instr> {
             }
 
             if self.match_token(TokenKind::Identifier)? {
-                let field_name: String = self.previous().lexeme.clone().unwrap();
-                let line: usize = self.previous().line;
+                let identifier: &Token = self.previous();
+
+                let field_name: String = identifier.lexeme.clone().unwrap();
+                let line: usize = identifier.line;
 
                 let field_type: DataTypes = match &self.peek().kind {
                     TokenKind::DataType(kind) => {
@@ -1744,7 +1805,10 @@ impl<'instr> Parser<'instr> {
                         if *ident == TokenKind::Identifier
                             && self
                                 .parser_objects
-                                .get_struct(self.peek().lexeme.as_ref().unwrap(), line)
+                                .get_struct(
+                                    self.peek().lexeme.as_ref().unwrap(),
+                                    (self.peek().line, self.peek().span),
+                                )
                                 .is_ok()
                             || name.lexeme.as_ref().unwrap()
                                 == self.peek().lexeme.as_ref().unwrap() =>
@@ -1760,6 +1824,7 @@ impl<'instr> Parser<'instr> {
                                 self.peek().lexeme.as_ref().unwrap()
                             ),
                             line,
+                            Some(self.peek().span),
                         ));
                     }
                 };
@@ -1775,14 +1840,12 @@ impl<'instr> Parser<'instr> {
             TokenKind::RBrace,
             String::from("Syntax error"),
             String::from("Expected '}'."),
-            line,
         )?;
 
         self.consume(
             TokenKind::SemiColon,
             String::from("Syntax error"),
             String::from("Expected ';'."),
-            line,
         )?;
 
         self.parser_objects
@@ -1801,6 +1864,7 @@ impl<'instr> Parser<'instr> {
                     "The functions must go in the global scope. Rewrite it in the global scope.",
                 ),
                 self.previous().line,
+                None,
             ));
         }
 
@@ -1820,7 +1884,6 @@ impl<'instr> Parser<'instr> {
             TokenKind::Identifier,
             String::from("Expected function name"),
             String::from("Expected name for the function."),
-            self.previous().line,
         )?;
 
         let line: usize = name.line;
@@ -1829,7 +1892,6 @@ impl<'instr> Parser<'instr> {
             TokenKind::LParen,
             String::from("Syntax error"),
             String::from("Expected '('."),
-            line,
         )?;
 
         let mut parameters: Vec<DataTypes> = Vec::new();
@@ -1859,7 +1921,10 @@ impl<'instr> Parser<'instr> {
                     if *ident == TokenKind::Identifier
                         && self
                             .parser_objects
-                            .get_struct(self.peek().lexeme.as_ref().unwrap(), line)
+                            .get_struct(
+                                self.peek().lexeme.as_ref().unwrap(),
+                                (self.peek().line, self.peek().span),
+                            )
                             .is_ok() =>
                 {
                     parameters_struct_types
@@ -1874,6 +1939,7 @@ impl<'instr> Parser<'instr> {
                         String::from("Undeterminated type"),
                         format!("Type \"{}\" not exist.", what),
                         line,
+                        Some(self.peek().span),
                     ));
                 }
             };
@@ -1889,7 +1955,8 @@ impl<'instr> Parser<'instr> {
                 String::from(
                     "Ignore statement \"...\" in functions is only allowed for external functions.",
                 ),
-                line,
+                self.peek().line,
+                None,
             ));
         }
 
@@ -1897,7 +1964,6 @@ impl<'instr> Parser<'instr> {
             TokenKind::Colon,
             String::from("Syntax error"),
             String::from("Expected ':'."),
-            line,
         )?;
 
         let return_type: (DataTypes, String) = match &self.peek().kind {
@@ -1909,7 +1975,10 @@ impl<'instr> Parser<'instr> {
                 if *ident == TokenKind::Identifier
                     && self
                         .parser_objects
-                        .get_struct(self.peek().lexeme.as_ref().unwrap(), line)
+                        .get_struct(
+                            self.peek().lexeme.as_ref().unwrap(),
+                            (self.peek().line, self.peek().span),
+                        )
                         .is_ok() =>
             {
                 (DataTypes::Struct, self.advance()?.lexeme.clone().unwrap())
@@ -1919,6 +1988,7 @@ impl<'instr> Parser<'instr> {
                     String::from("Undeterminated type"),
                     format!("Type \"{}\" not exist.", what),
                     line,
+                    Some(self.peek().span),
                 ));
             }
         };
@@ -1971,6 +2041,7 @@ impl<'instr> Parser<'instr> {
                 String::from("Syntax error"),
                 String::from("A struct initializer should be stored a variable."),
                 line,
+                None,
             ));
         }
 
@@ -2011,6 +2082,7 @@ impl<'instr> Parser<'instr> {
                         target_type, from_type
                     ),
                     line,
+                    None,
                 ));
             }
         }
@@ -2032,11 +2104,14 @@ impl<'instr> Parser<'instr> {
                     None,
                     value,
                     None,
-                    line,
-                    String::from("Mismatched types"),
-                    format!(
-                        "Mismatched type. Expected '{}' but found '{}'.",
-                        target, from
+                    ThrushError::Error(
+                        String::from("Mismatched types"),
+                        format!(
+                            "Mismatched type. Expected '{}' but found '{}'.",
+                            target, from
+                        ),
+                        line,
+                        None,
                     ),
                 ) {
                     self.errors.push(error);
@@ -2047,11 +2122,14 @@ impl<'instr> Parser<'instr> {
             Some(from),
             None,
             None,
-            line,
-            String::from("Mismatched types"),
-            format!(
-                "Mismatched type. Expected '{}' but found '{}'.",
-                target, from
+            ThrushError::Error(
+                String::from("Mismatched types"),
+                format!(
+                    "Mismatched type. Expected '{}' but found '{}'.",
+                    target, from
+                ),
+                line,
+                None,
             ),
         ) {
             self.errors.push(error);
@@ -2063,13 +2141,17 @@ impl<'instr> Parser<'instr> {
         kind: TokenKind,
         error_title: String,
         help: String,
-        line: usize,
     ) -> Result<&'instr Token, ThrushError> {
         if self.peek().kind == kind {
             return self.advance();
         }
 
-        Err(ThrushError::Error(error_title, help, line))
+        Err(ThrushError::Error(
+            error_title,
+            help,
+            self.peek().line,
+            Some(self.peek().span),
+        ))
     }
 
     fn check_type(&self, other_type: TokenKind) -> bool {
@@ -2098,7 +2180,8 @@ impl<'instr> Parser<'instr> {
         Err(ThrushError::Error(
             String::from("Syntax error"),
             String::from("EOF has been reached."),
-            self.previous().line,
+            self.peek().line,
+            None,
         ))
     }
 
@@ -2111,7 +2194,8 @@ impl<'instr> Parser<'instr> {
         Err(ThrushError::Error(
             String::from("Syntax error"),
             String::from("EOF has been reached."),
-            self.previous().line,
+            self.peek().line,
+            None,
         ))
     }
 

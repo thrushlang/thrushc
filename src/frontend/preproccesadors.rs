@@ -90,21 +90,17 @@ impl<'instr> Import<'instr> {
         let name: String = self
             .consume(
                 TokenKind::Identifier,
-                String::from("Expected struct name"),
-                String::from("Write the struct name: \"struct --> name <-- { ... };\"."),
-                self.previous().line,
+                String::from("Syntax error"),
+                String::from("Expected struct name."),
             )?
             .lexeme
             .clone()
             .unwrap();
 
-        let line: usize = self.previous().line;
-
         self.consume(
             TokenKind::LBrace,
             String::from("Syntax Error"),
             String::from("Expected '{'."),
-            line,
         )?;
 
         let mut fields_types: HashMap<String, DataTypes> = HashMap::new();
@@ -115,8 +111,7 @@ impl<'instr> Import<'instr> {
             }
 
             if self.match_token(TokenKind::Identifier)? {
-                let field_name: String = self.previous().lexeme.clone().unwrap();
-                let line: usize = self.previous().line;
+                let field_name: String = self.previous().clone().lexeme.unwrap();
 
                 let field_type: DataTypes = match self.peek().kind {
                     TokenKind::DataType(kind) => {
@@ -127,7 +122,10 @@ impl<'instr> Import<'instr> {
                         if ident == TokenKind::Identifier
                             && self
                                 .parser_objects
-                                .get_struct(self.peek().lexeme.as_ref().unwrap(), line)
+                                .get_struct(
+                                    self.peek().lexeme.as_ref().unwrap(),
+                                    (self.peek().line, self.peek().span),
+                                )
                                 .is_ok()
                             || &name == self.peek().lexeme.as_ref().unwrap() =>
                     {
@@ -138,7 +136,8 @@ impl<'instr> Import<'instr> {
                         return Err(ThrushError::Error(
                             String::from("Expected type of field"),
                             format!("Write the field type: \"{} --> i64 <--\".", field_name),
-                            line,
+                            self.peek().line,
+                            Some(self.peek().span),
                         ));
                     }
                 };
@@ -154,14 +153,12 @@ impl<'instr> Import<'instr> {
             TokenKind::RBrace,
             String::from("Syntax Error"),
             String::from("Expected '}'."),
-            line,
         )?;
 
         self.consume(
             TokenKind::SemiColon,
             String::from("Syntax Error"),
             String::from("Expected ';'."),
-            line,
         )?;
 
         self.add_struct(name, fields_types);
@@ -170,14 +167,11 @@ impl<'instr> Import<'instr> {
     }
 
     fn build_function(&mut self) -> Result<(), ThrushError> {
-        let line: usize = self.previous().line;
-
         let name: String = self
             .consume(
                 TokenKind::Identifier,
-                String::from("Expected function name"),
-                String::from("Expected a name to the function."),
-                self.previous().line,
+                String::from("Syntax error"),
+                String::from("Expected function name."),
             )?
             .lexeme
             .clone()
@@ -187,13 +181,12 @@ impl<'instr> Import<'instr> {
             TokenKind::LParen,
             String::from("Syntax Error"),
             String::from("Expected '('."),
-            line,
         )?;
 
-        let mut params: Vec<Instruction> = Vec::new();
-        let mut params_types: Vec<DataTypes> = Vec::new();
+        let mut parameters: Vec<Instruction> = Vec::new();
+        let mut parameters_types: Vec<DataTypes> = Vec::new();
 
-        let mut param_position: u32 = 0;
+        let mut parameter_index: u32 = 0;
 
         while !self.match_token(TokenKind::RParen)? {
             if self.match_token(TokenKind::Comma)? {
@@ -208,7 +201,8 @@ impl<'instr> Import<'instr> {
                 self.errors.push(ThrushError::Error(
                     String::from("Syntax Error"),
                     String::from("Expected argument name."),
-                    line,
+                    self.previous().line,
+                    Some(self.previous().span),
                 ));
             }
 
@@ -219,7 +213,8 @@ impl<'instr> Import<'instr> {
                 self.errors.push(ThrushError::Error(
                     String::from("Syntax Error"),
                     String::from("Expected '::'."),
-                    line,
+                    self.previous().line,
+                    Some(self.previous().span),
                 ));
             }
 
@@ -232,7 +227,10 @@ impl<'instr> Import<'instr> {
                     if ident == TokenKind::Identifier
                         && self
                             .parser_objects
-                            .get_struct(self.peek().lexeme.as_ref().unwrap(), line)
+                            .get_struct(
+                                self.peek().lexeme.as_ref().unwrap(),
+                                (self.peek().line, self.peek().span),
+                            )
                             .is_ok() =>
                 {
                     self.only_advance()?;
@@ -242,27 +240,28 @@ impl<'instr> Import<'instr> {
                     return Err(ThrushError::Error(
                         String::from("Undeterminated type"),
                         format!("Type \"{}\" not exist.", what),
-                        line,
+                        self.peek().line,
+                        Some(self.peek().span),
                     ));
                 }
             };
 
-            params.push(Instruction::Param {
+            parameters.push(Instruction::Param {
                 name: ident,
                 kind,
                 line,
-                position: param_position,
+                position: parameter_index,
             });
 
-            params_types.push(kind);
-            param_position += 1;
+            parameters_types.push(kind);
+
+            parameter_index += 1;
         }
 
         self.consume(
             TokenKind::Colon,
             String::from("Syntax Error"),
             String::from("Missing return type. Expected ':' followed by return type."),
-            line,
         )?;
 
         let return_type: (DataTypes, String) = match self.peek().kind {
@@ -274,7 +273,10 @@ impl<'instr> Import<'instr> {
                 if ident == TokenKind::Identifier
                     && self
                         .parser_objects
-                        .get_struct(self.peek().lexeme.as_ref().unwrap(), line)
+                        .get_struct(
+                            self.peek().lexeme.as_ref().unwrap(),
+                            (self.peek().line, self.peek().span),
+                        )
                         .is_ok() =>
             {
                 self.only_advance()?;
@@ -284,18 +286,19 @@ impl<'instr> Import<'instr> {
                 return Err(ThrushError::Error(
                     String::from("Undeterminated type"),
                     format!("Type \"{}\" not exist.", what),
-                    line,
+                    self.peek().line,
+                    Some(self.peek().span),
                 ))
             }
         };
 
-        self.add_build_function(name.clone(), return_type.0, params_types);
+        self.add_build_function(name.clone(), return_type.0, parameters_types);
 
         self.stmts.push(Instruction::Extern {
             name: name.clone(),
             instr: Box::new(Instruction::Function {
                 name,
-                params,
+                params: parameters,
                 body: None,
                 return_type: return_type.0,
                 is_public: true,
@@ -322,13 +325,17 @@ impl<'instr> Import<'instr> {
         kind: TokenKind,
         error_title: String,
         help: String,
-        line: usize,
     ) -> Result<&Token, ThrushError> {
         if self.peek().kind == kind {
             return self.advance();
         }
 
-        Err(ThrushError::Error(error_title, help, line))
+        Err(ThrushError::Error(
+            error_title,
+            help,
+            self.peek().line,
+            Some(self.peek().span),
+        ))
     }
 
     fn match_token(&mut self, kind: TokenKind) -> Result<bool, ThrushError> {
@@ -348,7 +355,8 @@ impl<'instr> Import<'instr> {
         Err(ThrushError::Error(
             String::from("Syntax error"),
             String::from("EOF has been reached."),
-            self.previous().line,
+            self.peek().line,
+            None,
         ))
     }
 
@@ -361,7 +369,8 @@ impl<'instr> Import<'instr> {
         Err(ThrushError::Error(
             String::from("Syntax error"),
             String::from("EOF has been reached."),
-            self.previous().line,
+            self.peek().line,
+            None,
         ))
     }
 

@@ -59,6 +59,7 @@ pub struct Lexer<'a> {
     start: usize,
     current: usize,
     line: usize,
+    span: (usize, usize),
     diagnostic: Diagnostic,
 }
 
@@ -71,6 +72,7 @@ impl<'a> Lexer<'a> {
             start: 0,
             current: 0,
             line: 1,
+            span: (0, 0),
             diagnostic: Diagnostic::new(file),
         };
 
@@ -80,6 +82,7 @@ impl<'a> Lexer<'a> {
     fn _lex(&mut self) -> Vec<Token> {
         while !self.end() {
             self.start = self.current;
+            self.start_span();
 
             if let Err(error) = self.scan() {
                 self.errors.push(error)
@@ -98,6 +101,7 @@ impl<'a> Lexer<'a> {
             lexeme: None,
             kind: TokenKind::Eof,
             line: self.line,
+            span: self.span,
         });
 
         mem::take(&mut self.tokens)
@@ -127,12 +131,15 @@ impl<'a> Lexer<'a> {
                 if self.char_match(b'*') && self.char_match(b'/') {
                     break;
                 } else if self.end() {
+                    self.end_span();
+
                     return Err(ThrushError::Error(
                         String::from("Syntax Error"),
                         String::from(
                             "Unterminated multiline comment. Did you forget to close the comment with a '*/'?",
                         ),
                         self.line,
+                        Some(self.span)
                     ));
                 }
 
@@ -163,10 +170,13 @@ impl<'a> Lexer<'a> {
             b'0'..=b'9' => self.integer_or_float()?,
             b'a'..=b'z' | b'A'..=b'Z' | b'_' | b'@' => self.identifier()?,
             _ => {
+                self.end_span();
+
                 return Err(ThrushError::Error(
                     String::from("Unknown character."),
                     String::from("Did you provide a valid character?"),
                     self.line,
+                    Some(self.span),
                 ));
             }
         }
@@ -198,6 +208,8 @@ impl<'a> Lexer<'a> {
             self.advance();
         }
 
+        self.end_span();
+
         let types: (DataTypes, bool) = self.parse_float_or_integer(self.lexeme())?;
 
         let raw_parsed_number: Result<f64, ParseFloatError> = self.lexeme().parse::<f64>();
@@ -209,6 +221,7 @@ impl<'a> Lexer<'a> {
                     "Did you provide a valid number with the correct format and not out of bounds?",
                 ),
                 self.line,
+                Some(self.span),
             ));
         }
 
@@ -219,6 +232,7 @@ impl<'a> Lexer<'a> {
                 kind: TokenKind::Float(types.0, parsed_number, types.1),
                 lexeme: None,
                 line: self.line,
+                span: self.span,
             });
 
             return Ok(());
@@ -228,82 +242,14 @@ impl<'a> Lexer<'a> {
             kind: TokenKind::Integer(types.0, parsed_number, types.1),
             lexeme: None,
             line: self.line,
+            span: self.span,
         });
 
         Ok(())
     }
 
-    fn char(&mut self) -> Result<(), ThrushError> {
-        while self.peek() != b'\'' && !self.end() {
-            self.advance();
-        }
-
-        if self.peek() != b'\'' {
-            return Err(ThrushError::Error(
-                String::from("Syntax Error"),
-                String::from("Unterminated char. Did you forget to close the char with a \'?"),
-                self.line,
-            ));
-        }
-
-        self.advance();
-
-        if self.code[self.start + 1..self.current - 1].len() > 1 {
-            return Err(ThrushError::Error(
-                String::from("Syntax Error"),
-                String::from("A char data type only can contain one character."),
-                self.line,
-            ));
-        }
-
-        self.tokens.push(Token {
-            kind: TokenKind::Char,
-            lexeme: Some(
-                String::from_utf8_lossy(&self.code[self.start + 1..self.current - 1]).to_string(),
-            ),
-            line: self.line,
-        });
-
-        Ok(())
-    }
-
-    fn string(&mut self) -> Result<(), ThrushError> {
-        while self.peek() != b'"' && !self.end() {
-            self.advance();
-        }
-
-        if self.peek() != b'"' {
-            return Err(ThrushError::Error(
-                String::from("Syntax Error"),
-                String::from(
-                    "Unterminated string. Did you forget to close the string with a '\"'?",
-                ),
-                self.line,
-            ));
-        }
-
-        self.advance();
-
-        let mut string: String =
-            String::from_utf8_lossy(&self.code[self.start + 1..self.current - 1]).to_string();
-
-        string = string.replace("\\n", "\n");
-        string = string.replace("\\r", "\r");
-        string = string.replace("\\t", "\t");
-
-        self.tokens.push(Token {
-            kind: TokenKind::Str,
-            lexeme: Some(string),
-            line: self.line,
-        });
-
-        Ok(())
-    }
-
-    pub fn parse_float_or_integer(
-        &mut self,
-        lexeme: String,
-    ) -> Result<(DataTypes, bool), ThrushError> {
+    #[inline]
+    fn parse_float_or_integer(&mut self, lexeme: String) -> Result<(DataTypes, bool), ThrushError> {
         if lexeme.contains('.') {
             return self.parse_float(&lexeme);
         }
@@ -320,6 +266,7 @@ impl<'a> Lexer<'a> {
                 String::from("Syntax error"),
                 String::from("Float values should only contain one dot."),
                 self.line,
+                Some(self.span),
             ));
         }
 
@@ -332,11 +279,10 @@ impl<'a> Lexer<'a> {
         }
 
         Err(ThrushError::Error(
-            String::from("The number is too big for a float."),
-            String::from(
-                "Did you provide a valid number with the correct format and not out of bounds?",
-            ),
+            String::from("Syntax error"),
+            String::from("Out of bounds."),
             self.line,
+            Some(self.span),
         ))
     }
 
@@ -361,20 +307,97 @@ impl<'a> Lexer<'a> {
                     Ok((DataTypes::I64, false))
                 } else {
                     Err(ThrushError::Error(
-                        String::from("Unreachable Number."),
-                        String::from("The size is out of bounds of an isize."),
+                        String::from("Syntax error."),
+                        String::from("Out of bounds."),
                         self.line,
+                        Some(self.span),
                     ))
                 }
             }
+
             Err(_) => Err(ThrushError::Error(
-                String::from("Unreachable Number"),
-                String::from(
-                    "Did you provide a valid number with the correct format and not out of bounds?",
-                ),
+                String::from("Syntax error"),
+                String::from("Out of bounds."),
                 self.line,
+                Some(self.span),
             )),
         }
+    }
+
+    fn char(&mut self) -> Result<(), ThrushError> {
+        while self.peek() != b'\'' && !self.end() {
+            self.advance();
+        }
+
+        self.end_span();
+
+        if self.peek() != b'\'' {
+            return Err(ThrushError::Error(
+                String::from("Syntax error"),
+                String::from("Unclosed char. Did you forget to close the char with a \'?"),
+                self.line,
+                Some(self.span),
+            ));
+        }
+
+        self.advance();
+
+        if self.code[self.start + 1..self.current - 1].len() > 1 {
+            return Err(ThrushError::Error(
+                String::from("Syntax Error"),
+                String::from("A char data type only can contain one character."),
+                self.line,
+                Some(self.span),
+            ));
+        }
+
+        self.tokens.push(Token {
+            kind: TokenKind::Char,
+            lexeme: Some(
+                String::from_utf8_lossy(&self.code[self.start + 1..self.current - 1]).to_string(),
+            ),
+            line: self.line,
+            span: self.span,
+        });
+
+        Ok(())
+    }
+
+    fn string(&mut self) -> Result<(), ThrushError> {
+        while self.peek() != b'"' && !self.end() {
+            self.advance();
+        }
+
+        self.end_span();
+
+        if self.peek() != b'"' {
+            return Err(ThrushError::Error(
+                String::from("Syntax Error"),
+                String::from(
+                    "Unclosed literal string. Did you forget to close the literal string with a '\"'?",
+                ),
+                self.line,
+                Some(self.span),
+            ));
+        }
+
+        self.advance();
+
+        let mut string: String =
+            String::from_utf8_lossy(&self.code[self.start + 1..self.current - 1]).to_string();
+
+        string = string.replace("\\n", "\n");
+        string = string.replace("\\r", "\r");
+        string = string.replace("\\t", "\t");
+
+        self.tokens.push(Token {
+            kind: TokenKind::Str,
+            lexeme: Some(string),
+            line: self.line,
+            span: self.span,
+        });
+
+        Ok(())
     }
 
     fn advance(&mut self) -> u8 {
@@ -415,11 +438,24 @@ impl<'a> Lexer<'a> {
     }
 
     fn make(&mut self, kind: TokenKind) {
+        self.end_span();
+
         self.tokens.push(Token {
             kind,
             lexeme: Some(self.lexeme()),
             line: self.line,
+            span: self.span,
         });
+    }
+
+    #[inline]
+    fn start_span(&mut self) {
+        self.span.0 = self.start;
+    }
+
+    #[inline]
+    fn end_span(&mut self) {
+        self.span.1 = self.current;
     }
 
     #[inline]
@@ -438,6 +474,7 @@ pub struct Token {
     pub lexeme: Option<String>,
     pub kind: TokenKind,
     pub line: usize,
+    pub span: (usize, usize),
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -681,7 +718,7 @@ impl std::fmt::Display for DataTypes {
             DataTypes::Char => write!(f, "char"),
             DataTypes::Struct => write!(f, "struct"),
             DataTypes::Ptr => write!(f, "ptr"),
-            DataTypes::Void => write!(f, "()"),
+            DataTypes::Void => write!(f, "void"),
         }
     }
 }
@@ -709,6 +746,15 @@ impl DataTypes {
     #[inline]
     pub const fn is_void_type(&self) -> bool {
         if let DataTypes::Void = self {
+            return true;
+        }
+
+        false
+    }
+
+    #[inline]
+    pub const fn is_bool_type(&self) -> bool {
+        if let DataTypes::Bool = self {
             return true;
         }
 

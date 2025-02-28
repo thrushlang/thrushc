@@ -89,6 +89,7 @@ impl<'ctx> ThrushScoper<'ctx> {
                         String::from("Undefined variable"),
                         format!("Local variable `{}` not found at current scope.", name),
                         *line,
+                        None,
                     ));
                 }
 
@@ -102,6 +103,7 @@ impl<'ctx> ThrushScoper<'ctx> {
                             name
                         ),
                         *line,
+                        None,
                     ));
                 }
 
