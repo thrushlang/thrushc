@@ -1,5 +1,5 @@
 use {
-    super::{backend::compiler::misc::ThrushFile, error::ThrushError, logging::LogType},
+    super::{backend::compiler::misc::ThrushFile, error::ThrushError, logging, logging::LogType},
     std::{fs, path::PathBuf},
     stylic::{style, Stylize},
 };
@@ -19,7 +19,17 @@ struct CodePosition {
 
 impl Diagnostic {
     pub fn new(thrushfile: &ThrushFile) -> Self {
-        let contain: String = fs::read_to_string(&thrushfile.path).unwrap();
+        let contain: String = fs::read_to_string(&thrushfile.path).unwrap_or_else(|_| {
+            logging::log(
+                LogType::PANIC,
+                &format!(
+                    "Unable to read `{}` file for build a diagnostic.",
+                    thrushfile.path.display()
+                ),
+            );
+
+            unreachable!()
+        });
 
         Self {
             path: thrushfile.path.clone(),
@@ -52,7 +62,7 @@ impl Diagnostic {
                     println!(
                         "|\n{}\n{}",
                         "|   ".to_string() + line_text.trim(),
-                        arrow_line.trim_end()
+                        "|   ".to_string() + arrow_line.trim_end()
                     );
                 } else {
                     return self.print_not_spanned_report(help, line);

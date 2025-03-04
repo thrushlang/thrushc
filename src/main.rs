@@ -25,9 +25,18 @@ use {
 
 lazy_static! {
     static ref HOME: Option<PathBuf> = {
+        let error = |_| {
+            logging::log(
+                logging::LogType::PANIC,
+                "Unable to get %HOME% of the system user.",
+            );
+
+            unreachable!()
+        };
+
         match env::consts::OS {
-            "windows" => Some(PathBuf::from(env::var("APPDATA").unwrap())),
-            "linux" => Some(PathBuf::from(env::var("HOME").unwrap())),
+            "windows" => Some(PathBuf::from(env::var("APPDATA").unwrap_or_else(error))),
+            "linux" => Some(PathBuf::from(env::var("HOME").unwrap_or_else(error))),
             _ => None,
         }
     };
@@ -162,8 +171,7 @@ fn main() {
     let mut cli: Cli = Cli::parse(env::args().collect());
 
     if cli.options.files.is_empty() {
-        logging::log(logging::LogType::ERROR, "No files to compile!");
-        process::exit(1);
+        logging::log(logging::LogType::PANIC, "No files to compile!");
     }
 
     if !cli.options.include_vector_api {

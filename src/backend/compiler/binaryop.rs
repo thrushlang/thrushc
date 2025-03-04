@@ -1683,7 +1683,7 @@ pub fn bool_binaryop<'ctx>(
         if binary.0.get_data_type().is_float_type() {
             return float_binaryop(builder, context, binary, target_type, objects);
         } else if binary.0.get_data_type().is_integer_type()
-            || binary.0.get_data_type() == DataTypes::Bool
+            || binary.0.get_data_type().is_bool_type()
         {
             return integer_binaryop(builder, context, binary, target_type, objects);
         }
@@ -1707,7 +1707,7 @@ pub fn bool_binaryop<'ctx>(
         if binary.0.get_data_type().is_float_type() {
             return float_binaryop(builder, context, binary, target_type, objects);
         } else if binary.0.get_data_type().is_integer_type()
-            || binary.0.get_data_type() == DataTypes::Bool
+            || binary.0.get_data_type().is_bool_type()
         {
             return integer_binaryop(builder, context, binary, target_type, objects);
         }
@@ -1731,7 +1731,7 @@ pub fn bool_binaryop<'ctx>(
         if binary.0.get_data_type().is_float_type() {
             return float_binaryop(builder, context, binary, target_type, objects);
         } else if binary.0.get_data_type().is_integer_type()
-            || binary.0.get_data_type() == DataTypes::Bool
+            || binary.0.get_data_type().is_bool_type()
         {
             return integer_binaryop(builder, context, binary, target_type, objects);
         }
@@ -1755,7 +1755,7 @@ pub fn bool_binaryop<'ctx>(
         if binary.2.get_data_type().is_float_type() {
             return float_binaryop(builder, context, binary, target_type, objects);
         } else if binary.2.get_data_type().is_integer_type()
-            || binary.2.get_data_type() == DataTypes::Bool
+            || binary.2.get_data_type().is_bool_type()
         {
             return integer_binaryop(builder, context, binary, target_type, objects);
         }

@@ -1,7 +1,7 @@
 use {
     super::super::{
-        backend::compiler::misc::ThrushFile, diagnostic::Diagnostic, error::ThrushError,
-        logging::LogType,
+        backend::compiler::misc::ThrushFile, constants::MINIMAL_ERROR_CAPACITY,
+        diagnostic::Diagnostic, error::ThrushError, logging::LogType,
     },
     ahash::{HashMap, HashMapExt},
     inkwell::{FloatPredicate, IntPredicate},
@@ -9,9 +9,13 @@ use {
     std::{mem, num::ParseFloatError, process::exit},
 };
 
+const KEYWORDS_CAPACITY: usize = 34;
+const MINIMAL_TOKENS_CAPACITY: usize = 100_000;
+
 lazy_static! {
     static ref KEYWORDS: HashMap<&'static [u8], TokenKind> = {
-        let mut keywords: HashMap<&'static [u8], TokenKind> = HashMap::with_capacity(34);
+        let mut keywords: HashMap<&'static [u8], TokenKind> =
+            HashMap::with_capacity(KEYWORDS_CAPACITY);
 
         keywords.insert(b"var", TokenKind::Var);
         keywords.insert(b"fn", TokenKind::Fn);
@@ -66,8 +70,8 @@ pub struct Lexer<'a> {
 impl<'a> Lexer<'a> {
     pub fn lex(code: &'a [u8], file: &ThrushFile) -> Vec<Token> {
         let mut lexer: Lexer = Self {
-            tokens: Vec::with_capacity(100_000),
-            errors: Vec::with_capacity(100),
+            tokens: Vec::with_capacity(MINIMAL_TOKENS_CAPACITY),
+            errors: Vec::with_capacity(MINIMAL_ERROR_CAPACITY),
             code,
             start: 0,
             current: 0,
@@ -248,7 +252,7 @@ impl<'a> Lexer<'a> {
         Ok(())
     }
 
-    #[inline]
+    #[inline(always)]
     fn parse_float_or_integer(&mut self, lexeme: String) -> Result<(DataTypes, bool), ThrushError> {
         if lexeme.contains('.') {
             return self.parse_float(&lexeme);
@@ -257,7 +261,7 @@ impl<'a> Lexer<'a> {
         self.parse_integer(&lexeme)
     }
 
-    #[inline]
+    #[inline(always)]
     fn parse_float(&self, lexeme: &str) -> Result<(DataTypes, bool), ThrushError> {
         let dot_count: usize = lexeme.bytes().filter(|&b| b == b'.').count();
 
@@ -286,7 +290,7 @@ impl<'a> Lexer<'a> {
         ))
     }
 
-    #[inline]
+    #[inline(always)]
     fn parse_integer(&self, lexeme: &str) -> Result<(DataTypes, bool), ThrushError> {
         const I8_MIN: isize = -128;
         const I8_MAX: isize = 127;
@@ -432,7 +436,7 @@ impl<'a> Lexer<'a> {
         false
     }
 
-    #[inline]
+    #[inline(always)]
     fn lexeme(&self) -> String {
         String::from_utf8_lossy(&self.code[self.start..self.current]).to_string()
     }
@@ -448,22 +452,22 @@ impl<'a> Lexer<'a> {
         });
     }
 
-    #[inline]
+    #[inline(always)]
     fn start_span(&mut self) {
         self.span.0 = self.start;
     }
 
-    #[inline]
+    #[inline(always)]
     fn end_span(&mut self) {
         self.span.1 = self.current;
     }
 
-    #[inline]
+    #[inline(always)]
     const fn end(&self) -> bool {
         self.current >= self.code.len()
     }
 
-    #[inline]
+    #[inline(always)]
     const fn is_alpha(&self, char: u8) -> bool {
         char.is_ascii_lowercase() || char.is_ascii_uppercase() || char == b'_'
     }
@@ -609,8 +613,8 @@ impl std::fmt::Display for TokenKind {
 }
 
 impl TokenKind {
-    #[inline]
-    pub fn as_int_predicate(&self, left_signed: bool, right_signed: bool) -> IntPredicate {
+    #[inline(always)]
+    pub const fn as_int_predicate(&self, left_signed: bool, right_signed: bool) -> IntPredicate {
         match self {
             TokenKind::EqEq => IntPredicate::EQ,
             TokenKind::BangEq => IntPredicate::NE,
@@ -634,8 +638,8 @@ impl TokenKind {
         }
     }
 
-    #[inline]
-    pub fn as_float_predicate(&self) -> FloatPredicate {
+    #[inline(always)]
+    pub const fn as_float_predicate(&self) -> FloatPredicate {
         // ESTABILIZAR ESTA COSA EN EL FUTURO IGUAL QUE LOS INTEGER PREDICATE (DETERMINAR SI TIENE SIGNO Y CAMBIAR EL PREDICATE A CONVENIR)
         match self {
             TokenKind::EqEq => FloatPredicate::OEQ,
@@ -648,8 +652,8 @@ impl TokenKind {
         }
     }
 
-    #[inline]
-    pub fn is_logical_type(&self) -> bool {
+    #[inline(always)]
+    pub const fn is_logical_type(&self) -> bool {
         if let TokenKind::BangEq
         | TokenKind::EqEq
         | TokenKind::LessEq
@@ -663,8 +667,8 @@ impl TokenKind {
         false
     }
 
-    #[inline]
-    pub fn is_logical_gate(&self) -> bool {
+    #[inline(always)]
+    pub const fn is_logical_gate(&self) -> bool {
         if let TokenKind::And | TokenKind::Or = self {
             return true;
         }
@@ -724,7 +728,7 @@ impl std::fmt::Display for DataTypes {
 }
 
 impl DataTypes {
-    #[inline]
+    #[inline(always)]
     pub const fn calculate_integer_datatype(self, other: DataTypes) -> DataTypes {
         match (self, other) {
             (DataTypes::I64, _) | (_, DataTypes::I64) => DataTypes::I64,
@@ -734,7 +738,7 @@ impl DataTypes {
         }
     }
 
-    #[inline]
+    #[inline(always)]
     pub const fn calculate_float_datatype(self, other: DataTypes) -> DataTypes {
         match (self, other) {
             (DataTypes::F64, _) | (_, DataTypes::F64) => DataTypes::F64,
@@ -743,7 +747,7 @@ impl DataTypes {
         }
     }
 
-    #[inline]
+    #[inline(always)]
     pub const fn is_void_type(&self) -> bool {
         if let DataTypes::Void = self {
             return true;
@@ -752,7 +756,7 @@ impl DataTypes {
         false
     }
 
-    #[inline]
+    #[inline(always)]
     pub const fn is_bool_type(&self) -> bool {
         if let DataTypes::Bool = self {
             return true;
@@ -761,7 +765,7 @@ impl DataTypes {
         false
     }
 
-    #[inline]
+    #[inline(always)]
     pub const fn is_struct_type(&self) -> bool {
         if let DataTypes::Struct = self {
             return true;
@@ -770,7 +774,7 @@ impl DataTypes {
         false
     }
 
-    #[inline]
+    #[inline(always)]
     pub const fn is_float_type(&self) -> bool {
         if let DataTypes::F32 | DataTypes::F64 = self {
             return true;
@@ -778,7 +782,7 @@ impl DataTypes {
         false
     }
 
-    #[inline]
+    #[inline(always)]
     pub const fn is_ptr_type(&self) -> bool {
         if let DataTypes::Struct | DataTypes::Str | DataTypes::Ptr = self {
             return true;
@@ -786,7 +790,7 @@ impl DataTypes {
         false
     }
 
-    #[inline]
+    #[inline(always)]
     pub const fn is_ptr_heaped(&self) -> bool {
         if let DataTypes::Struct | DataTypes::Ptr = self {
             return true;
@@ -794,7 +798,7 @@ impl DataTypes {
         false
     }
 
-    #[inline]
+    #[inline(always)]
     pub const fn is_integer_type(&self) -> bool {
         if let DataTypes::I8 | DataTypes::I16 | DataTypes::I32 | DataTypes::I64 | DataTypes::Char =
             self

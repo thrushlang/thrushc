@@ -1,3 +1,5 @@
+pub const MINIMAL_ERROR_CAPACITY: usize = 100;
+
 pub const TARGETS: [&str; 233] = [
     "aarch64-apple-darwin",
     "aarch64-apple-ios",

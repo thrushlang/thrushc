@@ -40,8 +40,8 @@ impl Cli {
         }
     }
 
-    fn analyze(&mut self, arg: String, index: &mut usize) {
-        match arg.trim() {
+    fn analyze(&mut self, argument: String, index: &mut usize) {
+        match argument.trim() {
             "help" | "-h" | "--help" => {
                 *index += 1;
                 self.help();
@@ -69,7 +69,7 @@ impl Cli {
                 *index += 2;
 
                 if *index > self.args.len() {
-                    self.report_error(&format!("Missing argument for \"{}\" flag.", arg));
+                    self.report_error(&format!("Missing argument for \"{}\" flag.", argument));
                 }
 
                 self.options.output = self.args[self.extract_relative_index(*index)].to_string();
@@ -79,7 +79,7 @@ impl Cli {
                 *index += 1;
 
                 if *index > self.args.len() {
-                    self.report_error(&format!("Missing argument for \"{}\" flag.", arg));
+                    self.report_error(&format!("Missing argument for \"{}\" flag.", argument));
                 }
 
                 self.options.optimization =
@@ -102,7 +102,7 @@ impl Cli {
                 *index += 1;
 
                 if *index > self.args.len() {
-                    self.report_error(&format!("Missing argument for \"{}\" flag.", arg));
+                    self.report_error(&format!("Missing argument for \"{}\" flag.", argument));
                 }
 
                 match self.args[self.extract_relative_index(*index)].as_str() {
@@ -112,7 +112,7 @@ impl Cli {
                     "asm" => self.options.emit_asm = true,
                     any => {
                         self.report_error(&format!(
-                            "\"{}\" is invalid target to emit raw compiled code. Maybe \"(--emit || -emit) llvm-ir || llvm-bc || thrush-ast || asm\", is the command?",
+                            "\"{}\" is invalid target to emit raw compiled code. Maybe \"-emit llvm-ir || llvm-bc || thrush-ast || asm\", is the command?",
                             any
                         ));
                     }
@@ -156,7 +156,7 @@ impl Cli {
                 *index += 1;
 
                 if *index > self.args.len() {
-                    self.report_error(&format!("Missing argument for \"{}\" flag.", arg));
+                    self.report_error(&format!("Missing argument for \"{}\" flag.", argument));
                 }
 
                 match self.args[self.extract_relative_index(*index)].as_str() {
@@ -193,7 +193,7 @@ impl Cli {
                 *index += 1;
 
                 if *index > self.args.len() {
-                    self.report_error(&format!("Missing argument for \"{}\" flag.", arg));
+                    self.report_error(&format!("Missing argument for \"{}\" flag.", argument));
                 }
 
                 self.options.reloc_mode =
@@ -211,7 +211,7 @@ impl Cli {
                 *index += 1;
 
                 if *index > self.args.len() {
-                    self.report_error(&format!("Missing argument for \"{}\" flag.", arg));
+                    self.report_error(&format!("Missing argument for \"{}\" flag.", argument));
                 }
 
                 self.options.code_model =
@@ -232,7 +232,7 @@ impl Cli {
                 if *index > self.args.len() {
                     self.report_error(&format!(
                         "Missing built-in API specification for \"{}\" flag.",
-                        arg
+                        argument
                     ));
                 }
 
@@ -291,6 +291,7 @@ impl Cli {
         }
     }
 
+    #[inline]
     fn extract_relative_index(&self, index: usize) -> usize {
         if index == self.args.len() {
             index - 1
@@ -299,6 +300,7 @@ impl Cli {
         }
     }
 
+    #[inline]
     fn report_error(&self, msg: &str) {
         println!(
             "{} {}",
@@ -483,7 +485,7 @@ impl Cli {
                 .bold()
         );
 
-        println!("{}", style("\nUseful Flags:\n").bold());
+        println!("{}", style("\nUseful flags:\n").bold());
 
         println!(
             "{} ({} | {}) {}",

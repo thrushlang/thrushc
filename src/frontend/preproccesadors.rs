@@ -2,6 +2,7 @@ use {
     super::{
         super::{
             backend::{compiler::misc::ThrushFile, instruction::Instruction},
+            constants::MINIMAL_ERROR_CAPACITY,
             diagnostic::Diagnostic,
             error::ThrushError,
             logging::LogType,
@@ -12,6 +13,8 @@ use {
     ahash::AHashMap as HashMap,
     std::{mem, process},
 };
+
+const MINIMAL_STATEMENT_CAPACITY: usize = 100_000;
 
 pub struct Import<'instr> {
     tokens: Vec<Token>,
@@ -29,11 +32,11 @@ impl<'instr> Import<'instr> {
     ) -> (Vec<Instruction<'instr>>, ParserObjects<'instr>) {
         let mut imports: Import = Self {
             tokens,
-            stmts: Vec::with_capacity(50_000),
-            errors: Vec::with_capacity(100),
+            stmts: Vec::with_capacity(MINIMAL_STATEMENT_CAPACITY),
+            errors: Vec::with_capacity(MINIMAL_ERROR_CAPACITY),
             current: 0,
             diagnostic: Diagnostic::new(file),
-            parser_objects: ParserObjects::new(HashMap::new()),
+            parser_objects: ParserObjects::new(),
         };
 
         imports._parse()
@@ -103,7 +106,7 @@ impl<'instr> Import<'instr> {
             String::from("Expected '{'."),
         )?;
 
-        let mut fields_types: HashMap<String, DataTypes> = HashMap::new();
+        let mut fields_types: HashMap<String, DataTypes> = HashMap::with_capacity(10);
 
         while self.peek().kind != TokenKind::RBrace {
             if self.match_token(TokenKind::Comma)? {
@@ -161,7 +164,7 @@ impl<'instr> Import<'instr> {
             String::from("Expected ';'."),
         )?;
 
-        self.add_struct(name, fields_types);
+        self.export_structure(name, fields_types);
 
         Ok(())
     }
@@ -183,8 +186,8 @@ impl<'instr> Import<'instr> {
             String::from("Expected '('."),
         )?;
 
-        let mut parameters: Vec<Instruction> = Vec::new();
-        let mut parameters_types: Vec<DataTypes> = Vec::new();
+        let mut parameters: Vec<Instruction> = Vec::with_capacity(24);
+        let mut parameters_types: Vec<DataTypes> = Vec::with_capacity(24);
 
         let mut parameter_index: u32 = 0;
 
@@ -219,10 +222,7 @@ impl<'instr> Import<'instr> {
             }
 
             let kind: DataTypes = match self.peek().kind {
-                TokenKind::DataType(kind) => {
-                    self.only_advance()?;
-                    kind
-                }
+                TokenKind::DataType(kind) => kind,
                 ident
                     if ident == TokenKind::Identifier
                         && self
@@ -233,7 +233,6 @@ impl<'instr> Import<'instr> {
                             )
                             .is_ok() =>
                 {
-                    self.only_advance()?;
                     DataTypes::Struct
                 }
                 what => {
@@ -245,6 +244,8 @@ impl<'instr> Import<'instr> {
                     ));
                 }
             };
+
+            self.only_advance()?;
 
             parameters.push(Instruction::Param {
                 name: ident,
@@ -265,10 +266,7 @@ impl<'instr> Import<'instr> {
         )?;
 
         let return_type: (DataTypes, String) = match self.peek().kind {
-            TokenKind::DataType(kind) => {
-                self.only_advance()?;
-                (kind, String::new())
-            }
+            TokenKind::DataType(kind) => (kind, String::new()),
             ident
                 if ident == TokenKind::Identifier
                     && self
@@ -279,8 +277,7 @@ impl<'instr> Import<'instr> {
                         )
                         .is_ok() =>
             {
-                self.only_advance()?;
-                (DataTypes::Struct, self.previous().lexeme.clone().unwrap())
+                (DataTypes::Struct, self.peek().lexeme.clone().unwrap())
             }
             what => {
                 return Err(ThrushError::Error(
@@ -292,7 +289,9 @@ impl<'instr> Import<'instr> {
             }
         };
 
-        self.add_build_function(name.clone(), return_type.0, parameters_types);
+        self.only_advance()?;
+
+        self.export_function(name.clone(), return_type.0, parameters_types);
 
         self.stmts.push(Instruction::Extern {
             name: name.clone(),
@@ -309,15 +308,17 @@ impl<'instr> Import<'instr> {
         Ok(())
     }
 
-    fn add_struct(&mut self, name: String, fields: HashMap<String, DataTypes>) {
-        self.parser_objects.insert_new_struct(name, fields);
-    }
-
-    fn add_build_function(&mut self, name: String, kind: DataTypes, datatypes: Vec<DataTypes>) {
+    #[inline]
+    fn export_function(&mut self, name: String, kind: DataTypes, datatypes: Vec<DataTypes>) {
         self.parser_objects.insert_new_global(
             name,
             (kind, datatypes, Vec::new(), true, false, String::new()),
         );
+    }
+
+    #[inline]
+    fn export_structure(&mut self, name: String, fields: HashMap<String, DataTypes>) {
+        self.parser_objects.insert_new_struct(name, fields);
     }
 
     fn consume(
@@ -374,14 +375,17 @@ impl<'instr> Import<'instr> {
         ))
     }
 
+    #[inline(always)]
     fn peek(&self) -> &Token {
         &self.tokens[self.current]
     }
 
+    #[inline(always)]
     fn end(&self) -> bool {
         self.tokens[self.current].kind == TokenKind::Eof
     }
 
+    #[inline(always)]
     fn previous(&self) -> &Token {
         &self.tokens[self.current - 1]
     }

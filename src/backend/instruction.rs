@@ -236,7 +236,7 @@ impl<'ctx> Instruction<'ctx> {
     pub fn return_with_ptr(&self) -> Option<&'ctx str> {
         if let Instruction::Return(instr, _) = self {
             if let Instruction::RefVar { name, kind, .. } = instr.as_ref() {
-                if kind.is_ptr_type() {
+                if kind.is_ptr_heaped() {
                     return Some(name);
                 }
             }

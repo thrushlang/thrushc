@@ -4,16 +4,7 @@ use super::super::{
     frontend::lexer::{DataTypes, TokenKind},
 };
 
-/*
-
-BINARY INSTRUCTION
-
---------------------
-A OPERATOR B
---------------------
-*/
-
-#[inline]
+#[inline(always)]
 fn check_binary_instr_add(
     a: &DataTypes,
     b: &DataTypes,
@@ -35,7 +26,7 @@ fn check_binary_instr_add(
     }
 }
 
-#[inline]
+#[inline(always)]
 fn check_binary_instr_sub(
     a: &DataTypes,
     b: &DataTypes,
@@ -59,7 +50,7 @@ fn check_binary_instr_sub(
     ))
 }
 
-#[inline]
+#[inline(always)]
 fn check_binary_instr_div(
     a: &DataTypes,
     b: &DataTypes,
@@ -83,7 +74,7 @@ fn check_binary_instr_div(
     ))
 }
 
-#[inline]
+#[inline(always)]
 fn check_binary_instr_mul(
     a: &DataTypes,
     b: &DataTypes,
@@ -107,7 +98,7 @@ fn check_binary_instr_mul(
     ))
 }
 
-#[inline]
+#[inline(always)]
 fn check_binary_instr_eqeq(
     a: &DataTypes,
     b: &DataTypes,
@@ -135,7 +126,7 @@ fn check_binary_instr_eqeq(
     ))
 }
 
-#[inline]
+#[inline(always)]
 fn check_binary_instr_bangeq(
     a: &DataTypes,
     b: &DataTypes,
@@ -163,7 +154,7 @@ fn check_binary_instr_bangeq(
     ))
 }
 
-#[inline]
+#[inline(always)]
 fn check_binary_instr_greater(
     a: &DataTypes,
     b: &DataTypes,
@@ -187,7 +178,7 @@ fn check_binary_instr_greater(
     ))
 }
 
-#[inline]
+#[inline(always)]
 fn check_binary_instr_greatereq(
     a: &DataTypes,
     b: &DataTypes,
@@ -211,7 +202,7 @@ fn check_binary_instr_greatereq(
     ))
 }
 
-#[inline]
+#[inline(always)]
 fn check_binary_instr_less(
     a: &DataTypes,
     b: &DataTypes,
@@ -235,7 +226,7 @@ fn check_binary_instr_less(
     ))
 }
 
-#[inline]
+#[inline(always)]
 fn check_binary_instr_lesseq(
     a: &DataTypes,
     b: &DataTypes,
@@ -259,7 +250,7 @@ fn check_binary_instr_lesseq(
     ))
 }
 
-#[inline]
+#[inline(always)]
 fn check_binary_instr_and(
     a: &DataTypes,
     b: &DataTypes,
@@ -277,7 +268,7 @@ fn check_binary_instr_and(
     ))
 }
 
-#[inline]
+#[inline(always)]
 fn check_binary_instr_or(
     a: &DataTypes,
     b: &DataTypes,
@@ -295,7 +286,7 @@ fn check_binary_instr_or(
     ))
 }
 
-#[inline]
+#[inline(always)]
 pub fn check_binary_instr(
     op: &TokenKind,
     a: &DataTypes,
@@ -328,7 +319,7 @@ OPERATOR B OPERATOR
 --------------------
 */
 
-#[inline]
+#[inline(always)]
 fn check_unary_instr_negate(
     a: &DataTypes,
     location: (usize, (usize, usize)),
@@ -351,7 +342,7 @@ fn check_unary_instr_negate(
     ))
 }
 
-#[inline]
+#[inline(always)]
 fn check_unary_instr_minusminus(
     a: &DataTypes,
     location: (usize, (usize, usize)),
@@ -374,7 +365,7 @@ fn check_unary_instr_minusminus(
     ))
 }
 
-#[inline]
+#[inline(always)]
 fn check_unary_instr_plusplus(
     a: &DataTypes,
     location: (usize, (usize, usize)),
@@ -397,7 +388,7 @@ fn check_unary_instr_plusplus(
     ))
 }
 
-#[inline]
+#[inline(always)]
 fn check_unary_instr_bang(
     a: &DataTypes,
     location: (usize, (usize, usize)),
@@ -414,7 +405,7 @@ fn check_unary_instr_bang(
     ))
 }
 
-#[inline]
+#[inline(always)]
 pub fn check_unary_instr(
     op: &TokenKind,
     a: &DataTypes,
