@@ -445,6 +445,21 @@ pub fn check_types(
         (DataTypes::Struct, DataTypes::Struct | DataTypes::Ptr, None) => Ok(()),
         (DataTypes::Ptr, DataTypes::Ptr | DataTypes::Str, None) => Ok(()),
         (
+            DataTypes::Generic,
+            DataTypes::Generic
+            | DataTypes::Ptr
+            | DataTypes::Str
+            | DataTypes::Char
+            | DataTypes::I8
+            | DataTypes::I32
+            | DataTypes::I64
+            | DataTypes::F32
+            | DataTypes::F64
+            | DataTypes::Bool
+            | DataTypes::Struct,
+            None,
+        ) => Ok(()),
+        (
             DataTypes::Bool,
             DataTypes::Bool,
             Some(

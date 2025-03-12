@@ -12,7 +12,7 @@ use {
     std::{mem, num::ParseFloatError, process::exit},
 };
 
-const KEYWORDS_CAPACITY: usize = 34;
+const KEYWORDS_CAPACITY: usize = 35;
 const MINIMAL_TOKENS_CAPACITY: usize = 100_000;
 
 pub type Lexeme<'a> = &'a [u8];
@@ -54,6 +54,7 @@ lazy_static! {
         keywords.insert(b"bool", TokenKind::DataType(DataTypes::Bool));
         keywords.insert(b"char", TokenKind::DataType(DataTypes::Char));
         keywords.insert(b"ptr", TokenKind::DataType(DataTypes::Ptr));
+        keywords.insert(b"T", TokenKind::DataType(DataTypes::Generic));
         keywords.insert(b"str", TokenKind::DataType(DataTypes::Str));
         keywords.insert(b"void", TokenKind::DataType(DataTypes::Void));
 
@@ -369,7 +370,7 @@ impl<'a> Lexer<'a> {
     }
 
     fn string(&mut self) -> Result<(), ThrushError> {
-        while self.peek() != b'"' && !self.end() {
+        while self.is_string_boundary() {
             self.advance();
         }
 
@@ -462,6 +463,11 @@ impl<'a> Lexer<'a> {
     }
 
     #[inline(always)]
+    fn is_string_boundary(&self) -> bool {
+        self.peek() != b'"' && !self.end()
+    }
+
+    #[inline(always)]
     const fn is_alpha(&self, char: u8) -> bool {
         char.is_ascii_lowercase() || char.is_ascii_uppercase() || char == b'_'
     }
@@ -476,12 +482,64 @@ pub struct Token<'token> {
 }
 
 impl TokenLexeme for Lexeme<'_> {
+    #[inline(always)]
     fn to_str(&self) -> &str {
         core::str::from_utf8(self).unwrap_or("invalid utf-8")
     }
 
+    #[inline(always)]
     fn to_string(&self) -> String {
         self.to_str().to_string()
+    }
+
+    fn parse_scapes(&self, line: usize, span: (usize, usize)) -> Result<String, ThrushError> {
+        let mut parsed_string: String = String::with_capacity(self.len());
+
+        let mut i: usize = 0;
+
+        while i < self.len() {
+            if self[i] == b'\\' {
+                i += 1;
+
+                match self[i] {
+                    b'n' => parsed_string.push('\n'),
+                    b't' => parsed_string.push('\t'),
+                    b'r' => parsed_string.push('\r'),
+                    b'\\' => parsed_string.push('\\'),
+                    b'0' => parsed_string.push('\0'),
+                    b'\'' => parsed_string.push('\''),
+                    b'"' => parsed_string.push('"'),
+                    _ => {
+                        return Err(ThrushError::Error(
+                            String::from("Syntax Error"),
+                            String::from("Invalid escape sequence."),
+                            line,
+                            Some(span),
+                        ))
+                    }
+                }
+
+                i += 1;
+                continue;
+            }
+
+            let char: Option<char> = char::from_u32(self[i] as u32);
+
+            if char.is_none() {
+                return Err(ThrushError::Error(
+                    String::from("Syntax Error"),
+                    String::from("Invalid char boundary in string."),
+                    line,
+                    Some(span),
+                ));
+            }
+
+            parsed_string.push(char.unwrap());
+
+            i += 1;
+        }
+
+        Ok(parsed_string)
     }
 }
 
@@ -705,6 +763,9 @@ pub enum DataTypes {
     // Pointer DataType
     Ptr,
 
+    // Generic DataType
+    Generic,
+
     // Struct DataType
     Struct,
 
@@ -722,10 +783,11 @@ impl std::fmt::Display for DataTypes {
             DataTypes::F32 => write!(f, "f32"),
             DataTypes::F64 => write!(f, "f64"),
             DataTypes::Bool => write!(f, "bool"),
-            DataTypes::Str => write!(f, "String"),
+            DataTypes::Str => write!(f, "str"),
             DataTypes::Char => write!(f, "char"),
             DataTypes::Struct => write!(f, "struct"),
             DataTypes::Ptr => write!(f, "ptr"),
+            DataTypes::Generic => write!(f, "generic"),
             DataTypes::Void => write!(f, "void"),
         }
     }

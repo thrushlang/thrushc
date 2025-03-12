@@ -28,9 +28,10 @@ const MINIMAL_GLOBAL_CAPACITY: usize = 2024;
 
 pub struct Parser<'instr> {
     stmts: Vec<Instruction<'instr>>,
-    errors: Vec<ThrushError>,
     tokens: &'instr [Token<'instr>],
+    errors: Vec<ThrushError>,
     inside_function: bool,
+    inside_loop: bool,
     at_typed_function: (DataTypes, String),
     at_typed_variable: DataTypes,
     current: usize,
@@ -49,7 +50,7 @@ impl<'instr> Parser<'instr> {
             "sizeof",
             (
                 DataTypes::I64,
-                Vec::from([DataTypes::Ptr]),
+                Vec::from([DataTypes::Generic]),
                 Vec::new(),
                 String::new(),
                 false,
@@ -62,6 +63,7 @@ impl<'instr> Parser<'instr> {
             tokens,
             current: 0,
             inside_function: false,
+            inside_loop: false,
             at_typed_function: (DataTypes::Void, String::new()),
             at_typed_variable: DataTypes::Void,
             scope: 0,
@@ -100,6 +102,7 @@ impl<'instr> Parser<'instr> {
             self.errors.iter().for_each(|error: &ThrushError| {
                 self.diagnostic.report(error, LogType::ERROR);
             });
+
             process::exit(1);
         }
 
@@ -120,6 +123,9 @@ impl<'instr> Parser<'instr> {
             TokenKind::For => Ok(self.build_for_loop()?),
             TokenKind::New => Ok(self.build_struct_initializer()?),
             TokenKind::If => Ok(self.build_if_elif_else()?),
+            TokenKind::While => Ok(self.build_while_loop()?),
+            TokenKind::Continue => Ok(self.build_continue()?),
+            TokenKind::Break => Ok(self.build_break()?),
             _ => Ok(self.expression()?),
         }
     }
@@ -162,6 +168,54 @@ impl<'instr> Parser<'instr> {
         self.inside_function = false;
 
         Ok(Instruction::EntryPoint { body })
+    }
+
+    fn build_while_loop(&mut self) -> Result<Instruction<'instr>, ThrushError> {
+        self.only_advance()?;
+
+        todo!()
+    }
+
+    fn build_continue(&mut self) -> Result<Instruction<'instr>, ThrushError> {
+        self.only_advance()?;
+
+        if !self.inside_loop {
+            return Err(ThrushError::Error(
+                String::from("Syntax error"),
+                String::from("The continue must go inside the a loop."),
+                self.peek().line,
+                Some(self.peek().span),
+            ));
+        }
+
+        self.consume(
+            TokenKind::SemiColon,
+            String::from("Syntax error"),
+            String::from("Expected ';'."),
+        )?;
+
+        Ok(Instruction::Continue)
+    }
+
+    fn build_break(&mut self) -> Result<Instruction<'instr>, ThrushError> {
+        self.only_advance()?;
+
+        if !self.inside_loop {
+            return Err(ThrushError::Error(
+                String::from("Syntax error"),
+                String::from("The break must go inside the a loop."),
+                self.peek().line,
+                Some(self.peek().span),
+            ));
+        }
+
+        self.consume(
+            TokenKind::SemiColon,
+            String::from("Syntax error"),
+            String::from("Expected ';'."),
+        )?;
+
+        Ok(Instruction::Break)
     }
 
     fn build_if_elif_else(&mut self) -> Result<Instruction<'instr>, ThrushError> {
@@ -275,13 +329,15 @@ impl<'instr> Parser<'instr> {
             String::from("Expected name for the struct."),
         )?;
 
+        let struct_name: &str = name.lexeme.to_str();
+
         self.consume(
             TokenKind::LBrace,
             String::from("Syntax error"),
             String::from("Expected '{'."),
         )?;
 
-        let mut fields_types: Vec<(String, DataTypes, u32)> = Vec::with_capacity(10);
+        let mut fields_types: Vec<(&str, DataTypes, u32)> = Vec::with_capacity(10);
         let mut field_position: u32 = 0;
 
         while self.peek().kind != TokenKind::RBrace {
@@ -294,19 +350,17 @@ impl<'instr> Parser<'instr> {
                 let span: (usize, usize) = self.previous().span;
 
                 match &self.peek().kind {
-                    TokenKind::DataType(kind) => {
-                        fields_types.push((String::new(), *kind, field_position))
-                    }
+                    TokenKind::DataType(kind) => fields_types.push(("", *kind, field_position)),
                     ident
                         if *ident == TokenKind::Identifier
                             && self
                                 .parser_objects
                                 .get_struct(self.peek().lexeme.to_str(), (line, span))
                                 .is_ok()
-                            || name.lexeme.to_str() == self.peek().lexeme.to_str() =>
+                            || struct_name == self.peek().lexeme.to_str() =>
                     {
                         fields_types.push((
-                            self.peek().lexeme.to_string(),
+                            self.peek().lexeme.to_str(),
                             DataTypes::Struct,
                             field_position,
                         ))
@@ -342,7 +396,7 @@ impl<'instr> Parser<'instr> {
         )?;
 
         Ok(Instruction::Struct {
-            name: name.lexeme.to_string(),
+            name: struct_name,
             types: fields_types,
         })
     }
@@ -355,6 +409,8 @@ impl<'instr> Parser<'instr> {
             String::from("Expected struct reference"),
             String::from("Write the struct name: \"new --> name <-- { ... }\"."),
         )?;
+
+        let struct_name: &str = name.lexeme.to_str();
 
         let line: usize = name.line;
         let span: (usize, usize) = name.span;
@@ -378,7 +434,7 @@ impl<'instr> Parser<'instr> {
             }
 
             if self.match_token(TokenKind::Identifier)? {
-                let mut field_name: &str = self.previous().lexeme.to_str();
+                let field_name: &str = self.previous().lexeme.to_str();
                 let span: (usize, usize) = self.previous().span;
 
                 if field_index as usize >= struct_found.len() {
@@ -415,16 +471,7 @@ impl<'instr> Parser<'instr> {
                     line,
                 );
 
-                if *target_type == DataTypes::Struct {
-                    field_name = self.get_struct_type_from_initializer(&instruction);
-                }
-
-                fields.push((
-                    field_name.to_string(),
-                    instruction,
-                    *target_type,
-                    field_index,
-                ));
+                fields.push((field_name, instruction, *target_type, field_index));
 
                 field_index += 1;
                 continue;
@@ -455,7 +502,7 @@ impl<'instr> Parser<'instr> {
         )?;
 
         Ok(Instruction::InitStruct {
-            name: name.lexeme.to_string(),
+            name: struct_name,
             fields,
             kind: DataTypes::Struct,
         })
@@ -622,6 +669,8 @@ impl<'instr> Parser<'instr> {
             String::from("Expected a string literal for @extern(\"NAME\")."),
         )?;
 
+        let external_name: &str = name.lexeme.to_str();
+
         self.consume(
             TokenKind::RParen,
             String::from("Syntax error"),
@@ -641,7 +690,7 @@ impl<'instr> Parser<'instr> {
         };
 
         Ok(Instruction::Extern {
-            name: name.lexeme.to_string(),
+            name: external_name,
             instr: Box::new(instr),
             kind: TokenKind::Fn,
         })
@@ -687,7 +736,11 @@ impl<'instr> Parser<'instr> {
             ));
         }
 
+        self.inside_loop = true;
+
         let body: Instruction = self.build_block(&mut [variable_clone], true)?;
+
+        self.inside_loop = false;
 
         Ok(Instruction::ForLoop {
             variable: Box::new(variable),
@@ -703,7 +756,7 @@ impl<'instr> Parser<'instr> {
     ) -> Result<Instruction<'instr>, ThrushError> {
         self.only_advance()?;
 
-        if self.scope == 0 {
+        if self.scope != 0 {
             return Err(ThrushError::Error(
                 String::from("Syntax error"),
                 String::from("Locals variables should be contained at local scope."),
@@ -719,6 +772,7 @@ impl<'instr> Parser<'instr> {
         )?;
 
         let line: usize = name.line;
+        let span: (usize, usize) = name.span;
 
         self.consume(
             TokenKind::Colon,
@@ -750,6 +804,8 @@ impl<'instr> Parser<'instr> {
             }
         };
 
+        self.throw_if_is_generic_type(kind.0, line, span)?;
+
         self.only_advance()?;
 
         if self.check_type(TokenKind::SemiColon) && kind.0 == DataTypes::Void {
@@ -775,6 +831,9 @@ impl<'instr> Parser<'instr> {
                 self.scope,
                 name.lexeme.to_str(),
                 (kind.0, kind.1, false, true),
+                line,
+                span,
+                &mut self.errors,
             );
 
             return Ok(Instruction::Var {
@@ -804,6 +863,9 @@ impl<'instr> Parser<'instr> {
             self.scope,
             name.lexeme.to_str(),
             (kind.0, kind.1, false, false),
+            line,
+            span,
+            &mut self.errors,
         );
 
         let local_variable: Instruction = Instruction::Var {
@@ -972,6 +1034,7 @@ impl<'instr> Parser<'instr> {
             String::from("Expected name to the function."),
         )?;
 
+        let function_name: &str = name.lexeme.to_str();
         let line: usize = name.line;
 
         if name.lexeme.to_str() == "main" {
@@ -998,6 +1061,9 @@ impl<'instr> Parser<'instr> {
         self.parser_objects.begin_local_scope();
 
         while !self.match_token(TokenKind::RParen)? {
+            let parameter_line: usize = self.previous().line;
+            let parameter_span: (usize, usize) = self.previous().span;
+
             if self.match_token(TokenKind::Comma)? {
                 continue;
             }
@@ -1058,14 +1124,19 @@ impl<'instr> Parser<'instr> {
 
             params_types.push(kind.0);
 
-            self.parser_objects.insert_new_local(
-                self.scope,
-                parameter_name,
-                (kind.0, kind.1, false, false),
-            );
+            if !only_define {
+                self.parser_objects.insert_new_local(
+                    self.scope,
+                    parameter_name,
+                    (kind.0, kind.1, false, false),
+                    parameter_line,
+                    parameter_span,
+                    &mut self.errors,
+                );
+            }
 
             params.push(Instruction::Param {
-                name: parameter_name.to_string(),
+                name: parameter_name,
                 kind: kind.0,
                 position: parameter_position,
                 line,
@@ -1109,7 +1180,7 @@ impl<'instr> Parser<'instr> {
         self.at_typed_function = return_type.clone();
 
         let mut function: Instruction = Instruction::Function {
-            name: name.lexeme.to_string(),
+            name: function_name,
             params: params.clone(),
             body: None,
             return_type: return_type.0,
@@ -1129,7 +1200,7 @@ impl<'instr> Parser<'instr> {
 
         if only_define {
             self.parser_objects.insert_new_function(
-                name.lexeme.to_str(),
+                function_name,
                 (
                     return_type.0,
                     params_types,
@@ -1160,6 +1231,7 @@ impl<'instr> Parser<'instr> {
             )?;
 
             self.inside_function = false;
+
             return Ok(function);
         }
 
@@ -1167,8 +1239,12 @@ impl<'instr> Parser<'instr> {
 
         self.inside_function = false;
 
-        if let Instruction::Function { body: body_fn, .. } = &mut function {
-            *body_fn = Some(body);
+        if let Instruction::Function {
+            body: function_body,
+            ..
+        } = &mut function
+        {
+            *function_body = Some(body);
         }
 
         Ok(function)
@@ -1201,6 +1277,9 @@ impl<'instr> Parser<'instr> {
                 (self.previous().line, self.previous().span),
             )?;
 
+            self.throw_if_call(&instr, self.previous().line, self.previous().span)?;
+            self.throw_if_call(&right, self.previous().line, self.previous().span)?;
+
             instr = Instruction::BinaryOp {
                 left: Box::new(instr),
                 op,
@@ -1225,6 +1304,9 @@ impl<'instr> Parser<'instr> {
                 &right.get_data_type(),
                 (self.previous().line, self.previous().span),
             )?;
+
+            self.throw_if_call(&instr, self.previous().line, self.previous().span)?;
+            self.throw_if_call(&right, self.previous().line, self.previous().span)?;
 
             instr = Instruction::BinaryOp {
                 left: Box::new(instr),
@@ -1255,6 +1337,9 @@ impl<'instr> Parser<'instr> {
             )?;
 
             instr.is_chained(&right, (self.previous().line, self.previous().span))?;
+
+            self.throw_if_call(&instr, self.previous().line, self.previous().span)?;
+            self.throw_if_call(&right, self.previous().line, self.previous().span)?;
 
             instr = Instruction::BinaryOp {
                 left: Box::from(instr),
@@ -1290,6 +1375,9 @@ impl<'instr> Parser<'instr> {
 
             instr.is_chained(&right, (self.previous().line, self.previous().span))?;
 
+            self.throw_if_call(&instr, self.previous().line, self.previous().span)?;
+            self.throw_if_call(&right, self.previous().line, self.previous().span)?;
+
             instr = Instruction::BinaryOp {
                 left: Box::from(instr),
                 op,
@@ -1317,6 +1405,9 @@ impl<'instr> Parser<'instr> {
                 &right_type,
                 (op.line, op.span),
             )?;
+
+            self.throw_if_call(&instr, self.previous().line, self.previous().span)?;
+            self.throw_if_call(&right, self.previous().line, self.previous().span)?;
 
             let kind: DataTypes = if left_type.is_integer_type() && right_type.is_integer_type() {
                 left_type.calculate_integer_datatype(right_type)
@@ -1354,6 +1445,9 @@ impl<'instr> Parser<'instr> {
                 (self.previous().line, self.previous().span),
             )?;
 
+            self.throw_if_call(&instr, self.previous().line, self.previous().span)?;
+            self.throw_if_call(&right, self.previous().line, self.previous().span)?;
+
             let kind: DataTypes = if left_type.is_integer_type() && right_type.is_integer_type() {
                 left_type.calculate_integer_datatype(right_type)
             } else if left_type.is_float_type() && right_type.is_float_type() {
@@ -1383,6 +1477,8 @@ impl<'instr> Parser<'instr> {
                 &value.get_data_type(),
                 (self.previous().line, self.previous().span),
             )?;
+
+            self.throw_if_call(&value, self.previous().line, self.previous().span)?;
 
             return Ok(Instruction::UnaryOp {
                 op,
@@ -1417,6 +1513,8 @@ impl<'instr> Parser<'instr> {
                 &value_type,
                 (self.previous().line, self.previous().span),
             )?;
+
+            self.throw_if_call(&value, self.previous().line, self.previous().span)?;
 
             return Ok(Instruction::UnaryOp {
                 op,
@@ -1489,10 +1587,13 @@ impl<'instr> Parser<'instr> {
                 self.only_advance()?;
                 Instruction::NullPtr
             }
-            TokenKind::Str => Instruction::Str(self.advance()?.lexeme.to_string()),
+            TokenKind::Str => {
+                let token: &Token = self.advance()?;
+                Instruction::Str(token.lexeme.parse_scapes(token.line, token.span)?)
+            }
             TokenKind::Char => {
                 let char: &Token = self.advance()?;
-                Instruction::Char(char.lexeme.to_str().as_bytes()[0])
+                Instruction::Char(char.lexeme[0])
             }
             kind => match kind {
                 TokenKind::Integer(kind, num, is_signed) => {
@@ -1538,6 +1639,9 @@ impl<'instr> Parser<'instr> {
                             self.scope,
                             object_name,
                             (local_type, String::new(), false, false),
+                            object_line,
+                            object_span,
+                            &mut self.errors,
                         );
 
                         return Ok(Instruction::MutVar {
@@ -1894,18 +1998,6 @@ impl<'instr> Parser<'instr> {
 
     ########################################################################*/
 
-    fn get_struct_type_from_initializer(&self, instruction: &'instr Instruction) -> &'instr str {
-        if let Instruction::RefVar { struct_type, .. } = instruction {
-            return struct_type;
-        }
-
-        if let Instruction::NullPtr = instruction {
-            return "";
-        }
-
-        unreachable!()
-    }
-
     fn throw_if_is_struct_initializer(
         &self,
         instruction: &Instruction,
@@ -1917,6 +2009,44 @@ impl<'instr> Parser<'instr> {
                 String::from("A struct initializer should be stored a variable."),
                 line,
                 None,
+            ));
+        }
+
+        Ok(())
+    }
+
+    fn throw_if_is_generic_type(
+        &self,
+        kind: DataTypes,
+        line: usize,
+        span: (usize, usize),
+    ) -> Result<(), ThrushError> {
+        if let DataTypes::Generic = kind {
+            return Err(ThrushError::Error(
+                String::from("Syntax error"),
+                String::from("A generic type `T` only is allowed in functions parameters/structures fields types."),
+                line,
+                Some(span),
+            ));
+        }
+
+        Ok(())
+    }
+
+    fn throw_if_call(
+        &self,
+        instruction: &Instruction,
+        line: usize,
+        span: (usize, usize),
+    ) -> Result<(), ThrushError> {
+        if let Instruction::Call { .. } = instruction {
+            return Err(ThrushError::Error(
+                String::from("Syntax error"),
+                String::from(
+                    "Functions calls is only allowed inside of local variables or not associated expressions.",
+                ),
+                line,
+                Some(span),
             ));
         }
 

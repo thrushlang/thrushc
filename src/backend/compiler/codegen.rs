@@ -6,7 +6,8 @@ use {
         },
         binaryop, call, generation,
         objects::CompilerObjects,
-        types::{Function, Struct},
+        traits::StructureBasics,
+        types::{Function, Struct, StructField},
         unaryop, utils, variable,
     },
     core::str,
@@ -29,6 +30,7 @@ pub struct Codegen<'a, 'ctx> {
     current: usize,
     compiler_objects: CompilerObjects<'ctx>,
     function: Option<FunctionValue<'ctx>>,
+    exit_block: Option<BasicBlock<'ctx>>,
 }
 
 impl<'a, 'ctx> Codegen<'a, 'ctx> {
@@ -46,6 +48,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
             current: 0,
             compiler_objects: CompilerObjects::new(),
             function: None,
+            exit_block: None,
         }
         .start();
     }
@@ -81,9 +84,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                 let struct_type: &str = struct_type;
                 let variable: PointerValue<'ctx> = self.compiler_objects.get_local(name).unwrap();
 
-                if self.compiler_objects.structs.contains_key(struct_type) {
-                    let struct_fields: &Struct = self.compiler_objects.get_struct(struct_type);
-
+                if let Some(struct_fields) = self.compiler_objects.get_struct(struct_type) {
                     let struct_type: StructType =
                         utils::build_struct_type_from_fields(self.context, struct_fields);
 
@@ -121,20 +122,25 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                 let compiled_if_cond: IntValue<'ctx> =
                     self.codegen(cond).as_basic_value().into_int_value();
 
-                let then_block: BasicBlock =
-                    self.context.append_basic_block(self.function.unwrap(), "");
+                let then_block: BasicBlock = self
+                    .context
+                    .append_basic_block(self.function.unwrap(), "if");
 
-                let else_if_cond: BasicBlock =
-                    self.context.append_basic_block(self.function.unwrap(), "");
+                let else_if_cond: BasicBlock = self
+                    .context
+                    .append_basic_block(self.function.unwrap(), "elseif");
 
-                let else_if_body: BasicBlock =
-                    self.context.append_basic_block(self.function.unwrap(), "");
+                let else_if_body: BasicBlock = self
+                    .context
+                    .append_basic_block(self.function.unwrap(), "elseifbody");
 
-                let else_block: BasicBlock =
-                    self.context.append_basic_block(self.function.unwrap(), "");
+                let else_block: BasicBlock = self
+                    .context
+                    .append_basic_block(self.function.unwrap(), "else");
 
-                let merge_block: BasicBlock =
-                    self.context.append_basic_block(self.function.unwrap(), "");
+                let merge_block: BasicBlock = self
+                    .context
+                    .append_basic_block(self.function.unwrap(), "merge");
 
                 if elfs.is_some() {
                     self.builder
@@ -154,7 +160,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
 
                 self.codegen(block);
 
-                if !block.has_return() {
+                if !block.has_return() && !block.has_break() {
                     self.builder
                         .build_unconditional_branch(merge_block)
                         .unwrap();
@@ -167,7 +173,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                 }
 
                 if let Some(chained_elifs) = elfs {
-                    let mut current_block: BasicBlock<'_> = else_if_body;
+                    let mut current_block: BasicBlock = else_if_body;
 
                     for (index, instr) in chained_elifs.iter().enumerate() {
                         if let Instruction::Elif { cond, block } = instr {
@@ -177,7 +183,8 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                             let elif_body: BasicBlock = current_block;
 
                             let next_block: BasicBlock = if index + 1 < chained_elifs.len() {
-                                self.context.append_basic_block(self.function.unwrap(), "")
+                                self.context
+                                    .append_basic_block(self.function.unwrap(), "elseifbody")
                             } else if otherwise.is_some() {
                                 else_block
                             } else {
@@ -196,7 +203,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
 
                             self.codegen(block);
 
-                            if !block.has_return() {
+                            if !block.has_return() && !block.has_break() {
                                 self.builder
                                     .build_unconditional_branch(merge_block)
                                     .unwrap();
@@ -204,8 +211,9 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
 
                             if index + 1 < chained_elifs.len() {
                                 self.builder.position_at_end(next_block);
-                                current_block =
-                                    self.context.append_basic_block(self.function.unwrap(), "");
+                                current_block = self
+                                    .context
+                                    .append_basic_block(self.function.unwrap(), "elseifbody");
                             }
                         }
                     }
@@ -217,7 +225,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
 
                         self.codegen(block);
 
-                        if !block.has_return() {
+                        if !block.has_return() && !block.has_break() {
                             self.builder
                                 .build_unconditional_branch(merge_block)
                                 .unwrap();
@@ -251,7 +259,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
 
                 self.codegen(variable.as_ref());
 
-                let start_block: BasicBlock = self.context.append_basic_block(function, "");
+                let start_block: BasicBlock = self.context.append_basic_block(function, "start");
 
                 self.builder
                     .build_unconditional_branch(start_block)
@@ -264,23 +272,39 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                     .as_basic_value()
                     .into_int_value();
 
-                let then_block: BasicBlock = self.context.append_basic_block(function, "");
-                let exit_block: BasicBlock = self.context.append_basic_block(function, "");
+                let then_block: BasicBlock = self.context.append_basic_block(function, "body");
+                let exit_block: BasicBlock = self.context.append_basic_block(function, "exit");
 
                 self.builder
                     .build_conditional_branch(conditional, then_block, exit_block)
                     .unwrap();
 
+                self.exit_block = Some(exit_block);
+
                 self.builder.position_at_end(then_block);
 
                 self.codegen(actions.as_ref());
+
                 self.codegen(block.as_ref());
 
-                self.builder
+                let exit_brancher = self
+                    .builder
                     .build_unconditional_branch(start_block)
                     .unwrap();
 
+                if block.has_break() {
+                    exit_brancher.remove_from_basic_block();
+                }
+
                 self.builder.position_at_end(exit_block);
+
+                Instruction::Null
+            }
+
+            Instruction::Break => {
+                self.builder
+                    .build_unconditional_branch(self.exit_block.unwrap())
+                    .unwrap();
 
                 Instruction::Null
             }
@@ -529,7 +553,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
             let variable: PointerValue<'ctx> = self.compiler_objects.get_local(name).unwrap();
 
             if kind.is_integer_type() || *kind == DataTypes::Bool {
-                let num: IntValue<'_> = self
+                let num: IntValue = self
                     .builder
                     .build_load(
                         utils::datatype_integer_to_llvm_type(self.context, kind),
@@ -545,7 +569,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
             }
 
             if kind.is_float_type() {
-                let num: FloatValue<'_> = self
+                let num: FloatValue = self
                     .builder
                     .build_load(
                         utils::datatype_float_to_llvm_type(self.context, kind),
@@ -573,7 +597,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
         &self,
         struct_type: StructType<'ctx>,
         variable: PointerValue,
-        field: &(String, DataTypes, u32),
+        field: &StructField,
     ) {
         let dealloc_struct_name: String = format!("dealloc_{}_struct", field.0.to_lowercase());
 
@@ -624,7 +648,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
     fn build_function(&mut self, function: Function<'ctx>, only_define: bool) {
         let function_name: &str = function.0;
         let function_return_type: &DataTypes = function.3;
-        let function_params: &[Instruction<'_>] = function.1;
+        let function_params: &[Instruction] = function.1;
         let function_is_public: &bool = function.4;
         let function_body: Option<&Box<Instruction>> = function.2;
 
@@ -681,12 +705,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
         self.compiler_objects
             .structs
             .iter()
-            .filter(|structure| {
-                structure
-                    .1
-                    .iter()
-                    .any(|structure_field| structure_field.1.is_struct_type())
-            })
+            .filter(|structure| structure.1.contain_heaped_fields(&self.compiler_objects))
             .for_each(|structure| {
                 let dealloc_function_name: &str =
                     &format!("dealloc_{}_struct", structure.0.to_lowercase());
@@ -773,7 +792,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
 
                             self.builder.build_free(struct_pointer).unwrap();
                         } else {
-                            let struct_name: &str = &structure_field.0;
+                            let struct_name: &str = structure_field.0;
 
                             let struct_fields: &Struct =
                                 self.compiler_objects.structs.get(struct_name).unwrap();

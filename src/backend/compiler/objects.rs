@@ -54,8 +54,8 @@ impl<'ctx> CompilerObjects<'ctx> {
     }
 
     #[inline]
-    pub fn get_struct(&self, name: &str) -> &Struct {
-        self.structs.get(name).unwrap()
+    pub fn get_struct(&self, name: &str) -> Option<&Struct> {
+        self.structs.get(name).map(|structure| &**structure)
     }
 
     #[inline]

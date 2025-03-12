@@ -53,7 +53,7 @@ pub struct ThrushFile {
 }
 
 impl Opt {
-    #[inline]
+    #[inline(always)]
     pub const fn to_str(&self, single_slash: bool) -> &str {
         match self {
             Opt::None if !single_slash => "O0",
@@ -70,7 +70,7 @@ impl Opt {
         }
     }
 
-    #[inline]
+    #[inline(always)]
     pub const fn as_llvm_lto_opt(&self) -> &str {
         match self {
             Opt::None => "-O0",
@@ -80,7 +80,7 @@ impl Opt {
         }
     }
 
-    #[inline]
+    #[inline(always)]
     pub const fn to_llvm_opt(&self) -> OptimizationLevel {
         match self {
             Opt::None => OptimizationLevel::None,
@@ -90,7 +90,7 @@ impl Opt {
         }
     }
 
-    #[inline]
+    #[inline(always)]
     pub const fn to_llvm_17_passes(&self) -> &str {
         match self {
             Opt::None => "default<O0>",

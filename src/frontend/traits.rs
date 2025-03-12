@@ -6,6 +6,11 @@ use {
 pub trait TokenLexeme {
     fn to_str(&self) -> &str;
     fn to_string(&self) -> String;
+    fn parse_scapes(&self, line: usize, span: (usize, usize)) -> Result<String, ThrushError>;
+}
+
+pub trait ParserErrorsBasics {
+    fn add_error(&self) -> &str;
 }
 
 pub trait FoundObjectEither {

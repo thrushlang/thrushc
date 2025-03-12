@@ -98,7 +98,26 @@ impl<'instr> ParserObjects<'instr> {
     }
 
     #[inline(always)]
-    pub fn insert_new_local(&mut self, scope_pos: usize, name: &'instr str, value: Local) {
+    pub fn insert_new_local(
+        &mut self,
+        scope_pos: usize,
+        name: &'instr str,
+        value: Local,
+        line: usize,
+        span: (usize, usize),
+        parser_errors: &mut Vec<ThrushError>,
+    ) {
+        if self.locals[scope_pos].contains_key(name) {
+            parser_errors.push(ThrushError::Error(
+                String::from("Local variable already declared"),
+                format!("'{}' local variable already declared.", name),
+                line,
+                Some(span),
+            ));
+
+            return;
+        }
+
         self.locals[scope_pos].insert(name, value);
     }
 

@@ -99,7 +99,13 @@ impl<'a> Thrushc<'a> {
 
         let start_time: Instant = Instant::now();
 
-        let content: String = fs::read_to_string(&file.path).unwrap();
+        let content: String = fs::read_to_string(&file.path).unwrap_or_else(|_| {
+            logging::log(
+                logging::LogType::PANIC,
+                &format!("`{}` is invalid utf-8 file.", &file.path.display()),
+            );
+            unreachable!()
+        });
 
         let tokens: Vec<Token> = Lexer::lex(content.as_bytes(), file);
 
@@ -155,7 +161,16 @@ impl<'a> Thrushc<'a> {
         if self.options.emit_raw_llvm_ir {
             module
                 .print_to_file(Path::new(&format!("output/{}.ll", &file.name)))
-                .unwrap();
+                .unwrap_or_else(|_| {
+                    logging::log(
+                        logging::LogType::PANIC,
+                        &format!(
+                            "'output/{}.ll' cannot be emitted in teh directory.",
+                            &file.name
+                        ),
+                    );
+                    unreachable!()
+                });
 
             return;
         }

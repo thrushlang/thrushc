@@ -3,7 +3,7 @@ use {
         super::{super::frontend::lexer::DataTypes, instruction::Instruction},
         call,
         objects::CompilerObjects,
-        utils, variable,
+        utils,
     },
     inkwell::{
         builder::Builder,
@@ -122,16 +122,6 @@ pub fn build_basic_value_enum<'ctx>(
             compiler_objects,
         )
         .unwrap();
-    }
-
-    if let Instruction::InitStruct { name, kind, .. } = instr {
-        return variable::compile(
-            module,
-            builder,
-            context,
-            (name, kind, instr),
-            compiler_objects,
-        );
     }
 
     println!("{:?}", instr);

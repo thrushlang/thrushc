@@ -61,8 +61,8 @@ impl Diagnostic {
                 {
                     println!(
                         "|\n{}\n{}",
-                        "|   ".to_string() + line_text.trim(),
-                        "|   ".to_string() + arrow_line.trim_end()
+                        "|".to_string() + &line_text,
+                        "|".to_string() + &arrow_line,
                     );
                 } else {
                     return self.print_not_spanned_report(help, line);
@@ -87,7 +87,7 @@ impl Diagnostic {
     fn print_not_spanned_report(&mut self, help: &str, line: usize) {
         let lines: Vec<&str> = self.contain.lines().collect();
 
-        let line_text: String = "|   ".to_string() + lines[line - 1];
+        let line_text: String = "|   ".to_string() + lines[line - 1].trim();
         let arrow_line: String =
             "|   ".to_string() + &style("─").bright_red().to_string().repeat(line_text.len());
 

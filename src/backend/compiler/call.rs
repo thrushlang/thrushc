@@ -1,13 +1,17 @@
 use {
     super::{
-        super::super::frontend::lexer::DataTypes, generation, objects::CompilerObjects,
-        types::Call, utils, Instruction,
+        super::super::{frontend::lexer::DataTypes, logging},
+        generation,
+        objects::CompilerObjects,
+        types::Call,
+        utils, Instruction,
     },
     inkwell::{
         builder::Builder,
         context::Context,
         module::Module,
-        values::{BasicMetadataValueEnum, BasicValueEnum, FunctionValue, PointerValue},
+        types::StructType,
+        values::{BasicMetadataValueEnum, BasicValueEnum, FunctionValue, IntValue, PointerValue},
         AddressSpace,
     },
 };
@@ -77,7 +81,32 @@ fn build_sizeof<'ctx>(
 ) -> Option<BasicValueEnum<'ctx>> {
     let var_value: &Instruction<'ctx> = &call.2[0];
 
-    if let Instruction::RefVar { name, .. } = var_value {
+    if let Instruction::RefVar {
+        name,
+        struct_type,
+        line,
+        ..
+    } = var_value
+    {
+        if let Some(structure_fields) = compiler_objects.get_struct(struct_type) {
+            let structure_type: StructType =
+                utils::build_struct_type_from_fields(context, structure_fields);
+
+            let structure_size_of: IntValue = structure_type.size_of().unwrap_or_else(|| {
+                logging::log(
+                    logging::LogType::PANIC,
+                    &format!(
+                        "Built-in `sizeof()` cannot get the size of `{}`, line {}.",
+                        name, line
+                    ),
+                );
+
+                unreachable!()
+            });
+
+            return Some(structure_size_of.into());
+        }
+
         let ptr: PointerValue<'ctx> = compiler_objects.get_local(name).unwrap();
         return Some(ptr.get_type().size_of().into());
     }

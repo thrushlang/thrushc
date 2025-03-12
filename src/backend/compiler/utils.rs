@@ -115,7 +115,7 @@ pub fn datatype_to_fn_type<'ctx>(
         DataTypes::I16 => context.i16_type().fn_type(&param_types, true),
         DataTypes::I32 => context.i32_type().fn_type(&param_types, true),
         DataTypes::I64 => context.i64_type().fn_type(&param_types, true),
-        DataTypes::Str | DataTypes::Struct | DataTypes::Ptr => context
+        DataTypes::Str | DataTypes::Struct | DataTypes::Ptr | DataTypes::Generic => context
             .ptr_type(AddressSpace::default())
             .fn_type(&param_types, true),
         DataTypes::Bool => context.bool_type().fn_type(&param_types, true),

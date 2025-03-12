@@ -19,10 +19,18 @@ use {
 #[derive(Debug, Clone, Default)]
 pub enum Instruction<'ctx> {
     BasicValueEnum(BasicValueEnum<'ctx>),
+    Str(String),
+    Char(u8),
+    Boolean(bool),
     DataTypes(DataTypes),
     Struct {
-        name: String,
+        name: &'ctx str,
         types: Struct<'ctx>,
+    },
+    InitStruct {
+        name: &'ctx str,
+        fields: StructFields<'ctx>,
+        kind: DataTypes,
     },
     If {
         cond: Box<Instruction<'ctx>>,
@@ -37,19 +45,14 @@ pub enum Instruction<'ctx> {
     Else {
         block: Box<Instruction<'ctx>>,
     },
-    InitStruct {
-        name: String,
-        fields: StructFields<'ctx>,
-        kind: DataTypes,
-    },
-    Str(String),
-    Char(u8),
     ForLoop {
         variable: Box<Instruction<'ctx>>,
         cond: Box<Instruction<'ctx>>,
         actions: Box<Instruction<'ctx>>,
         block: Box<Instruction<'ctx>>,
     },
+    Continue,
+    Break,
     Integer(DataTypes, f64, bool),
     Float(DataTypes, f64, bool),
     Block {
@@ -59,13 +62,13 @@ pub enum Instruction<'ctx> {
         body: Box<Instruction<'ctx>>,
     },
     Param {
-        name: String,
+        name: &'ctx str,
         kind: DataTypes,
         position: u32,
         line: usize,
     },
     Function {
-        name: String,
+        name: &'ctx str,
         params: Vec<Instruction<'ctx>>,
         body: Option<Box<Instruction<'ctx>>>,
         return_type: DataTypes,
@@ -116,14 +119,13 @@ pub enum Instruction<'ctx> {
         struct_type: String,
     },
     Extern {
-        name: String,
+        name: &'ctx str,
         instr: Box<Instruction<'ctx>>,
         kind: TokenKind,
     },
-    Boolean(bool),
     Pass,
-    #[default]
     NullPtr,
+    #[default]
     Null,
 }
 
@@ -150,26 +152,22 @@ impl<'ctx> Instruction<'ctx> {
         }
 
         if let Instruction::InitStruct { fields, .. } = self {
-            let mut new_fields: Vec<(String, DataTypes, u32)> = Vec::with_capacity(fields.len());
+            let mut new_fields: Vec<(&'ctx str, DataTypes, u32)> = Vec::with_capacity(fields.len());
 
             fields.iter().for_each(|field| {
-                if field.2 == DataTypes::Struct {
-                    new_fields.push((field.0.clone(), field.2, field.3));
-                } else {
-                    new_fields.push((String::new(), field.2, field.3));
-                }
+                new_fields.push((field.0, field.2, field.3));
             });
 
             return utils::build_struct_type_from_fields(context, &new_fields);
         }
 
         if let Instruction::RefVar { struct_type, .. } = self {
-            let fields: &Struct = compiler_objects.get_struct(struct_type);
+            let fields: &Struct = compiler_objects.get_struct(struct_type).unwrap();
             return utils::build_struct_type_from_fields(context, fields);
         }
 
         if let Instruction::Call { struct_type, .. } = self {
-            let fields: &Struct = compiler_objects.get_struct(struct_type);
+            let fields: &Struct = compiler_objects.get_struct(struct_type).unwrap();
             return utils::build_struct_type_from_fields(context, fields);
         }
 
@@ -233,6 +231,15 @@ impl<'ctx> Instruction<'ctx> {
     }
 
     #[inline]
+    pub fn has_break(&self) -> bool {
+        if let Instruction::Block { stmts } = self {
+            stmts.iter().any(|stmt| stmt.is_break())
+        } else {
+            false
+        }
+    }
+
+    #[inline]
     pub fn return_with_ptr(&self) -> Option<&'ctx str> {
         if let Instruction::Return(instr, _) = self {
             if let Instruction::RefVar { name, kind, .. } = instr.as_ref() {
@@ -284,6 +291,15 @@ impl<'ctx> Instruction<'ctx> {
     #[inline]
     pub const fn is_return(&self) -> bool {
         if let Instruction::Return(_, _) = self {
+            return true;
+        }
+
+        false
+    }
+
+    #[inline]
+    pub const fn is_break(&self) -> bool {
+        if let Instruction::Break = self {
             return true;
         }
 
@@ -346,6 +362,10 @@ impl<'ctx> Instruction<'ctx> {
         } = self
         {
             return *refvar_type;
+        }
+
+        if let Instruction::Call { kind, .. } = self {
+            return *kind;
         }
 
         if let Instruction::Integer(integer_type, _, _) = self {

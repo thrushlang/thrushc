@@ -261,22 +261,23 @@ fn compile_struct_var<'ctx>(
         let struct_type: StructType<'_> =
             var_value.build_struct_type(context, None, compiler_objects);
 
-        compiler_objects
-            .get_struct(struct_name)
-            .iter()
-            .filter(|field| field.1.is_ptr_heaped())
-            .for_each(|field| {
-                let field_in_struct: PointerValue<'ctx> = builder
-                    .build_struct_gep(struct_type, compiled_value, field.2, "")
-                    .unwrap();
+        if let Some(structure) = compiler_objects.get_struct(struct_name) {
+            structure
+                .iter()
+                .filter(|field| field.1.is_ptr_heaped())
+                .for_each(|field| {
+                    let field_in_struct: PointerValue<'ctx> = builder
+                        .build_struct_gep(struct_type, compiled_value, field.2, "")
+                        .unwrap();
 
-                let loaded_field: PointerValue<'ctx> = builder
-                    .build_load(field_in_struct.get_type(), field_in_struct, "")
-                    .unwrap()
-                    .into_pointer_value();
+                    let loaded_field: PointerValue<'ctx> = builder
+                        .build_load(field_in_struct.get_type(), field_in_struct, "")
+                        .unwrap()
+                        .into_pointer_value();
 
-                builder.build_free(loaded_field).unwrap();
-            });
+                    builder.build_free(loaded_field).unwrap();
+                });
+        };
 
         builder.build_free(compiled_value).unwrap();
 
