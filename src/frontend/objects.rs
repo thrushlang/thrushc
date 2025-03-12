@@ -18,6 +18,7 @@ pub type Function<'instr> = (
     String,
     bool,
 );
+
 pub type Struct<'instr> = HashMap<&'instr str, DataTypes>;
 pub type Local = (DataTypes, String, bool, bool);
 
@@ -79,12 +80,8 @@ impl<'instr> ParserObjects<'instr> {
         name: &str,
         location: (usize, (usize, usize)),
     ) -> Result<HashMap<&'instr str, DataTypes>, ThrushError> {
-        if let Some(struct_fields) = self.structs.get(name) {
-            let mut struct_fields_clone: HashMap<&'instr str, DataTypes> = HashMap::new();
-
-            struct_fields_clone.clone_from(struct_fields);
-
-            return Ok(struct_fields_clone);
+        if let Some(struct_fields) = self.structs.get(name).cloned() {
+            return Ok(struct_fields);
         }
 
         Err(ThrushError::Error(
@@ -181,8 +178,8 @@ impl<'instr> ParserObjects<'instr> {
     }
 }
 
-impl<'a> FoundObjectEither for FoundObject<'a> {
-    fn expected_local(&self, line: usize, span: (usize, usize)) -> Result<&'a Local, ThrushError> {
+impl FoundObjectEither for FoundObject<'_> {
+    fn expected_local(&self, line: usize, span: (usize, usize)) -> Result<&Local, ThrushError> {
         if let Some(local) = self.2 {
             return Ok(local);
         }

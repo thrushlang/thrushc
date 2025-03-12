@@ -30,7 +30,8 @@ pub struct Codegen<'a, 'ctx> {
     current: usize,
     compiler_objects: CompilerObjects<'ctx>,
     function: Option<FunctionValue<'ctx>>,
-    exit_block: Option<BasicBlock<'ctx>>,
+    loop_exit_block: Option<BasicBlock<'ctx>>,
+    loop_start_block: Option<BasicBlock<'ctx>>,
 }
 
 impl<'a, 'ctx> Codegen<'a, 'ctx> {
@@ -48,7 +49,8 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
             current: 0,
             compiler_objects: CompilerObjects::new(),
             function: None,
-            exit_block: None,
+            loop_exit_block: None,
+            loop_start_block: None,
         }
         .start();
     }
@@ -160,7 +162,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
 
                 self.codegen(block);
 
-                if !block.has_return() && !block.has_break() {
+                if !block.has_return() && !block.has_break() && !block.has_continue() {
                     self.builder
                         .build_unconditional_branch(merge_block)
                         .unwrap();
@@ -203,7 +205,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
 
                             self.codegen(block);
 
-                            if !block.has_return() && !block.has_break() {
+                            if !block.has_return() && !block.has_break() && !block.has_continue() {
                                 self.builder
                                     .build_unconditional_branch(merge_block)
                                     .unwrap();
@@ -225,7 +227,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
 
                         self.codegen(block);
 
-                        if !block.has_return() && !block.has_break() {
+                        if !block.has_return() && !block.has_break() && !block.has_continue() {
                             self.builder
                                 .build_unconditional_branch(merge_block)
                                 .unwrap();
@@ -261,6 +263,8 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
 
                 let start_block: BasicBlock = self.context.append_basic_block(function, "start");
 
+                self.loop_start_block = Some(start_block);
+
                 self.builder
                     .build_unconditional_branch(start_block)
                     .unwrap();
@@ -279,7 +283,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                     .build_conditional_branch(conditional, then_block, exit_block)
                     .unwrap();
 
-                self.exit_block = Some(exit_block);
+                self.loop_exit_block = Some(exit_block);
 
                 self.builder.position_at_end(then_block);
 
@@ -303,7 +307,15 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
 
             Instruction::Break => {
                 self.builder
-                    .build_unconditional_branch(self.exit_block.unwrap())
+                    .build_unconditional_branch(self.loop_exit_block.unwrap())
+                    .unwrap();
+
+                Instruction::Null
+            }
+
+            Instruction::Continue => {
+                self.builder
+                    .build_unconditional_branch(self.loop_start_block.unwrap())
                     .unwrap();
 
                 Instruction::Null
@@ -749,10 +761,11 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                 let recurse_block: BasicBlock =
                     self.context.append_basic_block(dealloc_function, "");
 
-                let exit_block: BasicBlock = self.context.append_basic_block(dealloc_function, "");
+                let loop_exit_block: BasicBlock =
+                    self.context.append_basic_block(dealloc_function, "");
 
                 self.builder
-                    .build_conditional_branch(cmp, exit_block, recurse_block)
+                    .build_conditional_branch(cmp, loop_exit_block, recurse_block)
                     .unwrap();
 
                 self.builder.position_at_end(recurse_block);
@@ -848,9 +861,11 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                         }
                     });
 
-                self.builder.build_unconditional_branch(exit_block).unwrap();
+                self.builder
+                    .build_unconditional_branch(loop_exit_block)
+                    .unwrap();
 
-                self.builder.position_at_end(exit_block);
+                self.builder.position_at_end(loop_exit_block);
                 self.builder.build_return(None).unwrap();
             });
     }

@@ -731,8 +731,8 @@ impl<'instr> Parser<'instr> {
             return Err(ThrushError::Error(
                 String::from("Syntax error"),
                 String::from("Expected for loop body \"{ ... }\"."),
-                self.peek().line,
-                Some(self.peek().span),
+                self.previous().line,
+                Some(self.previous().span),
             ));
         }
 
@@ -2154,8 +2154,8 @@ impl<'instr> Parser<'instr> {
         Err(ThrushError::Error(
             error_title,
             help,
-            self.peek().line,
-            Some(self.peek().span),
+            self.previous().line,
+            Some(self.previous().span),
         ))
     }
 

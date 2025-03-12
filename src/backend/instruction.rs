@@ -240,6 +240,15 @@ impl<'ctx> Instruction<'ctx> {
     }
 
     #[inline]
+    pub fn has_continue(&self) -> bool {
+        if let Instruction::Block { stmts } = self {
+            stmts.iter().any(|stmt| stmt.is_continue())
+        } else {
+            false
+        }
+    }
+
+    #[inline]
     pub fn return_with_ptr(&self) -> Option<&'ctx str> {
         if let Instruction::Return(instr, _) = self {
             if let Instruction::RefVar { name, kind, .. } = instr.as_ref() {
@@ -306,7 +315,17 @@ impl<'ctx> Instruction<'ctx> {
         false
     }
 
-    pub fn as_extern(&self) -> (&str, &Instruction, &TokenKind) {
+    #[inline]
+    pub const fn is_continue(&self) -> bool {
+        if let Instruction::Continue = self {
+            return true;
+        }
+
+        false
+    }
+
+    #[inline]
+    pub const fn as_extern(&self) -> (&str, &Instruction, &TokenKind) {
         if let Instruction::Extern { name, instr, kind } = self {
             return (name, instr, kind);
         }
@@ -314,6 +333,7 @@ impl<'ctx> Instruction<'ctx> {
         unreachable!()
     }
 
+    #[inline]
     pub fn as_function(&self) -> Function {
         if let Instruction::Function {
             name,
@@ -329,7 +349,8 @@ impl<'ctx> Instruction<'ctx> {
         unreachable!()
     }
 
-    pub fn as_binary(&self) -> BinaryOp {
+    #[inline]
+    pub const fn as_binary(&self) -> BinaryOp {
         if let Instruction::BinaryOp {
             left, op, right, ..
         } = self
@@ -344,7 +365,15 @@ impl<'ctx> Instruction<'ctx> {
         unreachable!()
     }
 
-    pub fn get_data_type_recursive(&self) -> DataTypes {
+    #[inline]
+    pub const fn as_basic_value(&self) -> &BasicValueEnum<'ctx> {
+        match self {
+            Instruction::BasicValueEnum(value) => value,
+            _ => unreachable!(),
+        }
+    }
+
+    pub const fn get_data_type_recursive(&self) -> DataTypes {
         if let Instruction::BinaryOp { left, .. } = self {
             return left.get_data_type_recursive();
         }
@@ -415,16 +444,9 @@ impl<'ctx> Instruction<'ctx> {
             Instruction::UnaryOp { value, .. } => value.get_data_type(),
 
             e => {
-                debug_assert!(false, "Unexpected instruction: {:?}", e);
+                println!("{:?}", e);
                 unimplemented!()
             }
-        }
-    }
-
-    pub fn as_basic_value(&self) -> &BasicValueEnum<'ctx> {
-        match self {
-            Instruction::BasicValueEnum(value) => value,
-            _ => unreachable!(),
         }
     }
 }
