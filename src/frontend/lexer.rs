@@ -1,7 +1,10 @@
 use {
-    super::super::{
-        backend::compiler::misc::ThrushFile, constants::MINIMAL_ERROR_CAPACITY,
-        diagnostic::Diagnostic, error::ThrushError, logging::LogType,
+    super::{
+        super::{
+            backend::compiler::misc::ThrushFile, constants::MINIMAL_ERROR_CAPACITY,
+            diagnostic::Diagnostic, error::ThrushError, logging::LogType,
+        },
+        traits::TokenLexeme,
     },
     ahash::{HashMap, HashMapExt},
     inkwell::{FloatPredicate, IntPredicate},
@@ -11,6 +14,8 @@ use {
 
 const KEYWORDS_CAPACITY: usize = 34;
 const MINIMAL_TOKENS_CAPACITY: usize = 100_000;
+
+pub type Lexeme<'a> = &'a [u8];
 
 lazy_static! {
     static ref KEYWORDS: HashMap<&'static [u8], TokenKind> = {
@@ -57,7 +62,7 @@ lazy_static! {
 }
 
 pub struct Lexer<'a> {
-    tokens: Vec<Token>,
+    tokens: Vec<Token<'a>>,
     errors: Vec<ThrushError>,
     code: &'a [u8],
     start: usize,
@@ -68,7 +73,7 @@ pub struct Lexer<'a> {
 }
 
 impl<'a> Lexer<'a> {
-    pub fn lex(code: &'a [u8], file: &ThrushFile) -> Vec<Token> {
+    pub fn lex(code: &'a [u8], file: &'a ThrushFile) -> Vec<Token<'a>> {
         let mut lexer: Lexer = Self {
             tokens: Vec::with_capacity(MINIMAL_TOKENS_CAPACITY),
             errors: Vec::with_capacity(MINIMAL_ERROR_CAPACITY),
@@ -83,7 +88,7 @@ impl<'a> Lexer<'a> {
         lexer._lex()
     }
 
-    fn _lex(&mut self) -> Vec<Token> {
+    fn _lex(&mut self) -> Vec<Token<'a>> {
         while !self.end() {
             self.start = self.current;
             self.start_span();
@@ -102,7 +107,7 @@ impl<'a> Lexer<'a> {
         };
 
         self.tokens.push(Token {
-            lexeme: None,
+            lexeme: b"",
             kind: TokenKind::Eof,
             line: self.line,
             span: self.span,
@@ -214,16 +219,14 @@ impl<'a> Lexer<'a> {
 
         self.end_span();
 
-        let types: (DataTypes, bool) = self.parse_float_or_integer(self.lexeme())?;
+        let types: (DataTypes, bool) = self.parse_float_or_integer(self.lexeme().to_str())?;
 
-        let raw_parsed_number: Result<f64, ParseFloatError> = self.lexeme().parse::<f64>();
+        let raw_parsed_number: Result<f64, ParseFloatError> = self.lexeme().to_str().parse::<f64>();
 
         if raw_parsed_number.is_err() {
             return Err(ThrushError::Error(
-                String::from("The number is too big for an integer or float."),
-                String::from(
-                    "Did you provide a valid number with the correct format and not out of bounds?",
-                ),
+                String::from("Syntax error"),
+                String::from("Out of bounds number."),
                 self.line,
                 Some(self.span),
             ));
@@ -234,7 +237,7 @@ impl<'a> Lexer<'a> {
         if types.0.is_float_type() {
             self.tokens.push(Token {
                 kind: TokenKind::Float(types.0, parsed_number, types.1),
-                lexeme: None,
+                lexeme: b"",
                 line: self.line,
                 span: self.span,
             });
@@ -244,7 +247,7 @@ impl<'a> Lexer<'a> {
 
         self.tokens.push(Token {
             kind: TokenKind::Integer(types.0, parsed_number, types.1),
-            lexeme: None,
+            lexeme: b"",
             line: self.line,
             span: self.span,
         });
@@ -253,12 +256,12 @@ impl<'a> Lexer<'a> {
     }
 
     #[inline(always)]
-    fn parse_float_or_integer(&mut self, lexeme: String) -> Result<(DataTypes, bool), ThrushError> {
+    fn parse_float_or_integer(&mut self, lexeme: &str) -> Result<(DataTypes, bool), ThrushError> {
         if lexeme.contains('.') {
-            return self.parse_float(&lexeme);
+            return self.parse_float(lexeme);
         }
 
-        self.parse_integer(&lexeme)
+        self.parse_integer(lexeme)
     }
 
     #[inline(always)]
@@ -357,9 +360,7 @@ impl<'a> Lexer<'a> {
 
         self.tokens.push(Token {
             kind: TokenKind::Char,
-            lexeme: Some(
-                String::from_utf8_lossy(&self.code[self.start + 1..self.current - 1]).to_string(),
-            ),
+            lexeme: &self.code[self.start + 1..self.current - 1],
             line: self.line,
             span: self.span,
         });
@@ -387,16 +388,9 @@ impl<'a> Lexer<'a> {
 
         self.advance();
 
-        let mut string: String =
-            String::from_utf8_lossy(&self.code[self.start + 1..self.current - 1]).to_string();
-
-        string = string.replace("\\n", "\n");
-        string = string.replace("\\r", "\r");
-        string = string.replace("\\t", "\t");
-
         self.tokens.push(Token {
             kind: TokenKind::Str,
-            lexeme: Some(string),
+            lexeme: &self.code[self.start + 1..self.current - 1],
             line: self.line,
             span: self.span,
         });
@@ -436,20 +430,20 @@ impl<'a> Lexer<'a> {
         false
     }
 
-    #[inline(always)]
-    fn lexeme(&self) -> String {
-        String::from_utf8_lossy(&self.code[self.start..self.current]).to_string()
-    }
-
     fn make(&mut self, kind: TokenKind) {
         self.end_span();
 
         self.tokens.push(Token {
             kind,
-            lexeme: Some(self.lexeme()),
+            lexeme: self.lexeme(),
             line: self.line,
             span: self.span,
         });
+    }
+
+    #[inline(always)]
+    fn lexeme(&self) -> Lexeme<'a> {
+        &self.code[self.start..self.current]
     }
 
     #[inline(always)]
@@ -463,7 +457,7 @@ impl<'a> Lexer<'a> {
     }
 
     #[inline(always)]
-    const fn end(&self) -> bool {
+    fn end(&self) -> bool {
         self.current >= self.code.len()
     }
 
@@ -474,11 +468,21 @@ impl<'a> Lexer<'a> {
 }
 
 #[derive(Debug, Clone)]
-pub struct Token {
-    pub lexeme: Option<String>,
+pub struct Token<'token> {
+    pub lexeme: &'token [u8],
     pub kind: TokenKind,
     pub line: usize,
     pub span: (usize, usize),
+}
+
+impl TokenLexeme for Lexeme<'_> {
+    fn to_str(&self) -> &str {
+        core::str::from_utf8(self).unwrap_or("invalid utf-8")
+    }
+
+    fn to_string(&self) -> String {
+        self.to_str().to_string()
+    }
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
