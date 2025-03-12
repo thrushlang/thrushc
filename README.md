@@ -18,10 +18,10 @@ The compiler is responsible for translating each code effectively into LLVM inte
   
 ## Requirements for create executables with the compiler
 
-### Linux
+### Linux Toolchain
 
 - [LLVM & Clang Toolchain (x64)](https://github.com/thrushlang/toolchains/releases/download/Toolchains/thrushlang-toolchain-linux-x64-v1.0.0.tar.gz)
 
 > [!NOTE]  
-> The language will contain a pre-optimized toolchain repository for each operating system. This process automates the installation of the language and its entire ecosystem through the **Thorium** package manager.
+> The language will contain a **pre-optimized** toolchain repository for each operating system. This process automates the installation of the language and its entire ecosystem through the **Thorium** package manager.
 
