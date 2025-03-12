@@ -121,8 +121,8 @@ impl<'a> Thrushc<'a> {
         }
 
         let context: Context = Context::create();
-        let builder: Builder<'_> = context.create_builder();
-        let module: Module<'_> = context.create_module(&file.name);
+        let builder: Builder = context.create_builder();
+        let module: Module = context.create_module(&file.name);
 
         module.set_triple(&self.options.target_triple);
 
@@ -165,7 +165,7 @@ impl<'a> Thrushc<'a> {
                     logging::log(
                         logging::LogType::PANIC,
                         &format!(
-                            "'output/{}.ll' cannot be emitted in teh directory.",
+                            "'output/{}.ll' cannot be emitted in this directory.",
                             &file.name
                         ),
                     );
