@@ -52,8 +52,6 @@ impl<'instr> ParserObjects<'instr> {
         name: &'instr str,
         location: (usize, (usize, usize)),
     ) -> Result<FoundObject, ThrushError> {
-        // FIX THE SAME VARIABLE IN THE SCOPE ISSUE FOR STRUCTURE INSTRUCTION.
-
         for scope in self.locals.iter().rev() {
             if let Some(local) = scope.get(name) {
                 return Ok((None, None, Some(local)));
