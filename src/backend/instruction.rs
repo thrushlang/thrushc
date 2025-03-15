@@ -18,20 +18,33 @@ use {
 
 #[derive(Debug, Clone, Default)]
 pub enum Instruction<'ctx> {
+    // Entrypoint -> fn main() {}
+    EntryPoint {
+        body: Box<Instruction<'ctx>>,
+    },
+
     BasicValueEnum(BasicValueEnum<'ctx>),
+
+    // Primitive types
     Str(String),
     Char(u8),
     Boolean(bool),
-    DataTypes(DataTypes),
+    Integer(DataTypes, f64, bool),
+    Float(DataTypes, f64, bool),
     Struct {
         name: &'ctx str,
-        types: Struct<'ctx>,
+        fields_types: Struct<'ctx>,
     },
+    NullPtr,
+
+    DataTypes(DataTypes),
     InitStruct {
         name: &'ctx str,
         fields: StructFields<'ctx>,
         kind: DataTypes,
     },
+
+    // Conditionals
     If {
         cond: Box<Instruction<'ctx>>,
         block: Box<Instruction<'ctx>>,
@@ -45,23 +58,33 @@ pub enum Instruction<'ctx> {
     Else {
         block: Box<Instruction<'ctx>>,
     },
+
+    // Loops
     ForLoop {
         variable: Box<Instruction<'ctx>>,
         cond: Box<Instruction<'ctx>>,
         actions: Box<Instruction<'ctx>>,
         block: Box<Instruction<'ctx>>,
     },
+    WhileLoop {
+        cond: Box<Instruction<'ctx>>,
+        block: Box<Instruction<'ctx>>,
+    },
+    Loop {
+        block: Box<Instruction<'ctx>>,
+    },
+
+    // Loop control flow
     Continue,
     Break,
-    Integer(DataTypes, f64, bool),
-    Float(DataTypes, f64, bool),
+
+    // Code block
     Block {
         stmts: Vec<Instruction<'ctx>>,
     },
-    EntryPoint {
-        body: Box<Instruction<'ctx>>,
-    },
-    Param {
+
+    // Functions
+    FunctionParameter {
         name: &'ctx str,
         kind: DataTypes,
         position: u32,
@@ -75,6 +98,7 @@ pub enum Instruction<'ctx> {
         is_public: bool,
     },
     Return(Box<Instruction<'ctx>>, DataTypes),
+
     Var {
         name: &'ctx str,
         kind: DataTypes,
@@ -93,6 +117,8 @@ pub enum Instruction<'ctx> {
         kind: DataTypes,
         value: Box<Instruction<'ctx>>,
     },
+
+    // Expressions
     Call {
         name: &'ctx str,
         args: Vec<Instruction<'ctx>>,
@@ -114,17 +140,23 @@ pub enum Instruction<'ctx> {
         instr: Box<Instruction<'ctx>>,
         kind: DataTypes,
     },
+
+    // Heap deallocator
     Free {
         name: &'ctx str,
         struct_type: String,
     },
+
+    // External Type (FFI)
     Extern {
         name: &'ctx str,
         instr: Box<Instruction<'ctx>>,
         kind: TokenKind,
     },
+
+    // Ignore statement
     Pass,
-    NullPtr,
+
     #[default]
     Null,
 }
@@ -221,7 +253,7 @@ impl<'ctx> Instruction<'ctx> {
         ))
     }
 
-    #[inline]
+    #[inline(always)]
     pub fn has_return(&self) -> bool {
         if let Instruction::Block { stmts } = self {
             stmts.iter().any(|stmt| stmt.is_return())
@@ -230,7 +262,7 @@ impl<'ctx> Instruction<'ctx> {
         }
     }
 
-    #[inline]
+    #[inline(always)]
     pub fn has_break(&self) -> bool {
         if let Instruction::Block { stmts } = self {
             stmts.iter().any(|stmt| stmt.is_break())
@@ -239,7 +271,7 @@ impl<'ctx> Instruction<'ctx> {
         }
     }
 
-    #[inline]
+    #[inline(always)]
     pub fn has_continue(&self) -> bool {
         if let Instruction::Block { stmts } = self {
             stmts.iter().any(|stmt| stmt.is_continue())
@@ -248,7 +280,7 @@ impl<'ctx> Instruction<'ctx> {
         }
     }
 
-    #[inline]
+    #[inline(always)]
     pub fn return_with_ptr(&self) -> Option<&'ctx str> {
         if let Instruction::Return(instr, _) = self {
             if let Instruction::RefVar { name, kind, .. } = instr.as_ref() {
@@ -261,7 +293,7 @@ impl<'ctx> Instruction<'ctx> {
         None
     }
 
-    #[inline]
+    #[inline(always)]
     pub const fn is_extern(&self) -> bool {
         if let Instruction::Extern { .. } = self {
             return true;
@@ -270,7 +302,7 @@ impl<'ctx> Instruction<'ctx> {
         false
     }
 
-    #[inline]
+    #[inline(always)]
     pub const fn is_function(&self) -> bool {
         if let Instruction::Function { .. } = self {
             return true;
@@ -279,7 +311,7 @@ impl<'ctx> Instruction<'ctx> {
         false
     }
 
-    #[inline]
+    #[inline(always)]
     pub const fn is_binary(&self) -> bool {
         if let Instruction::BinaryOp { .. } = self {
             return true;
@@ -288,7 +320,7 @@ impl<'ctx> Instruction<'ctx> {
         false
     }
 
-    #[inline]
+    #[inline(always)]
     pub const fn is_group(&self) -> bool {
         if let Instruction::Group { .. } = self {
             return true;
@@ -297,7 +329,7 @@ impl<'ctx> Instruction<'ctx> {
         false
     }
 
-    #[inline]
+    #[inline(always)]
     pub const fn is_return(&self) -> bool {
         if let Instruction::Return(_, _) = self {
             return true;
@@ -306,7 +338,7 @@ impl<'ctx> Instruction<'ctx> {
         false
     }
 
-    #[inline]
+    #[inline(always)]
     pub const fn is_break(&self) -> bool {
         if let Instruction::Break = self {
             return true;
@@ -315,7 +347,7 @@ impl<'ctx> Instruction<'ctx> {
         false
     }
 
-    #[inline]
+    #[inline(always)]
     pub const fn is_continue(&self) -> bool {
         if let Instruction::Continue = self {
             return true;
@@ -324,7 +356,7 @@ impl<'ctx> Instruction<'ctx> {
         false
     }
 
-    #[inline]
+    #[inline(always)]
     pub const fn as_extern(&self) -> (&str, &Instruction, &TokenKind) {
         if let Instruction::Extern { name, instr, kind } = self {
             return (name, instr, kind);
@@ -333,7 +365,7 @@ impl<'ctx> Instruction<'ctx> {
         unreachable!()
     }
 
-    #[inline]
+    #[inline(always)]
     pub fn as_function(&self) -> Function {
         if let Instruction::Function {
             name,
@@ -349,7 +381,7 @@ impl<'ctx> Instruction<'ctx> {
         unreachable!()
     }
 
-    #[inline]
+    #[inline(always)]
     pub const fn as_binary(&self) -> BinaryOp {
         if let Instruction::BinaryOp {
             left, op, right, ..
@@ -365,7 +397,7 @@ impl<'ctx> Instruction<'ctx> {
         unreachable!()
     }
 
-    #[inline]
+    #[inline(always)]
     pub const fn as_basic_value(&self) -> &BasicValueEnum<'ctx> {
         match self {
             Instruction::BasicValueEnum(value) => value,
@@ -373,6 +405,7 @@ impl<'ctx> Instruction<'ctx> {
         }
     }
 
+    #[inline(always)]
     pub const fn get_data_type_recursive(&self) -> DataTypes {
         if let Instruction::BinaryOp { left, .. } = self {
             return left.get_data_type_recursive();
@@ -431,7 +464,7 @@ impl<'ctx> Instruction<'ctx> {
             | Instruction::RefVar { kind: datatype, .. }
             | Instruction::Group { kind: datatype, .. }
             | Instruction::BinaryOp { kind: datatype, .. }
-            | Instruction::Param { kind: datatype, .. }
+            | Instruction::FunctionParameter { kind: datatype, .. }
             | Instruction::Call { kind: datatype, .. }
             | Instruction::DataTypes(datatype) => *datatype,
 

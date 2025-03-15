@@ -49,8 +49,8 @@ impl<'ctx> CompilerObjects<'ctx> {
     }
 
     #[inline]
-    pub fn insert_struct(&mut self, name: &'ctx str, fields: &'ctx Struct) {
-        self.structs.insert(name, fields);
+    pub fn insert_struct(&mut self, name: &'ctx str, fields_types: &'ctx Struct) {
+        self.structs.insert(name, fields_types);
     }
 
     #[inline]

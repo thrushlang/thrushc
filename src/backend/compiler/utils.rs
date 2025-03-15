@@ -102,12 +102,10 @@ pub fn datatype_to_fn_type<'ctx>(
 ) -> FunctionType<'ctx> {
     let mut param_types: Vec<BasicMetadataTypeEnum<'ctx>> = Vec::with_capacity(params.len());
 
-    params.iter().for_each(|param| match param {
-        Instruction::Param { kind, .. } => {
+    params.iter().for_each(|param| {
+        if let Instruction::FunctionParameter { kind, .. } = param {
             param_types.push(datatype_to_basicmetadata_type_enum(context, kind));
         }
-
-        _ => unreachable!(),
     });
 
     match kind {

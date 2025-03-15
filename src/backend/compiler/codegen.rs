@@ -134,7 +134,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
 
                 let else_if_body: BasicBlock = self
                     .context
-                    .append_basic_block(self.function.unwrap(), "elseifbody");
+                    .append_basic_block(self.function.unwrap(), "elseif_body");
 
                 let else_block: BasicBlock = self
                     .context
@@ -186,7 +186,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
 
                             let next_block: BasicBlock = if index + 1 < chained_elifs.len() {
                                 self.context
-                                    .append_basic_block(self.function.unwrap(), "elseifbody")
+                                    .append_basic_block(self.function.unwrap(), "elseif_body")
                             } else if otherwise.is_some() {
                                 else_block
                             } else {
@@ -215,7 +215,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                                 self.builder.position_at_end(next_block);
                                 current_block = self
                                     .context
-                                    .append_basic_block(self.function.unwrap(), "elseifbody");
+                                    .append_basic_block(self.function.unwrap(), "elseif_body");
                             }
                         }
                     }
@@ -251,6 +251,80 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                 Instruction::Null
             }
 
+            Instruction::WhileLoop { cond, block } => {
+                let function: FunctionValue = self.function.unwrap();
+
+                let cond_block: BasicBlock = self.context.append_basic_block(function, "while");
+
+                self.builder.build_unconditional_branch(cond_block).unwrap();
+
+                self.builder.position_at_end(cond_block);
+
+                let conditional: IntValue = self
+                    .codegen(cond.as_ref())
+                    .as_basic_value()
+                    .into_int_value();
+
+                let then_block: BasicBlock =
+                    self.context.append_basic_block(function, "while_body");
+                let exit_block: BasicBlock =
+                    self.context.append_basic_block(function, "while_exit");
+
+                self.loop_exit_block = Some(exit_block);
+
+                self.builder
+                    .build_conditional_branch(conditional, then_block, exit_block)
+                    .unwrap();
+
+                self.builder.position_at_end(then_block);
+
+                self.codegen(block);
+
+                let exit_brancher = self.builder.build_unconditional_branch(cond_block).unwrap();
+
+                if block.has_break() {
+                    exit_brancher.remove_from_basic_block();
+                }
+
+                self.builder.position_at_end(exit_block);
+
+                Instruction::Null
+            }
+
+            Instruction::Loop { block } => {
+                let function: FunctionValue = self.function.unwrap();
+                let loop_start_block: BasicBlock =
+                    self.context.append_basic_block(function, "loop");
+
+                self.builder
+                    .build_unconditional_branch(loop_start_block)
+                    .unwrap();
+
+                self.builder.position_at_end(loop_start_block);
+
+                let loop_exit_block: BasicBlock = self
+                    .context
+                    .append_basic_block(self.function.unwrap(), "loop_exit");
+
+                self.loop_exit_block = Some(loop_exit_block);
+
+                self.codegen(block);
+
+                if !block.has_return() && !block.has_break() && !block.has_continue() {
+                    let _ = loop_exit_block.remove_from_function();
+
+                    self.builder
+                        .build_unconditional_branch(
+                            self.function.unwrap().get_last_basic_block().unwrap(),
+                        )
+                        .unwrap();
+                } else {
+                    self.builder.position_at_end(loop_exit_block);
+                }
+
+                Instruction::Null
+            }
+
             Instruction::ForLoop {
                 variable,
                 cond,
@@ -261,7 +335,8 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
 
                 self.codegen(variable.as_ref());
 
-                let start_block: BasicBlock = self.context.append_basic_block(function, "start");
+                let start_block: BasicBlock =
+                    self.context.append_basic_block(function, "for_start");
 
                 self.loop_start_block = Some(start_block);
 
@@ -276,8 +351,8 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                     .as_basic_value()
                     .into_int_value();
 
-                let then_block: BasicBlock = self.context.append_basic_block(function, "body");
-                let exit_block: BasicBlock = self.context.append_basic_block(function, "exit");
+                let then_block: BasicBlock = self.context.append_basic_block(function, "for_body");
+                let exit_block: BasicBlock = self.context.append_basic_block(function, "for_exit");
 
                 self.builder
                     .build_conditional_branch(conditional, then_block, exit_block)
@@ -323,13 +398,13 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
 
             Instruction::Extern { .. } => Instruction::Null,
 
-            Instruction::Param {
+            Instruction::FunctionParameter {
                 name,
                 kind,
                 position,
                 ..
             } => {
-                self.build_param(name, *kind, *position);
+                self.build_function_parameter(name, *kind, *position);
                 Instruction::Null
             }
 
@@ -471,7 +546,15 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                 Instruction::Null
             }
 
+            Instruction::Boolean(bool) => Instruction::BasicValueEnum(
+                self.context
+                    .bool_type()
+                    .const_int(*bool as u64, false)
+                    .into(),
+            ),
+
             Instruction::Struct { .. } => Instruction::Null,
+            Instruction::Null => Instruction::Null,
 
             e => {
                 println!("{:?}", e);
@@ -491,7 +574,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
         main
     }
 
-    fn build_param(&mut self, name: &'ctx str, kind: DataTypes, position: u32) {
+    fn build_function_parameter(&mut self, name: &'ctx str, kind: DataTypes, position: u32) {
         let allocated_ptr: PointerValue<'ctx> = if !kind.is_ptr_type() {
             utils::build_ptr(self.context, self.builder, kind)
         } else {
@@ -707,8 +790,8 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                 // CHECK IF TOKENKIND IS FUNCTION KIND, (REMEMBER)
 
                 self.build_external(external.0, external.1);
-            } else if let Instruction::Struct { name, types } = instr {
-                self.compiler_objects.insert_struct(name, types);
+            } else if let Instruction::Struct { name, fields_types } = instr {
+                self.compiler_objects.insert_struct(name, fields_types);
             }
         });
     }

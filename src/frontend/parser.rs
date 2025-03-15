@@ -34,6 +34,7 @@ pub struct Parser<'instr> {
     inside_loop: bool,
     at_typed_function: (DataTypes, String),
     at_typed_variable: DataTypes,
+    future_unreacheable_code: usize,
     current: usize,
     scope: usize,
     has_entry_point: bool,
@@ -66,6 +67,7 @@ impl<'instr> Parser<'instr> {
             inside_loop: false,
             at_typed_function: (DataTypes::Void, String::new()),
             at_typed_variable: DataTypes::Void,
+            future_unreacheable_code: 0,
             scope: 0,
             has_entry_point: false,
             scoper: ThrushScoper::new(file),
@@ -115,7 +117,7 @@ impl<'instr> Parser<'instr> {
         match &self.peek().kind {
             TokenKind::Struct => Ok(self.build_struct()?),
             TokenKind::Fn => Ok(self.build_function(false, false, false)?),
-            TokenKind::LBrace => Ok(self.build_block(&mut [], true)?),
+            TokenKind::LBrace => Ok(self.build_code_block(&mut [], true)?),
             TokenKind::Return => Ok(self.build_return()?),
             TokenKind::Public => Ok(self.build_public_qualifier()?),
             TokenKind::Extern => Ok(self.build_external_qualifier()?),
@@ -126,6 +128,7 @@ impl<'instr> Parser<'instr> {
             TokenKind::While => Ok(self.build_while_loop()?),
             TokenKind::Continue => Ok(self.build_continue()?),
             TokenKind::Break => Ok(self.build_break()?),
+            TokenKind::Loop => Ok(self.build_loop()?),
             _ => Ok(self.expression()?),
         }
     }
@@ -163,21 +166,77 @@ impl<'instr> Parser<'instr> {
 
         self.has_entry_point = true;
 
-        let body: Box<Instruction<'instr>> = Box::new(self.build_block(&mut [], true)?);
+        let body: Box<Instruction<'instr>> = Box::new(self.build_code_block(&mut [], true)?);
 
         self.inside_function = false;
 
         Ok(Instruction::EntryPoint { body })
     }
 
-    fn build_while_loop(&mut self) -> Result<Instruction<'instr>, ThrushError> {
-        self.only_advance()?;
+    fn build_loop(&mut self) -> Result<Instruction<'instr>, ThrushError> {
+        let line: usize = self.advance()?.line;
 
-        todo!()
+        if self.future_unreacheable_code == self.scope {
+            self.errors.push(ThrushError::Error(
+                String::from("Syntax error"),
+                String::from("Unreacheable code."),
+                line,
+                Some(self.previous().span),
+            ));
+        }
+
+        self.inside_loop = true;
+
+        let block: Instruction<'instr> = self.build_code_block(&mut [], true)?;
+
+        if !block.has_break() && !block.has_return() && !block.has_continue() {
+            self.future_unreacheable_code = self.scope;
+        }
+
+        self.inside_loop = false;
+
+        Ok(Instruction::Loop {
+            block: Box::new(block),
+        })
+    }
+
+    fn build_while_loop(&mut self) -> Result<Instruction<'instr>, ThrushError> {
+        let line: usize = self.advance()?.line;
+
+        if self.future_unreacheable_code == self.scope {
+            self.errors.push(ThrushError::Error(
+                String::from("Syntax error"),
+                String::from("Unreacheable code."),
+                line,
+                Some(self.previous().span),
+            ));
+        }
+
+        let conditional: Instruction = self.expression()?;
+
+        self.check_type_mismatch(DataTypes::Bool, conditional.get_data_type(), None, line);
+
+        let block: Instruction = self.build_code_block(&mut [], true)?;
+
+        Ok(Instruction::WhileLoop {
+            cond: Box::new(conditional),
+            block: Box::new(block),
+        })
     }
 
     fn build_continue(&mut self) -> Result<Instruction<'instr>, ThrushError> {
-        self.only_advance()?;
+        let line: usize = self.advance()?.line;
+
+        if self.future_unreacheable_code == self.scope {
+            self.errors.push(ThrushError::Error(
+                String::from("Syntax error"),
+                String::from("Unreacheable code."),
+                line,
+                Some(self.previous().span),
+            ));
+        }
+
+        self.future_unreacheable_code = self.scope;
 
         if !self.inside_loop {
             return Err(ThrushError::Error(
@@ -198,7 +257,18 @@ impl<'instr> Parser<'instr> {
     }
 
     fn build_break(&mut self) -> Result<Instruction<'instr>, ThrushError> {
-        self.only_advance()?;
+        let line: usize = self.advance()?.line;
+
+        if self.future_unreacheable_code == self.scope {
+            self.errors.push(ThrushError::Error(
+                String::from("Syntax error"),
+                String::from("Unreacheable code."),
+                line,
+                Some(self.previous().span),
+            ));
+        }
+
+        self.future_unreacheable_code = self.scope;
 
         if !self.inside_loop {
             return Err(ThrushError::Error(
@@ -232,6 +302,15 @@ impl<'instr> Parser<'instr> {
             ));
         }
 
+        if self.future_unreacheable_code == self.scope {
+            self.errors.push(ThrushError::Error(
+                String::from("Syntax error"),
+                String::from("Unreacheable code."),
+                line,
+                Some(self.previous().span),
+            ));
+        }
+
         let if_condition: Instruction<'instr> = self.expression()?;
 
         if if_condition.get_data_type() != DataTypes::Bool {
@@ -243,16 +322,7 @@ impl<'instr> Parser<'instr> {
             ));
         }
 
-        if !self.check_type(TokenKind::LBrace) {
-            return Err(ThrushError::Error(
-                String::from("Syntax error"),
-                String::from("Expected '{'."),
-                line,
-                Some(self.peek().span),
-            ));
-        }
-
-        let if_body: Box<Instruction> = Box::new(self.build_block(&mut [], true)?);
+        let if_body: Box<Instruction> = Box::new(self.build_code_block(&mut [], true)?);
 
         let mut elfs: Option<Vec<Instruction>> = None;
 
@@ -283,7 +353,7 @@ impl<'instr> Parser<'instr> {
                 ));
             }
 
-            let elif_body: Instruction<'instr> = self.build_block(&mut [], true)?;
+            let elif_body: Instruction<'instr> = self.build_code_block(&mut [], true)?;
 
             elfs.as_mut().unwrap().push(Instruction::Elif {
                 cond: Box::new(elif_condition),
@@ -294,18 +364,7 @@ impl<'instr> Parser<'instr> {
         let mut otherwise: Option<Box<Instruction<'instr>>> = None;
 
         if self.check_type(TokenKind::Else) {
-            let line: usize = self.advance()?.line;
-
-            if !self.check_type(TokenKind::LBrace) {
-                return Err(ThrushError::Error(
-                    String::from("Syntax error"),
-                    String::from("Expected '{'."),
-                    line,
-                    Some(self.peek().span),
-                ));
-            }
-
-            let else_body: Instruction<'instr> = self.build_block(&mut [], true)?;
+            let else_body: Instruction<'instr> = self.build_code_block(&mut [], true)?;
 
             otherwise = Some(Box::new(Instruction::Else {
                 block: Box::new(else_body),
@@ -397,7 +456,7 @@ impl<'instr> Parser<'instr> {
 
         Ok(Instruction::Struct {
             name: struct_name,
-            types: fields_types,
+            fields_types,
         })
     }
 
@@ -414,6 +473,15 @@ impl<'instr> Parser<'instr> {
 
         let line: usize = name.line;
         let span: (usize, usize) = name.span;
+
+        if self.future_unreacheable_code == self.scope {
+            self.errors.push(ThrushError::Error(
+                String::from("Syntax error"),
+                String::from("Unreacheable code."),
+                line,
+                Some(self.previous().span),
+            ));
+        }
 
         let struct_found: HashMap<&'instr str, DataTypes> = self
             .parser_objects
@@ -464,12 +532,7 @@ impl<'instr> Parser<'instr> {
                 let field_type: DataTypes = instruction.get_data_type();
                 let target_type: &DataTypes = struct_found.get(field_name).unwrap();
 
-                self.check_possible_type_mismatch(
-                    *target_type,
-                    field_type,
-                    Some(&instruction),
-                    line,
-                );
+                self.check_type_mismatch(*target_type, field_type, Some(&instruction), line);
 
                 fields.push((field_name, instruction, *target_type, field_index));
 
@@ -697,17 +760,28 @@ impl<'instr> Parser<'instr> {
     }
 
     fn build_for_loop(&mut self) -> Result<Instruction<'instr>, ThrushError> {
-        self.only_advance()?;
+        let line: usize = self.advance()?.line;
+
+        if self.future_unreacheable_code == self.scope {
+            self.errors.push(ThrushError::Error(
+                String::from("Syntax error"),
+                String::from("Unreacheable code."),
+                line,
+                Some(self.previous().span),
+            ));
+        }
 
         let variable: Instruction = self.build_local_variable(false)?;
 
-        let cond: Instruction = self.expression()?;
+        let conditional: Instruction = self.expression()?;
 
         self.consume(
             TokenKind::SemiColon,
             String::from("Syntax error"),
             String::from("Expected ';'."),
         )?;
+
+        self.check_type_mismatch(DataTypes::Bool, conditional.get_data_type(), None, line);
 
         let actions: Instruction = self.expression()?;
 
@@ -721,30 +795,15 @@ impl<'instr> Parser<'instr> {
             *exist_only_comptime = true;
         }
 
-        self.consume(
-            TokenKind::SemiColon,
-            String::from("Syntax error"),
-            String::from("Expected ';'."),
-        )?;
-
-        if !self.check_type(TokenKind::LBrace) {
-            return Err(ThrushError::Error(
-                String::from("Syntax error"),
-                String::from("Expected for loop body \"{ ... }\"."),
-                self.previous().line,
-                Some(self.previous().span),
-            ));
-        }
-
         self.inside_loop = true;
 
-        let body: Instruction = self.build_block(&mut [variable_clone], true)?;
+        let body: Instruction = self.build_code_block(&mut [variable_clone], true)?;
 
         self.inside_loop = false;
 
         Ok(Instruction::ForLoop {
             variable: Box::new(variable),
-            cond: Box::new(cond),
+            cond: Box::new(conditional),
             actions: Box::new(actions),
             block: Box::new(body),
         })
@@ -754,13 +813,22 @@ impl<'instr> Parser<'instr> {
         &mut self,
         exist_only_comptime: bool,
     ) -> Result<Instruction<'instr>, ThrushError> {
-        self.only_advance()?;
+        let line: usize = self.advance()?.line;
 
-        if self.scope != 0 {
+        if self.scope == 0 {
             return Err(ThrushError::Error(
                 String::from("Syntax error"),
                 String::from("Locals variables should be contained at local scope."),
-                self.previous().line,
+                line,
+                Some(self.previous().span),
+            ));
+        }
+
+        if self.future_unreacheable_code == self.scope {
+            self.errors.push(ThrushError::Error(
+                String::from("Syntax error"),
+                String::from("Unreacheable code."),
+                line,
                 Some(self.previous().span),
             ));
         }
@@ -855,7 +923,7 @@ impl<'instr> Parser<'instr> {
 
         let value: Instruction = self.expression()?;
 
-        self.check_possible_type_mismatch(kind.0, value.get_data_type(), Some(&value), line);
+        self.check_type_mismatch(kind.0, value.get_data_type(), Some(&value), line);
 
         self.check_struct_type_mismatch(&kind.1, &value, line)?;
 
@@ -911,7 +979,16 @@ impl<'instr> Parser<'instr> {
                     "Return statement outside of function body. Invoke this, in function body.",
                 ),
                 line,
-                None,
+                Some(self.previous().span),
+            ));
+        }
+
+        if self.future_unreacheable_code == self.scope {
+            self.errors.push(ThrushError::Error(
+                String::from("Syntax error"),
+                String::from("Unreacheable code."),
+                line,
+                Some(self.previous().span),
             ));
         }
 
@@ -922,12 +999,7 @@ impl<'instr> Parser<'instr> {
                 String::from("Expected ';'."),
             )?;
 
-            self.check_possible_type_mismatch(
-                DataTypes::Void,
-                self.at_typed_function.0,
-                None,
-                line,
-            );
+            self.check_type_mismatch(DataTypes::Void, self.at_typed_function.0, None, line);
 
             return Ok(Instruction::Return(
                 Box::new(Instruction::Null),
@@ -937,7 +1009,7 @@ impl<'instr> Parser<'instr> {
 
         let value: Instruction = self.expression()?;
 
-        self.check_possible_type_mismatch(
+        self.check_type_mismatch(
             self.at_typed_function.0,
             value.get_data_type(),
             Some(&value),
@@ -958,12 +1030,18 @@ impl<'instr> Parser<'instr> {
         ))
     }
 
-    fn build_block(
+    fn build_code_block(
         &mut self,
         with_instrs: &mut [Instruction<'instr>],
         build_begin_scope: bool,
     ) -> Result<Instruction<'instr>, ThrushError> {
-        self.only_advance()?;
+        self.consume(
+            TokenKind::LBrace,
+            String::from("Syntax error"),
+            String::from("Expected '{'."),
+        )?;
+
+        self.scope += 1;
 
         if build_begin_scope {
             self.parser_objects.begin_local_scope();
@@ -1003,6 +1081,8 @@ impl<'instr> Parser<'instr> {
         self.parser_objects.end_local_scope();
 
         self.scoper.add_scope(stmts.clone());
+
+        self.scope -= 1;
 
         Ok(Instruction::Block { stmts })
     }
@@ -1135,7 +1215,7 @@ impl<'instr> Parser<'instr> {
                 );
             }
 
-            params.push(Instruction::Param {
+            params.push(Instruction::FunctionParameter {
                 name: parameter_name,
                 kind: kind.0,
                 position: parameter_position,
@@ -1235,7 +1315,7 @@ impl<'instr> Parser<'instr> {
             return Ok(function);
         }
 
-        let body: Box<Instruction> = Box::new(self.build_block(&mut params, false)?);
+        let body: Box<Instruction> = Box::new(self.build_code_block(&mut params, false)?);
 
         self.inside_function = false;
 
@@ -1533,6 +1613,7 @@ impl<'instr> Parser<'instr> {
             TokenKind::New => self.build_struct_initializer()?,
             TokenKind::DataType(dt) => {
                 let datatype: &Token = self.advance()?;
+
                 let line: usize = datatype.line;
                 let span: (usize, usize) = datatype.span;
 
@@ -1556,7 +1637,6 @@ impl<'instr> Parser<'instr> {
             }
             TokenKind::LParen => {
                 let lparen: &Token = self.advance()?;
-                let lparen_line: usize = lparen.line;
 
                 let instr: Instruction = self.expression()?;
                 let kind: DataTypes = instr.get_data_type();
@@ -1567,7 +1647,7 @@ impl<'instr> Parser<'instr> {
                         String::from(
                             "Group the expressions \"(...)\" is only allowed if contain binary expressions or other group expressions.",
                         ),
-                        lparen_line,
+                        lparen.line,
                         Some((lparen.span.0, self.peek().span.1))
                     ));
                 }
@@ -1605,11 +1685,21 @@ impl<'instr> Parser<'instr> {
                     Instruction::Float(*kind, *num, *is_signed)
                 }
                 TokenKind::Identifier => {
-                    let object_identifier_token: &Token = self.advance()?;
-                    let object_name: &str = object_identifier_token.lexeme.to_str();
-                    let object_type: TokenKind = object_identifier_token.kind;
-                    let object_span: (usize, usize) = object_identifier_token.span;
-                    let object_line: usize = object_identifier_token.line;
+                    let object_token: &Token = self.advance()?;
+
+                    let object_name: &str = object_token.lexeme.to_str();
+                    let object_type: TokenKind = object_token.kind;
+                    let object_span: (usize, usize) = object_token.span;
+                    let object_line: usize = object_token.line;
+
+                    if self.future_unreacheable_code == self.scope {
+                        self.errors.push(ThrushError::Error(
+                            String::from("Syntax error"),
+                            String::from("Unreacheable code."),
+                            object_line,
+                            Some(object_span),
+                        ));
+                    }
 
                     if self.match_token(TokenKind::Eq)? {
                         let object: FoundObject = self
@@ -1622,7 +1712,7 @@ impl<'instr> Parser<'instr> {
 
                         let expr: Instruction = self.expression()?;
 
-                        self.check_possible_type_mismatch(
+                        self.check_type_mismatch(
                             local_type,
                             expr.get_data_type(),
                             Some(&expr),
@@ -1650,7 +1740,7 @@ impl<'instr> Parser<'instr> {
                             kind: local_type,
                         });
                     } else if self.match_token(TokenKind::LParen)? {
-                        return self.call(object_name, (object_line, object_span));
+                        return self.build_function_call(object_name, (object_line, object_span));
                     } else {
                         let object: FoundObject = self
                             .parser_objects
@@ -1696,6 +1786,12 @@ impl<'instr> Parser<'instr> {
                                 kind: DataTypes::I64,
                             };
 
+                            self.consume(
+                                TokenKind::SemiColon,
+                                String::from("Syntax error"),
+                                String::from("Expected ';'."),
+                            )?;
+
                             return Ok(expr);
                         }
 
@@ -1730,7 +1826,7 @@ impl<'instr> Parser<'instr> {
         Ok(primary)
     }
 
-    fn call(
+    fn build_function_call(
         &mut self,
         name: &'instr str,
         location: (usize, (usize, usize)),
@@ -1800,12 +1896,7 @@ impl<'instr> Parser<'instr> {
                 let argument_type: DataTypes = argument.get_data_type();
                 let target: DataTypes = function.1[index];
 
-                self.check_possible_type_mismatch(
-                    target,
-                    argument_type,
-                    Some(argument),
-                    location.0,
-                );
+                self.check_type_mismatch(target, argument_type, Some(argument), location.0);
 
                 if target == DataTypes::Struct {
                     let original_struct_type: &(String, usize) =
@@ -2095,7 +2186,7 @@ impl<'instr> Parser<'instr> {
         Ok(())
     }
 
-    fn check_possible_type_mismatch(
+    fn check_type_mismatch(
         &mut self,
         target: DataTypes,
         from: DataTypes,

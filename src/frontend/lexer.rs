@@ -12,7 +12,7 @@ use {
     std::{mem, num::ParseFloatError, process::exit},
 };
 
-const KEYWORDS_CAPACITY: usize = 35;
+const KEYWORDS_CAPACITY: usize = 36;
 const MINIMAL_TOKENS_CAPACITY: usize = 100_000;
 
 pub type Lexeme<'a> = &'a [u8];
@@ -29,6 +29,7 @@ lazy_static! {
         keywords.insert(b"else", TokenKind::Else);
         keywords.insert(b"for", TokenKind::For);
         keywords.insert(b"while", TokenKind::While);
+        keywords.insert(b"loop", TokenKind::Loop);
         keywords.insert(b"true", TokenKind::True);
         keywords.insert(b"false", TokenKind::False);
         keywords.insert(b"or", TokenKind::Or);
@@ -606,6 +607,7 @@ pub enum TokenKind {
     Var,
     Const,
     While,
+    Loop,
 
     Eof,
 }
@@ -659,6 +661,7 @@ impl std::fmt::Display for TokenKind {
             TokenKind::Var => write!(f, "var"),
             TokenKind::Const => write!(f, "const"),
             TokenKind::While => write!(f, "while"),
+            TokenKind::Loop => write!(f, "loop"),
             TokenKind::Integer(datatype, _, _) => write!(f, "{}", datatype),
             TokenKind::Float(datatype, _, _) => write!(f, "{}", datatype),
             TokenKind::Str => write!(f, "str"),

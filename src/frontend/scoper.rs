@@ -150,7 +150,7 @@ impl<'ctx> ThrushScoper<'ctx> {
 
                         true
                     }
-                    Instruction::Param {
+                    Instruction::FunctionParameter {
                         name: param_name,
                         line,
                         ..
@@ -185,7 +185,7 @@ impl<'ctx> ThrushScoper<'ctx> {
 
                     true
                 }
-                Instruction::Param {
+                Instruction::FunctionParameter {
                     name: param_name,
                     line,
                     ..
@@ -221,7 +221,7 @@ impl<'ctx> ThrushScoper<'ctx> {
 
                         true
                     }
-                    Instruction::Param {
+                    Instruction::FunctionParameter {
                         name: param_name,
                         line,
                         ..
@@ -257,7 +257,7 @@ impl<'ctx> ThrushScoper<'ctx> {
             if let Instruction::Block { stmts, .. } = block.as_ref().unwrap() {
                 return stmts.iter().rev().any(|instr| match instr {
                     Instruction::Var { name: var_name, .. } if *var_name == name => true,
-                    Instruction::Param {
+                    Instruction::FunctionParameter {
                         name: param_name, ..
                     } if *param_name == name => true,
                     Instruction::Block { .. } => self.is_at_current_scope(name, Some(instr), depth),
@@ -272,7 +272,7 @@ impl<'ctx> ThrushScoper<'ctx> {
         if self.blocks.len() == 1 || depth == 0 {
             self.blocks[0].stmts.iter().rev().any(|instr| match &instr {
                 Instruction::Var { name: var_name, .. } if *var_name == name => true,
-                Instruction::Param {
+                Instruction::FunctionParameter {
                     name: param_name, ..
                 } if *param_name == name => true,
                 Instruction::Block { .. } => self.is_at_current_scope(name, Some(instr), depth),
@@ -288,7 +288,7 @@ impl<'ctx> ThrushScoper<'ctx> {
                 .rev()
                 .any(|instr| match &instr {
                     Instruction::Var { name: var_name, .. } if *var_name == name => true,
-                    Instruction::Param {
+                    Instruction::FunctionParameter {
                         name: param_name, ..
                     } if *param_name == name => true,
                     Instruction::Block { .. } => self.is_at_current_scope(name, Some(instr), depth),
