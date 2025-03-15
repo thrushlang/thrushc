@@ -13,7 +13,7 @@ The compiler is responsible for translating each code effectively into LLVM inte
 
 Currently, the only backend available for the thrush compiler to compile is the current LLVM, using the LLVM-C API. The process consists of three parts:
 
-1. Compilation by thrushc to LLVM Bitcode.
+1. Compilation by thrushc to LLVM bitcode (*.bc).
 2. Optimization by the LLVM optimization tool (opt & llvm-lto).
 3. Final compilation by clang to the target.
 
