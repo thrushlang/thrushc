@@ -9,7 +9,21 @@
 
 The compiler is responsible for translating each code effectively into LLVM intermediate code so that LLVM effectively compiles each scenario to the indicated architecture. LLVM is the main code generator for thrushc; it is speculated that in the future, GCC will be used.
 
-## Build dependencies for the compiler 
+# ¿How it works?
+
+Currently, the only backend available for the thrush compiler to compile is the current LLVM, using the LLVM-C API. The process consists of three parts:
+
+1. Compilation by thrushc to LLVM Bitcode.
+2. Optimization by the LLVM optimization tool (opt & llvm-lto).
+3. Final compilation by clang to the target.
+
+In summary:
+
+<p align="center">
+  <img src= "https://github.com/thrushlang/thrushc/blob/master/assets/how%20it%20works%20(with%20llvm%20backend).png" style= "width: 1hv; height: 1hv;"> </img>
+</p>
+
+## Build dependencies
 
 **Important Rust crates:**
 
