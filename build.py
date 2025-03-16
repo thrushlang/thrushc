@@ -1,8 +1,6 @@
 import sys
 import os
 
-from typing import List
-
 try:
    import elevate 
 except:
