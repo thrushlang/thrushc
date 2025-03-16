@@ -47,7 +47,7 @@ if __name__ == "__main__":
 
         wget: int = os.system("wget https://github.com/thrushlang/toolchains/releases/download/LLVM-C/thrushc-llvm-linux-x64_86-v1.0.0.tar.gz")
         
-        print("Building and installing LLVM v17.0.6...")
+        print("Unpacking the precompiled LLVM-C API v17.0.6...")
         tar: int = os.system("tar xvf thrushc-llvm-linux-x64_86-v1.0.0.tar.gz")
 
         llvm_c_includes: List[str] = get_files("llvm/include")
