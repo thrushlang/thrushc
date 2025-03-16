@@ -82,7 +82,7 @@ pub fn build_basic_value_enum<'ctx>(
     }
 
     if let Instruction::RefVar { name, kind, .. } = instr {
-        let var: PointerValue<'ctx> = compiler_objects.get_local(name).unwrap();
+        let var: PointerValue = compiler_objects.get_local(name).unwrap();
 
         if kind.is_float_type() {
             return builder

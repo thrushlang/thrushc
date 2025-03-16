@@ -27,6 +27,6 @@ impl<'a, 'ctx> Compiler {
         context: &'ctx Context,
         instructions: &'ctx [Instruction<'ctx>],
     ) {
-        Codegen::gen(module, builder, context, instructions);
+        Codegen::generate(module, builder, context, instructions);
     }
 }

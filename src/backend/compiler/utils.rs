@@ -28,7 +28,6 @@ pub fn datatype_integer_to_llvm_type<'ctx>(
         DataTypes::I32 => context.i32_type(),
         DataTypes::I64 => context.i64_type(),
         DataTypes::Bool => context.bool_type(),
-
         _ => unreachable!(),
     }
 }
@@ -102,7 +101,7 @@ pub fn build_const_integer<'ctx>(
 pub fn datatype_to_fn_type<'ctx>(
     context: &'ctx Context,
     kind: &DataTypes,
-    params: &[Instruction<'_>],
+    params: &[Instruction],
 ) -> FunctionType<'ctx> {
     let mut param_types: Vec<BasicMetadataTypeEnum<'ctx>> = Vec::with_capacity(params.len());
 
@@ -163,7 +162,7 @@ pub fn float_autocast<'ctx>(
         return None;
     }
 
-    let cast: FloatValue<'ctx>;
+    let cast: FloatValue;
 
     if kind != target && from.is_float_value() {
         cast = builder
@@ -217,19 +216,19 @@ pub fn integer_autocast<'ctx>(
         return None;
     }
 
-    let cast: IntValue<'ctx>;
+    let cast: IntValue;
 
     if kind != target && from.is_int_value() {
         cast = builder
             .build_int_cast_sign_flag(
                 from.into_int_value(),
                 datatype_integer_to_llvm_type(context, target),
-                is_signed_integer(kind),
+                true,
                 "",
             )
             .unwrap()
     } else if kind != target && from.is_pointer_value() {
-        let load: IntValue<'_> = builder
+        let load: IntValue = builder
             .build_load(
                 datatype_integer_to_llvm_type(context, kind),
                 from.into_pointer_value(),
@@ -242,7 +241,7 @@ pub fn integer_autocast<'ctx>(
             .build_int_cast_sign_flag(
                 load,
                 datatype_integer_to_llvm_type(context, target),
-                is_signed_integer(kind),
+                true,
                 "",
             )
             .unwrap();
@@ -260,22 +259,14 @@ pub fn integer_autocast<'ctx>(
     Some(cast.into())
 }
 
-#[inline]
-pub fn is_signed_integer(kind: &DataTypes) -> bool {
-    matches!(
-        kind,
-        DataTypes::I8 | DataTypes::I16 | DataTypes::I32 | DataTypes::I64
-    )
-}
-
 pub fn build_string_constant<'ctx>(
     module: &Module<'ctx>,
     builder: &Builder<'ctx>,
     context: &'ctx Context,
     string: &str,
 ) -> PointerValue<'ctx> {
-    let kind: ArrayType<'_> = context.i8_type().array_type(string.len() as u32 + 1);
-    let global: GlobalValue<'_> = module.add_global(kind, Some(AddressSpace::default()), "");
+    let kind: ArrayType = context.i8_type().array_type(string.len() as u32 + 1);
+    let global: GlobalValue = module.add_global(kind, Some(AddressSpace::default()), "");
 
     global.set_linkage(Linkage::LinkerPrivate);
     global.set_initializer(&context.const_string(string.as_ref(), true));
@@ -304,7 +295,6 @@ pub fn build_ptr<'ctx>(
         DataTypes::F64 | DataTypes::F32 => {
             build_alloca_float(builder, datatype_float_to_llvm_type(context, &kind))
         }
-
         _ => unreachable!(),
     }
 }
@@ -315,7 +305,7 @@ pub fn build_struct_ptr<'ctx>(
     struct_instr: &Instruction<'ctx>,
     _objects: &mut CompilerObjects<'ctx>,
 ) -> PointerValue<'ctx> {
-    let struct_type: StructType<'_> = struct_instr.build_struct_type(context, None, _objects);
+    let struct_type: StructType = struct_instr.build_struct_type(context, None, _objects);
     builder.build_malloc(struct_type, "").unwrap()
 }
 
@@ -323,7 +313,7 @@ pub fn build_struct_type_from_fields<'ctx>(
     context: &'ctx Context,
     struct_fields: &Struct,
 ) -> StructType<'ctx> {
-    let mut compiled_field_types: Vec<BasicTypeEnum> = Vec::new();
+    let mut compiled_field_types: Vec<BasicTypeEnum> = Vec::with_capacity(10);
 
     struct_fields.iter().for_each(|field| {
         if field.1.is_integer_type() {

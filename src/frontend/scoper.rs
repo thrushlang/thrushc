@@ -82,47 +82,45 @@ impl<'ctx> ThrushScoper<'ctx> {
             self.analyze_instruction(body, depth)?;
         }
 
-        match instr {
-            Instruction::RefVar { name, line, .. } => {
-                if !self.is_at_current_scope(name, None, depth) {
-                    return Err(ThrushError::Error(
-                        String::from("Undefined variable"),
-                        format!("Local variable `{}` not found at current scope.", name),
-                        *line,
-                        None,
-                    ));
-                }
-
-                if self.is_at_current_scope(name, None, depth)
-                    && !self.is_reacheable_at_current_scope(name, *line, None, depth)
-                {
-                    return Err(ThrushError::Error(
-                        String::from("Unreacheable variable"),
-                        format!(
-                            "Local variable `{}` is unreacheable at current scope.",
-                            name
-                        ),
-                        *line,
-                        None,
-                    ));
-                }
-
-                Ok(())
+        if let Instruction::RefVar { name, line, .. } = instr {
+            if !self.is_at_current_scope(name, None, depth) {
+                return Err(ThrushError::Error(
+                    String::from("Undefined variable"),
+                    format!("Local variable `{}` not found at current scope.", name),
+                    *line,
+                    None,
+                ));
             }
 
-            Instruction::Block { stmts, .. } => {
-                stmts.iter().try_for_each(|instr| {
-                    match self.analyze_instruction(instr, depth) {
-                        Ok(()) => Ok(()),
-                        Err(e) => Err(e),
-                    }
+            if self.is_at_current_scope(name, None, depth)
+                && !self.is_reacheable_at_current_scope(name, *line, None, depth)
+            {
+                return Err(ThrushError::Error(
+                    String::from("Unreacheable variable"),
+                    format!(
+                        "Local variable `{}` is unreacheable at current scope.",
+                        name
+                    ),
+                    *line,
+                    None,
+                ));
+            }
+
+            return Ok(());
+        }
+
+        if let Instruction::Block { stmts, .. } = instr {
+            stmts
+                .iter()
+                .try_for_each(|instr| match self.analyze_instruction(instr, depth) {
+                    Ok(()) => Ok(()),
+                    Err(e) => Err(e),
                 })?;
 
-                Ok(())
-            }
-
-            _ => Ok(()),
+            return Ok(());
         }
+
+        Ok(())
     }
 
     fn is_reacheable_at_current_scope(
@@ -174,22 +172,16 @@ impl<'ctx> ThrushScoper<'ctx> {
 
         if self.blocks.len() == 1 || depth == 0 {
             self.blocks[0].stmts.iter().rev().any(|instr| match instr {
-                Instruction::Var {
-                    name: var_name,
-                    line,
-                    ..
-                } if *var_name == name => {
-                    if *line > refvar_line {
-                        return false;
-                    }
-
-                    true
-                }
                 Instruction::FunctionParameter {
-                    name: param_name,
+                    name: instr_name,
                     line,
                     ..
-                } if *param_name == name => {
+                }
+                | Instruction::Var {
+                    name: instr_name,
+                    line,
+                    ..
+                } if *instr_name == name => {
                     if *line > refvar_line {
                         return false;
                     }
@@ -210,22 +202,16 @@ impl<'ctx> ThrushScoper<'ctx> {
                 .iter()
                 .rev()
                 .any(|instr| match instr {
-                    Instruction::Var {
-                        name: var_name,
-                        line,
-                        ..
-                    } if *var_name == name => {
-                        if *line > refvar_line {
-                            return false;
-                        }
-
-                        true
-                    }
                     Instruction::FunctionParameter {
-                        name: param_name,
+                        name: instr_name,
                         line,
                         ..
-                    } if *param_name == name => {
+                    }
+                    | Instruction::Var {
+                        name: instr_name,
+                        line,
+                        ..
+                    } if *instr_name == name => {
                         if *line > refvar_line {
                             return false;
                         }
@@ -256,10 +242,12 @@ impl<'ctx> ThrushScoper<'ctx> {
         if block.is_some() {
             if let Instruction::Block { stmts, .. } = block.as_ref().unwrap() {
                 return stmts.iter().rev().any(|instr| match instr {
-                    Instruction::Var { name: var_name, .. } if *var_name == name => true,
-                    Instruction::FunctionParameter {
-                        name: param_name, ..
-                    } if *param_name == name => true,
+                    Instruction::Var {
+                        name: instr_name, ..
+                    }
+                    | Instruction::FunctionParameter {
+                        name: instr_name, ..
+                    } if *instr_name == name => true,
                     Instruction::Block { .. } => self.is_at_current_scope(name, Some(instr), depth),
                     _ => {
                         depth += 1;
@@ -271,10 +259,13 @@ impl<'ctx> ThrushScoper<'ctx> {
 
         if self.blocks.len() == 1 || depth == 0 {
             self.blocks[0].stmts.iter().rev().any(|instr| match &instr {
-                Instruction::Var { name: var_name, .. } if *var_name == name => true,
-                Instruction::FunctionParameter {
-                    name: param_name, ..
-                } if *param_name == name => true,
+                Instruction::Var {
+                    name: instr_name, ..
+                }
+                | Instruction::FunctionParameter {
+                    name: instr_name, ..
+                } if *instr_name == name => true,
+
                 Instruction::Block { .. } => self.is_at_current_scope(name, Some(instr), depth),
                 _ => {
                     depth += 1;
@@ -287,10 +278,12 @@ impl<'ctx> ThrushScoper<'ctx> {
                 .iter()
                 .rev()
                 .any(|instr| match &instr {
-                    Instruction::Var { name: var_name, .. } if *var_name == name => true,
-                    Instruction::FunctionParameter {
-                        name: param_name, ..
-                    } if *param_name == name => true,
+                    Instruction::Var {
+                        name: instr_name, ..
+                    }
+                    | Instruction::FunctionParameter {
+                        name: instr_name, ..
+                    } if *instr_name == name => true,
                     Instruction::Block { .. } => self.is_at_current_scope(name, Some(instr), depth),
                     _ => {
                         depth += 1;

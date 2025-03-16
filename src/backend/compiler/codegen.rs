@@ -12,13 +12,13 @@ use {
     },
     core::str,
     inkwell::{
+        AddressSpace, IntPredicate,
         basic_block::BasicBlock,
         builder::Builder,
         context::Context,
         module::{Linkage, Module},
         types::{FunctionType, StructType},
         values::{BasicValueEnum, FloatValue, FunctionValue, GlobalValue, IntValue, PointerValue},
-        AddressSpace, IntPredicate,
     },
 };
 
@@ -35,7 +35,7 @@ pub struct Codegen<'a, 'ctx> {
 }
 
 impl<'a, 'ctx> Codegen<'a, 'ctx> {
-    pub fn gen(
+    pub fn generate(
         module: &'a Module<'ctx>,
         builder: &'a Builder<'ctx>,
         context: &'ctx Context,
