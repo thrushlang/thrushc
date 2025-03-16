@@ -38,7 +38,7 @@ if __name__ == "__main__":
         
         for index, source in enumerate(files):
             for file in source:
-                os.system(f"sudo cp {file} /usr/include/") if index == 0 else os.system(f"sudo cp {file} /usr/lib/") if index == 1 else os.system(f"sudo cp {file} /usr/bin/")
+                os.system(f"cp {file} /usr/include/") if index == 0 else os.system(f"sudo cp {file} /usr/lib/") if index == 1 else os.system(f"sudo cp {file} /usr/bin/")
 
     def build_dependencies_for_linux(): 
 
