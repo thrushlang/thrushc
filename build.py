@@ -4,7 +4,7 @@ import os
 try:
    import elevate 
 except:
-   print("Try to install elevate, across `pip install elevate")
+   print("Try to install elevate, across `pip install elevate`.")
    sys.exit(1)
 
 if __name__ == "__main__":
