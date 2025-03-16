@@ -17,6 +17,7 @@ use {
     },
 };
 
+#[inline]
 pub fn datatype_integer_to_llvm_type<'ctx>(
     context: &'ctx Context,
     kind: &DataTypes,
@@ -32,6 +33,7 @@ pub fn datatype_integer_to_llvm_type<'ctx>(
     }
 }
 
+#[inline]
 pub fn datatype_float_to_llvm_type<'ctx>(
     context: &'ctx Context,
     kind: &DataTypes,
@@ -41,6 +43,19 @@ pub fn datatype_float_to_llvm_type<'ctx>(
         DataTypes::F64 | DataTypes::Bool => context.f64_type(),
         _ => unreachable!(),
     }
+}
+
+#[inline]
+pub fn build_alloca_int<'ctx>(builder: &Builder<'ctx>, kind: IntType<'ctx>) -> PointerValue<'ctx> {
+    builder.build_alloca(kind, "").unwrap()
+}
+
+#[inline]
+pub fn build_alloca_float<'ctx>(
+    builder: &Builder<'ctx>,
+    kind: FloatType<'ctx>,
+) -> PointerValue<'ctx> {
+    builder.build_alloca(kind, "").unwrap()
 }
 
 pub fn build_const_float<'ctx>(
@@ -82,17 +97,6 @@ pub fn build_const_integer<'ctx>(
         DataTypes::Bool => context.bool_type().const_int(num, false),
         _ => unreachable!(),
     }
-}
-
-pub fn build_alloca_int<'ctx>(builder: &Builder<'ctx>, kind: IntType<'ctx>) -> PointerValue<'ctx> {
-    builder.build_alloca(kind, "").unwrap()
-}
-
-pub fn build_alloca_float<'ctx>(
-    builder: &Builder<'ctx>,
-    kind: FloatType<'ctx>,
-) -> PointerValue<'ctx> {
-    builder.build_alloca(kind, "").unwrap()
 }
 
 pub fn datatype_to_fn_type<'ctx>(
@@ -242,15 +246,7 @@ pub fn integer_autocast<'ctx>(
                 "",
             )
             .unwrap();
-    }
-    /* else if kind != target && from.is_struct_value() {
-        let extracted_integer: BasicValueEnum<'ctx> = builder
-            .build_extract_value(from.into_struct_value(), 0, "")
-            .unwrap();
-
-        return integer_autocast(kind, target, ptr, extracted_integer, builder, context);
-    } */
-    else {
+    } else {
         builder.build_store(ptr.unwrap(), from).unwrap();
         return None;
     }
@@ -338,7 +334,7 @@ pub fn build_struct_type_from_fields<'ctx>(
             compiled_field_types.push(datatype_float_to_llvm_type(context, &field.1).into());
         }
 
-        if field.1 == DataTypes::Bool {
+        if field.1.is_bool_type() {
             compiled_field_types.push(context.bool_type().into());
         }
 

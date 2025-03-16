@@ -117,7 +117,7 @@ impl<'instr> Parser<'instr> {
         match &self.peek().kind {
             TokenKind::Struct => Ok(self.build_struct()?),
             TokenKind::Fn => Ok(self.build_function(false, false, false)?),
-            TokenKind::LBrace => Ok(self.build_code_block(&mut [], true)?),
+            TokenKind::LBrace => Ok(self.build_code_block(&mut [])?),
             TokenKind::Return => Ok(self.build_return()?),
             TokenKind::Public => Ok(self.build_public_qualifier()?),
             TokenKind::Extern => Ok(self.build_external_qualifier()?),
@@ -166,7 +166,7 @@ impl<'instr> Parser<'instr> {
 
         self.has_entry_point = true;
 
-        let body: Box<Instruction<'instr>> = Box::new(self.build_code_block(&mut [], true)?);
+        let body: Box<Instruction<'instr>> = Box::new(self.build_code_block(&mut [])?);
 
         self.inside_function = false;
 
@@ -187,7 +187,7 @@ impl<'instr> Parser<'instr> {
 
         self.inside_loop = true;
 
-        let block: Instruction<'instr> = self.build_code_block(&mut [], true)?;
+        let block: Instruction<'instr> = self.build_code_block(&mut [])?;
 
         if !block.has_break() && !block.has_return() && !block.has_continue() {
             self.future_unreacheable_code = self.scope;
@@ -216,7 +216,7 @@ impl<'instr> Parser<'instr> {
 
         self.check_type_mismatch(DataTypes::Bool, conditional.get_data_type(), None, line);
 
-        let block: Instruction = self.build_code_block(&mut [], true)?;
+        let block: Instruction = self.build_code_block(&mut [])?;
 
         Ok(Instruction::WhileLoop {
             cond: Box::new(conditional),
@@ -322,7 +322,7 @@ impl<'instr> Parser<'instr> {
             ));
         }
 
-        let if_body: Box<Instruction> = Box::new(self.build_code_block(&mut [], true)?);
+        let if_body: Box<Instruction> = Box::new(self.build_code_block(&mut [])?);
 
         let mut elfs: Option<Vec<Instruction>> = None;
 
@@ -353,7 +353,7 @@ impl<'instr> Parser<'instr> {
                 ));
             }
 
-            let elif_body: Instruction<'instr> = self.build_code_block(&mut [], true)?;
+            let elif_body: Instruction<'instr> = self.build_code_block(&mut [])?;
 
             elfs.as_mut().unwrap().push(Instruction::Elif {
                 cond: Box::new(elif_condition),
@@ -364,7 +364,7 @@ impl<'instr> Parser<'instr> {
         let mut otherwise: Option<Box<Instruction<'instr>>> = None;
 
         if self.check_type(TokenKind::Else) {
-            let else_body: Instruction<'instr> = self.build_code_block(&mut [], true)?;
+            let else_body: Instruction<'instr> = self.build_code_block(&mut [])?;
 
             otherwise = Some(Box::new(Instruction::Else {
                 block: Box::new(else_body),
@@ -797,7 +797,7 @@ impl<'instr> Parser<'instr> {
 
         self.inside_loop = true;
 
-        let body: Instruction = self.build_code_block(&mut [variable_clone], true)?;
+        let body: Instruction = self.build_code_block(&mut [variable_clone])?;
 
         self.inside_loop = false;
 
@@ -1033,7 +1033,6 @@ impl<'instr> Parser<'instr> {
     fn build_code_block(
         &mut self,
         with_instrs: &mut [Instruction<'instr>],
-        build_begin_scope: bool,
     ) -> Result<Instruction<'instr>, ThrushError> {
         self.consume(
             TokenKind::LBrace,
@@ -1042,10 +1041,7 @@ impl<'instr> Parser<'instr> {
         )?;
 
         self.scope += 1;
-
-        if build_begin_scope {
-            self.parser_objects.begin_local_scope();
-        }
+        self.parser_objects.begin_local_scope();
 
         let mut stmts: Vec<Instruction> = Vec::new();
         let mut was_emited_deallocators: bool = false;
@@ -1315,7 +1311,7 @@ impl<'instr> Parser<'instr> {
             return Ok(function);
         }
 
-        let body: Box<Instruction> = Box::new(self.build_code_block(&mut params, false)?);
+        let body: Box<Instruction> = Box::new(self.build_code_block(&mut params)?);
 
         self.inside_function = false;
 
@@ -1871,7 +1867,7 @@ impl<'instr> Parser<'instr> {
                     .collect::<Vec<_>>()
                     .join(", ")
             } else {
-                DataTypes::Void.to_string()
+                String::from("none")
             };
 
             self.errors.push(ThrushError::Error(
