@@ -1,18 +1,18 @@
 use {
     super::{
         super::super::{frontend::lexer::DataTypes, logging},
-        generation,
+        Instruction, generation,
         objects::CompilerObjects,
         types::Call,
-        utils, Instruction,
+        utils,
     },
     inkwell::{
+        AddressSpace,
         builder::Builder,
         context::Context,
         module::Module,
         types::StructType,
         values::{BasicMetadataValueEnum, BasicValueEnum, FunctionValue, IntValue, PointerValue},
-        AddressSpace,
     },
 };
 
@@ -45,7 +45,7 @@ pub fn build_call<'ctx>(
             .map(|arg| arg.get_data_type());
 
         compiled_args.push(
-            generation::build_basic_value_enum(
+            generation::build_expression(
                 module,
                 builder,
                 context,
@@ -81,7 +81,7 @@ fn build_sizeof<'ctx>(
 ) -> Option<BasicValueEnum<'ctx>> {
     let var_value: &Instruction<'ctx> = &call.2[0];
 
-    if let Instruction::RefVar {
+    if let Instruction::LocalRef {
         name,
         struct_type,
         line,

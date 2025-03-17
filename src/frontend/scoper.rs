@@ -82,7 +82,7 @@ impl<'ctx> ThrushScoper<'ctx> {
             self.analyze_instruction(body, depth)?;
         }
 
-        if let Instruction::RefVar { name, line, .. } = instr {
+        if let Instruction::LocalRef { name, line, .. } = instr {
             if !self.is_at_current_scope(name, None, depth) {
                 return Err(ThrushError::Error(
                     String::from("Undefined variable"),
@@ -137,7 +137,7 @@ impl<'ctx> ThrushScoper<'ctx> {
         if block.is_some() {
             if let Instruction::Block { stmts, .. } = block.as_ref().unwrap() {
                 return stmts.iter().rev().any(|instr| match instr {
-                    Instruction::Var {
+                    Instruction::Local {
                         name: var_name,
                         line,
                         ..
@@ -177,7 +177,7 @@ impl<'ctx> ThrushScoper<'ctx> {
                     line,
                     ..
                 }
-                | Instruction::Var {
+                | Instruction::Local {
                     name: instr_name,
                     line,
                     ..
@@ -207,7 +207,7 @@ impl<'ctx> ThrushScoper<'ctx> {
                         line,
                         ..
                     }
-                    | Instruction::Var {
+                    | Instruction::Local {
                         name: instr_name,
                         line,
                         ..
@@ -242,7 +242,7 @@ impl<'ctx> ThrushScoper<'ctx> {
         if block.is_some() {
             if let Instruction::Block { stmts, .. } = block.as_ref().unwrap() {
                 return stmts.iter().rev().any(|instr| match instr {
-                    Instruction::Var {
+                    Instruction::Local {
                         name: instr_name, ..
                     }
                     | Instruction::FunctionParameter {
@@ -259,7 +259,7 @@ impl<'ctx> ThrushScoper<'ctx> {
 
         if self.blocks.len() == 1 || depth == 0 {
             self.blocks[0].stmts.iter().rev().any(|instr| match &instr {
-                Instruction::Var {
+                Instruction::Local {
                     name: instr_name, ..
                 }
                 | Instruction::FunctionParameter {
@@ -278,7 +278,7 @@ impl<'ctx> ThrushScoper<'ctx> {
                 .iter()
                 .rev()
                 .any(|instr| match &instr {
-                    Instruction::Var {
+                    Instruction::Local {
                         name: instr_name, ..
                     }
                     | Instruction::FunctionParameter {

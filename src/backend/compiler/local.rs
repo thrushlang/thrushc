@@ -1,7 +1,7 @@
 use {
     super::{
-        super::super::frontend::lexer::DataTypes, binaryop, call, generation,
-        objects::CompilerObjects, types::Variable, unaryop, utils, Instruction,
+        super::super::frontend::lexer::DataTypes, Instruction, binaryop, call, generation,
+        objects::CompilerObjects, types::Variable, unaryop, utils,
     },
     inkwell::{
         builder::Builder,
@@ -12,27 +12,27 @@ use {
     },
 };
 
-pub fn compile<'ctx>(
+pub fn build<'ctx>(
     module: &Module<'ctx>,
     builder: &Builder<'ctx>,
     context: &'ctx Context,
     variable: Variable<'ctx>,
     compiler_objects: &mut CompilerObjects<'ctx>,
 ) -> BasicValueEnum<'ctx> {
-    let var_type: &DataTypes = variable.1;
+    let local_type: &DataTypes = variable.1;
 
-    if *var_type == DataTypes::Ptr {
-        return compile_ptr_var(
+    if *local_type == DataTypes::Ptr {
+        return build_local_ptr(
             module,
             builder,
             context,
-            (variable.0, var_type, variable.2),
+            (variable.0, local_type, variable.2),
             compiler_objects,
         );
     }
 
-    if *var_type == DataTypes::Str {
-        return compile_str_var(
+    if *local_type == DataTypes::Str {
+        return build_local_static_str(
             module,
             builder,
             context,
@@ -42,46 +42,46 @@ pub fn compile<'ctx>(
         );
     }
 
-    if var_type.is_integer_type() {
-        let ptr: PointerValue<'_> = utils::build_ptr(context, builder, *var_type);
+    if local_type.is_integer_type() {
+        let ptr: PointerValue = utils::build_ptr(context, builder, *local_type);
 
-        return compile_integer_var(
+        return build_local_integer(
             module,
             builder,
             context,
-            (variable.0, var_type, variable.2),
+            (variable.0, local_type, variable.2),
             ptr,
             compiler_objects,
         );
     }
 
-    if var_type.is_float_type() {
-        let ptr: PointerValue<'_> = utils::build_ptr(context, builder, *var_type);
+    if local_type.is_float_type() {
+        let ptr: PointerValue = utils::build_ptr(context, builder, *local_type);
 
-        return compile_float_var(
+        return build_local_float(
             builder,
             context,
-            (variable.0, var_type, variable.2),
+            (variable.0, local_type, variable.2),
             ptr,
             compiler_objects,
         );
     }
 
-    if *var_type == DataTypes::Bool {
-        let ptr: PointerValue<'_> = utils::build_ptr(context, builder, *var_type);
+    if *local_type == DataTypes::Bool {
+        let ptr: PointerValue = utils::build_ptr(context, builder, *local_type);
 
-        return compile_boolean_var(builder, context, variable, ptr, compiler_objects);
+        return build_local_boolean(builder, context, variable, ptr, compiler_objects);
     }
 
-    if *var_type == DataTypes::Struct {
-        let ptr: PointerValue<'_> =
+    if *local_type == DataTypes::Struct {
+        let ptr: PointerValue =
             utils::build_struct_ptr(context, builder, variable.2, compiler_objects);
 
-        return compile_struct_var(
+        return build_local_structure(
             module,
             builder,
             context,
-            (variable.0, var_type, variable.2),
+            (variable.0, local_type, variable.2),
             compiler_objects,
             ptr,
         );
@@ -90,20 +90,20 @@ pub fn compile<'ctx>(
     unreachable!()
 }
 
-pub fn compile_mut<'ctx>(
+pub fn build_local_mut<'ctx>(
     module: &Module<'ctx>,
     builder: &Builder<'ctx>,
     context: &'ctx Context,
     compiler_objects: &mut CompilerObjects<'ctx>,
     variable: Variable<'ctx>,
 ) {
-    let var_name: &str = variable.0;
-    let var_type: &DataTypes = variable.1;
+    let local_name: &str = variable.0;
+    let local_type: &DataTypes = variable.1;
 
-    let variable_ptr: PointerValue<'ctx> = compiler_objects.get_local(var_name).unwrap();
+    let variable_ptr: PointerValue<'ctx> = compiler_objects.get_local(local_name).unwrap();
 
-    if var_type.is_integer_type() {
-        compile_integer_var(
+    if local_type.is_integer_type() {
+        build_local_integer(
             module,
             builder,
             context,
@@ -113,38 +113,37 @@ pub fn compile_mut<'ctx>(
         );
     }
 
-    if var_type.is_float_type() {
-        compile_float_var(builder, context, variable, variable_ptr, compiler_objects);
+    if local_type.is_float_type() {
+        build_local_float(builder, context, variable, variable_ptr, compiler_objects);
     }
 
-    if *var_type == DataTypes::Str {
+    if *local_type == DataTypes::Str {
         todo!()
     }
 }
 
-fn compile_ptr_var<'ctx>(
+fn build_local_ptr<'ctx>(
     module: &Module<'ctx>,
     builder: &Builder<'ctx>,
     context: &'ctx Context,
     variable: Variable<'ctx>,
     compiler_objects: &mut CompilerObjects<'ctx>,
 ) -> BasicValueEnum<'ctx> {
-    let var_name: &str = variable.0;
-    let var_value: &Instruction<'ctx> = variable.2;
+    let local_name: &str = variable.0;
+    let local_value: &Instruction<'ctx> = variable.2;
 
-    if let Instruction::NullPtr = var_value {
-        let compiled_str: PointerValue = generation::build_basic_value_enum(
+    if let Instruction::NullPtr = local_value {
+        let compiled_str: PointerValue = generation::build_expression(
             module,
             builder,
             context,
-            var_value,
+            local_value,
             None,
             compiler_objects,
         )
         .into_pointer_value();
 
-        compiler_objects.insert(var_name, compiled_str);
-
+        compiler_objects.insert(local_name, compiled_str);
         return compiled_str.into();
     }
 
@@ -153,7 +152,7 @@ fn compile_ptr_var<'ctx>(
         args: call_arguments,
         kind: call_type,
         ..
-    } = var_value
+    } = local_value
     {
         let compiled_call: PointerValue = call::build_call(
             module,
@@ -165,30 +164,29 @@ fn compile_ptr_var<'ctx>(
         .unwrap()
         .into_pointer_value();
 
-        compiler_objects.insert(var_name, compiled_call);
+        compiler_objects.insert(local_name, compiled_call);
         return compiled_call.into();
     }
 
-    if let Instruction::Str(_) = var_value {
-        let compiled_str: PointerValue = generation::build_basic_value_enum(
+    if let Instruction::Str(_) = local_value {
+        let compiled_str: PointerValue = generation::build_expression(
             module,
             builder,
             context,
-            var_value,
+            local_value,
             None,
             compiler_objects,
         )
         .into_pointer_value();
 
-        compiler_objects.insert(var_name, compiled_str);
-
+        compiler_objects.insert(local_name, compiled_str);
         return compiled_str.into();
     }
 
     unreachable!()
 }
 
-fn compile_struct_var<'ctx>(
+fn build_local_structure<'ctx>(
     module: &Module<'ctx>,
     builder: &Builder<'ctx>,
     context: &'ctx Context,
@@ -196,12 +194,12 @@ fn compile_struct_var<'ctx>(
     compiler_objects: &mut CompilerObjects<'ctx>,
     ptr: PointerValue<'ctx>,
 ) -> BasicValueEnum<'ctx> {
-    let var_name: &str = variable.0;
-    let var_value: &Instruction<'ctx> = variable.2;
+    let local_name: &str = variable.0;
+    let local_value: &Instruction<'ctx> = variable.2;
 
-    if let Instruction::InitStruct { fields, .. } = var_value {
+    if let Instruction::InitStruct { fields, .. } = local_value {
         fields.iter().for_each(|field| {
-            let compiled_field: BasicValueEnum = generation::build_basic_value_enum(
+            let compiled_field: BasicValueEnum = generation::build_expression(
                 module,
                 builder,
                 context,
@@ -210,9 +208,9 @@ fn compile_struct_var<'ctx>(
                 compiler_objects,
             );
 
-            let field_in_struct: PointerValue<'ctx> = builder
+            let field_in_struct: PointerValue = builder
                 .build_struct_gep(
-                    var_value.build_struct_type(context, None, compiler_objects),
+                    local_value.build_struct_type(context, None, compiler_objects),
                     ptr,
                     field.3,
                     "",
@@ -224,17 +222,17 @@ fn compile_struct_var<'ctx>(
                 .unwrap();
         });
 
-        compiler_objects.insert(var_name, ptr);
+        compiler_objects.insert(local_name, ptr);
 
         return ptr.into();
     }
 
-    if let Instruction::RefVar { name, .. } = var_value {
-        let original_ptr: PointerValue<'ctx> = compiler_objects.get_local(name).unwrap();
+    if let Instruction::LocalRef { name, .. } = local_value {
+        let original_ptr: PointerValue = compiler_objects.get_local(name).unwrap();
 
         builder.build_store(ptr, original_ptr).unwrap();
 
-        compiler_objects.insert(var_name, ptr);
+        compiler_objects.insert(local_name, ptr);
 
         return ptr.into();
     }
@@ -244,9 +242,9 @@ fn compile_struct_var<'ctx>(
         args: call_arguments,
         kind: call_type,
         struct_type: struct_name,
-    } = var_value
+    } = local_value
     {
-        let compiled_value: PointerValue<'_> = call::build_call(
+        let compiled_value: PointerValue = call::build_call(
             module,
             builder,
             context,
@@ -258,13 +256,13 @@ fn compile_struct_var<'ctx>(
 
         builder.build_store(ptr, compiled_value).unwrap();
 
-        let struct_type: StructType<'_> =
-            var_value.build_struct_type(context, None, compiler_objects);
+        let struct_type: StructType =
+            local_value.build_struct_type(context, None, compiler_objects);
 
         if let Some(structure) = compiler_objects.get_struct(struct_name) {
             structure
                 .iter()
-                .filter(|field| field.1.is_ptr_heaped())
+                .filter(|field| field.1.is_heaped_ptr())
                 .for_each(|field| {
                     let field_in_struct: PointerValue<'ctx> = builder
                         .build_struct_gep(struct_type, compiled_value, field.2, "")
@@ -281,7 +279,7 @@ fn compile_struct_var<'ctx>(
 
         builder.build_free(compiled_value).unwrap();
 
-        compiler_objects.insert(var_name, ptr);
+        compiler_objects.insert(local_name, ptr);
 
         return ptr.into();
     }
@@ -289,7 +287,7 @@ fn compile_struct_var<'ctx>(
     unreachable!()
 }
 
-fn compile_str_var<'ctx>(
+fn build_local_static_str<'ctx>(
     module: &Module<'ctx>,
     builder: &Builder<'ctx>,
     context: &'ctx Context,
@@ -298,31 +296,19 @@ fn compile_str_var<'ctx>(
     compiler_objects: &mut CompilerObjects<'ctx>,
 ) -> BasicValueEnum<'ctx> {
     if let Instruction::Str(_) = value {
-        let compiled_str = generation::build_basic_value_enum(
-            module,
-            builder,
-            context,
-            value,
-            None,
-            compiler_objects,
-        )
-        .into_pointer_value();
+        let compiled_str =
+            generation::build_expression(module, builder, context, value, None, compiler_objects)
+                .into_pointer_value();
 
         compiler_objects.insert(name, compiled_str);
 
         return compiled_str.into();
     }
 
-    if let Instruction::RefVar { .. } = value {
-        let compiled_refvar = generation::build_basic_value_enum(
-            module,
-            builder,
-            context,
-            value,
-            None,
-            compiler_objects,
-        )
-        .into_pointer_value();
+    if let Instruction::LocalRef { .. } = value {
+        let compiled_refvar =
+            generation::build_expression(module, builder, context, value, None, compiler_objects)
+                .into_pointer_value();
 
         compiler_objects.insert(name, compiled_refvar);
         return compiled_refvar.into();
@@ -335,7 +321,7 @@ fn compile_str_var<'ctx>(
         ..
     } = value
     {
-        let compiled_call: PointerValue<'_> = call::build_call(
+        let compiled_call: PointerValue = call::build_call(
             module,
             builder,
             context,
@@ -353,7 +339,7 @@ fn compile_str_var<'ctx>(
     unreachable!()
 }
 
-fn compile_integer_var<'ctx>(
+fn build_local_integer<'ctx>(
     module: &Module<'ctx>,
     builder: &Builder<'ctx>,
     context: &'ctx Context,
@@ -361,88 +347,91 @@ fn compile_integer_var<'ctx>(
     ptr: PointerValue<'ctx>,
     compiler_objects: &mut CompilerObjects<'ctx>,
 ) -> BasicValueEnum<'ctx> {
-    let var_name: &str = variable.0;
-    let var_type: &DataTypes = variable.1;
-    let var_value: &Instruction = variable.2;
+    let local_name: &str = variable.0;
+    let local_type: &DataTypes = variable.1;
+    let local_value: &Instruction = variable.2;
 
-    if let Instruction::Null = var_value {
-        builder
-            .build_store(ptr, utils::build_const_integer(context, var_type, 0, false))
-            .unwrap();
-
-        compiler_objects.insert(var_name, ptr);
-
-        return ptr.into();
-    }
-
-    if let Instruction::Char(byte) = var_value {
+    if let Instruction::Null = local_value {
         builder
             .build_store(
                 ptr,
-                utils::build_const_integer(context, var_type, *byte as u64, false),
+                utils::build_const_integer(context, local_type, 0, false),
             )
             .unwrap();
 
-        compiler_objects.insert(var_name, ptr);
+        compiler_objects.insert(local_name, ptr);
 
         return ptr.into();
     }
 
-    if let Instruction::Integer(_, num, is_signed) = var_value {
+    if let Instruction::Char(byte) = local_value {
         builder
             .build_store(
                 ptr,
-                utils::build_const_integer(context, var_type, *num as u64, *is_signed),
+                utils::build_const_integer(context, local_type, *byte as u64, false),
             )
             .unwrap();
 
-        compiler_objects.insert(var_name, ptr);
+        compiler_objects.insert(local_name, ptr);
 
         return ptr.into();
     }
 
-    if let Instruction::RefVar {
-        name: refvar_name,
-        kind: refvar_type,
+    if let Instruction::Integer(_, num, is_signed) = local_value {
+        builder
+            .build_store(
+                ptr,
+                utils::build_const_integer(context, local_type, *num as u64, *is_signed),
+            )
+            .unwrap();
+
+        compiler_objects.insert(local_name, ptr);
+
+        return ptr.into();
+    }
+
+    if let Instruction::LocalRef {
+        name: reflocal_name,
+        kind: reflocal_type,
         ..
-    } = var_value
+    } = local_value
     {
-        let var: PointerValue<'ctx> = compiler_objects.get_local(refvar_name).unwrap();
+        let var: PointerValue<'ctx> = compiler_objects.get_local(reflocal_name).unwrap();
 
-        let load: BasicValueEnum<'_> = builder
+        let load: BasicValueEnum = builder
             .build_load(
-                utils::datatype_integer_to_llvm_type(context, refvar_type),
+                utils::datatype_integer_to_llvm_type(context, reflocal_type),
                 var,
                 "",
             )
             .unwrap();
 
-        if utils::integer_autocast(refvar_type, var_type, Some(ptr), load, builder, context)
+        if utils::integer_autocast(reflocal_type, local_type, Some(ptr), load, builder, context)
             .is_none()
         {
             builder.build_store(ptr, load).unwrap();
         }
 
-        compiler_objects.insert(var_name, ptr);
+        compiler_objects.insert(local_name, ptr);
 
         return ptr.into();
     }
 
     if let Instruction::BinaryOp {
         left, op, right, ..
-    } = var_value
+    } = local_value
     {
-        let result: BasicValueEnum<'_> = binaryop::integer_binaryop(
+        let result: BasicValueEnum = binaryop::integer_binaryop(
             builder,
             context,
             (left, op, right),
-            var_type,
+            local_type,
             compiler_objects,
         );
 
         builder.build_store(ptr, result.into_int_value()).unwrap();
 
-        compiler_objects.insert(var_name, ptr);
+        compiler_objects.insert(local_name, ptr);
 
         return ptr.into();
     }
@@ -452,9 +441,9 @@ fn compile_integer_var<'ctx>(
         args,
         kind: call_type,
         ..
-    } = var_value
+    } = local_value
     {
-        let result: BasicValueEnum<'_> = call::build_call(
+        let result: BasicValueEnum = call::build_call(
             module,
             builder,
             context,
@@ -463,34 +452,34 @@ fn compile_integer_var<'ctx>(
         )
         .unwrap();
 
-        if utils::integer_autocast(call_type, var_type, Some(ptr), result, builder, context)
+        if utils::integer_autocast(call_type, local_type, Some(ptr), result, builder, context)
             .is_none()
         {
             builder.build_store(ptr, result).unwrap();
         };
 
-        compiler_objects.insert(var_name, ptr);
+        compiler_objects.insert(local_name, ptr);
 
         return ptr.into();
     }
 
-    if let Instruction::UnaryOp { op, value, kind } = var_value {
+    if let Instruction::UnaryOp { op, value, kind } = local_value {
         let result =
             unaryop::compile_unary_op(builder, context, (op, value, kind), compiler_objects);
 
         builder.build_store(ptr, result).unwrap();
 
-        compiler_objects.insert(var_name, ptr);
+        compiler_objects.insert(local_name, ptr);
 
         return ptr.into();
     }
 
-    if let Instruction::Group { instr, .. } = var_value {
-        compile_integer_var(
+    if let Instruction::Group { instr, .. } = local_value {
+        build_local_integer(
             module,
             builder,
             context,
-            (var_name, var_type, instr),
+            (local_name, local_type, instr),
             ptr,
             compiler_objects,
         );
@@ -501,48 +490,48 @@ fn compile_integer_var<'ctx>(
     unimplemented!()
 }
 
-fn compile_float_var<'ctx>(
+fn build_local_float<'ctx>(
     builder: &Builder<'ctx>,
     context: &'ctx Context,
     variable: Variable<'ctx>,
     ptr: PointerValue<'ctx>,
     compiler_objects: &mut CompilerObjects<'ctx>,
 ) -> BasicValueEnum<'ctx> {
-    let var_name: &str = variable.0;
-    let var_type: &DataTypes = variable.1;
-    let var_value: &Instruction = variable.2;
+    let local_name: &str = variable.0;
+    let local_type: &DataTypes = variable.1;
+    let local_value: &Instruction = variable.2;
 
-    if let Instruction::Null = var_value {
+    if let Instruction::Null = local_value {
         builder
             .build_store(
                 ptr,
-                utils::build_const_float(builder, context, var_type, 0.0, false),
+                utils::build_const_float(builder, context, local_type, 0.0, false),
             )
             .unwrap();
 
-        compiler_objects.insert(var_name, ptr);
+        compiler_objects.insert(local_name, ptr);
 
         return ptr.into();
     }
 
-    if let Instruction::Float(_, num, is_signed) = var_value {
+    if let Instruction::Float(_, num, is_signed) = local_value {
         builder
             .build_store(
                 ptr,
-                utils::build_const_float(builder, context, var_type, *num, *is_signed),
+                utils::build_const_float(builder, context, local_type, *num, *is_signed),
             )
             .unwrap();
 
-        compiler_objects.insert(var_name, ptr);
+        compiler_objects.insert(local_name, ptr);
 
         return ptr.into();
     }
 
-    if let Instruction::RefVar {
+    if let Instruction::LocalRef {
         name: name_refvar,
         kind: kind_refvar,
         ..
-    } = var_value
+    } = local_value
     {
         let var: PointerValue<'ctx> = compiler_objects.get_local(name_refvar).unwrap();
 
@@ -556,7 +545,7 @@ fn compile_float_var<'ctx>(
 
         if utils::float_autocast(
             kind_refvar,
-            var_type,
+            local_type,
             Some(ptr),
             var.into(),
             builder,
@@ -567,35 +556,35 @@ fn compile_float_var<'ctx>(
             builder.build_store(ptr, load).unwrap();
         }
 
-        compiler_objects.insert(var_name, ptr);
+        compiler_objects.insert(local_name, ptr);
 
         return ptr.into();
     }
 
     if let Instruction::BinaryOp {
         left, op, right, ..
-    } = var_value
+    } = local_value
     {
-        let result: BasicValueEnum<'_> = binaryop::float_binaryop(
+        let result: BasicValueEnum = binaryop::float_binaryop(
             builder,
             context,
             (left, op, right),
-            var_type,
+            local_type,
             compiler_objects,
         );
 
         builder.build_store(ptr, result).unwrap();
 
-        compiler_objects.insert(var_name, ptr);
+        compiler_objects.insert(local_name, ptr);
 
         return ptr.into();
     }
 
-    if let Instruction::Group { instr, .. } = var_value {
-        compile_float_var(
+    if let Instruction::Group { instr, .. } = local_value {
+        build_local_float(
             builder,
             context,
-            (var_name, var_type, instr),
+            (local_name, local_type, instr),
             ptr,
             compiler_objects,
         );
@@ -604,45 +593,48 @@ fn compile_float_var<'ctx>(
     unimplemented!()
 }
 
-fn compile_boolean_var<'ctx>(
+fn build_local_boolean<'ctx>(
     builder: &Builder<'ctx>,
     context: &'ctx Context,
     variable: Variable<'ctx>,
     ptr: PointerValue<'ctx>,
     compiler_objects: &mut CompilerObjects<'ctx>,
 ) -> BasicValueEnum<'ctx> {
-    let var_name: &str = variable.0;
-    let var_type: &DataTypes = variable.1;
-    let var_value: &Instruction<'ctx> = variable.2;
+    let local_name: &str = variable.0;
+    let local_type: &DataTypes = variable.1;
+    let local_value: &Instruction<'ctx> = variable.2;
 
-    if let Instruction::Null = var_value {
-        builder
-            .build_store(ptr, utils::build_const_integer(context, var_type, 0, false))
-            .unwrap();
-
-        compiler_objects.insert(var_name, ptr);
-
-        return ptr.into();
-    }
-
-    if let Instruction::Boolean(bool) = var_value {
+    if let Instruction::Null = local_value {
         builder
             .build_store(
                 ptr,
-                utils::build_const_integer(context, var_type, *bool as u64, false),
+                utils::build_const_integer(context, local_type, 0, false),
             )
             .unwrap();
 
-        compiler_objects.insert(var_name, ptr);
+        compiler_objects.insert(local_name, ptr);
 
         return ptr.into();
     }
 
-    if let Instruction::RefVar {
+    if let Instruction::Boolean(bool) = local_value {
+        builder
+            .build_store(
+                ptr,
+                utils::build_const_integer(context, local_type, *bool as u64, false),
+            )
+            .unwrap();
+
+        compiler_objects.insert(local_name, ptr);
+
+        return ptr.into();
+    }
+
+    if let Instruction::LocalRef {
         name: name_refvar,
         kind: kind_refvar,
         ..
-    } = var_value
+    } = local_value
     {
         let var: PointerValue<'ctx> = compiler_objects.get_local(name_refvar).unwrap();
 
@@ -656,7 +648,7 @@ fn compile_boolean_var<'ctx>(
 
         if utils::integer_autocast(
             kind_refvar,
-            var_type,
+            local_type,
             Some(ptr),
             var.into(),
             builder,
@@ -667,35 +659,35 @@ fn compile_boolean_var<'ctx>(
             builder.build_store(ptr, load).unwrap();
         }
 
-        compiler_objects.insert(var_name, ptr);
+        compiler_objects.insert(local_name, ptr);
 
         return ptr.into();
     }
 
     if let Instruction::BinaryOp {
         left, op, right, ..
-    } = var_value
+    } = local_value
     {
-        let result: BasicValueEnum<'_> = binaryop::bool_binaryop(
+        let result: BasicValueEnum = binaryop::bool_binaryop(
             builder,
             context,
             (left, op, right),
-            var_type,
+            local_type,
             compiler_objects,
         );
 
         builder.build_store(ptr, result).unwrap();
 
-        compiler_objects.insert(var_name, ptr);
+        compiler_objects.insert(local_name, ptr);
 
         return ptr.into();
     }
 
-    if let Instruction::Group { instr, .. } = var_value {
-        compile_boolean_var(
+    if let Instruction::Group { instr, .. } = local_value {
+        build_local_boolean(
             builder,
             context,
-            (var_name, var_type, instr),
+            (local_name, local_type, instr),
             ptr,
             compiler_objects,
         );

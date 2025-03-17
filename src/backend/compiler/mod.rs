@@ -3,13 +3,13 @@ pub mod call;
 pub mod codegen;
 pub mod generation;
 pub mod impls;
+pub mod local;
 pub mod misc;
 pub mod objects;
 pub mod traits;
 pub mod types;
 pub mod unaryop;
 pub mod utils;
-pub mod variable;
 
 use {
     super::instruction::Instruction,

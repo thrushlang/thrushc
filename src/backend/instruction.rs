@@ -99,14 +99,15 @@ pub enum Instruction<'ctx> {
     },
     Return(Box<Instruction<'ctx>>, DataTypes),
 
-    Var {
+    // Locals variables
+    Local {
         name: &'ctx str,
         kind: DataTypes,
         value: Box<Instruction<'ctx>>,
         line: usize,
         exist_only_comptime: bool,
     },
-    RefVar {
+    LocalRef {
         name: &'ctx str,
         line: usize,
         kind: DataTypes,
@@ -147,7 +148,7 @@ pub enum Instruction<'ctx> {
         struct_type: String,
     },
 
-    // External Type (FFI)
+    // External type (FFI)
     Extern {
         name: &'ctx str,
         instr: Box<Instruction<'ctx>>,
@@ -193,7 +194,7 @@ impl<'ctx> Instruction<'ctx> {
             return utils::build_struct_type_from_fields(context, &new_fields);
         }
 
-        if let Instruction::RefVar { struct_type, .. } = self {
+        if let Instruction::LocalRef { struct_type, .. } = self {
             let fields: &Struct = compiler_objects.get_struct(struct_type).unwrap();
             return utils::build_struct_type_from_fields(context, fields);
         }
@@ -228,7 +229,7 @@ impl<'ctx> Instruction<'ctx> {
         }
 
         if let (
-            Instruction::RefVar { .. }
+            Instruction::LocalRef { .. }
             | Instruction::Char { .. }
             | Instruction::Float { .. }
             | Instruction::Integer { .. }
@@ -236,7 +237,7 @@ impl<'ctx> Instruction<'ctx> {
             Instruction::Char { .. }
             | Instruction::Float { .. }
             | Instruction::Integer { .. }
-            | Instruction::RefVar { .. }
+            | Instruction::LocalRef { .. }
             | Instruction::Boolean(_),
         ) = (self, other)
         {
@@ -254,106 +255,16 @@ impl<'ctx> Instruction<'ctx> {
     }
 
     #[inline(always)]
-    pub fn has_return(&self) -> bool {
-        if let Instruction::Block { stmts } = self {
-            stmts.iter().any(|stmt| stmt.is_return())
-        } else {
-            false
-        }
-    }
-
-    #[inline(always)]
-    pub fn has_break(&self) -> bool {
-        if let Instruction::Block { stmts } = self {
-            stmts.iter().any(|stmt| stmt.is_break())
-        } else {
-            false
-        }
-    }
-
-    #[inline(always)]
-    pub fn has_continue(&self) -> bool {
-        if let Instruction::Block { stmts } = self {
-            stmts.iter().any(|stmt| stmt.is_continue())
-        } else {
-            false
-        }
-    }
-
-    #[inline(always)]
-    pub fn return_with_ptr(&self) -> Option<&'ctx str> {
+    pub fn return_with_heaped_ptr(&self) -> Option<&'ctx str> {
         if let Instruction::Return(instr, _) = self {
-            if let Instruction::RefVar { name, kind, .. } = instr.as_ref() {
-                if kind.is_ptr_heaped() {
+            if let Instruction::LocalRef { name, kind, .. } = instr.as_ref() {
+                if kind.is_heaped_ptr() {
                     return Some(name);
                 }
             }
         }
 
         None
-    }
-
-    #[inline(always)]
-    pub const fn is_extern(&self) -> bool {
-        if let Instruction::Extern { .. } = self {
-            return true;
-        }
-
-        false
-    }
-
-    #[inline(always)]
-    pub const fn is_function(&self) -> bool {
-        if let Instruction::Function { .. } = self {
-            return true;
-        }
-
-        false
-    }
-
-    #[inline(always)]
-    pub const fn is_binary(&self) -> bool {
-        if let Instruction::BinaryOp { .. } = self {
-            return true;
-        }
-
-        false
-    }
-
-    #[inline(always)]
-    pub const fn is_group(&self) -> bool {
-        if let Instruction::Group { .. } = self {
-            return true;
-        }
-
-        false
-    }
-
-    #[inline(always)]
-    pub const fn is_return(&self) -> bool {
-        if let Instruction::Return(_, _) = self {
-            return true;
-        }
-
-        false
-    }
-
-    #[inline(always)]
-    pub const fn is_break(&self) -> bool {
-        if let Instruction::Break = self {
-            return true;
-        }
-
-        false
-    }
-
-    #[inline(always)]
-    pub const fn is_continue(&self) -> bool {
-        if let Instruction::Continue = self {
-            return true;
-        }
-
-        false
     }
 
     #[inline(always)]
@@ -419,11 +330,12 @@ impl<'ctx> Instruction<'ctx> {
             return instr.get_data_type_recursive();
         }
 
-        if let Instruction::RefVar {
-            kind: refvar_type, ..
+        if let Instruction::LocalRef {
+            kind: localref_type,
+            ..
         } = self
         {
-            return *refvar_type;
+            return *localref_type;
         }
 
         if let Instruction::Call { kind, .. } = self {
@@ -461,7 +373,7 @@ impl<'ctx> Instruction<'ctx> {
         match self {
             Instruction::Integer(datatype, ..)
             | Instruction::Float(datatype, ..)
-            | Instruction::RefVar { kind: datatype, .. }
+            | Instruction::LocalRef { kind: datatype, .. }
             | Instruction::Group { kind: datatype, .. }
             | Instruction::BinaryOp { kind: datatype, .. }
             | Instruction::FunctionParameter { kind: datatype, .. }
@@ -481,5 +393,67 @@ impl<'ctx> Instruction<'ctx> {
                 unimplemented!()
             }
         }
+    }
+
+    #[inline(always)]
+    pub fn has_return(&self) -> bool {
+        if let Instruction::Block { stmts } = self {
+            stmts.iter().any(|stmt| stmt.is_return())
+        } else {
+            false
+        }
+    }
+
+    #[inline(always)]
+    pub fn has_break(&self) -> bool {
+        if let Instruction::Block { stmts } = self {
+            stmts.iter().any(|stmt| stmt.is_break())
+        } else {
+            false
+        }
+    }
+
+    #[inline(always)]
+    pub fn has_continue(&self) -> bool {
+        if let Instruction::Block { stmts } = self {
+            stmts.iter().any(|stmt| stmt.is_continue())
+        } else {
+            false
+        }
+    }
+
+    #[inline(always)]
+    pub const fn is_extern(&self) -> bool {
+        matches!(self, Instruction::Extern { .. })
+    }
+
+    #[inline(always)]
+    pub const fn is_function(&self) -> bool {
+        matches!(self, Instruction::Function { .. })
+    }
+
+    #[inline(always)]
+    pub const fn is_binary(&self) -> bool {
+        matches!(self, Instruction::BinaryOp { .. })
+    }
+
+    #[inline(always)]
+    pub const fn is_group(&self) -> bool {
+        matches!(self, Instruction::Group { .. })
+    }
+
+    #[inline(always)]
+    pub const fn is_return(&self) -> bool {
+        matches!(self, Instruction::Return(_, _))
+    }
+
+    #[inline(always)]
+    pub const fn is_break(&self) -> bool {
+        matches!(self, Instruction::Break)
+    }
+
+    #[inline(always)]
+    pub const fn is_continue(&self) -> bool {
+        matches!(self, Instruction::Continue)
     }
 }

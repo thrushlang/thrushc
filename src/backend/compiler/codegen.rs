@@ -4,11 +4,11 @@ use {
             super::frontend::lexer::{DataTypes, TokenKind},
             instruction::Instruction,
         },
-        binaryop, call, generation,
+        binaryop, call, generation, local,
         objects::CompilerObjects,
         traits::StructureBasics,
         types::{Function, Struct, StructField},
-        unaryop, utils, variable,
+        unaryop, utils,
     },
     core::str,
     inkwell::{
@@ -428,7 +428,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                 Instruction::Null
             }
 
-            Instruction::Str(_) => Instruction::BasicValueEnum(generation::build_basic_value_enum(
+            Instruction::Str(_) => Instruction::BasicValueEnum(generation::build_expression(
                 self.module,
                 self.builder,
                 self.context,
@@ -437,7 +437,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                 &mut self.compiler_objects,
             )),
 
-            Instruction::Var {
+            Instruction::Local {
                 name,
                 kind,
                 value,
@@ -448,7 +448,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                     return Instruction::Null;
                 }
 
-                variable::compile(
+                local::build(
                     self.module,
                     self.builder,
                     self.context,
@@ -460,7 +460,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
             }
 
             Instruction::MutVar { name, kind, value } => {
-                variable::compile_mut(
+                local::build_local_mut(
                     self.module,
                     self.builder,
                     self.context,
@@ -644,7 +644,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
             return;
         }
 
-        if let Instruction::RefVar { name, .. } = instr {
+        if let Instruction::LocalRef { name, .. } = instr {
             let variable: PointerValue<'ctx> = self.compiler_objects.get_local(name).unwrap();
 
             if kind.is_integer_type() || *kind == DataTypes::Bool {

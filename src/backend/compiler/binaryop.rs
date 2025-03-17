@@ -1,9 +1,10 @@
 use {
     super::{
         super::super::frontend::lexer::{DataTypes, TokenKind},
+        Instruction,
         objects::CompilerObjects,
         types::BinaryOp,
-        utils, Instruction,
+        utils,
     },
     inkwell::{
         builder::Builder,
@@ -249,7 +250,7 @@ pub fn integer_binaryop<'ctx>(
     }
 
     if let (
-        Instruction::RefVar {
+        Instruction::LocalRef {
             name: left_name,
             kind: left_type,
             ..
@@ -266,7 +267,7 @@ pub fn integer_binaryop<'ctx>(
         | TokenKind::GreaterEq
         | TokenKind::And
         | TokenKind::Or,
-        Instruction::RefVar {
+        Instruction::LocalRef {
             name: right_name,
             kind: right_type,
             ..
@@ -337,7 +338,7 @@ pub fn integer_binaryop<'ctx>(
         | TokenKind::GreaterEq
         | TokenKind::And
         | TokenKind::Or,
-        Instruction::RefVar { name, kind, .. },
+        Instruction::LocalRef { name, kind, .. },
     ) = binary
     {
         let mut left_compiled: IntValue<'_> =
@@ -483,7 +484,7 @@ pub fn integer_binaryop<'ctx>(
     }
 
     if let (
-        Instruction::RefVar { name, kind, .. },
+        Instruction::LocalRef { name, kind, .. },
         TokenKind::Plus
         | TokenKind::Slash
         | TokenKind::Minus
@@ -546,7 +547,7 @@ pub fn integer_binaryop<'ctx>(
     if let (
         Instruction::Boolean(left),
         TokenKind::BangEq | TokenKind::EqEq | TokenKind::And | TokenKind::Or,
-        Instruction::RefVar { name, kind, .. },
+        Instruction::LocalRef { name, kind, .. },
     ) = binary
     {
         let mut left_compiled: IntValue<'_> =
@@ -594,7 +595,7 @@ pub fn integer_binaryop<'ctx>(
     }
 
     if let (
-        Instruction::RefVar { name, kind, .. },
+        Instruction::LocalRef { name, kind, .. },
         TokenKind::BangEq | TokenKind::EqEq | TokenKind::And | TokenKind::Or,
         Instruction::Boolean(right),
     ) = binary
@@ -1069,7 +1070,7 @@ pub fn float_binaryop<'ctx>(
     }
 
     if let (
-        Instruction::RefVar {
+        Instruction::LocalRef {
             name: left_name,
             kind: left_type,
             ..
@@ -1084,7 +1085,7 @@ pub fn float_binaryop<'ctx>(
         | TokenKind::Less
         | TokenKind::Greater
         | TokenKind::GreaterEq,
-        Instruction::RefVar {
+        Instruction::LocalRef {
             name: right_name,
             kind: right_type,
             ..
@@ -1146,7 +1147,7 @@ pub fn float_binaryop<'ctx>(
         | TokenKind::Less
         | TokenKind::Greater
         | TokenKind::GreaterEq,
-        Instruction::RefVar { name, kind, .. },
+        Instruction::LocalRef { name, kind, .. },
     ) = binary
     {
         let mut left_compiled: FloatValue<'_> =
@@ -1187,7 +1188,7 @@ pub fn float_binaryop<'ctx>(
     }
 
     if let (
-        Instruction::RefVar { name, kind, .. },
+        Instruction::LocalRef { name, kind, .. },
         TokenKind::Plus
         | TokenKind::Slash
         | TokenKind::Minus
@@ -1692,7 +1693,7 @@ pub fn bool_binaryop<'ctx>(
     }
 
     if let (
-        Instruction::RefVar { .. },
+        Instruction::LocalRef { .. },
         TokenKind::BangEq
         | TokenKind::EqEq
         | TokenKind::LessEq
@@ -1701,7 +1702,7 @@ pub fn bool_binaryop<'ctx>(
         | TokenKind::GreaterEq
         | TokenKind::And
         | TokenKind::Or,
-        Instruction::RefVar { .. },
+        Instruction::LocalRef { .. },
     ) = binary
     {
         if binary.0.get_data_type().is_float_type() {
@@ -1725,7 +1726,7 @@ pub fn bool_binaryop<'ctx>(
         | TokenKind::GreaterEq
         | TokenKind::And
         | TokenKind::Or,
-        Instruction::RefVar { .. },
+        Instruction::LocalRef { .. },
     ) = binary
     {
         if binary.0.get_data_type().is_float_type() {
@@ -1740,7 +1741,7 @@ pub fn bool_binaryop<'ctx>(
     }
 
     if let (
-        Instruction::RefVar { .. },
+        Instruction::LocalRef { .. },
         TokenKind::BangEq
         | TokenKind::EqEq
         | TokenKind::LessEq

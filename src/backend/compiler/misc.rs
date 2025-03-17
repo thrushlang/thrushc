@@ -1,7 +1,7 @@
 use {
     inkwell::{
-        targets::{CodeModel, RelocMode, TargetMachine, TargetTriple},
         OptimizationLevel,
+        targets::{CodeModel, RelocMode, TargetMachine, TargetTriple},
     },
     std::path::PathBuf,
 };
@@ -115,7 +115,7 @@ impl Linking {
 impl Default for CompilerOptions {
     fn default() -> Self {
         Self {
-            output: String::new(),
+            output: String::with_capacity(10),
             target_triple: TargetMachine::get_default_triple(),
             optimization: Opt::default(),
             emit_llvm_ir: false,
@@ -132,8 +132,8 @@ impl Default for CompilerOptions {
             include_debug_api: false,
             reloc_mode: RelocMode::Default,
             code_model: CodeModel::Default,
-            files: Vec::new(),
-            args: Vec::new(),
+            files: Vec::with_capacity(10),
+            args: Vec::with_capacity(10),
         }
     }
 }

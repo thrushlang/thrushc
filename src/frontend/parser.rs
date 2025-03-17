@@ -1,12 +1,12 @@
 use {
     super::{
         super::{
+            CORE_LIBRARY_PATH,
             backend::{compiler::misc::ThrushFile, instruction::Instruction},
             constants::MINIMAL_ERROR_CAPACITY,
             diagnostic::Diagnostic,
             error::ThrushError,
             logging::LogType,
-            CORE_LIBRARY_PATH,
         },
         lexer::{DataTypes, Lexer, Token, TokenKind},
         objects::{FoundObject, Function, Functions, Local, ParserObjects},
@@ -121,7 +121,7 @@ impl<'instr> Parser<'instr> {
             TokenKind::Return => Ok(self.build_return()?),
             TokenKind::Public => Ok(self.build_public_qualifier()?),
             TokenKind::Extern => Ok(self.build_external_qualifier()?),
-            TokenKind::Var => Ok(self.build_local_variable(false)?),
+            TokenKind::Local => Ok(self.build_local_variable(false)?),
             TokenKind::For => Ok(self.build_for_loop()?),
             TokenKind::New => Ok(self.build_struct_initializer()?),
             TokenKind::If => Ok(self.build_if_elif_else()?),
@@ -508,9 +508,11 @@ impl<'instr> Parser<'instr> {
                 if field_index as usize >= struct_found.len() {
                     return Err(ThrushError::Error(
                         String::from("Too many fields in struct"),
-                        String::from("There are more fields in the structure than normal, they must be the exact amount."),
+                        String::from(
+                            "There are more fields in the structure than normal, they must be the exact amount.",
+                        ),
                         line,
-                        Some(span)
+                        Some(span),
                     ));
                 }
 
@@ -748,7 +750,7 @@ impl<'instr> Parser<'instr> {
                     format!("External qualifier is not applicable for \"{}\" .", what),
                     self.peek().line,
                     Some(self.peek().span),
-                ))
+                ));
             }
         };
 
@@ -772,7 +774,6 @@ impl<'instr> Parser<'instr> {
         }
 
         let variable: Instruction = self.build_local_variable(false)?;
-
         let conditional: Instruction = self.expression()?;
 
         self.consume(
@@ -787,7 +788,7 @@ impl<'instr> Parser<'instr> {
 
         let mut variable_clone: Instruction = variable.clone();
 
-        if let Instruction::Var {
+        if let Instruction::Local {
             exist_only_comptime,
             ..
         } = &mut variable_clone
@@ -904,7 +905,7 @@ impl<'instr> Parser<'instr> {
                 &mut self.errors,
             );
 
-            return Ok(Instruction::Var {
+            return Ok(Instruction::Local {
                 name: name.lexeme.to_str(),
                 kind: kind.0,
                 value: Box::new(Instruction::Null),
@@ -936,7 +937,7 @@ impl<'instr> Parser<'instr> {
             &mut self.errors,
         );
 
-        let local_variable: Instruction = Instruction::Var {
+        let local_variable: Instruction = Instruction::Local {
             name: name.lexeme.to_str(),
             kind: kind.0,
             value: Box::new(value),
@@ -1054,7 +1055,7 @@ impl<'instr> Parser<'instr> {
             let instr: Instruction = self.parse()?;
 
             if instr.is_return() {
-                if let Some(name) = instr.return_with_ptr() {
+                if let Some(name) = instr.return_with_heaped_ptr() {
                     self.parser_objects
                         .modify_local_deallocation(self.scope, name, true);
                 }
@@ -1077,7 +1078,6 @@ impl<'instr> Parser<'instr> {
         self.parser_objects.end_local_scope();
 
         self.scoper.add_scope(stmts.clone());
-
         self.scope -= 1;
 
         Ok(Instruction::Block { stmts })
@@ -1247,7 +1247,7 @@ impl<'instr> Parser<'instr> {
                     format!("Type \"{}\" not exist.", what),
                     self.peek().line,
                     Some(self.peek().span),
-                ))
+                ));
             }
         };
 
@@ -1627,7 +1627,7 @@ impl<'instr> Parser<'instr> {
                             ),
                             line,
                             Some(span),
-                        ))
+                        ));
                     }
                 }
             }
@@ -1644,7 +1644,7 @@ impl<'instr> Parser<'instr> {
                             "Group the expressions \"(...)\" is only allowed if contain binary expressions or other group expressions.",
                         ),
                         lparen.line,
-                        Some((lparen.span.0, self.peek().span.1))
+                        Some((lparen.span.0, self.peek().span.1)),
                     ));
                 }
 
@@ -1754,11 +1754,11 @@ impl<'instr> Parser<'instr> {
                                     object_name,
                                 ),
                                 object_line,
-                                Some(object_span)
+                                Some(object_span),
                             ));
                         }
 
-                        let refvar: Instruction = Instruction::RefVar {
+                        let refvar: Instruction = Instruction::LocalRef {
                             name: object_name,
                             line: object_line,
                             kind: local_type,
@@ -2111,7 +2111,9 @@ impl<'instr> Parser<'instr> {
         if let DataTypes::Generic = kind {
             return Err(ThrushError::Error(
                 String::from("Syntax error"),
-                String::from("A generic type `T` only is allowed in functions parameters/structures fields types."),
+                String::from(
+                    "A generic type `T` only is allowed in functions parameters/structures fields types.",
+                ),
                 line,
                 Some(span),
             ));
@@ -2162,7 +2164,7 @@ impl<'instr> Parser<'instr> {
                 from_type = struct_type;
             }
 
-            if let Instruction::RefVar { struct_type, .. } = &value {
+            if let Instruction::LocalRef { struct_type, .. } = &value {
                 from_type = struct_type;
             }
 
@@ -2286,7 +2288,7 @@ impl<'instr> Parser<'instr> {
     fn sync(&mut self) {
         while !self.end() {
             match self.peek().kind {
-                TokenKind::Var | TokenKind::Fn => return,
+                TokenKind::Local | TokenKind::Fn => return,
                 _ => {}
             }
 

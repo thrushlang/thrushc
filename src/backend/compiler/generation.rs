@@ -6,15 +6,15 @@ use {
         utils,
     },
     inkwell::{
+        AddressSpace,
         builder::Builder,
         context::Context,
         module::Module,
         values::{BasicValueEnum, FloatValue, IntValue, PointerValue},
-        AddressSpace,
     },
 };
 
-pub fn build_basic_value_enum<'ctx>(
+pub fn build_expression<'ctx>(
     module: &Module<'ctx>,
     builder: &Builder<'ctx>,
     context: &'ctx Context,
@@ -81,27 +81,31 @@ pub fn build_basic_value_enum<'ctx>(
         return context.bool_type().const_int(*bool as u64, false).into();
     }
 
-    if let Instruction::RefVar { name, kind, .. } = instr {
-        let var: PointerValue = compiler_objects.get_local(name).unwrap();
+    if let Instruction::LocalRef { name, kind, .. } = instr {
+        let local: PointerValue = compiler_objects.get_local(name).unwrap();
 
         if kind.is_float_type() {
             return builder
-                .build_load(utils::datatype_float_to_llvm_type(context, kind), var, "")
+                .build_load(utils::datatype_float_to_llvm_type(context, kind), local, "")
                 .unwrap();
         }
 
         if kind.is_integer_type() || *kind == DataTypes::Bool {
             return builder
-                .build_load(utils::datatype_integer_to_llvm_type(context, kind), var, "")
+                .build_load(
+                    utils::datatype_integer_to_llvm_type(context, kind),
+                    local,
+                    "",
+                )
                 .unwrap();
         }
 
         if *kind == DataTypes::Str {
-            return var.into();
+            return local.into();
         }
 
         if *kind == DataTypes::Struct {
-            return builder.build_load(var.get_type(), var, "").unwrap();
+            return builder.build_load(local.get_type(), local, "").unwrap();
         }
 
         unreachable!()

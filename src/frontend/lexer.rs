@@ -22,7 +22,7 @@ lazy_static! {
         let mut keywords: HashMap<&'static [u8], TokenKind> =
             HashMap::with_capacity(KEYWORDS_CAPACITY);
 
-        keywords.insert(b"var", TokenKind::Var);
+        keywords.insert(b"local", TokenKind::Local);
         keywords.insert(b"fn", TokenKind::Fn);
         keywords.insert(b"if", TokenKind::If);
         keywords.insert(b"elif", TokenKind::Elif);
@@ -150,7 +150,7 @@ impl<'a> Lexer<'a> {
                             "Unterminated multiline comment. Did you forget to close the comment with a '*/'?",
                         ),
                         self.line,
-                        Some(self.span)
+                        Some(self.span),
                     ));
                 }
 
@@ -516,7 +516,7 @@ impl TokenLexeme for Lexeme<'_> {
                             String::from("Invalid escape sequence."),
                             line,
                             Some(span),
-                        ))
+                        ));
                     }
                 }
 
@@ -604,7 +604,7 @@ pub enum TokenKind {
     Return,
     This,
     True,
-    Var,
+    Local,
     Const,
     While,
     Loop,
@@ -658,7 +658,7 @@ impl std::fmt::Display for TokenKind {
             TokenKind::Return => write!(f, "return"),
             TokenKind::This => write!(f, "this"),
             TokenKind::True => write!(f, "true"),
-            TokenKind::Var => write!(f, "var"),
+            TokenKind::Local => write!(f, "local"),
             TokenKind::Const => write!(f, "const"),
             TokenKind::While => write!(f, "while"),
             TokenKind::Loop => write!(f, "loop"),
@@ -719,26 +719,20 @@ impl TokenKind {
 
     #[inline(always)]
     pub const fn is_logical_type(&self) -> bool {
-        if let TokenKind::BangEq
-        | TokenKind::EqEq
-        | TokenKind::LessEq
-        | TokenKind::Less
-        | TokenKind::Greater
-        | TokenKind::GreaterEq = self
-        {
-            return true;
-        }
-
-        false
+        matches!(
+            self,
+            TokenKind::BangEq
+                | TokenKind::EqEq
+                | TokenKind::LessEq
+                | TokenKind::Less
+                | TokenKind::Greater
+                | TokenKind::GreaterEq
+        )
     }
 
     #[inline(always)]
     pub const fn is_logical_gate(&self) -> bool {
-        if let TokenKind::And | TokenKind::Or = self {
-            return true;
-        }
-
-        false
+        matches!(self, TokenKind::And | TokenKind::Or)
     }
 }
 
@@ -818,62 +812,39 @@ impl DataTypes {
 
     #[inline(always)]
     pub const fn is_void_type(&self) -> bool {
-        if let DataTypes::Void = self {
-            return true;
-        }
-
-        false
+        matches!(self, DataTypes::Void)
     }
 
     #[inline(always)]
     pub const fn is_bool_type(&self) -> bool {
-        if let DataTypes::Bool = self {
-            return true;
-        }
-
-        false
+        matches!(self, DataTypes::Bool)
     }
 
     #[inline(always)]
     pub const fn is_struct_type(&self) -> bool {
-        if let DataTypes::Struct = self {
-            return true;
-        }
-
-        false
+        matches!(self, DataTypes::Struct)
     }
 
     #[inline(always)]
     pub const fn is_float_type(&self) -> bool {
-        if let DataTypes::F32 | DataTypes::F64 = self {
-            return true;
-        }
-        false
+        matches!(self, DataTypes::F32 | DataTypes::F64)
     }
 
     #[inline(always)]
     pub const fn is_ptr_type(&self) -> bool {
-        if let DataTypes::Struct | DataTypes::Str | DataTypes::Ptr = self {
-            return true;
-        }
-        false
+        matches!(self, DataTypes::Struct | DataTypes::Str | DataTypes::Ptr)
     }
 
     #[inline(always)]
-    pub const fn is_ptr_heaped(&self) -> bool {
-        if let DataTypes::Struct | DataTypes::Ptr = self {
-            return true;
-        }
-        false
+    pub const fn is_heaped_ptr(&self) -> bool {
+        matches!(self, DataTypes::Struct | DataTypes::Ptr)
     }
 
     #[inline(always)]
     pub const fn is_integer_type(&self) -> bool {
-        if let DataTypes::I8 | DataTypes::I16 | DataTypes::I32 | DataTypes::I64 | DataTypes::Char =
-            self
-        {
-            return true;
-        }
-        false
+        matches!(
+            self,
+            DataTypes::I8 | DataTypes::I16 | DataTypes::I32 | DataTypes::I64 | DataTypes::Char
+        )
     }
 }
