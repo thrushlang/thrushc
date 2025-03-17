@@ -1,7 +1,7 @@
 use {
     super::{backend::compiler::misc::ThrushFile, error::ThrushError, logging, logging::LogType},
     std::{fs, path::PathBuf},
-    stylic::{style, Stylize},
+    stylic::{Stylize, style},
 };
 
 #[derive(Debug)]
@@ -61,8 +61,8 @@ impl Diagnostic {
                 {
                     println!(
                         "|\n{}\n{}",
-                        "|".to_string() + &line_text,
-                        "|".to_string() + &arrow_line,
+                        "|   ".to_string() + &line_text,
+                        "|   ".to_string() + &arrow_line,
                     );
                 } else {
                     return self.print_not_spanned_report(help, line);

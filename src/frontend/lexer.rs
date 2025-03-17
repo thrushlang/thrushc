@@ -12,7 +12,7 @@ use {
     std::{mem, num::ParseFloatError, process::exit},
 };
 
-const KEYWORDS_CAPACITY: usize = 36;
+const KEYWORDS_CAPACITY: usize = 38;
 const MINIMAL_TOKENS_CAPACITY: usize = 100_000;
 
 pub type Lexeme<'a> = &'a [u8];
@@ -42,6 +42,8 @@ lazy_static! {
         keywords.insert(b"this", TokenKind::This);
         keywords.insert(b"public", TokenKind::Public);
         keywords.insert(b"builtin", TokenKind::Builtin);
+        keywords.insert(b"match", TokenKind::Match);
+        keywords.insert(b"pattern", TokenKind::Pattern);
         keywords.insert(b"@import", TokenKind::Import);
         keywords.insert(b"@extern", TokenKind::Extern);
         keywords.insert(b"new", TokenKind::New);
@@ -597,6 +599,8 @@ pub enum TokenKind {
     For,
     Continue,
     Break,
+    Match,
+    Pattern,
     If,
     Elif,
     NullPtr,
@@ -650,6 +654,8 @@ impl std::fmt::Display for TokenKind {
             TokenKind::For => write!(f, "for"),
             TokenKind::Continue => write!(f, "continue"),
             TokenKind::Break => write!(f, "break"),
+            TokenKind::Match => write!(f, "match"),
+            TokenKind::Pattern => write!(f, "pattern"),
             TokenKind::If => write!(f, "if"),
             TokenKind::Elif => write!(f, "elif"),
             TokenKind::Public => write!(f, "public"),

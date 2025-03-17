@@ -223,7 +223,6 @@ fn build_local_structure<'ctx>(
         });
 
         compiler_objects.insert(local_name, ptr);
-
         return ptr.into();
     }
 
@@ -233,7 +232,6 @@ fn build_local_structure<'ctx>(
         builder.build_store(ptr, original_ptr).unwrap();
 
         compiler_objects.insert(local_name, ptr);
-
         return ptr.into();
     }
 
@@ -301,12 +299,11 @@ fn build_local_static_str<'ctx>(
                 .into_pointer_value();
 
         compiler_objects.insert(name, compiled_str);
-
         return compiled_str.into();
     }
 
     if let Instruction::LocalRef { .. } = value {
-        let compiled_refvar =
+        let compiled_refvar: PointerValue =
             generation::build_expression(module, builder, context, value, None, compiler_objects)
                 .into_pointer_value();
 
@@ -332,7 +329,6 @@ fn build_local_static_str<'ctx>(
         .into_pointer_value();
 
         compiler_objects.insert(name, compiled_call);
-
         return compiled_call.into();
     }
 

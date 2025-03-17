@@ -546,6 +546,17 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                 Instruction::Null
             }
 
+            Instruction::LocalRef { .. } => {
+                Instruction::BasicValueEnum(generation::build_expression(
+                    self.module,
+                    self.builder,
+                    self.context,
+                    instr,
+                    None,
+                    &mut self.compiler_objects,
+                ))
+            }
+
             Instruction::Boolean(bool) => Instruction::BasicValueEnum(
                 self.context
                     .bool_type()

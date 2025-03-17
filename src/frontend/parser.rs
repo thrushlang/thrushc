@@ -125,6 +125,7 @@ impl<'instr> Parser<'instr> {
             TokenKind::For => Ok(self.build_for_loop()?),
             TokenKind::New => Ok(self.build_struct_initializer()?),
             TokenKind::If => Ok(self.build_if_elif_else()?),
+            TokenKind::Match => Ok(self.build_match()?),
             TokenKind::While => Ok(self.build_while_loop()?),
             TokenKind::Continue => Ok(self.build_continue()?),
             TokenKind::Break => Ok(self.build_break()?),
@@ -154,15 +155,6 @@ impl<'instr> Parser<'instr> {
             String::from("Syntax error"),
             String::from("Expected ')'."),
         )?;
-
-        if !self.check_type(TokenKind::LBrace) {
-            return Err(ThrushError::Error(
-                String::from("Syntax error"),
-                String::from("Expected '{'."),
-                line,
-                Some(self.peek().span),
-            ));
-        }
 
         self.has_entry_point = true;
 
@@ -288,6 +280,119 @@ impl<'instr> Parser<'instr> {
         Ok(Instruction::Break)
     }
 
+    fn build_match(&mut self) -> Result<Instruction<'instr>, ThrushError> {
+        self.only_advance()?;
+
+        let mut if_cond: Instruction = self.expression()?;
+        let mut if_block: Option<Instruction> = None;
+
+        self.consume(
+            TokenKind::SemiColon,
+            String::from("Syntax error"),
+            String::from("Expected ';'."),
+        )?;
+
+        let mut patterns: Option<Vec<Instruction>> = None;
+        let mut patterns_stmts: Vec<Instruction> = Vec::with_capacity(5);
+
+        let mut index: u32 = 0;
+
+        while self.match_token(TokenKind::Pattern)? {
+            self.scope += 1;
+            self.parser_objects.begin_local_scope();
+
+            let pattern: Instruction = self.expression()?;
+
+            if !pattern.get_data_type().is_bool_type() {
+                self.errors.push(ThrushError::Error(
+                    String::from("Syntax error"),
+                    String::from("Expected boolean type at match pattern."),
+                    self.previous().line,
+                    Some(self.previous().span),
+                ));
+            }
+
+            self.consume(
+                TokenKind::ColonColon,
+                String::from("Syntax error"),
+                String::from("Expected '::'."),
+            )?;
+
+            while !self.match_token(TokenKind::Break)? {
+                patterns_stmts.push(self.parse()?);
+            }
+
+            self.consume(
+                TokenKind::SemiColon,
+                String::from("Syntax error"),
+                String::from("Expected ';'."),
+            )?;
+
+            if index == 0 {
+                if_cond = pattern;
+                if_block = Some(Instruction::Block {
+                    stmts: patterns_stmts.clone(),
+                });
+            } else {
+                patterns.as_mut().unwrap().push(Instruction::Elif {
+                    cond: Box::new(pattern),
+                    block: Box::new(Instruction::Block {
+                        stmts: patterns_stmts.clone(),
+                    }),
+                });
+            }
+
+            self.scope -= 1;
+            self.parser_objects.end_local_scope();
+
+            patterns_stmts.clear();
+
+            index += 1;
+        }
+
+        if if_block.is_none() || !if_cond.get_data_type().is_bool_type() {
+            return Err(ThrushError::Error(
+                String::from("Syntax error"),
+                String::from("Expected at least one pattern."),
+                self.previous().line,
+                Some(self.previous().span),
+            ));
+        }
+
+        let otherwise: Option<Box<Instruction>> = if self.match_token(TokenKind::Else)? {
+            self.consume(
+                TokenKind::ColonColon,
+                String::from("Syntax error"),
+                String::from("Expected '::'."),
+            )?;
+
+            let mut stmts: Vec<Instruction> = Vec::with_capacity(100);
+
+            while !self.match_token(TokenKind::Break)? {
+                stmts.push(self.parse()?);
+            }
+
+            self.consume(
+                TokenKind::SemiColon,
+                String::from("Syntax error"),
+                String::from("Expected ';'."),
+            )?;
+
+            Some(Box::new(Instruction::Else {
+                block: Box::new(Instruction::Block { stmts }),
+            }))
+        } else {
+            None
+        };
+
+        Ok(Instruction::If {
+            cond: Box::new(if_cond),
+            block: Box::new(if_block.unwrap()),
+            elfs: patterns,
+            otherwise,
+        })
+    }
+
     fn build_if_elif_else(&mut self) -> Result<Instruction<'instr>, ThrushError> {
         let if_keyword: &Token = self.advance()?;
         let line: usize = if_keyword.line;
@@ -311,9 +416,9 @@ impl<'instr> Parser<'instr> {
             ));
         }
 
-        let if_condition: Instruction<'instr> = self.expression()?;
+        let if_condition: Instruction = self.expression()?;
 
-        if if_condition.get_data_type() != DataTypes::Bool {
+        if if_condition.get_data_type().is_bool_type() {
             return Err(ThrushError::Error(
                 String::from("Syntax error"),
                 String::from("Condition must be type boolean."),
@@ -327,7 +432,7 @@ impl<'instr> Parser<'instr> {
         let mut elfs: Option<Vec<Instruction>> = None;
 
         if self.check_type(TokenKind::Elif) {
-            elfs = Some(Vec::with_capacity(100));
+            elfs = Some(Vec::with_capacity(10));
         }
 
         while self.check_type(TokenKind::Elif) {
@@ -339,15 +444,6 @@ impl<'instr> Parser<'instr> {
                 return Err(ThrushError::Error(
                     String::from("Syntax error"),
                     String::from("Condition must be type boolean."),
-                    line,
-                    Some(self.peek().span),
-                ));
-            }
-
-            if !self.check_type(TokenKind::LBrace) {
-                return Err(ThrushError::Error(
-                    String::from("Syntax error"),
-                    String::from("Expected '{'."),
                     line,
                     Some(self.peek().span),
                 ));
@@ -435,11 +531,24 @@ impl<'instr> Parser<'instr> {
                 };
 
                 self.only_advance()?;
+
                 field_position += 1;
+
+                self.consume(
+                    TokenKind::SemiColon,
+                    String::from("Syntax error"),
+                    String::from("Expected ';'."),
+                )?;
+
                 continue;
             }
 
-            self.only_advance()?;
+            return Err(ThrushError::Error(
+                String::from("Syntax error"),
+                String::from("Expected type indentifier in structure."),
+                self.peek().line,
+                Some(self.peek().span),
+            ));
         }
 
         self.consume(
@@ -1894,7 +2003,7 @@ impl<'instr> Parser<'instr> {
 
                 self.check_type_mismatch(target, argument_type, Some(argument), location.0);
 
-                if target == DataTypes::Struct {
+                if target.is_struct_type() {
                     let original_struct_type: &(String, usize) =
                         function.2.iter().find(|obj| obj.1 == index).unwrap();
 
@@ -2090,7 +2199,7 @@ impl<'instr> Parser<'instr> {
         instruction: &Instruction,
         line: usize,
     ) -> Result<(), ThrushError> {
-        if let Instruction::InitStruct { .. } = instruction {
+        if matches!(instruction, Instruction::InitStruct { .. }) {
             return Err(ThrushError::Error(
                 String::from("Syntax error"),
                 String::from("A struct initializer should be stored a variable."),
@@ -2108,7 +2217,7 @@ impl<'instr> Parser<'instr> {
         line: usize,
         span: (usize, usize),
     ) -> Result<(), ThrushError> {
-        if let DataTypes::Generic = kind {
+        if matches!(kind, DataTypes::Generic) {
             return Err(ThrushError::Error(
                 String::from("Syntax error"),
                 String::from(
@@ -2128,7 +2237,7 @@ impl<'instr> Parser<'instr> {
         line: usize,
         span: (usize, usize),
     ) -> Result<(), ThrushError> {
-        if let Instruction::Call { .. } = instruction {
+        if matches!(instruction, Instruction::Call { .. }) {
             return Err(ThrushError::Error(
                 String::from("Syntax error"),
                 String::from(
@@ -2148,32 +2257,30 @@ impl<'instr> Parser<'instr> {
         value: &Instruction,
         line: usize,
     ) -> Result<(), ThrushError> {
-        if self.at_typed_function.0 == DataTypes::Struct
-            || self.at_typed_variable == DataTypes::Struct
-        {
-            let mut from_type: &str = "unreacheable";
+        if self.at_structure_type() {
+            let mut structure_type: &str = "unreacheable";
 
             if let Instruction::InitStruct {
                 name: struct_name, ..
             } = &value
             {
-                from_type = struct_name;
+                structure_type = struct_name;
             }
 
             if let Instruction::Call { struct_type, .. } = &value {
-                from_type = struct_type;
+                structure_type = struct_type;
             }
 
             if let Instruction::LocalRef { struct_type, .. } = &value {
-                from_type = struct_type;
+                structure_type = struct_type;
             }
 
-            if target_type.trim().to_lowercase() != from_type.trim().to_lowercase() {
+            if target_type.to_lowercase() != structure_type.to_lowercase() {
                 return Err(ThrushError::Error(
                     String::from("Mismatched Types"),
                     format!(
                         "'{}' and '{}' aren't same struct type.",
-                        target_type, from_type
+                        target_type, structure_type
                     ),
                     line,
                     None,
@@ -2303,6 +2410,11 @@ impl<'instr> Parser<'instr> {
         } else {
             self.tokens[self.current - 4].kind == TokenKind::Extern
         }
+    }
+
+    #[inline(always)]
+    const fn at_structure_type(&self) -> bool {
+        self.at_typed_function.0.is_struct_type() || self.at_typed_variable.is_struct_type()
     }
 
     #[inline(always)]
