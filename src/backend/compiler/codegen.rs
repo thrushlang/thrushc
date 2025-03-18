@@ -335,8 +335,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
 
                 self.codegen(variable.as_ref());
 
-                let start_block: BasicBlock =
-                    self.context.append_basic_block(function, "for_start");
+                let start_block: BasicBlock = self.context.append_basic_block(function, "for");
 
                 self.loop_start_block = Some(start_block);
 
@@ -362,9 +361,13 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
 
                 self.builder.position_at_end(then_block);
 
-                self.codegen(actions.as_ref());
-
-                self.codegen(block.as_ref());
+                if actions.is_pre_unaryop() {
+                    self.codegen(block.as_ref());
+                    self.codegen(actions.as_ref());
+                } else {
+                    self.codegen(actions.as_ref());
+                    self.codegen(block.as_ref());
+                }
 
                 let exit_brancher = self
                     .builder
@@ -511,14 +514,14 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                 unimplemented!()
             }
 
-            Instruction::UnaryOp { op, value, kind } => {
-                Instruction::BasicValueEnum(unaryop::compile_unary_op(
-                    self.builder,
-                    self.context,
-                    (op, value, kind),
-                    &self.compiler_objects,
-                ))
-            }
+            Instruction::UnaryOp {
+                op, value, kind, ..
+            } => Instruction::BasicValueEnum(unaryop::compile_unary_op(
+                self.builder,
+                self.context,
+                (op, value, kind),
+                &self.compiler_objects,
+            )),
 
             Instruction::EntryPoint { body } => {
                 self.function = Some(self.build_main());

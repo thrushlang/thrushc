@@ -1,6 +1,6 @@
 pub const MINIMAL_ERROR_CAPACITY: usize = 100;
 
-pub const TARGETS: [&str; 36] = [
+pub const TARGET_TRIPLES: [&str; 36] = [
     "x86_64-apple-darwin",
     "x86_64-apple-ios",
     "x86_64-apple-ios-macabi",

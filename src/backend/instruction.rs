@@ -26,7 +26,7 @@ pub enum Instruction<'ctx> {
     BasicValueEnum(BasicValueEnum<'ctx>),
 
     // Primitive types
-    Str(String),
+    Str(Vec<u8>),
     Char(u8),
     Boolean(bool),
     Integer(DataTypes, f64, bool),
@@ -136,6 +136,7 @@ pub enum Instruction<'ctx> {
         op: &'ctx TokenKind,
         value: Box<Instruction<'ctx>>,
         kind: DataTypes,
+        is_pre: bool,
     },
     Group {
         instr: Box<Instruction<'ctx>>,
@@ -420,6 +421,16 @@ impl<'ctx> Instruction<'ctx> {
         } else {
             false
         }
+    }
+
+    #[inline(always)]
+    pub const fn is_pre_unaryop(&self) -> bool {
+        matches!(self, Instruction::UnaryOp { is_pre: true, .. })
+    }
+
+    #[inline(always)]
+    pub const fn is_local_reference(&self) -> bool {
+        matches!(self, Instruction::LocalRef { .. })
     }
 
     #[inline(always)]

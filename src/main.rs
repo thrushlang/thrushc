@@ -13,21 +13,21 @@ use {
         builder::Thrushc,
     },
     cli::Cli,
+    colored::{Colorize, control},
     frontend::{
         lexer::{Lexer, Token},
         parser::Parser,
     },
     inkwell::targets::{InitializationConfig, Target},
     lazy_static::lazy_static,
-    std::{env, path::PathBuf, process, time::Instant},
-    stylic::{style, Color, Stylize},
+    std::{env, path::PathBuf, time::Instant},
 };
 
 lazy_static! {
     static ref HOME: Option<PathBuf> = {
         let error = |_| {
             logging::log(
-                logging::LogType::PANIC,
+                logging::LogType::Panic,
                 "Unable to get %HOME% of the system user.",
             );
 
@@ -43,11 +43,9 @@ lazy_static! {
     static ref CORE_LIBRARY_PATH: HashMap<&'static str, (String, String)> = {
         if HOME.is_none() {
             logging::log(
-                logging::LogType::ERROR,
-                &format!("The Thrush toolchain is unreachable across the system; reinstall the entire toolchain via thorium install \"{}\".", env::consts::OS),
+                logging::LogType::Panic,
+                "The Thrush Toolchain is unreachable across the system; reinstall the entire toolchain across ~ `thorium install`.",
             );
-
-            process::exit(1);
         }
 
         let mut imports: HashMap<&'static str, (String, String)> = HashMap::with_capacity(1);
@@ -67,13 +65,15 @@ lazy_static! {
         imports
     };
     static ref LLVM_BACKEND_COMPILER: PathBuf = {
-        if HOME.is_none() {
+        let error = || {
             logging::log(
-                logging::LogType::ERROR,
-                &format!("The LLVM toolchain was corrupted from the thrush toolchain; reinstall the entire toolchain across \"thorium install {}\".", env::consts::OS),
+                logging::LogType::Panic,
+                "The LLVM Toolchain was corrupted from the thrush toolchain; reinstall the entire toolchain across ~ `thorium install`.",
             );
+        };
 
-            process::exit(1);
+        if HOME.is_none() {
+            error()
         }
 
         if !HOME.as_ref().unwrap().join("thrushlang").exists()
@@ -94,12 +94,7 @@ lazy_static! {
                 .join("thrushlang/backends/llvm/clang/")
                 .exists()
         {
-            logging::log(
-                logging::LogType::ERROR,
-                &format!("The LLVM toolchain was corrupted from the thrush toolchain; reinstall the entire toolchain across \"thorium install {}\".", env::consts::OS),
-            );
-
-            process::exit(1);
+            error()
         }
 
         if !HOME
@@ -107,49 +102,28 @@ lazy_static! {
             .unwrap()
             .join("thrushlang/backends/llvm/clang/bin/clang-17")
             .exists()
+            || !HOME
+                .as_ref()
+                .unwrap()
+                .join("thrushlang/backends/llvm/llvm/opt")
+                .exists()
+            || !HOME
+                .as_ref()
+                .unwrap()
+                .join("thrushlang/backends/llvm/llvm/llc")
+                .exists()
+            || !HOME
+                .as_ref()
+                .unwrap()
+                .join("thrushlang/backends/llvm/llvm/llvm-dis")
+                .exists()
+            || !HOME
+                .as_ref()
+                .unwrap()
+                .join("thrushlang/backends/llvm/llvm/llvm-lto")
+                .exists()
         {
-            logging::log(
-                logging::LogType::ERROR,
-                &format!("Clang-17 don't exists in thrush toolchain; reinstall the entire toolchain across \"thorium install {}\".", env::consts::OS),
-            );
-
-            process::exit(1);
-        } else if !HOME
-            .as_ref()
-            .unwrap()
-            .join("thrushlang/backends/llvm/llvm/opt")
-            .exists()
-        {
-            logging::log(
-                logging::LogType::ERROR,
-                &format!("Opt don't exists in thrush toolchain; reinstall the entire toolchain across \"thorium install {}\".", env::consts::OS),
-            );
-
-            process::exit(1);
-        } else if !HOME
-            .as_ref()
-            .unwrap()
-            .join("thrushlang/backends/llvm/llvm/llc")
-            .exists()
-        {
-            logging::log(
-                logging::LogType::ERROR,
-                &format!("The LLVM static compiler don't exists in thrush toolchain; reinstall the entire toolchain across \"thorium install {}\".", env::consts::OS),
-            );
-
-            process::exit(1);
-        } else if !HOME
-            .as_ref()
-            .unwrap()
-            .join("thrushlang/backends/llvm/llvm/llvm-dis")
-            .exists()
-        {
-            logging::log(
-            logging::LogType::ERROR,
-            &format!("The LLVM dissamsembler don't exists in thrush toolchain; reinstall the entire toolchain across \"thorium install {}\".", env::consts::OS),
-        );
-
-            process::exit(1);
+            error()
         }
 
         HOME.as_ref().unwrap().join("thrushlang/backends/llvm/")
@@ -157,13 +131,8 @@ lazy_static! {
 }
 
 fn main() {
-    if !["linux", "windows"].contains(&env::consts::OS) {
-        logging::log(
-            logging::LogType::ERROR,
-            "Compilation from unsopported operating system. Only Linux and Windows are supported.",
-        );
-
-        process::exit(1);
+    if cfg!(windows) {
+        control::set_override(true);
     }
 
     Target::initialize_all(&InitializationConfig::default());
@@ -171,7 +140,7 @@ fn main() {
     let mut cli: Cli = Cli::parse(env::args().collect());
 
     if cli.options.files.is_empty() {
-        logging::log(logging::LogType::PANIC, "No files to compile!");
+        logging::log(logging::LogType::Panic, "No files to compile!");
     }
 
     if !cli.options.include_vector_api {
@@ -194,30 +163,36 @@ fn main() {
 
     let compile_time: (u128, u128) = Thrushc::new(&cli.options.files, &cli.options).compile();
 
-    println!(
-        "\n{}\n{}\n\n{}\n{}\n{}",
-        style("─────────────────────────────────────────")
-            .bold()
-            .fg(Color::Rgb(141, 141, 142)),
-        style("Compile time report")
-            .bold()
-            .fg(Color::Rgb(141, 141, 142)),
-        format_args!("Thrush Compiler: {}ms", style(compile_time.0).bold()),
-        format_args!("LLVM & Clang: {}ms", style(compile_time.1).bold()),
-        style("─────────────────────────────────────────")
-            .bold()
-            .fg(Color::Rgb(141, 141, 142))
+    logging::write(
+        logging::OutputIn::Stdout,
+        format!(
+            "\n{}\n{}\n\n{}\n{}\n{}\n",
+            "─────────────────────────────────────────"
+                .custom_color((141, 141, 142))
+                .bold(),
+            "Compile time report".custom_color((141, 141, 142)).bold(),
+            format_args!("Thrush Compiler: {}ms", compile_time.0.to_string().bold()),
+            format_args!("LLVM & Clang: {}ms", compile_time.1.to_string().bold()),
+            "─────────────────────────────────────────"
+                .custom_color((141, 141, 142))
+                .bold(),
+        )
+        .as_bytes(),
     );
 
-    println!(
-        "\r{} {}",
-        style("Finished").bold().fg(Color::Rgb(141, 141, 142)),
-        style(&format!(
-            "{}.{}s",
-            start_time.elapsed().as_secs(),
-            start_time.elapsed().as_millis()
-        ))
-        .bold()
-        .fg(Color::Rgb(141, 141, 142))
+    logging::write(
+        logging::OutputIn::Stdout,
+        format!(
+            "\r{} {}",
+            "Finished".custom_color((141, 141, 142)).bold(),
+            format!(
+                "{}.{}s",
+                start_time.elapsed().as_secs(),
+                start_time.elapsed().as_millis()
+            )
+            .custom_color((141, 141, 142))
+            .bold(),
+        )
+        .as_bytes(),
     );
 }

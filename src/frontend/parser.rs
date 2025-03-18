@@ -102,7 +102,7 @@ impl<'instr> Parser<'instr> {
 
         if !self.errors.is_empty() {
             self.errors.iter().for_each(|error: &ThrushError| {
-                self.diagnostic.report(error, LogType::ERROR);
+                self.diagnostic.report(error, LogType::Error);
             });
 
             process::exit(1);
@@ -230,14 +230,7 @@ impl<'instr> Parser<'instr> {
 
         self.future_unreacheable_code = self.scope;
 
-        if !self.inside_loop {
-            return Err(ThrushError::Error(
-                String::from("Syntax error"),
-                String::from("The continue must go inside the a loop."),
-                self.peek().line,
-                Some(self.peek().span),
-            ));
-        }
+        self.throw_if_not_inside_loop()?;
 
         self.consume(
             TokenKind::SemiColon,
@@ -262,14 +255,7 @@ impl<'instr> Parser<'instr> {
 
         self.future_unreacheable_code = self.scope;
 
-        if !self.inside_loop {
-            return Err(ThrushError::Error(
-                String::from("Syntax error"),
-                String::from("The break must go inside the a loop."),
-                self.peek().line,
-                Some(self.peek().span),
-            ));
-        }
+        self.throw_if_not_inside_loop()?;
 
         self.consume(
             TokenKind::SemiColon,
@@ -418,7 +404,9 @@ impl<'instr> Parser<'instr> {
 
         let if_condition: Instruction = self.expression()?;
 
-        if if_condition.get_data_type().is_bool_type() {
+        if !if_condition.get_data_type().is_bool_type() {
+            println!("asdasdasd");
+
             return Err(ThrushError::Error(
                 String::from("Syntax error"),
                 String::from("Condition must be type boolean."),
@@ -438,7 +426,7 @@ impl<'instr> Parser<'instr> {
         while self.check_type(TokenKind::Elif) {
             let line: usize = self.advance()?.line;
 
-            let elif_condition: Instruction<'instr> = self.expression()?;
+            let elif_condition: Instruction = self.expression()?;
 
             if elif_condition.get_data_type() != DataTypes::Bool {
                 return Err(ThrushError::Error(
@@ -449,7 +437,7 @@ impl<'instr> Parser<'instr> {
                 ));
             }
 
-            let elif_body: Instruction<'instr> = self.build_code_block(&mut [])?;
+            let elif_body: Instruction = self.build_code_block(&mut [])?;
 
             elfs.as_mut().unwrap().push(Instruction::Elif {
                 cond: Box::new(elif_condition),
@@ -457,10 +445,10 @@ impl<'instr> Parser<'instr> {
             });
         }
 
-        let mut otherwise: Option<Box<Instruction<'instr>>> = None;
+        let mut otherwise: Option<Box<Instruction>> = None;
 
         if self.check_type(TokenKind::Else) {
-            let else_body: Instruction<'instr> = self.build_code_block(&mut [])?;
+            let else_body: Instruction = self.build_code_block(&mut [])?;
 
             otherwise = Some(Box::new(Instruction::Else {
                 block: Box::new(else_body),
@@ -1203,9 +1191,7 @@ impl<'instr> Parser<'instr> {
         if self.scope != 0 {
             self.errors.push(ThrushError::Error(
                 String::from("Syntax error"),
-                String::from(
-                    "The functions must go in the global scope. Rewrite it in the global scope.",
-                ),
+                String::from("Functions are only declared in the global scope."),
                 self.previous().line,
                 None,
             ));
@@ -1465,6 +1451,18 @@ impl<'instr> Parser<'instr> {
             self.throw_if_call(&instr, self.previous().line, self.previous().span)?;
             self.throw_if_call(&right, self.previous().line, self.previous().span)?;
 
+            self.throw_if_is_decrement_or_increment_unaryop(
+                &instr,
+                self.previous().line,
+                self.previous().span,
+            )?;
+
+            self.throw_if_is_decrement_or_increment_unaryop(
+                &right,
+                self.previous().line,
+                self.previous().span,
+            )?;
+
             instr = Instruction::BinaryOp {
                 left: Box::new(instr),
                 op,
@@ -1492,6 +1490,18 @@ impl<'instr> Parser<'instr> {
 
             self.throw_if_call(&instr, self.previous().line, self.previous().span)?;
             self.throw_if_call(&right, self.previous().line, self.previous().span)?;
+
+            self.throw_if_is_decrement_or_increment_unaryop(
+                &instr,
+                self.previous().line,
+                self.previous().span,
+            )?;
+
+            self.throw_if_is_decrement_or_increment_unaryop(
+                &right,
+                self.previous().line,
+                self.previous().span,
+            )?;
 
             instr = Instruction::BinaryOp {
                 left: Box::new(instr),
@@ -1525,6 +1535,18 @@ impl<'instr> Parser<'instr> {
 
             self.throw_if_call(&instr, self.previous().line, self.previous().span)?;
             self.throw_if_call(&right, self.previous().line, self.previous().span)?;
+
+            self.throw_if_is_decrement_or_increment_unaryop(
+                &instr,
+                self.previous().line,
+                self.previous().span,
+            )?;
+
+            self.throw_if_is_decrement_or_increment_unaryop(
+                &right,
+                self.previous().line,
+                self.previous().span,
+            )?;
 
             instr = Instruction::BinaryOp {
                 left: Box::from(instr),
@@ -1563,6 +1585,18 @@ impl<'instr> Parser<'instr> {
             self.throw_if_call(&instr, self.previous().line, self.previous().span)?;
             self.throw_if_call(&right, self.previous().line, self.previous().span)?;
 
+            self.throw_if_is_decrement_or_increment_unaryop(
+                &instr,
+                self.previous().line,
+                self.previous().span,
+            )?;
+
+            self.throw_if_is_decrement_or_increment_unaryop(
+                &right,
+                self.previous().line,
+                self.previous().span,
+            )?;
+
             instr = Instruction::BinaryOp {
                 left: Box::from(instr),
                 op,
@@ -1594,6 +1628,17 @@ impl<'instr> Parser<'instr> {
             self.throw_if_call(&instr, self.previous().line, self.previous().span)?;
             self.throw_if_call(&right, self.previous().line, self.previous().span)?;
 
+            self.throw_if_is_decrement_or_increment_unaryop(
+                &instr,
+                self.previous().line,
+                self.previous().span,
+            )?;
+
+            self.throw_if_is_decrement_or_increment_unaryop(
+                &right,
+                self.previous().line,
+                self.previous().span,
+            )?;
             let kind: DataTypes = if left_type.is_integer_type() && right_type.is_integer_type() {
                 left_type.calculate_integer_datatype(right_type)
             } else if left_type.is_float_type() && right_type.is_float_type() {
@@ -1633,6 +1678,18 @@ impl<'instr> Parser<'instr> {
             self.throw_if_call(&instr, self.previous().line, self.previous().span)?;
             self.throw_if_call(&right, self.previous().line, self.previous().span)?;
 
+            self.throw_if_is_decrement_or_increment_unaryop(
+                &instr,
+                self.previous().line,
+                self.previous().span,
+            )?;
+
+            self.throw_if_is_decrement_or_increment_unaryop(
+                &right,
+                self.previous().line,
+                self.previous().span,
+            )?;
+
             let kind: DataTypes = if left_type.is_integer_type() && right_type.is_integer_type() {
                 left_type.calculate_integer_datatype(right_type)
             } else if left_type.is_float_type() && right_type.is_float_type() {
@@ -1664,16 +1721,19 @@ impl<'instr> Parser<'instr> {
             )?;
 
             self.throw_if_call(&value, self.previous().line, self.previous().span)?;
+            self.throw_if_is_decrement_or_increment_unaryop(
+                &value,
+                self.previous().line,
+                self.previous().span,
+            )?;
 
             return Ok(Instruction::UnaryOp {
                 op,
                 value: Box::from(value),
                 kind: DataTypes::Bool,
+                is_pre: false,
             });
-        } else if self.match_token(TokenKind::PlusPlus)?
-            | self.match_token(TokenKind::MinusMinus)?
-            | self.match_token(TokenKind::Minus)?
-        {
+        } else if self.match_token(TokenKind::Minus)? {
             let op: &TokenKind = &self.previous().kind;
             let mut value: Instruction = self.primary()?;
 
@@ -1700,11 +1760,17 @@ impl<'instr> Parser<'instr> {
             )?;
 
             self.throw_if_call(&value, self.previous().line, self.previous().span)?;
+            self.throw_if_is_decrement_or_increment_unaryop(
+                &value,
+                self.previous().line,
+                self.previous().span,
+            )?;
 
             return Ok(Instruction::UnaryOp {
                 op,
                 value: Box::from(value),
                 kind: value_type,
+                is_pre: false,
             });
         }
 
@@ -1716,6 +1782,66 @@ impl<'instr> Parser<'instr> {
     fn primary(&mut self) -> Result<Instruction<'instr>, ThrushError> {
         let primary: Instruction = match &self.peek().kind {
             TokenKind::New => self.build_struct_initializer()?,
+            TokenKind::PlusPlus => {
+                let op: &TokenKind = &self.advance()?.kind;
+
+                let value: Instruction = self.expression()?;
+
+                if !value.is_local_reference() {
+                    return Err(ThrushError::Error(
+                        String::from("Syntax error"),
+                        String::from("Only local references can be pre-incremented."),
+                        self.previous().line,
+                        Some(self.previous().span),
+                    ));
+                }
+
+                let expr: Instruction = Instruction::UnaryOp {
+                    op,
+                    value: Box::from(value),
+                    kind: DataTypes::I64,
+                    is_pre: true,
+                };
+
+                self.consume(
+                    TokenKind::SemiColon,
+                    String::from("Syntax error"),
+                    String::from("Expected ';'."),
+                )?;
+
+                return Ok(expr);
+            }
+
+            TokenKind::MinusMinus => {
+                let op: &TokenKind = &self.advance()?.kind;
+
+                let value: Instruction = self.expression()?;
+
+                if !value.is_local_reference() {
+                    return Err(ThrushError::Error(
+                        String::from("Syntax error"),
+                        String::from("Only local references can be pre-decremented."),
+                        self.previous().line,
+                        Some(self.previous().span),
+                    ));
+                }
+
+                let expr: Instruction = Instruction::UnaryOp {
+                    op,
+                    value: Box::from(value),
+                    kind: DataTypes::I64,
+                    is_pre: true,
+                };
+
+                self.consume(
+                    TokenKind::SemiColon,
+                    String::from("Syntax error"),
+                    String::from("Expected ';'."),
+                )?;
+
+                return Ok(expr);
+            }
+
             TokenKind::DataType(dt) => {
                 let datatype: &Token = self.advance()?;
 
@@ -1889,6 +2015,7 @@ impl<'instr> Parser<'instr> {
                                 op,
                                 value: Box::from(refvar),
                                 kind: DataTypes::I64,
+                                is_pre: false,
                             };
 
                             self.consume(
@@ -2193,6 +2320,43 @@ impl<'instr> Parser<'instr> {
 
 
     ########################################################################*/
+
+    fn throw_if_is_decrement_or_increment_unaryop(
+        &self,
+        instruction: &Instruction,
+        line: usize,
+        span: (usize, usize),
+    ) -> Result<(), ThrushError> {
+        if let Instruction::UnaryOp {
+            op: TokenKind::PlusPlus | TokenKind::MinusMinus,
+            ..
+        } = instruction
+        {
+            return Err(ThrushError::Error(
+                String::from("Syntax error"),
+                String::from(
+                    "Increment/decrement operators (--X || X++) can only be used outside of expressions.",
+                ),
+                line,
+                Some(span),
+            ));
+        }
+
+        Ok(())
+    }
+
+    fn throw_if_not_inside_loop(&self) -> Result<(), ThrushError> {
+        if !self.inside_loop {
+            return Err(ThrushError::Error(
+                String::from("Syntax error"),
+                String::from("The flow changer of a loop must go inside one."),
+                self.peek().line,
+                Some(self.peek().span),
+            ));
+        }
+
+        Ok(())
+    }
 
     fn throw_if_is_struct_initializer(
         &self,

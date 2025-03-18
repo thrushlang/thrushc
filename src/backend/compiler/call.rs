@@ -94,7 +94,7 @@ fn build_sizeof<'ctx>(
 
             let structure_size_of: IntValue = structure_type.size_of().unwrap_or_else(|| {
                 logging::log(
-                    logging::LogType::PANIC,
+                    logging::LogType::Panic,
                     &format!(
                         "Built-in `sizeof()` cannot get the size of `{}`, line {}.",
                         name, line

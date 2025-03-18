@@ -2,20 +2,21 @@
 
 use {
     super::{
-        super::{logging, Lexer, Parser, Token, LLVM_BACKEND_COMPILER},
+        super::{LLVM_BACKEND_COMPILER, Lexer, Parser, Token, logging},
         apis::{debug::DebugAPI, vector::VectorAPI},
         compiler::{
-            misc::{CompilerOptions, ThrushFile},
             Compiler,
+            misc::{CompilerOptions, ThrushFile},
         },
         instruction::Instruction,
     },
+    colored::Colorize,
     inkwell::{
+        OptimizationLevel,
         builder::Builder,
         context::Context,
         module::Module,
         targets::{Target, TargetMachine},
-        OptimizationLevel,
     },
     std::{
         fs::{self, write},
@@ -23,7 +24,6 @@ use {
         process::Command,
         time::{Duration, Instant},
     },
-    stylic::{style, Color, Stylize},
 };
 
 pub struct Thrushc<'a> {
@@ -91,17 +91,21 @@ impl<'a> Thrushc<'a> {
     }
 
     fn compile_file(&mut self, file: &'a ThrushFile) {
-        println!(
-            "{} {}",
-            style("Compiling").bold().fg(Color::Rgb(141, 141, 142)),
-            &file.path.to_string_lossy()
+        logging::write(
+            logging::OutputIn::Stdout,
+            format!(
+                "{} {}\n",
+                "Compiling".custom_color((141, 141, 142)).bold(),
+                &file.path.to_string_lossy()
+            )
+            .as_bytes(),
         );
 
         let start_time: Instant = Instant::now();
 
         let content: String = fs::read_to_string(&file.path).unwrap_or_else(|_| {
             logging::log(
-                logging::LogType::PANIC,
+                logging::LogType::Panic,
                 &format!("`{}` is invalid utf-8 file.", &file.path.display()),
             );
             unreachable!()
@@ -163,7 +167,7 @@ impl<'a> Thrushc<'a> {
                 .print_to_file(Path::new(&format!("output/{}.ll", &file.name)))
                 .unwrap_or_else(|_| {
                     logging::log(
-                        logging::LogType::PANIC,
+                        logging::LogType::Panic,
                         &format!(
                             "'output/{}.ll' cannot be emitted in this directory.",
                             &file.name
@@ -226,18 +230,20 @@ impl<'a> Clang<'a> {
         let mut clang_command: Command =
             Command::new(LLVM_BACKEND_COMPILER.join("clang/bin/clang-17"));
 
-        let target_triple_string: String = self.options.target_triple.to_string();
-
-        let parsed_target_tripe_for_clang: String =
-            target_triple_string.split("-").collect::<Vec<_>>()[0].replace("TargetTriple(\"", "");
-
         let start_time: Instant = Instant::now();
 
         if self.options.executable {
             clang_command.args([
                 "-v",
                 "-opaque-pointers",
-                &format!("--target={}", parsed_target_tripe_for_clang),
+                &format!(
+                    "--target={}",
+                    self.options
+                        .target_triple
+                        .as_str()
+                        .to_str()
+                        .unwrap_or("invalid utf-8")
+                ),
                 self.options.linking.to_str(),
                 self.options.optimization.to_str(true),
             ]);
@@ -251,7 +257,14 @@ impl<'a> Clang<'a> {
             clang_command.args([
                 "-v",
                 "-opaque-pointers",
-                &format!("--target={}", parsed_target_tripe_for_clang),
+                &format!(
+                    "--target={}",
+                    self.options
+                        .target_triple
+                        .as_str()
+                        .to_str()
+                        .unwrap_or("invalid utf-8")
+                ),
                 self.options.linking.to_str(),
                 self.options.optimization.to_str(true),
                 library_variant,
@@ -360,7 +373,7 @@ fn handle_command(command: &mut Command) {
     if let Ok(child) = command.output() {
         if !child.status.success() {
             logging::log(
-                logging::LogType::ERROR,
+                logging::LogType::Error,
                 &String::from_utf8_lossy(&child.stderr).replace("\n", ""),
             );
         }

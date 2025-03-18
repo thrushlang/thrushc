@@ -1,11 +1,12 @@
 use {
     super::{
         backend::compiler::misc::{CompilerOptions, Linking, Opt, ThrushFile},
-        constants::TARGETS,
+        constants::TARGET_TRIPLES,
+        logging,
     },
+    colored::Colorize,
     inkwell::targets::{CodeModel, RelocMode, TargetMachine, TargetTriple},
     std::{path::PathBuf, process},
-    stylic::{style, Color, Stylize},
 };
 
 pub struct Cli {
@@ -53,15 +54,23 @@ impl Cli {
                 process::exit(0);
             }
 
-            "targets" => {
+            "target-triples" => {
                 *index += 1;
-                TARGETS.iter().for_each(|target| println!("{}", target));
+                TARGET_TRIPLES
+                    .iter()
+                    .for_each(|target| println!("{}", target));
                 process::exit(0);
             }
 
-            "native-target" => {
+            "host-triple" => {
                 *index += 1;
-                println!("{}", TargetMachine::get_default_triple());
+                println!(
+                    "{}",
+                    TargetMachine::get_default_triple()
+                        .as_str()
+                        .to_str()
+                        .unwrap_or("invalid-utf8")
+                );
                 process::exit(0);
             }
 
@@ -160,7 +169,7 @@ impl Cli {
                 }
 
                 match self.args[self.extract_relative_index(*index)].as_str() {
-                    target if TARGETS.contains(&target) => {
+                    target if TARGET_TRIPLES.contains(&target) => {
                         self.options.target_triple = TargetTriple::create(target);
                         *index += 1;
                     }
@@ -302,202 +311,254 @@ impl Cli {
 
     #[inline]
     fn report_error(&self, msg: &str) {
-        println!(
-            "{} {}",
-            style("ERROR").bold().fg(Color::Rgb(255, 51, 51)),
-            style(msg).bold()
-        );
-
-        process::exit(1);
+        logging::log(logging::LogType::Error, msg);
     }
 
     fn help(&self) {
-        println!(
-            "\n{}\n",
-            style("The Thrush Compiler")
-                .bold()
-                .fg(Color::Rgb(141, 141, 142))
-        );
-
-        println!(
-            "{} {} {}\n",
-            style("Usage:").bold(),
-            style("thrushc").bold().fg(Color::Rgb(141, 141, 142)),
-            style("[--flags] [file]").bold()
-        );
-
-        println!("{}", style("Compiler Commands:\n").bold());
-
-        println!(
-            "{} ({} | {} | {}) {}",
-            style("•").bold(),
-            style("help").bold().fg(Color::Rgb(141, 141, 142)),
-            style("-h").bold().fg(Color::Rgb(141, 141, 142)),
-            style("--help").bold().fg(Color::Rgb(141, 141, 142)),
-            style("Show help message.").bold()
-        );
-
-        println!(
-            "{} ({} | {} | {}) {}",
-            style("•").bold(),
-            style("version").bold().fg(Color::Rgb(141, 141, 142)),
-            style("-v").bold().fg(Color::Rgb(141, 141, 142)),
-            style("--version").bold().fg(Color::Rgb(141, 141, 142)),
-            style("Show the version.").bold()
-        );
-
-        println!(
-            "{} ({}) {}",
-            style("•").bold(),
-            style("targets").bold().fg(Color::Rgb(141, 141, 142)),
-            style("Print the list of supported targets machines.").bold()
-        );
-
-        println!(
-            "{} ({} | {}) {}",
-            style("•").bold(),
-            style("native-target").bold().fg(Color::Rgb(141, 141, 142)),
-            style("-nt").bold().fg(Color::Rgb(141, 141, 142)),
-            style("Print the native target of this machine.").bold()
-        );
-
-        println!("{}", style("\nCompiler Flags:\n").bold());
-
-        println!(
-            "{} ({} | {}) {}",
-            style("•").bold(),
-            style("--executable").bold().fg(Color::Rgb(141, 141, 142)),
-            style("-executable").bold().fg(Color::Rgb(141, 141, 142)),
-            style("Compile to native executable.").bold()
-        );
-
-        println!(
-            "{} ({} | {}) {}",
-            style("•").bold(),
-            style("--output [str]").bold().fg(Color::Rgb(141, 141, 142)),
-            style("-o [str]").bold().fg(Color::Rgb(141, 141, 142)),
-            style("Output file format.").bold()
-        );
-
-        println!(
-            "{} ({} | {}) {}",
-            style("•").bold(),
-            style("--optimization [opt-level]")
-                .bold()
-                .fg(Color::Rgb(141, 141, 142)),
-            style("-opt [opt-level]")
-                .bold()
-                .fg(Color::Rgb(141, 141, 142)),
-            style("Optimization level for the executable to emit or object file.").bold()
-        );
-
-        println!(
-            "{} ({} | {}) {}",
-            style("•").bold(),
-            style("--target [target-triple]")
-                .bold()
-                .fg(Color::Rgb(141, 141, 142)),
-            style("-t [target-triple]")
-                .bold()
-                .fg(Color::Rgb(141, 141, 142)),
-            style(
-                "Target architecture, operating system, and ABI for the executable or object file."
+        logging::write(
+            logging::OutputIn::Stdout,
+            format!(
+                "{}",
+                "The Thrush Compiler".custom_color((141, 141, 142)).bold()
             )
-            .bold()
+            .as_bytes(),
         );
 
-        println!(
-            "{} ({} | {}) {}",
-            style("•").bold(),
-            style("--emit [llvm-ir | llvm-bitcode | thrush-ast | asm]")
-                .bold()
-                .fg(Color::Rgb(141, 141, 142)),
-            style("-emit [llvm-ir | llvm-bitcode | thrush-ast | asm]")
-                .bold()
-                .fg(Color::Rgb(141, 141, 142)),
-            style("Compile the code into specified representation.").bold()
+        logging::write(
+            logging::OutputIn::Stdout,
+            format!(
+                "\n\n{} {} {}\n\n",
+                "Usage:".bold(),
+                "thrushc".custom_color((141, 141, 142)).bold(),
+                "[--flags] [file]".bold()
+            )
+            .as_bytes(),
         );
 
-        println!(
-            "{} ({} | {}) {}",
-            style("•").bold(),
-            style("--include").bold().fg(Color::Rgb(141, 141, 142)),
-            style("-include").bold().fg(Color::Rgb(141, 141, 142)),
-            style("Include a native api code in the IR.").bold()
+        logging::write(
+            logging::OutputIn::Stdout,
+            "Compiler Commands:\n\n".bold().as_bytes(),
         );
 
-        println!(
-            "{} ({} | {}) {}",
-            style("•").bold(),
-            style("--static").bold().fg(Color::Rgb(141, 141, 142)),
-            style("-s").bold().fg(Color::Rgb(141, 141, 142)),
-            style("Link the executable statically.").bold()
+        logging::write(
+            logging::OutputIn::Stdout,
+            format!(
+                "{} ({} | {} | {}) {}\n",
+                "•".bold(),
+                "help".custom_color((141, 141, 142)).bold(),
+                "-h".custom_color((141, 141, 142)).bold(),
+                "--help".custom_color((141, 141, 142)).bold(),
+                "Show help message.".bold()
+            )
+            .as_bytes(),
         );
 
-        println!(
-            "{} ({} | {}) {}",
-            style("•").bold(),
-            style("--dynamic").bold().fg(Color::Rgb(141, 141, 142)),
-            style("-d").bold().fg(Color::Rgb(141, 141, 142)),
-            style("Link the executable dynamically.").bold()
+        logging::write(
+            logging::OutputIn::Stdout,
+            format!(
+                "{} ({} | {} | {}) {}\n",
+                "•".bold(),
+                "version".custom_color((141, 141, 142)).bold(),
+                "-v".custom_color((141, 141, 142)).bold(),
+                "--version".custom_color((141, 141, 142)).bold(),
+                "Show the version.".bold()
+            )
+            .as_bytes(),
         );
 
-        println!(
-            "{} ({} | {}) {}",
-            style("•").bold(),
-            style("--library").bold().fg(Color::Rgb(141, 141, 142)),
-            style("-lib").bold().fg(Color::Rgb(141, 141, 142)),
-            style("Compile to an object file ('*.o').").bold()
+        logging::write(
+            logging::OutputIn::Stdout,
+            format!(
+                "{} ({}) {}\n",
+                "•".bold(),
+                "target-triples".custom_color((141, 141, 142)).bold(),
+                "Print the list of supported target triples.".bold()
+            )
+            .as_bytes(),
         );
 
-        println!(
-            "{} ({} | {}) {}",
-            style("•").bold(),
-            style("--static-library")
-                .bold()
-                .fg(Color::Rgb(141, 141, 142)),
-            style("-slib").bold().fg(Color::Rgb(141, 141, 142)),
-            style("Compile to an static C library ('*.a').").bold()
+        logging::write(
+            logging::OutputIn::Stdout,
+            format!(
+                "{} ({}) {}\n\n",
+                "•".bold(),
+                "host-triple".custom_color((141, 141, 142)).bold(),
+                "Print the target-triple of this machine.".bold()
+            )
+            .as_bytes(),
         );
 
-        println!(
-            "{} ({} | {}) {}",
-            style("•").bold(),
-            style("--reloc [reloc-mode]")
-                .bold()
-                .fg(Color::Rgb(141, 141, 142)),
-            style("-reloc [reloc-mode]")
-                .bold()
-                .fg(Color::Rgb(141, 141, 142)),
-            style("Indicate how references to memory addresses are handled.").bold()
+        logging::write(
+            logging::OutputIn::Stdout,
+            "Compiler flags:\n\n".bold().as_bytes(),
         );
 
-        println!(
-            "{} ({} | {}) {}",
-            style("•").bold(),
-            style("--codemodel [model]")
-                .bold()
-                .fg(Color::Rgb(141, 141, 142)),
-            style("-codemd [model]")
-                .bold()
-                .fg(Color::Rgb(141, 141, 142)),
-            style("Define how code is organized and accessed in the executable or object file.")
-                .bold()
+        logging::write(
+            logging::OutputIn::Stdout,
+            format!(
+                "{} ({} | {}) {}\n",
+                "•".bold(),
+                "--output [str]".custom_color((141, 141, 142)).bold(),
+                "-o [str]".custom_color((141, 141, 142)).bold(),
+                "Output file format.".bold()
+            )
+            .as_bytes(),
         );
 
-        println!("{}", style("\nUseful flags:\n").bold());
+        logging::write(
+            logging::OutputIn::Stdout,
+            format!(
+                "{} ({} | {}) {}\n",
+                "•".bold(),
+                "--executable".custom_color((141, 141, 142)).bold(),
+                "-executable".custom_color((141, 141, 142)).bold(),
+                "Compile to executable.".bold()
+            )
+            .as_bytes(),
+        );
 
-        println!(
-            "{} ({} | {}) {}",
-            style("•").bold(),
-            style("--emit-natives-apart")
-                .bold()
-                .fg(Color::Rgb(141, 141, 142)),
-            style("-emit-natives-apart")
-                .bold()
-                .fg(Color::Rgb(141, 141, 142)),
-            style("Emit the llvm ir or assembler output of the natives APIs in another folter called \"natives\".")
-                .bold()
+        logging::write(
+            logging::OutputIn::Stdout,
+            format!(
+                "{} ({} | {}) {}\n",
+                "•".bold(),
+                "--optimization [opt-level]"
+                    .custom_color((141, 141, 142))
+                    .bold(),
+                "-opt [opt-level]".custom_color((141, 141, 142)).bold(),
+                "Optimization level.".bold()
+            )
+            .as_bytes(),
+        );
+
+        logging::write(
+            logging::OutputIn::Stdout,
+            format!(
+                "{} ({} | {}) {}\n",
+                "•".bold(),
+                "--target [target-triple]"
+                    .custom_color((141, 141, 142))
+                    .bold(),
+                "-t [target-triple]".custom_color((141, 141, 142)).bold(),
+                "Target triple architecture, operating system, and ABI.".bold()
+            )
+            .as_bytes(),
+        );
+
+        logging::write(
+            logging::OutputIn::Stdout,
+            format!(
+                "{} ({}) {}\n",
+                "•".bold(),
+                "--emit | -emit [llvm-ir | llvm-bitcode | thrush-ast | asm]"
+                    .custom_color((141, 141, 142))
+                    .bold(),
+                "Compile the code into specified representation.".bold()
+            )
+            .as_bytes(),
+        );
+
+        logging::write(
+            logging::OutputIn::Stdout,
+            format!(
+                "{} ({} | {}) {}\n",
+                "•".bold(),
+                "--static".custom_color((141, 141, 142)).bold(),
+                "-s".custom_color((141, 141, 142)).bold(),
+                "Link the executable statically.".bold()
+            )
+            .as_bytes(),
+        );
+
+        logging::write(
+            logging::OutputIn::Stdout,
+            format!(
+                "{} ({} | {}) {}\n",
+                "•".bold(),
+                "--dynamic".custom_color((141, 141, 142)).bold(),
+                "-d".custom_color((141, 141, 142)).bold(),
+                "Link the executable dynamically.".bold()
+            )
+            .as_bytes(),
+        );
+
+        logging::write(
+            logging::OutputIn::Stdout,
+            format!(
+                "{} ({} | {}) {}\n",
+                "•".bold(),
+                "--library".custom_color((141, 141, 142)).bold(),
+                "-lib".custom_color((141, 141, 142)).bold(),
+                "Compile to an object file ('*.o').".bold()
+            )
+            .as_bytes(),
+        );
+
+        logging::write(
+            logging::OutputIn::Stdout,
+            format!(
+                "{} ({} | {}) {}\n",
+                "•".bold(),
+                "--static-library".custom_color((141, 141, 142)).bold(),
+                "-slib".custom_color((141, 141, 142)).bold(),
+                "Compile to an static C library ('*.a').".bold()
+            )
+            .as_bytes(),
+        );
+
+        logging::write(
+            logging::OutputIn::Stdout,
+            format!(
+                "{} ({} | {}) {}\n",
+                "•".bold(),
+                "--reloc [reloc-mode]".custom_color((141, 141, 142)).bold(),
+                "-reloc [reloc-mode]".custom_color((141, 141, 142)).bold(),
+                "Indicate how references to memory addresses are handled.".bold()
+            )
+            .as_bytes(),
+        );
+
+        logging::write(
+            logging::OutputIn::Stdout,
+            format!(
+                "{} ({} | {}) {}\n",
+                "•".bold(),
+                "--codemodel [model]".custom_color((141, 141, 142)).bold(),
+                "-codemd [model]".custom_color((141, 141, 142)).bold(),
+                "Define how code is organized and accessed at machine code level.".bold()
+            )
+            .as_bytes(),
+        );
+
+        logging::write(
+            logging::OutputIn::Stdout,
+            format!(
+                "{} ({} | {}) {}\n\n",
+                "•".bold(),
+                "--include".custom_color((141, 141, 142)).bold(),
+                "-include".custom_color((141, 141, 142)).bold(),
+                "Include a native api code in the IR.".bold()
+            )
+            .as_bytes(),
+        );
+
+        logging::write(
+            logging::OutputIn::Stdout,
+            "Useful flags:\n\n".bold().as_bytes(),
+        );
+
+        logging::write(
+            logging::OutputIn::Stdout,
+            format!(
+                "{} ({} | {}) {}",
+                "•".bold(),
+               "--emit-natives-apart"
+                    .custom_color((141, 141, 142)).bold(),
+                "-emit-natives-apart"
+                    .custom_color((141, 141, 142)).bold(),
+                "Emit the llvm-ir or assembler output of the natives APIs in another folder called \"natives\"."
+                    .bold()
+            ).as_bytes()
         );
 
         process::exit(1);

@@ -1,38 +1,45 @@
 use {
+    colored::{ColoredString, Colorize},
     std::{
         io::{self, Write},
         process,
     },
-    stylic::{style, Styled, Stylize},
 };
 
-#[derive(PartialEq, Clone, Copy)]
+#[derive(Debug)]
+pub enum OutputIn {
+    Stdout,
+    Stderr,
+}
+
+#[derive(Debug, PartialEq)]
 pub enum LogType {
-    INFO,
-    WARN,
-    ERROR,
-    PANIC,
+    Error,
+    Panic,
 }
 
 impl LogType {
-    pub fn to_styled(self) -> Styled<&'static str> {
+    pub fn to_styled(&self) -> ColoredString {
         match self {
-            LogType::INFO => style("INFO").bold().bright_green(),
-            LogType::WARN => style("WARN").bold().bright_yellow(),
-            LogType::ERROR => style("ERROR").bold().bright_red(),
-            LogType::PANIC => style("(!) PANIC").bold().bright_red().blink(),
+            LogType::Error => "ERROR".bright_red().underline().bold(),
+            LogType::Panic => "PANIC".bright_red().underline().bold(),
         }
+    }
+
+    #[inline(always)]
+    pub const fn is_err(&self) -> bool {
+        matches!(self, LogType::Error | LogType::Panic)
     }
 }
 
 #[inline]
 pub fn log(ltype: LogType, msg: &str) {
-    if ltype == LogType::ERROR || ltype == LogType::PANIC {
+    if ltype.is_err() {
         io::stderr()
-            .write_all(format!(">  {} {}\n  ", ltype.to_styled(), style(msg).bold()).as_bytes())
+            .write_all(format!("  {} {}\n  ", ltype.to_styled(), msg.bold()).as_bytes())
             .unwrap();
 
-        if ltype == LogType::ERROR {
+        if ltype == LogType::Error {
             return;
         } else {
             process::exit(1);
@@ -40,6 +47,14 @@ pub fn log(ltype: LogType, msg: &str) {
     }
 
     io::stdout()
-        .write_all(format!("  {} {}", ltype.to_styled(), style(msg).bold()).as_bytes())
+        .write_all(format!("  {} {}", ltype.to_styled(), msg.bold()).as_bytes())
         .unwrap();
+}
+
+#[inline]
+pub fn write(output_in: OutputIn, bytes: &[u8]) {
+    match output_in {
+        OutputIn::Stdout => io::stdout().write_all(bytes).unwrap_or(()),
+        OutputIn::Stderr => io::stderr().write_all(bytes).unwrap_or(()),
+    };
 }

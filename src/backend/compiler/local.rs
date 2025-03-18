@@ -459,7 +459,10 @@ fn build_local_integer<'ctx>(
         return ptr.into();
     }
 
-    if let Instruction::UnaryOp { op, value, kind } = local_value {
+    if let Instruction::UnaryOp {
+        op, value, kind, ..
+    } = local_value
+    {
         let result =
             unaryop::compile_unary_op(builder, context, (op, value, kind), compiler_objects);
 

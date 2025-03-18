@@ -104,7 +104,7 @@ impl<'a> Lexer<'a> {
 
         if !self.errors.is_empty() {
             self.errors.iter().for_each(|error| {
-                self.diagnostic.report(error, LogType::ERROR);
+                self.diagnostic.report(error, LogType::Error);
             });
 
             exit(1);
@@ -130,6 +130,7 @@ impl<'a> Lexer<'a> {
             b'}' => self.make(TokenKind::RBrace),
             b',' => self.make(TokenKind::Comma),
             b'.' if self.char_match(b'.') && self.char_match(b'.') => self.make(TokenKind::Pass),
+            b'.' if self.char_match(b'.') => self.make(TokenKind::Range),
             b'.' => self.make(TokenKind::Dot),
             b'%' => self.make(TokenKind::Arith),
             b'*' => self.make(TokenKind::Star),
@@ -495,8 +496,8 @@ impl TokenLexeme for Lexeme<'_> {
         self.to_str().to_string()
     }
 
-    fn parse_scapes(&self, line: usize, span: (usize, usize)) -> Result<String, ThrushError> {
-        let mut parsed_string: String = String::with_capacity(self.len());
+    fn parse_scapes(&self, line: usize, span: (usize, usize)) -> Result<Vec<u8>, ThrushError> {
+        let mut parsed_string: Vec<u8> = Vec::with_capacity(self.len());
 
         let mut i: usize = 0;
 
@@ -504,14 +505,14 @@ impl TokenLexeme for Lexeme<'_> {
             if self[i] == b'\\' {
                 i += 1;
 
-                match self[i] {
-                    b'n' => parsed_string.push('\n'),
-                    b't' => parsed_string.push('\t'),
-                    b'r' => parsed_string.push('\r'),
-                    b'\\' => parsed_string.push('\\'),
-                    b'0' => parsed_string.push('\0'),
-                    b'\'' => parsed_string.push('\''),
-                    b'"' => parsed_string.push('"'),
+                match self.get(i) {
+                    Some(b'n') => parsed_string.push(b'\n'),
+                    Some(b't') => parsed_string.push(b'\t'),
+                    Some(b'r') => parsed_string.push(b'\r'),
+                    Some(b'\\') => parsed_string.push(b'\\'),
+                    Some(b'0') => parsed_string.push(b'\0'),
+                    Some(b'\'') => parsed_string.push(b'\''),
+                    Some(b'"') => parsed_string.push(b'"'),
                     _ => {
                         return Err(ThrushError::Error(
                             String::from("Syntax Error"),
@@ -523,21 +524,11 @@ impl TokenLexeme for Lexeme<'_> {
                 }
 
                 i += 1;
+
                 continue;
             }
 
-            let char: Option<char> = char::from_u32(self[i] as u32);
-
-            if char.is_none() {
-                return Err(ThrushError::Error(
-                    String::from("Syntax Error"),
-                    String::from("Invalid char boundary in string."),
-                    line,
-                    Some(span),
-                ));
-            }
-
-            parsed_string.push(char.unwrap());
+            parsed_string.push(self[i]);
 
             i += 1;
         }
@@ -565,6 +556,7 @@ pub enum TokenKind {
     LBracket,   // ' [ '
     Arith,      // ' % ',
     Bang,       // ' ! '
+    Range,      // ' .. '
     ColonColon, // ' :: '
     BangEq,     // ' != '
     Eq,         // ' = '
@@ -635,6 +627,7 @@ impl std::fmt::Display for TokenKind {
             TokenKind::RBracket => write!(f, "]"),
             TokenKind::Arith => write!(f, "%"),
             TokenKind::Bang => write!(f, "!"),
+            TokenKind::Range => write!(f, ".."),
             TokenKind::ColonColon => write!(f, "::"),
             TokenKind::BangEq => write!(f, "!="),
             TokenKind::Eq => write!(f, "="),

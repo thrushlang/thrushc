@@ -51,7 +51,7 @@ impl<'ctx> ThrushScoper<'ctx> {
 
         if !self.errors.is_empty() {
             self.errors.iter().for_each(|error| {
-                self.diagnostic.report(error, LogType::ERROR);
+                self.diagnostic.report(error, LogType::Error);
             });
 
             process::exit(1);

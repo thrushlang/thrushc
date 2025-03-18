@@ -1,7 +1,11 @@
 use {
-    super::{backend::compiler::misc::ThrushFile, error::ThrushError, logging, logging::LogType},
+    super::{
+        backend::compiler::misc::ThrushFile,
+        error::ThrushError,
+        logging::{self, LogType},
+    },
+    colored::Colorize,
     std::{fs, path::PathBuf},
-    stylic::{Stylize, style},
 };
 
 #[derive(Debug)]
@@ -21,7 +25,7 @@ impl Diagnostic {
     pub fn new(thrushfile: &ThrushFile) -> Self {
         let contain: String = fs::read_to_string(&thrushfile.path).unwrap_or_else(|_| {
             logging::log(
-                LogType::PANIC,
+                LogType::Panic,
                 &format!(
                     "Unable to read `{}` file for build a diagnostic.",
                     thrushfile.path.display()
@@ -56,24 +60,19 @@ impl Diagnostic {
             if let Some(code_position) =
                 self.find_line_and_range(&self.contain, *start_span, *end_span)
             {
-                if let Some((line_text, arrow_line)) =
+                if let Some((line_text, arrow_line, line)) =
                     self.generate_diagnostic(&self.contain, code_position)
                 {
                     println!(
-                        "|\n{}\n{}",
-                        "|   ".to_string() + &line_text,
-                        "|   ".to_string() + &arrow_line,
+                        "   |\n{}\n{}",
+                        format_args!("{}  |  {}", line, &line_text),
+                        "   |  ".to_string() + &arrow_line,
                     );
                 } else {
                     return self.print_not_spanned_report(help, line);
                 }
 
-                println!(
-                    "\n{}{} {}\n",
-                    style("Help").bold().bright_green(),
-                    style(":").bold(),
-                    style(help).bold()
-                );
+                self.print_helper(help);
 
                 return;
             }
@@ -87,31 +86,45 @@ impl Diagnostic {
     fn print_not_spanned_report(&mut self, help: &str, line: usize) {
         let lines: Vec<&str> = self.contain.lines().collect();
 
-        let line_text: String = "|   ".to_string() + lines[line - 1].trim();
-        let arrow_line: String =
-            "|   ".to_string() + &style("─").bright_red().to_string().repeat(line_text.len());
+        let line_text: String = "|  ".to_string() + lines[line - 1].trim();
+        let arrow_line: String = "|  ".to_string() + &"─".bright_red().repeat(line_text.len());
 
-        println!("|\n{}\n{}", line_text, arrow_line);
+        logging::write(
+            logging::OutputIn::Stderr,
+            format!("|\n{}\n{}\n", line_text, arrow_line).as_bytes(),
+        );
 
-        println!(
-            "\n{}{} {}\n",
-            style("Help").bold().bright_green(),
-            style(":").bold(),
-            style(help).bold()
+        self.print_helper(help);
+    }
+
+    fn print_helper(&self, help: &str) {
+        logging::write(
+            logging::OutputIn::Stderr,
+            format!(
+                "\n{}{} {}\n\n",
+                "Help".bold().bright_green(),
+                ":".bold(),
+                help.bold()
+            )
+            .as_bytes(),
         );
     }
 
     fn report_header(&mut self, line: usize, title: &str, logtype: LogType) {
-        println!(
-            "{} - {}",
-            format_args!(
-                "{}",
-                style(&self.path.to_string_lossy()).bold().bright_red()
-            ),
-            line
+        logging::write(
+            logging::OutputIn::Stderr,
+            format!(
+                "{} at line {}\n",
+                format_args!("{}", &self.path.to_string_lossy().bold().bright_red()),
+                (line - 1).to_string().bold().bright_red()
+            )
+            .as_bytes(),
         );
 
-        println!("\n{} {}\n", logtype.to_styled(), title);
+        logging::write(
+            logging::OutputIn::Stderr,
+            format!("\n{} {}\n\n", logtype.to_styled(), title).as_bytes(),
+        );
     }
 
     fn find_line_and_range(&self, text: &str, start: usize, end: usize) -> Option<CodePosition> {
@@ -139,21 +152,24 @@ impl Diagnostic {
         })
     }
 
-    fn generate_diagnostic(&self, text: &str, position: CodePosition) -> Option<(String, String)> {
+    fn generate_diagnostic(
+        &self,
+        text: &str,
+        position: CodePosition,
+    ) -> Option<(String, String, usize)> {
         let lines: Vec<&str> = text.lines().collect();
 
         if position.line > lines.len() {
             return None;
         }
 
-        let line_text: String = lines[position.line - 1].to_string();
+        let line_position: usize = position.line - 1;
+
+        let line_text: String = lines[line_position].to_string();
         let mut arrow_line: String = " ".repeat(line_text.len());
 
-        arrow_line.replace_range(
-            position.start..position.end,
-            &style("—").bright_red().to_string(),
-        );
+        arrow_line.replace_range(position.start..position.end, &"—".bright_red());
 
-        Some((line_text, arrow_line))
+        Some((line_text, arrow_line, line_position))
     }
 }
