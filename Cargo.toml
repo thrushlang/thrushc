@@ -1,6 +1,6 @@
 [package]
 name = "thrushc"
-description = "The AOT Compiler for Thrush Programming language."
+description = "The compiler for Thrush Programming language."
 version = "1.0.0"
 edition = "2024"
 authors = ["DevCheckOG [https://github.com/DevCheckOG]"]
