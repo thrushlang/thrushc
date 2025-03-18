@@ -1,25 +1,26 @@
 ---
 name: Critical issue
-about: Describe the problem. Give us the compiler's standard error output and the
-  syntax that explains the problem.
+about: Explain the issue. Give us the compiler standard error output and the source
+  code that explains the critical issue.
 title: Critical issue
 labels: Critical issue
 assignees: Danixd12, DevCheckOG
 
 ---
 
-# Problem description
+## Issue
 
+## Issue explanation
 
-# Stderr
+## Stderr
 
 ```console
 
 ```
 
-# Syntax / code
+# Source code
 
-```rust
+```
 
 
 ```

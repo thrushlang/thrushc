@@ -1,10 +1,12 @@
 ---
 name: Proposal
-about: Proposal or idea for the development of the foreground compiler.
+about: Proposal or suggestion for the development of the compiler.
 title: Proposal
 labels: Proposal
 assignees: Danixd12, DevCheckOG
 
 ---
 
+## Proposal 
 
+## Proposal explanation
