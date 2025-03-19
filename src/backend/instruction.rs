@@ -1,7 +1,7 @@
 use {
     super::{
         super::{
-            error::ThrushError,
+            error::ThrushCompilerError,
             frontend::{
                 lexer::{TokenKind, Type},
                 types::StructFields,
@@ -213,7 +213,7 @@ impl<'ctx> Instruction<'ctx> {
         &self,
         other: &Instruction,
         location: (usize, (usize, usize)),
-    ) -> Result<(), ThrushError> {
+    ) -> Result<(), ThrushCompilerError> {
         if let (Instruction::BinaryOp { .. }, Instruction::BinaryOp { .. }) = (self, other) {
             return Ok(());
         }
@@ -248,7 +248,7 @@ impl<'ctx> Instruction<'ctx> {
 
         println!("{:?} {:?}", self, other);
 
-        Err(ThrushError::Error(
+        Err(ThrushCompilerError::Error(
             String::from("Type Checking"),
             String::from("Operators cannot be chained. Use logical gates as \"&&\" or \"||\"."),
             location.0,

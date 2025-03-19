@@ -2,7 +2,7 @@ use {
     super::super::{
         backend::{compiler::misc::ThrushFile, instruction::Instruction},
         diagnostic::Diagnostic,
-        error::ThrushError,
+        error::ThrushCompilerError,
         logging::LogType,
     },
     std::process,
@@ -11,7 +11,7 @@ use {
 #[derive(Debug)]
 pub struct ThrushScoper<'ctx> {
     blocks: Vec<ThrushBlock<'ctx>>,
-    errors: Vec<ThrushError>,
+    errors: Vec<ThrushCompilerError>,
     diagnostic: Diagnostic,
 }
 
@@ -62,7 +62,7 @@ impl<'ctx> ThrushScoper<'ctx> {
         &self,
         instr: &Instruction<'ctx>,
         depth: usize,
-    ) -> Result<(), ThrushError> {
+    ) -> Result<(), ThrushCompilerError> {
         if let Instruction::Block { stmts, .. } = instr {
             stmts
                 .iter()
@@ -84,7 +84,7 @@ impl<'ctx> ThrushScoper<'ctx> {
 
         if let Instruction::LocalRef { name, line, .. } = instr {
             if !self.is_at_current_scope(name, None, depth) {
-                return Err(ThrushError::Error(
+                return Err(ThrushCompilerError::Error(
                     String::from("Undefined variable"),
                     format!("Local variable `{}` not found at current scope.", name),
                     *line,
@@ -95,7 +95,7 @@ impl<'ctx> ThrushScoper<'ctx> {
             if self.is_at_current_scope(name, None, depth)
                 && !self.is_reacheable_at_current_scope(name, *line, None, depth)
             {
-                return Err(ThrushError::Error(
+                return Err(ThrushCompilerError::Error(
                     String::from("Unreacheable variable"),
                     format!(
                         "Local variable `{}` is unreacheable at current scope.",

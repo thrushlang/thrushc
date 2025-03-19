@@ -68,13 +68,13 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
         }
     }
 
-    fn codegen(&mut self, instr: &'ctx Instruction) -> Instruction<'ctx> {
-        match instr {
+    fn codegen(&mut self, instruction: &'ctx Instruction) -> Instruction<'ctx> {
+        match instruction {
             Instruction::Block { stmts, .. } => {
                 self.compiler_objects.begin_scope();
 
-                stmts.iter().for_each(|instr| {
-                    self.codegen(instr);
+                stmts.iter().for_each(|instruction| {
+                    self.codegen(instruction);
                 });
 
                 self.compiler_objects.end_scope();
@@ -435,7 +435,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                 self.module,
                 self.builder,
                 self.context,
-                instr,
+                instruction,
                 None,
                 &mut self.compiler_objects,
             )),
@@ -554,7 +554,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                     self.module,
                     self.builder,
                     self.context,
-                    instr,
+                    instruction,
                     None,
                     &mut self.compiler_objects,
                 ))
@@ -665,7 +665,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                 let num: IntValue = self
                     .builder
                     .build_load(
-                        utils::datatype_integer_to_llvm_type(self.context, kind),
+                        utils::type_int_to_llvm_int_type(self.context, kind),
                         variable,
                         "",
                     )
@@ -681,7 +681,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                 let num: FloatValue = self
                     .builder
                     .build_load(
-                        utils::datatype_float_to_llvm_type(self.context, kind),
+                        utils::type_float_to_llvm_float_type(self.context, kind),
                         variable,
                         "",
                     )
@@ -744,7 +744,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
     fn build_external(&mut self, external_name: &str, instr: &'ctx Instruction) {
         let function: Function = instr.as_function();
 
-        let kind: FunctionType = utils::datatype_to_fn_type(self.context, function.3, function.1);
+        let kind: FunctionType = utils::type_to_function_type(self.context, function.3, function.1);
 
         let external_function: FunctionValue =
             self.module
@@ -763,7 +763,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
 
         if only_define && self.module.get_function(function_name).is_none() {
             let kind: FunctionType =
-                utils::datatype_to_fn_type(self.context, function_return_type, function_params);
+                utils::type_to_function_type(self.context, function_return_type, function_params);
 
             let function: FunctionValue = self.module.add_function(function_name, kind, None);
 

@@ -86,17 +86,17 @@ pub fn build_expression<'ctx>(
 
         if kind.is_float_type() {
             return builder
-                .build_load(utils::datatype_float_to_llvm_type(context, kind), local, "")
-                .unwrap();
-        }
-
-        if kind.is_integer_type() || *kind == Type::Bool {
-            return builder
                 .build_load(
-                    utils::datatype_integer_to_llvm_type(context, kind),
+                    utils::type_float_to_llvm_float_type(context, kind),
                     local,
                     "",
                 )
+                .unwrap();
+        }
+
+        if kind.is_integer_type() || kind.is_bool_type() {
+            return builder
+                .build_load(utils::type_int_to_llvm_int_type(context, kind), local, "")
                 .unwrap();
         }
 

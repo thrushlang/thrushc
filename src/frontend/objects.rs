@@ -1,6 +1,6 @@
 use {
     super::{
-        super::{backend::instruction::Instruction, error::ThrushError},
+        super::{backend::instruction::Instruction, error::ThrushCompilerError},
         lexer::Type,
         traits::FoundObjectEither,
     },
@@ -46,7 +46,7 @@ impl<'instr> ParserObjects<'instr> {
         &self,
         name: &'instr str,
         location: (usize, (usize, usize)),
-    ) -> Result<FoundObject, ThrushError> {
+    ) -> Result<FoundObject, ThrushCompilerError> {
         for scope in self.locals.iter().rev() {
             if let Some(local) = scope.get(name) {
                 return Ok((None, None, Some(local)));
@@ -61,7 +61,7 @@ impl<'instr> ParserObjects<'instr> {
             return Ok((Some(structure), None, None));
         }
 
-        Err(ThrushError::Error(
+        Err(ThrushCompilerError::Error(
             String::from("Structure/function/local variable not found"),
             format!("'{}' is don't in declared or defined.", name),
             location.0,
@@ -73,12 +73,12 @@ impl<'instr> ParserObjects<'instr> {
         &self,
         name: &str,
         location: (usize, (usize, usize)),
-    ) -> Result<HashMap<&'instr str, Type>, ThrushError> {
+    ) -> Result<HashMap<&'instr str, Type>, ThrushCompilerError> {
         if let Some(struct_fields) = self.structs.get(name).cloned() {
             return Ok(struct_fields);
         }
 
-        Err(ThrushError::Error(
+        Err(ThrushCompilerError::Error(
             String::from("Structure don't found"),
             format!("'{}' structure not declared or defined.", name),
             location.0,
@@ -94,10 +94,10 @@ impl<'instr> ParserObjects<'instr> {
         value: Local,
         line: usize,
         span: (usize, usize),
-        parser_errors: &mut Vec<ThrushError>,
+        parser_errors: &mut Vec<ThrushCompilerError>,
     ) {
         if self.locals[scope_pos].contains_key(name) {
-            parser_errors.push(ThrushError::Error(
+            parser_errors.push(ThrushCompilerError::Error(
                 String::from("Local variable already declared"),
                 format!("'{}' local variable already declared.", name),
                 line,
@@ -173,12 +173,16 @@ impl<'instr> ParserObjects<'instr> {
 }
 
 impl FoundObjectEither for FoundObject<'_> {
-    fn expected_local(&self, line: usize, span: (usize, usize)) -> Result<&Local, ThrushError> {
+    fn expected_local(
+        &self,
+        line: usize,
+        span: (usize, usize),
+    ) -> Result<&Local, ThrushCompilerError> {
         if let Some(local) = self.2 {
             return Ok(local);
         }
 
-        Err(ThrushError::Error(
+        Err(ThrushCompilerError::Error(
             String::from("Expected local reference"),
             String::from("Expected local but found something else."),
             line,
@@ -190,12 +194,12 @@ impl FoundObjectEither for FoundObject<'_> {
         &self,
         line: usize,
         span: (usize, usize),
-    ) -> Result<&Function, ThrushError> {
+    ) -> Result<&Function, ThrushCompilerError> {
         if let Some(function) = self.1 {
             return Ok(function);
         }
 
-        Err(ThrushError::Error(
+        Err(ThrushCompilerError::Error(
             String::from("Expected function reference"),
             String::from("Expected function but found something else."),
             line,

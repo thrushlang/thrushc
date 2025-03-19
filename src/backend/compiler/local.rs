@@ -59,6 +59,7 @@ pub fn build<'ctx>(
         let ptr: PointerValue = utils::build_ptr(context, builder, *local_type);
 
         return build_local_float(
+            module,
             builder,
             context,
             (variable.0, local_type, variable.2),
@@ -69,8 +70,7 @@ pub fn build<'ctx>(
 
     if *local_type == Type::Bool {
         let ptr: PointerValue = utils::build_ptr(context, builder, *local_type);
-
-        return build_local_boolean(builder, context, variable, ptr, compiler_objects);
+        return build_local_boolean(module, builder, context, variable, ptr, compiler_objects);
     }
 
     if *local_type == Type::Struct {
@@ -114,7 +114,14 @@ pub fn build_local_mut<'ctx>(
     }
 
     if local_type.is_float_type() {
-        build_local_float(builder, context, variable, variable_ptr, compiler_objects);
+        build_local_float(
+            module,
+            builder,
+            context,
+            variable,
+            variable_ptr,
+            compiler_objects,
+        );
     }
 
     if *local_type == Type::Str {
@@ -195,7 +202,7 @@ fn build_local_structure<'ctx>(
     ptr: PointerValue<'ctx>,
 ) -> BasicValueEnum<'ctx> {
     let local_name: &str = variable.0;
-    let local_value: &Instruction<'ctx> = variable.2;
+    let local_value: &Instruction = variable.2;
 
     if let Instruction::InitStruct { fields, .. } = local_value {
         fields.iter().for_each(|field| {
@@ -230,8 +237,8 @@ fn build_local_structure<'ctx>(
         let original_ptr: PointerValue = compiler_objects.get_local(name).unwrap();
 
         builder.build_store(ptr, original_ptr).unwrap();
-
         compiler_objects.insert(local_name, ptr);
+
         return ptr.into();
     }
 
@@ -276,7 +283,6 @@ fn build_local_structure<'ctx>(
         };
 
         builder.build_free(compiled_value).unwrap();
-
         compiler_objects.insert(local_name, ptr);
 
         return ptr.into();
@@ -392,11 +398,11 @@ fn build_local_integer<'ctx>(
         ..
     } = local_value
     {
-        let var: PointerValue<'ctx> = compiler_objects.get_local(reflocal_name).unwrap();
+        let var: PointerValue = compiler_objects.get_local(reflocal_name).unwrap();
 
         let load: BasicValueEnum = builder
             .build_load(
-                utils::datatype_integer_to_llvm_type(context, reflocal_type),
+                utils::type_int_to_llvm_int_type(context, reflocal_type),
                 var,
                 "",
             )
@@ -490,6 +496,7 @@ fn build_local_integer<'ctx>(
 }
 
 fn build_local_float<'ctx>(
+    module: &Module<'ctx>,
     builder: &Builder<'ctx>,
     context: &'ctx Context,
     variable: Variable<'ctx>,
@@ -536,7 +543,7 @@ fn build_local_float<'ctx>(
 
         let load = builder
             .build_load(
-                utils::datatype_float_to_llvm_type(context, kind_refvar),
+                utils::type_float_to_llvm_float_type(context, kind_refvar),
                 var,
                 "",
             )
@@ -554,6 +561,33 @@ fn build_local_float<'ctx>(
         {
             builder.build_store(ptr, load).unwrap();
         }
+
+        compiler_objects.insert(local_name, ptr);
+
+        return ptr.into();
+    }
+
+    if let Instruction::Call {
+        name: call_name,
+        args,
+        kind: call_type,
+        ..
+    } = local_value
+    {
+        let result: BasicValueEnum = call::build_call(
+            module,
+            builder,
+            context,
+            (call_name, call_type, args),
+            compiler_objects,
+        )
+        .unwrap();
+
+        if utils::float_autocast(call_type, local_type, Some(ptr), result, builder, context)
+            .is_none()
+        {
+            builder.build_store(ptr, result).unwrap();
+        };
 
         compiler_objects.insert(local_name, ptr);
 
@@ -581,6 +615,7 @@ fn build_local_float<'ctx>(
 
     if let Instruction::Group { instr, .. } = local_value {
         build_local_float(
+            module,
             builder,
             context,
             (local_name, local_type, instr),
@@ -593,6 +628,7 @@ fn build_local_float<'ctx>(
 }
 
 fn build_local_boolean<'ctx>(
+    module: &Module<'ctx>,
     builder: &Builder<'ctx>,
     context: &'ctx Context,
     variable: Variable<'ctx>,
@@ -635,12 +671,12 @@ fn build_local_boolean<'ctx>(
         ..
     } = local_value
     {
-        let var: PointerValue<'ctx> = compiler_objects.get_local(name_refvar).unwrap();
+        let reflocal_ptr: PointerValue = compiler_objects.get_local(name_refvar).unwrap();
 
         let load = builder
             .build_load(
-                utils::datatype_float_to_llvm_type(context, kind_refvar),
-                var,
+                utils::type_float_to_llvm_float_type(context, kind_refvar),
+                reflocal_ptr,
                 "",
             )
             .unwrap();
@@ -649,7 +685,7 @@ fn build_local_boolean<'ctx>(
             kind_refvar,
             local_type,
             Some(ptr),
-            var.into(),
+            reflocal_ptr.into(),
             builder,
             context,
         )
@@ -657,6 +693,33 @@ fn build_local_boolean<'ctx>(
         {
             builder.build_store(ptr, load).unwrap();
         }
+
+        compiler_objects.insert(local_name, ptr);
+
+        return ptr.into();
+    }
+
+    if let Instruction::Call {
+        name: call_name,
+        args,
+        kind: call_type,
+        ..
+    } = local_value
+    {
+        let result: BasicValueEnum = call::build_call(
+            module,
+            builder,
+            context,
+            (call_name, call_type, args),
+            compiler_objects,
+        )
+        .unwrap();
+
+        if utils::integer_autocast(call_type, local_type, Some(ptr), result, builder, context)
+            .is_none()
+        {
+            builder.build_store(ptr, result).unwrap();
+        };
 
         compiler_objects.insert(local_name, ptr);
 
@@ -684,6 +747,7 @@ fn build_local_boolean<'ctx>(
 
     if let Instruction::Group { instr, .. } = local_value {
         build_local_boolean(
+            module,
             builder,
             context,
             (local_name, local_type, instr),

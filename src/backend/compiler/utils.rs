@@ -18,7 +18,7 @@ use {
 };
 
 #[inline]
-pub fn datatype_integer_to_llvm_type<'ctx>(context: &'ctx Context, kind: &Type) -> IntType<'ctx> {
+pub fn type_int_to_llvm_int_type<'ctx>(context: &'ctx Context, kind: &Type) -> IntType<'ctx> {
     match kind {
         Type::I8 | Type::Char => context.i8_type(),
         Type::I16 => context.i16_type(),
@@ -30,7 +30,7 @@ pub fn datatype_integer_to_llvm_type<'ctx>(context: &'ctx Context, kind: &Type) 
 }
 
 #[inline]
-pub fn datatype_float_to_llvm_type<'ctx>(context: &'ctx Context, kind: &Type) -> FloatType<'ctx> {
+pub fn type_float_to_llvm_float_type<'ctx>(context: &'ctx Context, kind: &Type) -> FloatType<'ctx> {
     match kind {
         Type::F32 => context.f32_type(),
         Type::F64 | Type::Bool => context.f64_type(),
@@ -92,7 +92,7 @@ pub fn build_const_integer<'ctx>(
     }
 }
 
-pub fn datatype_to_fn_type<'ctx>(
+pub fn type_to_function_type<'ctx>(
     context: &'ctx Context,
     kind: &Type,
     params: &[Instruction],
@@ -101,7 +101,7 @@ pub fn datatype_to_fn_type<'ctx>(
 
     params.iter().for_each(|param| {
         if let Instruction::FunctionParameter { kind, .. } = param {
-            param_types.push(datatype_to_basicmetadata_type_enum(context, kind));
+            param_types.push(type_to_basic_metadata_enum(context, kind));
         }
     });
 
@@ -120,7 +120,7 @@ pub fn datatype_to_fn_type<'ctx>(
     }
 }
 
-pub fn datatype_to_basicmetadata_type_enum<'ctx>(
+pub fn type_to_basic_metadata_enum<'ctx>(
     context: &'ctx Context,
     kind: &Type,
 ) -> BasicMetadataTypeEnum<'ctx> {
@@ -146,10 +146,6 @@ pub fn float_autocast<'ctx>(
     builder: &Builder<'ctx>,
     context: &'ctx Context,
 ) -> Option<BasicValueEnum<'ctx>> {
-    if *target == Type::Bool && kind.is_float_type() {
-        return None;
-    }
-
     if kind == target {
         return None;
     }
@@ -160,14 +156,14 @@ pub fn float_autocast<'ctx>(
         cast = builder
             .build_float_cast(
                 from.into_float_value(),
-                datatype_float_to_llvm_type(context, target),
+                type_float_to_llvm_float_type(context, target),
                 "",
             )
             .unwrap();
     } else if kind != target && from.is_pointer_value() {
         let load: FloatValue<'ctx> = builder
             .build_load(
-                datatype_float_to_llvm_type(context, kind),
+                type_float_to_llvm_float_type(context, kind),
                 from.into_pointer_value(),
                 "",
             )
@@ -175,7 +171,7 @@ pub fn float_autocast<'ctx>(
             .into_float_value();
 
         cast = builder
-            .build_float_cast(load, datatype_float_to_llvm_type(context, target), "")
+            .build_float_cast(load, type_float_to_llvm_float_type(context, target), "")
             .unwrap();
     } else {
         builder.build_store(ptr.unwrap(), from).unwrap();
@@ -200,10 +196,6 @@ pub fn integer_autocast<'ctx>(
     builder: &Builder<'ctx>,
     context: &'ctx Context,
 ) -> Option<BasicValueEnum<'ctx>> {
-    if *target == Type::Bool && kind.is_integer_type() {
-        return None;
-    }
-
     if kind == target {
         return None;
     }
@@ -214,7 +206,7 @@ pub fn integer_autocast<'ctx>(
         cast = builder
             .build_int_cast_sign_flag(
                 from.into_int_value(),
-                datatype_integer_to_llvm_type(context, target),
+                type_int_to_llvm_int_type(context, target),
                 true,
                 "",
             )
@@ -222,7 +214,7 @@ pub fn integer_autocast<'ctx>(
     } else if kind != target && from.is_pointer_value() {
         let load: IntValue = builder
             .build_load(
-                datatype_integer_to_llvm_type(context, kind),
+                type_int_to_llvm_int_type(context, kind),
                 from.into_pointer_value(),
                 "",
             )
@@ -230,12 +222,7 @@ pub fn integer_autocast<'ctx>(
             .into_int_value();
 
         cast = builder
-            .build_int_cast_sign_flag(
-                load,
-                datatype_integer_to_llvm_type(context, target),
-                true,
-                "",
-            )
+            .build_int_cast_sign_flag(load, type_int_to_llvm_int_type(context, target), true, "")
             .unwrap();
     } else {
         builder.build_store(ptr.unwrap(), from).unwrap();
@@ -281,11 +268,11 @@ pub fn build_ptr<'ctx>(
 ) -> PointerValue<'ctx> {
     match kind {
         kind if kind.is_integer_type() => {
-            build_alloca_int(builder, datatype_integer_to_llvm_type(context, &kind))
+            build_alloca_int(builder, type_int_to_llvm_int_type(context, &kind))
         }
         Type::Bool => build_alloca_int(builder, context.bool_type()),
         Type::F64 | Type::F32 => {
-            build_alloca_float(builder, datatype_float_to_llvm_type(context, &kind))
+            build_alloca_float(builder, type_float_to_llvm_float_type(context, &kind))
         }
         _ => unreachable!(),
     }
@@ -309,11 +296,11 @@ pub fn build_struct_type_from_fields<'ctx>(
 
     struct_fields.iter().for_each(|field| {
         if field.1.is_integer_type() {
-            compiled_field_types.push(datatype_integer_to_llvm_type(context, &field.1).into());
+            compiled_field_types.push(type_int_to_llvm_int_type(context, &field.1).into());
         }
 
         if field.1.is_float_type() {
-            compiled_field_types.push(datatype_float_to_llvm_type(context, &field.1).into());
+            compiled_field_types.push(type_float_to_llvm_float_type(context, &field.1).into());
         }
 
         if field.1.is_bool_type() {

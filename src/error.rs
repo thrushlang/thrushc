@@ -1,4 +1,4 @@
 #[derive(Debug)]
-pub enum ThrushError {
+pub enum ThrushCompilerError {
     Error(String, String, usize, Option<(usize, usize)>),
 }

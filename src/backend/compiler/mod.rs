@@ -1,4 +1,6 @@
+pub mod attributes;
 pub mod binaryop;
+pub mod builtins;
 pub mod call;
 pub mod codegen;
 pub mod generation;

@@ -1,7 +1,7 @@
 use {
     super::{
         backend::compiler::misc::ThrushFile,
-        error::ThrushError,
+        error::ThrushCompilerError,
         logging::{self, LogType},
     },
     colored::Colorize,
@@ -41,8 +41,8 @@ impl Diagnostic {
         }
     }
 
-    pub fn report(&mut self, error: &ThrushError, logtype: LogType) {
-        let ThrushError::Error(title, help, line, span) = error;
+    pub fn report(&mut self, error: &ThrushCompilerError, logtype: LogType) {
+        let ThrushCompilerError::Error(title, help, line, span) = error;
         self.print_spanned_report(title, help, *line, span.as_ref(), logtype);
     }
 

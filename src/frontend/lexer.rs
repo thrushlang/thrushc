@@ -2,9 +2,10 @@ use {
     super::{
         super::{
             backend::compiler::misc::ThrushFile, constants::MINIMAL_ERROR_CAPACITY,
-            diagnostic::Diagnostic, error::ThrushError, logging::LogType,
+            diagnostic::Diagnostic, error::ThrushCompilerError, logging::LogType,
         },
-        traits::TokenLexeme,
+        traits::TokenLexemeBasics,
+        types::TokenLexeme,
     },
     ahash::{HashMap, HashMapExt},
     inkwell::{FloatPredicate, IntPredicate},
@@ -14,8 +15,6 @@ use {
 
 const KEYWORDS_CAPACITY: usize = 38;
 const MINIMAL_TOKENS_CAPACITY: usize = 100_000;
-
-pub type Lexeme<'a> = &'a [u8];
 
 lazy_static! {
     static ref KEYWORDS: HashMap<&'static [u8], TokenKind> = {
@@ -67,7 +66,7 @@ lazy_static! {
 
 pub struct Lexer<'a> {
     tokens: Vec<Token<'a>>,
-    errors: Vec<ThrushError>,
+    errors: Vec<ThrushCompilerError>,
     code: &'a [u8],
     start: usize,
     current: usize,
@@ -120,7 +119,7 @@ impl<'a> Lexer<'a> {
         mem::take(&mut self.tokens)
     }
 
-    fn scan(&mut self) -> Result<(), ThrushError> {
+    fn scan(&mut self) -> Result<(), ThrushCompilerError> {
         match self.advance() {
             b'[' => self.make(TokenKind::LBracket),
             b']' => self.make(TokenKind::RBracket),
@@ -147,7 +146,7 @@ impl<'a> Lexer<'a> {
                 } else if self.end() {
                     self.end_span();
 
-                    return Err(ThrushError::Error(
+                    return Err(ThrushCompilerError::Error(
                         String::from("Syntax Error"),
                         String::from(
                             "Unterminated multiline comment. Did you forget to close the comment with a '*/'?",
@@ -188,7 +187,7 @@ impl<'a> Lexer<'a> {
             _ => {
                 self.end_span();
 
-                return Err(ThrushError::Error(
+                return Err(ThrushCompilerError::Error(
                     String::from("Unknown character."),
                     String::from("Did you provide a valid character?"),
                     self.line,
@@ -200,8 +199,11 @@ impl<'a> Lexer<'a> {
         Ok(())
     }
 
-    fn identifier(&mut self) -> Result<(), ThrushError> {
-        while self.is_alpha(self.peek()) || self.peek().is_ascii_digit() && self.peek() != b':' {
+    fn identifier(&mut self) -> Result<(), ThrushCompilerError> {
+        while self.is_alpha(self.peek())
+            || self.peek().is_ascii_digit()
+            || self.peek() == b'!' && self.peek() != b':'
+        {
             self.advance();
         }
 
@@ -216,7 +218,7 @@ impl<'a> Lexer<'a> {
         Ok(())
     }
 
-    fn integer_or_float(&mut self) -> Result<(), ThrushError> {
+    fn integer_or_float(&mut self) -> Result<(), ThrushCompilerError> {
         let mut is_hexadecimal: bool = false;
         let mut is_binary: bool = false;
 
@@ -229,7 +231,7 @@ impl<'a> Lexer<'a> {
             if is_hexadecimal && self.previous() == b'0' && self.peek() == b'x' {
                 self.end_span();
 
-                return Err(ThrushError::Error(
+                return Err(ThrushCompilerError::Error(
                     String::from("Syntax error"),
                     String::from("The hexadecimal identifier '0x' cannot be repeated."),
                     self.line,
@@ -240,7 +242,7 @@ impl<'a> Lexer<'a> {
             if is_binary && self.previous() == b'0' && self.peek() == b'b' {
                 self.end_span();
 
-                return Err(ThrushError::Error(
+                return Err(ThrushCompilerError::Error(
                     String::from("Syntax error"),
                     String::from("The binary identifier '0b' cannot be repeated."),
                     self.line,
@@ -284,8 +286,8 @@ impl<'a> Lexer<'a> {
         Ok(())
     }
 
-    #[inline(always)]
-    fn parse_float_or_integer(&mut self, lexeme: &str) -> Result<(Type, f64), ThrushError> {
+    #[inline]
+    fn parse_float_or_integer(&mut self, lexeme: &str) -> Result<(Type, f64), ThrushCompilerError> {
         // usize MAX 18446744073709551615 // Me lleva...
         // isize MAX 9223372036854775807 // (USADO ACTUALMENTE) -> TENEMOS MENOS CAPACIDAD ACTUAL EN EL LENGUAJE. (DA HELL EL QUE OVERFLOWEE ESTA WEBADA)
         // f64 MAX 1.7976931348623157e308 // NO HAY PROBLEMA SI OCURRE ALGÚN OVERFLOW.
@@ -297,12 +299,12 @@ impl<'a> Lexer<'a> {
         self.parse_integer(lexeme)
     }
 
-    #[inline(always)]
-    fn parse_float(&self, lexeme: &str) -> Result<(Type, f64), ThrushError> {
+    #[inline]
+    fn parse_float(&self, lexeme: &str) -> Result<(Type, f64), ThrushCompilerError> {
         let dot_count: usize = lexeme.bytes().filter(|&b| b == b'.').count();
 
         if dot_count > 1 {
-            return Err(ThrushError::Error(
+            return Err(ThrushCompilerError::Error(
                 String::from("Syntax error"),
                 String::from("Float values should only contain one dot."),
                 self.line,
@@ -310,11 +312,15 @@ impl<'a> Lexer<'a> {
             ));
         }
 
+        if let Ok(float) = lexeme.parse::<f32>() {
+            return Ok((Type::F32, float as f64));
+        }
+
         if let Ok(float) = lexeme.parse::<f64>() {
             return Ok((Type::F64, float));
         }
 
-        Err(ThrushError::Error(
+        Err(ThrushCompilerError::Error(
             String::from("Syntax error"),
             String::from("Out of bounds."),
             self.line,
@@ -322,8 +328,8 @@ impl<'a> Lexer<'a> {
         ))
     }
 
-    #[inline(always)]
-    fn parse_integer(&self, lexeme: &str) -> Result<(Type, f64), ThrushError> {
+    #[inline]
+    fn parse_integer(&self, lexeme: &str) -> Result<(Type, f64), ThrushCompilerError> {
         const I8_MIN: isize = -128;
         const I8_MAX: isize = 127;
         const I16_MIN: isize = -32768;
@@ -348,7 +354,7 @@ impl<'a> Lexer<'a> {
                     } else if (isize::MIN..=isize::MAX).contains(&num) {
                         return Ok((Type::I64, num as f64));
                     } else {
-                        return Err(ThrushError::Error(
+                        return Err(ThrushCompilerError::Error(
                             String::from("Syntax error"),
                             String::from("Invalid hexadecimal format."),
                             self.line,
@@ -357,7 +363,7 @@ impl<'a> Lexer<'a> {
                     }
                 }
 
-                Err(_) => Err(ThrushError::Error(
+                Err(_) => Err(ThrushCompilerError::Error(
                     String::from("Syntax error"),
                     String::from("Invalid hexadecimal format."),
                     self.line,
@@ -383,7 +389,7 @@ impl<'a> Lexer<'a> {
                     } else if (isize::MIN..=isize::MAX).contains(&num) {
                         return Ok((Type::I64, num as f64));
                     } else {
-                        return Err(ThrushError::Error(
+                        return Err(ThrushCompilerError::Error(
                             String::from("Syntax error"),
                             String::from("Invalid binary format."),
                             self.line,
@@ -392,7 +398,7 @@ impl<'a> Lexer<'a> {
                     }
                 }
 
-                Err(_) => Err(ThrushError::Error(
+                Err(_) => Err(ThrushCompilerError::Error(
                     String::from("Syntax error"),
                     String::from("Invalid binary format."),
                     self.line,
@@ -412,7 +418,7 @@ impl<'a> Lexer<'a> {
                 } else if (isize::MIN..=isize::MAX).contains(&num) {
                     Ok((Type::I64, num as f64))
                 } else {
-                    Err(ThrushError::Error(
+                    Err(ThrushCompilerError::Error(
                         String::from("Syntax error"),
                         String::from("Out of bounds."),
                         self.line,
@@ -421,7 +427,7 @@ impl<'a> Lexer<'a> {
                 }
             }
 
-            Err(_) => Err(ThrushError::Error(
+            Err(_) => Err(ThrushCompilerError::Error(
                 String::from("Syntax error"),
                 String::from("Out of bounds."),
                 self.line,
@@ -430,7 +436,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    fn char(&mut self) -> Result<(), ThrushError> {
+    fn char(&mut self) -> Result<(), ThrushCompilerError> {
         while self.peek() != b'\'' && !self.end() {
             self.advance();
         }
@@ -438,7 +444,7 @@ impl<'a> Lexer<'a> {
         self.end_span();
 
         if self.peek() != b'\'' {
-            return Err(ThrushError::Error(
+            return Err(ThrushCompilerError::Error(
                 String::from("Syntax error"),
                 String::from("Unclosed char. Did you forget to close the char with a \'?"),
                 self.line,
@@ -449,7 +455,7 @@ impl<'a> Lexer<'a> {
         self.advance();
 
         if self.code[self.start + 1..self.current - 1].len() > 1 {
-            return Err(ThrushError::Error(
+            return Err(ThrushCompilerError::Error(
                 String::from("Syntax error"),
                 String::from("A char data type only can contain one character."),
                 self.line,
@@ -467,7 +473,7 @@ impl<'a> Lexer<'a> {
         Ok(())
     }
 
-    fn string(&mut self) -> Result<(), ThrushError> {
+    fn string(&mut self) -> Result<(), ThrushCompilerError> {
         while self.is_string_boundary() {
             self.advance();
         }
@@ -475,7 +481,7 @@ impl<'a> Lexer<'a> {
         self.end_span();
 
         if self.peek() != b'"' {
-            return Err(ThrushError::Error(
+            return Err(ThrushCompilerError::Error(
                 String::from("Syntax error"),
                 String::from(
                     "Unclosed literal string. Did you forget to close the literal string with a '\"'?",
@@ -548,7 +554,7 @@ impl<'a> Lexer<'a> {
     }
 
     #[inline(always)]
-    fn lexeme(&self) -> Lexeme<'a> {
+    fn lexeme(&self) -> TokenLexeme<'a> {
         &self.code[self.start..self.current]
     }
 
@@ -586,7 +592,7 @@ pub struct Token<'token> {
     pub span: (usize, usize),
 }
 
-impl TokenLexeme for Lexeme<'_> {
+impl TokenLexemeBasics for TokenLexeme<'_> {
     #[inline(always)]
     fn to_str(&self) -> &str {
         core::str::from_utf8(self).unwrap_or("invalid utf-8")
@@ -597,7 +603,11 @@ impl TokenLexeme for Lexeme<'_> {
         self.to_str().to_string()
     }
 
-    fn parse_scapes(&self, line: usize, span: (usize, usize)) -> Result<Vec<u8>, ThrushError> {
+    fn parse_scapes(
+        &self,
+        line: usize,
+        span: (usize, usize),
+    ) -> Result<Vec<u8>, ThrushCompilerError> {
         let mut parsed_string: Vec<u8> = Vec::with_capacity(self.len());
 
         let mut i: usize = 0;
@@ -615,7 +625,7 @@ impl TokenLexeme for Lexeme<'_> {
                     Some(b'\'') => parsed_string.push(b'\''),
                     Some(b'"') => parsed_string.push(b'"'),
                     _ => {
-                        return Err(ThrushError::Error(
+                        return Err(ThrushCompilerError::Error(
                             String::from("Syntax Error"),
                             String::from("Invalid escape sequence."),
                             line,

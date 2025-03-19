@@ -31,7 +31,7 @@ pub fn compile_unary_op<'ctx>(
         if refvar_type.is_integer_type() {
             let left_num: IntValue<'ctx> = builder
                 .build_load(
-                    utils::datatype_integer_to_llvm_type(context, refvar_type),
+                    utils::type_int_to_llvm_int_type(context, refvar_type),
                     variable,
                     "",
                 )
@@ -39,7 +39,7 @@ pub fn compile_unary_op<'ctx>(
                 .into_int_value();
 
             let right_num: IntValue =
-                utils::datatype_integer_to_llvm_type(context, refvar_type).const_int(1, false);
+                utils::type_int_to_llvm_int_type(context, refvar_type).const_int(1, false);
 
             let result: IntValue = if *unary.0 == TokenKind::PlusPlus {
                 builder.build_int_nsw_add(left_num, right_num, "").unwrap()
@@ -54,7 +54,7 @@ pub fn compile_unary_op<'ctx>(
 
         let left_num: FloatValue = builder
             .build_load(
-                utils::datatype_float_to_llvm_type(context, refvar_type),
+                utils::type_float_to_llvm_float_type(context, refvar_type),
                 variable,
                 "",
             )
@@ -62,7 +62,7 @@ pub fn compile_unary_op<'ctx>(
             .into_float_value();
 
         let right_num: FloatValue =
-            utils::datatype_float_to_llvm_type(context, refvar_type).const_float(1.0);
+            utils::type_float_to_llvm_float_type(context, refvar_type).const_float(1.0);
 
         let result: FloatValue = if *unary.0 == TokenKind::PlusPlus {
             builder.build_float_add(left_num, right_num, "").unwrap()
@@ -85,37 +85,35 @@ pub fn compile_unary_op<'ctx>(
         _,
     ) = unary
     {
-        let variable: PointerValue<'ctx> = compiler_objects.get_local(name).unwrap();
+        let ptr: PointerValue = compiler_objects.get_local(name).unwrap();
 
         if refvar_type.is_integer_type() {
-            let left: IntValue<'ctx> = builder
+            let left: IntValue = builder
                 .build_load(
-                    utils::datatype_integer_to_llvm_type(context, refvar_type),
-                    variable,
+                    utils::type_int_to_llvm_int_type(context, refvar_type),
+                    ptr,
                     "",
                 )
                 .unwrap()
                 .into_int_value();
 
-            let result: IntValue<'ctx> = builder.build_not(left, "").unwrap();
-
-            builder.build_store(variable, result).unwrap();
+            let result: IntValue = builder.build_not(left, "").unwrap();
+            builder.build_store(ptr, result).unwrap();
 
             return result.into();
         }
 
-        let left: FloatValue<'ctx> = builder
+        let left: FloatValue = builder
             .build_load(
-                utils::datatype_float_to_llvm_type(context, refvar_type),
-                variable,
+                utils::type_float_to_llvm_float_type(context, refvar_type),
+                ptr,
                 "",
             )
             .unwrap()
             .into_float_value();
 
-        let result: FloatValue<'ctx> = builder.build_float_neg(left, "").unwrap();
-
-        builder.build_store(variable, result).unwrap();
+        let result: FloatValue = builder.build_float_neg(left, "").unwrap();
+        builder.build_store(ptr, result).unwrap();
 
         return result.into();
     }
