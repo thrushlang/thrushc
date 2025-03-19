@@ -1,7 +1,7 @@
 use {
     super::{
         super::{backend::instruction::Instruction, error::ThrushError},
-        lexer::DataTypes,
+        lexer::Type,
         traits::FoundObjectEither,
     },
     ahash::AHashMap as HashMap,
@@ -11,16 +11,10 @@ const MINIMAL_STRUCTURE_CAPACITY: usize = 1024;
 const MINIMAL_LOCAL_SCOPE_CAPACITY: usize = 255;
 const MINIMAL_DEALLOCATORS_CAPACITY: usize = 50;
 
-pub type Function<'instr> = (
-    DataTypes,
-    Vec<DataTypes>,
-    Vec<(String, usize)>,
-    String,
-    bool,
-);
+pub type Function<'instr> = (Type, Vec<Type>, Vec<(String, usize)>, String, bool);
 
-pub type Struct<'instr> = HashMap<&'instr str, DataTypes>;
-pub type Local = (DataTypes, String, bool, bool);
+pub type Struct<'instr> = HashMap<&'instr str, Type>;
+pub type Local = (Type, String, bool, bool);
 
 pub type Functions<'instr> = HashMap<&'instr str, Function<'instr>>;
 pub type Structs<'instr> = HashMap<&'instr str, Struct<'instr>>;
@@ -79,7 +73,7 @@ impl<'instr> ParserObjects<'instr> {
         &self,
         name: &str,
         location: (usize, (usize, usize)),
-    ) -> Result<HashMap<&'instr str, DataTypes>, ThrushError> {
+    ) -> Result<HashMap<&'instr str, Type>, ThrushError> {
         if let Some(struct_fields) = self.structs.get(name).cloned() {
             return Ok(struct_fields);
         }
@@ -117,7 +111,7 @@ impl<'instr> ParserObjects<'instr> {
     }
 
     #[inline(always)]
-    pub fn insert_new_struct(&mut self, name: &'instr str, value: HashMap<&'instr str, DataTypes>) {
+    pub fn insert_new_struct(&mut self, name: &'instr str, value: HashMap<&'instr str, Type>) {
         self.structs.insert(name, value);
     }
 
@@ -151,7 +145,7 @@ impl<'instr> ParserObjects<'instr> {
         let scope: &mut HashMap<&str, Local> = self.locals.get_mut(at_scope_pos).unwrap();
 
         if let Some(local) = scope.get(name) {
-            let mut local: (DataTypes, String, bool, bool) = local.clone();
+            let mut local: (Type, String, bool, bool) = local.clone();
 
             local.2 = mark_as_freeded;
 
@@ -163,7 +157,7 @@ impl<'instr> ParserObjects<'instr> {
         let mut frees: Vec<Instruction> = Vec::with_capacity(MINIMAL_DEALLOCATORS_CAPACITY);
 
         self.locals[at_scope_pos].iter().for_each(|statement| {
-            if let (_, (DataTypes::Struct, struct_type, false, false)) = statement {
+            if let (_, (Type::Struct, struct_type, false, false)) = statement {
                 let mut struct_type_cloned: String = String::with_capacity(struct_type.len());
                 struct_type_cloned.clone_from(struct_type);
 

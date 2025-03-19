@@ -8,7 +8,7 @@ use {
             error::ThrushError,
             logging::LogType,
         },
-        lexer::{DataTypes, Lexer, Token, TokenKind},
+        lexer::{Lexer, Token, TokenKind, Type},
         objects::{FoundObject, Function, Functions, Local, ParserObjects},
         scoper::ThrushScoper,
         traits::{FoundObjectEither, TokenLexeme},
@@ -32,9 +32,10 @@ pub struct Parser<'instr> {
     errors: Vec<ThrushError>,
     inside_function: bool,
     inside_loop: bool,
-    at_typed_function: (DataTypes, String),
-    at_typed_variable: DataTypes,
-    future_unreacheable_code: usize,
+    inside_local: bool,
+    at_typed_function: (Type, String),
+    at_typed_variable: Type,
+    at_unreacheable_code: usize,
     current: usize,
     scope: usize,
     has_entry_point: bool,
@@ -50,8 +51,8 @@ impl<'instr> Parser<'instr> {
         functions.insert(
             "sizeof",
             (
-                DataTypes::I64,
-                Vec::from([DataTypes::Generic]),
+                Type::I64,
+                Vec::from([Type::Generic]),
                 Vec::new(),
                 String::new(),
                 false,
@@ -65,9 +66,10 @@ impl<'instr> Parser<'instr> {
             current: 0,
             inside_function: false,
             inside_loop: false,
-            at_typed_function: (DataTypes::Void, String::new()),
-            at_typed_variable: DataTypes::Void,
-            future_unreacheable_code: 0,
+            inside_local: false,
+            at_typed_function: (Type::Void, String::new()),
+            at_typed_variable: Type::Void,
+            at_unreacheable_code: 0,
             scope: 0,
             has_entry_point: false,
             scoper: ThrushScoper::new(file),
@@ -109,7 +111,6 @@ impl<'instr> Parser<'instr> {
         }
 
         self.scoper.analyze();
-
         self.stmts.as_slice()
     }
 
@@ -158,7 +159,7 @@ impl<'instr> Parser<'instr> {
 
         self.has_entry_point = true;
 
-        let body: Box<Instruction<'instr>> = Box::new(self.build_code_block(&mut [])?);
+        let body: Box<Instruction> = Box::new(self.build_code_block(&mut [])?);
 
         self.inside_function = false;
 
@@ -168,7 +169,7 @@ impl<'instr> Parser<'instr> {
     fn build_loop(&mut self) -> Result<Instruction<'instr>, ThrushError> {
         let line: usize = self.advance()?.line;
 
-        if self.future_unreacheable_code == self.scope {
+        if self.at_unreacheable_code == self.scope {
             self.errors.push(ThrushError::Error(
                 String::from("Syntax error"),
                 String::from("Unreacheable code."),
@@ -179,10 +180,10 @@ impl<'instr> Parser<'instr> {
 
         self.inside_loop = true;
 
-        let block: Instruction<'instr> = self.build_code_block(&mut [])?;
+        let block: Instruction = self.build_code_block(&mut [])?;
 
         if !block.has_break() && !block.has_return() && !block.has_continue() {
-            self.future_unreacheable_code = self.scope;
+            self.at_unreacheable_code = self.scope;
         }
 
         self.inside_loop = false;
@@ -195,7 +196,7 @@ impl<'instr> Parser<'instr> {
     fn build_while_loop(&mut self) -> Result<Instruction<'instr>, ThrushError> {
         let line: usize = self.advance()?.line;
 
-        if self.future_unreacheable_code == self.scope {
+        if self.at_unreacheable_code == self.scope {
             self.errors.push(ThrushError::Error(
                 String::from("Syntax error"),
                 String::from("Unreacheable code."),
@@ -206,7 +207,7 @@ impl<'instr> Parser<'instr> {
 
         let conditional: Instruction = self.expression()?;
 
-        self.check_type_mismatch(DataTypes::Bool, conditional.get_data_type(), None, line);
+        self.check_type_mismatch(Type::Bool, conditional.get_data_type(), None, line);
 
         let block: Instruction = self.build_code_block(&mut [])?;
 
@@ -219,7 +220,7 @@ impl<'instr> Parser<'instr> {
     fn build_continue(&mut self) -> Result<Instruction<'instr>, ThrushError> {
         let line: usize = self.advance()?.line;
 
-        if self.future_unreacheable_code == self.scope {
+        if self.at_unreacheable_code == self.scope {
             self.errors.push(ThrushError::Error(
                 String::from("Syntax error"),
                 String::from("Unreacheable code."),
@@ -228,7 +229,7 @@ impl<'instr> Parser<'instr> {
             ));
         }
 
-        self.future_unreacheable_code = self.scope;
+        self.at_unreacheable_code = self.scope;
 
         self.throw_if_not_inside_loop()?;
 
@@ -244,7 +245,7 @@ impl<'instr> Parser<'instr> {
     fn build_break(&mut self) -> Result<Instruction<'instr>, ThrushError> {
         let line: usize = self.advance()?.line;
 
-        if self.future_unreacheable_code == self.scope {
+        if self.at_unreacheable_code == self.scope {
             self.errors.push(ThrushError::Error(
                 String::from("Syntax error"),
                 String::from("Unreacheable code."),
@@ -253,7 +254,7 @@ impl<'instr> Parser<'instr> {
             ));
         }
 
-        self.future_unreacheable_code = self.scope;
+        self.at_unreacheable_code = self.scope;
 
         self.throw_if_not_inside_loop()?;
 
@@ -393,7 +394,7 @@ impl<'instr> Parser<'instr> {
             ));
         }
 
-        if self.future_unreacheable_code == self.scope {
+        if self.at_unreacheable_code == self.scope {
             self.errors.push(ThrushError::Error(
                 String::from("Syntax error"),
                 String::from("Unreacheable code."),
@@ -428,7 +429,7 @@ impl<'instr> Parser<'instr> {
 
             let elif_condition: Instruction = self.expression()?;
 
-            if elif_condition.get_data_type() != DataTypes::Bool {
+            if elif_condition.get_data_type() != Type::Bool {
                 return Err(ThrushError::Error(
                     String::from("Syntax error"),
                     String::from("Condition must be type boolean."),
@@ -469,7 +470,7 @@ impl<'instr> Parser<'instr> {
         let name: &Token = self.consume(
             TokenKind::Identifier,
             String::from("Syntax error"),
-            String::from("Expected name for the struct."),
+            String::from("Expected name."),
         )?;
 
         let struct_name: &str = name.lexeme.to_str();
@@ -480,7 +481,7 @@ impl<'instr> Parser<'instr> {
             String::from("Expected '{'."),
         )?;
 
-        let mut fields_types: Vec<(&str, DataTypes, u32)> = Vec::with_capacity(10);
+        let mut fields_types: Vec<(&str, Type, u32)> = Vec::with_capacity(10);
         let mut field_position: u32 = 0;
 
         while self.peek().kind != TokenKind::RBrace {
@@ -504,7 +505,7 @@ impl<'instr> Parser<'instr> {
                     {
                         fields_types.push((
                             self.peek().lexeme.to_str(),
-                            DataTypes::Struct,
+                            Type::Struct,
                             field_position,
                         ))
                     }
@@ -533,7 +534,7 @@ impl<'instr> Parser<'instr> {
 
             return Err(ThrushError::Error(
                 String::from("Syntax error"),
-                String::from("Expected type indentifier in structure."),
+                String::from("Expected identifier structure field."),
                 self.peek().line,
                 Some(self.peek().span),
             ));
@@ -571,7 +572,7 @@ impl<'instr> Parser<'instr> {
         let line: usize = name.line;
         let span: (usize, usize) = name.span;
 
-        if self.future_unreacheable_code == self.scope {
+        if self.at_unreacheable_code == self.scope {
             self.errors.push(ThrushError::Error(
                 String::from("Syntax error"),
                 String::from("Unreacheable code."),
@@ -580,7 +581,7 @@ impl<'instr> Parser<'instr> {
             ));
         }
 
-        let struct_found: HashMap<&'instr str, DataTypes> = self
+        let struct_found: HashMap<&'instr str, Type> = self
             .parser_objects
             .get_struct(name.lexeme.to_str(), (line, span))?;
 
@@ -602,11 +603,14 @@ impl<'instr> Parser<'instr> {
                 let field_name: &str = self.previous().lexeme.to_str();
                 let span: (usize, usize) = self.previous().span;
 
-                if field_index as usize >= struct_found.len() {
+                let structure_fields_amount: usize = struct_found.len();
+
+                if field_index as usize >= structure_fields_amount {
                     return Err(ThrushError::Error(
-                        String::from("Too many fields in struct"),
-                        String::from(
-                            "There are more fields in the structure than normal, they must be the exact amount.",
+                        String::from("Too many fields in structure"),
+                        format!(
+                            "Expected '{}' fields, not '{}'.",
+                            structure_fields_amount, field_index
                         ),
                         line,
                         Some(span),
@@ -616,7 +620,7 @@ impl<'instr> Parser<'instr> {
                 if !struct_found.contains_key(field_name) {
                     return Err(ThrushError::Error(
                         String::from("Syntax error"),
-                        String::from("Write valid field name in the struct initialization."),
+                        String::from("Expected existing field name."),
                         line,
                         Some(span),
                     ));
@@ -628,8 +632,8 @@ impl<'instr> Parser<'instr> {
 
                 self.throw_if_is_struct_initializer(&instruction, line)?;
 
-                let field_type: DataTypes = instruction.get_data_type();
-                let target_type: &DataTypes = struct_found.get(field_name).unwrap();
+                let field_type: Type = instruction.get_data_type();
+                let target_type: &Type = struct_found.get(field_name).unwrap();
 
                 self.check_type_mismatch(*target_type, field_type, Some(&instruction), line);
 
@@ -649,7 +653,7 @@ impl<'instr> Parser<'instr> {
             return Err(ThrushError::Error(
                 String::from("Missing fields"),
                 format!(
-                    "Expected {} fields, but {} was gived.",
+                    "Expected '{}' fields, but '{}' was gived.",
                     fields_needed_size, fields_size
                 ),
                 line,
@@ -666,7 +670,7 @@ impl<'instr> Parser<'instr> {
         Ok(Instruction::InitStruct {
             name: struct_name,
             fields,
-            kind: DataTypes::Struct,
+            kind: Type::Struct,
         })
     }
 
@@ -844,7 +848,7 @@ impl<'instr> Parser<'instr> {
             what => {
                 return Err(ThrushError::Error(
                     String::from("Syntax error"),
-                    format!("External qualifier is not applicable for \"{}\" .", what),
+                    format!("External qualifier is not applicable for '{}' .", what),
                     self.peek().line,
                     Some(self.peek().span),
                 ));
@@ -861,7 +865,7 @@ impl<'instr> Parser<'instr> {
     fn build_for_loop(&mut self) -> Result<Instruction<'instr>, ThrushError> {
         let line: usize = self.advance()?.line;
 
-        if self.future_unreacheable_code == self.scope {
+        if self.at_unreacheable_code == self.scope {
             self.errors.push(ThrushError::Error(
                 String::from("Syntax error"),
                 String::from("Unreacheable code."),
@@ -879,7 +883,7 @@ impl<'instr> Parser<'instr> {
             String::from("Expected ';'."),
         )?;
 
-        self.check_type_mismatch(DataTypes::Bool, conditional.get_data_type(), None, line);
+        self.check_type_mismatch(Type::Bool, conditional.get_data_type(), None, line);
 
         let actions: Instruction = self.expression()?;
 
@@ -922,7 +926,7 @@ impl<'instr> Parser<'instr> {
             ));
         }
 
-        if self.future_unreacheable_code == self.scope {
+        if self.at_unreacheable_code == self.scope {
             self.errors.push(ThrushError::Error(
                 String::from("Syntax error"),
                 String::from("Unreacheable code."),
@@ -934,7 +938,7 @@ impl<'instr> Parser<'instr> {
         let name: &Token = self.consume(
             TokenKind::Identifier,
             String::from("Syntax error"),
-            String::from("Expected name for the variable."),
+            String::from("Expected name."),
         )?;
 
         let line: usize = name.line;
@@ -943,10 +947,10 @@ impl<'instr> Parser<'instr> {
         self.consume(
             TokenKind::Colon,
             String::from("Syntax error"),
-            String::from("Expected \":\"."),
+            String::from("Expected ':'."),
         )?;
 
-        let kind: (DataTypes, String) = match &self.peek().kind {
+        let kind: (Type, String) = match &self.peek().kind {
             TokenKind::DataType(kind) => (*kind, String::new()),
             ident
                 if *ident == TokenKind::Identifier
@@ -958,12 +962,12 @@ impl<'instr> Parser<'instr> {
                         )
                         .is_ok() =>
             {
-                (DataTypes::Struct, self.peek().lexeme.to_string())
+                (Type::Struct, self.peek().lexeme.to_string())
             }
             _ => {
                 return Err(ThrushError::Error(
                     String::from("Undeterminated type"),
-                    format!("Type \"{}\" not exist.", self.peek().lexeme.to_str()),
+                    format!("Type '{}' not exist.", self.peek().lexeme.to_str()),
                     line,
                     Some(self.peek().span),
                 ));
@@ -971,22 +975,9 @@ impl<'instr> Parser<'instr> {
         };
 
         self.throw_if_is_generic_type(kind.0, line, span)?;
-
         self.only_advance()?;
 
-        if self.check_type(TokenKind::SemiColon) && kind.0 == DataTypes::Void {
-            let previous: &Token = self.advance()?;
-
-            let line: usize = previous.line;
-            let span: (usize, usize) = previous.span;
-
-            self.errors.push(ThrushError::Error(
-                String::from("Expected type"),
-                String::from("Expected explicit type."),
-                line,
-                Some(span),
-            ));
-        } else if self.check_type(TokenKind::SemiColon) {
+        if self.check_type(TokenKind::SemiColon) {
             self.consume(
                 TokenKind::SemiColon,
                 String::from("Syntax error"),
@@ -1019,10 +1010,13 @@ impl<'instr> Parser<'instr> {
 
         self.at_typed_variable = kind.0;
 
+        self.inside_local = true;
+
         let value: Instruction = self.expression()?;
 
-        self.check_type_mismatch(kind.0, value.get_data_type(), Some(&value), line);
+        self.inside_local = false;
 
+        self.check_type_mismatch(kind.0, value.get_data_type(), Some(&value), line);
         self.check_struct_type_mismatch(&kind.1, &value, line)?;
 
         self.parser_objects.insert_new_local(
@@ -1060,7 +1054,7 @@ impl<'instr> Parser<'instr> {
             TokenKind::Struct => Ok(self.build_struct()?),
             what => Err(ThrushError::Error(
                 String::from("Syntax error"),
-                format!("Public qualifier is not applicable for \"{}\".", what),
+                format!("Public qualifier is not applicable for '{}'.", what),
                 self.peek().line,
                 Some(self.peek().span),
             )),
@@ -1073,15 +1067,13 @@ impl<'instr> Parser<'instr> {
         if !self.inside_function {
             self.errors.push(ThrushError::Error(
                 String::from("Syntax error"),
-                String::from(
-                    "Return statement outside of function body. Invoke this, in function body.",
-                ),
+                String::from("Return statement outside of function body."),
                 line,
                 Some(self.previous().span),
             ));
         }
 
-        if self.future_unreacheable_code == self.scope {
+        if self.at_unreacheable_code == self.scope {
             self.errors.push(ThrushError::Error(
                 String::from("Syntax error"),
                 String::from("Unreacheable code."),
@@ -1097,12 +1089,9 @@ impl<'instr> Parser<'instr> {
                 String::from("Expected ';'."),
             )?;
 
-            self.check_type_mismatch(DataTypes::Void, self.at_typed_function.0, None, line);
+            self.check_type_mismatch(Type::Void, self.at_typed_function.0, None, line);
 
-            return Ok(Instruction::Return(
-                Box::new(Instruction::Null),
-                DataTypes::Void,
-            ));
+            return Ok(Instruction::Return(Box::new(Instruction::Null), Type::Void));
         }
 
         let value: Instruction = self.expression()?;
@@ -1223,7 +1212,7 @@ impl<'instr> Parser<'instr> {
         )?;
 
         let mut params: Vec<Instruction<'instr>> = Vec::with_capacity(10);
-        let mut params_types: Vec<DataTypes> = Vec::with_capacity(10);
+        let mut params_types: Vec<Type> = Vec::with_capacity(10);
         let mut struct_types_params: Vec<(String, usize)> = Vec::with_capacity(10);
 
         let mut parameter_position: u32 = 0;
@@ -1247,7 +1236,7 @@ impl<'instr> Parser<'instr> {
             if !self.match_token(TokenKind::Identifier)? {
                 self.errors.push(ThrushError::Error(
                     String::from("Syntax error"),
-                    String::from("Expected argument name."),
+                    String::from("Expected parameter name."),
                     self.peek().line,
                     Some(self.peek().span),
                 ));
@@ -1264,7 +1253,7 @@ impl<'instr> Parser<'instr> {
                 ));
             }
 
-            let kind: (DataTypes, String) = match self.peek().kind {
+            let kind: (Type, String) = match self.peek().kind {
                 TokenKind::DataType(kind) => (kind, String::new()),
                 ident
                     if ident == TokenKind::Identifier
@@ -1279,12 +1268,12 @@ impl<'instr> Parser<'instr> {
                     struct_types_params
                         .push((self.peek().lexeme.to_string(), parameter_position as usize));
 
-                    (DataTypes::Struct, self.peek().lexeme.to_string())
+                    (Type::Struct, self.peek().lexeme.to_string())
                 }
                 what => {
                     return Err(ThrushError::Error(
                         String::from("Undeterminated type"),
-                        format!("Type \"{}\" not exist.", what),
+                        format!("Type '{}' not exist.", what),
                         self.peek().line,
                         Some(self.peek().span),
                     ));
@@ -1322,7 +1311,7 @@ impl<'instr> Parser<'instr> {
             String::from("Expected ':'."),
         )?;
 
-        let return_type: (DataTypes, String) = match &self.peek().kind {
+        let return_type: (Type, String) = match &self.peek().kind {
             TokenKind::DataType(kind) => (*kind, String::new()),
             ident
                 if *ident == TokenKind::Identifier
@@ -1334,12 +1323,12 @@ impl<'instr> Parser<'instr> {
                         )
                         .is_ok() =>
             {
-                (DataTypes::Struct, self.peek().lexeme.to_string())
+                (Type::Struct, self.peek().lexeme.to_string())
             }
             what => {
                 return Err(ThrushError::Error(
                     String::from("Undeterminated type"),
-                    format!("Type \"{}\" not exist.", what),
+                    format!("Type '{}' not exist.", what),
                     self.peek().line,
                     Some(self.peek().span),
                 ));
@@ -1467,7 +1456,7 @@ impl<'instr> Parser<'instr> {
                 left: Box::new(instr),
                 op,
                 right: Box::new(right),
-                kind: DataTypes::Bool,
+                kind: Type::Bool,
             }
         }
 
@@ -1507,7 +1496,7 @@ impl<'instr> Parser<'instr> {
                 left: Box::new(instr),
                 op,
                 right: Box::new(right),
-                kind: DataTypes::Bool,
+                kind: Type::Bool,
             }
         }
 
@@ -1521,8 +1510,8 @@ impl<'instr> Parser<'instr> {
             let op: &TokenKind = &self.previous().kind;
             let right: Instruction = self.comparison()?;
 
-            let left_type: DataTypes = instr.get_data_type_recursive();
-            let right_type: DataTypes = right.get_data_type_recursive();
+            let left_type: Type = instr.get_data_type_recursive();
+            let right_type: Type = right.get_data_type_recursive();
 
             type_checking::check_binary_instr(
                 op,
@@ -1552,7 +1541,7 @@ impl<'instr> Parser<'instr> {
                 left: Box::from(instr),
                 op,
                 right: Box::from(right),
-                kind: DataTypes::Bool,
+                kind: Type::Bool,
             }
         }
 
@@ -1570,8 +1559,8 @@ impl<'instr> Parser<'instr> {
             let op: &TokenKind = &self.previous().kind;
             let right: Instruction = self.term()?;
 
-            let left_type: DataTypes = instr.get_data_type_recursive();
-            let right_type: DataTypes = right.get_data_type_recursive();
+            let left_type: Type = instr.get_data_type_recursive();
+            let right_type: Type = right.get_data_type_recursive();
 
             type_checking::check_binary_instr(
                 op,
@@ -1601,7 +1590,7 @@ impl<'instr> Parser<'instr> {
                 left: Box::from(instr),
                 op,
                 right: Box::from(right),
-                kind: DataTypes::Bool,
+                kind: Type::Bool,
             };
         }
 
@@ -1611,12 +1600,16 @@ impl<'instr> Parser<'instr> {
     fn term(&mut self) -> Result<Instruction<'instr>, ThrushError> {
         let mut instr: Instruction = self.factor()?;
 
-        while self.match_token(TokenKind::Plus)? || self.match_token(TokenKind::Minus)? {
+        while self.match_token(TokenKind::Plus)?
+            || self.match_token(TokenKind::Minus)?
+            || self.match_token(TokenKind::LShift)?
+            || self.match_token(TokenKind::RShift)?
+        {
             let op: &Token = self.previous();
             let right: Instruction = self.factor()?;
 
-            let left_type: DataTypes = instr.get_data_type_recursive();
-            let right_type: DataTypes = right.get_data_type_recursive();
+            let left_type: Type = instr.get_data_type_recursive();
+            let right_type: Type = right.get_data_type_recursive();
 
             type_checking::check_binary_instr(
                 &op.kind,
@@ -1639,7 +1632,8 @@ impl<'instr> Parser<'instr> {
                 self.previous().line,
                 self.previous().span,
             )?;
-            let kind: DataTypes = if left_type.is_integer_type() && right_type.is_integer_type() {
+
+            let kind: Type = if left_type.is_integer_type() && right_type.is_integer_type() {
                 left_type.calculate_integer_datatype(right_type)
             } else if left_type.is_float_type() && right_type.is_float_type() {
                 left_type.calculate_float_datatype(right_type)
@@ -1665,8 +1659,8 @@ impl<'instr> Parser<'instr> {
             let op: &TokenKind = &self.previous().kind;
             let right: Instruction = self.unary()?;
 
-            let left_type: DataTypes = instr.get_data_type_recursive();
-            let right_type: DataTypes = right.get_data_type_recursive();
+            let left_type: Type = instr.get_data_type_recursive();
+            let right_type: Type = right.get_data_type_recursive();
 
             type_checking::check_binary_instr(
                 op,
@@ -1690,7 +1684,7 @@ impl<'instr> Parser<'instr> {
                 self.previous().span,
             )?;
 
-            let kind: DataTypes = if left_type.is_integer_type() && right_type.is_integer_type() {
+            let kind: Type = if left_type.is_integer_type() && right_type.is_integer_type() {
                 left_type.calculate_integer_datatype(right_type)
             } else if left_type.is_float_type() && right_type.is_float_type() {
                 left_type.calculate_float_datatype(right_type)
@@ -1730,7 +1724,7 @@ impl<'instr> Parser<'instr> {
             return Ok(Instruction::UnaryOp {
                 op,
                 value: Box::from(value),
-                kind: DataTypes::Bool,
+                kind: Type::Bool,
                 is_pre: false,
             });
         } else if self.match_token(TokenKind::Minus)? {
@@ -1751,7 +1745,7 @@ impl<'instr> Parser<'instr> {
                 }
             }
 
-            let value_type: DataTypes = value.get_data_type();
+            let value_type: Type = value.get_data_type();
 
             type_checking::check_unary_instr(
                 op,
@@ -1799,7 +1793,7 @@ impl<'instr> Parser<'instr> {
                 let expr: Instruction = Instruction::UnaryOp {
                     op,
                     value: Box::from(value),
-                    kind: DataTypes::I64,
+                    kind: Type::I64,
                     is_pre: true,
                 };
 
@@ -1829,7 +1823,7 @@ impl<'instr> Parser<'instr> {
                 let expr: Instruction = Instruction::UnaryOp {
                     op,
                     value: Box::from(value),
-                    kind: DataTypes::I64,
+                    kind: Type::I64,
                     is_pre: true,
                 };
 
@@ -1849,17 +1843,14 @@ impl<'instr> Parser<'instr> {
                 let span: (usize, usize) = datatype.span;
 
                 match dt {
-                    dt if dt.is_integer_type() => Instruction::DataTypes(*dt),
-                    dt if dt.is_float_type() => Instruction::DataTypes(*dt),
-                    dt if dt.is_bool_type() => Instruction::DataTypes(*dt),
-                    dt if dt == &DataTypes::Ptr => Instruction::DataTypes(*dt),
+                    dt if dt.is_integer_type() => Instruction::Type(*dt),
+                    dt if dt.is_float_type() => Instruction::Type(*dt),
+                    dt if dt.is_bool_type() => Instruction::Type(*dt),
+                    dt if dt == &Type::Ptr => Instruction::Type(*dt),
                     what_heck_dt => {
                         return Err(ThrushError::Error(
                             String::from("Syntax error"),
-                            format!(
-                                "The type \"{}\" is not a machine-native type.",
-                                what_heck_dt
-                            ),
+                            format!("The type '{}' is not a native-machine type.", what_heck_dt),
                             line,
                             Some(span),
                         ));
@@ -1870,13 +1861,13 @@ impl<'instr> Parser<'instr> {
                 let lparen: &Token = self.advance()?;
 
                 let instr: Instruction = self.expression()?;
-                let kind: DataTypes = instr.get_data_type();
+                let kind: Type = instr.get_data_type();
 
                 if !instr.is_binary() && !instr.is_group() {
                     return Err(ThrushError::Error(
                         String::from("Syntax error"),
                         String::from(
-                            "Group the expressions \"(...)\" is only allowed if contain binary expressions or other group expressions.",
+                            "Group the expressions '(...)' is only allowed if contain binary expressions or other group expressions.",
                         ),
                         lparen.line,
                         Some((lparen.span.0, self.peek().span.1)),
@@ -1923,7 +1914,7 @@ impl<'instr> Parser<'instr> {
                     let object_span: (usize, usize) = object_token.span;
                     let object_line: usize = object_token.line;
 
-                    if self.future_unreacheable_code == self.scope {
+                    if self.at_unreacheable_code == self.scope {
                         self.errors.push(ThrushError::Error(
                             String::from("Syntax error"),
                             String::from("Unreacheable code."),
@@ -1939,7 +1930,7 @@ impl<'instr> Parser<'instr> {
 
                         let local: &Local = object.expected_local(object_line, object_span)?;
 
-                        let local_type: DataTypes = local.0;
+                        let local_type: Type = local.0;
 
                         let expr: Instruction = self.expression()?;
 
@@ -1979,13 +1970,13 @@ impl<'instr> Parser<'instr> {
 
                         let local: &Local = object.expected_local(object_line, object_span)?;
 
-                        let local_type: DataTypes = local.0;
+                        let local_type: Type = local.0;
 
                         if local.3 {
                             return Err(ThrushError::Error(
                                 String::from("Syntax error"),
                                 format!(
-                                    "Variable `{}` is not defined for are use it. Define the variable with value before of the use.",
+                                    "Local reference '{}' is not defined for are use it.",
                                     object_name,
                                 ),
                                 object_line,
@@ -2014,7 +2005,7 @@ impl<'instr> Parser<'instr> {
                             let expr: Instruction = Instruction::UnaryOp {
                                 op,
                                 value: Box::from(refvar),
-                                kind: DataTypes::I64,
+                                kind: Type::I64,
                                 is_pre: false,
                             };
 
@@ -2068,6 +2059,8 @@ impl<'instr> Parser<'instr> {
         let object: FoundObject = self.parser_objects.get_object(name, location)?;
         let function: Function = object.expected_function(location.0, location.1)?.clone();
 
+        let maximun_function_arguments: usize = function.1.len();
+
         while self.peek().kind != TokenKind::RParen {
             if self.match_token(TokenKind::Comma)? {
                 continue;
@@ -2080,26 +2073,40 @@ impl<'instr> Parser<'instr> {
             arguments_provided.push(instruction);
         }
 
+        let amount_arguments_provided: usize = arguments_provided.len();
+
         self.consume(
             TokenKind::RParen,
             String::from("Syntax error"),
             String::from("Expected ')'."),
         )?;
 
-        if arguments_provided.len() > function.1.len() && !function.4 {
+        if !self.inside_local {
+            self.consume(
+                TokenKind::SemiColon,
+                String::from("Syntax error"),
+                String::from("Expected ';'."),
+            )?;
+        }
+
+        if arguments_provided.len() > maximun_function_arguments && !function.4 {
             return Err(ThrushError::Error(
                 String::from("Syntax error"),
-                String::from("Function called with more arguments than expected."),
+                format!(
+                    "Expected '{}' arguments, not '{}'.",
+                    maximun_function_arguments,
+                    arguments_provided.len()
+                ),
                 location.0,
-                None,
+                Some(location.1),
             ));
         }
 
-        if function.1.len() != arguments_provided.len() && !function.4 {
-            let represented_args_types: String = if !arguments_provided.is_empty() {
+        if amount_arguments_provided != function.1.len() && !function.4 {
+            let display_args_types: String = if !arguments_provided.is_empty() {
                 arguments_provided
                     .iter()
-                    .map(|param| param.get_data_type().to_string())
+                    .map(|parameter| parameter.get_data_type().to_string())
                     .collect::<Vec<_>>()
                     .join(", ")
             } else {
@@ -2116,25 +2123,25 @@ impl<'instr> Parser<'instr> {
                         .map(|param| param.to_string())
                         .collect::<Vec<_>>()
                         .join(", "),
-                    represented_args_types,
+                    display_args_types,
                 ),
                 location.0,
-                None,
+                Some(location.1),
             ));
         }
 
         if !function.4 {
-            for (index, argument) in arguments_provided.iter().enumerate() {
-                let argument_type: DataTypes = argument.get_data_type();
-                let target: DataTypes = function.1[index];
+            for (position, argument) in arguments_provided.iter().enumerate() {
+                let argument_type: Type = argument.get_data_type();
+                let target_type: Type = function.1[position];
 
-                self.check_type_mismatch(target, argument_type, Some(argument), location.0);
+                self.check_type_mismatch(target_type, argument_type, Some(argument), location.0);
 
-                if target.is_struct_type() {
-                    let original_struct_type: &(String, usize) =
-                        function.2.iter().find(|obj| obj.1 == index).unwrap();
+                if target_type.is_struct_type() {
+                    let struct_type: &(String, usize) =
+                        function.2.iter().find(|obj| obj.1 == position).unwrap();
 
-                    self.check_struct_type_mismatch(&original_struct_type.0, argument, location.0)?;
+                    self.check_struct_type_mismatch(&struct_type.0, argument, location.0)?;
                 }
             }
         }
@@ -2156,7 +2163,7 @@ impl<'instr> Parser<'instr> {
     ########################################################################*/
 
     fn predefine(&mut self) {
-        let mut declarations: Vec<(usize, TokenKind)> = Vec::new();
+        let mut declarations: Vec<(usize, TokenKind)> = Vec::with_capacity(50);
 
         for (pos, token) in self.tokens.iter().enumerate() {
             match token.kind {
@@ -2168,7 +2175,7 @@ impl<'instr> Parser<'instr> {
 
         declarations
             .iter()
-            .filter(|(_, kind)| kind == &TokenKind::Struct)
+            .filter(|(_, kind)| kind.is_struct_keyword())
             .for_each(|(pos, _)| {
                 let _ = self.predefine_struct(*pos);
                 self.current = 0;
@@ -2176,7 +2183,7 @@ impl<'instr> Parser<'instr> {
 
         declarations
             .iter()
-            .filter(|(_, kind)| *kind == TokenKind::Fn)
+            .filter(|(_, kind)| kind.is_function_keyword())
             .for_each(|(pos, _)| {
                 let _ = self.declare_function(*pos);
                 self.current = 0;
@@ -2230,7 +2237,7 @@ impl<'instr> Parser<'instr> {
             String::from("Expected '{'."),
         )?;
 
-        let mut fields_types: HashMap<&'instr str, DataTypes> = HashMap::new();
+        let mut fields_types: HashMap<&'instr str, Type> = HashMap::new();
 
         while self.peek().kind != TokenKind::RBrace {
             if self.match_token(TokenKind::Comma)? {
@@ -2243,7 +2250,7 @@ impl<'instr> Parser<'instr> {
                 let field_name: &str = identifier.lexeme.to_str();
                 let line: usize = identifier.line;
 
-                let field_type: DataTypes = match &self.peek().kind {
+                let field_type: Type = match &self.peek().kind {
                     TokenKind::DataType(kind) => {
                         self.only_advance()?;
                         *kind
@@ -2260,7 +2267,7 @@ impl<'instr> Parser<'instr> {
                             || name.lexeme == self.peek().lexeme =>
                     {
                         self.only_advance()?;
-                        DataTypes::Struct
+                        Type::Struct
                     }
                     _ => {
                         return Err(ThrushError::Error(
@@ -2335,7 +2342,7 @@ impl<'instr> Parser<'instr> {
             return Err(ThrushError::Error(
                 String::from("Syntax error"),
                 String::from(
-                    "Increment/decrement operators (--X || X++) can only be used outside of expressions.",
+                    "Increment/decrement operators (--x || x++) can only be used outside of expressions.",
                 ),
                 line,
                 Some(span),
@@ -2377,15 +2384,15 @@ impl<'instr> Parser<'instr> {
 
     fn throw_if_is_generic_type(
         &self,
-        kind: DataTypes,
+        kind: Type,
         line: usize,
         span: (usize, usize),
     ) -> Result<(), ThrushError> {
-        if matches!(kind, DataTypes::Generic) {
+        if matches!(kind, Type::Generic) {
             return Err(ThrushError::Error(
                 String::from("Syntax error"),
                 String::from(
-                    "A generic type `T` only is allowed in functions parameters/structures fields types.",
+                    "A generic type 'T' only is allowed in functions parameters or structures fields types.",
                 ),
                 line,
                 Some(span),
@@ -2405,7 +2412,7 @@ impl<'instr> Parser<'instr> {
             return Err(ThrushError::Error(
                 String::from("Syntax error"),
                 String::from(
-                    "Functions calls is only allowed inside of local variables or not associated expressions.",
+                    "Function calls are only allowed on local variables and in unassociated expressions.",
                 ),
                 line,
                 Some(span),
@@ -2422,7 +2429,7 @@ impl<'instr> Parser<'instr> {
         line: usize,
     ) -> Result<(), ThrushError> {
         if self.at_structure_type() {
-            let mut structure_type: &str = "unreacheable";
+            let mut structure_type: &str = "unreacheable type";
 
             if let Instruction::InitStruct {
                 name: struct_name, ..
@@ -2457,8 +2464,8 @@ impl<'instr> Parser<'instr> {
 
     fn check_type_mismatch(
         &mut self,
-        target: DataTypes,
-        from: DataTypes,
+        target: Type,
+        from: Type,
         value: Option<&Instruction>,
         line: usize,
     ) {
@@ -2471,10 +2478,7 @@ impl<'instr> Parser<'instr> {
                     None,
                     ThrushError::Error(
                         String::from("Mismatched types"),
-                        format!(
-                            "Mismatched type. Expected '{}' but found '{}'.",
-                            target, from
-                        ),
+                        format!("Expected '{}' but found '{}'.", target, from),
                         line,
                         None,
                     ),
@@ -2489,10 +2493,7 @@ impl<'instr> Parser<'instr> {
             None,
             ThrushError::Error(
                 String::from("Mismatched types"),
-                format!(
-                    "Mismatched type. Expected '{}' but found '{}'.",
-                    target, from
-                ),
+                format!("Expected '{}' but found '{}'.", target, from),
                 line,
                 None,
             ),
@@ -2556,13 +2557,13 @@ impl<'instr> Parser<'instr> {
         ))
     }
 
+    #[inline]
     fn sync(&mut self) {
         while !self.end() {
             match self.peek().kind {
                 TokenKind::Local | TokenKind::Fn => return,
                 _ => {}
             }
-
             self.current += 1;
         }
     }

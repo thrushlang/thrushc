@@ -1,7 +1,7 @@
 use {
     super::{
         super::{
-            super::frontend::lexer::{DataTypes, TokenKind},
+            super::frontend::lexer::{TokenKind, Type},
             instruction::Instruction,
         },
         binaryop, call, generation, local,
@@ -501,7 +501,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                     ));
                 }
 
-                if *kind == DataTypes::Bool {
+                if kind.is_bool_type() {
                     return Instruction::BasicValueEnum(binaryop::bool_binaryop(
                         self.builder,
                         self.context,
@@ -588,7 +588,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
         main
     }
 
-    fn build_function_parameter(&mut self, name: &'ctx str, kind: DataTypes, position: u32) {
+    fn build_function_parameter(&mut self, name: &'ctx str, kind: Type, position: u32) {
         let allocated_ptr: PointerValue<'ctx> = if !kind.is_ptr_type() {
             utils::build_ptr(self.context, self.builder, kind)
         } else {
@@ -613,8 +613,8 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
         self.compiler_objects.insert(name, allocated_ptr);
     }
 
-    fn build_return(&mut self, instr: &'ctx Instruction, kind: &DataTypes) {
-        if *kind == DataTypes::Void {
+    fn build_return(&mut self, instr: &'ctx Instruction, kind: &Type) {
+        if *kind == Type::Void {
             self.builder.build_return(None).unwrap();
             return;
         }
@@ -661,7 +661,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
         if let Instruction::LocalRef { name, .. } = instr {
             let variable: PointerValue<'ctx> = self.compiler_objects.get_local(name).unwrap();
 
-            if kind.is_integer_type() || *kind == DataTypes::Bool {
+            if kind.is_integer_type() || *kind == Type::Bool {
                 let num: IntValue = self
                     .builder
                     .build_load(
@@ -756,7 +756,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
 
     fn build_function(&mut self, function: Function<'ctx>, only_define: bool) {
         let function_name: &str = function.0;
-        let function_return_type: &DataTypes = function.3;
+        let function_return_type: &Type = function.3;
         let function_params: &[Instruction] = function.1;
         let function_is_public: &bool = function.4;
         let function_body: Option<&Box<Instruction>> = function.2;

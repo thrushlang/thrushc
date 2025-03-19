@@ -1,6 +1,6 @@
 use {
     super::{
-        super::{super::frontend::lexer::DataTypes, instruction::Instruction},
+        super::{super::frontend::lexer::Type, instruction::Instruction},
         objects::CompilerObjects,
         types::Struct,
     },
@@ -18,28 +18,22 @@ use {
 };
 
 #[inline]
-pub fn datatype_integer_to_llvm_type<'ctx>(
-    context: &'ctx Context,
-    kind: &DataTypes,
-) -> IntType<'ctx> {
+pub fn datatype_integer_to_llvm_type<'ctx>(context: &'ctx Context, kind: &Type) -> IntType<'ctx> {
     match kind {
-        DataTypes::I8 | DataTypes::Char => context.i8_type(),
-        DataTypes::I16 => context.i16_type(),
-        DataTypes::I32 => context.i32_type(),
-        DataTypes::I64 => context.i64_type(),
-        DataTypes::Bool => context.bool_type(),
+        Type::I8 | Type::Char => context.i8_type(),
+        Type::I16 => context.i16_type(),
+        Type::I32 => context.i32_type(),
+        Type::I64 => context.i64_type(),
+        Type::Bool => context.bool_type(),
         _ => unreachable!(),
     }
 }
 
 #[inline]
-pub fn datatype_float_to_llvm_type<'ctx>(
-    context: &'ctx Context,
-    kind: &DataTypes,
-) -> FloatType<'ctx> {
+pub fn datatype_float_to_llvm_type<'ctx>(context: &'ctx Context, kind: &Type) -> FloatType<'ctx> {
     match kind {
-        DataTypes::F32 => context.f32_type(),
-        DataTypes::F64 | DataTypes::Bool => context.f64_type(),
+        Type::F32 => context.f32_type(),
+        Type::F64 | Type::Bool => context.f64_type(),
         _ => unreachable!(),
     }
 }
@@ -60,47 +54,47 @@ pub fn build_alloca_float<'ctx>(
 pub fn build_const_float<'ctx>(
     builder: &Builder<'ctx>,
     context: &'ctx Context,
-    kind: &'ctx DataTypes,
+    kind: &'ctx Type,
     num: f64,
     is_signed: bool,
 ) -> FloatValue<'ctx> {
     match kind {
-        DataTypes::F32 if is_signed => builder
+        Type::F32 if is_signed => builder
             .build_float_neg(context.f32_type().const_float(num), "")
             .unwrap(),
-        DataTypes::F32 => context.f32_type().const_float(num),
-        DataTypes::F64 if is_signed => builder
+        Type::F32 => context.f32_type().const_float(num),
+        Type::F64 if is_signed => builder
             .build_float_neg(context.f64_type().const_float(num), "")
             .unwrap(),
-        DataTypes::F64 => context.f64_type().const_float(num),
+        Type::F64 => context.f64_type().const_float(num),
         _ => unreachable!(),
     }
 }
 
 pub fn build_const_integer<'ctx>(
     context: &'ctx Context,
-    kind: &'ctx DataTypes,
+    kind: &'ctx Type,
     num: u64,
     is_signed: bool,
 ) -> IntValue<'ctx> {
     match kind {
-        DataTypes::Char => context.i8_type().const_int(num, is_signed).const_neg(),
-        DataTypes::I8 if is_signed => context.i8_type().const_int(num, is_signed).const_neg(),
-        DataTypes::I8 => context.i8_type().const_int(num, is_signed),
-        DataTypes::I16 if is_signed => context.i16_type().const_int(num, is_signed).const_neg(),
-        DataTypes::I16 => context.i16_type().const_int(num, is_signed),
-        DataTypes::I32 if is_signed => context.i32_type().const_int(num, is_signed).const_neg(),
-        DataTypes::I32 => context.i32_type().const_int(num, is_signed),
-        DataTypes::I64 if is_signed => context.i64_type().const_int(num, is_signed).const_neg(),
-        DataTypes::I64 => context.i64_type().const_int(num, is_signed),
-        DataTypes::Bool => context.bool_type().const_int(num, false),
+        Type::Char => context.i8_type().const_int(num, is_signed).const_neg(),
+        Type::I8 if is_signed => context.i8_type().const_int(num, is_signed).const_neg(),
+        Type::I8 => context.i8_type().const_int(num, is_signed),
+        Type::I16 if is_signed => context.i16_type().const_int(num, is_signed).const_neg(),
+        Type::I16 => context.i16_type().const_int(num, is_signed),
+        Type::I32 if is_signed => context.i32_type().const_int(num, is_signed).const_neg(),
+        Type::I32 => context.i32_type().const_int(num, is_signed),
+        Type::I64 if is_signed => context.i64_type().const_int(num, is_signed).const_neg(),
+        Type::I64 => context.i64_type().const_int(num, is_signed),
+        Type::Bool => context.bool_type().const_int(num, false),
         _ => unreachable!(),
     }
 }
 
 pub fn datatype_to_fn_type<'ctx>(
     context: &'ctx Context,
-    kind: &DataTypes,
+    kind: &Type,
     params: &[Instruction],
 ) -> FunctionType<'ctx> {
     let mut param_types: Vec<BasicMetadataTypeEnum<'ctx>> = Vec::with_capacity(params.len());
@@ -112,34 +106,32 @@ pub fn datatype_to_fn_type<'ctx>(
     });
 
     match kind {
-        DataTypes::I8 | DataTypes::Char => context.i8_type().fn_type(&param_types, true),
-        DataTypes::I16 => context.i16_type().fn_type(&param_types, true),
-        DataTypes::I32 => context.i32_type().fn_type(&param_types, true),
-        DataTypes::I64 => context.i64_type().fn_type(&param_types, true),
-        DataTypes::Str | DataTypes::Struct | DataTypes::Ptr | DataTypes::Generic => context
+        Type::I8 | Type::Char => context.i8_type().fn_type(&param_types, true),
+        Type::I16 => context.i16_type().fn_type(&param_types, true),
+        Type::I32 => context.i32_type().fn_type(&param_types, true),
+        Type::I64 => context.i64_type().fn_type(&param_types, true),
+        Type::Str | Type::Struct | Type::Ptr | Type::Generic => context
             .ptr_type(AddressSpace::default())
             .fn_type(&param_types, true),
-        DataTypes::Bool => context.bool_type().fn_type(&param_types, true),
-        DataTypes::F32 => context.f32_type().fn_type(&param_types, true),
-        DataTypes::F64 => context.f64_type().fn_type(&param_types, true),
-        DataTypes::Void => context.void_type().fn_type(&param_types, true),
+        Type::Bool => context.bool_type().fn_type(&param_types, true),
+        Type::F32 => context.f32_type().fn_type(&param_types, true),
+        Type::F64 => context.f64_type().fn_type(&param_types, true),
+        Type::Void => context.void_type().fn_type(&param_types, true),
     }
 }
 
 pub fn datatype_to_basicmetadata_type_enum<'ctx>(
     context: &'ctx Context,
-    kind: &DataTypes,
+    kind: &Type,
 ) -> BasicMetadataTypeEnum<'ctx> {
     match kind {
-        DataTypes::I8 => context.i8_type().into(),
-        DataTypes::I16 => context.i16_type().into(),
-        DataTypes::I32 => context.i32_type().into(),
-        DataTypes::I64 => context.i64_type().into(),
-        DataTypes::F32 => context.f32_type().into(),
-        DataTypes::F64 => context.f64_type().into(),
-        DataTypes::Str | DataTypes::Struct | DataTypes::Ptr => {
-            context.ptr_type(AddressSpace::default()).into()
-        }
+        Type::I8 => context.i8_type().into(),
+        Type::I16 => context.i16_type().into(),
+        Type::I32 => context.i32_type().into(),
+        Type::I64 => context.i64_type().into(),
+        Type::F32 => context.f32_type().into(),
+        Type::F64 => context.f64_type().into(),
+        Type::Str | Type::Struct | Type::Ptr => context.ptr_type(AddressSpace::default()).into(),
 
         _ => unreachable!(),
     }
@@ -147,14 +139,14 @@ pub fn datatype_to_basicmetadata_type_enum<'ctx>(
 
 #[inline]
 pub fn float_autocast<'ctx>(
-    kind: &DataTypes,
-    target: &DataTypes,
+    kind: &Type,
+    target: &Type,
     ptr: Option<PointerValue<'ctx>>,
     from: BasicValueEnum<'ctx>,
     builder: &Builder<'ctx>,
     context: &'ctx Context,
 ) -> Option<BasicValueEnum<'ctx>> {
-    if *target == DataTypes::Bool && kind.is_float_type() {
+    if *target == Type::Bool && kind.is_float_type() {
         return None;
     }
 
@@ -201,14 +193,14 @@ pub fn float_autocast<'ctx>(
 
 #[inline]
 pub fn integer_autocast<'ctx>(
-    kind: &DataTypes,
-    target: &DataTypes,
+    kind: &Type,
+    target: &Type,
     ptr: Option<PointerValue<'ctx>>,
     from: BasicValueEnum<'ctx>,
     builder: &Builder<'ctx>,
     context: &'ctx Context,
 ) -> Option<BasicValueEnum<'ctx>> {
-    if *target == DataTypes::Bool && kind.is_integer_type() {
+    if *target == Type::Bool && kind.is_integer_type() {
         return None;
     }
 
@@ -285,14 +277,14 @@ pub fn build_string_constant<'ctx>(
 pub fn build_ptr<'ctx>(
     context: &'ctx Context,
     builder: &Builder<'ctx>,
-    kind: DataTypes,
+    kind: Type,
 ) -> PointerValue<'ctx> {
     match kind {
         kind if kind.is_integer_type() => {
             build_alloca_int(builder, datatype_integer_to_llvm_type(context, &kind))
         }
-        DataTypes::Bool => build_alloca_int(builder, context.bool_type()),
-        DataTypes::F64 | DataTypes::F32 => {
+        Type::Bool => build_alloca_int(builder, context.bool_type()),
+        Type::F64 | Type::F32 => {
             build_alloca_float(builder, datatype_float_to_llvm_type(context, &kind))
         }
         _ => unreachable!(),

@@ -1,6 +1,6 @@
 use {
     super::{
-        super::super::frontend::lexer::DataTypes, Instruction, binaryop, call, generation,
+        super::super::frontend::lexer::Type, Instruction, binaryop, call, generation,
         objects::CompilerObjects, types::Variable, unaryop, utils,
     },
     inkwell::{
@@ -19,9 +19,9 @@ pub fn build<'ctx>(
     variable: Variable<'ctx>,
     compiler_objects: &mut CompilerObjects<'ctx>,
 ) -> BasicValueEnum<'ctx> {
-    let local_type: &DataTypes = variable.1;
+    let local_type: &Type = variable.1;
 
-    if *local_type == DataTypes::Ptr {
+    if *local_type == Type::Ptr {
         return build_local_ptr(
             module,
             builder,
@@ -31,7 +31,7 @@ pub fn build<'ctx>(
         );
     }
 
-    if *local_type == DataTypes::Str {
+    if *local_type == Type::Str {
         return build_local_static_str(
             module,
             builder,
@@ -67,13 +67,13 @@ pub fn build<'ctx>(
         );
     }
 
-    if *local_type == DataTypes::Bool {
+    if *local_type == Type::Bool {
         let ptr: PointerValue = utils::build_ptr(context, builder, *local_type);
 
         return build_local_boolean(builder, context, variable, ptr, compiler_objects);
     }
 
-    if *local_type == DataTypes::Struct {
+    if *local_type == Type::Struct {
         let ptr: PointerValue =
             utils::build_struct_ptr(context, builder, variable.2, compiler_objects);
 
@@ -98,7 +98,7 @@ pub fn build_local_mut<'ctx>(
     variable: Variable<'ctx>,
 ) {
     let local_name: &str = variable.0;
-    let local_type: &DataTypes = variable.1;
+    let local_type: &Type = variable.1;
 
     let variable_ptr: PointerValue<'ctx> = compiler_objects.get_local(local_name).unwrap();
 
@@ -117,7 +117,7 @@ pub fn build_local_mut<'ctx>(
         build_local_float(builder, context, variable, variable_ptr, compiler_objects);
     }
 
-    if *local_type == DataTypes::Str {
+    if *local_type == Type::Str {
         todo!()
     }
 }
@@ -344,7 +344,7 @@ fn build_local_integer<'ctx>(
     compiler_objects: &mut CompilerObjects<'ctx>,
 ) -> BasicValueEnum<'ctx> {
     let local_name: &str = variable.0;
-    let local_type: &DataTypes = variable.1;
+    let local_type: &Type = variable.1;
     let local_value: &Instruction = variable.2;
 
     if let Instruction::Null = local_value {
@@ -497,7 +497,7 @@ fn build_local_float<'ctx>(
     compiler_objects: &mut CompilerObjects<'ctx>,
 ) -> BasicValueEnum<'ctx> {
     let local_name: &str = variable.0;
-    let local_type: &DataTypes = variable.1;
+    let local_type: &Type = variable.1;
     let local_value: &Instruction = variable.2;
 
     if let Instruction::Null = local_value {
@@ -600,7 +600,7 @@ fn build_local_boolean<'ctx>(
     compiler_objects: &mut CompilerObjects<'ctx>,
 ) -> BasicValueEnum<'ctx> {
     let local_name: &str = variable.0;
-    let local_type: &DataTypes = variable.1;
+    let local_type: &Type = variable.1;
     let local_value: &Instruction<'ctx> = variable.2;
 
     if let Instruction::Null = local_value {

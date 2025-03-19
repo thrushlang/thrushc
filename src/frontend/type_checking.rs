@@ -1,21 +1,21 @@
 use super::super::{
     backend::instruction::Instruction,
     error::ThrushError,
-    frontend::lexer::{DataTypes, TokenKind},
+    frontend::lexer::{TokenKind, Type},
 };
 
 #[inline(always)]
 fn check_binary_instr_add(
-    a: &DataTypes,
-    b: &DataTypes,
+    a: &Type,
+    b: &Type,
     location: (usize, (usize, usize)),
 ) -> Result<(), ThrushError> {
     match (a, b) {
         (
-            DataTypes::I8 | DataTypes::I16 | DataTypes::I32 | DataTypes::I64,
-            DataTypes::I8 | DataTypes::I16 | DataTypes::I32 | DataTypes::I64,
+            Type::I8 | Type::I16 | Type::I32 | Type::I64,
+            Type::I8 | Type::I16 | Type::I32 | Type::I64,
         ) => Ok(()),
-        (DataTypes::F32 | DataTypes::F64, DataTypes::F32 | DataTypes::F64) => Ok(()),
+        (Type::F32 | Type::F64, Type::F32 | Type::F64) => Ok(()),
 
         _ => Err(ThrushError::Error(
             String::from("Type Checking"),
@@ -28,17 +28,17 @@ fn check_binary_instr_add(
 
 #[inline(always)]
 fn check_binary_instr_sub(
-    a: &DataTypes,
-    b: &DataTypes,
+    a: &Type,
+    b: &Type,
     location: (usize, (usize, usize)),
 ) -> Result<(), ThrushError> {
     if let (
-        DataTypes::I8 | DataTypes::I16 | DataTypes::I32 | DataTypes::I64,
-        DataTypes::I8 | DataTypes::I16 | DataTypes::I32 | DataTypes::I64,
+        Type::I8 | Type::I16 | Type::I32 | Type::I64,
+        Type::I8 | Type::I16 | Type::I32 | Type::I64,
     ) = (a, b)
     {
         return Ok(());
-    } else if let (DataTypes::F32 | DataTypes::F64, DataTypes::F32 | DataTypes::F64) = (a, b) {
+    } else if let (Type::F32 | Type::F64, Type::F32 | Type::F64) = (a, b) {
         return Ok(());
     }
 
@@ -52,17 +52,17 @@ fn check_binary_instr_sub(
 
 #[inline(always)]
 fn check_binary_instr_div(
-    a: &DataTypes,
-    b: &DataTypes,
+    a: &Type,
+    b: &Type,
     location: (usize, (usize, usize)),
 ) -> Result<(), ThrushError> {
     if let (
-        DataTypes::I8 | DataTypes::I16 | DataTypes::I32 | DataTypes::I64,
-        DataTypes::I8 | DataTypes::I16 | DataTypes::I32 | DataTypes::I64,
+        Type::I8 | Type::I16 | Type::I32 | Type::I64,
+        Type::I8 | Type::I16 | Type::I32 | Type::I64,
     ) = (a, b)
     {
         return Ok(());
-    } else if let (DataTypes::F32 | DataTypes::F64, DataTypes::F32 | DataTypes::F64) = (a, b) {
+    } else if let (Type::F32 | Type::F64, Type::F32 | Type::F64) = (a, b) {
         return Ok(());
     }
 
@@ -76,17 +76,17 @@ fn check_binary_instr_div(
 
 #[inline(always)]
 fn check_binary_instr_mul(
-    a: &DataTypes,
-    b: &DataTypes,
+    a: &Type,
+    b: &Type,
     location: (usize, (usize, usize)),
 ) -> Result<(), ThrushError> {
     if let (
-        DataTypes::I8 | DataTypes::I16 | DataTypes::I32 | DataTypes::I64,
-        DataTypes::I8 | DataTypes::I16 | DataTypes::I32 | DataTypes::I64,
+        Type::I8 | Type::I16 | Type::I32 | Type::I64,
+        Type::I8 | Type::I16 | Type::I32 | Type::I64,
     ) = (a, b)
     {
         return Ok(());
-    } else if let (DataTypes::F32 | DataTypes::F64, DataTypes::F32 | DataTypes::F64) = (a, b) {
+    } else if let (Type::F32 | Type::F64, Type::F32 | Type::F64) = (a, b) {
         return Ok(());
     }
 
@@ -100,21 +100,21 @@ fn check_binary_instr_mul(
 
 #[inline(always)]
 fn check_binary_instr_eqeq(
-    a: &DataTypes,
-    b: &DataTypes,
+    a: &Type,
+    b: &Type,
     location: (usize, (usize, usize)),
 ) -> Result<(), ThrushError> {
     if let (
-        DataTypes::I8 | DataTypes::I16 | DataTypes::I32 | DataTypes::I64,
-        DataTypes::I8 | DataTypes::I16 | DataTypes::I32 | DataTypes::I64,
+        Type::I8 | Type::I16 | Type::I32 | Type::I64,
+        Type::I8 | Type::I16 | Type::I32 | Type::I64,
     ) = (a, b)
     {
         return Ok(());
-    } else if let (DataTypes::F32 | DataTypes::F64, DataTypes::F32 | DataTypes::F64) = (a, b) {
+    } else if let (Type::F32 | Type::F64, Type::F32 | Type::F64) = (a, b) {
         return Ok(());
-    } else if let (DataTypes::Bool, DataTypes::Bool) = (a, b) {
+    } else if let (Type::Bool, Type::Bool) = (a, b) {
         return Ok(());
-    } else if let (DataTypes::Char, DataTypes::Char) = (a, b) {
+    } else if let (Type::Char, Type::Char) = (a, b) {
         return Ok(());
     }
 
@@ -128,21 +128,21 @@ fn check_binary_instr_eqeq(
 
 #[inline(always)]
 fn check_binary_instr_bangeq(
-    a: &DataTypes,
-    b: &DataTypes,
+    a: &Type,
+    b: &Type,
     location: (usize, (usize, usize)),
 ) -> Result<(), ThrushError> {
     if let (
-        DataTypes::I8 | DataTypes::I16 | DataTypes::I32 | DataTypes::I64,
-        DataTypes::I8 | DataTypes::I16 | DataTypes::I32 | DataTypes::I64,
+        Type::I8 | Type::I16 | Type::I32 | Type::I64,
+        Type::I8 | Type::I16 | Type::I32 | Type::I64,
     ) = (a, b)
     {
         return Ok(());
-    } else if let (DataTypes::F32 | DataTypes::F64, DataTypes::F32 | DataTypes::F64) = (a, b) {
+    } else if let (Type::F32 | Type::F64, Type::F32 | Type::F64) = (a, b) {
         return Ok(());
-    } else if let (DataTypes::Bool, DataTypes::Bool) = (a, b) {
+    } else if let (Type::Bool, Type::Bool) = (a, b) {
         return Ok(());
-    } else if let (DataTypes::Char, DataTypes::Char) = (a, b) {
+    } else if let (Type::Char, Type::Char) = (a, b) {
         return Ok(());
     }
 
@@ -156,17 +156,17 @@ fn check_binary_instr_bangeq(
 
 #[inline(always)]
 fn check_binary_instr_greater(
-    a: &DataTypes,
-    b: &DataTypes,
+    a: &Type,
+    b: &Type,
     location: (usize, (usize, usize)),
 ) -> Result<(), ThrushError> {
     if let (
-        DataTypes::I8 | DataTypes::I16 | DataTypes::I32 | DataTypes::I64 | DataTypes::Bool,
-        DataTypes::I8 | DataTypes::I16 | DataTypes::I32 | DataTypes::I64 | DataTypes::Bool,
+        Type::I8 | Type::I16 | Type::I32 | Type::I64 | Type::Bool,
+        Type::I8 | Type::I16 | Type::I32 | Type::I64 | Type::Bool,
     ) = (a, b)
     {
         return Ok(());
-    } else if let (DataTypes::F32 | DataTypes::F64, DataTypes::F32 | DataTypes::F64) = (a, b) {
+    } else if let (Type::F32 | Type::F64, Type::F32 | Type::F64) = (a, b) {
         return Ok(());
     }
 
@@ -180,17 +180,17 @@ fn check_binary_instr_greater(
 
 #[inline(always)]
 fn check_binary_instr_greatereq(
-    a: &DataTypes,
-    b: &DataTypes,
+    a: &Type,
+    b: &Type,
     location: (usize, (usize, usize)),
 ) -> Result<(), ThrushError> {
     if let (
-        DataTypes::I8 | DataTypes::I16 | DataTypes::I32 | DataTypes::I64,
-        DataTypes::I8 | DataTypes::I16 | DataTypes::I32 | DataTypes::I64,
+        Type::I8 | Type::I16 | Type::I32 | Type::I64,
+        Type::I8 | Type::I16 | Type::I32 | Type::I64,
     ) = (a, b)
     {
         return Ok(());
-    } else if let (DataTypes::F32 | DataTypes::F64, DataTypes::F32 | DataTypes::F64) = (a, b) {
+    } else if let (Type::F32 | Type::F64, Type::F32 | Type::F64) = (a, b) {
         return Ok(());
     }
 
@@ -204,17 +204,17 @@ fn check_binary_instr_greatereq(
 
 #[inline(always)]
 fn check_binary_instr_less(
-    a: &DataTypes,
-    b: &DataTypes,
+    a: &Type,
+    b: &Type,
     location: (usize, (usize, usize)),
 ) -> Result<(), ThrushError> {
     if let (
-        DataTypes::Bool | DataTypes::I8 | DataTypes::I16 | DataTypes::I32 | DataTypes::I64,
-        DataTypes::I8 | DataTypes::I16 | DataTypes::I32 | DataTypes::I64 | DataTypes::Bool,
+        Type::Bool | Type::I8 | Type::I16 | Type::I32 | Type::I64,
+        Type::I8 | Type::I16 | Type::I32 | Type::I64 | Type::Bool,
     ) = (a, b)
     {
         return Ok(());
-    } else if let (DataTypes::F32 | DataTypes::F64, DataTypes::F32 | DataTypes::F64) = (a, b) {
+    } else if let (Type::F32 | Type::F64, Type::F32 | Type::F64) = (a, b) {
         return Ok(());
     }
 
@@ -228,17 +228,17 @@ fn check_binary_instr_less(
 
 #[inline(always)]
 fn check_binary_instr_lesseq(
-    a: &DataTypes,
-    b: &DataTypes,
+    a: &Type,
+    b: &Type,
     location: (usize, (usize, usize)),
 ) -> Result<(), ThrushError> {
     if let (
-        DataTypes::I8 | DataTypes::I16 | DataTypes::I32 | DataTypes::I64,
-        DataTypes::I8 | DataTypes::I16 | DataTypes::I32 | DataTypes::I64,
+        Type::I8 | Type::I16 | Type::I32 | Type::I64,
+        Type::I8 | Type::I16 | Type::I32 | Type::I64,
     ) = (a, b)
     {
         return Ok(());
-    } else if let (DataTypes::F32 | DataTypes::F64, DataTypes::F32 | DataTypes::F64) = (a, b) {
+    } else if let (Type::F32 | Type::F64, Type::F32 | Type::F64) = (a, b) {
         return Ok(());
     }
 
@@ -252,11 +252,11 @@ fn check_binary_instr_lesseq(
 
 #[inline(always)]
 fn check_binary_instr_and(
-    a: &DataTypes,
-    b: &DataTypes,
+    a: &Type,
+    b: &Type,
     location: (usize, (usize, usize)),
 ) -> Result<(), ThrushError> {
-    if let (DataTypes::Bool, DataTypes::Bool) = (a, b) {
+    if let (Type::Bool, Type::Bool) = (a, b) {
         return Ok(());
     }
 
@@ -270,11 +270,33 @@ fn check_binary_instr_and(
 
 #[inline(always)]
 fn check_binary_instr_or(
-    a: &DataTypes,
-    b: &DataTypes,
+    a: &Type,
+    b: &Type,
     location: (usize, (usize, usize)),
 ) -> Result<(), ThrushError> {
-    if let (DataTypes::Bool, DataTypes::Bool) = (a, b) {
+    if let (Type::Bool, Type::Bool) = (a, b) {
+        return Ok(());
+    }
+
+    Err(ThrushError::Error(
+        String::from("Type Checking"),
+        format!("Logical operation ({} || {}) is not allowed.", a, b),
+        location.0,
+        Some(location.1),
+    ))
+}
+
+#[inline(always)]
+fn check_binary_instr_shift(
+    a: &Type,
+    b: &Type,
+    location: (usize, (usize, usize)),
+) -> Result<(), ThrushError> {
+    if let (
+        Type::I8 | Type::I16 | Type::I32 | Type::I64,
+        Type::I8 | Type::I16 | Type::I32 | Type::I64,
+    ) = (a, b)
+    {
         return Ok(());
     }
 
@@ -289,8 +311,8 @@ fn check_binary_instr_or(
 #[inline(always)]
 pub fn check_binary_instr(
     op: &TokenKind,
-    a: &DataTypes,
-    b: &DataTypes,
+    a: &Type,
+    b: &Type,
     location: (usize, (usize, usize)),
 ) -> Result<(), ThrushError> {
     match op {
@@ -304,6 +326,7 @@ pub fn check_binary_instr(
         TokenKind::GreaterEq => check_binary_instr_greatereq(a, b, location),
         TokenKind::Less => check_binary_instr_less(a, b, location),
         TokenKind::LessEq => check_binary_instr_lesseq(a, b, location),
+        TokenKind::LShift | TokenKind::RShift => check_binary_instr_shift(a, b, location),
         TokenKind::And => check_binary_instr_and(a, b, location),
         TokenKind::Or => check_binary_instr_or(a, b, location),
         _ => Ok(()),
@@ -321,16 +344,10 @@ OPERATOR B OPERATOR
 
 #[inline(always)]
 fn check_unary_instr_negate(
-    a: &DataTypes,
+    a: &Type,
     location: (usize, (usize, usize)),
 ) -> Result<(), ThrushError> {
-    if let DataTypes::I8
-    | DataTypes::I16
-    | DataTypes::I32
-    | DataTypes::I64
-    | DataTypes::F32
-    | DataTypes::F64 = a
-    {
+    if let Type::I8 | Type::I16 | Type::I32 | Type::I64 | Type::F32 | Type::F64 = a {
         return Ok(());
     }
 
@@ -344,16 +361,10 @@ fn check_unary_instr_negate(
 
 #[inline(always)]
 fn check_unary_instr_minusminus(
-    a: &DataTypes,
+    a: &Type,
     location: (usize, (usize, usize)),
 ) -> Result<(), ThrushError> {
-    if let DataTypes::I8
-    | DataTypes::I16
-    | DataTypes::I32
-    | DataTypes::I64
-    | DataTypes::F32
-    | DataTypes::F64 = a
-    {
+    if let Type::I8 | Type::I16 | Type::I32 | Type::I64 | Type::F32 | Type::F64 = a {
         return Ok(());
     }
 
@@ -367,16 +378,10 @@ fn check_unary_instr_minusminus(
 
 #[inline(always)]
 fn check_unary_instr_plusplus(
-    a: &DataTypes,
+    a: &Type,
     location: (usize, (usize, usize)),
 ) -> Result<(), ThrushError> {
-    if let DataTypes::I8
-    | DataTypes::I16
-    | DataTypes::I32
-    | DataTypes::I64
-    | DataTypes::F32
-    | DataTypes::F64 = a
-    {
+    if let Type::I8 | Type::I16 | Type::I32 | Type::I64 | Type::F32 | Type::F64 = a {
         return Ok(());
     }
 
@@ -389,11 +394,8 @@ fn check_unary_instr_plusplus(
 }
 
 #[inline(always)]
-fn check_unary_instr_bang(
-    a: &DataTypes,
-    location: (usize, (usize, usize)),
-) -> Result<(), ThrushError> {
-    if let DataTypes::Bool = a {
+fn check_unary_instr_bang(a: &Type, location: (usize, (usize, usize))) -> Result<(), ThrushError> {
+    if let Type::Bool = a {
         return Ok(());
     }
 
@@ -408,7 +410,7 @@ fn check_unary_instr_bang(
 #[inline(always)]
 pub fn check_unary_instr(
     op: &TokenKind,
-    a: &DataTypes,
+    a: &Type,
     location: (usize, (usize, usize)),
 ) -> Result<(), ThrushError> {
     match op {
@@ -421,8 +423,8 @@ pub fn check_unary_instr(
 }
 
 pub fn check_types(
-    target: DataTypes,
-    from: Option<DataTypes>,
+    target: Type,
+    from: Option<Type>,
     value: Option<&Instruction>,
     op: Option<&TokenKind>,
     error: ThrushError,
@@ -440,28 +442,28 @@ pub fn check_types(
     }
 
     match (target, from.unwrap(), op) {
-        (DataTypes::Char, DataTypes::Char, None) => Ok(()),
-        (DataTypes::Str, DataTypes::Str, None) => Ok(()),
-        (DataTypes::Struct, DataTypes::Struct | DataTypes::Ptr, None) => Ok(()),
-        (DataTypes::Ptr, DataTypes::Ptr | DataTypes::Str, None) => Ok(()),
+        (Type::Char, Type::Char, None) => Ok(()),
+        (Type::Str, Type::Str, None) => Ok(()),
+        (Type::Struct, Type::Struct | Type::Ptr, None) => Ok(()),
+        (Type::Ptr, Type::Ptr | Type::Str, None) => Ok(()),
         (
-            DataTypes::Generic,
-            DataTypes::Generic
-            | DataTypes::Ptr
-            | DataTypes::Str
-            | DataTypes::Char
-            | DataTypes::I8
-            | DataTypes::I32
-            | DataTypes::I64
-            | DataTypes::F32
-            | DataTypes::F64
-            | DataTypes::Bool
-            | DataTypes::Struct,
+            Type::Generic,
+            Type::Generic
+            | Type::Ptr
+            | Type::Str
+            | Type::Char
+            | Type::I8
+            | Type::I32
+            | Type::I64
+            | Type::F32
+            | Type::F64
+            | Type::Bool
+            | Type::Struct,
             None,
         ) => Ok(()),
         (
-            DataTypes::Bool,
-            DataTypes::Bool,
+            Type::Bool,
+            Type::Bool,
             Some(
                 TokenKind::BangEq
                 | TokenKind::EqEq
@@ -476,33 +478,73 @@ pub fn check_types(
             | None,
         ) => Ok(()),
         (
-            DataTypes::I8,
-            DataTypes::I8,
-            Some(TokenKind::Plus | TokenKind::Minus | TokenKind::Slash | TokenKind::Star) | None,
+            Type::I8,
+            Type::I8,
+            Some(
+                TokenKind::Plus
+                | TokenKind::Minus
+                | TokenKind::Slash
+                | TokenKind::Star
+                | TokenKind::LShift
+                | TokenKind::RShift,
+            )
+            | None,
         ) => Ok(()),
         (
-            DataTypes::I16,
-            DataTypes::I16 | DataTypes::I8,
-            Some(TokenKind::Plus | TokenKind::Minus | TokenKind::Slash | TokenKind::Star) | None,
+            Type::I16,
+            Type::I16 | Type::I8,
+            Some(
+                TokenKind::Plus
+                | TokenKind::Minus
+                | TokenKind::Slash
+                | TokenKind::Star
+                | TokenKind::LShift
+                | TokenKind::RShift,
+            )
+            | None,
         ) => Ok(()),
         (
-            DataTypes::I32,
-            DataTypes::I32 | DataTypes::I16 | DataTypes::I8,
-            Some(TokenKind::Plus | TokenKind::Minus | TokenKind::Slash | TokenKind::Star) | None,
+            Type::I32,
+            Type::I32 | Type::I16 | Type::I8,
+            Some(
+                TokenKind::Plus
+                | TokenKind::Minus
+                | TokenKind::Slash
+                | TokenKind::Star
+                | TokenKind::LShift
+                | TokenKind::RShift,
+            )
+            | None,
         ) => Ok(()),
         (
-            DataTypes::I64,
-            DataTypes::I64 | DataTypes::I32 | DataTypes::I16 | DataTypes::I8,
-            Some(TokenKind::Plus | TokenKind::Minus | TokenKind::Slash | TokenKind::Star) | None,
+            Type::I64,
+            Type::I64 | Type::I32 | Type::I16 | Type::I8,
+            Some(
+                TokenKind::Plus
+                | TokenKind::Minus
+                | TokenKind::Slash
+                | TokenKind::Star
+                | TokenKind::LShift
+                | TokenKind::RShift,
+            )
+            | None,
         ) => Ok(()),
         (
-            DataTypes::F32,
-            DataTypes::F32,
-            Some(TokenKind::Plus | TokenKind::Minus | TokenKind::Slash | TokenKind::Star) | None,
+            Type::F32,
+            Type::F32,
+            Some(
+                TokenKind::Plus
+                | TokenKind::Minus
+                | TokenKind::Slash
+                | TokenKind::Star
+                | TokenKind::LShift
+                | TokenKind::RShift,
+            )
+            | None,
         ) => Ok(()),
         (
-            DataTypes::F64,
-            DataTypes::F64 | DataTypes::F32,
+            Type::F64,
+            Type::F64 | Type::F32,
             Some(TokenKind::Plus | TokenKind::Minus | TokenKind::Slash | TokenKind::Star) | None,
         ) => Ok(()),
 

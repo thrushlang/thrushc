@@ -9,7 +9,7 @@ use {
     ahash::{HashMap, HashMapExt},
     inkwell::{FloatPredicate, IntPredicate},
     lazy_static::lazy_static,
-    std::{mem, num::ParseFloatError, process::exit},
+    std::{mem, process::exit},
 };
 
 const KEYWORDS_CAPACITY: usize = 38;
@@ -48,18 +48,18 @@ lazy_static! {
         keywords.insert(b"@extern", TokenKind::Extern);
         keywords.insert(b"new", TokenKind::New);
         keywords.insert(b"nullptr", TokenKind::NullPtr);
-        keywords.insert(b"i8", TokenKind::DataType(DataTypes::I8));
-        keywords.insert(b"i16", TokenKind::DataType(DataTypes::I16));
-        keywords.insert(b"i32", TokenKind::DataType(DataTypes::I32));
-        keywords.insert(b"i64", TokenKind::DataType(DataTypes::I64));
-        keywords.insert(b"f32", TokenKind::DataType(DataTypes::F32));
-        keywords.insert(b"f64", TokenKind::DataType(DataTypes::F64));
-        keywords.insert(b"bool", TokenKind::DataType(DataTypes::Bool));
-        keywords.insert(b"char", TokenKind::DataType(DataTypes::Char));
-        keywords.insert(b"ptr", TokenKind::DataType(DataTypes::Ptr));
-        keywords.insert(b"T", TokenKind::DataType(DataTypes::Generic));
-        keywords.insert(b"str", TokenKind::DataType(DataTypes::Str));
-        keywords.insert(b"void", TokenKind::DataType(DataTypes::Void));
+        keywords.insert(b"i8", TokenKind::DataType(Type::I8));
+        keywords.insert(b"i16", TokenKind::DataType(Type::I16));
+        keywords.insert(b"i32", TokenKind::DataType(Type::I32));
+        keywords.insert(b"i64", TokenKind::DataType(Type::I64));
+        keywords.insert(b"f32", TokenKind::DataType(Type::F32));
+        keywords.insert(b"f64", TokenKind::DataType(Type::F64));
+        keywords.insert(b"bool", TokenKind::DataType(Type::Bool));
+        keywords.insert(b"char", TokenKind::DataType(Type::Char));
+        keywords.insert(b"ptr", TokenKind::DataType(Type::Ptr));
+        keywords.insert(b"T", TokenKind::DataType(Type::Generic));
+        keywords.insert(b"str", TokenKind::DataType(Type::Str));
+        keywords.insert(b"void", TokenKind::DataType(Type::Void));
 
         keywords
     };
@@ -172,8 +172,10 @@ impl<'a> Lexer<'a> {
             b'=' if self.char_match(b'=') => self.make(TokenKind::EqEq),
             b'=' => self.make(TokenKind::Eq),
             b'<' if self.char_match(b'=') => self.make(TokenKind::LessEq),
+            b'<' if self.char_match(b'<') => self.make(TokenKind::LShift),
             b'<' => self.make(TokenKind::Less),
             b'>' if self.char_match(b'=') => self.make(TokenKind::GreaterEq),
+            b'>' if self.char_match(b'>') => self.make(TokenKind::RShift),
             b'>' => self.make(TokenKind::Greater),
             b'|' if self.char_match(b'|') => self.make(TokenKind::Or),
             b'&' if self.char_match(b'&') => self.make(TokenKind::And),
@@ -215,33 +217,55 @@ impl<'a> Lexer<'a> {
     }
 
     fn integer_or_float(&mut self) -> Result<(), ThrushError> {
+        let mut is_hexadecimal: bool = false;
+        let mut is_binary: bool = false;
+
         while self.peek().is_ascii_digit()
             || self.peek() == b'_' && self.peek_next().is_ascii_digit()
             || self.peek() == b'.' && self.peek_next().is_ascii_digit()
+            || self.peek() == b'x' && self.peek_next().is_ascii_digit()
+            || self.peek() == b'b' && self.peek_next().is_ascii_digit()
         {
+            if is_hexadecimal && self.previous() == b'0' && self.peek() == b'x' {
+                self.end_span();
+
+                return Err(ThrushError::Error(
+                    String::from("Syntax error"),
+                    String::from("The hexadecimal identifier '0x' cannot be repeated."),
+                    self.line,
+                    Some(self.span),
+                ));
+            }
+
+            if is_binary && self.previous() == b'0' && self.peek() == b'b' {
+                self.end_span();
+
+                return Err(ThrushError::Error(
+                    String::from("Syntax error"),
+                    String::from("The binary identifier '0b' cannot be repeated."),
+                    self.line,
+                    Some(self.span),
+                ));
+            }
+
+            if self.peek() == b'x' && self.peek_next().is_ascii_digit() {
+                is_hexadecimal = true;
+            }
+
+            if self.peek() == b'b' && self.peek_next().is_ascii_digit() {
+                is_binary = true;
+            }
+
             self.advance();
         }
 
         self.end_span();
 
-        let types: (DataTypes, bool) = self.parse_float_or_integer(self.lexeme().to_str())?;
+        let parsed_number: (Type, f64) = self.parse_float_or_integer(self.lexeme().to_str())?;
 
-        let raw_parsed_number: Result<f64, ParseFloatError> = self.lexeme().to_str().parse::<f64>();
-
-        if raw_parsed_number.is_err() {
-            return Err(ThrushError::Error(
-                String::from("Syntax error"),
-                String::from("Out of bounds number."),
-                self.line,
-                Some(self.span),
-            ));
-        }
-
-        let parsed_number: f64 = raw_parsed_number.unwrap();
-
-        if types.0.is_float_type() {
+        if parsed_number.0.is_float_type() {
             self.tokens.push(Token {
-                kind: TokenKind::Float(types.0, parsed_number, types.1),
+                kind: TokenKind::Float(parsed_number.0, parsed_number.1, false),
                 lexeme: b"",
                 line: self.line,
                 span: self.span,
@@ -251,7 +275,7 @@ impl<'a> Lexer<'a> {
         }
 
         self.tokens.push(Token {
-            kind: TokenKind::Integer(types.0, parsed_number, types.1),
+            kind: TokenKind::Integer(parsed_number.0, parsed_number.1, false),
             lexeme: b"",
             line: self.line,
             span: self.span,
@@ -261,7 +285,11 @@ impl<'a> Lexer<'a> {
     }
 
     #[inline(always)]
-    fn parse_float_or_integer(&mut self, lexeme: &str) -> Result<(DataTypes, bool), ThrushError> {
+    fn parse_float_or_integer(&mut self, lexeme: &str) -> Result<(Type, f64), ThrushError> {
+        // usize MAX 18446744073709551615 // Me lleva...
+        // isize MAX 9223372036854775807 // (USADO ACTUALMENTE) -> TENEMOS MENOS CAPACIDAD ACTUAL EN EL LENGUAJE. (DA HELL EL QUE OVERFLOWEE ESTA WEBADA)
+        // f64 MAX 1.7976931348623157e308 // NO HAY PROBLEMA SI OCURRE ALGÚN OVERFLOW.
+
         if lexeme.contains('.') {
             return self.parse_float(lexeme);
         }
@@ -270,7 +298,7 @@ impl<'a> Lexer<'a> {
     }
 
     #[inline(always)]
-    fn parse_float(&self, lexeme: &str) -> Result<(DataTypes, bool), ThrushError> {
+    fn parse_float(&self, lexeme: &str) -> Result<(Type, f64), ThrushError> {
         let dot_count: usize = lexeme.bytes().filter(|&b| b == b'.').count();
 
         if dot_count > 1 {
@@ -282,12 +310,8 @@ impl<'a> Lexer<'a> {
             ));
         }
 
-        if lexeme.parse::<f32>().is_ok() {
-            return Ok((DataTypes::F32, false));
-        }
-
-        if lexeme.parse::<f64>().is_ok() {
-            return Ok((DataTypes::F64, false));
+        if let Ok(float) = lexeme.parse::<f64>() {
+            return Ok((Type::F64, float));
         }
 
         Err(ThrushError::Error(
@@ -299,7 +323,7 @@ impl<'a> Lexer<'a> {
     }
 
     #[inline(always)]
-    fn parse_integer(&self, lexeme: &str) -> Result<(DataTypes, bool), ThrushError> {
+    fn parse_integer(&self, lexeme: &str) -> Result<(Type, f64), ThrushError> {
         const I8_MIN: isize = -128;
         const I8_MAX: isize = 127;
         const I16_MIN: isize = -32768;
@@ -307,19 +331,89 @@ impl<'a> Lexer<'a> {
         const I32_MIN: isize = -2147483648;
         const I32_MAX: isize = 2147483647;
 
+        if lexeme.starts_with("0x") {
+            let cleaned_lexeme: String = lexeme
+                .strip_prefix("0x")
+                .unwrap_or(&lexeme.replace("0x", ""))
+                .replace("_", "");
+
+            return match isize::from_str_radix(&cleaned_lexeme, 16) {
+                Ok(num) => {
+                    if (I8_MIN..=I8_MAX).contains(&num) {
+                        return Ok((Type::I8, num as f64));
+                    } else if (I16_MIN..=I16_MAX).contains(&num) {
+                        return Ok((Type::I16, num as f64));
+                    } else if (I32_MIN..=I32_MAX).contains(&num) {
+                        return Ok((Type::I32, num as f64));
+                    } else if (isize::MIN..=isize::MAX).contains(&num) {
+                        return Ok((Type::I64, num as f64));
+                    } else {
+                        return Err(ThrushError::Error(
+                            String::from("Syntax error"),
+                            String::from("Invalid hexadecimal format."),
+                            self.line,
+                            Some(self.span),
+                        ));
+                    }
+                }
+
+                Err(_) => Err(ThrushError::Error(
+                    String::from("Syntax error"),
+                    String::from("Invalid hexadecimal format."),
+                    self.line,
+                    Some(self.span),
+                )),
+            };
+        }
+
+        if lexeme.starts_with("0b") {
+            let cleaned_lexeme: String = lexeme
+                .strip_prefix("0b")
+                .unwrap_or(&lexeme.replace("0b", ""))
+                .replace("_", "");
+
+            return match isize::from_str_radix(&cleaned_lexeme, 2) {
+                Ok(num) => {
+                    if (I8_MIN..=I8_MAX).contains(&num) {
+                        return Ok((Type::I8, num as f64));
+                    } else if (I16_MIN..=I16_MAX).contains(&num) {
+                        return Ok((Type::I16, num as f64));
+                    } else if (I32_MIN..=I32_MAX).contains(&num) {
+                        return Ok((Type::I32, num as f64));
+                    } else if (isize::MIN..=isize::MAX).contains(&num) {
+                        return Ok((Type::I64, num as f64));
+                    } else {
+                        return Err(ThrushError::Error(
+                            String::from("Syntax error"),
+                            String::from("Invalid binary format."),
+                            self.line,
+                            Some(self.span),
+                        ));
+                    }
+                }
+
+                Err(_) => Err(ThrushError::Error(
+                    String::from("Syntax error"),
+                    String::from("Invalid binary format."),
+                    self.line,
+                    Some(self.span),
+                )),
+            };
+        }
+
         match lexeme.parse::<isize>() {
             Ok(num) => {
                 if (I8_MIN..=I8_MAX).contains(&num) {
-                    Ok((DataTypes::I8, false))
+                    Ok((Type::I8, num as f64))
                 } else if (I16_MIN..=I16_MAX).contains(&num) {
-                    Ok((DataTypes::I16, false))
+                    Ok((Type::I16, num as f64))
                 } else if (I32_MIN..=I32_MAX).contains(&num) {
-                    Ok((DataTypes::I32, false))
+                    Ok((Type::I32, num as f64))
                 } else if (isize::MIN..=isize::MAX).contains(&num) {
-                    Ok((DataTypes::I64, false))
+                    Ok((Type::I64, num as f64))
                 } else {
                     Err(ThrushError::Error(
-                        String::from("Syntax error."),
+                        String::from("Syntax error"),
                         String::from("Out of bounds."),
                         self.line,
                         Some(self.span),
@@ -356,7 +450,7 @@ impl<'a> Lexer<'a> {
 
         if self.code[self.start + 1..self.current - 1].len() > 1 {
             return Err(ThrushError::Error(
-                String::from("Syntax Error"),
+                String::from("Syntax error"),
                 String::from("A char data type only can contain one character."),
                 self.line,
                 Some(self.span),
@@ -382,7 +476,7 @@ impl<'a> Lexer<'a> {
 
         if self.peek() != b'"' {
             return Err(ThrushError::Error(
-                String::from("Syntax Error"),
+                String::from("Syntax error"),
                 String::from(
                     "Unclosed literal string. Did you forget to close the literal string with a '\"'?",
                 ),
@@ -403,27 +497,15 @@ impl<'a> Lexer<'a> {
         Ok(())
     }
 
-    fn advance(&mut self) -> u8 {
-        let char: u8 = self.code[self.current];
-        self.current += 1;
+    fn make(&mut self, kind: TokenKind) {
+        self.end_span();
 
-        char
-    }
-
-    fn peek_next(&self) -> u8 {
-        if self.current + 1 >= self.code.len() {
-            return b'\0';
-        }
-
-        self.code[self.current + 1]
-    }
-
-    fn peek(&self) -> u8 {
-        if self.end() {
-            return b'\0';
-        }
-
-        self.code[self.current]
+        self.tokens.push(Token {
+            kind,
+            lexeme: self.lexeme(),
+            line: self.line,
+            span: self.span,
+        });
     }
 
     fn char_match(&mut self, ch: u8) -> bool {
@@ -435,15 +517,34 @@ impl<'a> Lexer<'a> {
         false
     }
 
-    fn make(&mut self, kind: TokenKind) {
-        self.end_span();
+    fn advance(&mut self) -> u8 {
+        let char: u8 = self.code[self.current];
+        self.current += 1;
 
-        self.tokens.push(Token {
-            kind,
-            lexeme: self.lexeme(),
-            line: self.line,
-            span: self.span,
-        });
+        char
+    }
+
+    #[inline]
+    fn peek_next(&self) -> u8 {
+        if self.current + 1 >= self.code.len() {
+            return b'\0';
+        }
+
+        self.code[self.current + 1]
+    }
+
+    #[inline]
+    fn previous(&self) -> u8 {
+        self.code[self.current - 1]
+    }
+
+    #[inline]
+    fn peek(&self) -> u8 {
+        if self.end() {
+            return b'\0';
+        }
+
+        self.code[self.current]
     }
 
     #[inline(always)]
@@ -567,13 +668,15 @@ pub enum TokenKind {
     LessEq,     // ' <= '
     PlusPlus,   // ' ++ '
     MinusMinus, // ' -- '
+    LShift,     // ' << '
+    RShift,     // ' >> '
     Pass,       // ...
 
     // --- Literals ---
     Identifier,
-    Integer(DataTypes, f64, bool),
-    Float(DataTypes, f64, bool),
-    DataType(DataTypes),
+    Integer(Type, f64, bool),
+    Float(Type, f64, bool),
+    DataType(Type),
     Str,
     Char,
 
@@ -638,6 +741,8 @@ impl std::fmt::Display for TokenKind {
             TokenKind::LessEq => write!(f, "<="),
             TokenKind::PlusPlus => write!(f, "++"),
             TokenKind::MinusMinus => write!(f, "--"),
+            TokenKind::LShift => write!(f, "<<"),
+            TokenKind::RShift => write!(f, ">>"),
             TokenKind::Identifier => write!(f, "Identifier"),
             TokenKind::And => write!(f, "and"),
             TokenKind::Struct => write!(f, "struct"),
@@ -733,17 +838,27 @@ impl TokenKind {
     pub const fn is_logical_gate(&self) -> bool {
         matches!(self, TokenKind::And | TokenKind::Or)
     }
+
+    #[inline(always)]
+    pub const fn is_struct_keyword(&self) -> bool {
+        matches!(self, TokenKind::Struct)
+    }
+
+    #[inline(always)]
+    pub const fn is_function_keyword(&self) -> bool {
+        matches!(self, TokenKind::Fn)
+    }
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
-pub enum DataTypes {
-    // Integer DataTypes
+pub enum Type {
+    // Integer Type
     I8,
     I16,
     I32,
     I64,
 
-    // Floating Point DataTypes
+    // Floating Point Type
     F32,
     F64,
 
@@ -769,81 +884,81 @@ pub enum DataTypes {
     Void,
 }
 
-impl std::fmt::Display for DataTypes {
+impl std::fmt::Display for Type {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            DataTypes::I8 => write!(f, "i8"),
-            DataTypes::I16 => write!(f, "i16"),
-            DataTypes::I32 => write!(f, "i32"),
-            DataTypes::I64 => write!(f, "i64"),
-            DataTypes::F32 => write!(f, "f32"),
-            DataTypes::F64 => write!(f, "f64"),
-            DataTypes::Bool => write!(f, "bool"),
-            DataTypes::Str => write!(f, "str"),
-            DataTypes::Char => write!(f, "char"),
-            DataTypes::Struct => write!(f, "struct"),
-            DataTypes::Ptr => write!(f, "ptr"),
-            DataTypes::Generic => write!(f, "generic"),
-            DataTypes::Void => write!(f, "void"),
+            Type::I8 => write!(f, "i8"),
+            Type::I16 => write!(f, "i16"),
+            Type::I32 => write!(f, "i32"),
+            Type::I64 => write!(f, "i64"),
+            Type::F32 => write!(f, "f32"),
+            Type::F64 => write!(f, "f64"),
+            Type::Bool => write!(f, "bool"),
+            Type::Str => write!(f, "str"),
+            Type::Char => write!(f, "char"),
+            Type::Struct => write!(f, "struct"),
+            Type::Ptr => write!(f, "ptr"),
+            Type::Generic => write!(f, "generic"),
+            Type::Void => write!(f, "void"),
         }
     }
 }
 
-impl DataTypes {
+impl Type {
     #[inline(always)]
-    pub const fn calculate_integer_datatype(self, other: DataTypes) -> DataTypes {
+    pub const fn calculate_integer_datatype(self, other: Type) -> Type {
         match (self, other) {
-            (DataTypes::I64, _) | (_, DataTypes::I64) => DataTypes::I64,
-            (DataTypes::I32, _) | (_, DataTypes::I32) => DataTypes::I32,
-            (DataTypes::I16, _) | (_, DataTypes::I16) => DataTypes::I16,
-            _ => DataTypes::I8,
+            (Type::I64, _) | (_, Type::I64) => Type::I64,
+            (Type::I32, _) | (_, Type::I32) => Type::I32,
+            (Type::I16, _) | (_, Type::I16) => Type::I16,
+            _ => Type::I8,
         }
     }
 
     #[inline(always)]
-    pub const fn calculate_float_datatype(self, other: DataTypes) -> DataTypes {
+    pub const fn calculate_float_datatype(self, other: Type) -> Type {
         match (self, other) {
-            (DataTypes::F64, _) | (_, DataTypes::F64) => DataTypes::F64,
-            (DataTypes::F32, _) | (_, DataTypes::F32) => DataTypes::F32,
-            _ => DataTypes::F64,
+            (Type::F64, _) | (_, Type::F64) => Type::F64,
+            (Type::F32, _) | (_, Type::F32) => Type::F32,
+            _ => Type::F64,
         }
     }
 
     #[inline(always)]
     pub const fn is_void_type(&self) -> bool {
-        matches!(self, DataTypes::Void)
+        matches!(self, Type::Void)
     }
 
     #[inline(always)]
     pub const fn is_bool_type(&self) -> bool {
-        matches!(self, DataTypes::Bool)
+        matches!(self, Type::Bool)
     }
 
     #[inline(always)]
     pub const fn is_struct_type(&self) -> bool {
-        matches!(self, DataTypes::Struct)
+        matches!(self, Type::Struct)
     }
 
     #[inline(always)]
     pub const fn is_float_type(&self) -> bool {
-        matches!(self, DataTypes::F32 | DataTypes::F64)
+        matches!(self, Type::F32 | Type::F64)
     }
 
     #[inline(always)]
     pub const fn is_ptr_type(&self) -> bool {
-        matches!(self, DataTypes::Struct | DataTypes::Str | DataTypes::Ptr)
+        matches!(self, Type::Struct | Type::Str | Type::Ptr)
     }
 
     #[inline(always)]
     pub const fn is_heaped_ptr(&self) -> bool {
-        matches!(self, DataTypes::Struct | DataTypes::Ptr)
+        matches!(self, Type::Struct | Type::Ptr)
     }
 
     #[inline(always)]
     pub const fn is_integer_type(&self) -> bool {
         matches!(
             self,
-            DataTypes::I8 | DataTypes::I16 | DataTypes::I32 | DataTypes::I64 | DataTypes::Char
+            Type::I8 | Type::I16 | Type::I32 | Type::I64 | Type::Char
         )
     }
 }

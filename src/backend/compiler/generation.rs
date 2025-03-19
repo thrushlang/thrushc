@@ -1,6 +1,6 @@
 use {
     super::{
-        super::{super::frontend::lexer::DataTypes, instruction::Instruction},
+        super::{super::frontend::lexer::Type, instruction::Instruction},
         call,
         objects::CompilerObjects,
         utils,
@@ -19,7 +19,7 @@ pub fn build_expression<'ctx>(
     builder: &Builder<'ctx>,
     context: &'ctx Context,
     instr: &'ctx Instruction,
-    casting_target: Option<DataTypes>,
+    casting_target: Option<Type>,
     compiler_objects: &mut CompilerObjects<'ctx>,
 ) -> BasicValueEnum<'ctx> {
     if let Instruction::NullPtr = instr {
@@ -90,7 +90,7 @@ pub fn build_expression<'ctx>(
                 .unwrap();
         }
 
-        if kind.is_integer_type() || *kind == DataTypes::Bool {
+        if kind.is_integer_type() || *kind == Type::Bool {
             return builder
                 .build_load(
                     utils::datatype_integer_to_llvm_type(context, kind),
@@ -100,11 +100,11 @@ pub fn build_expression<'ctx>(
                 .unwrap();
         }
 
-        if *kind == DataTypes::Str {
+        if *kind == Type::Str {
             return local.into();
         }
 
-        if *kind == DataTypes::Struct {
+        if *kind == Type::Struct {
             return builder.build_load(local.get_type(), local, "").unwrap();
         }
 

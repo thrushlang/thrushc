@@ -65,14 +65,18 @@ impl Diagnostic {
                 {
                     println!(
                         "   |\n{}\n{}",
-                        format_args!("{}  |  {}", line, &line_text),
+                        format_args!(
+                            "{}  |  {}",
+                            line.to_string().bold().bright_red(),
+                            &line_text
+                        ),
                         "   |  ".to_string() + &arrow_line,
                     );
                 } else {
                     return self.print_not_spanned_report(help, line);
                 }
 
-                self.print_helper(help);
+                self.print_description(help);
 
                 return;
             }
@@ -83,7 +87,7 @@ impl Diagnostic {
         self.print_not_spanned_report(help, line);
     }
 
-    fn print_not_spanned_report(&mut self, help: &str, line: usize) {
+    fn print_not_spanned_report(&mut self, description: &str, line: usize) {
         let lines: Vec<&str> = self.contain.lines().collect();
 
         let line_text: String = "|  ".to_string() + lines[line - 1].trim();
@@ -94,19 +98,13 @@ impl Diagnostic {
             format!("|\n{}\n{}\n", line_text, arrow_line).as_bytes(),
         );
 
-        self.print_helper(help);
+        self.print_description(description);
     }
 
-    fn print_helper(&self, help: &str) {
+    fn print_description(&self, help: &str) {
         logging::write(
             logging::OutputIn::Stderr,
-            format!(
-                "\n{}{} {}\n\n",
-                "Help".bold().bright_green(),
-                ":".bold(),
-                help.bold()
-            )
-            .as_bytes(),
+            format!("\n{} {}\n\n", "> ".bold().bright_red(), help.bold()).as_bytes(),
         );
     }
 
@@ -168,7 +166,7 @@ impl Diagnostic {
         let line_text: String = lines[line_position].to_string();
         let mut arrow_line: String = " ".repeat(line_text.len());
 
-        arrow_line.replace_range(position.start..position.end, &"—".bright_red());
+        arrow_line.replace_range(position.start..position.end, "—");
 
         Some((line_text, arrow_line, line_position))
     }

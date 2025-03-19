@@ -1,6 +1,6 @@
 use {
     super::{
-        super::super::{frontend::lexer::DataTypes, logging},
+        super::super::{frontend::lexer::Type, logging},
         Instruction, generation,
         objects::CompilerObjects,
         types::Call,
@@ -25,7 +25,7 @@ pub fn build_call<'ctx>(
 ) -> Option<BasicValueEnum<'ctx>> {
     let call_name: &str = call.0;
     let call_args: &[Instruction<'ctx>] = call.2;
-    let call_type: &DataTypes = call.1;
+    let call_type: &Type = call.1;
 
     if call_name == "sizeof" {
         return build_sizeof(context, call, compiler_objects);
@@ -40,7 +40,7 @@ pub fn build_call<'ctx>(
     let mut compiled_args: Vec<BasicMetadataValueEnum> = Vec::with_capacity(call_args.len());
 
     call_args.iter().enumerate().for_each(|instruction| {
-        let casting_target: Option<DataTypes> = called_function_arguments
+        let casting_target: Option<Type> = called_function_arguments
             .get(instruction.0)
             .map(|arg| arg.get_data_type());
 
@@ -111,23 +111,23 @@ fn build_sizeof<'ctx>(
         return Some(ptr.get_type().size_of().into());
     }
 
-    if let Instruction::DataTypes(data_type) = var_value {
-        match data_type {
-            data_type if data_type.is_integer_type() || *data_type == DataTypes::Bool => {
+    if let Instruction::Type(type_) = var_value {
+        match type_ {
+            type_ if type_.is_integer_type() || type_.is_bool_type() => {
                 return Some(
-                    utils::datatype_integer_to_llvm_type(context, data_type)
+                    utils::datatype_integer_to_llvm_type(context, type_)
                         .size_of()
                         .into(),
                 );
             }
-            data_type if data_type.is_float_type() => {
+            type_ if type_.is_float_type() => {
                 return Some(
-                    utils::datatype_float_to_llvm_type(context, data_type)
+                    utils::datatype_float_to_llvm_type(context, type_)
                         .size_of()
                         .into(),
                 );
             }
-            data_type if *data_type == DataTypes::Ptr => {
+            type_ if *type_ == Type::Ptr => {
                 return Some(context.ptr_type(AddressSpace::default()).size_of().into());
             }
 

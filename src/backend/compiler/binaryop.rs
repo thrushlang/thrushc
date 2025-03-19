@@ -1,6 +1,6 @@
 use {
     super::{
-        super::super::frontend::lexer::{DataTypes, TokenKind},
+        super::super::frontend::lexer::{TokenKind, Type},
         Instruction,
         objects::CompilerObjects,
         types::BinaryOp,
@@ -30,6 +30,12 @@ fn build_int_op<'ctx>(
             .build_int_signed_div(left, right, "")
             .unwrap()
             .into(),
+        TokenKind::LShift => builder.build_left_shift(left, right, "").unwrap().into(),
+        TokenKind::RShift => builder
+            .build_right_shift(left, right, signatures.0 || signatures.1, "")
+            .unwrap()
+            .into(),
+
         op if op.is_logical_type() => {
             match left
                 .get_type()
@@ -153,7 +159,7 @@ pub fn integer_binaryop<'ctx>(
     builder: &Builder<'ctx>,
     context: &'ctx Context,
     binary: BinaryOp<'ctx>,
-    target_type: &DataTypes,
+    target_type: &Type,
     objects: &CompilerObjects<'ctx>,
 ) -> BasicValueEnum<'ctx> {
     if let (
@@ -163,10 +169,10 @@ pub fn integer_binaryop<'ctx>(
     ) = binary
     {
         let left_compiled: IntValue<'_> =
-            utils::build_const_integer(context, &DataTypes::Bool, *left as u64, false);
+            utils::build_const_integer(context, &Type::Bool, *left as u64, false);
 
         let right_compiled: IntValue<'_> =
-            utils::build_const_integer(context, &DataTypes::Bool, *right as u64, false);
+            utils::build_const_integer(context, &Type::Bool, *right as u64, false);
 
         return build_bool_op(builder, left_compiled, right_compiled, binary.1);
     }
@@ -178,10 +184,10 @@ pub fn integer_binaryop<'ctx>(
     ) = binary
     {
         let left_compiled: IntValue<'_> =
-            utils::build_const_integer(context, &DataTypes::I8, *left as u64, false);
+            utils::build_const_integer(context, &Type::I8, *left as u64, false);
 
         let right_compiled: IntValue<'_> =
-            utils::build_const_integer(context, &DataTypes::I8, *right as u64, false);
+            utils::build_const_integer(context, &Type::I8, *right as u64, false);
 
         return builder
             .build_int_compare(
@@ -206,6 +212,8 @@ pub fn integer_binaryop<'ctx>(
         | TokenKind::Less
         | TokenKind::Greater
         | TokenKind::GreaterEq
+        | TokenKind::LShift
+        | TokenKind::RShift
         | TokenKind::And
         | TokenKind::Or,
         Instruction::Integer(right_type, right_num, right_signed),
@@ -265,6 +273,8 @@ pub fn integer_binaryop<'ctx>(
         | TokenKind::Less
         | TokenKind::Greater
         | TokenKind::GreaterEq
+        | TokenKind::LShift
+        | TokenKind::RShift
         | TokenKind::And
         | TokenKind::Or,
         Instruction::LocalRef {
@@ -336,6 +346,8 @@ pub fn integer_binaryop<'ctx>(
         | TokenKind::Less
         | TokenKind::Greater
         | TokenKind::GreaterEq
+        | TokenKind::LShift
+        | TokenKind::RShift
         | TokenKind::And
         | TokenKind::Or,
         Instruction::LocalRef { name, kind, .. },
@@ -495,6 +507,8 @@ pub fn integer_binaryop<'ctx>(
         | TokenKind::Less
         | TokenKind::Greater
         | TokenKind::GreaterEq
+        | TokenKind::LShift
+        | TokenKind::RShift
         | TokenKind::And
         | TokenKind::Or,
         Instruction::Integer(right_type, right_num, right_signed),
@@ -551,7 +565,7 @@ pub fn integer_binaryop<'ctx>(
     ) = binary
     {
         let mut left_compiled: IntValue<'_> =
-            utils::build_const_integer(context, &DataTypes::Bool, *left as u64, false);
+            utils::build_const_integer(context, &Type::Bool, *left as u64, false);
 
         let mut right_compiled: IntValue<'_> = builder
             .build_load(
@@ -563,7 +577,7 @@ pub fn integer_binaryop<'ctx>(
             .into_int_value();
 
         if let Some(new_left_compiled) = utils::integer_autocast(
-            &DataTypes::Bool,
+            &Type::Bool,
             target_type,
             None,
             left_compiled.into(),
@@ -610,7 +624,7 @@ pub fn integer_binaryop<'ctx>(
             .into_int_value();
 
         let mut right_compiled: IntValue<'_> =
-            utils::build_const_integer(context, &DataTypes::Bool, *right as u64, false);
+            utils::build_const_integer(context, &Type::Bool, *right as u64, false);
 
         if let Some(new_left_compiled) = utils::integer_autocast(
             kind,
@@ -624,7 +638,7 @@ pub fn integer_binaryop<'ctx>(
         }
 
         if let Some(new_right_compiled) = utils::integer_autocast(
-            &DataTypes::Bool,
+            &Type::Bool,
             target_type,
             None,
             right_compiled.into(),
@@ -658,6 +672,8 @@ pub fn integer_binaryop<'ctx>(
         | TokenKind::Less
         | TokenKind::Greater
         | TokenKind::GreaterEq
+        | TokenKind::LShift
+        | TokenKind::RShift
         | TokenKind::And
         | TokenKind::Or,
         Instruction::BinaryOp {
@@ -824,6 +840,8 @@ pub fn integer_binaryop<'ctx>(
         | TokenKind::Less
         | TokenKind::Greater
         | TokenKind::GreaterEq
+        | TokenKind::LShift
+        | TokenKind::RShift
         | TokenKind::And
         | TokenKind::Or,
         Instruction::Group {
@@ -892,6 +910,8 @@ pub fn integer_binaryop<'ctx>(
         | TokenKind::Less
         | TokenKind::Greater
         | TokenKind::GreaterEq
+        | TokenKind::LShift
+        | TokenKind::RShift
         | TokenKind::And
         | TokenKind::Or,
         Instruction::BinaryOp {
@@ -957,6 +977,8 @@ pub fn integer_binaryop<'ctx>(
         | TokenKind::Less
         | TokenKind::Greater
         | TokenKind::GreaterEq
+        | TokenKind::LShift
+        | TokenKind::RShift
         | TokenKind::And
         | TokenKind::Or,
         Instruction::Group {
@@ -1018,7 +1040,7 @@ pub fn float_binaryop<'ctx>(
     builder: &Builder<'ctx>,
     context: &'ctx Context,
     binary: BinaryOp<'ctx>,
-    target_type: &DataTypes,
+    target_type: &Type,
     objects: &CompilerObjects<'ctx>,
 ) -> BasicValueEnum<'ctx> {
     println!("{:?}", binary);
@@ -1665,7 +1687,7 @@ pub fn bool_binaryop<'ctx>(
     builder: &Builder<'ctx>,
     context: &'ctx Context,
     binary: BinaryOp<'ctx>,
-    target_type: &DataTypes,
+    target_type: &Type,
     objects: &CompilerObjects<'ctx>,
 ) -> BasicValueEnum<'ctx> {
     if let (

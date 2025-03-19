@@ -3,7 +3,7 @@ use {
         super::{
             error::ThrushError,
             frontend::{
-                lexer::{DataTypes, TokenKind},
+                lexer::{TokenKind, Type},
                 types::StructFields,
             },
         },
@@ -29,19 +29,20 @@ pub enum Instruction<'ctx> {
     Str(Vec<u8>),
     Char(u8),
     Boolean(bool),
-    Integer(DataTypes, f64, bool),
-    Float(DataTypes, f64, bool),
+    Integer(Type, f64, bool),
+    Float(Type, f64, bool),
     Struct {
         name: &'ctx str,
         fields_types: Struct<'ctx>,
     },
     NullPtr,
 
-    DataTypes(DataTypes),
+    Type(Type),
+
     InitStruct {
         name: &'ctx str,
         fields: StructFields<'ctx>,
-        kind: DataTypes,
+        kind: Type,
     },
 
     // Conditionals
@@ -86,7 +87,7 @@ pub enum Instruction<'ctx> {
     // Functions
     FunctionParameter {
         name: &'ctx str,
-        kind: DataTypes,
+        kind: Type,
         position: u32,
         line: usize,
     },
@@ -94,15 +95,15 @@ pub enum Instruction<'ctx> {
         name: &'ctx str,
         params: Vec<Instruction<'ctx>>,
         body: Option<Box<Instruction<'ctx>>>,
-        return_type: DataTypes,
+        return_type: Type,
         is_public: bool,
     },
-    Return(Box<Instruction<'ctx>>, DataTypes),
+    Return(Box<Instruction<'ctx>>, Type),
 
     // Locals variables
     Local {
         name: &'ctx str,
-        kind: DataTypes,
+        kind: Type,
         value: Box<Instruction<'ctx>>,
         line: usize,
         exist_only_comptime: bool,
@@ -110,12 +111,12 @@ pub enum Instruction<'ctx> {
     LocalRef {
         name: &'ctx str,
         line: usize,
-        kind: DataTypes,
+        kind: Type,
         struct_type: String,
     },
     MutVar {
         name: &'ctx str,
-        kind: DataTypes,
+        kind: Type,
         value: Box<Instruction<'ctx>>,
     },
 
@@ -123,24 +124,24 @@ pub enum Instruction<'ctx> {
     Call {
         name: &'ctx str,
         args: Vec<Instruction<'ctx>>,
-        kind: DataTypes,
+        kind: Type,
         struct_type: String,
     },
     BinaryOp {
         left: Box<Instruction<'ctx>>,
         op: &'ctx TokenKind,
         right: Box<Instruction<'ctx>>,
-        kind: DataTypes,
+        kind: Type,
     },
     UnaryOp {
         op: &'ctx TokenKind,
         value: Box<Instruction<'ctx>>,
-        kind: DataTypes,
+        kind: Type,
         is_pre: bool,
     },
     Group {
         instr: Box<Instruction<'ctx>>,
-        kind: DataTypes,
+        kind: Type,
     },
 
     // Heap deallocator
@@ -186,7 +187,7 @@ impl<'ctx> Instruction<'ctx> {
         }
 
         if let Instruction::InitStruct { fields, .. } = self {
-            let mut new_fields: Vec<(&'ctx str, DataTypes, u32)> = Vec::with_capacity(fields.len());
+            let mut new_fields: Vec<(&'ctx str, Type, u32)> = Vec::with_capacity(fields.len());
 
             fields.iter().for_each(|field| {
                 new_fields.push((field.0, field.2, field.3));
@@ -318,7 +319,7 @@ impl<'ctx> Instruction<'ctx> {
     }
 
     #[inline(always)]
-    pub const fn get_data_type_recursive(&self) -> DataTypes {
+    pub const fn get_data_type_recursive(&self) -> Type {
         if let Instruction::BinaryOp { left, .. } = self {
             return left.get_data_type_recursive();
         }
@@ -352,25 +353,25 @@ impl<'ctx> Instruction<'ctx> {
         }
 
         if let Instruction::Char(_) = self {
-            return DataTypes::Char;
+            return Type::Char;
         }
 
         if let Instruction::Str(_) = self {
-            return DataTypes::Str;
+            return Type::Str;
         }
 
         if let Instruction::Boolean(_) = self {
-            return DataTypes::Bool;
+            return Type::Bool;
         }
 
         if let Instruction::NullPtr = self {
-            return DataTypes::Ptr;
+            return Type::Ptr;
         }
 
         unimplemented!()
     }
 
-    pub fn get_data_type(&self) -> DataTypes {
+    pub fn get_data_type(&self) -> Type {
         match self {
             Instruction::Integer(datatype, ..)
             | Instruction::Float(datatype, ..)
@@ -379,12 +380,12 @@ impl<'ctx> Instruction<'ctx> {
             | Instruction::BinaryOp { kind: datatype, .. }
             | Instruction::FunctionParameter { kind: datatype, .. }
             | Instruction::Call { kind: datatype, .. }
-            | Instruction::DataTypes(datatype) => *datatype,
+            | Instruction::Type(datatype) => *datatype,
 
-            Instruction::Str(_) => DataTypes::Str,
-            Instruction::Boolean(_) => DataTypes::Bool,
-            Instruction::Char(_) => DataTypes::Char,
-            Instruction::NullPtr => DataTypes::Ptr,
+            Instruction::Str(_) => Type::Str,
+            Instruction::Boolean(_) => Type::Bool,
+            Instruction::Char(_) => Type::Char,
+            Instruction::NullPtr => Type::Ptr,
             Instruction::InitStruct { kind: datatype, .. } => *datatype,
 
             Instruction::UnaryOp { value, .. } => value.get_data_type(),

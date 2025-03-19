@@ -1,5 +1,5 @@
 use super::{
-    super::super::frontend::lexer::{DataTypes, TokenKind},
+    super::super::frontend::lexer::{TokenKind, Type},
     Instruction,
 };
 
@@ -9,19 +9,19 @@ pub type BinaryOp<'ctx> = (
     &'ctx Instruction<'ctx>,
 );
 
-pub type UnaryOp<'ctx> = (&'ctx TokenKind, &'ctx Instruction<'ctx>, &'ctx DataTypes);
+pub type UnaryOp<'ctx> = (&'ctx TokenKind, &'ctx Instruction<'ctx>, &'ctx Type);
 
-pub type Variable<'ctx> = (&'ctx str, &'ctx DataTypes, &'ctx Instruction<'ctx>);
+pub type Variable<'ctx> = (&'ctx str, &'ctx Type, &'ctx Instruction<'ctx>);
 
-pub type Call<'ctx> = (&'ctx str, &'ctx DataTypes, &'ctx [Instruction<'ctx>]);
+pub type Call<'ctx> = (&'ctx str, &'ctx Type, &'ctx [Instruction<'ctx>]);
 
 pub type Function<'ctx> = (
     &'ctx str,
     &'ctx [Instruction<'ctx>],
     Option<&'ctx Box<Instruction<'ctx>>>,
-    &'ctx DataTypes,
+    &'ctx Type,
     &'ctx bool,
 );
 
-pub type Struct<'ctx> = Vec<(&'ctx str, DataTypes, u32)>;
-pub type StructField<'ctx> = (&'ctx str, DataTypes, u32);
+pub type Struct<'ctx> = Vec<(&'ctx str, Type, u32)>;
+pub type StructField<'ctx> = (&'ctx str, Type, u32);
