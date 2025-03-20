@@ -114,7 +114,7 @@ impl Diagnostic {
             format!(
                 "{} at line {}\n",
                 format_args!("{}", &self.path.to_string_lossy().bold().bright_red()),
-                (line - 1).to_string().bold().bright_red()
+                line.to_string().bold().bright_red()
             )
             .as_bytes(),
         );
@@ -168,6 +168,6 @@ impl Diagnostic {
 
         arrow_line.replace_range(position.start..position.end, "—");
 
-        Some((line_text, arrow_line, line_position))
+        Some((line_text, arrow_line, position.line))
     }
 }

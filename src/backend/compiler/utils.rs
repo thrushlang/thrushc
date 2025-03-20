@@ -20,10 +20,10 @@ use {
 #[inline]
 pub fn type_int_to_llvm_int_type<'ctx>(context: &'ctx Context, kind: &Type) -> IntType<'ctx> {
     match kind {
-        Type::I8 | Type::Char => context.i8_type(),
-        Type::I16 => context.i16_type(),
-        Type::I32 => context.i32_type(),
-        Type::I64 => context.i64_type(),
+        Type::S8 | Type::U8 | Type::Char => context.i8_type(),
+        Type::S16 | Type::U16 => context.i16_type(),
+        Type::S32 | Type::U32 => context.i32_type(),
+        Type::S64 | Type::U64 => context.i64_type(),
         Type::Bool => context.bool_type(),
         _ => unreachable!(),
     }
@@ -33,7 +33,7 @@ pub fn type_int_to_llvm_int_type<'ctx>(context: &'ctx Context, kind: &Type) -> I
 pub fn type_float_to_llvm_float_type<'ctx>(context: &'ctx Context, kind: &Type) -> FloatType<'ctx> {
     match kind {
         Type::F32 => context.f32_type(),
-        Type::F64 | Type::Bool => context.f64_type(),
+        Type::F64 => context.f64_type(),
         _ => unreachable!(),
     }
 }
@@ -79,14 +79,18 @@ pub fn build_const_integer<'ctx>(
 ) -> IntValue<'ctx> {
     match kind {
         Type::Char => context.i8_type().const_int(num, is_signed).const_neg(),
-        Type::I8 if is_signed => context.i8_type().const_int(num, is_signed).const_neg(),
-        Type::I8 => context.i8_type().const_int(num, is_signed),
-        Type::I16 if is_signed => context.i16_type().const_int(num, is_signed).const_neg(),
-        Type::I16 => context.i16_type().const_int(num, is_signed),
-        Type::I32 if is_signed => context.i32_type().const_int(num, is_signed).const_neg(),
-        Type::I32 => context.i32_type().const_int(num, is_signed),
-        Type::I64 if is_signed => context.i64_type().const_int(num, is_signed).const_neg(),
-        Type::I64 => context.i64_type().const_int(num, is_signed),
+        Type::S8 if is_signed => context.i8_type().const_int(num, is_signed).const_neg(),
+        Type::S8 => context.i8_type().const_int(num, is_signed),
+        Type::S16 if is_signed => context.i16_type().const_int(num, is_signed).const_neg(),
+        Type::S16 => context.i16_type().const_int(num, is_signed),
+        Type::S32 if is_signed => context.i32_type().const_int(num, is_signed).const_neg(),
+        Type::S32 => context.i32_type().const_int(num, is_signed),
+        Type::S64 if is_signed => context.i64_type().const_int(num, is_signed).const_neg(),
+        Type::S64 => context.i64_type().const_int(num, is_signed),
+        Type::U8 => context.i8_type().const_int(num, false),
+        Type::U16 => context.i16_type().const_int(num, false),
+        Type::U32 => context.i32_type().const_int(num, false),
+        Type::U64 => context.i64_type().const_int(num, false),
         Type::Bool => context.bool_type().const_int(num, false),
         _ => unreachable!(),
     }
@@ -106,10 +110,10 @@ pub fn type_to_function_type<'ctx>(
     });
 
     match kind {
-        Type::I8 | Type::Char => context.i8_type().fn_type(&param_types, true),
-        Type::I16 => context.i16_type().fn_type(&param_types, true),
-        Type::I32 => context.i32_type().fn_type(&param_types, true),
-        Type::I64 => context.i64_type().fn_type(&param_types, true),
+        Type::S8 | Type::U8 | Type::Char => context.i8_type().fn_type(&param_types, true),
+        Type::S16 | Type::U16 => context.i16_type().fn_type(&param_types, true),
+        Type::S32 | Type::U32 => context.i32_type().fn_type(&param_types, true),
+        Type::S64 | Type::U64 => context.i64_type().fn_type(&param_types, true),
         Type::Str | Type::Struct | Type::Ptr | Type::Generic => context
             .ptr_type(AddressSpace::default())
             .fn_type(&param_types, true),
@@ -125,10 +129,10 @@ pub fn type_to_basic_metadata_enum<'ctx>(
     kind: &Type,
 ) -> BasicMetadataTypeEnum<'ctx> {
     match kind {
-        Type::I8 => context.i8_type().into(),
-        Type::I16 => context.i16_type().into(),
-        Type::I32 => context.i32_type().into(),
-        Type::I64 => context.i64_type().into(),
+        Type::S8 | Type::U8 | Type::Char => context.i8_type().into(),
+        Type::S16 | Type::U16 => context.i16_type().into(),
+        Type::S32 | Type::U32 => context.i32_type().into(),
+        Type::S64 | Type::U64 => context.i64_type().into(),
         Type::F32 => context.f32_type().into(),
         Type::F64 => context.f64_type().into(),
         Type::Str | Type::Struct | Type::Ptr => context.ptr_type(AddressSpace::default()).into(),

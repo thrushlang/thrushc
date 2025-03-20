@@ -13,7 +13,7 @@ use {
     std::{mem, process::exit},
 };
 
-const KEYWORDS_CAPACITY: usize = 38;
+const KEYWORDS_CAPACITY: usize = 42;
 const MINIMAL_TOKENS_CAPACITY: usize = 100_000;
 
 lazy_static! {
@@ -47,10 +47,14 @@ lazy_static! {
         keywords.insert(b"@extern", TokenKind::Extern);
         keywords.insert(b"new", TokenKind::New);
         keywords.insert(b"nullptr", TokenKind::NullPtr);
-        keywords.insert(b"i8", TokenKind::DataType(Type::I8));
-        keywords.insert(b"i16", TokenKind::DataType(Type::I16));
-        keywords.insert(b"i32", TokenKind::DataType(Type::I32));
-        keywords.insert(b"i64", TokenKind::DataType(Type::I64));
+        keywords.insert(b"s8", TokenKind::DataType(Type::S8));
+        keywords.insert(b"s16", TokenKind::DataType(Type::S16));
+        keywords.insert(b"s32", TokenKind::DataType(Type::S32));
+        keywords.insert(b"s64", TokenKind::DataType(Type::S64));
+        keywords.insert(b"u8", TokenKind::DataType(Type::U8));
+        keywords.insert(b"u16", TokenKind::DataType(Type::U16));
+        keywords.insert(b"u32", TokenKind::DataType(Type::U32));
+        keywords.insert(b"u64", TokenKind::DataType(Type::U64));
         keywords.insert(b"f32", TokenKind::DataType(Type::F32));
         keywords.insert(b"f64", TokenKind::DataType(Type::F64));
         keywords.insert(b"bool", TokenKind::DataType(Type::Bool));
@@ -288,10 +292,6 @@ impl<'a> Lexer<'a> {
 
     #[inline]
     fn parse_float_or_integer(&mut self, lexeme: &str) -> Result<(Type, f64), ThrushCompilerError> {
-        // usize MAX 18446744073709551615 // Me lleva...
-        // isize MAX 9223372036854775807 // (USADO ACTUALMENTE) -> TENEMOS MENOS CAPACIDAD ACTUAL EN EL LENGUAJE. (DA HELL EL QUE OVERFLOWEE ESTA WEBADA)
-        // f64 MAX 1.7976931348623157e308 // NO HAY PROBLEMA SI OCURRE ALGÚN OVERFLOW.
-
         if lexeme.contains('.') {
             return self.parse_float(lexeme);
         }
@@ -337,6 +337,13 @@ impl<'a> Lexer<'a> {
         const I32_MIN: isize = -2147483648;
         const I32_MAX: isize = 2147483647;
 
+        const U8_MIN: usize = 0;
+        const U8_MAX: usize = 255;
+        const U16_MIN: usize = 0;
+        const U16_MAX: usize = 65535;
+        const U32_MIN: usize = 0;
+        const U32_MAX: usize = 4294967295;
+
         if lexeme.starts_with("0x") {
             let cleaned_lexeme: String = lexeme
                 .strip_prefix("0x")
@@ -346,13 +353,13 @@ impl<'a> Lexer<'a> {
             return match isize::from_str_radix(&cleaned_lexeme, 16) {
                 Ok(num) => {
                     if (I8_MIN..=I8_MAX).contains(&num) {
-                        return Ok((Type::I8, num as f64));
+                        return Ok((Type::S8, num as f64));
                     } else if (I16_MIN..=I16_MAX).contains(&num) {
-                        return Ok((Type::I16, num as f64));
+                        return Ok((Type::S16, num as f64));
                     } else if (I32_MIN..=I32_MAX).contains(&num) {
-                        return Ok((Type::I32, num as f64));
+                        return Ok((Type::S32, num as f64));
                     } else if (isize::MIN..=isize::MAX).contains(&num) {
-                        return Ok((Type::I64, num as f64));
+                        return Ok((Type::S64, num as f64));
                     } else {
                         return Err(ThrushCompilerError::Error(
                             String::from("Syntax error"),
@@ -381,13 +388,13 @@ impl<'a> Lexer<'a> {
             return match isize::from_str_radix(&cleaned_lexeme, 2) {
                 Ok(num) => {
                     if (I8_MIN..=I8_MAX).contains(&num) {
-                        return Ok((Type::I8, num as f64));
+                        return Ok((Type::S8, num as f64));
                     } else if (I16_MIN..=I16_MAX).contains(&num) {
-                        return Ok((Type::I16, num as f64));
+                        return Ok((Type::S16, num as f64));
                     } else if (I32_MIN..=I32_MAX).contains(&num) {
-                        return Ok((Type::I32, num as f64));
+                        return Ok((Type::S32, num as f64));
                     } else if (isize::MIN..=isize::MAX).contains(&num) {
-                        return Ok((Type::I64, num as f64));
+                        return Ok((Type::S64, num as f64));
                     } else {
                         return Err(ThrushCompilerError::Error(
                             String::from("Syntax error"),
@@ -407,32 +414,53 @@ impl<'a> Lexer<'a> {
             };
         }
 
-        match lexeme.parse::<isize>() {
+        match lexeme.parse::<usize>() {
             Ok(num) => {
-                if (I8_MIN..=I8_MAX).contains(&num) {
-                    Ok((Type::I8, num as f64))
-                } else if (I16_MIN..=I16_MAX).contains(&num) {
-                    Ok((Type::I16, num as f64))
-                } else if (I32_MIN..=I32_MAX).contains(&num) {
-                    Ok((Type::I32, num as f64))
-                } else if (isize::MIN..=isize::MAX).contains(&num) {
-                    Ok((Type::I64, num as f64))
+                if (U8_MIN..=U8_MAX).contains(&num) {
+                    Ok((Type::U8, num as f64))
+                } else if (U16_MIN..=U16_MAX).contains(&num) {
+                    return Ok((Type::U16, num as f64));
+                } else if (U32_MIN..=U32_MAX).contains(&num) {
+                    return Ok((Type::U32, num as f64));
+                } else if (usize::MIN..=usize::MAX).contains(&num) {
+                    return Ok((Type::U64, num as f64));
                 } else {
-                    Err(ThrushCompilerError::Error(
+                    return Err(ThrushCompilerError::Error(
                         String::from("Syntax error"),
                         String::from("Out of bounds."),
                         self.line,
                         Some(self.span),
-                    ))
+                    ));
                 }
             }
 
-            Err(_) => Err(ThrushCompilerError::Error(
-                String::from("Syntax error"),
-                String::from("Out of bounds."),
-                self.line,
-                Some(self.span),
-            )),
+            Err(_) => match lexeme.parse::<isize>() {
+                Ok(num) => {
+                    if (I8_MIN..=I8_MAX).contains(&num) {
+                        Ok((Type::S8, num as f64))
+                    } else if (I16_MIN..=I16_MAX).contains(&num) {
+                        Ok((Type::S16, num as f64))
+                    } else if (I32_MIN..=I32_MAX).contains(&num) {
+                        Ok((Type::S32, num as f64))
+                    } else if (isize::MIN..=isize::MAX).contains(&num) {
+                        Ok((Type::S64, num as f64))
+                    } else {
+                        Err(ThrushCompilerError::Error(
+                            String::from("Syntax error"),
+                            String::from("Out of bounds."),
+                            self.line,
+                            Some(self.span),
+                        ))
+                    }
+                }
+
+                Err(_) => Err(ThrushCompilerError::Error(
+                    String::from("Syntax error"),
+                    String::from("Out of bounds."),
+                    self.line,
+                    Some(self.span),
+                )),
+            },
         }
     }
 
@@ -862,11 +890,17 @@ impl TokenKind {
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum Type {
-    // Integer Type
-    I8,
-    I16,
-    I32,
-    I64,
+    // Signed Integer Type
+    S8,
+    S16,
+    S32,
+    S64,
+
+    // Unsigned Integer Type
+    U8,
+    U16,
+    U32,
+    U64,
 
     // Floating Point Type
     F32,
@@ -897,10 +931,14 @@ pub enum Type {
 impl std::fmt::Display for Type {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Type::I8 => write!(f, "i8"),
-            Type::I16 => write!(f, "i16"),
-            Type::I32 => write!(f, "i32"),
-            Type::I64 => write!(f, "i64"),
+            Type::S8 => write!(f, "s8"),
+            Type::S16 => write!(f, "s16"),
+            Type::S32 => write!(f, "s32"),
+            Type::S64 => write!(f, "s64"),
+            Type::U8 => write!(f, "u8"),
+            Type::U16 => write!(f, "u16"),
+            Type::U32 => write!(f, "u32"),
+            Type::U64 => write!(f, "u64"),
             Type::F32 => write!(f, "f32"),
             Type::F64 => write!(f, "f64"),
             Type::Bool => write!(f, "bool"),
@@ -916,21 +954,37 @@ impl std::fmt::Display for Type {
 
 impl Type {
     #[inline(always)]
-    pub const fn calculate_integer_datatype(self, other: Type) -> Type {
+    pub const fn precompute_numeric_type(self, other: Type, default: Type) -> Type {
         match (self, other) {
-            (Type::I64, _) | (_, Type::I64) => Type::I64,
-            (Type::I32, _) | (_, Type::I32) => Type::I32,
-            (Type::I16, _) | (_, Type::I16) => Type::I16,
-            _ => Type::I8,
+            (Type::S64, _) | (_, Type::S64) => Type::S64,
+            (Type::S32, _) | (_, Type::S32) => Type::S32,
+            (Type::S16, _) | (_, Type::S16) => Type::S16,
+            (Type::S8, _) | (_, Type::S8) => Type::S8,
+
+            (Type::U64, _) | (_, Type::U64) => Type::U64,
+            (Type::U32, _) | (_, Type::U32) => Type::U32,
+            (Type::U16, _) | (_, Type::U16) => Type::U16,
+            (Type::U8, _) | (_, Type::U8) => Type::U8,
+
+            (Type::F64, _) | (_, Type::F64) => Type::F64,
+            (Type::F32, _) | (_, Type::F32) => Type::F32,
+
+            _ => default,
         }
     }
 
     #[inline(always)]
-    pub const fn calculate_float_datatype(self, other: Type) -> Type {
-        match (self, other) {
-            (Type::F64, _) | (_, Type::F64) => Type::F64,
-            (Type::F32, _) | (_, Type::F32) => Type::F32,
-            _ => Type::F64,
+    pub const fn reverse_signed_integer_type(self) -> Type {
+        if self.is_signed_integer_type() {
+            return self;
+        }
+
+        match self {
+            Type::U64 => Type::S64,
+            Type::U32 => Type::S32,
+            Type::U16 => Type::S16,
+            Type::U8 => Type::S8,
+            _ => self,
         }
     }
 
@@ -965,10 +1019,23 @@ impl Type {
     }
 
     #[inline(always)]
+    pub const fn is_signed_integer_type(&self) -> bool {
+        matches!(self, Type::S8 | Type::S16 | Type::S32 | Type::S64)
+    }
+
+    #[inline(always)]
     pub const fn is_integer_type(&self) -> bool {
         matches!(
             self,
-            Type::I8 | Type::I16 | Type::I32 | Type::I64 | Type::Char
+            Type::S8
+                | Type::S16
+                | Type::S32
+                | Type::S64
+                | Type::U8
+                | Type::U16
+                | Type::U32
+                | Type::U64
+                | Type::Char
         )
     }
 }

@@ -184,10 +184,10 @@ pub fn integer_binaryop<'ctx>(
     ) = binary
     {
         let left_compiled: IntValue =
-            utils::build_const_integer(context, &Type::I8, *left as u64, false);
+            utils::build_const_integer(context, &Type::S8, *left as u64, false);
 
         let right_compiled: IntValue =
-            utils::build_const_integer(context, &Type::I8, *right as u64, false);
+            utils::build_const_integer(context, &Type::S8, *right as u64, false);
 
         return builder
             .build_int_compare(

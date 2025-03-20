@@ -13,10 +13,23 @@ fn check_binary_arithmetic(
 ) -> Result<(), ThrushCompilerError> {
     match (a, b) {
         (
-            Type::I8 | Type::I16 | Type::I32 | Type::I64,
-            Type::I8 | Type::I16 | Type::I32 | Type::I64,
+            Type::S8
+            | Type::S16
+            | Type::S32
+            | Type::S64
+            | Type::U8
+            | Type::U16
+            | Type::U32
+            | Type::U64,
+            Type::S8
+            | Type::S16
+            | Type::S32
+            | Type::S64
+            | Type::U8
+            | Type::U16
+            | Type::U32
+            | Type::U64,
         ) => Ok(()),
-        (Type::F32 | Type::F64, Type::F32 | Type::F64) => Ok(()),
 
         _ => Err(ThrushCompilerError::Error(
             String::from("Type checking"),
@@ -35,8 +48,8 @@ fn check_binary_equality(
     location: (usize, (usize, usize)),
 ) -> Result<(), ThrushCompilerError> {
     if let (
-        Type::I8 | Type::I16 | Type::I32 | Type::I64,
-        Type::I8 | Type::I16 | Type::I32 | Type::I64,
+        Type::S8 | Type::S16 | Type::S32 | Type::S64 | Type::U8 | Type::U16 | Type::U32 | Type::U64,
+        Type::S8 | Type::S16 | Type::S32 | Type::S64 | Type::U8 | Type::U16 | Type::U32 | Type::U64,
     ) = (a, b)
     {
         return Ok(());
@@ -64,8 +77,8 @@ fn check_binary_comparasion(
     location: (usize, (usize, usize)),
 ) -> Result<(), ThrushCompilerError> {
     if let (
-        Type::I8 | Type::I16 | Type::I32 | Type::I64,
-        Type::I8 | Type::I16 | Type::I32 | Type::I64,
+        Type::S8 | Type::S16 | Type::S32 | Type::S64 | Type::U8 | Type::U16 | Type::U32 | Type::U64,
+        Type::S8 | Type::S16 | Type::S32 | Type::S64 | Type::U8 | Type::U16 | Type::U32 | Type::U64,
     ) = (a, b)
     {
         return Ok(());
@@ -108,8 +121,8 @@ fn check_binary_shift(
     location: (usize, (usize, usize)),
 ) -> Result<(), ThrushCompilerError> {
     if let (
-        Type::I8 | Type::I16 | Type::I32 | Type::I64,
-        Type::I8 | Type::I16 | Type::I32 | Type::I64,
+        Type::S8 | Type::S16 | Type::S32 | Type::S64 | Type::U8 | Type::U16 | Type::U32 | Type::U64,
+        Type::S8 | Type::S16 | Type::S32 | Type::S64 | Type::U8 | Type::U16 | Type::U32 | Type::U64,
     ) = (a, b)
     {
         return Ok(());
@@ -159,7 +172,7 @@ fn check_unary(
     a: &Type,
     location: (usize, (usize, usize)),
 ) -> Result<(), ThrushCompilerError> {
-    if let Type::I8 | Type::I16 | Type::I32 | Type::I64 | Type::F32 | Type::F64 = a {
+    if a.is_integer_type() || a.is_float_type() {
         return Ok(());
     }
 
@@ -204,25 +217,38 @@ pub fn check_unary_types(
 }
 
 pub fn check_types(
-    target: Type,
-    from: Option<Type>,
-    value: Option<&Instruction>,
+    target_type: Type,
+    from_type: Option<Type>,
+    expression: Option<&Instruction>,
     op: Option<&TokenKind>,
     error: ThrushCompilerError,
 ) -> Result<(), ThrushCompilerError> {
-    if let Some(Instruction::BinaryOp { op, kind, .. }) = value {
-        return check_types(target, Some(*kind), None, Some(op), error);
+    if let Some(Instruction::BinaryOp {
+        op,
+        kind: expression_type,
+        ..
+    }) = expression
+    {
+        return check_types(target_type, Some(*expression_type), None, Some(op), error);
     }
 
-    if let Some(Instruction::UnaryOp { op, kind, .. }) = value {
-        return check_types(target, Some(*kind), None, Some(op), error);
+    if let Some(Instruction::UnaryOp {
+        op,
+        kind: expression_type,
+        ..
+    }) = expression
+    {
+        return check_types(target_type, Some(*expression_type), None, Some(op), error);
     }
 
-    if let Some(Instruction::Group { instr, .. }) = value {
-        return check_types(target, None, Some(instr), None, error);
+    if let Some(Instruction::Group {
+        instr: expression, ..
+    }) = expression
+    {
+        return check_types(target_type, None, Some(expression), None, error);
     }
 
-    match (target, from.unwrap(), op) {
+    match (target_type, from_type.unwrap(), op) {
         (Type::Char, Type::Char, None) => Ok(()),
         (Type::Str, Type::Str, None) => Ok(()),
         (Type::Struct, Type::Struct | Type::Ptr, None) => Ok(()),
@@ -233,9 +259,14 @@ pub fn check_types(
             | Type::Ptr
             | Type::Str
             | Type::Char
-            | Type::I8
-            | Type::I32
-            | Type::I64
+            | Type::S8
+            | Type::S16
+            | Type::S32
+            | Type::S64
+            | Type::U8
+            | Type::U16
+            | Type::U32
+            | Type::U64
             | Type::F32
             | Type::F64
             | Type::Bool
@@ -259,8 +290,8 @@ pub fn check_types(
             | None,
         ) => Ok(()),
         (
-            Type::I8,
-            Type::I8,
+            Type::S8,
+            Type::S8 | Type::U8,
             Some(
                 TokenKind::Plus
                 | TokenKind::Minus
@@ -272,8 +303,8 @@ pub fn check_types(
             | None,
         ) => Ok(()),
         (
-            Type::I16,
-            Type::I16 | Type::I8,
+            Type::S16,
+            Type::S16 | Type::S8 | Type::U16 | Type::U8,
             Some(
                 TokenKind::Plus
                 | TokenKind::Minus
@@ -285,8 +316,8 @@ pub fn check_types(
             | None,
         ) => Ok(()),
         (
-            Type::I32,
-            Type::I32 | Type::I16 | Type::I8,
+            Type::S32,
+            Type::S32 | Type::S16 | Type::S8 | Type::U32 | Type::U16 | Type::U8,
             Some(
                 TokenKind::Plus
                 | TokenKind::Minus
@@ -298,8 +329,67 @@ pub fn check_types(
             | None,
         ) => Ok(()),
         (
-            Type::I64,
-            Type::I64 | Type::I32 | Type::I16 | Type::I8,
+            Type::S64,
+            Type::S64
+            | Type::S32
+            | Type::S16
+            | Type::S8
+            | Type::U64
+            | Type::U32
+            | Type::U16
+            | Type::U8,
+            Some(
+                TokenKind::Plus
+                | TokenKind::Minus
+                | TokenKind::Slash
+                | TokenKind::Star
+                | TokenKind::LShift
+                | TokenKind::RShift,
+            )
+            | None,
+        ) => Ok(()),
+        (
+            Type::U8,
+            Type::U8,
+            Some(
+                TokenKind::Plus
+                | TokenKind::Minus
+                | TokenKind::Slash
+                | TokenKind::Star
+                | TokenKind::LShift
+                | TokenKind::RShift,
+            )
+            | None,
+        ) => Ok(()),
+        (
+            Type::U16,
+            Type::U16 | Type::U8,
+            Some(
+                TokenKind::Plus
+                | TokenKind::Minus
+                | TokenKind::Slash
+                | TokenKind::Star
+                | TokenKind::LShift
+                | TokenKind::RShift,
+            )
+            | None,
+        ) => Ok(()),
+        (
+            Type::U32,
+            Type::U32 | Type::U16 | Type::U8,
+            Some(
+                TokenKind::Plus
+                | TokenKind::Minus
+                | TokenKind::Slash
+                | TokenKind::Star
+                | TokenKind::LShift
+                | TokenKind::RShift,
+            )
+            | None,
+        ) => Ok(()),
+        (
+            Type::U64,
+            Type::U64 | Type::U32 | Type::U16 | Type::U8,
             Some(
                 TokenKind::Plus
                 | TokenKind::Minus

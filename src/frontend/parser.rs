@@ -51,7 +51,7 @@ impl<'instr> Parser<'instr> {
         functions.insert(
             "sizeof!",
             (
-                Type::I64,
+                Type::S64,
                 Vec::from([Type::Generic]),
                 Vec::new(),
                 String::new(),
@@ -221,7 +221,7 @@ impl<'instr> Parser<'instr> {
 
         let conditional: Instruction = self.expression()?;
 
-        self.check_type_mismatch(Type::Bool, conditional.get_data_type(), None, line);
+        self.check_type_mismatch(Type::Bool, conditional.get_data_type(), None);
 
         let block: Instruction = self.build_code_block(&mut [])?;
 
@@ -649,7 +649,7 @@ impl<'instr> Parser<'instr> {
                 let field_type: Type = instruction.get_data_type();
                 let target_type: &Type = struct_found.get(field_name).unwrap();
 
-                self.check_type_mismatch(*target_type, field_type, Some(&instruction), line);
+                self.check_type_mismatch(*target_type, field_type, Some(&instruction));
 
                 fields.push((field_name, instruction, *target_type, field_index));
 
@@ -897,7 +897,7 @@ impl<'instr> Parser<'instr> {
             String::from("Expected ';'."),
         )?;
 
-        self.check_type_mismatch(Type::Bool, conditional.get_data_type(), None, line);
+        self.check_type_mismatch(Type::Bool, conditional.get_data_type(), None);
 
         let actions: Instruction = self.expression()?;
 
@@ -1030,7 +1030,7 @@ impl<'instr> Parser<'instr> {
 
         self.inside_local = false;
 
-        self.check_type_mismatch(kind.0, value.get_data_type(), Some(&value), line);
+        self.check_type_mismatch(kind.0, value.get_data_type(), Some(&value));
         self.check_struct_type_mismatch(&kind.1, &value, line)?;
 
         self.parser_objects.insert_new_local(
@@ -1103,7 +1103,7 @@ impl<'instr> Parser<'instr> {
                 String::from("Expected ';'."),
             )?;
 
-            self.check_type_mismatch(Type::Void, self.at_typed_function.0, None, line);
+            self.check_type_mismatch(Type::Void, self.at_typed_function.0, None);
 
             return Ok(Instruction::Return(Box::new(Instruction::Null), Type::Void));
         }
@@ -1114,7 +1114,6 @@ impl<'instr> Parser<'instr> {
             self.at_typed_function.0,
             value.get_data_type(),
             Some(&value),
-            line,
         );
 
         self.check_struct_type_mismatch(&self.at_typed_function.1, &value, line)?;
@@ -1652,13 +1651,7 @@ impl<'instr> Parser<'instr> {
                 self.previous().span,
             )?;
 
-            let kind: Type = if left_type.is_integer_type() && right_type.is_integer_type() {
-                left_type.calculate_integer_datatype(right_type)
-            } else if left_type.is_float_type() && right_type.is_float_type() {
-                left_type.calculate_float_datatype(right_type)
-            } else {
-                self.at_typed_variable
-            };
+            let kind: Type = left_type.precompute_numeric_type(right_type, self.at_typed_variable);
 
             instr = Instruction::BinaryOp {
                 left: Box::from(instr),
@@ -1703,13 +1696,7 @@ impl<'instr> Parser<'instr> {
                 self.previous().span,
             )?;
 
-            let kind: Type = if left_type.is_integer_type() && right_type.is_integer_type() {
-                left_type.calculate_integer_datatype(right_type)
-            } else if left_type.is_float_type() && right_type.is_float_type() {
-                left_type.calculate_float_datatype(right_type)
-            } else {
-                self.at_typed_variable
-            };
+            let kind: Type = left_type.precompute_numeric_type(right_type, self.at_typed_variable);
 
             instr = Instruction::BinaryOp {
                 left: Box::from(instr),
@@ -1750,9 +1737,11 @@ impl<'instr> Parser<'instr> {
             let op: &TokenKind = &self.previous().kind;
             let mut value: Instruction = self.primary()?;
 
-            if let Instruction::Integer(_, _, is_signed) = &mut value {
+            if let Instruction::Integer(type_, _, is_signed) = &mut value {
                 if *op == TokenKind::Minus {
+                    *type_ = type_.reverse_signed_integer_type();
                     *is_signed = true;
+
                     return Ok(value);
                 }
             }
@@ -1812,7 +1801,7 @@ impl<'instr> Parser<'instr> {
                 let expr: Instruction = Instruction::UnaryOp {
                     op,
                     value: Box::from(value),
-                    kind: Type::I64,
+                    kind: Type::S64,
                     is_pre: true,
                 };
 
@@ -1842,7 +1831,7 @@ impl<'instr> Parser<'instr> {
                 let expr: Instruction = Instruction::UnaryOp {
                     op,
                     value: Box::from(value),
-                    kind: Type::I64,
+                    kind: Type::S64,
                     is_pre: true,
                 };
 
@@ -1953,12 +1942,7 @@ impl<'instr> Parser<'instr> {
 
                         let expr: Instruction = self.expression()?;
 
-                        self.check_type_mismatch(
-                            local_type,
-                            expr.get_data_type(),
-                            Some(&expr),
-                            self.previous().line,
-                        );
+                        self.check_type_mismatch(local_type, expr.get_data_type(), Some(&expr));
 
                         self.consume(
                             TokenKind::SemiColon,
@@ -2024,7 +2008,7 @@ impl<'instr> Parser<'instr> {
                             let expr: Instruction = Instruction::UnaryOp {
                                 op,
                                 value: Box::from(refvar),
-                                kind: Type::I64,
+                                kind: Type::S64,
                                 is_pre: false,
                             };
 
@@ -2154,7 +2138,7 @@ impl<'instr> Parser<'instr> {
                 let argument_type: Type = argument.get_data_type();
                 let target_type: Type = function.1[position];
 
-                self.check_type_mismatch(target_type, argument_type, Some(argument), location.0);
+                self.check_type_mismatch(target_type, argument_type, Some(argument));
 
                 if target_type.is_struct_type() {
                     let struct_type: &(String, usize) =
@@ -2483,38 +2467,35 @@ impl<'instr> Parser<'instr> {
 
     fn check_type_mismatch(
         &mut self,
-        target: Type,
-        from: Type,
-        value: Option<&Instruction>,
-        line: usize,
+        target_type: Type,
+        from_type: Type,
+        expression: Option<&Instruction>,
     ) {
-        if let Some(Instruction::BinaryOp { .. } | Instruction::Group { .. }) = value {
-            if value.unwrap().is_binary() || value.unwrap().is_group() {
-                if let Err(error) = type_checking::check_types(
-                    target,
-                    None,
-                    value,
-                    None,
-                    ThrushCompilerError::Error(
-                        String::from("Mismatched types"),
-                        format!("Expected '{}' but found '{}'.", target, from),
-                        line,
-                        None,
-                    ),
-                ) {
-                    self.errors.push(error);
-                }
+        if expression.is_some_and(|expression| expression.is_binary() || expression.is_group()) {
+            if let Err(error) = type_checking::check_types(
+                target_type,
+                None,
+                expression,
+                None,
+                ThrushCompilerError::Error(
+                    String::from("Mismatched types"),
+                    format!("Expected '{}' but found '{}'.", target_type, from_type),
+                    self.previous().line,
+                    Some(self.previous().span),
+                ),
+            ) {
+                self.errors.push(error);
             }
         } else if let Err(error) = type_checking::check_types(
-            target,
-            Some(from),
+            target_type,
+            Some(from_type),
             None,
             None,
             ThrushCompilerError::Error(
                 String::from("Mismatched types"),
-                format!("Expected '{}' but found '{}'.", target, from),
-                line,
-                None,
+                format!("Expected '{}' but found '{}'.", target_type, from_type),
+                self.previous().line,
+                Some(self.previous().span),
             ),
         ) {
             self.errors.push(error);
@@ -2578,11 +2559,16 @@ impl<'instr> Parser<'instr> {
 
     #[inline]
     fn sync(&mut self) {
+        self.inside_function = false;
+        self.inside_loop = false;
+        self.inside_local = false;
+
         while !self.end() {
             match self.peek().kind {
                 TokenKind::Local | TokenKind::Fn => return,
                 _ => {}
             }
+
             self.current += 1;
         }
     }
