@@ -1,4 +1,8 @@
-use super::{objects::CompilerObjects, traits::StructureBasics, types::Struct};
+use super::{
+    objects::CompilerObjects,
+    traits::{AttributesExtensions, StructureBasics},
+    types::{CompilerAttributes, Struct},
+};
 
 impl StructureBasics for Struct<'_> {
     fn contain_heaped_fields(&self, compiler_objects: &CompilerObjects) -> bool {
@@ -15,5 +19,15 @@ impl StructureBasics for Struct<'_> {
 
             is_structure && contain_another_heaped_fields
         })
+    }
+}
+
+impl AttributesExtensions for CompilerAttributes<'_> {
+    fn contain_ffi_attribute(&self) -> bool {
+        self.iter().any(|attr| attr.is_ffi_attribute())
+    }
+
+    fn contain_ignore_attribute(&self) -> bool {
+        self.iter().any(|attr| attr.is_ignore_attribute())
     }
 }

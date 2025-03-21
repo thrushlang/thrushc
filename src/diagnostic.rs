@@ -60,18 +60,10 @@ impl Diagnostic {
             if let Some(code_position) =
                 self.find_line_and_range(&self.contain, *start_span, *end_span)
             {
-                if let Some((line_text, arrow_line, line)) =
+                if let Some((line_text, arrow_line)) =
                     self.generate_diagnostic(&self.contain, code_position)
                 {
-                    println!(
-                        "   |\n{}\n{}",
-                        format_args!(
-                            "{}  |  {}",
-                            line.to_string().bold().bright_red(),
-                            &line_text
-                        ),
-                        "   |  ".to_string() + &arrow_line,
-                    );
+                    println!("\n{}\n{}", line_text, arrow_line,);
                 } else {
                     return self.print_not_spanned_report(help, line);
                 }
@@ -150,11 +142,7 @@ impl Diagnostic {
         })
     }
 
-    fn generate_diagnostic(
-        &self,
-        text: &str,
-        position: CodePosition,
-    ) -> Option<(String, String, usize)> {
+    fn generate_diagnostic(&self, text: &str, position: CodePosition) -> Option<(String, String)> {
         let lines: Vec<&str> = text.lines().collect();
 
         if position.line > lines.len() {
@@ -168,6 +156,6 @@ impl Diagnostic {
 
         arrow_line.replace_range(position.start..position.end, "—");
 
-        Some((line_text, arrow_line, position.line))
+        Some((line_text, arrow_line.bold().bright_red().to_string()))
     }
 }

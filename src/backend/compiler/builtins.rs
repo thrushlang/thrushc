@@ -148,8 +148,8 @@ pub fn build_is_signed<'ctx>(
                 .into_int_value();
 
             if let Some(casted_float) = utils::integer_autocast(
-                kind,
                 &Type::S64,
+                kind,
                 None,
                 loaded_value.into(),
                 builder,

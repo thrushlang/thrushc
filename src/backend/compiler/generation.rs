@@ -1,9 +1,9 @@
 use {
     super::{
         super::{super::frontend::lexer::Type, instruction::Instruction},
-        call,
+        binaryop, call,
         objects::CompilerObjects,
-        utils,
+        unaryop, utils,
     },
     inkwell::{
         AddressSpace,
@@ -18,70 +18,56 @@ pub fn build_expression<'ctx>(
     module: &Module<'ctx>,
     builder: &Builder<'ctx>,
     context: &'ctx Context,
-    instr: &'ctx Instruction,
-    casting_target: Option<Type>,
+    instruction: &'ctx Instruction,
+    casting_target: &Type,
     compiler_objects: &mut CompilerObjects<'ctx>,
 ) -> BasicValueEnum<'ctx> {
-    if let Instruction::NullPtr = instr {
+    if let Instruction::NullPtr = instruction {
         return context
             .ptr_type(AddressSpace::default())
             .const_null()
             .into();
     }
 
-    if let Instruction::Str(str) = instr {
+    if let Instruction::Str(str) = instruction {
         return utils::build_string_constant(module, builder, context, str).into();
     }
 
-    if let Instruction::Float(kind, num, is_signed) = instr {
+    if let Instruction::Float(kind, num, is_signed) = instruction {
         let mut float: FloatValue =
             utils::build_const_float(builder, context, kind, *num, *is_signed);
 
-        if casting_target.is_some() {
-            if let Some(casted_float) = utils::float_autocast(
-                kind,
-                &casting_target.unwrap(),
-                None,
-                float.into(),
-                builder,
-                context,
-            ) {
-                float = casted_float.into_float_value();
-            }
+        if let Some(casted_float) =
+            utils::float_autocast(kind, casting_target, None, float.into(), builder, context)
+        {
+            float = casted_float.into_float_value();
         }
 
         return float.into();
     }
 
-    if let Instruction::Integer(kind, num, is_signed) = instr {
+    if let Instruction::Integer(kind, num, is_signed) = instruction {
         let mut integer: IntValue =
             utils::build_const_integer(context, kind, *num as u64, *is_signed);
 
-        if casting_target.is_some() {
-            if let Some(casted_integer) = utils::integer_autocast(
-                kind,
-                &casting_target.unwrap(),
-                None,
-                integer.into(),
-                builder,
-                context,
-            ) {
-                integer = casted_integer.into_int_value();
-            }
+        if let Some(casted_integer) =
+            utils::integer_autocast(casting_target, kind, None, integer.into(), builder, context)
+        {
+            integer = casted_integer.into_int_value();
         }
 
         return integer.into();
     }
 
-    if let Instruction::Char(char) = instr {
+    if let Instruction::Char(char) = instruction {
         return context.i8_type().const_int(*char as u64, false).into();
     }
 
-    if let Instruction::Boolean(bool) = instr {
+    if let Instruction::Boolean(bool) = instruction {
         return context.bool_type().const_int(*bool as u64, false).into();
     }
 
-    if let Instruction::LocalRef { name, kind, .. } = instr {
+    if let Instruction::LocalRef { name, kind, .. } = instruction {
         let local: PointerValue = compiler_objects.get_local(name).unwrap();
 
         if kind.is_float_type() {
@@ -111,12 +97,61 @@ pub fn build_expression<'ctx>(
         unreachable!()
     }
 
+    if let Instruction::BinaryOp {
+        left,
+        op,
+        right,
+        kind: binary_op_type,
+        ..
+    } = instruction
+    {
+        if binary_op_type.is_float_type() {
+            return binaryop::float_binaryop(
+                builder,
+                context,
+                (left, op, right),
+                casting_target,
+                compiler_objects,
+            );
+        }
+
+        if binary_op_type.is_integer_type() {
+            return binaryop::integer_binaryop(
+                builder,
+                context,
+                (left, op, right),
+                casting_target,
+                compiler_objects,
+            );
+        }
+
+        if binary_op_type.is_bool_type() {
+            return binaryop::bool_binaryop(
+                builder,
+                context,
+                (left, op, right),
+                casting_target,
+                compiler_objects,
+            );
+        }
+
+        println!("{:?}", instruction);
+        unreachable!()
+    }
+
+    if let Instruction::UnaryOp {
+        op, value, kind, ..
+    } = instruction
+    {
+        return unaryop::compile_unary_op(builder, context, (op, value, kind), compiler_objects);
+    }
+
     if let Instruction::Call {
         name: call_name,
         args: call_arguments,
         kind: call_type,
         ..
-    } = instr
+    } = instruction
     {
         return call::build_call(
             module,
@@ -128,7 +163,33 @@ pub fn build_expression<'ctx>(
         .unwrap();
     }
 
-    println!("{:?}", instr);
+    if let Instruction::Return(instruction, kind) = instruction {
+        if kind.is_void_type() {
+            builder.build_return(None).unwrap();
 
+            return context
+                .ptr_type(AddressSpace::default())
+                .const_null()
+                .into();
+        }
+
+        builder
+            .build_return(Some(&build_expression(
+                module,
+                builder,
+                context,
+                instruction,
+                kind,
+                compiler_objects,
+            )))
+            .unwrap();
+
+        return context
+            .ptr_type(AddressSpace::default())
+            .const_null()
+            .into();
+    }
+
+    println!("{:?}", instruction);
     unreachable!()
 }

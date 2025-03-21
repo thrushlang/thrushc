@@ -13,7 +13,7 @@ const MINIMAL_DEALLOCATORS_CAPACITY: usize = 50;
 
 pub type Function<'instr> = (Type, Vec<Type>, Vec<(String, usize)>, String, bool);
 
-pub type Struct<'instr> = HashMap<&'instr str, Type>;
+pub type Struct<'instr> = Vec<(&'instr str, Type, u32)>;
 pub type Local = (Type, String, bool, bool);
 
 pub type Functions<'instr> = HashMap<&'instr str, Function<'instr>>;
@@ -36,7 +36,7 @@ pub struct ParserObjects<'instr> {
 impl<'instr> ParserObjects<'instr> {
     pub fn with_functions(functions: HashMap<&'instr str, Function>) -> Self {
         Self {
-            locals: vec![HashMap::with_capacity(MINIMAL_LOCAL_SCOPE_CAPACITY)],
+            locals: Vec::new(),
             functions,
             structs: HashMap::with_capacity(MINIMAL_STRUCTURE_CAPACITY),
         }
@@ -73,7 +73,7 @@ impl<'instr> ParserObjects<'instr> {
         &self,
         name: &str,
         location: (usize, (usize, usize)),
-    ) -> Result<HashMap<&'instr str, Type>, ThrushCompilerError> {
+    ) -> Result<Struct<'instr>, ThrushCompilerError> {
         if let Some(struct_fields) = self.structs.get(name).cloned() {
             return Ok(struct_fields);
         }
@@ -96,7 +96,7 @@ impl<'instr> ParserObjects<'instr> {
         span: (usize, usize),
         parser_errors: &mut Vec<ThrushCompilerError>,
     ) {
-        if self.locals[scope_pos].contains_key(name) {
+        if self.locals[scope_pos - 1].contains_key(name) {
             parser_errors.push(ThrushCompilerError::Error(
                 String::from("Local variable already declared"),
                 format!("'{}' local variable already declared.", name),
@@ -107,22 +107,25 @@ impl<'instr> ParserObjects<'instr> {
             return;
         }
 
-        self.locals[scope_pos].insert(name, value);
+        self.locals[scope_pos - 1].insert(name, value);
     }
 
     #[inline(always)]
-    pub fn insert_new_struct(&mut self, name: &'instr str, value: HashMap<&'instr str, Type>) {
-        self.structs.insert(name, value);
+    pub fn insert_new_struct(&mut self, name: &'instr str, field_types: Struct<'instr>) {
+        if self.structs.contains_key(name) {
+            return;
+        }
+
+        self.structs.insert(name, field_types);
     }
 
     #[inline(always)]
-    pub fn contains_struct(&self, name: &str) -> bool {
-        self.structs.contains_key(name)
-    }
+    pub fn insert_new_function(&mut self, name: &'instr str, function: Function) {
+        if self.functions.contains_key(name) {
+            return;
+        }
 
-    #[inline(always)]
-    pub fn insert_new_function(&mut self, name: &'instr str, value: Function) {
-        self.functions.insert(name, value);
+        self.functions.insert(name, function);
     }
 
     #[inline(always)]
@@ -156,7 +159,7 @@ impl<'instr> ParserObjects<'instr> {
     pub fn create_deallocators(&self, at_scope_pos: usize) -> Vec<Instruction<'instr>> {
         let mut frees: Vec<Instruction> = Vec::with_capacity(MINIMAL_DEALLOCATORS_CAPACITY);
 
-        self.locals[at_scope_pos].iter().for_each(|statement| {
+        self.locals[at_scope_pos - 1].iter().for_each(|statement| {
             if let (_, (Type::Struct, struct_type, false, false)) = statement {
                 let mut struct_type_cloned: String = String::with_capacity(struct_type.len());
                 struct_type_cloned.clone_from(struct_type);

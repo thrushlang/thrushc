@@ -1,3 +1,5 @@
+#![allow(clippy::upper_case_acronyms)]
+
 use {
     super::{
         super::{
@@ -9,7 +11,7 @@ use {
         },
         compiler::{
             objects::CompilerObjects,
-            types::{BinaryOp, Function, Struct},
+            types::{BinaryOp, CompilerAttributes, Function, Struct},
             utils,
         },
     },
@@ -88,15 +90,17 @@ pub enum Instruction<'ctx> {
     FunctionParameter {
         name: &'ctx str,
         kind: Type,
+        struct_type: String,
         position: u32,
         line: usize,
+        span: (usize, usize),
     },
     Function {
         name: &'ctx str,
         params: Vec<Instruction<'ctx>>,
         body: Option<Box<Instruction<'ctx>>>,
         return_type: Type,
-        is_public: bool,
+        attributes: CompilerAttributes<'ctx>,
     },
     Return(Box<Instruction<'ctx>>, Type),
 
@@ -150,18 +154,27 @@ pub enum Instruction<'ctx> {
         struct_type: String,
     },
 
-    // External type (FFI)
-    Extern {
-        name: &'ctx str,
-        instr: Box<Instruction<'ctx>>,
-        kind: TokenKind,
-    },
-
-    // Ignore statement
-    Pass,
-
     #[default]
     Null,
+}
+
+#[derive(Debug, Clone)]
+pub enum Attribute<'ctx> {
+    FFI(&'ctx str),
+    Public(bool),
+    Ignore,
+}
+
+impl Attribute<'_> {
+    #[inline(always)]
+    pub const fn is_ffi_attribute(&self) -> bool {
+        matches!(self, Attribute::FFI(_))
+    }
+
+    #[inline(always)]
+    pub const fn is_ignore_attribute(&self) -> bool {
+        matches!(self, Attribute::Ignore)
+    }
 }
 
 impl PartialEq for Instruction<'_> {
@@ -270,25 +283,16 @@ impl<'ctx> Instruction<'ctx> {
     }
 
     #[inline(always)]
-    pub const fn as_extern(&self) -> (&str, &Instruction, &TokenKind) {
-        if let Instruction::Extern { name, instr, kind } = self {
-            return (name, instr, kind);
-        }
-
-        unreachable!()
-    }
-
-    #[inline(always)]
     pub fn as_function(&self) -> Function {
         if let Instruction::Function {
             name,
             params,
             body,
             return_type,
-            is_public,
+            attributes,
         } = self
         {
-            return (name, params, body.as_ref(), return_type, is_public);
+            return (name, return_type, params, body.as_ref(), attributes);
         }
 
         unreachable!()
@@ -432,11 +436,6 @@ impl<'ctx> Instruction<'ctx> {
     #[inline(always)]
     pub const fn is_local_reference(&self) -> bool {
         matches!(self, Instruction::LocalRef { .. })
-    }
-
-    #[inline(always)]
-    pub const fn is_extern(&self) -> bool {
-        matches!(self, Instruction::Extern { .. })
     }
 
     #[inline(always)]

@@ -1,6 +1,7 @@
-use {
-    super::super::error::ThrushCompilerError,
-    super::objects::{Function, Local},
+use super::{
+    super::error::ThrushCompilerError,
+    lexer::Type,
+    objects::{Function, Local},
 };
 
 pub trait TokenLexemeBasics {
@@ -11,6 +12,11 @@ pub trait TokenLexemeBasics {
         line: usize,
         span: (usize, usize),
     ) -> Result<Vec<u8>, ThrushCompilerError>;
+}
+
+pub trait StructureBasics {
+    fn contains_field(&self, field_name: &str) -> bool;
+    fn get_field_type(&self, field_name: &str) -> Type;
 }
 
 pub trait FoundObjectEither {

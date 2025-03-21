@@ -13,7 +13,7 @@ use {
     std::{mem, process::exit},
 };
 
-const KEYWORDS_CAPACITY: usize = 42;
+const KEYWORDS_CAPACITY: usize = 43;
 const MINIMAL_TOKENS_CAPACITY: usize = 100_000;
 
 lazy_static! {
@@ -39,12 +39,13 @@ lazy_static! {
         keywords.insert(b"break", TokenKind::Break);
         keywords.insert(b"continue", TokenKind::Continue);
         keywords.insert(b"this", TokenKind::This);
-        keywords.insert(b"public", TokenKind::Public);
         keywords.insert(b"builtin", TokenKind::Builtin);
         keywords.insert(b"match", TokenKind::Match);
         keywords.insert(b"pattern", TokenKind::Pattern);
         keywords.insert(b"@import", TokenKind::Import);
+        keywords.insert(b"@public", TokenKind::Public);
         keywords.insert(b"@extern", TokenKind::Extern);
+        keywords.insert(b"@ignore", TokenKind::Ignore);
         keywords.insert(b"new", TokenKind::New);
         keywords.insert(b"nullptr", TokenKind::NullPtr);
         keywords.insert(b"s8", TokenKind::DataType(Type::S8));
@@ -132,7 +133,6 @@ impl<'a> Lexer<'a> {
             b'{' => self.make(TokenKind::LBrace),
             b'}' => self.make(TokenKind::RBrace),
             b',' => self.make(TokenKind::Comma),
-            b'.' if self.char_match(b'.') && self.char_match(b'.') => self.make(TokenKind::Pass),
             b'.' if self.char_match(b'.') => self.make(TokenKind::Range),
             b'.' => self.make(TokenKind::Dot),
             b'%' => self.make(TokenKind::Arith),
@@ -708,7 +708,6 @@ pub enum TokenKind {
     MinusMinus, // ' -- '
     LShift,     // ' << '
     RShift,     // ' >> '
-    Pass,       // ...
 
     // --- Literals ---
     Identifier,
@@ -718,12 +717,15 @@ pub enum TokenKind {
     Str,
     Char,
 
+    // --- Attributes ---
+    Extern,
+    Ignore,
+    Public,
+
     // --- Keywords ---
     New,
     Import,
-    Extern,
     Builtin,
-    Public,
     And,
     Struct,
     Else,
@@ -794,7 +796,6 @@ impl std::fmt::Display for TokenKind {
             TokenKind::Pattern => write!(f, "pattern"),
             TokenKind::If => write!(f, "if"),
             TokenKind::Elif => write!(f, "elif"),
-            TokenKind::Public => write!(f, "public"),
             TokenKind::NullPtr => write!(f, "null"),
             TokenKind::Or => write!(f, "or"),
             TokenKind::Return => write!(f, "return"),
@@ -809,10 +810,11 @@ impl std::fmt::Display for TokenKind {
             TokenKind::Str => write!(f, "str"),
             TokenKind::Char => write!(f, "char"),
             TokenKind::Builtin => write!(f, "built-in"),
+            TokenKind::Public => write!(f, "@public"),
+            TokenKind::Ignore => write!(f, "@ignore"),
             TokenKind::Extern => write!(f, "@extern"),
             TokenKind::Import => write!(f, "@import"),
             TokenKind::New => write!(f, "new"),
-            TokenKind::Pass => write!(f, "..."),
             TokenKind::Eof => write!(f, "EOF"),
             TokenKind::DataType(datatype) => write!(f, "{}", datatype),
         }

@@ -226,8 +226,8 @@ pub fn integer_binaryop<'ctx>(
             utils::build_const_integer(context, right_type, *right_num as u64, *right_signed);
 
         if let Some(new_left_compiled) = utils::integer_autocast(
-            left_type,
             target_type,
+            left_type,
             None,
             left_compiled.into(),
             builder,
@@ -237,8 +237,8 @@ pub fn integer_binaryop<'ctx>(
         }
 
         if let Some(new_right_compiled) = utils::integer_autocast(
-            right_type,
             target_type,
+            right_type,
             None,
             right_compiled.into(),
             builder,
@@ -303,8 +303,8 @@ pub fn integer_binaryop<'ctx>(
             .into_int_value();
 
         if let Some(new_left_compiled) = utils::integer_autocast(
-            left_type,
             target_type,
+            left_type,
             None,
             left_compiled.into(),
             builder,
@@ -314,8 +314,8 @@ pub fn integer_binaryop<'ctx>(
         }
 
         if let Some(new_right_compiled) = utils::integer_autocast(
-            right_type,
             target_type,
+            right_type,
             None,
             right_compiled.into(),
             builder,
@@ -366,8 +366,8 @@ pub fn integer_binaryop<'ctx>(
             .into_int_value();
 
         if let Some(new_left_compiled) = utils::integer_autocast(
-            left_type,
             target_type,
+            left_type,
             None,
             left_compiled.into(),
             builder,
@@ -377,8 +377,8 @@ pub fn integer_binaryop<'ctx>(
         }
 
         if let Some(new_right_compiled) = utils::integer_autocast(
-            kind,
             target_type,
+            kind,
             None,
             right_compiled.into(),
             builder,
@@ -420,8 +420,8 @@ pub fn integer_binaryop<'ctx>(
                 .into_int_value();
 
         if let Some(new_left_compiled) = utils::integer_autocast(
-            left_type,
             target_type,
+            left_type,
             None,
             left_compiled.into(),
             builder,
@@ -474,8 +474,8 @@ pub fn integer_binaryop<'ctx>(
             utils::build_const_integer(context, right_type, *right_num as u64, *right_signed);
 
         if let Some(new_left_compiled) = utils::integer_autocast(
-            left_type,
             target_type,
+            left_type,
             None,
             left_compiled.into(),
             builder,
@@ -485,8 +485,8 @@ pub fn integer_binaryop<'ctx>(
         }
 
         if let Some(new_right_compiled) = utils::integer_autocast(
-            right_type,
             target_type,
+            right_type,
             None,
             right_compiled.into(),
             builder,
@@ -537,8 +537,8 @@ pub fn integer_binaryop<'ctx>(
             utils::build_const_integer(context, right_type, *right_num as u64, *right_signed);
 
         if let Some(new_left_compiled) = utils::integer_autocast(
-            kind,
             target_type,
+            kind,
             None,
             left_compiled.into(),
             builder,
@@ -548,8 +548,8 @@ pub fn integer_binaryop<'ctx>(
         }
 
         if let Some(new_right_compiled) = utils::integer_autocast(
-            right_type,
             target_type,
+            right_type,
             None,
             right_compiled.into(),
             builder,
@@ -587,8 +587,8 @@ pub fn integer_binaryop<'ctx>(
             .into_int_value();
 
         if let Some(new_left_compiled) = utils::integer_autocast(
-            &Type::Bool,
             target_type,
+            &Type::Bool,
             None,
             left_compiled.into(),
             builder,
@@ -637,8 +637,8 @@ pub fn integer_binaryop<'ctx>(
             utils::build_const_integer(context, &Type::Bool, *right as u64, false);
 
         if let Some(new_left_compiled) = utils::integer_autocast(
-            kind,
             target_type,
+            kind,
             None,
             left_compiled.into(),
             builder,
@@ -648,8 +648,8 @@ pub fn integer_binaryop<'ctx>(
         }
 
         if let Some(new_right_compiled) = utils::integer_autocast(
-            &Type::Bool,
             target_type,
+            &Type::Bool,
             None,
             right_compiled.into(),
             builder,
@@ -704,8 +704,8 @@ pub fn integer_binaryop<'ctx>(
                 .into_int_value();
 
         if let Some(new_left_compiled) = utils::integer_autocast(
-            left_type,
             target_type,
+            left_type,
             None,
             left_compiled.into(),
             builder,
@@ -715,8 +715,8 @@ pub fn integer_binaryop<'ctx>(
         }
 
         if let Some(new_right_compiled) = utils::integer_autocast(
-            right_type,
             target_type,
+            right_type,
             None,
             right_compiled.into(),
             builder,
@@ -754,8 +754,8 @@ pub fn integer_binaryop<'ctx>(
             utils::build_const_integer(context, right_type, *right_num as u64, *right_signed);
 
         if let Some(new_left_compiled) = utils::integer_autocast(
-            left_type,
             target_type,
+            left_type,
             None,
             left_compiled.into(),
             builder,
@@ -765,8 +765,8 @@ pub fn integer_binaryop<'ctx>(
         }
 
         if let Some(new_right_compiled) = utils::integer_autocast(
-            right_type,
             target_type,
+            right_type,
             None,
             right_compiled.into(),
             builder,
@@ -809,8 +809,8 @@ pub fn integer_binaryop<'ctx>(
                 .into_int_value();
 
         if let Some(new_left_compiled) = utils::integer_autocast(
-            left_type,
             target_type,
+            left_type,
             None,
             left_compiled.into(),
             builder,
@@ -820,8 +820,8 @@ pub fn integer_binaryop<'ctx>(
         }
 
         if let Some(new_right_compiled) = utils::integer_autocast(
-            right_type,
             target_type,
+            right_type,
             None,
             right_compiled.into(),
             builder,
@@ -879,8 +879,8 @@ pub fn integer_binaryop<'ctx>(
                 .into_int_value();
 
         if let Some(new_left_compiled) = utils::integer_autocast(
-            left_type,
             target_type,
+            left_type,
             None,
             left_compiled.into(),
             builder,
@@ -890,8 +890,8 @@ pub fn integer_binaryop<'ctx>(
         }
 
         if let Some(new_right_compiled) = utils::integer_autocast(
-            right_type,
             target_type,
+            right_type,
             None,
             right_compiled.into(),
             builder,
@@ -947,8 +947,8 @@ pub fn integer_binaryop<'ctx>(
                 .into_int_value();
 
         if let Some(new_left_compiled) = utils::integer_autocast(
-            left_type,
             target_type,
+            left_type,
             None,
             left_compiled.into(),
             builder,
@@ -958,8 +958,8 @@ pub fn integer_binaryop<'ctx>(
         }
 
         if let Some(new_right_compiled) = utils::integer_autocast(
-            right_type,
             target_type,
+            right_type,
             None,
             right_compiled.into(),
             builder,
@@ -1015,8 +1015,8 @@ pub fn integer_binaryop<'ctx>(
                 .into_int_value();
 
         if let Some(new_left_compiled) = utils::integer_autocast(
-            left_type,
             target_type,
+            left_type,
             None,
             left_compiled.into(),
             builder,
@@ -1026,8 +1026,8 @@ pub fn integer_binaryop<'ctx>(
         }
 
         if let Some(new_right_compiled) = utils::integer_autocast(
-            right_type,
             target_type,
+            right_type,
             None,
             right_compiled.into(),
             builder,

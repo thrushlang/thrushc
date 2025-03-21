@@ -34,7 +34,7 @@ pub fn build_call<'ctx>(
         return Some(build_is_signed(context, builder, call, compiler_objects));
     }
 
-    let function: (FunctionValue<'ctx>, &'ctx [Instruction<'ctx>]) =
+    let function: (FunctionValue, &'ctx [Instruction<'ctx>]) =
         compiler_objects.get_function(call_name).unwrap();
 
     let called_function_arguments: &[Instruction] = function.1;
@@ -43,9 +43,10 @@ pub fn build_call<'ctx>(
     let mut compiled_args: Vec<BasicMetadataValueEnum> = Vec::with_capacity(call_args.len());
 
     call_args.iter().enumerate().for_each(|instruction| {
-        let casting_target: Option<Type> = called_function_arguments
+        let casting_target: Type = called_function_arguments
             .get(instruction.0)
-            .map(|arg| arg.get_data_type());
+            .unwrap_or(instruction.1)
+            .get_data_type();
 
         compiled_args.push(
             generation::build_expression(
@@ -53,7 +54,7 @@ pub fn build_call<'ctx>(
                 builder,
                 context,
                 instruction.1,
-                casting_target,
+                &casting_target,
                 compiler_objects,
             )
             .into(),

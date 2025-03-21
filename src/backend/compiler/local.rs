@@ -145,7 +145,7 @@ fn build_local_ptr<'ctx>(
             builder,
             context,
             local_value,
-            None,
+            &Type::Void,
             compiler_objects,
         )
         .into_pointer_value();
@@ -181,7 +181,7 @@ fn build_local_ptr<'ctx>(
             builder,
             context,
             local_value,
-            None,
+            &Type::Void,
             compiler_objects,
         )
         .into_pointer_value();
@@ -211,7 +211,7 @@ fn build_local_structure<'ctx>(
                 builder,
                 context,
                 &field.1,
-                Some(field.2),
+                &field.2,
                 compiler_objects,
             );
 
@@ -300,18 +300,30 @@ fn build_local_static_str<'ctx>(
     compiler_objects: &mut CompilerObjects<'ctx>,
 ) -> BasicValueEnum<'ctx> {
     if let Instruction::Str(_) = value {
-        let compiled_str =
-            generation::build_expression(module, builder, context, value, None, compiler_objects)
-                .into_pointer_value();
+        let compiled_str = generation::build_expression(
+            module,
+            builder,
+            context,
+            value,
+            &Type::Void,
+            compiler_objects,
+        )
+        .into_pointer_value();
 
         compiler_objects.insert(name, compiled_str);
         return compiled_str.into();
     }
 
     if let Instruction::LocalRef { .. } = value {
-        let compiled_refvar: PointerValue =
-            generation::build_expression(module, builder, context, value, None, compiler_objects)
-                .into_pointer_value();
+        let compiled_refvar: PointerValue = generation::build_expression(
+            module,
+            builder,
+            context,
+            value,
+            &Type::Void,
+            compiler_objects,
+        )
+        .into_pointer_value();
 
         compiler_objects.insert(name, compiled_refvar);
         return compiled_refvar.into();
@@ -408,7 +420,7 @@ fn build_local_integer<'ctx>(
             )
             .unwrap();
 
-        if utils::integer_autocast(reflocal_type, local_type, Some(ptr), load, builder, context)
+        if utils::integer_autocast(local_type, reflocal_type, Some(ptr), load, builder, context)
             .is_none()
         {
             builder.build_store(ptr, load).unwrap();
@@ -454,7 +466,7 @@ fn build_local_integer<'ctx>(
         )
         .unwrap();
 
-        if utils::integer_autocast(call_type, local_type, Some(ptr), result, builder, context)
+        if utils::integer_autocast(local_type, call_type, Some(ptr), result, builder, context)
             .is_none()
         {
             builder.build_store(ptr, result).unwrap();
@@ -682,8 +694,8 @@ fn build_local_boolean<'ctx>(
             .unwrap();
 
         if utils::integer_autocast(
-            kind_refvar,
             local_type,
+            kind_refvar,
             Some(ptr),
             reflocal_ptr.into(),
             builder,
@@ -715,7 +727,7 @@ fn build_local_boolean<'ctx>(
         )
         .unwrap();
 
-        if utils::integer_autocast(call_type, local_type, Some(ptr), result, builder, context)
+        if utils::integer_autocast(local_type, call_type, Some(ptr), result, builder, context)
             .is_none()
         {
             builder.build_store(ptr, result).unwrap();

@@ -1,8 +1,8 @@
 use {
     super::{
         super::{
-            super::frontend::lexer::{TokenKind, Type},
-            instruction::Instruction,
+            super::frontend::lexer::Type,
+            instruction::{Attribute, Instruction},
         },
         binaryop, call, generation, local,
         objects::CompilerObjects,
@@ -18,7 +18,7 @@ use {
         context::Context,
         module::{Linkage, Module},
         types::{FunctionType, StructType},
-        values::{BasicValueEnum, FloatValue, FunctionValue, GlobalValue, IntValue, PointerValue},
+        values::{BasicValueEnum, FunctionValue, GlobalValue, IntValue, PointerValue},
     },
 };
 
@@ -399,8 +399,6 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                 Instruction::Null
             }
 
-            Instruction::Extern { .. } => Instruction::Null,
-
             Instruction::FunctionParameter {
                 name,
                 kind,
@@ -416,18 +414,26 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                 params,
                 body,
                 return_type,
-                is_public,
+                attributes,
             } => {
                 if let Some(body) = body {
-                    self.build_function((name, params, Some(body), return_type, is_public), false);
+                    self.build_function((name, return_type, params, Some(body), attributes));
                     return Instruction::Null;
                 }
 
                 Instruction::Null
             }
 
-            Instruction::Return(instr, kind) => {
-                self.build_return(instr, kind);
+            Instruction::Return(_, kind) => {
+                generation::build_expression(
+                    self.module,
+                    self.builder,
+                    self.context,
+                    instruction,
+                    kind,
+                    &mut self.compiler_objects,
+                );
+
                 Instruction::Null
             }
 
@@ -436,7 +442,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                 self.builder,
                 self.context,
                 instruction,
-                None,
+                &Type::Void,
                 &mut self.compiler_objects,
             )),
 
@@ -549,16 +555,17 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                 Instruction::Null
             }
 
-            Instruction::LocalRef { .. } => {
-                Instruction::BasicValueEnum(generation::build_expression(
-                    self.module,
-                    self.builder,
-                    self.context,
-                    instruction,
-                    None,
-                    &mut self.compiler_objects,
-                ))
-            }
+            Instruction::LocalRef {
+                kind: localref_type,
+                ..
+            } => Instruction::BasicValueEnum(generation::build_expression(
+                self.module,
+                self.builder,
+                self.context,
+                instruction,
+                localref_type,
+                &mut self.compiler_objects,
+            )),
 
             Instruction::Boolean(bool) => Instruction::BasicValueEnum(
                 self.context
@@ -589,7 +596,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
     }
 
     fn build_function_parameter(&mut self, name: &'ctx str, kind: Type, position: u32) {
-        let allocated_ptr: PointerValue<'ctx> = if !kind.is_ptr_type() {
+        let allocated_ptr: PointerValue = if !kind.is_ptr_type() {
             utils::build_ptr(self.context, self.builder, kind)
         } else {
             self.function
@@ -600,106 +607,15 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
         };
 
         if !kind.is_ptr_type() {
-            let param: BasicValueEnum<'ctx> =
-                self.function.unwrap().get_nth_param(position).unwrap();
+            let parameter: BasicValueEnum = self.function.unwrap().get_nth_param(position).unwrap();
 
-            self.builder.build_store(allocated_ptr, param).unwrap();
-
+            self.builder.build_store(allocated_ptr, parameter).unwrap();
             self.compiler_objects.insert(name, allocated_ptr);
 
             return;
         }
 
         self.compiler_objects.insert(name, allocated_ptr);
-    }
-
-    fn build_return(&mut self, instr: &'ctx Instruction, kind: &Type) {
-        if *kind == Type::Void {
-            self.builder.build_return(None).unwrap();
-            return;
-        }
-
-        if let Instruction::Integer(_, num, is_signed) = instr {
-            self.builder
-                .build_return(Some(&utils::build_const_integer(
-                    self.context,
-                    kind,
-                    *num as u64,
-                    *is_signed,
-                )))
-                .unwrap();
-
-            return;
-        }
-
-        if let Instruction::Str(_) = instr {
-            self.builder
-                .build_return(Some(self.codegen(instr).as_basic_value()))
-                .unwrap();
-
-            return;
-        }
-
-        if let Instruction::Char(byte) = instr {
-            self.builder
-                .build_return(Some(&self.context.i8_type().const_int(*byte as u64, false)))
-                .unwrap();
-
-            return;
-        }
-
-        if let Instruction::Boolean(bool) = instr {
-            self.builder
-                .build_return(Some(
-                    &self.context.bool_type().const_int(*bool as u64, false),
-                ))
-                .unwrap();
-
-            return;
-        }
-
-        if let Instruction::LocalRef { name, .. } = instr {
-            let variable: PointerValue<'ctx> = self.compiler_objects.get_local(name).unwrap();
-
-            if kind.is_integer_type() || *kind == Type::Bool {
-                let num: IntValue = self
-                    .builder
-                    .build_load(
-                        utils::type_int_to_llvm_int_type(self.context, kind),
-                        variable,
-                        "",
-                    )
-                    .unwrap()
-                    .into_int_value();
-
-                self.builder.build_return(Some(&num)).unwrap();
-
-                return;
-            }
-
-            if kind.is_float_type() {
-                let num: FloatValue = self
-                    .builder
-                    .build_load(
-                        utils::type_float_to_llvm_float_type(self.context, kind),
-                        variable,
-                        "",
-                    )
-                    .unwrap()
-                    .into_float_value();
-
-                self.builder.build_return(Some(&num)).unwrap();
-
-                return;
-            }
-
-            if kind.is_ptr_type() {
-                self.builder.build_return(Some(&variable)).unwrap();
-                return;
-            }
-        }
-
-        unreachable!()
     }
 
     fn build_struct_dealloc(
@@ -741,49 +657,16 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
         }
     }
 
-    fn build_external(&mut self, external_name: &str, instr: &'ctx Instruction) {
-        let function: Function = instr.as_function();
-
-        let kind: FunctionType = utils::type_to_function_type(self.context, function.3, function.1);
-
-        let external_function: FunctionValue =
-            self.module
-                .add_function(external_name, kind, Some(Linkage::External));
-
-        self.compiler_objects
-            .insert_function(function.0, (external_function, function.1));
-    }
-
-    fn build_function(&mut self, function: Function<'ctx>, only_define: bool) {
+    fn build_function(&mut self, function: Function<'ctx>) {
         let function_name: &str = function.0;
-        let function_return_type: &Type = function.3;
-        let function_params: &[Instruction] = function.1;
-        let function_is_public: &bool = function.4;
-        let function_body: Option<&Box<Instruction>> = function.2;
-
-        if only_define && self.module.get_function(function_name).is_none() {
-            let kind: FunctionType =
-                utils::type_to_function_type(self.context, function_return_type, function_params);
-
-            let function: FunctionValue = self.module.add_function(function_name, kind, None);
-
-            if !function_is_public {
-                function.set_linkage(Linkage::LinkerPrivate);
-            }
-
-            self.function = Some(function);
-
-            self.compiler_objects
-                .insert_function(function_name, (function, function_params));
-
-            return;
-        }
+        let function_return_type: &Type = function.1;
+        let function_body: Option<&Box<Instruction>> = function.3;
 
         let function: FunctionValue = self.module.get_function(function_name).unwrap();
 
-        let entry: BasicBlock = self.context.append_basic_block(function, "");
+        let start_block: BasicBlock = self.context.append_basic_block(function, "");
 
-        self.builder.position_at_end(entry);
+        self.builder.position_at_end(start_block);
 
         self.codegen(function_body.unwrap());
 
@@ -793,18 +676,52 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
     }
 
     fn predefine(&mut self) {
-        self.instructions.iter().for_each(|instr| {
-            if instr.is_function() {
-                let function: Function = instr.as_function();
+        self.instructions.iter().for_each(|instruction| {
+            if instruction.is_function() {
+                let function: Function = instruction.as_function();
 
-                self.build_function(function, true);
-            } else if instr.is_extern() {
-                let external: (&str, &Instruction, &TokenKind) = instr.as_extern();
+                let function_name: &str = function.0;
+                let function_return_type: &Type = function.1;
+                let function_parameters: &[Instruction] = function.2;
+                let mut is_public: bool = false;
+                let mut ffi: Option<&str> = None;
 
-                // CHECK IF TOKENKIND IS FUNCTION KIND, (REMEMBER)
+                function.4.iter().for_each(|attribute| match attribute {
+                    Attribute::Public(public) => {
+                        is_public = *public;
+                    }
+                    Attribute::FFI(ffi_found) => {
+                        ffi = Some(ffi_found);
+                    }
 
-                self.build_external(external.0, external.1);
-            } else if let Instruction::Struct { name, fields_types } = instr {
+                    _ => (),
+                });
+
+                let llvm_function_name: &str = if let Some(ffi_name) = ffi {
+                    ffi_name
+                } else {
+                    function_name
+                };
+
+                let function_type: FunctionType = utils::type_to_function_type(
+                    self.context,
+                    function_return_type,
+                    function_parameters,
+                );
+
+                let function: FunctionValue =
+                    self.module
+                        .add_function(llvm_function_name, function_type, None);
+
+                if !is_public && ffi.is_none() {
+                    function.set_linkage(Linkage::LinkerPrivate);
+                }
+
+                self.function = Some(function);
+
+                self.compiler_objects
+                    .insert_function(function_name, (function, function_parameters));
+            } else if let Instruction::Struct { name, fields_types } = instruction {
                 self.compiler_objects.insert_struct(name, fields_types);
             }
         });
@@ -987,10 +904,10 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
 
     #[inline]
     fn advance(&mut self) -> &'ctx Instruction<'ctx> {
-        let instr: &Instruction = &self.instructions[self.current];
+        let instruction: &Instruction = &self.instructions[self.current];
         self.current += 1;
 
-        instr
+        instruction
     }
 
     #[inline]
