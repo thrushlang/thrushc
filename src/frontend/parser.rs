@@ -32,8 +32,6 @@ pub struct Parser<'instr> {
     errors: Vec<ThrushCompilerError>,
     inside_a_function: bool,
     inside_a_loop: bool,
-    inside_a_local: bool,
-    inside_a_expression: bool,
     at_typed_function: (Type, String),
     at_typed_variable: Type,
     at_unreacheable_code_scope: usize,
@@ -78,8 +76,6 @@ impl<'instr> Parser<'instr> {
             current: 0,
             inside_a_function: false,
             inside_a_loop: false,
-            inside_a_local: false,
-            inside_a_expression: false,
             at_typed_function: (Type::Void, String::new()),
             at_typed_variable: Type::Void,
             at_unreacheable_code_scope: 0,
@@ -275,12 +271,6 @@ impl<'instr> Parser<'instr> {
         let mut if_cond: Instruction = self.expression()?;
         let mut if_block: Option<Instruction> = None;
 
-        self.consume(
-            TokenKind::SemiColon,
-            String::from("Syntax error"),
-            String::from("Expected ';'."),
-        )?;
-
         let mut patterns: Vec<Instruction> = Vec::with_capacity(10);
         let mut patterns_stmts: Vec<Instruction> = Vec::with_capacity(10);
 
@@ -353,12 +343,6 @@ impl<'instr> Parser<'instr> {
             while !self.match_token(TokenKind::Break)? {
                 stmts.push(self.parse()?);
             }
-
-            self.consume(
-                TokenKind::SemiColon,
-                String::from("Syntax error"),
-                String::from("Expected ';'."),
-            )?;
 
             Some(Box::new(Instruction::Else {
                 block: Box::new(Instruction::Block { stmts }),
@@ -776,13 +760,7 @@ impl<'instr> Parser<'instr> {
         self.throw_if_is_generic_type(kind.0, line, span)?;
         self.only_advance()?;
 
-        if self.check_type(TokenKind::SemiColon) {
-            self.consume(
-                TokenKind::SemiColon,
-                String::from("Syntax error"),
-                String::from("Expected ';'."),
-            )?;
-
+        if self.match_token(TokenKind::SemiColon)? {
             self.parser_objects.insert_new_local(
                 self.scope,
                 name.lexeme.to_str(),
@@ -809,11 +787,7 @@ impl<'instr> Parser<'instr> {
 
         self.at_typed_variable = kind.0;
 
-        self.inside_a_local = true;
-
         let value: Instruction = self.expression()?;
-
-        self.inside_a_local = false;
 
         self.check_type_mismatch(kind.0, value.get_data_type(), Some(&value));
         self.check_struct_type_mismatch(&kind.1, &value, line)?;
@@ -834,12 +808,6 @@ impl<'instr> Parser<'instr> {
             line,
             exist_only_comptime,
         };
-
-        self.consume(
-            TokenKind::SemiColon,
-            String::from("Syntax error"),
-            String::from("Expected ';'."),
-        )?;
 
         Ok(local_variable)
     }
@@ -865,13 +833,7 @@ impl<'instr> Parser<'instr> {
             ));
         }
 
-        if self.check_type(TokenKind::SemiColon) {
-            self.consume(
-                TokenKind::SemiColon,
-                String::from("Syntax error"),
-                String::from("Expected ';'."),
-            )?;
-
+        if self.match_token(TokenKind::SemiColon)? {
             if self.at_typed_function.0.is_void_type() {
                 return Ok(Instruction::Null);
             }
@@ -890,12 +852,6 @@ impl<'instr> Parser<'instr> {
         );
 
         self.check_struct_type_mismatch(&self.at_typed_function.1, &value, line)?;
-
-        self.consume(
-            TokenKind::SemiColon,
-            String::from("Syntax error"),
-            String::from("Expected ';'."),
-        )?;
 
         Ok(Instruction::Return(
             Box::new(value),
@@ -1231,11 +1187,15 @@ impl<'instr> Parser<'instr> {
     ########################################################################*/
 
     fn expression(&mut self) -> Result<Instruction<'instr>, ThrushCompilerError> {
-        self.inside_a_expression = true;
-
         let instr: Instruction = self.or()?;
 
-        self.inside_a_expression = false;
+        if self.check_type(TokenKind::SemiColon) {
+            self.consume(
+                TokenKind::SemiColon,
+                String::from("Syntax error"),
+                String::from("Expected ';'."),
+            )?;
+        }
 
         Ok(instr)
     }
@@ -1846,14 +1806,6 @@ impl<'instr> Parser<'instr> {
             String::from("Expected ')'."),
         )?;
 
-        if !self.inside_a_local && !self.inside_a_expression {
-            self.consume(
-                TokenKind::SemiColon,
-                String::from("Syntax error"),
-                String::from("Expected ';'."),
-            )?;
-        }
-
         if arguments_provided.len() > maximun_function_arguments && !function.4 {
             return Err(ThrushCompilerError::Error(
                 String::from("Syntax error"),
@@ -2154,7 +2106,7 @@ impl<'instr> Parser<'instr> {
             String::from("Syntax error"),
             String::from("EOF has been reached."),
             self.peek().line,
-            None,
+            Some(self.peek().span),
         ))
     }
 
@@ -2176,8 +2128,6 @@ impl<'instr> Parser<'instr> {
     fn sync(&mut self) {
         self.inside_a_function = false;
         self.inside_a_loop = false;
-        self.inside_a_local = false;
-        self.inside_a_expression = false;
 
         while !self.end() {
             match self.peek().kind {
