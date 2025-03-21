@@ -669,12 +669,6 @@ impl<'instr> Parser<'instr> {
         let variable: Instruction = self.build_local_variable(false)?;
         let conditional: Instruction = self.expression()?;
 
-        self.consume(
-            TokenKind::SemiColon,
-            String::from("Syntax error"),
-            String::from("Expected ';'."),
-        )?;
-
         self.check_type_mismatch(Type::Bool, conditional.get_data_type(), None);
 
         let actions: Instruction = self.expression()?;
