@@ -1541,12 +1541,6 @@ impl<'instr> Parser<'instr> {
                     is_pre: true,
                 };
 
-                self.consume(
-                    TokenKind::SemiColon,
-                    String::from("Syntax error"),
-                    String::from("Expected ';'."),
-                )?;
-
                 return Ok(expr);
             }
             TokenKind::MinusMinus => {
@@ -1569,12 +1563,6 @@ impl<'instr> Parser<'instr> {
                     kind: Type::S64,
                     is_pre: true,
                 };
-
-                self.consume(
-                    TokenKind::SemiColon,
-                    String::from("Syntax error"),
-                    String::from("Expected ';'."),
-                )?;
 
                 return Ok(expr);
             }
@@ -1731,12 +1719,6 @@ impl<'instr> Parser<'instr> {
                                 kind: Type::S64,
                                 is_pre: false,
                             };
-
-                            self.consume(
-                                TokenKind::SemiColon,
-                                String::from("Syntax error"),
-                                String::from("Expected ';'."),
-                            )?;
 
                             return Ok(expr);
                         }
