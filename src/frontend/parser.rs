@@ -138,8 +138,8 @@ impl<'instr> Parser<'instr> {
     fn build_entry_point(&mut self) -> Result<Instruction<'instr>, ThrushCompilerError> {
         if self.has_entry_point {
             self.errors.push(ThrushCompilerError::Error(
-                String::from("Duplicated Entrypoint"),
-                String::from("The language not support two entrypoints, remove one."),
+                String::from("Duplicated entrypoint"),
+                String::from("The language not support two entrypoints."),
                 self.previous().line,
                 Some(self.previous().span),
             ));
@@ -207,7 +207,7 @@ impl<'instr> Parser<'instr> {
 
         let conditional: Instruction = self.expression()?;
 
-        self.check_type_mismatch(Type::Bool, conditional.get_data_type(), None);
+        self.check_type_mismatch(Type::Bool, conditional.get_data_type(), Some(&conditional));
 
         let block: Instruction = self.build_code_block(&mut [])?;
 
@@ -290,14 +290,7 @@ impl<'instr> Parser<'instr> {
 
             let pattern: Instruction = self.expression()?;
 
-            if !pattern.get_data_type().is_bool_type() {
-                self.errors.push(ThrushCompilerError::Error(
-                    String::from("Syntax error"),
-                    String::from("Expected boolean type at match pattern."),
-                    self.previous().line,
-                    Some(self.previous().span),
-                ));
-            }
+            self.check_type_mismatch(Type::Bool, pattern.get_data_type(), Some(&pattern));
 
             self.consume(
                 TokenKind::ColonColon,
@@ -320,6 +313,8 @@ impl<'instr> Parser<'instr> {
                 if_block = Some(Instruction::Block {
                     stmts: patterns_stmts.clone(),
                 });
+            } else if index == 1 {
+                patterns = Some(Vec::with_capacity(10));
             } else {
                 patterns.as_mut().unwrap().push(Instruction::Elif {
                     cond: Box::new(pattern),
@@ -388,7 +383,7 @@ impl<'instr> Parser<'instr> {
         if !self.inside_a_function {
             self.errors.push(ThrushCompilerError::Error(
                 String::from("Syntax error"),
-                String::from("The if-elif-else must go inside the a function."),
+                String::from("The if-elif-else must be placed inside a function."),
                 line,
                 Some(span),
             ));
@@ -423,18 +418,13 @@ impl<'instr> Parser<'instr> {
         }
 
         while self.check_type(TokenKind::Elif) {
-            let line: usize = self.advance()?.line;
-
             let elif_condition: Instruction = self.expression()?;
 
-            if elif_condition.get_data_type() != Type::Bool {
-                return Err(ThrushCompilerError::Error(
-                    String::from("Syntax error"),
-                    String::from("Condition must be type boolean."),
-                    line,
-                    Some(self.peek().span),
-                ));
-            }
+            self.check_type_mismatch(
+                Type::Bool,
+                elif_condition.get_data_type(),
+                Some(&elif_condition),
+            );
 
             let elif_body: Instruction = self.build_code_block(&mut [])?;
 
@@ -497,11 +487,7 @@ impl<'instr> Parser<'instr> {
                 match &self.peek().kind {
                     TokenKind::DataType(kind) => fields_types.push(("", *kind, field_position)),
                     ident
-                        if *ident == TokenKind::Identifier
-                            && self
-                                .parser_objects
-                                .get_struct(self.peek().lexeme.to_str(), (line, span))
-                                .is_ok()
+                        if *ident == TokenKind::Identifier && self.peak_structure_type()
                             || struct_name == self.peek().lexeme.to_str() =>
                     {
                         fields_types.push((
@@ -535,7 +521,7 @@ impl<'instr> Parser<'instr> {
 
             return Err(ThrushCompilerError::Error(
                 String::from("Syntax error"),
-                String::from("Expected identifier structure field."),
+                String::from("Expected identifier in structure field."),
                 self.peek().line,
                 Some(self.peek().span),
             ));
@@ -571,8 +557,8 @@ impl<'instr> Parser<'instr> {
 
         let name: &Token = self.consume(
             TokenKind::Identifier,
-            String::from("Expected struct reference"),
-            String::from("Write the struct name: \"new --> name <-- { ... }\"."),
+            String::from("Syntax error"),
+            String::from("Expected structure reference."),
         )?;
 
         let struct_name: &str = name.lexeme.to_str();
@@ -1619,7 +1605,6 @@ impl<'instr> Parser<'instr> {
 
                 return Ok(expr);
             }
-
             TokenKind::MinusMinus => {
                 let op: &TokenKind = &self.advance()?.kind;
 
@@ -1649,7 +1634,6 @@ impl<'instr> Parser<'instr> {
 
                 return Ok(expr);
             }
-
             TokenKind::DataType(dt) => {
                 let datatype: &Token = self.advance()?;
 
@@ -1916,7 +1900,7 @@ impl<'instr> Parser<'instr> {
             self.errors.push(ThrushCompilerError::Error(
                 String::from("Syntax error"),
                 format!(
-                    "Function called expected all arguments with types ({}) don't ({}).",
+                    "Function expected all arguments with types ({}), not ({}).",
                     function
                         .1
                         .iter()
@@ -2018,7 +2002,7 @@ impl<'instr> Parser<'instr> {
             return Err(ThrushCompilerError::Error(
                 String::from("Syntax error"),
                 String::from(
-                    "Increment/decrement operators (--x || x++) can only be used outside of expressions.",
+                    "Increment/decrement operators (--x or x++) can only be used outside expressions.",
                 ),
                 line,
                 Some(span),
@@ -2049,7 +2033,7 @@ impl<'instr> Parser<'instr> {
         if matches!(instruction, Instruction::InitStruct { .. }) {
             return Err(ThrushCompilerError::Error(
                 String::from("Syntax error"),
-                String::from("A struct initializer should be stored a variable."),
+                String::from("A structure initializer should be stored a variable."),
                 line,
                 None,
             ));
@@ -2068,7 +2052,7 @@ impl<'instr> Parser<'instr> {
             return Err(ThrushCompilerError::Error(
                 String::from("Syntax error"),
                 String::from(
-                    "A generic type 'T' only is allowed in functions parameters or structures fields types.",
+                    "Generic type 'T' is only allowed in function parameters or structure field types.",
                 ),
                 line,
                 Some(span),
@@ -2088,7 +2072,7 @@ impl<'instr> Parser<'instr> {
             return Err(ThrushCompilerError::Error(
                 String::from("Syntax error"),
                 String::from(
-                    "Function calls are only allowed on local variables and in unassociated expressions.",
+                    "Function calls are only permitted on local variables and not associated expressions.",
                 ),
                 line,
                 Some(span),
@@ -2124,11 +2108,8 @@ impl<'instr> Parser<'instr> {
 
             if target_type.to_lowercase() != structure_type.to_lowercase() {
                 return Err(ThrushCompilerError::Error(
-                    String::from("Mismatched Types"),
-                    format!(
-                        "'{}' and '{}' aren't same struct type.",
-                        target_type, structure_type
-                    ),
+                    String::from("Mismatched types"),
+                    format!("Expected '{}' but found '{}'.", target_type, structure_type),
                     line,
                     None,
                 ));
