@@ -33,6 +33,7 @@ pub struct Parser<'instr> {
     inside_a_function: bool,
     inside_a_loop: bool,
     inside_a_local: bool,
+    inside_a_expression: bool,
     at_typed_function: (Type, String),
     at_typed_variable: Type,
     at_unreacheable_code_scope: usize,
@@ -78,6 +79,7 @@ impl<'instr> Parser<'instr> {
             inside_a_function: false,
             inside_a_loop: false,
             inside_a_local: false,
+            inside_a_expression: false,
             at_typed_function: (Type::Void, String::new()),
             at_typed_variable: Type::Void,
             at_unreacheable_code_scope: 0,
@@ -279,7 +281,7 @@ impl<'instr> Parser<'instr> {
             String::from("Expected ';'."),
         )?;
 
-        let mut patterns: Option<Vec<Instruction>> = None;
+        let mut patterns: Vec<Instruction> = Vec::with_capacity(10);
         let mut patterns_stmts: Vec<Instruction> = Vec::with_capacity(10);
 
         let mut index: u32 = 0;
@@ -313,10 +315,8 @@ impl<'instr> Parser<'instr> {
                 if_block = Some(Instruction::Block {
                     stmts: patterns_stmts.clone(),
                 });
-            } else if index == 1 {
-                patterns = Some(Vec::with_capacity(10));
             } else {
-                patterns.as_mut().unwrap().push(Instruction::Elif {
+                patterns.push(Instruction::Elif {
                     cond: Box::new(pattern),
                     block: Box::new(Instruction::Block {
                         stmts: patterns_stmts.clone(),
@@ -411,13 +411,9 @@ impl<'instr> Parser<'instr> {
 
         let if_body: Box<Instruction> = Box::new(self.build_code_block(&mut [])?);
 
-        let mut elfs: Option<Vec<Instruction>> = None;
+        let mut elfs: Vec<Instruction> = Vec::with_capacity(10);
 
-        if self.check_type(TokenKind::Elif) {
-            elfs = Some(Vec::with_capacity(10));
-        }
-
-        while self.check_type(TokenKind::Elif) {
+        while self.match_token(TokenKind::Elif)? {
             let elif_condition: Instruction = self.expression()?;
 
             self.check_type_mismatch(
@@ -428,7 +424,11 @@ impl<'instr> Parser<'instr> {
 
             let elif_body: Instruction = self.build_code_block(&mut [])?;
 
-            elfs.as_mut().unwrap().push(Instruction::Elif {
+            if !elif_body.has_more_than_a_statement() {
+                continue;
+            }
+
+            elfs.push(Instruction::Elif {
                 cond: Box::new(elif_condition),
                 block: Box::new(elif_body),
             });
@@ -436,12 +436,14 @@ impl<'instr> Parser<'instr> {
 
         let mut otherwise: Option<Box<Instruction>> = None;
 
-        if self.check_type(TokenKind::Else) {
+        if self.match_token(TokenKind::Else)? {
             let else_body: Instruction = self.build_code_block(&mut [])?;
 
-            otherwise = Some(Box::new(Instruction::Else {
-                block: Box::new(else_body),
-            }));
+            if else_body.has_more_than_a_statement() {
+                otherwise = Some(Box::new(Instruction::Else {
+                    block: Box::new(else_body),
+                }));
+            }
         }
 
         Ok(Instruction::If {
@@ -1229,7 +1231,12 @@ impl<'instr> Parser<'instr> {
     ########################################################################*/
 
     fn expression(&mut self) -> Result<Instruction<'instr>, ThrushCompilerError> {
+        self.inside_a_expression = true;
+
         let instr: Instruction = self.or()?;
+
+        self.inside_a_expression = false;
+
         Ok(instr)
     }
 
@@ -1247,16 +1254,13 @@ impl<'instr> Parser<'instr> {
                 (self.previous().line, self.previous().span),
             )?;
 
-            self.throw_if_call(&instr, self.previous().line, self.previous().span)?;
-            self.throw_if_call(&right, self.previous().line, self.previous().span)?;
-
-            self.throw_if_is_decrement_or_increment_unaryop(
+            self.throw_if_is_decrement_increment_instruction(
                 &instr,
                 self.previous().line,
                 self.previous().span,
             )?;
 
-            self.throw_if_is_decrement_or_increment_unaryop(
+            self.throw_if_is_decrement_increment_instruction(
                 &right,
                 self.previous().line,
                 self.previous().span,
@@ -1287,16 +1291,13 @@ impl<'instr> Parser<'instr> {
                 (self.previous().line, self.previous().span),
             )?;
 
-            self.throw_if_call(&instr, self.previous().line, self.previous().span)?;
-            self.throw_if_call(&right, self.previous().line, self.previous().span)?;
-
-            self.throw_if_is_decrement_or_increment_unaryop(
+            self.throw_if_is_decrement_increment_instruction(
                 &instr,
                 self.previous().line,
                 self.previous().span,
             )?;
 
-            self.throw_if_is_decrement_or_increment_unaryop(
+            self.throw_if_is_decrement_increment_instruction(
                 &right,
                 self.previous().line,
                 self.previous().span,
@@ -1332,16 +1333,13 @@ impl<'instr> Parser<'instr> {
 
             instr.is_chained(&right, (self.previous().line, self.previous().span))?;
 
-            self.throw_if_call(&instr, self.previous().line, self.previous().span)?;
-            self.throw_if_call(&right, self.previous().line, self.previous().span)?;
-
-            self.throw_if_is_decrement_or_increment_unaryop(
+            self.throw_if_is_decrement_increment_instruction(
                 &instr,
                 self.previous().line,
                 self.previous().span,
             )?;
 
-            self.throw_if_is_decrement_or_increment_unaryop(
+            self.throw_if_is_decrement_increment_instruction(
                 &right,
                 self.previous().line,
                 self.previous().span,
@@ -1381,16 +1379,13 @@ impl<'instr> Parser<'instr> {
 
             instr.is_chained(&right, (self.previous().line, self.previous().span))?;
 
-            self.throw_if_call(&instr, self.previous().line, self.previous().span)?;
-            self.throw_if_call(&right, self.previous().line, self.previous().span)?;
-
-            self.throw_if_is_decrement_or_increment_unaryop(
+            self.throw_if_is_decrement_increment_instruction(
                 &instr,
                 self.previous().line,
                 self.previous().span,
             )?;
 
-            self.throw_if_is_decrement_or_increment_unaryop(
+            self.throw_if_is_decrement_increment_instruction(
                 &right,
                 self.previous().line,
                 self.previous().span,
@@ -1428,16 +1423,13 @@ impl<'instr> Parser<'instr> {
                 (op.line, op.span),
             )?;
 
-            self.throw_if_call(&instr, self.previous().line, self.previous().span)?;
-            self.throw_if_call(&right, self.previous().line, self.previous().span)?;
-
-            self.throw_if_is_decrement_or_increment_unaryop(
+            self.throw_if_is_decrement_increment_instruction(
                 &instr,
                 self.previous().line,
                 self.previous().span,
             )?;
 
-            self.throw_if_is_decrement_or_increment_unaryop(
+            self.throw_if_is_decrement_increment_instruction(
                 &right,
                 self.previous().line,
                 self.previous().span,
@@ -1473,16 +1465,13 @@ impl<'instr> Parser<'instr> {
                 (self.previous().line, self.previous().span),
             )?;
 
-            self.throw_if_call(&instr, self.previous().line, self.previous().span)?;
-            self.throw_if_call(&right, self.previous().line, self.previous().span)?;
-
-            self.throw_if_is_decrement_or_increment_unaryop(
+            self.throw_if_is_decrement_increment_instruction(
                 &instr,
                 self.previous().line,
                 self.previous().span,
             )?;
 
-            self.throw_if_is_decrement_or_increment_unaryop(
+            self.throw_if_is_decrement_increment_instruction(
                 &right,
                 self.previous().line,
                 self.previous().span,
@@ -1512,8 +1501,7 @@ impl<'instr> Parser<'instr> {
                 (self.previous().line, self.previous().span),
             )?;
 
-            self.throw_if_call(&value, self.previous().line, self.previous().span)?;
-            self.throw_if_is_decrement_or_increment_unaryop(
+            self.throw_if_is_decrement_increment_instruction(
                 &value,
                 self.previous().line,
                 self.previous().span,
@@ -1530,18 +1518,21 @@ impl<'instr> Parser<'instr> {
             let mut value: Instruction = self.primary()?;
 
             if let Instruction::Integer(type_, _, is_signed) = &mut value {
-                if *op == TokenKind::Minus {
+                if op.is_minus_operator() {
                     *type_ = type_.reverse_signed_integer_type();
                     *is_signed = true;
-
-                    return Ok(value);
                 }
             }
 
             if let Instruction::Float(_, _, is_signed) = &mut value {
-                if *op == TokenKind::Minus {
+                if op.is_minus_operator() {
                     *is_signed = true;
-                    return Ok(value);
+                }
+            }
+
+            if let Instruction::LocalRef { kind: type_, .. } = &mut value {
+                if type_.is_integer_type() && op.is_minus_operator() {
+                    *type_ = type_.reverse_signed_integer_type();
                 }
             }
 
@@ -1553,8 +1544,7 @@ impl<'instr> Parser<'instr> {
                 (self.previous().line, self.previous().span),
             )?;
 
-            self.throw_if_call(&value, self.previous().line, self.previous().span)?;
-            self.throw_if_is_decrement_or_increment_unaryop(
+            self.throw_if_is_decrement_increment_instruction(
                 &value,
                 self.previous().line,
                 self.previous().span,
@@ -1739,16 +1729,7 @@ impl<'instr> Parser<'instr> {
                             String::from("Expected ';'."),
                         )?;
 
-                        self.parser_objects.insert_new_local(
-                            self.scope,
-                            object_name,
-                            (local_type, String::new(), false, false),
-                            object_line,
-                            object_span,
-                            &mut self.errors,
-                        );
-
-                        return Ok(Instruction::MutVar {
+                        return Ok(Instruction::LocalMut {
                             name: object_name,
                             value: Box::new(expr),
                             kind: local_type,
@@ -1865,7 +1846,7 @@ impl<'instr> Parser<'instr> {
             String::from("Expected ')'."),
         )?;
 
-        if !self.inside_a_local {
+        if !self.inside_a_local && !self.inside_a_expression {
             self.consume(
                 TokenKind::SemiColon,
                 String::from("Syntax error"),
@@ -1988,7 +1969,7 @@ impl<'instr> Parser<'instr> {
 
     ########################################################################*/
 
-    fn throw_if_is_decrement_or_increment_unaryop(
+    fn throw_if_is_decrement_increment_instruction(
         &self,
         instruction: &Instruction,
         line: usize,
@@ -2053,26 +2034,6 @@ impl<'instr> Parser<'instr> {
                 String::from("Syntax error"),
                 String::from(
                     "Generic type 'T' is only allowed in function parameters or structure field types.",
-                ),
-                line,
-                Some(span),
-            ));
-        }
-
-        Ok(())
-    }
-
-    fn throw_if_call(
-        &self,
-        instruction: &Instruction,
-        line: usize,
-        span: (usize, usize),
-    ) -> Result<(), ThrushCompilerError> {
-        if matches!(instruction, Instruction::Call { .. }) {
-            return Err(ThrushCompilerError::Error(
-                String::from("Syntax error"),
-                String::from(
-                    "Function calls are only permitted on local variables and not associated expressions.",
                 ),
                 line,
                 Some(span),
@@ -2216,6 +2177,7 @@ impl<'instr> Parser<'instr> {
         self.inside_a_function = false;
         self.inside_a_loop = false;
         self.inside_a_local = false;
+        self.inside_a_expression = false;
 
         while !self.end() {
             match self.peek().kind {

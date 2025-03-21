@@ -885,6 +885,16 @@ impl TokenKind {
     }
 
     #[inline(always)]
+    pub const fn is_plusplus_operator(&self) -> bool {
+        matches!(self, TokenKind::PlusPlus)
+    }
+
+    #[inline(always)]
+    pub const fn is_minus_operator(&self) -> bool {
+        matches!(self, TokenKind::Minus)
+    }
+
+    #[inline(always)]
     pub const fn is_function_keyword(&self) -> bool {
         matches!(self, TokenKind::Fn)
     }

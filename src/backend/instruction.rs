@@ -51,7 +51,7 @@ pub enum Instruction<'ctx> {
     If {
         cond: Box<Instruction<'ctx>>,
         block: Box<Instruction<'ctx>>,
-        elfs: Option<Vec<Instruction<'ctx>>>,
+        elfs: Vec<Instruction<'ctx>>,
         otherwise: Option<Box<Instruction<'ctx>>>,
     },
     Elif {
@@ -118,7 +118,7 @@ pub enum Instruction<'ctx> {
         kind: Type,
         struct_type: String,
     },
-    MutVar {
+    LocalMut {
         name: &'ctx str,
         kind: Type,
         value: Box<Instruction<'ctx>>,
@@ -222,6 +222,16 @@ impl<'ctx> Instruction<'ctx> {
         unreachable!()
     }
 
+    #[inline]
+    pub fn has_more_than_a_statement(&self) -> bool {
+        if let Instruction::Block { stmts } = self {
+            return !stmts.is_empty();
+        }
+
+        false
+    }
+
+    #[inline]
     pub fn is_chained(
         &self,
         other: &Instruction,
@@ -248,18 +258,18 @@ impl<'ctx> Instruction<'ctx> {
             | Instruction::Char { .. }
             | Instruction::Float { .. }
             | Instruction::Integer { .. }
-            | Instruction::Boolean(_),
+            | Instruction::Boolean(_)
+            | Instruction::Call { .. },
             Instruction::Char { .. }
             | Instruction::Float { .. }
             | Instruction::Integer { .. }
             | Instruction::LocalRef { .. }
-            | Instruction::Boolean(_),
+            | Instruction::Boolean(_)
+            | Instruction::Call { .. },
         ) = (self, other)
         {
             return Ok(());
         }
-
-        println!("{:?} {:?}", self, other);
 
         Err(ThrushCompilerError::Error(
             String::from("Type Checking"),
@@ -269,7 +279,7 @@ impl<'ctx> Instruction<'ctx> {
         ))
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn return_with_heaped_ptr(&self) -> Option<&'ctx str> {
         if let Instruction::Return(instr, _) = self {
             if let Instruction::LocalRef { name, kind, .. } = instr.as_ref() {

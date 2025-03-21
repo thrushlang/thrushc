@@ -124,6 +124,17 @@ pub fn build_local_mut<'ctx>(
         );
     }
 
+    if local_type.is_bool_type() {
+        build_local_boolean(
+            module,
+            builder,
+            context,
+            variable,
+            variable_ptr,
+            compiler_objects,
+        );
+    }
+
     if *local_type == Type::Str {
         todo!()
     }
@@ -404,6 +415,23 @@ fn build_local_integer<'ctx>(
         return ptr.into();
     }
 
+    if let Instruction::LocalMut { name, value, .. } = local_value {
+        let compiled_expression: BasicValueEnum = generation::build_expression(
+            module,
+            builder,
+            context,
+            value,
+            local_type,
+            compiler_objects,
+        );
+
+        builder.build_store(ptr, compiled_expression).unwrap();
+
+        compiler_objects.insert(name, ptr);
+
+        return ptr.into();
+    }
+
     if let Instruction::LocalRef {
         name: reflocal_name,
         kind: reflocal_type,
@@ -431,11 +459,26 @@ fn build_local_integer<'ctx>(
         return ptr.into();
     }
 
+    if let Instruction::UnaryOp {
+        op, value, kind, ..
+    } = local_value
+    {
+        let result =
+            unaryop::compile_unary_op(builder, context, (op, value, kind), compiler_objects);
+
+        builder.build_store(ptr, result).unwrap();
+
+        compiler_objects.insert(local_name, ptr);
+
+        return ptr.into();
+    }
+
     if let Instruction::BinaryOp {
         left, op, right, ..
     } = local_value
     {
         let result: BasicValueEnum = binaryop::integer_binaryop(
+            module,
             builder,
             context,
             (left, op, right),
@@ -471,20 +514,6 @@ fn build_local_integer<'ctx>(
         {
             builder.build_store(ptr, result).unwrap();
         };
-
-        compiler_objects.insert(local_name, ptr);
-
-        return ptr.into();
-    }
-
-    if let Instruction::UnaryOp {
-        op, value, kind, ..
-    } = local_value
-    {
-        let result =
-            unaryop::compile_unary_op(builder, context, (op, value, kind), compiler_objects);
-
-        builder.build_store(ptr, result).unwrap();
 
         compiler_objects.insert(local_name, ptr);
 
@@ -579,6 +608,23 @@ fn build_local_float<'ctx>(
         return ptr.into();
     }
 
+    if let Instruction::LocalMut { name, value, .. } = local_value {
+        let compiled_expression: BasicValueEnum<'_> = generation::build_expression(
+            module,
+            builder,
+            context,
+            value,
+            local_type,
+            compiler_objects,
+        );
+
+        builder.build_store(ptr, compiled_expression).unwrap();
+
+        compiler_objects.insert(name, ptr);
+
+        return ptr.into();
+    }
+
     if let Instruction::Call {
         name: call_name,
         args,
@@ -606,11 +652,26 @@ fn build_local_float<'ctx>(
         return ptr.into();
     }
 
+    if let Instruction::UnaryOp {
+        op, value, kind, ..
+    } = local_value
+    {
+        let result: BasicValueEnum =
+            unaryop::compile_unary_op(builder, context, (op, value, kind), compiler_objects);
+
+        builder.build_store(ptr, result).unwrap();
+
+        compiler_objects.insert(local_name, ptr);
+
+        return ptr.into();
+    }
+
     if let Instruction::BinaryOp {
         left, op, right, ..
     } = local_value
     {
         let result: BasicValueEnum = binaryop::float_binaryop(
+            module,
             builder,
             context,
             (left, op, right),
@@ -711,6 +772,23 @@ fn build_local_boolean<'ctx>(
         return ptr.into();
     }
 
+    if let Instruction::LocalMut { name, value, .. } = local_value {
+        let compiled_expression: BasicValueEnum = generation::build_expression(
+            module,
+            builder,
+            context,
+            value,
+            local_type,
+            compiler_objects,
+        );
+
+        builder.build_store(ptr, compiled_expression).unwrap();
+
+        compiler_objects.insert(name, ptr);
+
+        return ptr.into();
+    }
+
     if let Instruction::Call {
         name: call_name,
         args,
@@ -738,11 +816,26 @@ fn build_local_boolean<'ctx>(
         return ptr.into();
     }
 
+    if let Instruction::UnaryOp {
+        op, value, kind, ..
+    } = local_value
+    {
+        let result: BasicValueEnum =
+            unaryop::compile_unary_op(builder, context, (op, value, kind), compiler_objects);
+
+        builder.build_store(ptr, result).unwrap();
+
+        compiler_objects.insert(local_name, ptr);
+
+        return ptr.into();
+    }
+
     if let Instruction::BinaryOp {
         left, op, right, ..
     } = local_value
     {
         let result: BasicValueEnum = binaryop::bool_binaryop(
+            module,
             builder,
             context,
             (left, op, right),

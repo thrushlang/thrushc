@@ -107,6 +107,7 @@ pub fn build_expression<'ctx>(
     {
         if binary_op_type.is_float_type() {
             return binaryop::float_binaryop(
+                module,
                 builder,
                 context,
                 (left, op, right),
@@ -117,6 +118,7 @@ pub fn build_expression<'ctx>(
 
         if binary_op_type.is_integer_type() {
             return binaryop::integer_binaryop(
+                module,
                 builder,
                 context,
                 (left, op, right),
@@ -127,6 +129,7 @@ pub fn build_expression<'ctx>(
 
         if binary_op_type.is_bool_type() {
             return binaryop::bool_binaryop(
+                module,
                 builder,
                 context,
                 (left, op, right),

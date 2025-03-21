@@ -144,11 +144,11 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                     .context
                     .append_basic_block(self.function.unwrap(), "merge");
 
-                if elfs.is_some() {
+                if !elfs.is_empty() {
                     self.builder
                         .build_conditional_branch(compiled_if_cond, then_block, else_if_cond)
                         .unwrap();
-                } else if otherwise.is_some() && elfs.is_none() {
+                } else if otherwise.is_some() && elfs.is_empty() {
                     self.builder
                         .build_conditional_branch(compiled_if_cond, then_block, else_block)
                         .unwrap();
@@ -168,23 +168,23 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                         .unwrap();
                 }
 
-                if elfs.is_some() {
+                if !elfs.is_empty() {
                     self.builder.position_at_end(else_if_cond);
                 } else {
                     self.builder.position_at_end(merge_block);
                 }
 
-                if let Some(chained_elifs) = elfs {
+                if !elfs.is_empty() {
                     let mut current_block: BasicBlock = else_if_body;
 
-                    for (index, instr) in chained_elifs.iter().enumerate() {
+                    for (index, instr) in elfs.iter().enumerate() {
                         if let Instruction::Elif { cond, block } = instr {
                             let compiled_else_if_cond: IntValue =
                                 self.codegen(cond).as_basic_value().into_int_value();
 
                             let elif_body: BasicBlock = current_block;
 
-                            let next_block: BasicBlock = if index + 1 < chained_elifs.len() {
+                            let next_block: BasicBlock = if index + 1 < elfs.len() {
                                 self.context
                                     .append_basic_block(self.function.unwrap(), "elseif_body")
                             } else if otherwise.is_some() {
@@ -211,7 +211,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                                     .unwrap();
                             }
 
-                            if index + 1 < chained_elifs.len() {
+                            if index + 1 < elfs.len() {
                                 self.builder.position_at_end(next_block);
                                 current_block = self
                                     .context
@@ -235,11 +235,11 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                     }
                 }
 
-                if elfs.is_some() || otherwise.is_some() {
+                if !elfs.is_empty() || otherwise.is_some() {
                     self.builder.position_at_end(merge_block);
                 }
 
-                if elfs.is_none() {
+                if elfs.is_empty() {
                     let _ = else_if_cond.remove_from_function();
                     let _ = else_if_body.remove_from_function();
                 }
@@ -468,7 +468,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                 Instruction::Null
             }
 
-            Instruction::MutVar { name, kind, value } => {
+            Instruction::LocalMut { name, kind, value } => {
                 local::build_local_mut(
                     self.module,
                     self.builder,
@@ -489,31 +489,34 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
             } => {
                 if kind.is_integer_type() {
                     return Instruction::BasicValueEnum(binaryop::integer_binaryop(
+                        self.module,
                         self.builder,
                         self.context,
                         (left, op, right),
                         kind,
-                        &self.compiler_objects,
+                        &mut self.compiler_objects,
                     ));
                 }
 
                 if kind.is_float_type() {
                     return Instruction::BasicValueEnum(binaryop::float_binaryop(
+                        self.module,
                         self.builder,
                         self.context,
                         (left, op, right),
                         kind,
-                        &self.compiler_objects,
+                        &mut self.compiler_objects,
                     ));
                 }
 
                 if kind.is_bool_type() {
                     return Instruction::BasicValueEnum(binaryop::bool_binaryop(
+                        self.module,
                         self.builder,
                         self.context,
                         (left, op, right),
                         kind,
-                        &self.compiler_objects,
+                        &mut self.compiler_objects,
                     ));
                 }
 
