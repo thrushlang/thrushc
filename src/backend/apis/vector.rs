@@ -1,9 +1,10 @@
-use {
+/* use {
     super::super::super::backend::{
         builder::{Clang, LLVMOpt},
         compiler::misc::CompilerOptions,
     },
     inkwell::{
+        AddressSpace, IntPredicate,
         basic_block::BasicBlock,
         builder::Builder,
         context::Context,
@@ -11,7 +12,6 @@ use {
         targets::{Target, TargetMachine},
         types::{FunctionType, IntType, StructType},
         values::{FunctionValue, IntValue, PointerValue},
-        AddressSpace, IntPredicate,
     },
     std::{
         fs,
@@ -1676,31 +1676,18 @@ pub fn compile_vector_api(options: &mut CompilerOptions) {
     if !PathBuf::from("output/dist/vector.o").exists() {
         vector_api_module.write_bitcode_to_path(Path::new("output/vector.bc"));
 
-        LLVMOpt::optimize(
-            "output/vector.bc",
-            options.optimization.to_llvm_17_passes(),
-            options.optimization.as_llvm_lto_opt(),
-        );
+        LLVMOpt::optimize("output/vector.bc", options.optimization.to_llvm_17_passes());
 
-        let previous_library: bool = options.library;
-        let previous_executable: bool = options.executable;
-        let previous_static_library: bool = options.static_library;
         let previous_output: String = options.output.clone();
 
-        options.library = true;
-        options.executable = false;
-        options.static_library = false;
         options.output = String::from("vector.o");
 
         Clang::new(&[PathBuf::from("output/vector.bc")], options).compile();
 
-        options.library = previous_library;
-        options.executable = previous_executable;
-        options.static_library = previous_static_library;
         options.output = previous_output;
 
         let _ = fs::remove_file("output/vector.bc");
         let _ = fs::copy("vector.o", "output/vector.o");
         let _ = fs::remove_file("vector.o");
     }
-}
+} */

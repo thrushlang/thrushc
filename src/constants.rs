@@ -1,11 +1,8 @@
 pub const MINIMAL_ERROR_CAPACITY: usize = 100;
 
-pub const TARGET_TRIPLES: [&str; 36] = [
-    "x86_64-apple-darwin",
-    "x86_64-apple-ios",
-    "x86_64-apple-ios-macabi",
-    "x86_64-apple-tvos",
-    "x86_64-apple-watchos-sim",
+pub const CURRENT_CLANG_VERSION: &str = "17.0.6";
+
+pub const TARGET_TRIPLES: [&str; 30] = [
     "x86_64-fortanix-unknown-sgx",
     "x86_64-fuchsia",
     "x86_64-linux-android",
@@ -36,5 +33,4 @@ pub const TARGET_TRIPLES: [&str; 36] = [
     "x86_64-uwp-windows-msvc",
     "x86_64-win7-windows-msvc",
     "x86_64-wrs-vxworks",
-    "x86_64h-apple-darwin",
 ];

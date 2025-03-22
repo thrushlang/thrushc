@@ -4,4 +4,4 @@
 .vscode/
 .github/
 .venv/
-output
+build

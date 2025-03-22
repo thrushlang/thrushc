@@ -1,6 +1,6 @@
 use {
     super::super::{
-        backend::{compiler::misc::ThrushFile, instruction::Instruction},
+        backend::{compiler::misc::CompilerFile, instruction::Instruction},
         diagnostic::Diagnostic,
         error::ThrushCompilerError,
         logging::LogType,
@@ -21,7 +21,7 @@ struct ThrushBlock<'ctx> {
 }
 
 impl<'ctx> ThrushScoper<'ctx> {
-    pub fn new(file: &'ctx ThrushFile) -> Self {
+    pub fn new(file: &'ctx CompilerFile) -> Self {
         Self {
             blocks: Vec::with_capacity(25_000),
             errors: Vec::with_capacity(100),

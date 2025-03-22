@@ -1,6 +1,6 @@
 use {
     super::{
-        backend::compiler::misc::ThrushFile,
+        backend::compiler::misc::CompilerFile,
         error::ThrushCompilerError,
         logging::{self, LogType},
     },
@@ -22,7 +22,7 @@ struct CodePosition {
 }
 
 impl Diagnostic {
-    pub fn new(thrushfile: &ThrushFile) -> Self {
+    pub fn new(thrushfile: &CompilerFile) -> Self {
         let contain: String = fs::read_to_string(&thrushfile.path).unwrap_or_else(|_| {
             logging::log(
                 LogType::Panic,

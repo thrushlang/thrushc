@@ -3,7 +3,7 @@ use {
         super::{
             backend::{
                 compiler::{
-                    misc::ThrushFile, traits::AttributesExtensions, types::CompilerAttributes,
+                    misc::CompilerFile, traits::AttributesExtensions, types::CompilerAttributes,
                 },
                 instruction::{Attribute, Instruction},
             },
@@ -44,7 +44,7 @@ pub struct Parser<'instr> {
 }
 
 impl<'instr> Parser<'instr> {
-    pub fn new(tokens: &'instr Vec<Token<'instr>>, file: &'instr ThrushFile) -> Self {
+    pub fn new(tokens: &'instr Vec<Token<'instr>>, file: &'instr CompilerFile) -> Self {
         let mut functions: Functions = HashMap::with_capacity(MINIMAL_GLOBAL_CAPACITY);
 
         functions.insert(
@@ -111,6 +111,7 @@ impl<'instr> Parser<'instr> {
         }
 
         self.scoper.analyze();
+
         self.stmts.as_slice()
     }
 
@@ -1089,7 +1090,6 @@ impl<'instr> Parser<'instr> {
             )?;
 
             self.inside_a_function = false;
-
             return Ok(function);
         }
 

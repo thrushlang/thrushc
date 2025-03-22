@@ -1,7 +1,7 @@
 use {
     super::{
         super::{
-            backend::compiler::misc::ThrushFile, constants::MINIMAL_ERROR_CAPACITY,
+            backend::compiler::misc::CompilerFile, constants::MINIMAL_ERROR_CAPACITY,
             diagnostic::Diagnostic, error::ThrushCompilerError, logging::LogType,
         },
         traits::TokenLexemeBasics,
@@ -81,7 +81,7 @@ pub struct Lexer<'a> {
 }
 
 impl<'a> Lexer<'a> {
-    pub fn lex(code: &'a [u8], file: &'a ThrushFile) -> Vec<Token<'a>> {
+    pub fn lex(code: &'a [u8], file: &'a CompilerFile) -> Vec<Token<'a>> {
         let mut lexer: Lexer = Self {
             tokens: Vec::with_capacity(MINIMAL_TOKENS_CAPACITY),
             errors: Vec::with_capacity(MINIMAL_ERROR_CAPACITY),

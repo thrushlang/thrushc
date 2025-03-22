@@ -8,10 +8,7 @@ mod logging;
 
 use {
     ahash::AHashMap as HashMap,
-    backend::{
-        apis::{debug, vector},
-        builder::Thrushc,
-    },
+    backend::builder::Thrushc,
     cli::Cli,
     colored::{Colorize, control},
     frontend::{
@@ -86,12 +83,7 @@ lazy_static! {
             || !HOME
                 .as_ref()
                 .unwrap()
-                .join("thrushlang/backends/llvm/llvm")
-                .exists()
-            || !HOME
-                .as_ref()
-                .unwrap()
-                .join("thrushlang/backends/llvm/clang/")
+                .join("thrushlang/backends/llvm/tools")
                 .exists()
         {
             error()
@@ -100,27 +92,22 @@ lazy_static! {
         if !HOME
             .as_ref()
             .unwrap()
-            .join("thrushlang/backends/llvm/clang/bin/clang-17")
+            .join("thrushlang/backends/llvm/ld.lld")
             .exists()
             || !HOME
                 .as_ref()
                 .unwrap()
-                .join("thrushlang/backends/llvm/llvm/opt")
+                .join("thrushlang/backends/llvm/clang-17")
                 .exists()
             || !HOME
                 .as_ref()
                 .unwrap()
-                .join("thrushlang/backends/llvm/llvm/llc")
+                .join("thrushlang/backends/llvm/tools/opt")
                 .exists()
             || !HOME
                 .as_ref()
                 .unwrap()
-                .join("thrushlang/backends/llvm/llvm/llvm-dis")
-                .exists()
-            || !HOME
-                .as_ref()
-                .unwrap()
-                .join("thrushlang/backends/llvm/llvm/llvm-lto")
+                .join("thrushlang/backends/llvm/tools/llvm-dis")
                 .exists()
         {
             error()
@@ -137,27 +124,7 @@ fn main() {
 
     Target::initialize_all(&InitializationConfig::default());
 
-    let mut cli: Cli = Cli::parse(env::args().collect());
-
-    if cli.options.files.is_empty() {
-        logging::log(logging::LogType::Panic, "No files to compile!");
-    }
-
-    if !cli.options.include_vector_api {
-        vector::compile_vector_api(&mut cli.options);
-    }
-
-    if !cli.options.include_debug_api {
-        debug::compile_debug_api(&mut cli.options);
-    }
-
-    cli.options.files.sort_by_key(|file| file.name != "main.th");
-
-    if cli.options.executable || cli.options.library || cli.options.static_library {
-        cli.options
-            .args
-            .extend(["output/vector.o".to_string(), "output/debug.o".to_string()]);
-    }
+    let cli: Cli = Cli::parse(env::args().collect());
 
     let start_time: Instant = Instant::now();
 

@@ -1,12 +1,16 @@
 use {
     super::{
-        backend::compiler::misc::{CompilerOptions, Linking, Opt, ThrushFile},
+        LLVM_BACKEND_COMPILER,
+        backend::compiler::misc::{CompilerFile, CompilerOptions, Opt},
         constants::TARGET_TRIPLES,
         logging,
     },
     colored::Colorize,
     inkwell::targets::{CodeModel, RelocMode, TargetMachine, TargetTriple},
-    std::{path::PathBuf, process},
+    std::{
+        path::PathBuf,
+        process::{self, Command, Output},
+    },
 };
 
 pub struct Cli {
@@ -48,6 +52,11 @@ impl Cli {
                 self.help();
             }
 
+            "llvm-help" => {
+                *index += 1;
+                self.llvm_help();
+            }
+
             "version" | "-v" | "--version" => {
                 *index += 1;
                 println!("v{}", env!("CARGO_PKG_VERSION"));
@@ -74,21 +83,11 @@ impl Cli {
                 process::exit(0);
             }
 
-            "-o" | "--output" => {
-                *index += 2;
-
-                if *index > self.args.len() {
-                    self.report_error(&format!("Missing argument for \"{}\" flag.", argument));
-                }
-
-                self.options.output = self.args[self.extract_relative_index(*index)].to_string();
-            }
-
             "-opt" | "--optimization" => {
                 *index += 1;
 
                 if *index > self.args.len() {
-                    self.report_error(&format!("Missing argument for \"{}\" flag.", argument));
+                    self.report_error(&format!("Missing argument for '{}' flag.", argument));
                 }
 
                 self.options.optimization =
@@ -99,7 +98,7 @@ impl Cli {
                         "size" => Opt::Size,
                         "mcqueen" => Opt::Mcqueen,
                         any => {
-                            self.report_error(&format!("Unknown optimization level \"{}\".", any));
+                            self.report_error(&format!("Unknown optimization level '{}'.", any));
                             Opt::default()
                         }
                     };
@@ -111,17 +110,17 @@ impl Cli {
                 *index += 1;
 
                 if *index > self.args.len() {
-                    self.report_error(&format!("Missing argument for \"{}\" flag.", argument));
+                    self.report_error(&format!("Missing argument for '{}' flag.", argument));
                 }
 
                 match self.args[self.extract_relative_index(*index)].as_str() {
                     "llvm-ir" => self.options.emit_llvm_ir = true,
                     "llvm-bc" => self.options.emit_llvm_bitcode = true,
-                    "thrush-ast" => self.options.emit_thrush_ast = true,
+                    "ast" => self.options.emit_ast = true,
                     "asm" => self.options.emit_asm = true,
                     any => {
                         self.report_error(&format!(
-                            "\"{}\" is invalid target to emit raw compiled code. Maybe \"-emit llvm-ir || llvm-bc || thrush-ast || asm\", is the command?",
+                            "'{}' is invalid target to emit raw compiled code. Maybe '-emit llvm-ir || llvm-bc || thrush-ast || asm', is the command?",
                             any
                         ));
                     }
@@ -130,42 +129,11 @@ impl Cli {
                 *index += 1;
             }
 
-            "--emit-natives-apart" | "-emit-natives-apart" => {
-                *index += 1;
-                self.options.emit_natives_apart = true;
-            }
-
-            "--library" | "-lib" => {
-                *index += 1;
-
-                if self.options.executable {
-                    self.report_error(&format!(
-                        "You can't use \"{}\" and \"{}\" together.",
-                        "--executable", "--library"
-                    ));
-                }
-
-                self.options.library = true;
-            }
-
-            "--static-library" | "-slib" => {
-                *index += 1;
-
-                if self.options.executable || self.options.library {
-                    self.report_error(&format!(
-                        "You can't use \"{}\" and \"{}\" together.",
-                        "--executable || --library", "--static-library"
-                    ));
-                }
-
-                self.options.static_library = true;
-            }
-
             "--target" | "-t" => {
                 *index += 1;
 
                 if *index > self.args.len() {
-                    self.report_error(&format!("Missing argument for \"{}\" flag.", argument));
+                    self.report_error(&format!("Missing argument for '{}' flag.", argument));
                 }
 
                 match self.args[self.extract_relative_index(*index)].as_str() {
@@ -188,21 +156,11 @@ impl Cli {
                 self.options.emit_raw_llvm_ir = true;
             }
 
-            "--static" | "-s" => {
-                *index += 1;
-                self.options.linking = Linking::Static;
-            }
-
-            "--dynamic" | "-d" => {
-                *index += 1;
-                self.options.linking = Linking::Dynamic;
-            }
-
             "--reloc" | "-reloc" => {
                 *index += 1;
 
                 if *index > self.args.len() {
-                    self.report_error(&format!("Missing argument for \"{}\" flag.", argument));
+                    self.report_error(&format!("Missing argument for '{}' flag.", argument));
                 }
 
                 self.options.reloc_mode =
@@ -220,7 +178,7 @@ impl Cli {
                 *index += 1;
 
                 if *index > self.args.len() {
-                    self.report_error(&format!("Missing argument for \"{}\" flag.", argument));
+                    self.report_error(&format!("Missing argument for '{}' flag.", argument));
                 }
 
                 self.options.code_model =
@@ -235,60 +193,21 @@ impl Cli {
                 *index += 1;
             }
 
-            "--include" | "-include" => {
-                *index += 1;
-
-                if *index > self.args.len() {
-                    self.report_error(&format!(
-                        "Missing built-in API specification for \"{}\" flag.",
-                        argument
-                    ));
-                }
-
-                match self.args[self.extract_relative_index(*index)].as_str() {
-                    "vector-api" => {
-                        self.options.include_vector_api = true;
-                        *index += 1;
-                    }
-                    "debug-api" => {
-                        self.options.include_debug_api = true;
-                        *index += 1;
-                    }
-                    _ => {
-                        self.report_error(&format!(
-                            "Unknown built-in API name: \"{}\".",
-                            self.args[self.extract_relative_index(*index)]
-                        ));
-                    }
-                }
-            }
-
-            "--executable" | "-executable" => {
-                *index += 1;
-                self.options.executable = true;
-            }
-
-            path if PathBuf::from(path).exists() => {
+            path if PathBuf::from(path).exists() && path.ends_with(".th") => {
                 *index += 1;
 
                 let mut file: PathBuf = PathBuf::from(path);
 
-                if file.is_dir() {
-                    self.report_error(&format!("\"{}\" is a directory", path));
-                } else if file.extension().is_none() {
-                    self.report_error(&format!("\"{}\" does not have extension.", path));
-                } else if file.extension().unwrap() != "th" {
-                    self.report_error(&format!("\"{}\" is not a thrush file.", path));
-                } else if file.file_name().is_none() {
-                    self.report_error(&format!("\"{}\" does not have a name.", path));
-                }
-
                 if path.chars().filter(|ch| *ch == '.').count() > 2 && file.canonicalize().is_ok() {
-                    file = file.canonicalize().unwrap();
+                    file = file.canonicalize().unwrap_or_default();
                 }
 
-                self.options.files.push(ThrushFile {
-                    name: file.file_name().unwrap().to_string_lossy().to_string(),
+                self.options.files.push(CompilerFile {
+                    name: file
+                        .file_name()
+                        .unwrap_or_default()
+                        .to_string_lossy()
+                        .to_string(),
                     path: file,
                 });
             }
@@ -343,11 +262,9 @@ impl Cli {
         logging::write(
             logging::OutputIn::Stdout,
             format!(
-                "{} ({} | {} | {}) {}\n",
+                "{} ({}) {}\n",
                 "•".bold(),
                 "help".custom_color((141, 141, 142)).bold(),
-                "-h".custom_color((141, 141, 142)).bold(),
-                "--help".custom_color((141, 141, 142)).bold(),
                 "Show help message.".bold()
             )
             .as_bytes(),
@@ -356,11 +273,20 @@ impl Cli {
         logging::write(
             logging::OutputIn::Stdout,
             format!(
-                "{} ({} | {} | {}) {}\n",
+                "{} ({}) {}\n",
+                "•".bold(),
+                "llvm-help".custom_color((141, 141, 142)).bold(),
+                "Show Clang & LLVM help message.".bold()
+            )
+            .as_bytes(),
+        );
+
+        logging::write(
+            logging::OutputIn::Stdout,
+            format!(
+                "{} ({}) {}\n",
                 "•".bold(),
                 "version".custom_color((141, 141, 142)).bold(),
-                "-v".custom_color((141, 141, 142)).bold(),
-                "--version".custom_color((141, 141, 142)).bold(),
                 "Show the version.".bold()
             )
             .as_bytes(),
@@ -390,31 +316,7 @@ impl Cli {
 
         logging::write(
             logging::OutputIn::Stdout,
-            "Compiler flags:\n\n".bold().as_bytes(),
-        );
-
-        logging::write(
-            logging::OutputIn::Stdout,
-            format!(
-                "{} ({} | {}) {}\n",
-                "•".bold(),
-                "--output [str]".custom_color((141, 141, 142)).bold(),
-                "-o [str]".custom_color((141, 141, 142)).bold(),
-                "Output file format.".bold()
-            )
-            .as_bytes(),
-        );
-
-        logging::write(
-            logging::OutputIn::Stdout,
-            format!(
-                "{} ({} | {}) {}\n",
-                "•".bold(),
-                "--executable".custom_color((141, 141, 142)).bold(),
-                "-executable".custom_color((141, 141, 142)).bold(),
-                "Compile to executable.".bold()
-            )
-            .as_bytes(),
+            "Special Compiler flags:\n\n".bold().as_bytes(),
         );
 
         logging::write(
@@ -434,74 +336,12 @@ impl Cli {
         logging::write(
             logging::OutputIn::Stdout,
             format!(
-                "{} ({} | {}) {}\n",
-                "•".bold(),
-                "--target [target-triple]"
-                    .custom_color((141, 141, 142))
-                    .bold(),
-                "-t [target-triple]".custom_color((141, 141, 142)).bold(),
-                "Target triple architecture, operating system, and ABI.".bold()
-            )
-            .as_bytes(),
-        );
-
-        logging::write(
-            logging::OutputIn::Stdout,
-            format!(
                 "{} ({}) {}\n",
                 "•".bold(),
-                "--emit | -emit [llvm-ir | llvm-bitcode | thrush-ast | asm]"
+                "--emit | -emit [llvm-ir | llvm-bitcode | ast | asm]"
                     .custom_color((141, 141, 142))
                     .bold(),
                 "Compile the code into specified representation.".bold()
-            )
-            .as_bytes(),
-        );
-
-        logging::write(
-            logging::OutputIn::Stdout,
-            format!(
-                "{} ({} | {}) {}\n",
-                "•".bold(),
-                "--static".custom_color((141, 141, 142)).bold(),
-                "-s".custom_color((141, 141, 142)).bold(),
-                "Link the executable statically.".bold()
-            )
-            .as_bytes(),
-        );
-
-        logging::write(
-            logging::OutputIn::Stdout,
-            format!(
-                "{} ({} | {}) {}\n",
-                "•".bold(),
-                "--dynamic".custom_color((141, 141, 142)).bold(),
-                "-d".custom_color((141, 141, 142)).bold(),
-                "Link the executable dynamically.".bold()
-            )
-            .as_bytes(),
-        );
-
-        logging::write(
-            logging::OutputIn::Stdout,
-            format!(
-                "{} ({} | {}) {}\n",
-                "•".bold(),
-                "--library".custom_color((141, 141, 142)).bold(),
-                "-lib".custom_color((141, 141, 142)).bold(),
-                "Compile to an object file ('*.o').".bold()
-            )
-            .as_bytes(),
-        );
-
-        logging::write(
-            logging::OutputIn::Stdout,
-            format!(
-                "{} ({} | {}) {}\n",
-                "•".bold(),
-                "--static-library".custom_color((141, 141, 142)).bold(),
-                "-slib".custom_color((141, 141, 142)).bold(),
-                "Compile to an static C library ('*.a').".bold()
             )
             .as_bytes(),
         );
@@ -533,34 +373,36 @@ impl Cli {
         logging::write(
             logging::OutputIn::Stdout,
             format!(
-                "{} ({} | {}) {}\n\n",
-                "•".bold(),
-                "--include".custom_color((141, 141, 142)).bold(),
-                "-include".custom_color((141, 141, 142)).bold(),
-                "Include a native api code in the IR.".bold()
+                "\n{}{} {}\n",
+                "Note".custom_color((141, 141, 142)).bold().underline(),
+                ":".custom_color((141, 141, 142)).bold(),
+                "The Thrush Compiler supports Clang & LLVM commands and flags. Execute 'thrushc llvm-help' command to see."
+                    .bold(),
             )
             .as_bytes(),
         );
 
-        logging::write(
-            logging::OutputIn::Stdout,
-            "Useful flags:\n\n".bold().as_bytes(),
-        );
+        process::exit(0);
+    }
 
-        logging::write(
-            logging::OutputIn::Stdout,
-            format!(
-                "{} ({} | {}) {}",
-                "•".bold(),
-               "--emit-natives-apart"
-                    .custom_color((141, 141, 142)).bold(),
-                "-emit-natives-apart"
-                    .custom_color((141, 141, 142)).bold(),
-                "Emit the llvm-ir or assembler output of the natives APIs in another folder called \"natives\"."
-                    .bold()
-            ).as_bytes()
-        );
+    fn llvm_help(&self) {
+        let error = |_| {
+            logging::log(
+                logging::LogType::Panic,
+                "Unable to execute 'llvm-help' command.",
+            );
 
-        process::exit(1);
+            unreachable!()
+        };
+
+        let mut clang_help_command: Command = Command::new(LLVM_BACKEND_COMPILER.join("clang-17"));
+
+        clang_help_command.arg("--help");
+
+        let output: Output = clang_help_command.output().unwrap_or_else(error);
+
+        logging::write(logging::OutputIn::Stderr, &output.stdout);
+
+        process::exit(0);
     }
 }

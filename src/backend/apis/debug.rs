@@ -1,16 +1,16 @@
-use {
+/* use {
     super::super::super::backend::{
         builder::{Clang, LLVMOpt},
         compiler::misc::CompilerOptions,
     },
     inkwell::{
+        AddressSpace,
         basic_block::BasicBlock,
         builder::Builder,
         context::Context,
         module::{Linkage, Module},
         targets::{Target, TargetMachine},
         values::{FunctionValue, PointerValue},
-        AddressSpace,
     },
     std::{
         fs,
@@ -151,31 +151,18 @@ pub fn compile_debug_api(options: &mut CompilerOptions) {
     if !PathBuf::from("output/debug.o").exists() {
         debug_api_module.write_bitcode_to_path(Path::new("output/debug.bc"));
 
-        LLVMOpt::optimize(
-            "output/debug.bc",
-            options.optimization.to_llvm_17_passes(),
-            options.optimization.as_llvm_lto_opt(),
-        );
+        LLVMOpt::optimize("output/debug.bc", options.optimization.to_llvm_17_passes());
 
-        let previous_library: bool = options.library;
-        let previous_executable: bool = options.executable;
-        let previous_static_library: bool = options.static_library;
         let previous_output: String = options.output.clone();
 
-        options.library = true;
-        options.static_library = false;
-        options.executable = false;
         options.output = String::from("debug.o");
 
         Clang::new(&[PathBuf::from("output/debug.bc")], options).compile();
 
-        options.library = previous_library;
-        options.executable = previous_executable;
-        options.static_library = previous_static_library;
         options.output = previous_output;
 
         let _ = fs::remove_file("output/debug.bc");
         let _ = fs::copy("debug.o", "output/debug.o");
         let _ = fs::remove_file("debug.o");
     }
-}
+} */

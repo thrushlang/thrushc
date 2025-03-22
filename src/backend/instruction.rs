@@ -20,13 +20,6 @@ use {
 
 #[derive(Debug, Clone, Default)]
 pub enum Instruction<'ctx> {
-    // Entrypoint -> fn main() {}
-    EntryPoint {
-        body: Box<Instruction<'ctx>>,
-    },
-
-    BasicValueEnum(BasicValueEnum<'ctx>),
-
     // Primitive types
     Str(Vec<u8>),
     Char(u8),
@@ -38,6 +31,8 @@ pub enum Instruction<'ctx> {
         fields_types: Struct<'ctx>,
     },
     NullPtr,
+
+    LLVMValue(BasicValueEnum<'ctx>),
 
     Type(Type),
 
@@ -87,6 +82,12 @@ pub enum Instruction<'ctx> {
     },
 
     // Functions
+
+    // Entrypoint -> fn main() {}
+    EntryPoint {
+        body: Box<Instruction<'ctx>>,
+    },
+
     FunctionParameter {
         name: &'ctx str,
         kind: Type,
@@ -325,9 +326,9 @@ impl<'ctx> Instruction<'ctx> {
     }
 
     #[inline(always)]
-    pub const fn as_basic_value(&self) -> &BasicValueEnum<'ctx> {
+    pub const fn as_llvm_value(&self) -> &BasicValueEnum<'ctx> {
         match self {
-            Instruction::BasicValueEnum(value) => value,
+            Instruction::LLVMValue(value) => value,
             _ => unreachable!(),
         }
     }

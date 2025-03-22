@@ -122,7 +122,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                 otherwise,
             } => {
                 let compiled_if_cond: IntValue<'ctx> =
-                    self.codegen(cond).as_basic_value().into_int_value();
+                    self.codegen(cond).as_llvm_value().into_int_value();
 
                 let then_block: BasicBlock = self
                     .context
@@ -180,7 +180,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                     for (index, instr) in elfs.iter().enumerate() {
                         if let Instruction::Elif { cond, block } = instr {
                             let compiled_else_if_cond: IntValue =
-                                self.codegen(cond).as_basic_value().into_int_value();
+                                self.codegen(cond).as_llvm_value().into_int_value();
 
                             let elif_body: BasicBlock = current_block;
 
@@ -260,10 +260,8 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
 
                 self.builder.position_at_end(cond_block);
 
-                let conditional: IntValue = self
-                    .codegen(cond.as_ref())
-                    .as_basic_value()
-                    .into_int_value();
+                let conditional: IntValue =
+                    self.codegen(cond.as_ref()).as_llvm_value().into_int_value();
 
                 let then_block: BasicBlock =
                     self.context.append_basic_block(function, "while_body");
@@ -345,10 +343,8 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
 
                 self.builder.position_at_end(start_block);
 
-                let conditional: IntValue = self
-                    .codegen(cond.as_ref())
-                    .as_basic_value()
-                    .into_int_value();
+                let conditional: IntValue =
+                    self.codegen(cond.as_ref()).as_llvm_value().into_int_value();
 
                 let then_block: BasicBlock = self.context.append_basic_block(function, "for_body");
                 let exit_block: BasicBlock = self.context.append_basic_block(function, "for_exit");
@@ -437,7 +433,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                 Instruction::Null
             }
 
-            Instruction::Str(_) => Instruction::BasicValueEnum(generation::build_expression(
+            Instruction::Str(_) => Instruction::LLVMValue(generation::build_expression(
                 self.module,
                 self.builder,
                 self.context,
@@ -488,7 +484,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                 ..
             } => {
                 if kind.is_integer_type() {
-                    return Instruction::BasicValueEnum(binaryop::integer_binaryop(
+                    return Instruction::LLVMValue(binaryop::integer_binaryop(
                         self.module,
                         self.builder,
                         self.context,
@@ -499,7 +495,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                 }
 
                 if kind.is_float_type() {
-                    return Instruction::BasicValueEnum(binaryop::float_binaryop(
+                    return Instruction::LLVMValue(binaryop::float_binaryop(
                         self.module,
                         self.builder,
                         self.context,
@@ -510,7 +506,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                 }
 
                 if kind.is_bool_type() {
-                    return Instruction::BasicValueEnum(binaryop::bool_binaryop(
+                    return Instruction::LLVMValue(binaryop::bool_binaryop(
                         self.module,
                         self.builder,
                         self.context,
@@ -525,7 +521,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
 
             Instruction::UnaryOp {
                 op, value, kind, ..
-            } => Instruction::BasicValueEnum(unaryop::compile_unary_op(
+            } => Instruction::LLVMValue(unaryop::compile_unary_op(
                 self.builder,
                 self.context,
                 (op, value, kind),
@@ -561,7 +557,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
             Instruction::LocalRef {
                 kind: localref_type,
                 ..
-            } => Instruction::BasicValueEnum(generation::build_expression(
+            } => Instruction::LLVMValue(generation::build_expression(
                 self.module,
                 self.builder,
                 self.context,
@@ -570,7 +566,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                 &mut self.compiler_objects,
             )),
 
-            Instruction::Boolean(bool) => Instruction::BasicValueEnum(
+            Instruction::Boolean(bool) => Instruction::LLVMValue(
                 self.context
                     .bool_type()
                     .const_int(*bool as u64, false)
