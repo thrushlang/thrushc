@@ -2,8 +2,9 @@ use {
     super::{
         super::{
             super::frontend::lexer::Type,
-            instruction::{Attribute, Instruction},
+            instruction::{CompilerAttribute, Instruction},
         },
+        attributes::{AttributeBuilder, CompilerAttributeApplicant},
         binaryop, call, generation, local,
         objects::CompilerObjects,
         traits::StructureBasics,
@@ -682,19 +683,23 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                 let function_name: &str = function.0;
                 let function_return_type: &Type = function.1;
                 let function_parameters: &[Instruction] = function.2;
+                let function_attributes = function.4;
                 let mut is_public: bool = false;
                 let mut ffi: Option<&str> = None;
 
-                function.4.iter().for_each(|attribute| match attribute {
-                    Attribute::Public(public) => {
-                        is_public = *public;
-                    }
-                    Attribute::FFI(ffi_found) => {
-                        ffi = Some(ffi_found);
-                    }
-
-                    _ => (),
-                });
+                function
+                    .4
+                    .iter()
+                    .filter(|attribute| !attribute.is_llvm_attribute())
+                    .for_each(|attribute| match attribute {
+                        CompilerAttribute::Public(public) => {
+                            is_public = *public;
+                        }
+                        CompilerAttribute::FFI(ffi_found) => {
+                            ffi = Some(ffi_found);
+                        }
+                        _ => (),
+                    });
 
                 let llvm_function_name: &str = if let Some(ffi_name) = ffi {
                     ffi_name
@@ -711,6 +716,14 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                 let function: FunctionValue =
                     self.module
                         .add_function(llvm_function_name, function_type, None);
+
+                let attribute_builder: AttributeBuilder = AttributeBuilder::new(
+                    self.context,
+                    function_attributes,
+                    CompilerAttributeApplicant::Function(function),
+                );
+
+                attribute_builder.add_attributes();
 
                 if !is_public && ffi.is_none() {
                     function.set_linkage(Linkage::LinkerPrivate);

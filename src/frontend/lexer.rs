@@ -1,8 +1,11 @@
 use {
     super::{
         super::{
-            backend::compiler::misc::CompilerFile, constants::MINIMAL_ERROR_CAPACITY,
-            diagnostic::Diagnostic, error::ThrushCompilerError, logging::LogType,
+            backend::{compiler::misc::CompilerFile, instruction::CompilerAttribute},
+            constants::MINIMAL_ERROR_CAPACITY,
+            diagnostic::Diagnostic,
+            error::ThrushCompilerError,
+            logging::LogType,
         },
         traits::TokenLexemeBasics,
         types::TokenLexeme,
@@ -13,7 +16,7 @@ use {
     std::{mem, process::exit},
 };
 
-const KEYWORDS_CAPACITY: usize = 43;
+const KEYWORDS_CAPACITY: usize = 53;
 const MINIMAL_TOKENS_CAPACITY: usize = 100_000;
 
 lazy_static! {
@@ -46,6 +49,15 @@ lazy_static! {
         keywords.insert(b"@public", TokenKind::Public);
         keywords.insert(b"@extern", TokenKind::Extern);
         keywords.insert(b"@ignore", TokenKind::Ignore);
+        keywords.insert(b"@hot", TokenKind::Hot);
+        keywords.insert(b"@minsize", TokenKind::MinSize);
+        keywords.insert(b"@alwaysinline", TokenKind::AlwaysInline);
+        keywords.insert(b"@noinline", TokenKind::NoInline);
+        keywords.insert(b"@inline", TokenKind::InlineHint);
+        keywords.insert(b"@safestack", TokenKind::SafeStack);
+        keywords.insert(b"@weakstack", TokenKind::WeakStack);
+        keywords.insert(b"@strongstack", TokenKind::StrongStack);
+        keywords.insert(b"@precisefloats", TokenKind::PreciseFloats);
         keywords.insert(b"new", TokenKind::New);
         keywords.insert(b"nullptr", TokenKind::NullPtr);
         keywords.insert(b"s8", TokenKind::DataType(Type::S8));
@@ -721,6 +733,15 @@ pub enum TokenKind {
     Extern,
     Ignore,
     Public,
+    MinSize,
+    NoInline,
+    AlwaysInline,
+    InlineHint,
+    Hot,
+    SafeStack,
+    WeakStack,
+    StrongStack,
+    PreciseFloats,
 
     // --- Keywords ---
     New,
@@ -812,6 +833,15 @@ impl std::fmt::Display for TokenKind {
             TokenKind::Builtin => write!(f, "built-in"),
             TokenKind::Public => write!(f, "@public"),
             TokenKind::Ignore => write!(f, "@ignore"),
+            TokenKind::MinSize => write!(f, "@minsize"),
+            TokenKind::NoInline => write!(f, "@noinline"),
+            TokenKind::AlwaysInline => write!(f, "@alwaysinline"),
+            TokenKind::InlineHint => write!(f, "@inlinehint"),
+            TokenKind::Hot => write!(f, "@hot"),
+            TokenKind::SafeStack => write!(f, "@safestack"),
+            TokenKind::WeakStack => write!(f, "@weakstack"),
+            TokenKind::StrongStack => write!(f, "@strongstack"),
+            TokenKind::PreciseFloats => write!(f, "@precisefloats"),
             TokenKind::Extern => write!(f, "@extern"),
             TokenKind::Import => write!(f, "@import"),
             TokenKind::New => write!(f, "new"),
@@ -822,6 +852,24 @@ impl std::fmt::Display for TokenKind {
 }
 
 impl TokenKind {
+    #[inline(always)]
+    pub const fn as_compiler_attribute<'ctx>(self) -> Option<CompilerAttribute<'ctx>> {
+        match self {
+            TokenKind::Ignore => Some(CompilerAttribute::Ignore),
+
+            TokenKind::MinSize => Some(CompilerAttribute::MinSize),
+            TokenKind::NoInline => Some(CompilerAttribute::NoInline),
+            TokenKind::AlwaysInline => Some(CompilerAttribute::AlwaysInline),
+            TokenKind::InlineHint => Some(CompilerAttribute::InlineHint),
+            TokenKind::Hot => Some(CompilerAttribute::Hot),
+            TokenKind::SafeStack => Some(CompilerAttribute::SafeStack),
+            TokenKind::WeakStack => Some(CompilerAttribute::WeakStack),
+            TokenKind::StrongStack => Some(CompilerAttribute::StrongStack),
+            TokenKind::PreciseFloats => Some(CompilerAttribute::PreciseFloats),
+            _ => None,
+        }
+    }
+
     #[inline(always)]
     pub const fn as_int_predicate(&self, left_signed: bool, right_signed: bool) -> IntPredicate {
         match self {
@@ -897,6 +945,11 @@ impl TokenKind {
     #[inline(always)]
     pub const fn is_function_keyword(&self) -> bool {
         matches!(self, TokenKind::Fn)
+    }
+
+    #[inline(always)]
+    pub const fn is_identifier(&self) -> bool {
+        matches!(self, TokenKind::Identifier)
     }
 }
 

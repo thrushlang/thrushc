@@ -160,21 +160,44 @@ pub enum Instruction<'ctx> {
 }
 
 #[derive(Debug, Clone)]
-pub enum Attribute<'ctx> {
+pub enum CompilerAttribute<'ctx> {
     FFI(&'ctx str),
     Public(bool),
     Ignore,
+    Hot,
+    NoInline,
+    InlineHint,
+    MinSize,
+    AlwaysInline,
+    SafeStack,
+    StrongStack,
+    WeakStack,
+    PreciseFloats,
 }
 
-impl Attribute<'_> {
+impl CompilerAttribute<'_> {
     #[inline(always)]
     pub const fn is_ffi_attribute(&self) -> bool {
-        matches!(self, Attribute::FFI(_))
+        matches!(self, CompilerAttribute::FFI(_))
     }
 
     #[inline(always)]
     pub const fn is_ignore_attribute(&self) -> bool {
-        matches!(self, Attribute::Ignore)
+        matches!(self, CompilerAttribute::Ignore)
+    }
+
+    #[inline(always)]
+    pub const fn is_llvm_attribute(&self) -> bool {
+        matches!(
+            self,
+            CompilerAttribute::Ignore
+                | CompilerAttribute::MinSize
+                | CompilerAttribute::NoInline
+                | CompilerAttribute::AlwaysInline
+                | CompilerAttribute::InlineHint
+                | CompilerAttribute::Hot
+                | CompilerAttribute::SafeStack
+        )
     }
 }
 

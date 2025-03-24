@@ -5,7 +5,7 @@ use {
                 compiler::{
                     misc::CompilerFile, traits::AttributesExtensions, types::CompilerAttributes,
                 },
-                instruction::{Attribute, Instruction},
+                instruction::{CompilerAttribute, Instruction},
             },
             constants::MINIMAL_ERROR_CAPACITY,
             diagnostic::Diagnostic,
@@ -25,6 +25,7 @@ use {
 
 const MINIMAL_STATEMENT_CAPACITY: usize = 100_000;
 const MINIMAL_GLOBAL_CAPACITY: usize = 2024;
+const MINIMAL_SCOPE_CAPACITY: usize = 256;
 
 pub struct Parser<'instr> {
     stmts: Vec<Instruction<'instr>>,
@@ -232,7 +233,7 @@ impl<'instr> Parser<'instr> {
 
         self.throw_if_not_inside_a_loop()?;
 
-        self.consume_optional_semicolon()?;
+        self.optional_consume(TokenKind::SemiColon)?;
 
         Ok(Instruction::Continue)
     }
@@ -253,7 +254,7 @@ impl<'instr> Parser<'instr> {
 
         self.throw_if_not_inside_a_loop()?;
 
-        self.consume_optional_semicolon()?;
+        self.optional_consume(TokenKind::SemiColon)?;
 
         Ok(Instruction::Break)
     }
@@ -265,7 +266,7 @@ impl<'instr> Parser<'instr> {
         let mut if_block: Option<Instruction> = None;
 
         let mut patterns: Vec<Instruction> = Vec::with_capacity(10);
-        let mut patterns_stmts: Vec<Instruction> = Vec::with_capacity(10);
+        let mut patterns_stmts: Vec<Instruction> = Vec::with_capacity(MINIMAL_SCOPE_CAPACITY);
 
         let mut index: u32 = 0;
 
@@ -287,7 +288,7 @@ impl<'instr> Parser<'instr> {
                 patterns_stmts.push(self.parse()?);
             }
 
-            self.consume_optional_semicolon()?;
+            self.optional_consume(TokenKind::SemiColon)?;
 
             if index == 0 {
                 if_cond = pattern;
@@ -327,13 +328,13 @@ impl<'instr> Parser<'instr> {
                 String::from("Expected '::'."),
             )?;
 
-            let mut stmts: Vec<Instruction> = Vec::with_capacity(100);
+            let mut stmts: Vec<Instruction> = Vec::with_capacity(MINIMAL_SCOPE_CAPACITY);
 
             while !self.match_token(TokenKind::Break)? {
                 stmts.push(self.parse()?);
             }
 
-            self.consume_optional_semicolon()?;
+            self.optional_consume(TokenKind::SemiColon)?;
 
             Some(Box::new(Instruction::Else {
                 block: Box::new(Instruction::Block { stmts }),
@@ -464,7 +465,7 @@ impl<'instr> Parser<'instr> {
                 match &self.peek().kind {
                     TokenKind::DataType(kind) => fields_types.push(("", *kind, field_position)),
                     ident
-                        if *ident == TokenKind::Identifier && self.peak_structure_type()
+                        if ident.is_identifier() && self.peak_structure_type()
                             || struct_name == self.peek().lexeme.to_str() =>
                     {
                         fields_types.push((
@@ -729,7 +730,7 @@ impl<'instr> Parser<'instr> {
 
         let kind: (Type, String) = match &self.peek().kind {
             TokenKind::DataType(kind) => (*kind, String::new()),
-            ident if *ident == TokenKind::Identifier && self.peak_structure_type() => {
+            ident if ident.is_identifier() && self.peak_structure_type() => {
                 (Type::Struct, self.peek().lexeme.to_string())
             }
             _ => {
@@ -857,7 +858,7 @@ impl<'instr> Parser<'instr> {
         self.scope += 1;
         self.parser_objects.begin_local_scope();
 
-        let mut stmts: Vec<Instruction> = Vec::with_capacity(255);
+        let mut stmts: Vec<Instruction> = Vec::with_capacity(MINIMAL_SCOPE_CAPACITY);
         let mut was_emited_deallocators: bool = false;
 
         with_instrs.iter_mut().for_each(|instruction| {
@@ -984,7 +985,7 @@ impl<'instr> Parser<'instr> {
 
             let parameter_type: (Type, String) = match self.peek().kind {
                 TokenKind::DataType(kind) => (kind, String::new()),
-                ident if ident == TokenKind::Identifier && self.peak_structure_type() => {
+                ident if ident.is_identifier() && self.peak_structure_type() => {
                     struct_types_params
                         .push((self.peek().lexeme.to_string(), parameter_position as usize));
 
@@ -1110,15 +1111,20 @@ impl<'instr> Parser<'instr> {
         while !self.check_type(TokenKind::SemiColon) && !self.check_type(TokenKind::LParen) {
             match self.peek().kind {
                 TokenKind::Extern => {
-                    compiler_attributes.push(Attribute::FFI(self.build_external_attribute()?));
+                    compiler_attributes
+                        .push(CompilerAttribute::FFI(self.build_external_attribute()?));
                 }
+
                 TokenKind::Public => {
-                    compiler_attributes.push(Attribute::Public(true));
+                    compiler_attributes.push(CompilerAttribute::Public(true));
                     self.only_advance()?;
                 }
-                TokenKind::Ignore => {
-                    compiler_attributes.push(Attribute::Ignore);
-                    self.only_advance()?;
+
+                attribute if attribute.as_compiler_attribute().is_some() => {
+                    if let Some(compiler_attribute) = attribute.as_compiler_attribute() {
+                        compiler_attributes.push(compiler_attribute);
+                        self.only_advance()?;
+                    }
                 }
 
                 _ => break,
@@ -1173,7 +1179,7 @@ impl<'instr> Parser<'instr> {
     fn expression(&mut self) -> Result<Instruction<'instr>, ThrushCompilerError> {
         let instr: Instruction = self.or()?;
 
-        self.consume_optional_semicolon()?;
+        self.optional_consume(TokenKind::SemiColon)?;
 
         Ok(instr)
     }
@@ -1480,7 +1486,10 @@ impl<'instr> Parser<'instr> {
                     what_heck_dt => {
                         return Err(ThrushCompilerError::Error(
                             String::from("Syntax error"),
-                            format!("The type '{}' cannot be a value.", what_heck_dt),
+                            format!(
+                                "The type '{}' cannot be a value during the compilation.",
+                                what_heck_dt
+                            ),
                             line,
                             Some(span),
                         ));
@@ -1933,12 +1942,12 @@ impl<'instr> Parser<'instr> {
         ))
     }
 
-    fn consume_optional_semicolon(&mut self) -> Result<(), ThrushCompilerError> {
-        if self.check_type(TokenKind::SemiColon) {
+    fn optional_consume(&mut self, token_kind: TokenKind) -> Result<(), ThrushCompilerError> {
+        if self.check_type(token_kind) {
             self.consume(
-                TokenKind::SemiColon,
+                token_kind,
                 String::from("Syntax error"),
-                String::from("Expected ';'."),
+                format!("Expected '{}'.", token_kind),
             )?;
 
             return Ok(());

@@ -1,5 +1,5 @@
 use super::{
-    super::super::backend::instruction::Attribute,
+    super::super::backend::instruction::CompilerAttribute,
     super::super::frontend::lexer::{TokenKind, Type},
     Instruction,
 };
@@ -21,10 +21,10 @@ pub type Function<'ctx> = (
     &'ctx Type,
     &'ctx [Instruction<'ctx>],
     Option<&'ctx Box<Instruction<'ctx>>>,
-    &'ctx [Attribute<'ctx>],
+    &'ctx [CompilerAttribute<'ctx>],
 );
 
 pub type Struct<'ctx> = Vec<(&'ctx str, Type, u32)>;
 pub type StructField<'ctx> = (&'ctx str, Type, u32);
 
-pub type CompilerAttributes<'ctx> = Vec<Attribute<'ctx>>;
+pub type CompilerAttributes<'ctx> = Vec<CompilerAttribute<'ctx>>;
