@@ -1,5 +1,5 @@
 use super::{
-    super::super::backend::instruction::CompilerAttribute,
+    super::super::backend::compiler::attributes::CompilerAttribute,
     super::super::frontend::lexer::{TokenKind, Type},
     Instruction,
 };

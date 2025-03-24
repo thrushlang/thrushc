@@ -1,8 +1,8 @@
 use {
     super::{
         super::{
-            super::frontend::lexer::Type,
-            instruction::{CompilerAttribute, Instruction},
+            super::frontend::lexer::Type, compiler::attributes::CompilerAttribute,
+            instruction::Instruction,
         },
         attributes::{AttributeBuilder, CompilerAttributeApplicant},
         binaryop, call, generation, local,
@@ -618,6 +618,88 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
         self.compiler_objects.insert(name, allocated_ptr);
     }
 
+    fn build_function(&mut self, function: Function<'ctx>) {
+        let function_name: &str = function.0;
+        let function_return_type: &Type = function.1;
+        let function_body: Option<&Box<Instruction>> = function.3;
+
+        let function: FunctionValue = self.module.get_function(function_name).unwrap();
+
+        let start_block: BasicBlock = self.context.append_basic_block(function, "");
+
+        self.builder.position_at_end(start_block);
+
+        self.codegen(function_body.unwrap());
+
+        if function_return_type.is_void_type() {
+            self.builder.build_return(None).unwrap();
+        }
+    }
+
+    fn predefine(&mut self) {
+        self.instructions.iter().for_each(|instruction| {
+            if instruction.is_function() {
+                self.predefine_function(instruction);
+            }
+
+            if let Instruction::Struct { name, fields_types } = instruction {
+                self.compiler_objects.insert_struct(name, fields_types);
+            }
+        });
+    }
+
+    fn predefine_function(&mut self, instruction: &'ctx Instruction) {
+        let function: Function = instruction.as_function();
+
+        let function_name: &str = function.0;
+        let function_return_type: &Type = function.1;
+        let function_parameters: &[Instruction] = function.2;
+        let function_attributes = function.4;
+
+        let mut is_public: bool = false;
+        let mut ffi: Option<&str> = None;
+
+        function.4.iter().for_each(|attribute| match attribute {
+            CompilerAttribute::Public(public) => {
+                is_public = *public;
+            }
+            CompilerAttribute::FFI(ffi_found) => {
+                ffi = Some(ffi_found);
+            }
+            _ => (),
+        });
+
+        let llvm_function_name: &str = if let Some(ffi_name) = ffi {
+            ffi_name
+        } else {
+            function_name
+        };
+
+        let function_type: FunctionType =
+            utils::type_to_function_type(self.context, function_return_type, function_parameters);
+
+        let function: FunctionValue =
+            self.module
+                .add_function(llvm_function_name, function_type, None);
+
+        let attribute_builder: AttributeBuilder = AttributeBuilder::new(
+            self.context,
+            function_attributes,
+            CompilerAttributeApplicant::Function(function),
+        );
+
+        attribute_builder.add_attributes();
+
+        if !is_public && ffi.is_none() {
+            function.set_linkage(Linkage::LinkerPrivate);
+        }
+
+        self.function = Some(function);
+
+        self.compiler_objects
+            .insert_function(function_name, (function, function_parameters));
+    }
+
     fn build_struct_dealloc(
         &self,
         struct_type: StructType<'ctx>,
@@ -655,88 +737,6 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
 
             self.builder.build_free(loaded_field).unwrap();
         }
-    }
-
-    fn build_function(&mut self, function: Function<'ctx>) {
-        let function_name: &str = function.0;
-        let function_return_type: &Type = function.1;
-        let function_body: Option<&Box<Instruction>> = function.3;
-
-        let function: FunctionValue = self.module.get_function(function_name).unwrap();
-
-        let start_block: BasicBlock = self.context.append_basic_block(function, "");
-
-        self.builder.position_at_end(start_block);
-
-        self.codegen(function_body.unwrap());
-
-        if function_return_type.is_void_type() {
-            self.builder.build_return(None).unwrap();
-        }
-    }
-
-    fn predefine(&mut self) {
-        self.instructions.iter().for_each(|instruction| {
-            if instruction.is_function() {
-                let function: Function = instruction.as_function();
-
-                let function_name: &str = function.0;
-                let function_return_type: &Type = function.1;
-                let function_parameters: &[Instruction] = function.2;
-                let function_attributes = function.4;
-                let mut is_public: bool = false;
-                let mut ffi: Option<&str> = None;
-
-                function
-                    .4
-                    .iter()
-                    .filter(|attribute| !attribute.is_llvm_attribute())
-                    .for_each(|attribute| match attribute {
-                        CompilerAttribute::Public(public) => {
-                            is_public = *public;
-                        }
-                        CompilerAttribute::FFI(ffi_found) => {
-                            ffi = Some(ffi_found);
-                        }
-                        _ => (),
-                    });
-
-                let llvm_function_name: &str = if let Some(ffi_name) = ffi {
-                    ffi_name
-                } else {
-                    function_name
-                };
-
-                let function_type: FunctionType = utils::type_to_function_type(
-                    self.context,
-                    function_return_type,
-                    function_parameters,
-                );
-
-                let function: FunctionValue =
-                    self.module
-                        .add_function(llvm_function_name, function_type, None);
-
-                let attribute_builder: AttributeBuilder = AttributeBuilder::new(
-                    self.context,
-                    function_attributes,
-                    CompilerAttributeApplicant::Function(function),
-                );
-
-                attribute_builder.add_attributes();
-
-                if !is_public && ffi.is_none() {
-                    function.set_linkage(Linkage::LinkerPrivate);
-                }
-
-                self.function = Some(function);
-
-                self.compiler_objects
-                    .insert_function(function_name, (function, function_parameters));
-            } else if let Instruction::Struct { name, fields_types } = instruction {
-                self.compiler_objects.insert_struct(name, fields_types);
-            }
-        });
     }
 
     fn build_structure_deallocators(&self) {

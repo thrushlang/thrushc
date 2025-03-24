@@ -1,11 +1,38 @@
-use {
-    super::super::instruction::CompilerAttribute,
-    inkwell::{
-        attributes::{Attribute, AttributeLoc},
-        context::Context,
-        values::FunctionValue,
-    },
+#![allow(clippy::upper_case_acronyms)]
+
+use inkwell::{
+    attributes::{Attribute, AttributeLoc},
+    context::Context,
+    values::FunctionValue,
 };
+
+#[derive(Debug, Clone)]
+pub enum CompilerAttribute<'ctx> {
+    FFI(&'ctx str),
+    Public(bool),
+    Ignore,
+    Hot,
+    NoInline,
+    InlineHint,
+    MinSize,
+    AlwaysInline,
+    SafeStack,
+    StrongStack,
+    WeakStack,
+    PreciseFloats,
+}
+
+impl CompilerAttribute<'_> {
+    #[inline(always)]
+    pub const fn is_ffi_attribute(&self) -> bool {
+        matches!(self, CompilerAttribute::FFI(_))
+    }
+
+    #[inline(always)]
+    pub const fn is_ignore_attribute(&self) -> bool {
+        matches!(self, CompilerAttribute::Ignore)
+    }
+}
 
 pub enum CompilerAttributeApplicant<'ctx> {
     Function(FunctionValue<'ctx>),

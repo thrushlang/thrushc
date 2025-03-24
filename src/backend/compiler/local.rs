@@ -21,7 +21,7 @@ pub fn build<'ctx>(
 ) -> BasicValueEnum<'ctx> {
     let local_type: &Type = local.1;
 
-    if *local_type == Type::Ptr {
+    if local_type.is_raw_ptr() {
         return build_local_ptr(
             module,
             builder,
@@ -31,7 +31,7 @@ pub fn build<'ctx>(
         );
     }
 
-    if *local_type == Type::Str {
+    if local_type.is_static_str() {
         return build_local_static_str(
             module,
             builder,
@@ -68,12 +68,12 @@ pub fn build<'ctx>(
         );
     }
 
-    if *local_type == Type::Bool {
+    if local_type.is_bool_type() {
         let ptr: PointerValue = utils::build_ptr(context, builder, *local_type);
         return build_local_boolean(module, builder, context, local, ptr, compiler_objects);
     }
 
-    if *local_type == Type::Struct {
+    if local_type.is_struct_type() {
         let ptr: PointerValue =
             utils::build_struct_ptr(context, builder, local.2, compiler_objects);
 

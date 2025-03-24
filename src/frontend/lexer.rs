@@ -1,7 +1,7 @@
 use {
     super::{
         super::{
-            backend::{compiler::misc::CompilerFile, instruction::CompilerAttribute},
+            backend::compiler::{attributes::CompilerAttribute, misc::CompilerFile},
             constants::MINIMAL_ERROR_CAPACITY,
             diagnostic::Diagnostic,
             error::ThrushCompilerError,
@@ -57,7 +57,7 @@ lazy_static! {
         keywords.insert(b"@safestack", TokenKind::SafeStack);
         keywords.insert(b"@weakstack", TokenKind::WeakStack);
         keywords.insert(b"@strongstack", TokenKind::StrongStack);
-        keywords.insert(b"@precisefloats", TokenKind::PreciseFloats);
+        keywords.insert(b"@precisefp", TokenKind::PreciseFloats);
         keywords.insert(b"new", TokenKind::New);
         keywords.insert(b"nullptr", TokenKind::NullPtr);
         keywords.insert(b"s8", TokenKind::DataType(Type::S8));
@@ -1081,6 +1081,16 @@ impl Type {
     #[inline(always)]
     pub const fn is_heaped_ptr(&self) -> bool {
         matches!(self, Type::Struct | Type::Ptr)
+    }
+
+    #[inline(always)]
+    pub const fn is_raw_ptr(&self) -> bool {
+        matches!(self, Type::Ptr)
+    }
+
+    #[inline(always)]
+    pub const fn is_static_str(&self) -> bool {
+        matches!(self, Type::Str)
     }
 
     #[inline(always)]

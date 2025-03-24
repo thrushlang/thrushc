@@ -1,5 +1,3 @@
-#![allow(clippy::upper_case_acronyms)]
-
 use {
     super::{
         super::{
@@ -159,48 +157,6 @@ pub enum Instruction<'ctx> {
     Null,
 }
 
-#[derive(Debug, Clone)]
-pub enum CompilerAttribute<'ctx> {
-    FFI(&'ctx str),
-    Public(bool),
-    Ignore,
-    Hot,
-    NoInline,
-    InlineHint,
-    MinSize,
-    AlwaysInline,
-    SafeStack,
-    StrongStack,
-    WeakStack,
-    PreciseFloats,
-}
-
-impl CompilerAttribute<'_> {
-    #[inline(always)]
-    pub const fn is_ffi_attribute(&self) -> bool {
-        matches!(self, CompilerAttribute::FFI(_))
-    }
-
-    #[inline(always)]
-    pub const fn is_ignore_attribute(&self) -> bool {
-        matches!(self, CompilerAttribute::Ignore)
-    }
-
-    #[inline(always)]
-    pub const fn is_llvm_attribute(&self) -> bool {
-        matches!(
-            self,
-            CompilerAttribute::Ignore
-                | CompilerAttribute::MinSize
-                | CompilerAttribute::NoInline
-                | CompilerAttribute::AlwaysInline
-                | CompilerAttribute::InlineHint
-                | CompilerAttribute::Hot
-                | CompilerAttribute::SafeStack
-        )
-    }
-}
-
 impl PartialEq for Instruction<'_> {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
@@ -297,7 +253,7 @@ impl<'ctx> Instruction<'ctx> {
 
         Err(ThrushCompilerError::Error(
             String::from("Type Checking"),
-            String::from("Operators cannot be chained. Use logical gates as \"&&\" or \"||\"."),
+            String::from("Operators cannot be chained. Use logical gates as '&&' or '||'."),
             location.0,
             Some(location.1),
         ))

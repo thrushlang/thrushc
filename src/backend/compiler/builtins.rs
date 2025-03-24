@@ -1,6 +1,9 @@
 use {
     super::{
-        super::super::{frontend::lexer::Type, logging},
+        super::super::{
+            frontend::{lexer::Type, objects::Functions},
+            logging,
+        },
         Instruction,
         objects::CompilerObjects,
         types::Call,
@@ -14,6 +17,30 @@ use {
         values::{BasicValueEnum, FloatValue, IntValue, PointerValue},
     },
 };
+
+pub fn include(functions: &mut Functions) {
+    functions.insert(
+        "sizeof!",
+        (
+            Type::S64,
+            Vec::from([Type::Generic]),
+            Vec::new(),
+            String::new(),
+            false,
+        ),
+    );
+
+    functions.insert(
+        "is_signed!",
+        (
+            Type::Bool,
+            Vec::from([Type::Generic]),
+            Vec::new(),
+            String::new(),
+            false,
+        ),
+    );
+}
 
 pub fn build_sizeof<'ctx>(
     context: &'ctx Context,

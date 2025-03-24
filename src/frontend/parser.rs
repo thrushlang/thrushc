@@ -3,9 +3,10 @@ use {
         super::{
             backend::{
                 compiler::{
-                    misc::CompilerFile, traits::AttributesExtensions, types::CompilerAttributes,
+                    attributes::CompilerAttribute, builtins, misc::CompilerFile,
+                    traits::AttributesExtensions, types::CompilerAttributes,
                 },
-                instruction::{CompilerAttribute, Instruction},
+                instruction::Instruction,
             },
             constants::MINIMAL_ERROR_CAPACITY,
             diagnostic::Diagnostic,
@@ -48,27 +49,7 @@ impl<'instr> Parser<'instr> {
     pub fn new(tokens: &'instr Vec<Token<'instr>>, file: &'instr CompilerFile) -> Self {
         let mut functions: Functions = HashMap::with_capacity(MINIMAL_GLOBAL_CAPACITY);
 
-        functions.insert(
-            "sizeof!",
-            (
-                Type::S64,
-                Vec::from([Type::Generic]),
-                Vec::new(),
-                String::new(),
-                false,
-            ),
-        );
-
-        functions.insert(
-            "is_signed!",
-            (
-                Type::Bool,
-                Vec::from([Type::Generic]),
-                Vec::new(),
-                String::new(),
-                false,
-            ),
-        );
+        builtins::include(&mut functions);
 
         Self {
             stmts: Vec::with_capacity(MINIMAL_STATEMENT_CAPACITY),
@@ -139,7 +120,7 @@ impl<'instr> Parser<'instr> {
         if self.has_entry_point {
             self.errors.push(ThrushCompilerError::Error(
                 String::from("Duplicated entrypoint"),
-                String::from("The language not support two entrypoints."),
+                String::from("The language not support two entrypoints :>."),
                 self.previous().line,
                 Some(self.previous().span),
             ));
@@ -263,7 +244,7 @@ impl<'instr> Parser<'instr> {
         self.only_advance()?;
 
         let mut if_cond: Instruction = self.expression()?;
-        let mut if_block: Option<Instruction> = None;
+        let mut if_block: Instruction = Instruction::Block { stmts: Vec::new() };
 
         let mut patterns: Vec<Instruction> = Vec::with_capacity(10);
         let mut patterns_stmts: Vec<Instruction> = Vec::with_capacity(MINIMAL_SCOPE_CAPACITY);
@@ -290,35 +271,38 @@ impl<'instr> Parser<'instr> {
 
             self.optional_consume(TokenKind::SemiColon)?;
 
-            if index == 0 {
-                if_cond = pattern;
-                if_block = Some(Instruction::Block {
-                    stmts: patterns_stmts.clone(),
-                });
-            } else {
+            self.scope -= 1;
+            self.parser_objects.end_local_scope();
+
+            if patterns_stmts.is_empty() {
+                continue;
+            }
+
+            if index != 0 {
                 patterns.push(Instruction::Elif {
                     cond: Box::new(pattern),
                     block: Box::new(Instruction::Block {
                         stmts: patterns_stmts.clone(),
                     }),
                 });
+
+                patterns_stmts.clear();
+                index += 1;
+
+                continue;
             }
 
-            self.scope -= 1;
-            self.parser_objects.end_local_scope();
+            if_cond = pattern;
+            if_block = Instruction::Block {
+                stmts: patterns_stmts.clone(),
+            };
 
             patterns_stmts.clear();
-
             index += 1;
         }
 
-        if if_block.is_none() || !if_cond.get_data_type().is_bool_type() {
-            return Err(ThrushCompilerError::Error(
-                String::from("Syntax error"),
-                String::from("Expected at least one pattern."),
-                self.previous().line,
-                Some(self.previous().span),
-            ));
+        if if_block.has_more_than_a_statement() {
+            self.check_type_mismatch(Type::Bool, if_cond.get_data_type(), Some(&if_cond));
         }
 
         let otherwise: Option<Box<Instruction>> = if self.match_token(TokenKind::Else)? {
@@ -336,16 +320,24 @@ impl<'instr> Parser<'instr> {
 
             self.optional_consume(TokenKind::SemiColon)?;
 
-            Some(Box::new(Instruction::Else {
-                block: Box::new(Instruction::Block { stmts }),
-            }))
+            if stmts.is_empty() {
+                None
+            } else {
+                Some(Box::new(Instruction::Else {
+                    block: Box::new(Instruction::Block { stmts }),
+                }))
+            }
         } else {
             None
         };
 
+        if !if_block.has_more_than_a_statement() && patterns.is_empty() && otherwise.is_none() {
+            return Ok(Instruction::Null);
+        }
+
         Ok(Instruction::If {
             cond: Box::new(if_cond),
-            block: Box::new(if_block.unwrap()),
+            block: Box::new(if_block),
             elfs: patterns,
             otherwise,
         })
