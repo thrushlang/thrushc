@@ -1665,12 +1665,6 @@ impl<'instr> Parser<'instr> {
 
                         self.check_type_mismatch(local_type, expr.get_data_type(), Some(&expr));
 
-                        self.consume(
-                            TokenKind::SemiColon,
-                            String::from("Syntax error"),
-                            String::from("Expected ';'."),
-                        )?;
-
                         return Ok(Instruction::LocalMut {
                             name: object_name,
                             value: Box::new(expr),
