@@ -1,5 +1,5 @@
 <p align="center">
-  <img src= "https://github.com/thrushlang/thrushc/blob/master/assets/thrushlang-v1.0.png" alt= "logo" style= "width: 2hv; height: 2hv;"> </img>
+  <img src= "https://github.com/thrushlang/thrushc/blob/master/assets/thrushlang-v1.1.png" alt= "logo" style= "width: 2hv; height: 2hv;"> </img>
 </p>
 
 > [!WARNING]  
