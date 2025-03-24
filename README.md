@@ -7,7 +7,7 @@
 
 # The Thrush Compiler 
 
-The compiler is responsible for translating each code effectively into LLVM intermediate code so that LLVM effectively compiles each scenario to the indicated architecture. LLVM is the main code generator for thrushc; it is speculated that in the future, GCC will be used.
+The Thrush Compiler is tasked with converting Thrush source code (`.th`) into native code for each architecture, using either Just In Time (**JIT**) or Ahead Of Time (**AOT**) compilation modes, leveraging the LLVM infrastructure (**LLVM-C API**) during the process.
 
 # ¿How it works?
 
