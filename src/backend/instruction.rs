@@ -339,8 +339,12 @@ impl<'ctx> Instruction<'ctx> {
             return left.get_data_type_recursive();
         }
 
-        if let Instruction::UnaryOp { value, .. } = self {
-            return value.get_data_type_recursive();
+        if let Instruction::UnaryOp { value, kind, .. } = self {
+            return if !kind.is_void_type() {
+                value.get_data_type_recursive()
+            } else {
+                *kind
+            };
         }
 
         if let Instruction::Group { instr, .. } = self {
@@ -383,6 +387,10 @@ impl<'ctx> Instruction<'ctx> {
             return Type::Ptr;
         }
 
+        if let Instruction::LocalMut { .. } = self {
+            return Type::Void;
+        }
+
         unimplemented!()
     }
 
@@ -395,6 +403,7 @@ impl<'ctx> Instruction<'ctx> {
             | Instruction::BinaryOp { kind: datatype, .. }
             | Instruction::FunctionParameter { kind: datatype, .. }
             | Instruction::Call { kind: datatype, .. }
+            | Instruction::LocalMut { kind: datatype, .. }
             | Instruction::Type(datatype) => *datatype,
 
             Instruction::Str(_) => Type::Str,
@@ -403,7 +412,7 @@ impl<'ctx> Instruction<'ctx> {
             Instruction::NullPtr => Type::Ptr,
             Instruction::InitStruct { kind: datatype, .. } => *datatype,
 
-            Instruction::UnaryOp { value, .. } => value.get_data_type(),
+            Instruction::UnaryOp { kind: datatype, .. } => *datatype,
 
             e => {
                 println!("{:?}", e);

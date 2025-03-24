@@ -12,7 +12,7 @@ pub type BinaryOp<'ctx> = (
 
 pub type UnaryOp<'ctx> = (&'ctx TokenKind, &'ctx Instruction<'ctx>, &'ctx Type);
 
-pub type Variable<'ctx> = (&'ctx str, &'ctx Type, &'ctx Instruction<'ctx>);
+pub type Local<'ctx> = (&'ctx str, &'ctx Type, &'ctx Instruction<'ctx>);
 
 pub type Call<'ctx> = (&'ctx str, &'ctx Type, &'ctx [Instruction<'ctx>]);
 

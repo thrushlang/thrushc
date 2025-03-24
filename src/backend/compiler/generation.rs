@@ -149,6 +149,19 @@ pub fn build_expression<'ctx>(
         return unaryop::compile_unary_op(builder, context, (op, value, kind), compiler_objects);
     }
 
+    if let Instruction::LocalMut { name, kind, value } = instruction {
+        let ptr: PointerValue = compiler_objects.get_local(name).unwrap();
+
+        let compiled_expression: BasicValueEnum =
+            build_expression(module, builder, context, value, kind, compiler_objects);
+
+        builder.build_store(ptr, compiled_expression).unwrap();
+
+        compiler_objects.insert(name, ptr);
+
+        return compiled_expression;
+    }
+
     if let Instruction::Call {
         name: call_name,
         args: call_arguments,

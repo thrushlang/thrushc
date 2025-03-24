@@ -1,7 +1,7 @@
 use {
     super::{
         super::super::frontend::lexer::Type, Instruction, binaryop, call, generation,
-        objects::CompilerObjects, types::Variable, unaryop, utils,
+        objects::CompilerObjects, types::Local, unaryop, utils,
     },
     inkwell::{
         builder::Builder,
@@ -16,17 +16,17 @@ pub fn build<'ctx>(
     module: &Module<'ctx>,
     builder: &Builder<'ctx>,
     context: &'ctx Context,
-    variable: Variable<'ctx>,
+    local: Local<'ctx>,
     compiler_objects: &mut CompilerObjects<'ctx>,
 ) -> BasicValueEnum<'ctx> {
-    let local_type: &Type = variable.1;
+    let local_type: &Type = local.1;
 
     if *local_type == Type::Ptr {
         return build_local_ptr(
             module,
             builder,
             context,
-            (variable.0, local_type, variable.2),
+            (local.0, local_type, local.2),
             compiler_objects,
         );
     }
@@ -36,8 +36,8 @@ pub fn build<'ctx>(
             module,
             builder,
             context,
-            variable.0,
-            variable.2,
+            local.0,
+            local.2,
             compiler_objects,
         );
     }
@@ -49,7 +49,7 @@ pub fn build<'ctx>(
             module,
             builder,
             context,
-            (variable.0, local_type, variable.2),
+            (local.0, local_type, local.2),
             ptr,
             compiler_objects,
         );
@@ -62,7 +62,7 @@ pub fn build<'ctx>(
             module,
             builder,
             context,
-            (variable.0, local_type, variable.2),
+            (local.0, local_type, local.2),
             ptr,
             compiler_objects,
         );
@@ -70,18 +70,18 @@ pub fn build<'ctx>(
 
     if *local_type == Type::Bool {
         let ptr: PointerValue = utils::build_ptr(context, builder, *local_type);
-        return build_local_boolean(module, builder, context, variable, ptr, compiler_objects);
+        return build_local_boolean(module, builder, context, local, ptr, compiler_objects);
     }
 
     if *local_type == Type::Struct {
         let ptr: PointerValue =
-            utils::build_struct_ptr(context, builder, variable.2, compiler_objects);
+            utils::build_struct_ptr(context, builder, local.2, compiler_objects);
 
         return build_local_structure(
             module,
             builder,
             context,
-            (variable.0, local_type, variable.2),
+            (local.0, local_type, local.2),
             compiler_objects,
             ptr,
         );
@@ -95,60 +95,58 @@ pub fn build_local_mut<'ctx>(
     builder: &Builder<'ctx>,
     context: &'ctx Context,
     compiler_objects: &mut CompilerObjects<'ctx>,
-    variable: Variable<'ctx>,
+    local: Local<'ctx>,
 ) {
-    let local_name: &str = variable.0;
-    let local_type: &Type = variable.1;
+    let local_name: &str = local.0;
+    let local_type: &Type = local.1;
+    let local_value: &Instruction = local.2;
 
-    let variable_ptr: PointerValue<'ctx> = compiler_objects.get_local(local_name).unwrap();
+    let ptr: PointerValue = compiler_objects.get_local(local_name).unwrap();
 
-    if local_type.is_integer_type() {
-        build_local_integer(
+    if let Instruction::LocalMut { value, .. } = local_value {
+        let compiled_expression: BasicValueEnum = generation::build_expression(
             module,
             builder,
             context,
-            variable,
-            variable_ptr,
+            value,
+            local_type,
             compiler_objects,
         );
+
+        builder.build_store(ptr, compiled_expression).unwrap();
+
+        compiler_objects.insert(local_name, ptr);
+
+        return;
+    }
+
+    if local_type.is_integer_type() {
+        build_local_integer(module, builder, context, local, ptr, compiler_objects);
+        return;
     }
 
     if local_type.is_float_type() {
-        build_local_float(
-            module,
-            builder,
-            context,
-            variable,
-            variable_ptr,
-            compiler_objects,
-        );
+        build_local_float(module, builder, context, local, ptr, compiler_objects);
+        return;
     }
 
     if local_type.is_bool_type() {
-        build_local_boolean(
-            module,
-            builder,
-            context,
-            variable,
-            variable_ptr,
-            compiler_objects,
-        );
+        build_local_boolean(module, builder, context, local, ptr, compiler_objects);
+        return;
     }
 
-    if *local_type == Type::Str {
-        todo!()
-    }
+    todo!()
 }
 
 fn build_local_ptr<'ctx>(
     module: &Module<'ctx>,
     builder: &Builder<'ctx>,
     context: &'ctx Context,
-    variable: Variable<'ctx>,
+    local: Local<'ctx>,
     compiler_objects: &mut CompilerObjects<'ctx>,
 ) -> BasicValueEnum<'ctx> {
-    let local_name: &str = variable.0;
-    let local_value: &Instruction<'ctx> = variable.2;
+    let local_name: &str = local.0;
+    let local_value: &Instruction<'ctx> = local.2;
 
     if let Instruction::NullPtr = local_value {
         let compiled_str: PointerValue = generation::build_expression(
@@ -208,12 +206,12 @@ fn build_local_structure<'ctx>(
     module: &Module<'ctx>,
     builder: &Builder<'ctx>,
     context: &'ctx Context,
-    variable: Variable<'ctx>,
+    local: Local<'ctx>,
     compiler_objects: &mut CompilerObjects<'ctx>,
     ptr: PointerValue<'ctx>,
 ) -> BasicValueEnum<'ctx> {
-    let local_name: &str = variable.0;
-    let local_value: &Instruction = variable.2;
+    let local_name: &str = local.0;
+    let local_value: &Instruction = local.2;
 
     if let Instruction::InitStruct { fields, .. } = local_value {
         fields.iter().for_each(|field| {
@@ -368,13 +366,13 @@ fn build_local_integer<'ctx>(
     module: &Module<'ctx>,
     builder: &Builder<'ctx>,
     context: &'ctx Context,
-    variable: Variable<'ctx>,
+    local: Local<'ctx>,
     ptr: PointerValue<'ctx>,
     compiler_objects: &mut CompilerObjects<'ctx>,
 ) -> BasicValueEnum<'ctx> {
-    let local_name: &str = variable.0;
-    let local_type: &Type = variable.1;
-    let local_value: &Instruction = variable.2;
+    let local_name: &str = local.0;
+    let local_type: &Type = local.1;
+    let local_value: &Instruction = local.2;
 
     if let Instruction::Null = local_value {
         builder
@@ -411,23 +409,6 @@ fn build_local_integer<'ctx>(
             .unwrap();
 
         compiler_objects.insert(local_name, ptr);
-
-        return ptr.into();
-    }
-
-    if let Instruction::LocalMut { name, value, .. } = local_value {
-        let compiled_expression: BasicValueEnum = generation::build_expression(
-            module,
-            builder,
-            context,
-            value,
-            local_type,
-            compiler_objects,
-        );
-
-        builder.build_store(ptr, compiled_expression).unwrap();
-
-        compiler_objects.insert(name, ptr);
 
         return ptr.into();
     }
@@ -540,13 +521,13 @@ fn build_local_float<'ctx>(
     module: &Module<'ctx>,
     builder: &Builder<'ctx>,
     context: &'ctx Context,
-    variable: Variable<'ctx>,
+    local: Local<'ctx>,
     ptr: PointerValue<'ctx>,
     compiler_objects: &mut CompilerObjects<'ctx>,
 ) -> BasicValueEnum<'ctx> {
-    let local_name: &str = variable.0;
-    let local_type: &Type = variable.1;
-    let local_value: &Instruction = variable.2;
+    let local_name: &str = local.0;
+    let local_type: &Type = local.1;
+    let local_value: &Instruction = local.2;
 
     if let Instruction::Null = local_value {
         builder
@@ -604,23 +585,6 @@ fn build_local_float<'ctx>(
         }
 
         compiler_objects.insert(local_name, ptr);
-
-        return ptr.into();
-    }
-
-    if let Instruction::LocalMut { name, value, .. } = local_value {
-        let compiled_expression: BasicValueEnum<'_> = generation::build_expression(
-            module,
-            builder,
-            context,
-            value,
-            local_type,
-            compiler_objects,
-        );
-
-        builder.build_store(ptr, compiled_expression).unwrap();
-
-        compiler_objects.insert(name, ptr);
 
         return ptr.into();
     }
@@ -704,13 +668,13 @@ fn build_local_boolean<'ctx>(
     module: &Module<'ctx>,
     builder: &Builder<'ctx>,
     context: &'ctx Context,
-    variable: Variable<'ctx>,
+    local: Local<'ctx>,
     ptr: PointerValue<'ctx>,
     compiler_objects: &mut CompilerObjects<'ctx>,
 ) -> BasicValueEnum<'ctx> {
-    let local_name: &str = variable.0;
-    let local_type: &Type = variable.1;
-    let local_value: &Instruction<'ctx> = variable.2;
+    let local_name: &str = local.0;
+    let local_type: &Type = local.1;
+    let local_value: &Instruction = local.2;
 
     if let Instruction::Null = local_value {
         builder
@@ -768,23 +732,6 @@ fn build_local_boolean<'ctx>(
         }
 
         compiler_objects.insert(local_name, ptr);
-
-        return ptr.into();
-    }
-
-    if let Instruction::LocalMut { name, value, .. } = local_value {
-        let compiled_expression: BasicValueEnum = generation::build_expression(
-            module,
-            builder,
-            context,
-            value,
-            local_type,
-            compiler_objects,
-        );
-
-        builder.build_store(ptr, compiled_expression).unwrap();
-
-        compiler_objects.insert(name, ptr);
 
         return ptr.into();
     }

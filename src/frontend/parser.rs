@@ -232,11 +232,7 @@ impl<'instr> Parser<'instr> {
 
         self.throw_if_not_inside_a_loop()?;
 
-        self.consume(
-            TokenKind::SemiColon,
-            String::from("Syntax error"),
-            String::from("Expected ';'."),
-        )?;
+        self.consume_optional_semicolon()?;
 
         Ok(Instruction::Continue)
     }
@@ -257,11 +253,7 @@ impl<'instr> Parser<'instr> {
 
         self.throw_if_not_inside_a_loop()?;
 
-        self.consume(
-            TokenKind::SemiColon,
-            String::from("Syntax error"),
-            String::from("Expected ';'."),
-        )?;
+        self.consume_optional_semicolon()?;
 
         Ok(Instruction::Break)
     }
@@ -295,11 +287,7 @@ impl<'instr> Parser<'instr> {
                 patterns_stmts.push(self.parse()?);
             }
 
-            self.consume(
-                TokenKind::SemiColon,
-                String::from("Syntax error"),
-                String::from("Expected ';'."),
-            )?;
+            self.consume_optional_semicolon()?;
 
             if index == 0 {
                 if_cond = pattern;
@@ -344,6 +332,8 @@ impl<'instr> Parser<'instr> {
             while !self.match_token(TokenKind::Break)? {
                 stmts.push(self.parse()?);
             }
+
+            self.consume_optional_semicolon()?;
 
             Some(Box::new(Instruction::Else {
                 block: Box::new(Instruction::Block { stmts }),
@@ -1183,13 +1173,7 @@ impl<'instr> Parser<'instr> {
     fn expression(&mut self) -> Result<Instruction<'instr>, ThrushCompilerError> {
         let instr: Instruction = self.or()?;
 
-        if self.check_type(TokenKind::SemiColon) {
-            self.consume(
-                TokenKind::SemiColon,
-                String::from("Syntax error"),
-                String::from("Expected ';'."),
-            )?;
-        }
+        self.consume_optional_semicolon()?;
 
         Ok(instr)
     }
@@ -1206,18 +1190,6 @@ impl<'instr> Parser<'instr> {
                 &instr.get_data_type(),
                 &right.get_data_type(),
                 (self.previous().line, self.previous().span),
-            )?;
-
-            self.throw_if_is_decrement_increment_instruction(
-                &instr,
-                self.previous().line,
-                self.previous().span,
-            )?;
-
-            self.throw_if_is_decrement_increment_instruction(
-                &right,
-                self.previous().line,
-                self.previous().span,
             )?;
 
             instr = Instruction::BinaryOp {
@@ -1243,18 +1215,6 @@ impl<'instr> Parser<'instr> {
                 &instr.get_data_type(),
                 &right.get_data_type(),
                 (self.previous().line, self.previous().span),
-            )?;
-
-            self.throw_if_is_decrement_increment_instruction(
-                &instr,
-                self.previous().line,
-                self.previous().span,
-            )?;
-
-            self.throw_if_is_decrement_increment_instruction(
-                &right,
-                self.previous().line,
-                self.previous().span,
             )?;
 
             instr = Instruction::BinaryOp {
@@ -1286,18 +1246,6 @@ impl<'instr> Parser<'instr> {
             )?;
 
             instr.is_chained(&right, (self.previous().line, self.previous().span))?;
-
-            self.throw_if_is_decrement_increment_instruction(
-                &instr,
-                self.previous().line,
-                self.previous().span,
-            )?;
-
-            self.throw_if_is_decrement_increment_instruction(
-                &right,
-                self.previous().line,
-                self.previous().span,
-            )?;
 
             instr = Instruction::BinaryOp {
                 left: Box::from(instr),
@@ -1333,18 +1281,6 @@ impl<'instr> Parser<'instr> {
 
             instr.is_chained(&right, (self.previous().line, self.previous().span))?;
 
-            self.throw_if_is_decrement_increment_instruction(
-                &instr,
-                self.previous().line,
-                self.previous().span,
-            )?;
-
-            self.throw_if_is_decrement_increment_instruction(
-                &right,
-                self.previous().line,
-                self.previous().span,
-            )?;
-
             instr = Instruction::BinaryOp {
                 left: Box::from(instr),
                 op,
@@ -1377,18 +1313,6 @@ impl<'instr> Parser<'instr> {
                 (op.line, op.span),
             )?;
 
-            self.throw_if_is_decrement_increment_instruction(
-                &instr,
-                self.previous().line,
-                self.previous().span,
-            )?;
-
-            self.throw_if_is_decrement_increment_instruction(
-                &right,
-                self.previous().line,
-                self.previous().span,
-            )?;
-
             let kind: Type = left_type.precompute_numeric_type(right_type, self.at_typed_variable);
 
             instr = Instruction::BinaryOp {
@@ -1419,18 +1343,6 @@ impl<'instr> Parser<'instr> {
                 (self.previous().line, self.previous().span),
             )?;
 
-            self.throw_if_is_decrement_increment_instruction(
-                &instr,
-                self.previous().line,
-                self.previous().span,
-            )?;
-
-            self.throw_if_is_decrement_increment_instruction(
-                &right,
-                self.previous().line,
-                self.previous().span,
-            )?;
-
             let kind: Type = left_type.precompute_numeric_type(right_type, self.at_typed_variable);
 
             instr = Instruction::BinaryOp {
@@ -1453,12 +1365,6 @@ impl<'instr> Parser<'instr> {
                 op,
                 &value.get_data_type(),
                 (self.previous().line, self.previous().span),
-            )?;
-
-            self.throw_if_is_decrement_increment_instruction(
-                &value,
-                self.previous().line,
-                self.previous().span,
             )?;
 
             return Ok(Instruction::UnaryOp {
@@ -1498,12 +1404,6 @@ impl<'instr> Parser<'instr> {
                 (self.previous().line, self.previous().span),
             )?;
 
-            self.throw_if_is_decrement_increment_instruction(
-                &value,
-                self.previous().line,
-                self.previous().span,
-            )?;
-
             return Ok(Instruction::UnaryOp {
                 op,
                 value: Box::from(value),
@@ -1537,7 +1437,7 @@ impl<'instr> Parser<'instr> {
                 let expr: Instruction = Instruction::UnaryOp {
                     op,
                     value: Box::from(value),
-                    kind: Type::S64,
+                    kind: Type::Void,
                     is_pre: true,
                 };
 
@@ -1560,7 +1460,7 @@ impl<'instr> Parser<'instr> {
                 let expr: Instruction = Instruction::UnaryOp {
                     op,
                     value: Box::from(value),
-                    kind: Type::S64,
+                    kind: Type::Void,
                     is_pre: true,
                 };
 
@@ -1710,7 +1610,7 @@ impl<'instr> Parser<'instr> {
                             let expr: Instruction = Instruction::UnaryOp {
                                 op,
                                 value: Box::from(localref),
-                                kind: Type::S64,
+                                kind: Type::Void,
                                 is_pre: false,
                             };
 
@@ -1891,30 +1791,6 @@ impl<'instr> Parser<'instr> {
 
     ########################################################################*/
 
-    fn throw_if_is_decrement_increment_instruction(
-        &self,
-        instruction: &Instruction,
-        line: usize,
-        span: (usize, usize),
-    ) -> Result<(), ThrushCompilerError> {
-        if let Instruction::UnaryOp {
-            op: TokenKind::PlusPlus | TokenKind::MinusMinus,
-            ..
-        } = instruction
-        {
-            return Err(ThrushCompilerError::Error(
-                String::from("Syntax error"),
-                String::from(
-                    "Increment/decrement operators (--x or x++) can only be used outside expressions.",
-                ),
-                line,
-                Some(span),
-            ));
-        }
-
-        Ok(())
-    }
-
     fn throw_if_not_inside_a_loop(&self) -> Result<(), ThrushCompilerError> {
         if !self.inside_a_loop {
             return Err(ThrushCompilerError::Error(
@@ -2055,6 +1931,20 @@ impl<'instr> Parser<'instr> {
             self.previous().line,
             Some(self.previous().span),
         ))
+    }
+
+    fn consume_optional_semicolon(&mut self) -> Result<(), ThrushCompilerError> {
+        if self.check_type(TokenKind::SemiColon) {
+            self.consume(
+                TokenKind::SemiColon,
+                String::from("Syntax error"),
+                String::from("Expected ';'."),
+            )?;
+
+            return Ok(());
+        }
+
+        Ok(())
     }
 
     fn match_token(&mut self, kind: TokenKind) -> Result<bool, ThrushCompilerError> {
