@@ -30,7 +30,7 @@ In summary:
 - **llvm-sys** (v170)
 - **inkwell** (v0.50)
   
-## Requirements for create executables with the compiler
+## Requirements for creating optimal binaries
 
 ### Linux Toolchain
 
