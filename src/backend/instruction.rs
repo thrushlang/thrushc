@@ -1,3 +1,5 @@
+#![allow(clippy::upper_case_acronyms)]
+
 use {
     super::{
         super::{
@@ -28,7 +30,7 @@ pub enum Instruction<'ctx> {
         name: &'ctx str,
         fields_types: Struct<'ctx>,
     },
-    NullPtr,
+    NullT,
 
     LLVMValue(BasicValueEnum<'ctx>),
 
@@ -121,6 +123,12 @@ pub enum Instruction<'ctx> {
         name: &'ctx str,
         kind: Type,
         value: Box<Instruction<'ctx>>,
+    },
+
+    // Pointer
+    GEP {
+        name: &'ctx str,
+        index: Box<Instruction<'ctx>>,
     },
 
     // Expressions
@@ -362,8 +370,8 @@ impl<'ctx> Instruction<'ctx> {
             return Type::Bool;
         }
 
-        if let Instruction::NullPtr = self {
-            return Type::Ptr;
+        if let Instruction::NullT | Instruction::GEP { .. } = self {
+            return Type::T;
         }
 
         if let Instruction::LocalMut { .. } = self {
@@ -388,7 +396,8 @@ impl<'ctx> Instruction<'ctx> {
             Instruction::Str(_) => Type::Str,
             Instruction::Boolean(_) => Type::Bool,
             Instruction::Char(_) => Type::Char,
-            Instruction::NullPtr => Type::Ptr,
+            Instruction::NullT => Type::T,
+            Instruction::GEP { .. } => Type::T,
             Instruction::InitStruct { kind: datatype, .. } => *datatype,
 
             Instruction::UnaryOp { kind: datatype, .. } => *datatype,
@@ -425,6 +434,24 @@ impl<'ctx> Instruction<'ctx> {
         } else {
             false
         }
+    }
+
+    #[inline(always)]
+    pub fn is_unsigned_integer(&self) -> bool {
+        matches!(
+            self.get_data_type(),
+            Type::U8 | Type::U16 | Type::U32 | Type::U64
+        )
+    }
+
+    #[inline(always)]
+    pub const fn is_gep(&self) -> bool {
+        matches!(self, Instruction::GEP { .. })
+    }
+
+    #[inline(always)]
+    pub const fn is_nullt(&self) -> bool {
+        matches!(self, Instruction::NullT { .. })
     }
 
     #[inline(always)]

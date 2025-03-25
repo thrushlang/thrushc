@@ -22,7 +22,7 @@ pub fn build_expression<'ctx>(
     casting_target: &Type,
     compiler_objects: &mut CompilerObjects<'ctx>,
 ) -> BasicValueEnum<'ctx> {
-    if let Instruction::NullPtr = instruction {
+    if let Instruction::NullT = instruction {
         return context
             .ptr_type(AddressSpace::default())
             .const_null()
@@ -67,8 +67,44 @@ pub fn build_expression<'ctx>(
         return context.bool_type().const_int(*bool as u64, false).into();
     }
 
+    if let Instruction::GEP { name, index } = instruction {
+        let local: PointerValue = compiler_objects.get_local(name);
+
+        let mut compiled_index: BasicValueEnum = build_expression(
+            module,
+            builder,
+            context,
+            index,
+            &Type::U64,
+            compiler_objects,
+        );
+
+        if let Some(casted_index) = utils::integer_autocast(
+            &Type::U64,
+            &index.get_data_type(),
+            None,
+            compiled_index,
+            builder,
+            context,
+        ) {
+            compiled_index = casted_index;
+        }
+
+        return unsafe {
+            builder
+                .build_in_bounds_gep(
+                    context.ptr_type(AddressSpace::default()),
+                    local,
+                    &[compiled_index.into_int_value()],
+                    "",
+                )
+                .unwrap()
+                .into()
+        };
+    }
+
     if let Instruction::LocalRef { name, kind, .. } = instruction {
-        let local: PointerValue = compiler_objects.get_local(name).unwrap();
+        let local: PointerValue = compiler_objects.get_local(name);
 
         if kind.is_float_type() {
             return builder
@@ -86,12 +122,16 @@ pub fn build_expression<'ctx>(
                 .unwrap();
         }
 
-        if *kind == Type::Str {
+        if kind.is_static_str() {
             return local.into();
         }
 
-        if *kind == Type::Struct {
+        if kind.is_struct_type() {
             return builder.build_load(local.get_type(), local, "").unwrap();
+        }
+
+        if kind.is_raw_ptr() {
+            return local.into();
         }
 
         unreachable!()
@@ -150,7 +190,7 @@ pub fn build_expression<'ctx>(
     }
 
     if let Instruction::LocalMut { name, kind, value } = instruction {
-        let ptr: PointerValue = compiler_objects.get_local(name).unwrap();
+        let ptr: PointerValue = compiler_objects.get_local(name);
 
         let compiled_expression: BasicValueEnum =
             build_expression(module, builder, context, value, kind, compiler_objects);

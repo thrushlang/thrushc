@@ -101,7 +101,7 @@ pub fn build_local_mut<'ctx>(
     let local_type: &Type = local.1;
     let local_value: &Instruction = local.2;
 
-    let ptr: PointerValue = compiler_objects.get_local(local_name).unwrap();
+    let ptr: PointerValue = compiler_objects.get_local(local_name);
 
     if let Instruction::LocalMut { value, .. } = local_value {
         let compiled_expression: BasicValueEnum = generation::build_expression(
@@ -116,7 +116,6 @@ pub fn build_local_mut<'ctx>(
         builder.build_store(ptr, compiled_expression).unwrap();
 
         compiler_objects.insert(local_name, ptr);
-
         return;
     }
 
@@ -135,6 +134,15 @@ pub fn build_local_mut<'ctx>(
         return;
     }
 
+    if local_type.is_raw_ptr() {
+        let compiled_ptr: BasicValueEnum =
+            build_local_ptr(module, builder, context, local, compiler_objects);
+
+        builder.build_store(ptr, compiled_ptr).unwrap();
+
+        return;
+    }
+
     todo!()
 }
 
@@ -146,10 +154,10 @@ fn build_local_ptr<'ctx>(
     compiler_objects: &mut CompilerObjects<'ctx>,
 ) -> BasicValueEnum<'ctx> {
     let local_name: &str = local.0;
-    let local_value: &Instruction<'ctx> = local.2;
+    let local_value: &Instruction = local.2;
 
-    if let Instruction::NullPtr = local_value {
-        let compiled_str: PointerValue = generation::build_expression(
+    if local_value.is_nullt() {
+        let compiled_null: PointerValue = generation::build_expression(
             module,
             builder,
             context,
@@ -159,8 +167,9 @@ fn build_local_ptr<'ctx>(
         )
         .into_pointer_value();
 
-        compiler_objects.insert(local_name, compiled_str);
-        return compiled_str.into();
+        compiler_objects.insert(local_name, compiled_null);
+
+        return compiled_null.into();
     }
 
     if let Instruction::Call {
@@ -181,22 +190,32 @@ fn build_local_ptr<'ctx>(
         .into_pointer_value();
 
         compiler_objects.insert(local_name, compiled_call);
+
         return compiled_call.into();
     }
 
-    if let Instruction::Str(_) = local_value {
-        let compiled_str: PointerValue = generation::build_expression(
+    if local_value.is_gep() {
+        let compiled_gep: PointerValue = generation::build_expression(
             module,
             builder,
             context,
             local_value,
-            &Type::Void,
+            &Type::U64,
             compiler_objects,
         )
         .into_pointer_value();
 
-        compiler_objects.insert(local_name, compiled_str);
-        return compiled_str.into();
+        compiler_objects.insert(local_name, compiled_gep);
+
+        return compiled_gep.into();
+    }
+
+    if let Instruction::LocalRef { name, .. } = local_value {
+        let ptr: PointerValue = compiler_objects.get_local(name);
+
+        compiler_objects.insert(local_name, ptr);
+
+        return ptr.into();
     }
 
     unreachable!()
@@ -243,7 +262,7 @@ fn build_local_structure<'ctx>(
     }
 
     if let Instruction::LocalRef { name, .. } = local_value {
-        let original_ptr: PointerValue = compiler_objects.get_local(name).unwrap();
+        let original_ptr: PointerValue = compiler_objects.get_local(name);
 
         builder.build_store(ptr, original_ptr).unwrap();
         compiler_objects.insert(local_name, ptr);
@@ -419,7 +438,7 @@ fn build_local_integer<'ctx>(
         ..
     } = local_value
     {
-        let var: PointerValue = compiler_objects.get_local(reflocal_name).unwrap();
+        let var: PointerValue = compiler_objects.get_local(reflocal_name);
 
         let load: BasicValueEnum = builder
             .build_load(
@@ -561,7 +580,7 @@ fn build_local_float<'ctx>(
         ..
     } = local_value
     {
-        let var: PointerValue<'ctx> = compiler_objects.get_local(name_refvar).unwrap();
+        let var: PointerValue<'ctx> = compiler_objects.get_local(name_refvar);
 
         let load = builder
             .build_load(
@@ -708,7 +727,7 @@ fn build_local_boolean<'ctx>(
         ..
     } = local_value
     {
-        let reflocal_ptr: PointerValue = compiler_objects.get_local(name_refvar).unwrap();
+        let reflocal_ptr: PointerValue = compiler_objects.get_local(name_refvar);
 
         let load = builder
             .build_load(

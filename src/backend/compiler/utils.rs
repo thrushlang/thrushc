@@ -114,7 +114,7 @@ pub fn type_to_function_type<'ctx>(
         Type::S16 | Type::U16 => context.i16_type().fn_type(&param_types, true),
         Type::S32 | Type::U32 => context.i32_type().fn_type(&param_types, true),
         Type::S64 | Type::U64 => context.i64_type().fn_type(&param_types, true),
-        Type::Str | Type::Struct | Type::Ptr | Type::Generic => context
+        Type::Str | Type::Struct | Type::T => context
             .ptr_type(AddressSpace::default())
             .fn_type(&param_types, true),
         Type::Bool => context.bool_type().fn_type(&param_types, true),
@@ -135,7 +135,7 @@ pub fn type_to_basic_metadata_enum<'ctx>(
         Type::S64 | Type::U64 => context.i64_type().into(),
         Type::F32 => context.f32_type().into(),
         Type::F64 => context.f64_type().into(),
-        Type::Str | Type::Struct | Type::Ptr => context.ptr_type(AddressSpace::default()).into(),
+        Type::Str | Type::Struct | Type::T => context.ptr_type(AddressSpace::default()).into(),
 
         _ => unreachable!(),
     }

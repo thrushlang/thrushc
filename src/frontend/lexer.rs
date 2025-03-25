@@ -16,7 +16,7 @@ use {
     std::{mem, process::exit},
 };
 
-const KEYWORDS_CAPACITY: usize = 53;
+const KEYWORDS_CAPACITY: usize = 52;
 const MINIMAL_TOKENS_CAPACITY: usize = 100_000;
 
 lazy_static! {
@@ -59,7 +59,7 @@ lazy_static! {
         keywords.insert(b"@strongstack", TokenKind::StrongStack);
         keywords.insert(b"@precisefp", TokenKind::PreciseFloats);
         keywords.insert(b"new", TokenKind::New);
-        keywords.insert(b"nullptr", TokenKind::NullPtr);
+        keywords.insert(b"nullT", TokenKind::NullT);
         keywords.insert(b"s8", TokenKind::DataType(Type::S8));
         keywords.insert(b"s16", TokenKind::DataType(Type::S16));
         keywords.insert(b"s32", TokenKind::DataType(Type::S32));
@@ -72,8 +72,7 @@ lazy_static! {
         keywords.insert(b"f64", TokenKind::DataType(Type::F64));
         keywords.insert(b"bool", TokenKind::DataType(Type::Bool));
         keywords.insert(b"char", TokenKind::DataType(Type::Char));
-        keywords.insert(b"ptr", TokenKind::DataType(Type::Ptr));
-        keywords.insert(b"T", TokenKind::DataType(Type::Generic));
+        keywords.insert(b"T", TokenKind::DataType(Type::T));
         keywords.insert(b"str", TokenKind::DataType(Type::Str));
         keywords.insert(b"void", TokenKind::DataType(Type::Void));
 
@@ -759,7 +758,7 @@ pub enum TokenKind {
     Pattern,
     If,
     Elif,
-    NullPtr,
+    NullT,
     Or,
     Return,
     This,
@@ -817,7 +816,7 @@ impl std::fmt::Display for TokenKind {
             TokenKind::Pattern => write!(f, "pattern"),
             TokenKind::If => write!(f, "if"),
             TokenKind::Elif => write!(f, "elif"),
-            TokenKind::NullPtr => write!(f, "null"),
+            TokenKind::NullT => write!(f, "nullT"),
             TokenKind::Or => write!(f, "or"),
             TokenKind::Return => write!(f, "return"),
             TokenKind::This => write!(f, "this"),
@@ -971,25 +970,22 @@ pub enum Type {
     F32,
     F64,
 
-    // Boolean DataType
+    // Boolean Type
     Bool,
 
-    // Char DataType
+    // Char Type
     Char,
 
-    // Str DataType
+    // Str Type
     Str,
 
-    // Pointer DataType
-    Ptr,
+    // Generic Type
+    T,
 
-    // Generic DataType
-    Generic,
-
-    // Struct DataType
+    // Struct Type
     Struct,
 
-    // Void DataType
+    // Void Type
     Void,
 }
 
@@ -1010,8 +1006,7 @@ impl std::fmt::Display for Type {
             Type::Str => write!(f, "str"),
             Type::Char => write!(f, "char"),
             Type::Struct => write!(f, "struct"),
-            Type::Ptr => write!(f, "ptr"),
-            Type::Generic => write!(f, "generic"),
+            Type::T => write!(f, "T"),
             Type::Void => write!(f, "void"),
         }
     }
@@ -1075,17 +1070,17 @@ impl Type {
 
     #[inline(always)]
     pub const fn is_ptr_type(&self) -> bool {
-        matches!(self, Type::Struct | Type::Str | Type::Ptr)
+        matches!(self, Type::Struct | Type::Str | Type::T)
     }
 
     #[inline(always)]
     pub const fn is_heaped_ptr(&self) -> bool {
-        matches!(self, Type::Struct | Type::Ptr)
+        matches!(self, Type::Struct | Type::T)
     }
 
     #[inline(always)]
     pub const fn is_raw_ptr(&self) -> bool {
-        matches!(self, Type::Ptr)
+        matches!(self, Type::T)
     }
 
     #[inline(always)]

@@ -23,7 +23,7 @@ pub fn include(functions: &mut Functions) {
         "sizeof!",
         (
             Type::S64,
-            Vec::from([Type::Generic]),
+            Vec::from([Type::T]),
             Vec::new(),
             String::new(),
             false,
@@ -34,7 +34,7 @@ pub fn include(functions: &mut Functions) {
         "is_signed!",
         (
             Type::Bool,
-            Vec::from([Type::Generic]),
+            Vec::from([Type::T]),
             Vec::new(),
             String::new(),
             false,
@@ -75,7 +75,7 @@ pub fn build_sizeof<'ctx>(
             return structure_size_of.into();
         }
 
-        let ptr: PointerValue = compiler_objects.get_local(name).unwrap();
+        let ptr: PointerValue = compiler_objects.get_local(name);
 
         return ptr.get_type().size_of().into();
     }
@@ -92,7 +92,7 @@ pub fn build_sizeof<'ctx>(
                     .size_of()
                     .into();
             }
-            type_ if *type_ == Type::Ptr => {
+            type_ if *type_ == Type::T => {
                 return context.ptr_type(AddressSpace::default()).size_of().into();
             }
 
@@ -140,7 +140,7 @@ pub fn build_is_signed<'ctx>(
             );
         }
 
-        let ptr: PointerValue = compiler_objects.get_local(name).unwrap();
+        let ptr: PointerValue = compiler_objects.get_local(name);
 
         return if kind.is_float_type() {
             let mut loaded_value: FloatValue = builder

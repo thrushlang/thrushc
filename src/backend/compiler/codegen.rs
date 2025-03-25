@@ -85,7 +85,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
 
             Instruction::Free { name, struct_type } => {
                 let struct_type: &str = struct_type;
-                let variable: PointerValue<'ctx> = self.compiler_objects.get_local(name).unwrap();
+                let variable: PointerValue<'ctx> = self.compiler_objects.get_local(name);
 
                 if let Some(struct_fields) = self.compiler_objects.get_struct(struct_type) {
                     let struct_type: StructType =
@@ -573,6 +573,15 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                     .const_int(*bool as u64, false)
                     .into(),
             ),
+
+            Instruction::GEP { .. } => Instruction::LLVMValue(generation::build_expression(
+                self.module,
+                self.builder,
+                self.context,
+                instruction,
+                &Type::U64,
+                &mut self.compiler_objects,
+            )),
 
             Instruction::Struct { .. } => Instruction::Null,
             Instruction::Null => Instruction::Null,

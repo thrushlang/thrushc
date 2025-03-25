@@ -505,7 +505,7 @@ pub fn integer_binaryop<'ctx>(
         let mut left_compiled: BasicValueEnum = builder
             .build_load(
                 utils::type_int_to_llvm_int_type(context, left_type),
-                objects.get_local(left_name).unwrap(),
+                objects.get_local(left_name),
                 "",
             )
             .unwrap();
@@ -591,7 +591,7 @@ pub fn integer_binaryop<'ctx>(
         let mut right_compiled: BasicValueEnum = builder
             .build_load(
                 utils::type_int_to_llvm_int_type(context, right_type),
-                objects.get_local(right_name).unwrap(),
+                objects.get_local(right_name),
                 "",
             )
             .unwrap();
@@ -658,7 +658,7 @@ pub fn integer_binaryop<'ctx>(
         let mut left_compiled: IntValue = builder
             .build_load(
                 utils::type_int_to_llvm_int_type(context, left_type),
-                objects.get_local(left_name).unwrap(),
+                objects.get_local(left_name),
                 "",
             )
             .unwrap()
@@ -667,7 +667,7 @@ pub fn integer_binaryop<'ctx>(
         let mut right_compiled: IntValue = builder
             .build_load(
                 utils::type_int_to_llvm_int_type(context, right_type),
-                objects.get_local(right_name).unwrap(),
+                objects.get_local(right_name),
                 "",
             )
             .unwrap()
@@ -730,7 +730,7 @@ pub fn integer_binaryop<'ctx>(
         let mut right_compiled: IntValue = builder
             .build_load(
                 utils::type_int_to_llvm_int_type(context, kind),
-                objects.get_local(name).unwrap(),
+                objects.get_local(name),
                 "",
             )
             .unwrap()
@@ -800,7 +800,7 @@ pub fn integer_binaryop<'ctx>(
         let mut right_compiled: IntValue = builder
             .build_load(
                 utils::type_int_to_llvm_int_type(context, right_type),
-                objects.get_local(right_name).unwrap(),
+                objects.get_local(right_name),
                 "",
             )
             .unwrap()
@@ -980,7 +980,7 @@ pub fn integer_binaryop<'ctx>(
         let mut left_compiled: IntValue = builder
             .build_load(
                 utils::type_int_to_llvm_int_type(context, kind),
-                objects.get_local(name).unwrap(),
+                objects.get_local(name),
                 "",
             )
             .unwrap()
@@ -1033,7 +1033,7 @@ pub fn integer_binaryop<'ctx>(
         let mut right_compiled: IntValue = builder
             .build_load(
                 utils::type_int_to_llvm_int_type(context, kind),
-                objects.get_local(name).unwrap(),
+                objects.get_local(name),
                 "",
             )
             .unwrap()
@@ -1080,7 +1080,7 @@ pub fn integer_binaryop<'ctx>(
         let mut left_compiled: IntValue = builder
             .build_load(
                 utils::type_int_to_llvm_int_type(context, kind),
-                objects.get_local(name).unwrap(),
+                objects.get_local(name),
                 "",
             )
             .unwrap()
@@ -2014,7 +2014,7 @@ pub fn float_binaryop<'ctx>(
         let mut left_compiled: BasicValueEnum = builder
             .build_load(
                 utils::type_float_to_llvm_float_type(context, left_type),
-                objects.get_local(left_name).unwrap(),
+                objects.get_local(left_name),
                 "",
             )
             .unwrap();
@@ -2097,7 +2097,7 @@ pub fn float_binaryop<'ctx>(
         let mut right_compiled: BasicValueEnum = builder
             .build_load(
                 utils::type_float_to_llvm_float_type(context, right_type),
-                objects.get_local(right_name).unwrap(),
+                objects.get_local(right_name),
                 "",
             )
             .unwrap();
@@ -2159,7 +2159,7 @@ pub fn float_binaryop<'ctx>(
         let mut left_compiled: FloatValue = builder
             .build_load(
                 utils::type_float_to_llvm_float_type(context, left_type),
-                objects.get_local(left_name).unwrap(),
+                objects.get_local(left_name),
                 "",
             )
             .unwrap()
@@ -2168,7 +2168,7 @@ pub fn float_binaryop<'ctx>(
         let mut right_compiled: FloatValue = builder
             .build_load(
                 utils::type_float_to_llvm_float_type(context, right_type),
-                objects.get_local(right_name).unwrap(),
+                objects.get_local(right_name),
                 "",
             )
             .unwrap()
@@ -2220,7 +2220,7 @@ pub fn float_binaryop<'ctx>(
         let mut right_compiled: FloatValue = builder
             .build_load(
                 utils::type_float_to_llvm_float_type(context, kind),
-                objects.get_local(name).unwrap(),
+                objects.get_local(name),
                 "",
             )
             .unwrap()
@@ -2269,7 +2269,7 @@ pub fn float_binaryop<'ctx>(
         let mut left_compiled: FloatValue = builder
             .build_load(
                 utils::type_float_to_llvm_float_type(context, kind),
-                objects.get_local(name).unwrap(),
+                objects.get_local(name),
                 "",
             )
             .unwrap()
@@ -2330,7 +2330,7 @@ pub fn float_binaryop<'ctx>(
         let mut right_compiled: FloatValue = builder
             .build_load(
                 utils::type_float_to_llvm_float_type(context, right_type),
-                objects.get_local(right_name).unwrap(),
+                objects.get_local(right_name),
                 "",
             )
             .unwrap()

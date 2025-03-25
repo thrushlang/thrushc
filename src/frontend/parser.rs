@@ -735,7 +735,6 @@ impl<'instr> Parser<'instr> {
             }
         };
 
-        self.throw_if_is_generic_type(kind.0, line, span)?;
         self.only_advance()?;
 
         if self.match_token(TokenKind::SemiColon)? {
@@ -1077,6 +1076,15 @@ impl<'instr> Parser<'instr> {
         }
 
         let function_body: Box<Instruction> = Box::new(self.build_code_block(&mut params)?);
+
+        if !return_type.0.is_void_type() && !function_body.has_return() {
+            self.errors.push(ThrushCompilerError::Error(
+                String::from("Syntax error"),
+                format!("Missing return type with type '{}'.", return_type.0),
+                name.line,
+                Some(name.span),
+            ));
+        }
 
         self.inside_a_function = false;
 
@@ -1474,7 +1482,7 @@ impl<'instr> Parser<'instr> {
                     dt if dt.is_integer_type() => Instruction::Type(*dt),
                     dt if dt.is_float_type() => Instruction::Type(*dt),
                     dt if dt.is_bool_type() => Instruction::Type(*dt),
-                    dt if dt == &Type::Ptr => Instruction::Type(*dt),
+                    dt if dt == &Type::T => Instruction::Type(*dt),
                     what_heck_dt => {
                         return Err(ThrushCompilerError::Error(
                             String::from("Syntax error"),
@@ -1516,9 +1524,9 @@ impl<'instr> Parser<'instr> {
                     kind,
                 });
             }
-            TokenKind::NullPtr => {
+            TokenKind::NullT => {
                 self.only_advance()?;
-                Instruction::NullPtr
+                Instruction::NullT
             }
             TokenKind::Str => {
                 let token: &Token = self.advance()?;
@@ -1571,55 +1579,61 @@ impl<'instr> Parser<'instr> {
                             value: Box::new(expr),
                             kind: local_type,
                         });
-                    } else if self.match_token(TokenKind::LParen)? {
+                    }
+
+                    if self.match_token(TokenKind::LBracket)? {
+                        return self.build_gep(object_name, (object_line, object_span));
+                    }
+
+                    if self.match_token(TokenKind::LParen)? {
                         return self.build_function_call(object_name, (object_line, object_span));
-                    } else {
-                        let object: FoundObject = self
-                            .parser_objects
-                            .get_object(object_name, (object_line, object_span))?;
+                    }
 
-                        let local: &Local = object.expected_local(object_line, object_span)?;
-                        let local_type: Type = local.0;
+                    let object: FoundObject = self
+                        .parser_objects
+                        .get_object(object_name, (object_line, object_span))?;
 
-                        if local.3 {
-                            return Err(ThrushCompilerError::Error(
-                                String::from("Syntax error"),
-                                format!("Local reference '{}' is undefined for use.", object_name),
-                                object_line,
-                                Some(object_span),
-                            ));
-                        }
+                    let local: &Local = object.expected_local(object_line, object_span)?;
+                    let local_type: Type = local.0;
 
-                        let localref: Instruction = Instruction::LocalRef {
-                            name: object_name,
-                            line: object_line,
-                            kind: local_type,
-                            struct_type: local.1.clone(),
+                    if local.3 {
+                        return Err(ThrushCompilerError::Error(
+                            String::from("Syntax error"),
+                            format!("Local reference '{}' is undefined for use.", object_name),
+                            object_line,
+                            Some(object_span),
+                        ));
+                    }
+
+                    let localref: Instruction = Instruction::LocalRef {
+                        name: object_name,
+                        line: object_line,
+                        kind: local_type,
+                        struct_type: local.1.clone(),
+                    };
+
+                    if self.match_token(TokenKind::PlusPlus)?
+                        | self.match_token(TokenKind::MinusMinus)?
+                    {
+                        let op: &TokenKind = &self.previous().kind;
+
+                        type_checking::check_unary_types(
+                            &object_type,
+                            &local_type,
+                            (object_line, object_span),
+                        )?;
+
+                        let expr: Instruction = Instruction::UnaryOp {
+                            op,
+                            value: Box::from(localref),
+                            kind: Type::Void,
+                            is_pre: false,
                         };
 
-                        if self.match_token(TokenKind::PlusPlus)?
-                            | self.match_token(TokenKind::MinusMinus)?
-                        {
-                            let op: &TokenKind = &self.previous().kind;
-
-                            type_checking::check_unary_types(
-                                &object_type,
-                                &local_type,
-                                (object_line, object_span),
-                            )?;
-
-                            let expr: Instruction = Instruction::UnaryOp {
-                                op,
-                                value: Box::from(localref),
-                                kind: Type::Void,
-                                is_pre: false,
-                            };
-
-                            return Ok(expr);
-                        }
-
-                        localref
+                        return Ok(expr);
                     }
+
+                    localref
                 }
                 TokenKind::True => {
                     self.only_advance()?;
@@ -1645,6 +1659,42 @@ impl<'instr> Parser<'instr> {
         Ok(primary)
     }
 
+    fn build_gep(
+        &mut self,
+        name: &'instr str,
+        location: (usize, (usize, usize)),
+    ) -> Result<Instruction<'instr>, ThrushCompilerError> {
+        let object: FoundObject = self.parser_objects.get_object(name, location)?;
+        let local: &Local = object.expected_local(location.0, location.1)?;
+
+        self.check_type_mismatch(Type::T, local.0, None);
+
+        let index: Instruction = self.expression()?;
+
+        if !index.is_unsigned_integer() {
+            self.errors.push(ThrushCompilerError::Error(
+                String::from("Syntax error"),
+                format!(
+                    "Expected unsigned integer type (u8, u16, u32, u64), not {}. ",
+                    index.get_data_type(),
+                ),
+                self.previous().line,
+                Some(self.previous().span),
+            ));
+        }
+
+        self.consume(
+            TokenKind::RBracket,
+            String::from("Syntax error"),
+            String::from("Expected ']'."),
+        )?;
+
+        Ok(Instruction::GEP {
+            name,
+            index: Box::new(index),
+        })
+    }
+
     fn build_function_call(
         &mut self,
         name: &'instr str,
@@ -1662,7 +1712,7 @@ impl<'instr> Parser<'instr> {
                 continue;
             }
 
-            let instruction: Instruction<'instr> = self.expression()?;
+            let instruction: Instruction = self.expression()?;
 
             self.throw_if_is_struct_initializer(&instruction, location.0)?;
 
@@ -1816,26 +1866,6 @@ impl<'instr> Parser<'instr> {
                 String::from("A structure initializer should be stored a variable."),
                 line,
                 None,
-            ));
-        }
-
-        Ok(())
-    }
-
-    fn throw_if_is_generic_type(
-        &self,
-        kind: Type,
-        line: usize,
-        span: (usize, usize),
-    ) -> Result<(), ThrushCompilerError> {
-        if matches!(kind, Type::Generic) {
-            return Err(ThrushCompilerError::Error(
-                String::from("Syntax error"),
-                String::from(
-                    "Generic type 'T' is only allowed in function parameters or structure field types.",
-                ),
-                line,
-                Some(span),
             ));
         }
 

@@ -251,28 +251,8 @@ pub fn check_types(
     match (target_type, from_type.unwrap(), op) {
         (Type::Char, Type::Char, None) => Ok(()),
         (Type::Str, Type::Str, None) => Ok(()),
-        (Type::Struct, Type::Struct | Type::Ptr, None) => Ok(()),
-        (Type::Ptr, Type::Ptr | Type::Str, None) => Ok(()),
-        (
-            Type::Generic,
-            Type::Generic
-            | Type::Ptr
-            | Type::Str
-            | Type::Char
-            | Type::S8
-            | Type::S16
-            | Type::S32
-            | Type::S64
-            | Type::U8
-            | Type::U16
-            | Type::U32
-            | Type::U64
-            | Type::F32
-            | Type::F64
-            | Type::Bool
-            | Type::Struct,
-            None,
-        ) => Ok(()),
+        (Type::Struct, Type::Struct | Type::T, None) => Ok(()),
+        (Type::T, Type::T, None) => Ok(()),
         (
             Type::Bool,
             Type::Bool,

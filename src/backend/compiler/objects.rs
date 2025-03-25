@@ -1,5 +1,5 @@
 use {
-    super::{types::Struct, Instruction},
+    super::{super::super::logging, Instruction, types::Struct},
     ahash::AHashMap as HashMap,
     inkwell::values::{FunctionValue, PointerValue},
 };
@@ -59,14 +59,22 @@ impl<'ctx> CompilerObjects<'ctx> {
     }
 
     #[inline]
-    pub fn get_local(&self, name: &str) -> Option<PointerValue<'ctx>> {
+    pub fn get_local(&self, name: &str) -> PointerValue<'ctx> {
         for position in (0..self.scope_position).rev() {
             if self.blocks[position].contains_key(name) {
-                return Some(*self.blocks[position].get(name).unwrap());
+                return *self.blocks[position].get(name).unwrap();
             }
         }
 
-        None
+        logging::log(
+            logging::LogType::Panic,
+            &format!(
+                "Unable to get '{}' pointer at frame pointer number #{}.",
+                name, self.scope_position
+            ),
+        );
+
+        unreachable!()
     }
 
     #[inline]

@@ -29,7 +29,7 @@ pub fn compile_unary_op<'ctx>(
         _,
     ) = unary
     {
-        let ptr: PointerValue = compiler_objects.get_local(name).unwrap();
+        let ptr: PointerValue = compiler_objects.get_local(name);
 
         if refvar_type.is_integer_type() {
             let left_num: IntValue = builder
@@ -88,7 +88,7 @@ pub fn compile_unary_op<'ctx>(
         _,
     ) = unary
     {
-        let ptr: PointerValue = compiler_objects.get_local(name).unwrap();
+        let ptr: PointerValue = compiler_objects.get_local(name);
 
         if refvar_type.is_integer_type() || refvar_type.is_bool_type() {
             let left: IntValue = builder
@@ -128,7 +128,7 @@ pub fn compile_unary_op<'ctx>(
         _,
     ) = unary
     {
-        let ptr: PointerValue = compiler_objects.get_local(name).unwrap();
+        let ptr: PointerValue = compiler_objects.get_local(name);
 
         if refvar_type.is_integer_type() {
             let left: IntValue = builder
