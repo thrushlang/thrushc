@@ -34,7 +34,7 @@ In summary:
 
 ### Linux Toolchain
 
-- [LLVM & Clang Toolchain (x64)](https://github.com/thrushlang/toolchains/releases/download/Toolchains/thrushlang-toolchain-linux-x64-v1.0.1.tar.gz)
+- [Linux Toolchain (x64)](https://github.com/thrushlang/toolchains/releases/download/Toolchains/thrushlang-toolchain-llvm-linux-x64-v1.0.2.tar.xz)
 
 > [!NOTE]  
 > The language will contain a **pre-optimized** toolchain repository for each operating system. This process automates the installation of the language and its entire ecosystem through the **Thorium** package manager.
