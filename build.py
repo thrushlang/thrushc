@@ -13,7 +13,7 @@ if __name__ == "__main__":
 
     def build_dependencies_for_linux(): 
 
-        print("Building dependencies for the Thrush compiler in Linux...")
+        print("Building dependencies for The Thrush Compiler in Linux...")
         print("Installing LLVM-C API v17.0.6...")
 
         wget: int = os.system("wget https://github.com/thrushlang/toolchains/releases/download/LLVM-C/thrushc-llvm-linux-x64_86-v1.0.0.tar.gz")
@@ -27,7 +27,7 @@ if __name__ == "__main__":
             print("Failed to install LLVM-C API v17.0.6.")
             sys.exit(1)
 
-        print("Dependencies are ready to compile. Use cargo clean and cargo run now.")
+        print("Dependencies are ready to compile. Use 'cargo clean' and 'cargo run' now.")
         
         sys.exit(0)
     
