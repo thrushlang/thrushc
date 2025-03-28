@@ -5,13 +5,13 @@ use {
         builtins::{build_is_signed, build_sizeof},
         generation,
         objects::CompilerObjects,
-        types::Call,
+        types::{Call, CompilerFunction},
     },
     inkwell::{
         builder::Builder,
         context::Context,
         module::Module,
-        values::{BasicMetadataValueEnum, BasicValueEnum, FunctionValue},
+        values::{BasicMetadataValueEnum, BasicValueEnum, CallSiteValue, FunctionValue},
     },
 };
 
@@ -34,11 +34,11 @@ pub fn build_call<'ctx>(
         return Some(build_is_signed(context, builder, call, compiler_objects));
     }
 
-    let function: (FunctionValue, &'ctx [Instruction<'ctx>]) =
-        compiler_objects.get_function(call_name).unwrap();
+    let function: CompilerFunction = compiler_objects.get_function(call_name);
 
     let called_function_arguments: &[Instruction] = function.1;
     let called_function: FunctionValue = function.0;
+    let function_convention: u32 = function.2;
 
     let mut compiled_args: Vec<BasicMetadataValueEnum> = Vec::with_capacity(call_args.len());
 
@@ -61,19 +61,15 @@ pub fn build_call<'ctx>(
         );
     });
 
-    if !call_type.is_void_type() {
-        Some(
-            builder
-                .build_call(called_function, &compiled_args, "")
-                .unwrap()
-                .try_as_basic_value()
-                .unwrap_left(),
-        )
-    } else {
-        builder
-            .build_call(called_function, &compiled_args, "")
-            .unwrap();
+    let call: CallSiteValue = builder
+        .build_call(called_function, &compiled_args, "")
+        .unwrap();
 
-        None
+    call.set_call_convention(function_convention);
+
+    if !call_type.is_void_type() {
+        return Some(call.try_as_basic_value().unwrap_left());
     }
+
+    None
 }

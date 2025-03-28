@@ -1,7 +1,6 @@
 use {
     super::{
-        super::{super::frontend::lexer::Type, instruction::Instruction},
-        objects::CompilerObjects,
+        super::super::frontend::lexer::Type, instruction::Instruction, objects::CompilerObjects,
         types::Struct,
     },
     inkwell::{
@@ -100,6 +99,7 @@ pub fn type_to_function_type<'ctx>(
     context: &'ctx Context,
     kind: &Type,
     params: &[Instruction],
+    ignore_args: bool,
 ) -> FunctionType<'ctx> {
     let mut param_types: Vec<BasicMetadataTypeEnum<'ctx>> = Vec::with_capacity(params.len());
 
@@ -110,17 +110,17 @@ pub fn type_to_function_type<'ctx>(
     });
 
     match kind {
-        Type::S8 | Type::U8 | Type::Char => context.i8_type().fn_type(&param_types, true),
-        Type::S16 | Type::U16 => context.i16_type().fn_type(&param_types, true),
-        Type::S32 | Type::U32 => context.i32_type().fn_type(&param_types, true),
-        Type::S64 | Type::U64 => context.i64_type().fn_type(&param_types, true),
+        Type::S8 | Type::U8 | Type::Char => context.i8_type().fn_type(&param_types, ignore_args),
+        Type::S16 | Type::U16 => context.i16_type().fn_type(&param_types, ignore_args),
+        Type::S32 | Type::U32 => context.i32_type().fn_type(&param_types, ignore_args),
+        Type::S64 | Type::U64 => context.i64_type().fn_type(&param_types, ignore_args),
         Type::Str | Type::Struct | Type::T => context
             .ptr_type(AddressSpace::default())
-            .fn_type(&param_types, true),
-        Type::Bool => context.bool_type().fn_type(&param_types, true),
-        Type::F32 => context.f32_type().fn_type(&param_types, true),
-        Type::F64 => context.f64_type().fn_type(&param_types, true),
-        Type::Void => context.void_type().fn_type(&param_types, true),
+            .fn_type(&param_types, ignore_args),
+        Type::Bool => context.bool_type().fn_type(&param_types, ignore_args),
+        Type::F32 => context.f32_type().fn_type(&param_types, ignore_args),
+        Type::F64 => context.f64_type().fn_type(&param_types, ignore_args),
+        Type::Void => context.void_type().fn_type(&param_types, ignore_args),
     }
 }
 

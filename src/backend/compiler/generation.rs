@@ -1,9 +1,7 @@
 use {
     super::{
-        super::{super::frontend::lexer::Type, instruction::Instruction},
-        binaryop, call,
-        objects::CompilerObjects,
-        unaryop, utils,
+        super::super::frontend::lexer::Type, binaryop, call, instruction::Instruction,
+        objects::CompilerObjects, unaryop, utils,
     },
     inkwell::{
         AddressSpace,

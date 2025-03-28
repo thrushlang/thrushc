@@ -6,9 +6,12 @@ use inkwell::{
     values::FunctionValue,
 };
 
+use super::conventions::CallConvention;
+
 #[derive(Debug, Clone)]
 pub enum CompilerAttribute<'ctx> {
     FFI(&'ctx str),
+    Convention(CallConvention),
     Public(bool),
     Ignore,
     Hot,
@@ -57,7 +60,7 @@ impl<'ctx> AttributeBuilder<'ctx> {
         }
     }
 
-    pub fn add_attributes(&self) {
+    pub fn add_attributes(&mut self, call_convention: &mut u32) {
         match self.attribute_applicant {
             CompilerAttributeApplicant::Function(function) => {
                 self.attributes
@@ -151,6 +154,10 @@ impl<'ctx> AttributeBuilder<'ctx> {
                                     5,
                                 ),
                             );
+                        }
+
+                        CompilerAttribute::Convention(new_call_convention) => {
+                            *call_convention = *new_call_convention as u32;
                         }
 
                         _ => (),

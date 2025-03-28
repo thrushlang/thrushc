@@ -1,11 +1,12 @@
 use {
     super::{
-        super::{
-            super::frontend::lexer::Type, compiler::attributes::CompilerAttribute,
-            instruction::Instruction,
-        },
+        super::{super::frontend::lexer::Type, compiler::attributes::CompilerAttribute},
         attributes::{AttributeBuilder, CompilerAttributeApplicant},
-        binaryop, call, generation, local,
+        binaryop, call,
+        conventions::CallConvention,
+        generation,
+        instruction::Instruction,
+        local,
         objects::CompilerObjects,
         traits::StructureBasics,
         types::{Function, Struct, StructField},
@@ -665,6 +666,8 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
         let function_parameters: &[Instruction] = function.2;
         let function_attributes = function.4;
 
+        let mut call_convention: u32 = CallConvention::Standard as u32;
+        let mut ignore_args: bool = false;
         let mut is_public: bool = false;
         let mut ffi: Option<&str> = None;
 
@@ -675,6 +678,9 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
             CompilerAttribute::FFI(ffi_found) => {
                 ffi = Some(ffi_found);
             }
+            CompilerAttribute::Ignore => {
+                ignore_args = true;
+            }
             _ => (),
         });
 
@@ -684,20 +690,24 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
             function_name
         };
 
-        let function_type: FunctionType =
-            utils::type_to_function_type(self.context, function_return_type, function_parameters);
+        let function_type: FunctionType = utils::type_to_function_type(
+            self.context,
+            function_return_type,
+            function_parameters,
+            ignore_args,
+        );
 
         let function: FunctionValue =
             self.module
                 .add_function(llvm_function_name, function_type, None);
 
-        let attribute_builder: AttributeBuilder = AttributeBuilder::new(
+        let mut attribute_builder: AttributeBuilder = AttributeBuilder::new(
             self.context,
             function_attributes,
             CompilerAttributeApplicant::Function(function),
         );
 
-        attribute_builder.add_attributes();
+        attribute_builder.add_attributes(&mut call_convention);
 
         if !is_public && ffi.is_none() {
             function.set_linkage(Linkage::LinkerPrivate);
@@ -705,8 +715,10 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
 
         self.function = Some(function);
 
-        self.compiler_objects
-            .insert_function(function_name, (function, function_parameters));
+        self.compiler_objects.insert_function(
+            function_name,
+            (function, function_parameters, call_convention),
+        );
     }
 
     fn build_struct_dealloc(

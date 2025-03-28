@@ -3,8 +3,10 @@ pub mod binaryop;
 pub mod builtins;
 pub mod call;
 pub mod codegen;
+pub mod conventions;
 pub mod generation;
 pub mod impls;
+pub mod instruction;
 pub mod local;
 pub mod misc;
 pub mod objects;
@@ -14,9 +16,9 @@ pub mod unaryop;
 pub mod utils;
 
 use {
-    super::instruction::Instruction,
     codegen::Codegen,
     inkwell::{builder::Builder, context::Context, module::Module},
+    instruction::Instruction,
 };
 
 pub struct Compiler;

@@ -1,12 +1,15 @@
 use {
-    super::{super::super::logging, Instruction, types::Struct},
+    super::{
+        super::super::logging,
+        types::{CompilerFunction, Struct},
+    },
     ahash::AHashMap as HashMap,
-    inkwell::values::{FunctionValue, PointerValue},
+    inkwell::values::PointerValue,
 };
 
 #[derive(Debug, Clone)]
 pub struct CompilerObjects<'ctx> {
-    pub functions: HashMap<&'ctx str, (FunctionValue<'ctx>, &'ctx [Instruction<'ctx>])>,
+    pub functions: HashMap<&'ctx str, CompilerFunction<'ctx>>,
     pub structs: HashMap<&'ctx str, &'ctx Struct<'ctx>>,
     pub blocks: Vec<HashMap<&'ctx str, PointerValue<'ctx>>>,
     pub scope_position: usize,
@@ -40,11 +43,7 @@ impl<'ctx> CompilerObjects<'ctx> {
     }
 
     #[inline]
-    pub fn insert_function(
-        &mut self,
-        name: &'ctx str,
-        function: (FunctionValue<'ctx>, &'ctx [Instruction<'ctx>]),
-    ) {
+    pub fn insert_function(&mut self, name: &'ctx str, function: CompilerFunction<'ctx>) {
         self.functions.insert(name, function);
     }
 
@@ -61,8 +60,8 @@ impl<'ctx> CompilerObjects<'ctx> {
     #[inline]
     pub fn get_local(&self, name: &str) -> PointerValue<'ctx> {
         for position in (0..self.scope_position).rev() {
-            if self.blocks[position].contains_key(name) {
-                return *self.blocks[position].get(name).unwrap();
+            if let Some(local) = self.blocks[position].get(name) {
+                return *local;
             }
         }
 
@@ -78,14 +77,16 @@ impl<'ctx> CompilerObjects<'ctx> {
     }
 
     #[inline]
-    pub fn get_function(
-        &self,
-        name: &str,
-    ) -> Option<(FunctionValue<'ctx>, &'ctx [Instruction<'ctx>])> {
-        if self.functions.contains_key(name) {
-            return Some(*self.functions.get(name).unwrap());
+    pub fn get_function(&self, name: &str) -> CompilerFunction<'ctx> {
+        if let Some(function) = self.functions.get(name) {
+            return *function;
         }
 
-        None
+        logging::log(
+            logging::LogType::Panic,
+            &format!("Unable to get '{}' function in global frame.", name),
+        );
+
+        unreachable!()
     }
 }

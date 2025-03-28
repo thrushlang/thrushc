@@ -1,6 +1,6 @@
 use {
     super::super::{
-        backend::{compiler::misc::CompilerFile, instruction::Instruction},
+        backend::compiler::{instruction::Instruction, misc::CompilerFile},
         diagnostic::Diagnostic,
         error::ThrushCompilerError,
         logging::LogType,

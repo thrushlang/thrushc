@@ -1,7 +1,12 @@
-use super::{
-    super::super::backend::compiler::attributes::CompilerAttribute,
-    super::super::frontend::lexer::{TokenKind, Type},
-    Instruction,
+use {
+    super::{
+        super::super::{
+            backend::compiler::attributes::CompilerAttribute,
+            frontend::lexer::{TokenKind, Type},
+        },
+        Instruction,
+    },
+    inkwell::values::FunctionValue,
 };
 
 pub type BinaryOp<'ctx> = (
@@ -23,6 +28,8 @@ pub type Function<'ctx> = (
     Option<&'ctx Box<Instruction<'ctx>>>,
     &'ctx [CompilerAttribute<'ctx>],
 );
+
+pub type CompilerFunction<'ctx> = (FunctionValue<'ctx>, &'ctx [Instruction<'ctx>], u32);
 
 pub type Struct<'ctx> = Vec<(&'ctx str, Type, u32)>;
 pub type StructField<'ctx> = (&'ctx str, Type, u32);

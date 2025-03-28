@@ -3,17 +3,15 @@
 use {
     super::{
         super::{
-            error::ThrushCompilerError,
-            frontend::{
+            super::error::ThrushCompilerError,
+            super::frontend::{
                 lexer::{TokenKind, Type},
                 types::StructFields,
             },
         },
-        compiler::{
-            objects::CompilerObjects,
-            types::{BinaryOp, CompilerAttributes, Function, Struct},
-            utils,
-        },
+        objects::CompilerObjects,
+        types::{BinaryOp, CompilerAttributes, Function, Struct},
+        utils,
     },
     inkwell::{context::Context, types::StructType, values::BasicValueEnum},
 };

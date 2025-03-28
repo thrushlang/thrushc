@@ -7,9 +7,9 @@ use {
         },
         compiler::{
             Compiler,
+            instruction::Instruction,
             misc::{CompilerFile, CompilerOptions},
         },
-        instruction::Instruction,
     },
     colored::Colorize,
     inkwell::{

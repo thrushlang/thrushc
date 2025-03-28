@@ -16,7 +16,7 @@ use {
     std::{mem, process::exit},
 };
 
-const KEYWORDS_CAPACITY: usize = 52;
+const KEYWORDS_CAPACITY: usize = 53;
 const MINIMAL_TOKENS_CAPACITY: usize = 100_000;
 
 lazy_static! {
@@ -58,6 +58,7 @@ lazy_static! {
         keywords.insert(b"@weakstack", TokenKind::WeakStack);
         keywords.insert(b"@strongstack", TokenKind::StrongStack);
         keywords.insert(b"@precisefp", TokenKind::PreciseFloats);
+        keywords.insert(b"@convention", TokenKind::Convention);
         keywords.insert(b"new", TokenKind::New);
         keywords.insert(b"nullT", TokenKind::NullT);
         keywords.insert(b"s8", TokenKind::DataType(Type::S8));
@@ -569,6 +570,22 @@ impl<'a> Lexer<'a> {
         char
     }
 
+    #[must_use]
+    #[inline(always)]
+    fn lexeme(&self) -> TokenLexeme<'a> {
+        &self.code[self.start..self.current]
+    }
+
+    #[inline]
+    fn start_span(&mut self) {
+        self.span.0 = self.start;
+    }
+
+    #[inline]
+    fn end_span(&mut self) {
+        self.span.1 = self.current;
+    }
+
     #[inline]
     fn peek_next(&self) -> u8 {
         if self.current + 1 >= self.code.len() {
@@ -578,12 +595,14 @@ impl<'a> Lexer<'a> {
         self.code[self.current + 1]
     }
 
-    #[inline]
+    #[must_use]
+    #[inline(always)]
     fn previous(&self) -> u8 {
         self.code[self.current - 1]
     }
 
-    #[inline]
+    #[must_use]
+    #[inline(always)]
     fn peek(&self) -> u8 {
         if self.end() {
             return b'\0';
@@ -592,31 +611,19 @@ impl<'a> Lexer<'a> {
         self.code[self.current]
     }
 
-    #[inline(always)]
-    fn lexeme(&self) -> TokenLexeme<'a> {
-        &self.code[self.start..self.current]
-    }
-
-    #[inline(always)]
-    fn start_span(&mut self) {
-        self.span.0 = self.start;
-    }
-
-    #[inline(always)]
-    fn end_span(&mut self) {
-        self.span.1 = self.current;
-    }
-
-    #[inline(always)]
-    fn end(&self) -> bool {
-        self.current >= self.code.len()
-    }
-
+    #[must_use]
     #[inline(always)]
     fn is_string_boundary(&self) -> bool {
         self.peek() != b'"' && !self.end()
     }
 
+    #[must_use]
+    #[inline(always)]
+    fn end(&self) -> bool {
+        self.current >= self.code.len()
+    }
+
+    #[must_use]
     #[inline(always)]
     const fn is_alpha(&self, char: u8) -> bool {
         char.is_ascii_lowercase() || char.is_ascii_uppercase() || char == b'_'
@@ -741,6 +748,7 @@ pub enum TokenKind {
     WeakStack,
     StrongStack,
     PreciseFloats,
+    Convention,
 
     // --- Keywords ---
     New,
@@ -841,6 +849,7 @@ impl std::fmt::Display for TokenKind {
             TokenKind::WeakStack => write!(f, "@weakstack"),
             TokenKind::StrongStack => write!(f, "@strongstack"),
             TokenKind::PreciseFloats => write!(f, "@precisefloats"),
+            TokenKind::Convention => write!(f, "@convention"),
             TokenKind::Extern => write!(f, "@extern"),
             TokenKind::Import => write!(f, "@import"),
             TokenKind::New => write!(f, "new"),
@@ -1034,7 +1043,7 @@ impl Type {
     }
 
     #[inline(always)]
-    pub const fn reverse_signed_integer_type(self) -> Type {
+    pub const fn reverse_to_signed_integer_type(self) -> Type {
         if self.is_signed_integer_type() {
             return self;
         }

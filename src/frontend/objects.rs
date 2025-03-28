@@ -1,6 +1,6 @@
 use {
     super::{
-        super::{backend::instruction::Instruction, error::ThrushCompilerError},
+        super::{backend::compiler::instruction::Instruction, error::ThrushCompilerError},
         lexer::Type,
         traits::FoundObjectEither,
     },
@@ -36,7 +36,7 @@ pub struct ParserObjects<'instr> {
 impl<'instr> ParserObjects<'instr> {
     pub fn with_functions(functions: HashMap<&'instr str, Function>) -> Self {
         Self {
-            locals: Vec::new(),
+            locals: Vec::with_capacity(MINIMAL_LOCAL_SCOPE_CAPACITY),
             functions,
             structs: HashMap::with_capacity(MINIMAL_STRUCTURE_CAPACITY),
         }

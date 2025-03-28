@@ -1,5 +1,5 @@
 use super::super::{
-    backend::instruction::Instruction,
+    backend::compiler::instruction::Instruction,
     error::ThrushCompilerError,
     frontend::lexer::{TokenKind, Type},
 };
