@@ -12,7 +12,6 @@ use {
         types::{Function, Struct, StructField},
         unaryop, utils,
     },
-    core::str,
     inkwell::{
         AddressSpace, IntPredicate,
         basic_block::BasicBlock,
@@ -486,7 +485,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                 ..
             } => {
                 if kind.is_integer_type() {
-                    return Instruction::LLVMValue(binaryop::integer_binaryop(
+                    return Instruction::LLVMValue(binaryop::integer::compile_integer_binaryop(
                         self.module,
                         self.builder,
                         self.context,
@@ -497,7 +496,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                 }
 
                 if kind.is_float_type() {
-                    return Instruction::LLVMValue(binaryop::float_binaryop(
+                    return Instruction::LLVMValue(binaryop::float::float_binaryop(
                         self.module,
                         self.builder,
                         self.context,
@@ -508,7 +507,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                 }
 
                 if kind.is_bool_type() {
-                    return Instruction::LLVMValue(binaryop::bool_binaryop(
+                    return Instruction::LLVMValue(binaryop::boolean::bool_binaryop(
                         self.module,
                         self.builder,
                         self.context,

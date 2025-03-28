@@ -256,13 +256,13 @@ pub fn build_string_constant<'ctx>(
     module: &Module<'ctx>,
     builder: &Builder<'ctx>,
     context: &'ctx Context,
-    string: &'ctx [u8],
+    const_str: &'ctx [u8],
 ) -> PointerValue<'ctx> {
-    let kind: ArrayType = context.i8_type().array_type(string.len() as u32 + 1);
+    let kind: ArrayType = context.i8_type().array_type(const_str.len() as u32 + 1);
     let global: GlobalValue = module.add_global(kind, Some(AddressSpace::default()), "");
 
     global.set_linkage(Linkage::LinkerPrivate);
-    global.set_initializer(&context.const_string(string, true));
+    global.set_initializer(&context.const_string(const_str, true));
     global.set_constant(true);
     global.set_unnamed_addr(true);
 

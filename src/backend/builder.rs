@@ -100,7 +100,7 @@ impl<'a> Thrushc<'a> {
         let mut parser: Parser = Parser::new(&tokens, file);
         let instructions: &[Instruction] = parser.start();
 
-        if self.options.emit_ast {
+        if self.options.emit_asm {
             let _ = write(
                 format!("build/{}.ast", &file.name),
                 format!("{:#?}", instructions),

@@ -36,17 +36,18 @@ pub fn build_call<'ctx>(
 
     let function: CompilerFunction = compiler_objects.get_function(call_name);
 
-    let called_function_arguments: &[Instruction] = function.1;
-    let called_function: FunctionValue = function.0;
+    let llvm_function: FunctionValue = function.0;
+
+    let target_function_arguments: &[Instruction] = function.1;
     let function_convention: u32 = function.2;
 
     let mut compiled_args: Vec<BasicMetadataValueEnum> = Vec::with_capacity(call_args.len());
 
     call_args.iter().enumerate().for_each(|instruction| {
-        let casting_target: Type = called_function_arguments
+        let casting_target: Type = *target_function_arguments
             .get(instruction.0)
             .unwrap_or(instruction.1)
-            .get_data_type();
+            .get_type();
 
         compiled_args.push(
             generation::build_expression(
@@ -62,7 +63,7 @@ pub fn build_call<'ctx>(
     });
 
     let call: CallSiteValue = builder
-        .build_call(called_function, &compiled_args, "")
+        .build_call(llvm_function, &compiled_args, "")
         .unwrap();
 
     call.set_call_convention(function_convention);

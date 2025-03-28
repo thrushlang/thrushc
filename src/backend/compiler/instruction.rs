@@ -2,15 +2,15 @@
 
 use {
     super::{
-        super::{
-            super::error::ThrushCompilerError,
-            super::frontend::{
+        super::super::{
+            error::ThrushCompilerError,
+            frontend::{
                 lexer::{TokenKind, Type},
                 types::StructFields,
             },
         },
         objects::CompilerObjects,
-        types::{BinaryOp, CompilerAttributes, Function, Struct},
+        types::{BinaryOp, CompilerAttributes, Function, Struct, UnaryOp},
         utils,
     },
     inkwell::{context::Context, types::StructType, values::BasicValueEnum},
@@ -311,75 +311,27 @@ impl<'ctx> Instruction<'ctx> {
     }
 
     #[inline(always)]
-    pub const fn as_llvm_value(&self) -> &BasicValueEnum<'ctx> {
-        match self {
-            Instruction::LLVMValue(value) => value,
-            _ => unreachable!(),
+    pub const fn as_unaryop(&self) -> UnaryOp {
+        if let Instruction::UnaryOp {
+            op, value, kind, ..
+        } = self
+        {
+            return (op, value, kind);
         }
+
+        unreachable!()
     }
 
     #[inline(always)]
-    pub const fn get_data_type_recursive(&self) -> Type {
-        if let Instruction::BinaryOp { left, .. } = self {
-            return left.get_data_type_recursive();
+    pub const fn as_llvm_value(&self) -> &BasicValueEnum<'ctx> {
+        if let Instruction::LLVMValue(llvm_value) = self {
+            return llvm_value;
         }
 
-        if let Instruction::UnaryOp { value, kind, .. } = self {
-            return if !kind.is_void_type() {
-                value.get_data_type_recursive()
-            } else {
-                *kind
-            };
-        }
-
-        if let Instruction::Group { instr, .. } = self {
-            return instr.get_data_type_recursive();
-        }
-
-        if let Instruction::LocalRef {
-            kind: localref_type,
-            ..
-        } = self
-        {
-            return *localref_type;
-        }
-
-        if let Instruction::Call { kind, .. } = self {
-            return *kind;
-        }
-
-        if let Instruction::Integer(integer_type, _, _) = self {
-            return *integer_type;
-        }
-
-        if let Instruction::Float(float_type, _, _) = self {
-            return *float_type;
-        }
-
-        if let Instruction::Char(_) = self {
-            return Type::Char;
-        }
-
-        if let Instruction::Str(_) = self {
-            return Type::Str;
-        }
-
-        if let Instruction::Boolean(_) = self {
-            return Type::Bool;
-        }
-
-        if let Instruction::NullT | Instruction::GEP { .. } = self {
-            return Type::T;
-        }
-
-        if let Instruction::LocalMut { .. } = self {
-            return Type::Void;
-        }
-
-        unimplemented!()
+        unreachable!()
     }
 
-    pub fn get_data_type(&self) -> Type {
+    pub fn get_type(&self) -> &Type {
         match self {
             Instruction::Integer(datatype, ..)
             | Instruction::Float(datatype, ..)
@@ -389,16 +341,16 @@ impl<'ctx> Instruction<'ctx> {
             | Instruction::FunctionParameter { kind: datatype, .. }
             | Instruction::Call { kind: datatype, .. }
             | Instruction::LocalMut { kind: datatype, .. }
-            | Instruction::Type(datatype) => *datatype,
+            | Instruction::Type(datatype) => datatype,
 
-            Instruction::Str(_) => Type::Str,
-            Instruction::Boolean(_) => Type::Bool,
-            Instruction::Char(_) => Type::Char,
-            Instruction::NullT => Type::T,
-            Instruction::GEP { .. } => Type::T,
-            Instruction::InitStruct { kind: datatype, .. } => *datatype,
+            Instruction::Str(_) => &Type::Str,
+            Instruction::Boolean(_) => &Type::Bool,
+            Instruction::Char(_) => &Type::Char,
+            Instruction::NullT => &Type::T,
+            Instruction::GEP { .. } => &Type::T,
+            Instruction::InitStruct { kind: datatype, .. } => datatype,
 
-            Instruction::UnaryOp { kind: datatype, .. } => *datatype,
+            Instruction::UnaryOp { kind: datatype, .. } => datatype,
 
             e => {
                 println!("{:?}", e);
@@ -437,7 +389,7 @@ impl<'ctx> Instruction<'ctx> {
     #[inline(always)]
     pub fn is_unsigned_integer(&self) -> bool {
         matches!(
-            self.get_data_type(),
+            self.get_type(),
             Type::U8 | Type::U16 | Type::U32 | Type::U64
         )
     }

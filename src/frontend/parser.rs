@@ -54,9 +54,9 @@ pub struct Parser<'instr> {
     errors: Vec<ThrushCompilerError>,
     inside_a_function: bool,
     inside_a_loop: bool,
-    at_typed_function: (Type, String),
-    at_typed_variable: Type,
-    at_unreacheable_code_scope: usize,
+    in_function_type: (Type, String),
+    in_local_type: Type,
+    in_unreacheable_code: usize,
     current: usize,
     scope: usize,
     has_entry_point: bool,
@@ -78,9 +78,9 @@ impl<'instr> Parser<'instr> {
             current: 0,
             inside_a_function: false,
             inside_a_loop: false,
-            at_typed_function: (Type::Void, String::new()),
-            at_typed_variable: Type::Void,
-            at_unreacheable_code_scope: 0,
+            in_function_type: (Type::Void, String::new()),
+            in_local_type: Type::Void,
+            in_unreacheable_code: 0,
             scope: 0,
             has_entry_point: false,
             scoper: ThrushScoper::new(file),
@@ -175,7 +175,7 @@ impl<'instr> Parser<'instr> {
         let block: Instruction = self.build_code_block(&mut [])?;
 
         if !block.has_break() && !block.has_return() && !block.has_continue() {
-            self.at_unreacheable_code_scope = self.scope;
+            self.in_unreacheable_code = self.scope;
         }
 
         self.inside_a_loop = false;
@@ -192,7 +192,7 @@ impl<'instr> Parser<'instr> {
 
         let conditional: Instruction = self.expression()?;
 
-        self.check_type_mismatch(Type::Bool, conditional.get_data_type(), Some(&conditional));
+        self.check_type_mismatch(Type::Bool, *conditional.get_type(), Some(&conditional));
 
         let block: Instruction = self.build_code_block(&mut [])?;
 
@@ -207,7 +207,7 @@ impl<'instr> Parser<'instr> {
 
         self.throw_if_is_unreacheable_code();
 
-        self.at_unreacheable_code_scope = self.scope;
+        self.in_unreacheable_code = self.scope;
 
         self.throw_if_not_inside_a_loop();
 
@@ -221,7 +221,7 @@ impl<'instr> Parser<'instr> {
 
         self.throw_if_is_unreacheable_code();
 
-        self.at_unreacheable_code_scope = self.scope;
+        self.in_unreacheable_code = self.scope;
 
         self.throw_if_not_inside_a_loop();
 
@@ -249,7 +249,7 @@ impl<'instr> Parser<'instr> {
 
             let pattern: Instruction = self.expression()?;
 
-            self.check_type_mismatch(Type::Bool, pattern.get_data_type(), Some(&pattern));
+            self.check_type_mismatch(Type::Bool, *pattern.get_type(), Some(&pattern));
 
             self.consume(
                 TokenKind::ColonColon,
@@ -294,7 +294,7 @@ impl<'instr> Parser<'instr> {
         }
 
         if if_block.has_more_than_a_statement() {
-            self.check_type_mismatch(Type::Bool, if_cond.get_data_type(), Some(&if_cond));
+            self.check_type_mismatch(Type::Bool, *if_cond.get_type(), Some(&if_cond));
         }
 
         let otherwise: Option<Box<Instruction>> = if self.match_token(TokenKind::Else)? {
@@ -349,7 +349,7 @@ impl<'instr> Parser<'instr> {
 
         let if_condition: Instruction = self.expression()?;
 
-        if !if_condition.get_data_type().is_bool_type() {
+        if !if_condition.get_type().is_bool_type() {
             self.push_error(
                 String::from("Syntax error"),
                 String::from("Condition must be type boolean."),
@@ -365,7 +365,7 @@ impl<'instr> Parser<'instr> {
 
             self.check_type_mismatch(
                 Type::Bool,
-                elif_condition.get_data_type(),
+                *elif_condition.get_type(),
                 Some(&elif_condition),
             );
 
@@ -468,12 +468,12 @@ impl<'instr> Parser<'instr> {
                 continue;
             }
 
-            return Err(ThrushCompilerError::Error(
+            self.only_advance()?;
+
+            self.push_error(
                 String::from("Syntax error"),
                 String::from("Expected identifier in structure field."),
-                self.peek().line,
-                Some(self.peek().span),
-            ));
+            );
         }
 
         self.consume(
@@ -537,20 +537,19 @@ impl<'instr> Parser<'instr> {
 
             if self.match_token(TokenKind::Identifier)? {
                 let field_name: &str = self.previous().lexeme.to_str();
-                let span: (usize, usize) = self.previous().span;
 
                 let structure_fields_amount: usize = struct_found.len();
 
                 if field_index as usize >= structure_fields_amount {
-                    return Err(ThrushCompilerError::Error(
+                    self.push_error(
                         String::from("Too many fields in structure"),
                         format!(
                             "Expected '{}' fields, not '{}'.",
                             structure_fields_amount, field_index
                         ),
-                        line,
-                        Some(span),
-                    ));
+                    );
+
+                    field_index = (structure_fields_amount - 1) as u32;
                 }
 
                 if !struct_found.contains_field(field_name) {
@@ -564,7 +563,7 @@ impl<'instr> Parser<'instr> {
 
                 self.throw_if_is_structure_initializer(&instruction);
 
-                let field_type: Type = instruction.get_data_type();
+                let field_type: Type = *instruction.get_type();
                 let target_type: Type = struct_found.get_field_type(field_name);
 
                 self.check_type_mismatch(target_type, field_type, Some(&instruction));
@@ -612,7 +611,7 @@ impl<'instr> Parser<'instr> {
         let variable: Instruction = self.build_local_variable(false)?;
         let conditional: Instruction = self.expression()?;
 
-        self.check_type_mismatch(Type::Bool, conditional.get_data_type(), None);
+        self.check_type_mismatch(Type::Bool, *conditional.get_type(), None);
 
         let actions: Instruction = self.expression()?;
 
@@ -712,11 +711,11 @@ impl<'instr> Parser<'instr> {
             String::from("Expected '='."),
         )?;
 
-        self.at_typed_variable = kind.0;
+        self.in_local_type = kind.0;
 
         let value: Instruction = self.expression()?;
 
-        self.check_type_mismatch(kind.0, value.get_data_type(), Some(&value));
+        self.check_type_mismatch(kind.0, *value.get_type(), Some(&value));
         self.check_struct_type_mismatch(&kind.1, &value, line)?;
 
         self.parser_objects.insert_new_local(
@@ -752,28 +751,24 @@ impl<'instr> Parser<'instr> {
         self.throw_if_is_unreacheable_code();
 
         if self.match_token(TokenKind::SemiColon)? {
-            if self.at_typed_function.0.is_void_type() {
+            if self.in_function_type.0.is_void_type() {
                 return Ok(Instruction::Null);
             }
 
-            self.check_type_mismatch(Type::Void, self.at_typed_function.0, None);
+            self.check_type_mismatch(Type::Void, self.in_function_type.0, None);
 
             return Ok(Instruction::Return(Box::new(Instruction::Null), Type::Void));
         }
 
         let value: Instruction = self.expression()?;
 
-        self.check_type_mismatch(
-            self.at_typed_function.0,
-            value.get_data_type(),
-            Some(&value),
-        );
+        self.check_type_mismatch(self.in_function_type.0, *value.get_type(), Some(&value));
 
-        self.check_struct_type_mismatch(&self.at_typed_function.1, &value, line)?;
+        self.check_struct_type_mismatch(&self.in_function_type.1, &value, line)?;
 
         Ok(Instruction::Return(
             Box::new(value),
-            self.at_typed_function.0,
+            self.in_function_type.0,
         ))
     }
 
@@ -953,7 +948,7 @@ impl<'instr> Parser<'instr> {
 
         let return_type: (Type, String) = match &self.peek().kind {
             TokenKind::DataType(kind) => (*kind, String::new()),
-            ident if *ident == TokenKind::Identifier && self.peak_structure_type() => {
+            ident if ident.is_identifier() && self.peak_structure_type() => {
                 (Type::Struct, self.peek().lexeme.to_string())
             }
             what => {
@@ -974,17 +969,15 @@ impl<'instr> Parser<'instr> {
         let function_has_ignore: bool = function_attributes.contain_ignore_attribute();
 
         if function_has_ignore && !function_has_ffi {
-            self.errors.push(ThrushCompilerError::Error(
+            self.push_error(
                 String::from("Syntax error"),
                 String::from(
                     "The '@ignore' attribute can only be used if the function contains the '@extern' attribute.",
-                ),
-                self.peek().line,
-                Some(self.peek().span),
-            ));
+                )
+            );
         }
 
-        self.at_typed_function = return_type.clone();
+        self.in_function_type = return_type.clone();
 
         let mut function: Instruction = Instruction::Function {
             name: function_name,
@@ -1021,12 +1014,10 @@ impl<'instr> Parser<'instr> {
         let function_body: Box<Instruction> = Box::new(self.build_code_block(&mut params)?);
 
         if !return_type.0.is_void_type() && !function_body.has_return() {
-            self.errors.push(ThrushCompilerError::Error(
+            self.push_error(
                 String::from("Syntax error"),
                 format!("Missing return type with type '{}'.", return_type.0),
-                name.line,
-                Some(name.span),
-            ));
+            );
         }
 
         self.inside_a_function = false;
@@ -1100,7 +1091,7 @@ impl<'instr> Parser<'instr> {
         let name: &Token = self.consume(
             TokenKind::Str,
             String::from("Syntax error"),
-            String::from("Expected a string for @extern(\"FFI_NAME\")."),
+            String::from("Expected a string for @extern(\"FFI NAME\")."),
         )?;
 
         let ffi_name: &str = name.lexeme.to_str();
@@ -1170,7 +1161,7 @@ impl<'instr> Parser<'instr> {
     }
 
     fn or(&mut self) -> Result<Instruction<'instr>, ThrushCompilerError> {
-        let mut instr: Instruction = self.and()?;
+        let mut expression: Instruction = self.and()?;
 
         while self.match_token(TokenKind::Or)? {
             let op: &TokenKind = &self.previous().kind;
@@ -1178,24 +1169,24 @@ impl<'instr> Parser<'instr> {
 
             type_checking::check_binary_types(
                 op,
-                &instr.get_data_type(),
-                &right.get_data_type(),
+                expression.get_type(),
+                right.get_type(),
                 (self.previous().line, self.previous().span),
             )?;
 
-            instr = Instruction::BinaryOp {
-                left: Box::new(instr),
+            expression = Instruction::BinaryOp {
+                left: Box::new(expression),
                 op,
                 right: Box::new(right),
                 kind: Type::Bool,
             }
         }
 
-        Ok(instr)
+        Ok(expression)
     }
 
     fn and(&mut self) -> Result<Instruction<'instr>, ThrushCompilerError> {
-        let mut instr: Instruction = self.equality()?;
+        let mut expression: Instruction = self.equality()?;
 
         while self.match_token(TokenKind::And)? {
             let op: &TokenKind = &self.previous().kind;
@@ -1203,31 +1194,31 @@ impl<'instr> Parser<'instr> {
 
             type_checking::check_binary_types(
                 op,
-                &instr.get_data_type(),
-                &right.get_data_type(),
+                expression.get_type(),
+                right.get_type(),
                 (self.previous().line, self.previous().span),
             )?;
 
-            instr = Instruction::BinaryOp {
-                left: Box::new(instr),
+            expression = Instruction::BinaryOp {
+                left: Box::new(expression),
                 op,
                 right: Box::new(right),
                 kind: Type::Bool,
             }
         }
 
-        Ok(instr)
+        Ok(expression)
     }
 
     fn equality(&mut self) -> Result<Instruction<'instr>, ThrushCompilerError> {
-        let mut instr: Instruction = self.comparison()?;
+        let mut expression: Instruction = self.comparison()?;
 
         while self.match_token(TokenKind::BangEq)? || self.match_token(TokenKind::EqEq)? {
             let op: &TokenKind = &self.previous().kind;
             let right: Instruction = self.comparison()?;
 
-            let left_type: Type = instr.get_data_type_recursive();
-            let right_type: Type = right.get_data_type_recursive();
+            let left_type: Type = *expression.get_type();
+            let right_type: Type = *right.get_type();
 
             type_checking::check_binary_types(
                 op,
@@ -1236,21 +1227,21 @@ impl<'instr> Parser<'instr> {
                 (self.previous().line, self.previous().span),
             )?;
 
-            instr.is_chained(&right, (self.previous().line, self.previous().span))?;
+            expression.is_chained(&right, (self.previous().line, self.previous().span))?;
 
-            instr = Instruction::BinaryOp {
-                left: Box::from(instr),
+            expression = Instruction::BinaryOp {
+                left: Box::from(expression),
                 op,
                 right: Box::from(right),
                 kind: Type::Bool,
             }
         }
 
-        Ok(instr)
+        Ok(expression)
     }
 
     fn comparison(&mut self) -> Result<Instruction<'instr>, ThrushCompilerError> {
-        let mut instr: Instruction = self.term()?;
+        let mut expression: Instruction = self.term()?;
 
         while self.match_token(TokenKind::Greater)?
             || self.match_token(TokenKind::GreaterEq)?
@@ -1260,8 +1251,8 @@ impl<'instr> Parser<'instr> {
             let op: &TokenKind = &self.previous().kind;
             let right: Instruction = self.term()?;
 
-            let left_type: Type = instr.get_data_type_recursive();
-            let right_type: Type = right.get_data_type_recursive();
+            let left_type: Type = *expression.get_type();
+            let right_type: Type = *right.get_type();
 
             type_checking::check_binary_types(
                 op,
@@ -1270,21 +1261,21 @@ impl<'instr> Parser<'instr> {
                 (self.previous().line, self.previous().span),
             )?;
 
-            instr.is_chained(&right, (self.previous().line, self.previous().span))?;
+            expression.is_chained(&right, (self.previous().line, self.previous().span))?;
 
-            instr = Instruction::BinaryOp {
-                left: Box::from(instr),
+            expression = Instruction::BinaryOp {
+                left: Box::from(expression),
                 op,
                 right: Box::from(right),
                 kind: Type::Bool,
             };
         }
 
-        Ok(instr)
+        Ok(expression)
     }
 
     fn term(&mut self) -> Result<Instruction<'instr>, ThrushCompilerError> {
-        let mut instr: Instruction = self.factor()?;
+        let mut expression: Instruction = self.factor()?;
 
         while self.match_token(TokenKind::Plus)?
             || self.match_token(TokenKind::Minus)?
@@ -1294,8 +1285,8 @@ impl<'instr> Parser<'instr> {
             let op: &Token = self.previous();
             let right: Instruction = self.factor()?;
 
-            let left_type: Type = instr.get_data_type_recursive();
-            let right_type: Type = right.get_data_type_recursive();
+            let left_type: Type = *expression.get_type();
+            let right_type: Type = *right.get_type();
 
             type_checking::check_binary_types(
                 &op.kind,
@@ -1304,28 +1295,28 @@ impl<'instr> Parser<'instr> {
                 (op.line, op.span),
             )?;
 
-            let kind: Type = left_type.precompute_numeric_type(right_type, self.at_typed_variable);
+            let kind: Type = left_type.precompute_numeric_type(right_type);
 
-            instr = Instruction::BinaryOp {
-                left: Box::from(instr),
+            expression = Instruction::BinaryOp {
+                left: Box::from(expression),
                 op: &op.kind,
                 right: Box::from(right),
                 kind,
             };
         }
 
-        Ok(instr)
+        Ok(expression)
     }
 
     fn factor(&mut self) -> Result<Instruction<'instr>, ThrushCompilerError> {
-        let mut instr: Instruction = self.unary()?;
+        let mut expression: Instruction = self.unary()?;
 
         while self.match_token(TokenKind::Slash)? || self.match_token(TokenKind::Star)? {
             let op: &TokenKind = &self.previous().kind;
             let right: Instruction = self.unary()?;
 
-            let left_type: Type = instr.get_data_type_recursive();
-            let right_type: Type = right.get_data_type_recursive();
+            let left_type: Type = *expression.get_type();
+            let right_type: Type = *right.get_type();
 
             type_checking::check_binary_types(
                 op,
@@ -1334,17 +1325,17 @@ impl<'instr> Parser<'instr> {
                 (self.previous().line, self.previous().span),
             )?;
 
-            let kind: Type = left_type.precompute_numeric_type(right_type, self.at_typed_variable);
+            let kind: Type = left_type.precompute_numeric_type(right_type);
 
-            instr = Instruction::BinaryOp {
-                left: Box::from(instr),
+            expression = Instruction::BinaryOp {
+                left: Box::from(expression),
                 op,
                 right: Box::from(right),
                 kind,
             };
         }
 
-        Ok(instr)
+        Ok(expression)
     }
 
     fn unary(&mut self) -> Result<Instruction<'instr>, ThrushCompilerError> {
@@ -1354,7 +1345,7 @@ impl<'instr> Parser<'instr> {
 
             type_checking::check_unary_types(
                 op,
-                &value.get_data_type(),
+                value.get_type(),
                 (self.previous().line, self.previous().span),
             )?;
 
@@ -1387,18 +1378,18 @@ impl<'instr> Parser<'instr> {
                 }
             }
 
-            let value_type: Type = value.get_data_type();
+            let kind: Type = *value.get_type();
 
             type_checking::check_unary_types(
                 op,
-                &value_type,
+                &kind,
                 (self.previous().line, self.previous().span),
             )?;
 
             return Ok(Instruction::UnaryOp {
                 op,
                 value: Box::from(value),
-                kind: value_type,
+                kind,
                 is_pre: false,
             });
         }
@@ -1425,14 +1416,14 @@ impl<'instr> Parser<'instr> {
                     ));
                 }
 
-                let expr: Instruction = Instruction::UnaryOp {
+                let expression: Instruction = Instruction::UnaryOp {
                     op,
                     value: Box::from(value),
                     kind: Type::Void,
                     is_pre: true,
                 };
 
-                return Ok(expr);
+                return Ok(expression);
             }
             TokenKind::MinusMinus => {
                 let op: &TokenKind = &self.advance()?.kind;
@@ -1448,14 +1439,14 @@ impl<'instr> Parser<'instr> {
                     ));
                 }
 
-                let expr: Instruction = Instruction::UnaryOp {
+                let expression: Instruction = Instruction::UnaryOp {
                     op,
                     value: Box::from(value),
                     kind: Type::Void,
                     is_pre: true,
                 };
 
-                return Ok(expr);
+                return Ok(expression);
             }
             TokenKind::DataType(dt) => {
                 let datatype: &Token = self.advance()?;
@@ -1467,7 +1458,7 @@ impl<'instr> Parser<'instr> {
                     dt if dt.is_integer_type() => Instruction::Type(*dt),
                     dt if dt.is_float_type() => Instruction::Type(*dt),
                     dt if dt.is_bool_type() => Instruction::Type(*dt),
-                    dt if dt == &Type::T => Instruction::Type(*dt),
+                    dt if dt.is_raw_ptr() => Instruction::Type(*dt),
                     what_heck_dt => {
                         return Err(ThrushCompilerError::Error(
                             String::from("Syntax error"),
@@ -1485,7 +1476,7 @@ impl<'instr> Parser<'instr> {
                 let lparen: &Token = self.advance()?;
 
                 let instr: Instruction = self.expression()?;
-                let kind: Type = instr.get_data_type();
+                let kind: Type = *instr.get_type();
 
                 if !instr.is_binary() && !instr.is_group() {
                     return Err(ThrushCompilerError::Error(
@@ -1538,14 +1529,7 @@ impl<'instr> Parser<'instr> {
                     let object_span: (usize, usize) = object_token.span;
                     let object_line: usize = object_token.line;
 
-                    if self.at_unreacheable_code_scope == self.scope {
-                        self.errors.push(ThrushCompilerError::Error(
-                            String::from("Syntax error"),
-                            String::from("Unreacheable code."),
-                            object_line,
-                            Some(object_span),
-                        ));
-                    }
+                    self.throw_if_is_unreacheable_code();
 
                     if self.match_token(TokenKind::Eq)? {
                         let object: FoundObject = self
@@ -1557,7 +1541,7 @@ impl<'instr> Parser<'instr> {
 
                         let expr: Instruction = self.expression()?;
 
-                        self.check_type_mismatch(local_type, expr.get_data_type(), Some(&expr));
+                        self.check_type_mismatch(local_type, *expr.get_type(), Some(&expr));
 
                         return Ok(Instruction::LocalMut {
                             name: object_name,
@@ -1657,15 +1641,13 @@ impl<'instr> Parser<'instr> {
         let index: Instruction = self.expression()?;
 
         if !index.is_unsigned_integer() {
-            self.errors.push(ThrushCompilerError::Error(
+            self.push_error(
                 String::from("Syntax error"),
                 format!(
                     "Expected unsigned integer type (u8, u16, u32, u64), not {}. ",
-                    index.get_data_type(),
+                    index.get_type(),
                 ),
-                self.previous().line,
-                Some(self.previous().span),
-            ));
+            );
         }
 
         self.consume(
@@ -1729,7 +1711,7 @@ impl<'instr> Parser<'instr> {
             let display_args_types: String = if !arguments_provided.is_empty() {
                 arguments_provided
                     .iter()
-                    .map(|parameter| parameter.get_data_type().to_string())
+                    .map(|parameter| parameter.get_type().to_string())
                     .collect::<Vec<_>>()
                     .join(", ")
             } else {
@@ -1755,7 +1737,7 @@ impl<'instr> Parser<'instr> {
 
         if !function.4 {
             for (position, argument) in arguments_provided.iter().enumerate() {
-                let argument_type: Type = argument.get_data_type();
+                let argument_type: Type = *argument.get_type();
                 let target_type: Type = function.1[position];
 
                 self.check_type_mismatch(target_type, argument_type, Some(argument));
@@ -1828,7 +1810,7 @@ impl<'instr> Parser<'instr> {
     ########################################################################*/
 
     fn throw_if_is_unreacheable_code(&mut self) {
-        if self.at_unreacheable_code_scope == self.scope && self.scope != 0 {
+        if self.in_unreacheable_code == self.scope && self.scope != 0 {
             self.push_error(
                 String::from("Syntax error"),
                 String::from("Unreacheable code."),
@@ -1878,7 +1860,7 @@ impl<'instr> Parser<'instr> {
                 structure_type = struct_type;
             }
 
-            if target_type.to_lowercase() != structure_type.to_lowercase() {
+            if target_type != structure_type {
                 return Err(ThrushCompilerError::Error(
                     String::from("Mismatched types"),
                     format!("Expected '{}' but found '{}'.", target_type, structure_type),
@@ -2013,7 +1995,7 @@ impl<'instr> Parser<'instr> {
 
         while !self.end() {
             match self.peek().kind {
-                TokenKind::Local | TokenKind::Fn => return,
+                kind if kind.is_keyword() => return,
                 _ => {}
             }
 
@@ -2033,7 +2015,7 @@ impl<'instr> Parser<'instr> {
 
     #[inline(always)]
     const fn at_structure_type(&self) -> bool {
-        self.at_typed_function.0.is_struct_type() || self.at_typed_variable.is_struct_type()
+        self.in_function_type.0.is_struct_type() || self.in_local_type.is_struct_type()
     }
 
     #[must_use]

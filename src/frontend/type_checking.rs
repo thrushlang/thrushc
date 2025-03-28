@@ -31,6 +31,8 @@ fn check_binary_arithmetic(
             | Type::U64,
         ) => Ok(()),
 
+        (Type::F32 | Type::F64, Type::F32 | Type::F64) => Ok(()),
+
         _ => Err(ThrushCompilerError::Error(
             String::from("Type checking"),
             format!("Arithmetic operation ({} {} {}) is not allowed.", a, op, b),

@@ -477,7 +477,7 @@ fn build_local_integer<'ctx>(
         left, op, right, ..
     } = local_value
     {
-        let result: BasicValueEnum = binaryop::integer_binaryop(
+        let result: BasicValueEnum = binaryop::integer::compile_integer_binaryop(
             module,
             builder,
             context,
@@ -580,7 +580,7 @@ fn build_local_float<'ctx>(
         ..
     } = local_value
     {
-        let var: PointerValue<'ctx> = compiler_objects.get_local(name_refvar);
+        let var: PointerValue = compiler_objects.get_local(name_refvar);
 
         let load = builder
             .build_load(
@@ -653,7 +653,7 @@ fn build_local_float<'ctx>(
         left, op, right, ..
     } = local_value
     {
-        let result: BasicValueEnum = binaryop::float_binaryop(
+        let result: BasicValueEnum = binaryop::float::float_binaryop(
             module,
             builder,
             context,
@@ -800,7 +800,7 @@ fn build_local_boolean<'ctx>(
         left, op, right, ..
     } = local_value
     {
-        let result: BasicValueEnum = binaryop::bool_binaryop(
+        let result: BasicValueEnum = binaryop::boolean::bool_binaryop(
             module,
             builder,
             context,

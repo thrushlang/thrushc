@@ -27,8 +27,8 @@ pub fn build_expression<'ctx>(
             .into();
     }
 
-    if let Instruction::Str(str) = instruction {
-        return utils::build_string_constant(module, builder, context, str).into();
+    if let Instruction::Str(const_str) = instruction {
+        return utils::build_string_constant(module, builder, context, const_str).into();
     }
 
     if let Instruction::Float(kind, num, is_signed) = instruction {
@@ -57,8 +57,8 @@ pub fn build_expression<'ctx>(
         return integer.into();
     }
 
-    if let Instruction::Char(char) = instruction {
-        return context.i8_type().const_int(*char as u64, false).into();
+    if let Instruction::Char(byte) = instruction {
+        return context.i8_type().const_int(*byte as u64, false).into();
     }
 
     if let Instruction::Boolean(bool) = instruction {
@@ -79,7 +79,7 @@ pub fn build_expression<'ctx>(
 
         if let Some(casted_index) = utils::integer_autocast(
             &Type::U64,
-            &index.get_data_type(),
+            index.get_type(),
             None,
             compiled_index,
             builder,
@@ -144,7 +144,7 @@ pub fn build_expression<'ctx>(
     } = instruction
     {
         if binary_op_type.is_float_type() {
-            return binaryop::float_binaryop(
+            return binaryop::float::float_binaryop(
                 module,
                 builder,
                 context,
@@ -155,7 +155,7 @@ pub fn build_expression<'ctx>(
         }
 
         if binary_op_type.is_integer_type() {
-            return binaryop::integer_binaryop(
+            return binaryop::integer::compile_integer_binaryop(
                 module,
                 builder,
                 context,
@@ -166,7 +166,7 @@ pub fn build_expression<'ctx>(
         }
 
         if binary_op_type.is_bool_type() {
-            return binaryop::bool_binaryop(
+            return binaryop::boolean::bool_binaryop(
                 module,
                 builder,
                 context,
