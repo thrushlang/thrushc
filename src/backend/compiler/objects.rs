@@ -7,6 +7,10 @@ use {
     inkwell::values::PointerValue,
 };
 
+const FUNCTION_MINIMUM_SIZE: usize = 255;
+const STRUCTURES_MINIMUM_SIZE: usize = 255;
+const SCOPES_MINIMUM_SIZE: usize = 155;
+
 #[derive(Debug, Clone)]
 pub struct CompilerObjects<'ctx> {
     pub functions: HashMap<&'ctx str, CompilerFunction<'ctx>>,
@@ -18,9 +22,9 @@ pub struct CompilerObjects<'ctx> {
 impl<'ctx> CompilerObjects<'ctx> {
     pub fn new() -> Self {
         Self {
-            functions: HashMap::with_capacity(255),
-            structs: HashMap::with_capacity(255),
-            blocks: Vec::with_capacity(100),
+            functions: HashMap::with_capacity(FUNCTION_MINIMUM_SIZE),
+            structs: HashMap::with_capacity(STRUCTURES_MINIMUM_SIZE),
+            blocks: Vec::with_capacity(SCOPES_MINIMUM_SIZE),
             scope_position: 0,
         }
     }

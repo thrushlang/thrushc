@@ -31,8 +31,8 @@ pub fn build<'ctx>(
         );
     }
 
-    if local_type.is_static_str() {
-        return build_local_static_str(
+    if local_type.is_const_static_str() {
+        return build_local_const_static_str(
             module,
             builder,
             context,
@@ -70,6 +70,7 @@ pub fn build<'ctx>(
 
     if local_type.is_bool_type() {
         let ptr: PointerValue = utils::build_ptr(context, builder, *local_type);
+
         return build_local_boolean(module, builder, context, local, ptr, compiler_objects);
     }
 
@@ -319,7 +320,7 @@ fn build_local_structure<'ctx>(
     unreachable!()
 }
 
-fn build_local_static_str<'ctx>(
+fn build_local_const_static_str<'ctx>(
     module: &Module<'ctx>,
     builder: &Builder<'ctx>,
     context: &'ctx Context,

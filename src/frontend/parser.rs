@@ -58,7 +58,7 @@ pub struct Parser<'instr> {
     in_local_type: Type,
     in_unreacheable_code: usize,
     current: usize,
-    scope: usize,
+    scope_position: usize,
     has_entry_point: bool,
     scoper: ThrushScoper<'instr>,
     diagnostic: Diagnostic,
@@ -81,7 +81,7 @@ impl<'instr> Parser<'instr> {
             in_function_type: (Type::Void, String::new()),
             in_local_type: Type::Void,
             in_unreacheable_code: 0,
-            scope: 0,
+            scope_position: 0,
             has_entry_point: false,
             scoper: ThrushScoper::new(file),
             diagnostic: Diagnostic::new(file),
@@ -140,7 +140,7 @@ impl<'instr> Parser<'instr> {
         if self.has_entry_point {
             self.push_error(
                 String::from("Duplicated entrypoint"),
-                String::from("The language not support two entrypoints :>."),
+                String::from("The language not support two entrypoints."),
             );
         }
 
@@ -175,7 +175,7 @@ impl<'instr> Parser<'instr> {
         let block: Instruction = self.build_code_block(&mut [])?;
 
         if !block.has_break() && !block.has_return() && !block.has_continue() {
-            self.in_unreacheable_code = self.scope;
+            self.in_unreacheable_code = self.scope_position;
         }
 
         self.inside_a_loop = false;
@@ -207,7 +207,7 @@ impl<'instr> Parser<'instr> {
 
         self.throw_if_is_unreacheable_code();
 
-        self.in_unreacheable_code = self.scope;
+        self.in_unreacheable_code = self.scope_position;
 
         self.throw_if_not_inside_a_loop();
 
@@ -221,7 +221,7 @@ impl<'instr> Parser<'instr> {
 
         self.throw_if_is_unreacheable_code();
 
-        self.in_unreacheable_code = self.scope;
+        self.in_unreacheable_code = self.scope_position;
 
         self.throw_if_not_inside_a_loop();
 
@@ -244,7 +244,7 @@ impl<'instr> Parser<'instr> {
         let mut index: u32 = 0;
 
         while self.match_token(TokenKind::Pattern)? {
-            self.scope += 1;
+            self.scope_position += 1;
             self.parser_objects.begin_local_scope();
 
             let pattern: Instruction = self.expression()?;
@@ -263,7 +263,7 @@ impl<'instr> Parser<'instr> {
 
             self.optional_consume(TokenKind::SemiColon)?;
 
-            self.scope -= 1;
+            self.scope_position -= 1;
             self.parser_objects.end_local_scope();
 
             if patterns_stmts.is_empty() {
@@ -645,7 +645,7 @@ impl<'instr> Parser<'instr> {
     ) -> Result<Instruction<'instr>, ThrushCompilerError> {
         self.only_advance()?;
 
-        if self.scope == 0 {
+        if self.scope_position == 0 {
             self.push_error(
                 String::from("Syntax error"),
                 String::from("Locals variables should be contained at local scope."),
@@ -688,7 +688,7 @@ impl<'instr> Parser<'instr> {
 
         if self.match_token(TokenKind::SemiColon)? {
             self.parser_objects.insert_new_local(
-                self.scope,
+                self.scope_position,
                 name.lexeme.to_str(),
                 (kind.0, kind.1, false, true),
                 line,
@@ -719,7 +719,7 @@ impl<'instr> Parser<'instr> {
         self.check_struct_type_mismatch(&kind.1, &value, line)?;
 
         self.parser_objects.insert_new_local(
-            self.scope,
+            self.scope_position,
             name.lexeme.to_str(),
             (kind.0, kind.1, false, false),
             line,
@@ -784,7 +784,7 @@ impl<'instr> Parser<'instr> {
 
         self.throw_if_is_unreacheable_code();
 
-        self.scope += 1;
+        self.scope_position += 1;
         self.parser_objects.begin_local_scope();
 
         let mut stmts: Vec<Instruction> = Vec::with_capacity(MINIMAL_SCOPE_CAPACITY);
@@ -801,7 +801,7 @@ impl<'instr> Parser<'instr> {
             } = instruction
             {
                 self.parser_objects.insert_new_local(
-                    self.scope,
+                    self.scope_position,
                     name,
                     (*kind, struct_type.clone(), false, false),
                     *line,
@@ -819,11 +819,11 @@ impl<'instr> Parser<'instr> {
             if instr.is_return() {
                 if let Some(name) = instr.return_with_heaped_ptr() {
                     self.parser_objects
-                        .modify_local_deallocation(self.scope, name, true);
+                        .modify_local_deallocation(self.scope_position, name, true);
                 }
 
                 let deallocators: Vec<Instruction> =
-                    self.parser_objects.create_deallocators(self.scope);
+                    self.parser_objects.create_deallocators(self.scope_position);
 
                 stmts.extend(deallocators);
 
@@ -834,13 +834,13 @@ impl<'instr> Parser<'instr> {
         }
 
         if !was_emited_deallocators {
-            stmts.extend(self.parser_objects.create_deallocators(self.scope));
+            stmts.extend(self.parser_objects.create_deallocators(self.scope_position));
         }
 
         self.parser_objects.end_local_scope();
 
         self.scoper.add_scope(stmts.clone());
-        self.scope -= 1;
+        self.scope_position -= 1;
 
         Ok(Instruction::Block { stmts })
     }
@@ -851,7 +851,7 @@ impl<'instr> Parser<'instr> {
     ) -> Result<Instruction<'instr>, ThrushCompilerError> {
         self.only_advance()?;
 
-        if self.scope != 0 {
+        if self.scope_position != 0 {
             self.errors.push(ThrushCompilerError::Error(
                 String::from("Syntax error"),
                 String::from("Functions are only defined globally."),
@@ -1810,7 +1810,7 @@ impl<'instr> Parser<'instr> {
     ########################################################################*/
 
     fn throw_if_is_unreacheable_code(&mut self) {
-        if self.in_unreacheable_code == self.scope && self.scope != 0 {
+        if self.in_unreacheable_code == self.scope_position && self.scope_position != 0 {
             self.push_error(
                 String::from("Syntax error"),
                 String::from("Unreacheable code."),
@@ -1996,6 +1996,10 @@ impl<'instr> Parser<'instr> {
         while !self.end() {
             match self.peek().kind {
                 kind if kind.is_keyword() => return,
+                TokenKind::SemiColon => {
+                    self.current += 1;
+                    return;
+                }
                 _ => {}
             }
 

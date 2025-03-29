@@ -223,37 +223,27 @@ impl<'ctx> Instruction<'ctx> {
         other: &Instruction,
         location: (usize, (usize, usize)),
     ) -> Result<(), ThrushCompilerError> {
-        if let (Instruction::BinaryOp { .. }, Instruction::BinaryOp { .. }) = (self, other) {
-            return Ok(());
-        }
-
-        if let (Instruction::BinaryOp { .. }, Instruction::Group { .. }) = (self, other) {
-            return Ok(());
-        }
-
-        if let (Instruction::Group { .. }, Instruction::BinaryOp { .. }) = (self, other) {
-            return Ok(());
-        }
-
-        if let (Instruction::Group { .. }, Instruction::Group { .. }) = (self, other) {
-            return Ok(());
-        }
-
-        if let (
-            Instruction::LocalRef { .. }
-            | Instruction::Char { .. }
-            | Instruction::Float { .. }
-            | Instruction::Integer { .. }
-            | Instruction::Boolean(_)
-            | Instruction::Call { .. },
-            Instruction::Char { .. }
-            | Instruction::Float { .. }
-            | Instruction::Integer { .. }
-            | Instruction::LocalRef { .. }
-            | Instruction::Boolean(_)
-            | Instruction::Call { .. },
-        ) = (self, other)
-        {
+        if matches!(
+            (self, other),
+            (Instruction::BinaryOp { .. }, Instruction::Group { .. })
+                | (Instruction::BinaryOp { .. }, Instruction::BinaryOp { .. })
+                | (Instruction::Group { .. }, Instruction::BinaryOp { .. })
+                | (Instruction::Group { .. }, Instruction::Group { .. })
+                | (
+                    Instruction::LocalRef { .. }
+                        | Instruction::Char { .. }
+                        | Instruction::Float { .. }
+                        | Instruction::Integer { .. }
+                        | Instruction::Boolean(_)
+                        | Instruction::Call { .. },
+                    Instruction::Char { .. }
+                        | Instruction::Float { .. }
+                        | Instruction::Integer { .. }
+                        | Instruction::LocalRef { .. }
+                        | Instruction::Boolean(_)
+                        | Instruction::Call { .. },
+                )
+        ) {
             return Ok(());
         }
 
@@ -331,6 +321,8 @@ impl<'ctx> Instruction<'ctx> {
         unreachable!()
     }
 
+    #[must_use]
+    #[inline]
     pub fn get_type(&self) -> &Type {
         match self {
             Instruction::Integer(datatype, ..)

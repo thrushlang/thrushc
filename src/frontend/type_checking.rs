@@ -49,17 +49,29 @@ fn check_binary_equality(
     b: &Type,
     location: (usize, (usize, usize)),
 ) -> Result<(), ThrushCompilerError> {
-    if let (
-        Type::S8 | Type::S16 | Type::S32 | Type::S64 | Type::U8 | Type::U16 | Type::U32 | Type::U64,
-        Type::S8 | Type::S16 | Type::S32 | Type::S64 | Type::U8 | Type::U16 | Type::U32 | Type::U64,
-    ) = (a, b)
-    {
-        return Ok(());
-    } else if let (Type::F32 | Type::F64, Type::F32 | Type::F64) = (a, b) {
-        return Ok(());
-    } else if let (Type::Bool, Type::Bool) = (a, b) {
-        return Ok(());
-    } else if let (Type::Char, Type::Char) = (a, b) {
+    if matches!(
+        (a, b),
+        (
+            Type::S8
+                | Type::S16
+                | Type::S32
+                | Type::S64
+                | Type::U8
+                | Type::U16
+                | Type::U32
+                | Type::U64,
+            Type::S8
+                | Type::S16
+                | Type::S32
+                | Type::S64
+                | Type::U8
+                | Type::U16
+                | Type::U32
+                | Type::U64,
+        ) | (Type::F32 | Type::F64, Type::F32 | Type::F64)
+            | (Type::Bool, Type::Bool)
+            | (Type::Char, Type::Char)
+    ) {
         return Ok(());
     }
 

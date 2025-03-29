@@ -1075,6 +1075,161 @@ pub fn float_binaryop<'ctx>(
     }
 
     if let (
+        Instruction::Group {
+            instr: left_instr,
+            kind: left_type,
+        },
+        TokenKind::Plus
+        | TokenKind::Slash
+        | TokenKind::Minus
+        | TokenKind::Star
+        | TokenKind::BangEq
+        | TokenKind::EqEq
+        | TokenKind::LessEq
+        | TokenKind::Less
+        | TokenKind::Greater
+        | TokenKind::GreaterEq,
+        Instruction::Call {
+            name: right_call_name,
+            args: right_arguments,
+            kind: right_call_type,
+            ..
+        },
+    ) = binary
+    {
+        let left_dissasembled: BinaryOp = left_instr.as_binary();
+
+        let mut left_compiled: BasicValueEnum = float_binaryop(
+            module,
+            builder,
+            context,
+            left_dissasembled,
+            target_type,
+            compiler_objects,
+        );
+
+        let mut right_compiled: BasicValueEnum = call::build_call(
+            module,
+            builder,
+            context,
+            (right_call_name, right_call_type, right_arguments),
+            compiler_objects,
+        )
+        .unwrap();
+
+        if let Some(new_left_compiled) = utils::float_autocast(
+            target_type,
+            left_type,
+            None,
+            left_compiled,
+            builder,
+            context,
+        ) {
+            left_compiled = new_left_compiled;
+        }
+
+        if let Some(new_right_compiled) = utils::float_autocast(
+            target_type,
+            right_call_type,
+            None,
+            right_compiled,
+            builder,
+            context,
+        ) {
+            right_compiled = new_right_compiled;
+        }
+
+        return build_float_op(
+            builder,
+            left_compiled.into_float_value(),
+            right_compiled.into_float_value(),
+            binary.1,
+        );
+    }
+
+    if let (
+        Instruction::Call {
+            name: left_call_name,
+            args: left_arguments,
+            kind: left_call_type,
+            ..
+        },
+        TokenKind::Plus
+        | TokenKind::Slash
+        | TokenKind::Minus
+        | TokenKind::Star
+        | TokenKind::BangEq
+        | TokenKind::EqEq
+        | TokenKind::LessEq
+        | TokenKind::Less
+        | TokenKind::Greater
+        | TokenKind::GreaterEq,
+        Instruction::Group {
+            instr: right_instr,
+            kind: right_type,
+            ..
+        },
+    ) = binary
+    {
+        let mut left_compiled: BasicValueEnum = call::build_call(
+            module,
+            builder,
+            context,
+            (left_call_name, left_call_type, left_arguments),
+            compiler_objects,
+        )
+        .unwrap();
+
+        let right_dissasembled: BinaryOp = right_instr.as_binary();
+
+        let mut right_compiled: BasicValueEnum = float_binaryop(
+            module,
+            builder,
+            context,
+            right_dissasembled,
+            target_type,
+            compiler_objects,
+        );
+
+        if let Some(new_left_compiled) = utils::float_autocast(
+            target_type,
+            left_call_type,
+            None,
+            left_compiled,
+            builder,
+            context,
+        ) {
+            left_compiled = new_left_compiled;
+        }
+
+        if let Some(new_right_compiled) = utils::float_autocast(
+            target_type,
+            right_type,
+            None,
+            right_compiled,
+            builder,
+            context,
+        ) {
+            right_compiled = new_right_compiled;
+        }
+
+        return build_float_op(
+            builder,
+            left_compiled.into_float_value(),
+            right_compiled.into_float_value(),
+            binary.1,
+        );
+    }
+
+    /* ######################################################################
+
+
+        REFERENCE - BINARY EXPRESSIONS
+
+
+    ########################################################################*/
+
+    if let (
         Instruction::LocalRef {
             name: left_name,
             kind: left_type,
@@ -1243,6 +1398,14 @@ pub fn float_binaryop<'ctx>(
 
         return build_float_op(builder, left_compiled, right_compiled, binary.1);
     }
+
+    /* ######################################################################
+
+
+        BINARY - BINARY EXPRESSIONS
+
+
+    ########################################################################*/
 
     if let (
         Instruction::BinaryOp {
@@ -1496,152 +1659,13 @@ pub fn float_binaryop<'ctx>(
         );
     }
 
-    if let (
-        Instruction::Group {
-            instr: left_instr,
-            kind: left_type,
-        },
-        TokenKind::Plus
-        | TokenKind::Slash
-        | TokenKind::Minus
-        | TokenKind::Star
-        | TokenKind::BangEq
-        | TokenKind::EqEq
-        | TokenKind::LessEq
-        | TokenKind::Less
-        | TokenKind::Greater
-        | TokenKind::GreaterEq,
-        Instruction::Call {
-            name: right_call_name,
-            args: right_arguments,
-            kind: right_call_type,
-            ..
-        },
-    ) = binary
-    {
-        let left_dissasembled: BinaryOp = left_instr.as_binary();
+    /* ######################################################################
 
-        let mut left_compiled: BasicValueEnum = float_binaryop(
-            module,
-            builder,
-            context,
-            left_dissasembled,
-            target_type,
-            compiler_objects,
-        );
 
-        let mut right_compiled: BasicValueEnum = call::build_call(
-            module,
-            builder,
-            context,
-            (right_call_name, right_call_type, right_arguments),
-            compiler_objects,
-        )
-        .unwrap();
+        GROUP - BINARY EXPRESSIONS
 
-        if let Some(new_left_compiled) = utils::float_autocast(
-            target_type,
-            left_type,
-            None,
-            left_compiled,
-            builder,
-            context,
-        ) {
-            left_compiled = new_left_compiled;
-        }
 
-        if let Some(new_right_compiled) = utils::float_autocast(
-            target_type,
-            right_call_type,
-            None,
-            right_compiled,
-            builder,
-            context,
-        ) {
-            right_compiled = new_right_compiled;
-        }
-
-        return build_float_op(
-            builder,
-            left_compiled.into_float_value(),
-            right_compiled.into_float_value(),
-            binary.1,
-        );
-    }
-
-    if let (
-        Instruction::Call {
-            name: left_call_name,
-            args: left_arguments,
-            kind: left_call_type,
-            ..
-        },
-        TokenKind::Plus
-        | TokenKind::Slash
-        | TokenKind::Minus
-        | TokenKind::Star
-        | TokenKind::BangEq
-        | TokenKind::EqEq
-        | TokenKind::LessEq
-        | TokenKind::Less
-        | TokenKind::Greater
-        | TokenKind::GreaterEq,
-        Instruction::Group {
-            instr: right_instr,
-            kind: right_type,
-            ..
-        },
-    ) = binary
-    {
-        let mut left_compiled: BasicValueEnum = call::build_call(
-            module,
-            builder,
-            context,
-            (left_call_name, left_call_type, left_arguments),
-            compiler_objects,
-        )
-        .unwrap();
-
-        let right_dissasembled: BinaryOp = right_instr.as_binary();
-
-        let mut right_compiled: BasicValueEnum = float_binaryop(
-            module,
-            builder,
-            context,
-            right_dissasembled,
-            target_type,
-            compiler_objects,
-        );
-
-        if let Some(new_left_compiled) = utils::float_autocast(
-            target_type,
-            left_call_type,
-            None,
-            left_compiled,
-            builder,
-            context,
-        ) {
-            left_compiled = new_left_compiled;
-        }
-
-        if let Some(new_right_compiled) = utils::float_autocast(
-            target_type,
-            right_type,
-            None,
-            right_compiled,
-            builder,
-            context,
-        ) {
-            right_compiled = new_right_compiled;
-        }
-
-        return build_float_op(
-            builder,
-            left_compiled.into_float_value(),
-            right_compiled.into_float_value(),
-            binary.1,
-        );
-    }
+    ########################################################################*/
 
     if let (
         Instruction::Group {

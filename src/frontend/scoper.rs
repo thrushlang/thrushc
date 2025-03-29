@@ -1,12 +1,15 @@
 use {
     super::super::{
         backend::compiler::{instruction::Instruction, misc::CompilerFile},
+        constants::MINIMAL_ERROR_CAPACITY,
         diagnostic::Diagnostic,
         error::ThrushCompilerError,
         logging::LogType,
     },
     std::process,
 };
+
+const MINIMAL_SCOPE_CAPACITY: usize = 155;
 
 #[derive(Debug)]
 pub struct ThrushScoper<'ctx> {
@@ -23,8 +26,8 @@ struct ThrushBlock<'ctx> {
 impl<'ctx> ThrushScoper<'ctx> {
     pub fn new(file: &'ctx CompilerFile) -> Self {
         Self {
-            blocks: Vec::with_capacity(25_000),
-            errors: Vec::with_capacity(100),
+            blocks: Vec::with_capacity(MINIMAL_SCOPE_CAPACITY),
+            errors: Vec::with_capacity(MINIMAL_ERROR_CAPACITY),
             diagnostic: Diagnostic::new(file),
         }
     }
@@ -39,12 +42,9 @@ impl<'ctx> ThrushScoper<'ctx> {
         }
 
         for depth in (0..=self.blocks.len() - 1).rev() {
-            for instr in self.blocks[depth].stmts.iter().rev() {
-                match self.analyze_instruction(instr, depth) {
-                    Ok(()) => {}
-                    Err(e) => {
-                        self.errors.push(e);
-                    }
+            for instruction in self.blocks[depth].stmts.iter().rev() {
+                if let Err(error) = self.analyze_instruction(instruction, depth) {
+                    self.errors.push(error);
                 }
             }
         }
@@ -72,10 +72,11 @@ impl<'ctx> ThrushScoper<'ctx> {
                 })?;
         }
 
-        if let Instruction::Function { body, .. } = instr {
-            if body.is_some() {
-                self.analyze_instruction(body.as_ref().unwrap(), depth)?;
-            }
+        if let Instruction::Function {
+            body: Some(body), ..
+        } = instr
+        {
+            self.analyze_instruction(body.as_ref(), depth)?;
         }
 
         if let Instruction::EntryPoint { body } = instr {
@@ -86,7 +87,7 @@ impl<'ctx> ThrushScoper<'ctx> {
             if !self.is_at_current_scope(name, None, depth) {
                 return Err(ThrushCompilerError::Error(
                     String::from("Undefined variable"),
-                    format!("Local variable `{}` not found at current scope.", name),
+                    format!("Local variable '{}' not found at current scope.", name),
                     *line,
                     None,
                 ));
@@ -98,7 +99,7 @@ impl<'ctx> ThrushScoper<'ctx> {
                 return Err(ThrushCompilerError::Error(
                     String::from("Unreacheable variable"),
                     format!(
-                        "Local variable `{}` is unreacheable at current scope.",
+                        "Local variable '{}' is unreacheable at current scope.",
                         name
                     ),
                     *line,

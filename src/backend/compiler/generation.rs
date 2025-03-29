@@ -120,7 +120,7 @@ pub fn build_expression<'ctx>(
                 .unwrap();
         }
 
-        if kind.is_static_str() {
+        if kind.is_const_static_str() {
             return local.into();
         }
 
