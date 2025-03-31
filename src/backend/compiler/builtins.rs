@@ -5,6 +5,7 @@ use {
             logging,
         },
         Instruction,
+        memory::AllocatedObject,
         objects::CompilerObjects,
         types::Call,
         utils,
@@ -75,7 +76,7 @@ pub fn build_sizeof<'ctx>(
             return structure_size_of.into();
         }
 
-        let ptr: PointerValue = compiler_objects.get_local(name);
+        let ptr: PointerValue = compiler_objects.get_allocated_object(name).ptr;
 
         return ptr.get_type().size_of().into();
     }
@@ -140,38 +141,11 @@ pub fn build_is_signed<'ctx>(
             );
         }
 
-        let ptr: PointerValue = compiler_objects.get_local(name);
+        let object: AllocatedObject = compiler_objects.get_allocated_object(name);
 
-        return if kind.is_float_type() {
-            let mut loaded_value: FloatValue = builder
-                .build_load(utils::type_float_to_llvm_float_type(context, kind), ptr, "")
-                .unwrap()
-                .into_float_value();
-
-            if let Some(casted_float) = utils::float_autocast(
-                kind,
-                &Type::F64,
-                None,
-                loaded_value.into(),
-                builder,
-                context,
-            ) {
-                loaded_value = casted_float.into_float_value();
-            }
-
-            builder
-                .build_float_compare(
-                    FloatPredicate::OLT,
-                    loaded_value,
-                    context.f64_type().const_float(0.0),
-                    "",
-                )
-                .unwrap()
-                .into()
-        } else {
-            let mut loaded_value: IntValue = builder
-                .build_load(utils::type_int_to_llvm_int_type(context, kind), ptr, "")
-                .unwrap()
+        return if kind.is_integer_type() {
+            let mut loaded_value: IntValue = object
+                .load_from_memory(builder, utils::type_int_to_llvm_int_type(context, kind))
                 .into_int_value();
 
             if let Some(casted_float) = utils::integer_autocast(
@@ -190,6 +164,31 @@ pub fn build_is_signed<'ctx>(
                     inkwell::IntPredicate::SLT,
                     loaded_value,
                     context.i64_type().const_int(0, false),
+                    "",
+                )
+                .unwrap()
+                .into()
+        } else {
+            let mut loaded_value: FloatValue = object
+                .load_from_memory(builder, utils::type_float_to_llvm_float_type(context, kind))
+                .into_float_value();
+
+            if let Some(casted_float) = utils::float_autocast(
+                kind,
+                &Type::F64,
+                None,
+                loaded_value.into(),
+                builder,
+                context,
+            ) {
+                loaded_value = casted_float.into_float_value();
+            }
+
+            builder
+                .build_float_compare(
+                    FloatPredicate::OLT,
+                    loaded_value,
+                    context.f64_type().const_float(0.0),
                     "",
                 )
                 .unwrap()

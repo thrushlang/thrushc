@@ -8,6 +8,7 @@ pub mod generation;
 pub mod impls;
 pub mod instruction;
 pub mod local;
+pub mod memory;
 pub mod misc;
 pub mod objects;
 pub mod traits;

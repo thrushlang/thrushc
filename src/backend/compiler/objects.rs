@@ -1,37 +1,38 @@
 use {
     super::{
         super::super::logging,
+        memory::AllocatedObject,
         types::{CompilerFunction, Struct},
     },
     ahash::AHashMap as HashMap,
-    inkwell::values::PointerValue,
 };
 
-const FUNCTION_MINIMUM_SIZE: usize = 255;
-const STRUCTURES_MINIMUM_SIZE: usize = 255;
-const SCOPES_MINIMUM_SIZE: usize = 155;
+const FUNCTION_MINIMAL_CAPACITY: usize = 255;
+const STRUCTURE_MINIMAL_CAPACITY: usize = 255;
+const SCOPE_MINIMAL_CAPACITY: usize = 155;
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct CompilerObjects<'ctx> {
     pub functions: HashMap<&'ctx str, CompilerFunction<'ctx>>,
     pub structs: HashMap<&'ctx str, &'ctx Struct<'ctx>>,
-    pub blocks: Vec<HashMap<&'ctx str, PointerValue<'ctx>>>,
+    pub blocks: Vec<HashMap<&'ctx str, AllocatedObject<'ctx>>>,
     pub scope_position: usize,
 }
 
 impl<'ctx> CompilerObjects<'ctx> {
     pub fn new() -> Self {
         Self {
-            functions: HashMap::with_capacity(FUNCTION_MINIMUM_SIZE),
-            structs: HashMap::with_capacity(STRUCTURES_MINIMUM_SIZE),
-            blocks: Vec::with_capacity(SCOPES_MINIMUM_SIZE),
+            functions: HashMap::with_capacity(FUNCTION_MINIMAL_CAPACITY),
+            structs: HashMap::with_capacity(STRUCTURE_MINIMAL_CAPACITY),
+            blocks: Vec::with_capacity(SCOPE_MINIMAL_CAPACITY),
             scope_position: 0,
         }
     }
 
     #[inline]
     pub fn begin_scope(&mut self) {
-        self.blocks.push(HashMap::new());
+        self.blocks
+            .push(HashMap::with_capacity(SCOPE_MINIMAL_CAPACITY));
         self.scope_position += 1;
     }
 
@@ -42,8 +43,8 @@ impl<'ctx> CompilerObjects<'ctx> {
     }
 
     #[inline]
-    pub fn insert(&mut self, name: &'ctx str, value: PointerValue<'ctx>) {
-        self.blocks[self.scope_position - 1].insert(name, value);
+    pub fn alloc_local_object(&mut self, name: &'ctx str, object: AllocatedObject<'ctx>) {
+        self.blocks[self.scope_position - 1].insert(name, object);
     }
 
     #[inline]
@@ -62,17 +63,17 @@ impl<'ctx> CompilerObjects<'ctx> {
     }
 
     #[inline]
-    pub fn get_local(&self, name: &str) -> PointerValue<'ctx> {
+    pub fn get_allocated_object(&self, name: &str) -> AllocatedObject<'ctx> {
         for position in (0..self.scope_position).rev() {
-            if let Some(local) = self.blocks[position].get(name) {
-                return *local;
+            if let Some(allocated_object) = self.blocks[position].get(name) {
+                return *allocated_object;
             }
         }
 
         logging::log(
             logging::LogType::Panic,
             &format!(
-                "Unable to get '{}' pointer at frame pointer number #{}.",
+                "Unable to get '{}' allocated object at frame pointer number #{}.",
                 name, self.scope_position
             ),
         );

@@ -237,13 +237,9 @@ pub fn compile_integer_binaryop<'ctx>(
         let mut left_compiled: IntValue =
             utils::build_const_integer(context, &Type::Bool, *left as u64, false);
 
-        let mut right_compiled: IntValue = builder
-            .build_load(
-                utils::type_int_to_llvm_int_type(context, kind),
-                compiler_objects.get_local(name),
-                "",
-            )
-            .unwrap()
+        let mut right_compiled: IntValue = compiler_objects
+            .get_allocated_object(name)
+            .load_from_memory(builder, utils::type_int_to_llvm_int_type(context, kind))
             .into_int_value();
 
         if let Some(new_left_compiled) = utils::integer_autocast(
@@ -284,13 +280,9 @@ pub fn compile_integer_binaryop<'ctx>(
         Instruction::Boolean(right),
     ) = binary
     {
-        let mut left_compiled: IntValue = builder
-            .build_load(
-                utils::type_int_to_llvm_int_type(context, kind),
-                compiler_objects.get_local(name),
-                "",
-            )
-            .unwrap()
+        let mut left_compiled: IntValue = compiler_objects
+            .get_allocated_object(name)
+            .load_from_memory(builder, utils::type_int_to_llvm_int_type(context, kind))
             .into_int_value();
 
         let mut right_compiled: IntValue =
@@ -719,13 +711,12 @@ pub fn compile_integer_binaryop<'ctx>(
         Instruction::UnaryOp { .. },
     ) = binary
     {
-        let mut left_compiled: BasicValueEnum = builder
-            .build_load(
+        let mut left_compiled: BasicValueEnum = compiler_objects
+            .get_allocated_object(left_name)
+            .load_from_memory(
+                builder,
                 utils::type_int_to_llvm_int_type(context, left_type),
-                compiler_objects.get_local(left_name),
-                "",
-            )
-            .unwrap();
+            );
 
         let right_dissasembled: UnaryOp = binary.2.as_unaryop();
 
@@ -795,13 +786,12 @@ pub fn compile_integer_binaryop<'ctx>(
         let mut left_compiled: BasicValueEnum =
             unaryop::compile_unary_op(builder, context, left_dissasembled, compiler_objects);
 
-        let mut right_compiled: BasicValueEnum = builder
-            .build_load(
+        let mut right_compiled: BasicValueEnum = compiler_objects
+            .get_allocated_object(right_name)
+            .load_from_memory(
+                builder,
                 utils::type_int_to_llvm_int_type(context, right_type),
-                compiler_objects.get_local(right_name),
-                "",
-            )
-            .unwrap();
+            );
 
         if let Some(new_left_compiled) = utils::integer_autocast(
             target_type,
@@ -1320,13 +1310,12 @@ pub fn compile_integer_binaryop<'ctx>(
         },
     ) = binary
     {
-        let mut left_compiled: BasicValueEnum = builder
-            .build_load(
+        let mut left_compiled: BasicValueEnum = compiler_objects
+            .get_allocated_object(left_name)
+            .load_from_memory(
+                builder,
                 utils::type_int_to_llvm_int_type(context, left_type),
-                compiler_objects.get_local(left_name),
-                "",
-            )
-            .unwrap();
+            );
 
         let mut right_compiled: BasicValueEnum = call::build_call(
             module,
@@ -1409,13 +1398,12 @@ pub fn compile_integer_binaryop<'ctx>(
         )
         .unwrap();
 
-        let mut right_compiled: BasicValueEnum = builder
-            .build_load(
+        let mut right_compiled: BasicValueEnum = compiler_objects
+            .get_allocated_object(right_name)
+            .load_from_memory(
+                builder,
                 utils::type_int_to_llvm_int_type(context, right_type),
-                compiler_objects.get_local(right_name),
-                "",
-            )
-            .unwrap();
+            );
 
         if let Some(new_left_compiled) = utils::integer_autocast(
             target_type,
@@ -1704,13 +1692,9 @@ pub fn compile_integer_binaryop<'ctx>(
         let mut left_compiled: IntValue =
             utils::build_const_integer(context, left_type, *left_num as u64, *left_signed);
 
-        let mut right_compiled: IntValue = builder
-            .build_load(
-                utils::type_int_to_llvm_int_type(context, kind),
-                compiler_objects.get_local(name),
-                "",
-            )
-            .unwrap()
+        let mut right_compiled: IntValue = compiler_objects
+            .get_allocated_object(name)
+            .load_from_memory(builder, utils::type_int_to_llvm_int_type(context, kind))
             .into_int_value();
 
         if let Some(new_left_compiled) = utils::integer_autocast(
@@ -1772,22 +1756,20 @@ pub fn compile_integer_binaryop<'ctx>(
         },
     ) = binary
     {
-        let mut left_compiled: IntValue = builder
-            .build_load(
+        let mut left_compiled: IntValue = compiler_objects
+            .get_allocated_object(left_name)
+            .load_from_memory(
+                builder,
                 utils::type_int_to_llvm_int_type(context, left_type),
-                compiler_objects.get_local(left_name),
-                "",
             )
-            .unwrap()
             .into_int_value();
 
-        let mut right_compiled: IntValue = builder
-            .build_load(
+        let mut right_compiled: IntValue = compiler_objects
+            .get_allocated_object(right_name)
+            .load_from_memory(
+                builder,
                 utils::type_int_to_llvm_int_type(context, right_type),
-                compiler_objects.get_local(right_name),
-                "",
             )
-            .unwrap()
             .into_int_value();
 
         if let Some(new_left_compiled) = utils::integer_autocast(
@@ -1862,13 +1844,12 @@ pub fn compile_integer_binaryop<'ctx>(
         )
         .into_int_value();
 
-        let mut right_compiled: IntValue = builder
-            .build_load(
+        let mut right_compiled: IntValue = compiler_objects
+            .get_allocated_object(right_name)
+            .load_from_memory(
+                builder,
                 utils::type_int_to_llvm_int_type(context, right_type),
-                compiler_objects.get_local(right_name),
-                "",
             )
-            .unwrap()
             .into_int_value();
 
         if let Some(new_left_compiled) = utils::integer_autocast(
@@ -2061,13 +2042,9 @@ pub fn compile_integer_binaryop<'ctx>(
         Instruction::Integer(right_type, right_num, right_signed),
     ) = binary
     {
-        let mut left_compiled: IntValue = builder
-            .build_load(
-                utils::type_int_to_llvm_int_type(context, kind),
-                compiler_objects.get_local(name),
-                "",
-            )
-            .unwrap()
+        let mut left_compiled: IntValue = compiler_objects
+            .get_allocated_object(name)
+            .load_from_memory(builder, utils::type_int_to_llvm_int_type(context, kind))
             .into_int_value();
 
         let mut right_compiled: IntValue =

@@ -1,13 +1,14 @@
 use {
     super::{
         super::super::frontend::lexer::Type, binaryop, call, instruction::Instruction,
-        objects::CompilerObjects, unaryop, utils,
+        memory::AllocatedObject, objects::CompilerObjects, unaryop, utils,
     },
     inkwell::{
         AddressSpace,
         builder::Builder,
         context::Context,
         module::Module,
+        types::StructType,
         values::{BasicValueEnum, FloatValue, IntValue, PointerValue},
     },
 };
@@ -66,7 +67,7 @@ pub fn build_expression<'ctx>(
     }
 
     if let Instruction::GEP { name, index } = instruction {
-        let local: PointerValue = compiler_objects.get_local(name);
+        let local: PointerValue = compiler_objects.get_allocated_object(name).ptr;
 
         let mut compiled_index: BasicValueEnum = build_expression(
             module,
@@ -101,35 +102,42 @@ pub fn build_expression<'ctx>(
         };
     }
 
-    if let Instruction::LocalRef { name, kind, .. } = instruction {
-        let local: PointerValue = compiler_objects.get_local(name);
+    if let Instruction::LocalRef {
+        name,
+        kind,
+        struct_type,
+        ..
+    } = instruction
+    {
+        let object: AllocatedObject = compiler_objects.get_allocated_object(name);
 
         if kind.is_float_type() {
-            return builder
-                .build_load(
-                    utils::type_float_to_llvm_float_type(context, kind),
-                    local,
-                    "",
-                )
-                .unwrap();
+            return object
+                .load_from_memory(builder, utils::type_float_to_llvm_float_type(context, kind));
         }
 
         if kind.is_integer_type() || kind.is_bool_type() {
-            return builder
-                .build_load(utils::type_int_to_llvm_int_type(context, kind), local, "")
-                .unwrap();
+            return object
+                .load_from_memory(builder, utils::type_int_to_llvm_int_type(context, kind));
         }
 
-        if kind.is_const_static_str() {
-            return local.into();
+        if kind.is_str() {
+            return object.load_from_memory(builder, context.i8_type());
         }
 
         if kind.is_struct_type() {
-            return builder.build_load(local.get_type(), local, "").unwrap();
+            if let Some(struct_fields) = compiler_objects.get_struct(struct_type) {
+                let struct_type: StructType =
+                    utils::build_struct_type_from_fields(context, struct_fields);
+
+                return object.load_from_memory(builder, struct_type);
+            }
+
+            unreachable!()
         }
 
         if kind.is_raw_ptr() {
-            return local.into();
+            return object.load_from_memory(builder, context.ptr_type(AddressSpace::default()));
         }
 
         unreachable!()
@@ -188,16 +196,14 @@ pub fn build_expression<'ctx>(
     }
 
     if let Instruction::LocalMut { name, kind, value } = instruction {
-        let ptr: PointerValue = compiler_objects.get_local(name);
+        let object: AllocatedObject = compiler_objects.get_allocated_object(name);
 
-        let compiled_expression: BasicValueEnum =
+        let expression: BasicValueEnum =
             build_expression(module, builder, context, value, kind, compiler_objects);
 
-        builder.build_store(ptr, compiled_expression).unwrap();
+        object.build_store(builder, expression);
 
-        compiler_objects.insert(name, ptr);
-
-        return compiled_expression;
+        return expression;
     }
 
     if let Instruction::Call {

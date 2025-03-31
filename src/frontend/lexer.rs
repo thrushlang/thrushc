@@ -1018,7 +1018,7 @@ impl Type {
     }
 
     #[inline(always)]
-    pub const fn is_const_static_str(&self) -> bool {
+    pub const fn is_str(&self) -> bool {
         matches!(self, Type::Str)
     }
 

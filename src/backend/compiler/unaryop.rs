@@ -2,6 +2,7 @@ use {
     super::{
         super::super::frontend::lexer::{TokenKind, Type},
         Instruction,
+        memory::AllocatedObject,
         objects::CompilerObjects,
         types::UnaryOp,
         utils,
@@ -9,7 +10,7 @@ use {
     inkwell::{
         builder::Builder,
         context::Context,
-        values::{BasicValueEnum, FloatValue, IntValue, PointerValue},
+        values::{BasicValueEnum, FloatValue, IntValue},
     },
 };
 
@@ -29,51 +30,47 @@ pub fn compile_unary_op<'ctx>(
         _,
     ) = unary
     {
-        let ptr: PointerValue = compiler_objects.get_local(name);
+        let object: AllocatedObject = compiler_objects.get_allocated_object(name);
 
         if refvar_type.is_integer_type() {
-            let left_num: IntValue = builder
-                .build_load(
+            let int: IntValue = object
+                .load_from_memory(
+                    builder,
                     utils::type_int_to_llvm_int_type(context, refvar_type),
-                    ptr,
-                    "",
                 )
-                .unwrap()
                 .into_int_value();
 
-            let right_num: IntValue =
+            let modifier: IntValue =
                 utils::type_int_to_llvm_int_type(context, refvar_type).const_int(1, false);
 
             let result: IntValue = if unary.0.is_plusplus_operator() {
-                builder.build_int_nsw_add(left_num, right_num, "").unwrap()
+                builder.build_int_nsw_add(int, modifier, "").unwrap()
             } else {
-                builder.build_int_nsw_sub(left_num, right_num, "").unwrap()
+                builder.build_int_nsw_sub(int, modifier, "").unwrap()
             };
 
-            builder.build_store(ptr, result).unwrap();
+            object.build_store(builder, result);
 
             return result.into();
         }
 
-        let left_num: FloatValue = builder
-            .build_load(
+        let float: FloatValue = object
+            .load_from_memory(
+                builder,
                 utils::type_float_to_llvm_float_type(context, refvar_type),
-                ptr,
-                "",
             )
-            .unwrap()
             .into_float_value();
 
-        let right_num: FloatValue =
+        let modifier: FloatValue =
             utils::type_float_to_llvm_float_type(context, refvar_type).const_float(1.0);
 
         let result: FloatValue = if unary.0.is_plusplus_operator() {
-            builder.build_float_add(left_num, right_num, "").unwrap()
+            builder.build_float_add(float, modifier, "").unwrap()
         } else {
-            builder.build_float_sub(left_num, right_num, "").unwrap()
+            builder.build_float_sub(float, modifier, "").unwrap()
         };
 
-        builder.build_store(ptr, result).unwrap();
+        object.build_store(builder, result);
 
         return result.into();
     }
@@ -88,33 +85,28 @@ pub fn compile_unary_op<'ctx>(
         _,
     ) = unary
     {
-        let ptr: PointerValue = compiler_objects.get_local(name);
+        let object: AllocatedObject = compiler_objects.get_allocated_object(name);
 
         if refvar_type.is_integer_type() || refvar_type.is_bool_type() {
-            let left: IntValue = builder
-                .build_load(
+            let int: IntValue = object
+                .load_from_memory(
+                    builder,
                     utils::type_int_to_llvm_int_type(context, refvar_type),
-                    ptr,
-                    "",
                 )
-                .unwrap()
                 .into_int_value();
 
-            let result: IntValue = builder.build_not(left, "").unwrap();
-
+            let result: IntValue = builder.build_not(int, "").unwrap();
             return result.into();
         }
 
-        let left: FloatValue = builder
-            .build_load(
+        let float: FloatValue = object
+            .load_from_memory(
+                builder,
                 utils::type_float_to_llvm_float_type(context, refvar_type),
-                ptr,
-                "",
             )
-            .unwrap()
             .into_float_value();
 
-        let result: FloatValue = builder.build_float_neg(left, "").unwrap();
+        let result: FloatValue = builder.build_float_neg(float, "").unwrap();
         return result.into();
     }
 
@@ -128,34 +120,28 @@ pub fn compile_unary_op<'ctx>(
         _,
     ) = unary
     {
-        let ptr: PointerValue = compiler_objects.get_local(name);
+        let object: AllocatedObject = compiler_objects.get_allocated_object(name);
 
         if refvar_type.is_integer_type() {
-            let left: IntValue = builder
-                .build_load(
+            let int: IntValue = object
+                .load_from_memory(
+                    builder,
                     utils::type_int_to_llvm_int_type(context, refvar_type),
-                    ptr,
-                    "",
                 )
-                .unwrap()
                 .into_int_value();
 
-            let result: IntValue = builder.build_not(left, "").unwrap();
-
+            let result: IntValue = builder.build_not(int, "").unwrap();
             return result.into();
         }
 
-        let left: FloatValue = builder
-            .build_load(
+        let float: FloatValue = object
+            .load_from_memory(
+                builder,
                 utils::type_float_to_llvm_float_type(context, refvar_type),
-                ptr,
-                "",
             )
-            .unwrap()
             .into_float_value();
 
-        let result: FloatValue = builder.build_float_neg(left, "").unwrap();
-
+        let result: FloatValue = builder.build_float_neg(float, "").unwrap();
         return result.into();
     }
 

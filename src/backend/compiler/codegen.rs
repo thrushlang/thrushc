@@ -85,7 +85,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
 
             Instruction::Free { name, struct_type } => {
                 let struct_type: &str = struct_type;
-                let variable: PointerValue<'ctx> = self.compiler_objects.get_local(name);
+                let variable: PointerValue = self.compiler_objects.get_allocated_object(name).ptr;
 
                 if let Some(struct_fields) = self.compiler_objects.get_struct(struct_type) {
                     let struct_type: StructType =
@@ -605,7 +605,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
     }
 
     fn build_function_parameter(&mut self, name: &'ctx str, kind: Type, position: u32) {
-        let allocated_ptr: PointerValue = if !kind.is_ptr_type() {
+        /* let allocated_ptr: PointerValue = if !kind.is_ptr_type() {
             utils::build_ptr(self.context, self.builder, kind)
         } else {
             self.function
@@ -624,7 +624,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
             return;
         }
 
-        self.compiler_objects.insert(name, allocated_ptr);
+        self.compiler_objects.insert(name, allocated_ptr); */
     }
 
     fn build_function(&mut self, function: Function<'ctx>) {
