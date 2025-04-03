@@ -1,7 +1,10 @@
 use {
     super::{
-        super::super::frontend::lexer::Type, instruction::Instruction, objects::CompilerObjects,
-        types::Struct,
+        super::super::frontend::lexer::Type,
+        instruction::Instruction,
+        objects::CompilerObjects,
+        traits::MemoryFlagsBasics,
+        types::{CompilerStructure, CompilerStructureFields, MemoryFlags},
     },
     inkwell::{
         AddressSpace,
@@ -9,8 +12,8 @@ use {
         context::Context,
         module::{Linkage, Module},
         types::{
-            ArrayType, BasicMetadataTypeEnum, BasicTypeEnum, FloatType, FunctionType, IntType,
-            StructType,
+            AnyTypeEnum, ArrayType, BasicMetadataTypeEnum, BasicType, BasicTypeEnum, FloatType,
+            FunctionType, IntType, StructType,
         },
         values::{BasicValueEnum, FloatValue, GlobalValue, IntValue, PointerValue},
     },
@@ -97,30 +100,45 @@ pub fn build_const_integer<'ctx>(
 
 pub fn type_to_function_type<'ctx>(
     context: &'ctx Context,
+    compiler_objects: &CompilerObjects,
     kind: &Type,
-    params: &[Instruction],
+    parameters: &[Instruction],
     ignore_args: bool,
 ) -> FunctionType<'ctx> {
-    let mut param_types: Vec<BasicMetadataTypeEnum<'ctx>> = Vec::with_capacity(params.len());
+    let mut parameters_types: Vec<BasicMetadataTypeEnum> = Vec::with_capacity(parameters.len());
 
-    params.iter().for_each(|param| {
-        if let Instruction::FunctionParameter { kind, .. } = param {
-            param_types.push(type_to_basic_metadata_enum(context, kind));
+    for parameter in parameters.iter() {
+        if let Instruction::FunctionParameter {
+            kind, struct_type, ..
+        } = parameter
+        {
+            if kind.is_struct_type() {
+                let structure: &CompilerStructure = compiler_objects.get_struct(struct_type);
+                let fields: &CompilerStructureFields = &structure.1;
+
+                parameters_types.push(build_struct_type_from_fields(context, fields).into());
+
+                continue;
+            }
+
+            parameters_types.push(type_to_basic_metadata_enum(context, kind));
         }
-    });
+    }
 
     match kind {
-        Type::S8 | Type::U8 | Type::Char => context.i8_type().fn_type(&param_types, ignore_args),
-        Type::S16 | Type::U16 => context.i16_type().fn_type(&param_types, ignore_args),
-        Type::S32 | Type::U32 => context.i32_type().fn_type(&param_types, ignore_args),
-        Type::S64 | Type::U64 => context.i64_type().fn_type(&param_types, ignore_args),
+        Type::S8 | Type::U8 | Type::Char => {
+            context.i8_type().fn_type(&parameters_types, ignore_args)
+        }
+        Type::S16 | Type::U16 => context.i16_type().fn_type(&parameters_types, ignore_args),
+        Type::S32 | Type::U32 => context.i32_type().fn_type(&parameters_types, ignore_args),
+        Type::S64 | Type::U64 => context.i64_type().fn_type(&parameters_types, ignore_args),
         Type::Str | Type::Struct | Type::T => context
             .ptr_type(AddressSpace::default())
-            .fn_type(&param_types, ignore_args),
-        Type::Bool => context.bool_type().fn_type(&param_types, ignore_args),
-        Type::F32 => context.f32_type().fn_type(&param_types, ignore_args),
-        Type::F64 => context.f64_type().fn_type(&param_types, ignore_args),
-        Type::Void => context.void_type().fn_type(&param_types, ignore_args),
+            .fn_type(&parameters_types, ignore_args),
+        Type::Bool => context.bool_type().fn_type(&parameters_types, ignore_args),
+        Type::F32 => context.f32_type().fn_type(&parameters_types, ignore_args),
+        Type::F64 => context.f64_type().fn_type(&parameters_types, ignore_args),
+        Type::Void => context.void_type().fn_type(&parameters_types, ignore_args),
     }
 }
 
@@ -129,6 +147,7 @@ pub fn type_to_basic_metadata_enum<'ctx>(
     kind: &Type,
 ) -> BasicMetadataTypeEnum<'ctx> {
     match kind {
+        Type::Bool => context.bool_type().into(),
         Type::S8 | Type::U8 | Type::Char => context.i8_type().into(),
         Type::S16 | Type::U16 => context.i16_type().into(),
         Type::S32 | Type::U32 => context.i32_type().into(),
@@ -140,6 +159,21 @@ pub fn type_to_basic_metadata_enum<'ctx>(
         _ => unreachable!(),
     }
 }
+
+pub fn type_to_any_type_enum<'ctx>(context: &'ctx Context, kind: &Type) -> AnyTypeEnum<'ctx> {
+    match kind {
+        Type::Bool => context.bool_type().into(),
+        Type::S8 | Type::U8 | Type::Char => context.i8_type().into(),
+        Type::S16 | Type::U16 => context.i16_type().into(),
+        Type::S32 | Type::U32 => context.i32_type().into(),
+        Type::S64 | Type::U64 => context.i64_type().into(),
+        Type::F32 => context.f32_type().into(),
+        Type::F64 => context.f64_type().into(),
+        Type::Str | Type::Struct | Type::T => context.ptr_type(AddressSpace::default()).into(),
+        Type::Void => context.void_type().into(),
+    }
+}
+
 pub fn integer_autocast<'ctx>(
     target_type: &Type,
     from_type: &Type,
@@ -295,36 +329,42 @@ pub fn build_ptr<'ctx>(
 pub fn build_struct_ptr<'ctx>(
     context: &'ctx Context,
     builder: &Builder<'ctx>,
-    struct_instr: &Instruction<'ctx>,
-    _objects: &mut CompilerObjects<'ctx>,
+    instruction: &Instruction<'ctx>,
+    _objects: &CompilerObjects<'ctx>,
+    alloc_in_stack: bool,
 ) -> PointerValue<'ctx> {
-    let struct_type: StructType = struct_instr.build_struct_type(context, None, _objects);
+    let struct_type: StructType = instruction.build_struct_type(context, None, _objects);
+
+    if alloc_in_stack {
+        return builder.build_alloca(struct_type, "").unwrap();
+    }
+
     builder.build_malloc(struct_type, "").unwrap()
 }
 
 pub fn build_struct_type_from_fields<'ctx>(
     context: &'ctx Context,
-    struct_fields: &Struct,
+    fields: &CompilerStructureFields,
 ) -> StructType<'ctx> {
-    let mut compiled_field_types: Vec<BasicTypeEnum> = Vec::with_capacity(10);
+    let mut field_types: Vec<BasicTypeEnum> = Vec::with_capacity(10);
 
-    struct_fields.iter().for_each(|field| {
-        if field.1.is_integer_type() {
-            compiled_field_types.push(type_int_to_llvm_int_type(context, &field.1).into());
+    fields.iter().for_each(|field| {
+        if field.2.is_integer_type() {
+            field_types.push(type_int_to_llvm_int_type(context, &field.2).into());
         }
 
-        if field.1.is_float_type() {
-            compiled_field_types.push(type_float_to_llvm_float_type(context, &field.1).into());
+        if field.2.is_float_type() {
+            field_types.push(type_float_to_llvm_float_type(context, &field.2).into());
         }
 
-        if field.1.is_bool_type() {
-            compiled_field_types.push(context.bool_type().into());
+        if field.2.is_bool_type() {
+            field_types.push(context.bool_type().into());
         }
 
-        if field.1.is_ptr_type() {
-            compiled_field_types.push(context.ptr_type(AddressSpace::default()).into());
+        if field.2.is_ptr_type() {
+            field_types.push(context.ptr_type(AddressSpace::default()).into());
         }
     });
 
-    context.struct_type(&compiled_field_types, false)
+    context.struct_type(&field_types, false)
 }

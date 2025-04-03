@@ -4,6 +4,7 @@ use {
         Instruction, binaryop, call, generation,
         memory::{AllocatedObject, MemoryFlag},
         objects::CompilerObjects,
+        traits::MemoryFlagsBasics,
         types::Local,
         unaryop, utils,
     },
@@ -11,7 +12,6 @@ use {
         builder::Builder,
         context::Context,
         module::Module,
-        types::StructType,
         values::{BasicValueEnum, PointerValue},
     },
 };
@@ -26,27 +26,43 @@ pub fn build<'ctx>(
     let local_type: &Type = local.1;
 
     if local_type.is_raw_ptr() {
-        build_local_ptr(
-            module,
-            builder,
-            context,
-            (local.0, local_type, local.2),
-            compiler_objects,
-        );
-
+        build_local_ptr(module, builder, context, local, compiler_objects);
         return;
     }
 
     if local_type.is_str() {
         build_local_str(module, builder, context, local.0, local.2, compiler_objects);
+        return;
+    }
+
+    if local_type.is_struct_type() {
+        let allocated_pointer: PointerValue = utils::build_struct_ptr(
+            context,
+            builder,
+            local.2,
+            compiler_objects,
+            local.3.is_stack_allocated(),
+        );
+
+        let allocated_object: AllocatedObject = AllocatedObject::alloc(allocated_pointer, &local.3);
+
+        compiler_objects.alloc_local_object(local.0, allocated_object);
+
+        build_local_structure(
+            module,
+            builder,
+            context,
+            local,
+            compiler_objects,
+            allocated_object,
+        );
 
         return;
     }
 
     if local_type.is_integer_type() {
         let allocated_pointer: PointerValue = utils::build_ptr(context, builder, *local_type);
-        let allocated_object: AllocatedObject =
-            AllocatedObject::alloc(allocated_pointer, &[MemoryFlag::StackAllocated]);
+        let allocated_object: AllocatedObject = AllocatedObject::alloc(allocated_pointer, &local.3);
 
         compiler_objects.alloc_local_object(local.0, allocated_object);
 
@@ -54,7 +70,7 @@ pub fn build<'ctx>(
             module,
             builder,
             context,
-            (local.0, local_type, local.2),
+            local,
             allocated_object,
             compiler_objects,
         );
@@ -64,8 +80,7 @@ pub fn build<'ctx>(
 
     if local_type.is_float_type() {
         let allocated_pointer: PointerValue = utils::build_ptr(context, builder, *local_type);
-        let allocated_object: AllocatedObject =
-            AllocatedObject::alloc(allocated_pointer, &[MemoryFlag::StackAllocated]);
+        let allocated_object: AllocatedObject = AllocatedObject::alloc(allocated_pointer, &local.3);
 
         compiler_objects.alloc_local_object(local.0, allocated_object);
 
@@ -73,7 +88,7 @@ pub fn build<'ctx>(
             module,
             builder,
             context,
-            (local.0, local_type, local.2),
+            local,
             allocated_object,
             compiler_objects,
         );
@@ -83,8 +98,7 @@ pub fn build<'ctx>(
 
     if local_type.is_bool_type() {
         let allocated_pointer: PointerValue = utils::build_ptr(context, builder, *local_type);
-        let allocated_object: AllocatedObject =
-            AllocatedObject::alloc(allocated_pointer, &[MemoryFlag::StackAllocated]);
+        let allocated_object: AllocatedObject = AllocatedObject::alloc(allocated_pointer, &local.3);
 
         compiler_objects.alloc_local_object(local.0, allocated_object);
 
@@ -100,30 +114,10 @@ pub fn build<'ctx>(
         return;
     }
 
-    if local_type.is_struct_type() {
-        let allocated_pointer: PointerValue =
-            utils::build_struct_ptr(context, builder, local.2, compiler_objects);
-        let allocated_object: AllocatedObject =
-            AllocatedObject::alloc(allocated_pointer, &[MemoryFlag::HeapAllocated]);
-
-        compiler_objects.alloc_local_object(local.0, allocated_object);
-
-        build_local_structure(
-            module,
-            builder,
-            context,
-            (local.0, local_type, local.2),
-            compiler_objects,
-            allocated_object,
-        );
-
-        return;
-    }
-
     unreachable!()
 }
 
-pub fn build_local_mut<'ctx>(
+pub fn build_local_mutation<'ctx>(
     module: &Module<'ctx>,
     builder: &Builder<'ctx>,
     context: &'ctx Context,
@@ -313,7 +307,7 @@ fn build_local_structure<'ctx>(
         name: call_name,
         args: call_arguments,
         kind: call_type,
-        struct_type: struct_name,
+        ..
     } = local_value
     {
         let value: PointerValue = call::build_call(
@@ -327,29 +321,6 @@ fn build_local_structure<'ctx>(
         .into_pointer_value();
 
         object.build_store(builder, value);
-
-        let struct_type: StructType =
-            local_value.build_struct_type(context, None, compiler_objects);
-
-        if let Some(structure) = compiler_objects.get_struct(struct_name) {
-            structure
-                .iter()
-                .filter(|field| field.1.is_heaped_ptr())
-                .for_each(|field| {
-                    let field_in_struct: PointerValue<'ctx> = builder
-                        .build_struct_gep(struct_type, value, field.2, "")
-                        .unwrap();
-
-                    let loaded_field: PointerValue<'ctx> = builder
-                        .build_load(field_in_struct.get_type(), field_in_struct, "")
-                        .unwrap()
-                        .into_pointer_value();
-
-                    builder.build_free(loaded_field).unwrap();
-                });
-        };
-
-        builder.build_free(value).unwrap();
 
         return;
     }
@@ -556,7 +527,7 @@ fn build_local_integer<'ctx>(
             module,
             builder,
             context,
-            (local_name, local_type, instr),
+            (local_name, local_type, instr, local.3),
             object,
             compiler_objects,
         );
@@ -685,7 +656,7 @@ fn build_local_float<'ctx>(
             module,
             builder,
             context,
-            (local_name, local_type, instr),
+            (local_name, local_type, instr, local.3),
             object,
             compiler_objects,
         );
@@ -810,7 +781,7 @@ fn build_local_boolean<'ctx>(
             module,
             builder,
             context,
-            (local_name, local_type, instr),
+            (local_name, local_type, instr, local.3),
             object,
             compiler_objects,
         );

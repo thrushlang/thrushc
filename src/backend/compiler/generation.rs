@@ -1,7 +1,8 @@
 use {
     super::{
         super::super::frontend::lexer::Type, binaryop, call, instruction::Instruction,
-        memory::AllocatedObject, objects::CompilerObjects, unaryop, utils,
+        memory::AllocatedObject, memory::MemoryFlag, objects::CompilerObjects,
+        types::CompilerStructure, types::CompilerStructureFields, unaryop, utils,
     },
     inkwell::{
         AddressSpace,
@@ -126,14 +127,25 @@ pub fn build_expression<'ctx>(
         }
 
         if kind.is_struct_type() {
-            if let Some(struct_fields) = compiler_objects.get_struct(struct_type) {
-                let struct_type: StructType =
-                    utils::build_struct_type_from_fields(context, struct_fields);
+            let structure: &CompilerStructure = compiler_objects.get_struct(struct_type);
+            let fields: &CompilerStructureFields = &structure.1;
 
-                return object.load_from_memory(builder, struct_type);
+            let llvm_type: StructType = utils::build_struct_type_from_fields(context, fields);
+
+            if object.has_flag(MemoryFlag::HeapAllocated) {
+                return unsafe {
+                    builder.build_gep(
+                        llvm_type,
+                        object.ptr,
+                        &[context.i64_type().const_int(0, false)],
+                        "",
+                    )
+                }
+                .unwrap()
+                .into();
             }
 
-            unreachable!()
+            return object.load_from_memory(builder, llvm_type);
         }
 
         if kind.is_raw_ptr() {

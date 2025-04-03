@@ -18,7 +18,7 @@ pub mod utils;
 
 use {
     codegen::Codegen,
-    inkwell::{builder::Builder, context::Context, module::Module},
+    inkwell::{builder::Builder, context::Context, module::Module, targets::TargetData},
     instruction::Instruction,
 };
 
@@ -31,7 +31,8 @@ impl<'a, 'ctx> Compiler {
         builder: &'a Builder<'ctx>,
         context: &'ctx Context,
         instructions: &'ctx [Instruction<'ctx>],
+        target_data: TargetData,
     ) {
-        Codegen::generate(module, builder, context, instructions);
+        Codegen::generate(module, builder, context, instructions, target_data);
     }
 }

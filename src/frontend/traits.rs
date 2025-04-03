@@ -16,7 +16,7 @@ pub trait TokenLexemeBasics {
 
 pub trait StructureBasics {
     fn contains_field(&self, field_name: &str) -> bool;
-    fn get_field_type(&self, field_name: &str) -> Type;
+    fn get_field_type(&self, field_name: &str, default: Type) -> Type;
 }
 
 pub trait FoundObjectEither {

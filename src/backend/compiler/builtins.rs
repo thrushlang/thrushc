@@ -7,7 +7,7 @@ use {
         Instruction,
         memory::AllocatedObject,
         objects::CompilerObjects,
-        types::Call,
+        types::{Call, CompilerStructure, CompilerStructureFields},
         utils,
     },
     inkwell::{
@@ -52,16 +52,20 @@ pub fn build_sizeof<'ctx>(
 
     if let Instruction::LocalRef {
         name,
+        kind,
         struct_type,
         line,
         ..
     } = value
     {
-        if let Some(structure_fields) = compiler_objects.get_struct(struct_type) {
-            let structure_type: StructType =
+        if kind.is_ptr_type() {
+            let structure: &CompilerStructure = compiler_objects.get_struct(struct_type);
+            let structure_fields: &CompilerStructureFields = &structure.1;
+
+            let llvm_type: StructType =
                 utils::build_struct_type_from_fields(context, structure_fields);
 
-            let structure_size_of: IntValue = structure_type.size_of().unwrap_or_else(|| {
+            let structure_size: IntValue = llvm_type.size_of().unwrap_or_else(|| {
                 logging::log(
                     logging::LogType::Panic,
                     &format!(
@@ -73,7 +77,7 @@ pub fn build_sizeof<'ctx>(
                 unreachable!()
             });
 
-            return structure_size_of.into();
+            return structure_size.into();
         }
 
         let ptr: PointerValue = compiler_objects.get_allocated_object(name).ptr;

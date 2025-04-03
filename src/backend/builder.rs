@@ -100,11 +100,12 @@ impl<'a> Thrushc<'a> {
         let mut parser: Parser = Parser::new(&tokens, file);
         let instructions: &[Instruction] = parser.start();
 
-        if self.options.emit_asm {
+        if self.options.emit_ast {
             let _ = write(
                 format!("build/{}.ast", &file.name),
                 format!("{:#?}", instructions),
             );
+
             return;
         }
 
@@ -130,7 +131,13 @@ impl<'a> Thrushc<'a> {
 
         module.set_data_layout(&machine.get_target_data().get_data_layout());
 
-        Compiler::compile(&module, &builder, &context, instructions);
+        Compiler::compile(
+            &module,
+            &builder,
+            &context,
+            instructions,
+            machine.get_target_data(),
+        );
 
         self.thrushc_comptime += start_time.elapsed();
 

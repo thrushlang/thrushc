@@ -2,7 +2,7 @@ use {
     super::{
         super::super::logging,
         memory::AllocatedObject,
-        types::{CompilerFunction, Struct},
+        types::{CompilerFunction, CompilerStructure},
     },
     ahash::AHashMap as HashMap,
 };
@@ -14,7 +14,7 @@ const SCOPE_MINIMAL_CAPACITY: usize = 155;
 #[derive(Debug)]
 pub struct CompilerObjects<'ctx> {
     pub functions: HashMap<&'ctx str, CompilerFunction<'ctx>>,
-    pub structs: HashMap<&'ctx str, &'ctx Struct<'ctx>>,
+    pub structs: HashMap<&'ctx str, CompilerStructure<'ctx>>,
     pub blocks: Vec<HashMap<&'ctx str, AllocatedObject<'ctx>>>,
     pub scope_position: usize,
 }
@@ -53,13 +53,13 @@ impl<'ctx> CompilerObjects<'ctx> {
     }
 
     #[inline]
-    pub fn insert_struct(&mut self, name: &'ctx str, fields_types: &'ctx Struct) {
-        self.structs.insert(name, fields_types);
+    pub fn insert_structure(&mut self, name: &'ctx str, structure: CompilerStructure<'ctx>) {
+        self.structs.insert(name, structure);
     }
 
     #[inline]
-    pub fn get_struct(&self, name: &str) -> Option<&Struct> {
-        self.structs.get(name).map(|structure| &**structure)
+    pub fn get_struct(&self, name: &str) -> &CompilerStructure {
+        self.structs.get(name).unwrap()
     }
 
     #[inline]

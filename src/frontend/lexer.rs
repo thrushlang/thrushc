@@ -983,6 +983,11 @@ impl Type {
     }
 
     #[inline(always)]
+    pub const fn is_stack_allocated(&self) -> bool {
+        self.is_bool_type() || self.is_float_type() || self.is_integer_type()
+    }
+
+    #[inline(always)]
     pub const fn is_void_type(&self) -> bool {
         matches!(self, Type::Void)
     }

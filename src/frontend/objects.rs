@@ -1,19 +1,14 @@
 use {
-    super::{
-        super::{backend::compiler::instruction::Instruction, error::ThrushCompilerError},
-        lexer::Type,
-        traits::FoundObjectEither,
-    },
+    super::{super::error::ThrushCompilerError, lexer::Type, traits::FoundObjectEither},
     ahash::AHashMap as HashMap,
 };
 
 const MINIMAL_STRUCTURE_CAPACITY: usize = 1024;
 const MINIMAL_LOCAL_SCOPE_CAPACITY: usize = 255;
-const MINIMAL_DEALLOCATORS_CAPACITY: usize = 50;
 
 pub type Function<'instr> = (Type, Vec<Type>, Vec<(String, usize)>, String, bool);
 
-pub type Struct<'instr> = Vec<(&'instr str, Type, u32)>;
+pub type Struct<'instr> = Vec<(&'instr str, &'instr str, Type, u32)>;
 pub type Local = (Type, String, bool, bool);
 
 pub type Functions<'instr> = HashMap<&'instr str, Function<'instr>>;
@@ -94,20 +89,19 @@ impl<'instr> ParserObjects<'instr> {
         value: Local,
         line: usize,
         span: (usize, usize),
-        parser_errors: &mut Vec<ThrushCompilerError>,
-    ) {
+    ) -> Result<(), ThrushCompilerError> {
         if self.locals[scope_pos - 1].contains_key(name) {
-            parser_errors.push(ThrushCompilerError::Error(
+            return Err(ThrushCompilerError::Error(
                 String::from("Local variable already declared"),
                 format!("'{}' local variable already declared.", name),
                 line,
                 Some(span),
             ));
-
-            return;
         }
 
         self.locals[scope_pos - 1].insert(name, value);
+
+        Ok(())
     }
 
     #[inline(always)]
@@ -137,41 +131,6 @@ impl<'instr> ParserObjects<'instr> {
     #[inline(always)]
     pub fn end_local_scope(&mut self) {
         self.locals.pop();
-    }
-
-    pub fn modify_local_deallocation(
-        &mut self,
-        at_scope_pos: usize,
-        name: &'instr str,
-        mark_as_freeded: bool,
-    ) {
-        let scope: &mut HashMap<&str, Local> = self.locals.get_mut(at_scope_pos).unwrap();
-
-        if let Some(local) = scope.get(name) {
-            let mut local: (Type, String, bool, bool) = local.clone();
-
-            local.2 = mark_as_freeded;
-
-            scope.insert(name, local);
-        }
-    }
-
-    pub fn create_deallocators(&self, at_scope_pos: usize) -> Vec<Instruction<'instr>> {
-        let mut frees: Vec<Instruction> = Vec::with_capacity(MINIMAL_DEALLOCATORS_CAPACITY);
-
-        self.locals[at_scope_pos - 1].iter().for_each(|statement| {
-            if let (_, (Type::Struct, struct_type, false, false)) = statement {
-                let mut struct_type_cloned: String = String::with_capacity(struct_type.len());
-                struct_type_cloned.clone_from(struct_type);
-
-                frees.push(Instruction::Free {
-                    name: statement.0,
-                    struct_type: struct_type_cloned,
-                });
-            }
-        });
-
-        frees
     }
 }
 

@@ -1,26 +1,10 @@
 use super::{
+    super::super::frontend::types::StructFields,
+    memory::MemoryFlag,
     objects::CompilerObjects,
-    traits::{AttributesExtensions, StructureBasics},
-    types::{CompilerAttributes, Struct},
+    traits::{AttributesExtensions, CompilerStructureFieldsExtensions, MemoryFlagsBasics},
+    types::{CompilerAttributes, CompilerStructure, CompilerStructureFields, MemoryFlags},
 };
-
-impl StructureBasics for Struct<'_> {
-    fn contain_heaped_fields(&self, compiler_objects: &CompilerObjects) -> bool {
-        self.iter().any(|field| {
-            let is_structure: bool = field.1.is_struct_type() && !field.0.is_empty();
-
-            let contain_another_heaped_fields: bool =
-                if is_structure && compiler_objects.structs.contains_key(field.0) {
-                    let struct_type: &Struct = compiler_objects.get_struct(field.0).unwrap();
-                    struct_type.contain_heaped_fields(compiler_objects)
-                } else {
-                    false
-                };
-
-            is_structure && contain_another_heaped_fields
-        })
-    }
-}
 
 impl AttributesExtensions for CompilerAttributes<'_> {
     fn contain_ffi_attribute(&self) -> bool {
@@ -29,5 +13,39 @@ impl AttributesExtensions for CompilerAttributes<'_> {
 
     fn contain_ignore_attribute(&self) -> bool {
         self.iter().any(|attr| attr.is_ignore_attribute())
+    }
+}
+
+impl MemoryFlagsBasics for MemoryFlags {
+    fn is_stack_allocated(&self) -> bool {
+        self.iter().any(|flag| *flag == MemoryFlag::StackAllocated)
+    }
+}
+
+impl CompilerStructureFieldsExtensions for StructFields<'_> {
+    fn contain_recursive_structure_type(
+        &self,
+        compiler_objects: &CompilerObjects,
+        structure_name: &str,
+    ) -> bool {
+        let structure: &CompilerStructure = compiler_objects.get_struct(structure_name);
+
+        let fields: &CompilerStructureFields = &structure.1;
+
+        fields.iter().any(|field| field.1 == structure_name)
+    }
+}
+
+impl CompilerStructureFieldsExtensions for CompilerStructureFields<'_> {
+    fn contain_recursive_structure_type(
+        &self,
+        compiler_objects: &CompilerObjects,
+        structure_name: &str,
+    ) -> bool {
+        let structure: &CompilerStructure = compiler_objects.get_struct(structure_name);
+
+        let fields: &CompilerStructureFields = &structure.1;
+
+        fields.iter().any(|field| field.1 == structure_name)
     }
 }

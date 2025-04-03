@@ -1,8 +1,17 @@
+#![allow(clippy::enum_variant_names)]
+
 use inkwell::{
     builder::Builder,
     types::BasicType,
     values::{BasicValue, BasicValueEnum, InstructionValue, PointerValue},
 };
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum MemoryFlag {
+    StackAllocated,
+    HeapAllocated,
+    StaticAllocated,
+}
 
 #[derive(Debug, Clone, Copy)]
 pub struct AllocatedObject<'ctx> {
@@ -11,10 +20,10 @@ pub struct AllocatedObject<'ctx> {
 }
 
 impl<'ctx> AllocatedObject<'ctx> {
-    pub fn alloc(ptr: PointerValue<'ctx>, initial_flags: &[MemoryFlag]) -> Self {
+    pub fn alloc(ptr: PointerValue<'ctx>, flags: &[MemoryFlag]) -> Self {
         let mut memory_flags: u8 = 0;
 
-        initial_flags.iter().for_each(|flag| {
+        flags.iter().for_each(|flag| {
             memory_flags |= flag.to_bit();
         });
 
@@ -41,20 +50,12 @@ impl<'ctx> AllocatedObject<'ctx> {
 
     pub fn build_store<Value: BasicValue<'ctx>>(&self, builder: &Builder<'ctx>, value: Value) {
         let store: InstructionValue = builder.build_store(self.ptr, value).unwrap();
-
         let _ = store.set_alignment(8);
     }
 
-    fn has_flag(&self, flag: MemoryFlag) -> bool {
+    pub fn has_flag(&self, flag: MemoryFlag) -> bool {
         (self.memory_flags & flag.to_bit()) == flag.to_bit()
     }
-}
-
-#[derive(Debug)]
-pub enum MemoryFlag {
-    StackAllocated,
-    HeapAllocated,
-    StaticAllocated,
 }
 
 impl MemoryFlag {

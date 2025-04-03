@@ -421,7 +421,7 @@ impl<'instr> Parser<'instr> {
             String::from("Expected '{'."),
         )?;
 
-        let mut fields_types: Vec<(&str, Type, u32)> = Vec::with_capacity(10);
+        let mut fields_types: Vec<(&str, &str, Type, u32)> = Vec::with_capacity(10);
         let mut field_position: u32 = 0;
 
         while self.peek().kind != TokenKind::RBrace {
@@ -430,20 +430,21 @@ impl<'instr> Parser<'instr> {
             }
 
             if self.match_token(TokenKind::Identifier)? {
+                let field_name: &str = self.previous().lexeme.to_str();
                 let line: usize = self.previous().line;
                 let span: (usize, usize) = self.previous().span;
 
                 match &self.peek().kind {
-                    TokenKind::DataType(kind) => fields_types.push(("", *kind, field_position)),
+                    TokenKind::DataType(kind) => {
+                        fields_types.push((field_name, "", *kind, field_position))
+                    }
                     ident
                         if ident.is_identifier() && self.peak_structure_type()
                             || struct_name == self.peek().lexeme.to_str() =>
                     {
-                        fields_types.push((
-                            self.peek().lexeme.to_str(),
-                            Type::Struct,
-                            field_position,
-                        ))
+                        let type_name: &str = self.peek().lexeme.to_str();
+
+                        fields_types.push((field_name, type_name, Type::Struct, field_position))
                     }
                     what => {
                         return Err(ThrushCompilerError::Error(
@@ -552,25 +553,26 @@ impl<'instr> Parser<'instr> {
                     field_index = (structure_fields_amount - 1) as u32;
                 }
 
-                if !struct_found.contains_field(field_name) {
-                    self.push_error(
-                        String::from("Syntax error"),
-                        String::from("Expected existing field name."),
-                    );
-                }
-
                 let instruction: Instruction = self.expression()?;
 
                 self.throw_if_is_structure_initializer(&instruction);
 
                 let field_type: Type = *instruction.get_type();
-                let target_type: Type = struct_found.get_field_type(field_name);
+                let target_type: Type = struct_found.get_field_type(field_name, field_type);
 
                 self.check_type_mismatch(target_type, field_type, Some(&instruction));
 
                 fields.push((field_name, instruction, target_type, field_index));
 
                 field_index += 1;
+
+                if !struct_found.contains_field(field_name) {
+                    self.push_error(
+                        String::from("Syntax error"),
+                        String::from("Expected existing structure field name."),
+                    );
+                }
+
                 continue;
             }
 
@@ -660,9 +662,6 @@ impl<'instr> Parser<'instr> {
             String::from("Expected name."),
         )?;
 
-        let line: usize = name.line;
-        let span: (usize, usize) = name.span;
-
         self.consume(
             TokenKind::Colon,
             String::from("Syntax error"),
@@ -671,14 +670,14 @@ impl<'instr> Parser<'instr> {
 
         let kind: (Type, String) = match &self.peek().kind {
             TokenKind::DataType(kind) => (*kind, String::new()),
-            ident if ident.is_identifier() && self.peak_structure_type() => {
+            any if any.is_identifier() && self.peak_structure_type() => {
                 (Type::Struct, self.peek().lexeme.to_string())
             }
             _ => {
                 return Err(ThrushCompilerError::Error(
                     String::from("Undeterminated type"),
                     format!("Type '{}' not exist.", self.peek().lexeme.to_str()),
-                    line,
+                    self.peek().line,
                     Some(self.peek().span),
                 ));
             }
@@ -686,21 +685,20 @@ impl<'instr> Parser<'instr> {
 
         self.only_advance()?;
 
-        if self.match_token(TokenKind::SemiColon)? {
-            self.parser_objects.insert_new_local(
-                self.scope_position,
-                name.lexeme.to_str(),
-                (kind.0, kind.1, false, true),
-                line,
-                span,
-                &mut self.errors,
-            );
+        self.parser_objects.insert_new_local(
+            self.scope_position,
+            name.lexeme.to_str(),
+            (kind.0, kind.1.clone(), false, false),
+            name.line,
+            name.span,
+        )?;
 
+        if self.match_token(TokenKind::SemiColon)? {
             return Ok(Instruction::Local {
                 name: name.lexeme.to_str(),
                 kind: kind.0,
                 value: Box::new(Instruction::Null),
-                line,
+                line: name.line,
                 exist_only_comptime,
             });
         }
@@ -716,22 +714,13 @@ impl<'instr> Parser<'instr> {
         let value: Instruction = self.expression()?;
 
         self.check_type_mismatch(kind.0, *value.get_type(), Some(&value));
-        self.check_struct_type_mismatch(&kind.1, &value, line)?;
-
-        self.parser_objects.insert_new_local(
-            self.scope_position,
-            name.lexeme.to_str(),
-            (kind.0, kind.1, false, false),
-            line,
-            span,
-            &mut self.errors,
-        );
+        self.check_struct_type_mismatch(&kind.1, &value, name.line)?;
 
         let local_variable: Instruction = Instruction::Local {
             name: name.lexeme.to_str(),
             kind: kind.0,
             value: Box::new(value),
-            line,
+            line: name.line,
             exist_only_comptime,
         };
 
@@ -788,9 +777,8 @@ impl<'instr> Parser<'instr> {
         self.parser_objects.begin_local_scope();
 
         let mut stmts: Vec<Instruction> = Vec::with_capacity(MINIMAL_SCOPE_CAPACITY);
-        let mut was_emited_deallocators: bool = false;
 
-        with_instrs.iter_mut().for_each(|instruction| {
+        for instruction in with_instrs.iter_mut() {
             if let Instruction::FunctionParameter {
                 name,
                 kind,
@@ -806,35 +794,16 @@ impl<'instr> Parser<'instr> {
                     (*kind, struct_type.clone(), false, false),
                     *line,
                     *span,
-                    &mut self.errors,
-                );
+                )?;
             }
 
             stmts.push(mem::take(instruction));
-        });
+        }
 
         while !self.match_token(TokenKind::RBrace)? {
             let instr: Instruction = self.parse()?;
 
-            if instr.is_return() {
-                if let Some(name) = instr.return_with_heaped_ptr() {
-                    self.parser_objects
-                        .modify_local_deallocation(self.scope_position, name, true);
-                }
-
-                let deallocators: Vec<Instruction> =
-                    self.parser_objects.create_deallocators(self.scope_position);
-
-                stmts.extend(deallocators);
-
-                was_emited_deallocators = true;
-            }
-
             stmts.push(instr)
-        }
-
-        if !was_emited_deallocators {
-            stmts.extend(self.parser_objects.create_deallocators(self.scope_position));
         }
 
         self.parser_objects.end_local_scope();
@@ -1937,7 +1906,7 @@ impl<'instr> Parser<'instr> {
         ));
     }
 
-    fn optional_consume(&mut self, tokenkind: TokenKind) -> Result<(), ThrushCompilerError> {
+    fn optional_consume(&mut self, tokenkind: TokenKind) -> Result<bool, ThrushCompilerError> {
         if self.check_type(tokenkind) {
             self.consume(
                 tokenkind,
@@ -1945,10 +1914,10 @@ impl<'instr> Parser<'instr> {
                 format!("Expected '{}'.", tokenkind),
             )?;
 
-            return Ok(());
+            return Ok(true);
         }
 
-        Ok(())
+        Ok(false)
     }
 
     fn match_token(&mut self, kind: TokenKind) -> Result<bool, ThrushCompilerError> {

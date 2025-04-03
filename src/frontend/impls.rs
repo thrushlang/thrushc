@@ -9,11 +9,12 @@ impl StructureBasics for Struct<'_> {
         self.iter().any(|field| field.0 == field_name)
     }
 
-    fn get_field_type(&self, field_name: &str) -> Type {
-        self.iter()
-            .find(|field| field.0 == field_name)
-            .map(|field| field.1)
-            .unwrap()
+    fn get_field_type(&self, field_name: &str, default: Type) -> Type {
+        if let Some(found_field) = self.iter().find(|field| field.0 == field_name) {
+            return found_field.2;
+        }
+
+        default
     }
 }
 

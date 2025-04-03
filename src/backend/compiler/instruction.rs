@@ -10,7 +10,10 @@ use {
             },
         },
         objects::CompilerObjects,
-        types::{BinaryOp, CompilerAttributes, Function, Struct, UnaryOp},
+        types::{
+            BinaryOp, CompilerAttributes, CompilerStructure, CompilerStructureFields, Function,
+            UnaryOp,
+        },
         utils,
     },
     inkwell::{context::Context, types::StructType, values::BasicValueEnum},
@@ -26,7 +29,7 @@ pub enum Instruction<'ctx> {
     Float(Type, f64, bool),
     Struct {
         name: &'ctx str,
-        fields_types: Struct<'ctx>,
+        fields_types: CompilerStructureFields<'ctx>,
     },
     NullT,
 
@@ -153,12 +156,6 @@ pub enum Instruction<'ctx> {
         kind: Type,
     },
 
-    // Heap deallocator
-    Free {
-        name: &'ctx str,
-        struct_type: String,
-    },
-
     #[default]
     Null,
 }
@@ -178,7 +175,7 @@ impl<'ctx> Instruction<'ctx> {
     pub fn build_struct_type(
         &self,
         context: &'ctx Context,
-        struct_fields: Option<&Struct>,
+        struct_fields: Option<&CompilerStructureFields>,
         compiler_objects: &CompilerObjects,
     ) -> StructType<'ctx> {
         if let Some(from_fields) = struct_fields {
@@ -186,22 +183,27 @@ impl<'ctx> Instruction<'ctx> {
         }
 
         if let Instruction::InitStruct { fields, .. } = self {
-            let mut new_fields: Vec<(&'ctx str, Type, u32)> = Vec::with_capacity(fields.len());
+            let mut new_fields: Vec<(&'ctx str, &'ctx str, Type, u32)> =
+                Vec::with_capacity(fields.len());
 
             fields.iter().for_each(|field| {
-                new_fields.push((field.0, field.2, field.3));
+                new_fields.push((field.0, "", field.2, field.3));
             });
 
             return utils::build_struct_type_from_fields(context, &new_fields);
         }
 
         if let Instruction::LocalRef { struct_type, .. } = self {
-            let fields: &Struct = compiler_objects.get_struct(struct_type).unwrap();
+            let structure: &CompilerStructure = compiler_objects.get_struct(struct_type);
+            let fields: &CompilerStructureFields = &structure.1;
+
             return utils::build_struct_type_from_fields(context, fields);
         }
 
         if let Instruction::Call { struct_type, .. } = self {
-            let fields: &Struct = compiler_objects.get_struct(struct_type).unwrap();
+            let structure: &CompilerStructure = compiler_objects.get_struct(struct_type);
+            let fields: &CompilerStructureFields = &structure.1;
+
             return utils::build_struct_type_from_fields(context, fields);
         }
 
@@ -253,19 +255,6 @@ impl<'ctx> Instruction<'ctx> {
             location.0,
             Some(location.1),
         ))
-    }
-
-    #[inline]
-    pub fn return_with_heaped_ptr(&self) -> Option<&'ctx str> {
-        if let Instruction::Return(instr, _) = self {
-            if let Instruction::LocalRef { name, kind, .. } = instr.as_ref() {
-                if kind.is_heaped_ptr() {
-                    return Some(name);
-                }
-            }
-        }
-
-        None
     }
 
     #[inline(always)]
@@ -341,6 +330,7 @@ impl<'ctx> Instruction<'ctx> {
             Instruction::NullT => &Type::T,
             Instruction::GEP { .. } => &Type::T,
             Instruction::InitStruct { kind: datatype, .. } => datatype,
+            Instruction::Struct { .. } => &Type::Struct,
 
             Instruction::UnaryOp { kind: datatype, .. } => datatype,
 
