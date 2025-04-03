@@ -29,10 +29,11 @@ impl CompilerStructureFieldsExtensions for StructFields<'_> {
         structure_name: &str,
     ) -> bool {
         let structure: &CompilerStructure = compiler_objects.get_struct(structure_name);
+        let structure_fields: &CompilerStructureFields = &structure.1;
 
-        let fields: &CompilerStructureFields = &structure.1;
-
-        fields.iter().any(|field| field.1 == structure_name)
+        structure_fields
+            .iter()
+            .any(|field| field.1 == structure_name)
     }
 }
 
@@ -43,9 +44,10 @@ impl CompilerStructureFieldsExtensions for CompilerStructureFields<'_> {
         structure_name: &str,
     ) -> bool {
         let structure: &CompilerStructure = compiler_objects.get_struct(structure_name);
+        let structure_fields: &CompilerStructureFields = &structure.1;
 
-        let fields: &CompilerStructureFields = &structure.1;
-
-        fields.iter().any(|field| field.1 == structure_name)
+        structure_fields
+            .iter()
+            .any(|field| field.1 == structure_name)
     }
 }

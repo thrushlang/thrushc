@@ -541,7 +541,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
             )),
 
             Instruction::EntryPoint { body } => {
-                self.function = Some(self.build_main());
+                self.function = Some(self.build_entrypoint());
 
                 self.codegen(body);
 
@@ -604,7 +604,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
         }
     }
 
-    fn build_main(&mut self) -> FunctionValue<'ctx> {
+    fn build_entrypoint(&mut self) -> FunctionValue<'ctx> {
         let main_type: FunctionType = self.context.i32_type().fn_type(&[], false);
         let main: FunctionValue = self.module.add_function("main", main_type, None);
 
@@ -767,6 +767,8 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
     }
 
     fn generate_memory_flags(&self, instruction: &'ctx Instruction) -> Vec<MemoryFlag> {
+        const MAX_STACK_SIZE_OF_STRUCTURE: u64 = 128;
+
         let mut memory_flags: Vec<MemoryFlag> = Vec::with_capacity(5);
 
         if instruction.get_type().is_stack_allocated() {
@@ -782,7 +784,9 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                     .get_abi_size(&utils::type_to_any_type_enum(self.context, &field.2));
             });
 
-            if fields.contain_recursive_structure_type(&self.compiler_objects, name) {
+            if fields.contain_recursive_structure_type(&self.compiler_objects, name)
+                || structure_memory_size >= MAX_STACK_SIZE_OF_STRUCTURE
+            {
                 memory_flags.push(MemoryFlag::HeapAllocated);
             } else {
                 memory_flags.push(MemoryFlag::StackAllocated);

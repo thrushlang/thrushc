@@ -5,8 +5,9 @@ use {
             frontend::lexer::{TokenKind, Type},
         },
         Instruction,
-        memory::MemoryFlag,
+        memory::{AllocatedObject, MemoryFlag},
     },
+    ahash::AHashMap as HashMap,
     inkwell::values::FunctionValue,
 };
 
@@ -37,5 +38,7 @@ pub type CompilerStructure<'ctx> = (&'ctx str, Vec<(&'ctx str, &'ctx str, Type, 
 pub type CompilerStructureFields<'ctx> = Vec<(&'ctx str, &'ctx str, Type, u32)>;
 
 pub type CompilerAttributes<'ctx> = Vec<CompilerAttribute<'ctx>>;
+
+pub type AllocatedObjects<'ctx> = &'ctx HashMap<&'ctx str, AllocatedObject<'ctx>>;
 
 pub type MemoryFlags = Vec<MemoryFlag>;

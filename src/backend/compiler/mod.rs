@@ -4,6 +4,7 @@ pub mod builtins;
 pub mod call;
 pub mod codegen;
 pub mod conventions;
+pub mod dealloc;
 pub mod generation;
 pub mod impls;
 pub mod instruction;
