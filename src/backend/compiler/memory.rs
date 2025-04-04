@@ -3,7 +3,7 @@
 use {
     super::{
         objects::CompilerObjects,
-        types::{CompilerStructure, MappedHeapedPointer, MappedHeapedPointers},
+        types::{CompilerStructure, MappedHeapPointer, MappedHeapPointers},
     },
     ahash::{HashSet, HashSetExt},
     inkwell::{
@@ -24,7 +24,7 @@ pub enum MemoryFlag {
 pub struct AllocatedObject<'ctx> {
     pub ptr: PointerValue<'ctx>,
     pub memory_flags: u8,
-    pub structure: &'ctx str,
+    pub structure_type: &'ctx str,
 }
 
 impl<'ctx> AllocatedObject<'ctx> {
@@ -37,8 +37,8 @@ impl<'ctx> AllocatedObject<'ctx> {
 
         Self {
             ptr,
-            structure: "",
             memory_flags,
+            structure_type: "",
         }
     }
 
@@ -65,21 +65,16 @@ impl<'ctx> AllocatedObject<'ctx> {
             let _ = builder.build_free(self.ptr);
         }
     }
-
-    pub fn set_structure(&mut self, structure_name: &'ctx str) {
-        self.structure = structure_name;
-    }
-
     pub fn generate_mapped_heaped_pointers(
         &self,
         compiler_objects: &'ctx CompilerObjects,
-    ) -> MappedHeapedPointers {
-        if self.structure.is_empty() {
+    ) -> MappedHeapPointers {
+        if self.structure_type.is_empty() {
             return HashSet::new();
         }
 
-        let structure: &CompilerStructure = compiler_objects.get_struct(self.structure);
-        let mut mapped_pointers: HashSet<MappedHeapedPointer> = HashSet::with_capacity(10);
+        let structure: &CompilerStructure = compiler_objects.get_struct(self.structure_type);
+        let mut mapped_pointers: HashSet<MappedHeapPointer> = HashSet::with_capacity(10);
 
         structure
             .1
@@ -107,6 +102,10 @@ impl<'ctx> AllocatedObject<'ctx> {
 
     pub fn has_flag(&self, flag: MemoryFlag) -> bool {
         (self.memory_flags & flag.to_bit()) == flag.to_bit()
+    }
+
+    pub fn set_structure_type(&mut self, structure_type: &'ctx str) {
+        self.structure_type = structure_type;
     }
 }
 

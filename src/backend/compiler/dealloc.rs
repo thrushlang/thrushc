@@ -4,7 +4,7 @@ use {
         memory::{AllocatedObject, MemoryFlag},
         objects::CompilerObjects,
         traits::MappedHeapedPointersExtension,
-        types::{AllocatedObjects, MappedHeapedPointers},
+        types::{AllocatedObjects, MappedHeapPointers},
     },
     inkwell::{builder::Builder, context::Context},
 };
@@ -35,7 +35,7 @@ impl<'ctx> Deallocator<'ctx> {
         heaped_objects.iter().for_each(|heap_object| {
             let allocated_object: &AllocatedObject = heap_object.1;
 
-            let mapped_heaped_pointers: MappedHeapedPointers =
+            let mapped_heaped_pointers: MappedHeapPointers =
                 allocated_object.generate_mapped_heaped_pointers(compiler_objects);
 
             mapped_heaped_pointers.dealloc(
@@ -55,7 +55,7 @@ impl<'ctx> Deallocator<'ctx> {
             heaped_objects.iter().for_each(|heap_object| {
                 let allocated_object: &AllocatedObject = heap_object.1;
 
-                let mapped_heaped_pointers: MappedHeapedPointers =
+                let mapped_heaped_pointers: MappedHeapPointers =
                     allocated_object.generate_mapped_heaped_pointers(compiler_objects);
 
                 mapped_heaped_pointers.dealloc(

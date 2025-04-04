@@ -8,7 +8,7 @@ use {
             MemoryFlagsBasics,
         },
         types::{
-            CompilerAttributes, CompilerStructure, CompilerStructureFields, MappedHeapedPointers,
+            CompilerAttributes, CompilerStructure, CompilerStructureFields, MappedHeapPointers,
             MemoryFlags,
         },
         utils,
@@ -62,7 +62,7 @@ impl CompilerStructureFieldsExtensions for CompilerStructureFields<'_> {
     }
 }
 
-impl MappedHeapedPointersExtension<'_> for MappedHeapedPointers<'_> {
+impl MappedHeapedPointersExtension<'_> for MappedHeapPointers<'_> {
     fn dealloc(
         &self,
         builder: &Builder,
@@ -74,7 +74,7 @@ impl MappedHeapedPointersExtension<'_> for MappedHeapedPointers<'_> {
             .filter(|mapped_pointer| !mapped_pointer.2)
             .for_each(|mapped_pointer| {
                 let mapped_pointer_structure_name: &str = mapped_pointer.0;
-                let mapped_pointer_index: u64 = mapped_pointer.1 as u64;
+                let mapped_pointer_index: u32 = mapped_pointer.1;
 
                 let structure: &CompilerStructure =
                     compiler_objects.get_struct(mapped_pointer_structure_name);
@@ -83,16 +83,9 @@ impl MappedHeapedPointersExtension<'_> for MappedHeapedPointers<'_> {
                 let pointer_type: StructType =
                     utils::build_struct_type_from_fields(context, structure_fields);
 
-                let target_pointer: PointerValue = unsafe {
-                    builder
-                        .build_in_bounds_gep(
-                            pointer_type,
-                            pointer,
-                            &[context.i64_type().const_int(mapped_pointer_index, false)],
-                            "",
-                        )
-                        .unwrap()
-                };
+                let target_pointer: PointerValue = builder
+                    .build_struct_gep(pointer_type, pointer, mapped_pointer_index, "")
+                    .unwrap();
 
                 let loaded_target_pointer: PointerValue = builder
                     .build_load(target_pointer.get_type(), target_pointer, "")

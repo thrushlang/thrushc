@@ -47,8 +47,6 @@ pub fn build<'ctx>(
         let mut allocated_object: AllocatedObject =
             AllocatedObject::alloc(allocated_pointer, &local.3);
 
-        compiler_objects.alloc_local_object(local.0, allocated_object);
-
         build_local_structure(
             module,
             builder,
@@ -264,7 +262,7 @@ fn build_local_structure<'ctx>(
     context: &'ctx Context,
     local: Local<'ctx>,
     compiler_objects: &mut CompilerObjects<'ctx>,
-    object: &mut AllocatedObject<'ctx>,
+    allocated_object: &mut AllocatedObject<'ctx>,
 ) {
     let local_value: &Instruction = local.2;
 
@@ -282,7 +280,7 @@ fn build_local_structure<'ctx>(
             let field_in_struct: PointerValue = builder
                 .build_struct_gep(
                     local_value.build_struct_type(context, None, compiler_objects),
-                    object.ptr,
+                    allocated_object.ptr,
                     field.3,
                     "",
                 )
@@ -293,7 +291,8 @@ fn build_local_structure<'ctx>(
                 .unwrap();
         });
 
-        object.set_structure(name);
+        allocated_object.set_structure_type(name);
+        compiler_objects.alloc_local_object(local.0, *allocated_object);
 
         return;
     }
@@ -304,8 +303,10 @@ fn build_local_structure<'ctx>(
     {
         let localref_object: AllocatedObject = compiler_objects.get_allocated_object(name);
 
-        object.build_store(builder, localref_object.ptr);
-        object.set_structure(struct_type);
+        allocated_object.build_store(builder, localref_object.ptr);
+
+        allocated_object.set_structure_type(struct_type);
+        compiler_objects.alloc_local_object(local.0, *allocated_object);
 
         return;
     }
@@ -328,8 +329,10 @@ fn build_local_structure<'ctx>(
         .unwrap()
         .into_pointer_value();
 
-        object.build_store(builder, value);
-        object.set_structure(struct_type);
+        allocated_object.build_store(builder, value);
+
+        allocated_object.set_structure_type(struct_type);
+        compiler_objects.alloc_local_object(local.0, *allocated_object);
 
         return;
     }

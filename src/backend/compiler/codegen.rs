@@ -421,9 +421,16 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                 struct_type,
                 ..
             } => {
-                let memory_flags: MemoryFlags = self.generate_memory_flags(instruction);
+                let site_allocation_flag: MemoryFlag =
+                    self.generate_site_allocation_flag(instruction);
 
-                self.build_function_parameter((name, struct_type, kind, *position, memory_flags));
+                self.build_function_parameter((
+                    name,
+                    struct_type,
+                    kind,
+                    *position,
+                    [site_allocation_flag],
+                ));
 
                 Instruction::Null
             }
@@ -486,13 +493,13 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                     return Instruction::Null;
                 }
 
-                let memory_flags: MemoryFlags = self.generate_memory_flags(value);
+                let site_allocation_flag: MemoryFlag = self.generate_site_allocation_flag(value);
 
                 local::build(
                     self.module,
                     self.builder,
                     self.context,
-                    (name, kind, value, memory_flags),
+                    (name, kind, value, [site_allocation_flag]),
                     &mut self.compiler_objects,
                 );
 
@@ -500,14 +507,14 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
             }
 
             Instruction::LocalMut { name, kind, value } => {
-                let memory_flags: Vec<MemoryFlag> = self.generate_memory_flags(value);
+                let site_allocation_flag: MemoryFlag = self.generate_site_allocation_flag(value);
 
                 local::build_local_mutation(
                     self.module,
                     self.builder,
                     self.context,
                     &mut self.compiler_objects,
-                    (name, kind, value, memory_flags),
+                    (name, kind, value, [site_allocation_flag]),
                 );
 
                 Instruction::Null
@@ -791,13 +798,13 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
         }
     }
 
-    fn generate_memory_flags(&self, instruction: &'ctx Instruction) -> Vec<MemoryFlag> {
+    fn generate_site_allocation_flag(&self, instruction: &'ctx Instruction) -> MemoryFlag {
         const MAX_STACK_SIZE_OF_STRUCTURE: u64 = 128;
 
-        let mut memory_flags: Vec<MemoryFlag> = Vec::with_capacity(5);
+        let mut alloc_site_memory_flag: MemoryFlag = MemoryFlag::HeapAllocated;
 
         if instruction.get_type().is_stack_allocated() {
-            memory_flags.push(MemoryFlag::StackAllocated);
+            alloc_site_memory_flag = MemoryFlag::StackAllocated;
         }
 
         if let Instruction::InitStruct { name, fields, .. } = instruction {
@@ -812,9 +819,9 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
             if fields.contain_recursive_structure_type(&self.compiler_objects, name)
                 || structure_memory_size >= MAX_STACK_SIZE_OF_STRUCTURE
             {
-                memory_flags.push(MemoryFlag::HeapAllocated);
+                alloc_site_memory_flag = MemoryFlag::HeapAllocated;
             } else {
-                memory_flags.push(MemoryFlag::StackAllocated);
+                alloc_site_memory_flag = MemoryFlag::StackAllocated;
             }
         }
 
@@ -835,14 +842,14 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                     .contain_recursive_structure_type(&self.compiler_objects, struct_type)
                     || structure_memory_size >= MAX_STACK_SIZE_OF_STRUCTURE
                 {
-                    memory_flags.push(MemoryFlag::HeapAllocated);
+                    alloc_site_memory_flag = MemoryFlag::HeapAllocated;
                 } else {
-                    memory_flags.push(MemoryFlag::StackAllocated);
+                    alloc_site_memory_flag = MemoryFlag::StackAllocated;
                 }
             }
         }
 
-        memory_flags
+        alloc_site_memory_flag
     }
 
     /* fn build_struct_dealloc(
