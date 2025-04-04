@@ -1,9 +1,19 @@
-use super::{
-    super::super::frontend::types::StructFields,
-    memory::MemoryFlag,
-    objects::CompilerObjects,
-    traits::{AttributesExtensions, CompilerStructureFieldsExtensions, MemoryFlagsBasics},
-    types::{CompilerAttributes, CompilerStructure, CompilerStructureFields, MemoryFlags},
+use {
+    super::{
+        super::super::frontend::types::StructFields,
+        memory::MemoryFlag,
+        objects::CompilerObjects,
+        traits::{
+            AttributesExtensions, CompilerStructureFieldsExtensions, MappedHeapedPointersExtension,
+            MemoryFlagsBasics,
+        },
+        types::{
+            CompilerAttributes, CompilerStructure, CompilerStructureFields, MappedHeapedPointers,
+            MemoryFlags,
+        },
+        utils,
+    },
+    inkwell::{builder::Builder, context::Context, types::StructType, values::PointerValue},
 };
 
 impl AttributesExtensions for CompilerAttributes<'_> {
@@ -49,5 +59,47 @@ impl CompilerStructureFieldsExtensions for CompilerStructureFields<'_> {
         structure_fields
             .iter()
             .any(|field| field.1 == structure_name)
+    }
+}
+
+impl MappedHeapedPointersExtension<'_> for MappedHeapedPointers<'_> {
+    fn dealloc(
+        &self,
+        builder: &Builder,
+        context: &Context,
+        pointer: PointerValue,
+        compiler_objects: &CompilerObjects,
+    ) {
+        self.iter()
+            .filter(|mapped_pointer| !mapped_pointer.2)
+            .for_each(|mapped_pointer| {
+                let mapped_pointer_structure_name: &str = mapped_pointer.0;
+                let mapped_pointer_index: u64 = mapped_pointer.1 as u64;
+
+                let structure: &CompilerStructure =
+                    compiler_objects.get_struct(mapped_pointer_structure_name);
+                let structure_fields: &CompilerStructureFields = &structure.1;
+
+                let pointer_type: StructType =
+                    utils::build_struct_type_from_fields(context, structure_fields);
+
+                let target_pointer: PointerValue = unsafe {
+                    builder
+                        .build_in_bounds_gep(
+                            pointer_type,
+                            pointer,
+                            &[context.i64_type().const_int(mapped_pointer_index, false)],
+                            "",
+                        )
+                        .unwrap()
+                };
+
+                let loaded_target_pointer: PointerValue = builder
+                    .build_load(target_pointer.get_type(), target_pointer, "")
+                    .unwrap()
+                    .into_pointer_value();
+
+                let _ = builder.build_free(loaded_target_pointer);
+            });
     }
 }

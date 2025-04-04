@@ -1,7 +1,16 @@
-use super::objects::CompilerObjects;
+use {
+    super::objects::CompilerObjects,
+    inkwell::{builder::Builder, context::Context, values::PointerValue},
+};
 
-pub trait StructureBasics {
-    fn contain_heaped_fields(&self, compile_objects: &CompilerObjects) -> bool;
+pub trait MappedHeapedPointersExtension<'ctx> {
+    fn dealloc(
+        &self,
+        builder: &'ctx Builder<'ctx>,
+        context: &'ctx Context,
+        pointer: PointerValue<'ctx>,
+        compiler_objects: &CompilerObjects,
+    );
 }
 
 pub trait CompilerStructureFieldsExtensions {

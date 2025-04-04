@@ -3,8 +3,8 @@ use {
         super::super::frontend::lexer::Type,
         instruction::Instruction,
         objects::CompilerObjects,
-        traits::MemoryFlagsBasics,
-        types::{CompilerStructure, CompilerStructureFields, MemoryFlags},
+        traits::CompilerStructureFieldsExtensions,
+        types::{CompilerStructure, CompilerStructureFields},
     },
     inkwell::{
         AddressSpace,
@@ -12,8 +12,8 @@ use {
         context::Context,
         module::{Linkage, Module},
         types::{
-            AnyTypeEnum, ArrayType, BasicMetadataTypeEnum, BasicType, BasicTypeEnum, FloatType,
-            FunctionType, IntType, StructType,
+            AnyTypeEnum, ArrayType, BasicMetadataTypeEnum, BasicTypeEnum, FloatType, FunctionType,
+            IntType, StructType,
         },
         values::{BasicValueEnum, FloatValue, GlobalValue, IntValue, PointerValue},
     },
@@ -116,7 +116,15 @@ pub fn type_to_function_type<'ctx>(
                 let structure: &CompilerStructure = compiler_objects.get_struct(struct_type);
                 let fields: &CompilerStructureFields = &structure.1;
 
-                parameters_types.push(build_struct_type_from_fields(context, fields).into());
+                parameters_types.push(
+                    build_get_struct_type_from_compiler_objects(
+                        context,
+                        compiler_objects,
+                        struct_type,
+                        fields,
+                    )
+                    .into(),
+                );
 
                 continue;
             }
@@ -348,23 +356,38 @@ pub fn build_struct_type_from_fields<'ctx>(
 ) -> StructType<'ctx> {
     let mut field_types: Vec<BasicTypeEnum> = Vec::with_capacity(10);
 
-    fields.iter().for_each(|field| {
-        if field.2.is_integer_type() {
+    fields.iter().for_each(|field| match field.2 {
+        kind if kind.is_integer_type() || field.2.is_bool_type() => {
             field_types.push(type_int_to_llvm_int_type(context, &field.2).into());
         }
 
-        if field.2.is_float_type() {
+        kind if kind.is_float_type() => {
             field_types.push(type_float_to_llvm_float_type(context, &field.2).into());
         }
 
-        if field.2.is_bool_type() {
-            field_types.push(context.bool_type().into());
-        }
-
-        if field.2.is_ptr_type() {
+        kind if kind.is_ptr_type() => {
             field_types.push(context.ptr_type(AddressSpace::default()).into());
         }
+
+        _ => (),
     });
 
     context.struct_type(&field_types, false)
+}
+
+pub fn build_get_struct_type_from_compiler_objects<'ctx>(
+    context: &'ctx Context,
+    compiler_objects: &CompilerObjects,
+    structure_name: &str,
+    compiler_structure_fields: &CompilerStructureFields,
+) -> BasicTypeEnum<'ctx> {
+    if !compiler_structure_fields.contain_recursive_structure_type(compiler_objects, structure_name)
+    {
+        let structure_type: StructType =
+            build_struct_type_from_fields(context, compiler_structure_fields);
+
+        return structure_type.into();
+    }
+
+    context.ptr_type(AddressSpace::default()).into()
 }

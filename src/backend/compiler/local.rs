@@ -44,7 +44,8 @@ pub fn build<'ctx>(
             local.3.is_stack_allocated(),
         );
 
-        let allocated_object: AllocatedObject = AllocatedObject::alloc(allocated_pointer, &local.3);
+        let mut allocated_object: AllocatedObject =
+            AllocatedObject::alloc(allocated_pointer, &local.3);
 
         compiler_objects.alloc_local_object(local.0, allocated_object);
 
@@ -54,7 +55,7 @@ pub fn build<'ctx>(
             context,
             local,
             compiler_objects,
-            allocated_object,
+            &mut allocated_object,
         );
 
         return;
@@ -263,11 +264,11 @@ fn build_local_structure<'ctx>(
     context: &'ctx Context,
     local: Local<'ctx>,
     compiler_objects: &mut CompilerObjects<'ctx>,
-    object: AllocatedObject<'ctx>,
+    object: &mut AllocatedObject<'ctx>,
 ) {
     let local_value: &Instruction = local.2;
 
-    if let Instruction::InitStruct { fields, .. } = local_value {
+    if let Instruction::InitStruct { name, fields, .. } = local_value {
         fields.iter().for_each(|field| {
             let compiled_field: BasicValueEnum = generation::build_expression(
                 module,
@@ -292,13 +293,19 @@ fn build_local_structure<'ctx>(
                 .unwrap();
         });
 
+        object.set_structure(name);
+
         return;
     }
 
-    if let Instruction::LocalRef { name, .. } = local_value {
+    if let Instruction::LocalRef {
+        name, struct_type, ..
+    } = local_value
+    {
         let localref_object: AllocatedObject = compiler_objects.get_allocated_object(name);
 
         object.build_store(builder, localref_object.ptr);
+        object.set_structure(struct_type);
 
         return;
     }
@@ -307,6 +314,7 @@ fn build_local_structure<'ctx>(
         name: call_name,
         args: call_arguments,
         kind: call_type,
+        struct_type,
         ..
     } = local_value
     {
@@ -321,6 +329,7 @@ fn build_local_structure<'ctx>(
         .into_pointer_value();
 
         object.build_store(builder, value);
+        object.set_structure(struct_type);
 
         return;
     }

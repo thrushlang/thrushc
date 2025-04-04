@@ -1,9 +1,16 @@
 #![allow(clippy::enum_variant_names)]
 
-use inkwell::{
-    builder::Builder,
-    types::BasicType,
-    values::{BasicValue, BasicValueEnum, InstructionValue, PointerValue},
+use {
+    super::{
+        objects::CompilerObjects,
+        types::{CompilerStructure, MappedHeapedPointer, MappedHeapedPointers},
+    },
+    ahash::{HashSet, HashSetExt},
+    inkwell::{
+        builder::Builder,
+        types::BasicType,
+        values::{BasicValue, BasicValueEnum, InstructionValue, PointerValue},
+    },
 };
 
 #[derive(Debug, Clone, PartialEq)]
@@ -17,6 +24,7 @@ pub enum MemoryFlag {
 pub struct AllocatedObject<'ctx> {
     pub ptr: PointerValue<'ctx>,
     pub memory_flags: u8,
+    pub structure: &'ctx str,
 }
 
 impl<'ctx> AllocatedObject<'ctx> {
@@ -27,7 +35,11 @@ impl<'ctx> AllocatedObject<'ctx> {
             memory_flags |= flag.to_bit();
         });
 
-        Self { ptr, memory_flags }
+        Self {
+            ptr,
+            structure: "",
+            memory_flags,
+        }
     }
 
     pub fn load_from_memory<Type: BasicType<'ctx>>(
@@ -46,6 +58,46 @@ impl<'ctx> AllocatedObject<'ctx> {
         }
 
         self.ptr.into()
+    }
+
+    pub fn dealloc(&self, builder: &Builder<'ctx>) {
+        if self.has_flag(MemoryFlag::HeapAllocated) {
+            let _ = builder.build_free(self.ptr);
+        }
+    }
+
+    pub fn set_structure(&mut self, structure_name: &'ctx str) {
+        self.structure = structure_name;
+    }
+
+    pub fn generate_mapped_heaped_pointers(
+        &self,
+        compiler_objects: &'ctx CompilerObjects,
+    ) -> MappedHeapedPointers {
+        if self.structure.is_empty() {
+            return HashSet::new();
+        }
+
+        let structure: &CompilerStructure = compiler_objects.get_struct(self.structure);
+        let mut mapped_pointers: HashSet<MappedHeapedPointer> = HashSet::with_capacity(10);
+
+        structure
+            .1
+            .iter()
+            .filter(|field| field.2.is_ptr_type())
+            .for_each(|field| {
+                let structure: &CompilerStructure = compiler_objects.get_struct(field.1);
+
+                let is_recursive: bool = structure
+                    .1
+                    .iter()
+                    .filter(|field| field.2.is_struct_type())
+                    .any(|field_recursive| field_recursive.1 == field.1);
+
+                mapped_pointers.insert((field.1, field.3, is_recursive));
+            });
+
+        mapped_pointers
     }
 
     pub fn build_store<Value: BasicValue<'ctx>>(&self, builder: &Builder<'ctx>, value: Value) {

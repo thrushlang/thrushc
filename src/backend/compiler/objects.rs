@@ -2,7 +2,7 @@ use {
     super::{
         super::super::logging,
         memory::AllocatedObject,
-        types::{CompilerFunction, CompilerStructure},
+        types::{AllocatedObjects, CompilerFunction, CompilerStructure},
     },
     ahash::AHashMap as HashMap,
 };
@@ -60,6 +60,11 @@ impl<'ctx> CompilerObjects<'ctx> {
     #[inline]
     pub fn get_struct(&self, name: &str) -> &CompilerStructure {
         self.structs.get(name).unwrap()
+    }
+
+    #[inline]
+    pub fn get_allocated_objects(&self) -> AllocatedObjects {
+        &self.blocks[self.scope_position - 1]
     }
 
     #[inline]

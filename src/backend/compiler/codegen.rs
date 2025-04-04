@@ -4,6 +4,7 @@ use {
         attributes::{AttributeBuilder, CompilerAttributeApplicant},
         binaryop, call,
         conventions::CallConvention,
+        dealloc::Deallocator,
         generation,
         instruction::Instruction,
         local,
@@ -38,6 +39,7 @@ pub struct Codegen<'a, 'ctx> {
     function: Option<FunctionValue<'ctx>>,
     loop_exit_block: Option<BasicBlock<'ctx>>,
     loop_start_block: Option<BasicBlock<'ctx>>,
+    deallocators_emited: bool,
 }
 
 impl<'a, 'ctx> Codegen<'a, 'ctx> {
@@ -59,6 +61,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
             function: None,
             loop_exit_block: None,
             loop_start_block: None,
+            deallocators_emited: false,
         }
         .start();
     }
@@ -81,6 +84,18 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                 stmts.iter().for_each(|instruction| {
                     self.codegen(instruction);
                 });
+
+                if !self.deallocators_emited {
+                    let deallocator: Deallocator = Deallocator::new(
+                        self.builder,
+                        self.context,
+                        self.compiler_objects.get_allocated_objects(),
+                    );
+
+                    deallocator.dealloc_all(&self.compiler_objects);
+                }
+
+                self.deallocators_emited = false;
 
                 self.compiler_objects.end_scope();
 
@@ -428,7 +443,17 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                 Instruction::Null
             }
 
-            Instruction::Return(_, kind) => {
+            Instruction::Return(return_instruction, kind) => {
+                self.deallocators_emited = true;
+
+                let deallocator: Deallocator = Deallocator::new(
+                    self.builder,
+                    self.context,
+                    self.compiler_objects.get_allocated_objects(),
+                );
+
+                deallocator.dealloc(return_instruction, &self.compiler_objects);
+
                 generation::build_expression(
                     self.module,
                     self.builder,
@@ -790,6 +815,30 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                 memory_flags.push(MemoryFlag::HeapAllocated);
             } else {
                 memory_flags.push(MemoryFlag::StackAllocated);
+            }
+        }
+
+        if let Instruction::FunctionParameter { struct_type, .. } = instruction {
+            if !struct_type.is_empty() {
+                let mut structure_memory_size: u64 = 0;
+
+                let structure: &CompilerStructure = self.compiler_objects.get_struct(struct_type);
+                let structure_fields: &CompilerStructureFields = &structure.1;
+
+                structure_fields.iter().for_each(|field| {
+                    structure_memory_size += self
+                        .target_data
+                        .get_abi_size(&utils::type_to_any_type_enum(self.context, &field.2));
+                });
+
+                if structure_fields
+                    .contain_recursive_structure_type(&self.compiler_objects, struct_type)
+                    || structure_memory_size >= MAX_STACK_SIZE_OF_STRUCTURE
+                {
+                    memory_flags.push(MemoryFlag::HeapAllocated);
+                } else {
+                    memory_flags.push(MemoryFlag::StackAllocated);
+                }
             }
         }
 

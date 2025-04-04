@@ -130,22 +130,14 @@ pub fn build_expression<'ctx>(
             let structure: &CompilerStructure = compiler_objects.get_struct(struct_type);
             let fields: &CompilerStructureFields = &structure.1;
 
-            let llvm_type: StructType = utils::build_struct_type_from_fields(context, fields);
+            let llvm_structure_type: StructType =
+                utils::build_struct_type_from_fields(context, fields);
 
             if object.has_flag(MemoryFlag::HeapAllocated) {
-                return unsafe {
-                    builder.build_gep(
-                        llvm_type,
-                        object.ptr,
-                        &[context.i64_type().const_int(0, false)],
-                        "",
-                    )
-                }
-                .unwrap()
-                .into();
+                return object.ptr.into();
             }
 
-            return object.load_from_memory(builder, llvm_type);
+            return object.load_from_memory(builder, llvm_structure_type);
         }
 
         if kind.is_raw_ptr() {
