@@ -1,6 +1,6 @@
 use super::super::{
     backend::compiler::instruction::Instruction,
-    error::ThrushCompilerError,
+    common::error::ThrushCompilerError,
     frontend::lexer::{TokenKind, Type},
 };
 
@@ -255,10 +255,7 @@ pub fn check_types(
         return check_types(target_type, Some(*expression_type), None, Some(op), error);
     }
 
-    if let Some(Instruction::Group {
-        instr: expression, ..
-    }) = expression
-    {
+    if let Some(Instruction::Group { expression, .. }) = expression {
         return check_types(target_type, None, Some(expression), None, error);
     }
 

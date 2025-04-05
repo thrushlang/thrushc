@@ -1,16 +1,11 @@
 mod backend;
-mod cli;
-mod constants;
-mod diagnostic;
-mod error;
+mod common;
 mod frontend;
-mod logging;
 
 use {
-    ahash::AHashMap as HashMap,
     backend::builder::Thrushc,
-    cli::Cli,
     colored::{Colorize, control},
+    common::{cli::Cli, logging},
     frontend::{
         lexer::{Lexer, Token},
         parser::Parser,
@@ -37,31 +32,7 @@ lazy_static! {
             _ => None,
         }
     };
-    static ref CORE_LIBRARY_PATH: HashMap<&'static str, (String, String)> = {
-        if HOME.is_none() {
-            logging::log(
-                logging::LogType::Panic,
-                "The Thrush Toolchain is unreachable across the system; reinstall the entire toolchain across ~ `thorium install`.",
-            );
-        }
-
-        let mut imports: HashMap<&'static str, (String, String)> = HashMap::with_capacity(1);
-
-        imports.insert(
-            "core.fmt",
-            (
-                String::from("fmt.th"),
-                HOME.as_ref()
-                    .unwrap()
-                    .join("thrushlang/core/fmt.th")
-                    .to_string_lossy()
-                    .to_string(),
-            ),
-        );
-
-        imports
-    };
-    static ref LLVM_BACKEND_COMPILER: PathBuf = {
+    static ref LLVM_BACKEND: PathBuf = {
         let error = || {
             logging::log(
                 logging::LogType::Panic,
@@ -69,51 +40,29 @@ lazy_static! {
             );
         };
 
-        if HOME.is_none() {
-            error()
+        if let Some(os_home) = HOME.as_ref() {
+            let llvm_backend_required_paths: [PathBuf; 8] = [
+                os_home.join("thrushlang"),
+                os_home.join("thrushlang/backends"),
+                os_home.join("thrushlang/backends/llvm"),
+                os_home.join("thrushlang/backends/llvm/tools"),
+                os_home.join("thrushlang/backends/llvm/ld.lld"),
+                os_home.join("thrushlang/backends/llvm/clang-17"),
+                os_home.join("thrushlang/backends/llvm/tools/opt"),
+                os_home.join("thrushlang/backends/llvm/tools/llvm-dis"),
+            ];
+
+            llvm_backend_required_paths.iter().for_each(|path| {
+                if !path.exists() {
+                    error()
+                }
+            });
+
+            return os_home.join("thrushlang/backends/llvm/");
         }
 
-        if !HOME.as_ref().unwrap().join("thrushlang").exists()
-            || !HOME.as_ref().unwrap().join("thrushlang/backends/").exists()
-            || !HOME
-                .as_ref()
-                .unwrap()
-                .join("thrushlang/backends/llvm")
-                .exists()
-            || !HOME
-                .as_ref()
-                .unwrap()
-                .join("thrushlang/backends/llvm/tools")
-                .exists()
-        {
-            error()
-        }
-
-        if !HOME
-            .as_ref()
-            .unwrap()
-            .join("thrushlang/backends/llvm/ld.lld")
-            .exists()
-            || !HOME
-                .as_ref()
-                .unwrap()
-                .join("thrushlang/backends/llvm/clang-17")
-                .exists()
-            || !HOME
-                .as_ref()
-                .unwrap()
-                .join("thrushlang/backends/llvm/tools/opt")
-                .exists()
-            || !HOME
-                .as_ref()
-                .unwrap()
-                .join("thrushlang/backends/llvm/tools/llvm-dis")
-                .exists()
-        {
-            error()
-        }
-
-        HOME.as_ref().unwrap().join("thrushlang/backends/llvm/")
+        error();
+        unreachable!()
     };
 }
 

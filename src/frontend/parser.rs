@@ -6,9 +6,10 @@ use {
                 instruction::Instruction, misc::CompilerFile, traits::AttributesExtensions,
                 types::CompilerAttributes,
             },
-            constants::MINIMAL_ERROR_CAPACITY,
-            diagnostic::Diagnostic,
-            error::ThrushCompilerError,
+            common::{
+                constants::MINIMAL_ERROR_CAPACITY, diagnostic::Diagnostic,
+                error::ThrushCompilerError,
+            },
             logging::LogType,
         },
         lexer::{Token, TokenKind, Type},
@@ -557,10 +558,10 @@ impl<'instr> Parser<'instr> {
 
                 self.throw_if_is_structure_initializer(&instruction);
 
-                let field_type: Type = *instruction.get_type();
-                let target_type: Type = struct_found.get_field_type(field_name, field_type);
+                let field_type: &Type = instruction.get_type();
+                let target_type: Type = struct_found.get_field_type(field_name, *field_type);
 
-                self.check_type_mismatch(target_type, field_type, Some(&instruction));
+                self.check_type_mismatch(target_type, *field_type, Some(&instruction));
 
                 fields.push((field_name, instruction, target_type, field_index));
 
@@ -1310,55 +1311,56 @@ impl<'instr> Parser<'instr> {
     fn unary(&mut self) -> Result<Instruction<'instr>, ThrushCompilerError> {
         if self.match_token(TokenKind::Bang)? {
             let op: &TokenKind = &self.previous().kind;
-            let value: Instruction = self.primary()?;
+            let expression: Instruction = self.primary()?;
 
             type_checking::check_unary_types(
                 op,
-                value.get_type(),
+                expression.get_type(),
                 (self.previous().line, self.previous().span),
             )?;
 
             return Ok(Instruction::UnaryOp {
                 op,
-                value: Box::from(value),
+                expression: Box::from(expression),
                 kind: Type::Bool,
                 is_pre: false,
             });
         } else if self.match_token(TokenKind::Minus)? {
             let op: &TokenKind = &self.previous().kind;
-            let mut value: Instruction = self.primary()?;
 
-            if let Instruction::Integer(kind, _, is_signed) = &mut value {
+            let mut expression: Instruction = self.primary()?;
+
+            if let Instruction::Integer(kind, _, is_signed) = &mut expression {
                 if op.is_minus_operator() {
                     *kind = kind.reverse_to_signed_integer_type();
                     *is_signed = true;
                 }
             }
 
-            if let Instruction::Float(_, _, is_signed) = &mut value {
+            if let Instruction::Float(_, _, is_signed) = &mut expression {
                 if op.is_minus_operator() {
                     *is_signed = true;
                 }
             }
 
-            if let Instruction::LocalRef { kind, .. } = &mut value {
+            if let Instruction::LocalRef { kind, .. } = &mut expression {
                 if kind.is_integer_type() && op.is_minus_operator() {
                     *kind = kind.reverse_to_signed_integer_type();
                 }
             }
 
-            let kind: Type = *value.get_type();
+            let expression_type: Type = *expression.get_type();
 
             type_checking::check_unary_types(
                 op,
-                &kind,
+                &expression_type,
                 (self.previous().line, self.previous().span),
             )?;
 
             return Ok(Instruction::UnaryOp {
                 op,
-                value: Box::from(value),
-                kind,
+                expression: Box::from(expression),
+                kind: expression_type,
                 is_pre: false,
             });
         }
@@ -1374,9 +1376,9 @@ impl<'instr> Parser<'instr> {
             TokenKind::PlusPlus => {
                 let op: &TokenKind = &self.advance()?.kind;
 
-                let value: Instruction = self.expression()?;
+                let expression: Instruction = self.expression()?;
 
-                if !value.is_local_reference() {
+                if !expression.is_local_reference() {
                     return Err(ThrushCompilerError::Error(
                         String::from("Syntax error"),
                         String::from("Only local references can be pre-incremented."),
@@ -1385,21 +1387,21 @@ impl<'instr> Parser<'instr> {
                     ));
                 }
 
-                let expression: Instruction = Instruction::UnaryOp {
+                let unaryop: Instruction = Instruction::UnaryOp {
                     op,
-                    value: Box::from(value),
+                    expression: Box::from(expression),
                     kind: Type::Void,
                     is_pre: true,
                 };
 
-                return Ok(expression);
+                return Ok(unaryop);
             }
             TokenKind::MinusMinus => {
                 let op: &TokenKind = &self.advance()?.kind;
 
-                let value: Instruction = self.expression()?;
+                let expression: Instruction = self.expression()?;
 
-                if !value.is_local_reference() {
+                if !expression.is_local_reference() {
                     return Err(ThrushCompilerError::Error(
                         String::from("Syntax error"),
                         String::from("Only local references can be pre-decremented."),
@@ -1408,32 +1410,32 @@ impl<'instr> Parser<'instr> {
                     ));
                 }
 
-                let expression: Instruction = Instruction::UnaryOp {
+                let unaryop: Instruction = Instruction::UnaryOp {
                     op,
-                    value: Box::from(value),
+                    expression: Box::from(expression),
                     kind: Type::Void,
                     is_pre: true,
                 };
 
-                return Ok(expression);
+                return Ok(unaryop);
             }
-            TokenKind::DataType(dt) => {
+            TokenKind::DataType(tp) => {
                 let datatype: &Token = self.advance()?;
 
                 let line: usize = datatype.line;
                 let span: (usize, usize) = datatype.span;
 
-                match dt {
-                    dt if dt.is_integer_type() => Instruction::Type(*dt),
-                    dt if dt.is_float_type() => Instruction::Type(*dt),
-                    dt if dt.is_bool_type() => Instruction::Type(*dt),
-                    dt if dt.is_raw_ptr() => Instruction::Type(*dt),
-                    what_heck_dt => {
+                match tp {
+                    tp if tp.is_integer_type() => Instruction::Type(*tp),
+                    tp if tp.is_float_type() => Instruction::Type(*tp),
+                    tp if tp.is_bool_type() => Instruction::Type(*tp),
+                    tp if tp.is_raw_ptr() => Instruction::Type(*tp),
+                    what_heck_tp => {
                         return Err(ThrushCompilerError::Error(
                             String::from("Syntax error"),
                             format!(
                                 "The type '{}' cannot be a value during the compilation.",
-                                what_heck_dt
+                                what_heck_tp
                             ),
                             line,
                             Some(span),
@@ -1444,10 +1446,10 @@ impl<'instr> Parser<'instr> {
             TokenKind::LParen => {
                 let lparen: &Token = self.advance()?;
 
-                let instr: Instruction = self.expression()?;
-                let kind: Type = *instr.get_type();
+                let expression: Instruction = self.expression()?;
+                let expression_type: Type = *expression.get_type();
 
-                if !instr.is_binary() && !instr.is_group() {
+                if !expression.is_binary() && !expression.is_group() {
                     return Err(ThrushCompilerError::Error(
                         String::from("Syntax error"),
                         String::from(
@@ -1465,8 +1467,8 @@ impl<'instr> Parser<'instr> {
                 )?;
 
                 return Ok(Instruction::Group {
-                    instr: Box::new(instr),
-                    kind,
+                    expression: Box::new(expression),
+                    kind: expression_type,
                 });
             }
             TokenKind::NullT => {
@@ -1508,13 +1510,17 @@ impl<'instr> Parser<'instr> {
                         let local: &Local = object.expected_local(object_line, object_span)?;
                         let local_type: Type = local.0;
 
-                        let expr: Instruction = self.expression()?;
+                        let expression: Instruction = self.expression()?;
 
-                        self.check_type_mismatch(local_type, *expr.get_type(), Some(&expr));
+                        self.check_type_mismatch(
+                            local_type,
+                            *expression.get_type(),
+                            Some(&expression),
+                        );
 
                         return Ok(Instruction::LocalMut {
                             name: object_name,
-                            value: Box::new(expr),
+                            value: Box::new(expression),
                             kind: local_type,
                         });
                     }
@@ -1561,14 +1567,14 @@ impl<'instr> Parser<'instr> {
                             (object_line, object_span),
                         )?;
 
-                        let expr: Instruction = Instruction::UnaryOp {
+                        let unaryop: Instruction = Instruction::UnaryOp {
                             op,
-                            value: Box::from(localref),
+                            expression: Box::from(localref),
                             kind: Type::Void,
                             is_pre: false,
                         };
 
-                        return Ok(expr);
+                        return Ok(unaryop);
                     }
 
                     localref

@@ -3,7 +3,7 @@
 use {
     super::{
         super::super::{
-            error::ThrushCompilerError,
+            common::error::ThrushCompilerError,
             frontend::{
                 lexer::{TokenKind, Type},
                 types::StructFields,
@@ -147,12 +147,12 @@ pub enum Instruction<'ctx> {
     },
     UnaryOp {
         op: &'ctx TokenKind,
-        value: Box<Instruction<'ctx>>,
+        expression: Box<Instruction<'ctx>>,
         kind: Type,
         is_pre: bool,
     },
     Group {
-        instr: Box<Instruction<'ctx>>,
+        expression: Box<Instruction<'ctx>>,
         kind: Type,
     },
 
@@ -282,8 +282,8 @@ impl<'ctx> Instruction<'ctx> {
             return (&**left, op, &**right);
         }
 
-        if let Instruction::Group { instr, .. } = self {
-            return instr.as_binary();
+        if let Instruction::Group { expression, .. } = self {
+            return expression.as_binary();
         }
 
         unreachable!()
@@ -292,10 +292,13 @@ impl<'ctx> Instruction<'ctx> {
     #[inline(always)]
     pub const fn as_unaryop(&self) -> UnaryOp {
         if let Instruction::UnaryOp {
-            op, value, kind, ..
+            op,
+            expression,
+            kind,
+            ..
         } = self
         {
-            return (op, value, kind);
+            return (op, expression, kind);
         }
 
         unreachable!()

@@ -320,15 +320,15 @@ pub fn build_string_constant<'ctx>(
 pub fn build_ptr<'ctx>(
     context: &'ctx Context,
     builder: &Builder<'ctx>,
-    kind: Type,
+    kind: &Type,
 ) -> PointerValue<'ctx> {
     match kind {
         kind if kind.is_integer_type() => {
-            build_alloca_int(builder, type_int_to_llvm_int_type(context, &kind))
+            build_alloca_int(builder, type_int_to_llvm_int_type(context, kind))
         }
         Type::Bool => build_alloca_int(builder, context.bool_type()),
         Type::F64 | Type::F32 => {
-            build_alloca_float(builder, type_float_to_llvm_float_type(context, &kind))
+            build_alloca_float(builder, type_float_to_llvm_float_type(context, kind))
         }
         _ => unreachable!(),
     }

@@ -193,10 +193,18 @@ pub fn build_expression<'ctx>(
     }
 
     if let Instruction::UnaryOp {
-        op, value, kind, ..
+        op,
+        expression,
+        kind,
+        ..
     } = instruction
     {
-        return unaryop::compile_unary_op(builder, context, (op, value, kind), compiler_objects);
+        return unaryop::compile_unary_op(
+            builder,
+            context,
+            (op, expression, kind),
+            compiler_objects,
+        );
     }
 
     if let Instruction::LocalMut { name, kind, value } = instruction {

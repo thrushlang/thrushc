@@ -596,7 +596,7 @@ pub fn float_binaryop<'ctx>(
 
     if let (
         Instruction::Group {
-            instr: left_instr,
+            expression: left_instr,
             kind: left_type,
         },
         TokenKind::Plus
@@ -672,7 +672,7 @@ pub fn float_binaryop<'ctx>(
         | TokenKind::Greater
         | TokenKind::GreaterEq,
         Instruction::Group {
-            instr: right_instr,
+            expression: right_instr,
             kind: right_type,
             ..
         },
@@ -1072,7 +1072,7 @@ pub fn float_binaryop<'ctx>(
 
     if let (
         Instruction::Group {
-            instr: left_instr,
+            expression: left_instr,
             kind: left_type,
         },
         TokenKind::Plus
@@ -1161,7 +1161,7 @@ pub fn float_binaryop<'ctx>(
         | TokenKind::Greater
         | TokenKind::GreaterEq,
         Instruction::Group {
-            instr: right_instr,
+            expression: right_instr,
             kind: right_type,
             ..
         },
@@ -1654,7 +1654,7 @@ pub fn float_binaryop<'ctx>(
 
     if let (
         Instruction::Group {
-            instr: left_instr,
+            expression: left_instr,
             kind: left_type,
         },
         TokenKind::Plus
@@ -1668,7 +1668,7 @@ pub fn float_binaryop<'ctx>(
         | TokenKind::Greater
         | TokenKind::GreaterEq,
         Instruction::Group {
-            instr: right_instr,
+            expression: right_instr,
             kind: right_type,
             ..
         },
@@ -1728,7 +1728,7 @@ pub fn float_binaryop<'ctx>(
 
     if let (
         Instruction::Group {
-            instr,
+            expression,
             kind: left_type,
         },
         TokenKind::Plus
@@ -1744,7 +1744,7 @@ pub fn float_binaryop<'ctx>(
         Instruction::Float(right_type, right_num, right_signed),
     ) = binary
     {
-        let left_dissasembled: BinaryOp = instr.as_binary();
+        let left_dissasembled: BinaryOp = expression.as_binary();
 
         let mut left_compiled: FloatValue = float_binaryop(
             module,
@@ -1797,7 +1797,7 @@ pub fn float_binaryop<'ctx>(
         | TokenKind::Greater
         | TokenKind::GreaterEq,
         Instruction::Group {
-            instr,
+            expression,
             kind: right_type,
         },
     ) = binary
@@ -1805,7 +1805,7 @@ pub fn float_binaryop<'ctx>(
         let mut left_compiled: FloatValue =
             utils::build_const_float(builder, context, left_type, *left_num, *left_signed);
 
-        let right_dissasembled: BinaryOp = instr.as_binary();
+        let right_dissasembled: BinaryOp = expression.as_binary();
 
         let mut right_compiled: FloatValue = float_binaryop(
             module,
@@ -1844,7 +1844,7 @@ pub fn float_binaryop<'ctx>(
 
     if let (
         Instruction::Group {
-            instr,
+            expression,
             kind: left_type,
         },
         TokenKind::Plus
@@ -1862,7 +1862,7 @@ pub fn float_binaryop<'ctx>(
         },
     ) = binary
     {
-        let left_dissasembled: BinaryOp = instr.as_binary();
+        let left_dissasembled: BinaryOp = expression.as_binary();
 
         let mut left_compiled: BasicValueEnum = float_binaryop(
             module,
@@ -1929,7 +1929,7 @@ pub fn float_binaryop<'ctx>(
         | TokenKind::Greater
         | TokenKind::GreaterEq,
         Instruction::Group {
-            instr,
+            expression,
             kind: right_type,
         },
     ) = binary
@@ -1945,7 +1945,7 @@ pub fn float_binaryop<'ctx>(
             compiler_objects,
         );
 
-        let right_dissasembled: BinaryOp = instr.as_binary();
+        let right_dissasembled: BinaryOp = expression.as_binary();
 
         let mut right_compiled: BasicValueEnum = float_binaryop(
             module,

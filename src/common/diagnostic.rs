@@ -1,6 +1,6 @@
 use {
     super::{
-        backend::compiler::misc::CompilerFile,
+        super::backend::compiler::misc::CompilerFile,
         error::ThrushCompilerError,
         logging::{self, LogType},
     },

@@ -1,7 +1,9 @@
 use {
     super::{
-        LLVM_BACKEND_COMPILER,
-        backend::compiler::misc::{CompilerFile, CompilerOptions, Opt},
+        super::{
+            LLVM_BACKEND,
+            backend::compiler::misc::{CompilerFile, CompilerOptions, Opt},
+        },
         constants::TARGET_TRIPLES,
         logging,
     },
@@ -395,7 +397,7 @@ impl Cli {
             unreachable!()
         };
 
-        let mut clang_help_command: Command = Command::new(LLVM_BACKEND_COMPILER.join("clang-17"));
+        let mut clang_help_command: Command = Command::new(LLVM_BACKEND.join("clang-17"));
 
         clang_help_command.arg("--help");
 

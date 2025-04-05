@@ -1,5 +1,5 @@
 use super::{
-    super::error::ThrushCompilerError,
+    super::common::error::ThrushCompilerError,
     lexer::Type,
     objects::{Function, Local},
 };

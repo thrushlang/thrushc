@@ -1,15 +1,15 @@
 use {
     super::super::{
         backend::compiler::{instruction::Instruction, misc::CompilerFile},
-        constants::MINIMAL_ERROR_CAPACITY,
-        diagnostic::Diagnostic,
-        error::ThrushCompilerError,
+        common::{
+            constants::MINIMAL_ERROR_CAPACITY, diagnostic::Diagnostic, error::ThrushCompilerError,
+        },
         logging::LogType,
     },
     std::process,
 };
 
-const MINIMAL_SCOPE_CAPACITY: usize = 155;
+const MINIMAL_SCOPE_CAPACITY: usize = 256;
 
 #[derive(Debug)]
 pub struct ThrushScoper<'ctx> {

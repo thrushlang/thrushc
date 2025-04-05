@@ -3,7 +3,7 @@
 use {
     super::{
         super::{
-            LLVM_BACKEND_COMPILER, Lexer, Parser, Token, constants::CURRENT_CLANG_VERSION, logging,
+            LLVM_BACKEND, Lexer, Parser, Token, common::constants::CURRENT_CLANG_VERSION, logging,
         },
         compiler::{
             Compiler,
@@ -192,7 +192,7 @@ impl<'a> Clang<'a> {
             return llvm_time.elapsed();
         }
 
-        let mut clang_command: Command = Command::new(LLVM_BACKEND_COMPILER.join("clang-17"));
+        let mut clang_command: Command = Command::new(LLVM_BACKEND.join("clang-17"));
 
         clang_command.args([
             "-v",
@@ -217,7 +217,7 @@ impl<'a> Clang<'a> {
     }
 
     fn emit_assembler(&self) {
-        let mut clang_command: Command = Command::new(LLVM_BACKEND_COMPILER.join("clang-17"));
+        let mut clang_command: Command = Command::new(LLVM_BACKEND.join("clang-17"));
 
         clang_command.args(&self.options.args);
 
@@ -244,7 +244,7 @@ impl<'a> Clang<'a> {
 impl LLVMOpt {
     pub fn optimize(path: &str, opt: &str) {
         handle_command(
-            Command::new(LLVM_BACKEND_COMPILER.join("tools/opt"))
+            Command::new(LLVM_BACKEND.join("tools/opt"))
                 .arg(format!("-p={}", opt))
                 .arg(path)
                 .arg("-o")
@@ -259,7 +259,7 @@ impl<'a> LLVMDissambler<'a> {
     }
 
     pub fn dissamble(&self) {
-        handle_command(Command::new(LLVM_BACKEND_COMPILER.join("tools/llvm-dis")).args(self.files));
+        handle_command(Command::new(LLVM_BACKEND.join("tools/llvm-dis")).args(self.files));
     }
 }
 

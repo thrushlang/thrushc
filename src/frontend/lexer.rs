@@ -2,9 +2,10 @@ use {
     super::{
         super::{
             backend::compiler::{attributes::CompilerAttribute, misc::CompilerFile},
-            constants::MINIMAL_ERROR_CAPACITY,
-            diagnostic::Diagnostic,
-            error::ThrushCompilerError,
+            common::{
+                constants::MINIMAL_ERROR_CAPACITY, diagnostic::Diagnostic,
+                error::ThrushCompilerError,
+            },
             logging::LogType,
         },
         traits::TokenLexemeBasics,

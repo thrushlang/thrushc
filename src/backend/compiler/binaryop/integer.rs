@@ -903,7 +903,7 @@ pub fn compile_integer_binaryop<'ctx>(
 
     if let (
         Instruction::Group {
-            instr: left_instr,
+            expression: left_instr,
             kind: left_type,
         },
         TokenKind::Plus
@@ -992,7 +992,7 @@ pub fn compile_integer_binaryop<'ctx>(
         | TokenKind::And
         | TokenKind::Or,
         Instruction::Group {
-            instr: right_instr,
+            expression: right_instr,
             kind: right_type,
             ..
         },
@@ -1442,7 +1442,7 @@ pub fn compile_integer_binaryop<'ctx>(
 
     if let (
         Instruction::Group {
-            instr: left_instr,
+            expression: left_instr,
             kind: left_type,
         },
         TokenKind::Plus
@@ -1544,7 +1544,7 @@ pub fn compile_integer_binaryop<'ctx>(
         | TokenKind::And
         | TokenKind::Or,
         Instruction::Group {
-            instr: right_instr,
+            expression: right_instr,
             kind: right_type,
             ..
         },
@@ -2084,7 +2084,7 @@ pub fn compile_integer_binaryop<'ctx>(
 
     if let (
         Instruction::Group {
-            instr,
+            expression,
             kind: left_type,
         },
         TokenKind::Plus
@@ -2104,7 +2104,7 @@ pub fn compile_integer_binaryop<'ctx>(
         Instruction::Integer(right_type, right_num, right_signed),
     ) = binary
     {
-        let left_dissasembled: BinaryOp = instr.as_binary();
+        let left_dissasembled: BinaryOp = expression.as_binary();
 
         let mut left_compiled: IntValue = compile_integer_binaryop(
             module,
@@ -2168,7 +2168,7 @@ pub fn compile_integer_binaryop<'ctx>(
         | TokenKind::And
         | TokenKind::Or,
         Instruction::Group {
-            instr,
+            expression,
             kind: right_type,
         },
     ) = binary
@@ -2176,7 +2176,7 @@ pub fn compile_integer_binaryop<'ctx>(
         let mut left_compiled: IntValue =
             utils::build_const_integer(context, left_type, *left_num as u64, *left_signed);
 
-        let right_dissasembled: BinaryOp = instr.as_binary();
+        let right_dissasembled: BinaryOp = expression.as_binary();
 
         let mut right_compiled: IntValue = compile_integer_binaryop(
             module,
@@ -2320,7 +2320,7 @@ pub fn compile_integer_binaryop<'ctx>(
 
     if let (
         Instruction::Group {
-            instr: left_instr,
+            expression: left_instr,
             kind: left_type,
         },
         TokenKind::Plus
@@ -2338,7 +2338,7 @@ pub fn compile_integer_binaryop<'ctx>(
         | TokenKind::And
         | TokenKind::Or,
         Instruction::Group {
-            instr: right_instr,
+            expression: right_instr,
             kind: right_type,
             ..
         },
@@ -2405,7 +2405,7 @@ pub fn compile_integer_binaryop<'ctx>(
 
     if let (
         Instruction::Group {
-            instr,
+            expression,
             kind: left_type,
         },
         TokenKind::Plus
@@ -2427,7 +2427,7 @@ pub fn compile_integer_binaryop<'ctx>(
         },
     ) = binary
     {
-        let left_dissasembled: BinaryOp = instr.as_binary();
+        let left_dissasembled: BinaryOp = expression.as_binary();
 
         let mut left_compiled: IntValue = compile_integer_binaryop(
             module,
@@ -2505,7 +2505,7 @@ pub fn compile_integer_binaryop<'ctx>(
         | TokenKind::And
         | TokenKind::Or,
         Instruction::Group {
-            instr,
+            expression,
             kind: right_type,
         },
     ) = binary
@@ -2522,7 +2522,7 @@ pub fn compile_integer_binaryop<'ctx>(
         )
         .into_int_value();
 
-        let right_dissasembled: BinaryOp = instr.as_binary();
+        let right_dissasembled: BinaryOp = expression.as_binary();
 
         let mut right_compiled: IntValue = compile_integer_binaryop(
             module,

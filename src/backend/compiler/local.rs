@@ -60,7 +60,7 @@ pub fn build<'ctx>(
     }
 
     if local_type.is_integer_type() {
-        let allocated_pointer: PointerValue = utils::build_ptr(context, builder, *local_type);
+        let allocated_pointer: PointerValue = utils::build_ptr(context, builder, local_type);
         let allocated_object: AllocatedObject = AllocatedObject::alloc(allocated_pointer, &local.3);
 
         compiler_objects.alloc_local_object(local.0, allocated_object);
@@ -78,7 +78,7 @@ pub fn build<'ctx>(
     }
 
     if local_type.is_float_type() {
-        let allocated_pointer: PointerValue = utils::build_ptr(context, builder, *local_type);
+        let allocated_pointer: PointerValue = utils::build_ptr(context, builder, local_type);
         let allocated_object: AllocatedObject = AllocatedObject::alloc(allocated_pointer, &local.3);
 
         compiler_objects.alloc_local_object(local.0, allocated_object);
@@ -96,7 +96,7 @@ pub fn build<'ctx>(
     }
 
     if local_type.is_bool_type() {
-        let allocated_pointer: PointerValue = utils::build_ptr(context, builder, *local_type);
+        let allocated_pointer: PointerValue = utils::build_ptr(context, builder, local_type);
         let allocated_object: AllocatedObject = AllocatedObject::alloc(allocated_pointer, &local.3);
 
         compiler_objects.alloc_local_object(local.0, allocated_object);
@@ -478,11 +478,14 @@ fn build_local_integer<'ctx>(
     }
 
     if let Instruction::UnaryOp {
-        op, value, kind, ..
+        op,
+        expression,
+        kind,
+        ..
     } = local_value
     {
         let expression: BasicValueEnum =
-            unaryop::compile_unary_op(builder, context, (op, value, kind), compiler_objects);
+            unaryop::compile_unary_op(builder, context, (op, expression, kind), compiler_objects);
 
         object.build_store(builder, expression);
 
@@ -534,12 +537,12 @@ fn build_local_integer<'ctx>(
         return;
     }
 
-    if let Instruction::Group { instr, .. } = local_value {
+    if let Instruction::Group { expression, .. } = local_value {
         build_local_integer(
             module,
             builder,
             context,
-            (local_name, local_type, instr, local.3),
+            (local_name, local_type, expression, local.3),
             object,
             compiler_objects,
         );
@@ -632,11 +635,14 @@ fn build_local_float<'ctx>(
     }
 
     if let Instruction::UnaryOp {
-        op, value, kind, ..
+        op,
+        expression,
+        kind,
+        ..
     } = local_value
     {
         let expression: BasicValueEnum =
-            unaryop::compile_unary_op(builder, context, (op, value, kind), compiler_objects);
+            unaryop::compile_unary_op(builder, context, (op, expression, kind), compiler_objects);
 
         object.build_store(builder, expression);
 
@@ -663,12 +669,12 @@ fn build_local_float<'ctx>(
         return;
     }
 
-    if let Instruction::Group { instr, .. } = local_value {
+    if let Instruction::Group { expression, .. } = local_value {
         build_local_float(
             module,
             builder,
             context,
-            (local_name, local_type, instr, local.3),
+            (local_name, local_type, expression, local.3),
             object,
             compiler_objects,
         );
@@ -759,11 +765,14 @@ fn build_local_boolean<'ctx>(
     }
 
     if let Instruction::UnaryOp {
-        op, value, kind, ..
+        op,
+        expression,
+        kind,
+        ..
     } = local_value
     {
         let expression: BasicValueEnum =
-            unaryop::compile_unary_op(builder, context, (op, value, kind), compiler_objects);
+            unaryop::compile_unary_op(builder, context, (op, expression, kind), compiler_objects);
 
         object.build_store(builder, expression);
 
@@ -788,12 +797,12 @@ fn build_local_boolean<'ctx>(
         return;
     }
 
-    if let Instruction::Group { instr, .. } = local_value {
+    if let Instruction::Group { expression, .. } = local_value {
         build_local_boolean(
             module,
             builder,
             context,
-            (local_name, local_type, instr, local.3),
+            (local_name, local_type, expression, local.3),
             object,
             compiler_objects,
         );

@@ -564,11 +564,14 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
             }
 
             Instruction::UnaryOp {
-                op, value, kind, ..
+                op,
+                expression,
+                kind,
+                ..
             } => Instruction::LLVMValue(unaryop::compile_unary_op(
                 self.builder,
                 self.context,
-                (op, value, kind),
+                (op, expression, kind),
                 &self.compiler_objects,
             )),
 
@@ -650,7 +653,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
     fn build_function_parameter(&mut self, parameter: FunctionParameter<'ctx>) {
         let parameter_name: &str = parameter.0;
         let parameter_structure_type: &str = parameter.1;
-        let parameter_type: Type = *parameter.2;
+        let parameter_type: &Type = parameter.2;
         let parameter_position: u32 = parameter.3;
 
         let memory_flags: MemoryFlags = parameter.4;

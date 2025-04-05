@@ -44,7 +44,7 @@ pub fn build_call<'ctx>(
     let mut compiled_args: Vec<BasicMetadataValueEnum> = Vec::with_capacity(call_args.len());
 
     call_args.iter().enumerate().for_each(|instruction| {
-        let casting_target: Type = *target_function_arguments
+        let casting_target: &Type = target_function_arguments
             .get(instruction.0)
             .unwrap_or(instruction.1)
             .get_type();
@@ -55,7 +55,7 @@ pub fn build_call<'ctx>(
                 builder,
                 context,
                 instruction.1,
-                &casting_target,
+                casting_target,
                 compiler_objects,
             )
             .into(),

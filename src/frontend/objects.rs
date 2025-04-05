@@ -1,5 +1,5 @@
 use {
-    super::{super::error::ThrushCompilerError, lexer::Type, traits::FoundObjectEither},
+    super::{super::common::error::ThrushCompilerError, lexer::Type, traits::FoundObjectEither},
     ahash::AHashMap as HashMap,
 };
 
