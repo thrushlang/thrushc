@@ -602,7 +602,6 @@ impl<'instr> Parser<'instr> {
         Ok(Instruction::InitStruct {
             name: struct_name,
             fields,
-            kind: Type::Struct,
         })
     }
 
@@ -620,12 +619,8 @@ impl<'instr> Parser<'instr> {
 
         let mut variable_clone: Instruction = variable.clone();
 
-        if let Instruction::Local {
-            exist_only_comptime,
-            ..
-        } = &mut variable_clone
-        {
-            *exist_only_comptime = true;
+        if let Instruction::Local { comptime, .. } = &mut variable_clone {
+            *comptime = true;
         }
 
         self.inside_a_loop = true;
@@ -644,7 +639,7 @@ impl<'instr> Parser<'instr> {
 
     fn build_local_variable(
         &mut self,
-        exist_only_comptime: bool,
+        comptime: bool,
     ) -> Result<Instruction<'instr>, ThrushCompilerError> {
         self.only_advance()?;
 
@@ -697,10 +692,10 @@ impl<'instr> Parser<'instr> {
         if self.match_token(TokenKind::SemiColon)? {
             return Ok(Instruction::Local {
                 name: name.lexeme.to_str(),
-                kind: kind.0,
+                kind: Box::new(Instruction::Type(kind.0, String::new())),
                 value: Box::new(Instruction::Null),
                 line: name.line,
-                exist_only_comptime,
+                comptime,
             });
         }
 
@@ -717,15 +712,15 @@ impl<'instr> Parser<'instr> {
         self.check_type_mismatch(kind.0, *value.get_type(), Some(&value));
         self.check_struct_type_mismatch(&kind.1, &value, name.line)?;
 
-        let local_variable: Instruction = Instruction::Local {
+        let local: Instruction = Instruction::Local {
             name: name.lexeme.to_str(),
-            kind: kind.0,
+            kind: Box::new(Instruction::Type(kind.0, String::new())),
             value: Box::new(value),
             line: name.line,
-            exist_only_comptime,
+            comptime,
         };
 
-        Ok(local_variable)
+        Ok(local)
     }
 
     fn build_return(&mut self) -> Result<Instruction<'instr>, ThrushCompilerError> {
@@ -953,7 +948,7 @@ impl<'instr> Parser<'instr> {
             name: function_name,
             params: params.clone(),
             body: None,
-            return_type: return_type.0,
+            return_type: Box::new(Instruction::Type(return_type.0, String::new())),
             attributes: function_attributes,
         };
 
@@ -1332,7 +1327,7 @@ impl<'instr> Parser<'instr> {
 
             if let Instruction::Integer(kind, _, is_signed) = &mut expression {
                 if op.is_minus_operator() {
-                    *kind = kind.reverse_to_signed_integer_type();
+                    *kind = Box::new(self.negate_numeric_type(kind));
                     *is_signed = true;
                 }
             }
@@ -1345,7 +1340,7 @@ impl<'instr> Parser<'instr> {
 
             if let Instruction::LocalRef { kind, .. } = &mut expression {
                 if kind.is_integer_type() && op.is_minus_operator() {
-                    *kind = kind.reverse_to_signed_integer_type();
+                    // *kind = kind.reverse_to_signed_integer_type();
                 }
             }
 
@@ -1426,15 +1421,15 @@ impl<'instr> Parser<'instr> {
                 let span: (usize, usize) = datatype.span;
 
                 match tp {
-                    tp if tp.is_integer_type() => Instruction::Type(*tp),
-                    tp if tp.is_float_type() => Instruction::Type(*tp),
-                    tp if tp.is_bool_type() => Instruction::Type(*tp),
-                    tp if tp.is_raw_ptr() => Instruction::Type(*tp),
+                    tp if tp.is_integer_type() => Instruction::Type(*tp, String::new()),
+                    tp if tp.is_float_type() => Instruction::Type(*tp, String::new()),
+                    tp if tp.is_bool_type() => Instruction::Type(*tp, String::new()),
+                    tp if tp.is_raw_ptr() => Instruction::Type(*tp, String::new()),
                     what_heck_tp => {
                         return Err(ThrushCompilerError::Error(
                             String::from("Syntax error"),
                             format!(
-                                "The type '{}' cannot be a value during the compilation.",
+                                "The type '{}' cannot be a value during the compile time.",
                                 what_heck_tp
                             ),
                             line,
@@ -1473,24 +1468,37 @@ impl<'instr> Parser<'instr> {
             }
             TokenKind::NullT => {
                 self.only_advance()?;
+
                 Instruction::NullT
             }
             TokenKind::Str => {
                 let token: &Token = self.advance()?;
+
                 Instruction::Str(token.lexeme.parse_scapes(token.line, token.span)?)
             }
             TokenKind::Char => {
                 let char: &Token = self.advance()?;
+
                 Instruction::Char(char.lexeme[0])
             }
             kind => match kind {
-                TokenKind::Integer(kind, num, is_signed) => {
+                TokenKind::Integer(kind, number, is_signed) => {
                     self.only_advance()?;
-                    Instruction::Integer(*kind, *num, *is_signed)
+
+                    Instruction::Integer(
+                        Box::new(Instruction::Type(*kind, String::new())),
+                        *number,
+                        *is_signed,
+                    )
                 }
-                TokenKind::Float(kind, num, is_signed) => {
+                TokenKind::Float(kind, number, is_signed) => {
                     self.only_advance()?;
-                    Instruction::Float(*kind, *num, *is_signed)
+
+                    Instruction::Float(
+                        Box::new(Instruction::Type(*kind, String::new())),
+                        *number,
+                        *is_signed,
+                    )
                 }
                 TokenKind::Identifier => {
                     let object_token: &Token = self.advance()?;
@@ -1521,7 +1529,7 @@ impl<'instr> Parser<'instr> {
                         return Ok(Instruction::LocalMut {
                             name: object_name,
                             value: Box::new(expression),
-                            kind: local_type,
+                            kind: Box::new(Instruction::Type(local_type, String::new())),
                         });
                     }
 
@@ -1552,8 +1560,7 @@ impl<'instr> Parser<'instr> {
                     let localref: Instruction = Instruction::LocalRef {
                         name: object_name,
                         line: object_line,
-                        kind: local_type,
-                        struct_type: local.1.clone(),
+                        kind: Box::new(Instruction::Type(local_type, local.1.clone())),
                     };
 
                     if self.match_token(TokenKind::PlusPlus)?
@@ -1784,6 +1791,20 @@ impl<'instr> Parser<'instr> {
 
     ########################################################################*/
 
+    fn negate_numeric_type(&self, from: &Instruction) -> Instruction<'instr> {
+        if let Instruction::Type(tp, _) = from {
+            return match tp {
+                Type::U64 => Instruction::Type(Type::S64, String::new()),
+                Type::U32 => Instruction::Type(Type::S32, String::new()),
+                Type::U16 => Instruction::Type(Type::S16, String::new()),
+                Type::U8 => Instruction::Type(Type::S8, String::new()),
+                _ => Instruction::Type(*from.get_type(), String::new()),
+            };
+        }
+
+        Instruction::Type(*from.get_type(), String::new())
+    }
+
     fn throw_if_is_unreacheable_code(&mut self) {
         if self.in_unreacheable_code == self.scope_position && self.scope_position != 0 {
             self.push_error(
@@ -1831,8 +1852,12 @@ impl<'instr> Parser<'instr> {
                 structure_type = struct_type;
             }
 
-            if let Instruction::LocalRef { struct_type, .. } = &value {
-                structure_type = struct_type;
+            if let Instruction::LocalRef {
+                kind: localref_type,
+                ..
+            } = &value
+            {
+                structure_type = localref_type.get_type_structure_type();
             }
 
             if target_type != structure_type {

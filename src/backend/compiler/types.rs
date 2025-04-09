@@ -25,7 +25,7 @@ pub type Call<'ctx> = (&'ctx str, &'ctx Type, &'ctx [Instruction<'ctx>]);
 
 pub type Function<'ctx> = (
     &'ctx str,
-    &'ctx Type,
+    &'ctx Instruction<'ctx>,
     &'ctx [Instruction<'ctx>],
     Option<&'ctx Box<Instruction<'ctx>>>,
     &'ctx [CompilerAttribute<'ctx>],

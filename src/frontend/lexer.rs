@@ -969,21 +969,6 @@ impl Type {
     }
 
     #[inline(always)]
-    pub const fn reverse_to_signed_integer_type(self) -> Type {
-        if self.is_signed_integer_type() {
-            return self;
-        }
-
-        match self {
-            Type::U64 => Type::S64,
-            Type::U32 => Type::S32,
-            Type::U16 => Type::S16,
-            Type::U8 => Type::S8,
-            _ => self,
-        }
-    }
-
-    #[inline(always)]
     pub const fn is_stack_allocated(&self) -> bool {
         self.is_bool_type() || self.is_float_type() || self.is_integer_type()
     }
@@ -1011,11 +996,6 @@ impl Type {
     #[inline(always)]
     pub const fn is_ptr_type(&self) -> bool {
         matches!(self, Type::Struct | Type::Str | Type::T)
-    }
-
-    #[inline(always)]
-    pub const fn is_heaped_ptr(&self) -> bool {
-        matches!(self, Type::Struct | Type::T)
     }
 
     #[inline(always)]

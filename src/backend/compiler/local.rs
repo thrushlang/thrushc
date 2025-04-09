@@ -297,15 +297,13 @@ fn build_local_structure<'ctx>(
         return;
     }
 
-    if let Instruction::LocalRef {
-        name, struct_type, ..
-    } = local_value
-    {
+    if let Instruction::LocalRef { name, kind, .. } = local_value {
+        let localref_structure_type: &str = kind.get_type_structure_type();
         let localref_object: AllocatedObject = compiler_objects.get_allocated_object(name);
 
         allocated_object.build_store(builder, localref_object.ptr);
 
-        allocated_object.set_structure_type(struct_type);
+        allocated_object.set_structure_type(localref_structure_type);
         compiler_objects.alloc_local_object(local.0, *allocated_object);
 
         return;
@@ -454,20 +452,21 @@ fn build_local_integer<'ctx>(
     }
 
     if let Instruction::LocalRef {
-        name: reflocal_name,
-        kind: reflocal_type,
+        name: localref_name,
+        kind: localref_type,
         ..
     } = local_value
     {
-        let localref_object: AllocatedObject = compiler_objects.get_allocated_object(reflocal_name);
+        let localref_type: &Type = localref_type.get_type();
+        let localref_object: AllocatedObject = compiler_objects.get_allocated_object(localref_name);
 
         let mut value: BasicValueEnum = localref_object.load_from_memory(
             builder,
-            utils::type_int_to_llvm_int_type(context, reflocal_type),
+            utils::type_int_to_llvm_int_type(context, localref_type),
         );
 
         if let Some(casted_value) =
-            utils::integer_autocast(local_type, reflocal_type, None, value, builder, context)
+            utils::integer_autocast(local_type, localref_type, None, value, builder, context)
         {
             value = casted_value;
         }
@@ -589,6 +588,7 @@ fn build_local_float<'ctx>(
         ..
     } = local_value
     {
+        let kind_refvar: &Type = kind_refvar.get_type();
         let localref_object: AllocatedObject = compiler_objects.get_allocated_object(name_refvar);
 
         let mut value: BasicValueEnum = localref_object.load_from_memory(
@@ -719,6 +719,7 @@ fn build_local_boolean<'ctx>(
         ..
     } = local_value
     {
+        let kind_refvar: &Type = kind_refvar.get_type();
         let localref_object: AllocatedObject = compiler_objects.get_allocated_object(name_refvar);
 
         let mut value: BasicValueEnum = localref_object.load_from_memory(

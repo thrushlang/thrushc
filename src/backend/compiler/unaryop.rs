@@ -30,6 +30,7 @@ pub fn compile_unary_op<'ctx>(
         _,
     ) = unary
     {
+        let refvar_type: &Type = refvar_type.get_type();
         let object: AllocatedObject = compiler_objects.get_allocated_object(name);
 
         if refvar_type.is_integer_type() {
@@ -85,6 +86,8 @@ pub fn compile_unary_op<'ctx>(
         _,
     ) = unary
     {
+        let refvar_type: &Type = refvar_type.get_type();
+
         let object: AllocatedObject = compiler_objects.get_allocated_object(name);
 
         if refvar_type.is_integer_type() || refvar_type.is_bool_type() {
@@ -120,6 +123,8 @@ pub fn compile_unary_op<'ctx>(
         _,
     ) = unary
     {
+        let refvar_type: &Type = refvar_type.get_type();
+
         let object: AllocatedObject = compiler_objects.get_allocated_object(name);
 
         if refvar_type.is_integer_type() {
@@ -152,7 +157,9 @@ pub fn compile_unary_op<'ctx>(
         return result.into();
     }
 
-    if let (TokenKind::Minus, Instruction::Integer(integer_type, num, is_signed), _) = unary {
+    if let (TokenKind::Minus, Instruction::Integer(thrushc_type, num, is_signed), _) = unary {
+        let integer_type: &Type = thrushc_type.get_type();
+
         let value: IntValue =
             utils::build_const_integer(context, integer_type, *num as u64, *is_signed);
 
@@ -164,7 +171,9 @@ pub fn compile_unary_op<'ctx>(
         return value.into();
     }
 
-    if let (TokenKind::Minus, Instruction::Float(float_type, num, is_signed), _) = unary {
+    if let (TokenKind::Minus, Instruction::Float(thrushc_type, num, is_signed), _) = unary {
+        let float_type: &Type = thrushc_type.get_type();
+
         let value: FloatValue =
             utils::build_const_float(builder, context, float_type, *num, *is_signed);
 

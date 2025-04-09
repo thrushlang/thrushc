@@ -25,8 +25,8 @@ pub enum Instruction<'ctx> {
     Str(Vec<u8>),
     Char(u8),
     Boolean(bool),
-    Integer(Type, f64, bool),
-    Float(Type, f64, bool),
+    Integer(Box<Instruction<'ctx>>, f64, bool),
+    Float(Box<Instruction<'ctx>>, f64, bool),
     Struct {
         name: &'ctx str,
         fields_types: CompilerStructureFields<'ctx>,
@@ -35,12 +35,11 @@ pub enum Instruction<'ctx> {
 
     LLVMValue(BasicValueEnum<'ctx>),
 
-    Type(Type),
+    Type(Type, String),
 
     InitStruct {
         name: &'ctx str,
         fields: StructFields<'ctx>,
-        kind: Type,
     },
 
     // Conditionals
@@ -101,7 +100,7 @@ pub enum Instruction<'ctx> {
         name: &'ctx str,
         params: Vec<Instruction<'ctx>>,
         body: Option<Box<Instruction<'ctx>>>,
-        return_type: Type,
+        return_type: Box<Instruction<'ctx>>,
         attributes: CompilerAttributes<'ctx>,
     },
     Return(Box<Instruction<'ctx>>, Type),
@@ -109,20 +108,19 @@ pub enum Instruction<'ctx> {
     // Locals variables
     Local {
         name: &'ctx str,
-        kind: Type,
+        kind: Box<Instruction<'ctx>>,
         value: Box<Instruction<'ctx>>,
+        comptime: bool,
         line: usize,
-        exist_only_comptime: bool,
     },
     LocalRef {
         name: &'ctx str,
         line: usize,
-        kind: Type,
-        struct_type: String,
+        kind: Box<Instruction<'ctx>>,
     },
     LocalMut {
         name: &'ctx str,
-        kind: Type,
+        kind: Box<Instruction<'ctx>>,
         value: Box<Instruction<'ctx>>,
     },
 
@@ -166,7 +164,7 @@ impl PartialEq for Instruction<'_> {
             (Instruction::Integer(_, _, _), Instruction::Integer(_, _, _))
             | (Instruction::Float(_, _, _), Instruction::Float(_, _, _))
             | (Instruction::Str(_), Instruction::Str(_)) => true,
-            (a, b) => std::mem::discriminant(a) == std::mem::discriminant(b),
+            (left, right) => std::mem::discriminant(left) == std::mem::discriminant(right),
         }
     }
 }
@@ -193,8 +191,9 @@ impl<'ctx> Instruction<'ctx> {
             return utils::build_struct_type_from_fields(context, &new_fields);
         }
 
-        if let Instruction::LocalRef { struct_type, .. } = self {
-            let structure: &CompilerStructure = compiler_objects.get_struct(struct_type);
+        if let Instruction::LocalRef { kind, .. } = self {
+            let structure_type: &str = kind.get_type_structure_type();
+            let structure: &CompilerStructure = compiler_objects.get_struct(structure_type);
             let fields: &CompilerStructureFields = &structure.1;
 
             return utils::build_struct_type_from_fields(context, fields);
@@ -313,26 +312,46 @@ impl<'ctx> Instruction<'ctx> {
         unreachable!()
     }
 
+    #[inline(always)]
+    pub fn get_basic_type(&self) -> &Type {
+        if let Instruction::Type(tp, _) = self {
+            return tp;
+        }
+
+        unreachable!()
+    }
+
+    #[inline(always)]
+    pub fn get_type_structure_type(&self) -> &str {
+        if let Instruction::Type(_, structure_type) = self {
+            return structure_type;
+        }
+
+        unreachable!()
+    }
+
     #[must_use]
     #[inline]
     pub fn get_type(&self) -> &Type {
         match self {
-            Instruction::Integer(datatype, ..)
-            | Instruction::Float(datatype, ..)
-            | Instruction::LocalRef { kind: datatype, .. }
-            | Instruction::Group { kind: datatype, .. }
+            Instruction::Group { kind: datatype, .. }
             | Instruction::BinaryOp { kind: datatype, .. }
             | Instruction::FunctionParameter { kind: datatype, .. }
             | Instruction::Call { kind: datatype, .. }
+            | Instruction::Type(datatype, _) => datatype,
+
+            Instruction::Integer(datatype, ..)
+            | Instruction::Float(datatype, ..)
+            | Instruction::LocalRef { kind: datatype, .. }
             | Instruction::LocalMut { kind: datatype, .. }
-            | Instruction::Type(datatype) => datatype,
+            | Instruction::Local { kind: datatype, .. } => datatype.get_basic_type(),
 
             Instruction::Str(_) => &Type::Str,
             Instruction::Boolean(_) => &Type::Bool,
             Instruction::Char(_) => &Type::Char,
             Instruction::NullT => &Type::T,
             Instruction::GEP { .. } => &Type::T,
-            Instruction::InitStruct { kind: datatype, .. } => datatype,
+            Instruction::InitStruct { .. } => &Type::Struct,
             Instruction::Struct { .. } => &Type::Struct,
 
             Instruction::UnaryOp { kind: datatype, .. } => datatype,
@@ -369,6 +388,15 @@ impl<'ctx> Instruction<'ctx> {
         } else {
             false
         }
+    }
+
+    #[inline(always)]
+    pub fn is_integer_type(&self) -> bool {
+        if let Instruction::Type(tp, _) = self {
+            return tp.is_integer_type();
+        }
+
+        false
     }
 
     #[inline(always)]

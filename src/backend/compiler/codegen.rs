@@ -486,20 +486,21 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                 name,
                 kind,
                 value,
-                exist_only_comptime,
+                comptime,
                 ..
             } => {
-                if *exist_only_comptime {
+                if *comptime {
                     return Instruction::Null;
                 }
 
                 let site_allocation_flag: MemoryFlag = self.generate_site_allocation_flag(value);
+                let local_type: &Type = kind.get_type();
 
                 local::build(
                     self.module,
                     self.builder,
                     self.context,
-                    (name, kind, value, [site_allocation_flag]),
+                    (name, local_type, value, [site_allocation_flag]),
                     &mut self.compiler_objects,
                 );
 
@@ -508,13 +509,14 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
 
             Instruction::LocalMut { name, kind, value } => {
                 let site_allocation_flag: MemoryFlag = self.generate_site_allocation_flag(value);
+                let localmut_type: &Type = kind.get_type();
 
                 local::build_local_mutation(
                     self.module,
                     self.builder,
                     self.context,
                     &mut self.compiler_objects,
-                    (name, kind, value, [site_allocation_flag]),
+                    (name, localmut_type, value, [site_allocation_flag]),
                 );
 
                 Instruction::Null
@@ -609,7 +611,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                 self.builder,
                 self.context,
                 instruction,
-                localref_type,
+                localref_type.get_type(),
                 &mut self.compiler_objects,
             )),
 
@@ -721,9 +723,11 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
         let function: Function = instruction.as_function();
 
         let function_name: &str = function.0;
-        let function_return_type: &Type = function.1;
+        let function_type: &Instruction = function.1;
         let function_parameters: &[Instruction] = function.2;
         let function_attributes: &[CompilerAttribute] = function.4;
+
+        let function_basic_type: &Type = function_type.get_type();
 
         let mut call_convention: u32 = CallConvention::Standard as u32;
         let mut ignore_args: bool = false;
@@ -754,7 +758,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
         let function_type: FunctionType = utils::type_to_function_type(
             self.context,
             &self.compiler_objects,
-            function_return_type,
+            function_basic_type,
             function_parameters,
             ignore_args,
         );
@@ -785,18 +789,21 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
 
     fn build_function(&mut self, function: Function<'ctx>) {
         let function_name: &str = function.0;
-        let function_return_type: &Type = function.1;
+
+        let function_type: &Instruction = function.1;
+        let function_basic_type: &Type = function_type.get_type();
+
         let function_body: Option<&Box<Instruction>> = function.3;
 
-        let function: FunctionValue = self.module.get_function(function_name).unwrap();
+        let llvm_function: FunctionValue = self.module.get_function(function_name).unwrap();
 
-        let start_block: BasicBlock = self.context.append_basic_block(function, "");
+        let entry: BasicBlock = self.context.append_basic_block(llvm_function, "");
 
-        self.builder.position_at_end(start_block);
+        self.builder.position_at_end(entry);
 
         self.codegen(function_body.unwrap());
 
-        if function_return_type.is_void_type() {
+        if function_basic_type.is_void_type() {
             self.builder.build_return(None).unwrap();
         }
     }

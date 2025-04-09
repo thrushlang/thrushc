@@ -51,15 +51,15 @@ pub fn build_sizeof<'ctx>(
     let value: &Instruction = &call.2[0];
 
     if let Instruction::LocalRef {
-        name,
-        kind,
-        struct_type,
-        line,
-        ..
+        name, kind, line, ..
     } = value
     {
-        if kind.is_ptr_type() {
-            let structure: &CompilerStructure = compiler_objects.get_struct(struct_type);
+        let localref_type: &Type = kind.get_type();
+
+        if localref_type.is_struct_type() {
+            let localref_structure_type: &str = kind.get_type_structure_type();
+            let structure: &CompilerStructure =
+                compiler_objects.get_struct(localref_structure_type);
             let structure_fields: &CompilerStructureFields = &structure.1;
 
             let llvm_type: StructType =
@@ -85,7 +85,7 @@ pub fn build_sizeof<'ctx>(
         return ptr.get_type().size_of().into();
     }
 
-    if let Instruction::Type(kind) = value {
+    if let Instruction::Type(kind, _) = value {
         match kind {
             kind if kind.is_integer_type() || kind.is_bool_type() => {
                 return utils::type_int_to_llvm_int_type(context, kind)
@@ -135,7 +135,9 @@ pub fn build_is_signed<'ctx>(
         name, kind, line, ..
     } = value
     {
-        if !kind.is_float_type() && !kind.is_integer_type() {
+        let localref_type: &Type = kind.get_type();
+
+        if !localref_type.is_float_type() && !kind.is_integer_type() {
             logging::log(
                 logging::LogType::Panic,
                 &format!(
@@ -149,12 +151,15 @@ pub fn build_is_signed<'ctx>(
 
         return if kind.is_integer_type() {
             let mut loaded_value: IntValue = object
-                .load_from_memory(builder, utils::type_int_to_llvm_int_type(context, kind))
+                .load_from_memory(
+                    builder,
+                    utils::type_int_to_llvm_int_type(context, localref_type),
+                )
                 .into_int_value();
 
             if let Some(casted_float) = utils::integer_autocast(
                 &Type::S64,
-                kind,
+                localref_type,
                 None,
                 loaded_value.into(),
                 builder,
@@ -174,11 +179,14 @@ pub fn build_is_signed<'ctx>(
                 .into()
         } else {
             let mut loaded_value: FloatValue = object
-                .load_from_memory(builder, utils::type_float_to_llvm_float_type(context, kind))
+                .load_from_memory(
+                    builder,
+                    utils::type_float_to_llvm_float_type(context, localref_type),
+                )
                 .into_float_value();
 
             if let Some(casted_float) = utils::float_autocast(
-                kind,
+                localref_type,
                 &Type::F64,
                 None,
                 loaded_value.into(),

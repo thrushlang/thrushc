@@ -33,7 +33,9 @@ pub fn build_expression<'ctx>(
         return utils::build_string_constant(module, builder, context, const_str).into();
     }
 
-    if let Instruction::Float(kind, num, is_signed) = instruction {
+    if let Instruction::Float(thrushc_type, num, is_signed) = instruction {
+        let kind: &Type = thrushc_type.get_type();
+
         let mut float: FloatValue =
             utils::build_const_float(builder, context, kind, *num, *is_signed);
 
@@ -46,7 +48,9 @@ pub fn build_expression<'ctx>(
         return float.into();
     }
 
-    if let Instruction::Integer(kind, num, is_signed) = instruction {
+    if let Instruction::Integer(thrushc_type, num, is_signed) = instruction {
+        let kind: &Type = thrushc_type.get_type();
+
         let mut integer: IntValue =
             utils::build_const_integer(context, kind, *num as u64, *is_signed);
 
@@ -103,31 +107,33 @@ pub fn build_expression<'ctx>(
         };
     }
 
-    if let Instruction::LocalRef {
-        name,
-        kind,
-        struct_type,
-        ..
-    } = instruction
-    {
+    if let Instruction::LocalRef { name, kind, .. } = instruction {
+        let localref_type: &Type = kind.get_type();
+
         let object: AllocatedObject = compiler_objects.get_allocated_object(name);
 
-        if kind.is_float_type() {
-            return object
-                .load_from_memory(builder, utils::type_float_to_llvm_float_type(context, kind));
+        if localref_type.is_float_type() {
+            return object.load_from_memory(
+                builder,
+                utils::type_float_to_llvm_float_type(context, localref_type),
+            );
         }
 
-        if kind.is_integer_type() || kind.is_bool_type() {
-            return object
-                .load_from_memory(builder, utils::type_int_to_llvm_int_type(context, kind));
+        if kind.is_integer_type() || localref_type.is_bool_type() {
+            return object.load_from_memory(
+                builder,
+                utils::type_int_to_llvm_int_type(context, localref_type),
+            );
         }
 
-        if kind.is_str() {
+        if localref_type.is_str() {
             return object.load_from_memory(builder, context.i8_type());
         }
 
-        if kind.is_struct_type() {
-            let structure: &CompilerStructure = compiler_objects.get_struct(struct_type);
+        if localref_type.is_struct_type() {
+            let localref_structure_type: &str = kind.get_type_structure_type();
+            let structure: &CompilerStructure =
+                compiler_objects.get_struct(localref_structure_type);
             let fields: &CompilerStructureFields = &structure.1;
 
             let llvm_structure_type: StructType =
@@ -140,7 +146,7 @@ pub fn build_expression<'ctx>(
             return object.load_from_memory(builder, llvm_structure_type);
         }
 
-        if kind.is_raw_ptr() {
+        if localref_type.is_raw_ptr() {
             return object.load_from_memory(builder, context.ptr_type(AddressSpace::default()));
         }
 
@@ -208,10 +214,18 @@ pub fn build_expression<'ctx>(
     }
 
     if let Instruction::LocalMut { name, kind, value } = instruction {
+        let localmut_type: &Type = kind.get_type();
+
         let object: AllocatedObject = compiler_objects.get_allocated_object(name);
 
-        let expression: BasicValueEnum =
-            build_expression(module, builder, context, value, kind, compiler_objects);
+        let expression: BasicValueEnum = build_expression(
+            module,
+            builder,
+            context,
+            value,
+            localmut_type,
+            compiler_objects,
+        );
 
         object.build_store(builder, expression);
 
