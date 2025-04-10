@@ -1,7 +1,7 @@
 use super::{
     lexer::{TokenKind, Type},
-    objects::Struct,
-    traits::StructureExtensions,
+    objects::{FoundObject, Struct},
+    traits::{FoundObjectExtensions, StructureExtensions},
 };
 
 impl StructureExtensions for Struct<'_> {
@@ -118,5 +118,19 @@ impl std::fmt::Display for Type {
             Type::T => write!(f, "T"),
             Type::Void => write!(f, "void"),
         }
+    }
+}
+
+impl FoundObjectExtensions for FoundObject<'_> {
+    fn is_structure(&self) -> bool {
+        self.0.is_some()
+    }
+
+    fn is_function(&self) -> bool {
+        self.1.is_some()
+    }
+
+    fn is_local(&self) -> bool {
+        self.2.is_some()
     }
 }

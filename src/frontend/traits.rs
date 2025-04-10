@@ -1,7 +1,7 @@
 use super::{
     super::common::error::ThrushCompilerError,
     lexer::Type,
-    objects::{Function, Local},
+    objects::{Function, Local, Struct},
 };
 
 pub trait TokenLexemeExtensions {
@@ -12,6 +12,12 @@ pub trait TokenLexemeExtensions {
         line: usize,
         span: (usize, usize),
     ) -> Result<Vec<u8>, ThrushCompilerError>;
+}
+
+pub trait FoundObjectExtensions {
+    fn is_function(&self) -> bool;
+    fn is_structure(&self) -> bool;
+    fn is_local(&self) -> bool;
 }
 
 pub trait StructureExtensions {
@@ -30,4 +36,9 @@ pub trait FoundObjectEither {
         line: usize,
         span: (usize, usize),
     ) -> Result<&Function, ThrushCompilerError>;
+    fn expected_structure(
+        &self,
+        line: usize,
+        span: (usize, usize),
+    ) -> Result<Struct, ThrushCompilerError>;
 }

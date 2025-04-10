@@ -2,7 +2,9 @@ use super::{
     lexer::{Token, TokenKind, Type},
     objects::{FoundObject, Function, Functions, Local, ParserObjects, Struct},
     scoper::ThrushScoper,
-    traits::{FoundObjectEither, StructureExtensions, TokenLexemeExtensions},
+    traits::{
+        FoundObjectEither, FoundObjectExtensions, StructureExtensions, TokenLexemeExtensions,
+    },
     type_checking,
     types::StructFields,
 };
@@ -1523,6 +1525,10 @@ impl<'instr> Parser<'instr> {
                     let object: FoundObject = self
                         .parser_objects
                         .get_object(object_name, (object_line, object_span))?;
+
+                    if object.is_structure() {
+                        return Ok(Instruction::Type(Type::Struct, object_name.to_string()));
+                    }
 
                     if self.match_token(TokenKind::Eq)? {
                         let object: FoundObject = self

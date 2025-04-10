@@ -167,4 +167,21 @@ impl FoundObjectEither for FoundObject<'_> {
             Some(span),
         ))
     }
+
+    fn expected_structure(
+        &self,
+        line: usize,
+        span: (usize, usize),
+    ) -> Result<Struct, ThrushCompilerError> {
+        if let Some(structure) = self.0.cloned() {
+            return Ok(structure);
+        }
+
+        Err(ThrushCompilerError::Error(
+            String::from("Expected function reference"),
+            String::from("Expected function but found something else."),
+            line,
+            Some(span),
+        ))
+    }
 }
