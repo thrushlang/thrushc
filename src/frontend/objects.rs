@@ -57,7 +57,7 @@ impl<'instr> ParserObjects<'instr> {
 
         Err(ThrushCompilerError::Error(
             String::from("Structure/Function/Local not found"),
-            format!("'{}' is don't in defined.", name),
+            format!("'{}' is not defined.", name),
             location.0,
             Some(location.1),
         ))
@@ -73,7 +73,7 @@ impl<'instr> ParserObjects<'instr> {
         }
 
         Err(ThrushCompilerError::Error(
-            String::from("Structure don't found"),
+            String::from("Structure not found"),
             format!("'{}' structure not defined.", name),
             location.0,
             Some(location.1),
