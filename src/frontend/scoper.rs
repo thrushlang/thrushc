@@ -1,13 +1,12 @@
-use {
-    super::super::{
-        backend::compiler::{instruction::Instruction, misc::CompilerFile},
-        common::{
-            constants::MINIMAL_ERROR_CAPACITY, diagnostic::Diagnostic, error::ThrushCompilerError,
-        },
-        logging::LogType,
+use super::super::{
+    backend::compiler::{instruction::Instruction, misc::CompilerFile},
+    common::{
+        constants::MINIMAL_ERROR_CAPACITY, diagnostic::Diagnostic, error::ThrushCompilerError,
     },
-    std::process,
+    logging::LogType,
 };
+
+use std::process;
 
 const MINIMAL_SCOPE_CAPACITY: usize = 256;
 

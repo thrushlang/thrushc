@@ -1,9 +1,11 @@
+use super::super::backend::compiler::misc::CompilerFile;
+
+use super::{
+    error::ThrushCompilerError,
+    logging::{self, LogType},
+};
+
 use {
-    super::{
-        super::backend::compiler::misc::CompilerFile,
-        error::ThrushCompilerError,
-        logging::{self, LogType},
-    },
     colored::Colorize,
     std::{fs, path::PathBuf},
 };

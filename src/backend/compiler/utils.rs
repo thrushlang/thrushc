@@ -1,22 +1,22 @@
-use {
-    super::{
-        super::super::frontend::lexer::Type,
-        instruction::Instruction,
-        objects::CompilerObjects,
-        traits::CompilerStructureFieldsExtensions,
-        types::{CompilerStructure, CompilerStructureFields},
+use super::super::super::frontend::lexer::Type;
+
+use super::{
+    instruction::Instruction,
+    objects::CompilerObjects,
+    traits::CompilerStructureFieldsExtensions,
+    types::{CompilerStructure, CompilerStructureFields},
+};
+
+use inkwell::{
+    AddressSpace,
+    builder::Builder,
+    context::Context,
+    module::{Linkage, Module},
+    types::{
+        AnyTypeEnum, ArrayType, BasicMetadataTypeEnum, BasicTypeEnum, FloatType, FunctionType,
+        IntType, StructType,
     },
-    inkwell::{
-        AddressSpace,
-        builder::Builder,
-        context::Context,
-        module::{Linkage, Module},
-        types::{
-            AnyTypeEnum, ArrayType, BasicMetadataTypeEnum, BasicTypeEnum, FloatType, FunctionType,
-            IntType, StructType,
-        },
-        values::{BasicValueEnum, FloatValue, GlobalValue, IntValue, PointerValue},
-    },
+    values::{BasicValueEnum, FloatValue, GlobalValue, IntValue, PointerValue},
 };
 
 #[inline]

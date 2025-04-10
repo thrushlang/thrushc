@@ -1,22 +1,22 @@
-use {
-    super::{
-        super::super::{
-            frontend::{lexer::Type, objects::Functions},
-            logging,
-        },
-        Instruction,
-        memory::AllocatedObject,
-        objects::CompilerObjects,
-        types::{Call, CompilerStructure, CompilerStructureFields},
-        utils,
-    },
-    inkwell::{
-        AddressSpace, FloatPredicate,
-        builder::Builder,
-        context::Context,
-        types::StructType,
-        values::{BasicValueEnum, FloatValue, IntValue, PointerValue},
-    },
+use super::super::super::{
+    frontend::{lexer::Type, objects::Functions},
+    logging,
+};
+
+use super::{
+    Instruction,
+    memory::AllocatedObject,
+    objects::CompilerObjects,
+    types::{Call, CompilerStructure, CompilerStructureFields},
+    utils,
+};
+
+use inkwell::{
+    AddressSpace, FloatPredicate,
+    builder::Builder,
+    context::Context,
+    types::StructType,
+    values::{BasicValueEnum, FloatValue, IntValue, PointerValue},
 };
 
 pub fn include(functions: &mut Functions) {

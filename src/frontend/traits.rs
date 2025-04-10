@@ -4,7 +4,7 @@ use super::{
     objects::{Function, Local},
 };
 
-pub trait TokenLexemeBasics {
+pub trait TokenLexemeExtensions {
     fn to_str(&self) -> &str;
     fn to_string(&self) -> String;
     fn parse_scapes(
@@ -14,7 +14,7 @@ pub trait TokenLexemeBasics {
     ) -> Result<Vec<u8>, ThrushCompilerError>;
 }
 
-pub trait StructureBasics {
+pub trait StructureExtensions {
     fn contains_field(&self, field_name: &str) -> bool;
     fn get_field_type(&self, field_name: &str, default: Type) -> Type;
 }

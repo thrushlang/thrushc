@@ -1,13 +1,12 @@
-use {
-    super::{
-        instruction::Instruction,
-        memory::{AllocatedObject, MemoryFlag},
-        objects::CompilerObjects,
-        traits::MappedHeapedPointersExtension,
-        types::{AllocatedObjects, MappedHeapPointers},
-    },
-    inkwell::{builder::Builder, context::Context},
+use super::{
+    instruction::Instruction,
+    memory::{AllocatedObject, MemoryFlag},
+    objects::CompilerObjects,
+    traits::MappedHeapedPointersExtension,
+    types::{AllocatedObjects, MappedHeapPointers},
 };
+
+use inkwell::{builder::Builder, context::Context};
 
 #[derive(Debug)]
 pub struct Deallocator<'ctx> {

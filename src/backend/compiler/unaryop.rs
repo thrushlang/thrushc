@@ -1,17 +1,13 @@
-use {
-    super::{
-        super::super::frontend::lexer::{TokenKind, Type},
-        Instruction,
-        memory::AllocatedObject,
-        objects::CompilerObjects,
-        types::UnaryOp,
-        utils,
-    },
-    inkwell::{
-        builder::Builder,
-        context::Context,
-        values::{BasicValueEnum, FloatValue, IntValue},
-    },
+use super::super::super::frontend::lexer::{TokenKind, Type};
+
+use super::{
+    Instruction, memory::AllocatedObject, objects::CompilerObjects, types::UnaryOp, utils,
+};
+
+use inkwell::{
+    builder::Builder,
+    context::Context,
+    values::{BasicValueEnum, FloatValue, IntValue},
 };
 
 pub fn compile_unary_op<'ctx>(

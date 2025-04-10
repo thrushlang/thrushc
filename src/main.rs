@@ -36,7 +36,7 @@ lazy_static! {
         let error = || {
             logging::log(
                 logging::LogType::Panic,
-                "The LLVM Toolchain was corrupted from the thrush toolchain; reinstall the entire toolchain across ~ `thorium install`.",
+                "The LLVM Backend was corrupted; reinstall the entire toolchain across ~ `thorium install`.",
             );
         };
 

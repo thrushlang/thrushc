@@ -1,31 +1,31 @@
-use {
-    super::{
-        super::{super::frontend::lexer::Type, compiler::attributes::CompilerAttribute},
-        attributes::{AttributeBuilder, CompilerAttributeApplicant},
-        binaryop, call,
-        conventions::CallConvention,
-        dealloc::Deallocator,
-        generation,
-        instruction::Instruction,
-        local,
-        memory::{AllocatedObject, MemoryFlag},
-        objects::CompilerObjects,
-        traits::CompilerStructureFieldsExtensions,
-        types::{
-            CompilerStructure, CompilerStructureFields, Function, FunctionParameter, MemoryFlags,
-        },
-        unaryop, utils,
-    },
-    inkwell::{
-        AddressSpace,
-        basic_block::BasicBlock,
-        builder::Builder,
-        context::Context,
-        module::{Linkage, Module},
-        targets::TargetData,
-        types::{FunctionType, StructType},
-        values::{BasicValueEnum, FunctionValue, GlobalValue, IntValue, PointerValue},
-    },
+use super::super::super::frontend::lexer::Type;
+
+use super::super::compiler::attributes::CompilerAttribute;
+
+use super::{
+    attributes::{AttributeBuilder, CompilerAttributeApplicant},
+    binaryop, call,
+    conventions::CallConvention,
+    dealloc::Deallocator,
+    generation,
+    instruction::Instruction,
+    local,
+    memory::{AllocatedObject, MemoryFlag},
+    objects::CompilerObjects,
+    traits::CompilerStructureFieldsExtensions,
+    types::{CompilerStructure, CompilerStructureFields, Function, FunctionParameter, MemoryFlags},
+    unaryop, utils,
+};
+
+use inkwell::{
+    AddressSpace,
+    basic_block::BasicBlock,
+    builder::Builder,
+    context::Context,
+    module::{Linkage, Module},
+    targets::TargetData,
+    types::{FunctionType, StructType},
+    values::{BasicValueEnum, FunctionValue, GlobalValue, IntValue, PointerValue},
 };
 
 pub struct Codegen<'a, 'ctx> {

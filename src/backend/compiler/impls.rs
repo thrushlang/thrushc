@@ -1,20 +1,20 @@
-use {
-    super::{
-        super::super::frontend::types::StructFields,
-        memory::MemoryFlag,
-        objects::CompilerObjects,
-        traits::{
-            AttributesExtensions, CompilerStructureFieldsExtensions, MappedHeapedPointersExtension,
-            MemoryFlagsBasics,
-        },
-        types::{
-            CompilerAttributes, CompilerStructure, CompilerStructureFields, MappedHeapPointers,
-            MemoryFlags,
-        },
-        utils,
+use super::super::super::frontend::types::StructFields;
+
+use super::{
+    memory::MemoryFlag,
+    objects::CompilerObjects,
+    traits::{
+        AttributesExtensions, CompilerStructureFieldsExtensions, MappedHeapedPointersExtension,
+        MemoryFlagsBasics,
     },
-    inkwell::{builder::Builder, context::Context, types::StructType, values::PointerValue},
+    types::{
+        CompilerAttributes, CompilerStructure, CompilerStructureFields, MappedHeapPointers,
+        MemoryFlags,
+    },
+    utils,
 };
+
+use inkwell::{builder::Builder, context::Context, types::StructType, values::PointerValue};
 
 impl AttributesExtensions for CompilerAttributes<'_> {
     fn contain_ffi_attribute(&self) -> bool {

@@ -1,18 +1,14 @@
-use {
-    super::super::{
-        super::super::frontend::lexer::{TokenKind, Type},
-        Instruction, call,
-        objects::CompilerObjects,
-        types::BinaryOp,
-        types::UnaryOp,
-        unaryop, utils,
-    },
-    inkwell::{
-        builder::Builder,
-        context::Context,
-        module::Module,
-        values::{BasicValueEnum, FloatValue},
-    },
+use super::super::super::super::frontend::lexer::{TokenKind, Type};
+
+use super::super::{
+    Instruction, call, objects::CompilerObjects, types::BinaryOp, types::UnaryOp, unaryop, utils,
+};
+
+use inkwell::{
+    builder::Builder,
+    context::Context,
+    module::Module,
+    values::{BasicValueEnum, FloatValue},
 };
 
 fn build_float_op<'ctx>(

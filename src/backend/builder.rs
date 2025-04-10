@@ -1,16 +1,16 @@
 #![allow(clippy::upper_case_acronyms)]
 
+use super::compiler::{
+    Compiler,
+    instruction::Instruction,
+    misc::{CompilerFile, CompilerOptions},
+};
+
+use super::super::{
+    LLVM_BACKEND, Lexer, Parser, Token, common::constants::CURRENT_CLANG_VERSION, logging,
+};
+
 use {
-    super::{
-        super::{
-            LLVM_BACKEND, Lexer, Parser, Token, common::constants::CURRENT_CLANG_VERSION, logging,
-        },
-        compiler::{
-            Compiler,
-            instruction::Instruction,
-            misc::{CompilerFile, CompilerOptions},
-        },
-    },
     colored::Colorize,
     inkwell::{
         OptimizationLevel,
@@ -19,12 +19,13 @@ use {
         module::Module,
         targets::{Target, TargetMachine},
     },
-    std::{
-        fs::{self, write},
-        path::{Path, PathBuf},
-        process::Command,
-        time::{Duration, Instant},
-    },
+};
+
+use std::{
+    fs::{self, write},
+    path::{Path, PathBuf},
+    process::Command,
+    time::{Duration, Instant},
 };
 
 pub struct Thrushc<'a> {

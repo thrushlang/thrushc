@@ -1,12 +1,14 @@
+use super::super::super::{
+    backend::compiler::attributes::CompilerAttribute,
+    frontend::lexer::{TokenKind, Type},
+};
+
+use super::{
+    Instruction,
+    memory::{AllocatedObject, MemoryFlag},
+};
+
 use {
-    super::{
-        super::super::{
-            backend::compiler::attributes::CompilerAttribute,
-            frontend::lexer::{TokenKind, Type},
-        },
-        Instruction,
-        memory::{AllocatedObject, MemoryFlag},
-    },
     ahash::{AHashMap as HashMap, HashSet},
     inkwell::values::FunctionValue,
 };

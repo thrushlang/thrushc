@@ -1,28 +1,27 @@
-use {
-    super::{
-        super::{
-            backend::compiler::{
-                attributes::CompilerAttribute, builtins, conventions::CallConvention,
-                instruction::Instruction, misc::CompilerFile, traits::AttributesExtensions,
-                types::CompilerAttributes,
-            },
-            common::{
-                constants::MINIMAL_ERROR_CAPACITY, diagnostic::Diagnostic,
-                error::ThrushCompilerError,
-            },
-            logging::LogType,
-        },
-        lexer::{Token, TokenKind, Type},
-        objects::{FoundObject, Function, Functions, Local, ParserObjects, Struct},
-        scoper::ThrushScoper,
-        traits::{FoundObjectEither, StructureBasics, TokenLexemeBasics},
-        type_checking,
-        types::StructFields,
-    },
-    ahash::AHashMap as HashMap,
-    lazy_static::lazy_static,
-    std::{mem, process},
+use super::{
+    lexer::{Token, TokenKind, Type},
+    objects::{FoundObject, Function, Functions, Local, ParserObjects, Struct},
+    scoper::ThrushScoper,
+    traits::{FoundObjectEither, StructureExtensions, TokenLexemeExtensions},
+    type_checking,
+    types::StructFields,
 };
+
+use super::super::{
+    backend::compiler::{
+        attributes::CompilerAttribute, builtins, conventions::CallConvention,
+        instruction::Instruction, misc::CompilerFile, traits::AttributesExtensions,
+        types::CompilerAttributes,
+    },
+    common::{
+        constants::MINIMAL_ERROR_CAPACITY, diagnostic::Diagnostic, error::ThrushCompilerError,
+    },
+    logging::LogType,
+};
+
+use ahash::AHashMap as HashMap;
+use lazy_static::lazy_static;
+use std::{mem, process};
 
 const MINIMAL_STATEMENT_CAPACITY: usize = 100_000;
 const MINIMAL_GLOBAL_CAPACITY: usize = 2024;
@@ -729,7 +728,7 @@ impl<'instr> Parser<'instr> {
         if !self.inside_a_function {
             self.push_error(
                 String::from("Syntax error"),
-                String::from("Return statement outside of function body."),
+                String::from("Return outside of function body."),
             );
         }
 
@@ -1368,6 +1367,7 @@ impl<'instr> Parser<'instr> {
     fn primary(&mut self) -> Result<Instruction<'instr>, ThrushCompilerError> {
         let primary: Instruction = match &self.peek().kind {
             TokenKind::New => self.build_struct_initializer()?,
+
             TokenKind::PlusPlus => {
                 let op: &TokenKind = &self.advance()?.kind;
 
@@ -1391,6 +1391,7 @@ impl<'instr> Parser<'instr> {
 
                 return Ok(unaryop);
             }
+
             TokenKind::MinusMinus => {
                 let op: &TokenKind = &self.advance()?.kind;
 
@@ -1414,6 +1415,7 @@ impl<'instr> Parser<'instr> {
 
                 return Ok(unaryop);
             }
+
             TokenKind::DataType(tp) => {
                 let datatype: &Token = self.advance()?;
 
@@ -1438,6 +1440,7 @@ impl<'instr> Parser<'instr> {
                     }
                 }
             }
+
             TokenKind::LParen => {
                 let lparen: &Token = self.advance()?;
 
@@ -1466,21 +1469,26 @@ impl<'instr> Parser<'instr> {
                     kind: expression_type,
                 });
             }
+
             TokenKind::NullT => {
                 self.only_advance()?;
 
                 Instruction::NullT
             }
+
             TokenKind::Str => {
                 let token: &Token = self.advance()?;
+                let token_lexeme: &[u8] = token.lexeme;
 
-                Instruction::Str(token.lexeme.parse_scapes(token.line, token.span)?)
+                Instruction::Str(token_lexeme.parse_scapes(token.line, token.span)?)
             }
+
             TokenKind::Char => {
                 let char: &Token = self.advance()?;
 
                 Instruction::Char(char.lexeme[0])
             }
+
             kind => match kind {
                 TokenKind::Integer(kind, number, is_signed) => {
                     self.only_advance()?;
@@ -1491,6 +1499,7 @@ impl<'instr> Parser<'instr> {
                         *is_signed,
                     )
                 }
+
                 TokenKind::Float(kind, number, is_signed) => {
                     self.only_advance()?;
 
@@ -1500,6 +1509,7 @@ impl<'instr> Parser<'instr> {
                         *is_signed,
                     )
                 }
+
                 TokenKind::Identifier => {
                     let object_token: &Token = self.advance()?;
 
@@ -1509,6 +1519,10 @@ impl<'instr> Parser<'instr> {
                     let object_line: usize = object_token.line;
 
                     self.throw_if_is_unreacheable_code();
+
+                    let object: FoundObject = self
+                        .parser_objects
+                        .get_object(object_name, (object_line, object_span))?;
 
                     if self.match_token(TokenKind::Eq)? {
                         let object: FoundObject = self
@@ -1586,14 +1600,17 @@ impl<'instr> Parser<'instr> {
 
                     localref
                 }
+
                 TokenKind::True => {
                     self.only_advance()?;
                     Instruction::Boolean(true)
                 }
+
                 TokenKind::False => {
                     self.only_advance()?;
                     Instruction::Boolean(false)
                 }
+
                 _ => {
                     let previous: &Token = self.advance()?;
 

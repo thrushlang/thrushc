@@ -1,23 +1,22 @@
 #![allow(clippy::upper_case_acronyms)]
 
-use {
-    super::{
-        super::super::{
-            common::error::ThrushCompilerError,
-            frontend::{
-                lexer::{TokenKind, Type},
-                types::StructFields,
-            },
-        },
-        objects::CompilerObjects,
-        types::{
-            BinaryOp, CompilerAttributes, CompilerStructure, CompilerStructureFields, Function,
-            UnaryOp,
-        },
-        utils,
+use super::super::super::{
+    common::error::ThrushCompilerError,
+    frontend::{
+        lexer::{TokenKind, Type},
+        types::StructFields,
     },
-    inkwell::{context::Context, types::StructType, values::BasicValueEnum},
 };
+
+use super::{
+    objects::CompilerObjects,
+    types::{
+        BinaryOp, CompilerAttributes, CompilerStructure, CompilerStructureFields, Function, UnaryOp,
+    },
+    utils,
+};
+
+use inkwell::{context::Context, types::StructType, values::BasicValueEnum};
 
 #[derive(Debug, Clone, Default)]
 pub enum Instruction<'ctx> {

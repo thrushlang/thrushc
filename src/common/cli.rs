@@ -1,12 +1,11 @@
+use super::super::{
+    LLVM_BACKEND,
+    backend::compiler::misc::{CompilerFile, CompilerOptions, Opt},
+};
+
+use super::{constants::TARGET_TRIPLES, logging};
+
 use {
-    super::{
-        super::{
-            LLVM_BACKEND,
-            backend::compiler::misc::{CompilerFile, CompilerOptions, Opt},
-        },
-        constants::TARGET_TRIPLES,
-        logging,
-    },
     colored::Colorize,
     inkwell::targets::{CodeModel, RelocMode, TargetMachine, TargetTriple},
     std::{

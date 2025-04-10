@@ -1,9 +1,8 @@
-use {
-    colored::{ColoredString, Colorize},
-    std::{
-        io::{self, Write},
-        process,
-    },
+use colored::{ColoredString, Colorize};
+
+use std::{
+    io::{self, Write},
+    process,
 };
 
 #[derive(Debug)]

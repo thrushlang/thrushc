@@ -1,17 +1,19 @@
-use {
-    super::{
-        super::super::frontend::lexer::Type, binaryop, call, instruction::Instruction,
-        memory::AllocatedObject, memory::MemoryFlag, objects::CompilerObjects,
-        types::CompilerStructure, types::CompilerStructureFields, unaryop, utils,
-    },
-    inkwell::{
-        AddressSpace,
-        builder::Builder,
-        context::Context,
-        module::Module,
-        types::StructType,
-        values::{BasicValueEnum, FloatValue, IntValue, PointerValue},
-    },
+use super::super::super::frontend::lexer::Type;
+
+use super::{binaryop, call, instruction::Instruction};
+
+use super::{
+    memory::AllocatedObject, memory::MemoryFlag, objects::CompilerObjects,
+    types::CompilerStructure, types::CompilerStructureFields, unaryop, utils,
+};
+
+use inkwell::{
+    AddressSpace,
+    builder::Builder,
+    context::Context,
+    module::Module,
+    types::StructType,
+    values::{BasicValueEnum, FloatValue, IntValue, PointerValue},
 };
 
 pub fn build_expression<'ctx>(

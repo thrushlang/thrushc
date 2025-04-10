@@ -1,7 +1,6 @@
-use {
-    super::{super::common::error::ThrushCompilerError, lexer::Type, traits::FoundObjectEither},
-    ahash::AHashMap as HashMap,
-};
+use super::super::common::error::ThrushCompilerError;
+use super::{lexer::Type, traits::FoundObjectEither};
+use ahash::AHashMap as HashMap;
 
 const MINIMAL_STRUCTURE_CAPACITY: usize = 1024;
 const MINIMAL_LOCAL_SCOPE_CAPACITY: usize = 255;
@@ -57,8 +56,8 @@ impl<'instr> ParserObjects<'instr> {
         }
 
         Err(ThrushCompilerError::Error(
-            String::from("Structure/function/local variable not found"),
-            format!("'{}' is don't in declared or defined.", name),
+            String::from("Structure/Function/Local not found"),
+            format!("'{}' is don't in defined.", name),
             location.0,
             Some(location.1),
         ))
@@ -75,7 +74,7 @@ impl<'instr> ParserObjects<'instr> {
 
         Err(ThrushCompilerError::Error(
             String::from("Structure don't found"),
-            format!("'{}' structure not declared or defined.", name),
+            format!("'{}' structure not defined.", name),
             location.0,
             Some(location.1),
         ))

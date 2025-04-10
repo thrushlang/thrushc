@@ -1,10 +1,10 @@
 use super::{
     lexer::{TokenKind, Type},
     objects::Struct,
-    traits::StructureBasics,
+    traits::StructureExtensions,
 };
 
-impl StructureBasics for Struct<'_> {
+impl StructureExtensions for Struct<'_> {
     fn contains_field(&self, field_name: &str) -> bool {
         self.iter().any(|field| field.0 == field_name)
     }

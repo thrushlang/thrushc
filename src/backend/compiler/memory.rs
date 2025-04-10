@@ -1,10 +1,11 @@
 #![allow(clippy::enum_variant_names)]
 
+use super::{
+    objects::CompilerObjects,
+    types::{CompilerStructure, MappedHeapPointer, MappedHeapPointers},
+};
+
 use {
-    super::{
-        objects::CompilerObjects,
-        types::{CompilerStructure, MappedHeapPointer, MappedHeapPointers},
-    },
     ahash::{HashSet, HashSetExt},
     inkwell::{
         builder::Builder,

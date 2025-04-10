@@ -8,7 +8,7 @@ use {
             },
             logging::LogType,
         },
-        traits::TokenLexemeBasics,
+        traits::TokenLexemeExtensions,
         types::TokenLexeme,
     },
     ahash::{HashMap, HashMapExt},
@@ -639,7 +639,7 @@ pub struct Token<'token> {
     pub span: (usize, usize),
 }
 
-impl TokenLexemeBasics for TokenLexeme<'_> {
+impl TokenLexemeExtensions for TokenLexeme<'_> {
     #[inline(always)]
     fn to_str(&self) -> &str {
         core::str::from_utf8(self).unwrap_or("�")

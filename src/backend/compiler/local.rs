@@ -1,19 +1,19 @@
-use {
-    super::{
-        super::super::frontend::lexer::Type,
-        Instruction, binaryop, call, generation,
-        memory::{AllocatedObject, MemoryFlag},
-        objects::CompilerObjects,
-        traits::MemoryFlagsBasics,
-        types::Local,
-        unaryop, utils,
-    },
-    inkwell::{
-        builder::Builder,
-        context::Context,
-        module::Module,
-        values::{BasicValueEnum, PointerValue},
-    },
+use super::super::super::frontend::lexer::Type;
+
+use super::{
+    Instruction, binaryop, call, generation,
+    memory::{AllocatedObject, MemoryFlag},
+    objects::CompilerObjects,
+    traits::MemoryFlagsBasics,
+    types::Local,
+    unaryop, utils,
+};
+
+use inkwell::{
+    builder::Builder,
+    context::Context,
+    module::Module,
+    values::{BasicValueEnum, PointerValue},
 };
 
 pub fn build<'ctx>(
