@@ -35,8 +35,8 @@ pub fn build_expression<'ctx>(
         return utils::build_string_constant(module, builder, context, const_str).into();
     }
 
-    if let Instruction::Float(thrushc_type, num, is_signed) = instruction {
-        let kind: &Type = thrushc_type.get_type();
+    if let Instruction::Float(kind, num, is_signed) = instruction {
+        let kind: &Type = kind.get_basic_type();
 
         let mut float: FloatValue =
             utils::build_const_float(builder, context, kind, *num, *is_signed);
@@ -50,8 +50,8 @@ pub fn build_expression<'ctx>(
         return float.into();
     }
 
-    if let Instruction::Integer(thrushc_type, num, is_signed) = instruction {
-        let kind: &Type = thrushc_type.get_type();
+    if let Instruction::Integer(kind, num, is_signed) = instruction {
+        let kind: &Type = kind.get_basic_type();
 
         let mut integer: IntValue =
             utils::build_const_integer(context, kind, *num as u64, *is_signed);
@@ -75,6 +75,7 @@ pub fn build_expression<'ctx>(
 
     if let Instruction::GEP { name, index } = instruction {
         let local: PointerValue = compiler_objects.get_allocated_object(name).ptr;
+        let index_type: &Type = index.get_basic_type();
 
         let mut compiled_index: BasicValueEnum = build_expression(
             module,
@@ -87,7 +88,7 @@ pub fn build_expression<'ctx>(
 
         if let Some(casted_index) = utils::integer_autocast(
             &Type::U64,
-            index.get_type(),
+            index_type,
             None,
             compiled_index,
             builder,
@@ -110,7 +111,7 @@ pub fn build_expression<'ctx>(
     }
 
     if let Instruction::LocalRef { name, kind, .. } = instruction {
-        let localref_type: &Type = kind.get_type();
+        let localref_type: &Type = kind.get_basic_type();
 
         let object: AllocatedObject = compiler_objects.get_allocated_object(name);
 
@@ -159,11 +160,13 @@ pub fn build_expression<'ctx>(
         left,
         op,
         right,
-        kind: binary_op_type,
+        kind: binaryop_type,
         ..
     } = instruction
     {
-        if binary_op_type.is_float_type() {
+        let binaryop_type: &Type = binaryop_type.get_basic_type();
+
+        if binaryop_type.is_float_type() {
             return binaryop::float::float_binaryop(
                 module,
                 builder,
@@ -174,7 +177,7 @@ pub fn build_expression<'ctx>(
             );
         }
 
-        if binary_op_type.is_integer_type() {
+        if binaryop_type.is_integer_type() {
             return binaryop::integer::compile_integer_binaryop(
                 module,
                 builder,
@@ -185,7 +188,7 @@ pub fn build_expression<'ctx>(
             );
         }
 
-        if binary_op_type.is_bool_type() {
+        if binaryop_type.is_bool_type() {
             return binaryop::boolean::bool_binaryop(
                 module,
                 builder,
@@ -197,6 +200,7 @@ pub fn build_expression<'ctx>(
         }
 
         println!("{:?}", instruction);
+
         unreachable!()
     }
 
@@ -216,7 +220,7 @@ pub fn build_expression<'ctx>(
     }
 
     if let Instruction::LocalMut { name, kind, value } = instruction {
-        let localmut_type: &Type = kind.get_type();
+        let localmut_type: &Type = kind.get_basic_type();
 
         let object: AllocatedObject = compiler_objects.get_allocated_object(name);
 
@@ -252,7 +256,9 @@ pub fn build_expression<'ctx>(
     }
 
     if let Instruction::Return(instruction, kind) = instruction {
-        if kind.is_void_type() {
+        let basic_type: &Type = kind.get_basic_type();
+
+        if basic_type.is_void_type() {
             builder.build_return(None).unwrap();
 
             return context
@@ -267,7 +273,7 @@ pub fn build_expression<'ctx>(
                 builder,
                 context,
                 instruction,
-                kind,
+                basic_type,
                 compiler_objects,
             )))
             .unwrap();

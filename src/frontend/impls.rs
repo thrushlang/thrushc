@@ -1,17 +1,20 @@
+use super::super::common::error::ThrushCompilerError;
+
+use super::types::CodeLocation;
 use super::{
     lexer::{TokenKind, Type},
-    objects::{FoundObject, Struct},
-    traits::{FoundObjectExtensions, StructureExtensions},
+    objects::{FoundObjectId, Struct},
+    traits::{FoundObjectEither, FoundObjectExtensions, StructureExtensions},
 };
 
-impl StructureExtensions for Struct<'_> {
+impl<'a> StructureExtensions<'a> for Struct<'a> {
     fn contains_field(&self, field_name: &str) -> bool {
         self.iter().any(|field| field.0 == field_name)
     }
 
-    fn get_field_type(&self, field_name: &str, default: Type) -> Type {
+    fn get_field_type(&self, field_name: &str, default: (Type, &'a str)) -> (Type, &'a str) {
         if let Some(found_field) = self.iter().find(|field| field.0 == field_name) {
-            return found_field.2;
+            return (found_field.2, found_field.1);
         }
 
         default
@@ -121,7 +124,7 @@ impl std::fmt::Display for Type {
     }
 }
 
-impl FoundObjectExtensions for FoundObject<'_> {
+impl FoundObjectExtensions for FoundObjectId<'_> {
     fn is_structure(&self) -> bool {
         self.0.is_some()
     }
@@ -132,5 +135,39 @@ impl FoundObjectExtensions for FoundObject<'_> {
 
     fn is_local(&self) -> bool {
         self.2.is_some()
+    }
+}
+
+impl<'instr> FoundObjectEither<'instr> for FoundObjectId<'instr> {
+    fn expected_local(
+        &self,
+        location: CodeLocation,
+    ) -> Result<(&'instr str, usize), ThrushCompilerError> {
+        if let Some((name, scope_idx)) = self.2 {
+            return Ok((name, scope_idx));
+        }
+
+        Err(ThrushCompilerError::Error(
+            String::from("Expected local reference"),
+            String::from("Expected local but found something else."),
+            location.0,
+            Some(location.1),
+        ))
+    }
+
+    fn expected_function(
+        &self,
+        location: CodeLocation,
+    ) -> Result<&'instr str, ThrushCompilerError> {
+        if let Some(name) = self.1 {
+            return Ok(name);
+        }
+
+        Err(ThrushCompilerError::Error(
+            String::from("Expected function reference"),
+            String::from("Expected function but found something else."),
+            location.0,
+            Some(location.1),
+        ))
     }
 }

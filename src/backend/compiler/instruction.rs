@@ -1,11 +1,14 @@
 #![allow(clippy::upper_case_acronyms)]
 
-use super::super::super::{
-    common::error::ThrushCompilerError,
-    frontend::{
-        lexer::{TokenKind, Type},
-        types::StructFields,
+use super::{
+    super::super::{
+        common::error::ThrushCompilerError,
+        frontend::{
+            lexer::{TokenKind, Type},
+            types::StructFields,
+        },
     },
+    types::CompilerType,
 };
 
 use super::{
@@ -89,8 +92,7 @@ pub enum Instruction<'ctx> {
 
     FunctionParameter {
         name: &'ctx str,
-        kind: Type,
-        struct_type: String,
+        kind: Box<Instruction<'ctx>>,
         position: u32,
         line: usize,
         span: (usize, usize),
@@ -102,7 +104,8 @@ pub enum Instruction<'ctx> {
         return_type: Box<Instruction<'ctx>>,
         attributes: CompilerAttributes<'ctx>,
     },
-    Return(Box<Instruction<'ctx>>, Type),
+
+    Return(Box<Instruction<'ctx>>, Box<Instruction<'ctx>>),
 
     // Locals variables
     Local {
@@ -133,24 +136,23 @@ pub enum Instruction<'ctx> {
     Call {
         name: &'ctx str,
         args: Vec<Instruction<'ctx>>,
-        kind: Type,
-        struct_type: String,
+        kind: Box<Instruction<'ctx>>,
     },
     BinaryOp {
         left: Box<Instruction<'ctx>>,
         op: &'ctx TokenKind,
         right: Box<Instruction<'ctx>>,
-        kind: Type,
+        kind: Box<Instruction<'ctx>>,
     },
     UnaryOp {
         op: &'ctx TokenKind,
         expression: Box<Instruction<'ctx>>,
-        kind: Type,
+        kind: Box<Instruction<'ctx>>,
         is_pre: bool,
     },
     Group {
         expression: Box<Instruction<'ctx>>,
-        kind: Type,
+        kind: Box<Instruction<'ctx>>,
     },
 
     #[default]
@@ -198,8 +200,9 @@ impl<'ctx> Instruction<'ctx> {
             return utils::build_struct_type_from_fields(context, fields);
         }
 
-        if let Instruction::Call { struct_type, .. } = self {
-            let structure: &CompilerStructure = compiler_objects.get_struct(struct_type);
+        if let Instruction::Call { kind, .. } = self {
+            let structure_type: &str = kind.get_type_structure_type();
+            let structure: &CompilerStructure = compiler_objects.get_struct(structure_type);
             let fields: &CompilerStructureFields = &structure.1;
 
             return utils::build_struct_type_from_fields(context, fields);
@@ -215,6 +218,24 @@ impl<'ctx> Instruction<'ctx> {
         }
 
         false
+    }
+
+    #[inline]
+    pub fn expected_type(
+        &self,
+        line: usize,
+        span: (usize, usize),
+    ) -> Result<CompilerType, ThrushCompilerError> {
+        if let Instruction::Type(tp, structure_type) = self {
+            return Ok((tp, structure_type));
+        }
+
+        Err(ThrushCompilerError::Error(
+            String::from("Undeterminated type"),
+            String::from("Expected type."),
+            line,
+            Some(span),
+        ))
     }
 
     #[inline]
@@ -312,15 +333,6 @@ impl<'ctx> Instruction<'ctx> {
     }
 
     #[inline(always)]
-    pub fn get_basic_type(&self) -> &Type {
-        if let Instruction::Type(tp, _) = self {
-            return tp;
-        }
-
-        unreachable!()
-    }
-
-    #[inline(always)]
     pub fn get_type_structure_type(&self) -> &str {
         if let Instruction::Type(_, structure_type) = self {
             return structure_type;
@@ -329,21 +341,21 @@ impl<'ctx> Instruction<'ctx> {
         unreachable!()
     }
 
-    #[must_use]
-    #[inline]
-    pub fn get_type(&self) -> &Type {
+    #[inline(always)]
+    pub fn get_basic_type(&self) -> &Type {
         match self {
-            Instruction::Group { kind: datatype, .. }
-            | Instruction::BinaryOp { kind: datatype, .. }
-            | Instruction::FunctionParameter { kind: datatype, .. }
-            | Instruction::Call { kind: datatype, .. }
-            | Instruction::Type(datatype, _) => datatype,
+            Instruction::Type(datatype, _) => datatype,
 
             Instruction::Integer(datatype, ..)
             | Instruction::Float(datatype, ..)
             | Instruction::LocalRef { kind: datatype, .. }
             | Instruction::LocalMut { kind: datatype, .. }
-            | Instruction::Local { kind: datatype, .. } => datatype.get_basic_type(),
+            | Instruction::Local { kind: datatype, .. }
+            | Instruction::Call { kind: datatype, .. }
+            | Instruction::BinaryOp { kind: datatype, .. }
+            | Instruction::Group { kind: datatype, .. }
+            | Instruction::UnaryOp { kind: datatype, .. }
+            | Instruction::FunctionParameter { kind: datatype, .. } => datatype.get_basic_type(),
 
             Instruction::Str(_) => &Type::Str,
             Instruction::Boolean(_) => &Type::Bool,
@@ -353,7 +365,37 @@ impl<'ctx> Instruction<'ctx> {
             Instruction::InitStruct { .. } => &Type::Struct,
             Instruction::Struct { .. } => &Type::Struct,
 
-            Instruction::UnaryOp { kind: datatype, .. } => datatype,
+            e => {
+                println!("{:?}", e);
+                unimplemented!()
+            }
+        }
+    }
+
+    #[must_use]
+    #[inline]
+    pub fn get_type(&self) -> Instruction<'ctx> {
+        match self {
+            Instruction::Integer(datatype, ..)
+            | Instruction::Float(datatype, ..)
+            | Instruction::LocalRef { kind: datatype, .. }
+            | Instruction::LocalMut { kind: datatype, .. }
+            | Instruction::Local { kind: datatype, .. }
+            | Instruction::Call { kind: datatype, .. }
+            | Instruction::BinaryOp { kind: datatype, .. }
+            | Instruction::Group { kind: datatype, .. }
+            | Instruction::UnaryOp { kind: datatype, .. }
+            | Instruction::FunctionParameter { kind: datatype, .. } => (**datatype).clone(),
+
+            Instruction::Str(_) => Instruction::Type(Type::Str, String::default()),
+            Instruction::Boolean(_) => Instruction::Type(Type::Bool, String::default()),
+            Instruction::Char(_) => Instruction::Type(Type::Char, String::default()),
+            Instruction::NullT => Instruction::Type(Type::T, String::default()),
+            Instruction::GEP { .. } => Instruction::Type(Type::T, String::default()),
+            Instruction::InitStruct { .. } => Instruction::Type(Type::Struct, String::default()),
+            Instruction::Struct { .. } => Instruction::Type(Type::Struct, String::default()),
+
+            instruction if instruction.is_complex_type() => instruction.clone(),
 
             e => {
                 println!("{:?}", e);
@@ -401,9 +443,14 @@ impl<'ctx> Instruction<'ctx> {
     #[inline(always)]
     pub fn is_unsigned_integer(&self) -> bool {
         matches!(
-            self.get_type(),
+            self.get_basic_type(),
             Type::U8 | Type::U16 | Type::U32 | Type::U64
         )
+    }
+
+    #[inline(always)]
+    pub const fn is_complex_type(&self) -> bool {
+        matches!(self, Instruction::Type { .. })
     }
 
     #[inline(always)]

@@ -231,10 +231,10 @@ pub fn check_unary_types(
 }
 
 pub fn check_types(
-    target_type: Type,
-    from_type: Option<Type>,
+    target_type: Instruction,
+    from_type: Instruction,
     expression: Option<&Instruction>,
-    op: Option<&TokenKind>,
+    operator: Option<&TokenKind>,
     error: ThrushCompilerError,
 ) -> Result<(), ThrushCompilerError> {
     if let Some(Instruction::BinaryOp {
@@ -243,7 +243,13 @@ pub fn check_types(
         ..
     }) = expression
     {
-        return check_types(target_type, Some(*expression_type), None, Some(op), error);
+        return check_types(
+            target_type,
+            (**expression_type).clone(),
+            None,
+            Some(op),
+            error,
+        );
     }
 
     if let Some(Instruction::UnaryOp {
@@ -252,164 +258,192 @@ pub fn check_types(
         ..
     }) = expression
     {
-        return check_types(target_type, Some(*expression_type), None, Some(op), error);
+        return check_types(
+            target_type,
+            (**expression_type).clone(),
+            None,
+            Some(op),
+            error,
+        );
     }
 
     if let Some(Instruction::Group { expression, .. }) = expression {
-        return check_types(target_type, None, Some(expression), None, error);
+        return check_types(
+            target_type,
+            Instruction::Null,
+            Some(expression),
+            None,
+            error,
+        );
     }
 
-    match (target_type, from_type.unwrap(), op) {
-        (Type::Char, Type::Char, None) => Ok(()),
-        (Type::Str, Type::Str, None) => Ok(()),
-        (Type::Struct, Type::Struct | Type::T, None) => Ok(()),
-        (Type::T, Type::T, None) => Ok(()),
-        (
-            Type::Bool,
-            Type::Bool,
-            Some(
-                TokenKind::BangEq
-                | TokenKind::EqEq
-                | TokenKind::LessEq
-                | TokenKind::Less
-                | TokenKind::Greater
-                | TokenKind::GreaterEq
-                | TokenKind::And
-                | TokenKind::Or
-                | TokenKind::Bang,
-            )
-            | None,
-        ) => Ok(()),
-        (
-            Type::S8,
-            Type::S8 | Type::U8,
-            Some(
-                TokenKind::Plus
-                | TokenKind::Minus
-                | TokenKind::Slash
-                | TokenKind::Star
-                | TokenKind::LShift
-                | TokenKind::RShift,
-            )
-            | None,
-        ) => Ok(()),
-        (
-            Type::S16,
-            Type::S16 | Type::S8 | Type::U16 | Type::U8,
-            Some(
-                TokenKind::Plus
-                | TokenKind::Minus
-                | TokenKind::Slash
-                | TokenKind::Star
-                | TokenKind::LShift
-                | TokenKind::RShift,
-            )
-            | None,
-        ) => Ok(()),
-        (
-            Type::S32,
-            Type::S32 | Type::S16 | Type::S8 | Type::U32 | Type::U16 | Type::U8,
-            Some(
-                TokenKind::Plus
-                | TokenKind::Minus
-                | TokenKind::Slash
-                | TokenKind::Star
-                | TokenKind::LShift
-                | TokenKind::RShift,
-            )
-            | None,
-        ) => Ok(()),
-        (
-            Type::S64,
-            Type::S64
-            | Type::S32
-            | Type::S16
-            | Type::S8
-            | Type::U64
-            | Type::U32
-            | Type::U16
-            | Type::U8,
-            Some(
-                TokenKind::Plus
-                | TokenKind::Minus
-                | TokenKind::Slash
-                | TokenKind::Star
-                | TokenKind::LShift
-                | TokenKind::RShift,
-            )
-            | None,
-        ) => Ok(()),
-        (
-            Type::U8,
-            Type::U8,
-            Some(
-                TokenKind::Plus
-                | TokenKind::Minus
-                | TokenKind::Slash
-                | TokenKind::Star
-                | TokenKind::LShift
-                | TokenKind::RShift,
-            )
-            | None,
-        ) => Ok(()),
-        (
-            Type::U16,
-            Type::U16 | Type::U8,
-            Some(
-                TokenKind::Plus
-                | TokenKind::Minus
-                | TokenKind::Slash
-                | TokenKind::Star
-                | TokenKind::LShift
-                | TokenKind::RShift,
-            )
-            | None,
-        ) => Ok(()),
-        (
-            Type::U32,
-            Type::U32 | Type::U16 | Type::U8,
-            Some(
-                TokenKind::Plus
-                | TokenKind::Minus
-                | TokenKind::Slash
-                | TokenKind::Star
-                | TokenKind::LShift
-                | TokenKind::RShift,
-            )
-            | None,
-        ) => Ok(()),
-        (
-            Type::U64,
-            Type::U64 | Type::U32 | Type::U16 | Type::U8,
-            Some(
-                TokenKind::Plus
-                | TokenKind::Minus
-                | TokenKind::Slash
-                | TokenKind::Star
-                | TokenKind::LShift
-                | TokenKind::RShift,
-            )
-            | None,
-        ) => Ok(()),
-        (
-            Type::F32,
-            Type::F32,
-            Some(
-                TokenKind::Plus
-                | TokenKind::Minus
-                | TokenKind::Slash
-                | TokenKind::Star
-                | TokenKind::LShift
-                | TokenKind::RShift,
-            )
-            | None,
-        ) => Ok(()),
-        (
-            Type::F64,
-            Type::F64 | Type::F32,
-            Some(TokenKind::Plus | TokenKind::Minus | TokenKind::Slash | TokenKind::Star) | None,
-        ) => Ok(()),
+    if let (
+        Instruction::Type(target_type, target_structure_type),
+        Instruction::Type(from_type, from_structure_type),
+        op,
+    ) = (target_type, from_type, operator)
+    {
+        match (target_type, from_type, op) {
+            (Type::Char, Type::Char, None) => Ok(()),
 
-        _ => Err(error),
+            (Type::Str, Type::Str, None) => Ok(()),
+
+            (Type::Struct, Type::Struct, None) if target_structure_type == from_structure_type => {
+                Ok(())
+            }
+
+            (Type::T, Type::T, None) => Ok(()),
+
+            (
+                Type::Bool,
+                Type::Bool,
+                Some(
+                    TokenKind::BangEq
+                    | TokenKind::EqEq
+                    | TokenKind::LessEq
+                    | TokenKind::Less
+                    | TokenKind::Greater
+                    | TokenKind::GreaterEq
+                    | TokenKind::And
+                    | TokenKind::Or
+                    | TokenKind::Bang,
+                )
+                | None,
+            ) => Ok(()),
+            (
+                Type::S8,
+                Type::S8 | Type::U8,
+                Some(
+                    TokenKind::Plus
+                    | TokenKind::Minus
+                    | TokenKind::Slash
+                    | TokenKind::Star
+                    | TokenKind::LShift
+                    | TokenKind::RShift,
+                )
+                | None,
+            ) => Ok(()),
+            (
+                Type::S16,
+                Type::S16 | Type::S8 | Type::U16 | Type::U8,
+                Some(
+                    TokenKind::Plus
+                    | TokenKind::Minus
+                    | TokenKind::Slash
+                    | TokenKind::Star
+                    | TokenKind::LShift
+                    | TokenKind::RShift,
+                )
+                | None,
+            ) => Ok(()),
+            (
+                Type::S32,
+                Type::S32 | Type::S16 | Type::S8 | Type::U32 | Type::U16 | Type::U8,
+                Some(
+                    TokenKind::Plus
+                    | TokenKind::Minus
+                    | TokenKind::Slash
+                    | TokenKind::Star
+                    | TokenKind::LShift
+                    | TokenKind::RShift,
+                )
+                | None,
+            ) => Ok(()),
+            (
+                Type::S64,
+                Type::S64
+                | Type::S32
+                | Type::S16
+                | Type::S8
+                | Type::U64
+                | Type::U32
+                | Type::U16
+                | Type::U8,
+                Some(
+                    TokenKind::Plus
+                    | TokenKind::Minus
+                    | TokenKind::Slash
+                    | TokenKind::Star
+                    | TokenKind::LShift
+                    | TokenKind::RShift,
+                )
+                | None,
+            ) => Ok(()),
+            (
+                Type::U8,
+                Type::U8,
+                Some(
+                    TokenKind::Plus
+                    | TokenKind::Minus
+                    | TokenKind::Slash
+                    | TokenKind::Star
+                    | TokenKind::LShift
+                    | TokenKind::RShift,
+                )
+                | None,
+            ) => Ok(()),
+            (
+                Type::U16,
+                Type::U16 | Type::U8,
+                Some(
+                    TokenKind::Plus
+                    | TokenKind::Minus
+                    | TokenKind::Slash
+                    | TokenKind::Star
+                    | TokenKind::LShift
+                    | TokenKind::RShift,
+                )
+                | None,
+            ) => Ok(()),
+            (
+                Type::U32,
+                Type::U32 | Type::U16 | Type::U8,
+                Some(
+                    TokenKind::Plus
+                    | TokenKind::Minus
+                    | TokenKind::Slash
+                    | TokenKind::Star
+                    | TokenKind::LShift
+                    | TokenKind::RShift,
+                )
+                | None,
+            ) => Ok(()),
+            (
+                Type::U64,
+                Type::U64 | Type::U32 | Type::U16 | Type::U8,
+                Some(
+                    TokenKind::Plus
+                    | TokenKind::Minus
+                    | TokenKind::Slash
+                    | TokenKind::Star
+                    | TokenKind::LShift
+                    | TokenKind::RShift,
+                )
+                | None,
+            ) => Ok(()),
+            (
+                Type::F32,
+                Type::F32,
+                Some(
+                    TokenKind::Plus
+                    | TokenKind::Minus
+                    | TokenKind::Slash
+                    | TokenKind::Star
+                    | TokenKind::LShift
+                    | TokenKind::RShift,
+                )
+                | None,
+            ) => Ok(()),
+            (
+                Type::F64,
+                Type::F64 | Type::F32,
+                Some(TokenKind::Plus | TokenKind::Minus | TokenKind::Slash | TokenKind::Star)
+                | None,
+            ) => Ok(()),
+
+            _ => Err(error),
+        }
+    } else {
+        Err(error)
     }
 }

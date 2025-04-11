@@ -108,19 +108,20 @@ pub fn type_to_function_type<'ctx>(
     let mut parameters_types: Vec<BasicMetadataTypeEnum> = Vec::with_capacity(parameters.len());
 
     for parameter in parameters.iter() {
-        if let Instruction::FunctionParameter {
-            kind, struct_type, ..
-        } = parameter
-        {
-            if kind.is_struct_type() {
-                let structure: &CompilerStructure = compiler_objects.get_struct(struct_type);
+        if let Instruction::FunctionParameter { kind, .. } = parameter {
+            let parameter_basic_type: &Type = kind.get_basic_type();
+
+            if parameter_basic_type.is_struct_type() {
+                let structure_type: &str = kind.get_type_structure_type();
+
+                let structure: &CompilerStructure = compiler_objects.get_struct(structure_type);
                 let fields: &CompilerStructureFields = &structure.1;
 
                 parameters_types.push(
                     build_get_struct_type_from_compiler_objects(
                         context,
                         compiler_objects,
-                        struct_type,
+                        structure_type,
                         fields,
                     )
                     .into(),
@@ -129,7 +130,7 @@ pub fn type_to_function_type<'ctx>(
                 continue;
             }
 
-            parameters_types.push(type_to_basic_metadata_enum(context, kind));
+            parameters_types.push(type_to_basic_metadata_enum(context, parameter_basic_type));
         }
     }
 

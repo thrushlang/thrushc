@@ -313,10 +313,11 @@ fn build_local_structure<'ctx>(
         name: call_name,
         args: call_arguments,
         kind: call_type,
-        struct_type,
         ..
     } = local_value
     {
+        let structure_type: &str = call_type.get_type_structure_type();
+
         let value: PointerValue = call::build_call(
             module,
             builder,
@@ -329,7 +330,7 @@ fn build_local_structure<'ctx>(
 
         allocated_object.build_store(builder, value);
 
-        allocated_object.set_structure_type(struct_type);
+        allocated_object.set_structure_type(structure_type);
         compiler_objects.alloc_local_object(local.0, *allocated_object);
 
         return;
@@ -457,7 +458,7 @@ fn build_local_integer<'ctx>(
         ..
     } = local_value
     {
-        let localref_type: &Type = localref_type.get_type();
+        let localref_type: &Type = localref_type.get_basic_type();
         let localref_object: AllocatedObject = compiler_objects.get_allocated_object(localref_name);
 
         let mut value: BasicValueEnum = localref_object.load_from_memory(
@@ -525,9 +526,14 @@ fn build_local_integer<'ctx>(
         )
         .unwrap();
 
-        if let Some(casted_expression) =
-            utils::integer_autocast(local_type, call_type, None, expression, builder, context)
-        {
+        if let Some(casted_expression) = utils::integer_autocast(
+            local_type,
+            call_type.get_basic_type(),
+            None,
+            expression,
+            builder,
+            context,
+        ) {
             expression = casted_expression;
         };
 
@@ -588,7 +594,7 @@ fn build_local_float<'ctx>(
         ..
     } = local_value
     {
-        let kind_refvar: &Type = kind_refvar.get_type();
+        let kind_refvar: &Type = kind_refvar.get_basic_type();
         let localref_object: AllocatedObject = compiler_objects.get_allocated_object(name_refvar);
 
         let mut value: BasicValueEnum = localref_object.load_from_memory(
@@ -623,9 +629,14 @@ fn build_local_float<'ctx>(
         )
         .unwrap();
 
-        if let Some(casted_expression) =
-            utils::float_autocast(call_type, local_type, None, expression, builder, context)
-        {
+        if let Some(casted_expression) = utils::float_autocast(
+            call_type.get_basic_type(),
+            local_type,
+            None,
+            expression,
+            builder,
+            context,
+        ) {
             expression = casted_expression;
         };
 
@@ -719,7 +730,7 @@ fn build_local_boolean<'ctx>(
         ..
     } = local_value
     {
-        let kind_refvar: &Type = kind_refvar.get_type();
+        let kind_refvar: &Type = kind_refvar.get_basic_type();
         let localref_object: AllocatedObject = compiler_objects.get_allocated_object(name_refvar);
 
         let mut value: BasicValueEnum = localref_object.load_from_memory(
@@ -754,9 +765,14 @@ fn build_local_boolean<'ctx>(
         )
         .unwrap();
 
-        if let Some(casted_expression) =
-            utils::integer_autocast(local_type, call_type, None, expression, builder, context)
-        {
+        if let Some(casted_expression) = utils::integer_autocast(
+            local_type,
+            call_type.get_basic_type(),
+            None,
+            expression,
+            builder,
+            context,
+        ) {
             expression = casted_expression;
         };
 

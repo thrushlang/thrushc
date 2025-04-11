@@ -24,7 +24,7 @@ pub fn build_call<'ctx>(
 ) -> Option<BasicValueEnum<'ctx>> {
     let call_name: &str = call.0;
     let call_args: &[Instruction<'ctx>] = call.2;
-    let call_type: &Type = call.1;
+    let call_type: &Type = call.1.get_basic_type();
 
     if call_name == "sizeof!" {
         return Some(build_sizeof(context, call, compiler_objects));
@@ -47,7 +47,7 @@ pub fn build_call<'ctx>(
         let casting_target: &Type = target_function_arguments
             .get(instruction.0)
             .unwrap_or(instruction.1)
-            .get_type();
+            .get_basic_type();
 
         compiled_args.push(
             generation::build_expression(

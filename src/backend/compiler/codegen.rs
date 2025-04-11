@@ -418,19 +418,12 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                 name,
                 kind,
                 position,
-                struct_type,
                 ..
             } => {
                 let site_allocation_flag: MemoryFlag =
                     self.generate_site_allocation_flag(instruction);
 
-                self.build_function_parameter((
-                    name,
-                    struct_type,
-                    kind,
-                    *position,
-                    [site_allocation_flag],
-                ));
+                self.build_function_parameter((name, kind, *position, [site_allocation_flag]));
 
                 Instruction::Null
             }
@@ -453,6 +446,8 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
             Instruction::Return(return_instruction, kind) => {
                 self.deallocators_emited = true;
 
+                let basic_type: &Type = kind.get_basic_type();
+
                 let deallocator: Deallocator = Deallocator::new(
                     self.builder,
                     self.context,
@@ -466,7 +461,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                     self.builder,
                     self.context,
                     instruction,
-                    kind,
+                    basic_type,
                     &mut self.compiler_objects,
                 );
 
@@ -494,7 +489,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                 }
 
                 let site_allocation_flag: MemoryFlag = self.generate_site_allocation_flag(value);
-                let local_type: &Type = kind.get_type();
+                let local_type: &Type = kind.get_basic_type();
 
                 local::build(
                     self.module,
@@ -509,7 +504,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
 
             Instruction::LocalMut { name, kind, value } => {
                 let site_allocation_flag: MemoryFlag = self.generate_site_allocation_flag(value);
-                let localmut_type: &Type = kind.get_type();
+                let localmut_type: &Type = kind.get_basic_type();
 
                 local::build_local_mutation(
                     self.module,
@@ -529,35 +524,37 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                 kind,
                 ..
             } => {
-                if kind.is_integer_type() {
+                let binaryop_type: &Type = kind.get_basic_type();
+
+                if binaryop_type.is_integer_type() {
                     return Instruction::LLVMValue(binaryop::integer::compile_integer_binaryop(
                         self.module,
                         self.builder,
                         self.context,
                         (left, op, right),
-                        kind,
+                        binaryop_type,
                         &mut self.compiler_objects,
                     ));
                 }
 
-                if kind.is_float_type() {
+                if binaryop_type.is_float_type() {
                     return Instruction::LLVMValue(binaryop::float::float_binaryop(
                         self.module,
                         self.builder,
                         self.context,
                         (left, op, right),
-                        kind,
+                        binaryop_type,
                         &mut self.compiler_objects,
                     ));
                 }
 
-                if kind.is_bool_type() {
+                if binaryop_type.is_bool_type() {
                     return Instruction::LLVMValue(binaryop::boolean::bool_binaryop(
                         self.module,
                         self.builder,
                         self.context,
                         (left, op, right),
-                        kind,
+                        binaryop_type,
                         &mut self.compiler_objects,
                     ));
                 }
@@ -611,7 +608,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                 self.builder,
                 self.context,
                 instruction,
-                localref_type.get_type(),
+                localref_type.get_basic_type(),
                 &mut self.compiler_objects,
             )),
 
@@ -654,11 +651,10 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
 
     fn build_function_parameter(&mut self, parameter: FunctionParameter<'ctx>) {
         let parameter_name: &str = parameter.0;
-        let parameter_structure_type: &str = parameter.1;
-        let parameter_type: &Type = parameter.2;
-        let parameter_position: u32 = parameter.3;
+        let parameter_basic_type: &Type = parameter.1.get_basic_type();
+        let parameter_position: u32 = parameter.2;
 
-        let memory_flags: MemoryFlags = parameter.4;
+        let memory_flags: MemoryFlags = parameter.3;
 
         let llvm_parameter_value: BasicValueEnum = self
             .function
@@ -666,9 +662,9 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
             .get_nth_param(parameter_position)
             .unwrap();
 
-        if parameter_type.is_stack_allocated() {
+        if parameter_basic_type.is_stack_allocated() {
             let allocated_stack_pointer: PointerValue =
-                utils::build_ptr(self.context, self.builder, parameter_type);
+                utils::build_ptr(self.context, self.builder, parameter_basic_type);
 
             let allocated_object: AllocatedObject =
                 AllocatedObject::alloc(allocated_stack_pointer, &memory_flags);
@@ -681,10 +677,14 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
             return;
         }
 
-        if parameter_type.is_struct_type() {
+        if parameter_basic_type.is_struct_type() {
+            let parameter_structure_type = parameter.1.get_type_structure_type();
+
             let structure: &CompilerStructure =
                 self.compiler_objects.get_struct(parameter_structure_type);
+
             let structure_fields: &CompilerStructureFields = &structure.1;
+
             let llvm_structure_type: StructType =
                 utils::build_struct_type_from_fields(self.context, structure_fields);
 
@@ -727,7 +727,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
         let function_parameters: &[Instruction] = function.2;
         let function_attributes: &[CompilerAttribute] = function.4;
 
-        let function_basic_type: &Type = function_type.get_type();
+        let function_basic_type: &Type = function_type.get_basic_type();
 
         let mut call_convention: u32 = CallConvention::Standard as u32;
         let mut ignore_args: bool = false;
@@ -791,7 +791,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
         let function_name: &str = function.0;
 
         let function_type: &Instruction = function.1;
-        let function_basic_type: &Type = function_type.get_type();
+        let function_basic_type: &Type = function_type.get_basic_type();
 
         let function_body: Option<&Box<Instruction>> = function.3;
 
@@ -813,7 +813,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
 
         let mut alloc_site_memory_flag: MemoryFlag = MemoryFlag::HeapAllocated;
 
-        if instruction.get_type().is_stack_allocated() {
+        if instruction.get_basic_type().is_stack_allocated() {
             alloc_site_memory_flag = MemoryFlag::StackAllocated;
         }
 
@@ -835,11 +835,14 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
             }
         }
 
-        if let Instruction::FunctionParameter { struct_type, .. } = instruction {
-            if !struct_type.is_empty() {
+        if let Instruction::FunctionParameter { kind, .. } = instruction {
+            if kind.get_basic_type().is_struct_type() {
+                let structure_type: &str = kind.get_type_structure_type();
+
                 let mut structure_memory_size: u64 = 0;
 
-                let structure: &CompilerStructure = self.compiler_objects.get_struct(struct_type);
+                let structure: &CompilerStructure =
+                    self.compiler_objects.get_struct(structure_type);
                 let structure_fields: &CompilerStructureFields = &structure.1;
 
                 structure_fields.iter().for_each(|field| {
@@ -849,7 +852,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                 });
 
                 if structure_fields
-                    .contain_recursive_structure_type(&self.compiler_objects, struct_type)
+                    .contain_recursive_structure_type(&self.compiler_objects, structure_type)
                     || structure_memory_size >= MAX_STACK_SIZE_OF_STRUCTURE
                 {
                     alloc_site_memory_flag = MemoryFlag::HeapAllocated;

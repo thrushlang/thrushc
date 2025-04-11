@@ -76,8 +76,8 @@ pub fn float_binaryop<'ctx>(
         Instruction::Float(right_type, right_num, right_signed),
     ) = binary
     {
-        let left_type: &Type = left_type.get_type();
-        let right_type: &Type = right_type.get_type();
+        let left_type: &Type = left_type.get_basic_type();
+        let right_type: &Type = right_type.get_basic_type();
 
         let mut left_compiled: FloatValue =
             utils::build_const_float(builder, context, left_type, *left_num, *left_signed);
@@ -145,7 +145,7 @@ pub fn float_binaryop<'ctx>(
 
         if let Some(new_left_compiled) = utils::float_autocast(
             target_type,
-            left_dissasembled.2,
+            left_dissasembled.2.get_basic_type(),
             None,
             left_compiled,
             builder,
@@ -156,7 +156,7 @@ pub fn float_binaryop<'ctx>(
 
         if let Some(new_right_compiled) = utils::float_autocast(
             target_type,
-            right_dissasembled.2,
+            right_dissasembled.2.get_basic_type(),
             None,
             right_compiled,
             builder,
@@ -202,6 +202,8 @@ pub fn float_binaryop<'ctx>(
         )
         .unwrap();
 
+        let left_call_type: &Type = left_call_type.get_basic_type();
+
         let right_dissasembled: UnaryOp = binary.2.as_unaryop();
 
         let mut right_compiled: BasicValueEnum =
@@ -220,7 +222,7 @@ pub fn float_binaryop<'ctx>(
 
         if let Some(new_right_compiled) = utils::float_autocast(
             target_type,
-            right_dissasembled.2,
+            right_dissasembled.2.get_basic_type(),
             None,
             right_compiled,
             builder,
@@ -271,9 +273,11 @@ pub fn float_binaryop<'ctx>(
         )
         .unwrap();
 
+        let right_call_type: &Type = right_call_type.get_basic_type();
+
         if let Some(new_left_compiled) = utils::float_autocast(
             target_type,
-            left_dissasembled.2,
+            left_dissasembled.2.get_basic_type(),
             None,
             left_compiled,
             builder,
@@ -316,7 +320,7 @@ pub fn float_binaryop<'ctx>(
         Instruction::UnaryOp { .. },
     ) = binary
     {
-        let left_type: &Type = left_type.get_type();
+        let left_type: &Type = left_type.get_basic_type();
 
         let mut left_compiled: FloatValue =
             utils::build_const_float(builder, context, left_type, *left_num, *left_signed);
@@ -339,7 +343,7 @@ pub fn float_binaryop<'ctx>(
 
         if let Some(new_right_compiled) = utils::float_autocast(
             target_type,
-            right_dissasembled.2,
+            right_dissasembled.2.get_basic_type(),
             None,
             right_compiled,
             builder,
@@ -371,7 +375,7 @@ pub fn float_binaryop<'ctx>(
         Instruction::Integer(right_type, right_num, right_signed),
     ) = binary
     {
-        let right_type: &Type = right_type.get_type();
+        let right_type: &Type = right_type.get_basic_type();
 
         let left_dissasembled: UnaryOp = binary.0.as_unaryop();
 
@@ -383,7 +387,7 @@ pub fn float_binaryop<'ctx>(
 
         if let Some(new_left_compiled) = utils::float_autocast(
             target_type,
-            left_dissasembled.2,
+            left_dissasembled.2.get_basic_type(),
             None,
             left_compiled,
             builder,
@@ -430,7 +434,7 @@ pub fn float_binaryop<'ctx>(
         Instruction::UnaryOp { .. },
     ) = binary
     {
-        let left_type: &Type = left_type.get_type();
+        let left_type: &Type = left_type.get_basic_type();
 
         let mut left_compiled: BasicValueEnum = compiler_objects
             .get_allocated_object(left_name)
@@ -457,7 +461,7 @@ pub fn float_binaryop<'ctx>(
 
         if let Some(new_right_compiled) = utils::integer_autocast(
             target_type,
-            right_dissasembled.2,
+            right_dissasembled.2.get_basic_type(),
             None,
             right_compiled,
             builder,
@@ -493,7 +497,7 @@ pub fn float_binaryop<'ctx>(
         },
     ) = binary
     {
-        let right_type: &Type = right_type.get_type();
+        let right_type: &Type = right_type.get_basic_type();
 
         let left_dissasembled: UnaryOp = binary.0.as_unaryop();
 
@@ -509,7 +513,7 @@ pub fn float_binaryop<'ctx>(
 
         if let Some(new_left_compiled) = utils::integer_autocast(
             target_type,
-            left_dissasembled.2,
+            left_dissasembled.2.get_basic_type(),
             None,
             left_compiled,
             builder,
@@ -556,6 +560,8 @@ pub fn float_binaryop<'ctx>(
     {
         let left_dissasembled: BinaryOp = binary.0.as_binary();
 
+        let left_type: &Type = left_type.get_basic_type();
+
         let mut left_compiled: FloatValue = float_binaryop(
             module,
             builder,
@@ -584,7 +590,7 @@ pub fn float_binaryop<'ctx>(
 
         if let Some(new_right_compiled) = utils::float_autocast(
             target_type,
-            right_dissasembled.2,
+            right_dissasembled.2.get_basic_type(),
             None,
             right_compiled,
             builder,
@@ -619,6 +625,8 @@ pub fn float_binaryop<'ctx>(
         Instruction::UnaryOp { .. },
     ) = binary
     {
+        let left_type: &Type = left_type.get_basic_type();
+
         let left_dissasembled: BinaryOp = left_instr.as_binary();
 
         let mut left_compiled: FloatValue = float_binaryop(
@@ -649,7 +657,7 @@ pub fn float_binaryop<'ctx>(
 
         if let Some(new_right_compiled) = utils::float_autocast(
             target_type,
-            right_dissasembled.2,
+            right_dissasembled.2.get_basic_type(),
             None,
             right_compiled,
             builder,
@@ -685,6 +693,8 @@ pub fn float_binaryop<'ctx>(
         },
     ) = binary
     {
+        let right_type: &Type = right_type.get_basic_type();
+
         let left_dissasembled: UnaryOp = binary.0.as_unaryop();
 
         let mut left_compiled: BasicValueEnum =
@@ -704,7 +714,7 @@ pub fn float_binaryop<'ctx>(
 
         if let Some(new_left_compiled) = utils::integer_autocast(
             target_type,
-            left_dissasembled.2,
+            left_dissasembled.2.get_basic_type(),
             None,
             left_compiled,
             builder,
@@ -783,6 +793,9 @@ pub fn float_binaryop<'ctx>(
         )
         .unwrap();
 
+        let left_call_type: &Type = left_call_type.get_basic_type();
+        let right_call_type: &Type = right_call_type.get_basic_type();
+
         if let Some(new_left_compiled) = utils::float_autocast(
             target_type,
             left_call_type,
@@ -833,7 +846,7 @@ pub fn float_binaryop<'ctx>(
         },
     ) = binary
     {
-        let left_type: &Type = left_type.get_type();
+        let left_type: &Type = left_type.get_basic_type();
 
         let mut left_compiled: FloatValue =
             utils::build_const_float(builder, context, left_type, *left_num, *left_signed);
@@ -846,6 +859,8 @@ pub fn float_binaryop<'ctx>(
             compiler_objects,
         )
         .unwrap();
+
+        let right_call_type: &Type = right_call_type.get_basic_type();
 
         if let Some(new_left_compiled) = utils::float_autocast(
             target_type,
@@ -897,7 +912,7 @@ pub fn float_binaryop<'ctx>(
         Instruction::Float(right_type, right_num, right_signed),
     ) = binary
     {
-        let right_type: &Type = right_type.get_type();
+        let right_type: &Type = right_type.get_basic_type();
 
         let mut left_compiled: BasicValueEnum = call::build_call(
             module,
@@ -907,6 +922,8 @@ pub fn float_binaryop<'ctx>(
             compiler_objects,
         )
         .unwrap();
+
+        let left_call_type: &Type = left_call_type.get_basic_type();
 
         let mut right_compiled: FloatValue =
             utils::build_const_float(builder, context, right_type, *right_num, *right_signed);
@@ -965,7 +982,7 @@ pub fn float_binaryop<'ctx>(
         },
     ) = binary
     {
-        let left_type: &Type = left_type.get_type();
+        let left_type: &Type = left_type.get_basic_type();
 
         let mut left_compiled: BasicValueEnum = compiler_objects
             .get_allocated_object(left_name)
@@ -982,6 +999,8 @@ pub fn float_binaryop<'ctx>(
             compiler_objects,
         )
         .unwrap();
+
+        let right_call_type: &Type = right_call_type.get_basic_type();
 
         if let Some(new_left_compiled) = utils::float_autocast(
             target_type,
@@ -1037,7 +1056,7 @@ pub fn float_binaryop<'ctx>(
         },
     ) = binary
     {
-        let right_type: &Type = right_type.get_type();
+        let right_type: &Type = right_type.get_basic_type();
 
         let mut left_compiled: BasicValueEnum = call::build_call(
             module,
@@ -1054,6 +1073,8 @@ pub fn float_binaryop<'ctx>(
                 builder,
                 utils::type_float_to_llvm_float_type(context, right_type),
             );
+
+        let left_call_type: &Type = left_call_type.get_basic_type();
 
         if let Some(new_left_compiled) = utils::float_autocast(
             target_type,
@@ -1108,6 +1129,8 @@ pub fn float_binaryop<'ctx>(
         },
     ) = binary
     {
+        let left_type: &Type = left_type.get_basic_type();
+
         let left_dissasembled: BinaryOp = left_instr.as_binary();
 
         let mut left_compiled: BasicValueEnum = float_binaryop(
@@ -1127,6 +1150,8 @@ pub fn float_binaryop<'ctx>(
             compiler_objects,
         )
         .unwrap();
+
+        let right_call_type: &Type = right_call_type.get_basic_type();
 
         if let Some(new_left_compiled) = utils::float_autocast(
             target_type,
@@ -1182,6 +1207,8 @@ pub fn float_binaryop<'ctx>(
         },
     ) = binary
     {
+        let right_type: &Type = right_type.get_basic_type();
+
         let mut left_compiled: BasicValueEnum = call::build_call(
             module,
             builder,
@@ -1190,6 +1217,8 @@ pub fn float_binaryop<'ctx>(
             compiler_objects,
         )
         .unwrap();
+
+        let left_call_type: &Type = left_call_type.get_basic_type();
 
         let right_dissasembled: BinaryOp = right_instr.as_binary();
 
@@ -1263,8 +1292,8 @@ pub fn float_binaryop<'ctx>(
         },
     ) = binary
     {
-        let left_type: &Type = left_type.get_type();
-        let right_type: &Type = right_type.get_type();
+        let left_type: &Type = left_type.get_basic_type();
+        let right_type: &Type = right_type.get_basic_type();
 
         let mut left_compiled: FloatValue = compiler_objects
             .get_allocated_object(left_name)
@@ -1322,8 +1351,8 @@ pub fn float_binaryop<'ctx>(
         Instruction::LocalRef { name, kind, .. },
     ) = binary
     {
-        let left_type: &Type = left_type.get_type();
-        let right_type: &Type = kind.get_type();
+        let left_type: &Type = left_type.get_basic_type();
+        let right_type: &Type = kind.get_basic_type();
 
         let mut left_compiled: FloatValue =
             utils::build_const_float(builder, context, left_type, *left_num, *left_signed);
@@ -1376,8 +1405,8 @@ pub fn float_binaryop<'ctx>(
         Instruction::Float(right_type, right_num, right_signed),
     ) = binary
     {
-        let left_type: &Type = kind.get_type();
-        let right_type: &Type = right_type.get_type();
+        let left_type: &Type = kind.get_basic_type();
+        let right_type: &Type = right_type.get_basic_type();
 
         let mut left_compiled: FloatValue = compiler_objects
             .get_allocated_object(name)
@@ -1444,9 +1473,10 @@ pub fn float_binaryop<'ctx>(
         },
     ) = binary
     {
-        let left_dissasembled: BinaryOp = binary.0.as_binary();
+        let left_type: &Type = left_type.get_basic_type();
+        let right_type: &Type = right_type.get_basic_type();
 
-        let right_type: &Type = right_type.get_type();
+        let left_dissasembled: BinaryOp = binary.0.as_binary();
 
         let mut left_compiled: FloatValue = float_binaryop(
             module,
@@ -1508,7 +1538,8 @@ pub fn float_binaryop<'ctx>(
         },
     ) = binary
     {
-        let left_type: &Type = left_type.get_type();
+        let left_type: &Type = left_type.get_basic_type();
+        let right_type: &Type = right_type.get_basic_type();
 
         let mut left_compiled: FloatValue =
             utils::build_const_float(builder, context, left_type, *left_num, *left_signed);
@@ -1567,7 +1598,8 @@ pub fn float_binaryop<'ctx>(
         Instruction::Float(right_type, right_num, right_signed),
     ) = binary
     {
-        let right_type: &Type = right_type.get_type();
+        let left_type: &Type = left_type.get_basic_type();
+        let right_type: &Type = right_type.get_basic_type();
 
         let left_dissasembled: BinaryOp = binary.0.as_binary();
 
@@ -1628,6 +1660,9 @@ pub fn float_binaryop<'ctx>(
         },
     ) = binary
     {
+        let left_type: &Type = left_type.get_basic_type();
+        let right_type: &Type = right_type.get_basic_type();
+
         let left_dissasembled: BinaryOp = binary.0.as_binary();
 
         let mut left_compiled: BasicValueEnum = float_binaryop(
@@ -1710,6 +1745,9 @@ pub fn float_binaryop<'ctx>(
         },
     ) = binary
     {
+        let left_type: &Type = left_type.get_basic_type();
+        let right_type: &Type = right_type.get_basic_type();
+
         let left_dissasembled: BinaryOp = left_instr.as_binary();
 
         let mut left_compiled: BasicValueEnum = float_binaryop(
@@ -1780,7 +1818,8 @@ pub fn float_binaryop<'ctx>(
         Instruction::Float(right_type, right_num, right_signed),
     ) = binary
     {
-        let right_type: &Type = right_type.get_type();
+        let left_type: &Type = left_type.get_basic_type();
+        let right_type: &Type = right_type.get_basic_type();
 
         let left_dissasembled: BinaryOp = expression.as_binary();
 
@@ -1840,7 +1879,8 @@ pub fn float_binaryop<'ctx>(
         },
     ) = binary
     {
-        let left_type: &Type = left_type.get_type();
+        let left_type: &Type = left_type.get_basic_type();
+        let right_type: &Type = right_type.get_basic_type();
 
         let mut left_compiled: FloatValue =
             utils::build_const_float(builder, context, left_type, *left_num, *left_signed);
@@ -1902,6 +1942,9 @@ pub fn float_binaryop<'ctx>(
         },
     ) = binary
     {
+        let left_type: &Type = left_type.get_basic_type();
+        let right_type: &Type = right_type.get_basic_type();
+
         let left_dissasembled: BinaryOp = expression.as_binary();
 
         let mut left_compiled: BasicValueEnum = float_binaryop(
@@ -1974,6 +2017,9 @@ pub fn float_binaryop<'ctx>(
         },
     ) = binary
     {
+        let left_type: &Type = left_type.get_basic_type();
+        let right_type: &Type = right_type.get_basic_type();
+
         let left_dissasembled: BinaryOp = binary.0.as_binary();
 
         let mut left_compiled: BasicValueEnum = float_binaryop(

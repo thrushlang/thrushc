@@ -23,10 +23,8 @@ pub fn include(functions: &mut Functions) {
     functions.insert(
         "sizeof!",
         (
-            Type::S64,
-            Vec::from([Type::T]),
-            Vec::new(),
-            String::new(),
+            Instruction::Type(Type::S64, String::default()),
+            Vec::from([Instruction::Type(Type::T, String::default())]),
             false,
         ),
     );
@@ -34,10 +32,8 @@ pub fn include(functions: &mut Functions) {
     functions.insert(
         "is_signed!",
         (
-            Type::Bool,
-            Vec::from([Type::T]),
-            Vec::new(),
-            String::new(),
+            Instruction::Type(Type::Bool, String::default()),
+            Vec::from([Instruction::Type(Type::T, String::default())]),
             false,
         ),
     );
@@ -54,12 +50,14 @@ pub fn build_sizeof<'ctx>(
         name, kind, line, ..
     } = value
     {
-        let localref_type: &Type = kind.get_type();
+        let localref_basic_type: &Type = kind.get_basic_type();
 
-        if localref_type.is_struct_type() {
+        if localref_basic_type.is_struct_type() {
             let localref_structure_type: &str = kind.get_type_structure_type();
+
             let structure: &CompilerStructure =
                 compiler_objects.get_struct(localref_structure_type);
+
             let structure_fields: &CompilerStructureFields = &structure.1;
 
             let llvm_type: StructType =
@@ -92,11 +90,13 @@ pub fn build_sizeof<'ctx>(
                     .size_of()
                     .into();
             }
+
             kind if kind.is_float_type() => {
                 return utils::type_float_to_llvm_float_type(context, kind)
                     .size_of()
                     .into();
             }
+
             kind if *kind == Type::T => {
                 return context.ptr_type(AddressSpace::default()).size_of().into();
             }
@@ -116,7 +116,7 @@ pub fn build_sizeof<'ctx>(
         logging::LogType::Panic,
         &format!(
             "Builtin 'sizeof()' cannot get the size of '{}' type.",
-            value.get_type()
+            value.get_basic_type()
         ),
     );
 
@@ -135,9 +135,9 @@ pub fn build_is_signed<'ctx>(
         name, kind, line, ..
     } = value
     {
-        let localref_type: &Type = kind.get_type();
+        let localref_basic_type: &Type = kind.get_basic_type();
 
-        if !localref_type.is_float_type() && !kind.is_integer_type() {
+        if !localref_basic_type.is_float_type() && !kind.is_integer_type() {
             logging::log(
                 logging::LogType::Panic,
                 &format!(
@@ -153,13 +153,13 @@ pub fn build_is_signed<'ctx>(
             let mut loaded_value: IntValue = object
                 .load_from_memory(
                     builder,
-                    utils::type_int_to_llvm_int_type(context, localref_type),
+                    utils::type_int_to_llvm_int_type(context, localref_basic_type),
                 )
                 .into_int_value();
 
             if let Some(casted_float) = utils::integer_autocast(
                 &Type::S64,
-                localref_type,
+                localref_basic_type,
                 None,
                 loaded_value.into(),
                 builder,
@@ -181,12 +181,12 @@ pub fn build_is_signed<'ctx>(
             let mut loaded_value: FloatValue = object
                 .load_from_memory(
                     builder,
-                    utils::type_float_to_llvm_float_type(context, localref_type),
+                    utils::type_float_to_llvm_float_type(context, localref_basic_type),
                 )
                 .into_float_value();
 
             if let Some(casted_float) = utils::float_autocast(
-                localref_type,
+                localref_basic_type,
                 &Type::F64,
                 None,
                 loaded_value.into(),

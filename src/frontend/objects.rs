@@ -1,23 +1,25 @@
+use super::super::backend::compiler::instruction::Instruction;
 use super::super::common::error::ThrushCompilerError;
-use super::{lexer::Type, traits::FoundObjectEither};
+use super::lexer::Type;
+use super::types::CodeLocation;
 use ahash::AHashMap as HashMap;
 
 const MINIMAL_STRUCTURE_CAPACITY: usize = 1024;
 const MINIMAL_LOCAL_SCOPE_CAPACITY: usize = 255;
 
-pub type Function<'instr> = (Type, Vec<Type>, Vec<(String, usize)>, String, bool);
+pub type Function<'instr> = (Instruction<'instr>, Vec<Instruction<'instr>>, bool);
 
 pub type Struct<'instr> = Vec<(&'instr str, &'instr str, Type, u32)>;
-pub type Local = (Type, String, bool, bool);
+pub type Local<'instr> = (Instruction<'instr>, bool, bool);
 
 pub type Functions<'instr> = HashMap<&'instr str, Function<'instr>>;
 pub type Structs<'instr> = HashMap<&'instr str, Struct<'instr>>;
-pub type Locals<'instr> = Vec<HashMap<&'instr str, Local>>;
+pub type Locals<'instr> = Vec<HashMap<&'instr str, Local<'instr>>>;
 
-pub type FoundObject<'instr> = (
-    Option<&'instr Struct<'instr>>,
-    Option<&'instr Function<'instr>>,
-    Option<&'instr Local>,
+pub type FoundObjectId<'instr> = (
+    Option<&'instr str>,
+    Option<&'instr str>,
+    Option<(&'instr str, usize)>,
 );
 
 #[derive(Clone, Debug, Default)]
@@ -28,7 +30,7 @@ pub struct ParserObjects<'instr> {
 }
 
 impl<'instr> ParserObjects<'instr> {
-    pub fn with_functions(functions: HashMap<&'instr str, Function>) -> Self {
+    pub fn with_functions(functions: HashMap<&'instr str, Function<'instr>>) -> Self {
         Self {
             locals: Vec::with_capacity(MINIMAL_LOCAL_SCOPE_CAPACITY),
             functions,
@@ -36,28 +38,63 @@ impl<'instr> ParserObjects<'instr> {
         }
     }
 
-    pub fn get_object(
+    pub fn get_object_id(
         &self,
         name: &'instr str,
-        location: (usize, (usize, usize)),
-    ) -> Result<FoundObject, ThrushCompilerError> {
-        for scope in self.locals.iter().rev() {
-            if let Some(local) = scope.get(name) {
-                return Ok((None, None, Some(local)));
+        location: CodeLocation,
+    ) -> Result<FoundObjectId<'instr>, ThrushCompilerError> {
+        for (idx, scope) in self.locals.iter().enumerate().rev() {
+            if scope.contains_key(name) {
+                return Ok((None, None, Some((name, idx))));
             }
         }
 
-        if let Some(function) = self.functions.get(name) {
-            return Ok((None, Some(function), None));
+        if self.functions.contains_key(name) {
+            return Ok((None, Some(name), None));
         }
 
-        if let Some(structure) = self.structs.get(name) {
-            return Ok((Some(structure), None, None));
+        if self.structs.contains_key(name) {
+            return Ok((Some(name), None, None));
         }
 
         Err(ThrushCompilerError::Error(
             String::from("Structure/Function/Local not found"),
             format!("'{}' is not defined.", name),
+            location.0,
+            Some(location.1),
+        ))
+    }
+
+    pub fn get_function_by_id(
+        &self,
+        location: CodeLocation,
+        func_id: &'instr str,
+    ) -> Result<Function<'instr>, ThrushCompilerError> {
+        if let Some(function) = self.functions.get(func_id).cloned() {
+            return Ok(function);
+        }
+
+        Err(ThrushCompilerError::Error(
+            String::from("Expected function reference"),
+            String::from("Expected function but found something else."),
+            location.0,
+            Some(location.1),
+        ))
+    }
+
+    pub fn get_local_by_id(
+        &self,
+        location: CodeLocation,
+        local_id: &'instr str,
+        scope_idx: usize,
+    ) -> Result<&Local<'instr>, ThrushCompilerError> {
+        if let Some(local) = self.locals[scope_idx].get(local_id) {
+            return Ok(local);
+        }
+
+        Err(ThrushCompilerError::Error(
+            String::from("Expected function reference"),
+            String::from("Expected function but found something else."),
             location.0,
             Some(location.1),
         ))
@@ -85,7 +122,7 @@ impl<'instr> ParserObjects<'instr> {
         &mut self,
         scope_pos: usize,
         name: &'instr str,
-        value: Local,
+        value: Local<'instr>,
         line: usize,
         span: (usize, usize),
     ) -> Result<(), ThrushCompilerError> {
@@ -113,7 +150,7 @@ impl<'instr> ParserObjects<'instr> {
     }
 
     #[inline(always)]
-    pub fn insert_new_function(&mut self, name: &'instr str, function: Function) {
+    pub fn insert_new_function(&mut self, name: &'instr str, function: Function<'instr>) {
         if self.functions.contains_key(name) {
             return;
         }
@@ -130,58 +167,5 @@ impl<'instr> ParserObjects<'instr> {
     #[inline(always)]
     pub fn end_local_scope(&mut self) {
         self.locals.pop();
-    }
-}
-
-impl FoundObjectEither for FoundObject<'_> {
-    fn expected_local(
-        &self,
-        line: usize,
-        span: (usize, usize),
-    ) -> Result<&Local, ThrushCompilerError> {
-        if let Some(local) = self.2 {
-            return Ok(local);
-        }
-
-        Err(ThrushCompilerError::Error(
-            String::from("Expected local reference"),
-            String::from("Expected local but found something else."),
-            line,
-            Some(span),
-        ))
-    }
-
-    fn expected_function(
-        &self,
-        line: usize,
-        span: (usize, usize),
-    ) -> Result<&Function, ThrushCompilerError> {
-        if let Some(function) = self.1 {
-            return Ok(function);
-        }
-
-        Err(ThrushCompilerError::Error(
-            String::from("Expected function reference"),
-            String::from("Expected function but found something else."),
-            line,
-            Some(span),
-        ))
-    }
-
-    fn expected_structure(
-        &self,
-        line: usize,
-        span: (usize, usize),
-    ) -> Result<Struct, ThrushCompilerError> {
-        if let Some(structure) = self.0.cloned() {
-            return Ok(structure);
-        }
-
-        Err(ThrushCompilerError::Error(
-            String::from("Expected function reference"),
-            String::from("Expected function but found something else."),
-            line,
-            Some(span),
-        ))
     }
 }

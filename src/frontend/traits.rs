@@ -1,8 +1,4 @@
-use super::{
-    super::common::error::ThrushCompilerError,
-    lexer::Type,
-    objects::{Function, Local, Struct},
-};
+use super::{super::common::error::ThrushCompilerError, lexer::Type, types::CodeLocation};
 
 pub trait TokenLexemeExtensions {
     fn to_str(&self) -> &str;
@@ -20,25 +16,16 @@ pub trait FoundObjectExtensions {
     fn is_local(&self) -> bool;
 }
 
-pub trait StructureExtensions {
+pub trait StructureExtensions<'a> {
     fn contains_field(&self, field_name: &str) -> bool;
-    fn get_field_type(&self, field_name: &str, default: Type) -> Type;
+    fn get_field_type(&self, field_name: &str, default: (Type, &'a str)) -> (Type, &'a str);
 }
 
-pub trait FoundObjectEither {
+pub trait FoundObjectEither<'instr> {
     fn expected_local(
         &self,
-        line: usize,
-        span: (usize, usize),
-    ) -> Result<&Local, ThrushCompilerError>;
-    fn expected_function(
-        &self,
-        line: usize,
-        span: (usize, usize),
-    ) -> Result<&Function, ThrushCompilerError>;
-    fn expected_structure(
-        &self,
-        line: usize,
-        span: (usize, usize),
-    ) -> Result<Struct, ThrushCompilerError>;
+        location: CodeLocation,
+    ) -> Result<(&'instr str, usize), ThrushCompilerError>;
+    fn expected_function(&self, location: CodeLocation)
+    -> Result<&'instr str, ThrushCompilerError>;
 }
