@@ -196,7 +196,7 @@ impl<'instr> Parser<'instr> {
 
         self.throw_if_is_unreacheable_code();
 
-        let conditional: Instruction = self.expression()?;
+        let conditional: Instruction = self.expr()?;
 
         self.check_type_mismatch(
             Instruction::Type(Type::Bool, String::default()),
@@ -221,7 +221,11 @@ impl<'instr> Parser<'instr> {
 
         self.throw_if_not_inside_a_loop();
 
-        self.optional_consume(TokenKind::SemiColon)?;
+        self.consume(
+            TokenKind::SemiColon,
+            String::from("Syntax error"),
+            String::from("Expected ';'."),
+        )?;
 
         Ok(Instruction::Continue)
     }
@@ -235,7 +239,11 @@ impl<'instr> Parser<'instr> {
 
         self.throw_if_not_inside_a_loop();
 
-        self.optional_consume(TokenKind::SemiColon)?;
+        self.consume(
+            TokenKind::SemiColon,
+            String::from("Syntax error"),
+            String::from("Expected ';'."),
+        )?;
 
         Ok(Instruction::Break)
     }
@@ -245,7 +253,8 @@ impl<'instr> Parser<'instr> {
 
         self.throw_if_is_unreacheable_code();
 
-        let mut if_cond: Instruction = self.expression()?;
+        let mut if_cond: Instruction = self.expr()?;
+
         let mut if_block: Instruction = Instruction::Block { stmts: Vec::new() };
 
         let mut patterns: Vec<Instruction> = Vec::with_capacity(10);
@@ -257,7 +266,7 @@ impl<'instr> Parser<'instr> {
             self.scope_position += 1;
             self.parser_objects.begin_local_scope();
 
-            let pattern: Instruction = self.expression()?;
+            let pattern: Instruction = self.expr()?;
 
             self.check_type_mismatch(
                 Instruction::Type(Type::Bool, String::default()),
@@ -275,7 +284,11 @@ impl<'instr> Parser<'instr> {
                 patterns_stmts.push(self.parse()?);
             }
 
-            self.optional_consume(TokenKind::SemiColon)?;
+            self.consume(
+                TokenKind::SemiColon,
+                String::from("Syntax error"),
+                String::from("Expected ';'."),
+            )?;
 
             self.scope_position -= 1;
             self.parser_objects.end_local_scope();
@@ -328,7 +341,11 @@ impl<'instr> Parser<'instr> {
                 stmts.push(self.parse()?);
             }
 
-            self.optional_consume(TokenKind::SemiColon)?;
+            self.consume(
+                TokenKind::SemiColon,
+                String::from("Syntax error"),
+                String::from("Expected ';'."),
+            )?;
 
             if stmts.is_empty() {
                 None
@@ -365,7 +382,7 @@ impl<'instr> Parser<'instr> {
 
         self.throw_if_is_unreacheable_code();
 
-        let if_condition: Instruction = self.expression()?;
+        let if_condition: Instruction = self.expr()?;
 
         if !if_condition.get_basic_type().is_bool_type() {
             self.push_error(
@@ -379,7 +396,7 @@ impl<'instr> Parser<'instr> {
         let mut elfs: Vec<Instruction> = Vec::with_capacity(10);
 
         while self.match_token(TokenKind::Elif)? {
-            let elif_condition: Instruction = self.expression()?;
+            let elif_condition: Instruction = self.expr()?;
 
             self.check_type_mismatch(
                 Instruction::Type(Type::Bool, String::default()),
@@ -571,7 +588,7 @@ impl<'instr> Parser<'instr> {
                     field_index = (structure_fields_amount - 1) as u32;
                 }
 
-                let instruction: Instruction = self.expression()?;
+                let instruction: Instruction = self.expr()?;
 
                 self.throw_if_is_structure_initializer(&instruction);
 
@@ -699,7 +716,7 @@ impl<'instr> Parser<'instr> {
             String::from("Expected ':'."),
         )?;
 
-        let local_type: Instruction = self.expression()?;
+        let local_type: Instruction = self.expr()?;
 
         local_type.expected_type(self.previous().line, self.previous().span)?;
 
@@ -749,6 +766,8 @@ impl<'instr> Parser<'instr> {
     }
 
     fn build_return(&mut self) -> Result<Instruction<'instr>, ThrushCompilerError> {
+        self.only_advance()?;
+
         if !self.inside_a_function {
             self.push_error(
                 String::from("Syntax error"),
@@ -908,7 +927,7 @@ impl<'instr> Parser<'instr> {
                 String::from("Expected '::'."),
             )?;
 
-            let parameter_type: Instruction = self.expression()?;
+            let parameter_type: Instruction = self.expr()?;
 
             parameters_types.push(parameter_type.get_type());
 
@@ -923,7 +942,7 @@ impl<'instr> Parser<'instr> {
             parameter_position += 1;
         }
 
-        let return_type: Instruction = self.expression()?;
+        let return_type: Instruction = self.expr()?;
 
         let basic_return_type: CompilerType =
             return_type.expected_type(self.previous().line, self.previous().span)?;
@@ -1112,11 +1131,21 @@ impl<'instr> Parser<'instr> {
     ########################################################################*/
 
     fn expression(&mut self) -> Result<Instruction<'instr>, ThrushCompilerError> {
-        let instr: Instruction = self.or()?;
+        let instruction: Instruction = self.or()?;
 
-        self.optional_consume(TokenKind::SemiColon)?;
+        self.consume(
+            TokenKind::SemiColon,
+            String::from("Syntax error"),
+            String::from("Expected ';'."),
+        )?;
 
-        Ok(instr)
+        Ok(instruction)
+    }
+
+    fn expr(&mut self) -> Result<Instruction<'instr>, ThrushCompilerError> {
+        let instruction: Instruction = self.or()?;
+
+        Ok(instruction)
     }
 
     fn or(&mut self) -> Result<Instruction<'instr>, ThrushCompilerError> {
@@ -1366,7 +1395,7 @@ impl<'instr> Parser<'instr> {
             TokenKind::PlusPlus => {
                 let op: &TokenKind = &self.advance()?.kind;
 
-                let expression: Instruction = self.expression()?;
+                let expression: Instruction = self.expr()?;
 
                 if !expression.is_local_reference() {
                     return Err(ThrushCompilerError::Error(
@@ -1390,7 +1419,7 @@ impl<'instr> Parser<'instr> {
             TokenKind::MinusMinus => {
                 let op: &TokenKind = &self.advance()?.kind;
 
-                let expression: Instruction = self.expression()?;
+                let expression: Instruction = self.expr()?;
 
                 if !expression.is_local_reference() {
                     return Err(ThrushCompilerError::Error(
@@ -1540,7 +1569,7 @@ impl<'instr> Parser<'instr> {
 
                         let local_type: Instruction = local.0.clone();
 
-                        let expression: Instruction<'instr> = self.expression()?;
+                        let expression: Instruction = self.expression()?;
 
                         self.check_type_mismatch(
                             local_type.clone(),
@@ -1670,7 +1699,7 @@ impl<'instr> Parser<'instr> {
             None,
         );
 
-        let index: Instruction = self.expression()?;
+        let index: Instruction = self.expr()?;
 
         if !index.is_unsigned_integer() {
             self.push_error(
@@ -1719,7 +1748,7 @@ impl<'instr> Parser<'instr> {
                 continue;
             }
 
-            let instruction: Instruction = self.expression()?;
+            let instruction: Instruction = self.expr()?;
 
             self.throw_if_is_structure_initializer(&instruction);
 
@@ -1952,20 +1981,6 @@ impl<'instr> Parser<'instr> {
             self.previous().line,
             Some(self.previous().span),
         ));
-    }
-
-    fn optional_consume(&mut self, tokenkind: TokenKind) -> Result<bool, ThrushCompilerError> {
-        if self.check_type(tokenkind) {
-            self.consume(
-                tokenkind,
-                String::from("Syntax error"),
-                format!("Expected '{}'.", tokenkind),
-            )?;
-
-            return Ok(true);
-        }
-
-        Ok(false)
     }
 
     fn match_token(&mut self, kind: TokenKind) -> Result<bool, ThrushCompilerError> {
