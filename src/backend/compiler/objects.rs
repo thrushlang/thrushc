@@ -1,6 +1,6 @@
 use {
     super::{
-        super::super::logging,
+        super::super::logging::{self, LoggingType},
         memory::AllocatedObject,
         types::{AllocatedObjects, CompilerFunction, CompilerStructure},
     },
@@ -76,7 +76,7 @@ impl<'ctx> CompilerObjects<'ctx> {
         }
 
         logging::log(
-            logging::LogType::Panic,
+            LoggingType::Panic,
             &format!(
                 "Unable to get '{}' allocated object at frame pointer number #{}.",
                 name, self.scope_position
@@ -93,7 +93,7 @@ impl<'ctx> CompilerObjects<'ctx> {
         }
 
         logging::log(
-            logging::LogType::Panic,
+            LoggingType::Panic,
             &format!("Unable to get '{}' function in global frame.", name),
         );
 

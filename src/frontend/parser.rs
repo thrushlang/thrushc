@@ -20,9 +20,9 @@ use super::super::{
         types::{CompilerAttributes, CompilerType},
     },
     common::{
-        constants::MINIMAL_ERROR_CAPACITY, diagnostic::Diagnostic, error::ThrushCompilerError,
+        constants::MINIMAL_ERROR_CAPACITY, diagnostic::Diagnostician, error::ThrushCompilerError,
     },
-    logging::LogType,
+    logging::LoggingType,
 };
 
 use ahash::AHashMap as HashMap;
@@ -67,7 +67,7 @@ pub struct Parser<'instr> {
     scope_position: usize,
     has_entry_point: bool,
     scoper: ThrushScoper<'instr>,
-    diagnostic: Diagnostic,
+    diagnostician: Diagnostician,
     parser_objects: ParserObjects<'instr>,
 }
 
@@ -90,7 +90,7 @@ impl<'instr> Parser<'instr> {
             scope_position: 0,
             has_entry_point: false,
             scoper: ThrushScoper::new(file),
-            diagnostic: Diagnostic::new(file),
+            diagnostician: Diagnostician::new(file),
             parser_objects: ParserObjects::with_functions(functions),
         }
     }
@@ -112,7 +112,7 @@ impl<'instr> Parser<'instr> {
 
         if !self.errors.is_empty() {
             self.errors.iter().for_each(|error: &ThrushCompilerError| {
-                self.diagnostic.report(error, LogType::Error);
+                self.diagnostician.report_error(error, LoggingType::Error);
             });
 
             process::exit(1);

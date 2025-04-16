@@ -1,16 +1,14 @@
-use {
-    super::{
-        super::{
-            backend::compiler::{attributes::CompilerAttribute, misc::CompilerFile},
-            common::{
-                constants::MINIMAL_ERROR_CAPACITY, diagnostic::Diagnostic,
-                error::ThrushCompilerError,
-            },
-            logging::LogType,
-        },
-        traits::TokenLexemeExtensions,
-        types::TokenLexeme,
+use super::super::{
+    backend::compiler::{attributes::CompilerAttribute, misc::CompilerFile},
+    common::{
+        constants::MINIMAL_ERROR_CAPACITY, diagnostic::Diagnostician, error::ThrushCompilerError,
     },
+    logging::LoggingType,
+};
+
+use super::{traits::TokenLexemeExtensions, types::TokenLexeme};
+
+use {
     ahash::{HashMap, HashMapExt},
     inkwell::{FloatPredicate, IntPredicate},
     lazy_static::lazy_static,
@@ -90,7 +88,7 @@ pub struct Lexer<'a> {
     current: usize,
     line: usize,
     span: (usize, usize),
-    diagnostic: Diagnostic,
+    diagnostician: Diagnostician,
 }
 
 impl<'a> Lexer<'a> {
@@ -103,7 +101,7 @@ impl<'a> Lexer<'a> {
             current: 0,
             line: 1,
             span: (0, 0),
-            diagnostic: Diagnostic::new(file),
+            diagnostician: Diagnostician::new(file),
         };
 
         lexer._lex()
@@ -121,7 +119,7 @@ impl<'a> Lexer<'a> {
 
         if !self.errors.is_empty() {
             self.errors.iter().for_each(|error| {
-                self.diagnostic.report(error, LogType::Error);
+                self.diagnostician.report_error(error, LoggingType::Error);
             });
 
             exit(1);

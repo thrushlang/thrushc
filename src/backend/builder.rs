@@ -7,7 +7,9 @@ use super::compiler::{
 };
 
 use super::super::{
-    LLVM_BACKEND, Lexer, Parser, Token, common::constants::CURRENT_CLANG_VERSION, logging,
+    LLVM_BACKEND, Lexer, Parser, Token,
+    common::constants::CURRENT_CLANG_VERSION,
+    logging::{self, LoggingType},
 };
 
 use {
@@ -88,15 +90,15 @@ impl<'a> Thrushc<'a> {
 
         let start_time: Instant = Instant::now();
 
-        let content: String = fs::read_to_string(&file.path).unwrap_or_else(|_| {
+        let code: String = fs::read_to_string(&file.path).unwrap_or_else(|_| {
             logging::log(
-                logging::LogType::Panic,
+                LoggingType::Panic,
                 &format!("`{}` is invalid utf-8 file.", &file.path.display()),
             );
             unreachable!()
         });
 
-        let tokens: Vec<Token> = Lexer::lex(content.as_bytes(), file);
+        let tokens: Vec<Token> = Lexer::lex(code.as_bytes(), file);
 
         let mut parser: Parser = Parser::new(&tokens, file);
         let instructions: &[Instruction] = parser.start();
@@ -147,7 +149,7 @@ impl<'a> Thrushc<'a> {
                 .print_to_file(Path::new(&format!("build/{}.ll", &file.name)))
                 .unwrap_or_else(|_| {
                     logging::log(
-                        logging::LogType::Panic,
+                        logging::LoggingType::Panic,
                         &format!(
                             "'build/{}.ll' cannot be emitted in the 'build/' directory.",
                             &file.name
@@ -269,7 +271,7 @@ fn handle_command(command: &mut Command) {
     if let Ok(child) = command.output() {
         if !child.status.success() {
             logging::log(
-                logging::LogType::Error,
+                logging::LoggingType::Error,
                 &String::from_utf8_lossy(&child.stderr)
                     .replace("\n", "")
                     .replace(&format!("clang version {}", CURRENT_CLANG_VERSION), "")

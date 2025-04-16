@@ -1,9 +1,9 @@
 use super::super::{
     backend::compiler::{instruction::Instruction, misc::CompilerFile},
     common::{
-        constants::MINIMAL_ERROR_CAPACITY, diagnostic::Diagnostic, error::ThrushCompilerError,
+        constants::MINIMAL_ERROR_CAPACITY, diagnostic::Diagnostician, error::ThrushCompilerError,
     },
-    logging::LogType,
+    logging::LoggingType,
 };
 
 use std::process;
@@ -14,7 +14,7 @@ const MINIMAL_SCOPE_CAPACITY: usize = 256;
 pub struct ThrushScoper<'ctx> {
     blocks: Vec<ThrushBlock<'ctx>>,
     errors: Vec<ThrushCompilerError>,
-    diagnostic: Diagnostic,
+    diagnostician: Diagnostician,
 }
 
 #[derive(Debug)]
@@ -27,7 +27,7 @@ impl<'ctx> ThrushScoper<'ctx> {
         Self {
             blocks: Vec::with_capacity(MINIMAL_SCOPE_CAPACITY),
             errors: Vec::with_capacity(MINIMAL_ERROR_CAPACITY),
-            diagnostic: Diagnostic::new(file),
+            diagnostician: Diagnostician::new(file),
         }
     }
 
@@ -50,7 +50,7 @@ impl<'ctx> ThrushScoper<'ctx> {
 
         if !self.errors.is_empty() {
             self.errors.iter().for_each(|error| {
-                self.diagnostic.report(error, LogType::Error);
+                self.diagnostician.report_error(error, LoggingType::Error);
             });
 
             process::exit(1);

@@ -12,33 +12,33 @@ pub enum OutputIn {
 }
 
 #[derive(Debug, PartialEq)]
-pub enum LogType {
+pub enum LoggingType {
     Error,
     Panic,
 }
 
-impl LogType {
+impl LoggingType {
     pub fn to_styled(&self) -> ColoredString {
         match self {
-            LogType::Error => "ERROR".bright_red().underline().bold(),
-            LogType::Panic => "PANIC".bright_red().underline().bold(),
+            LoggingType::Error => "ERROR".bright_red().underline().bold(),
+            LoggingType::Panic => "PANIC".bright_red().underline().bold(),
         }
     }
 
     #[inline(always)]
     pub const fn is_err(&self) -> bool {
-        matches!(self, LogType::Error | LogType::Panic)
+        matches!(self, LoggingType::Error | LoggingType::Panic)
     }
 }
 
 #[inline]
-pub fn log(ltype: LogType, msg: &str) {
+pub fn log(ltype: LoggingType, msg: &str) {
     if ltype.is_err() {
         io::stderr()
             .write_all(format!("  {} {}\n  ", ltype.to_styled(), msg.bold()).as_bytes())
             .unwrap();
 
-        if ltype == LogType::Error {
+        if ltype == LoggingType::Error {
             return;
         } else {
             process::exit(1);

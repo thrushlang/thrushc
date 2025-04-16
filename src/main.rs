@@ -12,62 +12,67 @@ use {
     },
     inkwell::targets::{InitializationConfig, Target},
     lazy_static::lazy_static,
-    std::{env, path::PathBuf, time::Instant},
+    std::{env, path::PathBuf, process, time::Instant},
 };
 
 lazy_static! {
-    static ref HOME: Option<PathBuf> = {
+    static ref HOME: PathBuf = {
         let error = |_| {
-            logging::log(
-                logging::LogType::Panic,
-                "Unable to get %HOME% of the system user.",
-            );
+            logging::log(logging::LoggingType::Panic, "Unable to get user %HOME%.");
+            unreachable!()
+        };
 
+        let unsupported_os = || {
+            logging::log(
+                logging::LoggingType::Panic,
+                &format!(
+                    "No compatible operating system '{}' for host compilation.",
+                    env::consts::OS
+                ),
+            );
             unreachable!()
         };
 
         match env::consts::OS {
-            "windows" => Some(PathBuf::from(env::var("APPDATA").unwrap_or_else(error))),
-            "linux" => Some(PathBuf::from(env::var("HOME").unwrap_or_else(error))),
-            _ => None,
+            "windows" => PathBuf::from(env::var("APPDATA").unwrap_or_else(error)),
+            "linux" => PathBuf::from(env::var("HOME").unwrap_or_else(error)),
+            _ => {
+                unsupported_os();
+                unreachable!();
+            }
         }
     };
     static ref LLVM_BACKEND: PathBuf = {
         let error = || {
             logging::log(
-                logging::LogType::Panic,
+                logging::LoggingType::Panic,
                 "The LLVM Backend was corrupted; reinstall the entire toolchain across ~ `thorium install`.",
             );
         };
 
-        if let Some(os_home) = HOME.as_ref() {
-            let llvm_backend_required_paths: [PathBuf; 8] = [
-                os_home.join("thrushlang"),
-                os_home.join("thrushlang/backends"),
-                os_home.join("thrushlang/backends/llvm"),
-                os_home.join("thrushlang/backends/llvm/tools"),
-                os_home.join("thrushlang/backends/llvm/ld.lld"),
-                os_home.join("thrushlang/backends/llvm/clang-17"),
-                os_home.join("thrushlang/backends/llvm/tools/opt"),
-                os_home.join("thrushlang/backends/llvm/tools/llvm-dis"),
-            ];
+        let llvm_backend_required_paths: [PathBuf; 8] = [
+            HOME.join("thrushlang"),
+            HOME.join("thrushlang/backends"),
+            HOME.join("thrushlang/backends/llvm"),
+            HOME.join("thrushlang/backends/llvm/tools"),
+            HOME.join("thrushlang/backends/llvm/ld.lld"),
+            HOME.join("thrushlang/backends/llvm/clang-17"),
+            HOME.join("thrushlang/backends/llvm/tools/opt"),
+            HOME.join("thrushlang/backends/llvm/tools/llvm-dis"),
+        ];
 
-            llvm_backend_required_paths.iter().for_each(|path| {
-                if !path.exists() {
-                    error()
-                }
-            });
+        llvm_backend_required_paths.iter().for_each(|path| {
+            if !path.exists() {
+                error()
+            }
+        });
 
-            return os_home.join("thrushlang/backends/llvm/");
-        }
-
-        error();
-        unreachable!()
+        return HOME.join("thrushlang/backends/llvm/");
     };
 }
 
 fn main() {
-    if cfg!(windows) {
+    if cfg!(target_os = "windows") {
         control::set_override(true);
     }
 
@@ -111,4 +116,6 @@ fn main() {
         )
         .as_bytes(),
     );
+
+    process::exit(0);
 }

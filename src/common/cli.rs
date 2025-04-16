@@ -3,7 +3,10 @@ use super::super::{
     backend::compiler::misc::{CompilerFile, CompilerOptions, Opt},
 };
 
-use super::{constants::TARGET_TRIPLES, logging};
+use super::{
+    constants::TARGET_TRIPLES,
+    logging::{self, LoggingType},
+};
 
 use {
     colored::Colorize,
@@ -231,7 +234,7 @@ impl Cli {
 
     #[inline]
     fn report_error(&self, msg: &str) {
-        logging::log(logging::LogType::Error, msg);
+        logging::log(LoggingType::Error, msg);
     }
 
     fn help(&self) {
@@ -389,7 +392,7 @@ impl Cli {
     fn llvm_help(&self) {
         let error = |_| {
             logging::log(
-                logging::LogType::Panic,
+                logging::LoggingType::Panic,
                 "Unable to execute 'llvm-help' command.",
             );
 

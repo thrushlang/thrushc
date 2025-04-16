@@ -1,6 +1,6 @@
 use super::super::super::{
     frontend::{lexer::Type, objects::Functions},
-    logging,
+    logging::{self, LoggingType},
 };
 
 use super::{
@@ -65,9 +65,9 @@ pub fn build_sizeof<'ctx>(
 
             let structure_size: IntValue = llvm_type.size_of().unwrap_or_else(|| {
                 logging::log(
-                    logging::LogType::Panic,
+                    LoggingType::Panic,
                     &format!(
-                        "Builtin 'sizeof()' cannot get the size of `{}`, line {}.",
+                        "Built-in 'sizeof()' cannot get the size of local reference '{}' at line '{}'.",
                         name, line
                     ),
                 );
@@ -103,8 +103,11 @@ pub fn build_sizeof<'ctx>(
 
             what => {
                 logging::log(
-                    logging::LogType::Panic,
-                    &format!("Builtin 'sizeof()' cannot get the size of '{}' type.", what),
+                    LoggingType::Panic,
+                    &format!(
+                        "Built-in 'sizeof()' cannot get the size of '{}' type.",
+                        what
+                    ),
                 );
 
                 unreachable!()
@@ -113,9 +116,9 @@ pub fn build_sizeof<'ctx>(
     }
 
     logging::log(
-        logging::LogType::Panic,
+        LoggingType::Panic,
         &format!(
-            "Builtin 'sizeof()' cannot get the size of '{}' type.",
+            "Built-in 'sizeof()' cannot get the size of '{}' type.",
             value.get_basic_type()
         ),
     );
@@ -139,9 +142,9 @@ pub fn build_is_signed<'ctx>(
 
         if !localref_basic_type.is_float_type() && !kind.is_integer_type() {
             logging::log(
-                logging::LogType::Panic,
+                LoggingType::Panic,
                 &format!(
-                    "Builtin 'is_signed()' cannot get the signedness of `{}`, line {}.",
+                    "Built-in 'is_signed()' cannot get the signedness of `{}`, line {}.",
                     name, line
                 ),
             );

@@ -2,7 +2,7 @@ use super::super::backend::compiler::misc::CompilerFile;
 
 use super::{
     error::ThrushCompilerError,
-    logging::{self, LogType},
+    logging::{self, LoggingType},
 };
 
 use {
@@ -11,9 +11,15 @@ use {
 };
 
 #[derive(Debug)]
-pub struct Diagnostic {
+pub struct Diagnostician {
     path: PathBuf,
-    contain: String,
+    code: String,
+}
+
+#[derive(Debug)]
+struct Diagnostic {
+    code: String,
+    signal: String,
 }
 
 #[derive(Debug)]
@@ -23,11 +29,11 @@ struct CodePosition {
     end: usize,
 }
 
-impl Diagnostic {
+impl Diagnostician {
     pub fn new(thrushfile: &CompilerFile) -> Self {
-        let contain: String = fs::read_to_string(&thrushfile.path).unwrap_or_else(|_| {
+        let code: String = fs::read_to_string(&thrushfile.path).unwrap_or_else(|_| {
             logging::log(
-                LogType::Panic,
+                LoggingType::Panic,
                 &format!(
                     "Unable to read `{}` file for build a diagnostic.",
                     thrushfile.path.display()
@@ -39,70 +45,34 @@ impl Diagnostic {
 
         Self {
             path: thrushfile.path.clone(),
-            contain,
+            code,
         }
     }
 
-    pub fn report(&mut self, error: &ThrushCompilerError, logtype: LogType) {
+    pub fn report_error(&mut self, error: &ThrushCompilerError, logging_type: LoggingType) {
         let ThrushCompilerError::Error(title, help, line, span) = error;
-        self.print_spanned_report(title, help, *line, span.as_ref(), logtype);
+        self.print_error_report(title, help, *line, span.as_ref(), logging_type);
     }
 
-    fn print_spanned_report(
+    fn print_error_report(
         &mut self,
         title: &str,
-        help: &str,
+        description: &str,
         line: usize,
         span: Option<&(usize, usize)>,
-        logtype: LogType,
+        logging_type: LoggingType,
     ) {
-        self.report_header(line, title, logtype);
+        self.print_header(line, title, logging_type);
 
-        if let Some((start_span, end_span)) = span {
-            if let Some(code_position) =
-                self.find_line_and_range(&self.contain, *start_span, *end_span)
-            {
-                if let Some((line_text, arrow_line)) =
-                    self.generate_diagnostic(&self.contain, code_position)
-                {
-                    println!("\n{}\n{}", line_text, arrow_line,);
-                } else {
-                    return self.print_not_spanned_report(help, line);
-                }
-
-                self.print_description(help);
-
-                return;
-            }
-
-            return self.print_not_spanned_report(help, line);
+        if let Some((start, end)) = span {
+            Diagnostic::build(&self.code, line, *start, *end).print(description);
+            return;
         }
 
-        self.print_not_spanned_report(help, line);
+        Diagnostic::build_without_span(&self.code, line).print(description);
     }
 
-    fn print_not_spanned_report(&mut self, description: &str, line: usize) {
-        let lines: Vec<&str> = self.contain.lines().collect();
-
-        let line_text: String = "|  ".to_string() + lines[line - 1].trim();
-        let arrow_line: String = "|  ".to_string() + &"─".bright_red().repeat(line_text.len());
-
-        logging::write(
-            logging::OutputIn::Stderr,
-            format!("|\n{}\n{}\n", line_text, arrow_line).as_bytes(),
-        );
-
-        self.print_description(description);
-    }
-
-    fn print_description(&self, help: &str) {
-        logging::write(
-            logging::OutputIn::Stderr,
-            format!("\n{} {}\n\n", "> ".bold().bright_red(), help.bold()).as_bytes(),
-        );
-    }
-
-    fn report_header(&mut self, line: usize, title: &str, logtype: LogType) {
+    fn print_header(&mut self, line: usize, title: &str, logging_type: LoggingType) {
         logging::write(
             logging::OutputIn::Stderr,
             format!(
@@ -115,15 +85,27 @@ impl Diagnostic {
 
         logging::write(
             logging::OutputIn::Stderr,
-            format!("\n{} {}\n\n", logtype.to_styled(), title).as_bytes(),
+            format!("\n{} {}\n\n", logging_type.to_styled(), title).as_bytes(),
         );
     }
+}
 
-    fn find_line_and_range(&self, text: &str, start: usize, end: usize) -> Option<CodePosition> {
+impl Diagnostic {
+    pub fn build(code: &str, line: usize, start: usize, end: usize) -> Self {
+        if let Some(code_position) = Diagnostic::find_line_and_range(code, start, end) {
+            if let Some(diagnostic) = Diagnostic::generate_diagnostic(code, code_position) {
+                return diagnostic;
+            }
+        }
+
+        Diagnostic::build_without_span(code, line)
+    }
+
+    pub fn find_line_and_range(code: &str, start: usize, end: usize) -> Option<CodePosition> {
         let mut line_start: usize = 0;
         let mut line_num: usize = 1;
 
-        for (i, c) in text.char_indices() {
+        for (i, c) in code.char_indices() {
             if i >= start {
                 break;
             }
@@ -133,7 +115,7 @@ impl Diagnostic {
             }
         }
 
-        if start >= text.len() || end > text.len() || start > end {
+        if start >= code.len() || end > code.len() || start > end {
             return None;
         }
 
@@ -144,8 +126,8 @@ impl Diagnostic {
         })
     }
 
-    fn generate_diagnostic(&self, text: &str, position: CodePosition) -> Option<(String, String)> {
-        let lines: Vec<&str> = text.lines().collect();
+    pub fn generate_diagnostic(code: &str, position: CodePosition) -> Option<Diagnostic> {
+        let lines: Vec<&str> = code.lines().collect();
 
         if position.line > lines.len() {
             return None;
@@ -153,11 +135,38 @@ impl Diagnostic {
 
         let line_position: usize = position.line - 1;
 
-        let line_text: String = lines[line_position].to_string();
-        let mut arrow_line: String = " ".repeat(line_text.len());
+        let code_line: String = lines[line_position].to_string();
+        let mut signal_line: String = " ".repeat(code_line.len() + 1);
 
-        arrow_line.replace_range(position.start..position.end, "—");
+        signal_line.replace_range(position.start + 1..position.end + 1, "—");
 
-        Some((line_text, arrow_line.bold().bright_red().to_string()))
+        Some(Diagnostic {
+            code: code_line,
+            signal: signal_line,
+        })
+    }
+
+    pub fn build_without_span(code: &str, line: usize) -> Diagnostic {
+        let lines: Vec<&str> = code.lines().collect();
+
+        let code_line: String = "|  ".to_string() + lines[line - 1].trim();
+        let signal_line: String = "|  ".to_string() + &"^".bright_red().repeat(code_line.len());
+
+        Diagnostic {
+            code: code_line,
+            signal: signal_line,
+        }
+    }
+
+    pub fn print(self, description: &str) {
+        logging::write(
+            logging::OutputIn::Stderr,
+            format!("\n{}\n{}\n", self.code, self.signal).as_bytes(),
+        );
+
+        logging::write(
+            logging::OutputIn::Stderr,
+            format!("\n{} {}\n\n", "> ".bold().bright_red(), description.bold()).as_bytes(),
+        );
     }
 }
