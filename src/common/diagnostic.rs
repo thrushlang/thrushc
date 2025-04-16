@@ -135,10 +135,26 @@ impl Diagnostic {
 
         let line_position: usize = position.line - 1;
 
-        let code_line: String = lines[line_position].to_string();
-        let mut signal_line: String = " ".repeat(code_line.len() + 1);
+        let code_line_original: String = lines[line_position].to_string();
+        let code_line: String = format!("    {}", code_line_original.trim_start());
 
-        signal_line.replace_range(position.start + 1..position.end + 1, "—");
+        let code_line_chars: Vec<char> = code_line.chars().collect();
+
+        let mut signal_line: String = " ".repeat(code_line_chars.len() + 1);
+
+        let start_index: usize = code_line
+            .chars()
+            .take(position.start)
+            .map(|ch| ch.len_utf8())
+            .sum::<usize>();
+
+        let end_index: usize = code_line
+            .chars()
+            .take(position.end)
+            .map(|ch| ch.len_utf8())
+            .sum::<usize>();
+
+        signal_line.replace_range(start_index..end_index, "—");
 
         Some(Diagnostic {
             code: code_line,
