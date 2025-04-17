@@ -42,6 +42,27 @@ lazy_static! {
             }
         }
     };
+    static ref EXECUTABLE_EXTENSION: &'static str = {
+        let unsupported_os = || {
+            logging::log(
+                logging::LoggingType::Panic,
+                &format!(
+                    "No compatible operating system '{}' for host compilation.",
+                    env::consts::OS
+                ),
+            );
+            unreachable!()
+        };
+
+        match env::consts::OS {
+            "windows" => ".exe",
+            "linux" => "",
+            _ => {
+                unsupported_os();
+                unreachable!();
+            }
+        }
+    };
     static ref LLVM_BACKEND: PathBuf = {
         let error = || {
             logging::log(
@@ -50,16 +71,31 @@ lazy_static! {
             );
         };
 
+        let llvm_linker: PathBuf = if cfg!(target_os = "linux") {
+            HOME.join("thrushlang/backends/llvm/ld.lld")
+        } else {
+            HOME.join("thrushlang/backends/llvm/lld.exe")
+        };
+
         let llvm_backend_required_paths: [PathBuf; 9] = [
             HOME.join("thrushlang"),
             HOME.join("thrushlang/backends"),
             HOME.join("thrushlang/backends/llvm"),
             HOME.join("thrushlang/backends/llvm/build"),
             HOME.join("thrushlang/backends/llvm/tools"),
-            HOME.join("thrushlang/backends/llvm/ld.lld"),
-            HOME.join("thrushlang/backends/llvm/clang-17"),
-            HOME.join("thrushlang/backends/llvm/tools/opt"),
-            HOME.join("thrushlang/backends/llvm/tools/llvm-dis"),
+            llvm_linker,
+            HOME.join(format!(
+                "thrushlang/backends/llvm/clang-17{}",
+                *EXECUTABLE_EXTENSION
+            )),
+            HOME.join(format!(
+                "thrushlang/backends/llvm/tools/opt{}",
+                *EXECUTABLE_EXTENSION
+            )),
+            HOME.join(format!(
+                "thrushlang/backends/llvm/tools/llvm-dis{}",
+                *EXECUTABLE_EXTENSION
+            )),
         ];
 
         llvm_backend_required_paths.iter().for_each(|path| {
