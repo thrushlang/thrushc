@@ -1,45 +1,68 @@
+import platform
 import sys
 import os
-
-try:
-   import elevate 
-except:
-   print("Try to install elevate, across `pip install elevate`.")
-   sys.exit(1)
+import platform
+import urllib.request
+import shutil
 
 if __name__ == "__main__":
 
-    elevate.elevate()
+    HOME: str = os.environ["HOME"] if platform.platform() == "Linux" else os.environ["APPDATA"].replace("\\", "/")
+
+    os.makedirs(f"{HOME}/thrushlang/backends/llvm/build", exist_ok= True)
 
     def build_dependencies_for_linux(): 
 
         print("Building dependencies for The Thrush Compiler in Linux...")
-        print("Installing LLVM-C API v17.0.6...")
 
-        wget: int = os.system("wget https://github.com/thrushlang/toolchains/releases/download/LLVM-C/thrushc-llvm-linux-x64_86-v1.0.0.tar.gz")
-        
-        print("Unpacking the precompiled LLVM-C API v17.0.6...")
-        tar: int = os.system("tar xvf thrushc-llvm-linux-x64_86-v1.0.0.tar.gz")
+        if not os.path.exists("thrushc-build"): os.mkdir("thrushc-build")
 
-        os.system(f"rsync -r -a -mkpath {os.path.abspath("llvm/")} /usr/")
+        wget: int = os.system("wget https://github.com/thrushlang/toolchains/releases/download/LLVM-C/thrushc-llvm-linux-x64-v1.0.0.tar.gz -o thrushc-build/thrushc-llvm-linux-x64-v1.0.0.tar.gz")
+        tar: int = os.system("tar xvf thrushc-build/thrushc-llvm-linux-x64-v1.0.0.tar.gz")
+        decompress: int = os.system(f"rsync -r -a -mkpath {os.path.abspath("llvm/")} {HOME}//thrushlang/backends/llvm/build")
 
-        if sum([wget, tar]) > 0:
-            print("Failed to install LLVM-C API v17.0.6.")
+        if sum([wget, tar, decompress]) > 0:
+            print("Failed to install LLVM-C API.")
             sys.exit(1)
+
+        shutil.rmtree("thrushc-build/", ignore_errors= True)
 
         print("Dependencies are ready to compile. Use 'cargo clean' and 'cargo run' now.")
         
         sys.exit(0)
+
+    def build_dependencies_for_windows():
+
+        print("Building dependencies for The Thrush Compiler in Windows...")
+
+        if not os.path.exists("thrushc-build"): os.mkdir("thrushc-build")
+
+        urllib.request.urlretrieve("https://github.com/thrushlang/toolchains/releases/download/LLVM-C/thrushc-llvm-windows-x64-v1.0.0.tar.xz", "thrushc-build/thrushc-llvm-windows-x64-v1.0.0.tar.xz")
+
+        tar: int = os.system(f"tar -xJf thrushc-build/thrushc-llvm-windows-x64-v1.0.0.tar.xz -C {HOME}/thrushlang/backends/llvm/build/") 
+
+        if tar > 0:
+            print("Failed to install the LLVM-C API.")
+            sys.exit(1)
+
+        shutil.rmtree("thrushc-build/", ignore_errors= True)
+
+        print("Dependencies are ready to compile. Use 'cargo clean' and 'cargo run' now.")
+
+        sys.exit(0)
     
     if len(sys.argv) < 2:
         print("Usage: python build.py <operating-system>")
-        print("Available operating systems: linux")
+        print("Available operating systems: linux, windows")
         sys.exit(1)
 
     if sys.argv[1].lower() == "linux":
         build_dependencies_for_linux()
+
+    if sys.argv[1].lower() == "windows":
+        build_dependencies_for_windows()
     
     print("Usage: python build.py <target-operating-system>")
-    print("Available operating systems: linux")
+    print("Available operating systems: linux, windows")
 
     sys.exit(1)
