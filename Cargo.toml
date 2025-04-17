@@ -5,17 +5,19 @@ version = "1.0.0"
 edition = "2024"
 authors = ["DevCheckOG [https://github.com/DevCheckOG]"]
 
+[patch.crates-io]
+llvm-sys = { path = "crates/llvm-sys-v170.0.0" }
+
 [dependencies]
 colored = "3.0.0"
 ahash = "0.8.11"
 lazy_static = "1.5.0"
 
-inkwell = { version = "0.5.0", features = [
+llvm-sys = { path = "crates/llvm-sys-v170.0.0", features = ["force-static"] }
+inkwell = { path = "crates/inkwell-v0.5.0", features = [
     "llvm17-0",
-    "llvm17-0-force-static",
+    "llvm17-0-force-static"
 ]}
-
-llvm-sys = { version = "170.0.0", features = ["force-static"] }
 
 [profile.dev]
 incremental = true

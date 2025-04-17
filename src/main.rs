@@ -50,10 +50,11 @@ lazy_static! {
             );
         };
 
-        let llvm_backend_required_paths: [PathBuf; 8] = [
+        let llvm_backend_required_paths: [PathBuf; 9] = [
             HOME.join("thrushlang"),
             HOME.join("thrushlang/backends"),
             HOME.join("thrushlang/backends/llvm"),
+            HOME.join("thrushlang/backends/llvm/build"),
             HOME.join("thrushlang/backends/llvm/tools"),
             HOME.join("thrushlang/backends/llvm/ld.lld"),
             HOME.join("thrushlang/backends/llvm/clang-17"),
