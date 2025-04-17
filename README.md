@@ -23,18 +23,23 @@ In summary:
   <img src= "https://github.com/thrushlang/thrushc/blob/master/assets/how%20it%20works%20(with%20llvm%20backend).png" style= "width: 1hv; height: 1hv;"> </img>
 </p>
 
-## Build dependencies
+# Getting Started
 
-**Important Rust crates:**
+## Build dependencies 
 
-- **llvm-sys** (v170)
-- **inkwell** (v0.50)
-  
-## Requirements for creating optimal binaries
+Among the dependencies required by the compiler is the LLVM-C API, which you can find pre-compiled for each operating system at **[Thrush Programming Toolchains](https://github.com/thrushlang/toolchains)**.
 
-### Linux Toolchain
+Automatically:
 
-- [Linux Toolchain (x64)](https://github.com/thrushlang/toolchains/releases/download/Toolchains/thrushlang-toolchain-llvm-linux-x64-v1.0.2.tar.xz)
+```console
+python build.py <target-operating-system>
+```
+
+## Install a toolchain
+
+To create binaries with the compiler, you need the pre-compiled toolchain for each operating system. Find your operating system and architecture.
+
+- https://github.com/thrushlang/toolchains
 
 > [!NOTE]  
 > The language will contain a **pre-optimized** toolchain repository for each operating system. This process automates the installation of the language and its entire ecosystem through the **Thorium** package manager.
