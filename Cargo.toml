@@ -5,9 +5,6 @@ version = "1.0.0"
 edition = "2024"
 authors = ["DevCheckOG [https://github.com/DevCheckOG]"]
 
-[patch.crates-io]
-llvm-sys = { path = "crates/llvm-sys-v170.0.0" }
-
 [dependencies]
 colored = "3.0.0"
 ahash = "0.8.11"
