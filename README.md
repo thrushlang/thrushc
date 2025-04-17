@@ -25,6 +25,14 @@ In summary:
 
 # Getting Started
 
+## Start
+
+You must first clone the repository and access it locally. 
+
+```console
+git clone --depth 1 https://github.com/thrushlang/thrushc && cd thrushc
+```
+
 ## Build dependencies 
 
 Among the dependencies required by the compiler is the LLVM-C API, which you can find pre-compiled for each operating system at **[Thrush Programming Language Toolchains](https://github.com/thrushlang/toolchains)**.
