@@ -27,7 +27,7 @@ In summary:
 
 ## Build dependencies 
 
-Among the dependencies required by the compiler is the LLVM-C API, which you can find pre-compiled for each operating system at **[Thrush Programming Toolchains](https://github.com/thrushlang/toolchains)**.
+Among the dependencies required by the compiler is the LLVM-C API, which you can find pre-compiled for each operating system at **[Thrush Programming Language Toolchains](https://github.com/thrushlang/toolchains)**.
 
 Automatically:
 
@@ -39,7 +39,7 @@ python build.py <target-operating-system>
 
 To create binaries with the compiler, you need the pre-compiled toolchain for each operating system. Find your operating system and architecture.
 
-- https://github.com/thrushlang/toolchains
+- **[Thrush Programming Language Toolchains](https://github.com/thrushlang/toolchains)**.
 
 > [!NOTE]  
 > The language will contain a **pre-optimized** toolchain repository for each operating system. This process automates the installation of the language and its entire ecosystem through the **Thorium** package manager.
