@@ -58,4 +58,4 @@ To create binaries with the compiler, you need the pre-compiled toolchain for ea
 - **[Thrush Programming Language Toolchains](https://github.com/thrushlang/toolchains)**.
 
 > [!NOTE]  
-> In the future the **Thorium Package Manager** will do this for you when you use the command `thorium install <target-operating-system>`.
+> In the future the **Thorium Package Manager** will do this for you when you use the command `thorium install`.
