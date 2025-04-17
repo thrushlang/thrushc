@@ -35,6 +35,14 @@ Automatically:
 python build.py <target-operating-system>
 ```
 
+## Build the Compiler
+
+Now you need to compile the compiler with Rust.
+
+```console
+cargo run -- --help
+```
+
 ## Install a toolchain
 
 To create binaries with the compiler, you need the pre-compiled toolchain for each operating system. Find your operating system and architecture.
