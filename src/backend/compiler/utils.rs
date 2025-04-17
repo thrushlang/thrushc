@@ -112,7 +112,7 @@ pub fn type_to_function_type<'ctx>(
             let parameter_basic_type: &Type = kind.get_basic_type();
 
             if parameter_basic_type.is_struct_type() {
-                let structure_type: &str = kind.get_type_structure_type();
+                let structure_type: &str = kind.get_structure_type();
 
                 let structure: &CompilerStructure = compiler_objects.get_struct(structure_type);
                 let fields: &CompilerStructureFields = &structure.1;

@@ -23,8 +23,8 @@ pub fn include(functions: &mut Functions) {
     functions.insert(
         "sizeof!",
         (
-            Instruction::Type(Type::S64, String::default()),
-            Vec::from([Instruction::Type(Type::T, String::default())]),
+            Instruction::Type(Type::S64, ""),
+            Vec::from([Instruction::Type(Type::T, "")]),
             false,
         ),
     );
@@ -32,8 +32,8 @@ pub fn include(functions: &mut Functions) {
     functions.insert(
         "is_signed!",
         (
-            Instruction::Type(Type::Bool, String::default()),
-            Vec::from([Instruction::Type(Type::T, String::default())]),
+            Instruction::Type(Type::Bool, ""),
+            Vec::from([Instruction::Type(Type::T, "")]),
             false,
         ),
     );
@@ -53,7 +53,7 @@ pub fn build_sizeof<'ctx>(
         let localref_basic_type: &Type = kind.get_basic_type();
 
         if localref_basic_type.is_struct_type() {
-            let localref_structure_type: &str = kind.get_type_structure_type();
+            let localref_structure_type: &str = kind.get_structure_type();
 
             let structure: &CompilerStructure =
                 compiler_objects.get_struct(localref_structure_type);

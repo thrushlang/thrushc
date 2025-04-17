@@ -134,9 +134,11 @@ pub fn build_expression<'ctx>(
         }
 
         if localref_type.is_struct_type() {
-            let localref_structure_type: &str = kind.get_type_structure_type();
+            let localref_structure_type: &str = kind.get_structure_type();
+
             let structure: &CompilerStructure =
                 compiler_objects.get_struct(localref_structure_type);
+
             let fields: &CompilerStructureFields = &structure.1;
 
             let llvm_structure_type: StructType =

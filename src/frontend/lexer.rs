@@ -947,7 +947,7 @@ pub enum Type {
 
 impl Type {
     #[inline(always)]
-    pub const fn precompute_numeric_type(self, other: Type) -> Type {
+    pub const fn precompute_type(self, other: Type) -> Type {
         match (self, other) {
             (Type::S64, _) | (_, Type::S64) => Type::S64,
             (Type::S32, _) | (_, Type::S32) => Type::S32,

@@ -298,7 +298,7 @@ fn build_local_structure<'ctx>(
     }
 
     if let Instruction::LocalRef { name, kind, .. } = local_value {
-        let localref_structure_type: &str = kind.get_type_structure_type();
+        let localref_structure_type: &str = kind.get_structure_type();
         let localref_object: AllocatedObject = compiler_objects.get_allocated_object(name);
 
         allocated_object.build_store(builder, localref_object.ptr);
@@ -316,7 +316,7 @@ fn build_local_structure<'ctx>(
         ..
     } = local_value
     {
-        let structure_type: &str = call_type.get_type_structure_type();
+        let structure_type: &str = call_type.get_structure_type();
 
         let value: PointerValue = call::build_call(
             module,

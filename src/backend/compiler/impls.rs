@@ -1,6 +1,7 @@
 use super::super::super::frontend::types::StructFields;
 
 use super::{
+    Instruction,
     memory::MemoryFlag,
     objects::CompilerObjects,
     traits::{
@@ -94,5 +95,16 @@ impl MappedHeapedPointersExtension<'_> for MappedHeapPointers<'_> {
 
                 let _ = builder.build_free(loaded_target_pointer);
             });
+    }
+}
+
+impl PartialEq for Instruction<'_> {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Instruction::Integer(_, _, _), Instruction::Integer(_, _, _))
+            | (Instruction::Float(_, _, _), Instruction::Float(_, _, _))
+            | (Instruction::Str(_), Instruction::Str(_)) => true,
+            (left, right) => std::mem::discriminant(left) == std::mem::discriminant(right),
+        }
     }
 }

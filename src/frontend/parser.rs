@@ -6,7 +6,7 @@ use super::{
         FoundObjectEither, FoundObjectExtensions, StructureExtensions, TokenLexemeExtensions,
     },
     type_checking,
-    types::StructFields,
+    types::{ComplexType, StructFields},
 };
 
 use super::super::{
@@ -199,7 +199,7 @@ impl<'instr> Parser<'instr> {
         let conditional: Instruction = self.expr()?;
 
         self.check_type_mismatch(
-            Instruction::Type(Type::Bool, String::default()),
+            Instruction::Type(Type::Bool, ""),
             conditional.get_type(),
             Some(&conditional),
         );
@@ -269,7 +269,7 @@ impl<'instr> Parser<'instr> {
             let pattern: Instruction = self.expr()?;
 
             self.check_type_mismatch(
-                Instruction::Type(Type::Bool, String::default()),
+                Instruction::Type(Type::Bool, ""),
                 pattern.get_type(),
                 Some(&pattern),
             );
@@ -320,9 +320,9 @@ impl<'instr> Parser<'instr> {
             index += 1;
         }
 
-        if if_block.has_more_than_a_statement() {
+        if if_block.has_instruction() {
             self.check_type_mismatch(
-                Instruction::Type(Type::Bool, String::default()),
+                Instruction::Type(Type::Bool, ""),
                 if_cond.get_type(),
                 Some(&if_cond),
             );
@@ -358,7 +358,7 @@ impl<'instr> Parser<'instr> {
             None
         };
 
-        if !if_block.has_more_than_a_statement() && patterns.is_empty() && otherwise.is_none() {
+        if !if_block.has_instruction() && patterns.is_empty() && otherwise.is_none() {
             return Ok(Instruction::Null);
         }
 
@@ -399,14 +399,14 @@ impl<'instr> Parser<'instr> {
             let elif_condition: Instruction = self.expr()?;
 
             self.check_type_mismatch(
-                Instruction::Type(Type::Bool, String::default()),
+                Instruction::Type(Type::Bool, ""),
                 elif_condition.get_type(),
                 Some(&elif_condition),
             );
 
             let elif_body: Instruction = self.build_code_block(&mut [])?;
 
-            if !elif_body.has_more_than_a_statement() {
+            if !elif_body.has_instruction() {
                 continue;
             }
 
@@ -421,7 +421,7 @@ impl<'instr> Parser<'instr> {
         if self.match_token(TokenKind::Else)? {
             let else_body: Instruction = self.build_code_block(&mut [])?;
 
-            if else_body.has_more_than_a_statement() {
+            if else_body.has_instruction() {
                 otherwise = Some(Box::new(Instruction::Else {
                     block: Box::new(else_body),
                 }));
@@ -546,7 +546,7 @@ impl<'instr> Parser<'instr> {
             String::from("Expected structure reference."),
         )?;
 
-        let struct_name: &str = name.lexeme.to_str();
+        let structure_name: &str = name.lexeme.to_str();
 
         let line: usize = name.line;
         let span: (usize, usize) = name.span;
@@ -594,18 +594,16 @@ impl<'instr> Parser<'instr> {
 
                 let field_type: Instruction = instruction.get_type();
 
-                let original_field_target_type: (Type, &str) = struct_found.get_field_type(
+                let original_field_target_type: ComplexType = struct_found.get_field_type(
                     field_name,
                     (
                         *field_type.get_basic_type(),
-                        field_type.get_type_structure_type(),
+                        field_type.get_structure_type(),
                     ),
                 );
 
-                let target_type: Instruction = Instruction::Type(
-                    original_field_target_type.0,
-                    original_field_target_type.1.to_string(),
-                );
+                let target_type: Instruction =
+                    Instruction::Type(original_field_target_type.0, original_field_target_type.1);
 
                 self.check_type_mismatch(target_type.clone(), field_type, Some(&instruction));
 
@@ -651,7 +649,7 @@ impl<'instr> Parser<'instr> {
         )?;
 
         Ok(Instruction::InitStruct {
-            name: struct_name,
+            name: structure_name,
             fields,
         })
     }
@@ -665,7 +663,7 @@ impl<'instr> Parser<'instr> {
         let conditional: Instruction = self.expression()?;
 
         self.check_type_mismatch(
-            Instruction::Type(Type::Bool, String::default()),
+            Instruction::Type(Type::Bool, ""),
             conditional.get_type(),
             None,
         );
@@ -785,14 +783,14 @@ impl<'instr> Parser<'instr> {
             }
 
             self.check_type_mismatch(
-                Instruction::Type(Type::Void, String::default()),
+                Instruction::Type(Type::Void, ""),
                 self.in_function_type.clone(),
                 None,
             );
 
             return Ok(Instruction::Return(
                 Box::new(Instruction::Null),
-                Box::new(Instruction::Type(Type::Void, String::default())),
+                Box::new(Instruction::Type(Type::Void, "")),
             ));
         }
 
@@ -1166,7 +1164,7 @@ impl<'instr> Parser<'instr> {
                 left: Box::new(expression),
                 op,
                 right: Box::new(right),
-                kind: Box::new(Instruction::Type(Type::Bool, String::default())),
+                kind: Box::new(Instruction::Type(Type::Bool, "")),
             }
         }
 
@@ -1191,7 +1189,7 @@ impl<'instr> Parser<'instr> {
                 left: Box::new(expression),
                 op,
                 right: Box::new(right),
-                kind: Box::new(Instruction::Type(Type::Bool, String::default())),
+                kind: Box::new(Instruction::Type(Type::Bool, "")),
             }
         }
 
@@ -1221,7 +1219,7 @@ impl<'instr> Parser<'instr> {
                 left: Box::from(expression),
                 op,
                 right: Box::from(right),
-                kind: Box::new(Instruction::Type(Type::Bool, String::default())),
+                kind: Box::new(Instruction::Type(Type::Bool, "")),
             }
         }
 
@@ -1255,7 +1253,7 @@ impl<'instr> Parser<'instr> {
                 left: Box::from(expression),
                 op,
                 right: Box::from(right),
-                kind: Box::new(Instruction::Type(Type::Bool, String::default())),
+                kind: Box::new(Instruction::Type(Type::Bool, "")),
             };
         }
 
@@ -1283,13 +1281,13 @@ impl<'instr> Parser<'instr> {
                 (op.line, op.span),
             )?;
 
-            let kind: Type = left_type.precompute_numeric_type(right_type);
+            let kind: Type = left_type.precompute_type(right_type);
 
             expression = Instruction::BinaryOp {
                 left: Box::from(expression),
                 op: &op.kind,
                 right: Box::from(right),
-                kind: Box::new(Instruction::Type(kind, String::default())),
+                kind: Box::new(Instruction::Type(kind, "")),
             };
         }
 
@@ -1313,13 +1311,13 @@ impl<'instr> Parser<'instr> {
                 (self.previous().line, self.previous().span),
             )?;
 
-            let kind: Type = left_type.precompute_numeric_type(right_type);
+            let kind: Type = left_type.precompute_type(right_type);
 
             expression = Instruction::BinaryOp {
                 left: Box::from(expression),
                 op,
                 right: Box::from(right),
-                kind: Box::new(Instruction::Type(kind, String::default())),
+                kind: Box::new(Instruction::Type(kind, "")),
             };
         }
 
@@ -1340,10 +1338,12 @@ impl<'instr> Parser<'instr> {
             return Ok(Instruction::UnaryOp {
                 op,
                 expression: Box::from(expression),
-                kind: Box::new(Instruction::Type(Type::Bool, String::default())),
+                kind: Box::new(Instruction::Type(Type::Bool, "")),
                 is_pre: false,
             });
-        } else if self.match_token(TokenKind::Minus)? {
+        }
+
+        if self.match_token(TokenKind::Minus)? {
             let op: &TokenKind = &self.previous().kind;
 
             let mut expression: Instruction = self.primary()?;
@@ -1363,7 +1363,7 @@ impl<'instr> Parser<'instr> {
 
             if let Instruction::LocalRef { kind, .. } = &mut expression {
                 if kind.is_integer_type() && op.is_minus_operator() {
-                    // *kind = kind.reverse_to_signed_integer_type();
+                    *kind = Box::new(kind.narrowing_cast());
                 }
             }
 
@@ -1378,7 +1378,7 @@ impl<'instr> Parser<'instr> {
             return Ok(Instruction::UnaryOp {
                 op,
                 expression: Box::from(expression),
-                kind: Box::new(Instruction::Type(expression_type, String::default())),
+                kind: Box::new(Instruction::Type(expression_type, "")),
                 is_pre: false,
             });
         }
@@ -1409,7 +1409,7 @@ impl<'instr> Parser<'instr> {
                 let unaryop: Instruction = Instruction::UnaryOp {
                     op,
                     expression: Box::from(expression),
-                    kind: Box::new(Instruction::Type(Type::Void, String::default())),
+                    kind: Box::new(Instruction::Type(Type::Void, "")),
                     is_pre: true,
                 };
 
@@ -1433,7 +1433,7 @@ impl<'instr> Parser<'instr> {
                 let unaryop: Instruction = Instruction::UnaryOp {
                     op,
                     expression: Box::from(expression),
-                    kind: Box::new(Instruction::Type(Type::Void, String::default())),
+                    kind: Box::new(Instruction::Type(Type::Void, "")),
                     is_pre: true,
                 };
 
@@ -1447,12 +1447,12 @@ impl<'instr> Parser<'instr> {
                 let span: (usize, usize) = datatype.span;
 
                 match tp {
-                    tp if tp.is_integer_type() => Instruction::Type(*tp, String::default()),
-                    tp if tp.is_float_type() => Instruction::Type(*tp, String::default()),
-                    tp if tp.is_bool_type() => Instruction::Type(*tp, String::default()),
-                    tp if tp.is_raw_ptr() => Instruction::Type(*tp, String::default()),
-                    tp if tp.is_void_type() => Instruction::Type(*tp, String::default()),
-                    tp if tp.is_str() => Instruction::Type(*tp, String::default()),
+                    tp if tp.is_integer_type() => Instruction::Type(*tp, ""),
+                    tp if tp.is_float_type() => Instruction::Type(*tp, ""),
+                    tp if tp.is_bool_type() => Instruction::Type(*tp, ""),
+                    tp if tp.is_raw_ptr() => Instruction::Type(*tp, ""),
+                    tp if tp.is_void_type() => Instruction::Type(*tp, ""),
+                    tp if tp.is_str() => Instruction::Type(*tp, ""),
                     what_heck_tp => {
                         return Err(ThrushCompilerError::Error(
                             String::from("Syntax error"),
@@ -1492,7 +1492,7 @@ impl<'instr> Parser<'instr> {
 
                 return Ok(Instruction::Group {
                     expression: Box::new(expression),
-                    kind: Box::new(Instruction::Type(expression_type, String::default())),
+                    kind: Box::new(Instruction::Type(expression_type, "")),
                 });
             }
 
@@ -1520,7 +1520,7 @@ impl<'instr> Parser<'instr> {
                     self.only_advance()?;
 
                     Instruction::Integer(
-                        Box::new(Instruction::Type(*kind, String::default())),
+                        Box::new(Instruction::Type(*kind, "")),
                         *number,
                         *is_signed,
                     )
@@ -1529,11 +1529,7 @@ impl<'instr> Parser<'instr> {
                 TokenKind::Float(kind, number, is_signed) => {
                     self.only_advance()?;
 
-                    Instruction::Float(
-                        Box::new(Instruction::Type(*kind, String::default())),
-                        *number,
-                        *is_signed,
-                    )
+                    Instruction::Float(Box::new(Instruction::Type(*kind, "")), *number, *is_signed)
                 }
 
                 TokenKind::Identifier => {
@@ -1550,7 +1546,7 @@ impl<'instr> Parser<'instr> {
                         .get_object_id(object_name, (object_line, object_span))?;
 
                     if object.is_structure() {
-                        return Ok(Instruction::Type(Type::Struct, object_name.to_string()));
+                        return Ok(Instruction::Type(Type::Struct, object_name));
                     }
 
                     if self.match_token(TokenKind::Eq)? {
@@ -1638,7 +1634,7 @@ impl<'instr> Parser<'instr> {
                         let unaryop: Instruction = Instruction::UnaryOp {
                             op,
                             expression: Box::from(localref),
-                            kind: Box::new(Instruction::Type(Type::Void, String::default())),
+                            kind: Box::new(Instruction::Type(Type::Void, "")),
                             is_pre: false,
                         };
 
@@ -1693,11 +1689,7 @@ impl<'instr> Parser<'instr> {
 
         let local_type: Instruction = local.0.clone();
 
-        self.check_type_mismatch(
-            Instruction::Type(Type::T, String::default()),
-            local_type,
-            None,
-        );
+        self.check_type_mismatch(Instruction::Type(Type::T, ""), local_type, None);
 
         let index: Instruction = self.expr()?;
 
@@ -1873,15 +1865,15 @@ impl<'instr> Parser<'instr> {
     fn negate_numeric_type(&self, from: &Instruction) -> Instruction<'instr> {
         if let Instruction::Type(tp, _) = from {
             return match tp {
-                Type::U64 => Instruction::Type(Type::S64, String::default()),
-                Type::U32 => Instruction::Type(Type::S32, String::default()),
-                Type::U16 => Instruction::Type(Type::S16, String::default()),
-                Type::U8 => Instruction::Type(Type::S8, String::default()),
-                _ => Instruction::Type(*from.get_basic_type(), String::default()),
+                Type::U64 => Instruction::Type(Type::S64, ""),
+                Type::U32 => Instruction::Type(Type::S32, ""),
+                Type::U16 => Instruction::Type(Type::S16, ""),
+                Type::U8 => Instruction::Type(Type::S8, ""),
+                _ => Instruction::Type(*from.get_basic_type(), ""),
             };
         }
 
-        Instruction::Type(*from.get_basic_type(), String::default())
+        Instruction::Type(*from.get_basic_type(), "")
     }
 
     fn throw_if_is_unreacheable_code(&mut self) {

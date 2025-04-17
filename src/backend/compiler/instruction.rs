@@ -37,7 +37,7 @@ pub enum Instruction<'ctx> {
 
     LLVMValue(BasicValueEnum<'ctx>),
 
-    Type(Type, String),
+    Type(Type, &'ctx str),
 
     InitStruct {
         name: &'ctx str,
@@ -159,17 +159,6 @@ pub enum Instruction<'ctx> {
     Null,
 }
 
-impl PartialEq for Instruction<'_> {
-    fn eq(&self, other: &Self) -> bool {
-        match (self, other) {
-            (Instruction::Integer(_, _, _), Instruction::Integer(_, _, _))
-            | (Instruction::Float(_, _, _), Instruction::Float(_, _, _))
-            | (Instruction::Str(_), Instruction::Str(_)) => true,
-            (left, right) => std::mem::discriminant(left) == std::mem::discriminant(right),
-        }
-    }
-}
-
 impl<'ctx> Instruction<'ctx> {
     pub fn build_struct_type(
         &self,
@@ -193,7 +182,7 @@ impl<'ctx> Instruction<'ctx> {
         }
 
         if let Instruction::LocalRef { kind, .. } = self {
-            let structure_type: &str = kind.get_type_structure_type();
+            let structure_type: &str = kind.get_structure_type();
             let structure: &CompilerStructure = compiler_objects.get_struct(structure_type);
             let fields: &CompilerStructureFields = &structure.1;
 
@@ -201,7 +190,7 @@ impl<'ctx> Instruction<'ctx> {
         }
 
         if let Instruction::Call { kind, .. } = self {
-            let structure_type: &str = kind.get_type_structure_type();
+            let structure_type: &str = kind.get_structure_type();
             let structure: &CompilerStructure = compiler_objects.get_struct(structure_type);
             let fields: &CompilerStructureFields = &structure.1;
 
@@ -212,7 +201,7 @@ impl<'ctx> Instruction<'ctx> {
     }
 
     #[inline]
-    pub fn has_more_than_a_statement(&self) -> bool {
+    pub fn has_instruction(&self) -> bool {
         if let Instruction::Block { stmts } = self {
             return !stmts.is_empty();
         }
@@ -277,71 +266,6 @@ impl<'ctx> Instruction<'ctx> {
     }
 
     #[inline(always)]
-    pub fn as_function(&self) -> Function {
-        if let Instruction::Function {
-            name,
-            params,
-            body,
-            return_type,
-            attributes,
-        } = self
-        {
-            return (name, return_type, params, body.as_ref(), attributes);
-        }
-
-        unreachable!()
-    }
-
-    #[inline(always)]
-    pub const fn as_binary(&self) -> BinaryOp {
-        if let Instruction::BinaryOp {
-            left, op, right, ..
-        } = self
-        {
-            return (&**left, op, &**right);
-        }
-
-        if let Instruction::Group { expression, .. } = self {
-            return expression.as_binary();
-        }
-
-        unreachable!()
-    }
-
-    #[inline(always)]
-    pub const fn as_unaryop(&self) -> UnaryOp {
-        if let Instruction::UnaryOp {
-            op,
-            expression,
-            kind,
-            ..
-        } = self
-        {
-            return (op, expression, kind);
-        }
-
-        unreachable!()
-    }
-
-    #[inline(always)]
-    pub const fn as_llvm_value(&self) -> &BasicValueEnum<'ctx> {
-        if let Instruction::LLVMValue(llvm_value) = self {
-            return llvm_value;
-        }
-
-        unreachable!()
-    }
-
-    #[inline(always)]
-    pub fn get_type_structure_type(&self) -> &str {
-        if let Instruction::Type(_, structure_type) = self {
-            return structure_type;
-        }
-
-        unreachable!()
-    }
-
-    #[inline(always)]
     pub fn get_basic_type(&self) -> &Type {
         match self {
             Instruction::Type(datatype, _) => datatype,
@@ -387,13 +311,13 @@ impl<'ctx> Instruction<'ctx> {
             | Instruction::UnaryOp { kind: datatype, .. }
             | Instruction::FunctionParameter { kind: datatype, .. } => (**datatype).clone(),
 
-            Instruction::Str(_) => Instruction::Type(Type::Str, String::default()),
-            Instruction::Boolean(_) => Instruction::Type(Type::Bool, String::default()),
-            Instruction::Char(_) => Instruction::Type(Type::Char, String::default()),
-            Instruction::NullT => Instruction::Type(Type::T, String::default()),
-            Instruction::GEP { .. } => Instruction::Type(Type::T, String::default()),
-            Instruction::InitStruct { .. } => Instruction::Type(Type::Struct, String::default()),
-            Instruction::Struct { .. } => Instruction::Type(Type::Struct, String::default()),
+            Instruction::Str(_) => Instruction::Type(Type::Str, ""),
+            Instruction::Boolean(_) => Instruction::Type(Type::Bool, ""),
+            Instruction::Char(_) => Instruction::Type(Type::Char, ""),
+            Instruction::NullT => Instruction::Type(Type::T, ""),
+            Instruction::GEP { .. } => Instruction::Type(Type::T, ""),
+            Instruction::InitStruct { name, .. } => Instruction::Type(Type::Struct, name),
+            Instruction::Struct { name, .. } => Instruction::Type(Type::Struct, name),
 
             instruction if instruction.is_complex_type() => instruction.clone(),
 
@@ -404,31 +328,103 @@ impl<'ctx> Instruction<'ctx> {
         }
     }
 
-    #[inline(always)]
+    pub fn as_function(&self) -> Function {
+        if let Instruction::Function {
+            name,
+            params,
+            body,
+            return_type,
+            attributes,
+        } = self
+        {
+            return (name, return_type, params, body.as_ref(), attributes);
+        }
+
+        unreachable!()
+    }
+
+    pub fn as_binary(&self) -> BinaryOp {
+        if let Instruction::BinaryOp {
+            left, op, right, ..
+        } = self
+        {
+            return (&**left, op, &**right);
+        }
+
+        if let Instruction::Group { expression, .. } = self {
+            return expression.as_binary();
+        }
+
+        unreachable!()
+    }
+
+    pub fn as_unaryop(&self) -> UnaryOp {
+        if let Instruction::UnaryOp {
+            op,
+            expression,
+            kind,
+            ..
+        } = self
+        {
+            return (op, expression, kind);
+        }
+
+        unreachable!()
+    }
+
+    pub fn as_llvm_value(&self) -> &BasicValueEnum<'ctx> {
+        if let Instruction::LLVMValue(llvm_value) = self {
+            return llvm_value;
+        }
+
+        unreachable!()
+    }
+
+    pub fn get_structure_type(&self) -> &'ctx str {
+        if let Instruction::Type(_, structure_type) = self {
+            return structure_type;
+        }
+
+        unreachable!()
+    }
+
+    pub fn narrowing_cast(&self) -> Instruction<'ctx> {
+        let instruction_type: &Type = self.get_basic_type();
+        let instruction_structure_type: &str = self.get_structure_type();
+
+        let narrowed_type: Type = match instruction_type {
+            Type::U8 => Type::S8,
+            Type::U16 => Type::S16,
+            Type::U32 => Type::S32,
+            Type::U64 => Type::S64,
+            _ => *instruction_type,
+        };
+
+        Instruction::Type(narrowed_type, instruction_structure_type)
+    }
+
     pub fn has_return(&self) -> bool {
         if let Instruction::Block { stmts } = self {
-            stmts.iter().any(|stmt| stmt.is_return())
-        } else {
-            false
+            return stmts.iter().any(|stmt| stmt.is_return());
         }
+
+        false
     }
 
-    #[inline(always)]
     pub fn has_break(&self) -> bool {
         if let Instruction::Block { stmts } = self {
-            stmts.iter().any(|stmt| stmt.is_break())
-        } else {
-            false
+            return stmts.iter().any(|stmt| stmt.is_break());
         }
+
+        false
     }
 
-    #[inline(always)]
     pub fn has_continue(&self) -> bool {
         if let Instruction::Block { stmts } = self {
-            stmts.iter().any(|stmt| stmt.is_continue())
-        } else {
-            false
+            return stmts.iter().any(|stmt| stmt.is_continue());
         }
+
+        false
     }
 
     #[inline(always)]

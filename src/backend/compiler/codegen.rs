@@ -678,7 +678,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
         }
 
         if parameter_basic_type.is_struct_type() {
-            let parameter_structure_type = parameter.1.get_type_structure_type();
+            let parameter_structure_type: &str = parameter.1.get_structure_type();
 
             let structure: &CompilerStructure =
                 self.compiler_objects.get_struct(parameter_structure_type);
@@ -837,7 +837,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
 
         if let Instruction::FunctionParameter { kind, .. } = instruction {
             if kind.get_basic_type().is_struct_type() {
-                let structure_type: &str = kind.get_type_structure_type();
+                let structure_type: &str = kind.get_structure_type();
 
                 let mut structure_memory_size: u64 = 0;
 
