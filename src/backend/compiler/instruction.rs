@@ -5,7 +5,7 @@ use super::{
         common::error::ThrushCompilerError,
         frontend::{
             lexer::{TokenKind, Type},
-            types::StructFields,
+            types::StructureFields,
         },
     },
     types::CompilerType,
@@ -33,7 +33,6 @@ pub enum Instruction<'ctx> {
         name: &'ctx str,
         fields_types: CompilerStructureFields<'ctx>,
     },
-    NullT,
 
     LLVMValue(BasicValueEnum<'ctx>),
 
@@ -41,7 +40,7 @@ pub enum Instruction<'ctx> {
 
     InitStruct {
         name: &'ctx str,
-        fields: StructFields<'ctx>,
+        arguments: StructureFields<'ctx>,
     },
 
     // Conditionals
@@ -170,15 +169,11 @@ impl<'ctx> Instruction<'ctx> {
             return utils::build_struct_type_from_fields(context, from_fields);
         }
 
-        if let Instruction::InitStruct { fields, .. } = self {
-            let mut new_fields: Vec<(&'ctx str, &'ctx str, Type, u32)> =
-                Vec::with_capacity(fields.len());
+        if let Instruction::InitStruct { name, .. } = self {
+            let structure: &CompilerStructure = compiler_objects.get_struct(name);
+            let fields: &CompilerStructureFields = &structure.1;
 
-            fields.iter().for_each(|field| {
-                new_fields.push((field.0, "", field.2, field.3));
-            });
-
-            return utils::build_struct_type_from_fields(context, &new_fields);
+            return utils::build_struct_type_from_fields(context, fields);
         }
 
         if let Instruction::LocalRef { kind, .. } = self {
@@ -284,7 +279,6 @@ impl<'ctx> Instruction<'ctx> {
             Instruction::Str(_) => &Type::Str,
             Instruction::Boolean(_) => &Type::Bool,
             Instruction::Char(_) => &Type::Char,
-            Instruction::NullT => &Type::T,
             Instruction::GEP { .. } => &Type::T,
             Instruction::InitStruct { .. } => &Type::Struct,
             Instruction::Struct { .. } => &Type::Struct,
@@ -314,7 +308,6 @@ impl<'ctx> Instruction<'ctx> {
             Instruction::Str(_) => Instruction::Type(Type::Str, ""),
             Instruction::Boolean(_) => Instruction::Type(Type::Bool, ""),
             Instruction::Char(_) => Instruction::Type(Type::Char, ""),
-            Instruction::NullT => Instruction::Type(Type::T, ""),
             Instruction::GEP { .. } => Instruction::Type(Type::T, ""),
             Instruction::InitStruct { name, .. } => Instruction::Type(Type::Struct, name),
             Instruction::Struct { name, .. } => Instruction::Type(Type::Struct, name),
@@ -437,6 +430,60 @@ impl<'ctx> Instruction<'ctx> {
     }
 
     #[inline(always)]
+    pub fn is_float_type(&self) -> bool {
+        if let Instruction::Type(tp, _) = self {
+            return tp.is_float_type();
+        }
+
+        false
+    }
+
+    #[inline(always)]
+    pub fn is_ptr_type(&self) -> bool {
+        if let Instruction::Type(tp, _) = self {
+            return tp.is_ptr_type();
+        }
+
+        false
+    }
+
+    #[inline(always)]
+    pub fn is_struct_type(&self) -> bool {
+        if let Instruction::Type(tp, _) = self {
+            return tp.is_struct_type();
+        }
+
+        false
+    }
+
+    #[inline(always)]
+    pub fn is_bool_type(&self) -> bool {
+        if let Instruction::Type(tp, _) = self {
+            return tp.is_bool_type();
+        }
+
+        false
+    }
+
+    #[inline(always)]
+    pub fn is_str_type(&self) -> bool {
+        if let Instruction::Type(tp, _) = self {
+            return tp.is_str_type();
+        }
+
+        false
+    }
+
+    #[inline(always)]
+    pub fn is_raw_ptr_type(&self) -> bool {
+        if let Instruction::Type(tp, _) = self {
+            return tp.is_raw_ptr_type();
+        }
+
+        false
+    }
+
+    #[inline(always)]
     pub fn is_unsigned_integer(&self) -> bool {
         matches!(
             self.get_basic_type(),
@@ -455,8 +502,8 @@ impl<'ctx> Instruction<'ctx> {
     }
 
     #[inline(always)]
-    pub const fn is_nullt(&self) -> bool {
-        matches!(self, Instruction::NullT { .. })
+    pub const fn is_null(&self) -> bool {
+        matches!(self, Instruction::Type(Type::Void, _))
     }
 
     #[inline(always)]

@@ -1,6 +1,8 @@
-use super::{super::backend::compiler::instruction::Instruction, lexer::Type};
+use super::super::backend::compiler::instruction::Instruction;
 
 pub type CodeLocation = (usize, (usize, usize));
-pub type StructFields<'instr> = Vec<(&'instr str, Instruction<'instr>, Type, u32)>;
+
+pub type StructureFields<'instr> =
+    Vec<(&'instr str, Instruction<'instr>, Instruction<'instr>, u32)>;
+
 pub type TokenLexeme<'a> = &'a [u8];
-pub type ComplexType<'a> = (Type, &'a str);

@@ -25,7 +25,12 @@ pub type UnaryOp<'ctx> = (
     &'ctx Instruction<'ctx>,
 );
 
-pub type Local<'ctx> = (&'ctx str, &'ctx Type, &'ctx Instruction<'ctx>, MemoryFlags);
+pub type Local<'ctx> = (
+    &'ctx str,
+    &'ctx Instruction<'ctx>,
+    &'ctx Instruction<'ctx>,
+    MemoryFlags,
+);
 
 pub type Call<'ctx> = (
     &'ctx str,
@@ -44,8 +49,8 @@ pub type Function<'ctx> = (
 pub type CompilerFunction<'ctx> = (FunctionValue<'ctx>, &'ctx [Instruction<'ctx>], u32);
 pub type FunctionParameter<'ctx> = (&'ctx str, &'ctx Instruction<'ctx>, u32, MemoryFlags);
 
-pub type CompilerStructure<'ctx> = (&'ctx str, Vec<(&'ctx str, &'ctx str, Type, u32)>);
-pub type CompilerStructureFields<'ctx> = Vec<(&'ctx str, &'ctx str, Type, u32)>;
+pub type CompilerStructure<'ctx> = (&'ctx str, Vec<(&'ctx str, Instruction<'ctx>, u32)>);
+pub type CompilerStructureFields<'ctx> = Vec<(&'ctx str, Instruction<'ctx>, u32)>;
 
 pub type CompilerAttributes<'ctx> = Vec<CompilerAttribute<'ctx>>;
 

@@ -7,6 +7,7 @@ use super::{
     types::{CompilerStructure, CompilerStructureFields},
 };
 
+use inkwell::types::BasicType;
 use inkwell::{
     AddressSpace,
     builder::Builder,
@@ -41,15 +42,12 @@ pub fn type_float_to_llvm_float_type<'ctx>(context: &'ctx Context, kind: &Type) 
 }
 
 #[inline]
-pub fn build_alloca_int<'ctx>(builder: &Builder<'ctx>, kind: IntType<'ctx>) -> PointerValue<'ctx> {
+fn build_alloca_int<'ctx>(builder: &Builder<'ctx>, kind: IntType<'ctx>) -> PointerValue<'ctx> {
     builder.build_alloca(kind, "").unwrap()
 }
 
 #[inline]
-pub fn build_alloca_float<'ctx>(
-    builder: &Builder<'ctx>,
-    kind: FloatType<'ctx>,
-) -> PointerValue<'ctx> {
+fn build_alloca_float<'ctx>(builder: &Builder<'ctx>, kind: FloatType<'ctx>) -> PointerValue<'ctx> {
     builder.build_alloca(kind, "").unwrap()
 }
 
@@ -101,7 +99,7 @@ pub fn build_const_integer<'ctx>(
 pub fn type_to_function_type<'ctx>(
     context: &'ctx Context,
     compiler_objects: &CompilerObjects,
-    kind: &Type,
+    kind: &Instruction,
     parameters: &[Instruction],
     ignore_args: bool,
 ) -> FunctionType<'ctx> {
@@ -118,7 +116,7 @@ pub fn type_to_function_type<'ctx>(
                 let fields: &CompilerStructureFields = &structure.1;
 
                 parameters_types.push(
-                    build_get_struct_type_from_compiler_objects(
+                    build_struct_type_from_compiler_objects(
                         context,
                         compiler_objects,
                         structure_type,
@@ -134,21 +132,38 @@ pub fn type_to_function_type<'ctx>(
         }
     }
 
-    match kind {
-        Type::S8 | Type::U8 | Type::Char => {
-            context.i8_type().fn_type(&parameters_types, ignore_args)
-        }
-        Type::S16 | Type::U16 => context.i16_type().fn_type(&parameters_types, ignore_args),
-        Type::S32 | Type::U32 => context.i32_type().fn_type(&parameters_types, ignore_args),
-        Type::S64 | Type::U64 => context.i64_type().fn_type(&parameters_types, ignore_args),
-        Type::Str | Type::Struct | Type::T => context
-            .ptr_type(AddressSpace::default())
-            .fn_type(&parameters_types, ignore_args),
-        Type::Bool => context.bool_type().fn_type(&parameters_types, ignore_args),
-        Type::F32 => context.f32_type().fn_type(&parameters_types, ignore_args),
-        Type::F64 => context.f64_type().fn_type(&parameters_types, ignore_args),
-        Type::Void => context.void_type().fn_type(&parameters_types, ignore_args),
+    if let Instruction::Type(kind, structure_name) = kind {
+        return match kind {
+            Type::S8 | Type::U8 | Type::Char => {
+                context.i8_type().fn_type(&parameters_types, ignore_args)
+            }
+            Type::S16 | Type::U16 => context.i16_type().fn_type(&parameters_types, ignore_args),
+            Type::S32 | Type::U32 => context.i32_type().fn_type(&parameters_types, ignore_args),
+            Type::S64 | Type::U64 => context.i64_type().fn_type(&parameters_types, ignore_args),
+            Type::Str | Type::T => context
+                .ptr_type(AddressSpace::default())
+                .fn_type(&parameters_types, ignore_args),
+
+            Type::Struct => {
+                let structure: &CompilerStructure = compiler_objects.get_struct(structure_name);
+                let structure_fields: &CompilerStructureFields = &structure.1;
+
+                build_struct_type_from_compiler_objects(
+                    context,
+                    compiler_objects,
+                    structure_name,
+                    structure_fields,
+                )
+                .fn_type(&parameters_types, ignore_args)
+            }
+            Type::Bool => context.bool_type().fn_type(&parameters_types, ignore_args),
+            Type::F32 => context.f32_type().fn_type(&parameters_types, ignore_args),
+            Type::F64 => context.f64_type().fn_type(&parameters_types, ignore_args),
+            Type::Void => context.void_type().fn_type(&parameters_types, ignore_args),
+        };
     }
+
+    unreachable!()
 }
 
 pub fn type_to_basic_metadata_enum<'ctx>(
@@ -179,7 +194,7 @@ pub fn type_to_any_type_enum<'ctx>(context: &'ctx Context, kind: &Type) -> AnyTy
         Type::F32 => context.f32_type().into(),
         Type::F64 => context.f64_type().into(),
         Type::Str | Type::Struct | Type::T => context.ptr_type(AddressSpace::default()).into(),
-        Type::Void => context.void_type().into(),
+        _ => unreachable!(),
     }
 }
 
@@ -295,7 +310,7 @@ pub fn float_autocast<'ctx>(
     Some(cast.into())
 }
 
-pub fn build_string_constant<'ctx>(
+pub fn build_str_constant<'ctx>(
     module: &Module<'ctx>,
     builder: &Builder<'ctx>,
     context: &'ctx Context,
@@ -317,6 +332,16 @@ pub fn build_string_constant<'ctx>(
         )
         .unwrap()
 }
+
+/* pub fn build_str<'ctx>(
+    builder: &Builder<'ctx>,
+    context: &'ctx Context,
+    size: u32,
+) -> PointerValue<'ctx> {
+    builder
+        .build_alloca(context.i8_type().array_type(size), "")
+        .unwrap()
+} */
 
 pub fn build_ptr<'ctx>(
     context: &'ctx Context,
@@ -357,26 +382,27 @@ pub fn build_struct_type_from_fields<'ctx>(
 ) -> StructType<'ctx> {
     let mut field_types: Vec<BasicTypeEnum> = Vec::with_capacity(10);
 
-    fields.iter().for_each(|field| match field.2 {
-        kind if kind.is_integer_type() || field.2.is_bool_type() => {
-            field_types.push(type_int_to_llvm_int_type(context, &field.2).into());
+    fields.iter().for_each(|field| match &field.1 {
+        kind if kind.is_integer_type() || kind.is_bool_type() => {
+            field_types.push(type_int_to_llvm_int_type(context, field.1.get_basic_type()).into());
         }
 
         kind if kind.is_float_type() => {
-            field_types.push(type_float_to_llvm_float_type(context, &field.2).into());
+            field_types
+                .push(type_float_to_llvm_float_type(context, field.1.get_basic_type()).into());
         }
 
         kind if kind.is_ptr_type() => {
             field_types.push(context.ptr_type(AddressSpace::default()).into());
         }
 
-        _ => (),
+        _ => {}
     });
 
     context.struct_type(&field_types, false)
 }
 
-pub fn build_get_struct_type_from_compiler_objects<'ctx>(
+pub fn build_struct_type_from_compiler_objects<'ctx>(
     context: &'ctx Context,
     compiler_objects: &CompilerObjects,
     structure_name: &str,

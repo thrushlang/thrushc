@@ -1,4 +1,4 @@
-use super::super::super::frontend::types::StructFields;
+use super::super::super::frontend::types::StructureFields;
 
 use super::{
     Instruction,
@@ -33,18 +33,22 @@ impl MemoryFlagsBasics for MemoryFlags {
     }
 }
 
-impl CompilerStructureFieldsExtensions for StructFields<'_> {
+impl CompilerStructureFieldsExtensions for StructureFields<'_> {
     fn contain_recursive_structure_type(
         &self,
         compiler_objects: &CompilerObjects,
-        structure_name: &str,
+        name: &str,
     ) -> bool {
-        let structure: &CompilerStructure = compiler_objects.get_struct(structure_name);
+        let structure: &CompilerStructure = compiler_objects.get_struct(name);
         let structure_fields: &CompilerStructureFields = &structure.1;
 
-        structure_fields
-            .iter()
-            .any(|field| field.1 == structure_name)
+        structure_fields.iter().any(|field| {
+            if let Instruction::Type(_, structure_name) = field.1 {
+                structure_name == name
+            } else {
+                false
+            }
+        })
     }
 }
 
@@ -52,14 +56,18 @@ impl CompilerStructureFieldsExtensions for CompilerStructureFields<'_> {
     fn contain_recursive_structure_type(
         &self,
         compiler_objects: &CompilerObjects,
-        structure_name: &str,
+        name: &str,
     ) -> bool {
-        let structure: &CompilerStructure = compiler_objects.get_struct(structure_name);
+        let structure: &CompilerStructure = compiler_objects.get_struct(name);
         let structure_fields: &CompilerStructureFields = &structure.1;
 
-        structure_fields
-            .iter()
-            .any(|field| field.1 == structure_name)
+        structure_fields.iter().any(|field| {
+            if let Instruction::Type(_, structure_name) = field.1 {
+                structure_name == name
+            } else {
+                false
+            }
+        })
     }
 }
 

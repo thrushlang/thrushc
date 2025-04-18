@@ -1,8 +1,11 @@
 #![allow(clippy::enum_variant_names)]
 
+use super::super::super::frontend::lexer::Type;
+
 use super::{
+    instruction::Instruction,
     objects::CompilerObjects,
-    types::{CompilerStructure, MappedHeapPointer, MappedHeapPointers},
+    types::{CompilerStructure, CompilerStructureFields, MappedHeapPointer, MappedHeapPointers},
 };
 
 use {
@@ -25,11 +28,15 @@ pub enum MemoryFlag {
 pub struct AllocatedObject<'ctx> {
     pub ptr: PointerValue<'ctx>,
     pub memory_flags: u8,
-    pub structure_type: &'ctx str,
+    pub kind: &'ctx Instruction<'ctx>,
 }
 
 impl<'ctx> AllocatedObject<'ctx> {
-    pub fn alloc(ptr: PointerValue<'ctx>, flags: &[MemoryFlag]) -> Self {
+    pub fn alloc(
+        ptr: PointerValue<'ctx>,
+        flags: &[MemoryFlag],
+        kind: &'ctx Instruction<'ctx>,
+    ) -> Self {
         let mut memory_flags: u8 = 0;
 
         flags.iter().for_each(|flag| {
@@ -39,7 +46,7 @@ impl<'ctx> AllocatedObject<'ctx> {
         Self {
             ptr,
             memory_flags,
-            structure_type: "",
+            kind,
         }
     }
 
@@ -66,32 +73,41 @@ impl<'ctx> AllocatedObject<'ctx> {
             let _ = builder.build_free(self.ptr);
         }
     }
-    pub fn generate_mapped_heaped_pointers(
+
+    pub fn create_mapped_heaped_pointers(
         &self,
         compiler_objects: &'ctx CompilerObjects,
     ) -> MappedHeapPointers {
-        if self.structure_type.is_empty() {
+        if !self.kind.is_struct_type() {
             return HashSet::new();
         }
 
-        let structure: &CompilerStructure = compiler_objects.get_struct(self.structure_type);
         let mut mapped_pointers: HashSet<MappedHeapPointer> = HashSet::with_capacity(10);
 
-        structure
-            .1
-            .iter()
-            .filter(|field| field.2.is_ptr_type())
-            .for_each(|field| {
-                let structure: &CompilerStructure = compiler_objects.get_struct(field.1);
+        if let Instruction::Type(Type::Struct, structure_name) = self.kind {
+            let structure: &CompilerStructure = compiler_objects.get_struct(structure_name);
+            let structure_fields: &CompilerStructureFields = &structure.1;
 
-                let is_recursive: bool = structure
-                    .1
-                    .iter()
-                    .filter(|field| field.2.is_struct_type())
-                    .any(|field_recursive| field_recursive.1 == field.1);
+            structure_fields
+                .iter()
+                .filter(|field| field.1.is_ptr_type())
+                .for_each(|field| {
+                    let field_position: u32 = field.2;
 
-                mapped_pointers.insert((field.1, field.3, is_recursive));
-            });
+                    if let Instruction::Type(Type::Struct, structure_name) = field.1 {
+                        let structure: &CompilerStructure =
+                            compiler_objects.get_struct(structure_name);
+
+                        let is_recursive: bool = structure
+                            .1
+                            .iter()
+                            .filter(|field| field.1.is_struct_type())
+                            .any(|field_recursive| field_recursive.1 == field.1);
+
+                        mapped_pointers.insert((structure_name, field_position, is_recursive));
+                    }
+                });
+        }
 
         mapped_pointers
     }
@@ -103,10 +119,6 @@ impl<'ctx> AllocatedObject<'ctx> {
 
     pub fn has_flag(&self, flag: MemoryFlag) -> bool {
         (self.memory_flags & flag.to_bit()) == flag.to_bit()
-    }
-
-    pub fn set_structure_type(&mut self, structure_type: &'ctx str) {
-        self.structure_type = structure_type;
     }
 }
 

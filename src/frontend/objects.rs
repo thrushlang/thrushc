@@ -1,6 +1,5 @@
 use super::super::backend::compiler::instruction::Instruction;
 use super::super::common::error::ThrushCompilerError;
-use super::lexer::Type;
 use super::types::CodeLocation;
 use ahash::AHashMap as HashMap;
 
@@ -9,7 +8,7 @@ const MINIMAL_LOCAL_SCOPE_CAPACITY: usize = 255;
 
 pub type Function<'instr> = (Instruction<'instr>, Vec<Instruction<'instr>>, bool);
 
-pub type Struct<'instr> = Vec<(&'instr str, &'instr str, Type, u32)>;
+pub type Struct<'instr> = Vec<(&'instr str, Instruction<'instr>, u32)>;
 pub type Local<'instr> = (Instruction<'instr>, bool, bool);
 
 pub type Functions<'instr> = HashMap<&'instr str, Function<'instr>>;

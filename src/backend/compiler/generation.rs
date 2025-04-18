@@ -24,7 +24,7 @@ pub fn build_expression<'ctx>(
     casting_target: &Type,
     compiler_objects: &mut CompilerObjects<'ctx>,
 ) -> BasicValueEnum<'ctx> {
-    if let Instruction::NullT = instruction {
+    if let Instruction::Type(Type::Void, _) = instruction {
         return context
             .ptr_type(AddressSpace::default())
             .const_null()
@@ -32,7 +32,7 @@ pub fn build_expression<'ctx>(
     }
 
     if let Instruction::Str(const_str) = instruction {
-        return utils::build_string_constant(module, builder, context, const_str).into();
+        return utils::build_str_constant(module, builder, context, const_str).into();
     }
 
     if let Instruction::Float(kind, num, is_signed) = instruction {
@@ -129,7 +129,7 @@ pub fn build_expression<'ctx>(
             );
         }
 
-        if localref_type.is_str() {
+        if localref_type.is_str_type() {
             return object.load_from_memory(builder, context.i8_type());
         }
 
@@ -151,7 +151,7 @@ pub fn build_expression<'ctx>(
             return object.load_from_memory(builder, llvm_structure_type);
         }
 
-        if localref_type.is_raw_ptr() {
+        if localref_type.is_raw_ptr_type() {
             return object.load_from_memory(builder, context.ptr_type(AddressSpace::default()));
         }
 

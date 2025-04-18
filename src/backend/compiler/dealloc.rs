@@ -35,7 +35,7 @@ impl<'ctx> Deallocator<'ctx> {
             let allocated_object: &AllocatedObject = heap_object.1;
 
             let mapped_heaped_pointers: MappedHeapPointers =
-                allocated_object.generate_mapped_heaped_pointers(compiler_objects);
+                allocated_object.create_mapped_heaped_pointers(compiler_objects);
 
             mapped_heaped_pointers.dealloc(
                 self.builder,
@@ -55,7 +55,7 @@ impl<'ctx> Deallocator<'ctx> {
                 let allocated_object: &AllocatedObject = heap_object.1;
 
                 let mapped_heaped_pointers: MappedHeapPointers =
-                    allocated_object.generate_mapped_heaped_pointers(compiler_objects);
+                    allocated_object.create_mapped_heaped_pointers(compiler_objects);
 
                 mapped_heaped_pointers.dealloc(
                     self.builder,

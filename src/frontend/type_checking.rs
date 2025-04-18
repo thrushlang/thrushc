@@ -292,6 +292,8 @@ pub fn check_types(
                 Ok(())
             }
 
+            (Type::Struct, Type::Void, None) => Ok(()),
+
             (Type::T, Type::T, None) => Ok(()),
 
             (

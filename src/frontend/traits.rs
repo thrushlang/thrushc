@@ -1,4 +1,7 @@
-use super::{super::common::error::ThrushCompilerError, lexer::Type, types::CodeLocation};
+use super::{
+    super::backend::compiler::instruction::Instruction, super::common::error::ThrushCompilerError,
+    types::CodeLocation,
+};
 
 pub trait TokenLexemeExtensions {
     fn to_str(&self) -> &str;
@@ -17,8 +20,8 @@ pub trait FoundObjectExtensions {
 }
 
 pub trait StructureExtensions<'a> {
-    fn contains_field(&self, field_name: &str) -> bool;
-    fn get_field_type(&self, field_name: &str, default: (Type, &'a str)) -> (Type, &'a str);
+    fn contains_field(&self, name: &str) -> bool;
+    fn get_field_type(&self, name: &str) -> Option<Instruction<'a>>;
 }
 
 pub trait FoundObjectEither<'instr> {

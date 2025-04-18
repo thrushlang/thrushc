@@ -1,6 +1,9 @@
 use super::super::common::error::ThrushCompilerError;
 
 use super::types::CodeLocation;
+
+use super::super::backend::compiler::instruction::Instruction;
+
 use super::{
     lexer::{TokenKind, Type},
     objects::{FoundObjectId, Struct},
@@ -8,16 +11,18 @@ use super::{
 };
 
 impl<'a> StructureExtensions<'a> for Struct<'a> {
-    fn contains_field(&self, field_name: &str) -> bool {
-        self.iter().any(|field| field.0 == field_name)
+    fn contains_field(&self, name: &str) -> bool {
+        self.iter().any(|field| field.0 == name)
     }
 
-    fn get_field_type(&self, field_name: &str, default: (Type, &'a str)) -> (Type, &'a str) {
-        if let Some(found_field) = self.iter().find(|field| field.0 == field_name) {
-            return (found_field.2, found_field.1);
+    fn get_field_type(&self, name: &str) -> Option<Instruction<'a>> {
+        if let Some(field) = self.iter().find(|field| field.0 == name) {
+            let field_type: Instruction = field.1.clone();
+
+            return Some(field_type);
         }
 
-        default
+        None
     }
 }
 
@@ -66,7 +71,6 @@ impl std::fmt::Display for TokenKind {
             TokenKind::Pattern => write!(f, "pattern"),
             TokenKind::If => write!(f, "if"),
             TokenKind::Elif => write!(f, "elif"),
-            TokenKind::NullT => write!(f, "nullT"),
             TokenKind::Or => write!(f, "or"),
             TokenKind::Return => write!(f, "return"),
             TokenKind::This => write!(f, "this"),

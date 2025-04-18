@@ -59,7 +59,6 @@ lazy_static! {
         keywords.insert(b"@precisefp", TokenKind::PreciseFloats);
         keywords.insert(b"@convention", TokenKind::Convention);
         keywords.insert(b"new", TokenKind::New);
-        keywords.insert(b"nullT", TokenKind::NullT);
         keywords.insert(b"s8", TokenKind::DataType(Type::S8));
         keywords.insert(b"s16", TokenKind::DataType(Type::S16));
         keywords.insert(b"s32", TokenKind::DataType(Type::S32));
@@ -765,7 +764,6 @@ pub enum TokenKind {
     Pattern,
     If,
     Elif,
-    NullT,
     Or,
     Return,
     This,
@@ -901,11 +899,6 @@ impl TokenKind {
     pub const fn is_function_keyword(&self) -> bool {
         matches!(self, TokenKind::Fn)
     }
-
-    #[inline(always)]
-    pub const fn is_identifier(&self) -> bool {
-        matches!(self, TokenKind::Identifier)
-    }
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -993,16 +986,16 @@ impl Type {
 
     #[inline(always)]
     pub const fn is_ptr_type(&self) -> bool {
-        matches!(self, Type::Struct | Type::Str | Type::T)
+        matches!(self, Type::Struct | Type::T)
     }
 
     #[inline(always)]
-    pub const fn is_raw_ptr(&self) -> bool {
+    pub const fn is_raw_ptr_type(&self) -> bool {
         matches!(self, Type::T)
     }
 
     #[inline(always)]
-    pub const fn is_str(&self) -> bool {
+    pub const fn is_str_type(&self) -> bool {
         matches!(self, Type::Str)
     }
 
