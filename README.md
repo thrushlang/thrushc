@@ -2,9 +2,6 @@
   <img src= "https://github.com/thrushlang/thrushc/blob/master/assets/thrushlang-v1.4.png" alt= "logo" style= "width: 512px; height: 512px;"> </img>
 </p>
 
-> [!WARNING]  
-> **The compiler is still under development and is unfinished, please be peaceful if exists some bug.**
-
 # The Thrush Compiler 
 
 The Thrush Compiler is tasked with converting Thrush source code (`.th`) into native code for each architecture, using either Just In Time (**JIT**) or Ahead Of Time (**AOT**) compilation modes, leveraging the LLVM infrastructure (**LLVM-C API**) during the process.
