@@ -51,18 +51,12 @@ if __name__ == "__main__":
 
         sys.exit(0)
     
-    if len(sys.argv) < 2:
-        print("Usage: python build.py <operating-system>")
-        print("Available operating systems: linux, windows")
-        sys.exit(1)
+    match platform.platform():
 
-    if sys.argv[1].lower() == "linux":
-        build_dependencies_for_linux()
+        case "Linux": build_dependencies_for_linux()
+        case "Windows": build_dependencies_for_windows()
 
-    if sys.argv[1].lower() == "windows":
-        build_dependencies_for_windows()
-    
-    print("Usage: python build.py <target-operating-system>")
-    print("Available operating systems: linux, windows")
+    print("Usage: python build.py")
+    print(f"Available operating systems: linux, windows, not {platform.platform()}")
 
     sys.exit(1)
