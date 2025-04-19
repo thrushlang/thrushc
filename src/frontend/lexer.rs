@@ -1,5 +1,5 @@
 use super::super::{
-    backend::compiler::{attributes::CompilerAttribute, misc::CompilerFile},
+    backend::compiler::{attributes::LLVMAttribute, misc::CompilerFile},
     common::{
         constants::MINIMAL_ERROR_CAPACITY, diagnostic::Diagnostician, error::ThrushCompilerError,
     },
@@ -778,18 +778,18 @@ pub enum TokenKind {
 
 impl TokenKind {
     #[inline(always)]
-    pub const fn as_compiler_attribute<'ctx>(self) -> Option<CompilerAttribute<'ctx>> {
+    pub const fn as_compiler_attribute<'ctx>(self) -> Option<LLVMAttribute<'ctx>> {
         match self {
-            TokenKind::Ignore => Some(CompilerAttribute::Ignore),
-            TokenKind::MinSize => Some(CompilerAttribute::MinSize),
-            TokenKind::NoInline => Some(CompilerAttribute::NoInline),
-            TokenKind::AlwaysInline => Some(CompilerAttribute::AlwaysInline),
-            TokenKind::InlineHint => Some(CompilerAttribute::InlineHint),
-            TokenKind::Hot => Some(CompilerAttribute::Hot),
-            TokenKind::SafeStack => Some(CompilerAttribute::SafeStack),
-            TokenKind::WeakStack => Some(CompilerAttribute::WeakStack),
-            TokenKind::StrongStack => Some(CompilerAttribute::StrongStack),
-            TokenKind::PreciseFloats => Some(CompilerAttribute::PreciseFloats),
+            TokenKind::Ignore => Some(LLVMAttribute::Ignore),
+            TokenKind::MinSize => Some(LLVMAttribute::MinSize),
+            TokenKind::NoInline => Some(LLVMAttribute::NoInline),
+            TokenKind::AlwaysInline => Some(LLVMAttribute::AlwaysInline),
+            TokenKind::InlineHint => Some(LLVMAttribute::InlineHint),
+            TokenKind::Hot => Some(LLVMAttribute::Hot),
+            TokenKind::SafeStack => Some(LLVMAttribute::SafeStack),
+            TokenKind::WeakStack => Some(LLVMAttribute::WeakStack),
+            TokenKind::StrongStack => Some(LLVMAttribute::StrongStack),
+            TokenKind::PreciseFloats => Some(LLVMAttribute::PreciseFloats),
             _ => None,
         }
     }

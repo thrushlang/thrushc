@@ -7,7 +7,7 @@ use super::{
     Instruction,
     memory::AllocatedObject,
     objects::CompilerObjects,
-    types::{Call, CompilerStructure, CompilerStructureFields},
+    types::{FunctionCall, Structure, StructureFields},
     utils,
 };
 
@@ -23,8 +23,8 @@ pub fn include(functions: &mut Functions) {
     functions.insert(
         "sizeof!",
         (
-            Instruction::Type(Type::S64, ""),
-            Vec::from([Instruction::Type(Type::T, "")]),
+            Instruction::ComplexType(Type::S64, ""),
+            Vec::from([Instruction::ComplexType(Type::T, "")]),
             false,
         ),
     );
@@ -32,8 +32,8 @@ pub fn include(functions: &mut Functions) {
     functions.insert(
         "is_signed!",
         (
-            Instruction::Type(Type::Bool, ""),
-            Vec::from([Instruction::Type(Type::T, "")]),
+            Instruction::ComplexType(Type::Bool, ""),
+            Vec::from([Instruction::ComplexType(Type::T, "")]),
             false,
         ),
     );
@@ -41,7 +41,7 @@ pub fn include(functions: &mut Functions) {
 
 pub fn build_sizeof<'ctx>(
     context: &'ctx Context,
-    call: Call<'ctx>,
+    call: FunctionCall<'ctx>,
     compiler_objects: &CompilerObjects<'ctx>,
 ) -> BasicValueEnum<'ctx> {
     let value: &Instruction = &call.2[0];
@@ -55,10 +55,8 @@ pub fn build_sizeof<'ctx>(
         if localref_basic_type.is_struct_type() {
             let localref_structure_type: &str = kind.get_structure_type();
 
-            let structure: &CompilerStructure =
-                compiler_objects.get_struct(localref_structure_type);
-
-            let structure_fields: &CompilerStructureFields = &structure.1;
+            let structure: &Structure = compiler_objects.get_struct(localref_structure_type);
+            let structure_fields: &StructureFields = &structure.1;
 
             let llvm_type: StructType =
                 utils::build_struct_type_from_fields(context, structure_fields);
@@ -83,7 +81,7 @@ pub fn build_sizeof<'ctx>(
         return ptr.get_type().size_of().into();
     }
 
-    if let Instruction::Type(kind, _) = value {
+    if let Instruction::ComplexType(kind, _) = value {
         match kind {
             kind if kind.is_integer_type() || kind.is_bool_type() => {
                 return utils::type_int_to_llvm_int_type(context, kind)
@@ -129,7 +127,7 @@ pub fn build_sizeof<'ctx>(
 pub fn build_is_signed<'ctx>(
     context: &'ctx Context,
     builder: &Builder<'ctx>,
-    call: Call<'ctx>,
+    call: FunctionCall<'ctx>,
     compiler_objects: &CompilerObjects<'ctx>,
 ) -> BasicValueEnum<'ctx> {
     let value: &Instruction = &call.2[0];

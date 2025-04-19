@@ -3,8 +3,8 @@ use super::super::super::frontend::lexer::Type;
 use super::{binaryop, call, instruction::Instruction};
 
 use super::{
-    memory::AllocatedObject, memory::MemoryFlag, objects::CompilerObjects,
-    types::CompilerStructure, types::CompilerStructureFields, unaryop, utils,
+    memory::AllocatedObject, memory::MemoryFlag, objects::CompilerObjects, types::Structure,
+    types::StructureFields, unaryop, utils,
 };
 
 use inkwell::{
@@ -24,7 +24,7 @@ pub fn build_expression<'ctx>(
     casting_target: &Type,
     compiler_objects: &mut CompilerObjects<'ctx>,
 ) -> BasicValueEnum<'ctx> {
-    if let Instruction::Type(Type::Void, _) = instruction {
+    if let Instruction::ComplexType(Type::Void, _) = instruction {
         return context
             .ptr_type(AddressSpace::default())
             .const_null()
@@ -136,13 +136,11 @@ pub fn build_expression<'ctx>(
         if localref_type.is_struct_type() {
             let localref_structure_type: &str = kind.get_structure_type();
 
-            let structure: &CompilerStructure =
-                compiler_objects.get_struct(localref_structure_type);
-
-            let fields: &CompilerStructureFields = &structure.1;
+            let structure: &Structure = compiler_objects.get_struct(localref_structure_type);
+            let structure_fields: &StructureFields = &structure.1;
 
             let llvm_structure_type: StructType =
-                utils::build_struct_type_from_fields(context, fields);
+                utils::build_struct_type_from_fields(context, structure_fields);
 
             if object.has_flag(MemoryFlag::HeapAllocated) {
                 return object.ptr.into();

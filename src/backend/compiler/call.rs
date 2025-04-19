@@ -5,7 +5,7 @@ use super::{
     builtins::{build_is_signed, build_sizeof},
     generation,
     objects::CompilerObjects,
-    types::{Call, CompilerFunction},
+    types::{Function, FunctionCall},
 };
 
 use inkwell::{
@@ -19,22 +19,27 @@ pub fn build_call<'ctx>(
     module: &Module<'ctx>,
     builder: &Builder<'ctx>,
     context: &'ctx Context,
-    call: Call<'ctx>,
+    function_call: FunctionCall<'ctx>,
     compiler_objects: &mut CompilerObjects<'ctx>,
 ) -> Option<BasicValueEnum<'ctx>> {
-    let call_name: &str = call.0;
-    let call_args: &[Instruction<'ctx>] = call.2;
-    let call_type: &Type = call.1.get_basic_type();
+    let call_name: &str = function_call.0;
+    let call_args: &[Instruction<'ctx>] = function_call.2;
+    let call_type: &Type = function_call.1.get_basic_type();
 
     if call_name == "sizeof!" {
-        return Some(build_sizeof(context, call, compiler_objects));
+        return Some(build_sizeof(context, function_call, compiler_objects));
     }
 
     if call_name == "is_signed!" {
-        return Some(build_is_signed(context, builder, call, compiler_objects));
+        return Some(build_is_signed(
+            context,
+            builder,
+            function_call,
+            compiler_objects,
+        ));
     }
 
-    let function: CompilerFunction = compiler_objects.get_function(call_name);
+    let function: Function = compiler_objects.get_function(call_name);
 
     let llvm_function: FunctionValue = function.0;
 

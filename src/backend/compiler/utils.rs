@@ -4,7 +4,7 @@ use super::{
     instruction::Instruction,
     objects::CompilerObjects,
     traits::CompilerStructureFieldsExtensions,
-    types::{CompilerStructure, CompilerStructureFields},
+    types::{Structure, StructureFields},
 };
 
 use inkwell::types::BasicType;
@@ -112,8 +112,8 @@ pub fn type_to_function_type<'ctx>(
             if parameter_basic_type.is_struct_type() {
                 let structure_type: &str = kind.get_structure_type();
 
-                let structure: &CompilerStructure = compiler_objects.get_struct(structure_type);
-                let fields: &CompilerStructureFields = &structure.1;
+                let structure: &Structure = compiler_objects.get_struct(structure_type);
+                let fields: &StructureFields = &structure.1;
 
                 parameters_types.push(
                     build_struct_type_from_compiler_objects(
@@ -132,7 +132,7 @@ pub fn type_to_function_type<'ctx>(
         }
     }
 
-    if let Instruction::Type(kind, structure_name) = kind {
+    if let Instruction::ComplexType(kind, structure_name) = kind {
         return match kind {
             Type::S8 | Type::U8 | Type::Char => {
                 context.i8_type().fn_type(&parameters_types, ignore_args)
@@ -145,8 +145,8 @@ pub fn type_to_function_type<'ctx>(
                 .fn_type(&parameters_types, ignore_args),
 
             Type::Struct => {
-                let structure: &CompilerStructure = compiler_objects.get_struct(structure_name);
-                let structure_fields: &CompilerStructureFields = &structure.1;
+                let structure: &Structure = compiler_objects.get_struct(structure_name);
+                let structure_fields: &StructureFields = &structure.1;
 
                 build_struct_type_from_compiler_objects(
                     context,
@@ -378,7 +378,7 @@ pub fn build_struct_ptr<'ctx>(
 
 pub fn build_struct_type_from_fields<'ctx>(
     context: &'ctx Context,
-    fields: &CompilerStructureFields,
+    fields: &StructureFields,
 ) -> StructType<'ctx> {
     let mut field_types: Vec<BasicTypeEnum> = Vec::with_capacity(10);
 
@@ -406,7 +406,7 @@ pub fn build_struct_type_from_compiler_objects<'ctx>(
     context: &'ctx Context,
     compiler_objects: &CompilerObjects,
     structure_name: &str,
-    compiler_structure_fields: &CompilerStructureFields,
+    compiler_structure_fields: &StructureFields,
 ) -> BasicTypeEnum<'ctx> {
     if !compiler_structure_fields.contain_recursive_structure_type(compiler_objects, structure_name)
     {

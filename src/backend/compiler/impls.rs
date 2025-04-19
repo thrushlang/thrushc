@@ -1,4 +1,4 @@
-use super::super::super::frontend::types::StructureFields;
+use super::super::super::frontend::types::Constructor;
 
 use super::{
     Instruction,
@@ -8,16 +8,13 @@ use super::{
         AttributesExtensions, CompilerStructureFieldsExtensions, MappedHeapedPointersExtension,
         MemoryFlagsBasics,
     },
-    types::{
-        CompilerAttributes, CompilerStructure, CompilerStructureFields, MappedHeapPointers,
-        MemoryFlags,
-    },
+    types::{MappedHeapPointers, MemoryFlags, Structure, StructureFields, ThrushAttributes},
     utils,
 };
 
 use inkwell::{builder::Builder, context::Context, types::StructType, values::PointerValue};
 
-impl AttributesExtensions for CompilerAttributes<'_> {
+impl AttributesExtensions for ThrushAttributes<'_> {
     fn contain_ffi_attribute(&self) -> bool {
         self.iter().any(|attr| attr.is_ffi_attribute())
     }
@@ -33,17 +30,17 @@ impl MemoryFlagsBasics for MemoryFlags {
     }
 }
 
-impl CompilerStructureFieldsExtensions for StructureFields<'_> {
+impl CompilerStructureFieldsExtensions for Constructor<'_> {
     fn contain_recursive_structure_type(
         &self,
         compiler_objects: &CompilerObjects,
         name: &str,
     ) -> bool {
-        let structure: &CompilerStructure = compiler_objects.get_struct(name);
-        let structure_fields: &CompilerStructureFields = &structure.1;
+        let structure: &Structure = compiler_objects.get_struct(name);
+        let structure_fields: &StructureFields = &structure.1;
 
         structure_fields.iter().any(|field| {
-            if let Instruction::Type(_, structure_name) = field.1 {
+            if let Instruction::ComplexType(_, structure_name) = field.1 {
                 structure_name == name
             } else {
                 false
@@ -52,17 +49,17 @@ impl CompilerStructureFieldsExtensions for StructureFields<'_> {
     }
 }
 
-impl CompilerStructureFieldsExtensions for CompilerStructureFields<'_> {
+impl CompilerStructureFieldsExtensions for StructureFields<'_> {
     fn contain_recursive_structure_type(
         &self,
         compiler_objects: &CompilerObjects,
         name: &str,
     ) -> bool {
-        let structure: &CompilerStructure = compiler_objects.get_struct(name);
-        let structure_fields: &CompilerStructureFields = &structure.1;
+        let structure: &Structure = compiler_objects.get_struct(name);
+        let structure_fields: &StructureFields = &structure.1;
 
         structure_fields.iter().any(|field| {
-            if let Instruction::Type(_, structure_name) = field.1 {
+            if let Instruction::ComplexType(_, structure_name) = field.1 {
                 structure_name == name
             } else {
                 false
@@ -85,9 +82,9 @@ impl MappedHeapedPointersExtension<'_> for MappedHeapPointers<'_> {
                 let mapped_pointer_structure_name: &str = mapped_pointer.0;
                 let mapped_pointer_index: u32 = mapped_pointer.1;
 
-                let structure: &CompilerStructure =
+                let structure: &Structure =
                     compiler_objects.get_struct(mapped_pointer_structure_name);
-                let structure_fields: &CompilerStructureFields = &structure.1;
+                let structure_fields: &StructureFields = &structure.1;
 
                 let pointer_type: StructType =
                     utils::build_struct_type_from_fields(context, structure_fields);

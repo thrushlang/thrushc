@@ -360,7 +360,7 @@ fn build_local_str<'ctx>(
     compiler_objects: &mut CompilerObjects<'ctx>,
 ) {
     if let Instruction::Str(_) = value {
-        let str: PointerValue = generation::build_expression(
+        let str_compiled: PointerValue = generation::build_expression(
             module,
             builder,
             context,
@@ -371,9 +371,9 @@ fn build_local_str<'ctx>(
         .into_pointer_value();
 
         let allocated_object: AllocatedObject = AllocatedObject::alloc(
-            str,
+            str_compiled,
             &[MemoryFlag::StaticAllocated],
-            &Instruction::Type(Type::Str, ""),
+            &Instruction::ComplexType(Type::Str, ""),
         );
 
         compiler_objects.alloc_local_object(name, allocated_object);
@@ -420,7 +420,7 @@ fn build_local_str<'ctx>(
         let allocated_object: AllocatedObject = AllocatedObject::alloc(
             call,
             &[MemoryFlag::StaticAllocated],
-            &Instruction::Type(Type::Str, ""),
+            &Instruction::ComplexType(Type::Str, ""),
         );
 
         compiler_objects.alloc_local_object(name, allocated_object);

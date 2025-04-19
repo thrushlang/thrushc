@@ -2,7 +2,7 @@ use {
     super::{
         super::super::logging::{self, LoggingType},
         memory::AllocatedObject,
-        types::{AllocatedObjects, CompilerFunction, CompilerStructure},
+        types::{AllocatedObjects, Function, Structure},
     },
     ahash::AHashMap as HashMap,
 };
@@ -13,8 +13,8 @@ const SCOPE_MINIMAL_CAPACITY: usize = 155;
 
 #[derive(Debug)]
 pub struct CompilerObjects<'ctx> {
-    pub functions: HashMap<&'ctx str, CompilerFunction<'ctx>>,
-    pub structs: HashMap<&'ctx str, CompilerStructure<'ctx>>,
+    pub functions: HashMap<&'ctx str, Function<'ctx>>,
+    pub structs: HashMap<&'ctx str, Structure<'ctx>>,
     pub blocks: Vec<HashMap<&'ctx str, AllocatedObject<'ctx>>>,
     pub scope_position: usize,
 }
@@ -48,17 +48,17 @@ impl<'ctx> CompilerObjects<'ctx> {
     }
 
     #[inline]
-    pub fn insert_function(&mut self, name: &'ctx str, function: CompilerFunction<'ctx>) {
+    pub fn insert_function(&mut self, name: &'ctx str, function: Function<'ctx>) {
         self.functions.insert(name, function);
     }
 
     #[inline]
-    pub fn insert_structure(&mut self, name: &'ctx str, structure: CompilerStructure<'ctx>) {
+    pub fn insert_structure(&mut self, name: &'ctx str, structure: Structure<'ctx>) {
         self.structs.insert(name, structure);
     }
 
     #[inline]
-    pub fn get_struct(&self, name: &str) -> &CompilerStructure {
+    pub fn get_struct(&self, name: &str) -> &Structure {
         self.structs.get(name).unwrap()
     }
 
@@ -87,7 +87,7 @@ impl<'ctx> CompilerObjects<'ctx> {
     }
 
     #[inline]
-    pub fn get_function(&self, name: &str) -> CompilerFunction<'ctx> {
+    pub fn get_function(&self, name: &str) -> Function<'ctx> {
         if let Some(function) = self.functions.get(name) {
             return *function;
         }

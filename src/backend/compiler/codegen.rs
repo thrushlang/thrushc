@@ -1,9 +1,11 @@
 use super::super::super::frontend::lexer::Type;
 
-use super::super::compiler::attributes::CompilerAttribute;
+use super::super::compiler::attributes::LLVMAttribute;
+
+use super::types::FunctionPrototype;
 
 use super::{
-    attributes::{AttributeBuilder, CompilerAttributeApplicant},
+    attributes::{AttributeBuilder, LLVMAttributeApplicant},
     binaryop, call,
     conventions::CallConvention,
     dealloc::Deallocator,
@@ -13,7 +15,7 @@ use super::{
     memory::{AllocatedObject, MemoryFlag},
     objects::CompilerObjects,
     traits::CompilerStructureFieldsExtensions,
-    types::{CompilerStructure, CompilerStructureFields, Function, FunctionParameter, MemoryFlags},
+    types::{FunctionParameter, MemoryFlags, Structure, StructureFields},
     unaryop, utils,
 };
 
@@ -647,10 +649,8 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
         if parameter_basic_type.is_struct_type() {
             let parameter_structure_type: &str = parameter.1.get_structure_type();
 
-            let structure: &CompilerStructure =
-                self.compiler_objects.get_struct(parameter_structure_type);
-
-            let structure_fields: &CompilerStructureFields = &structure.1;
+            let structure: &Structure = self.compiler_objects.get_struct(parameter_structure_type);
+            let structure_fields: &StructureFields = &structure.1;
 
             let llvm_structure_type: StructType =
                 utils::build_struct_type_from_fields(self.context, structure_fields);
@@ -687,12 +687,12 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
     }
 
     fn declare_function(&mut self, instruction: &'ctx Instruction) {
-        let function: Function = instruction.as_function();
+        let function: FunctionPrototype = instruction.as_function();
 
         let function_name: &str = function.0;
         let function_type: &Instruction = function.1;
         let function_parameters: &[Instruction] = function.2;
-        let function_attributes: &[CompilerAttribute] = function.4;
+        let function_attributes: &[LLVMAttribute] = function.4;
 
         let mut call_convention: u32 = CallConvention::Standard as u32;
         let mut ignore_args: bool = false;
@@ -702,13 +702,13 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
         function_attributes
             .iter()
             .for_each(|attribute| match attribute {
-                CompilerAttribute::Public(public) => {
+                LLVMAttribute::Public(public) => {
                     is_public = *public;
                 }
-                CompilerAttribute::FFI(ffi_found) => {
+                LLVMAttribute::FFI(ffi_found) => {
                     ffi = Some(ffi_found);
                 }
-                CompilerAttribute::Ignore => {
+                LLVMAttribute::Ignore => {
                     ignore_args = true;
                 }
                 _ => (),
@@ -735,7 +735,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
         let mut attribute_builder: AttributeBuilder = AttributeBuilder::new(
             self.context,
             function_attributes,
-            CompilerAttributeApplicant::Function(function),
+            LLVMAttributeApplicant::Function(function),
         );
 
         attribute_builder.add_attributes(&mut call_convention);
@@ -752,7 +752,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
         );
     }
 
-    fn build_function(&mut self, function: Function<'ctx>) {
+    fn build_function(&mut self, function: FunctionPrototype<'ctx>) {
         let function_name: &str = function.0;
 
         let function_type: &Instruction = function.1;
@@ -781,8 +781,8 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
         if let Instruction::InitStruct { name, .. } = instruction {
             let mut structure_memory_size: u64 = 0;
 
-            let structure: &CompilerStructure = self.compiler_objects.get_struct(name);
-            let structure_fields: &CompilerStructureFields = &structure.1;
+            let structure: &Structure = self.compiler_objects.get_struct(name);
+            let structure_fields: &StructureFields = &structure.1;
 
             structure_fields.iter().for_each(|field| {
                 let field_basic_type: &Type = field.1.get_basic_type();
@@ -807,9 +807,8 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
 
                 let mut structure_memory_size: u64 = 0;
 
-                let structure: &CompilerStructure =
-                    self.compiler_objects.get_struct(structure_type);
-                let structure_fields: &CompilerStructureFields = &structure.1;
+                let structure: &Structure = self.compiler_objects.get_struct(structure_type);
+                let structure_fields: &StructureFields = &structure.1;
 
                 structure_fields.iter().for_each(|field| {
                     let field_basic_type: &Type = field.1.get_basic_type();

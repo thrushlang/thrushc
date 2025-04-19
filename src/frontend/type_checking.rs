@@ -278,8 +278,8 @@ pub fn check_types(
     }
 
     if let (
-        Instruction::Type(target_type, target_structure_type),
-        Instruction::Type(from_type, from_structure_type),
+        Instruction::ComplexType(target_type, target_structure_type),
+        Instruction::ComplexType(from_type, from_structure_type),
         op,
     ) = (target_type, from_type, operator)
     {

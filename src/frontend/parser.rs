@@ -6,18 +6,13 @@ use super::{
         FoundObjectEither, FoundObjectExtensions, StructureExtensions, TokenLexemeExtensions,
     },
     type_checking,
-    types::StructureFields,
+    types::Constructor,
 };
 
 use super::super::{
     backend::compiler::{
-        attributes::CompilerAttribute,
-        builtins,
-        conventions::CallConvention,
-        instruction::Instruction,
-        misc::CompilerFile,
-        traits::AttributesExtensions,
-        types::{CompilerAttributes, CompilerType},
+        attributes::LLVMAttribute, builtins, conventions::CallConvention, instruction::Instruction,
+        misc::CompilerFile, traits::AttributesExtensions, types::ThrushAttributes,
     },
     common::{
         constants::MINIMAL_ERROR_CAPACITY, diagnostic::Diagnostician, error::ThrushCompilerError,
@@ -199,7 +194,7 @@ impl<'instr> Parser<'instr> {
         let conditional: Instruction = self.expr()?;
 
         self.check_type_mismatch(
-            Instruction::Type(Type::Bool, ""),
+            Instruction::ComplexType(Type::Bool, ""),
             conditional.get_type(),
             Some(&conditional),
         );
@@ -269,7 +264,7 @@ impl<'instr> Parser<'instr> {
             let pattern: Instruction = self.expr()?;
 
             self.check_type_mismatch(
-                Instruction::Type(Type::Bool, ""),
+                Instruction::ComplexType(Type::Bool, ""),
                 pattern.get_type(),
                 Some(&pattern),
             );
@@ -322,7 +317,7 @@ impl<'instr> Parser<'instr> {
 
         if if_block.has_instruction() {
             self.check_type_mismatch(
-                Instruction::Type(Type::Bool, ""),
+                Instruction::ComplexType(Type::Bool, ""),
                 if_cond.get_type(),
                 Some(&if_cond),
             );
@@ -399,7 +394,7 @@ impl<'instr> Parser<'instr> {
             let elif_condition: Instruction = self.expr()?;
 
             self.check_type_mismatch(
-                Instruction::Type(Type::Bool, ""),
+                Instruction::ComplexType(Type::Bool, ""),
                 elif_condition.get_type(),
                 Some(&elif_condition),
             );
@@ -477,7 +472,7 @@ impl<'instr> Parser<'instr> {
                         String::from("Expected ';'."),
                     )?;
 
-                    Instruction::Type(Type::Struct, struct_name)
+                    Instruction::ComplexType(Type::Struct, struct_name)
                 };
 
                 field_type.expected_type(line, span)?;
@@ -547,7 +542,7 @@ impl<'instr> Parser<'instr> {
             String::from("Expected '{'."),
         )?;
 
-        let mut arguments: StructureFields = Vec::with_capacity(10);
+        let mut arguments: Constructor = Vec::with_capacity(10);
 
         let mut field_index: u32 = 0;
 
@@ -639,7 +634,7 @@ impl<'instr> Parser<'instr> {
         let conditional: Instruction = self.expression()?;
 
         self.check_type_mismatch(
-            Instruction::Type(Type::Bool, ""),
+            Instruction::ComplexType(Type::Bool, ""),
             conditional.get_type(),
             None,
         );
@@ -765,14 +760,14 @@ impl<'instr> Parser<'instr> {
             }
 
             self.check_type_mismatch(
-                Instruction::Type(Type::Void, ""),
+                Instruction::ComplexType(Type::Void, ""),
                 self.in_function_type.clone(),
                 None,
             );
 
             return Ok(Instruction::Return(
                 Box::new(Instruction::Null),
-                Box::new(Instruction::Type(Type::Void, "")),
+                Box::new(Instruction::ComplexType(Type::Void, "")),
             ));
         }
 
@@ -929,10 +924,9 @@ impl<'instr> Parser<'instr> {
 
         let return_type: Instruction = self.expr()?;
 
-        let basic_return_type: CompilerType =
-            return_type.expected_type(self.previous().line, self.previous().span)?;
+        return_type.expected_type(self.previous().line, self.previous().span)?;
 
-        let function_attributes: CompilerAttributes = self.build_compiler_attributes()?;
+        let function_attributes: ThrushAttributes = self.build_compiler_attributes()?;
 
         let function_has_ffi: bool = function_attributes.contain_ffi_attribute();
         let function_has_ignore: bool = function_attributes.contain_ignore_attribute();
@@ -976,10 +970,13 @@ impl<'instr> Parser<'instr> {
 
         let function_body: Box<Instruction> = Box::new(self.build_code_block(&mut params)?);
 
-        if !basic_return_type.0.is_void_type() && !function_body.has_return() {
+        if !return_type.is_void_type() && !function_body.has_return() {
             self.push_error(
                 String::from("Syntax error"),
-                format!("Missing return type with type '{}'.", basic_return_type.0),
+                format!(
+                    "Missing return type with type '{}'.",
+                    return_type.get_basic_type()
+                ),
             );
         }
 
@@ -1002,24 +999,24 @@ impl<'instr> Parser<'instr> {
 
     fn build_compiler_attributes(
         &mut self,
-    ) -> Result<CompilerAttributes<'instr>, ThrushCompilerError> {
-        let mut compiler_attributes: CompilerAttributes = Vec::with_capacity(10);
+    ) -> Result<ThrushAttributes<'instr>, ThrushCompilerError> {
+        let mut compiler_attributes: ThrushAttributes = Vec::with_capacity(10);
 
         while !self.check_type(TokenKind::SemiColon) && !self.check_type(TokenKind::LParen) {
             match self.peek().kind {
                 TokenKind::Extern => {
-                    compiler_attributes
-                        .push(CompilerAttribute::FFI(self.build_external_attribute()?));
+                    compiler_attributes.push(LLVMAttribute::FFI(self.build_external_attribute()?));
                 }
                 TokenKind::Convention => {
-                    compiler_attributes.push(CompilerAttribute::Convention(
+                    compiler_attributes.push(LLVMAttribute::Convention(
                         self.build_call_convention_attribute()?,
                     ));
                 }
                 TokenKind::Public => {
-                    compiler_attributes.push(CompilerAttribute::Public(true));
+                    compiler_attributes.push(LLVMAttribute::Public(true));
                     self.only_advance()?;
                 }
+
                 attribute if attribute.as_compiler_attribute().is_some() => {
                     if let Some(compiler_attribute) = attribute.as_compiler_attribute() {
                         compiler_attributes.push(compiler_attribute);
@@ -1151,7 +1148,7 @@ impl<'instr> Parser<'instr> {
                 left: Box::new(expression),
                 op,
                 right: Box::new(right),
-                kind: Box::new(Instruction::Type(Type::Bool, "")),
+                kind: Box::new(Instruction::ComplexType(Type::Bool, "")),
             }
         }
 
@@ -1176,7 +1173,7 @@ impl<'instr> Parser<'instr> {
                 left: Box::new(expression),
                 op,
                 right: Box::new(right),
-                kind: Box::new(Instruction::Type(Type::Bool, "")),
+                kind: Box::new(Instruction::ComplexType(Type::Bool, "")),
             }
         }
 
@@ -1206,7 +1203,7 @@ impl<'instr> Parser<'instr> {
                 left: Box::from(expression),
                 op,
                 right: Box::from(right),
-                kind: Box::new(Instruction::Type(Type::Bool, "")),
+                kind: Box::new(Instruction::ComplexType(Type::Bool, "")),
             }
         }
 
@@ -1240,7 +1237,7 @@ impl<'instr> Parser<'instr> {
                 left: Box::from(expression),
                 op,
                 right: Box::from(right),
-                kind: Box::new(Instruction::Type(Type::Bool, "")),
+                kind: Box::new(Instruction::ComplexType(Type::Bool, "")),
             };
         }
 
@@ -1274,7 +1271,7 @@ impl<'instr> Parser<'instr> {
                 left: Box::from(expression),
                 op: &op.kind,
                 right: Box::from(right),
-                kind: Box::new(Instruction::Type(kind, "")),
+                kind: Box::new(Instruction::ComplexType(kind, "")),
             };
         }
 
@@ -1304,7 +1301,7 @@ impl<'instr> Parser<'instr> {
                 left: Box::from(expression),
                 op,
                 right: Box::from(right),
-                kind: Box::new(Instruction::Type(kind, "")),
+                kind: Box::new(Instruction::ComplexType(kind, "")),
             };
         }
 
@@ -1325,7 +1322,7 @@ impl<'instr> Parser<'instr> {
             return Ok(Instruction::UnaryOp {
                 op,
                 expression: Box::from(expression),
-                kind: Box::new(Instruction::Type(Type::Bool, "")),
+                kind: Box::new(Instruction::ComplexType(Type::Bool, "")),
                 is_pre: false,
             });
         }
@@ -1365,7 +1362,7 @@ impl<'instr> Parser<'instr> {
             return Ok(Instruction::UnaryOp {
                 op,
                 expression: Box::from(expression),
-                kind: Box::new(Instruction::Type(expression_type, "")),
+                kind: Box::new(Instruction::ComplexType(expression_type, "")),
                 is_pre: false,
             });
         }
@@ -1396,7 +1393,7 @@ impl<'instr> Parser<'instr> {
                 let unaryop: Instruction = Instruction::UnaryOp {
                     op,
                     expression: Box::from(expression),
-                    kind: Box::new(Instruction::Type(Type::Void, "")),
+                    kind: Box::new(Instruction::ComplexType(Type::Void, "")),
                     is_pre: true,
                 };
 
@@ -1420,7 +1417,7 @@ impl<'instr> Parser<'instr> {
                 let unaryop: Instruction = Instruction::UnaryOp {
                     op,
                     expression: Box::from(expression),
-                    kind: Box::new(Instruction::Type(Type::Void, "")),
+                    kind: Box::new(Instruction::ComplexType(Type::Void, "")),
                     is_pre: true,
                 };
 
@@ -1434,12 +1431,12 @@ impl<'instr> Parser<'instr> {
                 let span: (usize, usize) = datatype.span;
 
                 match tp {
-                    tp if tp.is_integer_type() => Instruction::Type(*tp, ""),
-                    tp if tp.is_float_type() => Instruction::Type(*tp, ""),
-                    tp if tp.is_bool_type() => Instruction::Type(*tp, ""),
-                    tp if tp.is_raw_ptr_type() => Instruction::Type(*tp, ""),
-                    tp if tp.is_void_type() => Instruction::Type(*tp, ""),
-                    tp if tp.is_str_type() => Instruction::Type(*tp, ""),
+                    tp if tp.is_integer_type() => Instruction::ComplexType(*tp, ""),
+                    tp if tp.is_float_type() => Instruction::ComplexType(*tp, ""),
+                    tp if tp.is_bool_type() => Instruction::ComplexType(*tp, ""),
+                    tp if tp.is_raw_ptr_type() => Instruction::ComplexType(*tp, ""),
+                    tp if tp.is_void_type() => Instruction::ComplexType(*tp, ""),
+                    tp if tp.is_str_type() => Instruction::ComplexType(*tp, ""),
                     what_heck_tp => {
                         return Err(ThrushCompilerError::Error(
                             String::from("Syntax error"),
@@ -1479,7 +1476,7 @@ impl<'instr> Parser<'instr> {
 
                 return Ok(Instruction::Group {
                     expression: Box::new(expression),
-                    kind: Box::new(Instruction::Type(expression_type, "")),
+                    kind: Box::new(Instruction::ComplexType(expression_type, "")),
                 });
             }
 
@@ -1501,7 +1498,7 @@ impl<'instr> Parser<'instr> {
                     self.only_advance()?;
 
                     Instruction::Integer(
-                        Box::new(Instruction::Type(*kind, "")),
+                        Box::new(Instruction::ComplexType(*kind, "")),
                         *number,
                         *is_signed,
                     )
@@ -1510,7 +1507,11 @@ impl<'instr> Parser<'instr> {
                 TokenKind::Float(kind, number, is_signed) => {
                     self.only_advance()?;
 
-                    Instruction::Float(Box::new(Instruction::Type(*kind, "")), *number, *is_signed)
+                    Instruction::Float(
+                        Box::new(Instruction::ComplexType(*kind, "")),
+                        *number,
+                        *is_signed,
+                    )
                 }
 
                 TokenKind::Identifier => {
@@ -1527,7 +1528,7 @@ impl<'instr> Parser<'instr> {
                         .get_object_id(object_name, (object_line, object_span))?;
 
                     if object.is_structure() {
-                        return Ok(Instruction::Type(Type::Struct, object_name));
+                        return Ok(Instruction::ComplexType(Type::Struct, object_name));
                     }
 
                     if self.match_token(TokenKind::Eq)? {
@@ -1615,7 +1616,7 @@ impl<'instr> Parser<'instr> {
                         let unaryop: Instruction = Instruction::UnaryOp {
                             op,
                             expression: Box::from(localref),
-                            kind: Box::new(Instruction::Type(Type::Void, "")),
+                            kind: Box::new(Instruction::ComplexType(Type::Void, "")),
                             is_pre: false,
                         };
 
@@ -1670,7 +1671,7 @@ impl<'instr> Parser<'instr> {
 
         let local_type: Instruction = local.0.clone();
 
-        self.check_type_mismatch(Instruction::Type(Type::T, ""), local_type, None);
+        self.check_type_mismatch(Instruction::ComplexType(Type::T, ""), local_type, None);
 
         let index: Instruction = self.expr()?;
 
@@ -1844,17 +1845,17 @@ impl<'instr> Parser<'instr> {
     ########################################################################*/
 
     fn negate_numeric_type(&self, from: &Instruction) -> Instruction<'instr> {
-        if let Instruction::Type(tp, _) = from {
+        if let Instruction::ComplexType(tp, _) = from {
             return match tp {
-                Type::U64 => Instruction::Type(Type::S64, ""),
-                Type::U32 => Instruction::Type(Type::S32, ""),
-                Type::U16 => Instruction::Type(Type::S16, ""),
-                Type::U8 => Instruction::Type(Type::S8, ""),
-                _ => Instruction::Type(*from.get_basic_type(), ""),
+                Type::U64 => Instruction::ComplexType(Type::S64, ""),
+                Type::U32 => Instruction::ComplexType(Type::S32, ""),
+                Type::U16 => Instruction::ComplexType(Type::S16, ""),
+                Type::U8 => Instruction::ComplexType(Type::S8, ""),
+                _ => Instruction::ComplexType(*from.get_basic_type(), ""),
             };
         }
 
-        Instruction::Type(*from.get_basic_type(), "")
+        Instruction::ComplexType(*from.get_basic_type(), "")
     }
 
     fn throw_if_is_unreacheable_code(&mut self) {

@@ -5,7 +5,7 @@ use super::super::super::frontend::lexer::Type;
 use super::{
     instruction::Instruction,
     objects::CompilerObjects,
-    types::{CompilerStructure, CompilerStructureFields, MappedHeapPointer, MappedHeapPointers},
+    types::{MappedHeapPointer, MappedHeapPointers, Structure, StructureFields},
 };
 
 use {
@@ -84,9 +84,9 @@ impl<'ctx> AllocatedObject<'ctx> {
 
         let mut mapped_pointers: HashSet<MappedHeapPointer> = HashSet::with_capacity(10);
 
-        if let Instruction::Type(Type::Struct, structure_name) = self.kind {
-            let structure: &CompilerStructure = compiler_objects.get_struct(structure_name);
-            let structure_fields: &CompilerStructureFields = &structure.1;
+        if let Instruction::ComplexType(Type::Struct, structure_name) = self.kind {
+            let structure: &Structure = compiler_objects.get_struct(structure_name);
+            let structure_fields: &StructureFields = &structure.1;
 
             structure_fields
                 .iter()
@@ -94,9 +94,8 @@ impl<'ctx> AllocatedObject<'ctx> {
                 .for_each(|field| {
                     let field_position: u32 = field.2;
 
-                    if let Instruction::Type(Type::Struct, structure_name) = field.1 {
-                        let structure: &CompilerStructure =
-                            compiler_objects.get_struct(structure_name);
+                    if let Instruction::ComplexType(Type::Struct, structure_name) = field.1 {
+                        let structure: &Structure = compiler_objects.get_struct(structure_name);
 
                         let is_recursive: bool = structure
                             .1
