@@ -17,7 +17,7 @@ Currently, the only backend available for the thrush compiler to compile is the 
 In summary:
 
 <p align="center">
-  <img src= "https://github.com/thrushlang/thrushc/blob/master/assets/how%20it%20works%20(thrushc && llvm).png" style= "width: 1hv; height: 1hv;"> </img>
+  <img src= "https://github.com/thrushlang/thrushc/blob/master/assets/how%20it%20works%20(thrushc%20%26%20llvm)%20.png" style= "width: 1hv; height: 1hv;"> </img>
 </p>
 
 # Getting Started
