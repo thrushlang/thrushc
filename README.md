@@ -37,7 +37,7 @@ Among the dependencies required by the compiler is the LLVM-C API, which you can
 Automatically:
 
 ```console
-python build.py <target-operating-system>
+python build.py
 ```
 
 ## Build the Compiler
