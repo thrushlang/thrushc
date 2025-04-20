@@ -6,8 +6,6 @@ import urllib.request
 import shutil
 
 if __name__ == "__main__":
-    print(platform.platform())
-
     HOME: str = os.environ["HOME"] if "Linux" in platform.platform() else os.environ["APPDATA"].replace("\\", "/")
 
     os.makedirs(f"{HOME}/thrushlang/backends/llvm/build", exist_ok= True)
