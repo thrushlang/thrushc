@@ -1,5 +1,5 @@
 <p align="center">
-  <img src= "https://github.com/thrushlang/thrushc/blob/master/assets/thrushlang-v1.5.png" alt= "logo" style= "width: 412px; height: 412px;"> </img>
+  <img src= "https://github.com/thrushlang/thrushc/blob/master/assets/thrushlang-v1.5.png" alt= "logo" style= "width: 95%; height: 95%;"> </img>
 </p>
 
 # The Thrush Compiler 
