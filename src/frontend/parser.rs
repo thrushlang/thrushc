@@ -53,14 +53,22 @@ pub struct Parser<'instr> {
     stmts: Vec<Instruction<'instr>>,
     tokens: &'instr [Token<'instr>],
     errors: Vec<ThrushCompilerError>,
-    inside_a_function: bool,
-    inside_a_loop: bool,
+
+    // Type management
     in_function_type: Instruction<'instr>,
     in_local_type: Instruction<'instr>,
     in_unreacheable_code: usize,
+
+    // Scope control
     current: usize,
     scope_position: usize,
+
+    // Trigger flags
     has_entry_point: bool,
+    rec_structure_ref: bool,
+    inside_a_function: bool,
+    inside_a_loop: bool,
+
     scoper: ThrushScoper<'instr>,
     diagnostician: Diagnostician,
     parser_objects: ParserObjects<'instr>,
@@ -81,6 +89,7 @@ impl<'instr> Parser<'instr> {
             inside_a_loop: false,
             in_function_type: Instruction::Null,
             in_local_type: Instruction::Null,
+            rec_structure_ref: false,
             in_unreacheable_code: 0,
             scope_position: 0,
             has_entry_point: false,
@@ -440,7 +449,7 @@ impl<'instr> Parser<'instr> {
             String::from("Expected name."),
         )?;
 
-        let struct_name: &str = name.lexeme.to_str();
+        let structure_name: &str = name.lexeme.to_str();
 
         self.consume(
             TokenKind::LBrace,
@@ -461,19 +470,13 @@ impl<'instr> Parser<'instr> {
                 let line: usize = self.previous().line;
                 let span: (usize, usize) = self.previous().span;
 
-                let field_type: Instruction = if self.peek().lexeme.to_str() != struct_name {
-                    self.expression()?
-                } else {
-                    self.only_advance()?;
+                if self.peek().lexeme.to_str() == structure_name {
+                    self.rec_structure_ref = true;
+                }
 
-                    self.consume(
-                        TokenKind::SemiColon,
-                        String::from("Syntax error"),
-                        String::from("Expected ';'."),
-                    )?;
+                let field_type: Instruction = self.expression()?;
 
-                    Instruction::ComplexType(Type::Struct, struct_name)
-                };
+                self.rec_structure_ref = false;
 
                 field_type.expected_type(line, span)?;
 
@@ -511,7 +514,7 @@ impl<'instr> Parser<'instr> {
         }
 
         Ok(Instruction::Struct {
-            name: struct_name,
+            name: structure_name,
             fields_types,
         })
     }
@@ -1183,7 +1186,7 @@ impl<'instr> Parser<'instr> {
     fn equality(&mut self) -> Result<Instruction<'instr>, ThrushCompilerError> {
         let mut expression: Instruction = self.comparison()?;
 
-        while self.match_token(TokenKind::BangEq)? || self.match_token(TokenKind::EqEq)? {
+        if self.match_token(TokenKind::BangEq)? || self.match_token(TokenKind::EqEq)? {
             let op: &TokenKind = &self.previous().kind;
             let right: Instruction = self.comparison()?;
 
@@ -1196,8 +1199,6 @@ impl<'instr> Parser<'instr> {
                 &right_type,
                 (self.previous().line, self.previous().span),
             )?;
-
-            expression.is_chained(&right, (self.previous().line, self.previous().span))?;
 
             expression = Instruction::BinaryOp {
                 left: Box::from(expression),
@@ -1213,7 +1214,7 @@ impl<'instr> Parser<'instr> {
     fn comparison(&mut self) -> Result<Instruction<'instr>, ThrushCompilerError> {
         let mut expression: Instruction = self.term()?;
 
-        while self.match_token(TokenKind::Greater)?
+        if self.match_token(TokenKind::Greater)?
             || self.match_token(TokenKind::GreaterEq)?
             || self.match_token(TokenKind::Less)?
             || self.match_token(TokenKind::LessEq)?
@@ -1230,8 +1231,6 @@ impl<'instr> Parser<'instr> {
                 &right_type,
                 (self.previous().line, self.previous().span),
             )?;
-
-            expression.is_chained(&right, (self.previous().line, self.previous().span))?;
 
             expression = Instruction::BinaryOp {
                 left: Box::from(expression),
@@ -1522,6 +1521,10 @@ impl<'instr> Parser<'instr> {
                     let object_line: usize = object_token.line;
 
                     self.throw_if_is_unreacheable_code();
+
+                    if self.rec_structure_ref {
+                        return Ok(Instruction::ComplexType(Type::Struct, object_name));
+                    }
 
                     let object: FoundObjectId = self
                         .parser_objects
@@ -1998,6 +2001,7 @@ impl<'instr> Parser<'instr> {
     fn sync(&mut self) {
         self.inside_a_function = false;
         self.inside_a_loop = false;
+        self.rec_structure_ref = false;
 
         while !self.end() {
             match self.peek().kind {

@@ -138,23 +138,23 @@ impl Diagnostic {
         let code_line_original: String = lines[line_position].to_string();
         let code_line: String = format!("    {}", code_line_original.trim_start());
 
-        let code_line_chars: Vec<char> = code_line.chars().collect();
+        let code_line_bytes: &[u8] = code_line.as_bytes();
 
-        let mut signal_line: String = " ".repeat(code_line_chars.len() + 1);
+        let mut signal_line: String = String::with_capacity(100);
 
-        let start_index: usize = code_line_chars
-            .iter()
-            .take(position.start)
-            .map(|ch| ch.len_utf8())
-            .sum::<usize>();
+        let fixed_end_position: usize = if 5 >= position.end {
+            position.end + 4
+        } else {
+            position.end
+        };
 
-        let end_index: usize = code_line_chars
-            .iter()
-            .take(position.end)
-            .map(|ch| ch.len_utf8())
-            .sum::<usize>();
+        for i in 0..code_line_bytes.len() + 1 {
+            if i == fixed_end_position {
+                signal_line.push('↑');
+            }
 
-        signal_line.replace_range(start_index..end_index, "—");
+            signal_line.push(' ');
+        }
 
         Some(Diagnostic {
             code: code_line,

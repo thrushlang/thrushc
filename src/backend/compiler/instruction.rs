@@ -228,7 +228,7 @@ impl<'ctx> Instruction<'ctx> {
         ))
     }
 
-    #[inline]
+    /* #[inline]
     pub fn is_chained(
         &self,
         other: &Instruction,
@@ -264,7 +264,7 @@ impl<'ctx> Instruction<'ctx> {
             location.0,
             Some(location.1),
         ))
-    }
+    } */
 
     #[inline(always)]
     pub fn get_basic_type(&self) -> &Type {
