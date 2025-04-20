@@ -6,9 +6,9 @@ import urllib.request
 import shutil
 
 if __name__ == "__main__":
-    platform = (platform.platform()).lower()
+    PLATFORM: str = (platform.platform()).lower()
 
-    HOME: str = os.environ["HOME"] if "linux" in platform else os.environ["APPDATA"].replace("\\", "/")
+    HOME: str = os.environ["HOME"] if "linux" in PLATFORM else os.environ["APPDATA"].replace("\\", "/")
 
     os.makedirs(f"{HOME}/thrushlang/backends/llvm/build", exist_ok= True)
 
@@ -52,12 +52,12 @@ if __name__ == "__main__":
 
         sys.exit(0)
 
-    if "linux" in platform:
+    if "linux" in PLATFORM:
         build_dependencies_for_linux()
-    elif "windows" in platform:
+    elif "windows" in PLATFORM:
         build_dependencies_for_windows()
 
     print("Usage: python build.py")
-    print(f"Available operating systems: linux, windows, not {platform}")
+    print(f"Available operating systems: linux, windows, not {PLATFORM}")
 
     sys.exit(1)
