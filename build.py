@@ -56,7 +56,7 @@ if __name__ == "__main__":
     elif "windows" in PLATFORM:
         build_dependencies_for_windows()
 
-    print("Usage: python build.py")
+    print(f"Usage: {"py" if "windows" in PLATFORM else "python3"} {sys.argv[0]}")
     print(f"Available operating systems: linux, windows, not {PLATFORM}")
 
     sys.exit(1)
