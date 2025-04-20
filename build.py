@@ -1,13 +1,13 @@
 import platform
 import sys
 import os
-import platform
 import urllib.request
 import shutil
 
 if __name__ == "__main__":
+    PLATFORM: str = (platform.platform()).lower()
 
-    HOME: str = os.environ["HOME"] if platform.platform() == "Linux" else os.environ["APPDATA"].replace("\\", "/")
+    HOME: str = os.environ["HOME"] if "linux" in PLATFORM else os.environ["APPDATA"].replace("\\", "/")
 
     os.makedirs(f"{HOME}/thrushlang/backends/llvm/build", exist_ok= True)
 
@@ -50,13 +50,13 @@ if __name__ == "__main__":
         print("Dependencies are ready to compile. Use 'cargo clean' and 'cargo run' now.")
 
         sys.exit(0)
-    
-    match platform.platform():
 
-        case "Linux": build_dependencies_for_linux()
-        case "Windows": build_dependencies_for_windows()
+    if "linux" in PLATFORM:
+        build_dependencies_for_linux()
+    elif "windows" in PLATFORM:
+        build_dependencies_for_windows()
 
-    print("Usage: python build.py")
-    print(f"Available operating systems: linux, windows, not {platform.platform()}")
+    print(f"Usage: {"py" if "windows" in PLATFORM else "python3"} {' '.join(sys.argv)}")
+    print(f"Available operating systems: linux, windows, not {PLATFORM}")
 
     sys.exit(1)
