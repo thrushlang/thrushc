@@ -58,6 +58,6 @@ if __name__ == "__main__":
             build_dependencies_for_windows()
 
     print("Usage: python build.py")
-    print(f"Available operating systems: linux, windows, not {platform.platform()}")
+    print(f"Available operating systems: linux, windows, not {platform}")
 
     sys.exit(1)
