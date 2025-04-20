@@ -1,7 +1,6 @@
 import platform
 import sys
 import os
-import platform
 import urllib.request
 import shutil
 
