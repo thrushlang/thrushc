@@ -42,7 +42,12 @@ python build.py
 
 ## Build the Compiler
 
-Now you need to compile the compiler with Rust.
+Now you need to have Rust installed with a recent version.
+
+- >= Rust (v1.18.5) 
+- Rust 2024 Edition
+
+Now you need to compile the compiler with Rust. 
 
 ```console
 cargo run -- --help
