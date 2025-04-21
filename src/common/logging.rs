@@ -20,8 +20,8 @@ pub enum LoggingType {
 impl LoggingType {
     pub fn to_styled(&self) -> ColoredString {
         match self {
-            LoggingType::Error => "ERROR".bright_red().underline().bold(),
-            LoggingType::Panic => "PANIC".bright_red().underline().bold(),
+            LoggingType::Error => " ERROR ".on_bright_red().white().bold(),
+            LoggingType::Panic => " PANIC ".on_bright_red().white().bold(),
         }
     }
 

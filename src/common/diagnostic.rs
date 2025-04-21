@@ -1,3 +1,5 @@
+use std::str::Lines;
+
 use super::super::backend::compiler::misc::CompilerFile;
 
 use super::{
@@ -17,15 +19,14 @@ pub struct Diagnostician {
 }
 
 #[derive(Debug)]
-struct Diagnostic {
-    code: String,
-    signal: String,
+struct Diagnostic<'a> {
+    code: &'a str,
+    signaler: String,
 }
 
 #[derive(Debug)]
 struct CodePosition {
     line: usize,
-    start: usize,
     end: usize,
 }
 
@@ -90,8 +91,8 @@ impl Diagnostician {
     }
 }
 
-impl Diagnostic {
-    pub fn build(code: &str, line: usize, start: usize, end: usize) -> Self {
+impl<'a> Diagnostic<'a> {
+    pub fn build(code: &'a str, line: usize, start: usize, end: usize) -> Self {
         if let Some(code_position) = Diagnostic::find_line_and_range(code, start, end) {
             if let Some(diagnostic) = Diagnostic::generate_diagnostic(code, code_position) {
                 return diagnostic;
@@ -121,63 +122,48 @@ impl Diagnostic {
 
         Some(CodePosition {
             line: line_num,
-            start: start - line_start,
+            // start: start - line_start,
             end: end - line_start,
         })
     }
 
     pub fn generate_diagnostic(code: &str, position: CodePosition) -> Option<Diagnostic> {
-        let lines: Vec<&str> = code.lines().collect();
+        let mut lines: Lines = code.lines();
 
-        if position.line > lines.len() {
-            return None;
-        }
+        let line: &str = lines.nth(position.line.saturating_sub(1))?;
 
-        let line_position: usize = position.line - 1;
+        let code_before_trim: usize = line.len();
+        let code: &str = line.trim_start();
 
-        let code_line_original: String = lines[line_position].to_string();
-        let code_line: String = format!("    {}", code_line_original.trim_start());
+        let trim_diferrence: usize = code_before_trim - code.len();
 
-        let code_line_bytes: &[u8] = code_line.as_bytes();
+        let mut signaler: String = String::with_capacity(100);
 
-        let mut signal_line: String = String::with_capacity(100);
-
-        let fixed_end_position: usize = if 5 >= position.end {
-            position.end + 4
-        } else {
-            position.end
-        };
-
-        for i in 0..code_line_bytes.len() + 1 {
-            if i == fixed_end_position {
-                signal_line.push('↑');
+        for pos in 0..=position.end - trim_diferrence {
+            if pos == position.end - trim_diferrence {
+                signaler.push('^');
+                break;
             }
 
-            signal_line.push(' ');
+            signaler.push(' ');
         }
 
-        Some(Diagnostic {
-            code: code_line,
-            signal: signal_line,
-        })
+        Some(Diagnostic { code, signaler })
     }
 
     pub fn build_without_span(code: &str, line: usize) -> Diagnostic {
         let lines: Vec<&str> = code.lines().collect();
 
-        let code_line: String = "|  ".to_string() + lines[line - 1].trim();
-        let signal_line: String = "|  ".to_string() + &"^".bright_red().repeat(code_line.len());
+        let code: &str = lines[line - 1].trim_start();
+        let signaler: String = "|  ".to_string() + &"^".bright_red().repeat(code.len());
 
-        Diagnostic {
-            code: code_line,
-            signal: signal_line,
-        }
+        Diagnostic { code, signaler }
     }
 
     pub fn print(self, description: &str) {
         logging::write(
             logging::OutputIn::Stderr,
-            format!("\n{}\n{}\n", self.code, self.signal).as_bytes(),
+            format!("\n{}\n{}\n", self.code, self.signaler).as_bytes(),
         );
 
         logging::write(
