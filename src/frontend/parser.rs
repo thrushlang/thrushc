@@ -135,13 +135,14 @@ impl<'instr> Parser<'instr> {
             TokenKind::Return => Ok(self.build_return()?),
             TokenKind::Local => Ok(self.build_local(false)?),
             TokenKind::For => Ok(self.build_for_loop()?),
-            TokenKind::New => Ok(self.build_struct_initializer()?),
+            TokenKind::New => Ok(self.build_constructor()?),
             TokenKind::If => Ok(self.build_if_elif_else()?),
             TokenKind::Match => Ok(self.build_match()?),
             TokenKind::While => Ok(self.build_while_loop()?),
             TokenKind::Continue => Ok(self.build_continue()?),
             TokenKind::Break => Ok(self.build_break()?),
             TokenKind::Loop => Ok(self.build_loop()?),
+
             _ => Ok(self.expression()?),
         }
     }
@@ -176,8 +177,11 @@ impl<'instr> Parser<'instr> {
     }
 
     fn build_loop(&mut self) -> Result<Instruction<'instr>, ThrushCompilerError> {
-        self.only_advance()?;
-
+        self.consume(
+            TokenKind::Loop,
+            String::from("Syntax error"),
+            String::from("Expected 'loop'."),
+        )?;
         self.throw_if_is_unreacheable_code();
 
         self.inside_a_loop = true;
@@ -196,7 +200,11 @@ impl<'instr> Parser<'instr> {
     }
 
     fn build_while_loop(&mut self) -> Result<Instruction<'instr>, ThrushCompilerError> {
-        self.only_advance()?;
+        self.consume(
+            TokenKind::While,
+            String::from("Syntax error"),
+            String::from("Expected 'while'."),
+        )?;
 
         self.throw_if_is_unreacheable_code();
 
@@ -217,7 +225,11 @@ impl<'instr> Parser<'instr> {
     }
 
     fn build_continue(&mut self) -> Result<Instruction<'instr>, ThrushCompilerError> {
-        self.only_advance()?;
+        self.consume(
+            TokenKind::Continue,
+            String::from("Syntax error"),
+            String::from("Expected 'continue'."),
+        )?;
 
         self.throw_if_is_unreacheable_code();
 
@@ -235,7 +247,11 @@ impl<'instr> Parser<'instr> {
     }
 
     fn build_break(&mut self) -> Result<Instruction<'instr>, ThrushCompilerError> {
-        self.only_advance()?;
+        self.consume(
+            TokenKind::Break,
+            String::from("Syntax error"),
+            String::from("Expected 'break'."),
+        )?;
 
         self.throw_if_is_unreacheable_code();
 
@@ -253,18 +269,21 @@ impl<'instr> Parser<'instr> {
     }
 
     fn build_match(&mut self) -> Result<Instruction<'instr>, ThrushCompilerError> {
-        self.only_advance()?;
+        self.consume(
+            TokenKind::Match,
+            String::from("Syntax error"),
+            String::from("Expected 'match'."),
+        )?;
 
         self.throw_if_is_unreacheable_code();
 
-        let mut if_cond: Instruction = self.expr()?;
-
-        let mut if_block: Instruction = Instruction::Block { stmts: Vec::new() };
+        let mut start_pattern: Instruction = self.expr()?;
+        let mut start_block: Instruction = Instruction::Block { stmts: Vec::new() };
 
         let mut patterns: Vec<Instruction> = Vec::with_capacity(10);
         let mut patterns_stmts: Vec<Instruction> = Vec::with_capacity(MINIMAL_SCOPE_CAPACITY);
 
-        let mut index: u32 = 0;
+        let mut position: u32 = 0;
 
         while self.match_token(TokenKind::Pattern)? {
             self.scope_position += 1;
@@ -301,7 +320,7 @@ impl<'instr> Parser<'instr> {
                 continue;
             }
 
-            if index != 0 {
+            if position != 0 {
                 patterns.push(Instruction::Elif {
                     cond: Box::new(pattern),
                     block: Box::new(Instruction::Block {
@@ -310,25 +329,26 @@ impl<'instr> Parser<'instr> {
                 });
 
                 patterns_stmts.clear();
-                index += 1;
+                position += 1;
 
                 continue;
             }
 
-            if_cond = pattern;
-            if_block = Instruction::Block {
+            start_pattern = pattern;
+
+            start_block = Instruction::Block {
                 stmts: patterns_stmts.clone(),
             };
 
             patterns_stmts.clear();
-            index += 1;
+            position += 1;
         }
 
-        if if_block.has_instruction() {
+        if start_block.has_instruction() {
             self.check_type_mismatch(
                 Instruction::ComplexType(Type::Bool, ""),
-                if_cond.get_type(),
-                Some(&if_cond),
+                start_pattern.get_type(),
+                Some(&start_pattern),
             );
         }
 
@@ -362,20 +382,24 @@ impl<'instr> Parser<'instr> {
             None
         };
 
-        if !if_block.has_instruction() && patterns.is_empty() && otherwise.is_none() {
+        if !start_block.has_instruction() && patterns.is_empty() && otherwise.is_none() {
             return Ok(Instruction::Null);
         }
 
         Ok(Instruction::If {
-            cond: Box::new(if_cond),
-            block: Box::new(if_block),
+            cond: Box::new(start_pattern),
+            block: Box::new(start_block),
             elfs: patterns,
             otherwise,
         })
     }
 
     fn build_if_elif_else(&mut self) -> Result<Instruction<'instr>, ThrushCompilerError> {
-        self.only_advance()?;
+        self.consume(
+            TokenKind::If,
+            String::from("Syntax error"),
+            String::from("Expected 'if'."),
+        )?;
 
         if !self.inside_a_function {
             self.push_error(
@@ -441,12 +465,18 @@ impl<'instr> Parser<'instr> {
     }
 
     fn build_struct(&mut self, declare: bool) -> Result<Instruction<'instr>, ThrushCompilerError> {
-        self.only_advance()?;
+        self.throw_if_is_unreacheable_code();
+
+        self.consume(
+            TokenKind::Struct,
+            String::from("Syntax error"),
+            String::from("Expected 'struct'."),
+        )?;
 
         let name: &Token = self.consume(
             TokenKind::Identifier,
             String::from("Syntax error"),
-            String::from("Expected name."),
+            String::from("Expected structure name."),
         )?;
 
         let structure_name: &str = name.lexeme.to_str();
@@ -519,8 +549,14 @@ impl<'instr> Parser<'instr> {
         })
     }
 
-    fn build_struct_initializer(&mut self) -> Result<Instruction<'instr>, ThrushCompilerError> {
-        self.only_advance()?;
+    fn build_constructor(&mut self) -> Result<Instruction<'instr>, ThrushCompilerError> {
+        self.throw_if_is_unreacheable_code();
+
+        self.consume(
+            TokenKind::New,
+            String::from("Syntax error"),
+            String::from("Expected 'new'."),
+        )?;
 
         let name: &Token = self.consume(
             TokenKind::Identifier,
@@ -533,11 +569,9 @@ impl<'instr> Parser<'instr> {
         let line: usize = name.line;
         let span: (usize, usize) = name.span;
 
-        self.throw_if_is_unreacheable_code();
-
         let struct_found: Struct = self
             .parser_objects
-            .get_struct(name.lexeme.to_str(), (line, span))?;
+            .get_struct(structure_name, (line, span))?;
 
         self.consume(
             TokenKind::LBrace,
@@ -628,9 +662,13 @@ impl<'instr> Parser<'instr> {
     }
 
     fn build_for_loop(&mut self) -> Result<Instruction<'instr>, ThrushCompilerError> {
-        self.only_advance()?;
-
         self.throw_if_is_unreacheable_code();
+
+        self.consume(
+            TokenKind::For,
+            String::from("Syntax error"),
+            String::from("Expected 'for'."),
+        )?;
 
         let variable: Instruction = self.build_local(false)?;
 
@@ -665,7 +703,7 @@ impl<'instr> Parser<'instr> {
     }
 
     fn build_local(&mut self, comptime: bool) -> Result<Instruction<'instr>, ThrushCompilerError> {
-        self.only_advance()?;
+        self.throw_if_is_unreacheable_code();
 
         if self.scope_position == 0 {
             self.push_error(
@@ -674,7 +712,11 @@ impl<'instr> Parser<'instr> {
             );
         }
 
-        self.throw_if_is_unreacheable_code();
+        self.consume(
+            TokenKind::Local,
+            String::from("Syntax error"),
+            String::from("Expected 'local'."),
+        )?;
 
         let name: &Token = self.consume(
             TokenKind::Identifier,
@@ -744,7 +786,13 @@ impl<'instr> Parser<'instr> {
     }
 
     fn build_return(&mut self) -> Result<Instruction<'instr>, ThrushCompilerError> {
-        self.only_advance()?;
+        self.throw_if_is_unreacheable_code();
+
+        self.consume(
+            TokenKind::Return,
+            String::from("Syntax error"),
+            String::from("Expected 'return'."),
+        )?;
 
         if !self.inside_a_function {
             self.push_error(
@@ -752,8 +800,6 @@ impl<'instr> Parser<'instr> {
                 String::from("Return outside of function body."),
             );
         }
-
-        self.throw_if_is_unreacheable_code();
 
         if self.match_token(TokenKind::SemiColon)? {
             let basic_function_type: &Type = self.in_function_type.get_basic_type();
@@ -798,13 +844,13 @@ impl<'instr> Parser<'instr> {
         &mut self,
         with_instrs: &mut [Instruction<'instr>],
     ) -> Result<Instruction<'instr>, ThrushCompilerError> {
+        self.throw_if_is_unreacheable_code();
+
         self.consume(
             TokenKind::LBrace,
             String::from("Syntax error"),
             String::from("Expected '{'."),
         )?;
-
-        self.throw_if_is_unreacheable_code();
 
         self.scope_position += 1;
         self.parser_objects.begin_local_scope();
@@ -849,7 +895,7 @@ impl<'instr> Parser<'instr> {
         &mut self,
         declare: bool,
     ) -> Result<Instruction<'instr>, ThrushCompilerError> {
-        self.only_advance()?;
+        self.throw_if_is_unreacheable_code();
 
         if self.scope_position != 0 {
             self.errors.push(ThrushCompilerError::Error(
@@ -859,6 +905,12 @@ impl<'instr> Parser<'instr> {
                 Some(self.previous().span),
             ));
         }
+
+        self.consume(
+            TokenKind::Fn,
+            String::from("Syntax error"),
+            String::from("Expected 'fn'."),
+        )?;
 
         self.inside_a_function = true;
 
@@ -1373,7 +1425,7 @@ impl<'instr> Parser<'instr> {
 
     fn primary(&mut self) -> Result<Instruction<'instr>, ThrushCompilerError> {
         let primary: Instruction = match &self.peek().kind {
-            TokenKind::New => self.build_struct_initializer()?,
+            TokenKind::New => self.build_constructor()?,
 
             TokenKind::PlusPlus => {
                 let op: &TokenKind = &self.advance()?.kind;
