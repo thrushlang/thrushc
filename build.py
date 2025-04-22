@@ -18,15 +18,16 @@ if __name__ == "__main__":
         GITHUB_BUILD_FILE: str = f"https://github.com/thrushlang/toolchains/releases/download/LLVM-C/{COMPRESS_FILE}"
         TEMP_BUILD_DIR: str = "thrushc-build"
         TEMP_BUILD_PATH: str = os.path.join(TEMP_BUILD_DIR, "thrushc-llvm-linux-x64-v1.0.0.tar.gz")
+        TEMP_LLVM_DIR: str = os.path.abspath('llvm/')
 
         print("Building dependencies for The Thrush Compiler in Linux...")
 
         os.makedirs(TEMP_BUILD_DIR, exist_ok=True)
-        os.makedirs(os.path.abspath('llvm/'), exist_ok=True)
+        os.makedirs(TEMP_LLVM_DIR, exist_ok=True)
 
         wget: int = os.system(f"wget {GITHUB_BUILD_FILE} -O {TEMP_BUILD_PATH} -o /dev/null")
         tar: int = os.system(f"tar xvf {TEMP_BUILD_PATH} > /dev/null")
-        decompress: int = os.system(f"rsync -r -a -mkpath {os.path.abspath('llvm/')} {FINAL_BUILD_PATH}")
+        decompress: int = os.system(f"rsync -r -a -mkpath {TEMP_LLVM_DIR} {FINAL_BUILD_PATH}")
 
         for action in [wget, tar, decompress]:
             if action != 0:
@@ -34,6 +35,7 @@ if __name__ == "__main__":
                 sys.exit(1)
 
         shutil.rmtree(TEMP_BUILD_DIR, ignore_errors= True)
+        # shutil.rmtree(TEMP_LLVM_DIR, ignore_errors= True) No estoy seguro si se requiere este directorio o no
 
         print("Dependencies are ready to compile. Use 'cargo clean' and 'cargo run' now.")
 
