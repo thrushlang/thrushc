@@ -9,33 +9,31 @@ if __name__ == "__main__":
 
     HOME: str = os.environ["HOME"] if SYSTEM == "linux" else os.environ["APPDATA"].replace("\\", "/")
 
-    BUILD_PATH: str = os.path.join(HOME, "thrushlang", "backends", "llvm", "build")
+    FINAL_BUILD_PATH: str = os.path.join(HOME, "thrushlang", "backends", "llvm", "build")
 
-    os.makedirs(BUILD_PATH, exist_ok= True)
+    os.makedirs(FINAL_BUILD_PATH, exist_ok= True)
 
     def build_dependencies_for_linux():
         COMPRESS_FILE: str = "thrushc-llvm-linux-x64-v1.0.0.tar.gz"
         GITHUB_BUILD_FILE: str = f"https://github.com/thrushlang/toolchains/releases/download/LLVM-C/{COMPRESS_FILE}"
-
-        if os.path.exists(COMPRESS_FILE):
-            print(f"{COMPRESS_FILE} already exists. Deleting...")
-            os.remove(COMPRESS_FILE)
+        TEMP_BUILD_DIR: str = "thrushc-build"
+        TEMP_BUILD_PATH: str = os.path.join(TEMP_BUILD_DIR, "thrushc-llvm-linux-x64-v1.0.0.tar.gz")
 
         print("Building dependencies for The Thrush Compiler in Linux...")
 
-        os.makedirs("thrushc-build", exist_ok=True)
+        os.makedirs(TEMP_BUILD_DIR, exist_ok=True)
         os.makedirs(os.path.abspath('llvm/'), exist_ok=True)
 
-        wget: int = os.system(f"wget {GITHUB_BUILD_FILE} -O {os.path.join('thrushc-build', COMPRESS_FILE)} -o /dev/null")
-        gunzip: int = os.system(f"gunzip -c {os.path.join('thrushc-build', COMPRESS_FILE)} > {os.path.join('thrushc-build', 'llvm.tar')}")
-        decompress: int = os.system(f"tar -xvf thrushc-build/llvm.tar -C {BUILD_PATH}")
+        wget: int = os.system(f"wget {GITHUB_BUILD_FILE} -O {TEMP_BUILD_PATH} -o /dev/null")
+        tar: int = os.system(f"tar xvf {TEMP_BUILD_PATH} > /dev/null")
+        decompress: int = os.system(f"rsync -r -a -mkpath {os.path.abspath('llvm/')} {FINAL_BUILD_PATH}")
 
-        for action in [wget, gunzip, decompress]:
+        for action in [wget, tar, decompress]:
             if action != 0:
                 print(f"Error in {action}")
                 sys.exit(1)
 
-        shutil.rmtree("thrushc-build/", ignore_errors= True)
+        shutil.rmtree(TEMP_BUILD_DIR, ignore_errors= True)
 
         print("Dependencies are ready to compile. Use 'cargo clean' and 'cargo run' now.")
 
