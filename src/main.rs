@@ -67,7 +67,17 @@ lazy_static! {
         let error = || {
             logging::log(
                 logging::LoggingType::Panic,
-                "The LLVM Backend was corrupted; reinstall the entire toolchain across ~ `thorium install`.",
+                &format!(
+                    "The LLVM backend was corrupted.
+
+  Automatic installation: {}
+  Manual installation: {}",
+                    "thorium install".custom_color((141, 141, 142)).bold(),
+                    "https://github.com/thrushlang/toolchains"
+                        .custom_color((141, 141, 142))
+                        .bold()
+                        .underline(),
+                ),
             );
         };
 
