@@ -24,7 +24,7 @@ pub fn build_expression<'ctx>(
     casting_target: &Type,
     compiler_objects: &mut CompilerObjects<'ctx>,
 ) -> BasicValueEnum<'ctx> {
-    if let Instruction::ComplexType(Type::Void, _) = instruction {
+    if let Instruction::ComplexType(Type::Void, _, _, _) = instruction {
         return context
             .ptr_type(AddressSpace::default())
             .const_null()
@@ -42,7 +42,7 @@ pub fn build_expression<'ctx>(
             utils::build_const_float(builder, context, kind, *num, *is_signed);
 
         if let Some(casted_float) =
-            utils::float_autocast(kind, casting_target, None, float.into(), builder, context)
+            utils::float_autocast(casting_target, kind, None, float.into(), builder, context)
         {
             float = casted_float.into_float_value();
         }
@@ -73,7 +73,7 @@ pub fn build_expression<'ctx>(
         return context.bool_type().const_int(*bool as u64, false).into();
     }
 
-    if let Instruction::GEP { name, index } = instruction {
+    if let Instruction::GEP { name, index, .. } = instruction {
         let local: PointerValue = compiler_objects.get_allocated_object(name).ptr;
         let index_type: &Type = index.get_basic_type();
 
@@ -110,7 +110,10 @@ pub fn build_expression<'ctx>(
         };
     }
 
-    if let Instruction::LocalRef { name, kind, .. } = instruction {
+    if let Instruction::LocalRef {
+        name, kind, take, ..
+    } = instruction
+    {
         let localref_type: &Type = kind.get_basic_type();
 
         let object: AllocatedObject = compiler_objects.get_allocated_object(name);
@@ -149,8 +152,12 @@ pub fn build_expression<'ctx>(
             return object.load_from_memory(builder, llvm_structure_type);
         }
 
-        if localref_type.is_raw_ptr_type() {
+        if localref_type.is_raw_ptr_type() && !take {
             return object.load_from_memory(builder, context.ptr_type(AddressSpace::default()));
+        }
+
+        if localref_type.is_raw_ptr_type() && *take {
+            return object.ptr.into();
         }
 
         unreachable!()

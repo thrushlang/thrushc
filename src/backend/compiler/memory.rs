@@ -84,7 +84,7 @@ impl<'ctx> AllocatedObject<'ctx> {
 
         let mut mapped_pointers: HashSet<MappedHeapPointer> = HashSet::with_capacity(10);
 
-        if let Instruction::ComplexType(Type::Struct, structure_name) = self.kind {
+        if let Instruction::ComplexType(Type::Struct, structure_name, _, _) = self.kind {
             let structure: &Structure = compiler_objects.get_struct(structure_name);
             let structure_fields: &StructureFields = &structure.1;
 
@@ -94,7 +94,7 @@ impl<'ctx> AllocatedObject<'ctx> {
                 .for_each(|field| {
                     let field_position: u32 = field.2;
 
-                    if let Instruction::ComplexType(Type::Struct, structure_name) = field.1 {
+                    if let Instruction::ComplexType(Type::Struct, structure_name, _, _) = field.1 {
                         let structure: &Structure = compiler_objects.get_struct(structure_name);
 
                         let is_recursive: bool = structure

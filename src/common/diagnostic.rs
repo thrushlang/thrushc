@@ -66,7 +66,7 @@ impl Diagnostician {
         self.print_header(line, title, logging_type);
 
         if let Some((start, end)) = span {
-            Diagnostic::build(&self.code, line, *start, *end).print(description);
+            Diagnostic::build(title, &self.code, line, *start, *end).print(description);
             return;
         }
 
@@ -92,9 +92,9 @@ impl Diagnostician {
 }
 
 impl<'a> Diagnostic<'a> {
-    pub fn build(code: &'a str, line: usize, start: usize, end: usize) -> Self {
+    pub fn build(title: &'a str, code: &'a str, line: usize, start: usize, end: usize) -> Self {
         if let Some(code_position) = Diagnostic::find_line_and_range(code, start, end) {
-            if let Some(diagnostic) = Diagnostic::generate_diagnostic(code, code_position) {
+            if let Some(diagnostic) = Diagnostic::generate_diagnostic(title, code, code_position) {
                 return diagnostic;
             }
         }
@@ -127,7 +127,11 @@ impl<'a> Diagnostic<'a> {
         })
     }
 
-    pub fn generate_diagnostic(code: &str, position: CodePosition) -> Option<Diagnostic> {
+    pub fn generate_diagnostic(
+        title: &'a str,
+        code: &'a str,
+        position: CodePosition,
+    ) -> Option<Diagnostic<'a>> {
         let mut lines: Lines = code.lines();
 
         let line: &str = lines.nth(position.line.saturating_sub(1))?;
@@ -139,8 +143,14 @@ impl<'a> Diagnostic<'a> {
 
         let mut signaler: String = String::with_capacity(100);
 
-        for pos in 0..=position.end - trim_diferrence {
-            if pos == position.end - trim_diferrence {
+        let fixer_arrow_position: usize = if !title.to_lowercase().contains("syntax error") {
+            1
+        } else {
+            0
+        };
+
+        for pos in 0..=position.end - trim_diferrence - fixer_arrow_position {
+            if pos == position.end - trim_diferrence - fixer_arrow_position {
                 signaler.push('^');
                 break;
             }

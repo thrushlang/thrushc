@@ -278,23 +278,20 @@ pub fn check_types(
     }
 
     if let (
-        Instruction::ComplexType(target_type, target_structure_type),
-        Instruction::ComplexType(from_type, from_structure_type),
+        Instruction::ComplexType(target_type, target_structure_type, _, _),
+        Instruction::ComplexType(from_type, from_structure_type, _, _),
         op,
     ) = (target_type, from_type, operator)
     {
         match (target_type, from_type, op) {
             (Type::Char, Type::Char, None) => Ok(()),
-
             (Type::Str, Type::Str, None) => Ok(()),
-
             (Type::Struct, Type::Struct, None) if target_structure_type == from_structure_type => {
                 Ok(())
             }
 
             (Type::Struct, Type::Void, None) => Ok(()),
-
-            (Type::T, Type::T, None) => Ok(()),
+            (Type::Ptr, Type::Ptr, None) => Ok(()),
 
             (
                 Type::Bool,

@@ -15,7 +15,7 @@ use {
     std::{mem, process::exit},
 };
 
-const KEYWORDS_CAPACITY: usize = 53;
+const KEYWORDS_CAPACITY: usize = 55;
 const MINIMAL_TOKENS_CAPACITY: usize = 100_000;
 
 lazy_static! {
@@ -44,6 +44,7 @@ lazy_static! {
         keywords.insert(b"builtin", TokenKind::Builtin);
         keywords.insert(b"match", TokenKind::Match);
         keywords.insert(b"pattern", TokenKind::Pattern);
+        keywords.insert(b"take", TokenKind::Take);
         keywords.insert(b"@import", TokenKind::Import);
         keywords.insert(b"@public", TokenKind::Public);
         keywords.insert(b"@extern", TokenKind::Extern);
@@ -71,7 +72,7 @@ lazy_static! {
         keywords.insert(b"f64", TokenKind::DataType(Type::F64));
         keywords.insert(b"bool", TokenKind::DataType(Type::Bool));
         keywords.insert(b"char", TokenKind::DataType(Type::Char));
-        keywords.insert(b"T", TokenKind::DataType(Type::T));
+        keywords.insert(b"ptr", TokenKind::DataType(Type::Ptr));
         keywords.insert(b"str", TokenKind::DataType(Type::Str));
         keywords.insert(b"void", TokenKind::DataType(Type::Void));
 
@@ -752,6 +753,7 @@ pub enum TokenKind {
     New,
     Import,
     Builtin,
+    Take,
     And,
     Struct,
     Else,
@@ -928,8 +930,8 @@ pub enum Type {
     // Str Type
     Str,
 
-    // Generic Type
-    T,
+    // Ptr Type
+    Ptr,
 
     // Struct Type
     Struct,
@@ -986,12 +988,12 @@ impl Type {
 
     #[inline(always)]
     pub const fn is_ptr_type(&self) -> bool {
-        matches!(self, Type::Struct | Type::T)
+        matches!(self, Type::Struct | Type::Ptr)
     }
 
     #[inline(always)]
     pub const fn is_raw_ptr_type(&self) -> bool {
-        matches!(self, Type::T)
+        matches!(self, Type::Ptr)
     }
 
     #[inline(always)]

@@ -86,8 +86,8 @@ pub fn float_binaryop<'ctx>(
             utils::build_const_float(builder, context, right_type, *right_num, *right_signed);
 
         if let Some(new_left_compiled) = utils::float_autocast(
-            left_type,
             target_type,
+            left_type,
             None,
             left_compiled.into(),
             builder,
@@ -97,8 +97,8 @@ pub fn float_binaryop<'ctx>(
         }
 
         if let Some(new_right_compiled) = utils::float_autocast(
-            right_type,
             target_type,
+            right_type,
             None,
             right_compiled.into(),
             builder,
@@ -1312,8 +1312,8 @@ pub fn float_binaryop<'ctx>(
             .into_float_value();
 
         if let Some(new_left_compiled) = utils::float_autocast(
-            left_type,
             target_type,
+            left_type,
             None,
             left_compiled.into(),
             builder,
@@ -1323,8 +1323,8 @@ pub fn float_binaryop<'ctx>(
         }
 
         if let Some(new_right_compiled) = utils::float_autocast(
-            right_type,
             target_type,
+            right_type,
             None,
             right_compiled.into(),
             builder,
@@ -1366,8 +1366,8 @@ pub fn float_binaryop<'ctx>(
             .into_float_value();
 
         if let Some(new_left_compiled) = utils::float_autocast(
-            left_type,
             target_type,
+            left_type,
             None,
             left_compiled.into(),
             builder,
@@ -1377,8 +1377,8 @@ pub fn float_binaryop<'ctx>(
         }
 
         if let Some(new_right_compiled) = utils::float_autocast(
-            right_type,
             target_type,
+            right_type,
             None,
             right_compiled.into(),
             builder,
@@ -1420,8 +1420,8 @@ pub fn float_binaryop<'ctx>(
             utils::build_const_float(builder, context, right_type, *right_num, *right_signed);
 
         if let Some(new_left_compiled) = utils::float_autocast(
-            left_type,
             target_type,
+            left_type,
             None,
             left_compiled.into(),
             builder,
@@ -1431,8 +1431,8 @@ pub fn float_binaryop<'ctx>(
         }
 
         if let Some(new_right_compiled) = utils::float_autocast(
-            right_type,
             target_type,
+            right_type,
             None,
             right_compiled.into(),
             builder,
@@ -1557,8 +1557,8 @@ pub fn float_binaryop<'ctx>(
         .into_float_value();
 
         if let Some(new_left_compiled) = utils::float_autocast(
-            left_type,
             target_type,
+            left_type,
             None,
             left_compiled.into(),
             builder,
@@ -1568,8 +1568,8 @@ pub fn float_binaryop<'ctx>(
         }
 
         if let Some(new_right_compiled) = utils::float_autocast(
-            right_type,
             target_type,
+            right_type,
             None,
             right_compiled.into(),
             builder,
@@ -1617,8 +1617,8 @@ pub fn float_binaryop<'ctx>(
             utils::build_const_float(builder, context, right_type, *right_num, *right_signed);
 
         if let Some(new_left_compiled) = utils::float_autocast(
-            left_type,
             target_type,
+            left_type,
             None,
             left_compiled.into(),
             builder,
@@ -1628,8 +1628,8 @@ pub fn float_binaryop<'ctx>(
         }
 
         if let Some(new_right_compiled) = utils::float_autocast(
-            right_type,
             target_type,
+            right_type,
             None,
             right_compiled.into(),
             builder,
@@ -1686,8 +1686,8 @@ pub fn float_binaryop<'ctx>(
         );
 
         if let Some(new_left_compiled) = utils::float_autocast(
-            left_type,
             target_type,
+            left_type,
             None,
             left_compiled,
             builder,
@@ -1697,8 +1697,8 @@ pub fn float_binaryop<'ctx>(
         }
 
         if let Some(new_right_compiled) = utils::float_autocast(
-            right_type,
             target_type,
+            right_type,
             None,
             right_compiled,
             builder,
@@ -1771,8 +1771,8 @@ pub fn float_binaryop<'ctx>(
         );
 
         if let Some(new_left_compiled) = utils::float_autocast(
-            left_type,
             target_type,
+            left_type,
             None,
             left_compiled,
             builder,
@@ -1782,8 +1782,8 @@ pub fn float_binaryop<'ctx>(
         }
 
         if let Some(new_right_compiled) = utils::float_autocast(
-            right_type,
             target_type,
+            right_type,
             None,
             right_compiled,
             builder,
@@ -1837,8 +1837,8 @@ pub fn float_binaryop<'ctx>(
             utils::build_const_float(builder, context, right_type, *right_num, *right_signed);
 
         if let Some(new_left_compiled) = utils::float_autocast(
-            left_type,
             target_type,
+            left_type,
             None,
             left_compiled.into(),
             builder,
@@ -1848,8 +1848,8 @@ pub fn float_binaryop<'ctx>(
         }
 
         if let Some(new_right_compiled) = utils::float_autocast(
-            right_type,
             target_type,
+            right_type,
             None,
             right_compiled.into(),
             builder,
@@ -1898,8 +1898,8 @@ pub fn float_binaryop<'ctx>(
         .into_float_value();
 
         if let Some(new_left_compiled) = utils::float_autocast(
-            left_type,
             target_type,
+            left_type,
             None,
             left_compiled.into(),
             builder,
@@ -1909,8 +1909,8 @@ pub fn float_binaryop<'ctx>(
         }
 
         if let Some(new_right_compiled) = utils::float_autocast(
-            right_type,
             target_type,
+            right_type,
             None,
             right_compiled.into(),
             builder,
@@ -1968,8 +1968,8 @@ pub fn float_binaryop<'ctx>(
         );
 
         if let Some(new_left_compiled) = utils::float_autocast(
-            left_type,
             target_type,
+            left_type,
             None,
             left_compiled,
             builder,
@@ -1979,8 +1979,8 @@ pub fn float_binaryop<'ctx>(
         }
 
         if let Some(new_right_compiled) = utils::float_autocast(
-            right_type,
             target_type,
+            right_type,
             None,
             right_compiled,
             builder,
@@ -2043,8 +2043,8 @@ pub fn float_binaryop<'ctx>(
         );
 
         if let Some(new_left_compiled) = utils::float_autocast(
-            left_type,
             target_type,
+            left_type,
             None,
             left_compiled,
             builder,
@@ -2054,8 +2054,8 @@ pub fn float_binaryop<'ctx>(
         }
 
         if let Some(new_right_compiled) = utils::float_autocast(
-            right_type,
             target_type,
+            right_type,
             None,
             right_compiled,
             builder,

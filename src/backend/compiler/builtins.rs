@@ -23,8 +23,8 @@ pub fn include(functions: &mut Functions) {
     functions.insert(
         "sizeof!",
         (
-            Instruction::ComplexType(Type::S64, ""),
-            Vec::from([Instruction::ComplexType(Type::T, "")]),
+            Instruction::ComplexType(Type::S64, "", None, None),
+            Vec::from([Instruction::ComplexType(Type::Ptr, "", None, None)]),
             false,
         ),
     );
@@ -32,8 +32,8 @@ pub fn include(functions: &mut Functions) {
     functions.insert(
         "is_signed!",
         (
-            Instruction::ComplexType(Type::Bool, ""),
-            Vec::from([Instruction::ComplexType(Type::T, "")]),
+            Instruction::ComplexType(Type::Bool, "", None, None),
+            Vec::from([Instruction::ComplexType(Type::Ptr, "", None, None)]),
             false,
         ),
     );
@@ -81,7 +81,7 @@ pub fn build_sizeof<'ctx>(
         return ptr.get_type().size_of().into();
     }
 
-    if let Instruction::ComplexType(kind, _) = value {
+    if let Instruction::ComplexType(kind, _, _, _) = value {
         match kind {
             kind if kind.is_integer_type() || kind.is_bool_type() => {
                 return utils::type_int_to_llvm_int_type(context, kind)
@@ -95,7 +95,7 @@ pub fn build_sizeof<'ctx>(
                     .into();
             }
 
-            kind if *kind == Type::T => {
+            kind if kind.is_raw_ptr_type() => {
                 return context.ptr_type(AddressSpace::default()).size_of().into();
             }
 
@@ -187,8 +187,8 @@ pub fn build_is_signed<'ctx>(
                 .into_float_value();
 
             if let Some(casted_float) = utils::float_autocast(
-                localref_basic_type,
                 &Type::F64,
+                localref_basic_type,
                 None,
                 loaded_value.into(),
                 builder,

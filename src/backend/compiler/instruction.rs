@@ -8,7 +8,8 @@ use super::{
             types::Constructor,
         },
     },
-    types::{FixedArray, FunctionPrototype},
+    memory::MemoryFlag,
+    types::FunctionPrototype,
 };
 
 use super::{
@@ -18,12 +19,6 @@ use super::{
 };
 
 use inkwell::{context::Context, types::StructType, values::BasicValueEnum};
-
-#[derive(Debug, Clone)]
-pub enum ComplexType<'ctx> {
-    Base(Type, &'ctx str),
-    Nested(Box<ComplexType<'ctx>>),
-}
 
 #[derive(Debug, Clone, Default)]
 pub enum Instruction<'ctx> {
@@ -40,8 +35,13 @@ pub enum Instruction<'ctx> {
 
     LLVMValue(BasicValueEnum<'ctx>),
 
-    // T<?> array<[T, N]> Vec<T>
-    ComplexType(Type, &'ctx str),
+    // T<?> array<[T, N]> Vec<T, 'heap>
+    ComplexType(
+        Type,                           // Type
+        &'ctx str,                      // Structure Name
+        Option<MemoryFlag>,             // Customization heap!, type
+        Option<Box<Instruction<'ctx>>>, // Parent recusive type T<A<B<C>>>
+    ),
 
     // new Vec { ... };
     InitStruct {
@@ -122,8 +122,9 @@ pub enum Instruction<'ctx> {
     },
     LocalRef {
         name: &'ctx str,
-        line: usize,
         kind: Box<Instruction<'ctx>>,
+        take: bool,
+        line: usize,
     },
     LocalMut {
         name: &'ctx str,
@@ -135,6 +136,7 @@ pub enum Instruction<'ctx> {
     GEP {
         name: &'ctx str,
         index: Box<Instruction<'ctx>>,
+        kind: Box<Instruction<'ctx>>,
     },
 
     // Expressions
@@ -216,7 +218,7 @@ impl<'ctx> Instruction<'ctx> {
         line: usize,
         span: (usize, usize),
     ) -> Result<(), ThrushCompilerError> {
-        if let Instruction::ComplexType(_, _) = self {
+        if let Instruction::ComplexType(_, _, _, _) = self {
             return Ok(());
         }
 
@@ -228,48 +230,10 @@ impl<'ctx> Instruction<'ctx> {
         ))
     }
 
-    /* #[inline]
-    pub fn is_chained(
-        &self,
-        other: &Instruction,
-        location: (usize, (usize, usize)),
-    ) -> Result<(), ThrushCompilerError> {
-        if matches!(
-            (self, other),
-            (Instruction::BinaryOp { .. }, Instruction::Group { .. })
-                | (Instruction::BinaryOp { .. }, Instruction::BinaryOp { .. })
-                | (Instruction::Group { .. }, Instruction::BinaryOp { .. })
-                | (Instruction::Group { .. }, Instruction::Group { .. })
-                | (
-                    Instruction::LocalRef { .. }
-                        | Instruction::Char { .. }
-                        | Instruction::Float { .. }
-                        | Instruction::Integer { .. }
-                        | Instruction::Boolean(_)
-                        | Instruction::Call { .. },
-                    Instruction::Char { .. }
-                        | Instruction::Float { .. }
-                        | Instruction::Integer { .. }
-                        | Instruction::LocalRef { .. }
-                        | Instruction::Boolean(_)
-                        | Instruction::Call { .. },
-                )
-        ) {
-            return Ok(());
-        }
-
-        Err(ThrushCompilerError::Error(
-            String::from("Type Checking"),
-            String::from("Operators cannot be chained. Use logical gates as '&&' or '||'."),
-            location.0,
-            Some(location.1),
-        ))
-    } */
-
     #[inline(always)]
     pub fn get_basic_type(&self) -> &Type {
         match self {
-            Instruction::ComplexType(datatype, _) => datatype,
+            Instruction::ComplexType(datatype, _, _, _) => datatype,
 
             Instruction::Integer(datatype, ..)
             | Instruction::Float(datatype, ..)
@@ -285,7 +249,7 @@ impl<'ctx> Instruction<'ctx> {
             Instruction::Str(_) => &Type::Str,
             Instruction::Boolean(_) => &Type::Bool,
             Instruction::Char(_) => &Type::Char,
-            Instruction::GEP { .. } => &Type::T,
+            Instruction::GEP { .. } => &Type::Ptr,
             Instruction::InitStruct { .. } => &Type::Struct,
             Instruction::Struct { .. } => &Type::Struct,
 
@@ -309,14 +273,20 @@ impl<'ctx> Instruction<'ctx> {
             | Instruction::BinaryOp { kind: datatype, .. }
             | Instruction::Group { kind: datatype, .. }
             | Instruction::UnaryOp { kind: datatype, .. }
-            | Instruction::FunctionParameter { kind: datatype, .. } => (**datatype).clone(),
+            | Instruction::FunctionParameter { kind: datatype, .. }
+            | Instruction::GEP { kind: datatype, .. } => (**datatype).clone(),
 
-            Instruction::Str(_) => Instruction::ComplexType(Type::Str, ""),
-            Instruction::Boolean(_) => Instruction::ComplexType(Type::Bool, ""),
-            Instruction::Char(_) => Instruction::ComplexType(Type::Char, ""),
-            Instruction::GEP { .. } => Instruction::ComplexType(Type::T, ""),
-            Instruction::InitStruct { name, .. } => Instruction::ComplexType(Type::Struct, name),
-            Instruction::Struct { name, .. } => Instruction::ComplexType(Type::Struct, name),
+            Instruction::Str(_) => Instruction::ComplexType(Type::Str, "", None, None),
+            Instruction::Boolean(_) => Instruction::ComplexType(Type::Bool, "", None, None),
+            Instruction::Char(_) => Instruction::ComplexType(Type::Char, "", None, None),
+
+            Instruction::InitStruct { name, .. } => {
+                Instruction::ComplexType(Type::Struct, name, None, None)
+            }
+
+            Instruction::Struct { name, .. } => {
+                Instruction::ComplexType(Type::Struct, name, None, None)
+            }
 
             instruction if instruction.is_complex_type() => instruction.clone(),
 
@@ -380,7 +350,7 @@ impl<'ctx> Instruction<'ctx> {
     }
 
     pub fn get_structure_type(&self) -> &'ctx str {
-        if let Instruction::ComplexType(_, structure_type) = self {
+        if let Instruction::ComplexType(_, structure_type, _, _) = self {
             return structure_type;
         }
 
@@ -399,7 +369,7 @@ impl<'ctx> Instruction<'ctx> {
             _ => *instruction_type,
         };
 
-        Instruction::ComplexType(narrowed_type, instruction_structure_type)
+        Instruction::ComplexType(narrowed_type, instruction_structure_type, None, None)
     }
 }
 
@@ -430,7 +400,7 @@ impl Instruction<'_> {
 
     #[inline(always)]
     pub fn is_integer_type(&self) -> bool {
-        if let Instruction::ComplexType(tp, _) = self {
+        if let Instruction::ComplexType(tp, _, _, _) = self {
             return tp.is_integer_type();
         }
 
@@ -439,7 +409,7 @@ impl Instruction<'_> {
 
     #[inline(always)]
     pub fn is_float_type(&self) -> bool {
-        if let Instruction::ComplexType(tp, _) = self {
+        if let Instruction::ComplexType(tp, _, _, _) = self {
             return tp.is_float_type();
         }
 
@@ -448,7 +418,7 @@ impl Instruction<'_> {
 
     #[inline(always)]
     pub fn is_ptr_type(&self) -> bool {
-        if let Instruction::ComplexType(tp, _) = self {
+        if let Instruction::ComplexType(tp, _, _, _) = self {
             return tp.is_ptr_type();
         }
 
@@ -457,7 +427,7 @@ impl Instruction<'_> {
 
     #[inline(always)]
     pub fn is_void_type(&self) -> bool {
-        if let Instruction::ComplexType(tp, _) = self {
+        if let Instruction::ComplexType(tp, _, _, _) = self {
             return tp.is_void_type();
         }
 
@@ -466,7 +436,7 @@ impl Instruction<'_> {
 
     #[inline(always)]
     pub fn is_struct_type(&self) -> bool {
-        if let Instruction::ComplexType(tp, _) = self {
+        if let Instruction::ComplexType(tp, _, _, _) = self {
             return tp.is_struct_type();
         }
 
@@ -475,7 +445,7 @@ impl Instruction<'_> {
 
     #[inline(always)]
     pub fn is_bool_type(&self) -> bool {
-        if let Instruction::ComplexType(tp, _) = self {
+        if let Instruction::ComplexType(tp, _, _, _) = self {
             return tp.is_bool_type();
         }
 
@@ -484,7 +454,7 @@ impl Instruction<'_> {
 
     #[inline(always)]
     pub fn is_str_type(&self) -> bool {
-        if let Instruction::ComplexType(tp, _) = self {
+        if let Instruction::ComplexType(tp, _, _, _) = self {
             return tp.is_str_type();
         }
 
@@ -493,7 +463,7 @@ impl Instruction<'_> {
 
     #[inline(always)]
     pub fn is_raw_ptr_type(&self) -> bool {
-        if let Instruction::ComplexType(tp, _) = self {
+        if let Instruction::ComplexType(tp, _, _, _) = self {
             return tp.is_raw_ptr_type();
         }
 
@@ -519,18 +489,18 @@ impl Instruction<'_> {
     }
 
     #[inline(always)]
+    pub const fn is_local_ref(&self) -> bool {
+        matches!(self, Instruction::LocalRef { .. })
+    }
+
+    #[inline(always)]
     pub const fn is_null(&self) -> bool {
-        matches!(self, Instruction::ComplexType(Type::Void, _))
+        matches!(self, Instruction::ComplexType(Type::Void, _, _, _))
     }
 
     #[inline(always)]
     pub const fn is_pre_unaryop(&self) -> bool {
         matches!(self, Instruction::UnaryOp { is_pre: true, .. })
-    }
-
-    #[inline(always)]
-    pub const fn is_local_reference(&self) -> bool {
-        matches!(self, Instruction::LocalRef { .. })
     }
 
     #[inline(always)]
@@ -561,14 +531,5 @@ impl Instruction<'_> {
     #[inline(always)]
     pub const fn is_continue(&self) -> bool {
         matches!(self, Instruction::Continue)
-    }
-}
-
-impl<'ctx> ComplexType<'ctx> {
-    pub fn normalize(complex_type: &ComplexType<'ctx>) -> (Type, &'ctx str) {
-        match complex_type {
-            ComplexType::Nested(inner) => ComplexType::normalize(inner),
-            ComplexType::Base(tp, structure_name) => (*tp, structure_name),
-        }
     }
 }

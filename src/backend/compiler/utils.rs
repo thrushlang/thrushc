@@ -132,7 +132,7 @@ pub fn type_to_function_type<'ctx>(
         }
     }
 
-    if let Instruction::ComplexType(kind, structure_name) = kind {
+    if let Instruction::ComplexType(kind, structure_name, _, _) = kind {
         return match kind {
             Type::S8 | Type::U8 | Type::Char => {
                 context.i8_type().fn_type(&parameters_types, ignore_args)
@@ -140,7 +140,7 @@ pub fn type_to_function_type<'ctx>(
             Type::S16 | Type::U16 => context.i16_type().fn_type(&parameters_types, ignore_args),
             Type::S32 | Type::U32 => context.i32_type().fn_type(&parameters_types, ignore_args),
             Type::S64 | Type::U64 => context.i64_type().fn_type(&parameters_types, ignore_args),
-            Type::Str | Type::T => context
+            Type::Str | Type::Ptr => context
                 .ptr_type(AddressSpace::default())
                 .fn_type(&parameters_types, ignore_args),
 
@@ -178,7 +178,7 @@ pub fn type_to_basic_metadata_enum<'ctx>(
         Type::S64 | Type::U64 => context.i64_type().into(),
         Type::F32 => context.f32_type().into(),
         Type::F64 => context.f64_type().into(),
-        Type::Str | Type::Struct | Type::T => context.ptr_type(AddressSpace::default()).into(),
+        Type::Str | Type::Struct | Type::Ptr => context.ptr_type(AddressSpace::default()).into(),
 
         _ => unreachable!(),
     }
@@ -193,7 +193,7 @@ pub fn type_to_any_type_enum<'ctx>(context: &'ctx Context, kind: &Type) -> AnyTy
         Type::S64 | Type::U64 => context.i64_type().into(),
         Type::F32 => context.f32_type().into(),
         Type::F64 => context.f64_type().into(),
-        Type::Str | Type::Struct | Type::T => context.ptr_type(AddressSpace::default()).into(),
+        Type::Str | Type::Struct | Type::Ptr => context.ptr_type(AddressSpace::default()).into(),
         _ => unreachable!(),
     }
 }
@@ -206,11 +206,7 @@ pub fn integer_autocast<'ctx>(
     builder: &Builder<'ctx>,
     context: &'ctx Context,
 ) -> Option<BasicValueEnum<'ctx>> {
-    if target_type.is_bool_type() {
-        return None;
-    }
-
-    if from_type == target_type {
+    if target_type.is_bool_type() || target_type.is_void_type() || from_type == target_type {
         return None;
     }
 
@@ -258,35 +254,31 @@ pub fn integer_autocast<'ctx>(
 }
 
 pub fn float_autocast<'ctx>(
-    kind: &Type,
-    target: &Type,
+    target_type: &Type,
+    from_type: &Type,
     ptr: Option<PointerValue<'ctx>>,
     from: BasicValueEnum<'ctx>,
     builder: &Builder<'ctx>,
     context: &'ctx Context,
 ) -> Option<BasicValueEnum<'ctx>> {
-    if target.is_bool_type() {
-        return None;
-    }
-
-    if kind == target {
+    if target_type.is_bool_type() || target_type.is_void_type() || from_type == target_type {
         return None;
     }
 
     let cast: FloatValue;
 
-    if kind != target && from.is_float_value() {
+    if from_type != target_type && from.is_float_value() {
         cast = builder
             .build_float_cast(
                 from.into_float_value(),
-                type_float_to_llvm_float_type(context, target),
+                type_float_to_llvm_float_type(context, target_type),
                 "",
             )
             .unwrap();
-    } else if kind != target && from.is_pointer_value() {
+    } else if from_type != target_type && from.is_pointer_value() {
         let load: FloatValue<'ctx> = builder
             .build_load(
-                type_float_to_llvm_float_type(context, kind),
+                type_float_to_llvm_float_type(context, target_type),
                 from.into_pointer_value(),
                 "",
             )
@@ -294,7 +286,11 @@ pub fn float_autocast<'ctx>(
             .into_float_value();
 
         cast = builder
-            .build_float_cast(load, type_float_to_llvm_float_type(context, target), "")
+            .build_float_cast(
+                load,
+                type_float_to_llvm_float_type(context, target_type),
+                "",
+            )
             .unwrap();
     } else {
         builder.build_store(ptr.unwrap(), from).unwrap();
@@ -333,16 +329,6 @@ pub fn build_str_constant<'ctx>(
         .unwrap()
 }
 
-/* pub fn build_str<'ctx>(
-    builder: &Builder<'ctx>,
-    context: &'ctx Context,
-    size: u32,
-) -> PointerValue<'ctx> {
-    builder
-        .build_alloca(context.i8_type().array_type(size), "")
-        .unwrap()
-} */
-
 pub fn build_ptr<'ctx>(
     context: &'ctx Context,
     builder: &Builder<'ctx>,
@@ -358,6 +344,28 @@ pub fn build_ptr<'ctx>(
         }
         _ => unreachable!(),
     }
+}
+
+pub fn build_raw_ptr<'ctx>(
+    context: &'ctx Context,
+    builder: &Builder<'ctx>,
+    instruction: &Instruction<'ctx>,
+    _objects: &CompilerObjects<'ctx>,
+    alloc_in_stack: bool,
+) -> PointerValue<'ctx> {
+    if !instruction.get_type().get_structure_type().is_empty() {
+        return build_struct_ptr(context, builder, instruction, _objects, alloc_in_stack);
+    }
+
+    if alloc_in_stack {
+        return builder
+            .build_alloca(context.ptr_type(AddressSpace::default()), "")
+            .unwrap();
+    }
+
+    builder
+        .build_malloc(context.ptr_type(AddressSpace::default()), "")
+        .unwrap()
 }
 
 pub fn build_struct_ptr<'ctx>(

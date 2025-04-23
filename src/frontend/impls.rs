@@ -72,6 +72,7 @@ impl std::fmt::Display for TokenKind {
             TokenKind::If => write!(f, "if"),
             TokenKind::Elif => write!(f, "elif"),
             TokenKind::Or => write!(f, "or"),
+            TokenKind::Take => write!(f, "take"),
             TokenKind::Return => write!(f, "return"),
             TokenKind::This => write!(f, "this"),
             TokenKind::True => write!(f, "true"),
@@ -122,7 +123,7 @@ impl std::fmt::Display for Type {
             Type::Str => write!(f, "str"),
             Type::Char => write!(f, "char"),
             Type::Struct => write!(f, "struct"),
-            Type::T => write!(f, "T"),
+            Type::Ptr => write!(f, "ptr"),
             Type::Void => write!(f, "void"),
         }
     }

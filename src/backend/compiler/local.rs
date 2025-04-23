@@ -26,7 +26,28 @@ pub fn build<'ctx>(
     let local_type: &Instruction = local.1;
 
     if local_type.is_raw_ptr_type() {
-        build_local_ptr(module, builder, context, local, compiler_objects);
+        let allocated_pointer: PointerValue = utils::build_raw_ptr(
+            context,
+            builder,
+            local.2,
+            compiler_objects,
+            local.3.is_stack_allocated(),
+        );
+
+        let allocated_object: AllocatedObject =
+            AllocatedObject::alloc(allocated_pointer, &local.3, local_type);
+
+        compiler_objects.alloc_local_object(local.0, allocated_object);
+
+        build_local_ptr(
+            module,
+            builder,
+            context,
+            local,
+            allocated_object,
+            compiler_objects,
+        );
+
         return;
     }
 
@@ -52,8 +73,8 @@ pub fn build<'ctx>(
             builder,
             context,
             local,
-            compiler_objects,
             &mut allocated_object,
+            compiler_objects,
         );
 
         return;
@@ -175,7 +196,7 @@ pub fn build_local_mutation<'ctx>(
     }
 
     if local_type.is_raw_ptr_type() {
-        build_local_ptr(module, builder, context, local, compiler_objects);
+        build_local_ptr(module, builder, context, local, object, compiler_objects);
         return;
     }
 
@@ -187,10 +208,9 @@ fn build_local_ptr<'ctx>(
     builder: &Builder<'ctx>,
     context: &'ctx Context,
     local: Local<'ctx>,
+    allocated_object: AllocatedObject<'ctx>,
     compiler_objects: &mut CompilerObjects<'ctx>,
 ) {
-    let local_name: &str = local.0;
-    let local_type: &Instruction = local.1;
     let local_value: &Instruction = local.2;
 
     if local_value.is_null() {
@@ -204,10 +224,7 @@ fn build_local_ptr<'ctx>(
         )
         .into_pointer_value();
 
-        let allocated_object: AllocatedObject =
-            AllocatedObject::alloc(null, &[MemoryFlag::StackAllocated], local_type);
-
-        compiler_objects.alloc_local_object(local_name, allocated_object);
+        allocated_object.build_store(builder, null);
 
         return;
     }
@@ -229,10 +246,7 @@ fn build_local_ptr<'ctx>(
         .unwrap()
         .into_pointer_value();
 
-        let allocated_object: AllocatedObject =
-            AllocatedObject::alloc(call, &[MemoryFlag::HeapAllocated], local_type);
-
-        compiler_objects.alloc_local_object(local_name, allocated_object);
+        allocated_object.build_store(builder, call);
 
         return;
     }
@@ -243,26 +257,27 @@ fn build_local_ptr<'ctx>(
             builder,
             context,
             local_value,
-            &Type::U64,
+            &Type::Void,
             compiler_objects,
         )
         .into_pointer_value();
 
-        let allocated_object: AllocatedObject =
-            AllocatedObject::alloc(gep, &[MemoryFlag::StackAllocated], local_type);
-
-        compiler_objects.alloc_local_object(local_name, allocated_object);
+        allocated_object.build_store(builder, gep);
 
         return;
     }
 
-    if let Instruction::LocalRef { name, .. } = local_value {
-        let refvar_object: AllocatedObject = compiler_objects.get_allocated_object(name);
+    if local_value.is_local_ref() {
+        let reference: BasicValueEnum = generation::build_expression(
+            module,
+            builder,
+            context,
+            local_value,
+            &Type::Void,
+            compiler_objects,
+        );
 
-        let allocated_object: AllocatedObject =
-            AllocatedObject::alloc(refvar_object.ptr, &[MemoryFlag::HeapAllocated], local_type);
-
-        compiler_objects.alloc_local_object(local_name, allocated_object);
+        allocated_object.build_store(builder, reference);
 
         return;
     }
@@ -275,8 +290,8 @@ fn build_local_structure<'ctx>(
     builder: &Builder<'ctx>,
     context: &'ctx Context,
     local: Local<'ctx>,
-    compiler_objects: &mut CompilerObjects<'ctx>,
     allocated_object: &mut AllocatedObject<'ctx>,
+    compiler_objects: &mut CompilerObjects<'ctx>,
 ) {
     let local_value: &Instruction = local.2;
 
@@ -373,7 +388,7 @@ fn build_local_str<'ctx>(
         let allocated_object: AllocatedObject = AllocatedObject::alloc(
             str_compiled,
             &[MemoryFlag::StaticAllocated],
-            &Instruction::ComplexType(Type::Str, ""),
+            &Instruction::ComplexType(Type::Str, "", None, None),
         );
 
         compiler_objects.alloc_local_object(name, allocated_object);
@@ -420,7 +435,7 @@ fn build_local_str<'ctx>(
         let allocated_object: AllocatedObject = AllocatedObject::alloc(
             call,
             &[MemoryFlag::StaticAllocated],
-            &Instruction::ComplexType(Type::Str, ""),
+            &Instruction::ComplexType(Type::Str, "", None, None),
         );
 
         compiler_objects.alloc_local_object(name, allocated_object);
@@ -644,7 +659,7 @@ fn build_local_float<'ctx>(
         );
 
         if let Some(casted_value) =
-            utils::float_autocast(kind_refvar, local_basic_type, None, value, builder, context)
+            utils::float_autocast(local_basic_type, kind_refvar, None, value, builder, context)
         {
             value = casted_value;
         }
@@ -673,8 +688,8 @@ fn build_local_float<'ctx>(
         .unwrap();
 
         if let Some(casted_expression) = utils::float_autocast(
-            call_type.get_basic_type(),
             local_basic_type,
+            call_type.get_basic_type(),
             None,
             expression,
             builder,

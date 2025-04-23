@@ -1,7 +1,7 @@
 use super::super::super::frontend::types::Constructor;
 
 use super::{
-    Instruction,
+    instruction::Instruction,
     memory::MemoryFlag,
     objects::CompilerObjects,
     traits::{
@@ -40,7 +40,7 @@ impl CompilerStructureFieldsExtensions for Constructor<'_> {
         let structure_fields: &StructureFields = &structure.1;
 
         structure_fields.iter().any(|field| {
-            if let Instruction::ComplexType(_, structure_name) = field.1 {
+            if let Instruction::ComplexType(_, structure_name, _, _) = field.1 {
                 structure_name == name
             } else {
                 false
@@ -59,7 +59,7 @@ impl CompilerStructureFieldsExtensions for StructureFields<'_> {
         let structure_fields: &StructureFields = &structure.1;
 
         structure_fields.iter().any(|field| {
-            if let Instruction::ComplexType(_, structure_name) = field.1 {
+            if let Instruction::ComplexType(_, structure_name, _, _) = field.1 {
                 structure_name == name
             } else {
                 false
