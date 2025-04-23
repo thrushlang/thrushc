@@ -100,6 +100,15 @@ impl<'a> Thrushc<'a> {
 
         let tokens: Vec<Token> = Lexer::lex(code.as_bytes(), file);
 
+        if self.options.emit_tokens {
+            let _ = write(
+                format!("build/{}.tokens", &file.name),
+                format!("{:#?}", tokens),
+            );
+
+            return;
+        }
+
         let mut parser: Parser = Parser::new(&tokens, file);
         let instructions: &[Instruction] = parser.start();
 

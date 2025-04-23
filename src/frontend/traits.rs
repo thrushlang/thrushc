@@ -5,7 +5,6 @@ use super::{
 
 pub trait TokenLexemeExtensions {
     fn to_str(&self) -> &str;
-    fn to_string(&self) -> String;
     fn parse_scapes(
         &self,
         line: usize,

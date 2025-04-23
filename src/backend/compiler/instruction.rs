@@ -9,7 +9,7 @@ use super::{
         },
     },
     memory::MemoryFlag,
-    types::FunctionPrototype,
+    types::{EnumFields, FunctionPrototype},
 };
 
 use super::{
@@ -28,12 +28,9 @@ pub enum Instruction<'ctx> {
     Boolean(bool),
     Integer(Box<Instruction<'ctx>>, f64, bool),
     Float(Box<Instruction<'ctx>>, f64, bool),
-    Struct {
-        name: &'ctx str,
-        fields_types: StructureFields<'ctx>,
-    },
-
     LLVMValue(BasicValueEnum<'ctx>),
+
+    // Types
 
     // T<?> array<[T, N]> Vec<T, 'heap>
     ComplexType(
@@ -43,10 +40,46 @@ pub enum Instruction<'ctx> {
         Option<Box<Instruction<'ctx>>>, // Parent recusive type T<A<B<C>>>
     ),
 
+    // Structures
+
+    /*
+
+        // EXAMPLE:
+
+        struct Vector {
+            data T;
+            size u64;
+            capacity u64;
+        };
+
+    */
+    Struct {
+        name: &'ctx str,
+        fields_types: StructureFields<'ctx>,
+    },
+
     // new Vec { ... };
     InitStruct {
         name: &'ctx str,
         arguments: Constructor<'ctx>,
+    },
+
+    // Enums
+
+    /*
+
+        // EXAMPLE:
+
+        enum Colors {
+            Red : s32 = x0FF0000;
+            Green : s32 = x00FF00;
+            Blue : s64 = x0000FF;
+        };
+
+    */
+    Enum {
+        name: &'ctx str,
+        fields: EnumFields<'ctx>,
     },
 
     // Conditionals

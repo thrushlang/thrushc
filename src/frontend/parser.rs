@@ -11,8 +11,13 @@ use super::{
 
 use super::super::{
     backend::compiler::{
-        attributes::LLVMAttribute, builtins, conventions::CallConvention, instruction::Instruction,
-        misc::CompilerFile, traits::AttributesExtensions, types::ThrushAttributes,
+        attributes::LLVMAttribute,
+        builtins,
+        conventions::CallConvention,
+        instruction::Instruction,
+        misc::CompilerFile,
+        traits::AttributesExtensions,
+        types::{EnumFields, ThrushAttributes},
     },
     common::{
         constants::MINIMAL_ERROR_CAPACITY, diagnostic::Diagnostician, error::ThrushCompilerError,
@@ -130,7 +135,9 @@ impl<'instr> Parser<'instr> {
     fn parse(&mut self) -> Result<Instruction<'instr>, ThrushCompilerError> {
         match &self.peek().kind {
             TokenKind::Struct => Ok(self.build_struct(false)?),
+            TokenKind::Enum => Ok(self.build_enum(false)?),
             TokenKind::Fn => Ok(self.build_function(false)?),
+
             TokenKind::LBrace => Ok(self.build_code_block(&mut [])?),
             TokenKind::Return => Ok(self.build_return()?),
             TokenKind::Local => Ok(self.build_local(false)?),
@@ -174,6 +181,47 @@ impl<'instr> Parser<'instr> {
         self.inside_a_function = false;
 
         Ok(Instruction::EntryPoint { body })
+    }
+
+    fn build_for_loop(&mut self) -> Result<Instruction<'instr>, ThrushCompilerError> {
+        self.throw_if_is_unreacheable_code();
+
+        self.consume(
+            TokenKind::For,
+            String::from("Syntax error"),
+            String::from("Expected 'for'."),
+        )?;
+
+        let variable: Instruction = self.build_local(false)?;
+
+        let conditional: Instruction = self.expression()?;
+
+        self.check_type_mismatch(
+            Instruction::ComplexType(Type::Bool, "", None, None),
+            conditional.get_type(),
+            None,
+        );
+
+        let actions: Instruction = self.expression()?;
+
+        let mut variable_clone: Instruction = variable.clone();
+
+        if let Instruction::Local { comptime, .. } = &mut variable_clone {
+            *comptime = true;
+        }
+
+        self.inside_a_loop = true;
+
+        let body: Instruction = self.build_code_block(&mut [variable_clone])?;
+
+        self.inside_a_loop = false;
+
+        Ok(Instruction::ForLoop {
+            variable: Box::new(variable),
+            cond: Box::new(conditional),
+            actions: Box::new(actions),
+            block: Box::new(body),
+        })
     }
 
     fn build_loop(&mut self) -> Result<Instruction<'instr>, ThrushCompilerError> {
@@ -465,6 +513,127 @@ impl<'instr> Parser<'instr> {
         })
     }
 
+    fn build_enum(&mut self, declare: bool) -> Result<Instruction<'instr>, ThrushCompilerError> {
+        self.throw_if_is_unreacheable_code();
+
+        self.consume(
+            TokenKind::Enum,
+            String::from("Syntax error"),
+            String::from("Expected 'enum'."),
+        )?;
+
+        let name: &Token = self.consume(
+            TokenKind::Identifier,
+            String::from("Syntax error"),
+            String::from("Expected enum name."),
+        )?;
+
+        let enum_name: &str = name.lexeme.to_str();
+
+        self.consume(
+            TokenKind::LBrace,
+            String::from("Syntax error"),
+            String::from("Expected '{'."),
+        )?;
+
+        let mut enum_fields: EnumFields = Vec::with_capacity(10);
+        let mut index: f64 = 0.0;
+
+        while self.peek().kind != TokenKind::RBrace {
+            if self.match_token(TokenKind::Comma)? {
+                continue;
+            }
+
+            if self.match_token(TokenKind::Identifier)? {
+                let name: &str = self.previous().lexeme.to_str();
+                let line: usize = self.previous().line;
+                let span: (usize, usize) = self.previous().span;
+
+                self.consume(
+                    TokenKind::Colon,
+                    String::from("Syntax error"),
+                    String::from("Expected ':'."),
+                )?;
+
+                let field_type: Instruction = self.expr()?;
+
+                field_type.expected_type(line, span)?;
+
+                let field_basic_type: &Type = field_type.get_basic_type();
+
+                if !field_basic_type.is_integer_type() && !field_basic_type.is_float_type() {
+                    self.push_error(
+                        String::from("Syntax error"),
+                        String::from("Expected integer or floating-points types."),
+                    );
+                }
+
+                if self.match_token(TokenKind::SemiColon)? {
+                    let field_value: Instruction = if field_basic_type.is_float_type() {
+                        Instruction::Float(
+                            Box::new(Instruction::ComplexType(*field_basic_type, "", None, None)),
+                            index,
+                            false,
+                        )
+                    } else {
+                        Instruction::Integer(
+                            Box::new(Instruction::ComplexType(*field_basic_type, "", None, None)),
+                            index,
+                            false,
+                        )
+                    };
+
+                    enum_fields.push((name, *field_basic_type, field_value));
+                    index += 1.0;
+
+                    continue;
+                }
+
+                self.consume(
+                    TokenKind::Eq,
+                    String::from("Syntax error"),
+                    String::from("Expected '='."),
+                )?;
+
+                let expression: Instruction = self.expression()?;
+
+                self.check_type_mismatch(
+                    field_type.get_type(),
+                    expression.get_type(),
+                    Some(&expression),
+                );
+
+                enum_fields.push((name, *field_basic_type, expression));
+
+                continue;
+            }
+
+            self.only_advance()?;
+
+            self.push_error(
+                String::from("Syntax error"),
+                String::from("Expected identifier in enum field."),
+            );
+        }
+
+        self.consume(
+            TokenKind::RBrace,
+            String::from("Syntax error"),
+            String::from("Expected '}'."),
+        )?;
+
+        self.consume(
+            TokenKind::SemiColon,
+            String::from("Syntax error"),
+            String::from("Expected ';'."),
+        )?;
+
+        Ok(Instruction::Enum {
+            name: enum_name,
+            fields: enum_fields,
+        })
+    }
+
     fn build_struct(&mut self, declare: bool) -> Result<Instruction<'instr>, ThrushCompilerError> {
         self.throw_if_is_unreacheable_code();
 
@@ -480,7 +649,7 @@ impl<'instr> Parser<'instr> {
             String::from("Expected structure name."),
         )?;
 
-        let structure_name: &str = name.lexeme.to_str();
+        let struct_name: &str = name.lexeme.to_str();
 
         self.consume(
             TokenKind::LBrace,
@@ -501,11 +670,11 @@ impl<'instr> Parser<'instr> {
                 let line: usize = self.previous().line;
                 let span: (usize, usize) = self.previous().span;
 
-                if self.peek().lexeme.to_str() == structure_name {
+                if self.peek().lexeme.to_str() == struct_name {
                     self.rec_structure_ref = true;
                 }
 
-                let field_type: Instruction = self.expression()?;
+                let field_type: Instruction = self.expr()?;
 
                 self.rec_structure_ref = false;
 
@@ -545,7 +714,7 @@ impl<'instr> Parser<'instr> {
         }
 
         Ok(Instruction::Struct {
-            name: structure_name,
+            name: struct_name,
             fields_types,
         })
     }
@@ -659,47 +828,6 @@ impl<'instr> Parser<'instr> {
         Ok(Instruction::InitStruct {
             name: structure_name,
             arguments,
-        })
-    }
-
-    fn build_for_loop(&mut self) -> Result<Instruction<'instr>, ThrushCompilerError> {
-        self.throw_if_is_unreacheable_code();
-
-        self.consume(
-            TokenKind::For,
-            String::from("Syntax error"),
-            String::from("Expected 'for'."),
-        )?;
-
-        let variable: Instruction = self.build_local(false)?;
-
-        let conditional: Instruction = self.expression()?;
-
-        self.check_type_mismatch(
-            Instruction::ComplexType(Type::Bool, "", None, None),
-            conditional.get_type(),
-            None,
-        );
-
-        let actions: Instruction = self.expression()?;
-
-        let mut variable_clone: Instruction = variable.clone();
-
-        if let Instruction::Local { comptime, .. } = &mut variable_clone {
-            *comptime = true;
-        }
-
-        self.inside_a_loop = true;
-
-        let body: Instruction = self.build_code_block(&mut [variable_clone])?;
-
-        self.inside_a_loop = false;
-
-        Ok(Instruction::ForLoop {
-            variable: Box::new(variable),
-            cond: Box::new(conditional),
-            actions: Box::new(actions),
-            block: Box::new(body),
         })
     }
 
@@ -1182,7 +1310,6 @@ impl<'instr> Parser<'instr> {
 
     fn expr(&mut self) -> Result<Instruction<'instr>, ThrushCompilerError> {
         let instruction: Instruction = self.or()?;
-
         Ok(instruction)
     }
 

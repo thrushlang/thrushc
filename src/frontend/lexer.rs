@@ -45,6 +45,7 @@ lazy_static! {
         keywords.insert(b"match", TokenKind::Match);
         keywords.insert(b"pattern", TokenKind::Pattern);
         keywords.insert(b"take", TokenKind::Take);
+        keywords.insert(b"enum", TokenKind::Enum);
         keywords.insert(b"@import", TokenKind::Import);
         keywords.insert(b"@public", TokenKind::Public);
         keywords.insert(b"@extern", TokenKind::Extern);
@@ -238,10 +239,12 @@ impl<'a> Lexer<'a> {
         let mut is_binary: bool = false;
 
         while self.peek().is_ascii_digit()
-            || self.peek() == b'_' && self.peek_next().is_ascii_digit()
-            || self.peek() == b'.' && self.peek_next().is_ascii_digit()
-            || self.peek() == b'x' && self.peek_next().is_ascii_digit()
-            || self.peek() == b'b' && self.peek_next().is_ascii_digit()
+            || self.peek() == b'_'
+            || self.peek() == b'.'
+            || self.peek() == b'x'
+            || self.peek() == b'b'
+            || is_hexadecimal
+            || is_binary
         {
             if is_hexadecimal && self.previous() == b'0' && self.peek() == b'x' {
                 self.end_span();
@@ -265,7 +268,17 @@ impl<'a> Lexer<'a> {
                 ));
             }
 
-            if self.peek() == b'x' && self.peek_next().is_ascii_digit() {
+            if is_hexadecimal && !self.peek().is_ascii_alphanumeric() {
+                self.end_span();
+                break;
+            }
+
+            if is_binary && !self.peek().is_ascii_digit() {
+                self.end_span();
+                break;
+            }
+
+            if self.peek() == b'x' && self.peek_next().is_ascii_alphanumeric() {
                 is_hexadecimal = true;
             }
 
@@ -381,12 +394,16 @@ impl<'a> Lexer<'a> {
                     }
                 }
 
-                Err(_) => Err(ThrushCompilerError::Error(
-                    String::from("Syntax error"),
-                    String::from("Invalid hexadecimal format."),
-                    self.line,
-                    Some(self.span),
-                )),
+                Err(e) => {
+                    println!("{:?}", lexeme);
+                    println!("{:?}", e);
+                    Err(ThrushCompilerError::Error(
+                        String::from("Syntax error"),
+                        String::from("Invalid hexadecimal format."),
+                        self.line,
+                        Some(self.span),
+                    ))
+                }
             };
         }
 
@@ -643,11 +660,6 @@ impl TokenLexemeExtensions for TokenLexeme<'_> {
         core::str::from_utf8(self).unwrap_or("�")
     }
 
-    #[inline(always)]
-    fn to_string(&self) -> String {
-        self.to_str().to_string()
-    }
-
     fn parse_scapes(
         &self,
         line: usize,
@@ -754,6 +766,7 @@ pub enum TokenKind {
     Import,
     Builtin,
     Take,
+    Enum,
     And,
     Struct,
     Else,

@@ -122,6 +122,7 @@ impl Cli {
                     "llvm-bc" => self.options.emit_llvm_bitcode = true,
                     "ast" => self.options.emit_ast = true,
                     "asm" => self.options.emit_asm = true,
+                    "tokens" => self.options.emit_tokens = true,
                     any => {
                         self.report_error(&format!(
                             "'{}' is invalid target to emit raw compiled code. Maybe '-emit llvm-ir || llvm-bc || thrush-ast || asm', is the command?",
@@ -342,7 +343,7 @@ impl Cli {
             format!(
                 "{} ({}) {}\n",
                 "•".bold(),
-                "--emit | -emit [llvm-ir | llvm-bitcode | ast | asm]"
+                "--emit | -emit [llvm-ir | llvm-bitcode | asm | ast | tokens]"
                     .custom_color((141, 141, 142))
                     .bold(),
                 "Compile the code into specified representation.".bold()
