@@ -36,9 +36,9 @@ if __name__ == "__main__":
             
             return response_json
         
-    def get_llvm_c_apis(github_api_releases: Dict[str, Any]) -> Dict[str, Any]:
+    def get_llvm_c_apis(github_api_releases: Dict[str, Any]) -> List[Dict[str, Any]]:
 
-        llvm_c_apis: List[Dict[str, Any]] = [llvm_c_api for llvm_c_api in github_api_releases if llvm_c_api["tag_name"] == "LLVM-C"]
+        llvm_c_apis: List[Dict[str, Any]] = [llvm_c_api for llvm_c_api in github_api_releases if isinstance(llvm_c_api, dict) and llvm_c_api.get("tag_name") == "LLVM-C"]
 
         if len(llvm_c_apis) == 0:
 
