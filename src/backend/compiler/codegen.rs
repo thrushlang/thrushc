@@ -598,6 +598,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
 
             Instruction::Struct { .. } => Instruction::Null,
             Instruction::Null => Instruction::Null,
+            Instruction::Comptime => Instruction::Null,
 
             e => {
                 println!("{:?}", e);

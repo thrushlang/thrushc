@@ -1,5 +1,7 @@
 #![allow(clippy::upper_case_acronyms)]
 
+use std::mem;
+
 use super::{
     super::super::{
         common::error::ThrushCompilerError,
@@ -9,7 +11,7 @@ use super::{
         },
     },
     memory::MemoryFlag,
-    types::{EnumFields, FunctionPrototype},
+    types::FunctionPrototype,
 };
 
 use super::{
@@ -77,9 +79,9 @@ pub enum Instruction<'ctx> {
         };
 
     */
-    Enum {
-        name: &'ctx str,
-        fields: EnumFields<'ctx>,
+    EnumField {
+        kind: Box<Instruction<'ctx>>,
+        value: Box<Instruction<'ctx>>,
     },
 
     // Conditionals
@@ -145,6 +147,14 @@ pub enum Instruction<'ctx> {
 
     Return(Box<Instruction<'ctx>>, Box<Instruction<'ctx>>),
 
+    // Constants
+    Const {
+        name: &'ctx str,
+        kind: Box<Instruction<'ctx>>,
+        value: Box<Instruction<'ctx>>,
+        attributes: ThrushAttributes<'ctx>,
+    },
+
     // Locals variables
     Local {
         name: &'ctx str,
@@ -194,6 +204,8 @@ pub enum Instruction<'ctx> {
         expression: Box<Instruction<'ctx>>,
         kind: Box<Instruction<'ctx>>,
     },
+
+    Comptime,
 
     #[default]
     Null,
@@ -277,7 +289,8 @@ impl<'ctx> Instruction<'ctx> {
             | Instruction::BinaryOp { kind: datatype, .. }
             | Instruction::Group { kind: datatype, .. }
             | Instruction::UnaryOp { kind: datatype, .. }
-            | Instruction::FunctionParameter { kind: datatype, .. } => datatype.get_basic_type(),
+            | Instruction::FunctionParameter { kind: datatype, .. }
+            | Instruction::EnumField { kind: datatype, .. } => datatype.get_basic_type(),
 
             Instruction::Str(_) => &Type::Str,
             Instruction::Boolean(_) => &Type::Bool,
@@ -307,7 +320,8 @@ impl<'ctx> Instruction<'ctx> {
             | Instruction::Group { kind: datatype, .. }
             | Instruction::UnaryOp { kind: datatype, .. }
             | Instruction::FunctionParameter { kind: datatype, .. }
-            | Instruction::GEP { kind: datatype, .. } => (**datatype).clone(),
+            | Instruction::GEP { kind: datatype, .. }
+            | Instruction::EnumField { kind: datatype, .. } => (**datatype).clone(),
 
             Instruction::Str(_) => Instruction::ComplexType(Type::Str, "", None, None),
             Instruction::Boolean(_) => Instruction::ComplexType(Type::Bool, "", None, None),
@@ -382,12 +396,41 @@ impl<'ctx> Instruction<'ctx> {
         unreachable!()
     }
 
+    pub fn get_enum_field_value(&mut self) -> Instruction<'ctx> {
+        if let Instruction::EnumField { value, .. } = self {
+            return mem::take(value);
+        }
+
+        unreachable!()
+    }
+
     pub fn get_structure_type(&self) -> &'ctx str {
         if let Instruction::ComplexType(_, structure_type, _, _) = self {
             return structure_type;
         }
 
         unreachable!()
+    }
+
+    pub fn cast_signess(&mut self, operator: TokenKind) {
+        if let Instruction::Integer(kind, _, is_signed) = self {
+            if operator.is_minus_operator() {
+                *kind = Box::new(kind.narrowing_cast());
+                *is_signed = true;
+            }
+        }
+
+        if let Instruction::LocalRef { kind, .. } = self {
+            if kind.is_integer_type() && operator.is_minus_operator() {
+                *kind = Box::new(kind.narrowing_cast());
+            }
+        }
+
+        if let Instruction::Float(_, _, is_signed) = self {
+            if operator.is_minus_operator() {
+                *is_signed = true;
+            }
+        }
     }
 
     pub fn narrowing_cast(&self) -> Instruction<'ctx> {
@@ -542,6 +585,11 @@ impl Instruction<'_> {
     }
 
     #[inline(always)]
+    pub const fn is_enum_field(&self) -> bool {
+        matches!(self, Instruction::EnumField { .. })
+    }
+
+    #[inline(always)]
     pub const fn is_binary(&self) -> bool {
         matches!(self, Instruction::BinaryOp { .. })
     }
@@ -549,6 +597,16 @@ impl Instruction<'_> {
     #[inline(always)]
     pub const fn is_group(&self) -> bool {
         matches!(self, Instruction::Group { .. })
+    }
+
+    #[inline(always)]
+    pub const fn is_integer(&self) -> bool {
+        matches!(self, Instruction::Integer { .. })
+    }
+
+    #[inline(always)]
+    pub const fn is_float(&self) -> bool {
+        matches!(self, Instruction::Float { .. })
     }
 
     #[inline(always)]

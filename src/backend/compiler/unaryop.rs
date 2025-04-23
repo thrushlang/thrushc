@@ -181,5 +181,9 @@ pub fn compile_unary_op<'ctx>(
         return value.into();
     }
 
+    if let (TokenKind::Minus, Instruction::EnumField { kind, value, .. }, _) = unary {
+        return compile_unary_op(builder, context, (unary.0, value, kind), compiler_objects);
+    }
+
     unreachable!()
 }

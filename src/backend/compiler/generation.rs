@@ -31,6 +31,17 @@ pub fn build_expression<'ctx>(
             .into();
     }
 
+    if let Instruction::EnumField { value, .. } = instruction {
+        return build_expression(
+            module,
+            builder,
+            context,
+            value,
+            casting_target,
+            compiler_objects,
+        );
+    }
+
     if let Instruction::Str(const_str) = instruction {
         return utils::build_str_constant(module, builder, context, const_str).into();
     }

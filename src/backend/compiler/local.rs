@@ -469,6 +469,21 @@ fn build_local_integer<'ctx>(
         return;
     }
 
+    if let Instruction::EnumField { value, .. } = local_value {
+        let field: BasicValueEnum = generation::build_expression(
+            module,
+            builder,
+            context,
+            value,
+            local_type.get_basic_type(),
+            compiler_objects,
+        );
+
+        object.build_store(builder, field);
+
+        return;
+    }
+
     if let Instruction::Char(byte) = local_value {
         let local_basic_type: &Type = local_type.get_basic_type();
 
@@ -627,6 +642,21 @@ fn build_local_float<'ctx>(
             builder,
             utils::build_const_float(builder, context, local_basic_type, 0.0, false),
         );
+
+        return;
+    }
+
+    if let Instruction::EnumField { value, .. } = local_value {
+        let field: BasicValueEnum = generation::build_expression(
+            module,
+            builder,
+            context,
+            value,
+            local_type.get_basic_type(),
+            compiler_objects,
+        );
+
+        object.build_store(builder, field);
 
         return;
     }

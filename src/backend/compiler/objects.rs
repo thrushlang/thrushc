@@ -7,14 +7,15 @@ use {
     ahash::AHashMap as HashMap,
 };
 
-const FUNCTION_MINIMAL_CAPACITY: usize = 255;
 const STRUCTURE_MINIMAL_CAPACITY: usize = 255;
+const FUNCTION_MINIMAL_CAPACITY: usize = 255;
+
 const SCOPE_MINIMAL_CAPACITY: usize = 155;
 
 #[derive(Debug)]
 pub struct CompilerObjects<'ctx> {
-    pub functions: HashMap<&'ctx str, Function<'ctx>>,
     pub structs: HashMap<&'ctx str, Structure<'ctx>>,
+    pub functions: HashMap<&'ctx str, Function<'ctx>>,
     pub blocks: Vec<HashMap<&'ctx str, AllocatedObject<'ctx>>>,
     pub scope_position: usize,
 }
@@ -22,8 +23,8 @@ pub struct CompilerObjects<'ctx> {
 impl<'ctx> CompilerObjects<'ctx> {
     pub fn new() -> Self {
         Self {
-            functions: HashMap::with_capacity(FUNCTION_MINIMAL_CAPACITY),
             structs: HashMap::with_capacity(STRUCTURE_MINIMAL_CAPACITY),
+            functions: HashMap::with_capacity(FUNCTION_MINIMAL_CAPACITY),
             blocks: Vec::with_capacity(SCOPE_MINIMAL_CAPACITY),
             scope_position: 0,
         }

@@ -94,7 +94,7 @@ pub struct Lexer<'a> {
 
 impl<'a> Lexer<'a> {
     pub fn lex(code: &'a [u8], file: &'a CompilerFile) -> Vec<Token<'a>> {
-        let mut lexer: Lexer = Self {
+        let mut lexer: Lexer<'_> = Self {
             tokens: Vec::with_capacity(MINIMAL_TOKENS_CAPACITY),
             errors: Vec::with_capacity(MINIMAL_ERROR_CAPACITY),
             code,
@@ -177,6 +177,7 @@ impl<'a> Lexer<'a> {
             b'/' => self.make(TokenKind::Slash),
             b';' => self.make(TokenKind::SemiColon),
             b'-' if self.char_match(b'-') => self.make(TokenKind::MinusMinus),
+            b'-' if self.char_match(b'>') => self.make(TokenKind::Arrow),
             b'-' => self.make(TokenKind::Minus),
             b'+' if self.char_match(b'+') => self.make(TokenKind::PlusPlus),
             b'+' => self.make(TokenKind::Plus),
@@ -251,7 +252,7 @@ impl<'a> Lexer<'a> {
 
                 return Err(ThrushCompilerError::Error(
                     String::from("Syntax error"),
-                    String::from("The hexadecimal identifier '0x' cannot be repeated."),
+                    String::from("Hexadecimal identifier '0x' cannot be repeated."),
                     self.line,
                     Some(self.span),
                 ));
@@ -262,7 +263,7 @@ impl<'a> Lexer<'a> {
 
                 return Err(ThrushCompilerError::Error(
                     String::from("Syntax error"),
-                    String::from("The binary identifier '0b' cannot be repeated."),
+                    String::from("Binary identifier '0b' cannot be repeated."),
                     self.line,
                     Some(self.span),
                 ));
@@ -387,23 +388,40 @@ impl<'a> Lexer<'a> {
                     } else {
                         return Err(ThrushCompilerError::Error(
                             String::from("Syntax error"),
-                            String::from("Invalid hexadecimal format."),
+                            String::from("Out of bounds signed hexadecimal format."),
                             self.line,
                             Some(self.span),
                         ));
                     }
                 }
 
-                Err(e) => {
-                    println!("{:?}", lexeme);
-                    println!("{:?}", e);
-                    Err(ThrushCompilerError::Error(
+                Err(_) => match usize::from_str_radix(&cleaned_lexeme, 16) {
+                    Ok(num) => {
+                        if (U8_MIN..=U8_MAX).contains(&num) {
+                            return Ok((Type::U8, num as f64));
+                        } else if (U16_MIN..=U16_MAX).contains(&num) {
+                            return Ok((Type::U16, num as f64));
+                        } else if (U32_MIN..=U32_MAX).contains(&num) {
+                            return Ok((Type::U32, num as f64));
+                        } else if (usize::MIN..=usize::MAX).contains(&num) {
+                            return Ok((Type::U64, num as f64));
+                        } else {
+                            return Err(ThrushCompilerError::Error(
+                                String::from("Syntax error"),
+                                String::from("Out of bounds unsigned hexadecimal format."),
+                                self.line,
+                                Some(self.span),
+                            ));
+                        }
+                    }
+
+                    Err(_) => Err(ThrushCompilerError::Error(
                         String::from("Syntax error"),
-                        String::from("Invalid hexadecimal format."),
+                        String::from("Invalid numeric hexadecimal format."),
                         self.line,
                         Some(self.span),
-                    ))
-                }
+                    )),
+                },
             };
         }
 
@@ -426,19 +444,40 @@ impl<'a> Lexer<'a> {
                     } else {
                         return Err(ThrushCompilerError::Error(
                             String::from("Syntax error"),
-                            String::from("Invalid binary format."),
+                            String::from("Out of bounds signed binary format."),
                             self.line,
                             Some(self.span),
                         ));
                     }
                 }
 
-                Err(_) => Err(ThrushCompilerError::Error(
-                    String::from("Syntax error"),
-                    String::from("Invalid binary format."),
-                    self.line,
-                    Some(self.span),
-                )),
+                Err(_) => match usize::from_str_radix(&cleaned_lexeme, 2) {
+                    Ok(num) => {
+                        if (U8_MIN..=U8_MAX).contains(&num) {
+                            return Ok((Type::U8, num as f64));
+                        } else if (U16_MIN..=U16_MAX).contains(&num) {
+                            return Ok((Type::U16, num as f64));
+                        } else if (U32_MIN..=U32_MAX).contains(&num) {
+                            return Ok((Type::U32, num as f64));
+                        } else if (usize::MIN..=usize::MAX).contains(&num) {
+                            return Ok((Type::U64, num as f64));
+                        } else {
+                            return Err(ThrushCompilerError::Error(
+                                String::from("Syntax error"),
+                                String::from("Out of bounds unsigned binary format."),
+                                self.line,
+                                Some(self.span),
+                            ));
+                        }
+                    }
+
+                    Err(_) => Err(ThrushCompilerError::Error(
+                        String::from("Syntax error"),
+                        String::from("Invalid binary format."),
+                        self.line,
+                        Some(self.span),
+                    )),
+                },
             };
         }
 
@@ -737,6 +776,7 @@ pub enum TokenKind {
     MinusMinus, // ' -- '
     LShift,     // ' << '
     RShift,     // ' >> '
+    Arrow,      // ->
 
     // --- Literals ---
     Identifier,
@@ -898,6 +938,11 @@ impl TokenKind {
     #[inline(always)]
     pub const fn is_struct_keyword(&self) -> bool {
         matches!(self, TokenKind::Struct)
+    }
+
+    #[inline(always)]
+    pub const fn is_enum_keyword(&self) -> bool {
+        matches!(self, TokenKind::Enum)
     }
 
     #[inline(always)]

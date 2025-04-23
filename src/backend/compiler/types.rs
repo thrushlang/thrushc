@@ -1,6 +1,5 @@
 use super::super::super::{
-    backend::compiler::attributes::LLVMAttribute,
-    frontend::lexer::{TokenKind, Type},
+    backend::compiler::attributes::LLVMAttribute, frontend::lexer::TokenKind,
 };
 
 use super::{
@@ -52,9 +51,12 @@ pub type FunctionParameter<'ctx> = (&'ctx str, &'ctx Instruction<'ctx>, u32, Mem
 pub type Structure<'ctx> = (&'ctx str, Vec<(&'ctx str, Instruction<'ctx>, u32)>);
 pub type StructureFields<'ctx> = Vec<(&'ctx str, Instruction<'ctx>, u32)>;
 
-pub type EnumFields<'ctx> = Vec<(&'ctx str, Type, Instruction<'ctx>)>;
+pub type Enum<'ctx> = (EnumFields<'ctx>, ThrushAttributes<'ctx>);
 
-pub type FixedArray = (Type, u32);
+pub type EnumFields<'ctx> = Vec<(&'ctx str, Instruction<'ctx>, Instruction<'ctx>)>;
+pub type EnumField<'ctx> = (&'ctx str, Instruction<'ctx>, Instruction<'ctx>);
+
+// pub type FixedArray = (Type, u32);
 
 pub type ThrushAttributes<'ctx> = Vec<LLVMAttribute<'ctx>>;
 

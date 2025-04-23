@@ -1,8 +1,14 @@
 use super::super::common::error::ThrushCompilerError;
 
-use super::types::CodeLocation;
+use super::{
+    traits::{EnumExtensions, EnumFieldsExtensions},
+    types::CodeLocation,
+};
 
-use super::super::backend::compiler::instruction::Instruction;
+use super::super::backend::compiler::{
+    instruction::Instruction,
+    types::{Enum, EnumField, EnumFields, StructureFields, ThrushAttributes},
+};
 
 use super::{
     lexer::{TokenKind, Type},
@@ -12,17 +18,43 @@ use super::{
 
 impl<'a> StructureExtensions<'a> for Struct<'a> {
     fn contains_field(&self, name: &str) -> bool {
-        self.iter().any(|field| field.0 == name)
+        self.0.iter().any(|field| field.0 == name)
     }
 
     fn get_field_type(&self, name: &str) -> Option<Instruction<'a>> {
-        if let Some(field) = self.iter().find(|field| field.0 == name) {
-            let field_type: Instruction = field.1.clone();
+        if let Some(field) = self.0.iter().find(|field| field.0 == name) {
+            let field_type: Instruction<'_> = field.1.clone();
 
             return Some(field_type);
         }
 
         None
+    }
+
+    fn get_fields(&self) -> StructureFields<'a> {
+        self.0.clone()
+    }
+}
+
+impl<'a> EnumFieldsExtensions<'a> for EnumFields<'a> {
+    fn contain_field(&self, name: &'a str) -> bool {
+        self.iter().any(|enum_field| enum_field.0 == name)
+    }
+
+    fn get_field(&self, name: &'a str) -> EnumField<'a> {
+        self.iter()
+            .find(|enum_field| enum_field.0 == name)
+            .cloned()
+            .unwrap()
+    }
+}
+impl<'a> EnumExtensions<'a> for Enum<'a> {
+    fn get_fields(&self) -> EnumFields<'a> {
+        self.0.clone()
+    }
+
+    fn get_attributes(&self) -> ThrushAttributes<'a> {
+        self.1.clone()
     }
 }
 
@@ -47,6 +79,7 @@ impl std::fmt::Display for TokenKind {
             TokenKind::Bang => write!(f, "!"),
             TokenKind::Range => write!(f, ".."),
             TokenKind::ColonColon => write!(f, "::"),
+            TokenKind::Arrow => write!(f, "->"),
             TokenKind::BangEq => write!(f, "!="),
             TokenKind::Eq => write!(f, "="),
             TokenKind::EqEq => write!(f, "=="),
@@ -139,23 +172,24 @@ impl FoundObjectExtensions for FoundObjectId<'_> {
         self.1.is_some()
     }
 
-    fn is_local(&self) -> bool {
+    fn is_enum(&self) -> bool {
         self.2.is_some()
+    }
+
+    fn is_local(&self) -> bool {
+        self.3.is_some()
     }
 }
 
 impl<'instr> FoundObjectEither<'instr> for FoundObjectId<'instr> {
-    fn expected_local(
-        &self,
-        location: CodeLocation,
-    ) -> Result<(&'instr str, usize), ThrushCompilerError> {
-        if let Some((name, scope_idx)) = self.2 {
-            return Ok((name, scope_idx));
+    fn expected_enum(&self, location: CodeLocation) -> Result<&'instr str, ThrushCompilerError> {
+        if let Some(name) = self.2 {
+            return Ok(name);
         }
 
         Err(ThrushCompilerError::Error(
-            String::from("Expected local reference"),
-            String::from("Expected local but found something else."),
+            String::from("Expected enum reference"),
+            String::from("Expected enum but found something else."),
             location.0,
             Some(location.1),
         ))
@@ -172,6 +206,22 @@ impl<'instr> FoundObjectEither<'instr> for FoundObjectId<'instr> {
         Err(ThrushCompilerError::Error(
             String::from("Expected function reference"),
             String::from("Expected function but found something else."),
+            location.0,
+            Some(location.1),
+        ))
+    }
+
+    fn expected_local(
+        &self,
+        location: CodeLocation,
+    ) -> Result<(&'instr str, usize), ThrushCompilerError> {
+        if let Some((name, scope_idx)) = self.3 {
+            return Ok((name, scope_idx));
+        }
+
+        Err(ThrushCompilerError::Error(
+            String::from("Expected local reference"),
+            String::from("Expected local but found something else."),
             location.0,
             Some(location.1),
         ))
