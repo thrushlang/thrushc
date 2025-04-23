@@ -545,6 +545,8 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
             Instruction::EntryPoint { body } => {
                 self.function = Some(self.build_entrypoint());
 
+                self.declare_constants();
+
                 self.codegen(body);
 
                 self.builder
@@ -596,6 +598,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                 &mut self.compiler_objects,
             )),
 
+            Instruction::Const { .. } => Instruction::Null,
             Instruction::Struct { .. } => Instruction::Null,
             Instruction::Null => Instruction::Null,
             Instruction::Comptime => Instruction::Null,
@@ -611,9 +614,9 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
         let main_type: FunctionType = self.context.i32_type().fn_type(&[], false);
         let main: FunctionValue = self.module.add_function("main", main_type, None);
 
-        let entry_point: BasicBlock = self.context.append_basic_block(main, "");
+        let main_block: BasicBlock = self.context.append_basic_block(main, "");
 
-        self.builder.position_at_end(entry_point);
+        self.builder.position_at_end(main_block);
 
         main
     }
@@ -636,8 +639,12 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
             let allocated_stack_pointer: PointerValue =
                 utils::build_ptr(self.context, self.builder, parameter_basic_type);
 
-            let allocated_object: AllocatedObject =
-                AllocatedObject::alloc(allocated_stack_pointer, &memory_flags, parameter_type);
+            let allocated_object: AllocatedObject = AllocatedObject::alloc(
+                allocated_stack_pointer,
+                &memory_flags,
+                parameter_type,
+                false,
+            );
 
             allocated_object.build_store(self.builder, llvm_parameter_value);
 
@@ -665,7 +672,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
             };
 
             let allocated_object: AllocatedObject =
-                AllocatedObject::alloc(allocated_pointer, &memory_flags, parameter_type);
+                AllocatedObject::alloc(allocated_pointer, &memory_flags, parameter_type, false);
 
             allocated_object.build_store(self.builder, llvm_parameter_value);
 
@@ -683,6 +690,46 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
 
             if instruction.is_function() {
                 self.declare_function(instruction);
+            }
+        });
+    }
+
+    fn declare_constants(&mut self) {
+        self.instructions.iter().for_each(|instruction| {
+            if let Instruction::Const {
+                name,
+                kind,
+                value,
+                attributes,
+            } = instruction
+            {
+                let compiled_value: BasicValueEnum = generation::build_expression(
+                    self.module,
+                    self.builder,
+                    self.context,
+                    value,
+                    kind.get_basic_type(),
+                    &mut self.compiler_objects,
+                );
+
+                let constant_ptr: PointerValue = utils::build_global_constant(
+                    self.module,
+                    self.builder,
+                    self.context,
+                    compiled_value.get_type(),
+                    attributes,
+                    compiled_value,
+                );
+
+                let allocated_object: AllocatedObject = AllocatedObject::alloc(
+                    constant_ptr,
+                    &[MemoryFlag::StaticAllocated],
+                    kind,
+                    true,
+                );
+
+                self.compiler_objects
+                    .insert_constant_object(name, allocated_object);
             }
         });
     }

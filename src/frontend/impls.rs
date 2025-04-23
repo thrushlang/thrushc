@@ -176,8 +176,12 @@ impl FoundObjectExtensions for FoundObjectId<'_> {
         self.2.is_some()
     }
 
-    fn is_local(&self) -> bool {
+    fn is_constant(&self) -> bool {
         self.3.is_some()
+    }
+
+    fn is_local(&self) -> bool {
+        self.4.is_some()
     }
 }
 
@@ -215,13 +219,29 @@ impl<'instr> FoundObjectEither<'instr> for FoundObjectId<'instr> {
         &self,
         location: CodeLocation,
     ) -> Result<(&'instr str, usize), ThrushCompilerError> {
-        if let Some((name, scope_idx)) = self.3 {
+        if let Some((name, scope_idx)) = self.4 {
             return Ok((name, scope_idx));
         }
 
         Err(ThrushCompilerError::Error(
             String::from("Expected local reference"),
             String::from("Expected local but found something else."),
+            location.0,
+            Some(location.1),
+        ))
+    }
+
+    fn expected_constant(
+        &self,
+        location: CodeLocation,
+    ) -> Result<&'instr str, ThrushCompilerError> {
+        if let Some(const_id) = self.3 {
+            return Ok(const_id);
+        }
+
+        Err(ThrushCompilerError::Error(
+            String::from("Expected constant reference"),
+            String::from("Expected constant but found something else."),
             location.0,
             Some(location.1),
         ))

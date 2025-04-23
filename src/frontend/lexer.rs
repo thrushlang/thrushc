@@ -941,6 +941,11 @@ impl TokenKind {
     }
 
     #[inline(always)]
+    pub const fn is_const_keyword(&self) -> bool {
+        matches!(self, TokenKind::Const)
+    }
+
+    #[inline(always)]
     pub const fn is_enum_keyword(&self) -> bool {
         matches!(self, TokenKind::Enum)
     }

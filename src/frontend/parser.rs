@@ -1,5 +1,6 @@
 use super::super::backend::compiler::types::EnumField;
 
+use super::objects::Constant;
 use super::traits::EnumExtensions;
 use super::{
     lexer::{Token, TokenKind, Type},
@@ -190,7 +191,7 @@ impl<'instr> Parser<'instr> {
     }
 
     fn build_for_loop(&mut self) -> Result<Instruction<'instr>, ThrushCompilerError> {
-        self.throw_if_is_unreacheable_code();
+        self.throw_unreacheable_code();
 
         self.consume(
             TokenKind::For,
@@ -237,7 +238,7 @@ impl<'instr> Parser<'instr> {
             String::from("Expected 'loop'."),
         )?;
 
-        self.throw_if_is_unreacheable_code();
+        self.throw_unreacheable_code();
 
         self.inside_a_loop = true;
 
@@ -261,7 +262,7 @@ impl<'instr> Parser<'instr> {
             String::from("Expected 'while'."),
         )?;
 
-        self.throw_if_is_unreacheable_code();
+        self.throw_unreacheable_code();
 
         let conditional: Instruction = self.expr()?;
 
@@ -286,11 +287,11 @@ impl<'instr> Parser<'instr> {
             String::from("Expected 'continue'."),
         )?;
 
-        self.throw_if_is_unreacheable_code();
+        self.throw_unreacheable_code();
 
         self.in_unreacheable_code = self.scope_position;
 
-        self.throw_if_not_inside_a_loop();
+        self.throw_outside_loop();
 
         self.consume(
             TokenKind::SemiColon,
@@ -308,11 +309,11 @@ impl<'instr> Parser<'instr> {
             String::from("Expected 'break'."),
         )?;
 
-        self.throw_if_is_unreacheable_code();
+        self.throw_unreacheable_code();
 
         self.in_unreacheable_code = self.scope_position;
 
-        self.throw_if_not_inside_a_loop();
+        self.throw_outside_loop();
 
         self.consume(
             TokenKind::SemiColon,
@@ -330,7 +331,7 @@ impl<'instr> Parser<'instr> {
             String::from("Expected 'match'."),
         )?;
 
-        self.throw_if_is_unreacheable_code();
+        self.throw_unreacheable_code();
 
         let mut start_pattern: Instruction = self.expr()?;
         let mut start_block: Instruction = Instruction::Block { stmts: Vec::new() };
@@ -463,7 +464,7 @@ impl<'instr> Parser<'instr> {
             );
         }
 
-        self.throw_if_is_unreacheable_code();
+        self.throw_unreacheable_code();
 
         let if_condition: Instruction = self.expr()?;
 
@@ -520,7 +521,7 @@ impl<'instr> Parser<'instr> {
     }
 
     fn build_enum(&mut self, declare: bool) -> Result<Instruction<'instr>, ThrushCompilerError> {
-        self.throw_if_is_unreacheable_code();
+        self.throw_unreacheable_code();
 
         self.consume(
             TokenKind::Enum,
@@ -611,16 +612,7 @@ impl<'instr> Parser<'instr> {
 
                 let expression: Instruction = self.expr()?;
 
-                if !expression.is_integer() && !expression.is_float() {
-                    return Err(ThrushCompilerError::Error(
-                        String::from("Attemping use JIT"),
-                        String::from(
-                            "The compiler does not accept runtime-only expressions until the Just-in-Time (JIT) compiler development is complete.",
-                        ),
-                        self.previous().line,
-                        Some(self.previous().span),
-                    ));
-                }
+                expression.throw_attemping_use_jit((self.previous().line, self.previous().span))?;
 
                 self.consume(
                     TokenKind::SemiColon,
@@ -671,7 +663,7 @@ impl<'instr> Parser<'instr> {
     }
 
     fn build_struct(&mut self, declare: bool) -> Result<Instruction<'instr>, ThrushCompilerError> {
-        self.throw_if_is_unreacheable_code();
+        self.throw_unreacheable_code();
 
         self.consume(
             TokenKind::Struct,
@@ -764,7 +756,7 @@ impl<'instr> Parser<'instr> {
     }
 
     fn build_constructor(&mut self) -> Result<Instruction<'instr>, ThrushCompilerError> {
-        self.throw_if_is_unreacheable_code();
+        self.throw_unreacheable_code();
 
         self.consume(
             TokenKind::New,
@@ -828,7 +820,7 @@ impl<'instr> Parser<'instr> {
 
                 let expression: Instruction = self.expr()?;
 
-                self.throw_if_is_structure_initializer(&expression);
+                self.throw_constructor(&expression);
 
                 let expression_type: Instruction = expression.get_type();
 
@@ -921,6 +913,8 @@ impl<'instr> Parser<'instr> {
 
         let const_value: Instruction = self.expr()?;
 
+        const_value.throw_attemping_use_jit((self.previous().line, self.previous().span))?;
+
         self.check_type_mismatch(
             const_type.clone(),
             const_value.get_type(),
@@ -952,7 +946,7 @@ impl<'instr> Parser<'instr> {
     }
 
     fn build_local(&mut self, comptime: bool) -> Result<Instruction<'instr>, ThrushCompilerError> {
-        self.throw_if_is_unreacheable_code();
+        self.throw_unreacheable_code();
 
         if self.is_main_scope() {
             self.push_error(
@@ -1034,7 +1028,7 @@ impl<'instr> Parser<'instr> {
     }
 
     fn build_return(&mut self) -> Result<Instruction<'instr>, ThrushCompilerError> {
-        self.throw_if_is_unreacheable_code();
+        self.throw_unreacheable_code();
 
         self.consume(
             TokenKind::Return,
@@ -1092,7 +1086,7 @@ impl<'instr> Parser<'instr> {
         &mut self,
         with_instrs: &mut [Instruction<'instr>],
     ) -> Result<Instruction<'instr>, ThrushCompilerError> {
-        self.throw_if_is_unreacheable_code();
+        self.throw_unreacheable_code();
 
         self.consume(
             TokenKind::LBrace,
@@ -1142,7 +1136,7 @@ impl<'instr> Parser<'instr> {
         &mut self,
         declare: bool,
     ) -> Result<Instruction<'instr>, ThrushCompilerError> {
-        self.throw_if_is_unreacheable_code();
+        self.throw_unreacheable_code();
 
         if self.scope_position != 0 {
             self.errors.push(ThrushCompilerError::Error(
@@ -1679,15 +1673,35 @@ impl<'instr> Parser<'instr> {
 
                 if self.match_token(TokenKind::Identifier)? {
                     let token: &Token = self.previous();
-                    let ref_name: &str = token.lexeme.to_str();
+                    let object_name: &str = token.lexeme.to_str();
                     let location: CodeLocation = (token.line, token.span);
 
-                    return self.build_local_ref(ref_name, location, true);
+                    let object: FoundObjectId =
+                        self.parser_objects.get_object_id(object_name, location)?;
+
+                    if object.is_constant() {
+                        let const_id: &str = object.expected_constant(location)?;
+
+                        let constant: Constant =
+                            self.parser_objects.get_const_by_id(const_id, location)?;
+
+                        return Ok(Instruction::LocalRef {
+                            name: object_name,
+                            kind: Box::new(constant.0),
+                            take: true,
+                            is_constant_ref: true,
+                            line: location.0,
+                        });
+                    }
+
+                    return self.build_local_ref(object_name, location, true);
                 }
 
                 return Err(ThrushCompilerError::Error(
                     String::from("Syntax error"),
-                    String::from("Take the value is only allowed by references."),
+                    String::from(
+                        "Take the value is only allowed by references of constants or locals.",
+                    ),
                     self.previous().line,
                     Some(self.previous().span),
                 ));
@@ -1840,7 +1854,7 @@ impl<'instr> Parser<'instr> {
 
                     let location: CodeLocation = (object_token.line, object_token.span);
 
-                    self.throw_if_is_unreacheable_code();
+                    self.throw_unreacheable_code();
 
                     if self.rec_structure_ref {
                         return Ok(Instruction::ComplexType(
@@ -1853,6 +1867,21 @@ impl<'instr> Parser<'instr> {
 
                     let object: FoundObjectId =
                         self.parser_objects.get_object_id(object_name, location)?;
+
+                    if object.is_constant() {
+                        let const_id: &str = object.expected_constant(location)?;
+
+                        let constant: Constant =
+                            self.parser_objects.get_const_by_id(const_id, location)?;
+
+                        return Ok(Instruction::LocalRef {
+                            name: object_name,
+                            kind: Box::new(constant.0),
+                            take: false,
+                            is_constant_ref: true,
+                            line: location.0,
+                        });
+                    }
 
                     if object.is_structure() {
                         return Ok(Instruction::ComplexType(
@@ -1990,6 +2019,7 @@ impl<'instr> Parser<'instr> {
             name,
             kind: Box::new(local_type.clone()),
             take: take_ptr,
+            is_constant_ref: false,
             line,
         };
 
@@ -2131,7 +2161,7 @@ impl<'instr> Parser<'instr> {
 
             let instruction: Instruction = self.expr()?;
 
-            self.throw_if_is_structure_initializer(&instruction);
+            self.throw_constructor(&instruction);
 
             args_provided.push(instruction);
         }
@@ -2213,6 +2243,15 @@ impl<'instr> Parser<'instr> {
         self.tokens
             .iter()
             .enumerate()
+            .filter(|(_, token)| token.kind.is_const_keyword())
+            .for_each(|(pos, _)| {
+                let _ = self.declare_const(pos);
+                self.current = 0;
+            });
+
+        self.tokens
+            .iter()
+            .enumerate()
             .filter(|(_, token)| token.kind.is_struct_keyword())
             .for_each(|(pos, _)| {
                 let _ = self.declare_struct(pos);
@@ -2252,6 +2291,13 @@ impl<'instr> Parser<'instr> {
         Ok(())
     }
 
+    fn declare_const(&mut self, position: usize) -> Result<(), ThrushCompilerError> {
+        self.current = position;
+        self.build_const(true)?;
+
+        Ok(())
+    }
+
     fn declare_function(&mut self, position: usize) -> Result<(), ThrushCompilerError> {
         self.current = position;
         self.build_function(true)?;
@@ -2267,7 +2313,7 @@ impl<'instr> Parser<'instr> {
 
     ########################################################################*/
 
-    fn throw_if_is_unreacheable_code(&mut self) {
+    fn throw_unreacheable_code(&mut self) {
         if self.in_unreacheable_code == self.scope_position && self.scope_position != 0 {
             self.push_error(
                 String::from("Syntax error"),
@@ -2276,7 +2322,7 @@ impl<'instr> Parser<'instr> {
         }
     }
 
-    fn throw_if_not_inside_a_loop(&mut self) {
+    fn throw_outside_loop(&mut self) {
         if !self.inside_a_loop {
             self.push_error(
                 String::from("Syntax error"),
@@ -2285,11 +2331,11 @@ impl<'instr> Parser<'instr> {
         }
     }
 
-    fn throw_if_is_structure_initializer(&mut self, instruction: &Instruction) {
+    fn throw_constructor(&mut self, instruction: &Instruction) {
         if matches!(instruction, Instruction::InitStruct { .. }) {
             self.push_error(
                 String::from("Syntax error"),
-                String::from("A structure initializer should be stored a variable."),
+                String::from("A constructor should be stored a local variable."),
             );
         }
     }

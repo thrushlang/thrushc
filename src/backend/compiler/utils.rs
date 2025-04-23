@@ -1,5 +1,7 @@
 use super::super::super::frontend::lexer::Type;
 
+use super::traits::AttributesExtensions;
+use super::types::ThrushAttributes;
 use super::{
     instruction::Instruction,
     objects::CompilerObjects,
@@ -7,12 +9,13 @@ use super::{
     types::{Structure, StructureFields},
 };
 
-use inkwell::types::BasicType;
+use inkwell::values::BasicValue;
 use inkwell::{
     AddressSpace,
     builder::Builder,
     context::Context,
     module::{Linkage, Module},
+    types::BasicType,
     types::{
         AnyTypeEnum, ArrayType, BasicMetadataTypeEnum, BasicTypeEnum, FloatType, FunctionType,
         IntType, StructType,
@@ -319,6 +322,32 @@ pub fn build_str_constant<'ctx>(
     global.set_initializer(&context.const_string(const_str, true));
     global.set_constant(true);
     global.set_unnamed_addr(true);
+
+    builder
+        .build_pointer_cast(
+            global.as_pointer_value(),
+            context.ptr_type(AddressSpace::default()),
+            "",
+        )
+        .unwrap()
+}
+
+pub fn build_global_constant<'ctx, Type: BasicType<'ctx>, Value: BasicValue<'ctx>>(
+    module: &Module<'ctx>,
+    builder: &Builder<'ctx>,
+    context: &'ctx Context,
+    llvm_type: Type,
+    attributes: &'ctx ThrushAttributes<'ctx>,
+    value: Value,
+) -> PointerValue<'ctx> {
+    let global: GlobalValue = module.add_global(llvm_type, Some(AddressSpace::default()), "");
+
+    if !attributes.contain_public_attribute() {
+        global.set_linkage(Linkage::LinkerPrivate)
+    }
+
+    global.set_initializer(&value);
+    global.set_constant(true);
 
     builder
         .build_pointer_cast(

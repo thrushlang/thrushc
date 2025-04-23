@@ -17,10 +17,10 @@ pub enum CallConvention {
     // High-Performance Erlang Compiler (HiPE).
     HiPE = 11,
 
-    // Runtime calls that preserves most registers
+    // Preserves most caller-saved registers, balancing performance and compatibility.
     PreserveMost = 14,
 
-    // Runtime calls that preserves (almost) all registers
+    // Preserves all caller-saved registers, ensuring maximum compatibility but with higher overhead.
     PreserveAll = 15,
 
     // Swift.

@@ -35,6 +35,7 @@ pub type FoundObjectId<'instr> = (
     Option<&'instr str>,
     Option<&'instr str>,
     Option<&'instr str>,
+    Option<&'instr str>,
     Option<(&'instr str, usize)>,
 );
 
@@ -63,22 +64,26 @@ impl<'instr> ParserObjects<'instr> {
         name: &'instr str,
         location: CodeLocation,
     ) -> Result<FoundObjectId<'instr>, ThrushCompilerError> {
+        if self.constants.contains_key(name) {
+            return Ok((None, None, None, Some(name), None));
+        }
+
         for (idx, scope) in self.locals.iter().enumerate().rev() {
             if scope.contains_key(name) {
-                return Ok((None, None, None, Some((name, idx))));
+                return Ok((None, None, None, None, Some((name, idx))));
             }
         }
 
         if self.structs.contains_key(name) {
-            return Ok((Some(name), None, None, None));
+            return Ok((Some(name), None, None, None, None));
         }
 
         if self.enums.contains_key(name) {
-            return Ok((None, None, Some(name), None));
+            return Ok((None, None, Some(name), None, None));
         }
 
         if self.functions.contains_key(name) {
-            return Ok((None, Some(name), None, None));
+            return Ok((None, Some(name), None, None, None));
         }
 
         Err(ThrushCompilerError::Error(
@@ -137,8 +142,26 @@ impl<'instr> ParserObjects<'instr> {
         }
 
         Err(ThrushCompilerError::Error(
-            String::from("Expected function reference"),
-            String::from("Expected function but found something else."),
+            String::from("Expected local reference"),
+            String::from("Expected local but found something else."),
+            location.0,
+            Some(location.1),
+        ))
+    }
+
+    #[inline]
+    pub fn get_const_by_id(
+        &self,
+        const_id: &'instr str,
+        location: CodeLocation,
+    ) -> Result<Constant<'instr>, ThrushCompilerError> {
+        if let Some(constant) = self.constants.get(const_id).cloned() {
+            return Ok(constant);
+        }
+
+        Err(ThrushCompilerError::Error(
+            String::from("Expected constant reference"),
+            String::from("Expected constant but found something else."),
             location.0,
             Some(location.1),
         ))

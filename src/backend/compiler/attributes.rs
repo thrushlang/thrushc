@@ -35,6 +35,11 @@ impl LLVMAttribute<'_> {
     pub const fn is_ignore_attribute(&self) -> bool {
         matches!(self, LLVMAttribute::Ignore)
     }
+
+    #[inline(always)]
+    pub const fn is_public_attribute(&self) -> bool {
+        matches!(self, LLVMAttribute::Public(_))
+    }
 }
 
 pub enum LLVMAttributeApplicant<'ctx> {

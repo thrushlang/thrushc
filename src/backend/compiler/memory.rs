@@ -29,6 +29,7 @@ pub struct AllocatedObject<'ctx> {
     pub ptr: PointerValue<'ctx>,
     pub memory_flags: u8,
     pub kind: &'ctx Instruction<'ctx>,
+    pub is_constant: bool,
 }
 
 impl<'ctx> AllocatedObject<'ctx> {
@@ -36,6 +37,7 @@ impl<'ctx> AllocatedObject<'ctx> {
         ptr: PointerValue<'ctx>,
         flags: &[MemoryFlag],
         kind: &'ctx Instruction<'ctx>,
+        is_constant: bool,
     ) -> Self {
         let mut memory_flags: u8 = 0;
 
@@ -47,6 +49,7 @@ impl<'ctx> AllocatedObject<'ctx> {
             ptr,
             memory_flags,
             kind,
+            is_constant,
         }
     }
 
@@ -55,7 +58,9 @@ impl<'ctx> AllocatedObject<'ctx> {
         builder: &Builder<'ctx>,
         llvm_type: Type,
     ) -> BasicValueEnum<'ctx> {
-        if self.has_flag(MemoryFlag::StackAllocated) {
+        if self.has_flag(MemoryFlag::StackAllocated)
+            || self.has_flag(MemoryFlag::StaticAllocated) && self.is_constant
+        {
             let load: BasicValueEnum = builder.build_load(llvm_type, self.ptr, "").unwrap();
 
             if let Some(load_instruction) = load.as_instruction_value() {

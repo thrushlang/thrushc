@@ -22,6 +22,10 @@ impl AttributesExtensions for ThrushAttributes<'_> {
     fn contain_ignore_attribute(&self) -> bool {
         self.iter().any(|attr| attr.is_ignore_attribute())
     }
+
+    fn contain_public_attribute(&self) -> bool {
+        self.iter().any(|attr| attr.is_public_attribute())
+    }
 }
 
 impl MemoryFlagsBasics for MemoryFlags {

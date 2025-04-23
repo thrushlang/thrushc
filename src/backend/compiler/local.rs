@@ -35,7 +35,7 @@ pub fn build<'ctx>(
         );
 
         let allocated_object: AllocatedObject =
-            AllocatedObject::alloc(allocated_pointer, &local.3, local_type);
+            AllocatedObject::alloc(allocated_pointer, &local.3, local_type, false);
 
         compiler_objects.alloc_local_object(local.0, allocated_object);
 
@@ -66,7 +66,7 @@ pub fn build<'ctx>(
         );
 
         let mut allocated_object: AllocatedObject =
-            AllocatedObject::alloc(allocated_pointer, &local.3, local_type);
+            AllocatedObject::alloc(allocated_pointer, &local.3, local_type, false);
 
         build_local_structure(
             module,
@@ -86,7 +86,7 @@ pub fn build<'ctx>(
         let allocated_pointer: PointerValue = utils::build_ptr(context, builder, local_basic_type);
 
         let allocated_object: AllocatedObject =
-            AllocatedObject::alloc(allocated_pointer, &local.3, local_type);
+            AllocatedObject::alloc(allocated_pointer, &local.3, local_type, false);
 
         compiler_objects.alloc_local_object(local.0, allocated_object);
 
@@ -108,7 +108,7 @@ pub fn build<'ctx>(
         let allocated_pointer: PointerValue = utils::build_ptr(context, builder, local_basic_type);
 
         let allocated_object: AllocatedObject =
-            AllocatedObject::alloc(allocated_pointer, &local.3, local_type);
+            AllocatedObject::alloc(allocated_pointer, &local.3, local_type, false);
 
         compiler_objects.alloc_local_object(local.0, allocated_object);
 
@@ -129,7 +129,7 @@ pub fn build<'ctx>(
 
         let allocated_pointer: PointerValue = utils::build_ptr(context, builder, local_basic_type);
         let allocated_object: AllocatedObject =
-            AllocatedObject::alloc(allocated_pointer, &local.3, local_type);
+            AllocatedObject::alloc(allocated_pointer, &local.3, local_type, false);
 
         compiler_objects.alloc_local_object(local.0, allocated_object);
 
@@ -389,6 +389,7 @@ fn build_local_str<'ctx>(
             str_compiled,
             &[MemoryFlag::StaticAllocated],
             &Instruction::ComplexType(Type::Str, "", None, None),
+            false,
         );
 
         compiler_objects.alloc_local_object(name, allocated_object);
@@ -408,7 +409,7 @@ fn build_local_str<'ctx>(
         .into_pointer_value();
 
         let allocated_object: AllocatedObject =
-            AllocatedObject::alloc(refvar, &[MemoryFlag::StaticAllocated], kind);
+            AllocatedObject::alloc(refvar, &[MemoryFlag::StaticAllocated], kind, false);
 
         compiler_objects.alloc_local_object(name, allocated_object);
 
@@ -436,6 +437,7 @@ fn build_local_str<'ctx>(
             call,
             &[MemoryFlag::StaticAllocated],
             &Instruction::ComplexType(Type::Str, "", None, None),
+            false,
         );
 
         compiler_objects.alloc_local_object(name, allocated_object);

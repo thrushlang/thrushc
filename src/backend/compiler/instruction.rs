@@ -7,7 +7,7 @@ use super::{
         common::error::ThrushCompilerError,
         frontend::{
             lexer::{TokenKind, Type},
-            types::Constructor,
+            types::{CodeLocation, Constructor},
         },
     },
     memory::MemoryFlag,
@@ -167,6 +167,7 @@ pub enum Instruction<'ctx> {
         name: &'ctx str,
         kind: Box<Instruction<'ctx>>,
         take: bool,
+        is_constant_ref: bool,
         line: usize,
     },
     LocalMut {
@@ -446,6 +447,24 @@ impl<'ctx> Instruction<'ctx> {
         };
 
         Instruction::ComplexType(narrowed_type, instruction_structure_type, None, None)
+    }
+
+    pub fn throw_attemping_use_jit(
+        &self,
+        location: CodeLocation,
+    ) -> Result<(), ThrushCompilerError> {
+        if !self.is_integer() && !self.is_float() {
+            return Err(ThrushCompilerError::Error(
+                String::from("Attemping use JIT"),
+                String::from(
+                    "The compiler does not accept runtime-only expressions until the Just-in-Time (JIT) compiler development is complete.",
+                ),
+                location.0,
+                Some(location.1),
+            ));
+        }
+
+        Ok(())
     }
 }
 

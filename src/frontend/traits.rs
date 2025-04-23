@@ -27,6 +27,7 @@ pub trait EnumExtensions<'a> {
 }
 
 pub trait FoundObjectExtensions {
+    fn is_constant(&self) -> bool;
     fn is_local(&self) -> bool;
     fn is_structure(&self) -> bool;
     fn is_enum(&self) -> bool;
@@ -40,6 +41,8 @@ pub trait StructureExtensions<'a> {
 }
 
 pub trait FoundObjectEither<'instr> {
+    fn expected_constant(&self, location: CodeLocation)
+    -> Result<&'instr str, ThrushCompilerError>;
     fn expected_local(
         &self,
         location: CodeLocation,

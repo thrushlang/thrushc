@@ -7,6 +7,7 @@ use {
     ahash::AHashMap as HashMap,
 };
 
+const CONSTANTS_MINIMAL_CAPACITY: usize = 255;
 const STRUCTURE_MINIMAL_CAPACITY: usize = 255;
 const FUNCTION_MINIMAL_CAPACITY: usize = 255;
 
@@ -14,6 +15,7 @@ const SCOPE_MINIMAL_CAPACITY: usize = 155;
 
 #[derive(Debug)]
 pub struct CompilerObjects<'ctx> {
+    pub constants: HashMap<&'ctx str, AllocatedObject<'ctx>>,
     pub structs: HashMap<&'ctx str, Structure<'ctx>>,
     pub functions: HashMap<&'ctx str, Function<'ctx>>,
     pub blocks: Vec<HashMap<&'ctx str, AllocatedObject<'ctx>>>,
@@ -23,6 +25,7 @@ pub struct CompilerObjects<'ctx> {
 impl<'ctx> CompilerObjects<'ctx> {
     pub fn new() -> Self {
         Self {
+            constants: HashMap::with_capacity(CONSTANTS_MINIMAL_CAPACITY),
             structs: HashMap::with_capacity(STRUCTURE_MINIMAL_CAPACITY),
             functions: HashMap::with_capacity(FUNCTION_MINIMAL_CAPACITY),
             blocks: Vec::with_capacity(SCOPE_MINIMAL_CAPACITY),
@@ -49,13 +52,18 @@ impl<'ctx> CompilerObjects<'ctx> {
     }
 
     #[inline]
-    pub fn insert_function(&mut self, name: &'ctx str, function: Function<'ctx>) {
-        self.functions.insert(name, function);
+    pub fn insert_structure(&mut self, name: &'ctx str, structure: Structure<'ctx>) {
+        self.structs.insert(name, structure);
     }
 
     #[inline]
-    pub fn insert_structure(&mut self, name: &'ctx str, structure: Structure<'ctx>) {
-        self.structs.insert(name, structure);
+    pub fn insert_constant_object(&mut self, name: &'ctx str, object: AllocatedObject<'ctx>) {
+        self.constants.insert(name, object);
+    }
+
+    #[inline]
+    pub fn insert_function(&mut self, name: &'ctx str, function: Function<'ctx>) {
+        self.functions.insert(name, function);
     }
 
     #[inline]
@@ -70,6 +78,10 @@ impl<'ctx> CompilerObjects<'ctx> {
 
     #[inline]
     pub fn get_allocated_object(&self, name: &str) -> AllocatedObject<'ctx> {
+        if let Some(constant) = self.constants.get(name) {
+            return *constant;
+        }
+
         for position in (0..self.scope_position).rev() {
             if let Some(allocated_object) = self.blocks[position].get(name) {
                 return *allocated_object;
