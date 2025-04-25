@@ -109,17 +109,6 @@ impl<'ctx> ThrushScoper<'ctx> {
             return Ok(());
         }
 
-        if let Instruction::Block { stmts, .. } = instr {
-            stmts
-                .iter()
-                .try_for_each(|instr| match self.analyze_instruction(instr, depth) {
-                    Ok(()) => Ok(()),
-                    Err(e) => Err(e),
-                })?;
-
-            return Ok(());
-        }
-
         Ok(())
     }
 

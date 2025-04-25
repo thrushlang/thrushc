@@ -14,10 +14,11 @@ use super::{
     local,
     memory::{AllocatedObject, MemoryFlag},
     objects::CompilerObjects,
-    traits::CompilerStructureFieldsExtensions,
-    types::{FunctionParameter, MemoryFlags, Structure, StructureFields},
+    typegen,
+    types::{FunctionParameter, MemoryFlags},
     unaryop, utils,
 };
+use super::{memory, valuegen};
 
 use inkwell::{
     AddressSpace,
@@ -26,7 +27,7 @@ use inkwell::{
     context::Context,
     module::{Linkage, Module},
     targets::TargetData,
-    types::{FunctionType, StructType},
+    types::FunctionType,
     values::{BasicValueEnum, FunctionValue, GlobalValue, IntValue, PointerValue},
 };
 
@@ -391,7 +392,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                 ..
             } => {
                 let site_allocation_flag: MemoryFlag =
-                    self.generate_site_allocation_flag(instruction);
+                    memory::generate_site_allocation_flag(self.context, &self.target_data, kind);
 
                 self.build_function_parameter((name, kind, *position, [site_allocation_flag]));
 
@@ -413,10 +414,8 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                 Instruction::Null
             }
 
-            Instruction::Return(return_instruction, kind) => {
+            Instruction::Return(kind, value) => {
                 self.deallocators_emited = true;
-
-                let basic_type: &Type = kind.get_basic_type();
 
                 let deallocator: Deallocator = Deallocator::new(
                     self.builder,
@@ -424,21 +423,21 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                     self.compiler_objects.get_allocated_objects(),
                 );
 
-                deallocator.dealloc(return_instruction, &self.compiler_objects);
+                deallocator.dealloc(value, &self.compiler_objects);
 
                 generation::build_expression(
                     self.module,
                     self.builder,
                     self.context,
                     instruction,
-                    basic_type,
+                    kind,
                     &mut self.compiler_objects,
                 );
 
                 Instruction::Null
             }
 
-            Instruction::Str(_) => Instruction::LLVMValue(generation::build_expression(
+            Instruction::Str(_, _) => Instruction::LLVMValue(generation::build_expression(
                 self.module,
                 self.builder,
                 self.context,
@@ -458,7 +457,8 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                     return Instruction::Null;
                 }
 
-                let site_allocation_flag: MemoryFlag = self.generate_site_allocation_flag(value);
+                let site_allocation_flag: MemoryFlag =
+                    memory::generate_site_allocation_flag(self.context, &self.target_data, kind);
 
                 local::build(
                     self.module,
@@ -472,7 +472,8 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
             }
 
             Instruction::LocalMut { name, kind, value } => {
-                let site_allocation_flag: MemoryFlag = self.generate_site_allocation_flag(value);
+                let site_allocation_flag: MemoryFlag =
+                    memory::generate_site_allocation_flag(self.context, &self.target_data, kind);
 
                 local::build_local_mutation(
                     self.module,
@@ -489,11 +490,9 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                 op,
                 left,
                 right,
-                kind,
+                kind: binaryop_type,
                 ..
             } => {
-                let binaryop_type: &Type = kind.get_basic_type();
-
                 if binaryop_type.is_integer_type() {
                     return Instruction::LLVMValue(binaryop::integer::compile_integer_binaryop(
                         self.module,
@@ -532,13 +531,13 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
 
             Instruction::UnaryOp {
                 op,
-                expression,
                 kind,
+                expression,
                 ..
             } => Instruction::LLVMValue(unaryop::compile_unary_op(
                 self.builder,
                 self.context,
-                (op, expression, kind),
+                (op, kind, expression),
                 &self.compiler_objects,
             )),
 
@@ -570,26 +569,26 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                 Instruction::Null
             }
 
-            Instruction::LocalRef {
-                kind: localref_type,
-                ..
-            } => Instruction::LLVMValue(generation::build_expression(
-                self.module,
-                self.builder,
-                self.context,
-                instruction,
-                localref_type.get_basic_type(),
-                &mut self.compiler_objects,
-            )),
+            Instruction::LocalRef { kind: ref_type, .. }
+            | Instruction::ConstRef { kind: ref_type, .. } => {
+                Instruction::LLVMValue(generation::build_expression(
+                    self.module,
+                    self.builder,
+                    self.context,
+                    instruction,
+                    ref_type,
+                    &mut self.compiler_objects,
+                ))
+            }
 
-            Instruction::Boolean(bool) => Instruction::LLVMValue(
+            Instruction::Boolean(_, bool) => Instruction::LLVMValue(
                 self.context
                     .bool_type()
                     .const_int(*bool as u64, false)
                     .into(),
             ),
 
-            Instruction::GEP { .. } => Instruction::LLVMValue(generation::build_expression(
+            Instruction::Address { .. } => Instruction::LLVMValue(generation::build_expression(
                 self.module,
                 self.builder,
                 self.context,
@@ -598,11 +597,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                 &mut self.compiler_objects,
             )),
 
-            Instruction::Const { .. } => Instruction::Null,
-            Instruction::Struct { .. } => Instruction::Null,
-            Instruction::Null => Instruction::Null,
-            Instruction::Comptime => Instruction::Null,
-
+            Instruction::Null | Instruction::Const { .. } => Instruction::Null,
             e => {
                 println!("{:?}", e);
                 todo!()
@@ -623,8 +618,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
 
     fn build_function_parameter(&mut self, parameter: FunctionParameter<'ctx>) {
         let parameter_name: &str = parameter.0;
-        let parameter_type: &Instruction = parameter.1;
-        let parameter_basic_type: &Type = parameter.1.get_basic_type();
+        let parameter_type: &Type = parameter.1;
         let parameter_position: u32 = parameter.2;
 
         let memory_flags: MemoryFlags = parameter.3;
@@ -635,59 +629,24 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
             .get_nth_param(parameter_position)
             .unwrap();
 
-        if parameter_basic_type.is_stack_allocated() {
-            let allocated_stack_pointer: PointerValue =
-                utils::build_ptr(self.context, self.builder, parameter_basic_type);
+        let allocated_stack_pointer: PointerValue = valuegen::alloc(
+            self.context,
+            self.builder,
+            parameter_type,
+            parameter_type.is_stack_allocated(),
+        );
 
-            let allocated_object: AllocatedObject = AllocatedObject::alloc(
-                allocated_stack_pointer,
-                &memory_flags,
-                parameter_type,
-                false,
-            );
+        let allocated_object: AllocatedObject =
+            AllocatedObject::alloc(allocated_stack_pointer, &memory_flags, parameter_type);
 
-            allocated_object.build_store(self.builder, llvm_parameter_value);
+        allocated_object.build_store(self.builder, llvm_parameter_value);
 
-            self.compiler_objects
-                .alloc_local_object(parameter_name, allocated_object);
-
-            return;
-        }
-
-        if parameter_basic_type.is_struct_type() {
-            let parameter_structure_type: &str = parameter.1.get_structure_type();
-
-            let structure: &Structure = self.compiler_objects.get_struct(parameter_structure_type);
-            let structure_fields: &StructureFields = &structure.1;
-
-            let llvm_structure_type: StructType =
-                utils::build_struct_type_from_fields(self.context, structure_fields);
-
-            let allocated_pointer: PointerValue = if structure_fields
-                .contain_recursive_structure_type(&self.compiler_objects, parameter_structure_type)
-            {
-                self.builder.build_malloc(llvm_structure_type, "").unwrap()
-            } else {
-                self.builder.build_alloca(llvm_structure_type, "").unwrap()
-            };
-
-            let allocated_object: AllocatedObject =
-                AllocatedObject::alloc(allocated_pointer, &memory_flags, parameter_type, false);
-
-            allocated_object.build_store(self.builder, llvm_parameter_value);
-
-            self.compiler_objects
-                .alloc_local_object(parameter_name, allocated_object);
-        }
+        self.compiler_objects
+            .alloc_local_object(parameter_name, allocated_object);
     }
 
     fn declare(&mut self) {
         self.instructions.iter().for_each(|instruction| {
-            if let Instruction::Struct { name, fields_types } = instruction {
-                self.compiler_objects
-                    .insert_structure(name, (name, fields_types.clone()));
-            }
-
             if instruction.is_function() {
                 self.declare_function(instruction);
             }
@@ -708,25 +667,20 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                     self.builder,
                     self.context,
                     value,
-                    kind.get_basic_type(),
+                    kind,
                     &mut self.compiler_objects,
                 );
 
                 let constant_ptr: PointerValue = utils::build_global_constant(
                     self.module,
-                    self.builder,
-                    self.context,
+                    name,
                     compiled_value.get_type(),
-                    attributes,
                     compiled_value,
+                    attributes,
                 );
 
-                let allocated_object: AllocatedObject = AllocatedObject::alloc(
-                    constant_ptr,
-                    &[MemoryFlag::StaticAllocated],
-                    kind,
-                    true,
-                );
+                let allocated_object: AllocatedObject =
+                    AllocatedObject::alloc(constant_ptr, &[MemoryFlag::StaticAllocated], kind);
 
                 self.compiler_objects
                     .insert_constant_object(name, allocated_object);
@@ -738,7 +692,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
         let function: FunctionPrototype = instruction.as_function();
 
         let function_name: &str = function.0;
-        let function_type: &Instruction = function.1;
+        let function_type: &Type = function.1;
         let function_parameters: &[Instruction] = function.2;
         let function_attributes: &[LLVMAttribute] = function.4;
 
@@ -768,9 +722,8 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
             function_name
         };
 
-        let function_type: FunctionType = utils::type_to_function_type(
+        let function_type: FunctionType = typegen::function_type(
             self.context,
-            &self.compiler_objects,
             function_type,
             function_parameters,
             ignore_args,
@@ -803,8 +756,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
     fn build_function(&mut self, function: FunctionPrototype<'ctx>) {
         let function_name: &str = function.0;
 
-        let function_type: &Instruction = function.1;
-        let function_basic_type: &Type = function_type.get_basic_type();
+        let function_type: &Type = function.1;
 
         let function_body: Option<&Box<Instruction>> = function.3;
 
@@ -816,68 +768,9 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
 
         self.codegen(function_body.unwrap());
 
-        if function_basic_type.is_void_type() {
+        if function_type.is_void_type() {
             self.builder.build_return(None).unwrap();
         }
-    }
-
-    fn generate_site_allocation_flag(&self, instruction: &'ctx Instruction) -> MemoryFlag {
-        const MAX_STACK_SIZE_OF_STRUCTURE: u64 = 128;
-
-        let mut alloc_site_memory_flag: MemoryFlag = MemoryFlag::StackAllocated;
-
-        if let Instruction::InitStruct { name, .. } = instruction {
-            let mut structure_memory_size: u64 = 0;
-
-            let structure: &Structure = self.compiler_objects.get_struct(name);
-            let structure_fields: &StructureFields = &structure.1;
-
-            structure_fields.iter().for_each(|field| {
-                let field_basic_type: &Type = field.1.get_basic_type();
-
-                structure_memory_size += self.target_data.get_abi_size(
-                    &utils::type_to_any_type_enum(self.context, field_basic_type),
-                );
-            });
-
-            if structure_fields.contain_recursive_structure_type(&self.compiler_objects, name)
-                || structure_memory_size >= MAX_STACK_SIZE_OF_STRUCTURE
-            {
-                alloc_site_memory_flag = MemoryFlag::HeapAllocated;
-            } else {
-                alloc_site_memory_flag = MemoryFlag::StackAllocated;
-            }
-        }
-
-        if let Instruction::FunctionParameter { kind, .. } = instruction {
-            if kind.get_basic_type().is_struct_type() {
-                let structure_type: &str = kind.get_structure_type();
-
-                let mut structure_memory_size: u64 = 0;
-
-                let structure: &Structure = self.compiler_objects.get_struct(structure_type);
-                let structure_fields: &StructureFields = &structure.1;
-
-                structure_fields.iter().for_each(|field| {
-                    let field_basic_type: &Type = field.1.get_basic_type();
-
-                    structure_memory_size += self.target_data.get_abi_size(
-                        &utils::type_to_any_type_enum(self.context, field_basic_type),
-                    );
-                });
-
-                if structure_fields
-                    .contain_recursive_structure_type(&self.compiler_objects, structure_type)
-                    || structure_memory_size >= MAX_STACK_SIZE_OF_STRUCTURE
-                {
-                    alloc_site_memory_flag = MemoryFlag::HeapAllocated;
-                } else {
-                    alloc_site_memory_flag = MemoryFlag::StackAllocated;
-                }
-            }
-        }
-
-        alloc_site_memory_flag
     }
 
     fn declare_basics(&mut self) {

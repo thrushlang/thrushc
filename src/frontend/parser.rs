@@ -1,7 +1,9 @@
 use super::super::backend::compiler::types::EnumField;
 
-use super::objects::Constant;
-use super::traits::EnumExtensions;
+use super::traits::CustomTypeFieldsExtensions;
+use super::utils;
+use super::{objects::Constant, traits::EnumExtensions};
+
 use super::{
     lexer::{Token, TokenKind, Type},
     objects::{FoundObjectId, Function, Functions, Local, ParserObjects, Struct},
@@ -21,8 +23,8 @@ use super::super::{
         conventions::CallConvention,
         instruction::Instruction,
         misc::CompilerFile,
-        traits::AttributesExtensions,
-        types::{EnumFields, ThrushAttributes},
+        traits::{AttributesExtensions, ConstructorExtensions, StructFieldsExtensions},
+        types::{CustomType, CustomTypeFields, EnumFields, StructFields, ThrushAttributes},
     },
     common::{
         constants::MINIMAL_ERROR_CAPACITY, diagnostic::Diagnostician, error::ThrushCompilerError,
@@ -33,6 +35,7 @@ use super::super::{
 
 use ahash::AHashMap as HashMap;
 use lazy_static::lazy_static;
+use std::sync::Arc;
 use std::{mem, process};
 
 const MINIMAL_STATEMENT_CAPACITY: usize = 100_000;
@@ -66,8 +69,8 @@ pub struct Parser<'instr> {
     errors: Vec<ThrushCompilerError>,
 
     // Type management
-    in_function_type: Instruction<'instr>,
-    in_local_type: Instruction<'instr>,
+    in_function_type: Type,
+    in_local_type: Type,
     in_unreacheable_code: usize,
 
     // Scope control
@@ -98,8 +101,8 @@ impl<'instr> Parser<'instr> {
             current: 0,
             inside_a_function: false,
             inside_a_loop: false,
-            in_function_type: Instruction::Null,
-            in_local_type: Instruction::Null,
+            in_function_type: Type::Void,
+            in_local_type: Type::Void,
             rec_structure_ref: false,
             in_unreacheable_code: 0,
             scope_position: 0,
@@ -140,6 +143,7 @@ impl<'instr> Parser<'instr> {
 
     fn parse(&mut self) -> Result<Instruction<'instr>, ThrushCompilerError> {
         match &self.peek().kind {
+            TokenKind::Type => Ok(self.build_custom_type(false)?),
             TokenKind::Struct => Ok(self.build_struct(false)?),
             TokenKind::Enum => Ok(self.build_enum(false)?),
             TokenKind::Fn => Ok(self.build_function(false)?),
@@ -148,6 +152,7 @@ impl<'instr> Parser<'instr> {
             TokenKind::Return => Ok(self.build_return()?),
             TokenKind::Const => Ok(self.build_const(false)?),
             TokenKind::Local => Ok(self.build_local(false)?),
+            TokenKind::Instr => Ok(self.build_instr()?),
             TokenKind::For => Ok(self.build_for_loop()?),
             TokenKind::New => Ok(self.build_constructor()?),
             TokenKind::If => Ok(self.build_if_elif_else()?),
@@ -203,11 +208,7 @@ impl<'instr> Parser<'instr> {
 
         let conditional: Instruction = self.expression()?;
 
-        self.check_type_mismatch(
-            Instruction::ComplexType(Type::Bool, "", None, None),
-            conditional.get_type(),
-            None,
-        );
+        self.check_type_mismatch(Type::Bool, conditional.get_type().clone(), None);
 
         let actions: Instruction = self.expression()?;
 
@@ -267,8 +268,8 @@ impl<'instr> Parser<'instr> {
         let conditional: Instruction = self.expr()?;
 
         self.check_type_mismatch(
-            Instruction::ComplexType(Type::Bool, "", None, None),
-            conditional.get_type(),
+            Type::Bool,
+            conditional.get_type().clone(),
             Some(&conditional),
         );
 
@@ -347,11 +348,7 @@ impl<'instr> Parser<'instr> {
 
             let pattern: Instruction = self.expr()?;
 
-            self.check_type_mismatch(
-                Instruction::ComplexType(Type::Bool, "", None, None),
-                pattern.get_type(),
-                Some(&pattern),
-            );
+            self.check_type_mismatch(Type::Bool, pattern.get_type().clone(), Some(&pattern));
 
             self.consume(
                 TokenKind::ColonColon,
@@ -402,8 +399,8 @@ impl<'instr> Parser<'instr> {
 
         if start_block.has_instruction() {
             self.check_type_mismatch(
-                Instruction::ComplexType(Type::Bool, "", None, None),
-                start_pattern.get_type(),
+                Type::Bool,
+                start_pattern.get_type().clone(),
                 Some(&start_pattern),
             );
         }
@@ -468,7 +465,7 @@ impl<'instr> Parser<'instr> {
 
         let if_condition: Instruction = self.expr()?;
 
-        if !if_condition.get_basic_type().is_bool_type() {
+        if !if_condition.get_type().is_bool_type() {
             self.push_error(
                 String::from("Syntax error"),
                 String::from("Condition must be type boolean."),
@@ -483,8 +480,8 @@ impl<'instr> Parser<'instr> {
             let elif_condition: Instruction = self.expr()?;
 
             self.check_type_mismatch(
-                Instruction::ComplexType(Type::Bool, "", None, None),
-                elif_condition.get_type(),
+                Type::Bool,
+                elif_condition.get_type().clone(),
                 Some(&elif_condition),
             );
 
@@ -518,6 +515,76 @@ impl<'instr> Parser<'instr> {
             elfs,
             otherwise,
         })
+    }
+
+    fn build_custom_type(
+        &mut self,
+        declare: bool,
+    ) -> Result<Instruction<'instr>, ThrushCompilerError> {
+        self.throw_unreacheable_code();
+
+        self.consume(
+            TokenKind::Type,
+            String::from("Syntax error"),
+            String::from("Expected 'type'."),
+        )?;
+
+        let name: &Token = self.consume(
+            TokenKind::Identifier,
+            String::from("Syntax error"),
+            String::from("Expected type name."),
+        )?;
+
+        let custom_type_name: &str = name.lexeme.to_str();
+
+        self.consume(
+            TokenKind::Eq,
+            String::from("Syntax error"),
+            String::from("Expected '='."),
+        )?;
+
+        let custom_type_attributes: ThrushAttributes =
+            self.build_compiler_attributes(&[TokenKind::LBrace])?;
+
+        self.consume(
+            TokenKind::LBrace,
+            String::from("Syntax error"),
+            String::from("Expected '{'."),
+        )?;
+
+        let mut custom_type_fields: CustomTypeFields = Vec::with_capacity(10);
+
+        while self.peek().kind != TokenKind::RBrace {
+            if self.match_token(TokenKind::Comma)? {
+                continue;
+            }
+
+            let kind: Type = self.build_type(Some(TokenKind::SemiColon))?;
+
+            custom_type_fields.push(kind);
+        }
+
+        self.consume(
+            TokenKind::RBrace,
+            String::from("Syntax error"),
+            String::from("Expected '}'."),
+        )?;
+
+        self.consume(
+            TokenKind::SemiColon,
+            String::from("Syntax error"),
+            String::from("Expected ';'."),
+        )?;
+
+        if declare {
+            self.parser_objects.insert_new_custom_type(
+                custom_type_name,
+                (custom_type_fields, custom_type_attributes),
+                (name.line, name.span),
+            )?;
+        }
+
+        Ok(Instruction::Null)
     }
 
     fn build_enum(&mut self, declare: bool) -> Result<Instruction<'instr>, ThrushCompilerError> {
@@ -556,8 +623,6 @@ impl<'instr> Parser<'instr> {
 
             if self.match_token(TokenKind::Identifier)? {
                 let name: &str = self.previous().lexeme.to_str();
-                let line: usize = self.previous().line;
-                let span: (usize, usize) = self.previous().span;
 
                 self.consume(
                     TokenKind::Colon,
@@ -565,40 +630,30 @@ impl<'instr> Parser<'instr> {
                     String::from("Expected ':'."),
                 )?;
 
-                let field_type: Instruction = self.expr()?;
+                let field_type: Type = self.build_type(None)?;
 
-                field_type.expected_type(line, span)?;
-
-                let field_basic_type: &Type = field_type.get_basic_type();
-
-                let field_type: Instruction =
-                    Instruction::ComplexType(*field_basic_type, "", None, None);
-
-                if !field_basic_type.is_integer_type() && !field_basic_type.is_float_type() {
+                if !field_type.is_integer_type()
+                    && !field_type.is_float_type()
+                    && !field_type.is_bool_type()
+                {
                     return Err(ThrushCompilerError::Error(
                         String::from("Syntax error"),
-                        String::from("Expected integer or floating-point types."),
+                        String::from("Expected integer, boolean or floating-point types."),
                         self.previous().line,
                         Some(self.previous().span),
                     ));
                 }
 
                 if self.match_token(TokenKind::SemiColon)? {
-                    let field_value: Instruction = if field_basic_type.is_float_type() {
-                        Instruction::Float(
-                            Box::new(Instruction::ComplexType(*field_basic_type, "", None, None)),
-                            index,
-                            false,
-                        )
+                    let field_value: Instruction = if field_type.is_float_type() {
+                        Instruction::Float(field_type.clone(), index, false)
+                    } else if field_type.is_bool_type() {
+                        Instruction::Boolean(Type::Bool, index != 0.0)
                     } else {
-                        Instruction::Integer(
-                            Box::new(Instruction::ComplexType(*field_basic_type, "", None, None)),
-                            index,
-                            false,
-                        )
+                        Instruction::Integer(field_type.clone(), index, false)
                     };
 
-                    enum_fields.push((name, field_type, field_value));
+                    enum_fields.push((name, field_value));
                     index += 1.0;
 
                     continue;
@@ -621,12 +676,12 @@ impl<'instr> Parser<'instr> {
                 )?;
 
                 self.check_type_mismatch(
-                    field_type.get_type(),
-                    expression.get_type(),
+                    field_type,
+                    expression.get_type().clone(),
                     Some(&expression),
                 );
 
-                enum_fields.push((name, field_type, expression));
+                enum_fields.push((name, expression));
 
                 continue;
             }
@@ -659,7 +714,7 @@ impl<'instr> Parser<'instr> {
             )?;
         }
 
-        Ok(Instruction::Comptime)
+        Ok(Instruction::Null)
     }
 
     fn build_struct(&mut self, declare: bool) -> Result<Instruction<'instr>, ThrushCompilerError> {
@@ -688,7 +743,7 @@ impl<'instr> Parser<'instr> {
             String::from("Expected '{'."),
         )?;
 
-        let mut fields_types: Vec<(&str, Instruction, u32)> = Vec::with_capacity(10);
+        let mut fields_types: StructFields = Vec::with_capacity(10);
         let mut field_position: u32 = 0;
 
         while self.peek().kind != TokenKind::RBrace {
@@ -698,18 +753,14 @@ impl<'instr> Parser<'instr> {
 
             if self.match_token(TokenKind::Identifier)? {
                 let field_name: &str = self.previous().lexeme.to_str();
-                let line: usize = self.previous().line;
-                let span: (usize, usize) = self.previous().span;
 
                 if self.peek().lexeme.to_str() == struct_name {
                     self.rec_structure_ref = true;
                 }
 
-                let field_type: Instruction = self.expression()?;
+                let field_type: Type = self.build_type(Some(TokenKind::SemiColon))?;
 
                 self.rec_structure_ref = false;
-
-                field_type.expected_type(line, span)?;
 
                 fields_types.push((field_name, field_type, field_position));
                 field_position += 1;
@@ -745,14 +796,9 @@ impl<'instr> Parser<'instr> {
                 (fields_types, struct_attributes),
                 (name.line, name.span),
             )?;
-
-            return Ok(Instruction::Null);
         }
 
-        Ok(Instruction::Struct {
-            name: struct_name,
-            fields_types,
-        })
+        Ok(Instruction::Null)
     }
 
     fn build_constructor(&mut self) -> Result<Instruction<'instr>, ThrushCompilerError> {
@@ -822,12 +868,12 @@ impl<'instr> Parser<'instr> {
 
                 self.throw_constructor(&expression);
 
-                let expression_type: Instruction = expression.get_type();
+                let expression_type: &Type = expression.get_type();
 
                 if let Some(target_type) = struct_found.get_field_type(field_name) {
                     self.check_type_mismatch(
                         target_type.clone(),
-                        expression_type,
+                        expression_type.clone(),
                         Some(&expression),
                     );
 
@@ -863,8 +909,8 @@ impl<'instr> Parser<'instr> {
         )?;
 
         Ok(Instruction::InitStruct {
-            name: struct_name,
-            arguments,
+            arguments: arguments.clone(),
+            kind: arguments.get_type(),
         })
     }
 
@@ -898,9 +944,7 @@ impl<'instr> Parser<'instr> {
             String::from("Expected ':'."),
         )?;
 
-        let const_type: Instruction = self.expr()?;
-
-        const_type.expected_type(self.previous().line, self.previous().span)?;
+        let const_type: Type = self.build_type(None)?;
 
         let const_attributes: ThrushAttributes =
             self.build_compiler_attributes(&[TokenKind::Eq])?;
@@ -917,7 +961,7 @@ impl<'instr> Parser<'instr> {
 
         self.check_type_mismatch(
             const_type.clone(),
-            const_value.get_type(),
+            const_value.get_type().clone(),
             Some(&const_value),
         );
 
@@ -939,10 +983,61 @@ impl<'instr> Parser<'instr> {
 
         Ok(Instruction::Const {
             name: const_name,
-            kind: Box::new(const_type),
+            kind: const_type,
             value: Box::new(const_value),
             attributes: const_attributes,
         })
+    }
+
+    fn build_instr(&mut self) -> Result<Instruction<'instr>, ThrushCompilerError> {
+        self.throw_unreacheable_code();
+
+        if self.is_main_scope() {
+            self.push_error(
+                String::from("Syntax error"),
+                String::from("Instructions should be contained at local scope."),
+            );
+        }
+
+        self.consume(
+            TokenKind::Instr,
+            String::from("Syntax error"),
+            String::from("Expected 'instr'."),
+        )?;
+
+        let name_tk: &Token = self.consume(
+            TokenKind::Identifier,
+            String::from("Syntax error"),
+            String::from("Expected name."),
+        )?;
+
+        let name: &str = name_tk.lexeme.to_str();
+        let line: usize = name_tk.line;
+        let location: CodeLocation = (line, name_tk.span);
+
+        self.consume(
+            TokenKind::Eq,
+            String::from("Syntax error"),
+            String::from("Expected '='."),
+        )?;
+
+        let instr_value: Instruction = self.expression()?;
+
+        self.parser_objects.insert_new_instr(
+            self.scope_position,
+            name,
+            instr_value.get_type().clone(),
+            location,
+        )?;
+
+        let instr: Instruction = Instruction::Instr {
+            name,
+            kind: instr_value.get_type().clone(),
+            value: Box::new(instr_value),
+            line,
+        };
+
+        Ok(instr)
     }
 
     fn build_local(&mut self, comptime: bool) -> Result<Instruction<'instr>, ThrushCompilerError> {
@@ -973,9 +1068,7 @@ impl<'instr> Parser<'instr> {
             String::from("Expected ':'."),
         )?;
 
-        let local_type: Instruction = self.expr()?;
-
-        local_type.expected_type(self.previous().line, self.previous().span)?;
+        let local_type: Type = self.build_type(None)?;
 
         self.parser_objects.insert_new_local(
             self.scope_position,
@@ -987,7 +1080,7 @@ impl<'instr> Parser<'instr> {
         if self.match_token(TokenKind::SemiColon)? {
             return Ok(Instruction::Local {
                 name: name.lexeme.to_str(),
-                kind: Box::new(local_type),
+                kind: local_type,
                 value: Box::new(Instruction::Null),
                 line: name.line,
                 comptime,
@@ -1006,7 +1099,7 @@ impl<'instr> Parser<'instr> {
 
         self.check_type_mismatch(
             local_type.clone(),
-            local_value.get_type(),
+            local_value.get_type().clone(),
             Some(&local_value),
         );
 
@@ -1018,7 +1111,7 @@ impl<'instr> Parser<'instr> {
 
         let local: Instruction = Instruction::Local {
             name: name.lexeme.to_str(),
-            kind: Box::new(local_type),
+            kind: local_type,
             value: Box::new(local_value),
             line: name.line,
             comptime,
@@ -1044,29 +1137,20 @@ impl<'instr> Parser<'instr> {
         }
 
         if self.match_token(TokenKind::SemiColon)? {
-            let basic_function_type: &Type = self.in_function_type.get_basic_type();
-
-            if basic_function_type.is_void_type() {
+            if self.in_function_type.is_void_type() {
                 return Ok(Instruction::Null);
             }
 
-            self.check_type_mismatch(
-                Instruction::ComplexType(Type::Void, "", None, None),
-                self.in_function_type.clone(),
-                None,
-            );
+            self.check_type_mismatch(Type::Void, self.in_function_type.clone(), None);
 
-            return Ok(Instruction::Return(
-                Box::new(Instruction::Null),
-                Box::new(Instruction::ComplexType(Type::Void, "", None, None)),
-            ));
+            return Ok(Instruction::Return(Type::Void, Box::new(Instruction::Null)));
         }
 
         let value: Instruction = self.expr()?;
 
         self.check_type_mismatch(
             self.in_function_type.clone(),
-            value.get_type(),
+            value.get_type().clone(),
             Some(&value),
         );
 
@@ -1077,8 +1161,8 @@ impl<'instr> Parser<'instr> {
         )?;
 
         Ok(Instruction::Return(
+            self.in_function_type.clone(),
             Box::new(value),
-            Box::new(self.in_function_type.clone()),
         ))
     }
 
@@ -1111,7 +1195,7 @@ impl<'instr> Parser<'instr> {
                 self.parser_objects.insert_new_local(
                     self.scope_position,
                     name,
-                    ((**kind).clone(), false, false),
+                    ((*kind).clone(), false, false),
                     (*line, *span),
                 )?;
             }
@@ -1178,8 +1262,9 @@ impl<'instr> Parser<'instr> {
         )?;
 
         let mut params: Vec<Instruction> = Vec::with_capacity(10);
-        let mut parameters_types: Vec<Instruction> = Vec::with_capacity(10);
-        let mut parameter_position: u32 = 0;
+        let mut parameters_types: Vec<Type> = Vec::with_capacity(10);
+
+        let mut position: u32 = 0;
 
         while !self.match_token(TokenKind::RParen)? {
             let parameter_line: usize = self.previous().line;
@@ -1203,24 +1288,22 @@ impl<'instr> Parser<'instr> {
                 String::from("Expected '::'."),
             )?;
 
-            let parameter_type: Instruction = self.expr()?;
+            let parameter_type: Type = self.build_type(None)?;
 
-            parameters_types.push(parameter_type.get_type());
+            parameters_types.push(parameter_type.clone());
 
             params.push(Instruction::FunctionParameter {
                 name: parameter_name,
-                kind: Box::new(parameter_type),
-                position: parameter_position,
+                kind: parameter_type,
+                position,
                 line: parameter_line,
                 span: parameter_span,
             });
 
-            parameter_position += 1;
+            position += 1;
         }
 
-        let return_type: Instruction = self.expr()?;
-
-        return_type.expected_type(self.previous().line, self.previous().span)?;
+        let return_type: Type = self.build_type(None)?;
 
         let function_attributes: ThrushAttributes =
             self.build_compiler_attributes(&[TokenKind::SemiColon, TokenKind::LParen])?;
@@ -1243,7 +1326,7 @@ impl<'instr> Parser<'instr> {
             name: function_name,
             params: params.clone(),
             body: None,
-            return_type: Box::new(return_type.clone()),
+            return_type: return_type.clone(),
             attributes: function_attributes,
         };
 
@@ -1272,10 +1355,7 @@ impl<'instr> Parser<'instr> {
         if !return_type.is_void_type() && !function_body.has_return() {
             self.push_error(
                 String::from("Syntax error"),
-                format!(
-                    "Missing return type with type '{}'.",
-                    return_type.get_basic_type()
-                ),
+                format!("Missing return type with type '{}'.", return_type),
             );
         }
 
@@ -1438,8 +1518,8 @@ impl<'instr> Parser<'instr> {
 
             type_checking::check_binary_types(
                 op,
-                expression.get_basic_type(),
-                right.get_basic_type(),
+                expression.get_type(),
+                right.get_type(),
                 (self.previous().line, self.previous().span),
             )?;
 
@@ -1447,7 +1527,7 @@ impl<'instr> Parser<'instr> {
                 left: Box::new(expression),
                 op,
                 right: Box::new(right),
-                kind: Box::new(Instruction::ComplexType(Type::Bool, "", None, None)),
+                kind: Type::Bool,
             }
         }
 
@@ -1463,8 +1543,8 @@ impl<'instr> Parser<'instr> {
 
             type_checking::check_binary_types(
                 op,
-                expression.get_basic_type(),
-                right.get_basic_type(),
+                expression.get_type(),
+                right.get_type(),
                 (self.previous().line, self.previous().span),
             )?;
 
@@ -1472,7 +1552,7 @@ impl<'instr> Parser<'instr> {
                 left: Box::new(expression),
                 op,
                 right: Box::new(right),
-                kind: Box::new(Instruction::ComplexType(Type::Bool, "", None, None)),
+                kind: Type::Bool,
             }
         }
 
@@ -1486,13 +1566,10 @@ impl<'instr> Parser<'instr> {
             let op: &TokenKind = &self.previous().kind;
             let right: Instruction = self.comparison()?;
 
-            let left_type: Type = *expression.get_basic_type();
-            let right_type: Type = *right.get_basic_type();
-
             type_checking::check_binary_types(
                 op,
-                &left_type,
-                &right_type,
+                expression.get_type(),
+                right.get_type(),
                 (self.previous().line, self.previous().span),
             )?;
 
@@ -1500,7 +1577,7 @@ impl<'instr> Parser<'instr> {
                 left: Box::from(expression),
                 op,
                 right: Box::from(right),
-                kind: Box::new(Instruction::ComplexType(Type::Bool, "", None, None)),
+                kind: Type::Bool,
             }
         }
 
@@ -1518,13 +1595,10 @@ impl<'instr> Parser<'instr> {
             let op: &TokenKind = &self.previous().kind;
             let right: Instruction = self.term()?;
 
-            let left_type: Type = *expression.get_basic_type();
-            let right_type: Type = *right.get_basic_type();
-
             type_checking::check_binary_types(
                 op,
-                &left_type,
-                &right_type,
+                expression.get_type(),
+                right.get_type(),
                 (self.previous().line, self.previous().span),
             )?;
 
@@ -1532,7 +1606,7 @@ impl<'instr> Parser<'instr> {
                 left: Box::from(expression),
                 op,
                 right: Box::from(right),
-                kind: Box::new(Instruction::ComplexType(Type::Bool, "", None, None)),
+                kind: Type::Bool,
             };
         }
 
@@ -1548,33 +1622,20 @@ impl<'instr> Parser<'instr> {
             || self.match_token(TokenKind::RShift)?
         {
             let op: &Token = self.previous();
-            let mut right: Instruction = self.factor()?;
+            let right: Instruction = self.factor()?;
 
-            let left_type: Type = *expression.get_basic_type();
-            let right_type: Type = *right.get_basic_type();
+            let left_type: &Type = expression.get_type();
+            let right_type: &Type = right.get_type();
 
-            type_checking::check_binary_types(
-                &op.kind,
-                &left_type,
-                &right_type,
-                (op.line, op.span),
-            )?;
+            type_checking::check_binary_types(&op.kind, left_type, right_type, (op.line, op.span))?;
 
-            let kind: Type = left_type.precompute_type(right_type);
-
-            if expression.is_enum_field() {
-                expression = expression.get_enum_field_value();
-            }
-
-            if right.is_enum_field() {
-                right = right.get_enum_field_value();
-            }
+            let kind: &Type = left_type.precompute_type(right_type);
 
             expression = Instruction::BinaryOp {
-                left: Box::from(expression),
+                left: Box::from(expression.clone()),
                 op: &op.kind,
                 right: Box::from(right),
-                kind: Box::new(Instruction::ComplexType(kind, "", None, None)),
+                kind: kind.clone(),
             };
         }
 
@@ -1586,33 +1647,25 @@ impl<'instr> Parser<'instr> {
 
         while self.match_token(TokenKind::Slash)? || self.match_token(TokenKind::Star)? {
             let op: &TokenKind = &self.previous().kind;
-            let mut right: Instruction = self.unary()?;
+            let right: Instruction = self.unary()?;
 
-            let left_type: Type = *expression.get_basic_type();
-            let right_type: Type = *right.get_basic_type();
+            let left_type: &Type = expression.get_type();
+            let right_type: &Type = right.get_type();
 
             type_checking::check_binary_types(
                 op,
-                &left_type,
-                &right_type,
+                left_type,
+                right_type,
                 (self.previous().line, self.previous().span),
             )?;
 
-            let kind: Type = left_type.precompute_type(right_type);
-
-            if expression.is_enum_field() {
-                expression = expression.get_enum_field_value();
-            }
-
-            if right.is_enum_field() {
-                right = right.get_enum_field_value();
-            }
+            let kind: &Type = left_type.precompute_type(right_type);
 
             expression = Instruction::BinaryOp {
-                left: Box::from(expression),
+                left: Box::from(expression.clone()),
                 op,
                 right: Box::from(right),
-                kind: Box::new(Instruction::ComplexType(kind, "", None, None)),
+                kind: kind.clone(),
             };
         }
 
@@ -1626,14 +1679,14 @@ impl<'instr> Parser<'instr> {
 
             type_checking::check_unary_types(
                 op,
-                expression.get_basic_type(),
+                expression.get_type(),
                 (self.previous().line, self.previous().span),
             )?;
 
             return Ok(Instruction::UnaryOp {
                 op,
                 expression: Box::from(expression),
-                kind: Box::new(Instruction::ComplexType(Type::Bool, "", None, None)),
+                kind: Type::Bool,
                 is_pre: false,
             });
         }
@@ -1645,18 +1698,18 @@ impl<'instr> Parser<'instr> {
 
             expression.cast_signess(*op);
 
-            let expression_type: Type = *expression.get_basic_type();
+            let expression_type: &Type = expression.get_type();
 
             type_checking::check_unary_types(
                 op,
-                &expression_type,
+                expression_type,
                 (self.previous().line, self.previous().span),
             )?;
 
             return Ok(Instruction::UnaryOp {
                 op,
-                expression: Box::from(expression),
-                kind: Box::new(Instruction::ComplexType(expression_type, "", None, None)),
+                expression: Box::from(expression.clone()),
+                kind: expression_type.clone(),
                 is_pre: false,
             });
         }
@@ -1676,35 +1729,91 @@ impl<'instr> Parser<'instr> {
                     let object_name: &str = token.lexeme.to_str();
                     let location: CodeLocation = (token.line, token.span);
 
-                    let object: FoundObjectId =
-                        self.parser_objects.get_object_id(object_name, location)?;
-
-                    if object.is_constant() {
-                        let const_id: &str = object.expected_constant(location)?;
-
-                        let constant: Constant =
-                            self.parser_objects.get_const_by_id(const_id, location)?;
-
-                        return Ok(Instruction::LocalRef {
-                            name: object_name,
-                            kind: Box::new(constant.0),
-                            take: true,
-                            is_constant_ref: true,
-                            line: location.0,
-                        });
-                    }
-
-                    return self.build_local_ref(object_name, location, true);
+                    return self.build_ref(object_name, location, true);
                 }
 
                 return Err(ThrushCompilerError::Error(
                     String::from("Syntax error"),
-                    String::from(
-                        "Take the value is only allowed by references of constants or locals.",
-                    ),
+                    String::from("Take the value is only allowed by references."),
                     self.previous().line,
                     Some(self.previous().span),
                 ));
+            }
+
+            TokenKind::Carry => {
+                self.only_advance()?;
+
+                self.consume(
+                    TokenKind::LBracket,
+                    String::from("Syntax error"),
+                    String::from("Expected '['."),
+                )?;
+
+                let kind: Type = self.build_type(None)?;
+
+                self.consume(
+                    TokenKind::RBracket,
+                    String::from("Syntax error"),
+                    String::from("Expected ']'."),
+                )?;
+
+                if self.check(TokenKind::Identifier) {
+                    let object: &Token = self.consume(
+                        TokenKind::Identifier,
+                        String::from("Syntax error"),
+                        String::from("Expected 'identifier'."),
+                    )?;
+
+                    let name: &str = object.lexeme.to_str();
+
+                    self.build_ref(name, (object.line, object.span), false)?;
+
+                    return Ok(Instruction::Carry {
+                        name,
+                        expression: None,
+                        kind,
+                    });
+                }
+
+                let expression: Instruction = self.expr()?;
+                let expression_type: &Type = expression.get_type();
+
+                if !expression_type.is_ptr_type() && !expression_type.is_address_type() {
+                    self.push_error(
+                        String::from("Attemping to access an invalid pointer."),
+                        format!(
+                            "Carry is only allowed for pointer types, not '{}'. ",
+                            expression_type
+                        ),
+                    );
+                }
+
+                Instruction::Carry {
+                    name: "",
+                    expression: Some(Box::new(expression)),
+                    kind,
+                }
+            }
+
+            TokenKind::Address => {
+                self.only_advance()?;
+
+                let object: &Token = self.consume(
+                    TokenKind::Identifier,
+                    String::from("Syntax error"),
+                    String::from("Expected 'identifier'."),
+                )?;
+
+                let name: &str = object.lexeme.to_str();
+                let location: CodeLocation = (object.line, object.span);
+
+                self.consume(
+                    TokenKind::LBracket,
+                    String::from("Syntax error"),
+                    String::from("Expected '['."),
+                )?;
+
+                return self.build_address(name, location);
             }
 
             TokenKind::New => self.build_constructor()?,
@@ -1726,7 +1835,7 @@ impl<'instr> Parser<'instr> {
                 let unaryop: Instruction = Instruction::UnaryOp {
                     op,
                     expression: Box::from(expression),
-                    kind: Box::new(Instruction::ComplexType(Type::Void, "", None, None)),
+                    kind: Type::Void,
                     is_pre: true,
                 };
 
@@ -1750,45 +1859,19 @@ impl<'instr> Parser<'instr> {
                 let unaryop: Instruction = Instruction::UnaryOp {
                     op,
                     expression: Box::from(expression),
-                    kind: Box::new(Instruction::ComplexType(Type::Void, "", None, None)),
+                    kind: Type::Void,
                     is_pre: true,
                 };
 
                 return Ok(unaryop);
             }
 
-            TokenKind::DataType(tp) => {
-                let datatype: &Token = self.advance()?;
-
-                let line: usize = datatype.line;
-                let span: (usize, usize) = datatype.span;
-
-                match tp {
-                    tp if tp.is_integer_type() => Instruction::ComplexType(*tp, "", None, None),
-                    tp if tp.is_float_type() => Instruction::ComplexType(*tp, "", None, None),
-                    tp if tp.is_bool_type() => Instruction::ComplexType(*tp, "", None, None),
-                    tp if tp.is_raw_ptr_type() => Instruction::ComplexType(*tp, "", None, None),
-                    tp if tp.is_void_type() => Instruction::ComplexType(*tp, "", None, None),
-                    tp if tp.is_str_type() => Instruction::ComplexType(*tp, "", None, None),
-                    what_heck_tp => {
-                        return Err(ThrushCompilerError::Error(
-                            String::from("Syntax error"),
-                            format!(
-                                "The type '{}' cannot be a value during the compile time.",
-                                what_heck_tp
-                            ),
-                            line,
-                            Some(span),
-                        ));
-                    }
-                }
-            }
-
+            // tk_kind if tk_kind.is_type() => self.build_type()?,
             TokenKind::LParen => {
                 let lparen: &Token = self.advance()?;
 
                 let expression: Instruction = self.expression()?;
-                let expression_type: Type = *expression.get_basic_type();
+                let expression_type: &Type = expression.get_type();
 
                 if !expression.is_binary() && !expression.is_group() {
                     return Err(ThrushCompilerError::Error(
@@ -1808,8 +1891,8 @@ impl<'instr> Parser<'instr> {
                 )?;
 
                 return Ok(Instruction::Group {
-                    expression: Box::new(expression),
-                    kind: Box::new(Instruction::ComplexType(expression_type, "", None, None)),
+                    expression: Box::new(expression.clone()),
+                    kind: expression_type.clone(),
                 });
             }
 
@@ -1817,34 +1900,43 @@ impl<'instr> Parser<'instr> {
                 let token: &Token = self.advance()?;
                 let token_lexeme: &[u8] = token.lexeme;
 
-                Instruction::Str(token_lexeme.parse_scapes(token.line, token.span)?)
+                Instruction::Str(
+                    Type::Str,
+                    token_lexeme.parse_scapes(token.line, token.span)?,
+                )
             }
 
             TokenKind::Char => {
                 let char: &Token = self.advance()?;
 
-                Instruction::Char(char.lexeme[0])
+                Instruction::Char(Type::Char, char.lexeme[0])
             }
 
             kind => match kind {
-                TokenKind::Integer(kind, number, is_signed) => {
-                    self.only_advance()?;
+                TokenKind::Integer => {
+                    let integer_tk: &Token = self.advance()?;
+                    let integer: &str = integer_tk.lexeme.to_str();
 
-                    Instruction::Integer(
-                        Box::new(Instruction::ComplexType(*kind, "", None, None)),
-                        *number,
-                        *is_signed,
-                    )
+                    let parsed_integer: (Type, f64) =
+                        utils::parse_number(integer, (integer_tk.line, integer_tk.span))?;
+
+                    let integer_type: Type = parsed_integer.0;
+                    let integer_value: f64 = parsed_integer.1;
+
+                    Instruction::Integer(integer_type, integer_value, false)
                 }
 
-                TokenKind::Float(kind, number, is_signed) => {
-                    self.only_advance()?;
+                TokenKind::Float => {
+                    let float_tk: &Token = self.advance()?;
+                    let float: &str = float_tk.lexeme.to_str();
 
-                    Instruction::Float(
-                        Box::new(Instruction::ComplexType(*kind, "", None, None)),
-                        *number,
-                        *is_signed,
-                    )
+                    let parsed_float: (Type, f64) =
+                        utils::parse_number(float, (float_tk.line, float_tk.span))?;
+
+                    let float_type: Type = parsed_float.0;
+                    let float_value: f64 = parsed_float.1;
+
+                    Instruction::Float(float_type, float_value, false)
                 }
 
                 TokenKind::Identifier => {
@@ -1856,41 +1948,36 @@ impl<'instr> Parser<'instr> {
 
                     self.throw_unreacheable_code();
 
-                    if self.rec_structure_ref {
+                    /*if self.rec_structure_ref {
                         return Ok(Instruction::ComplexType(
-                            Type::Struct,
+                            Type::Struct(Vec::new()),
                             object_name,
                             None,
-                            None,
                         ));
-                    }
+                    }*/
 
                     let object: FoundObjectId =
                         self.parser_objects.get_object_id(object_name, location)?;
 
-                    if object.is_constant() {
-                        let const_id: &str = object.expected_constant(location)?;
-
-                        let constant: Constant =
-                            self.parser_objects.get_const_by_id(const_id, location)?;
-
-                        return Ok(Instruction::LocalRef {
-                            name: object_name,
-                            kind: Box::new(constant.0),
-                            take: false,
-                            is_constant_ref: true,
-                            line: location.0,
-                        });
-                    }
-
-                    if object.is_structure() {
+                    /*if object.is_structure() {
                         return Ok(Instruction::ComplexType(
-                            Type::Struct,
+                            Type::Struct(Vec::new()),
                             object_name,
                             None,
-                            None,
                         ));
-                    }
+                    }*/
+
+                    /*if object.is_custom_type() {
+                        let custom_id: &str = object.expected_custom_type(location)?;
+
+                        let custom: CustomType = self
+                            .parser_objects
+                            .get_custom_type_by_id(custom_id, location)?;
+
+                        let custom_type_fields: CustomTypeFields = custom.0;
+
+                        return Ok(custom_type_fields.get_type());
+                    }*/
 
                     if self.match_token(TokenKind::Eq)? {
                         let object: FoundObjectId =
@@ -1904,29 +1991,25 @@ impl<'instr> Parser<'instr> {
                             location,
                         )?;
 
-                        let local_type: Instruction = local.0.clone();
+                        let local_type: Type = local.0.clone();
 
                         let expression: Instruction = self.expression()?;
 
                         self.check_type_mismatch(
                             local_type.clone(),
-                            expression.get_type(),
+                            expression.get_type().clone(),
                             Some(&expression),
                         );
 
                         return Ok(Instruction::LocalMut {
                             name: object_name,
                             value: Box::new(expression),
-                            kind: Box::new(local_type),
+                            kind: local_type,
                         });
                     }
 
                     if self.match_token(TokenKind::Arrow)? {
                         return self.build_enum_field(object_name, location);
-                    }
-
-                    if self.match_token(TokenKind::LBracket)? {
-                        return self.build_gep(object_name, location);
                     }
 
                     if self.match_token(TokenKind::LParen)? {
@@ -1953,17 +2036,17 @@ impl<'instr> Parser<'instr> {
                         ));
                     }
 
-                    self.build_local_ref(object_name, location, false)?
+                    self.build_ref(object_name, location, false)?
                 }
 
                 TokenKind::True => {
                     self.only_advance()?;
-                    Instruction::Boolean(true)
+                    Instruction::Boolean(Type::Bool, true)
                 }
 
                 TokenKind::False => {
                     self.only_advance()?;
-                    Instruction::Boolean(false)
+                    Instruction::Boolean(Type::Bool, false)
                 }
 
                 _ => {
@@ -1971,7 +2054,7 @@ impl<'instr> Parser<'instr> {
 
                     return Err(ThrushCompilerError::Error(
                         String::from("Syntax error"),
-                        format!("Statement \"{}\" don't allowed.", previous.lexeme.to_str()),
+                        format!("Statement '{}' don't allowed.", previous.lexeme.to_str()),
                         previous.line,
                         Some(previous.span),
                     ));
@@ -1982,7 +2065,128 @@ impl<'instr> Parser<'instr> {
         Ok(primary)
     }
 
-    fn build_local_ref(
+    fn build_type(&mut self, consume: Option<TokenKind>) -> Result<Type, ThrushCompilerError> {
+        let builded_type: Result<Type, ThrushCompilerError> = match self.peek().kind {
+            tk_kind if tk_kind.is_type() => {
+                let tk: &Token = self.advance()?;
+
+                match tk_kind.as_type() {
+                    ty if ty.is_integer_type() => Ok(ty),
+                    ty if ty.is_float_type() => Ok(ty),
+                    ty if ty.is_bool_type() => Ok(ty),
+                    ty if ty.is_ptr_type() && self.check(TokenKind::LBracket) => {
+                        Ok(self.build_recursive_type(Type::Ptr(None))?)
+                    }
+                    ty if ty.is_ptr_type() => Ok(ty),
+                    ty if ty.is_void_type() => Ok(ty),
+                    ty if ty.is_str_type() => Ok(ty),
+
+                    what_heck => Err(ThrushCompilerError::Error(
+                        String::from("Syntax error"),
+                        format!(
+                            "The type '{}' cannot be a value during the compile time.",
+                            what_heck
+                        ),
+                        tk.line,
+                        Some(tk.span),
+                    )),
+                }
+            }
+
+            TokenKind::Identifier => {
+                let tk: &Token = self.advance()?;
+
+                let name: &str = tk.lexeme.to_str();
+
+                let location: CodeLocation = (tk.line, tk.span);
+
+                /*if self.rec_structure_ref {
+                    return Ok(Instruction::ComplexType(
+                        Type::Struct(Vec::new()),
+                        object_name,
+                        None,
+                    ));
+                }*/
+
+                let object: FoundObjectId = self.parser_objects.get_object_id(name, location)?;
+
+                if object.is_structure() {
+                    let struct_id: &str = object.expected_struct(location)?;
+
+                    let structure: Struct =
+                        self.parser_objects.get_struct_by_id(struct_id, location)?;
+
+                    let fields: StructFields = structure.get_fields();
+
+                    return Ok(fields.get_type());
+                }
+
+                if object.is_custom_type() {
+                    let custom_id: &str = object.expected_custom_type(location)?;
+
+                    let custom: CustomType = self
+                        .parser_objects
+                        .get_custom_type_by_id(custom_id, location)?;
+
+                    let custom_type_fields: CustomTypeFields = custom.0;
+
+                    return Ok(custom_type_fields.get_type());
+                }
+
+                Err(ThrushCompilerError::Error(
+                    String::from("Syntax error"),
+                    format!("Not found type '{}'.", name),
+                    self.previous().line,
+                    Some(self.previous().span),
+                ))
+            }
+
+            what_heck => Err(ThrushCompilerError::Error(
+                String::from("Syntax error"),
+                format!("Expected type, not '{}'", what_heck),
+                self.peek().line,
+                Some(self.peek().span),
+            )),
+        };
+
+        if let Some(tk_kind) = consume {
+            self.consume(
+                tk_kind,
+                String::from("Syntax error"),
+                format!("Expected '{}'.", tk_kind),
+            )?;
+        }
+
+        builded_type
+    }
+
+    fn build_recursive_type(&mut self, mut before_type: Type) -> Result<Type, ThrushCompilerError> {
+        self.consume(
+            TokenKind::LBracket,
+            String::from("Syntax error"),
+            String::from("Expected '['."),
+        )?;
+
+        if let Type::Ptr(_) = &mut before_type {
+            let mut inner_type: Type = self.build_type(None)?;
+
+            while self.peek().kind == TokenKind::LBracket {
+                inner_type = self.build_recursive_type(inner_type)?;
+            }
+
+            self.consume(
+                TokenKind::RBracket,
+                String::from("Syntax error"),
+                String::from("Expected ']'."),
+            )?;
+
+            return Ok(Type::Ptr(Some(Arc::new(inner_type))));
+        }
+
+        unreachable!()
+    }
+
+    fn build_ref(
         &mut self,
         name: &'instr str,
         location: CodeLocation,
@@ -1992,48 +2196,57 @@ impl<'instr> Parser<'instr> {
         let span: (usize, usize) = location.1;
 
         let object: FoundObjectId = self.parser_objects.get_object_id(name, location)?;
+
+        if object.is_constant() {
+            let const_id: &str = object.expected_constant(location)?;
+
+            let constant: Constant = self.parser_objects.get_const_by_id(const_id, location)?;
+
+            return Ok(Instruction::ConstRef {
+                name,
+                kind: constant.0,
+                take: take_ptr,
+                line: location.0,
+            });
+        }
+
         let local_position: (&str, usize) = object.expected_local(location)?;
 
         let local: &Local =
             self.parser_objects
                 .get_local_by_id(local_position.0, local_position.1, location)?;
 
-        let mut local_type: Instruction = local.0.clone();
+        let mut local_type: Type = local.0.clone();
 
         if local.2 {
             return Err(ThrushCompilerError::Error(
                 String::from("Syntax error"),
-                format!("Local reference '{}' is contain null value for use.", name),
+                format!("Local reference '{}' is undefined.", name),
                 line,
                 Some(span),
             ));
         }
 
         if take_ptr {
-            if let Instruction::ComplexType(tp, _, _, _) = &mut local_type {
-                *tp = Type::Ptr;
-            }
+            local_type = Type::Ptr(Some(Arc::new(local_type)));
         }
 
         let localref: Instruction = Instruction::LocalRef {
             name,
-            kind: Box::new(local_type.clone()),
+            kind: local_type.clone(),
             take: take_ptr,
-            is_constant_ref: false,
             line,
         };
 
         if self.match_token(TokenKind::PlusPlus)? | self.match_token(TokenKind::MinusMinus)? {
             let op: &TokenKind = &self.previous().kind;
 
-            let local_basic_type: &Type = local_type.get_basic_type();
-
-            type_checking::check_unary_types(op, local_basic_type, location)?;
+            type_checking::check_unary_types(op, &local_type, location)?;
 
             let unaryop: Instruction = Instruction::UnaryOp {
                 op,
                 expression: Box::from(localref),
-                kind: Box::new(Instruction::ComplexType(Type::Void, "", None, None)),
+                kind: Type::Void,
                 is_pre: false,
             };
 
@@ -2075,16 +2288,12 @@ impl<'instr> Parser<'instr> {
 
         let field: EnumField = union.get_field(field_name);
 
-        let field_type: Instruction = field.1;
-        let field_value: Instruction = field.2;
+        let field_value: Instruction = field.1;
 
-        Ok(Instruction::EnumField {
-            kind: Box::new(field_type),
-            value: Box::new(field_value),
-        })
+        Ok(field_value)
     }
 
-    fn build_gep(
+    fn build_address(
         &mut self,
         name: &'instr str,
         location: CodeLocation,
@@ -2097,17 +2306,19 @@ impl<'instr> Parser<'instr> {
             self.parser_objects
                 .get_local_by_id(local_position.0, local_position.1, location)?;
 
-        let local_type: Instruction = local.0.clone();
+        let local_type: Type = local.0.clone();
 
-        local_type.expected_type(location.0, location.1)?;
-
-        if let Instruction::ComplexType(_, structure_name, _, _) = &local_type {
-            self.check_type_mismatch(
-                Instruction::ComplexType(Type::Ptr, structure_name, None, None),
-                local_type.clone(),
-                None,
+        if !local_type.is_ptr_type() && !local_type.is_struct_type() && !local_type.is_str_type() {
+            self.push_error(
+                String::from("Syntax error"),
+                format!(
+                    "Indexe is only allowed for pointers and structs, not '{}'. ",
+                    local_type
+                ),
             );
         }
+
+        let mut indexes: Vec<Instruction> = Vec::with_capacity(10);
 
         let index: Instruction = self.expr()?;
 
@@ -2116,7 +2327,7 @@ impl<'instr> Parser<'instr> {
                 String::from("Syntax error"),
                 format!(
                     "Expected unsigned integer type (u8, u16, u32, u64), not {}. ",
-                    index.get_basic_type(),
+                    index.get_type(),
                 ),
             );
         }
@@ -2127,10 +2338,34 @@ impl<'instr> Parser<'instr> {
             String::from("Expected ']'."),
         )?;
 
-        Ok(Instruction::GEP {
+        indexes.push(index);
+
+        while self.match_token(TokenKind::LBracket)? {
+            let index: Instruction = self.expr()?;
+
+            if !index.is_unsigned_integer() {
+                self.push_error(
+                    String::from("Syntax error"),
+                    format!(
+                        "Expected unsigned integer type (u8, u16, u32, u64), not {}. ",
+                        index.get_type(),
+                    ),
+                );
+            }
+
+            self.consume(
+                TokenKind::RBracket,
+                String::from("Syntax error"),
+                String::from("Expected ']'."),
+            )?;
+
+            indexes.push(index);
+        }
+
+        Ok(Instruction::Address {
             name,
-            index: Box::new(index),
-            kind: Box::new(local_type),
+            indexes,
+            kind: local_type,
         })
     }
 
@@ -2149,7 +2384,7 @@ impl<'instr> Parser<'instr> {
             .parser_objects
             .get_function_by_id((location.0, location.1), function_id)?;
 
-        let function_type: Instruction = function.0;
+        let function_type: Type = function.0;
         let ignore_extra_args: bool = function.2;
 
         let maximun_function_arguments: usize = function.1.len();
@@ -2191,7 +2426,7 @@ impl<'instr> Parser<'instr> {
             let display_args_types: String = if !args_provided.is_empty() {
                 args_provided
                     .iter()
-                    .map(|parameter| parameter.get_basic_type().to_string())
+                    .map(|parameter| parameter.get_type().to_string())
                     .collect::<Vec<_>>()
                     .join(", ")
             } else {
@@ -2205,7 +2440,7 @@ impl<'instr> Parser<'instr> {
                     function
                         .1
                         .iter()
-                        .map(|param| param.get_basic_type().to_string())
+                        .map(|param| param.to_string())
                         .collect::<Vec<_>>()
                         .join(", "),
                     display_args_types,
@@ -2217,17 +2452,17 @@ impl<'instr> Parser<'instr> {
 
         if !ignore_extra_args {
             for (position, argument) in args_provided.iter().enumerate() {
-                let arg_type: Instruction = argument.get_type();
-                let target_type: Instruction = function.1[position].get_type();
+                let from_type: &Type = argument.get_type();
+                let target_type: &Type = &function.1[position];
 
-                self.check_type_mismatch(target_type, arg_type, Some(argument));
+                self.check_type_mismatch(target_type.clone(), from_type.clone(), Some(argument));
             }
         }
 
         Ok(Instruction::Call {
             name,
             args: args_provided,
-            kind: Box::new(function_type),
+            kind: function_type,
         })
     }
 
@@ -2240,6 +2475,15 @@ impl<'instr> Parser<'instr> {
     ########################################################################*/
 
     fn declare(&mut self) {
+        self.tokens
+            .iter()
+            .enumerate()
+            .filter(|(_, token)| token.kind.is_type_keyword())
+            .for_each(|(pos, _)| {
+                let _ = self.declare_type(pos);
+                self.current = 0;
+            });
+
         self.tokens
             .iter()
             .enumerate()
@@ -2275,6 +2519,13 @@ impl<'instr> Parser<'instr> {
                 let _ = self.declare_function(pos);
                 self.current = 0;
             });
+    }
+
+    fn declare_type(&mut self, position: usize) -> Result<(), ThrushCompilerError> {
+        self.current = position;
+        self.build_custom_type(true)?;
+
+        Ok(())
     }
 
     fn declare_struct(&mut self, position: usize) -> Result<(), ThrushCompilerError> {
@@ -2342,23 +2593,19 @@ impl<'instr> Parser<'instr> {
 
     fn check_type_mismatch(
         &mut self,
-        target_type: Instruction,
-        from_type: Instruction,
+        target_type: Type,
+        from_type: Type,
         expression: Option<&Instruction>,
     ) {
         if expression.is_some_and(|expression| expression.is_binary() || expression.is_group()) {
-            if let Err(error) = type_checking::check_types(
+            if let Err(error) = type_checking::check_type(
                 target_type.clone(),
-                Instruction::Null,
+                Type::Void,
                 expression,
                 None,
                 ThrushCompilerError::Error(
                     String::from("Mismatched types"),
-                    format!(
-                        "Expected '{}' but found '{}'.",
-                        target_type.get_basic_type(),
-                        from_type.get_basic_type()
-                    ),
+                    format!("Expected '{}' but found '{}'.", target_type, from_type),
                     self.previous().line,
                     Some(self.previous().span),
                 ),
@@ -2367,18 +2614,14 @@ impl<'instr> Parser<'instr> {
             }
         }
 
-        if let Err(error) = type_checking::check_types(
+        if let Err(error) = type_checking::check_type(
             target_type.clone(),
             from_type.clone(),
             None,
             None,
             ThrushCompilerError::Error(
                 String::from("Mismatched types"),
-                format!(
-                    "Expected '{}' but found '{}'.",
-                    target_type.get_basic_type(),
-                    from_type.get_basic_type()
-                ),
+                format!("Expected '{}' but found '{}'.", target_type, from_type),
                 self.previous().line,
                 Some(self.previous().span),
             ),
@@ -2465,6 +2708,15 @@ impl<'instr> Parser<'instr> {
 
             self.current += 1;
         }
+    }
+
+    #[inline]
+    fn check(&self, kind: TokenKind) -> bool {
+        if self.is_eof() {
+            return false;
+        }
+
+        self.peek().kind == kind
     }
 
     #[inline(always)]

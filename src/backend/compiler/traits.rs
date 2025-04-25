@@ -1,24 +1,11 @@
-use {
-    super::objects::CompilerObjects,
-    inkwell::{builder::Builder, context::Context, values::PointerValue},
-};
+use super::super::super::frontend::lexer::Type;
 
-pub trait MappedHeapedPointersExtension<'ctx> {
-    fn dealloc(
-        &self,
-        builder: &'ctx Builder<'ctx>,
-        context: &'ctx Context,
-        pointer: PointerValue<'ctx>,
-        compiler_objects: &CompilerObjects,
-    );
+pub trait StructFieldsExtensions {
+    fn get_type(&self) -> Type;
 }
 
-pub trait CompilerStructureFieldsExtensions {
-    fn contain_recursive_structure_type(
-        &self,
-        compiler_objects: &CompilerObjects,
-        structure: &str,
-    ) -> bool;
+pub trait ConstructorExtensions {
+    fn get_type(&self) -> Type;
 }
 
 pub trait AttributesExtensions {

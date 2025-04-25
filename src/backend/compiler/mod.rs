@@ -13,9 +13,11 @@ pub mod memory;
 pub mod misc;
 pub mod objects;
 pub mod traits;
+pub mod typegen;
 pub mod types;
 pub mod unaryop;
 pub mod utils;
+pub mod valuegen;
 
 use {
     codegen::Codegen,

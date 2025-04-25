@@ -1,5 +1,10 @@
+use std::sync::Arc;
+
+use ahash::{HashSet, HashSetExt};
+use inkwell::{context::Context, targets::TargetData};
+
 use super::super::{
-    backend::compiler::{attributes::LLVMAttribute, misc::CompilerFile},
+    backend::compiler::{attributes::LLVMAttribute, misc::CompilerFile, typegen},
     common::{
         constants::MINIMAL_ERROR_CAPACITY, diagnostic::Diagnostician, error::ThrushCompilerError,
     },
@@ -15,7 +20,7 @@ use {
     std::{mem, process::exit},
 };
 
-const KEYWORDS_CAPACITY: usize = 55;
+const KEYWORDS_CAPACITY: usize = 58;
 const MINIMAL_TOKENS_CAPACITY: usize = 100_000;
 
 lazy_static! {
@@ -45,7 +50,11 @@ lazy_static! {
         keywords.insert(b"match", TokenKind::Match);
         keywords.insert(b"pattern", TokenKind::Pattern);
         keywords.insert(b"take", TokenKind::Take);
+        keywords.insert(b"type", TokenKind::Type);
         keywords.insert(b"enum", TokenKind::Enum);
+        keywords.insert(b"address", TokenKind::Address);
+        keywords.insert(b"carry", TokenKind::Carry);
+        keywords.insert(b"instr", TokenKind::Instr);
         keywords.insert(b"@import", TokenKind::Import);
         keywords.insert(b"@public", TokenKind::Public);
         keywords.insert(b"@extern", TokenKind::Extern);
@@ -61,21 +70,22 @@ lazy_static! {
         keywords.insert(b"@precisefp", TokenKind::PreciseFloats);
         keywords.insert(b"@convention", TokenKind::Convention);
         keywords.insert(b"new", TokenKind::New);
-        keywords.insert(b"s8", TokenKind::DataType(Type::S8));
-        keywords.insert(b"s16", TokenKind::DataType(Type::S16));
-        keywords.insert(b"s32", TokenKind::DataType(Type::S32));
-        keywords.insert(b"s64", TokenKind::DataType(Type::S64));
-        keywords.insert(b"u8", TokenKind::DataType(Type::U8));
-        keywords.insert(b"u16", TokenKind::DataType(Type::U16));
-        keywords.insert(b"u32", TokenKind::DataType(Type::U32));
-        keywords.insert(b"u64", TokenKind::DataType(Type::U64));
-        keywords.insert(b"f32", TokenKind::DataType(Type::F32));
-        keywords.insert(b"f64", TokenKind::DataType(Type::F64));
-        keywords.insert(b"bool", TokenKind::DataType(Type::Bool));
-        keywords.insert(b"char", TokenKind::DataType(Type::Char));
-        keywords.insert(b"ptr", TokenKind::DataType(Type::Ptr));
-        keywords.insert(b"str", TokenKind::DataType(Type::Str));
-        keywords.insert(b"void", TokenKind::DataType(Type::Void));
+
+        keywords.insert(b"s8", TokenKind::S8);
+        keywords.insert(b"s16", TokenKind::S16);
+        keywords.insert(b"s32", TokenKind::S32);
+        keywords.insert(b"s64", TokenKind::S64);
+        keywords.insert(b"u8", TokenKind::U8);
+        keywords.insert(b"u16", TokenKind::U16);
+        keywords.insert(b"u32", TokenKind::U32);
+        keywords.insert(b"u64", TokenKind::U64);
+        keywords.insert(b"f32", TokenKind::F32);
+        keywords.insert(b"f64", TokenKind::F64);
+        keywords.insert(b"bool", TokenKind::Bool);
+        keywords.insert(b"char", TokenKind::Char);
+        keywords.insert(b"ptr", TokenKind::Ptr);
+        keywords.insert(b"str", TokenKind::Str);
+        keywords.insert(b"void", TokenKind::Void);
 
         keywords
     };
@@ -199,7 +209,7 @@ impl<'a> Lexer<'a> {
             b'\n' => self.line += 1,
             b'\'' => self.char()?,
             b'"' => self.string()?,
-            b'0'..=b'9' => self.integer_or_float()?,
+            b'0'..=b'9' => self.number()?,
             b'a'..=b'z' | b'A'..=b'Z' | b'_' | b'@' => self.identifier()?,
             _ => {
                 self.end_span();
@@ -235,7 +245,7 @@ impl<'a> Lexer<'a> {
         Ok(())
     }
 
-    fn integer_or_float(&mut self) -> Result<(), ThrushCompilerError> {
+    fn number(&mut self) -> Result<(), ThrushCompilerError> {
         let mut is_hexadecimal: bool = false;
         let mut is_binary: bool = false;
 
@@ -292,12 +302,14 @@ impl<'a> Lexer<'a> {
 
         self.end_span();
 
-        let parsed_number: (Type, f64) = self.parse_float_or_integer(self.lexeme().to_str())?;
+        let lexeme: &[u8] = self.lexeme();
 
-        if parsed_number.0.is_float_type() {
+        self.check_number(lexeme.to_str())?;
+
+        if lexeme.contains(&b'.') {
             self.tokens.push(Token {
-                kind: TokenKind::Float(parsed_number.0, parsed_number.1, false),
-                lexeme: b"",
+                lexeme,
+                kind: TokenKind::Float,
                 line: self.line,
                 span: self.span,
             });
@@ -306,8 +318,8 @@ impl<'a> Lexer<'a> {
         }
 
         self.tokens.push(Token {
-            kind: TokenKind::Integer(parsed_number.0, parsed_number.1, false),
-            lexeme: b"",
+            lexeme,
+            kind: TokenKind::Integer,
             line: self.line,
             span: self.span,
         });
@@ -316,7 +328,7 @@ impl<'a> Lexer<'a> {
     }
 
     #[inline]
-    fn parse_float_or_integer(&mut self, lexeme: &str) -> Result<(Type, f64), ThrushCompilerError> {
+    fn check_number(&mut self, lexeme: &str) -> Result<(), ThrushCompilerError> {
         if lexeme.contains('.') {
             return self.parse_float(lexeme);
         }
@@ -325,7 +337,7 @@ impl<'a> Lexer<'a> {
     }
 
     #[inline]
-    fn parse_float(&self, lexeme: &str) -> Result<(Type, f64), ThrushCompilerError> {
+    fn parse_float(&self, lexeme: &str) -> Result<(), ThrushCompilerError> {
         let dot_count: usize = lexeme.bytes().filter(|&b| b == b'.').count();
 
         if dot_count > 1 {
@@ -337,12 +349,12 @@ impl<'a> Lexer<'a> {
             ));
         }
 
-        if let Ok(float) = lexeme.parse::<f32>() {
-            return Ok((Type::F32, float as f64));
+        if lexeme.parse::<f32>().is_ok() {
+            return Ok(());
         }
 
-        if let Ok(float) = lexeme.parse::<f64>() {
-            return Ok((Type::F64, float));
+        if lexeme.parse::<f64>().is_ok() {
+            return Ok(());
         }
 
         Err(ThrushCompilerError::Error(
@@ -354,7 +366,7 @@ impl<'a> Lexer<'a> {
     }
 
     #[inline]
-    fn parse_integer(&self, lexeme: &str) -> Result<(Type, f64), ThrushCompilerError> {
+    fn parse_integer(&self, lexeme: &str) -> Result<(), ThrushCompilerError> {
         const I8_MIN: isize = -128;
         const I8_MAX: isize = 127;
         const I16_MIN: isize = -32768;
@@ -377,14 +389,12 @@ impl<'a> Lexer<'a> {
 
             return match isize::from_str_radix(&cleaned_lexeme, 16) {
                 Ok(num) => {
-                    if (I8_MIN..=I8_MAX).contains(&num) {
-                        return Ok((Type::S8, num as f64));
-                    } else if (I16_MIN..=I16_MAX).contains(&num) {
-                        return Ok((Type::S16, num as f64));
-                    } else if (I32_MIN..=I32_MAX).contains(&num) {
-                        return Ok((Type::S32, num as f64));
-                    } else if (isize::MIN..=isize::MAX).contains(&num) {
-                        return Ok((Type::S64, num as f64));
+                    if (I8_MIN..=I8_MAX).contains(&num)
+                        || (I16_MIN..=I16_MAX).contains(&num)
+                        || (I32_MIN..=I32_MAX).contains(&num)
+                        || (isize::MIN..=isize::MAX).contains(&num)
+                    {
+                        return Ok(());
                     } else {
                         return Err(ThrushCompilerError::Error(
                             String::from("Syntax error"),
@@ -397,14 +407,12 @@ impl<'a> Lexer<'a> {
 
                 Err(_) => match usize::from_str_radix(&cleaned_lexeme, 16) {
                     Ok(num) => {
-                        if (U8_MIN..=U8_MAX).contains(&num) {
-                            return Ok((Type::U8, num as f64));
-                        } else if (U16_MIN..=U16_MAX).contains(&num) {
-                            return Ok((Type::U16, num as f64));
-                        } else if (U32_MIN..=U32_MAX).contains(&num) {
-                            return Ok((Type::U32, num as f64));
-                        } else if (usize::MIN..=usize::MAX).contains(&num) {
-                            return Ok((Type::U64, num as f64));
+                        if (U8_MIN..=U8_MAX).contains(&num)
+                            || (U16_MIN..=U16_MAX).contains(&num)
+                            || (U32_MIN..=U32_MAX).contains(&num)
+                            || (usize::MIN..=usize::MAX).contains(&num)
+                        {
+                            return Ok(());
                         } else {
                             return Err(ThrushCompilerError::Error(
                                 String::from("Syntax error"),
@@ -433,14 +441,12 @@ impl<'a> Lexer<'a> {
 
             return match isize::from_str_radix(&cleaned_lexeme, 2) {
                 Ok(num) => {
-                    if (I8_MIN..=I8_MAX).contains(&num) {
-                        return Ok((Type::S8, num as f64));
-                    } else if (I16_MIN..=I16_MAX).contains(&num) {
-                        return Ok((Type::S16, num as f64));
-                    } else if (I32_MIN..=I32_MAX).contains(&num) {
-                        return Ok((Type::S32, num as f64));
-                    } else if (isize::MIN..=isize::MAX).contains(&num) {
-                        return Ok((Type::S64, num as f64));
+                    if (I8_MIN..=I8_MAX).contains(&num)
+                        || (I16_MIN..=I16_MAX).contains(&num)
+                        || (I32_MIN..=I32_MAX).contains(&num)
+                        || (isize::MIN..=isize::MAX).contains(&num)
+                    {
+                        return Ok(());
                     } else {
                         return Err(ThrushCompilerError::Error(
                             String::from("Syntax error"),
@@ -453,14 +459,12 @@ impl<'a> Lexer<'a> {
 
                 Err(_) => match usize::from_str_radix(&cleaned_lexeme, 2) {
                     Ok(num) => {
-                        if (U8_MIN..=U8_MAX).contains(&num) {
-                            return Ok((Type::U8, num as f64));
-                        } else if (U16_MIN..=U16_MAX).contains(&num) {
-                            return Ok((Type::U16, num as f64));
-                        } else if (U32_MIN..=U32_MAX).contains(&num) {
-                            return Ok((Type::U32, num as f64));
-                        } else if (usize::MIN..=usize::MAX).contains(&num) {
-                            return Ok((Type::U64, num as f64));
+                        if (U8_MIN..=U8_MAX).contains(&num)
+                            || (U16_MIN..=U16_MAX).contains(&num)
+                            || (U32_MIN..=U32_MAX).contains(&num)
+                            || (usize::MIN..=usize::MAX).contains(&num)
+                        {
+                            return Ok(());
                         } else {
                             return Err(ThrushCompilerError::Error(
                                 String::from("Syntax error"),
@@ -483,34 +487,30 @@ impl<'a> Lexer<'a> {
 
         match lexeme.parse::<usize>() {
             Ok(num) => {
-                if (U8_MIN..=U8_MAX).contains(&num) {
-                    Ok((Type::U8, num as f64))
-                } else if (U16_MIN..=U16_MAX).contains(&num) {
-                    return Ok((Type::U16, num as f64));
-                } else if (U32_MIN..=U32_MAX).contains(&num) {
-                    return Ok((Type::U32, num as f64));
-                } else if (usize::MIN..=usize::MAX).contains(&num) {
-                    return Ok((Type::U64, num as f64));
+                if (U8_MIN..=U8_MAX).contains(&num)
+                    || (U16_MIN..=U16_MAX).contains(&num)
+                    || (U32_MIN..=U32_MAX).contains(&num)
+                    || (usize::MIN..=usize::MAX).contains(&num)
+                {
+                    Ok(())
                 } else {
-                    return Err(ThrushCompilerError::Error(
+                    Err(ThrushCompilerError::Error(
                         String::from("Syntax error"),
                         String::from("Out of bounds."),
                         self.line,
                         Some(self.span),
-                    ));
+                    ))
                 }
             }
 
             Err(_) => match lexeme.parse::<isize>() {
                 Ok(num) => {
-                    if (I8_MIN..=I8_MAX).contains(&num) {
-                        Ok((Type::S8, num as f64))
-                    } else if (I16_MIN..=I16_MAX).contains(&num) {
-                        Ok((Type::S16, num as f64))
-                    } else if (I32_MIN..=I32_MAX).contains(&num) {
-                        Ok((Type::S32, num as f64))
-                    } else if (isize::MIN..=isize::MAX).contains(&num) {
-                        Ok((Type::S64, num as f64))
+                    if (I8_MIN..=I8_MAX).contains(&num)
+                        || (I16_MIN..=I16_MAX).contains(&num)
+                        || (I32_MIN..=I32_MAX).contains(&num)
+                        || (isize::MIN..=isize::MAX).contains(&num)
+                    {
+                        Ok(())
                     } else {
                         Err(ThrushCompilerError::Error(
                             String::from("Syntax error"),
@@ -602,8 +602,8 @@ impl<'a> Lexer<'a> {
         self.end_span();
 
         self.tokens.push(Token {
-            kind,
             lexeme: self.lexeme(),
+            kind,
             line: self.line,
             span: self.span,
         });
@@ -780,11 +780,8 @@ pub enum TokenKind {
 
     // --- Literals ---
     Identifier,
-    Integer(Type, f64, bool),
-    Float(Type, f64, bool),
-    DataType(Type),
-    Str,
-    Char,
+    Integer,
+    Float,
 
     // --- Attributes ---
     Extern,
@@ -802,10 +799,14 @@ pub enum TokenKind {
     Convention,
 
     // --- Keywords ---
+    Address,
+    Carry,
+    Instr,
     New,
     Import,
     Builtin,
     Take,
+    Type,
     Enum,
     And,
     Struct,
@@ -827,6 +828,26 @@ pub enum TokenKind {
     Const,
     While,
     Loop,
+
+    // --- Types ---
+    S8,
+    S16,
+    S32,
+    S64,
+
+    U8,
+    U16,
+    U32,
+    U64,
+
+    F32,
+    F64,
+
+    Bool,
+    Char,
+    Str,
+    Ptr,
+    Void,
 
     Eof,
 }
@@ -941,6 +962,11 @@ impl TokenKind {
     }
 
     #[inline(always)]
+    pub const fn is_type_keyword(&self) -> bool {
+        matches!(self, TokenKind::Type)
+    }
+
+    #[inline(always)]
     pub const fn is_const_keyword(&self) -> bool {
         matches!(self, TokenKind::Const)
     }
@@ -964,9 +990,86 @@ impl TokenKind {
     pub const fn is_function_keyword(&self) -> bool {
         matches!(self, TokenKind::Fn)
     }
+
+    #[inline(always)]
+    pub const fn is_void(&self) -> bool {
+        matches!(self, TokenKind::Void)
+    }
+
+    #[inline(always)]
+    pub const fn is_bool(&self) -> bool {
+        matches!(self, TokenKind::Bool)
+    }
+
+    pub const fn is_str(&self) -> bool {
+        matches!(self, TokenKind::Str)
+    }
+
+    #[inline(always)]
+    pub const fn is_ptr(&self) -> bool {
+        matches!(self, TokenKind::Ptr)
+    }
+
+    #[inline(always)]
+    pub const fn is_float(&self) -> bool {
+        matches!(self, TokenKind::F32 | TokenKind::F64)
+    }
+
+    #[inline(always)]
+    pub const fn is_integer(&self) -> bool {
+        matches!(
+            self,
+            TokenKind::S8
+                | TokenKind::S16
+                | TokenKind::S32
+                | TokenKind::S64
+                | TokenKind::U8
+                | TokenKind::U16
+                | TokenKind::U32
+                | TokenKind::U64
+                | TokenKind::Char
+        )
+    }
+
+    #[inline(always)]
+    pub const fn is_type(&self) -> bool {
+        self.is_integer()
+            || self.is_float()
+            || self.is_bool()
+            || self.is_ptr()
+            || self.is_str()
+            || self.is_void()
+    }
+
+    #[inline(always)]
+    pub fn as_type(&self) -> Type {
+        match self {
+            TokenKind::Char => Type::Char,
+
+            TokenKind::S8 => Type::S8,
+            TokenKind::S16 => Type::S16,
+            TokenKind::S32 => Type::S32,
+            TokenKind::S64 => Type::S64,
+
+            TokenKind::U8 => Type::U8,
+            TokenKind::U16 => Type::U16,
+            TokenKind::U32 => Type::U32,
+            TokenKind::U64 => Type::U64,
+
+            TokenKind::Bool => Type::Bool,
+
+            TokenKind::F32 => Type::F32,
+            TokenKind::F64 => Type::F64,
+
+            TokenKind::Str => Type::Str,
+            TokenKind::Ptr => Type::Ptr(None),
+
+            _ => Type::Void,
+        }
+    }
 }
 
-#[derive(Debug, PartialEq, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub enum Type {
     // Signed Integer Type
     S8,
@@ -994,10 +1097,13 @@ pub enum Type {
     Str,
 
     // Ptr Type
-    Ptr,
+    Ptr(Option<Arc<Type>>),
 
     // Struct Type
-    Struct,
+    Struct(Vec<Arc<Type>>),
+
+    // Address
+    Address,
 
     // Void Type
     Void,
@@ -1005,20 +1111,20 @@ pub enum Type {
 
 impl Type {
     #[inline(always)]
-    pub const fn precompute_type(self, other: Type) -> Type {
+    pub fn precompute_type(&self, other: &Type) -> &Type {
         match (self, other) {
-            (Type::S64, _) | (_, Type::S64) => Type::S64,
-            (Type::S32, _) | (_, Type::S32) => Type::S32,
-            (Type::S16, _) | (_, Type::S16) => Type::S16,
-            (Type::S8, _) | (_, Type::S8) => Type::S8,
+            (Type::S64, _) | (_, Type::S64) => &Type::S64,
+            (Type::S32, _) | (_, Type::S32) => &Type::S32,
+            (Type::S16, _) | (_, Type::S16) => &Type::S16,
+            (Type::S8, _) | (_, Type::S8) => &Type::S8,
 
-            (Type::U64, _) | (_, Type::U64) => Type::U64,
-            (Type::U32, _) | (_, Type::U32) => Type::U32,
-            (Type::U16, _) | (_, Type::U16) => Type::U16,
-            (Type::U8, _) | (_, Type::U8) => Type::U8,
+            (Type::U64, _) | (_, Type::U64) => &Type::U64,
+            (Type::U32, _) | (_, Type::U32) => &Type::U32,
+            (Type::U16, _) | (_, Type::U16) => &Type::U16,
+            (Type::U8, _) | (_, Type::U8) => &Type::U8,
 
-            (Type::F64, _) | (_, Type::F64) => Type::F64,
-            (Type::F32, _) | (_, Type::F32) => Type::F32,
+            (Type::F64, _) | (_, Type::F64) => &Type::F64,
+            (Type::F32, _) | (_, Type::F32) => &Type::F32,
 
             _ => self,
         }
@@ -1026,7 +1132,16 @@ impl Type {
 
     #[inline(always)]
     pub const fn is_stack_allocated(&self) -> bool {
-        self.is_bool_type() || self.is_float_type() || self.is_integer_type()
+        self.is_bool_type()
+            || self.is_float_type()
+            || self.is_integer_type()
+            || self.is_char_type()
+            || self.is_str_type()
+    }
+
+    #[inline(always)]
+    pub const fn is_char_type(&self) -> bool {
+        matches!(self, Type::Char)
     }
 
     #[inline(always)]
@@ -1041,7 +1156,7 @@ impl Type {
 
     #[inline(always)]
     pub const fn is_struct_type(&self) -> bool {
-        matches!(self, Type::Struct)
+        matches!(self, Type::Struct(_))
     }
 
     #[inline(always)]
@@ -1051,12 +1166,12 @@ impl Type {
 
     #[inline(always)]
     pub const fn is_ptr_type(&self) -> bool {
-        matches!(self, Type::Struct | Type::Ptr)
+        matches!(self, Type::Ptr(_))
     }
 
     #[inline(always)]
-    pub const fn is_raw_ptr_type(&self) -> bool {
-        matches!(self, Type::Ptr)
+    pub const fn is_address_type(&self) -> bool {
+        matches!(self, Type::Address)
     }
 
     #[inline(always)]
@@ -1084,5 +1199,103 @@ impl Type {
                 | Type::U64
                 | Type::Char
         )
+    }
+
+    pub fn narrowing_cast(&self) -> Type {
+        match self {
+            Type::U8 => Type::S8,
+            Type::U16 => Type::S16,
+            Type::U32 => Type::S32,
+            Type::U64 => Type::S64,
+            _ => self.clone(),
+        }
+    }
+
+    pub fn exceeds_stack(&self, context: &Context, target_data: &TargetData) -> u64 {
+        target_data.get_abi_size(&typegen::generate_type(context, self))
+    }
+
+    pub fn is_recursive_type(&self) -> bool {
+        if let Type::Struct(fields) = self {
+            let mut visited: HashSet<*const Type> = HashSet::with_capacity(100);
+
+            fields
+                .iter()
+                .any(|field| field.is_recursive_with_original(fields, &mut visited))
+        } else {
+            false
+        }
+    }
+
+    fn is_recursive_with_original(
+        &self,
+        original_fields: &[Arc<Type>],
+        visited: &mut HashSet<*const Type>,
+    ) -> bool {
+        let ptr: *const Type = self as *const Type;
+
+        if visited.contains(&ptr) {
+            return false;
+        }
+
+        visited.insert(ptr);
+
+        let result: bool = if let Type::Struct(fields) = self {
+            if fields.iter().map(|f| f.as_ref()).collect::<Vec<&Type>>()
+                == original_fields
+                    .iter()
+                    .map(|f| f.as_ref())
+                    .collect::<Vec<&Type>>()
+            {
+                true
+            } else {
+                fields
+                    .iter()
+                    .any(|field| field.is_recursive_with_original(original_fields, visited))
+            }
+        } else {
+            false
+        };
+
+        visited.remove(&ptr);
+
+        result
+    }
+
+    pub fn create_structure_type(fields: &[Type]) -> Type {
+        Type::Struct(fields.iter().map(|field| Arc::new(field.clone())).collect())
+    }
+}
+
+impl PartialEq for Type {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Type::Struct(fields1), Type::Struct(fields2)) => {
+                fields1.len() == fields2.len()
+                    && fields1
+                        .iter()
+                        .zip(fields2.iter())
+                        .all(|(f1, f2)| f1.as_ref() == f2.as_ref())
+            }
+
+            (Type::Char, Type::Char) => true,
+            (Type::S8, Type::S8) => true,
+            (Type::S16, Type::S16) => true,
+            (Type::S32, Type::S32) => true,
+            (Type::S64, Type::S64) => true,
+            (Type::U8, Type::U8) => true,
+            (Type::U16, Type::U16) => true,
+            (Type::U32, Type::U32) => true,
+            (Type::U64, Type::U64) => true,
+            (Type::F32, Type::F32) => true,
+            (Type::F64, Type::F64) => true,
+            (Type::Ptr(None), Type::Ptr(None)) => true,
+            (Type::Ptr(Some(target)), Type::Ptr(Some(from))) => target == from,
+            (Type::Void, Type::Void) => true,
+            (Type::Str, Type::Str) => true,
+            (Type::Bool, Type::Bool) => true,
+
+            _ => false,
+        }
     }
 }

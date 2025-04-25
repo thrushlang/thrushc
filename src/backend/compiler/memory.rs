@@ -1,11 +1,13 @@
 #![allow(clippy::enum_variant_names)]
 
+use inkwell::context::Context;
+use inkwell::targets::TargetData;
+
 use super::super::super::frontend::lexer::Type;
 
 use super::{
-    instruction::Instruction,
     objects::CompilerObjects,
-    types::{MappedHeapPointer, MappedHeapPointers, Structure, StructureFields},
+    types::{MappedHeapPointer, MappedHeapPointers},
 };
 
 use {
@@ -28,17 +30,11 @@ pub enum MemoryFlag {
 pub struct AllocatedObject<'ctx> {
     pub ptr: PointerValue<'ctx>,
     pub memory_flags: u8,
-    pub kind: &'ctx Instruction<'ctx>,
-    pub is_constant: bool,
+    pub kind: &'ctx Type,
 }
 
 impl<'ctx> AllocatedObject<'ctx> {
-    pub fn alloc(
-        ptr: PointerValue<'ctx>,
-        flags: &[MemoryFlag],
-        kind: &'ctx Instruction<'ctx>,
-        is_constant: bool,
-    ) -> Self {
+    pub fn alloc(ptr: PointerValue<'ctx>, flags: &[MemoryFlag], kind: &'ctx Type) -> Self {
         let mut memory_flags: u8 = 0;
 
         flags.iter().for_each(|flag| {
@@ -49,7 +45,6 @@ impl<'ctx> AllocatedObject<'ctx> {
             ptr,
             memory_flags,
             kind,
-            is_constant,
         }
     }
 
@@ -58,9 +53,7 @@ impl<'ctx> AllocatedObject<'ctx> {
         builder: &Builder<'ctx>,
         llvm_type: Type,
     ) -> BasicValueEnum<'ctx> {
-        if self.has_flag(MemoryFlag::StackAllocated)
-            || self.has_flag(MemoryFlag::StaticAllocated) && self.is_constant
-        {
+        if self.has_flag(MemoryFlag::StackAllocated) || self.has_flag(MemoryFlag::StaticAllocated) {
             let load: BasicValueEnum = builder.build_load(llvm_type, self.ptr, "").unwrap();
 
             if let Some(load_instruction) = load.as_instruction_value() {
@@ -89,17 +82,16 @@ impl<'ctx> AllocatedObject<'ctx> {
 
         let mut mapped_pointers: HashSet<MappedHeapPointer> = HashSet::with_capacity(10);
 
-        if let Instruction::ComplexType(Type::Struct, structure_name, _, _) = self.kind {
-            let structure: &Structure = compiler_objects.get_struct(structure_name);
-            let structure_fields: &StructureFields = &structure.1;
+        /*  if let Instruction::ComplexType(Type::Struct(_), structure_name, _) = self.kind {
+            let fields: &StructureFields = compiler_objects.get_struct(structure_name).get_fields();
 
-            structure_fields
+            fields
                 .iter()
                 .filter(|field| field.1.is_ptr_type())
                 .for_each(|field| {
                     let field_position: u32 = field.2;
 
-                    if let Instruction::ComplexType(Type::Struct, structure_name, _, _) = field.1 {
+                    if let Instruction::ComplexType(Type::Struct(_), structure_name, _) = field.1 {
                         let structure: &Structure = compiler_objects.get_struct(structure_name);
 
                         let is_recursive: bool = structure
@@ -111,9 +103,21 @@ impl<'ctx> AllocatedObject<'ctx> {
                         mapped_pointers.insert((structure_name, field_position, is_recursive));
                     }
                 });
-        }
+        }*/
 
         mapped_pointers
+    }
+
+    pub fn is_stack_allocated(&self) -> bool {
+        self.has_flag(MemoryFlag::StackAllocated)
+    }
+
+    pub fn is_heap_allocated(&self) -> bool {
+        self.has_flag(MemoryFlag::HeapAllocated)
+    }
+
+    pub fn is_static_allocated(&self) -> bool {
+        self.has_flag(MemoryFlag::StaticAllocated)
     }
 
     pub fn build_store<Value: BasicValue<'ctx>>(&self, builder: &Builder<'ctx>, value: Value) {
@@ -123,6 +127,10 @@ impl<'ctx> AllocatedObject<'ctx> {
 
     pub fn has_flag(&self, flag: MemoryFlag) -> bool {
         (self.memory_flags & flag.to_bit()) == flag.to_bit()
+    }
+
+    pub fn get_type(&self) -> &Type {
+        self.kind
     }
 }
 
@@ -135,4 +143,20 @@ impl MemoryFlag {
             MemoryFlag::StaticAllocated => 1 << 2,
         }
     }
+}
+
+pub fn generate_site_allocation_flag(
+    context: &Context,
+    target_data: &TargetData,
+    kind: &Type,
+) -> MemoryFlag {
+    let mut alloc_site_memory_flag: MemoryFlag = MemoryFlag::StackAllocated;
+
+    if kind.is_struct_type() && kind.is_recursive_type()
+        || kind.exceeds_stack(context, target_data) >= 120
+    {
+        alloc_site_memory_flag = MemoryFlag::HeapAllocated;
+    }
+
+    alloc_site_memory_flag
 }

@@ -2,7 +2,6 @@ use super::{
     instruction::Instruction,
     memory::{AllocatedObject, MemoryFlag},
     objects::CompilerObjects,
-    traits::MappedHeapedPointersExtension,
     types::{AllocatedObjects, MappedHeapPointers},
 };
 
@@ -37,18 +36,18 @@ impl<'ctx> Deallocator<'ctx> {
             let mapped_heaped_pointers: MappedHeapPointers =
                 allocated_object.create_mapped_heaped_pointers(compiler_objects);
 
-            mapped_heaped_pointers.dealloc(
+            /*mapped_heaped_pointers.dealloc(
                 self.builder,
                 self.context,
                 allocated_object.ptr,
                 compiler_objects,
-            );
+            );*/
             allocated_object.dealloc(self.builder);
         });
     }
 
-    pub fn dealloc(&self, return_instruction: &Instruction, compiler_objects: &CompilerObjects) {
-        if let Instruction::LocalRef { name, .. } = return_instruction {
+    pub fn dealloc(&self, value: &Instruction, compiler_objects: &CompilerObjects) {
+        if let Instruction::LocalRef { name, .. } = value {
             let heaped_objects: Vec<(&&str, &AllocatedObject)> = self.obtain_heap_objects(name);
 
             heaped_objects.iter().for_each(|heap_object| {
@@ -57,12 +56,13 @@ impl<'ctx> Deallocator<'ctx> {
                 let mapped_heaped_pointers: MappedHeapPointers =
                     allocated_object.create_mapped_heaped_pointers(compiler_objects);
 
-                mapped_heaped_pointers.dealloc(
+                /*mapped_heaped_pointers.dealloc(
                     self.builder,
                     self.context,
                     allocated_object.ptr,
                     compiler_objects,
-                );
+                );*/
+
                 allocated_object.dealloc(self.builder);
             });
         }

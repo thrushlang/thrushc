@@ -1,13 +1,12 @@
 use super::super::common::error::ThrushCompilerError;
 
 use super::{
-    traits::{EnumExtensions, EnumFieldsExtensions},
+    traits::{CustomTypeFieldsExtensions, EnumExtensions, EnumFieldsExtensions},
     types::CodeLocation,
 };
 
-use super::super::backend::compiler::{
-    instruction::Instruction,
-    types::{Enum, EnumField, EnumFields, StructureFields, ThrushAttributes},
+use super::super::backend::compiler::types::{
+    CustomTypeFields, Enum, EnumField, EnumFields, StructFields, ThrushAttributes,
 };
 
 use super::{
@@ -21,17 +20,16 @@ impl<'a> StructureExtensions<'a> for Struct<'a> {
         self.0.iter().any(|field| field.0 == name)
     }
 
-    fn get_field_type(&self, name: &str) -> Option<Instruction<'a>> {
+    fn get_field_type(&self, name: &str) -> Option<Type> {
         if let Some(field) = self.0.iter().find(|field| field.0 == name) {
-            let field_type: Instruction<'_> = field.1.clone();
-
+            let field_type: Type = field.1.clone();
             return Some(field_type);
         }
 
         None
     }
 
-    fn get_fields(&self) -> StructureFields<'a> {
+    fn get_fields(&self) -> StructFields<'a> {
         self.0.clone()
     }
 }
@@ -106,6 +104,7 @@ impl std::fmt::Display for TokenKind {
             TokenKind::Elif => write!(f, "elif"),
             TokenKind::Or => write!(f, "or"),
             TokenKind::Take => write!(f, "take"),
+            TokenKind::Type => write!(f, "type"),
             TokenKind::Return => write!(f, "return"),
             TokenKind::This => write!(f, "this"),
             TokenKind::True => write!(f, "true"),
@@ -113,11 +112,8 @@ impl std::fmt::Display for TokenKind {
             TokenKind::Const => write!(f, "const"),
             TokenKind::While => write!(f, "while"),
             TokenKind::Loop => write!(f, "loop"),
-            TokenKind::Integer(tp, _, _) => write!(f, "{}", tp),
-            TokenKind::Float(tp, _, _) => write!(f, "{}", tp),
+            TokenKind::Integer | TokenKind::Float => write!(f, "number"),
             TokenKind::Enum => write!(f, "enum"),
-            TokenKind::Str => write!(f, "str"),
-            TokenKind::Char => write!(f, "char"),
             TokenKind::Builtin => write!(f, "built-in"),
             TokenKind::Public => write!(f, "@public"),
             TokenKind::Ignore => write!(f, "@ignore"),
@@ -133,9 +129,26 @@ impl std::fmt::Display for TokenKind {
             TokenKind::Convention => write!(f, "@convention"),
             TokenKind::Extern => write!(f, "@extern"),
             TokenKind::Import => write!(f, "@import"),
+            TokenKind::Instr => write!(f, "instr"),
             TokenKind::New => write!(f, "new"),
             TokenKind::Eof => write!(f, "EOF"),
-            TokenKind::DataType(datatype) => write!(f, "{}", datatype),
+            TokenKind::S8 => write!(f, "s8"),
+            TokenKind::S16 => write!(f, "s16"),
+            TokenKind::S32 => write!(f, "s32"),
+            TokenKind::S64 => write!(f, "s64"),
+            TokenKind::U8 => write!(f, "u8"),
+            TokenKind::U16 => write!(f, "u16"),
+            TokenKind::U32 => write!(f, "u32"),
+            TokenKind::U64 => write!(f, "u64"),
+            TokenKind::F32 => write!(f, "f32"),
+            TokenKind::F64 => write!(f, "f64"),
+            TokenKind::Bool => write!(f, "bool"),
+            TokenKind::Str => write!(f, "str"),
+            TokenKind::Char => write!(f, "char"),
+            TokenKind::Ptr => write!(f, "ptr"),
+            TokenKind::Address => write!(f, "address"),
+            TokenKind::Carry => write!(f, "carry"),
+            TokenKind::Void => write!(f, "void"),
         }
     }
 }
@@ -156,8 +169,28 @@ impl std::fmt::Display for Type {
             Type::Bool => write!(f, "bool"),
             Type::Str => write!(f, "str"),
             Type::Char => write!(f, "char"),
-            Type::Struct => write!(f, "struct"),
-            Type::Ptr => write!(f, "ptr"),
+            Type::Struct(fields) => {
+                let _ = write!(f, "struct {{ ");
+
+                fields.iter().for_each(|field| {
+                    let _ = write!(f, "{} ", field);
+                });
+
+                write!(f, "}}")
+            }
+            Type::Ptr(typed) => {
+                if let Some(typed) = typed {
+                    let _ = write!(f, "ptr[");
+                    let _ = write!(f, "{}", typed);
+
+                    return write!(f, "]");
+                }
+
+                write!(f, "ptr")
+            }
+            Type::Address => {
+                write!(f, "memory address")
+            }
             Type::Void => write!(f, "void"),
         }
     }
@@ -180,12 +213,48 @@ impl FoundObjectExtensions for FoundObjectId<'_> {
         self.3.is_some()
     }
 
-    fn is_local(&self) -> bool {
+    fn is_custom_type(&self) -> bool {
         self.4.is_some()
+    }
+
+    fn is_instr(&self) -> bool {
+        self.6.is_some()
     }
 }
 
 impl<'instr> FoundObjectEither<'instr> for FoundObjectId<'instr> {
+    fn expected_custom_type(
+        &self,
+        location: CodeLocation,
+    ) -> Result<&'instr str, ThrushCompilerError> {
+        if let Some(type_id) = self.4 {
+            return Ok(type_id);
+        }
+
+        Err(ThrushCompilerError::Error(
+            String::from("Expected custom type reference"),
+            String::from("Expected custom type but found something else."),
+            location.0,
+            Some(location.1),
+        ))
+    }
+
+    fn expected_constant(
+        &self,
+        location: CodeLocation,
+    ) -> Result<&'instr str, ThrushCompilerError> {
+        if let Some(const_id) = self.3 {
+            return Ok(const_id);
+        }
+
+        Err(ThrushCompilerError::Error(
+            String::from("Expected constant reference"),
+            String::from("Expected constant but found something else."),
+            location.0,
+            Some(location.1),
+        ))
+    }
+
     fn expected_enum(&self, location: CodeLocation) -> Result<&'instr str, ThrushCompilerError> {
         if let Some(name) = self.2 {
             return Ok(name);
@@ -194,6 +263,19 @@ impl<'instr> FoundObjectEither<'instr> for FoundObjectId<'instr> {
         Err(ThrushCompilerError::Error(
             String::from("Expected enum reference"),
             String::from("Expected enum but found something else."),
+            location.0,
+            Some(location.1),
+        ))
+    }
+
+    fn expected_struct(&self, location: CodeLocation) -> Result<&'instr str, ThrushCompilerError> {
+        if let Some(name) = self.0 {
+            return Ok(name);
+        }
+
+        Err(ThrushCompilerError::Error(
+            String::from("Expected struct reference"),
+            String::from("Expected struct but found something else."),
             location.0,
             Some(location.1),
         ))
@@ -219,7 +301,7 @@ impl<'instr> FoundObjectEither<'instr> for FoundObjectId<'instr> {
         &self,
         location: CodeLocation,
     ) -> Result<(&'instr str, usize), ThrushCompilerError> {
-        if let Some((name, scope_idx)) = self.4 {
+        if let Some((name, scope_idx)) = self.5 {
             return Ok((name, scope_idx));
         }
 
@@ -231,19 +313,25 @@ impl<'instr> FoundObjectEither<'instr> for FoundObjectId<'instr> {
         ))
     }
 
-    fn expected_constant(
+    fn expected_instr(
         &self,
         location: CodeLocation,
-    ) -> Result<&'instr str, ThrushCompilerError> {
-        if let Some(const_id) = self.3 {
-            return Ok(const_id);
+    ) -> Result<(&'instr str, usize), ThrushCompilerError> {
+        if let Some((name, scope_idx)) = self.6 {
+            return Ok((name, scope_idx));
         }
 
         Err(ThrushCompilerError::Error(
-            String::from("Expected constant reference"),
-            String::from("Expected constant but found something else."),
+            String::from("Expected instruction reference"),
+            String::from("Expected instruction but found something else."),
             location.0,
             Some(location.1),
         ))
+    }
+}
+
+impl CustomTypeFieldsExtensions for CustomTypeFields<'_> {
+    fn get_type(&self) -> Type {
+        Type::create_structure_type(self)
     }
 }

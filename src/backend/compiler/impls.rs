@@ -1,18 +1,12 @@
-use super::super::super::frontend::types::Constructor;
+use super::super::super::frontend::{lexer::Type, types::Constructor};
 
+use super::traits::ConstructorExtensions;
 use super::{
     instruction::Instruction,
     memory::MemoryFlag,
-    objects::CompilerObjects,
-    traits::{
-        AttributesExtensions, CompilerStructureFieldsExtensions, MappedHeapedPointersExtension,
-        MemoryFlagsBasics,
-    },
-    types::{MappedHeapPointers, MemoryFlags, Structure, StructureFields, ThrushAttributes},
-    utils,
+    traits::{AttributesExtensions, MemoryFlagsBasics, StructFieldsExtensions},
+    types::{MemoryFlags, StructFields, ThrushAttributes},
 };
-
-use inkwell::{builder::Builder, context::Context, types::StructType, values::PointerValue};
 
 impl AttributesExtensions for ThrushAttributes<'_> {
     fn contain_ffi_attribute(&self) -> bool {
@@ -34,45 +28,21 @@ impl MemoryFlagsBasics for MemoryFlags {
     }
 }
 
-impl CompilerStructureFieldsExtensions for Constructor<'_> {
-    fn contain_recursive_structure_type(
-        &self,
-        compiler_objects: &CompilerObjects,
-        name: &str,
-    ) -> bool {
-        let structure: &Structure = compiler_objects.get_struct(name);
-        let structure_fields: &StructureFields = &structure.1;
-
-        structure_fields.iter().any(|field| {
-            if let Instruction::ComplexType(_, structure_name, _, _) = field.1 {
-                structure_name == name
-            } else {
-                false
-            }
-        })
+impl StructFieldsExtensions for StructFields<'_> {
+    fn get_type(&self) -> Type {
+        let types: Vec<Type> = self.iter().map(|field| field.1.clone()).collect();
+        Type::create_structure_type(types.as_slice())
     }
 }
 
-impl CompilerStructureFieldsExtensions for StructureFields<'_> {
-    fn contain_recursive_structure_type(
-        &self,
-        compiler_objects: &CompilerObjects,
-        name: &str,
-    ) -> bool {
-        let structure: &Structure = compiler_objects.get_struct(name);
-        let structure_fields: &StructureFields = &structure.1;
-
-        structure_fields.iter().any(|field| {
-            if let Instruction::ComplexType(_, structure_name, _, _) = field.1 {
-                structure_name == name
-            } else {
-                false
-            }
-        })
+impl ConstructorExtensions for Constructor<'_> {
+    fn get_type(&self) -> Type {
+        let types: Vec<Type> = self.iter().map(|field| field.2.clone()).collect();
+        Type::create_structure_type(types.as_slice())
     }
 }
 
-impl MappedHeapedPointersExtension<'_> for MappedHeapPointers<'_> {
+/*impl MappedHeapedPointersExtension<'_> for MappedHeapPointers<'_> {
     fn dealloc(
         &self,
         builder: &Builder,
@@ -86,12 +56,11 @@ impl MappedHeapedPointersExtension<'_> for MappedHeapPointers<'_> {
                 let mapped_pointer_structure_name: &str = mapped_pointer.0;
                 let mapped_pointer_index: u32 = mapped_pointer.1;
 
-                let structure: &Structure =
-                    compiler_objects.get_struct(mapped_pointer_structure_name);
-                let structure_fields: &StructureFields = &structure.1;
+                let fields: &StructureFields = compiler_objects
+                    .get_struct(mapped_pointer_structure_name)
+                    .get_fields();
 
-                let pointer_type: StructType =
-                    utils::build_struct_type_from_fields(context, structure_fields);
+                let pointer_type: StructType = typegen::struct_type(context, fields);
 
                 let target_pointer: PointerValue = builder
                     .build_struct_gep(pointer_type, pointer, mapped_pointer_index, "")
@@ -105,14 +74,14 @@ impl MappedHeapedPointersExtension<'_> for MappedHeapPointers<'_> {
                 let _ = builder.build_free(loaded_target_pointer);
             });
     }
-}
+}*/
 
 impl PartialEq for Instruction<'_> {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
             (Instruction::Integer(_, _, _), Instruction::Integer(_, _, _))
             | (Instruction::Float(_, _, _), Instruction::Float(_, _, _))
-            | (Instruction::Str(_), Instruction::Str(_)) => true,
+            | (Instruction::Str(_, _), Instruction::Str(_, _)) => true,
             (left, right) => std::mem::discriminant(left) == std::mem::discriminant(right),
         }
     }

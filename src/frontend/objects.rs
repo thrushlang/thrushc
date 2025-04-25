@@ -1,34 +1,38 @@
-use super::super::{
-    backend::compiler::instruction::Instruction,
-    backend::compiler::types::{Enum, ThrushAttributes},
-    common::error::ThrushCompilerError,
+use super::{
+    super::{
+        backend::compiler::types::{CustomType, Enum, ThrushAttributes},
+        common::error::ThrushCompilerError,
+    },
+    lexer::Type,
 };
 
 use super::types::CodeLocation;
 
 use ahash::AHashMap as HashMap;
 
+const MINIMAL_INSTRS_CAPACITY: usize = 255;
+const MINIMAL_CUSTOM_TYPE_CAPACITY: usize = 255;
+const MINIMAL_CONSTANTS_CAPACITY: usize = 255;
 const MINIMAL_STRUCTURE_CAPACITY: usize = 200;
 const MINIMAL_ENUMS_CAPACITY: usize = 200;
-
-const MINIMAL_CONSTANTS_CAPACITY: usize = 255;
 const MINIMAL_LOCAL_SCOPE_CAPACITY: usize = 255;
 
-pub type Struct<'instr> = (
-    Vec<(&'instr str, Instruction<'instr>, u32)>,
-    ThrushAttributes<'instr>,
-);
+pub type Constant<'instr> = (Type, ThrushAttributes<'instr>);
 
-pub type Function<'instr> = (Instruction<'instr>, Vec<Instruction<'instr>>, bool);
+pub type Struct<'instr> = (Vec<(&'instr str, Type, u32)>, ThrushAttributes<'instr>);
 
-pub type Constant<'instr> = (Instruction<'instr>, ThrushAttributes<'instr>);
-pub type Local<'instr> = (Instruction<'instr>, bool, bool);
+pub type Function<'instr> = (Type, Vec<Type>, bool);
+pub type Instr<'instr> = Type;
+pub type Local<'instr> = (Type, bool, bool);
+
+pub type CustomTypes<'instr> = HashMap<&'instr str, CustomType<'instr>>;
+pub type Constants<'instr> = HashMap<&'instr str, Constant<'instr>>;
 
 pub type Structs<'instr> = HashMap<&'instr str, Struct<'instr>>;
 pub type Enums<'instr> = HashMap<&'instr str, Enum<'instr>>;
 pub type Functions<'instr> = HashMap<&'instr str, Function<'instr>>;
 
-pub type Constants<'instr> = HashMap<&'instr str, Constant<'instr>>;
+pub type Instrs<'instr> = Vec<HashMap<&'instr str, Instr<'instr>>>;
 pub type Locals<'instr> = Vec<HashMap<&'instr str, Local<'instr>>>;
 
 pub type FoundObjectId<'instr> = (
@@ -36,12 +40,16 @@ pub type FoundObjectId<'instr> = (
     Option<&'instr str>,
     Option<&'instr str>,
     Option<&'instr str>,
+    Option<&'instr str>,
+    Option<(&'instr str, usize)>,
     Option<(&'instr str, usize)>,
 );
 
 #[derive(Clone, Debug, Default)]
 pub struct ParserObjects<'instr> {
+    custom_types: CustomTypes<'instr>,
     constants: Constants<'instr>,
+    instrs: Instrs<'instr>,
     locals: Locals<'instr>,
     structs: Structs<'instr>,
     functions: Functions<'instr>,
@@ -51,7 +59,9 @@ pub struct ParserObjects<'instr> {
 impl<'instr> ParserObjects<'instr> {
     pub fn with_functions(functions: HashMap<&'instr str, Function<'instr>>) -> Self {
         Self {
+            custom_types: HashMap::with_capacity(MINIMAL_CUSTOM_TYPE_CAPACITY),
             constants: HashMap::with_capacity(MINIMAL_CONSTANTS_CAPACITY),
+            instrs: Vec::with_capacity(MINIMAL_INSTRS_CAPACITY),
             locals: Vec::with_capacity(MINIMAL_LOCAL_SCOPE_CAPACITY),
             functions,
             structs: HashMap::with_capacity(MINIMAL_STRUCTURE_CAPACITY),
@@ -64,31 +74,59 @@ impl<'instr> ParserObjects<'instr> {
         name: &'instr str,
         location: CodeLocation,
     ) -> Result<FoundObjectId<'instr>, ThrushCompilerError> {
+        if self.custom_types.contains_key(name) {
+            return Ok((None, None, None, None, Some(name), None, None));
+        }
+
         if self.constants.contains_key(name) {
-            return Ok((None, None, None, Some(name), None));
+            return Ok((None, None, None, Some(name), None, None, None));
+        }
+
+        if self.structs.contains_key(name) {
+            return Ok((Some(name), None, None, None, None, None, None));
+        }
+
+        if self.enums.contains_key(name) {
+            return Ok((None, None, Some(name), None, None, None, None));
+        }
+
+        if self.functions.contains_key(name) {
+            return Ok((None, Some(name), None, None, None, None, None));
         }
 
         for (idx, scope) in self.locals.iter().enumerate().rev() {
             if scope.contains_key(name) {
-                return Ok((None, None, None, None, Some((name, idx))));
+                return Ok((None, None, None, None, None, Some((name, idx)), None));
             }
         }
 
-        if self.structs.contains_key(name) {
-            return Ok((Some(name), None, None, None, None));
-        }
-
-        if self.enums.contains_key(name) {
-            return Ok((None, None, Some(name), None, None));
-        }
-
-        if self.functions.contains_key(name) {
-            return Ok((None, Some(name), None, None, None));
+        for (idx, scope) in self.instrs.iter().enumerate().rev() {
+            if scope.contains_key(name) {
+                return Ok((None, None, None, None, None, None, Some((name, idx))));
+            }
         }
 
         Err(ThrushCompilerError::Error(
-            String::from("Structure/Function/Local not found"),
+            String::from("Structure/Function/Local/Constant/Type/Instr not found"),
             format!("'{}' is not declared or defined.", name),
+            location.0,
+            Some(location.1),
+        ))
+    }
+
+    #[inline]
+    pub fn get_struct_by_id(
+        &self,
+        struct_id: &'instr str,
+        location: CodeLocation,
+    ) -> Result<Struct<'instr>, ThrushCompilerError> {
+        if let Some(structure) = self.structs.get(struct_id).cloned() {
+            return Ok(structure);
+        }
+
+        Err(ThrushCompilerError::Error(
+            String::from("Expected struct reference"),
+            String::from("Expected struct but found something else."),
             location.0,
             Some(location.1),
         ))
@@ -130,6 +168,23 @@ impl<'instr> ParserObjects<'instr> {
         ))
     }
 
+    pub fn get_custom_type_by_id(
+        &self,
+        custom_type_id: &'instr str,
+        location: CodeLocation,
+    ) -> Result<CustomType<'instr>, ThrushCompilerError> {
+        if let Some(custom_type) = self.custom_types.get(custom_type_id).cloned() {
+            return Ok(custom_type);
+        }
+
+        Err(ThrushCompilerError::Error(
+            String::from("Expected custom type reference"),
+            String::from("Expected custom type but found something else."),
+            location.0,
+            Some(location.1),
+        ))
+    }
+
     #[inline]
     pub fn get_local_by_id(
         &self,
@@ -144,6 +199,25 @@ impl<'instr> ParserObjects<'instr> {
         Err(ThrushCompilerError::Error(
             String::from("Expected local reference"),
             String::from("Expected local but found something else."),
+            location.0,
+            Some(location.1),
+        ))
+    }
+
+    #[inline]
+    pub fn get_instr_by_id(
+        &self,
+        instr_id: &'instr str,
+        scope_idx: usize,
+        location: CodeLocation,
+    ) -> Result<&Instr<'instr>, ThrushCompilerError> {
+        if let Some(instruction) = self.instrs[scope_idx].get(instr_id) {
+            return Ok(instruction);
+        }
+
+        Err(ThrushCompilerError::Error(
+            String::from("Expected instruction reference"),
+            String::from("Expected instruction but found something else."),
             location.0,
             Some(location.1),
         ))
@@ -196,13 +270,35 @@ impl<'instr> ParserObjects<'instr> {
         if self.locals[scope_pos - 1].contains_key(name) {
             return Err(ThrushCompilerError::Error(
                 String::from("Local variable already declared"),
-                format!("'{}' local variable already declared.", name),
+                format!("'{}' local variable already declared before.", name),
                 location.0,
                 Some(location.1),
             ));
         }
 
         self.locals[scope_pos - 1].insert(name, value);
+
+        Ok(())
+    }
+
+    #[inline]
+    pub fn insert_new_instr(
+        &mut self,
+        scope_pos: usize,
+        name: &'instr str,
+        value: Instr<'instr>,
+        location: CodeLocation,
+    ) -> Result<(), ThrushCompilerError> {
+        if self.instrs[scope_pos - 1].contains_key(name) {
+            return Err(ThrushCompilerError::Error(
+                String::from("Instruction already declared"),
+                format!("'{}' Instruction already declared before.", name),
+                location.0,
+                Some(location.1),
+            ));
+        }
+
+        self.instrs[scope_pos - 1].insert(name, value);
 
         Ok(())
     }
@@ -217,13 +313,34 @@ impl<'instr> ParserObjects<'instr> {
         if self.constants.contains_key(name) {
             return Err(ThrushCompilerError::Error(
                 String::from("Constant already declared"),
-                format!("'{}' constant already declared.", name),
+                format!("'{}' constant already declared before.", name),
                 location.0,
                 Some(location.1),
             ));
         }
 
         self.constants.insert(name, constant);
+
+        Ok(())
+    }
+
+    #[inline]
+    pub fn insert_new_custom_type(
+        &mut self,
+        name: &'instr str,
+        custom_type: CustomType<'instr>,
+        location: CodeLocation,
+    ) -> Result<(), ThrushCompilerError> {
+        if self.constants.contains_key(name) {
+            return Err(ThrushCompilerError::Error(
+                String::from("Custom type already declared"),
+                format!("'{}' custom type already declared before.", name),
+                location.0,
+                Some(location.1),
+            ));
+        }
+
+        self.custom_types.insert(name, custom_type);
 
         Ok(())
     }
@@ -295,10 +412,13 @@ impl<'instr> ParserObjects<'instr> {
     pub fn begin_local_scope(&mut self) {
         self.locals
             .push(HashMap::with_capacity(MINIMAL_LOCAL_SCOPE_CAPACITY));
+        self.instrs
+            .push(HashMap::with_capacity(MINIMAL_INSTRS_CAPACITY));
     }
 
     #[inline(always)]
     pub fn end_local_scope(&mut self) {
         self.locals.pop();
+        self.instrs.pop();
     }
 }

@@ -2,17 +2,14 @@ use super::super::super::frontend::lexer::Type;
 
 use super::{binaryop, call, instruction::Instruction};
 
-use super::{
-    memory::AllocatedObject, memory::MemoryFlag, objects::CompilerObjects, types::Structure,
-    types::StructureFields, unaryop, utils,
-};
+use super::{memory::AllocatedObject, objects::CompilerObjects, typegen, unaryop, utils};
 
+use inkwell::types::BasicTypeEnum;
 use inkwell::{
     AddressSpace,
     builder::Builder,
     context::Context,
     module::Module,
-    types::StructType,
     values::{BasicValueEnum, FloatValue, IntValue, PointerValue},
 };
 
@@ -24,31 +21,11 @@ pub fn build_expression<'ctx>(
     casting_target: &Type,
     compiler_objects: &mut CompilerObjects<'ctx>,
 ) -> BasicValueEnum<'ctx> {
-    if let Instruction::ComplexType(Type::Void, _, _, _) = instruction {
-        return context
-            .ptr_type(AddressSpace::default())
-            .const_null()
-            .into();
-    }
-
-    if let Instruction::EnumField { value, .. } = instruction {
-        return build_expression(
-            module,
-            builder,
-            context,
-            value,
-            casting_target,
-            compiler_objects,
-        );
-    }
-
-    if let Instruction::Str(const_str) = instruction {
-        return utils::build_str_constant(module, builder, context, const_str).into();
+    if let Instruction::Str(_, str) = instruction {
+        return utils::build_str_constant(module, context, str).into();
     }
 
     if let Instruction::Float(kind, num, is_signed) = instruction {
-        let kind: &Type = kind.get_basic_type();
-
         let mut float: FloatValue =
             utils::build_const_float(builder, context, kind, *num, *is_signed);
 
@@ -62,8 +39,6 @@ pub fn build_expression<'ctx>(
     }
 
     if let Instruction::Integer(kind, num, is_signed) = instruction {
-        let kind: &Type = kind.get_basic_type();
-
         let mut integer: IntValue =
             utils::build_const_integer(context, kind, *num as u64, *is_signed);
 
@@ -76,44 +51,79 @@ pub fn build_expression<'ctx>(
         return integer.into();
     }
 
-    if let Instruction::Char(byte) = instruction {
+    if let Instruction::Char(_, byte) = instruction {
         return context.i8_type().const_int(*byte as u64, false).into();
     }
 
-    if let Instruction::Boolean(bool) = instruction {
+    if let Instruction::Boolean(_, bool) = instruction {
         return context.bool_type().const_int(*bool as u64, false).into();
     }
 
-    if let Instruction::GEP { name, index, .. } = instruction {
-        let local: PointerValue = compiler_objects.get_allocated_object(name).ptr;
-        let index_type: &Type = index.get_basic_type();
+    if let Instruction::Carry {
+        name,
+        expression,
+        kind,
+    } = instruction
+    {
+        if let Some(expression) = expression {
+            let compiled_expression: PointerValue<'_> =
+                build_expression(module, builder, context, expression, kind, compiler_objects)
+                    .into_pointer_value();
 
-        let mut compiled_index: BasicValueEnum = build_expression(
-            module,
-            builder,
-            context,
-            index,
-            &Type::U64,
-            compiler_objects,
-        );
-
-        if let Some(casted_index) = utils::integer_autocast(
-            &Type::U64,
-            index_type,
-            None,
-            compiled_index,
-            builder,
-            context,
-        ) {
-            compiled_index = casted_index;
+            return builder
+                .build_load(
+                    typegen::generate_type(context, kind),
+                    compiled_expression,
+                    "",
+                )
+                .unwrap();
         }
+
+        let local: AllocatedObject = compiler_objects.get_allocated_object(name);
+
+        return local.load_from_memory(builder, typegen::generate_type(context, kind));
+    }
+
+    if let Instruction::Address {
+        name,
+        indexes,
+        kind,
+    } = instruction
+    {
+        let local: PointerValue = compiler_objects.get_allocated_object(name).ptr;
+
+        let mut compiled_indexes: Vec<IntValue> = Vec::with_capacity(10);
+
+        indexes.iter().for_each(|indexe| {
+            let mut compiled_indexe: BasicValueEnum = build_expression(
+                module,
+                builder,
+                context,
+                indexe,
+                &Type::U32,
+                compiler_objects,
+            );
+
+            if let Some(casted_index) = utils::integer_autocast(
+                &Type::U32,
+                indexe.get_type(),
+                None,
+                compiled_indexe,
+                builder,
+                context,
+            ) {
+                compiled_indexe = casted_index;
+            }
+
+            compiled_indexes.push(compiled_indexe.into_int_value());
+        });
 
         return unsafe {
             builder
                 .build_in_bounds_gep(
-                    context.ptr_type(AddressSpace::default()),
+                    typegen::generate_type(context, kind),
                     local,
-                    &[compiled_index.into_int_value()],
+                    &compiled_indexes,
                     "",
                 )
                 .unwrap()
@@ -122,56 +132,27 @@ pub fn build_expression<'ctx>(
     }
 
     if let Instruction::LocalRef {
-        name, kind, take, ..
+        name,
+        kind: ref_type,
+        take,
+        ..
+    }
+    | Instruction::ConstRef {
+        name,
+        kind: ref_type,
+        take,
+        ..
     } = instruction
     {
-        let localref_type: &Type = kind.get_basic_type();
-
         let object: AllocatedObject = compiler_objects.get_allocated_object(name);
 
-        if localref_type.is_float_type() {
-            return object.load_from_memory(
-                builder,
-                utils::type_float_to_llvm_float_type(context, localref_type),
-            );
-        }
-
-        if kind.is_integer_type() || localref_type.is_bool_type() {
-            return object.load_from_memory(
-                builder,
-                utils::type_int_to_llvm_int_type(context, localref_type),
-            );
-        }
-
-        if localref_type.is_str_type() {
-            return object.load_from_memory(builder, context.i8_type());
-        }
-
-        if localref_type.is_struct_type() {
-            let localref_structure_type: &str = kind.get_structure_type();
-
-            let structure: &Structure = compiler_objects.get_struct(localref_structure_type);
-            let structure_fields: &StructureFields = &structure.1;
-
-            let llvm_structure_type: StructType =
-                utils::build_struct_type_from_fields(context, structure_fields);
-
-            if object.has_flag(MemoryFlag::HeapAllocated) {
-                return object.ptr.into();
-            }
-
-            return object.load_from_memory(builder, llvm_structure_type);
-        }
-
-        if localref_type.is_raw_ptr_type() && !take {
-            return object.load_from_memory(builder, context.ptr_type(AddressSpace::default()));
-        }
-
-        if localref_type.is_raw_ptr_type() && *take {
+        if *take {
             return object.ptr.into();
         }
 
-        unreachable!()
+        let llvm_type: BasicTypeEnum = typegen::generate_type(context, ref_type);
+
+        return object.load_from_memory(builder, llvm_type);
     }
 
     if let Instruction::BinaryOp {
@@ -182,8 +163,6 @@ pub fn build_expression<'ctx>(
         ..
     } = instruction
     {
-        let binaryop_type: &Type = binaryop_type.get_basic_type();
-
         if binaryop_type.is_float_type() {
             return binaryop::float::float_binaryop(
                 module,
@@ -224,32 +203,24 @@ pub fn build_expression<'ctx>(
 
     if let Instruction::UnaryOp {
         op,
-        expression,
         kind,
+        expression,
         ..
     } = instruction
     {
         return unaryop::compile_unary_op(
             builder,
             context,
-            (op, expression, kind),
+            (op, kind, expression),
             compiler_objects,
         );
     }
 
     if let Instruction::LocalMut { name, kind, value } = instruction {
-        let localmut_type: &Type = kind.get_basic_type();
-
         let object: AllocatedObject = compiler_objects.get_allocated_object(name);
 
-        let expression: BasicValueEnum = build_expression(
-            module,
-            builder,
-            context,
-            value,
-            localmut_type,
-            compiler_objects,
-        );
+        let expression: BasicValueEnum =
+            build_expression(module, builder, context, value, kind, compiler_objects);
 
         object.build_store(builder, expression);
 
@@ -273,10 +244,8 @@ pub fn build_expression<'ctx>(
         .unwrap();
     }
 
-    if let Instruction::Return(instruction, kind) = instruction {
-        let basic_type: &Type = kind.get_basic_type();
-
-        if basic_type.is_void_type() {
+    if let Instruction::Return(kind, value) = instruction {
+        if kind.is_void_type() {
             builder.build_return(None).unwrap();
 
             return context
@@ -290,8 +259,8 @@ pub fn build_expression<'ctx>(
                 module,
                 builder,
                 context,
-                instruction,
-                basic_type,
+                value,
+                kind,
                 compiler_objects,
             )))
             .unwrap();

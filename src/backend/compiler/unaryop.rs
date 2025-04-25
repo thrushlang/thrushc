@@ -4,6 +4,8 @@ use super::{
     Instruction, memory::AllocatedObject, objects::CompilerObjects, types::UnaryOp, utils,
 };
 
+use super::typegen;
+
 use inkwell::{
     builder::Builder,
     context::Context,
@@ -18,27 +20,26 @@ pub fn compile_unary_op<'ctx>(
 ) -> BasicValueEnum<'ctx> {
     if let (
         TokenKind::PlusPlus | TokenKind::MinusMinus,
+        _,
         Instruction::LocalRef {
             name,
-            kind: refvar_type,
+            kind: ref_type,
             ..
         },
-        _,
     ) = unary
     {
-        let refvar_type: &Type = refvar_type.get_basic_type();
         let object: AllocatedObject = compiler_objects.get_allocated_object(name);
 
-        if refvar_type.is_integer_type() {
+        if ref_type.is_integer_type() {
             let int: IntValue = object
                 .load_from_memory(
                     builder,
-                    utils::type_int_to_llvm_int_type(context, refvar_type),
+                    typegen::type_int_to_llvm_int_type(context, ref_type),
                 )
                 .into_int_value();
 
             let modifier: IntValue =
-                utils::type_int_to_llvm_int_type(context, refvar_type).const_int(1, false);
+                typegen::type_int_to_llvm_int_type(context, ref_type).const_int(1, false);
 
             let result: IntValue = if unary.0.is_plusplus_operator() {
                 builder.build_int_nsw_add(int, modifier, "").unwrap()
@@ -54,12 +55,12 @@ pub fn compile_unary_op<'ctx>(
         let float: FloatValue = object
             .load_from_memory(
                 builder,
-                utils::type_float_to_llvm_float_type(context, refvar_type),
+                typegen::type_float_to_llvm_float_type(context, ref_type),
             )
             .into_float_value();
 
         let modifier: FloatValue =
-            utils::type_float_to_llvm_float_type(context, refvar_type).const_float(1.0);
+            typegen::type_float_to_llvm_float_type(context, ref_type).const_float(1.0);
 
         let result: FloatValue = if unary.0.is_plusplus_operator() {
             builder.build_float_add(float, modifier, "").unwrap()
@@ -74,23 +75,26 @@ pub fn compile_unary_op<'ctx>(
 
     if let (
         TokenKind::Bang,
+        _,
         Instruction::LocalRef {
-            name,
-            kind: refvar_type,
+            name: ref_name,
+            kind: ref_type,
+            ..
+        }
+        | Instruction::ConstRef {
+            name: ref_name,
+            kind: ref_type,
             ..
         },
-        _,
     ) = unary
     {
-        let refvar_type: &Type = refvar_type.get_basic_type();
+        let object: AllocatedObject = compiler_objects.get_allocated_object(ref_name);
 
-        let object: AllocatedObject = compiler_objects.get_allocated_object(name);
-
-        if refvar_type.is_integer_type() || refvar_type.is_bool_type() {
+        if ref_type.is_integer_type() || ref_type.is_bool_type() {
             let int: IntValue = object
                 .load_from_memory(
                     builder,
-                    utils::type_int_to_llvm_int_type(context, refvar_type),
+                    typegen::type_int_to_llvm_int_type(context, ref_type),
                 )
                 .into_int_value();
 
@@ -101,7 +105,7 @@ pub fn compile_unary_op<'ctx>(
         let float: FloatValue = object
             .load_from_memory(
                 builder,
-                utils::type_float_to_llvm_float_type(context, refvar_type),
+                typegen::type_float_to_llvm_float_type(context, ref_type),
             )
             .into_float_value();
 
@@ -111,23 +115,26 @@ pub fn compile_unary_op<'ctx>(
 
     if let (
         TokenKind::Minus,
+        _,
         Instruction::LocalRef {
             name,
-            kind: refvar_type,
+            kind: ref_type,
+            ..
+        }
+        | Instruction::ConstRef {
+            name,
+            kind: ref_type,
             ..
         },
-        _,
     ) = unary
     {
-        let refvar_type: &Type = refvar_type.get_basic_type();
-
         let object: AllocatedObject = compiler_objects.get_allocated_object(name);
 
-        if refvar_type.is_integer_type() {
+        if ref_type.is_integer_type() {
             let int: IntValue = object
                 .load_from_memory(
                     builder,
-                    utils::type_int_to_llvm_int_type(context, refvar_type),
+                    typegen::type_int_to_llvm_int_type(context, ref_type),
                 )
                 .into_int_value();
 
@@ -138,7 +145,7 @@ pub fn compile_unary_op<'ctx>(
         let float: FloatValue = object
             .load_from_memory(
                 builder,
-                utils::type_float_to_llvm_float_type(context, refvar_type),
+                typegen::type_float_to_llvm_float_type(context, ref_type),
             )
             .into_float_value();
 
@@ -146,18 +153,15 @@ pub fn compile_unary_op<'ctx>(
         return result.into();
     }
 
-    if let (TokenKind::Bang, Instruction::Boolean(bool), _) = unary {
+    if let (TokenKind::Bang, _, Instruction::Boolean(_, bool)) = unary {
         let value: IntValue = utils::build_const_integer(context, &Type::Bool, *bool as u64, false);
         let result: IntValue = builder.build_not(value, "").unwrap();
 
         return result.into();
     }
 
-    if let (TokenKind::Minus, Instruction::Integer(kind, num, is_signed), _) = unary {
-        let integer_type: &Type = kind.get_basic_type();
-
-        let value: IntValue =
-            utils::build_const_integer(context, integer_type, *num as u64, *is_signed);
+    if let (TokenKind::Minus, _, Instruction::Integer(kind, num, is_signed)) = unary {
+        let value: IntValue = utils::build_const_integer(context, kind, *num as u64, *is_signed);
 
         if !is_signed {
             let result: IntValue = builder.build_not(value, "").unwrap();
@@ -167,11 +171,8 @@ pub fn compile_unary_op<'ctx>(
         return value.into();
     }
 
-    if let (TokenKind::Minus, Instruction::Float(kind, num, is_signed), _) = unary {
-        let float_type: &Type = kind.get_basic_type();
-
-        let value: FloatValue =
-            utils::build_const_float(builder, context, float_type, *num, *is_signed);
+    if let (TokenKind::Minus, _, Instruction::Float(kind, num, is_signed)) = unary {
+        let value: FloatValue = utils::build_const_float(builder, context, kind, *num, *is_signed);
 
         if !is_signed {
             let result: FloatValue = builder.build_float_neg(value, "").unwrap();
@@ -179,10 +180,6 @@ pub fn compile_unary_op<'ctx>(
         }
 
         return value.into();
-    }
-
-    if let (TokenKind::Minus, Instruction::EnumField { kind, value, .. }, _) = unary {
-        return compile_unary_op(builder, context, (unary.0, value, kind), compiler_objects);
     }
 
     unreachable!()

@@ -1,12 +1,8 @@
 use super::super::super::frontend::lexer::Type;
 
 use super::{
-    Instruction, binaryop, call, generation,
-    memory::{AllocatedObject, MemoryFlag},
-    objects::CompilerObjects,
-    traits::MemoryFlagsBasics,
-    types::Local,
-    unaryop, utils,
+    Instruction, binaryop, call, generation, memory::AllocatedObject, objects::CompilerObjects,
+    traits::MemoryFlagsBasics, typegen, types::Local, unaryop, utils, valuegen,
 };
 
 use inkwell::{
@@ -23,19 +19,14 @@ pub fn build<'ctx>(
     local: Local<'ctx>,
     compiler_objects: &mut CompilerObjects<'ctx>,
 ) {
-    let local_type: &Instruction = local.1;
+    let local_type: &Type = local.1;
 
-    if local_type.is_raw_ptr_type() {
-        let allocated_pointer: PointerValue = utils::build_raw_ptr(
-            context,
-            builder,
-            local.2,
-            compiler_objects,
-            local.3.is_stack_allocated(),
-        );
+    if local_type.is_ptr_type() {
+        let allocated_pointer: PointerValue =
+            valuegen::alloc(context, builder, local_type, local.3.is_stack_allocated());
 
         let allocated_object: AllocatedObject =
-            AllocatedObject::alloc(allocated_pointer, &local.3, local_type, false);
+            AllocatedObject::alloc(allocated_pointer, &local.3, local_type);
 
         compiler_objects.alloc_local_object(local.0, allocated_object);
 
@@ -52,21 +43,36 @@ pub fn build<'ctx>(
     }
 
     if local_type.is_str_type() {
-        build_local_str(module, builder, context, local.0, local.2, compiler_objects);
+        let allocated_pointer: PointerValue = valuegen::alloc(
+            context,
+            builder,
+            local_type,
+            local_type.is_stack_allocated(),
+        );
+
+        let allocated_object: AllocatedObject =
+            AllocatedObject::alloc(allocated_pointer, &local.3, local_type);
+
+        compiler_objects.alloc_local_object(local.0, allocated_object);
+
+        build_local_str(
+            module,
+            builder,
+            context,
+            local,
+            allocated_object,
+            compiler_objects,
+        );
+
         return;
     }
 
     if local_type.is_struct_type() {
-        let allocated_pointer: PointerValue = utils::build_struct_ptr(
-            context,
-            builder,
-            local.2,
-            compiler_objects,
-            local.3.is_stack_allocated(),
-        );
+        let allocated_pointer: PointerValue =
+            valuegen::alloc(context, builder, local.1, local.3.is_stack_allocated());
 
         let mut allocated_object: AllocatedObject =
-            AllocatedObject::alloc(allocated_pointer, &local.3, local_type, false);
+            AllocatedObject::alloc(allocated_pointer, &local.3, local_type);
 
         build_local_structure(
             module,
@@ -81,12 +87,15 @@ pub fn build<'ctx>(
     }
 
     if local_type.is_integer_type() {
-        let local_basic_type: &Type = local_type.get_basic_type();
-
-        let allocated_pointer: PointerValue = utils::build_ptr(context, builder, local_basic_type);
+        let allocated_pointer: PointerValue = valuegen::alloc(
+            context,
+            builder,
+            local_type,
+            local_type.is_stack_allocated(),
+        );
 
         let allocated_object: AllocatedObject =
-            AllocatedObject::alloc(allocated_pointer, &local.3, local_type, false);
+            AllocatedObject::alloc(allocated_pointer, &local.3, local_type);
 
         compiler_objects.alloc_local_object(local.0, allocated_object);
 
@@ -103,12 +112,15 @@ pub fn build<'ctx>(
     }
 
     if local_type.is_float_type() {
-        let local_basic_type: &Type = local_type.get_basic_type();
-
-        let allocated_pointer: PointerValue = utils::build_ptr(context, builder, local_basic_type);
+        let allocated_pointer: PointerValue = valuegen::alloc(
+            context,
+            builder,
+            local_type,
+            local_type.is_stack_allocated(),
+        );
 
         let allocated_object: AllocatedObject =
-            AllocatedObject::alloc(allocated_pointer, &local.3, local_type, false);
+            AllocatedObject::alloc(allocated_pointer, &local.3, local_type);
 
         compiler_objects.alloc_local_object(local.0, allocated_object);
 
@@ -125,11 +137,15 @@ pub fn build<'ctx>(
     }
 
     if local_type.is_bool_type() {
-        let local_basic_type: &Type = local_type.get_basic_type();
+        let allocated_pointer: PointerValue = valuegen::alloc(
+            context,
+            builder,
+            local_type,
+            local_type.is_stack_allocated(),
+        );
 
-        let allocated_pointer: PointerValue = utils::build_ptr(context, builder, local_basic_type);
         let allocated_object: AllocatedObject =
-            AllocatedObject::alloc(allocated_pointer, &local.3, local_type, false);
+            AllocatedObject::alloc(allocated_pointer, &local.3, local_type);
 
         compiler_objects.alloc_local_object(local.0, allocated_object);
 
@@ -156,20 +172,18 @@ pub fn build_local_mutation<'ctx>(
     local: Local<'ctx>,
 ) {
     let local_name: &str = local.0;
-    let local_type: &Instruction = local.1;
+    let local_type: &Type = local.1;
     let local_value: &Instruction = local.2;
 
     let object: AllocatedObject = compiler_objects.get_allocated_object(local_name);
 
     if let Instruction::LocalMut { value, .. } = local_value {
-        let local_basic_type: &Type = local_type.get_basic_type();
-
         let expression: BasicValueEnum = generation::build_expression(
             module,
             builder,
             context,
             value,
-            local_basic_type,
+            local_type,
             compiler_objects,
         );
 
@@ -195,7 +209,7 @@ pub fn build_local_mutation<'ctx>(
         return;
     }
 
-    if local_type.is_raw_ptr_type() {
+    if local_type.is_ptr_type() {
         build_local_ptr(module, builder, context, local, object, compiler_objects);
         return;
     }
@@ -214,15 +228,14 @@ fn build_local_ptr<'ctx>(
     let local_value: &Instruction = local.2;
 
     if local_value.is_null() {
-        let null: PointerValue = generation::build_expression(
+        let null: BasicValueEnum = generation::build_expression(
             module,
             builder,
             context,
             local_value,
             &Type::Void,
             compiler_objects,
-        )
-        .into_pointer_value();
+        );
 
         allocated_object.build_store(builder, null);
 
@@ -236,15 +249,14 @@ fn build_local_ptr<'ctx>(
         ..
     } = local_value
     {
-        let call: PointerValue = call::build_call(
+        let call: BasicValueEnum = call::build_call(
             module,
             builder,
             context,
             (call_name, call_type, call_arguments),
             compiler_objects,
         )
-        .unwrap()
-        .into_pointer_value();
+        .unwrap();
 
         allocated_object.build_store(builder, call);
 
@@ -252,15 +264,14 @@ fn build_local_ptr<'ctx>(
     }
 
     if local_value.is_gep() {
-        let gep: PointerValue = generation::build_expression(
+        let gep: BasicValueEnum = generation::build_expression(
             module,
             builder,
             context,
             local_value,
             &Type::Void,
             compiler_objects,
-        )
-        .into_pointer_value();
+        );
 
         allocated_object.build_store(builder, gep);
 
@@ -293,12 +304,13 @@ fn build_local_structure<'ctx>(
     allocated_object: &mut AllocatedObject<'ctx>,
     compiler_objects: &mut CompilerObjects<'ctx>,
 ) {
+    let local_type: &Type = local.1;
     let local_value: &Instruction = local.2;
 
     if let Instruction::InitStruct { arguments, .. } = local_value {
         arguments.iter().for_each(|argument| {
             let argument_instruction: &Instruction = &argument.1;
-            let argument_basic_type: &Type = argument.2.get_basic_type();
+            let argument_type: &Type = &argument.2;
             let argument_position: u32 = argument.3;
 
             let compiled_field: BasicValueEnum = generation::build_expression(
@@ -306,13 +318,13 @@ fn build_local_structure<'ctx>(
                 builder,
                 context,
                 argument_instruction,
-                argument_basic_type,
+                argument_type,
                 compiler_objects,
             );
 
             let field_in_struct: PointerValue = builder
                 .build_struct_gep(
-                    local_value.build_struct_type(context, None, compiler_objects),
+                    typegen::generate_type(context, local_type),
                     allocated_object.ptr,
                     argument_position,
                     "",
@@ -346,18 +358,50 @@ fn build_local_structure<'ctx>(
         ..
     } = local_value
     {
-        let value: PointerValue = call::build_call(
+        let value: BasicValueEnum = call::build_call(
             module,
             builder,
             context,
             (call_name, call_type, call_arguments),
             compiler_objects,
         )
-        .unwrap()
-        .into_pointer_value();
+        .unwrap();
 
         allocated_object.build_store(builder, value);
 
+        compiler_objects.alloc_local_object(local.0, *allocated_object);
+
+        return;
+    }
+
+    if local_value.is_gep() {
+        let value: BasicValueEnum = generation::build_expression(
+            module,
+            builder,
+            context,
+            local_value,
+            local_type,
+            compiler_objects,
+        );
+
+        allocated_object.build_store(builder, value);
+
+        compiler_objects.alloc_local_object(local.0, *allocated_object);
+
+        return;
+    }
+
+    if local_value.is_carry() {
+        let value: BasicValueEnum = generation::build_expression(
+            module,
+            builder,
+            context,
+            local_value,
+            local_type,
+            compiler_objects,
+        );
+
+        allocated_object.build_store(builder, value);
         compiler_objects.alloc_local_object(local.0, *allocated_object);
 
         return;
@@ -370,48 +414,38 @@ fn build_local_str<'ctx>(
     module: &Module<'ctx>,
     builder: &Builder<'ctx>,
     context: &'ctx Context,
-    name: &'ctx str,
-    value: &'ctx Instruction<'ctx>,
+    local: Local<'ctx>,
+    allocated_object: AllocatedObject<'ctx>,
     compiler_objects: &mut CompilerObjects<'ctx>,
 ) {
-    if let Instruction::Str(_) = value {
-        let str_compiled: PointerValue = generation::build_expression(
+    let local_value: &Instruction = local.2;
+
+    if local_value.is_str() {
+        let str_compiled: BasicValueEnum = generation::build_expression(
             module,
             builder,
             context,
-            value,
+            local_value,
             &Type::Void,
             compiler_objects,
-        )
-        .into_pointer_value();
-
-        let allocated_object: AllocatedObject = AllocatedObject::alloc(
-            str_compiled,
-            &[MemoryFlag::StaticAllocated],
-            &Instruction::ComplexType(Type::Str, "", None, None),
-            false,
         );
 
-        compiler_objects.alloc_local_object(name, allocated_object);
+        allocated_object.build_store(builder, str_compiled);
 
         return;
     }
 
-    if let Instruction::LocalRef { kind, .. } = value {
-        let refvar: PointerValue = generation::build_expression(
+    if let Instruction::LocalRef { .. } = local_value {
+        let compiled_refvar: BasicValueEnum = generation::build_expression(
             module,
             builder,
             context,
-            value,
+            local_value,
             &Type::Void,
             compiler_objects,
-        )
-        .into_pointer_value();
+        );
 
-        let allocated_object: AllocatedObject =
-            AllocatedObject::alloc(refvar, &[MemoryFlag::StaticAllocated], kind, false);
-
-        compiler_objects.alloc_local_object(name, allocated_object);
+        allocated_object.build_store(builder, compiled_refvar);
 
         return;
     }
@@ -421,27 +455,33 @@ fn build_local_str<'ctx>(
         args,
         kind: call_type,
         ..
-    } = value
+    } = local_value
     {
-        let call: PointerValue = call::build_call(
+        let compiled_call: BasicValueEnum = call::build_call(
             module,
             builder,
             context,
             (call_name, call_type, args),
             compiler_objects,
         )
-        .unwrap()
-        .into_pointer_value();
+        .unwrap();
 
-        let allocated_object: AllocatedObject = AllocatedObject::alloc(
-            call,
-            &[MemoryFlag::StaticAllocated],
-            &Instruction::ComplexType(Type::Str, "", None, None),
-            false,
+        allocated_object.build_store(builder, compiled_call);
+
+        return;
+    }
+
+    if local_value.is_carry() {
+        let value: BasicValueEnum = generation::build_expression(
+            module,
+            builder,
+            context,
+            local_value,
+            &Type::Str,
+            compiler_objects,
         );
 
-        compiler_objects.alloc_local_object(name, allocated_object);
-
+        allocated_object.build_store(builder, value);
         return;
     }
 
@@ -457,81 +497,58 @@ fn build_local_integer<'ctx>(
     compiler_objects: &mut CompilerObjects<'ctx>,
 ) {
     let local_name: &str = local.0;
-    let local_type: &Instruction = local.1;
+    let local_type: &Type = local.1;
     let local_value: &Instruction = local.2;
 
     if let Instruction::Null = local_value {
-        let local_basic_type: &Type = local_type.get_basic_type();
-
         object.build_store(
             builder,
-            utils::build_const_integer(context, local_basic_type, 0, false),
+            utils::build_const_integer(context, local_type, 0, false),
         );
 
         return;
     }
 
-    if let Instruction::EnumField { value, .. } = local_value {
-        let field: BasicValueEnum = generation::build_expression(
-            module,
-            builder,
-            context,
-            value,
-            local_type.get_basic_type(),
-            compiler_objects,
-        );
-
-        object.build_store(builder, field);
-
-        return;
-    }
-
-    if let Instruction::Char(byte) = local_value {
-        let local_basic_type: &Type = local_type.get_basic_type();
-
+    if let Instruction::Char(_, byte) = local_value {
         object.build_store(
             builder,
-            utils::build_const_integer(context, local_basic_type, *byte as u64, false),
+            utils::build_const_integer(context, local_type, *byte as u64, false),
         );
 
         return;
     }
 
     if let Instruction::Integer(_, num, is_signed) = local_value {
-        let local_basic_type: &Type = local_type.get_basic_type();
-
         object.build_store(
             builder,
-            utils::build_const_integer(context, local_basic_type, *num as u64, *is_signed),
+            utils::build_const_integer(context, local_type, *num as u64, *is_signed),
         );
 
         return;
     }
 
     if let Instruction::LocalRef {
-        name: localref_name,
-        kind: localref_type,
+        name: ref_name,
+        kind: ref_type,
+        ..
+    }
+    | Instruction::ConstRef {
+        name: ref_name,
+        kind: ref_type,
         ..
     } = local_value
     {
-        let local_basic_type: &Type = local_type.get_basic_type();
+        let target_type: &Type = local_type;
+        let ref_object: AllocatedObject = compiler_objects.get_allocated_object(ref_name);
 
-        let localref_basic_type: &Type = localref_type.get_basic_type();
-        let localref_object: AllocatedObject = compiler_objects.get_allocated_object(localref_name);
-
-        let mut value: BasicValueEnum = localref_object.load_from_memory(
+        let mut value: BasicValueEnum = ref_object.load_from_memory(
             builder,
-            utils::type_int_to_llvm_int_type(context, localref_basic_type),
+            typegen::type_int_to_llvm_int_type(context, ref_type),
         );
 
-        if let Some(casted_value) = utils::integer_autocast(
-            local_basic_type,
-            localref_basic_type,
-            None,
-            value,
-            builder,
-            context,
-        ) {
+        if let Some(casted_value) =
+            utils::integer_autocast(target_type, ref_type, None, value, builder, context)
+        {
             value = casted_value;
         }
 
@@ -542,13 +559,13 @@ fn build_local_integer<'ctx>(
 
     if let Instruction::UnaryOp {
         op,
-        expression,
         kind,
+        expression,
         ..
     } = local_value
     {
         let expression: BasicValueEnum =
-            unaryop::compile_unary_op(builder, context, (op, expression, kind), compiler_objects);
+            unaryop::compile_unary_op(builder, context, (op, kind, expression), compiler_objects);
 
         object.build_store(builder, expression);
 
@@ -559,14 +576,12 @@ fn build_local_integer<'ctx>(
         left, op, right, ..
     } = local_value
     {
-        let local_basic_type: &Type = local_type.get_basic_type();
-
         let expression: BasicValueEnum = binaryop::integer::compile_integer_binaryop(
             module,
             builder,
             context,
             (left, op, right),
-            local_basic_type,
+            local_type,
             compiler_objects,
         );
 
@@ -582,8 +597,6 @@ fn build_local_integer<'ctx>(
         ..
     } = local_value
     {
-        let local_basic_type: &Type = local_type.get_basic_type();
-
         let mut expression: BasicValueEnum = call::build_call(
             module,
             builder,
@@ -593,14 +606,9 @@ fn build_local_integer<'ctx>(
         )
         .unwrap();
 
-        if let Some(casted_expression) = utils::integer_autocast(
-            local_basic_type,
-            call_type.get_basic_type(),
-            None,
-            expression,
-            builder,
-            context,
-        ) {
+        if let Some(casted_expression) =
+            utils::integer_autocast(local_type, call_type, None, expression, builder, context)
+        {
             expression = casted_expression;
         };
 
@@ -622,6 +630,20 @@ fn build_local_integer<'ctx>(
         return;
     }
 
+    if local_value.is_carry() {
+        let value: BasicValueEnum = generation::build_expression(
+            module,
+            builder,
+            context,
+            local_value,
+            local_type,
+            compiler_objects,
+        );
+
+        object.build_store(builder, value);
+        return;
+    }
+
     unimplemented!()
 }
 
@@ -634,64 +656,49 @@ fn build_local_float<'ctx>(
     compiler_objects: &mut CompilerObjects<'ctx>,
 ) {
     let local_name: &str = local.0;
-    let local_type: &Instruction = local.1;
+    let local_type: &Type = local.1;
     let local_value: &Instruction = local.2;
 
     if let Instruction::Null = local_value {
-        let local_basic_type: &Type = local_type.get_basic_type();
-
         object.build_store(
             builder,
-            utils::build_const_float(builder, context, local_basic_type, 0.0, false),
+            utils::build_const_float(builder, context, local_type, 0.0, false),
         );
-
-        return;
-    }
-
-    if let Instruction::EnumField { value, .. } = local_value {
-        let field: BasicValueEnum = generation::build_expression(
-            module,
-            builder,
-            context,
-            value,
-            local_type.get_basic_type(),
-            compiler_objects,
-        );
-
-        object.build_store(builder, field);
 
         return;
     }
 
     if let Instruction::Float(_, num, is_signed) = local_value {
-        let local_basic_type: &Type = local_type.get_basic_type();
-
         object.build_store(
             builder,
-            utils::build_const_float(builder, context, local_basic_type, *num, *is_signed),
+            utils::build_const_float(builder, context, local_type, *num, *is_signed),
         );
 
         return;
     }
 
     if let Instruction::LocalRef {
-        name: name_refvar,
-        kind: kind_refvar,
+        name: ref_name,
+        kind: ref_type,
+        ..
+    }
+    | Instruction::ConstRef {
+        name: ref_name,
+        kind: ref_type,
         ..
     } = local_value
     {
-        let local_basic_type: &Type = local_type.get_basic_type();
+        let target_type: &Type = local_type;
 
-        let kind_refvar: &Type = kind_refvar.get_basic_type();
-        let localref_object: AllocatedObject = compiler_objects.get_allocated_object(name_refvar);
+        let ref_object: AllocatedObject = compiler_objects.get_allocated_object(ref_name);
 
-        let mut value: BasicValueEnum = localref_object.load_from_memory(
+        let mut value: BasicValueEnum = ref_object.load_from_memory(
             builder,
-            utils::type_float_to_llvm_float_type(context, kind_refvar),
+            typegen::type_float_to_llvm_float_type(context, ref_type),
         );
 
         if let Some(casted_value) =
-            utils::float_autocast(local_basic_type, kind_refvar, None, value, builder, context)
+            utils::float_autocast(target_type, ref_type, None, value, builder, context)
         {
             value = casted_value;
         }
@@ -708,8 +715,6 @@ fn build_local_float<'ctx>(
         ..
     } = local_value
     {
-        let local_basic_type: &Type = local_type.get_basic_type();
-
         let mut expression: BasicValueEnum = call::build_call(
             module,
             builder,
@@ -719,14 +724,9 @@ fn build_local_float<'ctx>(
         )
         .unwrap();
 
-        if let Some(casted_expression) = utils::float_autocast(
-            local_basic_type,
-            call_type.get_basic_type(),
-            None,
-            expression,
-            builder,
-            context,
-        ) {
+        if let Some(casted_expression) =
+            utils::float_autocast(local_type, call_type, None, expression, builder, context)
+        {
             expression = casted_expression;
         };
 
@@ -737,13 +737,13 @@ fn build_local_float<'ctx>(
 
     if let Instruction::UnaryOp {
         op,
-        expression,
         kind,
+        expression,
         ..
     } = local_value
     {
         let expression: BasicValueEnum =
-            unaryop::compile_unary_op(builder, context, (op, expression, kind), compiler_objects);
+            unaryop::compile_unary_op(builder, context, (op, kind, expression), compiler_objects);
 
         object.build_store(builder, expression);
 
@@ -754,14 +754,12 @@ fn build_local_float<'ctx>(
         left, op, right, ..
     } = local_value
     {
-        let local_basic_type: &Type = local_type.get_basic_type();
-
         let expression: BasicValueEnum = binaryop::float::float_binaryop(
             module,
             builder,
             context,
             (left, op, right),
-            local_basic_type,
+            local_type,
             compiler_objects,
         );
 
@@ -783,6 +781,20 @@ fn build_local_float<'ctx>(
         );
     }
 
+    if local_value.is_carry() {
+        let value: BasicValueEnum = generation::build_expression(
+            module,
+            builder,
+            context,
+            local_value,
+            local_type,
+            compiler_objects,
+        );
+
+        object.build_store(builder, value);
+        return;
+    }
+
     unimplemented!()
 }
 
@@ -795,55 +807,43 @@ fn build_local_boolean<'ctx>(
     compiler_objects: &mut CompilerObjects<'ctx>,
 ) {
     let local_name: &str = local.0;
-    let local_type: &Instruction = local.1;
+    let local_type: &Type = local.1;
     let local_value: &Instruction = local.2;
 
     if let Instruction::Null = local_value {
-        let local_basic_type: &Type = local_type.get_basic_type();
-
         object.build_store(
             builder,
-            utils::build_const_integer(context, local_basic_type, 0, false),
+            utils::build_const_integer(context, local_type, 0, false),
         );
 
         return;
     }
 
-    if let Instruction::Boolean(bool) = local_value {
-        let local_basic_type: &Type = local_type.get_basic_type();
-
+    if let Instruction::Boolean(_, bool) = local_value {
         object.build_store(
             builder,
-            utils::build_const_integer(context, local_basic_type, *bool as u64, false),
+            utils::build_const_integer(context, local_type, *bool as u64, false),
         );
 
         return;
     }
 
     if let Instruction::LocalRef {
-        name: name_refvar,
-        kind: kind_refvar,
+        name: ref_name,
+        kind: ref_type,
         ..
     } = local_value
     {
-        let local_basic_type: &Type = local_type.get_basic_type();
-        let refvar_basic_type: &Type = kind_refvar.get_basic_type();
-
-        let localref_object: AllocatedObject = compiler_objects.get_allocated_object(name_refvar);
+        let localref_object: AllocatedObject = compiler_objects.get_allocated_object(ref_name);
 
         let mut value: BasicValueEnum = localref_object.load_from_memory(
             builder,
-            utils::type_float_to_llvm_float_type(context, refvar_basic_type),
+            typegen::type_int_to_llvm_int_type(context, ref_type),
         );
 
-        if let Some(new_value) = utils::integer_autocast(
-            local_basic_type,
-            refvar_basic_type,
-            None,
-            value,
-            builder,
-            context,
-        ) {
+        if let Some(new_value) =
+            utils::integer_autocast(local_type, ref_type, None, value, builder, context)
+        {
             value = new_value;
         }
 
@@ -859,8 +859,6 @@ fn build_local_boolean<'ctx>(
         ..
     } = local_value
     {
-        let local_basic_type: &Type = local_type.get_basic_type();
-
         let mut expression: BasicValueEnum = call::build_call(
             module,
             builder,
@@ -870,14 +868,9 @@ fn build_local_boolean<'ctx>(
         )
         .unwrap();
 
-        if let Some(casted_expression) = utils::integer_autocast(
-            local_basic_type,
-            call_type.get_basic_type(),
-            None,
-            expression,
-            builder,
-            context,
-        ) {
+        if let Some(casted_expression) =
+            utils::integer_autocast(local_type, call_type, None, expression, builder, context)
+        {
             expression = casted_expression;
         };
 
@@ -888,13 +881,13 @@ fn build_local_boolean<'ctx>(
 
     if let Instruction::UnaryOp {
         op,
-        expression,
         kind,
+        expression,
         ..
     } = local_value
     {
         let expression: BasicValueEnum =
-            unaryop::compile_unary_op(builder, context, (op, expression, kind), compiler_objects);
+            unaryop::compile_unary_op(builder, context, (op, kind, expression), compiler_objects);
 
         object.build_store(builder, expression);
 
@@ -905,14 +898,12 @@ fn build_local_boolean<'ctx>(
         left, op, right, ..
     } = local_value
     {
-        let local_basic_type: &Type = local_type.get_basic_type();
-
         let expression: BasicValueEnum = binaryop::boolean::bool_binaryop(
             module,
             builder,
             context,
             (left, op, right),
-            local_basic_type,
+            local_type,
             compiler_objects,
         );
 
@@ -930,6 +921,20 @@ fn build_local_boolean<'ctx>(
             object,
             compiler_objects,
         );
+    }
+
+    if local_value.is_carry() {
+        let value: BasicValueEnum = generation::build_expression(
+            module,
+            builder,
+            context,
+            local_value,
+            local_type,
+            compiler_objects,
+        );
+
+        object.build_store(builder, value);
+        return;
     }
 
     unreachable!()

@@ -165,7 +165,7 @@ impl<'a> Diagnostic<'a> {
         let lines: Vec<&str> = code.lines().collect();
 
         let code: &str = lines[line - 1].trim_start();
-        let signaler: String = "|  ".to_string() + &"^".bright_red().repeat(code.len());
+        let signaler: String = "^".bright_red().repeat(code.len());
 
         Diagnostic { code, signaler }
     }

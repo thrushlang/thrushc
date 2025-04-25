@@ -230,9 +230,9 @@ pub fn check_unary_types(
     }
 }
 
-pub fn check_types(
-    target_type: Instruction,
-    from_type: Instruction,
+pub fn check_type(
+    target_type: Type,
+    from_type: Type,
     expression: Option<&Instruction>,
     operator: Option<&TokenKind>,
     error: ThrushCompilerError,
@@ -243,9 +243,9 @@ pub fn check_types(
         ..
     }) = expression
     {
-        return check_types(
+        return check_type(
             target_type,
-            (**expression_type).clone(),
+            (*expression_type).clone(),
             None,
             Some(op),
             error,
@@ -258,191 +258,215 @@ pub fn check_types(
         ..
     }) = expression
     {
-        return check_types(
+        return check_type(
             target_type,
-            (**expression_type).clone(),
+            (*expression_type).clone(),
             None,
             Some(op),
             error,
         );
     }
 
-    if let Some(Instruction::Group { expression, .. }) = expression {
-        return check_types(
+    if let Some(Instruction::Group {
+        expression,
+        kind: expression_type,
+    }) = expression
+    {
+        return check_type(
             target_type,
-            Instruction::Null,
+            (*expression_type).clone(),
             Some(expression),
             None,
             error,
         );
     }
 
-    if let (
-        Instruction::ComplexType(target_type, target_structure_type, _, _),
-        Instruction::ComplexType(from_type, from_structure_type, _, _),
-        op,
-    ) = (target_type, from_type, operator)
-    {
-        match (target_type, from_type, op) {
-            (Type::Char, Type::Char, None) => Ok(()),
-            (Type::Str, Type::Str, None) => Ok(()),
-            (Type::Struct, Type::Struct, None) if target_structure_type == from_structure_type => {
-                Ok(())
+    match (target_type, from_type, operator) {
+        (Type::Char, Type::Char, None) => Ok(()),
+        (Type::Str, Type::Str, None) => Ok(()),
+        (Type::Struct(target_fields), Type::Struct(from_fields), None) => {
+            if target_fields.len() != from_fields.len() {
+                return Err(error);
             }
 
-            (Type::Struct, Type::Void, None) => Ok(()),
-            (Type::Ptr, Type::Ptr, None) => Ok(()),
+            target_fields.iter().zip(from_fields.iter()).try_for_each(
+                |(target_field, from_field)| {
+                    check_type(
+                        (**target_field).clone(),
+                        (**from_field).clone(),
+                        None,
+                        None,
+                        error.clone(),
+                    )
+                },
+            )?;
 
-            (
-                Type::Bool,
-                Type::Bool,
-                Some(
-                    TokenKind::BangEq
-                    | TokenKind::EqEq
-                    | TokenKind::LessEq
-                    | TokenKind::Less
-                    | TokenKind::Greater
-                    | TokenKind::GreaterEq
-                    | TokenKind::And
-                    | TokenKind::Or
-                    | TokenKind::Bang,
-                )
-                | None,
-            ) => Ok(()),
-            (
-                Type::S8,
-                Type::S8 | Type::U8,
-                Some(
-                    TokenKind::Plus
-                    | TokenKind::Minus
-                    | TokenKind::Slash
-                    | TokenKind::Star
-                    | TokenKind::LShift
-                    | TokenKind::RShift,
-                )
-                | None,
-            ) => Ok(()),
-            (
-                Type::S16,
-                Type::S16 | Type::S8 | Type::U16 | Type::U8,
-                Some(
-                    TokenKind::Plus
-                    | TokenKind::Minus
-                    | TokenKind::Slash
-                    | TokenKind::Star
-                    | TokenKind::LShift
-                    | TokenKind::RShift,
-                )
-                | None,
-            ) => Ok(()),
-            (
-                Type::S32,
-                Type::S32 | Type::S16 | Type::S8 | Type::U32 | Type::U16 | Type::U8,
-                Some(
-                    TokenKind::Plus
-                    | TokenKind::Minus
-                    | TokenKind::Slash
-                    | TokenKind::Star
-                    | TokenKind::LShift
-                    | TokenKind::RShift,
-                )
-                | None,
-            ) => Ok(()),
-            (
-                Type::S64,
-                Type::S64
-                | Type::S32
-                | Type::S16
-                | Type::S8
-                | Type::U64
-                | Type::U32
-                | Type::U16
-                | Type::U8,
-                Some(
-                    TokenKind::Plus
-                    | TokenKind::Minus
-                    | TokenKind::Slash
-                    | TokenKind::Star
-                    | TokenKind::LShift
-                    | TokenKind::RShift,
-                )
-                | None,
-            ) => Ok(()),
-            (
-                Type::U8,
-                Type::U8,
-                Some(
-                    TokenKind::Plus
-                    | TokenKind::Minus
-                    | TokenKind::Slash
-                    | TokenKind::Star
-                    | TokenKind::LShift
-                    | TokenKind::RShift,
-                )
-                | None,
-            ) => Ok(()),
-            (
-                Type::U16,
-                Type::U16 | Type::U8,
-                Some(
-                    TokenKind::Plus
-                    | TokenKind::Minus
-                    | TokenKind::Slash
-                    | TokenKind::Star
-                    | TokenKind::LShift
-                    | TokenKind::RShift,
-                )
-                | None,
-            ) => Ok(()),
-            (
-                Type::U32,
-                Type::U32 | Type::U16 | Type::U8,
-                Some(
-                    TokenKind::Plus
-                    | TokenKind::Minus
-                    | TokenKind::Slash
-                    | TokenKind::Star
-                    | TokenKind::LShift
-                    | TokenKind::RShift,
-                )
-                | None,
-            ) => Ok(()),
-            (
-                Type::U64,
-                Type::U64 | Type::U32 | Type::U16 | Type::U8,
-                Some(
-                    TokenKind::Plus
-                    | TokenKind::Minus
-                    | TokenKind::Slash
-                    | TokenKind::Star
-                    | TokenKind::LShift
-                    | TokenKind::RShift,
-                )
-                | None,
-            ) => Ok(()),
-            (
-                Type::F32,
-                Type::F32,
-                Some(
-                    TokenKind::Plus
-                    | TokenKind::Minus
-                    | TokenKind::Slash
-                    | TokenKind::Star
-                    | TokenKind::LShift
-                    | TokenKind::RShift,
-                )
-                | None,
-            ) => Ok(()),
-            (
-                Type::F64,
-                Type::F64 | Type::F32,
-                Some(TokenKind::Plus | TokenKind::Minus | TokenKind::Slash | TokenKind::Star)
-                | None,
-            ) => Ok(()),
-
-            _ => Err(error),
+            Ok(())
         }
-    } else {
-        Err(error)
+
+        (Type::Struct(_), Type::Void, None) => Ok(()),
+
+        (Type::Ptr(_), Type::Address, None) => Ok(()),
+
+        (Type::Ptr(None), Type::Ptr(None), None) => Ok(()),
+        (Type::Ptr(Some(target_type)), Type::Ptr(Some(from_type)), None) => {
+            check_type(
+                (*target_type).clone(),
+                (*from_type).clone(),
+                expression,
+                operator,
+                error,
+            )?;
+
+            Ok(())
+        }
+
+        (
+            Type::Bool,
+            Type::Bool,
+            Some(
+                TokenKind::BangEq
+                | TokenKind::EqEq
+                | TokenKind::LessEq
+                | TokenKind::Less
+                | TokenKind::Greater
+                | TokenKind::GreaterEq
+                | TokenKind::And
+                | TokenKind::Or
+                | TokenKind::Bang,
+            )
+            | None,
+        ) => Ok(()),
+        (
+            Type::S8,
+            Type::S8 | Type::U8,
+            Some(
+                TokenKind::Plus
+                | TokenKind::Minus
+                | TokenKind::Slash
+                | TokenKind::Star
+                | TokenKind::LShift
+                | TokenKind::RShift,
+            )
+            | None,
+        ) => Ok(()),
+        (
+            Type::S16,
+            Type::S16 | Type::S8 | Type::U16 | Type::U8,
+            Some(
+                TokenKind::Plus
+                | TokenKind::Minus
+                | TokenKind::Slash
+                | TokenKind::Star
+                | TokenKind::LShift
+                | TokenKind::RShift,
+            )
+            | None,
+        ) => Ok(()),
+        (
+            Type::S32,
+            Type::S32 | Type::S16 | Type::S8 | Type::U32 | Type::U16 | Type::U8,
+            Some(
+                TokenKind::Plus
+                | TokenKind::Minus
+                | TokenKind::Slash
+                | TokenKind::Star
+                | TokenKind::LShift
+                | TokenKind::RShift,
+            )
+            | None,
+        ) => Ok(()),
+        (
+            Type::S64,
+            Type::S64
+            | Type::S32
+            | Type::S16
+            | Type::S8
+            | Type::U64
+            | Type::U32
+            | Type::U16
+            | Type::U8,
+            Some(
+                TokenKind::Plus
+                | TokenKind::Minus
+                | TokenKind::Slash
+                | TokenKind::Star
+                | TokenKind::LShift
+                | TokenKind::RShift,
+            )
+            | None,
+        ) => Ok(()),
+        (
+            Type::U8,
+            Type::U8,
+            Some(
+                TokenKind::Plus
+                | TokenKind::Minus
+                | TokenKind::Slash
+                | TokenKind::Star
+                | TokenKind::LShift
+                | TokenKind::RShift,
+            )
+            | None,
+        ) => Ok(()),
+        (
+            Type::U16,
+            Type::U16 | Type::U8,
+            Some(
+                TokenKind::Plus
+                | TokenKind::Minus
+                | TokenKind::Slash
+                | TokenKind::Star
+                | TokenKind::LShift
+                | TokenKind::RShift,
+            )
+            | None,
+        ) => Ok(()),
+        (
+            Type::U32,
+            Type::U32 | Type::U16 | Type::U8,
+            Some(
+                TokenKind::Plus
+                | TokenKind::Minus
+                | TokenKind::Slash
+                | TokenKind::Star
+                | TokenKind::LShift
+                | TokenKind::RShift,
+            )
+            | None,
+        ) => Ok(()),
+        (
+            Type::U64,
+            Type::U64 | Type::U32 | Type::U16 | Type::U8,
+            Some(
+                TokenKind::Plus
+                | TokenKind::Minus
+                | TokenKind::Slash
+                | TokenKind::Star
+                | TokenKind::LShift
+                | TokenKind::RShift,
+            )
+            | None,
+        ) => Ok(()),
+        (
+            Type::F32,
+            Type::F32,
+            Some(
+                TokenKind::Plus
+                | TokenKind::Minus
+                | TokenKind::Slash
+                | TokenKind::Star
+                | TokenKind::LShift
+                | TokenKind::RShift,
+            )
+            | None,
+        ) => Ok(()),
+        (
+            Type::F64,
+            Type::F64 | Type::F32,
+            Some(TokenKind::Plus | TokenKind::Minus | TokenKind::Slash | TokenKind::Star) | None,
+        ) => Ok(()),
+
+        _ => Err(error),
     }
 }

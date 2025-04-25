@@ -1,7 +1,5 @@
 #![allow(clippy::upper_case_acronyms)]
 
-use std::mem;
-
 use super::{
     super::super::{
         common::error::ThrushCompilerError,
@@ -10,37 +8,24 @@ use super::{
             types::{CodeLocation, Constructor},
         },
     },
-    memory::MemoryFlag,
     types::FunctionPrototype,
 };
 
-use super::{
-    objects::CompilerObjects,
-    types::{BinaryOp, Structure, StructureFields, ThrushAttributes, UnaryOp},
-    utils,
-};
+use super::types::{BinaryOp, ThrushAttributes, UnaryOp};
 
-use inkwell::{context::Context, types::StructType, values::BasicValueEnum};
+use inkwell::values::BasicValueEnum;
 
 #[derive(Debug, Clone, Default)]
 pub enum Instruction<'ctx> {
     // Primitive types
-    Str(Vec<u8>),
-    Char(u8),
-    Boolean(bool),
-    Integer(Box<Instruction<'ctx>>, f64, bool),
-    Float(Box<Instruction<'ctx>>, f64, bool),
+    Str(Type, Vec<u8>),
+    Char(Type, u8),
+    Boolean(Type, bool),
+    Integer(Type, f64, bool),
+    Float(Type, f64, bool),
+
+    // LLVMValue
     LLVMValue(BasicValueEnum<'ctx>),
-
-    // Types
-
-    // T<?> array<[T, N]> Vec<T, 'heap>
-    ComplexType(
-        Type,                           // Type
-        &'ctx str,                      // Structure Name
-        Option<MemoryFlag>,             // Customization heap!, type
-        Option<Box<Instruction<'ctx>>>, // Parent recusive type T<A<B<C>>>
-    ),
 
     // Structures
 
@@ -55,15 +40,10 @@ pub enum Instruction<'ctx> {
         };
 
     */
-    Struct {
-        name: &'ctx str,
-        fields_types: StructureFields<'ctx>,
-    },
-
     // new Vec { ... };
     InitStruct {
-        name: &'ctx str,
         arguments: Constructor<'ctx>,
+        kind: Type,
     },
 
     // Enums
@@ -79,11 +59,6 @@ pub enum Instruction<'ctx> {
         };
 
     */
-    EnumField {
-        kind: Box<Instruction<'ctx>>,
-        value: Box<Instruction<'ctx>>,
-    },
-
     // Conditionals
     If {
         cond: Box<Instruction<'ctx>>,
@@ -132,7 +107,7 @@ pub enum Instruction<'ctx> {
 
     FunctionParameter {
         name: &'ctx str,
-        kind: Box<Instruction<'ctx>>,
+        kind: Type,
         position: u32,
         line: usize,
         span: (usize, usize),
@@ -141,207 +116,124 @@ pub enum Instruction<'ctx> {
         name: &'ctx str,
         params: Vec<Instruction<'ctx>>,
         body: Option<Box<Instruction<'ctx>>>,
-        return_type: Box<Instruction<'ctx>>,
+        return_type: Type,
         attributes: ThrushAttributes<'ctx>,
     },
 
-    Return(Box<Instruction<'ctx>>, Box<Instruction<'ctx>>),
+    Return(Type, Box<Instruction<'ctx>>),
 
     // Constants
     Const {
         name: &'ctx str,
-        kind: Box<Instruction<'ctx>>,
+        kind: Type,
         value: Box<Instruction<'ctx>>,
         attributes: ThrushAttributes<'ctx>,
+    },
+    ConstRef {
+        name: &'ctx str,
+        kind: Type,
+        take: bool,
+        line: usize,
+    },
+
+    // LOW-LEVEL instructions
+    Instr {
+        name: &'ctx str,
+        kind: Type,
+        value: Box<Instruction<'ctx>>,
+        line: usize,
+    },
+
+    InstrRef {
+        name: &'ctx str,
+        kind: Type,
+        line: usize,
     },
 
     // Locals variables
     Local {
         name: &'ctx str,
-        kind: Box<Instruction<'ctx>>,
+        kind: Type,
         value: Box<Instruction<'ctx>>,
         comptime: bool,
         line: usize,
     },
     LocalRef {
         name: &'ctx str,
-        kind: Box<Instruction<'ctx>>,
+        kind: Type,
         take: bool,
-        is_constant_ref: bool,
         line: usize,
     },
     LocalMut {
         name: &'ctx str,
-        kind: Box<Instruction<'ctx>>,
+        kind: Type,
         value: Box<Instruction<'ctx>>,
     },
 
-    // Pointer
-    GEP {
+    // Pointer Manipulation
+    Address {
         name: &'ctx str,
-        index: Box<Instruction<'ctx>>,
-        kind: Box<Instruction<'ctx>>,
+        indexes: Vec<Instruction<'ctx>>,
+        kind: Type,
+    },
+
+    Carry {
+        name: &'ctx str,
+        expression: Option<Box<Instruction<'ctx>>>,
+        kind: Type,
     },
 
     // Expressions
     Call {
         name: &'ctx str,
         args: Vec<Instruction<'ctx>>,
-        kind: Box<Instruction<'ctx>>,
+        kind: Type,
     },
     BinaryOp {
         left: Box<Instruction<'ctx>>,
         op: &'ctx TokenKind,
         right: Box<Instruction<'ctx>>,
-        kind: Box<Instruction<'ctx>>,
+        kind: Type,
     },
     UnaryOp {
         op: &'ctx TokenKind,
+        kind: Type,
         expression: Box<Instruction<'ctx>>,
-        kind: Box<Instruction<'ctx>>,
         is_pre: bool,
     },
     Group {
         expression: Box<Instruction<'ctx>>,
-        kind: Box<Instruction<'ctx>>,
+        kind: Type,
     },
-
-    Comptime,
 
     #[default]
     Null,
 }
 
 impl<'ctx> Instruction<'ctx> {
-    pub fn build_struct_type(
-        &self,
-        context: &'ctx Context,
-        struct_fields: Option<&StructureFields>,
-        compiler_objects: &CompilerObjects,
-    ) -> StructType<'ctx> {
-        if let Some(from_fields) = struct_fields {
-            return utils::build_struct_type_from_fields(context, from_fields);
-        }
-
-        if let Instruction::InitStruct { name, .. } = self {
-            let structure: &Structure = compiler_objects.get_struct(name);
-            let fields: &StructureFields = &structure.1;
-
-            return utils::build_struct_type_from_fields(context, fields);
-        }
-
-        if let Instruction::LocalRef { kind, .. } = self {
-            let structure_type: &str = kind.get_structure_type();
-            let structure: &Structure = compiler_objects.get_struct(structure_type);
-            let fields: &StructureFields = &structure.1;
-
-            return utils::build_struct_type_from_fields(context, fields);
-        }
-
-        if let Instruction::Call { kind, .. } = self {
-            let structure_type: &str = kind.get_structure_type();
-            let structure: &Structure = compiler_objects.get_struct(structure_type);
-            let fields: &StructureFields = &structure.1;
-
-            return utils::build_struct_type_from_fields(context, fields);
-        }
-
-        unreachable!()
-    }
-
     #[inline]
-    pub fn has_instruction(&self) -> bool {
-        if let Instruction::Block { stmts } = self {
-            return !stmts.is_empty();
-        }
-
-        false
-    }
-
-    #[inline]
-    pub fn expected_type(
-        &self,
-        line: usize,
-        span: (usize, usize),
-    ) -> Result<(), ThrushCompilerError> {
-        if let Instruction::ComplexType(_, _, _, _) = self {
-            return Ok(());
-        }
-
-        Err(ThrushCompilerError::Error(
-            String::from("Undeterminated type"),
-            String::from("Expected type."),
-            line,
-            Some(span),
-        ))
-    }
-
-    #[inline(always)]
-    pub fn get_basic_type(&self) -> &Type {
+    pub fn get_type(&self) -> &Type {
         match self {
-            Instruction::ComplexType(datatype, _, _, _) => datatype,
+            Instruction::Integer(kind, ..) => kind,
+            Instruction::Float(kind, ..) => kind,
+            Instruction::Local { kind, .. } => kind,
+            Instruction::LocalMut { kind, .. } => kind,
+            Instruction::FunctionParameter { kind, .. } => kind,
+            Instruction::LocalRef { kind, .. } => kind,
+            Instruction::ConstRef { kind, .. } => kind,
+            Instruction::Call { kind, .. } => kind,
+            Instruction::BinaryOp { kind, .. } => kind,
+            Instruction::Group { kind, .. } => kind,
+            Instruction::UnaryOp { kind, .. } => kind,
 
-            Instruction::Integer(datatype, ..)
-            | Instruction::Float(datatype, ..)
-            | Instruction::LocalRef { kind: datatype, .. }
-            | Instruction::LocalMut { kind: datatype, .. }
-            | Instruction::Local { kind: datatype, .. }
-            | Instruction::Call { kind: datatype, .. }
-            | Instruction::BinaryOp { kind: datatype, .. }
-            | Instruction::Group { kind: datatype, .. }
-            | Instruction::UnaryOp { kind: datatype, .. }
-            | Instruction::FunctionParameter { kind: datatype, .. }
-            | Instruction::EnumField { kind: datatype, .. } => datatype.get_basic_type(),
+            Instruction::Str(kind, _) => kind,
+            Instruction::Boolean(kind, _) => kind,
+            Instruction::Char(kind, _) => kind,
+            Instruction::Address { .. } => &Type::Address,
+            Instruction::InitStruct { kind, .. } => kind,
+            Instruction::Carry { kind, .. } => kind,
 
-            Instruction::Str(_) => &Type::Str,
-            Instruction::Boolean(_) => &Type::Bool,
-            Instruction::Char(_) => &Type::Char,
-            Instruction::GEP { .. } => &Type::Ptr,
-            Instruction::InitStruct { .. } => &Type::Struct,
-            Instruction::Struct { .. } => &Type::Struct,
-
-            e => {
-                println!("{:?}", e);
-                unimplemented!()
-            }
-        }
-    }
-
-    #[must_use]
-    #[inline]
-    pub fn get_type(&self) -> Instruction<'ctx> {
-        match self {
-            Instruction::Integer(datatype, ..)
-            | Instruction::Float(datatype, ..)
-            | Instruction::LocalRef { kind: datatype, .. }
-            | Instruction::LocalMut { kind: datatype, .. }
-            | Instruction::Local { kind: datatype, .. }
-            | Instruction::Call { kind: datatype, .. }
-            | Instruction::BinaryOp { kind: datatype, .. }
-            | Instruction::Group { kind: datatype, .. }
-            | Instruction::UnaryOp { kind: datatype, .. }
-            | Instruction::FunctionParameter { kind: datatype, .. }
-            | Instruction::GEP { kind: datatype, .. }
-            | Instruction::EnumField { kind: datatype, .. } => (**datatype).clone(),
-
-            Instruction::Str(_) => Instruction::ComplexType(Type::Str, "", None, None),
-            Instruction::Boolean(_) => Instruction::ComplexType(Type::Bool, "", None, None),
-            Instruction::Char(_) => Instruction::ComplexType(Type::Char, "", None, None),
-
-            Instruction::InitStruct { name, .. } => {
-                Instruction::ComplexType(Type::Struct, name, None, None)
-            }
-
-            Instruction::Struct { name, .. } => {
-                Instruction::ComplexType(Type::Struct, name, None, None)
-            }
-
-            instruction if instruction.is_complex_type() => instruction.clone(),
-
-            e => {
-                println!("{:?}", e);
-                unimplemented!()
-            }
+            _ => &Type::Void,
         }
     }
 
@@ -378,12 +270,12 @@ impl<'ctx> Instruction<'ctx> {
     pub fn as_unaryop(&self) -> UnaryOp {
         if let Instruction::UnaryOp {
             op,
-            expression,
             kind,
+            expression,
             ..
         } = self
         {
-            return (op, expression, kind);
+            return (op, kind, expression);
         }
 
         unreachable!()
@@ -396,34 +288,20 @@ impl<'ctx> Instruction<'ctx> {
 
         unreachable!()
     }
+}
 
-    pub fn get_enum_field_value(&mut self) -> Instruction<'ctx> {
-        if let Instruction::EnumField { value, .. } = self {
-            return mem::take(value);
-        }
-
-        unreachable!()
-    }
-
-    pub fn get_structure_type(&self) -> &'ctx str {
-        if let Instruction::ComplexType(_, structure_type, _, _) = self {
-            return structure_type;
-        }
-
-        unreachable!()
-    }
-
+impl Instruction<'_> {
     pub fn cast_signess(&mut self, operator: TokenKind) {
         if let Instruction::Integer(kind, _, is_signed) = self {
             if operator.is_minus_operator() {
-                *kind = Box::new(kind.narrowing_cast());
+                *kind = kind.narrowing_cast();
                 *is_signed = true;
             }
         }
 
-        if let Instruction::LocalRef { kind, .. } = self {
+        if let Instruction::LocalRef { kind, .. } | Instruction::ConstRef { kind, .. } = self {
             if kind.is_integer_type() && operator.is_minus_operator() {
-                *kind = Box::new(kind.narrowing_cast());
+                *kind = kind.narrowing_cast();
             }
         }
 
@@ -434,26 +312,11 @@ impl<'ctx> Instruction<'ctx> {
         }
     }
 
-    pub fn narrowing_cast(&self) -> Instruction<'ctx> {
-        let instruction_type: &Type = self.get_basic_type();
-        let instruction_structure_type: &str = self.get_structure_type();
-
-        let narrowed_type: Type = match instruction_type {
-            Type::U8 => Type::S8,
-            Type::U16 => Type::S16,
-            Type::U32 => Type::S32,
-            Type::U64 => Type::S64,
-            _ => *instruction_type,
-        };
-
-        Instruction::ComplexType(narrowed_type, instruction_structure_type, None, None)
-    }
-
     pub fn throw_attemping_use_jit(
         &self,
         location: CodeLocation,
     ) -> Result<(), ThrushCompilerError> {
-        if !self.is_integer() && !self.is_float() {
+        if !self.is_integer() && !self.is_float() && !self.is_bool() {
             return Err(ThrushCompilerError::Error(
                 String::from("Attemping use JIT"),
                 String::from(
@@ -469,6 +332,15 @@ impl<'ctx> Instruction<'ctx> {
 }
 
 impl Instruction<'_> {
+    #[inline]
+    pub fn has_instruction(&self) -> bool {
+        if let Instruction::Block { stmts } = self {
+            return !stmts.is_empty();
+        }
+
+        false
+    }
+
     pub fn has_return(&self) -> bool {
         if let Instruction::Block { stmts } = self {
             return stmts.iter().any(|stmt| stmt.is_return());
@@ -493,152 +365,93 @@ impl Instruction<'_> {
         false
     }
 
-    #[inline(always)]
-    pub fn is_integer_type(&self) -> bool {
-        if let Instruction::ComplexType(tp, _, _, _) = self {
-            return tp.is_integer_type();
-        }
-
-        false
+    #[inline]
+    pub fn is_low_level_instructions(&self) -> bool {
+        matches!(
+            self,
+            Instruction::Carry { .. } | Instruction::Address { .. }
+        )
     }
 
-    #[inline(always)]
-    pub fn is_float_type(&self) -> bool {
-        if let Instruction::ComplexType(tp, _, _, _) = self {
-            return tp.is_float_type();
-        }
-
-        false
-    }
-
-    #[inline(always)]
-    pub fn is_ptr_type(&self) -> bool {
-        if let Instruction::ComplexType(tp, _, _, _) = self {
-            return tp.is_ptr_type();
-        }
-
-        false
-    }
-
-    #[inline(always)]
-    pub fn is_void_type(&self) -> bool {
-        if let Instruction::ComplexType(tp, _, _, _) = self {
-            return tp.is_void_type();
-        }
-
-        false
-    }
-
-    #[inline(always)]
-    pub fn is_struct_type(&self) -> bool {
-        if let Instruction::ComplexType(tp, _, _, _) = self {
-            return tp.is_struct_type();
-        }
-
-        false
-    }
-
-    #[inline(always)]
-    pub fn is_bool_type(&self) -> bool {
-        if let Instruction::ComplexType(tp, _, _, _) = self {
-            return tp.is_bool_type();
-        }
-
-        false
-    }
-
-    #[inline(always)]
-    pub fn is_str_type(&self) -> bool {
-        if let Instruction::ComplexType(tp, _, _, _) = self {
-            return tp.is_str_type();
-        }
-
-        false
-    }
-
-    #[inline(always)]
-    pub fn is_raw_ptr_type(&self) -> bool {
-        if let Instruction::ComplexType(tp, _, _, _) = self {
-            return tp.is_raw_ptr_type();
-        }
-
-        false
-    }
-
-    #[inline(always)]
+    #[inline]
     pub fn is_unsigned_integer(&self) -> bool {
         matches!(
-            self.get_basic_type(),
+            self.get_type(),
             Type::U8 | Type::U16 | Type::U32 | Type::U64
         )
     }
 
-    #[inline(always)]
-    pub const fn is_complex_type(&self) -> bool {
-        matches!(self, Instruction::ComplexType { .. })
+    #[inline]
+    pub const fn is_null(&self) -> bool {
+        matches!(self, Instruction::Null { .. })
     }
 
-    #[inline(always)]
+    #[inline]
     pub const fn is_gep(&self) -> bool {
-        matches!(self, Instruction::GEP { .. })
+        matches!(self, Instruction::Address { .. })
     }
 
-    #[inline(always)]
+    #[inline]
+    pub const fn is_carry(&self) -> bool {
+        matches!(self, Instruction::Carry { .. })
+    }
+
+    #[inline]
     pub const fn is_local_ref(&self) -> bool {
         matches!(self, Instruction::LocalRef { .. })
     }
 
-    #[inline(always)]
-    pub const fn is_null(&self) -> bool {
-        matches!(self, Instruction::ComplexType(Type::Void, _, _, _))
-    }
-
-    #[inline(always)]
+    #[inline]
     pub const fn is_pre_unaryop(&self) -> bool {
         matches!(self, Instruction::UnaryOp { is_pre: true, .. })
     }
 
-    #[inline(always)]
+    #[inline]
     pub const fn is_function(&self) -> bool {
         matches!(self, Instruction::Function { .. })
     }
 
-    #[inline(always)]
-    pub const fn is_enum_field(&self) -> bool {
-        matches!(self, Instruction::EnumField { .. })
-    }
-
-    #[inline(always)]
+    #[inline]
     pub const fn is_binary(&self) -> bool {
         matches!(self, Instruction::BinaryOp { .. })
     }
 
-    #[inline(always)]
+    #[inline]
     pub const fn is_group(&self) -> bool {
         matches!(self, Instruction::Group { .. })
     }
 
-    #[inline(always)]
+    #[inline]
+    pub const fn is_str(&self) -> bool {
+        matches!(self, Instruction::Str { .. })
+    }
+
+    #[inline]
     pub const fn is_integer(&self) -> bool {
         matches!(self, Instruction::Integer { .. })
     }
 
-    #[inline(always)]
+    #[inline]
+    pub const fn is_bool(&self) -> bool {
+        matches!(self, Instruction::Boolean(_, _))
+    }
+
+    #[inline]
     pub const fn is_float(&self) -> bool {
         matches!(self, Instruction::Float { .. })
     }
 
-    #[inline(always)]
+    #[inline]
     pub const fn is_return(&self) -> bool {
         matches!(self, Instruction::Return(_, _))
     }
 
-    #[inline(always)]
+    #[inline]
     pub const fn is_break(&self) -> bool {
         matches!(self, Instruction::Break)
     }
 
-    #[inline(always)]
+    #[inline]
     pub const fn is_continue(&self) -> bool {
         matches!(self, Instruction::Continue)
     }

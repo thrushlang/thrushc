@@ -4,15 +4,12 @@ use super::super::super::{
 };
 
 use super::{
-    Instruction,
-    memory::AllocatedObject,
-    objects::CompilerObjects,
-    types::{FunctionCall, Structure, StructureFields},
+    Instruction, memory::AllocatedObject, objects::CompilerObjects, typegen, types::FunctionCall,
     utils,
 };
 
 use inkwell::{
-    AddressSpace, FloatPredicate,
+    FloatPredicate,
     builder::Builder,
     context::Context,
     types::StructType,
@@ -20,22 +17,10 @@ use inkwell::{
 };
 
 pub fn include(functions: &mut Functions) {
-    functions.insert(
-        "sizeof!",
-        (
-            Instruction::ComplexType(Type::S64, "", None, None),
-            Vec::from([Instruction::ComplexType(Type::Ptr, "", None, None)]),
-            false,
-        ),
-    );
-
+    functions.insert("sizeof!", (Type::S64, Vec::from([Type::Ptr(None)]), false));
     functions.insert(
         "is_signed!",
-        (
-            Instruction::ComplexType(Type::Bool, "", None, None),
-            Vec::from([Instruction::ComplexType(Type::Ptr, "", None, None)]),
-            false,
-        ),
+        (Type::Bool, Vec::from([Type::Ptr(None)]), false),
     );
 }
 
@@ -47,19 +32,21 @@ pub fn build_sizeof<'ctx>(
     let value: &Instruction = &call.2[0];
 
     if let Instruction::LocalRef {
-        name, kind, line, ..
+        name,
+        kind: ref_type,
+        line,
+        ..
+    }
+    | Instruction::ConstRef {
+        name,
+        kind: ref_type,
+        line,
+        ..
     } = value
     {
-        let localref_basic_type: &Type = kind.get_basic_type();
-
-        if localref_basic_type.is_struct_type() {
-            let localref_structure_type: &str = kind.get_structure_type();
-
-            let structure: &Structure = compiler_objects.get_struct(localref_structure_type);
-            let structure_fields: &StructureFields = &structure.1;
-
+        if ref_type.is_struct_type() {
             let llvm_type: StructType =
-                utils::build_struct_type_from_fields(context, structure_fields);
+                typegen::generate_type(context, ref_type).into_struct_type();
 
             let structure_size: IntValue = llvm_type.size_of().unwrap_or_else(|| {
                 logging::log(
@@ -81,21 +68,21 @@ pub fn build_sizeof<'ctx>(
         return ptr.get_type().size_of().into();
     }
 
-    if let Instruction::ComplexType(kind, _, _, _) = value {
+    /*if let Instruction::ComplexType(kind, _, _) = value {
         match kind {
             kind if kind.is_integer_type() || kind.is_bool_type() => {
-                return utils::type_int_to_llvm_int_type(context, kind)
+                return typegen::type_int_to_llvm_int_type(context, kind)
                     .size_of()
                     .into();
             }
 
             kind if kind.is_float_type() => {
-                return utils::type_float_to_llvm_float_type(context, kind)
+                return typegen::type_float_to_llvm_float_type(context, kind)
                     .size_of()
                     .into();
             }
 
-            kind if kind.is_raw_ptr_type() => {
+            kind if kind.is_ptr_type() => {
                 return context.ptr_type(AddressSpace::default()).size_of().into();
             }
 
@@ -111,13 +98,13 @@ pub fn build_sizeof<'ctx>(
                 unreachable!()
             }
         }
-    }
+    } */
 
     logging::log(
         LoggingType::Panic,
         &format!(
             "Built-in 'sizeof()' cannot get the size of '{}' type.",
-            value.get_basic_type()
+            value.get_type()
         ),
     );
 
@@ -133,12 +120,19 @@ pub fn build_is_signed<'ctx>(
     let value: &Instruction = &call.2[0];
 
     if let Instruction::LocalRef {
-        name, kind, line, ..
+        name,
+        kind: ref_type,
+        line,
+        ..
+    }
+    | Instruction::ConstRef {
+        name,
+        kind: ref_type,
+        line,
+        ..
     } = value
     {
-        let localref_basic_type: &Type = kind.get_basic_type();
-
-        if !localref_basic_type.is_float_type() && !kind.is_integer_type() {
+        if !ref_type.is_float_type() && !ref_type.is_integer_type() {
             logging::log(
                 LoggingType::Panic,
                 &format!(
@@ -150,17 +144,14 @@ pub fn build_is_signed<'ctx>(
 
         let object: AllocatedObject = compiler_objects.get_allocated_object(name);
 
-        return if kind.is_integer_type() {
+        return if ref_type.is_integer_type() {
             let mut loaded_value: IntValue = object
-                .load_from_memory(
-                    builder,
-                    utils::type_int_to_llvm_int_type(context, localref_basic_type),
-                )
+                .load_from_memory(builder, typegen::generate_type(context, ref_type))
                 .into_int_value();
 
             if let Some(casted_float) = utils::integer_autocast(
                 &Type::S64,
-                localref_basic_type,
+                ref_type,
                 None,
                 loaded_value.into(),
                 builder,
@@ -180,15 +171,12 @@ pub fn build_is_signed<'ctx>(
                 .into()
         } else {
             let mut loaded_value: FloatValue = object
-                .load_from_memory(
-                    builder,
-                    utils::type_float_to_llvm_float_type(context, localref_basic_type),
-                )
+                .load_from_memory(builder, typegen::generate_type(context, ref_type))
                 .into_float_value();
 
             if let Some(casted_float) = utils::float_autocast(
                 &Type::F64,
-                localref_basic_type,
+                ref_type,
                 None,
                 loaded_value.into(),
                 builder,

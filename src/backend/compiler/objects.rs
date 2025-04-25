@@ -2,7 +2,7 @@ use {
     super::{
         super::super::logging::{self, LoggingType},
         memory::AllocatedObject,
-        types::{AllocatedObjects, Function, Structure},
+        types::{AllocatedObjects, Function},
     },
     ahash::AHashMap as HashMap,
 };
@@ -16,7 +16,6 @@ const SCOPE_MINIMAL_CAPACITY: usize = 155;
 #[derive(Debug)]
 pub struct CompilerObjects<'ctx> {
     pub constants: HashMap<&'ctx str, AllocatedObject<'ctx>>,
-    pub structs: HashMap<&'ctx str, Structure<'ctx>>,
     pub functions: HashMap<&'ctx str, Function<'ctx>>,
     pub blocks: Vec<HashMap<&'ctx str, AllocatedObject<'ctx>>>,
     pub scope_position: usize,
@@ -26,7 +25,6 @@ impl<'ctx> CompilerObjects<'ctx> {
     pub fn new() -> Self {
         Self {
             constants: HashMap::with_capacity(CONSTANTS_MINIMAL_CAPACITY),
-            structs: HashMap::with_capacity(STRUCTURE_MINIMAL_CAPACITY),
             functions: HashMap::with_capacity(FUNCTION_MINIMAL_CAPACITY),
             blocks: Vec::with_capacity(SCOPE_MINIMAL_CAPACITY),
             scope_position: 0,
@@ -52,11 +50,6 @@ impl<'ctx> CompilerObjects<'ctx> {
     }
 
     #[inline]
-    pub fn insert_structure(&mut self, name: &'ctx str, structure: Structure<'ctx>) {
-        self.structs.insert(name, structure);
-    }
-
-    #[inline]
     pub fn insert_constant_object(&mut self, name: &'ctx str, object: AllocatedObject<'ctx>) {
         self.constants.insert(name, object);
     }
@@ -64,11 +57,6 @@ impl<'ctx> CompilerObjects<'ctx> {
     #[inline]
     pub fn insert_function(&mut self, name: &'ctx str, function: Function<'ctx>) {
         self.functions.insert(name, function);
-    }
-
-    #[inline]
-    pub fn get_struct(&self, name: &str) -> &Structure {
-        self.structs.get(name).unwrap()
     }
 
     #[inline]
