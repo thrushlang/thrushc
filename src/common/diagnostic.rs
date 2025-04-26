@@ -1,8 +1,10 @@
+use std::path::Path;
 use std::str::Lines;
 
 use super::super::backend::compiler::misc::CompilerFile;
 
 use super::{
+    super::frontend::lexer::Span,
     error::ThrushCompilerError,
     logging::{self, LoggingType},
 };
@@ -22,11 +24,13 @@ pub struct Diagnostician {
 struct Diagnostic<'a> {
     code: &'a str,
     signaler: String,
+    span: Span,
 }
 
 #[derive(Debug)]
 struct CodePosition {
     line: usize,
+    start: usize,
     end: usize,
 }
 
@@ -50,67 +54,36 @@ impl Diagnostician {
         }
     }
 
-    pub fn report_error(&mut self, error: &ThrushCompilerError, logging_type: LoggingType) {
-        let ThrushCompilerError::Error(title, help, line, span) = error;
-        self.print_error_report(title, help, *line, span.as_ref(), logging_type);
+    pub fn build_diagnostic(&mut self, error: &ThrushCompilerError, logging_type: LoggingType) {
+        let ThrushCompilerError::Error(title, help, span) = error;
+        self.diagnose(title, help, *span, logging_type);
     }
 
-    fn print_error_report(
-        &mut self,
-        title: &str,
-        description: &str,
-        line: usize,
-        span: Option<&(usize, usize)>,
-        logging_type: LoggingType,
-    ) {
-        self.print_header(line, title, logging_type);
-
-        if let Some((start, end)) = span {
-            Diagnostic::build(title, &self.code, line, *start, *end).print(description);
-            return;
-        }
-
-        Diagnostic::build_without_span(&self.code, line).print(description);
-    }
-
-    fn print_header(&mut self, line: usize, title: &str, logging_type: LoggingType) {
-        logging::write(
-            logging::OutputIn::Stderr,
-            format!(
-                "{} at line {}\n",
-                format_args!("{}", &self.path.to_string_lossy().bold().bright_red()),
-                line.to_string().bold().bright_red()
-            )
-            .as_bytes(),
+    fn diagnose(&mut self, title: &str, description: &str, span: Span, logging_type: LoggingType) {
+        Diagnostic::build(title, &self.code, span).print(
+            &self.path,
+            title,
+            logging_type,
+            description,
         );
-
-        logging::write(
-            logging::OutputIn::Stderr,
-            format!("\n{} {}\n\n", logging_type.to_styled(), title).as_bytes(),
-        );
-    }
-
-    pub fn get_file_path(&self) -> PathBuf {
-        self.path.clone()
-    }
-
-    pub fn get_instance(&self) -> Self {
-        self.clone()
     }
 }
 
 impl<'a> Diagnostic<'a> {
-    pub fn build(title: &'a str, code: &'a str, line: usize, start: usize, end: usize) -> Self {
-        if let Some(code_position) = Diagnostic::find_line_and_range(code, start, end) {
+    pub fn build(title: &'a str, code: &'a str, span: Span) -> Self {
+        if let Some(code_position) = Diagnostic::find_line_and_range(code, span) {
             if let Some(diagnostic) = Diagnostic::generate_diagnostic(title, code, code_position) {
                 return diagnostic;
             }
         }
 
-        Diagnostic::build_without_span(code, line)
+        Diagnostic::build_without_span(code, span)
     }
 
-    pub fn find_line_and_range(code: &str, start: usize, end: usize) -> Option<CodePosition> {
+    pub fn find_line_and_range(code: &str, span: Span) -> Option<CodePosition> {
+        let start: usize = span.get_span_start();
+        let end: usize = span.get_span_end();
+
         let mut line_start: usize = 0;
         let mut line_num: usize = 1;
 
@@ -130,7 +103,7 @@ impl<'a> Diagnostic<'a> {
 
         Some(CodePosition {
             line: line_num,
-            // start: start - line_start,
+            start: start - line_start,
             end: end - line_start,
         })
     }
@@ -166,19 +139,45 @@ impl<'a> Diagnostic<'a> {
             signaler.push(' ');
         }
 
-        Some(Diagnostic { code, signaler })
+        Some(Diagnostic {
+            code,
+            signaler,
+            span: Span::new(position.line, (position.start, position.end)),
+        })
     }
 
-    pub fn build_without_span(code: &str, line: usize) -> Diagnostic {
+    pub fn build_without_span(code: &str, span: Span) -> Diagnostic {
         let lines: Vec<&str> = code.lines().collect();
+
+        let line: usize = span.line;
 
         let code: &str = lines[line - 1].trim_start();
         let signaler: String = "^".bright_red().repeat(code.len());
 
-        Diagnostic { code, signaler }
+        Diagnostic {
+            code,
+            signaler,
+            span,
+        }
     }
 
-    pub fn print(self, description: &str) {
+    pub fn print(self, path: &Path, title: &str, logging_type: LoggingType, description: &str) {
+        logging::write(
+            logging::OutputIn::Stderr,
+            format!(
+                "{} at {}:{}\n",
+                format_args!("{}", path.to_string_lossy().bold().bright_red()),
+                self.span.get_line().to_string().bold().bright_red(),
+                self.span.get_span_start().to_string().bold().bright_red()
+            )
+            .as_bytes(),
+        );
+
+        logging::write(
+            logging::OutputIn::Stderr,
+            format!("\n{} {}\n\n", logging_type.to_styled(), title).as_bytes(),
+        );
+
         logging::write(
             logging::OutputIn::Stderr,
             format!("\n{}\n{}\n", self.code, self.signaler).as_bytes(),

@@ -1,6 +1,9 @@
-use super::super::super::frontend::lexer::Type;
+use std::fmt::{self, Display};
+
+use super::super::super::frontend::lexer::{Span, Type};
 
 use super::traits::ConstructorExtensions;
+
 use super::{
     instruction::Instruction,
     memory::MemoryFlag,

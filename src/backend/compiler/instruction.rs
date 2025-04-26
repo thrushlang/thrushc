@@ -3,12 +3,12 @@
 use super::{
     super::super::{
         common::error::ThrushCompilerError,
-        frontend::lexer::{TokenKind, Type},
+        frontend::lexer::{Span, TokenKind, Type},
     },
     types::{Constructor, FunctionPrototype},
 };
 
-use super::types::{BinaryOp, CodeLocation, ThrushAttributes, UnaryOp};
+use super::types::{BinaryOp, ThrushAttributes, UnaryOp};
 
 use inkwell::values::BasicValueEnum;
 
@@ -106,7 +106,7 @@ pub enum Instruction<'ctx> {
         name: &'ctx str,
         kind: Type,
         position: u32,
-        location: CodeLocation,
+        span: Span,
     },
     Function {
         name: &'ctx str,
@@ -129,7 +129,7 @@ pub enum Instruction<'ctx> {
         name: &'ctx str,
         kind: Type,
         take: bool,
-        location: CodeLocation,
+        span: Span,
     },
 
     // Locals variables
@@ -138,18 +138,19 @@ pub enum Instruction<'ctx> {
         kind: Type,
         value: Box<Instruction<'ctx>>,
         comptime: bool,
-        location: CodeLocation,
+        span: Span,
     },
     LocalRef {
         name: &'ctx str,
         kind: Type,
         take: bool,
-        location: CodeLocation,
+        span: Span,
     },
     LocalMut {
         name: &'ctx str,
         kind: Type,
         value: Box<Instruction<'ctx>>,
+        span: Span,
     },
 
     // Pointer Manipulation
@@ -157,18 +158,21 @@ pub enum Instruction<'ctx> {
         name: &'ctx str,
         indexes: Vec<Instruction<'ctx>>,
         kind: Type,
+        span: Span,
     },
 
     Write {
         write_to: (&'ctx str, Option<Box<Instruction<'ctx>>>),
         write_value: Box<Instruction<'ctx>>,
         write_type: Type,
+        span: Span,
     },
 
     Carry {
         name: &'ctx str,
         expression: Option<Box<Instruction<'ctx>>>,
         carry_type: Type,
+        span: Span,
     },
 
     // Expressions
@@ -302,18 +306,14 @@ impl Instruction<'_> {
         }
     }
 
-    pub fn throw_attemping_use_jit(
-        &self,
-        location: CodeLocation,
-    ) -> Result<(), ThrushCompilerError> {
+    pub fn throw_attemping_use_jit(&self, span: Span) -> Result<(), ThrushCompilerError> {
         if !self.is_integer() && !self.is_float() && !self.is_bool() {
             return Err(ThrushCompilerError::Error(
                 String::from("Attemping use JIT"),
                 String::from(
                     "The compiler does not accept runtime-only expressions until the Just-in-Time (JIT) compiler development is complete.",
                 ),
-                location.line,
-                Some(location.span),
+                span,
             ));
         }
 

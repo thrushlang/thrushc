@@ -471,7 +471,9 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                 Instruction::Null
             }
 
-            Instruction::LocalMut { name, kind, value } => {
+            Instruction::LocalMut {
+                name, kind, value, ..
+            } => {
                 let site_allocation_flag: MemoryFlag =
                     memory::generate_site_allocation_flag(self.context, &self.target_data, kind);
 

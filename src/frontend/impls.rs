@@ -1,15 +1,13 @@
-use std::fmt::{self, Display};
-
-use super::super::common::{diagnostic::Diagnostician, error::ThrushCompilerError};
+use super::super::common::error::ThrushCompilerError;
 
 use super::traits::{CustomTypeFieldsExtensions, EnumExtensions, EnumFieldsExtensions};
 
 use super::super::backend::compiler::types::{
-    CodeLocation, CustomTypeFields, Enum, EnumField, EnumFields, StructFields, ThrushAttributes,
+    CustomTypeFields, Enum, EnumField, EnumFields, StructFields, ThrushAttributes,
 };
 
 use super::{
-    lexer::{TokenKind, Type},
+    lexer::{Span, TokenKind, Type},
     objects::{FoundObjectId, Struct},
     traits::{FoundObjectEither, FoundObjectExtensions, StructureExtensions},
 };
@@ -218,10 +216,7 @@ impl FoundObjectExtensions for FoundObjectId<'_> {
 }
 
 impl<'instr> FoundObjectEither<'instr> for FoundObjectId<'instr> {
-    fn expected_custom_type(
-        &self,
-        location: CodeLocation,
-    ) -> Result<&'instr str, ThrushCompilerError> {
+    fn expected_custom_type(&self, span: Span) -> Result<&'instr str, ThrushCompilerError> {
         if let Some(type_id) = self.4 {
             return Ok(type_id);
         }
@@ -229,15 +224,11 @@ impl<'instr> FoundObjectEither<'instr> for FoundObjectId<'instr> {
         Err(ThrushCompilerError::Error(
             String::from("Expected custom type reference"),
             String::from("Expected custom type but found something else."),
-            location.line,
-            Some(location.span),
+            span,
         ))
     }
 
-    fn expected_constant(
-        &self,
-        location: CodeLocation,
-    ) -> Result<&'instr str, ThrushCompilerError> {
+    fn expected_constant(&self, span: Span) -> Result<&'instr str, ThrushCompilerError> {
         if let Some(const_id) = self.3 {
             return Ok(const_id);
         }
@@ -245,12 +236,11 @@ impl<'instr> FoundObjectEither<'instr> for FoundObjectId<'instr> {
         Err(ThrushCompilerError::Error(
             String::from("Expected constant reference"),
             String::from("Expected constant but found something else."),
-            location.line,
-            Some(location.span),
+            span,
         ))
     }
 
-    fn expected_enum(&self, location: CodeLocation) -> Result<&'instr str, ThrushCompilerError> {
+    fn expected_enum(&self, span: Span) -> Result<&'instr str, ThrushCompilerError> {
         if let Some(name) = self.2 {
             return Ok(name);
         }
@@ -258,12 +248,11 @@ impl<'instr> FoundObjectEither<'instr> for FoundObjectId<'instr> {
         Err(ThrushCompilerError::Error(
             String::from("Expected enum reference"),
             String::from("Expected enum but found something else."),
-            location.line,
-            Some(location.span),
+            span,
         ))
     }
 
-    fn expected_struct(&self, location: CodeLocation) -> Result<&'instr str, ThrushCompilerError> {
+    fn expected_struct(&self, span: Span) -> Result<&'instr str, ThrushCompilerError> {
         if let Some(name) = self.0 {
             return Ok(name);
         }
@@ -271,15 +260,11 @@ impl<'instr> FoundObjectEither<'instr> for FoundObjectId<'instr> {
         Err(ThrushCompilerError::Error(
             String::from("Expected struct reference"),
             String::from("Expected struct but found something else."),
-            location.line,
-            Some(location.span),
+            span,
         ))
     }
 
-    fn expected_function(
-        &self,
-        location: CodeLocation,
-    ) -> Result<&'instr str, ThrushCompilerError> {
+    fn expected_function(&self, span: Span) -> Result<&'instr str, ThrushCompilerError> {
         if let Some(name) = self.1 {
             return Ok(name);
         }
@@ -287,15 +272,11 @@ impl<'instr> FoundObjectEither<'instr> for FoundObjectId<'instr> {
         Err(ThrushCompilerError::Error(
             String::from("Expected function reference"),
             String::from("Expected function but found something else."),
-            location.line,
-            Some(location.span),
+            span,
         ))
     }
 
-    fn expected_local(
-        &self,
-        location: CodeLocation,
-    ) -> Result<(&'instr str, usize), ThrushCompilerError> {
+    fn expected_local(&self, span: Span) -> Result<(&'instr str, usize), ThrushCompilerError> {
         if let Some((name, scope_idx)) = self.5 {
             return Ok((name, scope_idx));
         }
@@ -303,8 +284,7 @@ impl<'instr> FoundObjectEither<'instr> for FoundObjectId<'instr> {
         Err(ThrushCompilerError::Error(
             String::from("Expected local reference"),
             String::from("Expected local but found something else."),
-            location.line,
-            Some(location.span),
+            span,
         ))
     }
 }
@@ -312,27 +292,5 @@ impl<'instr> FoundObjectEither<'instr> for FoundObjectId<'instr> {
 impl CustomTypeFieldsExtensions for CustomTypeFields<'_> {
     fn get_type(&self) -> Type {
         Type::create_structure_type(self)
-    }
-}
-
-impl Display for CodeLocation {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "{}:{}:{}",
-            self.diagnostician.get_file_path().display(),
-            self.line,
-            self.span.0
-        )
-    }
-}
-
-impl CodeLocation {
-    pub fn new(diagnostician: Diagnostician, line: usize, span: (usize, usize)) -> Self {
-        Self {
-            diagnostician,
-            line,
-            span,
-        }
     }
 }

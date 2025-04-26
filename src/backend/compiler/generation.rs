@@ -112,6 +112,7 @@ pub fn build_expression<'ctx>(
         name,
         expression,
         carry_type,
+        ..
     } = instruction
     {
         let carry_type_generated: BasicTypeEnum = typegen::generate_type(context, carry_type);
@@ -140,6 +141,7 @@ pub fn build_expression<'ctx>(
         name,
         indexes,
         kind,
+        ..
     } = instruction
     {
         let local: PointerValue = compiler_objects.get_allocated_object(name).ptr;
@@ -268,7 +270,10 @@ pub fn build_expression<'ctx>(
         );
     }
 
-    if let Instruction::LocalMut { name, kind, value } = instruction {
+    if let Instruction::LocalMut {
+        name, kind, value, ..
+    } = instruction
+    {
         let object: AllocatedObject = compiler_objects.get_allocated_object(name);
 
         let expression: BasicValueEnum =

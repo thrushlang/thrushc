@@ -1,37 +1,25 @@
 use super::super::common::error::ThrushCompilerError;
 
-use super::lexer::Type;
-
-use super::super::backend::compiler::types::CodeLocation;
+use super::lexer::{Span, Type};
 
 #[inline]
-pub fn parse_number(
-    lexeme: &str,
-    location: CodeLocation,
-) -> Result<(Type, f64), ThrushCompilerError> {
+pub fn parse_number(lexeme: &str, span: Span) -> Result<(Type, f64), ThrushCompilerError> {
     if lexeme.contains('.') {
-        return parse_float(lexeme, location);
+        return parse_float(lexeme, span);
     }
 
-    parse_integer(lexeme, location)
+    parse_integer(lexeme, span)
 }
 
 #[inline]
-pub fn parse_float(
-    lexeme: &str,
-    location: CodeLocation,
-) -> Result<(Type, f64), ThrushCompilerError> {
+pub fn parse_float(lexeme: &str, span: Span) -> Result<(Type, f64), ThrushCompilerError> {
     let dot_count: usize = lexeme.bytes().filter(|&b| b == b'.').count();
-
-    let line: usize = location.line;
-    let span: (usize, usize) = location.span;
 
     if dot_count > 1 {
         return Err(ThrushCompilerError::Error(
             String::from("Syntax error"),
             String::from("Float values should only contain one dot."),
-            line,
-            Some(span),
+            span,
         ));
     }
 
@@ -46,16 +34,12 @@ pub fn parse_float(
     Err(ThrushCompilerError::Error(
         String::from("Syntax error"),
         String::from("Out of bounds."),
-        line,
-        Some(span),
+        span,
     ))
 }
 
 #[inline]
-pub fn parse_integer(
-    lexeme: &str,
-    location: CodeLocation,
-) -> Result<(Type, f64), ThrushCompilerError> {
+pub fn parse_integer(lexeme: &str, span: Span) -> Result<(Type, f64), ThrushCompilerError> {
     const I8_MIN: isize = -128;
     const I8_MAX: isize = 127;
     const I16_MIN: isize = -32768;
@@ -69,9 +53,6 @@ pub fn parse_integer(
     const U16_MAX: usize = 65535;
     const U32_MIN: usize = 0;
     const U32_MAX: usize = 4294967295;
-
-    let line: usize = location.line;
-    let span: (usize, usize) = location.span;
 
     if lexeme.starts_with("0x") {
         let cleaned_lexeme: String = lexeme
@@ -93,8 +74,7 @@ pub fn parse_integer(
                     return Err(ThrushCompilerError::Error(
                         String::from("Syntax error"),
                         String::from("Out of bounds signed hexadecimal format."),
-                        line,
-                        Some(span),
+                        span,
                     ));
                 }
             }
@@ -113,8 +93,7 @@ pub fn parse_integer(
                         return Err(ThrushCompilerError::Error(
                             String::from("Syntax error"),
                             String::from("Out of bounds unsigned hexadecimal format."),
-                            line,
-                            Some(span),
+                            span,
                         ));
                     }
                 }
@@ -122,8 +101,7 @@ pub fn parse_integer(
                 Err(_) => Err(ThrushCompilerError::Error(
                     String::from("Syntax error"),
                     String::from("Invalid numeric hexadecimal format."),
-                    line,
-                    Some(span),
+                    span,
                 )),
             },
         };
@@ -149,8 +127,7 @@ pub fn parse_integer(
                     return Err(ThrushCompilerError::Error(
                         String::from("Syntax error"),
                         String::from("Out of bounds signed binary format."),
-                        line,
-                        Some(span),
+                        span,
                     ));
                 }
             }
@@ -169,8 +146,7 @@ pub fn parse_integer(
                         return Err(ThrushCompilerError::Error(
                             String::from("Syntax error"),
                             String::from("Out of bounds unsigned binary format."),
-                            line,
-                            Some(span),
+                            span,
                         ));
                     }
                 }
@@ -178,8 +154,7 @@ pub fn parse_integer(
                 Err(_) => Err(ThrushCompilerError::Error(
                     String::from("Syntax error"),
                     String::from("Invalid binary format."),
-                    line,
-                    Some(span),
+                    span,
                 )),
             },
         };
@@ -199,8 +174,7 @@ pub fn parse_integer(
                 return Err(ThrushCompilerError::Error(
                     String::from("Syntax error"),
                     String::from("Out of bounds."),
-                    line,
-                    Some(span),
+                    span,
                 ));
             }
         }
@@ -219,8 +193,7 @@ pub fn parse_integer(
                     Err(ThrushCompilerError::Error(
                         String::from("Syntax error"),
                         String::from("Out of bounds."),
-                        line,
-                        Some(span),
+                        span,
                     ))
                 }
             }
@@ -228,8 +201,7 @@ pub fn parse_integer(
             Err(_) => Err(ThrushCompilerError::Error(
                 String::from("Syntax error"),
                 String::from("Out of bounds."),
-                line,
-                Some(span),
+                span,
             )),
         },
     }

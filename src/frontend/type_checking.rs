@@ -1,7 +1,10 @@
-use super::super::{
-    backend::compiler::instruction::Instruction,
-    common::error::ThrushCompilerError,
-    frontend::lexer::{TokenKind, Type},
+use super::{
+    super::{
+        backend::compiler::instruction::Instruction,
+        common::error::ThrushCompilerError,
+        frontend::lexer::{TokenKind, Type},
+    },
+    lexer::Span,
 };
 
 #[inline(always)]
@@ -9,7 +12,7 @@ fn check_binary_arithmetic(
     op: &TokenKind,
     a: &Type,
     b: &Type,
-    location: (usize, (usize, usize)),
+    span: Span,
 ) -> Result<(), ThrushCompilerError> {
     match (a, b) {
         (
@@ -36,8 +39,7 @@ fn check_binary_arithmetic(
         _ => Err(ThrushCompilerError::Error(
             String::from("Type checking"),
             format!("Arithmetic operation ({} {} {}) is not allowed.", a, op, b),
-            location.0,
-            Some(location.1),
+            span,
         )),
     }
 }
@@ -47,7 +49,7 @@ fn check_binary_equality(
     op: &TokenKind,
     a: &Type,
     b: &Type,
-    location: (usize, (usize, usize)),
+    span: Span,
 ) -> Result<(), ThrushCompilerError> {
     if matches!(
         (a, b),
@@ -78,8 +80,7 @@ fn check_binary_equality(
     Err(ThrushCompilerError::Error(
         String::from("Type checking"),
         format!("Logical operation ({} {} {}) is not allowed.", a, op, b),
-        location.0,
-        Some(location.1),
+        span,
     ))
 }
 
@@ -88,7 +89,7 @@ fn check_binary_comparasion(
     op: &TokenKind,
     a: &Type,
     b: &Type,
-    location: (usize, (usize, usize)),
+    span: Span,
 ) -> Result<(), ThrushCompilerError> {
     if let (
         Type::S8 | Type::S16 | Type::S32 | Type::S64 | Type::U8 | Type::U16 | Type::U32 | Type::U64,
@@ -103,8 +104,7 @@ fn check_binary_comparasion(
     Err(ThrushCompilerError::Error(
         String::from("Type checking"),
         format!("Logical operation ({} {} {}) is not allowed.", a, op, b),
-        location.0,
-        Some(location.1),
+        span,
     ))
 }
 
@@ -113,7 +113,7 @@ fn check_binary_gate(
     op: &TokenKind,
     a: &Type,
     b: &Type,
-    location: (usize, (usize, usize)),
+    span: Span,
 ) -> Result<(), ThrushCompilerError> {
     if let (Type::Bool, Type::Bool) = (a, b) {
         return Ok(());
@@ -122,8 +122,7 @@ fn check_binary_gate(
     Err(ThrushCompilerError::Error(
         String::from("Type checking"),
         format!("Logical operation ({} {} {}) is not allowed.", a, op, b),
-        location.0,
-        Some(location.1),
+        span,
     ))
 }
 
@@ -132,7 +131,7 @@ fn check_binary_shift(
     op: &TokenKind,
     a: &Type,
     b: &Type,
-    location: (usize, (usize, usize)),
+    span: Span,
 ) -> Result<(), ThrushCompilerError> {
     if let (
         Type::S8 | Type::S16 | Type::S32 | Type::S64 | Type::U8 | Type::U16 | Type::U32 | Type::U64,
@@ -145,8 +144,7 @@ fn check_binary_shift(
     Err(ThrushCompilerError::Error(
         String::from("Type checking"),
         format!("Arithmetic operation ({} {} {}) is not allowed.", a, op, b),
-        location.0,
-        Some(location.1),
+        span,
     ))
 }
 
@@ -155,18 +153,18 @@ pub fn check_binary_types(
     op: &TokenKind,
     a: &Type,
     b: &Type,
-    location: (usize, (usize, usize)),
+    span: Span,
 ) -> Result<(), ThrushCompilerError> {
     match op {
         TokenKind::Star | TokenKind::Slash | TokenKind::Minus | TokenKind::Plus => {
-            check_binary_arithmetic(op, a, b, location)
+            check_binary_arithmetic(op, a, b, span)
         }
-        TokenKind::BangEq | TokenKind::EqEq => check_binary_equality(op, a, b, location),
+        TokenKind::BangEq | TokenKind::EqEq => check_binary_equality(op, a, b, span),
         TokenKind::LessEq | TokenKind::Less | TokenKind::GreaterEq | TokenKind::Greater => {
-            check_binary_comparasion(op, a, b, location)
+            check_binary_comparasion(op, a, b, span)
         }
-        TokenKind::LShift | TokenKind::RShift => check_binary_shift(op, a, b, location),
-        TokenKind::And | TokenKind::Or => check_binary_gate(op, a, b, location),
+        TokenKind::LShift | TokenKind::RShift => check_binary_shift(op, a, b, span),
+        TokenKind::And | TokenKind::Or => check_binary_gate(op, a, b, span),
         _ => Ok(()),
     }
 }
@@ -181,11 +179,7 @@ OPERATOR OPERATOR
 */
 
 #[inline(always)]
-fn check_unary(
-    op: &TokenKind,
-    a: &Type,
-    location: (usize, (usize, usize)),
-) -> Result<(), ThrushCompilerError> {
+fn check_unary(op: &TokenKind, a: &Type, span: Span) -> Result<(), ThrushCompilerError> {
     if a.is_integer_type() || a.is_float_type() {
         return Ok(());
     }
@@ -193,16 +187,12 @@ fn check_unary(
     Err(ThrushCompilerError::Error(
         String::from("Type checking"),
         format!("Arithmetic operation '{}' with '{}' is not allowed.", op, a),
-        location.0,
-        Some(location.1),
+        span,
     ))
 }
 
 #[inline(always)]
-fn check_unary_instr_bang(
-    a: &Type,
-    location: (usize, (usize, usize)),
-) -> Result<(), ThrushCompilerError> {
+fn check_unary_instr_bang(a: &Type, span: Span) -> Result<(), ThrushCompilerError> {
     if let Type::Bool = a {
         return Ok(());
     }
@@ -210,22 +200,15 @@ fn check_unary_instr_bang(
     Err(ThrushCompilerError::Error(
         String::from("Type checking"),
         format!("Logical operation (!{}) is not allowed.", a),
-        location.0,
-        Some(location.1),
+        span,
     ))
 }
 
 #[inline(always)]
-pub fn check_unary_types(
-    op: &TokenKind,
-    a: &Type,
-    location: (usize, (usize, usize)),
-) -> Result<(), ThrushCompilerError> {
+pub fn check_unary_types(op: &TokenKind, a: &Type, span: Span) -> Result<(), ThrushCompilerError> {
     match op {
-        TokenKind::Minus | TokenKind::PlusPlus | TokenKind::MinusMinus => {
-            check_unary(op, a, location)
-        }
-        TokenKind::Bang => check_unary_instr_bang(a, location),
+        TokenKind::Minus | TokenKind::PlusPlus | TokenKind::MinusMinus => check_unary(op, a, span),
+        TokenKind::Bang => check_unary_instr_bang(a, span),
         _ => Ok(()),
     }
 }

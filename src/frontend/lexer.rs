@@ -1,4 +1,7 @@
-use std::sync::Arc;
+use std::{
+    fmt::{self, Display},
+    sync::Arc,
+};
 
 use ahash::{HashSet, HashSetExt};
 use inkwell::{context::Context, targets::TargetData};
@@ -132,7 +135,8 @@ impl<'a> Lexer<'a> {
 
         if !self.errors.is_empty() {
             self.errors.iter().for_each(|error| {
-                self.diagnostician.report_error(error, LoggingType::Error);
+                self.diagnostician
+                    .build_diagnostic(error, LoggingType::Error);
             });
 
             exit(1);
@@ -141,8 +145,7 @@ impl<'a> Lexer<'a> {
         self.tokens.push(Token {
             lexeme: b"",
             kind: TokenKind::Eof,
-            line: self.line,
-            span: self.span,
+            span: Span::new(self.line, self.span),
         });
 
         mem::take(&mut self.tokens)
@@ -174,13 +177,14 @@ impl<'a> Lexer<'a> {
                 } else if self.end() {
                     self.end_span();
 
+                    let span: Span = Span::new(self.line, self.span);
+
                     return Err(ThrushCompilerError::Error(
                         String::from("Syntax Error"),
                         String::from(
                             "Unterminated multiline comment. Did you forget to close the comment with a '*/'?",
                         ),
-                        self.line,
-                        Some(self.span),
+                        span,
                     ));
                 }
 
@@ -216,11 +220,12 @@ impl<'a> Lexer<'a> {
             _ => {
                 self.end_span();
 
+                let span: Span = Span::new(self.line, self.span);
+
                 return Err(ThrushCompilerError::Error(
                     String::from("Unknown character."),
                     String::from("Did you provide a valid character?"),
-                    self.line,
-                    Some(self.span),
+                    span,
                 ));
             }
         }
@@ -265,8 +270,7 @@ impl<'a> Lexer<'a> {
                 return Err(ThrushCompilerError::Error(
                     String::from("Syntax error"),
                     String::from("Hexadecimal identifier '0x' cannot be repeated."),
-                    self.line,
-                    Some(self.span),
+                    Span::new(self.line, self.span),
                 ));
             }
 
@@ -276,8 +280,7 @@ impl<'a> Lexer<'a> {
                 return Err(ThrushCompilerError::Error(
                     String::from("Syntax error"),
                     String::from("Binary identifier '0b' cannot be repeated."),
-                    self.line,
-                    Some(self.span),
+                    Span::new(self.line, self.span),
                 ));
             }
 
@@ -308,12 +311,13 @@ impl<'a> Lexer<'a> {
 
         self.check_number(lexeme.to_str())?;
 
+        let span: Span = Span::new(self.line, self.span);
+
         if lexeme.contains(&b'.') {
             self.tokens.push(Token {
                 lexeme,
                 kind: TokenKind::Float,
-                line: self.line,
-                span: self.span,
+                span,
             });
 
             return Ok(());
@@ -322,8 +326,7 @@ impl<'a> Lexer<'a> {
         self.tokens.push(Token {
             lexeme,
             kind: TokenKind::Integer,
-            line: self.line,
-            span: self.span,
+            span,
         });
 
         Ok(())
@@ -342,12 +345,13 @@ impl<'a> Lexer<'a> {
     fn parse_float(&self, lexeme: &str) -> Result<(), ThrushCompilerError> {
         let dot_count: usize = lexeme.bytes().filter(|&b| b == b'.').count();
 
+        let span: Span = Span::new(self.line, self.span);
+
         if dot_count > 1 {
             return Err(ThrushCompilerError::Error(
                 String::from("Syntax error"),
                 String::from("Float values should only contain one dot."),
-                self.line,
-                Some(self.span),
+                span,
             ));
         }
 
@@ -362,8 +366,7 @@ impl<'a> Lexer<'a> {
         Err(ThrushCompilerError::Error(
             String::from("Syntax error"),
             String::from("Out of bounds."),
-            self.line,
-            Some(self.span),
+            span,
         ))
     }
 
@@ -383,6 +386,8 @@ impl<'a> Lexer<'a> {
         const U32_MIN: usize = 0;
         const U32_MAX: usize = 4294967295;
 
+        let span: Span = Span::new(self.line, self.span);
+
         if lexeme.starts_with("0x") {
             let cleaned_lexeme: String = lexeme
                 .strip_prefix("0x")
@@ -401,8 +406,7 @@ impl<'a> Lexer<'a> {
                         return Err(ThrushCompilerError::Error(
                             String::from("Syntax error"),
                             String::from("Out of bounds signed hexadecimal format."),
-                            self.line,
-                            Some(self.span),
+                            span,
                         ));
                     }
                 }
@@ -419,8 +423,7 @@ impl<'a> Lexer<'a> {
                             return Err(ThrushCompilerError::Error(
                                 String::from("Syntax error"),
                                 String::from("Out of bounds unsigned hexadecimal format."),
-                                self.line,
-                                Some(self.span),
+                                span,
                             ));
                         }
                     }
@@ -428,8 +431,7 @@ impl<'a> Lexer<'a> {
                     Err(_) => Err(ThrushCompilerError::Error(
                         String::from("Syntax error"),
                         String::from("Invalid numeric hexadecimal format."),
-                        self.line,
-                        Some(self.span),
+                        span,
                     )),
                 },
             };
@@ -453,8 +455,7 @@ impl<'a> Lexer<'a> {
                         return Err(ThrushCompilerError::Error(
                             String::from("Syntax error"),
                             String::from("Out of bounds signed binary format."),
-                            self.line,
-                            Some(self.span),
+                            span,
                         ));
                     }
                 }
@@ -471,8 +472,7 @@ impl<'a> Lexer<'a> {
                             return Err(ThrushCompilerError::Error(
                                 String::from("Syntax error"),
                                 String::from("Out of bounds unsigned binary format."),
-                                self.line,
-                                Some(self.span),
+                                span,
                             ));
                         }
                     }
@@ -480,8 +480,7 @@ impl<'a> Lexer<'a> {
                     Err(_) => Err(ThrushCompilerError::Error(
                         String::from("Syntax error"),
                         String::from("Invalid binary format."),
-                        self.line,
-                        Some(self.span),
+                        span,
                     )),
                 },
             };
@@ -499,8 +498,7 @@ impl<'a> Lexer<'a> {
                     Err(ThrushCompilerError::Error(
                         String::from("Syntax error"),
                         String::from("Out of bounds."),
-                        self.line,
-                        Some(self.span),
+                        span,
                     ))
                 }
             }
@@ -517,8 +515,7 @@ impl<'a> Lexer<'a> {
                         Err(ThrushCompilerError::Error(
                             String::from("Syntax error"),
                             String::from("Out of bounds."),
-                            self.line,
-                            Some(self.span),
+                            span,
                         ))
                     }
                 }
@@ -526,8 +523,7 @@ impl<'a> Lexer<'a> {
                 Err(_) => Err(ThrushCompilerError::Error(
                     String::from("Syntax error"),
                     String::from("Out of bounds."),
-                    self.line,
-                    Some(self.span),
+                    span,
                 )),
             },
         }
@@ -540,12 +536,13 @@ impl<'a> Lexer<'a> {
 
         self.end_span();
 
+        let span: Span = Span::new(self.line, self.span);
+
         if self.peek() != b'\'' {
             return Err(ThrushCompilerError::Error(
                 String::from("Syntax error"),
                 String::from("Unclosed char. Did you forget to close the char with a \'?"),
-                self.line,
-                Some(self.span),
+                span,
             ));
         }
 
@@ -555,16 +552,14 @@ impl<'a> Lexer<'a> {
             return Err(ThrushCompilerError::Error(
                 String::from("Syntax error"),
                 String::from("A char data type only can contain one character."),
-                self.line,
-                Some(self.span),
+                span,
             ));
         }
 
         self.tokens.push(Token {
             kind: TokenKind::Char,
             lexeme: &self.code[self.start + 1..self.current - 1],
-            line: self.line,
-            span: self.span,
+            span,
         });
 
         Ok(())
@@ -577,14 +572,15 @@ impl<'a> Lexer<'a> {
 
         self.end_span();
 
+        let span: Span = Span::new(self.line, self.span);
+
         if self.peek() != b'"' {
             return Err(ThrushCompilerError::Error(
                 String::from("Syntax error"),
                 String::from(
                     "Unclosed literal string. Did you forget to close the literal string with a '\"'?",
                 ),
-                self.line,
-                Some(self.span),
+                span,
             ));
         }
 
@@ -593,8 +589,7 @@ impl<'a> Lexer<'a> {
         self.tokens.push(Token {
             kind: TokenKind::Str,
             lexeme: &self.code[self.start + 1..self.current - 1],
-            line: self.line,
-            span: self.span,
+            span,
         });
 
         Ok(())
@@ -606,8 +601,7 @@ impl<'a> Lexer<'a> {
         self.tokens.push(Token {
             lexeme: self.lexeme(),
             kind,
-            line: self.line,
-            span: self.span,
+            span: Span::new(self.line, self.span),
         });
     }
 
@@ -691,8 +685,7 @@ impl<'a> Lexer<'a> {
 pub struct Token<'token> {
     pub lexeme: &'token [u8],
     pub kind: TokenKind,
-    pub line: usize,
-    pub span: (usize, usize),
+    pub span: Span,
 }
 
 impl TokenLexemeExtensions for TokenLexeme<'_> {
@@ -701,11 +694,7 @@ impl TokenLexemeExtensions for TokenLexeme<'_> {
         core::str::from_utf8(self).unwrap_or("�")
     }
 
-    fn parse_scapes(
-        &self,
-        line: usize,
-        span: (usize, usize),
-    ) -> Result<Vec<u8>, ThrushCompilerError> {
+    fn parse_scapes(&self, span: Span) -> Result<Vec<u8>, ThrushCompilerError> {
         let mut parsed_string: Vec<u8> = Vec::with_capacity(self.len());
 
         let mut i: usize = 0;
@@ -726,8 +715,7 @@ impl TokenLexemeExtensions for TokenLexeme<'_> {
                         return Err(ThrushCompilerError::Error(
                             String::from("Syntax Error"),
                             String::from("Invalid escape sequence."),
-                            line,
-                            Some(span),
+                            span,
                         ));
                     }
                 }
@@ -1299,5 +1287,35 @@ impl PartialEq for Type {
 
             _ => false,
         }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct Span {
+    pub line: usize,
+    pub span: (usize, usize),
+}
+
+impl Display for Span {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}:{}", self.line, self.span.0)
+    }
+}
+
+impl Span {
+    pub fn new(line: usize, span: (usize, usize)) -> Self {
+        Self { line, span }
+    }
+
+    pub fn get_line(&self) -> usize {
+        self.line
+    }
+
+    pub fn get_span_start(&self) -> usize {
+        self.span.0
+    }
+
+    pub fn get_span_end(&self) -> usize {
+        self.span.0
     }
 }

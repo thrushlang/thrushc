@@ -1,9 +1,9 @@
 use super::{
     super::{
-        backend::compiler::types::{CodeLocation, CustomType, Enum, ThrushAttributes},
+        backend::compiler::types::{CustomType, Enum, ThrushAttributes},
         common::error::ThrushCompilerError,
     },
-    lexer::Type,
+    lexer::{Span, Type},
 };
 
 use ahash::AHashMap as HashMap;
@@ -64,7 +64,7 @@ impl<'instr> ParserObjects<'instr> {
     pub fn get_object_id(
         &self,
         name: &'instr str,
-        location: CodeLocation,
+        span: Span,
     ) -> Result<FoundObjectId<'instr>, ThrushCompilerError> {
         if self.custom_types.contains_key(name) {
             return Ok((None, None, None, None, Some(name), None));
@@ -95,8 +95,7 @@ impl<'instr> ParserObjects<'instr> {
         Err(ThrushCompilerError::Error(
             String::from("Structure/Function/Local/Constant/Type not found"),
             format!("'{}' is not declared or defined.", name),
-            location.line,
-            Some(location.span),
+            span,
         ))
     }
 
@@ -104,7 +103,7 @@ impl<'instr> ParserObjects<'instr> {
     pub fn get_struct_by_id(
         &self,
         struct_id: &'instr str,
-        location: CodeLocation,
+        span: Span,
     ) -> Result<Struct<'instr>, ThrushCompilerError> {
         if let Some(structure) = self.structs.get(struct_id).cloned() {
             return Ok(structure);
@@ -113,15 +112,14 @@ impl<'instr> ParserObjects<'instr> {
         Err(ThrushCompilerError::Error(
             String::from("Expected struct reference"),
             String::from("Expected struct but found something else."),
-            location.line,
-            Some(location.span),
+            span,
         ))
     }
 
     #[inline]
     pub fn get_function_by_id(
         &self,
-        location: CodeLocation,
+        span: Span,
         func_id: &'instr str,
     ) -> Result<Function<'instr>, ThrushCompilerError> {
         if let Some(function) = self.functions.get(func_id).cloned() {
@@ -131,8 +129,7 @@ impl<'instr> ParserObjects<'instr> {
         Err(ThrushCompilerError::Error(
             String::from("Expected function reference"),
             String::from("Expected function but found something else."),
-            location.line,
-            Some(location.span),
+            span,
         ))
     }
 
@@ -140,7 +137,7 @@ impl<'instr> ParserObjects<'instr> {
     pub fn get_enum_by_id(
         &self,
         enum_id: &'instr str,
-        location: CodeLocation,
+        span: Span,
     ) -> Result<Enum<'instr>, ThrushCompilerError> {
         if let Some(enum_found) = self.enums.get(enum_id).cloned() {
             return Ok(enum_found);
@@ -149,15 +146,14 @@ impl<'instr> ParserObjects<'instr> {
         Err(ThrushCompilerError::Error(
             String::from("Expected enum reference"),
             String::from("Expected enum but found something else."),
-            location.line,
-            Some(location.span),
+            span,
         ))
     }
 
     pub fn get_custom_type_by_id(
         &self,
         custom_type_id: &'instr str,
-        location: CodeLocation,
+        span: Span,
     ) -> Result<CustomType<'instr>, ThrushCompilerError> {
         if let Some(custom_type) = self.custom_types.get(custom_type_id).cloned() {
             return Ok(custom_type);
@@ -166,8 +162,7 @@ impl<'instr> ParserObjects<'instr> {
         Err(ThrushCompilerError::Error(
             String::from("Expected custom type reference"),
             String::from("Expected custom type but found something else."),
-            location.line,
-            Some(location.span),
+            span,
         ))
     }
 
@@ -176,7 +171,7 @@ impl<'instr> ParserObjects<'instr> {
         &self,
         local_id: &'instr str,
         scope_idx: usize,
-        location: CodeLocation,
+        span: Span,
     ) -> Result<&Local<'instr>, ThrushCompilerError> {
         if let Some(local) = self.locals[scope_idx].get(local_id) {
             return Ok(local);
@@ -185,8 +180,7 @@ impl<'instr> ParserObjects<'instr> {
         Err(ThrushCompilerError::Error(
             String::from("Expected local reference"),
             String::from("Expected local but found something else."),
-            location.line,
-            Some(location.span),
+            span,
         ))
     }
 
@@ -194,7 +188,7 @@ impl<'instr> ParserObjects<'instr> {
     pub fn get_const_by_id(
         &self,
         const_id: &'instr str,
-        location: CodeLocation,
+        span: Span,
     ) -> Result<Constant<'instr>, ThrushCompilerError> {
         if let Some(constant) = self.constants.get(const_id).cloned() {
             return Ok(constant);
@@ -203,8 +197,7 @@ impl<'instr> ParserObjects<'instr> {
         Err(ThrushCompilerError::Error(
             String::from("Expected constant reference"),
             String::from("Expected constant but found something else."),
-            location.line,
-            Some(location.span),
+            span,
         ))
     }
 
@@ -212,7 +205,7 @@ impl<'instr> ParserObjects<'instr> {
     pub fn get_struct(
         &self,
         name: &str,
-        location: CodeLocation,
+        span: Span,
     ) -> Result<Struct<'instr>, ThrushCompilerError> {
         if let Some(struct_fields) = self.structs.get(name).cloned() {
             return Ok(struct_fields);
@@ -221,8 +214,7 @@ impl<'instr> ParserObjects<'instr> {
         Err(ThrushCompilerError::Error(
             String::from("Structure not found"),
             format!("'{}' structure not defined.", name),
-            location.line,
-            Some(location.span),
+            span,
         ))
     }
 
@@ -232,14 +224,13 @@ impl<'instr> ParserObjects<'instr> {
         scope_pos: usize,
         name: &'instr str,
         value: Local<'instr>,
-        location: CodeLocation,
+        span: Span,
     ) -> Result<(), ThrushCompilerError> {
         if self.locals[scope_pos - 1].contains_key(name) {
             return Err(ThrushCompilerError::Error(
                 String::from("Local variable already declared"),
                 format!("'{}' local variable already declared before.", name),
-                location.line,
-                Some(location.span),
+                span,
             ));
         }
 
@@ -253,14 +244,13 @@ impl<'instr> ParserObjects<'instr> {
         &mut self,
         name: &'instr str,
         constant: Constant<'instr>,
-        location: CodeLocation,
+        span: Span,
     ) -> Result<(), ThrushCompilerError> {
         if self.constants.contains_key(name) {
             return Err(ThrushCompilerError::Error(
                 String::from("Constant already declared"),
                 format!("'{}' constant already declared before.", name),
-                location.line,
-                Some(location.span),
+                span,
             ));
         }
 
@@ -274,14 +264,13 @@ impl<'instr> ParserObjects<'instr> {
         &mut self,
         name: &'instr str,
         custom_type: CustomType<'instr>,
-        location: CodeLocation,
+        span: Span,
     ) -> Result<(), ThrushCompilerError> {
         if self.constants.contains_key(name) {
             return Err(ThrushCompilerError::Error(
                 String::from("Custom type already declared"),
                 format!("'{}' custom type already declared before.", name),
-                location.line,
-                Some(location.span),
+                span,
             ));
         }
 
@@ -295,14 +284,13 @@ impl<'instr> ParserObjects<'instr> {
         &mut self,
         name: &'instr str,
         field_types: Struct<'instr>,
-        location: CodeLocation,
+        span: Span,
     ) -> Result<(), ThrushCompilerError> {
         if self.structs.contains_key(name) {
             return Err(ThrushCompilerError::Error(
                 String::from("Structure already declared"),
                 format!("'{}' structure already declared before.", name),
-                location.line,
-                Some(location.span),
+                span,
             ));
         }
 
@@ -316,14 +304,13 @@ impl<'instr> ParserObjects<'instr> {
         &mut self,
         name: &'instr str,
         union: Enum<'instr>,
-        location: CodeLocation,
+        span: Span,
     ) -> Result<(), ThrushCompilerError> {
         if self.enums.contains_key(name) {
             return Err(ThrushCompilerError::Error(
                 String::from("Enum already declared"),
                 format!("'{}' enum already declared before.", name),
-                location.line,
-                Some(location.span),
+                span,
             ));
         }
 
@@ -337,14 +324,13 @@ impl<'instr> ParserObjects<'instr> {
         &mut self,
         name: &'instr str,
         function: Function<'instr>,
-        location: CodeLocation,
+        span: Span,
     ) -> Result<(), ThrushCompilerError> {
         if self.functions.contains_key(name) {
             return Err(ThrushCompilerError::Error(
                 String::from("Function already declared"),
                 format!("'{}' function already declared before.", name),
-                location.line,
-                Some(location.span),
+                span,
             ));
         }
 

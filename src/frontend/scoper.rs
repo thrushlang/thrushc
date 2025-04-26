@@ -46,7 +46,8 @@ impl<'ctx> ThrushScoper<'ctx> {
 
         if !self.errors.is_empty() {
             self.errors.iter().for_each(|error| {
-                self.diagnostician.report_error(error, LoggingType::Error);
+                self.diagnostician
+                    .build_diagnostic(error, LoggingType::Error);
             });
 
             process::exit(1);
@@ -74,18 +75,16 @@ impl<'ctx> ThrushScoper<'ctx> {
             self.analyze(body, depth)?;
         }
 
-        if let Instruction::LocalRef { name, location, .. } = instr {
-            let line: usize = location.line;
-            let span: (usize, usize) = location.span;
-
+        if let Instruction::LocalRef { name, span, .. } = instr {
             if !self.is_at_current_scope(name, None, depth) {
                 return Err(ThrushCompilerError::Error(
                     String::from("Undefined variable"),
                     format!("'{}' local not exist at this scope.", name),
-                    line,
-                    Some(span),
+                    *span,
                 ));
             }
+
+            let line: usize = span.get_line();
 
             if self.is_at_current_scope(name, None, depth)
                 && !self.is_reacheable_at_current_scope(name, line, None, depth)
@@ -93,8 +92,7 @@ impl<'ctx> ThrushScoper<'ctx> {
                 return Err(ThrushCompilerError::Error(
                     String::from("Unreacheable variable"),
                     format!("'{}' local is unreacheable at this point.", name),
-                    line,
-                    Some(span),
+                    *span,
                 ));
             }
 
@@ -120,15 +118,15 @@ impl<'ctx> ThrushScoper<'ctx> {
                 return stmts.iter().rev().any(|instr| match instr {
                     Instruction::Local {
                         name: other_name,
-                        location,
+                        span,
                         ..
                     }
                     | Instruction::FunctionParameter {
                         name: other_name,
-                        location,
+                        span,
                         ..
                     } if *other_name == name => {
-                        if location.line > refvar_line {
+                        if span.get_line() > refvar_line {
                             return false;
                         }
 
@@ -149,15 +147,15 @@ impl<'ctx> ThrushScoper<'ctx> {
             self.blocks[0].stmts.iter().rev().any(|instr| match instr {
                 Instruction::FunctionParameter {
                     name: instr_name,
-                    location,
+                    span,
                     ..
                 }
                 | Instruction::Local {
                     name: instr_name,
-                    location,
+                    span,
                     ..
                 } if *instr_name == name => {
-                    if location.line > refvar_line {
+                    if span.get_line() > refvar_line {
                         return false;
                     }
 
@@ -179,15 +177,15 @@ impl<'ctx> ThrushScoper<'ctx> {
                 .any(|instr| match instr {
                     Instruction::FunctionParameter {
                         name: instr_name,
-                        location,
+                        span,
                         ..
                     }
                     | Instruction::Local {
                         name: instr_name,
-                        location,
+                        span,
                         ..
                     } if *instr_name == name => {
-                        if location.line > refvar_line {
+                        if span.get_line() > refvar_line {
                             return false;
                         }
 

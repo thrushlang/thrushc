@@ -57,10 +57,3 @@ pub type MappedHeapPointers<'ctx> = HashSet<(&'ctx str, u32, bool)>;
 pub type MappedHeapPointer<'ctx> = (&'ctx str, u32, bool);
 
 pub type MemoryFlags = [MemoryFlag; 1];
-
-#[derive(Debug, Clone)]
-pub struct CodeLocation {
-    pub diagnostician: Diagnostician,
-    pub line: usize,
-    pub span: (usize, usize),
-}
