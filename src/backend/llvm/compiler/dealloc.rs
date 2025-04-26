@@ -1,5 +1,6 @@
+use crate::middle::instruction::Instruction;
+
 use super::{
-    instruction::Instruction,
     memory::{AllocatedObject, MemoryFlag},
     objects::CompilerObjects,
     types::{AllocatedObjects, MappedHeapPointers},

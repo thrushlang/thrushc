@@ -1,12 +1,11 @@
 #![allow(clippy::upper_case_acronyms)]
 
-use super::compiler::{
-    Compiler,
-    instruction::Instruction,
-    misc::{CompilerFile, CompilerOptions},
-};
+use crate::common::misc::{CompilerFile, CompilerOptions};
+use crate::middle::instruction::Instruction;
 
-use super::super::{
+use super::compiler::Compiler;
+
+use super::super::super::{
     LLVM_BACKEND, Lexer, Parser, Token,
     common::constants::CURRENT_CLANG_VERSION,
     logging::{self, LoggingType},

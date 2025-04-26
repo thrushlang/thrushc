@@ -1,6 +1,6 @@
 use super::super::common::error::ThrushCompilerError;
-
-use super::lexer::{Span, Type};
+use super::super::middle::types::Type;
+use super::lexer::Span;
 
 #[inline]
 pub fn parse_number(lexeme: &str, span: Span) -> Result<(Type, f64), ThrushCompilerError> {

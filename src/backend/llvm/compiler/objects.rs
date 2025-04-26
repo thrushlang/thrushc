@@ -1,9 +1,10 @@
 use {
     super::{
-        super::super::logging::{self, LoggingType},
+        super::super::super::logging::{self, LoggingType},
         memory::AllocatedObject,
-        types::{AllocatedObjects, Function},
+        types::AllocatedObjects,
     },
+    crate::middle::statement::Function,
     ahash::AHashMap as HashMap,
 };
 

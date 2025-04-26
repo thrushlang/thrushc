@@ -1,8 +1,7 @@
-use super::super::super::frontend::lexer::Type;
+use crate::middle::statement::ThrushAttributes;
+use crate::middle::statement::traits::AttributesExtensions;
 
-use super::traits::AttributesExtensions;
-
-use super::types::ThrushAttributes;
+use super::super::super::super::middle::types::Type;
 
 use super::typegen;
 
@@ -17,52 +16,6 @@ use inkwell::{
     types::BasicType,
     values::{BasicValueEnum, FloatValue, GlobalValue, IntValue, PointerValue},
 };
-
-#[inline]
-pub fn build_const_float<'ctx>(
-    builder: &Builder<'ctx>,
-    context: &'ctx Context,
-    kind: &'ctx Type,
-    num: f64,
-    is_signed: bool,
-) -> FloatValue<'ctx> {
-    match kind {
-        Type::F32 if is_signed => builder
-            .build_float_neg(context.f32_type().const_float(num), "")
-            .unwrap(),
-        Type::F32 => context.f32_type().const_float(num),
-        Type::F64 if is_signed => builder
-            .build_float_neg(context.f64_type().const_float(num), "")
-            .unwrap(),
-        Type::F64 => context.f64_type().const_float(num),
-        _ => unreachable!(),
-    }
-}
-
-pub fn build_const_integer<'ctx>(
-    context: &'ctx Context,
-    kind: &'ctx Type,
-    num: u64,
-    is_signed: bool,
-) -> IntValue<'ctx> {
-    match kind {
-        Type::Char => context.i8_type().const_int(num, is_signed).const_neg(),
-        Type::S8 if is_signed => context.i8_type().const_int(num, is_signed).const_neg(),
-        Type::S8 => context.i8_type().const_int(num, is_signed),
-        Type::S16 if is_signed => context.i16_type().const_int(num, is_signed).const_neg(),
-        Type::S16 => context.i16_type().const_int(num, is_signed),
-        Type::S32 if is_signed => context.i32_type().const_int(num, is_signed).const_neg(),
-        Type::S32 => context.i32_type().const_int(num, is_signed),
-        Type::S64 if is_signed => context.i64_type().const_int(num, is_signed).const_neg(),
-        Type::S64 => context.i64_type().const_int(num, is_signed),
-        Type::U8 => context.i8_type().const_int(num, false),
-        Type::U16 => context.i16_type().const_int(num, false),
-        Type::U32 => context.i32_type().const_int(num, false),
-        Type::U64 => context.i64_type().const_int(num, false),
-        Type::Bool => context.bool_type().const_int(num, false),
-        _ => unreachable!(),
-    }
-}
 
 pub fn integer_autocast<'ctx>(
     target_type: &Type,

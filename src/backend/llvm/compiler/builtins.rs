@@ -1,12 +1,10 @@
-use super::super::super::{
-    frontend::{lexer::Type, objects::Functions},
-    logging::{self, LoggingType},
+use crate::{
+    common::logging::{self, LoggingType},
+    frontend::objects::Functions,
+    middle::{statement::FunctionCall, types::Type},
 };
 
-use super::{
-    Instruction, memory::AllocatedObject, objects::CompilerObjects, typegen, types::FunctionCall,
-    utils,
-};
+use super::{Instruction, memory::AllocatedObject, objects::CompilerObjects, typegen, utils};
 
 use inkwell::{
     FloatPredicate,

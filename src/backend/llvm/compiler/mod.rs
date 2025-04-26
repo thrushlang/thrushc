@@ -6,13 +6,10 @@ pub mod codegen;
 pub mod conventions;
 pub mod dealloc;
 pub mod generation;
-pub mod impls;
-pub mod instruction;
 pub mod local;
 pub mod memory;
-pub mod misc;
 pub mod objects;
-pub mod traits;
+pub mod predicates;
 pub mod typegen;
 pub mod types;
 pub mod unaryop;
@@ -20,9 +17,9 @@ pub mod utils;
 pub mod valuegen;
 
 use {
+    crate::middle::instruction::Instruction,
     codegen::Codegen,
     inkwell::{builder::Builder, context::Context, module::Module, targets::TargetData},
-    instruction::Instruction,
 };
 
 pub struct Compiler;

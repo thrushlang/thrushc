@@ -1,7 +1,6 @@
-use super::super::{
-    LLVM_BACKEND,
-    backend::compiler::misc::{CompilerFile, CompilerOptions, Opt},
-};
+use super::super::LLVM_BACKEND;
+
+use super::misc::{CompilerFile, CompilerOptions, Opt};
 
 use super::{
     constants::TARGET_TRIPLES,

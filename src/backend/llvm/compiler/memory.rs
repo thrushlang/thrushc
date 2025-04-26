@@ -3,7 +3,7 @@
 use inkwell::context::Context;
 use inkwell::targets::TargetData;
 
-use super::super::super::frontend::lexer::Type;
+use crate::middle::types::Type;
 
 use super::{
     objects::CompilerObjects,
@@ -153,7 +153,7 @@ pub fn generate_site_allocation_flag(
     let mut alloc_site_memory_flag: MemoryFlag = MemoryFlag::StackAllocated;
 
     if kind.is_struct_type() && kind.is_recursive_type()
-        || kind.exceeds_stack(context, target_data) >= 120
+        || kind.llvm_exceeds_stack(context, target_data) >= 120
     {
         alloc_site_memory_flag = MemoryFlag::HeapAllocated;
     }

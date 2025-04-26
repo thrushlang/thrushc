@@ -1,10 +1,6 @@
-use super::{
-    super::{
-        backend::compiler::types::{CustomType, Enum, ThrushAttributes},
-        common::error::ThrushCompilerError,
-    },
-    lexer::{Span, Type},
-};
+use crate::middle::statement::{CustomType, Enum, ThrushAttributes};
+
+use super::{super::common::error::ThrushCompilerError, super::middle::types::Type, lexer::Span};
 
 use ahash::AHashMap as HashMap;
 
@@ -219,7 +215,7 @@ impl<'instr> ParserObjects<'instr> {
     }
 
     #[inline]
-    pub fn insert_new_local(
+    pub fn new_local(
         &mut self,
         scope_pos: usize,
         name: &'instr str,
@@ -240,7 +236,7 @@ impl<'instr> ParserObjects<'instr> {
     }
 
     #[inline]
-    pub fn insert_new_constant(
+    pub fn new_constant(
         &mut self,
         name: &'instr str,
         constant: Constant<'instr>,
@@ -260,7 +256,7 @@ impl<'instr> ParserObjects<'instr> {
     }
 
     #[inline]
-    pub fn insert_new_custom_type(
+    pub fn new_custom_type(
         &mut self,
         name: &'instr str,
         custom_type: CustomType<'instr>,
@@ -280,7 +276,7 @@ impl<'instr> ParserObjects<'instr> {
     }
 
     #[inline]
-    pub fn insert_new_struct(
+    pub fn new_struct(
         &mut self,
         name: &'instr str,
         field_types: Struct<'instr>,
@@ -300,7 +296,7 @@ impl<'instr> ParserObjects<'instr> {
     }
 
     #[inline]
-    pub fn insert_new_enum(
+    pub fn new_enum(
         &mut self,
         name: &'instr str,
         union: Enum<'instr>,
@@ -320,7 +316,7 @@ impl<'instr> ParserObjects<'instr> {
     }
 
     #[inline]
-    pub fn insert_new_function(
+    pub fn new_function(
         &mut self,
         name: &'instr str,
         function: Function<'instr>,

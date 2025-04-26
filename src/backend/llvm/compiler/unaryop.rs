@@ -1,8 +1,8 @@
-use super::super::super::frontend::lexer::{TokenKind, Type};
+use crate::middle::statement::UnaryOp;
 
-use super::{
-    Instruction, memory::AllocatedObject, objects::CompilerObjects, types::UnaryOp, utils,
-};
+use super::super::super::super::middle::types::*;
+
+use super::{Instruction, memory::AllocatedObject, objects::CompilerObjects, valuegen};
 
 use super::typegen;
 
@@ -12,7 +12,7 @@ use inkwell::{
     values::{BasicValueEnum, FloatValue, IntValue},
 };
 
-pub fn compile_unary_op<'ctx>(
+pub fn unary_op<'ctx>(
     builder: &Builder<'ctx>,
     context: &'ctx Context,
     unary: UnaryOp<'ctx>,
@@ -154,14 +154,14 @@ pub fn compile_unary_op<'ctx>(
     }
 
     if let (TokenKind::Bang, _, Instruction::Boolean(_, bool)) = unary {
-        let value: IntValue = utils::build_const_integer(context, &Type::Bool, *bool as u64, false);
+        let value: IntValue = valuegen::integer(context, &Type::Bool, *bool as u64, false);
         let result: IntValue = builder.build_not(value, "").unwrap();
 
         return result.into();
     }
 
     if let (TokenKind::Minus, _, Instruction::Integer(kind, num, is_signed)) = unary {
-        let value: IntValue = utils::build_const_integer(context, kind, *num as u64, *is_signed);
+        let value: IntValue = valuegen::integer(context, kind, *num as u64, *is_signed);
 
         if !is_signed {
             let result: IntValue = builder.build_not(value, "").unwrap();
@@ -171,8 +171,8 @@ pub fn compile_unary_op<'ctx>(
         return value.into();
     }
 
-    if let (TokenKind::Minus, _, Instruction::Float(kind, num, is_signed)) = unary {
-        let value: FloatValue = utils::build_const_float(builder, context, kind, *num, *is_signed);
+    if let (TokenKind::Minus, _, Instruction::Float(kind, number, is_signed)) = unary {
+        let value: FloatValue = valuegen::float(builder, context, kind, *number, *is_signed);
 
         if !is_signed {
             let result: FloatValue = builder.build_float_neg(value, "").unwrap();

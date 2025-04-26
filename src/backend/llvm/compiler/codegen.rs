@@ -1,22 +1,20 @@
-use super::super::super::frontend::lexer::Type;
+use std::rc::Rc;
+
+use crate::middle::instruction::Instruction;
+use crate::middle::statement::{FunctionParameter, FunctionPrototype, MemoryFlags};
+use crate::middle::types::Type;
 
 use super::super::compiler::attributes::LLVMAttribute;
-
-use super::types::FunctionPrototype;
 
 use super::{
     attributes::{AttributeBuilder, LLVMAttributeApplicant},
     binaryop, call,
     conventions::CallConvention,
     dealloc::Deallocator,
-    generation,
-    instruction::Instruction,
-    local,
+    generation, local,
     memory::{AllocatedObject, MemoryFlag},
     objects::CompilerObjects,
-    typegen,
-    types::{FunctionParameter, MemoryFlags},
-    unaryop, utils,
+    typegen, unaryop, utils,
 };
 use super::{memory, valuegen};
 
@@ -489,18 +487,18 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
             }
 
             Instruction::BinaryOp {
-                op,
+                operator,
                 left,
                 right,
                 kind: binaryop_type,
                 ..
             } => {
                 if binaryop_type.is_integer_type() {
-                    return Instruction::LLVMValue(binaryop::integer::compile_integer_binaryop(
+                    return Instruction::LLVMValue(binaryop::integer::integer_binaryop(
                         self.module,
                         self.builder,
                         self.context,
-                        (left, op, right),
+                        (left, operator, right),
                         binaryop_type,
                         &self.compiler_objects,
                     ));
@@ -511,7 +509,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                         self.module,
                         self.builder,
                         self.context,
-                        (left, op, right),
+                        (left, operator, right),
                         binaryop_type,
                         &self.compiler_objects,
                     ));
@@ -522,7 +520,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                         self.module,
                         self.builder,
                         self.context,
-                        (left, op, right),
+                        (left, operator, right),
                         binaryop_type,
                         &self.compiler_objects,
                     ));
@@ -532,14 +530,14 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
             }
 
             Instruction::UnaryOp {
-                op,
+                operator,
                 kind,
                 expression,
                 ..
-            } => Instruction::LLVMValue(unaryop::compile_unary_op(
+            } => Instruction::LLVMValue(unaryop::unary_op(
                 self.builder,
                 self.context,
-                (op, kind, expression),
+                (operator, kind, expression),
                 &self.compiler_objects,
             )),
 
@@ -675,6 +673,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                 kind,
                 value,
                 attributes,
+                ..
             } = instruction
             {
                 let compiled_value: BasicValueEnum = generation::build_expression(
@@ -773,7 +772,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
 
         let function_type: &Type = function.1;
 
-        let function_body: Option<&Box<Instruction>> = function.3;
+        let function_body: Option<&Rc<Instruction>> = function.3;
 
         let llvm_function: FunctionValue = self.module.get_function(function_name).unwrap();
 

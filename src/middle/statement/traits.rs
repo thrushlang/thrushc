@@ -1,10 +1,6 @@
-use super::{
-    super::{
-        backend::compiler::types::{EnumField, EnumFields, StructFields, ThrushAttributes},
-        common::error::ThrushCompilerError,
-    },
-    lexer::{Span, Type},
-};
+use crate::{common::error::ThrushCompilerError, frontend::lexer::Span, middle::types::Type};
+
+use super::{EnumField, EnumFields, StructFields};
 
 pub trait TokenLexemeExtensions {
     fn to_str(&self) -> &str;
@@ -18,7 +14,6 @@ pub trait EnumFieldsExtensions<'a> {
 
 pub trait EnumExtensions<'a> {
     fn get_fields(&self) -> EnumFields<'a>;
-    fn get_attributes(&self) -> ThrushAttributes<'a>;
 }
 
 pub trait CustomTypeFieldsExtensions {
@@ -46,4 +41,22 @@ pub trait FoundObjectEither<'instr> {
     fn expected_function(&self, span: Span) -> Result<&'instr str, ThrushCompilerError>;
     fn expected_enum(&self, span: Span) -> Result<&'instr str, ThrushCompilerError>;
     fn expected_struct(&self, span: Span) -> Result<&'instr str, ThrushCompilerError>;
+}
+
+pub trait StructFieldsExtensions {
+    fn get_type(&self) -> Type;
+}
+
+pub trait ConstructorExtensions {
+    fn get_type(&self) -> Type;
+}
+
+pub trait AttributesExtensions {
+    fn contain_ffi_attribute(&self) -> bool;
+    fn contain_ignore_attribute(&self) -> bool;
+    fn contain_public_attribute(&self) -> bool;
+}
+
+pub trait MemoryFlagsBasics {
+    fn is_stack_allocated(&self) -> bool;
 }

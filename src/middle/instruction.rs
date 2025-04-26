@@ -1,16 +1,15 @@
 #![allow(clippy::upper_case_acronyms)]
 
-use super::{
-    super::super::{
-        common::error::ThrushCompilerError,
-        frontend::lexer::{Span, TokenKind, Type},
-    },
-    types::{Constructor, FunctionPrototype},
-};
-
-use super::types::{BinaryOp, ThrushAttributes, UnaryOp};
+use std::rc::Rc;
 
 use inkwell::values::BasicValueEnum;
+
+use crate::{common::error::ThrushCompilerError, frontend::lexer::Span};
+
+use super::{
+    statement::{BinaryOp, Constructor, FunctionPrototype, ThrushAttributes, UnaryOp},
+    types::{TokenKind, Type},
+};
 
 #[derive(Debug, Clone, Default)]
 pub enum Instruction<'ctx> {
@@ -58,32 +57,32 @@ pub enum Instruction<'ctx> {
     */
     // Conditionals
     If {
-        cond: Box<Instruction<'ctx>>,
-        block: Box<Instruction<'ctx>>,
+        cond: Rc<Instruction<'ctx>>,
+        block: Rc<Instruction<'ctx>>,
         elfs: Vec<Instruction<'ctx>>,
-        otherwise: Option<Box<Instruction<'ctx>>>,
+        otherwise: Option<Rc<Instruction<'ctx>>>,
     },
     Elif {
-        cond: Box<Instruction<'ctx>>,
-        block: Box<Instruction<'ctx>>,
+        cond: Rc<Instruction<'ctx>>,
+        block: Rc<Instruction<'ctx>>,
     },
     Else {
-        block: Box<Instruction<'ctx>>,
+        block: Rc<Instruction<'ctx>>,
     },
 
     // Loops
     ForLoop {
-        variable: Box<Instruction<'ctx>>,
-        cond: Box<Instruction<'ctx>>,
-        actions: Box<Instruction<'ctx>>,
-        block: Box<Instruction<'ctx>>,
+        variable: Rc<Instruction<'ctx>>,
+        cond: Rc<Instruction<'ctx>>,
+        actions: Rc<Instruction<'ctx>>,
+        block: Rc<Instruction<'ctx>>,
     },
     WhileLoop {
-        cond: Box<Instruction<'ctx>>,
-        block: Box<Instruction<'ctx>>,
+        cond: Rc<Instruction<'ctx>>,
+        block: Rc<Instruction<'ctx>>,
     },
     Loop {
-        block: Box<Instruction<'ctx>>,
+        block: Rc<Instruction<'ctx>>,
     },
 
     // Loop control flow
@@ -99,7 +98,7 @@ pub enum Instruction<'ctx> {
 
     // Entrypoint -> fn main() {}
     EntryPoint {
-        body: Box<Instruction<'ctx>>,
+        body: Rc<Instruction<'ctx>>,
     },
 
     FunctionParameter {
@@ -111,19 +110,20 @@ pub enum Instruction<'ctx> {
     Function {
         name: &'ctx str,
         params: Vec<Instruction<'ctx>>,
-        body: Option<Box<Instruction<'ctx>>>,
+        body: Option<Rc<Instruction<'ctx>>>,
         return_type: Type,
         attributes: ThrushAttributes<'ctx>,
     },
 
-    Return(Type, Box<Instruction<'ctx>>),
+    Return(Type, Rc<Instruction<'ctx>>),
 
     // Constants
     Const {
         name: &'ctx str,
         kind: Type,
-        value: Box<Instruction<'ctx>>,
+        value: Rc<Instruction<'ctx>>,
         attributes: ThrushAttributes<'ctx>,
+        span: Span,
     },
     ConstRef {
         name: &'ctx str,
@@ -136,7 +136,7 @@ pub enum Instruction<'ctx> {
     Local {
         name: &'ctx str,
         kind: Type,
-        value: Box<Instruction<'ctx>>,
+        value: Rc<Instruction<'ctx>>,
         comptime: bool,
         span: Span,
     },
@@ -149,7 +149,7 @@ pub enum Instruction<'ctx> {
     LocalMut {
         name: &'ctx str,
         kind: Type,
-        value: Box<Instruction<'ctx>>,
+        value: Rc<Instruction<'ctx>>,
         span: Span,
     },
 
@@ -162,15 +162,15 @@ pub enum Instruction<'ctx> {
     },
 
     Write {
-        write_to: (&'ctx str, Option<Box<Instruction<'ctx>>>),
-        write_value: Box<Instruction<'ctx>>,
+        write_to: (&'ctx str, Option<Rc<Instruction<'ctx>>>),
+        write_value: Rc<Instruction<'ctx>>,
         write_type: Type,
         span: Span,
     },
 
     Carry {
         name: &'ctx str,
-        expression: Option<Box<Instruction<'ctx>>>,
+        expression: Option<Rc<Instruction<'ctx>>>,
         carry_type: Type,
         span: Span,
     },
@@ -180,22 +180,26 @@ pub enum Instruction<'ctx> {
         name: &'ctx str,
         args: Vec<Instruction<'ctx>>,
         kind: Type,
+        span: Span,
     },
     BinaryOp {
-        left: Box<Instruction<'ctx>>,
-        op: &'ctx TokenKind,
-        right: Box<Instruction<'ctx>>,
+        left: Rc<Instruction<'ctx>>,
+        operator: TokenKind,
+        right: Rc<Instruction<'ctx>>,
         kind: Type,
+        span: Span,
     },
     UnaryOp {
-        op: &'ctx TokenKind,
+        operator: TokenKind,
         kind: Type,
-        expression: Box<Instruction<'ctx>>,
+        expression: Rc<Instruction<'ctx>>,
         is_pre: bool,
+        span: Span,
     },
     Group {
-        expression: Box<Instruction<'ctx>>,
+        expression: Rc<Instruction<'ctx>>,
         kind: Type,
+        span: Span,
     },
 
     #[default]
@@ -248,10 +252,13 @@ impl<'ctx> Instruction<'ctx> {
 
     pub fn as_binary(&self) -> BinaryOp {
         if let Instruction::BinaryOp {
-            left, op, right, ..
+            left,
+            operator,
+            right,
+            ..
         } = self
         {
-            return (&**left, op, &**right);
+            return (&**left, operator, &**right);
         }
 
         if let Instruction::Group { expression, .. } = self {
@@ -263,13 +270,13 @@ impl<'ctx> Instruction<'ctx> {
 
     pub fn as_unaryop(&self) -> UnaryOp {
         if let Instruction::UnaryOp {
-            op,
+            operator,
             kind,
             expression,
             ..
         } = self
         {
-            return (op, kind, expression);
+            return (operator, kind, expression);
         }
 
         unreachable!()

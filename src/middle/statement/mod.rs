@@ -1,17 +1,15 @@
-use super::super::super::{
-    backend::compiler::attributes::LLVMAttribute,
-    common::diagnostic::Diagnostician,
-    frontend::lexer::{TokenKind, Type},
-};
+pub mod impls;
+pub mod traits;
+
+use std::rc::Rc;
+
+use crate::backend::llvm::compiler::{attributes::LLVMAttribute, memory::MemoryFlag};
+
+use inkwell::values::FunctionValue;
 
 use super::{
-    Instruction,
-    memory::{AllocatedObject, MemoryFlag},
-};
-
-use {
-    ahash::{AHashMap as HashMap, HashSet},
-    inkwell::values::FunctionValue,
+    instruction::Instruction,
+    types::{TokenKind, Type},
 };
 
 pub type BinaryOp<'ctx> = (
@@ -30,7 +28,7 @@ pub type FunctionPrototype<'ctx> = (
     &'ctx str,
     &'ctx Type,
     &'ctx [Instruction<'ctx>],
-    Option<&'ctx Box<Instruction<'ctx>>>,
+    Option<&'ctx Rc<Instruction<'ctx>>>,
     &'ctx ThrushAttributes<'ctx>,
 );
 
@@ -51,9 +49,5 @@ pub type CustomTypeFields<'ctx> = Vec<CustomTypeField<'ctx>>;
 pub type Constructor<'instr> = Vec<(&'instr str, Instruction<'instr>, Type, u32)>;
 
 pub type ThrushAttributes<'ctx> = Vec<LLVMAttribute<'ctx>>;
-
-pub type AllocatedObjects<'ctx> = &'ctx HashMap<&'ctx str, AllocatedObject<'ctx>>;
-pub type MappedHeapPointers<'ctx> = HashSet<(&'ctx str, u32, bool)>;
-pub type MappedHeapPointer<'ctx> = (&'ctx str, u32, bool);
 
 pub type MemoryFlags = [MemoryFlag; 1];

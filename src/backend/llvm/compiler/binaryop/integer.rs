@@ -1,11 +1,13 @@
 use {
     super::super::{
-        super::super::frontend::lexer::{TokenKind, Type},
-        Instruction, call,
-        objects::CompilerObjects,
-        typegen,
-        types::{BinaryOp, UnaryOp},
-        unaryop, utils,
+        Instruction, call, objects::CompilerObjects, typegen, unaryop, utils, valuegen,
+    },
+    crate::{
+        backend::llvm::compiler::predicates,
+        middle::{
+            statement::{BinaryOp, UnaryOp},
+            types::{TokenKind, Type},
+        },
     },
     inkwell::{
         builder::Builder,
@@ -16,15 +18,15 @@ use {
     std::cmp::Ordering,
 };
 
-pub fn build_int_op<'ctx>(
+pub fn int_operation<'ctx>(
     context: &'ctx Context,
     builder: &Builder<'ctx>,
     mut left: IntValue<'ctx>,
     mut right: IntValue<'ctx>,
     signatures: (bool, bool),
-    op: &TokenKind,
+    operator: &TokenKind,
 ) -> BasicValueEnum<'ctx> {
-    match op {
+    match operator {
         TokenKind::Plus => builder.build_int_nsw_add(left, right, "").unwrap().into(),
         TokenKind::Minus => builder.build_int_nsw_sub(left, right, "").unwrap().into(),
         TokenKind::Star => builder.build_int_nsw_mul(left, right, "").unwrap().into(),
@@ -63,7 +65,7 @@ pub fn build_int_op<'ctx>(
 
             builder
                 .build_int_compare(
-                    op.as_int_predicate(signatures.0, signatures.1),
+                    predicates::integer(operator, signatures.0, signatures.1),
                     left,
                     right,
                     "",
@@ -99,7 +101,7 @@ pub fn build_int_op<'ctx>(
     }
 }
 
-pub fn compile_integer_binaryop<'ctx>(
+pub fn integer_binaryop<'ctx>(
     module: &Module<'ctx>,
     builder: &Builder<'ctx>,
     context: &'ctx Context,
@@ -121,13 +123,11 @@ pub fn compile_integer_binaryop<'ctx>(
         Instruction::Boolean(_, right),
     ) = binary
     {
-        let left_compiled: IntValue =
-            utils::build_const_integer(context, &Type::Bool, *left as u64, false);
-
+        let left_compiled: IntValue = valuegen::integer(context, &Type::Bool, *left as u64, false);
         let right_compiled: IntValue =
-            utils::build_const_integer(context, &Type::Bool, *right as u64, false);
+            valuegen::integer(context, &Type::Bool, *right as u64, false);
 
-        return build_int_op(
+        return int_operation(
             context,
             builder,
             left_compiled,
@@ -144,12 +144,12 @@ pub fn compile_integer_binaryop<'ctx>(
     ) = binary
     {
         let mut left_compiled: IntValue =
-            utils::build_const_integer(context, &Type::Bool, *left as u64, false);
+            valuegen::integer(context, &Type::Bool, *left as u64, false);
 
         let right_dissasembled: UnaryOp = binary.2.as_unaryop();
 
         let mut right_compiled: BasicValueEnum =
-            unaryop::compile_unary_op(builder, context, right_dissasembled, compiler_objects);
+            unaryop::unary_op(builder, context, right_dissasembled, compiler_objects);
 
         if let Some(new_left_compiled) = utils::integer_autocast(
             target_type,
@@ -173,7 +173,7 @@ pub fn compile_integer_binaryop<'ctx>(
             right_compiled = new_right_compiled;
         }
 
-        return build_int_op(
+        return int_operation(
             context,
             builder,
             left_compiled,
@@ -195,10 +195,10 @@ pub fn compile_integer_binaryop<'ctx>(
         let left_dissasembled: UnaryOp = binary.0.as_unaryop();
 
         let mut left_compiled: BasicValueEnum =
-            unaryop::compile_unary_op(builder, context, left_dissasembled, compiler_objects);
+            unaryop::unary_op(builder, context, left_dissasembled, compiler_objects);
 
         let mut right_compiled: IntValue =
-            utils::build_const_integer(context, &Type::Bool, *right as u64, false);
+            valuegen::integer(context, &Type::Bool, *right as u64, false);
 
         if let Some(new_left_compiled) = utils::integer_autocast(
             target_type,
@@ -222,7 +222,7 @@ pub fn compile_integer_binaryop<'ctx>(
             right_compiled = new_right_compiled.into_int_value();
         }
 
-        return build_int_op(
+        return int_operation(
             context,
             builder,
             left_compiled.into_int_value(),
@@ -251,7 +251,7 @@ pub fn compile_integer_binaryop<'ctx>(
     ) = binary
     {
         let mut left_compiled: IntValue =
-            utils::build_const_integer(context, &Type::Bool, *left as u64, false);
+            valuegen::integer(context, &Type::Bool, *left as u64, false);
 
         let mut right_compiled: IntValue = compiler_objects
             .get_allocated_object(name)
@@ -283,7 +283,7 @@ pub fn compile_integer_binaryop<'ctx>(
             right_compiled = new_right_compiled.into_int_value();
         }
 
-        return build_int_op(
+        return int_operation(
             context,
             builder,
             left_compiled,
@@ -317,7 +317,7 @@ pub fn compile_integer_binaryop<'ctx>(
             .into_int_value();
 
         let mut right_compiled: IntValue =
-            utils::build_const_integer(context, &Type::Bool, *right as u64, false);
+            valuegen::integer(context, &Type::Bool, *right as u64, false);
 
         if let Some(new_left_compiled) = utils::integer_autocast(
             target_type,
@@ -341,7 +341,7 @@ pub fn compile_integer_binaryop<'ctx>(
             right_compiled = new_right_compiled.into_int_value();
         }
 
-        return build_int_op(
+        return int_operation(
             context,
             builder,
             left_compiled,
@@ -365,15 +365,14 @@ pub fn compile_integer_binaryop<'ctx>(
         Instruction::Char(_, right),
     ) = binary
     {
-        let left_compiled: IntValue =
-            utils::build_const_integer(context, &Type::S8, *left as u64, false);
+        let operator: &TokenKind = binary.1;
 
-        let right_compiled: IntValue =
-            utils::build_const_integer(context, &Type::S8, *right as u64, false);
+        let left_compiled: IntValue = valuegen::integer(context, &Type::S8, *left as u64, false);
+        let right_compiled: IntValue = valuegen::integer(context, &Type::S8, *right as u64, false);
 
         return builder
             .build_int_compare(
-                binary.1.as_int_predicate(false, false),
+                predicates::integer(operator, false, false),
                 left_compiled,
                 right_compiled,
                 "",
@@ -408,12 +407,12 @@ pub fn compile_integer_binaryop<'ctx>(
         let left_dissasembled: UnaryOp = binary.0.as_unaryop();
 
         let mut left_compiled: BasicValueEnum =
-            unaryop::compile_unary_op(builder, context, left_dissasembled, compiler_objects);
+            unaryop::unary_op(builder, context, left_dissasembled, compiler_objects);
 
         let right_dissasembled: UnaryOp = binary.2.as_unaryop();
 
         let mut right_compiled: BasicValueEnum =
-            unaryop::compile_unary_op(builder, context, right_dissasembled, compiler_objects);
+            unaryop::unary_op(builder, context, right_dissasembled, compiler_objects);
 
         if let Some(new_left_compiled) = utils::integer_autocast(
             target_type,
@@ -437,7 +436,7 @@ pub fn compile_integer_binaryop<'ctx>(
             right_compiled = new_right_compiled;
         }
 
-        return build_int_op(
+        return int_operation(
             context,
             builder,
             left_compiled.into_int_value(),
@@ -488,7 +487,7 @@ pub fn compile_integer_binaryop<'ctx>(
         let right_dissasembled: UnaryOp = binary.2.as_unaryop();
 
         let mut right_compiled: BasicValueEnum =
-            unaryop::compile_unary_op(builder, context, right_dissasembled, compiler_objects);
+            unaryop::unary_op(builder, context, right_dissasembled, compiler_objects);
 
         if let Some(new_left_compiled) = utils::integer_autocast(
             target_type,
@@ -512,7 +511,7 @@ pub fn compile_integer_binaryop<'ctx>(
             right_compiled = new_right_compiled;
         }
 
-        return build_int_op(
+        return int_operation(
             context,
             builder,
             left_compiled.into_int_value(),
@@ -552,7 +551,7 @@ pub fn compile_integer_binaryop<'ctx>(
         let left_dissasembled: UnaryOp = binary.0.as_unaryop();
 
         let mut left_compiled: BasicValueEnum =
-            unaryop::compile_unary_op(builder, context, left_dissasembled, compiler_objects);
+            unaryop::unary_op(builder, context, left_dissasembled, compiler_objects);
 
         let mut right_compiled: BasicValueEnum = call::build_call(
             module,
@@ -585,7 +584,7 @@ pub fn compile_integer_binaryop<'ctx>(
             right_compiled = new_right_compiled;
         }
 
-        return build_int_op(
+        return int_operation(
             context,
             builder,
             left_compiled.into_int_value(),
@@ -618,12 +617,12 @@ pub fn compile_integer_binaryop<'ctx>(
     ) = binary
     {
         let mut left_compiled: IntValue =
-            utils::build_const_integer(context, left_type, *left_num as u64, *left_signed);
+            valuegen::integer(context, left_type, *left_num as u64, *left_signed);
 
         let right_dissasembled: UnaryOp = binary.2.as_unaryop();
 
         let mut right_compiled: BasicValueEnum =
-            unaryop::compile_unary_op(builder, context, right_dissasembled, compiler_objects);
+            unaryop::unary_op(builder, context, right_dissasembled, compiler_objects);
 
         if let Some(new_left_compiled) = utils::integer_autocast(
             target_type,
@@ -647,7 +646,7 @@ pub fn compile_integer_binaryop<'ctx>(
             right_compiled = new_right_compiled;
         }
 
-        return build_int_op(
+        return int_operation(
             context,
             builder,
             left_compiled,
@@ -682,10 +681,10 @@ pub fn compile_integer_binaryop<'ctx>(
         let left_dissasembled: UnaryOp = binary.0.as_unaryop();
 
         let mut left_compiled: BasicValueEnum =
-            unaryop::compile_unary_op(builder, context, left_dissasembled, compiler_objects);
+            unaryop::unary_op(builder, context, left_dissasembled, compiler_objects);
 
         let mut right_compiled: IntValue =
-            utils::build_const_integer(context, right_type, *right_num as u64, *right_signed);
+            valuegen::integer(context, right_type, *right_num as u64, *right_signed);
 
         if let Some(new_left_compiled) = utils::integer_autocast(
             target_type,
@@ -709,7 +708,7 @@ pub fn compile_integer_binaryop<'ctx>(
             right_compiled = new_right_compiled.into_int_value();
         }
 
-        return build_int_op(
+        return int_operation(
             context,
             builder,
             left_compiled.into_int_value(),
@@ -760,7 +759,7 @@ pub fn compile_integer_binaryop<'ctx>(
         let right_dissasembled: UnaryOp = binary.2.as_unaryop();
 
         let mut right_compiled: BasicValueEnum =
-            unaryop::compile_unary_op(builder, context, right_dissasembled, compiler_objects);
+            unaryop::unary_op(builder, context, right_dissasembled, compiler_objects);
 
         if let Some(new_left_compiled) = utils::integer_autocast(
             target_type,
@@ -784,7 +783,7 @@ pub fn compile_integer_binaryop<'ctx>(
             right_compiled = new_right_compiled;
         }
 
-        return build_int_op(
+        return int_operation(
             context,
             builder,
             left_compiled.into_int_value(),
@@ -828,7 +827,7 @@ pub fn compile_integer_binaryop<'ctx>(
         let left_dissasembled: UnaryOp = binary.0.as_unaryop();
 
         let mut left_compiled: BasicValueEnum =
-            unaryop::compile_unary_op(builder, context, left_dissasembled, compiler_objects);
+            unaryop::unary_op(builder, context, left_dissasembled, compiler_objects);
 
         let mut right_compiled: BasicValueEnum = compiler_objects
             .get_allocated_object(right_name)
@@ -859,7 +858,7 @@ pub fn compile_integer_binaryop<'ctx>(
             right_compiled = new_right_compiled;
         }
 
-        return build_int_op(
+        return int_operation(
             context,
             builder,
             left_compiled.into_int_value(),
@@ -895,7 +894,7 @@ pub fn compile_integer_binaryop<'ctx>(
     {
         let left_dissasembled: BinaryOp = binary.0.as_binary();
 
-        let mut left_compiled: IntValue = compile_integer_binaryop(
+        let mut left_compiled: IntValue = integer_binaryop(
             module,
             builder,
             context,
@@ -908,7 +907,7 @@ pub fn compile_integer_binaryop<'ctx>(
         let right_dissasembled: UnaryOp = binary.2.as_unaryop();
 
         let mut right_compiled: BasicValueEnum =
-            unaryop::compile_unary_op(builder, context, right_dissasembled, compiler_objects);
+            unaryop::unary_op(builder, context, right_dissasembled, compiler_objects);
 
         if let Some(new_left_compiled) = utils::integer_autocast(
             target_type,
@@ -932,7 +931,7 @@ pub fn compile_integer_binaryop<'ctx>(
             right_compiled = new_right_compiled;
         }
 
-        return build_int_op(
+        return int_operation(
             context,
             builder,
             left_compiled,
@@ -949,6 +948,7 @@ pub fn compile_integer_binaryop<'ctx>(
         Instruction::Group {
             expression: left_instr,
             kind: left_type,
+            ..
         },
         TokenKind::Plus
         | TokenKind::Slash
@@ -969,7 +969,7 @@ pub fn compile_integer_binaryop<'ctx>(
     {
         let left_dissasembled: BinaryOp = left_instr.as_binary();
 
-        let mut left_compiled: IntValue = compile_integer_binaryop(
+        let mut left_compiled: IntValue = integer_binaryop(
             module,
             builder,
             context,
@@ -982,7 +982,7 @@ pub fn compile_integer_binaryop<'ctx>(
         let right_dissasembled: UnaryOp = binary.2.as_unaryop();
 
         let mut right_compiled: BasicValueEnum =
-            unaryop::compile_unary_op(builder, context, right_dissasembled, compiler_objects);
+            unaryop::unary_op(builder, context, right_dissasembled, compiler_objects);
 
         if let Some(new_left_compiled) = utils::integer_autocast(
             target_type,
@@ -1006,7 +1006,7 @@ pub fn compile_integer_binaryop<'ctx>(
             right_compiled = new_right_compiled;
         }
 
-        return build_int_op(
+        return int_operation(
             context,
             builder,
             left_compiled,
@@ -1045,11 +1045,11 @@ pub fn compile_integer_binaryop<'ctx>(
         let left_dissasembled: UnaryOp = binary.0.as_unaryop();
 
         let mut left_compiled: BasicValueEnum =
-            unaryop::compile_unary_op(builder, context, left_dissasembled, compiler_objects);
+            unaryop::unary_op(builder, context, left_dissasembled, compiler_objects);
 
         let right_dissasembled: BinaryOp = right_instr.as_binary();
 
-        let mut right_compiled: IntValue = compile_integer_binaryop(
+        let mut right_compiled: IntValue = integer_binaryop(
             module,
             builder,
             context,
@@ -1081,7 +1081,7 @@ pub fn compile_integer_binaryop<'ctx>(
             right_compiled = new_right_compiled.into_int_value();
         }
 
-        return build_int_op(
+        return int_operation(
             context,
             builder,
             left_compiled.into_int_value(),
@@ -1171,7 +1171,7 @@ pub fn compile_integer_binaryop<'ctx>(
             right_compiled = new_right_compiled;
         }
 
-        return build_int_op(
+        return int_operation(
             context,
             builder,
             left_compiled.into_int_value(),
@@ -1209,7 +1209,7 @@ pub fn compile_integer_binaryop<'ctx>(
     ) = binary
     {
         let mut left_compiled: IntValue =
-            utils::build_const_integer(context, left_type, *left_num as u64, *left_signed);
+            valuegen::integer(context, left_type, *left_num as u64, *left_signed);
 
         let mut right_compiled: BasicValueEnum = call::build_call(
             module,
@@ -1242,7 +1242,7 @@ pub fn compile_integer_binaryop<'ctx>(
             right_compiled = new_right_compiled;
         }
 
-        return build_int_op(
+        return int_operation(
             context,
             builder,
             left_compiled,
@@ -1289,7 +1289,7 @@ pub fn compile_integer_binaryop<'ctx>(
         .unwrap();
 
         let mut right_compiled: IntValue =
-            utils::build_const_integer(context, right_type, *right_num as u64, *right_signed);
+            valuegen::integer(context, right_type, *right_num as u64, *right_signed);
 
         if let Some(new_left_compiled) = utils::integer_autocast(
             target_type,
@@ -1313,7 +1313,7 @@ pub fn compile_integer_binaryop<'ctx>(
             right_compiled = new_right_compiled.into_int_value();
         }
 
-        return build_int_op(
+        return int_operation(
             context,
             builder,
             left_compiled.into_int_value(),
@@ -1397,7 +1397,7 @@ pub fn compile_integer_binaryop<'ctx>(
             right_compiled = new_right_compiled;
         }
 
-        return build_int_op(
+        return int_operation(
             context,
             builder,
             left_compiled.into_int_value(),
@@ -1481,7 +1481,7 @@ pub fn compile_integer_binaryop<'ctx>(
             right_compiled = new_right_compiled;
         }
 
-        return build_int_op(
+        return int_operation(
             context,
             builder,
             left_compiled.into_int_value(),
@@ -1498,6 +1498,7 @@ pub fn compile_integer_binaryop<'ctx>(
         Instruction::Group {
             expression: left_instr,
             kind: left_type,
+            ..
         },
         TokenKind::Plus
         | TokenKind::Slash
@@ -1523,7 +1524,7 @@ pub fn compile_integer_binaryop<'ctx>(
     {
         let left_dissasembled: BinaryOp = left_instr.as_binary();
 
-        let mut left_compiled: BasicValueEnum = compile_integer_binaryop(
+        let mut left_compiled: BasicValueEnum = integer_binaryop(
             module,
             builder,
             context,
@@ -1563,7 +1564,7 @@ pub fn compile_integer_binaryop<'ctx>(
             right_compiled = new_right_compiled;
         }
 
-        return build_int_op(
+        return int_operation(
             context,
             builder,
             left_compiled.into_int_value(),
@@ -1615,7 +1616,7 @@ pub fn compile_integer_binaryop<'ctx>(
 
         let right_dissasembled: BinaryOp = right_instr.as_binary();
 
-        let mut right_compiled: BasicValueEnum = compile_integer_binaryop(
+        let mut right_compiled: BasicValueEnum = integer_binaryop(
             module,
             builder,
             context,
@@ -1646,7 +1647,7 @@ pub fn compile_integer_binaryop<'ctx>(
             right_compiled = new_right_compiled;
         }
 
-        return build_int_op(
+        return int_operation(
             context,
             builder,
             left_compiled.into_int_value(),
@@ -1687,10 +1688,9 @@ pub fn compile_integer_binaryop<'ctx>(
     ) = binary
     {
         let mut left_compiled: IntValue =
-            utils::build_const_integer(context, left_type, *left_num as u64, *left_signed);
-
+            valuegen::integer(context, left_type, *left_num as u64, *left_signed);
         let mut right_compiled: IntValue =
-            utils::build_const_integer(context, right_type, *right_num as u64, *right_signed);
+            valuegen::integer(context, right_type, *right_num as u64, *right_signed);
 
         if let Some(new_left_compiled) = utils::integer_autocast(
             target_type,
@@ -1714,7 +1714,7 @@ pub fn compile_integer_binaryop<'ctx>(
             right_compiled = new_right_compiled.into_int_value();
         }
 
-        return build_int_op(
+        return int_operation(
             context,
             builder,
             left_compiled,
@@ -1753,7 +1753,7 @@ pub fn compile_integer_binaryop<'ctx>(
     ) = binary
     {
         let mut left_compiled: IntValue =
-            utils::build_const_integer(context, left_type, *left_num as u64, *left_signed);
+            valuegen::integer(context, left_type, *left_num as u64, *left_signed);
 
         let mut right_compiled: IntValue = compiler_objects
             .get_allocated_object(name)
@@ -1785,7 +1785,7 @@ pub fn compile_integer_binaryop<'ctx>(
             right_compiled = new_right_compiled.into_int_value();
         }
 
-        return build_int_op(
+        return int_operation(
             context,
             builder,
             left_compiled,
@@ -1870,7 +1870,7 @@ pub fn compile_integer_binaryop<'ctx>(
             right_compiled = new_right_compiled.into_int_value();
         }
 
-        return build_int_op(
+        return int_operation(
             context,
             builder,
             left_compiled,
@@ -1915,7 +1915,7 @@ pub fn compile_integer_binaryop<'ctx>(
     {
         let left_dissasembled: BinaryOp = binary.0.as_binary();
 
-        let mut left_compiled: IntValue = compile_integer_binaryop(
+        let mut left_compiled: IntValue = integer_binaryop(
             module,
             builder,
             context,
@@ -1955,7 +1955,7 @@ pub fn compile_integer_binaryop<'ctx>(
             right_compiled = new_right_compiled.into_int_value();
         }
 
-        return build_int_op(
+        return int_operation(
             context,
             builder,
             left_compiled,
@@ -1990,11 +1990,11 @@ pub fn compile_integer_binaryop<'ctx>(
     ) = binary
     {
         let mut left_compiled: IntValue =
-            utils::build_const_integer(context, left_type, *left_num as u64, *left_signed);
+            valuegen::integer(context, left_type, *left_num as u64, *left_signed);
 
         let right_dissasembled: BinaryOp = binary.2.as_binary();
 
-        let mut right_compiled: IntValue = compile_integer_binaryop(
+        let mut right_compiled: IntValue = integer_binaryop(
             module,
             builder,
             context,
@@ -2026,7 +2026,7 @@ pub fn compile_integer_binaryop<'ctx>(
             right_compiled = new_right_compiled.into_int_value();
         }
 
-        return build_int_op(
+        return int_operation(
             context,
             builder,
             left_compiled,
@@ -2059,7 +2059,7 @@ pub fn compile_integer_binaryop<'ctx>(
     {
         let left_dissasembled: BinaryOp = binary.0.as_binary();
 
-        let mut left_compiled: IntValue = compile_integer_binaryop(
+        let mut left_compiled: IntValue = integer_binaryop(
             module,
             builder,
             context,
@@ -2070,7 +2070,7 @@ pub fn compile_integer_binaryop<'ctx>(
         .into_int_value();
 
         let mut right_compiled: IntValue =
-            utils::build_const_integer(context, right_type, *right_num as u64, *right_signed);
+            valuegen::integer(context, right_type, *right_num as u64, *right_signed);
 
         if let Some(new_left_compiled) = utils::integer_autocast(
             target_type,
@@ -2094,7 +2094,7 @@ pub fn compile_integer_binaryop<'ctx>(
             right_compiled = new_right_compiled.into_int_value();
         }
 
-        return build_int_op(
+        return int_operation(
             context,
             builder,
             left_compiled,
@@ -2141,7 +2141,7 @@ pub fn compile_integer_binaryop<'ctx>(
             .into_int_value();
 
         let mut right_compiled: IntValue =
-            utils::build_const_integer(context, right_type, *right_num as u64, *right_signed);
+            valuegen::integer(context, right_type, *right_num as u64, *right_signed);
 
         if let Some(new_left_compiled) = utils::integer_autocast(
             target_type,
@@ -2165,7 +2165,7 @@ pub fn compile_integer_binaryop<'ctx>(
             right_compiled = new_right_compiled.into_int_value();
         }
 
-        return build_int_op(
+        return int_operation(
             context,
             builder,
             left_compiled,
@@ -2179,6 +2179,7 @@ pub fn compile_integer_binaryop<'ctx>(
         Instruction::Group {
             expression,
             kind: left_type,
+            ..
         },
         TokenKind::Plus
         | TokenKind::Slash
@@ -2199,7 +2200,7 @@ pub fn compile_integer_binaryop<'ctx>(
     {
         let left_dissasembled: BinaryOp = expression.as_binary();
 
-        let mut left_compiled: IntValue = compile_integer_binaryop(
+        let mut left_compiled: IntValue = integer_binaryop(
             module,
             builder,
             context,
@@ -2210,7 +2211,7 @@ pub fn compile_integer_binaryop<'ctx>(
         .into_int_value();
 
         let mut right_compiled: IntValue =
-            utils::build_const_integer(context, right_type, *right_num as u64, *right_signed);
+            valuegen::integer(context, right_type, *right_num as u64, *right_signed);
 
         if let Some(new_left_compiled) = utils::integer_autocast(
             target_type,
@@ -2234,7 +2235,7 @@ pub fn compile_integer_binaryop<'ctx>(
             right_compiled = new_right_compiled.into_int_value();
         }
 
-        return build_int_op(
+        return int_operation(
             context,
             builder,
             left_compiled,
@@ -2263,15 +2264,16 @@ pub fn compile_integer_binaryop<'ctx>(
         Instruction::Group {
             expression,
             kind: right_type,
+            ..
         },
     ) = binary
     {
         let mut left_compiled: IntValue =
-            utils::build_const_integer(context, left_type, *left_num as u64, *left_signed);
+            valuegen::integer(context, left_type, *left_num as u64, *left_signed);
 
         let right_dissasembled: BinaryOp = expression.as_binary();
 
-        let mut right_compiled: IntValue = compile_integer_binaryop(
+        let mut right_compiled: IntValue = integer_binaryop(
             module,
             builder,
             context,
@@ -2303,7 +2305,7 @@ pub fn compile_integer_binaryop<'ctx>(
             right_compiled = new_right_compiled.into_int_value();
         }
 
-        return build_int_op(
+        return int_operation(
             context,
             builder,
             left_compiled,
@@ -2346,7 +2348,7 @@ pub fn compile_integer_binaryop<'ctx>(
     {
         let left_dissasembled: BinaryOp = binary.0.as_binary();
 
-        let mut left_compiled: IntValue = compile_integer_binaryop(
+        let mut left_compiled: IntValue = integer_binaryop(
             module,
             builder,
             context,
@@ -2358,7 +2360,7 @@ pub fn compile_integer_binaryop<'ctx>(
 
         let right_dissasembled: BinaryOp = binary.2.as_binary();
 
-        let mut right_compiled: IntValue = compile_integer_binaryop(
+        let mut right_compiled: IntValue = integer_binaryop(
             module,
             builder,
             context,
@@ -2390,7 +2392,7 @@ pub fn compile_integer_binaryop<'ctx>(
             right_compiled = new_right_compiled.into_int_value();
         }
 
-        return build_int_op(
+        return int_operation(
             context,
             builder,
             left_compiled,
@@ -2415,6 +2417,7 @@ pub fn compile_integer_binaryop<'ctx>(
         Instruction::Group {
             expression: left_instr,
             kind: left_type,
+            ..
         },
         TokenKind::Plus
         | TokenKind::Slash
@@ -2439,7 +2442,7 @@ pub fn compile_integer_binaryop<'ctx>(
     {
         let left_dissasembled: BinaryOp = left_instr.as_binary();
 
-        let mut left_compiled: IntValue = compile_integer_binaryop(
+        let mut left_compiled: IntValue = integer_binaryop(
             module,
             builder,
             context,
@@ -2451,7 +2454,7 @@ pub fn compile_integer_binaryop<'ctx>(
 
         let right_dissasembled: BinaryOp = right_instr.as_binary();
 
-        let mut right_compiled: IntValue = compile_integer_binaryop(
+        let mut right_compiled: IntValue = integer_binaryop(
             module,
             builder,
             context,
@@ -2483,7 +2486,7 @@ pub fn compile_integer_binaryop<'ctx>(
             right_compiled = new_right_compiled.into_int_value();
         }
 
-        return build_int_op(
+        return int_operation(
             context,
             builder,
             left_compiled,
@@ -2500,6 +2503,7 @@ pub fn compile_integer_binaryop<'ctx>(
         Instruction::Group {
             expression,
             kind: left_type,
+            ..
         },
         TokenKind::Plus
         | TokenKind::Slash
@@ -2522,7 +2526,7 @@ pub fn compile_integer_binaryop<'ctx>(
     {
         let left_dissasembled: BinaryOp = expression.as_binary();
 
-        let mut left_compiled: IntValue = compile_integer_binaryop(
+        let mut left_compiled: IntValue = integer_binaryop(
             module,
             builder,
             context,
@@ -2534,7 +2538,7 @@ pub fn compile_integer_binaryop<'ctx>(
 
         let right_dissasembled: BinaryOp = binary.2.as_binary();
 
-        let mut right_compiled: IntValue = compile_integer_binaryop(
+        let mut right_compiled: IntValue = integer_binaryop(
             module,
             builder,
             context,
@@ -2566,7 +2570,7 @@ pub fn compile_integer_binaryop<'ctx>(
             right_compiled = new_right_compiled.into_int_value();
         }
 
-        return build_int_op(
+        return int_operation(
             context,
             builder,
             left_compiled,
@@ -2600,12 +2604,13 @@ pub fn compile_integer_binaryop<'ctx>(
         Instruction::Group {
             expression,
             kind: right_type,
+            ..
         },
     ) = binary
     {
         let left_dissasembled: BinaryOp = binary.0.as_binary();
 
-        let mut left_compiled: IntValue = compile_integer_binaryop(
+        let mut left_compiled: IntValue = integer_binaryop(
             module,
             builder,
             context,
@@ -2617,7 +2622,7 @@ pub fn compile_integer_binaryop<'ctx>(
 
         let right_dissasembled: BinaryOp = expression.as_binary();
 
-        let mut right_compiled: IntValue = compile_integer_binaryop(
+        let mut right_compiled: IntValue = integer_binaryop(
             module,
             builder,
             context,
@@ -2649,7 +2654,7 @@ pub fn compile_integer_binaryop<'ctx>(
             right_compiled = new_right_compiled.into_int_value();
         }
 
-        return build_int_op(
+        return int_operation(
             context,
             builder,
             left_compiled,

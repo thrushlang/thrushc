@@ -1,12 +1,11 @@
 use std::path::Path;
 use std::str::Lines;
 
-use super::super::backend::compiler::misc::CompilerFile;
-
 use super::{
     super::frontend::lexer::Span,
     error::ThrushCompilerError,
     logging::{self, LoggingType},
+    misc::CompilerFile,
 };
 
 use {

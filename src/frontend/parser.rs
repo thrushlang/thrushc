@@ -1,33 +1,29 @@
-use super::super::backend::compiler::types::EnumField;
+use crate::common::misc::CompilerFile;
+use crate::middle::instruction::Instruction;
+use crate::middle::statement::traits::{
+    AttributesExtensions, ConstructorExtensions, CustomTypeFieldsExtensions, EnumExtensions,
+    EnumFieldsExtensions, FoundObjectEither, FoundObjectExtensions, StructFieldsExtensions,
+    StructureExtensions, TokenLexemeExtensions,
+};
+use crate::middle::statement::{
+    Constructor, CustomType, CustomTypeFields, EnumField, EnumFields, StructFields,
+    ThrushAttributes,
+};
 
 use super::lexer::Span;
-use super::traits::CustomTypeFieldsExtensions;
+use super::objects::Constant;
 use super::utils;
-use super::{objects::Constant, traits::EnumExtensions};
 
 use super::{
-    lexer::{Token, TokenKind, Type},
+    super::middle::types::*,
+    lexer::Token,
     objects::{FoundObjectId, Function, Functions, Local, ParserObjects, Struct},
     scoper::ThrushScoper,
-    traits::{
-        EnumFieldsExtensions, FoundObjectEither, FoundObjectExtensions, StructureExtensions,
-        TokenLexemeExtensions,
-    },
     type_checking,
 };
 
 use super::super::{
-    backend::compiler::{
-        attributes::LLVMAttribute,
-        builtins,
-        conventions::CallConvention,
-        instruction::Instruction,
-        misc::CompilerFile,
-        traits::{AttributesExtensions, ConstructorExtensions, StructFieldsExtensions},
-        types::{
-            Constructor, CustomType, CustomTypeFields, EnumFields, StructFields, ThrushAttributes,
-        },
-    },
+    backend::llvm::compiler::{attributes::LLVMAttribute, builtins, conventions::CallConvention},
     common::{
         constants::MINIMAL_ERROR_CAPACITY, diagnostic::Diagnostician, error::ThrushCompilerError,
         logging,
@@ -37,6 +33,7 @@ use super::super::{
 
 use ahash::AHashMap as HashMap;
 use lazy_static::lazy_static;
+use std::rc::Rc;
 use std::sync::Arc;
 use std::{mem, process};
 
@@ -73,21 +70,22 @@ pub struct Parser<'instr> {
     // Type management
     in_function_type: Type,
     in_local_type: Type,
-    in_unreacheable_code: usize,
 
-    // Scope control
+    // Token control
     current: usize,
-    scope_position: usize,
+    // Scope control
+    scope: usize,
 
     // Trigger flags
-    has_entry_point: bool,
+    entry_point: bool,
     rec_structure_ref: bool,
     inside_a_function: bool,
     inside_a_loop: bool,
+    unreacheable_code: usize,
 
     scoper: ThrushScoper<'instr>,
     diagnostician: Diagnostician,
-    parser_objects: ParserObjects<'instr>,
+    objects: ParserObjects<'instr>,
 }
 
 impl<'instr> Parser<'instr> {
@@ -106,12 +104,12 @@ impl<'instr> Parser<'instr> {
             in_function_type: Type::Void,
             in_local_type: Type::Void,
             rec_structure_ref: false,
-            in_unreacheable_code: 0,
-            scope_position: 0,
-            has_entry_point: false,
+            unreacheable_code: 0,
+            scope: 0,
+            entry_point: false,
             scoper: ThrushScoper::new(file),
             diagnostician: Diagnostician::new(file),
-            parser_objects: ParserObjects::with_functions(functions),
+            objects: ParserObjects::with_functions(functions),
         }
     }
 
@@ -169,7 +167,7 @@ impl<'instr> Parser<'instr> {
     }
 
     fn build_entry_point(&mut self) -> Result<Instruction<'instr>, ThrushCompilerError> {
-        if self.has_entry_point {
+        if self.entry_point {
             self.push_error(
                 String::from("Duplicated entrypoint"),
                 String::from("The language not support two entrypoints."),
@@ -188,9 +186,9 @@ impl<'instr> Parser<'instr> {
             String::from("Expected ')'."),
         )?;
 
-        self.has_entry_point = true;
+        self.entry_point = true;
 
-        let body: Box<Instruction> = Box::new(self.build_code_block(&mut [])?);
+        let body: Rc<Instruction> = Rc::new(self.build_code_block(&mut [])?);
 
         self.inside_a_function = false;
 
@@ -227,10 +225,10 @@ impl<'instr> Parser<'instr> {
         self.inside_a_loop = false;
 
         Ok(Instruction::ForLoop {
-            variable: Box::new(variable),
-            cond: Box::new(conditional),
-            actions: Box::new(actions),
-            block: Box::new(body),
+            variable: Rc::new(variable),
+            cond: Rc::new(conditional),
+            actions: Rc::new(actions),
+            block: Rc::new(body),
         })
     }
 
@@ -248,13 +246,13 @@ impl<'instr> Parser<'instr> {
         let block: Instruction = self.build_code_block(&mut [])?;
 
         if !block.has_break() && !block.has_return() && !block.has_continue() {
-            self.in_unreacheable_code = self.scope_position;
+            self.unreacheable_code = self.scope;
         }
 
         self.inside_a_loop = false;
 
         Ok(Instruction::Loop {
-            block: Box::new(block),
+            block: Rc::new(block),
         })
     }
 
@@ -278,8 +276,8 @@ impl<'instr> Parser<'instr> {
         let block: Instruction = self.build_code_block(&mut [])?;
 
         Ok(Instruction::WhileLoop {
-            cond: Box::new(conditional),
-            block: Box::new(block),
+            cond: Rc::new(conditional),
+            block: Rc::new(block),
         })
     }
 
@@ -292,7 +290,7 @@ impl<'instr> Parser<'instr> {
 
         self.throw_unreacheable_code();
 
-        self.in_unreacheable_code = self.scope_position;
+        self.unreacheable_code = self.scope;
 
         self.throw_outside_loop();
 
@@ -314,7 +312,7 @@ impl<'instr> Parser<'instr> {
 
         self.throw_unreacheable_code();
 
-        self.in_unreacheable_code = self.scope_position;
+        self.unreacheable_code = self.scope;
 
         self.throw_outside_loop();
 
@@ -345,8 +343,8 @@ impl<'instr> Parser<'instr> {
         let mut position: u32 = 0;
 
         while self.match_token(TokenKind::Pattern)? {
-            self.scope_position += 1;
-            self.parser_objects.begin_local_scope();
+            self.scope += 1;
+            self.objects.begin_local_scope();
 
             let pattern: Instruction = self.expr()?;
 
@@ -368,8 +366,8 @@ impl<'instr> Parser<'instr> {
                 String::from("Expected ';'."),
             )?;
 
-            self.scope_position -= 1;
-            self.parser_objects.end_local_scope();
+            self.scope -= 1;
+            self.objects.end_local_scope();
 
             if patterns_stmts.is_empty() {
                 continue;
@@ -377,8 +375,8 @@ impl<'instr> Parser<'instr> {
 
             if position != 0 {
                 patterns.push(Instruction::Elif {
-                    cond: Box::new(pattern),
-                    block: Box::new(Instruction::Block {
+                    cond: Rc::new(pattern),
+                    block: Rc::new(Instruction::Block {
                         stmts: patterns_stmts.clone(),
                     }),
                 });
@@ -407,7 +405,7 @@ impl<'instr> Parser<'instr> {
             );
         }
 
-        let otherwise: Option<Box<Instruction>> = if self.match_token(TokenKind::Else)? {
+        let otherwise: Option<Rc<Instruction>> = if self.match_token(TokenKind::Else)? {
             self.consume(
                 TokenKind::ColonColon,
                 String::from("Syntax error"),
@@ -429,8 +427,8 @@ impl<'instr> Parser<'instr> {
             if stmts.is_empty() {
                 None
             } else {
-                Some(Box::new(Instruction::Else {
-                    block: Box::new(Instruction::Block { stmts }),
+                Some(Rc::new(Instruction::Else {
+                    block: Rc::new(Instruction::Block { stmts }),
                 }))
             }
         } else {
@@ -442,8 +440,8 @@ impl<'instr> Parser<'instr> {
         }
 
         Ok(Instruction::If {
-            cond: Box::new(start_pattern),
-            block: Box::new(start_block),
+            cond: Rc::new(start_pattern),
+            block: Rc::new(start_block),
             elfs: patterns,
             otherwise,
         })
@@ -474,7 +472,7 @@ impl<'instr> Parser<'instr> {
             );
         }
 
-        let if_body: Box<Instruction> = Box::new(self.build_code_block(&mut [])?);
+        let if_body: Rc<Instruction> = Rc::new(self.build_code_block(&mut [])?);
 
         let mut elfs: Vec<Instruction> = Vec::with_capacity(10);
 
@@ -494,25 +492,25 @@ impl<'instr> Parser<'instr> {
             }
 
             elfs.push(Instruction::Elif {
-                cond: Box::new(elif_condition),
-                block: Box::new(elif_body),
+                cond: Rc::new(elif_condition),
+                block: Rc::new(elif_body),
             });
         }
 
-        let mut otherwise: Option<Box<Instruction>> = None;
+        let mut otherwise: Option<Rc<Instruction>> = None;
 
         if self.match_token(TokenKind::Else)? {
             let else_body: Instruction = self.build_code_block(&mut [])?;
 
             if else_body.has_instruction() {
-                otherwise = Some(Box::new(Instruction::Else {
-                    block: Box::new(else_body),
+                otherwise = Some(Rc::new(Instruction::Else {
+                    block: Rc::new(else_body),
                 }));
             }
         }
 
         Ok(Instruction::If {
-            cond: Box::new(if_condition),
+            cond: Rc::new(if_condition),
             block: if_body,
             elfs,
             otherwise,
@@ -580,7 +578,7 @@ impl<'instr> Parser<'instr> {
         )?;
 
         if declare {
-            self.parser_objects.insert_new_custom_type(
+            self.objects.new_custom_type(
                 custom_type_name,
                 (custom_type_fields, custom_type_attributes),
                 span,
@@ -713,8 +711,8 @@ impl<'instr> Parser<'instr> {
         )?;
 
         if declare {
-            self.parser_objects
-                .insert_new_enum(enum_name, (enum_fields, enum_attributes), span)?;
+            self.objects
+                .new_enum(enum_name, (enum_fields, enum_attributes), span)?;
         }
 
         Ok(Instruction::Null)
@@ -795,11 +793,8 @@ impl<'instr> Parser<'instr> {
         )?;
 
         if declare {
-            self.parser_objects.insert_new_struct(
-                struct_name,
-                (fields_types, struct_attributes),
-                span,
-            )?;
+            self.objects
+                .new_struct(struct_name, (fields_types, struct_attributes), span)?;
         }
 
         Ok(Instruction::Null)
@@ -823,7 +818,7 @@ impl<'instr> Parser<'instr> {
         let span: Span = name.span;
         let struct_name: &str = name.lexeme.to_str();
 
-        let struct_found: Struct = self.parser_objects.get_struct(struct_name, span)?;
+        let struct_found: Struct = self.objects.get_struct(struct_name, span)?;
 
         let fields_required: usize = struct_found.get_fields().len();
 
@@ -972,11 +967,8 @@ impl<'instr> Parser<'instr> {
         )?;
 
         if declare {
-            self.parser_objects.insert_new_constant(
-                const_name,
-                (const_type, const_attributes),
-                const_span,
-            )?;
+            self.objects
+                .new_constant(const_name, (const_type, const_attributes), const_span)?;
 
             return Ok(Instruction::Null);
         }
@@ -984,8 +976,9 @@ impl<'instr> Parser<'instr> {
         Ok(Instruction::Const {
             name: const_name,
             kind: const_type,
-            value: Box::new(const_value),
+            value: Rc::new(const_value),
             attributes: const_attributes,
+            span: const_span,
         })
     }
 
@@ -1022,8 +1015,8 @@ impl<'instr> Parser<'instr> {
 
         let local_type: Type = self.build_type(None)?;
 
-        self.parser_objects.insert_new_local(
-            self.scope_position,
+        self.objects.new_local(
+            self.scope,
             local_name,
             (local_type.clone(), false, false),
             local_span,
@@ -1033,7 +1026,7 @@ impl<'instr> Parser<'instr> {
             return Ok(Instruction::Local {
                 name: local_name,
                 kind: local_type,
-                value: Box::new(Instruction::Null),
+                value: Rc::new(Instruction::Null),
                 span: local_span,
                 comptime,
             });
@@ -1064,7 +1057,7 @@ impl<'instr> Parser<'instr> {
         let local: Instruction = Instruction::Local {
             name: local_name,
             kind: local_type,
-            value: Box::new(local_value),
+            value: Rc::new(local_value),
             span: local_span,
             comptime,
         };
@@ -1095,7 +1088,7 @@ impl<'instr> Parser<'instr> {
 
             self.check_type_mismatch(Type::Void, self.in_function_type.clone(), None);
 
-            return Ok(Instruction::Return(Type::Void, Box::new(Instruction::Null)));
+            return Ok(Instruction::Return(Type::Void, Rc::new(Instruction::Null)));
         }
 
         let value: Instruction = self.expr()?;
@@ -1114,7 +1107,7 @@ impl<'instr> Parser<'instr> {
 
         Ok(Instruction::Return(
             self.in_function_type.clone(),
-            Box::new(value),
+            Rc::new(value),
         ))
     }
 
@@ -1130,8 +1123,8 @@ impl<'instr> Parser<'instr> {
             String::from("Expected '{'."),
         )?;
 
-        self.scope_position += 1;
-        self.parser_objects.begin_local_scope();
+        self.scope += 1;
+        self.objects.begin_local_scope();
 
         let mut stmts: Vec<Instruction> = Vec::with_capacity(MINIMAL_SCOPE_CAPACITY);
 
@@ -1140,12 +1133,8 @@ impl<'instr> Parser<'instr> {
                 name, kind, span, ..
             } = instruction
             {
-                self.parser_objects.insert_new_local(
-                    self.scope_position,
-                    name,
-                    ((*kind).clone(), false, false),
-                    *span,
-                )?;
+                self.objects
+                    .new_local(self.scope, name, ((*kind).clone(), false, false), *span)?;
             }
 
             stmts.push(mem::take(instruction));
@@ -1156,10 +1145,10 @@ impl<'instr> Parser<'instr> {
             stmts.push(instruction)
         }
 
-        self.parser_objects.end_local_scope();
+        self.objects.end_local_scope();
 
         self.scoper.add_scope(stmts.clone());
-        self.scope_position -= 1;
+        self.scope -= 1;
 
         Ok(Instruction::Block { stmts })
     }
@@ -1170,7 +1159,7 @@ impl<'instr> Parser<'instr> {
     ) -> Result<Instruction<'instr>, ThrushCompilerError> {
         self.throw_unreacheable_code();
 
-        if self.scope_position != 0 {
+        if self.scope != 0 {
             self.errors.push(ThrushCompilerError::Error(
                 String::from("Syntax error"),
                 String::from("Functions are only defined globally."),
@@ -1277,7 +1266,7 @@ impl<'instr> Parser<'instr> {
 
         if function_has_ffi || declare {
             if declare {
-                self.parser_objects.insert_new_function(
+                self.objects.new_function(
                     name,
                     (return_type, parameters_types, function_has_ignore),
                     span,
@@ -1295,7 +1284,7 @@ impl<'instr> Parser<'instr> {
             return Ok(function);
         }
 
-        let function_body: Box<Instruction> = Box::new(self.build_code_block(&mut params)?);
+        let function_body: Rc<Instruction> = Rc::new(self.build_code_block(&mut params)?);
 
         if !return_type.is_void_type() && !function_body.has_return() {
             self.push_error(
@@ -1460,21 +1449,25 @@ impl<'instr> Parser<'instr> {
         let mut expression: Instruction = self.and()?;
 
         while self.match_token(TokenKind::Or)? {
-            let op: &TokenKind = &self.previous().kind;
+            let operator_tk: &Token = self.previous();
+            let operator: TokenKind = operator_tk.kind;
+            let span: Span = operator_tk.span;
+
             let right: Instruction = self.and()?;
 
             type_checking::check_binary_types(
-                op,
+                &operator,
                 expression.get_type(),
                 right.get_type(),
-                self.previous().span,
+                span,
             )?;
 
             expression = Instruction::BinaryOp {
-                left: Box::new(expression),
-                op,
-                right: Box::new(right),
+                left: Rc::new(expression),
+                operator,
+                right: Rc::new(right),
                 kind: Type::Bool,
+                span,
             }
         }
 
@@ -1485,21 +1478,25 @@ impl<'instr> Parser<'instr> {
         let mut expression: Instruction = self.equality()?;
 
         while self.match_token(TokenKind::And)? {
-            let op: &TokenKind = &self.previous().kind;
+            let operator_tk: &Token = self.previous();
+            let operator: TokenKind = operator_tk.kind;
+            let span: Span = operator_tk.span;
+
             let right: Instruction = self.equality()?;
 
             type_checking::check_binary_types(
-                op,
+                &operator,
                 expression.get_type(),
                 right.get_type(),
-                self.previous().span,
+                span,
             )?;
 
             expression = Instruction::BinaryOp {
-                left: Box::new(expression),
-                op,
-                right: Box::new(right),
+                left: Rc::new(expression),
+                operator,
+                right: Rc::new(right),
                 kind: Type::Bool,
+                span,
             }
         }
 
@@ -1510,21 +1507,25 @@ impl<'instr> Parser<'instr> {
         let mut expression: Instruction = self.comparison()?;
 
         if self.match_token(TokenKind::BangEq)? || self.match_token(TokenKind::EqEq)? {
-            let op: &TokenKind = &self.previous().kind;
+            let operator_tk: &Token = self.previous();
+            let operator: TokenKind = operator_tk.kind;
+            let span: Span = operator_tk.span;
+
             let right: Instruction = self.comparison()?;
 
             type_checking::check_binary_types(
-                op,
+                &operator,
                 expression.get_type(),
                 right.get_type(),
-                self.previous().span,
+                span,
             )?;
 
             expression = Instruction::BinaryOp {
-                left: Box::from(expression),
-                op,
-                right: Box::from(right),
+                left: Rc::from(expression),
+                operator,
+                right: Rc::from(right),
                 kind: Type::Bool,
+                span,
             }
         }
 
@@ -1539,21 +1540,25 @@ impl<'instr> Parser<'instr> {
             || self.match_token(TokenKind::Less)?
             || self.match_token(TokenKind::LessEq)?
         {
-            let op: &TokenKind = &self.previous().kind;
+            let operator_tk: &Token = self.previous();
+            let operator: TokenKind = operator_tk.kind;
+            let span: Span = operator_tk.span;
+
             let right: Instruction = self.term()?;
 
             type_checking::check_binary_types(
-                op,
+                &operator,
                 expression.get_type(),
                 right.get_type(),
-                self.previous().span,
+                span,
             )?;
 
             expression = Instruction::BinaryOp {
-                left: Box::from(expression),
-                op,
-                right: Box::from(right),
+                left: Rc::from(expression),
+                operator,
+                right: Rc::from(right),
                 kind: Type::Bool,
+                span,
             };
         }
 
@@ -1568,21 +1573,25 @@ impl<'instr> Parser<'instr> {
             || self.match_token(TokenKind::LShift)?
             || self.match_token(TokenKind::RShift)?
         {
-            let op: &Token = self.previous();
+            let operator_tk: &Token = self.previous();
+            let operator: TokenKind = operator_tk.kind;
+            let span: Span = operator_tk.span;
+
             let right: Instruction = self.factor()?;
 
             let left_type: &Type = expression.get_type();
             let right_type: &Type = right.get_type();
 
-            type_checking::check_binary_types(&op.kind, left_type, right_type, op.span)?;
+            type_checking::check_binary_types(&operator, left_type, right_type, span)?;
 
             let kind: &Type = left_type.precompute_type(right_type);
 
             expression = Instruction::BinaryOp {
-                left: Box::from(expression.clone()),
-                op: &op.kind,
-                right: Box::from(right),
+                left: Rc::from(expression.clone()),
+                operator,
+                right: Rc::from(right),
                 kind: kind.clone(),
+                span,
             };
         }
 
@@ -1593,21 +1602,30 @@ impl<'instr> Parser<'instr> {
         let mut expression: Instruction = self.unary()?;
 
         while self.match_token(TokenKind::Slash)? || self.match_token(TokenKind::Star)? {
-            let op: &TokenKind = &self.previous().kind;
+            let operator_tk: &Token = self.previous();
+            let operator: TokenKind = operator_tk.kind;
+            let span: Span = operator_tk.span;
+
             let right: Instruction = self.unary()?;
 
             let left_type: &Type = expression.get_type();
             let right_type: &Type = right.get_type();
 
-            type_checking::check_binary_types(op, left_type, right_type, self.previous().span)?;
+            type_checking::check_binary_types(
+                &operator,
+                left_type,
+                right_type,
+                self.previous().span,
+            )?;
 
             let kind: &Type = left_type.precompute_type(right_type);
 
             expression = Instruction::BinaryOp {
-                left: Box::from(expression.clone()),
-                op,
-                right: Box::from(right),
+                left: Rc::from(expression.clone()),
+                operator,
+                right: Rc::from(right),
                 kind: kind.clone(),
+                span,
             };
         }
 
@@ -1616,35 +1634,46 @@ impl<'instr> Parser<'instr> {
 
     fn unary(&mut self) -> Result<Instruction<'instr>, ThrushCompilerError> {
         if self.match_token(TokenKind::Bang)? {
-            let op: &TokenKind = &self.previous().kind;
+            let operator_tk: &Token = self.previous();
+            let operator: TokenKind = operator_tk.kind;
+            let span: Span = operator_tk.span;
+
             let expression: Instruction = self.primary()?;
 
-            type_checking::check_unary_types(op, expression.get_type(), self.previous().span)?;
+            type_checking::check_unary_types(
+                &operator,
+                expression.get_type(),
+                self.previous().span,
+            )?;
 
             return Ok(Instruction::UnaryOp {
-                op,
-                expression: Box::from(expression),
+                operator,
+                expression: Rc::from(expression),
                 kind: Type::Bool,
                 is_pre: false,
+                span,
             });
         }
 
         if self.match_token(TokenKind::Minus)? {
-            let op: &TokenKind = &self.previous().kind;
+            let operator_tk: &Token = self.previous();
+            let operator: TokenKind = operator_tk.kind;
+            let span: Span = operator_tk.span;
 
             let mut expression: Instruction = self.primary()?;
 
-            expression.cast_signess(*op);
+            expression.cast_signess(operator);
 
             let expression_type: &Type = expression.get_type();
 
-            type_checking::check_unary_types(op, expression_type, self.previous().span)?;
+            type_checking::check_unary_types(&operator, expression_type, self.previous().span)?;
 
             return Ok(Instruction::UnaryOp {
-                op,
-                expression: Box::from(expression.clone()),
+                operator,
+                expression: Rc::from(expression.clone()),
                 kind: expression_type.clone(),
                 is_pre: false,
+                span,
             });
         }
 
@@ -1724,7 +1753,7 @@ impl<'instr> Parser<'instr> {
 
                 Instruction::Carry {
                     name: "",
-                    expression: Some(Box::new(expression)),
+                    expression: Some(Rc::new(expression)),
                     carry_type,
                     span,
                 }
@@ -1771,7 +1800,7 @@ impl<'instr> Parser<'instr> {
 
                     return Ok(Instruction::Write {
                         write_to: (name, None),
-                        write_value: Box::new(value),
+                        write_value: Rc::new(value),
                         write_type: kind,
                         span,
                     });
@@ -1791,8 +1820,8 @@ impl<'instr> Parser<'instr> {
                 }
 
                 Instruction::Write {
-                    write_to: ("", Some(Box::new(expression))),
-                    write_value: Box::new(value),
+                    write_to: ("", Some(Rc::new(expression))),
+                    write_value: Rc::new(value),
                     write_type: kind,
                     span,
                 }
@@ -1822,7 +1851,9 @@ impl<'instr> Parser<'instr> {
             TokenKind::New => self.build_constructor()?,
 
             TokenKind::PlusPlus => {
-                let op: &TokenKind = &self.advance()?.kind;
+                let operator_tk: &Token = self.advance()?;
+                let operator: TokenKind = operator_tk.kind;
+                let span: Span = operator_tk.span;
 
                 let expression: Instruction = self.expr()?;
 
@@ -1835,17 +1866,20 @@ impl<'instr> Parser<'instr> {
                 }
 
                 let unaryop: Instruction = Instruction::UnaryOp {
-                    op,
-                    expression: Box::from(expression),
+                    operator,
+                    expression: Rc::from(expression),
                     kind: Type::Void,
                     is_pre: true,
+                    span,
                 };
 
                 return Ok(unaryop);
             }
 
             TokenKind::MinusMinus => {
-                let op: &TokenKind = &self.advance()?.kind;
+                let operator_tk: &Token = self.advance()?;
+                let operator: TokenKind = operator_tk.kind;
+                let span: Span = operator_tk.span;
 
                 let expression: Instruction = self.expr()?;
 
@@ -1858,19 +1892,18 @@ impl<'instr> Parser<'instr> {
                 }
 
                 let unaryop: Instruction = Instruction::UnaryOp {
-                    op,
-                    expression: Box::from(expression),
+                    operator,
+                    expression: Rc::from(expression),
                     kind: Type::Void,
                     is_pre: true,
+                    span,
                 };
 
                 return Ok(unaryop);
             }
 
             TokenKind::LParen => {
-                let lparen: &Token = self.advance()?;
-
-                let span: Span = lparen.span;
+                let span: Span = self.advance()?.span;
 
                 let expression: Instruction = self.expression()?;
                 let expression_type: &Type = expression.get_type();
@@ -1892,8 +1925,9 @@ impl<'instr> Parser<'instr> {
                 )?;
 
                 return Ok(Instruction::Group {
-                    expression: Box::new(expression.clone()),
+                    expression: Rc::new(expression.clone()),
                     kind: expression_type.clone(),
+                    span,
                 });
             }
 
@@ -1954,7 +1988,7 @@ impl<'instr> Parser<'instr> {
                         ));
                     }*/
 
-                    let object: FoundObjectId = self.parser_objects.get_object_id(name, span)?;
+                    let object: FoundObjectId = self.objects.get_object_id(name, span)?;
 
                     /*if object.is_structure() {
                         return Ok(Instruction::ComplexType(
@@ -1968,7 +2002,7 @@ impl<'instr> Parser<'instr> {
                         let custom_id: &str = object.expected_custom_type(location)?;
 
                         let custom: CustomType = self
-                            .parser_objects
+                            .objects
                             .get_custom_type_by_id(custom_id, location)?;
 
                         let custom_type_fields: CustomTypeFields = custom.0;
@@ -1977,12 +2011,11 @@ impl<'instr> Parser<'instr> {
                     }*/
 
                     if self.match_token(TokenKind::Eq)? {
-                        let object: FoundObjectId =
-                            self.parser_objects.get_object_id(name, span)?;
+                        let object: FoundObjectId = self.objects.get_object_id(name, span)?;
 
                         let local_position: (&str, usize) = object.expected_local(span)?;
 
-                        let local: &Local = self.parser_objects.get_local_by_id(
+                        let local: &Local = self.objects.get_local_by_id(
                             local_position.0,
                             local_position.1,
                             span,
@@ -2000,7 +2033,7 @@ impl<'instr> Parser<'instr> {
 
                         return Ok(Instruction::LocalMut {
                             name,
-                            value: Box::new(expression),
+                            value: Rc::new(expression),
                             kind: local_type,
                             span,
                         });
@@ -2101,13 +2134,12 @@ impl<'instr> Parser<'instr> {
                     ));
                 }*/
 
-                let object: FoundObjectId = self.parser_objects.get_object_id(name, span)?;
+                let object: FoundObjectId = self.objects.get_object_id(name, span)?;
 
                 if object.is_structure() {
                     let struct_id: &str = object.expected_struct(span)?;
 
-                    let structure: Struct =
-                        self.parser_objects.get_struct_by_id(struct_id, span)?;
+                    let structure: Struct = self.objects.get_struct_by_id(struct_id, span)?;
 
                     let fields: StructFields = structure.get_fields();
 
@@ -2117,8 +2149,7 @@ impl<'instr> Parser<'instr> {
                 if object.is_custom_type() {
                     let custom_id: &str = object.expected_custom_type(span)?;
 
-                    let custom: CustomType =
-                        self.parser_objects.get_custom_type_by_id(custom_id, span)?;
+                    let custom: CustomType = self.objects.get_custom_type_by_id(custom_id, span)?;
 
                     let custom_type_fields: CustomTypeFields = custom.0;
 
@@ -2182,12 +2213,12 @@ impl<'instr> Parser<'instr> {
         span: Span,
         take_ptr: bool,
     ) -> Result<Instruction<'instr>, ThrushCompilerError> {
-        let object: FoundObjectId = self.parser_objects.get_object_id(name, span)?;
+        let object: FoundObjectId = self.objects.get_object_id(name, span)?;
 
         if object.is_constant() {
             let const_id: &str = object.expected_constant(span)?;
 
-            let constant: Constant = self.parser_objects.get_const_by_id(const_id, span)?;
+            let constant: Constant = self.objects.get_const_by_id(const_id, span)?;
 
             return Ok(Instruction::ConstRef {
                 name,
@@ -2200,7 +2231,7 @@ impl<'instr> Parser<'instr> {
         let local_position: (&str, usize) = object.expected_local(span)?;
 
         let local: &Local =
-            self.parser_objects
+            self.objects
                 .get_local_by_id(local_position.0, local_position.1, span)?;
 
         let mut local_type: Type = local.0.clone();
@@ -2225,15 +2256,18 @@ impl<'instr> Parser<'instr> {
         };
 
         if self.match_token(TokenKind::PlusPlus)? | self.match_token(TokenKind::MinusMinus)? {
-            let op: &TokenKind = &self.previous().kind;
+            let operator_tk: &Token = self.previous();
+            let operator: TokenKind = operator_tk.kind;
+            let span: Span = operator_tk.span;
 
-            type_checking::check_unary_types(op, &local_type, span)?;
+            type_checking::check_unary_types(&operator, &local_type, span)?;
 
             let unaryop: Instruction = Instruction::UnaryOp {
-                op,
-                expression: Box::from(localref),
+                operator,
+                expression: Rc::from(localref),
                 kind: Type::Void,
                 is_pre: false,
+                span,
             };
 
             return Ok(unaryop);
@@ -2247,13 +2281,10 @@ impl<'instr> Parser<'instr> {
         name: &'instr str,
         span: Span,
     ) -> Result<Instruction<'instr>, ThrushCompilerError> {
-        let object: FoundObjectId = self.parser_objects.get_object_id(name, span)?;
+        let object: FoundObjectId = self.objects.get_object_id(name, span)?;
         let enum_id: &str = object.expected_enum(span)?;
 
-        let union: EnumFields = self
-            .parser_objects
-            .get_enum_by_id(enum_id, span)?
-            .get_fields();
+        let union: EnumFields = self.objects.get_enum_by_id(enum_id, span)?.get_fields();
 
         let field: &Token = self.consume(
             TokenKind::Identifier,
@@ -2272,7 +2303,6 @@ impl<'instr> Parser<'instr> {
         }
 
         let field: EnumField = union.get_field(field_name);
-
         let field_value: Instruction = field.1;
 
         Ok(field_value)
@@ -2283,12 +2313,10 @@ impl<'instr> Parser<'instr> {
         name: &'instr str,
         span: Span,
     ) -> Result<Instruction<'instr>, ThrushCompilerError> {
-        let object: FoundObjectId = self.parser_objects.get_object_id(name, span)?;
+        let object: FoundObjectId = self.objects.get_object_id(name, span)?;
         let local_id: (&str, usize) = object.expected_local(span)?;
 
-        let local: &Local = self
-            .parser_objects
-            .get_local_by_id(local_id.0, local_id.1, span)?;
+        let local: &Local = self.objects.get_local_by_id(local_id.0, local_id.1, span)?;
 
         let local_type: Type = local.0.clone();
 
@@ -2361,11 +2389,11 @@ impl<'instr> Parser<'instr> {
     ) -> Result<Instruction<'instr>, ThrushCompilerError> {
         let mut args_provided: Vec<Instruction> = Vec::with_capacity(10);
 
-        let object: FoundObjectId = self.parser_objects.get_object_id(name, span)?;
+        let object: FoundObjectId = self.objects.get_object_id(name, span)?;
 
         let function_id: &str = object.expected_function(span)?;
 
-        let function: Function = self.parser_objects.get_function_by_id(span, function_id)?;
+        let function: Function = self.objects.get_function_by_id(span, function_id)?;
 
         let function_type: Type = function.0;
         let ignore_extra_args: bool = function.2;
@@ -2444,6 +2472,7 @@ impl<'instr> Parser<'instr> {
             name,
             args: args_provided,
             kind: function_type,
+            span,
         })
     }
 
@@ -2546,7 +2575,7 @@ impl<'instr> Parser<'instr> {
     ########################################################################*/
 
     fn throw_unreacheable_code(&mut self) {
-        if self.in_unreacheable_code == self.scope_position && self.scope_position != 0 {
+        if self.unreacheable_code == self.scope && self.scope != 0 {
             self.push_error(
                 String::from("Syntax error"),
                 String::from("Unreacheable code."),
@@ -2696,7 +2725,7 @@ impl<'instr> Parser<'instr> {
 
     #[inline(always)]
     const fn is_main_scope(&self) -> bool {
-        self.scope_position == 0
+        self.scope == 0
     }
 
     #[must_use]

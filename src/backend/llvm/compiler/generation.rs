@@ -1,10 +1,12 @@
-use super::super::super::frontend::lexer::Type;
+use crate::middle::instruction::Instruction;
+use crate::middle::types::Type;
 
-use super::{binaryop, call, instruction::Instruction};
+use super::{binaryop, call};
 
-use super::{memory::AllocatedObject, objects::CompilerObjects, typegen, unaryop, utils};
+use super::{memory::AllocatedObject, objects::CompilerObjects, typegen, unaryop, utils, valuegen};
 
 use inkwell::types::BasicTypeEnum;
+
 use inkwell::{
     AddressSpace,
     builder::Builder,
@@ -26,8 +28,7 @@ pub fn build_expression<'ctx>(
     }
 
     if let Instruction::Float(kind, num, is_signed) = instruction {
-        let mut float: FloatValue =
-            utils::build_const_float(builder, context, kind, *num, *is_signed);
+        let mut float: FloatValue = valuegen::float(builder, context, kind, *num, *is_signed);
 
         if let Some(casted_float) =
             utils::float_autocast(casting_target, kind, None, float.into(), builder, context)
@@ -39,8 +40,7 @@ pub fn build_expression<'ctx>(
     }
 
     if let Instruction::Integer(kind, num, is_signed) = instruction {
-        let mut integer: IntValue =
-            utils::build_const_integer(context, kind, *num as u64, *is_signed);
+        let mut integer: IntValue = valuegen::integer(context, kind, *num as u64, *is_signed);
 
         if let Some(casted_integer) =
             utils::integer_autocast(casting_target, kind, None, integer.into(), builder, context)
@@ -211,7 +211,7 @@ pub fn build_expression<'ctx>(
 
     if let Instruction::BinaryOp {
         left,
-        op,
+        operator,
         right,
         kind: binaryop_type,
         ..
@@ -222,18 +222,18 @@ pub fn build_expression<'ctx>(
                 module,
                 builder,
                 context,
-                (left, op, right),
+                (left, operator, right),
                 casting_target,
                 compiler_objects,
             );
         }
 
         if binaryop_type.is_integer_type() {
-            return binaryop::integer::compile_integer_binaryop(
+            return binaryop::integer::integer_binaryop(
                 module,
                 builder,
                 context,
-                (left, op, right),
+                (left, operator, right),
                 casting_target,
                 compiler_objects,
             );
@@ -244,7 +244,7 @@ pub fn build_expression<'ctx>(
                 module,
                 builder,
                 context,
-                (left, op, right),
+                (left, operator, right),
                 casting_target,
                 compiler_objects,
             );
@@ -256,16 +256,16 @@ pub fn build_expression<'ctx>(
     }
 
     if let Instruction::UnaryOp {
-        op,
+        operator,
         kind,
         expression,
         ..
     } = instruction
     {
-        return unaryop::compile_unary_op(
+        return unaryop::unary_op(
             builder,
             context,
-            (op, kind, expression),
+            (operator, kind, expression),
             compiler_objects,
         );
     }

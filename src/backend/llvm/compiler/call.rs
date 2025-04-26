@@ -1,11 +1,13 @@
-use super::super::super::frontend::lexer::Type;
+use crate::middle::{
+    statement::{Function, FunctionCall},
+    types::Type,
+};
 
 use super::{
     Instruction,
     builtins::{build_is_signed, build_sizeof},
     generation,
     objects::CompilerObjects,
-    types::{Function, FunctionCall},
 };
 
 use inkwell::{

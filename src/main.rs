@@ -1,9 +1,10 @@
 mod backend;
 mod common;
 mod frontend;
+mod middle;
 
 use {
-    backend::builder::Thrushc,
+    backend::llvm::builder::Thrushc,
     colored::{Colorize, control},
     common::{cli::Cli, logging},
     frontend::{

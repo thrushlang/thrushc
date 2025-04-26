@@ -1,8 +1,11 @@
-use super::super::super::frontend::lexer::Type;
+use crate::middle::{
+    statement::{Local, traits::MemoryFlagsBasics},
+    types::Type,
+};
 
 use super::{
     Instruction, binaryop, call, generation, memory::AllocatedObject, objects::CompilerObjects,
-    traits::MemoryFlagsBasics, typegen, types::Local, unaryop, utils, valuegen,
+    typegen, unaryop, utils, valuegen,
 };
 
 use inkwell::{
@@ -516,29 +519,23 @@ fn build_local_integer<'ctx>(
     let local_value: &Instruction = local.2;
 
     if let Instruction::Null = local_value {
-        object.build_store(
-            builder,
-            utils::build_const_integer(context, local_type, 0, false),
-        );
-
+        object.build_store(builder, valuegen::integer(context, local_type, 0, false));
         return;
     }
 
     if let Instruction::Char(_, byte) = local_value {
         object.build_store(
             builder,
-            utils::build_const_integer(context, local_type, *byte as u64, false),
+            valuegen::integer(context, local_type, *byte as u64, false),
         );
-
         return;
     }
 
-    if let Instruction::Integer(_, num, is_signed) = local_value {
+    if let Instruction::Integer(_, number, is_signed) = local_value {
         object.build_store(
             builder,
-            utils::build_const_integer(context, local_type, *num as u64, *is_signed),
+            valuegen::integer(context, local_type, *number as u64, *is_signed),
         );
-
         return;
     }
 
@@ -573,14 +570,18 @@ fn build_local_integer<'ctx>(
     }
 
     if let Instruction::UnaryOp {
-        op,
+        operator,
         kind,
         expression,
         ..
     } = local_value
     {
-        let expression: BasicValueEnum =
-            unaryop::compile_unary_op(builder, context, (op, kind, expression), compiler_objects);
+        let expression: BasicValueEnum = unaryop::unary_op(
+            builder,
+            context,
+            (operator, kind, expression),
+            compiler_objects,
+        );
 
         object.build_store(builder, expression);
 
@@ -588,14 +589,17 @@ fn build_local_integer<'ctx>(
     }
 
     if let Instruction::BinaryOp {
-        left, op, right, ..
+        left,
+        operator,
+        right,
+        ..
     } = local_value
     {
-        let expression: BasicValueEnum = binaryop::integer::compile_integer_binaryop(
+        let expression: BasicValueEnum = binaryop::integer::integer_binaryop(
             module,
             builder,
             context,
-            (left, op, right),
+            (left, operator, right),
             local_type,
             compiler_objects,
         );
@@ -677,7 +681,7 @@ fn build_local_float<'ctx>(
     if let Instruction::Null = local_value {
         object.build_store(
             builder,
-            utils::build_const_float(builder, context, local_type, 0.0, false),
+            valuegen::float(builder, context, local_type, 0.0, false),
         );
 
         return;
@@ -686,7 +690,7 @@ fn build_local_float<'ctx>(
     if let Instruction::Float(_, num, is_signed) = local_value {
         object.build_store(
             builder,
-            utils::build_const_float(builder, context, local_type, *num, *is_signed),
+            valuegen::float(builder, context, local_type, *num, *is_signed),
         );
 
         return;
@@ -751,14 +755,18 @@ fn build_local_float<'ctx>(
     }
 
     if let Instruction::UnaryOp {
-        op,
+        operator,
         kind,
         expression,
         ..
     } = local_value
     {
-        let expression: BasicValueEnum =
-            unaryop::compile_unary_op(builder, context, (op, kind, expression), compiler_objects);
+        let expression: BasicValueEnum = unaryop::unary_op(
+            builder,
+            context,
+            (operator, kind, expression),
+            compiler_objects,
+        );
 
         object.build_store(builder, expression);
 
@@ -766,14 +774,17 @@ fn build_local_float<'ctx>(
     }
 
     if let Instruction::BinaryOp {
-        left, op, right, ..
+        left,
+        operator,
+        right,
+        ..
     } = local_value
     {
         let expression: BasicValueEnum = binaryop::float::float_binaryop(
             module,
             builder,
             context,
-            (left, op, right),
+            (left, operator, right),
             local_type,
             compiler_objects,
         );
@@ -826,10 +837,7 @@ fn build_local_boolean<'ctx>(
     let local_value: &Instruction = local.2;
 
     if let Instruction::Null = local_value {
-        object.build_store(
-            builder,
-            utils::build_const_integer(context, local_type, 0, false),
-        );
+        object.build_store(builder, valuegen::integer(context, local_type, 0, false));
 
         return;
     }
@@ -837,7 +845,7 @@ fn build_local_boolean<'ctx>(
     if let Instruction::Boolean(_, bool) = local_value {
         object.build_store(
             builder,
-            utils::build_const_integer(context, local_type, *bool as u64, false),
+            valuegen::integer(context, local_type, *bool as u64, false),
         );
 
         return;
@@ -895,14 +903,18 @@ fn build_local_boolean<'ctx>(
     }
 
     if let Instruction::UnaryOp {
-        op,
+        operator,
         kind,
         expression,
         ..
     } = local_value
     {
-        let expression: BasicValueEnum =
-            unaryop::compile_unary_op(builder, context, (op, kind, expression), compiler_objects);
+        let expression: BasicValueEnum = unaryop::unary_op(
+            builder,
+            context,
+            (operator, kind, expression),
+            compiler_objects,
+        );
 
         object.build_store(builder, expression);
 
@@ -910,14 +922,17 @@ fn build_local_boolean<'ctx>(
     }
 
     if let Instruction::BinaryOp {
-        left, op, right, ..
+        left,
+        operator,
+        right,
+        ..
     } = local_value
     {
         let expression: BasicValueEnum = binaryop::boolean::bool_binaryop(
             module,
             builder,
             context,
-            (left, op, right),
+            (left, operator, right),
             local_type,
             compiler_objects,
         );

@@ -1,5 +1,6 @@
+use crate::{common::misc::CompilerFile, middle::instruction::Instruction};
+
 use super::super::{
-    backend::compiler::{instruction::Instruction, misc::CompilerFile},
     common::{
         constants::MINIMAL_ERROR_CAPACITY, diagnostic::Diagnostician, error::ThrushCompilerError,
     },

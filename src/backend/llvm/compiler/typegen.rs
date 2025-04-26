@@ -1,6 +1,5 @@
-use super::super::super::frontend::lexer::Type;
-
-use super::instruction::Instruction;
+use crate::middle::instruction::Instruction;
+use crate::middle::types::Type;
 
 use inkwell::types::{BasicType, BasicTypeEnum, FunctionType};
 

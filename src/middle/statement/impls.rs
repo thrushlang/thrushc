@@ -1,15 +1,15 @@
-use std::fmt::{self, Display};
+use crate::backend::llvm::compiler::memory::MemoryFlag;
+use crate::middle::types::Type;
 
-use super::super::super::frontend::lexer::{Span, Type};
+use super::{CustomTypeFields, traits::CustomTypeFieldsExtensions};
 
-use super::traits::ConstructorExtensions;
-
-use super::{
-    instruction::Instruction,
-    memory::MemoryFlag,
-    traits::{AttributesExtensions, MemoryFlagsBasics, StructFieldsExtensions},
-    types::{Constructor, MemoryFlags, StructFields, ThrushAttributes},
+use crate::middle::instruction::Instruction;
+use crate::middle::statement::traits::{
+    AttributesExtensions, ConstructorExtensions, StructFieldsExtensions,
 };
+
+use crate::middle::statement::{Constructor, MemoryFlags, StructFields};
+use crate::middle::statement::{ThrushAttributes, traits::MemoryFlagsBasics};
 
 impl AttributesExtensions for ThrushAttributes<'_> {
     fn contain_ffi_attribute(&self) -> bool {
@@ -78,6 +78,12 @@ impl ConstructorExtensions for Constructor<'_> {
             });
     }
 }*/
+
+impl CustomTypeFieldsExtensions for CustomTypeFields<'_> {
+    fn get_type(&self) -> Type {
+        Type::create_structure_type(self)
+    }
+}
 
 impl PartialEq for Instruction<'_> {
     fn eq(&self, other: &Self) -> bool {

@@ -1,9 +1,7 @@
+use crate::middle::instruction::Instruction;
+
 use super::{
-    super::{
-        backend::compiler::instruction::Instruction,
-        common::error::ThrushCompilerError,
-        frontend::lexer::{TokenKind, Type},
-    },
+    super::{common::error::ThrushCompilerError, middle::types::*},
     lexer::Span,
 };
 
@@ -221,7 +219,7 @@ pub fn check_type(
     error: ThrushCompilerError,
 ) -> Result<(), ThrushCompilerError> {
     if let Some(Instruction::BinaryOp {
-        op,
+        operator,
         kind: expression_type,
         ..
     }) = expression
@@ -230,13 +228,13 @@ pub fn check_type(
             target_type,
             (*expression_type).clone(),
             None,
-            Some(op),
+            Some(operator),
             error,
         );
     }
 
     if let Some(Instruction::UnaryOp {
-        op,
+        operator,
         kind: expression_type,
         ..
     }) = expression
@@ -245,7 +243,7 @@ pub fn check_type(
             target_type,
             (*expression_type).clone(),
             None,
-            Some(op),
+            Some(operator),
             error,
         );
     }
@@ -253,6 +251,7 @@ pub fn check_type(
     if let Some(Instruction::Group {
         expression,
         kind: expression_type,
+        ..
     }) = expression
     {
         return check_type(

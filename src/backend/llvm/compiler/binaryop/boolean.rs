@@ -1,13 +1,15 @@
 use {
     super::{
-        super::{
-            super::super::frontend::lexer::{TokenKind, Type},
-            Instruction,
-            objects::CompilerObjects,
-            types::BinaryOp,
-        },
         float::float_binaryop,
-        integer::{build_int_op, compile_integer_binaryop},
+        integer::{int_operation, integer_binaryop},
+    },
+    crate::{
+        backend::llvm::compiler::objects::CompilerObjects,
+        middle::{
+            instruction::Instruction,
+            statement::BinaryOp,
+            types::{TokenKind, Type},
+        },
     },
     inkwell::{builder::Builder, context::Context, module::Module, values::BasicValueEnum},
 };
@@ -43,7 +45,7 @@ pub fn bool_binaryop<'ctx>(
                 compiler_objects,
             );
         } else if binary.0.get_type().is_integer_type() || binary.0.get_type().is_bool_type() {
-            return compile_integer_binaryop(
+            return integer_binaryop(
                 module,
                 builder,
                 context,
@@ -79,7 +81,7 @@ pub fn bool_binaryop<'ctx>(
                 compiler_objects,
             );
         } else if binary.0.get_type().is_integer_type() || binary.0.get_type().is_bool_type() {
-            return compile_integer_binaryop(
+            return integer_binaryop(
                 module,
                 builder,
                 context,
@@ -115,7 +117,7 @@ pub fn bool_binaryop<'ctx>(
                 compiler_objects,
             );
         } else if binary.0.get_type().is_integer_type() || binary.0.get_type().is_bool_type() {
-            return compile_integer_binaryop(
+            return integer_binaryop(
                 module,
                 builder,
                 context,
@@ -151,7 +153,7 @@ pub fn bool_binaryop<'ctx>(
                 compiler_objects,
             );
         } else if binary.0.get_type().is_integer_type() || binary.0.get_type().is_bool_type() {
-            return compile_integer_binaryop(
+            return integer_binaryop(
                 module,
                 builder,
                 context,
@@ -187,7 +189,7 @@ pub fn bool_binaryop<'ctx>(
                 compiler_objects,
             );
         } else if binary.0.get_type().is_integer_type() || binary.0.get_type().is_bool_type() {
-            return compile_integer_binaryop(
+            return integer_binaryop(
                 module,
                 builder,
                 context,
@@ -202,40 +204,6 @@ pub fn bool_binaryop<'ctx>(
 
     if let (
         Instruction::Call { .. },
-        TokenKind::BangEq
-        | TokenKind::EqEq
-        | TokenKind::LessEq
-        | TokenKind::Less
-        | TokenKind::Greater
-        | TokenKind::GreaterEq
-        | TokenKind::And
-        | TokenKind::Or,
-        Instruction::Integer(_, _, _) | Instruction::Float(_, _, _) | Instruction::Boolean(_, _),
-    ) = binary
-    {
-        if binary.2.get_type().is_float_type() {
-            return float_binaryop(
-                module,
-                builder,
-                context,
-                binary,
-                target_type,
-                compiler_objects,
-            );
-        } else if binary.2.get_type().is_integer_type() || binary.2.get_type().is_bool_type() {
-            return compile_integer_binaryop(
-                module,
-                builder,
-                context,
-                binary,
-                target_type,
-                compiler_objects,
-            );
-        }
-    }
-
-    if let (
-        Instruction::LocalRef { .. } | Instruction::ConstRef { .. },
         TokenKind::BangEq
         | TokenKind::EqEq
         | TokenKind::LessEq
@@ -257,7 +225,41 @@ pub fn bool_binaryop<'ctx>(
                 compiler_objects,
             );
         } else if binary.2.get_type().is_integer_type() || binary.2.get_type().is_bool_type() {
-            return compile_integer_binaryop(
+            return integer_binaryop(
+                module,
+                builder,
+                context,
+                binary,
+                target_type,
+                compiler_objects,
+            );
+        }
+    }
+
+    if let (
+        Instruction::LocalRef { .. } | Instruction::ConstRef { .. },
+        TokenKind::BangEq
+        | TokenKind::EqEq
+        | TokenKind::LessEq
+        | TokenKind::Less
+        | TokenKind::Greater
+        | TokenKind::GreaterEq
+        | TokenKind::And
+        | TokenKind::Or,
+        Instruction::Integer(_, _, _) | Instruction::Float(_, _, _) | Instruction::Boolean(_, _),
+    ) = binary
+    {
+        if binary.2.get_type().is_float_type() {
+            return float_binaryop(
+                module,
+                builder,
+                context,
+                binary,
+                target_type,
+                compiler_objects,
+            );
+        } else if binary.2.get_type().is_integer_type() || binary.2.get_type().is_bool_type() {
+            return integer_binaryop(
                 module,
                 builder,
                 context,
@@ -291,7 +293,7 @@ pub fn bool_binaryop<'ctx>(
                 compiler_objects,
             );
         } else if binary.2.get_type().is_integer_type() || binary.2.get_type().is_bool_type() {
-            return compile_integer_binaryop(
+            return integer_binaryop(
                 module,
                 builder,
                 context,
@@ -325,7 +327,7 @@ pub fn bool_binaryop<'ctx>(
                 compiler_objects,
             );
         } else if binary.0.get_type().is_integer_type() || binary.0.get_type().is_bool_type() {
-            return compile_integer_binaryop(
+            return integer_binaryop(
                 module,
                 builder,
                 context,
@@ -363,7 +365,7 @@ pub fn bool_binaryop<'ctx>(
                 compiler_objects,
             );
 
-            return build_int_op(
+            return int_operation(
                 context,
                 builder,
                 left_compiled.into_int_value(),
@@ -373,7 +375,7 @@ pub fn bool_binaryop<'ctx>(
             );
         }
 
-        return compile_integer_binaryop(
+        return integer_binaryop(
             module,
             builder,
             context,
@@ -405,7 +407,7 @@ pub fn bool_binaryop<'ctx>(
                 compiler_objects,
             );
 
-            return build_int_op(
+            return int_operation(
                 context,
                 builder,
                 left_compiled.into_int_value(),
@@ -415,7 +417,7 @@ pub fn bool_binaryop<'ctx>(
             );
         }
 
-        return compile_integer_binaryop(
+        return integer_binaryop(
             module,
             builder,
             context,
@@ -450,7 +452,7 @@ pub fn bool_binaryop<'ctx>(
                 compiler_objects,
             );
 
-            return build_int_op(
+            return int_operation(
                 context,
                 builder,
                 left_compiled.into_int_value(),
@@ -460,7 +462,7 @@ pub fn bool_binaryop<'ctx>(
             );
         }
 
-        return compile_integer_binaryop(
+        return integer_binaryop(
             module,
             builder,
             context,
@@ -495,7 +497,7 @@ pub fn bool_binaryop<'ctx>(
                 compiler_objects,
             );
 
-            return build_int_op(
+            return int_operation(
                 context,
                 builder,
                 left_compiled.into_int_value(),
@@ -505,7 +507,7 @@ pub fn bool_binaryop<'ctx>(
             );
         }
 
-        return compile_integer_binaryop(
+        return integer_binaryop(
             module,
             builder,
             context,
