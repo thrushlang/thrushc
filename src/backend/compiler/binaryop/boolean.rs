@@ -18,7 +18,7 @@ pub fn bool_binaryop<'ctx>(
     context: &'ctx Context,
     binary: BinaryOp<'ctx>,
     target_type: &Type,
-    compiler_objects: &mut CompilerObjects<'ctx>,
+    compiler_objects: &CompilerObjects<'ctx>,
 ) -> BasicValueEnum<'ctx> {
     if let (
         Instruction::Integer(_, _, _) | Instruction::Float(_, _, _) | Instruction::Boolean(_, _),

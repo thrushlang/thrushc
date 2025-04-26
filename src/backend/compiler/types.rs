@@ -1,5 +1,6 @@
 use super::super::super::{
     backend::compiler::attributes::LLVMAttribute,
+    common::diagnostic::Diagnostician,
     frontend::lexer::{TokenKind, Type},
 };
 
@@ -47,6 +48,8 @@ pub type CustomType<'ctx> = (CustomTypeFields<'ctx>, ThrushAttributes<'ctx>);
 pub type CustomTypeField<'ctx> = Type;
 pub type CustomTypeFields<'ctx> = Vec<CustomTypeField<'ctx>>;
 
+pub type Constructor<'instr> = Vec<(&'instr str, Instruction<'instr>, Type, u32)>;
+
 pub type ThrushAttributes<'ctx> = Vec<LLVMAttribute<'ctx>>;
 
 pub type AllocatedObjects<'ctx> = &'ctx HashMap<&'ctx str, AllocatedObject<'ctx>>;
@@ -54,3 +57,10 @@ pub type MappedHeapPointers<'ctx> = HashSet<(&'ctx str, u32, bool)>;
 pub type MappedHeapPointer<'ctx> = (&'ctx str, u32, bool);
 
 pub type MemoryFlags = [MemoryFlag; 1];
+
+#[derive(Debug, Clone)]
+pub struct CodeLocation {
+    pub diagnostician: Diagnostician,
+    pub line: usize,
+    pub span: (usize, usize),
+}

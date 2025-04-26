@@ -12,7 +12,7 @@ use {
     std::{fs, path::PathBuf},
 };
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Diagnostician {
     path: PathBuf,
     code: String,
@@ -31,13 +31,13 @@ struct CodePosition {
 }
 
 impl Diagnostician {
-    pub fn new(thrushfile: &CompilerFile) -> Self {
-        let code: String = fs::read_to_string(&thrushfile.path).unwrap_or_else(|_| {
+    pub fn new(file: &CompilerFile) -> Self {
+        let code: String = fs::read_to_string(&file.path).unwrap_or_else(|_| {
             logging::log(
                 LoggingType::Panic,
                 &format!(
                     "Unable to read `{}` file for build a diagnostic.",
-                    thrushfile.path.display()
+                    file.path.display()
                 ),
             );
 
@@ -45,7 +45,7 @@ impl Diagnostician {
         });
 
         Self {
-            path: thrushfile.path.clone(),
+            path: file.path.clone(),
             code,
         }
     }
@@ -88,6 +88,14 @@ impl Diagnostician {
             logging::OutputIn::Stderr,
             format!("\n{} {}\n\n", logging_type.to_styled(), title).as_bytes(),
         );
+    }
+
+    pub fn get_file_path(&self) -> PathBuf {
+        self.path.clone()
+    }
+
+    pub fn get_instance(&self) -> Self {
+        self.clone()
     }
 }
 

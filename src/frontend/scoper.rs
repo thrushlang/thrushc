@@ -31,18 +31,14 @@ impl<'ctx> ThrushScoper<'ctx> {
         }
     }
 
-    pub fn add_scope(&mut self, stmts: Vec<Instruction<'ctx>>) {
-        self.blocks.push(ThrushBlock { stmts });
-    }
-
-    pub fn analyze(&mut self) {
+    pub fn check(&mut self) {
         if self.blocks.is_empty() {
             return;
         }
 
         for depth in (0..=self.blocks.len() - 1).rev() {
             for instruction in self.blocks[depth].stmts.iter().rev() {
-                if let Err(error) = self.analyze_instruction(instruction, depth) {
+                if let Err(error) = self.analyze(instruction, depth) {
                     self.errors.push(error);
                 }
             }
@@ -57,15 +53,11 @@ impl<'ctx> ThrushScoper<'ctx> {
         }
     }
 
-    fn analyze_instruction(
-        &self,
-        instr: &Instruction<'ctx>,
-        depth: usize,
-    ) -> Result<(), ThrushCompilerError> {
+    fn analyze(&self, instr: &Instruction<'ctx>, depth: usize) -> Result<(), ThrushCompilerError> {
         if let Instruction::Block { stmts, .. } = instr {
             stmts
                 .iter()
-                .try_for_each(|instr| match self.analyze_instruction(instr, depth) {
+                .try_for_each(|instr| match self.analyze(instr, depth) {
                     Ok(()) => Ok(()),
                     Err(e) => Err(e),
                 })?;
@@ -75,34 +67,34 @@ impl<'ctx> ThrushScoper<'ctx> {
             body: Some(body), ..
         } = instr
         {
-            self.analyze_instruction(body.as_ref(), depth)?;
+            self.analyze(body.as_ref(), depth)?;
         }
 
         if let Instruction::EntryPoint { body } = instr {
-            self.analyze_instruction(body, depth)?;
+            self.analyze(body, depth)?;
         }
 
-        if let Instruction::LocalRef { name, line, .. } = instr {
+        if let Instruction::LocalRef { name, location, .. } = instr {
+            let line: usize = location.line;
+            let span: (usize, usize) = location.span;
+
             if !self.is_at_current_scope(name, None, depth) {
                 return Err(ThrushCompilerError::Error(
                     String::from("Undefined variable"),
-                    format!("Local variable '{}' not found at current scope.", name),
-                    *line,
-                    None,
+                    format!("'{}' local not exist at this scope.", name),
+                    line,
+                    Some(span),
                 ));
             }
 
             if self.is_at_current_scope(name, None, depth)
-                && !self.is_reacheable_at_current_scope(name, *line, None, depth)
+                && !self.is_reacheable_at_current_scope(name, line, None, depth)
             {
                 return Err(ThrushCompilerError::Error(
                     String::from("Unreacheable variable"),
-                    format!(
-                        "Local variable '{}' is unreacheable at current scope.",
-                        name
-                    ),
-                    *line,
-                    None,
+                    format!("'{}' local is unreacheable at this point.", name),
+                    line,
+                    Some(span),
                 ));
             }
 
@@ -127,22 +119,16 @@ impl<'ctx> ThrushScoper<'ctx> {
             if let Instruction::Block { stmts, .. } = block.as_ref().unwrap() {
                 return stmts.iter().rev().any(|instr| match instr {
                     Instruction::Local {
-                        name: var_name,
-                        line,
+                        name: other_name,
+                        location,
                         ..
-                    } if *var_name == name => {
-                        if *line > refvar_line {
-                            return false;
-                        }
-
-                        true
                     }
-                    Instruction::FunctionParameter {
-                        name: param_name,
-                        line,
+                    | Instruction::FunctionParameter {
+                        name: other_name,
+                        location,
                         ..
-                    } if *param_name == name => {
-                        if *line > refvar_line {
+                    } if *other_name == name => {
+                        if location.line > refvar_line {
                             return false;
                         }
 
@@ -163,15 +149,15 @@ impl<'ctx> ThrushScoper<'ctx> {
             self.blocks[0].stmts.iter().rev().any(|instr| match instr {
                 Instruction::FunctionParameter {
                     name: instr_name,
-                    line,
+                    location,
                     ..
                 }
                 | Instruction::Local {
                     name: instr_name,
-                    line,
+                    location,
                     ..
                 } if *instr_name == name => {
-                    if *line > refvar_line {
+                    if location.line > refvar_line {
                         return false;
                     }
 
@@ -193,15 +179,15 @@ impl<'ctx> ThrushScoper<'ctx> {
                 .any(|instr| match instr {
                     Instruction::FunctionParameter {
                         name: instr_name,
-                        line,
+                        location,
                         ..
                     }
                     | Instruction::Local {
                         name: instr_name,
-                        line,
+                        location,
                         ..
                     } if *instr_name == name => {
-                        if *line > refvar_line {
+                        if location.line > refvar_line {
                             return false;
                         }
 
@@ -280,5 +266,9 @@ impl<'ctx> ThrushScoper<'ctx> {
                     }
                 })
         }
+    }
+
+    pub fn add_scope(&mut self, stmts: Vec<Instruction<'ctx>>) {
+        self.blocks.push(ThrushBlock { stmts });
     }
 }

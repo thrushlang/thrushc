@@ -431,7 +431,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                     self.context,
                     instruction,
                     kind,
-                    &mut self.compiler_objects,
+                    &self.compiler_objects,
                 );
 
                 Instruction::Null
@@ -443,7 +443,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                 self.context,
                 instruction,
                 &Type::Void,
-                &mut self.compiler_objects,
+                &self.compiler_objects,
             )),
 
             Instruction::Local {
@@ -500,7 +500,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                         self.context,
                         (left, op, right),
                         binaryop_type,
-                        &mut self.compiler_objects,
+                        &self.compiler_objects,
                     ));
                 }
 
@@ -511,7 +511,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                         self.context,
                         (left, op, right),
                         binaryop_type,
-                        &mut self.compiler_objects,
+                        &self.compiler_objects,
                     ));
                 }
 
@@ -522,7 +522,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                         self.context,
                         (left, op, right),
                         binaryop_type,
-                        &mut self.compiler_objects,
+                        &self.compiler_objects,
                     ));
                 }
 
@@ -563,7 +563,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                     self.builder,
                     self.context,
                     (name, kind, args),
-                    &mut self.compiler_objects,
+                    &self.compiler_objects,
                 );
 
                 Instruction::Null
@@ -577,7 +577,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                     self.context,
                     instruction,
                     ref_type,
-                    &mut self.compiler_objects,
+                    &self.compiler_objects,
                 ))
             }
 
@@ -593,9 +593,22 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                 self.builder,
                 self.context,
                 instruction,
-                &Type::U64,
-                &mut self.compiler_objects,
+                &Type::Void,
+                &self.compiler_objects,
             )),
+
+            Instruction::Write { .. } => {
+                generation::build_expression(
+                    self.module,
+                    self.builder,
+                    self.context,
+                    instruction,
+                    &Type::Void,
+                    &self.compiler_objects,
+                );
+
+                Instruction::Null
+            }
 
             Instruction::Null | Instruction::Const { .. } => Instruction::Null,
             e => {
@@ -668,7 +681,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                     self.context,
                     value,
                     kind,
-                    &mut self.compiler_objects,
+                    &self.compiler_objects,
                 );
 
                 let constant_ptr: PointerValue = utils::build_global_constant(

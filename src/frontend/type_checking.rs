@@ -306,8 +306,6 @@ pub fn check_type(
 
         (Type::Struct(_), Type::Void, None) => Ok(()),
 
-        (Type::Ptr(_), Type::Address, None) => Ok(()),
-
         (Type::Ptr(None), Type::Ptr(None), None) => Ok(()),
         (Type::Ptr(Some(target_type)), Type::Ptr(Some(from_type)), None) => {
             check_type(

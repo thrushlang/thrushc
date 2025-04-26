@@ -11,7 +11,7 @@ use super::super::{
     logging::LoggingType,
 };
 
-use super::{traits::TokenLexemeExtensions, types::TokenLexeme};
+use super::traits::TokenLexemeExtensions;
 
 use {
     ahash::{HashMap, HashMapExt},
@@ -54,7 +54,7 @@ lazy_static! {
         keywords.insert(b"enum", TokenKind::Enum);
         keywords.insert(b"address", TokenKind::Address);
         keywords.insert(b"carry", TokenKind::Carry);
-        keywords.insert(b"instr", TokenKind::Instr);
+        keywords.insert(b"write", TokenKind::Write);
         keywords.insert(b"@import", TokenKind::Import);
         keywords.insert(b"@public", TokenKind::Public);
         keywords.insert(b"@extern", TokenKind::Extern);
@@ -90,6 +90,8 @@ lazy_static! {
         keywords
     };
 }
+
+pub type TokenLexeme<'a> = &'a [u8];
 
 pub struct Lexer<'a> {
     tokens: Vec<Token<'a>>,
@@ -801,7 +803,7 @@ pub enum TokenKind {
     // --- Keywords ---
     Address,
     Carry,
-    Instr,
+    Write,
     New,
     Import,
     Builtin,

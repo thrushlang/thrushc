@@ -2,7 +2,7 @@ use super::super::common::error::ThrushCompilerError;
 
 use super::lexer::Type;
 
-use super::types::CodeLocation;
+use super::super::backend::compiler::types::CodeLocation;
 
 #[inline]
 pub fn parse_number(
@@ -23,8 +23,8 @@ pub fn parse_float(
 ) -> Result<(Type, f64), ThrushCompilerError> {
     let dot_count: usize = lexeme.bytes().filter(|&b| b == b'.').count();
 
-    let line: usize = location.0;
-    let span: (usize, usize) = location.1;
+    let line: usize = location.line;
+    let span: (usize, usize) = location.span;
 
     if dot_count > 1 {
         return Err(ThrushCompilerError::Error(
@@ -70,8 +70,8 @@ pub fn parse_integer(
     const U32_MIN: usize = 0;
     const U32_MAX: usize = 4294967295;
 
-    let line: usize = location.0;
-    let span: (usize, usize) = location.1;
+    let line: usize = location.line;
+    let span: (usize, usize) = location.span;
 
     if lexeme.starts_with("0x") {
         let cleaned_lexeme: String = lexeme

@@ -1,10 +1,10 @@
 use super::{
+    super::backend::compiler::types::CodeLocation,
     super::{
         backend::compiler::types::{EnumField, EnumFields, StructFields, ThrushAttributes},
         common::error::ThrushCompilerError,
     },
     lexer::Type,
-    types::CodeLocation,
 };
 
 pub trait TokenLexemeExtensions {
@@ -31,7 +31,6 @@ pub trait CustomTypeFieldsExtensions {
 }
 
 pub trait FoundObjectExtensions {
-    fn is_instr(&self) -> bool;
     fn is_custom_type(&self) -> bool;
     fn is_constant(&self) -> bool;
     fn is_structure(&self) -> bool;
@@ -53,10 +52,6 @@ pub trait FoundObjectEither<'instr> {
     fn expected_constant(&self, location: CodeLocation)
     -> Result<&'instr str, ThrushCompilerError>;
     fn expected_local(
-        &self,
-        location: CodeLocation,
-    ) -> Result<(&'instr str, usize), ThrushCompilerError>;
-    fn expected_instr(
         &self,
         location: CodeLocation,
     ) -> Result<(&'instr str, usize), ThrushCompilerError>;

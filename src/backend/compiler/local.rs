@@ -278,6 +278,21 @@ fn build_local_ptr<'ctx>(
         return;
     }
 
+    if local_value.is_carry() {
+        let carry: BasicValueEnum = generation::build_expression(
+            module,
+            builder,
+            context,
+            local_value,
+            &Type::Void,
+            compiler_objects,
+        );
+
+        allocated_object.build_store(builder, carry);
+
+        return;
+    }
+
     if local_value.is_local_ref() {
         let reference: BasicValueEnum = generation::build_expression(
             module,

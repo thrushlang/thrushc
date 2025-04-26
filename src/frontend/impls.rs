@@ -1,12 +1,11 @@
-use super::super::common::error::ThrushCompilerError;
+use std::fmt::{self, Display};
 
-use super::{
-    traits::{CustomTypeFieldsExtensions, EnumExtensions, EnumFieldsExtensions},
-    types::CodeLocation,
-};
+use super::super::common::{diagnostic::Diagnostician, error::ThrushCompilerError};
+
+use super::traits::{CustomTypeFieldsExtensions, EnumExtensions, EnumFieldsExtensions};
 
 use super::super::backend::compiler::types::{
-    CustomTypeFields, Enum, EnumField, EnumFields, StructFields, ThrushAttributes,
+    CodeLocation, CustomTypeFields, Enum, EnumField, EnumFields, StructFields, ThrushAttributes,
 };
 
 use super::{
@@ -104,6 +103,7 @@ impl std::fmt::Display for TokenKind {
             TokenKind::Elif => write!(f, "elif"),
             TokenKind::Or => write!(f, "or"),
             TokenKind::Take => write!(f, "take"),
+            TokenKind::Write => write!(f, "write"),
             TokenKind::Type => write!(f, "type"),
             TokenKind::Return => write!(f, "return"),
             TokenKind::This => write!(f, "this"),
@@ -129,7 +129,6 @@ impl std::fmt::Display for TokenKind {
             TokenKind::Convention => write!(f, "@convention"),
             TokenKind::Extern => write!(f, "@extern"),
             TokenKind::Import => write!(f, "@import"),
-            TokenKind::Instr => write!(f, "instr"),
             TokenKind::New => write!(f, "new"),
             TokenKind::Eof => write!(f, "EOF"),
             TokenKind::S8 => write!(f, "s8"),
@@ -178,10 +177,10 @@ impl std::fmt::Display for Type {
 
                 write!(f, "}}")
             }
-            Type::Ptr(typed) => {
-                if let Some(typed) = typed {
+            Type::Ptr(nested_type) => {
+                if let Some(nested_type) = nested_type {
                     let _ = write!(f, "ptr[");
-                    let _ = write!(f, "{}", typed);
+                    let _ = write!(f, "{}", nested_type);
 
                     return write!(f, "]");
                 }
@@ -216,10 +215,6 @@ impl FoundObjectExtensions for FoundObjectId<'_> {
     fn is_custom_type(&self) -> bool {
         self.4.is_some()
     }
-
-    fn is_instr(&self) -> bool {
-        self.6.is_some()
-    }
 }
 
 impl<'instr> FoundObjectEither<'instr> for FoundObjectId<'instr> {
@@ -234,8 +229,8 @@ impl<'instr> FoundObjectEither<'instr> for FoundObjectId<'instr> {
         Err(ThrushCompilerError::Error(
             String::from("Expected custom type reference"),
             String::from("Expected custom type but found something else."),
-            location.0,
-            Some(location.1),
+            location.line,
+            Some(location.span),
         ))
     }
 
@@ -250,8 +245,8 @@ impl<'instr> FoundObjectEither<'instr> for FoundObjectId<'instr> {
         Err(ThrushCompilerError::Error(
             String::from("Expected constant reference"),
             String::from("Expected constant but found something else."),
-            location.0,
-            Some(location.1),
+            location.line,
+            Some(location.span),
         ))
     }
 
@@ -263,8 +258,8 @@ impl<'instr> FoundObjectEither<'instr> for FoundObjectId<'instr> {
         Err(ThrushCompilerError::Error(
             String::from("Expected enum reference"),
             String::from("Expected enum but found something else."),
-            location.0,
-            Some(location.1),
+            location.line,
+            Some(location.span),
         ))
     }
 
@@ -276,8 +271,8 @@ impl<'instr> FoundObjectEither<'instr> for FoundObjectId<'instr> {
         Err(ThrushCompilerError::Error(
             String::from("Expected struct reference"),
             String::from("Expected struct but found something else."),
-            location.0,
-            Some(location.1),
+            location.line,
+            Some(location.span),
         ))
     }
 
@@ -292,8 +287,8 @@ impl<'instr> FoundObjectEither<'instr> for FoundObjectId<'instr> {
         Err(ThrushCompilerError::Error(
             String::from("Expected function reference"),
             String::from("Expected function but found something else."),
-            location.0,
-            Some(location.1),
+            location.line,
+            Some(location.span),
         ))
     }
 
@@ -308,24 +303,8 @@ impl<'instr> FoundObjectEither<'instr> for FoundObjectId<'instr> {
         Err(ThrushCompilerError::Error(
             String::from("Expected local reference"),
             String::from("Expected local but found something else."),
-            location.0,
-            Some(location.1),
-        ))
-    }
-
-    fn expected_instr(
-        &self,
-        location: CodeLocation,
-    ) -> Result<(&'instr str, usize), ThrushCompilerError> {
-        if let Some((name, scope_idx)) = self.6 {
-            return Ok((name, scope_idx));
-        }
-
-        Err(ThrushCompilerError::Error(
-            String::from("Expected instruction reference"),
-            String::from("Expected instruction but found something else."),
-            location.0,
-            Some(location.1),
+            location.line,
+            Some(location.span),
         ))
     }
 }
@@ -333,5 +312,27 @@ impl<'instr> FoundObjectEither<'instr> for FoundObjectId<'instr> {
 impl CustomTypeFieldsExtensions for CustomTypeFields<'_> {
     fn get_type(&self) -> Type {
         Type::create_structure_type(self)
+    }
+}
+
+impl Display for CodeLocation {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{}:{}:{}",
+            self.diagnostician.get_file_path().display(),
+            self.line,
+            self.span.0
+        )
+    }
+}
+
+impl CodeLocation {
+    pub fn new(diagnostician: Diagnostician, line: usize, span: (usize, usize)) -> Self {
+        Self {
+            diagnostician,
+            line,
+            span,
+        }
     }
 }

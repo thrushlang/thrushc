@@ -8,7 +8,6 @@ use {
 };
 
 const CONSTANTS_MINIMAL_CAPACITY: usize = 255;
-const STRUCTURE_MINIMAL_CAPACITY: usize = 255;
 const FUNCTION_MINIMAL_CAPACITY: usize = 255;
 
 const SCOPE_MINIMAL_CAPACITY: usize = 155;

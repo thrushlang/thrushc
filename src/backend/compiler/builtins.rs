@@ -34,13 +34,13 @@ pub fn build_sizeof<'ctx>(
     if let Instruction::LocalRef {
         name,
         kind: ref_type,
-        line,
+        location,
         ..
     }
     | Instruction::ConstRef {
         name,
         kind: ref_type,
-        line,
+        location,
         ..
     } = value
     {
@@ -52,8 +52,8 @@ pub fn build_sizeof<'ctx>(
                 logging::log(
                     LoggingType::Panic,
                     &format!(
-                        "Built-in 'sizeof()' cannot get the size of local reference '{}' at line '{}'.",
-                        name, line
+                        "{} built-in 'sizeof()' cannot get the size of local reference '{}'.",
+                        location, name
                     ),
                 );
 
@@ -122,13 +122,13 @@ pub fn build_is_signed<'ctx>(
     if let Instruction::LocalRef {
         name,
         kind: ref_type,
-        line,
+        location,
         ..
     }
     | Instruction::ConstRef {
         name,
         kind: ref_type,
-        line,
+        location,
         ..
     } = value
     {
@@ -136,8 +136,8 @@ pub fn build_is_signed<'ctx>(
             logging::log(
                 LoggingType::Panic,
                 &format!(
-                    "Built-in 'is_signed()' cannot get the signedness of `{}`, line {}.",
-                    name, line
+                    "{} built-in 'is_signed()' cannot get the signedness of `{}`.",
+                    location, name,
                 ),
             );
         }

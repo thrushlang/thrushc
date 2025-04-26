@@ -3,15 +3,12 @@
 use super::{
     super::super::{
         common::error::ThrushCompilerError,
-        frontend::{
-            lexer::{TokenKind, Type},
-            types::{CodeLocation, Constructor},
-        },
+        frontend::lexer::{TokenKind, Type},
     },
-    types::FunctionPrototype,
+    types::{Constructor, FunctionPrototype},
 };
 
-use super::types::{BinaryOp, ThrushAttributes, UnaryOp};
+use super::types::{BinaryOp, CodeLocation, ThrushAttributes, UnaryOp};
 
 use inkwell::values::BasicValueEnum;
 
@@ -109,8 +106,7 @@ pub enum Instruction<'ctx> {
         name: &'ctx str,
         kind: Type,
         position: u32,
-        line: usize,
-        span: (usize, usize),
+        location: CodeLocation,
     },
     Function {
         name: &'ctx str,
@@ -133,21 +129,7 @@ pub enum Instruction<'ctx> {
         name: &'ctx str,
         kind: Type,
         take: bool,
-        line: usize,
-    },
-
-    // LOW-LEVEL instructions
-    Instr {
-        name: &'ctx str,
-        kind: Type,
-        value: Box<Instruction<'ctx>>,
-        line: usize,
-    },
-
-    InstrRef {
-        name: &'ctx str,
-        kind: Type,
-        line: usize,
+        location: CodeLocation,
     },
 
     // Locals variables
@@ -156,13 +138,13 @@ pub enum Instruction<'ctx> {
         kind: Type,
         value: Box<Instruction<'ctx>>,
         comptime: bool,
-        line: usize,
+        location: CodeLocation,
     },
     LocalRef {
         name: &'ctx str,
         kind: Type,
         take: bool,
-        line: usize,
+        location: CodeLocation,
     },
     LocalMut {
         name: &'ctx str,
@@ -177,10 +159,16 @@ pub enum Instruction<'ctx> {
         kind: Type,
     },
 
+    Write {
+        write_to: (&'ctx str, Option<Box<Instruction<'ctx>>>),
+        write_value: Box<Instruction<'ctx>>,
+        write_type: Type,
+    },
+
     Carry {
         name: &'ctx str,
         expression: Option<Box<Instruction<'ctx>>>,
-        kind: Type,
+        carry_type: Type,
     },
 
     // Expressions
@@ -231,7 +219,9 @@ impl<'ctx> Instruction<'ctx> {
             Instruction::Char(kind, _) => kind,
             Instruction::Address { .. } => &Type::Address,
             Instruction::InitStruct { kind, .. } => kind,
-            Instruction::Carry { kind, .. } => kind,
+            Instruction::Carry {
+                carry_type: kind, ..
+            } => kind,
 
             _ => &Type::Void,
         }
@@ -322,8 +312,8 @@ impl Instruction<'_> {
                 String::from(
                     "The compiler does not accept runtime-only expressions until the Just-in-Time (JIT) compiler development is complete.",
                 ),
-                location.0,
-                Some(location.1),
+                location.line,
+                Some(location.span),
             ));
         }
 
@@ -363,14 +353,6 @@ impl Instruction<'_> {
         }
 
         false
-    }
-
-    #[inline]
-    pub fn is_low_level_instructions(&self) -> bool {
-        matches!(
-            self,
-            Instruction::Carry { .. } | Instruction::Address { .. }
-        )
     }
 
     #[inline]

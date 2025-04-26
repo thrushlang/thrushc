@@ -1,11 +1,11 @@
-use super::super::super::frontend::{lexer::Type, types::Constructor};
+use super::super::super::frontend::lexer::Type;
 
 use super::traits::ConstructorExtensions;
 use super::{
     instruction::Instruction,
     memory::MemoryFlag,
     traits::{AttributesExtensions, MemoryFlagsBasics, StructFieldsExtensions},
-    types::{MemoryFlags, StructFields, ThrushAttributes},
+    types::{Constructor, MemoryFlags, StructFields, ThrushAttributes},
 };
 
 impl AttributesExtensions for ThrushAttributes<'_> {

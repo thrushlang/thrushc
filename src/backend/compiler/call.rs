@@ -20,7 +20,7 @@ pub fn build_call<'ctx>(
     builder: &Builder<'ctx>,
     context: &'ctx Context,
     function_call: FunctionCall<'ctx>,
-    compiler_objects: &mut CompilerObjects<'ctx>,
+    compiler_objects: &CompilerObjects<'ctx>,
 ) -> Option<BasicValueEnum<'ctx>> {
     let call_name: &str = function_call.0;
     let call_args: &[Instruction<'ctx>] = function_call.2;

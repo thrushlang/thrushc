@@ -5,5 +5,4 @@ pub mod parser;
 pub mod scoper;
 pub mod traits;
 pub mod type_checking;
-pub mod types;
 pub mod utils;

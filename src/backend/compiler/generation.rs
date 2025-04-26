@@ -19,7 +19,7 @@ pub fn build_expression<'ctx>(
     context: &'ctx Context,
     instruction: &'ctx Instruction,
     casting_target: &Type,
-    compiler_objects: &mut CompilerObjects<'ctx>,
+    compiler_objects: &CompilerObjects<'ctx>,
 ) -> BasicValueEnum<'ctx> {
     if let Instruction::Str(_, str) = instruction {
         return utils::build_str_constant(module, context, str).into();
@@ -59,29 +59,81 @@ pub fn build_expression<'ctx>(
         return context.bool_type().const_int(*bool as u64, false).into();
     }
 
+    if let Instruction::Write {
+        write_to,
+        write_type,
+        write_value,
+        ..
+    } = instruction
+    {
+        let write_reference: &str = write_to.0;
+
+        let write_value: BasicValueEnum = build_expression(
+            module,
+            builder,
+            context,
+            write_value,
+            write_type,
+            compiler_objects,
+        );
+
+        if let Some(expression) = write_to.1.as_ref() {
+            let compiled_expression: PointerValue = build_expression(
+                module,
+                builder,
+                context,
+                expression,
+                &Type::Void,
+                compiler_objects,
+            )
+            .into_pointer_value();
+
+            builder
+                .build_store(compiled_expression, write_value)
+                .unwrap();
+
+            return context
+                .ptr_type(AddressSpace::default())
+                .const_null()
+                .into();
+        }
+
+        let object: AllocatedObject = compiler_objects.get_allocated_object(write_reference);
+
+        object.build_store(builder, write_value);
+
+        return context
+            .ptr_type(AddressSpace::default())
+            .const_null()
+            .into();
+    }
+
     if let Instruction::Carry {
         name,
         expression,
-        kind,
+        carry_type,
     } = instruction
     {
+        let carry_type_generated: BasicTypeEnum = typegen::generate_type(context, carry_type);
+
         if let Some(expression) = expression {
-            let compiled_expression: PointerValue<'_> =
-                build_expression(module, builder, context, expression, kind, compiler_objects)
-                    .into_pointer_value();
+            let compiled_expression: PointerValue<'_> = build_expression(
+                module,
+                builder,
+                context,
+                expression,
+                carry_type,
+                compiler_objects,
+            )
+            .into_pointer_value();
 
             return builder
-                .build_load(
-                    typegen::generate_type(context, kind),
-                    compiled_expression,
-                    "",
-                )
+                .build_load(carry_type_generated, compiled_expression, "")
                 .unwrap();
         }
 
         let local: AllocatedObject = compiler_objects.get_allocated_object(name);
-
-        return local.load_from_memory(builder, typegen::generate_type(context, kind));
+        return local.load_from_memory(builder, carry_type_generated);
     }
 
     if let Instruction::Address {
