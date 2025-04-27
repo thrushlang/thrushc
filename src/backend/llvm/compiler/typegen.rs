@@ -72,9 +72,7 @@ pub fn generate_type<'ctx>(context: &'ctx Context, kind: &Type) -> BasicTypeEnum
             type_int_to_llvm_int_type(context, kind).into()
         }
         kind if kind.is_float_type() => type_float_to_llvm_float_type(context, kind).into(),
-        Type::Ptr(None) => context.ptr_type(AddressSpace::default()).into(),
-        Type::Ptr(Some(typed)) => generate_type(context, typed),
-        Type::Address => context.ptr_type(AddressSpace::default()).into(),
+        Type::Ptr(_) | Type::Address => context.ptr_type(AddressSpace::default()).into(),
         kind if kind.is_str_type() => context
             .struct_type(
                 &[

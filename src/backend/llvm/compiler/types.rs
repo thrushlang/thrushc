@@ -1,7 +1,7 @@
 use ahash::{HashMap, HashSet};
 
-use super::memory::AllocatedObject;
+use super::memory::AllocatedSymbol;
 
-pub type AllocatedObjects<'ctx> = &'ctx HashMap<&'ctx str, AllocatedObject<'ctx>>;
+pub type AllocatedSymbols<'ctx> = &'ctx HashMap<&'ctx str, AllocatedSymbol<'ctx>>;
 pub type MappedHeapPointers<'ctx> = HashSet<(&'ctx str, u32, bool)>;
 pub type MappedHeapPointer<'ctx> = (&'ctx str, u32, bool);

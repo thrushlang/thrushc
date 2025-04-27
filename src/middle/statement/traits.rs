@@ -20,7 +20,7 @@ pub trait CustomTypeFieldsExtensions {
     fn get_type(&self) -> Type;
 }
 
-pub trait FoundObjectExtensions {
+pub trait FoundSymbolExtension {
     fn is_custom_type(&self) -> bool;
     fn is_constant(&self) -> bool;
     fn is_structure(&self) -> bool;
@@ -34,7 +34,7 @@ pub trait StructureExtensions<'a> {
     fn get_fields(&self) -> StructFields<'a>;
 }
 
-pub trait FoundObjectEither<'instr> {
+pub trait FoundSymbolEither<'instr> {
     fn expected_custom_type(&self, span: Span) -> Result<&'instr str, ThrushCompilerError>;
     fn expected_constant(&self, span: Span) -> Result<&'instr str, ThrushCompilerError>;
     fn expected_local(&self, span: Span) -> Result<(&'instr str, usize), ThrushCompilerError>;

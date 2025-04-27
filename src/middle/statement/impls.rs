@@ -88,9 +88,9 @@ impl CustomTypeFieldsExtensions for CustomTypeFields<'_> {
 impl PartialEq for Instruction<'_> {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
-            (Instruction::Integer(_, _, _), Instruction::Integer(_, _, _))
-            | (Instruction::Float(_, _, _), Instruction::Float(_, _, _))
-            | (Instruction::Str(_, _), Instruction::Str(_, _)) => true,
+            (Instruction::Integer(..), Instruction::Integer(..))
+            | (Instruction::Float(..), Instruction::Float(..))
+            | (Instruction::Str(..), Instruction::Str(..)) => true,
             (left, right) => std::mem::discriminant(left) == std::mem::discriminant(right),
         }
     }

@@ -6,8 +6,8 @@ use crate::middle::{
 use super::{
     Instruction,
     builtins::{build_is_signed, build_sizeof},
-    generation,
-    objects::CompilerObjects,
+    symbols::SymbolsTable,
+    valuegen,
 };
 
 use inkwell::{
@@ -22,26 +22,21 @@ pub fn build_call<'ctx>(
     builder: &Builder<'ctx>,
     context: &'ctx Context,
     function_call: FunctionCall<'ctx>,
-    compiler_objects: &CompilerObjects<'ctx>,
+    symbols: &SymbolsTable<'ctx>,
 ) -> Option<BasicValueEnum<'ctx>> {
     let call_name: &str = function_call.0;
     let call_args: &[Instruction<'ctx>] = function_call.2;
     let call_type: &Type = function_call.1;
 
     if call_name == "sizeof!" {
-        return Some(build_sizeof(context, function_call, compiler_objects));
+        return Some(build_sizeof(context, function_call, symbols));
     }
 
     if call_name == "is_signed!" {
-        return Some(build_is_signed(
-            context,
-            builder,
-            function_call,
-            compiler_objects,
-        ));
+        return Some(build_is_signed(context, builder, function_call, symbols));
     }
 
-    let function: Function = compiler_objects.get_function(call_name);
+    let function: Function = symbols.get_function(call_name);
 
     let llvm_function: FunctionValue = function.0;
 
@@ -57,13 +52,13 @@ pub fn build_call<'ctx>(
             .get_type();
 
         compiled_args.push(
-            generation::build_expression(
+            valuegen::generate_expression(
                 module,
                 builder,
                 context,
                 instruction.1,
                 casting_target,
-                compiler_objects,
+                symbols,
             )
             .into(),
         );

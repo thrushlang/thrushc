@@ -2,23 +2,24 @@ use crate::common::misc::CompilerFile;
 use crate::middle::instruction::Instruction;
 use crate::middle::statement::traits::{
     AttributesExtensions, ConstructorExtensions, CustomTypeFieldsExtensions, EnumExtensions,
-    EnumFieldsExtensions, FoundObjectEither, FoundObjectExtensions, StructFieldsExtensions,
+    EnumFieldsExtensions, FoundSymbolEither, FoundSymbolExtension, StructFieldsExtensions,
     StructureExtensions, TokenLexemeExtensions,
 };
 use crate::middle::statement::{
     Constructor, CustomType, CustomTypeFields, EnumField, EnumFields, StructFields,
     ThrushAttributes,
 };
+use crate::middle::symbols::traits::{ConstantExtensions, LocalExtensions};
+use crate::middle::symbols::types::{Constant, Function, Functions, Local, Struct};
 
 use super::lexer::Span;
-use super::objects::Constant;
 use super::utils;
 
 use super::{
     super::middle::types::*,
     lexer::Token,
-    objects::{FoundObjectId, Function, Functions, Local, ParserObjects, Struct},
     scoper::ThrushScoper,
+    symbols::{FoundSymbolId, SymbolsTable},
     type_checking,
 };
 
@@ -33,9 +34,9 @@ use super::super::{
 
 use ahash::AHashMap as HashMap;
 use lazy_static::lazy_static;
+use std::process;
 use std::rc::Rc;
 use std::sync::Arc;
-use std::{mem, process};
 
 const MINIMAL_STATEMENT_CAPACITY: usize = 100_000;
 const MINIMAL_GLOBAL_CAPACITY: usize = 2024;
@@ -67,14 +68,13 @@ pub struct Parser<'instr> {
     tokens: &'instr [Token<'instr>],
     errors: Vec<ThrushCompilerError>,
 
-    // Type management
-    in_function_type: Type,
-    in_local_type: Type,
-
     // Token control
     current: usize,
     // Scope control
     scope: usize,
+
+    // Lift locals
+    lift_locals: Vec<Instruction<'instr>>,
 
     // Trigger flags
     entry_point: bool,
@@ -85,7 +85,7 @@ pub struct Parser<'instr> {
 
     scoper: ThrushScoper<'instr>,
     diagnostician: Diagnostician,
-    objects: ParserObjects<'instr>,
+    symbols: SymbolsTable<'instr>,
 }
 
 impl<'instr> Parser<'instr> {
@@ -97,27 +97,28 @@ impl<'instr> Parser<'instr> {
         Self {
             stmts: Vec::with_capacity(MINIMAL_STATEMENT_CAPACITY),
             errors: Vec::with_capacity(MINIMAL_ERROR_CAPACITY),
+            lift_locals: Vec::with_capacity(10),
             tokens,
             current: 0,
             inside_a_function: false,
             inside_a_loop: false,
-            in_function_type: Type::Void,
-            in_local_type: Type::Void,
             rec_structure_ref: false,
             unreacheable_code: 0,
             scope: 0,
             entry_point: false,
             scoper: ThrushScoper::new(file),
             diagnostician: Diagnostician::new(file),
-            objects: ParserObjects::with_functions(functions),
+            symbols: SymbolsTable::with_functions(functions),
         }
     }
 
     pub fn start(&mut self) -> &[Instruction<'instr>] {
-        self.declare();
+        let mut type_ctx: TypeContext = TypeContext::new(Type::Void);
+
+        self.declare(&mut type_ctx);
 
         while !self.is_eof() {
-            match self.parse() {
+            match self.parse(&mut type_ctx) {
                 Ok(instr) => {
                     self.stmts.push(instr);
                 }
@@ -137,36 +138,43 @@ impl<'instr> Parser<'instr> {
             process::exit(1);
         }
 
-        self.scoper.check();
+        println!("{:?}", self.stmts);
 
+        self.scoper.check();
         self.stmts.as_slice()
     }
 
-    fn parse(&mut self) -> Result<Instruction<'instr>, ThrushCompilerError> {
+    fn parse(
+        &mut self,
+        type_ctx: &mut TypeContext,
+    ) -> Result<Instruction<'instr>, ThrushCompilerError> {
         match &self.peek().kind {
             TokenKind::Type => Ok(self.build_custom_type(false)?),
             TokenKind::Struct => Ok(self.build_struct(false)?),
-            TokenKind::Enum => Ok(self.build_enum(false)?),
-            TokenKind::Fn => Ok(self.build_function(false)?),
+            TokenKind::Enum => Ok(self.build_enum(false, type_ctx)?),
+            TokenKind::Fn => Ok(self.build_function(false, type_ctx)?),
 
-            TokenKind::LBrace => Ok(self.build_code_block(&mut [])?),
-            TokenKind::Return => Ok(self.build_return()?),
-            TokenKind::Const => Ok(self.build_const(false)?),
-            TokenKind::Local => Ok(self.build_local(false)?),
-            TokenKind::For => Ok(self.build_for_loop()?),
-            TokenKind::New => Ok(self.build_constructor()?),
-            TokenKind::If => Ok(self.build_if_elif_else()?),
-            TokenKind::Match => Ok(self.build_match()?),
-            TokenKind::While => Ok(self.build_while_loop()?),
+            TokenKind::LBrace => Ok(self.build_block(type_ctx)?),
+            TokenKind::Return => Ok(self.build_return(type_ctx)?),
+            TokenKind::Const => Ok(self.build_const(false, type_ctx)?),
+            TokenKind::Local => Ok(self.build_local(false, type_ctx)?),
+            TokenKind::For => Ok(self.build_for_loop(type_ctx)?),
+            TokenKind::New => Ok(self.build_constructor(type_ctx)?),
+            TokenKind::If => Ok(self.build_if_elif_else(type_ctx)?),
+            TokenKind::Match => Ok(self.build_match(type_ctx)?),
+            TokenKind::While => Ok(self.build_while_loop(type_ctx)?),
             TokenKind::Continue => Ok(self.build_continue()?),
             TokenKind::Break => Ok(self.build_break()?),
-            TokenKind::Loop => Ok(self.build_loop()?),
+            TokenKind::Loop => Ok(self.build_loop(type_ctx)?),
 
-            _ => Ok(self.expression()?),
+            _ => Ok(self.expression(type_ctx)?),
         }
     }
 
-    fn build_entry_point(&mut self) -> Result<Instruction<'instr>, ThrushCompilerError> {
+    fn build_entry_point(
+        &mut self,
+        type_ctx: &mut TypeContext,
+    ) -> Result<Instruction<'instr>, ThrushCompilerError> {
         if self.entry_point {
             self.push_error(
                 String::from("Duplicated entrypoint"),
@@ -188,14 +196,17 @@ impl<'instr> Parser<'instr> {
 
         self.entry_point = true;
 
-        let body: Rc<Instruction> = Rc::new(self.build_code_block(&mut [])?);
+        let body: Rc<Instruction> = Rc::new(self.build_block(type_ctx)?);
 
         self.inside_a_function = false;
 
         Ok(Instruction::EntryPoint { body })
     }
 
-    fn build_for_loop(&mut self) -> Result<Instruction<'instr>, ThrushCompilerError> {
+    fn build_for_loop(
+        &mut self,
+        type_ctx: &mut TypeContext,
+    ) -> Result<Instruction<'instr>, ThrushCompilerError> {
         self.throw_unreacheable_code();
 
         self.consume(
@@ -204,35 +215,39 @@ impl<'instr> Parser<'instr> {
             String::from("Expected 'for'."),
         )?;
 
-        let variable: Instruction = self.build_local(false)?;
+        let local: Instruction = self.build_local(false, type_ctx)?;
+        let cond: Instruction = self.expression(type_ctx)?;
 
-        let conditional: Instruction = self.expression()?;
+        self.check_type_mismatch(&Type::Bool, cond.get_type(), cond.get_span(), Some(&cond));
 
-        self.check_type_mismatch(Type::Bool, conditional.get_type().clone(), None);
+        let actions: Instruction = self.expression(type_ctx)?;
 
-        let actions: Instruction = self.expression()?;
+        let mut local_clone: Instruction = local.clone();
 
-        let mut variable_clone: Instruction = variable.clone();
-
-        if let Instruction::Local { comptime, .. } = &mut variable_clone {
+        if let Instruction::Local { comptime, .. } = &mut local_clone {
             *comptime = true;
         }
 
+        self.add_lift_local(local_clone);
+
         self.inside_a_loop = true;
 
-        let body: Instruction = self.build_code_block(&mut [variable_clone])?;
+        let body: Instruction = self.build_block(type_ctx)?;
 
         self.inside_a_loop = false;
 
         Ok(Instruction::ForLoop {
-            variable: Rc::new(variable),
-            cond: Rc::new(conditional),
+            variable: Rc::new(local),
+            cond: Rc::new(cond),
             actions: Rc::new(actions),
             block: Rc::new(body),
         })
     }
 
-    fn build_loop(&mut self) -> Result<Instruction<'instr>, ThrushCompilerError> {
+    fn build_loop(
+        &mut self,
+        type_ctx: &mut TypeContext,
+    ) -> Result<Instruction<'instr>, ThrushCompilerError> {
         self.consume(
             TokenKind::Loop,
             String::from("Syntax error"),
@@ -243,7 +258,7 @@ impl<'instr> Parser<'instr> {
 
         self.inside_a_loop = true;
 
-        let block: Instruction = self.build_code_block(&mut [])?;
+        let block: Instruction = self.build_block(type_ctx)?;
 
         if !block.has_break() && !block.has_return() && !block.has_continue() {
             self.unreacheable_code = self.scope;
@@ -256,7 +271,10 @@ impl<'instr> Parser<'instr> {
         })
     }
 
-    fn build_while_loop(&mut self) -> Result<Instruction<'instr>, ThrushCompilerError> {
+    fn build_while_loop(
+        &mut self,
+        type_ctx: &mut TypeContext,
+    ) -> Result<Instruction<'instr>, ThrushCompilerError> {
         self.consume(
             TokenKind::While,
             String::from("Syntax error"),
@@ -265,15 +283,16 @@ impl<'instr> Parser<'instr> {
 
         self.throw_unreacheable_code();
 
-        let conditional: Instruction = self.expr()?;
+        let conditional: Instruction = self.expr(type_ctx)?;
 
         self.check_type_mismatch(
-            Type::Bool,
-            conditional.get_type().clone(),
+            &Type::Bool,
+            conditional.get_type(),
+            conditional.get_span(),
             Some(&conditional),
         );
 
-        let block: Instruction = self.build_code_block(&mut [])?;
+        let block: Instruction = self.build_block(type_ctx)?;
 
         Ok(Instruction::WhileLoop {
             cond: Rc::new(conditional),
@@ -325,7 +344,10 @@ impl<'instr> Parser<'instr> {
         Ok(Instruction::Break)
     }
 
-    fn build_match(&mut self) -> Result<Instruction<'instr>, ThrushCompilerError> {
+    fn build_match(
+        &mut self,
+        type_ctx: &mut TypeContext,
+    ) -> Result<Instruction<'instr>, ThrushCompilerError> {
         self.consume(
             TokenKind::Match,
             String::from("Syntax error"),
@@ -334,7 +356,7 @@ impl<'instr> Parser<'instr> {
 
         self.throw_unreacheable_code();
 
-        let mut start_pattern: Instruction = self.expr()?;
+        let mut start_pattern: Instruction = self.expr(type_ctx)?;
         let mut start_block: Instruction = Instruction::Block { stmts: Vec::new() };
 
         let mut patterns: Vec<Instruction> = Vec::with_capacity(10);
@@ -344,11 +366,16 @@ impl<'instr> Parser<'instr> {
 
         while self.match_token(TokenKind::Pattern)? {
             self.scope += 1;
-            self.objects.begin_local_scope();
+            self.symbols.begin_local_scope();
 
-            let pattern: Instruction = self.expr()?;
+            let pattern: Instruction = self.expr(type_ctx)?;
 
-            self.check_type_mismatch(Type::Bool, pattern.get_type().clone(), Some(&pattern));
+            self.check_type_mismatch(
+                &Type::Bool,
+                pattern.get_type(),
+                pattern.get_span(),
+                Some(&pattern),
+            );
 
             self.consume(
                 TokenKind::ColonColon,
@@ -357,7 +384,7 @@ impl<'instr> Parser<'instr> {
             )?;
 
             while !self.match_token(TokenKind::Break)? {
-                patterns_stmts.push(self.parse()?);
+                patterns_stmts.push(self.parse(type_ctx)?);
             }
 
             self.consume(
@@ -367,7 +394,7 @@ impl<'instr> Parser<'instr> {
             )?;
 
             self.scope -= 1;
-            self.objects.end_local_scope();
+            self.symbols.end_local_scope();
 
             if patterns_stmts.is_empty() {
                 continue;
@@ -399,8 +426,9 @@ impl<'instr> Parser<'instr> {
 
         if start_block.has_instruction() {
             self.check_type_mismatch(
-                Type::Bool,
-                start_pattern.get_type().clone(),
+                &Type::Bool,
+                start_pattern.get_type(),
+                start_pattern.get_span(),
                 Some(&start_pattern),
             );
         }
@@ -415,7 +443,7 @@ impl<'instr> Parser<'instr> {
             let mut stmts: Vec<Instruction> = Vec::with_capacity(MINIMAL_SCOPE_CAPACITY);
 
             while !self.match_token(TokenKind::Break)? {
-                stmts.push(self.parse()?);
+                stmts.push(self.parse(type_ctx)?);
             }
 
             self.consume(
@@ -447,7 +475,10 @@ impl<'instr> Parser<'instr> {
         })
     }
 
-    fn build_if_elif_else(&mut self) -> Result<Instruction<'instr>, ThrushCompilerError> {
+    fn build_if_elif_else(
+        &mut self,
+        type_ctx: &mut TypeContext,
+    ) -> Result<Instruction<'instr>, ThrushCompilerError> {
         self.consume(
             TokenKind::If,
             String::from("Syntax error"),
@@ -463,7 +494,7 @@ impl<'instr> Parser<'instr> {
 
         self.throw_unreacheable_code();
 
-        let if_condition: Instruction = self.expr()?;
+        let if_condition: Instruction = self.expr(type_ctx)?;
 
         if !if_condition.get_type().is_bool_type() {
             self.push_error(
@@ -472,20 +503,21 @@ impl<'instr> Parser<'instr> {
             );
         }
 
-        let if_body: Rc<Instruction> = Rc::new(self.build_code_block(&mut [])?);
+        let if_body: Rc<Instruction> = Rc::new(self.build_block(type_ctx)?);
 
         let mut elfs: Vec<Instruction> = Vec::with_capacity(10);
 
         while self.match_token(TokenKind::Elif)? {
-            let elif_condition: Instruction = self.expr()?;
+            let elif_condition: Instruction = self.expr(type_ctx)?;
 
             self.check_type_mismatch(
-                Type::Bool,
-                elif_condition.get_type().clone(),
+                &Type::Bool,
+                elif_condition.get_type(),
+                elif_condition.get_span(),
                 Some(&elif_condition),
             );
 
-            let elif_body: Instruction = self.build_code_block(&mut [])?;
+            let elif_body: Instruction = self.build_block(type_ctx)?;
 
             if !elif_body.has_instruction() {
                 continue;
@@ -500,7 +532,7 @@ impl<'instr> Parser<'instr> {
         let mut otherwise: Option<Rc<Instruction>> = None;
 
         if self.match_token(TokenKind::Else)? {
-            let else_body: Instruction = self.build_code_block(&mut [])?;
+            let else_body: Instruction = self.build_block(type_ctx)?;
 
             if else_body.has_instruction() {
                 otherwise = Some(Rc::new(Instruction::Else {
@@ -578,7 +610,7 @@ impl<'instr> Parser<'instr> {
         )?;
 
         if declare {
-            self.objects.new_custom_type(
+            self.symbols.new_custom_type(
                 custom_type_name,
                 (custom_type_fields, custom_type_attributes),
                 span,
@@ -588,7 +620,11 @@ impl<'instr> Parser<'instr> {
         Ok(Instruction::Null)
     }
 
-    fn build_enum(&mut self, declare: bool) -> Result<Instruction<'instr>, ThrushCompilerError> {
+    fn build_enum(
+        &mut self,
+        declare: bool,
+        type_ctx: &mut TypeContext,
+    ) -> Result<Instruction<'instr>, ThrushCompilerError> {
         self.throw_unreacheable_code();
 
         self.consume(
@@ -650,11 +686,11 @@ impl<'instr> Parser<'instr> {
 
                 if self.match_token(TokenKind::SemiColon)? {
                     let field_value: Instruction = if field_type.is_float_type() {
-                        Instruction::Float(field_type.clone(), index, false)
+                        Instruction::Float(field_type.clone(), index, false, span)
                     } else if field_type.is_bool_type() {
-                        Instruction::Boolean(Type::Bool, index != 0.0)
+                        Instruction::Boolean(Type::Bool, index != 0.0, span)
                     } else {
-                        Instruction::Integer(field_type.clone(), index, false)
+                        Instruction::Integer(field_type.clone(), index, false, span)
                     };
 
                     enum_fields.push((name, field_value));
@@ -669,7 +705,7 @@ impl<'instr> Parser<'instr> {
                     String::from("Expected '='."),
                 )?;
 
-                let expression: Instruction = self.expr()?;
+                let expression: Instruction = self.expr(type_ctx)?;
 
                 expression.throw_attemping_use_jit(span)?;
 
@@ -680,8 +716,9 @@ impl<'instr> Parser<'instr> {
                 )?;
 
                 self.check_type_mismatch(
-                    field_type,
-                    expression.get_type().clone(),
+                    &field_type,
+                    expression.get_type(),
+                    expression.get_span(),
                     Some(&expression),
                 );
 
@@ -711,7 +748,7 @@ impl<'instr> Parser<'instr> {
         )?;
 
         if declare {
-            self.objects
+            self.symbols
                 .new_enum(enum_name, (enum_fields, enum_attributes), span)?;
         }
 
@@ -793,14 +830,17 @@ impl<'instr> Parser<'instr> {
         )?;
 
         if declare {
-            self.objects
+            self.symbols
                 .new_struct(struct_name, (fields_types, struct_attributes), span)?;
         }
 
         Ok(Instruction::Null)
     }
 
-    fn build_constructor(&mut self) -> Result<Instruction<'instr>, ThrushCompilerError> {
+    fn build_constructor(
+        &mut self,
+        type_ctx: &TypeContext,
+    ) -> Result<Instruction<'instr>, ThrushCompilerError> {
         self.throw_unreacheable_code();
 
         self.consume(
@@ -818,7 +858,7 @@ impl<'instr> Parser<'instr> {
         let span: Span = name.span;
         let struct_name: &str = name.lexeme.to_str();
 
-        let struct_found: Struct = self.objects.get_struct(struct_name, span)?;
+        let struct_found: Struct = self.symbols.get_struct(struct_name, span)?;
 
         let fields_required: usize = struct_found.get_fields().len();
 
@@ -830,7 +870,7 @@ impl<'instr> Parser<'instr> {
 
         let mut arguments: Constructor = Vec::with_capacity(10);
 
-        let mut field_index: u32 = 0;
+        let mut amount: usize = 0;
 
         while self.peek().kind != TokenKind::RBrace {
             if self.match_token(TokenKind::Comma)? {
@@ -849,18 +889,15 @@ impl<'instr> Parser<'instr> {
                     ));
                 }
 
-                if field_index as usize >= fields_required {
+                if amount >= fields_required {
                     return Err(ThrushCompilerError::Error(
                         String::from("Too many fields in structure"),
-                        format!(
-                            "Expected '{}' fields, not '{}'.",
-                            fields_required, field_index
-                        ),
+                        format!("Expected '{}' fields, not '{}'.", fields_required, amount),
                         span,
                     ));
                 }
 
-                let expression: Instruction = self.expr()?;
+                let expression: Instruction = self.expr(type_ctx)?;
 
                 self.throw_constructor(&expression);
 
@@ -868,30 +905,30 @@ impl<'instr> Parser<'instr> {
 
                 if let Some(target_type) = struct_found.get_field_type(field_name) {
                     self.check_type_mismatch(
-                        target_type.clone(),
-                        expression_type.clone(),
+                        &target_type,
+                        expression_type,
+                        expression.get_span(),
                         Some(&expression),
                     );
 
-                    arguments.push((field_name, expression, target_type, field_index));
+                    arguments.push((field_name, expression, target_type, amount as u32));
                 }
 
-                field_index += 1;
-
+                amount += 1;
                 continue;
             }
 
             self.only_advance()?;
         }
 
-        let fields_size: usize = arguments.len();
+        let amount_fields: usize = arguments.len();
 
-        if fields_size != fields_required {
+        if amount_fields != fields_required {
             return Err(ThrushCompilerError::Error(
                 String::from("Missing fields in structure"),
                 format!(
                     "Expected '{}' arguments, but '{}' was gived.",
-                    fields_required, fields_size
+                    fields_required, amount_fields
                 ),
                 span,
             ));
@@ -906,10 +943,15 @@ impl<'instr> Parser<'instr> {
         Ok(Instruction::InitStruct {
             arguments: arguments.clone(),
             kind: arguments.get_type(),
+            span,
         })
     }
 
-    fn build_const(&mut self, declare: bool) -> Result<Instruction<'instr>, ThrushCompilerError> {
+    fn build_const(
+        &mut self,
+        declare: bool,
+        type_ctx: &TypeContext,
+    ) -> Result<Instruction<'instr>, ThrushCompilerError> {
         if !self.is_main_scope() {
             return Err(ThrushCompilerError::Error(
                 String::from("Syntax error"),
@@ -930,8 +972,8 @@ impl<'instr> Parser<'instr> {
             String::from("Expected name."),
         )?;
 
-        let const_span: Span = const_tk.span;
-        let const_name: &str = const_tk.lexeme.to_str();
+        let name: &str = const_tk.lexeme.to_str();
+        let span: Span = const_tk.span;
 
         self.consume(
             TokenKind::Colon,
@@ -950,14 +992,15 @@ impl<'instr> Parser<'instr> {
             String::from("Expected '='."),
         )?;
 
-        let const_value: Instruction = self.expr()?;
+        let value: Instruction = self.expr(type_ctx)?;
 
-        const_value.throw_attemping_use_jit(const_span)?;
+        value.throw_attemping_use_jit(span)?;
 
         self.check_type_mismatch(
-            const_type.clone(),
-            const_value.get_type().clone(),
-            Some(&const_value),
+            &const_type,
+            value.get_type(),
+            value.get_span(),
+            Some(&value),
         );
 
         self.consume(
@@ -967,22 +1010,26 @@ impl<'instr> Parser<'instr> {
         )?;
 
         if declare {
-            self.objects
-                .new_constant(const_name, (const_type, const_attributes), const_span)?;
+            self.symbols
+                .new_constant(name, (const_type, const_attributes), span)?;
 
             return Ok(Instruction::Null);
         }
 
         Ok(Instruction::Const {
-            name: const_name,
+            name,
             kind: const_type,
-            value: Rc::new(const_value),
+            value: Rc::new(value),
             attributes: const_attributes,
-            span: const_span,
+            span,
         })
     }
 
-    fn build_local(&mut self, comptime: bool) -> Result<Instruction<'instr>, ThrushCompilerError> {
+    fn build_local(
+        &mut self,
+        comptime: bool,
+        type_ctx: &TypeContext,
+    ) -> Result<Instruction<'instr>, ThrushCompilerError> {
         self.throw_unreacheable_code();
 
         if self.is_main_scope() {
@@ -1005,7 +1052,7 @@ impl<'instr> Parser<'instr> {
         )?;
 
         let local_name: &str = local_tk.lexeme.to_str();
-        let local_span: Span = local_tk.span;
+        let span: Span = local_tk.span;
 
         self.consume(
             TokenKind::Colon,
@@ -1015,22 +1062,21 @@ impl<'instr> Parser<'instr> {
 
         let local_type: Type = self.build_type(None)?;
 
-        self.objects.new_local(
-            self.scope,
-            local_name,
-            (local_type.clone(), false, false),
-            local_span,
-        )?;
-
         if self.match_token(TokenKind::SemiColon)? {
+            self.symbols
+                .new_local(self.scope, local_name, (local_type.clone(), true), span)?;
+
             return Ok(Instruction::Local {
                 name: local_name,
                 kind: local_type,
                 value: Rc::new(Instruction::Null),
-                span: local_span,
+                span,
                 comptime,
             });
         }
+
+        self.symbols
+            .new_local(self.scope, local_name, (local_type.clone(), false), span)?;
 
         self.consume(
             TokenKind::Eq,
@@ -1038,14 +1084,13 @@ impl<'instr> Parser<'instr> {
             String::from("Expected '='."),
         )?;
 
-        self.in_local_type = local_type.clone();
-
-        let local_value: Instruction = self.expr()?;
+        let value: Instruction = self.expr(type_ctx)?;
 
         self.check_type_mismatch(
-            local_type.clone(),
-            local_value.get_type().clone(),
-            Some(&local_value),
+            &local_type,
+            value.get_type(),
+            value.get_span(),
+            Some(&value),
         );
 
         self.consume(
@@ -1057,15 +1102,18 @@ impl<'instr> Parser<'instr> {
         let local: Instruction = Instruction::Local {
             name: local_name,
             kind: local_type,
-            value: Rc::new(local_value),
-            span: local_span,
+            value: Rc::new(value),
+            span,
             comptime,
         };
 
         Ok(local)
     }
 
-    fn build_return(&mut self) -> Result<Instruction<'instr>, ThrushCompilerError> {
+    fn build_return(
+        &mut self,
+        type_ctx: &mut TypeContext,
+    ) -> Result<Instruction<'instr>, ThrushCompilerError> {
         self.throw_unreacheable_code();
 
         self.consume(
@@ -1082,20 +1130,26 @@ impl<'instr> Parser<'instr> {
         }
 
         if self.match_token(TokenKind::SemiColon)? {
-            if self.in_function_type.is_void_type() {
+            if type_ctx.function_type.is_void_type() {
                 return Ok(Instruction::Null);
             }
 
-            self.check_type_mismatch(Type::Void, self.in_function_type.clone(), None);
+            self.check_type_mismatch(
+                &Type::Void,
+                &type_ctx.function_type,
+                self.previous().span,
+                None,
+            );
 
             return Ok(Instruction::Return(Type::Void, Rc::new(Instruction::Null)));
         }
 
-        let value: Instruction = self.expr()?;
+        let value: Instruction = self.expr(type_ctx)?;
 
         self.check_type_mismatch(
-            self.in_function_type.clone(),
-            value.get_type().clone(),
+            &type_ctx.function_type,
+            value.get_type(),
+            value.get_span(),
             Some(&value),
         );
 
@@ -1106,14 +1160,14 @@ impl<'instr> Parser<'instr> {
         )?;
 
         Ok(Instruction::Return(
-            self.in_function_type.clone(),
+            type_ctx.function_type.clone(),
             Rc::new(value),
         ))
     }
 
-    fn build_code_block(
+    fn build_block(
         &mut self,
-        with_instrs: &mut [Instruction<'instr>],
+        type_ctx: &mut TypeContext,
     ) -> Result<Instruction<'instr>, ThrushCompilerError> {
         self.throw_unreacheable_code();
 
@@ -1124,28 +1178,19 @@ impl<'instr> Parser<'instr> {
         )?;
 
         self.scope += 1;
-        self.objects.begin_local_scope();
+        self.symbols.begin_local_scope();
+
+        self.symbols
+            .lift_locals(self.scope, &mut self.lift_locals)?;
 
         let mut stmts: Vec<Instruction> = Vec::with_capacity(MINIMAL_SCOPE_CAPACITY);
 
-        for instruction in with_instrs.iter_mut() {
-            if let Instruction::FunctionParameter {
-                name, kind, span, ..
-            } = instruction
-            {
-                self.objects
-                    .new_local(self.scope, name, ((*kind).clone(), false, false), *span)?;
-            }
-
-            stmts.push(mem::take(instruction));
-        }
-
         while !self.match_token(TokenKind::RBrace)? {
-            let instruction: Instruction = self.parse()?;
+            let instruction: Instruction = self.parse(type_ctx)?;
             stmts.push(instruction)
         }
 
-        self.objects.end_local_scope();
+        self.symbols.end_local_scope();
 
         self.scoper.add_scope(stmts.clone());
         self.scope -= 1;
@@ -1156,6 +1201,7 @@ impl<'instr> Parser<'instr> {
     fn build_function(
         &mut self,
         declare: bool,
+        type_ctx: &mut TypeContext,
     ) -> Result<Instruction<'instr>, ThrushCompilerError> {
         self.throw_unreacheable_code();
 
@@ -1189,7 +1235,7 @@ impl<'instr> Parser<'instr> {
                 return Ok(Instruction::Null);
             }
 
-            return self.build_entry_point();
+            return self.build_entry_point(type_ctx);
         }
 
         self.consume(
@@ -1254,7 +1300,7 @@ impl<'instr> Parser<'instr> {
             );
         }
 
-        self.in_function_type = return_type.clone();
+        type_ctx.function_type = return_type.clone();
 
         let mut function: Instruction = Instruction::Function {
             name,
@@ -1266,7 +1312,7 @@ impl<'instr> Parser<'instr> {
 
         if function_has_ffi || declare {
             if declare {
-                self.objects.new_function(
+                self.symbols.new_function(
                     name,
                     (return_type, parameters_types, function_has_ignore),
                     span,
@@ -1284,12 +1330,16 @@ impl<'instr> Parser<'instr> {
             return Ok(function);
         }
 
-        let function_body: Rc<Instruction> = Rc::new(self.build_code_block(&mut params)?);
+        params.iter().cloned().for_each(|param| {
+            self.add_lift_local(param);
+        });
+
+        let function_body: Rc<Instruction> = Rc::new(self.build_block(type_ctx)?);
 
         if !return_type.is_void_type() && !function_body.has_return() {
             self.push_error(
                 String::from("Syntax error"),
-                format!("Missing return type with type '{}'.", return_type),
+                format!("Missing return with type '{}'.", return_type),
             );
         }
 
@@ -1428,8 +1478,11 @@ impl<'instr> Parser<'instr> {
 
     ########################################################################*/
 
-    fn expression(&mut self) -> Result<Instruction<'instr>, ThrushCompilerError> {
-        let instruction: Instruction = self.or()?;
+    fn expression(
+        &mut self,
+        type_ctx: &TypeContext,
+    ) -> Result<Instruction<'instr>, ThrushCompilerError> {
+        let instruction: Instruction = self.or(type_ctx)?;
 
         self.consume(
             TokenKind::SemiColon,
@@ -1440,20 +1493,20 @@ impl<'instr> Parser<'instr> {
         Ok(instruction)
     }
 
-    fn expr(&mut self) -> Result<Instruction<'instr>, ThrushCompilerError> {
-        let instruction: Instruction = self.or()?;
+    fn expr(&mut self, type_ctx: &TypeContext) -> Result<Instruction<'instr>, ThrushCompilerError> {
+        let instruction: Instruction = self.or(type_ctx)?;
         Ok(instruction)
     }
 
-    fn or(&mut self) -> Result<Instruction<'instr>, ThrushCompilerError> {
-        let mut expression: Instruction = self.and()?;
+    fn or(&mut self, type_ctx: &TypeContext) -> Result<Instruction<'instr>, ThrushCompilerError> {
+        let mut expression: Instruction = self.and(type_ctx)?;
 
         while self.match_token(TokenKind::Or)? {
             let operator_tk: &Token = self.previous();
             let operator: TokenKind = operator_tk.kind;
             let span: Span = operator_tk.span;
 
-            let right: Instruction = self.and()?;
+            let right: Instruction = self.and(type_ctx)?;
 
             type_checking::check_binary_types(
                 &operator,
@@ -1474,15 +1527,15 @@ impl<'instr> Parser<'instr> {
         Ok(expression)
     }
 
-    fn and(&mut self) -> Result<Instruction<'instr>, ThrushCompilerError> {
-        let mut expression: Instruction = self.equality()?;
+    fn and(&mut self, type_ctx: &TypeContext) -> Result<Instruction<'instr>, ThrushCompilerError> {
+        let mut expression: Instruction = self.equality(type_ctx)?;
 
         while self.match_token(TokenKind::And)? {
             let operator_tk: &Token = self.previous();
             let operator: TokenKind = operator_tk.kind;
             let span: Span = operator_tk.span;
 
-            let right: Instruction = self.equality()?;
+            let right: Instruction = self.equality(type_ctx)?;
 
             type_checking::check_binary_types(
                 &operator,
@@ -1503,15 +1556,18 @@ impl<'instr> Parser<'instr> {
         Ok(expression)
     }
 
-    fn equality(&mut self) -> Result<Instruction<'instr>, ThrushCompilerError> {
-        let mut expression: Instruction = self.comparison()?;
+    fn equality(
+        &mut self,
+        type_ctx: &TypeContext,
+    ) -> Result<Instruction<'instr>, ThrushCompilerError> {
+        let mut expression: Instruction = self.comparison(type_ctx)?;
 
         if self.match_token(TokenKind::BangEq)? || self.match_token(TokenKind::EqEq)? {
             let operator_tk: &Token = self.previous();
             let operator: TokenKind = operator_tk.kind;
             let span: Span = operator_tk.span;
 
-            let right: Instruction = self.comparison()?;
+            let right: Instruction = self.comparison(type_ctx)?;
 
             type_checking::check_binary_types(
                 &operator,
@@ -1532,8 +1588,11 @@ impl<'instr> Parser<'instr> {
         Ok(expression)
     }
 
-    fn comparison(&mut self) -> Result<Instruction<'instr>, ThrushCompilerError> {
-        let mut expression: Instruction = self.term()?;
+    fn comparison(
+        &mut self,
+        type_ctx: &TypeContext,
+    ) -> Result<Instruction<'instr>, ThrushCompilerError> {
+        let mut expression: Instruction = self.term(type_ctx)?;
 
         if self.match_token(TokenKind::Greater)?
             || self.match_token(TokenKind::GreaterEq)?
@@ -1544,7 +1603,7 @@ impl<'instr> Parser<'instr> {
             let operator: TokenKind = operator_tk.kind;
             let span: Span = operator_tk.span;
 
-            let right: Instruction = self.term()?;
+            let right: Instruction = self.term(type_ctx)?;
 
             type_checking::check_binary_types(
                 &operator,
@@ -1565,8 +1624,8 @@ impl<'instr> Parser<'instr> {
         Ok(expression)
     }
 
-    fn term(&mut self) -> Result<Instruction<'instr>, ThrushCompilerError> {
-        let mut expression: Instruction = self.factor()?;
+    fn term(&mut self, type_ctx: &TypeContext) -> Result<Instruction<'instr>, ThrushCompilerError> {
+        let mut expression: Instruction = self.factor(type_ctx)?;
 
         while self.match_token(TokenKind::Plus)?
             || self.match_token(TokenKind::Minus)?
@@ -1577,7 +1636,7 @@ impl<'instr> Parser<'instr> {
             let operator: TokenKind = operator_tk.kind;
             let span: Span = operator_tk.span;
 
-            let right: Instruction = self.factor()?;
+            let right: Instruction = self.factor(type_ctx)?;
 
             let left_type: &Type = expression.get_type();
             let right_type: &Type = right.get_type();
@@ -1598,15 +1657,18 @@ impl<'instr> Parser<'instr> {
         Ok(expression)
     }
 
-    fn factor(&mut self) -> Result<Instruction<'instr>, ThrushCompilerError> {
-        let mut expression: Instruction = self.unary()?;
+    fn factor(
+        &mut self,
+        type_ctx: &TypeContext,
+    ) -> Result<Instruction<'instr>, ThrushCompilerError> {
+        let mut expression: Instruction = self.unary(type_ctx)?;
 
         while self.match_token(TokenKind::Slash)? || self.match_token(TokenKind::Star)? {
             let operator_tk: &Token = self.previous();
             let operator: TokenKind = operator_tk.kind;
             let span: Span = operator_tk.span;
 
-            let right: Instruction = self.unary()?;
+            let right: Instruction = self.unary(type_ctx)?;
 
             let left_type: &Type = expression.get_type();
             let right_type: &Type = right.get_type();
@@ -1632,13 +1694,16 @@ impl<'instr> Parser<'instr> {
         Ok(expression)
     }
 
-    fn unary(&mut self) -> Result<Instruction<'instr>, ThrushCompilerError> {
+    fn unary(
+        &mut self,
+        type_ctx: &TypeContext,
+    ) -> Result<Instruction<'instr>, ThrushCompilerError> {
         if self.match_token(TokenKind::Bang)? {
             let operator_tk: &Token = self.previous();
             let operator: TokenKind = operator_tk.kind;
             let span: Span = operator_tk.span;
 
-            let expression: Instruction = self.primary()?;
+            let expression: Instruction = self.primary(type_ctx)?;
 
             type_checking::check_unary_types(
                 &operator,
@@ -1660,7 +1725,7 @@ impl<'instr> Parser<'instr> {
             let operator: TokenKind = operator_tk.kind;
             let span: Span = operator_tk.span;
 
-            let mut expression: Instruction = self.primary()?;
+            let mut expression: Instruction = self.primary(type_ctx)?;
 
             expression.cast_signess(operator);
 
@@ -1677,12 +1742,15 @@ impl<'instr> Parser<'instr> {
             });
         }
 
-        let instr: Instruction = self.primary()?;
+        let instr: Instruction = self.primary(type_ctx)?;
 
         Ok(instr)
     }
 
-    fn primary(&mut self) -> Result<Instruction<'instr>, ThrushCompilerError> {
+    fn primary(
+        &mut self,
+        type_ctx: &TypeContext,
+    ) -> Result<Instruction<'instr>, ThrushCompilerError> {
         let primary: Instruction = match &self.peek().kind {
             TokenKind::Take => {
                 self.only_advance()?;
@@ -1738,7 +1806,7 @@ impl<'instr> Parser<'instr> {
                     });
                 }
 
-                let expression: Instruction = self.expr()?;
+                let expression: Instruction = self.expr(type_ctx)?;
                 let expression_type: &Type = expression.get_type();
 
                 if !expression_type.is_ptr_type() && !expression_type.is_address_type() {
@@ -1769,7 +1837,7 @@ impl<'instr> Parser<'instr> {
                     String::from("Expected '['."),
                 )?;
 
-                let kind: Type = self.build_type(None)?;
+                let write_type: Type = self.build_type(None)?;
 
                 self.consume(
                     TokenKind::RBracket,
@@ -1777,9 +1845,14 @@ impl<'instr> Parser<'instr> {
                     String::from("Expected ']'."),
                 )?;
 
-                let value: Instruction = self.expr()?;
+                let value: Instruction = self.expr(type_ctx)?;
 
-                self.check_type_mismatch(kind.clone(), value.get_type().clone(), Some(&value));
+                self.check_type_mismatch(
+                    &write_type,
+                    value.get_type(),
+                    value.get_span(),
+                    Some(&value),
+                );
 
                 self.consume(
                     TokenKind::Arrow,
@@ -1801,12 +1874,12 @@ impl<'instr> Parser<'instr> {
                     return Ok(Instruction::Write {
                         write_to: (name, None),
                         write_value: Rc::new(value),
-                        write_type: kind,
+                        write_type,
                         span,
                     });
                 }
 
-                let expression: Instruction = self.expr()?;
+                let expression: Instruction = self.expr(type_ctx)?;
                 let expression_type: &Type = expression.get_type();
 
                 if !expression_type.is_ptr_type() && !expression_type.is_address_type() {
@@ -1822,7 +1895,7 @@ impl<'instr> Parser<'instr> {
                 Instruction::Write {
                     write_to: ("", Some(Rc::new(expression))),
                     write_value: Rc::new(value),
-                    write_type: kind,
+                    write_type,
                     span,
                 }
             }
@@ -1845,17 +1918,17 @@ impl<'instr> Parser<'instr> {
                     String::from("Expected '['."),
                 )?;
 
-                return self.build_address(name, span);
+                return self.build_address(name, span, type_ctx);
             }
 
-            TokenKind::New => self.build_constructor()?,
+            TokenKind::New => self.build_constructor(type_ctx)?,
 
             TokenKind::PlusPlus => {
                 let operator_tk: &Token = self.advance()?;
                 let operator: TokenKind = operator_tk.kind;
                 let span: Span = operator_tk.span;
 
-                let expression: Instruction = self.expr()?;
+                let expression: Instruction = self.expr(type_ctx)?;
 
                 if !expression.is_local_ref() {
                     return Err(ThrushCompilerError::Error(
@@ -1881,7 +1954,7 @@ impl<'instr> Parser<'instr> {
                 let operator: TokenKind = operator_tk.kind;
                 let span: Span = operator_tk.span;
 
-                let expression: Instruction = self.expr()?;
+                let expression: Instruction = self.expr(type_ctx)?;
 
                 if !expression.is_local_ref() {
                     return Err(ThrushCompilerError::Error(
@@ -1905,8 +1978,8 @@ impl<'instr> Parser<'instr> {
             TokenKind::LParen => {
                 let span: Span = self.advance()?.span;
 
-                let expression: Instruction = self.expression()?;
-                let expression_type: &Type = expression.get_type();
+                let expression: Instruction = self.expression(type_ctx)?;
+                let kind: &Type = expression.get_type();
 
                 if !expression.is_binary() && !expression.is_group() {
                     return Err(ThrushCompilerError::Error(
@@ -1926,7 +1999,7 @@ impl<'instr> Parser<'instr> {
 
                 return Ok(Instruction::Group {
                     expression: Rc::new(expression.clone()),
-                    kind: expression_type.clone(),
+                    kind: kind.clone(),
                     span,
                 });
             }
@@ -1936,13 +2009,14 @@ impl<'instr> Parser<'instr> {
                 let str: &[u8] = str_tk.lexeme;
                 let span: Span = str_tk.span;
 
-                Instruction::Str(Type::Str, str.parse_scapes(span)?)
+                Instruction::Str(Type::Str, str.parse_scapes(span)?, span)
             }
 
             TokenKind::Char => {
                 let char: &Token = self.advance()?;
+                let span: Span = char.span;
 
-                Instruction::Char(Type::Char, char.lexeme[0])
+                Instruction::Char(Type::Char, char.lexeme[0], span)
             }
 
             kind => match kind {
@@ -1956,7 +2030,7 @@ impl<'instr> Parser<'instr> {
                     let integer_type: Type = parsed_integer.0;
                     let integer_value: f64 = parsed_integer.1;
 
-                    Instruction::Integer(integer_type, integer_value, false)
+                    Instruction::Integer(integer_type, integer_value, false, span)
                 }
 
                 TokenKind::Float => {
@@ -1969,7 +2043,7 @@ impl<'instr> Parser<'instr> {
                     let float_type: Type = parsed_float.0;
                     let float_value: f64 = parsed_float.1;
 
-                    Instruction::Float(float_type, float_value, false)
+                    Instruction::Float(float_type, float_value, false, span)
                 }
 
                 TokenKind::Identifier => {
@@ -1988,7 +2062,7 @@ impl<'instr> Parser<'instr> {
                         ));
                     }*/
 
-                    let object: FoundObjectId = self.objects.get_object_id(name, span)?;
+                    let object: FoundSymbolId = self.symbols.get_symbols_id(name, span)?;
 
                     /*if object.is_structure() {
                         return Ok(Instruction::ComplexType(
@@ -2002,7 +2076,7 @@ impl<'instr> Parser<'instr> {
                         let custom_id: &str = object.expected_custom_type(location)?;
 
                         let custom: CustomType = self
-                            .objects
+                            .symbols
                             .get_custom_type_by_id(custom_id, location)?;
 
                         let custom_type_fields: CustomTypeFields = custom.0;
@@ -2011,11 +2085,11 @@ impl<'instr> Parser<'instr> {
                     }*/
 
                     if self.match_token(TokenKind::Eq)? {
-                        let object: FoundObjectId = self.objects.get_object_id(name, span)?;
+                        let object: FoundSymbolId = self.symbols.get_symbols_id(name, span)?;
 
                         let local_position: (&str, usize) = object.expected_local(span)?;
 
-                        let local: &Local = self.objects.get_local_by_id(
+                        let local: &Local = self.symbols.get_local_by_id(
                             local_position.0,
                             local_position.1,
                             span,
@@ -2023,11 +2097,12 @@ impl<'instr> Parser<'instr> {
 
                         let local_type: Type = local.0.clone();
 
-                        let expression: Instruction = self.expression()?;
+                        let expression: Instruction = self.expression(type_ctx)?;
 
                         self.check_type_mismatch(
-                            local_type.clone(),
-                            expression.get_type().clone(),
+                            &local_type.clone(),
+                            expression.get_type(),
+                            expression.get_span(),
                             Some(&expression),
                         );
 
@@ -2044,7 +2119,7 @@ impl<'instr> Parser<'instr> {
                     }
 
                     if self.match_token(TokenKind::LParen)? {
-                        return self.build_function_call(name, span);
+                        return self.build_function_call(name, span, type_ctx);
                     }
 
                     if object.is_enum() {
@@ -2068,15 +2143,8 @@ impl<'instr> Parser<'instr> {
                     self.build_ref(name, span, false)?
                 }
 
-                TokenKind::True => {
-                    self.only_advance()?;
-                    Instruction::Boolean(Type::Bool, true)
-                }
-
-                TokenKind::False => {
-                    self.only_advance()?;
-                    Instruction::Boolean(Type::Bool, false)
-                }
+                TokenKind::True => Instruction::Boolean(Type::Bool, true, self.advance()?.span),
+                TokenKind::False => Instruction::Boolean(Type::Bool, false, self.advance()?.span),
 
                 _ => {
                     let previous: &Token = self.advance()?;
@@ -2134,12 +2202,12 @@ impl<'instr> Parser<'instr> {
                     ));
                 }*/
 
-                let object: FoundObjectId = self.objects.get_object_id(name, span)?;
+                let object: FoundSymbolId = self.symbols.get_symbols_id(name, span)?;
 
                 if object.is_structure() {
                     let struct_id: &str = object.expected_struct(span)?;
 
-                    let structure: Struct = self.objects.get_struct_by_id(struct_id, span)?;
+                    let structure: Struct = self.symbols.get_struct_by_id(struct_id, span)?;
 
                     let fields: StructFields = structure.get_fields();
 
@@ -2149,7 +2217,7 @@ impl<'instr> Parser<'instr> {
                 if object.is_custom_type() {
                     let custom_id: &str = object.expected_custom_type(span)?;
 
-                    let custom: CustomType = self.objects.get_custom_type_by_id(custom_id, span)?;
+                    let custom: CustomType = self.symbols.get_custom_type_by_id(custom_id, span)?;
 
                     let custom_type_fields: CustomTypeFields = custom.0;
 
@@ -2213,16 +2281,16 @@ impl<'instr> Parser<'instr> {
         span: Span,
         take_ptr: bool,
     ) -> Result<Instruction<'instr>, ThrushCompilerError> {
-        let object: FoundObjectId = self.objects.get_object_id(name, span)?;
+        let object: FoundSymbolId = self.symbols.get_symbols_id(name, span)?;
 
         if object.is_constant() {
             let const_id: &str = object.expected_constant(span)?;
-
-            let constant: Constant = self.objects.get_const_by_id(const_id, span)?;
+            let constant: Constant = self.symbols.get_const_by_id(const_id, span)?;
+            let constant_type: Type = constant.get_type();
 
             return Ok(Instruction::ConstRef {
                 name,
-                kind: constant.0,
+                kind: constant_type,
                 take: take_ptr,
                 span,
             });
@@ -2231,12 +2299,12 @@ impl<'instr> Parser<'instr> {
         let local_position: (&str, usize) = object.expected_local(span)?;
 
         let local: &Local =
-            self.objects
+            self.symbols
                 .get_local_by_id(local_position.0, local_position.1, span)?;
 
-        let mut local_type: Type = local.0.clone();
+        let mut local_type: Type = local.get_type();
 
-        if local.2 {
+        if local.is_undefined() {
             return Err(ThrushCompilerError::Error(
                 String::from("Syntax error"),
                 format!("Local reference '{}' is undefined.", name),
@@ -2281,10 +2349,10 @@ impl<'instr> Parser<'instr> {
         name: &'instr str,
         span: Span,
     ) -> Result<Instruction<'instr>, ThrushCompilerError> {
-        let object: FoundObjectId = self.objects.get_object_id(name, span)?;
+        let object: FoundSymbolId = self.symbols.get_symbols_id(name, span)?;
         let enum_id: &str = object.expected_enum(span)?;
 
-        let union: EnumFields = self.objects.get_enum_by_id(enum_id, span)?.get_fields();
+        let union: EnumFields = self.symbols.get_enum_by_id(enum_id, span)?.get_fields();
 
         let field: &Token = self.consume(
             TokenKind::Identifier,
@@ -2312,11 +2380,12 @@ impl<'instr> Parser<'instr> {
         &mut self,
         name: &'instr str,
         span: Span,
+        type_ctx: &TypeContext,
     ) -> Result<Instruction<'instr>, ThrushCompilerError> {
-        let object: FoundObjectId = self.objects.get_object_id(name, span)?;
+        let object: FoundSymbolId = self.symbols.get_symbols_id(name, span)?;
         let local_id: (&str, usize) = object.expected_local(span)?;
 
-        let local: &Local = self.objects.get_local_by_id(local_id.0, local_id.1, span)?;
+        let local: &Local = self.symbols.get_local_by_id(local_id.0, local_id.1, span)?;
 
         let local_type: Type = local.0.clone();
 
@@ -2332,7 +2401,7 @@ impl<'instr> Parser<'instr> {
 
         let mut indexes: Vec<Instruction> = Vec::with_capacity(10);
 
-        let index: Instruction = self.expr()?;
+        let index: Instruction = self.expr(type_ctx)?;
 
         if !index.is_unsigned_integer() {
             self.push_error(
@@ -2353,7 +2422,7 @@ impl<'instr> Parser<'instr> {
         indexes.push(index);
 
         while self.match_token(TokenKind::LBracket)? {
-            let index: Instruction = self.expr()?;
+            let index: Instruction = self.expr(type_ctx)?;
 
             if !index.is_unsigned_integer() {
                 self.push_error(
@@ -2386,14 +2455,15 @@ impl<'instr> Parser<'instr> {
         &mut self,
         name: &'instr str,
         span: Span,
+        type_ctx: &TypeContext,
     ) -> Result<Instruction<'instr>, ThrushCompilerError> {
         let mut args_provided: Vec<Instruction> = Vec::with_capacity(10);
 
-        let object: FoundObjectId = self.objects.get_object_id(name, span)?;
+        let object: FoundSymbolId = self.symbols.get_symbols_id(name, span)?;
 
         let function_id: &str = object.expected_function(span)?;
 
-        let function: Function = self.objects.get_function_by_id(span, function_id)?;
+        let function: Function = self.symbols.get_function_by_id(span, function_id)?;
 
         let function_type: Type = function.0;
         let ignore_extra_args: bool = function.2;
@@ -2405,7 +2475,7 @@ impl<'instr> Parser<'instr> {
                 continue;
             }
 
-            let instruction: Instruction = self.expr()?;
+            let instruction: Instruction = self.expr(type_ctx)?;
 
             self.throw_constructor(&instruction);
 
@@ -2464,7 +2534,12 @@ impl<'instr> Parser<'instr> {
                 let from_type: &Type = argument.get_type();
                 let target_type: &Type = &function.1[position];
 
-                self.check_type_mismatch(target_type.clone(), from_type.clone(), Some(argument));
+                self.check_type_mismatch(
+                    target_type,
+                    from_type,
+                    argument.get_span(),
+                    Some(argument),
+                );
             }
         }
 
@@ -2484,13 +2559,13 @@ impl<'instr> Parser<'instr> {
 
     ########################################################################*/
 
-    fn declare(&mut self) {
+    fn declare(&mut self, type_ctx: &mut TypeContext) {
         self.tokens
             .iter()
             .enumerate()
             .filter(|(_, token)| token.kind.is_type_keyword())
             .for_each(|(pos, _)| {
-                let _ = self.declare_type(pos);
+                let _ = self.declare_custom_type(pos);
                 self.current = 0;
             });
 
@@ -2499,7 +2574,7 @@ impl<'instr> Parser<'instr> {
             .enumerate()
             .filter(|(_, token)| token.kind.is_const_keyword())
             .for_each(|(pos, _)| {
-                let _ = self.declare_const(pos);
+                let _ = self.declare_const(pos, type_ctx);
                 self.current = 0;
             });
 
@@ -2517,7 +2592,7 @@ impl<'instr> Parser<'instr> {
             .enumerate()
             .filter(|(_, token)| token.kind.is_enum_keyword())
             .for_each(|(pos, _)| {
-                let _ = self.declare_enum(pos);
+                let _ = self.declare_enum(pos, type_ctx);
                 self.current = 0;
             });
 
@@ -2526,12 +2601,12 @@ impl<'instr> Parser<'instr> {
             .enumerate()
             .filter(|(_, token)| token.kind.is_function_keyword())
             .for_each(|(pos, _)| {
-                let _ = self.declare_function(pos);
+                let _ = self.declare_function(pos, type_ctx);
                 self.current = 0;
             });
     }
 
-    fn declare_type(&mut self, position: usize) -> Result<(), ThrushCompilerError> {
+    fn declare_custom_type(&mut self, position: usize) -> Result<(), ThrushCompilerError> {
         self.current = position;
         self.build_custom_type(true)?;
 
@@ -2545,23 +2620,35 @@ impl<'instr> Parser<'instr> {
         Ok(())
     }
 
-    fn declare_enum(&mut self, position: usize) -> Result<(), ThrushCompilerError> {
+    fn declare_enum(
+        &mut self,
+        position: usize,
+        type_ctx: &mut TypeContext,
+    ) -> Result<(), ThrushCompilerError> {
         self.current = position;
-        self.build_enum(true)?;
+        self.build_enum(true, type_ctx)?;
 
         Ok(())
     }
 
-    fn declare_const(&mut self, position: usize) -> Result<(), ThrushCompilerError> {
+    fn declare_const(
+        &mut self,
+        position: usize,
+        type_ctx: &mut TypeContext,
+    ) -> Result<(), ThrushCompilerError> {
         self.current = position;
-        self.build_const(true)?;
+        self.build_const(true, type_ctx)?;
 
         Ok(())
     }
 
-    fn declare_function(&mut self, position: usize) -> Result<(), ThrushCompilerError> {
+    fn declare_function(
+        &mut self,
+        position: usize,
+        type_ctx: &mut TypeContext,
+    ) -> Result<(), ThrushCompilerError> {
         self.current = position;
-        self.build_function(true)?;
+        self.build_function(true, type_ctx)?;
 
         Ok(())
     }
@@ -2575,7 +2662,7 @@ impl<'instr> Parser<'instr> {
     ########################################################################*/
 
     fn throw_unreacheable_code(&mut self) {
-        if self.unreacheable_code == self.scope && self.scope != 0 {
+        if self.unreacheable_code == self.scope && !self.is_main_scope() {
             self.push_error(
                 String::from("Syntax error"),
                 String::from("Unreacheable code."),
@@ -2603,39 +2690,28 @@ impl<'instr> Parser<'instr> {
 
     fn check_type_mismatch(
         &mut self,
-        target_type: Type,
-        from_type: Type,
-        expression: Option<&Instruction>,
+        target: &Type,
+        from: &Type,
+        span: Span,
+        expr: Option<&Instruction>,
     ) {
-        if expression.is_some_and(|expression| expression.is_binary() || expression.is_group()) {
-            if let Err(error) = type_checking::check_type(
-                target_type.clone(),
-                Type::Void,
-                expression,
-                None,
-                ThrushCompilerError::Error(
-                    String::from("Mismatched types"),
-                    format!("Expected '{}' but found '{}'.", target_type, from_type),
-                    self.previous().span,
-                ),
-            ) {
+        let error: ThrushCompilerError = ThrushCompilerError::Error(
+            String::from("Mismatched types"),
+            format!("Expected '{}' but found '{}'.", target, from),
+            span,
+        );
+
+        if expr.is_some_and(|expr| expr.is_binary() || expr.is_group()) {
+            if let Err(error) = type_checking::check_type(target, &Type::Void, expr, None, error) {
                 self.errors.push(error);
             }
-        }
-
-        if let Err(error) = type_checking::check_type(
-            target_type.clone(),
-            from_type.clone(),
-            None,
-            None,
-            ThrushCompilerError::Error(
-                String::from("Mismatched types"),
-                format!("Expected '{}' but found '{}'.", target_type, from_type),
-                self.previous().span,
-            ),
-        ) {
+        } else if let Err(error) = type_checking::check_type(target, from, None, None, error) {
             self.errors.push(error);
         }
+    }
+
+    fn add_lift_local(&mut self, instruction: Instruction<'instr>) {
+        self.lift_locals.push(instruction);
     }
 
     fn consume(

@@ -14,11 +14,11 @@ use super::{
 #[derive(Debug, Clone, Default)]
 pub enum Instruction<'ctx> {
     // Primitive types
-    Str(Type, Vec<u8>),
-    Char(Type, u8),
-    Boolean(Type, bool),
-    Integer(Type, f64, bool),
-    Float(Type, f64, bool),
+    Str(Type, Vec<u8>, Span),
+    Char(Type, u8, Span),
+    Boolean(Type, bool, Span),
+    Integer(Type, f64, bool, Span),
+    Float(Type, f64, bool, Span),
 
     // LLVMValue
     LLVMValue(BasicValueEnum<'ctx>),
@@ -40,6 +40,7 @@ pub enum Instruction<'ctx> {
     InitStruct {
         arguments: Constructor<'ctx>,
         kind: Type,
+        span: Span,
     },
 
     // Enums
@@ -207,7 +208,6 @@ pub enum Instruction<'ctx> {
 }
 
 impl<'ctx> Instruction<'ctx> {
-    #[inline]
     pub fn get_type(&self) -> &Type {
         match self {
             Instruction::Integer(kind, ..) => kind,
@@ -222,9 +222,9 @@ impl<'ctx> Instruction<'ctx> {
             Instruction::Group { kind, .. } => kind,
             Instruction::UnaryOp { kind, .. } => kind,
 
-            Instruction::Str(kind, _) => kind,
-            Instruction::Boolean(kind, _) => kind,
-            Instruction::Char(kind, _) => kind,
+            Instruction::Str(kind, _, _) => kind,
+            Instruction::Boolean(kind, _, _) => kind,
+            Instruction::Char(kind, _, _) => kind,
             Instruction::Address { .. } => &Type::Address,
             Instruction::InitStruct { kind, .. } => kind,
             Instruction::Carry {
@@ -232,6 +232,32 @@ impl<'ctx> Instruction<'ctx> {
             } => kind,
 
             _ => &Type::Void,
+        }
+    }
+
+    pub fn get_span(&self) -> Span {
+        match self {
+            Instruction::Integer(_, _, _, span) => *span,
+            Instruction::Float(_, _, _, span) => *span,
+            Instruction::Local { span, .. } => *span,
+            Instruction::LocalMut { span, .. } => *span,
+            Instruction::FunctionParameter { span, .. } => *span,
+            Instruction::LocalRef { span, .. } => *span,
+            Instruction::ConstRef { span, .. } => *span,
+            Instruction::Call { span, .. } => *span,
+            Instruction::BinaryOp { span, .. } => *span,
+            Instruction::Group { span, .. } => *span,
+            Instruction::UnaryOp { span, .. } => *span,
+
+            Instruction::Str(_, _, span) => *span,
+            Instruction::Boolean(_, _, span) => *span,
+            Instruction::Char(_, _, span) => *span,
+            Instruction::Address { span, .. } => *span,
+            Instruction::InitStruct { span, .. } => *span,
+            Instruction::Carry { span, .. } => *span,
+            Instruction::InitStruct { span, .. } => *span,
+
+            _ => unreachable!(),
         }
     }
 
@@ -293,7 +319,7 @@ impl<'ctx> Instruction<'ctx> {
 
 impl Instruction<'_> {
     pub fn cast_signess(&mut self, operator: TokenKind) {
-        if let Instruction::Integer(kind, _, is_signed) = self {
+        if let Instruction::Integer(kind, _, is_signed, _) = self {
             if operator.is_minus_operator() {
                 *kind = kind.narrowing_cast();
                 *is_signed = true;
@@ -306,7 +332,7 @@ impl Instruction<'_> {
             }
         }
 
-        if let Instruction::Float(_, _, is_signed) = self {
+        if let Instruction::Float(_, _, is_signed, _) = self {
             if operator.is_minus_operator() {
                 *is_signed = true;
             }
@@ -371,11 +397,6 @@ impl Instruction<'_> {
     }
 
     #[inline]
-    pub const fn is_null(&self) -> bool {
-        matches!(self, Instruction::Null { .. })
-    }
-
-    #[inline]
     pub const fn is_gep(&self) -> bool {
         matches!(self, Instruction::Address { .. })
     }
@@ -411,18 +432,13 @@ impl Instruction<'_> {
     }
 
     #[inline]
-    pub const fn is_str(&self) -> bool {
-        matches!(self, Instruction::Str { .. })
-    }
-
-    #[inline]
     pub const fn is_integer(&self) -> bool {
         matches!(self, Instruction::Integer { .. })
     }
 
     #[inline]
     pub const fn is_bool(&self) -> bool {
-        matches!(self, Instruction::Boolean(_, _))
+        matches!(self, Instruction::Boolean(_, _, _))
     }
 
     #[inline]

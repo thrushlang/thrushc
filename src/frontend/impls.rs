@@ -1,15 +1,12 @@
 use crate::middle::statement::StructFields;
 use crate::middle::statement::traits::{
-    FoundObjectEither, FoundObjectExtensions, StructureExtensions,
+    FoundSymbolEither, FoundSymbolExtension, StructureExtensions,
 };
+use crate::middle::symbols::types::Struct;
 
 use super::super::common::error::ThrushCompilerError;
 
-use super::{
-    super::middle::types::*,
-    lexer::Span,
-    objects::{FoundObjectId, Struct},
-};
+use super::{super::middle::types::*, lexer::Span, symbols::FoundSymbolId};
 
 impl<'a> StructureExtensions<'a> for Struct<'a> {
     fn contains_field(&self, name: &str) -> bool {
@@ -30,7 +27,7 @@ impl<'a> StructureExtensions<'a> for Struct<'a> {
     }
 }
 
-impl FoundObjectExtensions for FoundObjectId<'_> {
+impl FoundSymbolExtension for FoundSymbolId<'_> {
     fn is_structure(&self) -> bool {
         self.0.is_some()
     }
@@ -52,7 +49,7 @@ impl FoundObjectExtensions for FoundObjectId<'_> {
     }
 }
 
-impl<'instr> FoundObjectEither<'instr> for FoundObjectId<'instr> {
+impl<'instr> FoundSymbolEither<'instr> for FoundSymbolId<'instr> {
     fn expected_custom_type(&self, span: Span) -> Result<&'instr str, ThrushCompilerError> {
         if let Some(type_id) = self.4 {
             return Ok(type_id);

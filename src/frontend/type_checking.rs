@@ -212,8 +212,8 @@ pub fn check_unary_types(op: &TokenKind, a: &Type, span: Span) -> Result<(), Thr
 }
 
 pub fn check_type(
-    target_type: Type,
-    from_type: Type,
+    target_type: &Type,
+    from_type: &Type,
     expression: Option<&Instruction>,
     operator: Option<&TokenKind>,
     error: ThrushCompilerError,
@@ -224,13 +224,7 @@ pub fn check_type(
         ..
     }) = expression
     {
-        return check_type(
-            target_type,
-            (*expression_type).clone(),
-            None,
-            Some(operator),
-            error,
-        );
+        return check_type(target_type, expression_type, None, Some(operator), error);
     }
 
     if let Some(Instruction::UnaryOp {
@@ -239,13 +233,7 @@ pub fn check_type(
         ..
     }) = expression
     {
-        return check_type(
-            target_type,
-            (*expression_type).clone(),
-            None,
-            Some(operator),
-            error,
-        );
+        return check_type(target_type, expression_type, None, Some(operator), error);
     }
 
     if let Some(Instruction::Group {
@@ -254,13 +242,7 @@ pub fn check_type(
         ..
     }) = expression
     {
-        return check_type(
-            target_type,
-            (*expression_type).clone(),
-            Some(expression),
-            None,
-            error,
-        );
+        return check_type(target_type, expression_type, Some(expression), None, error);
     }
 
     match (target_type, from_type, operator) {
@@ -273,13 +255,7 @@ pub fn check_type(
 
             target_fields.iter().zip(from_fields.iter()).try_for_each(
                 |(target_field, from_field)| {
-                    check_type(
-                        (**target_field).clone(),
-                        (**from_field).clone(),
-                        None,
-                        None,
-                        error.clone(),
-                    )
+                    check_type(target_field, from_field, None, None, error.clone())
                 },
             )?;
 
@@ -290,13 +266,7 @@ pub fn check_type(
 
         (Type::Ptr(None), Type::Ptr(None), None) => Ok(()),
         (Type::Ptr(Some(target_type)), Type::Ptr(Some(from_type)), None) => {
-            check_type(
-                (*target_type).clone(),
-                (*from_type).clone(),
-                expression,
-                operator,
-                error,
-            )?;
+            check_type(target_type, from_type, expression, operator, error)?;
 
             Ok(())
         }

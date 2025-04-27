@@ -5,6 +5,16 @@ use inkwell::{context::Context, targets::TargetData};
 
 use crate::backend::llvm::compiler::{attributes::LLVMAttribute, typegen};
 
+pub struct TypeContext {
+    pub function_type: Type,
+}
+
+impl TypeContext {
+    pub fn new(function_type: Type) -> Self {
+        Self { function_type }
+    }
+}
+
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum TokenKind {
     // --- Operators ---

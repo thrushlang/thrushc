@@ -2,7 +2,7 @@ use crate::middle::statement::UnaryOp;
 
 use super::super::super::super::middle::types::*;
 
-use super::{Instruction, memory::AllocatedObject, objects::CompilerObjects, valuegen};
+use super::{Instruction, memory::AllocatedSymbol, symbols::SymbolsTable, valuegen};
 
 use super::typegen;
 
@@ -16,7 +16,7 @@ pub fn unary_op<'ctx>(
     builder: &Builder<'ctx>,
     context: &'ctx Context,
     unary: UnaryOp<'ctx>,
-    compiler_objects: &CompilerObjects<'ctx>,
+    compiler_objects: &SymbolsTable<'ctx>,
 ) -> BasicValueEnum<'ctx> {
     if let (
         TokenKind::PlusPlus | TokenKind::MinusMinus,
@@ -28,7 +28,7 @@ pub fn unary_op<'ctx>(
         },
     ) = unary
     {
-        let object: AllocatedObject = compiler_objects.get_allocated_object(name);
+        let object: AllocatedSymbol = compiler_objects.get_allocated_symbol(name);
 
         if ref_type.is_integer_type() {
             let int: IntValue = object
@@ -88,7 +88,7 @@ pub fn unary_op<'ctx>(
         },
     ) = unary
     {
-        let object: AllocatedObject = compiler_objects.get_allocated_object(ref_name);
+        let object: AllocatedSymbol = compiler_objects.get_allocated_symbol(ref_name);
 
         if ref_type.is_integer_type() || ref_type.is_bool_type() {
             let int: IntValue = object
@@ -128,7 +128,7 @@ pub fn unary_op<'ctx>(
         },
     ) = unary
     {
-        let object: AllocatedObject = compiler_objects.get_allocated_object(name);
+        let object: AllocatedSymbol = compiler_objects.get_allocated_symbol(name);
 
         if ref_type.is_integer_type() {
             let int: IntValue = object
@@ -153,14 +153,14 @@ pub fn unary_op<'ctx>(
         return result.into();
     }
 
-    if let (TokenKind::Bang, _, Instruction::Boolean(_, bool)) = unary {
+    if let (TokenKind::Bang, _, Instruction::Boolean(_, bool, _)) = unary {
         let value: IntValue = valuegen::integer(context, &Type::Bool, *bool as u64, false);
         let result: IntValue = builder.build_not(value, "").unwrap();
 
         return result.into();
     }
 
-    if let (TokenKind::Minus, _, Instruction::Integer(kind, num, is_signed)) = unary {
+    if let (TokenKind::Minus, _, Instruction::Integer(kind, num, is_signed, _)) = unary {
         let value: IntValue = valuegen::integer(context, kind, *num as u64, *is_signed);
 
         if !is_signed {
@@ -171,7 +171,7 @@ pub fn unary_op<'ctx>(
         return value.into();
     }
 
-    if let (TokenKind::Minus, _, Instruction::Float(kind, number, is_signed)) = unary {
+    if let (TokenKind::Minus, _, Instruction::Float(kind, number, is_signed, _)) = unary {
         let value: FloatValue = valuegen::float(builder, context, kind, *number, *is_signed);
 
         if !is_signed {

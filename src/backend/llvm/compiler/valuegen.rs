@@ -1,10 +1,17 @@
+use crate::backend::llvm::compiler::memory::AllocatedSymbol;
+use crate::backend::llvm::compiler::{binaryop, call, unaryop, utils};
+use crate::middle::instruction::Instruction;
+
 use super::super::super::super::middle::types::Type;
 
+use super::symbols::SymbolsTable;
 use super::typegen;
 
+use inkwell::module::Module;
 use inkwell::types::BasicTypeEnum;
 
-use inkwell::values::{FloatValue, IntValue};
+use inkwell::AddressSpace;
+use inkwell::values::{BasicValueEnum, FloatValue, IntValue};
 use inkwell::{builder::Builder, context::Context, values::PointerValue};
 
 pub fn alloc<'ctx>(
@@ -66,4 +73,298 @@ pub fn float<'ctx>(
         Type::F64 => context.f64_type().const_float(number),
         _ => unreachable!(),
     }
+}
+
+pub fn generate_expression<'ctx>(
+    module: &Module<'ctx>,
+    builder: &Builder<'ctx>,
+    context: &'ctx Context,
+    expression: &'ctx Instruction,
+    casting_target: &Type,
+    symbols: &SymbolsTable<'ctx>,
+) -> BasicValueEnum<'ctx> {
+    if let Instruction::Str(_, str, ..) = expression {
+        return utils::build_str_constant(module, context, str).into();
+    }
+
+    if let Instruction::Float(kind, num, is_signed, ..) = expression {
+        let mut float: FloatValue = float(builder, context, kind, *num, *is_signed);
+
+        if let Some(casted_float) =
+            utils::float_autocast(casting_target, kind, None, float.into(), builder, context)
+        {
+            float = casted_float.into_float_value();
+        }
+
+        return float.into();
+    }
+
+    if let Instruction::Integer(kind, num, is_signed, ..) = expression {
+        let mut integer: IntValue = integer(context, kind, *num as u64, *is_signed);
+
+        if let Some(casted_integer) =
+            utils::integer_autocast(casting_target, kind, None, integer.into(), builder, context)
+        {
+            integer = casted_integer.into_int_value();
+        }
+
+        return integer.into();
+    }
+
+    if let Instruction::Char(_, byte, ..) = expression {
+        return context.i8_type().const_int(*byte as u64, false).into();
+    }
+
+    if let Instruction::Boolean(_, bool, ..) = expression {
+        return context.bool_type().const_int(*bool as u64, false).into();
+    }
+
+    if let Instruction::Write {
+        write_to,
+        write_type,
+        write_value,
+        ..
+    } = expression
+    {
+        let write_reference: &str = write_to.0;
+
+        let write_value: BasicValueEnum =
+            generate_expression(module, builder, context, write_value, write_type, symbols);
+
+        if let Some(expression) = write_to.1.as_ref() {
+            let compiled_expression: PointerValue =
+                generate_expression(module, builder, context, expression, &Type::Void, symbols)
+                    .into_pointer_value();
+
+            builder
+                .build_store(compiled_expression, write_value)
+                .unwrap();
+
+            return context
+                .ptr_type(AddressSpace::default())
+                .const_null()
+                .into();
+        }
+
+        let object: AllocatedSymbol = symbols.get_allocated_symbol(write_reference);
+
+        object.build_store(builder, write_value);
+
+        return context
+            .ptr_type(AddressSpace::default())
+            .const_null()
+            .into();
+    }
+
+    if let Instruction::Carry {
+        name,
+        expression,
+        carry_type,
+        ..
+    } = expression
+    {
+        let carry_type_generated: BasicTypeEnum = typegen::generate_type(context, carry_type);
+
+        if let Some(expression) = expression {
+            let compiled_expression: PointerValue<'_> =
+                generate_expression(module, builder, context, expression, carry_type, symbols)
+                    .into_pointer_value();
+
+            return builder
+                .build_load(carry_type_generated, compiled_expression, "")
+                .unwrap();
+        }
+
+        let local: AllocatedSymbol = symbols.get_allocated_symbol(name);
+        return local.load_from_memory(builder, carry_type_generated);
+    }
+
+    if let Instruction::Address {
+        name,
+        indexes,
+        kind,
+        ..
+    } = expression
+    {
+        let local: PointerValue = symbols.get_allocated_symbol(name).ptr;
+
+        let mut compiled_indexes: Vec<IntValue> = Vec::with_capacity(10);
+
+        indexes.iter().for_each(|indexe| {
+            let mut compiled_indexe: BasicValueEnum =
+                generate_expression(module, builder, context, indexe, &Type::U32, symbols);
+
+            if let Some(casted_index) = utils::integer_autocast(
+                &Type::U32,
+                indexe.get_type(),
+                None,
+                compiled_indexe,
+                builder,
+                context,
+            ) {
+                compiled_indexe = casted_index;
+            }
+
+            compiled_indexes.push(compiled_indexe.into_int_value());
+        });
+
+        return unsafe {
+            builder
+                .build_in_bounds_gep(
+                    typegen::generate_type(context, kind),
+                    local,
+                    &compiled_indexes,
+                    "",
+                )
+                .unwrap()
+                .into()
+        };
+    }
+
+    if let Instruction::LocalRef {
+        name,
+        kind: ref_type,
+        take,
+        ..
+    }
+    | Instruction::ConstRef {
+        name,
+        kind: ref_type,
+        take,
+        ..
+    } = expression
+    {
+        let object: AllocatedSymbol = symbols.get_allocated_symbol(name);
+
+        if *take {
+            return object.ptr.into();
+        }
+
+        let llvm_type: BasicTypeEnum = typegen::generate_type(context, ref_type);
+
+        return object.load_from_memory(builder, llvm_type);
+    }
+
+    if let Instruction::BinaryOp {
+        left,
+        operator,
+        right,
+        kind: binaryop_type,
+        ..
+    } = expression
+    {
+        if binaryop_type.is_float_type() {
+            return binaryop::float::float_binaryop(
+                module,
+                builder,
+                context,
+                (left, operator, right),
+                casting_target,
+                symbols,
+            );
+        }
+
+        if binaryop_type.is_integer_type() {
+            return binaryop::integer::integer_binaryop(
+                module,
+                builder,
+                context,
+                (left, operator, right),
+                casting_target,
+                symbols,
+            );
+        }
+
+        if binaryop_type.is_bool_type() {
+            return binaryop::boolean::bool_binaryop(
+                module,
+                builder,
+                context,
+                (left, operator, right),
+                casting_target,
+                symbols,
+            );
+        }
+
+        println!("{:?}", expression);
+
+        unreachable!()
+    }
+
+    if let Instruction::UnaryOp {
+        operator,
+        kind,
+        expression,
+        ..
+    } = expression
+    {
+        return unaryop::unary_op(builder, context, (operator, kind, expression), symbols);
+    }
+
+    if let Instruction::LocalMut {
+        name, kind, value, ..
+    } = expression
+    {
+        let object: AllocatedSymbol = symbols.get_allocated_symbol(name);
+
+        let expression: BasicValueEnum =
+            generate_expression(module, builder, context, value, kind, symbols);
+
+        object.build_store(builder, expression);
+
+        return expression;
+    }
+
+    if let Instruction::Call {
+        name: call_name,
+        args: call_arguments,
+        kind: call_type,
+        ..
+    } = expression
+    {
+        return call::build_call(
+            module,
+            builder,
+            context,
+            (call_name, call_type, call_arguments),
+            symbols,
+        )
+        .unwrap();
+    }
+
+    if let Instruction::Return(kind, value) = expression {
+        if kind.is_void_type() {
+            builder.build_return(None).unwrap();
+
+            return context
+                .ptr_type(AddressSpace::default())
+                .const_null()
+                .into();
+        }
+
+        builder
+            .build_return(Some(&generate_expression(
+                module, builder, context, value, kind, symbols,
+            )))
+            .unwrap();
+
+        return context
+            .ptr_type(AddressSpace::default())
+            .const_null()
+            .into();
+    }
+
+    if let Instruction::Group { expression, .. } = expression {
+        return generate_expression(
+            module,
+            builder,
+            context,
+            expression,
+            casting_target,
+            symbols,
+        );
+    }
+
+    println!("{:?}", expression);
+    unreachable!()
 }

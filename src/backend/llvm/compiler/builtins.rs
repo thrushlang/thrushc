@@ -1,10 +1,9 @@
 use crate::{
     common::logging::{self, LoggingType},
-    frontend::objects::Functions,
-    middle::{statement::FunctionCall, types::Type},
+    middle::{statement::FunctionCall, symbols::types::Functions, types::Type},
 };
 
-use super::{Instruction, memory::AllocatedObject, objects::CompilerObjects, typegen, utils};
+use super::{Instruction, memory::AllocatedSymbol, symbols::SymbolsTable, typegen, utils};
 
 use inkwell::{
     FloatPredicate,
@@ -25,7 +24,7 @@ pub fn include(functions: &mut Functions) {
 pub fn build_sizeof<'ctx>(
     context: &'ctx Context,
     call: FunctionCall<'ctx>,
-    compiler_objects: &CompilerObjects<'ctx>,
+    symbols: &SymbolsTable<'ctx>,
 ) -> BasicValueEnum<'ctx> {
     let value: &Instruction = &call.2[0];
 
@@ -61,7 +60,7 @@ pub fn build_sizeof<'ctx>(
             return structure_size.into();
         }
 
-        let ptr: PointerValue = compiler_objects.get_allocated_object(name).ptr;
+        let ptr: PointerValue = symbols.get_allocated_symbol(name).ptr;
 
         return ptr.get_type().size_of().into();
     }
@@ -113,7 +112,7 @@ pub fn build_is_signed<'ctx>(
     context: &'ctx Context,
     builder: &Builder<'ctx>,
     call: FunctionCall<'ctx>,
-    compiler_objects: &CompilerObjects<'ctx>,
+    symbols: &SymbolsTable<'ctx>,
 ) -> BasicValueEnum<'ctx> {
     let value: &Instruction = &call.2[0];
 
@@ -140,7 +139,7 @@ pub fn build_is_signed<'ctx>(
             );
         }
 
-        let object: AllocatedObject = compiler_objects.get_allocated_object(name);
+        let object: AllocatedSymbol = symbols.get_allocated_symbol(name);
 
         return if ref_type.is_integer_type() {
             let mut loaded_value: IntValue = object

@@ -11,12 +11,11 @@ use super::{
     binaryop, call,
     conventions::CallConvention,
     dealloc::Deallocator,
-    generation, local,
-    memory::{AllocatedObject, MemoryFlag},
-    objects::CompilerObjects,
-    typegen, unaryop, utils,
+    local, memory,
+    memory::{AllocatedSymbol, MemoryFlag},
+    symbols::SymbolsTable,
+    typegen, unaryop, utils, valuegen,
 };
-use super::{memory, valuegen};
 
 use inkwell::{
     AddressSpace,
@@ -31,12 +30,12 @@ use inkwell::{
 
 pub struct Codegen<'a, 'ctx> {
     module: &'a Module<'ctx>,
-    builder: &'a Builder<'ctx>,
+    builder: &'ctx Builder<'ctx>,
     context: &'ctx Context,
     target_data: TargetData,
     instructions: &'ctx [Instruction<'ctx>],
     current: usize,
-    compiler_objects: CompilerObjects<'ctx>,
+    symbols: SymbolsTable<'ctx>,
     function: Option<FunctionValue<'ctx>>,
     loop_exit_block: Option<BasicBlock<'ctx>>,
     loop_start_block: Option<BasicBlock<'ctx>>,
@@ -46,7 +45,7 @@ pub struct Codegen<'a, 'ctx> {
 impl<'a, 'ctx> Codegen<'a, 'ctx> {
     pub fn generate(
         module: &'a Module<'ctx>,
-        builder: &'a Builder<'ctx>,
+        builder: &'ctx Builder<'ctx>,
         context: &'ctx Context,
         instructions: &'ctx [Instruction<'ctx>],
         target_data: TargetData,
@@ -58,7 +57,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
             target_data,
             instructions,
             current: 0,
-            compiler_objects: CompilerObjects::new(),
+            symbols: SymbolsTable::new(context, builder),
             function: None,
             loop_exit_block: None,
             loop_start_block: None,
@@ -80,7 +79,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
     fn codegen(&mut self, instruction: &'ctx Instruction) -> Instruction<'ctx> {
         match instruction {
             Instruction::Block { stmts, .. } => {
-                self.compiler_objects.begin_scope();
+                self.symbols.begin_scope();
 
                 stmts.iter().for_each(|instruction| {
                     self.codegen(instruction);
@@ -90,15 +89,15 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                     let deallocator: Deallocator = Deallocator::new(
                         self.builder,
                         self.context,
-                        self.compiler_objects.get_allocated_objects(),
+                        self.symbols.get_allocated_symbols(),
                     );
 
-                    deallocator.dealloc_all(&self.compiler_objects);
+                    deallocator.dealloc_all(&self.symbols);
                 }
 
                 self.deallocators_emited = false;
 
-                self.compiler_objects.end_scope();
+                self.symbols.end_scope();
 
                 Instruction::Null
             }
@@ -418,30 +417,30 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                 let deallocator: Deallocator = Deallocator::new(
                     self.builder,
                     self.context,
-                    self.compiler_objects.get_allocated_objects(),
+                    self.symbols.get_allocated_symbols(),
                 );
 
-                deallocator.dealloc(value, &self.compiler_objects);
+                deallocator.dealloc(value, &self.symbols);
 
-                generation::build_expression(
+                valuegen::generate_expression(
                     self.module,
                     self.builder,
                     self.context,
                     instruction,
                     kind,
-                    &self.compiler_objects,
+                    &self.symbols,
                 );
 
                 Instruction::Null
             }
 
-            Instruction::Str(_, _) => Instruction::LLVMValue(generation::build_expression(
+            Instruction::Str(_, _, _) => Instruction::LLVMValue(valuegen::generate_expression(
                 self.module,
                 self.builder,
                 self.context,
                 instruction,
                 &Type::Void,
-                &self.compiler_objects,
+                &self.symbols,
             )),
 
             Instruction::Local {
@@ -463,7 +462,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                     self.builder,
                     self.context,
                     (name, kind, value, [site_allocation_flag]),
-                    &mut self.compiler_objects,
+                    &mut self.symbols,
                 );
 
                 Instruction::Null
@@ -479,7 +478,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                     self.module,
                     self.builder,
                     self.context,
-                    &mut self.compiler_objects,
+                    &mut self.symbols,
                     (name, kind, value, [site_allocation_flag]),
                 );
 
@@ -500,7 +499,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                         self.context,
                         (left, operator, right),
                         binaryop_type,
-                        &self.compiler_objects,
+                        &self.symbols,
                     ));
                 }
 
@@ -511,7 +510,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                         self.context,
                         (left, operator, right),
                         binaryop_type,
-                        &self.compiler_objects,
+                        &self.symbols,
                     ));
                 }
 
@@ -522,7 +521,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                         self.context,
                         (left, operator, right),
                         binaryop_type,
-                        &self.compiler_objects,
+                        &self.symbols,
                     ));
                 }
 
@@ -538,7 +537,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                 self.builder,
                 self.context,
                 (operator, kind, expression),
-                &self.compiler_objects,
+                &self.symbols,
             )),
 
             Instruction::EntryPoint { body } => {
@@ -563,7 +562,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                     self.builder,
                     self.context,
                     (name, kind, args),
-                    &self.compiler_objects,
+                    &self.symbols,
                 );
 
                 Instruction::Null
@@ -571,40 +570,40 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
 
             Instruction::LocalRef { kind: ref_type, .. }
             | Instruction::ConstRef { kind: ref_type, .. } => {
-                Instruction::LLVMValue(generation::build_expression(
+                Instruction::LLVMValue(valuegen::generate_expression(
                     self.module,
                     self.builder,
                     self.context,
                     instruction,
                     ref_type,
-                    &self.compiler_objects,
+                    &self.symbols,
                 ))
             }
 
-            Instruction::Boolean(_, bool) => Instruction::LLVMValue(
+            Instruction::Boolean(_, bool, ..) => Instruction::LLVMValue(
                 self.context
                     .bool_type()
                     .const_int(*bool as u64, false)
                     .into(),
             ),
 
-            Instruction::Address { .. } => Instruction::LLVMValue(generation::build_expression(
+            Instruction::Address { .. } => Instruction::LLVMValue(valuegen::generate_expression(
                 self.module,
                 self.builder,
                 self.context,
                 instruction,
                 &Type::Void,
-                &self.compiler_objects,
+                &self.symbols,
             )),
 
             Instruction::Write { .. } => {
-                generation::build_expression(
+                valuegen::generate_expression(
                     self.module,
                     self.builder,
                     self.context,
                     instruction,
                     &Type::Void,
-                    &self.compiler_objects,
+                    &self.symbols,
                 );
 
                 Instruction::Null
@@ -642,20 +641,12 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
             .get_nth_param(parameter_position)
             .unwrap();
 
-        let allocated_stack_pointer: PointerValue = valuegen::alloc(
-            self.context,
-            self.builder,
-            parameter_type,
-            parameter_type.is_stack_allocated(),
-        );
+        self.symbols
+            .alloc(parameter_name, parameter_type, &memory_flags);
 
-        let allocated_object: AllocatedObject =
-            AllocatedObject::alloc(allocated_stack_pointer, &memory_flags, parameter_type);
+        let symbol: AllocatedSymbol = self.symbols.get_allocated_symbol(parameter_name);
 
-        allocated_object.build_store(self.builder, llvm_parameter_value);
-
-        self.compiler_objects
-            .alloc_local_object(parameter_name, allocated_object);
+        symbol.build_store(self.builder, llvm_parameter_value);
     }
 
     fn declare(&mut self) {
@@ -676,13 +667,13 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                 ..
             } = instruction
             {
-                let compiled_value: BasicValueEnum = generation::build_expression(
+                let compiled_value: BasicValueEnum = valuegen::generate_expression(
                     self.module,
                     self.builder,
                     self.context,
                     value,
                     kind,
-                    &self.compiler_objects,
+                    &self.symbols,
                 );
 
                 let constant_ptr: PointerValue = utils::build_global_constant(
@@ -693,11 +684,10 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                     attributes,
                 );
 
-                let allocated_object: AllocatedObject =
-                    AllocatedObject::alloc(constant_ptr, &[MemoryFlag::StaticAllocated], kind);
+                let allocated_object: AllocatedSymbol =
+                    AllocatedSymbol::alloc(constant_ptr, &[MemoryFlag::StaticAllocated], kind);
 
-                self.compiler_objects
-                    .insert_constant_object(name, allocated_object);
+                self.symbols.insert_constant_object(name, allocated_object);
             }
         });
     }
@@ -761,7 +751,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
 
         self.function = Some(function);
 
-        self.compiler_objects.insert_function(
+        self.symbols.insert_function(
             function_name,
             (function, function_parameters, call_convention),
         );
@@ -773,6 +763,8 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
         let function_type: &Type = function.1;
 
         let function_body: Option<&Rc<Instruction>> = function.3;
+
+        let function_parameters: &[Instruction<'ctx>] = function.2;
 
         let llvm_function: FunctionValue = self.module.get_function(function_name).unwrap();
 

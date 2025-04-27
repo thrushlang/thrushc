@@ -6,7 +6,7 @@ use inkwell::targets::TargetData;
 use crate::middle::types::Type;
 
 use super::{
-    objects::CompilerObjects,
+    symbols::SymbolsTable,
     types::{MappedHeapPointer, MappedHeapPointers},
 };
 
@@ -27,13 +27,13 @@ pub enum MemoryFlag {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub struct AllocatedObject<'ctx> {
+pub struct AllocatedSymbol<'ctx> {
     pub ptr: PointerValue<'ctx>,
     pub memory_flags: u8,
     pub kind: &'ctx Type,
 }
 
-impl<'ctx> AllocatedObject<'ctx> {
+impl<'ctx> AllocatedSymbol<'ctx> {
     pub fn alloc(ptr: PointerValue<'ctx>, flags: &[MemoryFlag], kind: &'ctx Type) -> Self {
         let mut memory_flags: u8 = 0;
 
@@ -74,7 +74,7 @@ impl<'ctx> AllocatedObject<'ctx> {
 
     pub fn create_mapped_heaped_pointers(
         &self,
-        compiler_objects: &'ctx CompilerObjects,
+        compiler_objects: &'ctx SymbolsTable,
     ) -> MappedHeapPointers {
         if !self.kind.is_struct_type() {
             return HashSet::new();
@@ -127,10 +127,6 @@ impl<'ctx> AllocatedObject<'ctx> {
 
     pub fn has_flag(&self, flag: MemoryFlag) -> bool {
         (self.memory_flags & flag.to_bit()) == flag.to_bit()
-    }
-
-    pub fn get_type(&self) -> &Type {
-        self.kind
     }
 }
 

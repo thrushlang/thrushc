@@ -1,6 +1,13 @@
-use crate::middle::statement::{CustomType, Enum, ThrushAttributes};
+use crate::middle::{
+    instruction::Instruction,
+    statement::{CustomType, Enum},
+    symbols::types::{
+        Constant, Constants, CustomTypes, Enums, Function, Functions, Local, Locals, Struct,
+        Structs,
+    },
+};
 
-use super::{super::common::error::ThrushCompilerError, super::middle::types::Type, lexer::Span};
+use super::{super::common::error::ThrushCompilerError, lexer::Span};
 
 use ahash::AHashMap as HashMap;
 
@@ -10,23 +17,7 @@ const MINIMAL_STRUCTURE_CAPACITY: usize = 255;
 const MINIMAL_ENUMS_CAPACITY: usize = 255;
 const MINIMAL_LOCAL_SCOPE_CAPACITY: usize = 255;
 
-pub type Constant<'instr> = (Type, ThrushAttributes<'instr>);
-
-pub type Struct<'instr> = (Vec<(&'instr str, Type, u32)>, ThrushAttributes<'instr>);
-
-pub type Function<'instr> = (Type, Vec<Type>, bool);
-pub type Local<'instr> = (Type, bool, bool);
-
-pub type CustomTypes<'instr> = HashMap<&'instr str, CustomType<'instr>>;
-pub type Constants<'instr> = HashMap<&'instr str, Constant<'instr>>;
-
-pub type Structs<'instr> = HashMap<&'instr str, Struct<'instr>>;
-pub type Enums<'instr> = HashMap<&'instr str, Enum<'instr>>;
-pub type Functions<'instr> = HashMap<&'instr str, Function<'instr>>;
-
-pub type Locals<'instr> = Vec<HashMap<&'instr str, Local<'instr>>>;
-
-pub type FoundObjectId<'instr> = (
+pub type FoundSymbolId<'instr> = (
     Option<&'instr str>,
     Option<&'instr str>,
     Option<&'instr str>,
@@ -36,7 +27,7 @@ pub type FoundObjectId<'instr> = (
 );
 
 #[derive(Clone, Debug, Default)]
-pub struct ParserObjects<'instr> {
+pub struct SymbolsTable<'instr> {
     custom_types: CustomTypes<'instr>,
     constants: Constants<'instr>,
     locals: Locals<'instr>,
@@ -45,7 +36,7 @@ pub struct ParserObjects<'instr> {
     enums: Enums<'instr>,
 }
 
-impl<'instr> ParserObjects<'instr> {
+impl<'instr> SymbolsTable<'instr> {
     pub fn with_functions(functions: HashMap<&'instr str, Function<'instr>>) -> Self {
         Self {
             custom_types: HashMap::with_capacity(MINIMAL_CUSTOM_TYPE_CAPACITY),
@@ -57,11 +48,11 @@ impl<'instr> ParserObjects<'instr> {
         }
     }
 
-    pub fn get_object_id(
+    pub fn get_symbols_id(
         &self,
         name: &'instr str,
         span: Span,
-    ) -> Result<FoundObjectId<'instr>, ThrushCompilerError> {
+    ) -> Result<FoundSymbolId<'instr>, ThrushCompilerError> {
         if self.custom_types.contains_key(name) {
             return Ok((None, None, None, None, Some(name), None));
         }
@@ -146,6 +137,7 @@ impl<'instr> ParserObjects<'instr> {
         ))
     }
 
+    #[inline]
     pub fn get_custom_type_by_id(
         &self,
         custom_type_id: &'instr str,
@@ -214,7 +206,6 @@ impl<'instr> ParserObjects<'instr> {
         ))
     }
 
-    #[inline]
     pub fn new_local(
         &mut self,
         scope_pos: usize,
@@ -235,7 +226,6 @@ impl<'instr> ParserObjects<'instr> {
         Ok(())
     }
 
-    #[inline]
     pub fn new_constant(
         &mut self,
         name: &'instr str,
@@ -255,7 +245,6 @@ impl<'instr> ParserObjects<'instr> {
         Ok(())
     }
 
-    #[inline]
     pub fn new_custom_type(
         &mut self,
         name: &'instr str,
@@ -275,7 +264,6 @@ impl<'instr> ParserObjects<'instr> {
         Ok(())
     }
 
-    #[inline]
     pub fn new_struct(
         &mut self,
         name: &'instr str,
@@ -295,7 +283,6 @@ impl<'instr> ParserObjects<'instr> {
         Ok(())
     }
 
-    #[inline]
     pub fn new_enum(
         &mut self,
         name: &'instr str,
@@ -315,7 +302,6 @@ impl<'instr> ParserObjects<'instr> {
         Ok(())
     }
 
-    #[inline]
     pub fn new_function(
         &mut self,
         name: &'instr str,
@@ -335,13 +321,38 @@ impl<'instr> ParserObjects<'instr> {
         Ok(())
     }
 
+    pub fn lift_locals(
+        &mut self,
+        scope_pos: usize,
+        locals: &mut Vec<Instruction<'instr>>,
+    ) -> Result<(), ThrushCompilerError> {
+        for parameter in &*locals {
+            if let Instruction::FunctionParameter {
+                name, kind, span, ..
+            } = parameter
+            {
+                self.new_local(scope_pos, name, (kind.clone(), false), *span)?;
+            }
+
+            if let Instruction::Local {
+                name, kind, span, ..
+            } = parameter
+            {
+                self.new_local(scope_pos, name, (kind.clone(), false), *span)?;
+            }
+        }
+
+        locals.clear();
+        Ok(())
+    }
+
     #[inline]
     pub fn begin_local_scope(&mut self) {
         self.locals
             .push(HashMap::with_capacity(MINIMAL_LOCAL_SCOPE_CAPACITY));
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn end_local_scope(&mut self) {
         self.locals.pop();
     }

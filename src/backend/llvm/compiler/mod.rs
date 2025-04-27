@@ -5,11 +5,10 @@ pub mod call;
 pub mod codegen;
 pub mod conventions;
 pub mod dealloc;
-pub mod generation;
 pub mod local;
 pub mod memory;
-pub mod objects;
 pub mod predicates;
+pub mod symbols;
 pub mod typegen;
 pub mod types;
 pub mod unaryop;
@@ -28,7 +27,7 @@ impl<'a, 'ctx> Compiler {
     #[inline]
     pub fn compile(
         module: &'a Module<'ctx>,
-        builder: &'a Builder<'ctx>,
+        builder: &'ctx Builder<'ctx>,
         context: &'ctx Context,
         instructions: &'ctx [Instruction<'ctx>],
         target_data: TargetData,
