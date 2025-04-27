@@ -321,7 +321,7 @@ impl<'instr> SymbolsTable<'instr> {
         Ok(())
     }
 
-    pub fn lift_locals(
+    pub fn lift(
         &mut self,
         scope_pos: usize,
         locals: &mut Vec<Instruction<'instr>>,

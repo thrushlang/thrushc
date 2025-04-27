@@ -71,7 +71,7 @@ impl std::fmt::Display for TokenKind {
             TokenKind::If => write!(f, "if"),
             TokenKind::Elif => write!(f, "elif"),
             TokenKind::Or => write!(f, "or"),
-            TokenKind::Take => write!(f, "take"),
+            TokenKind::Raw => write!(f, "raw"),
             TokenKind::Write => write!(f, "write"),
             TokenKind::Type => write!(f, "type"),
             TokenKind::Return => write!(f, "return"),

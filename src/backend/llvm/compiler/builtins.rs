@@ -3,14 +3,14 @@ use crate::{
     middle::{statement::FunctionCall, symbols::types::Functions, types::Type},
 };
 
-use super::{Instruction, memory::AllocatedSymbol, symbols::SymbolsTable, typegen, utils};
+use super::{Instruction, memory::SymbolAllocated, symbols::SymbolsTable, typegen, utils};
 
 use inkwell::{
     FloatPredicate,
     builder::Builder,
     context::Context,
     types::StructType,
-    values::{BasicValueEnum, FloatValue, IntValue, PointerValue},
+    values::{BasicValueEnum, IntValue},
 };
 
 pub fn include(functions: &mut Functions) {
@@ -24,7 +24,7 @@ pub fn include(functions: &mut Functions) {
 pub fn build_sizeof<'ctx>(
     context: &'ctx Context,
     call: FunctionCall<'ctx>,
-    symbols: &SymbolsTable<'ctx>,
+    symbols: &SymbolsTable<'_, 'ctx>,
 ) -> BasicValueEnum<'ctx> {
     let value: &Instruction = &call.2[0];
 
@@ -60,9 +60,7 @@ pub fn build_sizeof<'ctx>(
             return structure_size.into();
         }
 
-        let ptr: PointerValue = symbols.get_allocated_symbol(name).ptr;
-
-        return ptr.get_type().size_of().into();
+        return symbols.get_allocated_symbol(name).get_size_of();
     }
 
     /*if let Instruction::ComplexType(kind, _, _) = value {
@@ -112,7 +110,7 @@ pub fn build_is_signed<'ctx>(
     context: &'ctx Context,
     builder: &Builder<'ctx>,
     call: FunctionCall<'ctx>,
-    symbols: &SymbolsTable<'ctx>,
+    symbols: &SymbolsTable<'_, 'ctx>,
 ) -> BasicValueEnum<'ctx> {
     let value: &Instruction = &call.2[0];
 
@@ -139,12 +137,10 @@ pub fn build_is_signed<'ctx>(
             );
         }
 
-        let object: AllocatedSymbol = symbols.get_allocated_symbol(name);
+        let object: SymbolAllocated = symbols.get_allocated_symbol(name);
 
         return if ref_type.is_integer_type() {
-            let mut loaded_value: IntValue = object
-                .load_from_memory(builder, typegen::generate_type(context, ref_type))
-                .into_int_value();
+            let mut loaded_value: IntValue = object.load(context, builder).into_int_value();
 
             if let Some(casted_float) = utils::integer_autocast(
                 &Type::S64,
@@ -167,25 +163,18 @@ pub fn build_is_signed<'ctx>(
                 .unwrap()
                 .into()
         } else {
-            let mut loaded_value: FloatValue = object
-                .load_from_memory(builder, typegen::generate_type(context, ref_type))
-                .into_float_value();
+            let mut loaded_value: BasicValueEnum = object.load(context, builder);
 
-            if let Some(casted_float) = utils::float_autocast(
-                &Type::F64,
-                ref_type,
-                None,
-                loaded_value.into(),
-                builder,
-                context,
-            ) {
-                loaded_value = casted_float.into_float_value();
+            if let Some(casted_float) =
+                utils::float_autocast(&Type::F64, ref_type, None, loaded_value, builder, context)
+            {
+                loaded_value = casted_float;
             }
 
             builder
                 .build_float_compare(
                     FloatPredicate::OLT,
-                    loaded_value,
+                    loaded_value.into_float_value(),
                     context.f64_type().const_float(0.0),
                     "",
                 )

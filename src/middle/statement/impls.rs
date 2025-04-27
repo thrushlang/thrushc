@@ -1,4 +1,3 @@
-use crate::backend::llvm::compiler::memory::MemoryFlag;
 use crate::middle::types::Type;
 
 use super::{CustomTypeFields, traits::CustomTypeFieldsExtensions};
@@ -8,8 +7,8 @@ use crate::middle::statement::traits::{
     AttributesExtensions, ConstructorExtensions, StructFieldsExtensions,
 };
 
-use crate::middle::statement::{Constructor, MemoryFlags, StructFields};
-use crate::middle::statement::{ThrushAttributes, traits::MemoryFlagsBasics};
+use crate::middle::statement::ThrushAttributes;
+use crate::middle::statement::{Constructor, StructFields};
 
 impl AttributesExtensions for ThrushAttributes<'_> {
     fn contain_ffi_attribute(&self) -> bool {
@@ -22,12 +21,6 @@ impl AttributesExtensions for ThrushAttributes<'_> {
 
     fn contain_public_attribute(&self) -> bool {
         self.iter().any(|attr| attr.is_public_attribute())
-    }
-}
-
-impl MemoryFlagsBasics for MemoryFlags {
-    fn is_stack_allocated(&self) -> bool {
-        self.iter().any(|flag| *flag == MemoryFlag::StackAllocated)
     }
 }
 

@@ -11,17 +11,17 @@ use {
             types::{TokenKind, Type},
         },
     },
-    inkwell::{builder::Builder, context::Context, module::Module, values::BasicValueEnum},
+    inkwell::{builder::Builder, context::Context, values::BasicValueEnum},
 };
 
 pub fn bool_binaryop<'ctx>(
-    module: &Module<'ctx>,
-    builder: &Builder<'ctx>,
-    context: &'ctx Context,
     binary: BinaryOp<'ctx>,
     target_type: &Type,
-    symbols: &SymbolsTable<'ctx>,
+    symbols: &SymbolsTable<'_, 'ctx>,
 ) -> BasicValueEnum<'ctx> {
+    let context: &Context = symbols.get_llvm_context();
+    let builder: &Builder = symbols.get_llvm_builder();
+
     if let (
         Instruction::Integer(..) | Instruction::Float(..) | Instruction::Boolean(..),
         TokenKind::BangEq
@@ -36,9 +36,9 @@ pub fn bool_binaryop<'ctx>(
     ) = binary
     {
         if binary.0.get_type().is_float_type() {
-            return float_binaryop(module, builder, context, binary, target_type, symbols);
+            return float_binaryop(binary, target_type, symbols);
         } else if binary.0.get_type().is_integer_type() || binary.0.get_type().is_bool_type() {
-            return integer_binaryop(module, builder, context, binary, target_type, symbols);
+            return integer_binaryop(binary, target_type, symbols);
         }
 
         unreachable!()
@@ -58,9 +58,9 @@ pub fn bool_binaryop<'ctx>(
     ) = binary
     {
         if binary.0.get_type().is_float_type() {
-            return float_binaryop(module, builder, context, binary, target_type, symbols);
+            return float_binaryop(binary, target_type, symbols);
         } else if binary.0.get_type().is_integer_type() || binary.0.get_type().is_bool_type() {
-            return integer_binaryop(module, builder, context, binary, target_type, symbols);
+            return integer_binaryop(binary, target_type, symbols);
         }
 
         unreachable!()
@@ -80,9 +80,9 @@ pub fn bool_binaryop<'ctx>(
     ) = binary
     {
         if binary.0.get_type().is_float_type() {
-            return float_binaryop(module, builder, context, binary, target_type, symbols);
+            return float_binaryop(binary, target_type, symbols);
         } else if binary.0.get_type().is_integer_type() || binary.0.get_type().is_bool_type() {
-            return integer_binaryop(module, builder, context, binary, target_type, symbols);
+            return integer_binaryop(binary, target_type, symbols);
         }
 
         unreachable!()
@@ -102,9 +102,9 @@ pub fn bool_binaryop<'ctx>(
     ) = binary
     {
         if binary.0.get_type().is_float_type() {
-            return float_binaryop(module, builder, context, binary, target_type, symbols);
+            return float_binaryop(binary, target_type, symbols);
         } else if binary.0.get_type().is_integer_type() || binary.0.get_type().is_bool_type() {
-            return integer_binaryop(module, builder, context, binary, target_type, symbols);
+            return integer_binaryop(binary, target_type, symbols);
         }
 
         unreachable!()
@@ -124,9 +124,9 @@ pub fn bool_binaryop<'ctx>(
     ) = binary
     {
         if binary.0.get_type().is_float_type() {
-            return float_binaryop(module, builder, context, binary, target_type, symbols);
+            return float_binaryop(binary, target_type, symbols);
         } else if binary.0.get_type().is_integer_type() || binary.0.get_type().is_bool_type() {
-            return integer_binaryop(module, builder, context, binary, target_type, symbols);
+            return integer_binaryop(binary, target_type, symbols);
         }
 
         unreachable!()
@@ -146,9 +146,9 @@ pub fn bool_binaryop<'ctx>(
     ) = binary
     {
         if binary.2.get_type().is_float_type() {
-            return float_binaryop(module, builder, context, binary, target_type, symbols);
+            return float_binaryop(binary, target_type, symbols);
         } else if binary.2.get_type().is_integer_type() || binary.2.get_type().is_bool_type() {
-            return integer_binaryop(module, builder, context, binary, target_type, symbols);
+            return integer_binaryop(binary, target_type, symbols);
         }
     }
 
@@ -166,9 +166,9 @@ pub fn bool_binaryop<'ctx>(
     ) = binary
     {
         if binary.2.get_type().is_float_type() {
-            return float_binaryop(module, builder, context, binary, target_type, symbols);
+            return float_binaryop(binary, target_type, symbols);
         } else if binary.2.get_type().is_integer_type() || binary.2.get_type().is_bool_type() {
-            return integer_binaryop(module, builder, context, binary, target_type, symbols);
+            return integer_binaryop(binary, target_type, symbols);
         }
     }
 
@@ -186,9 +186,9 @@ pub fn bool_binaryop<'ctx>(
     ) = binary
     {
         if binary.2.get_type().is_float_type() {
-            return float_binaryop(module, builder, context, binary, target_type, symbols);
+            return float_binaryop(binary, target_type, symbols);
         } else if binary.2.get_type().is_integer_type() || binary.2.get_type().is_bool_type() {
-            return integer_binaryop(module, builder, context, binary, target_type, symbols);
+            return integer_binaryop(binary, target_type, symbols);
         }
     }
 
@@ -206,9 +206,9 @@ pub fn bool_binaryop<'ctx>(
     ) = binary
     {
         if binary.0.get_type().is_float_type() {
-            return float_binaryop(module, builder, context, binary, target_type, symbols);
+            return float_binaryop(binary, target_type, symbols);
         } else if binary.0.get_type().is_integer_type() || binary.0.get_type().is_bool_type() {
-            return integer_binaryop(module, builder, context, binary, target_type, symbols);
+            return integer_binaryop(binary, target_type, symbols);
         }
 
         unreachable!()
@@ -221,23 +221,11 @@ pub fn bool_binaryop<'ctx>(
     ) = binary
     {
         if binary.0.get_type().is_float_type() {
-            let left_compiled: BasicValueEnum = float_binaryop(
-                module,
-                builder,
-                context,
-                binary.0.as_binary(),
-                target_type,
-                symbols,
-            );
+            let left_compiled: BasicValueEnum =
+                float_binaryop(binary.0.as_binary(), target_type, symbols);
 
-            let right_compiled: BasicValueEnum = float_binaryop(
-                module,
-                builder,
-                context,
-                binary.2.as_binary(),
-                target_type,
-                symbols,
-            );
+            let right_compiled: BasicValueEnum =
+                float_binaryop(binary.2.as_binary(), target_type, symbols);
 
             return int_operation(
                 context,
@@ -249,30 +237,18 @@ pub fn bool_binaryop<'ctx>(
             );
         }
 
-        return integer_binaryop(module, builder, context, binary, target_type, symbols);
+        return integer_binaryop(binary, target_type, symbols);
     }
 
     if let (Instruction::Group { .. }, TokenKind::And | TokenKind::Or, Instruction::Group { .. }) =
         binary
     {
         if binary.0.get_type().is_float_type() {
-            let left_compiled: BasicValueEnum = float_binaryop(
-                module,
-                builder,
-                context,
-                binary.0.as_binary(),
-                target_type,
-                symbols,
-            );
+            let left_compiled: BasicValueEnum =
+                float_binaryop(binary.0.as_binary(), target_type, symbols);
 
-            let right_compiled: BasicValueEnum = float_binaryop(
-                module,
-                builder,
-                context,
-                binary.2.as_binary(),
-                target_type,
-                symbols,
-            );
+            let right_compiled: BasicValueEnum =
+                float_binaryop(binary.2.as_binary(), target_type, symbols);
 
             return int_operation(
                 context,
@@ -284,7 +260,7 @@ pub fn bool_binaryop<'ctx>(
             );
         }
 
-        return integer_binaryop(module, builder, context, binary, target_type, symbols);
+        return integer_binaryop(binary, target_type, symbols);
     }
 
     if let (
@@ -294,23 +270,11 @@ pub fn bool_binaryop<'ctx>(
     ) = binary
     {
         if binary.0.get_type().is_float_type() {
-            let left_compiled: BasicValueEnum = float_binaryop(
-                module,
-                builder,
-                context,
-                binary.0.as_binary(),
-                target_type,
-                symbols,
-            );
+            let left_compiled: BasicValueEnum =
+                float_binaryop(binary.0.as_binary(), target_type, symbols);
 
-            let right_compiled: BasicValueEnum = float_binaryop(
-                module,
-                builder,
-                context,
-                binary.2.as_binary(),
-                target_type,
-                symbols,
-            );
+            let right_compiled: BasicValueEnum =
+                float_binaryop(binary.2.as_binary(), target_type, symbols);
 
             return int_operation(
                 context,
@@ -322,7 +286,7 @@ pub fn bool_binaryop<'ctx>(
             );
         }
 
-        return integer_binaryop(module, builder, context, binary, target_type, symbols);
+        return integer_binaryop(binary, target_type, symbols);
     }
 
     if let (
@@ -332,23 +296,11 @@ pub fn bool_binaryop<'ctx>(
     ) = binary
     {
         if binary.0.get_type().is_float_type() {
-            let left_compiled: BasicValueEnum = float_binaryop(
-                module,
-                builder,
-                context,
-                binary.0.as_binary(),
-                target_type,
-                symbols,
-            );
+            let left_compiled: BasicValueEnum =
+                float_binaryop(binary.0.as_binary(), target_type, symbols);
 
-            let right_compiled: BasicValueEnum = float_binaryop(
-                module,
-                builder,
-                context,
-                binary.2.as_binary(),
-                target_type,
-                symbols,
-            );
+            let right_compiled: BasicValueEnum =
+                float_binaryop(binary.2.as_binary(), target_type, symbols);
 
             return int_operation(
                 context,
@@ -360,7 +312,7 @@ pub fn bool_binaryop<'ctx>(
             );
         }
 
-        return integer_binaryop(module, builder, context, binary, target_type, symbols);
+        return integer_binaryop(binary, target_type, symbols);
     }
 
     println!("{:#?}", binary);

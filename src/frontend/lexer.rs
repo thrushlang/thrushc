@@ -47,7 +47,7 @@ lazy_static! {
         keywords.insert(b"builtin", TokenKind::Builtin);
         keywords.insert(b"match", TokenKind::Match);
         keywords.insert(b"pattern", TokenKind::Pattern);
-        keywords.insert(b"take", TokenKind::Take);
+        keywords.insert(b"raw", TokenKind::Raw);
         keywords.insert(b"type", TokenKind::Type);
         keywords.insert(b"enum", TokenKind::Enum);
         keywords.insert(b"address", TokenKind::Address);

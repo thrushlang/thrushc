@@ -56,7 +56,3 @@ pub trait AttributesExtensions {
     fn contain_ignore_attribute(&self) -> bool;
     fn contain_public_attribute(&self) -> bool;
 }
-
-pub trait MemoryFlagsBasics {
-    fn is_stack_allocated(&self) -> bool;
-}

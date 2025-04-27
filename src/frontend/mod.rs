@@ -1,3 +1,4 @@
+pub mod contexts;
 pub mod impls;
 pub mod lexer;
 pub mod parser;

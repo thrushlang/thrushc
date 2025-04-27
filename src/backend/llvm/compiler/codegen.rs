@@ -1,7 +1,5 @@
-use std::rc::Rc;
-
 use crate::middle::instruction::Instruction;
-use crate::middle::statement::{FunctionParameter, FunctionPrototype, MemoryFlags};
+use crate::middle::statement::{FunctionParameter, FunctionPrototype};
 use crate::middle::types::Type;
 
 use super::super::compiler::attributes::LLVMAttribute;
@@ -11,10 +9,9 @@ use super::{
     binaryop, call,
     conventions::CallConvention,
     dealloc::Deallocator,
-    local, memory,
-    memory::{AllocatedSymbol, MemoryFlag},
+    local,
     symbols::SymbolsTable,
-    typegen, unaryop, utils, valuegen,
+    typegen, unaryop, valuegen,
 };
 
 use inkwell::{
@@ -25,7 +22,7 @@ use inkwell::{
     module::{Linkage, Module},
     targets::TargetData,
     types::FunctionType,
-    values::{BasicValueEnum, FunctionValue, GlobalValue, IntValue, PointerValue},
+    values::{BasicValueEnum, FunctionValue, GlobalValue, IntValue},
 };
 
 pub struct Codegen<'a, 'ctx> {
@@ -35,7 +32,7 @@ pub struct Codegen<'a, 'ctx> {
     target_data: TargetData,
     instructions: &'ctx [Instruction<'ctx>],
     current: usize,
-    symbols: SymbolsTable<'ctx>,
+    symbols: SymbolsTable<'a, 'ctx>,
     function: Option<FunctionValue<'ctx>>,
     loop_exit_block: Option<BasicBlock<'ctx>>,
     loop_start_block: Option<BasicBlock<'ctx>>,
@@ -57,7 +54,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
             target_data,
             instructions,
             current: 0,
-            symbols: SymbolsTable::new(context, builder),
+            symbols: SymbolsTable::new(module, context, builder),
             function: None,
             loop_exit_block: None,
             loop_start_block: None,
@@ -388,10 +385,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                 position,
                 ..
             } => {
-                let site_allocation_flag: MemoryFlag =
-                    memory::generate_site_allocation_flag(self.context, &self.target_data, kind);
-
-                self.build_function_parameter((name, kind, *position, [site_allocation_flag]));
+                self.build_function_parameter((name, kind, *position));
 
                 Instruction::Null
             }
@@ -403,10 +397,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                 return_type,
                 attributes,
             } => {
-                if let Some(body) = body {
-                    self.build_function((name, return_type, params, Some(body), attributes));
-                    return Instruction::Null;
-                }
+                self.build_function((name, return_type, params, body, attributes));
 
                 Instruction::Null
             }
@@ -422,22 +413,12 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
 
                 deallocator.dealloc(value, &self.symbols);
 
-                valuegen::generate_expression(
-                    self.module,
-                    self.builder,
-                    self.context,
-                    instruction,
-                    kind,
-                    &self.symbols,
-                );
+                valuegen::generate_expression(instruction, kind, &self.symbols);
 
                 Instruction::Null
             }
 
             Instruction::Str(_, _, _) => Instruction::LLVMValue(valuegen::generate_expression(
-                self.module,
-                self.builder,
-                self.context,
                 instruction,
                 &Type::Void,
                 &self.symbols,
@@ -454,16 +435,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                     return Instruction::Null;
                 }
 
-                let site_allocation_flag: MemoryFlag =
-                    memory::generate_site_allocation_flag(self.context, &self.target_data, kind);
-
-                local::build(
-                    self.module,
-                    self.builder,
-                    self.context,
-                    (name, kind, value, [site_allocation_flag]),
-                    &mut self.symbols,
-                );
+                local::build((name, kind, value), &mut self.symbols);
 
                 Instruction::Null
             }
@@ -471,16 +443,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
             Instruction::LocalMut {
                 name, kind, value, ..
             } => {
-                let site_allocation_flag: MemoryFlag =
-                    memory::generate_site_allocation_flag(self.context, &self.target_data, kind);
-
-                local::build_local_mutation(
-                    self.module,
-                    self.builder,
-                    self.context,
-                    &mut self.symbols,
-                    (name, kind, value, [site_allocation_flag]),
-                );
+                local::build_local_mutation(&mut self.symbols, (name, kind, value));
 
                 Instruction::Null
             }
@@ -494,9 +457,6 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
             } => {
                 if binaryop_type.is_integer_type() {
                     return Instruction::LLVMValue(binaryop::integer::integer_binaryop(
-                        self.module,
-                        self.builder,
-                        self.context,
                         (left, operator, right),
                         binaryop_type,
                         &self.symbols,
@@ -505,9 +465,6 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
 
                 if binaryop_type.is_float_type() {
                     return Instruction::LLVMValue(binaryop::float::float_binaryop(
-                        self.module,
-                        self.builder,
-                        self.context,
                         (left, operator, right),
                         binaryop_type,
                         &self.symbols,
@@ -516,9 +473,6 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
 
                 if binaryop_type.is_bool_type() {
                     return Instruction::LLVMValue(binaryop::boolean::bool_binaryop(
-                        self.module,
-                        self.builder,
-                        self.context,
                         (left, operator, right),
                         binaryop_type,
                         &self.symbols,
@@ -557,28 +511,15 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
             Instruction::Call {
                 name, args, kind, ..
             } => {
-                call::build_call(
-                    self.module,
-                    self.builder,
-                    self.context,
-                    (name, kind, args),
-                    &self.symbols,
-                );
+                call::build_call((name, kind, args), &self.symbols);
 
                 Instruction::Null
             }
 
             Instruction::LocalRef { kind: ref_type, .. }
-            | Instruction::ConstRef { kind: ref_type, .. } => {
-                Instruction::LLVMValue(valuegen::generate_expression(
-                    self.module,
-                    self.builder,
-                    self.context,
-                    instruction,
-                    ref_type,
-                    &self.symbols,
-                ))
-            }
+            | Instruction::ConstRef { kind: ref_type, .. } => Instruction::LLVMValue(
+                valuegen::generate_expression(instruction, ref_type, &self.symbols),
+            ),
 
             Instruction::Boolean(_, bool, ..) => Instruction::LLVMValue(
                 self.context
@@ -588,23 +529,13 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
             ),
 
             Instruction::Address { .. } => Instruction::LLVMValue(valuegen::generate_expression(
-                self.module,
-                self.builder,
-                self.context,
                 instruction,
                 &Type::Void,
                 &self.symbols,
             )),
 
             Instruction::Write { .. } => {
-                valuegen::generate_expression(
-                    self.module,
-                    self.builder,
-                    self.context,
-                    instruction,
-                    &Type::Void,
-                    &self.symbols,
-                );
+                valuegen::generate_expression(instruction, &Type::Void, &self.symbols);
 
                 Instruction::Null
             }
@@ -633,20 +564,14 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
         let parameter_type: &Type = parameter.1;
         let parameter_position: u32 = parameter.2;
 
-        let memory_flags: MemoryFlags = parameter.3;
-
-        let llvm_parameter_value: BasicValueEnum = self
+        let value: BasicValueEnum = self
             .function
             .unwrap()
             .get_nth_param(parameter_position)
             .unwrap();
 
         self.symbols
-            .alloc(parameter_name, parameter_type, &memory_flags);
-
-        let symbol: AllocatedSymbol = self.symbols.get_allocated_symbol(parameter_name);
-
-        symbol.build_store(self.builder, llvm_parameter_value);
+            .alloc_function_parameter(parameter_name, parameter_type, value);
     }
 
     fn declare(&mut self) {
@@ -667,27 +592,10 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                 ..
             } = instruction
             {
-                let compiled_value: BasicValueEnum = valuegen::generate_expression(
-                    self.module,
-                    self.builder,
-                    self.context,
-                    value,
-                    kind,
-                    &self.symbols,
-                );
+                let value: BasicValueEnum =
+                    valuegen::generate_expression(value, kind, &self.symbols);
 
-                let constant_ptr: PointerValue = utils::build_global_constant(
-                    self.module,
-                    name,
-                    compiled_value.get_type(),
-                    compiled_value,
-                    attributes,
-                );
-
-                let allocated_object: AllocatedSymbol =
-                    AllocatedSymbol::alloc(constant_ptr, &[MemoryFlag::StaticAllocated], kind);
-
-                self.symbols.insert_constant_object(name, allocated_object);
+                self.symbols.alloc_constant(name, kind, value, attributes);
             }
         });
     }
@@ -759,20 +667,25 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
 
     fn build_function(&mut self, function: FunctionPrototype<'ctx>) {
         let function_name: &str = function.0;
-
         let function_type: &Type = function.1;
-
-        let function_body: Option<&Rc<Instruction>> = function.3;
-
         let function_parameters: &[Instruction<'ctx>] = function.2;
+        let function_body: &Instruction = function.3;
 
-        let llvm_function: FunctionValue = self.module.get_function(function_name).unwrap();
+        if function_body.is_null() {
+            return;
+        }
+
+        let llvm_function: FunctionValue = self.symbols.get_function(function_name).0;
 
         let entry: BasicBlock = self.context.append_basic_block(llvm_function, "");
 
         self.builder.position_at_end(entry);
 
-        self.codegen(function_body.unwrap());
+        function_parameters.iter().for_each(|parameter| {
+            self.codegen(parameter);
+        });
+
+        self.codegen(function_body);
 
         if function_type.is_void_type() {
             self.builder.build_return(None).unwrap();

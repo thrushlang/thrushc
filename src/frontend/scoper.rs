@@ -65,11 +65,10 @@ impl<'ctx> ThrushScoper<'ctx> {
                 })?;
         }
 
-        if let Instruction::Function {
-            body: Some(body), ..
-        } = instr
-        {
-            self.analyze(body.as_ref(), depth)?;
+        if let Instruction::Function { body, .. } = instr {
+            if body.is_block() {
+                self.analyze(body, depth)?;
+            }
         }
 
         if let Instruction::EntryPoint { body } = instr {

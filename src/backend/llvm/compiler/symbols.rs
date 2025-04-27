@@ -1,13 +1,22 @@
 use {
     super::{
         super::super::super::logging::{self, LoggingType},
-        memory::{AllocatedSymbol, MemoryFlag},
-        types::AllocatedSymbols,
+        memory::SymbolAllocated,
+        typegen,
+        types::SymbolsAllocated,
         valuegen,
     },
-    crate::middle::{statement::Function, types::Type},
+    crate::middle::{
+        statement::{Function, ThrushAttributes},
+        types::Type,
+    },
     ahash::AHashMap as HashMap,
-    inkwell::{builder::Builder, context::Context, values::PointerValue},
+    inkwell::{
+        builder::Builder,
+        context::Context,
+        module::Module,
+        values::{BasicValueEnum, PointerValue},
+    },
 };
 
 const CONSTANTS_MINIMAL_CAPACITY: usize = 255;
@@ -16,44 +25,80 @@ const FUNCTION_MINIMAL_CAPACITY: usize = 255;
 const SCOPE_MINIMAL_CAPACITY: usize = 155;
 
 #[derive(Debug)]
-pub struct SymbolsTable<'ctx> {
-    pub context: &'ctx Context,
-    pub builder: &'ctx Builder<'ctx>,
-    pub constants: HashMap<&'ctx str, AllocatedSymbol<'ctx>>,
-    pub functions: HashMap<&'ctx str, Function<'ctx>>,
-    pub blocks: Vec<HashMap<&'ctx str, AllocatedSymbol<'ctx>>>,
-    pub scope: usize,
+pub struct SymbolsTable<'a, 'ctx> {
+    module: &'a Module<'ctx>,
+    context: &'ctx Context,
+    builder: &'ctx Builder<'ctx>,
+    constants: HashMap<&'ctx str, SymbolAllocated<'ctx>>,
+    functions: HashMap<&'ctx str, Function<'ctx>>,
+    blocks: Vec<HashMap<&'ctx str, SymbolAllocated<'ctx>>>,
+    lift: HashMap<&'ctx str, SymbolAllocated<'ctx>>,
+    scope: usize,
 }
 
-impl<'ctx> SymbolsTable<'ctx> {
-    pub fn new(context: &'ctx Context, builder: &'ctx Builder<'ctx>) -> Self {
+impl<'a, 'ctx> SymbolsTable<'a, 'ctx> {
+    pub fn new(
+        module: &'a Module<'ctx>,
+        context: &'ctx Context,
+        builder: &'ctx Builder<'ctx>,
+    ) -> Self {
         Self {
+            module,
             context,
             builder,
             constants: HashMap::with_capacity(CONSTANTS_MINIMAL_CAPACITY),
             functions: HashMap::with_capacity(FUNCTION_MINIMAL_CAPACITY),
             blocks: Vec::with_capacity(SCOPE_MINIMAL_CAPACITY),
+            lift: HashMap::with_capacity(SCOPE_MINIMAL_CAPACITY),
             scope: 0,
         }
     }
 
     #[inline]
-    pub fn alloc(&mut self, name: &'ctx str, kind: &'ctx Type, memory_flags: &[MemoryFlag]) {
-        let allocated_pointer: PointerValue =
-            valuegen::alloc(self.context, self.builder, kind, kind.is_stack_allocated());
+    pub fn alloc_local(&mut self, name: &'ctx str, kind: &'ctx Type) {
+        let ptr_allocated: PointerValue =
+            valuegen::alloc(self.context, self.builder, kind, kind.is_recursive_type());
 
-        let allocated_object: AllocatedSymbol =
-            AllocatedSymbol::alloc(allocated_pointer, memory_flags, kind);
+        let symbol_allocated: SymbolAllocated = SymbolAllocated::new_local(ptr_allocated, kind);
 
         self.blocks
             .last_mut()
             .unwrap()
-            .insert(name, allocated_object);
+            .insert(name, symbol_allocated);
     }
 
     #[inline]
-    pub fn insert_constant_object(&mut self, name: &'ctx str, object: AllocatedSymbol<'ctx>) {
-        self.constants.insert(name, object);
+    pub fn alloc_constant(
+        &mut self,
+        name: &'ctx str,
+        kind: &'ctx Type,
+        value: BasicValueEnum<'ctx>,
+        attributes: &'ctx ThrushAttributes<'ctx>,
+    ) {
+        let constant_allocated: PointerValue = valuegen::alloc_constant(
+            self.module,
+            name,
+            typegen::generate_type(self.context, kind),
+            value,
+            attributes,
+        );
+
+        let symbol_allocated: SymbolAllocated =
+            SymbolAllocated::new_constant(constant_allocated, kind);
+
+        self.constants.insert(name, symbol_allocated);
+    }
+
+    #[inline]
+    pub fn alloc_function_parameter(
+        &mut self,
+        name: &'ctx str,
+        kind: &'ctx Type,
+        value: BasicValueEnum<'ctx>,
+    ) {
+        let symbol_allocated: SymbolAllocated = SymbolAllocated::new_parameter(value, kind);
+
+        self.lift.insert(name, symbol_allocated);
     }
 
     #[inline]
@@ -62,19 +107,19 @@ impl<'ctx> SymbolsTable<'ctx> {
     }
 
     #[inline]
-    pub fn get_allocated_symbols(&self) -> AllocatedSymbols {
+    pub fn get_allocated_symbols(&self) -> SymbolsAllocated {
         self.blocks.last().unwrap()
     }
 
     #[inline]
-    pub fn get_allocated_symbol(&self, name: &str) -> AllocatedSymbol<'ctx> {
+    pub fn get_allocated_symbol(&self, name: &str) -> SymbolAllocated<'ctx> {
         if let Some(constant) = self.constants.get(name) {
-            return *constant;
+            return constant.clone();
         }
 
         for position in (0..self.scope).rev() {
             if let Some(allocated_symbol) = self.blocks[position].get(name) {
-                return *allocated_symbol;
+                return allocated_symbol.clone();
             }
         }
 
@@ -103,16 +148,30 @@ impl<'ctx> SymbolsTable<'ctx> {
         unreachable!()
     }
 
+    pub fn get_llvm_module(&self) -> &'a Module<'ctx> {
+        self.module
+    }
+
+    pub fn get_llvm_context(&self) -> &'ctx Context {
+        self.context
+    }
+
+    pub fn get_llvm_builder(&self) -> &'ctx Builder<'ctx> {
+        self.builder
+    }
+
     #[inline]
     pub fn begin_scope(&mut self) {
         self.blocks
             .push(HashMap::with_capacity(SCOPE_MINIMAL_CAPACITY));
+        self.blocks.last_mut().unwrap().extend(self.lift.clone());
         self.scope += 1;
     }
 
     #[inline]
     pub fn end_scope(&mut self) {
         self.blocks.pop();
+        self.lift.clear();
         self.scope -= 1;
     }
 }

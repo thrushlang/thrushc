@@ -95,3 +95,10 @@ pub fn generate_type<'ctx>(context: &'ctx Context, kind: &Type) -> BasicTypeEnum
         _ => unreachable!(),
     }
 }
+
+pub fn generate_typed_pointer<'ctx>(context: &'ctx Context, kind: &Type) -> BasicTypeEnum<'ctx> {
+    match kind {
+        Type::Ptr(Some(subtyped)) => generate_type(context, subtyped),
+        _ => generate_type(context, kind),
+    }
+}

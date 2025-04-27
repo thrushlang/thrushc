@@ -111,7 +111,7 @@ pub enum Instruction<'ctx> {
     Function {
         name: &'ctx str,
         params: Vec<Instruction<'ctx>>,
-        body: Option<Rc<Instruction<'ctx>>>,
+        body: Rc<Instruction<'ctx>>,
         return_type: Type,
         attributes: ThrushAttributes<'ctx>,
     },
@@ -255,7 +255,6 @@ impl<'ctx> Instruction<'ctx> {
             Instruction::Address { span, .. } => *span,
             Instruction::InitStruct { span, .. } => *span,
             Instruction::Carry { span, .. } => *span,
-            Instruction::InitStruct { span, .. } => *span,
 
             _ => unreachable!(),
         }
@@ -270,7 +269,7 @@ impl<'ctx> Instruction<'ctx> {
             attributes,
         } = self
         {
-            return (name, return_type, params, body.as_ref(), attributes);
+            return (name, return_type, params, body, attributes);
         }
 
         unreachable!()
@@ -397,13 +396,8 @@ impl Instruction<'_> {
     }
 
     #[inline]
-    pub const fn is_gep(&self) -> bool {
-        matches!(self, Instruction::Address { .. })
-    }
-
-    #[inline]
-    pub const fn is_carry(&self) -> bool {
-        matches!(self, Instruction::Carry { .. })
+    pub const fn is_block(&self) -> bool {
+        matches!(self, Instruction::Block { .. })
     }
 
     #[inline]
@@ -429,6 +423,11 @@ impl Instruction<'_> {
     #[inline]
     pub const fn is_group(&self) -> bool {
         matches!(self, Instruction::Group { .. })
+    }
+
+    #[inline]
+    pub const fn is_null(&self) -> bool {
+        matches!(self, Instruction::Null)
     }
 
     #[inline]

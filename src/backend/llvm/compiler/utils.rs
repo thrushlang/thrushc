@@ -5,7 +5,8 @@ use super::super::super::super::middle::types::Type;
 
 use super::typegen;
 
-use inkwell::values::{BasicValue, StructValue};
+use inkwell::types::BasicTypeEnum;
+use inkwell::values::StructValue;
 
 use inkwell::{
     AddressSpace,
@@ -13,7 +14,6 @@ use inkwell::{
     context::Context,
     module::{Linkage, Module},
     types::ArrayType,
-    types::BasicType,
     values::{BasicValueEnum, FloatValue, GlobalValue, IntValue, PointerValue},
 };
 
@@ -153,23 +153,4 @@ pub fn build_str_constant<'ctx>(
         ],
         false,
     )
-}
-
-pub fn build_global_constant<'ctx, Type: BasicType<'ctx>, Value: BasicValue<'ctx>>(
-    module: &Module<'ctx>,
-    name: &str,
-    llvm_type: Type,
-    llvm_value: Value,
-    attributes: &'ctx ThrushAttributes<'ctx>,
-) -> PointerValue<'ctx> {
-    let global: GlobalValue = module.add_global(llvm_type, Some(AddressSpace::default()), name);
-
-    if !attributes.contain_public_attribute() {
-        global.set_linkage(Linkage::LinkerPrivate)
-    }
-
-    global.set_initializer(&llvm_value);
-    global.set_constant(true);
-
-    global.as_pointer_value()
 }

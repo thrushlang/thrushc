@@ -76,7 +76,7 @@ pub enum TokenKind {
     New,
     Import,
     Builtin,
-    Take,
+    Raw,
     Type,
     Enum,
     And,
@@ -363,12 +363,22 @@ impl Type {
     }
 
     #[inline(always)]
-    pub const fn is_stack_allocated(&self) -> bool {
+    pub fn is_stack_allocated(&self) -> bool {
         self.is_bool_type()
             || self.is_float_type()
             || self.is_integer_type()
             || self.is_char_type()
             || self.is_str_type()
+            || !self.is_recursive_type()
+            || self.is_stack_allocated_pointer()
+    }
+
+    pub fn is_stack_allocated_pointer(&self) -> bool {
+        if let Type::Ptr(Some(subtype)) = self {
+            return subtype.is_stack_allocated();
+        }
+
+        false
     }
 
     #[inline(always)]

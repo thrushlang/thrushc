@@ -13,17 +13,16 @@ use super::{
 use inkwell::{
     builder::Builder,
     context::Context,
-    module::Module,
     values::{BasicMetadataValueEnum, BasicValueEnum, CallSiteValue, FunctionValue},
 };
 
-pub fn build_call<'ctx>(
-    module: &Module<'ctx>,
-    builder: &Builder<'ctx>,
-    context: &'ctx Context,
+pub fn build_call<'a, 'ctx>(
     function_call: FunctionCall<'ctx>,
-    symbols: &SymbolsTable<'ctx>,
+    symbols: &SymbolsTable<'a, 'ctx>,
 ) -> Option<BasicValueEnum<'ctx>> {
+    let context: &Context = symbols.get_llvm_context();
+    let builder: &Builder = symbols.get_llvm_builder();
+
     let call_name: &str = function_call.0;
     let call_args: &[Instruction<'ctx>] = function_call.2;
     let call_type: &Type = function_call.1;
@@ -51,17 +50,8 @@ pub fn build_call<'ctx>(
             .unwrap_or(instruction.1)
             .get_type();
 
-        compiled_args.push(
-            valuegen::generate_expression(
-                module,
-                builder,
-                context,
-                instruction.1,
-                casting_target,
-                symbols,
-            )
-            .into(),
-        );
+        compiled_args
+            .push(valuegen::generate_expression(instruction.1, casting_target, symbols).into());
     });
 
     let call: CallSiteValue = builder
