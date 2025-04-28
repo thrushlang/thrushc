@@ -81,6 +81,7 @@ impl std::fmt::Display for TokenKind {
             TokenKind::Const => write!(f, "const"),
             TokenKind::While => write!(f, "while"),
             TokenKind::Loop => write!(f, "loop"),
+            TokenKind::NullPtr => write!(f, "nullptr"),
             TokenKind::Integer | TokenKind::Float => write!(f, "number"),
             TokenKind::Enum => write!(f, "enum"),
             TokenKind::Builtin => write!(f, "built-in"),
@@ -137,8 +138,8 @@ impl std::fmt::Display for Type {
             Type::Bool => write!(f, "bool"),
             Type::Str => write!(f, "str"),
             Type::Char => write!(f, "char"),
-            Type::Struct(fields) => {
-                let _ = write!(f, "struct {{ ");
+            Type::Struct(name, fields) => {
+                let _ = write!(f, "struct {} {{ ", name);
 
                 fields.iter().for_each(|field| {
                     let _ = write!(f, "{} ", field);

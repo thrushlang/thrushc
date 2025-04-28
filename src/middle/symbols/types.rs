@@ -7,7 +7,11 @@ use crate::middle::{
 
 pub type Constant<'instr> = (Type, ThrushAttributes<'instr>);
 
-pub type Struct<'instr> = (Vec<(&'instr str, Type, u32)>, ThrushAttributes<'instr>);
+pub type Struct<'instr> = (
+    &'instr str,
+    Vec<(&'instr str, Type, u32)>,
+    ThrushAttributes<'instr>,
+);
 
 pub type Function<'instr> = (Type, Vec<Type>, bool);
 pub type Local<'instr> = (Type, bool);

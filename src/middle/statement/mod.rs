@@ -33,7 +33,7 @@ pub type FunctionPrototype<'ctx> = (
 pub type Function<'ctx> = (FunctionValue<'ctx>, &'ctx [Instruction<'ctx>], u32);
 pub type FunctionParameter<'ctx> = (&'ctx str, &'ctx Type, u32);
 
-pub type StructFields<'ctx> = Vec<(&'ctx str, Type, u32)>;
+pub type StructFields<'ctx> = (&'ctx str, Vec<(&'ctx str, Type, u32)>);
 
 pub type Enum<'ctx> = (EnumFields<'ctx>, ThrushAttributes<'ctx>);
 
@@ -44,6 +44,9 @@ pub type CustomType<'ctx> = (CustomTypeFields<'ctx>, ThrushAttributes<'ctx>);
 pub type CustomTypeField<'ctx> = Type;
 pub type CustomTypeFields<'ctx> = Vec<CustomTypeField<'ctx>>;
 
-pub type Constructor<'instr> = Vec<(&'instr str, Instruction<'instr>, Type, u32)>;
+pub type Constructor<'instr> = (
+    &'instr str,
+    Vec<(&'instr str, Instruction<'instr>, Type, u32)>,
+);
 
 pub type ThrushAttributes<'ctx> = Vec<LLVMAttribute<'ctx>>;

@@ -11,6 +11,7 @@ use crate::middle::statement::{
 };
 use crate::middle::symbols::traits::{ConstantExtensions, LocalExtensions};
 use crate::middle::symbols::types::{Constant, Function, Functions, Local, Struct};
+use crate::middle::types;
 
 use super::contexts::{ParserControlContext, ParserTypeContext};
 use super::lexer::Span;
@@ -822,7 +823,7 @@ impl<'instr> Parser<'instr> {
             String::from("Expected '{'."),
         )?;
 
-        let mut fields_types: StructFields = Vec::with_capacity(10);
+        let mut fields_types: StructFields = (struct_name, Vec::with_capacity(10));
         let mut field_position: u32 = 0;
 
         while self.peek().kind != TokenKind::RBrace {
@@ -840,7 +841,9 @@ impl<'instr> Parser<'instr> {
 
                 let field_type: Type = self.build_type(Some(TokenKind::SemiColon))?;
 
-                fields_types.push((field_name, field_type, field_position));
+                fields_types
+                    .1
+                    .push((field_name, field_type, field_position));
                 field_position += 1;
 
                 continue;
@@ -868,8 +871,11 @@ impl<'instr> Parser<'instr> {
         )?;
 
         if declare {
-            self.symbols
-                .new_struct(struct_name, (fields_types, struct_attributes), span)?;
+            self.symbols.new_struct(
+                struct_name,
+                (struct_name, fields_types.1, struct_attributes),
+                span,
+            )?;
         }
 
         Ok(Instruction::Null)
@@ -899,7 +905,7 @@ impl<'instr> Parser<'instr> {
 
         let struct_found: Struct = self.symbols.get_struct(struct_name, span)?;
 
-        let fields_required: usize = struct_found.get_fields().len();
+        let fields_required: usize = struct_found.get_fields().1.len();
 
         self.consume(
             TokenKind::LBrace,
@@ -907,7 +913,7 @@ impl<'instr> Parser<'instr> {
             String::from("Expected '{'."),
         )?;
 
-        let mut arguments: Constructor = Vec::with_capacity(10);
+        let mut arguments: Constructor = (struct_name, Vec::with_capacity(10));
 
         let mut amount: usize = 0;
 
@@ -950,7 +956,9 @@ impl<'instr> Parser<'instr> {
                         Some(&expression),
                     );
 
-                    arguments.push((field_name, expression, target_type, amount as u32));
+                    arguments
+                        .1
+                        .push((field_name, expression, target_type, amount as u32));
                 }
 
                 amount += 1;
@@ -960,7 +968,7 @@ impl<'instr> Parser<'instr> {
             self.only_advance()?;
         }
 
-        let amount_fields: usize = arguments.len();
+        let amount_fields: usize = arguments.1.len();
 
         if amount_fields != fields_required {
             return Err(ThrushCompilerError::Error(
@@ -2089,141 +2097,147 @@ impl<'instr> Parser<'instr> {
                 Instruction::Char(Type::Char, char.lexeme[0], span)
             }
 
-            kind => match kind {
-                TokenKind::Integer => {
-                    let integer_tk: &Token = self.advance()?;
-                    let integer: &str = integer_tk.lexeme.to_str();
-                    let span: Span = integer_tk.span;
+            TokenKind::NullPtr => {
+                self.only_advance()?;
 
-                    let parsed_integer: (Type, f64) = utils::parse_number(integer, span)?;
+                Instruction::NullPtr
+            }
 
-                    let integer_type: Type = parsed_integer.0;
-                    let integer_value: f64 = parsed_integer.1;
+            TokenKind::Integer => {
+                let integer_tk: &Token = self.advance()?;
+                let integer: &str = integer_tk.lexeme.to_str();
+                let span: Span = integer_tk.span;
 
-                    Instruction::Integer(integer_type, integer_value, false, span)
-                }
+                let parsed_integer: (Type, f64) = utils::parse_number(integer, span)?;
 
-                TokenKind::Float => {
-                    let float_tk: &Token = self.advance()?;
-                    let float: &str = float_tk.lexeme.to_str();
-                    let span: Span = float_tk.span;
+                let integer_type: Type = parsed_integer.0;
+                let integer_value: f64 = parsed_integer.1;
 
-                    let parsed_float: (Type, f64) = utils::parse_number(float, span)?;
+                Instruction::Integer(integer_type, integer_value, false, span)
+            }
 
-                    let float_type: Type = parsed_float.0;
-                    let float_value: f64 = parsed_float.1;
+            TokenKind::Float => {
+                let float_tk: &Token = self.advance()?;
+                let float: &str = float_tk.lexeme.to_str();
+                let span: Span = float_tk.span;
 
-                    Instruction::Float(float_type, float_value, false, span)
-                }
+                let parsed_float: (Type, f64) = utils::parse_number(float, span)?;
 
-                TokenKind::Identifier => {
-                    let identifier_tk: &Token = self.advance()?;
+                let float_type: Type = parsed_float.0;
+                let float_value: f64 = parsed_float.1;
 
-                    let name: &str = identifier_tk.lexeme.to_str();
-                    let span: Span = identifier_tk.span;
+                Instruction::Float(float_type, float_value, false, span)
+            }
 
-                    /*if self.rec_structure_ref {
-                        return Ok(Instruction::ComplexType(
-                            Type::Struct(Vec::new()),
-                            object_name,
-                            None,
-                        ));
-                    }*/
+            TokenKind::Identifier => {
+                let identifier_tk: &Token = self.advance()?;
 
+                let name: &str = identifier_tk.lexeme.to_str();
+                let span: Span = identifier_tk.span;
+
+                /*if self.rec_structure_ref {
+                    return Ok(Instruction::ComplexType(
+                        Type::Struct(Vec::new()),
+                        object_name,
+                        None,
+                    ));
+                }*/
+
+                let object: FoundSymbolId = self.symbols.get_symbols_id(name, span)?;
+
+                /*if object.is_structure() {
+                    return Ok(Instruction::ComplexType(
+                        Type::Struct(Vec::new()),
+                        object_name,
+                        None,
+                    ));
+                }*/
+
+                /*if object.is_custom_type() {
+                    let custom_id: &str = object.expected_custom_type(location)?;
+
+                    let custom: CustomType = self
+                        .symbols
+                        .get_custom_type_by_id(custom_id, location)?;
+
+                    let custom_type_fields: CustomTypeFields = custom.0;
+
+                    return Ok(custom_type_fields.get_type());
+                }*/
+
+                if self.match_token(TokenKind::Eq)? {
                     let object: FoundSymbolId = self.symbols.get_symbols_id(name, span)?;
 
-                    /*if object.is_structure() {
-                        return Ok(Instruction::ComplexType(
-                            Type::Struct(Vec::new()),
-                            object_name,
-                            None,
-                        ));
-                    }*/
+                    let local_position: (&str, usize) = object.expected_local(span)?;
 
-                    /*if object.is_custom_type() {
-                        let custom_id: &str = object.expected_custom_type(location)?;
+                    let local: &Local =
+                        self.symbols
+                            .get_local_by_id(local_position.0, local_position.1, span)?;
 
-                        let custom: CustomType = self
-                            .symbols
-                            .get_custom_type_by_id(custom_id, location)?;
+                    let local_type: Type = local.0.clone();
 
-                        let custom_type_fields: CustomTypeFields = custom.0;
+                    let expression: Instruction = self.expr(type_ctx, control_ctx)?;
 
-                        return Ok(custom_type_fields.get_type());
-                    }*/
+                    self.check_type_mismatch(
+                        &local_type.clone(),
+                        expression.get_type(),
+                        expression.get_span(),
+                        Some(&expression),
+                    );
 
-                    if self.match_token(TokenKind::Eq)? {
-                        let object: FoundSymbolId = self.symbols.get_symbols_id(name, span)?;
-
-                        let local_position: (&str, usize) = object.expected_local(span)?;
-
-                        let local: &Local = self.symbols.get_local_by_id(
-                            local_position.0,
-                            local_position.1,
-                            span,
-                        )?;
-
-                        let local_type: Type = local.0.clone();
-
-                        let expression: Instruction = self.expression(type_ctx, control_ctx)?;
-
-                        self.check_type_mismatch(
-                            &local_type.clone(),
-                            expression.get_type(),
-                            expression.get_span(),
-                            Some(&expression),
-                        );
-
-                        return Ok(Instruction::LocalMut {
-                            name,
-                            value: Rc::new(expression),
-                            kind: local_type,
-                            span,
-                        });
-                    }
-
-                    if self.match_token(TokenKind::Arrow)? {
-                        return self.build_enum_field(name, span);
-                    }
-
-                    if self.match_token(TokenKind::LParen)? {
-                        return self.build_function_call(name, span, type_ctx, control_ctx);
-                    }
-
-                    if object.is_enum() {
-                        return Err(ThrushCompilerError::Error(
-                            String::from("Invalid type"),
-                            String::from(
-                                "Enums cannot be used as types; use properties instead with their types.",
-                            ),
-                            span,
-                        ));
-                    }
-
-                    if object.is_function() {
-                        return Err(ThrushCompilerError::Error(
-                            String::from("Invalid type"),
-                            String::from("Functions cannot be used as types; call it instead."),
-                            span,
-                        ));
-                    }
-
-                    self.build_ref(name, span, false)?
+                    return Ok(Instruction::LocalMut {
+                        name,
+                        value: Rc::new(expression),
+                        kind: local_type,
+                        span,
+                    });
                 }
 
-                TokenKind::True => Instruction::Boolean(Type::Bool, true, self.advance()?.span),
-                TokenKind::False => Instruction::Boolean(Type::Bool, false, self.advance()?.span),
+                if self.match_token(TokenKind::Arrow)? {
+                    return self.build_enum_field(name, span);
+                }
 
-                _ => {
-                    let previous: &Token = self.advance()?;
+                if self.match_token(TokenKind::LParen)? {
+                    return self.build_function_call(name, span, type_ctx, control_ctx);
+                }
 
+                if self.match_token(TokenKind::Dot)? {
+                    return self.build_property(name, span);
+                }
+
+                if object.is_enum() {
                     return Err(ThrushCompilerError::Error(
-                        String::from("Syntax error"),
-                        format!("Statement '{}' don't allowed.", previous.lexeme.to_str()),
-                        previous.span,
+                        String::from("Invalid type"),
+                        String::from(
+                            "Enums cannot be used as types; use properties instead with their types.",
+                        ),
+                        span,
                     ));
                 }
-            },
+
+                if object.is_function() {
+                    return Err(ThrushCompilerError::Error(
+                        String::from("Invalid type"),
+                        String::from("Functions cannot be used as types; call it instead."),
+                        span,
+                    ));
+                }
+
+                self.build_ref(name, span, false)?
+            }
+
+            TokenKind::True => Instruction::Boolean(Type::Bool, true, self.advance()?.span),
+            TokenKind::False => Instruction::Boolean(Type::Bool, false, self.advance()?.span),
+
+            _ => {
+                let previous: &Token = self.advance()?;
+
+                return Err(ThrushCompilerError::Error(
+                    String::from("Syntax error"),
+                    format!("Statement '{}' don't allowed.", previous.lexeme.to_str()),
+                    previous.span,
+                ));
+            }
         };
 
         Ok(primary)
@@ -2343,16 +2357,68 @@ impl<'instr> Parser<'instr> {
         unreachable!()
     }
 
+    fn build_property(
+        &mut self,
+        name: &'instr str,
+        span: Span,
+    ) -> Result<Instruction<'instr>, ThrushCompilerError> {
+        let symbol: FoundSymbolId = self.symbols.get_symbols_id(name, span)?;
+
+        let local_position: (&str, usize) = symbol.expected_local(span)?;
+
+        let local: &Local =
+            self.symbols
+                .get_local_by_id(local_position.0, local_position.1, span)?;
+
+        let local_type: Type = local.get_type();
+
+        let mut property_names: Vec<&'instr str> = Vec::with_capacity(10);
+
+        let first_property: &Token = self.consume(
+            TokenKind::Identifier,
+            String::from("Syntax error"),
+            String::from("Expected property name."),
+        )?;
+
+        let mut span: Span = first_property.span;
+
+        property_names.push(first_property.lexeme.to_str());
+
+        while self.match_token(TokenKind::Dot)? {
+            let property: &Token = self.consume(
+                TokenKind::Identifier,
+                String::from("Syntax error"),
+                String::from("Expected property name."),
+            )?;
+
+            span = property.span;
+
+            property_names.push(property.lexeme.to_str());
+        }
+
+        property_names.reverse();
+
+        let decomposed: (Type, Vec<u32>) =
+            types::decompose_struct_property(0, property_names, local_type, &self.symbols, span)?;
+
+        Ok(Instruction::Property {
+            name,
+            indexes: decomposed.1,
+            kind: decomposed.0,
+            span,
+        })
+    }
+
     fn build_ref(
         &mut self,
         name: &'instr str,
         span: Span,
         take_ptr: bool,
     ) -> Result<Instruction<'instr>, ThrushCompilerError> {
-        let object: FoundSymbolId = self.symbols.get_symbols_id(name, span)?;
+        let symbol: FoundSymbolId = self.symbols.get_symbols_id(name, span)?;
 
-        if object.is_constant() {
-            let const_id: &str = object.expected_constant(span)?;
+        if symbol.is_constant() {
+            let const_id: &str = symbol.expected_constant(span)?;
             let constant: Constant = self.symbols.get_const_by_id(const_id, span)?;
             let constant_type: Type = constant.get_type();
 
@@ -2364,7 +2430,7 @@ impl<'instr> Parser<'instr> {
             });
         }
 
-        let local_position: (&str, usize) = object.expected_local(span)?;
+        let local_position: (&str, usize) = symbol.expected_local(span)?;
 
         let local: &Local =
             self.symbols

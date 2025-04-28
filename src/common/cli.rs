@@ -41,33 +41,33 @@ impl Cli {
             return;
         }
 
-        let mut depth: usize = 0;
+        let mut position: usize = 0;
 
-        while depth != self.args.len() {
-            self.analyze(self.args[depth].clone(), &mut depth);
+        while position != self.args.len() {
+            self.analyze(self.args[position].clone(), &mut position);
         }
     }
 
-    fn analyze(&mut self, argument: String, index: &mut usize) {
+    fn analyze(&mut self, argument: String, position: &mut usize) {
         match argument.trim() {
             "help" | "-h" | "--help" => {
-                *index += 1;
+                *position += 1;
                 self.help();
             }
 
             "llvm-help" => {
-                *index += 1;
+                *position += 1;
                 self.llvm_help();
             }
 
             "version" | "-v" | "--version" => {
-                *index += 1;
+                *position += 1;
                 println!("v{}", env!("CARGO_PKG_VERSION"));
                 process::exit(0);
             }
 
             "target-triples" => {
-                *index += 1;
+                *position += 1;
                 TARGET_TRIPLES
                     .iter()
                     .for_each(|target| println!("{}", target));
@@ -75,7 +75,7 @@ impl Cli {
             }
 
             "host-triple" => {
-                *index += 1;
+                *position += 1;
                 println!(
                     "{}",
                     TargetMachine::get_default_triple()
@@ -87,14 +87,14 @@ impl Cli {
             }
 
             "-opt" | "--optimization" => {
-                *index += 1;
+                *position += 1;
 
-                if *index > self.args.len() {
+                if *position > self.args.len() {
                     self.report_error(&format!("Missing argument for '{}' flag.", argument));
                 }
 
                 self.options.optimization =
-                    match self.args[self.extract_relative_index(*index)].as_str() {
+                    match self.args[self.extract_relative_position(*position)].as_str() {
                         "O0" => Opt::None,
                         "O1" => Opt::Low,
                         "O2" => Opt::Mid,
@@ -106,17 +106,17 @@ impl Cli {
                         }
                     };
 
-                *index += 1;
+                *position += 1;
             }
 
             "--emit" | "-emit" => {
-                *index += 1;
+                *position += 1;
 
-                if *index > self.args.len() {
+                if *position > self.args.len() {
                     self.report_error(&format!("Missing argument for '{}' flag.", argument));
                 }
 
-                match self.args[self.extract_relative_index(*index)].as_str() {
+                match self.args[self.extract_relative_position(*position)].as_str() {
                     "llvm-ir" => self.options.emit_llvm_ir = true,
                     "llvm-bc" => self.options.emit_llvm_bitcode = true,
                     "ast" => self.options.emit_ast = true,
@@ -130,63 +130,63 @@ impl Cli {
                     }
                 }
 
-                *index += 1;
+                *position += 1;
             }
 
             "--target" | "-t" => {
-                *index += 1;
+                *position += 1;
 
-                if *index > self.args.len() {
+                if *position > self.args.len() {
                     self.report_error(&format!("Missing argument for '{}' flag.", argument));
                 }
 
-                match self.args[self.extract_relative_index(*index)].as_str() {
+                match self.args[self.extract_relative_position(*position)].as_str() {
                     target if TARGET_TRIPLES.contains(&target) => {
                         self.options.target_triple = TargetTriple::create(target);
-                        *index += 1;
+                        *position += 1;
                     }
 
                     _ => {
                         self.report_error(&format!(
                             "Invalid target: {}",
-                            self.args[self.extract_relative_index(*index)]
+                            self.args[self.extract_relative_position(*position)]
                         ));
                     }
                 }
             }
 
             "--emit-raw-llvm-ir" | "-emit-raw-llvm-ir" => {
-                *index += 1;
+                *position += 1;
                 self.options.emit_raw_llvm_ir = true;
             }
 
             "--reloc" | "-reloc" => {
-                *index += 1;
+                *position += 1;
 
-                if *index > self.args.len() {
+                if *position > self.args.len() {
                     self.report_error(&format!("Missing argument for '{}' flag.", argument));
                 }
 
                 self.options.reloc_mode =
-                    match self.args[self.extract_relative_index(*index)].as_str() {
+                    match self.args[self.extract_relative_position(*position)].as_str() {
                         "dynamic-no-pic" => RelocMode::DynamicNoPic,
                         "pic" => RelocMode::PIC,
                         "static" => RelocMode::Static,
                         _ => RelocMode::Default,
                     };
 
-                *index += 1;
+                *position += 1;
             }
 
             "--code-model" | "-code-model" => {
-                *index += 1;
+                *position += 1;
 
-                if *index > self.args.len() {
+                if *position > self.args.len() {
                     self.report_error(&format!("Missing argument for '{}' flag.", argument));
                 }
 
                 self.options.code_model =
-                    match self.args[self.extract_relative_index(*index)].as_str() {
+                    match self.args[self.extract_relative_position(*position)].as_str() {
                         "small" => CodeModel::Small,
                         "medium" => CodeModel::Medium,
                         "large" => CodeModel::Large,
@@ -194,11 +194,11 @@ impl Cli {
                         _ => CodeModel::Default,
                     };
 
-                *index += 1;
+                *position += 1;
             }
 
             path if PathBuf::from(path).exists() && path.ends_with(".th") => {
-                *index += 1;
+                *position += 1;
 
                 let mut file: PathBuf = PathBuf::from(path);
 
@@ -217,18 +217,18 @@ impl Cli {
             }
 
             arg => {
-                *index += 1;
+                *position += 1;
                 self.options.args.push(arg.to_owned());
             }
         }
     }
 
     #[inline]
-    fn extract_relative_index(&self, index: usize) -> usize {
-        if index == self.args.len() {
-            index - 1
+    fn extract_relative_position(&self, position: usize) -> usize {
+        if position == self.args.len() {
+            position - 1
         } else {
-            index
+            position
         }
     }
 

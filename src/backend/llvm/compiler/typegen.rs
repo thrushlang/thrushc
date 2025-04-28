@@ -57,7 +57,7 @@ pub fn function_type<'ctx>(
 
         Type::Address => generate_type(context, kind).fn_type(&parameters_types, ignore_args),
         Type::Ptr(_) => generate_type(context, kind).fn_type(&parameters_types, ignore_args),
-        Type::Struct(_) => generate_type(context, kind).fn_type(&parameters_types, ignore_args),
+        Type::Struct(..) => generate_type(context, kind).fn_type(&parameters_types, ignore_args),
 
         Type::Bool => context.bool_type().fn_type(&parameters_types, ignore_args),
         Type::F32 => context.f32_type().fn_type(&parameters_types, ignore_args),
@@ -82,7 +82,7 @@ pub fn generate_type<'ctx>(context: &'ctx Context, kind: &Type) -> BasicTypeEnum
                 false,
             )
             .into(),
-        Type::Struct(fields) => {
+        Type::Struct(_, fields) => {
             let mut field_types: Vec<BasicTypeEnum> = Vec::with_capacity(10);
 
             fields.iter().for_each(|field| {

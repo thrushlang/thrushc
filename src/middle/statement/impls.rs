@@ -26,15 +26,15 @@ impl AttributesExtensions for ThrushAttributes<'_> {
 
 impl StructFieldsExtensions for StructFields<'_> {
     fn get_type(&self) -> Type {
-        let types: Vec<Type> = self.iter().map(|field| field.1.clone()).collect();
-        Type::create_structure_type(types.as_slice())
+        let types: Vec<Type> = self.1.iter().map(|field| field.1.clone()).collect();
+        Type::create_structure_type(self.0.to_string(), types.as_slice())
     }
 }
 
 impl ConstructorExtensions for Constructor<'_> {
     fn get_type(&self) -> Type {
-        let types: Vec<Type> = self.iter().map(|field| field.2.clone()).collect();
-        Type::create_structure_type(types.as_slice())
+        let types: Vec<Type> = self.1.iter().map(|field| field.2.clone()).collect();
+        Type::create_structure_type(self.0.to_string(), types.as_slice())
     }
 }
 
@@ -74,7 +74,7 @@ impl ConstructorExtensions for Constructor<'_> {
 
 impl CustomTypeFieldsExtensions for CustomTypeFields<'_> {
     fn get_type(&self) -> Type {
-        Type::create_structure_type(self)
+        Type::create_structure_type(String::new(), self)
     }
 }
 

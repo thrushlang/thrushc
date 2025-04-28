@@ -18,7 +18,7 @@ use {
     std::{mem, process::exit},
 };
 
-const KEYWORDS_CAPACITY: usize = 58;
+const KEYWORDS_CAPACITY: usize = 60;
 const MINIMAL_TOKENS_CAPACITY: usize = 100_000;
 
 lazy_static! {
@@ -48,6 +48,7 @@ lazy_static! {
         keywords.insert(b"match", TokenKind::Match);
         keywords.insert(b"pattern", TokenKind::Pattern);
         keywords.insert(b"raw", TokenKind::Raw);
+        keywords.insert(b"nullptr", TokenKind::NullPtr);
         keywords.insert(b"type", TokenKind::Type);
         keywords.insert(b"enum", TokenKind::Enum);
         keywords.insert(b"address", TokenKind::Address);

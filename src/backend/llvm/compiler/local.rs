@@ -110,7 +110,7 @@ fn build_local_structure<'ctx>(local: Local<'ctx>, symbols: &mut SymbolsTable<'_
     if let Instruction::InitStruct { arguments, .. } = local_value {
         let context: &Context = symbols.get_llvm_context();
 
-        arguments.iter().for_each(|argument| {
+        arguments.1.iter().for_each(|argument| {
             let argument_instruction: &Instruction = &argument.1;
             let argument_type: &Type = &argument.2;
             let index: u32 = argument.3;

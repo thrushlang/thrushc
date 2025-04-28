@@ -25,7 +25,11 @@ pub fn integer_autocast<'ctx>(
     builder: &Builder<'ctx>,
     context: &'ctx Context,
 ) -> Option<BasicValueEnum<'ctx>> {
-    if target_type.is_bool_type() || target_type.is_void_type() || from_type == target_type {
+    if target_type.is_bool_type()
+        || target_type.is_void_type()
+        || from_type == target_type
+        || target_type.is_ptr_type()
+    {
         return None;
     }
 
@@ -80,7 +84,11 @@ pub fn float_autocast<'ctx>(
     builder: &Builder<'ctx>,
     context: &'ctx Context,
 ) -> Option<BasicValueEnum<'ctx>> {
-    if target_type.is_bool_type() || target_type.is_void_type() || from_type == target_type {
+    if target_type.is_bool_type()
+        || target_type.is_void_type()
+        || from_type == target_type
+        || target_type.is_ptr_type()
+    {
         return None;
     }
 

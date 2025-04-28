@@ -3,7 +3,16 @@ use std::sync::Arc;
 use ahash::{HashSet, HashSetExt};
 use inkwell::{context::Context, targets::TargetData};
 
-use crate::backend::llvm::compiler::{attributes::LLVMAttribute, typegen};
+use crate::{
+    backend::llvm::compiler::{attributes::LLVMAttribute, typegen},
+    common::error::ThrushCompilerError,
+    frontend::{lexer::Span, symbols::SymbolsTable},
+};
+
+use super::{
+    statement::{StructFields, traits::StructureExtensions},
+    symbols::types::Struct,
+};
 
 pub struct TypeContext {
     pub function_type: Type,
@@ -99,6 +108,7 @@ pub enum TokenKind {
     Const,
     While,
     Loop,
+    NullPtr,
 
     // --- Types ---
     S8,
@@ -332,7 +342,7 @@ pub enum Type {
     Ptr(Option<Arc<Type>>),
 
     // Struct Type
-    Struct(Vec<Arc<Type>>),
+    Struct(String, Vec<Arc<Type>>),
 
     // Address
     Address,
@@ -398,7 +408,7 @@ impl Type {
 
     #[inline(always)]
     pub const fn is_struct_type(&self) -> bool {
-        matches!(self, Type::Struct(_))
+        matches!(self, Type::Struct(..))
     }
 
     #[inline(always)]
@@ -453,12 +463,12 @@ impl Type {
         }
     }
 
-    pub fn llvm_exceeds_stack(&self, context: &Context, target_data: &TargetData) -> u64 {
-        target_data.get_abi_size(&typegen::generate_type(context, self))
+    pub fn llvm_exceeds_stack(&self, context: &Context, target_data: &TargetData) -> bool {
+        target_data.get_abi_size(&typegen::generate_type(context, self)) >= 120
     }
 
     pub fn is_recursive_type(&self) -> bool {
-        if let Type::Struct(fields) = self {
+        if let Type::Struct(_, fields) = self {
             let mut visited: HashSet<*const Type> = HashSet::with_capacity(100);
 
             fields
@@ -482,7 +492,7 @@ impl Type {
 
         visited.insert(ptr);
 
-        let result: bool = if let Type::Struct(fields) = self {
+        let result: bool = if let Type::Struct(_, fields) = self {
             if fields.iter().map(|f| f.as_ref()).collect::<Vec<&Type>>()
                 == original_fields
                     .iter()
@@ -504,15 +514,18 @@ impl Type {
         result
     }
 
-    pub fn create_structure_type(fields: &[Type]) -> Type {
-        Type::Struct(fields.iter().map(|field| Arc::new(field.clone())).collect())
+    pub fn create_structure_type(name: String, fields: &[Type]) -> Type {
+        Type::Struct(
+            name,
+            fields.iter().map(|field| Arc::new(field.clone())).collect(),
+        )
     }
 }
 
 impl PartialEq for Type {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
-            (Type::Struct(fields1), Type::Struct(fields2)) => {
+            (Type::Struct(_, fields1), Type::Struct(_, fields2)) => {
                 fields1.len() == fields2.len()
                     && fields1
                         .iter()
@@ -540,4 +553,68 @@ impl PartialEq for Type {
             _ => false,
         }
     }
+}
+
+pub fn decompose_struct_property(
+    mut position: usize,
+    property_names: Vec<&'_ str>,
+    struct_type: Type,
+    symbols_table: &SymbolsTable<'_>,
+    span: Span,
+) -> Result<(Type, Vec<u32>), ThrushCompilerError> {
+    let mut gep_indices: Vec<u32> = Vec::with_capacity(10);
+
+    if position >= property_names.len() {
+        return Ok((struct_type.clone(), gep_indices));
+    }
+
+    if let Type::Struct(name, _) = &struct_type {
+        let structure: Struct = symbols_table.get_struct(name, span)?;
+        let fields: StructFields = structure.get_fields();
+
+        let field_name: &str = property_names[position];
+
+        let field_with_index: Option<(usize, &(&str, Type, u32))> = fields
+            .1
+            .iter()
+            .enumerate()
+            .find(|field| field.1.0 == field_name);
+
+        if let Some((index, (_, field_type, _))) = field_with_index {
+            gep_indices.push(index as u32);
+
+            position += 1;
+
+            let (result_type, mut nested_indices) = decompose_struct_property(
+                position,
+                property_names,
+                field_type.clone(),
+                symbols_table,
+                span,
+            )?;
+
+            gep_indices.append(&mut nested_indices);
+
+            return Ok((result_type, gep_indices));
+        }
+
+        return Err(ThrushCompilerError::Error(
+            String::from("Syntax error"),
+            format!("Expected existing property, not '{}'.", field_name,),
+            span,
+        ));
+    }
+
+    if position < property_names.len() {
+        return Err(ThrushCompilerError::Error(
+            String::from("Syntax error"),
+            format!(
+                "Existing property '{}' is not a structure.",
+                property_names[position]
+            ),
+            span,
+        ));
+    }
+
+    Ok((struct_type.clone(), gep_indices))
 }

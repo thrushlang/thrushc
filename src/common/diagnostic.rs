@@ -59,19 +59,14 @@ impl Diagnostician {
     }
 
     fn diagnose(&mut self, title: &str, description: &str, span: Span, logging_type: LoggingType) {
-        Diagnostic::build(title, &self.code, span).print(
-            &self.path,
-            title,
-            logging_type,
-            description,
-        );
+        Diagnostic::build(&self.code, span).print(&self.path, title, logging_type, description);
     }
 }
 
 impl<'a> Diagnostic<'a> {
-    pub fn build(title: &'a str, code: &'a str, span: Span) -> Self {
+    pub fn build(code: &'a str, span: Span) -> Self {
         if let Some(code_position) = Diagnostic::find_line_and_range(code, span) {
-            if let Some(diagnostic) = Diagnostic::generate_diagnostic(title, code, code_position) {
+            if let Some(diagnostic) = Diagnostic::generate_diagnostic(code, code_position) {
                 return diagnostic;
             }
         }
@@ -107,11 +102,7 @@ impl<'a> Diagnostic<'a> {
         })
     }
 
-    pub fn generate_diagnostic(
-        title: &'a str,
-        code: &'a str,
-        position: CodePosition,
-    ) -> Option<Diagnostic<'a>> {
+    pub fn generate_diagnostic(code: &'a str, position: CodePosition) -> Option<Diagnostic<'a>> {
         let mut lines: Lines = code.lines();
 
         let line: &str = lines.nth(position.line.saturating_sub(1))?;
@@ -123,14 +114,8 @@ impl<'a> Diagnostic<'a> {
 
         let mut signaler: String = String::with_capacity(100);
 
-        let fixer_arrow_position: usize = if !title.to_lowercase().contains("syntax error") {
-            1
-        } else {
-            0
-        };
-
-        for pos in 0..=position.end - trim_diferrence - fixer_arrow_position {
-            if pos == position.end - trim_diferrence - fixer_arrow_position {
+        for pos in 0..=position.end - trim_diferrence {
+            if pos == position.end - trim_diferrence {
                 signaler.push('^');
                 break;
             }

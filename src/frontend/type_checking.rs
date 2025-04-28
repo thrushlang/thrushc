@@ -248,7 +248,7 @@ pub fn check_type(
     match (target_type, from_type, operator) {
         (Type::Char, Type::Char, None) => Ok(()),
         (Type::Str, Type::Str, None) => Ok(()),
-        (Type::Struct(target_fields), Type::Struct(from_fields), None) => {
+        (Type::Struct(_, target_fields), Type::Struct(_, from_fields), None) => {
             if target_fields.len() != from_fields.len() {
                 return Err(error);
             }
@@ -262,12 +262,16 @@ pub fn check_type(
             Ok(())
         }
 
-        (Type::Struct(_), Type::Void, None) => Ok(()),
+        (Type::Struct(_, _), Type::Void, None) => Ok(()),
 
         (Type::Ptr(None), Type::Ptr(None), None) => Ok(()),
         (Type::Ptr(Some(target_type)), Type::Ptr(Some(from_type)), None) => {
             check_type(target_type, from_type, expression, operator, error)?;
+            Ok(())
+        }
 
+        (Type::Ptr(Some(typed)), any, None) => {
+            check_type(typed, any, expression, operator, error)?;
             Ok(())
         }
 

@@ -10,11 +10,11 @@ use super::{super::middle::types::*, lexer::Span, symbols::FoundSymbolId};
 
 impl<'a> StructureExtensions<'a> for Struct<'a> {
     fn contains_field(&self, name: &str) -> bool {
-        self.0.iter().any(|field| field.0 == name)
+        self.1.iter().any(|field| field.0 == name)
     }
 
     fn get_field_type(&self, name: &str) -> Option<Type> {
-        if let Some(field) = self.0.iter().find(|field| field.0 == name) {
+        if let Some(field) = self.1.iter().find(|field| field.0 == name) {
             let field_type: Type = field.1.clone();
             return Some(field_type);
         }
@@ -23,7 +23,7 @@ impl<'a> StructureExtensions<'a> for Struct<'a> {
     }
 
     fn get_fields(&self) -> StructFields<'a> {
-        self.0.clone()
+        (self.0, self.1.clone())
     }
 }
 

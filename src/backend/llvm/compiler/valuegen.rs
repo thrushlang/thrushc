@@ -86,6 +86,13 @@ pub fn generate_expression<'ctx>(
     let context: &Context = symbols.get_llvm_context();
     let builder: &Builder = symbols.get_llvm_builder();
 
+    if let Instruction::NullPtr = expression {
+        return context
+            .ptr_type(AddressSpace::default())
+            .const_null()
+            .into();
+    }
+
     if let Instruction::Str(_, str, ..) = expression {
         return utils::build_str_constant(module, context, str).into();
     }

@@ -19,6 +19,7 @@ pub enum Instruction<'ctx> {
     Boolean(Type, bool, Span),
     Integer(Type, f64, bool, Span),
     Float(Type, f64, bool, Span),
+    NullPtr,
 
     // LLVMValue
     LLVMValue(BasicValueEnum<'ctx>),
@@ -39,6 +40,13 @@ pub enum Instruction<'ctx> {
     // new Vec { ... };
     InitStruct {
         arguments: Constructor<'ctx>,
+        kind: Type,
+        span: Span,
+    },
+
+    Property {
+        name: &'ctx str,
+        indexes: Vec<u32>,
         kind: Type,
         span: Span,
     },
@@ -230,6 +238,8 @@ impl<'ctx> Instruction<'ctx> {
             Instruction::Carry {
                 carry_type: kind, ..
             } => kind,
+            Instruction::Property { kind, .. } => kind,
+            Instruction::NullPtr => &Type::Ptr(None),
 
             _ => &Type::Void,
         }
@@ -255,6 +265,7 @@ impl<'ctx> Instruction<'ctx> {
             Instruction::Address { span, .. } => *span,
             Instruction::InitStruct { span, .. } => *span,
             Instruction::Carry { span, .. } => *span,
+            Instruction::Property { span, .. } => *span,
 
             _ => unreachable!(),
         }
