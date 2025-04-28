@@ -46,7 +46,7 @@ pub enum Instruction<'ctx> {
 
     Property {
         name: &'ctx str,
-        indexes: Vec<u32>,
+        indexes: Vec<(Type, u32)>,
         kind: Type,
         span: Span,
     },
@@ -156,9 +156,9 @@ pub enum Instruction<'ctx> {
         span: Span,
     },
     LocalMut {
-        name: &'ctx str,
+        source: (&'ctx str, Option<Rc<Instruction<'ctx>>>),
+        target: Rc<Instruction<'ctx>>,
         kind: Type,
-        value: Rc<Instruction<'ctx>>,
         span: Span,
     },
 

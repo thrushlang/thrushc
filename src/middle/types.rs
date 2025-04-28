@@ -379,7 +379,7 @@ impl Type {
             || self.is_integer_type()
             || self.is_char_type()
             || self.is_str_type()
-            || !self.is_recursive_type()
+            || self.is_recursive_type()
             || self.is_stack_allocated_pointer()
     }
 
@@ -561,8 +561,8 @@ pub fn decompose_struct_property(
     struct_type: Type,
     symbols_table: &SymbolsTable<'_>,
     span: Span,
-) -> Result<(Type, Vec<u32>), ThrushCompilerError> {
-    let mut gep_indices: Vec<u32> = Vec::with_capacity(10);
+) -> Result<(Type, Vec<(Type, u32)>), ThrushCompilerError> {
+    let mut gep_indices: Vec<(Type, u32)> = Vec::with_capacity(10);
 
     if position >= property_names.len() {
         return Ok((struct_type.clone(), gep_indices));
@@ -581,7 +581,7 @@ pub fn decompose_struct_property(
             .find(|field| field.1.0 == field_name);
 
         if let Some((index, (_, field_type, _))) = field_with_index {
-            gep_indices.push(index as u32);
+            gep_indices.push((field_type.clone(), index as u32));
 
             position += 1;
 

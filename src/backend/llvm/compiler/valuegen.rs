@@ -1,4 +1,6 @@
-use crate::backend::llvm::compiler::memory::SymbolAllocated;
+use std::rc::Rc;
+
+use crate::backend::llvm::compiler::memory::{self, SymbolAllocated};
 use crate::backend::llvm::compiler::{binaryop, call, unaryop, utils};
 use crate::middle::instruction::Instruction;
 use crate::middle::statement::ThrushAttributes;
@@ -211,6 +213,29 @@ pub fn generate_expression<'ctx>(
         return symbol.gep(context, builder, &compiled_indexes).into();
     }
 
+    if let Instruction::Property {
+        name,
+        indexes,
+        kind,
+        ..
+    } = expression
+    {
+        let symbol: SymbolAllocated = symbols.get_allocated_symbol(name);
+
+        let mut last_gep: PointerValue<'ctx> = symbol.gep_struct(context, builder, indexes[0].1);
+
+        indexes.iter().skip(1).for_each(|indexe| {
+            last_gep = memory::gep_struct_from_ptr(
+                builder,
+                typegen::generate_type(context, &indexe.0),
+                last_gep,
+                indexe.1,
+            );
+        });
+
+        return last_gep.into();
+    }
+
     if let Instruction::LocalRef { name, take, .. } | Instruction::ConstRef { name, take, .. } =
         expression
     {
@@ -271,12 +296,27 @@ pub fn generate_expression<'ctx>(
     }
 
     if let Instruction::LocalMut {
-        name, kind, value, ..
+        source,
+        kind,
+        target,
+        ..
     } = expression
     {
-        let symbol: SymbolAllocated = symbols.get_allocated_symbol(name);
+        let source_name: &str = source.0;
+        let source_expression: Option<&Rc<Instruction<'_>>> = source.1.as_ref();
 
-        let expression: BasicValueEnum = generate_expression(value, kind, symbols);
+        if let Some(expression) = source_expression {
+            let source: BasicValueEnum = generate_expression(expression, kind, symbols);
+            let target: BasicValueEnum = generate_expression(target, kind, symbols);
+
+            memory::store_anon(builder, source.into_pointer_value(), target);
+
+            return source;
+        }
+
+        let symbol: SymbolAllocated = symbols.get_allocated_symbol(source_name);
+
+        let expression: BasicValueEnum = generate_expression(target, kind, symbols);
 
         symbol.store(builder, expression);
 

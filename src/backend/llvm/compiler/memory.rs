@@ -1,6 +1,10 @@
 #![allow(clippy::enum_variant_names)]
 
-use inkwell::{context::Context, types::BasicType, values::IntValue};
+use inkwell::{
+    context::Context,
+    types::{BasicType, BasicTypeEnum},
+    values::IntValue,
+};
 
 use crate::{backend::llvm::compiler::typegen, common::logging, middle::types::Type};
 
@@ -211,7 +215,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
                 .unwrap_or_else(|| {
                     logging::log(
                         logging::LoggingType::Panic,
-                        "built-in size_of!(), cannot be get size of an function parameter. ",
+                        "built-in sizeof!(), cannot be get size of an function parameter. ",
                     );
 
                     unreachable!()
@@ -219,4 +223,43 @@ impl<'ctx> SymbolAllocated<'ctx> {
                 .into(),
         }
     }
+}
+
+pub fn gep_struct_from_ptr<'ctx>(
+    builder: &Builder<'ctx>,
+    kind: BasicTypeEnum<'ctx>,
+    ptr: PointerValue<'ctx>,
+    index: u32,
+) -> PointerValue<'ctx> {
+    builder.build_struct_gep(kind, ptr, index, "").unwrap()
+}
+
+pub fn load_anon<'ctx>(
+    context: &'ctx Context,
+    builder: &Builder<'ctx>,
+    kind: &Type,
+    ptr: PointerValue<'ctx>,
+) -> BasicValueEnum<'ctx> {
+    if kind.is_stack_allocated() {
+        let value: BasicValueEnum = builder
+            .build_load(typegen::generate_typed_pointer(context, kind), ptr, "")
+            .unwrap();
+
+        if let Some(load_instruction) = value.as_instruction_value() {
+            let _ = load_instruction.set_alignment(8);
+        }
+
+        return value;
+    }
+
+    ptr.into()
+}
+
+pub fn store_anon<'ctx>(
+    builder: &Builder<'ctx>,
+    ptr: PointerValue<'ctx>,
+    value: BasicValueEnum<'ctx>,
+) {
+    let store: InstructionValue = builder.build_store(ptr, value).unwrap();
+    let _ = store.set_alignment(8);
 }

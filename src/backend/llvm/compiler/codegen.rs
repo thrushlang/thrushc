@@ -440,11 +440,8 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                 Instruction::Null
             }
 
-            Instruction::LocalMut {
-                name, kind, value, ..
-            } => {
-                local::build_local_mutation(&mut self.symbols, (name, kind, value));
-
+            Instruction::LocalMut { kind, .. } => {
+                valuegen::generate_expression(instruction, kind, &self.symbols);
                 Instruction::Null
             }
 

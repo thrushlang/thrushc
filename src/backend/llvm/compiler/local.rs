@@ -46,46 +46,6 @@ pub fn build<'ctx>(local: Local<'ctx>, symbols: &mut SymbolsTable<'_, 'ctx>) {
     unreachable!()
 }
 
-pub fn build_local_mutation<'ctx>(symbols: &mut SymbolsTable<'_, 'ctx>, local: Local<'ctx>) {
-    let builder: &Builder = symbols.get_llvm_builder();
-
-    let local_name: &str = local.0;
-    let local_type: &Type = local.1;
-    let local_value: &Instruction = local.2;
-
-    let symbol: SymbolAllocated = symbols.get_allocated_symbol(local_name);
-
-    if let Instruction::LocalMut { value, .. } = local_value {
-        let expression: BasicValueEnum = valuegen::generate_expression(value, local_type, symbols);
-
-        symbol.store(builder, expression);
-
-        return;
-    }
-
-    if local_type.is_integer_type() {
-        build_local_integer(local, symbols);
-        return;
-    }
-
-    if local_type.is_float_type() {
-        build_local_float(local, symbols);
-        return;
-    }
-
-    if local_type.is_bool_type() {
-        build_local_boolean(local, symbols);
-        return;
-    }
-
-    if local_type.is_ptr_type() {
-        build_local_ptr(local, symbols);
-        return;
-    }
-
-    todo!()
-}
-
 fn build_local_ptr<'ctx>(local: Local<'ctx>, symbols: &mut SymbolsTable<'_, 'ctx>) {
     let builder: &Builder = symbols.get_llvm_builder();
 

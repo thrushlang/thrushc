@@ -926,6 +926,12 @@ impl<'instr> Parser<'instr> {
                 let field_tk: &Token = self.previous();
                 let field_name: &str = field_tk.lexeme.to_str();
 
+                self.consume(
+                    TokenKind::Colon,
+                    String::from("Syntax error"),
+                    String::from("Expected ':'."),
+                )?;
+
                 if !struct_found.contains_field(field_name) {
                     return Err(ThrushCompilerError::Error(
                         String::from("Syntax error"),
@@ -1785,7 +1791,7 @@ impl<'instr> Parser<'instr> {
 
             return Ok(Instruction::UnaryOp {
                 operator,
-                expression: Rc::from(expression),
+                expression: expression.into(),
                 kind: Type::Bool,
                 is_pre: false,
                 span,
@@ -1807,7 +1813,7 @@ impl<'instr> Parser<'instr> {
 
             return Ok(Instruction::UnaryOp {
                 operator,
-                expression: Rc::from(expression.clone()),
+                expression: expression.clone().into(),
                 kind: expression_type.clone(),
                 is_pre: false,
                 span,
@@ -2186,8 +2192,8 @@ impl<'instr> Parser<'instr> {
                     );
 
                     return Ok(Instruction::LocalMut {
-                        name,
-                        value: Rc::new(expression),
+                        source: (name, None),
+                        target: expression.into(),
                         kind: local_type,
                         span,
                     });
@@ -2202,7 +2208,27 @@ impl<'instr> Parser<'instr> {
                 }
 
                 if self.match_token(TokenKind::Dot)? {
-                    return self.build_property(name, span);
+                    let property: Instruction = self.build_property(name, span)?;
+
+                    if self.match_token(TokenKind::Eq)? {
+                        let expression: Instruction = self.expr(type_ctx, control_ctx)?;
+
+                        self.check_type_mismatch(
+                            property.get_type(),
+                            expression.get_type(),
+                            expression.get_span(),
+                            Some(&expression),
+                        );
+
+                        return Ok(Instruction::LocalMut {
+                            source: ("", Some(property.clone().into())),
+                            target: expression.into(),
+                            kind: property.get_type().clone(),
+                            span,
+                        });
+                    }
+
+                    return Ok(property);
                 }
 
                 if object.is_enum() {
@@ -2351,7 +2377,7 @@ impl<'instr> Parser<'instr> {
                 String::from("Expected ']'."),
             )?;
 
-            return Ok(Type::Ptr(Some(Arc::new(inner_type))));
+            return Ok(Type::Ptr(Some(inner_type.into())));
         }
 
         unreachable!()
@@ -2398,8 +2424,13 @@ impl<'instr> Parser<'instr> {
 
         property_names.reverse();
 
-        let decomposed: (Type, Vec<u32>) =
-            types::decompose_struct_property(0, property_names, local_type, &self.symbols, span)?;
+        let decomposed: (Type, Vec<(Type, u32)>) = types::decompose_struct_property(
+            0,
+            property_names,
+            local_type.clone(),
+            &self.symbols,
+            span,
+        )?;
 
         Ok(Instruction::Property {
             name,
