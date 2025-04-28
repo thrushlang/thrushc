@@ -43,12 +43,25 @@ pub fn build<'ctx>(local: Local<'ctx>, symbols: &mut SymbolsTable<'_, 'ctx>) {
         return;
     }
 
+    if local_type.is_mut_type() {
+        build_local_mut(local, symbols);
+        return;
+    }
+
     unreachable!()
 }
 
-fn build_local_ptr<'ctx>(local: Local<'ctx>, symbols: &mut SymbolsTable<'_, 'ctx>) {
-    let builder: &Builder = symbols.get_llvm_builder();
+fn build_local_mut<'ctx>(local: Local<'ctx>, symbols: &mut SymbolsTable<'_, 'ctx>) {
+    let local_value: &Instruction = local.2;
 
+    let symbol: SymbolAllocated = symbols.get_allocated_symbol(local.0);
+
+    let expression: BasicValueEnum = valuegen::generate_expression(local_value, local.1, symbols);
+
+    symbol.store(symbols, expression);
+}
+
+fn build_local_ptr<'ctx>(local: Local<'ctx>, symbols: &mut SymbolsTable<'_, 'ctx>) {
     let local_value: &Instruction = local.2;
 
     let symbol: SymbolAllocated = symbols.get_allocated_symbol(local.0);
@@ -56,7 +69,7 @@ fn build_local_ptr<'ctx>(local: Local<'ctx>, symbols: &mut SymbolsTable<'_, 'ctx
     let expression: BasicValueEnum =
         valuegen::generate_expression(local_value, &Type::Ptr(None), symbols);
 
-    symbol.store(builder, expression);
+    symbol.store(symbols, expression);
 }
 
 fn build_local_structure<'ctx>(local: Local<'ctx>, symbols: &mut SymbolsTable<'_, 'ctx>) {
@@ -89,23 +102,20 @@ fn build_local_structure<'ctx>(local: Local<'ctx>, symbols: &mut SymbolsTable<'_
     let expression: BasicValueEnum =
         valuegen::generate_expression(local_value, local_type, symbols);
 
-    symbol.store(builder, expression);
+    symbol.store(symbols, expression);
 }
 
 fn build_local_str<'ctx>(local: Local<'ctx>, symbols: &mut SymbolsTable<'_, 'ctx>) {
-    let builder: &Builder = symbols.get_llvm_builder();
     let local_value: &Instruction = local.2;
 
     let symbol: SymbolAllocated = symbols.get_allocated_symbol(local.0);
 
     let expression: BasicValueEnum = valuegen::generate_expression(local_value, local.1, symbols);
 
-    symbol.store(builder, expression);
+    symbol.store(symbols, expression);
 }
 
 fn build_local_integer<'ctx>(local: Local<'ctx>, symbols: &mut SymbolsTable<'_, 'ctx>) {
-    let builder: &Builder = symbols.get_llvm_builder();
-
     let local_name: &str = local.0;
     let local_type: &Type = local.1;
     let local_value: &Instruction = local.2;
@@ -115,12 +125,10 @@ fn build_local_integer<'ctx>(local: Local<'ctx>, symbols: &mut SymbolsTable<'_, 
     let expression: BasicValueEnum =
         valuegen::generate_expression(local_value, local_type, symbols);
 
-    symbol.store(builder, expression);
+    symbol.store(symbols, expression);
 }
 
 fn build_local_float<'ctx>(local: Local<'ctx>, symbols: &mut SymbolsTable<'_, 'ctx>) {
-    let builder: &Builder = symbols.get_llvm_builder();
-
     let local_name: &str = local.0;
     let local_type: &Type = local.1;
     let local_value: &Instruction = local.2;
@@ -130,12 +138,10 @@ fn build_local_float<'ctx>(local: Local<'ctx>, symbols: &mut SymbolsTable<'_, 'c
     let expression: BasicValueEnum =
         valuegen::generate_expression(local_value, local_type, symbols);
 
-    symbol.store(builder, expression);
+    symbol.store(symbols, expression);
 }
 
 fn build_local_boolean<'ctx>(local: Local<'ctx>, symbols: &mut SymbolsTable<'_, 'ctx>) {
-    let builder: &Builder = symbols.get_llvm_builder();
-
     let local_name: &str = local.0;
     let local_type: &Type = local.1;
     let local_value: &Instruction = local.2;
@@ -145,5 +151,5 @@ fn build_local_boolean<'ctx>(local: Local<'ctx>, symbols: &mut SymbolsTable<'_, 
     let expression: BasicValueEnum =
         valuegen::generate_expression(local_value, local_type, symbols);
 
-    symbol.store(builder, expression);
+    symbol.store(symbols, expression);
 }

@@ -15,6 +15,7 @@ use {
         builder::Builder,
         context::Context,
         module::Module,
+        targets::TargetData,
         values::{BasicValueEnum, PointerValue},
     },
 };
@@ -29,6 +30,7 @@ pub struct SymbolsTable<'a, 'ctx> {
     module: &'a Module<'ctx>,
     context: &'ctx Context,
     builder: &'ctx Builder<'ctx>,
+    pub target_data: TargetData,
     constants: HashMap<&'ctx str, SymbolAllocated<'ctx>>,
     functions: HashMap<&'ctx str, Function<'ctx>>,
     blocks: Vec<HashMap<&'ctx str, SymbolAllocated<'ctx>>>,
@@ -41,11 +43,13 @@ impl<'a, 'ctx> SymbolsTable<'a, 'ctx> {
         module: &'a Module<'ctx>,
         context: &'ctx Context,
         builder: &'ctx Builder<'ctx>,
+        target_data: TargetData,
     ) -> Self {
         Self {
             module,
             context,
             builder,
+            target_data,
             constants: HashMap::with_capacity(CONSTANTS_MINIMAL_CAPACITY),
             functions: HashMap::with_capacity(FUNCTION_MINIMAL_CAPACITY),
             blocks: Vec::with_capacity(SCOPE_MINIMAL_CAPACITY),
@@ -56,8 +60,12 @@ impl<'a, 'ctx> SymbolsTable<'a, 'ctx> {
 
     #[inline]
     pub fn alloc_local(&mut self, name: &'ctx str, kind: &'ctx Type) {
-        let ptr_allocated: PointerValue =
-            valuegen::alloc(self.context, self.builder, kind, kind.is_recursive_type());
+        let ptr_allocated: PointerValue = valuegen::alloc(
+            self.context,
+            self.builder,
+            kind,
+            kind.is_heap_allocated(self.context, &self.target_data),
+        );
 
         let symbol_allocated: SymbolAllocated = SymbolAllocated::new_local(ptr_allocated, kind);
 
@@ -97,7 +105,6 @@ impl<'a, 'ctx> SymbolsTable<'a, 'ctx> {
         value: BasicValueEnum<'ctx>,
     ) {
         let symbol_allocated: SymbolAllocated = SymbolAllocated::new_parameter(value, kind);
-
         self.lift.insert(name, symbol_allocated);
     }
 
@@ -106,7 +113,6 @@ impl<'a, 'ctx> SymbolsTable<'a, 'ctx> {
         self.functions.insert(name, function);
     }
 
-    #[inline]
     pub fn get_allocated_symbols(&self) -> SymbolsAllocated {
         self.blocks.last().unwrap()
     }
@@ -160,7 +166,6 @@ impl<'a, 'ctx> SymbolsTable<'a, 'ctx> {
         self.builder
     }
 
-    #[inline]
     pub fn begin_scope(&mut self) {
         self.blocks
             .push(HashMap::with_capacity(SCOPE_MINIMAL_CAPACITY));
@@ -168,7 +173,6 @@ impl<'a, 'ctx> SymbolsTable<'a, 'ctx> {
         self.scope += 1;
     }
 
-    #[inline]
     pub fn end_scope(&mut self) {
         self.blocks.pop();
         self.lift.clear();

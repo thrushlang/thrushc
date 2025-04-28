@@ -140,16 +140,11 @@ pub fn build_is_signed<'ctx>(
         let object: SymbolAllocated = symbols.get_allocated_symbol(name);
 
         return if ref_type.is_integer_type() {
-            let mut loaded_value: IntValue = object.load(context, builder).into_int_value();
+            let mut loaded_value: IntValue = object.load(symbols).into_int_value();
 
-            if let Some(casted_float) = utils::integer_autocast(
-                &Type::S64,
-                ref_type,
-                None,
-                loaded_value.into(),
-                builder,
-                context,
-            ) {
+            if let Some(casted_float) =
+                utils::integer_autocast(&Type::S64, ref_type, loaded_value.into(), builder, context)
+            {
                 loaded_value = casted_float.into_int_value();
             }
 
@@ -163,10 +158,10 @@ pub fn build_is_signed<'ctx>(
                 .unwrap()
                 .into()
         } else {
-            let mut loaded_value: BasicValueEnum = object.load(context, builder);
+            let mut loaded_value: BasicValueEnum = object.load(symbols);
 
             if let Some(casted_float) =
-                utils::float_autocast(&Type::F64, ref_type, None, loaded_value, builder, context)
+                utils::float_autocast(&Type::F64, ref_type, loaded_value, builder, context)
             {
                 loaded_value = casted_float;
             }

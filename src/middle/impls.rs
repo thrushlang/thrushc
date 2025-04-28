@@ -71,7 +71,7 @@ impl std::fmt::Display for TokenKind {
             TokenKind::If => write!(f, "if"),
             TokenKind::Elif => write!(f, "elif"),
             TokenKind::Or => write!(f, "or"),
-            TokenKind::Raw => write!(f, "raw"),
+            TokenKind::Mut => write!(f, "mut"),
             TokenKind::Write => write!(f, "write"),
             TokenKind::Type => write!(f, "type"),
             TokenKind::Return => write!(f, "return"),
@@ -138,6 +138,7 @@ impl std::fmt::Display for Type {
             Type::Bool => write!(f, "bool"),
             Type::Str => write!(f, "str"),
             Type::Char => write!(f, "char"),
+            Type::Mut(any_type) => write!(f, "mut {}", any_type),
             Type::Struct(name, fields) => {
                 let _ = write!(f, "struct {} {{ ", name);
 

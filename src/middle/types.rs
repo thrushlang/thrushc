@@ -85,7 +85,7 @@ pub enum TokenKind {
     New,
     Import,
     Builtin,
-    Raw,
+    Mut,
     Type,
     Enum,
     And,
@@ -229,6 +229,11 @@ impl TokenKind {
     }
 
     #[inline(always)]
+    pub const fn is_mut(&self) -> bool {
+        matches!(self, TokenKind::Mut)
+    }
+
+    #[inline(always)]
     pub const fn is_function_keyword(&self) -> bool {
         matches!(self, TokenKind::Fn)
     }
@@ -281,6 +286,7 @@ impl TokenKind {
             || self.is_ptr()
             || self.is_str()
             || self.is_void()
+            || self.is_mut()
     }
 
     #[inline(always)]
@@ -338,6 +344,9 @@ pub enum Type {
     // Str Type
     Str,
 
+    // Mutable Type
+    Mut(Arc<Type>),
+
     // Ptr Type
     Ptr(Option<Arc<Type>>),
 
@@ -372,23 +381,9 @@ impl Type {
         }
     }
 
-    #[inline(always)]
-    pub fn is_stack_allocated(&self) -> bool {
-        self.is_bool_type()
-            || self.is_float_type()
-            || self.is_integer_type()
-            || self.is_char_type()
-            || self.is_str_type()
+    pub fn is_heap_allocated(&self, context: &Context, target_data: &TargetData) -> bool {
+        target_data.get_abi_size(&typegen::generate_type(context, self)) >= 100
             || self.is_recursive_type()
-            || self.is_stack_allocated_pointer()
-    }
-
-    pub fn is_stack_allocated_pointer(&self) -> bool {
-        if let Type::Ptr(Some(subtype)) = self {
-            return subtype.is_stack_allocated();
-        }
-
-        false
     }
 
     #[inline(always)]
@@ -427,6 +422,11 @@ impl Type {
     }
 
     #[inline(always)]
+    pub const fn is_mut_type(&self) -> bool {
+        matches!(self, Type::Mut(_))
+    }
+
+    #[inline(always)]
     pub const fn is_str_type(&self) -> bool {
         matches!(self, Type::Str)
     }
@@ -461,10 +461,6 @@ impl Type {
             Type::U64 => Type::S64,
             _ => self.clone(),
         }
-    }
-
-    pub fn llvm_exceeds_stack(&self, context: &Context, target_data: &TargetData) -> bool {
-        target_data.get_abi_size(&typegen::generate_type(context, self)) >= 120
     }
 
     pub fn is_recursive_type(&self) -> bool {
@@ -533,6 +529,7 @@ impl PartialEq for Type {
                         .all(|(f1, f2)| f1.as_ref() == f2.as_ref())
             }
 
+            (Type::Mut(target), Type::Mut(from)) => target == from,
             (Type::Char, Type::Char) => true,
             (Type::S8, Type::S8) => true,
             (Type::S16, Type::S16) => true,

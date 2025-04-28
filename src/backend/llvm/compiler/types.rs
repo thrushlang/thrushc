@@ -1,4 +1,4 @@
-use ahash::{HashMap, HashSet};
+use ahash::{AHashMap as HashMap, HashSet};
 
 use super::memory::SymbolAllocated;
 

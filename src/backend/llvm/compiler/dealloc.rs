@@ -1,72 +1,36 @@
 use crate::middle::instruction::Instruction;
 
-use super::{
-    memory::SymbolAllocated,
-    symbols::SymbolsTable,
-    types::{MappedHeapPointers, SymbolsAllocated},
-};
-
-use inkwell::{builder::Builder, context::Context};
+use super::{memory::SymbolAllocated, symbols::SymbolsTable, types::SymbolsAllocated};
 
 #[derive(Debug)]
-pub struct Deallocator<'ctx> {
-    builder: &'ctx Builder<'ctx>,
-    context: &'ctx Context,
-    objects: SymbolsAllocated<'ctx>,
+pub struct Deallocator<'a, 'ctx> {
+    symbols: &'a SymbolsTable<'a, 'ctx>,
 }
 
-impl<'ctx> Deallocator<'ctx> {
-    pub fn new(
-        builder: &'ctx Builder<'ctx>,
-        context: &'ctx Context,
-        objects: SymbolsAllocated<'ctx>,
-    ) -> Self {
-        Self {
-            builder,
-            context,
-            objects,
-        }
+impl<'a, 'ctx> Deallocator<'a, 'ctx> {
+    pub fn new(symbols: &'a SymbolsTable<'a, 'ctx>) -> Self {
+        Self { symbols }
     }
 
-    pub fn dealloc_all(&self, symbols: &SymbolsTable) {
-        let heaped_objects: Vec<(&&str, &SymbolAllocated)> = self.obtain_heap_objects("");
-
-        heaped_objects.iter().for_each(|heap_object| {
-            let allocated_object: &SymbolAllocated = heap_object.1;
-
-            /*mapped_heaped_pointers.dealloc(
-                self.builder,
-                self.context,
-                allocated_object.ptr,
-                symbols,
-            );*/
-            allocated_object.dealloc(self.builder);
+    pub fn dealloc_all(&self, symbols_allocated: SymbolsAllocated) {
+        symbols_allocated.iter().for_each(|any_symbol| {
+            let symbol: &SymbolAllocated = any_symbol.1;
+            symbol.dealloc(self.symbols);
         });
     }
 
-    pub fn dealloc(&self, value: &Instruction, symbols: &SymbolsTable) {
+    pub fn dealloc(&self, symbols_allocated: SymbolsAllocated, value: &Instruction) {
         if let Instruction::LocalRef { name, .. } = value {
-            let heaped_objects: Vec<(&&str, &SymbolAllocated)> = self.obtain_heap_objects(name);
+            for symbol in symbols_allocated {
+                let symbol_name = symbol.0;
 
-            heaped_objects.iter().for_each(|heap_object| {
-                let allocated_object: &SymbolAllocated = heap_object.1;
+                if symbol_name == name {
+                    continue;
+                }
 
-                /*mapped_heaped_pointers.dealloc(
-                    self.builder,
-                    self.context,
-                    allocated_object.ptr,
-                    symbols,
-                );*/
-
-                allocated_object.dealloc(self.builder);
-            });
+                let symbol: &SymbolAllocated = symbol.1;
+                symbol.dealloc(self.symbols);
+            }
         }
-    }
-
-    fn obtain_heap_objects(&self, except: &str) -> Vec<(&&str, &SymbolAllocated)> {
-        self.objects
-            .iter()
-            .filter(|object| object.1.get_type().is_recursive_type() && *object.0 != except)
-            .collect::<Vec<_>>()
     }
 }

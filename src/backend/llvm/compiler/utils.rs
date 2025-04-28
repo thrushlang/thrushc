@@ -1,11 +1,7 @@
-use crate::middle::statement::ThrushAttributes;
-use crate::middle::statement::traits::AttributesExtensions;
-
 use super::super::super::super::middle::types::Type;
 
 use super::typegen;
 
-use inkwell::types::BasicTypeEnum;
 use inkwell::values::StructValue;
 
 use inkwell::{
@@ -14,13 +10,12 @@ use inkwell::{
     context::Context,
     module::{Linkage, Module},
     types::ArrayType,
-    values::{BasicValueEnum, FloatValue, GlobalValue, IntValue, PointerValue},
+    values::{BasicValueEnum, GlobalValue},
 };
 
 pub fn integer_autocast<'ctx>(
     target_type: &Type,
     from_type: &Type,
-    ptr: Option<PointerValue<'ctx>>,
     from: BasicValueEnum<'ctx>,
     builder: &Builder<'ctx>,
     context: &'ctx Context,
@@ -33,10 +28,8 @@ pub fn integer_autocast<'ctx>(
         return None;
     }
 
-    let cast: IntValue;
-
-    if from_type != target_type && from.is_int_value() {
-        cast = builder
+    Some(
+        builder
             .build_int_cast_sign_flag(
                 from.into_int_value(),
                 typegen::type_int_to_llvm_int_type(context, target_type),
@@ -44,42 +37,13 @@ pub fn integer_autocast<'ctx>(
                 "",
             )
             .unwrap()
-    } else if from_type != target_type && from.is_pointer_value() {
-        let load: IntValue = builder
-            .build_load(
-                typegen::type_int_to_llvm_int_type(context, from_type),
-                from.into_pointer_value(),
-                "",
-            )
-            .unwrap()
-            .into_int_value();
-
-        cast = builder
-            .build_int_cast_sign_flag(
-                load,
-                typegen::type_int_to_llvm_int_type(context, target_type),
-                true,
-                "",
-            )
-            .unwrap();
-    } else {
-        builder.build_store(ptr.unwrap(), from).unwrap();
-        return None;
-    }
-
-    if ptr.is_none() {
-        return Some(cast.into());
-    }
-
-    builder.build_store(ptr.unwrap(), cast).unwrap();
-
-    Some(cast.into())
+            .into(),
+    )
 }
 
 pub fn float_autocast<'ctx>(
     target_type: &Type,
     from_type: &Type,
-    ptr: Option<PointerValue<'ctx>>,
     from: BasicValueEnum<'ctx>,
     builder: &Builder<'ctx>,
     context: &'ctx Context,
@@ -92,45 +56,16 @@ pub fn float_autocast<'ctx>(
         return None;
     }
 
-    let cast: FloatValue;
-
-    if from_type != target_type && from.is_float_value() {
-        cast = builder
+    Some(
+        builder
             .build_float_cast(
                 from.into_float_value(),
                 typegen::type_float_to_llvm_float_type(context, target_type),
                 "",
             )
-            .unwrap();
-    } else if from_type != target_type && from.is_pointer_value() {
-        let load: FloatValue<'ctx> = builder
-            .build_load(
-                typegen::type_float_to_llvm_float_type(context, target_type),
-                from.into_pointer_value(),
-                "",
-            )
             .unwrap()
-            .into_float_value();
-
-        cast = builder
-            .build_float_cast(
-                load,
-                typegen::type_float_to_llvm_float_type(context, target_type),
-                "",
-            )
-            .unwrap();
-    } else {
-        builder.build_store(ptr.unwrap(), from).unwrap();
-        return None;
-    }
-
-    if ptr.is_none() {
-        return Some(cast.into());
-    }
-
-    builder.build_store(ptr.unwrap(), cast).unwrap();
-
-    Some(cast.into())
+            .into(),
+    )
 }
 
 pub fn build_str_constant<'ctx>(

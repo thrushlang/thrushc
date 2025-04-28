@@ -6,7 +6,7 @@ use super::super::compiler::attributes::LLVMAttribute;
 
 use super::{
     attributes::{AttributeBuilder, LLVMAttributeApplicant},
-    binaryop, call,
+    binaryop,
     conventions::CallConvention,
     dealloc::Deallocator,
     local,
@@ -29,7 +29,6 @@ pub struct Codegen<'a, 'ctx> {
     module: &'a Module<'ctx>,
     builder: &'ctx Builder<'ctx>,
     context: &'ctx Context,
-    target_data: TargetData,
     instructions: &'ctx [Instruction<'ctx>],
     current: usize,
     symbols: SymbolsTable<'a, 'ctx>,
@@ -51,10 +50,9 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
             module,
             builder,
             context,
-            target_data,
             instructions,
             current: 0,
-            symbols: SymbolsTable::new(module, context, builder),
+            symbols: SymbolsTable::new(module, context, builder, target_data),
             function: None,
             loop_exit_block: None,
             loop_start_block: None,
@@ -83,13 +81,8 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                 });
 
                 if !self.deallocators_emited {
-                    let deallocator: Deallocator = Deallocator::new(
-                        self.builder,
-                        self.context,
-                        self.symbols.get_allocated_symbols(),
-                    );
-
-                    deallocator.dealloc_all(&self.symbols);
+                    let deallocator: Deallocator = Deallocator::new(&self.symbols);
+                    deallocator.dealloc_all(self.symbols.get_allocated_symbols());
                 }
 
                 self.deallocators_emited = false;
@@ -393,11 +386,12 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
             Instruction::Function {
                 name,
                 params,
+                param_types,
                 body,
                 return_type,
                 attributes,
             } => {
-                self.build_function((name, return_type, params, body, attributes));
+                self.build_function((name, return_type, params, param_types, body, attributes));
 
                 Instruction::Null
             }
@@ -405,13 +399,9 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
             Instruction::Return(kind, value) => {
                 self.deallocators_emited = true;
 
-                let deallocator: Deallocator = Deallocator::new(
-                    self.builder,
-                    self.context,
-                    self.symbols.get_allocated_symbols(),
-                );
+                let deallocator: Deallocator = Deallocator::new(&self.symbols);
 
-                deallocator.dealloc(value, &self.symbols);
+                deallocator.dealloc(self.symbols.get_allocated_symbols(), value);
 
                 valuegen::generate_expression(instruction, kind, &self.symbols);
 
@@ -505,13 +495,9 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                 Instruction::Null
             }
 
-            Instruction::Call {
-                name, args, kind, ..
-            } => {
-                call::build_call((name, kind, args), &self.symbols);
-
-                Instruction::Null
-            }
+            Instruction::Call { kind, .. } => Instruction::LLVMValue(
+                valuegen::generate_expression(instruction, kind, &self.symbols),
+            ),
 
             Instruction::LocalRef { kind: ref_type, .. }
             | Instruction::ConstRef { kind: ref_type, .. } => Instruction::LLVMValue(
@@ -602,8 +588,9 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
 
         let function_name: &str = function.0;
         let function_type: &Type = function.1;
-        let function_parameters: &[Instruction] = function.2;
-        let function_attributes: &[LLVMAttribute] = function.4;
+        let function_parameters: &[Instruction<'ctx>] = function.2;
+        let function_parameters_types: &[Type] = function.3;
+        let function_attributes: &[LLVMAttribute] = function.5;
 
         let mut call_convention: u32 = CallConvention::Standard as u32;
         let mut ignore_args: bool = false;
@@ -658,7 +645,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
 
         self.symbols.insert_function(
             function_name,
-            (function, function_parameters, call_convention),
+            (function, function_parameters_types, call_convention),
         );
     }
 
@@ -666,7 +653,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
         let function_name: &str = function.0;
         let function_type: &Type = function.1;
         let function_parameters: &[Instruction<'ctx>] = function.2;
-        let function_body: &Instruction = function.3;
+        let function_body: &Instruction = function.4;
 
         if function_body.is_null() {
             return;

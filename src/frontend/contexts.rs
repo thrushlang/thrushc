@@ -2,11 +2,15 @@ use crate::middle::types::Type;
 
 pub struct ParserTypeContext {
     pub function_type: Type,
+    pub is_mutable: bool,
 }
 
 impl ParserTypeContext {
-    pub fn new(function_type: Type) -> Self {
-        Self { function_type }
+    pub fn new(function_type: Type, is_mutable: bool) -> Self {
+        Self {
+            function_type,
+            is_mutable,
+        }
     }
 }
 

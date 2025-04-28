@@ -264,6 +264,21 @@ pub fn check_type(
 
         (Type::Struct(_, _), Type::Void, None) => Ok(()),
 
+        (target_type, Type::Mut(from_type), None) if !target_type.is_mut_type() => {
+            check_type(target_type, from_type, expression, operator, error)?;
+            Ok(())
+        }
+
+        (Type::Mut(target_type), any_type, None) if !any_type.is_mut_type() => {
+            check_type(target_type, any_type, expression, operator, error)?;
+            Ok(())
+        }
+
+        (Type::Mut(target_type), Type::Mut(from_type), None) => {
+            check_type(target_type, from_type, expression, operator, error)?;
+            Ok(())
+        }
+
         (Type::Ptr(None), Type::Ptr(None), None) => Ok(()),
         (Type::Ptr(Some(target_type)), Type::Ptr(Some(from_type)), None) => {
             check_type(target_type, from_type, expression, operator, error)?;

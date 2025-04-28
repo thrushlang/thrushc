@@ -47,6 +47,7 @@ pub enum Instruction<'ctx> {
     Property {
         name: &'ctx str,
         indexes: Vec<(Type, u32)>,
+        is_mutable: bool,
         kind: Type,
         span: Span,
     },
@@ -119,6 +120,7 @@ pub enum Instruction<'ctx> {
     Function {
         name: &'ctx str,
         params: Vec<Instruction<'ctx>>,
+        param_types: Vec<Type>,
         body: Rc<Instruction<'ctx>>,
         return_type: Type,
         attributes: ThrushAttributes<'ctx>,
@@ -137,7 +139,6 @@ pub enum Instruction<'ctx> {
     ConstRef {
         name: &'ctx str,
         kind: Type,
-        take: bool,
         span: Span,
     },
 
@@ -152,7 +153,6 @@ pub enum Instruction<'ctx> {
     LocalRef {
         name: &'ctx str,
         kind: Type,
-        take: bool,
         span: Span,
     },
     LocalMut {
@@ -271,16 +271,24 @@ impl<'ctx> Instruction<'ctx> {
         }
     }
 
+    pub fn get_mutability(&self) -> bool {
+        match self {
+            Instruction::Property { is_mutable, .. } => *is_mutable,
+            any => any.get_type().is_mut_type(),
+        }
+    }
+
     pub fn as_function(&self) -> FunctionPrototype {
         if let Instruction::Function {
             name,
             params,
+            param_types,
             body,
             return_type,
             attributes,
         } = self
         {
-            return (name, return_type, params, body, attributes);
+            return (name, return_type, params, param_types, body, attributes);
         }
 
         unreachable!()

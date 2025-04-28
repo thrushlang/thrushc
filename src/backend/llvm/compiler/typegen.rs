@@ -17,6 +17,7 @@ pub fn type_int_to_llvm_int_type<'ctx>(context: &'ctx Context, kind: &Type) -> I
         Type::S32 | Type::U32 => context.i32_type(),
         Type::S64 | Type::U64 => context.i64_type(),
         Type::Bool => context.bool_type(),
+        Type::Mut(subtype) => type_int_to_llvm_int_type(context, subtype),
         _ => unreachable!(),
     }
 }
@@ -26,6 +27,7 @@ pub fn type_float_to_llvm_float_type<'ctx>(context: &'ctx Context, kind: &Type) 
     match kind {
         Type::F32 => context.f32_type(),
         Type::F64 => context.f64_type(),
+        Type::Mut(subtype) => type_float_to_llvm_float_type(context, subtype),
         _ => unreachable!(),
     }
 }
@@ -58,6 +60,7 @@ pub fn function_type<'ctx>(
         Type::Address => generate_type(context, kind).fn_type(&parameters_types, ignore_args),
         Type::Ptr(_) => generate_type(context, kind).fn_type(&parameters_types, ignore_args),
         Type::Struct(..) => generate_type(context, kind).fn_type(&parameters_types, ignore_args),
+        Type::Mut(..) => generate_type(context, kind).fn_type(&parameters_types, ignore_args),
 
         Type::Bool => context.bool_type().fn_type(&parameters_types, ignore_args),
         Type::F32 => context.f32_type().fn_type(&parameters_types, ignore_args),
@@ -72,7 +75,9 @@ pub fn generate_type<'ctx>(context: &'ctx Context, kind: &Type) -> BasicTypeEnum
             type_int_to_llvm_int_type(context, kind).into()
         }
         kind if kind.is_float_type() => type_float_to_llvm_float_type(context, kind).into(),
-        Type::Ptr(_) | Type::Address => context.ptr_type(AddressSpace::default()).into(),
+        Type::Ptr(_) | Type::Address | Type::Mut(..) => {
+            context.ptr_type(AddressSpace::default()).into()
+        }
         kind if kind.is_str_type() => context
             .struct_type(
                 &[
@@ -96,9 +101,10 @@ pub fn generate_type<'ctx>(context: &'ctx Context, kind: &Type) -> BasicTypeEnum
     }
 }
 
-pub fn generate_typed_pointer<'ctx>(context: &'ctx Context, kind: &Type) -> BasicTypeEnum<'ctx> {
+pub fn generate_subtyped<'ctx>(context: &'ctx Context, kind: &Type) -> BasicTypeEnum<'ctx> {
     match kind {
-        Type::Ptr(Some(subtyped)) => generate_type(context, subtyped),
+        Type::Ptr(Some(subtyped)) => generate_subtyped(context, subtyped),
+        Type::Mut(subtyped) => generate_subtyped(context, subtyped),
         _ => generate_type(context, kind),
     }
 }

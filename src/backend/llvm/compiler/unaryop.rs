@@ -16,7 +16,7 @@ pub fn unary_op<'ctx>(
     builder: &Builder<'ctx>,
     context: &'ctx Context,
     unary: UnaryOp<'ctx>,
-    compiler_objects: &SymbolsTable<'_, 'ctx>,
+    symbols: &SymbolsTable<'_, 'ctx>,
 ) -> BasicValueEnum<'ctx> {
     if let (
         TokenKind::PlusPlus | TokenKind::MinusMinus,
@@ -28,10 +28,10 @@ pub fn unary_op<'ctx>(
         },
     ) = unary
     {
-        let symbol: SymbolAllocated = compiler_objects.get_allocated_symbol(name);
+        let symbol: SymbolAllocated = symbols.get_allocated_symbol(name);
 
         if ref_type.is_integer_type() {
-            let int: IntValue = symbol.load(context, builder).into_int_value();
+            let int: IntValue = symbol.load(symbols).into_int_value();
 
             let modifier: IntValue =
                 typegen::type_int_to_llvm_int_type(context, ref_type).const_int(1, false);
@@ -42,12 +42,12 @@ pub fn unary_op<'ctx>(
                 builder.build_int_nsw_sub(int, modifier, "").unwrap()
             };
 
-            symbol.store(builder, result.into());
+            symbol.store(symbols, result.into());
 
             return result.into();
         }
 
-        let float: FloatValue = symbol.load(context, builder).into_float_value();
+        let float: FloatValue = symbol.load(symbols).into_float_value();
 
         let modifier: FloatValue =
             typegen::type_float_to_llvm_float_type(context, ref_type).const_float(1.0);
@@ -58,7 +58,7 @@ pub fn unary_op<'ctx>(
             builder.build_float_sub(float, modifier, "").unwrap()
         };
 
-        symbol.store(builder, result.into());
+        symbol.store(symbols, result.into());
 
         return result.into();
     }
@@ -78,16 +78,16 @@ pub fn unary_op<'ctx>(
         },
     ) = unary
     {
-        let symbol: SymbolAllocated = compiler_objects.get_allocated_symbol(ref_name);
+        let symbol: SymbolAllocated = symbols.get_allocated_symbol(ref_name);
 
         if ref_type.is_integer_type() || ref_type.is_bool_type() {
-            let int: IntValue = symbol.load(context, builder).into_int_value();
+            let int: IntValue = symbol.load(symbols).into_int_value();
             let result: IntValue = builder.build_not(int, "").unwrap();
 
             return result.into();
         }
 
-        let float: FloatValue = symbol.load(context, builder).into_float_value();
+        let float: FloatValue = symbol.load(symbols).into_float_value();
         let result: FloatValue = builder.build_float_neg(float, "").unwrap();
 
         return result.into();
@@ -108,16 +108,16 @@ pub fn unary_op<'ctx>(
         },
     ) = unary
     {
-        let symbol: SymbolAllocated = compiler_objects.get_allocated_symbol(name);
+        let symbol: SymbolAllocated = symbols.get_allocated_symbol(name);
 
         if ref_type.is_integer_type() {
-            let int: IntValue = symbol.load(context, builder).into_int_value();
+            let int: IntValue = symbol.load(symbols).into_int_value();
             let result: IntValue = builder.build_not(int, "").unwrap();
 
             return result.into();
         }
 
-        let float: FloatValue = symbol.load(context, builder).into_float_value();
+        let float: FloatValue = symbol.load(symbols).into_float_value();
         let result: FloatValue = builder.build_float_neg(float, "").unwrap();
 
         return result.into();

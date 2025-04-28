@@ -26,11 +26,12 @@ pub type FunctionPrototype<'ctx> = (
     &'ctx str,
     &'ctx Type,
     &'ctx [Instruction<'ctx>],
+    &'ctx [Type],
     &'ctx Instruction<'ctx>,
     &'ctx ThrushAttributes<'ctx>,
 );
 
-pub type Function<'ctx> = (FunctionValue<'ctx>, &'ctx [Instruction<'ctx>], u32);
+pub type Function<'ctx> = (FunctionValue<'ctx>, &'ctx [Type], u32);
 pub type FunctionParameter<'ctx> = (&'ctx str, &'ctx Type, u32);
 
 pub type StructFields<'ctx> = (&'ctx str, Vec<(&'ctx str, Type, u32)>);
