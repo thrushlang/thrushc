@@ -2,7 +2,7 @@ use inkwell::{FloatPredicate, IntPredicate};
 
 use crate::middle::types::TokenKind;
 
-#[inline(always)]
+#[must_use]
 pub fn integer(operator: &TokenKind, left_signed: bool, right_signed: bool) -> IntPredicate {
     match operator {
         TokenKind::EqEq => IntPredicate::EQ,
@@ -27,7 +27,15 @@ pub fn integer(operator: &TokenKind, left_signed: bool, right_signed: bool) -> I
     }
 }
 
-#[inline(always)]
+pub fn pointer(operator: &TokenKind) -> IntPredicate {
+    match operator {
+        TokenKind::EqEq => IntPredicate::EQ,
+        TokenKind::BangEq => IntPredicate::NE,
+        _ => unreachable!(),
+    }
+}
+
+#[must_use]
 pub fn float(operator: &TokenKind) -> FloatPredicate {
     // ESTABILIZAR ESTA COSA EN EL FUTURO IGUAL QUE LOS INTEGER PREDICATE (DETERMINAR SI TIENE SIGNO Y CAMBIAR EL PREDICATE A CONVENIR)
     match operator {

@@ -328,17 +328,37 @@ impl<'instr> SymbolsTable<'instr> {
     ) -> Result<(), ThrushCompilerError> {
         for parameter in &*locals {
             if let Instruction::FunctionParameter {
-                name, kind, span, ..
+                name,
+                kind,
+                span,
+                is_mutable,
+                type_span,
+                ..
             } = parameter
             {
-                self.new_local(scope_pos, name, (kind.clone(), false), *span)?;
+                self.new_local(
+                    scope_pos,
+                    name,
+                    (kind.clone(), *is_mutable, false, *span, *type_span),
+                    *span,
+                )?;
             }
 
             if let Instruction::Local {
-                name, kind, span, ..
+                name,
+                kind,
+                span,
+                is_mutable,
+                type_span,
+                ..
             } = parameter
             {
-                self.new_local(scope_pos, name, (kind.clone(), false), *span)?;
+                self.new_local(
+                    scope_pos,
+                    name,
+                    (kind.clone(), *is_mutable, false, *span, *type_span),
+                    *span,
+                )?;
             }
         }
 

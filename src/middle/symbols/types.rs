@@ -1,8 +1,11 @@
 use ahash::AHashMap as HashMap;
 
-use crate::middle::{
-    statement::{CustomType, Enum, ThrushAttributes},
-    types::Type,
+use crate::{
+    frontend::lexer::Span,
+    middle::{
+        statement::{CustomType, Enum, ThrushAttributes},
+        types::Type,
+    },
 };
 
 pub type Constant<'instr> = (Type, ThrushAttributes<'instr>);
@@ -14,7 +17,7 @@ pub type Struct<'instr> = (
 );
 
 pub type Function<'instr> = (Type, Vec<Type>, bool);
-pub type Local<'instr> = (Type, bool);
+pub type Local<'instr> = (Type, bool, bool, Span, Span);
 
 pub type CustomTypes<'instr> = HashMap<&'instr str, CustomType<'instr>>;
 pub type Constants<'instr> = HashMap<&'instr str, Constant<'instr>>;

@@ -14,7 +14,7 @@ use inkwell::{
     values::{BasicValue, BasicValueEnum, InstructionValue, PointerValue},
 };
 
-use super::symbols::SymbolsTable;
+use super::symbols::{self, SymbolsTable};
 
 #[derive(Debug, Clone)]
 pub enum SymbolAllocated<'ctx> {
@@ -52,7 +52,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
 
         match self {
             Self::Local { ptr, kind } => {
-                let ptr_type: BasicTypeEnum = typegen::generate_subtyped(context, kind);
+                let ptr_type: BasicTypeEnum = typegen::generate_subtype(context, kind);
                 let alignment: u32 = target_data.get_preferred_alignment(&ptr_type);
 
                 if kind.is_heap_allocated(context, target_data) {
@@ -79,7 +79,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
             Self::Parameter { value, kind } => {
                 if value.is_pointer_value() {
                     let ptr: PointerValue = value.into_pointer_value();
-                    let ptr_type: BasicTypeEnum = typegen::generate_subtyped(context, kind);
+                    let ptr_type: BasicTypeEnum = typegen::generate_subtype(context, kind);
 
                     let alignment: u32 = target_data.get_preferred_alignment(&ptr_type);
 
@@ -109,7 +109,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
             }
 
             Self::Constant { ptr, kind } => {
-                let ptr_type: BasicTypeEnum = typegen::generate_subtyped(context, kind);
+                let ptr_type: BasicTypeEnum = typegen::generate_subtype(context, kind);
                 let alignment: u32 = target_data.get_preferred_alignment(&ptr_type);
 
                 let value: BasicValueEnum = builder.build_load(ptr_type, *ptr, "").unwrap();
@@ -150,7 +150,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
 
         match self {
             Self::Local { ptr, kind, .. } => {
-                let kind: BasicTypeEnum<'_> = typegen::generate_subtyped(context, kind);
+                let kind: BasicTypeEnum<'_> = typegen::generate_subtype(context, kind);
                 let alignment: u32 = target_data.get_preferred_alignment(&kind);
 
                 let store: InstructionValue = builder.build_store(*ptr, value).unwrap();
@@ -160,7 +160,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
             Self::Parameter {
                 value: ptr, kind, ..
             } if ptr.is_pointer_value() => {
-                let kind: BasicTypeEnum<'_> = typegen::generate_subtyped(context, kind);
+                let kind: BasicTypeEnum<'_> = typegen::generate_subtype(context, kind);
                 let alignment: u32 = target_data.get_preferred_alignment(&kind);
 
                 let store: InstructionValue = builder
@@ -275,23 +275,6 @@ pub fn gep_struct_from_ptr<'ctx>(
     builder.build_struct_gep(kind, ptr, index, "").unwrap()
 }
 
-pub fn load_anon<'ctx>(
-    context: &'ctx Context,
-    builder: &Builder<'ctx>,
-    kind: &Type,
-    ptr: PointerValue<'ctx>,
-) -> BasicValueEnum<'ctx> {
-    let value: BasicValueEnum = builder
-        .build_load(typegen::generate_subtyped(context, kind), ptr, "")
-        .unwrap();
-
-    if let Some(load_instruction) = value.as_instruction_value() {
-        let _ = load_instruction.set_alignment(8);
-    }
-
-    value
-}
-
 pub fn store_anon<'ctx>(
     builder: &Builder<'ctx>,
     ptr: PointerValue<'ctx>,
@@ -299,4 +282,41 @@ pub fn store_anon<'ctx>(
 ) {
     let store: InstructionValue = builder.build_store(ptr, value).unwrap();
     let _ = store.set_alignment(8);
+}
+
+pub trait MemoryManagement<'ctx> {
+    fn load_maybe(&self, kind: &Type, symbols: &SymbolsTable<'_, 'ctx>) -> BasicValueEnum<'ctx>;
+}
+
+impl<'ctx> MemoryManagement<'ctx> for BasicValueEnum<'ctx> {
+    fn load_maybe(&self, kind: &Type, symbols: &SymbolsTable<'_, 'ctx>) -> BasicValueEnum<'ctx> {
+        let context: &Context = symbols.get_llvm_context();
+        let builder: &Builder = symbols.get_llvm_builder();
+
+        if self.is_pointer_value() {
+            let new_value: BasicValueEnum =
+                load_anon(context, builder, kind, self.into_pointer_value());
+
+            return new_value;
+        }
+
+        *self
+    }
+}
+
+pub fn load_anon<'ctx>(
+    context: &'ctx Context,
+    builder: &Builder<'ctx>,
+    kind: &Type,
+    ptr: PointerValue<'ctx>,
+) -> BasicValueEnum<'ctx> {
+    let value: BasicValueEnum = builder
+        .build_load(typegen::generate_subtype(context, kind), ptr, "")
+        .unwrap();
+
+    if let Some(load_instruction) = value.as_instruction_value() {
+        let _ = load_instruction.set_alignment(8);
+    }
+
+    value
 }

@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use crate::backend::llvm::compiler::memory::{self, SymbolAllocated};
+use crate::backend::llvm::compiler::memory::{self, MemoryManagement, SymbolAllocated};
 use crate::backend::llvm::compiler::{binaryop, builtins, unaryop, utils};
 use crate::middle::instruction::Instruction;
 use crate::middle::statement::traits::AttributesExtensions;
@@ -27,7 +27,7 @@ pub fn alloc<'ctx>(
     kind: &Type,
     alloc_in_heap: bool,
 ) -> PointerValue<'ctx> {
-    let llvm_type: BasicTypeEnum = typegen::generate_subtyped(context, kind);
+    let llvm_type: BasicTypeEnum = typegen::generate_subtype(context, kind);
 
     if alloc_in_heap {
         return builder.build_malloc(llvm_type, "").unwrap();
@@ -91,7 +91,7 @@ pub fn generate_expression<'ctx>(
     let context: &Context = symbols.get_llvm_context();
     let builder: &Builder = symbols.get_llvm_builder();
 
-    if let Instruction::NullPtr = expression {
+    if let Instruction::NullPtr { .. } = expression {
         return context
             .ptr_type(AddressSpace::default())
             .const_null()
@@ -313,19 +313,23 @@ pub fn generate_expression<'ctx>(
         let source_expression: Option<&Rc<Instruction<'_>>> = source.1.as_ref();
 
         if let Some(expression) = source_expression {
-            let source: BasicValueEnum = generate_expression(expression, kind, symbols);
-            let target: BasicValueEnum = generate_expression(target, kind, symbols);
+            let compiled_source: BasicValueEnum = generate_expression(expression, kind, symbols);
+            let compiled_target: BasicValueEnum = generate_expression(target, kind, symbols);
 
-            memory::store_anon(builder, source.into_pointer_value(), target);
+            memory::store_anon(
+                builder,
+                compiled_source.into_pointer_value(),
+                compiled_target.load_maybe(target.get_type(), symbols),
+            );
 
-            return source;
+            return compiled_source;
         }
 
         let symbol: SymbolAllocated = symbols.get_allocated_symbol(source_name);
 
         let expression: BasicValueEnum = generate_expression(target, kind, symbols);
 
-        symbol.store(symbols, expression);
+        symbol.store(symbols, expression.load_maybe(target.get_type(), symbols));
 
         return expression;
     }
@@ -378,6 +382,10 @@ pub fn generate_expression<'ctx>(
 
             if call_type.is_mut_type() && casting_target.is_mut_type() {
                 return return_value;
+            }
+
+            if call_type.is_mut_type() {
+                return call.try_as_basic_value().unwrap_left();
             }
 
             if return_value.is_pointer_value() {

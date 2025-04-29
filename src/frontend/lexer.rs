@@ -730,7 +730,7 @@ impl TokenLexemeExtensions for TokenLexeme<'_> {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Default)]
 pub struct Span {
     pub line: usize,
     pub span: (usize, usize),

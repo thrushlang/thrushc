@@ -75,6 +75,14 @@ fn check_binary_equality(
         return Ok(());
     }
 
+    if a.is_ptr_type() && b.is_ptr_type()
+        || a.is_mut_ptr_type() && b.is_mut_ptr_type()
+        || a.is_mut_ptr_type() && b.is_ptr_type()
+        || a.is_ptr_type() && b.is_mut_ptr_type()
+    {
+        return Ok(());
+    }
+
     Err(ThrushCompilerError::Error(
         String::from("Type checking"),
         format!("Logical operation ({} {} {}) is not allowed.", a, op, b),

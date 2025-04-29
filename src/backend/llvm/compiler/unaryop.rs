@@ -1,3 +1,4 @@
+use crate::frontend::lexer::Span;
 use crate::middle::statement::UnaryOp;
 
 use super::super::super::super::middle::types::*;

@@ -101,10 +101,10 @@ pub fn generate_type<'ctx>(context: &'ctx Context, kind: &Type) -> BasicTypeEnum
     }
 }
 
-pub fn generate_subtyped<'ctx>(context: &'ctx Context, kind: &Type) -> BasicTypeEnum<'ctx> {
+pub fn generate_subtype<'ctx>(context: &'ctx Context, kind: &Type) -> BasicTypeEnum<'ctx> {
     match kind {
-        Type::Ptr(Some(subtyped)) => generate_subtyped(context, subtyped),
-        Type::Mut(subtyped) => generate_subtyped(context, subtyped),
+        Type::Ptr(Some(subtype)) => generate_subtype(context, subtype),
+        Type::Mut(subtype) => generate_subtype(context, subtype),
         _ => generate_type(context, kind),
     }
 }

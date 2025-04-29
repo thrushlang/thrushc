@@ -386,6 +386,16 @@ impl Type {
             || self.is_recursive_type()
     }
 
+    pub fn is_mut_ptr_type(&self) -> bool {
+        if let Type::Mut(subtype) = self {
+            if let Type::Ptr(_) = &**subtype {
+                return true;
+            }
+        }
+
+        false
+    }
+
     #[inline(always)]
     pub const fn is_char_type(&self) -> bool {
         matches!(self, Type::Char)

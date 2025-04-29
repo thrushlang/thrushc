@@ -4,7 +4,7 @@ use {
         integer::{int_operation, integer_binaryop},
     },
     crate::{
-        backend::llvm::compiler::symbols::SymbolsTable,
+        backend::llvm::compiler::{binaryop::ptr::ptr_binaryop, symbols::SymbolsTable},
         middle::{
             instruction::Instruction,
             statement::BinaryOp,
@@ -111,7 +111,10 @@ pub fn bool_binaryop<'ctx>(
     }
 
     if let (
-        Instruction::Integer(..) | Instruction::Float(..) | Instruction::Boolean(..),
+        Instruction::Integer(..)
+        | Instruction::Float(..)
+        | Instruction::Boolean(..)
+        | Instruction::NullPtr { .. },
         TokenKind::BangEq
         | TokenKind::EqEq
         | TokenKind::LessEq
@@ -127,6 +130,8 @@ pub fn bool_binaryop<'ctx>(
             return float_binaryop(binary, target_type, symbols);
         } else if binary.0.get_type().is_integer_type() || binary.0.get_type().is_bool_type() {
             return integer_binaryop(binary, target_type, symbols);
+        } else if binary.2.get_type().is_mut_ptr_type() || binary.2.get_type().is_ptr_type() {
+            return ptr_binaryop(binary, target_type, symbols);
         }
 
         unreachable!()
@@ -142,13 +147,18 @@ pub fn bool_binaryop<'ctx>(
         | TokenKind::GreaterEq
         | TokenKind::And
         | TokenKind::Or,
-        Instruction::Integer(..) | Instruction::Float(..) | Instruction::Boolean(..),
+        Instruction::Integer(..)
+        | Instruction::Float(..)
+        | Instruction::Boolean(..)
+        | Instruction::NullPtr { .. },
     ) = binary
     {
         if binary.2.get_type().is_float_type() {
             return float_binaryop(binary, target_type, symbols);
         } else if binary.2.get_type().is_integer_type() || binary.2.get_type().is_bool_type() {
             return integer_binaryop(binary, target_type, symbols);
+        } else if binary.2.get_type().is_mut_ptr_type() || binary.2.get_type().is_ptr_type() {
+            return ptr_binaryop(binary, target_type, symbols);
         }
     }
 
@@ -230,8 +240,8 @@ pub fn bool_binaryop<'ctx>(
             return int_operation(
                 context,
                 builder,
-                left_compiled.into_int_value(),
-                right_compiled.into_int_value(),
+                left_compiled,
+                right_compiled,
                 (false, false),
                 binary.1,
             );
@@ -253,8 +263,8 @@ pub fn bool_binaryop<'ctx>(
             return int_operation(
                 context,
                 builder,
-                left_compiled.into_int_value(),
-                right_compiled.into_int_value(),
+                left_compiled,
+                right_compiled,
                 (false, false),
                 binary.1,
             );
@@ -279,8 +289,8 @@ pub fn bool_binaryop<'ctx>(
             return int_operation(
                 context,
                 builder,
-                left_compiled.into_int_value(),
-                right_compiled.into_int_value(),
+                left_compiled,
+                right_compiled,
                 (false, false),
                 binary.1,
             );
@@ -305,8 +315,8 @@ pub fn bool_binaryop<'ctx>(
             return int_operation(
                 context,
                 builder,
-                left_compiled.into_int_value(),
-                right_compiled.into_int_value(),
+                left_compiled,
+                right_compiled,
                 (false, false),
                 binary.1,
             );

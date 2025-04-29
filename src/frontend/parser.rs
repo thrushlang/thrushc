@@ -38,7 +38,6 @@ use ahash::AHashMap as HashMap;
 use lazy_static::lazy_static;
 use std::process;
 use std::rc::Rc;
-use std::sync::Arc;
 
 const MINIMAL_STATEMENT_CAPACITY: usize = 100_000;
 const MINIMAL_GLOBAL_CAPACITY: usize = 2024;
@@ -1100,6 +1099,8 @@ impl<'instr> Parser<'instr> {
             String::from("Expected 'local'."),
         )?;
 
+        let is_mutable: bool = self.match_token(TokenKind::Mut)?;
+
         let local_tk: &Token = self.consume(
             TokenKind::Identifier,
             String::from("Syntax error"),
@@ -1115,23 +1116,34 @@ impl<'instr> Parser<'instr> {
             String::from("Expected ':'."),
         )?;
 
+        let type_span: Span = self.peek().span;
         let local_type: Type = self.build_type(None)?;
 
         if self.match_token(TokenKind::SemiColon)? {
-            self.symbols
-                .new_local(self.scope, local_name, (local_type.clone(), true), span)?;
+            self.symbols.new_local(
+                self.scope,
+                local_name,
+                (local_type.clone(), is_mutable, true, span, type_span),
+                span,
+            )?;
 
             return Ok(Instruction::Local {
                 name: local_name,
                 kind: local_type,
                 value: Rc::new(Instruction::Null),
+                is_mutable,
                 span,
                 comptime,
+                type_span,
             });
         }
 
-        self.symbols
-            .new_local(self.scope, local_name, (local_type.clone(), false), span)?;
+        self.symbols.new_local(
+            self.scope,
+            local_name,
+            (local_type.clone(), is_mutable, false, span, type_span),
+            span,
+        )?;
 
         self.consume(
             TokenKind::Eq,
@@ -1158,8 +1170,10 @@ impl<'instr> Parser<'instr> {
             name: local_name,
             kind: local_type,
             value: Rc::new(value),
+            is_mutable,
             span,
             comptime,
+            type_span,
         };
 
         Ok(local)
@@ -1311,6 +1325,8 @@ impl<'instr> Parser<'instr> {
                 continue;
             }
 
+            let is_mutable: bool = self.match_token(TokenKind::Mut)?;
+
             let parameter_tk: &Token = self.consume(
                 TokenKind::Identifier,
                 String::from("Syntax error"),
@@ -1326,6 +1342,7 @@ impl<'instr> Parser<'instr> {
                 String::from("Expected '::'."),
             )?;
 
+            let type_span: Span = self.peek().span;
             let parameter_type: Type = self.build_type(None)?;
 
             params_types.push(parameter_type.clone());
@@ -1334,7 +1351,9 @@ impl<'instr> Parser<'instr> {
                 name: parameter_name,
                 kind: parameter_type,
                 position,
+                is_mutable,
                 span: parameter_span,
+                type_span,
             });
 
             position += 1;
@@ -2099,11 +2118,9 @@ impl<'instr> Parser<'instr> {
                 Instruction::Char(Type::Char, char.lexeme[0], span)
             }
 
-            TokenKind::NullPtr => {
-                self.only_advance()?;
-
-                Instruction::NullPtr
-            }
+            TokenKind::NullPtr => Instruction::NullPtr {
+                span: self.advance()?.span,
+            },
 
             TokenKind::Integer => {
                 let integer_tk: &Token = self.advance()?;
@@ -2148,14 +2165,35 @@ impl<'instr> Parser<'instr> {
                         self.symbols
                             .get_local_by_id(local_position.0, local_position.1, span)?;
 
+                    let local_span: Span = local.get_span();
+                    let local_type_span: Span = local.get_type_span();
+
                     let local_type: Type = local.0.clone();
+
+                    if !local.is_mutable() {
+                        return Err(ThrushCompilerError::Error(
+                            String::from("Expected mutable reference"),
+                            String::from("Make mutable with 'mut' keyword before the identifier."),
+                            local_span,
+                        ));
+                    }
+
+                    if !local_type.is_mut_type() {
+                        return Err(ThrushCompilerError::Error(
+                            String::from("Expected mutable type"),
+                            String::from(
+                                "Make mutable the type with 'mut' keyword before the type.",
+                            ),
+                            local_type_span,
+                        ));
+                    }
 
                     let expression: Instruction = self.expr(type_ctx, control_ctx)?;
 
                     self.check_type_mismatch(
                         &local_type.clone(),
                         expression.get_type(),
-                        expression.get_span(),
+                        span,
                         Some(&expression),
                     );
 
@@ -2187,8 +2225,8 @@ impl<'instr> Parser<'instr> {
 
                         if !callee.get_mutability() {
                             return Err(ThrushCompilerError::Error(
-                                String::from("Expected mutable"),
-                                String::from("Make mutable the call."),
+                                String::from("Expected mutable type"),
+                                String::from("Make mutable the return type of this call."),
                                 span,
                             ));
                         }
@@ -2377,7 +2415,7 @@ impl<'instr> Parser<'instr> {
         if let Type::Ptr(_) = &mut before_type {
             let mut inner_type: Type = self.build_type(None)?;
 
-            while self.peek().kind == TokenKind::LBracket {
+            while self.check(TokenKind::LBracket) {
                 inner_type = self.build_recursive_type(inner_type)?;
             }
 
@@ -2390,7 +2428,11 @@ impl<'instr> Parser<'instr> {
             return Ok(Type::Ptr(Some(inner_type.into())));
         }
 
-        unreachable!()
+        Err(ThrushCompilerError::Error(
+            String::from("Syntax error"),
+            format!("Expected pointer type, not '{}'", before_type),
+            self.previous().span,
+        ))
     }
 
     fn build_property(
@@ -2477,7 +2519,7 @@ impl<'instr> Parser<'instr> {
             self.symbols
                 .get_local_by_id(local_position.0, local_position.1, span)?;
 
-        let mut local_type: Type = local.get_type();
+        let local_type: Type = local.get_type();
 
         if local.is_undefined() {
             return Err(ThrushCompilerError::Error(

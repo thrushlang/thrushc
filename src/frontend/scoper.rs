@@ -13,13 +13,13 @@ const MINIMAL_SCOPE_CAPACITY: usize = 256;
 
 #[derive(Debug)]
 pub struct ThrushScoper<'ctx> {
-    blocks: Vec<ThrushBlock<'ctx>>,
+    blocks: Vec<Block<'ctx>>,
     errors: Vec<ThrushCompilerError>,
     diagnostician: Diagnostician,
 }
 
 #[derive(Debug)]
-struct ThrushBlock<'ctx> {
+struct Block<'ctx> {
     stmts: Vec<Instruction<'ctx>>,
 }
 
@@ -267,6 +267,6 @@ impl<'ctx> ThrushScoper<'ctx> {
     }
 
     pub fn add_scope(&mut self, stmts: Vec<Instruction<'ctx>>) {
-        self.blocks.push(ThrushBlock { stmts });
+        self.blocks.push(Block { stmts });
     }
 }

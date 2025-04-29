@@ -14,7 +14,7 @@ use inkwell::{
     values::{BasicValueEnum, FloatValue},
 };
 
-fn float_operation<'ctx>(
+pub fn float_operation<'ctx>(
     builder: &Builder<'ctx>,
     mut left: FloatValue<'ctx>,
     mut right: FloatValue<'ctx>,

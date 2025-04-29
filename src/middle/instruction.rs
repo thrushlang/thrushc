@@ -19,7 +19,9 @@ pub enum Instruction<'ctx> {
     Boolean(Type, bool, Span),
     Integer(Type, f64, bool, Span),
     Float(Type, f64, bool, Span),
-    NullPtr,
+    NullPtr {
+        span: Span,
+    },
 
     // LLVMValue
     LLVMValue(BasicValueEnum<'ctx>),
@@ -115,7 +117,9 @@ pub enum Instruction<'ctx> {
         name: &'ctx str,
         kind: Type,
         position: u32,
+        is_mutable: bool,
         span: Span,
+        type_span: Span,
     },
     Function {
         name: &'ctx str,
@@ -147,8 +151,10 @@ pub enum Instruction<'ctx> {
         name: &'ctx str,
         kind: Type,
         value: Rc<Instruction<'ctx>>,
+        is_mutable: bool,
         comptime: bool,
         span: Span,
+        type_span: Span,
     },
     LocalRef {
         name: &'ctx str,
@@ -239,7 +245,7 @@ impl<'ctx> Instruction<'ctx> {
                 carry_type: kind, ..
             } => kind,
             Instruction::Property { kind, .. } => kind,
-            Instruction::NullPtr => &Type::Ptr(None),
+            Instruction::NullPtr { .. } => &Type::Ptr(None),
 
             _ => &Type::Void,
         }
@@ -266,6 +272,7 @@ impl<'ctx> Instruction<'ctx> {
             Instruction::InitStruct { span, .. } => *span,
             Instruction::Carry { span, .. } => *span,
             Instruction::Property { span, .. } => *span,
+            Instruction::NullPtr { span } => *span,
 
             _ => unreachable!(),
         }
