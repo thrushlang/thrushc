@@ -83,6 +83,7 @@ impl std::fmt::Display for TokenKind {
             TokenKind::Const => write!(f, "const"),
             TokenKind::While => write!(f, "while"),
             TokenKind::Loop => write!(f, "loop"),
+            TokenKind::Ref => write!(f, "ref"),
             TokenKind::NullPtr => write!(f, "nullptr"),
             TokenKind::Integer | TokenKind::Float => write!(f, "number"),
             TokenKind::Enum => write!(f, "enum"),

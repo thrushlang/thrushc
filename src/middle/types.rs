@@ -87,6 +87,7 @@ pub enum TokenKind {
     New,
     Import,
     Mut,
+    Ref,
     Unsafe,
     Type,
     Enum,
@@ -619,6 +620,7 @@ pub fn decompose_struct_property(
         return Err(ThrushCompilerError::Error(
             String::from("Syntax error"),
             format!("Expected existing property, not '{}'.", field_name,),
+            String::default(),
             span,
         ));
     }
@@ -630,6 +632,7 @@ pub fn decompose_struct_property(
                 "Existing property '{}' is not a structure.",
                 property_names[position]
             ),
+            String::default(),
             span,
         ));
     }

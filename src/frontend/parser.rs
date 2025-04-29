@@ -577,6 +577,7 @@ impl<'instr> Parser<'instr> {
             self.errors.push(ThrushCompilerError::Error(
                 String::from("Syntax error"),
                 String::from("Types are only defined globally."),
+                String::default(),
                 self.previous().span,
             ));
         }
@@ -707,6 +708,7 @@ impl<'instr> Parser<'instr> {
                     return Err(ThrushCompilerError::Error(
                         String::from("Syntax error"),
                         String::from("Expected integer, boolean or floating-point types."),
+                        String::default(),
                         span,
                     ));
                 }
@@ -734,7 +736,7 @@ impl<'instr> Parser<'instr> {
 
                 let expression: Instruction = self.expr(type_ctx, control_ctx)?;
 
-                expression.throw_attemping_use_jit(span)?;
+                expression.throw_attemping_use_jit(expression.get_span())?;
 
                 self.consume(
                     TokenKind::SemiColon,
@@ -793,6 +795,7 @@ impl<'instr> Parser<'instr> {
             self.errors.push(ThrushCompilerError::Error(
                 String::from("Syntax error"),
                 String::from("Structs are only defined globally."),
+                String::default(),
                 self.previous().span,
             ));
         }
@@ -853,6 +856,7 @@ impl<'instr> Parser<'instr> {
             return Err(ThrushCompilerError::Error(
                 String::from("Syntax error"),
                 String::from("Expected identifier in structure field."),
+                String::default(),
                 self.previous().span,
             ));
         }
@@ -935,6 +939,7 @@ impl<'instr> Parser<'instr> {
                     return Err(ThrushCompilerError::Error(
                         String::from("Syntax error"),
                         String::from("Expected existing structure field name."),
+                        String::default(),
                         span,
                     ));
                 }
@@ -943,6 +948,7 @@ impl<'instr> Parser<'instr> {
                     return Err(ThrushCompilerError::Error(
                         String::from("Too many fields in structure"),
                         format!("Expected '{}' fields, not '{}'.", fields_required, amount),
+                        String::default(),
                         span,
                     ));
                 }
@@ -982,6 +988,7 @@ impl<'instr> Parser<'instr> {
                     "Expected '{}' arguments, but '{}' was gived.",
                     fields_required, amount_fields
                 ),
+                String::default(),
                 span,
             ));
         }
@@ -1005,14 +1012,6 @@ impl<'instr> Parser<'instr> {
         type_ctx: &mut ParserTypeContext,
         control_ctx: &mut ParserControlContext,
     ) -> Result<Instruction<'instr>, ThrushCompilerError> {
-        if !self.is_main_scope() {
-            self.errors.push(ThrushCompilerError::Error(
-                String::from("Syntax error"),
-                String::from("Constants are only defined globally."),
-                self.previous().span,
-            ));
-        }
-
         self.consume(
             TokenKind::Const,
             String::from("Syntax error"),
@@ -1024,6 +1023,15 @@ impl<'instr> Parser<'instr> {
             String::from("Syntax error"),
             String::from("Expected name."),
         )?;
+
+        if !self.is_main_scope() {
+            self.errors.push(ThrushCompilerError::Error(
+                String::from("Syntax error"),
+                String::from("Constants are only defined globally."),
+                String::default(),
+                self.previous().span,
+            ));
+        }
 
         let name: &str = const_tk.lexeme.to_str();
         let span: Span = const_tk.span;
@@ -1117,7 +1125,22 @@ impl<'instr> Parser<'instr> {
         )?;
 
         let type_span: Span = self.peek().span;
-        let local_type: Type = self.build_type(None)?;
+        let mut local_type: Type = self.build_type(None)?;
+
+        if local_type.is_mut_type() && is_mutable {
+            return Err(ThrushCompilerError::Error(
+                String::from("Syntax error"),
+                String::from(
+                    "The muteable type is inferred, there is no need to use the 'mut' keyword before the type. ",
+                ),
+                String::default(),
+                type_span,
+            ));
+        }
+
+        if is_mutable {
+            local_type = Type::Mut(local_type.into());
+        }
 
         if self.match_token(TokenKind::SemiColon)? {
             self.symbols.new_local(
@@ -1276,14 +1299,6 @@ impl<'instr> Parser<'instr> {
     ) -> Result<Instruction<'instr>, ThrushCompilerError> {
         self.throw_unreacheable_code(control_ctx);
 
-        if !self.is_main_scope() {
-            self.errors.push(ThrushCompilerError::Error(
-                String::from("Syntax error"),
-                String::from("Functions are only defined globally."),
-                self.previous().span,
-            ));
-        }
-
         self.consume(
             TokenKind::Fn,
             String::from("Syntax error"),
@@ -1295,6 +1310,15 @@ impl<'instr> Parser<'instr> {
             String::from("Syntax error"),
             String::from("Expected name to the function."),
         )?;
+
+        if !self.is_main_scope() {
+            self.errors.push(ThrushCompilerError::Error(
+                String::from("Syntax error"),
+                String::from("Functions are only defined globally."),
+                String::default(),
+                self.previous().span,
+            ));
+        }
 
         let name: &str = function_name_tk.lexeme.to_str();
         let span: Span = function_name_tk.span;
@@ -1543,6 +1567,7 @@ impl<'instr> Parser<'instr> {
         Err(ThrushCompilerError::Error(
             String::from("Syntax error"),
             String::from("Unknown call convention."),
+            String::default(),
             span,
         ))
     }
@@ -1853,18 +1878,6 @@ impl<'instr> Parser<'instr> {
         self.throw_unreacheable_code(control_ctx);
 
         let primary: Instruction = match &self.peek().kind {
-            TokenKind::Mut => {
-                self.only_advance()?;
-
-                type_ctx.is_mutable = true;
-
-                let expr: Instruction = self.expr(type_ctx, control_ctx)?;
-
-                type_ctx.is_mutable = false;
-
-                return Ok(expr);
-            }
-
             TokenKind::Carry => {
                 let carry_tk: &Token = self.advance()?;
                 let span: Span = carry_tk.span;
@@ -2032,6 +2045,7 @@ impl<'instr> Parser<'instr> {
                     return Err(ThrushCompilerError::Error(
                         String::from("Syntax error"),
                         String::from("Only local references can be pre-incremented."),
+                        String::default(),
                         self.previous().span,
                     ));
                 }
@@ -2058,6 +2072,7 @@ impl<'instr> Parser<'instr> {
                     return Err(ThrushCompilerError::Error(
                         String::from("Syntax error"),
                         String::from("Only local references can be pre-decremented."),
+                        String::default(),
                         self.previous().span,
                     ));
                 }
@@ -2086,6 +2101,7 @@ impl<'instr> Parser<'instr> {
                         String::from(
                             "Grouping '(...)' is only allowed with binary expressions or other grouped expressions.",
                         ),
+                        String::default(),
                         span,
                     ));
                 }
@@ -2166,7 +2182,6 @@ impl<'instr> Parser<'instr> {
                             .get_local_by_id(local_position.0, local_position.1, span)?;
 
                     let local_span: Span = local.get_span();
-                    let local_type_span: Span = local.get_type_span();
 
                     let local_type: Type = local.0.clone();
 
@@ -2174,17 +2189,8 @@ impl<'instr> Parser<'instr> {
                         return Err(ThrushCompilerError::Error(
                             String::from("Expected mutable reference"),
                             String::from("Make mutable with 'mut' keyword before the identifier."),
+                            String::default(),
                             local_span,
-                        ));
-                    }
-
-                    if !local_type.is_mut_type() {
-                        return Err(ThrushCompilerError::Error(
-                            String::from("Expected mutable type"),
-                            String::from(
-                                "Make mutable the type with 'mut' keyword before the type.",
-                            ),
-                            local_type_span,
                         ));
                     }
 
@@ -2223,10 +2229,11 @@ impl<'instr> Parser<'instr> {
                             Some(&expr),
                         );
 
-                        if !callee.get_mutability() {
+                        if !callee.is_mutable() {
                             return Err(ThrushCompilerError::Error(
                                 String::from("Expected mutable type"),
                                 String::from("Make mutable the return type of this call."),
+                                String::default(),
                                 span,
                             ));
                         }
@@ -2243,8 +2250,7 @@ impl<'instr> Parser<'instr> {
                 }
 
                 if self.match_token(TokenKind::Dot)? {
-                    let property: Instruction =
-                        self.build_property(name, span, type_ctx.is_mutable)?;
+                    let property: Instruction = self.build_property(name, span)?;
 
                     if self.match_token(TokenKind::Eq)? {
                         let expr: Instruction = self.expr(type_ctx, control_ctx)?;
@@ -2256,11 +2262,12 @@ impl<'instr> Parser<'instr> {
                             Some(&expr),
                         );
 
-                        if !property.get_mutability() {
+                        if !property.is_mutable() {
                             return Err(ThrushCompilerError::Error(
-                                String::from("Expected mutable"),
-                                String::from("Make mutable the property with 'mut'."),
-                                span,
+                                String::from("Expected mutable type"),
+                                String::from("Make mutable the type of this property."),
+                                String::default(),
+                                property.get_span(),
                             ));
                         }
 
@@ -2281,6 +2288,7 @@ impl<'instr> Parser<'instr> {
                         String::from(
                             "Enums cannot be used as types; use properties instead with their types.",
                         ),
+                        String::default(),
                         span,
                     ));
                 }
@@ -2289,6 +2297,7 @@ impl<'instr> Parser<'instr> {
                     return Err(ThrushCompilerError::Error(
                         String::from("Invalid type"),
                         String::from("Functions cannot be used as types; call it instead."),
+                        String::default(),
                         span,
                     ));
                 }
@@ -2305,6 +2314,7 @@ impl<'instr> Parser<'instr> {
                 return Err(ThrushCompilerError::Error(
                     String::from("Syntax error"),
                     format!("Statement '{}' don't allowed.", previous.lexeme.to_str()),
+                    String::default(),
                     previous.span,
                 ));
             }
@@ -2319,7 +2329,7 @@ impl<'instr> Parser<'instr> {
                 let tk: &Token = self.advance()?;
 
                 if tk_kind.is_mut() {
-                    return Ok(Type::Mut(self.build_type(None)?.into()));
+                    return Ok(Type::Mut(self.build_type(consume)?.into()));
                 }
 
                 match tk_kind.as_type() {
@@ -2339,6 +2349,7 @@ impl<'instr> Parser<'instr> {
                             "The type '{}' cannot be a value during the compile time.",
                             what_heck
                         ),
+                        String::default(),
                         tk.span,
                     )),
                 }
@@ -2383,6 +2394,7 @@ impl<'instr> Parser<'instr> {
                 Err(ThrushCompilerError::Error(
                     String::from("Syntax error"),
                     format!("Not found type '{}'.", name),
+                    String::default(),
                     span,
                 ))
             }
@@ -2390,6 +2402,7 @@ impl<'instr> Parser<'instr> {
             what_heck => Err(ThrushCompilerError::Error(
                 String::from("Syntax error"),
                 format!("Expected type, not '{}'", what_heck),
+                String::default(),
                 self.previous().span,
             )),
         };
@@ -2431,6 +2444,7 @@ impl<'instr> Parser<'instr> {
         Err(ThrushCompilerError::Error(
             String::from("Syntax error"),
             format!("Expected pointer type, not '{}'", before_type),
+            String::default(),
             self.previous().span,
         ))
     }
@@ -2439,7 +2453,6 @@ impl<'instr> Parser<'instr> {
         &mut self,
         name: &'instr str,
         span: Span,
-        is_mutable: bool,
     ) -> Result<Instruction<'instr>, ThrushCompilerError> {
         let symbol: FoundSymbolId = self.symbols.get_symbols_id(name, span)?;
 
@@ -2489,7 +2502,6 @@ impl<'instr> Parser<'instr> {
             name,
             indexes: decomposed.1,
             kind: decomposed.0,
-            is_mutable,
             span,
         })
     }
@@ -2525,6 +2537,7 @@ impl<'instr> Parser<'instr> {
             return Err(ThrushCompilerError::Error(
                 String::from("Syntax error"),
                 format!("Local reference '{}' is undefined.", name),
+                String::default(),
                 span,
             ));
         }
@@ -2578,6 +2591,7 @@ impl<'instr> Parser<'instr> {
             return Err(ThrushCompilerError::Error(
                 String::from("Syntax error"),
                 format!("Not found '{}' field in '{}' enum.", name, field_name),
+                String::default(),
                 span,
             ));
         }
@@ -2712,6 +2726,7 @@ impl<'instr> Parser<'instr> {
                     maximun_function_arguments,
                     args_provided.len()
                 ),
+                String::default(),
                 span,
             ));
         }
@@ -2730,7 +2745,7 @@ impl<'instr> Parser<'instr> {
             self.errors.push(ThrushCompilerError::Error(
                 String::from("Syntax error"),
                 format!(
-                    "Function expected all arguments with types ({}), not ({}).",
+                    "Function expected all arguments with types '{}', not '{}'.",
                     function
                         .1
                         .iter()
@@ -2739,6 +2754,7 @@ impl<'instr> Parser<'instr> {
                         .join(", "),
                     display_args_types,
                 ),
+                String::default(),
                 span,
             ));
         }
@@ -2865,6 +2881,7 @@ impl<'instr> Parser<'instr> {
         let error: ThrushCompilerError = ThrushCompilerError::Error(
             String::from("Mismatched types"),
             format!("Expected '{}' but found '{}'.", target, from),
+            String::default(),
             span,
         );
 
@@ -2894,6 +2911,7 @@ impl<'instr> Parser<'instr> {
         Err(ThrushCompilerError::Error(
             title,
             help,
+            String::default(),
             self.previous().span,
         ))
     }
@@ -2902,6 +2920,7 @@ impl<'instr> Parser<'instr> {
         self.errors.push(ThrushCompilerError::Error(
             title,
             help,
+            String::default(),
             self.previous().span,
         ));
     }
@@ -2924,6 +2943,7 @@ impl<'instr> Parser<'instr> {
         Err(ThrushCompilerError::Error(
             String::from("Syntax error"),
             String::from("EOF has been reached."),
+            String::default(),
             self.peek().span,
         ))
     }
@@ -2937,6 +2957,7 @@ impl<'instr> Parser<'instr> {
         Err(ThrushCompilerError::Error(
             String::from("Syntax error"),
             String::from("EOF has been reached."),
+            String::default(),
             self.peek().span,
         ))
     }

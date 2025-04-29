@@ -49,7 +49,6 @@ pub enum Instruction<'ctx> {
     Property {
         name: &'ctx str,
         indexes: Vec<(Type, u32)>,
-        is_mutable: bool,
         kind: Type,
         span: Span,
     },
@@ -273,16 +272,15 @@ impl<'ctx> Instruction<'ctx> {
             Instruction::Carry { span, .. } => *span,
             Instruction::Property { span, .. } => *span,
             Instruction::NullPtr { span } => *span,
+            Instruction::Write { span, .. } => *span,
+            Instruction::Const { span, .. } => *span,
 
             _ => unreachable!(),
         }
     }
 
-    pub fn get_mutability(&self) -> bool {
-        match self {
-            Instruction::Property { is_mutable, .. } => *is_mutable,
-            any => any.get_type().is_mut_type(),
-        }
+    pub fn is_mutable(&self) -> bool {
+        self.get_type().is_mut_type()
     }
 
     pub fn as_function(&self) -> FunctionPrototype {
@@ -368,6 +366,7 @@ impl Instruction<'_> {
         if !self.is_integer() && !self.is_float() && !self.is_bool() {
             return Err(ThrushCompilerError::Error(
                 String::from("Attemping use JIT"),
+                String::from("This expression cannot be compiled correctly."),
                 String::from(
                     "The compiler does not accept runtime-only expressions until the Just-in-Time (JIT) compiler development is complete.",
                 ),

@@ -54,24 +54,31 @@ impl Diagnostician {
     }
 
     pub fn build_diagnostic(&mut self, error: &ThrushCompilerError, logging_type: LoggingType) {
-        let ThrushCompilerError::Error(title, help, span) = error;
-        self.diagnose(title, help, *span, logging_type);
+        let ThrushCompilerError::Error(title, help, note, span) = error;
+        self.diagnose(title, help, note, *span, logging_type);
     }
 
-    fn diagnose(&mut self, title: &str, description: &str, span: Span, logging_type: LoggingType) {
-        Diagnostic::build(&self.code, span).print(&self.path, title, logging_type, description);
+    fn diagnose(
+        &mut self,
+        title: &str,
+        help: &str,
+        note: &str,
+        span: Span,
+        logging_type: LoggingType,
+    ) {
+        Diagnostic::build(&self.code, span, help).print(&self.path, title, note, logging_type);
     }
 }
 
 impl<'a> Diagnostic<'a> {
-    pub fn build(code: &'a str, span: Span) -> Self {
+    pub fn build(code: &'a str, span: Span, help: &'a str) -> Self {
         if let Some(code_position) = Diagnostic::find_line_and_range(code, span) {
-            if let Some(diagnostic) = Diagnostic::generate_diagnostic(code, code_position) {
+            if let Some(diagnostic) = Diagnostic::generate_diagnostic(code, code_position, help) {
                 return diagnostic;
             }
         }
 
-        Diagnostic::build_without_span(code, span)
+        Diagnostic::build_without_span(code, span, help)
     }
 
     pub fn find_line_and_range(code: &str, span: Span) -> Option<CodePosition> {
@@ -102,7 +109,11 @@ impl<'a> Diagnostic<'a> {
         })
     }
 
-    pub fn generate_diagnostic(code: &'a str, position: CodePosition) -> Option<Diagnostic<'a>> {
+    pub fn generate_diagnostic(
+        code: &'a str,
+        position: CodePosition,
+        help: &str,
+    ) -> Option<Diagnostic<'a>> {
         let mut lines: Lines = code.lines();
 
         let line: &str = lines.nth(position.line.saturating_sub(1))?;
@@ -117,6 +128,13 @@ impl<'a> Diagnostic<'a> {
         for pos in 0..=position.end - trim_diferrence {
             if pos == position.end - trim_diferrence {
                 signaler.push('^');
+                signaler.push(' ');
+                signaler.push_str(&format!(
+                    "{}{}",
+                    "HELP: ".bright_green().bold(),
+                    help.bold()
+                ));
+                signaler.push_str("\n\n");
                 break;
             }
 
@@ -130,13 +148,27 @@ impl<'a> Diagnostic<'a> {
         })
     }
 
-    pub fn build_without_span(code: &str, span: Span) -> Diagnostic {
+    pub fn build_without_span(code: &'a str, span: Span, help: &'a str) -> Diagnostic<'a> {
         let lines: Vec<&str> = code.lines().collect();
 
         let line: usize = span.line;
 
         let code: &str = lines[line - 1].trim_start();
-        let signaler: String = "^".bright_red().repeat(code.len());
+        let mut signaler: String = String::with_capacity(200);
+
+        for i in 0..=code.len() {
+            if i == code.len() {
+                signaler.push_str(&format!(
+                    "\n\n{}{}\n",
+                    "HELP: ".bright_green().bold(),
+                    help.bold()
+                ));
+
+                break;
+            }
+
+            signaler.push('^');
+        }
 
         Diagnostic {
             code,
@@ -145,11 +177,12 @@ impl<'a> Diagnostic<'a> {
         }
     }
 
-    pub fn print(self, path: &Path, title: &str, logging_type: LoggingType, description: &str) {
+    pub fn print(self, path: &Path, title: &str, note: &str, logging_type: LoggingType) {
         logging::write(
             logging::OutputIn::Stderr,
             format!(
-                "{} at {}:{}\n",
+                "{} {} at {}:{}\n",
+                "-->".bold().blink(),
                 format_args!("{}", path.to_string_lossy().bold().bright_red()),
                 self.span.get_line().to_string().bold().bright_red(),
                 self.span.get_span_start().to_string().bold().bright_red()
@@ -159,7 +192,12 @@ impl<'a> Diagnostic<'a> {
 
         logging::write(
             logging::OutputIn::Stderr,
-            format!("\n{} {}\n\n", logging_type.to_styled(), title).as_bytes(),
+            format!(
+                "\n{} {}\n\n",
+                logging_type.to_styled(),
+                title.bold().to_uppercase()
+            )
+            .as_bytes(),
         );
 
         logging::write(
@@ -167,9 +205,11 @@ impl<'a> Diagnostic<'a> {
             format!("\n{}\n{}\n", self.code, self.signaler).as_bytes(),
         );
 
-        logging::write(
-            logging::OutputIn::Stderr,
-            format!("\n{} {}\n\n", "> ".bold().bright_red(), description.bold()).as_bytes(),
-        );
+        if !note.is_empty() {
+            logging::write(
+                logging::OutputIn::Stderr,
+                format!("{} {}\n", "NOTE:".bright_blue().bold(), note).as_bytes(),
+            );
+        }
     }
 }

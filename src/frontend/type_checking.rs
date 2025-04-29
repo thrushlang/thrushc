@@ -42,6 +42,7 @@ fn check_binary_arithmetic(
         _ => Err(ThrushCompilerError::Error(
             String::from("Type checking"),
             format!("Arithmetic operation ({} {} {}) is not allowed.", a, op, b),
+            String::default(),
             span,
         )),
     }
@@ -91,6 +92,7 @@ fn check_binary_equality(
     Err(ThrushCompilerError::Error(
         String::from("Type checking"),
         format!("Logical operation ({} {} {}) is not allowed.", a, op, b),
+        String::default(),
         span,
     ))
 }
@@ -121,6 +123,7 @@ fn check_binary_comparasion(
     Err(ThrushCompilerError::Error(
         String::from("Type checking"),
         format!("Logical operation ({} {} {}) is not allowed.", a, op, b),
+        String::default(),
         span,
     ))
 }
@@ -139,6 +142,7 @@ fn check_binary_gate(
     Err(ThrushCompilerError::Error(
         String::from("Type checking"),
         format!("Logical operation ({} {} {}) is not allowed.", a, op, b),
+        String::default(),
         span,
     ))
 }
@@ -167,6 +171,7 @@ fn check_binary_shift(
     Err(ThrushCompilerError::Error(
         String::from("Type checking"),
         format!("Arithmetic operation ({} {} {}) is not allowed.", a, op, b),
+        String::default(),
         span,
     ))
 }
@@ -210,6 +215,7 @@ fn check_unary(op: &TokenKind, a: &Type, span: Span) -> Result<(), ThrushCompile
     Err(ThrushCompilerError::Error(
         String::from("Type checking"),
         format!("Arithmetic operation '{}' with '{}' is not allowed.", op, a),
+        String::default(),
         span,
     ))
 }
@@ -223,6 +229,7 @@ fn check_unary_instr_bang(a: &Type, span: Span) -> Result<(), ThrushCompilerErro
     Err(ThrushCompilerError::Error(
         String::from("Type checking"),
         format!("Logical operation (!{}) is not allowed.", a),
+        String::default(),
         span,
     ))
 }

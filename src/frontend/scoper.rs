@@ -80,6 +80,7 @@ impl<'ctx> ThrushScoper<'ctx> {
                 return Err(ThrushCompilerError::Error(
                     String::from("Undefined variable"),
                     format!("'{}' local not exist at this scope.", name),
+                    String::default(),
                     *span,
                 ));
             }
@@ -92,6 +93,7 @@ impl<'ctx> ThrushScoper<'ctx> {
                 return Err(ThrushCompilerError::Error(
                     String::from("Unreacheable variable"),
                     format!("'{}' local is unreacheable at this point.", name),
+                    String::default(),
                     *span,
                 ));
             }

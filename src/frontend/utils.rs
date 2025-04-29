@@ -19,6 +19,7 @@ pub fn parse_float(lexeme: &str, span: Span) -> Result<(Type, f64), ThrushCompil
         return Err(ThrushCompilerError::Error(
             String::from("Syntax error"),
             String::from("Float values should only contain one dot."),
+            String::default(),
             span,
         ));
     }
@@ -34,6 +35,7 @@ pub fn parse_float(lexeme: &str, span: Span) -> Result<(Type, f64), ThrushCompil
     Err(ThrushCompilerError::Error(
         String::from("Syntax error"),
         String::from("Out of bounds."),
+        String::default(),
         span,
     ))
 }
@@ -74,6 +76,7 @@ pub fn parse_integer(lexeme: &str, span: Span) -> Result<(Type, f64), ThrushComp
                     return Err(ThrushCompilerError::Error(
                         String::from("Syntax error"),
                         String::from("Out of bounds signed hexadecimal format."),
+                        String::default(),
                         span,
                     ));
                 }
@@ -93,6 +96,7 @@ pub fn parse_integer(lexeme: &str, span: Span) -> Result<(Type, f64), ThrushComp
                         return Err(ThrushCompilerError::Error(
                             String::from("Syntax error"),
                             String::from("Out of bounds unsigned hexadecimal format."),
+                            String::default(),
                             span,
                         ));
                     }
@@ -101,6 +105,7 @@ pub fn parse_integer(lexeme: &str, span: Span) -> Result<(Type, f64), ThrushComp
                 Err(_) => Err(ThrushCompilerError::Error(
                     String::from("Syntax error"),
                     String::from("Invalid numeric hexadecimal format."),
+                    String::default(),
                     span,
                 )),
             },
@@ -127,6 +132,7 @@ pub fn parse_integer(lexeme: &str, span: Span) -> Result<(Type, f64), ThrushComp
                     return Err(ThrushCompilerError::Error(
                         String::from("Syntax error"),
                         String::from("Out of bounds signed binary format."),
+                        String::default(),
                         span,
                     ));
                 }
@@ -146,6 +152,7 @@ pub fn parse_integer(lexeme: &str, span: Span) -> Result<(Type, f64), ThrushComp
                         return Err(ThrushCompilerError::Error(
                             String::from("Syntax error"),
                             String::from("Out of bounds unsigned binary format."),
+                            String::default(),
                             span,
                         ));
                     }
@@ -154,6 +161,7 @@ pub fn parse_integer(lexeme: &str, span: Span) -> Result<(Type, f64), ThrushComp
                 Err(_) => Err(ThrushCompilerError::Error(
                     String::from("Syntax error"),
                     String::from("Invalid binary format."),
+                    String::default(),
                     span,
                 )),
             },
@@ -174,6 +182,7 @@ pub fn parse_integer(lexeme: &str, span: Span) -> Result<(Type, f64), ThrushComp
                 return Err(ThrushCompilerError::Error(
                     String::from("Syntax error"),
                     String::from("Out of bounds."),
+                    String::default(),
                     span,
                 ));
             }
@@ -193,6 +202,7 @@ pub fn parse_integer(lexeme: &str, span: Span) -> Result<(Type, f64), ThrushComp
                     Err(ThrushCompilerError::Error(
                         String::from("Syntax error"),
                         String::from("Out of bounds."),
+                        String::default(),
                         span,
                     ))
                 }
@@ -201,6 +211,7 @@ pub fn parse_integer(lexeme: &str, span: Span) -> Result<(Type, f64), ThrushComp
             Err(_) => Err(ThrushCompilerError::Error(
                 String::from("Syntax error"),
                 String::from("Out of bounds."),
+                String::default(),
                 span,
             )),
         },

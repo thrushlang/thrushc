@@ -197,6 +197,7 @@ impl<'a, 'ctx> CodeGenContext<'a, 'ctx> {
 pub enum CodeGenContextPosition {
     Local,
     Call,
+    Mutation,
 
     #[default]
     NoRelevant,
@@ -209,5 +210,9 @@ impl CodeGenContextPosition {
 
     pub fn in_call(&self) -> bool {
         matches!(self, CodeGenContextPosition::Call)
+    }
+
+    pub fn in_mutation(&self) -> bool {
+        matches!(self, CodeGenContextPosition::Mutation)
     }
 }

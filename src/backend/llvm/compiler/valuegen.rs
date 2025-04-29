@@ -233,7 +233,6 @@ pub fn generate_expression<'ctx>(
         name,
         indexes,
         kind,
-        is_mutable,
         ..
     } = expression
     {
@@ -250,7 +249,11 @@ pub fn generate_expression<'ctx>(
             );
         });
 
-        if *is_mutable {
+        if kind.is_mut_type() && context.get_position().in_mutation() {
+            return address.into();
+        }
+
+        if kind.is_mut_type() && casting_target.is_mut_type() && context.get_position().in_call() {
             return address.into();
         }
 
@@ -328,6 +331,8 @@ pub fn generate_expression<'ctx>(
         ..
     } = expression
     {
+        context.set_position(CodeGenContextPosition::Mutation);
+
         let source_name: &str = source.0;
         let source_expression: Option<&Rc<Instruction<'_>>> = source.1.as_ref();
 
@@ -341,6 +346,8 @@ pub fn generate_expression<'ctx>(
                 compiled_target.load_maybe(target.get_type(), context),
             );
 
+            context.set_position_irrelevant();
+
             return compiled_source;
         }
 
@@ -349,6 +356,8 @@ pub fn generate_expression<'ctx>(
         let expression: BasicValueEnum = generate_expression(target, kind, context);
 
         symbol.store(context, expression.load_maybe(target.get_type(), context));
+
+        context.set_position_irrelevant();
 
         return expression;
     }
