@@ -1,5 +1,6 @@
 use std::rc::Rc;
 
+use crate::backend::llvm::compiler::context::CodeGenContextPosition;
 use crate::backend::llvm::compiler::memory::{self, MemoryManagement, SymbolAllocated};
 use crate::backend::llvm::compiler::{binaryop, builtins, unaryop, utils};
 use crate::middle::instruction::Instruction;
@@ -8,7 +9,7 @@ use crate::middle::statement::{Function, ThrushAttributes};
 
 use super::super::super::super::middle::types::Type;
 
-use super::symbols::SymbolsTable;
+use super::context::CodeGenContext;
 use super::typegen;
 
 use inkwell::module::{Linkage, Module};
@@ -85,29 +86,33 @@ pub fn float<'ctx>(
 pub fn generate_expression<'ctx>(
     expression: &'ctx Instruction,
     casting_target: &Type,
-    symbols: &SymbolsTable<'_, 'ctx>,
+    context: &mut CodeGenContext<'_, 'ctx>,
 ) -> BasicValueEnum<'ctx> {
-    let module: &Module = symbols.get_llvm_module();
-    let context: &Context = symbols.get_llvm_context();
-    let builder: &Builder = symbols.get_llvm_builder();
+    let llvm_module: &Module = context.get_llvm_module();
+    let llvm_context: &Context = context.get_llvm_context();
+    let llvm_builder: &Builder = context.get_llvm_builder();
 
     if let Instruction::NullPtr { .. } = expression {
-        return context
+        return llvm_context
             .ptr_type(AddressSpace::default())
             .const_null()
             .into();
     }
 
     if let Instruction::Str(_, str, ..) = expression {
-        return utils::build_str_constant(module, context, str).into();
+        return utils::build_str_constant(llvm_module, llvm_context, str).into();
     }
 
     if let Instruction::Float(kind, num, is_signed, ..) = expression {
-        let mut float: FloatValue = float(builder, context, kind, *num, *is_signed);
+        let mut float: FloatValue = float(llvm_builder, llvm_context, kind, *num, *is_signed);
 
-        if let Some(casted_float) =
-            utils::float_autocast(casting_target, kind, float.into(), builder, context)
-        {
+        if let Some(casted_float) = utils::float_autocast(
+            casting_target,
+            kind,
+            float.into(),
+            llvm_builder,
+            llvm_context,
+        ) {
             float = casted_float.into_float_value();
         }
 
@@ -115,11 +120,15 @@ pub fn generate_expression<'ctx>(
     }
 
     if let Instruction::Integer(kind, num, is_signed, ..) = expression {
-        let mut integer: IntValue = integer(context, kind, *num as u64, *is_signed);
+        let mut integer: IntValue = integer(llvm_context, kind, *num as u64, *is_signed);
 
-        if let Some(casted_integer) =
-            utils::integer_autocast(casting_target, kind, integer.into(), builder, context)
-        {
+        if let Some(casted_integer) = utils::integer_autocast(
+            casting_target,
+            kind,
+            integer.into(),
+            llvm_builder,
+            llvm_context,
+        ) {
             integer = casted_integer.into_int_value();
         }
 
@@ -127,11 +136,14 @@ pub fn generate_expression<'ctx>(
     }
 
     if let Instruction::Char(_, byte, ..) = expression {
-        return context.i8_type().const_int(*byte as u64, false).into();
+        return llvm_context.i8_type().const_int(*byte as u64, false).into();
     }
 
     if let Instruction::Boolean(_, bool, ..) = expression {
-        return context.bool_type().const_int(*bool as u64, false).into();
+        return llvm_context
+            .bool_type()
+            .const_int(*bool as u64, false)
+            .into();
     }
 
     if let Instruction::Write {
@@ -143,27 +155,27 @@ pub fn generate_expression<'ctx>(
     {
         let write_reference: &str = write_to.0;
 
-        let write_value: BasicValueEnum = generate_expression(write_value, write_type, symbols);
+        let write_value: BasicValueEnum = generate_expression(write_value, write_type, context);
 
         if let Some(expression) = write_to.1.as_ref() {
             let compiled_expression: PointerValue =
-                generate_expression(expression, &Type::Void, symbols).into_pointer_value();
+                generate_expression(expression, &Type::Void, context).into_pointer_value();
 
-            builder
+            llvm_builder
                 .build_store(compiled_expression, write_value)
                 .unwrap();
 
-            return context
+            return llvm_context
                 .ptr_type(AddressSpace::default())
                 .const_null()
                 .into();
         }
 
-        let symbol: SymbolAllocated = symbols.get_allocated_symbol(write_reference);
+        let symbol: SymbolAllocated = context.get_allocated_symbol(write_reference);
 
-        symbol.store(symbols, write_value);
+        symbol.store(context, write_value);
 
-        return context
+        return llvm_context
             .ptr_type(AddressSpace::default())
             .const_null()
             .into();
@@ -176,35 +188,35 @@ pub fn generate_expression<'ctx>(
         ..
     } = expression
     {
-        let carry_type_generated: BasicTypeEnum = typegen::generate_type(context, carry_type);
+        let carry_type_generated: BasicTypeEnum = typegen::generate_type(llvm_context, carry_type);
 
         if let Some(expression) = expression {
             let compiled_expression: PointerValue<'_> =
-                generate_expression(expression, carry_type, symbols).into_pointer_value();
+                generate_expression(expression, carry_type, context).into_pointer_value();
 
-            return builder
+            return llvm_builder
                 .build_load(carry_type_generated, compiled_expression, "")
                 .unwrap();
         }
 
-        return symbols.get_allocated_symbol(name).load(symbols);
+        return context.get_allocated_symbol(name).load(context);
     }
 
     if let Instruction::Address { name, indexes, .. } = expression {
-        let symbol: SymbolAllocated = symbols.get_allocated_symbol(name);
+        let symbol: SymbolAllocated = context.get_allocated_symbol(name);
 
         let mut compiled_indexes: Vec<IntValue> = Vec::with_capacity(10);
 
         indexes.iter().for_each(|indexe| {
             let mut compiled_indexe: BasicValueEnum =
-                generate_expression(indexe, &Type::U32, symbols);
+                generate_expression(indexe, &Type::U32, context);
 
             if let Some(casted_index) = utils::integer_autocast(
                 &Type::U32,
                 indexe.get_type(),
                 compiled_indexe,
-                builder,
-                context,
+                llvm_builder,
+                llvm_context,
             ) {
                 compiled_indexe = casted_index;
             }
@@ -212,7 +224,9 @@ pub fn generate_expression<'ctx>(
             compiled_indexes.push(compiled_indexe.into_int_value());
         });
 
-        return symbol.gep(context, builder, &compiled_indexes).into();
+        return symbol
+            .gep(llvm_context, llvm_builder, &compiled_indexes)
+            .into();
     }
 
     if let Instruction::Property {
@@ -223,14 +237,14 @@ pub fn generate_expression<'ctx>(
         ..
     } = expression
     {
-        let symbol: SymbolAllocated = symbols.get_allocated_symbol(name);
+        let symbol: SymbolAllocated = context.get_allocated_symbol(name);
 
-        let mut address: PointerValue<'ctx> = symbol.gep_struct(context, builder, indexes[0].1);
+        let mut address: PointerValue = symbol.gep_struct(llvm_context, llvm_builder, indexes[0].1);
 
         indexes.iter().skip(1).for_each(|indexe| {
             address = memory::gep_struct_from_ptr(
-                builder,
-                typegen::generate_type(context, &indexe.0),
+                llvm_builder,
+                typegen::generate_type(llvm_context, &indexe.0),
                 address,
                 indexe.1,
             );
@@ -240,19 +254,19 @@ pub fn generate_expression<'ctx>(
             return address.into();
         }
 
-        return memory::load_anon(context, builder, kind, address);
+        return memory::load_anon(llvm_context, llvm_builder, kind, address);
     }
 
     if let Instruction::LocalRef { name, kind, .. } | Instruction::ConstRef { name, kind, .. } =
         expression
     {
-        let symbol: SymbolAllocated = symbols.get_allocated_symbol(name);
+        let symbol: SymbolAllocated = context.get_allocated_symbol(name);
 
-        if kind.is_mut_type() && casting_target.is_mut_type() {
+        if kind.is_mut_type() && casting_target.is_mut_type() && context.get_position().in_call() {
             return symbol.take();
         }
 
-        return symbol.load(symbols);
+        return symbol.load(context);
     }
 
     if let Instruction::BinaryOp {
@@ -267,7 +281,7 @@ pub fn generate_expression<'ctx>(
             return binaryop::float::float_binaryop(
                 (left, operator, right),
                 casting_target,
-                symbols,
+                context,
             );
         }
 
@@ -275,7 +289,7 @@ pub fn generate_expression<'ctx>(
             return binaryop::integer::integer_binaryop(
                 (left, operator, right),
                 casting_target,
-                symbols,
+                context,
             );
         }
 
@@ -283,7 +297,7 @@ pub fn generate_expression<'ctx>(
             return binaryop::boolean::bool_binaryop(
                 (left, operator, right),
                 casting_target,
-                symbols,
+                context,
             );
         }
 
@@ -299,7 +313,12 @@ pub fn generate_expression<'ctx>(
         ..
     } = expression
     {
-        return unaryop::unary_op(builder, context, (operator, kind, expression), symbols);
+        return unaryop::unary_op(
+            llvm_builder,
+            llvm_context,
+            (operator, kind, expression),
+            context,
+        );
     }
 
     if let Instruction::LocalMut {
@@ -313,23 +332,23 @@ pub fn generate_expression<'ctx>(
         let source_expression: Option<&Rc<Instruction<'_>>> = source.1.as_ref();
 
         if let Some(expression) = source_expression {
-            let compiled_source: BasicValueEnum = generate_expression(expression, kind, symbols);
-            let compiled_target: BasicValueEnum = generate_expression(target, kind, symbols);
+            let compiled_source: BasicValueEnum = generate_expression(expression, kind, context);
+            let compiled_target: BasicValueEnum = generate_expression(target, kind, context);
 
             memory::store_anon(
-                builder,
+                llvm_builder,
                 compiled_source.into_pointer_value(),
-                compiled_target.load_maybe(target.get_type(), symbols),
+                compiled_target.load_maybe(target.get_type(), context),
             );
 
             return compiled_source;
         }
 
-        let symbol: SymbolAllocated = symbols.get_allocated_symbol(source_name);
+        let symbol: SymbolAllocated = context.get_allocated_symbol(source_name);
 
-        let expression: BasicValueEnum = generate_expression(target, kind, symbols);
+        let expression: BasicValueEnum = generate_expression(target, kind, context);
 
-        symbol.store(symbols, expression.load_maybe(target.get_type(), symbols));
+        symbol.store(context, expression.load_maybe(target.get_type(), context));
 
         return expression;
     }
@@ -342,19 +361,25 @@ pub fn generate_expression<'ctx>(
     } = expression
     {
         if *call_name == "sizeof!" {
-            return builtins::build_sizeof(context, (call_name, call_type, call_args), symbols);
+            return builtins::build_sizeof(
+                llvm_context,
+                (call_name, call_type, call_args),
+                context,
+            );
         }
 
         if *call_name == "is_signed!" {
             return builtins::build_is_signed(
-                context,
-                builder,
+                llvm_context,
+                llvm_builder,
                 (call_name, call_type, call_args),
-                symbols,
+                context,
             );
         }
 
-        let function: Function = symbols.get_function(call_name);
+        context.set_position(CodeGenContextPosition::Call);
+
+        let function: Function = context.get_function(call_name);
 
         let llvm_function: FunctionValue = function.0;
 
@@ -368,10 +393,10 @@ pub fn generate_expression<'ctx>(
                 .get(instruction.0)
                 .unwrap_or(&Type::Void);
 
-            compiled_args.push(generate_expression(instruction.1, casting_target, symbols).into());
+            compiled_args.push(generate_expression(instruction.1, casting_target, context).into());
         });
 
-        let call: CallSiteValue = builder
+        let call: CallSiteValue = llvm_builder
             .build_call(llvm_function, &compiled_args, "")
             .unwrap();
 
@@ -380,54 +405,59 @@ pub fn generate_expression<'ctx>(
         if !call_type.is_void_type() {
             let return_value: BasicValueEnum = call.try_as_basic_value().unwrap_left();
 
-            if call_type.is_mut_type() && casting_target.is_mut_type() {
+            if call_type.is_mut_type()
+                && casting_target.is_mut_type()
+                && context.get_position().in_call()
+            {
+                context.set_position_irrelevant();
                 return return_value;
             }
 
             if call_type.is_mut_type() {
+                context.set_position_irrelevant();
                 return call.try_as_basic_value().unwrap_left();
             }
 
             if return_value.is_pointer_value() {
+                context.set_position_irrelevant();
                 return memory::load_anon(
-                    context,
-                    builder,
+                    llvm_context,
+                    llvm_builder,
                     call_type,
                     return_value.into_pointer_value(),
                 );
             }
 
+            context.set_position_irrelevant();
             return call.try_as_basic_value().unwrap_left();
         }
 
-        return context
+        context.set_position_irrelevant();
+
+        return llvm_context
             .ptr_type(AddressSpace::default())
             .const_null()
             .into();
     }
 
     if let Instruction::Return(kind, value) = expression {
-        if kind.is_void_type() {
-            builder.build_return(None).unwrap();
+        let default_return: PointerValue =
+            llvm_context.ptr_type(AddressSpace::default()).const_null();
 
-            return context
-                .ptr_type(AddressSpace::default())
-                .const_null()
-                .into();
+        if kind.is_void_type() {
+            llvm_builder.build_return(None).unwrap();
+            return default_return.into();
         }
 
-        builder
-            .build_return(Some(&generate_expression(value, kind, symbols)))
+        llvm_builder
+            .build_return(Some(&generate_expression(value, kind, context)))
             .unwrap();
 
-        return context
-            .ptr_type(AddressSpace::default())
-            .const_null()
-            .into();
+        return default_return.into();
     }
 
     if let Instruction::Group { expression, .. } = expression {
-        return generate_expression(expression, casting_target, symbols);
+        return generate_expression(expression, casting_target, context);
     }
 
     println!("{:?}", expression);

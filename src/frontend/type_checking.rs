@@ -33,6 +33,11 @@ fn check_binary_arithmetic(
         ) => Ok(()),
 
         (Type::F32 | Type::F64, Type::F32 | Type::F64) => Ok(()),
+        (Type::Mut(a_subtype), Type::Mut(b_subtype)) => {
+            check_binary_arithmetic(op, a_subtype, b_subtype, span)
+        }
+        (any, Type::Mut(b_subtype)) => check_binary_arithmetic(op, any, b_subtype, span),
+        (Type::Mut(a_subtype), any) => check_binary_arithmetic(op, a_subtype, any, span),
 
         _ => Err(ThrushCompilerError::Error(
             String::from("Type checking"),
@@ -105,6 +110,12 @@ fn check_binary_comparasion(
         return Ok(());
     } else if let (Type::F32 | Type::F64, Type::F32 | Type::F64) = (a, b) {
         return Ok(());
+    } else if let (Type::Mut(a_subtype), Type::Mut(b_subtype)) = (a, b) {
+        return check_binary_comparasion(op, a_subtype, b_subtype, span);
+    } else if let (Type::Mut(a_subtype), any) = (a, b) {
+        return check_binary_comparasion(op, a_subtype, any, span);
+    } else if let (any, Type::Mut(b_subtype)) = (a, b) {
+        return check_binary_comparasion(op, any, b_subtype, span);
     }
 
     Err(ThrushCompilerError::Error(
@@ -145,6 +156,12 @@ fn check_binary_shift(
     ) = (a, b)
     {
         return Ok(());
+    } else if let (Type::Mut(a_subtype), Type::Mut(b_subtype)) = (a, b) {
+        return check_binary_shift(op, a_subtype, b_subtype, span);
+    } else if let (Type::Mut(a_subtype), any) = (a, b) {
+        return check_binary_shift(op, a_subtype, any, span);
+    } else if let (any, Type::Mut(b_subtype)) = (a, b) {
+        return check_binary_shift(op, any, b_subtype, span);
     }
 
     Err(ThrushCompilerError::Error(
@@ -186,7 +203,7 @@ OPERATOR OPERATOR
 
 #[inline(always)]
 fn check_unary(op: &TokenKind, a: &Type, span: Span) -> Result<(), ThrushCompilerError> {
-    if a.is_integer_type() || a.is_float_type() {
+    if a.is_integer_type() || a.is_float_type() || a.is_mut_numeric_type() {
         return Ok(());
     }
 
@@ -272,17 +289,80 @@ pub fn check_type(
 
         (Type::Struct(_, _), Type::Void, None) => Ok(()),
 
-        (target_type, Type::Mut(from_type), None) if !target_type.is_mut_type() => {
+        (
+            target_type,
+            Type::Mut(from_type),
+            Some(
+                TokenKind::BangEq
+                | TokenKind::EqEq
+                | TokenKind::LessEq
+                | TokenKind::Less
+                | TokenKind::Greater
+                | TokenKind::GreaterEq
+                | TokenKind::And
+                | TokenKind::Or
+                | TokenKind::Bang
+                | TokenKind::Plus
+                | TokenKind::Minus
+                | TokenKind::Slash
+                | TokenKind::Star
+                | TokenKind::LShift
+                | TokenKind::RShift,
+            )
+            | None,
+        ) if !target_type.is_mut_type() => {
             check_type(target_type, from_type, expression, operator, error)?;
             Ok(())
         }
 
-        (Type::Mut(target_type), any_type, None) if !any_type.is_mut_type() => {
+        (
+            Type::Mut(target_type),
+            any_type,
+            Some(
+                TokenKind::BangEq
+                | TokenKind::EqEq
+                | TokenKind::LessEq
+                | TokenKind::Less
+                | TokenKind::Greater
+                | TokenKind::GreaterEq
+                | TokenKind::And
+                | TokenKind::Or
+                | TokenKind::Bang
+                | TokenKind::Plus
+                | TokenKind::Minus
+                | TokenKind::Slash
+                | TokenKind::Star
+                | TokenKind::LShift
+                | TokenKind::RShift,
+            )
+            | None,
+        ) if !any_type.is_mut_type() => {
             check_type(target_type, any_type, expression, operator, error)?;
             Ok(())
         }
 
-        (Type::Mut(target_type), Type::Mut(from_type), None) => {
+        (
+            Type::Mut(target_type),
+            Type::Mut(from_type),
+            Some(
+                TokenKind::BangEq
+                | TokenKind::EqEq
+                | TokenKind::LessEq
+                | TokenKind::Less
+                | TokenKind::Greater
+                | TokenKind::GreaterEq
+                | TokenKind::And
+                | TokenKind::Or
+                | TokenKind::Bang
+                | TokenKind::Plus
+                | TokenKind::Minus
+                | TokenKind::Slash
+                | TokenKind::Star
+                | TokenKind::LShift
+                | TokenKind::RShift,
+            )
+            | None,
+        ) => {
             check_type(target_type, from_type, expression, operator, error)?;
             Ok(())
         }

@@ -22,14 +22,14 @@ use {
 
 const CONSTANTS_MINIMAL_CAPACITY: usize = 255;
 const FUNCTION_MINIMAL_CAPACITY: usize = 255;
-
 const SCOPE_MINIMAL_CAPACITY: usize = 155;
 
 #[derive(Debug)]
-pub struct SymbolsTable<'a, 'ctx> {
+pub struct CodeGenContext<'a, 'ctx> {
     module: &'a Module<'ctx>,
     context: &'ctx Context,
     builder: &'ctx Builder<'ctx>,
+    position: CodeGenContextPosition,
     pub target_data: TargetData,
     constants: HashMap<&'ctx str, SymbolAllocated<'ctx>>,
     functions: HashMap<&'ctx str, Function<'ctx>>,
@@ -38,7 +38,7 @@ pub struct SymbolsTable<'a, 'ctx> {
     scope: usize,
 }
 
-impl<'a, 'ctx> SymbolsTable<'a, 'ctx> {
+impl<'a, 'ctx> CodeGenContext<'a, 'ctx> {
     pub fn new(
         module: &'a Module<'ctx>,
         context: &'ctx Context,
@@ -49,6 +49,7 @@ impl<'a, 'ctx> SymbolsTable<'a, 'ctx> {
             module,
             context,
             builder,
+            position: CodeGenContextPosition::default(),
             target_data,
             constants: HashMap::with_capacity(CONSTANTS_MINIMAL_CAPACITY),
             functions: HashMap::with_capacity(FUNCTION_MINIMAL_CAPACITY),
@@ -166,6 +167,18 @@ impl<'a, 'ctx> SymbolsTable<'a, 'ctx> {
         self.builder
     }
 
+    pub fn set_position(&mut self, new_position: CodeGenContextPosition) {
+        self.position = new_position;
+    }
+
+    pub fn get_position(&self) -> CodeGenContextPosition {
+        self.position
+    }
+
+    pub fn set_position_irrelevant(&mut self) {
+        self.position = CodeGenContextPosition::NoRelevant;
+    }
+
     pub fn begin_scope(&mut self) {
         self.blocks
             .push(HashMap::with_capacity(SCOPE_MINIMAL_CAPACITY));
@@ -177,5 +190,24 @@ impl<'a, 'ctx> SymbolsTable<'a, 'ctx> {
         self.blocks.pop();
         self.lift.clear();
         self.scope -= 1;
+    }
+}
+
+#[derive(Debug, Default, Clone, Copy)]
+pub enum CodeGenContextPosition {
+    Local,
+    Call,
+
+    #[default]
+    NoRelevant,
+}
+
+impl CodeGenContextPosition {
+    pub fn in_local(&self) -> bool {
+        matches!(self, CodeGenContextPosition::Local)
+    }
+
+    pub fn in_call(&self) -> bool {
+        matches!(self, CodeGenContextPosition::Call)
     }
 }

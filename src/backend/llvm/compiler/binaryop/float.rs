@@ -6,7 +6,7 @@ use crate::{
     },
 };
 
-use super::super::{Instruction, symbols::SymbolsTable, unaryop, utils, valuegen};
+use super::super::{Instruction, context::CodeGenContext, unaryop, utils, valuegen};
 
 use inkwell::{
     builder::Builder,
@@ -51,7 +51,7 @@ pub fn float_operation<'ctx>(
 pub fn float_binaryop<'ctx>(
     binary: BinaryOp<'ctx>,
     target_type: &Type,
-    symbols: &SymbolsTable<'_, 'ctx>,
+    context: &mut CodeGenContext<'_, 'ctx>,
 ) -> BasicValueEnum<'ctx> {
     /* ######################################################################
 
@@ -61,8 +61,8 @@ pub fn float_binaryop<'ctx>(
 
     ########################################################################*/
 
-    let context: &Context = symbols.get_llvm_context();
-    let builder: &Builder = symbols.get_llvm_builder();
+    let llvm_context: &Context = context.get_llvm_context();
+    let llvm_builder: &Builder = context.get_llvm_builder();
 
     if let (
         Instruction::Float(left_type, left_num, left_signed, ..),
@@ -79,18 +79,28 @@ pub fn float_binaryop<'ctx>(
         Instruction::Float(right_type, right_num, right_signed, ..),
     ) = binary
     {
-        let mut left_compiled: FloatValue =
-            valuegen::float(builder, context, left_type, *left_num, *left_signed);
+        let mut left_compiled: FloatValue = valuegen::float(
+            llvm_builder,
+            llvm_context,
+            left_type,
+            *left_num,
+            *left_signed,
+        );
 
-        let mut right_compiled: FloatValue =
-            valuegen::float(builder, context, right_type, *right_num, *right_signed);
+        let mut right_compiled: FloatValue = valuegen::float(
+            llvm_builder,
+            llvm_context,
+            right_type,
+            *right_num,
+            *right_signed,
+        );
 
         if let Some(new_left_compiled) = utils::float_autocast(
             target_type,
             left_type,
             left_compiled.into(),
-            builder,
-            context,
+            llvm_builder,
+            llvm_context,
         ) {
             left_compiled = new_left_compiled.into_float_value();
         }
@@ -99,13 +109,13 @@ pub fn float_binaryop<'ctx>(
             target_type,
             right_type,
             right_compiled.into(),
-            builder,
-            context,
+            llvm_builder,
+            llvm_context,
         ) {
             right_compiled = new_right_compiled.into_float_value();
         }
 
-        return float_operation(builder, left_compiled, right_compiled, binary.1);
+        return float_operation(llvm_builder, left_compiled, right_compiled, binary.1);
     }
 
     /* ######################################################################
@@ -134,19 +144,19 @@ pub fn float_binaryop<'ctx>(
         let left_dissasembled: UnaryOp = binary.0.as_unaryop();
 
         let mut left_compiled: BasicValueEnum =
-            unaryop::unary_op(builder, context, left_dissasembled, symbols);
+            unaryop::unary_op(llvm_builder, llvm_context, left_dissasembled, context);
 
         let right_dissasembled: UnaryOp = binary.2.as_unaryop();
 
         let mut right_compiled: BasicValueEnum =
-            unaryop::unary_op(builder, context, right_dissasembled, symbols);
+            unaryop::unary_op(llvm_builder, llvm_context, right_dissasembled, context);
 
         if let Some(new_left_compiled) = utils::float_autocast(
             target_type,
             left_dissasembled.2.get_type(),
             left_compiled,
-            builder,
-            context,
+            llvm_builder,
+            llvm_context,
         ) {
             left_compiled = new_left_compiled;
         }
@@ -155,14 +165,14 @@ pub fn float_binaryop<'ctx>(
             target_type,
             right_dissasembled.2.get_type(),
             right_compiled,
-            builder,
-            context,
+            llvm_builder,
+            llvm_context,
         ) {
             right_compiled = new_right_compiled;
         }
 
         return float_operation(
-            builder,
+            llvm_builder,
             left_compiled.into_float_value(),
             right_compiled.into_float_value(),
             binary.1,
@@ -188,16 +198,20 @@ pub fn float_binaryop<'ctx>(
     ) = binary
     {
         let mut left_compiled: BasicValueEnum =
-            valuegen::generate_expression(binary.0, target_type, symbols);
+            valuegen::generate_expression(binary.0, target_type, context);
 
         let right_dissasembled: UnaryOp = binary.2.as_unaryop();
 
         let mut right_compiled: BasicValueEnum =
-            unaryop::unary_op(builder, context, right_dissasembled, symbols);
+            unaryop::unary_op(llvm_builder, llvm_context, right_dissasembled, context);
 
-        if let Some(new_left_compiled) =
-            utils::float_autocast(target_type, left_call_type, left_compiled, builder, context)
-        {
+        if let Some(new_left_compiled) = utils::float_autocast(
+            target_type,
+            left_call_type,
+            left_compiled,
+            llvm_builder,
+            llvm_context,
+        ) {
             left_compiled = new_left_compiled;
         }
 
@@ -205,14 +219,14 @@ pub fn float_binaryop<'ctx>(
             target_type,
             right_dissasembled.2.get_type(),
             right_compiled,
-            builder,
-            context,
+            llvm_builder,
+            llvm_context,
         ) {
             right_compiled = new_right_compiled;
         }
 
         return float_operation(
-            builder,
+            llvm_builder,
             left_compiled.into_float_value(),
             right_compiled.into_float_value(),
             binary.1,
@@ -240,17 +254,17 @@ pub fn float_binaryop<'ctx>(
         let left_dissasembled: UnaryOp = binary.0.as_unaryop();
 
         let mut left_compiled: BasicValueEnum =
-            unaryop::unary_op(builder, context, left_dissasembled, symbols);
+            unaryop::unary_op(llvm_builder, llvm_context, left_dissasembled, context);
 
         let mut right_compiled: BasicValueEnum =
-            valuegen::generate_expression(binary.2, target_type, symbols);
+            valuegen::generate_expression(binary.2, target_type, context);
 
         if let Some(new_left_compiled) = utils::float_autocast(
             target_type,
             left_dissasembled.2.get_type(),
             left_compiled,
-            builder,
-            context,
+            llvm_builder,
+            llvm_context,
         ) {
             left_compiled = new_left_compiled;
         }
@@ -259,14 +273,14 @@ pub fn float_binaryop<'ctx>(
             target_type,
             right_call_type,
             right_compiled,
-            builder,
-            context,
+            llvm_builder,
+            llvm_context,
         ) {
             right_compiled = new_right_compiled;
         }
 
         return float_operation(
-            builder,
+            llvm_builder,
             left_compiled.into_float_value(),
             right_compiled.into_float_value(),
             binary.1,
@@ -288,20 +302,25 @@ pub fn float_binaryop<'ctx>(
         Instruction::UnaryOp { .. },
     ) = binary
     {
-        let mut left_compiled: FloatValue =
-            valuegen::float(builder, context, left_type, *left_num, *left_signed);
+        let mut left_compiled: FloatValue = valuegen::float(
+            llvm_builder,
+            llvm_context,
+            left_type,
+            *left_num,
+            *left_signed,
+        );
 
         let right_dissasembled: UnaryOp = binary.2.as_unaryop();
 
         let mut right_compiled: BasicValueEnum =
-            unaryop::unary_op(builder, context, right_dissasembled, symbols);
+            unaryop::unary_op(llvm_builder, llvm_context, right_dissasembled, context);
 
         if let Some(new_left_compiled) = utils::float_autocast(
             target_type,
             left_type,
             left_compiled.into(),
-            builder,
-            context,
+            llvm_builder,
+            llvm_context,
         ) {
             left_compiled = new_left_compiled.into_float_value();
         }
@@ -310,14 +329,14 @@ pub fn float_binaryop<'ctx>(
             target_type,
             right_dissasembled.2.get_type(),
             right_compiled,
-            builder,
-            context,
+            llvm_builder,
+            llvm_context,
         ) {
             right_compiled = new_right_compiled;
         }
 
         return float_operation(
-            builder,
+            llvm_builder,
             left_compiled,
             right_compiled.into_float_value(),
             binary.1,
@@ -349,16 +368,20 @@ pub fn float_binaryop<'ctx>(
     ) = binary
     {
         let mut left_compiled: BasicValueEnum =
-            symbols.get_allocated_symbol(left_name).load(symbols);
+            context.get_allocated_symbol(left_name).load(context);
 
         let right_dissasembled: UnaryOp = binary.2.as_unaryop();
 
         let mut right_compiled: BasicValueEnum =
-            unaryop::unary_op(builder, context, right_dissasembled, symbols);
+            unaryop::unary_op(llvm_builder, llvm_context, right_dissasembled, context);
 
-        if let Some(new_left_compiled) =
-            utils::float_autocast(target_type, left_type, left_compiled, builder, context)
-        {
+        if let Some(new_left_compiled) = utils::float_autocast(
+            target_type,
+            left_type,
+            left_compiled,
+            llvm_builder,
+            llvm_context,
+        ) {
             left_compiled = new_left_compiled;
         }
 
@@ -366,14 +389,14 @@ pub fn float_binaryop<'ctx>(
             target_type,
             right_dissasembled.2.get_type(),
             right_compiled,
-            builder,
-            context,
+            llvm_builder,
+            llvm_context,
         ) {
             right_compiled = new_right_compiled;
         }
 
         return float_operation(
-            builder,
+            llvm_builder,
             left_compiled.into_float_value(),
             right_compiled.into_float_value(),
             binary.1,
@@ -407,29 +430,33 @@ pub fn float_binaryop<'ctx>(
         let left_dissasembled: UnaryOp = binary.0.as_unaryop();
 
         let mut left_compiled: BasicValueEnum =
-            unaryop::unary_op(builder, context, left_dissasembled, symbols);
+            unaryop::unary_op(llvm_builder, llvm_context, left_dissasembled, context);
 
         let mut right_compiled: BasicValueEnum =
-            symbols.get_allocated_symbol(right_name).load(symbols);
+            context.get_allocated_symbol(right_name).load(context);
 
         if let Some(new_left_compiled) = utils::float_autocast(
             target_type,
             left_dissasembled.2.get_type(),
             left_compiled,
-            builder,
-            context,
+            llvm_builder,
+            llvm_context,
         ) {
             left_compiled = new_left_compiled;
         }
 
-        if let Some(new_right_compiled) =
-            utils::float_autocast(target_type, right_type, right_compiled, builder, context)
-        {
+        if let Some(new_right_compiled) = utils::float_autocast(
+            target_type,
+            right_type,
+            right_compiled,
+            llvm_builder,
+            llvm_context,
+        ) {
             right_compiled = new_right_compiled;
         }
 
         return float_operation(
-            builder,
+            llvm_builder,
             left_compiled.into_float_value(),
             right_compiled.into_float_value(),
             binary.1,
@@ -456,19 +483,19 @@ pub fn float_binaryop<'ctx>(
         let left_dissasembled: BinaryOp = binary.0.as_binary();
 
         let mut left_compiled: FloatValue =
-            float_binaryop(left_dissasembled, target_type, symbols).into_float_value();
+            float_binaryop(left_dissasembled, target_type, context).into_float_value();
 
         let right_dissasembled: UnaryOp = binary.2.as_unaryop();
 
         let mut right_compiled: BasicValueEnum =
-            unaryop::unary_op(builder, context, right_dissasembled, symbols);
+            unaryop::unary_op(llvm_builder, llvm_context, right_dissasembled, context);
 
         if let Some(new_left_compiled) = utils::float_autocast(
             target_type,
             left_type,
             left_compiled.into(),
-            builder,
-            context,
+            llvm_builder,
+            llvm_context,
         ) {
             left_compiled = new_left_compiled.into_float_value();
         }
@@ -477,14 +504,14 @@ pub fn float_binaryop<'ctx>(
             target_type,
             right_dissasembled.2.get_type(),
             right_compiled,
-            builder,
-            context,
+            llvm_builder,
+            llvm_context,
         ) {
             right_compiled = new_right_compiled;
         }
 
         return float_operation(
-            builder,
+            llvm_builder,
             left_compiled,
             right_compiled.into_float_value(),
             binary.1,
@@ -513,19 +540,19 @@ pub fn float_binaryop<'ctx>(
         let left_dissasembled: BinaryOp = left_instr.as_binary();
 
         let mut left_compiled: FloatValue =
-            float_binaryop(left_dissasembled, target_type, symbols).into_float_value();
+            float_binaryop(left_dissasembled, target_type, context).into_float_value();
 
         let right_dissasembled: UnaryOp = binary.2.as_unaryop();
 
         let mut right_compiled: BasicValueEnum =
-            unaryop::unary_op(builder, context, right_dissasembled, symbols);
+            unaryop::unary_op(llvm_builder, llvm_context, right_dissasembled, context);
 
         if let Some(new_left_compiled) = utils::float_autocast(
             target_type,
             left_type,
             left_compiled.into(),
-            builder,
-            context,
+            llvm_builder,
+            llvm_context,
         ) {
             left_compiled = new_left_compiled.into_float_value();
         }
@@ -534,14 +561,14 @@ pub fn float_binaryop<'ctx>(
             target_type,
             right_dissasembled.2.get_type(),
             right_compiled,
-            builder,
-            context,
+            llvm_builder,
+            llvm_context,
         ) {
             right_compiled = new_right_compiled;
         }
 
         return float_operation(
-            builder,
+            llvm_builder,
             left_compiled,
             right_compiled.into_float_value(),
             binary.1,
@@ -570,19 +597,19 @@ pub fn float_binaryop<'ctx>(
         let left_dissasembled: UnaryOp = binary.0.as_unaryop();
 
         let mut left_compiled: BasicValueEnum =
-            unaryop::unary_op(builder, context, left_dissasembled, symbols);
+            unaryop::unary_op(llvm_builder, llvm_context, left_dissasembled, context);
 
         let right_dissasembled: BinaryOp = right_instr.as_binary();
 
         let mut right_compiled: FloatValue =
-            float_binaryop(right_dissasembled, target_type, symbols).into_float_value();
+            float_binaryop(right_dissasembled, target_type, context).into_float_value();
 
         if let Some(new_left_compiled) = utils::float_autocast(
             target_type,
             left_dissasembled.2.get_type(),
             left_compiled,
-            builder,
-            context,
+            llvm_builder,
+            llvm_context,
         ) {
             left_compiled = new_left_compiled;
         }
@@ -591,14 +618,14 @@ pub fn float_binaryop<'ctx>(
             target_type,
             right_type,
             right_compiled.into(),
-            builder,
-            context,
+            llvm_builder,
+            llvm_context,
         ) {
             right_compiled = new_right_compiled.into_float_value();
         }
 
         return float_operation(
-            builder,
+            llvm_builder,
             left_compiled.into_float_value(),
             right_compiled,
             binary.1,
@@ -635,14 +662,18 @@ pub fn float_binaryop<'ctx>(
     ) = binary
     {
         let mut left_compiled: BasicValueEnum =
-            valuegen::generate_expression(binary.0, target_type, symbols);
+            valuegen::generate_expression(binary.0, target_type, context);
 
         let mut right_compiled: BasicValueEnum =
-            valuegen::generate_expression(binary.2, target_type, symbols);
+            valuegen::generate_expression(binary.2, target_type, context);
 
-        if let Some(new_left_compiled) =
-            utils::float_autocast(target_type, left_call_type, left_compiled, builder, context)
-        {
+        if let Some(new_left_compiled) = utils::float_autocast(
+            target_type,
+            left_call_type,
+            left_compiled,
+            llvm_builder,
+            llvm_context,
+        ) {
             left_compiled = new_left_compiled;
         }
 
@@ -650,14 +681,14 @@ pub fn float_binaryop<'ctx>(
             target_type,
             right_call_type,
             right_compiled,
-            builder,
-            context,
+            llvm_builder,
+            llvm_context,
         ) {
             right_compiled = new_right_compiled;
         }
 
         return float_operation(
-            builder,
+            llvm_builder,
             left_compiled.into_float_value(),
             right_compiled.into_float_value(),
             binary.1,
@@ -682,18 +713,23 @@ pub fn float_binaryop<'ctx>(
         },
     ) = binary
     {
-        let mut left_compiled: FloatValue =
-            valuegen::float(builder, context, left_type, *left_num, *left_signed);
+        let mut left_compiled: FloatValue = valuegen::float(
+            llvm_builder,
+            llvm_context,
+            left_type,
+            *left_num,
+            *left_signed,
+        );
 
         let mut right_compiled: BasicValueEnum =
-            valuegen::generate_expression(binary.2, target_type, symbols);
+            valuegen::generate_expression(binary.2, target_type, context);
 
         if let Some(new_left_compiled) = utils::float_autocast(
             target_type,
             left_type,
             left_compiled.into(),
-            builder,
-            context,
+            llvm_builder,
+            llvm_context,
         ) {
             left_compiled = new_left_compiled.into_float_value();
         }
@@ -702,14 +738,14 @@ pub fn float_binaryop<'ctx>(
             target_type,
             right_call_type,
             right_compiled,
-            builder,
-            context,
+            llvm_builder,
+            llvm_context,
         ) {
             right_compiled = new_right_compiled;
         }
 
         return float_operation(
-            builder,
+            llvm_builder,
             left_compiled,
             right_compiled.into_float_value(),
             binary.1,
@@ -735,14 +771,23 @@ pub fn float_binaryop<'ctx>(
     ) = binary
     {
         let mut left_compiled: BasicValueEnum =
-            valuegen::generate_expression(binary.0, target_type, symbols);
+            valuegen::generate_expression(binary.0, target_type, context);
 
-        let mut right_compiled: FloatValue =
-            valuegen::float(builder, context, right_type, *right_num, *right_signed);
+        let mut right_compiled: FloatValue = valuegen::float(
+            llvm_builder,
+            llvm_context,
+            right_type,
+            *right_num,
+            *right_signed,
+        );
 
-        if let Some(new_left_compiled) =
-            utils::float_autocast(target_type, left_call_type, left_compiled, builder, context)
-        {
+        if let Some(new_left_compiled) = utils::float_autocast(
+            target_type,
+            left_call_type,
+            left_compiled,
+            llvm_builder,
+            llvm_context,
+        ) {
             left_compiled = new_left_compiled;
         }
 
@@ -750,14 +795,14 @@ pub fn float_binaryop<'ctx>(
             target_type,
             right_type,
             right_compiled.into(),
-            builder,
-            context,
+            llvm_builder,
+            llvm_context,
         ) {
             right_compiled = new_right_compiled.into_float_value();
         }
 
         return float_operation(
-            builder,
+            llvm_builder,
             left_compiled.into_float_value(),
             right_compiled,
             binary.1,
@@ -792,14 +837,18 @@ pub fn float_binaryop<'ctx>(
     ) = binary
     {
         let mut left_compiled: BasicValueEnum =
-            symbols.get_allocated_symbol(left_name).load(symbols);
+            context.get_allocated_symbol(left_name).load(context);
 
         let mut right_compiled: BasicValueEnum =
-            valuegen::generate_expression(binary.2, target_type, symbols);
+            valuegen::generate_expression(binary.2, target_type, context);
 
-        if let Some(new_left_compiled) =
-            utils::float_autocast(target_type, left_type, left_compiled, builder, context)
-        {
+        if let Some(new_left_compiled) = utils::float_autocast(
+            target_type,
+            left_type,
+            left_compiled,
+            llvm_builder,
+            llvm_context,
+        ) {
             left_compiled = new_left_compiled;
         }
 
@@ -807,14 +856,14 @@ pub fn float_binaryop<'ctx>(
             target_type,
             right_call_type,
             right_compiled,
-            builder,
-            context,
+            llvm_builder,
+            llvm_context,
         ) {
             right_compiled = new_right_compiled;
         }
 
         return float_operation(
-            builder,
+            llvm_builder,
             left_compiled.into_float_value(),
             right_compiled.into_float_value(),
             binary.1,
@@ -849,25 +898,33 @@ pub fn float_binaryop<'ctx>(
     ) = binary
     {
         let mut left_compiled: BasicValueEnum =
-            valuegen::generate_expression(binary.0, target_type, symbols);
+            valuegen::generate_expression(binary.0, target_type, context);
 
         let mut right_compiled: BasicValueEnum =
-            symbols.get_allocated_symbol(right_name).load(symbols);
+            context.get_allocated_symbol(right_name).load(context);
 
-        if let Some(new_left_compiled) =
-            utils::float_autocast(target_type, left_call_type, left_compiled, builder, context)
-        {
+        if let Some(new_left_compiled) = utils::float_autocast(
+            target_type,
+            left_call_type,
+            left_compiled,
+            llvm_builder,
+            llvm_context,
+        ) {
             left_compiled = new_left_compiled;
         }
 
-        if let Some(new_right_compiled) =
-            utils::float_autocast(target_type, right_type, right_compiled, builder, context)
-        {
+        if let Some(new_right_compiled) = utils::float_autocast(
+            target_type,
+            right_type,
+            right_compiled,
+            llvm_builder,
+            llvm_context,
+        ) {
             right_compiled = new_right_compiled;
         }
 
         return float_operation(
-            builder,
+            llvm_builder,
             left_compiled.into_float_value(),
             right_compiled.into_float_value(),
             binary.1,
@@ -899,14 +956,18 @@ pub fn float_binaryop<'ctx>(
         let left_dissasembled: BinaryOp = left_instr.as_binary();
 
         let mut left_compiled: BasicValueEnum =
-            float_binaryop(left_dissasembled, target_type, symbols);
+            float_binaryop(left_dissasembled, target_type, context);
 
         let mut right_compiled: BasicValueEnum =
-            valuegen::generate_expression(binary.2, target_type, symbols);
+            valuegen::generate_expression(binary.2, target_type, context);
 
-        if let Some(new_left_compiled) =
-            utils::float_autocast(target_type, left_type, left_compiled, builder, context)
-        {
+        if let Some(new_left_compiled) = utils::float_autocast(
+            target_type,
+            left_type,
+            left_compiled,
+            llvm_builder,
+            llvm_context,
+        ) {
             left_compiled = new_left_compiled;
         }
 
@@ -914,14 +975,14 @@ pub fn float_binaryop<'ctx>(
             target_type,
             right_call_type,
             right_compiled,
-            builder,
-            context,
+            llvm_builder,
+            llvm_context,
         ) {
             right_compiled = new_right_compiled;
         }
 
         return float_operation(
-            builder,
+            llvm_builder,
             left_compiled.into_float_value(),
             right_compiled.into_float_value(),
             binary.1,
@@ -951,27 +1012,35 @@ pub fn float_binaryop<'ctx>(
     ) = binary
     {
         let mut left_compiled: BasicValueEnum =
-            valuegen::generate_expression(binary.0, target_type, symbols);
+            valuegen::generate_expression(binary.0, target_type, context);
 
         let right_dissasembled: BinaryOp = right_instr.as_binary();
 
         let mut right_compiled: BasicValueEnum =
-            float_binaryop(right_dissasembled, target_type, symbols);
+            float_binaryop(right_dissasembled, target_type, context);
 
-        if let Some(new_left_compiled) =
-            utils::float_autocast(target_type, left_call_type, left_compiled, builder, context)
-        {
+        if let Some(new_left_compiled) = utils::float_autocast(
+            target_type,
+            left_call_type,
+            left_compiled,
+            llvm_builder,
+            llvm_context,
+        ) {
             left_compiled = new_left_compiled;
         }
 
-        if let Some(new_right_compiled) =
-            utils::float_autocast(target_type, right_type, right_compiled, builder, context)
-        {
+        if let Some(new_right_compiled) = utils::float_autocast(
+            target_type,
+            right_type,
+            right_compiled,
+            llvm_builder,
+            llvm_context,
+        ) {
             right_compiled = new_right_compiled;
         }
 
         return float_operation(
-            builder,
+            llvm_builder,
             left_compiled.into_float_value(),
             right_compiled.into_float_value(),
             binary.1,
@@ -1020,25 +1089,33 @@ pub fn float_binaryop<'ctx>(
     ) = binary
     {
         let mut left_compiled: BasicValueEnum =
-            symbols.get_allocated_symbol(left_name).load(symbols);
+            context.get_allocated_symbol(left_name).load(context);
 
         let mut right_compiled: BasicValueEnum =
-            symbols.get_allocated_symbol(right_name).load(symbols);
+            context.get_allocated_symbol(right_name).load(context);
 
-        if let Some(new_left_compiled) =
-            utils::float_autocast(target_type, left_type, left_compiled, builder, context)
-        {
+        if let Some(new_left_compiled) = utils::float_autocast(
+            target_type,
+            left_type,
+            left_compiled,
+            llvm_builder,
+            llvm_context,
+        ) {
             left_compiled = new_left_compiled;
         }
 
-        if let Some(new_right_compiled) =
-            utils::float_autocast(target_type, right_type, right_compiled, builder, context)
-        {
+        if let Some(new_right_compiled) = utils::float_autocast(
+            target_type,
+            right_type,
+            right_compiled,
+            llvm_builder,
+            llvm_context,
+        ) {
             right_compiled = new_right_compiled;
         }
 
         return float_operation(
-            builder,
+            llvm_builder,
             left_compiled.into_float_value(),
             right_compiled.into_float_value(),
             binary.1,
@@ -1064,29 +1141,38 @@ pub fn float_binaryop<'ctx>(
         },
     ) = binary
     {
-        let mut left_compiled: FloatValue =
-            valuegen::float(builder, context, left_type, *left_num, *left_signed);
+        let mut left_compiled: FloatValue = valuegen::float(
+            llvm_builder,
+            llvm_context,
+            left_type,
+            *left_num,
+            *left_signed,
+        );
 
-        let mut right_compiled: BasicValueEnum = symbols.get_allocated_symbol(name).load(symbols);
+        let mut right_compiled: BasicValueEnum = context.get_allocated_symbol(name).load(context);
 
         if let Some(new_left_compiled) = utils::float_autocast(
             target_type,
             left_type,
             left_compiled.into(),
-            builder,
-            context,
+            llvm_builder,
+            llvm_context,
         ) {
             left_compiled = new_left_compiled.into_float_value();
         }
 
-        if let Some(new_right_compiled) =
-            utils::float_autocast(target_type, right_type, right_compiled, builder, context)
-        {
+        if let Some(new_right_compiled) = utils::float_autocast(
+            target_type,
+            right_type,
+            right_compiled,
+            llvm_builder,
+            llvm_context,
+        ) {
             right_compiled = new_right_compiled;
         }
 
         return float_operation(
-            builder,
+            llvm_builder,
             left_compiled,
             right_compiled.into_float_value(),
             binary.1,
@@ -1117,14 +1203,23 @@ pub fn float_binaryop<'ctx>(
         Instruction::Float(right_type, right_num, right_signed, ..),
     ) = binary
     {
-        let mut left_compiled: BasicValueEnum = symbols.get_allocated_symbol(name).load(symbols);
+        let mut left_compiled: BasicValueEnum = context.get_allocated_symbol(name).load(context);
 
-        let mut right_compiled: FloatValue =
-            valuegen::float(builder, context, right_type, *right_num, *right_signed);
+        let mut right_compiled: FloatValue = valuegen::float(
+            llvm_builder,
+            llvm_context,
+            right_type,
+            *right_num,
+            *right_signed,
+        );
 
-        if let Some(new_left_compiled) =
-            utils::float_autocast(target_type, left_type, left_compiled, builder, context)
-        {
+        if let Some(new_left_compiled) = utils::float_autocast(
+            target_type,
+            left_type,
+            left_compiled,
+            llvm_builder,
+            llvm_context,
+        ) {
             left_compiled = new_left_compiled;
         }
 
@@ -1132,14 +1227,14 @@ pub fn float_binaryop<'ctx>(
             target_type,
             right_type,
             right_compiled.into(),
-            builder,
-            context,
+            llvm_builder,
+            llvm_context,
         ) {
             right_compiled = new_right_compiled.into_float_value();
         }
 
         return float_operation(
-            builder,
+            llvm_builder,
             left_compiled.into_float_value(),
             right_compiled,
             binary.1,
@@ -1183,29 +1278,33 @@ pub fn float_binaryop<'ctx>(
         let left_dissasembled: BinaryOp = binary.0.as_binary();
 
         let mut left_compiled: FloatValue =
-            float_binaryop(left_dissasembled, target_type, symbols).into_float_value();
+            float_binaryop(left_dissasembled, target_type, context).into_float_value();
 
         let mut right_compiled: BasicValueEnum =
-            symbols.get_allocated_symbol(right_name).load(symbols);
+            context.get_allocated_symbol(right_name).load(context);
 
         if let Some(new_left_compiled) = utils::float_autocast(
             target_type,
             left_type,
             left_compiled.into(),
-            builder,
-            context,
+            llvm_builder,
+            llvm_context,
         ) {
             left_compiled = new_left_compiled.into_float_value();
         }
 
-        if let Some(new_right_compiled) =
-            utils::float_autocast(target_type, right_type, right_compiled, builder, context)
-        {
+        if let Some(new_right_compiled) = utils::float_autocast(
+            target_type,
+            right_type,
+            right_compiled,
+            llvm_builder,
+            llvm_context,
+        ) {
             right_compiled = new_right_compiled;
         }
 
         return float_operation(
-            builder,
+            llvm_builder,
             left_compiled,
             right_compiled.into_float_value(),
             binary.1,
@@ -1229,20 +1328,25 @@ pub fn float_binaryop<'ctx>(
         },
     ) = binary
     {
-        let mut left_compiled: FloatValue =
-            valuegen::float(builder, context, left_type, *left_num, *left_signed);
+        let mut left_compiled: FloatValue = valuegen::float(
+            llvm_builder,
+            llvm_context,
+            left_type,
+            *left_num,
+            *left_signed,
+        );
 
         let right_dissasembled: BinaryOp = binary.2.as_binary();
 
         let mut right_compiled: FloatValue =
-            float_binaryop(right_dissasembled, target_type, symbols).into_float_value();
+            float_binaryop(right_dissasembled, target_type, context).into_float_value();
 
         if let Some(new_left_compiled) = utils::float_autocast(
             target_type,
             left_type,
             left_compiled.into(),
-            builder,
-            context,
+            llvm_builder,
+            llvm_context,
         ) {
             left_compiled = new_left_compiled.into_float_value();
         }
@@ -1251,13 +1355,13 @@ pub fn float_binaryop<'ctx>(
             target_type,
             right_type,
             right_compiled.into(),
-            builder,
-            context,
+            llvm_builder,
+            llvm_context,
         ) {
             right_compiled = new_right_compiled.into_float_value();
         }
 
-        return float_operation(builder, left_compiled, right_compiled, binary.1);
+        return float_operation(llvm_builder, left_compiled, right_compiled, binary.1);
     }
 
     if let (
@@ -1280,17 +1384,22 @@ pub fn float_binaryop<'ctx>(
         let left_dissasembled: BinaryOp = binary.0.as_binary();
 
         let mut left_compiled: FloatValue =
-            float_binaryop(left_dissasembled, target_type, symbols).into_float_value();
+            float_binaryop(left_dissasembled, target_type, context).into_float_value();
 
-        let mut right_compiled: FloatValue =
-            valuegen::float(builder, context, right_type, *right_num, *right_signed);
+        let mut right_compiled: FloatValue = valuegen::float(
+            llvm_builder,
+            llvm_context,
+            right_type,
+            *right_num,
+            *right_signed,
+        );
 
         if let Some(new_left_compiled) = utils::float_autocast(
             target_type,
             left_type,
             left_compiled.into(),
-            builder,
-            context,
+            llvm_builder,
+            llvm_context,
         ) {
             left_compiled = new_left_compiled.into_float_value();
         }
@@ -1299,13 +1408,13 @@ pub fn float_binaryop<'ctx>(
             target_type,
             right_type,
             right_compiled.into(),
-            builder,
-            context,
+            llvm_builder,
+            llvm_context,
         ) {
             right_compiled = new_right_compiled.into_float_value();
         }
 
-        return float_operation(builder, left_compiled, right_compiled, binary.1);
+        return float_operation(llvm_builder, left_compiled, right_compiled, binary.1);
     }
 
     if let (
@@ -1330,27 +1439,35 @@ pub fn float_binaryop<'ctx>(
         let left_dissasembled: BinaryOp = binary.0.as_binary();
 
         let mut left_compiled: BasicValueEnum =
-            float_binaryop(left_dissasembled, target_type, symbols);
+            float_binaryop(left_dissasembled, target_type, context);
 
         let right_dissasembled: BinaryOp = binary.2.as_binary();
 
         let mut right_compiled: BasicValueEnum =
-            float_binaryop(right_dissasembled, target_type, symbols);
+            float_binaryop(right_dissasembled, target_type, context);
 
-        if let Some(new_left_compiled) =
-            utils::float_autocast(target_type, left_type, left_compiled, builder, context)
-        {
+        if let Some(new_left_compiled) = utils::float_autocast(
+            target_type,
+            left_type,
+            left_compiled,
+            llvm_builder,
+            llvm_context,
+        ) {
             left_compiled = new_left_compiled;
         }
 
-        if let Some(new_right_compiled) =
-            utils::float_autocast(target_type, right_type, right_compiled, builder, context)
-        {
+        if let Some(new_right_compiled) = utils::float_autocast(
+            target_type,
+            right_type,
+            right_compiled,
+            llvm_builder,
+            llvm_context,
+        ) {
             right_compiled = new_right_compiled;
         }
 
         return float_operation(
-            builder,
+            llvm_builder,
             left_compiled.into_float_value(),
             right_compiled.into_float_value(),
             binary.1,
@@ -1391,27 +1508,35 @@ pub fn float_binaryop<'ctx>(
         let left_dissasembled: BinaryOp = left_instr.as_binary();
 
         let mut left_compiled: BasicValueEnum =
-            float_binaryop(left_dissasembled, target_type, symbols);
+            float_binaryop(left_dissasembled, target_type, context);
 
         let right_dissasembled: BinaryOp = right_instr.as_binary();
 
         let mut right_compiled: BasicValueEnum =
-            float_binaryop(right_dissasembled, target_type, symbols);
+            float_binaryop(right_dissasembled, target_type, context);
 
-        if let Some(new_left_compiled) =
-            utils::float_autocast(target_type, left_type, left_compiled, builder, context)
-        {
+        if let Some(new_left_compiled) = utils::float_autocast(
+            target_type,
+            left_type,
+            left_compiled,
+            llvm_builder,
+            llvm_context,
+        ) {
             left_compiled = new_left_compiled;
         }
 
-        if let Some(new_right_compiled) =
-            utils::float_autocast(target_type, right_type, right_compiled, builder, context)
-        {
+        if let Some(new_right_compiled) = utils::float_autocast(
+            target_type,
+            right_type,
+            right_compiled,
+            llvm_builder,
+            llvm_context,
+        ) {
             right_compiled = new_right_compiled;
         }
 
         return float_operation(
-            builder,
+            llvm_builder,
             left_compiled.into_float_value(),
             right_compiled.into_float_value(),
             binary.1,
@@ -1440,17 +1565,22 @@ pub fn float_binaryop<'ctx>(
         let left_dissasembled: BinaryOp = expression.as_binary();
 
         let mut left_compiled: FloatValue =
-            float_binaryop(left_dissasembled, target_type, symbols).into_float_value();
+            float_binaryop(left_dissasembled, target_type, context).into_float_value();
 
-        let mut right_compiled: FloatValue =
-            valuegen::float(builder, context, right_type, *right_num, *right_signed);
+        let mut right_compiled: FloatValue = valuegen::float(
+            llvm_builder,
+            llvm_context,
+            right_type,
+            *right_num,
+            *right_signed,
+        );
 
         if let Some(new_left_compiled) = utils::float_autocast(
             target_type,
             left_type,
             left_compiled.into(),
-            builder,
-            context,
+            llvm_builder,
+            llvm_context,
         ) {
             left_compiled = new_left_compiled.into_float_value();
         }
@@ -1459,13 +1589,13 @@ pub fn float_binaryop<'ctx>(
             target_type,
             right_type,
             right_compiled.into(),
-            builder,
-            context,
+            llvm_builder,
+            llvm_context,
         ) {
             right_compiled = new_right_compiled.into_float_value();
         }
 
-        return float_operation(builder, left_compiled, right_compiled, binary.1);
+        return float_operation(llvm_builder, left_compiled, right_compiled, binary.1);
     }
 
     if let (
@@ -1487,20 +1617,25 @@ pub fn float_binaryop<'ctx>(
         },
     ) = binary
     {
-        let mut left_compiled: FloatValue =
-            valuegen::float(builder, context, left_type, *left_num, *left_signed);
+        let mut left_compiled: FloatValue = valuegen::float(
+            llvm_builder,
+            llvm_context,
+            left_type,
+            *left_num,
+            *left_signed,
+        );
 
         let right_dissasembled: BinaryOp = expression.as_binary();
 
         let mut right_compiled: FloatValue =
-            float_binaryop(right_dissasembled, target_type, symbols).into_float_value();
+            float_binaryop(right_dissasembled, target_type, context).into_float_value();
 
         if let Some(new_left_compiled) = utils::float_autocast(
             target_type,
             left_type,
             left_compiled.into(),
-            builder,
-            context,
+            llvm_builder,
+            llvm_context,
         ) {
             left_compiled = new_left_compiled.into_float_value();
         }
@@ -1509,13 +1644,13 @@ pub fn float_binaryop<'ctx>(
             target_type,
             right_type,
             right_compiled.into(),
-            builder,
-            context,
+            llvm_builder,
+            llvm_context,
         ) {
             right_compiled = new_right_compiled.into_float_value();
         }
 
-        return float_operation(builder, left_compiled, right_compiled, binary.1);
+        return float_operation(llvm_builder, left_compiled, right_compiled, binary.1);
     }
 
     if let (
@@ -1542,27 +1677,35 @@ pub fn float_binaryop<'ctx>(
         let left_dissasembled: BinaryOp = expression.as_binary();
 
         let mut left_compiled: BasicValueEnum =
-            float_binaryop(left_dissasembled, target_type, symbols);
+            float_binaryop(left_dissasembled, target_type, context);
 
         let right_dissasembled: BinaryOp = binary.2.as_binary();
 
         let mut right_compiled: BasicValueEnum =
-            float_binaryop(right_dissasembled, target_type, symbols);
+            float_binaryop(right_dissasembled, target_type, context);
 
-        if let Some(new_left_compiled) =
-            utils::float_autocast(target_type, left_type, left_compiled, builder, context)
-        {
+        if let Some(new_left_compiled) = utils::float_autocast(
+            target_type,
+            left_type,
+            left_compiled,
+            llvm_builder,
+            llvm_context,
+        ) {
             left_compiled = new_left_compiled;
         }
 
-        if let Some(new_right_compiled) =
-            utils::float_autocast(target_type, right_type, right_compiled, builder, context)
-        {
+        if let Some(new_right_compiled) = utils::float_autocast(
+            target_type,
+            right_type,
+            right_compiled,
+            llvm_builder,
+            llvm_context,
+        ) {
             right_compiled = new_right_compiled;
         }
 
         return float_operation(
-            builder,
+            llvm_builder,
             left_compiled.into_float_value(),
             right_compiled.into_float_value(),
             binary.1,
@@ -1593,27 +1736,35 @@ pub fn float_binaryop<'ctx>(
         let left_dissasembled: BinaryOp = binary.0.as_binary();
 
         let mut left_compiled: BasicValueEnum =
-            float_binaryop(left_dissasembled, target_type, symbols);
+            float_binaryop(left_dissasembled, target_type, context);
 
         let right_dissasembled: BinaryOp = expression.as_binary();
 
         let mut right_compiled: BasicValueEnum =
-            float_binaryop(right_dissasembled, target_type, symbols);
+            float_binaryop(right_dissasembled, target_type, context);
 
-        if let Some(new_left_compiled) =
-            utils::float_autocast(target_type, left_type, left_compiled, builder, context)
-        {
+        if let Some(new_left_compiled) = utils::float_autocast(
+            target_type,
+            left_type,
+            left_compiled,
+            llvm_builder,
+            llvm_context,
+        ) {
             left_compiled = new_left_compiled;
         }
 
-        if let Some(new_right_compiled) =
-            utils::float_autocast(target_type, right_type, right_compiled, builder, context)
-        {
+        if let Some(new_right_compiled) = utils::float_autocast(
+            target_type,
+            right_type,
+            right_compiled,
+            llvm_builder,
+            llvm_context,
+        ) {
             right_compiled = new_right_compiled;
         }
 
         return float_operation(
-            builder,
+            llvm_builder,
             left_compiled.into_float_value(),
             right_compiled.into_float_value(),
             binary.1,

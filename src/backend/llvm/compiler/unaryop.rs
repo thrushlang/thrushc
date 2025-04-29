@@ -1,9 +1,8 @@
-use crate::frontend::lexer::Span;
 use crate::middle::statement::UnaryOp;
 
 use super::super::super::super::middle::types::*;
 
-use super::{Instruction, memory::SymbolAllocated, symbols::SymbolsTable, valuegen};
+use super::{Instruction, context::CodeGenContext, memory::SymbolAllocated, valuegen};
 
 use super::typegen;
 
@@ -17,7 +16,7 @@ pub fn unary_op<'ctx>(
     builder: &Builder<'ctx>,
     context: &'ctx Context,
     unary: UnaryOp<'ctx>,
-    symbols: &SymbolsTable<'_, 'ctx>,
+    symbols: &CodeGenContext<'_, 'ctx>,
 ) -> BasicValueEnum<'ctx> {
     if let (
         TokenKind::PlusPlus | TokenKind::MinusMinus,

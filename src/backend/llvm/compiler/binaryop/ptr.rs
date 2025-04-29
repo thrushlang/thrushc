@@ -6,7 +6,7 @@ use inkwell::{
 };
 
 use crate::{
-    backend::llvm::compiler::{predicates, symbols::SymbolsTable, valuegen},
+    backend::llvm::compiler::{context::CodeGenContext, predicates, valuegen},
     middle::{
         instruction::Instruction,
         statement::BinaryOp,
@@ -39,7 +39,7 @@ pub fn ptr_operation<'ctx>(
 pub fn ptr_binaryop<'ctx>(
     binary: BinaryOp<'ctx>,
     target_type: &Type,
-    symbols: &SymbolsTable<'_, 'ctx>,
+    symbols: &mut CodeGenContext<'_, 'ctx>,
 ) -> BasicValueEnum<'ctx> {
     let context: &Context = symbols.get_llvm_context();
     let builder: &Builder = symbols.get_llvm_builder();

@@ -1,6 +1,11 @@
 use crate::middle::{statement::Local, types::Type};
 
-use super::{Instruction, memory::SymbolAllocated, symbols::SymbolsTable, valuegen};
+use super::{
+    Instruction,
+    context::{CodeGenContext, CodeGenContextPosition},
+    memory::SymbolAllocated,
+    valuegen,
+};
 
 use inkwell::{
     builder::Builder,
@@ -8,80 +13,73 @@ use inkwell::{
     values::{BasicValueEnum, PointerValue},
 };
 
-pub fn build<'ctx>(local: Local<'ctx>, symbols: &mut SymbolsTable<'_, 'ctx>) {
+pub fn build<'ctx>(local: Local<'ctx>, context: &mut CodeGenContext<'_, 'ctx>) {
     let local_type: &Type = local.1;
 
-    symbols.alloc_local(local.0, local.1);
+    context.alloc_local(local.0, local.1);
+    context.set_position(CodeGenContextPosition::Local);
 
     if local_type.is_ptr_type() {
-        build_local_ptr(local, symbols);
-        return;
+        build_local_ptr(local, context);
     }
 
     if local_type.is_str_type() {
-        build_local_str(local, symbols);
-        return;
+        build_local_str(local, context);
     }
 
     if local_type.is_struct_type() {
-        build_local_structure(local, symbols);
-        return;
+        build_local_structure(local, context);
     }
 
     if local_type.is_integer_type() {
-        build_local_integer(local, symbols);
-        return;
+        build_local_integer(local, context);
     }
 
     if local_type.is_float_type() {
-        build_local_float(local, symbols);
-        return;
+        build_local_float(local, context);
     }
 
     if local_type.is_bool_type() {
-        build_local_boolean(local, symbols);
-        return;
+        build_local_boolean(local, context);
     }
 
     if local_type.is_mut_type() {
-        build_local_mut(local, symbols);
-        return;
+        build_local_mut(local, context);
     }
 
-    unreachable!()
+    context.set_position_irrelevant();
 }
 
-fn build_local_mut<'ctx>(local: Local<'ctx>, symbols: &mut SymbolsTable<'_, 'ctx>) {
+fn build_local_mut<'ctx>(local: Local<'ctx>, context: &mut CodeGenContext<'_, 'ctx>) {
     let local_value: &Instruction = local.2;
 
-    let symbol: SymbolAllocated = symbols.get_allocated_symbol(local.0);
+    let symbol: SymbolAllocated = context.get_allocated_symbol(local.0);
 
-    let expression: BasicValueEnum = valuegen::generate_expression(local_value, local.1, symbols);
+    let expression: BasicValueEnum = valuegen::generate_expression(local_value, local.1, context);
 
-    symbol.store(symbols, expression);
+    symbol.store(context, expression);
 }
 
-fn build_local_ptr<'ctx>(local: Local<'ctx>, symbols: &mut SymbolsTable<'_, 'ctx>) {
+fn build_local_ptr<'ctx>(local: Local<'ctx>, context: &mut CodeGenContext<'_, 'ctx>) {
     let local_value: &Instruction = local.2;
 
-    let symbol: SymbolAllocated = symbols.get_allocated_symbol(local.0);
+    let symbol: SymbolAllocated = context.get_allocated_symbol(local.0);
 
     let expression: BasicValueEnum =
-        valuegen::generate_expression(local_value, &Type::Ptr(None), symbols);
+        valuegen::generate_expression(local_value, &Type::Ptr(None), context);
 
-    symbol.store(symbols, expression);
+    symbol.store(context, expression);
 }
 
-fn build_local_structure<'ctx>(local: Local<'ctx>, symbols: &mut SymbolsTable<'_, 'ctx>) {
-    let builder: &Builder = symbols.get_llvm_builder();
-
+fn build_local_structure<'ctx>(local: Local<'ctx>, context: &mut CodeGenContext<'_, 'ctx>) {
     let local_type: &Type = local.1;
     let local_value: &Instruction = local.2;
 
-    let symbol: SymbolAllocated = symbols.get_allocated_symbol(local.0);
+    let symbol: SymbolAllocated = context.get_allocated_symbol(local.0);
 
     if let Instruction::InitStruct { arguments, .. } = local_value {
-        let context: &Context = symbols.get_llvm_context();
+        let llvm_builder: &Builder = context.get_llvm_builder();
+        let llvm_context: &Context = context.get_llvm_context();
 
         arguments.1.iter().for_each(|argument| {
             let argument_instruction: &Instruction = &argument.1;
@@ -89,67 +87,67 @@ fn build_local_structure<'ctx>(local: Local<'ctx>, symbols: &mut SymbolsTable<'_
             let index: u32 = argument.3;
 
             let compiled_field: BasicValueEnum =
-                valuegen::generate_expression(argument_instruction, argument_type, symbols);
+                valuegen::generate_expression(argument_instruction, argument_type, context);
 
-            let get_field: PointerValue = symbol.gep_struct(context, builder, index);
+            let get_field: PointerValue = symbol.gep_struct(llvm_context, llvm_builder, index);
 
-            builder.build_store(get_field, compiled_field).unwrap();
+            llvm_builder.build_store(get_field, compiled_field).unwrap();
         });
 
         return;
     }
 
     let expression: BasicValueEnum =
-        valuegen::generate_expression(local_value, local_type, symbols);
+        valuegen::generate_expression(local_value, local_type, context);
 
-    symbol.store(symbols, expression);
+    symbol.store(context, expression);
 }
 
-fn build_local_str<'ctx>(local: Local<'ctx>, symbols: &mut SymbolsTable<'_, 'ctx>) {
+fn build_local_str<'ctx>(local: Local<'ctx>, context: &mut CodeGenContext<'_, 'ctx>) {
     let local_value: &Instruction = local.2;
 
-    let symbol: SymbolAllocated = symbols.get_allocated_symbol(local.0);
+    let symbol: SymbolAllocated = context.get_allocated_symbol(local.0);
 
-    let expression: BasicValueEnum = valuegen::generate_expression(local_value, local.1, symbols);
+    let expression: BasicValueEnum = valuegen::generate_expression(local_value, local.1, context);
 
-    symbol.store(symbols, expression);
+    symbol.store(context, expression);
 }
 
-fn build_local_integer<'ctx>(local: Local<'ctx>, symbols: &mut SymbolsTable<'_, 'ctx>) {
+fn build_local_integer<'ctx>(local: Local<'ctx>, context: &mut CodeGenContext<'_, 'ctx>) {
     let local_name: &str = local.0;
     let local_type: &Type = local.1;
     let local_value: &Instruction = local.2;
 
-    let symbol: SymbolAllocated = symbols.get_allocated_symbol(local_name);
+    let symbol: SymbolAllocated = context.get_allocated_symbol(local_name);
 
     let expression: BasicValueEnum =
-        valuegen::generate_expression(local_value, local_type, symbols);
+        valuegen::generate_expression(local_value, local_type, context);
 
-    symbol.store(symbols, expression);
+    symbol.store(context, expression);
 }
 
-fn build_local_float<'ctx>(local: Local<'ctx>, symbols: &mut SymbolsTable<'_, 'ctx>) {
+fn build_local_float<'ctx>(local: Local<'ctx>, context: &mut CodeGenContext<'_, 'ctx>) {
     let local_name: &str = local.0;
     let local_type: &Type = local.1;
     let local_value: &Instruction = local.2;
 
-    let symbol: SymbolAllocated = symbols.get_allocated_symbol(local_name);
+    let symbol: SymbolAllocated = context.get_allocated_symbol(local_name);
 
     let expression: BasicValueEnum =
-        valuegen::generate_expression(local_value, local_type, symbols);
+        valuegen::generate_expression(local_value, local_type, context);
 
-    symbol.store(symbols, expression);
+    symbol.store(context, expression);
 }
 
-fn build_local_boolean<'ctx>(local: Local<'ctx>, symbols: &mut SymbolsTable<'_, 'ctx>) {
+fn build_local_boolean<'ctx>(local: Local<'ctx>, context: &mut CodeGenContext<'_, 'ctx>) {
     let local_name: &str = local.0;
     let local_type: &Type = local.1;
     let local_value: &Instruction = local.2;
 
-    let symbol: SymbolAllocated = symbols.get_allocated_symbol(local_name);
+    let symbol: SymbolAllocated = context.get_allocated_symbol(local_name);
 
     let expression: BasicValueEnum =
-        valuegen::generate_expression(local_value, local_type, symbols);
+        valuegen::generate_expression(local_value, local_type, context);
 
-    symbol.store(symbols, expression);
+    symbol.store(context, expression);
 }

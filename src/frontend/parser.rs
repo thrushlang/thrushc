@@ -186,7 +186,7 @@ impl<'instr> Parser<'instr> {
 
         control_ctx.set_has_entrypoint();
 
-        let body: Rc<Instruction> = Rc::new(self.build_block(type_ctx, control_ctx)?);
+        let body: Rc<Instruction> = self.build_block(type_ctx, control_ctx)?.into();
 
         control_ctx.set_is_outside_function();
 
@@ -259,7 +259,7 @@ impl<'instr> Parser<'instr> {
         control_ctx.set_is_outside_loop();
 
         Ok(Instruction::Loop {
-            block: Rc::new(block),
+            block: block.into(),
         })
     }
 
@@ -288,8 +288,8 @@ impl<'instr> Parser<'instr> {
         let block: Instruction = self.build_block(type_ctx, control_ctx)?;
 
         Ok(Instruction::WhileLoop {
-            cond: Rc::new(conditional),
-            block: Rc::new(block),
+            cond: conditional.into(),
+            block: block.into(),
         })
     }
 
@@ -1072,7 +1072,7 @@ impl<'instr> Parser<'instr> {
         Ok(Instruction::Const {
             name,
             kind: const_type,
-            value: Rc::new(value),
+            value: value.into(),
             attributes: const_attributes,
             span,
         })
@@ -1169,7 +1169,7 @@ impl<'instr> Parser<'instr> {
         let local: Instruction = Instruction::Local {
             name: local_name,
             kind: local_type,
-            value: Rc::new(value),
+            value: value.into(),
             is_mutable,
             span,
             comptime,
@@ -1231,7 +1231,7 @@ impl<'instr> Parser<'instr> {
 
         Ok(Instruction::Return(
             type_ctx.function_type.clone(),
-            Rc::new(value),
+            value.into(),
         ))
     }
 
@@ -1454,7 +1454,7 @@ impl<'instr> Parser<'instr> {
                     ));
                 }
                 TokenKind::Public => {
-                    compiler_attributes.push(LLVMAttribute::Public(true));
+                    compiler_attributes.push(LLVMAttribute::Public);
                     self.only_advance()?;
                 }
 
@@ -1602,9 +1602,9 @@ impl<'instr> Parser<'instr> {
             )?;
 
             expression = Instruction::BinaryOp {
-                left: Rc::new(expression),
+                left: expression.into(),
                 operator,
-                right: Rc::new(right),
+                right: right.into(),
                 kind: Type::Bool,
                 span,
             }
@@ -1635,9 +1635,9 @@ impl<'instr> Parser<'instr> {
             )?;
 
             expression = Instruction::BinaryOp {
-                left: Rc::new(expression),
+                left: expression.into(),
                 operator,
-                right: Rc::new(right),
+                right: right.into(),
                 kind: Type::Bool,
                 span,
             }
@@ -1668,9 +1668,9 @@ impl<'instr> Parser<'instr> {
             )?;
 
             expression = Instruction::BinaryOp {
-                left: Rc::from(expression),
+                left: expression.into(),
                 operator,
-                right: Rc::from(right),
+                right: right.into(),
                 kind: Type::Bool,
                 span,
             }
@@ -1705,9 +1705,9 @@ impl<'instr> Parser<'instr> {
             )?;
 
             expression = Instruction::BinaryOp {
-                left: Rc::from(expression),
+                left: expression.into(),
                 operator,
-                right: Rc::from(right),
+                right: right.into(),
                 kind: Type::Bool,
                 span,
             };
@@ -1742,9 +1742,9 @@ impl<'instr> Parser<'instr> {
             let kind: &Type = left_type.precompute_type(right_type);
 
             expression = Instruction::BinaryOp {
-                left: Rc::from(expression.clone()),
+                left: expression.clone().into(),
                 operator,
-                right: Rc::from(right),
+                right: right.into(),
                 kind: kind.clone(),
                 span,
             };
@@ -1780,9 +1780,9 @@ impl<'instr> Parser<'instr> {
             let kind: &Type = left_type.precompute_type(right_type);
 
             expression = Instruction::BinaryOp {
-                left: Rc::from(expression.clone()),
+                left: expression.clone().into(),
                 operator,
-                right: Rc::from(right),
+                right: right.into(),
                 kind: kind.clone(),
                 span,
             };

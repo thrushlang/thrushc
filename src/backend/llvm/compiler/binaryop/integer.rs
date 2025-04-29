@@ -1,5 +1,5 @@
 use {
-    super::super::{Instruction, symbols::SymbolsTable, unaryop, utils, valuegen},
+    super::super::{Instruction, context::CodeGenContext, unaryop, utils, valuegen},
     crate::{
         backend::llvm::compiler::predicates,
         middle::{
@@ -121,7 +121,7 @@ pub fn int_operation<'ctx>(
 pub fn integer_binaryop<'ctx>(
     binary: BinaryOp<'ctx>,
     target_type: &Type,
-    symbols: &SymbolsTable<'_, 'ctx>,
+    symbols: &mut CodeGenContext<'_, 'ctx>,
 ) -> BasicValueEnum<'ctx> {
     let context: &Context = symbols.get_llvm_context();
     let builder: &Builder = symbols.get_llvm_builder();

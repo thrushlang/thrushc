@@ -12,7 +12,7 @@ use super::conventions::CallConvention;
 pub enum LLVMAttribute<'ctx> {
     FFI(&'ctx str),
     Convention(CallConvention),
-    Public(bool),
+    Public,
     Ignore,
     Hot,
     NoInline,
@@ -38,7 +38,7 @@ impl LLVMAttribute<'_> {
 
     #[inline(always)]
     pub const fn is_public_attribute(&self) -> bool {
-        matches!(self, LLVMAttribute::Public(_))
+        matches!(self, LLVMAttribute::Public)
     }
 }
 

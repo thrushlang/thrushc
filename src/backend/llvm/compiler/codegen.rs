@@ -7,11 +7,10 @@ use super::super::compiler::attributes::LLVMAttribute;
 use super::{
     attributes::{AttributeBuilder, LLVMAttributeApplicant},
     binaryop,
+    context::CodeGenContext,
     conventions::CallConvention,
     dealloc::Deallocator,
-    local,
-    symbols::SymbolsTable,
-    typegen, unaryop, valuegen,
+    local, typegen, unaryop, valuegen,
 };
 
 use inkwell::{
@@ -26,12 +25,9 @@ use inkwell::{
 };
 
 pub struct Codegen<'a, 'ctx> {
-    module: &'a Module<'ctx>,
-    builder: &'ctx Builder<'ctx>,
-    context: &'ctx Context,
+    context: CodeGenContext<'a, 'ctx>,
     instructions: &'ctx [Instruction<'ctx>],
     current: usize,
-    symbols: SymbolsTable<'a, 'ctx>,
     function: Option<FunctionValue<'ctx>>,
     loop_exit_block: Option<BasicBlock<'ctx>>,
     loop_start_block: Option<BasicBlock<'ctx>>,
@@ -47,12 +43,9 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
         target_data: TargetData,
     ) {
         Self {
-            module,
-            builder,
-            context,
+            context: CodeGenContext::new(module, context, builder, target_data),
             instructions,
             current: 0,
-            symbols: SymbolsTable::new(module, context, builder, target_data),
             function: None,
             loop_exit_block: None,
             loop_start_block: None,
@@ -72,22 +65,25 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
     }
 
     fn codegen(&mut self, instruction: &'ctx Instruction) -> Instruction<'ctx> {
+        let llvm_builder: &Builder = self.context.get_llvm_builder();
+        let llvm_context: &Context = self.context.get_llvm_context();
+
         match instruction {
             Instruction::Block { stmts, .. } => {
-                self.symbols.begin_scope();
+                self.context.begin_scope();
 
                 stmts.iter().for_each(|instruction| {
                     self.codegen(instruction);
                 });
 
                 if !self.deallocators_emited {
-                    let deallocator: Deallocator = Deallocator::new(&self.symbols);
-                    deallocator.dealloc_all(self.symbols.get_allocated_symbols());
+                    let deallocator: Deallocator = Deallocator::new(&self.context);
+                    deallocator.dealloc_all(self.context.get_allocated_symbols());
                 }
 
                 self.deallocators_emited = false;
 
-                self.symbols.end_scope();
+                self.context.end_scope();
 
                 Instruction::Null
             }
@@ -101,54 +97,49 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                 let compiled_if_cond: IntValue<'ctx> =
                     self.codegen(cond).as_llvm_value().into_int_value();
 
-                let then_block: BasicBlock = self
-                    .context
-                    .append_basic_block(self.function.unwrap(), "if");
+                let then_block: BasicBlock =
+                    llvm_context.append_basic_block(self.function.unwrap(), "if");
 
-                let else_if_cond: BasicBlock = self
-                    .context
-                    .append_basic_block(self.function.unwrap(), "elseif");
+                let else_if_cond: BasicBlock =
+                    llvm_context.append_basic_block(self.function.unwrap(), "elseif");
 
-                let else_if_body: BasicBlock = self
-                    .context
-                    .append_basic_block(self.function.unwrap(), "elseif_body");
+                let else_if_body: BasicBlock =
+                    llvm_context.append_basic_block(self.function.unwrap(), "elseif_body");
 
-                let else_block: BasicBlock = self
-                    .context
-                    .append_basic_block(self.function.unwrap(), "else");
+                let else_block: BasicBlock =
+                    llvm_context.append_basic_block(self.function.unwrap(), "else");
 
-                let merge_block: BasicBlock = self
-                    .context
-                    .append_basic_block(self.function.unwrap(), "merge");
+                let merge_block: BasicBlock =
+                    llvm_context.append_basic_block(self.function.unwrap(), "merge");
 
                 if !elfs.is_empty() {
-                    self.builder
+                    llvm_builder
                         .build_conditional_branch(compiled_if_cond, then_block, else_if_cond)
                         .unwrap();
                 } else if otherwise.is_some() && elfs.is_empty() {
-                    self.builder
+                    llvm_builder
                         .build_conditional_branch(compiled_if_cond, then_block, else_block)
                         .unwrap();
                 } else {
-                    self.builder
+                    llvm_builder
                         .build_conditional_branch(compiled_if_cond, then_block, merge_block)
                         .unwrap();
                 }
 
-                self.builder.position_at_end(then_block);
+                llvm_builder.position_at_end(then_block);
 
                 self.codegen(block);
 
                 if !block.has_return() && !block.has_break() && !block.has_continue() {
-                    self.builder
+                    llvm_builder
                         .build_unconditional_branch(merge_block)
                         .unwrap();
                 }
 
                 if !elfs.is_empty() {
-                    self.builder.position_at_end(else_if_cond);
+                    llvm_builder.position_at_end(else_if_cond);
                 } else {
-                    self.builder.position_at_end(merge_block);
+                    llvm_builder.position_at_end(merge_block);
                 }
 
                 if !elfs.is_empty() {
@@ -162,7 +153,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                             let elif_body: BasicBlock = current_block;
 
                             let next_block: BasicBlock = if index + 1 < elfs.len() {
-                                self.context
+                                llvm_context
                                     .append_basic_block(self.function.unwrap(), "elseif_body")
                             } else if otherwise.is_some() {
                                 else_block
@@ -170,7 +161,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                                 merge_block
                             };
 
-                            self.builder
+                            llvm_builder
                                 .build_conditional_branch(
                                     compiled_else_if_cond,
                                     elif_body,
@@ -178,20 +169,19 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                                 )
                                 .unwrap();
 
-                            self.builder.position_at_end(elif_body);
+                            llvm_builder.position_at_end(elif_body);
 
                             self.codegen(block);
 
                             if !block.has_return() && !block.has_break() && !block.has_continue() {
-                                self.builder
+                                llvm_builder
                                     .build_unconditional_branch(merge_block)
                                     .unwrap();
                             }
 
                             if index + 1 < elfs.len() {
-                                self.builder.position_at_end(next_block);
-                                current_block = self
-                                    .context
+                                llvm_builder.position_at_end(next_block);
+                                current_block = llvm_context
                                     .append_basic_block(self.function.unwrap(), "elseif_body");
                             }
                         }
@@ -200,12 +190,12 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
 
                 if let Some(otherwise) = otherwise {
                     if let Instruction::Else { block } = &**otherwise {
-                        self.builder.position_at_end(else_block);
+                        llvm_builder.position_at_end(else_block);
 
                         self.codegen(block);
 
                         if !block.has_return() && !block.has_break() && !block.has_continue() {
-                            self.builder
+                            llvm_builder
                                 .build_unconditional_branch(merge_block)
                                 .unwrap();
                         }
@@ -213,7 +203,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                 }
 
                 if !elfs.is_empty() || otherwise.is_some() {
-                    self.builder.position_at_end(merge_block);
+                    llvm_builder.position_at_end(merge_block);
                 }
 
                 if elfs.is_empty() {
@@ -231,37 +221,37 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
             Instruction::WhileLoop { cond, block } => {
                 let function: FunctionValue = self.function.unwrap();
 
-                let cond_block: BasicBlock = self.context.append_basic_block(function, "while");
+                let cond_block: BasicBlock = llvm_context.append_basic_block(function, "while");
 
-                self.builder.build_unconditional_branch(cond_block).unwrap();
+                llvm_builder.build_unconditional_branch(cond_block).unwrap();
 
-                self.builder.position_at_end(cond_block);
+                llvm_builder.position_at_end(cond_block);
 
                 let conditional: IntValue =
                     self.codegen(cond.as_ref()).as_llvm_value().into_int_value();
 
                 let then_block: BasicBlock =
-                    self.context.append_basic_block(function, "while_body");
+                    llvm_context.append_basic_block(function, "while_body");
                 let exit_block: BasicBlock =
-                    self.context.append_basic_block(function, "while_exit");
+                    llvm_context.append_basic_block(function, "while_exit");
 
                 self.loop_exit_block = Some(exit_block);
 
-                self.builder
+                llvm_builder
                     .build_conditional_branch(conditional, then_block, exit_block)
                     .unwrap();
 
-                self.builder.position_at_end(then_block);
+                llvm_builder.position_at_end(then_block);
 
                 self.codegen(block);
 
-                let exit_brancher = self.builder.build_unconditional_branch(cond_block).unwrap();
+                let exit_brancher = llvm_builder.build_unconditional_branch(cond_block).unwrap();
 
                 if block.has_break() {
                     exit_brancher.remove_from_basic_block();
                 }
 
-                self.builder.position_at_end(exit_block);
+                llvm_builder.position_at_end(exit_block);
 
                 Instruction::Null
             }
@@ -269,17 +259,16 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
             Instruction::Loop { block } => {
                 let function: FunctionValue = self.function.unwrap();
                 let loop_start_block: BasicBlock =
-                    self.context.append_basic_block(function, "loop");
+                    llvm_context.append_basic_block(function, "loop");
 
-                self.builder
+                llvm_builder
                     .build_unconditional_branch(loop_start_block)
                     .unwrap();
 
-                self.builder.position_at_end(loop_start_block);
+                llvm_builder.position_at_end(loop_start_block);
 
-                let loop_exit_block: BasicBlock = self
-                    .context
-                    .append_basic_block(self.function.unwrap(), "loop_exit");
+                let loop_exit_block: BasicBlock =
+                    llvm_context.append_basic_block(self.function.unwrap(), "loop_exit");
 
                 self.loop_exit_block = Some(loop_exit_block);
 
@@ -288,13 +277,13 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                 if !block.has_return() && !block.has_break() && !block.has_continue() {
                     let _ = loop_exit_block.remove_from_function();
 
-                    self.builder
+                    llvm_builder
                         .build_unconditional_branch(
                             self.function.unwrap().get_last_basic_block().unwrap(),
                         )
                         .unwrap();
                 } else {
-                    self.builder.position_at_end(loop_exit_block);
+                    llvm_builder.position_at_end(loop_exit_block);
                 }
 
                 Instruction::Null
@@ -310,29 +299,29 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
 
                 self.codegen(variable.as_ref());
 
-                let start_block: BasicBlock = self.context.append_basic_block(function, "for");
+                let start_block: BasicBlock = llvm_context.append_basic_block(function, "for");
 
                 self.loop_start_block = Some(start_block);
 
-                self.builder
+                llvm_builder
                     .build_unconditional_branch(start_block)
                     .unwrap();
 
-                self.builder.position_at_end(start_block);
+                llvm_builder.position_at_end(start_block);
 
                 let conditional: IntValue =
                     self.codegen(cond.as_ref()).as_llvm_value().into_int_value();
 
-                let then_block: BasicBlock = self.context.append_basic_block(function, "for_body");
-                let exit_block: BasicBlock = self.context.append_basic_block(function, "for_exit");
+                let then_block: BasicBlock = llvm_context.append_basic_block(function, "for_body");
+                let exit_block: BasicBlock = llvm_context.append_basic_block(function, "for_exit");
 
-                self.builder
+                llvm_builder
                     .build_conditional_branch(conditional, then_block, exit_block)
                     .unwrap();
 
                 self.loop_exit_block = Some(exit_block);
 
-                self.builder.position_at_end(then_block);
+                llvm_builder.position_at_end(then_block);
 
                 if actions.is_pre_unaryop() {
                     self.codegen(block.as_ref());
@@ -342,8 +331,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                     self.codegen(block.as_ref());
                 }
 
-                let exit_brancher = self
-                    .builder
+                let exit_brancher = llvm_builder
                     .build_unconditional_branch(start_block)
                     .unwrap();
 
@@ -351,13 +339,13 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                     exit_brancher.remove_from_basic_block();
                 }
 
-                self.builder.position_at_end(exit_block);
+                llvm_builder.position_at_end(exit_block);
 
                 Instruction::Null
             }
 
             Instruction::Break => {
-                self.builder
+                llvm_builder
                     .build_unconditional_branch(self.loop_exit_block.unwrap())
                     .unwrap();
 
@@ -365,7 +353,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
             }
 
             Instruction::Continue => {
-                self.builder
+                llvm_builder
                     .build_unconditional_branch(self.loop_start_block.unwrap())
                     .unwrap();
 
@@ -399,11 +387,11 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
             Instruction::Return(kind, value) => {
                 self.deallocators_emited = true;
 
-                let deallocator: Deallocator = Deallocator::new(&self.symbols);
+                let deallocator: Deallocator = Deallocator::new(&self.context);
 
-                deallocator.dealloc(self.symbols.get_allocated_symbols(), value);
+                deallocator.dealloc(self.context.get_allocated_symbols(), value);
 
-                valuegen::generate_expression(instruction, kind, &self.symbols);
+                valuegen::generate_expression(instruction, kind, &mut self.context);
 
                 Instruction::Null
             }
@@ -411,7 +399,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
             Instruction::Str(_, _, _) => Instruction::LLVMValue(valuegen::generate_expression(
                 instruction,
                 &Type::Void,
-                &self.symbols,
+                &mut self.context,
             )),
 
             Instruction::Local {
@@ -425,13 +413,13 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                     return Instruction::Null;
                 }
 
-                local::build((name, kind, value), &mut self.symbols);
+                local::build((name, kind, value), &mut self.context);
 
                 Instruction::Null
             }
 
             Instruction::LocalMut { kind, .. } => {
-                valuegen::generate_expression(instruction, kind, &self.symbols);
+                valuegen::generate_expression(instruction, kind, &mut self.context);
                 Instruction::Null
             }
 
@@ -446,7 +434,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                     return Instruction::LLVMValue(binaryop::integer::integer_binaryop(
                         (left, operator, right),
                         binaryop_type,
-                        &self.symbols,
+                        &mut self.context,
                     ));
                 }
 
@@ -454,7 +442,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                     return Instruction::LLVMValue(binaryop::float::float_binaryop(
                         (left, operator, right),
                         binaryop_type,
-                        &self.symbols,
+                        &mut self.context,
                     ));
                 }
 
@@ -462,7 +450,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                     return Instruction::LLVMValue(binaryop::boolean::bool_binaryop(
                         (left, operator, right),
                         binaryop_type,
-                        &self.symbols,
+                        &mut self.context,
                     ));
                 }
 
@@ -475,10 +463,10 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                 expression,
                 ..
             } => Instruction::LLVMValue(unaryop::unary_op(
-                self.builder,
-                self.context,
+                llvm_builder,
+                llvm_context,
                 (operator, kind, expression),
-                &self.symbols,
+                &self.context,
             )),
 
             Instruction::EntryPoint { body } => {
@@ -488,24 +476,24 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
 
                 self.codegen(body);
 
-                self.builder
-                    .build_return(Some(&self.context.i32_type().const_int(0, false)))
+                llvm_builder
+                    .build_return(Some(&llvm_context.i32_type().const_int(0, false)))
                     .unwrap();
 
                 Instruction::Null
             }
 
             Instruction::Call { kind, .. } => Instruction::LLVMValue(
-                valuegen::generate_expression(instruction, kind, &self.symbols),
+                valuegen::generate_expression(instruction, kind, &mut self.context),
             ),
 
             Instruction::LocalRef { kind: ref_type, .. }
             | Instruction::ConstRef { kind: ref_type, .. } => Instruction::LLVMValue(
-                valuegen::generate_expression(instruction, ref_type, &self.symbols),
+                valuegen::generate_expression(instruction, ref_type, &mut self.context),
             ),
 
             Instruction::Boolean(_, bool, ..) => Instruction::LLVMValue(
-                self.context
+                llvm_context
                     .bool_type()
                     .const_int(*bool as u64, false)
                     .into(),
@@ -514,11 +502,11 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
             Instruction::Address { .. } => Instruction::LLVMValue(valuegen::generate_expression(
                 instruction,
                 &Type::Void,
-                &self.symbols,
+                &mut self.context,
             )),
 
             Instruction::Write { .. } => {
-                valuegen::generate_expression(instruction, &Type::Void, &self.symbols);
+                valuegen::generate_expression(instruction, &Type::Void, &mut self.context);
 
                 Instruction::Null
             }
@@ -532,12 +520,16 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
     }
 
     fn build_entrypoint(&mut self) -> FunctionValue<'ctx> {
-        let main_type: FunctionType = self.context.i32_type().fn_type(&[], false);
-        let main: FunctionValue = self.module.add_function("main", main_type, None);
+        let llvm_module: &Module = self.context.get_llvm_module();
+        let llvm_context: &Context = self.context.get_llvm_context();
+        let llvm_builder: &Builder = self.context.get_llvm_builder();
 
-        let main_block: BasicBlock = self.context.append_basic_block(main, "");
+        let main_type: FunctionType = llvm_context.i32_type().fn_type(&[], false);
+        let main: FunctionValue = llvm_module.add_function("main", main_type, None);
 
-        self.builder.position_at_end(main_block);
+        let main_block: BasicBlock = llvm_context.append_basic_block(main, "");
+
+        llvm_builder.position_at_end(main_block);
 
         main
     }
@@ -553,7 +545,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
             .get_nth_param(parameter_position)
             .unwrap();
 
-        self.symbols
+        self.context
             .alloc_function_parameter(parameter_name, parameter_type, value);
     }
 
@@ -576,14 +568,17 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
             } = instruction
             {
                 let value: BasicValueEnum =
-                    valuegen::generate_expression(value, kind, &self.symbols);
+                    valuegen::generate_expression(value, kind, &mut self.context);
 
-                self.symbols.alloc_constant(name, kind, value, attributes);
+                self.context.alloc_constant(name, kind, value, attributes);
             }
         });
     }
 
     fn declare_function(&mut self, instruction: &'ctx Instruction) {
+        let llvm_module: &Module = self.context.get_llvm_module();
+        let llvm_context: &Context = self.context.get_llvm_context();
+
         let function: FunctionPrototype = instruction.as_function();
 
         let function_name: &str = function.0;
@@ -600,8 +595,8 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
         function_attributes
             .iter()
             .for_each(|attribute| match attribute {
-                LLVMAttribute::Public(public) => {
-                    is_public = *public;
+                LLVMAttribute::Public => {
+                    is_public = true;
                 }
                 LLVMAttribute::FFI(ffi_found) => {
                     ffi = Some(ffi_found);
@@ -619,18 +614,17 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
         };
 
         let function_type: FunctionType = typegen::function_type(
-            self.context,
+            llvm_context,
             function_type,
             function_parameters,
             ignore_args,
         );
 
         let function: FunctionValue =
-            self.module
-                .add_function(llvm_function_name, function_type, None);
+            llvm_module.add_function(llvm_function_name, function_type, None);
 
         let mut attribute_builder: AttributeBuilder = AttributeBuilder::new(
-            self.context,
+            llvm_context,
             function_attributes,
             LLVMAttributeApplicant::Function(function),
         );
@@ -643,13 +637,16 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
 
         self.function = Some(function);
 
-        self.symbols.insert_function(
+        self.context.insert_function(
             function_name,
             (function, function_parameters_types, call_convention),
         );
     }
 
     fn build_function(&mut self, function: FunctionPrototype<'ctx>) {
+        let llvm_context: &Context = self.context.get_llvm_context();
+        let llvm_builder: &Builder<'_> = self.context.get_llvm_builder();
+
         let function_name: &str = function.0;
         let function_type: &Type = function.1;
         let function_parameters: &[Instruction<'ctx>] = function.2;
@@ -659,11 +656,11 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
             return;
         }
 
-        let llvm_function: FunctionValue = self.symbols.get_function(function_name).0;
+        let llvm_function: FunctionValue = self.context.get_function(function_name).0;
 
-        let entry: BasicBlock = self.context.append_basic_block(llvm_function, "");
+        let entry: BasicBlock = llvm_context.append_basic_block(llvm_function, "");
 
-        self.builder.position_at_end(entry);
+        llvm_builder.position_at_end(entry);
 
         function_parameters.iter().for_each(|parameter| {
             self.codegen(parameter);
@@ -672,21 +669,24 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
         self.codegen(function_body);
 
         if function_type.is_void_type() {
-            self.builder.build_return(None).unwrap();
+            llvm_builder.build_return(None).unwrap();
         }
     }
 
     fn declare_basics(&mut self) {
-        let stderr: GlobalValue = self.module.add_global(
-            self.context.ptr_type(AddressSpace::default()),
+        let llvm_module: &Module = self.context.get_llvm_module();
+        let llvm_context: &Context = self.context.get_llvm_context();
+
+        let stderr: GlobalValue = llvm_module.add_global(
+            llvm_context.ptr_type(AddressSpace::default()),
             Some(AddressSpace::default()),
             "stderr",
         );
 
         stderr.set_linkage(Linkage::External);
 
-        let stdout: GlobalValue = self.module.add_global(
-            self.context.ptr_type(AddressSpace::default()),
+        let stdout: GlobalValue = llvm_module.add_global(
+            llvm_context.ptr_type(AddressSpace::default()),
             Some(AddressSpace::default()),
             "stdout",
         );

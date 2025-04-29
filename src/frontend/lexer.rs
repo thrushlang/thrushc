@@ -18,7 +18,7 @@ use {
     std::{mem, process::exit},
 };
 
-const KEYWORDS_CAPACITY: usize = 60;
+const KEYWORDS_CAPACITY: usize = 61;
 const MINIMAL_TOKENS_CAPACITY: usize = 100_000;
 
 lazy_static! {
@@ -43,8 +43,8 @@ lazy_static! {
         keywords.insert(b"return", TokenKind::Return);
         keywords.insert(b"break", TokenKind::Break);
         keywords.insert(b"continue", TokenKind::Continue);
+        keywords.insert(b"unsafe", TokenKind::Unsafe);
         keywords.insert(b"this", TokenKind::This);
-        keywords.insert(b"builtin", TokenKind::Builtin);
         keywords.insert(b"match", TokenKind::Match);
         keywords.insert(b"pattern", TokenKind::Pattern);
         keywords.insert(b"mut", TokenKind::Mut);
@@ -189,9 +189,11 @@ impl<'a> Lexer<'a> {
             b'/' => self.make(TokenKind::Slash),
             b';' => self.make(TokenKind::SemiColon),
             b'-' if self.char_match(b'-') => self.make(TokenKind::MinusMinus),
+            b'-' if self.char_match(b'=') => self.make(TokenKind::MinusEq),
             b'-' if self.char_match(b'>') => self.make(TokenKind::Arrow),
             b'-' => self.make(TokenKind::Minus),
             b'+' if self.char_match(b'+') => self.make(TokenKind::PlusPlus),
+            b'+' if self.char_match(b'=') => self.make(TokenKind::PlusEq),
             b'+' => self.make(TokenKind::Plus),
             b':' if self.char_match(b':') => self.make(TokenKind::ColonColon),
             b':' => self.make(TokenKind::Colon),

@@ -3,7 +3,7 @@ use crate::{
     middle::{statement::FunctionCall, symbols::types::Functions, types::Type},
 };
 
-use super::{Instruction, memory::SymbolAllocated, symbols::SymbolsTable, typegen, utils};
+use super::{Instruction, context::CodeGenContext, memory::SymbolAllocated, typegen, utils};
 
 use inkwell::{
     FloatPredicate,
@@ -24,7 +24,7 @@ pub fn include(functions: &mut Functions) {
 pub fn build_sizeof<'ctx>(
     context: &'ctx Context,
     call: FunctionCall<'ctx>,
-    symbols: &SymbolsTable<'_, 'ctx>,
+    symbols: &CodeGenContext<'_, 'ctx>,
 ) -> BasicValueEnum<'ctx> {
     let value: &Instruction = &call.2[0];
 
@@ -110,7 +110,7 @@ pub fn build_is_signed<'ctx>(
     context: &'ctx Context,
     builder: &Builder<'ctx>,
     call: FunctionCall<'ctx>,
-    symbols: &SymbolsTable<'_, 'ctx>,
+    symbols: &CodeGenContext<'_, 'ctx>,
 ) -> BasicValueEnum<'ctx> {
     let value: &Instruction = &call.2[0];
 

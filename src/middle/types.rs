@@ -54,6 +54,8 @@ pub enum TokenKind {
     LessEq,     // ' <= '
     PlusPlus,   // ' ++ '
     MinusMinus, // ' -- '
+    MinusEq,    // -=
+    PlusEq,     // +=
     LShift,     // ' << '
     RShift,     // ' >> '
     Arrow,      // ->
@@ -84,8 +86,8 @@ pub enum TokenKind {
     Write,
     New,
     Import,
-    Builtin,
     Mut,
+    Unsafe,
     Type,
     Enum,
     And,
@@ -171,7 +173,6 @@ impl TokenKind {
             self,
             TokenKind::New
                 | TokenKind::Import
-                | TokenKind::Builtin
                 | TokenKind::Struct
                 | TokenKind::Else
                 | TokenKind::False
@@ -377,6 +378,8 @@ impl Type {
             (Type::F64, _) | (_, Type::F64) => &Type::F64,
             (Type::F32, _) | (_, Type::F32) => &Type::F32,
 
+            (Type::Mut(a_subtype), Type::Mut(b_subtype)) => a_subtype.precompute_type(b_subtype),
+
             _ => self,
         }
     }
@@ -391,6 +394,14 @@ impl Type {
             if let Type::Ptr(_) = &**subtype {
                 return true;
             }
+        }
+
+        false
+    }
+
+    pub fn is_mut_numeric_type(&self) -> bool {
+        if let Type::Mut(subtype) = self {
+            return subtype.is_integer_type() || subtype.is_float_type();
         }
 
         false

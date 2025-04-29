@@ -1,21 +1,21 @@
 use crate::middle::instruction::Instruction;
 
-use super::{memory::SymbolAllocated, symbols::SymbolsTable, types::SymbolsAllocated};
+use super::{context::CodeGenContext, memory::SymbolAllocated, types::SymbolsAllocated};
 
 #[derive(Debug)]
 pub struct Deallocator<'a, 'ctx> {
-    symbols: &'a SymbolsTable<'a, 'ctx>,
+    context: &'a CodeGenContext<'a, 'ctx>,
 }
 
 impl<'a, 'ctx> Deallocator<'a, 'ctx> {
-    pub fn new(symbols: &'a SymbolsTable<'a, 'ctx>) -> Self {
-        Self { symbols }
+    pub fn new(context: &'a CodeGenContext<'a, 'ctx>) -> Self {
+        Self { context }
     }
 
     pub fn dealloc_all(&self, symbols_allocated: SymbolsAllocated) {
         symbols_allocated.iter().for_each(|any_symbol| {
             let symbol: &SymbolAllocated = any_symbol.1;
-            symbol.dealloc(self.symbols);
+            symbol.dealloc(self.context);
         });
     }
 
@@ -29,7 +29,7 @@ impl<'a, 'ctx> Deallocator<'a, 'ctx> {
                 }
 
                 let symbol: &SymbolAllocated = symbol.1;
-                symbol.dealloc(self.symbols);
+                symbol.dealloc(self.context);
             }
         }
     }
