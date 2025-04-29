@@ -91,7 +91,7 @@ pub fn generate_type<'ctx>(context: &'ctx Context, kind: &Type) -> BasicTypeEnum
             let mut field_types: Vec<BasicTypeEnum> = Vec::with_capacity(10);
 
             fields.iter().for_each(|field| {
-                field_types.push(generate_type(context, field));
+                field_types.push(generate_subtype(context, field));
             });
 
             context.struct_type(&field_types, false).into()

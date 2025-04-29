@@ -22,10 +22,11 @@ pub fn include(functions: &mut Functions) {
 }
 
 pub fn build_sizeof<'ctx>(
-    context: &'ctx Context,
+    context: &CodeGenContext<'_, 'ctx>,
     call: FunctionCall<'ctx>,
-    symbols: &CodeGenContext<'_, 'ctx>,
 ) -> BasicValueEnum<'ctx> {
+    let llvm_context: &Context = context.get_llvm_context();
+
     let value: &Instruction = &call.2[0];
 
     if let Instruction::LocalRef {
@@ -43,7 +44,7 @@ pub fn build_sizeof<'ctx>(
     {
         if ref_type.is_struct_type() {
             let llvm_type: StructType =
-                typegen::generate_type(context, ref_type).into_struct_type();
+                typegen::generate_type(llvm_context, ref_type).into_struct_type();
 
             let structure_size: IntValue = llvm_type.size_of().unwrap_or_else(|| {
                 logging::log(
@@ -60,7 +61,7 @@ pub fn build_sizeof<'ctx>(
             return structure_size.into();
         }
 
-        return symbols.get_allocated_symbol(name).get_size_of();
+        return context.get_allocated_symbol(name).get_size_of();
     }
 
     /*if let Instruction::ComplexType(kind, _, _) = value {
@@ -107,11 +108,12 @@ pub fn build_sizeof<'ctx>(
 }
 
 pub fn build_is_signed<'ctx>(
-    context: &'ctx Context,
-    builder: &Builder<'ctx>,
+    context: &CodeGenContext<'_, 'ctx>,
     call: FunctionCall<'ctx>,
-    symbols: &CodeGenContext<'_, 'ctx>,
 ) -> BasicValueEnum<'ctx> {
+    let llvm_context: &Context = context.get_llvm_context();
+    let llvm_builder: &Builder = context.get_llvm_builder();
+
     let value: &Instruction = &call.2[0];
 
     if let Instruction::LocalRef {
@@ -137,40 +139,40 @@ pub fn build_is_signed<'ctx>(
             );
         }
 
-        let object: SymbolAllocated = symbols.get_allocated_symbol(name);
+        let object: SymbolAllocated = context.get_allocated_symbol(name);
 
         return if ref_type.is_integer_type() {
-            let mut loaded_value: IntValue = object.load(symbols).into_int_value();
+            let mut loaded_value: IntValue = object.load(context).into_int_value();
 
             if let Some(casted_float) =
-                utils::integer_autocast(&Type::S64, ref_type, loaded_value.into(), builder, context)
+                utils::integer_autocast(context, &Type::S64, ref_type, loaded_value.into())
             {
                 loaded_value = casted_float.into_int_value();
             }
 
-            builder
+            llvm_builder
                 .build_int_compare(
                     inkwell::IntPredicate::SLT,
                     loaded_value,
-                    context.i64_type().const_int(0, false),
+                    llvm_context.i64_type().const_int(0, false),
                     "",
                 )
                 .unwrap()
                 .into()
         } else {
-            let mut loaded_value: BasicValueEnum = object.load(symbols);
+            let mut loaded_value: BasicValueEnum = object.load(context);
 
             if let Some(casted_float) =
-                utils::float_autocast(&Type::F64, ref_type, loaded_value, builder, context)
+                utils::float_autocast(context, &Type::F64, ref_type, loaded_value)
             {
                 loaded_value = casted_float;
             }
 
-            builder
+            llvm_builder
                 .build_float_compare(
                     FloatPredicate::OLT,
                     loaded_value.into_float_value(),
-                    context.f64_type().const_float(0.0),
+                    llvm_context.f64_type().const_float(0.0),
                     "",
                 )
                 .unwrap()
@@ -178,5 +180,5 @@ pub fn build_is_signed<'ctx>(
         };
     }
 
-    context.bool_type().const_zero().into()
+    llvm_context.bool_type().const_zero().into()
 }

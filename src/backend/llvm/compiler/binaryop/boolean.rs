@@ -11,7 +11,7 @@ use {
             types::{TokenKind, Type},
         },
     },
-    inkwell::{builder::Builder, context::Context, values::BasicValueEnum},
+    inkwell::values::BasicValueEnum,
 };
 
 pub fn bool_binaryop<'ctx>(
@@ -19,9 +19,6 @@ pub fn bool_binaryop<'ctx>(
     target_type: &Type,
     context: &mut CodeGenContext<'_, 'ctx>,
 ) -> BasicValueEnum<'ctx> {
-    let llvm_context: &Context = context.get_llvm_context();
-    let llvm_builder: &Builder = context.get_llvm_builder();
-
     if let (
         Instruction::Integer(..) | Instruction::Float(..) | Instruction::Boolean(..),
         TokenKind::BangEq
@@ -238,8 +235,7 @@ pub fn bool_binaryop<'ctx>(
                 float_binaryop(binary.2.as_binary(), target_type, context);
 
             return int_operation(
-                llvm_context,
-                llvm_builder,
+                context,
                 left_compiled,
                 right_compiled,
                 (false, false),
@@ -261,8 +257,7 @@ pub fn bool_binaryop<'ctx>(
                 float_binaryop(binary.2.as_binary(), target_type, context);
 
             return int_operation(
-                llvm_context,
-                llvm_builder,
+                context,
                 left_compiled,
                 right_compiled,
                 (false, false),
@@ -287,8 +282,7 @@ pub fn bool_binaryop<'ctx>(
                 float_binaryop(binary.2.as_binary(), target_type, context);
 
             return int_operation(
-                llvm_context,
-                llvm_builder,
+                context,
                 left_compiled,
                 right_compiled,
                 (false, false),
@@ -313,8 +307,7 @@ pub fn bool_binaryop<'ctx>(
                 float_binaryop(binary.2.as_binary(), target_type, context);
 
             return int_operation(
-                llvm_context,
-                llvm_builder,
+                context,
                 left_compiled,
                 right_compiled,
                 (false, false),

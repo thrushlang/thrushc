@@ -1,5 +1,6 @@
 use super::super::super::super::middle::types::Type;
 
+use super::context::CodeGenContext;
 use super::typegen;
 
 use inkwell::values::StructValue;
@@ -14,12 +15,14 @@ use inkwell::{
 };
 
 pub fn integer_autocast<'ctx>(
+    context: &CodeGenContext<'_, 'ctx>,
     target_type: &Type,
     from_type: &Type,
     from: BasicValueEnum<'ctx>,
-    builder: &Builder<'ctx>,
-    context: &'ctx Context,
 ) -> Option<BasicValueEnum<'ctx>> {
+    let llvm_builder: &Builder = context.get_llvm_builder();
+    let llvm_context: &Context = context.get_llvm_context();
+
     if target_type.is_bool_type()
         || target_type.is_void_type()
         || from_type == target_type
@@ -29,10 +32,10 @@ pub fn integer_autocast<'ctx>(
     }
 
     Some(
-        builder
+        llvm_builder
             .build_int_cast_sign_flag(
                 from.into_int_value(),
-                typegen::type_int_to_llvm_int_type(context, target_type),
+                typegen::type_int_to_llvm_int_type(llvm_context, target_type),
                 true,
                 "",
             )
@@ -42,12 +45,14 @@ pub fn integer_autocast<'ctx>(
 }
 
 pub fn float_autocast<'ctx>(
+    context: &CodeGenContext<'_, 'ctx>,
     target_type: &Type,
     from_type: &Type,
     from: BasicValueEnum<'ctx>,
-    builder: &Builder<'ctx>,
-    context: &'ctx Context,
 ) -> Option<BasicValueEnum<'ctx>> {
+    let llvm_builder: &Builder = context.get_llvm_builder();
+    let llvm_context: &Context = context.get_llvm_context();
+
     if target_type.is_bool_type()
         || target_type.is_void_type()
         || from_type == target_type
@@ -57,10 +62,10 @@ pub fn float_autocast<'ctx>(
     }
 
     Some(
-        builder
+        llvm_builder
             .build_float_cast(
                 from.into_float_value(),
-                typegen::type_float_to_llvm_float_type(context, target_type),
+                typegen::type_float_to_llvm_float_type(llvm_context, target_type),
                 "",
             )
             .unwrap()

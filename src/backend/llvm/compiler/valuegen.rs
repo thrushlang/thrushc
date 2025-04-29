@@ -106,13 +106,9 @@ pub fn generate_expression<'ctx>(
     if let Instruction::Float(kind, num, is_signed, ..) = expression {
         let mut float: FloatValue = float(llvm_builder, llvm_context, kind, *num, *is_signed);
 
-        if let Some(casted_float) = utils::float_autocast(
-            casting_target,
-            kind,
-            float.into(),
-            llvm_builder,
-            llvm_context,
-        ) {
+        if let Some(casted_float) =
+            utils::float_autocast(context, casting_target, kind, float.into())
+        {
             float = casted_float.into_float_value();
         }
 
@@ -122,13 +118,9 @@ pub fn generate_expression<'ctx>(
     if let Instruction::Integer(kind, num, is_signed, ..) = expression {
         let mut integer: IntValue = integer(llvm_context, kind, *num as u64, *is_signed);
 
-        if let Some(casted_integer) = utils::integer_autocast(
-            casting_target,
-            kind,
-            integer.into(),
-            llvm_builder,
-            llvm_context,
-        ) {
+        if let Some(casted_integer) =
+            utils::integer_autocast(context, casting_target, kind, integer.into())
+        {
             integer = casted_integer.into_int_value();
         }
 
@@ -211,13 +203,9 @@ pub fn generate_expression<'ctx>(
             let mut compiled_indexe: BasicValueEnum =
                 generate_expression(indexe, &Type::U32, context);
 
-            if let Some(casted_index) = utils::integer_autocast(
-                &Type::U32,
-                indexe.get_type(),
-                compiled_indexe,
-                llvm_builder,
-                llvm_context,
-            ) {
+            if let Some(casted_index) =
+                utils::integer_autocast(context, &Type::U32, indexe.get_type(), compiled_indexe)
+            {
                 compiled_indexe = casted_index;
             }
 
@@ -249,7 +237,7 @@ pub fn generate_expression<'ctx>(
             );
         });
 
-        if kind.is_mut_type() && context.get_position().in_mutation() {
+        if context.get_position().in_mutation() {
             return address.into();
         }
 
@@ -316,12 +304,7 @@ pub fn generate_expression<'ctx>(
         ..
     } = expression
     {
-        return unaryop::unary_op(
-            llvm_builder,
-            llvm_context,
-            (operator, kind, expression),
-            context,
-        );
+        return unaryop::unary_op(context, (operator, kind, expression));
     }
 
     if let Instruction::LocalMut {
@@ -370,20 +353,11 @@ pub fn generate_expression<'ctx>(
     } = expression
     {
         if *call_name == "sizeof!" {
-            return builtins::build_sizeof(
-                llvm_context,
-                (call_name, call_type, call_args),
-                context,
-            );
+            return builtins::build_sizeof(context, (call_name, call_type, call_args));
         }
 
         if *call_name == "is_signed!" {
-            return builtins::build_is_signed(
-                llvm_context,
-                llvm_builder,
-                (call_name, call_type, call_args),
-                context,
-            );
+            return builtins::build_is_signed(context, (call_name, call_type, call_args));
         }
 
         context.set_position(CodeGenContextPosition::Call);

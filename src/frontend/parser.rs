@@ -1131,8 +1131,17 @@ impl<'instr> Parser<'instr> {
             return Err(ThrushCompilerError::Error(
                 String::from("Syntax error"),
                 String::from(
-                    "The muteable type is inferred, there is no need to use the 'mut' keyword before the type. ",
+                    "The muteable type is inferred, there is no need to use the 'mut' keyword before the type.",
                 ),
+                String::default(),
+                type_span,
+            ));
+        }
+
+        if local_type.is_mut_type() && !is_mutable {
+            return Err(ThrushCompilerError::Error(
+                String::from("Syntax error"),
+                String::from("Make mutable the local, not the type."),
                 String::default(),
                 type_span,
             ));

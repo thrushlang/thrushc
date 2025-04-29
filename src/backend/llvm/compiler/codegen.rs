@@ -463,10 +463,8 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                 expression,
                 ..
             } => Instruction::LLVMValue(unaryop::unary_op(
-                llvm_builder,
-                llvm_context,
-                (operator, kind, expression),
                 &self.context,
+                (operator, kind, expression),
             )),
 
             Instruction::EntryPoint { body } => {
