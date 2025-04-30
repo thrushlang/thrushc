@@ -50,6 +50,7 @@ pub enum Instruction<'ctx> {
         name: &'ctx str,
         indexes: Vec<(Type, u32)>,
         kind: Type,
+        is_mutable: bool,
         span: Span,
     },
 
@@ -118,7 +119,6 @@ pub enum Instruction<'ctx> {
         position: u32,
         is_mutable: bool,
         span: Span,
-        type_span: Span,
     },
     Function {
         name: &'ctx str,
@@ -153,7 +153,6 @@ pub enum Instruction<'ctx> {
         is_mutable: bool,
         comptime: bool,
         span: Span,
-        type_span: Span,
     },
     LocalRef {
         name: &'ctx str,
@@ -194,6 +193,7 @@ pub enum Instruction<'ctx> {
         name: &'ctx str,
         args: Vec<Instruction<'ctx>>,
         kind: Type,
+        is_mutable: bool,
         span: Span,
     },
     BinaryOp {
@@ -280,7 +280,12 @@ impl<'ctx> Instruction<'ctx> {
     }
 
     pub fn is_mutable(&self) -> bool {
-        self.get_type().is_mut_type()
+        match self {
+            Instruction::Local { is_mutable, .. } => *is_mutable,
+            Instruction::Property { is_mutable, .. } => *is_mutable,
+            Instruction::Call { is_mutable, .. } => *is_mutable,
+            _ => false,
+        }
     }
 
     pub fn as_function(&self) -> FunctionPrototype {

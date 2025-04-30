@@ -14,10 +14,13 @@ use inkwell::{
 };
 
 pub fn include(functions: &mut Functions) {
-    functions.insert("sizeof!", (Type::S64, Vec::from([Type::Ptr(None)]), false));
+    functions.insert(
+        "sizeof!",
+        (Type::S64, Vec::from([Type::Ptr(None)]), false, false),
+    );
     functions.insert(
         "is_signed!",
-        (Type::Bool, Vec::from([Type::Ptr(None)]), false),
+        (Type::Bool, Vec::from([Type::Ptr(None)]), false, false),
     );
 }
 

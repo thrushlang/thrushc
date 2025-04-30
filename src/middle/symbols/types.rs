@@ -16,8 +16,8 @@ pub type Struct<'instr> = (
     ThrushAttributes<'instr>,
 );
 
-pub type Function<'instr> = (Type, Vec<Type>, bool);
-pub type Local<'instr> = (Type, bool, bool, Span, Span);
+pub type Function<'instr> = (Type, Vec<Type>, bool, bool);
+pub type Local<'instr> = (Type, bool, bool, Span);
 
 pub type CustomTypes<'instr> = HashMap<&'instr str, CustomType<'instr>>;
 pub type Constants<'instr> = HashMap<&'instr str, Constant<'instr>>;

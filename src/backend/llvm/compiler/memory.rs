@@ -14,7 +14,7 @@ use inkwell::{
     values::{BasicValue, BasicValueEnum, InstructionValue, PointerValue},
 };
 
-use super::context::{self, CodeGenContext};
+use super::context::CodeGenContext;
 
 #[derive(Debug, Clone)]
 pub enum SymbolAllocated<'ctx> {
@@ -153,7 +153,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
 
         match self {
             Self::Local { ptr, kind, .. } => {
-                let kind: BasicTypeEnum<'_> = typegen::generate_subtype(llvm_context, kind);
+                let kind: BasicTypeEnum = typegen::generate_subtype(llvm_context, kind);
                 let alignment: u32 = target_data.get_preferred_alignment(&kind);
 
                 let store: InstructionValue = llvm_builder.build_store(*ptr, value).unwrap();
@@ -163,7 +163,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
             Self::Parameter {
                 value: ptr, kind, ..
             } if ptr.is_pointer_value() => {
-                let kind: BasicTypeEnum<'_> = typegen::generate_subtype(llvm_context, kind);
+                let kind: BasicTypeEnum = typegen::generate_subtype(llvm_context, kind);
                 let alignment: u32 = target_data.get_preferred_alignment(&kind);
 
                 let store: InstructionValue = llvm_builder

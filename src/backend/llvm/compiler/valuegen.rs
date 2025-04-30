@@ -241,19 +241,17 @@ pub fn generate_expression<'ctx>(
             return address.into();
         }
 
-        if kind.is_mut_type() && casting_target.is_mut_type() && context.get_position().in_call() {
+        if casting_target.is_mut_type() && context.get_position().in_call() {
             return address.into();
         }
 
         return memory::load_anon(llvm_context, llvm_builder, kind, address);
     }
 
-    if let Instruction::LocalRef { name, kind, .. } | Instruction::ConstRef { name, kind, .. } =
-        expression
-    {
+    if let Instruction::LocalRef { name, .. } | Instruction::ConstRef { name, .. } = expression {
         let symbol: SymbolAllocated = context.get_allocated_symbol(name);
 
-        if kind.is_mut_type() && casting_target.is_mut_type() && context.get_position().in_call() {
+        if casting_target.is_mut_type() && context.get_position().in_call() {
             return symbol.take();
         }
 
@@ -388,10 +386,7 @@ pub fn generate_expression<'ctx>(
         if !call_type.is_void_type() {
             let return_value: BasicValueEnum = call.try_as_basic_value().unwrap_left();
 
-            if call_type.is_mut_type()
-                && casting_target.is_mut_type()
-                && context.get_position().in_call()
-            {
+            if casting_target.is_mut_type() && context.get_position().in_call() {
                 context.set_position_irrelevant();
                 return return_value;
             }

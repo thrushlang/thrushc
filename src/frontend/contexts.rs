@@ -1,16 +1,49 @@
 use crate::middle::types::Type;
 
+#[derive(Debug, Default, Clone, Copy)]
+pub enum TypePosition {
+    Local,
+    Parameter,
+    Call,
+    Expression,
+
+    #[default]
+    NoRelevant,
+}
+#[derive(Debug)]
 pub struct ParserTypeContext {
     pub function_type: Type,
-    pub is_mutable: bool,
+    pub position: TypePosition,
 }
 
 impl ParserTypeContext {
-    pub fn new(function_type: Type, is_mutable: bool) -> Self {
+    pub fn new(function_type: Type, position: TypePosition) -> Self {
         Self {
             function_type,
-            is_mutable,
+            position,
         }
+    }
+
+    pub fn get_position(&self) -> TypePosition {
+        self.position
+    }
+
+    pub fn set_position(&mut self, new_position: TypePosition) {
+        self.position = new_position;
+    }
+}
+
+impl TypePosition {
+    pub fn is_local(&self) -> bool {
+        matches!(self, TypePosition::Local)
+    }
+
+    pub fn is_call(&self) -> bool {
+        matches!(self, TypePosition::Call)
+    }
+
+    pub fn is_parameter(&self) -> bool {
+        matches!(self, TypePosition::Parameter)
     }
 }
 

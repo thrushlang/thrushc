@@ -277,6 +277,22 @@ pub fn check_type(
         return check_type(target_type, expression_type, Some(expression), None, error);
     }
 
+    /*   TokenKind::BangEq
+    | TokenKind::EqEq
+    | TokenKind::LessEq
+    | TokenKind::Less
+    | TokenKind::Greater
+    | TokenKind::GreaterEq
+    | TokenKind::And
+    | TokenKind::Or
+    | TokenKind::Bang
+    | TokenKind::Plus
+    | TokenKind::Minus
+    | TokenKind::Slash
+    | TokenKind::Star
+    | TokenKind::LShift
+    | TokenKind::RShift, */
+
     match (target_type, from_type, operator) {
         (Type::Char, Type::Char, None) => Ok(()),
         (Type::Str, Type::Str, None) => Ok(()),

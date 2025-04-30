@@ -9,11 +9,11 @@ use crate::middle::statement::{
     Constructor, CustomType, CustomTypeFields, EnumField, EnumFields, StructFields,
     ThrushAttributes,
 };
-use crate::middle::symbols::traits::{ConstantExtensions, LocalExtensions};
+use crate::middle::symbols::traits::{ConstantExtensions, FunctionExtensions, LocalExtensions};
 use crate::middle::symbols::types::{Constant, Function, Functions, Local, Struct};
 use crate::middle::types;
 
-use super::contexts::{ParserControlContext, ParserTypeContext};
+use super::contexts::{ParserControlContext, ParserTypeContext, TypePosition};
 use super::lexer::Span;
 use super::utils;
 
@@ -102,7 +102,9 @@ impl<'instr> Parser<'instr> {
     }
 
     pub fn start(&mut self) -> &[Instruction<'instr>] {
-        let mut type_ctx: ParserTypeContext = ParserTypeContext::new(Type::Void, false);
+        let mut type_ctx: ParserTypeContext =
+            ParserTypeContext::new(Type::Void, TypePosition::default());
+
         let mut control_ctx: ParserControlContext = ParserControlContext::default();
 
         self.declare(&mut type_ctx, &mut control_ctx);
@@ -114,7 +116,7 @@ impl<'instr> Parser<'instr> {
                 }
                 Err(e) => {
                     self.errors.push(e);
-                    self.sync(&mut control_ctx);
+                    self.sync(&mut control_ctx, &mut type_ctx);
                 }
             }
         }
@@ -138,8 +140,8 @@ impl<'instr> Parser<'instr> {
         control_ctx: &mut ParserControlContext,
     ) -> Result<Instruction<'instr>, ThrushCompilerError> {
         match &self.peek().kind {
-            TokenKind::Type => Ok(self.build_custom_type(false, control_ctx)?),
-            TokenKind::Struct => Ok(self.build_struct(false, control_ctx)?),
+            TokenKind::Type => Ok(self.build_custom_type(false, control_ctx, type_ctx)?),
+            TokenKind::Struct => Ok(self.build_struct(false, control_ctx, type_ctx)?),
             TokenKind::Enum => Ok(self.build_enum(false, type_ctx, control_ctx)?),
             TokenKind::Fn => Ok(self.build_function(false, type_ctx, control_ctx)?),
 
@@ -570,6 +572,7 @@ impl<'instr> Parser<'instr> {
         &mut self,
         declare: bool,
         control_ctx: &mut ParserControlContext,
+        type_ctx: &ParserTypeContext,
     ) -> Result<Instruction<'instr>, ThrushCompilerError> {
         self.throw_unreacheable_code(control_ctx);
 
@@ -619,7 +622,7 @@ impl<'instr> Parser<'instr> {
                 continue;
             }
 
-            let kind: Type = self.build_type(Some(TokenKind::SemiColon))?;
+            let kind: Type = self.build_type(type_ctx, Some(TokenKind::SemiColon))?;
 
             custom_type_fields.push(kind);
         }
@@ -699,7 +702,7 @@ impl<'instr> Parser<'instr> {
                     String::from("Expected ':'."),
                 )?;
 
-                let field_type: Type = self.build_type(None)?;
+                let field_type: Type = self.build_type(type_ctx, None)?;
 
                 if !field_type.is_integer_type()
                     && !field_type.is_float_type()
@@ -788,6 +791,7 @@ impl<'instr> Parser<'instr> {
         &mut self,
         declare: bool,
         control_ctx: &mut ParserControlContext,
+        type_ctx: &mut ParserTypeContext,
     ) -> Result<Instruction<'instr>, ThrushCompilerError> {
         self.throw_unreacheable_code(control_ctx);
 
@@ -841,11 +845,12 @@ impl<'instr> Parser<'instr> {
                     todo!()
                 }
 
-                let field_type: Type = self.build_type(Some(TokenKind::SemiColon))?;
+                let field_type: Type = self.build_type(type_ctx, Some(TokenKind::SemiColon))?;
 
                 fields_types
                     .1
                     .push((field_name, field_type, field_position));
+
                 field_position += 1;
 
                 continue;
@@ -1042,7 +1047,7 @@ impl<'instr> Parser<'instr> {
             String::from("Expected ':'."),
         )?;
 
-        let const_type: Type = self.build_type(None)?;
+        let const_type: Type = self.build_type(type_ctx, None)?;
 
         let const_attributes: ThrushAttributes =
             self.build_compiler_attributes(&[TokenKind::Eq])?;
@@ -1101,6 +1106,8 @@ impl<'instr> Parser<'instr> {
             );
         }
 
+        type_ctx.set_position(TypePosition::Local);
+
         self.consume(
             TokenKind::Local,
             String::from("Syntax error"),
@@ -1124,40 +1131,17 @@ impl<'instr> Parser<'instr> {
             String::from("Expected ':'."),
         )?;
 
-        let type_span: Span = self.peek().span;
-        let mut local_type: Type = self.build_type(None)?;
-
-        if local_type.is_mut_type() && is_mutable {
-            return Err(ThrushCompilerError::Error(
-                String::from("Syntax error"),
-                String::from(
-                    "The muteable type is inferred, there is no need to use the 'mut' keyword before the type.",
-                ),
-                String::default(),
-                type_span,
-            ));
-        }
-
-        if local_type.is_mut_type() && !is_mutable {
-            return Err(ThrushCompilerError::Error(
-                String::from("Syntax error"),
-                String::from("Make mutable the local, not the type."),
-                String::default(),
-                type_span,
-            ));
-        }
-
-        if is_mutable {
-            local_type = Type::Mut(local_type.into());
-        }
+        let local_type: Type = self.build_type(type_ctx, None)?;
 
         if self.match_token(TokenKind::SemiColon)? {
             self.symbols.new_local(
                 self.scope,
                 local_name,
-                (local_type.clone(), is_mutable, true, span, type_span),
+                (local_type.clone(), is_mutable, true, span),
                 span,
             )?;
+
+            type_ctx.set_position(TypePosition::NoRelevant);
 
             return Ok(Instruction::Local {
                 name: local_name,
@@ -1166,14 +1150,13 @@ impl<'instr> Parser<'instr> {
                 is_mutable,
                 span,
                 comptime,
-                type_span,
             });
         }
 
         self.symbols.new_local(
             self.scope,
             local_name,
-            (local_type.clone(), is_mutable, false, span, type_span),
+            (local_type.clone(), is_mutable, false, span),
             span,
         )?;
 
@@ -1198,6 +1181,8 @@ impl<'instr> Parser<'instr> {
             String::from("Expected ';'."),
         )?;
 
+        type_ctx.set_position(TypePosition::NoRelevant);
+
         let local: Instruction = Instruction::Local {
             name: local_name,
             kind: local_type,
@@ -1205,7 +1190,6 @@ impl<'instr> Parser<'instr> {
             is_mutable,
             span,
             comptime,
-            type_span,
         };
 
         Ok(local)
@@ -1358,6 +1342,8 @@ impl<'instr> Parser<'instr> {
                 continue;
             }
 
+            type_ctx.set_position(TypePosition::Parameter);
+
             let is_mutable: bool = self.match_token(TokenKind::Mut)?;
 
             let parameter_tk: &Token = self.consume(
@@ -1375,8 +1361,9 @@ impl<'instr> Parser<'instr> {
                 String::from("Expected '::'."),
             )?;
 
-            let type_span: Span = self.peek().span;
-            let parameter_type: Type = self.build_type(None)?;
+            let parameter_type: Type = self.build_type(type_ctx, None)?;
+
+            type_ctx.set_position(TypePosition::NoRelevant);
 
             params_types.push(parameter_type.clone());
 
@@ -1386,13 +1373,14 @@ impl<'instr> Parser<'instr> {
                 position,
                 is_mutable,
                 span: parameter_span,
-                type_span,
             });
 
             position += 1;
         }
 
-        let return_type: Type = self.build_type(None)?;
+        let is_mutable_return_type: bool = self.match_token(TokenKind::Mut)?;
+
+        let return_type: Type = self.build_type(type_ctx, None)?;
 
         let function_attributes: ThrushAttributes =
             self.build_compiler_attributes(&[TokenKind::SemiColon, TokenKind::LParen])?;
@@ -1424,7 +1412,12 @@ impl<'instr> Parser<'instr> {
             if declare {
                 self.symbols.new_function(
                     name,
-                    (return_type, params_types, function_has_ignore),
+                    (
+                        return_type,
+                        params_types,
+                        function_has_ignore,
+                        is_mutable_return_type,
+                    ),
                     span,
                 )?;
             }
@@ -1897,7 +1890,7 @@ impl<'instr> Parser<'instr> {
                     String::from("Expected '['."),
                 )?;
 
-                let carry_type: Type = self.build_type(None)?;
+                let carry_type: Type = self.build_type(type_ctx, None)?;
 
                 self.consume(
                     TokenKind::RBracket,
@@ -1956,7 +1949,7 @@ impl<'instr> Parser<'instr> {
                     String::from("Expected '['."),
                 )?;
 
-                let write_type: Type = self.build_type(None)?;
+                let write_type: Type = self.build_type(type_ctx, None)?;
 
                 self.consume(
                     TokenKind::RBracket,
@@ -2274,7 +2267,9 @@ impl<'instr> Parser<'instr> {
                         if !property.is_mutable() {
                             return Err(ThrushCompilerError::Error(
                                 String::from("Expected mutable type"),
-                                String::from("Make mutable the type of this property."),
+                                String::from(
+                                    "Make mutable the parameter or local of this property.",
+                                ),
                                 String::default(),
                                 property.get_span(),
                             ));
@@ -2332,13 +2327,26 @@ impl<'instr> Parser<'instr> {
         Ok(primary)
     }
 
-    fn build_type(&mut self, consume: Option<TokenKind>) -> Result<Type, ThrushCompilerError> {
+    fn build_type(
+        &mut self,
+        type_ctx: &ParserTypeContext,
+        consume: Option<TokenKind>,
+    ) -> Result<Type, ThrushCompilerError> {
         let builded_type: Result<Type, ThrushCompilerError> = match self.peek().kind {
             tk_kind if tk_kind.is_type() => {
                 let tk: &Token = self.advance()?;
 
+                if tk_kind.is_mut() && !type_ctx.get_position().is_parameter() {
+                    return Err(ThrushCompilerError::Error(
+                        String::from("Syntax error"),
+                        String::from("Mutable types is only allowed in function parameters."),
+                        String::default(),
+                        tk.span,
+                    ));
+                }
+
                 if tk_kind.is_mut() {
-                    return Ok(Type::Mut(self.build_type(consume)?.into()));
+                    return Ok(Type::Mut(self.build_type(type_ctx, consume)?.into()));
                 }
 
                 match tk_kind.as_type() {
@@ -2346,7 +2354,7 @@ impl<'instr> Parser<'instr> {
                     ty if ty.is_float_type() => Ok(ty),
                     ty if ty.is_bool_type() => Ok(ty),
                     ty if ty.is_ptr_type() && self.check(TokenKind::LBracket) => {
-                        Ok(self.build_recursive_type(Type::Ptr(None))?)
+                        Ok(self.build_recursive_type(type_ctx, Type::Ptr(None))?)
                     }
                     ty if ty.is_ptr_type() => Ok(ty),
                     ty if ty.is_void_type() => Ok(ty),
@@ -2427,7 +2435,11 @@ impl<'instr> Parser<'instr> {
         builded_type
     }
 
-    fn build_recursive_type(&mut self, mut before_type: Type) -> Result<Type, ThrushCompilerError> {
+    fn build_recursive_type(
+        &mut self,
+        type_ctx: &ParserTypeContext,
+        mut before_type: Type,
+    ) -> Result<Type, ThrushCompilerError> {
         self.consume(
             TokenKind::LBracket,
             String::from("Syntax error"),
@@ -2435,10 +2447,10 @@ impl<'instr> Parser<'instr> {
         )?;
 
         if let Type::Ptr(_) = &mut before_type {
-            let mut inner_type: Type = self.build_type(None)?;
+            let mut inner_type: Type = self.build_type(type_ctx, None)?;
 
             while self.check(TokenKind::LBracket) {
-                inner_type = self.build_recursive_type(inner_type)?;
+                inner_type = self.build_recursive_type(type_ctx, inner_type)?;
             }
 
             self.consume(
@@ -2472,6 +2484,7 @@ impl<'instr> Parser<'instr> {
                 .get_local_by_id(local_position.0, local_position.1, span)?;
 
         let local_type: Type = local.get_type();
+        let is_mutable: bool = local.is_mutable();
 
         let mut property_names: Vec<&'instr str> = Vec::with_capacity(10);
 
@@ -2511,6 +2524,7 @@ impl<'instr> Parser<'instr> {
             name,
             indexes: decomposed.1,
             kind: decomposed.0,
+            is_mutable,
             span,
         })
     }
@@ -2702,8 +2716,9 @@ impl<'instr> Parser<'instr> {
 
         let function: Function = self.symbols.get_function_by_id(span, function_id)?;
 
-        let function_type: Type = function.0;
-        let ignore_extra_args: bool = function.2;
+        let function_type: Type = function.get_type();
+        let ignore_more_args: bool = function.ignore_more_args();
+        let is_mutable: bool = function.is_mutable();
 
         let maximun_function_arguments: usize = function.1.len();
 
@@ -2727,7 +2742,7 @@ impl<'instr> Parser<'instr> {
             String::from("Expected ')'."),
         )?;
 
-        if args_provided.len() > maximun_function_arguments && !ignore_extra_args {
+        if args_provided.len() > maximun_function_arguments && !ignore_more_args {
             return Err(ThrushCompilerError::Error(
                 String::from("Syntax error"),
                 format!(
@@ -2740,7 +2755,7 @@ impl<'instr> Parser<'instr> {
             ));
         }
 
-        if amount_arguments_provided != function.1.len() && !ignore_extra_args {
+        if amount_arguments_provided != function.1.len() && !ignore_more_args {
             let display_args_types: String = if !args_provided.is_empty() {
                 args_provided
                     .iter()
@@ -2768,7 +2783,7 @@ impl<'instr> Parser<'instr> {
             ));
         }
 
-        if !ignore_extra_args {
+        if !ignore_more_args {
             for (position, argument) in args_provided.iter().enumerate() {
                 let from_type: &Type = argument.get_type();
                 let target_type: &Type = &function.1[position];
@@ -2786,6 +2801,7 @@ impl<'instr> Parser<'instr> {
             name,
             args: args_provided,
             kind: function_type,
+            is_mutable,
             span,
         })
     }
@@ -2809,7 +2825,7 @@ impl<'instr> Parser<'instr> {
             .filter(|(_, token)| token.kind.is_type_keyword())
             .for_each(|(pos, _)| {
                 self.current = pos;
-                let _ = self.build_custom_type(true, control_ctx);
+                let _ = self.build_custom_type(true, control_ctx, type_ctx);
                 self.current = 0;
             });
 
@@ -2829,7 +2845,7 @@ impl<'instr> Parser<'instr> {
             .filter(|(_, token)| token.kind.is_struct_keyword())
             .for_each(|(pos, _)| {
                 self.current = pos;
-                let _ = self.build_struct(true, control_ctx);
+                let _ = self.build_struct(true, control_ctx, type_ctx);
                 self.current = 0;
             });
 
@@ -2903,10 +2919,6 @@ impl<'instr> Parser<'instr> {
         }
     }
 
-    fn add_lift_local(&mut self, instruction: Instruction<'instr>) {
-        self.lift.push(instruction);
-    }
-
     fn consume(
         &mut self,
         kind: TokenKind,
@@ -2972,7 +2984,8 @@ impl<'instr> Parser<'instr> {
     }
 
     #[inline]
-    fn sync(&mut self, control_ctx: &mut ParserControlContext) {
+    fn sync(&mut self, control_ctx: &mut ParserControlContext, type_ctx: &mut ParserTypeContext) {
+        type_ctx.set_position(TypePosition::NoRelevant);
         control_ctx.set_is_outside_function();
         control_ctx.set_is_outside_loop();
 
@@ -2984,6 +2997,11 @@ impl<'instr> Parser<'instr> {
 
             self.current += 1;
         }
+    }
+
+    #[inline]
+    fn add_lift_local(&mut self, instruction: Instruction<'instr>) {
+        self.lift.push(instruction);
     }
 
     #[inline]
@@ -3001,13 +3019,11 @@ impl<'instr> Parser<'instr> {
     }
 
     #[must_use]
-    #[inline(always)]
     fn is_eof(&self) -> bool {
         self.peek().kind == TokenKind::Eof
     }
 
     #[must_use]
-    #[inline(always)]
     fn peek(&self) -> &'instr Token<'instr> {
         self.tokens.get(self.current).unwrap_or_else(|| {
             logging::log(
@@ -3020,7 +3036,6 @@ impl<'instr> Parser<'instr> {
     }
 
     #[must_use]
-    #[inline(always)]
     fn previous(&self) -> &'instr Token<'instr> {
         self.tokens.get(self.current - 1).unwrap_or_else(|| {
             logging::log(

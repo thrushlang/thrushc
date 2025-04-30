@@ -346,14 +346,13 @@ impl<'instr> SymbolsTable<'instr> {
                 kind,
                 span,
                 is_mutable,
-                type_span,
                 ..
             } = parameter
             {
                 self.new_local(
                     scope_pos,
                     name,
-                    (kind.clone(), *is_mutable, false, *span, *type_span),
+                    (kind.clone(), *is_mutable, false, *span),
                     *span,
                 )?;
             }
@@ -363,14 +362,13 @@ impl<'instr> SymbolsTable<'instr> {
                 kind,
                 span,
                 is_mutable,
-                type_span,
                 ..
             } = parameter
             {
                 self.new_local(
                     scope_pos,
                     name,
-                    (kind.clone(), *is_mutable, false, *span, *type_span),
+                    (kind.clone(), *is_mutable, false, *span),
                     *span,
                 )?;
             }

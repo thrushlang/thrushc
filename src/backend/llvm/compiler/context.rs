@@ -1,7 +1,7 @@
 use {
     super::{
         super::super::super::logging::{self, LoggingType},
-        memory::SymbolAllocated,
+        memory::{self, SymbolAllocated},
         typegen,
         types::SymbolsAllocated,
         valuegen,
@@ -103,9 +103,24 @@ impl<'a, 'ctx> CodeGenContext<'a, 'ctx> {
         &mut self,
         name: &'ctx str,
         kind: &'ctx Type,
-        value: BasicValueEnum<'ctx>,
+        is_mutable: bool,
+        mut value: BasicValueEnum<'ctx>,
     ) {
+        if is_mutable && !value.is_pointer_value() && !kind.is_mut_type() {
+            let new_value: PointerValue = valuegen::alloc(
+                self.context,
+                self.builder,
+                kind,
+                kind.is_heap_allocated(self.context, &self.target_data),
+            );
+
+            memory::store_anon(self.builder, new_value, value);
+
+            value = new_value.into();
+        }
+
         let symbol_allocated: SymbolAllocated = SymbolAllocated::new_parameter(value, kind);
+
         self.lift.insert(name, symbol_allocated);
     }
 

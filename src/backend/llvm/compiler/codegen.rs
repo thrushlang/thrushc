@@ -364,9 +364,10 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                 name,
                 kind,
                 position,
+                is_mutable,
                 ..
             } => {
-                self.build_function_parameter((name, kind, *position));
+                self.build_function_parameter((name, kind, *position, *is_mutable));
 
                 Instruction::Null
             }
@@ -536,6 +537,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
         let parameter_name: &str = parameter.0;
         let parameter_type: &Type = parameter.1;
         let parameter_position: u32 = parameter.2;
+        let is_mutable: bool = parameter.3;
 
         let value: BasicValueEnum = self
             .function
@@ -544,7 +546,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
             .unwrap();
 
         self.context
-            .alloc_function_parameter(parameter_name, parameter_type, value);
+            .alloc_function_parameter(parameter_name, parameter_type, is_mutable, value);
     }
 
     fn declare(&mut self) {

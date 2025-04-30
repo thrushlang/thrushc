@@ -32,7 +32,7 @@ pub type FunctionPrototype<'ctx> = (
 );
 
 pub type Function<'ctx> = (FunctionValue<'ctx>, &'ctx [Type], u32);
-pub type FunctionParameter<'ctx> = (&'ctx str, &'ctx Type, u32);
+pub type FunctionParameter<'ctx> = (&'ctx str, &'ctx Type, u32, bool);
 
 pub type StructFields<'ctx> = (&'ctx str, Vec<(&'ctx str, Type, u32)>);
 
