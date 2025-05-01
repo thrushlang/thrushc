@@ -40,7 +40,7 @@ pub enum Instruction<'ctx> {
 
     */
     // new Vec { ... };
-    InitStruct {
+    Constructor {
         arguments: Constructor<'ctx>,
         kind: Type,
         span: Span,
@@ -239,7 +239,7 @@ impl<'ctx> Instruction<'ctx> {
             Instruction::Boolean(kind, _, _) => kind,
             Instruction::Char(kind, _, _) => kind,
             Instruction::Address { .. } => &Type::Address,
-            Instruction::InitStruct { kind, .. } => kind,
+            Instruction::Constructor { kind, .. } => kind,
             Instruction::Carry {
                 carry_type: kind, ..
             } => kind,
@@ -268,7 +268,7 @@ impl<'ctx> Instruction<'ctx> {
             Instruction::Boolean(_, _, span) => *span,
             Instruction::Char(_, _, span) => *span,
             Instruction::Address { span, .. } => *span,
-            Instruction::InitStruct { span, .. } => *span,
+            Instruction::Constructor { span, .. } => *span,
             Instruction::Carry { span, .. } => *span,
             Instruction::Property { span, .. } => *span,
             Instruction::NullPtr { span } => *span,
@@ -426,8 +426,8 @@ impl Instruction<'_> {
     }
 
     #[inline]
-    pub const fn is_block(&self) -> bool {
-        matches!(self, Instruction::Block { .. })
+    pub fn is_anyu32bit_integer(&self) -> bool {
+        matches!(self.get_type(), Type::U8 | Type::U16 | Type::U32)
     }
 
     #[inline]
@@ -443,6 +443,11 @@ impl Instruction<'_> {
     #[inline]
     pub const fn is_function(&self) -> bool {
         matches!(self, Instruction::Function { .. })
+    }
+
+    #[inline]
+    pub const fn is_constructor(&self) -> bool {
+        matches!(self, Instruction::Constructor { .. })
     }
 
     #[inline]

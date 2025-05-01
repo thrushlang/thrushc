@@ -1,15 +1,20 @@
 use crate::middle::types::Type;
 
-#[derive(Debug, Default, Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub enum TypePosition {
     Local,
     Parameter,
-    Call,
-    Expression,
-
-    #[default]
     NoRelevant,
 }
+
+#[derive(Debug, Clone, Copy)]
+pub enum Position {
+    Statement,
+    Declaration,
+    Expression,
+    NoRelevant,
+}
+
 #[derive(Debug)]
 pub struct ParserTypeContext {
     pub function_type: Type,
@@ -17,10 +22,10 @@ pub struct ParserTypeContext {
 }
 
 impl ParserTypeContext {
-    pub fn new(function_type: Type, position: TypePosition) -> Self {
+    pub fn new() -> Self {
         Self {
-            function_type,
-            position,
+            function_type: Type::Void,
+            position: TypePosition::NoRelevant,
         }
     }
 
@@ -34,21 +39,13 @@ impl ParserTypeContext {
 }
 
 impl TypePosition {
-    pub fn is_local(&self) -> bool {
-        matches!(self, TypePosition::Local)
-    }
-
-    pub fn is_call(&self) -> bool {
-        matches!(self, TypePosition::Call)
-    }
-
     pub fn is_parameter(&self) -> bool {
         matches!(self, TypePosition::Parameter)
     }
 }
 
-#[derive(Default)]
 pub struct ParserControlContext {
+    position: Position,
     entry_point: bool,
     rec_structure_ref: bool,
     inside_function: bool,
@@ -57,6 +54,25 @@ pub struct ParserControlContext {
 }
 
 impl ParserControlContext {
+    pub fn new() -> Self {
+        Self {
+            position: Position::NoRelevant,
+            entry_point: false,
+            rec_structure_ref: false,
+            inside_function: false,
+            inside_loop: false,
+            unreacheable_code: 0,
+        }
+    }
+
+    pub fn get_position(&self) -> Position {
+        self.position
+    }
+
+    pub fn set_position(&mut self, new_position: Position) {
+        self.position = new_position;
+    }
+
     pub fn has_entry_point(&self) -> bool {
         self.entry_point
     }
@@ -81,7 +97,7 @@ impl ParserControlContext {
         self.inside_loop = true;
     }
 
-    pub fn set_is_outside_loop(&mut self) {
+    pub fn set_outside_loop(&mut self) {
         self.inside_loop = false;
     }
 
@@ -89,7 +105,7 @@ impl ParserControlContext {
         self.inside_function = true;
     }
 
-    pub fn set_is_outside_function(&mut self) {
+    pub fn set_outside_function(&mut self) {
         self.inside_function = false;
     }
 

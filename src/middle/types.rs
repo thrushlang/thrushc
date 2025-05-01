@@ -158,39 +158,48 @@ impl TokenKind {
     }
 
     #[must_use]
-    #[inline(always)]
-    pub const fn is_keyword(&self) -> bool {
+    pub const fn is_sync_declaration(&self) -> bool {
         matches!(
             self,
-            TokenKind::New
-                | TokenKind::Import
+            TokenKind::Import
+                | TokenKind::Type
                 | TokenKind::Struct
-                | TokenKind::Else
-                | TokenKind::False
                 | TokenKind::Fn
+                | TokenKind::Enum
+                | TokenKind::Const
+        )
+    }
+
+    #[must_use]
+    pub const fn is_sync_statement(&self) -> bool {
+        matches!(
+            self,
+            TokenKind::LBrace
+                | TokenKind::Return
+                | TokenKind::Local
                 | TokenKind::For
+                | TokenKind::New
+                | TokenKind::If
+                | TokenKind::Match
+                | TokenKind::While
                 | TokenKind::Continue
                 | TokenKind::Break
-                | TokenKind::Match
-                | TokenKind::Pattern
-                | TokenKind::If
-                | TokenKind::Elif
-                | TokenKind::Or
-                | TokenKind::Return
-                | TokenKind::This
-                | TokenKind::Local
-                | TokenKind::Const
-                | TokenKind::While
                 | TokenKind::Loop
         )
     }
 
-    #[inline(always)]
+    #[must_use]
+    pub const fn is_sync_expression(&self) -> bool {
+        matches!(
+            self,
+            TokenKind::SemiColon | TokenKind::LBrace | TokenKind::RBrace
+        )
+    }
+
     pub const fn is_logical_gate(&self) -> bool {
         matches!(self, TokenKind::And | TokenKind::Or)
     }
 
-    #[inline(always)]
     pub const fn is_struct_keyword(&self) -> bool {
         matches!(self, TokenKind::Struct)
     }
@@ -353,7 +362,7 @@ pub enum Type {
 }
 
 impl Type {
-    #[inline(always)]
+    #[must_use]
     pub fn precompute_type(&self, other: &Type) -> &Type {
         match (self, other) {
             (Type::S64, _) | (_, Type::S64) => &Type::S64,

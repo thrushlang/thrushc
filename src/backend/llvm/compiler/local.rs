@@ -77,7 +77,7 @@ fn build_local_structure<'ctx>(local: Local<'ctx>, context: &mut CodeGenContext<
 
     let symbol: SymbolAllocated = context.get_allocated_symbol(local.0);
 
-    if let Instruction::InitStruct { arguments, .. } = local_value {
+    if let Instruction::Constructor { arguments, .. } = local_value {
         let llvm_builder: &Builder = context.get_llvm_builder();
         let llvm_context: &Context = context.get_llvm_context();
 
