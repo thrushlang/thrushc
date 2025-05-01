@@ -221,7 +221,12 @@ impl<'instr> SymbolsTable<'instr> {
         value: Local<'instr>,
         span: Span,
     ) -> Result<(), ThrushCompilerError> {
-        if self.locals[scope_pos - 1].contains_key(name) {
+        if self
+            .locals
+            .iter()
+            .rev()
+            .any(|scope| scope.contains_key(name))
+        {
             return Err(ThrushCompilerError::Error(
                 String::from("Local variable already declared"),
                 format!("'{}' local variable already declared before.", name),

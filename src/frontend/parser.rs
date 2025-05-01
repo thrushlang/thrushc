@@ -20,7 +20,6 @@ use super::utils;
 use super::{
     super::middle::types::*,
     lexer::Token,
-    scoper::ThrushScoper,
     symbols::{FoundSymbolId, SymbolsTable},
     type_checking,
 };
@@ -77,7 +76,6 @@ pub struct Parser<'instr> {
     // Lift
     lift: Vec<Instruction<'instr>>,
 
-    scoper: ThrushScoper<'instr>,
     diagnostician: Diagnostician,
     symbols: SymbolsTable<'instr>,
 }
@@ -95,7 +93,6 @@ impl<'instr> Parser<'instr> {
             tokens,
             current: 0,
             scope: 0,
-            scoper: ThrushScoper::new(file),
             diagnostician: Diagnostician::new(file),
             symbols: SymbolsTable::with_functions(functions),
         }
@@ -130,7 +127,6 @@ impl<'instr> Parser<'instr> {
             process::exit(1);
         }
 
-        self.scoper.check();
         self.stmts.as_slice()
     }
 
@@ -1277,8 +1273,6 @@ impl<'instr> Parser<'instr> {
         }
 
         self.symbols.end_local_scope();
-
-        self.scoper.add_scope(stmts.clone());
         self.scope -= 1;
 
         Ok(Instruction::Block { stmts })

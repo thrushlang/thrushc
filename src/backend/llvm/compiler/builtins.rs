@@ -53,7 +53,7 @@ pub fn build_sizeof<'ctx>(
                 logging::log(
                     LoggingType::Panic,
                     &format!(
-                        "Built-in 'sizeof()' cannot get the size of local reference '{}' in '{}'.",
+                        "Built-in 'sizeof()' cannot get the size of local reference '{}' at '{}'.",
                         name, span,
                     ),
                 );
@@ -102,7 +102,7 @@ pub fn build_sizeof<'ctx>(
     logging::log(
         LoggingType::Panic,
         &format!(
-            "Built-in 'sizeof()' cannot get the size of '{}' type.",
+            "Builtin 'sizeof!' cannot get the size of '{}' type.",
             value.get_type()
         ),
     );
@@ -136,7 +136,7 @@ pub fn build_is_signed<'ctx>(
             logging::log(
                 LoggingType::Panic,
                 &format!(
-                    "Built-in 'is_signed()' cannot get the signedness of `{}` in {}.",
+                    "Builtin 'is_signed!' cannot get the signedness of `{}` at {}.",
                     name, span
                 ),
             );
