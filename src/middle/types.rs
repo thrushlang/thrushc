@@ -10,11 +10,17 @@ use crate::{
 };
 
 use super::{
-    statement::{StructFields, traits::StructureExtensions},
-    symbols::types::Struct,
+    instruction::Instruction,
+    statement::{StructFields, traits::StructExtensions},
+    symbols::types::{Bindings, Struct},
 };
 
 pub type ThrushStructType = (String, Vec<Arc<Type>>);
+
+#[derive(Debug, Clone, Copy)]
+pub enum BindingsApplicant {
+    Struct,
+}
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum TokenKind {
@@ -205,6 +211,10 @@ impl TokenKind {
 
     pub const fn is_struct_keyword(&self) -> bool {
         matches!(self, TokenKind::Struct)
+    }
+
+    pub const fn is_bindings_keyword(&self) -> bool {
+        matches!(self, TokenKind::Bindings)
     }
 
     #[inline(always)]
@@ -582,6 +592,20 @@ impl PartialEq for Type {
             _ => false,
         }
     }
+}
+
+pub fn generate_bindings(original_bindings: Vec<Instruction>) -> Bindings {
+    let mut bindings: Bindings = Vec::with_capacity(original_bindings.len());
+
+    for binding in original_bindings {
+        bindings.push((
+            binding.get_binding_name(),
+            binding.get_binding_type(),
+            binding.get_binding_parameters(),
+        ));
+    }
+
+    bindings
 }
 
 pub fn decompose_struct_property(

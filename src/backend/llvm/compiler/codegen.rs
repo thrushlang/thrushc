@@ -372,22 +372,9 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                 Instruction::Null
             }
 
-            Instruction::Function {
-                name,
-                parameters,
-                parameter_types,
-                body,
-                return_type,
-                attributes,
-            } => {
-                self.build_function((
-                    name,
-                    return_type,
-                    parameters,
-                    parameter_types,
-                    body,
-                    attributes,
-                ));
+            Instruction::Function { .. } => {
+                let function_prototype: FunctionPrototype = instruction.as_function();
+                self.build_function(function_prototype);
 
                 Instruction::Null
             }
@@ -586,7 +573,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
         let llvm_module: &Module = self.context.get_llvm_module();
         let llvm_context: &Context = self.context.get_llvm_context();
 
-        let function: FunctionPrototype = instruction.into_function();
+        let function: FunctionPrototype = instruction.as_function();
 
         let function_name: &str = function.0;
         let function_type: &Type = function.1;

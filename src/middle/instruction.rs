@@ -307,7 +307,7 @@ impl<'ctx> Instruction<'ctx> {
         }
     }
 
-    pub fn into_function(&self) -> FunctionPrototype {
+    pub fn as_function(&self) -> FunctionPrototype {
         if let Instruction::Function {
             name,
             parameters,
@@ -365,6 +365,36 @@ impl<'ctx> Instruction<'ctx> {
     pub fn as_llvm_value(&self) -> &BasicValueEnum<'ctx> {
         if let Instruction::LLVMValue(llvm_value) = self {
             return llvm_value;
+        }
+
+        unreachable!()
+    }
+
+    pub fn get_binding_name(&self) -> &'ctx str {
+        if let Instruction::Bind { name, .. } = self {
+            return name;
+        }
+
+        unreachable!()
+    }
+
+    pub fn get_binding_parameters(&self) -> Vec<Type> {
+        if let Instruction::Bind { parameters, .. } = self {
+            let parameters_type: Vec<Type> = parameters
+                .iter()
+                .map(|parameter| parameter.get_type().clone())
+                .filter(|parameter_type| !parameter_type.is_void_type())
+                .collect();
+
+            return parameters_type;
+        }
+
+        unreachable!()
+    }
+
+    pub fn get_binding_type(&self) -> Type {
+        if let Instruction::Bind { return_type, .. } = self {
+            return return_type.clone();
         }
 
         unreachable!()

@@ -1,4 +1,8 @@
-use crate::{common::error::ThrushCompilerError, frontend::lexer::Span, middle::types::Type};
+use crate::{
+    common::error::ThrushCompilerError,
+    frontend::lexer::Span,
+    middle::{symbols::types::Bindings, types::Type},
+};
 
 use super::{EnumField, EnumFields, StructFields};
 
@@ -28,10 +32,11 @@ pub trait FoundSymbolExtension {
     fn is_function(&self) -> bool;
 }
 
-pub trait StructureExtensions<'a> {
+pub trait StructExtensions<'a> {
     fn contains_field(&self, name: &str) -> bool;
     fn get_field_type(&self, name: &str) -> Option<Type>;
     fn get_fields(&self) -> StructFields<'a>;
+    fn get_bindings(&self) -> Bindings<'a>;
 }
 
 pub trait FoundSymbolEither<'instr> {

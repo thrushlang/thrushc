@@ -2,9 +2,10 @@ use crate::middle::{
     instruction::Instruction,
     statement::{CustomType, Enum},
     symbols::types::{
-        Constant, Constants, CustomTypes, Enums, Function, Functions, Local, Locals, Struct,
-        Structs,
+        Bindings, Constant, Constants, CustomTypes, Enums, Function, Functions, Local, Locals,
+        Struct, Structs,
     },
+    types::BindingsApplicant,
 };
 
 use super::{super::common::error::ThrushCompilerError, lexer::Span};
@@ -354,6 +355,36 @@ impl<'instr> SymbolsTable<'instr> {
         }
 
         self.functions.insert(name, function);
+
+        Ok(())
+    }
+
+    pub fn set_bindings(
+        &mut self,
+        name: &str,
+        bindings: Bindings<'instr>,
+        applicant: BindingsApplicant,
+        span: Span,
+    ) -> Result<(), ThrushCompilerError> {
+        match applicant {
+            BindingsApplicant::Struct => {
+                let structure: &mut Struct = self.get_struct_mut(name, span)?;
+                structure.3 = bindings;
+            }
+        }
+
+        Ok(())
+    }
+
+    pub fn contains_structure(&self, name: &str, span: Span) -> Result<(), ThrushCompilerError> {
+        if !self.structs.contains_key(name) {
+            return Err(ThrushCompilerError::Error(
+                String::from("Structure not found"),
+                format!("'{}' structure not defined or declared yet.", name),
+                String::default(),
+                span,
+            ));
+        }
 
         Ok(())
     }

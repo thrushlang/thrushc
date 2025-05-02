@@ -3,15 +3,17 @@ use crate::frontend::contexts::InstructionPosition;
 use crate::middle::instruction::Instruction;
 use crate::middle::statement::traits::{
     AttributesExtensions, ConstructorExtensions, CustomTypeFieldsExtensions, EnumExtensions,
-    EnumFieldsExtensions, FoundSymbolEither, FoundSymbolExtension, StructFieldsExtensions,
-    StructureExtensions, TokenLexemeExtensions,
+    EnumFieldsExtensions, FoundSymbolEither, FoundSymbolExtension, StructExtensions,
+    StructFieldsExtensions, TokenLexemeExtensions,
 };
 use crate::middle::statement::{
     Constructor, CustomType, CustomTypeFields, EnumField, EnumFields, StructFields,
     ThrushAttributes,
 };
 use crate::middle::symbols::traits::{ConstantExtensions, FunctionExtensions, LocalExtensions};
-use crate::middle::symbols::types::{Constant, Function, Functions, Local, Struct};
+use crate::middle::symbols::types::{
+    Bindings, Constant, Function, Functions, Local, Parameters, Struct,
+};
 use crate::middle::traits::ThrushStructTypeExtensions;
 use crate::middle::types;
 
@@ -143,7 +145,7 @@ impl<'instr> Parser<'instr> {
             TokenKind::Enum => Ok(self.build_enum(false, type_ctx, control_ctx)?),
             TokenKind::Fn => Ok(self.build_function(false, type_ctx, control_ctx)?),
             TokenKind::Const => Ok(self.build_const(false, type_ctx, control_ctx)?),
-            TokenKind::Bindings => Ok(self.build_bindings(type_ctx, control_ctx)?),
+            TokenKind::Bindings => Ok(self.build_bindings(false, type_ctx, control_ctx)?),
             TokenKind::Bind => Ok(self.build_bind(type_ctx, control_ctx)?),
             _ => Ok(self.statement(type_ctx, control_ctx)?),
         };
@@ -177,6 +179,7 @@ impl<'instr> Parser<'instr> {
 
     fn build_bindings(
         &mut self,
+        declare: bool,
         type_ctx: &mut ParserTypeContext,
         control_ctx: &mut ParserControlContext,
     ) -> Result<Instruction<'instr>, ThrushCompilerError> {
@@ -187,6 +190,17 @@ impl<'instr> Parser<'instr> {
             String::from("Syntax error"),
             String::from("Expected 'bindings' keyword."),
         )?;
+
+        let span: Span = bindings_tk.span;
+
+        if !self.is_main_scope() {
+            self.errors.push(ThrushCompilerError::Error(
+                String::from("Syntax error"),
+                String::from("Bindings are only defined globally."),
+                String::default(),
+                span,
+            ));
+        }
 
         let kind: Type = self.build_type(type_ctx, None)?;
 
@@ -202,11 +216,9 @@ impl<'instr> Parser<'instr> {
         let struct_type: ThrushStructType = kind.into_structure_type();
         let struct_name: String = struct_type.get_name();
 
-        let structure: &mut Struct = self
-            .symbols
-            .get_struct_mut(&struct_name, bindings_tk.span)?;
+        self.symbols.contains_structure(&struct_name, span)?;
 
-        let mut binds: Vec<Instruction> = Vec::with_capacity(100);
+        let mut binds: Vec<Instruction> = Vec::with_capacity(20);
 
         self.consume(
             TokenKind::LBrace,
@@ -226,6 +238,19 @@ impl<'instr> Parser<'instr> {
         )?;
 
         control_ctx.set_instr_position(InstructionPosition::NoRelevant);
+
+        if declare {
+            let bindings_generated: Bindings = generate_bindings(binds.clone());
+
+            self.symbols.set_bindings(
+                &struct_name,
+                bindings_generated,
+                BindingsApplicant::Struct,
+                span,
+            )?;
+
+            return Ok(Instruction::Null);
+        }
 
         Ok(Instruction::Bindings {
             name: struct_name,
@@ -1164,7 +1189,12 @@ impl<'instr> Parser<'instr> {
         if declare {
             self.symbols.new_struct(
                 struct_name,
-                (struct_name, fields_types.1, struct_attributes),
+                (
+                    struct_name,
+                    fields_types.1,
+                    struct_attributes,
+                    Vec::with_capacity(100),
+                ),
                 span,
             )?;
         }
@@ -1705,6 +1735,15 @@ impl<'instr> Parser<'instr> {
 
             let parameter_type: Type = self.build_type(type_ctx, None)?;
 
+            if parameter_type.is_void_type() {
+                return Err(ThrushCompilerError::Error(
+                    String::from("Syntax error"),
+                    String::from("Void type are not allowed as parameters."),
+                    String::default(),
+                    parameter_span,
+                ));
+            }
+
             type_ctx.set_position(TypePosition::NoRelevant);
 
             parameters_types.push(parameter_type.clone());
@@ -1760,7 +1799,11 @@ impl<'instr> Parser<'instr> {
             if declare {
                 self.symbols.new_function(
                     function_name,
-                    (return_type, parameters_types, function_has_ignore),
+                    (
+                        return_type,
+                        Parameters::new(parameters_types),
+                        function_has_ignore,
+                    ),
                     function_span,
                 )?;
             }
@@ -2628,6 +2671,10 @@ impl<'instr> Parser<'instr> {
                     return Ok(property);
                 }
 
+                if self.match_token(TokenKind::ColonColon)? {
+                    return self.build_binding_call(name, span);
+                }
+
                 if symbol.is_enum() {
                     return Err(ThrushCompilerError::Error(
                         String::from("Invalid type"),
@@ -2805,6 +2852,14 @@ impl<'instr> Parser<'instr> {
             String::default(),
             self.previous().span,
         ))
+    }
+
+    fn build_binding_call(
+        &mut self,
+        name: &'instr str,
+        span: Span,
+    ) -> Result<Instruction<'instr>, ThrushCompilerError> {
+        todo!()
     }
 
     fn build_property(
@@ -3051,18 +3106,18 @@ impl<'instr> Parser<'instr> {
         type_ctx: &mut ParserTypeContext,
         control_ctx: &mut ParserControlContext,
     ) -> Result<Instruction<'instr>, ThrushCompilerError> {
-        let mut args_provided: Vec<Instruction> = Vec::with_capacity(10);
-
         let object: FoundSymbolId = self.symbols.get_symbols_id(name, span)?;
 
         let function_id: &str = object.expected_function(span)?;
-
         let function: Function = self.symbols.get_function_by_id(span, function_id)?;
 
         let function_type: Type = function.get_type();
         let ignore_more_args: bool = function.ignore_more_args();
 
-        let maximun_function_arguments: usize = function.1.len();
+        let parameters: &Parameters = function.get_parameters();
+        let maximun_arguments: usize = function.get_parameters_size();
+
+        let mut args: Vec<Instruction> = Vec::with_capacity(10);
 
         while self.peek().kind != TokenKind::RParen {
             if self.match_token(TokenKind::Comma)? {
@@ -3080,10 +3135,8 @@ impl<'instr> Parser<'instr> {
                 ));
             }
 
-            args_provided.push(expression);
+            args.push(expression);
         }
-
-        let amount_arguments_provided: usize = args_provided.len();
 
         self.consume(
             TokenKind::RParen,
@@ -3091,23 +3144,24 @@ impl<'instr> Parser<'instr> {
             String::from("Expected ')'."),
         )?;
 
-        if args_provided.len() > maximun_function_arguments && !ignore_more_args {
+        let arguments_size: usize = args.len();
+
+        if args.len() > maximun_arguments && !ignore_more_args {
             return Err(ThrushCompilerError::Error(
                 String::from("Syntax error"),
                 format!(
                     "Expected '{}' arguments, not '{}'.",
-                    maximun_function_arguments,
-                    args_provided.len()
+                    maximun_arguments,
+                    args.len()
                 ),
                 String::default(),
                 span,
             ));
         }
 
-        if amount_arguments_provided != function.1.len() && !ignore_more_args {
-            let display_args_types: String = if !args_provided.is_empty() {
-                args_provided
-                    .iter()
+        if arguments_size != maximun_arguments && !ignore_more_args {
+            let display_args_types: String = if !args.is_empty() {
+                args.iter()
                     .map(|parameter| parameter.get_type().to_string())
                     .collect::<Vec<_>>()
                     .join(", ")
@@ -3118,13 +3172,8 @@ impl<'instr> Parser<'instr> {
             self.errors.push(ThrushCompilerError::Error(
                 String::from("Syntax error"),
                 format!(
-                    "Function expected all arguments with types '{}', not '{}'.",
-                    function
-                        .1
-                        .iter()
-                        .map(|param| param.to_string())
-                        .collect::<Vec<_>>()
-                        .join(", "),
+                    "Expected all arguments with types '{}', not '{}'.",
+                    function.get_parameters(),
                     display_args_types,
                 ),
                 String::default(),
@@ -3133,9 +3182,9 @@ impl<'instr> Parser<'instr> {
         }
 
         if !ignore_more_args {
-            for (position, argument) in args_provided.iter().enumerate() {
+            for (position, argument) in args.iter().enumerate() {
                 let from_type: &Type = argument.get_type();
-                let target_type: &Type = &function.1[position];
+                let target_type: &Type = &parameters.0[position];
 
                 self.check_type_mismatch(
                     target_type,
@@ -3148,7 +3197,7 @@ impl<'instr> Parser<'instr> {
 
         Ok(Instruction::Call {
             name,
-            args: args_provided,
+            args,
             kind: function_type,
             span,
         })
@@ -3194,6 +3243,16 @@ impl<'instr> Parser<'instr> {
             .for_each(|(pos, _)| {
                 self.current = pos;
                 let _ = self.build_struct(true, type_ctx);
+                self.current = 0;
+            });
+
+        self.tokens
+            .iter()
+            .enumerate()
+            .filter(|(_, token)| token.kind.is_bindings_keyword())
+            .for_each(|(pos, _)| {
+                self.current = pos;
+                let _ = self.build_bindings(true, type_ctx, control_ctx);
                 self.current = 0;
             });
 

@@ -1,14 +1,12 @@
 use crate::middle::statement::StructFields;
-use crate::middle::statement::traits::{
-    FoundSymbolEither, FoundSymbolExtension, StructureExtensions,
-};
-use crate::middle::symbols::types::Struct;
+use crate::middle::statement::traits::{FoundSymbolEither, FoundSymbolExtension, StructExtensions};
+use crate::middle::symbols::types::{Bindings, Struct};
 
 use super::super::common::error::ThrushCompilerError;
 
 use super::{super::middle::types::*, lexer::Span, symbols::FoundSymbolId};
 
-impl<'a> StructureExtensions<'a> for Struct<'a> {
+impl<'a> StructExtensions<'a> for Struct<'a> {
     fn contains_field(&self, name: &str) -> bool {
         self.1.iter().any(|field| field.0 == name)
     }
@@ -24,6 +22,10 @@ impl<'a> StructureExtensions<'a> for Struct<'a> {
 
     fn get_fields(&self) -> StructFields<'a> {
         (self.0, self.1.clone())
+    }
+
+    fn get_bindings(&self) -> Bindings<'a> {
+        self.3.clone()
     }
 }
 

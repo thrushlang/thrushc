@@ -14,9 +14,16 @@ pub type Struct<'instr> = (
     &'instr str,
     Vec<(&'instr str, Type, u32)>,
     ThrushAttributes<'instr>,
+    Bindings<'instr>,
 );
 
-pub type Function<'instr> = (Type, Vec<Type>, bool);
+pub type Bindings<'instr> = Vec<(&'instr str, Type, Vec<Type>)>;
+
+pub type Function<'instr> = (Type, Parameters, bool);
+
+#[derive(Debug, Clone)]
+pub struct Parameters(pub Vec<Type>);
+
 pub type Local<'instr> = (Type, bool, bool, Span);
 
 pub type CustomTypes<'instr> = HashMap<&'instr str, CustomType<'instr>>;

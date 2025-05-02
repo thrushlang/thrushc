@@ -1,6 +1,10 @@
 use crate::{
     common::logging::{self, LoggingType},
-    middle::{statement::FunctionCall, symbols::types::Functions, types::Type},
+    middle::{
+        statement::FunctionCall,
+        symbols::types::{Functions, Parameters},
+        types::Type,
+    },
 };
 
 use super::{Instruction, context::CodeGenContext, memory::SymbolAllocated, typegen, utils};
@@ -14,10 +18,21 @@ use inkwell::{
 };
 
 pub fn include(functions: &mut Functions) {
-    functions.insert("sizeof!", (Type::S64, Vec::from([Type::Ptr(None)]), false));
+    functions.insert(
+        "sizeof!",
+        (
+            Type::S64,
+            Parameters::new(Vec::from([Type::Ptr(None)])),
+            false,
+        ),
+    );
     functions.insert(
         "is_signed!",
-        (Type::Bool, Vec::from([Type::Ptr(None)]), false),
+        (
+            Type::Bool,
+            Parameters::new(Vec::from([Type::Ptr(None)])),
+            false,
+        ),
     );
 }
 
