@@ -3,8 +3,10 @@ use std::fmt::Display;
 use crate::{frontend::lexer::Span, middle::types::Type};
 
 use super::{
-    traits::{ConstantExtensions, FunctionExtensions, LocalExtensions},
-    types::{Constant, Function, Local, Parameters},
+    traits::{
+        BindExtensions, BindingsExtensions, ConstantExtensions, FunctionExtensions, LocalExtensions,
+    },
+    types::{Bind, Bindings, Constant, Function, Local, Parameters},
 };
 
 impl LocalExtensions for Local<'_> {
@@ -70,5 +72,29 @@ impl Display for Parameters {
         }
 
         Ok(())
+    }
+}
+
+impl BindingsExtensions for Bindings<'_> {
+    fn contains_binding(&self, name: &str) -> bool {
+        self.iter().any(|binding| binding.0 == name)
+    }
+
+    fn get_bind(&self, name: &str) -> Bind {
+        self.iter().find(|binding| binding.0 == name).unwrap()
+    }
+}
+
+impl BindExtensions for Bind<'_> {
+    fn get_name(&self) -> &str {
+        self.0
+    }
+
+    fn get_parameters_types(&self) -> &[Type] {
+        &self.2
+    }
+
+    fn get_type(&self) -> Type {
+        self.1.clone()
     }
 }

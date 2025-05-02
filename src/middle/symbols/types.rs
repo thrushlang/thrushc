@@ -18,6 +18,7 @@ pub type Struct<'instr> = (
 );
 
 pub type Bindings<'instr> = Vec<(&'instr str, Type, Vec<Type>)>;
+pub type Bind<'instr> = &'instr (&'instr str, Type, Vec<Type>);
 
 pub type Function<'instr> = (Type, Parameters, bool);
 

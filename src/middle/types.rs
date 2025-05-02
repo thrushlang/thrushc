@@ -176,6 +176,7 @@ impl TokenKind {
                 | TokenKind::Fn
                 | TokenKind::Enum
                 | TokenKind::Const
+                | TokenKind::Bindings
         )
     }
 
@@ -194,6 +195,7 @@ impl TokenKind {
                 | TokenKind::Continue
                 | TokenKind::Break
                 | TokenKind::Loop
+                | TokenKind::Bind
         )
     }
 

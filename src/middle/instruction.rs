@@ -59,6 +59,12 @@ pub enum Instruction<'ctx> {
         attributes: ThrushAttributes<'ctx>,
     },
 
+    This {
+        kind: Type,
+        is_mutable: bool,
+        span: Span,
+    },
+
     BindParameter {
         name: &'ctx str,
         kind: Type,
@@ -216,6 +222,12 @@ pub enum Instruction<'ctx> {
         kind: Type,
         span: Span,
     },
+    BindCall {
+        name: String,
+        args: Vec<Instruction<'ctx>>,
+        kind: Type,
+        span: Span,
+    },
     BinaryOp {
         left: Rc<Instruction<'ctx>>,
         operator: TokenKind,
@@ -265,6 +277,9 @@ impl<'ctx> Instruction<'ctx> {
             } => kind,
             Instruction::Property { kind, .. } => kind,
             Instruction::NullPtr { .. } => &Type::Ptr(None),
+            Instruction::This { kind, .. } => kind,
+            Instruction::BindCall { kind, .. } => kind,
+            Instruction::BindParameter { kind, .. } => kind,
 
             _ => &Type::Void,
         }
@@ -294,6 +309,9 @@ impl<'ctx> Instruction<'ctx> {
             Instruction::NullPtr { span } => *span,
             Instruction::Write { span, .. } => *span,
             Instruction::Const { span, .. } => *span,
+            Instruction::This { span, .. } => *span,
+            Instruction::BindCall { span, .. } => *span,
+            Instruction::BindParameter { span, .. } => *span,
 
             _ => unreachable!(),
         }
@@ -383,7 +401,6 @@ impl<'ctx> Instruction<'ctx> {
             let parameters_type: Vec<Type> = parameters
                 .iter()
                 .map(|parameter| parameter.get_type().clone())
-                .filter(|parameter_type| !parameter_type.is_void_type())
                 .collect();
 
             return parameters_type;

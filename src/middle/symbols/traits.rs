@@ -1,6 +1,6 @@
 use crate::{frontend::lexer::Span, middle::types::Type};
 
-use super::types::Parameters;
+use super::types::{Bind, Parameters};
 
 pub trait LocalExtensions {
     fn is_undefined(&self) -> bool;
@@ -18,4 +18,15 @@ pub trait FunctionExtensions {
     fn get_type(&self) -> Type;
     fn get_parameters_size(&self) -> usize;
     fn get_parameters(&self) -> &Parameters;
+}
+
+pub trait BindingsExtensions {
+    fn contains_binding(&self, name: &str) -> bool;
+    fn get_bind(&self, name: &str) -> Bind;
+}
+
+pub trait BindExtensions {
+    fn get_name(&self) -> &str;
+    fn get_parameters_types(&self) -> &[Type];
+    fn get_type(&self) -> Type;
 }

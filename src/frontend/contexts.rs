@@ -1,5 +1,11 @@
 use crate::middle::types::Type;
 
+#[derive(Debug, Clone)]
+pub enum BindingsType {
+    Struct(Type),
+    NoRelevant,
+}
+
 #[derive(Debug, Clone, Copy)]
 pub enum TypePosition {
     Local,
@@ -25,6 +31,7 @@ pub enum SyncPosition {
 #[derive(Debug)]
 pub struct ParserTypeContext {
     pub function_type: Type,
+    pub bindinds_type: BindingsType,
     pub position: TypePosition,
 }
 
@@ -32,6 +39,7 @@ impl ParserTypeContext {
     pub fn new() -> Self {
         Self {
             function_type: Type::Void,
+            bindinds_type: BindingsType::NoRelevant,
             position: TypePosition::NoRelevant,
         }
     }
@@ -51,6 +59,14 @@ impl ParserTypeContext {
     pub fn get_function_type(&self) -> &Type {
         &self.function_type
     }
+
+    pub fn get_this_bindinds_type(&self) -> &BindingsType {
+        &self.bindinds_type
+    }
+
+    pub fn set_this_bindings_type(&mut self, new_type: BindingsType) {
+        self.bindinds_type = new_type;
+    }
 }
 
 impl TypePosition {
@@ -66,6 +82,19 @@ impl TypePosition {
 impl InstructionPosition {
     pub fn is_bindings(&self) -> bool {
         matches!(self, InstructionPosition::Bindings)
+    }
+}
+
+impl BindingsType {
+    pub fn is_struct_type(&self) -> bool {
+        matches!(self, BindingsType::Struct(_))
+    }
+
+    pub fn dissamble(&self) -> Type {
+        match self {
+            BindingsType::Struct(tp) => tp.clone(),
+            BindingsType::NoRelevant => Type::Void,
+        }
     }
 }
 

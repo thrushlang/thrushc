@@ -418,6 +418,20 @@ impl<'instr> SymbolsTable<'instr> {
                 )?;
             }
 
+            if let Instruction::This {
+                kind,
+                is_mutable,
+                span,
+            } = parameter
+            {
+                self.new_local(
+                    scope_pos,
+                    "instance",
+                    (kind.clone(), *is_mutable, false, *span),
+                    *span,
+                )?;
+            }
+
             if let Instruction::Local {
                 name,
                 kind,

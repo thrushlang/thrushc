@@ -10,14 +10,18 @@ use crate::middle::statement::{
     Constructor, CustomType, CustomTypeFields, EnumField, EnumFields, StructFields,
     ThrushAttributes,
 };
-use crate::middle::symbols::traits::{ConstantExtensions, FunctionExtensions, LocalExtensions};
+use crate::middle::symbols::traits::{
+    BindExtensions, BindingsExtensions, ConstantExtensions, FunctionExtensions, LocalExtensions,
+};
 use crate::middle::symbols::types::{
-    Bindings, Constant, Function, Functions, Local, Parameters, Struct,
+    Bind, Bindings, Constant, Function, Functions, Local, Parameters, Struct,
 };
 use crate::middle::traits::ThrushStructTypeExtensions;
 use crate::middle::types;
 
-use super::contexts::{ParserControlContext, ParserTypeContext, SyncPosition, TypePosition};
+use super::contexts::{
+    BindingsType, ParserControlContext, ParserTypeContext, SyncPosition, TypePosition,
+};
 use super::lexer::Span;
 use super::utils;
 
@@ -146,7 +150,6 @@ impl<'instr> Parser<'instr> {
             TokenKind::Fn => Ok(self.build_function(false, type_ctx, control_ctx)?),
             TokenKind::Const => Ok(self.build_const(false, type_ctx, control_ctx)?),
             TokenKind::Bindings => Ok(self.build_bindings(false, type_ctx, control_ctx)?),
-            TokenKind::Bind => Ok(self.build_bind(type_ctx, control_ctx)?),
             _ => Ok(self.statement(type_ctx, control_ctx)?),
         };
 
@@ -194,7 +197,7 @@ impl<'instr> Parser<'instr> {
         let span: Span = bindings_tk.span;
 
         if !self.is_main_scope() {
-            self.errors.push(ThrushCompilerError::Error(
+            return Err(ThrushCompilerError::Error(
                 String::from("Syntax error"),
                 String::from("Bindings are only defined globally."),
                 String::default(),
@@ -213,6 +216,8 @@ impl<'instr> Parser<'instr> {
             ));
         }
 
+        type_ctx.set_this_bindings_type(BindingsType::Struct(kind.clone()));
+
         let struct_type: ThrushStructType = kind.into_structure_type();
         let struct_name: String = struct_type.get_name();
 
@@ -227,7 +232,7 @@ impl<'instr> Parser<'instr> {
         )?;
 
         while self.peek().kind != TokenKind::RBrace {
-            let bind: Instruction = self.build_bind(type_ctx, control_ctx)?;
+            let bind: Instruction = self.build_bind(declare, type_ctx, control_ctx)?;
             binds.push(bind);
         }
 
@@ -237,6 +242,7 @@ impl<'instr> Parser<'instr> {
             String::from("Expected '}'."),
         )?;
 
+        type_ctx.set_this_bindings_type(BindingsType::NoRelevant);
         control_ctx.set_instr_position(InstructionPosition::NoRelevant);
 
         if declare {
@@ -260,6 +266,7 @@ impl<'instr> Parser<'instr> {
 
     fn build_bind(
         &mut self,
+        declare: bool,
         type_ctx: &mut ParserTypeContext,
         control_ctx: &mut ParserControlContext,
     ) -> Result<Instruction<'instr>, ThrushCompilerError> {
@@ -295,12 +302,31 @@ impl<'instr> Parser<'instr> {
         let mut bind_parameters: Vec<Instruction> = Vec::with_capacity(10);
         let mut bind_position: u32 = 0;
 
+        let mut this_is_declared: bool = false;
+
         while !self.match_token(TokenKind::RParen)? {
             if self.match_token(TokenKind::Comma)? {
                 continue;
             }
 
             type_ctx.set_position(TypePosition::BindParameter);
+
+            if self.check(TokenKind::This) {
+                bind_parameters.push(self.build_this_instance(type_ctx)?);
+                this_is_declared = true;
+                continue;
+            }
+
+            if this_is_declared && self.check(TokenKind::This) {
+                return Err(ThrushCompilerError::Error(
+                    String::from("Syntax error"),
+                    String::from(
+                        "'This' keyword is already declared. Multiple instances are not allowed.",
+                    ),
+                    String::default(),
+                    bind_name_tk.span,
+                ));
+            }
 
             let is_mutable: bool = self.match_token(TokenKind::Mut)?;
 
@@ -341,20 +367,30 @@ impl<'instr> Parser<'instr> {
         let bind_attributes: ThrushAttributes =
             self.build_compiler_attributes(&[TokenKind::LBrace])?;
 
-        bind_parameters.iter().cloned().for_each(|bind_parameter| {
-            self.add_lift_local(bind_parameter);
-        });
+        if !declare {
+            bind_parameters.iter().cloned().for_each(|bind_parameter| {
+                self.add_lift_local(bind_parameter);
+            });
 
-        control_ctx.set_inside_bind(true);
+            control_ctx.set_inside_bind(true);
 
-        let bind_body: Instruction = self.build_block(type_ctx, control_ctx)?;
+            let bind_body: Instruction = self.build_block(type_ctx, control_ctx)?;
 
-        control_ctx.set_inside_bind(false);
+            control_ctx.set_inside_bind(false);
+
+            return Ok(Instruction::Bind {
+                name: bind_name,
+                parameters: bind_parameters,
+                body: bind_body.into(),
+                return_type,
+                attributes: bind_attributes,
+            });
+        }
 
         Ok(Instruction::Bind {
             name: bind_name,
             parameters: bind_parameters,
-            body: bind_body.into(),
+            body: Instruction::Null.into(),
             return_type,
             attributes: bind_attributes,
         })
@@ -1110,7 +1146,7 @@ impl<'instr> Parser<'instr> {
         )?;
 
         if !self.is_main_scope() {
-            self.errors.push(ThrushCompilerError::Error(
+            return Err(ThrushCompilerError::Error(
                 String::from("Syntax error"),
                 String::from("Structs are only defined globally."),
                 String::default(),
@@ -1335,6 +1371,38 @@ impl<'instr> Parser<'instr> {
         Ok(Instruction::Constructor {
             arguments: arguments.clone(),
             kind: arguments.get_type(),
+            span,
+        })
+    }
+
+    fn build_this_instance(
+        &mut self,
+        type_ctx: &mut ParserTypeContext,
+    ) -> Result<Instruction<'instr>, ThrushCompilerError> {
+        let this_tk: &Token = self.consume(
+            TokenKind::This,
+            String::from("Syntax error"),
+            String::from("Expected 'this' keyword."),
+        )?;
+
+        let span: Span = this_tk.span;
+
+        if !type_ctx.get_this_bindinds_type().is_struct_type() {
+            return Err(ThrushCompilerError::Error(
+                String::from("Syntax error"),
+                String::from("Expected 'this' inside the a bindings definition context."),
+                String::default(),
+                span,
+            ));
+        }
+
+        let this_type: Type = type_ctx.get_this_bindinds_type().dissamble();
+
+        let is_mutable: bool = self.match_token(TokenKind::Mut)?;
+
+        Ok(Instruction::This {
+            kind: this_type,
+            is_mutable,
             span,
         })
     }
@@ -2653,7 +2721,7 @@ impl<'instr> Parser<'instr> {
                             return Err(ThrushCompilerError::Error(
                                 String::from("Expected mutable type"),
                                 String::from(
-                                    "Make mutable the parameter or local of this property.",
+                                    "Make mutable the parameter or local or self type of this property.",
                                 ),
                                 String::default(),
                                 property.get_span(),
@@ -2672,7 +2740,7 @@ impl<'instr> Parser<'instr> {
                 }
 
                 if self.match_token(TokenKind::ColonColon)? {
-                    return self.build_binding_call(name, span);
+                    return self.build_binding_call(name, span, type_ctx, control_ctx);
                 }
 
                 if symbol.is_enum() {
@@ -2858,8 +2926,90 @@ impl<'instr> Parser<'instr> {
         &mut self,
         name: &'instr str,
         span: Span,
+        type_ctx: &mut ParserTypeContext,
+        control_ctx: &mut ParserControlContext,
     ) -> Result<Instruction<'instr>, ThrushCompilerError> {
-        todo!()
+        let symbol: FoundSymbolId = self.symbols.get_symbols_id(name, span)?;
+
+        let structure_id: &str = symbol.expected_struct(span)?;
+        let structure: Struct = self.symbols.get_struct_by_id(structure_id, span)?;
+
+        let binding_tk: &Token = self.consume(
+            TokenKind::Identifier,
+            String::from("Syntax error"),
+            String::from("Expected bind name."),
+        )?;
+
+        let binding_name: &str = binding_tk.lexeme.to_str();
+
+        let bindings: Bindings = structure.get_bindings();
+
+        if !bindings.contains_binding(binding_name) {
+            return Err(ThrushCompilerError::Error(
+                String::from("Syntax error"),
+                format!("Not found '{}' binding in '{}' struct.", binding_name, name),
+                String::default(),
+                span,
+            ));
+        }
+
+        let bind: Bind = bindings.get_bind(binding_name);
+        let bind_name: &str = bind.get_name();
+        let bind_type: Type = bind.get_type();
+        let bind_parameters_type: &[Type] = bind.get_parameters_types();
+
+        self.consume(
+            TokenKind::LParen,
+            String::from("Syntax error"),
+            String::from("Expected '('."),
+        )?;
+
+        let mut args: Vec<Instruction> = Vec::with_capacity(10);
+
+        while self.peek().kind != TokenKind::RParen {
+            if self.match_token(TokenKind::Comma)? {
+                continue;
+            }
+
+            let expression: Instruction = self.expr(type_ctx, control_ctx)?;
+
+            args.push(expression);
+        }
+
+        self.consume(
+            TokenKind::RParen,
+            String::from("Syntax error"),
+            String::from("Expected ')'."),
+        )?;
+
+        if args.len() != bind_parameters_type.len() {
+            return Err(ThrushCompilerError::Error(
+                String::from("Syntax error"),
+                format!(
+                    "Expected {} arguments, not {}.",
+                    bind_parameters_type.len(),
+                    args.len()
+                ),
+                String::default(),
+                span,
+            ));
+        }
+
+        for (index, argument) in args.iter().enumerate() {
+            let target_type: &Type = &bind_parameters_type[index];
+            let from_type: &Type = argument.get_type();
+
+            self.check_type_mismatch(target_type, from_type, argument.get_span(), Some(argument));
+        }
+
+        let canonical_name: String = format!("{}.{}", name, bind_name);
+
+        Ok(Instruction::BindCall {
+            name: canonical_name,
+            args,
+            kind: bind_type,
+            span,
+        })
     }
 
     fn build_property(
@@ -3407,6 +3557,7 @@ impl<'instr> Parser<'instr> {
 
         control_ctx.set_sync_position(SyncPosition::NoRelevant);
         type_ctx.set_position(TypePosition::NoRelevant);
+        type_ctx.set_this_bindings_type(BindingsType::NoRelevant);
 
         control_ctx.set_inside_bind(false);
         control_ctx.set_inside_function(false);
