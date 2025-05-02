@@ -214,6 +214,24 @@ impl<'instr> SymbolsTable<'instr> {
         ))
     }
 
+    #[inline]
+    pub fn get_struct_mut(
+        &mut self,
+        name: &str,
+        span: Span,
+    ) -> Result<&mut Struct<'instr>, ThrushCompilerError> {
+        if let Some(struct_fields) = self.structs.get_mut(name) {
+            return Ok(struct_fields);
+        }
+
+        Err(ThrushCompilerError::Error(
+            String::from("Structure not found"),
+            format!("'{}' structure not defined.", name),
+            String::default(),
+            span,
+        ))
+    }
+
     pub fn new_local(
         &mut self,
         scope_pos: usize,
@@ -349,8 +367,15 @@ impl<'instr> SymbolsTable<'instr> {
             if let Instruction::FunctionParameter {
                 name,
                 kind,
-                span,
                 is_mutable,
+                span,
+                ..
+            }
+            | Instruction::BindParameter {
+                name,
+                kind,
+                is_mutable,
+                span,
                 ..
             } = parameter
             {

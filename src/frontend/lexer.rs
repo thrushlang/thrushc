@@ -43,7 +43,8 @@ lazy_static! {
         keywords.insert(b"return", TokenKind::Return);
         keywords.insert(b"break", TokenKind::Break);
         keywords.insert(b"continue", TokenKind::Continue);
-        keywords.insert(b"unsafe", TokenKind::Unsafe);
+        keywords.insert(b"bindings", TokenKind::Bindings);
+        keywords.insert(b"bind", TokenKind::Bind);
         keywords.insert(b"this", TokenKind::This);
         keywords.insert(b"match", TokenKind::Match);
         keywords.insert(b"pattern", TokenKind::Pattern);

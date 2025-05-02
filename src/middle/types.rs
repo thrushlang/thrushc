@@ -14,6 +14,8 @@ use super::{
     symbols::types::Struct,
 };
 
+pub type ThrushStructType = (String, Vec<Arc<Type>>);
+
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum TokenKind {
     // --- Operators ---
@@ -76,9 +78,10 @@ pub enum TokenKind {
     Write,
     New,
     Import,
+    Bindings,
+    Bind,
     Mut,
     Ref,
-    Unsafe,
     Type,
     Enum,
     And,
@@ -405,6 +408,14 @@ impl Type {
         }
 
         false
+    }
+
+    pub fn into_structure_type(self) -> ThrushStructType {
+        if let Type::Struct(name, types) = self {
+            return (name, types);
+        }
+
+        unreachable!()
     }
 
     #[inline(always)]

@@ -3,7 +3,8 @@ use super::{
         Enum, EnumField, EnumFields,
         traits::{EnumExtensions, EnumFieldsExtensions},
     },
-    types::{TokenKind, Type},
+    traits::ThrushStructTypeExtensions,
+    types::{ThrushStructType, TokenKind, Type},
 };
 
 impl<'a> EnumFieldsExtensions<'a> for EnumFields<'a> {
@@ -85,9 +86,10 @@ impl std::fmt::Display for TokenKind {
             TokenKind::Loop => write!(f, "loop"),
             TokenKind::Ref => write!(f, "ref"),
             TokenKind::NullPtr => write!(f, "nullptr"),
+            TokenKind::Bindings => write!(f, "bindings"),
+            TokenKind::Bind => write!(f, "bind"),
             TokenKind::Integer | TokenKind::Float => write!(f, "number"),
             TokenKind::Enum => write!(f, "enum"),
-            TokenKind::Unsafe => write!(f, "unsafe"),
             TokenKind::Public => write!(f, "@public"),
             TokenKind::Ignore => write!(f, "@ignore"),
             TokenKind::MinSize => write!(f, "@minsize"),
@@ -166,5 +168,11 @@ impl std::fmt::Display for Type {
             }
             Type::Void => write!(f, "void"),
         }
+    }
+}
+
+impl ThrushStructTypeExtensions for ThrushStructType {
+    fn get_name(&self) -> String {
+        self.0.clone()
     }
 }

@@ -52,6 +52,10 @@ impl<'ctx> SymbolAllocated<'ctx> {
 
         match self {
             Self::Local { ptr, kind } => {
+                if kind.is_ptr_type() {
+                    return (*ptr).into();
+                }
+
                 let ptr_type: BasicTypeEnum = typegen::generate_subtype(llvm_context, kind);
                 let alignment: u32 = target_data.get_preferred_alignment(&ptr_type);
 
@@ -78,6 +82,10 @@ impl<'ctx> SymbolAllocated<'ctx> {
                 value
             }
             Self::Parameter { value, kind } => {
+                if kind.is_ptr_type() {
+                    return *value;
+                }
+
                 if value.is_pointer_value() {
                     let ptr: PointerValue = value.into_pointer_value();
                     let ptr_type: BasicTypeEnum = typegen::generate_subtype(llvm_context, kind);

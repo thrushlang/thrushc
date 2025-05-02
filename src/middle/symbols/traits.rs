@@ -12,7 +12,6 @@ pub trait ConstantExtensions {
 }
 
 pub trait FunctionExtensions {
-    fn is_mutable(&self) -> bool;
     fn ignore_more_args(&self) -> bool;
     fn get_type(&self) -> Type;
 }

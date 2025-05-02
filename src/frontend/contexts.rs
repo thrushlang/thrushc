@@ -4,11 +4,18 @@ use crate::middle::types::Type;
 pub enum TypePosition {
     Local,
     Parameter,
+    BindParameter,
     NoRelevant,
 }
 
 #[derive(Debug, Clone, Copy)]
-pub enum Position {
+pub enum InstructionPosition {
+    Bindings,
+    NoRelevant,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum SyncPosition {
     Statement,
     Declaration,
     Expression,
@@ -36,19 +43,38 @@ impl ParserTypeContext {
     pub fn set_position(&mut self, new_position: TypePosition) {
         self.position = new_position;
     }
+
+    pub fn set_function_type(&mut self, new_type: Type) {
+        self.function_type = new_type;
+    }
+
+    pub fn get_function_type(&self) -> &Type {
+        &self.function_type
+    }
 }
 
 impl TypePosition {
     pub fn is_parameter(&self) -> bool {
         matches!(self, TypePosition::Parameter)
     }
+
+    pub fn is_bind_parameter(&self) -> bool {
+        matches!(self, TypePosition::BindParameter)
+    }
+}
+
+impl InstructionPosition {
+    pub fn is_bindings(&self) -> bool {
+        matches!(self, InstructionPosition::Bindings)
+    }
 }
 
 pub struct ParserControlContext {
-    position: Position,
+    sync_position: SyncPosition,
+    instr_position: InstructionPosition,
     entry_point: bool,
-    rec_structure_ref: bool,
     inside_function: bool,
+    inside_bind: bool,
     inside_loop: bool,
     unreacheable_code: usize,
 }
@@ -56,57 +82,66 @@ pub struct ParserControlContext {
 impl ParserControlContext {
     pub fn new() -> Self {
         Self {
-            position: Position::NoRelevant,
+            sync_position: SyncPosition::NoRelevant,
+            instr_position: InstructionPosition::NoRelevant,
             entry_point: false,
-            rec_structure_ref: false,
             inside_function: false,
+            inside_bind: false,
             inside_loop: false,
             unreacheable_code: 0,
         }
     }
 
-    pub fn get_position(&self) -> Position {
-        self.position
+    pub fn get_sync_position(&self) -> SyncPosition {
+        self.sync_position
     }
 
-    pub fn set_position(&mut self, new_position: Position) {
-        self.position = new_position;
+    pub fn set_sync_position(&mut self, new_sync_position: SyncPosition) {
+        self.sync_position = new_sync_position;
     }
 
-    pub fn has_entry_point(&self) -> bool {
+    pub fn get_instr_position(&self) -> InstructionPosition {
+        self.instr_position
+    }
+
+    pub fn set_instr_position(&mut self, new_instr_position: InstructionPosition) {
+        self.instr_position = new_instr_position;
+    }
+
+    pub fn set_entrypoint(&mut self, value: bool) {
+        self.entry_point = value;
+    }
+
+    pub fn get_entrypoint(&self) -> bool {
         self.entry_point
     }
 
-    pub fn is_inside_function(&self) -> bool {
+    pub fn set_inside_function(&mut self, value: bool) {
+        self.inside_function = value;
+    }
+
+    pub fn get_inside_function(&self) -> bool {
         self.inside_function
     }
 
-    pub fn is_inside_loop(&self) -> bool {
+    pub fn set_inside_loop(&mut self, value: bool) {
+        self.inside_loop = value;
+    }
+
+    pub fn get_inside_loop(&self) -> bool {
         self.inside_loop
+    }
+
+    pub fn set_inside_bind(&mut self, value: bool) {
+        self.inside_bind = value;
+    }
+
+    pub fn get_inside_bind(&self) -> bool {
+        self.inside_bind
     }
 
     pub fn get_unreacheable_code_scope(&self) -> usize {
         self.unreacheable_code
-    }
-
-    pub fn set_has_entrypoint(&mut self) {
-        self.entry_point = true;
-    }
-
-    pub fn set_is_inside_loop(&mut self) {
-        self.inside_loop = true;
-    }
-
-    pub fn set_outside_loop(&mut self) {
-        self.inside_loop = false;
-    }
-
-    pub fn set_is_inside_function(&mut self) {
-        self.inside_function = true;
-    }
-
-    pub fn set_outside_function(&mut self) {
-        self.inside_function = false;
     }
 
     pub fn set_unreacheable_code_scope(&mut self, scope: usize) {

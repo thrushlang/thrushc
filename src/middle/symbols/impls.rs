@@ -30,10 +30,6 @@ impl ConstantExtensions for Constant<'_> {
 }
 
 impl FunctionExtensions for Function<'_> {
-    fn is_mutable(&self) -> bool {
-        self.3
-    }
-
     fn ignore_more_args(&self) -> bool {
         self.2
     }

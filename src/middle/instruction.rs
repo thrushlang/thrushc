@@ -46,6 +46,27 @@ pub enum Instruction<'ctx> {
         span: Span,
     },
 
+    Bindings {
+        name: String,
+        binds: Vec<Instruction<'ctx>>,
+    },
+
+    Bind {
+        name: &'ctx str,
+        parameters: Vec<Instruction<'ctx>>,
+        body: Rc<Instruction<'ctx>>,
+        return_type: Type,
+        attributes: ThrushAttributes<'ctx>,
+    },
+
+    BindParameter {
+        name: &'ctx str,
+        kind: Type,
+        position: u32,
+        is_mutable: bool,
+        span: Span,
+    },
+
     Property {
         name: &'ctx str,
         indexes: Vec<(Type, u32)>,
@@ -122,8 +143,8 @@ pub enum Instruction<'ctx> {
     },
     Function {
         name: &'ctx str,
-        params: Vec<Instruction<'ctx>>,
-        param_types: Vec<Type>,
+        parameters: Vec<Instruction<'ctx>>,
+        parameter_types: Vec<Type>,
         body: Rc<Instruction<'ctx>>,
         return_type: Type,
         attributes: ThrushAttributes<'ctx>,
@@ -193,7 +214,6 @@ pub enum Instruction<'ctx> {
         name: &'ctx str,
         args: Vec<Instruction<'ctx>>,
         kind: Type,
-        is_mutable: bool,
         span: Span,
     },
     BinaryOp {
@@ -283,22 +303,28 @@ impl<'ctx> Instruction<'ctx> {
         match self {
             Instruction::Local { is_mutable, .. } => *is_mutable,
             Instruction::Property { is_mutable, .. } => *is_mutable,
-            Instruction::Call { is_mutable, .. } => *is_mutable,
             _ => false,
         }
     }
 
-    pub fn as_function(&self) -> FunctionPrototype {
+    pub fn into_function(&self) -> FunctionPrototype {
         if let Instruction::Function {
             name,
-            params,
-            param_types,
+            parameters,
+            parameter_types,
             body,
             return_type,
             attributes,
         } = self
         {
-            return (name, return_type, params, param_types, body, attributes);
+            return (
+                name,
+                return_type,
+                parameters,
+                parameter_types,
+                body,
+                attributes,
+            );
         }
 
         unreachable!()

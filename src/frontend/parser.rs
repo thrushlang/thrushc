@@ -1,4 +1,5 @@
 use crate::common::misc::CompilerFile;
+use crate::frontend::contexts::InstructionPosition;
 use crate::middle::instruction::Instruction;
 use crate::middle::statement::traits::{
     AttributesExtensions, ConstructorExtensions, CustomTypeFieldsExtensions, EnumExtensions,
@@ -11,9 +12,10 @@ use crate::middle::statement::{
 };
 use crate::middle::symbols::traits::{ConstantExtensions, FunctionExtensions, LocalExtensions};
 use crate::middle::symbols::types::{Constant, Function, Functions, Local, Struct};
+use crate::middle::traits::ThrushStructTypeExtensions;
 use crate::middle::types;
 
-use super::contexts::{ParserControlContext, ParserTypeContext, Position, TypePosition};
+use super::contexts::{ParserControlContext, ParserTypeContext, SyncPosition, TypePosition};
 use super::lexer::Span;
 use super::utils;
 
@@ -133,7 +135,7 @@ impl<'instr> Parser<'instr> {
         type_ctx: &mut ParserTypeContext,
         control_ctx: &mut ParserControlContext,
     ) -> Result<Instruction<'instr>, ThrushCompilerError> {
-        control_ctx.set_position(Position::Declaration);
+        control_ctx.set_sync_position(SyncPosition::Declaration);
 
         let statement: Result<Instruction<'instr>, ThrushCompilerError> = match &self.peek().kind {
             TokenKind::Type => Ok(self.build_custom_type(false, type_ctx)?),
@@ -141,6 +143,8 @@ impl<'instr> Parser<'instr> {
             TokenKind::Enum => Ok(self.build_enum(false, type_ctx, control_ctx)?),
             TokenKind::Fn => Ok(self.build_function(false, type_ctx, control_ctx)?),
             TokenKind::Const => Ok(self.build_const(false, type_ctx, control_ctx)?),
+            TokenKind::Bindings => Ok(self.build_bindings(type_ctx, control_ctx)?),
+            TokenKind::Bind => Ok(self.build_bind(type_ctx, control_ctx)?),
             _ => Ok(self.statement(type_ctx, control_ctx)?),
         };
 
@@ -152,14 +156,13 @@ impl<'instr> Parser<'instr> {
         type_ctx: &mut ParserTypeContext,
         control_ctx: &mut ParserControlContext,
     ) -> Result<Instruction<'instr>, ThrushCompilerError> {
-        control_ctx.set_position(Position::Statement);
+        control_ctx.set_sync_position(SyncPosition::Statement);
 
         let statement: Result<Instruction<'instr>, ThrushCompilerError> = match &self.peek().kind {
             TokenKind::LBrace => Ok(self.build_block(type_ctx, control_ctx)?),
             TokenKind::Return => Ok(self.build_return(type_ctx, control_ctx)?),
             TokenKind::Local => Ok(self.build_local(false, type_ctx, control_ctx)?),
             TokenKind::For => Ok(self.build_for_loop(type_ctx, control_ctx)?),
-            TokenKind::New => Ok(self.build_constructor(type_ctx, control_ctx)?),
             TokenKind::If => Ok(self.build_if_elif_else(type_ctx, control_ctx)?),
             TokenKind::Match => Ok(self.build_match(type_ctx, control_ctx)?),
             TokenKind::While => Ok(self.build_while_loop(type_ctx, control_ctx)?),
@@ -172,12 +175,172 @@ impl<'instr> Parser<'instr> {
         statement
     }
 
+    fn build_bindings(
+        &mut self,
+        type_ctx: &mut ParserTypeContext,
+        control_ctx: &mut ParserControlContext,
+    ) -> Result<Instruction<'instr>, ThrushCompilerError> {
+        control_ctx.set_instr_position(InstructionPosition::Bindings);
+
+        let bindings_tk: &Token = self.consume(
+            TokenKind::Bindings,
+            String::from("Syntax error"),
+            String::from("Expected 'bindings' keyword."),
+        )?;
+
+        let kind: Type = self.build_type(type_ctx, None)?;
+
+        if !kind.is_struct_type() {
+            return Err(ThrushCompilerError::Error(
+                String::from("Syntax error"),
+                String::from("Expected struct type."),
+                String::default(),
+                bindings_tk.span,
+            ));
+        }
+
+        let struct_type: ThrushStructType = kind.into_structure_type();
+        let struct_name: String = struct_type.get_name();
+
+        let structure: &mut Struct = self
+            .symbols
+            .get_struct_mut(&struct_name, bindings_tk.span)?;
+
+        let mut binds: Vec<Instruction> = Vec::with_capacity(100);
+
+        self.consume(
+            TokenKind::LBrace,
+            String::from("Syntax error"),
+            String::from("Expected '{'."),
+        )?;
+
+        while self.peek().kind != TokenKind::RBrace {
+            let bind: Instruction = self.build_bind(type_ctx, control_ctx)?;
+            binds.push(bind);
+        }
+
+        self.consume(
+            TokenKind::RBrace,
+            String::from("Syntax error"),
+            String::from("Expected '}'."),
+        )?;
+
+        control_ctx.set_instr_position(InstructionPosition::NoRelevant);
+
+        Ok(Instruction::Bindings {
+            name: struct_name,
+            binds,
+        })
+    }
+
+    fn build_bind(
+        &mut self,
+        type_ctx: &mut ParserTypeContext,
+        control_ctx: &mut ParserControlContext,
+    ) -> Result<Instruction<'instr>, ThrushCompilerError> {
+        self.consume(
+            TokenKind::Bind,
+            String::from("Syntax error"),
+            String::from("Expected 'bind' keyword."),
+        )?;
+
+        let bind_name_tk: &Token = self.consume(
+            TokenKind::Identifier,
+            String::from("Syntax error"),
+            String::from("Expected name to the bind."),
+        )?;
+
+        let bind_name: &str = bind_name_tk.lexeme.to_str();
+
+        if !control_ctx.get_instr_position().is_bindings() {
+            return Err(ThrushCompilerError::Error(
+                String::from("Syntax error"),
+                String::from("Expected bind inside the bindings definition."),
+                String::default(),
+                bind_name_tk.span,
+            ));
+        }
+
+        self.consume(
+            TokenKind::LParen,
+            String::from("Syntax error"),
+            String::from("Expected '('."),
+        )?;
+
+        let mut bind_parameters: Vec<Instruction> = Vec::with_capacity(10);
+        let mut bind_position: u32 = 0;
+
+        while !self.match_token(TokenKind::RParen)? {
+            if self.match_token(TokenKind::Comma)? {
+                continue;
+            }
+
+            type_ctx.set_position(TypePosition::BindParameter);
+
+            let is_mutable: bool = self.match_token(TokenKind::Mut)?;
+
+            let parameter_tk: &Token = self.consume(
+                TokenKind::Identifier,
+                String::from("Syntax error"),
+                String::from("Expected parameter name."),
+            )?;
+
+            let parameter_name: &str = parameter_tk.lexeme.to_str();
+            let parameter_span: Span = parameter_tk.span;
+
+            self.consume(
+                TokenKind::ColonColon,
+                String::from("Syntax error"),
+                String::from("Expected '::'."),
+            )?;
+
+            let parameter_type: Type = self.build_type(type_ctx, None)?;
+
+            type_ctx.set_position(TypePosition::NoRelevant);
+
+            bind_parameters.push(Instruction::BindParameter {
+                name: parameter_name,
+                kind: parameter_type,
+                position: bind_position,
+                is_mutable,
+                span: parameter_span,
+            });
+
+            bind_position += 1;
+        }
+
+        let return_type: Type = self.build_type(type_ctx, None)?;
+
+        type_ctx.set_function_type(return_type.clone());
+
+        let bind_attributes: ThrushAttributes =
+            self.build_compiler_attributes(&[TokenKind::LBrace])?;
+
+        bind_parameters.iter().cloned().for_each(|bind_parameter| {
+            self.add_lift_local(bind_parameter);
+        });
+
+        control_ctx.set_inside_bind(true);
+
+        let bind_body: Instruction = self.build_block(type_ctx, control_ctx)?;
+
+        control_ctx.set_inside_bind(false);
+
+        Ok(Instruction::Bind {
+            name: bind_name,
+            parameters: bind_parameters,
+            body: bind_body.into(),
+            return_type,
+            attributes: bind_attributes,
+        })
+    }
+
     fn build_entry_point(
         &mut self,
         type_ctx: &mut ParserTypeContext,
         control_ctx: &mut ParserControlContext,
     ) -> Result<Instruction<'instr>, ThrushCompilerError> {
-        if control_ctx.has_entry_point() {
+        if control_ctx.get_entrypoint() {
             return Err(ThrushCompilerError::Error(
                 String::from("Duplicated entrypoint"),
                 String::from("The language not support two entrypoints."),
@@ -198,11 +361,9 @@ impl<'instr> Parser<'instr> {
             String::from("Expected ')'."),
         )?;
 
-        control_ctx.set_has_entrypoint();
+        control_ctx.set_entrypoint(true);
 
         let body: Rc<Instruction> = self.build_block(type_ctx, control_ctx)?.into();
-
-        control_ctx.set_outside_function();
 
         Ok(Instruction::EntryPoint { body })
     }
@@ -215,13 +376,22 @@ impl<'instr> Parser<'instr> {
         let for_tk: &Token = self.consume(
             TokenKind::For,
             String::from("Syntax error"),
-            String::from("Expected 'for'."),
+            String::from("Expected 'for' keyword."),
         )?;
 
         if self.is_unreacheable_code(control_ctx) {
             return Err(ThrushCompilerError::Error(
                 String::from("Syntax error"),
                 String::from("Unreacheable code."),
+                String::default(),
+                for_tk.span,
+            ));
+        }
+
+        if !control_ctx.get_inside_function() && !control_ctx.get_inside_bind() {
+            return Err(ThrushCompilerError::Error(
+                String::from("Syntax error"),
+                String::from("For loop must be placed inside a function or a bind."),
                 String::default(),
                 for_tk.span,
             ));
@@ -242,11 +412,11 @@ impl<'instr> Parser<'instr> {
 
         self.add_lift_local(local_clone);
 
-        control_ctx.set_is_inside_loop();
+        control_ctx.set_inside_loop(true);
 
         let body: Instruction = self.build_block(type_ctx, control_ctx)?;
 
-        control_ctx.set_outside_loop();
+        control_ctx.set_inside_loop(false);
 
         Ok(Instruction::ForLoop {
             variable: local.into(),
@@ -264,7 +434,7 @@ impl<'instr> Parser<'instr> {
         let loop_tk: &Token = self.consume(
             TokenKind::Loop,
             String::from("Syntax error"),
-            String::from("Expected 'loop'."),
+            String::from("Expected 'loop' keyword."),
         )?;
 
         if self.is_unreacheable_code(control_ctx) {
@@ -276,7 +446,16 @@ impl<'instr> Parser<'instr> {
             ));
         }
 
-        control_ctx.set_is_inside_loop();
+        if !control_ctx.get_inside_function() && !control_ctx.get_inside_bind() {
+            return Err(ThrushCompilerError::Error(
+                String::from("Syntax error"),
+                String::from("Loop must be placed inside a function or a bind."),
+                String::default(),
+                loop_tk.span,
+            ));
+        }
+
+        control_ctx.set_inside_loop(true);
 
         let block: Instruction = self.build_block(type_ctx, control_ctx)?;
 
@@ -284,7 +463,7 @@ impl<'instr> Parser<'instr> {
             control_ctx.set_unreacheable_code_scope(self.scope);
         }
 
-        control_ctx.set_outside_loop();
+        control_ctx.set_inside_loop(false);
 
         Ok(Instruction::Loop {
             block: block.into(),
@@ -299,13 +478,22 @@ impl<'instr> Parser<'instr> {
         let while_tk: &Token = self.consume(
             TokenKind::While,
             String::from("Syntax error"),
-            String::from("Expected 'while'."),
+            String::from("Expected 'while' keyword."),
         )?;
 
         if self.is_unreacheable_code(control_ctx) {
             return Err(ThrushCompilerError::Error(
                 String::from("Syntax error"),
                 String::from("Unreacheable code."),
+                String::default(),
+                while_tk.span,
+            ));
+        }
+
+        if !control_ctx.get_inside_function() && !control_ctx.get_inside_bind() {
+            return Err(ThrushCompilerError::Error(
+                String::from("Syntax error"),
+                String::from("While loop must be placed inside a function or a bind."),
                 String::default(),
                 while_tk.span,
             ));
@@ -335,7 +523,7 @@ impl<'instr> Parser<'instr> {
         let continue_tk: &Token = self.consume(
             TokenKind::Continue,
             String::from("Syntax error"),
-            String::from("Expected 'continue'."),
+            String::from("Expected 'continue' keyword."),
         )?;
 
         if self.is_unreacheable_code(control_ctx) {
@@ -347,9 +535,18 @@ impl<'instr> Parser<'instr> {
             ));
         }
 
+        if !control_ctx.get_inside_function() && !control_ctx.get_inside_bind() {
+            return Err(ThrushCompilerError::Error(
+                String::from("Syntax error"),
+                String::from("Continue must be placed inside a function or a bind."),
+                String::default(),
+                continue_tk.span,
+            ));
+        }
+
         control_ctx.set_unreacheable_code_scope(self.scope);
 
-        if !control_ctx.is_inside_loop() {
+        if !control_ctx.get_inside_loop() {
             return Err(ThrushCompilerError::Error(
                 String::from("Syntax error"),
                 String::from("The flow changer of a loop must go inside one."),
@@ -374,7 +571,7 @@ impl<'instr> Parser<'instr> {
         let break_tk: &Token = self.consume(
             TokenKind::Break,
             String::from("Syntax error"),
-            String::from("Expected 'break'."),
+            String::from("Expected 'break' keyword."),
         )?;
 
         if self.is_unreacheable_code(control_ctx) {
@@ -388,12 +585,21 @@ impl<'instr> Parser<'instr> {
 
         control_ctx.set_unreacheable_code_scope(self.scope);
 
-        if !control_ctx.is_inside_loop() {
+        if !control_ctx.get_inside_loop() {
             return Err(ThrushCompilerError::Error(
                 String::from("Syntax error"),
                 String::from("The flow changer of a loop must go inside one."),
                 String::default(),
                 self.previous().span,
+            ));
+        }
+
+        if !control_ctx.get_inside_function() && !control_ctx.get_inside_bind() {
+            return Err(ThrushCompilerError::Error(
+                String::from("Syntax error"),
+                String::from("Break must be placed inside a function or a bind."),
+                String::default(),
+                break_tk.span,
             ));
         }
 
@@ -414,13 +620,22 @@ impl<'instr> Parser<'instr> {
         let match_tk: &Token = self.consume(
             TokenKind::Match,
             String::from("Syntax error"),
-            String::from("Expected 'match'."),
+            String::from("Expected 'match' keyword."),
         )?;
 
         if self.is_unreacheable_code(control_ctx) {
             return Err(ThrushCompilerError::Error(
                 String::from("Syntax error"),
                 String::from("Unreacheable code."),
+                String::default(),
+                match_tk.span,
+            ));
+        }
+
+        if !control_ctx.get_inside_function() && !control_ctx.get_inside_bind() {
+            return Err(ThrushCompilerError::Error(
+                String::from("Syntax error"),
+                String::from("Match must be placed inside a function or a bind."),
                 String::default(),
                 match_tk.span,
             ));
@@ -556,13 +771,13 @@ impl<'instr> Parser<'instr> {
         let if_tk: &Token = self.consume(
             TokenKind::If,
             String::from("Syntax error"),
-            String::from("Expected 'if'."),
+            String::from("Expected 'if' keyword."),
         )?;
 
-        if !control_ctx.is_inside_function() {
+        if !control_ctx.get_inside_function() && !control_ctx.get_inside_bind() {
             return Err(ThrushCompilerError::Error(
                 String::from("Syntax error"),
-                String::from("The if-elif-else must be placed inside a function."),
+                String::from("Conditionals must be placed inside a function or a bind."),
                 String::default(),
                 if_tk.span,
             ));
@@ -643,7 +858,7 @@ impl<'instr> Parser<'instr> {
         let type_tk: &Token = self.consume(
             TokenKind::Type,
             String::from("Syntax error"),
-            String::from("Expected 'type'."),
+            String::from("Expected 'type' keyword."),
         )?;
 
         if !self.is_main_scope() {
@@ -866,7 +1081,7 @@ impl<'instr> Parser<'instr> {
         let struct_tk: &Token = self.consume(
             TokenKind::Struct,
             String::from("Syntax error"),
-            String::from("Expected 'struct'."),
+            String::from("Expected 'struct' keyword."),
         )?;
 
         if !self.is_main_scope() {
@@ -965,7 +1180,7 @@ impl<'instr> Parser<'instr> {
         let new_tk: &Token = self.consume(
             TokenKind::New,
             String::from("Syntax error"),
-            String::from("Expected 'new'."),
+            String::from("Expected 'new' keyword."),
         )?;
 
         if self.is_unreacheable_code(control_ctx) {
@@ -1103,7 +1318,7 @@ impl<'instr> Parser<'instr> {
         self.consume(
             TokenKind::Const,
             String::from("Syntax error"),
-            String::from("Expected 'const'."),
+            String::from("Expected 'const' keyword."),
         )?;
 
         let const_tk: &Token = self.consume(
@@ -1185,7 +1400,7 @@ impl<'instr> Parser<'instr> {
         let local_tk: &Token = self.consume(
             TokenKind::Local,
             String::from("Syntax error"),
-            String::from("Expected 'local'."),
+            String::from("Expected 'local' keyword."),
         )?;
 
         if self.is_main_scope() {
@@ -1295,13 +1510,13 @@ impl<'instr> Parser<'instr> {
         let return_tk: &Token = self.consume(
             TokenKind::Return,
             String::from("Syntax error"),
-            String::from("Expected 'return'."),
+            String::from("Expected 'return' keyword."),
         )?;
 
-        if !control_ctx.is_inside_function() {
+        if !control_ctx.get_inside_function() && !control_ctx.get_inside_bind() {
             return Err(ThrushCompilerError::Error(
                 String::from("Syntax error"),
-                String::from("Return outside of function body."),
+                String::from("Return outside of bind or function."),
                 String::default(),
                 return_tk.span,
             ));
@@ -1323,7 +1538,7 @@ impl<'instr> Parser<'instr> {
 
             self.check_type_mismatch(
                 &Type::Void,
-                &type_ctx.function_type,
+                type_ctx.get_function_type(),
                 self.previous().span,
                 None,
             );
@@ -1334,7 +1549,7 @@ impl<'instr> Parser<'instr> {
         let value: Instruction = self.expr(type_ctx, control_ctx)?;
 
         self.check_type_mismatch(
-            &type_ctx.function_type,
+            type_ctx.get_function_type(),
             value.get_type(),
             value.get_span(),
             Some(&value),
@@ -1372,6 +1587,15 @@ impl<'instr> Parser<'instr> {
             ));
         }
 
+        if !control_ctx.get_inside_function() && !control_ctx.get_inside_bind() {
+            return Err(ThrushCompilerError::Error(
+                String::from("Syntax error"),
+                String::from("Block of code must be placed inside a function or a bind."),
+                String::default(),
+                block_tk.span,
+            ));
+        }
+
         self.scope += 1;
         self.symbols.begin_local_scope();
 
@@ -1399,7 +1623,7 @@ impl<'instr> Parser<'instr> {
         self.consume(
             TokenKind::Fn,
             String::from("Syntax error"),
-            String::from("Expected 'fn'."),
+            String::from("Expected 'fn' keyword."),
         )?;
 
         let function_name_tk: &Token = self.consume(
@@ -1426,18 +1650,28 @@ impl<'instr> Parser<'instr> {
             ));
         }
 
-        let name: &str = function_name_tk.lexeme.to_str();
-        let span: Span = function_name_tk.span;
+        let function_name: &str = function_name_tk.lexeme.to_str();
+        let function_span: Span = function_name_tk.span;
 
-        control_ctx.set_is_inside_function();
-
-        if name == "main" {
+        if function_name == "main" {
             if declare {
                 return Ok(Instruction::Null);
             }
 
-            return self.build_entry_point(type_ctx, control_ctx);
+            control_ctx.set_inside_function(true);
+
+            let entrypoint: Result<Instruction, ThrushCompilerError> =
+                self.build_entry_point(type_ctx, control_ctx);
+
+            control_ctx.set_inside_function(false);
+
+            return entrypoint;
         }
+
+        let mut parameters: Vec<Instruction> = Vec::with_capacity(10);
+        let mut parameters_types: Vec<Type> = Vec::with_capacity(10);
+
+        let mut position: u32 = 0;
 
         self.consume(
             TokenKind::LParen,
@@ -1445,12 +1679,7 @@ impl<'instr> Parser<'instr> {
             String::from("Expected '('."),
         )?;
 
-        let mut params: Vec<Instruction> = Vec::with_capacity(10);
-        let mut params_types: Vec<Type> = Vec::with_capacity(10);
-
-        let mut position: u32 = 0;
-
-        while !self.match_token(TokenKind::RParen)? {
+        while self.peek().kind != TokenKind::RParen {
             if self.match_token(TokenKind::Comma)? {
                 continue;
             }
@@ -1478,9 +1707,9 @@ impl<'instr> Parser<'instr> {
 
             type_ctx.set_position(TypePosition::NoRelevant);
 
-            params_types.push(parameter_type.clone());
+            parameters_types.push(parameter_type.clone());
 
-            params.push(Instruction::FunctionParameter {
+            parameters.push(Instruction::FunctionParameter {
                 name: parameter_name,
                 kind: parameter_type,
                 position,
@@ -1491,12 +1720,18 @@ impl<'instr> Parser<'instr> {
             position += 1;
         }
 
-        let is_mutable_return_type: bool = self.match_token(TokenKind::Mut)?;
+        self.consume(
+            TokenKind::RParen,
+            String::from("Syntax error"),
+            String::from("Expected ')'."),
+        )?;
 
         let return_type: Type = self.build_type(type_ctx, None)?;
 
+        type_ctx.set_function_type(return_type.clone());
+
         let function_attributes: ThrushAttributes =
-            self.build_compiler_attributes(&[TokenKind::SemiColon, TokenKind::LParen])?;
+            self.build_compiler_attributes(&[TokenKind::SemiColon, TokenKind::LBrace])?;
 
         let function_has_ffi: bool = function_attributes.contain_ffi_attribute();
         let function_has_ignore: bool = function_attributes.contain_ignore_attribute();
@@ -1508,16 +1743,14 @@ impl<'instr> Parser<'instr> {
                     "The '@ignore' attribute can only be used if the function contains the '@extern' attribute.",
                 ),
                 String::default(),
-                span,
+                function_span,
             ));
         }
 
-        type_ctx.function_type = return_type.clone();
-
         let mut function: Instruction = Instruction::Function {
-            name,
-            params: params.clone(),
-            param_types: params_types.clone(),
+            name: function_name,
+            parameters: parameters.clone(),
+            parameter_types: parameters_types.clone(),
             body: Instruction::Null.into(),
             return_type: return_type.clone(),
             attributes: function_attributes,
@@ -1526,14 +1759,9 @@ impl<'instr> Parser<'instr> {
         if function_has_ffi || declare {
             if declare {
                 self.symbols.new_function(
-                    name,
-                    (
-                        return_type,
-                        params_types,
-                        function_has_ignore,
-                        is_mutable_return_type,
-                    ),
-                    span,
+                    function_name,
+                    (return_type, parameters_types, function_has_ignore),
+                    function_span,
                 )?;
             }
 
@@ -1543,27 +1771,29 @@ impl<'instr> Parser<'instr> {
                 String::from("Expected ';'."),
             )?;
 
-            control_ctx.set_outside_function();
+            control_ctx.set_inside_function(false);
 
             return Ok(function);
         }
 
-        params.iter().cloned().for_each(|param| {
+        parameters.iter().cloned().for_each(|param| {
             self.add_lift_local(param);
         });
 
+        control_ctx.set_inside_function(true);
+
         let function_body: Rc<Instruction> = self.build_block(type_ctx, control_ctx)?.into();
+
+        control_ctx.set_inside_function(false);
 
         if !return_type.is_void_type() && !function_body.has_return() {
             return Err(ThrushCompilerError::Error(
                 String::from("Syntax error"),
                 format!("Missing return with type '{}'.", return_type),
                 String::default(),
-                span,
+                function_span,
             ));
         }
-
-        control_ctx.set_outside_function();
 
         if let Instruction::Function { body, .. } = &mut function {
             *body = function_body;
@@ -1704,7 +1934,7 @@ impl<'instr> Parser<'instr> {
         type_ctx: &mut ParserTypeContext,
         control_ctx: &mut ParserControlContext,
     ) -> Result<Instruction<'instr>, ThrushCompilerError> {
-        control_ctx.set_position(Position::Expression);
+        control_ctx.set_sync_position(SyncPosition::Expression);
 
         if self.is_unreacheable_code(control_ctx) {
             return Err(ThrushCompilerError::Error(
@@ -1731,7 +1961,7 @@ impl<'instr> Parser<'instr> {
         type_ctx: &mut ParserTypeContext,
         control_ctx: &mut ParserControlContext,
     ) -> Result<Instruction<'instr>, ThrushCompilerError> {
-        control_ctx.set_position(Position::Expression);
+        control_ctx.set_sync_position(SyncPosition::Expression);
 
         if self.is_unreacheable_code(control_ctx) {
             return Err(ThrushCompilerError::Error(
@@ -2360,37 +2590,7 @@ impl<'instr> Parser<'instr> {
                 }
 
                 if self.match_token(TokenKind::LParen)? {
-                    let callee: Instruction =
-                        self.build_function_call(name, span, type_ctx, control_ctx)?;
-
-                    if self.match_token(TokenKind::Eq)? {
-                        let expr: Instruction = self.expr(type_ctx, control_ctx)?;
-
-                        self.check_type_mismatch(
-                            callee.get_type(),
-                            expr.get_type(),
-                            expr.get_span(),
-                            Some(&expr),
-                        );
-
-                        if !callee.is_mutable() {
-                            return Err(ThrushCompilerError::Error(
-                                String::from("Expected mutable type"),
-                                String::from("Make mutable the return type of this call."),
-                                String::default(),
-                                span,
-                            ));
-                        }
-
-                        return Ok(Instruction::LocalMut {
-                            source: ("", Some(callee.clone().into())),
-                            target: expr.into(),
-                            kind: callee.get_type().clone(),
-                            span,
-                        });
-                    }
-
-                    return Ok(callee);
+                    return self.build_function_call(name, span, type_ctx, control_ctx);
                 }
 
                 if self.match_token(TokenKind::Dot)? {
@@ -2478,10 +2678,15 @@ impl<'instr> Parser<'instr> {
             tk_kind if tk_kind.is_type() => {
                 let tk: &Token = self.advance()?;
 
-                if tk_kind.is_mut() && !type_ctx.get_position().is_parameter() {
+                if tk_kind.is_mut()
+                    && !type_ctx.get_position().is_parameter()
+                    && !type_ctx.get_position().is_bind_parameter()
+                {
                     return Err(ThrushCompilerError::Error(
                         String::from("Syntax error"),
-                        String::from("Mutable types is only allowed in function parameters."),
+                        String::from(
+                            "Mutable types is only allowed in function and bind parameters.",
+                        ),
                         String::default(),
                         tk.span,
                     ));
@@ -2519,14 +2724,6 @@ impl<'instr> Parser<'instr> {
 
                 let name: &str = identifier_tk.lexeme.to_str();
                 let span: Span = identifier_tk.span;
-
-                /*if self.rec_structure_ref {
-                    return Ok(Instruction::ComplexType(
-                        Type::Struct(Vec::new()),
-                        object_name,
-                        None,
-                    ));
-                }*/
 
                 let object: FoundSymbolId = self.symbols.get_symbols_id(name, span)?;
 
@@ -2864,7 +3061,6 @@ impl<'instr> Parser<'instr> {
 
         let function_type: Type = function.get_type();
         let ignore_more_args: bool = function.ignore_more_args();
-        let is_mutable: bool = function.is_mutable();
 
         let maximun_function_arguments: usize = function.1.len();
 
@@ -2954,7 +3150,6 @@ impl<'instr> Parser<'instr> {
             name,
             args: args_provided,
             kind: function_type,
-            is_mutable,
             span,
         })
     }
@@ -3110,24 +3305,29 @@ impl<'instr> Parser<'instr> {
     }
 
     fn sync(&mut self, control_ctx: &mut ParserControlContext, type_ctx: &mut ParserTypeContext) {
-        match control_ctx.get_position() {
-            Position::Declaration => {
+        match control_ctx.get_sync_position() {
+            SyncPosition::Declaration => {
                 self.scope = 0;
 
                 while !self.is_eof() && !self.peek().kind.is_sync_declaration() {
                     self.current += 1;
                 }
             }
-
-            Position::Statement => {
-                while !self.is_eof() && !self.peek().kind.is_sync_statement() {
+            SyncPosition::Statement => {
+                while !self.is_eof()
+                    && !self.peek().kind.is_sync_statement()
+                    && !self.peek().kind.is_sync_declaration()
+                {
                     self.current += 1;
                 }
             }
-            Position::Expression => {
+            SyncPosition::Expression => {
                 while !self.is_eof() {
                     match self.peek().kind {
-                        any if any.is_sync_expression() => {
+                        any if any.is_sync_expression()
+                            || any.is_sync_statement()
+                            || any.is_sync_declaration() =>
+                        {
                             self.current += 1;
 
                             if self.peek().kind.is_sync_expression() {
@@ -3146,10 +3346,12 @@ impl<'instr> Parser<'instr> {
             _ => {}
         }
 
+        control_ctx.set_sync_position(SyncPosition::NoRelevant);
         type_ctx.set_position(TypePosition::NoRelevant);
 
-        control_ctx.set_outside_function();
-        control_ctx.set_outside_loop();
+        control_ctx.set_inside_bind(false);
+        control_ctx.set_inside_function(false);
+        control_ctx.set_inside_loop(false);
     }
 
     #[inline]
