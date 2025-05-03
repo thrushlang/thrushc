@@ -426,7 +426,7 @@ impl<'instr> SymbolsTable<'instr> {
             {
                 self.new_local(
                     scope_pos,
-                    "instance",
+                    "this",
                     (kind.clone(), *is_mutable, false, *span),
                     *span,
                 )?;

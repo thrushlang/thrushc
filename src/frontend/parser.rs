@@ -233,6 +233,9 @@ impl<'instr> Parser<'instr> {
 
         while self.peek().kind != TokenKind::RBrace {
             let bind: Instruction = self.build_bind(declare, type_ctx, control_ctx)?;
+
+            control_ctx.set_instr_position(InstructionPosition::Bindings);
+
             binds.push(bind);
         }
 
@@ -293,6 +296,8 @@ impl<'instr> Parser<'instr> {
             ));
         }
 
+        control_ctx.set_instr_position(InstructionPosition::Bind);
+
         self.consume(
             TokenKind::LParen,
             String::from("Syntax error"),
@@ -311,12 +316,6 @@ impl<'instr> Parser<'instr> {
 
             type_ctx.set_position(TypePosition::BindParameter);
 
-            if self.check(TokenKind::This) {
-                bind_parameters.push(self.build_this_instance(type_ctx)?);
-                this_is_declared = true;
-                continue;
-            }
-
             if this_is_declared && self.check(TokenKind::This) {
                 return Err(ThrushCompilerError::Error(
                     String::from("Syntax error"),
@@ -326,6 +325,26 @@ impl<'instr> Parser<'instr> {
                     String::default(),
                     bind_name_tk.span,
                 ));
+            }
+
+            if self.check(TokenKind::This) {
+                let this_tk: &Token = self.consume(
+                    TokenKind::This,
+                    String::from("Syntax error"),
+                    String::from("Expected 'this' keyword."),
+                )?;
+
+                let is_mutable: bool = self.match_token(TokenKind::Mut)?;
+
+                bind_parameters.push(Instruction::This {
+                    kind: type_ctx.get_this_bindings_type().dissamble(),
+                    is_mutable,
+                    span: this_tk.span,
+                });
+
+                this_is_declared = true;
+
+                continue;
             }
 
             let is_mutable: bool = self.match_token(TokenKind::Mut)?;
@@ -373,10 +392,14 @@ impl<'instr> Parser<'instr> {
             });
 
             control_ctx.set_inside_bind(true);
+            type_ctx.set_bind_instance(this_is_declared);
 
             let bind_body: Instruction = self.build_block(type_ctx, control_ctx)?;
 
             control_ctx.set_inside_bind(false);
+            type_ctx.set_bind_instance(false);
+
+            control_ctx.set_instr_position(InstructionPosition::NoRelevant);
 
             return Ok(Instruction::Bind {
                 name: bind_name,
@@ -387,13 +410,9 @@ impl<'instr> Parser<'instr> {
             });
         }
 
-        Ok(Instruction::Bind {
-            name: bind_name,
-            parameters: bind_parameters,
-            body: Instruction::Null.into(),
-            return_type,
-            attributes: bind_attributes,
-        })
+        control_ctx.set_instr_position(InstructionPosition::NoRelevant);
+
+        Ok(Instruction::Null)
     }
 
     fn build_entry_point(
@@ -1375,38 +1394,6 @@ impl<'instr> Parser<'instr> {
         })
     }
 
-    fn build_this_instance(
-        &mut self,
-        type_ctx: &mut ParserTypeContext,
-    ) -> Result<Instruction<'instr>, ThrushCompilerError> {
-        let this_tk: &Token = self.consume(
-            TokenKind::This,
-            String::from("Syntax error"),
-            String::from("Expected 'this' keyword."),
-        )?;
-
-        let span: Span = this_tk.span;
-
-        if !type_ctx.get_this_bindinds_type().is_struct_type() {
-            return Err(ThrushCompilerError::Error(
-                String::from("Syntax error"),
-                String::from("Expected 'this' inside the a bindings definition context."),
-                String::default(),
-                span,
-            ));
-        }
-
-        let this_type: Type = type_ctx.get_this_bindinds_type().dissamble();
-
-        let is_mutable: bool = self.match_token(TokenKind::Mut)?;
-
-        Ok(Instruction::This {
-            kind: this_type,
-            is_mutable,
-            span,
-        })
-    }
-
     fn build_const(
         &mut self,
         declare: bool,
@@ -1630,7 +1617,7 @@ impl<'instr> Parser<'instr> {
         }
 
         if self.match_token(TokenKind::SemiColon)? {
-            if type_ctx.function_type.is_void_type() {
+            if type_ctx.get_function_type().is_void_type() {
                 return Ok(Instruction::Null);
             }
 
@@ -1660,7 +1647,7 @@ impl<'instr> Parser<'instr> {
         )?;
 
         Ok(Instruction::Return(
-            type_ctx.function_type.clone(),
+            type_ctx.get_function_type().clone(),
             value.into(),
         ))
     }
@@ -2359,6 +2346,8 @@ impl<'instr> Parser<'instr> {
         control_ctx: &mut ParserControlContext,
     ) -> Result<Instruction<'instr>, ThrushCompilerError> {
         let primary: Instruction = match &self.peek().kind {
+            TokenKind::This => self.build_this(type_ctx, control_ctx)?,
+
             TokenKind::Carry => {
                 let carry_tk: &Token = self.advance()?;
                 let span: Span = carry_tk.span;
@@ -2934,26 +2923,29 @@ impl<'instr> Parser<'instr> {
         let structure_id: &str = symbol.expected_struct(span)?;
         let structure: Struct = self.symbols.get_struct_by_id(structure_id, span)?;
 
-        let binding_tk: &Token = self.consume(
+        let bind_tk: &Token = self.consume(
             TokenKind::Identifier,
             String::from("Syntax error"),
             String::from("Expected bind name."),
         )?;
 
-        let binding_name: &str = binding_tk.lexeme.to_str();
+        let bind_name: &str = bind_tk.lexeme.to_str();
 
         let bindings: Bindings = structure.get_bindings();
 
-        if !bindings.contains_binding(binding_name) {
+        if !bindings.contains_binding(bind_name) {
             return Err(ThrushCompilerError::Error(
                 String::from("Syntax error"),
-                format!("Not found '{}' binding in '{}' struct.", binding_name, name),
+                format!(
+                    "Not found '{}' bind inside the bindings of '{}' struct.",
+                    bind_name, name
+                ),
                 String::default(),
                 span,
             ));
         }
 
-        let bind: Bind = bindings.get_bind(binding_name);
+        let bind: Bind = bindings.get_bind(bind_name);
         let bind_name: &str = bind.get_name();
         let bind_type: Type = bind.get_type();
         let bind_parameters_type: &[Type] = bind.get_parameters_types();
@@ -3008,6 +3000,63 @@ impl<'instr> Parser<'instr> {
             name: canonical_name,
             args,
             kind: bind_type,
+            span,
+        })
+    }
+
+    fn build_this(
+        &mut self,
+        type_ctx: &mut ParserTypeContext,
+        control_ctx: &mut ParserControlContext,
+    ) -> Result<Instruction<'instr>, ThrushCompilerError> {
+        let this_tk: &Token = self.consume(
+            TokenKind::This,
+            String::from("Syntax error"),
+            String::from("Expected 'this' keyword."),
+        )?;
+
+        let span: Span = this_tk.span;
+
+        if !type_ctx.get_this_bindings_type().is_struct_type() {
+            return Err(ThrushCompilerError::Error(
+                String::from("Syntax error"),
+                String::from("Expected 'this' inside the a bindings definition context."),
+                String::default(),
+                span,
+            ));
+        }
+
+        if !control_ctx.get_instr_position().is_bind() {
+            return Err(ThrushCompilerError::Error(
+                String::from("Syntax error"),
+                String::from("Expected 'this' inside the a bind definition context."),
+                String::default(),
+                span,
+            ));
+        }
+
+        if !type_ctx.get_bind_instance() {
+            return Err(ThrushCompilerError::Error(
+                String::from("Syntax error"),
+                String::from(
+                    "Expected that 'this' was already declared within the definition of the a previous bind parameter.",
+                ),
+                String::default(),
+                span,
+            ));
+        }
+
+        if self.match_token(TokenKind::Dot)? {
+            return self.build_property("this", span);
+        }
+
+        let this_type: Type = type_ctx.get_this_bindings_type().dissamble();
+
+        let is_mutable: bool = self.match_token(TokenKind::Mut)?;
+
+        Ok(Instruction::This {
+            kind: this_type,
+            is_mutable,
             span,
         })
     }

@@ -17,6 +17,7 @@ pub enum TypePosition {
 #[derive(Debug, Clone, Copy)]
 pub enum InstructionPosition {
     Bindings,
+    Bind,
     NoRelevant,
 }
 
@@ -30,17 +31,19 @@ pub enum SyncPosition {
 
 #[derive(Debug)]
 pub struct ParserTypeContext {
-    pub function_type: Type,
-    pub bindinds_type: BindingsType,
-    pub position: TypePosition,
+    function_type: Type,
+    bindings_type: BindingsType,
+    position: TypePosition,
+    bind_instance: bool,
 }
 
 impl ParserTypeContext {
     pub fn new() -> Self {
         Self {
             function_type: Type::Void,
-            bindinds_type: BindingsType::NoRelevant,
+            bindings_type: BindingsType::NoRelevant,
             position: TypePosition::NoRelevant,
+            bind_instance: false,
         }
     }
 
@@ -60,12 +63,20 @@ impl ParserTypeContext {
         &self.function_type
     }
 
-    pub fn get_this_bindinds_type(&self) -> &BindingsType {
-        &self.bindinds_type
+    pub fn get_this_bindings_type(&self) -> &BindingsType {
+        &self.bindings_type
     }
 
     pub fn set_this_bindings_type(&mut self, new_type: BindingsType) {
-        self.bindinds_type = new_type;
+        self.bindings_type = new_type;
+    }
+
+    pub fn set_bind_instance(&mut self, value: bool) {
+        self.bind_instance = value;
+    }
+
+    pub fn get_bind_instance(&self) -> bool {
+        self.bind_instance
     }
 }
 
@@ -82,6 +93,10 @@ impl TypePosition {
 impl InstructionPosition {
     pub fn is_bindings(&self) -> bool {
         matches!(self, InstructionPosition::Bindings)
+    }
+
+    pub fn is_bind(&self) -> bool {
+        matches!(self, InstructionPosition::Bind)
     }
 }
 
