@@ -35,6 +35,8 @@ pub struct SymbolsTable<'instr> {
     structs: Structs<'instr>,
     functions: Functions<'instr>,
     enums: Enums<'instr>,
+
+    lifts: Vec<Instruction<'instr>>,
 }
 
 impl<'instr> SymbolsTable<'instr> {
@@ -46,6 +48,7 @@ impl<'instr> SymbolsTable<'instr> {
             functions,
             structs: HashMap::with_capacity(MINIMAL_STRUCTURE_CAPACITY),
             enums: HashMap::with_capacity(MINIMAL_ENUMS_CAPACITY),
+            lifts: Vec::with_capacity(10),
         }
     }
 
@@ -389,12 +392,8 @@ impl<'instr> SymbolsTable<'instr> {
         Ok(())
     }
 
-    pub fn lift(
-        &mut self,
-        scope_pos: usize,
-        locals: &mut Vec<Instruction<'instr>>,
-    ) -> Result<(), ThrushCompilerError> {
-        for parameter in &*locals {
+    pub fn lift_instructions(&mut self, scope_pos: usize) -> Result<(), ThrushCompilerError> {
+        for parameter in self.clone().lifts.iter() {
             if let Instruction::FunctionParameter {
                 name,
                 kind,
@@ -449,8 +448,12 @@ impl<'instr> SymbolsTable<'instr> {
             }
         }
 
-        locals.clear();
+        self.lifts.clear();
         Ok(())
+    }
+
+    pub fn add_lift_instruction(&mut self, instruction: Instruction<'instr>) {
+        self.lifts.push(instruction);
     }
 
     #[inline]

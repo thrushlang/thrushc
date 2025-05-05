@@ -1,6 +1,7 @@
 #![allow(clippy::upper_case_acronyms)]
 
 use crate::common::misc::{CompilerFile, CompilerOptions};
+use crate::frontend::parser::ParserContext;
 use crate::middle::instruction::Instruction;
 
 use super::compiler::Compiler;
@@ -109,7 +110,9 @@ impl<'a> Thrushc<'a> {
         }
 
         let mut parser: Parser = Parser::new(&tokens, file);
-        let instructions: &[Instruction] = parser.start();
+
+        let ctx: ParserContext = parser.start();
+        let instructions: &[Instruction] = ctx.get_instructions();
 
         if self.options.emit_ast {
             let _ = write(

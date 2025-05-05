@@ -30,6 +30,17 @@ pub enum SyncPosition {
 }
 
 #[derive(Debug)]
+pub struct ParserControlContext {
+    sync_position: SyncPosition,
+    instr_position: InstructionPosition,
+    entry_point: bool,
+    inside_function: bool,
+    inside_bind: bool,
+    inside_loop: bool,
+    unreacheable_code: usize,
+}
+
+#[derive(Debug)]
 pub struct ParserTypeContext {
     function_type: Type,
     bindings_type: BindingsType,
@@ -59,8 +70,8 @@ impl ParserTypeContext {
         self.function_type = new_type;
     }
 
-    pub fn get_function_type(&self) -> &Type {
-        &self.function_type
+    pub fn get_function_type(&self) -> Type {
+        self.function_type.clone()
     }
 
     pub fn get_this_bindings_type(&self) -> &BindingsType {
@@ -78,49 +89,6 @@ impl ParserTypeContext {
     pub fn get_bind_instance(&self) -> bool {
         self.bind_instance
     }
-}
-
-impl TypePosition {
-    pub fn is_parameter(&self) -> bool {
-        matches!(self, TypePosition::Parameter)
-    }
-
-    pub fn is_bind_parameter(&self) -> bool {
-        matches!(self, TypePosition::BindParameter)
-    }
-}
-
-impl InstructionPosition {
-    pub fn is_bindings(&self) -> bool {
-        matches!(self, InstructionPosition::Bindings)
-    }
-
-    pub fn is_bind(&self) -> bool {
-        matches!(self, InstructionPosition::Bind)
-    }
-}
-
-impl BindingsType {
-    pub fn is_struct_type(&self) -> bool {
-        matches!(self, BindingsType::Struct(_))
-    }
-
-    pub fn dissamble(&self) -> Type {
-        match self {
-            BindingsType::Struct(tp) => tp.clone(),
-            BindingsType::NoRelevant => Type::Void,
-        }
-    }
-}
-
-pub struct ParserControlContext {
-    sync_position: SyncPosition,
-    instr_position: InstructionPosition,
-    entry_point: bool,
-    inside_function: bool,
-    inside_bind: bool,
-    inside_loop: bool,
-    unreacheable_code: usize,
 }
 
 impl ParserControlContext {
@@ -190,5 +158,38 @@ impl ParserControlContext {
 
     pub fn set_unreacheable_code_scope(&mut self, scope: usize) {
         self.unreacheable_code = scope;
+    }
+}
+
+impl TypePosition {
+    pub fn is_parameter(&self) -> bool {
+        matches!(self, TypePosition::Parameter)
+    }
+
+    pub fn is_bind_parameter(&self) -> bool {
+        matches!(self, TypePosition::BindParameter)
+    }
+}
+
+impl InstructionPosition {
+    pub fn is_bindings(&self) -> bool {
+        matches!(self, InstructionPosition::Bindings)
+    }
+
+    pub fn is_bind(&self) -> bool {
+        matches!(self, InstructionPosition::Bind)
+    }
+}
+
+impl BindingsType {
+    pub fn is_struct_type(&self) -> bool {
+        matches!(self, BindingsType::Struct(_))
+    }
+
+    pub fn dissamble(&self) -> Type {
+        match self {
+            BindingsType::Struct(tp) => tp.clone(),
+            BindingsType::NoRelevant => Type::Void,
+        }
     }
 }
