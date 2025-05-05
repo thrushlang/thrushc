@@ -18,7 +18,7 @@ use super::contexts::{
 use super::lexer::{Span, Token};
 
 use super::symbols::SymbolsTable;
-use super::{stmt, type_checking};
+use super::{stmt, typechecking};
 
 const MINIMAL_STATEMENT_CAPACITY: usize = 100_000;
 const MINIMAL_GLOBAL_CAPACITY: usize = 2024;
@@ -114,10 +114,10 @@ impl<'instr> ParserContext<'instr> {
         );
 
         if expr.is_some_and(|expr| expr.is_binary() || expr.is_group()) {
-            if let Err(error) = type_checking::check_type(target, &Type::Void, expr, None, error) {
+            if let Err(error) = typechecking::check_type(target, &Type::Void, expr, None, error) {
                 self.errors.push(error);
             }
-        } else if let Err(error) = type_checking::check_type(target, from, None, None, error) {
+        } else if let Err(error) = typechecking::check_type(target, from, None, None, error) {
             self.errors.push(error);
         }
     }

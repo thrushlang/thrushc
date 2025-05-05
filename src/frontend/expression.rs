@@ -25,7 +25,7 @@ use super::{
     lexer::{Span, Token},
     parser::ParserContext,
     symbols::FoundSymbolId,
-    type_checking, typegen, utils,
+    typechecking, typegen, utils,
 };
 
 pub fn build_expression<'instr>(
@@ -88,12 +88,7 @@ fn or<'instr>(
 
         let right: Instruction = and(parser_ctx)?;
 
-        type_checking::check_binary_types(
-            &operator,
-            expression.get_type(),
-            right.get_type(),
-            span,
-        )?;
+        typechecking::check_binary_types(&operator, expression.get_type(), right.get_type(), span)?;
 
         expression = Instruction::BinaryOp {
             left: expression.into(),
@@ -119,12 +114,7 @@ fn and<'instr>(
 
         let right: Instruction = equality(parser_ctx)?;
 
-        type_checking::check_binary_types(
-            &operator,
-            expression.get_type(),
-            right.get_type(),
-            span,
-        )?;
+        typechecking::check_binary_types(&operator, expression.get_type(), right.get_type(), span)?;
 
         expression = Instruction::BinaryOp {
             left: expression.into(),
@@ -150,12 +140,7 @@ fn equality<'instr>(
 
         let right: Instruction = comparison(parser_ctx)?;
 
-        type_checking::check_binary_types(
-            &operator,
-            expression.get_type(),
-            right.get_type(),
-            span,
-        )?;
+        typechecking::check_binary_types(&operator, expression.get_type(), right.get_type(), span)?;
 
         expression = Instruction::BinaryOp {
             left: expression.into(),
@@ -185,12 +170,7 @@ fn comparison<'instr>(
 
         let right: Instruction = term(parser_ctx)?;
 
-        type_checking::check_binary_types(
-            &operator,
-            expression.get_type(),
-            right.get_type(),
-            span,
-        )?;
+        typechecking::check_binary_types(&operator, expression.get_type(), right.get_type(), span)?;
 
         expression = Instruction::BinaryOp {
             left: expression.into(),
@@ -223,7 +203,7 @@ fn term<'instr>(
         let left_type: &Type = expression.get_type();
         let right_type: &Type = right.get_type();
 
-        type_checking::check_binary_types(&operator, left_type, right_type, span)?;
+        typechecking::check_binary_types(&operator, left_type, right_type, span)?;
 
         let kind: &Type = left_type.precompute_type(right_type);
 
@@ -254,7 +234,7 @@ fn factor<'instr>(
         let left_type: &Type = expression.get_type();
         let right_type: &Type = right.get_type();
 
-        type_checking::check_binary_types(
+        typechecking::check_binary_types(
             &operator,
             left_type,
             right_type,
@@ -285,7 +265,7 @@ fn unary<'instr>(
 
         let expression: Instruction = primary(parser_ctx)?;
 
-        type_checking::check_unary_types(
+        typechecking::check_unary_types(
             &operator,
             expression.get_type(),
             parser_ctx.previous().span,
@@ -311,7 +291,7 @@ fn unary<'instr>(
 
         let expression_type: &Type = expression.get_type();
 
-        type_checking::check_unary_types(&operator, expression_type, parser_ctx.previous().span)?;
+        typechecking::check_unary_types(&operator, expression_type, parser_ctx.previous().span)?;
 
         return Ok(Instruction::UnaryOp {
             operator,
@@ -963,7 +943,7 @@ fn build_ref<'instr>(
         let operator: TokenKind = operator_tk.kind;
         let span: Span = operator_tk.span;
 
-        type_checking::check_unary_types(&operator, &local_type, span)?;
+        typechecking::check_unary_types(&operator, &local_type, span)?;
 
         let unaryop: Instruction = Instruction::UnaryOp {
             operator,
