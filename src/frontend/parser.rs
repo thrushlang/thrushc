@@ -43,30 +43,33 @@ pub struct Parser<'instr> {
 }
 
 impl<'instr> Parser<'instr> {
-    pub fn new(tokens: &'instr Vec<Token<'instr>>, file: &'instr CompilerFile) -> Self {
-        Self { tokens, file }
+    pub fn parse(
+        tokens: &'instr [Token<'instr>],
+        file: &'instr CompilerFile,
+    ) -> ParserContext<'instr> {
+        Self { tokens, file }.start()
     }
 
-    pub fn start(&mut self) -> ParserContext<'instr> {
-        let mut ctx: ParserContext = ParserContext::new(self.tokens, self.file);
+    fn start(&mut self) -> ParserContext<'instr> {
+        let mut parser_ctx: ParserContext = ParserContext::new(self.tokens, self.file);
 
-        ctx.init();
+        parser_ctx.init();
 
-        while !ctx.is_eof() {
-            match stmt::parse(&mut ctx) {
+        while !parser_ctx.is_eof() {
+            match stmt::parse(&mut parser_ctx) {
                 Ok(instr) => {
-                    ctx.add_stmt(instr);
+                    parser_ctx.add_stmt(instr);
                 }
                 Err(error) => {
-                    ctx.add_error(error);
-                    ctx.sync();
+                    parser_ctx.add_error(error);
+                    parser_ctx.sync();
                 }
             }
         }
 
-        ctx.verify();
+        parser_ctx.verify();
 
-        ctx
+        parser_ctx
     }
 }
 

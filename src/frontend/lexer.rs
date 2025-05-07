@@ -1,4 +1,5 @@
 use std::fmt::{self, Display};
+use std::process;
 
 use crate::common::misc::CompilerFile;
 use crate::middle::statement::traits::TokenLexemeExtensions;
@@ -15,7 +16,7 @@ use super::super::{
 use {
     ahash::{HashMap, HashMapExt},
     lazy_static::lazy_static,
-    std::{mem, process::exit},
+    std::mem,
 };
 
 const KEYWORDS_CAPACITY: usize = 61;
@@ -106,7 +107,7 @@ pub struct Lexer<'a> {
 
 impl<'a> Lexer<'a> {
     pub fn lex(code: &'a [u8], file: &'a CompilerFile) -> Vec<Token<'a>> {
-        let mut lexer: Lexer<'_> = Self {
+        Self {
             tokens: Vec::with_capacity(MINIMAL_TOKENS_CAPACITY),
             errors: Vec::with_capacity(MINIMAL_ERROR_CAPACITY),
             code,
@@ -115,12 +116,11 @@ impl<'a> Lexer<'a> {
             line: 1,
             span: (0, 0),
             diagnostician: Diagnostician::new(file),
-        };
-
-        lexer._lex()
+        }
+        .start()
     }
 
-    fn _lex(&mut self) -> Vec<Token<'a>> {
+    fn start(&mut self) -> Vec<Token<'a>> {
         while !self.end() {
             self.start = self.current;
             self.start_span();
@@ -136,7 +136,7 @@ impl<'a> Lexer<'a> {
                     .build_diagnostic(error, LoggingType::Error);
             });
 
-            exit(1);
+            process::exit(1);
         };
 
         self.tokens.push(Token {

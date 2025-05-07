@@ -8,7 +8,7 @@ pub fn integer(operator: &TokenKind, left_signed: bool, right_signed: bool) -> I
         TokenKind::EqEq => IntPredicate::EQ,
         TokenKind::BangEq => IntPredicate::NE,
         TokenKind::Greater if !left_signed && !right_signed => IntPredicate::UGT,
-        TokenKind::Greater if left_signed | !right_signed => IntPredicate::SGT,
+        TokenKind::Greater if left_signed && !right_signed => IntPredicate::SGT,
         TokenKind::Greater if !left_signed && right_signed => IntPredicate::SGT,
         TokenKind::Greater if left_signed && right_signed => IntPredicate::SGT,
         TokenKind::GreaterEq if !left_signed && !right_signed => IntPredicate::UGE,

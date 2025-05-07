@@ -55,8 +55,8 @@ impl<'a> Thrushc<'a> {
             compiled: Vec::with_capacity(files.len()),
             files,
             options,
-            llvm_comptime: Duration::new(0, 0),
-            thrushc_comptime: Duration::new(0, 0),
+            llvm_comptime: Duration::default(),
+            thrushc_comptime: Duration::default(),
         }
     }
 
@@ -109,10 +109,8 @@ impl<'a> Thrushc<'a> {
             return;
         }
 
-        let mut parser: Parser = Parser::new(&tokens, file);
-
-        let ctx: ParserContext = parser.start();
-        let instructions: &[Instruction] = ctx.get_instructions();
+        let parser_ctx: ParserContext = Parser::parse(&tokens, file);
+        let instructions: &[Instruction] = parser_ctx.get_instructions();
 
         if self.options.emit_ast {
             let _ = write(
