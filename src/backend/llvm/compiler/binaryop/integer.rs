@@ -1616,6 +1616,64 @@ pub fn integer_binaryop<'ctx>(
     }
 
     if let (
+        Instruction::LocalRef {
+            kind: left_type, ..
+        }
+        | Instruction::ConstRef {
+            kind: left_type, ..
+        },
+        TokenKind::Plus
+        | TokenKind::Slash
+        | TokenKind::Minus
+        | TokenKind::Star
+        | TokenKind::BangEq
+        | TokenKind::EqEq
+        | TokenKind::LessEq
+        | TokenKind::Less
+        | TokenKind::Greater
+        | TokenKind::GreaterEq
+        | TokenKind::LShift
+        | TokenKind::RShift
+        | TokenKind::And
+        | TokenKind::Or,
+        Instruction::BinaryOp {
+            kind: right_type, ..
+        },
+    ) = binary
+    {
+        let mut left_compiled: BasicValueEnum =
+            valuegen::generate_expression(binary.0, target_type, context);
+
+        if let Some(new_left_compiled) =
+            utils::integer_autocast(context, target_type, left_type, left_compiled.into())
+        {
+            left_compiled = new_left_compiled;
+        }
+
+        let right_dissasembled: BinaryOp = binary.2.as_binary();
+
+        let mut right_compiled: BasicValueEnum =
+            integer_binaryop(right_dissasembled, target_type, context);
+
+        if let Some(new_right_compiled) =
+            utils::integer_autocast(context, target_type, right_type, right_compiled)
+        {
+            right_compiled = new_right_compiled;
+        }
+
+        return int_operation(
+            context,
+            left_compiled,
+            right_compiled,
+            (
+                left_type.is_signed_integer_type(),
+                right_type.is_signed_integer_type(),
+            ),
+            binary.1,
+        );
+    }
+
+    if let (
         Instruction::Integer(left_type, left_num, left_signed, ..),
         TokenKind::Plus
         | TokenKind::Slash
