@@ -86,6 +86,26 @@ pub fn bool_binaryop<'ctx>(
     }
 
     if let (
+        Instruction::LocalRef { .. } | Instruction::ConstRef { .. },
+        TokenKind::BangEq
+        | TokenKind::EqEq
+        | TokenKind::LessEq
+        | TokenKind::Less
+        | TokenKind::Greater
+        | TokenKind::GreaterEq
+        | TokenKind::And
+        | TokenKind::Or,
+        Instruction::Integer(..) | Instruction::Float(..) | Instruction::Boolean(..),
+    ) = binary
+    {
+        if binary.2.get_type().is_float_type() {
+            return float_binaryop(binary, target_type, context);
+        } else if binary.2.get_type().is_integer_type() || binary.2.get_type().is_bool_type() {
+            return integer_binaryop(binary, target_type, context);
+        }
+    }
+
+    if let (
         Instruction::Integer(..) | Instruction::Float(..) | Instruction::Boolean(..),
         TokenKind::BangEq
         | TokenKind::EqEq
@@ -156,26 +176,6 @@ pub fn bool_binaryop<'ctx>(
             return integer_binaryop(binary, target_type, context);
         } else if binary.2.get_type().is_mut_ptr_type() || binary.2.get_type().is_ptr_type() {
             return ptr_binaryop(binary, target_type, context);
-        }
-    }
-
-    if let (
-        Instruction::LocalRef { .. } | Instruction::ConstRef { .. },
-        TokenKind::BangEq
-        | TokenKind::EqEq
-        | TokenKind::LessEq
-        | TokenKind::Less
-        | TokenKind::Greater
-        | TokenKind::GreaterEq
-        | TokenKind::And
-        | TokenKind::Or,
-        Instruction::Integer(..) | Instruction::Float(..) | Instruction::Boolean(..),
-    ) = binary
-    {
-        if binary.2.get_type().is_float_type() {
-            return float_binaryop(binary, target_type, context);
-        } else if binary.2.get_type().is_integer_type() || binary.2.get_type().is_bool_type() {
-            return integer_binaryop(binary, target_type, context);
         }
     }
 

@@ -183,9 +183,11 @@ impl<'instr> ParserContext<'instr> {
     pub fn sync(&mut self) {
         match self.control_ctx.get_sync_position() {
             SyncPosition::Declaration => {
-                self.scope = 0;
-
                 while !self.is_eof() && !self.peek().kind.is_sync_declaration() {
+                    if self.check(TokenKind::RBrace) {
+                        self.scope -= 1;
+                    }
+
                     self.current += 1;
                 }
             }
@@ -194,6 +196,10 @@ impl<'instr> ParserContext<'instr> {
                     && !self.peek().kind.is_sync_statement()
                     && !self.peek().kind.is_sync_declaration()
                 {
+                    if self.check(TokenKind::RBrace) {
+                        self.scope -= 1;
+                    }
+
                     self.current += 1;
                 }
             }

@@ -1,3 +1,4 @@
+use crate::common::diagnostic::Diagnostician;
 use crate::middle::instruction::Instruction;
 use crate::middle::statement::{FunctionParameter, FunctionPrototype};
 use crate::middle::types::Type;
@@ -41,9 +42,10 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
         context: &'ctx Context,
         instructions: &'ctx [Instruction<'ctx>],
         target_data: TargetData,
+        diagnostician: Diagnostician,
     ) {
         Self {
-            context: CodeGenContext::new(module, context, builder, target_data),
+            context: CodeGenContext::new(module, context, builder, target_data, diagnostician),
             instructions,
             current: 0,
             function: None,

@@ -1088,6 +1088,56 @@ pub fn float_binaryop<'ctx>(
     ########################################################################*/
 
     if let (
+        Instruction::LocalRef {
+            kind: left_type, ..
+        }
+        | Instruction::ConstRef {
+            kind: left_type, ..
+        },
+        TokenKind::Plus
+        | TokenKind::Slash
+        | TokenKind::Minus
+        | TokenKind::Star
+        | TokenKind::BangEq
+        | TokenKind::EqEq
+        | TokenKind::LessEq
+        | TokenKind::Less
+        | TokenKind::Greater
+        | TokenKind::GreaterEq,
+        Instruction::BinaryOp {
+            kind: right_type, ..
+        },
+    ) = binary
+    {
+        let mut left_compiled: BasicValueEnum =
+            valuegen::generate_expression(binary.0, target_type, context);
+
+        if let Some(new_left_compiled) =
+            utils::float_autocast(context, target_type, left_type, left_compiled)
+        {
+            left_compiled = new_left_compiled;
+        }
+
+        let right_dissasembled: BinaryOp = binary.2.as_binary();
+
+        let mut right_compiled: BasicValueEnum =
+            float_binaryop(right_dissasembled, target_type, context);
+
+        if let Some(new_right_compiled) =
+            utils::float_autocast(context, target_type, right_type, right_compiled)
+        {
+            right_compiled = new_right_compiled;
+        }
+
+        return float_operation(
+            llvm_builder,
+            left_compiled.into_float_value(),
+            right_compiled.into_float_value(),
+            binary.1,
+        );
+    }
+
+    if let (
         Instruction::BinaryOp {
             kind: left_type, ..
         },

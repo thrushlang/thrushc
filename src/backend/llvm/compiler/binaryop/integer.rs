@@ -1645,7 +1645,7 @@ pub fn integer_binaryop<'ctx>(
             valuegen::generate_expression(binary.0, target_type, context);
 
         if let Some(new_left_compiled) =
-            utils::integer_autocast(context, target_type, left_type, left_compiled.into())
+            utils::integer_autocast(context, target_type, left_type, left_compiled)
         {
             left_compiled = new_left_compiled;
         }

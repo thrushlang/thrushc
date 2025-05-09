@@ -115,7 +115,7 @@ lazy_static! {
             }
         });
 
-        return HOME.join("thrushlang/backends/llvm/");
+        return HOME.join("thrushlang/backends/llvm");
     };
 }
 

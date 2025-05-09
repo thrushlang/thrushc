@@ -15,7 +15,7 @@ pub mod utils;
 pub mod valuegen;
 
 use {
-    crate::middle::instruction::Instruction,
+    crate::{common::diagnostic::Diagnostician, middle::instruction::Instruction},
     codegen::Codegen,
     inkwell::{builder::Builder, context::Context, module::Module, targets::TargetData},
 };
@@ -30,7 +30,15 @@ impl<'a, 'ctx> Compiler {
         context: &'ctx Context,
         instructions: &'ctx [Instruction<'ctx>],
         target_data: TargetData,
+        diagnostician: Diagnostician,
     ) {
-        Codegen::generate(module, builder, context, instructions, target_data);
+        Codegen::generate(
+            module,
+            builder,
+            context,
+            instructions,
+            target_data,
+            diagnostician,
+        );
     }
 }

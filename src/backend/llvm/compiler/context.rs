@@ -6,9 +6,12 @@ use {
         types::SymbolsAllocated,
         valuegen,
     },
-    crate::middle::{
-        statement::{Function, ThrushAttributes},
-        types::Type,
+    crate::{
+        common::diagnostic::Diagnostician,
+        middle::{
+            statement::{Function, ThrushAttributes},
+            types::Type,
+        },
     },
     ahash::AHashMap as HashMap,
     inkwell::{
@@ -31,6 +34,7 @@ pub struct CodeGenContext<'a, 'ctx> {
     builder: &'ctx Builder<'ctx>,
     position: CodeGenContextPosition,
     pub target_data: TargetData,
+    diagnostician: Diagnostician,
     constants: HashMap<&'ctx str, SymbolAllocated<'ctx>>,
     functions: HashMap<&'ctx str, Function<'ctx>>,
     blocks: Vec<HashMap<&'ctx str, SymbolAllocated<'ctx>>>,
@@ -44,6 +48,7 @@ impl<'a, 'ctx> CodeGenContext<'a, 'ctx> {
         context: &'ctx Context,
         builder: &'ctx Builder<'ctx>,
         target_data: TargetData,
+        diagnostician: Diagnostician,
     ) -> Self {
         Self {
             module,
@@ -51,6 +56,7 @@ impl<'a, 'ctx> CodeGenContext<'a, 'ctx> {
             builder,
             position: CodeGenContextPosition::default(),
             target_data,
+            diagnostician,
             constants: HashMap::with_capacity(CONSTANTS_MINIMAL_CAPACITY),
             functions: HashMap::with_capacity(FUNCTION_MINIMAL_CAPACITY),
             blocks: Vec::with_capacity(SCOPE_MINIMAL_CAPACITY),
@@ -192,6 +198,10 @@ impl<'a, 'ctx> CodeGenContext<'a, 'ctx> {
 
     pub fn set_position_irrelevant(&mut self) {
         self.position = CodeGenContextPosition::NoRelevant;
+    }
+
+    pub fn get_diagnostician(&self) -> &Diagnostician {
+        &self.diagnostician
     }
 
     pub fn begin_scope(&mut self) {

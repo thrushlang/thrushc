@@ -1,5 +1,6 @@
 #![allow(clippy::upper_case_acronyms)]
 
+use crate::common::diagnostic::Diagnostician;
 use crate::common::misc::{CompilerFile, CompilerOptions};
 use crate::frontend::parser::ParserContext;
 use crate::middle::instruction::Instruction;
@@ -149,6 +150,7 @@ impl<'a> Thrushc<'a> {
             &context,
             instructions,
             machine.get_target_data(),
+            Diagnostician::new(file),
         );
 
         self.thrushc_comptime += start_time.elapsed();
@@ -210,11 +212,7 @@ impl<'a> Clang<'a> {
             "-v",
             &format!(
                 "--target={}",
-                self.options
-                    .target_triple
-                    .as_str()
-                    .to_str()
-                    .unwrap_or("invalid utf-8")
+                self.options.target_triple.as_str().to_string_lossy()
             ),
         ]);
 
@@ -238,11 +236,7 @@ impl<'a> Clang<'a> {
             "-S",
             &format!(
                 "--target={}",
-                self.options
-                    .target_triple
-                    .as_str()
-                    .to_str()
-                    .unwrap_or("invalid utf-8")
+                self.options.target_triple.as_str().to_string_lossy()
             ),
         ]);
 
