@@ -5,7 +5,7 @@ use crate::{
             CustomType, CustomTypeFields, StructFields,
             traits::{
                 CustomTypeFieldsExtensions, FoundSymbolEither, FoundSymbolExtension,
-                StructExtensions, StructFieldsExtensions, TokenLexemeExtensions,
+                StructExtensions, StructFieldsExtensions,
             },
         },
         symbols::types::Struct,
@@ -69,7 +69,7 @@ pub fn build_type(
         TokenKind::Identifier => {
             let identifier_tk: &Token = parser_ctx.advance()?;
 
-            let name: &str = identifier_tk.lexeme.to_str();
+            let name: &str = identifier_tk.lexeme;
             let span: Span = identifier_tk.span;
 
             let object: FoundSymbolId = parser_ctx.get_symbols().get_symbols_id(name, span)?;

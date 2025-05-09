@@ -6,9 +6,9 @@ use crate::{
 
 use super::{EnumField, EnumFields, StructFields};
 
-pub trait TokenLexemeExtensions {
-    fn to_str(&self) -> &str;
+pub trait TokenExtensions {
     fn parse_scapes(&self, span: Span) -> Result<Vec<u8>, ThrushCompilerError>;
+    fn get_first_byte(&self) -> u8;
 }
 
 pub trait EnumFieldsExtensions<'a> {

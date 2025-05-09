@@ -461,4 +461,8 @@ impl<'instr> SymbolsTable<'instr> {
     pub fn end_local_scope(&mut self) {
         self.locals.pop();
     }
+
+    pub fn clear_all_scopes(&mut self) {
+        self.locals.clear();
+    }
 }

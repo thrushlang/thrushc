@@ -10,7 +10,7 @@ use crate::{
         instruction::Instruction,
         statement::{
             CustomTypeFields, EnumFields, StructFields, ThrushAttributes,
-            traits::{AttributesExtensions, TokenLexemeExtensions},
+            traits::AttributesExtensions,
         },
         symbols::types::{Bindings, Parameters},
         traits::ThrushStructTypeExtensions,
@@ -210,7 +210,7 @@ fn build_bind<'instr>(
         String::from("Expected name to the bind."),
     )?;
 
-    let bind_name: &str = bind_name_tk.lexeme.to_str();
+    let bind_name: &str = bind_name_tk.lexeme;
 
     if !parser_ctx
         .get_control_ctx()
@@ -291,7 +291,7 @@ fn build_bind<'instr>(
             String::from("Expected parameter name."),
         )?;
 
-        let parameter_name: &str = parameter_tk.lexeme.to_str();
+        let parameter_name: &str = parameter_tk.lexeme;
         let parameter_span: Span = parameter_tk.span;
 
         parser_ctx.consume(
@@ -917,7 +917,7 @@ pub fn build_custom_type<'instr>(
     )?;
 
     let span: Span = name.span;
-    let custom_type_name: &str = name.lexeme.to_str();
+    let custom_type_name: &str = name.lexeme;
 
     parser_ctx.consume(
         TokenKind::Eq,
@@ -996,7 +996,7 @@ pub fn build_enum<'instr>(
 
     let span: Span = name.span;
 
-    let enum_name: &str = name.lexeme.to_str();
+    let enum_name: &str = name.lexeme;
 
     let enum_attributes: ThrushAttributes =
         build_compiler_attributes(parser_ctx, &[TokenKind::LBrace])?;
@@ -1017,7 +1017,7 @@ pub fn build_enum<'instr>(
 
         if parser_ctx.match_token(TokenKind::Identifier)? {
             let field_tk: &Token = parser_ctx.previous();
-            let name: &str = field_tk.lexeme.to_str();
+            let name: &str = field_tk.lexeme;
             let span: Span = field_tk.span;
 
             parser_ctx.consume(
@@ -1139,7 +1139,7 @@ pub fn build_struct<'instr>(
 
     let span: Span = name.span;
 
-    let struct_name: &str = name.lexeme.to_str();
+    let struct_name: &str = name.lexeme;
 
     let struct_attributes: ThrushAttributes =
         build_compiler_attributes(parser_ctx, &[TokenKind::LBrace])?;
@@ -1159,10 +1159,10 @@ pub fn build_struct<'instr>(
         }
 
         if parser_ctx.match_token(TokenKind::Identifier)? {
-            let field_name: &str = parser_ctx.previous().lexeme.to_str();
+            let field_name: &str = parser_ctx.previous().lexeme;
 
             // solucionar con Self type talvez?
-            if parser_ctx.peek().lexeme.to_str() == struct_name {
+            if parser_ctx.peek().lexeme == struct_name {
                 todo!()
             }
 
@@ -1240,7 +1240,7 @@ pub fn build_const<'instr>(
         ));
     }
 
-    let name: &str = const_tk.lexeme.to_str();
+    let name: &str = const_tk.lexeme;
     let span: Span = const_tk.span;
 
     parser_ctx.consume(
@@ -1334,7 +1334,7 @@ fn build_local<'instr>(
         String::from("Expected name."),
     )?;
 
-    let local_name: &str = local_tk.lexeme.to_str();
+    let local_name: &str = local_tk.lexeme;
     let span: Span = local_tk.span;
 
     parser_ctx.consume(
@@ -1563,7 +1563,7 @@ pub fn build_function<'instr>(
         ));
     }
 
-    let function_name: &str = function_name_tk.lexeme.to_str();
+    let function_name: &str = function_name_tk.lexeme;
     let function_span: Span = function_name_tk.span;
 
     if function_name == "main" {
@@ -1608,7 +1608,7 @@ pub fn build_function<'instr>(
             String::from("Expected parameter name."),
         )?;
 
-        let parameter_name: &str = parameter_tk.lexeme.to_str();
+        let parameter_name: &str = parameter_tk.lexeme;
         let parameter_span: Span = parameter_tk.span;
 
         parser_ctx.consume(
@@ -1801,7 +1801,7 @@ fn build_external_attribute<'instr>(
         String::from("Expected a string for @extern(\"FFI NAME\")."),
     )?;
 
-    let ffi_name: &str = name.lexeme.to_str();
+    let ffi_name: &str = name.lexeme;
 
     parser_ctx.consume(
         TokenKind::RParen,
@@ -1830,7 +1830,7 @@ fn build_call_convention_attribute(
     )?;
 
     let span: Span = convention_tk.span;
-    let name: &[u8] = convention_tk.lexeme;
+    let name: &[u8] = convention_tk.lexeme.as_bytes();
 
     if let Some(call_convention) = CALL_CONVENTIONS.get(name) {
         parser_ctx.consume(

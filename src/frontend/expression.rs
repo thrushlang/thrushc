@@ -6,7 +6,7 @@ use crate::{
             Constructor, EnumField, EnumFields,
             traits::{
                 ConstructorExtensions, EnumExtensions, EnumFieldsExtensions, FoundSymbolEither,
-                FoundSymbolExtension, StructExtensions, TokenLexemeExtensions,
+                FoundSymbolExtension, StructExtensions, TokenExtensions,
             },
         },
         symbols::{
@@ -336,7 +336,7 @@ fn primary<'instr>(
                     String::from("Expected 'identifier'."),
                 )?;
 
-                let name: &str = identifier_tk.lexeme.to_str();
+                let name: &str = identifier_tk.lexeme;
 
                 build_ref(parser_ctx, name, span)?;
 
@@ -412,7 +412,7 @@ fn primary<'instr>(
                     String::from("Expected 'identifier'."),
                 )?;
 
-                let name: &str = identifier_tk.lexeme.to_str();
+                let name: &str = identifier_tk.lexeme;
 
                 build_ref(parser_ctx, name, span)?;
 
@@ -457,7 +457,7 @@ fn primary<'instr>(
                 String::from("Expected 'identifier'."),
             )?;
 
-            let name: &str = identifier_tk.lexeme.to_str();
+            let name: &str = identifier_tk.lexeme;
             let span: Span = identifier_tk.span;
 
             parser_ctx.consume(
@@ -556,17 +556,18 @@ fn primary<'instr>(
 
         TokenKind::Str => {
             let str_tk: &Token = parser_ctx.advance()?;
-            let str: &[u8] = str_tk.lexeme;
+            let lexeme: &str = str_tk.lexeme;
             let span: Span = str_tk.span;
 
-            Instruction::Str(Type::Str, str.parse_scapes(span)?, span)
+            Instruction::Str(Type::Str, lexeme.parse_scapes(span)?, span)
         }
 
         TokenKind::Char => {
-            let char: &Token = parser_ctx.advance()?;
-            let span: Span = char.span;
+            let char_tk: &Token = parser_ctx.advance()?;
+            let span: Span = char_tk.span;
+            let lexeme: &str = char_tk.lexeme;
 
-            Instruction::Char(Type::Char, char.lexeme[0], span)
+            Instruction::Char(Type::Char, lexeme.get_first_byte(), span)
         }
 
         TokenKind::NullPtr => Instruction::NullPtr {
@@ -575,7 +576,7 @@ fn primary<'instr>(
 
         TokenKind::Integer => {
             let integer_tk: &Token = parser_ctx.advance()?;
-            let integer: &str = integer_tk.lexeme.to_str();
+            let integer: &str = integer_tk.lexeme;
             let span: Span = integer_tk.span;
 
             let parsed_integer: (Type, f64) = utils::parse_number(integer, span)?;
@@ -588,7 +589,7 @@ fn primary<'instr>(
 
         TokenKind::Float => {
             let float_tk: &Token = parser_ctx.advance()?;
-            let float: &str = float_tk.lexeme.to_str();
+            let float: &str = float_tk.lexeme;
             let span: Span = float_tk.span;
 
             let parsed_float: (Type, f64) = utils::parse_number(float, span)?;
@@ -602,7 +603,7 @@ fn primary<'instr>(
         TokenKind::Identifier => {
             let identifier_tk: &Token = parser_ctx.advance()?;
 
-            let name: &str = identifier_tk.lexeme.to_str();
+            let name: &str = identifier_tk.lexeme;
             let span: Span = identifier_tk.span;
 
             let symbol: FoundSymbolId = parser_ctx.get_symbols().get_symbols_id(name, span)?;
@@ -729,7 +730,7 @@ fn primary<'instr>(
 
             return Err(ThrushCompilerError::Error(
                 String::from("Syntax error"),
-                format!("Statement '{}' don't allowed.", previous.lexeme.to_str()),
+                format!("Statement '{}' don't allowed.", previous.lexeme),
                 String::default(),
                 previous.span,
             ));
@@ -758,7 +759,7 @@ fn build_binding_call<'instr>(
         String::from("Expected bind name."),
     )?;
 
-    let bind_name: &str = bind_tk.lexeme.to_str();
+    let bind_name: &str = bind_tk.lexeme;
 
     let bindings: Bindings = structure.get_bindings();
 
@@ -860,7 +861,7 @@ fn build_property<'instr>(
 
     let mut span: Span = first_property.span;
 
-    property_names.push(first_property.lexeme.to_str());
+    property_names.push(first_property.lexeme);
 
     while parser_ctx.match_token(TokenKind::Dot)? {
         let property: &Token = parser_ctx.consume(
@@ -871,7 +872,7 @@ fn build_property<'instr>(
 
         span = property.span;
 
-        property_names.push(property.lexeme.to_str());
+        property_names.push(property.lexeme);
     }
 
     property_names.reverse();
@@ -978,7 +979,7 @@ fn build_enum_field<'instr>(
         String::from("Expected enum field identifier."),
     )?;
 
-    let field_name: &str = field.lexeme.to_str();
+    let field_name: &str = field.lexeme;
 
     if !union.contain_field(field_name) {
         return Err(ThrushCompilerError::Error(
@@ -1268,7 +1269,7 @@ fn build_constructor<'instr>(
     )?;
 
     let span: Span = name.span;
-    let struct_name: &str = name.lexeme.to_str();
+    let struct_name: &str = name.lexeme;
 
     let struct_found: Struct = parser_ctx.get_symbols().get_struct(struct_name, span)?;
 
@@ -1292,7 +1293,7 @@ fn build_constructor<'instr>(
         if parser_ctx.match_token(TokenKind::Identifier)? {
             let field_tk: &Token = parser_ctx.previous();
             let field_span: Span = field_tk.span;
-            let field_name: &str = field_tk.lexeme.to_str();
+            let field_name: &str = field_tk.lexeme;
 
             parser_ctx.consume(
                 TokenKind::Colon,

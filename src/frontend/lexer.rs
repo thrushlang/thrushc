@@ -2,7 +2,7 @@ use std::fmt::{self, Display};
 use std::process;
 
 use crate::common::misc::CompilerFile;
-use crate::middle::statement::traits::TokenLexemeExtensions;
+use crate::middle::statement::traits::TokenExtensions;
 
 use super::super::middle::types::*;
 
@@ -92,8 +92,6 @@ lazy_static! {
     };
 }
 
-pub type TokenLexeme<'a> = &'a [u8];
-
 pub struct Lexer<'a> {
     tokens: Vec<Token<'a>>,
     errors: Vec<ThrushCompilerError>,
@@ -140,7 +138,7 @@ impl<'a> Lexer<'a> {
         };
 
         self.tokens.push(Token {
-            lexeme: b"",
+            lexeme: "",
             kind: TokenKind::Eof,
             span: Span::new(self.line, self.span),
         });
@@ -310,13 +308,13 @@ impl<'a> Lexer<'a> {
 
         self.end_span();
 
-        let lexeme: &[u8] = self.lexeme();
+        let lexeme: &str = self.lexeme();
 
-        self.check_number(lexeme.to_str())?;
+        self.check_number(lexeme)?;
 
         let span: Span = Span::new(self.line, self.span);
 
-        if lexeme.contains(&b'.') {
+        if lexeme.contains(".") {
             self.tokens.push(Token {
                 lexeme,
                 kind: TokenKind::Float,
@@ -572,9 +570,11 @@ impl<'a> Lexer<'a> {
             ));
         }
 
+        let lexeme: &str = self.shrink_lexeme();
+
         self.tokens.push(Token {
             kind: TokenKind::Char,
-            lexeme: &self.code[self.start + 1..self.current - 1],
+            lexeme,
             span,
         });
 
@@ -603,9 +603,11 @@ impl<'a> Lexer<'a> {
 
         self.advance();
 
+        let lexeme: &str = self.shrink_lexeme();
+
         self.tokens.push(Token {
             kind: TokenKind::Str,
-            lexeme: &self.code[self.start + 1..self.current - 1],
+            lexeme,
             span,
         });
 
@@ -639,9 +641,15 @@ impl<'a> Lexer<'a> {
     }
 
     #[must_use]
-    #[inline(always)]
-    fn lexeme(&self) -> TokenLexeme<'a> {
-        &self.code[self.start..self.current]
+    #[inline]
+    fn lexeme(&self) -> &'a str {
+        core::str::from_utf8(&self.code[self.start..self.current]).unwrap_or("�")
+    }
+
+    #[must_use]
+    #[inline]
+    fn shrink_lexeme(&self) -> &'a str {
+        core::str::from_utf8(&self.code[self.start + 1..self.current - 1]).unwrap_or("�")
     }
 
     #[inline]
@@ -664,13 +672,12 @@ impl<'a> Lexer<'a> {
     }
 
     #[must_use]
-    #[inline(always)]
     fn previous(&self) -> u8 {
         self.code[self.current - 1]
     }
 
     #[must_use]
-    #[inline(always)]
+    #[inline]
     fn peek(&self) -> u8 {
         if self.end() {
             return b'\0';
@@ -680,47 +687,44 @@ impl<'a> Lexer<'a> {
     }
 
     #[must_use]
-    #[inline(always)]
+    #[inline]
     fn is_string_boundary(&self) -> bool {
         self.peek() != b'"' && !self.end()
     }
 
     #[must_use]
-    #[inline(always)]
+    #[inline]
     fn end(&self) -> bool {
         self.current >= self.code.len()
     }
 
     #[must_use]
-    #[inline(always)]
-    const fn is_alpha(&self, char: u8) -> bool {
+    #[inline]
+    fn is_alpha(&self, char: u8) -> bool {
         char.is_ascii_lowercase() || char.is_ascii_uppercase() || char == b'_'
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Token<'token> {
-    pub lexeme: &'token [u8],
+    pub lexeme: &'token str,
     pub kind: TokenKind,
     pub span: Span,
 }
 
-impl TokenLexemeExtensions for TokenLexeme<'_> {
-    #[inline(always)]
-    fn to_str(&self) -> &str {
-        core::str::from_utf8(self).unwrap_or("�")
-    }
-
+impl TokenExtensions for str {
     fn parse_scapes(&self, span: Span) -> Result<Vec<u8>, ThrushCompilerError> {
-        let mut parsed_string: Vec<u8> = Vec::with_capacity(self.len());
+        let source: &[u8] = self.as_bytes();
+
+        let mut parsed_string: Vec<u8> = Vec::with_capacity(source.len());
 
         let mut i: usize = 0;
 
         while i < self.len() {
-            if self[i] == b'\\' {
+            if source[i] == b'\\' {
                 i += 1;
 
-                match self.get(i) {
+                match source.get(i) {
                     Some(b'n') => parsed_string.push(b'\n'),
                     Some(b't') => parsed_string.push(b'\t'),
                     Some(b'r') => parsed_string.push(b'\r'),
@@ -743,12 +747,16 @@ impl TokenLexemeExtensions for TokenLexeme<'_> {
                 continue;
             }
 
-            parsed_string.push(self[i]);
+            parsed_string.push(source[i]);
 
             i += 1;
         }
 
         Ok(parsed_string)
+    }
+
+    fn get_first_byte(&self) -> u8 {
+        self.as_bytes()[0]
     }
 }
 
