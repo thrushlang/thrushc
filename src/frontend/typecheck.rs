@@ -5,9 +5,28 @@ use super::{
     lexer::Span,
 };
 
-#[inline(always)]
+pub fn check_binaryop(
+    operator: &TokenKind,
+    a: &Type,
+    b: &Type,
+    span: Span,
+) -> Result<(), ThrushCompilerError> {
+    match operator {
+        TokenKind::Star | TokenKind::Slash | TokenKind::Minus | TokenKind::Plus => {
+            check_binary_arithmetic(operator, a, b, span)
+        }
+        TokenKind::BangEq | TokenKind::EqEq => check_binary_equality(operator, a, b, span),
+        TokenKind::LessEq | TokenKind::Less | TokenKind::GreaterEq | TokenKind::Greater => {
+            check_binary_comparasion(operator, a, b, span)
+        }
+        TokenKind::LShift | TokenKind::RShift => check_binary_shift(operator, a, b, span),
+        TokenKind::And | TokenKind::Or => check_binary_gate(operator, a, b, span),
+        _ => Ok(()),
+    }
+}
+
 fn check_binary_arithmetic(
-    op: &TokenKind,
+    operator: &TokenKind,
     a: &Type,
     b: &Type,
     span: Span,
@@ -34,14 +53,17 @@ fn check_binary_arithmetic(
 
         (Type::F32 | Type::F64, Type::F32 | Type::F64) => Ok(()),
         (Type::Mut(a_subtype), Type::Mut(b_subtype)) => {
-            check_binary_arithmetic(op, a_subtype, b_subtype, span)
+            check_binary_arithmetic(operator, a_subtype, b_subtype, span)
         }
-        (any, Type::Mut(b_subtype)) => check_binary_arithmetic(op, any, b_subtype, span),
-        (Type::Mut(a_subtype), any) => check_binary_arithmetic(op, a_subtype, any, span),
+        (any, Type::Mut(b_subtype)) => check_binary_arithmetic(operator, any, b_subtype, span),
+        (Type::Mut(a_subtype), any) => check_binary_arithmetic(operator, a_subtype, any, span),
 
         _ => Err(ThrushCompilerError::Error(
             String::from("Type checking"),
-            format!("Arithmetic operation ({} {} {}) is not allowed.", a, op, b),
+            format!(
+                "Arithmetic operation ({} {} {}) is not allowed.",
+                a, operator, b
+            ),
             String::default(),
             span,
         )),
@@ -50,7 +72,7 @@ fn check_binary_arithmetic(
 
 #[inline(always)]
 fn check_binary_equality(
-    op: &TokenKind,
+    operator: &TokenKind,
     a: &Type,
     b: &Type,
     span: Span,
@@ -91,15 +113,17 @@ fn check_binary_equality(
 
     Err(ThrushCompilerError::Error(
         String::from("Type checking"),
-        format!("Logical operation ({} {} {}) is not allowed.", a, op, b),
+        format!(
+            "Logical operation ({} {} {}) is not allowed.",
+            a, operator, b
+        ),
         String::default(),
         span,
     ))
 }
 
-#[inline(always)]
 fn check_binary_comparasion(
-    op: &TokenKind,
+    operator: &TokenKind,
     a: &Type,
     b: &Type,
     span: Span,
@@ -113,24 +137,26 @@ fn check_binary_comparasion(
     } else if let (Type::F32 | Type::F64, Type::F32 | Type::F64) = (a, b) {
         return Ok(());
     } else if let (Type::Mut(a_subtype), Type::Mut(b_subtype)) = (a, b) {
-        return check_binary_comparasion(op, a_subtype, b_subtype, span);
+        return check_binary_comparasion(operator, a_subtype, b_subtype, span);
     } else if let (Type::Mut(a_subtype), any) = (a, b) {
-        return check_binary_comparasion(op, a_subtype, any, span);
+        return check_binary_comparasion(operator, a_subtype, any, span);
     } else if let (any, Type::Mut(b_subtype)) = (a, b) {
-        return check_binary_comparasion(op, any, b_subtype, span);
+        return check_binary_comparasion(operator, any, b_subtype, span);
     }
 
     Err(ThrushCompilerError::Error(
         String::from("Type checking"),
-        format!("Logical operation ({} {} {}) is not allowed.", a, op, b),
+        format!(
+            "Logical operation ({} {} {}) is not allowed.",
+            a, operator, b
+        ),
         String::default(),
         span,
     ))
 }
 
-#[inline(always)]
 fn check_binary_gate(
-    op: &TokenKind,
+    operator: &TokenKind,
     a: &Type,
     b: &Type,
     span: Span,
@@ -141,15 +167,17 @@ fn check_binary_gate(
 
     Err(ThrushCompilerError::Error(
         String::from("Type checking"),
-        format!("Logical operation ({} {} {}) is not allowed.", a, op, b),
+        format!(
+            "Logical operation ({} {} {}) is not allowed.",
+            a, operator, b
+        ),
         String::default(),
         span,
     ))
 }
 
-#[inline(always)]
 fn check_binary_shift(
-    op: &TokenKind,
+    operator: &TokenKind,
     a: &Type,
     b: &Type,
     span: Span,
@@ -161,66 +189,54 @@ fn check_binary_shift(
     {
         return Ok(());
     } else if let (Type::Mut(a_subtype), Type::Mut(b_subtype)) = (a, b) {
-        return check_binary_shift(op, a_subtype, b_subtype, span);
+        return check_binary_shift(operator, a_subtype, b_subtype, span);
     } else if let (Type::Mut(a_subtype), any) = (a, b) {
-        return check_binary_shift(op, a_subtype, any, span);
+        return check_binary_shift(operator, a_subtype, any, span);
     } else if let (any, Type::Mut(b_subtype)) = (a, b) {
-        return check_binary_shift(op, any, b_subtype, span);
+        return check_binary_shift(operator, any, b_subtype, span);
     }
 
     Err(ThrushCompilerError::Error(
         String::from("Type checking"),
-        format!("Arithmetic operation ({} {} {}) is not allowed.", a, op, b),
+        format!(
+            "Arithmetic operation ({} {} {}) is not allowed.",
+            a, operator, b
+        ),
         String::default(),
         span,
     ))
 }
 
-#[inline(always)]
-pub fn check_binary_types(
-    op: &TokenKind,
-    a: &Type,
-    b: &Type,
-    span: Span,
-) -> Result<(), ThrushCompilerError> {
-    match op {
-        TokenKind::Star | TokenKind::Slash | TokenKind::Minus | TokenKind::Plus => {
-            check_binary_arithmetic(op, a, b, span)
+pub fn check_unary(operator: &TokenKind, a: &Type, span: Span) -> Result<(), ThrushCompilerError> {
+    match operator {
+        TokenKind::Minus | TokenKind::PlusPlus | TokenKind::MinusMinus => {
+            check_general_unary(operator, a, span)
         }
-        TokenKind::BangEq | TokenKind::EqEq => check_binary_equality(op, a, b, span),
-        TokenKind::LessEq | TokenKind::Less | TokenKind::GreaterEq | TokenKind::Greater => {
-            check_binary_comparasion(op, a, b, span)
-        }
-        TokenKind::LShift | TokenKind::RShift => check_binary_shift(op, a, b, span),
-        TokenKind::And | TokenKind::Or => check_binary_gate(op, a, b, span),
+        TokenKind::Bang => check_unary_instr_bang(a, span),
         _ => Ok(()),
     }
 }
 
-/*
-
-UNARY INSTRUCTION
-
---------------------
-OPERATOR OPERATOR
---------------------
-*/
-
-#[inline(always)]
-fn check_unary(op: &TokenKind, a: &Type, span: Span) -> Result<(), ThrushCompilerError> {
+fn check_general_unary(
+    operator: &TokenKind,
+    a: &Type,
+    span: Span,
+) -> Result<(), ThrushCompilerError> {
     if a.is_integer_type() || a.is_float_type() || a.is_mut_numeric_type() {
         return Ok(());
     }
 
     Err(ThrushCompilerError::Error(
         String::from("Type checking"),
-        format!("Arithmetic operation '{}' with '{}' is not allowed.", op, a),
+        format!(
+            "Arithmetic operation '{}' with '{}' is not allowed.",
+            operator, a
+        ),
         String::default(),
         span,
     ))
 }
 
-#[inline(always)]
 fn check_unary_instr_bang(a: &Type, span: Span) -> Result<(), ThrushCompilerError> {
     if let Type::Bool = a {
         return Ok(());
@@ -232,15 +248,6 @@ fn check_unary_instr_bang(a: &Type, span: Span) -> Result<(), ThrushCompilerErro
         String::default(),
         span,
     ))
-}
-
-#[inline(always)]
-pub fn check_unary_types(op: &TokenKind, a: &Type, span: Span) -> Result<(), ThrushCompilerError> {
-    match op {
-        TokenKind::Minus | TokenKind::PlusPlus | TokenKind::MinusMinus => check_unary(op, a, span),
-        TokenKind::Bang => check_unary_instr_bang(a, span),
-        _ => Ok(()),
-    }
 }
 
 pub fn check_type(
@@ -276,22 +283,6 @@ pub fn check_type(
     {
         return check_type(target_type, expression_type, Some(expression), None, error);
     }
-
-    /*   TokenKind::BangEq
-    | TokenKind::EqEq
-    | TokenKind::LessEq
-    | TokenKind::Less
-    | TokenKind::Greater
-    | TokenKind::GreaterEq
-    | TokenKind::And
-    | TokenKind::Or
-    | TokenKind::Bang
-    | TokenKind::Plus
-    | TokenKind::Minus
-    | TokenKind::Slash
-    | TokenKind::Star
-    | TokenKind::LShift
-    | TokenKind::RShift, */
 
     match (target_type, from_type, operator) {
         (Type::Char, Type::Char, None) => Ok(()),

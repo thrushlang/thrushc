@@ -8,7 +8,7 @@ use crate::{
                 StructExtensions, StructFieldsExtensions,
             },
         },
-        symbols::types::Struct,
+        symbols::types::{FoundSymbolId, Struct},
         types::{TokenKind, Type},
     },
 };
@@ -16,7 +16,6 @@ use crate::{
 use super::{
     lexer::{Span, Token},
     parser::ParserContext,
-    symbols::FoundSymbolId,
 };
 
 pub fn build_type(

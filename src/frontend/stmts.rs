@@ -20,7 +20,7 @@ use crate::{
 
 use super::{
     contexts::{BindingsType, InstructionPosition, SyncPosition, TypePosition},
-    expression,
+    expressions,
     lexer::{Span, Token},
     parser::ParserContext,
     typegen,
@@ -90,7 +90,7 @@ fn statement<'instr>(
         TokenKind::Break => Ok(build_break(parser_ctx)?),
         TokenKind::Loop => Ok(build_loop(parser_ctx)?),
 
-        _ => Ok(expression::build_expression(parser_ctx)?),
+        _ => Ok(expressions::build_expression(parser_ctx)?),
     };
 
     statement
@@ -423,11 +423,11 @@ fn build_for_loop<'instr>(
     }
 
     let local: Instruction = build_local(parser_ctx, false)?;
-    let cond: Instruction = expression::build_expression(parser_ctx)?;
+    let cond: Instruction = expressions::build_expression(parser_ctx)?;
 
     parser_ctx.mismatch_types(&Type::Bool, cond.get_type(), cond.get_span(), Some(&cond));
 
-    let actions: Instruction = expression::build_expression(parser_ctx)?;
+    let actions: Instruction = expressions::build_expression(parser_ctx)?;
 
     let mut local_clone: Instruction = local.clone();
 
@@ -528,7 +528,7 @@ fn build_while_loop<'instr>(
         ));
     }
 
-    let conditional: Instruction = expression::build_expr(parser_ctx)?;
+    let conditional: Instruction = expressions::build_expr(parser_ctx)?;
 
     parser_ctx.mismatch_types(
         &Type::Bool,
@@ -680,7 +680,7 @@ fn build_match<'instr>(
         ));
     }
 
-    let mut start_pattern: Instruction = expression::build_expr(parser_ctx)?;
+    let mut start_pattern: Instruction = expressions::build_expr(parser_ctx)?;
     let mut start_block: Instruction = Instruction::Block { stmts: Vec::new() };
 
     let mut patterns: Vec<Instruction> = Vec::with_capacity(10);
@@ -693,7 +693,7 @@ fn build_match<'instr>(
 
         parser_ctx.get_mut_symbols().begin_local_scope();
 
-        let pattern: Instruction = expression::build_expr(parser_ctx)?;
+        let pattern: Instruction = expressions::build_expr(parser_ctx)?;
 
         parser_ctx.mismatch_types(
             &Type::Bool,
@@ -833,7 +833,7 @@ fn build_if_elif_else<'instr>(
         ));
     }
 
-    let if_condition: Instruction = expression::build_expr(parser_ctx)?;
+    let if_condition: Instruction = expressions::build_expr(parser_ctx)?;
 
     parser_ctx.mismatch_types(
         &Type::Bool,
@@ -847,7 +847,7 @@ fn build_if_elif_else<'instr>(
     let mut elfs: Vec<Instruction> = Vec::with_capacity(10);
 
     while parser_ctx.match_token(TokenKind::Elif)? {
-        let elif_condition: Instruction = expression::build_expr(parser_ctx)?;
+        let elif_condition: Instruction = expressions::build_expr(parser_ctx)?;
 
         parser_ctx.mismatch_types(
             &Type::Bool,
@@ -1061,7 +1061,7 @@ pub fn build_enum<'instr>(
                 String::from("Expected '='."),
             )?;
 
-            let expression: Instruction = expression::build_expr(parser_ctx)?;
+            let expression: Instruction = expressions::build_expr(parser_ctx)?;
 
             expression.throw_attemping_use_jit(expression.get_span())?;
 
@@ -1260,7 +1260,7 @@ pub fn build_const<'instr>(
         String::from("Expected '='."),
     )?;
 
-    let value: Instruction = expression::build_expr(parser_ctx)?;
+    let value: Instruction = expressions::build_expr(parser_ctx)?;
 
     value.throw_attemping_use_jit(span)?;
 
@@ -1382,7 +1382,7 @@ fn build_local<'instr>(
         String::from("Expected '='."),
     )?;
 
-    let value: Instruction = expression::build_expr(parser_ctx)?;
+    let value: Instruction = expressions::build_expr(parser_ctx)?;
 
     parser_ctx.mismatch_types(
         &local_type,
@@ -1422,6 +1422,8 @@ fn build_return<'instr>(
         String::from("Expected 'return' keyword."),
     )?;
 
+    let span: Span = return_tk.span;
+
     if !parser_ctx.get_control_ctx().get_inside_function()
         && !parser_ctx.get_control_ctx().get_inside_bind()
     {
@@ -1429,7 +1431,7 @@ fn build_return<'instr>(
             String::from("Syntax error"),
             String::from("Return outside of bind or function."),
             String::default(),
-            return_tk.span,
+            span,
         ));
     }
 
@@ -1438,7 +1440,7 @@ fn build_return<'instr>(
             String::from("Syntax error"),
             String::from("Unreacheable code."),
             String::default(),
-            return_tk.span,
+            span,
         ));
     }
 
@@ -1456,10 +1458,14 @@ fn build_return<'instr>(
             None,
         );
 
-        return Ok(Instruction::Return(Type::Void, Instruction::Null.into()));
+        return Ok(Instruction::Return {
+            expression: None,
+            kind: Type::Void,
+            span,
+        });
     }
 
-    let value: Instruction = expression::build_expr(parser_ctx)?;
+    let value: Instruction = expressions::build_expr(parser_ctx)?;
 
     parser_ctx.mismatch_types(
         &function_type,
@@ -1474,10 +1480,11 @@ fn build_return<'instr>(
         String::from("Expected ';'."),
     )?;
 
-    Ok(Instruction::Return(
-        parser_ctx.get_type_ctx().get_function_type().clone(),
-        value.into(),
-    ))
+    Ok(Instruction::Return {
+        expression: Some(value.into()),
+        kind: parser_ctx.get_type_ctx().get_function_type().clone(),
+        span,
+    })
 }
 
 fn build_block<'instr>(

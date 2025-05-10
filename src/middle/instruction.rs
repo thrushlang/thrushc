@@ -156,7 +156,11 @@ pub enum Instruction<'ctx> {
         attributes: ThrushAttributes<'ctx>,
     },
 
-    Return(Type, Rc<Instruction<'ctx>>),
+    Return {
+        expression: Option<Rc<Instruction<'ctx>>>,
+        kind: Type,
+        span: Span,
+    },
 
     // Constants
     Const {
@@ -280,6 +284,7 @@ impl<'ctx> Instruction<'ctx> {
             Instruction::This { kind, .. } => kind,
             Instruction::BindCall { kind, .. } => kind,
             Instruction::BindParameter { kind, .. } => kind,
+            Instruction::Return { kind, .. } => kind,
 
             _ => &Type::Void,
         }
@@ -312,6 +317,7 @@ impl<'ctx> Instruction<'ctx> {
             Instruction::This { span, .. } => *span,
             Instruction::BindCall { span, .. } => *span,
             Instruction::BindParameter { span, .. } => *span,
+            Instruction::Return { span, .. } => *span,
 
             _ => unreachable!(),
         }
@@ -555,7 +561,7 @@ impl Instruction<'_> {
 
     #[inline]
     pub const fn is_return(&self) -> bool {
-        matches!(self, Instruction::Return(_, _))
+        matches!(self, Instruction::Return { .. })
     }
 
     #[inline]

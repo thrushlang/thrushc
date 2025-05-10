@@ -2,8 +2,8 @@ use crate::middle::{
     instruction::Instruction,
     statement::{CustomType, Enum},
     symbols::types::{
-        Bindings, Constant, Constants, CustomTypes, Enums, Function, Functions, Local, Locals,
-        Struct, Structs,
+        Bindings, Constant, Constants, CustomTypes, Enums, FoundSymbolId, Function, Functions,
+        Local, Locals, Struct, Structs,
     },
     types::BindingsApplicant,
 };
@@ -17,15 +17,6 @@ const MINIMAL_CONSTANTS_CAPACITY: usize = 255;
 const MINIMAL_STRUCTURE_CAPACITY: usize = 255;
 const MINIMAL_ENUMS_CAPACITY: usize = 255;
 const MINIMAL_LOCAL_SCOPE_CAPACITY: usize = 255;
-
-pub type FoundSymbolId<'instr> = (
-    Option<&'instr str>,
-    Option<&'instr str>,
-    Option<&'instr str>,
-    Option<&'instr str>,
-    Option<&'instr str>,
-    Option<(&'instr str, usize)>,
-);
 
 #[derive(Clone, Debug, Default)]
 pub struct SymbolsTable<'instr> {

@@ -14,7 +14,7 @@ use crate::{
                 BindExtensions, BindingsExtensions, ConstantExtensions, FunctionExtensions,
                 LocalExtensions,
             },
-            types::{Bind, Bindings, Constant, Function, Local, Parameters, Struct},
+            types::{Bind, Bindings, Constant, FoundSymbolId, Function, Local, Parameters, Struct},
         },
         types::{self, TokenKind, Type},
     },
@@ -24,8 +24,7 @@ use super::{
     contexts::SyncPosition,
     lexer::{Span, Token},
     parser::ParserContext,
-    symbols::FoundSymbolId,
-    typechecking, typegen, utils,
+    typecheck, typegen, utils,
 };
 
 pub fn build_expression<'instr>(
@@ -88,7 +87,7 @@ fn or<'instr>(
 
         let right: Instruction = and(parser_ctx)?;
 
-        typechecking::check_binary_types(&operator, expression.get_type(), right.get_type(), span)?;
+        typecheck::check_binaryop(&operator, expression.get_type(), right.get_type(), span)?;
 
         expression = Instruction::BinaryOp {
             left: expression.into(),
@@ -114,7 +113,7 @@ fn and<'instr>(
 
         let right: Instruction = equality(parser_ctx)?;
 
-        typechecking::check_binary_types(&operator, expression.get_type(), right.get_type(), span)?;
+        typecheck::check_binaryop(&operator, expression.get_type(), right.get_type(), span)?;
 
         expression = Instruction::BinaryOp {
             left: expression.into(),
@@ -140,7 +139,7 @@ fn equality<'instr>(
 
         let right: Instruction = comparison(parser_ctx)?;
 
-        typechecking::check_binary_types(&operator, expression.get_type(), right.get_type(), span)?;
+        typecheck::check_binaryop(&operator, expression.get_type(), right.get_type(), span)?;
 
         expression = Instruction::BinaryOp {
             left: expression.into(),
@@ -170,7 +169,7 @@ fn comparison<'instr>(
 
         let right: Instruction = term(parser_ctx)?;
 
-        typechecking::check_binary_types(&operator, expression.get_type(), right.get_type(), span)?;
+        typecheck::check_binaryop(&operator, expression.get_type(), right.get_type(), span)?;
 
         expression = Instruction::BinaryOp {
             left: expression.into(),
@@ -203,7 +202,7 @@ fn term<'instr>(
         let left_type: &Type = expression.get_type();
         let right_type: &Type = right.get_type();
 
-        typechecking::check_binary_types(&operator, left_type, right_type, span)?;
+        typecheck::check_binaryop(&operator, left_type, right_type, span)?;
 
         let kind: &Type = left_type.precompute_type(right_type);
 
@@ -234,12 +233,7 @@ fn factor<'instr>(
         let left_type: &Type = expression.get_type();
         let right_type: &Type = right.get_type();
 
-        typechecking::check_binary_types(
-            &operator,
-            left_type,
-            right_type,
-            parser_ctx.previous().span,
-        )?;
+        typecheck::check_binaryop(&operator, left_type, right_type, parser_ctx.previous().span)?;
 
         let kind: &Type = left_type.precompute_type(right_type);
 
@@ -265,11 +259,7 @@ fn unary<'instr>(
 
         let expression: Instruction = primary(parser_ctx)?;
 
-        typechecking::check_unary_types(
-            &operator,
-            expression.get_type(),
-            parser_ctx.previous().span,
-        )?;
+        typecheck::check_unary(&operator, expression.get_type(), parser_ctx.previous().span)?;
 
         return Ok(Instruction::UnaryOp {
             operator,
@@ -291,7 +281,7 @@ fn unary<'instr>(
 
         let expression_type: &Type = expression.get_type();
 
-        typechecking::check_unary_types(&operator, expression_type, parser_ctx.previous().span)?;
+        typecheck::check_unary(&operator, expression_type, parser_ctx.previous().span)?;
 
         return Ok(Instruction::UnaryOp {
             operator,
@@ -944,7 +934,7 @@ fn build_ref<'instr>(
         let operator: TokenKind = operator_tk.kind;
         let span: Span = operator_tk.span;
 
-        typechecking::check_unary_types(&operator, &local_type, span)?;
+        typecheck::check_unary(&operator, &local_type, span)?;
 
         let unaryop: Instruction = Instruction::UnaryOp {
             operator,

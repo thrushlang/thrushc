@@ -381,12 +381,14 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
                 Instruction::Null
             }
 
-            Instruction::Return(kind, value) => {
+            Instruction::Return {
+                expression, kind, ..
+            } => {
                 self.deallocators_emited = true;
 
                 let deallocator: Deallocator = Deallocator::new(&self.context);
 
-                deallocator.dealloc(self.context.get_allocated_symbols(), value);
+                deallocator.dealloc(self.context.get_allocated_symbols(), expression.as_ref());
 
                 valuegen::generate_expression(instruction, kind, &mut self.context);
 

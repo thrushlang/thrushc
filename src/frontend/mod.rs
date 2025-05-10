@@ -1,10 +1,9 @@
 pub mod contexts;
-pub mod expression;
-pub mod impls;
+pub mod expressions;
 pub mod lexer;
 pub mod parser;
-pub mod stmt;
+pub mod stmts;
 pub mod symbols;
-pub mod typechecking;
+pub mod typecheck;
 pub mod typegen;
 pub mod utils;

@@ -418,18 +418,23 @@ pub fn generate_expression<'ctx>(
             .into();
     }
 
-    if let Instruction::Return(kind, value) = expression {
+    if let Instruction::Return {
+        expression, kind, ..
+    } = expression
+    {
         let default_return: PointerValue =
             llvm_context.ptr_type(AddressSpace::default()).const_null();
 
-        if kind.is_void_type() {
+        if expression.is_none() {
             llvm_builder.build_return(None).unwrap();
             return default_return.into();
         }
 
-        llvm_builder
-            .build_return(Some(&generate_expression(value, kind, context)))
-            .unwrap();
+        if let Some(expression) = expression {
+            llvm_builder
+                .build_return(Some(&generate_expression(expression, kind, context)))
+                .unwrap();
+        }
 
         return default_return.into();
     }

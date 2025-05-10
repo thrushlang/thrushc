@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use crate::middle::instruction::Instruction;
 
 use super::{context::CodeGenContext, memory::SymbolAllocated, types::SymbolsAllocated};
@@ -19,18 +21,28 @@ impl<'a, 'ctx> Deallocator<'a, 'ctx> {
         });
     }
 
-    pub fn dealloc(&self, symbols_allocated: SymbolsAllocated, value: &Instruction) {
-        if let Instruction::LocalRef { name, .. } = value {
-            for symbol in symbols_allocated {
-                let symbol_name = symbol.0;
+    pub fn dealloc(
+        &self,
+        symbols_allocated: SymbolsAllocated,
+        expression: Option<&Rc<Instruction>>,
+    ) {
+        if let Some(expression) = expression {
+            if let Instruction::LocalRef { name, .. } = **expression {
+                for symbol in symbols_allocated {
+                    let symbol_name: &str = symbol.0;
 
-                if symbol_name == name {
-                    continue;
+                    if *symbol_name == *name {
+                        continue;
+                    }
+
+                    let symbol: &SymbolAllocated = symbol.1;
+                    symbol.dealloc(self.context);
                 }
 
-                let symbol: &SymbolAllocated = symbol.1;
-                symbol.dealloc(self.context);
+                return;
             }
+
+            self.dealloc_all(symbols_allocated);
         }
     }
 }

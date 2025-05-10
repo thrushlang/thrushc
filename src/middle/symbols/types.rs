@@ -8,6 +8,15 @@ use crate::{
     },
 };
 
+pub type FoundSymbolId<'instr> = (
+    Option<&'instr str>,
+    Option<&'instr str>,
+    Option<&'instr str>,
+    Option<&'instr str>,
+    Option<&'instr str>,
+    Option<(&'instr str, usize)>,
+);
+
 pub type Constant<'instr> = (Type, ThrushAttributes<'instr>);
 
 pub type Struct<'instr> = (

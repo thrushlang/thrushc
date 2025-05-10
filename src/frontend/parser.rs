@@ -18,7 +18,7 @@ use super::contexts::{
 use super::lexer::{Span, Token};
 
 use super::symbols::SymbolsTable;
-use super::{stmt, typechecking};
+use super::{stmts, typecheck};
 
 const MINIMAL_STATEMENT_CAPACITY: usize = 100_000;
 const MINIMAL_GLOBAL_CAPACITY: usize = 2024;
@@ -56,7 +56,7 @@ impl<'instr> Parser<'instr> {
         parser_ctx.init();
 
         while !parser_ctx.is_eof() {
-            match stmt::parse(&mut parser_ctx) {
+            match stmts::parse(&mut parser_ctx) {
                 Ok(instr) => {
                     parser_ctx.add_stmt(instr);
                 }
@@ -117,10 +117,10 @@ impl<'instr> ParserContext<'instr> {
         );
 
         if expr.is_some_and(|expr| expr.is_binary() || expr.is_group()) {
-            if let Err(error) = typechecking::check_type(target, &Type::Void, expr, None, error) {
+            if let Err(error) = typecheck::check_type(target, &Type::Void, expr, None, error) {
                 self.errors.push(error);
             }
-        } else if let Err(error) = typechecking::check_type(target, from, None, None, error) {
+        } else if let Err(error) = typecheck::check_type(target, from, None, None, error) {
             self.errors.push(error);
         }
     }
@@ -191,7 +191,7 @@ impl<'instr> ParserContext<'instr> {
                 self.symbols.clear_all_scopes();
             }
             SyncPosition::Statement => {
-                if let Some((lbrace_count, rbrace_count, diff)) = self.previous_scopes() {
+                if let Some((lbrace_count, rbrace_count, diff)) = self.get_peerless_scopes() {
                     if lbrace_count != rbrace_count {
                         for _ in 0..diff {
                             self.scope = self.scope.saturating_sub(1);
@@ -208,6 +208,15 @@ impl<'instr> ParserContext<'instr> {
                 }
             }
             SyncPosition::Expression => {
+                if let Some((lbrace_count, rbrace_count, diff)) = self.get_peerless_scopes() {
+                    if lbrace_count != rbrace_count {
+                        for _ in 0..diff {
+                            self.scope = self.scope.saturating_sub(1);
+                            self.symbols.end_local_scope();
+                        }
+                    }
+                }
+
                 while !self.is_eof() {
                     match self.peek().kind {
                         any if any.is_sync_expression()
@@ -308,7 +317,7 @@ impl<'instr> ParserContext<'instr> {
         self.scope == 0
     }
 
-    fn previous_scopes(&mut self) -> Option<(usize, usize, usize)> {
+    fn get_peerless_scopes(&mut self) -> Option<(usize, usize, usize)> {
         self.tokens[self.current..]
             .iter()
             .enumerate()
@@ -376,7 +385,7 @@ impl<'instr> ParserContext<'instr> {
             .filter(|(_, token)| token.kind.is_type_keyword())
             .for_each(|(pos, _)| {
                 self.current = pos;
-                let _ = stmt::build_custom_type(self, true);
+                let _ = stmts::build_custom_type(self, true);
                 self.current = 0;
             });
 
@@ -386,7 +395,7 @@ impl<'instr> ParserContext<'instr> {
             .filter(|(_, token)| token.kind.is_const_keyword())
             .for_each(|(pos, _)| {
                 self.current = pos;
-                let _ = stmt::build_const(self, true);
+                let _ = stmts::build_const(self, true);
                 self.current = 0;
             });
 
@@ -396,7 +405,7 @@ impl<'instr> ParserContext<'instr> {
             .filter(|(_, token)| token.kind.is_struct_keyword())
             .for_each(|(pos, _)| {
                 self.current = pos;
-                let _ = stmt::build_struct(self, true);
+                let _ = stmts::build_struct(self, true);
                 self.current = 0;
             });
 
@@ -406,7 +415,7 @@ impl<'instr> ParserContext<'instr> {
             .filter(|(_, token)| token.kind.is_bindings_keyword())
             .for_each(|(pos, _)| {
                 self.current = pos;
-                let _ = stmt::build_bindings(self, true);
+                let _ = stmts::build_bindings(self, true);
                 self.current = 0;
             });
 
@@ -416,7 +425,7 @@ impl<'instr> ParserContext<'instr> {
             .filter(|(_, token)| token.kind.is_enum_keyword())
             .for_each(|(pos, _)| {
                 self.current = pos;
-                let _ = stmt::build_enum(self, true);
+                let _ = stmts::build_enum(self, true);
                 self.current = 0;
             });
 
@@ -426,7 +435,7 @@ impl<'instr> ParserContext<'instr> {
             .filter(|(_, token)| token.kind.is_function_keyword())
             .for_each(|(pos, _)| {
                 self.current = pos;
-                let _ = stmt::build_function(self, true);
+                let _ = stmts::build_function(self, true);
                 self.current = 0;
             });
     }
