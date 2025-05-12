@@ -1,35 +1,42 @@
-#![allow(clippy::upper_case_acronyms)]
-
-use inkwell::targets::TargetTriple;
-
-use crate::backend::llvm;
-use crate::frontend::parser::ParserContext;
-use crate::middle::instruction::Instruction;
-use crate::standard::diagnostic::Diagnostician;
-use crate::standard::misc::{CompilerFile, CompilerOptions, Emitable, Opt};
-
-use super::super::super::{
-    LLVM_BACKEND, Lexer, Parser, Token,
-    logging::{self, LoggingType},
-};
-
-use {
-    colored::Colorize,
-    inkwell::{
-        OptimizationLevel,
-        builder::Builder,
-        context::Context,
-        module::Module,
-        targets::{Target, TargetMachine},
-    },
-};
-
 use std::{
     fs::{self, write},
     path::{Path, PathBuf},
-    process::Command,
     time::{Duration, Instant},
 };
+
+use assembler::LLVMStaticCompiler;
+use colored::Colorize;
+use disassembler::LLVMDisassembler;
+use inkwell::{
+    OptimizationLevel,
+    builder::Builder,
+    context::Context,
+    module::Module,
+    targets::{Target, TargetMachine, TargetTriple},
+};
+use linkers::LLVMLinker;
+use optimizers::LLVMOptimizer;
+
+use crate::{
+    frontend::{
+        lexer::{Lexer, Token},
+        parser::{Parser, ParserContext},
+    },
+    middle::instruction::Instruction,
+    standard::{
+        diagnostic::Diagnostician,
+        logging::{self, LoggingType},
+        misc::{CompilerFile, CompilerOptions, Emitable, Opt},
+    },
+};
+
+use super::llvm;
+
+pub mod assembler;
+pub mod disassembler;
+pub mod handler;
+pub mod linkers;
+pub mod optimizers;
 
 pub struct Thrushc<'a> {
     compiled: Vec<PathBuf>,
@@ -38,22 +45,6 @@ pub struct Thrushc<'a> {
     llvm_comptime: Duration,
     thrushc_comptime: Duration,
 }
-
-pub struct LLVMLinker<'a> {
-    files: &'a [PathBuf],
-    options: &'a CompilerOptions,
-}
-
-pub struct LLVMStaticCompiler<'a> {
-    files: &'a [PathBuf],
-    options: &'a CompilerOptions,
-}
-
-pub struct LLVMDissambler<'a> {
-    files: &'a [PathBuf],
-}
-
-pub struct LLVMOptimizer;
 
 impl<'a> Thrushc<'a> {
     pub fn new(files: &'a [CompilerFile], options: &'a CompilerOptions) -> Self {
@@ -70,6 +61,23 @@ impl<'a> Thrushc<'a> {
         self.files.iter().for_each(|file| {
             self.compile_file(file);
         });
+
+        if self
+            .options
+            .get_llvm_backend_options()
+            .contains_emitable(Emitable::LLVMIR)
+        {
+            let dissamble_time: Instant = Instant::now();
+
+            LLVMDisassembler::new(&self.compiled).dissamble();
+
+            self.llvm_comptime += dissamble_time.elapsed();
+
+            return (
+                self.thrushc_comptime.as_millis(),
+                self.llvm_comptime.as_millis(),
+            );
+        }
 
         let static_compiler_llvm_time: Duration =
             LLVMStaticCompiler::new(&self.compiled, self.options).compile();
@@ -213,106 +221,6 @@ impl<'a> Thrushc<'a> {
 
         self.llvm_comptime += optimization_time.elapsed();
 
-        if self
-            .options
-            .get_llvm_backend_options()
-            .contains_emitable(Emitable::LLVMIR)
-        {
-            let dissamble_time: Instant = Instant::now();
-
-            LLVMDissambler::new(&[PathBuf::from(compiled_path)]).dissamble();
-
-            self.llvm_comptime += dissamble_time.elapsed();
-
-            return;
-        }
-
         self.compiled.push(PathBuf::from(compiled_path));
-    }
-}
-
-impl<'a> LLVMStaticCompiler<'a> {
-    pub fn new(files: &'a [PathBuf], options: &'a CompilerOptions) -> Self {
-        Self { files, options }
-    }
-
-    pub fn compile(&self) -> Duration {
-        let start_time: Instant = Instant::now();
-
-        let mut llvm_link_command: Command =
-            Command::new(LLVM_BACKEND.as_ref().unwrap().join("llc"));
-
-        llvm_link_command.args(
-            self.options
-                .get_llvm_backend_options()
-                .get_static_compiler_arguments(),
-        );
-
-        llvm_link_command.args(self.files);
-
-        handle_command(&mut llvm_link_command);
-
-        start_time.elapsed()
-    }
-}
-
-impl<'a> LLVMLinker<'a> {
-    pub fn new(files: &'a [PathBuf], options: &'a CompilerOptions) -> Self {
-        Self { files, options }
-    }
-
-    pub fn link(&self) -> Duration {
-        let start_time: Instant = Instant::now();
-
-        let mut llvm_link_command: Command =
-            Command::new(LLVM_BACKEND.as_ref().unwrap().join("lld"));
-
-        llvm_link_command.args(
-            self.options
-                .get_llvm_backend_options()
-                .get_linker_arguments(),
-        );
-
-        llvm_link_command.args(self.files);
-
-        handle_command(&mut llvm_link_command);
-
-        start_time.elapsed()
-    }
-}
-
-impl LLVMOptimizer {
-    pub fn optimize(path: &str, opt: &str) {
-        handle_command(
-            Command::new(LLVM_BACKEND.as_ref().unwrap().join("tools/opt"))
-                .arg(format!("-p={}", opt))
-                .arg(path)
-                .arg("-o")
-                .arg(path),
-        );
-    }
-}
-
-impl<'a> LLVMDissambler<'a> {
-    pub fn new(files: &'a [PathBuf]) -> Self {
-        Self { files }
-    }
-
-    pub fn dissamble(&self) {
-        handle_command(
-            Command::new(LLVM_BACKEND.as_ref().unwrap().join("tools/llvm-dis")).args(self.files),
-        );
-    }
-}
-
-#[inline]
-fn handle_command(command: &mut Command) {
-    if let Ok(child) = command.output() {
-        if !child.status.success() {
-            logging::log(
-                logging::LoggingType::Error,
-                &String::from_utf8_lossy(&child.stderr),
-            );
-        }
     }
 }

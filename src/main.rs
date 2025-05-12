@@ -4,12 +4,8 @@ mod middle;
 mod standard;
 
 use {
-    backend::llvm::builder::Thrushc,
+    backend::thrushc::Thrushc,
     colored::{Colorize, control},
-    frontend::{
-        lexer::{Lexer, Token},
-        parser::Parser,
-    },
     inkwell::targets::{InitializationConfig, Target},
     lazy_static::lazy_static,
     standard::{cli::Cli, logging},
