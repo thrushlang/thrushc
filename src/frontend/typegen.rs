@@ -1,5 +1,4 @@
 use crate::{
-    common::error::ThrushCompilerError,
     middle::{
         statement::{
             CustomType, CustomTypeFields, StructFields,
@@ -11,6 +10,7 @@ use crate::{
         symbols::types::{FoundSymbolId, Struct},
         types::{TokenKind, Type},
     },
+    standard::error::ThrushCompilerError,
 };
 
 use super::{

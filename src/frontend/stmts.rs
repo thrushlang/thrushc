@@ -4,7 +4,6 @@ use ahash::AHashMap as HashMap;
 
 use crate::{
     backend::llvm::compiler::{attributes::LLVMAttribute, conventions::CallConvention},
-    common::error::ThrushCompilerError,
     lazy_static,
     middle::{
         instruction::Instruction,
@@ -16,6 +15,7 @@ use crate::{
         traits::ThrushStructTypeExtensions,
         types::{BindingsApplicant, ThrushStructType, TokenKind, Type, generate_bindings},
     },
+    standard::error::ThrushCompilerError,
 };
 
 use super::{

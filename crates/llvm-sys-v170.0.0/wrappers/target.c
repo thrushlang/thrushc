@@ -4,6 +4,7 @@
  * we can't bind directly to them (the function body is generated via macro),
  * so here are some wrappers.
  */
+
 #include <llvm-c/Target.h>
 
 void LLVM_InitializeAllTargetInfos(void) {

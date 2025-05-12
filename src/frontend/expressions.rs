@@ -1,5 +1,4 @@
 use crate::{
-    common::error::ThrushCompilerError,
     middle::{
         instruction::Instruction,
         statement::{
@@ -18,6 +17,7 @@ use crate::{
         },
         types::{self, TokenKind, Type},
     },
+    standard::error::ThrushCompilerError,
 };
 
 use super::{

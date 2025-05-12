@@ -1,6 +1,4 @@
-use super::super::LLVM_BACKEND;
-
-use super::misc::{CompilerFile, CompilerOptions, Opt};
+use super::misc::{CompilerOptions, Emitable, FlagsPosition, Opt};
 
 use super::{
     constants::TARGET_TRIPLES,
@@ -12,19 +10,19 @@ use {
     inkwell::targets::{CodeModel, RelocMode, TargetMachine, TargetTriple},
     std::{
         path::PathBuf,
-        process::{self, Command, Output},
+        process::{self},
     },
 };
 
 pub struct Cli {
-    pub options: CompilerOptions,
+    options: CompilerOptions,
     args: Vec<String>,
 }
 
 impl Cli {
     pub fn parse(args: Vec<String>) -> Cli {
         let mut cli: Cli = Self {
-            options: CompilerOptions::default(),
+            options: CompilerOptions::new(),
             args,
         };
 
@@ -43,73 +41,135 @@ impl Cli {
 
         let mut position: usize = 0;
 
+        self.options
+            .set_flag_position(FlagsPosition::ThrushCompiler);
+
         while position != self.args.len() {
             self.analyze(self.args[position].clone(), &mut position);
         }
     }
 
-    fn analyze(&mut self, argument: String, position: &mut usize) {
-        match argument.trim() {
+    fn analyze(&mut self, arg: String, position: &mut usize) {
+        let argument: &str = arg.trim();
+
+        match argument {
             "help" | "-h" | "--help" => {
                 *position += 1;
                 self.help();
             }
 
-            "llvm-help" => {
-                *position += 1;
-                self.llvm_help();
-            }
-
             "version" | "-v" | "--version" => {
                 *position += 1;
-                println!("v{}", env!("CARGO_PKG_VERSION"));
+                println!("{}", env!("CARGO_PKG_VERSION"));
                 process::exit(0);
             }
 
-            "target-triples" => {
+            "-llvm" => {
                 *position += 1;
+                self.options.set_use_llvm_backend(true);
+            }
+
+            "-sc" => {
+                if !self.options.use_llvm() {
+                    self.report_error(&format!(
+                        "Cannot use '{}' without '-llvm' flag previously.",
+                        argument
+                    ));
+                }
+
+                *position += 1;
+
+                self.options
+                    .set_flag_position(FlagsPosition::LLVMStaticCompiler);
+            }
+
+            "-lk" => {
+                if !self.options.use_llvm() {
+                    self.report_error(&format!(
+                        "Cannot use '{}' without '-llvm' flag previously.",
+                        argument
+                    ));
+                }
+
+                *position += 1;
+
+                self.options.set_flag_position(FlagsPosition::LLVMLinker);
+            }
+
+            "target-triples" => {
+                if !self.options.use_llvm() {
+                    self.report_error(
+                        "Cannot use 'target-triples' without '-llvm' flag previously.",
+                    );
+                }
+
+                *position += 1;
+
                 TARGET_TRIPLES
                     .iter()
                     .for_each(|target| println!("{}", target));
+
                 process::exit(0);
             }
 
             "host-triple" => {
+                if !self.options.use_llvm() {
+                    self.report_error("Cannot use 'host-triple' without '-llvm' flag previously.");
+                }
+
                 *position += 1;
+
                 println!(
                     "{}",
                     TargetMachine::get_default_triple()
                         .as_str()
-                        .to_str()
-                        .unwrap_or("invalid-utf8")
+                        .to_string_lossy()
                 );
+
                 process::exit(0);
             }
 
             "-opt" | "--optimization" => {
+                if !self.options.use_llvm() {
+                    self.report_error(&format!(
+                        "Cannot use '{}' without '-llvm' flag previously.",
+                        argument
+                    ));
+                }
+
                 *position += 1;
 
                 if *position > self.args.len() {
                     self.report_error(&format!("Missing argument for '{}' flag.", argument));
                 }
 
-                self.options.optimization =
-                    match self.args[self.extract_relative_position(*position)].as_str() {
-                        "O0" => Opt::None,
-                        "O1" => Opt::Low,
-                        "O2" => Opt::Mid,
-                        "size" => Opt::Size,
-                        "mcqueen" => Opt::Mcqueen,
-                        any => {
-                            self.report_error(&format!("Unknown optimization level '{}'.", any));
-                            Opt::default()
-                        }
-                    };
+                let opt: Opt = match self.args[self.extract_relative_position(*position)].as_str() {
+                    "O0" => Opt::None,
+                    "O1" => Opt::Low,
+                    "O2" => Opt::Mid,
+                    "size" => Opt::Size,
+                    "mcqueen" => Opt::Mcqueen,
+                    any => {
+                        self.report_error(&format!("Unknown optimization level '{}'.", any));
+                        Opt::default()
+                    }
+                };
+
+                self.options
+                    .get_mut_llvm_backend_options()
+                    .set_optimization(opt);
 
                 *position += 1;
             }
 
             "--emit" | "-emit" => {
+                if !self.options.use_llvm() {
+                    self.report_error(&format!(
+                        "Cannot use '{}' without '-llvm' flag previously.",
+                        argument
+                    ));
+                }
+
                 *position += 1;
 
                 if *position > self.args.len() {
@@ -117,14 +177,34 @@ impl Cli {
                 }
 
                 match self.args[self.extract_relative_position(*position)].as_str() {
-                    "llvm-ir" => self.options.emit_llvm_ir = true,
-                    "llvm-bc" => self.options.emit_llvm_bitcode = true,
-                    "ast" => self.options.emit_ast = true,
-                    "asm" => self.options.emit_asm = true,
-                    "tokens" => self.options.emit_tokens = true,
+                    "llvm-ir" => self
+                        .options
+                        .get_mut_llvm_backend_options()
+                        .add_emit_option(Emitable::LLVMIR),
+                    "raw-llvm-ir" => self
+                        .options
+                        .get_mut_llvm_backend_options()
+                        .add_emit_option(Emitable::RawLLVMIR),
+                    "llvm-bc" => self
+                        .options
+                        .get_mut_llvm_backend_options()
+                        .add_emit_option(Emitable::LLVMBitcode),
+                    "ast" => self
+                        .options
+                        .get_mut_llvm_backend_options()
+                        .add_emit_option(Emitable::AST),
+                    "asm" => self
+                        .options
+                        .get_mut_llvm_backend_options()
+                        .add_emit_option(Emitable::Assembly),
+                    "tokens" => self
+                        .options
+                        .get_mut_llvm_backend_options()
+                        .add_emit_option(Emitable::Tokens),
+
                     any => {
                         self.report_error(&format!(
-                            "'{}' is invalid target to emit raw compiled code. Maybe '-emit llvm-ir || llvm-bc || thrush-ast || asm', is the command?",
+                            "'{}' is invalid target to emit raw compiled code. Maybe '-emit llvm-ir || raw-llvm-ir || llvm-bc || thrush-ast || asm', is the command?",
                             any
                         ));
                     }
@@ -134,6 +214,13 @@ impl Cli {
             }
 
             "--target" | "-t" => {
+                if !self.options.use_llvm() {
+                    self.report_error(&format!(
+                        "Cannot use '{}' without '-llvm' flag previously.",
+                        argument
+                    ));
+                }
+
                 *position += 1;
 
                 if *position > self.args.len() {
@@ -142,7 +229,10 @@ impl Cli {
 
                 match self.args[self.extract_relative_position(*position)].as_str() {
                     target if TARGET_TRIPLES.contains(&target) => {
-                        self.options.target_triple = TargetTriple::create(target);
+                        self.options
+                            .get_mut_llvm_backend_options()
+                            .set_target_triple(TargetTriple::create(target));
+
                         *position += 1;
                     }
 
@@ -155,25 +245,31 @@ impl Cli {
                 }
             }
 
-            "--emit-raw-llvm-ir" | "-emit-raw-llvm-ir" => {
-                *position += 1;
-                self.options.emit_raw_llvm_ir = true;
-            }
-
             "--reloc" | "-reloc" => {
+                if !self.options.use_llvm() {
+                    self.report_error(&format!(
+                        "Cannot use '{}' without '-llvm' flag previously.",
+                        argument
+                    ));
+                }
+
                 *position += 1;
 
                 if *position > self.args.len() {
                     self.report_error(&format!("Missing argument for '{}' flag.", argument));
                 }
 
-                self.options.reloc_mode =
+                let reloc_mode: RelocMode =
                     match self.args[self.extract_relative_position(*position)].as_str() {
                         "dynamic-no-pic" => RelocMode::DynamicNoPic,
                         "pic" => RelocMode::PIC,
                         "static" => RelocMode::Static,
                         _ => RelocMode::Default,
                     };
+
+                self.options
+                    .get_mut_llvm_backend_options()
+                    .set_reloc_mode(reloc_mode);
 
                 *position += 1;
             }
@@ -185,7 +281,7 @@ impl Cli {
                     self.report_error(&format!("Missing argument for '{}' flag.", argument));
                 }
 
-                self.options.code_model =
+                let code_model: CodeModel =
                     match self.args[self.extract_relative_position(*position)].as_str() {
                         "small" => CodeModel::Small,
                         "medium" => CodeModel::Medium,
@@ -194,31 +290,56 @@ impl Cli {
                         _ => CodeModel::Default,
                     };
 
+                self.options
+                    .get_mut_llvm_backend_options()
+                    .set_code_model(code_model);
+
                 *position += 1;
             }
 
             path if PathBuf::from(path).exists() && path.ends_with(".th") => {
                 *position += 1;
 
-                let mut file: PathBuf = PathBuf::from(path);
+                let mut file_path: PathBuf = PathBuf::from(path);
 
-                if path.chars().filter(|ch| *ch == '.').count() > 2 && file.canonicalize().is_ok() {
-                    file = file.canonicalize().unwrap_or_default();
+                if let Ok(canonicalized_path) = file_path.canonicalize() {
+                    file_path = canonicalized_path;
                 }
 
-                self.options.files.push(CompilerFile {
-                    name: file
+                self.options.add_file(
+                    file_path
                         .file_name()
                         .unwrap_or_default()
                         .to_string_lossy()
                         .to_string(),
-                    path: file,
-                });
+                    file_path,
+                );
             }
 
             arg => {
                 *position += 1;
-                self.options.args.push(arg.to_owned());
+
+                if self.options.use_llvm() && self.options.get_flag_position().llvm_linker() {
+                    self.options
+                        .get_mut_llvm_backend_options()
+                        .add_linker_argument(arg.to_string());
+
+                    return;
+                }
+
+                if self.options.use_llvm()
+                    && self.options.get_flag_position().llvm_static_compiler()
+                {
+                    self.options
+                        .get_mut_llvm_backend_options()
+                        .add_static_compiler_argument(arg.to_string());
+
+                    return;
+                }
+
+                self.report_error(
+                    "Expected arguments between '-sc' (Static Compiler) or '-lk' (Linker) flag.",
+                );
             }
         }
     }
@@ -279,17 +400,6 @@ impl Cli {
             format!(
                 "{} ({}) {}\n",
                 "•".bold(),
-                "llvm-help".custom_color((141, 141, 142)).bold(),
-                "Show Clang & LLVM help message.".bold()
-            )
-            .as_bytes(),
-        );
-
-        logging::write(
-            logging::OutputIn::Stdout,
-            format!(
-                "{} ({}) {}\n",
-                "•".bold(),
                 "version".custom_color((141, 141, 142)).bold(),
                 "Show the version.".bold()
             )
@@ -320,7 +430,41 @@ impl Cli {
 
         logging::write(
             logging::OutputIn::Stdout,
-            "Special Compiler flags:\n\n".bold().as_bytes(),
+            "Compiler flags:\n\n".bold().as_bytes(),
+        );
+
+        logging::write(
+            logging::OutputIn::Stdout,
+            format!(
+                "{} ({} | {}) {}\n",
+                "•".bold(),
+                "-llvm".custom_color((141, 141, 142)).bold(),
+                "-llvm".custom_color((141, 141, 142)).bold(),
+                "Enable the LLVM backend infrastructure.".bold()
+            )
+            .as_bytes(),
+        );
+
+        logging::write(
+            logging::OutputIn::Stdout,
+            format!(
+                "{} ({}) {}\n",
+                "•".bold(),
+                "-sc".custom_color((141, 141, 142)).bold(),
+                "Pass arguments to the Static Compiler.".bold()
+            )
+            .as_bytes(),
+        );
+
+        logging::write(
+            logging::OutputIn::Stdout,
+            format!(
+                "{} ({}) {}\n",
+                "•".bold(),
+                "-lk".custom_color((141, 141, 142)).bold(),
+                "Pass arguments to the Linker.".bold()
+            )
+            .as_bytes(),
         );
 
         logging::write(
@@ -374,39 +518,10 @@ impl Cli {
             .as_bytes(),
         );
 
-        logging::write(
-            logging::OutputIn::Stdout,
-            format!(
-                "\n{}{} {}\n",
-                "Note".custom_color((141, 141, 142)).bold().underline(),
-                ":".custom_color((141, 141, 142)).bold(),
-                "The Thrush Compiler supports Clang & LLVM commands and flags. Execute 'thrushc llvm-help' command to see."
-                    .bold(),
-            )
-            .as_bytes(),
-        );
-
         process::exit(0);
     }
 
-    fn llvm_help(&self) {
-        let error = |_| {
-            logging::log(
-                logging::LoggingType::Panic,
-                "Unable to execute 'llvm-help' command.",
-            );
-
-            unreachable!()
-        };
-
-        let mut clang_help_command: Command = Command::new(LLVM_BACKEND.join("clang-17"));
-
-        clang_help_command.arg("--help");
-
-        let output: Output = clang_help_command.output().unwrap_or_else(error);
-
-        logging::write(logging::OutputIn::Stderr, &output.stdout);
-
-        process::exit(0);
+    pub fn get_options(&self) -> &CompilerOptions {
+        &self.options
     }
 }

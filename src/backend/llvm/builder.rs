@@ -1,15 +1,15 @@
 #![allow(clippy::upper_case_acronyms)]
 
-use crate::common::diagnostic::Diagnostician;
-use crate::common::misc::{CompilerFile, CompilerOptions};
+use inkwell::targets::TargetTriple;
+
+use crate::backend::llvm;
 use crate::frontend::parser::ParserContext;
 use crate::middle::instruction::Instruction;
-
-use super::compiler::Compiler;
+use crate::standard::diagnostic::Diagnostician;
+use crate::standard::misc::{CompilerFile, CompilerOptions, Emitable, Opt};
 
 use super::super::super::{
     LLVM_BACKEND, Lexer, Parser, Token,
-    common::constants::CURRENT_CLANG_VERSION,
     logging::{self, LoggingType},
 };
 
@@ -39,16 +39,21 @@ pub struct Thrushc<'a> {
     thrushc_comptime: Duration,
 }
 
-pub struct Clang<'a> {
+pub struct LLVMLinker<'a> {
     files: &'a [PathBuf],
     options: &'a CompilerOptions,
 }
 
-pub struct LLVMOpt;
+pub struct LLVMStaticCompiler<'a> {
+    files: &'a [PathBuf],
+    options: &'a CompilerOptions,
+}
 
-struct LLVMDissambler<'a> {
+pub struct LLVMDissambler<'a> {
     files: &'a [PathBuf],
 }
+
+pub struct LLVMOptimizer;
 
 impl<'a> Thrushc<'a> {
     pub fn new(files: &'a [CompilerFile], options: &'a CompilerOptions) -> Self {
@@ -66,9 +71,13 @@ impl<'a> Thrushc<'a> {
             self.compile_file(file);
         });
 
-        let llvm_time: Duration = Clang::new(&self.compiled, self.options).compile();
+        let static_compiler_llvm_time: Duration =
+            LLVMStaticCompiler::new(&self.compiled, self.options).compile();
 
-        self.llvm_comptime += llvm_time;
+        let llvm_linker_time: Duration = LLVMLinker::new(&self.compiled, self.options).link();
+
+        self.llvm_comptime += static_compiler_llvm_time;
+        self.llvm_comptime += llvm_linker_time;
 
         (
             self.thrushc_comptime.as_millis(),
@@ -89,23 +98,29 @@ impl<'a> Thrushc<'a> {
             .as_bytes(),
         );
 
-        let start_time: Instant = Instant::now();
+        let thrushc_time: Instant = Instant::now();
 
         let code: String = fs::read_to_string(&file.path).unwrap_or_else(|_| {
             logging::log(
                 LoggingType::Panic,
-                &format!("`{}` is invalid utf-8 file.", &file.path.display()),
+                &format!("'{}' is invalid utf-8 file.", &file.path.display()),
             );
             unreachable!()
         });
 
         let tokens: Vec<Token> = Lexer::lex(code.as_bytes(), file);
 
-        if self.options.emit_tokens {
+        if self
+            .options
+            .get_llvm_backend_options()
+            .contains_emitable(Emitable::Tokens)
+        {
             let _ = write(
                 format!("build/{}.tokens", &file.name),
                 format!("{:#?}", tokens),
             );
+
+            self.thrushc_comptime += thrushc_time.elapsed();
 
             return;
         }
@@ -113,38 +128,50 @@ impl<'a> Thrushc<'a> {
         let parser_ctx: ParserContext = Parser::parse(&tokens, file);
         let instructions: &[Instruction] = parser_ctx.get_instructions();
 
-        if self.options.emit_ast {
+        if self
+            .options
+            .get_llvm_backend_options()
+            .contains_emitable(Emitable::AST)
+        {
             let _ = write(
                 format!("build/{}.ast", &file.name),
                 format!("{:#?}", instructions),
             );
 
+            self.thrushc_comptime += thrushc_time.elapsed();
+
             return;
         }
 
         let context: Context = Context::create();
+
         let builder: Builder = context.create_builder();
         let module: Module = context.create_module(&file.name);
 
-        module.set_triple(&self.options.target_triple);
+        let target_triple: &TargetTriple =
+            self.options.get_llvm_backend_options().get_target_triple();
 
-        let opt: OptimizationLevel = self.options.optimization.to_llvm_opt();
+        module.set_triple(target_triple);
 
-        let machine: TargetMachine = Target::from_triple(&self.options.target_triple)
+        let thrush_opt: Opt = self.options.get_llvm_backend_options().get_optimization();
+
+        let opt: OptimizationLevel = thrush_opt.to_llvm_opt();
+
+        let machine: TargetMachine = Target::from_triple(target_triple)
             .unwrap()
             .create_target_machine(
-                &self.options.target_triple,
+                target_triple,
                 "",
                 "",
                 opt,
-                self.options.reloc_mode,
-                self.options.code_model,
+                self.options.get_llvm_backend_options().get_reloc_mode(),
+                self.options.get_llvm_backend_options().get_code_model(),
             )
             .unwrap();
 
         module.set_data_layout(&machine.get_target_data().get_data_layout());
 
-        Compiler::compile(
+        llvm::compiler::Compiler::compile(
             &module,
             &builder,
             &context,
@@ -153,9 +180,13 @@ impl<'a> Thrushc<'a> {
             Diagnostician::new(file),
         );
 
-        self.thrushc_comptime += start_time.elapsed();
+        self.thrushc_comptime += thrushc_time.elapsed();
 
-        if self.options.emit_raw_llvm_ir {
+        if self
+            .options
+            .get_llvm_backend_options()
+            .contains_emitable(Emitable::RawLLVMIR)
+        {
             module
                 .print_to_file(Path::new(&format!("build/{}.ll", &file.name)))
                 .unwrap_or_else(|_| {
@@ -176,81 +207,84 @@ impl<'a> Thrushc<'a> {
 
         module.write_bitcode_to_path(Path::new(compiled_path));
 
-        let start_time: Instant = Instant::now();
+        let optimization_time: Instant = Instant::now();
 
-        LLVMOpt::optimize(compiled_path, self.options.optimization.to_llvm_17_passes());
+        LLVMOptimizer::optimize(compiled_path, thrush_opt.to_llvm_17_passes());
 
-        self.llvm_comptime += start_time.elapsed();
+        self.llvm_comptime += optimization_time.elapsed();
+
+        if self
+            .options
+            .get_llvm_backend_options()
+            .contains_emitable(Emitable::LLVMIR)
+        {
+            let dissamble_time: Instant = Instant::now();
+
+            LLVMDissambler::new(&[PathBuf::from(compiled_path)]).dissamble();
+
+            self.llvm_comptime += dissamble_time.elapsed();
+
+            return;
+        }
 
         self.compiled.push(PathBuf::from(compiled_path));
     }
 }
 
-impl<'a> Clang<'a> {
+impl<'a> LLVMStaticCompiler<'a> {
     pub fn new(files: &'a [PathBuf], options: &'a CompilerOptions) -> Self {
         Self { files, options }
     }
 
     pub fn compile(&self) -> Duration {
-        let llvm_time: Instant = Instant::now();
-
-        if self.options.emit_llvm_ir {
-            LLVMDissambler::new(self.files).dissamble();
-        }
-
-        if self.options.emit_asm {
-            self.emit_assembler();
-        }
-
-        if self.options.emit_llvm_bitcode || self.options.emit_asm || self.options.emit_llvm_ir {
-            return llvm_time.elapsed();
-        }
-
-        let mut clang_command: Command = Command::new(LLVM_BACKEND.join("clang-17"));
-
-        clang_command.args([
-            "-v",
-            &format!(
-                "--target={}",
-                self.options.target_triple.as_str().to_string_lossy()
-            ),
-        ]);
-
-        clang_command.args(&self.options.args);
-        clang_command.args(self.files);
-
         let start_time: Instant = Instant::now();
 
-        handle_command(&mut clang_command);
+        let mut llvm_link_command: Command =
+            Command::new(LLVM_BACKEND.as_ref().unwrap().join("llc"));
+
+        llvm_link_command.args(
+            self.options
+                .get_llvm_backend_options()
+                .get_static_compiler_arguments(),
+        );
+
+        llvm_link_command.args(self.files);
+
+        handle_command(&mut llvm_link_command);
 
         start_time.elapsed()
     }
+}
 
-    fn emit_assembler(&self) {
-        let mut clang_command: Command = Command::new(LLVM_BACKEND.join("clang-17"));
+impl<'a> LLVMLinker<'a> {
+    pub fn new(files: &'a [PathBuf], options: &'a CompilerOptions) -> Self {
+        Self { files, options }
+    }
 
-        clang_command.args(&self.options.args);
+    pub fn link(&self) -> Duration {
+        let start_time: Instant = Instant::now();
 
-        clang_command.args([
-            "-v",
-            "-S",
-            &format!(
-                "--target={}",
-                self.options.target_triple.as_str().to_string_lossy()
-            ),
-        ]);
+        let mut llvm_link_command: Command =
+            Command::new(LLVM_BACKEND.as_ref().unwrap().join("lld"));
 
-        clang_command.args(&self.options.args);
-        clang_command.args(self.files);
+        llvm_link_command.args(
+            self.options
+                .get_llvm_backend_options()
+                .get_linker_arguments(),
+        );
 
-        handle_command(&mut clang_command);
+        llvm_link_command.args(self.files);
+
+        handle_command(&mut llvm_link_command);
+
+        start_time.elapsed()
     }
 }
 
-impl LLVMOpt {
+impl LLVMOptimizer {
     pub fn optimize(path: &str, opt: &str) {
         handle_command(
-            Command::new(LLVM_BACKEND.join("tools/opt"))
+            Command::new(LLVM_BACKEND.as_ref().unwrap().join("tools/opt"))
                 .arg(format!("-p={}", opt))
                 .arg(path)
                 .arg("-o")
@@ -265,7 +299,9 @@ impl<'a> LLVMDissambler<'a> {
     }
 
     pub fn dissamble(&self) {
-        handle_command(Command::new(LLVM_BACKEND.join("tools/llvm-dis")).args(self.files));
+        handle_command(
+            Command::new(LLVM_BACKEND.as_ref().unwrap().join("tools/llvm-dis")).args(self.files),
+        );
     }
 }
 
@@ -275,10 +311,7 @@ fn handle_command(command: &mut Command) {
         if !child.status.success() {
             logging::log(
                 logging::LoggingType::Error,
-                &String::from_utf8_lossy(&child.stderr)
-                    .replace("\n", "")
-                    .replace(&format!("clang version {}", CURRENT_CLANG_VERSION), "")
-                    .replace("clang-17:", ""),
+                &String::from_utf8_lossy(&child.stderr),
             );
         }
     }

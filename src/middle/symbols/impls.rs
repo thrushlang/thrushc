@@ -1,7 +1,6 @@
 use std::fmt::Display;
 
 use crate::{
-    common::error::ThrushCompilerError,
     frontend::lexer::Span,
     middle::{
         statement::{
@@ -10,6 +9,7 @@ use crate::{
         },
         types::Type,
     },
+    standard::error::ThrushCompilerError,
 };
 
 use super::{

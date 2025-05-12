@@ -1,10 +1,10 @@
 use crate::{
-    common::logging::{self, LoggingType},
     middle::{
         statement::FunctionCall,
         symbols::types::{Functions, Parameters},
         types::Type,
     },
+    standard::logging::{self, LoggingType},
 };
 
 use super::{Instruction, context::CodeGenContext, memory::SymbolAllocated, typegen, utils};

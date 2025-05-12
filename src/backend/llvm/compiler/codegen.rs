@@ -1,7 +1,7 @@
-use crate::common::diagnostic::Diagnostician;
 use crate::middle::instruction::Instruction;
 use crate::middle::statement::{FunctionParameter, FunctionPrototype};
 use crate::middle::types::Type;
+use crate::standard::diagnostic::Diagnostician;
 
 use super::super::compiler::attributes::LLVMAttribute;
 

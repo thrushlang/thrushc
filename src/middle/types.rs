@@ -5,8 +5,8 @@ use inkwell::{context::Context, targets::TargetData};
 
 use crate::{
     backend::llvm::compiler::{attributes::LLVMAttribute, typegen},
-    common::error::ThrushCompilerError,
     frontend::{lexer::Span, symbols::SymbolsTable},
+    standard::error::ThrushCompilerError,
 };
 
 use super::{

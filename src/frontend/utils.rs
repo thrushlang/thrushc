@@ -1,5 +1,5 @@
-use super::super::common::error::ThrushCompilerError;
 use super::super::middle::types::Type;
+use super::super::standard::error::ThrushCompilerError;
 use super::lexer::Span;
 
 #[inline]

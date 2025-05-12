@@ -8,7 +8,7 @@ use crate::middle::{
     types::BindingsApplicant,
 };
 
-use super::{super::common::error::ThrushCompilerError, lexer::Span};
+use super::{super::standard::error::ThrushCompilerError, lexer::Span};
 
 use ahash::AHashMap as HashMap;
 

@@ -1,7 +1,5 @@
 pub const MINIMAL_ERROR_CAPACITY: usize = 100;
 
-pub const CURRENT_CLANG_VERSION: &str = "17.0.6";
-
 pub const TARGET_TRIPLES: [&str; 30] = [
     "x86_64-fortanix-unknown-sgx",
     "x86_64-fuchsia",

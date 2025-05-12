@@ -1,18 +1,18 @@
 mod backend;
-mod common;
 mod frontend;
 mod middle;
+mod standard;
 
 use {
     backend::llvm::builder::Thrushc,
     colored::{Colorize, control},
-    common::{cli::Cli, logging},
     frontend::{
         lexer::{Lexer, Token},
         parser::Parser,
     },
     inkwell::targets::{InitializationConfig, Target},
     lazy_static::lazy_static,
+    standard::{cli::Cli, logging},
     std::{env, path::PathBuf, process, time::Instant},
 };
 
@@ -64,26 +64,9 @@ lazy_static! {
             }
         }
     };
-    static ref LLVM_BACKEND: PathBuf = {
-        let error = || {
-            logging::log(
-                logging::LoggingType::Panic,
-                &format!(
-                    "The LLVM backend was corrupted.
-
-  Automatic installation: {}
-  Manual installation: {}",
-                    "thorium install".custom_color((141, 141, 142)).bold(),
-                    "https://github.com/thrushlang/toolchains"
-                        .custom_color((141, 141, 142))
-                        .bold()
-                        .underline(),
-                ),
-            );
-        };
-
+    static ref LLVM_BACKEND: Option<PathBuf> = {
         let llvm_linker: PathBuf = if cfg!(target_os = "linux") {
-            HOME.join("thrushlang/backends/llvm/ld.lld")
+            HOME.join("thrushlang/backends/llvm/lld")
         } else {
             HOME.join("thrushlang/backends/llvm/lld.exe")
         };
@@ -96,7 +79,7 @@ lazy_static! {
             HOME.join("thrushlang/backends/llvm/tools"),
             llvm_linker,
             HOME.join(format!(
-                "thrushlang/backends/llvm/clang-17{}",
+                "thrushlang/backends/llvm/llc{}",
                 *EXECUTABLE_EXTENSION
             )),
             HOME.join(format!(
@@ -109,13 +92,13 @@ lazy_static! {
             )),
         ];
 
-        llvm_backend_required_paths.iter().for_each(|path| {
+        for path in llvm_backend_required_paths.iter() {
             if !path.exists() {
-                error()
+                return None;
             }
-        });
+        }
 
-        return HOME.join("thrushlang/backends/llvm");
+        return Some(HOME.join("thrushlang/backends/llvm"));
     };
 }
 
@@ -124,13 +107,28 @@ fn main() {
         control::set_override(true);
     }
 
+    let cli: Cli = Cli::parse(env::args().collect());
+
     Target::initialize_all(&InitializationConfig::default());
 
-    let cli: Cli = Cli::parse(env::args().collect());
+    if !cli.get_options().use_llvm() {
+        logging::log(
+            logging::LoggingType::Error,
+            "Select a backend infrastructure with flags: '--llvm'.",
+        );
+    }
+
+    if cli.get_options().use_llvm() && LLVM_BACKEND.is_none() {
+        logging::log(
+            logging::LoggingType::Error,
+            "Unable to find a valid LLVM Toolchain, you should use 'thorium setup toolchain'.",
+        );
+    }
 
     let start_time: Instant = Instant::now();
 
-    let compile_time: (u128, u128) = Thrushc::new(&cli.options.files, &cli.options).compile();
+    let compile_time: (u128, u128) =
+        Thrushc::new(cli.get_options().get_files(), cli.get_options()).compile();
 
     logging::write(
         logging::OutputIn::Stdout,

@@ -4,7 +4,7 @@ use std::rc::Rc;
 
 use inkwell::values::BasicValueEnum;
 
-use crate::{common::error::ThrushCompilerError, frontend::lexer::Span};
+use crate::{frontend::lexer::Span, standard::error::ThrushCompilerError};
 
 use super::{
     statement::{BinaryOp, Constructor, FunctionPrototype, ThrushAttributes, UnaryOp},

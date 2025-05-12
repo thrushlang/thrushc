@@ -1,16 +1,16 @@
 use std::fmt::{self, Display};
 use std::process;
 
-use crate::common::misc::CompilerFile;
 use crate::middle::statement::traits::TokenExtensions;
+use crate::standard::misc::CompilerFile;
 
 use super::super::middle::types::*;
 
 use super::super::{
-    common::{
+    logging::LoggingType,
+    standard::{
         constants::MINIMAL_ERROR_CAPACITY, diagnostic::Diagnostician, error::ThrushCompilerError,
     },
-    logging::LoggingType,
 };
 
 use {

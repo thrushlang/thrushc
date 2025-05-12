@@ -7,11 +7,11 @@ use {
         valuegen,
     },
     crate::{
-        common::diagnostic::Diagnostician,
         middle::{
             statement::{Function, ThrushAttributes},
             types::Type,
         },
+        standard::diagnostic::Diagnostician,
     },
     ahash::AHashMap as HashMap,
     inkwell::{

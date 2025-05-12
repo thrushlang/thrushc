@@ -7,7 +7,7 @@ use inkwell::{
     values::IntValue,
 };
 
-use crate::{backend::llvm::compiler::typegen, common::logging, middle::types::Type};
+use crate::{backend::llvm::compiler::typegen, middle::types::Type, standard::logging};
 
 use inkwell::{
     builder::Builder,

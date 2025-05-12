@@ -15,7 +15,7 @@ pub mod utils;
 pub mod valuegen;
 
 use {
-    crate::{common::diagnostic::Diagnostician, middle::instruction::Instruction},
+    crate::{middle::instruction::Instruction, standard::diagnostic::Diagnostician},
     codegen::Codegen,
     inkwell::{builder::Builder, context::Context, module::Module, targets::TargetData},
 };

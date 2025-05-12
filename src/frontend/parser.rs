@@ -3,14 +3,14 @@ use std::process;
 use ahash::AHashMap as HashMap;
 
 use crate::backend::llvm::compiler::builtins;
-use crate::common::constants::MINIMAL_ERROR_CAPACITY;
-use crate::common::diagnostic::Diagnostician;
-use crate::common::error::ThrushCompilerError;
-use crate::common::logging::{self, LoggingType};
-use crate::common::misc::CompilerFile;
 use crate::middle::instruction::Instruction;
 use crate::middle::symbols::types::Functions;
 use crate::middle::types::{TokenKind, Type};
+use crate::standard::constants::MINIMAL_ERROR_CAPACITY;
+use crate::standard::diagnostic::Diagnostician;
+use crate::standard::error::ThrushCompilerError;
+use crate::standard::logging::{self, LoggingType};
+use crate::standard::misc::CompilerFile;
 
 use super::contexts::{
     BindingsType, ParserControlContext, ParserTypeContext, SyncPosition, TypePosition,

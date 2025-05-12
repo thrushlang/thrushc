@@ -1,7 +1,7 @@
 use crate::middle::instruction::Instruction;
 
 use super::{
-    super::{common::error::ThrushCompilerError, middle::types::*},
+    super::{middle::types::*, standard::error::ThrushCompilerError},
     lexer::Span,
 };
 
