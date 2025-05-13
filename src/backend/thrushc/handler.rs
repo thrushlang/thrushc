@@ -7,7 +7,7 @@ pub fn handle_command(command: &mut Command) {
         if !child.status.success() {
             logging::log(
                 logging::LoggingType::Error,
-                &String::from_utf8_lossy(&child.stderr),
+                String::from_utf8_lossy(&child.stderr).trim_end(),
             );
         }
     }

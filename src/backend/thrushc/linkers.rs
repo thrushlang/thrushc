@@ -22,7 +22,7 @@ impl<'a> LLVMLinker<'a> {
         let start_time: Instant = Instant::now();
 
         let mut llvm_link_command: Command =
-            Command::new(LLVM_BACKEND.as_ref().unwrap().join("lld"));
+            Command::new(LLVM_BACKEND.as_ref().unwrap().join("ld.lld"));
 
         llvm_link_command.args(
             self.options

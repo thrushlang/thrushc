@@ -8,7 +8,7 @@ use {
     colored::{Colorize, control},
     inkwell::targets::{InitializationConfig, Target},
     lazy_static::lazy_static,
-    standard::{cli::Cli, logging},
+    standard::{cli::CommandLine, logging},
     std::{env, path::PathBuf, process, time::Instant},
 };
 
@@ -23,7 +23,7 @@ lazy_static! {
             logging::log(
                 logging::LoggingType::Panic,
                 &format!(
-                    "No compatible operating system '{}' for host compilation.",
+                    "Incompatible host operating system '{}' for compilation.",
                     env::consts::OS
                 ),
             );
@@ -44,7 +44,7 @@ lazy_static! {
             logging::log(
                 logging::LoggingType::Panic,
                 &format!(
-                    "No compatible operating system '{}' for host compilation.",
+                    "Incompatible host operating system '{}' for compilation.",
                     env::consts::OS
                 ),
             );
@@ -62,7 +62,7 @@ lazy_static! {
     };
     static ref LLVM_BACKEND: Option<PathBuf> = {
         let llvm_linker: PathBuf = if cfg!(target_os = "linux") {
-            HOME.join("thrushlang/backends/llvm/lld")
+            HOME.join("thrushlang/backends/llvm/ld.lld")
         } else {
             HOME.join("thrushlang/backends/llvm/lld.exe")
         };
@@ -103,21 +103,21 @@ fn main() {
         control::set_override(true);
     }
 
-    let cli: Cli = Cli::parse(env::args().collect());
+    let cli: CommandLine = CommandLine::parse(env::args().collect());
 
     Target::initialize_all(&InitializationConfig::default());
 
     if !cli.get_options().use_llvm() {
         logging::log(
             logging::LoggingType::Error,
-            "Select a backend infrastructure with flags: '--llvm'.",
+            "Select a backend infrastructure for example: '-llvm'.",
         );
     }
 
     if cli.get_options().use_llvm() && LLVM_BACKEND.is_none() {
         logging::log(
             logging::LoggingType::Error,
-            "Unable to find a valid LLVM Toolchain, you should use 'thorium setup toolchain'.",
+            "Unable to find a correctly configured LLVM Toolchain; Maybe it's time to use 'thorium toolchain [backend-name] repair'.",
         );
     }
 

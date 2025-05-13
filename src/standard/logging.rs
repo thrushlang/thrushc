@@ -25,8 +25,7 @@ impl LoggingType {
         }
     }
 
-    #[inline(always)]
-    pub const fn is_err(&self) -> bool {
+    pub fn is_err(&self) -> bool {
         matches!(self, LoggingType::Error | LoggingType::Panic)
     }
 }

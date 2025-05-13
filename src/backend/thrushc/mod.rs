@@ -79,6 +79,29 @@ impl<'a> Thrushc<'a> {
             );
         }
 
+        if self
+            .options
+            .get_llvm_backend_options()
+            .contains_emitable(Emitable::RawLLVMIR)
+            || self
+                .options
+                .get_llvm_backend_options()
+                .contains_emitable(Emitable::LLVMBitcode)
+            || self
+                .options
+                .get_llvm_backend_options()
+                .contains_emitable(Emitable::AST)
+            || self
+                .options
+                .get_llvm_backend_options()
+                .contains_emitable(Emitable::Tokens)
+        {
+            return (
+                self.thrushc_comptime.as_millis(),
+                self.llvm_comptime.as_millis(),
+            );
+        }
+
         let static_compiler_llvm_time: Duration =
             LLVMStaticCompiler::new(&self.compiled, self.options).compile();
 

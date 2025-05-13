@@ -149,10 +149,6 @@ impl LLVMBackendOptions {
         self.static_compiler_args.as_slice()
     }
 
-    pub fn get_emitables(&self) -> &[Emitable] {
-        self.emit.as_slice()
-    }
-
     pub fn get_reloc_mode(&self) -> RelocMode {
         self.reloc_mode
     }
