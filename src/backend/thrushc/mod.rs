@@ -55,14 +55,14 @@ impl<'a> Thrushc<'a> {
             self.compile_file(file);
         });
 
-        let options: &LLVMBackend = self.options.get_llvm_backend_options();
+        let llvm_backend: &LLVMBackend = self.options.get_llvm_backend_options();
 
-        if options.was_emited() {
+        if llvm_backend.was_emited() {
             return (self.thrushc_time.as_millis(), self.llvm_time.as_millis());
         }
 
         let clang_time: Duration =
-            Clang::new(&self.thrushc_compiled_files, options.get_arguments()).compile();
+            Clang::new(&self.thrushc_compiled_files, llvm_backend.get_arguments()).compile();
 
         self.llvm_time += clang_time;
 
@@ -85,10 +85,10 @@ impl<'a> Thrushc<'a> {
 
         let tokens: Vec<Token> = Lexer::lex(source_code, file);
 
-        let options: &LLVMBackend = self.options.get_llvm_backend_options();
+        let llvm_backend: &LLVMBackend = self.options.get_llvm_backend_options();
         let build_dir: &PathBuf = self.options.get_build_dir();
 
-        if options.contains_emitable(Emitable::Tokens) {
+        if llvm_backend.contains_emitable(Emitable::Tokens) {
             let _ = write(
                 build_dir.join(format!("{}.tokens", file.name)),
                 format!("{:#?}", tokens),
@@ -102,7 +102,7 @@ impl<'a> Thrushc<'a> {
         let parser_ctx: ParserContext = Parser::parse(&tokens, file);
         let instructions: &[Instruction] = parser_ctx.get_instructions();
 
-        if options.contains_emitable(Emitable::AST) {
+        if llvm_backend.contains_emitable(Emitable::AST) {
             let _ = write(
                 build_dir.join(format!("{}.ast", file.name)),
                 format!("{:#?}", instructions),
@@ -117,11 +117,11 @@ impl<'a> Thrushc<'a> {
         let builder: Builder = context.create_builder();
         let module: Module = context.create_module(&file.name);
 
-        let target_triple: &TargetTriple = options.get_target_triple();
+        let target_triple: &TargetTriple = llvm_backend.get_target_triple();
 
         module.set_triple(target_triple);
 
-        let thrush_opt: Opt = options.get_opt();
+        let thrush_opt: Opt = llvm_backend.get_opt();
         let llvm_opt: OptimizationLevel = thrush_opt.to_llvm_opt();
 
         let target_machine: TargetMachine = Target::from_triple(target_triple)
@@ -131,8 +131,8 @@ impl<'a> Thrushc<'a> {
                 "",
                 "",
                 llvm_opt,
-                options.get_reloc_mode(),
-                options.get_code_model(),
+                llvm_backend.get_reloc_mode(),
+                llvm_backend.get_code_model(),
             )
             .unwrap();
 
@@ -151,7 +151,7 @@ impl<'a> Thrushc<'a> {
 
         let bitcode_compiled_path: PathBuf = build_dir.join(format!("{}.bc", &file.name));
 
-        if options.contains_emitable(Emitable::RawLLVMIR) {
+        if llvm_backend.contains_emitable(Emitable::RawLLVMIR) {
             let output_path: PathBuf = build_dir.join(format!("{}.ll", &file.name));
 
             module.print_to_file(&output_path).unwrap_or_else(|_| {
@@ -165,7 +165,7 @@ impl<'a> Thrushc<'a> {
             return;
         }
 
-        if options.contains_emitable(Emitable::LLVMBitcode) {
+        if llvm_backend.contains_emitable(Emitable::LLVMBitcode) {
             module.write_bitcode_to_path(&bitcode_compiled_path);
             return;
         }

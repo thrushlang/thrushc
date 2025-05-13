@@ -146,9 +146,7 @@ impl CommandLine {
             "--emit" | "-emit" => {
                 self.advance();
 
-                if !self.options.use_llvm()
-                    && ["llvm-ir", "raw-llvm-ir", "llvm-bc"].contains(&self.peek())
-                {
+                if !self.options.use_llvm() && ["raw-llvm-ir", "llvm-bc"].contains(&self.peek()) {
                     self.report_error(&format!(
                         "Cannot use '{}' without '-llvm' flag previously.",
                         argument
@@ -156,10 +154,6 @@ impl CommandLine {
                 }
 
                 match self.peek() {
-                    "llvm-ir" => self
-                        .options
-                        .get_mut_llvm_backend_options()
-                        .add_emit_option(Emitable::LLVMIR),
                     "raw-llvm-ir" => self
                         .options
                         .get_mut_llvm_backend_options()
@@ -172,10 +166,6 @@ impl CommandLine {
                         .options
                         .get_mut_llvm_backend_options()
                         .add_emit_option(Emitable::AST),
-                    "asm" => self
-                        .options
-                        .get_mut_llvm_backend_options()
-                        .add_emit_option(Emitable::Assembly),
                     "tokens" => self
                         .options
                         .get_mut_llvm_backend_options()

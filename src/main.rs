@@ -61,26 +61,10 @@ lazy_static! {
         }
     };
     static ref LLVM_BACKEND: PathBuf = {
-        let llvm_x86_64_linker: PathBuf = if cfg!(target_os = "linux") {
-            HOME.join("thrushlang/backends/llvm/compilers/ld.lld")
-        } else {
-            HOME.join("thrushlang/backends/llvm/compilers/lld.exe")
-        };
-
-        let llvm_wasmer_linker: PathBuf = if cfg!(target_os = "linux") {
-            HOME.join("thrushlang/backends/llvm/compilers/wasm-ld")
-        } else {
-            HOME.join("thrushlang/backends/llvm/compilers/wasm-ld.exe")
-        };
-
-        let llvm_backend_required_paths: [PathBuf; 3] = [
-            HOME.join(format!(
-                "thrushlang/backends/llvm/compilers/clang{}",
-                *EXECUTABLE_EXTENSION
-            )),
-            llvm_x86_64_linker,
-            llvm_wasmer_linker,
-        ];
+        let llvm_backend_required_paths: [PathBuf; 1] = [HOME.join(format!(
+            "thrushlang/backends/llvm/clang{}",
+            *EXECUTABLE_EXTENSION
+        ))];
 
         for path in llvm_backend_required_paths.iter() {
             if !path.exists() {

@@ -34,10 +34,8 @@ pub struct CompilerFile {
 
 #[derive(Debug, PartialEq)]
 pub enum Emitable {
-    LLVMIR,
     RawLLVMIR,
     LLVMBitcode,
-    Assembly,
     AST,
     Tokens,
 }

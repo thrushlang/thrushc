@@ -19,7 +19,7 @@ impl<'clang> Clang<'clang> {
     pub fn compile(&self) -> Duration {
         let clang_time: Instant = Instant::now();
 
-        let clang_path: PathBuf = LLVM_BACKEND.join("compilers/clang");
+        let clang_path: PathBuf = LLVM_BACKEND.join("clang");
 
         if !clang_path.exists() {
             logging::log(
