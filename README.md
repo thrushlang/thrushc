@@ -3,7 +3,7 @@
 </p>
 
 > [!WARNING]
-> The development of **The Thush Compiler** (thrushc) is incomplete; build the program at your own risk—it may contain bugs.
+> The development of **The Thush Compiler** (thrushc) is incomplete and constantly changing; build the program at your own risk, as it may contain errors.
 
 # The Thrush Compiler 
 
