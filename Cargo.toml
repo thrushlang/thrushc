@@ -2,7 +2,6 @@
 name = "thrushc"
 description = "The Compiler for Thrush Programming Language."
 license = "GPL-3.0"
-license-file = "LICENSE.txt"
 version = "1.0.0"
 edition = "2024"
 authors = ["DevCheckOG > https://github.com/DevCheckOG"]

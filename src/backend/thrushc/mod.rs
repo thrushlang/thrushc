@@ -1,12 +1,10 @@
 use std::{
-    fs::{self, write},
-    path::{Path, PathBuf},
+    fs::write,
+    path::PathBuf,
     time::{Duration, Instant},
 };
 
-use assembler::LLVMStaticCompiler;
 use colored::Colorize;
-use disassembler::LLVMDisassembler;
 use inkwell::{
     OptimizationLevel,
     builder::Builder,
@@ -14,8 +12,6 @@ use inkwell::{
     module::Module,
     targets::{Target, TargetMachine, TargetTriple},
 };
-use linkers::LLVMLinker;
-use optimizers::LLVMOptimizer;
 
 use crate::{
     frontend::{
@@ -25,35 +21,32 @@ use crate::{
     middle::instruction::Instruction,
     standard::{
         diagnostic::Diagnostician,
-        logging::{self, LoggingType},
-        misc::{CompilerFile, CompilerOptions, Emitable, Opt},
+        logging::{self},
+        misc::{CompilerFile, CompilerOptions, Emitable, LLVMBackend, Opt},
     },
 };
 
-use super::llvm;
+use super::llvm::{self, clang::Clang};
 
-pub mod assembler;
-pub mod disassembler;
 pub mod handler;
-pub mod linkers;
-pub mod optimizers;
+pub mod utils;
 
 pub struct Thrushc<'a> {
-    compiled: Vec<PathBuf>,
+    thrushc_compiled_files: Vec<PathBuf>,
     files: &'a [CompilerFile],
     options: &'a CompilerOptions,
-    llvm_comptime: Duration,
-    thrushc_comptime: Duration,
+    llvm_time: Duration,
+    thrushc_time: Duration,
 }
 
 impl<'a> Thrushc<'a> {
     pub fn new(files: &'a [CompilerFile], options: &'a CompilerOptions) -> Self {
         Self {
-            compiled: Vec::with_capacity(files.len()),
+            thrushc_compiled_files: Vec::with_capacity(files.len()),
             files,
             options,
-            llvm_comptime: Duration::default(),
-            thrushc_comptime: Duration::default(),
+            llvm_time: Duration::default(),
+            thrushc_time: Duration::default(),
         }
     }
 
@@ -62,96 +55,46 @@ impl<'a> Thrushc<'a> {
             self.compile_file(file);
         });
 
-        if self
-            .options
-            .get_llvm_backend_options()
-            .contains_emitable(Emitable::LLVMIR)
-        {
-            let dissamble_time: Instant = Instant::now();
+        let options: &LLVMBackend = self.options.get_llvm_backend_options();
 
-            LLVMDisassembler::new(&self.compiled).dissamble();
-
-            self.llvm_comptime += dissamble_time.elapsed();
-
-            return (
-                self.thrushc_comptime.as_millis(),
-                self.llvm_comptime.as_millis(),
-            );
+        if options.was_emited() {
+            return (self.thrushc_time.as_millis(), self.llvm_time.as_millis());
         }
 
-        if self
-            .options
-            .get_llvm_backend_options()
-            .contains_emitable(Emitable::RawLLVMIR)
-            || self
-                .options
-                .get_llvm_backend_options()
-                .contains_emitable(Emitable::LLVMBitcode)
-            || self
-                .options
-                .get_llvm_backend_options()
-                .contains_emitable(Emitable::AST)
-            || self
-                .options
-                .get_llvm_backend_options()
-                .contains_emitable(Emitable::Tokens)
-        {
-            return (
-                self.thrushc_comptime.as_millis(),
-                self.llvm_comptime.as_millis(),
-            );
-        }
+        let clang_time: Duration =
+            Clang::new(&self.thrushc_compiled_files, options.get_arguments()).compile();
 
-        let static_compiler_llvm_time: Duration =
-            LLVMStaticCompiler::new(&self.compiled, self.options).compile();
+        self.llvm_time += clang_time;
 
-        let llvm_linker_time: Duration = LLVMLinker::new(&self.compiled, self.options).link();
-
-        self.llvm_comptime += static_compiler_llvm_time;
-        self.llvm_comptime += llvm_linker_time;
-
-        (
-            self.thrushc_comptime.as_millis(),
-            self.llvm_comptime.as_millis(),
-        )
+        (self.thrushc_time.as_millis(), self.llvm_time.as_millis())
     }
 
     fn compile_file(&mut self, file: &'a CompilerFile) {
-        let _ = fs::create_dir_all("build/");
-
         logging::write(
             logging::OutputIn::Stdout,
-            format!(
+            &format!(
                 "{} {}\n",
                 "Compiling".custom_color((141, 141, 142)).bold(),
                 &file.path.to_string_lossy()
-            )
-            .as_bytes(),
+            ),
         );
 
         let thrushc_time: Instant = Instant::now();
 
-        let code: String = fs::read_to_string(&file.path).unwrap_or_else(|_| {
-            logging::log(
-                LoggingType::Panic,
-                &format!("'{}' is invalid utf-8 file.", &file.path.display()),
-            );
-            unreachable!()
-        });
+        let source_code: &[u8] = &utils::extract_code_from_file(&file.path);
 
-        let tokens: Vec<Token> = Lexer::lex(code.as_bytes(), file);
+        let tokens: Vec<Token> = Lexer::lex(source_code, file);
 
-        if self
-            .options
-            .get_llvm_backend_options()
-            .contains_emitable(Emitable::Tokens)
-        {
+        let options: &LLVMBackend = self.options.get_llvm_backend_options();
+        let build_dir: &PathBuf = self.options.get_build_dir();
+
+        if options.contains_emitable(Emitable::Tokens) {
             let _ = write(
-                format!("build/{}.tokens", &file.name),
+                build_dir.join(format!("{}.tokens", file.name)),
                 format!("{:#?}", tokens),
             );
 
-            self.thrushc_comptime += thrushc_time.elapsed();
+            self.thrushc_time += thrushc_time.elapsed();
 
             return;
         }
@@ -159,91 +102,76 @@ impl<'a> Thrushc<'a> {
         let parser_ctx: ParserContext = Parser::parse(&tokens, file);
         let instructions: &[Instruction] = parser_ctx.get_instructions();
 
-        if self
-            .options
-            .get_llvm_backend_options()
-            .contains_emitable(Emitable::AST)
-        {
+        if options.contains_emitable(Emitable::AST) {
             let _ = write(
-                format!("build/{}.ast", &file.name),
+                build_dir.join(format!("{}.ast", file.name)),
                 format!("{:#?}", instructions),
             );
 
-            self.thrushc_comptime += thrushc_time.elapsed();
+            self.thrushc_time += thrushc_time.elapsed();
 
             return;
         }
 
         let context: Context = Context::create();
-
         let builder: Builder = context.create_builder();
         let module: Module = context.create_module(&file.name);
 
-        let target_triple: &TargetTriple =
-            self.options.get_llvm_backend_options().get_target_triple();
+        let target_triple: &TargetTriple = options.get_target_triple();
 
         module.set_triple(target_triple);
 
-        let thrush_opt: Opt = self.options.get_llvm_backend_options().get_optimization();
+        let thrush_opt: Opt = options.get_opt();
+        let llvm_opt: OptimizationLevel = thrush_opt.to_llvm_opt();
 
-        let opt: OptimizationLevel = thrush_opt.to_llvm_opt();
-
-        let machine: TargetMachine = Target::from_triple(target_triple)
+        let target_machine: TargetMachine = Target::from_triple(target_triple)
             .unwrap()
             .create_target_machine(
                 target_triple,
                 "",
                 "",
-                opt,
-                self.options.get_llvm_backend_options().get_reloc_mode(),
-                self.options.get_llvm_backend_options().get_code_model(),
+                llvm_opt,
+                options.get_reloc_mode(),
+                options.get_code_model(),
             )
             .unwrap();
 
-        module.set_data_layout(&machine.get_target_data().get_data_layout());
+        module.set_data_layout(&target_machine.get_target_data().get_data_layout());
 
         llvm::compiler::Compiler::compile(
             &module,
             &builder,
             &context,
             instructions,
-            machine.get_target_data(),
+            target_machine.get_target_data(),
             Diagnostician::new(file),
         );
 
-        self.thrushc_comptime += thrushc_time.elapsed();
+        self.thrushc_time += thrushc_time.elapsed();
 
-        if self
-            .options
-            .get_llvm_backend_options()
-            .contains_emitable(Emitable::RawLLVMIR)
-        {
-            module
-                .print_to_file(Path::new(&format!("build/{}.ll", &file.name)))
-                .unwrap_or_else(|_| {
-                    logging::log(
-                        logging::LoggingType::Panic,
-                        &format!(
-                            "'build/{}.ll' cannot be emitted in the 'build/' directory.",
-                            &file.name
-                        ),
-                    );
-                    unreachable!()
-                });
+        let bitcode_compiled_path: PathBuf = build_dir.join(format!("{}.bc", &file.name));
+
+        if options.contains_emitable(Emitable::RawLLVMIR) {
+            let output_path: PathBuf = build_dir.join(format!("{}.ll", &file.name));
+
+            module.print_to_file(&output_path).unwrap_or_else(|_| {
+                logging::log(
+                    logging::LoggingType::Panic,
+                    &format!("'{}' cannot be emitted.", output_path.display()),
+                );
+                unreachable!()
+            });
 
             return;
         }
 
-        let compiled_path: &str = &format!("build/{}.bc", &file.name);
+        if options.contains_emitable(Emitable::LLVMBitcode) {
+            module.write_bitcode_to_path(&bitcode_compiled_path);
+            return;
+        }
 
-        module.write_bitcode_to_path(Path::new(compiled_path));
+        module.write_bitcode_to_path(&bitcode_compiled_path);
 
-        let optimization_time: Instant = Instant::now();
-
-        LLVMOptimizer::optimize(compiled_path, thrush_opt.to_llvm_17_passes());
-
-        self.llvm_comptime += optimization_time.elapsed();
-
-        self.compiled.push(PathBuf::from(compiled_path));
+        self.thrushc_compiled_files.push(bitcode_compiled_path);
     }
 }

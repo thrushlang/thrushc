@@ -10,21 +10,20 @@ use {
 
 #[derive(Debug)]
 pub struct CompilerOptions {
-    flag_position: FlagsPosition,
-    llvm_backend: bool,
-    llvm_backend_options: LLVMBackendOptions,
+    use_llvm_backend: bool,
+    llvm_backend: LLVMBackend,
     files: Vec<CompilerFile>,
+    build_dir: PathBuf,
 }
 
 #[derive(Debug)]
-pub struct LLVMBackendOptions {
+pub struct LLVMBackend {
     target_triple: TargetTriple,
     optimization: Opt,
     emit: Vec<Emitable>,
     reloc_mode: RelocMode,
     code_model: CodeModel,
-    static_compiler_args: Vec<String>,
-    linker_args: Vec<String>,
+    arguments: Vec<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -43,13 +42,6 @@ pub enum Emitable {
     Tokens,
 }
 
-#[derive(Debug, Clone, Copy)]
-pub enum FlagsPosition {
-    ThrushCompiler,
-    LLVMLinker,
-    LLVMStaticCompiler,
-}
-
 #[derive(Default, Debug, Clone, Copy)]
 pub enum Opt {
     #[default]
@@ -58,20 +50,6 @@ pub enum Opt {
     Low,
     Mid,
     Mcqueen,
-}
-
-impl FlagsPosition {
-    pub fn llvm_linker(&self) -> bool {
-        matches!(self, FlagsPosition::LLVMLinker)
-    }
-
-    pub fn llvm_static_compiler(&self) -> bool {
-        matches!(self, FlagsPosition::LLVMStaticCompiler)
-    }
-
-    pub fn thrush_compiler(&self) -> bool {
-        matches!(self, FlagsPosition::ThrushCompiler)
-    }
 }
 
 impl Opt {
@@ -84,69 +62,71 @@ impl Opt {
             Opt::Mcqueen | Opt::Size => OptimizationLevel::Aggressive,
         }
     }
+}
 
-    #[inline]
-    pub fn to_llvm_17_passes(self) -> &'static str {
-        match self {
-            Opt::None => "default<O0>",
-            Opt::Low => "default<O1>",
-            Opt::Mid => "default<O2>",
-            Opt::Mcqueen => "default<O3>",
-            Opt::Size => "default<Oz>",
-        }
+impl CompilerFile {
+    pub fn new(name: String, path: PathBuf) -> Self {
+        Self { name, path }
     }
 }
 
 impl CompilerOptions {
     pub fn new() -> Self {
         Self {
-            flag_position: FlagsPosition::ThrushCompiler,
-            llvm_backend: false,
-            llvm_backend_options: LLVMBackendOptions::default(),
+            use_llvm_backend: false,
+            llvm_backend: LLVMBackend::new(),
             files: Vec::with_capacity(100),
+            build_dir: PathBuf::new(),
         }
     }
 
     pub fn use_llvm(&self) -> bool {
-        self.llvm_backend
+        self.use_llvm_backend
     }
 
     pub fn get_files(&self) -> &[CompilerFile] {
         self.files.as_slice()
     }
 
-    pub fn get_llvm_backend_options(&self) -> &LLVMBackendOptions {
-        &self.llvm_backend_options
+    pub fn get_llvm_backend_options(&self) -> &LLVMBackend {
+        &self.llvm_backend
     }
 
-    pub fn get_mut_llvm_backend_options(&mut self) -> &mut LLVMBackendOptions {
-        &mut self.llvm_backend_options
+    pub fn get_mut_llvm_backend_options(&mut self) -> &mut LLVMBackend {
+        &mut self.llvm_backend
     }
 
-    pub fn get_flag_position(&self) -> FlagsPosition {
-        self.flag_position
+    pub fn get_build_dir(&self) -> &PathBuf {
+        &self.build_dir
     }
 
-    pub fn add_file(&mut self, name: String, path: PathBuf) {
-        self.files.push(CompilerFile { name, path });
+    pub fn new_file(&mut self, name: String, path: PathBuf) {
+        self.files.push(CompilerFile::new(name, path));
     }
 
-    pub fn set_flag_position(&mut self, flag_position: FlagsPosition) {
-        self.flag_position = flag_position;
+    pub fn set_use_llvm_backend(&mut self, use_llvm_backend: bool) {
+        self.use_llvm_backend = use_llvm_backend;
     }
 
-    pub fn set_use_llvm_backend(&mut self, llvm_backend: bool) {
-        self.llvm_backend = llvm_backend;
+    pub fn set_build_dir(&mut self, build_dir: PathBuf) {
+        self.build_dir = build_dir;
+    }
+
+    pub fn is_build_dir_setted(&self) -> bool {
+        self.build_dir.exists()
     }
 }
 
-impl LLVMBackendOptions {
-    pub fn get_linker_arguments(&self) -> &[String] {
-        self.linker_args.as_slice()
-    }
-
-    pub fn get_static_compiler_arguments(&self) -> &[String] {
-        self.static_compiler_args.as_slice()
+impl LLVMBackend {
+    pub fn new() -> Self {
+        Self {
+            target_triple: TargetMachine::get_default_triple(),
+            optimization: Opt::None,
+            emit: Vec::with_capacity(10),
+            reloc_mode: RelocMode::Default,
+            code_model: CodeModel::Default,
+            arguments: Vec::with_capacity(100),
+        }
     }
 
     pub fn get_reloc_mode(&self) -> RelocMode {
@@ -169,14 +149,6 @@ impl LLVMBackendOptions {
         self.code_model = code_model;
     }
 
-    pub fn add_static_compiler_argument(&mut self, arg: String) {
-        self.static_compiler_args.push(arg);
-    }
-
-    pub fn add_linker_argument(&mut self, arg: String) {
-        self.linker_args.push(arg);
-    }
-
     pub fn set_target_triple(&mut self, target_triple: TargetTriple) {
         self.target_triple = target_triple;
     }
@@ -189,16 +161,28 @@ impl LLVMBackendOptions {
         &self.target_triple
     }
 
-    pub fn get_optimization(&self) -> Opt {
+    pub fn get_opt(&self) -> Opt {
         self.optimization
+    }
+
+    pub fn was_emited(&self) -> bool {
+        !self.emit.is_empty()
+    }
+
+    pub fn get_arguments(&self) -> &[String] {
+        self.arguments.as_slice()
     }
 
     pub fn contains_emitable(&self, emit: Emitable) -> bool {
         self.emit.contains(&emit)
     }
+
+    pub fn add_compiler_argument(&mut self, argument: String) {
+        self.arguments.push(argument);
+    }
 }
 
-impl Default for LLVMBackendOptions {
+impl Default for LLVMBackend {
     fn default() -> Self {
         Self {
             target_triple: TargetMachine::get_default_triple(),
@@ -206,8 +190,7 @@ impl Default for LLVMBackendOptions {
             emit: Vec::with_capacity(10),
             reloc_mode: RelocMode::Default,
             code_model: CodeModel::Default,
-            static_compiler_args: Vec::with_capacity(100),
-            linker_args: Vec::with_capacity(100),
+            arguments: Vec::with_capacity(100),
         }
     }
 }

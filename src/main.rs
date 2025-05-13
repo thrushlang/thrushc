@@ -60,41 +60,41 @@ lazy_static! {
             }
         }
     };
-    static ref LLVM_BACKEND: Option<PathBuf> = {
-        let llvm_linker: PathBuf = if cfg!(target_os = "linux") {
-            HOME.join("thrushlang/backends/llvm/ld.lld")
+    static ref LLVM_BACKEND: PathBuf = {
+        let llvm_x86_64_linker: PathBuf = if cfg!(target_os = "linux") {
+            HOME.join("thrushlang/backends/llvm/compilers/ld.lld")
         } else {
-            HOME.join("thrushlang/backends/llvm/lld.exe")
+            HOME.join("thrushlang/backends/llvm/compilers/lld.exe")
         };
 
-        let llvm_backend_required_paths: [PathBuf; 9] = [
-            HOME.join("thrushlang"),
-            HOME.join("thrushlang/backends"),
-            HOME.join("thrushlang/backends/llvm"),
-            HOME.join("thrushlang/backends/llvm/build"),
-            HOME.join("thrushlang/backends/llvm/tools"),
-            llvm_linker,
+        let llvm_wasmer_linker: PathBuf = if cfg!(target_os = "linux") {
+            HOME.join("thrushlang/backends/llvm/compilers/wasm-ld")
+        } else {
+            HOME.join("thrushlang/backends/llvm/compilers/wasm-ld.exe")
+        };
+
+        let llvm_backend_required_paths: [PathBuf; 3] = [
             HOME.join(format!(
-                "thrushlang/backends/llvm/llc{}",
+                "thrushlang/backends/llvm/compilers/clang{}",
                 *EXECUTABLE_EXTENSION
             )),
-            HOME.join(format!(
-                "thrushlang/backends/llvm/tools/opt{}",
-                *EXECUTABLE_EXTENSION
-            )),
-            HOME.join(format!(
-                "thrushlang/backends/llvm/tools/llvm-dis{}",
-                *EXECUTABLE_EXTENSION
-            )),
+            llvm_x86_64_linker,
+            llvm_wasmer_linker,
         ];
 
         for path in llvm_backend_required_paths.iter() {
             if !path.exists() {
-                return None;
+                logging::log(
+                    logging::LoggingType::Panic,
+                    &format!(
+                        "Missinng LLVM Toolchain component: '{}'; It's time to use 'thorium toolchain llvm repair'.",
+                        path.display()
+                    ),
+                );
             }
         }
 
-        return Some(HOME.join("thrushlang/backends/llvm"));
+        return HOME.join("thrushlang/backends/llvm");
     };
 }
 
@@ -109,15 +109,8 @@ fn main() {
 
     if !cli.get_options().use_llvm() {
         logging::log(
-            logging::LoggingType::Error,
+            logging::LoggingType::Panic,
             "Select a backend infrastructure for example: '-llvm'.",
-        );
-    }
-
-    if cli.get_options().use_llvm() && LLVM_BACKEND.is_none() {
-        logging::log(
-            logging::LoggingType::Error,
-            "Unable to find a correctly configured LLVM Toolchain; Maybe it's time to use 'thorium toolchain [backend-name] repair'.",
         );
     }
 
@@ -128,7 +121,7 @@ fn main() {
 
     logging::write(
         logging::OutputIn::Stdout,
-        format!(
+        &format!(
             "\n{}\n{}\n\n{}\n{}\n{}\n",
             "─────────────────────────────────────────"
                 .custom_color((141, 141, 142))
@@ -139,13 +132,12 @@ fn main() {
             "─────────────────────────────────────────"
                 .custom_color((141, 141, 142))
                 .bold(),
-        )
-        .as_bytes(),
+        ),
     );
 
     logging::write(
         logging::OutputIn::Stdout,
-        format!(
+        &format!(
             "\r{} {}",
             "Finished".custom_color((141, 141, 142)).bold(),
             format!(
@@ -155,8 +147,7 @@ fn main() {
             )
             .custom_color((141, 141, 142))
             .bold(),
-        )
-        .as_bytes(),
+        ),
     );
 
     process::exit(0);

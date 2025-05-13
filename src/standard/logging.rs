@@ -30,7 +30,6 @@ impl LoggingType {
     }
 }
 
-#[inline]
 pub fn log(ltype: LoggingType, msg: &str) {
     if ltype.is_err() {
         io::stderr()
@@ -49,10 +48,9 @@ pub fn log(ltype: LoggingType, msg: &str) {
         .unwrap();
 }
 
-#[inline]
-pub fn write(output_in: OutputIn, bytes: &[u8]) {
+pub fn write(output_in: OutputIn, text: &str) {
     match output_in {
-        OutputIn::Stdout => io::stdout().write_all(bytes).unwrap_or(()),
-        OutputIn::Stderr => io::stderr().write_all(bytes).unwrap_or(()),
+        OutputIn::Stdout => io::stdout().write_all(text.as_bytes()).unwrap_or(()),
+        OutputIn::Stderr => io::stderr().write_all(text.as_bytes()).unwrap_or(()),
     };
 }

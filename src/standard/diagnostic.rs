@@ -180,35 +180,33 @@ impl<'a> Diagnostic<'a> {
     pub fn print(self, path: &Path, title: &str, note: &str, logging_type: LoggingType) {
         logging::write(
             logging::OutputIn::Stderr,
-            format!(
+            &format!(
                 "{} {} at {}:{}\n",
                 "-->".bold().blink(),
                 format_args!("{}", path.to_string_lossy().bold().bright_red()),
                 self.span.get_line().to_string().bold().bright_red(),
                 self.span.get_span_start().to_string().bold().bright_red()
-            )
-            .as_bytes(),
+            ),
         );
 
         logging::write(
             logging::OutputIn::Stderr,
-            format!(
+            &format!(
                 "\n{} {}\n\n",
                 logging_type.to_styled(),
                 title.bold().to_uppercase()
-            )
-            .as_bytes(),
+            ),
         );
 
         logging::write(
             logging::OutputIn::Stderr,
-            format!("\n{}\n{}\n", self.code, self.signaler).as_bytes(),
+            &format!("\n{}\n{}\n", self.code, self.signaler),
         );
 
         if !note.is_empty() {
             logging::write(
                 logging::OutputIn::Stderr,
-                format!("{} {}\n", "NOTE:".bright_blue().bold(), note).as_bytes(),
+                &format!("{} {}\n", "NOTE:".bright_blue().bold(), note),
             );
         }
     }
