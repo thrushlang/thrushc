@@ -23,7 +23,7 @@ pub type WarnersConstants<'warner> = HashMap<&'warner str, WarnerConstantInfo>;
 pub type WarnerFunctionInfo<'warner> = (&'warner Instruction<'warner>, Span, bool);
 pub type WarnersFunctions<'warner> = HashMap<&'warner str, WarnerFunctionInfo<'warner>>;
 
-pub type WarnerLocalInfo = (Span, bool);
+pub type WarnerLocalInfo = (Span, bool, bool);
 pub type WarnerLocals<'warner> = Vec<HashMap<&'warner str, WarnerLocalInfo>>;
 
 pub struct Warner<'warner> {
@@ -60,7 +60,7 @@ impl<'warner> Warner<'warner> {
         while !self.is_eof() {
             let current_instruction: &Instruction = self.peek();
 
-            self.analyze_instruction(current_instruction);
+            let _ = self.analyze_instruction(current_instruction);
 
             self.advance();
         }
@@ -75,28 +75,30 @@ impl<'warner> Warner<'warner> {
         }
     }
 
-    pub fn analyze_instruction(&mut self, instruction: &'warner Instruction) {
+    pub fn analyze_instruction(&mut self, instruction: &'warner Instruction) -> Result<(), ()> {
         if let Instruction::EntryPoint { body, .. } = instruction {
-            self.analyze_instruction(body);
+            self.analyze_instruction(body)?;
         }
 
         if let Instruction::Function { body, .. } = instruction {
-            self.analyze_instruction(body);
+            self.analyze_instruction(body)?;
         }
 
         if let Instruction::BinaryOp { left, right, .. } = instruction {
-            self.analyze_instruction(left);
-            self.analyze_instruction(right);
+            self.analyze_instruction(left)?;
+            self.analyze_instruction(right)?;
         }
 
         if let Instruction::UnaryOp { expression, .. } = instruction {
-            self.analyze_instruction(expression);
+            self.analyze_instruction(expression)?;
         }
 
         if let Instruction::Block { stmts } = instruction {
             self.begin_scope();
 
-            stmts.iter().for_each(|stmt| self.analyze_instruction(stmt));
+            stmts
+                .iter()
+                .try_for_each(|stmt| self.analyze_instruction(stmt))?;
 
             self.end_scope();
         }
@@ -106,9 +108,9 @@ impl<'warner> Warner<'warner> {
         } = instruction
         {
             let scope: usize = self.get_scope();
-            self.locals[scope].insert(name, (*span, false));
+            self.locals[scope].insert(name, (*span, false, false));
 
-            self.analyze_instruction(value);
+            self.analyze_instruction(value)?;
         }
 
         if let Instruction::Call { name, .. } = instruction {
@@ -122,9 +124,18 @@ impl<'warner> Warner<'warner> {
         }
 
         if let Instruction::LocalRef { name, .. } = instruction {
-            let local: &mut WarnerLocalInfo = self.get_mut_local(name);
+            let local: &mut WarnerLocalInfo = self.get_mut_local(name)?;
             local.1 = true;
         }
+
+        if let Instruction::LocalMut { source, .. } = instruction {
+            if let Some(local_name) = source.0 {
+                let local: &mut WarnerLocalInfo = self.get_mut_local(local_name)?;
+                local.2 = true;
+            }
+        }
+
+        Ok(())
     }
 
     pub fn generate_warnings(&mut self) {
@@ -158,10 +169,19 @@ impl<'warner> Warner<'warner> {
             scope.iter().for_each(|(name, info)| {
                 let span: Span = info.0;
                 let used: bool = info.1;
+                let is_mutable_used: bool = info.2;
 
                 if !used {
                     self.warnings.push(ThrushCompilerIssue::Warning(
                         String::from("Local not used"),
+                        format!("'{}' not used.", name),
+                        span,
+                    ));
+                }
+
+                if !is_mutable_used {
+                    self.warnings.push(ThrushCompilerIssue::Warning(
+                        String::from("Mutable local not used"),
                         format!("'{}' not used.", name),
                         span,
                     ));
@@ -193,22 +213,42 @@ impl<'warner> Warner<'warner> {
             });
     }
 
-    fn get_mut_local(&mut self, name: &str) -> &mut WarnerLocalInfo {
+    fn get_mut_local(&mut self, name: &str) -> Result<&mut WarnerLocalInfo, ()> {
         for i in (0..=self.get_scope()).rev() {
             if self.locals[i].contains_key(name) {
-                return self.locals[i].get_mut(name).unwrap();
+                return Ok(self.locals[i].get_mut(name).unwrap());
             }
         }
 
-        unreachable!()
+        Err(())
     }
 
     fn get_mut_constant(&mut self, name: &str) -> &mut WarnerConstantInfo {
-        self.constants.get_mut(name).unwrap()
+        self.constants.get_mut(name).unwrap_or_else(|| {
+            logging::log(
+                LoggingType::Panic,
+                &format!(
+                    "Attempting to get warning info of the constant with name '{}'.",
+                    name
+                ),
+            );
+
+            unreachable!()
+        })
     }
 
     fn get_mut_function(&mut self, name: &str) -> &mut WarnerFunctionInfo<'warner> {
-        self.functions.get_mut(name).unwrap()
+        self.functions.get_mut(name).unwrap_or_else(|| {
+            logging::log(
+                LoggingType::Panic,
+                &format!(
+                    "Attempting to get warning info of the function with name '{}'.",
+                    name
+                ),
+            );
+
+            unreachable!()
+        })
     }
 
     fn begin_scope(&mut self) {

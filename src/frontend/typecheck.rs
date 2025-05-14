@@ -64,7 +64,7 @@ fn check_binary_arithmetic(
                 "Arithmetic operation ({} {} {}) is not allowed.",
                 a, operator, b
             ),
-            String::default(),
+            None,
             span,
         )),
     }
@@ -117,7 +117,7 @@ fn check_binary_equality(
             "Logical operation ({} {} {}) is not allowed.",
             a, operator, b
         ),
-        String::default(),
+        None,
         span,
     ))
 }
@@ -150,7 +150,7 @@ fn check_binary_comparasion(
             "Logical operation ({} {} {}) is not allowed.",
             a, operator, b
         ),
-        String::default(),
+        None,
         span,
     ))
 }
@@ -171,7 +171,7 @@ fn check_binary_gate(
             "Logical operation ({} {} {}) is not allowed.",
             a, operator, b
         ),
-        String::default(),
+        None,
         span,
     ))
 }
@@ -202,7 +202,7 @@ fn check_binary_shift(
             "Arithmetic operation ({} {} {}) is not allowed.",
             a, operator, b
         ),
-        String::default(),
+        None,
         span,
     ))
 }
@@ -232,7 +232,7 @@ fn check_general_unary(
             "Arithmetic operation '{}' with '{}' is not allowed.",
             operator, a
         ),
-        String::default(),
+        None,
         span,
     ))
 }
@@ -245,7 +245,7 @@ fn check_unary_instr_bang(a: &Type, span: Span) -> Result<(), ThrushCompilerIssu
     Err(ThrushCompilerIssue::Error(
         String::from("Type checking"),
         format!("Logical operation (!{}) is not allowed.", a),
-        String::default(),
+        None,
         span,
     ))
 }
@@ -301,7 +301,11 @@ pub fn check_type(
             Ok(())
         }
 
-        (Type::Struct(_, _), Type::Void, None) => Ok(()),
+        (Type::Me(_), Type::Me(_), None) => Ok(()),
+
+        (Type::Me(_), Type::Struct(_, _), None) => Ok(()),
+
+        (Type::Struct(_, _) | Type::Me(_), Type::Ptr(_), None) => Ok(()),
 
         (
             target_type,

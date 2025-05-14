@@ -116,18 +116,18 @@ pub fn build_bindings<'instr>(
         return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("Bindings are only defined globally."),
-            String::default(),
+            None,
             span,
         ));
     }
 
-    let kind: Type = typegen::build_type(parser_ctx, None)?;
+    let kind: Type = typegen::build_type(parser_ctx)?;
 
     if !kind.is_struct_type() {
         return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("Expected struct type."),
-            String::default(),
+            None,
             bindings_tk.span,
         ));
     }
@@ -220,7 +220,7 @@ fn build_bind<'instr>(
         return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("Expected bind inside the bindings definition."),
-            String::default(),
+            None,
             bind_name_tk.span,
         ));
     }
@@ -255,7 +255,7 @@ fn build_bind<'instr>(
                 String::from(
                     "'This' keyword is already declared. Multiple instances are not allowed.",
                 ),
-                String::default(),
+                None,
                 bind_name_tk.span,
             ));
         }
@@ -300,7 +300,7 @@ fn build_bind<'instr>(
             String::from("Expected '::'."),
         )?;
 
-        let parameter_type: Type = typegen::build_type(parser_ctx, None)?;
+        let parameter_type: Type = typegen::build_type(parser_ctx)?;
 
         parser_ctx
             .get_mut_type_ctx()
@@ -317,7 +317,7 @@ fn build_bind<'instr>(
         bind_position += 1;
     }
 
-    let return_type: Type = typegen::build_type(parser_ctx, None)?;
+    let return_type: Type = typegen::build_type(parser_ctx)?;
 
     parser_ctx
         .get_mut_type_ctx()
@@ -369,7 +369,7 @@ fn build_entry_point<'instr>(
         return Err(ThrushCompilerIssue::Error(
             String::from("Duplicated entrypoint"),
             String::from("The language not support two entrypoints."),
-            String::default(),
+            None,
             parser_ctx.previous().span,
         ));
     }
@@ -406,7 +406,7 @@ fn build_for_loop<'instr>(
         return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("Unreacheable code."),
-            String::default(),
+            None,
             for_tk.span,
         ));
     }
@@ -417,7 +417,7 @@ fn build_for_loop<'instr>(
         return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("For loop must be placed inside a function or a bind."),
-            String::default(),
+            None,
             for_tk.span,
         ));
     }
@@ -464,7 +464,7 @@ fn build_loop<'instr>(
         return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("Unreacheable code."),
-            String::default(),
+            None,
             loop_tk.span,
         ));
     }
@@ -475,7 +475,7 @@ fn build_loop<'instr>(
         return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("Loop must be placed inside a function or a bind."),
-            String::default(),
+            None,
             loop_tk.span,
         ));
     }
@@ -512,7 +512,7 @@ fn build_while_loop<'instr>(
         return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("Unreacheable code."),
-            String::default(),
+            None,
             while_tk.span,
         ));
     }
@@ -523,7 +523,7 @@ fn build_while_loop<'instr>(
         return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("While loop must be placed inside a function or a bind."),
-            String::default(),
+            None,
             while_tk.span,
         ));
     }
@@ -558,7 +558,7 @@ fn build_continue<'instr>(
         return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("Unreacheable code."),
-            String::default(),
+            None,
             continue_tk.span,
         ));
     }
@@ -569,7 +569,7 @@ fn build_continue<'instr>(
         return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("Continue must be placed inside a function or a bind."),
-            String::default(),
+            None,
             continue_tk.span,
         ));
     }
@@ -584,7 +584,7 @@ fn build_continue<'instr>(
         return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("The flow changer of a loop must go inside one."),
-            String::default(),
+            None,
             parser_ctx.previous().span,
         ));
     }
@@ -611,7 +611,7 @@ fn build_break<'instr>(
         return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("Unreacheable code."),
-            String::default(),
+            None,
             break_tk.span,
         ));
     }
@@ -626,7 +626,7 @@ fn build_break<'instr>(
         return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("The flow changer of a loop must go inside one."),
-            String::default(),
+            None,
             parser_ctx.previous().span,
         ));
     }
@@ -637,7 +637,7 @@ fn build_break<'instr>(
         return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("Break must be placed inside a function or a bind."),
-            String::default(),
+            None,
             break_tk.span,
         ));
     }
@@ -664,7 +664,7 @@ fn build_match<'instr>(
         return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("Unreacheable code."),
-            String::default(),
+            None,
             match_tk.span,
         ));
     }
@@ -675,7 +675,7 @@ fn build_match<'instr>(
         return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("Match must be placed inside a function or a bind."),
-            String::default(),
+            None,
             match_tk.span,
         ));
     }
@@ -819,7 +819,7 @@ fn build_if_elif_else<'instr>(
         return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("Conditionals must be placed inside a function or a bind."),
-            String::default(),
+            None,
             if_tk.span,
         ));
     }
@@ -828,7 +828,7 @@ fn build_if_elif_else<'instr>(
         return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("Unreacheable code."),
-            String::default(),
+            None,
             if_tk.span,
         ));
     }
@@ -905,7 +905,7 @@ pub fn build_custom_type<'instr>(
         return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("Types are only defined globally."),
-            String::default(),
+            None,
             type_tk.span,
         ));
     }
@@ -941,7 +941,7 @@ pub fn build_custom_type<'instr>(
             continue;
         }
 
-        let kind: Type = typegen::build_type(parser_ctx, Some(TokenKind::SemiColon))?;
+        let kind: Type = typegen::build_type(parser_ctx)?;
 
         custom_type_fields.push(kind);
     }
@@ -983,7 +983,7 @@ pub fn build_enum<'instr>(
         return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("Enums are only defined globally."),
-            String::default(),
+            None,
             enum_tk.span,
         ));
     }
@@ -1026,7 +1026,7 @@ pub fn build_enum<'instr>(
                 String::from("Expected ':'."),
             )?;
 
-            let field_type: Type = typegen::build_type(parser_ctx, None)?;
+            let field_type: Type = typegen::build_type(parser_ctx)?;
 
             if !field_type.is_integer_type()
                 && !field_type.is_float_type()
@@ -1035,7 +1035,7 @@ pub fn build_enum<'instr>(
                 return Err(ThrushCompilerIssue::Error(
                     String::from("Syntax error"),
                     String::from("Expected integer, boolean or floating-point types."),
-                    String::default(),
+                    None,
                     span,
                 ));
             }
@@ -1086,7 +1086,7 @@ pub fn build_enum<'instr>(
         return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("Expected identifier in enum field."),
-            String::default(),
+            None,
             parser_ctx.advance()?.span,
         ));
     }
@@ -1126,7 +1126,7 @@ pub fn build_struct<'instr>(
         return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("Structs are only defined globally."),
-            String::default(),
+            None,
             struct_tk.span,
         ));
     }
@@ -1158,45 +1158,41 @@ pub fn build_struct<'instr>(
             continue;
         }
 
-        if parser_ctx.match_token(TokenKind::Identifier)? {
-            let field_name: &str = parser_ctx.previous().lexeme;
-
-            // solucionar con Self type talvez?
-            if parser_ctx.peek().lexeme == struct_name {
-                todo!()
-            }
-
-            let field_type: Type = typegen::build_type(parser_ctx, Some(TokenKind::SemiColon))?;
-
-            fields_types
-                .1
-                .push((field_name, field_type, field_position));
-
-            field_position += 1;
-
-            continue;
-        }
-
-        parser_ctx.only_advance()?;
-
-        return Err(ThrushCompilerIssue::Error(
+        let field_tk: &Token<'_> = parser_ctx.consume(
+            TokenKind::Identifier,
             String::from("Syntax error"),
-            String::from("Expected identifier in structure field."),
-            String::default(),
-            parser_ctx.previous().span,
-        ));
+            String::from("Expected identifier."),
+        )?;
+
+        let field_name: &str = field_tk.lexeme;
+
+        parser_ctx
+            .get_mut_type_ctx()
+            .set_position(TypePosition::StructureField);
+
+        parser_ctx.consume(
+            TokenKind::Colon,
+            String::from("Syntax error"),
+            String::from("Expected ':'."),
+        )?;
+
+        let field_type: Type = typegen::build_type(parser_ctx)?;
+
+        fields_types
+            .1
+            .push((field_name, field_type, field_position));
+
+        field_position += 1;
+
+        parser_ctx
+            .get_mut_type_ctx()
+            .set_position(TypePosition::NoRelevant);
     }
 
     parser_ctx.consume(
         TokenKind::RBrace,
         String::from("Syntax error"),
         String::from("Expected '}'."),
-    )?;
-
-    parser_ctx.consume(
-        TokenKind::SemiColon,
-        String::from("Syntax error"),
-        String::from("Expected ';'."),
     )?;
 
     if declare {
@@ -1235,7 +1231,7 @@ pub fn build_const<'instr>(
         return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("Constants are only defined globally."),
-            String::default(),
+            None,
             const_tk.span,
         ));
     }
@@ -1249,7 +1245,7 @@ pub fn build_const<'instr>(
         String::from("Expected ':'."),
     )?;
 
-    let const_type: Type = typegen::build_type(parser_ctx, None)?;
+    let const_type: Type = typegen::build_type(parser_ctx)?;
 
     let const_attributes: ThrushAttributes =
         build_compiler_attributes(parser_ctx, &[TokenKind::Eq])?;
@@ -1312,7 +1308,7 @@ fn build_local<'instr>(
         return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("Locals variables should be contained at local scope."),
-            String::default(),
+            None,
             local_tk.span,
         ));
     }
@@ -1321,7 +1317,7 @@ fn build_local<'instr>(
         return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("Unreacheable code."),
-            String::default(),
+            None,
             local_tk.span,
         ));
     }
@@ -1343,7 +1339,7 @@ fn build_local<'instr>(
         String::from("Expected ':'."),
     )?;
 
-    let local_type: Type = typegen::build_type(parser_ctx, None)?;
+    let local_type: Type = typegen::build_type(parser_ctx)?;
 
     let scope: usize = parser_ctx.get_scope();
 
@@ -1430,7 +1426,7 @@ fn build_return<'instr>(
         return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("Return outside of bind or function."),
-            String::default(),
+            None,
             span,
         ));
     }
@@ -1439,7 +1435,7 @@ fn build_return<'instr>(
         return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("Unreacheable code."),
-            String::default(),
+            None,
             span,
         ));
     }
@@ -1500,7 +1496,7 @@ fn build_block<'instr>(
         return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("Unreacheable code."),
-            String::default(),
+            None,
             block_tk.span,
         ));
     }
@@ -1511,7 +1507,7 @@ fn build_block<'instr>(
         return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("Block of code must be placed inside a function or a bind."),
-            String::default(),
+            None,
             block_tk.span,
         ));
     }
@@ -1559,7 +1555,7 @@ pub fn build_function<'instr>(
         return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("Functions are only defined globally."),
-            String::default(),
+            None,
             function_span,
         ));
     }
@@ -1568,7 +1564,7 @@ pub fn build_function<'instr>(
         return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("Unreacheable code."),
-            String::default(),
+            None,
             function_span,
         ));
     }
@@ -1624,13 +1620,13 @@ pub fn build_function<'instr>(
             String::from("Expected '::'."),
         )?;
 
-        let parameter_type: Type = typegen::build_type(parser_ctx, None)?;
+        let parameter_type: Type = typegen::build_type(parser_ctx)?;
 
         if parameter_type.is_void_type() {
             return Err(ThrushCompilerIssue::Error(
                 String::from("Syntax error"),
-                String::from("Void type are not allowed as parameters."),
-                String::default(),
+                String::from("Void type are not allowed as type parameter."),
+                None,
                 parameter_span,
             ));
         }
@@ -1658,7 +1654,7 @@ pub fn build_function<'instr>(
         String::from("Expected ')'."),
     )?;
 
-    let return_type: Type = typegen::build_type(parser_ctx, None)?;
+    let return_type: Type = typegen::build_type(parser_ctx)?;
 
     parser_ctx
         .get_mut_type_ctx()
@@ -1676,7 +1672,7 @@ pub fn build_function<'instr>(
             String::from(
                 "The '@ignore' attribute can only be used if the function contains the '@extern' attribute.",
             ),
-            String::default(),
+            None,
             function_span,
         ));
     }
@@ -1729,7 +1725,7 @@ pub fn build_function<'instr>(
         return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             format!("Missing return with type '{}'.", return_type),
-            String::default(),
+            None,
             function_span,
         ));
     }
@@ -1806,7 +1802,7 @@ fn build_external_attribute<'instr>(
     let name: &Token = parser_ctx.consume(
         TokenKind::Str,
         String::from("Syntax error"),
-        String::from("Expected a string for @extern(\"FFI NAME\")."),
+        String::from("Expected a literal 'str' for @extern(\"FFI NAME\")."),
     )?;
 
     let ffi_name: &str = name.lexeme;
@@ -1834,7 +1830,7 @@ fn build_call_convention_attribute(
     let convention_tk: &Token = parser_ctx.consume(
         TokenKind::Str,
         String::from("Syntax error"),
-        String::from("Expected a string for @convention(\"CONVENTION NAME\")."),
+        String::from("Expected a literal 'str' for @convention(\"CONVENTION NAME\")."),
     )?;
 
     let span: Span = convention_tk.span;
@@ -1859,7 +1855,7 @@ fn build_call_convention_attribute(
     Err(ThrushCompilerIssue::Error(
         String::from("Syntax error"),
         String::from("Unknown call convention."),
-        String::default(),
+        None,
         span,
     ))
 }

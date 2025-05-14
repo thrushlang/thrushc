@@ -103,8 +103,7 @@ impl<'a> Thrushc<'a> {
         let parser_ctx: ParserContext = Parser::parse(&tokens, file);
         let instructions: &[Instruction] = parser_ctx.get_instructions();
 
-        let mut static_checker: Warner = Warner::new(instructions, file);
-        static_checker.check();
+        Warner::new(instructions, file).check();
 
         if llvm_backend.contains_emitable(Emitable::AST) {
             let _ = write(

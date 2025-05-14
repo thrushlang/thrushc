@@ -17,7 +17,7 @@ pub fn parse_float(lexeme: &str, span: Span) -> Result<(Type, f64), ThrushCompil
         return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("Float values should only contain one dot."),
-            String::default(),
+            None,
             span,
         ));
     }
@@ -33,7 +33,7 @@ pub fn parse_float(lexeme: &str, span: Span) -> Result<(Type, f64), ThrushCompil
     Err(ThrushCompilerIssue::Error(
         String::from("Syntax error"),
         String::from("Out of bounds."),
-        String::default(),
+        None,
         span,
     ))
 }
@@ -73,7 +73,7 @@ pub fn parse_integer(lexeme: &str, span: Span) -> Result<(Type, f64), ThrushComp
                     return Err(ThrushCompilerIssue::Error(
                         String::from("Syntax error"),
                         String::from("Out of bounds signed hexadecimal format."),
-                        String::default(),
+                        None,
                         span,
                     ));
                 }
@@ -93,7 +93,7 @@ pub fn parse_integer(lexeme: &str, span: Span) -> Result<(Type, f64), ThrushComp
                         return Err(ThrushCompilerIssue::Error(
                             String::from("Syntax error"),
                             String::from("Out of bounds unsigned hexadecimal format."),
-                            String::default(),
+                            None,
                             span,
                         ));
                     }
@@ -102,7 +102,7 @@ pub fn parse_integer(lexeme: &str, span: Span) -> Result<(Type, f64), ThrushComp
                 Err(_) => Err(ThrushCompilerIssue::Error(
                     String::from("Syntax error"),
                     String::from("Invalid numeric hexadecimal format."),
-                    String::default(),
+                    None,
                     span,
                 )),
             },
@@ -129,7 +129,7 @@ pub fn parse_integer(lexeme: &str, span: Span) -> Result<(Type, f64), ThrushComp
                     return Err(ThrushCompilerIssue::Error(
                         String::from("Syntax error"),
                         String::from("Out of bounds signed binary format."),
-                        String::default(),
+                        None,
                         span,
                     ));
                 }
@@ -149,7 +149,7 @@ pub fn parse_integer(lexeme: &str, span: Span) -> Result<(Type, f64), ThrushComp
                         return Err(ThrushCompilerIssue::Error(
                             String::from("Syntax error"),
                             String::from("Out of bounds unsigned binary format."),
-                            String::default(),
+                            None,
                             span,
                         ));
                     }
@@ -158,7 +158,7 @@ pub fn parse_integer(lexeme: &str, span: Span) -> Result<(Type, f64), ThrushComp
                 Err(_) => Err(ThrushCompilerIssue::Error(
                     String::from("Syntax error"),
                     String::from("Invalid binary format."),
-                    String::default(),
+                    None,
                     span,
                 )),
             },
@@ -179,7 +179,7 @@ pub fn parse_integer(lexeme: &str, span: Span) -> Result<(Type, f64), ThrushComp
                 return Err(ThrushCompilerIssue::Error(
                     String::from("Syntax error"),
                     String::from("Out of bounds."),
-                    String::default(),
+                    None,
                     span,
                 ));
             }
@@ -199,7 +199,7 @@ pub fn parse_integer(lexeme: &str, span: Span) -> Result<(Type, f64), ThrushComp
                     Err(ThrushCompilerIssue::Error(
                         String::from("Syntax error"),
                         String::from("Out of bounds."),
-                        String::default(),
+                        None,
                         span,
                     ))
                 }
@@ -208,7 +208,7 @@ pub fn parse_integer(lexeme: &str, span: Span) -> Result<(Type, f64), ThrushComp
             Err(_) => Err(ThrushCompilerIssue::Error(
                 String::from("Syntax error"),
                 String::from("Out of bounds."),
-                String::default(),
+                None,
                 span,
             )),
         },

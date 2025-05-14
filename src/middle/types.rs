@@ -1,6 +1,5 @@
 use std::sync::Arc;
 
-use ahash::{HashSet, HashSetExt};
 use inkwell::{context::Context, targets::TargetData};
 
 use crate::{
@@ -105,6 +104,7 @@ pub enum TokenKind {
     Or,
     Return,
     This,
+    Me,
     True,
     Local,
     Const,
@@ -250,6 +250,11 @@ impl TokenKind {
     }
 
     #[inline(always)]
+    pub const fn is_me(&self) -> bool {
+        matches!(self, TokenKind::Me)
+    }
+
+    #[inline(always)]
     pub const fn is_function_keyword(&self) -> bool {
         matches!(self, TokenKind::Fn)
     }
@@ -303,6 +308,7 @@ impl TokenKind {
             || self.is_str()
             || self.is_void()
             || self.is_mut()
+            || self.is_me()
     }
 
     #[inline(always)]
@@ -368,6 +374,9 @@ pub enum Type {
 
     // Struct Type
     Struct(String, Vec<Arc<Type>>),
+
+    // Me (Self Type)
+    Me(Option<Arc<Type>>),
 
     // Address
     Address,
@@ -475,6 +484,11 @@ impl Type {
         matches!(self, Type::Str)
     }
 
+    #[inline(always)]
+    pub const fn is_me_type(&self) -> bool {
+        matches!(self, Type::Me(_))
+    }
+
     #[must_use]
     #[inline(always)]
     pub const fn is_signed_integer_type(&self) -> bool {
@@ -509,49 +523,10 @@ impl Type {
 
     pub fn is_recursive_type(&self) -> bool {
         if let Type::Struct(_, fields) = self {
-            let mut visited: HashSet<*const Type> = HashSet::with_capacity(100);
-
-            fields
-                .iter()
-                .any(|field| field.is_recursive_with_original(fields, &mut visited))
+            fields.iter().any(|tp| tp.is_me_type())
         } else {
             false
         }
-    }
-
-    fn is_recursive_with_original(
-        &self,
-        original_fields: &[Arc<Type>],
-        visited: &mut HashSet<*const Type>,
-    ) -> bool {
-        let ptr: *const Type = self as *const Type;
-
-        if visited.contains(&ptr) {
-            return false;
-        }
-
-        visited.insert(ptr);
-
-        let result: bool = if let Type::Struct(_, fields) = self {
-            if fields.iter().map(|f| f.as_ref()).collect::<Vec<&Type>>()
-                == original_fields
-                    .iter()
-                    .map(|f| f.as_ref())
-                    .collect::<Vec<&Type>>()
-            {
-                true
-            } else {
-                fields
-                    .iter()
-                    .any(|field| field.is_recursive_with_original(original_fields, visited))
-            }
-        } else {
-            false
-        };
-
-        visited.remove(&ptr);
-
-        result
     }
 
     pub fn create_structure_type(name: String, fields: &[Type]) -> Type {
@@ -589,6 +564,8 @@ impl PartialEq for Type {
             (Type::Ptr(Some(target)), Type::Ptr(Some(from))) => target == from,
             (Type::Void, Type::Void) => true,
             (Type::Str, Type::Str) => true,
+            (Type::Me(Some(target)), Type::Me(Some(from))) => target == from,
+            (Type::Me(None), Type::Me(None)) => true,
             (Type::Bool, Type::Bool) => true,
 
             _ => false,
@@ -656,7 +633,7 @@ pub fn decompose_struct_property(
         return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             format!("Expected existing property, not '{}'.", field_name,),
-            String::default(),
+            None,
             span,
         ));
     }
@@ -668,7 +645,7 @@ pub fn decompose_struct_property(
                 "Existing property '{}' is not a structure.",
                 property_names[position]
             ),
-            String::default(),
+            None,
             span,
         ));
     }

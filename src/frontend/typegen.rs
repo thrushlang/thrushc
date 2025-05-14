@@ -18,13 +18,11 @@ use super::{
     parser::ParserContext,
 };
 
-pub fn build_type(
-    parser_ctx: &mut ParserContext<'_>,
-    consume: Option<TokenKind>,
-) -> Result<Type, ThrushCompilerIssue> {
+pub fn build_type(parser_ctx: &mut ParserContext<'_>) -> Result<Type, ThrushCompilerIssue> {
     let builded_type: Result<Type, ThrushCompilerIssue> = match parser_ctx.peek().kind {
         tk_kind if tk_kind.is_type() => {
             let tk: &Token = parser_ctx.advance()?;
+            let span: Span = tk.span;
 
             if tk_kind.is_mut()
                 && !parser_ctx.get_type_ctx().get_position().is_parameter()
@@ -33,13 +31,31 @@ pub fn build_type(
                 return Err(ThrushCompilerIssue::Error(
                     String::from("Syntax error"),
                     String::from("Mutable types is only allowed in function and bind parameters."),
-                    String::default(),
-                    tk.span,
+                    None,
+                    span,
                 ));
             }
 
+            if tk_kind.is_me()
+                && !parser_ctx
+                    .get_type_ctx()
+                    .get_position()
+                    .is_structure_field()
+            {
+                return Err(ThrushCompilerIssue::Error(
+                    String::from("Syntax error"),
+                    String::from("Self types 'Me' is only allowed in structure fields."),
+                    None,
+                    span,
+                ));
+            }
+
+            if tk_kind.is_me() {
+                return Ok(Type::Me(None));
+            }
+
             if tk_kind.is_mut() {
-                return Ok(Type::Mut(build_type(parser_ctx, consume)?.into()));
+                return Ok(Type::Mut(build_type(parser_ctx)?.into()));
             }
 
             match tk_kind.as_type() {
@@ -56,11 +72,11 @@ pub fn build_type(
                 what_heck => Err(ThrushCompilerIssue::Error(
                     String::from("Syntax error"),
                     format!(
-                        "The type '{}' cannot be a value during the compile time.",
+                        "The type '{}' cannot be a valid value in runtime.",
                         what_heck
                     ),
-                    String::default(),
-                    tk.span,
+                    None,
+                    span,
                 )),
             }
         }
@@ -96,7 +112,7 @@ pub fn build_type(
                 return Err(ThrushCompilerIssue::Error(
                     String::from("Syntax error"),
                     format!("Not found type '{}'.", name),
-                    String::default(),
+                    None,
                     span,
                 ));
             }
@@ -105,18 +121,10 @@ pub fn build_type(
         what_heck => Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             format!("Expected type, not '{}'", what_heck),
-            String::default(),
+            None,
             parser_ctx.previous().span,
         )),
     };
-
-    if let Some(tk_kind) = consume {
-        parser_ctx.consume(
-            tk_kind,
-            String::from("Syntax error"),
-            format!("Expected '{}'.", tk_kind),
-        )?;
-    }
 
     builded_type
 }
@@ -132,7 +140,7 @@ fn build_recursive_type(
     )?;
 
     if let Type::Ptr(_) = &mut before_type {
-        let mut inner_type: Type = build_type(parser_ctx, None)?;
+        let mut inner_type: Type = build_type(parser_ctx)?;
 
         while parser_ctx.check(TokenKind::LBracket) {
             inner_type = build_recursive_type(parser_ctx, inner_type)?;
@@ -150,7 +158,7 @@ fn build_recursive_type(
     Err(ThrushCompilerIssue::Error(
         String::from("Syntax error"),
         format!("Expected pointer type, not '{}'", before_type),
-        String::default(),
+        None,
         parser_ctx.previous().span,
     ))
 }

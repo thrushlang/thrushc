@@ -120,6 +120,7 @@ impl std::fmt::Display for TokenKind {
             TokenKind::Str => write!(f, "str"),
             TokenKind::Char => write!(f, "char"),
             TokenKind::Ptr => write!(f, "ptr"),
+            TokenKind::Me => write!(f, "me"),
             TokenKind::Address => write!(f, "address"),
             TokenKind::Carry => write!(f, "carry"),
             TokenKind::Void => write!(f, "void"),
@@ -165,6 +166,12 @@ impl std::fmt::Display for Type {
             }
             Type::Address => {
                 write!(f, "memory address")
+            }
+            Type::Me(None) => {
+                write!(f, "Me")
+            }
+            Type::Me(Some(nested_type)) => {
+                write!(f, "Me[{}]", nested_type)
             }
             Type::Void => write!(f, "void"),
         }

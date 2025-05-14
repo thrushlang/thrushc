@@ -14,7 +14,7 @@ use inkwell::{
     values::{BasicValue, BasicValueEnum, InstructionValue, PointerValue},
 };
 
-use super::context::CodeGenContext;
+use super::{context::CodeGenContext, predicates};
 
 #[derive(Debug, Clone)]
 pub enum SymbolAllocated<'ctx> {
@@ -60,17 +60,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
                 let alignment: u32 = target_data.get_preferred_alignment(&ptr_type);
 
                 if kind.is_heap_allocated(llvm_context, target_data) {
-                    let gep: PointerValue = llvm_builder
-                        .build_struct_gep(ptr_type, *ptr, 0, "")
-                        .unwrap();
-
-                    let value: BasicValueEnum = llvm_builder.build_load(ptr_type, gep, "").unwrap();
-
-                    if let Some(load_instruction) = value.as_instruction_value() {
-                        let _ = load_instruction.set_alignment(alignment);
-                    }
-
-                    return value;
+                    return (*ptr).into();
                 }
 
                 let value: BasicValueEnum = llvm_builder.build_load(ptr_type, *ptr, "").unwrap();
@@ -93,17 +83,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
                     let alignment: u32 = target_data.get_preferred_alignment(&ptr_type);
 
                     if kind.is_heap_allocated(llvm_context, target_data) {
-                        let gep: PointerValue =
-                            llvm_builder.build_struct_gep(ptr_type, ptr, 0, "").unwrap();
-
-                        let value: BasicValueEnum =
-                            llvm_builder.build_load(ptr_type, gep, "").unwrap();
-
-                        if let Some(load_instruction) = value.as_instruction_value() {
-                            let _ = load_instruction.set_alignment(alignment);
-                        }
-
-                        return value;
+                        return *value;
                     }
 
                     let value: BasicValueEnum = llvm_builder.build_load(ptr_type, ptr, "").unwrap();

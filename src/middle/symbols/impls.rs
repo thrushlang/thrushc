@@ -163,7 +163,7 @@ impl<'instr> FoundSymbolEither<'instr> for FoundSymbolId<'instr> {
         Err(ThrushCompilerIssue::Error(
             String::from("Expected custom type reference"),
             String::from("Expected custom type but found something else."),
-            String::default(),
+            None,
             span,
         ))
     }
@@ -176,7 +176,7 @@ impl<'instr> FoundSymbolEither<'instr> for FoundSymbolId<'instr> {
         Err(ThrushCompilerIssue::Error(
             String::from("Expected constant reference"),
             String::from("Expected constant but found something else."),
-            String::default(),
+            None,
             span,
         ))
     }
@@ -189,7 +189,7 @@ impl<'instr> FoundSymbolEither<'instr> for FoundSymbolId<'instr> {
         Err(ThrushCompilerIssue::Error(
             String::from("Expected enum reference"),
             String::from("Expected enum but found something else."),
-            String::default(),
+            None,
             span,
         ))
     }
@@ -202,7 +202,7 @@ impl<'instr> FoundSymbolEither<'instr> for FoundSymbolId<'instr> {
         Err(ThrushCompilerIssue::Error(
             String::from("Expected struct reference"),
             String::from("Expected struct but found something else."),
-            String::default(),
+            None,
             span,
         ))
     }
@@ -215,7 +215,7 @@ impl<'instr> FoundSymbolEither<'instr> for FoundSymbolId<'instr> {
         Err(ThrushCompilerIssue::Error(
             String::from("Expected function reference"),
             String::from("Expected function but found something else."),
-            String::default(),
+            None,
             span,
         ))
     }
@@ -228,7 +228,7 @@ impl<'instr> FoundSymbolEither<'instr> for FoundSymbolId<'instr> {
         Err(ThrushCompilerIssue::Error(
             String::from("Expected local reference"),
             String::from("Expected local but found something else."),
-            String::default(),
+            None,
             span,
         ))
     }

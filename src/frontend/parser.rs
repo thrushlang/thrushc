@@ -112,7 +112,7 @@ impl<'instr> ParserContext<'instr> {
         let error: ThrushCompilerIssue = ThrushCompilerIssue::Error(
             String::from("Mismatched types"),
             format!("Expected '{}' but found '{}'.", target, from),
-            String::default(),
+            None,
             span,
         );
 
@@ -138,7 +138,7 @@ impl<'instr> ParserContext<'instr> {
         Err(ThrushCompilerIssue::Error(
             title,
             help,
-            String::default(),
+            None,
             self.previous().span,
         ))
     }
@@ -161,7 +161,7 @@ impl<'instr> ParserContext<'instr> {
         Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("EOF has been reached."),
-            String::default(),
+            None,
             self.peek().span,
         ))
     }
@@ -175,7 +175,7 @@ impl<'instr> ParserContext<'instr> {
         Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("EOF has been reached."),
-            String::default(),
+            None,
             self.peek().span,
         ))
     }

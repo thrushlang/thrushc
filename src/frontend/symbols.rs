@@ -77,7 +77,7 @@ impl<'instr> SymbolsTable<'instr> {
         Err(ThrushCompilerIssue::Error(
             String::from("Structure/Function/Local/Constant/Type not found"),
             format!("'{}' is not declared or defined.", name),
-            String::default(),
+            None,
             span,
         ))
     }
@@ -95,7 +95,7 @@ impl<'instr> SymbolsTable<'instr> {
         Err(ThrushCompilerIssue::Error(
             String::from("Expected struct reference"),
             String::from("Expected struct but found something else."),
-            String::default(),
+            None,
             span,
         ))
     }
@@ -113,7 +113,7 @@ impl<'instr> SymbolsTable<'instr> {
         Err(ThrushCompilerIssue::Error(
             String::from("Expected function reference"),
             String::from("Expected function but found something else."),
-            String::default(),
+            None,
             span,
         ))
     }
@@ -131,7 +131,7 @@ impl<'instr> SymbolsTable<'instr> {
         Err(ThrushCompilerIssue::Error(
             String::from("Expected enum reference"),
             String::from("Expected enum but found something else."),
-            String::default(),
+            None,
             span,
         ))
     }
@@ -149,7 +149,7 @@ impl<'instr> SymbolsTable<'instr> {
         Err(ThrushCompilerIssue::Error(
             String::from("Expected custom type reference"),
             String::from("Expected custom type but found something else."),
-            String::default(),
+            None,
             span,
         ))
     }
@@ -168,7 +168,7 @@ impl<'instr> SymbolsTable<'instr> {
         Err(ThrushCompilerIssue::Error(
             String::from("Expected local reference"),
             String::from("Expected local but found something else."),
-            String::default(),
+            None,
             span,
         ))
     }
@@ -186,7 +186,7 @@ impl<'instr> SymbolsTable<'instr> {
         Err(ThrushCompilerIssue::Error(
             String::from("Expected constant reference"),
             String::from("Expected constant but found something else."),
-            String::default(),
+            None,
             span,
         ))
     }
@@ -204,7 +204,7 @@ impl<'instr> SymbolsTable<'instr> {
         Err(ThrushCompilerIssue::Error(
             String::from("Structure not found"),
             format!("'{}' structure not defined.", name),
-            String::default(),
+            None,
             span,
         ))
     }
@@ -222,7 +222,7 @@ impl<'instr> SymbolsTable<'instr> {
         Err(ThrushCompilerIssue::Error(
             String::from("Structure not found"),
             format!("'{}' structure not defined.", name),
-            String::default(),
+            None,
             span,
         ))
     }
@@ -238,7 +238,7 @@ impl<'instr> SymbolsTable<'instr> {
             return Err(ThrushCompilerIssue::Error(
                 String::from("Local variable already declared"),
                 format!("'{}' local variable already declared before.", name),
-                String::default(),
+                None,
                 span,
             ));
         }
@@ -258,7 +258,7 @@ impl<'instr> SymbolsTable<'instr> {
             return Err(ThrushCompilerIssue::Error(
                 String::from("Constant already declared"),
                 format!("'{}' constant already declared before.", name),
-                String::default(),
+                None,
                 span,
             ));
         }
@@ -278,7 +278,7 @@ impl<'instr> SymbolsTable<'instr> {
             return Err(ThrushCompilerIssue::Error(
                 String::from("Custom type already declared"),
                 format!("'{}' custom type already declared before.", name),
-                String::default(),
+                None,
                 span,
             ));
         }
@@ -298,7 +298,7 @@ impl<'instr> SymbolsTable<'instr> {
             return Err(ThrushCompilerIssue::Error(
                 String::from("Structure already declared"),
                 format!("'{}' structure already declared before.", name),
-                String::default(),
+                None,
                 span,
             ));
         }
@@ -318,7 +318,7 @@ impl<'instr> SymbolsTable<'instr> {
             return Err(ThrushCompilerIssue::Error(
                 String::from("Enum already declared"),
                 format!("'{}' enum already declared before.", name),
-                String::default(),
+                None,
                 span,
             ));
         }
@@ -338,7 +338,7 @@ impl<'instr> SymbolsTable<'instr> {
             return Err(ThrushCompilerIssue::Error(
                 String::from("Function already declared"),
                 format!("'{}' function already declared before.", name),
-                String::default(),
+                None,
                 span,
             ));
         }
@@ -370,7 +370,7 @@ impl<'instr> SymbolsTable<'instr> {
             return Err(ThrushCompilerIssue::Error(
                 String::from("Structure not found"),
                 format!("'{}' structure not defined or declared yet.", name),
-                String::default(),
+                None,
                 span,
             ));
         }

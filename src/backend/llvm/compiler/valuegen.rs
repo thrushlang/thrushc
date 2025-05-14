@@ -314,7 +314,7 @@ pub fn generate_expression<'ctx>(
     {
         context.set_position(CodeGenContextPosition::Mutation);
 
-        let source_name: &str = source.0;
+        let source_name: Option<&str> = source.0;
         let source_expression: Option<&Rc<Instruction<'_>>> = source.1.as_ref();
 
         if let Some(expression) = source_expression {
@@ -332,15 +332,20 @@ pub fn generate_expression<'ctx>(
             return compiled_source;
         }
 
-        let symbol: SymbolAllocated = context.get_allocated_symbol(source_name);
+        if let Some(name) = source_name {
+            let symbol: SymbolAllocated = context.get_allocated_symbol(name);
 
-        let expression: BasicValueEnum = generate_expression(target, kind, context);
+            let compiled_expression: BasicValueEnum = generate_expression(target, kind, context);
 
-        symbol.store(context, expression.load_maybe(target.get_type(), context));
+            symbol.store(
+                context,
+                compiled_expression.load_maybe(target.get_type(), context),
+            );
 
-        context.set_position_irrelevant();
+            context.set_position_irrelevant();
 
-        return expression;
+            return compiled_expression;
+        }
     }
 
     if let Instruction::Call {
@@ -389,11 +394,6 @@ pub fn generate_expression<'ctx>(
             if casting_target.is_mut_type() && context.get_position().in_call() {
                 context.set_position_irrelevant();
                 return return_value;
-            }
-
-            if call_type.is_mut_type() {
-                context.set_position_irrelevant();
-                return call.try_as_basic_value().unwrap_left();
             }
 
             if return_value.is_pointer_value() {

@@ -11,6 +11,7 @@ pub enum TypePosition {
     Local,
     Parameter,
     BindParameter,
+    StructureField,
     NoRelevant,
 }
 
@@ -168,6 +169,10 @@ impl TypePosition {
 
     pub fn is_bind_parameter(&self) -> bool {
         matches!(self, TypePosition::BindParameter)
+    }
+
+    pub fn is_structure_field(&self) -> bool {
+        matches!(self, TypePosition::StructureField)
     }
 }
 

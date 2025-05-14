@@ -38,7 +38,7 @@ pub fn build_expression<'instr>(
         return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("Unreacheable code."),
-            String::default(),
+            None,
             parser_ctx.peek().span,
         ));
     }
@@ -65,7 +65,7 @@ pub fn build_expr<'instr>(
         return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("Unreacheable code."),
-            String::default(),
+            None,
             parser_ctx.peek().span,
         ));
     }
@@ -311,7 +311,7 @@ fn primary<'instr>(
                 String::from("Expected '['."),
             )?;
 
-            let carry_type: Type = typegen::build_type(parser_ctx, None)?;
+            let carry_type: Type = typegen::build_type(parser_ctx)?;
 
             parser_ctx.consume(
                 TokenKind::RBracket,
@@ -349,7 +349,7 @@ fn primary<'instr>(
                         "Carry is only allowed for pointer types or memory address, not '{}'. ",
                         expression_type
                     ),
-                    String::default(),
+                    None,
                     span,
                 ));
             }
@@ -372,7 +372,7 @@ fn primary<'instr>(
                 String::from("Expected '['."),
             )?;
 
-            let write_type: Type = typegen::build_type(parser_ctx, None)?;
+            let write_type: Type = typegen::build_type(parser_ctx)?;
 
             parser_ctx.consume(
                 TokenKind::RBracket,
@@ -425,7 +425,7 @@ fn primary<'instr>(
                         "Write is only allowed for pointer types or memory address, not '{}'. ",
                         expression_type
                     ),
-                    String::default(),
+                    None,
                     span,
                 ));
             }
@@ -470,7 +470,7 @@ fn primary<'instr>(
                 return Err(ThrushCompilerIssue::Error(
                     String::from("Syntax error"),
                     String::from("Only local references can be pre-incremented."),
-                    String::default(),
+                    None,
                     parser_ctx.previous().span,
                 ));
             }
@@ -497,7 +497,7 @@ fn primary<'instr>(
                 return Err(ThrushCompilerIssue::Error(
                     String::from("Syntax error"),
                     String::from("Only local references can be pre-decremented."),
-                    String::default(),
+                    None,
                     parser_ctx.previous().span,
                 ));
             }
@@ -526,7 +526,7 @@ fn primary<'instr>(
                     String::from(
                         "Grouping '(...)' is only allowed with binary expressions or other grouped expressions.",
                     ),
-                    String::default(),
+                    None,
                     span,
                 ));
             }
@@ -617,7 +617,7 @@ fn primary<'instr>(
                     return Err(ThrushCompilerIssue::Error(
                         String::from("Expected mutable reference"),
                         String::from("Make mutable with 'mut' keyword before the identifier."),
-                        String::default(),
+                        None,
                         local_span,
                     ));
                 }
@@ -632,7 +632,7 @@ fn primary<'instr>(
                 );
 
                 return Ok(Instruction::LocalMut {
-                    source: (name, None),
+                    source: (Some(name), None),
                     target: expression.into(),
                     kind: local_type,
                     span,
@@ -663,16 +663,14 @@ fn primary<'instr>(
                     if !property.is_mutable() {
                         return Err(ThrushCompilerIssue::Error(
                             String::from("Expected mutable type"),
-                            String::from(
-                                "Make mutable the parameter or local or self type of this property.",
-                            ),
-                            String::default(),
+                            String::from("Make mutable the parameter or local of this property."),
+                            None,
                             property.get_span(),
                         ));
                     }
 
                     return Ok(Instruction::LocalMut {
-                        source: ("", Some(property.clone().into())),
+                        source: (None, Some(property.clone().into())),
                         target: expr.into(),
                         kind: property.get_type().clone(),
                         span,
@@ -692,7 +690,7 @@ fn primary<'instr>(
                     String::from(
                         "Enums cannot be used as types; use properties instead with their types.",
                     ),
-                    String::default(),
+                    None,
                     span,
                 ));
             }
@@ -701,7 +699,7 @@ fn primary<'instr>(
                 return Err(ThrushCompilerIssue::Error(
                     String::from("Invalid type"),
                     String::from("Functions cannot be used as types; call it instead."),
-                    String::default(),
+                    None,
                     span,
                 ));
             }
@@ -721,7 +719,7 @@ fn primary<'instr>(
             return Err(ThrushCompilerIssue::Error(
                 String::from("Syntax error"),
                 format!("Statement '{}' don't allowed.", previous.lexeme),
-                String::default(),
+                None,
                 previous.span,
             ));
         }
@@ -760,7 +758,7 @@ fn build_binding_call<'instr>(
                 "Not found '{}' bind inside the bindings of '{}' struct.",
                 bind_name, name
             ),
-            String::default(),
+            None,
             span,
         ));
     }
@@ -802,7 +800,7 @@ fn build_binding_call<'instr>(
                 bind_parameters_type.len(),
                 args.len()
             ),
-            String::default(),
+            None,
             span,
         ));
     }
@@ -916,7 +914,7 @@ fn build_ref<'instr>(
         return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             format!("Local reference '{}' is undefined.", name),
-            String::default(),
+            None,
             span,
         ));
     }
@@ -975,7 +973,7 @@ fn build_enum_field<'instr>(
         return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             format!("Not found '{}' field in '{}' enum.", name, field_name),
-            String::default(),
+            None,
             span,
         ));
     }
@@ -1007,7 +1005,7 @@ fn build_address<'instr>(
                 "Indexe is only allowed for pointers and structs, not '{}'. ",
                 local_type
             ),
-            String::default(),
+            None,
             local.get_span(),
         ));
     }
@@ -1023,7 +1021,7 @@ fn build_address<'instr>(
                 "Expected unsigned integer type (u8, u16, u32), not {}. ",
                 index.get_type(),
             ),
-            String::default(),
+            None,
             index.get_span(),
         ));
     }
@@ -1046,7 +1044,7 @@ fn build_address<'instr>(
                     "Expected unsigned integer type (u8, u16, u32), not {}. ",
                     index.get_type(),
                 ),
-                String::default(),
+                None,
                 index.get_span(),
             ));
         }
@@ -1099,7 +1097,7 @@ fn build_function_call<'instr>(
             return Err(ThrushCompilerIssue::Error(
                 String::from("Syntax error"),
                 String::from("Constructor should be stored in a local variable."),
-                String::default(),
+                None,
                 expression.get_span(),
             ));
         }
@@ -1123,7 +1121,7 @@ fn build_function_call<'instr>(
                 maximun_arguments,
                 args.len()
             ),
-            String::default(),
+            None,
             span,
         ));
     }
@@ -1146,7 +1144,7 @@ fn build_function_call<'instr>(
                 function.get_parameters(),
                 display_args_types,
             ),
-            String::default(),
+            None,
             span,
         ));
     }
@@ -1187,7 +1185,7 @@ fn build_this<'instr>(
         return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("Expected 'this' inside the a bindings definition context."),
-            String::default(),
+            None,
             span,
         ));
     }
@@ -1200,7 +1198,7 @@ fn build_this<'instr>(
         return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("Expected 'this' inside the a bind definition context."),
-            String::default(),
+            None,
             span,
         ));
     }
@@ -1211,7 +1209,7 @@ fn build_this<'instr>(
             String::from(
                 "Expected that 'this' was already declared within the definition of the a previous bind parameter.",
             ),
-            String::default(),
+            None,
             span,
         ));
     }
@@ -1247,7 +1245,7 @@ fn build_constructor<'instr>(
         return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("Unreacheable code."),
-            String::default(),
+            None,
             new_tk.span,
         ));
     }
@@ -1295,7 +1293,7 @@ fn build_constructor<'instr>(
                 return Err(ThrushCompilerIssue::Error(
                     String::from("Syntax error"),
                     String::from("Expected existing structure field name."),
-                    String::default(),
+                    None,
                     field_span,
                 ));
             }
@@ -1304,7 +1302,7 @@ fn build_constructor<'instr>(
                 return Err(ThrushCompilerIssue::Error(
                     String::from("Too many fields in structure"),
                     format!("Expected '{}' fields, not '{}'.", fields_required, amount),
-                    String::default(),
+                    None,
                     span,
                 ));
             }
@@ -1315,7 +1313,7 @@ fn build_constructor<'instr>(
                 return Err(ThrushCompilerIssue::Error(
                     String::from("Syntax error"),
                     String::from("Constructor should be stored in a local variable."),
-                    String::default(),
+                    None,
                     field_span,
                 ));
             }
@@ -1351,7 +1349,7 @@ fn build_constructor<'instr>(
                 "Expected '{}' arguments, but '{}' was gived.",
                 fields_required, amount_fields
             ),
-            String::default(),
+            None,
             span,
         ));
     }

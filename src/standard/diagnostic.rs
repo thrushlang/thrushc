@@ -56,13 +56,11 @@ impl Diagnostician {
     pub fn build_diagnostic(&mut self, error: &ThrushCompilerIssue, logging_type: LoggingType) {
         match error {
             ThrushCompilerIssue::Error(title, help, note, span) => {
-                self.diagnose(title, help, Some(note), *span, logging_type);
+                self.diagnose(title, help, note.as_deref(), *span, logging_type);
             }
             ThrushCompilerIssue::Warning(title, help, span) => {
                 self.diagnose(title, help, None, *span, logging_type);
             }
-
-            _ => todo!(),
         }
     }
 
@@ -203,7 +201,7 @@ impl<'a> Diagnostic<'a> {
         logging::write(
             logging::OutputIn::Stderr,
             &format!(
-                "\n{} {}\n\n",
+                "\n{} {}\n",
                 logging_type.to_styled(),
                 title.bold().to_uppercase()
             ),

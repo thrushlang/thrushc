@@ -192,7 +192,7 @@ pub enum Instruction<'ctx> {
         span: Span,
     },
     LocalMut {
-        source: (&'ctx str, Option<Rc<Instruction<'ctx>>>),
+        source: (Option<&'ctx str>, Option<Rc<Instruction<'ctx>>>),
         target: Rc<Instruction<'ctx>>,
         kind: Type,
         span: Span,
@@ -453,9 +453,9 @@ impl Instruction<'_> {
             return Err(ThrushCompilerIssue::Error(
                 String::from("Attemping use JIT"),
                 String::from("This expression cannot be compiled correctly."),
-                String::from(
+                Some(String::from(
                     "The compiler does not accept runtime-only expressions until the Just-in-Time (JIT) compiler development is complete.",
-                ),
+                )),
                 span,
             ));
         }

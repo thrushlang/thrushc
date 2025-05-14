@@ -19,7 +19,7 @@ use {
     std::mem,
 };
 
-const KEYWORDS_CAPACITY: usize = 61;
+const KEYWORDS_CAPACITY: usize = 62;
 const MINIMAL_TOKENS_CAPACITY: usize = 100_000;
 
 lazy_static! {
@@ -47,6 +47,7 @@ lazy_static! {
         keywords.insert(b"bindings", TokenKind::Bindings);
         keywords.insert(b"bind", TokenKind::Bind);
         keywords.insert(b"this", TokenKind::This);
+        keywords.insert(b"Me", TokenKind::Me);
         keywords.insert(b"match", TokenKind::Match);
         keywords.insert(b"pattern", TokenKind::Pattern);
         keywords.insert(b"mut", TokenKind::Mut);
@@ -179,7 +180,7 @@ impl<'a> Lexer<'a> {
                         String::from(
                             "Unterminated multiline comment. Did you forget to close the comment with a '*/'?",
                         ),
-                        String::default(),
+                        None,
                         span,
                     ));
                 }
@@ -222,8 +223,8 @@ impl<'a> Lexer<'a> {
 
                 return Err(ThrushCompilerIssue::Error(
                     String::from("Unknown character"),
-                    String::from("Provide a valid utf-8 character."),
-                    String::default(),
+                    String::from("The compiler does not know how to handle this character."),
+                    None,
                     span,
                 ));
             }
@@ -269,7 +270,7 @@ impl<'a> Lexer<'a> {
                 return Err(ThrushCompilerIssue::Error(
                     String::from("Syntax error"),
                     String::from("Hexadecimal identifier '0x' cannot be repeated."),
-                    String::default(),
+                    None,
                     Span::new(self.line, self.span),
                 ));
             }
@@ -280,7 +281,7 @@ impl<'a> Lexer<'a> {
                 return Err(ThrushCompilerIssue::Error(
                     String::from("Syntax error"),
                     String::from("Binary identifier '0b' cannot be repeated."),
-                    String::default(),
+                    None,
                     Span::new(self.line, self.span),
                 ));
             }
@@ -352,7 +353,7 @@ impl<'a> Lexer<'a> {
             return Err(ThrushCompilerIssue::Error(
                 String::from("Syntax error"),
                 String::from("Float values should only contain one dot."),
-                String::default(),
+                None,
                 span,
             ));
         }
@@ -368,7 +369,7 @@ impl<'a> Lexer<'a> {
         Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("Out of bounds."),
-            String::default(),
+            None,
             span,
         ))
     }
@@ -409,7 +410,7 @@ impl<'a> Lexer<'a> {
                         return Err(ThrushCompilerIssue::Error(
                             String::from("Syntax error"),
                             String::from("Out of bounds signed hexadecimal format."),
-                            String::default(),
+                            None,
                             span,
                         ));
                     }
@@ -427,7 +428,7 @@ impl<'a> Lexer<'a> {
                             return Err(ThrushCompilerIssue::Error(
                                 String::from("Syntax error"),
                                 String::from("Out of bounds unsigned hexadecimal format."),
-                                String::default(),
+                                None,
                                 span,
                             ));
                         }
@@ -436,7 +437,7 @@ impl<'a> Lexer<'a> {
                     Err(_) => Err(ThrushCompilerIssue::Error(
                         String::from("Syntax error"),
                         String::from("Invalid numeric hexadecimal format."),
-                        String::default(),
+                        None,
                         span,
                     )),
                 },
@@ -461,7 +462,7 @@ impl<'a> Lexer<'a> {
                         return Err(ThrushCompilerIssue::Error(
                             String::from("Syntax error"),
                             String::from("Out of bounds signed binary format."),
-                            String::default(),
+                            None,
                             span,
                         ));
                     }
@@ -479,7 +480,7 @@ impl<'a> Lexer<'a> {
                             return Err(ThrushCompilerIssue::Error(
                                 String::from("Syntax error"),
                                 String::from("Out of bounds unsigned binary format."),
-                                String::default(),
+                                None,
                                 span,
                             ));
                         }
@@ -488,7 +489,7 @@ impl<'a> Lexer<'a> {
                     Err(_) => Err(ThrushCompilerIssue::Error(
                         String::from("Syntax error"),
                         String::from("Invalid binary format."),
-                        String::default(),
+                        None,
                         span,
                     )),
                 },
@@ -507,7 +508,7 @@ impl<'a> Lexer<'a> {
                     Err(ThrushCompilerIssue::Error(
                         String::from("Syntax error"),
                         String::from("Out of bounds."),
-                        String::default(),
+                        None,
                         span,
                     ))
                 }
@@ -525,7 +526,7 @@ impl<'a> Lexer<'a> {
                         Err(ThrushCompilerIssue::Error(
                             String::from("Syntax error"),
                             String::from("Out of bounds."),
-                            String::default(),
+                            None,
                             span,
                         ))
                     }
@@ -534,7 +535,7 @@ impl<'a> Lexer<'a> {
                 Err(_) => Err(ThrushCompilerIssue::Error(
                     String::from("Syntax error"),
                     String::from("Out of bounds."),
-                    String::default(),
+                    None,
                     span,
                 )),
             },
@@ -554,7 +555,7 @@ impl<'a> Lexer<'a> {
             return Err(ThrushCompilerIssue::Error(
                 String::from("Syntax error"),
                 String::from("Unclosed char. Did you forget to close the char with a \'?"),
-                String::default(),
+                None,
                 span,
             ));
         }
@@ -565,7 +566,7 @@ impl<'a> Lexer<'a> {
             return Err(ThrushCompilerIssue::Error(
                 String::from("Syntax error"),
                 String::from("A char data type only can contain one character."),
-                String::default(),
+                None,
                 span,
             ));
         }
@@ -596,7 +597,7 @@ impl<'a> Lexer<'a> {
                 String::from(
                     "Unclosed literal str. Did you forget to close the literal str with a '\"'?",
                 ),
-                String::default(),
+                None,
                 span,
             ));
         }
@@ -736,7 +737,7 @@ impl TokenExtensions for str {
                         return Err(ThrushCompilerIssue::Error(
                             String::from("Syntax Error"),
                             String::from("Invalid escape sequence."),
-                            String::default(),
+                            None,
                             span,
                         ));
                     }

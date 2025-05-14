@@ -66,6 +66,8 @@ pub fn function_type<'ctx>(
         Type::F32 => context.f32_type().fn_type(&parameters_types, ignore_args),
         Type::F64 => context.f64_type().fn_type(&parameters_types, ignore_args),
         Type::Void => context.void_type().fn_type(&parameters_types, ignore_args),
+
+        _ => unreachable!(),
     }
 }
 
@@ -75,7 +77,7 @@ pub fn generate_type<'ctx>(context: &'ctx Context, kind: &Type) -> BasicTypeEnum
             type_int_to_llvm_int_type(context, kind).into()
         }
         kind if kind.is_float_type() => type_float_to_llvm_float_type(context, kind).into(),
-        Type::Ptr(_) | Type::Address | Type::Mut(..) => {
+        Type::Ptr(_) | Type::Address | Type::Mut(..) | Type::Me(..) => {
             context.ptr_type(AddressSpace::default()).into()
         }
         kind if kind.is_str_type() => context
