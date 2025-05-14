@@ -1,13 +1,13 @@
 use crate::{
     frontend::lexer::Span,
     middle::{symbols::types::Bindings, types::Type},
-    standard::error::ThrushCompilerError,
+    standard::error::ThrushCompilerIssue,
 };
 
 use super::{EnumField, EnumFields, StructFields};
 
 pub trait TokenExtensions {
-    fn parse_scapes(&self, span: Span) -> Result<Vec<u8>, ThrushCompilerError>;
+    fn parse_scapes(&self, span: Span) -> Result<Vec<u8>, ThrushCompilerIssue>;
     fn get_first_byte(&self) -> u8;
 }
 
@@ -40,12 +40,12 @@ pub trait StructExtensions<'a> {
 }
 
 pub trait FoundSymbolEither<'instr> {
-    fn expected_custom_type(&self, span: Span) -> Result<&'instr str, ThrushCompilerError>;
-    fn expected_constant(&self, span: Span) -> Result<&'instr str, ThrushCompilerError>;
-    fn expected_local(&self, span: Span) -> Result<(&'instr str, usize), ThrushCompilerError>;
-    fn expected_function(&self, span: Span) -> Result<&'instr str, ThrushCompilerError>;
-    fn expected_enum(&self, span: Span) -> Result<&'instr str, ThrushCompilerError>;
-    fn expected_struct(&self, span: Span) -> Result<&'instr str, ThrushCompilerError>;
+    fn expected_custom_type(&self, span: Span) -> Result<&'instr str, ThrushCompilerIssue>;
+    fn expected_constant(&self, span: Span) -> Result<&'instr str, ThrushCompilerIssue>;
+    fn expected_local(&self, span: Span) -> Result<(&'instr str, usize), ThrushCompilerIssue>;
+    fn expected_function(&self, span: Span) -> Result<&'instr str, ThrushCompilerIssue>;
+    fn expected_enum(&self, span: Span) -> Result<&'instr str, ThrushCompilerIssue>;
+    fn expected_struct(&self, span: Span) -> Result<&'instr str, ThrushCompilerIssue>;
 }
 
 pub trait StructFieldsExtensions {

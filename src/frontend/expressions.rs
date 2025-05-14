@@ -17,7 +17,7 @@ use crate::{
         },
         types::{self, TokenKind, Type},
     },
-    standard::error::ThrushCompilerError,
+    standard::error::ThrushCompilerIssue,
 };
 
 use super::{
@@ -29,13 +29,13 @@ use super::{
 
 pub fn build_expression<'instr>(
     parser_ctx: &mut ParserContext<'instr>,
-) -> Result<Instruction<'instr>, ThrushCompilerError> {
+) -> Result<Instruction<'instr>, ThrushCompilerIssue> {
     parser_ctx
         .get_mut_control_ctx()
         .set_sync_position(SyncPosition::Expression);
 
     if parser_ctx.is_unreacheable_code() {
-        return Err(ThrushCompilerError::Error(
+        return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("Unreacheable code."),
             String::default(),
@@ -56,13 +56,13 @@ pub fn build_expression<'instr>(
 
 pub fn build_expr<'instr>(
     parser_ctx: &mut ParserContext<'instr>,
-) -> Result<Instruction<'instr>, ThrushCompilerError> {
+) -> Result<Instruction<'instr>, ThrushCompilerIssue> {
     parser_ctx
         .get_mut_control_ctx()
         .set_sync_position(SyncPosition::Expression);
 
     if parser_ctx.is_unreacheable_code() {
-        return Err(ThrushCompilerError::Error(
+        return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("Unreacheable code."),
             String::default(),
@@ -77,7 +77,7 @@ pub fn build_expr<'instr>(
 
 fn or<'instr>(
     parser_ctx: &mut ParserContext<'instr>,
-) -> Result<Instruction<'instr>, ThrushCompilerError> {
+) -> Result<Instruction<'instr>, ThrushCompilerIssue> {
     let mut expression: Instruction = and(parser_ctx)?;
 
     while parser_ctx.match_token(TokenKind::Or)? {
@@ -103,7 +103,7 @@ fn or<'instr>(
 
 fn and<'instr>(
     parser_ctx: &mut ParserContext<'instr>,
-) -> Result<Instruction<'instr>, ThrushCompilerError> {
+) -> Result<Instruction<'instr>, ThrushCompilerIssue> {
     let mut expression: Instruction = equality(parser_ctx)?;
 
     while parser_ctx.match_token(TokenKind::And)? {
@@ -129,7 +129,7 @@ fn and<'instr>(
 
 fn equality<'instr>(
     parser_ctx: &mut ParserContext<'instr>,
-) -> Result<Instruction<'instr>, ThrushCompilerError> {
+) -> Result<Instruction<'instr>, ThrushCompilerIssue> {
     let mut expression: Instruction = comparison(parser_ctx)?;
 
     if parser_ctx.match_token(TokenKind::BangEq)? || parser_ctx.match_token(TokenKind::EqEq)? {
@@ -155,7 +155,7 @@ fn equality<'instr>(
 
 fn comparison<'instr>(
     parser_ctx: &mut ParserContext<'instr>,
-) -> Result<Instruction<'instr>, ThrushCompilerError> {
+) -> Result<Instruction<'instr>, ThrushCompilerIssue> {
     let mut expression: Instruction = term(parser_ctx)?;
 
     if parser_ctx.match_token(TokenKind::Greater)?
@@ -185,7 +185,7 @@ fn comparison<'instr>(
 
 fn term<'instr>(
     parser_ctx: &mut ParserContext<'instr>,
-) -> Result<Instruction<'instr>, ThrushCompilerError> {
+) -> Result<Instruction<'instr>, ThrushCompilerIssue> {
     let mut expression: Instruction = factor(parser_ctx)?;
 
     while parser_ctx.match_token(TokenKind::Plus)?
@@ -220,7 +220,7 @@ fn term<'instr>(
 
 fn factor<'instr>(
     parser_ctx: &mut ParserContext<'instr>,
-) -> Result<Instruction<'instr>, ThrushCompilerError> {
+) -> Result<Instruction<'instr>, ThrushCompilerIssue> {
     let mut expression: Instruction = unary(parser_ctx)?;
 
     while parser_ctx.match_token(TokenKind::Slash)? || parser_ctx.match_token(TokenKind::Star)? {
@@ -251,7 +251,7 @@ fn factor<'instr>(
 
 fn unary<'instr>(
     parser_ctx: &mut ParserContext<'instr>,
-) -> Result<Instruction<'instr>, ThrushCompilerError> {
+) -> Result<Instruction<'instr>, ThrushCompilerIssue> {
     if parser_ctx.match_token(TokenKind::Bang)? {
         let operator_tk: &Token = parser_ctx.previous();
         let operator: TokenKind = operator_tk.kind;
@@ -299,7 +299,7 @@ fn unary<'instr>(
 
 fn primary<'instr>(
     parser_ctx: &mut ParserContext<'instr>,
-) -> Result<Instruction<'instr>, ThrushCompilerError> {
+) -> Result<Instruction<'instr>, ThrushCompilerIssue> {
     let primary: Instruction = match &parser_ctx.peek().kind {
         TokenKind::Carry => {
             let carry_tk: &Token = parser_ctx.advance()?;
@@ -343,7 +343,7 @@ fn primary<'instr>(
             let expression_type: &Type = expression.get_type();
 
             if !expression_type.is_ptr_type() && !expression_type.is_address_type() {
-                return Err(ThrushCompilerError::Error(
+                return Err(ThrushCompilerIssue::Error(
                     String::from("Attemping to access an invalid pointer"),
                     format!(
                         "Carry is only allowed for pointer types or memory address, not '{}'. ",
@@ -419,7 +419,7 @@ fn primary<'instr>(
             let expression_type: &Type = expression.get_type();
 
             if !expression_type.is_ptr_type() && !expression_type.is_address_type() {
-                return Err(ThrushCompilerError::Error(
+                return Err(ThrushCompilerIssue::Error(
                     String::from("Attemping to access an invalid pointer"),
                     format!(
                         "Write is only allowed for pointer types or memory address, not '{}'. ",
@@ -467,7 +467,7 @@ fn primary<'instr>(
             let expression: Instruction = build_expr(parser_ctx)?;
 
             if !expression.is_local_ref() {
-                return Err(ThrushCompilerError::Error(
+                return Err(ThrushCompilerIssue::Error(
                     String::from("Syntax error"),
                     String::from("Only local references can be pre-incremented."),
                     String::default(),
@@ -494,7 +494,7 @@ fn primary<'instr>(
             let expression: Instruction = build_expr(parser_ctx)?;
 
             if !expression.is_local_ref() {
-                return Err(ThrushCompilerError::Error(
+                return Err(ThrushCompilerIssue::Error(
                     String::from("Syntax error"),
                     String::from("Only local references can be pre-decremented."),
                     String::default(),
@@ -521,7 +521,7 @@ fn primary<'instr>(
             let kind: &Type = expression.get_type();
 
             if !expression.is_binary() && !expression.is_group() {
-                return Err(ThrushCompilerError::Error(
+                return Err(ThrushCompilerIssue::Error(
                     String::from("Syntax error"),
                     String::from(
                         "Grouping '(...)' is only allowed with binary expressions or other grouped expressions.",
@@ -614,7 +614,7 @@ fn primary<'instr>(
                 let local_type: Type = local.0.clone();
 
                 if !local.is_mutable() {
-                    return Err(ThrushCompilerError::Error(
+                    return Err(ThrushCompilerIssue::Error(
                         String::from("Expected mutable reference"),
                         String::from("Make mutable with 'mut' keyword before the identifier."),
                         String::default(),
@@ -661,7 +661,7 @@ fn primary<'instr>(
                     );
 
                     if !property.is_mutable() {
-                        return Err(ThrushCompilerError::Error(
+                        return Err(ThrushCompilerIssue::Error(
                             String::from("Expected mutable type"),
                             String::from(
                                 "Make mutable the parameter or local or self type of this property.",
@@ -687,7 +687,7 @@ fn primary<'instr>(
             }
 
             if symbol.is_enum() {
-                return Err(ThrushCompilerError::Error(
+                return Err(ThrushCompilerIssue::Error(
                     String::from("Invalid type"),
                     String::from(
                         "Enums cannot be used as types; use properties instead with their types.",
@@ -698,7 +698,7 @@ fn primary<'instr>(
             }
 
             if symbol.is_function() {
-                return Err(ThrushCompilerError::Error(
+                return Err(ThrushCompilerIssue::Error(
                     String::from("Invalid type"),
                     String::from("Functions cannot be used as types; call it instead."),
                     String::default(),
@@ -718,7 +718,7 @@ fn primary<'instr>(
         _ => {
             let previous: &Token = parser_ctx.advance()?;
 
-            return Err(ThrushCompilerError::Error(
+            return Err(ThrushCompilerIssue::Error(
                 String::from("Syntax error"),
                 format!("Statement '{}' don't allowed.", previous.lexeme),
                 String::default(),
@@ -734,7 +734,7 @@ fn build_binding_call<'instr>(
     parser_ctx: &mut ParserContext<'instr>,
     name: &'instr str,
     span: Span,
-) -> Result<Instruction<'instr>, ThrushCompilerError> {
+) -> Result<Instruction<'instr>, ThrushCompilerIssue> {
     let symbol: FoundSymbolId = parser_ctx.get_symbols().get_symbols_id(name, span)?;
 
     let structure_id: &str = symbol.expected_struct(span)?;
@@ -754,7 +754,7 @@ fn build_binding_call<'instr>(
     let bindings: Bindings = structure.get_bindings();
 
     if !bindings.contains_binding(bind_name) {
-        return Err(ThrushCompilerError::Error(
+        return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             format!(
                 "Not found '{}' bind inside the bindings of '{}' struct.",
@@ -795,7 +795,7 @@ fn build_binding_call<'instr>(
     )?;
 
     if args.len() != bind_parameters_type.len() {
-        return Err(ThrushCompilerError::Error(
+        return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             format!(
                 "Expected {} arguments, not {}.",
@@ -828,7 +828,7 @@ fn build_property<'instr>(
     parser_ctx: &mut ParserContext<'instr>,
     name: &'instr str,
     span: Span,
-) -> Result<Instruction<'instr>, ThrushCompilerError> {
+) -> Result<Instruction<'instr>, ThrushCompilerIssue> {
     let symbol: FoundSymbolId = parser_ctx.get_symbols().get_symbols_id(name, span)?;
 
     let local_position: (&str, usize) = symbol.expected_local(span)?;
@@ -888,7 +888,7 @@ fn build_ref<'instr>(
     parser_ctx: &mut ParserContext<'instr>,
     name: &'instr str,
     span: Span,
-) -> Result<Instruction<'instr>, ThrushCompilerError> {
+) -> Result<Instruction<'instr>, ThrushCompilerIssue> {
     let symbol: FoundSymbolId = parser_ctx.get_symbols().get_symbols_id(name, span)?;
 
     if symbol.is_constant() {
@@ -913,7 +913,7 @@ fn build_ref<'instr>(
     let local_type: Type = local.get_type();
 
     if local.is_undefined() {
-        return Err(ThrushCompilerError::Error(
+        return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             format!("Local reference '{}' is undefined.", name),
             String::default(),
@@ -954,7 +954,7 @@ fn build_enum_field<'instr>(
     parser_ctx: &mut ParserContext<'instr>,
     name: &'instr str,
     span: Span,
-) -> Result<Instruction<'instr>, ThrushCompilerError> {
+) -> Result<Instruction<'instr>, ThrushCompilerIssue> {
     let object: FoundSymbolId = parser_ctx.get_symbols().get_symbols_id(name, span)?;
     let enum_id: &str = object.expected_enum(span)?;
 
@@ -972,7 +972,7 @@ fn build_enum_field<'instr>(
     let field_name: &str = field.lexeme;
 
     if !union.contain_field(field_name) {
-        return Err(ThrushCompilerError::Error(
+        return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             format!("Not found '{}' field in '{}' enum.", name, field_name),
             String::default(),
@@ -990,7 +990,7 @@ fn build_address<'instr>(
     parser_ctx: &mut ParserContext<'instr>,
     name: &'instr str,
     span: Span,
-) -> Result<Instruction<'instr>, ThrushCompilerError> {
+) -> Result<Instruction<'instr>, ThrushCompilerIssue> {
     let object: FoundSymbolId = parser_ctx.get_symbols().get_symbols_id(name, span)?;
     let local_id: (&str, usize) = object.expected_local(span)?;
 
@@ -1001,7 +1001,7 @@ fn build_address<'instr>(
     let local_type: Type = local.0.clone();
 
     if !local_type.is_ptr_type() && !local_type.is_struct_type() && !local_type.is_str_type() {
-        return Err(ThrushCompilerError::Error(
+        return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             format!(
                 "Indexe is only allowed for pointers and structs, not '{}'. ",
@@ -1017,7 +1017,7 @@ fn build_address<'instr>(
     let index: Instruction = build_expr(parser_ctx)?;
 
     if !index.is_unsigned_integer() || !index.is_anyu32bit_integer() {
-        return Err(ThrushCompilerError::Error(
+        return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             format!(
                 "Expected unsigned integer type (u8, u16, u32), not {}. ",
@@ -1040,7 +1040,7 @@ fn build_address<'instr>(
         let index: Instruction = build_expr(parser_ctx)?;
 
         if !index.is_unsigned_integer() || !index.is_anyu32bit_integer() {
-            return Err(ThrushCompilerError::Error(
+            return Err(ThrushCompilerIssue::Error(
                 String::from("Syntax error"),
                 format!(
                     "Expected unsigned integer type (u8, u16, u32), not {}. ",
@@ -1072,7 +1072,7 @@ fn build_function_call<'instr>(
     parser_ctx: &mut ParserContext<'instr>,
     name: &'instr str,
     span: Span,
-) -> Result<Instruction<'instr>, ThrushCompilerError> {
+) -> Result<Instruction<'instr>, ThrushCompilerIssue> {
     let object: FoundSymbolId = parser_ctx.get_symbols().get_symbols_id(name, span)?;
 
     let function_id: &str = object.expected_function(span)?;
@@ -1096,7 +1096,7 @@ fn build_function_call<'instr>(
         let expression: Instruction = build_expr(parser_ctx)?;
 
         if expression.is_constructor() {
-            return Err(ThrushCompilerError::Error(
+            return Err(ThrushCompilerIssue::Error(
                 String::from("Syntax error"),
                 String::from("Constructor should be stored in a local variable."),
                 String::default(),
@@ -1116,7 +1116,7 @@ fn build_function_call<'instr>(
     let arguments_size: usize = args.len();
 
     if args.len() > maximun_arguments && !ignore_more_args {
-        return Err(ThrushCompilerError::Error(
+        return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             format!(
                 "Expected '{}' arguments, not '{}'.",
@@ -1138,7 +1138,7 @@ fn build_function_call<'instr>(
             String::from("none")
         };
 
-        return Err(ThrushCompilerError::Error(
+        return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             format!(
                 "Expected '{}' arguments with types '{}', not '{}'.",
@@ -1170,7 +1170,7 @@ fn build_function_call<'instr>(
 
 fn build_this<'instr>(
     parser_ctx: &mut ParserContext<'instr>,
-) -> Result<Instruction<'instr>, ThrushCompilerError> {
+) -> Result<Instruction<'instr>, ThrushCompilerIssue> {
     let this_tk: &Token = parser_ctx.consume(
         TokenKind::This,
         String::from("Syntax error"),
@@ -1184,7 +1184,7 @@ fn build_this<'instr>(
         .get_this_bindings_type()
         .is_struct_type()
     {
-        return Err(ThrushCompilerError::Error(
+        return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("Expected 'this' inside the a bindings definition context."),
             String::default(),
@@ -1197,7 +1197,7 @@ fn build_this<'instr>(
         .get_instr_position()
         .is_bind()
     {
-        return Err(ThrushCompilerError::Error(
+        return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("Expected 'this' inside the a bind definition context."),
             String::default(),
@@ -1206,7 +1206,7 @@ fn build_this<'instr>(
     }
 
     if !parser_ctx.get_type_ctx().get_bind_instance() {
-        return Err(ThrushCompilerError::Error(
+        return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from(
                 "Expected that 'this' was already declared within the definition of the a previous bind parameter.",
@@ -1236,7 +1236,7 @@ fn build_this<'instr>(
 
 fn build_constructor<'instr>(
     parser_ctx: &mut ParserContext<'instr>,
-) -> Result<Instruction<'instr>, ThrushCompilerError> {
+) -> Result<Instruction<'instr>, ThrushCompilerIssue> {
     let new_tk: &Token = parser_ctx.consume(
         TokenKind::New,
         String::from("Syntax error"),
@@ -1244,7 +1244,7 @@ fn build_constructor<'instr>(
     )?;
 
     if parser_ctx.is_unreacheable_code() {
-        return Err(ThrushCompilerError::Error(
+        return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("Unreacheable code."),
             String::default(),
@@ -1292,7 +1292,7 @@ fn build_constructor<'instr>(
             )?;
 
             if !struct_found.contains_field(field_name) {
-                return Err(ThrushCompilerError::Error(
+                return Err(ThrushCompilerIssue::Error(
                     String::from("Syntax error"),
                     String::from("Expected existing structure field name."),
                     String::default(),
@@ -1301,7 +1301,7 @@ fn build_constructor<'instr>(
             }
 
             if amount >= fields_required {
-                return Err(ThrushCompilerError::Error(
+                return Err(ThrushCompilerIssue::Error(
                     String::from("Too many fields in structure"),
                     format!("Expected '{}' fields, not '{}'.", fields_required, amount),
                     String::default(),
@@ -1312,7 +1312,7 @@ fn build_constructor<'instr>(
             let expression: Instruction = build_expr(parser_ctx)?;
 
             if expression.is_constructor() {
-                return Err(ThrushCompilerError::Error(
+                return Err(ThrushCompilerIssue::Error(
                     String::from("Syntax error"),
                     String::from("Constructor should be stored in a local variable."),
                     String::default(),
@@ -1345,7 +1345,7 @@ fn build_constructor<'instr>(
     let amount_fields: usize = arguments.1.len();
 
     if amount_fields != fields_required {
-        return Err(ThrushCompilerError::Error(
+        return Err(ThrushCompilerIssue::Error(
             String::from("Missing fields in structure"),
             format!(
                 "Expected '{}' arguments, but '{}' was gived.",

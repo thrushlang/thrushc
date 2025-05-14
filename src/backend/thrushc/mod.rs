@@ -17,6 +17,7 @@ use crate::{
     frontend::{
         lexer::{Lexer, Token},
         parser::{Parser, ParserContext},
+        warner::Warner,
     },
     middle::instruction::Instruction,
     standard::{
@@ -101,6 +102,9 @@ impl<'a> Thrushc<'a> {
 
         let parser_ctx: ParserContext = Parser::parse(&tokens, file);
         let instructions: &[Instruction] = parser_ctx.get_instructions();
+
+        let mut static_checker: Warner = Warner::new(instructions, file);
+        static_checker.check();
 
         if llvm_backend.contains_emitable(Emitable::AST) {
             let _ = write(

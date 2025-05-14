@@ -14,6 +14,7 @@ pub enum OutputIn {
 #[derive(Debug, PartialEq)]
 pub enum LoggingType {
     Error,
+    Warning,
     Panic,
 }
 
@@ -21,12 +22,21 @@ impl LoggingType {
     pub fn to_styled(&self) -> ColoredString {
         match self {
             LoggingType::Error => "ERROR".bright_red().bold(),
+            LoggingType::Warning => "WARN".yellow().bold(),
             LoggingType::Panic => "PANIC".bold().bright_red().underline(),
         }
     }
 
     pub fn is_err(&self) -> bool {
         matches!(self, LoggingType::Error | LoggingType::Panic)
+    }
+
+    pub fn text_with_color(&self, msg: &str) -> ColoredString {
+        match self {
+            LoggingType::Error => msg.bright_red().bold(),
+            LoggingType::Warning => msg.yellow().bold(),
+            LoggingType::Panic => msg.bright_red().underline(),
+        }
     }
 }
 

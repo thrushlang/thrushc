@@ -1,9 +1,8 @@
 use super::super::middle::types::Type;
-use super::super::standard::error::ThrushCompilerError;
+use super::super::standard::error::ThrushCompilerIssue;
 use super::lexer::Span;
 
-#[inline]
-pub fn parse_number(lexeme: &str, span: Span) -> Result<(Type, f64), ThrushCompilerError> {
+pub fn parse_number(lexeme: &str, span: Span) -> Result<(Type, f64), ThrushCompilerIssue> {
     if lexeme.contains('.') {
         return parse_float(lexeme, span);
     }
@@ -11,12 +10,11 @@ pub fn parse_number(lexeme: &str, span: Span) -> Result<(Type, f64), ThrushCompi
     parse_integer(lexeme, span)
 }
 
-#[inline]
-pub fn parse_float(lexeme: &str, span: Span) -> Result<(Type, f64), ThrushCompilerError> {
+pub fn parse_float(lexeme: &str, span: Span) -> Result<(Type, f64), ThrushCompilerIssue> {
     let dot_count: usize = lexeme.bytes().filter(|&b| b == b'.').count();
 
     if dot_count > 1 {
-        return Err(ThrushCompilerError::Error(
+        return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("Float values should only contain one dot."),
             String::default(),
@@ -32,7 +30,7 @@ pub fn parse_float(lexeme: &str, span: Span) -> Result<(Type, f64), ThrushCompil
         return Ok((Type::F64, float));
     }
 
-    Err(ThrushCompilerError::Error(
+    Err(ThrushCompilerIssue::Error(
         String::from("Syntax error"),
         String::from("Out of bounds."),
         String::default(),
@@ -40,8 +38,7 @@ pub fn parse_float(lexeme: &str, span: Span) -> Result<(Type, f64), ThrushCompil
     ))
 }
 
-#[inline]
-pub fn parse_integer(lexeme: &str, span: Span) -> Result<(Type, f64), ThrushCompilerError> {
+pub fn parse_integer(lexeme: &str, span: Span) -> Result<(Type, f64), ThrushCompilerIssue> {
     const I8_MIN: isize = -128;
     const I8_MAX: isize = 127;
     const I16_MIN: isize = -32768;
@@ -73,7 +70,7 @@ pub fn parse_integer(lexeme: &str, span: Span) -> Result<(Type, f64), ThrushComp
                 } else if (isize::MIN..=isize::MAX).contains(&number) {
                     return Ok((Type::S64, number as f64));
                 } else {
-                    return Err(ThrushCompilerError::Error(
+                    return Err(ThrushCompilerIssue::Error(
                         String::from("Syntax error"),
                         String::from("Out of bounds signed hexadecimal format."),
                         String::default(),
@@ -93,7 +90,7 @@ pub fn parse_integer(lexeme: &str, span: Span) -> Result<(Type, f64), ThrushComp
                     } else if (usize::MIN..=usize::MAX).contains(&number) {
                         return Ok((Type::U64, number as f64));
                     } else {
-                        return Err(ThrushCompilerError::Error(
+                        return Err(ThrushCompilerIssue::Error(
                             String::from("Syntax error"),
                             String::from("Out of bounds unsigned hexadecimal format."),
                             String::default(),
@@ -102,7 +99,7 @@ pub fn parse_integer(lexeme: &str, span: Span) -> Result<(Type, f64), ThrushComp
                     }
                 }
 
-                Err(_) => Err(ThrushCompilerError::Error(
+                Err(_) => Err(ThrushCompilerIssue::Error(
                     String::from("Syntax error"),
                     String::from("Invalid numeric hexadecimal format."),
                     String::default(),
@@ -129,7 +126,7 @@ pub fn parse_integer(lexeme: &str, span: Span) -> Result<(Type, f64), ThrushComp
                 } else if (isize::MIN..=isize::MAX).contains(&number) {
                     return Ok((Type::U64, number as f64));
                 } else {
-                    return Err(ThrushCompilerError::Error(
+                    return Err(ThrushCompilerIssue::Error(
                         String::from("Syntax error"),
                         String::from("Out of bounds signed binary format."),
                         String::default(),
@@ -149,7 +146,7 @@ pub fn parse_integer(lexeme: &str, span: Span) -> Result<(Type, f64), ThrushComp
                     } else if (usize::MIN..=usize::MAX).contains(&number) {
                         return Ok((Type::U64, number as f64));
                     } else {
-                        return Err(ThrushCompilerError::Error(
+                        return Err(ThrushCompilerIssue::Error(
                             String::from("Syntax error"),
                             String::from("Out of bounds unsigned binary format."),
                             String::default(),
@@ -158,7 +155,7 @@ pub fn parse_integer(lexeme: &str, span: Span) -> Result<(Type, f64), ThrushComp
                     }
                 }
 
-                Err(_) => Err(ThrushCompilerError::Error(
+                Err(_) => Err(ThrushCompilerIssue::Error(
                     String::from("Syntax error"),
                     String::from("Invalid binary format."),
                     String::default(),
@@ -179,7 +176,7 @@ pub fn parse_integer(lexeme: &str, span: Span) -> Result<(Type, f64), ThrushComp
             } else if (usize::MIN..=usize::MAX).contains(&number) {
                 return Ok((Type::U64, number as f64));
             } else {
-                return Err(ThrushCompilerError::Error(
+                return Err(ThrushCompilerIssue::Error(
                     String::from("Syntax error"),
                     String::from("Out of bounds."),
                     String::default(),
@@ -199,7 +196,7 @@ pub fn parse_integer(lexeme: &str, span: Span) -> Result<(Type, f64), ThrushComp
                 } else if (isize::MIN..=isize::MAX).contains(&number) {
                     Ok((Type::U64, number as f64))
                 } else {
-                    Err(ThrushCompilerError::Error(
+                    Err(ThrushCompilerIssue::Error(
                         String::from("Syntax error"),
                         String::from("Out of bounds."),
                         String::default(),
@@ -208,7 +205,7 @@ pub fn parse_integer(lexeme: &str, span: Span) -> Result<(Type, f64), ThrushComp
                 }
             }
 
-            Err(_) => Err(ThrushCompilerError::Error(
+            Err(_) => Err(ThrushCompilerIssue::Error(
                 String::from("Syntax error"),
                 String::from("Out of bounds."),
                 String::default(),

@@ -1,4 +1,5 @@
 pub const MINIMAL_ERROR_CAPACITY: usize = 100;
+pub const MINIMAL_WARNINGS_CAPACITY: usize = 100;
 
 pub const TARGET_TRIPLES: [&str; 30] = [
     "x86_64-fortanix-unknown-sgx",

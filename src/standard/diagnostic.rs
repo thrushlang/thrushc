@@ -3,7 +3,7 @@ use std::str::Lines;
 
 use super::{
     super::frontend::lexer::Span,
-    error::ThrushCompilerError,
+    error::ThrushCompilerIssue,
     logging::{self, LoggingType},
     misc::CompilerFile,
 };
@@ -53,16 +53,24 @@ impl Diagnostician {
         }
     }
 
-    pub fn build_diagnostic(&mut self, error: &ThrushCompilerError, logging_type: LoggingType) {
-        let ThrushCompilerError::Error(title, help, note, span) = error;
-        self.diagnose(title, help, note, *span, logging_type);
+    pub fn build_diagnostic(&mut self, error: &ThrushCompilerIssue, logging_type: LoggingType) {
+        match error {
+            ThrushCompilerIssue::Error(title, help, note, span) => {
+                self.diagnose(title, help, Some(note), *span, logging_type);
+            }
+            ThrushCompilerIssue::Warning(title, help, span) => {
+                self.diagnose(title, help, None, *span, logging_type);
+            }
+
+            _ => todo!(),
+        }
     }
 
     fn diagnose(
         &mut self,
         title: &str,
         help: &str,
-        note: &str,
+        note: Option<&str>,
         span: Span,
         logging_type: LoggingType,
     ) {
@@ -177,15 +185,18 @@ impl<'a> Diagnostic<'a> {
         }
     }
 
-    pub fn print(self, path: &Path, title: &str, note: &str, logging_type: LoggingType) {
+    pub fn print(self, path: &Path, title: &str, note: Option<&str>, logging_type: LoggingType) {
         logging::write(
             logging::OutputIn::Stderr,
             &format!(
                 "{} {} at {}:{}\n",
                 "-->".bold().blink(),
-                format_args!("{}", path.to_string_lossy().bold().bright_red()),
-                self.span.get_line().to_string().bold().bright_red(),
-                self.span.get_span_start().to_string().bold().bright_red()
+                format_args!(
+                    "{}",
+                    logging_type.text_with_color(path.to_string_lossy().as_ref())
+                ),
+                logging_type.text_with_color(&self.span.get_line().to_string()),
+                logging_type.text_with_color(&self.span.get_span_start().to_string()),
             ),
         );
 
@@ -200,10 +211,10 @@ impl<'a> Diagnostic<'a> {
 
         logging::write(
             logging::OutputIn::Stderr,
-            &format!("\n{}\n{}\n", self.code, self.signaler),
+            &format!("\n{}\n{}", self.code, self.signaler),
         );
 
-        if !note.is_empty() {
+        if let Some(note) = note {
             logging::write(
                 logging::OutputIn::Stderr,
                 &format!("{} {}\n", "NOTE:".bright_blue().bold(), note),

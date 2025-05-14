@@ -9,7 +9,7 @@ use super::super::middle::types::*;
 use super::super::{
     logging::LoggingType,
     standard::{
-        constants::MINIMAL_ERROR_CAPACITY, diagnostic::Diagnostician, error::ThrushCompilerError,
+        constants::MINIMAL_ERROR_CAPACITY, diagnostic::Diagnostician, error::ThrushCompilerIssue,
     },
 };
 
@@ -94,7 +94,7 @@ lazy_static! {
 
 pub struct Lexer<'a> {
     tokens: Vec<Token<'a>>,
-    errors: Vec<ThrushCompilerError>,
+    errors: Vec<ThrushCompilerIssue>,
     code: &'a [u8],
     start: usize,
     current: usize,
@@ -146,7 +146,7 @@ impl<'a> Lexer<'a> {
         mem::take(&mut self.tokens)
     }
 
-    fn scan(&mut self) -> Result<(), ThrushCompilerError> {
+    fn scan(&mut self) -> Result<(), ThrushCompilerIssue> {
         match self.advance() {
             b'[' => self.make(TokenKind::LBracket),
             b']' => self.make(TokenKind::RBracket),
@@ -174,7 +174,7 @@ impl<'a> Lexer<'a> {
 
                     let span: Span = Span::new(self.line, self.span);
 
-                    return Err(ThrushCompilerError::Error(
+                    return Err(ThrushCompilerIssue::Error(
                         String::from("Syntax Error"),
                         String::from(
                             "Unterminated multiline comment. Did you forget to close the comment with a '*/'?",
@@ -220,7 +220,7 @@ impl<'a> Lexer<'a> {
 
                 let span: Span = Span::new(self.line, self.span);
 
-                return Err(ThrushCompilerError::Error(
+                return Err(ThrushCompilerIssue::Error(
                     String::from("Unknown character"),
                     String::from("Provide a valid utf-8 character."),
                     String::default(),
@@ -232,7 +232,7 @@ impl<'a> Lexer<'a> {
         Ok(())
     }
 
-    fn identifier(&mut self) -> Result<(), ThrushCompilerError> {
+    fn identifier(&mut self) -> Result<(), ThrushCompilerIssue> {
         while self.is_alpha(self.peek())
             || self.peek().is_ascii_digit()
             || self.peek() == b'!' && self.peek() != b':'
@@ -251,7 +251,7 @@ impl<'a> Lexer<'a> {
         Ok(())
     }
 
-    fn number(&mut self) -> Result<(), ThrushCompilerError> {
+    fn number(&mut self) -> Result<(), ThrushCompilerIssue> {
         let mut is_hexadecimal: bool = false;
         let mut is_binary: bool = false;
 
@@ -266,7 +266,7 @@ impl<'a> Lexer<'a> {
             if is_hexadecimal && self.previous() == b'0' && self.peek() == b'x' {
                 self.end_span();
 
-                return Err(ThrushCompilerError::Error(
+                return Err(ThrushCompilerIssue::Error(
                     String::from("Syntax error"),
                     String::from("Hexadecimal identifier '0x' cannot be repeated."),
                     String::default(),
@@ -277,7 +277,7 @@ impl<'a> Lexer<'a> {
             if is_binary && self.previous() == b'0' && self.peek() == b'b' {
                 self.end_span();
 
-                return Err(ThrushCompilerError::Error(
+                return Err(ThrushCompilerIssue::Error(
                     String::from("Syntax error"),
                     String::from("Binary identifier '0b' cannot be repeated."),
                     String::default(),
@@ -334,7 +334,7 @@ impl<'a> Lexer<'a> {
     }
 
     #[inline]
-    fn check_number(&mut self, lexeme: &str) -> Result<(), ThrushCompilerError> {
+    fn check_number(&mut self, lexeme: &str) -> Result<(), ThrushCompilerIssue> {
         if lexeme.contains('.') {
             return self.parse_float(lexeme);
         }
@@ -343,13 +343,13 @@ impl<'a> Lexer<'a> {
     }
 
     #[inline]
-    fn parse_float(&self, lexeme: &str) -> Result<(), ThrushCompilerError> {
+    fn parse_float(&self, lexeme: &str) -> Result<(), ThrushCompilerIssue> {
         let dot_count: usize = lexeme.bytes().filter(|&b| b == b'.').count();
 
         let span: Span = Span::new(self.line, self.span);
 
         if dot_count > 1 {
-            return Err(ThrushCompilerError::Error(
+            return Err(ThrushCompilerIssue::Error(
                 String::from("Syntax error"),
                 String::from("Float values should only contain one dot."),
                 String::default(),
@@ -365,7 +365,7 @@ impl<'a> Lexer<'a> {
             return Ok(());
         }
 
-        Err(ThrushCompilerError::Error(
+        Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("Out of bounds."),
             String::default(),
@@ -374,7 +374,7 @@ impl<'a> Lexer<'a> {
     }
 
     #[inline]
-    fn parse_integer(&self, lexeme: &str) -> Result<(), ThrushCompilerError> {
+    fn parse_integer(&self, lexeme: &str) -> Result<(), ThrushCompilerIssue> {
         const I8_MIN: isize = -128;
         const I8_MAX: isize = 127;
         const I16_MIN: isize = -32768;
@@ -406,7 +406,7 @@ impl<'a> Lexer<'a> {
                     {
                         return Ok(());
                     } else {
-                        return Err(ThrushCompilerError::Error(
+                        return Err(ThrushCompilerIssue::Error(
                             String::from("Syntax error"),
                             String::from("Out of bounds signed hexadecimal format."),
                             String::default(),
@@ -424,7 +424,7 @@ impl<'a> Lexer<'a> {
                         {
                             return Ok(());
                         } else {
-                            return Err(ThrushCompilerError::Error(
+                            return Err(ThrushCompilerIssue::Error(
                                 String::from("Syntax error"),
                                 String::from("Out of bounds unsigned hexadecimal format."),
                                 String::default(),
@@ -433,7 +433,7 @@ impl<'a> Lexer<'a> {
                         }
                     }
 
-                    Err(_) => Err(ThrushCompilerError::Error(
+                    Err(_) => Err(ThrushCompilerIssue::Error(
                         String::from("Syntax error"),
                         String::from("Invalid numeric hexadecimal format."),
                         String::default(),
@@ -458,7 +458,7 @@ impl<'a> Lexer<'a> {
                     {
                         return Ok(());
                     } else {
-                        return Err(ThrushCompilerError::Error(
+                        return Err(ThrushCompilerIssue::Error(
                             String::from("Syntax error"),
                             String::from("Out of bounds signed binary format."),
                             String::default(),
@@ -476,7 +476,7 @@ impl<'a> Lexer<'a> {
                         {
                             return Ok(());
                         } else {
-                            return Err(ThrushCompilerError::Error(
+                            return Err(ThrushCompilerIssue::Error(
                                 String::from("Syntax error"),
                                 String::from("Out of bounds unsigned binary format."),
                                 String::default(),
@@ -485,7 +485,7 @@ impl<'a> Lexer<'a> {
                         }
                     }
 
-                    Err(_) => Err(ThrushCompilerError::Error(
+                    Err(_) => Err(ThrushCompilerIssue::Error(
                         String::from("Syntax error"),
                         String::from("Invalid binary format."),
                         String::default(),
@@ -504,7 +504,7 @@ impl<'a> Lexer<'a> {
                 {
                     Ok(())
                 } else {
-                    Err(ThrushCompilerError::Error(
+                    Err(ThrushCompilerIssue::Error(
                         String::from("Syntax error"),
                         String::from("Out of bounds."),
                         String::default(),
@@ -522,7 +522,7 @@ impl<'a> Lexer<'a> {
                     {
                         Ok(())
                     } else {
-                        Err(ThrushCompilerError::Error(
+                        Err(ThrushCompilerIssue::Error(
                             String::from("Syntax error"),
                             String::from("Out of bounds."),
                             String::default(),
@@ -531,7 +531,7 @@ impl<'a> Lexer<'a> {
                     }
                 }
 
-                Err(_) => Err(ThrushCompilerError::Error(
+                Err(_) => Err(ThrushCompilerIssue::Error(
                     String::from("Syntax error"),
                     String::from("Out of bounds."),
                     String::default(),
@@ -541,7 +541,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    fn char(&mut self) -> Result<(), ThrushCompilerError> {
+    fn char(&mut self) -> Result<(), ThrushCompilerIssue> {
         while self.peek() != b'\'' && !self.end() {
             self.advance();
         }
@@ -551,7 +551,7 @@ impl<'a> Lexer<'a> {
         let span: Span = Span::new(self.line, self.span);
 
         if self.peek() != b'\'' {
-            return Err(ThrushCompilerError::Error(
+            return Err(ThrushCompilerIssue::Error(
                 String::from("Syntax error"),
                 String::from("Unclosed char. Did you forget to close the char with a \'?"),
                 String::default(),
@@ -562,7 +562,7 @@ impl<'a> Lexer<'a> {
         self.advance();
 
         if self.code[self.start + 1..self.current - 1].len() > 1 {
-            return Err(ThrushCompilerError::Error(
+            return Err(ThrushCompilerIssue::Error(
                 String::from("Syntax error"),
                 String::from("A char data type only can contain one character."),
                 String::default(),
@@ -581,7 +581,7 @@ impl<'a> Lexer<'a> {
         Ok(())
     }
 
-    fn string(&mut self) -> Result<(), ThrushCompilerError> {
+    fn string(&mut self) -> Result<(), ThrushCompilerIssue> {
         while self.is_string_boundary() {
             self.advance();
         }
@@ -591,7 +591,7 @@ impl<'a> Lexer<'a> {
         let span: Span = Span::new(self.line, self.span);
 
         if self.peek() != b'"' {
-            return Err(ThrushCompilerError::Error(
+            return Err(ThrushCompilerIssue::Error(
                 String::from("Syntax error"),
                 String::from(
                     "Unclosed literal str. Did you forget to close the literal str with a '\"'?",
@@ -713,7 +713,7 @@ pub struct Token<'token> {
 }
 
 impl TokenExtensions for str {
-    fn parse_scapes(&self, span: Span) -> Result<Vec<u8>, ThrushCompilerError> {
+    fn parse_scapes(&self, span: Span) -> Result<Vec<u8>, ThrushCompilerIssue> {
         let source: &[u8] = self.as_bytes();
 
         let mut parsed_string: Vec<u8> = Vec::with_capacity(source.len());
@@ -733,7 +733,7 @@ impl TokenExtensions for str {
                     Some(b'\'') => parsed_string.push(b'\''),
                     Some(b'"') => parsed_string.push(b'"'),
                     _ => {
-                        return Err(ThrushCompilerError::Error(
+                        return Err(ThrushCompilerIssue::Error(
                             String::from("Syntax Error"),
                             String::from("Invalid escape sequence."),
                             String::default(),

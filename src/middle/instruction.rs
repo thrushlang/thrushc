@@ -4,7 +4,7 @@ use std::rc::Rc;
 
 use inkwell::values::BasicValueEnum;
 
-use crate::{frontend::lexer::Span, standard::error::ThrushCompilerError};
+use crate::{frontend::lexer::Span, standard::error::ThrushCompilerIssue};
 
 use super::{
     statement::{BinaryOp, Constructor, FunctionPrototype, ThrushAttributes, UnaryOp},
@@ -154,6 +154,7 @@ pub enum Instruction<'ctx> {
         body: Rc<Instruction<'ctx>>,
         return_type: Type,
         attributes: ThrushAttributes<'ctx>,
+        span: Span,
     },
 
     Return {
@@ -339,6 +340,7 @@ impl<'ctx> Instruction<'ctx> {
             body,
             return_type,
             attributes,
+            ..
         } = self
         {
             return (
@@ -446,9 +448,9 @@ impl Instruction<'_> {
         }
     }
 
-    pub fn throw_attemping_use_jit(&self, span: Span) -> Result<(), ThrushCompilerError> {
+    pub fn throw_attemping_use_jit(&self, span: Span) -> Result<(), ThrushCompilerIssue> {
         if !self.is_integer() && !self.is_float() && !self.is_bool() {
-            return Err(ThrushCompilerError::Error(
+            return Err(ThrushCompilerIssue::Error(
                 String::from("Attemping use JIT"),
                 String::from("This expression cannot be compiled correctly."),
                 String::from(
@@ -522,6 +524,11 @@ impl Instruction<'_> {
     #[inline]
     pub const fn is_function(&self) -> bool {
         matches!(self, Instruction::Function { .. })
+    }
+
+    #[inline]
+    pub const fn is_constant(&self) -> bool {
+        matches!(self, Instruction::Const { .. })
     }
 
     #[inline]

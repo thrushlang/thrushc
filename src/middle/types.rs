@@ -6,7 +6,7 @@ use inkwell::{context::Context, targets::TargetData};
 use crate::{
     backend::llvm::compiler::{attributes::LLVMAttribute, typegen},
     frontend::{lexer::Span, symbols::SymbolsTable},
-    standard::error::ThrushCompilerError,
+    standard::error::ThrushCompilerIssue,
 };
 
 use super::{
@@ -616,7 +616,7 @@ pub fn decompose_struct_property(
     struct_type: Type,
     symbols_table: &SymbolsTable<'_>,
     span: Span,
-) -> Result<(Type, Vec<(Type, u32)>), ThrushCompilerError> {
+) -> Result<(Type, Vec<(Type, u32)>), ThrushCompilerIssue> {
     let mut gep_indices: Vec<(Type, u32)> = Vec::with_capacity(10);
 
     if position >= property_names.len() {
@@ -653,7 +653,7 @@ pub fn decompose_struct_property(
             return Ok((result_type, gep_indices));
         }
 
-        return Err(ThrushCompilerError::Error(
+        return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             format!("Expected existing property, not '{}'.", field_name,),
             String::default(),
@@ -662,7 +662,7 @@ pub fn decompose_struct_property(
     }
 
     if position < property_names.len() {
-        return Err(ThrushCompilerError::Error(
+        return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             format!(
                 "Existing property '{}' is not a structure.",

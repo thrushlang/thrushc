@@ -8,7 +8,7 @@ use crate::middle::{
     types::BindingsApplicant,
 };
 
-use super::{super::standard::error::ThrushCompilerError, lexer::Span};
+use super::{super::standard::error::ThrushCompilerIssue, lexer::Span};
 
 use ahash::AHashMap as HashMap;
 
@@ -47,7 +47,7 @@ impl<'instr> SymbolsTable<'instr> {
         &self,
         name: &'instr str,
         span: Span,
-    ) -> Result<FoundSymbolId<'instr>, ThrushCompilerError> {
+    ) -> Result<FoundSymbolId<'instr>, ThrushCompilerIssue> {
         if self.custom_types.contains_key(name) {
             return Ok((None, None, None, None, Some(name), None));
         }
@@ -74,7 +74,7 @@ impl<'instr> SymbolsTable<'instr> {
             }
         }
 
-        Err(ThrushCompilerError::Error(
+        Err(ThrushCompilerIssue::Error(
             String::from("Structure/Function/Local/Constant/Type not found"),
             format!("'{}' is not declared or defined.", name),
             String::default(),
@@ -87,12 +87,12 @@ impl<'instr> SymbolsTable<'instr> {
         &self,
         struct_id: &'instr str,
         span: Span,
-    ) -> Result<Struct<'instr>, ThrushCompilerError> {
+    ) -> Result<Struct<'instr>, ThrushCompilerIssue> {
         if let Some(structure) = self.structs.get(struct_id).cloned() {
             return Ok(structure);
         }
 
-        Err(ThrushCompilerError::Error(
+        Err(ThrushCompilerIssue::Error(
             String::from("Expected struct reference"),
             String::from("Expected struct but found something else."),
             String::default(),
@@ -105,12 +105,12 @@ impl<'instr> SymbolsTable<'instr> {
         &self,
         span: Span,
         func_id: &'instr str,
-    ) -> Result<Function<'instr>, ThrushCompilerError> {
+    ) -> Result<Function<'instr>, ThrushCompilerIssue> {
         if let Some(function) = self.functions.get(func_id).cloned() {
             return Ok(function);
         }
 
-        Err(ThrushCompilerError::Error(
+        Err(ThrushCompilerIssue::Error(
             String::from("Expected function reference"),
             String::from("Expected function but found something else."),
             String::default(),
@@ -123,12 +123,12 @@ impl<'instr> SymbolsTable<'instr> {
         &self,
         enum_id: &'instr str,
         span: Span,
-    ) -> Result<Enum<'instr>, ThrushCompilerError> {
+    ) -> Result<Enum<'instr>, ThrushCompilerIssue> {
         if let Some(enum_found) = self.enums.get(enum_id).cloned() {
             return Ok(enum_found);
         }
 
-        Err(ThrushCompilerError::Error(
+        Err(ThrushCompilerIssue::Error(
             String::from("Expected enum reference"),
             String::from("Expected enum but found something else."),
             String::default(),
@@ -141,12 +141,12 @@ impl<'instr> SymbolsTable<'instr> {
         &self,
         custom_type_id: &'instr str,
         span: Span,
-    ) -> Result<CustomType<'instr>, ThrushCompilerError> {
+    ) -> Result<CustomType<'instr>, ThrushCompilerIssue> {
         if let Some(custom_type) = self.custom_types.get(custom_type_id).cloned() {
             return Ok(custom_type);
         }
 
-        Err(ThrushCompilerError::Error(
+        Err(ThrushCompilerIssue::Error(
             String::from("Expected custom type reference"),
             String::from("Expected custom type but found something else."),
             String::default(),
@@ -160,12 +160,12 @@ impl<'instr> SymbolsTable<'instr> {
         local_id: &'instr str,
         scope_idx: usize,
         span: Span,
-    ) -> Result<&Local<'instr>, ThrushCompilerError> {
+    ) -> Result<&Local<'instr>, ThrushCompilerIssue> {
         if let Some(local) = self.locals[scope_idx].get(local_id) {
             return Ok(local);
         }
 
-        Err(ThrushCompilerError::Error(
+        Err(ThrushCompilerIssue::Error(
             String::from("Expected local reference"),
             String::from("Expected local but found something else."),
             String::default(),
@@ -178,12 +178,12 @@ impl<'instr> SymbolsTable<'instr> {
         &self,
         const_id: &'instr str,
         span: Span,
-    ) -> Result<Constant<'instr>, ThrushCompilerError> {
+    ) -> Result<Constant<'instr>, ThrushCompilerIssue> {
         if let Some(constant) = self.constants.get(const_id).cloned() {
             return Ok(constant);
         }
 
-        Err(ThrushCompilerError::Error(
+        Err(ThrushCompilerIssue::Error(
             String::from("Expected constant reference"),
             String::from("Expected constant but found something else."),
             String::default(),
@@ -196,12 +196,12 @@ impl<'instr> SymbolsTable<'instr> {
         &self,
         name: &str,
         span: Span,
-    ) -> Result<Struct<'instr>, ThrushCompilerError> {
+    ) -> Result<Struct<'instr>, ThrushCompilerIssue> {
         if let Some(struct_fields) = self.structs.get(name).cloned() {
             return Ok(struct_fields);
         }
 
-        Err(ThrushCompilerError::Error(
+        Err(ThrushCompilerIssue::Error(
             String::from("Structure not found"),
             format!("'{}' structure not defined.", name),
             String::default(),
@@ -214,12 +214,12 @@ impl<'instr> SymbolsTable<'instr> {
         &mut self,
         name: &str,
         span: Span,
-    ) -> Result<&mut Struct<'instr>, ThrushCompilerError> {
+    ) -> Result<&mut Struct<'instr>, ThrushCompilerIssue> {
         if let Some(struct_fields) = self.structs.get_mut(name) {
             return Ok(struct_fields);
         }
 
-        Err(ThrushCompilerError::Error(
+        Err(ThrushCompilerIssue::Error(
             String::from("Structure not found"),
             format!("'{}' structure not defined.", name),
             String::default(),
@@ -233,9 +233,9 @@ impl<'instr> SymbolsTable<'instr> {
         name: &'instr str,
         value: Local<'instr>,
         span: Span,
-    ) -> Result<(), ThrushCompilerError> {
+    ) -> Result<(), ThrushCompilerIssue> {
         if self.locals[scope_pos - 1].contains_key(name) {
-            return Err(ThrushCompilerError::Error(
+            return Err(ThrushCompilerIssue::Error(
                 String::from("Local variable already declared"),
                 format!("'{}' local variable already declared before.", name),
                 String::default(),
@@ -253,9 +253,9 @@ impl<'instr> SymbolsTable<'instr> {
         name: &'instr str,
         constant: Constant<'instr>,
         span: Span,
-    ) -> Result<(), ThrushCompilerError> {
+    ) -> Result<(), ThrushCompilerIssue> {
         if self.constants.contains_key(name) {
-            return Err(ThrushCompilerError::Error(
+            return Err(ThrushCompilerIssue::Error(
                 String::from("Constant already declared"),
                 format!("'{}' constant already declared before.", name),
                 String::default(),
@@ -273,9 +273,9 @@ impl<'instr> SymbolsTable<'instr> {
         name: &'instr str,
         custom_type: CustomType<'instr>,
         span: Span,
-    ) -> Result<(), ThrushCompilerError> {
+    ) -> Result<(), ThrushCompilerIssue> {
         if self.constants.contains_key(name) {
-            return Err(ThrushCompilerError::Error(
+            return Err(ThrushCompilerIssue::Error(
                 String::from("Custom type already declared"),
                 format!("'{}' custom type already declared before.", name),
                 String::default(),
@@ -293,9 +293,9 @@ impl<'instr> SymbolsTable<'instr> {
         name: &'instr str,
         field_types: Struct<'instr>,
         span: Span,
-    ) -> Result<(), ThrushCompilerError> {
+    ) -> Result<(), ThrushCompilerIssue> {
         if self.structs.contains_key(name) {
-            return Err(ThrushCompilerError::Error(
+            return Err(ThrushCompilerIssue::Error(
                 String::from("Structure already declared"),
                 format!("'{}' structure already declared before.", name),
                 String::default(),
@@ -313,9 +313,9 @@ impl<'instr> SymbolsTable<'instr> {
         name: &'instr str,
         union: Enum<'instr>,
         span: Span,
-    ) -> Result<(), ThrushCompilerError> {
+    ) -> Result<(), ThrushCompilerIssue> {
         if self.enums.contains_key(name) {
-            return Err(ThrushCompilerError::Error(
+            return Err(ThrushCompilerIssue::Error(
                 String::from("Enum already declared"),
                 format!("'{}' enum already declared before.", name),
                 String::default(),
@@ -333,9 +333,9 @@ impl<'instr> SymbolsTable<'instr> {
         name: &'instr str,
         function: Function<'instr>,
         span: Span,
-    ) -> Result<(), ThrushCompilerError> {
+    ) -> Result<(), ThrushCompilerIssue> {
         if self.functions.contains_key(name) {
-            return Err(ThrushCompilerError::Error(
+            return Err(ThrushCompilerIssue::Error(
                 String::from("Function already declared"),
                 format!("'{}' function already declared before.", name),
                 String::default(),
@@ -354,7 +354,7 @@ impl<'instr> SymbolsTable<'instr> {
         bindings: Bindings<'instr>,
         applicant: BindingsApplicant,
         span: Span,
-    ) -> Result<(), ThrushCompilerError> {
+    ) -> Result<(), ThrushCompilerIssue> {
         match applicant {
             BindingsApplicant::Struct => {
                 let structure: &mut Struct = self.get_struct_mut(name, span)?;
@@ -365,9 +365,9 @@ impl<'instr> SymbolsTable<'instr> {
         Ok(())
     }
 
-    pub fn contains_structure(&self, name: &str, span: Span) -> Result<(), ThrushCompilerError> {
+    pub fn contains_structure(&self, name: &str, span: Span) -> Result<(), ThrushCompilerIssue> {
         if !self.structs.contains_key(name) {
-            return Err(ThrushCompilerError::Error(
+            return Err(ThrushCompilerIssue::Error(
                 String::from("Structure not found"),
                 format!("'{}' structure not defined or declared yet.", name),
                 String::default(),
@@ -378,7 +378,7 @@ impl<'instr> SymbolsTable<'instr> {
         Ok(())
     }
 
-    pub fn lift_instructions(&mut self, scope_pos: usize) -> Result<(), ThrushCompilerError> {
+    pub fn lift_instructions(&mut self, scope_pos: usize) -> Result<(), ThrushCompilerIssue> {
         for parameter in self.clone().lifts.iter() {
             if let Instruction::FunctionParameter {
                 name,

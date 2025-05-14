@@ -15,7 +15,7 @@ use crate::{
         traits::ThrushStructTypeExtensions,
         types::{BindingsApplicant, ThrushStructType, TokenKind, Type, generate_bindings},
     },
-    standard::error::ThrushCompilerError,
+    standard::error::ThrushCompilerIssue,
 };
 
 use super::{
@@ -50,12 +50,12 @@ lazy_static! {
 
 pub fn parse<'instr>(
     parser_ctx: &mut ParserContext<'instr>,
-) -> Result<Instruction<'instr>, ThrushCompilerError> {
+) -> Result<Instruction<'instr>, ThrushCompilerIssue> {
     parser_ctx
         .get_mut_control_ctx()
         .set_sync_position(SyncPosition::Declaration);
 
-    let statement: Result<Instruction<'instr>, ThrushCompilerError> = match &parser_ctx.peek().kind
+    let statement: Result<Instruction<'instr>, ThrushCompilerIssue> = match &parser_ctx.peek().kind
     {
         TokenKind::Type => Ok(build_custom_type(parser_ctx, false)?),
         TokenKind::Struct => Ok(build_struct(parser_ctx, false)?),
@@ -72,12 +72,12 @@ pub fn parse<'instr>(
 
 fn statement<'instr>(
     parser_ctx: &mut ParserContext<'instr>,
-) -> Result<Instruction<'instr>, ThrushCompilerError> {
+) -> Result<Instruction<'instr>, ThrushCompilerIssue> {
     parser_ctx
         .get_mut_control_ctx()
         .set_sync_position(SyncPosition::Statement);
 
-    let statement: Result<Instruction<'instr>, ThrushCompilerError> = match &parser_ctx.peek().kind
+    let statement: Result<Instruction<'instr>, ThrushCompilerIssue> = match &parser_ctx.peek().kind
     {
         TokenKind::LBrace => Ok(build_block(parser_ctx)?),
         TokenKind::Return => Ok(build_return(parser_ctx)?),
@@ -99,7 +99,7 @@ fn statement<'instr>(
 pub fn build_bindings<'instr>(
     parser_ctx: &mut ParserContext<'instr>,
     declare: bool,
-) -> Result<Instruction<'instr>, ThrushCompilerError> {
+) -> Result<Instruction<'instr>, ThrushCompilerIssue> {
     parser_ctx
         .get_mut_control_ctx()
         .set_instr_position(InstructionPosition::Bindings);
@@ -113,7 +113,7 @@ pub fn build_bindings<'instr>(
     let span: Span = bindings_tk.span;
 
     if !parser_ctx.is_main_scope() {
-        return Err(ThrushCompilerError::Error(
+        return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("Bindings are only defined globally."),
             String::default(),
@@ -124,7 +124,7 @@ pub fn build_bindings<'instr>(
     let kind: Type = typegen::build_type(parser_ctx, None)?;
 
     if !kind.is_struct_type() {
-        return Err(ThrushCompilerError::Error(
+        return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("Expected struct type."),
             String::default(),
@@ -197,7 +197,7 @@ pub fn build_bindings<'instr>(
 fn build_bind<'instr>(
     declare: bool,
     parser_ctx: &mut ParserContext<'instr>,
-) -> Result<Instruction<'instr>, ThrushCompilerError> {
+) -> Result<Instruction<'instr>, ThrushCompilerIssue> {
     parser_ctx.consume(
         TokenKind::Bind,
         String::from("Syntax error"),
@@ -217,7 +217,7 @@ fn build_bind<'instr>(
         .get_instr_position()
         .is_bindings()
     {
-        return Err(ThrushCompilerError::Error(
+        return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("Expected bind inside the bindings definition."),
             String::default(),
@@ -250,7 +250,7 @@ fn build_bind<'instr>(
             .set_position(TypePosition::BindParameter);
 
         if this_is_declared && parser_ctx.check(TokenKind::This) {
-            return Err(ThrushCompilerError::Error(
+            return Err(ThrushCompilerIssue::Error(
                 String::from("Syntax error"),
                 String::from(
                     "'This' keyword is already declared. Multiple instances are not allowed.",
@@ -364,9 +364,9 @@ fn build_bind<'instr>(
 
 fn build_entry_point<'instr>(
     parser_ctx: &mut ParserContext<'instr>,
-) -> Result<Instruction<'instr>, ThrushCompilerError> {
+) -> Result<Instruction<'instr>, ThrushCompilerIssue> {
     if parser_ctx.get_control_ctx().get_entrypoint() {
-        return Err(ThrushCompilerError::Error(
+        return Err(ThrushCompilerIssue::Error(
             String::from("Duplicated entrypoint"),
             String::from("The language not support two entrypoints."),
             String::default(),
@@ -395,7 +395,7 @@ fn build_entry_point<'instr>(
 
 fn build_for_loop<'instr>(
     parser_ctx: &mut ParserContext<'instr>,
-) -> Result<Instruction<'instr>, ThrushCompilerError> {
+) -> Result<Instruction<'instr>, ThrushCompilerIssue> {
     let for_tk: &Token = parser_ctx.consume(
         TokenKind::For,
         String::from("Syntax error"),
@@ -403,7 +403,7 @@ fn build_for_loop<'instr>(
     )?;
 
     if parser_ctx.is_unreacheable_code() {
-        return Err(ThrushCompilerError::Error(
+        return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("Unreacheable code."),
             String::default(),
@@ -414,7 +414,7 @@ fn build_for_loop<'instr>(
     if !parser_ctx.get_control_ctx().get_inside_function()
         && !parser_ctx.get_control_ctx().get_inside_bind()
     {
-        return Err(ThrushCompilerError::Error(
+        return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("For loop must be placed inside a function or a bind."),
             String::default(),
@@ -453,7 +453,7 @@ fn build_for_loop<'instr>(
 
 fn build_loop<'instr>(
     parser_ctx: &mut ParserContext<'instr>,
-) -> Result<Instruction<'instr>, ThrushCompilerError> {
+) -> Result<Instruction<'instr>, ThrushCompilerIssue> {
     let loop_tk: &Token = parser_ctx.consume(
         TokenKind::Loop,
         String::from("Syntax error"),
@@ -461,7 +461,7 @@ fn build_loop<'instr>(
     )?;
 
     if parser_ctx.is_unreacheable_code() {
-        return Err(ThrushCompilerError::Error(
+        return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("Unreacheable code."),
             String::default(),
@@ -472,7 +472,7 @@ fn build_loop<'instr>(
     if !parser_ctx.get_control_ctx().get_inside_function()
         && !parser_ctx.get_control_ctx().get_inside_bind()
     {
-        return Err(ThrushCompilerError::Error(
+        return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("Loop must be placed inside a function or a bind."),
             String::default(),
@@ -501,7 +501,7 @@ fn build_loop<'instr>(
 
 fn build_while_loop<'instr>(
     parser_ctx: &mut ParserContext<'instr>,
-) -> Result<Instruction<'instr>, ThrushCompilerError> {
+) -> Result<Instruction<'instr>, ThrushCompilerIssue> {
     let while_tk: &Token = parser_ctx.consume(
         TokenKind::While,
         String::from("Syntax error"),
@@ -509,7 +509,7 @@ fn build_while_loop<'instr>(
     )?;
 
     if parser_ctx.is_unreacheable_code() {
-        return Err(ThrushCompilerError::Error(
+        return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("Unreacheable code."),
             String::default(),
@@ -520,7 +520,7 @@ fn build_while_loop<'instr>(
     if !parser_ctx.get_control_ctx().get_inside_function()
         && !parser_ctx.get_control_ctx().get_inside_bind()
     {
-        return Err(ThrushCompilerError::Error(
+        return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("While loop must be placed inside a function or a bind."),
             String::default(),
@@ -547,7 +547,7 @@ fn build_while_loop<'instr>(
 
 fn build_continue<'instr>(
     parser_ctx: &mut ParserContext<'instr>,
-) -> Result<Instruction<'instr>, ThrushCompilerError> {
+) -> Result<Instruction<'instr>, ThrushCompilerIssue> {
     let continue_tk: &Token = parser_ctx.consume(
         TokenKind::Continue,
         String::from("Syntax error"),
@@ -555,7 +555,7 @@ fn build_continue<'instr>(
     )?;
 
     if parser_ctx.is_unreacheable_code() {
-        return Err(ThrushCompilerError::Error(
+        return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("Unreacheable code."),
             String::default(),
@@ -566,7 +566,7 @@ fn build_continue<'instr>(
     if !parser_ctx.get_control_ctx().get_inside_function()
         && !parser_ctx.get_control_ctx().get_inside_bind()
     {
-        return Err(ThrushCompilerError::Error(
+        return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("Continue must be placed inside a function or a bind."),
             String::default(),
@@ -581,7 +581,7 @@ fn build_continue<'instr>(
         .set_unreacheable_code_scope(scope);
 
     if !parser_ctx.get_control_ctx().get_inside_loop() {
-        return Err(ThrushCompilerError::Error(
+        return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("The flow changer of a loop must go inside one."),
             String::default(),
@@ -600,7 +600,7 @@ fn build_continue<'instr>(
 
 fn build_break<'instr>(
     parser_ctx: &mut ParserContext<'instr>,
-) -> Result<Instruction<'instr>, ThrushCompilerError> {
+) -> Result<Instruction<'instr>, ThrushCompilerIssue> {
     let break_tk: &Token = parser_ctx.consume(
         TokenKind::Break,
         String::from("Syntax error"),
@@ -608,7 +608,7 @@ fn build_break<'instr>(
     )?;
 
     if parser_ctx.is_unreacheable_code() {
-        return Err(ThrushCompilerError::Error(
+        return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("Unreacheable code."),
             String::default(),
@@ -623,7 +623,7 @@ fn build_break<'instr>(
         .set_unreacheable_code_scope(scope);
 
     if !parser_ctx.get_control_ctx().get_inside_loop() {
-        return Err(ThrushCompilerError::Error(
+        return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("The flow changer of a loop must go inside one."),
             String::default(),
@@ -634,7 +634,7 @@ fn build_break<'instr>(
     if !parser_ctx.get_control_ctx().get_inside_function()
         && !parser_ctx.get_control_ctx().get_inside_bind()
     {
-        return Err(ThrushCompilerError::Error(
+        return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("Break must be placed inside a function or a bind."),
             String::default(),
@@ -653,7 +653,7 @@ fn build_break<'instr>(
 
 fn build_match<'instr>(
     parser_ctx: &mut ParserContext<'instr>,
-) -> Result<Instruction<'instr>, ThrushCompilerError> {
+) -> Result<Instruction<'instr>, ThrushCompilerIssue> {
     let match_tk: &Token = parser_ctx.consume(
         TokenKind::Match,
         String::from("Syntax error"),
@@ -661,7 +661,7 @@ fn build_match<'instr>(
     )?;
 
     if parser_ctx.is_unreacheable_code() {
-        return Err(ThrushCompilerError::Error(
+        return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("Unreacheable code."),
             String::default(),
@@ -672,7 +672,7 @@ fn build_match<'instr>(
     if !parser_ctx.get_control_ctx().get_inside_function()
         && !parser_ctx.get_control_ctx().get_inside_bind()
     {
-        return Err(ThrushCompilerError::Error(
+        return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("Match must be placed inside a function or a bind."),
             String::default(),
@@ -806,7 +806,7 @@ fn build_match<'instr>(
 
 fn build_if_elif_else<'instr>(
     parser_ctx: &mut ParserContext<'instr>,
-) -> Result<Instruction<'instr>, ThrushCompilerError> {
+) -> Result<Instruction<'instr>, ThrushCompilerIssue> {
     let if_tk: &Token = parser_ctx.consume(
         TokenKind::If,
         String::from("Syntax error"),
@@ -816,7 +816,7 @@ fn build_if_elif_else<'instr>(
     if !parser_ctx.get_control_ctx().get_inside_function()
         && !parser_ctx.get_control_ctx().get_inside_bind()
     {
-        return Err(ThrushCompilerError::Error(
+        return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("Conditionals must be placed inside a function or a bind."),
             String::default(),
@@ -825,7 +825,7 @@ fn build_if_elif_else<'instr>(
     }
 
     if parser_ctx.is_unreacheable_code() {
-        return Err(ThrushCompilerError::Error(
+        return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("Unreacheable code."),
             String::default(),
@@ -894,7 +894,7 @@ fn build_if_elif_else<'instr>(
 pub fn build_custom_type<'instr>(
     parser_ctx: &mut ParserContext<'instr>,
     declare: bool,
-) -> Result<Instruction<'instr>, ThrushCompilerError> {
+) -> Result<Instruction<'instr>, ThrushCompilerIssue> {
     let type_tk: &Token = parser_ctx.consume(
         TokenKind::Type,
         String::from("Syntax error"),
@@ -902,7 +902,7 @@ pub fn build_custom_type<'instr>(
     )?;
 
     if !parser_ctx.is_main_scope() {
-        return Err(ThrushCompilerError::Error(
+        return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("Types are only defined globally."),
             String::default(),
@@ -972,7 +972,7 @@ pub fn build_custom_type<'instr>(
 pub fn build_enum<'instr>(
     parser_ctx: &mut ParserContext<'instr>,
     declare: bool,
-) -> Result<Instruction<'instr>, ThrushCompilerError> {
+) -> Result<Instruction<'instr>, ThrushCompilerIssue> {
     let enum_tk: &Token = parser_ctx.consume(
         TokenKind::Enum,
         String::from("Syntax error"),
@@ -980,7 +980,7 @@ pub fn build_enum<'instr>(
     )?;
 
     if !parser_ctx.is_main_scope() {
-        return Err(ThrushCompilerError::Error(
+        return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("Enums are only defined globally."),
             String::default(),
@@ -1032,7 +1032,7 @@ pub fn build_enum<'instr>(
                 && !field_type.is_float_type()
                 && !field_type.is_bool_type()
             {
-                return Err(ThrushCompilerError::Error(
+                return Err(ThrushCompilerIssue::Error(
                     String::from("Syntax error"),
                     String::from("Expected integer, boolean or floating-point types."),
                     String::default(),
@@ -1083,7 +1083,7 @@ pub fn build_enum<'instr>(
             continue;
         }
 
-        return Err(ThrushCompilerError::Error(
+        return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("Expected identifier in enum field."),
             String::default(),
@@ -1115,7 +1115,7 @@ pub fn build_enum<'instr>(
 pub fn build_struct<'instr>(
     parser_ctx: &mut ParserContext<'instr>,
     declare: bool,
-) -> Result<Instruction<'instr>, ThrushCompilerError> {
+) -> Result<Instruction<'instr>, ThrushCompilerIssue> {
     let struct_tk: &Token = parser_ctx.consume(
         TokenKind::Struct,
         String::from("Syntax error"),
@@ -1123,7 +1123,7 @@ pub fn build_struct<'instr>(
     )?;
 
     if !parser_ctx.is_main_scope() {
-        return Err(ThrushCompilerError::Error(
+        return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("Structs are only defined globally."),
             String::default(),
@@ -1179,7 +1179,7 @@ pub fn build_struct<'instr>(
 
         parser_ctx.only_advance()?;
 
-        return Err(ThrushCompilerError::Error(
+        return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("Expected identifier in structure field."),
             String::default(),
@@ -1218,7 +1218,7 @@ pub fn build_struct<'instr>(
 pub fn build_const<'instr>(
     parser_ctx: &mut ParserContext<'instr>,
     declare: bool,
-) -> Result<Instruction<'instr>, ThrushCompilerError> {
+) -> Result<Instruction<'instr>, ThrushCompilerIssue> {
     parser_ctx.consume(
         TokenKind::Const,
         String::from("Syntax error"),
@@ -1232,7 +1232,7 @@ pub fn build_const<'instr>(
     )?;
 
     if !parser_ctx.is_main_scope() {
-        return Err(ThrushCompilerError::Error(
+        return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("Constants are only defined globally."),
             String::default(),
@@ -1297,7 +1297,7 @@ pub fn build_const<'instr>(
 fn build_local<'instr>(
     parser_ctx: &mut ParserContext<'instr>,
     comptime: bool,
-) -> Result<Instruction<'instr>, ThrushCompilerError> {
+) -> Result<Instruction<'instr>, ThrushCompilerIssue> {
     parser_ctx
         .get_mut_type_ctx()
         .set_position(TypePosition::Local);
@@ -1309,7 +1309,7 @@ fn build_local<'instr>(
     )?;
 
     if parser_ctx.is_main_scope() {
-        return Err(ThrushCompilerError::Error(
+        return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("Locals variables should be contained at local scope."),
             String::default(),
@@ -1318,7 +1318,7 @@ fn build_local<'instr>(
     }
 
     if parser_ctx.is_unreacheable_code() {
-        return Err(ThrushCompilerError::Error(
+        return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("Unreacheable code."),
             String::default(),
@@ -1415,7 +1415,7 @@ fn build_local<'instr>(
 
 fn build_return<'instr>(
     parser_ctx: &mut ParserContext<'instr>,
-) -> Result<Instruction<'instr>, ThrushCompilerError> {
+) -> Result<Instruction<'instr>, ThrushCompilerIssue> {
     let return_tk: &Token = parser_ctx.consume(
         TokenKind::Return,
         String::from("Syntax error"),
@@ -1427,7 +1427,7 @@ fn build_return<'instr>(
     if !parser_ctx.get_control_ctx().get_inside_function()
         && !parser_ctx.get_control_ctx().get_inside_bind()
     {
-        return Err(ThrushCompilerError::Error(
+        return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("Return outside of bind or function."),
             String::default(),
@@ -1436,7 +1436,7 @@ fn build_return<'instr>(
     }
 
     if parser_ctx.is_unreacheable_code() {
-        return Err(ThrushCompilerError::Error(
+        return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("Unreacheable code."),
             String::default(),
@@ -1489,7 +1489,7 @@ fn build_return<'instr>(
 
 fn build_block<'instr>(
     parser_ctx: &mut ParserContext<'instr>,
-) -> Result<Instruction<'instr>, ThrushCompilerError> {
+) -> Result<Instruction<'instr>, ThrushCompilerIssue> {
     let block_tk: &Token = parser_ctx.consume(
         TokenKind::LBrace,
         String::from("Syntax error"),
@@ -1497,7 +1497,7 @@ fn build_block<'instr>(
     )?;
 
     if parser_ctx.is_unreacheable_code() {
-        return Err(ThrushCompilerError::Error(
+        return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("Unreacheable code."),
             String::default(),
@@ -1508,7 +1508,7 @@ fn build_block<'instr>(
     if !parser_ctx.get_control_ctx().get_inside_function()
         && !parser_ctx.get_control_ctx().get_inside_bind()
     {
-        return Err(ThrushCompilerError::Error(
+        return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("Block of code must be placed inside a function or a bind."),
             String::default(),
@@ -1539,7 +1539,7 @@ fn build_block<'instr>(
 pub fn build_function<'instr>(
     parser_ctx: &mut ParserContext<'instr>,
     declare: bool,
-) -> Result<Instruction<'instr>, ThrushCompilerError> {
+) -> Result<Instruction<'instr>, ThrushCompilerIssue> {
     parser_ctx.consume(
         TokenKind::Fn,
         String::from("Syntax error"),
@@ -1552,26 +1552,26 @@ pub fn build_function<'instr>(
         String::from("Expected name to the function."),
     )?;
 
+    let function_name: &str = function_name_tk.lexeme;
+    let function_span: Span = function_name_tk.span;
+
     if !parser_ctx.is_main_scope() {
-        return Err(ThrushCompilerError::Error(
+        return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("Functions are only defined globally."),
             String::default(),
-            function_name_tk.span,
+            function_span,
         ));
     }
 
     if parser_ctx.is_unreacheable_code() {
-        return Err(ThrushCompilerError::Error(
+        return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("Unreacheable code."),
             String::default(),
-            function_name_tk.span,
+            function_span,
         ));
     }
-
-    let function_name: &str = function_name_tk.lexeme;
-    let function_span: Span = function_name_tk.span;
 
     if function_name == "main" {
         if declare {
@@ -1580,7 +1580,7 @@ pub fn build_function<'instr>(
 
         parser_ctx.get_mut_control_ctx().set_inside_function(true);
 
-        let entrypoint: Result<Instruction, ThrushCompilerError> = build_entry_point(parser_ctx);
+        let entrypoint: Result<Instruction, ThrushCompilerIssue> = build_entry_point(parser_ctx);
 
         parser_ctx.get_mut_control_ctx().set_inside_function(false);
 
@@ -1627,7 +1627,7 @@ pub fn build_function<'instr>(
         let parameter_type: Type = typegen::build_type(parser_ctx, None)?;
 
         if parameter_type.is_void_type() {
-            return Err(ThrushCompilerError::Error(
+            return Err(ThrushCompilerIssue::Error(
                 String::from("Syntax error"),
                 String::from("Void type are not allowed as parameters."),
                 String::default(),
@@ -1671,7 +1671,7 @@ pub fn build_function<'instr>(
     let function_has_ignore: bool = function_attributes.contain_ignore_attribute();
 
     if function_has_ignore && !function_has_ffi {
-        return Err(ThrushCompilerError::Error(
+        return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from(
                 "The '@ignore' attribute can only be used if the function contains the '@extern' attribute.",
@@ -1688,6 +1688,7 @@ pub fn build_function<'instr>(
         body: Instruction::Null.into(),
         return_type: return_type.clone(),
         attributes: function_attributes,
+        span: function_span,
     };
 
     if function_has_ffi || declare {
@@ -1725,7 +1726,7 @@ pub fn build_function<'instr>(
     parser_ctx.get_mut_control_ctx().set_inside_function(false);
 
     if !return_type.is_void_type() && !function_body.has_return() {
-        return Err(ThrushCompilerError::Error(
+        return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             format!("Missing return with type '{}'.", return_type),
             String::default(),
@@ -1751,7 +1752,7 @@ pub fn build_function<'instr>(
 fn build_compiler_attributes<'instr>(
     parser_ctx: &mut ParserContext<'instr>,
     limits: &[TokenKind],
-) -> Result<ThrushAttributes<'instr>, ThrushCompilerError> {
+) -> Result<ThrushAttributes<'instr>, ThrushCompilerIssue> {
     let mut compiler_attributes: ThrushAttributes = Vec::with_capacity(10);
 
     while !limits.contains(&parser_ctx.peek().kind) {
@@ -1793,7 +1794,7 @@ fn build_compiler_attributes<'instr>(
 
 fn build_external_attribute<'instr>(
     parser_ctx: &mut ParserContext<'instr>,
-) -> Result<&'instr str, ThrushCompilerError> {
+) -> Result<&'instr str, ThrushCompilerIssue> {
     parser_ctx.only_advance()?;
 
     parser_ctx.consume(
@@ -1821,7 +1822,7 @@ fn build_external_attribute<'instr>(
 
 fn build_call_convention_attribute(
     parser_ctx: &mut ParserContext<'_>,
-) -> Result<CallConvention, ThrushCompilerError> {
+) -> Result<CallConvention, ThrushCompilerIssue> {
     parser_ctx.only_advance()?;
 
     parser_ctx.consume(
@@ -1855,7 +1856,7 @@ fn build_call_convention_attribute(
         String::from("Expected ')'."),
     )?;
 
-    Err(ThrushCompilerError::Error(
+    Err(ThrushCompilerIssue::Error(
         String::from("Syntax error"),
         String::from("Unknown call convention."),
         String::default(),

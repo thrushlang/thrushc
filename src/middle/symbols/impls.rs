@@ -9,7 +9,7 @@ use crate::{
         },
         types::Type,
     },
-    standard::error::ThrushCompilerError,
+    standard::error::ThrushCompilerIssue,
 };
 
 use super::{
@@ -155,12 +155,12 @@ impl FoundSymbolExtension for FoundSymbolId<'_> {
 }
 
 impl<'instr> FoundSymbolEither<'instr> for FoundSymbolId<'instr> {
-    fn expected_custom_type(&self, span: Span) -> Result<&'instr str, ThrushCompilerError> {
+    fn expected_custom_type(&self, span: Span) -> Result<&'instr str, ThrushCompilerIssue> {
         if let Some(type_id) = self.4 {
             return Ok(type_id);
         }
 
-        Err(ThrushCompilerError::Error(
+        Err(ThrushCompilerIssue::Error(
             String::from("Expected custom type reference"),
             String::from("Expected custom type but found something else."),
             String::default(),
@@ -168,12 +168,12 @@ impl<'instr> FoundSymbolEither<'instr> for FoundSymbolId<'instr> {
         ))
     }
 
-    fn expected_constant(&self, span: Span) -> Result<&'instr str, ThrushCompilerError> {
+    fn expected_constant(&self, span: Span) -> Result<&'instr str, ThrushCompilerIssue> {
         if let Some(const_id) = self.3 {
             return Ok(const_id);
         }
 
-        Err(ThrushCompilerError::Error(
+        Err(ThrushCompilerIssue::Error(
             String::from("Expected constant reference"),
             String::from("Expected constant but found something else."),
             String::default(),
@@ -181,12 +181,12 @@ impl<'instr> FoundSymbolEither<'instr> for FoundSymbolId<'instr> {
         ))
     }
 
-    fn expected_enum(&self, span: Span) -> Result<&'instr str, ThrushCompilerError> {
+    fn expected_enum(&self, span: Span) -> Result<&'instr str, ThrushCompilerIssue> {
         if let Some(name) = self.2 {
             return Ok(name);
         }
 
-        Err(ThrushCompilerError::Error(
+        Err(ThrushCompilerIssue::Error(
             String::from("Expected enum reference"),
             String::from("Expected enum but found something else."),
             String::default(),
@@ -194,12 +194,12 @@ impl<'instr> FoundSymbolEither<'instr> for FoundSymbolId<'instr> {
         ))
     }
 
-    fn expected_struct(&self, span: Span) -> Result<&'instr str, ThrushCompilerError> {
+    fn expected_struct(&self, span: Span) -> Result<&'instr str, ThrushCompilerIssue> {
         if let Some(name) = self.0 {
             return Ok(name);
         }
 
-        Err(ThrushCompilerError::Error(
+        Err(ThrushCompilerIssue::Error(
             String::from("Expected struct reference"),
             String::from("Expected struct but found something else."),
             String::default(),
@@ -207,12 +207,12 @@ impl<'instr> FoundSymbolEither<'instr> for FoundSymbolId<'instr> {
         ))
     }
 
-    fn expected_function(&self, span: Span) -> Result<&'instr str, ThrushCompilerError> {
+    fn expected_function(&self, span: Span) -> Result<&'instr str, ThrushCompilerIssue> {
         if let Some(name) = self.1 {
             return Ok(name);
         }
 
-        Err(ThrushCompilerError::Error(
+        Err(ThrushCompilerIssue::Error(
             String::from("Expected function reference"),
             String::from("Expected function but found something else."),
             String::default(),
@@ -220,12 +220,12 @@ impl<'instr> FoundSymbolEither<'instr> for FoundSymbolId<'instr> {
         ))
     }
 
-    fn expected_local(&self, span: Span) -> Result<(&'instr str, usize), ThrushCompilerError> {
+    fn expected_local(&self, span: Span) -> Result<(&'instr str, usize), ThrushCompilerIssue> {
         if let Some((name, scope_idx)) = self.5 {
             return Ok((name, scope_idx));
         }
 
-        Err(ThrushCompilerError::Error(
+        Err(ThrushCompilerIssue::Error(
             String::from("Expected local reference"),
             String::from("Expected local but found something else."),
             String::default(),

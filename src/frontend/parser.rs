@@ -8,7 +8,7 @@ use crate::middle::symbols::types::Functions;
 use crate::middle::types::{TokenKind, Type};
 use crate::standard::constants::MINIMAL_ERROR_CAPACITY;
 use crate::standard::diagnostic::Diagnostician;
-use crate::standard::error::ThrushCompilerError;
+use crate::standard::error::ThrushCompilerIssue;
 use crate::standard::logging::{self, LoggingType};
 use crate::standard::misc::CompilerFile;
 
@@ -26,7 +26,7 @@ const MINIMAL_GLOBAL_CAPACITY: usize = 2024;
 pub struct ParserContext<'instr> {
     stmts: Vec<Instruction<'instr>>,
     tokens: &'instr [Token<'instr>],
-    errors: Vec<ThrushCompilerError>,
+    errors: Vec<ThrushCompilerIssue>,
 
     control_ctx: ParserControlContext,
     type_ctx: ParserTypeContext,
@@ -94,7 +94,7 @@ impl<'instr> ParserContext<'instr> {
 
     pub fn verify(&mut self) {
         if !self.errors.is_empty() {
-            self.errors.iter().for_each(|error: &ThrushCompilerError| {
+            self.errors.iter().for_each(|error: &ThrushCompilerIssue| {
                 self.diagnostician
                     .build_diagnostic(error, LoggingType::Error);
             });
@@ -109,7 +109,7 @@ impl<'instr> ParserContext<'instr> {
         span: Span,
         expr: Option<&Instruction>,
     ) {
-        let error: ThrushCompilerError = ThrushCompilerError::Error(
+        let error: ThrushCompilerIssue = ThrushCompilerIssue::Error(
             String::from("Mismatched types"),
             format!("Expected '{}' but found '{}'.", target, from),
             String::default(),
@@ -130,12 +130,12 @@ impl<'instr> ParserContext<'instr> {
         kind: TokenKind,
         title: String,
         help: String,
-    ) -> Result<&'instr Token<'instr>, ThrushCompilerError> {
+    ) -> Result<&'instr Token<'instr>, ThrushCompilerIssue> {
         if self.peek().kind == kind {
             return self.advance();
         }
 
-        Err(ThrushCompilerError::Error(
+        Err(ThrushCompilerIssue::Error(
             title,
             help,
             String::default(),
@@ -143,7 +143,7 @@ impl<'instr> ParserContext<'instr> {
         ))
     }
 
-    pub fn match_token(&mut self, kind: TokenKind) -> Result<bool, ThrushCompilerError> {
+    pub fn match_token(&mut self, kind: TokenKind) -> Result<bool, ThrushCompilerIssue> {
         if self.peek().kind == kind {
             self.only_advance()?;
             return Ok(true);
@@ -152,13 +152,13 @@ impl<'instr> ParserContext<'instr> {
         Ok(false)
     }
 
-    pub fn only_advance(&mut self) -> Result<(), ThrushCompilerError> {
+    pub fn only_advance(&mut self) -> Result<(), ThrushCompilerIssue> {
         if !self.is_eof() {
             self.current += 1;
             return Ok(());
         }
 
-        Err(ThrushCompilerError::Error(
+        Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("EOF has been reached."),
             String::default(),
@@ -166,13 +166,13 @@ impl<'instr> ParserContext<'instr> {
         ))
     }
 
-    pub fn advance(&mut self) -> Result<&'instr Token<'instr>, ThrushCompilerError> {
+    pub fn advance(&mut self) -> Result<&'instr Token<'instr>, ThrushCompilerIssue> {
         if !self.is_eof() {
             self.current += 1;
             return Ok(self.previous());
         }
 
-        Err(ThrushCompilerError::Error(
+        Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("EOF has been reached."),
             String::default(),
@@ -291,7 +291,7 @@ impl<'instr> ParserContext<'instr> {
         self.stmts.push(stmt);
     }
 
-    pub fn add_error(&mut self, error: ThrushCompilerError) {
+    pub fn add_error(&mut self, error: ThrushCompilerIssue) {
         self.errors.push(error);
     }
 
