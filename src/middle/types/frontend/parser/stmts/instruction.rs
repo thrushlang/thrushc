@@ -4,21 +4,25 @@ use std::rc::Rc;
 
 use inkwell::values::BasicValueEnum;
 
-use crate::{frontend::lexer::Span, standard::error::ThrushCompilerIssue};
-
-use super::{
-    statement::{BinaryOp, Constructor, FunctionPrototype, ThrushAttributes, UnaryOp},
-    types::{TokenKind, Type},
+use crate::{
+    frontend::lexer::Span,
+    middle::types::{
+        backend::llvm::types::{LLVMBinaryOp, LLVMFunctionPrototype, LLVMUnaryOp},
+        frontend::lexer::{tokenkind::TokenKind, types::ThrushType},
+    },
+    standard::error::ThrushCompilerIssue,
 };
+
+use super::types::{Constructor, ThrushAttributes};
 
 #[derive(Debug, Clone, Default)]
 pub enum Instruction<'ctx> {
     // Primitive types
-    Str(Type, Vec<u8>, Span),
-    Char(Type, u8, Span),
-    Boolean(Type, bool, Span),
-    Integer(Type, f64, bool, Span),
-    Float(Type, f64, bool, Span),
+    Str(ThrushType, Vec<u8>, Span),
+    Char(ThrushType, u8, Span),
+    Boolean(ThrushType, bool, Span),
+    Integer(ThrushType, f64, bool, Span),
+    Float(ThrushType, f64, bool, Span),
     NullPtr {
         span: Span,
     },
@@ -42,7 +46,7 @@ pub enum Instruction<'ctx> {
     // new Vec { ... };
     Constructor {
         arguments: Constructor<'ctx>,
-        kind: Type,
+        kind: ThrushType,
         span: Span,
     },
 
@@ -55,19 +59,19 @@ pub enum Instruction<'ctx> {
         name: &'ctx str,
         parameters: Vec<Instruction<'ctx>>,
         body: Rc<Instruction<'ctx>>,
-        return_type: Type,
+        return_type: ThrushType,
         attributes: ThrushAttributes<'ctx>,
     },
 
     This {
-        kind: Type,
+        kind: ThrushType,
         is_mutable: bool,
         span: Span,
     },
 
     BindParameter {
         name: &'ctx str,
-        kind: Type,
+        kind: ThrushType,
         position: u32,
         is_mutable: bool,
         span: Span,
@@ -75,8 +79,8 @@ pub enum Instruction<'ctx> {
 
     Property {
         name: &'ctx str,
-        indexes: Vec<(Type, u32)>,
-        kind: Type,
+        indexes: Vec<(ThrushType, u32)>,
+        kind: ThrushType,
         is_mutable: bool,
         span: Span,
     },
@@ -142,7 +146,7 @@ pub enum Instruction<'ctx> {
 
     FunctionParameter {
         name: &'ctx str,
-        kind: Type,
+        kind: ThrushType,
         position: u32,
         is_mutable: bool,
         span: Span,
@@ -150,37 +154,37 @@ pub enum Instruction<'ctx> {
     Function {
         name: &'ctx str,
         parameters: Vec<Instruction<'ctx>>,
-        parameter_types: Vec<Type>,
+        parameter_types: Vec<ThrushType>,
         body: Rc<Instruction<'ctx>>,
-        return_type: Type,
+        return_type: ThrushType,
         attributes: ThrushAttributes<'ctx>,
         span: Span,
     },
 
     Return {
         expression: Option<Rc<Instruction<'ctx>>>,
-        kind: Type,
+        kind: ThrushType,
         span: Span,
     },
 
     // Constants
     Const {
         name: &'ctx str,
-        kind: Type,
+        kind: ThrushType,
         value: Rc<Instruction<'ctx>>,
         attributes: ThrushAttributes<'ctx>,
         span: Span,
     },
     ConstRef {
         name: &'ctx str,
-        kind: Type,
+        kind: ThrushType,
         span: Span,
     },
 
     // Locals variables
     Local {
         name: &'ctx str,
-        kind: Type,
+        kind: ThrushType,
         value: Rc<Instruction<'ctx>>,
         is_mutable: bool,
         comptime: bool,
@@ -188,13 +192,13 @@ pub enum Instruction<'ctx> {
     },
     LocalRef {
         name: &'ctx str,
-        kind: Type,
+        kind: ThrushType,
         span: Span,
     },
     LocalMut {
         source: (Option<&'ctx str>, Option<Rc<Instruction<'ctx>>>),
         target: Rc<Instruction<'ctx>>,
-        kind: Type,
+        kind: ThrushType,
         span: Span,
     },
 
@@ -202,21 +206,21 @@ pub enum Instruction<'ctx> {
     Address {
         name: &'ctx str,
         indexes: Vec<Instruction<'ctx>>,
-        kind: Type,
+        kind: ThrushType,
         span: Span,
     },
 
     Write {
         write_to: (&'ctx str, Option<Rc<Instruction<'ctx>>>),
         write_value: Rc<Instruction<'ctx>>,
-        write_type: Type,
+        write_type: ThrushType,
         span: Span,
     },
 
     Carry {
         name: &'ctx str,
         expression: Option<Rc<Instruction<'ctx>>>,
-        carry_type: Type,
+        carry_type: ThrushType,
         span: Span,
     },
 
@@ -224,32 +228,32 @@ pub enum Instruction<'ctx> {
     Call {
         name: &'ctx str,
         args: Vec<Instruction<'ctx>>,
-        kind: Type,
+        kind: ThrushType,
         span: Span,
     },
     BindCall {
         name: String,
         args: Vec<Instruction<'ctx>>,
-        kind: Type,
+        kind: ThrushType,
         span: Span,
     },
     BinaryOp {
         left: Rc<Instruction<'ctx>>,
         operator: TokenKind,
         right: Rc<Instruction<'ctx>>,
-        kind: Type,
+        kind: ThrushType,
         span: Span,
     },
     UnaryOp {
         operator: TokenKind,
-        kind: Type,
+        kind: ThrushType,
         expression: Rc<Instruction<'ctx>>,
         is_pre: bool,
         span: Span,
     },
     Group {
         expression: Rc<Instruction<'ctx>>,
-        kind: Type,
+        kind: ThrushType,
         span: Span,
     },
 
@@ -258,7 +262,7 @@ pub enum Instruction<'ctx> {
 }
 
 impl<'ctx> Instruction<'ctx> {
-    pub fn get_type(&self) -> &Type {
+    pub fn get_type(&self) -> &ThrushType {
         match self {
             Instruction::Integer(kind, ..) => kind,
             Instruction::Float(kind, ..) => kind,
@@ -275,19 +279,19 @@ impl<'ctx> Instruction<'ctx> {
             Instruction::Str(kind, _, _) => kind,
             Instruction::Boolean(kind, _, _) => kind,
             Instruction::Char(kind, _, _) => kind,
-            Instruction::Address { .. } => &Type::Address,
+            Instruction::Address { .. } => &ThrushType::Address,
             Instruction::Constructor { kind, .. } => kind,
             Instruction::Carry {
                 carry_type: kind, ..
             } => kind,
             Instruction::Property { kind, .. } => kind,
-            Instruction::NullPtr { .. } => &Type::Ptr(None),
+            Instruction::NullPtr { .. } => &ThrushType::Ptr(None),
             Instruction::This { kind, .. } => kind,
             Instruction::BindCall { kind, .. } => kind,
             Instruction::BindParameter { kind, .. } => kind,
             Instruction::Return { kind, .. } => kind,
 
-            _ => &Type::Void,
+            _ => &ThrushType::Void,
         }
     }
 
@@ -332,7 +336,7 @@ impl<'ctx> Instruction<'ctx> {
         }
     }
 
-    pub fn as_function(&self) -> FunctionPrototype {
+    pub fn as_llvm_function_proto(&self) -> LLVMFunctionPrototype {
         if let Instruction::Function {
             name,
             parameters,
@@ -356,7 +360,7 @@ impl<'ctx> Instruction<'ctx> {
         unreachable!()
     }
 
-    pub fn as_binary(&self) -> BinaryOp {
+    pub fn as_binary(&self) -> LLVMBinaryOp {
         if let Instruction::BinaryOp {
             left,
             operator,
@@ -374,7 +378,7 @@ impl<'ctx> Instruction<'ctx> {
         unreachable!()
     }
 
-    pub fn as_unaryop(&self) -> UnaryOp {
+    pub fn as_unaryop(&self) -> LLVMUnaryOp {
         if let Instruction::UnaryOp {
             operator,
             kind,
@@ -404,9 +408,9 @@ impl<'ctx> Instruction<'ctx> {
         unreachable!()
     }
 
-    pub fn get_binding_parameters(&self) -> Vec<Type> {
+    pub fn get_binding_parameters(&self) -> Vec<ThrushType> {
         if let Instruction::Bind { parameters, .. } = self {
-            let parameters_type: Vec<Type> = parameters
+            let parameters_type: Vec<ThrushType> = parameters
                 .iter()
                 .map(|parameter| parameter.get_type().clone())
                 .collect();
@@ -417,7 +421,7 @@ impl<'ctx> Instruction<'ctx> {
         unreachable!()
     }
 
-    pub fn get_binding_type(&self) -> Type {
+    pub fn get_binding_type(&self) -> ThrushType {
         if let Instruction::Bind { return_type, .. } = self {
             return return_type.clone();
         }
@@ -507,13 +511,16 @@ impl Instruction<'_> {
     pub fn is_unsigned_integer(&self) -> bool {
         matches!(
             self.get_type(),
-            Type::U8 | Type::U16 | Type::U32 | Type::U64
+            ThrushType::U8 | ThrushType::U16 | ThrushType::U32 | ThrushType::U64
         )
     }
 
     #[inline]
     pub fn is_anyu32bit_integer(&self) -> bool {
-        matches!(self.get_type(), Type::U8 | Type::U16 | Type::U32)
+        matches!(
+            self.get_type(),
+            ThrushType::U8 | ThrushType::U16 | ThrushType::U32
+        )
     }
 
     #[inline]

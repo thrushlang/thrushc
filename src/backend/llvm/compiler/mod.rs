@@ -9,14 +9,16 @@ pub mod local;
 pub mod memory;
 pub mod predicates;
 pub mod typegen;
-pub mod types;
 pub mod unaryop;
 pub mod utils;
 pub mod valuegen;
 
 use {
-    crate::{middle::instruction::Instruction, standard::diagnostic::Diagnostician},
-    codegen::Codegen,
+    crate::{
+        middle::types::frontend::parser::stmts::instruction::Instruction,
+        standard::diagnostic::Diagnostician,
+    },
+    codegen::LLVMCodegen,
     inkwell::{builder::Builder, context::Context, module::Module, targets::TargetData},
 };
 
@@ -32,7 +34,7 @@ impl<'a, 'ctx> Compiler {
         target_data: TargetData,
         diagnostician: Diagnostician,
     ) {
-        Codegen::generate(
+        LLVMCodegen::generate(
             module,
             builder,
             context,

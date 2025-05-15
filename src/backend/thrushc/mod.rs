@@ -19,7 +19,7 @@ use crate::{
         parser::{Parser, ParserContext},
         warner::Warner,
     },
-    middle::instruction::Instruction,
+    middle::types::frontend::parser::stmts::instruction::Instruction,
     standard::{
         diagnostic::Diagnostician,
         logging::{self},

@@ -1,8 +1,8 @@
-use crate::middle::statement::UnaryOp;
+use crate::middle::types::backend::llvm::types::LLVMUnaryOp;
+use crate::middle::types::frontend::lexer::tokenkind::TokenKind;
+use crate::middle::types::frontend::lexer::types::ThrushType;
 
-use super::super::super::super::middle::types::*;
-
-use super::{Instruction, context::CodeGenContext, memory::SymbolAllocated, valuegen};
+use super::{Instruction, context::LLVMCodeGenContext, memory::SymbolAllocated, valuegen};
 
 use super::typegen;
 
@@ -13,8 +13,8 @@ use inkwell::{
 };
 
 pub fn unary_op<'ctx>(
-    context: &CodeGenContext<'_, 'ctx>,
-    unary: UnaryOp<'ctx>,
+    context: &LLVMCodeGenContext<'_, 'ctx>,
+    unary: LLVMUnaryOp<'ctx>,
 ) -> BasicValueEnum<'ctx> {
     let llvm_builder: &Builder = context.get_llvm_builder();
     let llvm_context: &Context = context.get_llvm_context();
@@ -125,7 +125,8 @@ pub fn unary_op<'ctx>(
     }
 
     if let (TokenKind::Bang, _, Instruction::Boolean(_, bool, _)) = unary {
-        let value: IntValue = valuegen::integer(llvm_context, &Type::Bool, *bool as u64, false);
+        let value: IntValue =
+            valuegen::integer(llvm_context, &ThrushType::Bool, *bool as u64, false);
         let result: IntValue = llvm_builder.build_not(value, "").unwrap();
 
         return result.into();

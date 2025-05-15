@@ -6,11 +6,13 @@ use inkwell::{
 };
 
 use crate::{
-    backend::llvm::compiler::{context::CodeGenContext, predicates, valuegen},
-    middle::{
-        instruction::Instruction,
-        statement::BinaryOp,
-        types::{TokenKind, Type},
+    backend::llvm::compiler::{context::LLVMCodeGenContext, predicates, valuegen},
+    middle::types::{
+        backend::llvm::types::LLVMBinaryOp,
+        frontend::{
+            lexer::{tokenkind::TokenKind, types::ThrushType},
+            parser::stmts::instruction::Instruction,
+        },
     },
 };
 
@@ -37,9 +39,9 @@ pub fn ptr_operation<'ctx>(
 }
 
 pub fn ptr_binaryop<'ctx>(
-    binary: BinaryOp<'ctx>,
-    target_type: &Type,
-    symbols: &mut CodeGenContext<'_, 'ctx>,
+    binary: LLVMBinaryOp<'ctx>,
+    target_type: &ThrushType,
+    symbols: &mut LLVMCodeGenContext<'_, 'ctx>,
 ) -> BasicValueEnum<'ctx> {
     let context: &Context = symbols.get_llvm_context();
     let builder: &Builder = symbols.get_llvm_builder();

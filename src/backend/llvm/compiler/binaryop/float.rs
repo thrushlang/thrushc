@@ -1,12 +1,12 @@
 use crate::{
     backend::llvm::compiler::predicates,
-    middle::{
-        statement::{BinaryOp, UnaryOp},
-        types::{TokenKind, Type},
+    middle::types::{
+        backend::llvm::types::{LLVMBinaryOp, LLVMUnaryOp},
+        frontend::lexer::{tokenkind::TokenKind, types::ThrushType},
     },
 };
 
-use super::super::{Instruction, context::CodeGenContext, unaryop, utils, valuegen};
+use super::super::{Instruction, context::LLVMCodeGenContext, unaryop, utils, valuegen};
 
 use inkwell::{
     builder::Builder,
@@ -49,9 +49,9 @@ pub fn float_operation<'ctx>(
 }
 
 pub fn float_binaryop<'ctx>(
-    binary: BinaryOp<'ctx>,
-    target_type: &Type,
-    context: &mut CodeGenContext<'_, 'ctx>,
+    binary: LLVMBinaryOp<'ctx>,
+    target_type: &ThrushType,
+    context: &mut LLVMCodeGenContext<'_, 'ctx>,
 ) -> BasicValueEnum<'ctx> {
     /* ######################################################################
 
@@ -133,11 +133,11 @@ pub fn float_binaryop<'ctx>(
         Instruction::UnaryOp { .. },
     ) = binary
     {
-        let left_dissasembled: UnaryOp = binary.0.as_unaryop();
+        let left_dissasembled: LLVMUnaryOp = binary.0.as_unaryop();
 
         let mut left_compiled: BasicValueEnum = unaryop::unary_op(context, left_dissasembled);
 
-        let right_dissasembled: UnaryOp = binary.2.as_unaryop();
+        let right_dissasembled: LLVMUnaryOp = binary.2.as_unaryop();
 
         let mut right_compiled: BasicValueEnum = unaryop::unary_op(context, right_dissasembled);
 
@@ -188,7 +188,7 @@ pub fn float_binaryop<'ctx>(
         let mut left_compiled: BasicValueEnum =
             valuegen::generate_expression(binary.0, target_type, context);
 
-        let right_dissasembled: UnaryOp = binary.2.as_unaryop();
+        let right_dissasembled: LLVMUnaryOp = binary.2.as_unaryop();
 
         let mut right_compiled: BasicValueEnum = unaryop::unary_op(context, right_dissasembled);
 
@@ -233,7 +233,7 @@ pub fn float_binaryop<'ctx>(
         },
     ) = binary
     {
-        let left_dissasembled: UnaryOp = binary.0.as_unaryop();
+        let left_dissasembled: LLVMUnaryOp = binary.0.as_unaryop();
 
         let mut left_compiled: BasicValueEnum = unaryop::unary_op(context, left_dissasembled);
 
@@ -286,7 +286,7 @@ pub fn float_binaryop<'ctx>(
             *left_signed,
         );
 
-        let right_dissasembled: UnaryOp = binary.2.as_unaryop();
+        let right_dissasembled: LLVMUnaryOp = binary.2.as_unaryop();
 
         let mut right_compiled: BasicValueEnum = unaryop::unary_op(context, right_dissasembled);
 
@@ -336,7 +336,7 @@ pub fn float_binaryop<'ctx>(
         let mut left_compiled: BasicValueEnum =
             valuegen::generate_expression(binary.0, target_type, context);
 
-        let right_dissasembled: UnaryOp = binary.2.as_unaryop();
+        let right_dissasembled: LLVMUnaryOp = binary.2.as_unaryop();
 
         let mut right_compiled: BasicValueEnum = unaryop::unary_op(context, right_dissasembled);
 
@@ -387,7 +387,7 @@ pub fn float_binaryop<'ctx>(
         },
     ) = binary
     {
-        let left_dissasembled: UnaryOp = binary.0.as_unaryop();
+        let left_dissasembled: LLVMUnaryOp = binary.0.as_unaryop();
 
         let mut left_compiled: BasicValueEnum = unaryop::unary_op(context, left_dissasembled);
 
@@ -434,12 +434,12 @@ pub fn float_binaryop<'ctx>(
         Instruction::UnaryOp { .. },
     ) = binary
     {
-        let left_dissasembled: BinaryOp = binary.0.as_binary();
+        let left_dissasembled: LLVMBinaryOp = binary.0.as_binary();
 
         let mut left_compiled: FloatValue =
             float_binaryop(left_dissasembled, target_type, context).into_float_value();
 
-        let right_dissasembled: UnaryOp = binary.2.as_unaryop();
+        let right_dissasembled: LLVMUnaryOp = binary.2.as_unaryop();
 
         let mut right_compiled: BasicValueEnum = unaryop::unary_op(context, right_dissasembled);
 
@@ -485,12 +485,12 @@ pub fn float_binaryop<'ctx>(
         Instruction::UnaryOp { .. },
     ) = binary
     {
-        let left_dissasembled: BinaryOp = left_instr.as_binary();
+        let left_dissasembled: LLVMBinaryOp = left_instr.as_binary();
 
         let mut left_compiled: FloatValue =
             float_binaryop(left_dissasembled, target_type, context).into_float_value();
 
-        let right_dissasembled: UnaryOp = binary.2.as_unaryop();
+        let right_dissasembled: LLVMUnaryOp = binary.2.as_unaryop();
 
         let mut right_compiled: BasicValueEnum = unaryop::unary_op(context, right_dissasembled);
 
@@ -536,11 +536,11 @@ pub fn float_binaryop<'ctx>(
         },
     ) = binary
     {
-        let left_dissasembled: UnaryOp = binary.0.as_unaryop();
+        let left_dissasembled: LLVMUnaryOp = binary.0.as_unaryop();
 
         let mut left_compiled: BasicValueEnum = unaryop::unary_op(context, left_dissasembled);
 
-        let right_dissasembled: BinaryOp = right_instr.as_binary();
+        let right_dissasembled: LLVMBinaryOp = right_instr.as_binary();
 
         let mut right_compiled: FloatValue =
             float_binaryop(right_dissasembled, target_type, context).into_float_value();
@@ -841,7 +841,7 @@ pub fn float_binaryop<'ctx>(
         },
     ) = binary
     {
-        let left_dissasembled: BinaryOp = left_instr.as_binary();
+        let left_dissasembled: LLVMBinaryOp = left_instr.as_binary();
 
         let mut left_compiled: BasicValueEnum =
             float_binaryop(left_dissasembled, target_type, context);
@@ -894,7 +894,7 @@ pub fn float_binaryop<'ctx>(
         let mut left_compiled: BasicValueEnum =
             valuegen::generate_expression(binary.0, target_type, context);
 
-        let right_dissasembled: BinaryOp = right_instr.as_binary();
+        let right_dissasembled: LLVMBinaryOp = right_instr.as_binary();
 
         let mut right_compiled: BasicValueEnum =
             float_binaryop(right_dissasembled, target_type, context);
@@ -1118,7 +1118,7 @@ pub fn float_binaryop<'ctx>(
             left_compiled = new_left_compiled;
         }
 
-        let right_dissasembled: BinaryOp = binary.2.as_binary();
+        let right_dissasembled: LLVMBinaryOp = binary.2.as_binary();
 
         let mut right_compiled: BasicValueEnum =
             float_binaryop(right_dissasembled, target_type, context);
@@ -1159,7 +1159,7 @@ pub fn float_binaryop<'ctx>(
         },
     ) = binary
     {
-        let left_dissasembled: BinaryOp = binary.0.as_binary();
+        let left_dissasembled: LLVMBinaryOp = binary.0.as_binary();
 
         let mut left_compiled: FloatValue =
             float_binaryop(left_dissasembled, target_type, context).into_float_value();
@@ -1212,7 +1212,7 @@ pub fn float_binaryop<'ctx>(
             *left_signed,
         );
 
-        let right_dissasembled: BinaryOp = binary.2.as_binary();
+        let right_dissasembled: LLVMBinaryOp = binary.2.as_binary();
 
         let mut right_compiled: FloatValue =
             float_binaryop(right_dissasembled, target_type, context).into_float_value();
@@ -1249,7 +1249,7 @@ pub fn float_binaryop<'ctx>(
         Instruction::Float(right_type, right_num, right_signed, ..),
     ) = binary
     {
-        let left_dissasembled: BinaryOp = binary.0.as_binary();
+        let left_dissasembled: LLVMBinaryOp = binary.0.as_binary();
 
         let mut left_compiled: FloatValue =
             float_binaryop(left_dissasembled, target_type, context).into_float_value();
@@ -1296,12 +1296,12 @@ pub fn float_binaryop<'ctx>(
         },
     ) = binary
     {
-        let left_dissasembled: BinaryOp = binary.0.as_binary();
+        let left_dissasembled: LLVMBinaryOp = binary.0.as_binary();
 
         let mut left_compiled: BasicValueEnum =
             float_binaryop(left_dissasembled, target_type, context);
 
-        let right_dissasembled: BinaryOp = binary.2.as_binary();
+        let right_dissasembled: LLVMBinaryOp = binary.2.as_binary();
 
         let mut right_compiled: BasicValueEnum =
             float_binaryop(right_dissasembled, target_type, context);
@@ -1357,12 +1357,12 @@ pub fn float_binaryop<'ctx>(
         },
     ) = binary
     {
-        let left_dissasembled: BinaryOp = left_instr.as_binary();
+        let left_dissasembled: LLVMBinaryOp = left_instr.as_binary();
 
         let mut left_compiled: BasicValueEnum =
             float_binaryop(left_dissasembled, target_type, context);
 
-        let right_dissasembled: BinaryOp = right_instr.as_binary();
+        let right_dissasembled: LLVMBinaryOp = right_instr.as_binary();
 
         let mut right_compiled: BasicValueEnum =
             float_binaryop(right_dissasembled, target_type, context);
@@ -1406,7 +1406,7 @@ pub fn float_binaryop<'ctx>(
         Instruction::Float(right_type, right_num, right_signed, ..),
     ) = binary
     {
-        let left_dissasembled: BinaryOp = expression.as_binary();
+        let left_dissasembled: LLVMBinaryOp = expression.as_binary();
 
         let mut left_compiled: FloatValue =
             float_binaryop(left_dissasembled, target_type, context).into_float_value();
@@ -1461,7 +1461,7 @@ pub fn float_binaryop<'ctx>(
             *left_signed,
         );
 
-        let right_dissasembled: BinaryOp = expression.as_binary();
+        let right_dissasembled: LLVMBinaryOp = expression.as_binary();
 
         let mut right_compiled: FloatValue =
             float_binaryop(right_dissasembled, target_type, context).into_float_value();
@@ -1502,12 +1502,12 @@ pub fn float_binaryop<'ctx>(
         },
     ) = binary
     {
-        let left_dissasembled: BinaryOp = expression.as_binary();
+        let left_dissasembled: LLVMBinaryOp = expression.as_binary();
 
         let mut left_compiled: BasicValueEnum =
             float_binaryop(left_dissasembled, target_type, context);
 
-        let right_dissasembled: BinaryOp = binary.2.as_binary();
+        let right_dissasembled: LLVMBinaryOp = binary.2.as_binary();
 
         let mut right_compiled: BasicValueEnum =
             float_binaryop(right_dissasembled, target_type, context);
@@ -1553,12 +1553,12 @@ pub fn float_binaryop<'ctx>(
         },
     ) = binary
     {
-        let left_dissasembled: BinaryOp = binary.0.as_binary();
+        let left_dissasembled: LLVMBinaryOp = binary.0.as_binary();
 
         let mut left_compiled: BasicValueEnum =
             float_binaryop(left_dissasembled, target_type, context);
 
-        let right_dissasembled: BinaryOp = expression.as_binary();
+        let right_dissasembled: LLVMBinaryOp = expression.as_binary();
 
         let mut right_compiled: BasicValueEnum =
             float_binaryop(right_dissasembled, target_type, context);

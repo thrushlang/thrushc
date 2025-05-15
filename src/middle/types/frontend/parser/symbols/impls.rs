@@ -2,12 +2,12 @@ use std::fmt::Display;
 
 use crate::{
     frontend::lexer::Span,
-    middle::{
-        statement::{
-            StructFields,
+    middle::types::frontend::{
+        lexer::types::ThrushType,
+        parser::stmts::{
             traits::{FoundSymbolEither, FoundSymbolExtension, StructExtensions},
+            types::StructFields,
         },
-        types::Type,
     },
     standard::error::ThrushCompilerIssue,
 };
@@ -32,13 +32,13 @@ impl LocalExtensions for Local<'_> {
         self.3
     }
 
-    fn get_type(&self) -> Type {
+    fn get_type(&self) -> ThrushType {
         self.0.clone()
     }
 }
 
 impl ConstantExtensions for Constant<'_> {
-    fn get_type(&self) -> Type {
+    fn get_type(&self) -> ThrushType {
         self.0.clone()
     }
 }
@@ -48,7 +48,7 @@ impl FunctionExtensions for Function<'_> {
         self.2
     }
 
-    fn get_type(&self) -> Type {
+    fn get_type(&self) -> ThrushType {
         self.0.clone()
     }
 
@@ -62,7 +62,7 @@ impl FunctionExtensions for Function<'_> {
 }
 
 impl Parameters {
-    pub fn new(inner: Vec<Type>) -> Self {
+    pub fn new(inner: Vec<ThrushType>) -> Self {
         Self(inner)
     }
 
@@ -100,11 +100,11 @@ impl BindExtensions for Bind<'_> {
         self.0
     }
 
-    fn get_parameters_types(&self) -> &[Type] {
+    fn get_parameters_types(&self) -> &[ThrushType] {
         &self.2
     }
 
-    fn get_type(&self) -> Type {
+    fn get_type(&self) -> ThrushType {
         self.1.clone()
     }
 }
@@ -114,9 +114,9 @@ impl<'a> StructExtensions<'a> for Struct<'a> {
         self.1.iter().any(|field| field.0 == name)
     }
 
-    fn get_field_type(&self, name: &str) -> Option<Type> {
+    fn get_field_type(&self, name: &str) -> Option<ThrushType> {
         if let Some(field) = self.1.iter().find(|field| field.0 == name) {
-            let field_type: Type = field.1.clone();
+            let field_type: ThrushType = field.1.clone();
             return Some(field_type);
         }
 

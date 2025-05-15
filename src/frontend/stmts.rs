@@ -5,15 +5,20 @@ use ahash::AHashMap as HashMap;
 use crate::{
     backend::llvm::compiler::{attributes::LLVMAttribute, conventions::CallConvention},
     lazy_static,
-    middle::{
-        instruction::Instruction,
-        statement::{
-            CustomTypeFields, EnumFields, StructFields, ThrushAttributes,
-            traits::AttributesExtensions,
+    middle::types::frontend::{
+        lexer::{
+            tokenkind::TokenKind,
+            traits::ThrushStructTypeExtensions,
+            types::{BindingsApplicant, ThrushStructType, ThrushType, generate_bindings},
         },
-        symbols::types::{Bindings, Parameters},
-        traits::ThrushStructTypeExtensions,
-        types::{BindingsApplicant, ThrushStructType, TokenKind, Type, generate_bindings},
+        parser::{
+            stmts::{
+                instruction::Instruction,
+                traits::AttributesExtensions,
+                types::{CustomTypeFields, EnumFields, StructFields, ThrushAttributes},
+            },
+            symbols::types::{Bindings, Parameters},
+        },
     },
     standard::error::ThrushCompilerIssue,
 };
@@ -121,7 +126,7 @@ pub fn build_bindings<'instr>(
         ));
     }
 
-    let kind: Type = typegen::build_type(parser_ctx)?;
+    let kind: ThrushType = typegen::build_type(parser_ctx)?;
 
     if !kind.is_struct_type() {
         return Err(ThrushCompilerIssue::Error(
@@ -300,7 +305,7 @@ fn build_bind<'instr>(
             String::from("Expected '::'."),
         )?;
 
-        let parameter_type: Type = typegen::build_type(parser_ctx)?;
+        let parameter_type: ThrushType = typegen::build_type(parser_ctx)?;
 
         parser_ctx
             .get_mut_type_ctx()
@@ -317,7 +322,7 @@ fn build_bind<'instr>(
         bind_position += 1;
     }
 
-    let return_type: Type = typegen::build_type(parser_ctx)?;
+    let return_type: ThrushType = typegen::build_type(parser_ctx)?;
 
     parser_ctx
         .get_mut_type_ctx()
@@ -425,7 +430,12 @@ fn build_for_loop<'instr>(
     let local: Instruction = build_local(parser_ctx, false)?;
     let cond: Instruction = expressions::build_expression(parser_ctx)?;
 
-    parser_ctx.mismatch_types(&Type::Bool, cond.get_type(), cond.get_span(), Some(&cond));
+    parser_ctx.mismatch_types(
+        &ThrushType::Bool,
+        cond.get_type(),
+        cond.get_span(),
+        Some(&cond),
+    );
 
     let actions: Instruction = expressions::build_expression(parser_ctx)?;
 
@@ -531,7 +541,7 @@ fn build_while_loop<'instr>(
     let conditional: Instruction = expressions::build_expr(parser_ctx)?;
 
     parser_ctx.mismatch_types(
-        &Type::Bool,
+        &ThrushType::Bool,
         conditional.get_type(),
         conditional.get_span(),
         Some(&conditional),
@@ -696,7 +706,7 @@ fn build_match<'instr>(
         let pattern: Instruction = expressions::build_expr(parser_ctx)?;
 
         parser_ctx.mismatch_types(
-            &Type::Bool,
+            &ThrushType::Bool,
             pattern.get_type(),
             pattern.get_span(),
             Some(&pattern),
@@ -752,7 +762,7 @@ fn build_match<'instr>(
 
     if start_block.has_instruction() {
         parser_ctx.mismatch_types(
-            &Type::Bool,
+            &ThrushType::Bool,
             start_pattern.get_type(),
             start_pattern.get_span(),
             Some(&start_pattern),
@@ -836,7 +846,7 @@ fn build_if_elif_else<'instr>(
     let if_condition: Instruction = expressions::build_expr(parser_ctx)?;
 
     parser_ctx.mismatch_types(
-        &Type::Bool,
+        &ThrushType::Bool,
         if_condition.get_type(),
         if_condition.get_span(),
         Some(&if_condition),
@@ -850,7 +860,7 @@ fn build_if_elif_else<'instr>(
         let elif_condition: Instruction = expressions::build_expr(parser_ctx)?;
 
         parser_ctx.mismatch_types(
-            &Type::Bool,
+            &ThrushType::Bool,
             elif_condition.get_type(),
             elif_condition.get_span(),
             Some(&elif_condition),
@@ -941,7 +951,7 @@ pub fn build_custom_type<'instr>(
             continue;
         }
 
-        let kind: Type = typegen::build_type(parser_ctx)?;
+        let kind: ThrushType = typegen::build_type(parser_ctx)?;
 
         custom_type_fields.push(kind);
     }
@@ -1026,7 +1036,7 @@ pub fn build_enum<'instr>(
                 String::from("Expected ':'."),
             )?;
 
-            let field_type: Type = typegen::build_type(parser_ctx)?;
+            let field_type: ThrushType = typegen::build_type(parser_ctx)?;
 
             if !field_type.is_integer_type()
                 && !field_type.is_float_type()
@@ -1044,7 +1054,7 @@ pub fn build_enum<'instr>(
                 let field_value: Instruction = if field_type.is_float_type() {
                     Instruction::Float(field_type.clone(), index, false, span)
                 } else if field_type.is_bool_type() {
-                    Instruction::Boolean(Type::Bool, index != 0.0, span)
+                    Instruction::Boolean(ThrushType::Bool, index != 0.0, span)
                 } else {
                     Instruction::Integer(field_type.clone(), index, false, span)
                 };
@@ -1176,7 +1186,7 @@ pub fn build_struct<'instr>(
             String::from("Expected ':'."),
         )?;
 
-        let field_type: Type = typegen::build_type(parser_ctx)?;
+        let field_type: ThrushType = typegen::build_type(parser_ctx)?;
 
         fields_types
             .1
@@ -1245,7 +1255,7 @@ pub fn build_const<'instr>(
         String::from("Expected ':'."),
     )?;
 
-    let const_type: Type = typegen::build_type(parser_ctx)?;
+    let const_type: ThrushType = typegen::build_type(parser_ctx)?;
 
     let const_attributes: ThrushAttributes =
         build_compiler_attributes(parser_ctx, &[TokenKind::Eq])?;
@@ -1339,7 +1349,7 @@ fn build_local<'instr>(
         String::from("Expected ':'."),
     )?;
 
-    let local_type: Type = typegen::build_type(parser_ctx)?;
+    let local_type: ThrushType = typegen::build_type(parser_ctx)?;
 
     let scope: usize = parser_ctx.get_scope();
 
@@ -1440,7 +1450,7 @@ fn build_return<'instr>(
         ));
     }
 
-    let function_type: Type = parser_ctx.get_type_ctx().get_function_type();
+    let function_type: ThrushType = parser_ctx.get_type_ctx().get_function_type();
 
     if parser_ctx.match_token(TokenKind::SemiColon)? {
         if parser_ctx.get_type_ctx().get_function_type().is_void_type() {
@@ -1448,7 +1458,7 @@ fn build_return<'instr>(
         }
 
         parser_ctx.mismatch_types(
-            &Type::Void,
+            &ThrushType::Void,
             &function_type,
             parser_ctx.previous().span,
             None,
@@ -1456,7 +1466,7 @@ fn build_return<'instr>(
 
         return Ok(Instruction::Return {
             expression: None,
-            kind: Type::Void,
+            kind: ThrushType::Void,
             span,
         });
     }
@@ -1584,7 +1594,7 @@ pub fn build_function<'instr>(
     }
 
     let mut parameters: Vec<Instruction> = Vec::with_capacity(10);
-    let mut parameters_types: Vec<Type> = Vec::with_capacity(10);
+    let mut parameters_types: Vec<ThrushType> = Vec::with_capacity(10);
 
     let mut position: u32 = 0;
 
@@ -1615,12 +1625,12 @@ pub fn build_function<'instr>(
         let parameter_span: Span = parameter_tk.span;
 
         parser_ctx.consume(
-            TokenKind::ColonColon,
+            TokenKind::Colon,
             String::from("Syntax error"),
-            String::from("Expected '::'."),
+            String::from("Expected ':'."),
         )?;
 
-        let parameter_type: Type = typegen::build_type(parser_ctx)?;
+        let parameter_type: ThrushType = typegen::build_type(parser_ctx)?;
 
         if parameter_type.is_void_type() {
             return Err(ThrushCompilerIssue::Error(
@@ -1654,7 +1664,7 @@ pub fn build_function<'instr>(
         String::from("Expected ')'."),
     )?;
 
-    let return_type: Type = typegen::build_type(parser_ctx)?;
+    let return_type: ThrushType = typegen::build_type(parser_ctx)?;
 
     parser_ctx
         .get_mut_type_ctx()

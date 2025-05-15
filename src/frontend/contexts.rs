@@ -1,8 +1,8 @@
-use crate::middle::types::Type;
+use crate::middle::types::frontend::lexer::types::ThrushType;
 
 #[derive(Debug, Clone)]
 pub enum BindingsType {
-    Struct(Type),
+    Struct(ThrushType),
     NoRelevant,
 }
 
@@ -43,7 +43,7 @@ pub struct ParserControlContext {
 
 #[derive(Debug)]
 pub struct ParserTypeContext {
-    function_type: Type,
+    function_type: ThrushType,
     bindings_type: BindingsType,
     position: TypePosition,
     bind_instance: bool,
@@ -52,7 +52,7 @@ pub struct ParserTypeContext {
 impl ParserTypeContext {
     pub fn new() -> Self {
         Self {
-            function_type: Type::Void,
+            function_type: ThrushType::Void,
             bindings_type: BindingsType::NoRelevant,
             position: TypePosition::NoRelevant,
             bind_instance: false,
@@ -67,11 +67,11 @@ impl ParserTypeContext {
         self.position = new_position;
     }
 
-    pub fn set_function_type(&mut self, new_type: Type) {
+    pub fn set_function_type(&mut self, new_type: ThrushType) {
         self.function_type = new_type;
     }
 
-    pub fn get_function_type(&self) -> Type {
+    pub fn get_function_type(&self) -> ThrushType {
         self.function_type.clone()
     }
 
@@ -191,10 +191,10 @@ impl BindingsType {
         matches!(self, BindingsType::Struct(_))
     }
 
-    pub fn dissamble(&self) -> Type {
+    pub fn dissamble(&self) -> ThrushType {
         match self {
             BindingsType::Struct(tp) => tp.clone(),
-            BindingsType::NoRelevant => Type::Void,
+            BindingsType::NoRelevant => ThrushType::Void,
         }
     }
 }

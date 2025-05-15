@@ -1,10 +1,9 @@
 use std::fmt::{self, Display};
 use std::process;
 
-use crate::middle::statement::traits::TokenExtensions;
+use crate::middle::types::frontend::lexer::tokenkind::TokenKind;
+use crate::middle::types::frontend::parser::stmts::traits::TokenExtensions;
 use crate::standard::misc::CompilerFile;
-
-use super::super::middle::types::*;
 
 use super::super::{
     logging::LoggingType,

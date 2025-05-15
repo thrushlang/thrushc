@@ -1,10 +1,10 @@
 use {
-    super::super::{Instruction, context::CodeGenContext, unaryop, utils, valuegen},
+    super::super::{Instruction, context::LLVMCodeGenContext, unaryop, utils, valuegen},
     crate::{
         backend::llvm::compiler::predicates,
-        middle::{
-            statement::{BinaryOp, UnaryOp},
-            types::{TokenKind, Type},
+        middle::types::{
+            backend::llvm::types::{LLVMBinaryOp, LLVMUnaryOp},
+            frontend::lexer::{tokenkind::TokenKind, types::ThrushType},
         },
     },
     inkwell::{
@@ -16,7 +16,7 @@ use {
 };
 
 pub fn int_operation<'ctx>(
-    context: &CodeGenContext<'_, 'ctx>,
+    context: &LLVMCodeGenContext<'_, 'ctx>,
     left: BasicValueEnum<'ctx>,
     right: BasicValueEnum<'ctx>,
     signatures: (bool, bool),
@@ -133,9 +133,9 @@ pub fn int_operation<'ctx>(
 }
 
 pub fn integer_binaryop<'ctx>(
-    binary: BinaryOp<'ctx>,
-    target_type: &Type,
-    context: &mut CodeGenContext<'_, 'ctx>,
+    binary: LLVMBinaryOp<'ctx>,
+    target_type: &ThrushType,
+    context: &mut LLVMCodeGenContext<'_, 'ctx>,
 ) -> BasicValueEnum<'ctx> {
     let llvm_context: &Context = context.get_llvm_context();
     let llvm_builder: &Builder = context.get_llvm_builder();
@@ -261,7 +261,7 @@ pub fn integer_binaryop<'ctx>(
         let mut left_compiled: IntValue =
             valuegen::integer(llvm_context, left_type, *left as u64, false);
 
-        let right_dissasembled: UnaryOp = binary.2.as_unaryop();
+        let right_dissasembled: LLVMUnaryOp = binary.2.as_unaryop();
 
         let mut right_compiled: BasicValueEnum = unaryop::unary_op(context, right_dissasembled);
 
@@ -294,7 +294,7 @@ pub fn integer_binaryop<'ctx>(
         Instruction::Boolean(right_type, right, ..),
     ) = binary
     {
-        let left_dissasembled: UnaryOp = binary.0.as_unaryop();
+        let left_dissasembled: LLVMUnaryOp = binary.0.as_unaryop();
 
         let mut left_compiled: BasicValueEnum = unaryop::unary_op(context, left_dissasembled);
 
@@ -457,11 +457,11 @@ pub fn integer_binaryop<'ctx>(
         },
     ) = binary
     {
-        let left_dissasembled: UnaryOp = binary.0.as_unaryop();
+        let left_dissasembled: LLVMUnaryOp = binary.0.as_unaryop();
 
         let mut left_compiled: BasicValueEnum = unaryop::unary_op(context, left_dissasembled);
 
-        let right_dissasembled: UnaryOp = binary.2.as_unaryop();
+        let right_dissasembled: LLVMUnaryOp = binary.2.as_unaryop();
 
         let mut right_compiled: BasicValueEnum = unaryop::unary_op(context, right_dissasembled);
 
@@ -516,9 +516,9 @@ pub fn integer_binaryop<'ctx>(
         let mut left_compiled: BasicValueEnum =
             valuegen::generate_expression(binary.0, target_type, context);
 
-        let left_call_type: &Type = left_call_type;
+        let left_call_type: &ThrushType = left_call_type;
 
-        let right_dissasembled: UnaryOp = binary.2.as_unaryop();
+        let right_dissasembled: LLVMUnaryOp = binary.2.as_unaryop();
 
         let mut right_compiled: BasicValueEnum = unaryop::unary_op(context, right_dissasembled);
 
@@ -570,7 +570,7 @@ pub fn integer_binaryop<'ctx>(
         },
     ) = binary
     {
-        let left_dissasembled: UnaryOp = binary.0.as_unaryop();
+        let left_dissasembled: LLVMUnaryOp = binary.0.as_unaryop();
 
         let mut left_compiled: BasicValueEnum = unaryop::unary_op(context, left_dissasembled);
 
@@ -625,7 +625,7 @@ pub fn integer_binaryop<'ctx>(
         let mut left_compiled: IntValue =
             valuegen::integer(llvm_context, left_type, *left_num as u64, *left_signed);
 
-        let right_dissasembled: UnaryOp = binary.2.as_unaryop();
+        let right_dissasembled: LLVMUnaryOp = binary.2.as_unaryop();
 
         let mut right_compiled: BasicValueEnum = unaryop::unary_op(context, right_dissasembled);
 
@@ -674,7 +674,7 @@ pub fn integer_binaryop<'ctx>(
         Instruction::Integer(right_type, right_num, right_signed, ..),
     ) = binary
     {
-        let left_dissasembled: UnaryOp = binary.0.as_unaryop();
+        let left_dissasembled: LLVMUnaryOp = binary.0.as_unaryop();
 
         let mut left_compiled: BasicValueEnum = unaryop::unary_op(context, left_dissasembled);
 
@@ -734,7 +734,7 @@ pub fn integer_binaryop<'ctx>(
         let mut left_compiled: BasicValueEnum =
             valuegen::generate_expression(binary.0, target_type, context);
 
-        let right_dissasembled: UnaryOp = binary.2.as_unaryop();
+        let right_dissasembled: LLVMUnaryOp = binary.2.as_unaryop();
 
         let mut right_compiled: BasicValueEnum = unaryop::unary_op(context, right_dissasembled);
 
@@ -788,7 +788,7 @@ pub fn integer_binaryop<'ctx>(
         },
     ) = binary
     {
-        let left_dissasembled: UnaryOp = binary.0.as_unaryop();
+        let left_dissasembled: LLVMUnaryOp = binary.0.as_unaryop();
 
         let mut left_compiled: BasicValueEnum = unaryop::unary_op(context, left_dissasembled);
 
@@ -842,12 +842,12 @@ pub fn integer_binaryop<'ctx>(
         },
     ) = binary
     {
-        let left_dissasembled: BinaryOp = binary.0.as_binary();
+        let left_dissasembled: LLVMBinaryOp = binary.0.as_binary();
 
         let mut left_compiled: IntValue =
             integer_binaryop(left_dissasembled, target_type, context).into_int_value();
 
-        let right_dissasembled: UnaryOp = binary.2.as_unaryop();
+        let right_dissasembled: LLVMUnaryOp = binary.2.as_unaryop();
 
         let mut right_compiled: BasicValueEnum = unaryop::unary_op(context, right_dissasembled);
 
@@ -900,12 +900,12 @@ pub fn integer_binaryop<'ctx>(
         },
     ) = binary
     {
-        let left_dissasembled: BinaryOp = left_instr.as_binary();
+        let left_dissasembled: LLVMBinaryOp = left_instr.as_binary();
 
         let mut left_compiled: IntValue =
             integer_binaryop(left_dissasembled, target_type, context).into_int_value();
 
-        let right_dissasembled: UnaryOp = binary.2.as_unaryop();
+        let right_dissasembled: LLVMUnaryOp = binary.2.as_unaryop();
 
         let mut right_compiled: BasicValueEnum = unaryop::unary_op(context, right_dissasembled);
 
@@ -958,11 +958,11 @@ pub fn integer_binaryop<'ctx>(
         },
     ) = binary
     {
-        let left_dissasembled: UnaryOp = binary.0.as_unaryop();
+        let left_dissasembled: LLVMUnaryOp = binary.0.as_unaryop();
 
         let mut left_compiled: BasicValueEnum = unaryop::unary_op(context, left_dissasembled);
 
-        let right_dissasembled: BinaryOp = right_instr.as_binary();
+        let right_dissasembled: LLVMBinaryOp = right_instr.as_binary();
 
         let mut right_compiled: IntValue =
             integer_binaryop(right_dissasembled, target_type, context).into_int_value();
@@ -1302,7 +1302,7 @@ pub fn integer_binaryop<'ctx>(
         },
     ) = binary
     {
-        let left_dissasembled: BinaryOp = left_instr.as_binary();
+        let left_dissasembled: LLVMBinaryOp = left_instr.as_binary();
 
         let mut left_compiled: BasicValueEnum =
             integer_binaryop(left_dissasembled, target_type, context);
@@ -1363,7 +1363,7 @@ pub fn integer_binaryop<'ctx>(
         let mut left_compiled: BasicValueEnum =
             valuegen::generate_expression(binary.0, target_type, context);
 
-        let right_dissasembled: BinaryOp = right_instr.as_binary();
+        let right_dissasembled: LLVMBinaryOp = right_instr.as_binary();
 
         let mut right_compiled: BasicValueEnum =
             integer_binaryop(right_dissasembled, target_type, context);
@@ -1583,7 +1583,7 @@ pub fn integer_binaryop<'ctx>(
         },
     ) = binary
     {
-        let left_dissasembled: BinaryOp = binary.0.as_binary();
+        let left_dissasembled: LLVMBinaryOp = binary.0.as_binary();
 
         let mut left_compiled: IntValue =
             integer_binaryop(left_dissasembled, target_type, context).into_int_value();
@@ -1650,7 +1650,7 @@ pub fn integer_binaryop<'ctx>(
             left_compiled = new_left_compiled;
         }
 
-        let right_dissasembled: BinaryOp = binary.2.as_binary();
+        let right_dissasembled: LLVMBinaryOp = binary.2.as_binary();
 
         let mut right_compiled: BasicValueEnum =
             integer_binaryop(right_dissasembled, target_type, context);
@@ -1697,7 +1697,7 @@ pub fn integer_binaryop<'ctx>(
         let mut left_compiled: IntValue =
             valuegen::integer(llvm_context, left_type, *left_num as u64, *left_signed);
 
-        let right_dissasembled: BinaryOp = binary.2.as_binary();
+        let right_dissasembled: LLVMBinaryOp = binary.2.as_binary();
 
         let mut right_compiled: IntValue =
             integer_binaryop(right_dissasembled, target_type, context).into_int_value();
@@ -1744,7 +1744,7 @@ pub fn integer_binaryop<'ctx>(
         Instruction::Integer(right_type, right_num, right_signed, ..),
     ) = binary
     {
-        let left_dissasembled: BinaryOp = binary.0.as_binary();
+        let left_dissasembled: LLVMBinaryOp = binary.0.as_binary();
 
         let mut left_compiled: IntValue =
             integer_binaryop(left_dissasembled, target_type, context).into_int_value();
@@ -1850,7 +1850,7 @@ pub fn integer_binaryop<'ctx>(
         Instruction::Integer(right_type, right_num, right_signed, ..),
     ) = binary
     {
-        let left_dissasembled: BinaryOp = expression.as_binary();
+        let left_dissasembled: LLVMBinaryOp = expression.as_binary();
 
         let mut left_compiled: IntValue =
             integer_binaryop(left_dissasembled, target_type, context).into_int_value();
@@ -1905,7 +1905,7 @@ pub fn integer_binaryop<'ctx>(
         let mut left_compiled: IntValue =
             valuegen::integer(llvm_context, left_type, *left_num as u64, *left_signed);
 
-        let right_dissasembled: BinaryOp = expression.as_binary();
+        let right_dissasembled: LLVMBinaryOp = expression.as_binary();
 
         let mut right_compiled: IntValue =
             integer_binaryop(right_dissasembled, target_type, context).into_int_value();
@@ -1962,12 +1962,12 @@ pub fn integer_binaryop<'ctx>(
         },
     ) = binary
     {
-        let left_dissasembled: BinaryOp = binary.0.as_binary();
+        let left_dissasembled: LLVMBinaryOp = binary.0.as_binary();
 
         let mut left_compiled: IntValue =
             integer_binaryop(left_dissasembled, target_type, context).into_int_value();
 
-        let right_dissasembled: BinaryOp = binary.2.as_binary();
+        let right_dissasembled: LLVMBinaryOp = binary.2.as_binary();
 
         let mut right_compiled: IntValue =
             integer_binaryop(right_dissasembled, target_type, context).into_int_value();
@@ -2031,12 +2031,12 @@ pub fn integer_binaryop<'ctx>(
         },
     ) = binary
     {
-        let left_dissasembled: BinaryOp = left_instr.as_binary();
+        let left_dissasembled: LLVMBinaryOp = left_instr.as_binary();
 
         let mut left_compiled: IntValue =
             integer_binaryop(left_dissasembled, target_type, context).into_int_value();
 
-        let right_dissasembled: BinaryOp = right_instr.as_binary();
+        let right_dissasembled: LLVMBinaryOp = right_instr.as_binary();
 
         let mut right_compiled: IntValue =
             integer_binaryop(right_dissasembled, target_type, context).into_int_value();
@@ -2090,12 +2090,12 @@ pub fn integer_binaryop<'ctx>(
         },
     ) = binary
     {
-        let left_dissasembled: BinaryOp = expression.as_binary();
+        let left_dissasembled: LLVMBinaryOp = expression.as_binary();
 
         let mut left_compiled: IntValue =
             integer_binaryop(left_dissasembled, target_type, context).into_int_value();
 
-        let right_dissasembled: BinaryOp = binary.2.as_binary();
+        let right_dissasembled: LLVMBinaryOp = binary.2.as_binary();
 
         let mut right_compiled: IntValue =
             integer_binaryop(right_dissasembled, target_type, context).into_int_value();
@@ -2149,12 +2149,12 @@ pub fn integer_binaryop<'ctx>(
         },
     ) = binary
     {
-        let left_dissasembled: BinaryOp = binary.0.as_binary();
+        let left_dissasembled: LLVMBinaryOp = binary.0.as_binary();
 
         let mut left_compiled: IntValue =
             integer_binaryop(left_dissasembled, target_type, context).into_int_value();
 
-        let right_dissasembled: BinaryOp = expression.as_binary();
+        let right_dissasembled: LLVMBinaryOp = expression.as_binary();
 
         let mut right_compiled: IntValue =
             integer_binaryop(right_dissasembled, target_type, context).into_int_value();

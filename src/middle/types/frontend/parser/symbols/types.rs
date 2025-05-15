@@ -2,9 +2,9 @@ use ahash::AHashMap as HashMap;
 
 use crate::{
     frontend::lexer::Span,
-    middle::{
-        statement::{CustomType, Enum, ThrushAttributes},
-        types::Type,
+    middle::types::frontend::{
+        lexer::types::ThrushType,
+        parser::stmts::types::{CustomType, Enum, ThrushAttributes},
     },
 };
 
@@ -17,24 +17,24 @@ pub type FoundSymbolId<'instr> = (
     Option<(&'instr str, usize)>,
 );
 
-pub type Constant<'instr> = (Type, ThrushAttributes<'instr>);
+pub type Constant<'instr> = (ThrushType, ThrushAttributes<'instr>);
 
 pub type Struct<'instr> = (
     &'instr str,
-    Vec<(&'instr str, Type, u32)>,
+    Vec<(&'instr str, ThrushType, u32)>,
     ThrushAttributes<'instr>,
     Bindings<'instr>,
 );
 
-pub type Bindings<'instr> = Vec<(&'instr str, Type, Vec<Type>)>;
-pub type Bind<'instr> = &'instr (&'instr str, Type, Vec<Type>);
+pub type Bindings<'instr> = Vec<(&'instr str, ThrushType, Vec<ThrushType>)>;
+pub type Bind<'instr> = &'instr (&'instr str, ThrushType, Vec<ThrushType>);
 
-pub type Function<'instr> = (Type, Parameters, bool);
+pub type Function<'instr> = (ThrushType, Parameters, bool);
 
 #[derive(Debug, Clone)]
-pub struct Parameters(pub Vec<Type>);
+pub struct Parameters(pub Vec<ThrushType>);
 
-pub type Local<'instr> = (Type, bool, bool, Span);
+pub type Local<'instr> = (ThrushType, bool, bool, Span);
 
 pub type CustomTypes<'instr> = HashMap<&'instr str, CustomType<'instr>>;
 pub type Constants<'instr> = HashMap<&'instr str, Constant<'instr>>;

@@ -1,14 +1,14 @@
-use crate::middle::instruction::Instruction;
-
-use super::{
-    super::{middle::types::*, standard::error::ThrushCompilerIssue},
-    lexer::Span,
+use crate::middle::types::frontend::{
+    lexer::{tokenkind::TokenKind, types::ThrushType},
+    parser::stmts::instruction::Instruction,
 };
+
+use super::{super::standard::error::ThrushCompilerIssue, lexer::Span};
 
 pub fn check_binaryop(
     operator: &TokenKind,
-    a: &Type,
-    b: &Type,
+    a: &ThrushType,
+    b: &ThrushType,
     span: Span,
 ) -> Result<(), ThrushCompilerIssue> {
     match operator {
@@ -27,36 +27,40 @@ pub fn check_binaryop(
 
 fn check_binary_arithmetic(
     operator: &TokenKind,
-    a: &Type,
-    b: &Type,
+    a: &ThrushType,
+    b: &ThrushType,
     span: Span,
 ) -> Result<(), ThrushCompilerIssue> {
     match (a, b) {
         (
-            Type::S8
-            | Type::S16
-            | Type::S32
-            | Type::S64
-            | Type::U8
-            | Type::U16
-            | Type::U32
-            | Type::U64,
-            Type::S8
-            | Type::S16
-            | Type::S32
-            | Type::S64
-            | Type::U8
-            | Type::U16
-            | Type::U32
-            | Type::U64,
+            ThrushType::S8
+            | ThrushType::S16
+            | ThrushType::S32
+            | ThrushType::S64
+            | ThrushType::U8
+            | ThrushType::U16
+            | ThrushType::U32
+            | ThrushType::U64,
+            ThrushType::S8
+            | ThrushType::S16
+            | ThrushType::S32
+            | ThrushType::S64
+            | ThrushType::U8
+            | ThrushType::U16
+            | ThrushType::U32
+            | ThrushType::U64,
         ) => Ok(()),
 
-        (Type::F32 | Type::F64, Type::F32 | Type::F64) => Ok(()),
-        (Type::Mut(a_subtype), Type::Mut(b_subtype)) => {
+        (ThrushType::F32 | ThrushType::F64, ThrushType::F32 | ThrushType::F64) => Ok(()),
+        (ThrushType::Mut(a_subtype), ThrushType::Mut(b_subtype)) => {
             check_binary_arithmetic(operator, a_subtype, b_subtype, span)
         }
-        (any, Type::Mut(b_subtype)) => check_binary_arithmetic(operator, any, b_subtype, span),
-        (Type::Mut(a_subtype), any) => check_binary_arithmetic(operator, a_subtype, any, span),
+        (any, ThrushType::Mut(b_subtype)) => {
+            check_binary_arithmetic(operator, any, b_subtype, span)
+        }
+        (ThrushType::Mut(a_subtype), any) => {
+            check_binary_arithmetic(operator, a_subtype, any, span)
+        }
 
         _ => Err(ThrushCompilerIssue::Error(
             String::from("Type checking"),
@@ -73,32 +77,34 @@ fn check_binary_arithmetic(
 #[inline(always)]
 fn check_binary_equality(
     operator: &TokenKind,
-    a: &Type,
-    b: &Type,
+    a: &ThrushType,
+    b: &ThrushType,
     span: Span,
 ) -> Result<(), ThrushCompilerIssue> {
     if matches!(
         (a, b),
         (
-            Type::S8
-                | Type::S16
-                | Type::S32
-                | Type::S64
-                | Type::U8
-                | Type::U16
-                | Type::U32
-                | Type::U64,
-            Type::S8
-                | Type::S16
-                | Type::S32
-                | Type::S64
-                | Type::U8
-                | Type::U16
-                | Type::U32
-                | Type::U64,
-        ) | (Type::F32 | Type::F64, Type::F32 | Type::F64)
-            | (Type::Bool, Type::Bool)
-            | (Type::Char, Type::Char)
+            ThrushType::S8
+                | ThrushType::S16
+                | ThrushType::S32
+                | ThrushType::S64
+                | ThrushType::U8
+                | ThrushType::U16
+                | ThrushType::U32
+                | ThrushType::U64,
+            ThrushType::S8
+                | ThrushType::S16
+                | ThrushType::S32
+                | ThrushType::S64
+                | ThrushType::U8
+                | ThrushType::U16
+                | ThrushType::U32
+                | ThrushType::U64,
+        ) | (
+            ThrushType::F32 | ThrushType::F64,
+            ThrushType::F32 | ThrushType::F64
+        ) | (ThrushType::Bool, ThrushType::Bool)
+            | (ThrushType::Char, ThrushType::Char)
     ) {
         return Ok(());
     }
@@ -124,23 +130,37 @@ fn check_binary_equality(
 
 fn check_binary_comparasion(
     operator: &TokenKind,
-    a: &Type,
-    b: &Type,
+    a: &ThrushType,
+    b: &ThrushType,
     span: Span,
 ) -> Result<(), ThrushCompilerIssue> {
     if let (
-        Type::S8 | Type::S16 | Type::S32 | Type::S64 | Type::U8 | Type::U16 | Type::U32 | Type::U64,
-        Type::S8 | Type::S16 | Type::S32 | Type::S64 | Type::U8 | Type::U16 | Type::U32 | Type::U64,
+        ThrushType::S8
+        | ThrushType::S16
+        | ThrushType::S32
+        | ThrushType::S64
+        | ThrushType::U8
+        | ThrushType::U16
+        | ThrushType::U32
+        | ThrushType::U64,
+        ThrushType::S8
+        | ThrushType::S16
+        | ThrushType::S32
+        | ThrushType::S64
+        | ThrushType::U8
+        | ThrushType::U16
+        | ThrushType::U32
+        | ThrushType::U64,
     ) = (a, b)
     {
         return Ok(());
-    } else if let (Type::F32 | Type::F64, Type::F32 | Type::F64) = (a, b) {
+    } else if let (ThrushType::F32 | ThrushType::F64, ThrushType::F32 | ThrushType::F64) = (a, b) {
         return Ok(());
-    } else if let (Type::Mut(a_subtype), Type::Mut(b_subtype)) = (a, b) {
+    } else if let (ThrushType::Mut(a_subtype), ThrushType::Mut(b_subtype)) = (a, b) {
         return check_binary_comparasion(operator, a_subtype, b_subtype, span);
-    } else if let (Type::Mut(a_subtype), any) = (a, b) {
+    } else if let (ThrushType::Mut(a_subtype), any) = (a, b) {
         return check_binary_comparasion(operator, a_subtype, any, span);
-    } else if let (any, Type::Mut(b_subtype)) = (a, b) {
+    } else if let (any, ThrushType::Mut(b_subtype)) = (a, b) {
         return check_binary_comparasion(operator, any, b_subtype, span);
     }
 
@@ -157,11 +177,11 @@ fn check_binary_comparasion(
 
 fn check_binary_gate(
     operator: &TokenKind,
-    a: &Type,
-    b: &Type,
+    a: &ThrushType,
+    b: &ThrushType,
     span: Span,
 ) -> Result<(), ThrushCompilerIssue> {
-    if let (Type::Bool, Type::Bool) = (a, b) {
+    if let (ThrushType::Bool, ThrushType::Bool) = (a, b) {
         return Ok(());
     }
 
@@ -178,21 +198,35 @@ fn check_binary_gate(
 
 fn check_binary_shift(
     operator: &TokenKind,
-    a: &Type,
-    b: &Type,
+    a: &ThrushType,
+    b: &ThrushType,
     span: Span,
 ) -> Result<(), ThrushCompilerIssue> {
     if let (
-        Type::S8 | Type::S16 | Type::S32 | Type::S64 | Type::U8 | Type::U16 | Type::U32 | Type::U64,
-        Type::S8 | Type::S16 | Type::S32 | Type::S64 | Type::U8 | Type::U16 | Type::U32 | Type::U64,
+        ThrushType::S8
+        | ThrushType::S16
+        | ThrushType::S32
+        | ThrushType::S64
+        | ThrushType::U8
+        | ThrushType::U16
+        | ThrushType::U32
+        | ThrushType::U64,
+        ThrushType::S8
+        | ThrushType::S16
+        | ThrushType::S32
+        | ThrushType::S64
+        | ThrushType::U8
+        | ThrushType::U16
+        | ThrushType::U32
+        | ThrushType::U64,
     ) = (a, b)
     {
         return Ok(());
-    } else if let (Type::Mut(a_subtype), Type::Mut(b_subtype)) = (a, b) {
+    } else if let (ThrushType::Mut(a_subtype), ThrushType::Mut(b_subtype)) = (a, b) {
         return check_binary_shift(operator, a_subtype, b_subtype, span);
-    } else if let (Type::Mut(a_subtype), any) = (a, b) {
+    } else if let (ThrushType::Mut(a_subtype), any) = (a, b) {
         return check_binary_shift(operator, a_subtype, any, span);
-    } else if let (any, Type::Mut(b_subtype)) = (a, b) {
+    } else if let (any, ThrushType::Mut(b_subtype)) = (a, b) {
         return check_binary_shift(operator, any, b_subtype, span);
     }
 
@@ -207,7 +241,11 @@ fn check_binary_shift(
     ))
 }
 
-pub fn check_unary(operator: &TokenKind, a: &Type, span: Span) -> Result<(), ThrushCompilerIssue> {
+pub fn check_unary(
+    operator: &TokenKind,
+    a: &ThrushType,
+    span: Span,
+) -> Result<(), ThrushCompilerIssue> {
     match operator {
         TokenKind::Minus | TokenKind::PlusPlus | TokenKind::MinusMinus => {
             check_general_unary(operator, a, span)
@@ -219,7 +257,7 @@ pub fn check_unary(operator: &TokenKind, a: &Type, span: Span) -> Result<(), Thr
 
 fn check_general_unary(
     operator: &TokenKind,
-    a: &Type,
+    a: &ThrushType,
     span: Span,
 ) -> Result<(), ThrushCompilerIssue> {
     if a.is_integer_type() || a.is_float_type() || a.is_mut_numeric_type() {
@@ -237,8 +275,8 @@ fn check_general_unary(
     ))
 }
 
-fn check_unary_instr_bang(a: &Type, span: Span) -> Result<(), ThrushCompilerIssue> {
-    if let Type::Bool = a {
+fn check_unary_instr_bang(a: &ThrushType, span: Span) -> Result<(), ThrushCompilerIssue> {
+    if let ThrushType::Bool = a {
         return Ok(());
     }
 
@@ -251,8 +289,8 @@ fn check_unary_instr_bang(a: &Type, span: Span) -> Result<(), ThrushCompilerIssu
 }
 
 pub fn check_type(
-    target_type: &Type,
-    from_type: &Type,
+    target_type: &ThrushType,
+    from_type: &ThrushType,
     expression: Option<&Instruction>,
     operator: Option<&TokenKind>,
     error: ThrushCompilerIssue,
@@ -285,9 +323,9 @@ pub fn check_type(
     }
 
     match (target_type, from_type, operator) {
-        (Type::Char, Type::Char, None) => Ok(()),
-        (Type::Str, Type::Str, None) => Ok(()),
-        (Type::Struct(_, target_fields), Type::Struct(_, from_fields), None) => {
+        (ThrushType::Char, ThrushType::Char, None) => Ok(()),
+        (ThrushType::Str, ThrushType::Str, None) => Ok(()),
+        (ThrushType::Struct(_, target_fields), ThrushType::Struct(_, from_fields), None) => {
             if target_fields.len() != from_fields.len() {
                 return Err(error);
             }
@@ -301,15 +339,15 @@ pub fn check_type(
             Ok(())
         }
 
-        (Type::Me(_), Type::Me(_), None) => Ok(()),
+        (ThrushType::Me(_), ThrushType::Me(_), None) => Ok(()),
 
-        (Type::Me(_), Type::Struct(_, _), None) => Ok(()),
+        (ThrushType::Me(_), ThrushType::Struct(_, _), None) => Ok(()),
 
-        (Type::Struct(_, _) | Type::Me(_), Type::Ptr(_), None) => Ok(()),
+        (ThrushType::Struct(_, _) | ThrushType::Me(_), ThrushType::Ptr(_), None) => Ok(()),
 
         (
             target_type,
-            Type::Mut(from_type),
+            ThrushType::Mut(from_type),
             Some(
                 TokenKind::BangEq
                 | TokenKind::EqEq
@@ -334,7 +372,7 @@ pub fn check_type(
         }
 
         (
-            Type::Mut(target_type),
+            ThrushType::Mut(target_type),
             any_type,
             Some(
                 TokenKind::BangEq
@@ -360,8 +398,8 @@ pub fn check_type(
         }
 
         (
-            Type::Mut(target_type),
-            Type::Mut(from_type),
+            ThrushType::Mut(target_type),
+            ThrushType::Mut(from_type),
             Some(
                 TokenKind::BangEq
                 | TokenKind::EqEq
@@ -385,20 +423,20 @@ pub fn check_type(
             Ok(())
         }
 
-        (Type::Ptr(None), Type::Ptr(None), None) => Ok(()),
-        (Type::Ptr(Some(target_type)), Type::Ptr(Some(from_type)), None) => {
+        (ThrushType::Ptr(None), ThrushType::Ptr(None), None) => Ok(()),
+        (ThrushType::Ptr(Some(target_type)), ThrushType::Ptr(Some(from_type)), None) => {
             check_type(target_type, from_type, expression, operator, error)?;
             Ok(())
         }
 
-        (Type::Ptr(Some(typed)), any, None) => {
+        (ThrushType::Ptr(Some(typed)), any, None) => {
             check_type(typed, any, expression, operator, error)?;
             Ok(())
         }
 
         (
-            Type::Bool,
-            Type::Bool,
+            ThrushType::Bool,
+            ThrushType::Bool,
             Some(
                 TokenKind::BangEq
                 | TokenKind::EqEq
@@ -413,8 +451,8 @@ pub fn check_type(
             | None,
         ) => Ok(()),
         (
-            Type::S8,
-            Type::S8 | Type::U8,
+            ThrushType::S8,
+            ThrushType::S8 | ThrushType::U8,
             Some(
                 TokenKind::Plus
                 | TokenKind::Minus
@@ -426,8 +464,8 @@ pub fn check_type(
             | None,
         ) => Ok(()),
         (
-            Type::S16,
-            Type::S16 | Type::S8 | Type::U16 | Type::U8,
+            ThrushType::S16,
+            ThrushType::S16 | ThrushType::S8 | ThrushType::U16 | ThrushType::U8,
             Some(
                 TokenKind::Plus
                 | TokenKind::Minus
@@ -439,8 +477,13 @@ pub fn check_type(
             | None,
         ) => Ok(()),
         (
-            Type::S32,
-            Type::S32 | Type::S16 | Type::S8 | Type::U32 | Type::U16 | Type::U8,
+            ThrushType::S32,
+            ThrushType::S32
+            | ThrushType::S16
+            | ThrushType::S8
+            | ThrushType::U32
+            | ThrushType::U16
+            | ThrushType::U8,
             Some(
                 TokenKind::Plus
                 | TokenKind::Minus
@@ -452,15 +495,15 @@ pub fn check_type(
             | None,
         ) => Ok(()),
         (
-            Type::S64,
-            Type::S64
-            | Type::S32
-            | Type::S16
-            | Type::S8
-            | Type::U64
-            | Type::U32
-            | Type::U16
-            | Type::U8,
+            ThrushType::S64,
+            ThrushType::S64
+            | ThrushType::S32
+            | ThrushType::S16
+            | ThrushType::S8
+            | ThrushType::U64
+            | ThrushType::U32
+            | ThrushType::U16
+            | ThrushType::U8,
             Some(
                 TokenKind::Plus
                 | TokenKind::Minus
@@ -472,8 +515,8 @@ pub fn check_type(
             | None,
         ) => Ok(()),
         (
-            Type::U8,
-            Type::U8,
+            ThrushType::U8,
+            ThrushType::U8,
             Some(
                 TokenKind::Plus
                 | TokenKind::Minus
@@ -485,8 +528,8 @@ pub fn check_type(
             | None,
         ) => Ok(()),
         (
-            Type::U16,
-            Type::U16 | Type::U8,
+            ThrushType::U16,
+            ThrushType::U16 | ThrushType::U8,
             Some(
                 TokenKind::Plus
                 | TokenKind::Minus
@@ -498,8 +541,8 @@ pub fn check_type(
             | None,
         ) => Ok(()),
         (
-            Type::U32,
-            Type::U32 | Type::U16 | Type::U8,
+            ThrushType::U32,
+            ThrushType::U32 | ThrushType::U16 | ThrushType::U8,
             Some(
                 TokenKind::Plus
                 | TokenKind::Minus
@@ -511,8 +554,8 @@ pub fn check_type(
             | None,
         ) => Ok(()),
         (
-            Type::U64,
-            Type::U64 | Type::U32 | Type::U16 | Type::U8,
+            ThrushType::U64,
+            ThrushType::U64 | ThrushType::U32 | ThrushType::U16 | ThrushType::U8,
             Some(
                 TokenKind::Plus
                 | TokenKind::Minus
@@ -524,8 +567,8 @@ pub fn check_type(
             | None,
         ) => Ok(()),
         (
-            Type::F32,
-            Type::F32,
+            ThrushType::F32,
+            ThrushType::F32,
             Some(
                 TokenKind::Plus
                 | TokenKind::Minus
@@ -537,8 +580,8 @@ pub fn check_type(
             | None,
         ) => Ok(()),
         (
-            Type::F64,
-            Type::F64 | Type::F32,
+            ThrushType::F64,
+            ThrushType::F64 | ThrushType::F32,
             Some(TokenKind::Plus | TokenKind::Minus | TokenKind::Slash | TokenKind::Star) | None,
         ) => Ok(()),
 

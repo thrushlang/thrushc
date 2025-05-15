@@ -1,15 +1,15 @@
 use std::rc::Rc;
 
-use crate::backend::llvm::compiler::context::CodeGenContextPosition;
+use crate::backend::llvm::compiler::context::LLVMCodeGenContextPosition;
 use crate::backend::llvm::compiler::memory::{self, MemoryManagement, SymbolAllocated};
 use crate::backend::llvm::compiler::{binaryop, builtins, unaryop, utils};
-use crate::middle::instruction::Instruction;
-use crate::middle::statement::traits::AttributesExtensions;
-use crate::middle::statement::{Function, ThrushAttributes};
+use crate::middle::types::backend::llvm::types::LLVMFunction;
+use crate::middle::types::frontend::lexer::types::ThrushType;
+use crate::middle::types::frontend::parser::stmts::instruction::Instruction;
+use crate::middle::types::frontend::parser::stmts::traits::AttributesExtensions;
+use crate::middle::types::frontend::parser::stmts::types::ThrushAttributes;
 
-use super::super::super::super::middle::types::Type;
-
-use super::context::CodeGenContext;
+use super::context::LLVMCodeGenContext;
 use super::typegen;
 
 use inkwell::module::{Linkage, Module};
@@ -25,7 +25,7 @@ use inkwell::{builder::Builder, context::Context, values::PointerValue};
 pub fn alloc<'ctx>(
     context: &'ctx Context,
     builder: &Builder<'ctx>,
-    kind: &Type,
+    kind: &ThrushType,
     alloc_in_heap: bool,
 ) -> PointerValue<'ctx> {
     let llvm_type: BasicTypeEnum = typegen::generate_subtype(context, kind);
@@ -39,25 +39,25 @@ pub fn alloc<'ctx>(
 
 pub fn integer<'ctx>(
     context: &'ctx Context,
-    kind: &'ctx Type,
+    kind: &'ctx ThrushType,
     number: u64,
     is_signed: bool,
 ) -> IntValue<'ctx> {
     match kind {
-        Type::Char => context.i8_type().const_int(number, is_signed).const_neg(),
-        Type::S8 if is_signed => context.i8_type().const_int(number, is_signed).const_neg(),
-        Type::S8 => context.i8_type().const_int(number, is_signed),
-        Type::S16 if is_signed => context.i16_type().const_int(number, is_signed).const_neg(),
-        Type::S16 => context.i16_type().const_int(number, is_signed),
-        Type::S32 if is_signed => context.i32_type().const_int(number, is_signed).const_neg(),
-        Type::S32 => context.i32_type().const_int(number, is_signed),
-        Type::S64 if is_signed => context.i64_type().const_int(number, is_signed).const_neg(),
-        Type::S64 => context.i64_type().const_int(number, is_signed),
-        Type::U8 => context.i8_type().const_int(number, false),
-        Type::U16 => context.i16_type().const_int(number, false),
-        Type::U32 => context.i32_type().const_int(number, false),
-        Type::U64 => context.i64_type().const_int(number, false),
-        Type::Bool => context.bool_type().const_int(number, false),
+        ThrushType::Char => context.i8_type().const_int(number, is_signed).const_neg(),
+        ThrushType::S8 if is_signed => context.i8_type().const_int(number, is_signed).const_neg(),
+        ThrushType::S8 => context.i8_type().const_int(number, is_signed),
+        ThrushType::S16 if is_signed => context.i16_type().const_int(number, is_signed).const_neg(),
+        ThrushType::S16 => context.i16_type().const_int(number, is_signed),
+        ThrushType::S32 if is_signed => context.i32_type().const_int(number, is_signed).const_neg(),
+        ThrushType::S32 => context.i32_type().const_int(number, is_signed),
+        ThrushType::S64 if is_signed => context.i64_type().const_int(number, is_signed).const_neg(),
+        ThrushType::S64 => context.i64_type().const_int(number, is_signed),
+        ThrushType::U8 => context.i8_type().const_int(number, false),
+        ThrushType::U16 => context.i16_type().const_int(number, false),
+        ThrushType::U32 => context.i32_type().const_int(number, false),
+        ThrushType::U64 => context.i64_type().const_int(number, false),
+        ThrushType::Bool => context.bool_type().const_int(number, false),
         _ => unreachable!(),
     }
 }
@@ -66,27 +66,27 @@ pub fn integer<'ctx>(
 pub fn float<'ctx>(
     builder: &Builder<'ctx>,
     context: &'ctx Context,
-    kind: &'ctx Type,
+    kind: &'ctx ThrushType,
     number: f64,
     is_signed: bool,
 ) -> FloatValue<'ctx> {
     match kind {
-        Type::F32 if is_signed => builder
+        ThrushType::F32 if is_signed => builder
             .build_float_neg(context.f32_type().const_float(number), "")
             .unwrap(),
-        Type::F32 => context.f32_type().const_float(number),
-        Type::F64 if is_signed => builder
+        ThrushType::F32 => context.f32_type().const_float(number),
+        ThrushType::F64 if is_signed => builder
             .build_float_neg(context.f64_type().const_float(number), "")
             .unwrap(),
-        Type::F64 => context.f64_type().const_float(number),
+        ThrushType::F64 => context.f64_type().const_float(number),
         _ => unreachable!(),
     }
 }
 
 pub fn generate_expression<'ctx>(
     expression: &'ctx Instruction,
-    casting_target: &Type,
-    context: &mut CodeGenContext<'_, 'ctx>,
+    casting_target: &ThrushType,
+    context: &mut LLVMCodeGenContext<'_, 'ctx>,
 ) -> BasicValueEnum<'ctx> {
     let llvm_module: &Module = context.get_llvm_module();
     let llvm_context: &Context = context.get_llvm_context();
@@ -151,7 +151,7 @@ pub fn generate_expression<'ctx>(
 
         if let Some(expression) = write_to.1.as_ref() {
             let compiled_expression: PointerValue =
-                generate_expression(expression, &Type::Void, context).into_pointer_value();
+                generate_expression(expression, &ThrushType::Void, context).into_pointer_value();
 
             llvm_builder
                 .build_store(compiled_expression, write_value)
@@ -201,11 +201,14 @@ pub fn generate_expression<'ctx>(
 
         indexes.iter().for_each(|indexe| {
             let mut compiled_indexe: BasicValueEnum =
-                generate_expression(indexe, &Type::U32, context);
+                generate_expression(indexe, &ThrushType::U32, context);
 
-            if let Some(casted_index) =
-                utils::integer_autocast(context, &Type::U32, indexe.get_type(), compiled_indexe)
-            {
+            if let Some(casted_index) = utils::integer_autocast(
+                context,
+                &ThrushType::U32,
+                indexe.get_type(),
+                compiled_indexe,
+            ) {
                 compiled_indexe = casted_index;
             }
 
@@ -312,7 +315,7 @@ pub fn generate_expression<'ctx>(
         ..
     } = expression
     {
-        context.set_position(CodeGenContextPosition::Mutation);
+        context.set_position(LLVMCodeGenContextPosition::Mutation);
 
         let source_name: Option<&str> = source.0;
         let source_expression: Option<&Rc<Instruction<'_>>> = source.1.as_ref();
@@ -363,23 +366,23 @@ pub fn generate_expression<'ctx>(
             return builtins::build_is_signed(context, (call_name, call_type, call_args));
         }
 
-        let previous_position: CodeGenContextPosition = context.get_position();
+        let previous_position: LLVMCodeGenContextPosition = context.get_position();
 
-        context.set_position(CodeGenContextPosition::Call);
+        context.set_position(LLVMCodeGenContextPosition::Call);
 
-        let function: Function = context.get_function(call_name);
+        let function: LLVMFunction = context.get_function(call_name);
 
         let llvm_function: FunctionValue = function.0;
 
-        let target_function_arguments: &[Type] = function.1;
+        let target_function_arguments: &[ThrushType] = function.1;
         let function_convention: u32 = function.2;
 
         let mut compiled_args: Vec<BasicMetadataValueEnum> = Vec::with_capacity(call_args.len());
 
         call_args.iter().enumerate().for_each(|instruction| {
-            let casting_target: &Type = target_function_arguments
+            let casting_target: &ThrushType = target_function_arguments
                 .get(instruction.0)
-                .unwrap_or(&Type::Void);
+                .unwrap_or(&ThrushType::Void);
 
             compiled_args.push(generate_expression(instruction.1, casting_target, context).into());
         });

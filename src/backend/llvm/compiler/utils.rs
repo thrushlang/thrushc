@@ -1,6 +1,6 @@
-use super::super::super::super::middle::types::Type;
+use crate::middle::types::frontend::lexer::types::ThrushType;
 
-use super::context::CodeGenContext;
+use super::context::LLVMCodeGenContext;
 use super::typegen;
 
 use inkwell::values::StructValue;
@@ -15,9 +15,9 @@ use inkwell::{
 };
 
 pub fn integer_autocast<'ctx>(
-    context: &CodeGenContext<'_, 'ctx>,
-    target_type: &Type,
-    from_type: &Type,
+    context: &LLVMCodeGenContext<'_, 'ctx>,
+    target_type: &ThrushType,
+    from_type: &ThrushType,
     from: BasicValueEnum<'ctx>,
 ) -> Option<BasicValueEnum<'ctx>> {
     let llvm_builder: &Builder = context.get_llvm_builder();
@@ -45,9 +45,9 @@ pub fn integer_autocast<'ctx>(
 }
 
 pub fn float_autocast<'ctx>(
-    context: &CodeGenContext<'_, 'ctx>,
-    target_type: &Type,
-    from_type: &Type,
+    context: &LLVMCodeGenContext<'_, 'ctx>,
+    target_type: &ThrushType,
+    from_type: &ThrushType,
     from: BasicValueEnum<'ctx>,
 ) -> Option<BasicValueEnum<'ctx>> {
     let llvm_builder: &Builder = context.get_llvm_builder();

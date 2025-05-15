@@ -1,7 +1,13 @@
 use ahash::AHashMap as HashMap;
 
 use crate::{
-    middle::instruction::Instruction,
+    middle::types::frontend::{
+        parser::stmts::instruction::Instruction,
+        warner::types::{
+            WarnerConstantInfo, WarnerFunctionInfo, WarnerFunctionParameterInfo, WarnerLocalInfo,
+            WarnerLocals, WarnersConstants, WarnersFunctionParameters, WarnersFunctions,
+        },
+    },
     standard::{
         constants::MINIMAL_WARNINGS_CAPACITY,
         diagnostic::Diagnostician,
@@ -17,18 +23,6 @@ const MINIMAL_WARNER_FUNCTIONS_CAPACITY: usize = 255;
 const MINIMAL_WARNER_CONSTANTS_CAPACITY: usize = 255;
 const MINIMAL_WARNER_LOCALS_CAPACITY: usize = 255;
 const MINIMAL_WARNER_PARAMETERS_CAPACITY: usize = 255;
-
-pub type WarnerConstantInfo = (Span, bool);
-pub type WarnersConstants<'warner> = HashMap<&'warner str, WarnerConstantInfo>;
-
-pub type WarnerFunctionInfo<'warner> = (&'warner Instruction<'warner>, Span, bool);
-pub type WarnersFunctions<'warner> = HashMap<&'warner str, WarnerFunctionInfo<'warner>>;
-
-pub type WarnerLocalInfo = (Span, bool, bool);
-pub type WarnerLocals<'warner> = Vec<HashMap<&'warner str, WarnerLocalInfo>>;
-
-pub type WarnerFunctionParameterInfo = (Span, bool, bool);
-pub type WarnersFunctionParameters<'warner> = HashMap<&'warner str, WarnerFunctionParameterInfo>;
 
 pub struct Warner<'warner> {
     instructions: &'warner [Instruction<'warner>],

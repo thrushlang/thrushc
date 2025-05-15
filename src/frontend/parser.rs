@@ -3,9 +3,11 @@ use std::process;
 use ahash::AHashMap as HashMap;
 
 use crate::backend::llvm::compiler::builtins;
-use crate::middle::instruction::Instruction;
-use crate::middle::symbols::types::Functions;
-use crate::middle::types::{TokenKind, Type};
+
+use crate::middle::types::frontend::lexer::tokenkind::TokenKind;
+use crate::middle::types::frontend::lexer::types::ThrushType;
+use crate::middle::types::frontend::parser::stmts::instruction::Instruction;
+use crate::middle::types::frontend::parser::symbols::types::Functions;
 use crate::standard::constants::MINIMAL_ERROR_CAPACITY;
 use crate::standard::diagnostic::Diagnostician;
 use crate::standard::error::ThrushCompilerIssue;
@@ -104,8 +106,8 @@ impl<'instr> ParserContext<'instr> {
     }
     pub fn mismatch_types(
         &mut self,
-        target: &Type,
-        from: &Type,
+        target: &ThrushType,
+        from: &ThrushType,
         span: Span,
         expr: Option<&Instruction>,
     ) {
@@ -117,7 +119,8 @@ impl<'instr> ParserContext<'instr> {
         );
 
         if expr.is_some_and(|expr| expr.is_binary() || expr.is_group()) {
-            if let Err(error) = typecheck::check_type(target, &Type::Void, expr, None, error) {
+            if let Err(error) = typecheck::check_type(target, &ThrushType::Void, expr, None, error)
+            {
                 self.errors.push(error);
             }
         } else if let Err(error) = typecheck::check_type(target, from, None, None, error) {

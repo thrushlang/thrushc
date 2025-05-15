@@ -1,6 +1,6 @@
 use inkwell::{FloatPredicate, IntPredicate};
 
-use crate::middle::types::TokenKind;
+use crate::middle::types::frontend::lexer::tokenkind::TokenKind;
 
 #[must_use]
 pub fn integer(operator: &TokenKind, left_signed: bool, right_signed: bool) -> IntPredicate {

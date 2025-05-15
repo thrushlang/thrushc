@@ -1,14 +1,16 @@
 use crate::{
-    middle::{
-        statement::{
-            CustomType, CustomTypeFields, StructFields,
-            traits::{
-                CustomTypeFieldsExtensions, FoundSymbolEither, FoundSymbolExtension,
-                StructExtensions, StructFieldsExtensions,
+    middle::types::frontend::{
+        lexer::{tokenkind::TokenKind, types::ThrushType},
+        parser::{
+            stmts::{
+                traits::{
+                    CustomTypeFieldsExtensions, FoundSymbolEither, FoundSymbolExtension,
+                    StructExtensions, StructFieldsExtensions,
+                },
+                types::{CustomType, CustomTypeFields, StructFields},
             },
+            symbols::types::{FoundSymbolId, Struct},
         },
-        symbols::types::{FoundSymbolId, Struct},
-        types::{TokenKind, Type},
     },
     standard::error::ThrushCompilerIssue,
 };
@@ -18,8 +20,8 @@ use super::{
     parser::ParserContext,
 };
 
-pub fn build_type(parser_ctx: &mut ParserContext<'_>) -> Result<Type, ThrushCompilerIssue> {
-    let builded_type: Result<Type, ThrushCompilerIssue> = match parser_ctx.peek().kind {
+pub fn build_type(parser_ctx: &mut ParserContext<'_>) -> Result<ThrushType, ThrushCompilerIssue> {
+    let builded_type: Result<ThrushType, ThrushCompilerIssue> = match parser_ctx.peek().kind {
         tk_kind if tk_kind.is_type() => {
             let tk: &Token = parser_ctx.advance()?;
             let span: Span = tk.span;
@@ -51,11 +53,11 @@ pub fn build_type(parser_ctx: &mut ParserContext<'_>) -> Result<Type, ThrushComp
             }
 
             if tk_kind.is_me() {
-                return Ok(Type::Me(None));
+                return Ok(ThrushType::Me(None));
             }
 
             if tk_kind.is_mut() {
-                return Ok(Type::Mut(build_type(parser_ctx)?.into()));
+                return Ok(ThrushType::Mut(build_type(parser_ctx)?.into()));
             }
 
             match tk_kind.as_type() {
@@ -63,7 +65,7 @@ pub fn build_type(parser_ctx: &mut ParserContext<'_>) -> Result<Type, ThrushComp
                 ty if ty.is_float_type() => Ok(ty),
                 ty if ty.is_bool_type() => Ok(ty),
                 ty if ty.is_ptr_type() && parser_ctx.check(TokenKind::LBracket) => {
-                    Ok(build_recursive_type(parser_ctx, Type::Ptr(None))?)
+                    Ok(build_recursive_type(parser_ctx, ThrushType::Ptr(None))?)
                 }
                 ty if ty.is_ptr_type() => Ok(ty),
                 ty if ty.is_void_type() => Ok(ty),
@@ -131,16 +133,16 @@ pub fn build_type(parser_ctx: &mut ParserContext<'_>) -> Result<Type, ThrushComp
 
 fn build_recursive_type(
     parser_ctx: &mut ParserContext<'_>,
-    mut before_type: Type,
-) -> Result<Type, ThrushCompilerIssue> {
+    mut before_type: ThrushType,
+) -> Result<ThrushType, ThrushCompilerIssue> {
     parser_ctx.consume(
         TokenKind::LBracket,
         String::from("Syntax error"),
         String::from("Expected '['."),
     )?;
 
-    if let Type::Ptr(_) = &mut before_type {
-        let mut inner_type: Type = build_type(parser_ctx)?;
+    if let ThrushType::Ptr(_) = &mut before_type {
+        let mut inner_type: ThrushType = build_type(parser_ctx)?;
 
         while parser_ctx.check(TokenKind::LBracket) {
             inner_type = build_recursive_type(parser_ctx, inner_type)?;
@@ -152,7 +154,7 @@ fn build_recursive_type(
             String::from("Expected ']'."),
         )?;
 
-        return Ok(Type::Ptr(Some(inner_type.into())));
+        return Ok(ThrushType::Ptr(Some(inner_type.into())));
     }
 
     Err(ThrushCompilerIssue::Error(

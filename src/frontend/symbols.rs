@@ -1,11 +1,15 @@
-use crate::middle::{
-    instruction::Instruction,
-    statement::{CustomType, Enum},
-    symbols::types::{
-        Bindings, Constant, Constants, CustomTypes, Enums, FoundSymbolId, Function, Functions,
-        Local, Locals, Struct, Structs,
+use crate::middle::types::frontend::{
+    lexer::types::BindingsApplicant,
+    parser::{
+        stmts::{
+            instruction::Instruction,
+            types::{CustomType, Enum},
+        },
+        symbols::types::{
+            Bindings, Constant, Constants, CustomTypes, Enums, FoundSymbolId, Function, Functions,
+            Local, Locals, Struct, Structs,
+        },
     },
-    types::BindingsApplicant,
 };
 
 use super::{super::standard::error::ThrushCompilerIssue, lexer::Span};

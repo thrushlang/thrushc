@@ -1,10 +1,10 @@
 use crate::{
     frontend::lexer::Span,
-    middle::{symbols::types::Bindings, types::Type},
+    middle::types::frontend::{lexer::types::ThrushType, parser::symbols::types::Bindings},
     standard::error::ThrushCompilerIssue,
 };
 
-use super::{EnumField, EnumFields, StructFields};
+use super::types::{EnumField, EnumFields, StructFields};
 
 pub trait TokenExtensions {
     fn parse_scapes(&self, span: Span) -> Result<Vec<u8>, ThrushCompilerIssue>;
@@ -21,7 +21,7 @@ pub trait EnumExtensions<'a> {
 }
 
 pub trait CustomTypeFieldsExtensions {
-    fn get_type(&self) -> Type;
+    fn get_type(&self) -> ThrushType;
 }
 
 pub trait FoundSymbolExtension {
@@ -34,7 +34,7 @@ pub trait FoundSymbolExtension {
 
 pub trait StructExtensions<'a> {
     fn contains_field(&self, name: &str) -> bool;
-    fn get_field_type(&self, name: &str) -> Option<Type>;
+    fn get_field_type(&self, name: &str) -> Option<ThrushType>;
     fn get_fields(&self) -> StructFields<'a>;
     fn get_bindings(&self) -> Bindings<'a>;
 }
@@ -49,11 +49,11 @@ pub trait FoundSymbolEither<'instr> {
 }
 
 pub trait StructFieldsExtensions {
-    fn get_type(&self) -> Type;
+    fn get_type(&self) -> ThrushType;
 }
 
 pub trait ConstructorExtensions {
-    fn get_type(&self) -> Type;
+    fn get_type(&self) -> ThrushType;
 }
 
 pub trait AttributesExtensions {

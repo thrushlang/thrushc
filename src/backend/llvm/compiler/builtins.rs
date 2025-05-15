@@ -1,13 +1,15 @@
 use crate::{
-    middle::{
-        statement::FunctionCall,
-        symbols::types::{Functions, Parameters},
-        types::Type,
+    middle::types::{
+        backend::llvm::types::LLVMFunctionCall,
+        frontend::{
+            lexer::types::ThrushType,
+            parser::symbols::types::{Functions, Parameters},
+        },
     },
     standard::logging::{self, LoggingType},
 };
 
-use super::{Instruction, context::CodeGenContext, memory::SymbolAllocated, typegen, utils};
+use super::{Instruction, context::LLVMCodeGenContext, memory::SymbolAllocated, typegen, utils};
 
 use inkwell::{
     FloatPredicate,
@@ -21,24 +23,24 @@ pub fn include(functions: &mut Functions) {
     functions.insert(
         "sizeof!",
         (
-            Type::S64,
-            Parameters::new(Vec::from([Type::Ptr(None)])),
+            ThrushType::S64,
+            Parameters::new(Vec::from([ThrushType::Ptr(None)])),
             false,
         ),
     );
     functions.insert(
         "is_signed!",
         (
-            Type::Bool,
-            Parameters::new(Vec::from([Type::Ptr(None)])),
+            ThrushType::Bool,
+            Parameters::new(Vec::from([ThrushType::Ptr(None)])),
             false,
         ),
     );
 }
 
 pub fn build_sizeof<'ctx>(
-    context: &CodeGenContext<'_, 'ctx>,
-    call: FunctionCall<'ctx>,
+    context: &LLVMCodeGenContext<'_, 'ctx>,
+    call: LLVMFunctionCall<'ctx>,
 ) -> BasicValueEnum<'ctx> {
     let llvm_context: &Context = context.get_llvm_context();
 
@@ -123,8 +125,8 @@ pub fn build_sizeof<'ctx>(
 }
 
 pub fn build_is_signed<'ctx>(
-    context: &CodeGenContext<'_, 'ctx>,
-    call: FunctionCall<'ctx>,
+    context: &LLVMCodeGenContext<'_, 'ctx>,
+    call: LLVMFunctionCall<'ctx>,
 ) -> BasicValueEnum<'ctx> {
     let llvm_context: &Context = context.get_llvm_context();
     let llvm_builder: &Builder = context.get_llvm_builder();
@@ -160,7 +162,7 @@ pub fn build_is_signed<'ctx>(
             let mut loaded_value: IntValue = object.load(context).into_int_value();
 
             if let Some(casted_float) =
-                utils::integer_autocast(context, &Type::S64, ref_type, loaded_value.into())
+                utils::integer_autocast(context, &ThrushType::S64, ref_type, loaded_value.into())
             {
                 loaded_value = casted_float.into_int_value();
             }
@@ -178,7 +180,7 @@ pub fn build_is_signed<'ctx>(
             let mut loaded_value: BasicValueEnum = object.load(context);
 
             if let Some(casted_float) =
-                utils::float_autocast(context, &Type::F64, ref_type, loaded_value)
+                utils::float_autocast(context, &ThrushType::F64, ref_type, loaded_value)
             {
                 loaded_value = casted_float;
             }

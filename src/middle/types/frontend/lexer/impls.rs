@@ -1,10 +1,12 @@
+use crate::middle::types::frontend::parser::stmts::{
+    traits::{EnumExtensions, EnumFieldsExtensions},
+    types::{Enum, EnumField, EnumFields},
+};
+
 use super::{
-    statement::{
-        Enum, EnumField, EnumFields,
-        traits::{EnumExtensions, EnumFieldsExtensions},
-    },
+    tokenkind::TokenKind,
     traits::ThrushStructTypeExtensions,
-    types::{ThrushStructType, TokenKind, Type},
+    types::{ThrushStructType, ThrushType},
 };
 
 impl<'a> EnumFieldsExtensions<'a> for EnumFields<'a> {
@@ -128,24 +130,24 @@ impl std::fmt::Display for TokenKind {
     }
 }
 
-impl std::fmt::Display for Type {
+impl std::fmt::Display for ThrushType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Type::S8 => write!(f, "s8"),
-            Type::S16 => write!(f, "s16"),
-            Type::S32 => write!(f, "s32"),
-            Type::S64 => write!(f, "s64"),
-            Type::U8 => write!(f, "u8"),
-            Type::U16 => write!(f, "u16"),
-            Type::U32 => write!(f, "u32"),
-            Type::U64 => write!(f, "u64"),
-            Type::F32 => write!(f, "f32"),
-            Type::F64 => write!(f, "f64"),
-            Type::Bool => write!(f, "bool"),
-            Type::Str => write!(f, "str"),
-            Type::Char => write!(f, "char"),
-            Type::Mut(any_type) => write!(f, "mut {}", any_type),
-            Type::Struct(name, fields) => {
+            ThrushType::S8 => write!(f, "s8"),
+            ThrushType::S16 => write!(f, "s16"),
+            ThrushType::S32 => write!(f, "s32"),
+            ThrushType::S64 => write!(f, "s64"),
+            ThrushType::U8 => write!(f, "u8"),
+            ThrushType::U16 => write!(f, "u16"),
+            ThrushType::U32 => write!(f, "u32"),
+            ThrushType::U64 => write!(f, "u64"),
+            ThrushType::F32 => write!(f, "f32"),
+            ThrushType::F64 => write!(f, "f64"),
+            ThrushType::Bool => write!(f, "bool"),
+            ThrushType::Str => write!(f, "str"),
+            ThrushType::Char => write!(f, "char"),
+            ThrushType::Mut(any_type) => write!(f, "mut {}", any_type),
+            ThrushType::Struct(name, fields) => {
                 let _ = write!(f, "struct {} {{ ", name);
 
                 fields.iter().for_each(|field| {
@@ -154,7 +156,7 @@ impl std::fmt::Display for Type {
 
                 write!(f, "}}")
             }
-            Type::Ptr(nested_type) => {
+            ThrushType::Ptr(nested_type) => {
                 if let Some(nested_type) = nested_type {
                     let _ = write!(f, "ptr[");
                     let _ = write!(f, "{}", nested_type);
@@ -164,16 +166,16 @@ impl std::fmt::Display for Type {
 
                 write!(f, "ptr")
             }
-            Type::Address => {
+            ThrushType::Address => {
                 write!(f, "memory address")
             }
-            Type::Me(None) => {
+            ThrushType::Me(None) => {
                 write!(f, "Me")
             }
-            Type::Me(Some(nested_type)) => {
+            ThrushType::Me(Some(nested_type)) => {
                 write!(f, "Me[{}]", nested_type)
             }
-            Type::Void => write!(f, "void"),
+            ThrushType::Void => write!(f, "void"),
         }
     }
 }

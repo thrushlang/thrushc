@@ -1,6 +1,3 @@
-use crate::middle::instruction::Instruction;
-use crate::middle::types::Type;
-
 use inkwell::types::{BasicType, BasicTypeEnum, FunctionType};
 
 use inkwell::{
@@ -9,17 +6,23 @@ use inkwell::{
     types::{BasicMetadataTypeEnum, FloatType, IntType},
 };
 
-use super::context::CodeGenContext;
+use crate::middle::types::frontend::lexer::types::ThrushType;
+use crate::middle::types::frontend::parser::stmts::instruction::Instruction;
+
+use super::context::LLVMCodeGenContext;
 
 #[inline]
-pub fn type_int_to_llvm_int_type<'ctx>(llvm_context: &'ctx Context, kind: &Type) -> IntType<'ctx> {
+pub fn type_int_to_llvm_int_type<'ctx>(
+    llvm_context: &'ctx Context,
+    kind: &ThrushType,
+) -> IntType<'ctx> {
     match kind {
-        Type::S8 | Type::U8 | Type::Char => llvm_context.i8_type(),
-        Type::S16 | Type::U16 => llvm_context.i16_type(),
-        Type::S32 | Type::U32 => llvm_context.i32_type(),
-        Type::S64 | Type::U64 => llvm_context.i64_type(),
-        Type::Bool => llvm_context.bool_type(),
-        Type::Mut(subtype) => type_int_to_llvm_int_type(llvm_context, subtype),
+        ThrushType::S8 | ThrushType::U8 | ThrushType::Char => llvm_context.i8_type(),
+        ThrushType::S16 | ThrushType::U16 => llvm_context.i16_type(),
+        ThrushType::S32 | ThrushType::U32 => llvm_context.i32_type(),
+        ThrushType::S64 | ThrushType::U64 => llvm_context.i64_type(),
+        ThrushType::Bool => llvm_context.bool_type(),
+        ThrushType::Mut(subtype) => type_int_to_llvm_int_type(llvm_context, subtype),
         _ => unreachable!(),
     }
 }
@@ -27,19 +30,19 @@ pub fn type_int_to_llvm_int_type<'ctx>(llvm_context: &'ctx Context, kind: &Type)
 #[inline]
 pub fn type_float_to_llvm_float_type<'ctx>(
     llvm_context: &'ctx Context,
-    kind: &Type,
+    kind: &ThrushType,
 ) -> FloatType<'ctx> {
     match kind {
-        Type::F32 => llvm_context.f32_type(),
-        Type::F64 => llvm_context.f64_type(),
-        Type::Mut(subtype) => type_float_to_llvm_float_type(llvm_context, subtype),
+        ThrushType::F32 => llvm_context.f32_type(),
+        ThrushType::F64 => llvm_context.f64_type(),
+        ThrushType::Mut(subtype) => type_float_to_llvm_float_type(llvm_context, subtype),
         _ => unreachable!(),
     }
 }
 
 pub fn function_type<'ctx>(
-    context: &CodeGenContext<'_, 'ctx>,
-    kind: &Type,
+    context: &LLVMCodeGenContext<'_, 'ctx>,
+    kind: &ThrushType,
     parameters: &[Instruction],
     ignore_args: bool,
 ) -> FunctionType<'ctx> {
@@ -55,25 +58,29 @@ pub fn function_type<'ctx>(
     });
 
     match kind {
-        Type::S8 | Type::U8 | Type::Char => llvm_context
+        ThrushType::S8 | ThrushType::U8 | ThrushType::Char => llvm_context
             .i8_type()
             .fn_type(&parameters_types, ignore_args),
-        Type::S16 | Type::U16 => llvm_context
+        ThrushType::S16 | ThrushType::U16 => llvm_context
             .i16_type()
             .fn_type(&parameters_types, ignore_args),
-        Type::S32 | Type::U32 => llvm_context
+        ThrushType::S32 | ThrushType::U32 => llvm_context
             .i32_type()
             .fn_type(&parameters_types, ignore_args),
-        Type::S64 | Type::U64 => llvm_context
+        ThrushType::S64 | ThrushType::U64 => llvm_context
             .i64_type()
             .fn_type(&parameters_types, ignore_args),
-        Type::Str => llvm_context
+        ThrushType::Str => llvm_context
             .ptr_type(AddressSpace::default())
             .fn_type(&parameters_types, ignore_args),
 
-        Type::Address => generate_type(llvm_context, kind).fn_type(&parameters_types, ignore_args),
-        Type::Ptr(_) => generate_type(llvm_context, kind).fn_type(&parameters_types, ignore_args),
-        Type::Struct(..) => {
+        ThrushType::Address => {
+            generate_type(llvm_context, kind).fn_type(&parameters_types, ignore_args)
+        }
+        ThrushType::Ptr(_) => {
+            generate_type(llvm_context, kind).fn_type(&parameters_types, ignore_args)
+        }
+        ThrushType::Struct(..) => {
             let is_heap_allocated_type: bool =
                 kind.is_heap_allocated(llvm_context, &context.target_data);
 
@@ -85,18 +92,20 @@ pub fn function_type<'ctx>(
 
             generate_type(llvm_context, kind).fn_type(&parameters_types, ignore_args)
         }
-        Type::Mut(..) => generate_type(llvm_context, kind).fn_type(&parameters_types, ignore_args),
+        ThrushType::Mut(..) => {
+            generate_type(llvm_context, kind).fn_type(&parameters_types, ignore_args)
+        }
 
-        Type::Bool => llvm_context
+        ThrushType::Bool => llvm_context
             .bool_type()
             .fn_type(&parameters_types, ignore_args),
-        Type::F32 => llvm_context
+        ThrushType::F32 => llvm_context
             .f32_type()
             .fn_type(&parameters_types, ignore_args),
-        Type::F64 => llvm_context
+        ThrushType::F64 => llvm_context
             .f64_type()
             .fn_type(&parameters_types, ignore_args),
-        Type::Void => llvm_context
+        ThrushType::Void => llvm_context
             .void_type()
             .fn_type(&parameters_types, ignore_args),
 
@@ -104,13 +113,13 @@ pub fn function_type<'ctx>(
     }
 }
 
-pub fn generate_type<'ctx>(llvm_context: &'ctx Context, kind: &Type) -> BasicTypeEnum<'ctx> {
+pub fn generate_type<'ctx>(llvm_context: &'ctx Context, kind: &ThrushType) -> BasicTypeEnum<'ctx> {
     match kind {
         kind if kind.is_bool_type() || kind.is_integer_type() || kind.is_char_type() => {
             type_int_to_llvm_int_type(llvm_context, kind).into()
         }
         kind if kind.is_float_type() => type_float_to_llvm_float_type(llvm_context, kind).into(),
-        Type::Ptr(_) | Type::Address | Type::Mut(..) | Type::Me(..) => {
+        ThrushType::Ptr(_) | ThrushType::Address | ThrushType::Mut(..) | ThrushType::Me(..) => {
             llvm_context.ptr_type(AddressSpace::default()).into()
         }
         kind if kind.is_str_type() => llvm_context
@@ -122,7 +131,7 @@ pub fn generate_type<'ctx>(llvm_context: &'ctx Context, kind: &Type) -> BasicTyp
                 false,
             )
             .into(),
-        Type::Struct(_, fields) => {
+        ThrushType::Struct(_, fields) => {
             let mut field_types: Vec<BasicTypeEnum> = Vec::with_capacity(10);
 
             fields.iter().for_each(|field| {
@@ -136,10 +145,13 @@ pub fn generate_type<'ctx>(llvm_context: &'ctx Context, kind: &Type) -> BasicTyp
     }
 }
 
-pub fn generate_subtype<'ctx>(llvm_context: &'ctx Context, kind: &Type) -> BasicTypeEnum<'ctx> {
+pub fn generate_subtype<'ctx>(
+    llvm_context: &'ctx Context,
+    kind: &ThrushType,
+) -> BasicTypeEnum<'ctx> {
     match kind {
-        Type::Ptr(Some(subtype)) => generate_subtype(llvm_context, subtype),
-        Type::Mut(subtype) => generate_subtype(llvm_context, subtype),
+        ThrushType::Ptr(Some(subtype)) => generate_subtype(llvm_context, subtype),
+        ThrushType::Mut(subtype) => generate_subtype(llvm_context, subtype),
         _ => generate_type(llvm_context, kind),
     }
 }

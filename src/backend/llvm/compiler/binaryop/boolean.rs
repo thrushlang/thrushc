@@ -4,20 +4,22 @@ use {
         integer::{int_operation, integer_binaryop},
     },
     crate::{
-        backend::llvm::compiler::{binaryop::ptr::ptr_binaryop, context::CodeGenContext},
-        middle::{
-            instruction::Instruction,
-            statement::BinaryOp,
-            types::{TokenKind, Type},
+        backend::llvm::compiler::{binaryop::ptr::ptr_binaryop, context::LLVMCodeGenContext},
+        middle::types::{
+            backend::llvm::types::LLVMBinaryOp,
+            frontend::{
+                lexer::{tokenkind::TokenKind, types::ThrushType},
+                parser::stmts::instruction::Instruction,
+            },
         },
     },
     inkwell::values::BasicValueEnum,
 };
 
 pub fn bool_binaryop<'ctx>(
-    binary: BinaryOp<'ctx>,
-    target_type: &Type,
-    context: &mut CodeGenContext<'_, 'ctx>,
+    binary: LLVMBinaryOp<'ctx>,
+    target_type: &ThrushType,
+    context: &mut LLVMCodeGenContext<'_, 'ctx>,
 ) -> BasicValueEnum<'ctx> {
     if let (
         Instruction::Integer(..) | Instruction::Float(..) | Instruction::Boolean(..),

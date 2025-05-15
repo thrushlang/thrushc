@@ -6,17 +6,20 @@ use inkwell::{
     values::{BasicValueEnum, PointerValue},
 };
 
-use crate::middle::{instruction::Instruction, types::Type};
+use crate::middle::types::{
+    backend::llvm::types::SymbolsAllocated,
+    frontend::{lexer::types::ThrushType, parser::stmts::instruction::Instruction},
+};
 
-use super::{context::CodeGenContext, memory::SymbolAllocated, types::SymbolsAllocated};
+use super::{context::LLVMCodeGenContext, memory::SymbolAllocated};
 
 #[derive(Debug)]
 pub struct Deallocator<'a, 'ctx> {
-    context: &'a CodeGenContext<'a, 'ctx>,
+    context: &'a LLVMCodeGenContext<'a, 'ctx>,
 }
 
 impl<'a, 'ctx> Deallocator<'a, 'ctx> {
-    pub fn new(context: &'a CodeGenContext<'a, 'ctx>) -> Self {
+    pub fn new(context: &'a LLVMCodeGenContext<'a, 'ctx>) -> Self {
         Self { context }
     }
 
@@ -53,8 +56,8 @@ impl<'a, 'ctx> Deallocator<'a, 'ctx> {
     }
 
     fn destroy_calls(&self) {
-        self.context.get_scope_calls().iter().for_each(|call| {
-            let call_type: &Type = call.0;
+        self.context.get_llvm_calls().iter().for_each(|call| {
+            let call_type: &ThrushType = call.0;
             let call_value: BasicValueEnum = call.1;
 
             let llvm_context: &Context = self.context.get_llvm_context();

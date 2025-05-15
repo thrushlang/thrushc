@@ -7,45 +7,48 @@ use inkwell::{
     values::IntValue,
 };
 
-use crate::{backend::llvm::compiler::typegen, middle::types::Type, standard::logging};
+use crate::{
+    backend::llvm::compiler::typegen, middle::types::frontend::lexer::types::ThrushType,
+    standard::logging,
+};
 
 use inkwell::{
     builder::Builder,
     values::{BasicValue, BasicValueEnum, InstructionValue, PointerValue},
 };
 
-use super::context::CodeGenContext;
+use super::context::LLVMCodeGenContext;
 
 #[derive(Debug, Clone)]
 pub enum SymbolAllocated<'ctx> {
     Local {
         ptr: PointerValue<'ctx>,
-        kind: &'ctx Type,
+        kind: &'ctx ThrushType,
     },
     Constant {
         ptr: PointerValue<'ctx>,
-        kind: &'ctx Type,
+        kind: &'ctx ThrushType,
     },
     Parameter {
         value: BasicValueEnum<'ctx>,
-        kind: &'ctx Type,
+        kind: &'ctx ThrushType,
     },
 }
 
 impl<'ctx> SymbolAllocated<'ctx> {
-    pub fn new_constant(ptr: PointerValue<'ctx>, kind: &'ctx Type) -> Self {
+    pub fn new_constant(ptr: PointerValue<'ctx>, kind: &'ctx ThrushType) -> Self {
         Self::Constant { ptr, kind }
     }
 
-    pub fn new_local(ptr: PointerValue<'ctx>, kind: &'ctx Type) -> Self {
+    pub fn new_local(ptr: PointerValue<'ctx>, kind: &'ctx ThrushType) -> Self {
         Self::Local { ptr, kind }
     }
 
-    pub fn new_parameter(value: BasicValueEnum<'ctx>, kind: &'ctx Type) -> Self {
+    pub fn new_parameter(value: BasicValueEnum<'ctx>, kind: &'ctx ThrushType) -> Self {
         Self::Parameter { value, kind }
     }
 
-    pub fn load(&self, context: &CodeGenContext<'_, 'ctx>) -> BasicValueEnum<'ctx> {
+    pub fn load(&self, context: &LLVMCodeGenContext<'_, 'ctx>) -> BasicValueEnum<'ctx> {
         let llvm_context: &Context = context.get_llvm_context();
         let llvm_builder: &Builder = context.get_llvm_builder();
         let target_data: &TargetData = &context.target_data;
@@ -135,7 +138,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
         }
     }
 
-    pub fn dealloc(&self, context: &CodeGenContext<'_, '_>) {
+    pub fn dealloc(&self, context: &LLVMCodeGenContext<'_, '_>) {
         let llvm_context: &Context = context.get_llvm_context();
         let llvm_builder: &Builder = context.get_llvm_builder();
         let target_data: &TargetData = &context.target_data;
@@ -157,7 +160,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
         }
     }
 
-    pub fn store(&self, context: &CodeGenContext<'_, 'ctx>, value: BasicValueEnum<'ctx>) {
+    pub fn store(&self, context: &LLVMCodeGenContext<'_, 'ctx>, value: BasicValueEnum<'ctx>) {
         let llvm_context: &Context = context.get_llvm_context();
         let llvm_builder: &Builder = context.get_llvm_builder();
         let target_data: &TargetData = &context.target_data;
@@ -291,11 +294,19 @@ pub fn store_anon<'ctx>(
 }
 
 pub trait MemoryManagement<'ctx> {
-    fn load_maybe(&self, kind: &Type, context: &CodeGenContext<'_, 'ctx>) -> BasicValueEnum<'ctx>;
+    fn load_maybe(
+        &self,
+        kind: &ThrushType,
+        context: &LLVMCodeGenContext<'_, 'ctx>,
+    ) -> BasicValueEnum<'ctx>;
 }
 
 impl<'ctx> MemoryManagement<'ctx> for BasicValueEnum<'ctx> {
-    fn load_maybe(&self, kind: &Type, context: &CodeGenContext<'_, 'ctx>) -> BasicValueEnum<'ctx> {
+    fn load_maybe(
+        &self,
+        kind: &ThrushType,
+        context: &LLVMCodeGenContext<'_, 'ctx>,
+    ) -> BasicValueEnum<'ctx> {
         if self.is_pointer_value() {
             let new_value: BasicValueEnum = load_anon(context, kind, self.into_pointer_value());
             return new_value;
@@ -306,8 +317,8 @@ impl<'ctx> MemoryManagement<'ctx> for BasicValueEnum<'ctx> {
 }
 
 pub fn load_anon<'ctx>(
-    context: &CodeGenContext<'_, 'ctx>,
-    kind: &Type,
+    context: &LLVMCodeGenContext<'_, 'ctx>,
+    kind: &ThrushType,
     ptr: PointerValue<'ctx>,
 ) -> BasicValueEnum<'ctx> {
     let llvm_context: &Context = context.get_llvm_context();

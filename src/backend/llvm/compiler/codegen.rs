@@ -1,6 +1,7 @@
-use crate::middle::instruction::Instruction;
-use crate::middle::statement::{FunctionParameter, FunctionPrototype};
-use crate::middle::types::Type;
+use crate::middle::types::backend::llvm::types::{LLVMFunctionParameter, LLVMFunctionPrototype};
+use crate::middle::types::frontend::lexer::types::ThrushType;
+
+use crate::middle::types::frontend::parser::stmts::instruction::Instruction;
 use crate::standard::diagnostic::Diagnostician;
 
 use super::super::compiler::attributes::LLVMAttribute;
@@ -8,7 +9,7 @@ use super::super::compiler::attributes::LLVMAttribute;
 use super::{
     attributes::{AttributeBuilder, LLVMAttributeApplicant},
     binaryop,
-    context::CodeGenContext,
+    context::LLVMCodeGenContext,
     conventions::CallConvention,
     deallocator::Deallocator,
     local, typegen, unaryop, valuegen,
@@ -25,8 +26,8 @@ use inkwell::{
     values::{BasicValueEnum, FunctionValue, GlobalValue, IntValue},
 };
 
-pub struct Codegen<'a, 'ctx> {
-    context: CodeGenContext<'a, 'ctx>,
+pub struct LLVMCodegen<'a, 'ctx> {
+    context: LLVMCodeGenContext<'a, 'ctx>,
     instructions: &'ctx [Instruction<'ctx>],
     current: usize,
     function: Option<FunctionValue<'ctx>>,
@@ -35,7 +36,7 @@ pub struct Codegen<'a, 'ctx> {
     deallocators_emited: bool,
 }
 
-impl<'a, 'ctx> Codegen<'a, 'ctx> {
+impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
     pub fn generate(
         module: &'a Module<'ctx>,
         builder: &'ctx Builder<'ctx>,
@@ -45,7 +46,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
         diagnostician: Diagnostician,
     ) {
         Self {
-            context: CodeGenContext::new(module, context, builder, target_data, diagnostician),
+            context: LLVMCodeGenContext::new(module, context, builder, target_data, diagnostician),
             instructions,
             current: 0,
             function: None,
@@ -375,7 +376,9 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
             }
 
             Instruction::Function { .. } => {
-                let function_prototype: FunctionPrototype = instruction.as_function();
+                let function_prototype: LLVMFunctionPrototype =
+                    instruction.as_llvm_function_proto();
+
                 self.build_function(function_prototype);
 
                 Instruction::Null
@@ -397,7 +400,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
 
             Instruction::Str(_, _, _) => Instruction::LLVMValue(valuegen::generate_expression(
                 instruction,
-                &Type::Void,
+                &ThrushType::Void,
                 &mut self.context,
             )),
 
@@ -498,12 +501,12 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
 
             Instruction::Address { .. } => Instruction::LLVMValue(valuegen::generate_expression(
                 instruction,
-                &Type::Void,
+                &ThrushType::Void,
                 &mut self.context,
             )),
 
             Instruction::Write { .. } => {
-                valuegen::generate_expression(instruction, &Type::Void, &mut self.context);
+                valuegen::generate_expression(instruction, &ThrushType::Void, &mut self.context);
 
                 Instruction::Null
             }
@@ -531,9 +534,9 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
         main
     }
 
-    fn build_function_parameter(&mut self, parameter: FunctionParameter<'ctx>) {
+    fn build_function_parameter(&mut self, parameter: LLVMFunctionParameter<'ctx>) {
         let parameter_name: &str = parameter.0;
-        let parameter_type: &Type = parameter.1;
+        let parameter_type: &ThrushType = parameter.1;
         let parameter_position: u32 = parameter.2;
         let is_mutable: bool = parameter.3;
 
@@ -577,12 +580,12 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
         let llvm_module: &Module = self.context.get_llvm_module();
         let llvm_context: &Context = self.context.get_llvm_context();
 
-        let function: FunctionPrototype = instruction.as_function();
+        let function: LLVMFunctionPrototype = instruction.as_llvm_function_proto();
 
         let function_name: &str = function.0;
-        let function_type: &Type = function.1;
+        let function_type: &ThrushType = function.1;
         let function_parameters: &[Instruction<'ctx>] = function.2;
-        let function_parameters_types: &[Type] = function.3;
+        let function_parameters_types: &[ThrushType] = function.3;
         let function_attributes: &[LLVMAttribute] = function.5;
 
         let mut call_convention: u32 = CallConvention::Standard as u32;
@@ -641,12 +644,12 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
         );
     }
 
-    fn build_function(&mut self, function: FunctionPrototype<'ctx>) {
+    fn build_function(&mut self, function: LLVMFunctionPrototype<'ctx>) {
         let llvm_context: &Context = self.context.get_llvm_context();
         let llvm_builder: &Builder<'_> = self.context.get_llvm_builder();
 
         let function_name: &str = function.0;
-        let function_type: &Type = function.1;
+        let function_type: &ThrushType = function.1;
         let function_parameters: &[Instruction<'ctx>] = function.2;
         let function_body: &Instruction = function.4;
 

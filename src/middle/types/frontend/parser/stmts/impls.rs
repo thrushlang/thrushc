@@ -1,14 +1,13 @@
-use crate::middle::types::Type;
+use crate::middle::types::frontend::lexer::types::ThrushType;
 
-use super::{CustomTypeFields, traits::CustomTypeFieldsExtensions};
-
-use crate::middle::instruction::Instruction;
-use crate::middle::statement::traits::{
-    AttributesExtensions, ConstructorExtensions, StructFieldsExtensions,
+use super::{
+    instruction::Instruction,
+    traits::{
+        AttributesExtensions, ConstructorExtensions, CustomTypeFieldsExtensions,
+        StructFieldsExtensions,
+    },
+    types::{Constructor, CustomTypeFields, StructFields, ThrushAttributes},
 };
-
-use crate::middle::statement::ThrushAttributes;
-use crate::middle::statement::{Constructor, StructFields};
 
 impl AttributesExtensions for ThrushAttributes<'_> {
     fn contain_ffi_attribute(&self) -> bool {
@@ -25,22 +24,22 @@ impl AttributesExtensions for ThrushAttributes<'_> {
 }
 
 impl StructFieldsExtensions for StructFields<'_> {
-    fn get_type(&self) -> Type {
-        let types: Vec<Type> = self.1.iter().map(|field| field.1.clone()).collect();
-        Type::create_structure_type(self.0.to_string(), types.as_slice())
+    fn get_type(&self) -> ThrushType {
+        let types: Vec<ThrushType> = self.1.iter().map(|field| field.1.clone()).collect();
+        ThrushType::create_structure_type(self.0.to_string(), types.as_slice())
     }
 }
 
 impl ConstructorExtensions for Constructor<'_> {
-    fn get_type(&self) -> Type {
-        let types: Vec<Type> = self.1.iter().map(|field| field.2.clone()).collect();
-        Type::create_structure_type(self.0.to_string(), types.as_slice())
+    fn get_type(&self) -> ThrushType {
+        let types: Vec<ThrushType> = self.1.iter().map(|field| field.2.clone()).collect();
+        ThrushType::create_structure_type(self.0.to_string(), types.as_slice())
     }
 }
 
 impl CustomTypeFieldsExtensions for CustomTypeFields<'_> {
-    fn get_type(&self) -> Type {
-        Type::create_structure_type(String::new(), self)
+    fn get_type(&self) -> ThrushType {
+        ThrushType::create_structure_type(String::new(), self)
     }
 }
 

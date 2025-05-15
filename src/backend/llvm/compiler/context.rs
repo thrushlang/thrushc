@@ -2,14 +2,12 @@ use {
     super::{
         super::super::super::logging::{self, LoggingType},
         memory::{self, SymbolAllocated},
-        typegen,
-        types::{ScopeCall, ScopeCalls, SymbolsAllocated},
-        valuegen,
+        typegen, valuegen,
     },
     crate::{
-        middle::{
-            statement::{Function, ThrushAttributes},
-            types::Type,
+        middle::types::{
+            backend::llvm::types::{LLVMCall, LLVMCalls, LLVMFunction, SymbolsAllocated},
+            frontend::{lexer::types::ThrushType, parser::stmts::types::ThrushAttributes},
         },
         standard::diagnostic::Diagnostician,
     },
@@ -29,22 +27,22 @@ const SCOPE_MINIMAL_CAPACITY: usize = 155;
 const CALLS_PER_SCOPE_MINIMAL_CAPACITY: usize = 100;
 
 #[derive(Debug)]
-pub struct CodeGenContext<'a, 'ctx> {
+pub struct LLVMCodeGenContext<'a, 'ctx> {
     module: &'a Module<'ctx>,
     context: &'ctx Context,
     builder: &'ctx Builder<'ctx>,
-    position: CodeGenContextPosition,
+    position: LLVMCodeGenContextPosition,
     pub target_data: TargetData,
     diagnostician: Diagnostician,
     constants: HashMap<&'ctx str, SymbolAllocated<'ctx>>,
-    functions: HashMap<&'ctx str, Function<'ctx>>,
+    functions: HashMap<&'ctx str, LLVMFunction<'ctx>>,
     blocks: Vec<HashMap<&'ctx str, SymbolAllocated<'ctx>>>,
-    scope_calls: Vec<ScopeCall<'ctx>>,
+    llvm_calls: LLVMCalls<'ctx>,
     lift_instructions: HashMap<&'ctx str, SymbolAllocated<'ctx>>,
     scope: usize,
 }
 
-impl<'a, 'ctx> CodeGenContext<'a, 'ctx> {
+impl<'a, 'ctx> LLVMCodeGenContext<'a, 'ctx> {
     pub fn new(
         module: &'a Module<'ctx>,
         context: &'ctx Context,
@@ -56,19 +54,19 @@ impl<'a, 'ctx> CodeGenContext<'a, 'ctx> {
             module,
             context,
             builder,
-            position: CodeGenContextPosition::default(),
+            position: LLVMCodeGenContextPosition::default(),
             target_data,
             diagnostician,
             constants: HashMap::with_capacity(CONSTANTS_MINIMAL_CAPACITY),
             functions: HashMap::with_capacity(FUNCTION_MINIMAL_CAPACITY),
             blocks: Vec::with_capacity(SCOPE_MINIMAL_CAPACITY),
-            scope_calls: Vec::with_capacity(CALLS_PER_SCOPE_MINIMAL_CAPACITY),
+            llvm_calls: Vec::with_capacity(CALLS_PER_SCOPE_MINIMAL_CAPACITY),
             lift_instructions: HashMap::with_capacity(SCOPE_MINIMAL_CAPACITY),
             scope: 0,
         }
     }
 
-    pub fn alloc_local(&mut self, name: &'ctx str, kind: &'ctx Type) {
+    pub fn alloc_local(&mut self, name: &'ctx str, kind: &'ctx ThrushType) {
         let ptr_allocated: PointerValue = valuegen::alloc(
             self.context,
             self.builder,
@@ -87,7 +85,7 @@ impl<'a, 'ctx> CodeGenContext<'a, 'ctx> {
     pub fn alloc_constant(
         &mut self,
         name: &'ctx str,
-        kind: &'ctx Type,
+        kind: &'ctx ThrushType,
         value: BasicValueEnum<'ctx>,
         attributes: &'ctx ThrushAttributes<'ctx>,
     ) {
@@ -108,7 +106,7 @@ impl<'a, 'ctx> CodeGenContext<'a, 'ctx> {
     pub fn alloc_function_parameter(
         &mut self,
         name: &'ctx str,
-        kind: &'ctx Type,
+        kind: &'ctx ThrushType,
         is_mutable: bool,
         mut value: BasicValueEnum<'ctx>,
     ) {
@@ -131,7 +129,7 @@ impl<'a, 'ctx> CodeGenContext<'a, 'ctx> {
     }
 
     #[inline]
-    pub fn insert_function(&mut self, name: &'ctx str, function: Function<'ctx>) {
+    pub fn insert_function(&mut self, name: &'ctx str, function: LLVMFunction<'ctx>) {
         self.functions.insert(name, function);
     }
 
@@ -164,7 +162,7 @@ impl<'a, 'ctx> CodeGenContext<'a, 'ctx> {
     }
 
     #[inline]
-    pub fn get_function(&self, name: &str) -> Function<'ctx> {
+    pub fn get_function(&self, name: &str) -> LLVMFunction<'ctx> {
         if let Some(function) = self.functions.get(name) {
             return *function;
         }
@@ -189,28 +187,28 @@ impl<'a, 'ctx> CodeGenContext<'a, 'ctx> {
         self.builder
     }
 
-    pub fn set_position(&mut self, new_position: CodeGenContextPosition) {
+    pub fn set_position(&mut self, new_position: LLVMCodeGenContextPosition) {
         self.position = new_position;
     }
 
-    pub fn get_position(&self) -> CodeGenContextPosition {
+    pub fn get_position(&self) -> LLVMCodeGenContextPosition {
         self.position
     }
 
     pub fn set_position_irrelevant(&mut self) {
-        self.position = CodeGenContextPosition::NoRelevant;
+        self.position = LLVMCodeGenContextPosition::NoRelevant;
     }
 
     pub fn get_diagnostician(&self) -> &Diagnostician {
         &self.diagnostician
     }
 
-    pub fn get_scope_calls(&self) -> &ScopeCalls<'ctx> {
-        &self.scope_calls
+    pub fn get_llvm_calls(&self) -> &LLVMCalls<'ctx> {
+        &self.llvm_calls
     }
 
-    pub fn add_scope_call(&mut self, call: ScopeCall<'ctx>) {
-        self.scope_calls.push(call);
+    pub fn add_scope_call(&mut self, call: LLVMCall<'ctx>) {
+        self.llvm_calls.push(call);
     }
 
     pub fn begin_scope(&mut self) {
@@ -227,14 +225,14 @@ impl<'a, 'ctx> CodeGenContext<'a, 'ctx> {
         self.blocks.pop();
 
         self.lift_instructions.clear();
-        self.scope_calls.clear();
+        self.llvm_calls.clear();
 
         self.scope -= 1;
     }
 }
 
 #[derive(Debug, Default, Clone, Copy)]
-pub enum CodeGenContextPosition {
+pub enum LLVMCodeGenContextPosition {
     Local,
     Call,
     Mutation,
@@ -243,16 +241,16 @@ pub enum CodeGenContextPosition {
     NoRelevant,
 }
 
-impl CodeGenContextPosition {
+impl LLVMCodeGenContextPosition {
     pub fn in_local(&self) -> bool {
-        matches!(self, CodeGenContextPosition::Local)
+        matches!(self, LLVMCodeGenContextPosition::Local)
     }
 
     pub fn in_call(&self) -> bool {
-        matches!(self, CodeGenContextPosition::Call)
+        matches!(self, LLVMCodeGenContextPosition::Call)
     }
 
     pub fn in_mutation(&self) -> bool {
-        matches!(self, CodeGenContextPosition::Mutation)
+        matches!(self, LLVMCodeGenContextPosition::Mutation)
     }
 }
