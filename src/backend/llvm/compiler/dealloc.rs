@@ -19,6 +19,11 @@ impl<'a, 'ctx> Deallocator<'a, 'ctx> {
             let symbol: &SymbolAllocated = any_symbol.1;
             symbol.dealloc(self.context);
         });
+
+        symbols_allocated.iter().for_each(|any_symbol| {
+            let symbol: &SymbolAllocated = any_symbol.1;
+            symbol.set_null(self.context);
+        });
     }
 
     pub fn dealloc(
@@ -28,16 +33,21 @@ impl<'a, 'ctx> Deallocator<'a, 'ctx> {
     ) {
         if let Some(expression) = expression {
             if let Instruction::LocalRef { name, .. } = **expression {
-                for symbol in symbols_allocated {
-                    let symbol_name: &str = symbol.0;
+                symbols_allocated
+                    .iter()
+                    .filter(|symbol| *symbol.0 != name)
+                    .for_each(|symbol| {
+                        let symbol: &SymbolAllocated = symbol.1;
+                        symbol.dealloc(self.context);
+                    });
 
-                    if *symbol_name == *name {
-                        continue;
-                    }
-
-                    let symbol: &SymbolAllocated = symbol.1;
-                    symbol.dealloc(self.context);
-                }
+                symbols_allocated
+                    .iter()
+                    .filter(|symbol| *symbol.0 != name)
+                    .for_each(|symbol| {
+                        let symbol: &SymbolAllocated = symbol.1;
+                        symbol.set_null(self.context);
+                    });
 
                 return;
             }

@@ -498,6 +498,10 @@ impl Instruction<'_> {
         false
     }
 
+    pub fn is_block(&self) -> bool {
+        matches!(self, Instruction::Block { .. })
+    }
+
     #[inline]
     pub fn is_unsigned_integer(&self) -> bool {
         matches!(

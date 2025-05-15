@@ -1,6 +1,7 @@
 #![allow(clippy::enum_variant_names)]
 
 use inkwell::{
+    AddressSpace,
     context::Context,
     targets::TargetData,
     types::{BasicType, BasicTypeEnum},
@@ -60,6 +61,17 @@ impl<'ctx> SymbolAllocated<'ctx> {
                 let alignment: u32 = target_data.get_preferred_alignment(&ptr_type);
 
                 if kind.is_heap_allocated(llvm_context, target_data) {
+                    if context.get_position().in_call() {
+                        let value: BasicValueEnum =
+                            llvm_builder.build_load(ptr_type, *ptr, "").unwrap();
+
+                        if let Some(load_instruction) = value.as_instruction_value() {
+                            let _ = load_instruction.set_alignment(alignment);
+                        }
+
+                        return value;
+                    }
+
                     return (*ptr).into();
                 }
 
@@ -83,6 +95,17 @@ impl<'ctx> SymbolAllocated<'ctx> {
                     let alignment: u32 = target_data.get_preferred_alignment(&ptr_type);
 
                     if kind.is_heap_allocated(llvm_context, target_data) {
+                        if context.get_position().in_call() {
+                            let value: BasicValueEnum =
+                                llvm_builder.build_load(ptr_type, ptr, "").unwrap();
+
+                            if let Some(load_instruction) = value.as_instruction_value() {
+                                let _ = load_instruction.set_alignment(alignment);
+                            }
+
+                            return value;
+                        }
+
                         return *value;
                     }
 
@@ -127,7 +150,39 @@ impl<'ctx> SymbolAllocated<'ctx> {
                 if kind.is_heap_allocated(llvm_context, target_data)
                     && value.is_pointer_value() =>
             {
-                let _ = llvm_builder.build_free(value.into_pointer_value());
+                let ptr: PointerValue = value.into_pointer_value();
+                let _ = llvm_builder.build_free(ptr);
+            }
+
+            _ => (),
+        }
+    }
+
+    pub fn set_null(&self, context: &CodeGenContext<'_, '_>) {
+        let llvm_context: &Context = context.get_llvm_context();
+        let llvm_builder: &Builder = context.get_llvm_builder();
+
+        let null: PointerValue = llvm_context.ptr_type(AddressSpace::default()).const_null();
+
+        match self {
+            Self::Local { ptr, kind, .. } => {
+                let kind: BasicTypeEnum = typegen::generate_subtype(llvm_context, kind);
+                let preferred_alignment: u32 = context.target_data.get_preferred_alignment(&kind);
+
+                if let Ok(store) = llvm_builder.build_store(*ptr, null) {
+                    let _ = store.set_alignment(preferred_alignment);
+                }
+            }
+
+            Self::Parameter {
+                value: ptr, kind, ..
+            } if ptr.is_pointer_value() => {
+                let kind: BasicTypeEnum = typegen::generate_subtype(llvm_context, kind);
+                let preferred_alignment: u32 = context.target_data.get_preferred_alignment(&kind);
+
+                if let Ok(store) = llvm_builder.build_store(ptr.into_pointer_value(), null) {
+                    let _ = store.set_alignment(preferred_alignment);
+                }
             }
 
             _ => (),
