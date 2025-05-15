@@ -498,6 +498,7 @@ impl Instruction<'_> {
         false
     }
 
+    #[inline]
     pub fn is_block(&self) -> bool {
         matches!(self, Instruction::Block { .. })
     }

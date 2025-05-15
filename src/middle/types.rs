@@ -408,8 +408,8 @@ impl Type {
         }
     }
 
-    pub fn is_heap_allocated(&self, context: &Context, target_data: &TargetData) -> bool {
-        target_data.get_abi_size(&typegen::generate_type(context, self)) >= 100
+    pub fn is_heap_allocated(&self, llvm_context: &Context, target_data: &TargetData) -> bool {
+        target_data.get_abi_size(&typegen::generate_type(llvm_context, self)) >= 128
             || self.is_recursive_type()
     }
 

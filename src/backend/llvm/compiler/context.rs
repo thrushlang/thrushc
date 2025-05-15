@@ -3,7 +3,7 @@ use {
         super::super::super::logging::{self, LoggingType},
         memory::{self, SymbolAllocated},
         typegen,
-        types::SymbolsAllocated,
+        types::{ScopeCall, ScopeCalls, SymbolsAllocated},
         valuegen,
     },
     crate::{
@@ -26,6 +26,7 @@ use {
 const CONSTANTS_MINIMAL_CAPACITY: usize = 255;
 const FUNCTION_MINIMAL_CAPACITY: usize = 255;
 const SCOPE_MINIMAL_CAPACITY: usize = 155;
+const CALLS_PER_SCOPE_MINIMAL_CAPACITY: usize = 100;
 
 #[derive(Debug)]
 pub struct CodeGenContext<'a, 'ctx> {
@@ -38,7 +39,8 @@ pub struct CodeGenContext<'a, 'ctx> {
     constants: HashMap<&'ctx str, SymbolAllocated<'ctx>>,
     functions: HashMap<&'ctx str, Function<'ctx>>,
     blocks: Vec<HashMap<&'ctx str, SymbolAllocated<'ctx>>>,
-    lift: HashMap<&'ctx str, SymbolAllocated<'ctx>>,
+    scope_calls: Vec<ScopeCall<'ctx>>,
+    lift_instructions: HashMap<&'ctx str, SymbolAllocated<'ctx>>,
     scope: usize,
 }
 
@@ -60,12 +62,12 @@ impl<'a, 'ctx> CodeGenContext<'a, 'ctx> {
             constants: HashMap::with_capacity(CONSTANTS_MINIMAL_CAPACITY),
             functions: HashMap::with_capacity(FUNCTION_MINIMAL_CAPACITY),
             blocks: Vec::with_capacity(SCOPE_MINIMAL_CAPACITY),
-            lift: HashMap::with_capacity(SCOPE_MINIMAL_CAPACITY),
+            scope_calls: Vec::with_capacity(CALLS_PER_SCOPE_MINIMAL_CAPACITY),
+            lift_instructions: HashMap::with_capacity(SCOPE_MINIMAL_CAPACITY),
             scope: 0,
         }
     }
 
-    #[inline]
     pub fn alloc_local(&mut self, name: &'ctx str, kind: &'ctx Type) {
         let ptr_allocated: PointerValue = valuegen::alloc(
             self.context,
@@ -82,7 +84,6 @@ impl<'a, 'ctx> CodeGenContext<'a, 'ctx> {
             .insert(name, symbol_allocated);
     }
 
-    #[inline]
     pub fn alloc_constant(
         &mut self,
         name: &'ctx str,
@@ -104,7 +105,6 @@ impl<'a, 'ctx> CodeGenContext<'a, 'ctx> {
         self.constants.insert(name, symbol_allocated);
     }
 
-    #[inline]
     pub fn alloc_function_parameter(
         &mut self,
         name: &'ctx str,
@@ -127,7 +127,7 @@ impl<'a, 'ctx> CodeGenContext<'a, 'ctx> {
 
         let symbol_allocated: SymbolAllocated = SymbolAllocated::new_parameter(value, kind);
 
-        self.lift.insert(name, symbol_allocated);
+        self.lift_instructions.insert(name, symbol_allocated);
     }
 
     #[inline]
@@ -135,6 +135,7 @@ impl<'a, 'ctx> CodeGenContext<'a, 'ctx> {
         self.functions.insert(name, function);
     }
 
+    #[inline]
     pub fn get_allocated_symbols(&self) -> SymbolsAllocated {
         self.blocks.last().unwrap()
     }
@@ -204,16 +205,30 @@ impl<'a, 'ctx> CodeGenContext<'a, 'ctx> {
         &self.diagnostician
     }
 
+    pub fn get_scope_calls(&self) -> &ScopeCalls<'ctx> {
+        &self.scope_calls
+    }
+
+    pub fn add_scope_call(&mut self, call: ScopeCall<'ctx>) {
+        self.scope_calls.push(call);
+    }
+
     pub fn begin_scope(&mut self) {
         self.blocks
             .push(HashMap::with_capacity(SCOPE_MINIMAL_CAPACITY));
-        self.blocks.last_mut().unwrap().extend(self.lift.clone());
+        self.blocks
+            .last_mut()
+            .unwrap()
+            .extend(self.lift_instructions.clone());
         self.scope += 1;
     }
 
     pub fn end_scope(&mut self) {
         self.blocks.pop();
-        self.lift.clear();
+
+        self.lift_instructions.clear();
+        self.scope_calls.clear();
+
         self.scope -= 1;
     }
 }

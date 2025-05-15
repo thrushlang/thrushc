@@ -27,7 +27,7 @@ pub type WarnersFunctions<'warner> = HashMap<&'warner str, WarnerFunctionInfo<'w
 pub type WarnerLocalInfo = (Span, bool, bool);
 pub type WarnerLocals<'warner> = Vec<HashMap<&'warner str, WarnerLocalInfo>>;
 
-pub type WarnerFunctionParameterInfo = (Span, bool);
+pub type WarnerFunctionParameterInfo = (Span, bool, bool);
 pub type WarnersFunctionParameters<'warner> = HashMap<&'warner str, WarnerFunctionParameterInfo>;
 
 pub struct Warner<'warner> {
@@ -40,8 +40,8 @@ pub struct Warner<'warner> {
     constants: WarnersConstants<'warner>,
     locals: WarnerLocals<'warner>,
     parameters: WarnersFunctionParameters<'warner>,
-    parameters_analyze: WarnersFunctionParameters<'warner>,
-    locals_anaylize: WarnerLocals<'warner>,
+    parameters_to_analyze: WarnersFunctionParameters<'warner>,
+    locals_to_analyze: WarnerLocals<'warner>,
     scope: usize,
 }
 
@@ -56,8 +56,8 @@ impl<'warner> Warner<'warner> {
             constants: HashMap::with_capacity(MINIMAL_WARNER_CONSTANTS_CAPACITY),
             locals: Vec::with_capacity(MINIMAL_WARNER_LOCALS_CAPACITY),
             parameters: HashMap::with_capacity(MINIMAL_WARNER_LOCALS_CAPACITY),
-            parameters_analyze: HashMap::with_capacity(MINIMAL_WARNER_PARAMETERS_CAPACITY),
-            locals_anaylize: Vec::with_capacity(MINIMAL_WARNER_PARAMETERS_CAPACITY),
+            parameters_to_analyze: HashMap::with_capacity(MINIMAL_WARNER_PARAMETERS_CAPACITY),
+            locals_to_analyze: Vec::with_capacity(MINIMAL_WARNER_PARAMETERS_CAPACITY),
             scope: 0,
         }
     }
@@ -66,9 +66,9 @@ impl<'warner> Warner<'warner> {
         self.declare();
 
         while !self.is_eof() {
-            let current_instruction: &Instruction = self.peek();
+            let instruction: &Instruction = self.peek();
 
-            self.analyze_instruction(current_instruction);
+            self.analyze_instruction(instruction);
 
             self.advance();
         }
@@ -164,19 +164,6 @@ impl<'warner> Warner<'warner> {
     }
 
     pub fn generate_warnings(&mut self) {
-        self.functions.iter().for_each(|(name, info)| {
-            let span: Span = info.1;
-            let used: bool = info.2;
-
-            if !used {
-                self.warnings.push(ThrushCompilerIssue::Warning(
-                    String::from("Function not used"),
-                    format!("'{}' not used.", name),
-                    span,
-                ));
-            }
-        });
-
         self.constants.iter().for_each(|(name, info)| {
             let span: Span = info.0;
             let used: bool = info.1;
@@ -190,7 +177,43 @@ impl<'warner> Warner<'warner> {
             }
         });
 
-        self.locals_anaylize.iter().for_each(|scope| {
+        self.functions.iter().for_each(|(name, info)| {
+            let span: Span = info.1;
+            let used: bool = info.2;
+
+            if !used {
+                self.warnings.push(ThrushCompilerIssue::Warning(
+                    String::from("Function not used"),
+                    format!("'{}' not used.", name),
+                    span,
+                ));
+            }
+        });
+
+        self.parameters_to_analyze.iter().for_each(|parameter| {
+            let name: &str = parameter.0;
+            let span: Span = parameter.1.0;
+            let used: bool = parameter.1.1;
+            let is_mutable_used: bool = parameter.1.2;
+
+            if !used {
+                self.warnings.push(ThrushCompilerIssue::Warning(
+                    String::from("Parameter not used"),
+                    format!("'{}' not used.", name),
+                    span,
+                ));
+            }
+
+            if !is_mutable_used {
+                self.warnings.push(ThrushCompilerIssue::Warning(
+                    String::from("Mutable parameter not used"),
+                    format!("'{}' not used.", name),
+                    span,
+                ));
+            }
+        });
+
+        self.locals_to_analyze.iter().for_each(|scope| {
             scope.iter().for_each(|(name, info)| {
                 let span: Span = info.0;
                 let used: bool = info.1;
@@ -212,20 +235,6 @@ impl<'warner> Warner<'warner> {
                     ));
                 }
             });
-        });
-
-        self.parameters_analyze.iter().for_each(|parameter| {
-            let name: &str = parameter.0;
-            let span: Span = parameter.1.0;
-            let used: bool = parameter.1.1;
-
-            if !used {
-                self.warnings.push(ThrushCompilerIssue::Warning(
-                    String::from("Parameter not used"),
-                    format!("'{}' not used.", name),
-                    span,
-                ));
-            }
         });
     }
 
@@ -292,8 +301,14 @@ impl<'warner> Warner<'warner> {
 
     fn start_parameters(&mut self, parameters: &'warner [Instruction<'warner>]) {
         parameters.iter().for_each(|instruction| {
-            if let Instruction::FunctionParameter { name, span, .. } = instruction {
-                self.parameters.insert(name, (*span, false));
+            if let Instruction::FunctionParameter {
+                name,
+                span,
+                is_mutable,
+                ..
+            } = instruction
+            {
+                self.parameters.insert(name, (*span, false, !is_mutable));
             }
         });
     }
@@ -307,7 +322,7 @@ impl<'warner> Warner<'warner> {
     }
 
     fn end_parameters(&mut self) {
-        self.parameters_analyze.extend(self.parameters.iter());
+        self.parameters_to_analyze.extend(self.parameters.iter());
         self.parameters.clear();
     }
 
@@ -319,7 +334,7 @@ impl<'warner> Warner<'warner> {
     }
 
     fn end_scope(&mut self) {
-        self.locals_anaylize.push(self.locals.pop().unwrap());
+        self.locals_to_analyze.push(self.locals.pop().unwrap());
         self.scope -= 1;
     }
 

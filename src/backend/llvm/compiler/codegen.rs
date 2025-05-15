@@ -10,7 +10,7 @@ use super::{
     binaryop,
     context::CodeGenContext,
     conventions::CallConvention,
-    dealloc::Deallocator,
+    deallocator::Deallocator,
     local, typegen, unaryop, valuegen,
 };
 
@@ -612,7 +612,7 @@ impl<'a, 'ctx> Codegen<'a, 'ctx> {
         };
 
         let function_type: FunctionType = typegen::function_type(
-            llvm_context,
+            &self.context,
             function_type,
             function_parameters,
             ignore_args,

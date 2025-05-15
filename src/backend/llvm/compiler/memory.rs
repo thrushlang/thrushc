@@ -1,7 +1,6 @@
 #![allow(clippy::enum_variant_names)]
 
 use inkwell::{
-    AddressSpace,
     context::Context,
     targets::TargetData,
     types::{BasicType, BasicTypeEnum},
@@ -15,7 +14,7 @@ use inkwell::{
     values::{BasicValue, BasicValueEnum, InstructionValue, PointerValue},
 };
 
-use super::{context::CodeGenContext, predicates};
+use super::context::CodeGenContext;
 
 #[derive(Debug, Clone)]
 pub enum SymbolAllocated<'ctx> {
@@ -58,7 +57,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
                 }
 
                 let ptr_type: BasicTypeEnum = typegen::generate_subtype(llvm_context, kind);
-                let alignment: u32 = target_data.get_preferred_alignment(&ptr_type);
+                let preffered_alignment: u32 = target_data.get_preferred_alignment(&ptr_type);
 
                 if kind.is_heap_allocated(llvm_context, target_data) {
                     if context.get_position().in_call() {
@@ -66,7 +65,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
                             llvm_builder.build_load(ptr_type, *ptr, "").unwrap();
 
                         if let Some(load_instruction) = value.as_instruction_value() {
-                            let _ = load_instruction.set_alignment(alignment);
+                            let _ = load_instruction.set_alignment(preffered_alignment);
                         }
 
                         return value;
@@ -78,7 +77,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
                 let value: BasicValueEnum = llvm_builder.build_load(ptr_type, *ptr, "").unwrap();
 
                 if let Some(load_instruction) = value.as_instruction_value() {
-                    let _ = load_instruction.set_alignment(alignment);
+                    let _ = load_instruction.set_alignment(preffered_alignment);
                 }
 
                 value
@@ -92,7 +91,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
                     let ptr: PointerValue = value.into_pointer_value();
                     let ptr_type: BasicTypeEnum = typegen::generate_subtype(llvm_context, kind);
 
-                    let alignment: u32 = target_data.get_preferred_alignment(&ptr_type);
+                    let preffered_alignment: u32 = target_data.get_preferred_alignment(&ptr_type);
 
                     if kind.is_heap_allocated(llvm_context, target_data) {
                         if context.get_position().in_call() {
@@ -100,7 +99,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
                                 llvm_builder.build_load(ptr_type, ptr, "").unwrap();
 
                             if let Some(load_instruction) = value.as_instruction_value() {
-                                let _ = load_instruction.set_alignment(alignment);
+                                let _ = load_instruction.set_alignment(preffered_alignment);
                             }
 
                             return value;
@@ -112,7 +111,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
                     let value: BasicValueEnum = llvm_builder.build_load(ptr_type, ptr, "").unwrap();
 
                     if let Some(load_instruction) = value.as_instruction_value() {
-                        let _ = load_instruction.set_alignment(alignment);
+                        let _ = load_instruction.set_alignment(preffered_alignment);
                     }
 
                     return value;
@@ -123,12 +122,12 @@ impl<'ctx> SymbolAllocated<'ctx> {
 
             Self::Constant { ptr, kind } => {
                 let ptr_type: BasicTypeEnum = typegen::generate_subtype(llvm_context, kind);
-                let alignment: u32 = target_data.get_preferred_alignment(&ptr_type);
+                let preffered_alignment: u32 = target_data.get_preferred_alignment(&ptr_type);
 
                 let value: BasicValueEnum = llvm_builder.build_load(ptr_type, *ptr, "").unwrap();
 
                 if let Some(load_instruction) = value.as_instruction_value() {
-                    let _ = load_instruction.set_alignment(alignment);
+                    let _ = load_instruction.set_alignment(preffered_alignment);
                 }
 
                 value
@@ -152,37 +151,6 @@ impl<'ctx> SymbolAllocated<'ctx> {
             {
                 let ptr: PointerValue = value.into_pointer_value();
                 let _ = llvm_builder.build_free(ptr);
-            }
-
-            _ => (),
-        }
-    }
-
-    pub fn set_null(&self, context: &CodeGenContext<'_, '_>) {
-        let llvm_context: &Context = context.get_llvm_context();
-        let llvm_builder: &Builder = context.get_llvm_builder();
-
-        let null: PointerValue = llvm_context.ptr_type(AddressSpace::default()).const_null();
-
-        match self {
-            Self::Local { ptr, kind, .. } => {
-                let kind: BasicTypeEnum = typegen::generate_subtype(llvm_context, kind);
-                let preferred_alignment: u32 = context.target_data.get_preferred_alignment(&kind);
-
-                if let Ok(store) = llvm_builder.build_store(*ptr, null) {
-                    let _ = store.set_alignment(preferred_alignment);
-                }
-            }
-
-            Self::Parameter {
-                value: ptr, kind, ..
-            } if ptr.is_pointer_value() => {
-                let kind: BasicTypeEnum = typegen::generate_subtype(llvm_context, kind);
-                let preferred_alignment: u32 = context.target_data.get_preferred_alignment(&kind);
-
-                if let Ok(store) = llvm_builder.build_store(ptr.into_pointer_value(), null) {
-                    let _ = store.set_alignment(preferred_alignment);
-                }
             }
 
             _ => (),
@@ -284,14 +252,6 @@ impl<'ctx> SymbolAllocated<'ctx> {
         }
     }
 
-    pub fn get_type(&self) -> &'ctx Type {
-        match self {
-            Self::Local { kind, .. }
-            | Self::Parameter { kind, .. }
-            | Self::Constant { kind, .. } => kind,
-        }
-    }
-
     pub fn get_size_of(&self) -> BasicValueEnum<'ctx> {
         match self {
             Self::Local { ptr, .. } => ptr.get_type().size_of().into(),
@@ -302,7 +262,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
                 .unwrap_or_else(|| {
                     logging::log(
                         logging::LoggingType::Panic,
-                        "built-in sizeof!(), cannot be get size of an function parameter. ",
+                        "built-in sizeof!(), cannot be get size of an function parameter.",
                     );
 
                     unreachable!()
@@ -336,13 +296,8 @@ pub trait MemoryManagement<'ctx> {
 
 impl<'ctx> MemoryManagement<'ctx> for BasicValueEnum<'ctx> {
     fn load_maybe(&self, kind: &Type, context: &CodeGenContext<'_, 'ctx>) -> BasicValueEnum<'ctx> {
-        let llvm_context: &Context = context.get_llvm_context();
-        let llvm_builder: &Builder = context.get_llvm_builder();
-
         if self.is_pointer_value() {
-            let new_value: BasicValueEnum =
-                load_anon(llvm_context, llvm_builder, kind, self.into_pointer_value());
-
+            let new_value: BasicValueEnum = load_anon(context, kind, self.into_pointer_value());
             return new_value;
         }
 
@@ -351,17 +306,23 @@ impl<'ctx> MemoryManagement<'ctx> for BasicValueEnum<'ctx> {
 }
 
 pub fn load_anon<'ctx>(
-    context: &'ctx Context,
-    builder: &Builder<'ctx>,
+    context: &CodeGenContext<'_, 'ctx>,
     kind: &Type,
     ptr: PointerValue<'ctx>,
 ) -> BasicValueEnum<'ctx> {
-    let value: BasicValueEnum = builder
-        .build_load(typegen::generate_subtype(context, kind), ptr, "")
-        .unwrap();
+    let llvm_context: &Context = context.get_llvm_context();
+    let llvm_builder: &Builder = context.get_llvm_builder();
+
+    let target_data: &TargetData = &context.target_data;
+
+    let llvm_type: BasicTypeEnum = typegen::generate_subtype(llvm_context, kind);
+
+    let preffered_alignment: u32 = target_data.get_preferred_alignment(&llvm_type);
+
+    let value: BasicValueEnum = llvm_builder.build_load(llvm_type, ptr, "").unwrap();
 
     if let Some(load_instruction) = value.as_instruction_value() {
-        let _ = load_instruction.set_alignment(8);
+        let _ = load_instruction.set_alignment(preffered_alignment);
     }
 
     value

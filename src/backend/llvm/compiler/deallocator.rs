@@ -1,6 +1,12 @@
 use std::rc::Rc;
 
-use crate::middle::instruction::Instruction;
+use inkwell::{
+    builder::Builder,
+    context::Context,
+    values::{BasicValueEnum, PointerValue},
+};
+
+use crate::middle::{instruction::Instruction, types::Type};
 
 use super::{context::CodeGenContext, memory::SymbolAllocated, types::SymbolsAllocated};
 
@@ -20,10 +26,7 @@ impl<'a, 'ctx> Deallocator<'a, 'ctx> {
             symbol.dealloc(self.context);
         });
 
-        symbols_allocated.iter().for_each(|any_symbol| {
-            let symbol: &SymbolAllocated = any_symbol.1;
-            symbol.set_null(self.context);
-        });
+        self.destroy_calls();
     }
 
     pub fn dealloc(
@@ -41,18 +44,33 @@ impl<'a, 'ctx> Deallocator<'a, 'ctx> {
                         symbol.dealloc(self.context);
                     });
 
-                symbols_allocated
-                    .iter()
-                    .filter(|symbol| *symbol.0 != name)
-                    .for_each(|symbol| {
-                        let symbol: &SymbolAllocated = symbol.1;
-                        symbol.set_null(self.context);
-                    });
-
                 return;
             }
 
             self.dealloc_all(symbols_allocated);
+            self.destroy_calls();
         }
+    }
+
+    fn destroy_calls(&self) {
+        self.context.get_scope_calls().iter().for_each(|call| {
+            let call_type: &Type = call.0;
+            let call_value: BasicValueEnum = call.1;
+
+            let llvm_context: &Context = self.context.get_llvm_context();
+            let llvm_builder: &Builder = self.context.get_llvm_builder();
+
+            let is_heap_allocated: bool =
+                call_type.is_heap_allocated(llvm_context, &self.context.target_data);
+
+            if !is_heap_allocated {
+                return;
+            }
+
+            if call_value.is_pointer_value() {
+                let ptr: PointerValue = call_value.into_pointer_value();
+                let _ = llvm_builder.build_free(ptr);
+            }
+        });
     }
 }

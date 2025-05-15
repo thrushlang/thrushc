@@ -4,7 +4,7 @@ pub mod builtins;
 pub mod codegen;
 pub mod context;
 pub mod conventions;
-pub mod dealloc;
+pub mod deallocator;
 pub mod local;
 pub mod memory;
 pub mod predicates;

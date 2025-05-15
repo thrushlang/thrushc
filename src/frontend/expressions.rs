@@ -601,6 +601,15 @@ fn primary<'instr>(
             if parser_ctx.match_token(TokenKind::Eq)? {
                 let object: FoundSymbolId = parser_ctx.get_symbols().get_symbols_id(name, span)?;
 
+                if object.is_constant() {
+                    return Err(ThrushCompilerIssue::Error(
+                        String::from("Syntax error"),
+                        String::from("Constants cannot be modified."),
+                        None,
+                        span,
+                    ));
+                }
+
                 let local_position: (&str, usize) = object.expected_local(span)?;
 
                 let local: &Local = parser_ctx.get_symbols().get_local_by_id(

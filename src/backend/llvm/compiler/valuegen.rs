@@ -245,7 +245,7 @@ pub fn generate_expression<'ctx>(
             return address.into();
         }
 
-        return memory::load_anon(llvm_context, llvm_builder, kind, address);
+        return memory::load_anon(context, kind, address);
     }
 
     if let Instruction::LocalRef { name, .. } | Instruction::ConstRef { name, .. } = expression {
@@ -363,6 +363,8 @@ pub fn generate_expression<'ctx>(
             return builtins::build_is_signed(context, (call_name, call_type, call_args));
         }
 
+        let previous_position: CodeGenContextPosition = context.get_position();
+
         context.set_position(CodeGenContextPosition::Call);
 
         let function: Function = context.get_function(call_name);
@@ -391,22 +393,27 @@ pub fn generate_expression<'ctx>(
         if !call_type.is_void_type() {
             let return_value: BasicValueEnum = call.try_as_basic_value().unwrap_left();
 
+            let llvm_context: &Context = context.get_llvm_context();
+
+            context.add_scope_call((call_type, return_value));
+
             if casting_target.is_mut_type() && context.get_position().in_call() {
                 context.set_position_irrelevant();
+
                 return return_value;
             }
 
-            if return_value.is_pointer_value() {
+            if call_type.is_heap_allocated(llvm_context, &context.target_data)
+                && previous_position.in_local()
+                || previous_position.in_call()
+            {
                 context.set_position_irrelevant();
-                return memory::load_anon(
-                    llvm_context,
-                    llvm_builder,
-                    call_type,
-                    return_value.into_pointer_value(),
-                );
+
+                return memory::load_anon(context, call_type, return_value.into_pointer_value());
             }
 
             context.set_position_irrelevant();
+
             return call.try_as_basic_value().unwrap_left();
         }
 
