@@ -61,21 +61,20 @@ lazy_static! {
         }
     };
     static ref LLVM_BACKEND: PathBuf = {
-        let llvm_backend_required_paths: [PathBuf; 1] = [HOME.join(format!(
-            "thrushlang/backends/llvm/clang{}",
-            *EXECUTABLE_EXTENSION
-        ))];
+        let system_executables_extension: &str = &EXECUTABLE_EXTENSION;
+        let llvm_x86_64_linker: &str = &format!("ld.lld{}", system_executables_extension);
 
-        for path in llvm_backend_required_paths.iter() {
-            if !path.exists() {
-                logging::log(
-                    logging::LoggingType::Panic,
-                    &format!(
-                        "Missinng LLVM Toolchain component: '{}'; It's time to use 'thorium toolchain llvm repair'.",
-                        path.display()
-                    ),
-                );
-            }
+        let llvm_x86_64_linker_path =
+            HOME.join(format!("thrushlang/backends/llvm/{}", llvm_x86_64_linker));
+
+        if !llvm_x86_64_linker_path.exists() {
+            logging::log(
+                logging::LoggingType::Panic,
+                &format!(
+                    "Missing LLVM Toolchain component: '{}'; It's time to use 'thorium toolchain llvm repair'.",
+                    llvm_x86_64_linker_path.display()
+                ),
+            );
         }
 
         return HOME.join("thrushlang/backends/llvm");
@@ -112,7 +111,7 @@ fn main() {
                 .bold(),
             "Compile time report".custom_color((141, 141, 142)).bold(),
             format_args!("Thrush Compiler: {}ms", compile_time.0.to_string().bold()),
-            format_args!("LLVM & Clang: {}ms", compile_time.1.to_string().bold()),
+            format_args!("Linker: {}ms", compile_time.1.to_string().bold()),
             "─────────────────────────────────────────"
                 .custom_color((141, 141, 142))
                 .bold(),

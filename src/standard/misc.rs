@@ -18,12 +18,13 @@ pub struct CompilerOptions {
 
 #[derive(Debug)]
 pub struct LLVMBackend {
+    target_cpu: String,
     target_triple: TargetTriple,
-    optimization: Opt,
+    optimization: ThrushOptimization,
     emit: Vec<Emitable>,
     reloc_mode: RelocMode,
     code_model: CodeModel,
-    arguments: Vec<String>,
+    linker_flags: String,
 }
 
 #[derive(Debug, Clone)]
@@ -35,13 +36,18 @@ pub struct CompilerFile {
 #[derive(Debug, PartialEq)]
 pub enum Emitable {
     RawLLVMIR,
+    RawLLVMBitcode,
     LLVMBitcode,
+    LLVMIR,
+    Object,
+    RawAssembly,
+    Assembly,
     AST,
     Tokens,
 }
 
 #[derive(Default, Debug, Clone, Copy)]
-pub enum Opt {
+pub enum ThrushOptimization {
     #[default]
     None,
     Size,
@@ -50,14 +56,14 @@ pub enum Opt {
     Mcqueen,
 }
 
-impl Opt {
+impl ThrushOptimization {
     #[inline]
     pub fn to_llvm_opt(self) -> OptimizationLevel {
         match self {
-            Opt::None => OptimizationLevel::None,
-            Opt::Low => OptimizationLevel::Default,
-            Opt::Mid => OptimizationLevel::Less,
-            Opt::Mcqueen | Opt::Size => OptimizationLevel::Aggressive,
+            ThrushOptimization::None => OptimizationLevel::None,
+            ThrushOptimization::Low => OptimizationLevel::Default,
+            ThrushOptimization::Mid => OptimizationLevel::Less,
+            ThrushOptimization::Mcqueen | ThrushOptimization::Size => OptimizationLevel::Aggressive,
         }
     }
 }
@@ -118,12 +124,13 @@ impl CompilerOptions {
 impl LLVMBackend {
     pub fn new() -> Self {
         Self {
+            target_cpu: String::with_capacity(100),
             target_triple: TargetMachine::get_default_triple(),
-            optimization: Opt::None,
+            optimization: ThrushOptimization::None,
             emit: Vec::with_capacity(10),
             reloc_mode: RelocMode::Default,
             code_model: CodeModel::Default,
-            arguments: Vec::with_capacity(100),
+            linker_flags: String::with_capacity(100),
         }
     }
 
@@ -135,7 +142,7 @@ impl LLVMBackend {
         self.code_model
     }
 
-    pub fn set_optimization(&mut self, opt: Opt) {
+    pub fn set_optimization(&mut self, opt: ThrushOptimization) {
         self.optimization = opt;
     }
 
@@ -159,7 +166,7 @@ impl LLVMBackend {
         &self.target_triple
     }
 
-    pub fn get_opt(&self) -> Opt {
+    pub fn get_optimization(&self) -> ThrushOptimization {
         self.optimization
     }
 
@@ -167,28 +174,23 @@ impl LLVMBackend {
         !self.emit.is_empty()
     }
 
-    pub fn get_arguments(&self) -> &[String] {
-        self.arguments.as_slice()
+    pub fn get_linker_flags(&self) -> &str {
+        self.linker_flags.as_str()
     }
 
     pub fn contains_emitable(&self, emit: Emitable) -> bool {
         self.emit.contains(&emit)
     }
 
-    pub fn add_compiler_argument(&mut self, argument: String) {
-        self.arguments.push(argument);
+    pub fn set_linker_flags(&mut self, lk_flags: String) {
+        self.linker_flags = lk_flags;
     }
-}
 
-impl Default for LLVMBackend {
-    fn default() -> Self {
-        Self {
-            target_triple: TargetMachine::get_default_triple(),
-            optimization: Opt::None,
-            emit: Vec::with_capacity(10),
-            reloc_mode: RelocMode::Default,
-            code_model: CodeModel::Default,
-            arguments: Vec::with_capacity(100),
-        }
+    pub fn get_target_cpu(&self) -> &str {
+        self.target_cpu.as_str()
+    }
+
+    pub fn set_target_cpu(&mut self, target_cpu: String) {
+        self.target_cpu = target_cpu;
     }
 }

@@ -1,3 +1,4 @@
 pub mod apis;
-pub mod clang;
 pub mod compiler;
+pub mod linker;
+pub mod optimizer;

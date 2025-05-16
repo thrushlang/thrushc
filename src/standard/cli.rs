@@ -1,5 +1,6 @@
-use super::misc::{CompilerOptions, Emitable, Opt};
+use super::misc::{CompilerOptions, Emitable, ThrushOptimization};
 
+use super::utils;
 use super::{
     constants::TARGET_TRIPLES,
     logging::{self, LoggingType},
@@ -71,12 +72,12 @@ impl CommandLine {
                 self.options.set_use_llvm_backend(true);
             }
 
-            "target-triples" => {
+            "print-target-triples" => {
                 self.advance();
 
                 if !self.options.use_llvm() {
                     self.report_error(
-                        "Cannot use 'target-triples' without '-llvm' flag previously.",
+                        "Cannot use 'print-target-triples' without '-llvm' flag previously.",
                     );
                 }
 
@@ -87,12 +88,12 @@ impl CommandLine {
                 process::exit(0);
             }
 
-            "host-target-triple" => {
+            "print-host-target-triple" => {
                 self.advance();
 
                 if !self.options.use_llvm() {
                     self.report_error(
-                        "Cannot use 'host-target-triple' without '-llvm' flag previously.",
+                        "Cannot use 'print-host-target-triple' without '-llvm' flag previously.",
                     );
                 }
 
@@ -106,6 +107,20 @@ impl CommandLine {
                 process::exit(0);
             }
 
+            "print-supported-cpus" => {
+                self.advance();
+
+                if !self.options.use_llvm() {
+                    self.report_error(
+                        "Cannot use 'print-supported-cpus' without '-llvm' flag previously.",
+                    );
+                }
+
+                utils::print_supported_cpus();
+
+                process::exit(0);
+            }
+
             "-build-dir" => {
                 self.advance();
 
@@ -114,7 +129,7 @@ impl CommandLine {
                 self.advance();
             }
 
-            "-opt" | "--optimization" => {
+            "-lkflags" => {
                 self.advance();
 
                 if !self.options.use_llvm() {
@@ -124,15 +139,60 @@ impl CommandLine {
                     ));
                 }
 
-                let opt: Opt = match self.peek() {
-                    "O0" => Opt::None,
-                    "O1" => Opt::Low,
-                    "O2" => Opt::Mid,
-                    "size" => Opt::Size,
-                    "mcqueen" => Opt::Mcqueen,
+                let linker_flags: String = self.peek().to_string();
+
+                self.options
+                    .get_mut_llvm_backend_options()
+                    .set_linker_flags(linker_flags);
+
+                self.advance();
+            }
+
+            "-cpu" => {
+                self.advance();
+
+                if !self.options.use_llvm() {
+                    self.report_error(&format!(
+                        "Cannot use '{}' without '-llvm' flag previously.",
+                        argument
+                    ));
+                }
+
+                let target_cpu: String = self.peek().to_string();
+
+                if !utils::is_supported_cpu_target(&target_cpu) {
+                    self.report_error(&format!(
+                        "Unknown CPU target: '{}' ~ See 'print-supported-cpus'.",
+                        target_cpu
+                    ));
+                }
+
+                self.options
+                    .get_mut_llvm_backend_options()
+                    .set_target_cpu(target_cpu);
+
+                self.advance();
+            }
+
+            "-opt" => {
+                self.advance();
+
+                if !self.options.use_llvm() {
+                    self.report_error(&format!(
+                        "Cannot use '{}' without '-llvm' flag previously.",
+                        argument
+                    ));
+                }
+
+                let opt: ThrushOptimization = match self.peek() {
+                    "O0" => ThrushOptimization::None,
+                    "O1" => ThrushOptimization::Low,
+                    "O2" => ThrushOptimization::Mid,
+                    "size" => ThrushOptimization::Size,
+                    "mcqueen" => ThrushOptimization::Mcqueen,
                     any => {
                         self.report_error(&format!("Unknown optimization level: '{}'.", any));
-                        Opt::default()
+                        ThrushOptimization::default()
                     }
                 };
 
@@ -143,7 +203,7 @@ impl CommandLine {
                 self.advance();
             }
 
-            "--emit" | "-emit" => {
+            "-emit" => {
                 self.advance();
 
                 if !self.options.use_llvm() && ["raw-llvm-ir", "llvm-bc"].contains(&self.peek()) {
@@ -154,14 +214,34 @@ impl CommandLine {
                 }
 
                 match self.peek() {
-                    "raw-llvm-ir" => self
-                        .options
-                        .get_mut_llvm_backend_options()
-                        .add_emit_option(Emitable::RawLLVMIR),
                     "llvm-bc" => self
                         .options
                         .get_mut_llvm_backend_options()
                         .add_emit_option(Emitable::LLVMBitcode),
+                    "llvm-ir" => self
+                        .options
+                        .get_mut_llvm_backend_options()
+                        .add_emit_option(Emitable::LLVMIR),
+                    "asm" => self
+                        .options
+                        .get_mut_llvm_backend_options()
+                        .add_emit_option(Emitable::Assembly),
+                    "raw-llvm-bc" => self
+                        .options
+                        .get_mut_llvm_backend_options()
+                        .add_emit_option(Emitable::RawLLVMBitcode),
+                    "raw-llvm-ir" => self
+                        .options
+                        .get_mut_llvm_backend_options()
+                        .add_emit_option(Emitable::RawLLVMIR),
+                    "raw-asm" => self
+                        .options
+                        .get_mut_llvm_backend_options()
+                        .add_emit_option(Emitable::RawAssembly),
+                    "obj" => self
+                        .options
+                        .get_mut_llvm_backend_options()
+                        .add_emit_option(Emitable::Object),
                     "ast" => self
                         .options
                         .get_mut_llvm_backend_options()
@@ -179,7 +259,7 @@ impl CommandLine {
                 self.advance();
             }
 
-            "--target" | "-t" => {
+            "-target-triple" => {
                 self.advance();
 
                 if !self.options.use_llvm() {
@@ -209,7 +289,7 @@ impl CommandLine {
                 ));
             }
 
-            "--reloc" | "-reloc" => {
+            "-reloc" => {
                 self.advance();
 
                 if !self.options.use_llvm() {
@@ -236,7 +316,7 @@ impl CommandLine {
                 self.advance();
             }
 
-            "--code-model" | "-code-model" => {
+            "-code-model" => {
                 self.advance();
 
                 let code_model: CodeModel = match self.peek() {
@@ -284,20 +364,13 @@ impl CommandLine {
                 self.options.new_file(file_name, file_path);
             }
 
-            _ => {
+            any => {
                 self.advance();
 
-                if self.options.use_llvm() {
-                    self.options
-                        .get_mut_llvm_backend_options()
-                        .add_compiler_argument(argument);
-
-                    return;
-                }
-
-                self.report_error(
-                    "Expected the arguments after of the declaration of an backend compiler, example '--llvm'.",
-                );
+                self.report_error(&format!(
+                    "'{}' Unrecognized flag or command. Use '-help' for more information.",
+                    any
+                ));
             }
         }
     }
@@ -326,7 +399,7 @@ impl CommandLine {
         logging::write(
             logging::OutputIn::Stderr,
             &format!(
-                "{} [{}] {}\n",
+                "{} {} {}\n",
                 "•".bold(),
                 "help".custom_color((141, 141, 142)).bold(),
                 "Show help message.".bold()
@@ -336,7 +409,7 @@ impl CommandLine {
         logging::write(
             logging::OutputIn::Stderr,
             &format!(
-                "{} [{}] {}\n",
+                "{} {} {}\n\n",
                 "•".bold(),
                 "version".custom_color((141, 141, 142)).bold(),
                 "Show the version.".bold()
@@ -346,9 +419,9 @@ impl CommandLine {
         logging::write(
             logging::OutputIn::Stderr,
             &format!(
-                "{} [{}] {}\n",
+                "{} {} {}\n",
                 "•".bold(),
-                "target-triples".custom_color((141, 141, 142)).bold(),
+                "print-target-triples".custom_color((141, 141, 142)).bold(),
                 "Show the current LLVM target triples supported.".bold()
             ),
         );
@@ -356,9 +429,21 @@ impl CommandLine {
         logging::write(
             logging::OutputIn::Stderr,
             &format!(
-                "{} [{}] {}\n\n",
+                "{} {} {}\n",
                 "•".bold(),
-                "host-target-triple".custom_color((141, 141, 142)).bold(),
+                "print-supported-cpus".custom_color((141, 141, 142)).bold(),
+                "Show the current LLVM supported CPUs.".bold()
+            ),
+        );
+
+        logging::write(
+            logging::OutputIn::Stderr,
+            &format!(
+                "{} {} {}\n\n",
+                "•".bold(),
+                "print-host-target-triple"
+                    .custom_color((141, 141, 142))
+                    .bold(),
                 "Show the host LLVM target-triple.".bold()
             ),
         );
@@ -368,18 +453,17 @@ impl CommandLine {
         logging::write(
             logging::OutputIn::Stderr,
             &format!(
-                "{} [{} | {}] {}\n",
+                "{} {} {}\n",
                 "•".bold(),
                 "-llvm".custom_color((141, 141, 142)).bold(),
-                "-llvm".custom_color((141, 141, 142)).bold(),
-                "Enable the LLVM backend infrastructure.".bold()
+                "Enable the usage of the LLVM backend infrastructure.".bold()
             ),
         );
 
         logging::write(
             logging::OutputIn::Stderr,
             &format!(
-                "{} [{}] {}\n",
+                "{} {} {}\n",
                 "•".bold(),
                 "-build-dir".custom_color((141, 141, 142)).bold(),
                 "Set the compiler build directory.".bold()
@@ -389,11 +473,32 @@ impl CommandLine {
         logging::write(
             logging::OutputIn::Stderr,
             &format!(
-                "{} [{}] {}\n",
+                "{} {} [{}] {}\n",
                 "•".bold(),
-                "--emit | -emit [llvm-ir | llvm-bitcode | asm | ast | tokens]"
-                    .custom_color((141, 141, 142))
-                    .bold(),
+                "-target-triple".custom_color((141, 141, 142)).bold(),
+                "\"target-triple\"".bold(),
+                "Set the LLVM target triple.".bold()
+            ),
+        );
+
+        logging::write(
+            logging::OutputIn::Stderr,
+            &format!(
+                "{} {} [{}] {}\n",
+                "•".bold(),
+                "-lkflags".custom_color((141, 141, 142)).bold(),
+                "\"-lc;-lpthread\"".bold(),
+                "Pass flags to the linker.".bold()
+            ),
+        );
+
+        logging::write(
+            logging::OutputIn::Stderr,
+            &format!(
+                "{} {} [{}] {}\n",
+                "•".bold(),
+                "-emit".custom_color((141, 141, 142)).bold(),
+                "llvm-bc|llvm-ir|asm|raw-llvm-ir|raw-llvm-bc|raw-asm|obj|ast|tokens".bold(),
                 "Compile the code into specified representation.".bold()
             ),
         );
@@ -401,36 +506,38 @@ impl CommandLine {
         logging::write(
             logging::OutputIn::Stderr,
             &format!(
-                "{} [{} | {}] {}\n",
+                "{} {} [{}] {}\n",
                 "•".bold(),
-                "--optimization [opt-level]"
-                    .custom_color((141, 141, 142))
-                    .bold(),
-                "-opt [opt-level]".custom_color((141, 141, 142)).bold(),
-                "Optimization level for the JIT Compiler.".bold()
+                "-opt".custom_color((141, 141, 142)).bold(),
+                "O0|O1|O2|mcqueen".bold(),
+                "Optimization level.".bold()
+            ),
+        );
+
+        logging::write(
+            logging::OutputIn::Stderr,
+            &"\nExtra compiler flags:\n\n".bold(),
+        );
+
+        logging::write(
+            logging::OutputIn::Stderr,
+            &format!(
+                "{} {} {} {}\n",
+                "•".bold(),
+                "--reloc".custom_color((141, 141, 142)).bold(),
+                "[static|pic|dynamic]".bold(),
+                "Indicate how references to memory addresses are handled.".bold()
             ),
         );
 
         logging::write(
             logging::OutputIn::Stderr,
             &format!(
-                "{} [{} | {}] {}\n",
+                "{} {} {} {}\n",
                 "•".bold(),
-                "--reloc [reloc-mode]".custom_color((141, 141, 142)).bold(),
-                "-reloc [reloc-mode]".custom_color((141, 141, 142)).bold(),
-                "Indicate how references to memory addresses are handled for the JIT compiler."
-                    .bold()
-            ),
-        );
-
-        logging::write(
-            logging::OutputIn::Stderr,
-            &format!(
-                "{} [{} | {}] {}\n",
-                "•".bold(),
-                "--codemodel [model]".custom_color((141, 141, 142)).bold(),
-                "-codemd [model]".custom_color((141, 141, 142)).bold(),
-                "Define how code is organized and accessed at machine code level for the JIT compiler.".bold()
+                "--codemodel".custom_color((141, 141, 142)).bold(),
+                "[small|medium|large|kernel]".bold(),
+                "Define how code is organized and accessed at machine code level.".bold()
             ),
         );
 
