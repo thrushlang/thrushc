@@ -9,77 +9,8 @@ use {
     inkwell::targets::{InitializationConfig, Target},
     lazy_static::lazy_static,
     standard::{cli::CommandLine, logging},
-    std::{env, path::PathBuf, process, time::Instant},
+    std::{env, process, time::Instant},
 };
-
-lazy_static! {
-    static ref HOME: PathBuf = {
-        let error = |_| {
-            logging::log(logging::LoggingType::Panic, "Unable to get user %HOME%.");
-            unreachable!()
-        };
-
-        let unsupported_os = || {
-            logging::log(
-                logging::LoggingType::Panic,
-                &format!(
-                    "Incompatible host operating system '{}' for compilation.",
-                    env::consts::OS
-                ),
-            );
-            unreachable!()
-        };
-
-        match env::consts::OS {
-            "windows" => PathBuf::from(env::var("APPDATA").unwrap_or_else(error)),
-            "linux" => PathBuf::from(env::var("HOME").unwrap_or_else(error)),
-            _ => {
-                unsupported_os();
-                unreachable!();
-            }
-        }
-    };
-    static ref EXECUTABLE_EXTENSION: &'static str = {
-        let unsupported_os = || {
-            logging::log(
-                logging::LoggingType::Panic,
-                &format!(
-                    "Incompatible host operating system '{}' for compilation.",
-                    env::consts::OS
-                ),
-            );
-            unreachable!()
-        };
-
-        match env::consts::OS {
-            "windows" => ".exe",
-            "linux" => "",
-            _ => {
-                unsupported_os();
-                unreachable!();
-            }
-        }
-    };
-    static ref LLVM_BACKEND: PathBuf = {
-        let system_executables_extension: &str = &EXECUTABLE_EXTENSION;
-        let llvm_x86_64_linker: &str = &format!("ld.lld{}", system_executables_extension);
-
-        let llvm_x86_64_linker_path =
-            HOME.join(format!("thrushlang/backends/llvm/{}", llvm_x86_64_linker));
-
-        if !llvm_x86_64_linker_path.exists() {
-            logging::log(
-                logging::LoggingType::Panic,
-                &format!(
-                    "Missing LLVM Toolchain component: '{}'; It's time to use 'thorium toolchain llvm repair'.",
-                    llvm_x86_64_linker_path.display()
-                ),
-            );
-        }
-
-        return HOME.join("thrushlang/backends/llvm");
-    };
-}
 
 fn main() {
     if cfg!(target_os = "windows") {

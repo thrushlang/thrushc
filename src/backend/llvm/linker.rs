@@ -1,14 +1,11 @@
 use std::{
     path::PathBuf,
-    process::Command,
     time::{Duration, Instant},
 };
 
-use crate::{
-    EXECUTABLE_EXTENSION, LLVM_BACKEND,
-    backend::thrushc::{self},
-    standard::logging,
-};
+use lld::{LLDResult, LldFlavor};
+
+use crate::standard::logging;
 
 pub struct LLVMLinker<'lld> {
     files: &'lld [PathBuf],
@@ -23,34 +20,41 @@ impl<'lld> LLVMLinker<'lld> {
     pub fn link(&self) -> Duration {
         let lld_time: Instant = Instant::now();
 
-        let system_executables_extension: &str = &EXECUTABLE_EXTENSION;
+        let lld_flags: Vec<&str> = self.setup_flags();
 
-        let lld_path: PathBuf =
-            LLVM_BACKEND.join(format!("ld.lld{}", system_executables_extension));
+        let lld_result: LLDResult = lld::link_all(LldFlavor::Elf, lld_flags);
 
-        if !lld_path.exists() {
-            logging::log(
-                logging::LoggingType::Panic,
-                &format!(
-                    "Missing linker of the LLVM Toolchain: 'ld.lld{}'. Maybe it's time to use 'thorium toolchain llvm repair'.",
-                    system_executables_extension
-                ),
-            )
+        if !lld_result.get_state() {
+            logging::log(logging::LoggingType::Error, lld_result.get_messages());
         }
-
-        let flags: Vec<&str> = self.create_flags();
-
-        let mut lld: Command = Command::new(lld_path);
-
-        lld.args(self.files);
-        lld.args(flags);
-
-        thrushc::handler::handle_command(&mut lld);
 
         lld_time.elapsed()
     }
 
-    fn create_flags(&self) -> Vec<&str> {
-        self.flags.split(";").collect()
+    fn setup_flags(&self) -> Vec<&str> {
+        let mut flags: Vec<&str> = Vec::with_capacity(self.flags.len() + self.files.len());
+
+        flags.extend(
+            self.files
+                .iter()
+                .map(|file_path| {
+                    file_path.to_str().unwrap_or_else(|| {
+                        logging::log(
+                            logging::LoggingType::Error,
+                            &format!(
+                                "Failed to convert path to valid str utf-8 during link time: '{}'.",
+                                file_path.display()
+                            ),
+                        );
+
+                        ""
+                    })
+                })
+                .collect::<Vec<&str>>(),
+        );
+
+        flags.extend(self.flags.split(";"));
+
+        flags
     }
 }
