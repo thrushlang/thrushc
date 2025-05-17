@@ -9,11 +9,15 @@ The Thrush Compiler is tasked with converting Thrush source code (`.th`) into na
 
 # ¿How it works?
 
-Currently, the only backend available for the thrush compiler to compile is the current LLVM, using the LLVM-C API. The process consists of three parts:
+Currently, the only backend available for the thrush compiler to compile is the current LLVM, using the LLVM-C API. 
 
-1. Compilation by thrushc to LLVM bitcode (*.bc).
-2. Optimization by the LLVM optimization tool (opt & llvm-lto).
-3. Final compilation by clang to the target.
+By default the compiler has the LLVM-C API fully embedded, in addition to multiple linkers; Avoiding any direct external dependencies.
+
+The code generation is in 3 phases. 
+
+- Intermediate Code Generation (``LLVM IR``).
+- Emit object files (``.o``). 
+- Linking.
 
 In summary:
 
