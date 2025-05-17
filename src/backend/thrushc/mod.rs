@@ -22,13 +22,14 @@ use crate::{
     },
     middle::types::frontend::parser::stmts::instruction::Instruction,
     standard::{
+        backends::{LLVMBackend, LLVMExecutableFlavor},
         diagnostic::Diagnostician,
         logging::{self},
-        misc::{CompilerFile, CompilerOptions, Emitable, LLVMBackend, ThrushOptimization},
+        misc::{CompilerFile, CompilerOptions, Emitable, ThrushOptimization},
     },
 };
 
-use super::llvm::{self, linker::LLVMLinker};
+use super::llvm::{self, linker::lld::LLVMLinker};
 
 pub mod handler;
 pub mod utils;
@@ -63,9 +64,12 @@ impl<'a> Thrushc<'a> {
             return (self.thrushc_time.as_millis(), self.llvm_time.as_millis());
         }
 
+        let executable_flavor: LLVMExecutableFlavor = llvm_backend.get_executable_flavor();
+
         let linker_time: Duration = LLVMLinker::new(
             &self.thrushc_compiled_files,
             llvm_backend.get_linker_flags(),
+            executable_flavor.into_llvm_linker_flavor(),
         )
         .link();
 
@@ -180,7 +184,14 @@ impl<'a> Thrushc<'a> {
             return;
         }
 
-        llvm::optimizer::Optimizer::new(&llvm_module, &target_machine, llvm_opt).optimize();
+        llvm::compiler::passes::LLVMOptimizer::new(
+            &llvm_module,
+            &target_machine,
+            llvm_opt,
+            llvm_backend.get_opt_passes(),
+            llvm_backend.get_modificator_passes(),
+        )
+        .optimize();
 
         if self.emit_after_optimization(
             llvm_backend,

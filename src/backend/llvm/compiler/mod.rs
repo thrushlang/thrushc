@@ -7,6 +7,7 @@ pub mod conventions;
 pub mod deallocator;
 pub mod local;
 pub mod memory;
+pub mod passes;
 pub mod predicates;
 pub mod typegen;
 pub mod unaryop;

@@ -9,3 +9,4 @@ authors = ["Kevin Benavides <https://github.com/DevCheckOG>"]
 [build-dependencies]
 lazy_static = "1.5.0"
 cc = "1.2.10"
+colored = "3.0.0"

@@ -1,12 +1,6 @@
 #![allow(non_camel_case_types, clippy::upper_case_acronyms)]
 
-use {
-    inkwell::{
-        OptimizationLevel,
-        targets::{CodeModel, RelocMode, TargetMachine, TargetTriple},
-    },
-    std::path::PathBuf,
-};
+use {super::backends::LLVMBackend, inkwell::OptimizationLevel, std::path::PathBuf};
 
 #[derive(Debug)]
 pub struct CompilerOptions {
@@ -14,17 +8,6 @@ pub struct CompilerOptions {
     llvm_backend: LLVMBackend,
     files: Vec<CompilerFile>,
     build_dir: PathBuf,
-}
-
-#[derive(Debug)]
-pub struct LLVMBackend {
-    target_cpu: String,
-    target_triple: TargetTriple,
-    optimization: ThrushOptimization,
-    emit: Vec<Emitable>,
-    reloc_mode: RelocMode,
-    code_model: CodeModel,
-    linker_flags: String,
 }
 
 #[derive(Debug, Clone)]
@@ -118,79 +101,5 @@ impl CompilerOptions {
 
     pub fn is_build_dir_setted(&self) -> bool {
         self.build_dir.exists()
-    }
-}
-
-impl LLVMBackend {
-    pub fn new() -> Self {
-        Self {
-            target_cpu: String::with_capacity(100),
-            target_triple: TargetMachine::get_default_triple(),
-            optimization: ThrushOptimization::None,
-            emit: Vec::with_capacity(10),
-            reloc_mode: RelocMode::Default,
-            code_model: CodeModel::Default,
-            linker_flags: String::with_capacity(100),
-        }
-    }
-
-    pub fn get_reloc_mode(&self) -> RelocMode {
-        self.reloc_mode
-    }
-
-    pub fn get_code_model(&self) -> CodeModel {
-        self.code_model
-    }
-
-    pub fn set_optimization(&mut self, opt: ThrushOptimization) {
-        self.optimization = opt;
-    }
-
-    pub fn set_reloc_mode(&mut self, reloc_mode: RelocMode) {
-        self.reloc_mode = reloc_mode;
-    }
-
-    pub fn set_code_model(&mut self, code_model: CodeModel) {
-        self.code_model = code_model;
-    }
-
-    pub fn set_target_triple(&mut self, target_triple: TargetTriple) {
-        self.target_triple = target_triple;
-    }
-
-    pub fn add_emit_option(&mut self, emit: Emitable) {
-        self.emit.push(emit);
-    }
-
-    pub fn get_target_triple(&self) -> &TargetTriple {
-        &self.target_triple
-    }
-
-    pub fn get_optimization(&self) -> ThrushOptimization {
-        self.optimization
-    }
-
-    pub fn was_emited(&self) -> bool {
-        !self.emit.is_empty()
-    }
-
-    pub fn get_linker_flags(&self) -> &str {
-        self.linker_flags.as_str()
-    }
-
-    pub fn contains_emitable(&self, emit: Emitable) -> bool {
-        self.emit.contains(&emit)
-    }
-
-    pub fn set_linker_flags(&mut self, lk_flags: String) {
-        self.linker_flags = lk_flags;
-    }
-
-    pub fn get_target_cpu(&self) -> &str {
-        self.target_cpu.as_str()
-    }
-
-    pub fn set_target_cpu(&mut self, target_cpu: String) {
-        self.target_cpu = target_cpu;
     }
 }

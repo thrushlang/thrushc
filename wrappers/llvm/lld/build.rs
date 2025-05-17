@@ -1,24 +1,28 @@
+use colored::{ColoredString, Colorize};
 use std::env;
 use std::ffi::OsStr;
 use std::io::{self};
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::{io::Write, process};
 
 lazy_static::lazy_static! {
     static ref HOME: PathBuf = {
         let error = |_| {
-            /*  logging::log(logging::LoggingType::Panic, "Unable to get user %HOME%."); */
+            log(LoggingType::Panic, "Unable to get user %HOME% for build the LLVM Linker wrapper.");
+
             unreachable!()
         };
 
         let unsupported_os = || {
-            /*logging::log(
-                logging::LoggingType::Panic,
+            log(
+                LoggingType::Panic,
                 &format!(
-                    "Incompatible host operating system '{}' for compilation.",
+                    "Incompatible host operating system '{}' for compilation of the LLVM Linker wrapper.",
                     env::consts::OS
                 ),
-            );*/
+            );
+
             unreachable!()
         };
 
@@ -34,13 +38,14 @@ lazy_static::lazy_static! {
 
     static ref EXECUTABLE_EXTENSION: &'static str = {
         let unsupported_os = || {
-            /*logging::log(
-                logging::LoggingType::Panic,
+            log(
+                LoggingType::Panic,
                 &format!(
-                    "Incompatible host operating system '{}' for compilation.",
+                    "Incompatible host operating system '{}' for compilation of the LLVM Linker wrapper.",
                     env::consts::OS
                 ),
-            );*/
+            );
+
             unreachable!()
         };
 
@@ -59,10 +64,11 @@ lazy_static::lazy_static! {
         let llvm_config_path = HOME.join(format!("thrushlang/backends/llvm/build/bin/llvm-config{}", system_executables_extension));
 
         if !llvm_config_path.exists() {
-            /*logging::log(
-                logging::LoggingType::Panic,
-                "Unable to find 'llvm-config' for build LLD Wrapper. Use 'thorium toolchain install' to install it.",
-            );*/
+            log(
+                LoggingType::Panic,
+                "Unable to find 'llvm-config' for build LLVM Linker wrapper. Use 'thorium toolchain llvm install' to install it.",
+            );
+
             unreachable!()
         }
 
@@ -85,7 +91,10 @@ fn target_os_is(name: &str) -> bool {
 }
 
 fn llvm_config(arg: &str) -> String {
-    llvm_config_ex(&*LLVM_CONFIG_PATH, arg).expect("Surprising failure from llvm-config")
+    llvm_config_ex(&*LLVM_CONFIG_PATH, arg).unwrap_or_else(|_| {
+        log(LoggingType::Panic, "Unable to invoke llvm-config.");
+        unreachable!()
+    })
 }
 
 fn llvm_config_ex<S: AsRef<OsStr>>(binary: S, arg: &str) -> io::Result<String> {
@@ -263,4 +272,84 @@ fn main() {
     if cfg!(not(target_os = "windows")) {
         println!("cargo:rustc-link-lib=dylib=ffi");
     }
+}
+
+#[derive(Debug)]
+pub enum OutputIn {
+    Stdout,
+    Stderr,
+}
+
+#[derive(Debug, PartialEq)]
+pub enum LoggingType {
+    Error,
+    Warning,
+    Panic,
+}
+
+impl LoggingType {
+    pub fn to_styled(&self) -> ColoredString {
+        match self {
+            LoggingType::Error => "ERROR".bright_red().bold(),
+            LoggingType::Warning => "WARN".yellow().bold(),
+            LoggingType::Panic => "PANIC".bold().bright_red().underline(),
+        }
+    }
+
+    pub fn is_panic(&self) -> bool {
+        matches!(self, LoggingType::Panic)
+    }
+
+    pub fn is_err(&self) -> bool {
+        matches!(self, LoggingType::Error)
+    }
+
+    pub fn is_warn(&self) -> bool {
+        matches!(self, LoggingType::Warning)
+    }
+
+    pub fn text_with_color(&self, msg: &str) -> ColoredString {
+        match self {
+            LoggingType::Error => msg.bright_red().bold(),
+            LoggingType::Warning => msg.yellow().bold(),
+            LoggingType::Panic => msg.bright_red().underline(),
+        }
+    }
+}
+
+pub fn log(ltype: LoggingType, msg: &str) {
+    if ltype.is_panic() {
+        io::stderr()
+            .write_all(format!("{} {}\n  ", ltype.to_styled(), msg.bold()).as_bytes())
+            .unwrap();
+
+        process::exit(1);
+    }
+
+    if ltype.is_err() {
+        io::stderr()
+            .write_all(format!("{} {}\n  ", ltype.to_styled(), msg.bold()).as_bytes())
+            .unwrap();
+
+        return;
+    }
+
+    if ltype.is_warn() {
+        io::stderr()
+            .write_all(format!("{} {}", ltype.to_styled(), msg.bold()).as_bytes())
+            .unwrap();
+
+        return;
+    }
+
+    io::stdout()
+        .write_all(format!("{} {}", ltype.to_styled(), msg.bold()).as_bytes())
+        .unwrap();
+}
+
+pub fn write(output_in: OutputIn, text: &str) {
+    match output_in {
+        OutputIn::Stdout => io::stdout().write_all(text.as_bytes()).unwrap_or(()),
+        OutputIn::Stderr => io::stderr().write_all(text.as_bytes()).unwrap_or(()),
+    };
 }

@@ -1,7 +1,15 @@
 pub const MINIMAL_ERROR_CAPACITY: usize = 100;
 pub const MINIMAL_WARNINGS_CAPACITY: usize = 100;
 
-pub const TARGET_TRIPLES: [&str; 30] = [
+/* ######################################################################
+
+
+    LLVM | CONSTANTS - START
+
+
+########################################################################*/
+
+pub const LLVM_TARGET_TRIPLES_X86_64: [&str; 30] = [
     "x86_64-fortanix-unknown-sgx",
     "x86_64-fuchsia",
     "x86_64-linux-android",
@@ -34,7 +42,7 @@ pub const TARGET_TRIPLES: [&str; 30] = [
     "x86_64-wrs-vxworks",
 ];
 
-pub const X86_64_SUPPORTED_CPUS: [&str; 128] = [
+pub const LLVM_X86_64_SUPPORTED_CPUS: [&str; 128] = [
     "alderlake",
     "amdfam10",
     "arrowlake",
@@ -164,3 +172,13 @@ pub const X86_64_SUPPORTED_CPUS: [&str; 128] = [
     "znver4",
     "znver5",
 ];
+
+pub const LLVM_EXECUTABLES_FLAVORS: [&str; 4] = ["wasm", "mach0", "elf", "coff"];
+
+/* ######################################################################
+
+
+    LLVM | CONSTANTS - END
+
+
+########################################################################*/

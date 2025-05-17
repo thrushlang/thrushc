@@ -109,6 +109,7 @@ name = "lld"
 version = "1.0.0"
 dependencies = [
  "cc",
+ "colored",
  "lazy_static",
 ]
 

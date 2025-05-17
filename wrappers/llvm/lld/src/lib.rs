@@ -12,6 +12,7 @@ struct LldInvokeResult {
 }
 
 #[repr(C)]
+#[derive(Debug, Clone, Copy)]
 pub enum LldFlavor {
     Elf = 0,
     Wasm = 1,
@@ -29,12 +30,16 @@ unsafe extern "C" {
 }
 
 #[derive(Debug)]
-pub struct LLDResult {
+pub struct LLVMLinkerResult {
     success: bool,
     messages: String,
 }
 
-impl LLDResult {
+impl LLVMLinkerResult {
+    pub fn new(success: bool, messages: String) -> Self {
+        Self { success, messages }
+    }
+
     pub fn get_state(&self) -> bool {
         self.success
     }
@@ -44,7 +49,7 @@ impl LLDResult {
     }
 }
 
-pub fn link_all(flavor: LldFlavor, args: Vec<&str>) -> LLDResult {
+pub fn link_all(flavor: LldFlavor, args: Vec<&str>) -> LLVMLinkerResult {
     let c_args: Vec<CString> = args
         .iter()
         .map(|arg| CString::new(arg.as_bytes()).unwrap())
@@ -65,10 +70,7 @@ pub fn link_all(flavor: LldFlavor, args: Vec<&str>) -> LLDResult {
         String::new()
     };
 
-    let result: LLDResult = LLDResult {
-        success: lld_result.success,
-        messages,
-    };
+    let result: LLVMLinkerResult = LLVMLinkerResult::new(lld_result.success, messages);
 
     unsafe { link_free_result(&mut lld_result as *mut LldInvokeResult) };
 
