@@ -1,3 +1,5 @@
+use std::iter;
+
 use crate::middle::types::frontend::lexer::types::ThrushType;
 
 use super::context::LLVMCodeGenContext;
@@ -13,6 +15,8 @@ use inkwell::{
     types::ArrayType,
     values::{BasicValueEnum, GlobalValue},
 };
+use rand::Rng;
+use rand::rngs::ThreadRng;
 
 pub fn integer_autocast<'ctx>(
     context: &LLVMCodeGenContext<'_, 'ctx>,
@@ -23,11 +27,7 @@ pub fn integer_autocast<'ctx>(
     let llvm_builder: &Builder = context.get_llvm_builder();
     let llvm_context: &Context = context.get_llvm_context();
 
-    if target_type.is_bool_type()
-        || target_type.is_void_type()
-        || from_type == target_type
-        || target_type.is_ptr_type()
-    {
+    if target_type.is_bool_type() || target_type.is_void_type() || from_type == target_type {
         return None;
     }
 
@@ -35,7 +35,7 @@ pub fn integer_autocast<'ctx>(
         llvm_builder
             .build_int_cast_sign_flag(
                 from.into_int_value(),
-                typegen::type_int_to_llvm_int_type(llvm_context, target_type),
+                typegen::thrush_integer_to_llvm_type(llvm_context, target_type),
                 true,
                 "",
             )
@@ -53,11 +53,7 @@ pub fn float_autocast<'ctx>(
     let llvm_builder: &Builder = context.get_llvm_builder();
     let llvm_context: &Context = context.get_llvm_context();
 
-    if target_type.is_bool_type()
-        || target_type.is_void_type()
-        || from_type == target_type
-        || target_type.is_ptr_type()
-    {
+    if target_type.is_bool_type() || target_type.is_void_type() || from_type == target_type {
         return None;
     }
 
@@ -76,19 +72,19 @@ pub fn float_autocast<'ctx>(
 pub fn build_str_constant<'ctx>(
     module: &Module<'ctx>,
     context: &'ctx Context,
-    str: &'ctx [u8],
+    bytes: &'ctx [u8],
 ) -> StructValue<'ctx> {
-    let fixed_str_size: u32 = if !str.is_empty() {
-        str.len() as u32 + 1
+    let fixed_str_size: u32 = if !bytes.is_empty() {
+        bytes.len() as u32 + 1
     } else {
-        str.len() as u32
+        bytes.len() as u32
     };
 
     let kind: ArrayType = context.i8_type().array_type(fixed_str_size);
     let global: GlobalValue = module.add_global(kind, Some(AddressSpace::default()), "");
 
     global.set_linkage(Linkage::LinkerPrivate);
-    global.set_initializer(&context.const_string(str, true));
+    global.set_initializer(&context.const_string(bytes, true));
     global.set_constant(true);
 
     context.const_struct(
@@ -101,4 +97,19 @@ pub fn build_str_constant<'ctx>(
         ],
         false,
     )
+}
+
+pub fn generate_random_function_name(prefix: &str, length: usize) -> String {
+    format!("{}_{}", prefix, generate_random_suffix(length))
+}
+
+fn generate_random_suffix(length: usize) -> String {
+    let letters: String = String::from("abcdefghijklmnopqrstuvwxyz0123456789");
+    let mut rng: ThreadRng = rand::rng();
+
+    iter::repeat(())
+        .map(|_| rng.random_range(0..letters.len()))
+        .map(|i| letters.chars().nth(i).unwrap())
+        .take(length)
+        .collect()
 }

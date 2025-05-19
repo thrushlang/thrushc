@@ -167,11 +167,9 @@ pub fn integer_binaryop<'ctx>(
         Instruction::Property { .. },
     ) = binary
     {
-        let left_compiled: BasicValueEnum =
-            valuegen::generate_expression(binary.0, target_type, context);
+        let left_compiled: BasicValueEnum = valuegen::build(binary.0, target_type, context);
 
-        let right_compiled: BasicValueEnum =
-            valuegen::generate_expression(binary.2, target_type, context);
+        let right_compiled: BasicValueEnum = valuegen::build(binary.2, target_type, context);
 
         return int_operation(
             context,
@@ -204,11 +202,9 @@ pub fn integer_binaryop<'ctx>(
         Instruction::Property { .. },
     ) = binary
     {
-        let left_compiled: BasicValueEnum =
-            valuegen::generate_expression(binary.0, target_type, context);
+        let left_compiled: BasicValueEnum = valuegen::build(binary.0, target_type, context);
 
-        let right_compiled: BasicValueEnum =
-            valuegen::generate_expression(binary.2, target_type, context);
+        let right_compiled: BasicValueEnum = valuegen::build(binary.2, target_type, context);
 
         return int_operation(
             context,
@@ -336,8 +332,7 @@ pub fn integer_binaryop<'ctx>(
         let mut left_compiled: IntValue =
             valuegen::integer(llvm_context, left_type, *left as u64, false);
 
-        let mut right_compiled: BasicValueEnum =
-            valuegen::generate_expression(binary.2, target_type, context);
+        let mut right_compiled: BasicValueEnum = valuegen::build(binary.2, target_type, context);
 
         if let Some(new_left_compiled) =
             utils::integer_autocast(context, target_type, left_type, left_compiled.into())
@@ -371,8 +366,7 @@ pub fn integer_binaryop<'ctx>(
         Instruction::Boolean(right_type, right, ..),
     ) = binary
     {
-        let mut left_compiled: BasicValueEnum =
-            valuegen::generate_expression(binary.0, target_type, context);
+        let mut left_compiled: BasicValueEnum = valuegen::build(binary.0, target_type, context);
 
         let mut right_compiled: IntValue =
             valuegen::integer(llvm_context, right_type, *right as u64, false);
@@ -513,8 +507,7 @@ pub fn integer_binaryop<'ctx>(
         },
     ) = binary
     {
-        let mut left_compiled: BasicValueEnum =
-            valuegen::generate_expression(binary.0, target_type, context);
+        let mut left_compiled: BasicValueEnum = valuegen::build(binary.0, target_type, context);
 
         let left_call_type: &ThrushType = left_call_type;
 
@@ -574,8 +567,7 @@ pub fn integer_binaryop<'ctx>(
 
         let mut left_compiled: BasicValueEnum = unaryop::unary_op(context, left_dissasembled);
 
-        let mut right_compiled: BasicValueEnum =
-            valuegen::generate_expression(binary.2, target_type, context);
+        let mut right_compiled: BasicValueEnum = valuegen::build(binary.2, target_type, context);
 
         if let Some(new_left_compiled) =
             utils::integer_autocast(context, target_type, left_type, left_compiled)
@@ -731,8 +723,7 @@ pub fn integer_binaryop<'ctx>(
         },
     ) = binary
     {
-        let mut left_compiled: BasicValueEnum =
-            valuegen::generate_expression(binary.0, target_type, context);
+        let mut left_compiled: BasicValueEnum = valuegen::build(binary.0, target_type, context);
 
         let right_dissasembled: LLVMUnaryOp = binary.2.as_unaryop();
 
@@ -792,8 +783,7 @@ pub fn integer_binaryop<'ctx>(
 
         let mut left_compiled: BasicValueEnum = unaryop::unary_op(context, left_dissasembled);
 
-        let mut right_compiled: BasicValueEnum =
-            valuegen::generate_expression(binary.2, target_type, context);
+        let mut right_compiled: BasicValueEnum = valuegen::build(binary.2, target_type, context);
 
         if let Some(new_left_compiled) =
             utils::integer_autocast(context, target_type, left_type, left_compiled)
@@ -1024,11 +1014,9 @@ pub fn integer_binaryop<'ctx>(
         },
     ) = binary
     {
-        let mut left_compiled: BasicValueEnum =
-            valuegen::generate_expression(binary.0, target_type, context);
+        let mut left_compiled: BasicValueEnum = valuegen::build(binary.0, target_type, context);
 
-        let mut right_compiled: BasicValueEnum =
-            valuegen::generate_expression(binary.2, target_type, context);
+        let mut right_compiled: BasicValueEnum = valuegen::build(binary.2, target_type, context);
 
         if let Some(new_left_compiled) =
             utils::integer_autocast(context, target_type, left_call_type, left_compiled)
@@ -1079,8 +1067,7 @@ pub fn integer_binaryop<'ctx>(
         let mut left_compiled: IntValue =
             valuegen::integer(llvm_context, left_type, *left_num as u64, *left_signed);
 
-        let mut right_compiled: BasicValueEnum =
-            valuegen::generate_expression(binary.2, target_type, context);
+        let mut right_compiled: BasicValueEnum = valuegen::build(binary.2, target_type, context);
 
         if let Some(new_left_compiled) =
             utils::integer_autocast(context, target_type, left_type, left_compiled.into())
@@ -1128,8 +1115,7 @@ pub fn integer_binaryop<'ctx>(
         Instruction::Integer(right_type, right_num, right_signed, ..),
     ) = binary
     {
-        let mut left_compiled: BasicValueEnum =
-            valuegen::generate_expression(binary.0, target_type, context);
+        let mut left_compiled: BasicValueEnum = valuegen::build(binary.0, target_type, context);
 
         let mut right_compiled: IntValue =
             valuegen::integer(llvm_context, right_type, *right_num as u64, *right_signed);
@@ -1185,11 +1171,9 @@ pub fn integer_binaryop<'ctx>(
         },
     ) = binary
     {
-        let mut left_compiled: BasicValueEnum =
-            valuegen::generate_expression(binary.0, target_type, context);
+        let mut left_compiled: BasicValueEnum = valuegen::build(binary.0, target_type, context);
 
-        let mut right_compiled: BasicValueEnum =
-            valuegen::generate_expression(binary.2, target_type, context);
+        let mut right_compiled: BasicValueEnum = valuegen::build(binary.2, target_type, context);
 
         if let Some(new_left_compiled) =
             utils::integer_autocast(context, target_type, left_type, left_compiled)
@@ -1246,8 +1230,7 @@ pub fn integer_binaryop<'ctx>(
         },
     ) = binary
     {
-        let mut left_compiled: BasicValueEnum =
-            valuegen::generate_expression(binary.0, target_type, context);
+        let mut left_compiled: BasicValueEnum = valuegen::build(binary.0, target_type, context);
 
         let mut right_compiled: BasicValueEnum =
             context.get_allocated_symbol(right_name).load(context);
@@ -1307,8 +1290,7 @@ pub fn integer_binaryop<'ctx>(
         let mut left_compiled: BasicValueEnum =
             integer_binaryop(left_dissasembled, target_type, context);
 
-        let mut right_compiled: BasicValueEnum =
-            valuegen::generate_expression(binary.2, target_type, context);
+        let mut right_compiled: BasicValueEnum = valuegen::build(binary.2, target_type, context);
 
         if let Some(new_left_compiled) =
             utils::integer_autocast(context, target_type, left_type, left_compiled)
@@ -1360,8 +1342,7 @@ pub fn integer_binaryop<'ctx>(
         },
     ) = binary
     {
-        let mut left_compiled: BasicValueEnum =
-            valuegen::generate_expression(binary.0, target_type, context);
+        let mut left_compiled: BasicValueEnum = valuegen::build(binary.0, target_type, context);
 
         let right_dissasembled: LLVMBinaryOp = right_instr.as_binary();
 
@@ -1528,10 +1509,8 @@ pub fn integer_binaryop<'ctx>(
         },
     ) = binary
     {
-        let mut left_compiled: BasicValueEnum =
-            valuegen::generate_expression(binary.0, target_type, context);
-        let mut right_compiled: BasicValueEnum =
-            valuegen::generate_expression(binary.2, target_type, context);
+        let mut left_compiled: BasicValueEnum = valuegen::build(binary.0, target_type, context);
+        let mut right_compiled: BasicValueEnum = valuegen::build(binary.2, target_type, context);
 
         if let Some(new_left_compiled) =
             utils::integer_autocast(context, target_type, left_type, left_compiled)
@@ -1588,8 +1567,7 @@ pub fn integer_binaryop<'ctx>(
         let mut left_compiled: IntValue =
             integer_binaryop(left_dissasembled, target_type, context).into_int_value();
 
-        let mut right_compiled: BasicValueEnum =
-            valuegen::generate_expression(binary.2, target_type, context);
+        let mut right_compiled: BasicValueEnum = valuegen::build(binary.2, target_type, context);
 
         if let Some(new_left_compiled) =
             utils::integer_autocast(context, target_type, left_type, left_compiled.into())
@@ -1641,8 +1619,7 @@ pub fn integer_binaryop<'ctx>(
         },
     ) = binary
     {
-        let mut left_compiled: BasicValueEnum =
-            valuegen::generate_expression(binary.0, target_type, context);
+        let mut left_compiled: BasicValueEnum = valuegen::build(binary.0, target_type, context);
 
         if let Some(new_left_compiled) =
             utils::integer_autocast(context, target_type, left_type, left_compiled)

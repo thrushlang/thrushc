@@ -9,7 +9,7 @@ use crate::{
     },
 };
 
-pub type SymbolsAllocated<'ctx> = &'ctx HashMap<&'ctx str, SymbolAllocated<'ctx>>;
+pub type SymbolsAllocated<'ctx> = HashMap<&'ctx str, SymbolAllocated<'ctx>>;
 
 pub type LLVMBinaryOp<'ctx> = (
     &'ctx Instruction<'ctx>,
@@ -19,8 +19,8 @@ pub type LLVMBinaryOp<'ctx> = (
 
 pub type LLVMUnaryOp<'ctx> = (&'ctx TokenKind, &'ctx ThrushType, &'ctx Instruction<'ctx>);
 
-pub type LLVMCall<'ctx> = (&'ctx ThrushType, BasicValueEnum<'ctx>);
-pub type LLVMCalls<'ctx> = Vec<LLVMCall<'ctx>>;
+pub type LLVMScopeCall<'ctx> = (&'ctx ThrushType, BasicValueEnum<'ctx>);
+pub type LLVMScopeCalls<'ctx> = Vec<LLVMScopeCall<'ctx>>;
 
 pub type LLVMFunction<'ctx> = (FunctionValue<'ctx>, &'ctx [ThrushType], u32);
 

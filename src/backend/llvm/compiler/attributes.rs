@@ -26,17 +26,17 @@ pub enum LLVMAttribute<'ctx> {
 }
 
 impl LLVMAttribute<'_> {
-    #[inline(always)]
+    #[inline]
     pub const fn is_ffi_attribute(&self) -> bool {
         matches!(self, LLVMAttribute::FFI(_))
     }
 
-    #[inline(always)]
+    #[inline]
     pub const fn is_ignore_attribute(&self) -> bool {
         matches!(self, LLVMAttribute::Ignore)
     }
 
-    #[inline(always)]
+    #[inline]
     pub const fn is_public_attribute(&self) -> bool {
         matches!(self, LLVMAttribute::Public)
     }

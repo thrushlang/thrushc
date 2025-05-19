@@ -195,9 +195,11 @@ pub enum Instruction<'ctx> {
         kind: ThrushType,
         span: Span,
     },
-    LocalMut {
+
+    // Mutation
+    Mut {
         source: (Option<&'ctx str>, Option<Rc<Instruction<'ctx>>>),
-        target: Rc<Instruction<'ctx>>,
+        value: Rc<Instruction<'ctx>>,
         kind: ThrushType,
         span: Span,
     },
@@ -267,7 +269,7 @@ impl<'ctx> Instruction<'ctx> {
             Instruction::Integer(kind, ..) => kind,
             Instruction::Float(kind, ..) => kind,
             Instruction::Local { kind, .. } => kind,
-            Instruction::LocalMut { kind, .. } => kind,
+            Instruction::Mut { kind, .. } => kind,
             Instruction::FunctionParameter { kind, .. } => kind,
             Instruction::LocalRef { kind, .. } => kind,
             Instruction::ConstRef { kind, .. } => kind,
@@ -300,7 +302,7 @@ impl<'ctx> Instruction<'ctx> {
             Instruction::Integer(_, _, _, span) => *span,
             Instruction::Float(_, _, _, span) => *span,
             Instruction::Local { span, .. } => *span,
-            Instruction::LocalMut { span, .. } => *span,
+            Instruction::Mut { span, .. } => *span,
             Instruction::FunctionParameter { span, .. } => *span,
             Instruction::LocalRef { span, .. } => *span,
             Instruction::ConstRef { span, .. } => *span,

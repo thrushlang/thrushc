@@ -78,7 +78,7 @@ pub fn build_sizeof<'ctx>(
             return structure_size.into();
         }
 
-        return context.get_allocated_symbol(name).get_size_of();
+        return context.get_allocated_symbol(name).get_size();
     }
 
     /*if let Instruction::ComplexType(kind, _, _) = value {

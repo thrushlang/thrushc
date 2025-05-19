@@ -119,8 +119,6 @@ impl<'a, 'ctx> LLVMOptimizer<'a, 'ctx> {
             LLVMModificatorPasses::MergeFunctions => {
                 passes_builder.set_merge_functions(true);
             }
-
-            _ => (),
         });
 
         passes_builder

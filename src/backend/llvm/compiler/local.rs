@@ -3,7 +3,7 @@ use crate::middle::types::{backend::llvm::types::LLVMLocal, frontend::lexer::typ
 use super::{
     Instruction,
     context::{LLVMCodeGenContext, LLVMCodeGenContextPosition},
-    memory::SymbolAllocated,
+    memory::{self, AllocSite, SymbolAllocated},
     valuegen,
 };
 
@@ -55,7 +55,7 @@ fn build_local_mut<'ctx>(local: LLVMLocal<'ctx>, context: &mut LLVMCodeGenContex
 
     let symbol: SymbolAllocated = context.get_allocated_symbol(local.0);
 
-    let expression: BasicValueEnum = valuegen::generate_expression(local_value, local.1, context);
+    let expression: BasicValueEnum = valuegen::build(local_value, local.1, context);
 
     symbol.store(context, expression);
 }
@@ -65,8 +65,53 @@ fn build_local_ptr<'ctx>(local: LLVMLocal<'ctx>, context: &mut LLVMCodeGenContex
 
     let symbol: SymbolAllocated = context.get_allocated_symbol(local.0);
 
-    let expression: BasicValueEnum =
-        valuegen::generate_expression(local_value, &ThrushType::Ptr(None), context);
+    let expression: BasicValueEnum = valuegen::build(local_value, &ThrushType::Ptr(None), context);
+
+    symbol.store(context, expression);
+}
+
+fn build_local_str<'ctx>(local: LLVMLocal<'ctx>, context: &mut LLVMCodeGenContext<'_, 'ctx>) {
+    let local_value: &Instruction = local.2;
+
+    let symbol: SymbolAllocated = context.get_allocated_symbol(local.0);
+
+    let expression: BasicValueEnum = valuegen::build(local_value, local.1, context);
+
+    symbol.store(context, expression);
+}
+
+fn build_local_integer<'ctx>(local: LLVMLocal<'ctx>, context: &mut LLVMCodeGenContext<'_, 'ctx>) {
+    let local_name: &str = local.0;
+    let local_type: &ThrushType = local.1;
+    let local_value: &Instruction = local.2;
+
+    let symbol: SymbolAllocated = context.get_allocated_symbol(local_name);
+
+    let expression: BasicValueEnum = valuegen::build(local_value, local_type, context);
+
+    symbol.store(context, expression);
+}
+
+fn build_local_float<'ctx>(local: LLVMLocal<'ctx>, context: &mut LLVMCodeGenContext<'_, 'ctx>) {
+    let local_name: &str = local.0;
+    let local_type: &ThrushType = local.1;
+    let local_value: &Instruction = local.2;
+
+    let symbol: SymbolAllocated = context.get_allocated_symbol(local_name);
+
+    let expression: BasicValueEnum = valuegen::build(local_value, local_type, context);
+
+    symbol.store(context, expression);
+}
+
+fn build_local_boolean<'ctx>(local: LLVMLocal<'ctx>, context: &mut LLVMCodeGenContext<'_, 'ctx>) {
+    let local_name: &str = local.0;
+    let local_type: &ThrushType = local.1;
+    let local_value: &Instruction = local.2;
+
+    let symbol: SymbolAllocated = context.get_allocated_symbol(local_name);
+
+    let expression: BasicValueEnum = valuegen::build(local_value, local_type, context);
 
     symbol.store(context, expression);
 }
@@ -81,73 +126,38 @@ fn build_local_structure<'ctx>(local: LLVMLocal<'ctx>, context: &mut LLVMCodeGen
         let llvm_builder: &Builder = context.get_llvm_builder();
         let llvm_context: &Context = context.get_llvm_context();
 
-        arguments.1.iter().for_each(|argument| {
-            let argument_instruction: &Instruction = &argument.1;
-            let argument_type: &ThrushType = &argument.2;
-            let index: u32 = argument.3;
+        let exprs: &[(&str, Instruction<'_>, ThrushType, u32)] = &arguments.1;
 
-            let compiled_field: BasicValueEnum =
-                valuegen::generate_expression(argument_instruction, argument_type, context);
+        exprs.iter().for_each(|argument| {
+            let expr: &Instruction = &argument.1;
+            let expr_type: &ThrushType = &argument.2;
+            let expr_index: u32 = argument.3;
 
-            let get_field: PointerValue = symbol.gep_struct(llvm_context, llvm_builder, index);
+            let mut expr: BasicValueEnum = valuegen::build(expr, expr_type, context);
 
-            llvm_builder.build_store(get_field, compiled_field).unwrap();
+            if expr_type.is_heap_allocated(llvm_context, &context.target_data)
+                && expr_type.is_me_type()
+            {
+                let src_ptr: PointerValue = expr.into_pointer_value();
+
+                if !src_ptr.is_null() {
+                    let dest_ptr: PointerValue =
+                        memory::alloc(AllocSite::Heap, context, local_type);
+
+                    memory::memcpy(context, dest_ptr, src_ptr, local_type);
+
+                    expr = dest_ptr.into();
+                }
+            }
+
+            let field_memory_address_position: PointerValue =
+                symbol.gep_struct(llvm_context, llvm_builder, expr_index);
+
+            memory::store_anon(context, field_memory_address_position, expr);
         });
+    } else {
+        let expression: BasicValueEnum = valuegen::build(local_value, local_type, context);
 
-        return;
+        symbol.store(context, expression);
     }
-
-    let expression: BasicValueEnum =
-        valuegen::generate_expression(local_value, local_type, context);
-
-    symbol.store(context, expression);
-}
-
-fn build_local_str<'ctx>(local: LLVMLocal<'ctx>, context: &mut LLVMCodeGenContext<'_, 'ctx>) {
-    let local_value: &Instruction = local.2;
-
-    let symbol: SymbolAllocated = context.get_allocated_symbol(local.0);
-
-    let expression: BasicValueEnum = valuegen::generate_expression(local_value, local.1, context);
-
-    symbol.store(context, expression);
-}
-
-fn build_local_integer<'ctx>(local: LLVMLocal<'ctx>, context: &mut LLVMCodeGenContext<'_, 'ctx>) {
-    let local_name: &str = local.0;
-    let local_type: &ThrushType = local.1;
-    let local_value: &Instruction = local.2;
-
-    let symbol: SymbolAllocated = context.get_allocated_symbol(local_name);
-
-    let expression: BasicValueEnum =
-        valuegen::generate_expression(local_value, local_type, context);
-
-    symbol.store(context, expression);
-}
-
-fn build_local_float<'ctx>(local: LLVMLocal<'ctx>, context: &mut LLVMCodeGenContext<'_, 'ctx>) {
-    let local_name: &str = local.0;
-    let local_type: &ThrushType = local.1;
-    let local_value: &Instruction = local.2;
-
-    let symbol: SymbolAllocated = context.get_allocated_symbol(local_name);
-
-    let expression: BasicValueEnum =
-        valuegen::generate_expression(local_value, local_type, context);
-
-    symbol.store(context, expression);
-}
-
-fn build_local_boolean<'ctx>(local: LLVMLocal<'ctx>, context: &mut LLVMCodeGenContext<'_, 'ctx>) {
-    let local_name: &str = local.0;
-    let local_type: &ThrushType = local.1;
-    let local_value: &Instruction = local.2;
-
-    let symbol: SymbolAllocated = context.get_allocated_symbol(local_name);
-
-    let expression: BasicValueEnum =
-        valuegen::generate_expression(local_value, local_type, context);
-
-    symbol.store(context, expression);
 }

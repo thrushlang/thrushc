@@ -148,7 +148,7 @@ impl<'warner> Warner<'warner> {
             }
         }
 
-        if let Instruction::LocalMut { source, .. } = instruction {
+        if let Instruction::Mut { source, .. } = instruction {
             if let Some(local_name) = source.0 {
                 if let Ok(local) = self.get_mut_local(local_name) {
                     local.1 = true;

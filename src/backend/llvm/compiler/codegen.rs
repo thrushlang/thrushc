@@ -6,12 +6,12 @@ use crate::standard::diagnostic::Diagnostician;
 
 use super::super::compiler::attributes::LLVMAttribute;
 
+use super::deallocator;
 use super::{
     attributes::{AttributeBuilder, LLVMAttributeApplicant},
     binaryop,
     context::LLVMCodeGenContext,
     conventions::CallConvention,
-    deallocator::Deallocator,
     local, typegen, unaryop, valuegen,
 };
 
@@ -80,8 +80,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 });
 
                 if !self.deallocators_emited {
-                    let deallocator: Deallocator = Deallocator::new(&self.context);
-                    deallocator.dealloc_all(self.context.get_allocated_symbols());
+                    deallocator::dealloc_all(&self.context, self.context.get_allocated_symbols());
                 }
 
                 self.deallocators_emited = false;
@@ -389,16 +388,18 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
             } => {
                 self.deallocators_emited = true;
 
-                let deallocator: Deallocator = Deallocator::new(&self.context);
+                deallocator::dealloc(
+                    &self.context,
+                    self.context.get_allocated_symbols(),
+                    expression.as_ref(),
+                );
 
-                deallocator.dealloc(self.context.get_allocated_symbols(), expression.as_ref());
-
-                valuegen::generate_expression(instruction, kind, &mut self.context);
+                valuegen::build(instruction, kind, &mut self.context);
 
                 Instruction::Null
             }
 
-            Instruction::Str(_, _, _) => Instruction::LLVMValue(valuegen::generate_expression(
+            Instruction::Str(_, _, _) => Instruction::LLVMValue(valuegen::build(
                 instruction,
                 &ThrushType::Void,
                 &mut self.context,
@@ -420,8 +421,9 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 Instruction::Null
             }
 
-            Instruction::LocalMut { kind, .. } => {
-                valuegen::generate_expression(instruction, kind, &mut self.context);
+            Instruction::Mut { kind, .. } => {
+                valuegen::build(instruction, kind, &mut self.context);
+
                 Instruction::Null
             }
 
@@ -483,14 +485,14 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 Instruction::Null
             }
 
-            Instruction::Call { kind, .. } => Instruction::LLVMValue(
-                valuegen::generate_expression(instruction, kind, &mut self.context),
-            ),
+            Instruction::Call { kind, .. } => {
+                Instruction::LLVMValue(valuegen::build(instruction, kind, &mut self.context))
+            }
 
             Instruction::LocalRef { kind: ref_type, .. }
-            | Instruction::ConstRef { kind: ref_type, .. } => Instruction::LLVMValue(
-                valuegen::generate_expression(instruction, ref_type, &mut self.context),
-            ),
+            | Instruction::ConstRef { kind: ref_type, .. } => {
+                Instruction::LLVMValue(valuegen::build(instruction, ref_type, &mut self.context))
+            }
 
             Instruction::Boolean(_, bool, ..) => Instruction::LLVMValue(
                 llvm_context
@@ -499,14 +501,14 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                     .into(),
             ),
 
-            Instruction::Address { .. } => Instruction::LLVMValue(valuegen::generate_expression(
+            Instruction::Address { .. } => Instruction::LLVMValue(valuegen::build(
                 instruction,
                 &ThrushType::Void,
                 &mut self.context,
             )),
 
             Instruction::Write { .. } => {
-                valuegen::generate_expression(instruction, &ThrushType::Void, &mut self.context);
+                valuegen::build(instruction, &ThrushType::Void, &mut self.context);
 
                 Instruction::Null
             }
@@ -538,7 +540,6 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         let parameter_name: &str = parameter.0;
         let parameter_type: &ThrushType = parameter.1;
         let parameter_position: u32 = parameter.2;
-        let is_mutable: bool = parameter.3;
 
         let value: BasicValueEnum = self
             .function
@@ -547,7 +548,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
             .unwrap();
 
         self.context
-            .alloc_function_parameter(parameter_name, parameter_type, is_mutable, value);
+            .alloc_function_parameter(parameter_name, parameter_type, value);
     }
 
     fn declare(&mut self) {
@@ -568,8 +569,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 ..
             } = instruction
             {
-                let value: BasicValueEnum =
-                    valuegen::generate_expression(value, kind, &mut self.context);
+                let value: BasicValueEnum = valuegen::build(value, kind, &mut self.context);
 
                 self.context.alloc_constant(name, kind, value, attributes);
             }
@@ -638,7 +638,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
 
         self.function = Some(function);
 
-        self.context.insert_function(
+        self.context.add_function(
             function_name,
             (function, function_parameters_types, call_convention),
         );
@@ -703,8 +703,9 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         instruction
     }
 
+    #[must_use]
     #[inline]
-    const fn is_end(&self) -> bool {
+    fn is_end(&self) -> bool {
         self.current >= self.instructions.len()
     }
 }

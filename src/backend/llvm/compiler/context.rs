@@ -1,12 +1,12 @@
 use {
     super::{
         super::super::super::logging::{self, LoggingType},
-        memory::{self, SymbolAllocated},
+        memory::{SymbolAllocated, SymbolToAllocate},
         typegen, valuegen,
     },
     crate::{
         middle::types::{
-            backend::llvm::types::{LLVMCall, LLVMCalls, LLVMFunction, SymbolsAllocated},
+            backend::llvm::types::{LLVMFunction, LLVMScopeCall, LLVMScopeCalls, SymbolsAllocated},
             frontend::{lexer::types::ThrushType, parser::stmts::types::ThrushAttributes},
         },
         standard::diagnostic::Diagnostician,
@@ -32,12 +32,13 @@ pub struct LLVMCodeGenContext<'a, 'ctx> {
     context: &'ctx Context,
     builder: &'ctx Builder<'ctx>,
     position: LLVMCodeGenContextPosition,
+    previous_position: LLVMCodeGenContextPosition,
     pub target_data: TargetData,
     diagnostician: Diagnostician,
     constants: HashMap<&'ctx str, SymbolAllocated<'ctx>>,
     functions: HashMap<&'ctx str, LLVMFunction<'ctx>>,
     blocks: Vec<HashMap<&'ctx str, SymbolAllocated<'ctx>>>,
-    llvm_calls: LLVMCalls<'ctx>,
+    llvm_calls: LLVMScopeCalls<'ctx>,
     lift_instructions: HashMap<&'ctx str, SymbolAllocated<'ctx>>,
     scope: usize,
 }
@@ -55,6 +56,7 @@ impl<'a, 'ctx> LLVMCodeGenContext<'a, 'ctx> {
             context,
             builder,
             position: LLVMCodeGenContextPosition::default(),
+            previous_position: LLVMCodeGenContextPosition::default(),
             target_data,
             diagnostician,
             constants: HashMap::with_capacity(CONSTANTS_MINIMAL_CAPACITY),
@@ -74,7 +76,8 @@ impl<'a, 'ctx> LLVMCodeGenContext<'a, 'ctx> {
             kind.is_heap_allocated(self.context, &self.target_data),
         );
 
-        let symbol_allocated: SymbolAllocated = SymbolAllocated::new_local(ptr_allocated, kind);
+        let symbol_allocated: SymbolAllocated =
+            SymbolAllocated::new(self, SymbolToAllocate::Local, ptr_allocated.into(), kind);
 
         self.blocks
             .last_mut()
@@ -89,7 +92,7 @@ impl<'a, 'ctx> LLVMCodeGenContext<'a, 'ctx> {
         value: BasicValueEnum<'ctx>,
         attributes: &'ctx ThrushAttributes<'ctx>,
     ) {
-        let constant_allocated: PointerValue = valuegen::alloc_constant(
+        let ptr_allocated: PointerValue = valuegen::alloc_constant(
             self.module,
             name,
             typegen::generate_type(self.context, kind),
@@ -98,7 +101,7 @@ impl<'a, 'ctx> LLVMCodeGenContext<'a, 'ctx> {
         );
 
         let symbol_allocated: SymbolAllocated =
-            SymbolAllocated::new_constant(constant_allocated, kind);
+            SymbolAllocated::new(self, SymbolToAllocate::Constant, ptr_allocated.into(), kind);
 
         self.constants.insert(name, symbol_allocated);
     }
@@ -107,38 +110,22 @@ impl<'a, 'ctx> LLVMCodeGenContext<'a, 'ctx> {
         &mut self,
         name: &'ctx str,
         kind: &'ctx ThrushType,
-        is_mutable: bool,
-        mut value: BasicValueEnum<'ctx>,
+        value: BasicValueEnum<'ctx>,
     ) {
-        if is_mutable && !value.is_pointer_value() && !kind.is_mut_type() {
-            let new_value: PointerValue = valuegen::alloc(
-                self.context,
-                self.builder,
-                kind,
-                kind.is_heap_allocated(self.context, &self.target_data),
-            );
-
-            memory::store_anon(self.builder, new_value, value);
-
-            value = new_value.into();
-        }
-
-        let symbol_allocated: SymbolAllocated = SymbolAllocated::new_parameter(value, kind);
+        let symbol_allocated: SymbolAllocated =
+            SymbolAllocated::new(self, SymbolToAllocate::Parameter, value, kind);
 
         self.lift_instructions.insert(name, symbol_allocated);
     }
 
-    #[inline]
-    pub fn insert_function(&mut self, name: &'ctx str, function: LLVMFunction<'ctx>) {
+    pub fn add_function(&mut self, name: &'ctx str, function: LLVMFunction<'ctx>) {
         self.functions.insert(name, function);
     }
 
-    #[inline]
     pub fn get_allocated_symbols(&self) -> SymbolsAllocated {
-        self.blocks.last().unwrap()
+        self.blocks.last().cloned().unwrap()
     }
 
-    #[inline]
     pub fn get_allocated_symbol(&self, name: &str) -> SymbolAllocated<'ctx> {
         if let Some(constant) = self.constants.get(name) {
             return constant.clone();
@@ -161,7 +148,6 @@ impl<'a, 'ctx> LLVMCodeGenContext<'a, 'ctx> {
         unreachable!()
     }
 
-    #[inline]
     pub fn get_function(&self, name: &str) -> LLVMFunction<'ctx> {
         if let Some(function) = self.functions.get(name) {
             return *function;
@@ -175,6 +161,29 @@ impl<'a, 'ctx> LLVMCodeGenContext<'a, 'ctx> {
         unreachable!()
     }
 
+    pub fn begin_scope(&mut self) {
+        self.blocks
+            .push(HashMap::with_capacity(SCOPE_MINIMAL_CAPACITY));
+
+        self.blocks
+            .last_mut()
+            .unwrap()
+            .extend(self.lift_instructions.clone());
+
+        self.scope += 1;
+    }
+
+    pub fn end_scope(&mut self) {
+        self.blocks.pop();
+
+        self.lift_instructions.clear();
+        self.llvm_calls.clear();
+
+        self.scope -= 1;
+    }
+}
+
+impl<'a, 'ctx> LLVMCodeGenContext<'a, 'ctx> {
     pub fn get_llvm_module(&self) -> &'a Module<'ctx> {
         self.module
     }
@@ -188,11 +197,16 @@ impl<'a, 'ctx> LLVMCodeGenContext<'a, 'ctx> {
     }
 
     pub fn set_position(&mut self, new_position: LLVMCodeGenContextPosition) {
+        self.previous_position = self.position;
         self.position = new_position;
     }
 
     pub fn get_position(&self) -> LLVMCodeGenContextPosition {
         self.position
+    }
+
+    pub fn get_previous_position(&self) -> LLVMCodeGenContextPosition {
+        self.previous_position
     }
 
     pub fn set_position_irrelevant(&mut self) {
@@ -203,31 +217,12 @@ impl<'a, 'ctx> LLVMCodeGenContext<'a, 'ctx> {
         &self.diagnostician
     }
 
-    pub fn get_llvm_calls(&self) -> &LLVMCalls<'ctx> {
+    pub fn get_llvm_calls(&self) -> &LLVMScopeCalls<'ctx> {
         &self.llvm_calls
     }
 
-    pub fn add_scope_call(&mut self, call: LLVMCall<'ctx>) {
+    pub fn add_scope_call(&mut self, call: LLVMScopeCall<'ctx>) {
         self.llvm_calls.push(call);
-    }
-
-    pub fn begin_scope(&mut self) {
-        self.blocks
-            .push(HashMap::with_capacity(SCOPE_MINIMAL_CAPACITY));
-        self.blocks
-            .last_mut()
-            .unwrap()
-            .extend(self.lift_instructions.clone());
-        self.scope += 1;
-    }
-
-    pub fn end_scope(&mut self) {
-        self.blocks.pop();
-
-        self.lift_instructions.clear();
-        self.llvm_calls.clear();
-
-        self.scope -= 1;
     }
 }
 

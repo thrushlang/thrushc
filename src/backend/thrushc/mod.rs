@@ -31,7 +31,6 @@ use crate::{
 
 use super::llvm::{self, linker::lld::LLVMLinker};
 
-pub mod handler;
 pub mod utils;
 
 pub struct Thrushc<'a> {

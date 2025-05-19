@@ -1,23 +1,28 @@
 #![allow(clippy::enum_variant_names)]
 
 use inkwell::{
+    AddressSpace,
+    basic_block::BasicBlock,
     context::Context,
+    module::Module,
     targets::TargetData,
-    types::{BasicType, BasicTypeEnum},
-    values::IntValue,
+    types::{BasicType, BasicTypeEnum, FunctionType},
+    values::{FunctionValue, IntValue},
 };
+use rand::rand_core::block;
 
 use crate::{
-    backend::llvm::compiler::typegen, middle::types::frontend::lexer::types::ThrushType,
+    backend::llvm::{self, compiler::typegen},
+    middle::types::frontend::lexer::types::ThrushType,
     standard::logging,
 };
 
 use inkwell::{
     builder::Builder,
-    values::{BasicValue, BasicValueEnum, InstructionValue, PointerValue},
+    values::{BasicValue, BasicValueEnum, PointerValue},
 };
 
-use super::context::LLVMCodeGenContext;
+use super::{context::LLVMCodeGenContext, utils, valuegen};
 
 #[derive(Debug, Clone)]
 pub enum SymbolAllocated<'ctx> {
@@ -35,116 +40,198 @@ pub enum SymbolAllocated<'ctx> {
     },
 }
 
+#[derive(Debug, Clone, Copy)]
+pub enum SymbolToAllocate {
+    Local,
+    Constant,
+    Parameter,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum AllocSite {
+    Heap,
+    Stack,
+}
+
 impl<'ctx> SymbolAllocated<'ctx> {
-    pub fn new_constant(ptr: PointerValue<'ctx>, kind: &'ctx ThrushType) -> Self {
-        Self::Constant { ptr, kind }
-    }
+    pub fn new(
+        context: &LLVMCodeGenContext<'_, 'ctx>,
+        allocate: SymbolToAllocate,
+        value: BasicValueEnum<'ctx>,
+        kind: &'ctx ThrushType,
+    ) -> Self {
+        match allocate {
+            SymbolToAllocate::Local => Self::Local {
+                ptr: value.into_pointer_value(),
+                kind,
+            },
+            SymbolToAllocate::Constant => Self::Constant {
+                ptr: value.into_pointer_value(),
+                kind,
+            },
+            SymbolToAllocate::Parameter => {
+                let llvm_builder: &Builder = context.get_llvm_builder();
+                let llvm_context: &Context = context.get_llvm_context();
 
-    pub fn new_local(ptr: PointerValue<'ctx>, kind: &'ctx ThrushType) -> Self {
-        Self::Local { ptr, kind }
-    }
+                let mut value: BasicValueEnum<'ctx> = value;
 
-    pub fn new_parameter(value: BasicValueEnum<'ctx>, kind: &'ctx ThrushType) -> Self {
-        Self::Parameter { value, kind }
+                if !kind.is_mut_type() {
+                    let ptr_allocated: PointerValue = valuegen::alloc(
+                        llvm_context,
+                        llvm_builder,
+                        kind,
+                        kind.is_heap_allocated(llvm_context, &context.target_data),
+                    );
+
+                    self::store_anon(context, ptr_allocated, value);
+
+                    value = ptr_allocated.into();
+                }
+
+                Self::Parameter { value, kind }
+            }
+        }
     }
 
     pub fn load(&self, context: &LLVMCodeGenContext<'_, 'ctx>) -> BasicValueEnum<'ctx> {
         let llvm_context: &Context = context.get_llvm_context();
         let llvm_builder: &Builder = context.get_llvm_builder();
+
         let target_data: &TargetData = &context.target_data;
+
+        let thrush_type: &ThrushType = self.get_type();
+
+        if thrush_type.is_ptr_type() {
+            return self.get_value();
+        }
+
+        let llvm_type: BasicTypeEnum = typegen::generate_subtype(llvm_context, thrush_type);
+        let preferred_memory_alignment: u32 = target_data.get_preferred_alignment(&llvm_type);
 
         match self {
             Self::Local { ptr, kind } => {
-                if kind.is_ptr_type() {
-                    return (*ptr).into();
-                }
-
-                let ptr_type: BasicTypeEnum = typegen::generate_subtype(llvm_context, kind);
-                let preffered_alignment: u32 = target_data.get_preferred_alignment(&ptr_type);
-
                 if kind.is_heap_allocated(llvm_context, target_data) {
                     if context.get_position().in_call() {
-                        let value: BasicValueEnum =
-                            llvm_builder.build_load(ptr_type, *ptr, "").unwrap();
+                        let loaded_value: BasicValueEnum =
+                            llvm_builder.build_load(llvm_type, *ptr, "").unwrap();
 
-                        if let Some(load_instruction) = value.as_instruction_value() {
-                            let _ = load_instruction.set_alignment(preffered_alignment);
+                        if let Some(load_instruction) = loaded_value.as_instruction_value() {
+                            let _ = load_instruction.set_alignment(preferred_memory_alignment);
                         }
 
-                        return value;
+                        return loaded_value;
                     }
 
                     return (*ptr).into();
                 }
 
-                let value: BasicValueEnum = llvm_builder.build_load(ptr_type, *ptr, "").unwrap();
+                let loaded_value: BasicValueEnum =
+                    llvm_builder.build_load(llvm_type, *ptr, "").unwrap();
 
-                if let Some(load_instruction) = value.as_instruction_value() {
-                    let _ = load_instruction.set_alignment(preffered_alignment);
+                if let Some(load_instruction) = loaded_value.as_instruction_value() {
+                    let _ = load_instruction.set_alignment(preferred_memory_alignment);
                 }
 
-                value
+                loaded_value
             }
             Self::Parameter { value, kind } => {
-                if kind.is_ptr_type() {
-                    return *value;
-                }
-
                 if value.is_pointer_value() {
                     let ptr: PointerValue = value.into_pointer_value();
-                    let ptr_type: BasicTypeEnum = typegen::generate_subtype(llvm_context, kind);
-
-                    let preffered_alignment: u32 = target_data.get_preferred_alignment(&ptr_type);
 
                     if kind.is_heap_allocated(llvm_context, target_data) {
                         if context.get_position().in_call() {
-                            let value: BasicValueEnum =
-                                llvm_builder.build_load(ptr_type, ptr, "").unwrap();
+                            let loaded_value: BasicValueEnum =
+                                llvm_builder.build_load(llvm_type, ptr, "").unwrap();
 
                             if let Some(load_instruction) = value.as_instruction_value() {
-                                let _ = load_instruction.set_alignment(preffered_alignment);
+                                let _ = load_instruction.set_alignment(preferred_memory_alignment);
                             }
 
-                            return value;
+                            return loaded_value;
                         }
 
                         return *value;
                     }
 
-                    let value: BasicValueEnum = llvm_builder.build_load(ptr_type, ptr, "").unwrap();
+                    let loaded_value: BasicValueEnum =
+                        llvm_builder.build_load(llvm_type, ptr, "").unwrap();
 
-                    if let Some(load_instruction) = value.as_instruction_value() {
-                        let _ = load_instruction.set_alignment(preffered_alignment);
+                    if let Some(load_instruction) = loaded_value.as_instruction_value() {
+                        let _ = load_instruction.set_alignment(preferred_memory_alignment);
                     }
 
-                    return value;
+                    return loaded_value;
                 }
 
                 *value
             }
 
-            Self::Constant { ptr, kind } => {
-                let ptr_type: BasicTypeEnum = typegen::generate_subtype(llvm_context, kind);
-                let preffered_alignment: u32 = target_data.get_preferred_alignment(&ptr_type);
+            Self::Constant { ptr, .. } => {
+                let loaded_value: BasicValueEnum =
+                    llvm_builder.build_load(llvm_type, *ptr, "").unwrap();
 
-                let value: BasicValueEnum = llvm_builder.build_load(ptr_type, *ptr, "").unwrap();
-
-                if let Some(load_instruction) = value.as_instruction_value() {
-                    let _ = load_instruction.set_alignment(preffered_alignment);
+                if let Some(load_instruction) = loaded_value.as_instruction_value() {
+                    let _ = load_instruction.set_alignment(preferred_memory_alignment);
                 }
 
-                value
+                loaded_value
             }
+        }
+    }
+
+    pub fn store(&self, context: &LLVMCodeGenContext<'_, 'ctx>, new_value: BasicValueEnum<'ctx>) {
+        let llvm_context: &Context = context.get_llvm_context();
+        let llvm_builder: &Builder = context.get_llvm_builder();
+
+        let target_data: &TargetData = &context.target_data;
+
+        let thrush_type: &ThrushType = self.get_type();
+        let llvm_type: BasicTypeEnum = typegen::generate_subtype(llvm_context, thrush_type);
+
+        let preferred_memory_alignment: u32 = target_data.get_preferred_alignment(&llvm_type);
+
+        match self {
+            Self::Local { ptr, .. } => {
+                if let Ok(store) = llvm_builder.build_store(*ptr, new_value) {
+                    let _ = store.set_alignment(preferred_memory_alignment);
+                }
+            }
+
+            Self::Parameter { value, .. } if value.is_pointer_value() => {
+                if let Ok(store) = llvm_builder.build_store(value.into_pointer_value(), new_value) {
+                    let _ = store.set_alignment(preferred_memory_alignment);
+                }
+            }
+
+            _ => (),
         }
     }
 
     pub fn dealloc(&self, context: &LLVMCodeGenContext<'_, '_>) {
         let llvm_context: &Context = context.get_llvm_context();
         let llvm_builder: &Builder = context.get_llvm_builder();
+
         let target_data: &TargetData = &context.target_data;
 
         match self {
             Self::Local { ptr, kind, .. } if kind.is_heap_allocated(llvm_context, target_data) => {
+                if let Some(last_block) = llvm_builder.get_insert_block() {
+                    let recursive_indexes: Vec<u64> = kind.get_recursive_type_positions();
+
+                    if !recursive_indexes.is_empty() {
+                        let deallocator: FunctionValue =
+                            self.create_deallocator(context, kind, &recursive_indexes);
+
+                        llvm_builder.position_at_end(last_block);
+
+                        let _ = llvm_builder.build_call(deallocator, &[(*ptr).into()], "");
+
+                        llvm_builder.position_at_end(last_block);
+
+                        return;
+                    }
+                }
+
                 let _ = llvm_builder.build_free(*ptr);
             }
 
@@ -160,41 +247,75 @@ impl<'ctx> SymbolAllocated<'ctx> {
         }
     }
 
-    pub fn store(&self, context: &LLVMCodeGenContext<'_, 'ctx>, value: BasicValueEnum<'ctx>) {
+    fn create_deallocator(
+        &self,
+        context: &'ctx LLVMCodeGenContext<'_, '_>,
+        kind: &'ctx ThrushType,
+        indexes: &[u64],
+    ) -> FunctionValue<'ctx> {
         let llvm_context: &Context = context.get_llvm_context();
         let llvm_builder: &Builder = context.get_llvm_builder();
-        let target_data: &TargetData = &context.target_data;
+        let llvm_module: &Module = context.get_llvm_module();
 
-        match self {
-            Self::Local { ptr, kind, .. } => {
-                let kind: BasicTypeEnum = typegen::generate_subtype(llvm_context, kind);
-                let alignment: u32 = target_data.get_preferred_alignment(&kind);
+        let llvm_type: BasicTypeEnum = typegen::generate_type(llvm_context, kind);
 
-                let store: InstructionValue = llvm_builder.build_store(*ptr, value).unwrap();
-                let _ = store.set_alignment(alignment);
-            }
+        let deallocator_type: FunctionType = llvm_context.void_type().fn_type(
+            &[llvm_context.ptr_type(AddressSpace::default()).into()],
+            false,
+        );
 
-            Self::Parameter {
-                value: ptr, kind, ..
-            } if ptr.is_pointer_value() => {
-                let kind: BasicTypeEnum = typegen::generate_subtype(llvm_context, kind);
-                let alignment: u32 = target_data.get_preferred_alignment(&kind);
+        let deallocator_name: String =
+            utils::generate_random_function_name("thrush_deallocator", 25);
 
-                let store: InstructionValue = llvm_builder
-                    .build_store(ptr.into_pointer_value(), value)
-                    .unwrap();
+        let deallocator: FunctionValue =
+            llvm_module.add_function(&deallocator_name, deallocator_type, None);
 
-                let _ = store.set_alignment(alignment);
-            }
-            _ => (),
+        let deallocator_block: BasicBlock = llvm_context.append_basic_block(deallocator, "");
+
+        let recursive_block: BasicBlock = llvm_context.append_basic_block(deallocator, "");
+        let out_block: BasicBlock = llvm_context.append_basic_block(deallocator, "");
+
+        llvm_builder.position_at_end(deallocator_block);
+
+        if let Some(param) = deallocator.get_first_param() {
+            let ptr: PointerValue = param.into_pointer_value();
+
+            let is_null_ptr: IntValue = llvm_builder
+                .build_int_compare(
+                    inkwell::IntPredicate::NE,
+                    ptr,
+                    llvm_context.ptr_type(AddressSpace::default()).const_null(),
+                    "",
+                )
+                .unwrap();
+
+            let _ = llvm_builder.build_conditional_branch(is_null_ptr, recursive_block, out_block);
+
+            llvm_builder.position_at_end(recursive_block);
+
+            let indexes_gep: Vec<PointerValue> = indexes
+                .iter()
+                .map(|index| {
+                    llvm_builder
+                        .build_struct_gep(llvm_type, ptr, (*index) as u32, "")
+                        .unwrap()
+                })
+                .collect();
+
+            indexes_gep.iter().for_each(|ptr| {
+                let _ = llvm_builder.build_call(deallocator, &[(*ptr).into()], "");
+            });
+
+            let _ = llvm_builder.build_free(ptr);
+
+            let _ = llvm_builder.build_unconditional_branch(out_block);
+
+            llvm_builder.position_at_end(out_block);
+
+            let _ = llvm_builder.build_return(None);
         }
-    }
 
-    pub fn take(&self) -> BasicValueEnum<'ctx> {
-        match self {
-            Self::Local { ptr, .. } | Self::Constant { ptr, .. } => (*ptr).into(),
-            Self::Parameter { value, .. } => *value,
-        }
+        deallocator
     }
 
     pub fn gep(
@@ -255,7 +376,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
         }
     }
 
-    pub fn get_size_of(&self) -> BasicValueEnum<'ctx> {
+    pub fn get_size(&self) -> BasicValueEnum<'ctx> {
         match self {
             Self::Local { ptr, .. } => ptr.get_type().size_of().into(),
             Self::Constant { ptr, .. } => ptr.get_type().size_of().into(),
@@ -273,46 +394,43 @@ impl<'ctx> SymbolAllocated<'ctx> {
                 .into(),
         }
     }
-}
 
-pub fn gep_struct_from_ptr<'ctx>(
-    builder: &Builder<'ctx>,
-    kind: BasicTypeEnum<'ctx>,
-    ptr: PointerValue<'ctx>,
-    index: u32,
-) -> PointerValue<'ctx> {
-    builder.build_struct_gep(kind, ptr, index, "").unwrap()
+    pub fn take(&self) -> BasicValueEnum<'ctx> {
+        match self {
+            Self::Local { ptr, .. } | Self::Constant { ptr, .. } => (*ptr).into(),
+            Self::Parameter { value, .. } => *value,
+        }
+    }
+
+    pub fn get_type(&self) -> &'ctx ThrushType {
+        match self {
+            Self::Local { kind, .. } => kind,
+            Self::Constant { kind, .. } => kind,
+            Self::Parameter { kind, .. } => kind,
+        }
+    }
+
+    pub fn get_value(&self) -> BasicValueEnum<'ctx> {
+        match self {
+            Self::Local { ptr, .. } => (*ptr).into(),
+            Self::Constant { ptr, .. } => (*ptr).into(),
+            Self::Parameter { value, .. } => *value,
+        }
+    }
 }
 
 pub fn store_anon<'ctx>(
-    builder: &Builder<'ctx>,
+    context: &LLVMCodeGenContext<'_, '_>,
     ptr: PointerValue<'ctx>,
     value: BasicValueEnum<'ctx>,
 ) {
-    let store: InstructionValue = builder.build_store(ptr, value).unwrap();
-    let _ = store.set_alignment(8);
-}
+    let llvm_builder: &Builder = context.get_llvm_builder();
+    let target_data: &TargetData = &context.target_data;
 
-pub trait MemoryManagement<'ctx> {
-    fn load_maybe(
-        &self,
-        kind: &ThrushType,
-        context: &LLVMCodeGenContext<'_, 'ctx>,
-    ) -> BasicValueEnum<'ctx>;
-}
+    let preferred_memory_alignment: u32 = target_data.get_preferred_alignment(&ptr.get_type());
 
-impl<'ctx> MemoryManagement<'ctx> for BasicValueEnum<'ctx> {
-    fn load_maybe(
-        &self,
-        kind: &ThrushType,
-        context: &LLVMCodeGenContext<'_, 'ctx>,
-    ) -> BasicValueEnum<'ctx> {
-        if self.is_pointer_value() {
-            let new_value: BasicValueEnum = load_anon(context, kind, self.into_pointer_value());
-            return new_value;
-        }
-
-        *self
+    if let Ok(store) = llvm_builder.build_store(ptr, value) {
+        let _ = store.set_alignment(preferred_memory_alignment);
     }
 }
 
@@ -324,17 +442,60 @@ pub fn load_anon<'ctx>(
     let llvm_context: &Context = context.get_llvm_context();
     let llvm_builder: &Builder = context.get_llvm_builder();
 
-    let target_data: &TargetData = &context.target_data;
-
     let llvm_type: BasicTypeEnum = typegen::generate_subtype(llvm_context, kind);
 
-    let preffered_alignment: u32 = target_data.get_preferred_alignment(&llvm_type);
+    let preferred_alignment: u32 = context.target_data.get_preferred_alignment(&llvm_type);
 
-    let value: BasicValueEnum = llvm_builder.build_load(llvm_type, ptr, "").unwrap();
+    let loaded_value: BasicValueEnum = llvm_builder.build_load(llvm_type, ptr, "").unwrap();
 
-    if let Some(load_instruction) = value.as_instruction_value() {
-        let _ = load_instruction.set_alignment(preffered_alignment);
+    if let Some(load_instruction) = loaded_value.as_instruction_value() {
+        let _ = load_instruction.set_alignment(preferred_alignment);
+    }
+
+    loaded_value
+}
+
+pub fn load_maybe<'ctx>(
+    context: &LLVMCodeGenContext<'_, 'ctx>,
+    kind: &ThrushType,
+    value: BasicValueEnum<'ctx>,
+) -> BasicValueEnum<'ctx> {
+    if value.is_pointer_value() {
+        let new_value: BasicValueEnum = self::load_anon(context, kind, value.into_pointer_value());
+        return new_value;
     }
 
     value
+}
+
+pub fn alloc<'ctx>(
+    site: AllocSite,
+    context: &LLVMCodeGenContext<'_, 'ctx>,
+    kind: &ThrushType,
+) -> PointerValue<'ctx> {
+    let llvm_context: &Context = context.get_llvm_context();
+    let llvm_builder: &Builder = context.get_llvm_builder();
+
+    let llvm_type: BasicTypeEnum = typegen::generate_type(llvm_context, kind);
+
+    match site {
+        AllocSite::Stack => llvm_builder.build_alloca(llvm_type, "").unwrap(),
+        AllocSite::Heap => llvm_builder.build_malloc(llvm_type, "").unwrap(),
+    }
+}
+
+pub fn memcpy<'ctx>(
+    context: &LLVMCodeGenContext<'_, 'ctx>,
+    dst: PointerValue<'ctx>,
+    src: PointerValue<'ctx>,
+    kind: &ThrushType,
+) {
+    let llvm_builder: &Builder = context.get_llvm_builder();
+    let llvm_context: &Context = context.get_llvm_context();
+
+    let llvm_type: BasicTypeEnum = typegen::generate_type(llvm_context, kind);
+
+    if let Some(size) = llvm_type.size_of() {
+        let _ = llvm_builder.build_memcpy(dst, 8, src, 8, size);
+    }
 }

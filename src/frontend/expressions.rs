@@ -647,9 +647,9 @@ fn primary<'instr>(
                     Some(&expression),
                 );
 
-                return Ok(Instruction::LocalMut {
+                return Ok(Instruction::Mut {
                     source: (Some(name), None),
-                    target: expression.into(),
+                    value: expression.into(),
                     kind: local_type,
                     span,
                 });
@@ -685,9 +685,9 @@ fn primary<'instr>(
                         ));
                     }
 
-                    return Ok(Instruction::LocalMut {
+                    return Ok(Instruction::Mut {
                         source: (None, Some(property.clone().into())),
-                        target: expr.into(),
+                        value: expr.into(),
                         kind: property.get_type().clone(),
                         span,
                     });

@@ -35,7 +35,7 @@ pub fn unary_op<'ctx>(
             let int: IntValue = symbol.load(context).into_int_value();
 
             let modifier: IntValue =
-                typegen::type_int_to_llvm_int_type(llvm_context, ref_type).const_int(1, false);
+                typegen::thrush_integer_to_llvm_type(llvm_context, ref_type).const_int(1, false);
 
             let result: IntValue = if unary.0.is_plusplus_operator() {
                 llvm_builder.build_int_nsw_add(int, modifier, "").unwrap()

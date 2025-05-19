@@ -12,7 +12,7 @@ use crate::middle::types::frontend::parser::stmts::instruction::Instruction;
 use super::context::LLVMCodeGenContext;
 
 #[inline]
-pub fn type_int_to_llvm_int_type<'ctx>(
+pub fn thrush_integer_to_llvm_type<'ctx>(
     llvm_context: &'ctx Context,
     kind: &ThrushType,
 ) -> IntType<'ctx> {
@@ -22,7 +22,8 @@ pub fn type_int_to_llvm_int_type<'ctx>(
         ThrushType::S32 | ThrushType::U32 => llvm_context.i32_type(),
         ThrushType::S64 | ThrushType::U64 => llvm_context.i64_type(),
         ThrushType::Bool => llvm_context.bool_type(),
-        ThrushType::Mut(subtype) => type_int_to_llvm_int_type(llvm_context, subtype),
+        ThrushType::Mut(subtype) => thrush_integer_to_llvm_type(llvm_context, subtype),
+
         _ => unreachable!(),
     }
 }
@@ -116,7 +117,7 @@ pub fn function_type<'ctx>(
 pub fn generate_type<'ctx>(llvm_context: &'ctx Context, kind: &ThrushType) -> BasicTypeEnum<'ctx> {
     match kind {
         kind if kind.is_bool_type() || kind.is_integer_type() || kind.is_char_type() => {
-            type_int_to_llvm_int_type(llvm_context, kind).into()
+            thrush_integer_to_llvm_type(llvm_context, kind).into()
         }
         kind if kind.is_float_type() => type_float_to_llvm_float_type(llvm_context, kind).into(),
         ThrushType::Ptr(_) | ThrushType::Address | ThrushType::Mut(..) | ThrushType::Me(..) => {

@@ -60,8 +60,7 @@ pub fn ptr_binaryop<'ctx>(
         Instruction::NullPtr { .. },
     ) = binary
     {
-        let left_compiled: BasicValueEnum =
-            valuegen::generate_expression(binary.0, target_type, symbols);
+        let left_compiled: BasicValueEnum = valuegen::build(binary.0, target_type, symbols);
         let right_compiled: PointerValue = context.ptr_type(AddressSpace::default()).const_null();
 
         return ptr_operation(builder, left_compiled, right_compiled.into(), binary.1);
@@ -74,8 +73,7 @@ pub fn ptr_binaryop<'ctx>(
     ) = binary
     {
         let left_compiled: PointerValue = context.ptr_type(AddressSpace::default()).const_null();
-        let right_compiled: BasicValueEnum =
-            valuegen::generate_expression(binary.2, target_type, symbols);
+        let right_compiled: BasicValueEnum = valuegen::build(binary.2, target_type, symbols);
 
         return ptr_operation(builder, left_compiled.into(), right_compiled, binary.1);
     }

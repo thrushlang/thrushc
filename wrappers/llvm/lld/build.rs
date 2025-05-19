@@ -225,7 +225,7 @@ fn main() {
 
     let mut build = cc::Build::new();
 
-    build.cpp(true).file("wrapper/library.cpp");
+    build.cpp(true).file("wrapper/lld.cpp");
 
     if build.get_compiler().is_like_msvc() {
         build.flag("/std:c++17");
@@ -235,7 +235,7 @@ fn main() {
 
     build.compile("lldwrapper");
 
-    println!("cargo:rerun-if-changed=wrapper/library.cpp");
+    println!("cargo:rerun-if-changed=wrapper/lld.cpp");
 
     let libdir: String = llvm_config("--libdir");
 

@@ -90,6 +90,50 @@ impl ThrushType {
         }
     }
 
+    pub fn narrowing_cast(&self) -> ThrushType {
+        match self {
+            ThrushType::U8 => ThrushType::S8,
+            ThrushType::U16 => ThrushType::S16,
+            ThrushType::U32 => ThrushType::S32,
+            ThrushType::U64 => ThrushType::S64,
+            _ => self.clone(),
+        }
+    }
+
+    pub fn is_recursive_type(&self) -> bool {
+        if let ThrushType::Struct(_, fields) = self {
+            return fields.iter().any(|tp| tp.is_recursive_type());
+        }
+
+        matches!(self, ThrushType::Me(_))
+    }
+
+    pub fn get_recursive_type_positions(&self) -> Vec<u64> {
+        let mut found_indexes: Vec<u64> = Vec::with_capacity(100);
+
+        self.get_recursive_struct_field(&mut found_indexes);
+
+        found_indexes
+    }
+
+    fn get_recursive_struct_field(&self, indexes: &mut Vec<u64>) {
+        if let ThrushType::Struct(_, fields) = self {
+            for (index, field) in fields.iter().enumerate() {
+                if field.is_recursive_type() {
+                    indexes.push(index as u64);
+                    field.get_recursive_struct_field(indexes);
+                }
+            }
+        }
+    }
+
+    pub fn create_structure_type(name: String, fields: &[ThrushType]) -> ThrushType {
+        ThrushType::Struct(
+            name,
+            fields.iter().map(|field| Arc::new(field.clone())).collect(),
+        )
+    }
+
     pub fn is_heap_allocated(&self, llvm_context: &Context, target_data: &TargetData) -> bool {
         target_data.get_abi_size(&typegen::generate_type(llvm_context, self)) >= 128
             || self.is_recursive_type()
@@ -193,31 +237,6 @@ impl ThrushType {
                 | ThrushType::U32
                 | ThrushType::U64
                 | ThrushType::Char
-        )
-    }
-
-    pub fn narrowing_cast(&self) -> ThrushType {
-        match self {
-            ThrushType::U8 => ThrushType::S8,
-            ThrushType::U16 => ThrushType::S16,
-            ThrushType::U32 => ThrushType::S32,
-            ThrushType::U64 => ThrushType::S64,
-            _ => self.clone(),
-        }
-    }
-
-    pub fn is_recursive_type(&self) -> bool {
-        if let ThrushType::Struct(_, fields) = self {
-            fields.iter().any(|tp| tp.is_me_type())
-        } else {
-            false
-        }
-    }
-
-    pub fn create_structure_type(name: String, fields: &[ThrushType]) -> ThrushType {
-        ThrushType::Struct(
-            name,
-            fields.iter().map(|field| Arc::new(field.clone())).collect(),
         )
     }
 }
