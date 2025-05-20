@@ -46,6 +46,7 @@ lazy_static! {
         keywords.insert(b"bindings", TokenKind::Bindings);
         keywords.insert(b"bind", TokenKind::Bind);
         keywords.insert(b"this", TokenKind::This);
+        keywords.insert(b"pass", TokenKind::Pass);
         keywords.insert(b"Me", TokenKind::Me);
         keywords.insert(b"match", TokenKind::Match);
         keywords.insert(b"pattern", TokenKind::Pattern);
@@ -155,6 +156,7 @@ impl<'a> Lexer<'a> {
             b'{' => self.make(TokenKind::LBrace),
             b'}' => self.make(TokenKind::RBrace),
             b',' => self.make(TokenKind::Comma),
+            b'.' if self.char_match(b'.') && self.char_match(b'.') => self.make(TokenKind::Pass),
             b'.' if self.char_match(b'.') => self.make(TokenKind::Range),
             b'.' => self.make(TokenKind::Dot),
             b'%' => self.make(TokenKind::Arith),

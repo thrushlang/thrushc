@@ -95,7 +95,7 @@ fn or<'instr>(
 
         let right: Instruction = and(parser_ctx)?;
 
-        typecheck::check_binaryop(&operator, expression.get_type(), right.get_type(), span)?;
+        typecheck::check_binaryop(&operator, expression.get_type()?, right.get_type()?, span)?;
 
         expression = Instruction::BinaryOp {
             left: expression.into(),
@@ -121,7 +121,7 @@ fn and<'instr>(
 
         let right: Instruction = equality(parser_ctx)?;
 
-        typecheck::check_binaryop(&operator, expression.get_type(), right.get_type(), span)?;
+        typecheck::check_binaryop(&operator, expression.get_type()?, right.get_type()?, span)?;
 
         expression = Instruction::BinaryOp {
             left: expression.into(),
@@ -147,7 +147,7 @@ fn equality<'instr>(
 
         let right: Instruction = comparison(parser_ctx)?;
 
-        typecheck::check_binaryop(&operator, expression.get_type(), right.get_type(), span)?;
+        typecheck::check_binaryop(&operator, expression.get_type()?, right.get_type()?, span)?;
 
         expression = Instruction::BinaryOp {
             left: expression.into(),
@@ -177,7 +177,7 @@ fn comparison<'instr>(
 
         let right: Instruction = term(parser_ctx)?;
 
-        typecheck::check_binaryop(&operator, expression.get_type(), right.get_type(), span)?;
+        typecheck::check_binaryop(&operator, expression.get_type()?, right.get_type()?, span)?;
 
         expression = Instruction::BinaryOp {
             left: expression.into(),
@@ -207,8 +207,8 @@ fn term<'instr>(
 
         let right: Instruction = factor(parser_ctx)?;
 
-        let left_type: &ThrushType = expression.get_type();
-        let right_type: &ThrushType = right.get_type();
+        let left_type: &ThrushType = expression.get_type()?;
+        let right_type: &ThrushType = right.get_type()?;
 
         typecheck::check_binaryop(&operator, left_type, right_type, span)?;
 
@@ -238,8 +238,8 @@ fn factor<'instr>(
 
         let right: Instruction = unary(parser_ctx)?;
 
-        let left_type: &ThrushType = expression.get_type();
-        let right_type: &ThrushType = right.get_type();
+        let left_type: &ThrushType = expression.get_type()?;
+        let right_type: &ThrushType = right.get_type()?;
 
         typecheck::check_binaryop(&operator, left_type, right_type, parser_ctx.previous().span)?;
 
@@ -267,7 +267,11 @@ fn unary<'instr>(
 
         let expression: Instruction = primary(parser_ctx)?;
 
-        typecheck::check_unary(&operator, expression.get_type(), parser_ctx.previous().span)?;
+        typecheck::check_unary(
+            &operator,
+            expression.get_type()?,
+            parser_ctx.previous().span,
+        )?;
 
         return Ok(Instruction::UnaryOp {
             operator,
@@ -287,7 +291,7 @@ fn unary<'instr>(
 
         expression.cast_signess(operator);
 
-        let expression_type: &ThrushType = expression.get_type();
+        let expression_type: &ThrushType = expression.get_type()?;
 
         typecheck::check_unary(&operator, expression_type, parser_ctx.previous().span)?;
 
@@ -348,7 +352,7 @@ fn primary<'instr>(
 
             let expression: Instruction = build_expr(parser_ctx)?;
 
-            let expression_type: &ThrushType = expression.get_type();
+            let expression_type: &ThrushType = expression.get_type()?;
 
             if !expression_type.is_ptr_type() && !expression_type.is_address_type() {
                 return Err(ThrushCompilerIssue::Error(
@@ -392,8 +396,8 @@ fn primary<'instr>(
 
             parser_ctx.mismatch_types(
                 &write_type,
-                value.get_type(),
-                value.get_span(),
+                value.get_type()?,
+                value.get_span()?,
                 Some(&value),
             );
 
@@ -424,7 +428,7 @@ fn primary<'instr>(
 
             let expression: Instruction = build_expr(parser_ctx)?;
 
-            let expression_type: &ThrushType = expression.get_type();
+            let expression_type: &ThrushType = expression.get_type()?;
 
             if !expression_type.is_ptr_type() && !expression_type.is_address_type() {
                 return Err(ThrushCompilerIssue::Error(
@@ -526,7 +530,7 @@ fn primary<'instr>(
 
             let expression: Instruction = build_expr(parser_ctx)?;
 
-            let kind: &ThrushType = expression.get_type();
+            let kind: &ThrushType = expression.get_type()?;
 
             if !expression.is_binary() && !expression.is_group() {
                 return Err(ThrushCompilerIssue::Error(
@@ -643,7 +647,7 @@ fn primary<'instr>(
 
                 parser_ctx.mismatch_types(
                     &local_type.clone(),
-                    expression.get_type(),
+                    expression.get_type()?,
                     span,
                     Some(&expression),
                 );
@@ -671,9 +675,9 @@ fn primary<'instr>(
                     let expr: Instruction = build_expr(parser_ctx)?;
 
                     parser_ctx.mismatch_types(
-                        property.get_type(),
-                        expr.get_type(),
-                        expr.get_span(),
+                        property.get_type()?,
+                        expr.get_type()?,
+                        expr.get_span()?,
                         Some(&expr),
                     );
 
@@ -682,14 +686,14 @@ fn primary<'instr>(
                             String::from("Expected mutable type"),
                             String::from("Make mutable the parameter or local of this property."),
                             None,
-                            property.get_span(),
+                            property.get_span()?,
                         ));
                     }
 
                     return Ok(Instruction::Mut {
                         source: (None, Some(property.clone().into())),
                         value: expr.into(),
-                        kind: property.get_type().clone(),
+                        kind: property.get_type()?.clone(),
                         span,
                     });
                 }
@@ -731,6 +735,10 @@ fn primary<'instr>(
 
         TokenKind::This => build_this(parser_ctx)?,
         TokenKind::New => build_constructor(parser_ctx)?,
+
+        TokenKind::Pass => Instruction::Pass {
+            span: parser_ctx.advance()?.span,
+        },
 
         _ => {
             let previous: &Token = parser_ctx.advance()?;
@@ -826,9 +834,9 @@ fn build_binding_call<'instr>(
 
     for (index, argument) in args.iter().enumerate() {
         let target_type: &ThrushType = &bind_parameters_type[index];
-        let from_type: &ThrushType = argument.get_type();
+        let from_type: &ThrushType = argument.get_type()?;
 
-        parser_ctx.mismatch_types(target_type, from_type, argument.get_span(), Some(argument));
+        parser_ctx.mismatch_types(target_type, from_type, argument.get_span()?, Some(argument));
     }
 
     let canonical_name: String = format!("{}.{}", name, bind_name);
@@ -1047,15 +1055,15 @@ fn build_address<'instr>(
 
     let index: Instruction = build_expr(parser_ctx)?;
 
-    if !index.is_unsigned_integer() || !index.is_anyu32bit_integer() {
+    if !index.is_unsigned_integer()? || !index.is_anyu32bit_integer()? {
         return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             format!(
                 "Expected unsigned integer type (u8, u16, u32), not {}. ",
-                index.get_type(),
+                index.get_type()?,
             ),
             None,
-            index.get_span(),
+            index.get_span()?,
         ));
     }
 
@@ -1070,15 +1078,15 @@ fn build_address<'instr>(
     while parser_ctx.match_token(TokenKind::LBracket)? {
         let index: Instruction = build_expr(parser_ctx)?;
 
-        if !index.is_unsigned_integer() || !index.is_anyu32bit_integer() {
+        if !index.is_unsigned_integer()? || !index.is_anyu32bit_integer()? {
             return Err(ThrushCompilerIssue::Error(
                 String::from("Syntax error"),
                 format!(
                     "Expected unsigned integer type (u8, u16, u32), not {}. ",
-                    index.get_type(),
+                    index.get_type()?,
                 ),
                 None,
-                index.get_span(),
+                index.get_span()?,
             ));
         }
 
@@ -1112,7 +1120,7 @@ fn build_function_call<'instr>(
         .get_function_by_id(span, function_id)?;
 
     let function_type: ThrushType = function.get_type();
-    let ignore_more_args: bool = function.ignore_more_args();
+    let ignore_more_args: bool = function.has_ignore_more_args();
 
     let parameters_types: &ParametersTypes = function.get_parameters_types();
     let maximun_arguments: usize = function.get_parameters_size();
@@ -1131,7 +1139,7 @@ fn build_function_call<'instr>(
                 String::from("Syntax error"),
                 String::from("Constructor should be stored in a local variable."),
                 None,
-                expression.get_span(),
+                expression.get_span()?,
             ));
         }
 
@@ -1162,7 +1170,7 @@ fn build_function_call<'instr>(
     if arguments_size != maximun_arguments && !ignore_more_args {
         let display_args_types: String = if !args.is_empty() {
             args.iter()
-                .map(|parameter| parameter.get_type().to_string())
+                .map(|arg| arg.get_type().unwrap_or(&ThrushType::Void).to_string())
                 .collect::<Vec<_>>()
                 .join(", ")
         } else {
@@ -1184,10 +1192,10 @@ fn build_function_call<'instr>(
 
     if !ignore_more_args {
         for (position, argument) in args.iter().enumerate() {
-            let from_type: &ThrushType = argument.get_type();
+            let from_type: &ThrushType = argument.get_type()?;
             let target_type: &ThrushType = &parameters_types.0[position];
 
-            parser_ctx.mismatch_types(target_type, from_type, argument.get_span(), Some(argument));
+            parser_ctx.mismatch_types(target_type, from_type, argument.get_span()?, Some(argument));
         }
     }
 
@@ -1351,13 +1359,13 @@ fn build_constructor<'instr>(
                 ));
             }
 
-            let expression_type: &ThrushType = expression.get_type();
+            let expression_type: &ThrushType = expression.get_type()?;
 
             if let Some(target_type) = struct_found.get_field_type(field_name) {
                 parser_ctx.mismatch_types(
                     &target_type,
                     expression_type,
-                    expression.get_span(),
+                    expression.get_span()?,
                     Some(&expression),
                 );
 

@@ -88,7 +88,7 @@ fn statement<'instr>(
         TokenKind::Return => Ok(build_return(parser_ctx)?),
         TokenKind::Local => Ok(build_local(parser_ctx, false)?),
         TokenKind::For => Ok(build_for_loop(parser_ctx)?),
-        TokenKind::If => Ok(build_if_elif_else(parser_ctx)?),
+        TokenKind::If => Ok(build_conditional(parser_ctx)?),
         TokenKind::Match => Ok(build_match(parser_ctx)?),
         TokenKind::While => Ok(build_while_loop(parser_ctx)?),
         TokenKind::Continue => Ok(build_continue(parser_ctx)?),
@@ -375,6 +375,8 @@ fn build_bind<'instr>(
 fn build_entry_point<'instr>(
     parser_ctx: &mut ParserContext<'instr>,
 ) -> Result<Instruction<'instr>, ThrushCompilerIssue> {
+    let span: Span = parser_ctx.previous().span;
+
     if parser_ctx.get_control_ctx().get_entrypoint() {
         return Err(ThrushCompilerIssue::Error(
             String::from("Duplicated entrypoint"),
@@ -400,6 +402,7 @@ fn build_entry_point<'instr>(
 
     Ok(Instruction::EntryPoint {
         body: build_block(parser_ctx)?.into(),
+        span,
     })
 }
 
@@ -412,12 +415,14 @@ fn build_for_loop<'instr>(
         String::from("Expected 'for' keyword."),
     )?;
 
+    let for_span: Span = for_tk.span;
+
     if parser_ctx.is_unreacheable_code() {
         return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("Unreacheable code."),
             None,
-            for_tk.span,
+            for_span,
         ));
     }
 
@@ -428,7 +433,7 @@ fn build_for_loop<'instr>(
             String::from("Syntax error"),
             String::from("For loop must be placed inside a function or a bind."),
             None,
-            for_tk.span,
+            for_span,
         ));
     }
 
@@ -437,8 +442,8 @@ fn build_for_loop<'instr>(
 
     parser_ctx.mismatch_types(
         &ThrushType::Bool,
-        cond.get_type(),
-        cond.get_span(),
+        cond.get_type()?,
+        cond.get_span()?,
         Some(&cond),
     );
 
@@ -458,11 +463,12 @@ fn build_for_loop<'instr>(
 
     parser_ctx.get_mut_control_ctx().set_inside_loop(false);
 
-    Ok(Instruction::ForLoop {
-        variable: local.into(),
+    Ok(Instruction::For {
+        local: local.into(),
         cond: cond.into(),
         actions: actions.into(),
         block: body.into(),
+        span: for_span,
     })
 }
 
@@ -475,12 +481,14 @@ fn build_loop<'instr>(
         String::from("Expected 'loop' keyword."),
     )?;
 
+    let loop_span: Span = loop_tk.span;
+
     if parser_ctx.is_unreacheable_code() {
         return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("Unreacheable code."),
             None,
-            loop_tk.span,
+            loop_span,
         ));
     }
 
@@ -491,7 +499,7 @@ fn build_loop<'instr>(
             String::from("Syntax error"),
             String::from("Loop must be placed inside a function or a bind."),
             None,
-            loop_tk.span,
+            loop_span,
         ));
     }
 
@@ -511,6 +519,7 @@ fn build_loop<'instr>(
 
     Ok(Instruction::Loop {
         block: block.into(),
+        span: loop_span,
     })
 }
 
@@ -523,12 +532,14 @@ fn build_while_loop<'instr>(
         String::from("Expected 'while' keyword."),
     )?;
 
+    let while_span: Span = while_tk.span;
+
     if parser_ctx.is_unreacheable_code() {
         return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("Unreacheable code."),
             None,
-            while_tk.span,
+            while_span,
         ));
     }
 
@@ -539,7 +550,7 @@ fn build_while_loop<'instr>(
             String::from("Syntax error"),
             String::from("While loop must be placed inside a function or a bind."),
             None,
-            while_tk.span,
+            while_span,
         ));
     }
 
@@ -547,16 +558,17 @@ fn build_while_loop<'instr>(
 
     parser_ctx.mismatch_types(
         &ThrushType::Bool,
-        conditional.get_type(),
-        conditional.get_span(),
+        conditional.get_type()?,
+        conditional.get_span()?,
         Some(&conditional),
     );
 
     let block: Instruction = build_block(parser_ctx)?;
 
-    Ok(Instruction::WhileLoop {
+    Ok(Instruction::While {
         cond: conditional.into(),
         block: block.into(),
+        span: while_span,
     })
 }
 
@@ -569,12 +581,14 @@ fn build_continue<'instr>(
         String::from("Expected 'continue' keyword."),
     )?;
 
+    let span: Span = continue_tk.span;
+
     if parser_ctx.is_unreacheable_code() {
         return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("Unreacheable code."),
             None,
-            continue_tk.span,
+            span,
         ));
     }
 
@@ -585,7 +599,7 @@ fn build_continue<'instr>(
             String::from("Syntax error"),
             String::from("Continue must be placed inside a function or a bind."),
             None,
-            continue_tk.span,
+            span,
         ));
     }
 
@@ -600,7 +614,7 @@ fn build_continue<'instr>(
             String::from("Syntax error"),
             String::from("The flow changer of a loop must go inside one."),
             None,
-            parser_ctx.previous().span,
+            span,
         ));
     }
 
@@ -610,7 +624,7 @@ fn build_continue<'instr>(
         String::from("Expected ';'."),
     )?;
 
-    Ok(Instruction::Continue)
+    Ok(Instruction::Continue { span })
 }
 
 fn build_break<'instr>(
@@ -622,12 +636,14 @@ fn build_break<'instr>(
         String::from("Expected 'break' keyword."),
     )?;
 
+    let span: Span = break_tk.span;
+
     if parser_ctx.is_unreacheable_code() {
         return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("Unreacheable code."),
             None,
-            break_tk.span,
+            span,
         ));
     }
 
@@ -642,7 +658,7 @@ fn build_break<'instr>(
             String::from("Syntax error"),
             String::from("The flow changer of a loop must go inside one."),
             None,
-            parser_ctx.previous().span,
+            span,
         ));
     }
 
@@ -653,7 +669,7 @@ fn build_break<'instr>(
             String::from("Syntax error"),
             String::from("Break must be placed inside a function or a bind."),
             None,
-            break_tk.span,
+            span,
         ));
     }
 
@@ -663,7 +679,7 @@ fn build_break<'instr>(
         String::from("Expected ';'."),
     )?;
 
-    Ok(Instruction::Break)
+    Ok(Instruction::Break { span })
 }
 
 fn build_match<'instr>(
@@ -675,12 +691,14 @@ fn build_match<'instr>(
         String::from("Expected 'match' keyword."),
     )?;
 
+    let span: Span = match_tk.span;
+
     if parser_ctx.is_unreacheable_code() {
         return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("Unreacheable code."),
             None,
-            match_tk.span,
+            span,
         ));
     }
 
@@ -691,12 +709,15 @@ fn build_match<'instr>(
             String::from("Syntax error"),
             String::from("Match must be placed inside a function or a bind."),
             None,
-            match_tk.span,
+            span,
         ));
     }
 
     let mut start_pattern: Instruction = expressions::build_expr(parser_ctx)?;
-    let mut start_block: Instruction = Instruction::Block { stmts: Vec::new() };
+    let mut start_block: Instruction = Instruction::Block {
+        stmts: Vec::new(),
+        span,
+    };
 
     let mut patterns: Vec<Instruction> = Vec::with_capacity(10);
     let mut patterns_stmts: Vec<Instruction> = Vec::with_capacity(MINIMAL_SCOPE_CAPACITY);
@@ -709,11 +730,12 @@ fn build_match<'instr>(
         parser_ctx.get_mut_symbols().begin_local_scope();
 
         let pattern: Instruction = expressions::build_expr(parser_ctx)?;
+        let pattern_span: Span = pattern.get_span()?;
 
         parser_ctx.mismatch_types(
             &ThrushType::Bool,
-            pattern.get_type(),
-            pattern.get_span(),
+            pattern.get_type()?,
+            pattern.get_span()?,
             Some(&pattern),
         );
 
@@ -746,7 +768,9 @@ fn build_match<'instr>(
                 cond: Rc::new(pattern),
                 block: Rc::new(Instruction::Block {
                     stmts: patterns_stmts.clone(),
+                    span: pattern_span,
                 }),
+                span: pattern_span,
             });
 
             patterns_stmts.clear();
@@ -759,6 +783,7 @@ fn build_match<'instr>(
 
         start_block = Instruction::Block {
             stmts: patterns_stmts.clone(),
+            span: pattern_span,
         };
 
         patterns_stmts.clear();
@@ -768,13 +793,15 @@ fn build_match<'instr>(
     if start_block.has_instruction() {
         parser_ctx.mismatch_types(
             &ThrushType::Bool,
-            start_pattern.get_type(),
-            start_pattern.get_span(),
+            start_pattern.get_type()?,
+            start_pattern.get_span()?,
             Some(&start_pattern),
         );
     }
 
     let otherwise: Option<Rc<Instruction>> = if parser_ctx.match_token(TokenKind::Else)? {
+        let otherwise_span: Span = parser_ctx.previous().span;
+
         parser_ctx.consume(
             TokenKind::ColonColon,
             String::from("Syntax error"),
@@ -798,7 +825,12 @@ fn build_match<'instr>(
         } else {
             Some(
                 Instruction::Else {
-                    block: Instruction::Block { stmts }.into(),
+                    block: Instruction::Block {
+                        stmts,
+                        span: otherwise_span,
+                    }
+                    .into(),
+                    span: otherwise_span,
                 }
                 .into(),
             )
@@ -816,10 +848,11 @@ fn build_match<'instr>(
         block: Rc::new(start_block),
         elfs: patterns,
         otherwise,
+        span,
     })
 }
 
-fn build_if_elif_else<'instr>(
+fn build_conditional<'instr>(
     parser_ctx: &mut ParserContext<'instr>,
 ) -> Result<Instruction<'instr>, ThrushCompilerIssue> {
     let if_tk: &Token = parser_ctx.consume(
@@ -828,6 +861,8 @@ fn build_if_elif_else<'instr>(
         String::from("Expected 'if' keyword."),
     )?;
 
+    let span: Span = if_tk.span;
+
     if !parser_ctx.get_control_ctx().get_inside_function()
         && !parser_ctx.get_control_ctx().get_inside_bind()
     {
@@ -835,7 +870,7 @@ fn build_if_elif_else<'instr>(
             String::from("Syntax error"),
             String::from("Conditionals must be placed inside a function or a bind."),
             None,
-            if_tk.span,
+            span,
         ));
     }
 
@@ -844,7 +879,7 @@ fn build_if_elif_else<'instr>(
             String::from("Syntax error"),
             String::from("Unreacheable code."),
             None,
-            if_tk.span,
+            span,
         ));
     }
 
@@ -852,8 +887,8 @@ fn build_if_elif_else<'instr>(
 
     parser_ctx.mismatch_types(
         &ThrushType::Bool,
-        if_condition.get_type(),
-        if_condition.get_span(),
+        if_condition.get_type()?,
+        if_condition.get_span()?,
         Some(&if_condition),
     );
 
@@ -862,12 +897,14 @@ fn build_if_elif_else<'instr>(
     let mut elfs: Vec<Instruction> = Vec::with_capacity(10);
 
     while parser_ctx.match_token(TokenKind::Elif)? {
+        let span: Span = parser_ctx.previous().span;
+
         let elif_condition: Instruction = expressions::build_expr(parser_ctx)?;
 
         parser_ctx.mismatch_types(
             &ThrushType::Bool,
-            elif_condition.get_type(),
-            elif_condition.get_span(),
+            elif_condition.get_type()?,
+            elif_condition.get_span()?,
             Some(&elif_condition),
         );
 
@@ -880,18 +917,21 @@ fn build_if_elif_else<'instr>(
         elfs.push(Instruction::Elif {
             cond: Rc::new(elif_condition),
             block: Rc::new(elif_body),
+            span,
         });
     }
 
     let mut otherwise: Option<Rc<Instruction>> = None;
 
     if parser_ctx.match_token(TokenKind::Else)? {
+        let span: Span = parser_ctx.previous().span;
         let else_body: Instruction = build_block(parser_ctx)?;
 
         if else_body.has_instruction() {
             otherwise = Some(
                 Instruction::Else {
                     block: else_body.into(),
+                    span,
                 }
                 .into(),
             );
@@ -903,6 +943,7 @@ fn build_if_elif_else<'instr>(
         block: if_body,
         elfs,
         otherwise,
+        span,
     })
 }
 
@@ -1078,7 +1119,7 @@ pub fn build_enum<'instr>(
 
             let expression: Instruction = expressions::build_expr(parser_ctx)?;
 
-            expression.throw_attemping_use_jit(expression.get_span())?;
+            expression.throw_attemping_use_jit(expression.get_span()?)?;
 
             parser_ctx.consume(
                 TokenKind::SemiColon,
@@ -1088,8 +1129,8 @@ pub fn build_enum<'instr>(
 
             parser_ctx.mismatch_types(
                 &field_type,
-                expression.get_type(),
-                expression.get_span(),
+                expression.get_type()?,
+                expression.get_span()?,
                 Some(&expression),
             );
 
@@ -1277,8 +1318,8 @@ pub fn build_const<'instr>(
 
     parser_ctx.mismatch_types(
         &const_type,
-        value.get_type(),
-        value.get_span(),
+        value.get_type()?,
+        value.get_span()?,
         Some(&value),
     );
 
@@ -1397,8 +1438,8 @@ fn build_local<'instr>(
 
     parser_ctx.mismatch_types(
         &local_type,
-        value.get_type(),
-        value.get_span(),
+        value.get_type()?,
+        value.get_span()?,
         Some(&value),
     );
 
@@ -1480,8 +1521,8 @@ fn build_return<'instr>(
 
     parser_ctx.mismatch_types(
         &function_type,
-        value.get_type(),
-        value.get_span(),
+        value.get_type()?,
+        value.get_span()?,
         Some(&value),
     );
 
@@ -1507,12 +1548,14 @@ fn build_block<'instr>(
         String::from("Expected '{'."),
     )?;
 
+    let span: Span = block_tk.span;
+
     if parser_ctx.is_unreacheable_code() {
         return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("Unreacheable code."),
             None,
-            block_tk.span,
+            span,
         ));
     }
 
@@ -1523,7 +1566,7 @@ fn build_block<'instr>(
             String::from("Syntax error"),
             String::from("Block of code must be placed inside a function or a bind."),
             None,
-            block_tk.span,
+            span,
         ));
     }
 
@@ -1540,7 +1583,7 @@ fn build_block<'instr>(
     parser_ctx.get_mut_symbols().end_local_scope();
     *parser_ctx.get_mut_scope() -= 1;
 
-    Ok(Instruction::Block { stmts })
+    Ok(Instruction::Block { stmts, span })
 }
 
 pub fn build_function<'instr>(

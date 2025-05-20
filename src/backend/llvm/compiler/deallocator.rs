@@ -1,9 +1,6 @@
 use std::rc::Rc;
 
-use inkwell::{
-    builder::Builder,
-    values::{BasicValueEnum, PointerValue},
-};
+use inkwell::values::BasicValueEnum;
 
 use crate::middle::types::{
     backend::llvm::{traits::LLVMDeallocator, types::SymbolsAllocated},

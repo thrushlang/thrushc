@@ -90,6 +90,7 @@ impl std::fmt::Display for TokenKind {
             TokenKind::While => write!(f, "while"),
             TokenKind::Loop => write!(f, "loop"),
             TokenKind::Ref => write!(f, "ref"),
+            TokenKind::Pass => write!(f, "..."),
             TokenKind::NullPtr => write!(f, "nullptr"),
             TokenKind::Bindings => write!(f, "bindings"),
             TokenKind::Bind => write!(f, "bind"),

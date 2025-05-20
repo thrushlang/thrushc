@@ -104,37 +104,48 @@ pub enum Instruction<'ctx> {
         block: Rc<Instruction<'ctx>>,
         elfs: Vec<Instruction<'ctx>>,
         otherwise: Option<Rc<Instruction<'ctx>>>,
+        span: Span,
     },
     Elif {
         cond: Rc<Instruction<'ctx>>,
         block: Rc<Instruction<'ctx>>,
+        span: Span,
     },
     Else {
         block: Rc<Instruction<'ctx>>,
+        span: Span,
     },
 
     // Loops
-    ForLoop {
-        variable: Rc<Instruction<'ctx>>,
+    For {
+        local: Rc<Instruction<'ctx>>,
         cond: Rc<Instruction<'ctx>>,
         actions: Rc<Instruction<'ctx>>,
         block: Rc<Instruction<'ctx>>,
+        span: Span,
     },
-    WhileLoop {
+    While {
         cond: Rc<Instruction<'ctx>>,
         block: Rc<Instruction<'ctx>>,
+        span: Span,
     },
     Loop {
         block: Rc<Instruction<'ctx>>,
+        span: Span,
     },
 
     // Loop control flow
-    Continue,
-    Break,
+    Continue {
+        span: Span,
+    },
+    Break {
+        span: Span,
+    },
 
     // Code block
     Block {
         stmts: Vec<Instruction<'ctx>>,
+        span: Span,
     },
 
     // Functions
@@ -142,6 +153,7 @@ pub enum Instruction<'ctx> {
     // Entrypoint -> fn main() {}
     EntryPoint {
         body: Rc<Instruction<'ctx>>,
+        span: Span,
     },
 
     FunctionParameter {
@@ -259,12 +271,54 @@ pub enum Instruction<'ctx> {
         span: Span,
     },
 
+    Pass {
+        span: Span,
+    },
+
     #[default]
     Null,
 }
 
 impl<'ctx> Instruction<'ctx> {
-    pub fn get_type(&self) -> &ThrushType {
+    pub fn get_type(&self) -> Result<&ThrushType, ThrushCompilerIssue> {
+        match self {
+            Instruction::Integer(kind, ..) => Ok(kind),
+            Instruction::Float(kind, ..) => Ok(kind),
+            Instruction::Local { kind, .. } => Ok(kind),
+            Instruction::Mut { kind, .. } => Ok(kind),
+            Instruction::FunctionParameter { kind, .. } => Ok(kind),
+            Instruction::LocalRef { kind, .. } => Ok(kind),
+            Instruction::ConstRef { kind, .. } => Ok(kind),
+            Instruction::Call { kind, .. } => Ok(kind),
+            Instruction::BinaryOp { kind, .. } => Ok(kind),
+            Instruction::Group { kind, .. } => Ok(kind),
+            Instruction::UnaryOp { kind, .. } => Ok(kind),
+
+            Instruction::Str(kind, _, _) => Ok(kind),
+            Instruction::Boolean(kind, _, _) => Ok(kind),
+            Instruction::Char(kind, _, _) => Ok(kind),
+            Instruction::Address { .. } => Ok(&ThrushType::Address),
+            Instruction::Constructor { kind, .. } => Ok(kind),
+            Instruction::Carry {
+                carry_type: kind, ..
+            } => Ok(kind),
+            Instruction::Property { kind, .. } => Ok(kind),
+            Instruction::NullPtr { .. } => Ok(&ThrushType::Ptr(None)),
+            Instruction::This { kind, .. } => Ok(kind),
+            Instruction::BindCall { kind, .. } => Ok(kind),
+            Instruction::BindParameter { kind, .. } => Ok(kind),
+            Instruction::Return { kind, .. } => Ok(kind),
+
+            _ => Err(ThrushCompilerIssue::Error(
+                String::from("Syntax error"),
+                String::from("Expected a value to get a type."),
+                None,
+                self.get_span()?,
+            )),
+        }
+    }
+
+    pub fn get_type_unwrapped(&self) -> &ThrushType {
         match self {
             Instruction::Integer(kind, ..) => kind,
             Instruction::Float(kind, ..) => kind,
@@ -293,40 +347,57 @@ impl<'ctx> Instruction<'ctx> {
             Instruction::BindParameter { kind, .. } => kind,
             Instruction::Return { kind, .. } => kind,
 
-            _ => &ThrushType::Void,
+            any => {
+                panic!("Attempting to unwrap a null type: {:?}.", any)
+            }
         }
     }
 
-    pub fn get_span(&self) -> Span {
+    pub fn get_span(&self) -> Result<Span, ThrushCompilerIssue> {
         match self {
-            Instruction::Integer(_, _, _, span) => *span,
-            Instruction::Float(_, _, _, span) => *span,
-            Instruction::Local { span, .. } => *span,
-            Instruction::Mut { span, .. } => *span,
-            Instruction::FunctionParameter { span, .. } => *span,
-            Instruction::LocalRef { span, .. } => *span,
-            Instruction::ConstRef { span, .. } => *span,
-            Instruction::Call { span, .. } => *span,
-            Instruction::BinaryOp { span, .. } => *span,
-            Instruction::Group { span, .. } => *span,
-            Instruction::UnaryOp { span, .. } => *span,
+            Instruction::Integer(_, _, _, span) => Ok(*span),
+            Instruction::Float(_, _, _, span) => Ok(*span),
+            Instruction::Local { span, .. } => Ok(*span),
+            Instruction::Mut { span, .. } => Ok(*span),
+            Instruction::FunctionParameter { span, .. } => Ok(*span),
+            Instruction::LocalRef { span, .. } => Ok(*span),
+            Instruction::ConstRef { span, .. } => Ok(*span),
+            Instruction::Call { span, .. } => Ok(*span),
+            Instruction::BinaryOp { span, .. } => Ok(*span),
+            Instruction::Group { span, .. } => Ok(*span),
+            Instruction::UnaryOp { span, .. } => Ok(*span),
 
-            Instruction::Str(_, _, span) => *span,
-            Instruction::Boolean(_, _, span) => *span,
-            Instruction::Char(_, _, span) => *span,
-            Instruction::Address { span, .. } => *span,
-            Instruction::Constructor { span, .. } => *span,
-            Instruction::Carry { span, .. } => *span,
-            Instruction::Property { span, .. } => *span,
-            Instruction::NullPtr { span } => *span,
-            Instruction::Write { span, .. } => *span,
-            Instruction::Const { span, .. } => *span,
-            Instruction::This { span, .. } => *span,
-            Instruction::BindCall { span, .. } => *span,
-            Instruction::BindParameter { span, .. } => *span,
-            Instruction::Return { span, .. } => *span,
+            Instruction::Str(_, _, span) => Ok(*span),
+            Instruction::Boolean(_, _, span) => Ok(*span),
+            Instruction::Char(_, _, span) => Ok(*span),
+            Instruction::Address { span, .. } => Ok(*span),
+            Instruction::Constructor { span, .. } => Ok(*span),
+            Instruction::Carry { span, .. } => Ok(*span),
+            Instruction::Property { span, .. } => Ok(*span),
+            Instruction::NullPtr { span } => Ok(*span),
+            Instruction::Write { span, .. } => Ok(*span),
+            Instruction::Const { span, .. } => Ok(*span),
+            Instruction::This { span, .. } => Ok(*span),
+            Instruction::BindCall { span, .. } => Ok(*span),
+            Instruction::BindParameter { span, .. } => Ok(*span),
+            Instruction::Return { span, .. } => Ok(*span),
 
-            _ => unreachable!(),
+            Instruction::Else { span, .. } => Ok(*span),
+            Instruction::Elif { span, .. } => Ok(*span),
+            Instruction::If { span, .. } => Ok(*span),
+
+            Instruction::Continue { span, .. } => Ok(*span),
+            Instruction::Break { span, .. } => Ok(*span),
+            Instruction::While { span, .. } => Ok(*span),
+            Instruction::For { span, .. } => Ok(*span),
+            Instruction::Pass { span } => Ok(*span),
+
+            _ => Err(ThrushCompilerIssue::Error(
+                String::from("Syntax error"),
+                String::from("Expected a valid statament to get a valid code point."),
+                None,
+                Span::default(),
+            )),
         }
     }
 
@@ -414,7 +485,7 @@ impl<'ctx> Instruction<'ctx> {
         if let Instruction::Bind { parameters, .. } = self {
             let parameters_type: Vec<ThrushType> = parameters
                 .iter()
-                .map(|parameter| parameter.get_type().clone())
+                .map(|parameter| parameter.get_type_unwrapped().clone())
                 .collect();
 
             return parameters_type;
@@ -471,9 +542,8 @@ impl Instruction<'_> {
 }
 
 impl Instruction<'_> {
-    #[inline]
     pub fn has_instruction(&self) -> bool {
-        if let Instruction::Block { stmts } = self {
+        if let Instruction::Block { stmts, .. } = self {
             return !stmts.is_empty();
         }
 
@@ -481,7 +551,7 @@ impl Instruction<'_> {
     }
 
     pub fn has_return(&self) -> bool {
-        if let Instruction::Block { stmts } = self {
+        if let Instruction::Block { stmts, .. } = self {
             return stmts.iter().any(|stmt| stmt.is_return());
         }
 
@@ -489,7 +559,7 @@ impl Instruction<'_> {
     }
 
     pub fn has_break(&self) -> bool {
-        if let Instruction::Block { stmts } = self {
+        if let Instruction::Block { stmts, .. } = self {
             return stmts.iter().any(|stmt| stmt.is_break());
         }
 
@@ -497,7 +567,7 @@ impl Instruction<'_> {
     }
 
     pub fn has_continue(&self) -> bool {
-        if let Instruction::Block { stmts } = self {
+        if let Instruction::Block { stmts, .. } = self {
             return stmts.iter().any(|stmt| stmt.is_continue());
         }
 
@@ -510,19 +580,19 @@ impl Instruction<'_> {
     }
 
     #[inline]
-    pub fn is_unsigned_integer(&self) -> bool {
-        matches!(
-            self.get_type(),
+    pub fn is_unsigned_integer(&self) -> Result<bool, ThrushCompilerIssue> {
+        Ok(matches!(
+            self.get_type()?,
             ThrushType::U8 | ThrushType::U16 | ThrushType::U32 | ThrushType::U64
-        )
+        ))
     }
 
     #[inline]
-    pub fn is_anyu32bit_integer(&self) -> bool {
-        matches!(
-            self.get_type(),
+    pub fn is_anyu32bit_integer(&self) -> Result<bool, ThrushCompilerIssue> {
+        Ok(matches!(
+            self.get_type()?,
             ThrushType::U8 | ThrushType::U16 | ThrushType::U32
-        )
+        ))
     }
 
     #[inline]
@@ -587,11 +657,11 @@ impl Instruction<'_> {
 
     #[inline]
     pub const fn is_break(&self) -> bool {
-        matches!(self, Instruction::Break)
+        matches!(self, Instruction::Break { .. })
     }
 
     #[inline]
     pub const fn is_continue(&self) -> bool {
-        matches!(self, Instruction::Continue)
+        matches!(self, Instruction::Continue { .. })
     }
 }

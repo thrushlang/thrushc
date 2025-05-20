@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use crate::backend::llvm::compiler::context::LLVMCodeGenContextPosition;
 use crate::backend::llvm::compiler::memory::{self, SymbolAllocated};
-use crate::backend::llvm::compiler::{binaryop, builtins, unaryop, utils};
+use crate::backend::llvm::compiler::{binaryop, builtins, cast, unaryop, utils};
 use crate::middle::types::backend::llvm::types::LLVMFunction;
 use crate::middle::types::frontend::lexer::types::ThrushType;
 use crate::middle::types::frontend::parser::stmts::instruction::Instruction;
@@ -106,8 +106,7 @@ pub fn build<'ctx>(
     if let Instruction::Float(kind, num, is_signed, ..) = expression {
         let mut float: FloatValue = float(llvm_builder, llvm_context, kind, *num, *is_signed);
 
-        if let Some(casted_float) = utils::float_autocast(context, cast_target, kind, float.into())
-        {
+        if let Some(casted_float) = cast::float(context, cast_target, kind, float.into()) {
             float = casted_float.into_float_value();
         }
 
@@ -117,9 +116,7 @@ pub fn build<'ctx>(
     if let Instruction::Integer(kind, num, is_signed, ..) = expression {
         let mut integer: IntValue = integer(llvm_context, kind, *num as u64, *is_signed);
 
-        if let Some(casted_integer) =
-            utils::integer_autocast(context, cast_target, kind, integer.into())
-        {
+        if let Some(casted_integer) = cast::integer(context, cast_target, kind, integer.into()) {
             integer = casted_integer.into_int_value();
         }
 
@@ -201,10 +198,10 @@ pub fn build<'ctx>(
         indexes.iter().for_each(|indexe| {
             let mut compiled_indexe: BasicValueEnum = build(indexe, &ThrushType::U32, context);
 
-            if let Some(casted_index) = utils::integer_autocast(
+            if let Some(casted_index) = cast::integer(
                 context,
                 &ThrushType::U32,
-                indexe.get_type(),
+                indexe.get_type_unwrapped(),
                 compiled_indexe,
             ) {
                 compiled_indexe = casted_index;
@@ -317,7 +314,7 @@ pub fn build<'ctx>(
         let source_name: Option<&str> = source.0;
         let source_expression: Option<&Rc<Instruction<'_>>> = source.1.as_ref();
 
-        let value_type: &ThrushType = value.get_type();
+        let value_type: &ThrushType = value.get_type_unwrapped();
 
         if let Some(expression) = source_expression {
             let source: BasicValueEnum = build(expression, kind, context);

@@ -1,7 +1,7 @@
 use {
-    super::super::{Instruction, context::LLVMCodeGenContext, unaryop, utils, valuegen},
+    super::super::{Instruction, context::LLVMCodeGenContext, unaryop, valuegen},
     crate::{
-        backend::llvm::compiler::predicates,
+        backend::llvm::compiler::{cast, predicates},
         middle::types::{
             backend::llvm::types::{LLVMBinaryOp, LLVMUnaryOp},
             frontend::lexer::{tokenkind::TokenKind, types::ThrushType},
@@ -176,8 +176,8 @@ pub fn integer_binaryop<'ctx>(
             left_compiled,
             right_compiled,
             (
-                binary.0.get_type().is_signed_integer_type(),
-                binary.2.get_type().is_signed_integer_type(),
+                binary.0.get_type_unwrapped().is_signed_integer_type(),
+                binary.2.get_type_unwrapped().is_signed_integer_type(),
             ),
             binary.1,
         );
@@ -211,8 +211,8 @@ pub fn integer_binaryop<'ctx>(
             left_compiled,
             right_compiled,
             (
-                binary.0.get_type().is_signed_integer_type(),
-                binary.2.get_type().is_signed_integer_type(),
+                binary.0.get_type_unwrapped().is_signed_integer_type(),
+                binary.2.get_type_unwrapped().is_signed_integer_type(),
             ),
             binary.1,
         );
@@ -262,13 +262,13 @@ pub fn integer_binaryop<'ctx>(
         let mut right_compiled: BasicValueEnum = unaryop::unary_op(context, right_dissasembled);
 
         if let Some(new_left_compiled) =
-            utils::integer_autocast(context, target_type, left_type, left_compiled.into())
+            cast::integer(context, target_type, left_type, left_compiled.into())
         {
             left_compiled = new_left_compiled.into_int_value();
         }
 
         if let Some(new_right_compiled) =
-            utils::integer_autocast(context, target_type, right_type, right_compiled)
+            cast::integer(context, target_type, right_type, right_compiled)
         {
             right_compiled = new_right_compiled;
         }
@@ -298,13 +298,13 @@ pub fn integer_binaryop<'ctx>(
             valuegen::integer(llvm_context, right_type, *right as u64, false);
 
         if let Some(new_left_compiled) =
-            utils::integer_autocast(context, target_type, left_type, left_compiled)
+            cast::integer(context, target_type, left_type, left_compiled)
         {
             left_compiled = new_left_compiled;
         }
 
         if let Some(new_right_compiled) =
-            utils::integer_autocast(context, target_type, right_type, right_compiled.into())
+            cast::integer(context, target_type, right_type, right_compiled.into())
         {
             right_compiled = new_right_compiled.into_int_value();
         }
@@ -335,13 +335,13 @@ pub fn integer_binaryop<'ctx>(
         let mut right_compiled: BasicValueEnum = valuegen::build(binary.2, target_type, context);
 
         if let Some(new_left_compiled) =
-            utils::integer_autocast(context, target_type, left_type, left_compiled.into())
+            cast::integer(context, target_type, left_type, left_compiled.into())
         {
             left_compiled = new_left_compiled.into_int_value();
         }
 
         if let Some(new_right_compiled) =
-            utils::integer_autocast(context, target_type, right_type, right_compiled)
+            cast::integer(context, target_type, right_type, right_compiled)
         {
             right_compiled = new_right_compiled;
         }
@@ -372,13 +372,13 @@ pub fn integer_binaryop<'ctx>(
             valuegen::integer(llvm_context, right_type, *right as u64, false);
 
         if let Some(new_left_compiled) =
-            utils::integer_autocast(context, target_type, left_type, left_compiled)
+            cast::integer(context, target_type, left_type, left_compiled)
         {
             left_compiled = new_left_compiled;
         }
 
         if let Some(new_right_compiled) =
-            utils::integer_autocast(context, target_type, right_type, right_compiled.into())
+            cast::integer(context, target_type, right_type, right_compiled.into())
         {
             right_compiled = new_right_compiled.into_int_value();
         }
@@ -460,13 +460,13 @@ pub fn integer_binaryop<'ctx>(
         let mut right_compiled: BasicValueEnum = unaryop::unary_op(context, right_dissasembled);
 
         if let Some(new_left_compiled) =
-            utils::integer_autocast(context, target_type, left_type, left_compiled)
+            cast::integer(context, target_type, left_type, left_compiled)
         {
             left_compiled = new_left_compiled;
         }
 
         if let Some(new_right_compiled) =
-            utils::integer_autocast(context, target_type, right_type, right_compiled)
+            cast::integer(context, target_type, right_type, right_compiled)
         {
             right_compiled = new_right_compiled;
         }
@@ -516,13 +516,13 @@ pub fn integer_binaryop<'ctx>(
         let mut right_compiled: BasicValueEnum = unaryop::unary_op(context, right_dissasembled);
 
         if let Some(new_left_compiled) =
-            utils::integer_autocast(context, target_type, left_call_type, left_compiled)
+            cast::integer(context, target_type, left_call_type, left_compiled)
         {
             left_compiled = new_left_compiled;
         }
 
         if let Some(new_right_compiled) =
-            utils::integer_autocast(context, target_type, right_type, right_compiled)
+            cast::integer(context, target_type, right_type, right_compiled)
         {
             right_compiled = new_right_compiled;
         }
@@ -570,13 +570,13 @@ pub fn integer_binaryop<'ctx>(
         let mut right_compiled: BasicValueEnum = valuegen::build(binary.2, target_type, context);
 
         if let Some(new_left_compiled) =
-            utils::integer_autocast(context, target_type, left_type, left_compiled)
+            cast::integer(context, target_type, left_type, left_compiled)
         {
             left_compiled = new_left_compiled;
         }
 
         if let Some(new_right_compiled) =
-            utils::integer_autocast(context, target_type, right_call_type, right_compiled)
+            cast::integer(context, target_type, right_call_type, right_compiled)
         {
             right_compiled = new_right_compiled;
         }
@@ -622,13 +622,13 @@ pub fn integer_binaryop<'ctx>(
         let mut right_compiled: BasicValueEnum = unaryop::unary_op(context, right_dissasembled);
 
         if let Some(new_left_compiled) =
-            utils::integer_autocast(context, target_type, left_type, left_compiled.into())
+            cast::integer(context, target_type, left_type, left_compiled.into())
         {
             left_compiled = new_left_compiled.into_int_value();
         }
 
         if let Some(new_right_compiled) =
-            utils::integer_autocast(context, target_type, right_type, right_compiled)
+            cast::integer(context, target_type, right_type, right_compiled)
         {
             right_compiled = new_right_compiled;
         }
@@ -674,13 +674,13 @@ pub fn integer_binaryop<'ctx>(
             valuegen::integer(llvm_context, right_type, *right_num as u64, *right_signed);
 
         if let Some(new_left_compiled) =
-            utils::integer_autocast(context, target_type, left_type, left_compiled)
+            cast::integer(context, target_type, left_type, left_compiled)
         {
             left_compiled = new_left_compiled;
         }
 
         if let Some(new_right_compiled) =
-            utils::integer_autocast(context, target_type, right_type, right_compiled.into())
+            cast::integer(context, target_type, right_type, right_compiled.into())
         {
             right_compiled = new_right_compiled.into_int_value();
         }
@@ -730,13 +730,13 @@ pub fn integer_binaryop<'ctx>(
         let mut right_compiled: BasicValueEnum = unaryop::unary_op(context, right_dissasembled);
 
         if let Some(new_left_compiled) =
-            utils::integer_autocast(context, target_type, left_type, left_compiled)
+            cast::integer(context, target_type, left_type, left_compiled)
         {
             left_compiled = new_left_compiled;
         }
 
         if let Some(new_right_compiled) =
-            utils::integer_autocast(context, target_type, right_type, right_compiled)
+            cast::integer(context, target_type, right_type, right_compiled)
         {
             right_compiled = new_right_compiled;
         }
@@ -786,13 +786,13 @@ pub fn integer_binaryop<'ctx>(
         let mut right_compiled: BasicValueEnum = valuegen::build(binary.2, target_type, context);
 
         if let Some(new_left_compiled) =
-            utils::integer_autocast(context, target_type, left_type, left_compiled)
+            cast::integer(context, target_type, left_type, left_compiled)
         {
             left_compiled = new_left_compiled;
         }
 
         if let Some(new_right_compiled) =
-            utils::integer_autocast(context, target_type, right_type, right_compiled)
+            cast::integer(context, target_type, right_type, right_compiled)
         {
             right_compiled = new_right_compiled;
         }
@@ -842,13 +842,13 @@ pub fn integer_binaryop<'ctx>(
         let mut right_compiled: BasicValueEnum = unaryop::unary_op(context, right_dissasembled);
 
         if let Some(new_left_compiled) =
-            utils::integer_autocast(context, target_type, left_type, left_compiled.into())
+            cast::integer(context, target_type, left_type, left_compiled.into())
         {
             left_compiled = new_left_compiled.into_int_value();
         }
 
         if let Some(new_right_compiled) =
-            utils::integer_autocast(context, target_type, right_type, right_compiled)
+            cast::integer(context, target_type, right_type, right_compiled)
         {
             right_compiled = new_right_compiled;
         }
@@ -900,13 +900,13 @@ pub fn integer_binaryop<'ctx>(
         let mut right_compiled: BasicValueEnum = unaryop::unary_op(context, right_dissasembled);
 
         if let Some(new_left_compiled) =
-            utils::integer_autocast(context, target_type, left_type, left_compiled.into())
+            cast::integer(context, target_type, left_type, left_compiled.into())
         {
             left_compiled = new_left_compiled.into_int_value();
         }
 
         if let Some(new_right_compiled) =
-            utils::integer_autocast(context, target_type, right_type, right_compiled)
+            cast::integer(context, target_type, right_type, right_compiled)
         {
             right_compiled = new_right_compiled;
         }
@@ -958,13 +958,13 @@ pub fn integer_binaryop<'ctx>(
             integer_binaryop(right_dissasembled, target_type, context).into_int_value();
 
         if let Some(new_left_compiled) =
-            utils::integer_autocast(context, target_type, left_type, left_compiled)
+            cast::integer(context, target_type, left_type, left_compiled)
         {
             left_compiled = new_left_compiled;
         }
 
         if let Some(new_right_compiled) =
-            utils::integer_autocast(context, target_type, right_type, right_compiled.into())
+            cast::integer(context, target_type, right_type, right_compiled.into())
         {
             right_compiled = new_right_compiled.into_int_value();
         }
@@ -1019,13 +1019,13 @@ pub fn integer_binaryop<'ctx>(
         let mut right_compiled: BasicValueEnum = valuegen::build(binary.2, target_type, context);
 
         if let Some(new_left_compiled) =
-            utils::integer_autocast(context, target_type, left_call_type, left_compiled)
+            cast::integer(context, target_type, left_call_type, left_compiled)
         {
             left_compiled = new_left_compiled;
         }
 
         if let Some(new_right_compiled) =
-            utils::integer_autocast(context, target_type, right_call_type, right_compiled)
+            cast::integer(context, target_type, right_call_type, right_compiled)
         {
             right_compiled = new_right_compiled;
         }
@@ -1070,13 +1070,13 @@ pub fn integer_binaryop<'ctx>(
         let mut right_compiled: BasicValueEnum = valuegen::build(binary.2, target_type, context);
 
         if let Some(new_left_compiled) =
-            utils::integer_autocast(context, target_type, left_type, left_compiled.into())
+            cast::integer(context, target_type, left_type, left_compiled.into())
         {
             left_compiled = new_left_compiled.into_int_value();
         }
 
         if let Some(new_right_compiled) =
-            utils::integer_autocast(context, target_type, right_call_type, right_compiled)
+            cast::integer(context, target_type, right_call_type, right_compiled)
         {
             right_compiled = new_right_compiled;
         }
@@ -1121,13 +1121,13 @@ pub fn integer_binaryop<'ctx>(
             valuegen::integer(llvm_context, right_type, *right_num as u64, *right_signed);
 
         if let Some(new_left_compiled) =
-            utils::integer_autocast(context, target_type, left_call_type, left_compiled)
+            cast::integer(context, target_type, left_call_type, left_compiled)
         {
             left_compiled = new_left_compiled;
         }
 
         if let Some(new_right_compiled) =
-            utils::integer_autocast(context, target_type, right_type, right_compiled.into())
+            cast::integer(context, target_type, right_type, right_compiled.into())
         {
             right_compiled = new_right_compiled.into_int_value();
         }
@@ -1176,13 +1176,13 @@ pub fn integer_binaryop<'ctx>(
         let mut right_compiled: BasicValueEnum = valuegen::build(binary.2, target_type, context);
 
         if let Some(new_left_compiled) =
-            utils::integer_autocast(context, target_type, left_type, left_compiled)
+            cast::integer(context, target_type, left_type, left_compiled)
         {
             left_compiled = new_left_compiled;
         }
 
         if let Some(new_right_compiled) =
-            utils::integer_autocast(context, target_type, right_call_type, right_compiled)
+            cast::integer(context, target_type, right_call_type, right_compiled)
         {
             right_compiled = new_right_compiled;
         }
@@ -1236,13 +1236,13 @@ pub fn integer_binaryop<'ctx>(
             context.get_allocated_symbol(right_name).load(context);
 
         if let Some(new_left_compiled) =
-            utils::integer_autocast(context, target_type, left_call_type, left_compiled)
+            cast::integer(context, target_type, left_call_type, left_compiled)
         {
             left_compiled = new_left_compiled;
         }
 
         if let Some(new_right_compiled) =
-            utils::integer_autocast(context, target_type, right_type, right_compiled)
+            cast::integer(context, target_type, right_type, right_compiled)
         {
             right_compiled = new_right_compiled;
         }
@@ -1293,13 +1293,13 @@ pub fn integer_binaryop<'ctx>(
         let mut right_compiled: BasicValueEnum = valuegen::build(binary.2, target_type, context);
 
         if let Some(new_left_compiled) =
-            utils::integer_autocast(context, target_type, left_type, left_compiled)
+            cast::integer(context, target_type, left_type, left_compiled)
         {
             left_compiled = new_left_compiled;
         }
 
         if let Some(new_right_compiled) =
-            utils::integer_autocast(context, target_type, right_call_type, right_compiled)
+            cast::integer(context, target_type, right_call_type, right_compiled)
         {
             right_compiled = new_right_compiled;
         }
@@ -1350,13 +1350,13 @@ pub fn integer_binaryop<'ctx>(
             integer_binaryop(right_dissasembled, target_type, context);
 
         if let Some(new_left_compiled) =
-            utils::integer_autocast(context, target_type, left_call_type, left_compiled)
+            cast::integer(context, target_type, left_call_type, left_compiled)
         {
             left_compiled = new_left_compiled;
         }
 
         if let Some(new_right_compiled) =
-            utils::integer_autocast(context, target_type, right_type, right_compiled)
+            cast::integer(context, target_type, right_type, right_compiled)
         {
             right_compiled = new_right_compiled;
         }
@@ -1406,13 +1406,13 @@ pub fn integer_binaryop<'ctx>(
             valuegen::integer(llvm_context, right_type, *right_num as u64, *right_signed);
 
         if let Some(new_left_compiled) =
-            utils::integer_autocast(context, target_type, left_type, left_compiled.into())
+            cast::integer(context, target_type, left_type, left_compiled.into())
         {
             left_compiled = new_left_compiled.into_int_value();
         }
 
         if let Some(new_right_compiled) =
-            utils::integer_autocast(context, target_type, right_type, right_compiled.into())
+            cast::integer(context, target_type, right_type, right_compiled.into())
         {
             right_compiled = new_right_compiled.into_int_value();
         }
@@ -1460,13 +1460,13 @@ pub fn integer_binaryop<'ctx>(
         let mut right_compiled: BasicValueEnum = context.get_allocated_symbol(name).load(context);
 
         if let Some(new_left_compiled) =
-            utils::integer_autocast(context, target_type, left_type, left_compiled.into())
+            cast::integer(context, target_type, left_type, left_compiled.into())
         {
             left_compiled = new_left_compiled.into_int_value();
         }
 
         if let Some(new_right_compiled) =
-            utils::integer_autocast(context, target_type, right_type, right_compiled)
+            cast::integer(context, target_type, right_type, right_compiled)
         {
             right_compiled = new_right_compiled;
         }
@@ -1513,13 +1513,13 @@ pub fn integer_binaryop<'ctx>(
         let mut right_compiled: BasicValueEnum = valuegen::build(binary.2, target_type, context);
 
         if let Some(new_left_compiled) =
-            utils::integer_autocast(context, target_type, left_type, left_compiled)
+            cast::integer(context, target_type, left_type, left_compiled)
         {
             left_compiled = new_left_compiled;
         }
 
         if let Some(new_right_compiled) =
-            utils::integer_autocast(context, target_type, right_type, right_compiled)
+            cast::integer(context, target_type, right_type, right_compiled)
         {
             right_compiled = new_right_compiled;
         }
@@ -1570,13 +1570,13 @@ pub fn integer_binaryop<'ctx>(
         let mut right_compiled: BasicValueEnum = valuegen::build(binary.2, target_type, context);
 
         if let Some(new_left_compiled) =
-            utils::integer_autocast(context, target_type, left_type, left_compiled.into())
+            cast::integer(context, target_type, left_type, left_compiled.into())
         {
             left_compiled = new_left_compiled.into_int_value();
         }
 
         if let Some(new_right_compiled) =
-            utils::integer_autocast(context, target_type, right_type, right_compiled)
+            cast::integer(context, target_type, right_type, right_compiled)
         {
             right_compiled = new_right_compiled;
         }
@@ -1622,7 +1622,7 @@ pub fn integer_binaryop<'ctx>(
         let mut left_compiled: BasicValueEnum = valuegen::build(binary.0, target_type, context);
 
         if let Some(new_left_compiled) =
-            utils::integer_autocast(context, target_type, left_type, left_compiled)
+            cast::integer(context, target_type, left_type, left_compiled)
         {
             left_compiled = new_left_compiled;
         }
@@ -1633,7 +1633,7 @@ pub fn integer_binaryop<'ctx>(
             integer_binaryop(right_dissasembled, target_type, context);
 
         if let Some(new_right_compiled) =
-            utils::integer_autocast(context, target_type, right_type, right_compiled)
+            cast::integer(context, target_type, right_type, right_compiled)
         {
             right_compiled = new_right_compiled;
         }
@@ -1680,13 +1680,13 @@ pub fn integer_binaryop<'ctx>(
             integer_binaryop(right_dissasembled, target_type, context).into_int_value();
 
         if let Some(new_left_compiled) =
-            utils::integer_autocast(context, target_type, left_type, left_compiled.into())
+            cast::integer(context, target_type, left_type, left_compiled.into())
         {
             left_compiled = new_left_compiled.into_int_value();
         }
 
         if let Some(new_right_compiled) =
-            utils::integer_autocast(context, right_type, target_type, right_compiled.into())
+            cast::integer(context, right_type, target_type, right_compiled.into())
         {
             right_compiled = new_right_compiled.into_int_value();
         }
@@ -1730,13 +1730,13 @@ pub fn integer_binaryop<'ctx>(
             valuegen::integer(llvm_context, right_type, *right_num as u64, *right_signed);
 
         if let Some(new_left_compiled) =
-            utils::integer_autocast(context, target_type, left_type, left_compiled.into())
+            cast::integer(context, target_type, left_type, left_compiled.into())
         {
             left_compiled = new_left_compiled.into_int_value();
         }
 
         if let Some(new_right_compiled) =
-            utils::integer_autocast(context, target_type, right_type, right_compiled.into())
+            cast::integer(context, target_type, right_type, right_compiled.into())
         {
             right_compiled = new_right_compiled.into_int_value();
         }
@@ -1784,13 +1784,13 @@ pub fn integer_binaryop<'ctx>(
             valuegen::integer(llvm_context, right_type, *right_num as u64, *right_signed);
 
         if let Some(new_left_compiled) =
-            utils::integer_autocast(context, target_type, left_type, left_compiled)
+            cast::integer(context, target_type, left_type, left_compiled)
         {
             left_compiled = new_left_compiled;
         }
 
         if let Some(new_right_compiled) =
-            utils::integer_autocast(context, target_type, right_type, right_compiled.into())
+            cast::integer(context, target_type, right_type, right_compiled.into())
         {
             right_compiled = new_right_compiled.into_int_value();
         }
@@ -1836,13 +1836,13 @@ pub fn integer_binaryop<'ctx>(
             valuegen::integer(llvm_context, right_type, *right_num as u64, *right_signed);
 
         if let Some(new_left_compiled) =
-            utils::integer_autocast(context, target_type, left_type, left_compiled.into())
+            cast::integer(context, target_type, left_type, left_compiled.into())
         {
             left_compiled = new_left_compiled.into_int_value();
         }
 
         if let Some(new_right_compiled) =
-            utils::integer_autocast(context, target_type, right_type, right_compiled.into())
+            cast::integer(context, target_type, right_type, right_compiled.into())
         {
             right_compiled = new_right_compiled.into_int_value();
         }
@@ -1888,13 +1888,13 @@ pub fn integer_binaryop<'ctx>(
             integer_binaryop(right_dissasembled, target_type, context).into_int_value();
 
         if let Some(new_left_compiled) =
-            utils::integer_autocast(context, target_type, left_type, left_compiled.into())
+            cast::integer(context, target_type, left_type, left_compiled.into())
         {
             left_compiled = new_left_compiled.into_int_value();
         }
 
         if let Some(new_right_compiled) =
-            utils::integer_autocast(context, target_type, right_type, right_compiled.into())
+            cast::integer(context, target_type, right_type, right_compiled.into())
         {
             right_compiled = new_right_compiled.into_int_value();
         }
@@ -1950,13 +1950,13 @@ pub fn integer_binaryop<'ctx>(
             integer_binaryop(right_dissasembled, target_type, context).into_int_value();
 
         if let Some(new_left_compiled) =
-            utils::integer_autocast(context, target_type, left_type, left_compiled.into())
+            cast::integer(context, target_type, left_type, left_compiled.into())
         {
             left_compiled = new_left_compiled.into_int_value();
         }
 
         if let Some(new_right_compiled) =
-            utils::integer_autocast(context, target_type, right_type, right_compiled.into())
+            cast::integer(context, target_type, right_type, right_compiled.into())
         {
             right_compiled = new_right_compiled.into_int_value();
         }
@@ -2019,13 +2019,13 @@ pub fn integer_binaryop<'ctx>(
             integer_binaryop(right_dissasembled, target_type, context).into_int_value();
 
         if let Some(new_left_compiled) =
-            utils::integer_autocast(context, target_type, left_type, left_compiled.into())
+            cast::integer(context, target_type, left_type, left_compiled.into())
         {
             left_compiled = new_left_compiled.into_int_value();
         }
 
         if let Some(new_right_compiled) =
-            utils::integer_autocast(context, target_type, right_type, right_compiled.into())
+            cast::integer(context, target_type, right_type, right_compiled.into())
         {
             right_compiled = new_right_compiled.into_int_value();
         }
@@ -2078,13 +2078,13 @@ pub fn integer_binaryop<'ctx>(
             integer_binaryop(right_dissasembled, target_type, context).into_int_value();
 
         if let Some(new_left_compiled) =
-            utils::integer_autocast(context, target_type, left_type, left_compiled.into())
+            cast::integer(context, target_type, left_type, left_compiled.into())
         {
             left_compiled = new_left_compiled.into_int_value();
         }
 
         if let Some(new_right_compiled) =
-            utils::integer_autocast(context, target_type, right_type, right_compiled.into())
+            cast::integer(context, target_type, right_type, right_compiled.into())
         {
             right_compiled = new_right_compiled.into_int_value();
         }
@@ -2137,13 +2137,13 @@ pub fn integer_binaryop<'ctx>(
             integer_binaryop(right_dissasembled, target_type, context).into_int_value();
 
         if let Some(new_left_compiled) =
-            utils::integer_autocast(context, target_type, left_type, left_compiled.into())
+            cast::integer(context, target_type, left_type, left_compiled.into())
         {
             left_compiled = new_left_compiled.into_int_value();
         }
 
         if let Some(new_right_compiled) =
-            utils::integer_autocast(context, target_type, right_type, right_compiled.into())
+            cast::integer(context, target_type, right_type, right_compiled.into())
         {
             right_compiled = new_right_compiled.into_int_value();
         }

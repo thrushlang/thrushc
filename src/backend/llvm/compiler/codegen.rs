@@ -95,6 +95,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 block,
                 elfs,
                 otherwise,
+                ..
             } => {
                 let compiled_if_cond: IntValue<'ctx> =
                     self.codegen(cond).as_llvm_value().into_int_value();
@@ -148,7 +149,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                     let mut current_block: BasicBlock = else_if_body;
 
                     for (index, instr) in elfs.iter().enumerate() {
-                        if let Instruction::Elif { cond, block } = instr {
+                        if let Instruction::Elif { cond, block, .. } = instr {
                             let compiled_else_if_cond: IntValue =
                                 self.codegen(cond).as_llvm_value().into_int_value();
 
@@ -191,7 +192,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 }
 
                 if let Some(otherwise) = otherwise {
-                    if let Instruction::Else { block } = &**otherwise {
+                    if let Instruction::Else { block, .. } = &**otherwise {
                         llvm_builder.position_at_end(else_block);
 
                         self.codegen(block);
@@ -220,7 +221,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 Instruction::Null
             }
 
-            Instruction::WhileLoop { cond, block } => {
+            Instruction::While { cond, block, .. } => {
                 let function: FunctionValue = self.function.unwrap();
 
                 let cond_block: BasicBlock = llvm_context.append_basic_block(function, "while");
@@ -258,7 +259,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 Instruction::Null
             }
 
-            Instruction::Loop { block } => {
+            Instruction::Loop { block, .. } => {
                 let function: FunctionValue = self.function.unwrap();
                 let loop_start_block: BasicBlock =
                     llvm_context.append_basic_block(function, "loop");
@@ -291,15 +292,16 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 Instruction::Null
             }
 
-            Instruction::ForLoop {
-                variable,
+            Instruction::For {
+                local,
                 cond,
                 actions,
                 block,
+                ..
             } => {
                 let function: FunctionValue = self.function.unwrap();
 
-                self.codegen(variable.as_ref());
+                self.codegen(local.as_ref());
 
                 let start_block: BasicBlock = llvm_context.append_basic_block(function, "for");
 
@@ -346,7 +348,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 Instruction::Null
             }
 
-            Instruction::Break => {
+            Instruction::Break { .. } => {
                 llvm_builder
                     .build_unconditional_branch(self.loop_exit_block.unwrap())
                     .unwrap();
@@ -354,7 +356,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 Instruction::Null
             }
 
-            Instruction::Continue => {
+            Instruction::Continue { .. } => {
                 llvm_builder
                     .build_unconditional_branch(self.loop_start_block.unwrap())
                     .unwrap();
@@ -471,7 +473,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 (operator, kind, expression),
             )),
 
-            Instruction::EntryPoint { body } => {
+            Instruction::EntryPoint { body, .. } => {
                 self.function = Some(self.build_entrypoint());
 
                 self.declare_constants();

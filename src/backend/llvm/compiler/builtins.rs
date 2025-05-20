@@ -9,7 +9,7 @@ use crate::{
     standard::logging::{self, LoggingType},
 };
 
-use super::{Instruction, context::LLVMCodeGenContext, memory::SymbolAllocated, typegen, utils};
+use super::{Instruction, cast, context::LLVMCodeGenContext, memory::SymbolAllocated, typegen};
 
 use inkwell::{
     FloatPredicate,
@@ -117,7 +117,7 @@ pub fn build_sizeof<'ctx>(
         LoggingType::Panic,
         &format!(
             "Builtin 'sizeof!' cannot get the size of '{}' type.",
-            value.get_type()
+            value.get_type_unwrapped()
         ),
     );
 
@@ -162,7 +162,7 @@ pub fn build_is_signed<'ctx>(
             let mut loaded_value: IntValue = object.load(context).into_int_value();
 
             if let Some(casted_float) =
-                utils::integer_autocast(context, &ThrushType::S64, ref_type, loaded_value.into())
+                cast::integer(context, &ThrushType::S64, ref_type, loaded_value.into())
             {
                 loaded_value = casted_float.into_int_value();
             }
@@ -180,7 +180,7 @@ pub fn build_is_signed<'ctx>(
             let mut loaded_value: BasicValueEnum = object.load(context);
 
             if let Some(casted_float) =
-                utils::float_autocast(context, &ThrushType::F64, ref_type, loaded_value)
+                cast::float(context, &ThrushType::F64, ref_type, loaded_value)
             {
                 loaded_value = casted_float;
             }

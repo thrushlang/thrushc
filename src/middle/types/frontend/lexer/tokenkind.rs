@@ -22,6 +22,7 @@ pub enum TokenKind {
     Arith,      // ' % ',
     Bang,       // ' ! '
     Range,      // ' .. '
+    Pass,       // ' ... '
     ColonColon, // ' :: '
     BangEq,     // ' != '
     Eq,         // ' = '

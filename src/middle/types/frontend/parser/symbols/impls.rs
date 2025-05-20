@@ -48,7 +48,7 @@ impl ConstantSymbolExtensions for ConstantSymbol<'_> {
 }
 
 impl FunctionExtensions for Function<'_> {
-    fn ignore_more_args(&self) -> bool {
+    fn has_ignore_more_args(&self) -> bool {
         self.2
     }
 

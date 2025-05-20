@@ -163,7 +163,7 @@ impl<'a> Thrushc<'a> {
 
         llvm_module.set_data_layout(&target_machine.get_target_data().get_data_layout());
 
-        llvm::compiler::Compiler::compile(
+        llvm::compiler::LLVMCompiler::compile(
             &llvm_module,
             &llvm_builder,
             &llvm_context,

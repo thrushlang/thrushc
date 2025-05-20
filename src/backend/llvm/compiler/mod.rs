@@ -1,6 +1,7 @@
 pub mod attributes;
 pub mod binaryop;
 pub mod builtins;
+pub mod cast;
 pub mod codegen;
 pub mod context;
 pub mod conventions;
@@ -23,9 +24,9 @@ use {
     inkwell::{builder::Builder, context::Context, module::Module, targets::TargetData},
 };
 
-pub struct Compiler;
+pub struct LLVMCompiler;
 
-impl<'a, 'ctx> Compiler {
+impl<'a, 'ctx> LLVMCompiler {
     #[inline]
     pub fn compile(
         module: &'a Module<'ctx>,

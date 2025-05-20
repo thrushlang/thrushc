@@ -104,7 +104,7 @@ impl<'warner> Warner<'warner> {
             self.analyze_instruction(expression);
         }
 
-        if let Instruction::Block { stmts } = instruction {
+        if let Instruction::Block { stmts, .. } = instruction {
             self.begin_scope();
 
             stmts.iter().for_each(|stmt| {

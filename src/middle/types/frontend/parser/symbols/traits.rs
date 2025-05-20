@@ -14,7 +14,7 @@ pub trait ConstantSymbolExtensions {
 }
 
 pub trait FunctionExtensions {
-    fn ignore_more_args(&self) -> bool;
+    fn has_ignore_more_args(&self) -> bool;
     fn get_type(&self) -> ThrushType;
     fn get_parameters_size(&self) -> usize;
     fn get_parameters_types(&self) -> &ParametersTypes;
