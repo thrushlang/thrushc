@@ -101,17 +101,17 @@ impl Builder {
 
         self::log(
             LoggingType::Log,
-            "\nThe Thrush Compiler linux dependencies are succesfully installed.\n",
+            "\nThe Thrush Compiler dependencies are succesfully installed.\n",
         );
     }
 
     fn install_llvm_c_api(&self) -> Result<(), String> {
         if let Ok(mut llvm_c_apis) = isahc::get(THRUSH_LLVM_C_APIS_GITHUB_URL) {
             if let Ok(llvm_c_apis_json) = llvm_c_apis.json::<Value>() {
-                let llvm_c_apis: &Vec<Value> =
+                let all_llvm_c_apis: &Vec<Value> =
                     llvm_c_apis_json.as_array().expect("Expected 'array' type.");
 
-                let llvm_linux_c_apis: Option<&Value> = llvm_c_apis
+                let latest_llvm_c_api: Option<&Value> = all_llvm_c_apis
                     .iter()
                     .filter(|llvm_c_api| {
                         let llvm_c_api = llvm_c_api.as_object().unwrap();
@@ -174,16 +174,16 @@ impl Builder {
                         left_version.cmp(&right_version)
                     });
 
-                if llvm_linux_c_apis.is_none() {
+                if latest_llvm_c_api.is_none() {
                     return Err("No windows LLVM-C APIs found.".into());
                 }
 
-                if let Some(latest_llvm_linux_c_api) = llvm_linux_c_apis {
-                    let latest_llvm_linux_c_api: &Map<String, Value> = latest_llvm_linux_c_api
+                if let Some(latest_llvm_c_api) = latest_llvm_c_api {
+                    let llvm_c_api: &Map<String, Value> = latest_llvm_c_api
                         .as_object()
                         .expect("Expected 'object' type.");
 
-                    let assets: &Vec<Value> = latest_llvm_linux_c_api
+                    let assets: &Vec<Value> = llvm_c_api
                         .get("assets")
                         .expect("Expected to get 'assets' field.")
                         .as_array()
