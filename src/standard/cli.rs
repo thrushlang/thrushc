@@ -457,11 +457,11 @@ impl CommandLine {
                 "\n\n{} {} {}\n\n",
                 "Usage:".bold(),
                 "thrushc".custom_color((141, 141, 142)).bold(),
-                "[--flags] [file]".bold()
+                "[--flags] [file]"
             ),
         );
 
-        logging::write(logging::OutputIn::Stderr, &"General Commands:\n\n".bold());
+        logging::write(logging::OutputIn::Stderr, "General Commands:\n\n");
 
         logging::write(
             logging::OutputIn::Stderr,
@@ -469,7 +469,7 @@ impl CommandLine {
                 "{} {} {}\n",
                 "•".bold(),
                 "help".custom_color((141, 141, 142)).bold(),
-                "Show help message.".bold()
+                "Show help message.",
             ),
         );
 
@@ -479,11 +479,11 @@ impl CommandLine {
                 "{} {} {}\n\n",
                 "•".bold(),
                 "version".custom_color((141, 141, 142)).bold(),
-                "Show the version.".bold()
+                "Show the version.",
             ),
         );
 
-        logging::write(logging::OutputIn::Stderr, &"LLVM Commands:\n\n".bold());
+        logging::write(logging::OutputIn::Stderr, "LLVM Commands:\n\n");
 
         logging::write(
             logging::OutputIn::Stderr,
@@ -493,7 +493,7 @@ impl CommandLine {
                 "llvm-print-target-triples"
                     .custom_color((141, 141, 142))
                     .bold(),
-                "Show the current LLVM target triples supported.".bold()
+                "Show the current LLVM target triples supported."
             ),
         );
 
@@ -505,7 +505,7 @@ impl CommandLine {
                 "llvm-print-supported-cpus"
                     .custom_color((141, 141, 142))
                     .bold(),
-                "Show the current LLVM supported CPUs.".bold()
+                "Show the current LLVM supported CPUs.",
             ),
         );
 
@@ -517,7 +517,7 @@ impl CommandLine {
                 "llvm-print-host-target-triple"
                     .custom_color((141, 141, 142))
                     .bold(),
-                "Show the host LLVM target-triple.".bold()
+                "Show the host LLVM target-triple.",
             ),
         );
 
@@ -529,11 +529,11 @@ impl CommandLine {
                 "llvm-print-executable-flavors"
                     .custom_color((141, 141, 142))
                     .bold(),
-                "Show the LLVM executable flavors.".bold()
+                "Show the LLVM executable flavors.",
             ),
         );
 
-        logging::write(logging::OutputIn::Stderr, &"General flags:\n\n".bold());
+        logging::write(logging::OutputIn::Stderr, "General flags:\n\n");
 
         logging::write(
             logging::OutputIn::Stderr,
@@ -541,14 +541,11 @@ impl CommandLine {
                 "{} {} {}\n",
                 "•".bold(),
                 "-build-dir".custom_color((141, 141, 142)).bold(),
-                "Set the compiler build directory.".bold()
+                "Set the compiler build directory.",
             ),
         );
 
-        logging::write(
-            logging::OutputIn::Stderr,
-            &"\nLLVM Compiler flags:\n\n".bold(),
-        );
+        logging::write(logging::OutputIn::Stderr, "\nLLVM Compiler flags:\n\n");
 
         logging::write(
             logging::OutputIn::Stderr,
@@ -556,7 +553,7 @@ impl CommandLine {
                 "{} {} {}\n",
                 "•".bold(),
                 "-llvm".custom_color((141, 141, 142)).bold(),
-                "Enable the usage of the LLVM backend infrastructure.".bold()
+                "Enable the usage of the LLVM backend infrastructure.",
             ),
         );
 
@@ -566,8 +563,8 @@ impl CommandLine {
                 "{} {} [{}] {}\n",
                 "•".bold(),
                 "-llvm-target-triple".custom_color((141, 141, 142)).bold(),
-                "\"target-triple\"".bold(),
-                "Set the LLVM target triple.".bold()
+                "\"target-triple\"",
+                "Set the LLVM target triple.",
             ),
         );
 
@@ -580,8 +577,8 @@ impl CommandLine {
                 "-llvm-executable-flavor"
                     .custom_color((141, 141, 142))
                     .bold(),
-                "\"elf\"".bold(),
-                "Set the LLVM executable flavor.".bold()
+                "\"elf\"",
+                "Set the LLVM executable flavor.",
             ),
         );
 
@@ -592,8 +589,8 @@ impl CommandLine {
                 "•".bold(),
                 "-llvm-lkflags".custom_color((141, 141, 142)).bold(),
                 "-llvm-linkerflags".custom_color((141, 141, 142)).bold(),
-                "\"-lc;-lpthread\"".bold(),
-                "Pass flags to the LLVM linker.".bold()
+                "\"-lc;-lpthread\"",
+                "Pass flags to the LLVM linker.",
             ),
         );
 
@@ -603,8 +600,8 @@ impl CommandLine {
                 "{} {} [{}] {}\n",
                 "•".bold(),
                 "-llvm-emit".custom_color((141, 141, 142)).bold(),
-                "llvm-bc|llvm-ir|asm|raw-llvm-ir|raw-llvm-bc|raw-asm|obj|ast|tokens".bold(),
-                "Compile the code into specified representation.".bold()
+                "llvm-bc|llvm-ir|asm|raw-llvm-ir|raw-llvm-bc|raw-asm|obj|ast|tokens",
+                "Compile the code into specified representation.",
             ),
         );
 
@@ -614,14 +611,14 @@ impl CommandLine {
                 "{} {} [{}] {}\n",
                 "•".bold(),
                 "-llvm-opt".custom_color((141, 141, 142)).bold(),
-                "O0|O1|O2|mcqueen".bold(),
-                "LLVM optimization level.".bold()
+                "O0|O1|O2|mcqueen",
+                "LLVM optimization level.",
             ),
         );
 
         logging::write(
             logging::OutputIn::Stderr,
-            &"\nExtra LLVM compiler flags:\n\n".bold(),
+            "\nExtra LLVM compiler flags:\n\n",
         );
 
         logging::write(
@@ -630,8 +627,8 @@ impl CommandLine {
                 "{} {} {} {}\n",
                 "•".bold(),
                 "--llvm-opt-passes".custom_color((141, 141, 142)).bold(),
-                "[-p{passname}]".bold(),
-                "Pass a list of custom optimization passes to the LLVM optimizator.".bold()
+                "[-p{passname}]",
+                "Pass a list of custom optimization passes to the LLVM optimizator.",
             ),
         );
 
@@ -643,8 +640,8 @@ impl CommandLine {
                 "--llvm-modificator-passes"
                     .custom_color((141, 141, 142))
                     .bold(),
-                "[loopvectorization;loopunroll;loopinterleaving;loopsimplifyvectorization;mergefunctions]".bold(),
-                "Pass a list of custom modificator passes to the LLVM optimizator.".bold()
+                "[loopvectorization;loopunroll;loopinterleaving;loopsimplifyvectorization;mergefunctions]",
+                "Pass a list of custom modificator passes to the LLVM optimizator.",
             ),
         );
 
@@ -654,9 +651,8 @@ impl CommandLine {
                 "{} {} {} {}\n",
                 "•".bold(),
                 "--llvm-reloc".custom_color((141, 141, 142)).bold(),
-                "[static|pic|dynamic]".bold(),
+                "[static|pic|dynamic]",
                 "Indicate how references to memory addresses and linkage symbols are handled."
-                    .bold()
             ),
         );
 
@@ -666,8 +662,8 @@ impl CommandLine {
                 "{} {} {} {}\n",
                 "•".bold(),
                 "--llvm-codemodel".custom_color((141, 141, 142)).bold(),
-                "[small|medium|large|kernel]".bold(),
-                "Define how code is organized and accessed at machine code level.".bold()
+                "[small|medium|large|kernel]",
+                "Define how code is organized and accessed at machine code level."
             ),
         );
 

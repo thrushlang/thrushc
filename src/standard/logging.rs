@@ -27,6 +27,14 @@ impl LoggingType {
         }
     }
 
+    pub fn text_with_color(&self, msg: &str) -> ColoredString {
+        match self {
+            LoggingType::Error => msg.bright_red().bold(),
+            LoggingType::Warning => msg.yellow().bold(),
+            LoggingType::Panic => msg.bright_red().underline(),
+        }
+    }
+
     pub fn is_panic(&self) -> bool {
         matches!(self, LoggingType::Panic)
     }
@@ -37,14 +45,6 @@ impl LoggingType {
 
     pub fn is_warn(&self) -> bool {
         matches!(self, LoggingType::Warning)
-    }
-
-    pub fn text_with_color(&self, msg: &str) -> ColoredString {
-        match self {
-            LoggingType::Error => msg.bright_red().bold(),
-            LoggingType::Warning => msg.yellow().bold(),
-            LoggingType::Panic => msg.bright_red().underline(),
-        }
     }
 }
 
