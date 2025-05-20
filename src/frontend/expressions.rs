@@ -15,11 +15,12 @@ use crate::{
             },
             symbols::{
                 traits::{
-                    BindExtensions, BindingsExtensions, ConstantExtensions, FunctionExtensions,
-                    LocalExtensions,
+                    BindExtensions, BindingsExtensions, ConstantSymbolExtensions,
+                    FunctionExtensions, LocalSymbolExtensions,
                 },
                 types::{
-                    Bind, Bindings, Constant, FoundSymbolId, Function, Local, Parameters, Struct,
+                    Bind, Bindings, ConstantSymbol, FoundSymbolId, Function, LocalSymbol,
+                    ParameterSymbol, ParametersTypes, Struct,
                 },
             },
         },
@@ -335,7 +336,7 @@ fn primary<'instr>(
 
                 let name: &str = identifier_tk.lexeme;
 
-                build_ref(parser_ctx, name, span)?;
+                build_reference(parser_ctx, name, span)?;
 
                 return Ok(Instruction::Carry {
                     name,
@@ -411,7 +412,7 @@ fn primary<'instr>(
 
                 let name: &str = identifier_tk.lexeme;
 
-                build_ref(parser_ctx, name, span)?;
+                build_reference(parser_ctx, name, span)?;
 
                 return Ok(Instruction::Write {
                     write_to: (name, None),
@@ -619,7 +620,7 @@ fn primary<'instr>(
 
                 let local_position: (&str, usize) = object.expected_local(span)?;
 
-                let local: &Local = parser_ctx.get_symbols().get_local_by_id(
+                let local: &LocalSymbol = parser_ctx.get_symbols().get_local_by_id(
                     local_position.0,
                     local_position.1,
                     span,
@@ -720,7 +721,7 @@ fn primary<'instr>(
                 ));
             }
 
-            build_ref(parser_ctx, name, span)?
+            build_reference(parser_ctx, name, span)?
         }
 
         TokenKind::True => Instruction::Boolean(ThrushType::Bool, true, parser_ctx.advance()?.span),
@@ -849,7 +850,7 @@ fn build_property<'instr>(
 
     let local_position: (&str, usize) = symbol.expected_local(span)?;
 
-    let local: &Local =
+    let local: &LocalSymbol =
         parser_ctx
             .get_symbols()
             .get_local_by_id(local_position.0, local_position.1, span)?;
@@ -900,7 +901,7 @@ fn build_property<'instr>(
     })
 }
 
-fn build_ref<'instr>(
+fn build_reference<'instr>(
     parser_ctx: &mut ParserContext<'instr>,
     name: &'instr str,
     span: Span,
@@ -909,7 +910,7 @@ fn build_ref<'instr>(
 
     if symbol.is_constant() {
         let const_id: &str = symbol.expected_constant(span)?;
-        let constant: Constant = parser_ctx.get_symbols().get_const_by_id(const_id, span)?;
+        let constant: ConstantSymbol = parser_ctx.get_symbols().get_const_by_id(const_id, span)?;
         let constant_type: ThrushType = constant.get_type();
 
         return Ok(Instruction::ConstRef {
@@ -919,9 +920,23 @@ fn build_ref<'instr>(
         });
     }
 
+    if symbol.is_parameter() {
+        let parameter_id: &str = symbol.expected_parameter(span)?;
+        let parameter: ParameterSymbol = parser_ctx
+            .get_symbols()
+            .get_parameter_by_id(parameter_id, span)?;
+        let parameter_type: ThrushType = parameter.get_type();
+
+        return Ok(Instruction::LocalRef {
+            name,
+            kind: parameter_type,
+            span,
+        });
+    }
+
     let local_position: (&str, usize) = symbol.expected_local(span)?;
 
-    let local: &Local =
+    let local: &LocalSymbol =
         parser_ctx
             .get_symbols()
             .get_local_by_id(local_position.0, local_position.1, span)?;
@@ -1010,7 +1025,7 @@ fn build_address<'instr>(
     let object: FoundSymbolId = parser_ctx.get_symbols().get_symbols_id(name, span)?;
     let local_id: (&str, usize) = object.expected_local(span)?;
 
-    let local: &Local = parser_ctx
+    let local: &LocalSymbol = parser_ctx
         .get_symbols()
         .get_local_by_id(local_id.0, local_id.1, span)?;
 
@@ -1099,7 +1114,7 @@ fn build_function_call<'instr>(
     let function_type: ThrushType = function.get_type();
     let ignore_more_args: bool = function.ignore_more_args();
 
-    let parameters: &Parameters = function.get_parameters();
+    let parameters_types: &ParametersTypes = function.get_parameters_types();
     let maximun_arguments: usize = function.get_parameters_size();
 
     let mut args: Vec<Instruction> = Vec::with_capacity(10);
@@ -1159,7 +1174,7 @@ fn build_function_call<'instr>(
             format!(
                 "Expected '{}' arguments with types '{}', not '{}'.",
                 maximun_arguments,
-                function.get_parameters(),
+                function.get_parameters_types(),
                 display_args_types,
             ),
             None,
@@ -1170,7 +1185,7 @@ fn build_function_call<'instr>(
     if !ignore_more_args {
         for (position, argument) in args.iter().enumerate() {
             let from_type: &ThrushType = argument.get_type();
-            let target_type: &ThrushType = &parameters.0[position];
+            let target_type: &ThrushType = &parameters_types.0[position];
 
             parser_ctx.mismatch_types(target_type, from_type, argument.get_span(), Some(argument));
         }

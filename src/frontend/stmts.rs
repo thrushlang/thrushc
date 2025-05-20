@@ -14,10 +14,10 @@ use crate::{
         parser::{
             stmts::{
                 instruction::Instruction,
-                traits::AttributesExtensions,
-                types::{CustomTypeFields, EnumFields, StructFields, ThrushAttributes},
+                traits::CompilerAttributesExtensions,
+                types::{CompilerAttributes, CustomTypeFields, EnumFields, StructFields},
             },
-            symbols::types::{Bindings, Parameters},
+            symbols::types::{Bindings, ParametersTypes},
         },
     },
     standard::error::ThrushCompilerIssue,
@@ -307,6 +307,14 @@ fn build_bind<'instr>(
 
         let parameter_type: ThrushType = typegen::build_type(parser_ctx)?;
 
+        if !declare {
+            parser_ctx.get_mut_symbols().new_parameter(
+                parameter_name,
+                (parameter_type.clone(), false, is_mutable, parameter_span),
+                parameter_span,
+            )?;
+        }
+
         parser_ctx
             .get_mut_type_ctx()
             .set_position(TypePosition::NoRelevant);
@@ -328,14 +336,10 @@ fn build_bind<'instr>(
         .get_mut_type_ctx()
         .set_function_type(return_type.clone());
 
-    let bind_attributes: ThrushAttributes =
-        build_compiler_attributes(parser_ctx, &[TokenKind::LBrace])?;
+    let bind_attributes: CompilerAttributes =
+        self::build_compiler_attributes(parser_ctx, &[TokenKind::LBrace])?;
 
     if !declare {
-        bind_parameters.iter().cloned().for_each(|bind_parameter| {
-            parser_ctx.add_lift_local(bind_parameter);
-        });
-
         parser_ctx.get_mut_control_ctx().set_inside_bind(true);
 
         parser_ctx
@@ -344,6 +348,7 @@ fn build_bind<'instr>(
 
         let bind_body: Instruction = build_block(parser_ctx)?;
 
+        parser_ctx.get_mut_symbols().end_parameters();
         parser_ctx.get_mut_control_ctx().set_inside_bind(false);
         parser_ctx.get_mut_type_ctx().set_bind_instance(false);
 
@@ -445,7 +450,7 @@ fn build_for_loop<'instr>(
         *comptime = true;
     }
 
-    parser_ctx.add_lift_local(local_clone);
+    //parser_ctx.add_lift_local(local_clone);
 
     parser_ctx.get_mut_control_ctx().set_inside_loop(true);
 
@@ -935,7 +940,7 @@ pub fn build_custom_type<'instr>(
         String::from("Expected '='."),
     )?;
 
-    let custom_type_attributes: ThrushAttributes =
+    let custom_type_attributes: CompilerAttributes =
         build_compiler_attributes(parser_ctx, &[TokenKind::LBrace])?;
 
     parser_ctx.consume(
@@ -1008,8 +1013,8 @@ pub fn build_enum<'instr>(
 
     let enum_name: &str = name.lexeme;
 
-    let enum_attributes: ThrushAttributes =
-        build_compiler_attributes(parser_ctx, &[TokenKind::LBrace])?;
+    let enum_attributes: CompilerAttributes =
+        self::build_compiler_attributes(parser_ctx, &[TokenKind::LBrace])?;
 
     parser_ctx.consume(
         TokenKind::LBrace,
@@ -1151,8 +1156,8 @@ pub fn build_struct<'instr>(
 
     let struct_name: &str = name.lexeme;
 
-    let struct_attributes: ThrushAttributes =
-        build_compiler_attributes(parser_ctx, &[TokenKind::LBrace])?;
+    let struct_attributes: CompilerAttributes =
+        self::build_compiler_attributes(parser_ctx, &[TokenKind::LBrace])?;
 
     parser_ctx.consume(
         TokenKind::LBrace,
@@ -1257,8 +1262,8 @@ pub fn build_const<'instr>(
 
     let const_type: ThrushType = typegen::build_type(parser_ctx)?;
 
-    let const_attributes: ThrushAttributes =
-        build_compiler_attributes(parser_ctx, &[TokenKind::Eq])?;
+    let const_attributes: CompilerAttributes =
+        self::build_compiler_attributes(parser_ctx, &[TokenKind::Eq])?;
 
     parser_ctx.consume(
         TokenKind::Eq,
@@ -1525,10 +1530,6 @@ fn build_block<'instr>(
     *parser_ctx.get_mut_scope() += 1;
     parser_ctx.get_mut_symbols().begin_local_scope();
 
-    let scope: usize = parser_ctx.get_scope();
-
-    parser_ctx.get_mut_symbols().lift_instructions(scope)?;
-
     let mut stmts: Vec<Instruction> = Vec::with_capacity(100);
 
     while !parser_ctx.match_token(TokenKind::RBrace)? {
@@ -1647,6 +1648,14 @@ pub fn build_function<'instr>(
 
         parameters_types.push(parameter_type.clone());
 
+        if !declare {
+            parser_ctx.get_mut_symbols().new_parameter(
+                parameter_name,
+                (parameter_type.clone(), false, is_mutable, parameter_span),
+                parameter_span,
+            )?;
+        }
+
         parameters.push(Instruction::FunctionParameter {
             name: parameter_name,
             kind: parameter_type,
@@ -1670,11 +1679,11 @@ pub fn build_function<'instr>(
         .get_mut_type_ctx()
         .set_function_type(return_type.clone());
 
-    let function_attributes: ThrushAttributes =
+    let function_attributes: CompilerAttributes =
         build_compiler_attributes(parser_ctx, &[TokenKind::SemiColon, TokenKind::LBrace])?;
 
-    let function_has_ffi: bool = function_attributes.contain_ffi_attribute();
-    let function_has_ignore: bool = function_attributes.contain_ignore_attribute();
+    let function_has_ffi: bool = function_attributes.has_ffi_attribute();
+    let function_has_ignore: bool = function_attributes.has_ignore_attribute();
 
     if function_has_ignore && !function_has_ffi {
         return Err(ThrushCompilerIssue::Error(
@@ -1703,7 +1712,7 @@ pub fn build_function<'instr>(
                 function_name,
                 (
                     return_type,
-                    Parameters::new(parameters_types),
+                    ParametersTypes::new(parameters_types),
                     function_has_ignore,
                 ),
                 function_span,
@@ -1721,14 +1730,11 @@ pub fn build_function<'instr>(
         return Ok(function);
     }
 
-    parameters.iter().cloned().for_each(|parameter| {
-        parser_ctx.add_lift_local(parameter);
-    });
-
     parser_ctx.get_mut_control_ctx().set_inside_function(true);
 
     let function_body: Rc<Instruction> = build_block(parser_ctx)?.into();
 
+    parser_ctx.get_mut_symbols().end_parameters();
     parser_ctx.get_mut_control_ctx().set_inside_function(false);
 
     if !return_type.is_void_type() && !function_body.has_return() {
@@ -1758,8 +1764,8 @@ pub fn build_function<'instr>(
 fn build_compiler_attributes<'instr>(
     parser_ctx: &mut ParserContext<'instr>,
     limits: &[TokenKind],
-) -> Result<ThrushAttributes<'instr>, ThrushCompilerIssue> {
-    let mut compiler_attributes: ThrushAttributes = Vec::with_capacity(10);
+) -> Result<CompilerAttributes<'instr>, ThrushCompilerIssue> {
+    let mut compiler_attributes: CompilerAttributes = Vec::with_capacity(10);
 
     while !limits.contains(&parser_ctx.peek().kind) {
         match parser_ctx.peek().kind {

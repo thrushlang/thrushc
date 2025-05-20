@@ -14,12 +14,16 @@ use crate::{
 
 use super::{
     traits::{
-        BindExtensions, BindingsExtensions, ConstantExtensions, FunctionExtensions, LocalExtensions,
+        BindExtensions, BindingsExtensions, ConstantSymbolExtensions, FunctionExtensions,
+        LocalSymbolExtensions,
     },
-    types::{Bind, Bindings, Constant, FoundSymbolId, Function, Local, Parameters, Struct},
+    types::{
+        Bind, Bindings, ConstantSymbol, FoundSymbolId, Function, LocalSymbol, ParametersTypes,
+        Struct,
+    },
 };
 
-impl LocalExtensions for Local<'_> {
+impl LocalSymbolExtensions for LocalSymbol<'_> {
     fn is_undefined(&self) -> bool {
         self.2
     }
@@ -37,7 +41,7 @@ impl LocalExtensions for Local<'_> {
     }
 }
 
-impl ConstantExtensions for Constant<'_> {
+impl ConstantSymbolExtensions for ConstantSymbol<'_> {
     fn get_type(&self) -> ThrushType {
         self.0.clone()
     }
@@ -56,12 +60,12 @@ impl FunctionExtensions for Function<'_> {
         self.1.get_size()
     }
 
-    fn get_parameters(&self) -> &Parameters {
+    fn get_parameters_types(&self) -> &ParametersTypes {
         &self.1
     }
 }
 
-impl Parameters {
+impl ParametersTypes {
     pub fn new(inner: Vec<ThrushType>) -> Self {
         Self(inner)
     }
@@ -71,7 +75,7 @@ impl Parameters {
     }
 }
 
-impl Display for Parameters {
+impl Display for ParametersTypes {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         for (index, kind) in self.0.iter().enumerate() {
             if index > 0 {
@@ -152,6 +156,10 @@ impl FoundSymbolExtension for FoundSymbolId<'_> {
     fn is_custom_type(&self) -> bool {
         self.4.is_some()
     }
+
+    fn is_parameter(&self) -> bool {
+        self.5.is_some()
+    }
 }
 
 impl<'instr> FoundSymbolEither<'instr> for FoundSymbolId<'instr> {
@@ -220,8 +228,21 @@ impl<'instr> FoundSymbolEither<'instr> for FoundSymbolId<'instr> {
         ))
     }
 
+    fn expected_parameter(&self, span: Span) -> Result<&'instr str, ThrushCompilerIssue> {
+        if let Some(name) = self.5 {
+            return Ok(name);
+        }
+
+        Err(ThrushCompilerIssue::Error(
+            String::from("Expected parameter reference"),
+            String::from("Expected parameter but found something else."),
+            None,
+            span,
+        ))
+    }
+
     fn expected_local(&self, span: Span) -> Result<(&'instr str, usize), ThrushCompilerIssue> {
-        if let Some((name, scope_idx)) = self.5 {
+        if let Some((name, scope_idx)) = self.6 {
             return Ok((name, scope_idx));
         }
 

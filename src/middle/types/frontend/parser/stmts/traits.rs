@@ -30,6 +30,7 @@ pub trait FoundSymbolExtension {
     fn is_structure(&self) -> bool;
     fn is_enum(&self) -> bool;
     fn is_function(&self) -> bool;
+    fn is_parameter(&self) -> bool;
 }
 
 pub trait StructExtensions<'a> {
@@ -46,6 +47,7 @@ pub trait FoundSymbolEither<'instr> {
     fn expected_function(&self, span: Span) -> Result<&'instr str, ThrushCompilerIssue>;
     fn expected_enum(&self, span: Span) -> Result<&'instr str, ThrushCompilerIssue>;
     fn expected_struct(&self, span: Span) -> Result<&'instr str, ThrushCompilerIssue>;
+    fn expected_parameter(&self, span: Span) -> Result<&'instr str, ThrushCompilerIssue>;
 }
 
 pub trait StructFieldsExtensions {
@@ -56,8 +58,8 @@ pub trait ConstructorExtensions {
     fn get_type(&self) -> ThrushType;
 }
 
-pub trait AttributesExtensions {
-    fn contain_ffi_attribute(&self) -> bool;
-    fn contain_ignore_attribute(&self) -> bool;
-    fn contain_public_attribute(&self) -> bool;
+pub trait CompilerAttributesExtensions {
+    fn has_ffi_attribute(&self) -> bool;
+    fn has_ignore_attribute(&self) -> bool;
+    fn has_public_attribute(&self) -> bool;
 }

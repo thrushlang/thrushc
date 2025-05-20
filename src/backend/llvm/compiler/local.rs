@@ -135,16 +135,13 @@ fn build_local_structure<'ctx>(local: LLVMLocal<'ctx>, context: &mut LLVMCodeGen
 
             let mut expr: BasicValueEnum = valuegen::build(expr, expr_type, context);
 
-            if expr_type.is_heap_allocated(llvm_context, &context.target_data)
-                && expr_type.is_me_type()
-            {
+            if expr_type.is_recursive_type() {
                 let src_ptr: PointerValue = expr.into_pointer_value();
 
                 if !src_ptr.is_null() {
-                    let dest_ptr: PointerValue =
-                        memory::alloc(AllocSite::Heap, context, local_type);
+                    let dest_ptr: PointerValue = memory::alloc(AllocSite::Heap, context, expr_type);
 
-                    memory::memcpy(context, dest_ptr, src_ptr, local_type);
+                    memory::memcpy(context, dest_ptr, src_ptr, expr_type);
 
                     expr = dest_ptr.into();
                 }

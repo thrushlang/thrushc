@@ -1,6 +1,9 @@
-use crate::middle::types::frontend::parser::stmts::{
-    traits::{EnumExtensions, EnumFieldsExtensions},
-    types::{Enum, EnumField, EnumFields},
+use crate::middle::types::frontend::parser::{
+    stmts::{
+        traits::{EnumExtensions, EnumFieldsExtensions},
+        types::{EnumField, EnumFields},
+    },
+    symbols::types::EnumSymbol,
 };
 
 use super::{
@@ -21,7 +24,7 @@ impl<'a> EnumFieldsExtensions<'a> for EnumFields<'a> {
             .unwrap()
     }
 }
-impl<'a> EnumExtensions<'a> for Enum<'a> {
+impl<'a> EnumExtensions<'a> for EnumSymbol<'a> {
     fn get_fields(&self) -> EnumFields<'a> {
         self.0.clone()
     }

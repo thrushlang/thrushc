@@ -99,8 +99,14 @@ pub fn build_str_constant<'ctx>(
     )
 }
 
+#[inline]
 pub fn generate_random_function_name(prefix: &str, length: usize) -> String {
     format!("{}_{}", prefix, generate_random_suffix(length))
+}
+
+#[inline]
+pub fn generate_random_range(max: usize) -> usize {
+    rand::rng().random_range(0..max)
 }
 
 fn generate_random_suffix(length: usize) -> String {

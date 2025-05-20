@@ -3,7 +3,7 @@ use crate::{
         backend::llvm::types::LLVMFunctionCall,
         frontend::{
             lexer::types::ThrushType,
-            parser::symbols::types::{Functions, Parameters},
+            parser::symbols::types::{Functions, ParametersTypes},
         },
     },
     standard::logging::{self, LoggingType},
@@ -24,7 +24,7 @@ pub fn include(functions: &mut Functions) {
         "sizeof!",
         (
             ThrushType::S64,
-            Parameters::new(Vec::from([ThrushType::Ptr(None)])),
+            ParametersTypes::new(Vec::from([ThrushType::Ptr(None)])),
             false,
         ),
     );
@@ -32,7 +32,7 @@ pub fn include(functions: &mut Functions) {
         "is_signed!",
         (
             ThrushType::Bool,
-            Parameters::new(Vec::from([ThrushType::Ptr(None)])),
+            ParametersTypes::new(Vec::from([ThrushType::Ptr(None)])),
             false,
         ),
     );

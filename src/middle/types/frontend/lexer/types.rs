@@ -1,13 +1,21 @@
 use std::sync::Arc;
 
-use inkwell::{context::Context, targets::TargetData};
+use inkwell::{
+    builder::Builder,
+    context::Context,
+    targets::TargetData,
+    values::{BasicValueEnum, FunctionValue, PointerValue},
+};
 
 use crate::{
-    backend::llvm::compiler::typegen,
+    backend::llvm::compiler::{context::LLVMCodeGenContext, memory, typegen},
     frontend::{lexer::Span, symbols::SymbolsTable},
-    middle::types::frontend::parser::{
-        stmts::{instruction::Instruction, traits::StructExtensions, types::StructFields},
-        symbols::types::{Bindings, Struct},
+    middle::types::{
+        backend::llvm::traits::LLVMDeallocator,
+        frontend::parser::{
+            stmts::{instruction::Instruction, traits::StructExtensions, types::StructFields},
+            symbols::types::{Bindings, Struct},
+        },
     },
     standard::error::ThrushCompilerIssue,
 };
@@ -108,22 +116,78 @@ impl ThrushType {
         matches!(self, ThrushType::Me(_))
     }
 
-    pub fn get_recursive_type_positions(&self) -> Vec<u64> {
-        let mut found_indexes: Vec<u64> = Vec::with_capacity(100);
+    pub fn has_any_recursive_type(&self) -> bool {
+        let mut indexes: Vec<bool> = Vec::with_capacity(50);
 
-        self.get_recursive_struct_field(&mut found_indexes);
+        self.check_recursive_type(&mut indexes);
 
-        found_indexes
+        indexes.iter().any(|found| *found)
     }
 
-    fn get_recursive_struct_field(&self, indexes: &mut Vec<u64>) {
+    fn check_recursive_type(&self, indexes: &mut Vec<bool>) {
         if let ThrushType::Struct(_, fields) = self {
-            for (index, field) in fields.iter().enumerate() {
+            for field in fields.iter() {
                 if field.is_recursive_type() {
-                    indexes.push(index as u64);
-                    field.get_recursive_struct_field(indexes);
+                    indexes.push(true);
+                    field.check_recursive_type(indexes);
                 }
             }
+        }
+    }
+
+    pub fn get_recursive_types(&self) -> Vec<ThrushType> {
+        let mut types: Vec<ThrushType> = Vec::with_capacity(50);
+        let mut current: ThrushType = ThrushType::Void;
+
+        self.get_exact_recursive_type(&mut types, &mut current);
+
+        types
+    }
+
+    fn get_exact_recursive_type(&self, types: &mut Vec<ThrushType>, current: &mut ThrushType) {
+        match self {
+            ThrushType::Struct(_, fields) => {
+                for field in fields.iter() {
+                    *current = (**field).clone();
+
+                    field.get_exact_recursive_type(types, current);
+
+                    *current = ThrushType::Void;
+                }
+            }
+
+            ThrushType::Me(_) => {
+                types.push(current.clone());
+            }
+
+            _ => (),
+        }
+    }
+
+    pub fn get_recursive_type_paths(&self) -> Vec<Vec<u32>> {
+        let mut paths: Vec<Vec<u32>> = Vec::with_capacity(50);
+        let mut current_path: Vec<u32> = Vec::with_capacity(50);
+
+        self.get_recursive_type_path(&mut paths, &mut current_path);
+
+        paths
+    }
+
+    fn get_recursive_type_path(&self, paths: &mut Vec<Vec<u32>>, current_path: &mut Vec<u32>) {
+        match self {
+            ThrushType::Struct(_, fields) => {
+                for (index, field) in fields.iter().enumerate() {
+                    current_path.push(index as u32);
+                    field.get_recursive_type_path(paths, current_path);
+                    current_path.pop();
+                }
+            }
+
+            ThrushType::Me(_) => {
+                paths.push(current_path.clone());
+            }
+
+            _ => (),
         }
     }
 
@@ -238,6 +302,40 @@ impl ThrushType {
                 | ThrushType::U64
                 | ThrushType::Char
         )
+    }
+}
+
+impl LLVMDeallocator for ThrushType {
+    fn dealloc(&self, context: &LLVMCodeGenContext<'_, '_>, value: BasicValueEnum<'_>) {
+        let llvm_builder: &Builder = context.get_llvm_builder();
+        let llvm_context: &Context = context.get_llvm_context();
+        let target_data: &TargetData = &context.target_data;
+
+        if self.is_heap_allocated(llvm_context, target_data) && value.is_pointer_value() {
+            let ptr: PointerValue = value.into_pointer_value();
+
+            if self.has_any_recursive_type() {
+                if let Some(last_block) = llvm_builder.get_insert_block() {
+                    let recursive_paths: Vec<Vec<u32>> = self.get_recursive_type_paths();
+                    let recursive_types: Vec<ThrushType> = self.get_recursive_types();
+
+                    println!("{:?}", self.get_recursive_types());
+
+                    let deallocator: FunctionValue =
+                        memory::create_deallocator(context, self, &recursive_paths);
+
+                    llvm_builder.position_at_end(last_block);
+
+                    let _ = llvm_builder.build_call(deallocator, &[ptr.into()], "");
+
+                    llvm_builder.position_at_end(last_block);
+
+                    return;
+                }
+            }
+
+            let _ = llvm_builder.build_free(ptr);
+        }
     }
 }
 

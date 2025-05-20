@@ -7,7 +7,7 @@ use {
     crate::{
         middle::types::{
             backend::llvm::types::{LLVMFunction, LLVMScopeCall, LLVMScopeCalls, SymbolsAllocated},
-            frontend::{lexer::types::ThrushType, parser::stmts::types::ThrushAttributes},
+            frontend::{lexer::types::ThrushType, parser::stmts::types::CompilerAttributes},
         },
         standard::diagnostic::Diagnostician,
     },
@@ -90,7 +90,7 @@ impl<'a, 'ctx> LLVMCodeGenContext<'a, 'ctx> {
         name: &'ctx str,
         kind: &'ctx ThrushType,
         value: BasicValueEnum<'ctx>,
-        attributes: &'ctx ThrushAttributes<'ctx>,
+        attributes: &'ctx CompilerAttributes<'ctx>,
     ) {
         let ptr_allocated: PointerValue = valuegen::alloc_constant(
             self.module,

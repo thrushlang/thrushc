@@ -13,7 +13,7 @@ use crate::{
     standard::error::ThrushCompilerIssue,
 };
 
-use super::types::{Constructor, ThrushAttributes};
+use super::types::{CompilerAttributes, Constructor};
 
 #[derive(Debug, Clone, Default)]
 pub enum Instruction<'ctx> {
@@ -60,7 +60,7 @@ pub enum Instruction<'ctx> {
         parameters: Vec<Instruction<'ctx>>,
         body: Rc<Instruction<'ctx>>,
         return_type: ThrushType,
-        attributes: ThrushAttributes<'ctx>,
+        attributes: CompilerAttributes<'ctx>,
     },
 
     This {
@@ -157,7 +157,7 @@ pub enum Instruction<'ctx> {
         parameter_types: Vec<ThrushType>,
         body: Rc<Instruction<'ctx>>,
         return_type: ThrushType,
-        attributes: ThrushAttributes<'ctx>,
+        attributes: CompilerAttributes<'ctx>,
         span: Span,
     },
 
@@ -172,7 +172,7 @@ pub enum Instruction<'ctx> {
         name: &'ctx str,
         kind: ThrushType,
         value: Rc<Instruction<'ctx>>,
-        attributes: ThrushAttributes<'ctx>,
+        attributes: CompilerAttributes<'ctx>,
         span: Span,
     },
     ConstRef {

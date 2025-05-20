@@ -3,22 +3,22 @@ use crate::middle::types::frontend::lexer::types::ThrushType;
 use super::{
     instruction::Instruction,
     traits::{
-        AttributesExtensions, ConstructorExtensions, CustomTypeFieldsExtensions,
+        CompilerAttributesExtensions, ConstructorExtensions, CustomTypeFieldsExtensions,
         StructFieldsExtensions,
     },
-    types::{Constructor, CustomTypeFields, StructFields, ThrushAttributes},
+    types::{CompilerAttributes, Constructor, CustomTypeFields, StructFields},
 };
 
-impl AttributesExtensions for ThrushAttributes<'_> {
-    fn contain_ffi_attribute(&self) -> bool {
+impl CompilerAttributesExtensions for CompilerAttributes<'_> {
+    fn has_ffi_attribute(&self) -> bool {
         self.iter().any(|attr| attr.is_ffi_attribute())
     }
 
-    fn contain_ignore_attribute(&self) -> bool {
+    fn has_ignore_attribute(&self) -> bool {
         self.iter().any(|attr| attr.is_ignore_attribute())
     }
 
-    fn contain_public_attribute(&self) -> bool {
+    fn has_public_attribute(&self) -> bool {
         self.iter().any(|attr| attr.is_public_attribute())
     }
 }

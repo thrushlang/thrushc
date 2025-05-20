@@ -6,7 +6,8 @@ use inkwell::{
 };
 
 use crate::middle::types::{
-    backend::llvm::types::SymbolsAllocated, frontend::parser::stmts::instruction::Instruction,
+    backend::llvm::{traits::LLVMDeallocator, types::SymbolsAllocated},
+    frontend::{lexer::types::ThrushType, parser::stmts::instruction::Instruction},
 };
 
 use super::{context::LLVMCodeGenContext, memory::SymbolAllocated};
@@ -47,11 +48,9 @@ fn destroy_calls(context: &LLVMCodeGenContext<'_, '_>) {
     for call in context.get_llvm_calls().iter() {
         let call_value: BasicValueEnum = call.1;
 
-        let llvm_builder: &Builder = context.get_llvm_builder();
-
         if call_value.is_pointer_value() {
-            let ptr: PointerValue = call_value.into_pointer_value();
-            let _ = llvm_builder.build_free(ptr);
+            let ptr_type: &ThrushType = call.0;
+            ptr_type.dealloc(context, call_value);
         }
     }
 }

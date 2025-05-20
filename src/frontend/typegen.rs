@@ -7,9 +7,9 @@ use crate::{
                     CustomTypeFieldsExtensions, FoundSymbolEither, FoundSymbolExtension,
                     StructExtensions, StructFieldsExtensions,
                 },
-                types::{CustomType, CustomTypeFields, StructFields},
+                types::{CustomTypeFields, StructFields},
             },
-            symbols::types::{FoundSymbolId, Struct},
+            symbols::types::{CustomTypeSymbol, FoundSymbolId, Struct},
         },
     },
     standard::error::ThrushCompilerIssue,
@@ -103,7 +103,7 @@ pub fn build_type(parser_ctx: &mut ParserContext<'_>) -> Result<ThrushType, Thru
             } else if object.is_custom_type() {
                 let custom_id: &str = object.expected_custom_type(span)?;
 
-                let custom: CustomType = parser_ctx
+                let custom: CustomTypeSymbol = parser_ctx
                     .get_symbols()
                     .get_custom_type_by_id(custom_id, span)?;
 

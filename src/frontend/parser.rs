@@ -249,6 +249,8 @@ impl<'instr> ParserContext<'instr> {
         self.type_ctx
             .set_this_bindings_type(BindingsType::NoRelevant);
 
+        self.symbols.end_parameters();
+
         self.control_ctx.set_inside_bind(false);
         self.control_ctx.set_inside_function(false);
         self.control_ctx.set_inside_loop(false);
@@ -300,10 +302,6 @@ impl<'instr> ParserContext<'instr> {
 
     pub fn get_instructions(&self) -> &[Instruction<'instr>] {
         self.stmts.as_slice()
-    }
-
-    pub fn add_lift_local(&mut self, instruction: Instruction<'instr>) {
-        self.symbols.add_lift_instruction(instruction);
     }
 
     #[must_use]
