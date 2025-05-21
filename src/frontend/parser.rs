@@ -318,36 +318,6 @@ impl<'instr> ParserContext<'instr> {
         self.scope == 0
     }
 
-    fn get_peerless_scopes(&mut self) -> Option<(usize, usize, usize)> {
-        self.tokens[self.current..]
-            .iter()
-            .enumerate()
-            .find(|(_, tk)| tk.kind.is_sync_statement() || tk.kind.is_sync_declaration())
-            .map(|(i, _)| {
-                let limit_pos: usize = self.current + i;
-
-                let lbrace_count: usize = self.tokens[self.current..limit_pos]
-                    .iter()
-                    .rev()
-                    .filter(|tk| matches!(tk.kind, TokenKind::LBrace))
-                    .count();
-
-                let rbrace_count: usize = self.tokens[self.current..limit_pos]
-                    .iter()
-                    .rev()
-                    .filter(|tk| matches!(tk.kind, TokenKind::RBrace))
-                    .count();
-
-                let diff: usize = if lbrace_count > rbrace_count {
-                    lbrace_count - rbrace_count
-                } else {
-                    rbrace_count - lbrace_count
-                };
-
-                (lbrace_count, rbrace_count, diff)
-            })
-    }
-
     #[must_use]
     pub fn is_eof(&self) -> bool {
         self.peek().kind == TokenKind::Eof
@@ -377,6 +347,36 @@ impl<'instr> ParserContext<'instr> {
             );
             unreachable!()
         })
+    }
+
+    fn get_peerless_scopes(&mut self) -> Option<(usize, usize, usize)> {
+        self.tokens[self.current..]
+            .iter()
+            .enumerate()
+            .find(|(_, tk)| tk.kind.is_sync_statement() || tk.kind.is_sync_declaration())
+            .map(|(i, _)| {
+                let limit_pos: usize = self.current + i;
+
+                let lbrace_count: usize = self.tokens[self.current..limit_pos]
+                    .iter()
+                    .rev()
+                    .filter(|tk| matches!(tk.kind, TokenKind::LBrace))
+                    .count();
+
+                let rbrace_count: usize = self.tokens[self.current..limit_pos]
+                    .iter()
+                    .rev()
+                    .filter(|tk| matches!(tk.kind, TokenKind::RBrace))
+                    .count();
+
+                let diff: usize = if lbrace_count > rbrace_count {
+                    lbrace_count - rbrace_count
+                } else {
+                    rbrace_count - lbrace_count
+                };
+
+                (lbrace_count, rbrace_count, diff)
+            })
     }
 
     pub fn init(&mut self) {

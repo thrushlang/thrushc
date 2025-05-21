@@ -74,6 +74,10 @@ impl Diagnostician {
     ) {
         Diagnostic::build(&self.code, span, help).print(&self.path, title, note, logging_type);
     }
+
+    pub fn get_file_path(&self) -> PathBuf {
+        self.path.clone()
+    }
 }
 
 impl<'a> Diagnostic<'a> {

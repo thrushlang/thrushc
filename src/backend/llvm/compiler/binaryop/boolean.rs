@@ -22,7 +22,7 @@ pub fn bool_binaryop<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
 ) -> BasicValueEnum<'ctx> {
     if let (
-        Instruction::Integer(..) | Instruction::Float(..) | Instruction::Boolean(..),
+        Instruction::Integer { .. } | Instruction::Float { .. } | Instruction::Boolean { .. },
         TokenKind::BangEq
         | TokenKind::EqEq
         | TokenKind::LessEq
@@ -31,7 +31,7 @@ pub fn bool_binaryop<'ctx>(
         | TokenKind::GreaterEq
         | TokenKind::And
         | TokenKind::Or,
-        Instruction::Integer(..) | Instruction::Float(..) | Instruction::Boolean(..),
+        Instruction::Integer { .. } | Instruction::Float { .. } | Instruction::Boolean { .. },
     ) = binary
     {
         if binary.0.get_type_unwrapped().is_float_type() {
@@ -103,7 +103,7 @@ pub fn bool_binaryop<'ctx>(
         | TokenKind::GreaterEq
         | TokenKind::And
         | TokenKind::Or,
-        Instruction::Integer(..) | Instruction::Float(..) | Instruction::Boolean(..),
+        Instruction::Integer { .. } | Instruction::Float { .. } | Instruction::Boolean { .. },
     ) = binary
     {
         if binary.2.get_type_unwrapped().is_float_type() {
@@ -116,7 +116,7 @@ pub fn bool_binaryop<'ctx>(
     }
 
     if let (
-        Instruction::Integer(..) | Instruction::Float(..) | Instruction::Boolean(..),
+        Instruction::Integer { .. } | Instruction::Float { .. } | Instruction::Boolean { .. },
         TokenKind::BangEq
         | TokenKind::EqEq
         | TokenKind::LessEq
@@ -140,9 +140,9 @@ pub fn bool_binaryop<'ctx>(
     }
 
     if let (
-        Instruction::Integer(..)
-        | Instruction::Float(..)
-        | Instruction::Boolean(..)
+        Instruction::Integer { .. }
+        | Instruction::Float { .. }
+        | Instruction::Boolean { .. }
         | Instruction::NullPtr { .. },
         TokenKind::BangEq
         | TokenKind::EqEq
@@ -180,9 +180,9 @@ pub fn bool_binaryop<'ctx>(
         | TokenKind::GreaterEq
         | TokenKind::And
         | TokenKind::Or,
-        Instruction::Integer(..)
-        | Instruction::Float(..)
-        | Instruction::Boolean(..)
+        Instruction::Integer { .. }
+        | Instruction::Float { .. }
+        | Instruction::Boolean { .. }
         | Instruction::NullPtr { .. },
     ) = binary
     {

@@ -1,10 +1,10 @@
 pub mod contexts;
 pub mod expressions;
 pub mod lexer;
+pub mod parse;
 pub mod parser;
 pub mod stmts;
 pub mod symbols;
 pub mod typecheck;
 pub mod typegen;
-pub mod utils;
 pub mod warner;

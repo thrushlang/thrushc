@@ -31,7 +31,6 @@ use super::{
     typegen,
 };
 
-const MINIMAL_SCOPE_CAPACITY: usize = 256;
 const CALL_CONVENTIONS_CAPACITY: usize = 10;
 
 lazy_static! {
@@ -89,7 +88,6 @@ fn statement<'instr>(
         TokenKind::Local => Ok(build_local(parser_ctx, false)?),
         TokenKind::For => Ok(build_for_loop(parser_ctx)?),
         TokenKind::If => Ok(build_conditional(parser_ctx)?),
-        TokenKind::Match => Ok(build_match(parser_ctx)?),
         TokenKind::While => Ok(build_while_loop(parser_ctx)?),
         TokenKind::Continue => Ok(build_continue(parser_ctx)?),
         TokenKind::Break => Ok(build_break(parser_ctx)?),
@@ -190,12 +188,13 @@ pub fn build_bindings<'instr>(
             span,
         )?;
 
-        return Ok(Instruction::Null);
+        return Ok(Instruction::Null { span });
     }
 
     Ok(Instruction::Bindings {
         name: struct_name,
         binds,
+        span,
     })
 }
 
@@ -216,6 +215,8 @@ fn build_bind<'instr>(
     )?;
 
     let bind_name: &str = bind_name_tk.lexeme;
+
+    let span: Span = bind_name_tk.span;
 
     if !parser_ctx
         .get_control_ctx()
@@ -362,6 +363,7 @@ fn build_bind<'instr>(
             body: bind_body.into(),
             return_type,
             attributes: bind_attributes,
+            span,
         });
     }
 
@@ -369,7 +371,7 @@ fn build_bind<'instr>(
         .get_mut_control_ctx()
         .set_instr_position(InstructionPosition::NoRelevant);
 
-    Ok(Instruction::Null)
+    Ok(Instruction::Null { span })
 }
 
 fn build_entry_point<'instr>(
@@ -682,176 +684,6 @@ fn build_break<'instr>(
     Ok(Instruction::Break { span })
 }
 
-fn build_match<'instr>(
-    parser_ctx: &mut ParserContext<'instr>,
-) -> Result<Instruction<'instr>, ThrushCompilerIssue> {
-    let match_tk: &Token = parser_ctx.consume(
-        TokenKind::Match,
-        String::from("Syntax error"),
-        String::from("Expected 'match' keyword."),
-    )?;
-
-    let span: Span = match_tk.span;
-
-    if parser_ctx.is_unreacheable_code() {
-        return Err(ThrushCompilerIssue::Error(
-            String::from("Syntax error"),
-            String::from("Unreacheable code."),
-            None,
-            span,
-        ));
-    }
-
-    if !parser_ctx.get_control_ctx().get_inside_function()
-        && !parser_ctx.get_control_ctx().get_inside_bind()
-    {
-        return Err(ThrushCompilerIssue::Error(
-            String::from("Syntax error"),
-            String::from("Match must be placed inside a function or a bind."),
-            None,
-            span,
-        ));
-    }
-
-    let mut start_pattern: Instruction = expressions::build_expr(parser_ctx)?;
-    let mut start_block: Instruction = Instruction::Block {
-        stmts: Vec::new(),
-        span,
-    };
-
-    let mut patterns: Vec<Instruction> = Vec::with_capacity(10);
-    let mut patterns_stmts: Vec<Instruction> = Vec::with_capacity(MINIMAL_SCOPE_CAPACITY);
-
-    let mut position: u32 = 0;
-
-    while parser_ctx.match_token(TokenKind::Pattern)? {
-        *parser_ctx.get_mut_scope() += 1;
-
-        parser_ctx.get_mut_symbols().begin_local_scope();
-
-        let pattern: Instruction = expressions::build_expr(parser_ctx)?;
-        let pattern_span: Span = pattern.get_span()?;
-
-        parser_ctx.mismatch_types(
-            &ThrushType::Bool,
-            pattern.get_type()?,
-            pattern.get_span()?,
-            Some(&pattern),
-        );
-
-        parser_ctx.consume(
-            TokenKind::ColonColon,
-            String::from("Syntax error"),
-            String::from("Expected '::'."),
-        )?;
-
-        while !parser_ctx.match_token(TokenKind::Break)? {
-            patterns_stmts.push(statement(parser_ctx)?);
-        }
-
-        parser_ctx.consume(
-            TokenKind::SemiColon,
-            String::from("Syntax error"),
-            String::from("Expected ';'."),
-        )?;
-
-        *parser_ctx.get_mut_scope() -= 1;
-
-        parser_ctx.get_mut_symbols().end_local_scope();
-
-        if patterns_stmts.is_empty() {
-            continue;
-        }
-
-        if position != 0 {
-            patterns.push(Instruction::Elif {
-                cond: Rc::new(pattern),
-                block: Rc::new(Instruction::Block {
-                    stmts: patterns_stmts.clone(),
-                    span: pattern_span,
-                }),
-                span: pattern_span,
-            });
-
-            patterns_stmts.clear();
-            position += 1;
-
-            continue;
-        }
-
-        start_pattern = pattern;
-
-        start_block = Instruction::Block {
-            stmts: patterns_stmts.clone(),
-            span: pattern_span,
-        };
-
-        patterns_stmts.clear();
-        position += 1;
-    }
-
-    if start_block.has_instruction() {
-        parser_ctx.mismatch_types(
-            &ThrushType::Bool,
-            start_pattern.get_type()?,
-            start_pattern.get_span()?,
-            Some(&start_pattern),
-        );
-    }
-
-    let otherwise: Option<Rc<Instruction>> = if parser_ctx.match_token(TokenKind::Else)? {
-        let otherwise_span: Span = parser_ctx.previous().span;
-
-        parser_ctx.consume(
-            TokenKind::ColonColon,
-            String::from("Syntax error"),
-            String::from("Expected '::'."),
-        )?;
-
-        let mut stmts: Vec<Instruction> = Vec::with_capacity(MINIMAL_SCOPE_CAPACITY);
-
-        while !parser_ctx.match_token(TokenKind::Break)? {
-            stmts.push(statement(parser_ctx)?);
-        }
-
-        parser_ctx.consume(
-            TokenKind::SemiColon,
-            String::from("Syntax error"),
-            String::from("Expected ';'."),
-        )?;
-
-        if stmts.is_empty() {
-            None
-        } else {
-            Some(
-                Instruction::Else {
-                    block: Instruction::Block {
-                        stmts,
-                        span: otherwise_span,
-                    }
-                    .into(),
-                    span: otherwise_span,
-                }
-                .into(),
-            )
-        }
-    } else {
-        None
-    };
-
-    if !start_block.has_instruction() && patterns.is_empty() && otherwise.is_none() {
-        return Ok(Instruction::Null);
-    }
-
-    Ok(Instruction::If {
-        cond: Rc::new(start_pattern),
-        block: Rc::new(start_block),
-        elfs: patterns,
-        otherwise,
-        span,
-    })
-}
-
 fn build_conditional<'instr>(
     parser_ctx: &mut ParserContext<'instr>,
 ) -> Result<Instruction<'instr>, ThrushCompilerIssue> {
@@ -972,8 +804,9 @@ pub fn build_custom_type<'instr>(
         String::from("Expected type name."),
     )?;
 
-    let span: Span = name.span;
     let custom_type_name: &str = name.lexeme;
+
+    let span: Span = name.span;
 
     parser_ctx.consume(
         TokenKind::Eq,
@@ -1022,7 +855,7 @@ pub fn build_custom_type<'instr>(
         )?;
     }
 
-    Ok(Instruction::Null)
+    Ok(Instruction::Null { span })
 }
 
 pub fn build_enum<'instr>(
@@ -1050,9 +883,9 @@ pub fn build_enum<'instr>(
         String::from("Expected enum name."),
     )?;
 
-    let span: Span = name.span;
-
     let enum_name: &str = name.lexeme;
+
+    let span: Span = name.span;
 
     let enum_attributes: CompilerAttributes =
         self::build_compiler_attributes(parser_ctx, &[TokenKind::LBrace])?;
@@ -1064,7 +897,9 @@ pub fn build_enum<'instr>(
     )?;
 
     let mut enum_fields: EnumFields = Vec::with_capacity(10);
-    let mut index: f64 = 0.0;
+
+    let mut default_float_value: f64 = 0.0;
+    let mut default_integer_value: u64 = 0;
 
     while parser_ctx.peek().kind != TokenKind::RBrace {
         if parser_ctx.match_token(TokenKind::Comma)? {
@@ -1073,6 +908,7 @@ pub fn build_enum<'instr>(
 
         if parser_ctx.match_token(TokenKind::Identifier)? {
             let field_tk: &Token = parser_ctx.previous();
+
             let name: &str = field_tk.lexeme;
             let span: Span = field_tk.span;
 
@@ -1084,13 +920,10 @@ pub fn build_enum<'instr>(
 
             let field_type: ThrushType = typegen::build_type(parser_ctx)?;
 
-            if !field_type.is_integer_type()
-                && !field_type.is_float_type()
-                && !field_type.is_bool_type()
-            {
+            if !field_type.is_numeric() {
                 return Err(ThrushCompilerIssue::Error(
                     String::from("Syntax error"),
-                    String::from("Expected integer, boolean or floating-point types."),
+                    String::from("Expected integer, boolean, char or floating-point types."),
                     None,
                     span,
                 ));
@@ -1098,15 +931,28 @@ pub fn build_enum<'instr>(
 
             if parser_ctx.match_token(TokenKind::SemiColon)? {
                 let field_value: Instruction = if field_type.is_float_type() {
-                    Instruction::Float(field_type.clone(), index, false, span)
+                    Instruction::new_float(field_type, default_float_value, false, span)
                 } else if field_type.is_bool_type() {
-                    Instruction::Boolean(ThrushType::Bool, index != 0.0, span)
+                    Instruction::new_boolean(field_type, default_integer_value, span)
+                } else if field_type.is_char_type() {
+                    if default_integer_value > char::MAX as u64 {
+                        return Err(ThrushCompilerIssue::Error(
+                            String::from("Syntax error"),
+                            String::from("Char overflow."),
+                            None,
+                            span,
+                        ));
+                    }
+
+                    Instruction::new_char(field_type, default_integer_value, span)
                 } else {
-                    Instruction::Integer(field_type.clone(), index, false, span)
+                    Instruction::new_integer(field_type, default_integer_value, false, span)
                 };
 
                 enum_fields.push((name, field_value));
-                index += 1.0;
+
+                default_float_value += 1.0;
+                default_integer_value += 1;
 
                 continue;
             }
@@ -1165,7 +1011,7 @@ pub fn build_enum<'instr>(
             .new_enum(enum_name, (enum_fields, enum_attributes), span)?;
     }
 
-    Ok(Instruction::Null)
+    Ok(Instruction::Null { span })
 }
 
 pub fn build_struct<'instr>(
@@ -1193,9 +1039,8 @@ pub fn build_struct<'instr>(
         String::from("Expected structure name."),
     )?;
 
-    let span: Span = name.span;
-
     let struct_name: &str = name.lexeme;
+    let span: Span = name.span;
 
     let struct_attributes: CompilerAttributes =
         self::build_compiler_attributes(parser_ctx, &[TokenKind::LBrace])?;
@@ -1264,7 +1109,7 @@ pub fn build_struct<'instr>(
         )?;
     }
 
-    Ok(Instruction::Null)
+    Ok(Instruction::Null { span })
 }
 
 pub fn build_const<'instr>(
@@ -1334,7 +1179,7 @@ pub fn build_const<'instr>(
             .get_mut_symbols()
             .new_constant(name, (const_type, const_attributes), span)?;
 
-        return Ok(Instruction::Null);
+        return Ok(Instruction::Null { span });
     }
 
     Ok(Instruction::Const {
@@ -1414,7 +1259,7 @@ fn build_local<'instr>(
         return Ok(Instruction::Local {
             name: local_name,
             kind: local_type,
-            value: Rc::new(Instruction::Null),
+            value: Rc::new(Instruction::Null { span }),
             is_mutable,
             span,
             comptime,
@@ -1500,7 +1345,7 @@ fn build_return<'instr>(
 
     if parser_ctx.match_token(TokenKind::SemiColon)? {
         if parser_ctx.get_type_ctx().get_function_type().is_void_type() {
-            return Ok(Instruction::Null);
+            return Ok(Instruction::Null { span });
         }
 
         parser_ctx.mismatch_types(
@@ -1603,14 +1448,14 @@ pub fn build_function<'instr>(
     )?;
 
     let function_name: &str = function_name_tk.lexeme;
-    let function_span: Span = function_name_tk.span;
+    let span: Span = function_name_tk.span;
 
     if !parser_ctx.is_main_scope() {
         return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("Functions are only defined globally."),
             None,
-            function_span,
+            span,
         ));
     }
 
@@ -1619,13 +1464,13 @@ pub fn build_function<'instr>(
             String::from("Syntax error"),
             String::from("Unreacheable code."),
             None,
-            function_span,
+            span,
         ));
     }
 
     if function_name == "main" {
         if declare {
-            return Ok(Instruction::Null);
+            return Ok(Instruction::Null { span });
         }
 
         parser_ctx.get_mut_control_ctx().set_inside_function(true);
@@ -1735,7 +1580,7 @@ pub fn build_function<'instr>(
                 "The '@ignore' attribute can only be used if the function contains the '@extern' attribute.",
             ),
             None,
-            function_span,
+            span,
         ));
     }
 
@@ -1743,10 +1588,10 @@ pub fn build_function<'instr>(
         name: function_name,
         parameters: parameters.clone(),
         parameter_types: parameters_types.clone(),
-        body: Instruction::Null.into(),
+        body: Instruction::Null { span }.into(),
         return_type: return_type.clone(),
         attributes: function_attributes,
-        span: function_span,
+        span,
     };
 
     if function_has_ffi || declare {
@@ -1758,7 +1603,7 @@ pub fn build_function<'instr>(
                     ParametersTypes::new(parameters_types),
                     function_has_ignore,
                 ),
-                function_span,
+                span,
             )?;
         }
 
@@ -1785,7 +1630,7 @@ pub fn build_function<'instr>(
             String::from("Syntax error"),
             format!("Missing return with type '{}'.", return_type),
             None,
-            function_span,
+            span,
         ));
     }
 

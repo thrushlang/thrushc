@@ -11,8 +11,7 @@ use inkwell::{
 };
 
 use crate::{
-    backend::llvm::{self, compiler::typegen},
-    middle::types::frontend::lexer::types::ThrushType,
+    backend::llvm::compiler::typegen, middle::types::frontend::lexer::types::ThrushType,
     standard::logging,
 };
 

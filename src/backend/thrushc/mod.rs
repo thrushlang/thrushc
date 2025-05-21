@@ -91,7 +91,13 @@ impl<'a> Thrushc<'a> {
 
         let source_code: &[u8] = &utils::extract_code_from_file(&file.path);
 
-        let tokens: Vec<Token> = Lexer::lex(source_code, file);
+        let tokens: Vec<Token> = match Lexer::lex(source_code, file) {
+            Ok(tokens) => tokens,
+            Err(error) => {
+                logging::log(logging::LoggingType::Panic, &error.display());
+                unreachable!()
+            }
+        };
 
         let llvm_backend: &LLVMBackend = self.options.get_llvm_backend_options();
         let build_dir: &PathBuf = self.options.get_build_dir();

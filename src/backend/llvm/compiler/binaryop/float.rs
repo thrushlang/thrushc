@@ -65,7 +65,12 @@ pub fn float_binaryop<'ctx>(
     let llvm_builder: &Builder = context.get_llvm_builder();
 
     if let (
-        Instruction::Float(left_type, left_num, left_signed, ..),
+        Instruction::Float {
+            kind: left_type,
+            value: left_number,
+            signed: left_signed,
+            ..
+        },
         TokenKind::Plus
         | TokenKind::Slash
         | TokenKind::Minus
@@ -76,14 +81,19 @@ pub fn float_binaryop<'ctx>(
         | TokenKind::Less
         | TokenKind::Greater
         | TokenKind::GreaterEq,
-        Instruction::Float(right_type, right_num, right_signed, ..),
+        Instruction::Float {
+            kind: right_type,
+            value: right_num,
+            signed: right_signed,
+            ..
+        },
     ) = binary
     {
         let mut left_compiled: FloatValue = valuegen::float(
             llvm_builder,
             llvm_context,
             left_type,
-            *left_num,
+            *left_number,
             *left_signed,
         );
 
@@ -262,7 +272,12 @@ pub fn float_binaryop<'ctx>(
     }
 
     if let (
-        Instruction::Float(left_type, left_num, left_signed, ..),
+        Instruction::Float {
+            kind: left_type,
+            value: left_number,
+            signed: left_signed,
+            ..
+        },
         TokenKind::Plus
         | TokenKind::Slash
         | TokenKind::Minus
@@ -280,7 +295,7 @@ pub fn float_binaryop<'ctx>(
             llvm_builder,
             llvm_context,
             left_type,
-            *left_num,
+            *left_number,
             *left_signed,
         );
 
@@ -618,7 +633,12 @@ pub fn float_binaryop<'ctx>(
     }
 
     if let (
-        Instruction::Float(left_type, left_num, left_signed, ..),
+        Instruction::Float {
+            kind: left_type,
+            value: left_number,
+            signed: left_signed,
+            ..
+        },
         TokenKind::Plus
         | TokenKind::Slash
         | TokenKind::Minus
@@ -639,7 +659,7 @@ pub fn float_binaryop<'ctx>(
             llvm_builder,
             llvm_context,
             left_type,
-            *left_num,
+            *left_number,
             *left_signed,
         );
 
@@ -680,7 +700,12 @@ pub fn float_binaryop<'ctx>(
         | TokenKind::Less
         | TokenKind::Greater
         | TokenKind::GreaterEq,
-        Instruction::Float(right_type, right_num, right_signed, ..),
+        Instruction::Float {
+            kind: right_type,
+            value: right_num,
+            signed: right_signed,
+            ..
+        },
     ) = binary
     {
         let mut left_compiled: BasicValueEnum = valuegen::build(binary.0, target_type, context);
@@ -959,7 +984,12 @@ pub fn float_binaryop<'ctx>(
     }
 
     if let (
-        Instruction::Float(left_type, left_num, left_signed, ..),
+        Instruction::Float {
+            kind: left_type,
+            value: left_number,
+            signed: left_signed,
+            ..
+        },
         TokenKind::Plus
         | TokenKind::Slash
         | TokenKind::Minus
@@ -982,7 +1012,7 @@ pub fn float_binaryop<'ctx>(
             llvm_builder,
             llvm_context,
             left_type,
-            *left_num,
+            *left_number,
             *left_signed,
         );
 
@@ -1025,7 +1055,12 @@ pub fn float_binaryop<'ctx>(
         | TokenKind::Less
         | TokenKind::Greater
         | TokenKind::GreaterEq,
-        Instruction::Float(right_type, right_num, right_signed, ..),
+        Instruction::Float {
+            kind: right_type,
+            value: right_num,
+            signed: right_signed,
+            ..
+        },
     ) = binary
     {
         let mut left_compiled: BasicValueEnum = valuegen::build(binary.0, target_type, context);
@@ -1163,7 +1198,12 @@ pub fn float_binaryop<'ctx>(
     }
 
     if let (
-        Instruction::Float(left_type, left_num, left_signed, ..),
+        Instruction::Float {
+            kind: left_type,
+            value: left_number,
+            signed: left_signed,
+            ..
+        },
         TokenKind::Plus
         | TokenKind::Slash
         | TokenKind::Minus
@@ -1183,7 +1223,7 @@ pub fn float_binaryop<'ctx>(
             llvm_builder,
             llvm_context,
             left_type,
-            *left_num,
+            *left_number,
             *left_signed,
         );
 
@@ -1221,7 +1261,12 @@ pub fn float_binaryop<'ctx>(
         | TokenKind::Less
         | TokenKind::Greater
         | TokenKind::GreaterEq,
-        Instruction::Float(right_type, right_num, right_signed, ..),
+        Instruction::Float {
+            kind: right_type,
+            value: right_num,
+            signed: right_signed,
+            ..
+        },
     ) = binary
     {
         let left_dissasembled: LLVMBinaryOp = binary.0.as_binary();
@@ -1376,7 +1421,12 @@ pub fn float_binaryop<'ctx>(
         | TokenKind::Less
         | TokenKind::Greater
         | TokenKind::GreaterEq,
-        Instruction::Float(right_type, right_num, right_signed, ..),
+        Instruction::Float {
+            kind: right_type,
+            value: right_num,
+            signed: right_signed,
+            ..
+        },
     ) = binary
     {
         let left_dissasembled: LLVMBinaryOp = expression.as_binary();
@@ -1408,7 +1458,12 @@ pub fn float_binaryop<'ctx>(
     }
 
     if let (
-        Instruction::Float(left_type, left_num, left_signed, ..),
+        Instruction::Float {
+            kind: left_type,
+            value: left_number,
+            signed: left_signed,
+            ..
+        },
         TokenKind::Plus
         | TokenKind::Slash
         | TokenKind::Minus
@@ -1430,7 +1485,7 @@ pub fn float_binaryop<'ctx>(
             llvm_builder,
             llvm_context,
             left_type,
-            *left_num,
+            *left_number,
             *left_signed,
         );
 

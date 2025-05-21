@@ -72,7 +72,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         let llvm_context: &Context = self.context.get_llvm_context();
 
         match instruction {
-            Instruction::Block { stmts, .. } => {
+            Instruction::Block { stmts, span, .. } => {
                 self.context.begin_scope();
 
                 stmts.iter().for_each(|instruction| {
@@ -87,14 +87,14 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
 
                 self.context.end_scope();
 
-                Instruction::Null
+                Instruction::Null { span: *span }
             }
-
             Instruction::If {
                 cond,
                 block,
                 elfs,
                 otherwise,
+                span,
                 ..
             } => {
                 let compiled_if_cond: IntValue<'ctx> =
@@ -218,10 +218,11 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                     let _ = else_block.remove_from_function();
                 }
 
-                Instruction::Null
+                Instruction::Null { span: *span }
             }
-
-            Instruction::While { cond, block, .. } => {
+            Instruction::While {
+                cond, block, span, ..
+            } => {
                 let function: FunctionValue = self.function.unwrap();
 
                 let cond_block: BasicBlock = llvm_context.append_basic_block(function, "while");
@@ -256,10 +257,9 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
 
                 llvm_builder.position_at_end(exit_block);
 
-                Instruction::Null
+                Instruction::Null { span: *span }
             }
-
-            Instruction::Loop { block, .. } => {
+            Instruction::Loop { block, span } => {
                 let function: FunctionValue = self.function.unwrap();
                 let loop_start_block: BasicBlock =
                     llvm_context.append_basic_block(function, "loop");
@@ -289,14 +289,14 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                     llvm_builder.position_at_end(loop_exit_block);
                 }
 
-                Instruction::Null
+                Instruction::Null { span: *span }
             }
-
             Instruction::For {
                 local,
                 cond,
                 actions,
                 block,
+                span,
                 ..
             } => {
                 let function: FunctionValue = self.function.unwrap();
@@ -345,23 +345,23 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
 
                 llvm_builder.position_at_end(exit_block);
 
-                Instruction::Null
+                Instruction::Null { span: *span }
             }
 
-            Instruction::Break { .. } => {
+            Instruction::Break { span, .. } => {
                 llvm_builder
                     .build_unconditional_branch(self.loop_exit_block.unwrap())
                     .unwrap();
 
-                Instruction::Null
+                Instruction::Null { span: *span }
             }
 
-            Instruction::Continue { .. } => {
+            Instruction::Continue { span, .. } => {
                 llvm_builder
                     .build_unconditional_branch(self.loop_start_block.unwrap())
                     .unwrap();
 
-                Instruction::Null
+                Instruction::Null { span: *span }
             }
 
             Instruction::FunctionParameter {
@@ -369,24 +369,28 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 kind,
                 position,
                 is_mutable,
+                span,
                 ..
             } => {
                 self.build_function_parameter((name, kind, *position, *is_mutable));
 
-                Instruction::Null
+                Instruction::Null { span: *span }
             }
 
-            Instruction::Function { .. } => {
+            Instruction::Function { span, .. } => {
                 let function_prototype: LLVMFunctionPrototype =
                     instruction.as_llvm_function_proto();
 
                 self.build_function(function_prototype);
 
-                Instruction::Null
+                Instruction::Null { span: *span }
             }
 
             Instruction::Return {
-                expression, kind, ..
+                expression,
+                kind,
+                span,
+                ..
             } => {
                 self.deallocators_emited = true;
 
@@ -398,10 +402,10 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
 
                 valuegen::build(instruction, kind, &mut self.context);
 
-                Instruction::Null
+                Instruction::Null { span: *span }
             }
 
-            Instruction::Str(_, _, _) => Instruction::LLVMValue(valuegen::build(
+            Instruction::Str { .. } => Instruction::LLVMValue(valuegen::build(
                 instruction,
                 &ThrushType::Void,
                 &mut self.context,
@@ -412,21 +416,22 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 kind,
                 value,
                 comptime,
+                span,
                 ..
             } => {
                 if *comptime {
-                    return Instruction::Null;
+                    return Instruction::Null { span: *span };
                 }
 
                 local::build((name, kind, value), &mut self.context);
 
-                Instruction::Null
+                Instruction::Null { span: *span }
             }
 
-            Instruction::Mut { kind, .. } => {
+            Instruction::Mut { kind, span, .. } => {
                 valuegen::build(instruction, kind, &mut self.context);
 
-                Instruction::Null
+                Instruction::Null { span: *span }
             }
 
             Instruction::BinaryOp {
@@ -460,7 +465,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                     ));
                 }
 
-                unimplemented!()
+                unreachable!()
             }
 
             Instruction::UnaryOp {
@@ -473,7 +478,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 (operator, kind, expression),
             )),
 
-            Instruction::EntryPoint { body, .. } => {
+            Instruction::EntryPoint { body, span, .. } => {
                 self.function = Some(self.build_entrypoint());
 
                 self.declare_constants();
@@ -484,7 +489,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                     .build_return(Some(&llvm_context.i32_type().const_int(0, false)))
                     .unwrap();
 
-                Instruction::Null
+                Instruction::Null { span: *span }
             }
 
             Instruction::Call { kind, .. } => {
@@ -496,12 +501,9 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 Instruction::LLVMValue(valuegen::build(instruction, ref_type, &mut self.context))
             }
 
-            Instruction::Boolean(_, bool, ..) => Instruction::LLVMValue(
-                llvm_context
-                    .bool_type()
-                    .const_int(*bool as u64, false)
-                    .into(),
-            ),
+            Instruction::Boolean { value, .. } => {
+                Instruction::LLVMValue(llvm_context.bool_type().const_int(*value, false).into())
+            }
 
             Instruction::Address { .. } => Instruction::LLVMValue(valuegen::build(
                 instruction,
@@ -509,17 +511,18 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 &mut self.context,
             )),
 
-            Instruction::Write { .. } => {
+            Instruction::Write { span, .. } => {
                 valuegen::build(instruction, &ThrushType::Void, &mut self.context);
-
-                Instruction::Null
+                Instruction::Null { span: *span }
             }
 
-            Instruction::Null | Instruction::Const { .. } => Instruction::Null,
-            e => {
-                println!("{:?}", e);
-                todo!()
+            Instruction::Null { span, .. } | Instruction::Const { span, .. } => {
+                Instruction::Null { span: *span }
             }
+
+            any => Instruction::Null {
+                span: any.get_span().unwrap_or_default(),
+            },
         }
     }
 

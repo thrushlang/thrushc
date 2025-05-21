@@ -7,8 +7,8 @@ use crate::{
 use super::types::{EnumField, EnumFields, StructFields};
 
 pub trait TokenExtensions {
-    fn parse_scapes(&self, span: Span) -> Result<Vec<u8>, ThrushCompilerIssue>;
-    fn get_first_byte(&self) -> u8;
+    fn to_bytes(&self, span: Span) -> Result<Vec<u8>, ThrushCompilerIssue>;
+    fn get_first_byte(&self) -> u64;
 }
 
 pub trait EnumFieldsExtensions<'a> {

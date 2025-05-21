@@ -48,9 +48,9 @@ impl CustomTypeFieldsExtensions for CustomTypeFields<'_> {
 impl PartialEq for Instruction<'_> {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
-            (Instruction::Integer(..), Instruction::Integer(..))
-            | (Instruction::Float(..), Instruction::Float(..))
-            | (Instruction::Str(..), Instruction::Str(..)) => true,
+            (Instruction::Integer { .. }, Instruction::Integer { .. })
+            | (Instruction::Float { .. }, Instruction::Float { .. })
+            | (Instruction::Str { .. }, Instruction::Str { .. }) => true,
             (left, right) => std::mem::discriminant(left) == std::mem::discriminant(right),
         }
     }
@@ -59,27 +59,211 @@ impl PartialEq for Instruction<'_> {
 impl Display for Instruction<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Instruction::Null => write!(f, "null"),
+            Instruction::Null { .. } => write!(f, "null"),
             Instruction::Pass { .. } => write!(f, "pass"),
-            Instruction::Integer(_, value, ..) => write!(f, "{}", value),
-            Instruction::Float(_, value, ..) => write!(f, "{}", value),
-            Instruction::Boolean(_, value, ..) => write!(f, "{}", value),
-            Instruction::Str(_, value, ..) => {
-                write!(f, "\"{}\"", String::from_utf8_lossy(value))
+            Instruction::Char { byte, .. } => write!(f, "{}", byte),
+            Instruction::Integer { value, .. } => write!(f, "{}", value),
+            Instruction::Float { value, .. } => write!(f, "{}", value),
+            Instruction::Boolean { value, .. } => write!(f, "{}", value),
+            Instruction::Str { bytes, .. } => {
+                write!(f, "\"{}\"", String::from_utf8_lossy(bytes))
+            }
+            Instruction::Function {
+                name,
+                parameters,
+                parameter_types,
+                body,
+                return_type,
+                attributes,
+                ..
+            } => {
+                write!(f, "fn {}(", name)?;
+
+                for (i, (param, param_type)) in
+                    parameters.iter().zip(parameter_types.iter()).enumerate()
+                {
+                    if i > 0 {
+                        write!(f, ", ")?;
+                    }
+
+                    write!(f, "{}: {}", param, param_type)?;
+                }
+
+                write!(f, ") {} ", return_type)?;
+
+                attributes
+                    .iter()
+                    .try_for_each(|attr| write!(f, "{}", attr))?;
+
+                if body.is_block() {
+                    write!(f, "{}", body)?;
+                }
+
+                Ok(())
             }
             Instruction::Block { stmts, .. } => {
-                let _ = writeln!(f, "{{");
+                let _ = write!(f, "{{ ");
 
                 for stmt in stmts {
                     let _ = write!(f, "{}", stmt);
                 }
 
-                let _ = writeln!(f, "}}");
+                let _ = write!(f, " }}");
+
+                Ok(())
+            }
+            Instruction::BinaryOp {
+                left,
+                operator,
+                right,
+                ..
+            } => {
+                write!(f, "{} {} {}", left, operator, right)
+            }
+            Instruction::UnaryOp {
+                operator,
+                expression,
+                is_pre,
+                ..
+            } => {
+                if *is_pre {
+                    write!(f, "{}{}", operator, expression)
+                } else {
+                    write!(f, "{}{}", expression, operator)
+                }
+            }
+            Instruction::Break { .. } => {
+                write!(f, "break")
+            }
+            Instruction::Continue { .. } => {
+                write!(f, "continue")
+            }
+            Instruction::For {
+                local,
+                cond,
+                actions,
+                block,
+                ..
+            } => {
+                write!(f, "for {} {} {} {}", local, cond, actions, block)
+            }
+            Instruction::Call { name, args, .. } => {
+                write!(f, "{}(", name)?;
+
+                for (index, arg) in args.iter().enumerate() {
+                    write!(f, "{}", arg)?;
+
+                    if index > 0 {
+                        write!(f, ", ")?;
+                    }
+                }
+
+                write!(f, ")")
+            }
+
+            Instruction::If {
+                cond,
+                block,
+                elfs,
+                otherwise,
+                ..
+            } => {
+                write!(f, "if {} {}", cond, block)?;
+
+                for elif in elfs {
+                    write!(f, " elif {}", elif)?;
+                }
+
+                if let Some(otherwise) = otherwise {
+                    write!(f, " else {}", otherwise)?;
+                }
 
                 Ok(())
             }
 
-            _ => unreachable!(),
+            Instruction::Return { expression, .. } => {
+                if let Some(expr) = expression {
+                    write!(f, "return {}", expr)?;
+                }
+
+                write!(f, "return")
+            }
+
+            Instruction::Local {
+                name,
+                kind,
+                value,
+                is_mutable,
+                ..
+            } => {
+                if *is_mutable {
+                    write!(f, "let mut {} : {} = {}", name, kind, value)
+                } else {
+                    write!(f, "let {} : {} = {}", name, kind, value)
+                }
+            }
+
+            Instruction::Mut { source, value, .. } => {
+                if let (Some(name), _) = source {
+                    write!(f, "{} = {}", name, value)?;
+                }
+
+                if let (_, Some(expr)) = source {
+                    write!(f, "{} = {}", expr, value)?;
+                }
+
+                Ok(())
+            }
+
+            Instruction::LocalRef { name, .. } => {
+                write!(f, "{}", name)
+            }
+
+            Instruction::Loop { block, .. } => {
+                write!(f, "loop {}", block)
+            }
+
+            Instruction::While { cond, block, .. } => {
+                write!(f, "while {} {}", cond, block)
+            }
+
+            Instruction::Bind {
+                name,
+                parameters,
+                body,
+                return_type,
+                ..
+            } => {
+                write!(f, "bind {}(", name)?;
+
+                for (index, param) in parameters.iter().enumerate() {
+                    write!(f, "{}", param)?;
+
+                    if index > 0 {
+                        write!(f, ", ")?;
+                    }
+                }
+
+                write!(f, ") ")?;
+                write!(f, "{} ", return_type)?;
+                write!(f, "{}", body)?;
+
+                Ok(())
+            }
+
+            Instruction::EntryPoint { body, .. } => {
+                write!(f, "fn main() {}", body)
+            }
+
+            Instruction::NullPtr { .. } => {
+                write!(f, "null")
+            }
+
+            Instruction::Group { expression, .. } => {
+                write!(f, "({})", expression)
+            }
+
+            _ => Ok(()),
         }
     }
 }

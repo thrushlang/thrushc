@@ -1,25 +1,25 @@
 use std::fmt::{self, Display};
-use std::process;
+use std::{mem, process};
 
 use crate::middle::types::frontend::lexer::tokenkind::TokenKind;
 use crate::middle::types::frontend::parser::stmts::traits::TokenExtensions;
+
+use crate::standard::errors::lexer::ThrushLexerPanic;
+use crate::standard::logging::LoggingType;
 use crate::standard::misc::CompilerFile;
 
-use super::super::{
-    logging::LoggingType,
-    standard::{
-        constants::MINIMAL_ERROR_CAPACITY, diagnostic::Diagnostician, error::ThrushCompilerIssue,
-    },
+use super::super::standard::{
+    constants::MINIMAL_ERROR_CAPACITY, diagnostic::Diagnostician, error::ThrushCompilerIssue,
 };
 
 use {
     ahash::{HashMap, HashMapExt},
     lazy_static::lazy_static,
-    std::mem,
 };
 
 const KEYWORDS_CAPACITY: usize = 62;
-const MINIMAL_TOKENS_CAPACITY: usize = 100_000;
+const MINIMAL_TOKENS_CAPACITY: usize = 1_000_000;
+const MAXIMUN_BYTES_TO_LEX: usize = 1_000_000;
 
 lazy_static! {
     static ref KEYWORDS: HashMap<&'static [u8], TokenKind> = {
@@ -105,7 +105,7 @@ pub struct Lexer<'a> {
 }
 
 impl<'a> Lexer<'a> {
-    pub fn lex(code: &'a [u8], file: &'a CompilerFile) -> Vec<Token<'a>> {
+    pub fn lex(code: &'a [u8], file: &'a CompilerFile) -> Result<Vec<Token<'a>>, ThrushLexerPanic> {
         Self {
             tokens: Vec::with_capacity(MINIMAL_TOKENS_CAPACITY),
             errors: Vec::with_capacity(MINIMAL_ERROR_CAPACITY),
@@ -119,7 +119,13 @@ impl<'a> Lexer<'a> {
         .start()
     }
 
-    fn start(&mut self) -> Vec<Token<'a>> {
+    fn start(&mut self) -> Result<Vec<Token<'a>>, ThrushLexerPanic> {
+        if self.code.len() > MAXIMUN_BYTES_TO_LEX {
+            return Err(ThrushLexerPanic::TooBigFile(
+                self.diagnostician.get_file_path(),
+            ));
+        }
+
         while !self.end() {
             self.start = self.current;
             self.start_span();
@@ -144,7 +150,7 @@ impl<'a> Lexer<'a> {
             span: Span::new(self.line, self.span),
         });
 
-        mem::take(&mut self.tokens)
+        Ok(mem::take(&mut self.tokens))
     }
 
     fn scan(&mut self) -> Result<(), ThrushCompilerIssue> {
@@ -715,7 +721,7 @@ pub struct Token<'token> {
 }
 
 impl TokenExtensions for str {
-    fn parse_scapes(&self, span: Span) -> Result<Vec<u8>, ThrushCompilerIssue> {
+    fn to_bytes(&self, span: Span) -> Result<Vec<u8>, ThrushCompilerIssue> {
         let source: &[u8] = self.as_bytes();
 
         let mut parsed_string: Vec<u8> = Vec::with_capacity(source.len());
@@ -757,8 +763,8 @@ impl TokenExtensions for str {
         Ok(parsed_string)
     }
 
-    fn get_first_byte(&self) -> u8 {
-        self.as_bytes()[0]
+    fn get_first_byte(&self) -> u64 {
+        self.as_bytes()[0] as u64
     }
 }
 

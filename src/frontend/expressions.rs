@@ -31,8 +31,9 @@ use crate::{
 use super::{
     contexts::SyncPosition,
     lexer::{Span, Token},
+    parse,
     parser::ParserContext,
-    typecheck, typegen, utils,
+    typecheck, typegen,
 };
 
 pub fn build_expression<'instr>(
@@ -561,7 +562,7 @@ fn primary<'instr>(
             let lexeme: &str = str_tk.lexeme;
             let span: Span = str_tk.span;
 
-            Instruction::Str(ThrushType::Str, lexeme.parse_scapes(span)?, span)
+            Instruction::new_str(ThrushType::Str, lexeme.to_bytes(span)?, span)
         }
 
         TokenKind::Char => {
@@ -569,7 +570,7 @@ fn primary<'instr>(
             let span: Span = char_tk.span;
             let lexeme: &str = char_tk.lexeme;
 
-            Instruction::Char(ThrushType::Char, lexeme.get_first_byte(), span)
+            Instruction::new_char(ThrushType::Char, lexeme.get_first_byte(), span)
         }
 
         TokenKind::NullPtr => Instruction::NullPtr {
@@ -581,25 +582,26 @@ fn primary<'instr>(
             let integer: &str = integer_tk.lexeme;
             let span: Span = integer_tk.span;
 
-            let parsed_integer: (ThrushType, f64) = utils::parse_number(integer, span)?;
+            let parsed_integer: (ThrushType, u64) = parse::integer(integer, span)?;
 
             let integer_type: ThrushType = parsed_integer.0;
-            let integer_value: f64 = parsed_integer.1;
+            let integer_value: u64 = parsed_integer.1;
 
-            Instruction::Integer(integer_type, integer_value, false, span)
+            Instruction::new_integer(integer_type, integer_value, false, span)
         }
 
         TokenKind::Float => {
             let float_tk: &Token = parser_ctx.advance()?;
+
             let float: &str = float_tk.lexeme;
             let span: Span = float_tk.span;
 
-            let parsed_float: (ThrushType, f64) = utils::parse_number(float, span)?;
+            let parsed_float: (ThrushType, f64) = parse::float(float, span)?;
 
             let float_type: ThrushType = parsed_float.0;
             let float_value: f64 = parsed_float.1;
 
-            Instruction::Float(float_type, float_value, false, span)
+            Instruction::new_float(float_type, float_value, false, span)
         }
 
         TokenKind::Identifier => {
@@ -728,9 +730,12 @@ fn primary<'instr>(
             build_reference(parser_ctx, name, span)?
         }
 
-        TokenKind::True => Instruction::Boolean(ThrushType::Bool, true, parser_ctx.advance()?.span),
+        TokenKind::True => {
+            Instruction::new_boolean(ThrushType::Bool, 1, parser_ctx.advance()?.span)
+        }
+
         TokenKind::False => {
-            Instruction::Boolean(ThrushType::Bool, false, parser_ctx.advance()?.span)
+            Instruction::new_boolean(ThrushType::Bool, 0, parser_ctx.advance()?.span)
         }
 
         TokenKind::This => build_this(parser_ctx)?,
@@ -1168,14 +1173,19 @@ fn build_function_call<'instr>(
     }
 
     if arguments_size != maximun_arguments && !ignore_more_args {
-        let display_args_types: String = if !args.is_empty() {
-            args.iter()
-                .map(|arg| arg.get_type().unwrap_or(&ThrushType::Void).to_string())
-                .collect::<Vec<_>>()
-                .join(", ")
+        let mut displayed_args_types: String = String::with_capacity(100);
+
+        if !args.is_empty() {
+            for (index, arg) in args.iter().enumerate() {
+                displayed_args_types.push_str(&format!("{}", arg.get_type()?));
+
+                if index > 0 {
+                    displayed_args_types.push_str(", ");
+                }
+            }
         } else {
-            String::from("none")
-        };
+            displayed_args_types = String::from("none");
+        }
 
         return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
@@ -1183,7 +1193,7 @@ fn build_function_call<'instr>(
                 "Expected '{}' arguments with types '{}', not '{}'.",
                 maximun_arguments,
                 function.get_parameters_types(),
-                display_args_types,
+                displayed_args_types,
             ),
             None,
             span,

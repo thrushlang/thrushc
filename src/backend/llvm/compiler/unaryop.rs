@@ -124,18 +124,27 @@ pub fn unary_op<'ctx>(
         return result.into();
     }
 
-    if let (TokenKind::Bang, _, Instruction::Boolean(_, bool, _)) = unary {
-        let value: IntValue =
-            valuegen::integer(llvm_context, &ThrushType::Bool, *bool as u64, false);
+    if let (TokenKind::Bang, _, Instruction::Boolean { value, .. }) = unary {
+        let value: IntValue = valuegen::integer(llvm_context, &ThrushType::Bool, *value, false);
         let result: IntValue = llvm_builder.build_not(value, "").unwrap();
 
         return result.into();
     }
 
-    if let (TokenKind::Minus, _, Instruction::Integer(kind, num, is_signed, _)) = unary {
-        let value: IntValue = valuegen::integer(llvm_context, kind, *num as u64, *is_signed);
+    if let (
+        TokenKind::Minus,
+        _,
+        Instruction::Integer {
+            kind,
+            value,
+            signed,
+            ..
+        },
+    ) = unary
+    {
+        let value: IntValue = valuegen::integer(llvm_context, kind, *value, *signed);
 
-        if !is_signed {
+        if !signed {
             let result: IntValue = llvm_builder.build_not(value, "").unwrap();
             return result.into();
         }
@@ -143,11 +152,20 @@ pub fn unary_op<'ctx>(
         return value.into();
     }
 
-    if let (TokenKind::Minus, _, Instruction::Float(kind, number, is_signed, _)) = unary {
-        let value: FloatValue =
-            valuegen::float(llvm_builder, llvm_context, kind, *number, *is_signed);
+    if let (
+        TokenKind::Minus,
+        _,
+        Instruction::Float {
+            kind,
+            value,
+            signed,
+            ..
+        },
+    ) = unary
+    {
+        let value: FloatValue = valuegen::float(llvm_builder, llvm_context, kind, *value, *signed);
 
-        if !is_signed {
+        if !signed {
             let result: FloatValue = llvm_builder.build_float_neg(value, "").unwrap();
             return result.into();
         }

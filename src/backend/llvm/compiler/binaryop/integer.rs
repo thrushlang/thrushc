@@ -227,15 +227,21 @@ pub fn integer_binaryop<'ctx>(
     ########################################################################*/
 
     if let (
-        Instruction::Boolean(left_type, left, ..),
+        Instruction::Boolean {
+            kind: left_type,
+            value: left,
+            ..
+        },
         TokenKind::BangEq | TokenKind::EqEq | TokenKind::And | TokenKind::Or,
-        Instruction::Boolean(right_type, right, ..),
+        Instruction::Boolean {
+            kind: right_type,
+            value: right,
+            ..
+        },
     ) = binary
     {
-        let left_compiled: IntValue =
-            valuegen::integer(llvm_context, left_type, *left as u64, false);
-        let right_compiled: IntValue =
-            valuegen::integer(llvm_context, right_type, *right as u64, false);
+        let left_compiled: IntValue = valuegen::integer(llvm_context, left_type, *left, false);
+        let right_compiled: IntValue = valuegen::integer(llvm_context, right_type, *right, false);
 
         return int_operation(
             context,
@@ -247,15 +253,18 @@ pub fn integer_binaryop<'ctx>(
     }
 
     if let (
-        Instruction::Boolean(left_type, left, ..),
+        Instruction::Boolean {
+            kind: left_type,
+            value: left,
+            ..
+        },
         TokenKind::BangEq | TokenKind::EqEq | TokenKind::And | TokenKind::Or,
         Instruction::UnaryOp {
             kind: right_type, ..
         },
     ) = binary
     {
-        let mut left_compiled: IntValue =
-            valuegen::integer(llvm_context, left_type, *left as u64, false);
+        let mut left_compiled: IntValue = valuegen::integer(llvm_context, left_type, *left, false);
 
         let right_dissasembled: LLVMUnaryOp = binary.2.as_unaryop();
 
@@ -287,7 +296,11 @@ pub fn integer_binaryop<'ctx>(
             kind: left_type, ..
         },
         TokenKind::BangEq | TokenKind::EqEq | TokenKind::And | TokenKind::Or,
-        Instruction::Boolean(right_type, right, ..),
+        Instruction::Boolean {
+            kind: right_type,
+            value: right,
+            ..
+        },
     ) = binary
     {
         let left_dissasembled: LLVMUnaryOp = binary.0.as_unaryop();
@@ -295,7 +308,7 @@ pub fn integer_binaryop<'ctx>(
         let mut left_compiled: BasicValueEnum = unaryop::unary_op(context, left_dissasembled);
 
         let mut right_compiled: IntValue =
-            valuegen::integer(llvm_context, right_type, *right as u64, false);
+            valuegen::integer(llvm_context, right_type, *right, false);
 
         if let Some(new_left_compiled) =
             cast::integer(context, target_type, left_type, left_compiled)
@@ -319,7 +332,11 @@ pub fn integer_binaryop<'ctx>(
     }
 
     if let (
-        Instruction::Boolean(left_type, left, ..),
+        Instruction::Boolean {
+            kind: left_type,
+            value: left,
+            ..
+        },
         TokenKind::BangEq | TokenKind::EqEq | TokenKind::And | TokenKind::Or,
         Instruction::LocalRef {
             kind: right_type, ..
@@ -329,8 +346,7 @@ pub fn integer_binaryop<'ctx>(
         },
     ) = binary
     {
-        let mut left_compiled: IntValue =
-            valuegen::integer(llvm_context, left_type, *left as u64, false);
+        let mut left_compiled: IntValue = valuegen::integer(llvm_context, left_type, *left, false);
 
         let mut right_compiled: BasicValueEnum = valuegen::build(binary.2, target_type, context);
 
@@ -363,13 +379,17 @@ pub fn integer_binaryop<'ctx>(
             kind: left_type, ..
         },
         TokenKind::BangEq | TokenKind::EqEq | TokenKind::And | TokenKind::Or,
-        Instruction::Boolean(right_type, right, ..),
+        Instruction::Boolean {
+            kind: right_type,
+            value: right,
+            ..
+        },
     ) = binary
     {
         let mut left_compiled: BasicValueEnum = valuegen::build(binary.0, target_type, context);
 
         let mut right_compiled: IntValue =
-            valuegen::integer(llvm_context, right_type, *right as u64, false);
+            valuegen::integer(llvm_context, right_type, *right, false);
 
         if let Some(new_left_compiled) =
             cast::integer(context, target_type, left_type, left_compiled)
@@ -401,17 +421,23 @@ pub fn integer_binaryop<'ctx>(
     ########################################################################*/
 
     if let (
-        Instruction::Char(left_type, left, ..),
+        Instruction::Char {
+            kind: left_type,
+            byte: left,
+            ..
+        },
         TokenKind::BangEq | TokenKind::EqEq,
-        Instruction::Char(right_type, right, ..),
+        Instruction::Char {
+            kind: right_type,
+            byte: right,
+            ..
+        },
     ) = binary
     {
         let operator: &TokenKind = binary.1;
 
-        let left_compiled: IntValue =
-            valuegen::integer(llvm_context, left_type, *left as u64, false);
-        let right_compiled: IntValue =
-            valuegen::integer(llvm_context, right_type, *right as u64, false);
+        let left_compiled: IntValue = valuegen::integer(llvm_context, left_type, *left, false);
+        let right_compiled: IntValue = valuegen::integer(llvm_context, right_type, *right, false);
 
         return llvm_builder
             .build_int_compare(
@@ -594,7 +620,12 @@ pub fn integer_binaryop<'ctx>(
     }
 
     if let (
-        Instruction::Integer(left_type, left_num, left_signed, ..),
+        Instruction::Integer {
+            kind: left_type,
+            value: left_num,
+            signed: left_signed,
+            ..
+        },
         TokenKind::Plus
         | TokenKind::Slash
         | TokenKind::Minus
@@ -615,7 +646,7 @@ pub fn integer_binaryop<'ctx>(
     ) = binary
     {
         let mut left_compiled: IntValue =
-            valuegen::integer(llvm_context, left_type, *left_num as u64, *left_signed);
+            valuegen::integer(llvm_context, left_type, *left_num, *left_signed);
 
         let right_dissasembled: LLVMUnaryOp = binary.2.as_unaryop();
 
@@ -663,7 +694,12 @@ pub fn integer_binaryop<'ctx>(
         | TokenKind::RShift
         | TokenKind::And
         | TokenKind::Or,
-        Instruction::Integer(right_type, right_num, right_signed, ..),
+        Instruction::Integer {
+            kind: right_type,
+            value: right_num,
+            signed: right_signed,
+            ..
+        },
     ) = binary
     {
         let left_dissasembled: LLVMUnaryOp = binary.0.as_unaryop();
@@ -671,7 +707,7 @@ pub fn integer_binaryop<'ctx>(
         let mut left_compiled: BasicValueEnum = unaryop::unary_op(context, left_dissasembled);
 
         let mut right_compiled: IntValue =
-            valuegen::integer(llvm_context, right_type, *right_num as u64, *right_signed);
+            valuegen::integer(llvm_context, right_type, *right_num, *right_signed);
 
         if let Some(new_left_compiled) =
             cast::integer(context, target_type, left_type, left_compiled)
@@ -1043,7 +1079,12 @@ pub fn integer_binaryop<'ctx>(
     }
 
     if let (
-        Instruction::Integer(left_type, left_num, left_signed, _),
+        Instruction::Integer {
+            kind: left_type,
+            value: left_num,
+            signed: left_signed,
+            ..
+        },
         TokenKind::Plus
         | TokenKind::Slash
         | TokenKind::Minus
@@ -1065,7 +1106,7 @@ pub fn integer_binaryop<'ctx>(
     ) = binary
     {
         let mut left_compiled: IntValue =
-            valuegen::integer(llvm_context, left_type, *left_num as u64, *left_signed);
+            valuegen::integer(llvm_context, left_type, *left_num, *left_signed);
 
         let mut right_compiled: BasicValueEnum = valuegen::build(binary.2, target_type, context);
 
@@ -1112,13 +1153,18 @@ pub fn integer_binaryop<'ctx>(
         | TokenKind::RShift
         | TokenKind::And
         | TokenKind::Or,
-        Instruction::Integer(right_type, right_num, right_signed, ..),
+        Instruction::Integer {
+            kind: right_type,
+            value: right_num,
+            signed: right_signed,
+            ..
+        },
     ) = binary
     {
         let mut left_compiled: BasicValueEnum = valuegen::build(binary.0, target_type, context);
 
         let mut right_compiled: IntValue =
-            valuegen::integer(llvm_context, right_type, *right_num as u64, *right_signed);
+            valuegen::integer(llvm_context, right_type, *right_num, *right_signed);
 
         if let Some(new_left_compiled) =
             cast::integer(context, target_type, left_call_type, left_compiled)
@@ -1382,7 +1428,12 @@ pub fn integer_binaryop<'ctx>(
     ########################################################################*/
 
     if let (
-        Instruction::Integer(left_type, left_num, left_signed, ..),
+        Instruction::Integer {
+            kind: left_type,
+            value: left_num,
+            signed: left_signed,
+            ..
+        },
         TokenKind::Plus
         | TokenKind::Slash
         | TokenKind::Minus
@@ -1397,13 +1448,18 @@ pub fn integer_binaryop<'ctx>(
         | TokenKind::RShift
         | TokenKind::And
         | TokenKind::Or,
-        Instruction::Integer(right_type, right_num, right_signed, ..),
+        Instruction::Integer {
+            kind: right_type,
+            value: right_num,
+            signed: right_signed,
+            ..
+        },
     ) = binary
     {
         let mut left_compiled: IntValue =
-            valuegen::integer(llvm_context, left_type, *left_num as u64, *left_signed);
+            valuegen::integer(llvm_context, left_type, *left_num, *left_signed);
         let mut right_compiled: IntValue =
-            valuegen::integer(llvm_context, right_type, *right_num as u64, *right_signed);
+            valuegen::integer(llvm_context, right_type, *right_num, *right_signed);
 
         if let Some(new_left_compiled) =
             cast::integer(context, target_type, left_type, left_compiled.into())
@@ -1427,7 +1483,12 @@ pub fn integer_binaryop<'ctx>(
     }
 
     if let (
-        Instruction::Integer(left_type, left_num, left_signed, ..),
+        Instruction::Integer {
+            kind: left_type,
+            value: left_num,
+            signed: left_signed,
+            ..
+        },
         TokenKind::Plus
         | TokenKind::Slash
         | TokenKind::Minus
@@ -1455,7 +1516,7 @@ pub fn integer_binaryop<'ctx>(
     ) = binary
     {
         let mut left_compiled: IntValue =
-            valuegen::integer(llvm_context, left_type, *left_num as u64, *left_signed);
+            valuegen::integer(llvm_context, left_type, *left_num, *left_signed);
 
         let mut right_compiled: BasicValueEnum = context.get_allocated_symbol(name).load(context);
 
@@ -1651,7 +1712,12 @@ pub fn integer_binaryop<'ctx>(
     }
 
     if let (
-        Instruction::Integer(left_type, left_num, left_signed, ..),
+        Instruction::Integer {
+            kind: left_type,
+            value: left_num,
+            signed: left_signed,
+            ..
+        },
         TokenKind::Plus
         | TokenKind::Slash
         | TokenKind::Minus
@@ -1672,7 +1738,7 @@ pub fn integer_binaryop<'ctx>(
     ) = binary
     {
         let mut left_compiled: IntValue =
-            valuegen::integer(llvm_context, left_type, *left_num as u64, *left_signed);
+            valuegen::integer(llvm_context, left_type, *left_num, *left_signed);
 
         let right_dissasembled: LLVMBinaryOp = binary.2.as_binary();
 
@@ -1718,7 +1784,12 @@ pub fn integer_binaryop<'ctx>(
         | TokenKind::RShift
         | TokenKind::And
         | TokenKind::Or,
-        Instruction::Integer(right_type, right_num, right_signed, ..),
+        Instruction::Integer {
+            kind: right_type,
+            value: right_num,
+            signed: right_signed,
+            ..
+        },
     ) = binary
     {
         let left_dissasembled: LLVMBinaryOp = binary.0.as_binary();
@@ -1727,7 +1798,7 @@ pub fn integer_binaryop<'ctx>(
             integer_binaryop(left_dissasembled, target_type, context).into_int_value();
 
         let mut right_compiled: IntValue =
-            valuegen::integer(llvm_context, right_type, *right_num as u64, *right_signed);
+            valuegen::integer(llvm_context, right_type, *right_num, *right_signed);
 
         if let Some(new_left_compiled) =
             cast::integer(context, target_type, left_type, left_compiled.into())
@@ -1775,13 +1846,18 @@ pub fn integer_binaryop<'ctx>(
         | TokenKind::RShift
         | TokenKind::And
         | TokenKind::Or,
-        Instruction::Integer(right_type, right_num, right_signed, ..),
+        Instruction::Integer {
+            kind: right_type,
+            value: right_num,
+            signed: right_signed,
+            ..
+        },
     ) = binary
     {
         let mut left_compiled: BasicValueEnum = context.get_allocated_symbol(name).load(context);
 
         let mut right_compiled: IntValue =
-            valuegen::integer(llvm_context, right_type, *right_num as u64, *right_signed);
+            valuegen::integer(llvm_context, right_type, *right_num, *right_signed);
 
         if let Some(new_left_compiled) =
             cast::integer(context, target_type, left_type, left_compiled)
@@ -1824,7 +1900,12 @@ pub fn integer_binaryop<'ctx>(
         | TokenKind::RShift
         | TokenKind::And
         | TokenKind::Or,
-        Instruction::Integer(right_type, right_num, right_signed, ..),
+        Instruction::Integer {
+            kind: right_type,
+            value: right_num,
+            signed: right_signed,
+            ..
+        },
     ) = binary
     {
         let left_dissasembled: LLVMBinaryOp = expression.as_binary();
@@ -1833,7 +1914,7 @@ pub fn integer_binaryop<'ctx>(
             integer_binaryop(left_dissasembled, target_type, context).into_int_value();
 
         let mut right_compiled: IntValue =
-            valuegen::integer(llvm_context, right_type, *right_num as u64, *right_signed);
+            valuegen::integer(llvm_context, right_type, *right_num, *right_signed);
 
         if let Some(new_left_compiled) =
             cast::integer(context, target_type, left_type, left_compiled.into())
@@ -1857,7 +1938,12 @@ pub fn integer_binaryop<'ctx>(
     }
 
     if let (
-        Instruction::Integer(left_type, left_num, left_signed, ..),
+        Instruction::Integer {
+            kind: left_type,
+            value: left_num,
+            signed: left_signed,
+            ..
+        },
         TokenKind::Plus
         | TokenKind::Slash
         | TokenKind::Minus
@@ -1880,7 +1966,7 @@ pub fn integer_binaryop<'ctx>(
     ) = binary
     {
         let mut left_compiled: IntValue =
-            valuegen::integer(llvm_context, left_type, *left_num as u64, *left_signed);
+            valuegen::integer(llvm_context, left_type, *left_num, *left_signed);
 
         let right_dissasembled: LLVMBinaryOp = expression.as_binary();
 

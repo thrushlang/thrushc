@@ -26,11 +26,11 @@ pub fn alloc<'ctx>(
     context: &'ctx Context,
     builder: &Builder<'ctx>,
     kind: &ThrushType,
-    alloc_in_heap: bool,
+    heap: bool,
 ) -> PointerValue<'ctx> {
     let llvm_type: BasicTypeEnum = typegen::generate_subtype(context, kind);
 
-    if alloc_in_heap {
+    if heap {
         return builder.build_malloc(llvm_type, "").unwrap();
     }
 
@@ -41,18 +41,18 @@ pub fn integer<'ctx>(
     context: &'ctx Context,
     kind: &'ctx ThrushType,
     number: u64,
-    is_signed: bool,
+    signed: bool,
 ) -> IntValue<'ctx> {
     match kind {
-        ThrushType::Char => context.i8_type().const_int(number, is_signed).const_neg(),
-        ThrushType::S8 if is_signed => context.i8_type().const_int(number, is_signed).const_neg(),
-        ThrushType::S8 => context.i8_type().const_int(number, is_signed),
-        ThrushType::S16 if is_signed => context.i16_type().const_int(number, is_signed).const_neg(),
-        ThrushType::S16 => context.i16_type().const_int(number, is_signed),
-        ThrushType::S32 if is_signed => context.i32_type().const_int(number, is_signed).const_neg(),
-        ThrushType::S32 => context.i32_type().const_int(number, is_signed),
-        ThrushType::S64 if is_signed => context.i64_type().const_int(number, is_signed).const_neg(),
-        ThrushType::S64 => context.i64_type().const_int(number, is_signed),
+        ThrushType::Char => context.i8_type().const_int(number, signed).const_neg(),
+        ThrushType::S8 if signed => context.i8_type().const_int(number, signed).const_neg(),
+        ThrushType::S8 => context.i8_type().const_int(number, signed),
+        ThrushType::S16 if signed => context.i16_type().const_int(number, signed).const_neg(),
+        ThrushType::S16 => context.i16_type().const_int(number, signed),
+        ThrushType::S32 if signed => context.i32_type().const_int(number, signed).const_neg(),
+        ThrushType::S32 => context.i32_type().const_int(number, signed),
+        ThrushType::S64 if signed => context.i64_type().const_int(number, signed).const_neg(),
+        ThrushType::S64 => context.i64_type().const_int(number, signed),
         ThrushType::U8 => context.i8_type().const_int(number, false),
         ThrushType::U16 => context.i16_type().const_int(number, false),
         ThrushType::U32 => context.i32_type().const_int(number, false),
@@ -68,14 +68,14 @@ pub fn float<'ctx>(
     context: &'ctx Context,
     kind: &'ctx ThrushType,
     number: f64,
-    is_signed: bool,
+    signed: bool,
 ) -> FloatValue<'ctx> {
     match kind {
-        ThrushType::F32 if is_signed => builder
+        ThrushType::F32 if signed => builder
             .build_float_neg(context.f32_type().const_float(number), "")
             .unwrap(),
         ThrushType::F32 => context.f32_type().const_float(number),
-        ThrushType::F64 if is_signed => builder
+        ThrushType::F64 if signed => builder
             .build_float_neg(context.f64_type().const_float(number), "")
             .unwrap(),
         ThrushType::F64 => context.f64_type().const_float(number),
@@ -99,12 +99,18 @@ pub fn build<'ctx>(
             .into();
     }
 
-    if let Instruction::Str(_, bytes, ..) = expression {
+    if let Instruction::Str { bytes, .. } = expression {
         return utils::build_str_constant(llvm_module, llvm_context, bytes).into();
     }
 
-    if let Instruction::Float(kind, num, is_signed, ..) = expression {
-        let mut float: FloatValue = float(llvm_builder, llvm_context, kind, *num, *is_signed);
+    if let Instruction::Float {
+        kind,
+        value,
+        signed,
+        ..
+    } = expression
+    {
+        let mut float: FloatValue = float(llvm_builder, llvm_context, kind, *value, *signed);
 
         if let Some(casted_float) = cast::float(context, cast_target, kind, float.into()) {
             float = casted_float.into_float_value();
@@ -113,8 +119,14 @@ pub fn build<'ctx>(
         return float.into();
     }
 
-    if let Instruction::Integer(kind, num, is_signed, ..) = expression {
-        let mut integer: IntValue = integer(llvm_context, kind, *num as u64, *is_signed);
+    if let Instruction::Integer {
+        kind,
+        value,
+        signed,
+        ..
+    } = expression
+    {
+        let mut integer: IntValue = integer(llvm_context, kind, *value, *signed);
 
         if let Some(casted_integer) = cast::integer(context, cast_target, kind, integer.into()) {
             integer = casted_integer.into_int_value();
@@ -123,15 +135,12 @@ pub fn build<'ctx>(
         return integer.into();
     }
 
-    if let Instruction::Char(_, byte, ..) = expression {
-        return llvm_context.i8_type().const_int(*byte as u64, false).into();
+    if let Instruction::Char { byte, .. } = expression {
+        return llvm_context.i8_type().const_int(*byte, false).into();
     }
 
-    if let Instruction::Boolean(_, bool, ..) = expression {
-        return llvm_context
-            .bool_type()
-            .const_int(*bool as u64, false)
-            .into();
+    if let Instruction::Boolean { value, .. } = expression {
+        return llvm_context.bool_type().const_int(*value, false).into();
     }
 
     if let Instruction::Write {

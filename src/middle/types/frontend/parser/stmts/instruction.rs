@@ -15,19 +15,44 @@ use crate::{
 
 use super::types::{CompilerAttributes, Constructor};
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub enum Instruction<'ctx> {
-    // Primitive types
-    Str(ThrushType, Vec<u8>, Span),
-    Char(ThrushType, u8, Span),
-    Boolean(ThrushType, bool, Span),
-    Integer(ThrushType, f64, bool, Span),
-    Float(ThrushType, f64, bool, Span),
+    Str {
+        kind: ThrushType,
+        bytes: Vec<u8>,
+        span: Span,
+    },
+
+    Char {
+        kind: ThrushType,
+        byte: u64,
+        span: Span,
+    },
+
+    Boolean {
+        kind: ThrushType,
+        value: u64,
+        span: Span,
+    },
+
+    Integer {
+        kind: ThrushType,
+        value: u64,
+        signed: bool,
+        span: Span,
+    },
+
+    Float {
+        kind: ThrushType,
+        value: f64,
+        signed: bool,
+        span: Span,
+    },
+
     NullPtr {
         span: Span,
     },
 
-    // LLVMValue
     LLVMValue(BasicValueEnum<'ctx>),
 
     // Structures
@@ -53,6 +78,7 @@ pub enum Instruction<'ctx> {
     Bindings {
         name: String,
         binds: Vec<Instruction<'ctx>>,
+        span: Span,
     },
 
     Bind {
@@ -61,6 +87,7 @@ pub enum Instruction<'ctx> {
         body: Rc<Instruction<'ctx>>,
         return_type: ThrushType,
         attributes: CompilerAttributes<'ctx>,
+        span: Span,
     },
 
     This {
@@ -275,15 +302,16 @@ pub enum Instruction<'ctx> {
         span: Span,
     },
 
-    #[default]
-    Null,
+    Null {
+        span: Span,
+    },
 }
 
 impl<'ctx> Instruction<'ctx> {
     pub fn get_type(&self) -> Result<&ThrushType, ThrushCompilerIssue> {
         match self {
-            Instruction::Integer(kind, ..) => Ok(kind),
-            Instruction::Float(kind, ..) => Ok(kind),
+            Instruction::Integer { kind, .. } => Ok(kind),
+            Instruction::Float { kind, .. } => Ok(kind),
             Instruction::Local { kind, .. } => Ok(kind),
             Instruction::Mut { kind, .. } => Ok(kind),
             Instruction::FunctionParameter { kind, .. } => Ok(kind),
@@ -294,9 +322,9 @@ impl<'ctx> Instruction<'ctx> {
             Instruction::Group { kind, .. } => Ok(kind),
             Instruction::UnaryOp { kind, .. } => Ok(kind),
 
-            Instruction::Str(kind, _, _) => Ok(kind),
-            Instruction::Boolean(kind, _, _) => Ok(kind),
-            Instruction::Char(kind, _, _) => Ok(kind),
+            Instruction::Str { kind, .. } => Ok(kind),
+            Instruction::Boolean { kind, .. } => Ok(kind),
+            Instruction::Char { kind, .. } => Ok(kind),
             Instruction::Address { .. } => Ok(&ThrushType::Address),
             Instruction::Constructor { kind, .. } => Ok(kind),
             Instruction::Carry {
@@ -320,8 +348,8 @@ impl<'ctx> Instruction<'ctx> {
 
     pub fn get_type_unwrapped(&self) -> &ThrushType {
         match self {
-            Instruction::Integer(kind, ..) => kind,
-            Instruction::Float(kind, ..) => kind,
+            Instruction::Integer { kind, .. } => kind,
+            Instruction::Float { kind, .. } => kind,
             Instruction::Local { kind, .. } => kind,
             Instruction::Mut { kind, .. } => kind,
             Instruction::FunctionParameter { kind, .. } => kind,
@@ -332,9 +360,9 @@ impl<'ctx> Instruction<'ctx> {
             Instruction::Group { kind, .. } => kind,
             Instruction::UnaryOp { kind, .. } => kind,
 
-            Instruction::Str(kind, _, _) => kind,
-            Instruction::Boolean(kind, _, _) => kind,
-            Instruction::Char(kind, _, _) => kind,
+            Instruction::Str { kind, .. } => kind,
+            Instruction::Boolean { kind, .. } => kind,
+            Instruction::Char { kind, .. } => kind,
             Instruction::Address { .. } => &ThrushType::Address,
             Instruction::Constructor { kind, .. } => kind,
             Instruction::Carry {
@@ -355,8 +383,8 @@ impl<'ctx> Instruction<'ctx> {
 
     pub fn get_span(&self) -> Result<Span, ThrushCompilerIssue> {
         match self {
-            Instruction::Integer(_, _, _, span) => Ok(*span),
-            Instruction::Float(_, _, _, span) => Ok(*span),
+            Instruction::Integer { span, .. } => Ok(*span),
+            Instruction::Float { span, .. } => Ok(*span),
             Instruction::Local { span, .. } => Ok(*span),
             Instruction::Mut { span, .. } => Ok(*span),
             Instruction::FunctionParameter { span, .. } => Ok(*span),
@@ -367,9 +395,9 @@ impl<'ctx> Instruction<'ctx> {
             Instruction::Group { span, .. } => Ok(*span),
             Instruction::UnaryOp { span, .. } => Ok(*span),
 
-            Instruction::Str(_, _, span) => Ok(*span),
-            Instruction::Boolean(_, _, span) => Ok(*span),
-            Instruction::Char(_, _, span) => Ok(*span),
+            Instruction::Str { span, .. } => Ok(*span),
+            Instruction::Boolean { span, .. } => Ok(*span),
+            Instruction::Char { span, .. } => Ok(*span),
             Instruction::Address { span, .. } => Ok(*span),
             Instruction::Constructor { span, .. } => Ok(*span),
             Instruction::Carry { span, .. } => Ok(*span),
@@ -391,10 +419,14 @@ impl<'ctx> Instruction<'ctx> {
             Instruction::While { span, .. } => Ok(*span),
             Instruction::For { span, .. } => Ok(*span),
             Instruction::Pass { span } => Ok(*span),
+            Instruction::Bind { span, .. } => Ok(*span),
+            Instruction::Bindings { span, .. } => Ok(*span),
+
+            Instruction::Null { span } => Ok(*span),
 
             _ => Err(ThrushCompilerIssue::Error(
                 String::from("Syntax error"),
-                String::from("Expected a valid statament to get a valid code point."),
+                String::from("Expected a value to get its code position."),
                 None,
                 Span::default(),
             )),
@@ -503,12 +535,49 @@ impl<'ctx> Instruction<'ctx> {
     }
 }
 
+impl<'ctx> Instruction<'ctx> {
+    pub fn new_float(kind: ThrushType, value: f64, signed: bool, span: Span) -> Instruction<'ctx> {
+        Instruction::Float {
+            kind,
+            value,
+            signed,
+            span,
+        }
+    }
+
+    pub fn new_integer(
+        kind: ThrushType,
+        value: u64,
+        signed: bool,
+        span: Span,
+    ) -> Instruction<'ctx> {
+        Instruction::Integer {
+            kind,
+            value,
+            signed,
+            span,
+        }
+    }
+
+    pub fn new_boolean(kind: ThrushType, value: u64, span: Span) -> Instruction<'ctx> {
+        Instruction::Boolean { kind, value, span }
+    }
+
+    pub fn new_char(kind: ThrushType, byte: u64, span: Span) -> Instruction<'ctx> {
+        Instruction::Char { kind, byte, span }
+    }
+
+    pub fn new_str(kind: ThrushType, bytes: Vec<u8>, span: Span) -> Instruction<'ctx> {
+        Instruction::Str { kind, bytes, span }
+    }
+}
+
 impl Instruction<'_> {
     pub fn cast_signess(&mut self, operator: TokenKind) {
-        if let Instruction::Integer(kind, _, is_signed, _) = self {
+        if let Instruction::Integer { kind, signed, .. } = self {
             if operator.is_minus_operator() {
                 *kind = kind.narrowing_cast();
-                *is_signed = true;
+                *signed = true;
             }
         }
 
@@ -518,9 +587,9 @@ impl Instruction<'_> {
             }
         }
 
-        if let Instruction::Float(_, _, is_signed, _) = self {
+        if let Instruction::Float { signed, .. } = self {
             if operator.is_minus_operator() {
-                *is_signed = true;
+                *signed = true;
             }
         }
     }
@@ -632,7 +701,7 @@ impl Instruction<'_> {
 
     #[inline]
     pub const fn is_null(&self) -> bool {
-        matches!(self, Instruction::Null)
+        matches!(self, Instruction::Null { .. })
     }
 
     #[inline]
@@ -642,7 +711,7 @@ impl Instruction<'_> {
 
     #[inline]
     pub const fn is_bool(&self) -> bool {
-        matches!(self, Instruction::Boolean(_, _, _))
+        matches!(self, Instruction::Boolean { .. })
     }
 
     #[inline]
