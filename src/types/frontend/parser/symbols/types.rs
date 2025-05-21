@@ -2,21 +2,11 @@ use ahash::AHashMap as HashMap;
 
 use crate::{
     frontend::lexer::span::Span,
-    middle::types::frontend::{
+    types::frontend::{
         lexer::types::ThrushType,
         parser::stmts::types::{CompilerAttributes, CustomTypeFields, EnumFields},
     },
 };
-
-pub type FoundSymbolId<'instr> = (
-    Option<&'instr str>,
-    Option<&'instr str>,
-    Option<&'instr str>,
-    Option<&'instr str>,
-    Option<&'instr str>,
-    Option<&'instr str>,
-    Option<(&'instr str, usize)>,
-);
 
 pub type Struct<'instr> = (
     &'instr str,
@@ -40,6 +30,16 @@ pub struct ParametersTypes(pub Vec<ThrushType>);
 
 
 ########################################################################*/
+
+pub type FoundSymbolId<'instr> = (
+    Option<&'instr str>,
+    Option<&'instr str>,
+    Option<&'instr str>,
+    Option<&'instr str>,
+    Option<&'instr str>,
+    Option<&'instr str>,
+    Option<(&'instr str, usize)>,
+);
 
 pub type CustomTypeSymbol<'ctx> = (CustomTypeFields<'ctx>, CompilerAttributes<'ctx>);
 pub type EnumSymbol<'ctx> = (EnumFields<'ctx>, CompilerAttributes<'ctx>);

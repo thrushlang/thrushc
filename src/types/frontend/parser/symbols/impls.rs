@@ -2,14 +2,14 @@ use std::fmt::Display;
 
 use crate::{
     frontend::lexer::span::Span,
-    middle::types::frontend::{
+    standard::error::ThrushCompilerIssue,
+    types::frontend::{
         lexer::types::ThrushType,
         parser::stmts::{
             traits::{FoundSymbolEither, FoundSymbolExtension, StructExtensions},
             types::StructFields,
         },
     },
-    standard::error::ThrushCompilerIssue,
 };
 
 use super::{

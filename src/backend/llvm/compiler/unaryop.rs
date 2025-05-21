@@ -1,8 +1,9 @@
-use crate::middle::types::backend::llvm::types::LLVMUnaryOp;
-use crate::middle::types::frontend::lexer::tokenkind::TokenKind;
-use crate::middle::types::frontend::lexer::types::ThrushType;
+use crate::types::backend::llvm::types::LLVMUnaryOp;
+use crate::types::frontend::lexer::tokenkind::TokenKind;
+use crate::types::frontend::lexer::types::ThrushType;
+use crate::types::frontend::parser::stmts::stmt::ThrushStatement;
 
-use super::{ThrushStatement, context::LLVMCodeGenContext, memory::SymbolAllocated, valuegen};
+use super::{context::LLVMCodeGenContext, memory::SymbolAllocated, valuegen};
 
 use super::typegen;
 

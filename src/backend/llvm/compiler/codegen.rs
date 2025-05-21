@@ -1,8 +1,8 @@
-use crate::middle::types::backend::llvm::types::{LLVMFunctionParameter, LLVMFunctionPrototype};
-use crate::middle::types::frontend::lexer::types::ThrushType;
+use crate::types::backend::llvm::types::{LLVMFunctionParameter, LLVMFunctionPrototype};
+use crate::types::frontend::lexer::types::ThrushType;
 
-use crate::middle::types::frontend::parser::stmts::stmt::ThrushStatement;
 use crate::standard::diagnostic::Diagnostician;
+use crate::types::frontend::parser::stmts::stmt::ThrushStatement;
 
 use super::super::compiler::attributes::LLVMAttribute;
 

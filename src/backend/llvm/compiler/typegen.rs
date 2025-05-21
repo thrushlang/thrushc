@@ -6,8 +6,8 @@ use inkwell::{
     types::{BasicMetadataTypeEnum, FloatType, IntType},
 };
 
-use crate::middle::types::frontend::lexer::types::ThrushType;
-use crate::middle::types::frontend::parser::stmts::stmt::ThrushStatement;
+use crate::types::frontend::lexer::types::ThrushType;
+use crate::types::frontend::parser::stmts::stmt::ThrushStatement;
 
 use super::context::LLVMCodeGenContext;
 

@@ -1,7 +1,7 @@
 mod backend;
 mod frontend;
-mod middle;
 mod standard;
+mod types;
 
 use {
     colored::{Colorize, control},

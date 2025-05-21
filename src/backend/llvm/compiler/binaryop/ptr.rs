@@ -7,7 +7,7 @@ use inkwell::{
 
 use crate::{
     backend::llvm::compiler::{context::LLVMCodeGenContext, predicates, valuegen},
-    middle::types::{
+    types::{
         backend::llvm::types::LLVMBinaryOp,
         frontend::{
             lexer::{tokenkind::TokenKind, types::ThrushType},

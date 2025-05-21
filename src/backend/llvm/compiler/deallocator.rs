@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use inkwell::values::BasicValueEnum;
 
-use crate::middle::types::{
+use crate::types::{
     backend::llvm::{traits::LLVMDeallocator, types::SymbolsAllocated},
     frontend::{lexer::types::ThrushType, parser::stmts::stmt::ThrushStatement},
 };

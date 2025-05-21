@@ -3,11 +3,11 @@ use std::rc::Rc;
 use crate::backend::llvm::compiler::context::LLVMCodeGenContextPosition;
 use crate::backend::llvm::compiler::memory::{self, SymbolAllocated};
 use crate::backend::llvm::compiler::{binaryop, builtins, cast, unaryop, utils};
-use crate::middle::types::backend::llvm::types::LLVMFunction;
-use crate::middle::types::frontend::lexer::types::ThrushType;
-use crate::middle::types::frontend::parser::stmts::stmt::ThrushStatement;
-use crate::middle::types::frontend::parser::stmts::traits::CompilerAttributesExtensions;
-use crate::middle::types::frontend::parser::stmts::types::CompilerAttributes;
+use crate::types::backend::llvm::types::LLVMFunction;
+use crate::types::frontend::lexer::types::ThrushType;
+use crate::types::frontend::parser::stmts::stmt::ThrushStatement;
+use crate::types::frontend::parser::stmts::traits::CompilerAttributesExtensions;
+use crate::types::frontend::parser::stmts::types::CompilerAttributes;
 
 use super::context::LLVMCodeGenContext;
 use super::typegen;

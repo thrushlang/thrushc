@@ -1,12 +1,12 @@
 use crate::{
-    middle::types::{
+    standard::logging::{self, LoggingType},
+    types::{
         backend::llvm::types::LLVMFunctionCall,
         frontend::{
             lexer::types::ThrushType,
             parser::symbols::types::{Functions, ParametersTypes},
         },
     },
-    standard::logging::{self, LoggingType},
 };
 
 use super::{ThrushStatement, cast, context::LLVMCodeGenContext, memory::SymbolAllocated, typegen};

@@ -1,37 +1,37 @@
-use std::process;
+#![allow(clippy::only_used_in_recursion)]
 
 use ahash::AHashMap as HashMap;
 
 use crate::{
     frontend::lexer::span::Span,
-    middle::types::frontend::{
-        lexer::{tokenkind::TokenKind, types::ThrushType},
-        parser::stmts::{stmt::ThrushStatement, traits::CompilerAttributesExtensions},
-    },
     standard::{
         constants::MINIMAL_ERROR_CAPACITY, diagnostic::Diagnostician, error::ThrushCompilerIssue,
         logging::LoggingType, misc::CompilerFile,
     },
+    types::frontend::{
+        lexer::{tokenkind::TokenKind, types::ThrushType},
+        parser::stmts::{stmt::ThrushStatement, traits::CompilerAttributesExtensions},
+        typechecker::types::{
+            TypeCheckerBind, TypeCheckerBindings, TypeCheckerBinds, TypeCheckerFunction,
+            TypeCheckerFunctions, TypeCheckerLocal, TypeCheckerLocals,
+        },
+    },
 };
-
-type TypeCheckerLocal<'symbol> = &'symbol ThrushType;
-type TypeCheckerLocals<'symbol> = Vec<HashMap<&'symbol str, TypeCheckerLocal<'symbol>>>;
-
-type TypeCheckerFunction<'symbol> = (&'symbol [ThrushType], bool);
-type TypeCheckerFunctions<'symbol> = HashMap<&'symbol str, TypeCheckerFunction<'symbol>>;
 
 #[derive(Debug)]
 pub struct TypeCheckerSymbolsTable<'symbol> {
     functions: TypeCheckerFunctions<'symbol>,
     locals: TypeCheckerLocals<'symbol>,
+    bindings: TypeCheckerBindings<'symbol>,
     scope: usize,
 }
 
 impl<'symbol> TypeCheckerSymbolsTable<'symbol> {
     pub fn new() -> Self {
         Self {
-            functions: HashMap::with_capacity(200),
+            functions: HashMap::with_capacity(100),
             locals: Vec::with_capacity(200),
+            bindings: HashMap::with_capacity(100),
             scope: 0,
         }
     }
@@ -42,6 +42,10 @@ impl<'symbol> TypeCheckerSymbolsTable<'symbol> {
 
     pub fn new_function(&mut self, name: &'symbol str, function: (&'symbol [ThrushType], bool)) {
         self.functions.insert(name, function);
+    }
+
+    pub fn new_bindings(&mut self, name: &'symbol str, binds: TypeCheckerBinds<'symbol>) {
+        self.bindings.insert(name, binds);
     }
 
     pub fn get_local(&self, name: &'symbol str) -> Option<TypeCheckerLocal<'symbol>> {
@@ -58,6 +62,32 @@ impl<'symbol> TypeCheckerSymbolsTable<'symbol> {
 
     pub fn get_function(&self, name: &'symbol str) -> Option<&TypeCheckerFunction<'symbol>> {
         self.functions.get(name)
+    }
+
+    pub fn split_bind_call_name(&self, from: &'symbol str) -> Option<(&'symbol str, &'symbol str)> {
+        let splitted: Vec<&str> = from.split(".").collect();
+
+        if let Some(binding_name) = splitted.first() {
+            if let Some(bind_name) = splitted.get(1) {
+                return Some((binding_name, bind_name));
+            }
+        }
+
+        None
+    }
+
+    pub fn get_specific_bind(
+        &self,
+        binding_name: &'symbol str,
+        bind_name: &'symbol str,
+    ) -> Option<&TypeCheckerBind<'symbol>> {
+        if let Some(binds) = self.bindings.get(binding_name) {
+            if let Some(bind) = binds.iter().find(|bind| bind.0 == bind_name) {
+                return Some(&bind.1);
+            }
+        }
+
+        None
     }
 
     pub fn begin_scope(&mut self) {
@@ -295,14 +325,14 @@ impl<'stmts> TypeChecker<'stmts> {
                 let mut parameter_types_displayed: String = String::with_capacity(100);
 
                 parameter_types.iter().for_each(|parameter_type| {
-                    parameter_types_displayed.push_str(&format!("{}", parameter_type));
+                    parameter_types_displayed.push_str(&format!("{} ", parameter_type));
                 });
 
                 if args.len() != parameter_types_size && !ignore_more_arguments {
                     self.add_error(ThrushCompilerIssue::Error(
                         String::from("Syntax error"),
                         format!(
-                            "Expected \"{}\" arguments, with types {}",
+                            "Expected \"{}\" arguments, with types \"{}\".",
                             parameter_types_size, parameter_types_displayed
                         ),
                         None,
@@ -314,6 +344,48 @@ impl<'stmts> TypeChecker<'stmts> {
 
                 if !ignore_more_arguments {
                     for (target_type, arg) in parameter_types.iter().zip(args.iter()) {
+                        let from_type: &ThrushType = arg.get_type()?;
+                        let span: Span = arg.get_span();
+
+                        if let Err(mismatched_types_error) =
+                            self.is_mismatch_type(target_type, from_type, Some(arg), None, &span)
+                        {
+                            self.add_error(mismatched_types_error);
+                        }
+                    }
+                }
+            }
+        }
+
+        if let ThrushStatement::BindCall {
+            name, args, span, ..
+        } = stmt
+        {
+            if let Some((binding_name, bind_name)) = self.symbols.split_bind_call_name(name) {
+                if let Some(types) = self.symbols.get_specific_bind(binding_name, bind_name) {
+                    let types_size: usize = types.len();
+
+                    let mut types_displayed: String = String::with_capacity(100);
+
+                    types.iter().for_each(|parameter_type| {
+                        types_displayed.push_str(&format!("{}", parameter_type));
+                    });
+
+                    if args.len() != types_size {
+                        self.add_error(ThrushCompilerIssue::Error(
+                            String::from("Syntax error"),
+                            format!(
+                                "Expected \"{}\" arguments, with types \"{}\".",
+                                types_size, types_displayed
+                            ),
+                            None,
+                            *span,
+                        ));
+
+                        return Ok(());
+                    }
+
+                    for (target_type, arg) in types.iter().zip(args.iter()) {
                         let from_type: &ThrushType = arg.get_type()?;
                         let span: Span = arg.get_span();
 
@@ -1059,6 +1131,28 @@ impl<'stmts> TypeChecker<'stmts> {
                 {
                     self.symbols
                         .new_function(name, (types, attributes.has_public_attribute()));
+                }
+            });
+
+        self.stmts
+            .iter()
+            .filter(|stmt| stmt.is_bindings())
+            .for_each(|stmt| {
+                if let ThrushStatement::Bindings { name, binds, .. } = stmt {
+                    let binds: Vec<(&'stmts str, &'stmts [ThrushType])> = binds
+                        .iter()
+                        .filter_map(|stmt| match stmt {
+                            ThrushStatement::Bind {
+                                name,
+                                parameters_types,
+                                ..
+                            } => Some((*name, parameters_types.as_slice())),
+
+                            _ => None,
+                        })
+                        .collect();
+
+                    self.symbols.new_bindings(name, binds);
                 }
             });
     }

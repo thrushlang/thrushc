@@ -1,7 +1,7 @@
 use crate::{
     frontend::lexer::span::Span,
-    middle::types::frontend::{lexer::types::ThrushType, parser::symbols::types::Bindings},
     standard::error::ThrushCompilerIssue,
+    types::frontend::{lexer::types::ThrushType, parser::symbols::types::Bindings},
 };
 
 use super::types::{EnumField, EnumFields, StructFields};

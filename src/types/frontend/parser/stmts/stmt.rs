@@ -6,11 +6,11 @@ use inkwell::values::BasicValueEnum;
 
 use crate::{
     frontend::lexer::span::Span,
-    middle::types::{
+    standard::error::ThrushCompilerIssue,
+    types::{
         backend::llvm::types::{LLVMBinaryOp, LLVMFunctionPrototype, LLVMUnaryOp},
         frontend::lexer::{tokenkind::TokenKind, types::ThrushType},
     },
-    standard::error::ThrushCompilerIssue,
 };
 
 use super::types::{CompilerAttributes, Constructor};
@@ -84,6 +84,7 @@ pub enum ThrushStatement<'ctx> {
     Bind {
         name: &'ctx str,
         parameters: Vec<ThrushStatement<'ctx>>,
+        parameters_types: Vec<ThrushType>,
         body: Rc<ThrushStatement<'ctx>>,
         return_type: ThrushType,
         attributes: CompilerAttributes<'ctx>,
@@ -697,6 +698,11 @@ impl ThrushStatement<'_> {
     #[inline]
     pub const fn is_binary(&self) -> bool {
         matches!(self, ThrushStatement::BinaryOp { .. })
+    }
+
+    #[inline]
+    pub const fn is_bindings(&self) -> bool {
+        matches!(self, ThrushStatement::Bindings { .. })
     }
 
     #[inline]

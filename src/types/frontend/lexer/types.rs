@@ -10,14 +10,14 @@ use inkwell::{
 use crate::{
     backend::llvm::compiler::{context::LLVMCodeGenContext, memory, typegen},
     frontend::{lexer::span::Span, parser::symbols::SymbolsTable},
-    middle::types::{
+    standard::error::ThrushCompilerIssue,
+    types::{
         backend::llvm::traits::LLVMDeallocator,
         frontend::parser::{
             stmts::{stmt::ThrushStatement, traits::StructExtensions, types::StructFields},
             symbols::types::{Bindings, Struct},
         },
     },
-    standard::error::ThrushCompilerIssue,
 };
 
 pub type ThrushStructType = (String, Vec<Arc<ThrushType>>);

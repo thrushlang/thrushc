@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use crate::middle::types::frontend::lexer::types::ThrushType;
+use crate::types::frontend::lexer::types::ThrushType;
 
 use super::{
     stmt::ThrushStatement,

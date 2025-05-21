@@ -4,7 +4,7 @@ use keywords::THRUSH_KEYWORDS;
 use span::Span;
 use token::Token;
 
-use crate::middle::types::frontend::lexer::tokenkind::TokenKind;
+use crate::types::frontend::lexer::tokenkind::TokenKind;
 
 use crate::standard::errors::lexer::ThrushLexerPanic;
 use crate::standard::logging::LoggingType;
@@ -18,7 +18,7 @@ pub mod keywords;
 pub mod span;
 pub mod token;
 
-const MINIMAL_TOKENS_CAPACITY: usize = 1_000_000;
+const MAXIMUM_TOKENS_CAPACITY: usize = 1_000_000;
 const MAXIMUM_BYTES_TO_LEX: usize = 1_000_000;
 
 pub struct Lexer<'a> {
@@ -35,7 +35,7 @@ pub struct Lexer<'a> {
 impl<'a> Lexer<'a> {
     pub fn lex(code: &'a [u8], file: &'a CompilerFile) -> Result<Vec<Token<'a>>, ThrushLexerPanic> {
         Self {
-            tokens: Vec::with_capacity(MINIMAL_TOKENS_CAPACITY),
+            tokens: Vec::with_capacity(MAXIMUM_TOKENS_CAPACITY),
             errors: Vec::with_capacity(MINIMAL_ERROR_CAPACITY),
             code,
             start: 0,
@@ -55,6 +55,10 @@ impl<'a> Lexer<'a> {
         }
 
         while !self.end() {
+            if self.tokens.len() >= MAXIMUM_TOKENS_CAPACITY {
+                return Err(ThrushLexerPanic::TooMuchTokens);
+            }
+
             self.start = self.current;
             self.start_span();
 

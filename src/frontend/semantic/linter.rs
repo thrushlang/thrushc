@@ -2,13 +2,6 @@ use ahash::AHashMap as HashMap;
 
 use crate::{
     frontend::lexer::span::Span,
-    middle::types::frontend::{
-        linter::types::{
-            LinterConstantInfo, LinterConstants, LinterFunctionInfo, LinterFunctionParameterInfo,
-            LinterFunctionParameters, LinterFunctions, LinterLocalInfo, LinterLocals,
-        },
-        parser::stmts::stmt::ThrushStatement,
-    },
     standard::{
         constants::MINIMAL_WARNINGS_CAPACITY,
         diagnostic::Diagnostician,
@@ -16,20 +9,115 @@ use crate::{
         logging::{self, LoggingType},
         misc::CompilerFile,
     },
+    types::frontend::{
+        linter::types::{
+            LinterConstantInfo, LinterConstants, LinterFunctionInfo, LinterFunctionParameterInfo,
+            LinterFunctionParameters, LinterFunctions, LinterLocalInfo, LinterLocals,
+        },
+        parser::stmts::stmt::ThrushStatement,
+    },
 };
+
+pub struct LinterSymbolsTable<'linter> {
+    functions: LinterFunctions<'linter>,
+    constants: LinterConstants<'linter>,
+    locals: LinterLocals<'linter>,
+    parameters: LinterFunctionParameters<'linter>,
+    scope: usize,
+}
+
+impl<'linter> LinterSymbolsTable<'linter> {
+    pub fn new() -> Self {
+        Self {
+            functions: HashMap::with_capacity(255),
+            constants: HashMap::with_capacity(255),
+            locals: Vec::with_capacity(255),
+            parameters: HashMap::with_capacity(10),
+            scope: 0,
+        }
+    }
+
+    pub fn new_function(&mut self, name: &'linter str, info: LinterFunctionInfo<'linter>) {
+        self.functions.insert(name, info);
+    }
+
+    pub fn new_constant(&mut self, name: &'linter str, info: LinterConstantInfo) {
+        self.constants.insert(name, info);
+    }
+
+    pub fn new_parameter(&mut self, name: &'linter str, info: LinterFunctionParameterInfo) {
+        self.parameters.insert(name, info);
+    }
+
+    pub fn new_local(&mut self, name: &'linter str, info: LinterLocalInfo) {
+        if let Some(scope) = self.locals.last_mut() {
+            scope.insert(name, info);
+        }
+    }
+
+    pub fn bulk_declare_parameters(&mut self, parameters: &'linter [ThrushStatement]) {
+        parameters.iter().for_each(|parameter| {
+            if let ThrushStatement::FunctionParameter {
+                name,
+                is_mutable,
+                span,
+                ..
+            } = parameter
+            {
+                self.new_parameter(name, (*span, false, !is_mutable));
+            }
+        });
+    }
+
+    pub fn destroy_all_parameters(&mut self) {
+        self.parameters.clear();
+    }
+
+    pub fn get_function_info(
+        &mut self,
+        name: &'linter str,
+    ) -> Option<&mut LinterFunctionInfo<'linter>> {
+        self.functions.get_mut(name)
+    }
+
+    pub fn get_constant_info(&mut self, name: &'linter str) -> Option<&mut LinterConstantInfo> {
+        self.constants.get_mut(name)
+    }
+
+    pub fn get_parameter_info(
+        &mut self,
+        name: &'linter str,
+    ) -> Option<&mut LinterFunctionParameterInfo> {
+        self.parameters.get_mut(name)
+    }
+
+    pub fn get_local_info(&mut self, name: &'linter str) -> Option<&mut LinterLocalInfo> {
+        for i in (0..=self.scope - 1).rev() {
+            if self.locals[i].contains_key(name) {
+                return Some(self.locals[i].get_mut(name).unwrap());
+            }
+        }
+
+        None
+    }
+
+    pub fn begin_scope(&mut self) {
+        self.locals.push(HashMap::with_capacity(255));
+        self.scope += 1;
+    }
+
+    pub fn end_scope(&mut self) {
+        self.locals.pop();
+        self.scope -= 1;
+    }
+}
 
 pub struct Linter<'linter> {
     stmts: &'linter [ThrushStatement<'linter>],
     current: usize,
     warnings: Vec<ThrushCompilerIssue>,
     diagnostician: Diagnostician,
-    functions: LinterFunctions<'linter>,
-    constants: LinterConstants<'linter>,
-    locals: LinterLocals<'linter>,
-    parameters: LinterFunctionParameters<'linter>,
-    parameters_to_analyze: LinterFunctionParameters<'linter>,
-    locals_to_analyze: LinterLocals<'linter>,
-    scope: usize,
+    symbols: LinterSymbolsTable<'linter>,
 }
 
 impl<'linter> Linter<'linter> {
@@ -39,18 +127,12 @@ impl<'linter> Linter<'linter> {
             current: 0,
             warnings: Vec::with_capacity(MINIMAL_WARNINGS_CAPACITY),
             diagnostician: Diagnostician::new(file),
-            functions: HashMap::with_capacity(255),
-            constants: HashMap::with_capacity(255),
-            locals: Vec::with_capacity(255),
-            parameters: HashMap::with_capacity(255),
-            parameters_to_analyze: HashMap::with_capacity(255),
-            locals_to_analyze: Vec::with_capacity(255),
-            scope: 0,
+            symbols: LinterSymbolsTable::new(),
         }
     }
 
     pub fn check(&mut self) {
-        self.declare();
+        self.init();
 
         while !self.is_eof() {
             let instruction: &ThrushStatement = self.peek();
@@ -62,12 +144,10 @@ impl<'linter> Linter<'linter> {
 
         self.generate_warnings();
 
-        if !self.warnings.is_empty() {
-            self.warnings.iter().for_each(|warn| {
-                self.diagnostician
-                    .build_diagnostic(warn, LoggingType::Warning);
-            });
-        }
+        self.warnings.iter().for_each(|warn| {
+            self.diagnostician
+                .build_diagnostic(warn, LoggingType::Warning);
+        });
     }
 
     pub fn analyze_stmt(&mut self, instruction: &'linter ThrushStatement) {
@@ -80,11 +160,13 @@ impl<'linter> Linter<'linter> {
         } = instruction
         {
             if body.is_block() {
-                self.start_parameters(parameters);
+                self.symbols.bulk_declare_parameters(parameters);
 
                 self.analyze_stmt(body);
 
-                self.end_parameters();
+                self.generate_scoped_warnings();
+
+                self.symbols.destroy_all_parameters();
             }
         }
 
@@ -115,69 +197,44 @@ impl<'linter> Linter<'linter> {
             ..
         } = instruction
         {
-            let scope: usize = self.get_scope();
-            self.locals[scope].insert(name, (*span, false, !is_mutable));
+            self.symbols.new_local(name, (*span, false, !is_mutable));
 
             self.analyze_stmt(value);
         }
 
         if let ThrushStatement::Call { name, .. } = instruction {
-            let function: &mut LinterFunctionInfo = self.get_mut_function(name);
-            function.2 = true;
+            if let Some(function) = self.symbols.get_function_info(name) {
+                function.1 = true;
+            }
         }
 
         if let ThrushStatement::ConstRef { name, .. } = instruction {
-            let constant: &mut LinterConstantInfo = self.get_mut_constant(name);
-            constant.1 = true;
+            if let Some(constant) = self.symbols.get_constant_info(name) {
+                constant.1 = true;
+            }
         }
 
         if let ThrushStatement::LocalRef { name, .. } = instruction {
-            if let Ok(local) = self.get_mut_local(name) {
+            if let Some(local) = self.symbols.get_local_info(name) {
                 local.1 = true;
             }
 
-            if let Ok(parameter) = self.get_mut_parameter(name) {
+            if let Some(parameter) = self.symbols.get_parameter_info(name) {
                 parameter.1 = true;
             }
         }
 
         if let ThrushStatement::Mut { source, .. } = instruction {
             if let Some(local_name) = source.0 {
-                if let Ok(local) = self.get_mut_local(local_name) {
+                if let Some(local) = self.symbols.get_local_info(local_name) {
                     local.1 = true;
                 }
             }
         }
     }
 
-    pub fn generate_warnings(&mut self) {
-        self.constants.iter().for_each(|(name, info)| {
-            let span: Span = info.0;
-            let used: bool = info.1;
-
-            if !used {
-                self.warnings.push(ThrushCompilerIssue::Warning(
-                    String::from("Constant not used"),
-                    format!("'{}' not used.", name),
-                    span,
-                ));
-            }
-        });
-
-        self.functions.iter().for_each(|(name, info)| {
-            let span: Span = info.1;
-            let used: bool = info.2;
-
-            if !used {
-                self.warnings.push(ThrushCompilerIssue::Warning(
-                    String::from("Function not used"),
-                    format!("'{}' not used.", name),
-                    span,
-                ));
-            }
-        });
-
-        self.parameters_to_analyze.iter().for_each(|parameter| {
+    pub fn generate_scoped_warnings(&mut self) {
+        self.symbols.parameters.iter().for_each(|parameter| {
             let name: &str = parameter.0;
             let span: Span = parameter.1.0;
             let used: bool = parameter.1.1;
@@ -200,8 +257,8 @@ impl<'linter> Linter<'linter> {
             }
         });
 
-        self.locals_to_analyze.iter().for_each(|scope| {
-            scope.iter().for_each(|(name, info)| {
+        if let Some(last_scope) = self.symbols.locals.last() {
+            last_scope.iter().for_each(|(name, info)| {
                 let span: Span = info.0;
                 let used: bool = info.1;
                 let is_mutable_used: bool = info.2;
@@ -222,19 +279,44 @@ impl<'linter> Linter<'linter> {
                     ));
                 }
             });
+        }
+    }
+
+    pub fn generate_warnings(&mut self) {
+        self.symbols.constants.iter().for_each(|(name, info)| {
+            let span: Span = info.0;
+            let used: bool = info.1;
+
+            if !used {
+                self.warnings.push(ThrushCompilerIssue::Warning(
+                    String::from("Constant not used"),
+                    format!("'{}' not used.", name),
+                    span,
+                ));
+            }
+        });
+
+        self.symbols.functions.iter().for_each(|(name, info)| {
+            let span: Span = info.0;
+            let used: bool = info.1;
+
+            if !used {
+                self.warnings.push(ThrushCompilerIssue::Warning(
+                    String::from("Function not used"),
+                    format!("'{}' not used.", name),
+                    span,
+                ));
+            }
         });
     }
 
-    pub fn declare(&mut self) {
+    pub fn init(&mut self) {
         self.stmts
             .iter()
-            .filter(|instruction| instruction.is_function())
-            .for_each(|instruction| {
-                if let ThrushStatement::Function {
-                    name, span, body, ..
-                } = instruction
-                {
-                    self.functions.insert(name, (&**body, *span, false));
+            .filter(|stmt| stmt.is_function())
+            .for_each(|stmt| {
+                if let ThrushStatement::Function { name, span, .. } = stmt {
+                    self.symbols.new_function(name, (*span, false));
                 }
             });
 
@@ -243,88 +325,17 @@ impl<'linter> Linter<'linter> {
             .filter(|instruction| instruction.is_constant())
             .for_each(|instruction| {
                 if let ThrushStatement::Const { name, span, .. } = instruction {
-                    self.constants.insert(name, (*span, false));
+                    self.symbols.new_constant(name, (*span, false));
                 }
             });
     }
 
-    fn get_mut_local(&mut self, name: &str) -> Result<&mut LinterLocalInfo, ()> {
-        for i in (0..=self.get_scope()).rev() {
-            if self.locals[i].contains_key(name) {
-                return Ok(self.locals[i].get_mut(name).unwrap());
-            }
-        }
-
-        Err(())
-    }
-
-    fn get_mut_constant(&mut self, name: &str) -> &mut LinterConstantInfo {
-        self.constants.get_mut(name).unwrap_or_else(|| {
-            logging::log(
-                LoggingType::Panic,
-                &format!(
-                    "Attempting to get warning info of the constant with name '{}'.",
-                    name
-                ),
-            );
-
-            unreachable!()
-        })
-    }
-
-    fn get_mut_function(&mut self, name: &str) -> &mut LinterFunctionInfo<'linter> {
-        self.functions.get_mut(name).unwrap_or_else(|| {
-            logging::log(
-                LoggingType::Panic,
-                &format!(
-                    "Attempting to get warning info of the function with name '{}'.",
-                    name
-                ),
-            );
-
-            unreachable!()
-        })
-    }
-
-    fn start_parameters(&mut self, parameters: &'linter [ThrushStatement<'linter>]) {
-        parameters.iter().for_each(|instruction| {
-            if let ThrushStatement::FunctionParameter {
-                name,
-                span,
-                is_mutable,
-                ..
-            } = instruction
-            {
-                self.parameters.insert(name, (*span, false, !is_mutable));
-            }
-        });
-    }
-
-    fn get_mut_parameter(&mut self, name: &str) -> Result<&mut LinterFunctionParameterInfo, ()> {
-        if let Some(parameter) = self.parameters.get_mut(name) {
-            return Ok(parameter);
-        }
-
-        Err(())
-    }
-
-    fn end_parameters(&mut self) {
-        self.parameters_to_analyze.extend(self.parameters.iter());
-        self.parameters.clear();
-    }
-
     fn begin_scope(&mut self) {
-        self.locals.push(HashMap::with_capacity(255));
-        self.scope += 1;
+        self.symbols.begin_scope();
     }
 
     fn end_scope(&mut self) {
-        self.locals_to_analyze.push(self.locals.pop().unwrap());
-        self.scope -= 1;
-    }
-
-    fn get_scope(&self) -> usize {
-        self.scope - 1
+        self.symbols.end_scope();
     }
 
     fn advance(&mut self) {

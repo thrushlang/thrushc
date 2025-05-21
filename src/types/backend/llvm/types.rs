@@ -3,7 +3,7 @@ use inkwell::values::{BasicValueEnum, FunctionValue};
 
 use crate::{
     backend::llvm::compiler::memory::SymbolAllocated,
-    middle::types::frontend::{
+    types::frontend::{
         lexer::{tokenkind::TokenKind, types::ThrushType},
         parser::stmts::{stmt::ThrushStatement, types::CompilerAttributes},
     },

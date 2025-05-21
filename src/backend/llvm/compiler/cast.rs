@@ -1,6 +1,6 @@
 use inkwell::{builder::Builder, context::Context, values::BasicValueEnum};
 
-use crate::middle::types::frontend::lexer::types::ThrushType;
+use crate::types::frontend::lexer::types::ThrushType;
 
 use super::{context::LLVMCodeGenContext, typegen};
 

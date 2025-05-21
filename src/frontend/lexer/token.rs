@@ -1,8 +1,6 @@
 use crate::{
-    middle::types::frontend::{
-        lexer::tokenkind::TokenKind, parser::stmts::traits::TokenExtensions,
-    },
     standard::error::ThrushCompilerIssue,
+    types::frontend::{lexer::tokenkind::TokenKind, parser::stmts::traits::TokenExtensions},
 };
 
 use super::span::Span;

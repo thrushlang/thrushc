@@ -1,4 +1,4 @@
-use crate::middle::types::frontend::parser::{
+use crate::types::frontend::parser::{
     stmts::{
         traits::{EnumExtensions, EnumFieldsExtensions},
         types::{EnumField, EnumFields},

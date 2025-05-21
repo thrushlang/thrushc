@@ -17,8 +17,7 @@ pub mod valuegen;
 
 use {
     crate::{
-        middle::types::frontend::parser::stmts::stmt::ThrushStatement,
-        standard::diagnostic::Diagnostician,
+        standard::diagnostic::Diagnostician, types::frontend::parser::stmts::stmt::ThrushStatement,
     },
     codegen::LLVMCodegen,
     inkwell::{builder::Builder, context::Context, module::Module, targets::TargetData},

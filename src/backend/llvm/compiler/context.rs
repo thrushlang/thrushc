@@ -5,11 +5,11 @@ use {
         typegen, valuegen,
     },
     crate::{
-        middle::types::{
+        standard::diagnostic::Diagnostician,
+        types::{
             backend::llvm::types::{LLVMFunction, LLVMScopeCall, LLVMScopeCalls, SymbolsAllocated},
             frontend::{lexer::types::ThrushType, parser::stmts::types::CompilerAttributes},
         },
-        standard::diagnostic::Diagnostician,
     },
     ahash::AHashMap as HashMap,
     inkwell::{
@@ -20,11 +20,6 @@ use {
         values::{BasicValueEnum, PointerValue},
     },
 };
-
-const CONSTANTS_MINIMAL_CAPACITY: usize = 255;
-const FUNCTION_MINIMAL_CAPACITY: usize = 255;
-const SCOPE_MINIMAL_CAPACITY: usize = 155;
-const CALLS_PER_SCOPE_MINIMAL_CAPACITY: usize = 100;
 
 #[derive(Debug)]
 pub struct LLVMCodeGenContext<'a, 'ctx> {
@@ -59,11 +54,11 @@ impl<'a, 'ctx> LLVMCodeGenContext<'a, 'ctx> {
             previous_position: LLVMCodeGenContextPosition::default(),
             target_data,
             diagnostician,
-            constants: HashMap::with_capacity(CONSTANTS_MINIMAL_CAPACITY),
-            functions: HashMap::with_capacity(FUNCTION_MINIMAL_CAPACITY),
-            blocks: Vec::with_capacity(SCOPE_MINIMAL_CAPACITY),
-            llvm_calls: Vec::with_capacity(CALLS_PER_SCOPE_MINIMAL_CAPACITY),
-            lift_instructions: HashMap::with_capacity(SCOPE_MINIMAL_CAPACITY),
+            constants: HashMap::with_capacity(100),
+            functions: HashMap::with_capacity(100),
+            blocks: Vec::with_capacity(255),
+            llvm_calls: Vec::with_capacity(100),
+            lift_instructions: HashMap::with_capacity(100),
             scope: 0,
         }
     }
@@ -162,8 +157,7 @@ impl<'a, 'ctx> LLVMCodeGenContext<'a, 'ctx> {
     }
 
     pub fn begin_scope(&mut self) {
-        self.blocks
-            .push(HashMap::with_capacity(SCOPE_MINIMAL_CAPACITY));
+        self.blocks.push(HashMap::with_capacity(256));
 
         self.blocks
             .last_mut()

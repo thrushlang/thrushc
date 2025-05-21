@@ -2,10 +2,7 @@
 
 use {
     super::backends::LLVMBackend,
-    crate::{
-        frontend::lexer::token::Token,
-        middle::types::frontend::parser::stmts::stmt::ThrushStatement,
-    },
+    crate::{frontend::lexer::token::Token, types::frontend::parser::stmts::stmt::ThrushStatement},
     inkwell::OptimizationLevel,
     std::path::PathBuf,
 };

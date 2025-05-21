@@ -5,7 +5,7 @@ use {
     },
     crate::{
         backend::llvm::compiler::{binaryop::ptr::ptr_binaryop, context::LLVMCodeGenContext},
-        middle::types::{
+        types::{
             backend::llvm::types::LLVMBinaryOp,
             frontend::{
                 lexer::{tokenkind::TokenKind, types::ThrushType},

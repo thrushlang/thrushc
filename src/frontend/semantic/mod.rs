@@ -1,9 +1,7 @@
 use linter::Linter;
 use typechecker::TypeChecker;
 
-use crate::{
-    middle::types::frontend::parser::stmts::stmt::ThrushStatement, standard::misc::CompilerFile,
-};
+use crate::{standard::misc::CompilerFile, types::frontend::parser::stmts::stmt::ThrushStatement};
 
 pub mod linter;
 pub mod typechecker;

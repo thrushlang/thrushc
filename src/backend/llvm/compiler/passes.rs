@@ -39,7 +39,7 @@ impl<'a, 'ctx> LLVMOptimizer<'a, 'ctx> {
                 logging::log(
                     logging::LoggingType::Warning,
                     &format!(
-                        "Optimization passes could not be performed because: '{:?}'.",
+                        "Some optimizations passes could not be performed because: '{:?}'.",
                         error
                     ),
                 );
@@ -61,7 +61,7 @@ impl<'a, 'ctx> LLVMOptimizer<'a, 'ctx> {
                     logging::log(
                         logging::LoggingType::Warning,
                         &format!(
-                            "Optimization passes could not be performed because: '{:?}'.",
+                            "Some optimizations passes could not be performed because: '{:?}'.",
                             error
                         ),
                     );
@@ -76,7 +76,7 @@ impl<'a, 'ctx> LLVMOptimizer<'a, 'ctx> {
                     logging::log(
                         logging::LoggingType::Warning,
                         &format!(
-                            "Optimization passes could not be performed because: '{:?}'.",
+                            "Some optimizations passes could not be performed because: '{:?}'.",
                             error
                         ),
                     );
@@ -91,7 +91,7 @@ impl<'a, 'ctx> LLVMOptimizer<'a, 'ctx> {
                     logging::log(
                         logging::LoggingType::Warning,
                         &format!(
-                            "Optimization passes could not be performed because: '{:?}'.",
+                            "Some optimizations passes could not be performed because: '{:?}'.",
                             error
                         ),
                     );

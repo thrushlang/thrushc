@@ -16,18 +16,18 @@ use inkwell::{
 };
 
 use crate::{
-    backend::llvm::{self, linker::lld::LLVMLinker},
+    backend::llvm::{self, linkers::lld::LLVMLinker},
     frontend::{
         lexer::{Lexer, token::Token},
         parser::{Parser, ParserContext},
     },
-    middle::types::frontend::parser::stmts::stmt::ThrushStatement,
     standard::{
         backends::{LLVMBackend, LLVMExecutableFlavor},
         diagnostic::Diagnostician,
         logging::{self, LoggingType},
         misc::{CompilerFile, CompilerOptions, Emitable, Emited, ThrushOptimization},
     },
+    types::frontend::parser::stmts::stmt::ThrushStatement,
 };
 
 use super::semantic::SemanticAnalyzer;
@@ -56,13 +56,9 @@ impl<'thrushc> TheThrushCompiler<'thrushc> {
             self.compile_file(file);
         });
 
-        if self.compiled_files.is_empty() {
-            return (self.thrushc_time.as_millis(), self.llvm_time.as_millis());
-        }
-
         let llvm_backend: &LLVMBackend = self.options.get_llvm_backend_options();
 
-        if llvm_backend.was_emited() {
+        if llvm_backend.was_emited() || self.compiled_files.is_empty() {
             return (self.thrushc_time.as_millis(), self.llvm_time.as_millis());
         }
 
@@ -81,6 +77,8 @@ impl<'thrushc> TheThrushCompiler<'thrushc> {
     }
 
     fn compile_file(&mut self, file: &'thrushc CompilerFile) {
+        let thrushc_time: Instant = Instant::now();
+
         logging::write(
             logging::OutputIn::Stdout,
             &format!(
@@ -90,8 +88,6 @@ impl<'thrushc> TheThrushCompiler<'thrushc> {
                 &file.path.to_string_lossy()
             ),
         );
-
-        let thrushc_time: Instant = Instant::now();
 
         let source_code: &[u8] = &self.get_source_code(&file.path);
 

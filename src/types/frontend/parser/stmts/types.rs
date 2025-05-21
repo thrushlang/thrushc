@@ -1,6 +1,5 @@
 use crate::{
-    backend::llvm::compiler::attributes::LLVMAttribute,
-    middle::types::frontend::lexer::types::ThrushType,
+    backend::llvm::compiler::attributes::LLVMAttribute, types::frontend::lexer::types::ThrushType,
 };
 
 use super::stmt::ThrushStatement;

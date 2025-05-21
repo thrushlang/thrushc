@@ -6,11 +6,12 @@ use crate::{
     backend::llvm::compiler::{attributes::LLVMAttribute, conventions::CallConvention},
     frontend::lexer::{span::Span, token::Token},
     lazy_static,
-    middle::types::frontend::{
+    standard::error::ThrushCompilerIssue,
+    types::frontend::{
         lexer::{
             tokenkind::TokenKind,
             traits::ThrushStructTypeExtensions,
-            types::{BindingsApplicant, ThrushStructType, ThrushType, generate_bindings},
+            types::{self, BindingsApplicant, ThrushStructType, ThrushType},
         },
         parser::{
             stmts::{
@@ -21,7 +22,6 @@ use crate::{
             symbols::types::{Bindings, ParametersTypes},
         },
     },
-    standard::error::ThrushCompilerIssue,
 };
 
 use super::{
@@ -154,7 +154,7 @@ pub fn build_bindings<'instr>(
     )?;
 
     while parser_ctx.peek().kind != TokenKind::RBrace {
-        let bind: ThrushStatement = build_bind(declare, parser_ctx)?;
+        let bind: ThrushStatement = self::build_bind(declare, parser_ctx)?;
 
         parser_ctx
             .get_mut_control_ctx()
@@ -178,7 +178,7 @@ pub fn build_bindings<'instr>(
         .set_instr_position(InstructionPosition::NoRelevant);
 
     if declare {
-        let bindings_generated: Bindings = generate_bindings(binds.clone());
+        let bindings_generated: Bindings = types::generate_bindings(binds.clone());
 
         parser_ctx.get_mut_symbols().set_bindings(
             &struct_name,
@@ -241,6 +241,7 @@ fn build_bind<'instr>(
     )?;
 
     let mut bind_parameters: Vec<ThrushStatement> = Vec::with_capacity(10);
+    let mut bind_parameters_types: Vec<ThrushType> = Vec::with_capacity(10);
     let mut bind_position: u32 = 0;
 
     let mut this_is_declared: bool = false;
@@ -315,6 +316,8 @@ fn build_bind<'instr>(
             )?;
         }
 
+        bind_parameters_types.push(parameter_type.clone());
+
         parser_ctx
             .get_mut_type_ctx()
             .set_position(TypePosition::NoRelevant);
@@ -346,7 +349,7 @@ fn build_bind<'instr>(
             .get_mut_type_ctx()
             .set_bind_instance(this_is_declared);
 
-        let bind_body: ThrushStatement = build_block(parser_ctx)?;
+        let bind_body: ThrushStatement = self::build_block(parser_ctx)?;
 
         parser_ctx.get_mut_symbols().end_parameters();
         parser_ctx.get_mut_control_ctx().set_inside_bind(false);
@@ -359,6 +362,7 @@ fn build_bind<'instr>(
         return Ok(ThrushStatement::Bind {
             name: bind_name,
             parameters: bind_parameters,
+            parameters_types: bind_parameters_types,
             body: bind_body.into(),
             return_type,
             attributes: bind_attributes,
@@ -1419,13 +1423,13 @@ pub fn build_function<'instr>(
     let mut parameters: Vec<ThrushStatement> = Vec::with_capacity(10);
     let mut parameters_types: Vec<ThrushType> = Vec::with_capacity(10);
 
-    let mut position: u32 = 0;
-
     parser_ctx.consume(
         TokenKind::LParen,
         String::from("Syntax error"),
         String::from("Expected '('."),
     )?;
+
+    let mut parameter_position: u32 = 0;
 
     while parser_ctx.peek().kind != TokenKind::RParen {
         if parser_ctx.match_token(TokenKind::Comma)? {
@@ -1481,12 +1485,12 @@ pub fn build_function<'instr>(
         parameters.push(ThrushStatement::FunctionParameter {
             name: parameter_name,
             kind: parameter_type,
-            position,
+            position: parameter_position,
             is_mutable,
             span: parameter_span,
         });
 
-        position += 1;
+        parameter_position += 1;
     }
 
     parser_ctx.consume(
@@ -1594,11 +1598,13 @@ fn build_compiler_attributes<'instr>(
             TokenKind::Extern => {
                 compiler_attributes.push(LLVMAttribute::FFI(build_external_attribute(parser_ctx)?));
             }
+
             TokenKind::Convention => {
                 compiler_attributes.push(LLVMAttribute::Convention(
                     build_call_convention_attribute(parser_ctx)?,
                 ));
             }
+
             TokenKind::Public => {
                 compiler_attributes.push(LLVMAttribute::Public);
                 parser_ctx.only_advance()?;

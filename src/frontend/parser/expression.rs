@@ -1,6 +1,7 @@
 use crate::{
     frontend::lexer::{span::Span, token::Token},
-    middle::types::frontend::{
+    standard::error::ThrushCompilerIssue,
+    types::frontend::{
         lexer::{
             tokenkind::TokenKind,
             types::{self, ThrushType},
@@ -26,7 +27,6 @@ use crate::{
             },
         },
     },
-    standard::error::ThrushCompilerIssue,
 };
 
 use super::{ParserContext, contexts::SyncPosition, parse, typegen};

@@ -1,4 +1,4 @@
-use crate::middle::types::{backend::llvm::types::LLVMLocal, frontend::lexer::types::ThrushType};
+use crate::types::{backend::llvm::types::LLVMLocal, frontend::lexer::types::ThrushType};
 
 use super::{
     ThrushStatement,

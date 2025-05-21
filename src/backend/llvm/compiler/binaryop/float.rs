@@ -1,6 +1,6 @@
 use crate::{
     backend::llvm::compiler::predicates,
-    middle::types::{
+    types::{
         backend::llvm::types::{LLVMBinaryOp, LLVMUnaryOp},
         frontend::lexer::{tokenkind::TokenKind, types::ThrushType},
     },

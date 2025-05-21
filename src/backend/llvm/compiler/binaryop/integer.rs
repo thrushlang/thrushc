@@ -2,7 +2,7 @@ use {
     super::super::{ThrushStatement, context::LLVMCodeGenContext, unaryop, valuegen},
     crate::{
         backend::llvm::compiler::{cast, predicates},
-        middle::types::{
+        types::{
             backend::llvm::types::{LLVMBinaryOp, LLVMUnaryOp},
             frontend::lexer::{tokenkind::TokenKind, types::ThrushType},
         },

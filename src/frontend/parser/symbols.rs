@@ -1,6 +1,7 @@
 use crate::{
     frontend::lexer::span::Span,
-    middle::types::frontend::{
+    standard::error::ThrushCompilerIssue,
+    types::frontend::{
         lexer::types::BindingsApplicant,
         parser::symbols::types::{
             Bindings, ConstantSymbol, Constants, CustomTypeSymbol, CustomTypes, EnumSymbol, Enums,
@@ -8,7 +9,6 @@ use crate::{
             Struct, Structs,
         },
     },
-    standard::error::ThrushCompilerIssue,
 };
 
 use ahash::AHashMap as HashMap;
