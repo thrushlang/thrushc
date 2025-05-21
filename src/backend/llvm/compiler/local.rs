@@ -1,7 +1,7 @@
 use crate::middle::types::{backend::llvm::types::LLVMLocal, frontend::lexer::types::ThrushType};
 
 use super::{
-    Instruction,
+    ThrushStatement,
     context::{LLVMCodeGenContext, LLVMCodeGenContextPosition},
     memory::{self, AllocSite, SymbolAllocated},
     valuegen,
@@ -51,7 +51,7 @@ pub fn build<'ctx>(local: LLVMLocal<'ctx>, context: &mut LLVMCodeGenContext<'_, 
 }
 
 fn build_local_mut<'ctx>(local: LLVMLocal<'ctx>, context: &mut LLVMCodeGenContext<'_, 'ctx>) {
-    let local_value: &Instruction = local.2;
+    let local_value: &ThrushStatement = local.2;
 
     let symbol: SymbolAllocated = context.get_allocated_symbol(local.0);
 
@@ -61,7 +61,7 @@ fn build_local_mut<'ctx>(local: LLVMLocal<'ctx>, context: &mut LLVMCodeGenContex
 }
 
 fn build_local_ptr<'ctx>(local: LLVMLocal<'ctx>, context: &mut LLVMCodeGenContext<'_, 'ctx>) {
-    let local_value: &Instruction = local.2;
+    let local_value: &ThrushStatement = local.2;
 
     let symbol: SymbolAllocated = context.get_allocated_symbol(local.0);
 
@@ -71,7 +71,7 @@ fn build_local_ptr<'ctx>(local: LLVMLocal<'ctx>, context: &mut LLVMCodeGenContex
 }
 
 fn build_local_str<'ctx>(local: LLVMLocal<'ctx>, context: &mut LLVMCodeGenContext<'_, 'ctx>) {
-    let local_value: &Instruction = local.2;
+    let local_value: &ThrushStatement = local.2;
 
     let symbol: SymbolAllocated = context.get_allocated_symbol(local.0);
 
@@ -83,7 +83,7 @@ fn build_local_str<'ctx>(local: LLVMLocal<'ctx>, context: &mut LLVMCodeGenContex
 fn build_local_integer<'ctx>(local: LLVMLocal<'ctx>, context: &mut LLVMCodeGenContext<'_, 'ctx>) {
     let local_name: &str = local.0;
     let local_type: &ThrushType = local.1;
-    let local_value: &Instruction = local.2;
+    let local_value: &ThrushStatement = local.2;
 
     let symbol: SymbolAllocated = context.get_allocated_symbol(local_name);
 
@@ -95,7 +95,7 @@ fn build_local_integer<'ctx>(local: LLVMLocal<'ctx>, context: &mut LLVMCodeGenCo
 fn build_local_float<'ctx>(local: LLVMLocal<'ctx>, context: &mut LLVMCodeGenContext<'_, 'ctx>) {
     let local_name: &str = local.0;
     let local_type: &ThrushType = local.1;
-    let local_value: &Instruction = local.2;
+    let local_value: &ThrushStatement = local.2;
 
     let symbol: SymbolAllocated = context.get_allocated_symbol(local_name);
 
@@ -107,7 +107,7 @@ fn build_local_float<'ctx>(local: LLVMLocal<'ctx>, context: &mut LLVMCodeGenCont
 fn build_local_boolean<'ctx>(local: LLVMLocal<'ctx>, context: &mut LLVMCodeGenContext<'_, 'ctx>) {
     let local_name: &str = local.0;
     let local_type: &ThrushType = local.1;
-    let local_value: &Instruction = local.2;
+    let local_value: &ThrushStatement = local.2;
 
     let symbol: SymbolAllocated = context.get_allocated_symbol(local_name);
 
@@ -118,18 +118,18 @@ fn build_local_boolean<'ctx>(local: LLVMLocal<'ctx>, context: &mut LLVMCodeGenCo
 
 fn build_local_structure<'ctx>(local: LLVMLocal<'ctx>, context: &mut LLVMCodeGenContext<'_, 'ctx>) {
     let local_type: &ThrushType = local.1;
-    let local_value: &Instruction = local.2;
+    let local_value: &ThrushStatement = local.2;
 
     let symbol: SymbolAllocated = context.get_allocated_symbol(local.0);
 
-    if let Instruction::Constructor { arguments, .. } = local_value {
+    if let ThrushStatement::Constructor { arguments, .. } = local_value {
         let llvm_builder: &Builder = context.get_llvm_builder();
         let llvm_context: &Context = context.get_llvm_context();
 
-        let exprs: &[(&str, Instruction<'_>, ThrushType, u32)] = &arguments.1;
+        let exprs: &[(&str, ThrushStatement<'_>, ThrushType, u32)] = &arguments.1;
 
         exprs.iter().for_each(|argument| {
-            let expr: &Instruction = &argument.1;
+            let expr: &ThrushStatement = &argument.1;
             let expr_type: &ThrushType = &argument.2;
             let expr_index: u32 = argument.3;
 

@@ -5,19 +5,23 @@ use crate::{
     backend::llvm::compiler::memory::SymbolAllocated,
     middle::types::frontend::{
         lexer::{tokenkind::TokenKind, types::ThrushType},
-        parser::stmts::{instruction::Instruction, types::CompilerAttributes},
+        parser::stmts::{stmt::ThrushStatement, types::CompilerAttributes},
     },
 };
 
 pub type SymbolsAllocated<'ctx> = HashMap<&'ctx str, SymbolAllocated<'ctx>>;
 
 pub type LLVMBinaryOp<'ctx> = (
-    &'ctx Instruction<'ctx>,
+    &'ctx ThrushStatement<'ctx>,
     &'ctx TokenKind,
-    &'ctx Instruction<'ctx>,
+    &'ctx ThrushStatement<'ctx>,
 );
 
-pub type LLVMUnaryOp<'ctx> = (&'ctx TokenKind, &'ctx ThrushType, &'ctx Instruction<'ctx>);
+pub type LLVMUnaryOp<'ctx> = (
+    &'ctx TokenKind,
+    &'ctx ThrushType,
+    &'ctx ThrushStatement<'ctx>,
+);
 
 pub type LLVMScopeCall<'ctx> = (&'ctx ThrushType, BasicValueEnum<'ctx>);
 pub type LLVMScopeCalls<'ctx> = Vec<LLVMScopeCall<'ctx>>;
@@ -27,14 +31,14 @@ pub type LLVMFunction<'ctx> = (FunctionValue<'ctx>, &'ctx [ThrushType], u32);
 pub type LLVMFunctionPrototype<'ctx> = (
     &'ctx str,
     &'ctx ThrushType,
-    &'ctx [Instruction<'ctx>],
+    &'ctx [ThrushStatement<'ctx>],
     &'ctx [ThrushType],
-    &'ctx Instruction<'ctx>,
+    &'ctx ThrushStatement<'ctx>,
     &'ctx CompilerAttributes<'ctx>,
 );
 
-pub type LLVMFunctionCall<'ctx> = (&'ctx str, &'ctx ThrushType, &'ctx [Instruction<'ctx>]);
+pub type LLVMFunctionCall<'ctx> = (&'ctx str, &'ctx ThrushType, &'ctx [ThrushStatement<'ctx>]);
 
 pub type LLVMFunctionParameter<'ctx> = (&'ctx str, &'ctx ThrushType, u32, bool);
 
-pub type LLVMLocal<'ctx> = (&'ctx str, &'ctx ThrushType, &'ctx Instruction<'ctx>);
+pub type LLVMLocal<'ctx> = (&'ctx str, &'ctx ThrushType, &'ctx ThrushStatement<'ctx>);

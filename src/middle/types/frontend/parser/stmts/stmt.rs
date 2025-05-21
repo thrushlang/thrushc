@@ -5,7 +5,7 @@ use std::rc::Rc;
 use inkwell::values::BasicValueEnum;
 
 use crate::{
-    frontend::lexer::Span,
+    frontend::lexer::span::Span,
     middle::types::{
         backend::llvm::types::{LLVMBinaryOp, LLVMFunctionPrototype, LLVMUnaryOp},
         frontend::lexer::{tokenkind::TokenKind, types::ThrushType},
@@ -16,7 +16,7 @@ use crate::{
 use super::types::{CompilerAttributes, Constructor};
 
 #[derive(Debug, Clone)]
-pub enum Instruction<'ctx> {
+pub enum ThrushStatement<'ctx> {
     Str {
         kind: ThrushType,
         bytes: Vec<u8>,
@@ -53,7 +53,7 @@ pub enum Instruction<'ctx> {
         span: Span,
     },
 
-    LLVMValue(BasicValueEnum<'ctx>),
+    LLVMValue(BasicValueEnum<'ctx>, Span),
 
     // Structures
 
@@ -77,14 +77,14 @@ pub enum Instruction<'ctx> {
 
     Bindings {
         name: String,
-        binds: Vec<Instruction<'ctx>>,
+        binds: Vec<ThrushStatement<'ctx>>,
         span: Span,
     },
 
     Bind {
         name: &'ctx str,
-        parameters: Vec<Instruction<'ctx>>,
-        body: Rc<Instruction<'ctx>>,
+        parameters: Vec<ThrushStatement<'ctx>>,
+        body: Rc<ThrushStatement<'ctx>>,
         return_type: ThrushType,
         attributes: CompilerAttributes<'ctx>,
         span: Span,
@@ -127,37 +127,37 @@ pub enum Instruction<'ctx> {
     */
     // Conditionals
     If {
-        cond: Rc<Instruction<'ctx>>,
-        block: Rc<Instruction<'ctx>>,
-        elfs: Vec<Instruction<'ctx>>,
-        otherwise: Option<Rc<Instruction<'ctx>>>,
+        cond: Rc<ThrushStatement<'ctx>>,
+        block: Rc<ThrushStatement<'ctx>>,
+        elfs: Vec<ThrushStatement<'ctx>>,
+        otherwise: Option<Rc<ThrushStatement<'ctx>>>,
         span: Span,
     },
     Elif {
-        cond: Rc<Instruction<'ctx>>,
-        block: Rc<Instruction<'ctx>>,
+        cond: Rc<ThrushStatement<'ctx>>,
+        block: Rc<ThrushStatement<'ctx>>,
         span: Span,
     },
     Else {
-        block: Rc<Instruction<'ctx>>,
+        block: Rc<ThrushStatement<'ctx>>,
         span: Span,
     },
 
     // Loops
     For {
-        local: Rc<Instruction<'ctx>>,
-        cond: Rc<Instruction<'ctx>>,
-        actions: Rc<Instruction<'ctx>>,
-        block: Rc<Instruction<'ctx>>,
+        local: Rc<ThrushStatement<'ctx>>,
+        cond: Rc<ThrushStatement<'ctx>>,
+        actions: Rc<ThrushStatement<'ctx>>,
+        block: Rc<ThrushStatement<'ctx>>,
         span: Span,
     },
     While {
-        cond: Rc<Instruction<'ctx>>,
-        block: Rc<Instruction<'ctx>>,
+        cond: Rc<ThrushStatement<'ctx>>,
+        block: Rc<ThrushStatement<'ctx>>,
         span: Span,
     },
     Loop {
-        block: Rc<Instruction<'ctx>>,
+        block: Rc<ThrushStatement<'ctx>>,
         span: Span,
     },
 
@@ -171,7 +171,7 @@ pub enum Instruction<'ctx> {
 
     // Code block
     Block {
-        stmts: Vec<Instruction<'ctx>>,
+        stmts: Vec<ThrushStatement<'ctx>>,
         span: Span,
     },
 
@@ -179,7 +179,7 @@ pub enum Instruction<'ctx> {
 
     // Entrypoint -> fn main() {}
     EntryPoint {
-        body: Rc<Instruction<'ctx>>,
+        body: Rc<ThrushStatement<'ctx>>,
         span: Span,
     },
 
@@ -192,16 +192,16 @@ pub enum Instruction<'ctx> {
     },
     Function {
         name: &'ctx str,
-        parameters: Vec<Instruction<'ctx>>,
+        parameters: Vec<ThrushStatement<'ctx>>,
         parameter_types: Vec<ThrushType>,
-        body: Rc<Instruction<'ctx>>,
+        body: Rc<ThrushStatement<'ctx>>,
         return_type: ThrushType,
         attributes: CompilerAttributes<'ctx>,
         span: Span,
     },
 
     Return {
-        expression: Option<Rc<Instruction<'ctx>>>,
+        expression: Option<Rc<ThrushStatement<'ctx>>>,
         kind: ThrushType,
         span: Span,
     },
@@ -210,7 +210,7 @@ pub enum Instruction<'ctx> {
     Const {
         name: &'ctx str,
         kind: ThrushType,
-        value: Rc<Instruction<'ctx>>,
+        value: Rc<ThrushStatement<'ctx>>,
         attributes: CompilerAttributes<'ctx>,
         span: Span,
     },
@@ -224,7 +224,7 @@ pub enum Instruction<'ctx> {
     Local {
         name: &'ctx str,
         kind: ThrushType,
-        value: Rc<Instruction<'ctx>>,
+        value: Rc<ThrushStatement<'ctx>>,
         is_mutable: bool,
         comptime: bool,
         span: Span,
@@ -237,8 +237,8 @@ pub enum Instruction<'ctx> {
 
     // Mutation
     Mut {
-        source: (Option<&'ctx str>, Option<Rc<Instruction<'ctx>>>),
-        value: Rc<Instruction<'ctx>>,
+        source: (Option<&'ctx str>, Option<Rc<ThrushStatement<'ctx>>>),
+        value: Rc<ThrushStatement<'ctx>>,
         kind: ThrushType,
         span: Span,
     },
@@ -246,21 +246,21 @@ pub enum Instruction<'ctx> {
     // Pointer Manipulation
     Address {
         name: &'ctx str,
-        indexes: Vec<Instruction<'ctx>>,
+        indexes: Vec<ThrushStatement<'ctx>>,
         kind: ThrushType,
         span: Span,
     },
 
     Write {
-        write_to: (&'ctx str, Option<Rc<Instruction<'ctx>>>),
-        write_value: Rc<Instruction<'ctx>>,
+        write_to: (&'ctx str, Option<Rc<ThrushStatement<'ctx>>>),
+        write_value: Rc<ThrushStatement<'ctx>>,
         write_type: ThrushType,
         span: Span,
     },
 
     Carry {
         name: &'ctx str,
-        expression: Option<Rc<Instruction<'ctx>>>,
+        expression: Option<Rc<ThrushStatement<'ctx>>>,
         carry_type: ThrushType,
         span: Span,
     },
@@ -268,32 +268,32 @@ pub enum Instruction<'ctx> {
     // Expressions
     Call {
         name: &'ctx str,
-        args: Vec<Instruction<'ctx>>,
+        args: Vec<ThrushStatement<'ctx>>,
         kind: ThrushType,
         span: Span,
     },
     BindCall {
         name: String,
-        args: Vec<Instruction<'ctx>>,
+        args: Vec<ThrushStatement<'ctx>>,
         kind: ThrushType,
         span: Span,
     },
     BinaryOp {
-        left: Rc<Instruction<'ctx>>,
+        left: Rc<ThrushStatement<'ctx>>,
         operator: TokenKind,
-        right: Rc<Instruction<'ctx>>,
+        right: Rc<ThrushStatement<'ctx>>,
         kind: ThrushType,
         span: Span,
     },
     UnaryOp {
         operator: TokenKind,
         kind: ThrushType,
-        expression: Rc<Instruction<'ctx>>,
+        expression: Rc<ThrushStatement<'ctx>>,
         is_pre: bool,
         span: Span,
     },
     Group {
-        expression: Rc<Instruction<'ctx>>,
+        expression: Rc<ThrushStatement<'ctx>>,
         kind: ThrushType,
         span: Span,
     },
@@ -307,73 +307,73 @@ pub enum Instruction<'ctx> {
     },
 }
 
-impl<'ctx> Instruction<'ctx> {
+impl<'ctx> ThrushStatement<'ctx> {
     pub fn get_type(&self) -> Result<&ThrushType, ThrushCompilerIssue> {
         match self {
-            Instruction::Integer { kind, .. } => Ok(kind),
-            Instruction::Float { kind, .. } => Ok(kind),
-            Instruction::Local { kind, .. } => Ok(kind),
-            Instruction::Mut { kind, .. } => Ok(kind),
-            Instruction::FunctionParameter { kind, .. } => Ok(kind),
-            Instruction::LocalRef { kind, .. } => Ok(kind),
-            Instruction::ConstRef { kind, .. } => Ok(kind),
-            Instruction::Call { kind, .. } => Ok(kind),
-            Instruction::BinaryOp { kind, .. } => Ok(kind),
-            Instruction::Group { kind, .. } => Ok(kind),
-            Instruction::UnaryOp { kind, .. } => Ok(kind),
+            ThrushStatement::Integer { kind, .. } => Ok(kind),
+            ThrushStatement::Float { kind, .. } => Ok(kind),
+            ThrushStatement::Local { kind, .. } => Ok(kind),
+            ThrushStatement::Mut { kind, .. } => Ok(kind),
+            ThrushStatement::FunctionParameter { kind, .. } => Ok(kind),
+            ThrushStatement::LocalRef { kind, .. } => Ok(kind),
+            ThrushStatement::ConstRef { kind, .. } => Ok(kind),
+            ThrushStatement::Call { kind, .. } => Ok(kind),
+            ThrushStatement::BinaryOp { kind, .. } => Ok(kind),
+            ThrushStatement::Group { kind, .. } => Ok(kind),
+            ThrushStatement::UnaryOp { kind, .. } => Ok(kind),
 
-            Instruction::Str { kind, .. } => Ok(kind),
-            Instruction::Boolean { kind, .. } => Ok(kind),
-            Instruction::Char { kind, .. } => Ok(kind),
-            Instruction::Address { .. } => Ok(&ThrushType::Address),
-            Instruction::Constructor { kind, .. } => Ok(kind),
-            Instruction::Carry {
+            ThrushStatement::Str { kind, .. } => Ok(kind),
+            ThrushStatement::Boolean { kind, .. } => Ok(kind),
+            ThrushStatement::Char { kind, .. } => Ok(kind),
+            ThrushStatement::Address { .. } => Ok(&ThrushType::Address),
+            ThrushStatement::Constructor { kind, .. } => Ok(kind),
+            ThrushStatement::Carry {
                 carry_type: kind, ..
             } => Ok(kind),
-            Instruction::Property { kind, .. } => Ok(kind),
-            Instruction::NullPtr { .. } => Ok(&ThrushType::Ptr(None)),
-            Instruction::This { kind, .. } => Ok(kind),
-            Instruction::BindCall { kind, .. } => Ok(kind),
-            Instruction::BindParameter { kind, .. } => Ok(kind),
-            Instruction::Return { kind, .. } => Ok(kind),
+            ThrushStatement::Property { kind, .. } => Ok(kind),
+            ThrushStatement::NullPtr { .. } => Ok(&ThrushType::Ptr(None)),
+            ThrushStatement::This { kind, .. } => Ok(kind),
+            ThrushStatement::BindCall { kind, .. } => Ok(kind),
+            ThrushStatement::BindParameter { kind, .. } => Ok(kind),
+            ThrushStatement::Return { kind, .. } => Ok(kind),
 
             _ => Err(ThrushCompilerIssue::Error(
                 String::from("Syntax error"),
                 String::from("Expected a value to get a type."),
                 None,
-                self.get_span()?,
+                self.get_span(),
             )),
         }
     }
 
     pub fn get_type_unwrapped(&self) -> &ThrushType {
         match self {
-            Instruction::Integer { kind, .. } => kind,
-            Instruction::Float { kind, .. } => kind,
-            Instruction::Local { kind, .. } => kind,
-            Instruction::Mut { kind, .. } => kind,
-            Instruction::FunctionParameter { kind, .. } => kind,
-            Instruction::LocalRef { kind, .. } => kind,
-            Instruction::ConstRef { kind, .. } => kind,
-            Instruction::Call { kind, .. } => kind,
-            Instruction::BinaryOp { kind, .. } => kind,
-            Instruction::Group { kind, .. } => kind,
-            Instruction::UnaryOp { kind, .. } => kind,
+            ThrushStatement::Integer { kind, .. } => kind,
+            ThrushStatement::Float { kind, .. } => kind,
+            ThrushStatement::Local { kind, .. } => kind,
+            ThrushStatement::Mut { kind, .. } => kind,
+            ThrushStatement::FunctionParameter { kind, .. } => kind,
+            ThrushStatement::LocalRef { kind, .. } => kind,
+            ThrushStatement::ConstRef { kind, .. } => kind,
+            ThrushStatement::Call { kind, .. } => kind,
+            ThrushStatement::BinaryOp { kind, .. } => kind,
+            ThrushStatement::Group { kind, .. } => kind,
+            ThrushStatement::UnaryOp { kind, .. } => kind,
 
-            Instruction::Str { kind, .. } => kind,
-            Instruction::Boolean { kind, .. } => kind,
-            Instruction::Char { kind, .. } => kind,
-            Instruction::Address { .. } => &ThrushType::Address,
-            Instruction::Constructor { kind, .. } => kind,
-            Instruction::Carry {
+            ThrushStatement::Str { kind, .. } => kind,
+            ThrushStatement::Boolean { kind, .. } => kind,
+            ThrushStatement::Char { kind, .. } => kind,
+            ThrushStatement::Address { .. } => &ThrushType::Address,
+            ThrushStatement::Constructor { kind, .. } => kind,
+            ThrushStatement::Carry {
                 carry_type: kind, ..
             } => kind,
-            Instruction::Property { kind, .. } => kind,
-            Instruction::NullPtr { .. } => &ThrushType::Ptr(None),
-            Instruction::This { kind, .. } => kind,
-            Instruction::BindCall { kind, .. } => kind,
-            Instruction::BindParameter { kind, .. } => kind,
-            Instruction::Return { kind, .. } => kind,
+            ThrushStatement::Property { kind, .. } => kind,
+            ThrushStatement::NullPtr { .. } => &ThrushType::Ptr(None),
+            ThrushStatement::This { kind, .. } => kind,
+            ThrushStatement::BindCall { kind, .. } => kind,
+            ThrushStatement::BindParameter { kind, .. } => kind,
+            ThrushStatement::Return { kind, .. } => kind,
 
             any => {
                 panic!("Attempting to unwrap a null type: {:?}.", any)
@@ -381,68 +381,66 @@ impl<'ctx> Instruction<'ctx> {
         }
     }
 
-    pub fn get_span(&self) -> Result<Span, ThrushCompilerIssue> {
+    pub fn get_span(&self) -> Span {
         match self {
-            Instruction::Integer { span, .. } => Ok(*span),
-            Instruction::Float { span, .. } => Ok(*span),
-            Instruction::Local { span, .. } => Ok(*span),
-            Instruction::Mut { span, .. } => Ok(*span),
-            Instruction::FunctionParameter { span, .. } => Ok(*span),
-            Instruction::LocalRef { span, .. } => Ok(*span),
-            Instruction::ConstRef { span, .. } => Ok(*span),
-            Instruction::Call { span, .. } => Ok(*span),
-            Instruction::BinaryOp { span, .. } => Ok(*span),
-            Instruction::Group { span, .. } => Ok(*span),
-            Instruction::UnaryOp { span, .. } => Ok(*span),
+            ThrushStatement::Integer { span, .. } => *span,
+            ThrushStatement::Float { span, .. } => *span,
+            ThrushStatement::Local { span, .. } => *span,
+            ThrushStatement::Mut { span, .. } => *span,
+            ThrushStatement::FunctionParameter { span, .. } => *span,
+            ThrushStatement::LocalRef { span, .. } => *span,
+            ThrushStatement::ConstRef { span, .. } => *span,
+            ThrushStatement::Call { span, .. } => *span,
+            ThrushStatement::BinaryOp { span, .. } => *span,
+            ThrushStatement::Group { span, .. } => *span,
+            ThrushStatement::UnaryOp { span, .. } => *span,
 
-            Instruction::Str { span, .. } => Ok(*span),
-            Instruction::Boolean { span, .. } => Ok(*span),
-            Instruction::Char { span, .. } => Ok(*span),
-            Instruction::Address { span, .. } => Ok(*span),
-            Instruction::Constructor { span, .. } => Ok(*span),
-            Instruction::Carry { span, .. } => Ok(*span),
-            Instruction::Property { span, .. } => Ok(*span),
-            Instruction::NullPtr { span } => Ok(*span),
-            Instruction::Write { span, .. } => Ok(*span),
-            Instruction::Const { span, .. } => Ok(*span),
-            Instruction::This { span, .. } => Ok(*span),
-            Instruction::BindCall { span, .. } => Ok(*span),
-            Instruction::BindParameter { span, .. } => Ok(*span),
-            Instruction::Return { span, .. } => Ok(*span),
+            ThrushStatement::Str { span, .. } => *span,
+            ThrushStatement::Boolean { span, .. } => *span,
+            ThrushStatement::Char { span, .. } => *span,
+            ThrushStatement::Address { span, .. } => *span,
+            ThrushStatement::Constructor { span, .. } => *span,
+            ThrushStatement::Carry { span, .. } => *span,
+            ThrushStatement::Property { span, .. } => *span,
+            ThrushStatement::NullPtr { span } => *span,
+            ThrushStatement::Write { span, .. } => *span,
+            ThrushStatement::Const { span, .. } => *span,
+            ThrushStatement::This { span, .. } => *span,
+            ThrushStatement::BindCall { span, .. } => *span,
+            ThrushStatement::BindParameter { span, .. } => *span,
+            ThrushStatement::Return { span, .. } => *span,
 
-            Instruction::Else { span, .. } => Ok(*span),
-            Instruction::Elif { span, .. } => Ok(*span),
-            Instruction::If { span, .. } => Ok(*span),
+            ThrushStatement::Else { span, .. } => *span,
+            ThrushStatement::Elif { span, .. } => *span,
+            ThrushStatement::If { span, .. } => *span,
 
-            Instruction::Continue { span, .. } => Ok(*span),
-            Instruction::Break { span, .. } => Ok(*span),
-            Instruction::While { span, .. } => Ok(*span),
-            Instruction::For { span, .. } => Ok(*span),
-            Instruction::Pass { span } => Ok(*span),
-            Instruction::Bind { span, .. } => Ok(*span),
-            Instruction::Bindings { span, .. } => Ok(*span),
+            ThrushStatement::Continue { span, .. } => *span,
+            ThrushStatement::Break { span, .. } => *span,
+            ThrushStatement::While { span, .. } => *span,
+            ThrushStatement::For { span, .. } => *span,
+            ThrushStatement::Pass { span } => *span,
+            ThrushStatement::Bind { span, .. } => *span,
+            ThrushStatement::Bindings { span, .. } => *span,
 
-            Instruction::Null { span } => Ok(*span),
-
-            _ => Err(ThrushCompilerIssue::Error(
-                String::from("Syntax error"),
-                String::from("Expected a value to get its code position."),
-                None,
-                Span::default(),
-            )),
+            ThrushStatement::Null { span } => *span,
+            ThrushStatement::LLVMValue(_, span) => *span,
+            ThrushStatement::Block { span, .. } => *span,
+            ThrushStatement::Loop { span, .. } => *span,
+            ThrushStatement::EntryPoint { span, .. } => *span,
+            ThrushStatement::Function { span, .. } => *span,
         }
     }
 
     pub fn is_mutable(&self) -> bool {
         match self {
-            Instruction::Local { is_mutable, .. } => *is_mutable,
-            Instruction::Property { is_mutable, .. } => *is_mutable,
+            ThrushStatement::Local { is_mutable, .. } => *is_mutable,
+            ThrushStatement::Property { is_mutable, .. } => *is_mutable,
             _ => false,
         }
     }
 
     pub fn as_llvm_function_proto(&self) -> LLVMFunctionPrototype {
-        if let Instruction::Function {
+        if let ThrushStatement::Function {
             name,
             parameters,
             parameter_types,
@@ -466,7 +464,7 @@ impl<'ctx> Instruction<'ctx> {
     }
 
     pub fn as_binary(&self) -> LLVMBinaryOp {
-        if let Instruction::BinaryOp {
+        if let ThrushStatement::BinaryOp {
             left,
             operator,
             right,
@@ -476,7 +474,7 @@ impl<'ctx> Instruction<'ctx> {
             return (&**left, operator, &**right);
         }
 
-        if let Instruction::Group { expression, .. } = self {
+        if let ThrushStatement::Group { expression, .. } = self {
             return expression.as_binary();
         }
 
@@ -484,7 +482,7 @@ impl<'ctx> Instruction<'ctx> {
     }
 
     pub fn as_unaryop(&self) -> LLVMUnaryOp {
-        if let Instruction::UnaryOp {
+        if let ThrushStatement::UnaryOp {
             operator,
             kind,
             expression,
@@ -498,7 +496,7 @@ impl<'ctx> Instruction<'ctx> {
     }
 
     pub fn as_llvm_value(&self) -> &BasicValueEnum<'ctx> {
-        if let Instruction::LLVMValue(llvm_value) = self {
+        if let ThrushStatement::LLVMValue(llvm_value, _) = self {
             return llvm_value;
         }
 
@@ -506,7 +504,7 @@ impl<'ctx> Instruction<'ctx> {
     }
 
     pub fn get_binding_name(&self) -> &'ctx str {
-        if let Instruction::Bind { name, .. } = self {
+        if let ThrushStatement::Bind { name, .. } = self {
             return name;
         }
 
@@ -514,7 +512,7 @@ impl<'ctx> Instruction<'ctx> {
     }
 
     pub fn get_binding_parameters(&self) -> Vec<ThrushType> {
-        if let Instruction::Bind { parameters, .. } = self {
+        if let ThrushStatement::Bind { parameters, .. } = self {
             let parameters_type: Vec<ThrushType> = parameters
                 .iter()
                 .map(|parameter| parameter.get_type_unwrapped().clone())
@@ -527,7 +525,7 @@ impl<'ctx> Instruction<'ctx> {
     }
 
     pub fn get_binding_type(&self) -> ThrushType {
-        if let Instruction::Bind { return_type, .. } = self {
+        if let ThrushStatement::Bind { return_type, .. } = self {
             return return_type.clone();
         }
 
@@ -535,9 +533,14 @@ impl<'ctx> Instruction<'ctx> {
     }
 }
 
-impl<'ctx> Instruction<'ctx> {
-    pub fn new_float(kind: ThrushType, value: f64, signed: bool, span: Span) -> Instruction<'ctx> {
-        Instruction::Float {
+impl<'ctx> ThrushStatement<'ctx> {
+    pub fn new_float(
+        kind: ThrushType,
+        value: f64,
+        signed: bool,
+        span: Span,
+    ) -> ThrushStatement<'ctx> {
+        ThrushStatement::Float {
             kind,
             value,
             signed,
@@ -550,8 +553,8 @@ impl<'ctx> Instruction<'ctx> {
         value: u64,
         signed: bool,
         span: Span,
-    ) -> Instruction<'ctx> {
-        Instruction::Integer {
+    ) -> ThrushStatement<'ctx> {
+        ThrushStatement::Integer {
             kind,
             value,
             signed,
@@ -559,35 +562,37 @@ impl<'ctx> Instruction<'ctx> {
         }
     }
 
-    pub fn new_boolean(kind: ThrushType, value: u64, span: Span) -> Instruction<'ctx> {
-        Instruction::Boolean { kind, value, span }
+    pub fn new_boolean(kind: ThrushType, value: u64, span: Span) -> ThrushStatement<'ctx> {
+        ThrushStatement::Boolean { kind, value, span }
     }
 
-    pub fn new_char(kind: ThrushType, byte: u64, span: Span) -> Instruction<'ctx> {
-        Instruction::Char { kind, byte, span }
+    pub fn new_char(kind: ThrushType, byte: u64, span: Span) -> ThrushStatement<'ctx> {
+        ThrushStatement::Char { kind, byte, span }
     }
 
-    pub fn new_str(kind: ThrushType, bytes: Vec<u8>, span: Span) -> Instruction<'ctx> {
-        Instruction::Str { kind, bytes, span }
+    pub fn new_str(kind: ThrushType, bytes: Vec<u8>, span: Span) -> ThrushStatement<'ctx> {
+        ThrushStatement::Str { kind, bytes, span }
     }
 }
 
-impl Instruction<'_> {
+impl ThrushStatement<'_> {
     pub fn cast_signess(&mut self, operator: TokenKind) {
-        if let Instruction::Integer { kind, signed, .. } = self {
+        if let ThrushStatement::Integer { kind, signed, .. } = self {
             if operator.is_minus_operator() {
                 *kind = kind.narrowing_cast();
                 *signed = true;
             }
         }
 
-        if let Instruction::LocalRef { kind, .. } | Instruction::ConstRef { kind, .. } = self {
+        if let ThrushStatement::LocalRef { kind, .. } | ThrushStatement::ConstRef { kind, .. } =
+            self
+        {
             if kind.is_integer_type() && operator.is_minus_operator() {
                 *kind = kind.narrowing_cast();
             }
         }
 
-        if let Instruction::Float { signed, .. } = self {
+        if let ThrushStatement::Float { signed, .. } = self {
             if operator.is_minus_operator() {
                 *signed = true;
             }
@@ -610,9 +615,9 @@ impl Instruction<'_> {
     }
 }
 
-impl Instruction<'_> {
-    pub fn has_instruction(&self) -> bool {
-        if let Instruction::Block { stmts, .. } = self {
+impl ThrushStatement<'_> {
+    pub fn has_block(&self) -> bool {
+        if let ThrushStatement::Block { stmts, .. } = self {
             return !stmts.is_empty();
         }
 
@@ -620,7 +625,7 @@ impl Instruction<'_> {
     }
 
     pub fn has_return(&self) -> bool {
-        if let Instruction::Block { stmts, .. } = self {
+        if let ThrushStatement::Block { stmts, .. } = self {
             return stmts.iter().any(|stmt| stmt.is_return());
         }
 
@@ -628,7 +633,7 @@ impl Instruction<'_> {
     }
 
     pub fn has_break(&self) -> bool {
-        if let Instruction::Block { stmts, .. } = self {
+        if let ThrushStatement::Block { stmts, .. } = self {
             return stmts.iter().any(|stmt| stmt.is_break());
         }
 
@@ -636,7 +641,7 @@ impl Instruction<'_> {
     }
 
     pub fn has_continue(&self) -> bool {
-        if let Instruction::Block { stmts, .. } = self {
+        if let ThrushStatement::Block { stmts, .. } = self {
             return stmts.iter().any(|stmt| stmt.is_continue());
         }
 
@@ -645,7 +650,7 @@ impl Instruction<'_> {
 
     #[inline]
     pub fn is_block(&self) -> bool {
-        matches!(self, Instruction::Block { .. })
+        matches!(self, ThrushStatement::Block { .. })
     }
 
     #[inline]
@@ -666,71 +671,71 @@ impl Instruction<'_> {
 
     #[inline]
     pub const fn is_local_ref(&self) -> bool {
-        matches!(self, Instruction::LocalRef { .. })
+        matches!(self, ThrushStatement::LocalRef { .. })
     }
 
     #[inline]
     pub const fn is_pre_unaryop(&self) -> bool {
-        matches!(self, Instruction::UnaryOp { is_pre: true, .. })
+        matches!(self, ThrushStatement::UnaryOp { is_pre: true, .. })
     }
 
     #[inline]
     pub const fn is_function(&self) -> bool {
-        matches!(self, Instruction::Function { .. })
+        matches!(self, ThrushStatement::Function { .. })
     }
 
     #[inline]
     pub const fn is_constant(&self) -> bool {
-        matches!(self, Instruction::Const { .. })
+        matches!(self, ThrushStatement::Const { .. })
     }
 
     #[inline]
     pub const fn is_constructor(&self) -> bool {
-        matches!(self, Instruction::Constructor { .. })
+        matches!(self, ThrushStatement::Constructor { .. })
     }
 
     #[inline]
     pub const fn is_binary(&self) -> bool {
-        matches!(self, Instruction::BinaryOp { .. })
+        matches!(self, ThrushStatement::BinaryOp { .. })
     }
 
     #[inline]
     pub const fn is_group(&self) -> bool {
-        matches!(self, Instruction::Group { .. })
+        matches!(self, ThrushStatement::Group { .. })
     }
 
     #[inline]
     pub const fn is_null(&self) -> bool {
-        matches!(self, Instruction::Null { .. })
+        matches!(self, ThrushStatement::Null { .. })
     }
 
     #[inline]
     pub const fn is_integer(&self) -> bool {
-        matches!(self, Instruction::Integer { .. })
+        matches!(self, ThrushStatement::Integer { .. })
     }
 
     #[inline]
     pub const fn is_bool(&self) -> bool {
-        matches!(self, Instruction::Boolean { .. })
+        matches!(self, ThrushStatement::Boolean { .. })
     }
 
     #[inline]
     pub const fn is_float(&self) -> bool {
-        matches!(self, Instruction::Float { .. })
+        matches!(self, ThrushStatement::Float { .. })
     }
 
     #[inline]
     pub const fn is_return(&self) -> bool {
-        matches!(self, Instruction::Return { .. })
+        matches!(self, ThrushStatement::Return { .. })
     }
 
     #[inline]
     pub const fn is_break(&self) -> bool {
-        matches!(self, Instruction::Break { .. })
+        matches!(self, ThrushStatement::Break { .. })
     }
 
     #[inline]
     pub const fn is_continue(&self) -> bool {
-        matches!(self, Instruction::Continue { .. })
+        matches!(self, ThrushStatement::Continue { .. })
     }
 }

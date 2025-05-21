@@ -9,7 +9,7 @@ use crate::{
     standard::logging::{self, LoggingType},
 };
 
-use super::{Instruction, cast, context::LLVMCodeGenContext, memory::SymbolAllocated, typegen};
+use super::{ThrushStatement, cast, context::LLVMCodeGenContext, memory::SymbolAllocated, typegen};
 
 use inkwell::{
     FloatPredicate,
@@ -44,15 +44,15 @@ pub fn build_sizeof<'ctx>(
 ) -> BasicValueEnum<'ctx> {
     let llvm_context: &Context = context.get_llvm_context();
 
-    let value: &Instruction = &call.2[0];
+    let value: &ThrushStatement = &call.2[0];
 
-    if let Instruction::LocalRef {
+    if let ThrushStatement::LocalRef {
         name,
         kind: ref_type,
         span,
         ..
     }
-    | Instruction::ConstRef {
+    | ThrushStatement::ConstRef {
         name,
         kind: ref_type,
         span,
@@ -81,7 +81,7 @@ pub fn build_sizeof<'ctx>(
         return context.get_allocated_symbol(name).get_size();
     }
 
-    /*if let Instruction::ComplexType(kind, _, _) = value {
+    /*if let ThrushStatement::ComplexType(kind, _, _) = value {
         match kind {
             kind if kind.is_integer_type() || kind.is_bool_type() => {
                 return typegen::type_int_to_llvm_int_type(context, kind)
@@ -131,15 +131,15 @@ pub fn build_is_signed<'ctx>(
     let llvm_context: &Context = context.get_llvm_context();
     let llvm_builder: &Builder = context.get_llvm_builder();
 
-    let value: &Instruction = &call.2[0];
+    let value: &ThrushStatement = &call.2[0];
 
-    if let Instruction::LocalRef {
+    if let ThrushStatement::LocalRef {
         name,
         kind: ref_type,
         span,
         ..
     }
-    | Instruction::ConstRef {
+    | ThrushStatement::ConstRef {
         name,
         kind: ref_type,
         span,

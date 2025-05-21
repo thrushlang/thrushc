@@ -1,4 +1,5 @@
 use crate::{
+    frontend::lexer::{span::Span, token::Token},
     middle::types::frontend::{
         lexer::{
             tokenkind::TokenKind,
@@ -6,7 +7,7 @@ use crate::{
         },
         parser::{
             stmts::{
-                instruction::Instruction,
+                stmt::ThrushStatement,
                 traits::{
                     ConstructorExtensions, EnumExtensions, EnumFieldsExtensions, FoundSymbolEither,
                     FoundSymbolExtension, StructExtensions, TokenExtensions,
@@ -20,7 +21,7 @@ use crate::{
                 },
                 types::{
                     Bind, Bindings, ConstantSymbol, FoundSymbolId, Function, LocalSymbol,
-                    ParameterSymbol, ParametersTypes, Struct,
+                    ParameterSymbol, Struct,
                 },
             },
         },
@@ -28,17 +29,11 @@ use crate::{
     standard::error::ThrushCompilerIssue,
 };
 
-use super::{
-    contexts::SyncPosition,
-    lexer::{Span, Token},
-    parse,
-    parser::ParserContext,
-    typecheck, typegen,
-};
+use super::{ParserContext, contexts::SyncPosition, parse, typegen};
 
 pub fn build_expression<'instr>(
     parser_ctx: &mut ParserContext<'instr>,
-) -> Result<Instruction<'instr>, ThrushCompilerIssue> {
+) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
     parser_ctx
         .get_mut_control_ctx()
         .set_sync_position(SyncPosition::Expression);
@@ -52,7 +47,7 @@ pub fn build_expression<'instr>(
         ));
     }
 
-    let instruction: Instruction = or(parser_ctx)?;
+    let expression: ThrushStatement = self::or(parser_ctx)?;
 
     parser_ctx.consume(
         TokenKind::SemiColon,
@@ -60,12 +55,12 @@ pub fn build_expression<'instr>(
         String::from("Expected ';'."),
     )?;
 
-    Ok(instruction)
+    Ok(expression)
 }
 
 pub fn build_expr<'instr>(
     parser_ctx: &mut ParserContext<'instr>,
-) -> Result<Instruction<'instr>, ThrushCompilerIssue> {
+) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
     parser_ctx
         .get_mut_control_ctx()
         .set_sync_position(SyncPosition::Expression);
@@ -79,26 +74,24 @@ pub fn build_expr<'instr>(
         ));
     }
 
-    let instruction: Instruction = or(parser_ctx)?;
+    let expr: ThrushStatement = or(parser_ctx)?;
 
-    Ok(instruction)
+    Ok(expr)
 }
 
 fn or<'instr>(
     parser_ctx: &mut ParserContext<'instr>,
-) -> Result<Instruction<'instr>, ThrushCompilerIssue> {
-    let mut expression: Instruction = and(parser_ctx)?;
+) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
+    let mut expression: ThrushStatement = and(parser_ctx)?;
 
     while parser_ctx.match_token(TokenKind::Or)? {
         let operator_tk: &Token = parser_ctx.previous();
         let operator: TokenKind = operator_tk.kind;
         let span: Span = operator_tk.span;
 
-        let right: Instruction = and(parser_ctx)?;
+        let right: ThrushStatement = self::and(parser_ctx)?;
 
-        typecheck::check_binaryop(&operator, expression.get_type()?, right.get_type()?, span)?;
-
-        expression = Instruction::BinaryOp {
+        expression = ThrushStatement::BinaryOp {
             left: expression.into(),
             operator,
             right: right.into(),
@@ -112,19 +105,17 @@ fn or<'instr>(
 
 fn and<'instr>(
     parser_ctx: &mut ParserContext<'instr>,
-) -> Result<Instruction<'instr>, ThrushCompilerIssue> {
-    let mut expression: Instruction = equality(parser_ctx)?;
+) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
+    let mut expression: ThrushStatement = equality(parser_ctx)?;
 
     while parser_ctx.match_token(TokenKind::And)? {
         let operator_tk: &Token = parser_ctx.previous();
         let operator: TokenKind = operator_tk.kind;
         let span: Span = operator_tk.span;
 
-        let right: Instruction = equality(parser_ctx)?;
+        let right: ThrushStatement = self::equality(parser_ctx)?;
 
-        typecheck::check_binaryop(&operator, expression.get_type()?, right.get_type()?, span)?;
-
-        expression = Instruction::BinaryOp {
+        expression = ThrushStatement::BinaryOp {
             left: expression.into(),
             operator,
             right: right.into(),
@@ -138,19 +129,17 @@ fn and<'instr>(
 
 fn equality<'instr>(
     parser_ctx: &mut ParserContext<'instr>,
-) -> Result<Instruction<'instr>, ThrushCompilerIssue> {
-    let mut expression: Instruction = comparison(parser_ctx)?;
+) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
+    let mut expression: ThrushStatement = cmp(parser_ctx)?;
 
     if parser_ctx.match_token(TokenKind::BangEq)? || parser_ctx.match_token(TokenKind::EqEq)? {
         let operator_tk: &Token = parser_ctx.previous();
         let operator: TokenKind = operator_tk.kind;
         let span: Span = operator_tk.span;
 
-        let right: Instruction = comparison(parser_ctx)?;
+        let right: ThrushStatement = self::cmp(parser_ctx)?;
 
-        typecheck::check_binaryop(&operator, expression.get_type()?, right.get_type()?, span)?;
-
-        expression = Instruction::BinaryOp {
+        expression = ThrushStatement::BinaryOp {
             left: expression.into(),
             operator,
             right: right.into(),
@@ -162,10 +151,10 @@ fn equality<'instr>(
     Ok(expression)
 }
 
-fn comparison<'instr>(
+fn cmp<'instr>(
     parser_ctx: &mut ParserContext<'instr>,
-) -> Result<Instruction<'instr>, ThrushCompilerIssue> {
-    let mut expression: Instruction = term(parser_ctx)?;
+) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
+    let mut expression: ThrushStatement = term(parser_ctx)?;
 
     if parser_ctx.match_token(TokenKind::Greater)?
         || parser_ctx.match_token(TokenKind::GreaterEq)?
@@ -176,11 +165,9 @@ fn comparison<'instr>(
         let operator: TokenKind = operator_tk.kind;
         let span: Span = operator_tk.span;
 
-        let right: Instruction = term(parser_ctx)?;
+        let right: ThrushStatement = self::term(parser_ctx)?;
 
-        typecheck::check_binaryop(&operator, expression.get_type()?, right.get_type()?, span)?;
-
-        expression = Instruction::BinaryOp {
+        expression = ThrushStatement::BinaryOp {
             left: expression.into(),
             operator,
             right: right.into(),
@@ -194,8 +181,8 @@ fn comparison<'instr>(
 
 fn term<'instr>(
     parser_ctx: &mut ParserContext<'instr>,
-) -> Result<Instruction<'instr>, ThrushCompilerIssue> {
-    let mut expression: Instruction = factor(parser_ctx)?;
+) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
+    let mut expression: ThrushStatement = factor(parser_ctx)?;
 
     while parser_ctx.match_token(TokenKind::Plus)?
         || parser_ctx.match_token(TokenKind::Minus)?
@@ -206,16 +193,14 @@ fn term<'instr>(
         let operator: TokenKind = operator_tk.kind;
         let span: Span = operator_tk.span;
 
-        let right: Instruction = factor(parser_ctx)?;
+        let right: ThrushStatement = self::factor(parser_ctx)?;
 
         let left_type: &ThrushType = expression.get_type()?;
         let right_type: &ThrushType = right.get_type()?;
 
-        typecheck::check_binaryop(&operator, left_type, right_type, span)?;
-
         let kind: &ThrushType = left_type.precompute_type(right_type);
 
-        expression = Instruction::BinaryOp {
+        expression = ThrushStatement::BinaryOp {
             left: expression.clone().into(),
             operator,
             right: right.into(),
@@ -229,24 +214,22 @@ fn term<'instr>(
 
 fn factor<'instr>(
     parser_ctx: &mut ParserContext<'instr>,
-) -> Result<Instruction<'instr>, ThrushCompilerIssue> {
-    let mut expression: Instruction = unary(parser_ctx)?;
+) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
+    let mut expression: ThrushStatement = unary(parser_ctx)?;
 
     while parser_ctx.match_token(TokenKind::Slash)? || parser_ctx.match_token(TokenKind::Star)? {
         let operator_tk: &Token = parser_ctx.previous();
         let operator: TokenKind = operator_tk.kind;
         let span: Span = operator_tk.span;
 
-        let right: Instruction = unary(parser_ctx)?;
+        let right: ThrushStatement = self::unary(parser_ctx)?;
 
         let left_type: &ThrushType = expression.get_type()?;
         let right_type: &ThrushType = right.get_type()?;
 
-        typecheck::check_binaryop(&operator, left_type, right_type, parser_ctx.previous().span)?;
-
         let kind: &ThrushType = left_type.precompute_type(right_type);
 
-        expression = Instruction::BinaryOp {
+        expression = ThrushStatement::BinaryOp {
             left: expression.clone().into(),
             operator,
             right: right.into(),
@@ -260,21 +243,15 @@ fn factor<'instr>(
 
 fn unary<'instr>(
     parser_ctx: &mut ParserContext<'instr>,
-) -> Result<Instruction<'instr>, ThrushCompilerIssue> {
+) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
     if parser_ctx.match_token(TokenKind::Bang)? {
         let operator_tk: &Token = parser_ctx.previous();
         let operator: TokenKind = operator_tk.kind;
         let span: Span = operator_tk.span;
 
-        let expression: Instruction = primary(parser_ctx)?;
+        let expression: ThrushStatement = self::primary(parser_ctx)?;
 
-        typecheck::check_unary(
-            &operator,
-            expression.get_type()?,
-            parser_ctx.previous().span,
-        )?;
-
-        return Ok(Instruction::UnaryOp {
+        return Ok(ThrushStatement::UnaryOp {
             operator,
             expression: expression.into(),
             kind: ThrushType::Bool,
@@ -288,15 +265,13 @@ fn unary<'instr>(
         let operator: TokenKind = operator_tk.kind;
         let span: Span = operator_tk.span;
 
-        let mut expression: Instruction = primary(parser_ctx)?;
+        let mut expression: ThrushStatement = self::primary(parser_ctx)?;
 
         expression.cast_signess(operator);
 
         let expression_type: &ThrushType = expression.get_type()?;
 
-        typecheck::check_unary(&operator, expression_type, parser_ctx.previous().span)?;
-
-        return Ok(Instruction::UnaryOp {
+        return Ok(ThrushStatement::UnaryOp {
             operator,
             expression: expression.clone().into(),
             kind: expression_type.clone(),
@@ -305,15 +280,15 @@ fn unary<'instr>(
         });
     }
 
-    let instr: Instruction = primary(parser_ctx)?;
+    let instr: ThrushStatement = primary(parser_ctx)?;
 
     Ok(instr)
 }
 
 fn primary<'instr>(
     parser_ctx: &mut ParserContext<'instr>,
-) -> Result<Instruction<'instr>, ThrushCompilerIssue> {
-    let primary: Instruction = match &parser_ctx.peek().kind {
+) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
+    let primary: ThrushStatement = match &parser_ctx.peek().kind {
         TokenKind::Carry => {
             let carry_tk: &Token = parser_ctx.advance()?;
             let span: Span = carry_tk.span;
@@ -343,7 +318,7 @@ fn primary<'instr>(
 
                 build_reference(parser_ctx, name, span)?;
 
-                return Ok(Instruction::Carry {
+                return Ok(ThrushStatement::Carry {
                     name,
                     expression: None,
                     carry_type,
@@ -351,7 +326,7 @@ fn primary<'instr>(
                 });
             }
 
-            let expression: Instruction = build_expr(parser_ctx)?;
+            let expression: ThrushStatement = build_expr(parser_ctx)?;
 
             let expression_type: &ThrushType = expression.get_type()?;
 
@@ -367,7 +342,7 @@ fn primary<'instr>(
                 ));
             }
 
-            Instruction::Carry {
+            ThrushStatement::Carry {
                 name: "",
                 expression: Some(expression.into()),
                 carry_type,
@@ -393,14 +368,7 @@ fn primary<'instr>(
                 String::from("Expected ']'."),
             )?;
 
-            let value: Instruction = build_expr(parser_ctx)?;
-
-            parser_ctx.mismatch_types(
-                &write_type,
-                value.get_type()?,
-                value.get_span()?,
-                Some(&value),
-            );
+            let value: ThrushStatement = build_expr(parser_ctx)?;
 
             parser_ctx.consume(
                 TokenKind::Arrow,
@@ -419,7 +387,7 @@ fn primary<'instr>(
 
                 build_reference(parser_ctx, name, span)?;
 
-                return Ok(Instruction::Write {
+                return Ok(ThrushStatement::Write {
                     write_to: (name, None),
                     write_value: value.into(),
                     write_type,
@@ -427,7 +395,7 @@ fn primary<'instr>(
                 });
             }
 
-            let expression: Instruction = build_expr(parser_ctx)?;
+            let expression: ThrushStatement = build_expr(parser_ctx)?;
 
             let expression_type: &ThrushType = expression.get_type()?;
 
@@ -443,7 +411,7 @@ fn primary<'instr>(
                 ));
             }
 
-            Instruction::Write {
+            ThrushStatement::Write {
                 write_to: ("", Some(expression.into())),
                 write_value: value.into(),
                 write_type,
@@ -477,7 +445,7 @@ fn primary<'instr>(
             let operator: TokenKind = operator_tk.kind;
             let span: Span = operator_tk.span;
 
-            let expression: Instruction = build_expr(parser_ctx)?;
+            let expression: ThrushStatement = build_expr(parser_ctx)?;
 
             if !expression.is_local_ref() {
                 return Err(ThrushCompilerIssue::Error(
@@ -488,7 +456,7 @@ fn primary<'instr>(
                 ));
             }
 
-            let unaryop: Instruction = Instruction::UnaryOp {
+            let unaryop: ThrushStatement = ThrushStatement::UnaryOp {
                 operator,
                 expression: expression.into(),
                 kind: ThrushType::Void,
@@ -504,7 +472,7 @@ fn primary<'instr>(
             let operator: TokenKind = operator_tk.kind;
             let span: Span = operator_tk.span;
 
-            let expression: Instruction = build_expr(parser_ctx)?;
+            let expression: ThrushStatement = build_expr(parser_ctx)?;
 
             if !expression.is_local_ref() {
                 return Err(ThrushCompilerIssue::Error(
@@ -515,7 +483,7 @@ fn primary<'instr>(
                 ));
             }
 
-            let unaryop: Instruction = Instruction::UnaryOp {
+            let unaryop: ThrushStatement = ThrushStatement::UnaryOp {
                 operator,
                 expression: expression.into(),
                 kind: ThrushType::Void,
@@ -529,7 +497,7 @@ fn primary<'instr>(
         TokenKind::LParen => {
             let span: Span = parser_ctx.advance()?.span;
 
-            let expression: Instruction = build_expr(parser_ctx)?;
+            let expression: ThrushStatement = build_expr(parser_ctx)?;
 
             let kind: &ThrushType = expression.get_type()?;
 
@@ -550,7 +518,7 @@ fn primary<'instr>(
                 String::from("Expected ')'."),
             )?;
 
-            return Ok(Instruction::Group {
+            return Ok(ThrushStatement::Group {
                 expression: expression.clone().into(),
                 kind: kind.clone(),
                 span,
@@ -562,7 +530,7 @@ fn primary<'instr>(
             let lexeme: &str = str_tk.lexeme;
             let span: Span = str_tk.span;
 
-            Instruction::new_str(ThrushType::Str, lexeme.to_bytes(span)?, span)
+            ThrushStatement::new_str(ThrushType::Str, lexeme.to_bytes(span)?, span)
         }
 
         TokenKind::Char => {
@@ -570,10 +538,10 @@ fn primary<'instr>(
             let span: Span = char_tk.span;
             let lexeme: &str = char_tk.lexeme;
 
-            Instruction::new_char(ThrushType::Char, lexeme.get_first_byte(), span)
+            ThrushStatement::new_char(ThrushType::Char, lexeme.get_first_byte(), span)
         }
 
-        TokenKind::NullPtr => Instruction::NullPtr {
+        TokenKind::NullPtr => ThrushStatement::NullPtr {
             span: parser_ctx.advance()?.span,
         },
 
@@ -587,7 +555,7 @@ fn primary<'instr>(
             let integer_type: ThrushType = parsed_integer.0;
             let integer_value: u64 = parsed_integer.1;
 
-            Instruction::new_integer(integer_type, integer_value, false, span)
+            ThrushStatement::new_integer(integer_type, integer_value, false, span)
         }
 
         TokenKind::Float => {
@@ -601,7 +569,7 @@ fn primary<'instr>(
             let float_type: ThrushType = parsed_float.0;
             let float_value: f64 = parsed_float.1;
 
-            Instruction::new_float(float_type, float_value, false, span)
+            ThrushStatement::new_float(float_type, float_value, false, span)
         }
 
         TokenKind::Identifier => {
@@ -645,16 +613,9 @@ fn primary<'instr>(
                     ));
                 }
 
-                let expression: Instruction = build_expr(parser_ctx)?;
+                let expression: ThrushStatement = build_expr(parser_ctx)?;
 
-                parser_ctx.mismatch_types(
-                    &local_type.clone(),
-                    expression.get_type()?,
-                    span,
-                    Some(&expression),
-                );
-
-                return Ok(Instruction::Mut {
+                return Ok(ThrushStatement::Mut {
                     source: (Some(name), None),
                     value: expression.into(),
                     kind: local_type,
@@ -671,28 +632,21 @@ fn primary<'instr>(
             }
 
             if parser_ctx.match_token(TokenKind::Dot)? {
-                let property: Instruction = build_property(parser_ctx, name, span)?;
+                let property: ThrushStatement = build_property(parser_ctx, name, span)?;
 
                 if parser_ctx.match_token(TokenKind::Eq)? {
-                    let expr: Instruction = build_expr(parser_ctx)?;
-
-                    parser_ctx.mismatch_types(
-                        property.get_type()?,
-                        expr.get_type()?,
-                        expr.get_span()?,
-                        Some(&expr),
-                    );
+                    let expr: ThrushStatement = build_expr(parser_ctx)?;
 
                     if !property.is_mutable() {
                         return Err(ThrushCompilerIssue::Error(
                             String::from("Expected mutable type"),
                             String::from("Make mutable the parameter or local of this property."),
                             None,
-                            property.get_span()?,
+                            property.get_span(),
                         ));
                     }
 
-                    return Ok(Instruction::Mut {
+                    return Ok(ThrushStatement::Mut {
                         source: (None, Some(property.clone().into())),
                         value: expr.into(),
                         kind: property.get_type()?.clone(),
@@ -731,17 +685,17 @@ fn primary<'instr>(
         }
 
         TokenKind::True => {
-            Instruction::new_boolean(ThrushType::Bool, 1, parser_ctx.advance()?.span)
+            ThrushStatement::new_boolean(ThrushType::Bool, 1, parser_ctx.advance()?.span)
         }
 
         TokenKind::False => {
-            Instruction::new_boolean(ThrushType::Bool, 0, parser_ctx.advance()?.span)
+            ThrushStatement::new_boolean(ThrushType::Bool, 0, parser_ctx.advance()?.span)
         }
 
         TokenKind::This => build_this(parser_ctx)?,
         TokenKind::New => build_constructor(parser_ctx)?,
 
-        TokenKind::Pass => Instruction::Pass {
+        TokenKind::Pass => ThrushStatement::Pass {
             span: parser_ctx.advance()?.span,
         },
 
@@ -764,7 +718,7 @@ fn build_binding_call<'instr>(
     parser_ctx: &mut ParserContext<'instr>,
     name: &'instr str,
     span: Span,
-) -> Result<Instruction<'instr>, ThrushCompilerIssue> {
+) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
     let symbol: FoundSymbolId = parser_ctx.get_symbols().get_symbols_id(name, span)?;
 
     let structure_id: &str = symbol.expected_struct(span)?;
@@ -806,14 +760,14 @@ fn build_binding_call<'instr>(
         String::from("Expected '('."),
     )?;
 
-    let mut args: Vec<Instruction> = Vec::with_capacity(10);
+    let mut args: Vec<ThrushStatement> = Vec::with_capacity(10);
 
     while parser_ctx.peek().kind != TokenKind::RParen {
         if parser_ctx.match_token(TokenKind::Comma)? {
             continue;
         }
 
-        let expression: Instruction = build_expr(parser_ctx)?;
+        let expression: ThrushStatement = build_expr(parser_ctx)?;
 
         args.push(expression);
     }
@@ -837,16 +791,9 @@ fn build_binding_call<'instr>(
         ));
     }
 
-    for (index, argument) in args.iter().enumerate() {
-        let target_type: &ThrushType = &bind_parameters_type[index];
-        let from_type: &ThrushType = argument.get_type()?;
-
-        parser_ctx.mismatch_types(target_type, from_type, argument.get_span()?, Some(argument));
-    }
-
     let canonical_name: String = format!("{}.{}", name, bind_name);
 
-    Ok(Instruction::BindCall {
+    Ok(ThrushStatement::BindCall {
         name: canonical_name,
         args,
         kind: bind_type,
@@ -858,7 +805,7 @@ fn build_property<'instr>(
     parser_ctx: &mut ParserContext<'instr>,
     name: &'instr str,
     span: Span,
-) -> Result<Instruction<'instr>, ThrushCompilerIssue> {
+) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
     let symbol: FoundSymbolId = parser_ctx.get_symbols().get_symbols_id(name, span)?;
 
     let local_position: (&str, usize) = symbol.expected_local(span)?;
@@ -905,7 +852,7 @@ fn build_property<'instr>(
         span,
     )?;
 
-    Ok(Instruction::Property {
+    Ok(ThrushStatement::Property {
         name,
         indexes: decomposed.1,
         kind: decomposed.0,
@@ -918,7 +865,7 @@ fn build_reference<'instr>(
     parser_ctx: &mut ParserContext<'instr>,
     name: &'instr str,
     span: Span,
-) -> Result<Instruction<'instr>, ThrushCompilerIssue> {
+) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
     let symbol: FoundSymbolId = parser_ctx.get_symbols().get_symbols_id(name, span)?;
 
     if symbol.is_constant() {
@@ -926,7 +873,7 @@ fn build_reference<'instr>(
         let constant: ConstantSymbol = parser_ctx.get_symbols().get_const_by_id(const_id, span)?;
         let constant_type: ThrushType = constant.get_type();
 
-        return Ok(Instruction::ConstRef {
+        return Ok(ThrushStatement::ConstRef {
             name,
             kind: constant_type,
             span,
@@ -940,7 +887,7 @@ fn build_reference<'instr>(
             .get_parameter_by_id(parameter_id, span)?;
         let parameter_type: ThrushType = parameter.get_type();
 
-        return Ok(Instruction::LocalRef {
+        return Ok(ThrushStatement::LocalRef {
             name,
             kind: parameter_type,
             span,
@@ -965,7 +912,7 @@ fn build_reference<'instr>(
         ));
     }
 
-    let localref: Instruction = Instruction::LocalRef {
+    let localref: ThrushStatement = ThrushStatement::LocalRef {
         name,
         kind: local_type.clone(),
         span,
@@ -978,9 +925,7 @@ fn build_reference<'instr>(
         let operator: TokenKind = operator_tk.kind;
         let span: Span = operator_tk.span;
 
-        typecheck::check_unary(&operator, &local_type, span)?;
-
-        let unaryop: Instruction = Instruction::UnaryOp {
+        let unaryop: ThrushStatement = ThrushStatement::UnaryOp {
             operator,
             expression: localref.into(),
             kind: ThrushType::Void,
@@ -998,7 +943,7 @@ fn build_enum_field<'instr>(
     parser_ctx: &mut ParserContext<'instr>,
     name: &'instr str,
     span: Span,
-) -> Result<Instruction<'instr>, ThrushCompilerIssue> {
+) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
     let object: FoundSymbolId = parser_ctx.get_symbols().get_symbols_id(name, span)?;
     let enum_id: &str = object.expected_enum(span)?;
 
@@ -1025,7 +970,7 @@ fn build_enum_field<'instr>(
     }
 
     let field: EnumField = union.get_field(field_name);
-    let field_value: Instruction = field.1;
+    let field_value: ThrushStatement = field.1;
 
     Ok(field_value)
 }
@@ -1034,7 +979,7 @@ fn build_address<'instr>(
     parser_ctx: &mut ParserContext<'instr>,
     name: &'instr str,
     span: Span,
-) -> Result<Instruction<'instr>, ThrushCompilerIssue> {
+) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
     let object: FoundSymbolId = parser_ctx.get_symbols().get_symbols_id(name, span)?;
     let local_id: (&str, usize) = object.expected_local(span)?;
 
@@ -1056,9 +1001,9 @@ fn build_address<'instr>(
         ));
     }
 
-    let mut indexes: Vec<Instruction> = Vec::with_capacity(10);
+    let mut indexes: Vec<ThrushStatement> = Vec::with_capacity(10);
 
-    let index: Instruction = build_expr(parser_ctx)?;
+    let index: ThrushStatement = build_expr(parser_ctx)?;
 
     if !index.is_unsigned_integer()? || !index.is_anyu32bit_integer()? {
         return Err(ThrushCompilerIssue::Error(
@@ -1068,7 +1013,7 @@ fn build_address<'instr>(
                 index.get_type()?,
             ),
             None,
-            index.get_span()?,
+            index.get_span(),
         ));
     }
 
@@ -1081,7 +1026,7 @@ fn build_address<'instr>(
     indexes.push(index);
 
     while parser_ctx.match_token(TokenKind::LBracket)? {
-        let index: Instruction = build_expr(parser_ctx)?;
+        let index: ThrushStatement = build_expr(parser_ctx)?;
 
         if !index.is_unsigned_integer()? || !index.is_anyu32bit_integer()? {
             return Err(ThrushCompilerIssue::Error(
@@ -1091,7 +1036,7 @@ fn build_address<'instr>(
                     index.get_type()?,
                 ),
                 None,
-                index.get_span()?,
+                index.get_span(),
             ));
         }
 
@@ -1104,7 +1049,7 @@ fn build_address<'instr>(
         indexes.push(index);
     }
 
-    Ok(Instruction::Address {
+    Ok(ThrushStatement::Address {
         name,
         indexes,
         kind: local_type,
@@ -1116,7 +1061,7 @@ fn build_function_call<'instr>(
     parser_ctx: &mut ParserContext<'instr>,
     name: &'instr str,
     span: Span,
-) -> Result<Instruction<'instr>, ThrushCompilerIssue> {
+) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
     let object: FoundSymbolId = parser_ctx.get_symbols().get_symbols_id(name, span)?;
 
     let function_id: &str = object.expected_function(span)?;
@@ -1125,26 +1070,21 @@ fn build_function_call<'instr>(
         .get_function_by_id(span, function_id)?;
 
     let function_type: ThrushType = function.get_type();
-    let ignore_more_args: bool = function.has_ignore_more_args();
-
-    let parameters_types: &ParametersTypes = function.get_parameters_types();
-    let maximun_arguments: usize = function.get_parameters_size();
-
-    let mut args: Vec<Instruction> = Vec::with_capacity(10);
+    let mut args: Vec<ThrushStatement> = Vec::with_capacity(10);
 
     while parser_ctx.peek().kind != TokenKind::RParen {
         if parser_ctx.match_token(TokenKind::Comma)? {
             continue;
         }
 
-        let expression: Instruction = build_expr(parser_ctx)?;
+        let expression: ThrushStatement = build_expr(parser_ctx)?;
 
         if expression.is_constructor() {
             return Err(ThrushCompilerIssue::Error(
                 String::from("Syntax error"),
                 String::from("Constructor should be stored in a local variable."),
                 None,
-                expression.get_span()?,
+                expression.get_span(),
             ));
         }
 
@@ -1157,59 +1097,7 @@ fn build_function_call<'instr>(
         String::from("Expected ')'."),
     )?;
 
-    let arguments_size: usize = args.len();
-
-    if args.len() > maximun_arguments && !ignore_more_args {
-        return Err(ThrushCompilerIssue::Error(
-            String::from("Syntax error"),
-            format!(
-                "Expected '{}' arguments, not '{}'.",
-                maximun_arguments,
-                args.len()
-            ),
-            None,
-            span,
-        ));
-    }
-
-    if arguments_size != maximun_arguments && !ignore_more_args {
-        let mut displayed_args_types: String = String::with_capacity(100);
-
-        if !args.is_empty() {
-            for (index, arg) in args.iter().enumerate() {
-                displayed_args_types.push_str(&format!("{}", arg.get_type()?));
-
-                if index > 0 {
-                    displayed_args_types.push_str(", ");
-                }
-            }
-        } else {
-            displayed_args_types = String::from("none");
-        }
-
-        return Err(ThrushCompilerIssue::Error(
-            String::from("Syntax error"),
-            format!(
-                "Expected '{}' arguments with types '{}', not '{}'.",
-                maximun_arguments,
-                function.get_parameters_types(),
-                displayed_args_types,
-            ),
-            None,
-            span,
-        ));
-    }
-
-    if !ignore_more_args {
-        for (position, argument) in args.iter().enumerate() {
-            let from_type: &ThrushType = argument.get_type()?;
-            let target_type: &ThrushType = &parameters_types.0[position];
-
-            parser_ctx.mismatch_types(target_type, from_type, argument.get_span()?, Some(argument));
-        }
-    }
-
-    Ok(Instruction::Call {
+    Ok(ThrushStatement::Call {
         name,
         args,
         kind: function_type,
@@ -1219,7 +1107,7 @@ fn build_function_call<'instr>(
 
 fn build_this<'instr>(
     parser_ctx: &mut ParserContext<'instr>,
-) -> Result<Instruction<'instr>, ThrushCompilerIssue> {
+) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
     let this_tk: &Token = parser_ctx.consume(
         TokenKind::This,
         String::from("Syntax error"),
@@ -1276,7 +1164,7 @@ fn build_this<'instr>(
 
     let is_mutable: bool = parser_ctx.match_token(TokenKind::Mut)?;
 
-    Ok(Instruction::This {
+    Ok(ThrushStatement::This {
         kind: this_type,
         is_mutable,
         span,
@@ -1285,7 +1173,7 @@ fn build_this<'instr>(
 
 fn build_constructor<'instr>(
     parser_ctx: &mut ParserContext<'instr>,
-) -> Result<Instruction<'instr>, ThrushCompilerIssue> {
+) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
     let new_tk: &Token = parser_ctx.consume(
         TokenKind::New,
         String::from("Syntax error"),
@@ -1358,7 +1246,7 @@ fn build_constructor<'instr>(
                 ));
             }
 
-            let expression: Instruction = build_expr(parser_ctx)?;
+            let expression: ThrushStatement = self::build_expr(parser_ctx)?;
 
             if expression.is_constructor() {
                 return Err(ThrushCompilerIssue::Error(
@@ -1369,16 +1257,7 @@ fn build_constructor<'instr>(
                 ));
             }
 
-            let expression_type: &ThrushType = expression.get_type()?;
-
             if let Some(target_type) = struct_found.get_field_type(field_name) {
-                parser_ctx.mismatch_types(
-                    &target_type,
-                    expression_type,
-                    expression.get_span()?,
-                    Some(&expression),
-                );
-
                 arguments
                     .1
                     .push((field_name, expression, target_type, amount as u32));
@@ -1411,7 +1290,7 @@ fn build_constructor<'instr>(
         String::from("Expected '}'."),
     )?;
 
-    Ok(Instruction::Constructor {
+    Ok(ThrushStatement::Constructor {
         arguments: arguments.clone(),
         kind: arguments.get_type(),
         span,

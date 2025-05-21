@@ -11,7 +11,7 @@ use crate::{
         backend::llvm::types::LLVMBinaryOp,
         frontend::{
             lexer::{tokenkind::TokenKind, types::ThrushType},
-            parser::stmts::instruction::Instruction,
+            parser::stmts::stmt::ThrushStatement,
         },
     },
 };
@@ -55,9 +55,9 @@ pub fn ptr_binaryop<'ctx>(
     ########################################################################*/
 
     if let (
-        Instruction::Call { .. },
+        ThrushStatement::Call { .. },
         TokenKind::EqEq | TokenKind::BangEq,
-        Instruction::NullPtr { .. },
+        ThrushStatement::NullPtr { .. },
     ) = binary
     {
         let left_compiled: BasicValueEnum = valuegen::build(binary.0, target_type, symbols);
@@ -67,9 +67,9 @@ pub fn ptr_binaryop<'ctx>(
     }
 
     if let (
-        Instruction::NullPtr { .. },
+        ThrushStatement::NullPtr { .. },
         TokenKind::EqEq | TokenKind::BangEq,
-        Instruction::Call { .. },
+        ThrushStatement::Call { .. },
     ) = binary
     {
         let left_compiled: PointerValue = context.ptr_type(AddressSpace::default()).const_null();

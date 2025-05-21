@@ -1,5 +1,5 @@
 use crate::{
-    frontend::lexer::Span,
+    frontend::lexer::span::Span,
     middle::types::frontend::{lexer::types::ThrushType, parser::symbols::types::Bindings},
     standard::error::ThrushCompilerIssue,
 };

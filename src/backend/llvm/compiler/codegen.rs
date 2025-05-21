@@ -1,7 +1,7 @@
 use crate::middle::types::backend::llvm::types::{LLVMFunctionParameter, LLVMFunctionPrototype};
 use crate::middle::types::frontend::lexer::types::ThrushType;
 
-use crate::middle::types::frontend::parser::stmts::instruction::Instruction;
+use crate::middle::types::frontend::parser::stmts::stmt::ThrushStatement;
 use crate::standard::diagnostic::Diagnostician;
 
 use super::super::compiler::attributes::LLVMAttribute;
@@ -28,7 +28,7 @@ use inkwell::{
 
 pub struct LLVMCodegen<'a, 'ctx> {
     context: LLVMCodeGenContext<'a, 'ctx>,
-    instructions: &'ctx [Instruction<'ctx>],
+    stmts: &'ctx [ThrushStatement<'ctx>],
     current: usize,
     function: Option<FunctionValue<'ctx>>,
     loop_exit_block: Option<BasicBlock<'ctx>>,
@@ -41,13 +41,13 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         module: &'a Module<'ctx>,
         builder: &'ctx Builder<'ctx>,
         context: &'ctx Context,
-        instructions: &'ctx [Instruction<'ctx>],
+        stmts: &'ctx [ThrushStatement<'ctx>],
         target_data: TargetData,
         diagnostician: Diagnostician,
     ) {
         Self {
             context: LLVMCodeGenContext::new(module, context, builder, target_data, diagnostician),
-            instructions,
+            stmts,
             current: 0,
             function: None,
             loop_exit_block: None,
@@ -62,21 +62,21 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         self.declare();
 
         while !self.is_end() {
-            let instruction: &Instruction = self.advance();
-            self.codegen(instruction);
+            let stmt: &ThrushStatement = self.advance();
+            self.codegen(stmt);
         }
     }
 
-    fn codegen(&mut self, instruction: &'ctx Instruction) -> Instruction<'ctx> {
+    fn codegen(&mut self, stmt: &'ctx ThrushStatement) -> ThrushStatement<'ctx> {
         let llvm_builder: &Builder = self.context.get_llvm_builder();
         let llvm_context: &Context = self.context.get_llvm_context();
 
-        match instruction {
-            Instruction::Block { stmts, span, .. } => {
+        match stmt {
+            ThrushStatement::Block { stmts, span, .. } => {
                 self.context.begin_scope();
 
-                stmts.iter().for_each(|instruction| {
-                    self.codegen(instruction);
+                stmts.iter().for_each(|stmt| {
+                    self.codegen(stmt);
                 });
 
                 if !self.deallocators_emited {
@@ -87,9 +87,9 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
 
                 self.context.end_scope();
 
-                Instruction::Null { span: *span }
+                ThrushStatement::Null { span: *span }
             }
-            Instruction::If {
+            ThrushStatement::If {
                 cond,
                 block,
                 elfs,
@@ -149,7 +149,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                     let mut current_block: BasicBlock = else_if_body;
 
                     for (index, instr) in elfs.iter().enumerate() {
-                        if let Instruction::Elif { cond, block, .. } = instr {
+                        if let ThrushStatement::Elif { cond, block, .. } = instr {
                             let compiled_else_if_cond: IntValue =
                                 self.codegen(cond).as_llvm_value().into_int_value();
 
@@ -192,7 +192,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 }
 
                 if let Some(otherwise) = otherwise {
-                    if let Instruction::Else { block, .. } = &**otherwise {
+                    if let ThrushStatement::Else { block, .. } = &**otherwise {
                         llvm_builder.position_at_end(else_block);
 
                         self.codegen(block);
@@ -218,9 +218,9 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                     let _ = else_block.remove_from_function();
                 }
 
-                Instruction::Null { span: *span }
+                ThrushStatement::Null { span: *span }
             }
-            Instruction::While {
+            ThrushStatement::While {
                 cond, block, span, ..
             } => {
                 let function: FunctionValue = self.function.unwrap();
@@ -257,9 +257,9 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
 
                 llvm_builder.position_at_end(exit_block);
 
-                Instruction::Null { span: *span }
+                ThrushStatement::Null { span: *span }
             }
-            Instruction::Loop { block, span } => {
+            ThrushStatement::Loop { block, span } => {
                 let function: FunctionValue = self.function.unwrap();
                 let loop_start_block: BasicBlock =
                     llvm_context.append_basic_block(function, "loop");
@@ -289,9 +289,9 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                     llvm_builder.position_at_end(loop_exit_block);
                 }
 
-                Instruction::Null { span: *span }
+                ThrushStatement::Null { span: *span }
             }
-            Instruction::For {
+            ThrushStatement::For {
                 local,
                 cond,
                 actions,
@@ -345,26 +345,26 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
 
                 llvm_builder.position_at_end(exit_block);
 
-                Instruction::Null { span: *span }
+                ThrushStatement::Null { span: *span }
             }
 
-            Instruction::Break { span, .. } => {
+            ThrushStatement::Break { span, .. } => {
                 llvm_builder
                     .build_unconditional_branch(self.loop_exit_block.unwrap())
                     .unwrap();
 
-                Instruction::Null { span: *span }
+                ThrushStatement::Null { span: *span }
             }
 
-            Instruction::Continue { span, .. } => {
+            ThrushStatement::Continue { span, .. } => {
                 llvm_builder
                     .build_unconditional_branch(self.loop_start_block.unwrap())
                     .unwrap();
 
-                Instruction::Null { span: *span }
+                ThrushStatement::Null { span: *span }
             }
 
-            Instruction::FunctionParameter {
+            ThrushStatement::FunctionParameter {
                 name,
                 kind,
                 position,
@@ -374,19 +374,18 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
             } => {
                 self.build_function_parameter((name, kind, *position, *is_mutable));
 
-                Instruction::Null { span: *span }
+                ThrushStatement::Null { span: *span }
             }
 
-            Instruction::Function { span, .. } => {
-                let function_prototype: LLVMFunctionPrototype =
-                    instruction.as_llvm_function_proto();
+            ThrushStatement::Function { span, .. } => {
+                let function_prototype: LLVMFunctionPrototype = stmt.as_llvm_function_proto();
 
                 self.build_function(function_prototype);
 
-                Instruction::Null { span: *span }
+                ThrushStatement::Null { span: *span }
             }
 
-            Instruction::Return {
+            ThrushStatement::Return {
                 expression,
                 kind,
                 span,
@@ -400,18 +399,17 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                     expression.as_ref(),
                 );
 
-                valuegen::build(instruction, kind, &mut self.context);
+                valuegen::build(stmt, kind, &mut self.context);
 
-                Instruction::Null { span: *span }
+                ThrushStatement::Null { span: *span }
             }
 
-            Instruction::Str { .. } => Instruction::LLVMValue(valuegen::build(
-                instruction,
-                &ThrushType::Void,
-                &mut self.context,
-            )),
+            ThrushStatement::Str { span, .. } => ThrushStatement::LLVMValue(
+                valuegen::build(stmt, &ThrushType::Void, &mut self.context),
+                *span,
+            ),
 
-            Instruction::Local {
+            ThrushStatement::Local {
                 name,
                 kind,
                 value,
@@ -420,65 +418,76 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 ..
             } => {
                 if *comptime {
-                    return Instruction::Null { span: *span };
+                    return ThrushStatement::Null { span: *span };
                 }
 
                 local::build((name, kind, value), &mut self.context);
 
-                Instruction::Null { span: *span }
+                ThrushStatement::Null { span: *span }
             }
 
-            Instruction::Mut { kind, span, .. } => {
-                valuegen::build(instruction, kind, &mut self.context);
+            ThrushStatement::Mut { kind, span, .. } => {
+                valuegen::build(stmt, kind, &mut self.context);
 
-                Instruction::Null { span: *span }
+                ThrushStatement::Null { span: *span }
             }
 
-            Instruction::BinaryOp {
+            ThrushStatement::BinaryOp {
                 operator,
                 left,
                 right,
                 kind: binaryop_type,
+                span,
                 ..
             } => {
                 if binaryop_type.is_integer_type() {
-                    return Instruction::LLVMValue(binaryop::integer::integer_binaryop(
-                        (left, operator, right),
-                        binaryop_type,
-                        &mut self.context,
-                    ));
+                    return ThrushStatement::LLVMValue(
+                        binaryop::integer::integer_binaryop(
+                            (left, operator, right),
+                            binaryop_type,
+                            &mut self.context,
+                        ),
+                        *span,
+                    );
                 }
 
                 if binaryop_type.is_float_type() {
-                    return Instruction::LLVMValue(binaryop::float::float_binaryop(
-                        (left, operator, right),
-                        binaryop_type,
-                        &mut self.context,
-                    ));
+                    return ThrushStatement::LLVMValue(
+                        binaryop::float::float_binaryop(
+                            (left, operator, right),
+                            binaryop_type,
+                            &mut self.context,
+                        ),
+                        *span,
+                    );
                 }
 
                 if binaryop_type.is_bool_type() {
-                    return Instruction::LLVMValue(binaryop::boolean::bool_binaryop(
-                        (left, operator, right),
-                        binaryop_type,
-                        &mut self.context,
-                    ));
+                    return ThrushStatement::LLVMValue(
+                        binaryop::boolean::bool_binaryop(
+                            (left, operator, right),
+                            binaryop_type,
+                            &mut self.context,
+                        ),
+                        *span,
+                    );
                 }
 
                 unreachable!()
             }
 
-            Instruction::UnaryOp {
+            ThrushStatement::UnaryOp {
                 operator,
                 kind,
                 expression,
+                span,
                 ..
-            } => Instruction::LLVMValue(unaryop::unary_op(
-                &self.context,
-                (operator, kind, expression),
-            )),
+            } => ThrushStatement::LLVMValue(
+                unaryop::unary_op(&self.context, (operator, kind, expression)),
+                *span,
+            ),
 
-            Instruction::EntryPoint { body, span, .. } => {
+            ThrushStatement::EntryPoint { body, span, .. } => {
                 self.function = Some(self.build_entrypoint());
 
                 self.declare_constants();
@@ -489,39 +498,48 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                     .build_return(Some(&llvm_context.i32_type().const_int(0, false)))
                     .unwrap();
 
-                Instruction::Null { span: *span }
+                ThrushStatement::Null { span: *span }
             }
 
-            Instruction::Call { kind, .. } => {
-                Instruction::LLVMValue(valuegen::build(instruction, kind, &mut self.context))
+            ThrushStatement::Call { kind, span, .. } => {
+                ThrushStatement::LLVMValue(valuegen::build(stmt, kind, &mut self.context), *span)
             }
 
-            Instruction::LocalRef { kind: ref_type, .. }
-            | Instruction::ConstRef { kind: ref_type, .. } => {
-                Instruction::LLVMValue(valuegen::build(instruction, ref_type, &mut self.context))
+            ThrushStatement::LocalRef {
+                kind: ref_type,
+                span,
+                ..
+            }
+            | ThrushStatement::ConstRef {
+                kind: ref_type,
+                span,
+                ..
+            } => ThrushStatement::LLVMValue(
+                valuegen::build(stmt, ref_type, &mut self.context),
+                *span,
+            ),
+
+            ThrushStatement::Boolean { value, span, .. } => ThrushStatement::LLVMValue(
+                llvm_context.bool_type().const_int(*value, false).into(),
+                *span,
+            ),
+
+            ThrushStatement::Address { span, .. } => ThrushStatement::LLVMValue(
+                valuegen::build(stmt, &ThrushType::Void, &mut self.context),
+                *span,
+            ),
+
+            ThrushStatement::Write { span, .. } => {
+                valuegen::build(stmt, &ThrushType::Void, &mut self.context);
+                ThrushStatement::Null { span: *span }
             }
 
-            Instruction::Boolean { value, .. } => {
-                Instruction::LLVMValue(llvm_context.bool_type().const_int(*value, false).into())
+            ThrushStatement::Null { span, .. } | ThrushStatement::Const { span, .. } => {
+                ThrushStatement::Null { span: *span }
             }
 
-            Instruction::Address { .. } => Instruction::LLVMValue(valuegen::build(
-                instruction,
-                &ThrushType::Void,
-                &mut self.context,
-            )),
-
-            Instruction::Write { span, .. } => {
-                valuegen::build(instruction, &ThrushType::Void, &mut self.context);
-                Instruction::Null { span: *span }
-            }
-
-            Instruction::Null { span, .. } | Instruction::Const { span, .. } => {
-                Instruction::Null { span: *span }
-            }
-
-            any => Instruction::Null {
-                span: any.get_span().unwrap_or_default(),
+            any => ThrushStatement::Null {
+                span: any.get_span(),
             },
         }
     }
@@ -557,39 +575,38 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
     }
 
     fn declare(&mut self) {
-        self.instructions.iter().for_each(|instruction| {
-            if instruction.is_function() {
-                self.declare_function(instruction);
+        self.stmts.iter().for_each(|stmt| {
+            if stmt.is_function() {
+                self.declare_function(stmt);
             }
         });
     }
 
     fn declare_constants(&mut self) {
-        self.instructions.iter().for_each(|instruction| {
-            if let Instruction::Const {
+        self.stmts.iter().for_each(|stmt| {
+            if let ThrushStatement::Const {
                 name,
                 kind,
                 value,
                 attributes,
                 ..
-            } = instruction
+            } = stmt
             {
                 let value: BasicValueEnum = valuegen::build(value, kind, &mut self.context);
-
                 self.context.alloc_constant(name, kind, value, attributes);
             }
         });
     }
 
-    fn declare_function(&mut self, instruction: &'ctx Instruction) {
+    fn declare_function(&mut self, stmt: &'ctx ThrushStatement) {
         let llvm_module: &Module = self.context.get_llvm_module();
         let llvm_context: &Context = self.context.get_llvm_context();
 
-        let function: LLVMFunctionPrototype = instruction.as_llvm_function_proto();
+        let function: LLVMFunctionPrototype = stmt.as_llvm_function_proto();
 
         let function_name: &str = function.0;
         let function_type: &ThrushType = function.1;
-        let function_parameters: &[Instruction<'ctx>] = function.2;
+        let function_parameters: &[ThrushStatement<'ctx>] = function.2;
         let function_parameters_types: &[ThrushType] = function.3;
         let function_attributes: &[LLVMAttribute] = function.5;
 
@@ -655,8 +672,8 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
 
         let function_name: &str = function.0;
         let function_type: &ThrushType = function.1;
-        let function_parameters: &[Instruction<'ctx>] = function.2;
-        let function_body: &Instruction = function.4;
+        let function_parameters: &[ThrushStatement<'ctx>] = function.2;
+        let function_body: &ThrushStatement = function.4;
 
         if function_body.is_null() {
             return;
@@ -701,16 +718,16 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
     }
 
     #[inline]
-    fn advance(&mut self) -> &'ctx Instruction<'ctx> {
-        let instruction: &Instruction = &self.instructions[self.current];
+    fn advance(&mut self) -> &'ctx ThrushStatement<'ctx> {
+        let stmt: &ThrushStatement = &self.stmts[self.current];
         self.current += 1;
 
-        instruction
+        stmt
     }
 
     #[must_use]
     #[inline]
     fn is_end(&self) -> bool {
-        self.current >= self.instructions.len()
+        self.current >= self.stmts.len()
     }
 }

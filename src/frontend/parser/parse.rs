@@ -1,7 +1,7 @@
-use crate::middle::types::frontend::lexer::types::ThrushType;
-
-use super::super::standard::error::ThrushCompilerIssue;
-use super::lexer::Span;
+use crate::{
+    frontend::lexer::span::Span, middle::types::frontend::lexer::types::ThrushType,
+    standard::error::ThrushCompilerIssue,
+};
 
 pub fn float(lexeme: &str, span: Span) -> Result<(ThrushType, f64), ThrushCompilerIssue> {
     let dot_count: usize = lexeme.bytes().filter(|&b| b == b'.').count();

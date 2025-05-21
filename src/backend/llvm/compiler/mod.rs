@@ -17,7 +17,7 @@ pub mod valuegen;
 
 use {
     crate::{
-        middle::types::frontend::parser::stmts::instruction::Instruction,
+        middle::types::frontend::parser::stmts::stmt::ThrushStatement,
         standard::diagnostic::Diagnostician,
     },
     codegen::LLVMCodegen,
@@ -32,17 +32,10 @@ impl<'a, 'ctx> LLVMCompiler {
         module: &'a Module<'ctx>,
         builder: &'ctx Builder<'ctx>,
         context: &'ctx Context,
-        instructions: &'ctx [Instruction<'ctx>],
+        stmts: &'ctx [ThrushStatement<'ctx>],
         target_data: TargetData,
         diagnostician: Diagnostician,
     ) {
-        LLVMCodegen::generate(
-            module,
-            builder,
-            context,
-            instructions,
-            target_data,
-            diagnostician,
-        );
+        LLVMCodegen::generate(module, builder, context, stmts, target_data, diagnostician);
     }
 }

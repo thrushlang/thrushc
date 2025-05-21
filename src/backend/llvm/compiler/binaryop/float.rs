@@ -6,7 +6,7 @@ use crate::{
     },
 };
 
-use super::super::{Instruction, cast, context::LLVMCodeGenContext, unaryop, valuegen};
+use super::super::{ThrushStatement, cast, context::LLVMCodeGenContext, unaryop, valuegen};
 
 use inkwell::{
     builder::Builder,
@@ -65,7 +65,7 @@ pub fn float_binaryop<'ctx>(
     let llvm_builder: &Builder = context.get_llvm_builder();
 
     if let (
-        Instruction::Float {
+        ThrushStatement::Float {
             kind: left_type,
             value: left_number,
             signed: left_signed,
@@ -81,7 +81,7 @@ pub fn float_binaryop<'ctx>(
         | TokenKind::Less
         | TokenKind::Greater
         | TokenKind::GreaterEq,
-        Instruction::Float {
+        ThrushStatement::Float {
             kind: right_type,
             value: right_num,
             signed: right_signed,
@@ -129,7 +129,7 @@ pub fn float_binaryop<'ctx>(
     ########################################################################*/
 
     if let (
-        Instruction::UnaryOp { .. },
+        ThrushStatement::UnaryOp { .. },
         TokenKind::Plus
         | TokenKind::Slash
         | TokenKind::Minus
@@ -140,7 +140,7 @@ pub fn float_binaryop<'ctx>(
         | TokenKind::Less
         | TokenKind::Greater
         | TokenKind::GreaterEq,
-        Instruction::UnaryOp { .. },
+        ThrushStatement::UnaryOp { .. },
     ) = binary
     {
         let left_dissasembled: LLVMUnaryOp = binary.0.as_unaryop();
@@ -178,7 +178,7 @@ pub fn float_binaryop<'ctx>(
     }
 
     if let (
-        Instruction::Call {
+        ThrushStatement::Call {
             kind: left_call_type,
             ..
         },
@@ -192,7 +192,7 @@ pub fn float_binaryop<'ctx>(
         | TokenKind::Less
         | TokenKind::Greater
         | TokenKind::GreaterEq,
-        Instruction::UnaryOp { .. },
+        ThrushStatement::UnaryOp { .. },
     ) = binary
     {
         let mut left_compiled: BasicValueEnum = valuegen::build(binary.0, target_type, context);
@@ -225,7 +225,7 @@ pub fn float_binaryop<'ctx>(
     }
 
     if let (
-        Instruction::UnaryOp { .. },
+        ThrushStatement::UnaryOp { .. },
         TokenKind::Plus
         | TokenKind::Slash
         | TokenKind::Minus
@@ -236,7 +236,7 @@ pub fn float_binaryop<'ctx>(
         | TokenKind::Less
         | TokenKind::Greater
         | TokenKind::GreaterEq,
-        Instruction::Call {
+        ThrushStatement::Call {
             kind: right_call_type,
             ..
         },
@@ -272,7 +272,7 @@ pub fn float_binaryop<'ctx>(
     }
 
     if let (
-        Instruction::Float {
+        ThrushStatement::Float {
             kind: left_type,
             value: left_number,
             signed: left_signed,
@@ -288,7 +288,7 @@ pub fn float_binaryop<'ctx>(
         | TokenKind::Less
         | TokenKind::Greater
         | TokenKind::GreaterEq,
-        Instruction::UnaryOp { .. },
+        ThrushStatement::UnaryOp { .. },
     ) = binary
     {
         let mut left_compiled: FloatValue = valuegen::float(
@@ -327,10 +327,10 @@ pub fn float_binaryop<'ctx>(
     }
 
     if let (
-        Instruction::LocalRef {
+        ThrushStatement::LocalRef {
             kind: left_type, ..
         }
-        | Instruction::ConstRef {
+        | ThrushStatement::ConstRef {
             kind: left_type, ..
         },
         TokenKind::Plus
@@ -343,7 +343,7 @@ pub fn float_binaryop<'ctx>(
         | TokenKind::Less
         | TokenKind::Greater
         | TokenKind::GreaterEq,
-        Instruction::UnaryOp { .. },
+        ThrushStatement::UnaryOp { .. },
     ) = binary
     {
         let mut left_compiled: BasicValueEnum = valuegen::build(binary.0, target_type, context);
@@ -375,7 +375,7 @@ pub fn float_binaryop<'ctx>(
     }
 
     if let (
-        Instruction::UnaryOp { .. },
+        ThrushStatement::UnaryOp { .. },
         TokenKind::Plus
         | TokenKind::Slash
         | TokenKind::Minus
@@ -386,12 +386,12 @@ pub fn float_binaryop<'ctx>(
         | TokenKind::Less
         | TokenKind::Greater
         | TokenKind::GreaterEq,
-        Instruction::LocalRef {
+        ThrushStatement::LocalRef {
             name: right_name,
             kind: right_type,
             ..
         }
-        | Instruction::ConstRef {
+        | ThrushStatement::ConstRef {
             name: right_name,
             kind: right_type,
             ..
@@ -429,7 +429,7 @@ pub fn float_binaryop<'ctx>(
     }
 
     if let (
-        Instruction::BinaryOp {
+        ThrushStatement::BinaryOp {
             kind: left_type, ..
         },
         TokenKind::Plus
@@ -442,7 +442,7 @@ pub fn float_binaryop<'ctx>(
         | TokenKind::Less
         | TokenKind::Greater
         | TokenKind::GreaterEq,
-        Instruction::UnaryOp { .. },
+        ThrushStatement::UnaryOp { .. },
     ) = binary
     {
         let left_dissasembled: LLVMBinaryOp = binary.0.as_binary();
@@ -478,7 +478,7 @@ pub fn float_binaryop<'ctx>(
     }
 
     if let (
-        Instruction::Group {
+        ThrushStatement::Group {
             expression: left_instr,
             kind: left_type,
             ..
@@ -493,7 +493,7 @@ pub fn float_binaryop<'ctx>(
         | TokenKind::Less
         | TokenKind::Greater
         | TokenKind::GreaterEq,
-        Instruction::UnaryOp { .. },
+        ThrushStatement::UnaryOp { .. },
     ) = binary
     {
         let left_dissasembled: LLVMBinaryOp = left_instr.as_binary();
@@ -529,7 +529,7 @@ pub fn float_binaryop<'ctx>(
     }
 
     if let (
-        Instruction::UnaryOp { .. },
+        ThrushStatement::UnaryOp { .. },
         TokenKind::Plus
         | TokenKind::Slash
         | TokenKind::Minus
@@ -540,7 +540,7 @@ pub fn float_binaryop<'ctx>(
         | TokenKind::Less
         | TokenKind::Greater
         | TokenKind::GreaterEq,
-        Instruction::Group {
+        ThrushStatement::Group {
             expression: right_instr,
             kind: right_type,
             ..
@@ -588,7 +588,7 @@ pub fn float_binaryop<'ctx>(
     ########################################################################*/
 
     if let (
-        Instruction::Call {
+        ThrushStatement::Call {
             kind: left_call_type,
             ..
         },
@@ -602,7 +602,7 @@ pub fn float_binaryop<'ctx>(
         | TokenKind::Less
         | TokenKind::Greater
         | TokenKind::GreaterEq,
-        Instruction::Call {
+        ThrushStatement::Call {
             kind: right_call_type,
             ..
         },
@@ -633,7 +633,7 @@ pub fn float_binaryop<'ctx>(
     }
 
     if let (
-        Instruction::Float {
+        ThrushStatement::Float {
             kind: left_type,
             value: left_number,
             signed: left_signed,
@@ -649,7 +649,7 @@ pub fn float_binaryop<'ctx>(
         | TokenKind::Less
         | TokenKind::Greater
         | TokenKind::GreaterEq,
-        Instruction::Call {
+        ThrushStatement::Call {
             kind: right_call_type,
             ..
         },
@@ -686,7 +686,7 @@ pub fn float_binaryop<'ctx>(
     }
 
     if let (
-        Instruction::Call {
+        ThrushStatement::Call {
             kind: left_call_type,
             ..
         },
@@ -700,7 +700,7 @@ pub fn float_binaryop<'ctx>(
         | TokenKind::Less
         | TokenKind::Greater
         | TokenKind::GreaterEq,
-        Instruction::Float {
+        ThrushStatement::Float {
             kind: right_type,
             value: right_num,
             signed: right_signed,
@@ -739,10 +739,10 @@ pub fn float_binaryop<'ctx>(
     }
 
     if let (
-        Instruction::LocalRef {
+        ThrushStatement::LocalRef {
             kind: left_type, ..
         }
-        | Instruction::ConstRef {
+        | ThrushStatement::ConstRef {
             kind: left_type, ..
         },
         TokenKind::Plus
@@ -755,7 +755,7 @@ pub fn float_binaryop<'ctx>(
         | TokenKind::Less
         | TokenKind::Greater
         | TokenKind::GreaterEq,
-        Instruction::Call {
+        ThrushStatement::Call {
             kind: right_call_type,
             ..
         },
@@ -785,7 +785,7 @@ pub fn float_binaryop<'ctx>(
     }
 
     if let (
-        Instruction::Call {
+        ThrushStatement::Call {
             kind: left_call_type,
             ..
         },
@@ -799,10 +799,10 @@ pub fn float_binaryop<'ctx>(
         | TokenKind::Less
         | TokenKind::Greater
         | TokenKind::GreaterEq,
-        Instruction::LocalRef {
+        ThrushStatement::LocalRef {
             kind: right_type, ..
         }
-        | Instruction::ConstRef {
+        | ThrushStatement::ConstRef {
             kind: right_type, ..
         },
     ) = binary
@@ -832,7 +832,7 @@ pub fn float_binaryop<'ctx>(
     }
 
     if let (
-        Instruction::Group {
+        ThrushStatement::Group {
             expression: left_instr,
             kind: left_type,
             ..
@@ -847,7 +847,7 @@ pub fn float_binaryop<'ctx>(
         | TokenKind::Less
         | TokenKind::Greater
         | TokenKind::GreaterEq,
-        Instruction::Call {
+        ThrushStatement::Call {
             kind: right_call_type,
             ..
         },
@@ -880,7 +880,7 @@ pub fn float_binaryop<'ctx>(
     }
 
     if let (
-        Instruction::Call {
+        ThrushStatement::Call {
             kind: left_call_type,
             ..
         },
@@ -894,7 +894,7 @@ pub fn float_binaryop<'ctx>(
         | TokenKind::Less
         | TokenKind::Greater
         | TokenKind::GreaterEq,
-        Instruction::Group {
+        ThrushStatement::Group {
             expression: right_instr,
             kind: right_type,
             ..
@@ -937,10 +937,10 @@ pub fn float_binaryop<'ctx>(
     ########################################################################*/
 
     if let (
-        Instruction::LocalRef {
+        ThrushStatement::LocalRef {
             kind: left_type, ..
         }
-        | Instruction::ConstRef {
+        | ThrushStatement::ConstRef {
             kind: left_type, ..
         },
         TokenKind::Plus
@@ -953,10 +953,10 @@ pub fn float_binaryop<'ctx>(
         | TokenKind::Less
         | TokenKind::Greater
         | TokenKind::GreaterEq,
-        Instruction::LocalRef {
+        ThrushStatement::LocalRef {
             kind: right_type, ..
         }
-        | Instruction::ConstRef {
+        | ThrushStatement::ConstRef {
             kind: right_type, ..
         },
     ) = binary
@@ -984,7 +984,7 @@ pub fn float_binaryop<'ctx>(
     }
 
     if let (
-        Instruction::Float {
+        ThrushStatement::Float {
             kind: left_type,
             value: left_number,
             signed: left_signed,
@@ -1000,10 +1000,10 @@ pub fn float_binaryop<'ctx>(
         | TokenKind::Less
         | TokenKind::Greater
         | TokenKind::GreaterEq,
-        Instruction::LocalRef {
+        ThrushStatement::LocalRef {
             kind: right_type, ..
         }
-        | Instruction::ConstRef {
+        | ThrushStatement::ConstRef {
             kind: right_type, ..
         },
     ) = binary
@@ -1039,10 +1039,10 @@ pub fn float_binaryop<'ctx>(
     }
 
     if let (
-        Instruction::LocalRef {
+        ThrushStatement::LocalRef {
             kind: left_type, ..
         }
-        | Instruction::ConstRef {
+        | ThrushStatement::ConstRef {
             kind: left_type, ..
         },
         TokenKind::Plus
@@ -1055,7 +1055,7 @@ pub fn float_binaryop<'ctx>(
         | TokenKind::Less
         | TokenKind::Greater
         | TokenKind::GreaterEq,
-        Instruction::Float {
+        ThrushStatement::Float {
             kind: right_type,
             value: right_num,
             signed: right_signed,
@@ -1101,10 +1101,10 @@ pub fn float_binaryop<'ctx>(
     ########################################################################*/
 
     if let (
-        Instruction::LocalRef {
+        ThrushStatement::LocalRef {
             kind: left_type, ..
         }
-        | Instruction::ConstRef {
+        | ThrushStatement::ConstRef {
             kind: left_type, ..
         },
         TokenKind::Plus
@@ -1117,7 +1117,7 @@ pub fn float_binaryop<'ctx>(
         | TokenKind::Less
         | TokenKind::Greater
         | TokenKind::GreaterEq,
-        Instruction::BinaryOp {
+        ThrushStatement::BinaryOp {
             kind: right_type, ..
         },
     ) = binary
@@ -1149,7 +1149,7 @@ pub fn float_binaryop<'ctx>(
     }
 
     if let (
-        Instruction::BinaryOp {
+        ThrushStatement::BinaryOp {
             kind: left_type, ..
         },
         TokenKind::Plus
@@ -1162,10 +1162,10 @@ pub fn float_binaryop<'ctx>(
         | TokenKind::Less
         | TokenKind::Greater
         | TokenKind::GreaterEq,
-        Instruction::LocalRef {
+        ThrushStatement::LocalRef {
             kind: right_type, ..
         }
-        | Instruction::ConstRef {
+        | ThrushStatement::ConstRef {
             kind: right_type, ..
         },
     ) = binary
@@ -1198,7 +1198,7 @@ pub fn float_binaryop<'ctx>(
     }
 
     if let (
-        Instruction::Float {
+        ThrushStatement::Float {
             kind: left_type,
             value: left_number,
             signed: left_signed,
@@ -1214,7 +1214,7 @@ pub fn float_binaryop<'ctx>(
         | TokenKind::Less
         | TokenKind::Greater
         | TokenKind::GreaterEq,
-        Instruction::BinaryOp {
+        ThrushStatement::BinaryOp {
             kind: right_type, ..
         },
     ) = binary
@@ -1248,7 +1248,7 @@ pub fn float_binaryop<'ctx>(
     }
 
     if let (
-        Instruction::BinaryOp {
+        ThrushStatement::BinaryOp {
             kind: left_type, ..
         },
         TokenKind::Plus
@@ -1261,7 +1261,7 @@ pub fn float_binaryop<'ctx>(
         | TokenKind::Less
         | TokenKind::Greater
         | TokenKind::GreaterEq,
-        Instruction::Float {
+        ThrushStatement::Float {
             kind: right_type,
             value: right_num,
             signed: right_signed,
@@ -1298,7 +1298,7 @@ pub fn float_binaryop<'ctx>(
     }
 
     if let (
-        Instruction::BinaryOp {
+        ThrushStatement::BinaryOp {
             kind: left_type, ..
         },
         TokenKind::Plus
@@ -1311,7 +1311,7 @@ pub fn float_binaryop<'ctx>(
         | TokenKind::Less
         | TokenKind::Greater
         | TokenKind::GreaterEq,
-        Instruction::BinaryOp {
+        ThrushStatement::BinaryOp {
             kind: right_type, ..
         },
     ) = binary
@@ -1354,7 +1354,7 @@ pub fn float_binaryop<'ctx>(
     ########################################################################*/
 
     if let (
-        Instruction::Group {
+        ThrushStatement::Group {
             expression: left_instr,
             kind: left_type,
             ..
@@ -1369,7 +1369,7 @@ pub fn float_binaryop<'ctx>(
         | TokenKind::Less
         | TokenKind::Greater
         | TokenKind::GreaterEq,
-        Instruction::Group {
+        ThrushStatement::Group {
             expression: right_instr,
             kind: right_type,
             ..
@@ -1406,7 +1406,7 @@ pub fn float_binaryop<'ctx>(
     }
 
     if let (
-        Instruction::Group {
+        ThrushStatement::Group {
             expression,
             kind: left_type,
             ..
@@ -1421,7 +1421,7 @@ pub fn float_binaryop<'ctx>(
         | TokenKind::Less
         | TokenKind::Greater
         | TokenKind::GreaterEq,
-        Instruction::Float {
+        ThrushStatement::Float {
             kind: right_type,
             value: right_num,
             signed: right_signed,
@@ -1458,7 +1458,7 @@ pub fn float_binaryop<'ctx>(
     }
 
     if let (
-        Instruction::Float {
+        ThrushStatement::Float {
             kind: left_type,
             value: left_number,
             signed: left_signed,
@@ -1474,7 +1474,7 @@ pub fn float_binaryop<'ctx>(
         | TokenKind::Less
         | TokenKind::Greater
         | TokenKind::GreaterEq,
-        Instruction::Group {
+        ThrushStatement::Group {
             expression,
             kind: right_type,
             ..
@@ -1510,7 +1510,7 @@ pub fn float_binaryop<'ctx>(
     }
 
     if let (
-        Instruction::Group {
+        ThrushStatement::Group {
             expression,
             kind: left_type,
             ..
@@ -1525,7 +1525,7 @@ pub fn float_binaryop<'ctx>(
         | TokenKind::Less
         | TokenKind::Greater
         | TokenKind::GreaterEq,
-        Instruction::BinaryOp {
+        ThrushStatement::BinaryOp {
             kind: right_type, ..
         },
     ) = binary
@@ -1560,7 +1560,7 @@ pub fn float_binaryop<'ctx>(
     }
 
     if let (
-        Instruction::BinaryOp {
+        ThrushStatement::BinaryOp {
             kind: left_type, ..
         },
         TokenKind::Plus
@@ -1573,7 +1573,7 @@ pub fn float_binaryop<'ctx>(
         | TokenKind::Less
         | TokenKind::Greater
         | TokenKind::GreaterEq,
-        Instruction::Group {
+        ThrushStatement::Group {
             expression,
             kind: right_type,
             ..

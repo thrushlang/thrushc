@@ -1,12 +1,13 @@
 use ahash::AHashMap as HashMap;
 
 use crate::{
+    frontend::lexer::span::Span,
     middle::types::frontend::{
-        parser::stmts::instruction::Instruction,
-        warner::types::{
-            WarnerConstantInfo, WarnerFunctionInfo, WarnerFunctionParameterInfo, WarnerLocalInfo,
-            WarnerLocals, WarnersConstants, WarnersFunctionParameters, WarnersFunctions,
+        linter::types::{
+            LinterConstantInfo, LinterConstants, LinterFunctionInfo, LinterFunctionParameterInfo,
+            LinterFunctionParameters, LinterFunctions, LinterLocalInfo, LinterLocals,
         },
+        parser::stmts::stmt::ThrushStatement,
     },
     standard::{
         constants::MINIMAL_WARNINGS_CAPACITY,
@@ -17,41 +18,33 @@ use crate::{
     },
 };
 
-use super::lexer::Span;
-
-const MINIMAL_WARNER_FUNCTIONS_CAPACITY: usize = 255;
-const MINIMAL_WARNER_CONSTANTS_CAPACITY: usize = 255;
-const MINIMAL_WARNER_LOCALS_CAPACITY: usize = 255;
-const MINIMAL_WARNER_PARAMETERS_CAPACITY: usize = 255;
-
-pub struct Warner<'warner> {
-    instructions: &'warner [Instruction<'warner>],
+pub struct Linter<'linter> {
+    stmts: &'linter [ThrushStatement<'linter>],
     current: usize,
     warnings: Vec<ThrushCompilerIssue>,
     diagnostician: Diagnostician,
-
-    functions: WarnersFunctions<'warner>,
-    constants: WarnersConstants<'warner>,
-    locals: WarnerLocals<'warner>,
-    parameters: WarnersFunctionParameters<'warner>,
-    parameters_to_analyze: WarnersFunctionParameters<'warner>,
-    locals_to_analyze: WarnerLocals<'warner>,
+    functions: LinterFunctions<'linter>,
+    constants: LinterConstants<'linter>,
+    locals: LinterLocals<'linter>,
+    parameters: LinterFunctionParameters<'linter>,
+    parameters_to_analyze: LinterFunctionParameters<'linter>,
+    locals_to_analyze: LinterLocals<'linter>,
     scope: usize,
 }
 
-impl<'warner> Warner<'warner> {
-    pub fn new(instructions: &'warner [Instruction], file: &'warner CompilerFile) -> Self {
+impl<'linter> Linter<'linter> {
+    pub fn new(stmts: &'linter [ThrushStatement], file: &'linter CompilerFile) -> Self {
         Self {
-            instructions,
+            stmts,
             current: 0,
             warnings: Vec::with_capacity(MINIMAL_WARNINGS_CAPACITY),
             diagnostician: Diagnostician::new(file),
-            functions: HashMap::with_capacity(MINIMAL_WARNER_FUNCTIONS_CAPACITY),
-            constants: HashMap::with_capacity(MINIMAL_WARNER_CONSTANTS_CAPACITY),
-            locals: Vec::with_capacity(MINIMAL_WARNER_LOCALS_CAPACITY),
-            parameters: HashMap::with_capacity(MINIMAL_WARNER_LOCALS_CAPACITY),
-            parameters_to_analyze: HashMap::with_capacity(MINIMAL_WARNER_PARAMETERS_CAPACITY),
-            locals_to_analyze: Vec::with_capacity(MINIMAL_WARNER_PARAMETERS_CAPACITY),
+            functions: HashMap::with_capacity(255),
+            constants: HashMap::with_capacity(255),
+            locals: Vec::with_capacity(255),
+            parameters: HashMap::with_capacity(255),
+            parameters_to_analyze: HashMap::with_capacity(255),
+            locals_to_analyze: Vec::with_capacity(255),
             scope: 0,
         }
     }
@@ -60,9 +53,9 @@ impl<'warner> Warner<'warner> {
         self.declare();
 
         while !self.is_eof() {
-            let instruction: &Instruction = self.peek();
+            let instruction: &ThrushStatement = self.peek();
 
-            self.analyze_instruction(instruction);
+            self.analyze_stmt(instruction);
 
             self.advance();
         }
@@ -77,44 +70,44 @@ impl<'warner> Warner<'warner> {
         }
     }
 
-    pub fn analyze_instruction(&mut self, instruction: &'warner Instruction) {
-        if let Instruction::EntryPoint { body, .. } = instruction {
-            self.analyze_instruction(body);
+    pub fn analyze_stmt(&mut self, instruction: &'linter ThrushStatement) {
+        if let ThrushStatement::EntryPoint { body, .. } = instruction {
+            self.analyze_stmt(body);
         }
 
-        if let Instruction::Function {
+        if let ThrushStatement::Function {
             parameters, body, ..
         } = instruction
         {
             if body.is_block() {
                 self.start_parameters(parameters);
 
-                self.analyze_instruction(body);
+                self.analyze_stmt(body);
 
                 self.end_parameters();
             }
         }
 
-        if let Instruction::BinaryOp { left, right, .. } = instruction {
-            self.analyze_instruction(left);
-            self.analyze_instruction(right);
+        if let ThrushStatement::BinaryOp { left, right, .. } = instruction {
+            self.analyze_stmt(left);
+            self.analyze_stmt(right);
         }
 
-        if let Instruction::UnaryOp { expression, .. } = instruction {
-            self.analyze_instruction(expression);
+        if let ThrushStatement::UnaryOp { expression, .. } = instruction {
+            self.analyze_stmt(expression);
         }
 
-        if let Instruction::Block { stmts, .. } = instruction {
+        if let ThrushStatement::Block { stmts, .. } = instruction {
             self.begin_scope();
 
             stmts.iter().for_each(|stmt| {
-                self.analyze_instruction(stmt);
+                self.analyze_stmt(stmt);
             });
 
             self.end_scope();
         }
 
-        if let Instruction::Local {
+        if let ThrushStatement::Local {
             name,
             value,
             span,
@@ -125,20 +118,20 @@ impl<'warner> Warner<'warner> {
             let scope: usize = self.get_scope();
             self.locals[scope].insert(name, (*span, false, !is_mutable));
 
-            self.analyze_instruction(value);
+            self.analyze_stmt(value);
         }
 
-        if let Instruction::Call { name, .. } = instruction {
-            let function: &mut WarnerFunctionInfo = self.get_mut_function(name);
+        if let ThrushStatement::Call { name, .. } = instruction {
+            let function: &mut LinterFunctionInfo = self.get_mut_function(name);
             function.2 = true;
         }
 
-        if let Instruction::ConstRef { name, .. } = instruction {
-            let constant: &mut WarnerConstantInfo = self.get_mut_constant(name);
+        if let ThrushStatement::ConstRef { name, .. } = instruction {
+            let constant: &mut LinterConstantInfo = self.get_mut_constant(name);
             constant.1 = true;
         }
 
-        if let Instruction::LocalRef { name, .. } = instruction {
+        if let ThrushStatement::LocalRef { name, .. } = instruction {
             if let Ok(local) = self.get_mut_local(name) {
                 local.1 = true;
             }
@@ -148,7 +141,7 @@ impl<'warner> Warner<'warner> {
             }
         }
 
-        if let Instruction::Mut { source, .. } = instruction {
+        if let ThrushStatement::Mut { source, .. } = instruction {
             if let Some(local_name) = source.0 {
                 if let Ok(local) = self.get_mut_local(local_name) {
                     local.1 = true;
@@ -233,11 +226,11 @@ impl<'warner> Warner<'warner> {
     }
 
     pub fn declare(&mut self) {
-        self.instructions
+        self.stmts
             .iter()
             .filter(|instruction| instruction.is_function())
             .for_each(|instruction| {
-                if let Instruction::Function {
+                if let ThrushStatement::Function {
                     name, span, body, ..
                 } = instruction
                 {
@@ -245,17 +238,17 @@ impl<'warner> Warner<'warner> {
                 }
             });
 
-        self.instructions
+        self.stmts
             .iter()
             .filter(|instruction| instruction.is_constant())
             .for_each(|instruction| {
-                if let Instruction::Const { name, span, .. } = instruction {
+                if let ThrushStatement::Const { name, span, .. } = instruction {
                     self.constants.insert(name, (*span, false));
                 }
             });
     }
 
-    fn get_mut_local(&mut self, name: &str) -> Result<&mut WarnerLocalInfo, ()> {
+    fn get_mut_local(&mut self, name: &str) -> Result<&mut LinterLocalInfo, ()> {
         for i in (0..=self.get_scope()).rev() {
             if self.locals[i].contains_key(name) {
                 return Ok(self.locals[i].get_mut(name).unwrap());
@@ -265,7 +258,7 @@ impl<'warner> Warner<'warner> {
         Err(())
     }
 
-    fn get_mut_constant(&mut self, name: &str) -> &mut WarnerConstantInfo {
+    fn get_mut_constant(&mut self, name: &str) -> &mut LinterConstantInfo {
         self.constants.get_mut(name).unwrap_or_else(|| {
             logging::log(
                 LoggingType::Panic,
@@ -279,7 +272,7 @@ impl<'warner> Warner<'warner> {
         })
     }
 
-    fn get_mut_function(&mut self, name: &str) -> &mut WarnerFunctionInfo<'warner> {
+    fn get_mut_function(&mut self, name: &str) -> &mut LinterFunctionInfo<'linter> {
         self.functions.get_mut(name).unwrap_or_else(|| {
             logging::log(
                 LoggingType::Panic,
@@ -293,9 +286,9 @@ impl<'warner> Warner<'warner> {
         })
     }
 
-    fn start_parameters(&mut self, parameters: &'warner [Instruction<'warner>]) {
+    fn start_parameters(&mut self, parameters: &'linter [ThrushStatement<'linter>]) {
         parameters.iter().for_each(|instruction| {
-            if let Instruction::FunctionParameter {
+            if let ThrushStatement::FunctionParameter {
                 name,
                 span,
                 is_mutable,
@@ -307,7 +300,7 @@ impl<'warner> Warner<'warner> {
         });
     }
 
-    fn get_mut_parameter(&mut self, name: &str) -> Result<&mut WarnerFunctionParameterInfo, ()> {
+    fn get_mut_parameter(&mut self, name: &str) -> Result<&mut LinterFunctionParameterInfo, ()> {
         if let Some(parameter) = self.parameters.get_mut(name) {
             return Ok(parameter);
         }
@@ -321,9 +314,7 @@ impl<'warner> Warner<'warner> {
     }
 
     fn begin_scope(&mut self) {
-        self.locals
-            .push(HashMap::with_capacity(MINIMAL_WARNER_LOCALS_CAPACITY));
-
+        self.locals.push(HashMap::with_capacity(255));
         self.scope += 1;
     }
 
@@ -342,8 +333,8 @@ impl<'warner> Warner<'warner> {
         }
     }
 
-    fn peek(&self) -> &'warner Instruction<'warner> {
-        self.instructions.get(self.current).unwrap_or_else(|| {
+    fn peek(&self) -> &'linter ThrushStatement<'linter> {
+        self.stmts.get(self.current).unwrap_or_else(|| {
             logging::log(
                 LoggingType::Panic,
                 "Attempting to get instruction in invalid current position.",
@@ -354,6 +345,6 @@ impl<'warner> Warner<'warner> {
     }
 
     fn is_eof(&self) -> bool {
-        self.current >= self.instructions.len()
+        self.current >= self.stmts.len()
     }
 }

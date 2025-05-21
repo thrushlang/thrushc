@@ -1,4 +1,4 @@
 pub mod impls;
-pub mod instruction;
+pub mod stmt;
 pub mod traits;
 pub mod types;

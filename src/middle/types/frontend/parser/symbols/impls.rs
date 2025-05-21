@@ -1,7 +1,7 @@
 use std::fmt::Display;
 
 use crate::{
-    frontend::lexer::Span,
+    frontend::lexer::span::Span,
     middle::types::frontend::{
         lexer::types::ThrushType,
         parser::stmts::{

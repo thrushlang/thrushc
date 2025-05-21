@@ -5,7 +5,7 @@ use crate::backend::llvm::compiler::memory::{self, SymbolAllocated};
 use crate::backend::llvm::compiler::{binaryop, builtins, cast, unaryop, utils};
 use crate::middle::types::backend::llvm::types::LLVMFunction;
 use crate::middle::types::frontend::lexer::types::ThrushType;
-use crate::middle::types::frontend::parser::stmts::instruction::Instruction;
+use crate::middle::types::frontend::parser::stmts::stmt::ThrushStatement;
 use crate::middle::types::frontend::parser::stmts::traits::CompilerAttributesExtensions;
 use crate::middle::types::frontend::parser::stmts::types::CompilerAttributes;
 
@@ -84,7 +84,7 @@ pub fn float<'ctx>(
 }
 
 pub fn build<'ctx>(
-    expression: &'ctx Instruction,
+    expression: &'ctx ThrushStatement,
     cast_target: &ThrushType,
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
 ) -> BasicValueEnum<'ctx> {
@@ -92,18 +92,18 @@ pub fn build<'ctx>(
     let llvm_context: &Context = context.get_llvm_context();
     let llvm_builder: &Builder = context.get_llvm_builder();
 
-    if let Instruction::NullPtr { .. } = expression {
+    if let ThrushStatement::NullPtr { .. } = expression {
         return llvm_context
             .ptr_type(AddressSpace::default())
             .const_null()
             .into();
     }
 
-    if let Instruction::Str { bytes, .. } = expression {
+    if let ThrushStatement::Str { bytes, .. } = expression {
         return utils::build_str_constant(llvm_module, llvm_context, bytes).into();
     }
 
-    if let Instruction::Float {
+    if let ThrushStatement::Float {
         kind,
         value,
         signed,
@@ -119,7 +119,7 @@ pub fn build<'ctx>(
         return float.into();
     }
 
-    if let Instruction::Integer {
+    if let ThrushStatement::Integer {
         kind,
         value,
         signed,
@@ -135,15 +135,15 @@ pub fn build<'ctx>(
         return integer.into();
     }
 
-    if let Instruction::Char { byte, .. } = expression {
+    if let ThrushStatement::Char { byte, .. } = expression {
         return llvm_context.i8_type().const_int(*byte, false).into();
     }
 
-    if let Instruction::Boolean { value, .. } = expression {
+    if let ThrushStatement::Boolean { value, .. } = expression {
         return llvm_context.bool_type().const_int(*value, false).into();
     }
 
-    if let Instruction::Write {
+    if let ThrushStatement::Write {
         write_to,
         write_type,
         write_value,
@@ -178,7 +178,7 @@ pub fn build<'ctx>(
             .into();
     }
 
-    if let Instruction::Carry {
+    if let ThrushStatement::Carry {
         name,
         expression,
         carry_type,
@@ -199,7 +199,7 @@ pub fn build<'ctx>(
         return context.get_allocated_symbol(name).load(context);
     }
 
-    if let Instruction::Address { name, indexes, .. } = expression {
+    if let ThrushStatement::Address { name, indexes, .. } = expression {
         let symbol: SymbolAllocated = context.get_allocated_symbol(name);
 
         let mut compiled_indexes: Vec<IntValue> = Vec::with_capacity(10);
@@ -224,7 +224,7 @@ pub fn build<'ctx>(
             .into();
     }
 
-    if let Instruction::Property {
+    if let ThrushStatement::Property {
         name,
         indexes,
         kind,
@@ -263,7 +263,9 @@ pub fn build<'ctx>(
         return memory::load_anon(context, kind, last_memory_calculation);
     }
 
-    if let Instruction::LocalRef { name, .. } | Instruction::ConstRef { name, .. } = expression {
+    if let ThrushStatement::LocalRef { name, .. } | ThrushStatement::ConstRef { name, .. } =
+        expression
+    {
         let symbol: SymbolAllocated = context.get_allocated_symbol(name);
 
         if cast_target.is_mut_type() && context.get_position().in_call() {
@@ -273,7 +275,7 @@ pub fn build<'ctx>(
         return symbol.load(context);
     }
 
-    if let Instruction::BinaryOp {
+    if let ThrushStatement::BinaryOp {
         left,
         operator,
         right,
@@ -301,7 +303,7 @@ pub fn build<'ctx>(
         unreachable!()
     }
 
-    if let Instruction::UnaryOp {
+    if let ThrushStatement::UnaryOp {
         operator,
         kind,
         expression,
@@ -311,7 +313,7 @@ pub fn build<'ctx>(
         return unaryop::unary_op(context, (operator, kind, expression));
     }
 
-    if let Instruction::Mut {
+    if let ThrushStatement::Mut {
         source,
         kind,
         value,
@@ -321,7 +323,7 @@ pub fn build<'ctx>(
         context.set_position(LLVMCodeGenContextPosition::Mutation);
 
         let source_name: Option<&str> = source.0;
-        let source_expression: Option<&Rc<Instruction<'_>>> = source.1.as_ref();
+        let source_expression: Option<&Rc<ThrushStatement<'_>>> = source.1.as_ref();
 
         let value_type: &ThrushType = value.get_type_unwrapped();
 
@@ -353,7 +355,7 @@ pub fn build<'ctx>(
         }
     }
 
-    if let Instruction::Call {
+    if let ThrushStatement::Call {
         name,
         args: call_args,
         kind: call_type,
@@ -380,9 +382,9 @@ pub fn build<'ctx>(
 
         let mut compiled_args: Vec<BasicMetadataValueEnum> = Vec::with_capacity(call_args.len());
 
-        call_args.iter().enumerate().for_each(|instruction| {
-            let arg_position: usize = instruction.0;
-            let arg_expr: &Instruction = instruction.1;
+        call_args.iter().enumerate().for_each(|arg| {
+            let arg_position: usize = arg.0;
+            let arg_expr: &ThrushStatement = arg.1;
 
             let cast_target: &ThrushType = function_arguments_types
                 .get(arg_position)
@@ -432,7 +434,7 @@ pub fn build<'ctx>(
             .into();
     }
 
-    if let Instruction::Return {
+    if let ThrushStatement::Return {
         expression, kind, ..
     } = expression
     {
@@ -453,7 +455,7 @@ pub fn build<'ctx>(
         return null.into();
     }
 
-    if let Instruction::Group { expression, .. } = expression {
+    if let ThrushStatement::Group { expression, .. } = expression {
         return build(expression, cast_target, context);
     }
 

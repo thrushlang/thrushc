@@ -1,12 +1,18 @@
-use std::process;
+pub mod contexts;
+pub mod expression;
+pub mod parse;
+pub mod stmt;
+pub mod symbols;
+pub mod typegen;
 
 use ahash::AHashMap as HashMap;
+use contexts::{BindingsType, ParserControlContext, ParserTypeContext, SyncPosition, TypePosition};
+use symbols::SymbolsTable;
 
 use crate::backend::llvm::compiler::builtins;
-
+use crate::frontend::lexer::token::Token;
 use crate::middle::types::frontend::lexer::tokenkind::TokenKind;
-use crate::middle::types::frontend::lexer::types::ThrushType;
-use crate::middle::types::frontend::parser::stmts::instruction::Instruction;
+use crate::middle::types::frontend::parser::stmts::stmt::ThrushStatement;
 use crate::middle::types::frontend::parser::symbols::types::Functions;
 use crate::standard::constants::MINIMAL_ERROR_CAPACITY;
 use crate::standard::diagnostic::Diagnostician;
@@ -14,19 +20,11 @@ use crate::standard::error::ThrushCompilerIssue;
 use crate::standard::logging::{self, LoggingType};
 use crate::standard::misc::CompilerFile;
 
-use super::contexts::{
-    BindingsType, ParserControlContext, ParserTypeContext, SyncPosition, TypePosition,
-};
-use super::lexer::{Span, Token};
-
-use super::symbols::SymbolsTable;
-use super::{stmts, typecheck};
-
 const MINIMAL_STATEMENT_CAPACITY: usize = 100_000;
 const MINIMAL_GLOBAL_CAPACITY: usize = 2024;
 
 pub struct ParserContext<'instr> {
-    stmts: Vec<Instruction<'instr>>,
+    stmts: Vec<ThrushStatement<'instr>>,
     tokens: &'instr [Token<'instr>],
     errors: Vec<ThrushCompilerIssue>,
 
@@ -48,17 +46,17 @@ impl<'instr> Parser<'instr> {
     pub fn parse(
         tokens: &'instr [Token<'instr>],
         file: &'instr CompilerFile,
-    ) -> ParserContext<'instr> {
+    ) -> (ParserContext<'instr>, bool) {
         Self { tokens, file }.start()
     }
 
-    fn start(&mut self) -> ParserContext<'instr> {
+    fn start(&mut self) -> (ParserContext<'instr>, bool) {
         let mut parser_ctx: ParserContext = ParserContext::new(self.tokens, self.file);
 
         parser_ctx.init();
 
         while !parser_ctx.is_eof() {
-            match stmts::parse(&mut parser_ctx) {
+            match stmt::parse(&mut parser_ctx) {
                 Ok(instr) => {
                     parser_ctx.add_stmt(instr);
                 }
@@ -69,9 +67,9 @@ impl<'instr> Parser<'instr> {
             }
         }
 
-        parser_ctx.verify();
+        let throwed_errors: bool = parser_ctx.verify();
 
-        parser_ctx
+        (parser_ctx, throwed_errors)
     }
 }
 
@@ -94,38 +92,17 @@ impl<'instr> ParserContext<'instr> {
         }
     }
 
-    pub fn verify(&mut self) {
+    pub fn verify(&mut self) -> bool {
         if !self.errors.is_empty() {
             self.errors.iter().for_each(|error: &ThrushCompilerIssue| {
                 self.diagnostician
                     .build_diagnostic(error, LoggingType::Error);
             });
 
-            process::exit(1);
+            return true;
         }
-    }
-    pub fn mismatch_types(
-        &mut self,
-        target: &ThrushType,
-        from: &ThrushType,
-        span: Span,
-        expr: Option<&Instruction>,
-    ) {
-        let error: ThrushCompilerIssue = ThrushCompilerIssue::Error(
-            String::from("Mismatched types"),
-            format!("Expected '{}' but found '{}'.", target, from),
-            None,
-            span,
-        );
 
-        if expr.is_some_and(|expr| expr.is_binary() || expr.is_group()) {
-            if let Err(error) = typecheck::check_type(target, &ThrushType::Void, expr, None, error)
-            {
-                self.errors.push(error);
-            }
-        } else if let Err(error) = typecheck::check_type(target, from, None, None, error) {
-            self.errors.push(error);
-        }
+        false
     }
 
     pub fn consume(
@@ -292,7 +269,7 @@ impl<'instr> ParserContext<'instr> {
         &mut self.scope
     }
 
-    pub fn add_stmt(&mut self, stmt: Instruction<'instr>) {
+    pub fn add_stmt(&mut self, stmt: ThrushStatement<'instr>) {
         self.stmts.push(stmt);
     }
 
@@ -300,7 +277,7 @@ impl<'instr> ParserContext<'instr> {
         self.errors.push(error);
     }
 
-    pub fn get_instructions(&self) -> &[Instruction<'instr>] {
+    pub fn get_stmts(&self) -> &[ThrushStatement<'instr>] {
         self.stmts.as_slice()
     }
 
@@ -386,7 +363,7 @@ impl<'instr> ParserContext<'instr> {
             .filter(|(_, token)| token.kind.is_type_keyword())
             .for_each(|(pos, _)| {
                 self.current = pos;
-                let _ = stmts::build_custom_type(self, true);
+                let _ = stmt::build_custom_type(self, true);
                 self.current = 0;
             });
 
@@ -396,7 +373,7 @@ impl<'instr> ParserContext<'instr> {
             .filter(|(_, token)| token.kind.is_const_keyword())
             .for_each(|(pos, _)| {
                 self.current = pos;
-                let _ = stmts::build_const(self, true);
+                let _ = stmt::build_const(self, true);
                 self.current = 0;
             });
 
@@ -406,7 +383,7 @@ impl<'instr> ParserContext<'instr> {
             .filter(|(_, token)| token.kind.is_struct_keyword())
             .for_each(|(pos, _)| {
                 self.current = pos;
-                let _ = stmts::build_struct(self, true);
+                let _ = stmt::build_struct(self, true);
                 self.current = 0;
             });
 
@@ -416,7 +393,7 @@ impl<'instr> ParserContext<'instr> {
             .filter(|(_, token)| token.kind.is_bindings_keyword())
             .for_each(|(pos, _)| {
                 self.current = pos;
-                let _ = stmts::build_bindings(self, true);
+                let _ = stmt::build_bindings(self, true);
                 self.current = 0;
             });
 
@@ -426,7 +403,7 @@ impl<'instr> ParserContext<'instr> {
             .filter(|(_, token)| token.kind.is_enum_keyword())
             .for_each(|(pos, _)| {
                 self.current = pos;
-                let _ = stmts::build_enum(self, true);
+                let _ = stmt::build_enum(self, true);
                 self.current = 0;
             });
 
@@ -436,7 +413,7 @@ impl<'instr> ParserContext<'instr> {
             .filter(|(_, token)| token.kind.is_function_keyword())
             .for_each(|(pos, _)| {
                 self.current = pos;
-                let _ = stmts::build_function(self, true);
+                let _ = stmt::build_function(self, true);
                 self.current = 0;
             });
     }

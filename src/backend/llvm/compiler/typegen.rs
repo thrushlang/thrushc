@@ -7,7 +7,7 @@ use inkwell::{
 };
 
 use crate::middle::types::frontend::lexer::types::ThrushType;
-use crate::middle::types::frontend::parser::stmts::instruction::Instruction;
+use crate::middle::types::frontend::parser::stmts::stmt::ThrushStatement;
 
 use super::context::LLVMCodeGenContext;
 
@@ -44,7 +44,7 @@ pub fn type_float_to_llvm_float_type<'ctx>(
 pub fn function_type<'ctx>(
     context: &LLVMCodeGenContext<'_, 'ctx>,
     kind: &ThrushType,
-    parameters: &[Instruction],
+    parameters: &[ThrushStatement],
     ignore_args: bool,
 ) -> FunctionType<'ctx> {
     let llvm_context: &Context = context.get_llvm_context();
@@ -52,7 +52,7 @@ pub fn function_type<'ctx>(
     let mut parameters_types: Vec<BasicMetadataTypeEnum> = Vec::with_capacity(parameters.len());
 
     parameters.iter().for_each(|parameter| {
-        if let Instruction::FunctionParameter { kind, .. } = parameter {
+        if let ThrushStatement::FunctionParameter { kind, .. } = parameter {
             let llvm_type: BasicMetadataTypeEnum = generate_type(llvm_context, kind).into();
             parameters_types.push(llvm_type);
         }

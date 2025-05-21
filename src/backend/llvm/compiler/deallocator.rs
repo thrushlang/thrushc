@@ -4,7 +4,7 @@ use inkwell::values::BasicValueEnum;
 
 use crate::middle::types::{
     backend::llvm::{traits::LLVMDeallocator, types::SymbolsAllocated},
-    frontend::{lexer::types::ThrushType, parser::stmts::instruction::Instruction},
+    frontend::{lexer::types::ThrushType, parser::stmts::stmt::ThrushStatement},
 };
 
 use super::{context::LLVMCodeGenContext, memory::SymbolAllocated};
@@ -21,10 +21,10 @@ pub fn dealloc_all(context: &LLVMCodeGenContext<'_, '_>, symbols_allocated: Symb
 pub fn dealloc(
     context: &LLVMCodeGenContext<'_, '_>,
     symbols_allocated: SymbolsAllocated,
-    exclusion: Option<&Rc<Instruction>>,
+    exclusion: Option<&Rc<ThrushStatement>>,
 ) {
     if let Some(expression) = exclusion {
-        if let Instruction::LocalRef { name, .. } = **expression {
+        if let ThrushStatement::LocalRef { name, .. } = **expression {
             symbols_allocated
                 .iter()
                 .filter(|symbol| *symbol.0 != name)

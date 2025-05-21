@@ -1,4 +1,4 @@
-use crate::frontend::lexer::Span;
+use crate::frontend::lexer::span::Span;
 
 #[derive(Debug, Clone)]
 pub enum ThrushCompilerIssue {

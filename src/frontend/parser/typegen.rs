@@ -1,4 +1,5 @@
 use crate::{
+    frontend::lexer::{span::Span, token::Token},
     middle::types::frontend::{
         lexer::{tokenkind::TokenKind, types::ThrushType},
         parser::{
@@ -15,10 +16,7 @@ use crate::{
     standard::error::ThrushCompilerIssue,
 };
 
-use super::{
-    lexer::{Span, Token},
-    parser::ParserContext,
-};
+use super::ParserContext;
 
 pub fn build_type(parser_ctx: &mut ParserContext<'_>) -> Result<ThrushType, ThrushCompilerIssue> {
     let builded_type: Result<ThrushType, ThrushCompilerIssue> = match parser_ctx.peek().kind {

@@ -1,4 +1,4 @@
-use crate::{frontend::lexer::Span, middle::types::frontend::lexer::types::ThrushType};
+use crate::{frontend::lexer::span::Span, middle::types::frontend::lexer::types::ThrushType};
 
 use super::types::{Bind, ParametersTypes};
 

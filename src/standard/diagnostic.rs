@@ -2,7 +2,7 @@ use std::path::Path;
 use std::str::Lines;
 
 use super::{
-    super::frontend::lexer::Span,
+    super::frontend::lexer::span::Span,
     error::ThrushCompilerIssue,
     logging::{self, LoggingType},
     misc::CompilerFile,

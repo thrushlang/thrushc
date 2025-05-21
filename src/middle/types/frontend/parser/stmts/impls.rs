@@ -3,7 +3,7 @@ use std::fmt::Display;
 use crate::middle::types::frontend::lexer::types::ThrushType;
 
 use super::{
-    instruction::Instruction,
+    stmt::ThrushStatement,
     traits::{
         CompilerAttributesExtensions, ConstructorExtensions, CustomTypeFieldsExtensions,
         StructFieldsExtensions,
@@ -45,30 +45,30 @@ impl CustomTypeFieldsExtensions for CustomTypeFields<'_> {
     }
 }
 
-impl PartialEq for Instruction<'_> {
+impl PartialEq for ThrushStatement<'_> {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
-            (Instruction::Integer { .. }, Instruction::Integer { .. })
-            | (Instruction::Float { .. }, Instruction::Float { .. })
-            | (Instruction::Str { .. }, Instruction::Str { .. }) => true,
+            (ThrushStatement::Integer { .. }, ThrushStatement::Integer { .. })
+            | (ThrushStatement::Float { .. }, ThrushStatement::Float { .. })
+            | (ThrushStatement::Str { .. }, ThrushStatement::Str { .. }) => true,
             (left, right) => std::mem::discriminant(left) == std::mem::discriminant(right),
         }
     }
 }
 
-impl Display for Instruction<'_> {
+impl Display for ThrushStatement<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Instruction::Null { .. } => write!(f, "null"),
-            Instruction::Pass { .. } => write!(f, "pass"),
-            Instruction::Char { byte, .. } => write!(f, "{}", byte),
-            Instruction::Integer { value, .. } => write!(f, "{}", value),
-            Instruction::Float { value, .. } => write!(f, "{}", value),
-            Instruction::Boolean { value, .. } => write!(f, "{}", value),
-            Instruction::Str { bytes, .. } => {
+            ThrushStatement::Null { .. } => write!(f, "null"),
+            ThrushStatement::Pass { .. } => write!(f, "pass"),
+            ThrushStatement::Char { byte, .. } => write!(f, "{}", byte),
+            ThrushStatement::Integer { value, .. } => write!(f, "{}", value),
+            ThrushStatement::Float { value, .. } => write!(f, "{}", value),
+            ThrushStatement::Boolean { value, .. } => write!(f, "{}", value),
+            ThrushStatement::Str { bytes, .. } => {
                 write!(f, "\"{}\"", String::from_utf8_lossy(bytes))
             }
-            Instruction::Function {
+            ThrushStatement::Function {
                 name,
                 parameters,
                 parameter_types,
@@ -101,7 +101,7 @@ impl Display for Instruction<'_> {
 
                 Ok(())
             }
-            Instruction::Block { stmts, .. } => {
+            ThrushStatement::Block { stmts, .. } => {
                 let _ = write!(f, "{{ ");
 
                 for stmt in stmts {
@@ -112,7 +112,7 @@ impl Display for Instruction<'_> {
 
                 Ok(())
             }
-            Instruction::BinaryOp {
+            ThrushStatement::BinaryOp {
                 left,
                 operator,
                 right,
@@ -120,7 +120,7 @@ impl Display for Instruction<'_> {
             } => {
                 write!(f, "{} {} {}", left, operator, right)
             }
-            Instruction::UnaryOp {
+            ThrushStatement::UnaryOp {
                 operator,
                 expression,
                 is_pre,
@@ -132,13 +132,13 @@ impl Display for Instruction<'_> {
                     write!(f, "{}{}", expression, operator)
                 }
             }
-            Instruction::Break { .. } => {
+            ThrushStatement::Break { .. } => {
                 write!(f, "break")
             }
-            Instruction::Continue { .. } => {
+            ThrushStatement::Continue { .. } => {
                 write!(f, "continue")
             }
-            Instruction::For {
+            ThrushStatement::For {
                 local,
                 cond,
                 actions,
@@ -147,7 +147,7 @@ impl Display for Instruction<'_> {
             } => {
                 write!(f, "for {} {} {} {}", local, cond, actions, block)
             }
-            Instruction::Call { name, args, .. } => {
+            ThrushStatement::Call { name, args, .. } => {
                 write!(f, "{}(", name)?;
 
                 for (index, arg) in args.iter().enumerate() {
@@ -161,7 +161,7 @@ impl Display for Instruction<'_> {
                 write!(f, ")")
             }
 
-            Instruction::If {
+            ThrushStatement::If {
                 cond,
                 block,
                 elfs,
@@ -181,7 +181,7 @@ impl Display for Instruction<'_> {
                 Ok(())
             }
 
-            Instruction::Return { expression, .. } => {
+            ThrushStatement::Return { expression, .. } => {
                 if let Some(expr) = expression {
                     write!(f, "return {}", expr)?;
                 }
@@ -189,7 +189,7 @@ impl Display for Instruction<'_> {
                 write!(f, "return")
             }
 
-            Instruction::Local {
+            ThrushStatement::Local {
                 name,
                 kind,
                 value,
@@ -203,7 +203,7 @@ impl Display for Instruction<'_> {
                 }
             }
 
-            Instruction::Mut { source, value, .. } => {
+            ThrushStatement::Mut { source, value, .. } => {
                 if let (Some(name), _) = source {
                     write!(f, "{} = {}", name, value)?;
                 }
@@ -215,19 +215,19 @@ impl Display for Instruction<'_> {
                 Ok(())
             }
 
-            Instruction::LocalRef { name, .. } => {
+            ThrushStatement::LocalRef { name, .. } => {
                 write!(f, "{}", name)
             }
 
-            Instruction::Loop { block, .. } => {
+            ThrushStatement::Loop { block, .. } => {
                 write!(f, "loop {}", block)
             }
 
-            Instruction::While { cond, block, .. } => {
+            ThrushStatement::While { cond, block, .. } => {
                 write!(f, "while {} {}", cond, block)
             }
 
-            Instruction::Bind {
+            ThrushStatement::Bind {
                 name,
                 parameters,
                 body,
@@ -251,15 +251,15 @@ impl Display for Instruction<'_> {
                 Ok(())
             }
 
-            Instruction::EntryPoint { body, .. } => {
+            ThrushStatement::EntryPoint { body, .. } => {
                 write!(f, "fn main() {}", body)
             }
 
-            Instruction::NullPtr { .. } => {
+            ThrushStatement::NullPtr { .. } => {
                 write!(f, "null")
             }
 
-            Instruction::Group { expression, .. } => {
+            ThrushStatement::Group { expression, .. } => {
                 write!(f, "({})", expression)
             }
 

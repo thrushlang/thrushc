@@ -1,5 +1,6 @@
 use std::{
-    fs::write,
+    fs::{File, write},
+    io::{self, BufReader, Read},
     path::{Path, PathBuf},
     time::{Duration, Instant},
 };
@@ -15,36 +16,34 @@ use inkwell::{
 };
 
 use crate::{
+    backend::llvm::{self, linker::lld::LLVMLinker},
     frontend::{
-        lexer::{Lexer, Token},
+        lexer::{Lexer, token::Token},
         parser::{Parser, ParserContext},
-        warner::Warner,
     },
-    middle::types::frontend::parser::stmts::instruction::Instruction,
+    middle::types::frontend::parser::stmts::stmt::ThrushStatement,
     standard::{
         backends::{LLVMBackend, LLVMExecutableFlavor},
         diagnostic::Diagnostician,
-        logging::{self},
-        misc::{CompilerFile, CompilerOptions, Emitable, ThrushOptimization},
+        logging::{self, LoggingType},
+        misc::{CompilerFile, CompilerOptions, Emitable, Emited, ThrushOptimization},
     },
 };
 
-use super::llvm::{self, linker::lld::LLVMLinker};
+use super::semantic::SemanticAnalyzer;
 
-pub mod utils;
-
-pub struct Thrushc<'a> {
-    thrushc_compiled_files: Vec<PathBuf>,
-    files: &'a [CompilerFile],
-    options: &'a CompilerOptions,
+pub struct TheThrushCompiler<'thrushc> {
+    compiled_files: Vec<PathBuf>,
+    files: &'thrushc [CompilerFile],
+    options: &'thrushc CompilerOptions,
     llvm_time: Duration,
     thrushc_time: Duration,
 }
 
-impl<'a> Thrushc<'a> {
-    pub fn new(files: &'a [CompilerFile], options: &'a CompilerOptions) -> Self {
+impl<'thrushc> TheThrushCompiler<'thrushc> {
+    pub fn new(files: &'thrushc [CompilerFile], options: &'thrushc CompilerOptions) -> Self {
         Self {
-            thrushc_compiled_files: Vec::with_capacity(files.len()),
+            compiled_files: Vec::with_capacity(files.len()),
             files,
             options,
             llvm_time: Duration::default(),
@@ -57,6 +56,10 @@ impl<'a> Thrushc<'a> {
             self.compile_file(file);
         });
 
+        if self.compiled_files.is_empty() {
+            return (self.thrushc_time.as_millis(), self.llvm_time.as_millis());
+        }
+
         let llvm_backend: &LLVMBackend = self.options.get_llvm_backend_options();
 
         if llvm_backend.was_emited() {
@@ -66,7 +69,7 @@ impl<'a> Thrushc<'a> {
         let executable_flavor: LLVMExecutableFlavor = llvm_backend.get_executable_flavor();
 
         let linker_time: Duration = LLVMLinker::new(
-            &self.thrushc_compiled_files,
+            self.get_compiled_files(),
             llvm_backend.get_linker_flags(),
             executable_flavor.into_llvm_linker_flavor(),
         )
@@ -77,19 +80,23 @@ impl<'a> Thrushc<'a> {
         (self.thrushc_time.as_millis(), self.llvm_time.as_millis())
     }
 
-    fn compile_file(&mut self, file: &'a CompilerFile) {
+    fn compile_file(&mut self, file: &'thrushc CompilerFile) {
         logging::write(
             logging::OutputIn::Stdout,
             &format!(
-                "{} {}\n",
-                "Compiling".custom_color((141, 141, 142)).bold(),
+                "{} {} {}\n",
+                "Compilation".custom_color((141, 141, 142)).bold(),
+                "RUNNING".bright_green().bold(),
                 &file.path.to_string_lossy()
             ),
         );
 
         let thrushc_time: Instant = Instant::now();
 
-        let source_code: &[u8] = &utils::extract_code_from_file(&file.path);
+        let source_code: &[u8] = &self.get_source_code(&file.path);
+
+        let llvm_backend: &LLVMBackend = self.options.get_llvm_backend_options();
+        let build_dir: &PathBuf = self.options.get_build_dir();
 
         let tokens: Vec<Token> = match Lexer::lex(source_code, file) {
             Ok(tokens) => tokens,
@@ -99,32 +106,46 @@ impl<'a> Thrushc<'a> {
             }
         };
 
-        let llvm_backend: &LLVMBackend = self.options.get_llvm_backend_options();
-        let build_dir: &PathBuf = self.options.get_build_dir();
-
-        if llvm_backend.contains_emitable(Emitable::Tokens) {
-            let _ = write(
-                build_dir.join(format!("{}.tokens", file.name)),
-                format!("{:#?}", tokens),
-            );
-
+        if self.emit_after_frontend(llvm_backend, build_dir, file, Emited::Tokens(&tokens)) {
             self.thrushc_time += thrushc_time.elapsed();
+            return;
+        }
+
+        let parser: (ParserContext, bool) = Parser::parse(&tokens, file);
+        let parser_result: (ParserContext, bool) = parser;
+        let parser_context: ParserContext = parser_result.0;
+        let parser_throwed_errors: bool = parser_result.1;
+
+        let stmts: &[ThrushStatement] = parser_context.get_stmts();
+
+        let semantic_analysis_throwed_errors: bool = SemanticAnalyzer::new(stmts, file).check();
+
+        if parser_throwed_errors || semantic_analysis_throwed_errors {
+            logging::write(
+                logging::OutputIn::Stderr,
+                &format!(
+                    "{} {} {}\n",
+                    "Compilation".custom_color((141, 141, 142)).bold(),
+                    "FAILED".bright_red().bold(),
+                    &file.path.to_string_lossy()
+                ),
+            );
 
             return;
         }
 
-        let parser_ctx: ParserContext = Parser::parse(&tokens, file);
-        let instructions: &[Instruction] = parser_ctx.get_instructions();
-
-        Warner::new(instructions, file).check();
-
-        if llvm_backend.contains_emitable(Emitable::AST) {
-            let _ = write(
-                build_dir.join(format!("{}.ast", file.name)),
-                format!("{:#?}", instructions),
-            );
-
+        if self.emit_after_frontend(llvm_backend, build_dir, file, Emited::Statements(stmts)) {
             self.thrushc_time += thrushc_time.elapsed();
+
+            logging::write(
+                logging::OutputIn::Stdout,
+                &format!(
+                    "{} {} {}\n",
+                    "Compilation".custom_color((141, 141, 142)).bold(),
+                    "FINISHED".bright_green().bold(),
+                    &file.path.to_string_lossy()
+                ),
+            );
 
             return;
         }
@@ -173,7 +194,7 @@ impl<'a> Thrushc<'a> {
             &llvm_module,
             &llvm_builder,
             &llvm_context,
-            instructions,
+            stmts,
             target_machine.get_target_data(),
             Diagnostician::new(file),
         );
@@ -186,6 +207,17 @@ impl<'a> Thrushc<'a> {
             file,
         ) {
             self.thrushc_time += thrushc_time.elapsed();
+
+            logging::write(
+                logging::OutputIn::Stdout,
+                &format!(
+                    "{} {} {}\n",
+                    "Compilation".custom_color((141, 141, 142)).bold(),
+                    "FINISHED".bright_green().bold(),
+                    &file.path.to_string_lossy()
+                ),
+            );
+
             return;
         }
 
@@ -206,6 +238,17 @@ impl<'a> Thrushc<'a> {
             file,
         ) {
             self.thrushc_time += thrushc_time.elapsed();
+
+            logging::write(
+                logging::OutputIn::Stdout,
+                &format!(
+                    "{} {} {}\n",
+                    "Compilation".custom_color((141, 141, 142)).bold(),
+                    "FINISHED".bright_green().bold(),
+                    &file.path.to_string_lossy()
+                ),
+            );
+
             return;
         }
 
@@ -218,13 +261,56 @@ impl<'a> Thrushc<'a> {
                     logging::LoggingType::Panic,
                     &format!("'{}' cannot be emitted.", object_file_path.display()),
                 );
+
                 unreachable!()
             });
 
-        self.thrushc_compiled_files.push(object_file_path);
+        self.add_compiled_file(object_file_path);
+
+        logging::write(
+            logging::OutputIn::Stdout,
+            &format!(
+                "{} {} {}\n",
+                "Compilation".custom_color((141, 141, 142)).bold(),
+                "FINISHED".bright_green().bold(),
+                &file.path.to_string_lossy()
+            ),
+        );
     }
 
-    pub fn emit_before_optimization(
+    fn emit_after_frontend(
+        &self,
+        llvm_backend: &LLVMBackend,
+        build_dir: &Path,
+        file: &CompilerFile,
+        emited: Emited<'thrushc>,
+    ) -> bool {
+        if llvm_backend.contains_emitable(Emitable::Tokens) {
+            if let Emited::Tokens(tokens) = emited {
+                let _ = write(
+                    build_dir.join(format!("{}.tokens", file.name)),
+                    format!("{:#?}", tokens),
+                );
+
+                return true;
+            }
+        }
+
+        if llvm_backend.contains_emitable(Emitable::AST) {
+            if let Emited::Statements(stmts) = emited {
+                let _ = write(
+                    build_dir.join(format!("{}.ast", file.name)),
+                    format!("{:#?}", stmts),
+                );
+
+                return true;
+            }
+        }
+
+        false
+    }
+
+    fn emit_before_optimization(
         &self,
         llvm_backend: &LLVMBackend,
         llvm_module: &Module,
@@ -360,5 +446,37 @@ impl<'a> Thrushc<'a> {
         }
 
         false
+    }
+
+    fn get_compiled_files(&self) -> &[PathBuf] {
+        &self.compiled_files
+    }
+
+    fn add_compiled_file(&mut self, path: PathBuf) {
+        self.compiled_files.push(path);
+    }
+
+    fn get_source_code(&self, file_path: &Path) -> Vec<u8> {
+        match self.read_file_to_string_buffered(file_path) {
+            Ok(code) => code,
+            _ => {
+                logging::log(
+                    LoggingType::Panic,
+                    &format!("'{}' file can't be read.", file_path.display()),
+                );
+
+                unreachable!()
+            }
+        }
+    }
+
+    fn read_file_to_string_buffered(&self, path: &Path) -> Result<Vec<u8>, io::Error> {
+        let file: File = File::open(path)?;
+        let mut reader: BufReader<File> = BufReader::new(file);
+
+        let mut buffer: Vec<u8> = Vec::with_capacity(100_000);
+        reader.read_to_end(&mut buffer)?;
+
+        Ok(buffer)
     }
 }

@@ -1,5 +1,5 @@
 use {
-    super::super::{Instruction, context::LLVMCodeGenContext, unaryop, valuegen},
+    super::super::{ThrushStatement, context::LLVMCodeGenContext, unaryop, valuegen},
     crate::{
         backend::llvm::compiler::{cast, predicates},
         middle::types::{
@@ -149,7 +149,7 @@ pub fn integer_binaryop<'ctx>(
     ########################################################################*/
 
     if let (
-        Instruction::Property { .. },
+        ThrushStatement::Property { .. },
         TokenKind::Plus
         | TokenKind::Slash
         | TokenKind::Minus
@@ -164,7 +164,7 @@ pub fn integer_binaryop<'ctx>(
         | TokenKind::RShift
         | TokenKind::And
         | TokenKind::Or,
-        Instruction::Property { .. },
+        ThrushStatement::Property { .. },
     ) = binary
     {
         let left_compiled: BasicValueEnum = valuegen::build(binary.0, target_type, context);
@@ -184,7 +184,7 @@ pub fn integer_binaryop<'ctx>(
     }
 
     if let (
-        Instruction::Property { .. },
+        ThrushStatement::Property { .. },
         TokenKind::Plus
         | TokenKind::Slash
         | TokenKind::Minus
@@ -199,7 +199,7 @@ pub fn integer_binaryop<'ctx>(
         | TokenKind::RShift
         | TokenKind::And
         | TokenKind::Or,
-        Instruction::Property { .. },
+        ThrushStatement::Property { .. },
     ) = binary
     {
         let left_compiled: BasicValueEnum = valuegen::build(binary.0, target_type, context);
@@ -227,13 +227,13 @@ pub fn integer_binaryop<'ctx>(
     ########################################################################*/
 
     if let (
-        Instruction::Boolean {
+        ThrushStatement::Boolean {
             kind: left_type,
             value: left,
             ..
         },
         TokenKind::BangEq | TokenKind::EqEq | TokenKind::And | TokenKind::Or,
-        Instruction::Boolean {
+        ThrushStatement::Boolean {
             kind: right_type,
             value: right,
             ..
@@ -253,13 +253,13 @@ pub fn integer_binaryop<'ctx>(
     }
 
     if let (
-        Instruction::Boolean {
+        ThrushStatement::Boolean {
             kind: left_type,
             value: left,
             ..
         },
         TokenKind::BangEq | TokenKind::EqEq | TokenKind::And | TokenKind::Or,
-        Instruction::UnaryOp {
+        ThrushStatement::UnaryOp {
             kind: right_type, ..
         },
     ) = binary
@@ -292,11 +292,11 @@ pub fn integer_binaryop<'ctx>(
     }
 
     if let (
-        Instruction::UnaryOp {
+        ThrushStatement::UnaryOp {
             kind: left_type, ..
         },
         TokenKind::BangEq | TokenKind::EqEq | TokenKind::And | TokenKind::Or,
-        Instruction::Boolean {
+        ThrushStatement::Boolean {
             kind: right_type,
             value: right,
             ..
@@ -332,16 +332,16 @@ pub fn integer_binaryop<'ctx>(
     }
 
     if let (
-        Instruction::Boolean {
+        ThrushStatement::Boolean {
             kind: left_type,
             value: left,
             ..
         },
         TokenKind::BangEq | TokenKind::EqEq | TokenKind::And | TokenKind::Or,
-        Instruction::LocalRef {
+        ThrushStatement::LocalRef {
             kind: right_type, ..
         }
-        | Instruction::ConstRef {
+        | ThrushStatement::ConstRef {
             kind: right_type, ..
         },
     ) = binary
@@ -372,14 +372,14 @@ pub fn integer_binaryop<'ctx>(
     }
 
     if let (
-        Instruction::LocalRef {
+        ThrushStatement::LocalRef {
             kind: left_type, ..
         }
-        | Instruction::ConstRef {
+        | ThrushStatement::ConstRef {
             kind: left_type, ..
         },
         TokenKind::BangEq | TokenKind::EqEq | TokenKind::And | TokenKind::Or,
-        Instruction::Boolean {
+        ThrushStatement::Boolean {
             kind: right_type,
             value: right,
             ..
@@ -421,13 +421,13 @@ pub fn integer_binaryop<'ctx>(
     ########################################################################*/
 
     if let (
-        Instruction::Char {
+        ThrushStatement::Char {
             kind: left_type,
             byte: left,
             ..
         },
         TokenKind::BangEq | TokenKind::EqEq,
-        Instruction::Char {
+        ThrushStatement::Char {
             kind: right_type,
             byte: right,
             ..
@@ -459,7 +459,7 @@ pub fn integer_binaryop<'ctx>(
     ########################################################################*/
 
     if let (
-        Instruction::UnaryOp {
+        ThrushStatement::UnaryOp {
             kind: left_type, ..
         },
         TokenKind::Plus
@@ -472,7 +472,7 @@ pub fn integer_binaryop<'ctx>(
         | TokenKind::EqEq
         | TokenKind::And
         | TokenKind::Or,
-        Instruction::UnaryOp {
+        ThrushStatement::UnaryOp {
             kind: right_type, ..
         },
     ) = binary
@@ -510,7 +510,7 @@ pub fn integer_binaryop<'ctx>(
     }
 
     if let (
-        Instruction::Call {
+        ThrushStatement::Call {
             kind: left_call_type,
             ..
         },
@@ -528,7 +528,7 @@ pub fn integer_binaryop<'ctx>(
         | TokenKind::RShift
         | TokenKind::And
         | TokenKind::Or,
-        Instruction::UnaryOp {
+        ThrushStatement::UnaryOp {
             kind: right_type, ..
         },
     ) = binary
@@ -566,7 +566,7 @@ pub fn integer_binaryop<'ctx>(
     }
 
     if let (
-        Instruction::UnaryOp {
+        ThrushStatement::UnaryOp {
             kind: left_type, ..
         },
         TokenKind::Plus
@@ -583,7 +583,7 @@ pub fn integer_binaryop<'ctx>(
         | TokenKind::RShift
         | TokenKind::And
         | TokenKind::Or,
-        Instruction::Call {
+        ThrushStatement::Call {
             kind: right_call_type,
             ..
         },
@@ -620,7 +620,7 @@ pub fn integer_binaryop<'ctx>(
     }
 
     if let (
-        Instruction::Integer {
+        ThrushStatement::Integer {
             kind: left_type,
             value: left_num,
             signed: left_signed,
@@ -640,7 +640,7 @@ pub fn integer_binaryop<'ctx>(
         | TokenKind::RShift
         | TokenKind::And
         | TokenKind::Or,
-        Instruction::UnaryOp {
+        ThrushStatement::UnaryOp {
             kind: right_type, ..
         },
     ) = binary
@@ -677,7 +677,7 @@ pub fn integer_binaryop<'ctx>(
     }
 
     if let (
-        Instruction::UnaryOp {
+        ThrushStatement::UnaryOp {
             kind: left_type, ..
         },
         TokenKind::Plus
@@ -694,7 +694,7 @@ pub fn integer_binaryop<'ctx>(
         | TokenKind::RShift
         | TokenKind::And
         | TokenKind::Or,
-        Instruction::Integer {
+        ThrushStatement::Integer {
             kind: right_type,
             value: right_num,
             signed: right_signed,
@@ -734,10 +734,10 @@ pub fn integer_binaryop<'ctx>(
     }
 
     if let (
-        Instruction::LocalRef {
+        ThrushStatement::LocalRef {
             kind: left_type, ..
         }
-        | Instruction::ConstRef {
+        | ThrushStatement::ConstRef {
             kind: left_type, ..
         },
         TokenKind::Plus
@@ -754,7 +754,7 @@ pub fn integer_binaryop<'ctx>(
         | TokenKind::RShift
         | TokenKind::And
         | TokenKind::Or,
-        Instruction::UnaryOp {
+        ThrushStatement::UnaryOp {
             kind: right_type, ..
         },
     ) = binary
@@ -790,7 +790,7 @@ pub fn integer_binaryop<'ctx>(
     }
 
     if let (
-        Instruction::UnaryOp {
+        ThrushStatement::UnaryOp {
             kind: left_type, ..
         },
         TokenKind::Plus
@@ -807,10 +807,10 @@ pub fn integer_binaryop<'ctx>(
         | TokenKind::RShift
         | TokenKind::And
         | TokenKind::Or,
-        Instruction::LocalRef {
+        ThrushStatement::LocalRef {
             kind: right_type, ..
         }
-        | Instruction::ConstRef {
+        | ThrushStatement::ConstRef {
             kind: right_type, ..
         },
     ) = binary
@@ -846,7 +846,7 @@ pub fn integer_binaryop<'ctx>(
     }
 
     if let (
-        Instruction::BinaryOp {
+        ThrushStatement::BinaryOp {
             kind: left_type, ..
         },
         TokenKind::Plus
@@ -863,7 +863,7 @@ pub fn integer_binaryop<'ctx>(
         | TokenKind::RShift
         | TokenKind::And
         | TokenKind::Or,
-        Instruction::UnaryOp {
+        ThrushStatement::UnaryOp {
             kind: right_type, ..
         },
     ) = binary
@@ -902,7 +902,7 @@ pub fn integer_binaryop<'ctx>(
     }
 
     if let (
-        Instruction::Group {
+        ThrushStatement::Group {
             expression: left_instr,
             kind: left_type,
             ..
@@ -921,7 +921,7 @@ pub fn integer_binaryop<'ctx>(
         | TokenKind::RShift
         | TokenKind::And
         | TokenKind::Or,
-        Instruction::UnaryOp {
+        ThrushStatement::UnaryOp {
             kind: right_type, ..
         },
     ) = binary
@@ -960,7 +960,7 @@ pub fn integer_binaryop<'ctx>(
     }
 
     if let (
-        Instruction::UnaryOp {
+        ThrushStatement::UnaryOp {
             kind: left_type, ..
         },
         TokenKind::Plus
@@ -977,7 +977,7 @@ pub fn integer_binaryop<'ctx>(
         | TokenKind::RShift
         | TokenKind::And
         | TokenKind::Or,
-        Instruction::Group {
+        ThrushStatement::Group {
             expression: right_instr,
             kind: right_type,
             ..
@@ -1026,7 +1026,7 @@ pub fn integer_binaryop<'ctx>(
     ########################################################################*/
 
     if let (
-        Instruction::Call {
+        ThrushStatement::Call {
             kind: left_call_type,
             ..
         },
@@ -1044,7 +1044,7 @@ pub fn integer_binaryop<'ctx>(
         | TokenKind::RShift
         | TokenKind::And
         | TokenKind::Or,
-        Instruction::Call {
+        ThrushStatement::Call {
             kind: right_call_type,
             ..
         },
@@ -1079,7 +1079,7 @@ pub fn integer_binaryop<'ctx>(
     }
 
     if let (
-        Instruction::Integer {
+        ThrushStatement::Integer {
             kind: left_type,
             value: left_num,
             signed: left_signed,
@@ -1099,7 +1099,7 @@ pub fn integer_binaryop<'ctx>(
         | TokenKind::RShift
         | TokenKind::And
         | TokenKind::Or,
-        Instruction::Call {
+        ThrushStatement::Call {
             kind: right_call_type,
             ..
         },
@@ -1135,7 +1135,7 @@ pub fn integer_binaryop<'ctx>(
     }
 
     if let (
-        Instruction::Call {
+        ThrushStatement::Call {
             kind: left_call_type,
             ..
         },
@@ -1153,7 +1153,7 @@ pub fn integer_binaryop<'ctx>(
         | TokenKind::RShift
         | TokenKind::And
         | TokenKind::Or,
-        Instruction::Integer {
+        ThrushStatement::Integer {
             kind: right_type,
             value: right_num,
             signed: right_signed,
@@ -1191,10 +1191,10 @@ pub fn integer_binaryop<'ctx>(
     }
 
     if let (
-        Instruction::LocalRef {
+        ThrushStatement::LocalRef {
             kind: left_type, ..
         }
-        | Instruction::ConstRef {
+        | ThrushStatement::ConstRef {
             kind: left_type, ..
         },
         TokenKind::Plus
@@ -1211,7 +1211,7 @@ pub fn integer_binaryop<'ctx>(
         | TokenKind::RShift
         | TokenKind::And
         | TokenKind::Or,
-        Instruction::Call {
+        ThrushStatement::Call {
             kind: right_call_type,
             ..
         },
@@ -1246,7 +1246,7 @@ pub fn integer_binaryop<'ctx>(
     }
 
     if let (
-        Instruction::Call {
+        ThrushStatement::Call {
             kind: left_call_type,
             ..
         },
@@ -1264,12 +1264,12 @@ pub fn integer_binaryop<'ctx>(
         | TokenKind::RShift
         | TokenKind::And
         | TokenKind::Or,
-        Instruction::LocalRef {
+        ThrushStatement::LocalRef {
             name: right_name,
             kind: right_type,
             ..
         }
-        | Instruction::ConstRef {
+        | ThrushStatement::ConstRef {
             name: right_name,
             kind: right_type,
             ..
@@ -1306,7 +1306,7 @@ pub fn integer_binaryop<'ctx>(
     }
 
     if let (
-        Instruction::Group {
+        ThrushStatement::Group {
             expression: left_instr,
             kind: left_type,
             ..
@@ -1325,7 +1325,7 @@ pub fn integer_binaryop<'ctx>(
         | TokenKind::RShift
         | TokenKind::And
         | TokenKind::Or,
-        Instruction::Call {
+        ThrushStatement::Call {
             kind: right_call_type,
             ..
         },
@@ -1363,7 +1363,7 @@ pub fn integer_binaryop<'ctx>(
     }
 
     if let (
-        Instruction::Call {
+        ThrushStatement::Call {
             kind: left_call_type,
             ..
         },
@@ -1381,7 +1381,7 @@ pub fn integer_binaryop<'ctx>(
         | TokenKind::RShift
         | TokenKind::And
         | TokenKind::Or,
-        Instruction::Group {
+        ThrushStatement::Group {
             expression: right_instr,
             kind: right_type,
             ..
@@ -1428,7 +1428,7 @@ pub fn integer_binaryop<'ctx>(
     ########################################################################*/
 
     if let (
-        Instruction::Integer {
+        ThrushStatement::Integer {
             kind: left_type,
             value: left_num,
             signed: left_signed,
@@ -1448,7 +1448,7 @@ pub fn integer_binaryop<'ctx>(
         | TokenKind::RShift
         | TokenKind::And
         | TokenKind::Or,
-        Instruction::Integer {
+        ThrushStatement::Integer {
             kind: right_type,
             value: right_num,
             signed: right_signed,
@@ -1483,7 +1483,7 @@ pub fn integer_binaryop<'ctx>(
     }
 
     if let (
-        Instruction::Integer {
+        ThrushStatement::Integer {
             kind: left_type,
             value: left_num,
             signed: left_signed,
@@ -1503,12 +1503,12 @@ pub fn integer_binaryop<'ctx>(
         | TokenKind::RShift
         | TokenKind::And
         | TokenKind::Or,
-        Instruction::LocalRef {
+        ThrushStatement::LocalRef {
             name,
             kind: right_type,
             ..
         }
-        | Instruction::ConstRef {
+        | ThrushStatement::ConstRef {
             name,
             kind: right_type,
             ..
@@ -1542,10 +1542,10 @@ pub fn integer_binaryop<'ctx>(
     }
 
     if let (
-        Instruction::LocalRef {
+        ThrushStatement::LocalRef {
             kind: left_type, ..
         }
-        | Instruction::ConstRef {
+        | ThrushStatement::ConstRef {
             kind: left_type, ..
         },
         TokenKind::Plus
@@ -1562,10 +1562,10 @@ pub fn integer_binaryop<'ctx>(
         | TokenKind::RShift
         | TokenKind::And
         | TokenKind::Or,
-        Instruction::LocalRef {
+        ThrushStatement::LocalRef {
             kind: right_type, ..
         }
-        | Instruction::ConstRef {
+        | ThrushStatement::ConstRef {
             kind: right_type, ..
         },
     ) = binary
@@ -1598,7 +1598,7 @@ pub fn integer_binaryop<'ctx>(
     }
 
     if let (
-        Instruction::BinaryOp {
+        ThrushStatement::BinaryOp {
             kind: left_type, ..
         },
         TokenKind::Plus
@@ -1615,10 +1615,10 @@ pub fn integer_binaryop<'ctx>(
         | TokenKind::RShift
         | TokenKind::And
         | TokenKind::Or,
-        Instruction::LocalRef {
+        ThrushStatement::LocalRef {
             kind: right_type, ..
         }
-        | Instruction::ConstRef {
+        | ThrushStatement::ConstRef {
             kind: right_type, ..
         },
     ) = binary
@@ -1655,10 +1655,10 @@ pub fn integer_binaryop<'ctx>(
     }
 
     if let (
-        Instruction::LocalRef {
+        ThrushStatement::LocalRef {
             kind: left_type, ..
         }
-        | Instruction::ConstRef {
+        | ThrushStatement::ConstRef {
             kind: left_type, ..
         },
         TokenKind::Plus
@@ -1675,7 +1675,7 @@ pub fn integer_binaryop<'ctx>(
         | TokenKind::RShift
         | TokenKind::And
         | TokenKind::Or,
-        Instruction::BinaryOp {
+        ThrushStatement::BinaryOp {
             kind: right_type, ..
         },
     ) = binary
@@ -1712,7 +1712,7 @@ pub fn integer_binaryop<'ctx>(
     }
 
     if let (
-        Instruction::Integer {
+        ThrushStatement::Integer {
             kind: left_type,
             value: left_num,
             signed: left_signed,
@@ -1732,7 +1732,7 @@ pub fn integer_binaryop<'ctx>(
         | TokenKind::RShift
         | TokenKind::And
         | TokenKind::Or,
-        Instruction::BinaryOp {
+        ThrushStatement::BinaryOp {
             kind: right_type, ..
         },
     ) = binary
@@ -1767,7 +1767,7 @@ pub fn integer_binaryop<'ctx>(
     }
 
     if let (
-        Instruction::BinaryOp {
+        ThrushStatement::BinaryOp {
             kind: left_type, ..
         },
         TokenKind::Plus
@@ -1784,7 +1784,7 @@ pub fn integer_binaryop<'ctx>(
         | TokenKind::RShift
         | TokenKind::And
         | TokenKind::Or,
-        Instruction::Integer {
+        ThrushStatement::Integer {
             kind: right_type,
             value: right_num,
             signed: right_signed,
@@ -1822,12 +1822,12 @@ pub fn integer_binaryop<'ctx>(
     }
 
     if let (
-        Instruction::LocalRef {
+        ThrushStatement::LocalRef {
             name,
             kind: left_type,
             ..
         }
-        | Instruction::ConstRef {
+        | ThrushStatement::ConstRef {
             name,
             kind: left_type,
             ..
@@ -1846,7 +1846,7 @@ pub fn integer_binaryop<'ctx>(
         | TokenKind::RShift
         | TokenKind::And
         | TokenKind::Or,
-        Instruction::Integer {
+        ThrushStatement::Integer {
             kind: right_type,
             value: right_num,
             signed: right_signed,
@@ -1881,7 +1881,7 @@ pub fn integer_binaryop<'ctx>(
     }
 
     if let (
-        Instruction::Group {
+        ThrushStatement::Group {
             expression,
             kind: left_type,
             ..
@@ -1900,7 +1900,7 @@ pub fn integer_binaryop<'ctx>(
         | TokenKind::RShift
         | TokenKind::And
         | TokenKind::Or,
-        Instruction::Integer {
+        ThrushStatement::Integer {
             kind: right_type,
             value: right_num,
             signed: right_signed,
@@ -1938,7 +1938,7 @@ pub fn integer_binaryop<'ctx>(
     }
 
     if let (
-        Instruction::Integer {
+        ThrushStatement::Integer {
             kind: left_type,
             value: left_num,
             signed: left_signed,
@@ -1958,7 +1958,7 @@ pub fn integer_binaryop<'ctx>(
         | TokenKind::RShift
         | TokenKind::And
         | TokenKind::Or,
-        Instruction::Group {
+        ThrushStatement::Group {
             expression,
             kind: right_type,
             ..
@@ -2003,7 +2003,7 @@ pub fn integer_binaryop<'ctx>(
     ########################################################################*/
 
     if let (
-        Instruction::BinaryOp {
+        ThrushStatement::BinaryOp {
             kind: left_type, ..
         },
         TokenKind::Plus
@@ -2020,7 +2020,7 @@ pub fn integer_binaryop<'ctx>(
         | TokenKind::RShift
         | TokenKind::And
         | TokenKind::Or,
-        Instruction::BinaryOp {
+        ThrushStatement::BinaryOp {
             kind: right_type, ..
         },
     ) = binary
@@ -2068,7 +2068,7 @@ pub fn integer_binaryop<'ctx>(
     ########################################################################*/
 
     if let (
-        Instruction::Group {
+        ThrushStatement::Group {
             expression: left_instr,
             kind: left_type,
             ..
@@ -2087,7 +2087,7 @@ pub fn integer_binaryop<'ctx>(
         | TokenKind::RShift
         | TokenKind::And
         | TokenKind::Or,
-        Instruction::Group {
+        ThrushStatement::Group {
             expression: right_instr,
             kind: right_type,
             ..
@@ -2129,7 +2129,7 @@ pub fn integer_binaryop<'ctx>(
     }
 
     if let (
-        Instruction::Group {
+        ThrushStatement::Group {
             expression,
             kind: left_type,
             ..
@@ -2148,7 +2148,7 @@ pub fn integer_binaryop<'ctx>(
         | TokenKind::RShift
         | TokenKind::And
         | TokenKind::Or,
-        Instruction::BinaryOp {
+        ThrushStatement::BinaryOp {
             kind: right_type, ..
         },
     ) = binary
@@ -2188,7 +2188,7 @@ pub fn integer_binaryop<'ctx>(
     }
 
     if let (
-        Instruction::BinaryOp {
+        ThrushStatement::BinaryOp {
             kind: left_type, ..
         },
         TokenKind::Plus
@@ -2205,7 +2205,7 @@ pub fn integer_binaryop<'ctx>(
         | TokenKind::RShift
         | TokenKind::And
         | TokenKind::Or,
-        Instruction::Group {
+        ThrushStatement::Group {
             expression,
             kind: right_type,
             ..

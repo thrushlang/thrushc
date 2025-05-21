@@ -1,13 +1,15 @@
-use crate::middle::types::frontend::{
-    lexer::types::BindingsApplicant,
-    parser::symbols::types::{
-        Bindings, ConstantSymbol, Constants, CustomTypeSymbol, CustomTypes, EnumSymbol, Enums,
-        FoundSymbolId, Function, Functions, LocalSymbol, Locals, ParameterSymbol, Parameters,
-        Struct, Structs,
+use crate::{
+    frontend::lexer::span::Span,
+    middle::types::frontend::{
+        lexer::types::BindingsApplicant,
+        parser::symbols::types::{
+            Bindings, ConstantSymbol, Constants, CustomTypeSymbol, CustomTypes, EnumSymbol, Enums,
+            FoundSymbolId, Function, Functions, LocalSymbol, Locals, ParameterSymbol, Parameters,
+            Struct, Structs,
+        },
     },
+    standard::error::ThrushCompilerIssue,
 };
-
-use super::{super::standard::error::ThrushCompilerIssue, lexer::Span};
 
 use ahash::AHashMap as HashMap;
 

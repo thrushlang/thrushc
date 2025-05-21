@@ -4,8 +4,8 @@ mod middle;
 mod standard;
 
 use {
-    backend::thrushc::Thrushc,
     colored::{Colorize, control},
+    frontend::thrushc::TheThrushCompiler,
     inkwell::targets::{InitializationConfig, Target},
     lazy_static::lazy_static,
     standard::{cli::CommandLine, logging},
@@ -31,7 +31,7 @@ fn main() {
     let start_time: Instant = Instant::now();
 
     let compile_time: (u128, u128) =
-        Thrushc::new(cli.get_options().get_files(), cli.get_options()).compile();
+        TheThrushCompiler::new(cli.get_options().get_files(), cli.get_options()).compile();
 
     logging::write(
         logging::OutputIn::Stdout,

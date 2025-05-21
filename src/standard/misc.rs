@@ -1,6 +1,14 @@
 #![allow(non_camel_case_types, clippy::upper_case_acronyms)]
 
-use {super::backends::LLVMBackend, inkwell::OptimizationLevel, std::path::PathBuf};
+use {
+    super::backends::LLVMBackend,
+    crate::{
+        frontend::lexer::token::Token,
+        middle::types::frontend::parser::stmts::stmt::ThrushStatement,
+    },
+    inkwell::OptimizationLevel,
+    std::path::PathBuf,
+};
 
 #[derive(Debug)]
 pub struct CompilerOptions {
@@ -27,6 +35,12 @@ pub enum Emitable {
     Assembly,
     AST,
     Tokens,
+}
+
+#[derive(Debug)]
+pub enum Emited<'emited> {
+    Tokens(&'emited [Token<'emited>]),
+    Statements(&'emited [ThrushStatement<'emited>]),
 }
 
 #[derive(Default, Debug, Clone, Copy)]

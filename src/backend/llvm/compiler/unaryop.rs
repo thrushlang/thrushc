@@ -2,7 +2,7 @@ use crate::middle::types::backend::llvm::types::LLVMUnaryOp;
 use crate::middle::types::frontend::lexer::tokenkind::TokenKind;
 use crate::middle::types::frontend::lexer::types::ThrushType;
 
-use super::{Instruction, context::LLVMCodeGenContext, memory::SymbolAllocated, valuegen};
+use super::{ThrushStatement, context::LLVMCodeGenContext, memory::SymbolAllocated, valuegen};
 
 use super::typegen;
 
@@ -22,7 +22,7 @@ pub fn unary_op<'ctx>(
     if let (
         TokenKind::PlusPlus | TokenKind::MinusMinus,
         _,
-        Instruction::LocalRef {
+        ThrushStatement::LocalRef {
             name,
             kind: ref_type,
             ..
@@ -67,12 +67,12 @@ pub fn unary_op<'ctx>(
     if let (
         TokenKind::Bang,
         _,
-        Instruction::LocalRef {
+        ThrushStatement::LocalRef {
             name: ref_name,
             kind: ref_type,
             ..
         }
-        | Instruction::ConstRef {
+        | ThrushStatement::ConstRef {
             name: ref_name,
             kind: ref_type,
             ..
@@ -97,12 +97,12 @@ pub fn unary_op<'ctx>(
     if let (
         TokenKind::Minus,
         _,
-        Instruction::LocalRef {
+        ThrushStatement::LocalRef {
             name,
             kind: ref_type,
             ..
         }
-        | Instruction::ConstRef {
+        | ThrushStatement::ConstRef {
             name,
             kind: ref_type,
             ..
@@ -124,7 +124,7 @@ pub fn unary_op<'ctx>(
         return result.into();
     }
 
-    if let (TokenKind::Bang, _, Instruction::Boolean { value, .. }) = unary {
+    if let (TokenKind::Bang, _, ThrushStatement::Boolean { value, .. }) = unary {
         let value: IntValue = valuegen::integer(llvm_context, &ThrushType::Bool, *value, false);
         let result: IntValue = llvm_builder.build_not(value, "").unwrap();
 
@@ -134,7 +134,7 @@ pub fn unary_op<'ctx>(
     if let (
         TokenKind::Minus,
         _,
-        Instruction::Integer {
+        ThrushStatement::Integer {
             kind,
             value,
             signed,
@@ -155,7 +155,7 @@ pub fn unary_op<'ctx>(
     if let (
         TokenKind::Minus,
         _,
-        Instruction::Float {
+        ThrushStatement::Float {
             kind,
             value,
             signed,

@@ -9,7 +9,7 @@ use {
             backend::llvm::types::LLVMBinaryOp,
             frontend::{
                 lexer::{tokenkind::TokenKind, types::ThrushType},
-                parser::stmts::instruction::Instruction,
+                parser::stmts::stmt::ThrushStatement,
             },
         },
     },
@@ -22,7 +22,9 @@ pub fn bool_binaryop<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
 ) -> BasicValueEnum<'ctx> {
     if let (
-        Instruction::Integer { .. } | Instruction::Float { .. } | Instruction::Boolean { .. },
+        ThrushStatement::Integer { .. }
+        | ThrushStatement::Float { .. }
+        | ThrushStatement::Boolean { .. },
         TokenKind::BangEq
         | TokenKind::EqEq
         | TokenKind::LessEq
@@ -31,7 +33,9 @@ pub fn bool_binaryop<'ctx>(
         | TokenKind::GreaterEq
         | TokenKind::And
         | TokenKind::Or,
-        Instruction::Integer { .. } | Instruction::Float { .. } | Instruction::Boolean { .. },
+        ThrushStatement::Integer { .. }
+        | ThrushStatement::Float { .. }
+        | ThrushStatement::Boolean { .. },
     ) = binary
     {
         if binary.0.get_type_unwrapped().is_float_type() {
@@ -46,7 +50,7 @@ pub fn bool_binaryop<'ctx>(
     }
 
     if let (
-        Instruction::Call { .. },
+        ThrushStatement::Call { .. },
         TokenKind::BangEq
         | TokenKind::EqEq
         | TokenKind::LessEq
@@ -55,7 +59,7 @@ pub fn bool_binaryop<'ctx>(
         | TokenKind::GreaterEq
         | TokenKind::And
         | TokenKind::Or,
-        Instruction::Call { .. },
+        ThrushStatement::Call { .. },
     ) = binary
     {
         if binary.0.get_type_unwrapped().is_float_type() {
@@ -70,7 +74,7 @@ pub fn bool_binaryop<'ctx>(
     }
 
     if let (
-        Instruction::LocalRef { .. } | Instruction::ConstRef { .. },
+        ThrushStatement::LocalRef { .. } | ThrushStatement::ConstRef { .. },
         TokenKind::BangEq
         | TokenKind::EqEq
         | TokenKind::LessEq
@@ -79,7 +83,7 @@ pub fn bool_binaryop<'ctx>(
         | TokenKind::GreaterEq
         | TokenKind::And
         | TokenKind::Or,
-        Instruction::LocalRef { .. } | Instruction::ConstRef { .. },
+        ThrushStatement::LocalRef { .. } | ThrushStatement::ConstRef { .. },
     ) = binary
     {
         if binary.0.get_type_unwrapped().is_float_type() {
@@ -94,7 +98,7 @@ pub fn bool_binaryop<'ctx>(
     }
 
     if let (
-        Instruction::LocalRef { .. } | Instruction::ConstRef { .. },
+        ThrushStatement::LocalRef { .. } | ThrushStatement::ConstRef { .. },
         TokenKind::BangEq
         | TokenKind::EqEq
         | TokenKind::LessEq
@@ -103,7 +107,9 @@ pub fn bool_binaryop<'ctx>(
         | TokenKind::GreaterEq
         | TokenKind::And
         | TokenKind::Or,
-        Instruction::Integer { .. } | Instruction::Float { .. } | Instruction::Boolean { .. },
+        ThrushStatement::Integer { .. }
+        | ThrushStatement::Float { .. }
+        | ThrushStatement::Boolean { .. },
     ) = binary
     {
         if binary.2.get_type_unwrapped().is_float_type() {
@@ -116,7 +122,9 @@ pub fn bool_binaryop<'ctx>(
     }
 
     if let (
-        Instruction::Integer { .. } | Instruction::Float { .. } | Instruction::Boolean { .. },
+        ThrushStatement::Integer { .. }
+        | ThrushStatement::Float { .. }
+        | ThrushStatement::Boolean { .. },
         TokenKind::BangEq
         | TokenKind::EqEq
         | TokenKind::LessEq
@@ -125,7 +133,7 @@ pub fn bool_binaryop<'ctx>(
         | TokenKind::GreaterEq
         | TokenKind::And
         | TokenKind::Or,
-        Instruction::LocalRef { .. } | Instruction::ConstRef { .. },
+        ThrushStatement::LocalRef { .. } | ThrushStatement::ConstRef { .. },
     ) = binary
     {
         if binary.0.get_type_unwrapped().is_float_type() {
@@ -140,10 +148,10 @@ pub fn bool_binaryop<'ctx>(
     }
 
     if let (
-        Instruction::Integer { .. }
-        | Instruction::Float { .. }
-        | Instruction::Boolean { .. }
-        | Instruction::NullPtr { .. },
+        ThrushStatement::Integer { .. }
+        | ThrushStatement::Float { .. }
+        | ThrushStatement::Boolean { .. }
+        | ThrushStatement::NullPtr { .. },
         TokenKind::BangEq
         | TokenKind::EqEq
         | TokenKind::LessEq
@@ -152,7 +160,7 @@ pub fn bool_binaryop<'ctx>(
         | TokenKind::GreaterEq
         | TokenKind::And
         | TokenKind::Or,
-        Instruction::Call { .. },
+        ThrushStatement::Call { .. },
     ) = binary
     {
         if binary.0.get_type_unwrapped().is_float_type() {
@@ -171,7 +179,7 @@ pub fn bool_binaryop<'ctx>(
     }
 
     if let (
-        Instruction::Call { .. },
+        ThrushStatement::Call { .. },
         TokenKind::BangEq
         | TokenKind::EqEq
         | TokenKind::LessEq
@@ -180,10 +188,10 @@ pub fn bool_binaryop<'ctx>(
         | TokenKind::GreaterEq
         | TokenKind::And
         | TokenKind::Or,
-        Instruction::Integer { .. }
-        | Instruction::Float { .. }
-        | Instruction::Boolean { .. }
-        | Instruction::NullPtr { .. },
+        ThrushStatement::Integer { .. }
+        | ThrushStatement::Float { .. }
+        | ThrushStatement::Boolean { .. }
+        | ThrushStatement::NullPtr { .. },
     ) = binary
     {
         if binary.2.get_type_unwrapped().is_float_type() {
@@ -200,7 +208,7 @@ pub fn bool_binaryop<'ctx>(
     }
 
     if let (
-        Instruction::LocalRef { .. } | Instruction::ConstRef { .. },
+        ThrushStatement::LocalRef { .. } | ThrushStatement::ConstRef { .. },
         TokenKind::BangEq
         | TokenKind::EqEq
         | TokenKind::LessEq
@@ -209,7 +217,7 @@ pub fn bool_binaryop<'ctx>(
         | TokenKind::GreaterEq
         | TokenKind::And
         | TokenKind::Or,
-        Instruction::Call { .. },
+        ThrushStatement::Call { .. },
     ) = binary
     {
         if binary.2.get_type_unwrapped().is_float_type() {
@@ -222,7 +230,7 @@ pub fn bool_binaryop<'ctx>(
     }
 
     if let (
-        Instruction::Call { .. },
+        ThrushStatement::Call { .. },
         TokenKind::BangEq
         | TokenKind::EqEq
         | TokenKind::LessEq
@@ -231,7 +239,7 @@ pub fn bool_binaryop<'ctx>(
         | TokenKind::GreaterEq
         | TokenKind::And
         | TokenKind::Or,
-        Instruction::LocalRef { .. } | Instruction::ConstRef { .. },
+        ThrushStatement::LocalRef { .. } | ThrushStatement::ConstRef { .. },
     ) = binary
     {
         if binary.0.get_type_unwrapped().is_float_type() {
@@ -246,56 +254,9 @@ pub fn bool_binaryop<'ctx>(
     }
 
     if let (
-        Instruction::BinaryOp { .. },
+        ThrushStatement::BinaryOp { .. },
         TokenKind::And | TokenKind::Or,
-        Instruction::BinaryOp { .. },
-    ) = binary
-    {
-        if binary.0.get_type_unwrapped().is_float_type() {
-            let left_compiled: BasicValueEnum =
-                float_binaryop(binary.0.as_binary(), target_type_unwrapped, context);
-
-            let right_compiled: BasicValueEnum =
-                float_binaryop(binary.2.as_binary(), target_type_unwrapped, context);
-
-            return int_operation(
-                context,
-                left_compiled,
-                right_compiled,
-                (false, false),
-                binary.1,
-            );
-        }
-
-        return integer_binaryop(binary, target_type_unwrapped, context);
-    }
-
-    if let (Instruction::Group { .. }, TokenKind::And | TokenKind::Or, Instruction::Group { .. }) =
-        binary
-    {
-        if binary.0.get_type_unwrapped().is_float_type() {
-            let left_compiled: BasicValueEnum =
-                float_binaryop(binary.0.as_binary(), target_type_unwrapped, context);
-
-            let right_compiled: BasicValueEnum =
-                float_binaryop(binary.2.as_binary(), target_type_unwrapped, context);
-
-            return int_operation(
-                context,
-                left_compiled,
-                right_compiled,
-                (false, false),
-                binary.1,
-            );
-        }
-
-        return integer_binaryop(binary, target_type_unwrapped, context);
-    }
-
-    if let (
-        Instruction::Group { .. },
-        TokenKind::And | TokenKind::Or,
-        Instruction::BinaryOp { .. },
+        ThrushStatement::BinaryOp { .. },
     ) = binary
     {
         if binary.0.get_type_unwrapped().is_float_type() {
@@ -318,9 +279,59 @@ pub fn bool_binaryop<'ctx>(
     }
 
     if let (
-        Instruction::BinaryOp { .. },
+        ThrushStatement::Group { .. },
         TokenKind::And | TokenKind::Or,
-        Instruction::Group { .. },
+        ThrushStatement::Group { .. },
+    ) = binary
+    {
+        if binary.0.get_type_unwrapped().is_float_type() {
+            let left_compiled: BasicValueEnum =
+                float_binaryop(binary.0.as_binary(), target_type_unwrapped, context);
+
+            let right_compiled: BasicValueEnum =
+                float_binaryop(binary.2.as_binary(), target_type_unwrapped, context);
+
+            return int_operation(
+                context,
+                left_compiled,
+                right_compiled,
+                (false, false),
+                binary.1,
+            );
+        }
+
+        return integer_binaryop(binary, target_type_unwrapped, context);
+    }
+
+    if let (
+        ThrushStatement::Group { .. },
+        TokenKind::And | TokenKind::Or,
+        ThrushStatement::BinaryOp { .. },
+    ) = binary
+    {
+        if binary.0.get_type_unwrapped().is_float_type() {
+            let left_compiled: BasicValueEnum =
+                float_binaryop(binary.0.as_binary(), target_type_unwrapped, context);
+
+            let right_compiled: BasicValueEnum =
+                float_binaryop(binary.2.as_binary(), target_type_unwrapped, context);
+
+            return int_operation(
+                context,
+                left_compiled,
+                right_compiled,
+                (false, false),
+                binary.1,
+            );
+        }
+
+        return integer_binaryop(binary, target_type_unwrapped, context);
+    }
+
+    if let (
+        ThrushStatement::BinaryOp { .. },
+        TokenKind::And | TokenKind::Or,
+        ThrushStatement::Group { .. },
     ) = binary
     {
         if binary.0.get_type_unwrapped().is_float_type() {

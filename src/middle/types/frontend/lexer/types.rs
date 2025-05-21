@@ -9,11 +9,11 @@ use inkwell::{
 
 use crate::{
     backend::llvm::compiler::{context::LLVMCodeGenContext, memory, typegen},
-    frontend::{lexer::Span, symbols::SymbolsTable},
+    frontend::{lexer::span::Span, parser::symbols::SymbolsTable},
     middle::types::{
         backend::llvm::traits::LLVMDeallocator,
         frontend::parser::{
-            stmts::{instruction::Instruction, traits::StructExtensions, types::StructFields},
+            stmts::{stmt::ThrushStatement, traits::StructExtensions, types::StructFields},
             symbols::types::{Bindings, Struct},
         },
     },
@@ -380,7 +380,7 @@ impl PartialEq for ThrushType {
     }
 }
 
-pub fn generate_bindings(original_bindings: Vec<Instruction>) -> Bindings {
+pub fn generate_bindings(original_bindings: Vec<ThrushStatement>) -> Bindings {
     let mut bindings: Bindings = Vec::with_capacity(original_bindings.len());
 
     for binding in original_bindings {

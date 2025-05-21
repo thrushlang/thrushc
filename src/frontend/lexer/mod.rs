@@ -1,8 +1,10 @@
-use std::fmt::{self, Display};
 use std::{mem, process};
 
+use keywords::THRUSH_KEYWORDS;
+use span::Span;
+use token::Token;
+
 use crate::middle::types::frontend::lexer::tokenkind::TokenKind;
-use crate::middle::types::frontend::parser::stmts::traits::TokenExtensions;
 
 use crate::standard::errors::lexer::ThrushLexerPanic;
 use crate::standard::logging::LoggingType;
@@ -12,86 +14,12 @@ use super::super::standard::{
     constants::MINIMAL_ERROR_CAPACITY, diagnostic::Diagnostician, error::ThrushCompilerIssue,
 };
 
-use {
-    ahash::{HashMap, HashMapExt},
-    lazy_static::lazy_static,
-};
+pub mod keywords;
+pub mod span;
+pub mod token;
 
-const KEYWORDS_CAPACITY: usize = 62;
 const MINIMAL_TOKENS_CAPACITY: usize = 1_000_000;
-const MAXIMUN_BYTES_TO_LEX: usize = 1_000_000;
-
-lazy_static! {
-    static ref KEYWORDS: HashMap<&'static [u8], TokenKind> = {
-        let mut keywords: HashMap<&'static [u8], TokenKind> =
-            HashMap::with_capacity(KEYWORDS_CAPACITY);
-
-        keywords.insert(b"local", TokenKind::Local);
-        keywords.insert(b"fn", TokenKind::Fn);
-        keywords.insert(b"if", TokenKind::If);
-        keywords.insert(b"elif", TokenKind::Elif);
-        keywords.insert(b"else", TokenKind::Else);
-        keywords.insert(b"for", TokenKind::For);
-        keywords.insert(b"while", TokenKind::While);
-        keywords.insert(b"loop", TokenKind::Loop);
-        keywords.insert(b"true", TokenKind::True);
-        keywords.insert(b"false", TokenKind::False);
-        keywords.insert(b"or", TokenKind::Or);
-        keywords.insert(b"and", TokenKind::And);
-        keywords.insert(b"const", TokenKind::Const);
-        keywords.insert(b"struct", TokenKind::Struct);
-        keywords.insert(b"return", TokenKind::Return);
-        keywords.insert(b"break", TokenKind::Break);
-        keywords.insert(b"continue", TokenKind::Continue);
-        keywords.insert(b"bindings", TokenKind::Bindings);
-        keywords.insert(b"bind", TokenKind::Bind);
-        keywords.insert(b"this", TokenKind::This);
-        keywords.insert(b"pass", TokenKind::Pass);
-        keywords.insert(b"Me", TokenKind::Me);
-        keywords.insert(b"match", TokenKind::Match);
-        keywords.insert(b"pattern", TokenKind::Pattern);
-        keywords.insert(b"mut", TokenKind::Mut);
-        keywords.insert(b"nullptr", TokenKind::NullPtr);
-        keywords.insert(b"type", TokenKind::Type);
-        keywords.insert(b"enum", TokenKind::Enum);
-        keywords.insert(b"address", TokenKind::Address);
-        keywords.insert(b"carry", TokenKind::Carry);
-        keywords.insert(b"write", TokenKind::Write);
-        keywords.insert(b"@import", TokenKind::Import);
-        keywords.insert(b"@public", TokenKind::Public);
-        keywords.insert(b"@extern", TokenKind::Extern);
-        keywords.insert(b"@ignore", TokenKind::Ignore);
-        keywords.insert(b"@hot", TokenKind::Hot);
-        keywords.insert(b"@minsize", TokenKind::MinSize);
-        keywords.insert(b"@alwaysinline", TokenKind::AlwaysInline);
-        keywords.insert(b"@noinline", TokenKind::NoInline);
-        keywords.insert(b"@inline", TokenKind::InlineHint);
-        keywords.insert(b"@safestack", TokenKind::SafeStack);
-        keywords.insert(b"@weakstack", TokenKind::WeakStack);
-        keywords.insert(b"@strongstack", TokenKind::StrongStack);
-        keywords.insert(b"@precisefp", TokenKind::PreciseFloats);
-        keywords.insert(b"@convention", TokenKind::Convention);
-        keywords.insert(b"new", TokenKind::New);
-
-        keywords.insert(b"s8", TokenKind::S8);
-        keywords.insert(b"s16", TokenKind::S16);
-        keywords.insert(b"s32", TokenKind::S32);
-        keywords.insert(b"s64", TokenKind::S64);
-        keywords.insert(b"u8", TokenKind::U8);
-        keywords.insert(b"u16", TokenKind::U16);
-        keywords.insert(b"u32", TokenKind::U32);
-        keywords.insert(b"u64", TokenKind::U64);
-        keywords.insert(b"f32", TokenKind::F32);
-        keywords.insert(b"f64", TokenKind::F64);
-        keywords.insert(b"bool", TokenKind::Bool);
-        keywords.insert(b"char", TokenKind::Char);
-        keywords.insert(b"ptr", TokenKind::Ptr);
-        keywords.insert(b"str", TokenKind::Str);
-        keywords.insert(b"void", TokenKind::Void);
-
-        keywords
-    };
-}
+const MAXIMUM_BYTES_TO_LEX: usize = 1_000_000;
 
 pub struct Lexer<'a> {
     tokens: Vec<Token<'a>>,
@@ -120,7 +48,7 @@ impl<'a> Lexer<'a> {
     }
 
     fn start(&mut self) -> Result<Vec<Token<'a>>, ThrushLexerPanic> {
-        if self.code.len() > MAXIMUN_BYTES_TO_LEX {
+        if self.code.len() > MAXIMUM_BYTES_TO_LEX {
             return Err(ThrushLexerPanic::TooBigFile(
                 self.diagnostician.get_file_path(),
             ));
@@ -250,7 +178,7 @@ impl<'a> Lexer<'a> {
 
         let code: &[u8] = &self.code[self.start..self.current];
 
-        if let Some(token_type) = KEYWORDS.get(code) {
+        if let Some(token_type) = THRUSH_KEYWORDS.get(code) {
             self.make(*token_type);
         } else {
             self.make(TokenKind::Identifier);
@@ -710,90 +638,5 @@ impl<'a> Lexer<'a> {
     #[inline]
     fn is_alpha(&self, char: u8) -> bool {
         char.is_ascii_lowercase() || char.is_ascii_uppercase() || char == b'_'
-    }
-}
-
-#[derive(Debug)]
-pub struct Token<'token> {
-    pub lexeme: &'token str,
-    pub kind: TokenKind,
-    pub span: Span,
-}
-
-impl TokenExtensions for str {
-    fn to_bytes(&self, span: Span) -> Result<Vec<u8>, ThrushCompilerIssue> {
-        let source: &[u8] = self.as_bytes();
-
-        let mut parsed_string: Vec<u8> = Vec::with_capacity(source.len());
-
-        let mut i: usize = 0;
-
-        while i < self.len() {
-            if source[i] == b'\\' {
-                i += 1;
-
-                match source.get(i) {
-                    Some(b'n') => parsed_string.push(b'\n'),
-                    Some(b't') => parsed_string.push(b'\t'),
-                    Some(b'r') => parsed_string.push(b'\r'),
-                    Some(b'\\') => parsed_string.push(b'\\'),
-                    Some(b'0') => parsed_string.push(b'\0'),
-                    Some(b'\'') => parsed_string.push(b'\''),
-                    Some(b'"') => parsed_string.push(b'"'),
-                    _ => {
-                        return Err(ThrushCompilerIssue::Error(
-                            String::from("Syntax Error"),
-                            String::from("Invalid escape sequence."),
-                            None,
-                            span,
-                        ));
-                    }
-                }
-
-                i += 1;
-
-                continue;
-            }
-
-            parsed_string.push(source[i]);
-
-            i += 1;
-        }
-
-        Ok(parsed_string)
-    }
-
-    fn get_first_byte(&self) -> u64 {
-        self.as_bytes()[0] as u64
-    }
-}
-
-#[derive(Debug, Clone, Copy, Default)]
-pub struct Span {
-    pub line: usize,
-    pub span: (usize, usize),
-}
-
-impl Display for Span {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}:{}", self.line, self.span.0)
-    }
-}
-
-impl Span {
-    pub fn new(line: usize, span: (usize, usize)) -> Self {
-        Self { line, span }
-    }
-
-    pub fn get_line(&self) -> usize {
-        self.line
-    }
-
-    pub fn get_span_start(&self) -> usize {
-        self.span.0
-    }
-
-    pub fn get_span_end(&self) -> usize {
-        self.span.0
     }
 }
