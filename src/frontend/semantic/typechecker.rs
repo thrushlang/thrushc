@@ -5,7 +5,8 @@ use ahash::AHashMap as HashMap;
 use crate::{
     frontend::lexer::span::Span,
     standard::{
-        constants::MINIMAL_ERROR_CAPACITY, diagnostic::Diagnostician, error::ThrushCompilerIssue,
+        constants::MINIMAL_ERROR_CAPACITY, diagnostic::Diagnostician,
+        errors::position::CompilationPosition, errors::standard::ThrushCompilerIssue,
         logging::LoggingType, misc::CompilerFile,
     },
     types::frontend::{
@@ -309,7 +310,9 @@ impl<'stmts> TypeChecker<'stmts> {
                 self.add_error(mismatch_type_error);
             }
 
-            self.check_stmt(expression)?;
+            if let Err(type_error) = self.check_stmt(expression) {
+                self.add_error(type_error);
+            }
         }
 
         if let ThrushStatement::Call {
@@ -343,18 +346,28 @@ impl<'stmts> TypeChecker<'stmts> {
                 }
 
                 if !ignore_more_arguments {
-                    for (target_type, arg) in parameter_types.iter().zip(args.iter()) {
-                        let from_type: &ThrushType = arg.get_type()?;
-                        let span: Span = arg.get_span();
+                    for (target_type, expr) in parameter_types.iter().zip(args.iter()) {
+                        let from_type: &ThrushType = expr.get_type()?;
+                        let span: Span = expr.get_span();
 
                         if let Err(mismatched_types_error) =
-                            self.is_mismatch_type(target_type, from_type, Some(arg), None, &span)
+                            self.is_mismatch_type(target_type, from_type, Some(expr), None, &span)
                         {
                             self.add_error(mismatched_types_error);
                         }
                     }
                 }
+
+                return Ok(());
             }
+
+            self.errors.push(ThrushCompilerIssue::Bug(
+                String::from("Call not caught"),
+                format!("Could not get named function '{}'.", name),
+                *span,
+                CompilationPosition::TypeChecker,
+                line!(),
+            ));
         }
 
         if let ThrushStatement::BindCall {
@@ -417,7 +430,17 @@ impl<'stmts> TypeChecker<'stmts> {
                     ) {
                         self.add_error(mismatched_types_error);
                     }
+
+                    return Ok(());
                 }
+
+                self.errors.push(ThrushCompilerIssue::Bug(
+                    String::from("Could not catch a local"),
+                    String::from("A location could not be obtained for processing."),
+                    *span,
+                    CompilationPosition::TypeChecker,
+                    line!(),
+                ));
             }
 
             if let (None, Some(expression)) = source {
@@ -430,7 +453,17 @@ impl<'stmts> TypeChecker<'stmts> {
                 ) {
                     self.add_error(mismatched_types_error);
                 }
+
+                return Ok(());
             }
+
+            self.errors.push(ThrushCompilerIssue::Bug(
+                String::from("Non-trapped mutable expression."),
+                String::from("The mutable expression could not be caught for processing."),
+                *span,
+                CompilationPosition::TypeChecker,
+                line!(),
+            ));
         }
 
         if let ThrushStatement::Return {

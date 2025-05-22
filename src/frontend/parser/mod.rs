@@ -13,7 +13,7 @@ use crate::backend::llvm::compiler::builtins;
 use crate::frontend::lexer::token::Token;
 use crate::standard::constants::MINIMAL_ERROR_CAPACITY;
 use crate::standard::diagnostic::Diagnostician;
-use crate::standard::error::ThrushCompilerIssue;
+use crate::standard::errors::standard::ThrushCompilerIssue;
 use crate::standard::logging::{self, LoggingType};
 use crate::standard::misc::CompilerFile;
 use crate::types::frontend::lexer::tokenkind::TokenKind;

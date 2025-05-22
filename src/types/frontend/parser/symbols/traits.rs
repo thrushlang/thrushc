@@ -1,6 +1,6 @@
 use crate::{frontend::lexer::span::Span, types::frontend::lexer::types::ThrushType};
 
-use super::types::{Bind, ParametersTypes};
+use super::types::Bind;
 
 pub trait LocalSymbolExtensions {
     fn is_undefined(&self) -> bool;
@@ -14,10 +14,7 @@ pub trait ConstantSymbolExtensions {
 }
 
 pub trait FunctionExtensions {
-    fn has_ignore_more_args(&self) -> bool;
     fn get_type(&self) -> ThrushType;
-    fn get_parameters_size(&self) -> usize;
-    fn get_parameters_types(&self) -> &ParametersTypes;
 }
 
 pub trait BindingsExtensions {

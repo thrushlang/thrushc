@@ -16,6 +16,7 @@ pub enum LoggingType {
     Error,
     Warning,
     Panic,
+    Bug,
 }
 
 impl LoggingType {
@@ -24,6 +25,7 @@ impl LoggingType {
             LoggingType::Error => "ERROR".bright_red().bold(),
             LoggingType::Warning => "WARN".yellow().bold(),
             LoggingType::Panic => "PANIC".bold().bright_red().underline(),
+            LoggingType::Bug => "BUG".bold().bright_red().underline(),
         }
     }
 
@@ -32,6 +34,7 @@ impl LoggingType {
             LoggingType::Error => msg.bright_red().bold(),
             LoggingType::Warning => msg.yellow().bold(),
             LoggingType::Panic => msg.bright_red().underline(),
+            LoggingType::Bug => msg.bold().bright_red().underline(),
         }
     }
 
@@ -46,12 +49,24 @@ impl LoggingType {
     pub fn is_warn(&self) -> bool {
         matches!(self, LoggingType::Warning)
     }
+
+    pub fn is_bug(&self) -> bool {
+        matches!(self, LoggingType::Bug)
+    }
 }
 
 pub fn log(ltype: LoggingType, msg: &str) {
+    if ltype.is_bug() {
+        io::stderr()
+            .write_all(format!("{} {}\n  ", ltype.to_styled(), msg).as_bytes())
+            .unwrap();
+
+        process::exit(1);
+    }
+
     if ltype.is_panic() {
         io::stderr()
-            .write_all(format!("{} {}\n  ", ltype.to_styled(), msg.bold()).as_bytes())
+            .write_all(format!("{} {}\n  ", ltype.to_styled(), msg).as_bytes())
             .unwrap();
 
         process::exit(1);
@@ -59,7 +74,7 @@ pub fn log(ltype: LoggingType, msg: &str) {
 
     if ltype.is_err() {
         io::stderr()
-            .write_all(format!("{} {}\n  ", ltype.to_styled(), msg.bold()).as_bytes())
+            .write_all(format!("{} {}\n  ", ltype.to_styled(), msg).as_bytes())
             .unwrap();
 
         return;
@@ -67,14 +82,14 @@ pub fn log(ltype: LoggingType, msg: &str) {
 
     if ltype.is_warn() {
         io::stderr()
-            .write_all(format!("{} {}", ltype.to_styled(), msg.bold()).as_bytes())
+            .write_all(format!("{} {}", ltype.to_styled(), msg).as_bytes())
             .unwrap();
 
         return;
     }
 
     io::stdout()
-        .write_all(format!("{} {}", ltype.to_styled(), msg.bold()).as_bytes())
+        .write_all(format!("{} {}", ltype.to_styled(), msg).as_bytes())
         .unwrap();
 }
 

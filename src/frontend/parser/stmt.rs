@@ -6,7 +6,7 @@ use crate::{
     backend::llvm::compiler::{attributes::LLVMAttribute, conventions::CallConvention},
     frontend::lexer::{span::Span, token::Token},
     lazy_static,
-    standard::error::ThrushCompilerIssue,
+    standard::errors::standard::ThrushCompilerIssue,
     types::frontend::{
         lexer::{
             tokenkind::TokenKind,

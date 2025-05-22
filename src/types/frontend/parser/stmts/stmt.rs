@@ -6,7 +6,7 @@ use inkwell::values::BasicValueEnum;
 
 use crate::{
     frontend::lexer::span::Span,
-    standard::error::ThrushCompilerIssue,
+    standard::errors::standard::ThrushCompilerIssue,
     types::{
         backend::llvm::types::{LLVMBinaryOp, LLVMFunctionPrototype, LLVMUnaryOp},
         frontend::lexer::{tokenkind::TokenKind, types::ThrushType},

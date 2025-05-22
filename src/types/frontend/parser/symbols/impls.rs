@@ -2,7 +2,7 @@ use std::fmt::Display;
 
 use crate::{
     frontend::lexer::span::Span,
-    standard::error::ThrushCompilerIssue,
+    standard::errors::standard::ThrushCompilerIssue,
     types::frontend::{
         lexer::types::ThrushType,
         parser::stmts::{
@@ -48,30 +48,14 @@ impl ConstantSymbolExtensions for ConstantSymbol<'_> {
 }
 
 impl FunctionExtensions for Function<'_> {
-    fn has_ignore_more_args(&self) -> bool {
-        self.2
-    }
-
     fn get_type(&self) -> ThrushType {
         self.0.clone()
-    }
-
-    fn get_parameters_size(&self) -> usize {
-        self.1.get_size()
-    }
-
-    fn get_parameters_types(&self) -> &ParametersTypes {
-        &self.1
     }
 }
 
 impl ParametersTypes {
     pub fn new(inner: Vec<ThrushType>) -> Self {
         Self(inner)
-    }
-
-    pub fn get_size(&self) -> usize {
-        self.0.len()
     }
 }
 

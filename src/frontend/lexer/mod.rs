@@ -4,15 +4,15 @@ use keywords::THRUSH_KEYWORDS;
 use span::Span;
 use token::Token;
 
-use crate::types::frontend::lexer::tokenkind::TokenKind;
+use crate::{
+    standard::errors::standard::ThrushCompilerIssue, types::frontend::lexer::tokenkind::TokenKind,
+};
 
 use crate::standard::errors::lexer::ThrushLexerPanic;
 use crate::standard::logging::LoggingType;
 use crate::standard::misc::CompilerFile;
 
-use super::super::standard::{
-    constants::MINIMAL_ERROR_CAPACITY, diagnostic::Diagnostician, error::ThrushCompilerIssue,
-};
+use super::super::standard::{constants::MINIMAL_ERROR_CAPACITY, diagnostic::Diagnostician};
 
 pub mod keywords;
 pub mod span;

@@ -1,6 +1,6 @@
 use crate::{
     frontend::lexer::span::Span,
-    standard::error::ThrushCompilerIssue,
+    standard::errors::standard::ThrushCompilerIssue,
     types::frontend::{lexer::types::ThrushType, parser::symbols::types::Bindings},
 };
 

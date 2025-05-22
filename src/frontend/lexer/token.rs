@@ -1,5 +1,5 @@
 use crate::{
-    standard::error::ThrushCompilerIssue,
+    standard::errors::standard::ThrushCompilerIssue,
     types::frontend::{lexer::tokenkind::TokenKind, parser::stmts::traits::TokenExtensions},
 };
 

@@ -33,6 +33,9 @@ fn main() {
     let compile_time: (u128, u128) =
         TheThrushCompiler::new(cli.get_options().get_files(), cli.get_options()).compile();
 
+    let thrushc_time: u128 = compile_time.0;
+    let linker_time: u128 = compile_time.1;
+
     logging::write(
         logging::OutputIn::Stdout,
         &format!(
@@ -41,8 +44,8 @@ fn main() {
                 .custom_color((141, 141, 142))
                 .bold(),
             "Compile time report".custom_color((141, 141, 142)).bold(),
-            format_args!("Thrush Compiler: {}ms", compile_time.0.to_string().bold()),
-            format_args!("Linker: {}ms", compile_time.1.to_string().bold()),
+            format_args!("Thrush Compiler: {}ms", thrushc_time.to_string()),
+            format_args!("Linker: {}ms", linker_time.to_string()),
             "─────────────────────────────────────────"
                 .custom_color((141, 141, 142))
                 .bold(),

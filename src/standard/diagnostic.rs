@@ -1,9 +1,10 @@
-use std::path::Path;
 use std::str::Lines;
+use std::{fmt::Display, path::Path};
 
+use super::errors::position::CompilationPosition;
 use super::{
     super::frontend::lexer::span::Span,
-    error::ThrushCompilerIssue,
+    errors::standard::ThrushCompilerIssue,
     logging::{self, LoggingType},
     misc::CompilerFile,
 };
@@ -12,6 +13,12 @@ use {
     colored::Colorize,
     std::{fs, path::PathBuf},
 };
+
+#[derive(Debug, Clone, Copy)]
+pub enum NotificatorType {
+    CommonHelp,
+    CompilerBug,
+}
 
 #[derive(Debug, Clone)]
 pub struct Diagnostician {
@@ -61,6 +68,11 @@ impl Diagnostician {
             ThrushCompilerIssue::Warning(title, help, span) => {
                 self.diagnose(title, help, None, *span, logging_type);
             }
+
+            ThrushCompilerIssue::Bug(title, info, span, position, line) => {
+                Diagnostic::build(&self.code, *span, info, NotificatorType::CompilerBug)
+                    .print_compiler_bug(title, *position, LoggingType::Bug, &self.path, *line);
+            }
         }
     }
 
@@ -72,7 +84,12 @@ impl Diagnostician {
         span: Span,
         logging_type: LoggingType,
     ) {
-        Diagnostic::build(&self.code, span, help).print(&self.path, title, note, logging_type);
+        Diagnostic::build(&self.code, span, help, NotificatorType::CommonHelp).print(
+            &self.path,
+            title,
+            note,
+            logging_type,
+        );
     }
 
     pub fn get_file_path(&self) -> PathBuf {
@@ -81,14 +98,21 @@ impl Diagnostician {
 }
 
 impl<'a> Diagnostic<'a> {
-    pub fn build(code: &'a str, span: Span, help: &'a str) -> Self {
+    pub fn build(
+        code: &'a str,
+        span: Span,
+        info: &'a str,
+        notificator_type: NotificatorType,
+    ) -> Self {
         if let Some(code_position) = Diagnostic::find_line_and_range(code, span) {
-            if let Some(diagnostic) = Diagnostic::generate_diagnostic(code, code_position, help) {
+            if let Some(diagnostic) =
+                Diagnostic::generate_diagnostic(code, code_position, info, notificator_type)
+            {
                 return diagnostic;
             }
         }
 
-        Diagnostic::build_without_span(code, span, help)
+        Diagnostic::build_without_span(code, span, info)
     }
 
     pub fn find_line_and_range(code: &str, span: Span) -> Option<CodePosition> {
@@ -122,7 +146,8 @@ impl<'a> Diagnostic<'a> {
     pub fn generate_diagnostic(
         code: &'a str,
         position: CodePosition,
-        help: &str,
+        info: &str,
+        notificator_type: NotificatorType,
     ) -> Option<Diagnostic<'a>> {
         let mut lines: Lines = code.lines();
 
@@ -139,11 +164,7 @@ impl<'a> Diagnostic<'a> {
             if pos == position.end - trim_diferrence {
                 signaler.push('^');
                 signaler.push(' ');
-                signaler.push_str(&format!(
-                    "{}{}",
-                    "HELP: ".bright_green().bold(),
-                    help.bold()
-                ));
+                signaler.push_str(&format!("{}{}", notificator_type, info));
                 signaler.push_str("\n\n");
                 break;
             }
@@ -158,7 +179,7 @@ impl<'a> Diagnostic<'a> {
         })
     }
 
-    pub fn build_without_span(code: &'a str, span: Span, help: &'a str) -> Diagnostic<'a> {
+    pub fn build_without_span(code: &'a str, span: Span, info: &'a str) -> Diagnostic<'a> {
         let lines: Vec<&str> = code.lines().collect();
 
         let line: usize = span.line;
@@ -168,12 +189,7 @@ impl<'a> Diagnostic<'a> {
 
         for i in 0..=code.len() {
             if i == code.len() {
-                signaler.push_str(&format!(
-                    "\n\n{}{}\n",
-                    "HELP: ".bright_green().bold(),
-                    help.bold()
-                ));
-
+                signaler.push_str(&format!("\n\n{}{}\n", "HELP: ".bright_green().bold(), info));
                 break;
             }
 
@@ -192,7 +208,7 @@ impl<'a> Diagnostic<'a> {
             logging::OutputIn::Stderr,
             &format!(
                 "{} {} at {}:{}\n",
-                "-->".bold().blink(),
+                "-->".blink(),
                 format_args!(
                     "{}",
                     logging_type.text_with_color(path.to_string_lossy().as_ref())
@@ -204,11 +220,7 @@ impl<'a> Diagnostic<'a> {
 
         logging::write(
             logging::OutputIn::Stderr,
-            &format!(
-                "\n{} {}\n",
-                logging_type.to_styled(),
-                title.bold().to_uppercase()
-            ),
+            &format!("\n{} {}\n", logging_type.to_styled(), title.to_uppercase()),
         );
 
         logging::write(
@@ -221,6 +233,67 @@ impl<'a> Diagnostic<'a> {
                 logging::OutputIn::Stderr,
                 &format!("{} {}\n", "NOTE:".bright_blue().bold(), note),
             );
+        }
+    }
+
+    pub fn print_compiler_bug(
+        self,
+        title: &str,
+        position: CompilationPosition,
+        logging_type: LoggingType,
+        path: &Path,
+        line: u32,
+    ) {
+        logging::write(
+            logging::OutputIn::Stderr,
+            &format!(
+                "{} {} at {}:{}\n",
+                "-->".blink(),
+                format_args!(
+                    "{}",
+                    logging_type.text_with_color(path.to_string_lossy().as_ref())
+                ),
+                logging_type.text_with_color(&self.span.get_line().to_string()),
+                logging_type.text_with_color(&self.span.get_span_start().to_string()),
+            ),
+        );
+
+        logging::write(
+            logging::OutputIn::Stderr,
+            &format!(
+                "\n{} {} {} {}{}{}\n",
+                logging_type.to_styled(),
+                title.to_uppercase(),
+                "-".bold(),
+                position,
+                ":".bold(),
+                line.to_string().red().underline().bold()
+            ),
+        );
+
+        logging::write(
+            logging::OutputIn::Stderr,
+            &format!("\n{}\n{}", self.code, self.signaler),
+        );
+
+        logging::write(
+            logging::OutputIn::Stderr,
+            &format!(
+                "Report it in '{}'.\n",
+                "https://github.com/thrushlang/thrushc/issues"
+                    .white()
+                    .bold()
+                    .underline()
+            ),
+        );
+    }
+}
+
+impl Display for NotificatorType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::CommonHelp => write!(f, "{}", "HELP: ".bright_green().bold()),
+            Self::CompilerBug => write!(f, "{}", "INFO: ".bright_red().bold()),
         }
     }
 }

@@ -1,6 +1,6 @@
 use crate::{
     frontend::lexer::{span::Span, token::Token},
-    standard::error::ThrushCompilerIssue,
+    standard::errors::standard::ThrushCompilerIssue,
     types::frontend::{
         lexer::{tokenkind::TokenKind, types::ThrushType},
         parser::{

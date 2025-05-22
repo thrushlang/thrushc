@@ -3,9 +3,9 @@ use ahash::AHashMap as HashMap;
 use crate::{
     frontend::lexer::span::Span,
     standard::{
-        constants::MINIMAL_WARNINGS_CAPACITY,
+        constants::{MINIMAL_BUGS_CAPACITY, MINIMAL_WARNINGS_CAPACITY},
         diagnostic::Diagnostician,
-        error::ThrushCompilerIssue,
+        errors::{position::CompilationPosition, standard::ThrushCompilerIssue},
         logging::{self, LoggingType},
         misc::CompilerFile,
     },
@@ -116,6 +116,7 @@ pub struct Linter<'linter> {
     stmts: &'linter [ThrushStatement<'linter>],
     current: usize,
     warnings: Vec<ThrushCompilerIssue>,
+    bugs: Vec<ThrushCompilerIssue>,
     diagnostician: Diagnostician,
     symbols: LinterSymbolsTable<'linter>,
 }
@@ -126,6 +127,7 @@ impl<'linter> Linter<'linter> {
             stmts,
             current: 0,
             warnings: Vec::with_capacity(MINIMAL_WARNINGS_CAPACITY),
+            bugs: Vec::with_capacity(MINIMAL_BUGS_CAPACITY),
             diagnostician: Diagnostician::new(file),
             symbols: LinterSymbolsTable::new(),
         }
@@ -143,6 +145,10 @@ impl<'linter> Linter<'linter> {
         }
 
         self.generate_warnings();
+
+        self.bugs.iter().for_each(|warn| {
+            self.diagnostician.build_diagnostic(warn, LoggingType::Bug);
+        });
 
         self.warnings.iter().for_each(|warn| {
             self.diagnostician
@@ -202,33 +208,70 @@ impl<'linter> Linter<'linter> {
             self.analyze_stmt(value);
         }
 
-        if let ThrushStatement::Call { name, .. } = instruction {
+        if let ThrushStatement::Call { name, span, .. } = instruction {
             if let Some(function) = self.symbols.get_function_info(name) {
                 function.1 = true;
+                return;
             }
+
+            self.add_bug(ThrushCompilerIssue::Bug(
+                String::from("Call not caught"),
+                format!("Could not get named function '{}'.", name),
+                *span,
+                CompilationPosition::Linter,
+                line!(),
+            ));
         }
 
-        if let ThrushStatement::ConstRef { name, .. } = instruction {
+        if let ThrushStatement::ConstRef { name, span, .. } = instruction {
             if let Some(constant) = self.symbols.get_constant_info(name) {
                 constant.1 = true;
+                return;
             }
+
+            self.add_bug(ThrushCompilerIssue::Bug(
+                String::from("Constant not caught"),
+                format!("Could not get named constant '{}'.", name),
+                *span,
+                CompilationPosition::Linter,
+                line!(),
+            ));
         }
 
-        if let ThrushStatement::LocalRef { name, .. } = instruction {
+        if let ThrushStatement::LocalRef { name, span, .. } = instruction {
             if let Some(local) = self.symbols.get_local_info(name) {
                 local.1 = true;
+                return;
             }
 
             if let Some(parameter) = self.symbols.get_parameter_info(name) {
                 parameter.1 = true;
+                return;
             }
+
+            self.add_bug(ThrushCompilerIssue::Bug(
+                String::from("Reference not caught"),
+                format!("Could not get object reference with name '{}'.", name),
+                *span,
+                CompilationPosition::Linter,
+                line!(),
+            ));
         }
 
-        if let ThrushStatement::Mut { source, .. } = instruction {
+        if let ThrushStatement::Mut { source, span, .. } = instruction {
             if let Some(local_name) = source.0 {
                 if let Some(local) = self.symbols.get_local_info(local_name) {
                     local.1 = true;
+                    return;
                 }
+
+                self.add_bug(ThrushCompilerIssue::Bug(
+                    String::from("Mutable expression not caught"),
+                    format!("Could not mutable reference with name '{}'.", local_name),
+                    *span,
+                    CompilationPosition::Linter,
+                    line!(),
+                ));
             }
         }
     }
@@ -328,6 +371,10 @@ impl<'linter> Linter<'linter> {
                     self.symbols.new_constant(name, (*span, false));
                 }
             });
+    }
+
+    fn add_bug(&mut self, bug: ThrushCompilerIssue) {
+        self.bugs.push(bug);
     }
 
     fn begin_scope(&mut self) {

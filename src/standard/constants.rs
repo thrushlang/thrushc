@@ -1,5 +1,6 @@
 pub const MINIMAL_ERROR_CAPACITY: usize = 100;
 pub const MINIMAL_WARNINGS_CAPACITY: usize = 100;
+pub const MINIMAL_BUGS_CAPACITY: usize = 100;
 
 /* ######################################################################
 

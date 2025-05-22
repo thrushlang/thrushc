@@ -10,7 +10,7 @@ use inkwell::{
 use crate::{
     backend::llvm::compiler::{context::LLVMCodeGenContext, memory, typegen},
     frontend::{lexer::span::Span, parser::symbols::SymbolsTable},
-    standard::error::ThrushCompilerIssue,
+    standard::errors::standard::ThrushCompilerIssue,
     types::{
         backend::llvm::traits::LLVMDeallocator,
         frontend::parser::{
