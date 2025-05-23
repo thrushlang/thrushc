@@ -137,9 +137,9 @@ impl<'linter> Linter<'linter> {
         self.init();
 
         while !self.is_eof() {
-            let instruction: &ThrushStatement = self.peek();
+            let stmt: &ThrushStatement = self.peek();
 
-            self.analyze_stmt(instruction);
+            self.analyze_stmt(stmt);
 
             self.advance();
         }
@@ -156,43 +156,57 @@ impl<'linter> Linter<'linter> {
         });
     }
 
-    pub fn analyze_stmt(&mut self, instruction: &'linter ThrushStatement) {
-        if let ThrushStatement::EntryPoint { body, .. } = instruction {
+    pub fn analyze_stmt(&mut self, stmt: &'linter ThrushStatement) {
+        if let ThrushStatement::EntryPoint { body, .. } = stmt {
             self.analyze_stmt(body);
         }
 
         if let ThrushStatement::Function {
             parameters, body, ..
-        } = instruction
+        } = stmt
         {
             if body.is_block() {
                 self.symbols.bulk_declare_parameters(parameters);
 
                 self.analyze_stmt(body);
 
-                self.generate_scoped_warnings();
-
                 self.symbols.destroy_all_parameters();
             }
         }
 
-        if let ThrushStatement::BinaryOp { left, right, .. } = instruction {
+        if let ThrushStatement::BinaryOp { left, right, .. } = stmt {
             self.analyze_stmt(left);
             self.analyze_stmt(right);
         }
 
-        if let ThrushStatement::UnaryOp { expression, .. } = instruction {
+        if let ThrushStatement::UnaryOp { expression, .. } = stmt {
             self.analyze_stmt(expression);
         }
 
-        if let ThrushStatement::Block { stmts, .. } = instruction {
+        if let ThrushStatement::Block { stmts, .. } = stmt {
             self.begin_scope();
 
             stmts.iter().for_each(|stmt| {
                 self.analyze_stmt(stmt);
             });
 
+            self.generate_scoped_warnings();
+
             self.end_scope();
+        }
+
+        if let ThrushStatement::For {
+            local,
+            actions,
+            cond,
+            block,
+            ..
+        } = stmt
+        {
+            self.analyze_stmt(local);
+            self.analyze_stmt(actions);
+            self.analyze_stmt(cond);
+            self.analyze_stmt(block);
         }
 
         if let ThrushStatement::Local {
@@ -201,14 +215,14 @@ impl<'linter> Linter<'linter> {
             span,
             is_mutable,
             ..
-        } = instruction
+        } = stmt
         {
             self.symbols.new_local(name, (*span, false, !is_mutable));
 
             self.analyze_stmt(value);
         }
 
-        if let ThrushStatement::Call { name, span, .. } = instruction {
+        if let ThrushStatement::Call { name, span, .. } = stmt {
             if let Some(function) = self.symbols.get_function_info(name) {
                 function.1 = true;
                 return;
@@ -223,7 +237,7 @@ impl<'linter> Linter<'linter> {
             ));
         }
 
-        if let ThrushStatement::ConstRef { name, span, .. } = instruction {
+        if let ThrushStatement::ConstRef { name, span, .. } = stmt {
             if let Some(constant) = self.symbols.get_constant_info(name) {
                 constant.1 = true;
                 return;
@@ -238,7 +252,7 @@ impl<'linter> Linter<'linter> {
             ));
         }
 
-        if let ThrushStatement::LocalRef { name, span, .. } = instruction {
+        if let ThrushStatement::LocalRef { name, span, .. } = stmt {
             if let Some(local) = self.symbols.get_local_info(name) {
                 local.1 = true;
                 return;
@@ -258,7 +272,7 @@ impl<'linter> Linter<'linter> {
             ));
         }
 
-        if let ThrushStatement::Mut { source, span, .. } = instruction {
+        if let ThrushStatement::Mut { source, span, .. } = stmt {
             if let Some(local_name) = source.0 {
                 if let Some(local) = self.symbols.get_local_info(local_name) {
                     local.1 = true;

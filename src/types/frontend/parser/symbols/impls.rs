@@ -14,11 +14,11 @@ use crate::{
 
 use super::{
     traits::{
-        BindExtensions, BindingsExtensions, ConstantSymbolExtensions, FunctionExtensions,
-        LocalSymbolExtensions,
+        ConstantSymbolExtensions, FunctionExtensions, LocalSymbolExtensions, MethodExtensions,
+        MethodsExtensions,
     },
     types::{
-        Bind, Bindings, ConstantSymbol, FoundSymbolId, Function, LocalSymbol, ParametersTypes,
+        ConstantSymbol, FoundSymbolId, Function, LocalSymbol, MethodDef, Methods, ParametersTypes,
         Struct,
     },
 };
@@ -73,17 +73,17 @@ impl Display for ParametersTypes {
     }
 }
 
-impl BindingsExtensions for Bindings<'_> {
-    fn contains_binding(&self, name: &str) -> bool {
+impl MethodsExtensions for Methods<'_> {
+    fn contains_method(&self, name: &str) -> bool {
         self.iter().any(|binding| binding.0 == name)
     }
 
-    fn get_bind(&self, name: &str) -> Bind {
+    fn get_method(&self, name: &str) -> MethodDef {
         self.iter().find(|binding| binding.0 == name).unwrap()
     }
 }
 
-impl BindExtensions for Bind<'_> {
+impl MethodExtensions for MethodDef<'_> {
     fn get_name(&self) -> &str {
         self.0
     }
@@ -115,7 +115,7 @@ impl<'a> StructExtensions<'a> for Struct<'a> {
         (self.0, self.1.clone())
     }
 
-    fn get_bindings(&self) -> Bindings<'a> {
+    fn get_methods(&self) -> Methods<'a> {
         self.3.clone()
     }
 }

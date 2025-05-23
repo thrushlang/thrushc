@@ -227,14 +227,14 @@ impl Display for ThrushStatement<'_> {
                 write!(f, "while {} {}", cond, block)
             }
 
-            ThrushStatement::Bind {
+            ThrushStatement::Method {
                 name,
                 parameters,
                 body,
                 return_type,
                 ..
             } => {
-                write!(f, "bind {}(", name)?;
+                write!(f, "def {}(", name)?;
 
                 for (index, param) in parameters.iter().enumerate() {
                     write!(f, "{}", param)?;

@@ -17,11 +17,11 @@ use crate::{
             },
             symbols::{
                 traits::{
-                    BindExtensions, BindingsExtensions, ConstantSymbolExtensions,
-                    FunctionExtensions, LocalSymbolExtensions,
+                    ConstantSymbolExtensions, FunctionExtensions, LocalSymbolExtensions,
+                    MethodExtensions, MethodsExtensions,
                 },
                 types::{
-                    Bind, Bindings, ConstantSymbol, FoundSymbolId, Function, LocalSymbol,
+                    ConstantSymbol, FoundSymbolId, Function, LocalSymbol, MethodDef, Methods,
                     ParameterSymbol, Struct,
                 },
             },
@@ -437,7 +437,7 @@ fn primary<'instr>(
                 String::from("Expected '['."),
             )?;
 
-            return build_address(parser_ctx, name, span);
+            return self::build_address(parser_ctx, name, span);
         }
 
         TokenKind::PlusPlus => {
@@ -445,9 +445,9 @@ fn primary<'instr>(
             let operator: TokenKind = operator_tk.kind;
             let span: Span = operator_tk.span;
 
-            let expression: ThrushStatement = build_expr(parser_ctx)?;
+            let expression: ThrushStatement = self::build_expr(parser_ctx)?;
 
-            if !expression.is_local_ref() {
+            if !expression.is_ref() {
                 return Err(ThrushCompilerIssue::Error(
                     String::from("Syntax error"),
                     String::from("Only local references can be pre-incremented."),
@@ -456,10 +456,12 @@ fn primary<'instr>(
                 ));
             }
 
+            let reftype: ThrushType = expression.get_reference_type()?;
+
             let unaryop: ThrushStatement = ThrushStatement::UnaryOp {
                 operator,
                 expression: expression.into(),
-                kind: ThrushType::Void,
+                kind: reftype,
                 is_pre: true,
                 span,
             };
@@ -472,9 +474,9 @@ fn primary<'instr>(
             let operator: TokenKind = operator_tk.kind;
             let span: Span = operator_tk.span;
 
-            let expression: ThrushStatement = build_expr(parser_ctx)?;
+            let expression: ThrushStatement = self::build_expr(parser_ctx)?;
 
-            if !expression.is_local_ref() {
+            if !expression.is_ref() {
                 return Err(ThrushCompilerIssue::Error(
                     String::from("Syntax error"),
                     String::from("Only local references can be pre-decremented."),
@@ -483,10 +485,12 @@ fn primary<'instr>(
                 ));
             }
 
+            let reftype: ThrushType = expression.get_reference_type()?;
+
             let unaryop: ThrushStatement = ThrushStatement::UnaryOp {
                 operator,
                 expression: expression.into(),
-                kind: ThrushType::Void,
+                kind: reftype,
                 is_pre: true,
                 span,
             };
@@ -658,7 +662,7 @@ fn primary<'instr>(
             }
 
             if parser_ctx.match_token(TokenKind::ColonColon)? {
-                return build_binding_call(parser_ctx, name, span);
+                return self::build_method_call(parser_ctx, name, span);
             }
 
             if symbol.is_enum() {
@@ -714,7 +718,7 @@ fn primary<'instr>(
     Ok(primary)
 }
 
-fn build_binding_call<'instr>(
+fn build_method_call<'instr>(
     parser_ctx: &mut ParserContext<'instr>,
     name: &'instr str,
     span: Span,
@@ -727,32 +731,32 @@ fn build_binding_call<'instr>(
         .get_symbols()
         .get_struct_by_id(structure_id, span)?;
 
-    let bind_tk: &Token = parser_ctx.consume(
+    let method_tk: &Token = parser_ctx.consume(
         TokenKind::Identifier,
         String::from("Syntax error"),
-        String::from("Expected bind name."),
+        String::from("Expected method name."),
     )?;
 
-    let bind_name: &str = bind_tk.lexeme;
+    let method_name: &str = method_tk.lexeme;
 
-    let bindings: Bindings = structure.get_bindings();
+    let methods: Methods = structure.get_methods();
 
-    if !bindings.contains_binding(bind_name) {
+    if !methods.contains_method(method_name) {
         return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             format!(
-                "Not found '{}' bind inside the bindings of '{}' struct.",
-                bind_name, name
+                "Not found '{}' method inside the methods of '{}' struct.",
+                method_name, name
             ),
             None,
             span,
         ));
     }
 
-    let bind: Bind = bindings.get_bind(bind_name);
-    let bind_name: &str = bind.get_name();
-    let bind_type: ThrushType = bind.get_type();
-    let bind_parameters_type: &[ThrushType] = bind.get_parameters_types();
+    let method: MethodDef = methods.get_method(method_name);
+
+    let method_name: &str = method.get_name();
+    let method_type: ThrushType = method.get_type();
 
     parser_ctx.consume(
         TokenKind::LParen,
@@ -778,25 +782,12 @@ fn build_binding_call<'instr>(
         String::from("Expected ')'."),
     )?;
 
-    if args.len() != bind_parameters_type.len() {
-        return Err(ThrushCompilerIssue::Error(
-            String::from("Syntax error"),
-            format!(
-                "Expected {} arguments, not {}.",
-                bind_parameters_type.len(),
-                args.len()
-            ),
-            None,
-            span,
-        ));
-    }
+    let canonical_name: String = format!("{}.{}", name, method_name);
 
-    let canonical_name: String = format!("{}.{}", name, bind_name);
-
-    Ok(ThrushStatement::BindCall {
+    Ok(ThrushStatement::MethodCall {
         name: canonical_name,
         args,
-        kind: bind_type,
+        kind: method_type,
         span,
     })
 }
@@ -928,7 +919,7 @@ fn build_reference<'instr>(
         let unaryop: ThrushStatement = ThrushStatement::UnaryOp {
             operator,
             expression: localref.into(),
-            kind: ThrushType::Void,
+            kind: local_type,
             is_pre: false,
             span,
         };
@@ -1118,12 +1109,12 @@ fn build_this<'instr>(
 
     if !parser_ctx
         .get_type_ctx()
-        .get_this_bindings_type()
+        .get_this_methods_type()
         .is_struct_type()
     {
         return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
-            String::from("Expected 'this' inside the a bindings definition context."),
+            String::from("Expected 'this' inside the a methods definition context."),
             None,
             span,
         ));
@@ -1132,11 +1123,11 @@ fn build_this<'instr>(
     if !parser_ctx
         .get_mut_control_ctx()
         .get_instr_position()
-        .is_bind()
+        .is_method()
     {
         return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
-            String::from("Expected 'this' inside the a bind definition context."),
+            String::from("Expected 'this' inside the a method definition context."),
             None,
             span,
         ));
@@ -1159,7 +1150,7 @@ fn build_this<'instr>(
 
     let this_type: ThrushType = parser_ctx
         .get_type_ctx()
-        .get_this_bindings_type()
+        .get_this_methods_type()
         .dissamble();
 
     let is_mutable: bool = parser_ctx.match_token(TokenKind::Mut)?;

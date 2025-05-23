@@ -23,8 +23,8 @@ lazy_static! {
         keywords.insert(b"return", TokenKind::Return);
         keywords.insert(b"break", TokenKind::Break);
         keywords.insert(b"continue", TokenKind::Continue);
-        keywords.insert(b"bindings", TokenKind::Bindings);
-        keywords.insert(b"bind", TokenKind::Bind);
+        keywords.insert(b"methods", TokenKind::Methods);
+        keywords.insert(b"def", TokenKind::Def);
         keywords.insert(b"this", TokenKind::This);
         keywords.insert(b"pass", TokenKind::Pass);
         keywords.insert(b"Me", TokenKind::Me);

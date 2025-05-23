@@ -5,16 +5,18 @@ use ahash::AHashMap as HashMap;
 use crate::{
     frontend::lexer::span::Span,
     standard::{
-        constants::MINIMAL_ERROR_CAPACITY, diagnostic::Diagnostician,
-        errors::position::CompilationPosition, errors::standard::ThrushCompilerIssue,
-        logging::LoggingType, misc::CompilerFile,
+        constants::MINIMAL_ERROR_CAPACITY,
+        diagnostic::Diagnostician,
+        errors::{position::CompilationPosition, standard::ThrushCompilerIssue},
+        logging::LoggingType,
+        misc::CompilerFile,
     },
     types::frontend::{
         lexer::{tokenkind::TokenKind, types::ThrushType},
         parser::stmts::{stmt::ThrushStatement, traits::CompilerAttributesExtensions},
         typechecker::types::{
-            TypeCheckerBind, TypeCheckerBindings, TypeCheckerBinds, TypeCheckerFunction,
-            TypeCheckerFunctions, TypeCheckerLocal, TypeCheckerLocals,
+            TypeCheckerAllMethods, TypeCheckerFunction, TypeCheckerFunctions, TypeCheckerLocal,
+            TypeCheckerLocals, TypeCheckerMethod, TypeCheckerMethods,
         },
     },
 };
@@ -23,7 +25,7 @@ use crate::{
 pub struct TypeCheckerSymbolsTable<'symbol> {
     functions: TypeCheckerFunctions<'symbol>,
     locals: TypeCheckerLocals<'symbol>,
-    bindings: TypeCheckerBindings<'symbol>,
+    methods: TypeCheckerMethods<'symbol>,
     scope: usize,
 }
 
@@ -32,7 +34,7 @@ impl<'symbol> TypeCheckerSymbolsTable<'symbol> {
         Self {
             functions: HashMap::with_capacity(100),
             locals: Vec::with_capacity(200),
-            bindings: HashMap::with_capacity(100),
+            methods: HashMap::with_capacity(100),
             scope: 0,
         }
     }
@@ -45,8 +47,8 @@ impl<'symbol> TypeCheckerSymbolsTable<'symbol> {
         self.functions.insert(name, function);
     }
 
-    pub fn new_bindings(&mut self, name: &'symbol str, binds: TypeCheckerBinds<'symbol>) {
-        self.bindings.insert(name, binds);
+    pub fn new_methods(&mut self, name: &'symbol str, binds: TypeCheckerAllMethods<'symbol>) {
+        self.methods.insert(name, binds);
     }
 
     pub fn get_local(&self, name: &'symbol str) -> Option<TypeCheckerLocal<'symbol>> {
@@ -65,26 +67,29 @@ impl<'symbol> TypeCheckerSymbolsTable<'symbol> {
         self.functions.get(name)
     }
 
-    pub fn split_bind_call_name(&self, from: &'symbol str) -> Option<(&'symbol str, &'symbol str)> {
+    pub fn split_method_call_name(
+        &self,
+        from: &'symbol str,
+    ) -> Option<(&'symbol str, &'symbol str)> {
         let splitted: Vec<&str> = from.split(".").collect();
 
-        if let Some(binding_name) = splitted.first() {
-            if let Some(bind_name) = splitted.get(1) {
-                return Some((binding_name, bind_name));
+        if let Some(methods_name) = splitted.first() {
+            if let Some(method_name) = splitted.get(1) {
+                return Some((methods_name, method_name));
             }
         }
 
         None
     }
 
-    pub fn get_specific_bind(
+    pub fn get_specific_method_definition(
         &self,
-        binding_name: &'symbol str,
-        bind_name: &'symbol str,
-    ) -> Option<&TypeCheckerBind<'symbol>> {
-        if let Some(binds) = self.bindings.get(binding_name) {
-            if let Some(bind) = binds.iter().find(|bind| bind.0 == bind_name) {
-                return Some(&bind.1);
+        methods_name: &'symbol str,
+        method_name: &'symbol str,
+    ) -> Option<&TypeCheckerMethod<'symbol>> {
+        if let Some(methods) = self.methods.get(methods_name) {
+            if let Some(method) = methods.iter().find(|method| method.0 == method_name) {
+                return Some(&method.1);
             }
         }
 
@@ -196,6 +201,43 @@ impl<'stmts> TypeChecker<'stmts> {
             if let Err(type_error) = self.check_stmt(body) {
                 self.add_error(type_error);
             }
+
+            return Ok(());
+        }
+
+        if let ThrushStatement::For {
+            local,
+            cond,
+            actions,
+            block,
+            ..
+        } = stmt
+        {
+            if let Err(type_error) = self.check_stmt(local) {
+                self.add_error(type_error);
+            }
+
+            if let Err(type_error) = self.check_stmt(cond) {
+                self.add_error(type_error);
+            }
+
+            if let Err(type_error) = self.check_stmt(actions) {
+                self.add_error(type_error);
+            }
+
+            if let Err(type_error) = self.check_stmt(block) {
+                self.add_error(type_error);
+            }
+
+            return Ok(());
+        }
+
+        if let ThrushStatement::Group { expression, .. } = stmt {
+            if let Err(type_error) = self.check_stmt(expression) {
+                self.add_error(type_error);
+            }
+
+            return Ok(());
         }
 
         if let ThrushStatement::Const {
@@ -212,6 +254,8 @@ impl<'stmts> TypeChecker<'stmts> {
             {
                 self.add_error(mismatch_type_error);
             }
+
+            return Ok(());
         }
 
         if let ThrushStatement::Function {
@@ -229,6 +273,8 @@ impl<'stmts> TypeChecker<'stmts> {
             self.type_ctx
                 .set_type_position(TypeCheckerTypePosition::None);
             self.type_ctx.set_function_type(&ThrushType::Void);
+
+            return Ok(());
         }
 
         if let ThrushStatement::Block { stmts, .. } = stmt {
@@ -241,6 +287,8 @@ impl<'stmts> TypeChecker<'stmts> {
             });
 
             self.end_scope();
+
+            return Ok(());
         }
 
         if let ThrushStatement::Local {
@@ -272,6 +320,8 @@ impl<'stmts> TypeChecker<'stmts> {
             self.type_ctx
                 .set_type_position(TypeCheckerTypePosition::None);
             self.type_ctx.set_function_type(&ThrushType::Void);
+
+            return Ok(());
         }
 
         if let ThrushStatement::BinaryOp {
@@ -295,6 +345,8 @@ impl<'stmts> TypeChecker<'stmts> {
             if let Err(type_error) = self.check_stmt(right) {
                 self.add_error(type_error);
             }
+
+            return Ok(());
         }
 
         if let ThrushStatement::UnaryOp {
@@ -313,6 +365,8 @@ impl<'stmts> TypeChecker<'stmts> {
             if let Err(type_error) = self.check_stmt(expression) {
                 self.add_error(type_error);
             }
+
+            return Ok(());
         }
 
         if let ThrushStatement::Call {
@@ -370,12 +424,15 @@ impl<'stmts> TypeChecker<'stmts> {
             ));
         }
 
-        if let ThrushStatement::BindCall {
+        if let ThrushStatement::MethodCall {
             name, args, span, ..
         } = stmt
         {
-            if let Some((binding_name, bind_name)) = self.symbols.split_bind_call_name(name) {
-                if let Some(types) = self.symbols.get_specific_bind(binding_name, bind_name) {
+            if let Some((binding_name, bind_name)) = self.symbols.split_method_call_name(name) {
+                if let Some(types) = self
+                    .symbols
+                    .get_specific_method_definition(binding_name, bind_name)
+                {
                     let types_size: usize = types.len();
 
                     let mut types_displayed: String = String::with_capacity(100);
@@ -408,8 +465,26 @@ impl<'stmts> TypeChecker<'stmts> {
                             self.add_error(mismatched_types_error);
                         }
                     }
+
+                    return Ok(());
                 }
+
+                self.errors.push(ThrushCompilerIssue::Bug(
+                    String::from("Method canonical name not caught"),
+                    format!("It was not possible to obtain the canonical name of the methods, which is the parent of '{}'.", name),
+                    *span,
+                    CompilationPosition::TypeChecker,
+                    line!(),
+                ));
             }
+
+            self.errors.push(ThrushCompilerIssue::Bug(
+                String::from("Methods definition not caught"),
+                format!("Could not get named method '{}'.", name),
+                *span,
+                CompilationPosition::TypeChecker,
+                line!(),
+            ));
         }
 
         if let ThrushStatement::Mut {
@@ -510,6 +585,8 @@ impl<'stmts> TypeChecker<'stmts> {
                     }
                 }
             }
+
+            return Ok(());
         }
 
         if let ThrushStatement::Constructor { arguments, .. } = stmt {
@@ -532,7 +609,55 @@ impl<'stmts> TypeChecker<'stmts> {
                     self.add_error(mismatched_types_error);
                 }
             }
+
+            return Ok(());
         }
+
+        if let ThrushStatement::ConstRef { .. } | ThrushStatement::LocalRef { .. } = stmt {
+            return Ok(());
+        }
+
+        if let ThrushStatement::Integer { .. } = stmt {
+            return Ok(());
+        }
+
+        if let ThrushStatement::Boolean { .. } = stmt {
+            return Ok(());
+        }
+
+        if let ThrushStatement::Str { .. } = stmt {
+            return Ok(());
+        }
+
+        if let ThrushStatement::Float { .. } = stmt {
+            return Ok(());
+        }
+
+        if let ThrushStatement::Null { .. } = stmt {
+            return Ok(());
+        }
+
+        if let ThrushStatement::NullPtr { .. } = stmt {
+            return Ok(());
+        }
+
+        if let ThrushStatement::Char { .. } = stmt {
+            return Ok(());
+        }
+
+        if let ThrushStatement::Pass { .. } = stmt {
+            return Ok(());
+        }
+
+        println!("{:?}", stmt);
+
+        self.errors.push(ThrushCompilerIssue::Bug(
+            String::from("Expression not caught"),
+            String::from("The expression could not be caught for processing."),
+            stmt.get_span(),
+            CompilationPosition::TypeChecker,
+            line!(),
+        ));
 
         Ok(())
     }
@@ -727,7 +852,9 @@ impl<'stmts> TypeChecker<'stmts> {
                     | TokenKind::Slash
                     | TokenKind::Star
                     | TokenKind::LShift
-                    | TokenKind::RShift,
+                    | TokenKind::RShift
+                    | TokenKind::PlusPlus
+                    | TokenKind::MinusMinus,
                 )
                 | None,
             ) => Ok(()),
@@ -740,7 +867,9 @@ impl<'stmts> TypeChecker<'stmts> {
                     | TokenKind::Slash
                     | TokenKind::Star
                     | TokenKind::LShift
-                    | TokenKind::RShift,
+                    | TokenKind::RShift
+                    | TokenKind::PlusPlus
+                    | TokenKind::MinusMinus,
                 )
                 | None,
             ) => Ok(()),
@@ -758,7 +887,9 @@ impl<'stmts> TypeChecker<'stmts> {
                     | TokenKind::Slash
                     | TokenKind::Star
                     | TokenKind::LShift
-                    | TokenKind::RShift,
+                    | TokenKind::RShift
+                    | TokenKind::PlusPlus
+                    | TokenKind::MinusMinus,
                 )
                 | None,
             ) => Ok(()),
@@ -778,7 +909,9 @@ impl<'stmts> TypeChecker<'stmts> {
                     | TokenKind::Slash
                     | TokenKind::Star
                     | TokenKind::LShift
-                    | TokenKind::RShift,
+                    | TokenKind::RShift
+                    | TokenKind::PlusPlus
+                    | TokenKind::MinusMinus,
                 )
                 | None,
             ) => Ok(()),
@@ -791,7 +924,9 @@ impl<'stmts> TypeChecker<'stmts> {
                     | TokenKind::Slash
                     | TokenKind::Star
                     | TokenKind::LShift
-                    | TokenKind::RShift,
+                    | TokenKind::RShift
+                    | TokenKind::PlusPlus
+                    | TokenKind::MinusMinus,
                 )
                 | None,
             ) => Ok(()),
@@ -804,7 +939,9 @@ impl<'stmts> TypeChecker<'stmts> {
                     | TokenKind::Slash
                     | TokenKind::Star
                     | TokenKind::LShift
-                    | TokenKind::RShift,
+                    | TokenKind::RShift
+                    | TokenKind::PlusPlus
+                    | TokenKind::MinusMinus,
                 )
                 | None,
             ) => Ok(()),
@@ -817,7 +954,9 @@ impl<'stmts> TypeChecker<'stmts> {
                     | TokenKind::Slash
                     | TokenKind::Star
                     | TokenKind::LShift
-                    | TokenKind::RShift,
+                    | TokenKind::RShift
+                    | TokenKind::PlusPlus
+                    | TokenKind::MinusMinus,
                 )
                 | None,
             ) => Ok(()),
@@ -830,7 +969,9 @@ impl<'stmts> TypeChecker<'stmts> {
                     | TokenKind::Slash
                     | TokenKind::Star
                     | TokenKind::LShift
-                    | TokenKind::RShift,
+                    | TokenKind::RShift
+                    | TokenKind::PlusPlus
+                    | TokenKind::MinusMinus,
                 )
                 | None,
             ) => Ok(()),
@@ -843,14 +984,25 @@ impl<'stmts> TypeChecker<'stmts> {
                     | TokenKind::Slash
                     | TokenKind::Star
                     | TokenKind::LShift
-                    | TokenKind::RShift,
+                    | TokenKind::RShift
+                    | TokenKind::PlusPlus
+                    | TokenKind::MinusMinus,
                 )
                 | None,
             ) => Ok(()),
             (
                 ThrushType::F64,
                 ThrushType::F64 | ThrushType::F32,
-                Some(TokenKind::Plus | TokenKind::Minus | TokenKind::Slash | TokenKind::Star)
+                Some(
+                    TokenKind::Plus
+                    | TokenKind::Minus
+                    | TokenKind::Slash
+                    | TokenKind::Star
+                    | TokenKind::LShift
+                    | TokenKind::RShift
+                    | TokenKind::PlusPlus
+                    | TokenKind::MinusMinus,
+                )
                 | None,
             ) => Ok(()),
 
@@ -1169,13 +1321,13 @@ impl<'stmts> TypeChecker<'stmts> {
 
         self.stmts
             .iter()
-            .filter(|stmt| stmt.is_bindings())
+            .filter(|stmt| stmt.is_methods())
             .for_each(|stmt| {
-                if let ThrushStatement::Bindings { name, binds, .. } = stmt {
+                if let ThrushStatement::Methods { name, binds, .. } = stmt {
                     let binds: Vec<(&'stmts str, &'stmts [ThrushType])> = binds
                         .iter()
                         .filter_map(|stmt| match stmt {
-                            ThrushStatement::Bind {
+                            ThrushStatement::Method {
                                 name,
                                 parameters_types,
                                 ..
@@ -1185,7 +1337,7 @@ impl<'stmts> TypeChecker<'stmts> {
                         })
                         .collect();
 
-                    self.symbols.new_bindings(name, binds);
+                    self.symbols.new_methods(name, binds);
                 }
             });
     }

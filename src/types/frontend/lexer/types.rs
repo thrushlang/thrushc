@@ -15,7 +15,7 @@ use crate::{
         backend::llvm::traits::LLVMDeallocator,
         frontend::parser::{
             stmts::{stmt::ThrushStatement, traits::StructExtensions, types::StructFields},
-            symbols::types::{Bindings, Struct},
+            symbols::types::{Methods, Struct},
         },
     },
 };
@@ -23,7 +23,7 @@ use crate::{
 pub type ThrushStructType = (String, Vec<Arc<ThrushType>>);
 
 #[derive(Debug, Clone, Copy)]
-pub enum BindingsApplicant {
+pub enum MethodsApplicant {
     Struct,
 }
 
@@ -380,18 +380,20 @@ impl PartialEq for ThrushType {
     }
 }
 
-pub fn generate_bindings(original_bindings: Vec<ThrushStatement>) -> Bindings {
-    let mut bindings: Bindings = Vec::with_capacity(original_bindings.len());
+pub fn generate_methods(
+    original_bindings: Vec<ThrushStatement>,
+) -> Result<Methods, ThrushCompilerIssue> {
+    let mut bindings: Methods = Vec::with_capacity(original_bindings.len());
 
     for binding in original_bindings {
         bindings.push((
-            binding.get_binding_name(),
-            binding.get_binding_type(),
-            binding.get_binding_parameters(),
+            binding.get_method_name()?,
+            binding.get_method_type()?,
+            binding.get_method_parameters_types()?,
         ));
     }
 
-    bindings
+    Ok(bindings)
 }
 
 pub fn decompose_struct_property(

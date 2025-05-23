@@ -8,6 +8,6 @@ pub type TypeCheckerLocals<'symbol> = Vec<HashMap<&'symbol str, TypeCheckerLocal
 pub type TypeCheckerFunction<'symbol> = (&'symbol [ThrushType], bool);
 pub type TypeCheckerFunctions<'symbol> = HashMap<&'symbol str, TypeCheckerFunction<'symbol>>;
 
-pub type TypeCheckerBind<'symbol> = &'symbol [ThrushType];
-pub type TypeCheckerBinds<'symbol> = Vec<(&'symbol str, TypeCheckerBind<'symbol>)>;
-pub type TypeCheckerBindings<'symbol> = HashMap<&'symbol str, TypeCheckerBinds<'symbol>>;
+pub type TypeCheckerMethod<'symbol> = &'symbol [ThrushType];
+pub type TypeCheckerAllMethods<'symbol> = Vec<(&'symbol str, TypeCheckerMethod<'symbol>)>;
+pub type TypeCheckerMethods<'symbol> = HashMap<&'symbol str, TypeCheckerAllMethods<'symbol>>;

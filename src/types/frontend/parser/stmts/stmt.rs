@@ -6,7 +6,7 @@ use inkwell::values::BasicValueEnum;
 
 use crate::{
     frontend::lexer::span::Span,
-    standard::errors::standard::ThrushCompilerIssue,
+    standard::errors::{position::CompilationPosition, standard::ThrushCompilerIssue},
     types::{
         backend::llvm::types::{LLVMBinaryOp, LLVMFunctionPrototype, LLVMUnaryOp},
         frontend::lexer::{tokenkind::TokenKind, types::ThrushType},
@@ -75,13 +75,13 @@ pub enum ThrushStatement<'ctx> {
         span: Span,
     },
 
-    Bindings {
+    Methods {
         name: String,
         binds: Vec<ThrushStatement<'ctx>>,
         span: Span,
     },
 
-    Bind {
+    Method {
         name: &'ctx str,
         parameters: Vec<ThrushStatement<'ctx>>,
         parameters_types: Vec<ThrushType>,
@@ -227,9 +227,9 @@ pub enum ThrushStatement<'ctx> {
         kind: ThrushType,
         value: Rc<ThrushStatement<'ctx>>,
         is_mutable: bool,
-        comptime: bool,
         span: Span,
     },
+
     LocalRef {
         name: &'ctx str,
         kind: ThrushType,
@@ -273,7 +273,7 @@ pub enum ThrushStatement<'ctx> {
         kind: ThrushType,
         span: Span,
     },
-    BindCall {
+    MethodCall {
         name: String,
         args: Vec<ThrushStatement<'ctx>>,
         kind: ThrushType,
@@ -334,7 +334,7 @@ impl<'ctx> ThrushStatement<'ctx> {
             ThrushStatement::Property { kind, .. } => Ok(kind),
             ThrushStatement::NullPtr { .. } => Ok(&ThrushType::Ptr(None)),
             ThrushStatement::This { kind, .. } => Ok(kind),
-            ThrushStatement::BindCall { kind, .. } => Ok(kind),
+            ThrushStatement::MethodCall { kind, .. } => Ok(kind),
             ThrushStatement::BindParameter { kind, .. } => Ok(kind),
             ThrushStatement::Return { kind, .. } => Ok(kind),
 
@@ -372,7 +372,7 @@ impl<'ctx> ThrushStatement<'ctx> {
             ThrushStatement::Property { kind, .. } => kind,
             ThrushStatement::NullPtr { .. } => &ThrushType::Ptr(None),
             ThrushStatement::This { kind, .. } => kind,
-            ThrushStatement::BindCall { kind, .. } => kind,
+            ThrushStatement::MethodCall { kind, .. } => kind,
             ThrushStatement::BindParameter { kind, .. } => kind,
             ThrushStatement::Return { kind, .. } => kind,
 
@@ -407,7 +407,7 @@ impl<'ctx> ThrushStatement<'ctx> {
             ThrushStatement::Write { span, .. } => *span,
             ThrushStatement::Const { span, .. } => *span,
             ThrushStatement::This { span, .. } => *span,
-            ThrushStatement::BindCall { span, .. } => *span,
+            ThrushStatement::MethodCall { span, .. } => *span,
             ThrushStatement::BindParameter { span, .. } => *span,
             ThrushStatement::Return { span, .. } => *span,
 
@@ -420,8 +420,8 @@ impl<'ctx> ThrushStatement<'ctx> {
             ThrushStatement::While { span, .. } => *span,
             ThrushStatement::For { span, .. } => *span,
             ThrushStatement::Pass { span } => *span,
-            ThrushStatement::Bind { span, .. } => *span,
-            ThrushStatement::Bindings { span, .. } => *span,
+            ThrushStatement::Method { span, .. } => *span,
+            ThrushStatement::Methods { span, .. } => *span,
 
             ThrushStatement::Null { span } => *span,
             ThrushStatement::LLVMValue(_, span) => *span,
@@ -504,33 +504,66 @@ impl<'ctx> ThrushStatement<'ctx> {
         unreachable!()
     }
 
-    pub fn get_binding_name(&self) -> &'ctx str {
-        if let ThrushStatement::Bind { name, .. } = self {
-            return name;
+    pub fn get_reference_type(&self) -> Result<ThrushType, ThrushCompilerIssue> {
+        if let ThrushStatement::LocalRef { kind, .. } = self {
+            return Ok(kind.clone());
         }
 
-        unreachable!()
+        Err(ThrushCompilerIssue::Bug(
+            String::from("Reference not caught"),
+            String::from("Expected a local reference."),
+            self.get_span(),
+            CompilationPosition::Parser,
+            line!(),
+        ))
     }
 
-    pub fn get_binding_parameters(&self) -> Vec<ThrushType> {
-        if let ThrushStatement::Bind { parameters, .. } = self {
-            let parameters_type: Vec<ThrushType> = parameters
-                .iter()
-                .map(|parameter| parameter.get_type_unwrapped().clone())
-                .collect();
-
-            return parameters_type;
+    pub fn get_method_name(&self) -> Result<&'ctx str, ThrushCompilerIssue> {
+        if let ThrushStatement::Method { name, .. } = self {
+            return Ok(name);
         }
 
-        unreachable!()
+        Err(ThrushCompilerIssue::Bug(
+            String::from("Method not caught"),
+            String::from("Expected a method definition reference."),
+            self.get_span(),
+            CompilationPosition::Parser,
+            line!(),
+        ))
     }
 
-    pub fn get_binding_type(&self) -> ThrushType {
-        if let ThrushStatement::Bind { return_type, .. } = self {
-            return return_type.clone();
+    pub fn get_method_parameters_types(&self) -> Result<Vec<ThrushType>, ThrushCompilerIssue> {
+        if let ThrushStatement::Method { parameters, .. } = self {
+            let mut parameters_types: Vec<ThrushType> = Vec::with_capacity(10);
+
+            for parameter in parameters {
+                parameters_types.push(parameter.get_type()?.clone());
+            }
+
+            return Ok(parameters_types);
         }
 
-        unreachable!()
+        Err(ThrushCompilerIssue::Bug(
+            String::from("Method not caught"),
+            String::from("Expected a method definition reference."),
+            self.get_span(),
+            CompilationPosition::Parser,
+            line!(),
+        ))
+    }
+
+    pub fn get_method_type(&self) -> Result<ThrushType, ThrushCompilerIssue> {
+        if let ThrushStatement::Method { return_type, .. } = self {
+            return Ok(return_type.clone());
+        }
+
+        Err(ThrushCompilerIssue::Bug(
+            String::from("Method not caught"),
+            String::from("Expected a method definition reference."),
+            self.get_span(),
+            CompilationPosition::Parser,
+            line!(),
+        ))
     }
 }
 
@@ -671,7 +704,7 @@ impl ThrushStatement<'_> {
     }
 
     #[inline]
-    pub const fn is_local_ref(&self) -> bool {
+    pub const fn is_ref(&self) -> bool {
         matches!(self, ThrushStatement::LocalRef { .. })
     }
 
@@ -701,8 +734,8 @@ impl ThrushStatement<'_> {
     }
 
     #[inline]
-    pub const fn is_bindings(&self) -> bool {
-        matches!(self, ThrushStatement::Bindings { .. })
+    pub const fn is_methods(&self) -> bool {
+        matches!(self, ThrushStatement::Methods { .. })
     }
 
     #[inline]

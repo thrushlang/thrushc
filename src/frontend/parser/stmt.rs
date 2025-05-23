@@ -11,7 +11,7 @@ use crate::{
         lexer::{
             tokenkind::TokenKind,
             traits::ThrushStructTypeExtensions,
-            types::{self, BindingsApplicant, ThrushStructType, ThrushType},
+            types::{self, MethodsApplicant, ThrushStructType, ThrushType},
         },
         parser::{
             stmts::{
@@ -19,14 +19,14 @@ use crate::{
                 traits::CompilerAttributesExtensions,
                 types::{CompilerAttributes, CustomTypeFields, EnumFields, StructFields},
             },
-            symbols::types::{Bindings, ParametersTypes},
+            symbols::types::{Methods, ParametersTypes},
         },
     },
 };
 
 use super::{
     ParserContext,
-    contexts::{BindingsType, InstructionPosition, SyncPosition, TypePosition},
+    contexts::{InstructionPosition, MethodsType, SyncPosition, TypePosition},
     expression, typegen,
 };
 
@@ -60,12 +60,12 @@ pub fn parse<'instr>(
 
     let statement: Result<ThrushStatement<'instr>, ThrushCompilerIssue> =
         match &parser_ctx.peek().kind {
-            TokenKind::Type => Ok(build_custom_type(parser_ctx, false)?),
-            TokenKind::Struct => Ok(build_struct(parser_ctx, false)?),
-            TokenKind::Enum => Ok(build_enum(parser_ctx, false)?),
-            TokenKind::Fn => Ok(build_function(parser_ctx, false)?),
-            TokenKind::Const => Ok(build_const(parser_ctx, false)?),
-            TokenKind::Bindings => Ok(build_bindings(parser_ctx, false)?),
+            TokenKind::Type => Ok(self::build_custom_type(parser_ctx, false)?),
+            TokenKind::Struct => Ok(self::build_struct(parser_ctx, false)?),
+            TokenKind::Enum => Ok(self::build_enum(parser_ctx, false)?),
+            TokenKind::Fn => Ok(self::build_function(parser_ctx, false)?),
+            TokenKind::Const => Ok(self::build_const(parser_ctx, false)?),
+            TokenKind::Methods => Ok(self::build_methods(parser_ctx, false)?),
 
             _ => Ok(statement(parser_ctx)?),
         };
@@ -82,15 +82,15 @@ fn statement<'instr>(
 
     let statement: Result<ThrushStatement<'instr>, ThrushCompilerIssue> =
         match &parser_ctx.peek().kind {
-            TokenKind::LBrace => Ok(build_block(parser_ctx)?),
-            TokenKind::Return => Ok(build_return(parser_ctx)?),
-            TokenKind::Local => Ok(build_local(parser_ctx, false)?),
-            TokenKind::For => Ok(build_for_loop(parser_ctx)?),
-            TokenKind::If => Ok(build_conditional(parser_ctx)?),
-            TokenKind::While => Ok(build_while_loop(parser_ctx)?),
-            TokenKind::Continue => Ok(build_continue(parser_ctx)?),
-            TokenKind::Break => Ok(build_break(parser_ctx)?),
-            TokenKind::Loop => Ok(build_loop(parser_ctx)?),
+            TokenKind::LBrace => Ok(self::build_block(parser_ctx)?),
+            TokenKind::Return => Ok(self::build_return(parser_ctx)?),
+            TokenKind::Local => Ok(self::build_local(parser_ctx)?),
+            TokenKind::For => Ok(self::build_for_loop(parser_ctx)?),
+            TokenKind::If => Ok(self::build_conditional(parser_ctx)?),
+            TokenKind::While => Ok(self::build_while_loop(parser_ctx)?),
+            TokenKind::Continue => Ok(self::build_continue(parser_ctx)?),
+            TokenKind::Break => Ok(self::build_break(parser_ctx)?),
+            TokenKind::Loop => Ok(self::build_loop(parser_ctx)?),
 
             _ => Ok(expression::build_expression(parser_ctx)?),
         };
@@ -98,18 +98,18 @@ fn statement<'instr>(
     statement
 }
 
-pub fn build_bindings<'instr>(
+pub fn build_methods<'instr>(
     parser_ctx: &mut ParserContext<'instr>,
     declare: bool,
 ) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
     parser_ctx
         .get_mut_control_ctx()
-        .set_instr_position(InstructionPosition::Bindings);
+        .set_instr_position(InstructionPosition::Methods);
 
     let bindings_tk: &Token = parser_ctx.consume(
-        TokenKind::Bindings,
+        TokenKind::Methods,
         String::from("Syntax error"),
-        String::from("Expected 'bindings' keyword."),
+        String::from("Expected 'methods' keyword."),
     )?;
 
     let span: Span = bindings_tk.span;
@@ -117,7 +117,7 @@ pub fn build_bindings<'instr>(
     if !parser_ctx.is_main_scope() {
         return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
-            String::from("Bindings are only defined globally."),
+            String::from("Methods are only defined globally."),
             None,
             span,
         ));
@@ -130,13 +130,13 @@ pub fn build_bindings<'instr>(
             String::from("Syntax error"),
             String::from("Expected struct type."),
             None,
-            bindings_tk.span,
+            span,
         ));
     }
 
     parser_ctx
         .get_mut_type_ctx()
-        .set_this_bindings_type(BindingsType::Struct(kind.clone()));
+        .set_this_methods_type(MethodsType::Struct(kind.clone()));
 
     let struct_type: ThrushStructType = kind.into_structure_type();
     let struct_name: String = struct_type.get_name();
@@ -145,7 +145,7 @@ pub fn build_bindings<'instr>(
         .get_symbols()
         .contains_structure(&struct_name, span)?;
 
-    let mut binds: Vec<ThrushStatement> = Vec::with_capacity(20);
+    let mut binds: Vec<ThrushStatement> = Vec::with_capacity(50);
 
     parser_ctx.consume(
         TokenKind::LBrace,
@@ -154,11 +154,11 @@ pub fn build_bindings<'instr>(
     )?;
 
     while parser_ctx.peek().kind != TokenKind::RBrace {
-        let bind: ThrushStatement = self::build_bind(declare, parser_ctx)?;
+        let bind: ThrushStatement = self::build_def(declare, parser_ctx)?;
 
         parser_ctx
             .get_mut_control_ctx()
-            .set_instr_position(InstructionPosition::Bindings);
+            .set_instr_position(InstructionPosition::Methods);
 
         binds.push(bind);
     }
@@ -171,46 +171,46 @@ pub fn build_bindings<'instr>(
 
     parser_ctx
         .get_mut_type_ctx()
-        .set_this_bindings_type(BindingsType::NoRelevant);
+        .set_this_methods_type(MethodsType::NoRelevant);
 
     parser_ctx
         .get_mut_control_ctx()
         .set_instr_position(InstructionPosition::NoRelevant);
 
     if declare {
-        let bindings_generated: Bindings = types::generate_bindings(binds.clone());
+        let bindings_generated: Methods = types::generate_methods(binds.clone())?;
 
-        parser_ctx.get_mut_symbols().set_bindings(
+        parser_ctx.get_mut_symbols().add_methods(
             &struct_name,
             bindings_generated,
-            BindingsApplicant::Struct,
+            MethodsApplicant::Struct,
             span,
         )?;
 
         return Ok(ThrushStatement::Null { span });
     }
 
-    Ok(ThrushStatement::Bindings {
+    Ok(ThrushStatement::Methods {
         name: struct_name,
         binds,
         span,
     })
 }
 
-fn build_bind<'instr>(
+fn build_def<'instr>(
     declare: bool,
     parser_ctx: &mut ParserContext<'instr>,
 ) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
     parser_ctx.consume(
-        TokenKind::Bind,
+        TokenKind::Def,
         String::from("Syntax error"),
-        String::from("Expected 'bind' keyword."),
+        String::from("Expected 'def' keyword."),
     )?;
 
     let bind_name_tk: &Token = parser_ctx.consume(
         TokenKind::Identifier,
         String::from("Syntax error"),
-        String::from("Expected name to the bind."),
+        String::from("Expected name to the method definition."),
     )?;
 
     let bind_name: &str = bind_name_tk.lexeme;
@@ -220,11 +220,11 @@ fn build_bind<'instr>(
     if !parser_ctx
         .get_control_ctx()
         .get_instr_position()
-        .is_bindings()
+        .is_methods()
     {
         return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
-            String::from("Expected bind inside the bindings definition."),
+            String::from("Expected method definition inside the methods context definition."),
             None,
             bind_name_tk.span,
         ));
@@ -232,7 +232,7 @@ fn build_bind<'instr>(
 
     parser_ctx
         .get_mut_control_ctx()
-        .set_instr_position(InstructionPosition::Bind);
+        .set_instr_position(InstructionPosition::Method);
 
     parser_ctx.consume(
         TokenKind::LParen,
@@ -278,7 +278,7 @@ fn build_bind<'instr>(
             bind_parameters.push(ThrushStatement::This {
                 kind: parser_ctx
                     .get_type_ctx()
-                    .get_this_bindings_type()
+                    .get_this_methods_type()
                     .dissamble(),
                 is_mutable,
                 span: this_tk.span,
@@ -301,9 +301,9 @@ fn build_bind<'instr>(
         let parameter_span: Span = parameter_tk.span;
 
         parser_ctx.consume(
-            TokenKind::ColonColon,
+            TokenKind::Colon,
             String::from("Syntax error"),
-            String::from("Expected '::'."),
+            String::from("Expected ':'."),
         )?;
 
         let parameter_type: ThrushType = typegen::build_type(parser_ctx)?;
@@ -359,7 +359,7 @@ fn build_bind<'instr>(
             .get_mut_control_ctx()
             .set_instr_position(InstructionPosition::NoRelevant);
 
-        return Ok(ThrushStatement::Bind {
+        return Ok(ThrushStatement::Method {
             name: bind_name,
             parameters: bind_parameters,
             parameters_types: bind_parameters_types,
@@ -385,7 +385,7 @@ fn build_entry_point<'instr>(
     if parser_ctx.get_control_ctx().get_entrypoint() {
         return Err(ThrushCompilerIssue::Error(
             String::from("Duplicated entrypoint"),
-            String::from("The language not support two entrypoints."),
+            String::from("The language not support two entrypoints. :>"),
             None,
             parser_ctx.previous().span,
         ));
@@ -420,14 +420,14 @@ fn build_for_loop<'instr>(
         String::from("Expected 'for' keyword."),
     )?;
 
-    let for_span: Span = for_tk.span;
+    let span: Span = for_tk.span;
 
     if parser_ctx.is_unreacheable_code() {
         return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("Unreacheable code."),
             None,
-            for_span,
+            span,
         ));
     }
 
@@ -438,26 +438,17 @@ fn build_for_loop<'instr>(
             String::from("Syntax error"),
             String::from("For loop must be placed inside a function or a bind."),
             None,
-            for_span,
+            span,
         ));
     }
 
-    let local: ThrushStatement = build_local(parser_ctx, false)?;
+    let local: ThrushStatement = self::build_local(parser_ctx)?;
     let cond: ThrushStatement = expression::build_expression(parser_ctx)?;
-
     let actions: ThrushStatement = expression::build_expression(parser_ctx)?;
-
-    let mut local_clone: ThrushStatement = local.clone();
-
-    if let ThrushStatement::Local { comptime, .. } = &mut local_clone {
-        *comptime = true;
-    }
-
-    //parser_ctx.add_lift_local(local_clone);
 
     parser_ctx.get_mut_control_ctx().set_inside_loop(true);
 
-    let body: ThrushStatement = build_block(parser_ctx)?;
+    let body: ThrushStatement = self::build_block(parser_ctx)?;
 
     parser_ctx.get_mut_control_ctx().set_inside_loop(false);
 
@@ -466,7 +457,7 @@ fn build_for_loop<'instr>(
         cond: cond.into(),
         actions: actions.into(),
         block: body.into(),
-        span: for_span,
+        span,
     })
 }
 
@@ -1153,7 +1144,6 @@ pub fn build_const<'instr>(
 
 fn build_local<'instr>(
     parser_ctx: &mut ParserContext<'instr>,
-    comptime: bool,
 ) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
     parser_ctx
         .get_mut_type_ctx()
@@ -1191,7 +1181,7 @@ fn build_local<'instr>(
         String::from("Expected name."),
     )?;
 
-    let local_name: &str = local_tk.lexeme;
+    let name: &str = local_tk.lexeme;
     let span: Span = local_tk.span;
 
     parser_ctx.consume(
@@ -1207,7 +1197,7 @@ fn build_local<'instr>(
     if parser_ctx.match_token(TokenKind::SemiColon)? {
         parser_ctx.get_mut_symbols().new_local(
             scope,
-            local_name,
+            name,
             (local_type.clone(), is_mutable, true, span),
             span,
         )?;
@@ -1217,18 +1207,17 @@ fn build_local<'instr>(
             .set_position(TypePosition::NoRelevant);
 
         return Ok(ThrushStatement::Local {
-            name: local_name,
+            name,
             kind: local_type,
-            value: Rc::new(ThrushStatement::Null { span }),
+            value: ThrushStatement::Null { span }.into(),
             is_mutable,
             span,
-            comptime,
         });
     }
 
     parser_ctx.get_mut_symbols().new_local(
         scope,
-        local_name,
+        name,
         (local_type.clone(), is_mutable, false, span),
         span,
     )?;
@@ -1252,12 +1241,11 @@ fn build_local<'instr>(
         .set_position(TypePosition::NoRelevant);
 
     let local: ThrushStatement = ThrushStatement::Local {
-        name: local_name,
+        name,
         kind: local_type,
         value: value.into(),
         is_mutable,
         span,
-        comptime,
     };
 
     Ok(local)
@@ -1358,7 +1346,7 @@ fn build_block<'instr>(
     let mut stmts: Vec<ThrushStatement> = Vec::with_capacity(100);
 
     while !parser_ctx.match_token(TokenKind::RBrace)? {
-        let stmt: ThrushStatement = statement(parser_ctx)?;
+        let stmt: ThrushStatement = self::statement(parser_ctx)?;
         stmts.push(stmt)
     }
 

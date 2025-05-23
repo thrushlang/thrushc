@@ -1,7 +1,7 @@
 use crate::{
     frontend::lexer::span::Span,
     standard::errors::standard::ThrushCompilerIssue,
-    types::frontend::{lexer::types::ThrushType, parser::symbols::types::Bindings},
+    types::frontend::{lexer::types::ThrushType, parser::symbols::types::Methods},
 };
 
 use super::types::{EnumField, EnumFields, StructFields};
@@ -37,7 +37,7 @@ pub trait StructExtensions<'a> {
     fn contains_field(&self, name: &str) -> bool;
     fn get_field_type(&self, name: &str) -> Option<ThrushType>;
     fn get_fields(&self) -> StructFields<'a>;
-    fn get_bindings(&self) -> Bindings<'a>;
+    fn get_methods(&self) -> Methods<'a>;
 }
 
 pub trait FoundSymbolEither<'instr> {

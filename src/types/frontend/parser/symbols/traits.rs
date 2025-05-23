@@ -1,6 +1,6 @@
 use crate::{frontend::lexer::span::Span, types::frontend::lexer::types::ThrushType};
 
-use super::types::Bind;
+use super::types::MethodDef;
 
 pub trait LocalSymbolExtensions {
     fn is_undefined(&self) -> bool;
@@ -17,12 +17,12 @@ pub trait FunctionExtensions {
     fn get_type(&self) -> ThrushType;
 }
 
-pub trait BindingsExtensions {
-    fn contains_binding(&self, name: &str) -> bool;
-    fn get_bind(&self, name: &str) -> Bind;
+pub trait MethodsExtensions {
+    fn contains_method(&self, name: &str) -> bool;
+    fn get_method(&self, name: &str) -> MethodDef;
 }
 
-pub trait BindExtensions {
+pub trait MethodExtensions {
     fn get_name(&self) -> &str;
     fn get_parameters_types(&self) -> &[ThrushType];
     fn get_type(&self) -> ThrushType;

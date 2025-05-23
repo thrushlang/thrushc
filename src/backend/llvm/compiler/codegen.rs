@@ -413,14 +413,9 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 name,
                 kind,
                 value,
-                comptime,
                 span,
                 ..
             } => {
-                if *comptime {
-                    return ThrushStatement::Null { span: *span };
-                }
-
                 local::build((name, kind, value), &mut self.context);
 
                 ThrushStatement::Null { span: *span }

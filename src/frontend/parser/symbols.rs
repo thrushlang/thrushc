@@ -2,11 +2,11 @@ use crate::{
     frontend::lexer::span::Span,
     standard::errors::standard::ThrushCompilerIssue,
     types::frontend::{
-        lexer::types::BindingsApplicant,
+        lexer::types::MethodsApplicant,
         parser::symbols::types::{
-            Bindings, ConstantSymbol, Constants, CustomTypeSymbol, CustomTypes, EnumSymbol, Enums,
-            FoundSymbolId, Function, Functions, LocalSymbol, Locals, ParameterSymbol, Parameters,
-            Struct, Structs,
+            ConstantSymbol, Constants, CustomTypeSymbol, CustomTypes, EnumSymbol, Enums,
+            FoundSymbolId, Function, Functions, LocalSymbol, Locals, Methods, ParameterSymbol,
+            Parameters, Struct, Structs,
         },
     },
 };
@@ -204,17 +204,17 @@ impl<'instr> SymbolsTable<'instr> {
         Ok(())
     }
 
-    pub fn set_bindings(
+    pub fn add_methods(
         &mut self,
         name: &str,
-        bindings: Bindings<'instr>,
-        applicant: BindingsApplicant,
+        methods: Methods<'instr>,
+        applicant: MethodsApplicant,
         span: Span,
     ) -> Result<(), ThrushCompilerIssue> {
         match applicant {
-            BindingsApplicant::Struct => {
+            MethodsApplicant::Struct => {
                 let structure: &mut Struct = self.get_struct_mut(name, span)?;
-                structure.3 = bindings;
+                structure.3 = methods;
             }
         }
 
@@ -272,7 +272,7 @@ impl<'instr> SymbolsTable<'instr> {
         }
 
         Err(ThrushCompilerIssue::Error(
-            String::from("Structure/Function/Local/Parameter/Constant/Type not found"),
+            String::from("Reference not found"),
             format!("'{}' is not declared or defined.", name),
             None,
             span,

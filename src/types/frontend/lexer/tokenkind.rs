@@ -65,8 +65,8 @@ pub enum TokenKind {
     Write,
     New,
     Import,
-    Bindings,
-    Bind,
+    Methods,
+    Def,
     Mut,
     Ref,
     Type,
@@ -158,7 +158,7 @@ impl TokenKind {
                 | TokenKind::Fn
                 | TokenKind::Enum
                 | TokenKind::Const
-                | TokenKind::Bindings
+                | TokenKind::Methods
         )
     }
 
@@ -177,7 +177,7 @@ impl TokenKind {
                 | TokenKind::Continue
                 | TokenKind::Break
                 | TokenKind::Loop
-                | TokenKind::Bind
+                | TokenKind::Def
         )
     }
 
@@ -197,8 +197,8 @@ impl TokenKind {
         matches!(self, TokenKind::Struct)
     }
 
-    pub const fn is_bindings_keyword(&self) -> bool {
-        matches!(self, TokenKind::Bindings)
+    pub const fn is_methods_keyword(&self) -> bool {
+        matches!(self, TokenKind::Methods)
     }
 
     #[inline(always)]

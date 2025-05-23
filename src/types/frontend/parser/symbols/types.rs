@@ -12,11 +12,11 @@ pub type Struct<'instr> = (
     &'instr str,
     Vec<(&'instr str, ThrushType, u32)>,
     CompilerAttributes<'instr>,
-    Bindings<'instr>,
+    Methods<'instr>,
 );
 
-pub type Bindings<'instr> = Vec<(&'instr str, ThrushType, Vec<ThrushType>)>;
-pub type Bind<'instr> = &'instr (&'instr str, ThrushType, Vec<ThrushType>);
+pub type Methods<'instr> = Vec<(&'instr str, ThrushType, Vec<ThrushType>)>;
+pub type MethodDef<'instr> = &'instr (&'instr str, ThrushType, Vec<ThrushType>);
 
 pub type Function<'instr> = (ThrushType, ParametersTypes, bool);
 

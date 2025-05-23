@@ -1,7 +1,7 @@
 use crate::types::frontend::lexer::types::ThrushType;
 
 #[derive(Debug, Clone)]
-pub enum BindingsType {
+pub enum MethodsType {
     Struct(ThrushType),
     NoRelevant,
 }
@@ -17,8 +17,8 @@ pub enum TypePosition {
 
 #[derive(Debug, Clone, Copy)]
 pub enum InstructionPosition {
-    Bindings,
-    Bind,
+    Methods,
+    Method,
     NoRelevant,
 }
 
@@ -44,7 +44,7 @@ pub struct ParserControlContext {
 #[derive(Debug)]
 pub struct ParserTypeContext {
     function_type: ThrushType,
-    bindings_type: BindingsType,
+    methods_type: MethodsType,
     position: TypePosition,
     bind_instance: bool,
 }
@@ -53,7 +53,7 @@ impl ParserTypeContext {
     pub fn new() -> Self {
         Self {
             function_type: ThrushType::Void,
-            bindings_type: BindingsType::NoRelevant,
+            methods_type: MethodsType::NoRelevant,
             position: TypePosition::NoRelevant,
             bind_instance: false,
         }
@@ -75,12 +75,12 @@ impl ParserTypeContext {
         self.function_type.clone()
     }
 
-    pub fn get_this_bindings_type(&self) -> &BindingsType {
-        &self.bindings_type
+    pub fn get_this_methods_type(&self) -> &MethodsType {
+        &self.methods_type
     }
 
-    pub fn set_this_bindings_type(&mut self, new_type: BindingsType) {
-        self.bindings_type = new_type;
+    pub fn set_this_methods_type(&mut self, new_type: MethodsType) {
+        self.methods_type = new_type;
     }
 
     pub fn set_bind_instance(&mut self, value: bool) {
@@ -177,24 +177,24 @@ impl TypePosition {
 }
 
 impl InstructionPosition {
-    pub fn is_bindings(&self) -> bool {
-        matches!(self, InstructionPosition::Bindings)
+    pub fn is_methods(&self) -> bool {
+        matches!(self, InstructionPosition::Methods)
     }
 
-    pub fn is_bind(&self) -> bool {
-        matches!(self, InstructionPosition::Bind)
+    pub fn is_method(&self) -> bool {
+        matches!(self, InstructionPosition::Method)
     }
 }
 
-impl BindingsType {
+impl MethodsType {
     pub fn is_struct_type(&self) -> bool {
-        matches!(self, BindingsType::Struct(_))
+        matches!(self, MethodsType::Struct(_))
     }
 
     pub fn dissamble(&self) -> ThrushType {
         match self {
-            BindingsType::Struct(tp) => tp.clone(),
-            BindingsType::NoRelevant => ThrushType::Void,
+            MethodsType::Struct(tp) => tp.clone(),
+            MethodsType::NoRelevant => ThrushType::Void,
         }
     }
 }
