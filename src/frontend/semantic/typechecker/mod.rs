@@ -119,7 +119,7 @@ impl<'stmts> TypeChecker<'stmts> {
             ..
         } = stmt
         {
-            let from_type: &ThrushType = value.get_type()?;
+            let from_type: &ThrushType = value.get_value_type()?;
 
             if let Err(mismatch_type_error) =
                 self.is_mismatch_type(target_type, from_type, Some(value), None, span)
@@ -173,7 +173,7 @@ impl<'stmts> TypeChecker<'stmts> {
         {
             self.symbols.new_local(name, local_type);
 
-            let local_value_type: &ThrushType = local_value.get_type()?;
+            let local_value_type: &ThrushType = local_value.get_value_type()?;
 
             if let Err(mismatch_type_error) =
                 self.is_mismatch_type(local_type, local_value_type, Some(local_value), None, span)
@@ -195,7 +195,7 @@ impl<'stmts> TypeChecker<'stmts> {
             ..
         } = stmt
         {
-            let lli_value_type: &ThrushType = lli_value.get_type()?;
+            let lli_value_type: &ThrushType = lli_value.get_value_type()?;
 
             if let Err(mismatch_type_error) =
                 self.is_mismatch_type(lli_type, lli_value_type, Some(lli_value), None, span)
@@ -218,9 +218,12 @@ impl<'stmts> TypeChecker<'stmts> {
             ..
         } = stmt
         {
-            if let Err(mismatch_type_error) =
-                self.check_binaryop(operator, left.get_type()?, right.get_type()?, *span)
-            {
+            if let Err(mismatch_type_error) = self.check_binaryop(
+                operator,
+                left.get_value_type()?,
+                right.get_value_type()?,
+                *span,
+            ) {
                 self.add_error(mismatch_type_error);
             }
 
@@ -243,7 +246,7 @@ impl<'stmts> TypeChecker<'stmts> {
         } = stmt
         {
             if let Err(mismatch_type_error) =
-                self.check_unary(operator, expression.get_type()?, *span)
+                self.check_unary(operator, expression.get_value_type()?, *span)
             {
                 self.add_error(mismatch_type_error);
             }
@@ -287,7 +290,7 @@ impl<'stmts> TypeChecker<'stmts> {
 
                 if !ignore_more_arguments {
                     for (target_type, expr) in parameter_types.iter().zip(args.iter()) {
-                        let from_type: &ThrushType = expr.get_type()?;
+                        let from_type: &ThrushType = expr.get_value_type()?;
                         let span: Span = expr.get_span();
 
                         if let Err(mismatched_types_error) =
@@ -342,7 +345,7 @@ impl<'stmts> TypeChecker<'stmts> {
                     }
 
                     for (target_type, arg) in types.iter().zip(args.iter()) {
-                        let from_type: &ThrushType = arg.get_type()?;
+                        let from_type: &ThrushType = arg.get_value_type()?;
                         let span: Span = arg.get_span();
 
                         if let Err(mismatched_types_error) =
@@ -384,7 +387,7 @@ impl<'stmts> TypeChecker<'stmts> {
                 if let Some(local_type) = self.symbols.get_local(local_name) {
                     if let Err(mismatched_types_error) = self.is_mismatch_type(
                         local_type,
-                        value.get_type()?,
+                        value.get_value_type()?,
                         Some(value),
                         None,
                         span,
@@ -406,8 +409,8 @@ impl<'stmts> TypeChecker<'stmts> {
 
             if let (None, Some(expression)) = source {
                 if let Err(mismatched_types_error) = self.is_mismatch_type(
-                    expression.get_type()?,
-                    value.get_type()?,
+                    expression.get_value_type()?,
+                    value.get_value_type()?,
                     Some(value),
                     None,
                     span,
@@ -432,7 +435,7 @@ impl<'stmts> TypeChecker<'stmts> {
         } = stmt
         {
             let from_type = if let Some(expression) = expression {
-                expression.get_type()?
+                expression.get_value_type()?
             } else {
                 &ThrushType::Void
             };
@@ -452,9 +455,13 @@ impl<'stmts> TypeChecker<'stmts> {
             cond, elfs, span, ..
         } = stmt
         {
-            if let Err(mismatched_types_error) =
-                self.is_mismatch_type(&ThrushType::Bool, cond.get_type()?, Some(cond), None, span)
-            {
+            if let Err(mismatched_types_error) = self.is_mismatch_type(
+                &ThrushType::Bool,
+                cond.get_value_type()?,
+                Some(cond),
+                None,
+                span,
+            ) {
                 self.add_error(mismatched_types_error);
             }
 
@@ -462,7 +469,7 @@ impl<'stmts> TypeChecker<'stmts> {
                 if let ThrushStatement::Elif { cond, span, .. } = elif {
                     if let Err(mismatched_types_error) = self.is_mismatch_type(
                         &ThrushType::Bool,
-                        cond.get_type()?,
+                        cond.get_value_type()?,
                         Some(cond),
                         None,
                         span,
@@ -483,7 +490,7 @@ impl<'stmts> TypeChecker<'stmts> {
                 let expression_span: Span = expression.get_span();
 
                 let target_type: &ThrushType = &arg.2;
-                let from_type: &ThrushType = expression.get_type()?;
+                let from_type: &ThrushType = expression.get_value_type()?;
 
                 if let Err(mismatched_types_error) = self.is_mismatch_type(
                     target_type,
@@ -501,7 +508,8 @@ impl<'stmts> TypeChecker<'stmts> {
 
         if let ThrushStatement::Load { .. }
         | ThrushStatement::Write { .. }
-        | ThrushStatement::Address { .. } = stmt
+        | ThrushStatement::Address { .. }
+        | ThrushStatement::Alloc { .. } = stmt
         {
             return Ok(());
         }
@@ -549,8 +557,6 @@ impl<'stmts> TypeChecker<'stmts> {
         if let ThrushStatement::Pass { .. } = stmt {
             return Ok(());
         }
-
-        println!("{:?}", stmt);
 
         self.errors.push(ThrushCompilerIssue::Bug(
             String::from("Expression not caught"),

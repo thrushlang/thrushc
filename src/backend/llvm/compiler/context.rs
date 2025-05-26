@@ -71,13 +71,26 @@ impl<'a, 'ctx> LLVMCodeGenContext<'a, 'ctx> {
             kind.is_heap_allocated(self.context, &self.target_data),
         );
 
-        let symbol_allocated: SymbolAllocated =
+        let local: SymbolAllocated =
             SymbolAllocated::new(self, SymbolToAllocate::Local, ptr_allocated.into(), kind);
 
-        self.blocks
-            .last_mut()
-            .unwrap()
-            .insert(name, symbol_allocated);
+        if let Some(last_block) = self.blocks.last_mut() {
+            last_block.insert(name, local);
+        }
+    }
+
+    pub fn alloc_low_level_instruction(
+        &mut self,
+        name: &'ctx str,
+        value: BasicValueEnum<'ctx>,
+        kind: &'ctx ThrushType,
+    ) {
+        let lli: SymbolAllocated =
+            SymbolAllocated::new(self, SymbolToAllocate::LowLevelInstruction, value, kind);
+
+        if let Some(last_block) = self.blocks.last_mut() {
+            last_block.insert(name, lli);
+        }
     }
 
     pub fn alloc_constant(

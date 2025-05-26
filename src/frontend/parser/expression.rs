@@ -1,4 +1,5 @@
 use crate::{
+    backend::llvm::compiler::attributes::LLVMAttribute,
     frontend::lexer::{span::Span, token::Token},
     standard::errors::standard::ThrushCompilerIssue,
     types::frontend::{
@@ -9,6 +10,7 @@ use crate::{
         parser::{
             stmts::{
                 ident::ReferenceIndentificator,
+                sites::LLIAllocationSite,
                 stmt::ThrushStatement,
                 traits::{
                     ConstructorExtensions, EnumExtensions, EnumFieldsExtensions, FoundSymbolEither,
@@ -30,7 +32,7 @@ use crate::{
     },
 };
 
-use super::{ParserContext, contexts::SyncPosition, parse, typegen};
+use super::{ParserContext, contexts::SyncPosition, parse, stmt, typegen};
 
 pub fn build_expression<'instr>(
     parser_ctx: &mut ParserContext<'instr>,
@@ -131,14 +133,14 @@ fn and<'instr>(
 fn equality<'instr>(
     parser_ctx: &mut ParserContext<'instr>,
 ) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
-    let mut expression: ThrushStatement = cmp(parser_ctx)?;
+    let mut expression: ThrushStatement = self::casts(parser_ctx)?;
 
     if parser_ctx.match_token(TokenKind::BangEq)? || parser_ctx.match_token(TokenKind::EqEq)? {
         let operator_tk: &Token = parser_ctx.previous();
         let operator: TokenKind = operator_tk.kind;
         let span: Span = operator_tk.span;
 
-        let right: ThrushStatement = self::cmp(parser_ctx)?;
+        let right: ThrushStatement = self::casts(parser_ctx)?;
 
         expression = ThrushStatement::BinaryOp {
             left: expression.into(),
@@ -147,6 +149,44 @@ fn equality<'instr>(
             kind: ThrushType::Bool,
             span,
         }
+    }
+
+    Ok(expression)
+}
+
+fn casts<'instr>(
+    parser_ctx: &mut ParserContext<'instr>,
+) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
+    let mut expression: ThrushStatement = self::cmp(parser_ctx)?;
+
+    if parser_ctx.match_token(TokenKind::CastPtr)? {
+        let span: Span = parser_ctx.previous().span;
+
+        if !expression.is_ref_lli() {
+            return Err(ThrushCompilerIssue::Error(
+                String::from("Syntax error"),
+                String::from("Expected lli reference."),
+                None,
+                span,
+            ));
+        }
+
+        let cast_type: ThrushType = typegen::build_type(parser_ctx)?;
+
+        if !cast_type.is_ptr_type() {
+            return Err(ThrushCompilerIssue::Error(
+                String::from("Syntax error"),
+                String::from("Expected any pointer type."),
+                None,
+                span,
+            ));
+        }
+
+        expression = ThrushStatement::CastPtr {
+            from: expression.into(),
+            cast_type,
+            span,
+        };
     }
 
     Ok(expression)
@@ -196,8 +236,8 @@ fn term<'instr>(
 
         let right: ThrushStatement = self::factor(parser_ctx)?;
 
-        let left_type: &ThrushType = expression.get_type()?;
-        let right_type: &ThrushType = right.get_type()?;
+        let left_type: &ThrushType = expression.get_value_type()?;
+        let right_type: &ThrushType = right.get_value_type()?;
 
         let kind: &ThrushType = left_type.precompute_type(right_type);
 
@@ -225,8 +265,8 @@ fn factor<'instr>(
 
         let right: ThrushStatement = self::unary(parser_ctx)?;
 
-        let left_type: &ThrushType = expression.get_type()?;
-        let right_type: &ThrushType = right.get_type()?;
+        let left_type: &ThrushType = expression.get_value_type()?;
+        let right_type: &ThrushType = right.get_value_type()?;
 
         let kind: &ThrushType = left_type.precompute_type(right_type);
 
@@ -270,7 +310,7 @@ fn unary<'instr>(
 
         expression.cast_signess(operator);
 
-        let expression_type: &ThrushType = expression.get_type()?;
+        let expression_type: &ThrushType = expression.get_value_type()?;
 
         return Ok(ThrushStatement::UnaryOp {
             operator,
@@ -290,6 +330,65 @@ fn primary<'instr>(
     parser_ctx: &mut ParserContext<'instr>,
 ) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
     let primary: ThrushStatement = match &parser_ctx.peek().kind {
+        TokenKind::Alloc => {
+            let alloc_tk: &Token = parser_ctx.advance()?;
+            let span: Span = alloc_tk.span;
+
+            let site_allocation: LLIAllocationSite = match parser_ctx.peek().kind {
+                TokenKind::Heap => {
+                    parser_ctx.only_advance()?;
+                    LLIAllocationSite::Heap
+                }
+                TokenKind::Stack => {
+                    parser_ctx.only_advance()?;
+                    LLIAllocationSite::Stack
+                }
+                TokenKind::Static => {
+                    parser_ctx.only_advance()?;
+                    LLIAllocationSite::Static
+                }
+                _ => {
+                    return Err(ThrushCompilerIssue::Error(
+                        String::from("Syntax error"),
+                        String::from("Expected site allocation flag."),
+                        None,
+                        span,
+                    ));
+                }
+            };
+
+            parser_ctx.consume(
+                TokenKind::LBrace,
+                String::from("Syntax error"),
+                String::from("Expected '{'."),
+            )?;
+
+            let mut alloc_type: ThrushType = typegen::build_type(parser_ctx)?;
+
+            if !alloc_type.is_ptr_type() {
+                alloc_type = ThrushType::Ptr(Some(alloc_type.into()));
+            }
+
+            let attributes: Vec<LLVMAttribute> = if parser_ctx.match_token(TokenKind::LBrace)? {
+                stmt::build_attributes(parser_ctx, &[TokenKind::RBrace, TokenKind::SemiColon])?
+            } else {
+                Vec::new()
+            };
+
+            parser_ctx.consume(
+                TokenKind::RBrace,
+                String::from("Syntax error"),
+                String::from("Expected '}'."),
+            )?;
+
+            ThrushStatement::Alloc {
+                type_to_alloc: alloc_type,
+                site_allocation,
+                attributes,
+                span,
+            }
+        }
+
         TokenKind::Load => {
             let load_tk: &Token = parser_ctx.advance()?;
             let span: Span = load_tk.span;
@@ -322,7 +421,7 @@ fn primary<'instr>(
 
             let expression: ThrushStatement = self::build_expr(parser_ctx)?;
 
-            let expression_type: &ThrushType = expression.get_type()?;
+            let expression_type: &ThrushType = expression.get_value_type()?;
 
             if !expression_type.is_ptr_type() && !expression_type.is_address_type() {
                 return Err(ThrushCompilerIssue::Error(
@@ -364,9 +463,9 @@ fn primary<'instr>(
             let value: ThrushStatement = self::build_expr(parser_ctx)?;
 
             parser_ctx.consume(
-                TokenKind::Arrow,
+                TokenKind::Comma,
                 String::from("Syntax error"),
-                String::from("Expected '->'."),
+                String::from("Expected ','."),
             )?;
 
             if parser_ctx.check(TokenKind::Identifier) {
@@ -390,7 +489,7 @@ fn primary<'instr>(
 
             let expression: ThrushStatement = build_expr(parser_ctx)?;
 
-            let expression_type: &ThrushType = expression.get_type()?;
+            let expression_type: &ThrushType = expression.get_value_type()?;
 
             if !expression_type.is_ptr_type() && !expression_type.is_address_type() {
                 return Err(ThrushCompilerIssue::Error(
@@ -496,7 +595,7 @@ fn primary<'instr>(
 
             let expression: ThrushStatement = build_expr(parser_ctx)?;
 
-            let kind: &ThrushType = expression.get_type()?;
+            let kind: &ThrushType = expression.get_value_type()?;
 
             if !expression.is_binary() && !expression.is_group() {
                 return Err(ThrushCompilerIssue::Error(
@@ -655,7 +754,7 @@ fn primary<'instr>(
                     return Ok(ThrushStatement::Mut {
                         source: (None, Some(property.clone().into())),
                         value: expr.into(),
-                        kind: property.get_type()?.clone(),
+                        kind: property.get_value_type()?.clone(),
                         span,
                     });
                 }
@@ -987,7 +1086,7 @@ fn build_enum_field<'instr>(
 
     let field: EnumField = union.get_field(field_name);
     let field_value: ThrushStatement = field.1;
-    let field_type: ThrushType = field_value.get_type()?.clone();
+    let field_type: ThrushType = field_value.get_value_type()?.clone();
 
     let canonical_name: String = format!("{}.{}", name, field_name);
 
@@ -1005,6 +1104,7 @@ fn build_address<'instr>(
     span: Span,
 ) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
     let object: FoundSymbolId = parser_ctx.get_symbols().get_symbols_id(name, span)?;
+
     let local_id: (&str, usize) = object.expected_local(span)?;
 
     let local: &LocalSymbol = parser_ctx
@@ -1034,7 +1134,7 @@ fn build_address<'instr>(
             String::from("Syntax error"),
             format!(
                 "Expected unsigned integer type (u8, u16, u32), not {}. ",
-                index.get_type()?,
+                index.get_value_type()?,
             ),
             None,
             index.get_span(),
@@ -1057,7 +1157,7 @@ fn build_address<'instr>(
                 String::from("Syntax error"),
                 format!(
                     "Expected unsigned integer type (u8, u16, u32), not {}. ",
-                    index.get_type()?,
+                    index.get_value_type()?,
                 ),
                 None,
                 index.get_span(),

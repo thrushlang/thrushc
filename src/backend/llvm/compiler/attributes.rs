@@ -65,7 +65,7 @@ impl<'ctx> AttributeBuilder<'ctx> {
         }
     }
 
-    pub fn add_attributes(&mut self, call_convention: &mut u32) {
+    pub fn add_function_attributes(&mut self, call_convention: &mut u32) {
         match self.attribute_applicant {
             LLVMAttributeApplicant::Function(function) => {
                 self.attributes

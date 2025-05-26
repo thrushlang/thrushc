@@ -3,6 +3,7 @@ use std::rc::Rc;
 use crate::backend::llvm::compiler::context::LLVMCodeGenContextPosition;
 use crate::backend::llvm::compiler::memory::{self, SymbolAllocated};
 use crate::backend::llvm::compiler::{binaryop, builtins, cast, unaryop, utils};
+use crate::standard::logging::{self, LoggingType};
 use crate::types::backend::llvm::types::LLVMFunction;
 use crate::types::frontend::lexer::types::ThrushType;
 use crate::types::frontend::parser::stmts::stmt::ThrushStatement;
@@ -13,7 +14,8 @@ use super::context::LLVMCodeGenContext;
 use super::typegen;
 
 use inkwell::module::{Linkage, Module};
-use inkwell::types::BasicTypeEnum;
+use inkwell::targets::TargetData;
+use inkwell::types::{BasicTypeEnum, PointerType};
 
 use inkwell::AddressSpace;
 use inkwell::values::{
@@ -143,6 +145,17 @@ pub fn build<'ctx>(
         return llvm_context.bool_type().const_int(*value, false).into();
     }
 
+    if let ThrushStatement::Alloc {
+        type_to_alloc,
+        site_allocation,
+        ..
+    } = expression
+    {
+        let site_allocation: memory::LLVMAllocationSite = site_allocation.to_llvm_allocation_site();
+
+        return memory::alloc_anon(site_allocation, context, type_to_alloc).into();
+    }
+
     if let ThrushStatement::Write {
         write_to,
         write_type,
@@ -154,11 +167,16 @@ pub fn build<'ctx>(
 
         if let Some(expression) = write_to.1.as_ref() {
             let compiled_expression: PointerValue =
-                build(expression, &ThrushType::Void, context).into_pointer_value();
+                self::build(expression, &ThrushType::Void, context).into_pointer_value();
 
-            llvm_builder
-                .build_store(compiled_expression, write_value)
-                .unwrap();
+            if let Ok(store) = llvm_builder.build_store(compiled_expression, write_value) {
+                let target_data: &TargetData = &context.target_data;
+
+                let preferred_memory_alignment: u32 =
+                    target_data.get_preferred_alignment(&compiled_expression.get_type());
+
+                let _ = store.set_alignment(preferred_memory_alignment);
+            }
 
             return llvm_context
                 .ptr_type(AddressSpace::default())
@@ -178,14 +196,39 @@ pub fn build<'ctx>(
         }
     }
 
+    if let ThrushStatement::CastPtr {
+        from, cast_type, ..
+    } = expression
+    {
+        let ptr: PointerValue = self::build(from, cast_type, context).into_pointer_value();
+
+        let cast_type: PointerType =
+            typegen::generate_type(llvm_context, cast_type).into_pointer_type();
+
+        if let Ok(casted_ptr) = llvm_builder.build_pointer_cast(ptr, cast_type, "") {
+            return casted_ptr.into();
+        }
+
+        logging::log(
+            LoggingType::Panic,
+            &format!("Pointer casting could not be completed from: '{}'.", from),
+        );
+    }
+
     if let ThrushStatement::Load { load, kind, .. } = expression {
         if let Some(expression) = &load.1 {
             let ptr: PointerValue = self::build(expression, kind, context).into_pointer_value();
+
             return memory::load_anon(context, kind, ptr);
         }
 
         if let Some(ref_name) = load.0 {
-            return context.get_allocated_symbol(ref_name).load(context);
+            let ptr: PointerValue = context
+                .get_allocated_symbol(ref_name)
+                .load(context)
+                .into_pointer_value();
+
+            return memory::load_anon(context, kind, ptr);
         }
     }
 

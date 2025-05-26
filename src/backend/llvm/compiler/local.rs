@@ -3,7 +3,7 @@ use crate::types::{backend::llvm::types::LLVMLocal, frontend::lexer::types::Thru
 use super::{
     ThrushStatement,
     context::{LLVMCodeGenContext, LLVMCodeGenContextPosition},
-    memory::{self, AllocSite, SymbolAllocated},
+    memory::{self, LLVMAllocationSite, SymbolAllocated},
     valuegen,
 };
 
@@ -139,7 +139,8 @@ fn build_local_structure<'ctx>(local: LLVMLocal<'ctx>, context: &mut LLVMCodeGen
                 let src_ptr: PointerValue = expr.into_pointer_value();
 
                 if !src_ptr.is_null() {
-                    let dest_ptr: PointerValue = memory::alloc(AllocSite::Heap, context, expr_type);
+                    let dest_ptr: PointerValue =
+                        memory::alloc_anon(LLVMAllocationSite::Heap, context, expr_type);
 
                     memory::memcpy(context, dest_ptr, src_ptr, expr_type);
 

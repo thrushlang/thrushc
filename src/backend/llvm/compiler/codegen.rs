@@ -6,7 +6,6 @@ use crate::types::frontend::parser::stmts::stmt::ThrushStatement;
 
 use super::super::compiler::attributes::LLVMAttribute;
 
-use super::deallocator;
 use super::{
     attributes::{AttributeBuilder, LLVMAttributeApplicant},
     binaryop,
@@ -14,6 +13,7 @@ use super::{
     conventions::CallConvention,
     local, typegen, unaryop, valuegen,
 };
+use super::{deallocator, llis};
 
 use inkwell::{
     AddressSpace,
@@ -421,6 +421,17 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 ThrushStatement::Null { span: *span }
             }
 
+            ThrushStatement::LLI {
+                name,
+                kind,
+                value,
+                span,
+            } => {
+                llis::build(name, kind, value, &mut self.context);
+
+                ThrushStatement::Null { span: *span }
+            }
+
             ThrushStatement::Mut { kind, span, .. } => {
                 valuegen::build(stmt, kind, &mut self.context);
 
@@ -642,7 +653,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
             LLVMAttributeApplicant::Function(function),
         );
 
-        attribute_builder.add_attributes(&mut call_convention);
+        attribute_builder.add_function_attributes(&mut call_convention);
 
         if !is_public && ffi.is_none() {
             function.set_linkage(Linkage::LinkerPrivate);

@@ -24,7 +24,6 @@ lazy_static! {
         keywords.insert(b"break", TokenKind::Break);
         keywords.insert(b"continue", TokenKind::Continue);
         keywords.insert(b"methods", TokenKind::Methods);
-        keywords.insert(b"def", TokenKind::Def);
         keywords.insert(b"this", TokenKind::This);
         keywords.insert(b"pass", TokenKind::Pass);
         keywords.insert(b"Me", TokenKind::Me);
@@ -33,8 +32,13 @@ lazy_static! {
         keywords.insert(b"instr", TokenKind::Instr);
         keywords.insert(b"mut", TokenKind::Mut);
         keywords.insert(b"nullptr", TokenKind::NullPtr);
+        keywords.insert(b"castptr", TokenKind::CastPtr);
         keywords.insert(b"type", TokenKind::Type);
         keywords.insert(b"enum", TokenKind::Enum);
+        keywords.insert(b"alloc", TokenKind::Alloc);
+        keywords.insert(b"heap!", TokenKind::Heap);
+        keywords.insert(b"stack!", TokenKind::Stack);
+        keywords.insert(b"static!", TokenKind::Static);
         keywords.insert(b"address", TokenKind::Address);
         keywords.insert(b"load", TokenKind::Load);
         keywords.insert(b"write", TokenKind::Write);

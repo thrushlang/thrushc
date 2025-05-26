@@ -11,7 +11,9 @@ use inkwell::{
 };
 
 use crate::{
-    backend::llvm::compiler::typegen, standard::logging, types::frontend::lexer::types::ThrushType,
+    backend::llvm::compiler::typegen,
+    standard::logging::{self, LoggingType},
+    types::frontend::lexer::types::ThrushType,
 };
 
 use inkwell::{
@@ -31,6 +33,10 @@ pub enum SymbolAllocated<'ctx> {
         ptr: PointerValue<'ctx>,
         kind: &'ctx ThrushType,
     },
+    LowLevelInstruction {
+        value: BasicValueEnum<'ctx>,
+        kind: &'ctx ThrushType,
+    },
     Parameter {
         value: BasicValueEnum<'ctx>,
         kind: &'ctx ThrushType,
@@ -42,12 +48,14 @@ pub enum SymbolToAllocate {
     Local,
     Constant,
     Parameter,
+    LowLevelInstruction,
 }
 
 #[derive(Debug, Clone, Copy)]
-pub enum AllocSite {
+pub enum LLVMAllocationSite {
     Heap,
     Stack,
+    Static,
 }
 
 impl<'ctx> SymbolAllocated<'ctx> {
@@ -87,6 +95,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
 
                 Self::Parameter { value, kind }
             }
+            SymbolToAllocate::LowLevelInstruction => Self::LowLevelInstruction { value, kind },
         }
     }
 
@@ -173,6 +182,8 @@ impl<'ctx> SymbolAllocated<'ctx> {
 
                 loaded_value
             }
+
+            Self::LowLevelInstruction { value, .. } => *value,
         }
     }
 
@@ -195,6 +206,12 @@ impl<'ctx> SymbolAllocated<'ctx> {
             }
 
             Self::Parameter { value, .. } if value.is_pointer_value() => {
+                if let Ok(store) = llvm_builder.build_store(value.into_pointer_value(), new_value) {
+                    let _ = store.set_alignment(preferred_memory_alignment);
+                }
+            }
+
+            Self::LowLevelInstruction { value, .. } if value.is_pointer_value() => {
                 if let Ok(store) = llvm_builder.build_store(value.into_pointer_value(), new_value) {
                     let _ = store.set_alignment(preferred_memory_alignment);
                 }
@@ -273,15 +290,20 @@ impl<'ctx> SymbolAllocated<'ctx> {
         match self {
             Self::Local { ptr, kind } | Self::Constant { ptr, kind } => unsafe {
                 builder
-                    .build_in_bounds_gep(typegen::generate_type(context, kind), *ptr, indexes, "")
+                    .build_in_bounds_gep(
+                        typegen::generate_subtype(context, kind),
+                        *ptr,
+                        indexes,
+                        "",
+                    )
                     .unwrap()
             },
-            Self::Parameter { value, kind } => {
+            Self::Parameter { value, kind } | Self::LowLevelInstruction { value, kind } => {
                 if value.is_pointer_value() {
                     return unsafe {
                         builder
                             .build_in_bounds_gep(
-                                typegen::generate_type(context, kind),
+                                typegen::generate_subtype(context, kind),
                                 (*value).into_pointer_value(),
                                 indexes,
                                 "",
@@ -303,13 +325,13 @@ impl<'ctx> SymbolAllocated<'ctx> {
     ) -> PointerValue<'ctx> {
         match self {
             Self::Local { ptr, kind } | Self::Constant { ptr, kind } => builder
-                .build_struct_gep(typegen::generate_type(context, kind), *ptr, index, "")
+                .build_struct_gep(typegen::generate_subtype(context, kind), *ptr, index, "")
                 .unwrap(),
-            Self::Parameter { value, kind } => {
+            Self::Parameter { value, kind } | Self::LowLevelInstruction { value, kind } => {
                 if value.is_pointer_value() {
                     return builder
                         .build_struct_gep(
-                            typegen::generate_type(context, kind),
+                            typegen::generate_subtype(context, kind),
                             (*value).into_pointer_value(),
                             index,
                             "",
@@ -326,13 +348,27 @@ impl<'ctx> SymbolAllocated<'ctx> {
         match self {
             Self::Local { ptr, .. } => ptr.get_type().size_of().into(),
             Self::Constant { ptr, .. } => ptr.get_type().size_of().into(),
+
             Self::Parameter { value, .. } => value
                 .get_type()
                 .size_of()
                 .unwrap_or_else(|| {
                     logging::log(
-                        logging::LoggingType::Panic,
-                        "built-in sizeof!(), cannot be get size of an function parameter.",
+                        LoggingType::Panic,
+                        "Built-in sizeof!(), cannot be get size of an function parameter.",
+                    );
+
+                    unreachable!()
+                })
+                .into(),
+
+            Self::LowLevelInstruction { value, .. } => value
+                .get_type()
+                .size_of()
+                .unwrap_or_else(|| {
+                    logging::log(
+                        LoggingType::Panic,
+                        "Built-in sizeof!(), cannot be get size of an Low Level Instruction.",
                     );
 
                     unreachable!()
@@ -344,7 +380,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
     pub fn take(&self) -> BasicValueEnum<'ctx> {
         match self {
             Self::Local { ptr, .. } | Self::Constant { ptr, .. } => (*ptr).into(),
-            Self::Parameter { value, .. } => *value,
+            Self::Parameter { value, .. } | Self::LowLevelInstruction { value, .. } => *value,
         }
     }
 
@@ -353,6 +389,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
             Self::Local { kind, .. } => kind,
             Self::Constant { kind, .. } => kind,
             Self::Parameter { kind, .. } => kind,
+            Self::LowLevelInstruction { kind, .. } => kind,
         }
     }
 
@@ -361,6 +398,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
             Self::Local { ptr, .. } => (*ptr).into(),
             Self::Constant { ptr, .. } => (*ptr).into(),
             Self::Parameter { value, .. } => *value,
+            Self::LowLevelInstruction { value, .. } => *value,
         }
     }
 }
@@ -487,8 +525,6 @@ fn create_field_deallocator<'ctx>(
             .map(|indexe| llvm_context.i32_type().const_int((*indexe).into(), false))
             .collect();
 
-        if indexes.len() >= 2 {}
-
         if let Ok(address) = unsafe { llvm_builder.build_gep(dealloc_type, ptr, &indexes, "") } {
             let ptr_loaded: BasicValueEnum = llvm_builder
                 .build_load(llvm_context.ptr_type(AddressSpace::default()), address, "")
@@ -560,19 +596,52 @@ pub fn load_maybe<'ctx>(
     value
 }
 
-pub fn alloc<'ctx>(
-    site: AllocSite,
+pub fn alloc_anon<'ctx>(
+    site: LLVMAllocationSite,
     context: &LLVMCodeGenContext<'_, 'ctx>,
     kind: &ThrushType,
 ) -> PointerValue<'ctx> {
+    let llvm_module: &Module = context.get_llvm_module();
     let llvm_context: &Context = context.get_llvm_context();
     let llvm_builder: &Builder = context.get_llvm_builder();
+    let target_data: &TargetData = &context.target_data;
 
-    let llvm_type: BasicTypeEnum = typegen::generate_type(llvm_context, kind);
+    let llvm_type: BasicTypeEnum = typegen::generate_subtype(llvm_context, kind);
+
+    let preferred_memory_alignment: u32 = target_data.get_preferred_alignment(&llvm_type);
 
     match site {
-        AllocSite::Stack => llvm_builder.build_alloca(llvm_type, "").unwrap(),
-        AllocSite::Heap => llvm_builder.build_malloc(llvm_type, "").unwrap(),
+        LLVMAllocationSite::Stack => {
+            if let Ok(ptr) = llvm_builder.build_alloca(llvm_type, "") {
+                if let Some(instruction) = ptr.as_instruction() {
+                    let _ = instruction.set_alignment(preferred_memory_alignment);
+                }
+
+                return ptr;
+            }
+
+            logging::log(
+                LoggingType::Panic,
+                &format!("Cannot assign type to stack: '{}'.", kind),
+            );
+
+            unreachable!()
+        }
+        LLVMAllocationSite::Heap => {
+            if let Ok(ptr) = llvm_builder.build_malloc(llvm_type, "") {
+                return ptr;
+            }
+
+            logging::log(
+                LoggingType::Panic,
+                &format!("Cannot assign type to heap: '{}'.", kind),
+            );
+
+            unreachable!()
+        }
+        LLVMAllocationSite::Static => llvm_module
+            .add_global(llvm_type, Some(AddressSpace::default()), "")
+            .as_pointer_value(),
     }
 }
 

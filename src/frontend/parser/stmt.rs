@@ -155,7 +155,7 @@ pub fn build_methods<'instr>(
     )?;
 
     while parser_ctx.peek().kind != TokenKind::RBrace {
-        let bind: ThrushStatement = self::build_def(declare, parser_ctx)?;
+        let bind: ThrushStatement = self::build_method(declare, parser_ctx)?;
 
         parser_ctx
             .get_mut_control_ctx()
@@ -198,14 +198,14 @@ pub fn build_methods<'instr>(
     })
 }
 
-fn build_def<'instr>(
+fn build_method<'instr>(
     declare: bool,
     parser_ctx: &mut ParserContext<'instr>,
 ) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
     parser_ctx.consume(
-        TokenKind::Def,
+        TokenKind::Fn,
         String::from("Syntax error"),
-        String::from("Expected 'def' keyword."),
+        String::from("Expected 'fn' keyword."),
     )?;
 
     let bind_name_tk: &Token = parser_ctx.consume(
@@ -341,7 +341,7 @@ fn build_def<'instr>(
         .set_function_type(return_type.clone());
 
     let bind_attributes: CompilerAttributes =
-        self::build_compiler_attributes(parser_ctx, &[TokenKind::LBrace])?;
+        self::build_attributes(parser_ctx, &[TokenKind::LBrace])?;
 
     if !declare {
         parser_ctx.get_mut_control_ctx().set_inside_bind(true);
@@ -781,7 +781,7 @@ pub fn build_custom_type<'instr>(
     )?;
 
     let custom_type_attributes: CompilerAttributes =
-        self::build_compiler_attributes(parser_ctx, &[TokenKind::LBrace])?;
+        self::build_attributes(parser_ctx, &[TokenKind::LBrace])?;
 
     parser_ctx.consume(
         TokenKind::LBrace,
@@ -843,7 +843,7 @@ pub fn build_enum<'instr>(
     let span: Span = name.span;
 
     let enum_attributes: CompilerAttributes =
-        self::build_compiler_attributes(parser_ctx, &[TokenKind::LBrace])?;
+        self::build_attributes(parser_ctx, &[TokenKind::LBrace])?;
 
     parser_ctx.consume(
         TokenKind::LBrace,
@@ -997,7 +997,7 @@ pub fn build_struct<'instr>(
     let span: Span = name.span;
 
     let struct_attributes: CompilerAttributes =
-        self::build_compiler_attributes(parser_ctx, &[TokenKind::LBrace])?;
+        self::build_attributes(parser_ctx, &[TokenKind::LBrace])?;
 
     parser_ctx.consume(
         TokenKind::LBrace,
@@ -1145,7 +1145,7 @@ pub fn build_const<'instr>(
     let const_type: ThrushType = typegen::build_type(parser_ctx)?;
 
     let const_attributes: CompilerAttributes =
-        self::build_compiler_attributes(parser_ctx, &[TokenKind::Eq])?;
+        self::build_attributes(parser_ctx, &[TokenKind::Eq])?;
 
     parser_ctx.consume(
         TokenKind::Eq,
@@ -1541,7 +1541,7 @@ pub fn build_function<'instr>(
         parser_ctx.get_mut_control_ctx().set_inside_function(true);
 
         let entrypoint: Result<ThrushStatement, ThrushCompilerIssue> =
-            build_entry_point(parser_ctx);
+            self::build_entry_point(parser_ctx);
 
         parser_ctx.get_mut_control_ctx().set_inside_function(false);
 
@@ -1634,7 +1634,7 @@ pub fn build_function<'instr>(
         .set_function_type(return_type.clone());
 
     let function_attributes: CompilerAttributes =
-        build_compiler_attributes(parser_ctx, &[TokenKind::SemiColon, TokenKind::LBrace])?;
+        self::build_attributes(parser_ctx, &[TokenKind::SemiColon, TokenKind::LBrace])?;
 
     let function_has_ffi: bool = function_attributes.has_ffi_attribute();
     let function_has_ignore: bool = function_attributes.has_ignore_attribute();
@@ -1679,6 +1679,7 @@ pub fn build_function<'instr>(
             String::from("Expected ';'."),
         )?;
 
+        parser_ctx.get_mut_symbols().end_parameters();
         parser_ctx.get_mut_control_ctx().set_inside_function(false);
 
         return Ok(function);
@@ -1686,7 +1687,7 @@ pub fn build_function<'instr>(
 
     parser_ctx.get_mut_control_ctx().set_inside_function(true);
 
-    let function_body: Rc<ThrushStatement> = build_block(parser_ctx)?.into();
+    let function_body: Rc<ThrushStatement> = self::build_block(parser_ctx)?.into();
 
     parser_ctx.get_mut_symbols().end_parameters();
     parser_ctx.get_mut_control_ctx().set_inside_function(false);
@@ -1715,7 +1716,7 @@ pub fn build_function<'instr>(
 
 ########################################################################*/
 
-fn build_compiler_attributes<'instr>(
+pub fn build_attributes<'instr>(
     parser_ctx: &mut ParserContext<'instr>,
     limits: &[TokenKind],
 ) -> Result<CompilerAttributes<'instr>, ThrushCompilerIssue> {

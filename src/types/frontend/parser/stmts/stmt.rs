@@ -15,6 +15,7 @@ use crate::{
 
 use super::{
     ident::ReferenceIndentificator,
+    sites::LLIAllocationSite,
     types::{CompilerAttributes, Constructor, EnumFields, StructFields},
 };
 
@@ -211,7 +212,6 @@ pub enum ThrushStatement<'ctx> {
         attributes: CompilerAttributes<'ctx>,
         span: Span,
     },
-
     Return {
         expression: Option<Rc<ThrushStatement<'ctx>>>,
         kind: ThrushType,
@@ -261,6 +261,13 @@ pub enum ThrushStatement<'ctx> {
     },
 
     // Pointer Manipulation
+    Alloc {
+        type_to_alloc: ThrushType,
+        site_allocation: LLIAllocationSite,
+        attributes: CompilerAttributes<'ctx>,
+        span: Span,
+    },
+
     Address {
         name: &'ctx str,
         indexes: Vec<ThrushStatement<'ctx>>,
@@ -278,6 +285,13 @@ pub enum ThrushStatement<'ctx> {
     Load {
         load: (Option<&'ctx str>, Option<Rc<ThrushStatement<'ctx>>>),
         kind: ThrushType,
+        span: Span,
+    },
+
+    // Casts
+    CastPtr {
+        from: Rc<ThrushStatement<'ctx>>,
+        cast_type: ThrushType,
         span: Span,
     },
 
@@ -324,7 +338,7 @@ pub enum ThrushStatement<'ctx> {
 }
 
 impl<'ctx> ThrushStatement<'ctx> {
-    pub fn get_type(&self) -> Result<&ThrushType, ThrushCompilerIssue> {
+    pub fn get_stmt_type(&self) -> Result<&ThrushType, ThrushCompilerIssue> {
         match self {
             ThrushStatement::Integer { kind, .. } => Ok(kind),
             ThrushStatement::Float { kind, .. } => Ok(kind),
@@ -346,10 +360,52 @@ impl<'ctx> ThrushStatement<'ctx> {
             ThrushStatement::Property { kind, .. } => Ok(kind),
             ThrushStatement::NullPtr { .. } => Ok(&ThrushType::Ptr(None)),
             ThrushStatement::This { kind, .. } => Ok(kind),
+            ThrushStatement::Alloc {
+                type_to_alloc: kind,
+                ..
+            } => Ok(kind),
             ThrushStatement::MethodCall { kind, .. } => Ok(kind),
             ThrushStatement::BindParameter { kind, .. } => Ok(kind),
-            ThrushStatement::Return { kind, .. } => Ok(kind),
             ThrushStatement::EnumValue { kind, .. } => Ok(kind),
+
+            _ => Err(ThrushCompilerIssue::Error(
+                String::from("Syntax error"),
+                String::from("Expected a valid statemant to get a type."),
+                None,
+                self.get_span(),
+            )),
+        }
+    }
+
+    pub fn get_value_type(&self) -> Result<&ThrushType, ThrushCompilerIssue> {
+        match self {
+            ThrushStatement::Integer { kind, .. } => Ok(kind),
+            ThrushStatement::Float { kind, .. } => Ok(kind),
+            ThrushStatement::Mut { kind, .. } => Ok(kind),
+            ThrushStatement::Reference { kind, .. } => Ok(kind),
+            ThrushStatement::Call { kind, .. } => Ok(kind),
+            ThrushStatement::BinaryOp { kind, .. } => Ok(kind),
+            ThrushStatement::Group { kind, .. } => Ok(kind),
+            ThrushStatement::UnaryOp { kind, .. } => Ok(kind),
+
+            ThrushStatement::Str { kind, .. } => Ok(kind),
+            ThrushStatement::Boolean { kind, .. } => Ok(kind),
+            ThrushStatement::Char { kind, .. } => Ok(kind),
+            ThrushStatement::Address { .. } => Ok(&ThrushType::Address),
+            ThrushStatement::Constructor { kind, .. } => Ok(kind),
+            ThrushStatement::Load { kind, .. } => Ok(kind),
+            ThrushStatement::Property { kind, .. } => Ok(kind),
+            ThrushStatement::NullPtr { .. } => Ok(&ThrushType::Ptr(None)),
+            ThrushStatement::This { kind, .. } => Ok(kind),
+            ThrushStatement::Alloc {
+                type_to_alloc: kind,
+                ..
+            } => Ok(kind),
+            ThrushStatement::MethodCall { kind, .. } => Ok(kind),
+            ThrushStatement::EnumValue { kind, .. } => Ok(kind),
+            ThrushStatement::CastPtr {
+                cast_type: kind, ..
+            } => Ok(kind),
 
             _ => Err(ThrushCompilerIssue::Error(
                 String::from("Syntax error"),
@@ -386,6 +442,9 @@ impl<'ctx> ThrushStatement<'ctx> {
             ThrushStatement::BindParameter { kind, .. } => kind,
             ThrushStatement::Return { kind, .. } => kind,
             ThrushStatement::EnumValue { kind, .. } => kind,
+            ThrushStatement::CastPtr {
+                cast_type: kind, ..
+            } => kind,
 
             any => {
                 panic!("Attempting to unwrap a null type: {:?}.", any)
@@ -405,6 +464,7 @@ impl<'ctx> ThrushStatement<'ctx> {
             ThrushStatement::BinaryOp { span, .. } => *span,
             ThrushStatement::Group { span, .. } => *span,
             ThrushStatement::UnaryOp { span, .. } => *span,
+            ThrushStatement::CastPtr { span, .. } => *span,
 
             ThrushStatement::Str { span, .. } => *span,
             ThrushStatement::Boolean { span, .. } => *span,
@@ -443,6 +503,7 @@ impl<'ctx> ThrushStatement<'ctx> {
             ThrushStatement::Loop { span, .. } => *span,
             ThrushStatement::EntryPoint { span, .. } => *span,
             ThrushStatement::Function { span, .. } => *span,
+            ThrushStatement::Alloc { span, .. } => *span,
         }
     }
 
@@ -551,7 +612,7 @@ impl<'ctx> ThrushStatement<'ctx> {
             let mut parameters_types: Vec<ThrushType> = Vec::with_capacity(10);
 
             for parameter in parameters {
-                parameters_types.push(parameter.get_type()?.clone());
+                parameters_types.push(parameter.get_stmt_type()?.clone());
             }
 
             return Ok(parameters_types);
@@ -702,7 +763,7 @@ impl ThrushStatement<'_> {
     #[inline]
     pub fn is_unsigned_integer(&self) -> Result<bool, ThrushCompilerIssue> {
         Ok(matches!(
-            self.get_type()?,
+            self.get_value_type()?,
             ThrushType::U8 | ThrushType::U16 | ThrushType::U32 | ThrushType::U64
         ))
     }
@@ -710,7 +771,7 @@ impl ThrushStatement<'_> {
     #[inline]
     pub fn is_anyu32bit_integer(&self) -> Result<bool, ThrushCompilerIssue> {
         Ok(matches!(
-            self.get_type()?,
+            self.get_value_type()?,
             ThrushType::U8 | ThrushType::U16 | ThrushType::U32
         ))
     }
@@ -718,6 +779,17 @@ impl ThrushStatement<'_> {
     #[inline]
     pub const fn is_ref(&self) -> bool {
         matches!(self, ThrushStatement::Reference { .. })
+    }
+
+    #[inline]
+    pub const fn is_ref_lli(&self) -> bool {
+        matches!(
+            self,
+            ThrushStatement::Reference {
+                identificator: ReferenceIndentificator::LowLevelInstruction,
+                ..
+            }
+        )
     }
 
     #[inline]
@@ -762,6 +834,7 @@ impl ThrushStatement<'_> {
             ThrushStatement::Write { .. }
                 | ThrushStatement::Load { .. }
                 | ThrushStatement::Address { .. }
+                | ThrushStatement::Alloc { .. }
         )
     }
 

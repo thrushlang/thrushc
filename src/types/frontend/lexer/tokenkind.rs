@@ -60,14 +60,18 @@ pub enum TokenKind {
     Convention,
 
     // --- Keywords ---
+    Alloc,
     Address,
     Instr,
     Load,
     Write,
+    CastPtr,
+    Heap,
+    Stack,
+    Static,
     New,
     Import,
     Methods,
-    Def,
     Mut,
     Ref,
     Type,
@@ -178,7 +182,6 @@ impl TokenKind {
                 | TokenKind::Continue
                 | TokenKind::Break
                 | TokenKind::Loop
-                | TokenKind::Def
         )
     }
 

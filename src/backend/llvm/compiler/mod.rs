@@ -6,6 +6,7 @@ pub mod codegen;
 pub mod context;
 pub mod conventions;
 pub mod deallocator;
+pub mod llis;
 pub mod local;
 pub mod memory;
 pub mod passes;

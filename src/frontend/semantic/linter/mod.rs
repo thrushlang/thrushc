@@ -106,6 +106,22 @@ impl<'linter> Linter<'linter> {
             self.end_scope();
         }
 
+        if let ThrushStatement::Load { load, .. } = stmt {
+            if let Some(local_name) = load.0 {
+                if let Some(local) = self.symbols.get_local_info(local_name) {
+                    local.1 = true;
+                }
+
+                if let Some(lli) = self.symbols.get_lli_info(local_name) {
+                    lli.1 = true;
+                }
+            }
+
+            if let Some(expr) = &load.1 {
+                self.analyze_stmt(expr);
+            }
+        }
+
         if let ThrushStatement::For {
             local,
             actions,

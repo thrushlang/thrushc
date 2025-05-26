@@ -94,7 +94,6 @@ impl std::fmt::Display for TokenKind {
             TokenKind::NullPtr => write!(f, "nullptr"),
             TokenKind::Methods => write!(f, "methods"),
             TokenKind::Instr => write!(f, "instr"),
-            TokenKind::Def => write!(f, "def"),
             TokenKind::Integer | TokenKind::Float => write!(f, "number"),
             TokenKind::Enum => write!(f, "enum"),
             TokenKind::Public => write!(f, "@public"),
@@ -128,8 +127,13 @@ impl std::fmt::Display for TokenKind {
             TokenKind::Char => write!(f, "char"),
             TokenKind::Ptr => write!(f, "ptr"),
             TokenKind::Me => write!(f, "me"),
+            TokenKind::Static => write!(f, "static!"),
+            TokenKind::Heap => write!(f, "heap!"),
+            TokenKind::Stack => write!(f, "stack!"),
             TokenKind::Address => write!(f, "address"),
-            TokenKind::Load => write!(f, "carry"),
+            TokenKind::Load => write!(f, "load"),
+            TokenKind::Alloc => write!(f, "alloc"),
+            TokenKind::CastPtr => write!(f, "castptr"),
             TokenKind::Void => write!(f, "void"),
         }
     }

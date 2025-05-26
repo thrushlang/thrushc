@@ -104,10 +104,22 @@ impl<'thrushc> TheThrushCompiler<'thrushc> {
 
         if self.emit_after_frontend(llvm_backend, build_dir, file, Emited::Tokens(&tokens)) {
             self.thrushc_time += thrushc_time.elapsed();
+
+            logging::write(
+                logging::OutputIn::Stdout,
+                &format!(
+                    "{} {} {}\n",
+                    "Compilation".custom_color((141, 141, 142)).bold(),
+                    "FINISHED".bright_green().bold(),
+                    &file.path.to_string_lossy()
+                ),
+            );
+
             return;
         }
 
         let parser: (ParserContext, bool) = Parser::parse(&tokens, file);
+
         let parser_result: (ParserContext, bool) = parser;
         let parser_context: ParserContext = parser_result.0;
         let parser_throwed_errors: bool = parser_result.1;
