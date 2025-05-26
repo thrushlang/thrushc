@@ -15,7 +15,7 @@ use crate::{
 
 use super::{
     ident::ReferenceIndentificator,
-    types::{CompilerAttributes, Constructor},
+    types::{CompilerAttributes, Constructor, EnumFields, StructFields},
 };
 
 #[derive(Debug, Clone)]
@@ -59,20 +59,15 @@ pub enum ThrushStatement<'ctx> {
     LLVMValue(BasicValueEnum<'ctx>, Span),
 
     // Structures
+    Struct {
+        name: &'ctx str,
+        fields: StructFields<'ctx>,
+        kind: ThrushType,
+        span: Span,
+    },
 
-    /*
-
-        // EXAMPLE:
-
-        struct Vector {
-            data T;
-            size u64;
-            capacity u64;
-        };
-
-    */
-    // new Vec { ... };
     Constructor {
+        name: &'ctx str,
         arguments: Constructor<'ctx>,
         kind: ThrushType,
         span: Span,
@@ -176,6 +171,19 @@ pub enum ThrushStatement<'ctx> {
     // Code block
     Block {
         stmts: Vec<ThrushStatement<'ctx>>,
+        span: Span,
+    },
+
+    // Enums
+    Enum {
+        name: &'ctx str,
+        fields: EnumFields<'ctx>,
+        span: Span,
+    },
+    EnumValue {
+        name: String,
+        value: Rc<ThrushStatement<'ctx>>,
+        kind: ThrushType,
         span: Span,
     },
 
@@ -341,10 +349,11 @@ impl<'ctx> ThrushStatement<'ctx> {
             ThrushStatement::MethodCall { kind, .. } => Ok(kind),
             ThrushStatement::BindParameter { kind, .. } => Ok(kind),
             ThrushStatement::Return { kind, .. } => Ok(kind),
+            ThrushStatement::EnumValue { kind, .. } => Ok(kind),
 
             _ => Err(ThrushCompilerIssue::Error(
                 String::from("Syntax error"),
-                String::from("Expected a value to get a type."),
+                String::from("Expected a valid statemant to get a type."),
                 None,
                 self.get_span(),
             )),
@@ -376,6 +385,7 @@ impl<'ctx> ThrushStatement<'ctx> {
             ThrushStatement::MethodCall { kind, .. } => kind,
             ThrushStatement::BindParameter { kind, .. } => kind,
             ThrushStatement::Return { kind, .. } => kind,
+            ThrushStatement::EnumValue { kind, .. } => kind,
 
             any => {
                 panic!("Attempting to unwrap a null type: {:?}.", any)
@@ -410,6 +420,9 @@ impl<'ctx> ThrushStatement<'ctx> {
             ThrushStatement::MethodCall { span, .. } => *span,
             ThrushStatement::BindParameter { span, .. } => *span,
             ThrushStatement::Return { span, .. } => *span,
+            ThrushStatement::Enum { span, .. } => *span,
+            ThrushStatement::EnumValue { span, .. } => *span,
+            ThrushStatement::Struct { span, .. } => *span,
 
             ThrushStatement::Else { span, .. } => *span,
             ThrushStatement::Elif { span, .. } => *span,
@@ -715,6 +728,16 @@ impl ThrushStatement<'_> {
     #[inline]
     pub const fn is_function(&self) -> bool {
         matches!(self, ThrushStatement::Function { .. })
+    }
+
+    #[inline]
+    pub const fn is_struct(&self) -> bool {
+        matches!(self, ThrushStatement::Struct { .. })
+    }
+
+    #[inline]
+    pub const fn is_enum(&self) -> bool {
+        matches!(self, ThrushStatement::Enum { .. })
     }
 
     #[inline]

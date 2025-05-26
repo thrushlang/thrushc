@@ -290,6 +290,19 @@ impl<'instr> ParserContext<'instr> {
     }
 
     #[must_use]
+    pub fn check_to(&self, kind: TokenKind, changer: usize) -> bool {
+        if self.is_eof() {
+            return false;
+        }
+
+        if self.current + changer >= self.tokens.len() {
+            return false;
+        }
+
+        self.tokens[self.current + changer].kind == kind
+    }
+
+    #[must_use]
     pub const fn is_main_scope(&self) -> bool {
         self.scope == 0
     }

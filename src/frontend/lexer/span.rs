@@ -26,6 +26,6 @@ impl Span {
     }
 
     pub fn get_span_end(&self) -> usize {
-        self.span.0
+        self.span.1
     }
 }

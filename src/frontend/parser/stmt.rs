@@ -16,7 +16,7 @@ use crate::{
         parser::{
             stmts::{
                 stmt::ThrushStatement,
-                traits::CompilerAttributesExtensions,
+                traits::{CompilerAttributesExtensions, StructFieldsExtensions},
                 types::{CompilerAttributes, CustomTypeFields, EnumFields, StructFields},
             },
             symbols::types::{Methods, ParametersTypes},
@@ -781,7 +781,7 @@ pub fn build_custom_type<'instr>(
     )?;
 
     let custom_type_attributes: CompilerAttributes =
-        build_compiler_attributes(parser_ctx, &[TokenKind::LBrace])?;
+        self::build_compiler_attributes(parser_ctx, &[TokenKind::LBrace])?;
 
     parser_ctx.consume(
         TokenKind::LBrace,
@@ -792,12 +792,7 @@ pub fn build_custom_type<'instr>(
     let mut custom_type_fields: CustomTypeFields = Vec::with_capacity(10);
 
     while parser_ctx.peek().kind != TokenKind::RBrace {
-        if parser_ctx.match_token(TokenKind::Comma)? {
-            continue;
-        }
-
         let kind: ThrushType = typegen::build_type(parser_ctx)?;
-
         custom_type_fields.push(kind);
     }
 
@@ -805,12 +800,6 @@ pub fn build_custom_type<'instr>(
         TokenKind::RBrace,
         String::from("Syntax error"),
         String::from("Expected '}'."),
-    )?;
-
-    parser_ctx.consume(
-        TokenKind::SemiColon,
-        String::from("Syntax error"),
-        String::from("Expected ';'."),
     )?;
 
     if declare {
@@ -867,9 +856,9 @@ pub fn build_enum<'instr>(
     let mut default_float_value: f64 = 0.0;
     let mut default_integer_value: u64 = 0;
 
-    while parser_ctx.peek().kind != TokenKind::RBrace {
-        if parser_ctx.match_token(TokenKind::Comma)? {
-            continue;
+    loop {
+        if parser_ctx.check(TokenKind::RBrace) {
+            break;
         }
 
         if parser_ctx.match_token(TokenKind::Identifier)? {
@@ -968,9 +957,15 @@ pub fn build_enum<'instr>(
         parser_ctx
             .get_mut_symbols()
             .new_enum(enum_name, (enum_fields, enum_attributes), span)?;
+
+        return Ok(ThrushStatement::Null { span });
     }
 
-    Ok(ThrushStatement::Null { span })
+    Ok(ThrushStatement::Enum {
+        name: enum_name,
+        fields: enum_fields,
+        span,
+    })
 }
 
 pub fn build_struct<'instr>(
@@ -1013,40 +1008,75 @@ pub fn build_struct<'instr>(
     let mut fields_types: StructFields = (struct_name, Vec::with_capacity(10));
     let mut field_position: u32 = 0;
 
-    while parser_ctx.peek().kind != TokenKind::RBrace {
-        if parser_ctx.match_token(TokenKind::Comma)? {
-            continue;
+    loop {
+        if parser_ctx.check(TokenKind::RBrace) {
+            break;
         }
 
-        let field_tk: &Token<'_> = parser_ctx.consume(
-            TokenKind::Identifier,
-            String::from("Syntax error"),
-            String::from("Expected identifier."),
-        )?;
+        if parser_ctx.check(TokenKind::Identifier) {
+            let field_tk: &Token = parser_ctx.consume(
+                TokenKind::Identifier,
+                String::from("Syntax error"),
+                String::from("Expected identifier."),
+            )?;
 
-        let field_name: &str = field_tk.lexeme;
+            let field_name: &str = field_tk.lexeme;
+            let field_span: Span = field_tk.span;
 
-        parser_ctx
-            .get_mut_type_ctx()
-            .set_position(TypePosition::StructureField);
+            parser_ctx
+                .get_mut_type_ctx()
+                .set_position(TypePosition::StructureField);
 
-        parser_ctx.consume(
-            TokenKind::Colon,
-            String::from("Syntax error"),
-            String::from("Expected ':'."),
-        )?;
+            parser_ctx.consume(
+                TokenKind::Colon,
+                String::from("Syntax error"),
+                String::from("Expected ':'."),
+            )?;
 
-        let field_type: ThrushType = typegen::build_type(parser_ctx)?;
+            let field_type: ThrushType = typegen::build_type(parser_ctx)?;
 
-        fields_types
-            .1
-            .push((field_name, field_type, field_position));
+            fields_types
+                .1
+                .push((field_name, field_type, field_position, field_span));
 
-        field_position += 1;
+            field_position += 1;
 
-        parser_ctx
-            .get_mut_type_ctx()
-            .set_position(TypePosition::NoRelevant);
+            parser_ctx
+                .get_mut_type_ctx()
+                .set_position(TypePosition::NoRelevant);
+
+            if parser_ctx.check(TokenKind::RBrace) {
+                break;
+            }
+
+            if parser_ctx.match_token(TokenKind::Comma)? {
+                if parser_ctx.check(TokenKind::RBrace) {
+                    break;
+                }
+            } else if parser_ctx.check_to(TokenKind::Identifier, 0) {
+                parser_ctx.consume(
+                    TokenKind::Comma,
+                    String::from("Syntax error"),
+                    String::from("Expected ','."),
+                )?;
+            } else {
+                return Err(ThrushCompilerIssue::Error(
+                    String::from("Syntax error"),
+                    String::from("Expected identifier."),
+                    None,
+                    parser_ctx.previous().span,
+                ));
+            }
+        } else {
+            parser_ctx.only_advance()?;
+
+            return Err(ThrushCompilerIssue::Error(
+                String::from("Syntax error"),
+                String::from("Expected structure fields identifiers."),
+                None,
+                parser_ctx.previous().span,
+            ));
+        }
     }
 
     parser_ctx.consume(
@@ -1066,9 +1096,16 @@ pub fn build_struct<'instr>(
             ),
             span,
         )?;
+
+        return Ok(ThrushStatement::Null { span });
     }
 
-    Ok(ThrushStatement::Null { span })
+    Ok(ThrushStatement::Struct {
+        name: struct_name,
+        fields: fields_types.clone(),
+        kind: fields_types.get_type(),
+        span,
+    })
 }
 
 pub fn build_const<'instr>(

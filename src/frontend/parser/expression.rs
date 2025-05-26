@@ -589,6 +589,15 @@ fn primary<'instr>(
                     ));
                 }
 
+                if object.is_lli() {
+                    return Err(ThrushCompilerIssue::Error(
+                        String::from("Syntax error"),
+                        String::from("LLI's cannot be modified."),
+                        None,
+                        span,
+                    ));
+                }
+
                 let local_position: (&str, usize) = object.expected_local(span)?;
 
                 let local: &LocalSymbol = parser_ctx.get_symbols().get_local_by_id(
@@ -959,13 +968,13 @@ fn build_enum_field<'instr>(
         .get_enum_by_id(enum_id, span)?
         .get_fields();
 
-    let field: &Token = parser_ctx.consume(
+    let field_tk: &Token = parser_ctx.consume(
         TokenKind::Identifier,
         String::from("Syntax error"),
-        String::from("Expected enum field identifier."),
+        String::from("Expected enum name."),
     )?;
 
-    let field_name: &str = field.lexeme;
+    let field_name: &str = field_tk.lexeme;
 
     if !union.contain_field(field_name) {
         return Err(ThrushCompilerIssue::Error(
@@ -978,8 +987,16 @@ fn build_enum_field<'instr>(
 
     let field: EnumField = union.get_field(field_name);
     let field_value: ThrushStatement = field.1;
+    let field_type: ThrushType = field_value.get_type()?.clone();
 
-    Ok(field_value)
+    let canonical_name: String = format!("{}.{}", name, field_name);
+
+    Ok(ThrushStatement::EnumValue {
+        name: canonical_name,
+        value: field_value.into(),
+        kind: field_type,
+        span,
+    })
 }
 
 fn build_address<'instr>(
@@ -1219,9 +1236,9 @@ fn build_constructor<'instr>(
 
     let mut amount: usize = 0;
 
-    while parser_ctx.peek().kind != TokenKind::RBrace {
-        if parser_ctx.match_token(TokenKind::Comma)? {
-            continue;
+    loop {
+        if parser_ctx.check(TokenKind::RBrace) {
+            break;
         }
 
         if parser_ctx.match_token(TokenKind::Identifier)? {
@@ -1271,10 +1288,37 @@ fn build_constructor<'instr>(
             }
 
             amount += 1;
-            continue;
-        }
 
-        parser_ctx.only_advance()?;
+            if parser_ctx.check(TokenKind::RBrace) {
+                break;
+            }
+
+            if parser_ctx.match_token(TokenKind::Comma)? {
+                if parser_ctx.check(TokenKind::RBrace) {
+                    break;
+                }
+            } else if parser_ctx.check_to(TokenKind::Identifier, 0) {
+                parser_ctx.consume(
+                    TokenKind::Comma,
+                    String::from("Syntax error"),
+                    String::from("Expected ','."),
+                )?;
+            } else {
+                return Err(ThrushCompilerIssue::Error(
+                    String::from("Syntax error"),
+                    String::from("Expected identifier."),
+                    None,
+                    parser_ctx.previous().span,
+                ));
+            }
+        } else {
+            return Err(ThrushCompilerIssue::Error(
+                String::from("Syntax error"),
+                String::from("Expected field name."),
+                None,
+                span,
+            ));
+        }
     }
 
     let amount_fields: usize = arguments.1.len();
@@ -1298,6 +1342,7 @@ fn build_constructor<'instr>(
     )?;
 
     Ok(ThrushStatement::Constructor {
+        name: struct_name,
         arguments: arguments.clone(),
         kind: arguments.get_type(),
         span,

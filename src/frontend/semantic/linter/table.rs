@@ -4,9 +4,10 @@ use crate::{
     frontend::lexer::span::Span,
     types::frontend::{
         linter::types::{
-            LinterConstantInfo, LinterConstants, LinterFunctionInfo, LinterFunctionParameterInfo,
+            LinterConstantInfo, LinterConstants, LinterEnumFieldInfo, LinterEnums,
+            LinterEnumsFieldsInfo, LinterFunctionInfo, LinterFunctionParameterInfo,
             LinterFunctionParameters, LinterFunctions, LinterLLIInfo, LinterLLIs, LinterLocalInfo,
-            LinterLocals,
+            LinterLocals, LinterStructFieldInfo, LinterStructFieldsInfo, LinterStructs,
         },
         parser::stmts::stmt::ThrushStatement,
     },
@@ -16,11 +17,15 @@ const MINIMAL_FUNCTIONS_CAPACITY: usize = 255;
 const MINIMAL_CONSTANTS_CAPACITY: usize = 255;
 const MINIMAL_LOCALS_CAPACITY: usize = 255;
 const MINIMAL_LLIS_CAPACITY: usize = 255;
+const MINIMAL_ENUMS_CAPACITY: usize = 255;
+const MINIMAL_STRUCTS_CAPACITY: usize = 255;
 const MINIMAL_PARAMETERS_CAPACITY: usize = 10;
 
 pub struct LinterSymbolsTable<'linter> {
     functions: LinterFunctions<'linter>,
     constants: LinterConstants<'linter>,
+    enums: LinterEnums<'linter>,
+    structs: LinterStructs<'linter>,
     locals: LinterLocals<'linter>,
     llis: LinterLLIs<'linter>,
     parameters: LinterFunctionParameters<'linter>,
@@ -32,6 +37,8 @@ impl<'linter> LinterSymbolsTable<'linter> {
         Self {
             functions: HashMap::with_capacity(MINIMAL_FUNCTIONS_CAPACITY),
             constants: HashMap::with_capacity(MINIMAL_CONSTANTS_CAPACITY),
+            enums: HashMap::with_capacity(MINIMAL_ENUMS_CAPACITY),
+            structs: HashMap::with_capacity(MINIMAL_STRUCTS_CAPACITY),
             locals: Vec::with_capacity(MINIMAL_LOCALS_CAPACITY),
             llis: Vec::with_capacity(MINIMAL_LLIS_CAPACITY),
             parameters: HashMap::with_capacity(MINIMAL_PARAMETERS_CAPACITY),
@@ -51,23 +58,39 @@ impl<'linter> LinterSymbolsTable<'linter> {
         self.parameters.insert(name, info);
     }
 
-    pub fn get_all_parameters(&self) -> &HashMap<&'linter str, (Span, bool, bool)> {
+    pub fn new_enum(&mut self, name: &'linter str, info: LinterEnumsFieldsInfo<'linter>) {
+        self.enums.insert(name, info);
+    }
+
+    pub fn new_struct(&mut self, name: &'linter str, info: LinterStructFieldsInfo<'linter>) {
+        self.structs.insert(name, info);
+    }
+
+    pub fn get_all_function_parameters(&self) -> &LinterFunctionParameters {
         &self.parameters
     }
 
-    pub fn get_all_locals(&self) -> &[HashMap<&'linter str, (Span, bool, bool)>] {
+    pub fn get_all_locals(&self) -> &LinterLocals {
         &self.locals
     }
 
-    pub fn get_all_llis(&self) -> &[HashMap<&'linter str, (Span, bool)>] {
+    pub fn get_all_llis(&self) -> &LinterLLIs {
         &self.llis
     }
 
-    pub fn get_all_constants(&self) -> &HashMap<&'linter str, (Span, bool)> {
+    pub fn get_all_enums(&self) -> &LinterEnums<'linter> {
+        &self.enums
+    }
+
+    pub fn get_all_constants(&self) -> &LinterConstants {
         &self.constants
     }
 
-    pub fn get_all_functions(&self) -> &HashMap<&'linter str, (Span, bool)> {
+    pub fn get_all_structs(&self) -> &LinterStructs {
+        &self.structs
+    }
+
+    pub fn get_all_functions(&self) -> &LinterFunctions {
         &self.functions
     }
 
@@ -117,6 +140,82 @@ impl<'linter> LinterSymbolsTable<'linter> {
         name: &'linter str,
     ) -> Option<&mut LinterFunctionParameterInfo> {
         self.parameters.get_mut(name)
+    }
+
+    pub fn get_enum_info(
+        &mut self,
+        name: &'linter str,
+    ) -> Option<&mut LinterEnumsFieldsInfo<'linter>> {
+        self.enums.get_mut(name)
+    }
+
+    pub fn get_struct_info(
+        &mut self,
+        name: &'linter str,
+    ) -> Option<&mut LinterStructFieldsInfo<'linter>> {
+        self.structs.get_mut(name)
+    }
+
+    pub fn get_struct_field_info(
+        &mut self,
+        struct_name: &'linter str,
+        field_name: &'linter str,
+    ) -> Option<&mut LinterStructFieldInfo> {
+        if let Some(raw_struct_fields) = self.get_struct_info(struct_name) {
+            let struct_fields: &mut HashMap<&'linter str, (Span, bool)> = &mut raw_struct_fields.0;
+
+            if let Some(struct_field) = struct_fields.get_mut(field_name) {
+                return Some(struct_field);
+            }
+        }
+
+        None
+    }
+
+    pub fn split_property_name(
+        &mut self,
+        from: &'linter str,
+    ) -> Option<(&'linter str, &'linter str)> {
+        let splitted: Vec<&str> = from.split(".").collect();
+
+        if let Some(struct_name) = splitted.first() {
+            if let Some(field_name) = splitted.get(1) {
+                return Some((struct_name, field_name));
+            }
+        }
+
+        None
+    }
+
+    pub fn get_enum_field_info(
+        &mut self,
+        enum_name: &'linter str,
+        field_name: &'linter str,
+    ) -> Option<&mut LinterEnumFieldInfo> {
+        if let Some(raw_enum_fields) = self.get_enum_info(enum_name) {
+            let enum_fields: &mut HashMap<&'linter str, (Span, bool)> = &mut raw_enum_fields.0;
+
+            if let Some(enum_field) = enum_fields.get_mut(field_name) {
+                return Some(enum_field);
+            }
+        }
+
+        None
+    }
+
+    pub fn split_enum_field_name(
+        &mut self,
+        from: &'linter str,
+    ) -> Option<(&'linter str, &'linter str)> {
+        let splitted: Vec<&str> = from.split(".").collect();
+
+        if let Some(enum_name) = splitted.first() {
+            if let Some(field_name) = splitted.get(1) {
+                return Some((enum_name, field_name));
+            }
+        }
+
+        None
     }
 
     pub fn get_local_info(&mut self, name: &'linter str) -> Option<&mut LinterLocalInfo> {

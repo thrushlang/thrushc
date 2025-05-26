@@ -1,10 +1,11 @@
 use crate::{
-    backend::llvm::compiler::attributes::LLVMAttribute, types::frontend::lexer::types::ThrushType,
+    backend::llvm::compiler::attributes::LLVMAttribute, frontend::lexer::span::Span,
+    types::frontend::lexer::types::ThrushType,
 };
 
 use super::stmt::ThrushStatement;
 
-pub type StructFields<'ctx> = (&'ctx str, Vec<(&'ctx str, ThrushType, u32)>);
+pub type StructFields<'ctx> = (&'ctx str, Vec<(&'ctx str, ThrushType, u32, Span)>);
 
 pub type EnumFields<'ctx> = Vec<(&'ctx str, ThrushStatement<'ctx>)>;
 pub type EnumField<'ctx> = (&'ctx str, ThrushStatement<'ctx>);

@@ -1,3 +1,5 @@
+use ahash::AHashMap as HashMap;
+
 use table::LinterSymbolsTable;
 
 use crate::{
@@ -61,6 +63,13 @@ impl<'linter> Linter<'linter> {
     pub fn analyze_stmt(&mut self, stmt: &'linter ThrushStatement) {
         if let ThrushStatement::EntryPoint { body, .. } = stmt {
             self.analyze_stmt(body);
+        }
+
+        if let ThrushStatement::Enum { fields, .. } = stmt {
+            fields.iter().for_each(|field| {
+                let field_expr: &ThrushStatement = &field.1;
+                self.analyze_stmt(field_expr);
+            });
         }
 
         if let ThrushStatement::Function {
@@ -133,11 +142,30 @@ impl<'linter> Linter<'linter> {
             self.analyze_stmt(value);
         }
 
-        if let ThrushStatement::Constructor { arguments, .. } = stmt {
+        if let ThrushStatement::Constructor {
+            name,
+            arguments,
+            span,
+            ..
+        } = stmt
+        {
             arguments.1.iter().for_each(|arg| {
                 let stmt: &ThrushStatement = &arg.1;
                 self.analyze_stmt(stmt);
             });
+
+            if let Some(structure) = self.symbols.get_struct_info(name) {
+                structure.2 = true;
+                return;
+            }
+
+            self.add_bug(ThrushCompilerIssue::Bug(
+                String::from("Structure not caught"),
+                format!("Could not get named struct with name '{}'.", name),
+                *span,
+                CompilationPosition::Linter,
+                line!(),
+            ));
         }
 
         if let ThrushStatement::Call { name, span, .. } = stmt {
@@ -185,6 +213,33 @@ impl<'linter> Linter<'linter> {
             ));
         }
 
+        if let ThrushStatement::EnumValue {
+            name, value, span, ..
+        } = stmt
+        {
+            if let Some((enum_name, field_name)) = self.symbols.split_enum_field_name(name) {
+                if let Some(union) = self.symbols.get_enum_info(enum_name) {
+                    union.2 = true;
+                }
+
+                if let Some(enum_field) = self.symbols.get_enum_field_info(enum_name, field_name) {
+                    enum_field.1 = true;
+                }
+
+                self.analyze_stmt(value);
+
+                return;
+            }
+
+            self.add_bug(ThrushCompilerIssue::Bug(
+                String::from("Enum value not caught"),
+                format!("Could not get correct name of the enum field '{}'.", name),
+                *span,
+                CompilationPosition::Linter,
+                line!(),
+            ));
+        }
+
         if let ThrushStatement::Mut { source, span, .. } = stmt {
             if let Some(local_name) = source.0 {
                 if let Some(local) = self.symbols.get_local_info(local_name) {
@@ -205,7 +260,7 @@ impl<'linter> Linter<'linter> {
 
     pub fn generate_scoped_warnings(&mut self) {
         self.symbols
-            .get_all_parameters()
+            .get_all_function_parameters()
             .iter()
             .for_each(|parameter| {
                 let name: &str = parameter.0;
@@ -302,24 +357,132 @@ impl<'linter> Linter<'linter> {
                     ));
                 }
             });
+
+        self.symbols
+            .get_all_enums()
+            .iter()
+            .for_each(|(name, info)| {
+                let span: Span = info.1;
+                let used: bool = info.2;
+
+                if !used {
+                    self.warnings.push(ThrushCompilerIssue::Warning(
+                        String::from("Enum not used"),
+                        format!("'{}' not used.", name),
+                        span,
+                    ));
+                }
+
+                let fields: &HashMap<&str, (Span, bool)> = &info.0;
+
+                fields.iter().for_each(|(name, info)| {
+                    let span: Span = info.0;
+                    let used: bool = info.1;
+
+                    if !used {
+                        self.warnings.push(ThrushCompilerIssue::Warning(
+                            String::from("Enum field not used"),
+                            format!("'{}' not used.", name),
+                            span,
+                        ));
+                    }
+                });
+            });
+
+        self.symbols
+            .get_all_structs()
+            .iter()
+            .for_each(|(name, info)| {
+                let span: Span = info.1;
+                let used: bool = info.2;
+
+                if !used {
+                    self.warnings.push(ThrushCompilerIssue::Warning(
+                        String::from("Structure not used"),
+                        format!("'{}' not used.", name),
+                        span,
+                    ));
+                }
+
+                let fields: &HashMap<&str, (Span, bool)> = &info.0;
+
+                fields.iter().for_each(|(name, info)| {
+                    let span: Span = info.0;
+                    let used: bool = info.1;
+
+                    if !used {
+                        self.warnings.push(ThrushCompilerIssue::Warning(
+                            String::from("Structure field not used"),
+                            format!("'{}' not used.", name),
+                            span,
+                        ));
+                    }
+                });
+            });
     }
 
     pub fn init(&mut self) {
-        self.stmts
-            .iter()
-            .filter(|stmt| stmt.is_function())
-            .for_each(|stmt| {
-                if let ThrushStatement::Function { name, span, .. } = stmt {
-                    self.symbols.new_function(name, (*span, false));
-                }
-            });
-
         self.stmts
             .iter()
             .filter(|instruction| instruction.is_constant())
             .for_each(|instruction| {
                 if let ThrushStatement::Const { name, span, .. } = instruction {
                     self.symbols.new_constant(name, (*span, false));
+                }
+            });
+
+        self.stmts
+            .iter()
+            .filter(|stmt| stmt.is_struct())
+            .for_each(|stmt| {
+                if let ThrushStatement::Struct {
+                    name, fields, span, ..
+                } = stmt
+                {
+                    let mut converted_fields: HashMap<&str, (Span, bool)> =
+                        HashMap::with_capacity(100);
+
+                    for field in fields.1.iter() {
+                        let field_name: &str = field.0;
+                        let span: Span = field.3;
+
+                        converted_fields.insert(field_name, (span, false));
+                    }
+
+                    self.symbols
+                        .new_struct(name, (converted_fields, *span, false));
+                }
+            });
+
+        self.stmts
+            .iter()
+            .filter(|stmt| stmt.is_enum())
+            .for_each(|stmt| {
+                if let ThrushStatement::Enum {
+                    name, fields, span, ..
+                } = stmt
+                {
+                    let mut converted_fields: HashMap<&str, (Span, bool)> =
+                        HashMap::with_capacity(100);
+
+                    for field in fields.iter() {
+                        let field_name: &str = field.0;
+                        let expr_span: Span = field.1.get_span();
+
+                        converted_fields.insert(field_name, (expr_span, false));
+                    }
+
+                    self.symbols
+                        .new_enum(name, (converted_fields, *span, false));
+                }
+            });
+
+        self.stmts
+            .iter()
+            .filter(|stmt| stmt.is_function())
+            .for_each(|stmt| {
+                if let ThrushStatement::Function { name, span, .. } = stmt {
+                    self.symbols.new_function(name, (*span, false));
                 }
             });
     }

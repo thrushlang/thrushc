@@ -14,5 +14,15 @@ pub type LinterFunctions<'linter> = HashMap<&'linter str, LinterFunctionInfo<'li
 pub type LinterLocalInfo = (Span, bool, bool);
 pub type LinterLocals<'linter> = Vec<HashMap<&'linter str, LinterLocalInfo>>;
 
+pub type LinterEnumFieldInfo = (Span, bool);
+
+pub type LinterEnumsFieldsInfo<'linter> = (HashMap<&'linter str, LinterEnumFieldInfo>, Span, bool);
+pub type LinterEnums<'linter> = HashMap<&'linter str, LinterEnumsFieldsInfo<'linter>>;
+
+pub type LinterStructFieldInfo = (Span, bool);
+pub type LinterStructFieldsInfo<'linter> =
+    (HashMap<&'linter str, LinterStructFieldInfo>, Span, bool);
+pub type LinterStructs<'linter> = HashMap<&'linter str, LinterStructFieldsInfo<'linter>>;
+
 pub type LinterFunctionParameterInfo = (Span, bool, bool);
 pub type LinterFunctionParameters<'linter> = HashMap<&'linter str, LinterFunctionParameterInfo>;

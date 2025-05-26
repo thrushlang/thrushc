@@ -10,7 +10,7 @@ use crate::{
 
 pub type Struct<'instr> = (
     &'instr str,
-    Vec<(&'instr str, ThrushType, u32)>,
+    Vec<(&'instr str, ThrushType, u32, Span)>,
     CompilerAttributes<'instr>,
     Methods<'instr>,
 );

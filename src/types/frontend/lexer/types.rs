@@ -424,13 +424,13 @@ pub fn decompose_struct_property(
 
         let field_name: &str = property_names[position];
 
-        let field_with_index: Option<(usize, &(&str, ThrushType, u32))> = fields
+        let field_with_index: Option<(usize, &(&str, ThrushType, u32, Span))> = fields
             .1
             .iter()
             .enumerate()
             .find(|field| field.1.0 == field_name);
 
-        if let Some((index, (_, field_type, _))) = field_with_index {
+        if let Some((index, (_, field_type, ..))) = field_with_index {
             gep_indices.push((field_type.clone(), index as u32));
 
             position += 1;

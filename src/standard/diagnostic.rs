@@ -138,8 +138,8 @@ impl<'a> Diagnostic<'a> {
 
         Some(CodePosition {
             line: line_num,
-            start: start - line_start,
-            end: end - line_start,
+            start: start.saturating_sub(line_start),
+            end: end.saturating_sub(line_start),
         })
     }
 
@@ -160,8 +160,13 @@ impl<'a> Diagnostic<'a> {
 
         let mut signaler: String = String::with_capacity(100);
 
-        for pos in 0..=position.end - trim_diferrence {
-            if pos == position.end - trim_diferrence {
+        let end_position = position
+            .end
+            .saturating_sub(trim_diferrence)
+            .saturating_sub(1);
+
+        for pos in 0..=end_position {
+            if pos == end_position {
                 signaler.push('^');
                 signaler.push(' ');
                 signaler.push_str(&format!("{}{}", notificator_type, info));

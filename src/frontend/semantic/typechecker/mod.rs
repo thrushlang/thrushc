@@ -506,6 +506,14 @@ impl<'stmts> TypeChecker<'stmts> {
             return Ok(());
         }
 
+        if let ThrushStatement::Struct { .. } = stmt {
+            return Ok(());
+        }
+
+        if let ThrushStatement::EnumValue { .. } = stmt {
+            return Ok(());
+        }
+
         if let ThrushStatement::Reference { .. } = stmt {
             return Ok(());
         }
