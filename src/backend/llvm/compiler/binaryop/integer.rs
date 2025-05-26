@@ -338,10 +338,7 @@ pub fn integer_binaryop<'ctx>(
             ..
         },
         TokenKind::BangEq | TokenKind::EqEq | TokenKind::And | TokenKind::Or,
-        ThrushStatement::LocalRef {
-            kind: right_type, ..
-        }
-        | ThrushStatement::ConstRef {
+        ThrushStatement::Reference {
             kind: right_type, ..
         },
     ) = binary
@@ -372,10 +369,7 @@ pub fn integer_binaryop<'ctx>(
     }
 
     if let (
-        ThrushStatement::LocalRef {
-            kind: left_type, ..
-        }
-        | ThrushStatement::ConstRef {
+        ThrushStatement::Reference {
             kind: left_type, ..
         },
         TokenKind::BangEq | TokenKind::EqEq | TokenKind::And | TokenKind::Or,
@@ -734,10 +728,7 @@ pub fn integer_binaryop<'ctx>(
     }
 
     if let (
-        ThrushStatement::LocalRef {
-            kind: left_type, ..
-        }
-        | ThrushStatement::ConstRef {
+        ThrushStatement::Reference {
             kind: left_type, ..
         },
         TokenKind::Plus
@@ -807,10 +798,7 @@ pub fn integer_binaryop<'ctx>(
         | TokenKind::RShift
         | TokenKind::And
         | TokenKind::Or,
-        ThrushStatement::LocalRef {
-            kind: right_type, ..
-        }
-        | ThrushStatement::ConstRef {
+        ThrushStatement::Reference {
             kind: right_type, ..
         },
     ) = binary
@@ -1191,10 +1179,7 @@ pub fn integer_binaryop<'ctx>(
     }
 
     if let (
-        ThrushStatement::LocalRef {
-            kind: left_type, ..
-        }
-        | ThrushStatement::ConstRef {
+        ThrushStatement::Reference {
             kind: left_type, ..
         },
         TokenKind::Plus
@@ -1264,12 +1249,7 @@ pub fn integer_binaryop<'ctx>(
         | TokenKind::RShift
         | TokenKind::And
         | TokenKind::Or,
-        ThrushStatement::LocalRef {
-            name: right_name,
-            kind: right_type,
-            ..
-        }
-        | ThrushStatement::ConstRef {
+        ThrushStatement::Reference {
             name: right_name,
             kind: right_type,
             ..
@@ -1503,12 +1483,7 @@ pub fn integer_binaryop<'ctx>(
         | TokenKind::RShift
         | TokenKind::And
         | TokenKind::Or,
-        ThrushStatement::LocalRef {
-            name,
-            kind: right_type,
-            ..
-        }
-        | ThrushStatement::ConstRef {
+        ThrushStatement::Reference {
             name,
             kind: right_type,
             ..
@@ -1542,10 +1517,7 @@ pub fn integer_binaryop<'ctx>(
     }
 
     if let (
-        ThrushStatement::LocalRef {
-            kind: left_type, ..
-        }
-        | ThrushStatement::ConstRef {
+        ThrushStatement::Reference {
             kind: left_type, ..
         },
         TokenKind::Plus
@@ -1562,10 +1534,7 @@ pub fn integer_binaryop<'ctx>(
         | TokenKind::RShift
         | TokenKind::And
         | TokenKind::Or,
-        ThrushStatement::LocalRef {
-            kind: right_type, ..
-        }
-        | ThrushStatement::ConstRef {
+        ThrushStatement::Reference {
             kind: right_type, ..
         },
     ) = binary
@@ -1615,10 +1584,7 @@ pub fn integer_binaryop<'ctx>(
         | TokenKind::RShift
         | TokenKind::And
         | TokenKind::Or,
-        ThrushStatement::LocalRef {
-            kind: right_type, ..
-        }
-        | ThrushStatement::ConstRef {
+        ThrushStatement::Reference {
             kind: right_type, ..
         },
     ) = binary
@@ -1655,10 +1621,7 @@ pub fn integer_binaryop<'ctx>(
     }
 
     if let (
-        ThrushStatement::LocalRef {
-            kind: left_type, ..
-        }
-        | ThrushStatement::ConstRef {
+        ThrushStatement::Reference {
             kind: left_type, ..
         },
         TokenKind::Plus
@@ -1822,12 +1785,7 @@ pub fn integer_binaryop<'ctx>(
     }
 
     if let (
-        ThrushStatement::LocalRef {
-            name,
-            kind: left_type,
-            ..
-        }
-        | ThrushStatement::ConstRef {
+        ThrushStatement::Reference {
             name,
             kind: left_type,
             ..

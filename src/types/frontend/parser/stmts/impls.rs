@@ -215,7 +215,7 @@ impl Display for ThrushStatement<'_> {
                 Ok(())
             }
 
-            ThrushStatement::LocalRef { name, .. } => {
+            ThrushStatement::Reference { name, .. } => {
                 write!(f, "{}", name)
             }
 

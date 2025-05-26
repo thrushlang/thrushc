@@ -14,12 +14,12 @@ use crate::{
 
 use super::{
     traits::{
-        ConstantSymbolExtensions, FunctionExtensions, LocalSymbolExtensions, MethodExtensions,
-        MethodsExtensions,
+        ConstantSymbolExtensions, FunctionExtensions, LLISymbolExtensions, LocalSymbolExtensions,
+        MethodExtensions, MethodsExtensions,
     },
     types::{
-        ConstantSymbol, FoundSymbolId, Function, LocalSymbol, MethodDef, Methods, ParametersTypes,
-        Struct,
+        ConstantSymbol, FoundSymbolId, Function, LLISymbol, LocalSymbol, MethodDef, Methods,
+        ParametersTypes, Struct,
     },
 };
 
@@ -48,6 +48,12 @@ impl ConstantSymbolExtensions for ConstantSymbol<'_> {
 }
 
 impl FunctionExtensions for Function<'_> {
+    fn get_type(&self) -> ThrushType {
+        self.0.clone()
+    }
+}
+
+impl LLISymbolExtensions for LLISymbol<'_> {
     fn get_type(&self) -> ThrushType {
         self.0.clone()
     }
@@ -144,6 +150,10 @@ impl FoundSymbolExtension for FoundSymbolId<'_> {
     fn is_parameter(&self) -> bool {
         self.5.is_some()
     }
+
+    fn is_lli(&self) -> bool {
+        self.6.is_some()
+    }
 }
 
 impl<'instr> FoundSymbolEither<'instr> for FoundSymbolId<'instr> {
@@ -225,8 +235,21 @@ impl<'instr> FoundSymbolEither<'instr> for FoundSymbolId<'instr> {
         ))
     }
 
-    fn expected_local(&self, span: Span) -> Result<(&'instr str, usize), ThrushCompilerIssue> {
+    fn expected_lli(&self, span: Span) -> Result<(&'instr str, usize), ThrushCompilerIssue> {
         if let Some((name, scope_idx)) = self.6 {
+            return Ok((name, scope_idx));
+        }
+
+        Err(ThrushCompilerIssue::Error(
+            String::from("Expected low level instruction reference"),
+            String::from("Expected LLI but found something else."),
+            None,
+            span,
+        ))
+    }
+
+    fn expected_local(&self, span: Span) -> Result<(&'instr str, usize), ThrushCompilerIssue> {
+        if let Some((name, scope_idx)) = self.7 {
             return Ok((name, scope_idx));
         }
 

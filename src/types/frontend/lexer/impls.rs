@@ -93,6 +93,7 @@ impl std::fmt::Display for TokenKind {
             TokenKind::Pass => write!(f, "..."),
             TokenKind::NullPtr => write!(f, "nullptr"),
             TokenKind::Methods => write!(f, "methods"),
+            TokenKind::Instr => write!(f, "instr"),
             TokenKind::Def => write!(f, "def"),
             TokenKind::Integer | TokenKind::Float => write!(f, "number"),
             TokenKind::Enum => write!(f, "enum"),
@@ -128,7 +129,7 @@ impl std::fmt::Display for TokenKind {
             TokenKind::Ptr => write!(f, "ptr"),
             TokenKind::Me => write!(f, "me"),
             TokenKind::Address => write!(f, "address"),
-            TokenKind::Carry => write!(f, "carry"),
+            TokenKind::Load => write!(f, "carry"),
             TokenKind::Void => write!(f, "void"),
         }
     }

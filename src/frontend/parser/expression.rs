@@ -8,6 +8,7 @@ use crate::{
         },
         parser::{
             stmts::{
+                ident::ReferenceIndentificator,
                 stmt::ThrushStatement,
                 traits::{
                     ConstructorExtensions, EnumExtensions, EnumFieldsExtensions, FoundSymbolEither,
@@ -17,12 +18,12 @@ use crate::{
             },
             symbols::{
                 traits::{
-                    ConstantSymbolExtensions, FunctionExtensions, LocalSymbolExtensions,
-                    MethodExtensions, MethodsExtensions,
+                    ConstantSymbolExtensions, FunctionExtensions, LLISymbolExtensions,
+                    LocalSymbolExtensions, MethodExtensions, MethodsExtensions,
                 },
                 types::{
-                    ConstantSymbol, FoundSymbolId, Function, LocalSymbol, MethodDef, Methods,
-                    ParameterSymbol, Struct,
+                    ConstantSymbol, FoundSymbolId, Function, LLISymbol, LocalSymbol, MethodDef,
+                    Methods, ParameterSymbol, Struct,
                 },
             },
         },
@@ -289,22 +290,16 @@ fn primary<'instr>(
     parser_ctx: &mut ParserContext<'instr>,
 ) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
     let primary: ThrushStatement = match &parser_ctx.peek().kind {
-        TokenKind::Carry => {
-            let carry_tk: &Token = parser_ctx.advance()?;
-            let span: Span = carry_tk.span;
+        TokenKind::Load => {
+            let load_tk: &Token = parser_ctx.advance()?;
+            let span: Span = load_tk.span;
+
+            let load_type: ThrushType = typegen::build_type(parser_ctx)?;
 
             parser_ctx.consume(
-                TokenKind::LBracket,
+                TokenKind::Comma,
                 String::from("Syntax error"),
-                String::from("Expected '['."),
-            )?;
-
-            let carry_type: ThrushType = typegen::build_type(parser_ctx)?;
-
-            parser_ctx.consume(
-                TokenKind::RBracket,
-                String::from("Syntax error"),
-                String::from("Expected ']'."),
+                String::from("Expected ','."),
             )?;
 
             if parser_ctx.check(TokenKind::Identifier) {
@@ -316,17 +311,16 @@ fn primary<'instr>(
 
                 let name: &str = identifier_tk.lexeme;
 
-                build_reference(parser_ctx, name, span)?;
+                self::build_reference(parser_ctx, name, span)?;
 
-                return Ok(ThrushStatement::Carry {
-                    name,
-                    expression: None,
-                    carry_type,
+                return Ok(ThrushStatement::Load {
+                    load: (Some(name), None),
+                    kind: load_type,
                     span,
                 });
             }
 
-            let expression: ThrushStatement = build_expr(parser_ctx)?;
+            let expression: ThrushStatement = self::build_expr(parser_ctx)?;
 
             let expression_type: &ThrushType = expression.get_type()?;
 
@@ -334,7 +328,7 @@ fn primary<'instr>(
                 return Err(ThrushCompilerIssue::Error(
                     String::from("Attemping to access an invalid pointer"),
                     format!(
-                        "Carry is only allowed for pointer types or memory address, not '{}'. ",
+                        "Load low-level instruction is only allowed for pointer types or memory address, not '{}'. ",
                         expression_type
                     ),
                     None,
@@ -342,10 +336,9 @@ fn primary<'instr>(
                 ));
             }
 
-            ThrushStatement::Carry {
-                name: "",
-                expression: Some(expression.into()),
-                carry_type,
+            ThrushStatement::Load {
+                load: (None, Some(expression.into())),
+                kind: load_type,
                 span,
             }
         }
@@ -368,7 +361,7 @@ fn primary<'instr>(
                 String::from("Expected ']'."),
             )?;
 
-            let value: ThrushStatement = build_expr(parser_ctx)?;
+            let value: ThrushStatement = self::build_expr(parser_ctx)?;
 
             parser_ctx.consume(
                 TokenKind::Arrow,
@@ -385,10 +378,10 @@ fn primary<'instr>(
 
                 let name: &str = identifier_tk.lexeme;
 
-                build_reference(parser_ctx, name, span)?;
+                self::build_reference(parser_ctx, name, span)?;
 
                 return Ok(ThrushStatement::Write {
-                    write_to: (name, None),
+                    write_to: (Some(name), None),
                     write_value: value.into(),
                     write_type,
                     span,
@@ -412,7 +405,7 @@ fn primary<'instr>(
             }
 
             ThrushStatement::Write {
-                write_to: ("", Some(expression.into())),
+                write_to: (None, Some(expression.into())),
                 write_value: value.into(),
                 write_type,
                 span,
@@ -864,10 +857,11 @@ fn build_reference<'instr>(
         let constant: ConstantSymbol = parser_ctx.get_symbols().get_const_by_id(const_id, span)?;
         let constant_type: ThrushType = constant.get_type();
 
-        return Ok(ThrushStatement::ConstRef {
+        return Ok(ThrushStatement::Reference {
             name,
             kind: constant_type,
             span,
+            identificator: ReferenceIndentificator::Constant,
         });
     }
 
@@ -878,10 +872,31 @@ fn build_reference<'instr>(
             .get_parameter_by_id(parameter_id, span)?;
         let parameter_type: ThrushType = parameter.get_type();
 
-        return Ok(ThrushStatement::LocalRef {
+        return Ok(ThrushStatement::Reference {
             name,
             kind: parameter_type,
             span,
+            identificator: ReferenceIndentificator::FunctionParameter,
+        });
+    }
+
+    if symbol.is_lli() {
+        let lli_id: (&str, usize) = symbol.expected_lli(span)?;
+
+        let lli_name: &str = lli_id.0;
+        let scope_idx: usize = lli_id.1;
+
+        let parameter: &LLISymbol = parser_ctx
+            .get_symbols()
+            .get_lli_by_id(lli_name, scope_idx, span)?;
+
+        let lli_type: ThrushType = parameter.get_type();
+
+        return Ok(ThrushStatement::Reference {
+            name,
+            kind: lli_type,
+            span,
+            identificator: ReferenceIndentificator::LowLevelInstruction,
         });
     }
 
@@ -903,10 +918,11 @@ fn build_reference<'instr>(
         ));
     }
 
-    let localref: ThrushStatement = ThrushStatement::LocalRef {
+    let reference: ThrushStatement = ThrushStatement::Reference {
         name,
         kind: local_type.clone(),
         span,
+        identificator: ReferenceIndentificator::Local,
     };
 
     if parser_ctx.match_token(TokenKind::PlusPlus)?
@@ -918,7 +934,7 @@ fn build_reference<'instr>(
 
         let unaryop: ThrushStatement = ThrushStatement::UnaryOp {
             operator,
-            expression: localref.into(),
+            expression: reference.into(),
             kind: local_type,
             is_pre: false,
             span,
@@ -927,7 +943,7 @@ fn build_reference<'instr>(
         return Ok(unaryop);
     }
 
-    Ok(localref)
+    Ok(reference)
 }
 
 fn build_enum_field<'instr>(

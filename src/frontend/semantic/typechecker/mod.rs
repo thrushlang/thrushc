@@ -1,6 +1,7 @@
 #![allow(clippy::only_used_in_recursion)]
 
-use ahash::AHashMap as HashMap;
+use marks::{TypeCheckerTypeContext, TypeCheckerTypePosition};
+use table::TypeCheckerSymbolsTable;
 
 use crate::{
     frontend::lexer::span::Span,
@@ -14,140 +15,11 @@ use crate::{
     types::frontend::{
         lexer::{tokenkind::TokenKind, types::ThrushType},
         parser::stmts::{stmt::ThrushStatement, traits::CompilerAttributesExtensions},
-        typechecker::types::{
-            TypeCheckerAllMethods, TypeCheckerFunction, TypeCheckerFunctions, TypeCheckerLocal,
-            TypeCheckerLocals, TypeCheckerMethod, TypeCheckerMethods,
-        },
     },
 };
 
-#[derive(Debug)]
-pub struct TypeCheckerSymbolsTable<'symbol> {
-    functions: TypeCheckerFunctions<'symbol>,
-    locals: TypeCheckerLocals<'symbol>,
-    methods: TypeCheckerMethods<'symbol>,
-    scope: usize,
-}
-
-impl<'symbol> TypeCheckerSymbolsTable<'symbol> {
-    pub fn new() -> Self {
-        Self {
-            functions: HashMap::with_capacity(100),
-            locals: Vec::with_capacity(200),
-            methods: HashMap::with_capacity(100),
-            scope: 0,
-        }
-    }
-
-    pub fn new_local(&mut self, name: &'symbol str, local: TypeCheckerLocal<'symbol>) {
-        self.locals.last_mut().unwrap().insert(name, local);
-    }
-
-    pub fn new_function(&mut self, name: &'symbol str, function: (&'symbol [ThrushType], bool)) {
-        self.functions.insert(name, function);
-    }
-
-    pub fn new_methods(&mut self, name: &'symbol str, binds: TypeCheckerAllMethods<'symbol>) {
-        self.methods.insert(name, binds);
-    }
-
-    pub fn get_local(&self, name: &'symbol str) -> Option<TypeCheckerLocal<'symbol>> {
-        for scope in (0..=self.scope - 1).rev() {
-            if let Some(scope) = self.locals.get(scope) {
-                if let Some(local) = scope.get(name) {
-                    return Some(local);
-                }
-            }
-        }
-
-        None
-    }
-
-    pub fn get_function(&self, name: &'symbol str) -> Option<&TypeCheckerFunction<'symbol>> {
-        self.functions.get(name)
-    }
-
-    pub fn split_method_call_name(
-        &self,
-        from: &'symbol str,
-    ) -> Option<(&'symbol str, &'symbol str)> {
-        let splitted: Vec<&str> = from.split(".").collect();
-
-        if let Some(methods_name) = splitted.first() {
-            if let Some(method_name) = splitted.get(1) {
-                return Some((methods_name, method_name));
-            }
-        }
-
-        None
-    }
-
-    pub fn get_specific_method_definition(
-        &self,
-        methods_name: &'symbol str,
-        method_name: &'symbol str,
-    ) -> Option<&TypeCheckerMethod<'symbol>> {
-        if let Some(methods) = self.methods.get(methods_name) {
-            if let Some(method) = methods.iter().find(|method| method.0 == method_name) {
-                return Some(&method.1);
-            }
-        }
-
-        None
-    }
-
-    pub fn begin_scope(&mut self) {
-        self.locals.push(HashMap::with_capacity(200));
-        self.scope += 1;
-    }
-
-    pub fn end_scope(&mut self) {
-        self.locals.pop();
-        self.scope -= 1;
-    }
-}
-
-#[derive(Debug, Default, Clone, Copy)]
-pub enum TypeCheckerTypePosition {
-    Local,
-    Function,
-
-    #[default]
-    None,
-}
-
-#[derive(Debug)]
-pub struct TypeCheckerTypeContext<'types> {
-    current_function_type: &'types ThrushType,
-    current_local_type: &'types ThrushType,
-    position: TypeCheckerTypePosition,
-}
-
-impl<'types> TypeCheckerTypeContext<'types> {
-    pub fn new() -> Self {
-        Self {
-            current_function_type: &ThrushType::Void,
-            current_local_type: &ThrushType::Void,
-            position: TypeCheckerTypePosition::default(),
-        }
-    }
-
-    pub fn set_function_type(&mut self, new_type: &'types ThrushType) {
-        self.current_function_type = new_type;
-    }
-
-    pub fn set_local_type(&mut self, new_type: &'types ThrushType) {
-        self.current_local_type = new_type;
-    }
-
-    pub fn set_type_position(&mut self, new_position: TypeCheckerTypePosition) {
-        self.position = new_position;
-    }
-
-    pub fn get_function_type(&self) -> &ThrushType {
-        self.current_function_type
-    }
-}
+mod marks;
+mod table;
 
 #[derive(Debug)]
 pub struct TypeChecker<'stmts> {
@@ -299,10 +171,6 @@ impl<'stmts> TypeChecker<'stmts> {
             ..
         } = stmt
         {
-            self.type_ctx
-                .set_type_position(TypeCheckerTypePosition::Local);
-            self.type_ctx.set_local_type(local_type);
-
             self.symbols.new_local(name, local_type);
 
             let local_value_type: &ThrushType = local_value.get_type()?;
@@ -317,9 +185,27 @@ impl<'stmts> TypeChecker<'stmts> {
                 self.add_error(type_error);
             }
 
-            self.type_ctx
-                .set_type_position(TypeCheckerTypePosition::None);
-            self.type_ctx.set_function_type(&ThrushType::Void);
+            return Ok(());
+        }
+
+        if let ThrushStatement::LLI {
+            kind: lli_type,
+            value: lli_value,
+            span,
+            ..
+        } = stmt
+        {
+            let lli_value_type: &ThrushType = lli_value.get_type()?;
+
+            if let Err(mismatch_type_error) =
+                self.is_mismatch_type(lli_type, lli_value_type, Some(lli_value), None, span)
+            {
+                self.add_error(mismatch_type_error);
+            }
+
+            if let Err(type_error) = self.check_stmt(lli_value) {
+                self.add_error(type_error);
+            }
 
             return Ok(());
         }
@@ -613,7 +499,14 @@ impl<'stmts> TypeChecker<'stmts> {
             return Ok(());
         }
 
-        if let ThrushStatement::ConstRef { .. } | ThrushStatement::LocalRef { .. } = stmt {
+        if let ThrushStatement::Load { .. }
+        | ThrushStatement::Write { .. }
+        | ThrushStatement::Address { .. } = stmt
+        {
+            return Ok(());
+        }
+
+        if let ThrushStatement::Reference { .. } = stmt {
             return Ok(());
         }
 
@@ -817,12 +710,6 @@ impl<'stmts> TypeChecker<'stmts> {
             (ThrushType::Ptr(None), ThrushType::Ptr(None), None) => Ok(()),
             (ThrushType::Ptr(Some(target_type)), ThrushType::Ptr(Some(from_type)), None) => {
                 self.is_mismatch_type(target_type, from_type, expression, operator, span)?;
-
-                Ok(())
-            }
-
-            (ThrushType::Ptr(Some(typed)), any, None) => {
-                self.is_mismatch_type(typed, any, expression, operator, span)?;
 
                 Ok(())
             }

@@ -23,7 +23,7 @@ pub fn unary_op<'ctx>(
     if let (
         TokenKind::PlusPlus | TokenKind::MinusMinus,
         _,
-        ThrushStatement::LocalRef {
+        ThrushStatement::Reference {
             name,
             kind: ref_type,
             ..
@@ -68,12 +68,7 @@ pub fn unary_op<'ctx>(
     if let (
         TokenKind::Bang,
         _,
-        ThrushStatement::LocalRef {
-            name: ref_name,
-            kind: ref_type,
-            ..
-        }
-        | ThrushStatement::ConstRef {
+        ThrushStatement::Reference {
             name: ref_name,
             kind: ref_type,
             ..
@@ -98,12 +93,7 @@ pub fn unary_op<'ctx>(
     if let (
         TokenKind::Minus,
         _,
-        ThrushStatement::LocalRef {
-            name,
-            kind: ref_type,
-            ..
-        }
-        | ThrushStatement::ConstRef {
+        ThrushStatement::Reference {
             name,
             kind: ref_type,
             ..

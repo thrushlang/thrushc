@@ -39,12 +39,14 @@ pub type FoundSymbolId<'instr> = (
     Option<&'instr str>,
     Option<&'instr str>,
     Option<(&'instr str, usize)>,
+    Option<(&'instr str, usize)>,
 );
 
 pub type CustomTypeSymbol<'ctx> = (CustomTypeFields<'ctx>, CompilerAttributes<'ctx>);
 pub type EnumSymbol<'ctx> = (EnumFields<'ctx>, CompilerAttributes<'ctx>);
 pub type ConstantSymbol<'instr> = (ThrushType, CompilerAttributes<'instr>);
 
+pub type LLISymbol<'instr> = (ThrushType, Span);
 pub type LocalSymbol<'instr> = (ThrushType, bool, bool, Span);
 pub type ParameterSymbol<'instr> = (ThrushType, bool, bool, Span);
 
@@ -56,4 +58,5 @@ pub type Structs<'instr> = HashMap<&'instr str, Struct<'instr>>;
 pub type Enums<'instr> = HashMap<&'instr str, EnumSymbol<'instr>>;
 pub type Functions<'instr> = HashMap<&'instr str, Function<'instr>>;
 
+pub type LLIs<'instr> = Vec<HashMap<&'instr str, LLISymbol<'instr>>>;
 pub type Locals<'instr> = Vec<HashMap<&'instr str, LocalSymbol<'instr>>>;

@@ -164,27 +164,36 @@ impl ThrushType {
         }
     }
 
-    pub fn get_recursive_type_paths(&self) -> Vec<Vec<u32>> {
-        let mut paths: Vec<Vec<u32>> = Vec::with_capacity(50);
+    pub fn get_recursive_type_paths(&self) -> Vec<(ThrushType, Vec<u32>)> {
+        let mut paths: Vec<(ThrushType, Vec<u32>)> = Vec::with_capacity(50);
         let mut current_path: Vec<u32> = Vec::with_capacity(50);
+        let mut current_struct_type: ThrushType = self.clone();
 
-        self.get_recursive_type_path(&mut paths, &mut current_path);
+        self.get_recursive_type_path(&mut paths, &mut current_struct_type, &mut current_path);
 
         paths
     }
 
-    fn get_recursive_type_path(&self, paths: &mut Vec<Vec<u32>>, current_path: &mut Vec<u32>) {
+    fn get_recursive_type_path(
+        &self,
+        paths: &mut Vec<(ThrushType, Vec<u32>)>,
+        current_struct_type: &mut ThrushType,
+        current_path: &mut Vec<u32>,
+    ) {
         match self {
             ThrushType::Struct(_, fields) => {
+                *current_struct_type = self.clone();
+
                 for (index, field) in fields.iter().enumerate() {
                     current_path.push(index as u32);
-                    field.get_recursive_type_path(paths, current_path);
+                    field.get_recursive_type_path(paths, current_struct_type, current_path);
                     current_path.pop();
                 }
             }
 
             ThrushType::Me(_) => {
-                paths.push(current_path.clone());
+                current_path.insert(0, 0);
+                paths.push((current_struct_type.clone(), current_path.clone()));
             }
 
             _ => (),
@@ -321,7 +330,7 @@ impl LLVMDeallocator for ThrushType {
 
             if self.has_any_recursive_type() {
                 if let Some(last_block) = llvm_builder.get_insert_block() {
-                    let recursive_paths: Vec<Vec<u32>> = self.get_recursive_type_paths();
+                    /*let recursive_paths: Vec<Vec<u32>> = self.get_recursive_type_paths();
                     let recursive_types: Vec<ThrushType> = self.get_recursive_types();
 
                     println!("{:?}", self.get_recursive_types());
@@ -333,7 +342,7 @@ impl LLVMDeallocator for ThrushType {
 
                     let _ = llvm_builder.build_call(deallocator, &[ptr.into()], "");
 
-                    llvm_builder.position_at_end(last_block);
+                    llvm_builder.position_at_end(last_block);*/
 
                     return;
                 }

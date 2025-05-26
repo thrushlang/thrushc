@@ -150,9 +150,7 @@ pub fn build<'ctx>(
         ..
     } = expression
     {
-        let write_reference: &str = write_to.0;
-
-        let write_value: BasicValueEnum = build(write_value, write_type, context);
+        let write_value: BasicValueEnum = self::build(write_value, write_type, context);
 
         if let Some(expression) = write_to.1.as_ref() {
             let compiled_expression: PointerValue =
@@ -168,35 +166,27 @@ pub fn build<'ctx>(
                 .into();
         }
 
-        let symbol: SymbolAllocated = context.get_allocated_symbol(write_reference);
+        if let Some(ref_name) = write_to.0 {
+            let symbol: SymbolAllocated = context.get_allocated_symbol(ref_name);
 
-        symbol.store(context, write_value);
+            symbol.store(context, write_value);
 
-        return llvm_context
-            .ptr_type(AddressSpace::default())
-            .const_null()
-            .into();
+            return llvm_context
+                .ptr_type(AddressSpace::default())
+                .const_null()
+                .into();
+        }
     }
 
-    if let ThrushStatement::Carry {
-        name,
-        expression,
-        carry_type,
-        ..
-    } = expression
-    {
-        let carry_type_generated: BasicTypeEnum = typegen::generate_type(llvm_context, carry_type);
-
-        if let Some(expression) = expression {
-            let compiled_expression: PointerValue<'_> =
-                build(expression, carry_type, context).into_pointer_value();
-
-            return llvm_builder
-                .build_load(carry_type_generated, compiled_expression, "")
-                .unwrap();
+    if let ThrushStatement::Load { load, kind, .. } = expression {
+        if let Some(expression) = &load.1 {
+            let ptr: PointerValue = self::build(expression, kind, context).into_pointer_value();
+            return memory::load_anon(context, kind, ptr);
         }
 
-        return context.get_allocated_symbol(name).load(context);
+        if let Some(ref_name) = load.0 {
+            return context.get_allocated_symbol(ref_name).load(context);
+        }
     }
 
     if let ThrushStatement::Address { name, indexes, .. } = expression {
@@ -205,7 +195,8 @@ pub fn build<'ctx>(
         let mut compiled_indexes: Vec<IntValue> = Vec::with_capacity(10);
 
         indexes.iter().for_each(|indexe| {
-            let mut compiled_indexe: BasicValueEnum = build(indexe, &ThrushType::U32, context);
+            let mut compiled_indexe: BasicValueEnum =
+                self::build(indexe, &ThrushType::U32, context);
 
             if let Some(casted_index) = cast::integer(
                 context,
@@ -263,12 +254,18 @@ pub fn build<'ctx>(
         return memory::load_anon(context, kind, last_memory_calculation);
     }
 
-    if let ThrushStatement::LocalRef { name, .. } | ThrushStatement::ConstRef { name, .. } =
-        expression
+    if let ThrushStatement::Reference {
+        name,
+        identificator,
+        ..
+    } = expression
     {
         let symbol: SymbolAllocated = context.get_allocated_symbol(name);
 
-        if cast_target.is_mut_type() && context.get_position().in_call() {
+        if cast_target.is_mut_type()
+            && context.get_position().in_call()
+            && !identificator.is_constant()
+        {
             return symbol.take();
         }
 

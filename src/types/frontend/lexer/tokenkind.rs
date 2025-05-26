@@ -61,7 +61,8 @@ pub enum TokenKind {
 
     // --- Keywords ---
     Address,
-    Carry,
+    Instr,
+    Load,
     Write,
     New,
     Import,

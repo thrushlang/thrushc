@@ -31,6 +31,7 @@ pub trait FoundSymbolExtension {
     fn is_enum(&self) -> bool;
     fn is_function(&self) -> bool;
     fn is_parameter(&self) -> bool;
+    fn is_lli(&self) -> bool;
 }
 
 pub trait StructExtensions<'a> {
@@ -44,6 +45,7 @@ pub trait FoundSymbolEither<'instr> {
     fn expected_custom_type(&self, span: Span) -> Result<&'instr str, ThrushCompilerIssue>;
     fn expected_constant(&self, span: Span) -> Result<&'instr str, ThrushCompilerIssue>;
     fn expected_local(&self, span: Span) -> Result<(&'instr str, usize), ThrushCompilerIssue>;
+    fn expected_lli(&self, span: Span) -> Result<(&'instr str, usize), ThrushCompilerIssue>;
     fn expected_function(&self, span: Span) -> Result<&'instr str, ThrushCompilerIssue>;
     fn expected_enum(&self, span: Span) -> Result<&'instr str, ThrushCompilerIssue>;
     fn expected_struct(&self, span: Span) -> Result<&'instr str, ThrushCompilerIssue>;

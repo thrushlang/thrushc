@@ -500,12 +500,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 ThrushStatement::LLVMValue(valuegen::build(stmt, kind, &mut self.context), *span)
             }
 
-            ThrushStatement::LocalRef {
-                kind: ref_type,
-                span,
-                ..
-            }
-            | ThrushStatement::ConstRef {
+            ThrushStatement::Reference {
                 kind: ref_type,
                 span,
                 ..

@@ -175,7 +175,7 @@ impl<'instr> ParserContext<'instr> {
                     if lbrace_count != rbrace_count {
                         for _ in 0..diff {
                             self.scope = self.scope.saturating_sub(1);
-                            self.symbols.end_local_scope();
+                            self.symbols.end_scope();
                         }
                     }
                 }
@@ -192,7 +192,7 @@ impl<'instr> ParserContext<'instr> {
                     if lbrace_count != rbrace_count {
                         for _ in 0..diff {
                             self.scope = self.scope.saturating_sub(1);
-                            self.symbols.end_local_scope();
+                            self.symbols.end_scope();
                         }
                     }
                 }

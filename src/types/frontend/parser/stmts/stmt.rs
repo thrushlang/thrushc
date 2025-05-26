@@ -13,7 +13,10 @@ use crate::{
     },
 };
 
-use super::types::{CompilerAttributes, Constructor};
+use super::{
+    ident::ReferenceIndentificator,
+    types::{CompilerAttributes, Constructor},
+};
 
 #[derive(Debug, Clone)]
 pub enum ThrushStatement<'ctx> {
@@ -215,11 +218,6 @@ pub enum ThrushStatement<'ctx> {
         attributes: CompilerAttributes<'ctx>,
         span: Span,
     },
-    ConstRef {
-        name: &'ctx str,
-        kind: ThrushType,
-        span: Span,
-    },
 
     // Locals variables
     Local {
@@ -230,10 +228,12 @@ pub enum ThrushStatement<'ctx> {
         span: Span,
     },
 
-    LocalRef {
+    // Reference
+    Reference {
         name: &'ctx str,
         kind: ThrushType,
         span: Span,
+        identificator: ReferenceIndentificator,
     },
 
     // Mutation
@@ -241,6 +241,14 @@ pub enum ThrushStatement<'ctx> {
         source: (Option<&'ctx str>, Option<Rc<ThrushStatement<'ctx>>>),
         value: Rc<ThrushStatement<'ctx>>,
         kind: ThrushType,
+        span: Span,
+    },
+
+    // Low Level Instruction
+    LLI {
+        name: &'ctx str,
+        kind: ThrushType,
+        value: Rc<ThrushStatement<'ctx>>,
         span: Span,
     },
 
@@ -253,16 +261,15 @@ pub enum ThrushStatement<'ctx> {
     },
 
     Write {
-        write_to: (&'ctx str, Option<Rc<ThrushStatement<'ctx>>>),
+        write_to: (Option<&'ctx str>, Option<Rc<ThrushStatement<'ctx>>>),
         write_value: Rc<ThrushStatement<'ctx>>,
         write_type: ThrushType,
         span: Span,
     },
 
-    Carry {
-        name: &'ctx str,
-        expression: Option<Rc<ThrushStatement<'ctx>>>,
-        carry_type: ThrushType,
+    Load {
+        load: (Option<&'ctx str>, Option<Rc<ThrushStatement<'ctx>>>),
+        kind: ThrushType,
         span: Span,
     },
 
@@ -316,8 +323,7 @@ impl<'ctx> ThrushStatement<'ctx> {
             ThrushStatement::Local { kind, .. } => Ok(kind),
             ThrushStatement::Mut { kind, .. } => Ok(kind),
             ThrushStatement::FunctionParameter { kind, .. } => Ok(kind),
-            ThrushStatement::LocalRef { kind, .. } => Ok(kind),
-            ThrushStatement::ConstRef { kind, .. } => Ok(kind),
+            ThrushStatement::Reference { kind, .. } => Ok(kind),
             ThrushStatement::Call { kind, .. } => Ok(kind),
             ThrushStatement::BinaryOp { kind, .. } => Ok(kind),
             ThrushStatement::Group { kind, .. } => Ok(kind),
@@ -328,9 +334,7 @@ impl<'ctx> ThrushStatement<'ctx> {
             ThrushStatement::Char { kind, .. } => Ok(kind),
             ThrushStatement::Address { .. } => Ok(&ThrushType::Address),
             ThrushStatement::Constructor { kind, .. } => Ok(kind),
-            ThrushStatement::Carry {
-                carry_type: kind, ..
-            } => Ok(kind),
+            ThrushStatement::Load { kind, .. } => Ok(kind),
             ThrushStatement::Property { kind, .. } => Ok(kind),
             ThrushStatement::NullPtr { .. } => Ok(&ThrushType::Ptr(None)),
             ThrushStatement::This { kind, .. } => Ok(kind),
@@ -354,8 +358,7 @@ impl<'ctx> ThrushStatement<'ctx> {
             ThrushStatement::Local { kind, .. } => kind,
             ThrushStatement::Mut { kind, .. } => kind,
             ThrushStatement::FunctionParameter { kind, .. } => kind,
-            ThrushStatement::LocalRef { kind, .. } => kind,
-            ThrushStatement::ConstRef { kind, .. } => kind,
+            ThrushStatement::Reference { kind, .. } => kind,
             ThrushStatement::Call { kind, .. } => kind,
             ThrushStatement::BinaryOp { kind, .. } => kind,
             ThrushStatement::Group { kind, .. } => kind,
@@ -366,9 +369,7 @@ impl<'ctx> ThrushStatement<'ctx> {
             ThrushStatement::Char { kind, .. } => kind,
             ThrushStatement::Address { .. } => &ThrushType::Address,
             ThrushStatement::Constructor { kind, .. } => kind,
-            ThrushStatement::Carry {
-                carry_type: kind, ..
-            } => kind,
+            ThrushStatement::Load { kind, .. } => kind,
             ThrushStatement::Property { kind, .. } => kind,
             ThrushStatement::NullPtr { .. } => &ThrushType::Ptr(None),
             ThrushStatement::This { kind, .. } => kind,
@@ -389,8 +390,7 @@ impl<'ctx> ThrushStatement<'ctx> {
             ThrushStatement::Local { span, .. } => *span,
             ThrushStatement::Mut { span, .. } => *span,
             ThrushStatement::FunctionParameter { span, .. } => *span,
-            ThrushStatement::LocalRef { span, .. } => *span,
-            ThrushStatement::ConstRef { span, .. } => *span,
+            ThrushStatement::Reference { span, .. } => *span,
             ThrushStatement::Call { span, .. } => *span,
             ThrushStatement::BinaryOp { span, .. } => *span,
             ThrushStatement::Group { span, .. } => *span,
@@ -401,7 +401,7 @@ impl<'ctx> ThrushStatement<'ctx> {
             ThrushStatement::Char { span, .. } => *span,
             ThrushStatement::Address { span, .. } => *span,
             ThrushStatement::Constructor { span, .. } => *span,
-            ThrushStatement::Carry { span, .. } => *span,
+            ThrushStatement::Load { span, .. } => *span,
             ThrushStatement::Property { span, .. } => *span,
             ThrushStatement::NullPtr { span } => *span,
             ThrushStatement::Write { span, .. } => *span,
@@ -422,6 +422,7 @@ impl<'ctx> ThrushStatement<'ctx> {
             ThrushStatement::Pass { span } => *span,
             ThrushStatement::Method { span, .. } => *span,
             ThrushStatement::Methods { span, .. } => *span,
+            ThrushStatement::LLI { span, .. } => *span,
 
             ThrushStatement::Null { span } => *span,
             ThrushStatement::LLVMValue(_, span) => *span,
@@ -505,7 +506,7 @@ impl<'ctx> ThrushStatement<'ctx> {
     }
 
     pub fn get_reference_type(&self) -> Result<ThrushType, ThrushCompilerIssue> {
-        if let ThrushStatement::LocalRef { kind, .. } = self {
+        if let ThrushStatement::Reference { kind, .. } = self {
             return Ok(kind.clone());
         }
 
@@ -618,9 +619,7 @@ impl ThrushStatement<'_> {
             }
         }
 
-        if let ThrushStatement::LocalRef { kind, .. } | ThrushStatement::ConstRef { kind, .. } =
-            self
-        {
+        if let ThrushStatement::Reference { kind, .. } = self {
             if kind.is_integer_type() && operator.is_minus_operator() {
                 *kind = kind.narrowing_cast();
             }
@@ -705,7 +704,7 @@ impl ThrushStatement<'_> {
 
     #[inline]
     pub const fn is_ref(&self) -> bool {
-        matches!(self, ThrushStatement::LocalRef { .. })
+        matches!(self, ThrushStatement::Reference { .. })
     }
 
     #[inline]
@@ -731,6 +730,21 @@ impl ThrushStatement<'_> {
     #[inline]
     pub const fn is_binary(&self) -> bool {
         matches!(self, ThrushStatement::BinaryOp { .. })
+    }
+
+    #[inline]
+    pub const fn is_lli(&self) -> bool {
+        matches!(
+            self,
+            ThrushStatement::Write { .. }
+                | ThrushStatement::Load { .. }
+                | ThrushStatement::Address { .. }
+        )
+    }
+
+    #[inline]
+    pub const fn is_write(&self) -> bool {
+        matches!(self, ThrushStatement::Write { .. })
     }
 
     #[inline]

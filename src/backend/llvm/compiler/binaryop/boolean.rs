@@ -74,7 +74,7 @@ pub fn bool_binaryop<'ctx>(
     }
 
     if let (
-        ThrushStatement::LocalRef { .. } | ThrushStatement::ConstRef { .. },
+        ThrushStatement::Reference { .. },
         TokenKind::BangEq
         | TokenKind::EqEq
         | TokenKind::LessEq
@@ -83,7 +83,7 @@ pub fn bool_binaryop<'ctx>(
         | TokenKind::GreaterEq
         | TokenKind::And
         | TokenKind::Or,
-        ThrushStatement::LocalRef { .. } | ThrushStatement::ConstRef { .. },
+        ThrushStatement::Reference { .. },
     ) = binary
     {
         if binary.0.get_type_unwrapped().is_float_type() {
@@ -98,7 +98,7 @@ pub fn bool_binaryop<'ctx>(
     }
 
     if let (
-        ThrushStatement::LocalRef { .. } | ThrushStatement::ConstRef { .. },
+        ThrushStatement::Reference { .. },
         TokenKind::BangEq
         | TokenKind::EqEq
         | TokenKind::LessEq
@@ -133,7 +133,7 @@ pub fn bool_binaryop<'ctx>(
         | TokenKind::GreaterEq
         | TokenKind::And
         | TokenKind::Or,
-        ThrushStatement::LocalRef { .. } | ThrushStatement::ConstRef { .. },
+        ThrushStatement::Reference { .. },
     ) = binary
     {
         if binary.0.get_type_unwrapped().is_float_type() {
@@ -208,7 +208,7 @@ pub fn bool_binaryop<'ctx>(
     }
 
     if let (
-        ThrushStatement::LocalRef { .. } | ThrushStatement::ConstRef { .. },
+        ThrushStatement::Reference { .. },
         TokenKind::BangEq
         | TokenKind::EqEq
         | TokenKind::LessEq
@@ -239,7 +239,7 @@ pub fn bool_binaryop<'ctx>(
         | TokenKind::GreaterEq
         | TokenKind::And
         | TokenKind::Or,
-        ThrushStatement::LocalRef { .. } | ThrushStatement::ConstRef { .. },
+        ThrushStatement::Reference { .. },
     ) = binary
     {
         if binary.0.get_type_unwrapped().is_float_type() {

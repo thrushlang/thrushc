@@ -1,12 +1,12 @@
 use crate::{
     frontend::lexer::span::Span,
-    standard::errors::standard::ThrushCompilerIssue,
+    standard::errors::{position::CompilationPosition, standard::ThrushCompilerIssue},
     types::frontend::{
         lexer::types::MethodsApplicant,
         parser::symbols::types::{
             ConstantSymbol, Constants, CustomTypeSymbol, CustomTypes, EnumSymbol, Enums,
-            FoundSymbolId, Function, Functions, LocalSymbol, Locals, Methods, ParameterSymbol,
-            Parameters, Struct, Structs,
+            FoundSymbolId, Function, Functions, LLISymbol, LLIs, LocalSymbol, Locals, Methods,
+            ParameterSymbol, Parameters, Struct, Structs,
         },
     },
 };
@@ -17,7 +17,8 @@ const MINIMAL_CUSTOM_TYPE_CAPACITY: usize = 255;
 const MINIMAL_CONSTANTS_CAPACITY: usize = 255;
 const MINIMAL_STRUCTURE_CAPACITY: usize = 255;
 const MINIMAL_ENUMS_CAPACITY: usize = 255;
-const MINIMAL_LOCAL_SCOPE_CAPACITY: usize = 255;
+const MINIMAL_LOCALS_CAPACITY: usize = 255;
+const MINIMAL_LLIS_CAPACITY: usize = 255;
 const MINIMAL_PARAMETERS_CAPACITY: usize = 255;
 
 #[derive(Clone, Debug, Default)]
@@ -25,6 +26,7 @@ pub struct SymbolsTable<'instr> {
     custom_types: CustomTypes<'instr>,
     constants: Constants<'instr>,
     locals: Locals<'instr>,
+    llis: LLIs<'instr>,
     structs: Structs<'instr>,
     functions: Functions<'instr>,
     enums: Enums<'instr>,
@@ -36,7 +38,8 @@ impl<'instr> SymbolsTable<'instr> {
         Self {
             custom_types: HashMap::with_capacity(MINIMAL_CUSTOM_TYPE_CAPACITY),
             constants: HashMap::with_capacity(MINIMAL_CONSTANTS_CAPACITY),
-            locals: Vec::with_capacity(MINIMAL_LOCAL_SCOPE_CAPACITY),
+            locals: Vec::with_capacity(MINIMAL_LOCALS_CAPACITY),
+            llis: Vec::with_capacity(MINIMAL_LLIS_CAPACITY),
             functions,
             structs: HashMap::with_capacity(MINIMAL_STRUCTURE_CAPACITY),
             enums: HashMap::with_capacity(MINIMAL_ENUMS_CAPACITY),
@@ -44,13 +47,17 @@ impl<'instr> SymbolsTable<'instr> {
         }
     }
 
-    pub fn begin_local_scope(&mut self) {
+    pub fn begin_scope(&mut self) {
         self.locals
-            .push(HashMap::with_capacity(MINIMAL_LOCAL_SCOPE_CAPACITY));
+            .push(HashMap::with_capacity(MINIMAL_LOCALS_CAPACITY));
+
+        self.llis
+            .push(HashMap::with_capacity(MINIMAL_LLIS_CAPACITY));
     }
 
-    pub fn end_local_scope(&mut self) {
+    pub fn end_scope(&mut self) {
         self.locals.pop();
+        self.llis.pop();
     }
 
     pub fn end_parameters(&mut self) {
@@ -81,6 +88,36 @@ impl<'instr> SymbolsTable<'instr> {
         self.parameters.insert(name, parameter);
 
         Ok(())
+    }
+
+    pub fn new_lli(
+        &mut self,
+        name: &'instr str,
+        lli: LLISymbol<'instr>,
+        span: Span,
+    ) -> Result<(), ThrushCompilerIssue> {
+        if let Some(last_scope) = self.llis.last_mut() {
+            if last_scope.contains_key(name) {
+                return Err(ThrushCompilerIssue::Error(
+                    String::from("Low level instruction already declared"),
+                    format!("Low level instruction '{}' already declared before.", name),
+                    None,
+                    span,
+                ));
+            }
+
+            last_scope.insert(name, lli);
+
+            return Ok(());
+        }
+
+        return Err(ThrushCompilerIssue::Bug(
+            String::from("Low level instruction not caught"),
+            String::from("The final scope was not obtained."),
+            span,
+            CompilationPosition::Parser,
+            line!(),
+        ));
     }
 
     pub fn new_local(
@@ -242,38 +279,63 @@ impl<'instr> SymbolsTable<'instr> {
         span: Span,
     ) -> Result<FoundSymbolId<'instr>, ThrushCompilerIssue> {
         if self.custom_types.contains_key(name) {
-            return Ok((None, None, None, None, Some(name), None, None));
+            return Ok((None, None, None, None, Some(name), None, None, None));
         }
 
         if self.constants.contains_key(name) {
-            return Ok((None, None, None, Some(name), None, None, None));
+            return Ok((None, None, None, Some(name), None, None, None, None));
         }
 
         if self.structs.contains_key(name) {
-            return Ok((Some(name), None, None, None, None, None, None));
+            return Ok((Some(name), None, None, None, None, None, None, None));
         }
 
         if self.enums.contains_key(name) {
-            return Ok((None, None, Some(name), None, None, None, None));
+            return Ok((None, None, Some(name), None, None, None, None, None));
         }
 
         if self.functions.contains_key(name) {
-            return Ok((None, Some(name), None, None, None, None, None));
+            return Ok((None, Some(name), None, None, None, None, None, None));
         }
 
         if self.parameters.contains_key(name) {
-            return Ok((None, None, None, None, None, Some(name), None));
+            return Ok((None, None, None, None, None, Some(name), None, None));
+        }
+
+        for (idx, scope) in self.llis.iter().enumerate().rev() {
+            if scope.contains_key(name) {
+                return Ok((None, None, None, None, None, None, Some((name, idx)), None));
+            }
         }
 
         for (idx, scope) in self.locals.iter().enumerate().rev() {
             if scope.contains_key(name) {
-                return Ok((None, None, None, None, None, None, Some((name, idx))));
+                return Ok((None, None, None, None, None, None, None, Some((name, idx))));
             }
         }
 
         Err(ThrushCompilerIssue::Error(
             String::from("Reference not found"),
             format!("'{}' is not declared or defined.", name),
+            None,
+            span,
+        ))
+    }
+
+    #[inline]
+    pub fn get_lli_by_id(
+        &self,
+        lli_id: &'instr str,
+        scope_idx: usize,
+        span: Span,
+    ) -> Result<&LLISymbol<'instr>, ThrushCompilerIssue> {
+        if let Some(lli) = self.llis[scope_idx].get(lli_id) {
+            return Ok(lli);
+        }
+
+        Err(ThrushCompilerIssue::Error(
+            String::from("Expected low level instruction reference"),
+            String::from("Expected LLI but found something else."),
             None,
             span,
         ))

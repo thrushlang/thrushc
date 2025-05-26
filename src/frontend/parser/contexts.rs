@@ -8,6 +8,7 @@ pub enum MethodsType {
 
 #[derive(Debug, Clone, Copy)]
 pub enum TypePosition {
+    Instr,
     Local,
     Parameter,
     BindParameter,

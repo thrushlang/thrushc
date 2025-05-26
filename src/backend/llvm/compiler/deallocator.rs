@@ -24,7 +24,7 @@ pub fn dealloc(
     exclusion: Option<&Rc<ThrushStatement>>,
 ) {
     if let Some(expression) = exclusion {
-        if let ThrushStatement::LocalRef { name, .. } = **expression {
+        if let ThrushStatement::Reference { name, .. } = **expression {
             symbols_allocated
                 .iter()
                 .filter(|symbol| *symbol.0 != name)

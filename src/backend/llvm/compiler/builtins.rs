@@ -46,13 +46,7 @@ pub fn build_sizeof<'ctx>(
 
     let value: &ThrushStatement = &call.2[0];
 
-    if let ThrushStatement::LocalRef {
-        name,
-        kind: ref_type,
-        span,
-        ..
-    }
-    | ThrushStatement::ConstRef {
+    if let ThrushStatement::Reference {
         name,
         kind: ref_type,
         span,
@@ -133,13 +127,7 @@ pub fn build_is_signed<'ctx>(
 
     let value: &ThrushStatement = &call.2[0];
 
-    if let ThrushStatement::LocalRef {
-        name,
-        kind: ref_type,
-        span,
-        ..
-    }
-    | ThrushStatement::ConstRef {
+    if let ThrushStatement::Reference {
         name,
         kind: ref_type,
         span,

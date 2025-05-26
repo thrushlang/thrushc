@@ -1,9 +1,12 @@
 use ahash::AHashMap as HashMap;
 
-use crate::{frontend::lexer::span::Span, types::frontend::parser::stmts::stmt::ThrushStatement};
+use crate::frontend::lexer::span::Span;
 
 pub type LinterConstantInfo = (Span, bool);
 pub type LinterConstants<'linter> = HashMap<&'linter str, LinterConstantInfo>;
+
+pub type LinterLLIInfo<'symbol> = (Span, bool);
+pub type LinterLLIs<'symbol> = Vec<HashMap<&'symbol str, LinterLLIInfo<'symbol>>>;
 
 pub type LinterFunctionInfo<'linter> = (Span, bool);
 pub type LinterFunctions<'linter> = HashMap<&'linter str, LinterFunctionInfo<'linter>>;

@@ -85,6 +85,7 @@ fn statement<'instr>(
             TokenKind::LBrace => Ok(self::build_block(parser_ctx)?),
             TokenKind::Return => Ok(self::build_return(parser_ctx)?),
             TokenKind::Local => Ok(self::build_local(parser_ctx)?),
+            TokenKind::Instr => Ok(self::build_instr(parser_ctx)?),
             TokenKind::For => Ok(self::build_for_loop(parser_ctx)?),
             TokenKind::If => Ok(self::build_conditional(parser_ctx)?),
             TokenKind::While => Ok(self::build_while_loop(parser_ctx)?),
@@ -1142,6 +1143,106 @@ pub fn build_const<'instr>(
     })
 }
 
+fn build_instr<'instr>(
+    parser_ctx: &mut ParserContext<'instr>,
+) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
+    parser_ctx
+        .get_mut_type_ctx()
+        .set_position(TypePosition::Instr);
+
+    let instr_tk: &Token = parser_ctx.consume(
+        TokenKind::Instr,
+        String::from("Syntax error"),
+        String::from("Expected 'instr' keyword."),
+    )?;
+
+    let span: Span = instr_tk.span;
+
+    if parser_ctx.is_main_scope() {
+        return Err(ThrushCompilerIssue::Error(
+            String::from("Syntax error"),
+            String::from("LLI's should be contained at local scope."),
+            None,
+            span,
+        ));
+    }
+
+    if parser_ctx.is_unreacheable_code() {
+        return Err(ThrushCompilerIssue::Error(
+            String::from("Syntax error"),
+            String::from("Unreacheable code."),
+            None,
+            span,
+        ));
+    }
+
+    let instr_tk: &Token = parser_ctx.consume(
+        TokenKind::Identifier,
+        String::from("Syntax error"),
+        String::from("Expected name."),
+    )?;
+
+    let name: &str = instr_tk.lexeme;
+    let span: Span = instr_tk.span;
+
+    parser_ctx.consume(
+        TokenKind::Colon,
+        String::from("Syntax error"),
+        String::from("Expected ':'."),
+    )?;
+
+    let instr_type: ThrushType = typegen::build_type(parser_ctx)?;
+
+    parser_ctx.consume(
+        TokenKind::Eq,
+        String::from("Syntax error"),
+        String::from("Expected '='."),
+    )?;
+
+    let value: ThrushStatement = expression::build_expr(parser_ctx)?;
+
+    if !value.is_lli() {
+        return Err(ThrushCompilerIssue::Error(
+            String::from("Syntax error"),
+            String::from("LLI was expected."),
+            None,
+            value.get_span(),
+        ));
+    }
+
+    if value.is_write() {
+        return Err(ThrushCompilerIssue::Error(
+            String::from("Syntax error"),
+            String::from("Write LLI is cannot be used as a value."),
+            None,
+            value.get_span(),
+        ));
+    }
+
+    parser_ctx.consume(
+        TokenKind::SemiColon,
+        String::from("Syntax error"),
+        String::from("Expected ';'."),
+    )?;
+
+    parser_ctx
+        .get_mut_symbols()
+        .new_lli(name, (instr_type.clone(), span), span)?;
+
+    parser_ctx
+        .get_mut_type_ctx()
+        .set_position(TypePosition::NoRelevant);
+
+    let lli: ThrushStatement = ThrushStatement::LLI {
+        name,
+        kind: instr_type,
+        value: value.into(),
+        span,
+    };
+
+    Ok(lli)
+}
+
 fn build_local<'instr>(
     parser_ctx: &mut ParserContext<'instr>,
 ) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
@@ -1155,12 +1256,14 @@ fn build_local<'instr>(
         String::from("Expected 'local' keyword."),
     )?;
 
+    let span: Span = local_tk.span;
+
     if parser_ctx.is_main_scope() {
         return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("Locals variables should be contained at local scope."),
             None,
-            local_tk.span,
+            span,
         ));
     }
 
@@ -1169,7 +1272,7 @@ fn build_local<'instr>(
             String::from("Syntax error"),
             String::from("Unreacheable code."),
             None,
-            local_tk.span,
+            span,
         ));
     }
 
@@ -1341,7 +1444,7 @@ fn build_block<'instr>(
     }
 
     *parser_ctx.get_mut_scope() += 1;
-    parser_ctx.get_mut_symbols().begin_local_scope();
+    parser_ctx.get_mut_symbols().begin_scope();
 
     let mut stmts: Vec<ThrushStatement> = Vec::with_capacity(100);
 
@@ -1350,7 +1453,7 @@ fn build_block<'instr>(
         stmts.push(stmt)
     }
 
-    parser_ctx.get_mut_symbols().end_local_scope();
+    parser_ctx.get_mut_symbols().end_scope();
     *parser_ctx.get_mut_scope() -= 1;
 
     Ok(ThrushStatement::Block { stmts, span })
@@ -1584,17 +1687,19 @@ fn build_compiler_attributes<'instr>(
     while !limits.contains(&parser_ctx.peek().kind) {
         match parser_ctx.peek().kind {
             TokenKind::Extern => {
-                compiler_attributes.push(LLVMAttribute::FFI(build_external_attribute(parser_ctx)?));
+                compiler_attributes.push(LLVMAttribute::FFI(self::build_external_attribute(
+                    parser_ctx,
+                )?));
             }
 
             TokenKind::Convention => {
                 compiler_attributes.push(LLVMAttribute::Convention(
-                    build_call_convention_attribute(parser_ctx)?,
+                    self::build_call_convention_attribute(parser_ctx)?,
                 ));
             }
 
             TokenKind::Public => {
-                compiler_attributes.push(LLVMAttribute::Public);
+                compiler_attributes.push(self::LLVMAttribute::Public);
                 parser_ctx.only_advance()?;
             }
 

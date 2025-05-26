@@ -87,35 +87,42 @@ pub fn build_type(parser_ctx: &mut ParserContext<'_>) -> Result<ThrushType, Thru
             let name: &str = identifier_tk.lexeme;
             let span: Span = identifier_tk.span;
 
-            let object: FoundSymbolId = parser_ctx.get_symbols().get_symbols_id(name, span)?;
+            if let Ok(object) = parser_ctx.get_symbols().get_symbols_id(name, span) {
+                if object.is_structure() {
+                    let struct_id: &str = object.expected_struct(span)?;
 
-            if object.is_structure() {
-                let struct_id: &str = object.expected_struct(span)?;
+                    let structure: Struct =
+                        parser_ctx.get_symbols().get_struct_by_id(struct_id, span)?;
 
-                let structure: Struct =
-                    parser_ctx.get_symbols().get_struct_by_id(struct_id, span)?;
+                    let fields: StructFields = structure.get_fields();
 
-                let fields: StructFields = structure.get_fields();
+                    return Ok(fields.get_type());
+                } else if object.is_custom_type() {
+                    let custom_id: &str = object.expected_custom_type(span)?;
 
-                Ok(fields.get_type())
-            } else if object.is_custom_type() {
-                let custom_id: &str = object.expected_custom_type(span)?;
+                    let custom: CustomTypeSymbol = parser_ctx
+                        .get_symbols()
+                        .get_custom_type_by_id(custom_id, span)?;
 
-                let custom: CustomTypeSymbol = parser_ctx
-                    .get_symbols()
-                    .get_custom_type_by_id(custom_id, span)?;
+                    let custom_type_fields: CustomTypeFields = custom.0;
 
-                let custom_type_fields: CustomTypeFields = custom.0;
-
-                Ok(custom_type_fields.get_type())
-            } else {
-                return Err(ThrushCompilerIssue::Error(
-                    String::from("Syntax error"),
-                    format!("Not found type '{}'.", name),
-                    None,
-                    span,
-                ));
+                    return Ok(custom_type_fields.get_type());
+                } else {
+                    return Err(ThrushCompilerIssue::Error(
+                        String::from("Syntax error"),
+                        format!("Not found type '{}'.", name),
+                        None,
+                        span,
+                    ));
+                }
             }
+
+            return Err(ThrushCompilerIssue::Error(
+                String::from("Syntax error"),
+                format!("Expected type, not '{}'", name),
+                None,
+                parser_ctx.previous().span,
+            ));
         }
 
         what_heck => Err(ThrushCompilerIssue::Error(
