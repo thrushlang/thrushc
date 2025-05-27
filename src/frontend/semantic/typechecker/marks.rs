@@ -34,3 +34,22 @@ impl<'types> TypeCheckerTypeContext<'types> {
         self.current_function_type
     }
 }
+
+#[derive(Debug, Clone, Copy, Default)]
+pub enum TypeCheckerTypeCheckSource {
+    Local,
+    Call,
+
+    #[default]
+    NoRelevant,
+}
+
+impl TypeCheckerTypeCheckSource {
+    pub fn is_call(&self) -> bool {
+        matches!(self, TypeCheckerTypeCheckSource::Call)
+    }
+
+    pub fn is_local(&self) -> bool {
+        matches!(self, TypeCheckerTypeCheckSource::Local)
+    }
+}

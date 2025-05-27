@@ -10,6 +10,6 @@ pub fn build<'ctx>(
     expression: &'ctx ThrushStatement,
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
 ) {
-    let value: BasicValueEnum = valuegen::build(expression, kind, context);
+    let value: BasicValueEnum = valuegen::build(context, expression, kind);
     context.alloc_low_level_instruction(name, value, kind);
 }

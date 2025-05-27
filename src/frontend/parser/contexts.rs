@@ -175,6 +175,10 @@ impl TypePosition {
     pub fn is_structure_field(&self) -> bool {
         matches!(self, TypePosition::StructureField)
     }
+
+    pub fn is_local(&self) -> bool {
+        matches!(self, TypePosition::Local)
+    }
 }
 
 impl InstructionPosition {

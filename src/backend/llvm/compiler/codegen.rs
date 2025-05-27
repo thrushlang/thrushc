@@ -1,3 +1,4 @@
+use crate::standard::logging::{self, LoggingType};
 use crate::types::backend::llvm::types::{LLVMFunctionParameter, LLVMFunctionPrototype};
 use crate::types::frontend::lexer::types::ThrushType;
 
@@ -8,29 +9,27 @@ use super::super::compiler::attributes::LLVMAttribute;
 
 use super::{
     attributes::{AttributeBuilder, LLVMAttributeApplicant},
-    binaryop,
     context::LLVMCodeGenContext,
     conventions::CallConvention,
-    local, typegen, unaryop, valuegen,
+    local, typegen, valuegen,
 };
 use super::{deallocator, llis};
 
 use inkwell::{
-    AddressSpace,
     basic_block::BasicBlock,
     builder::Builder,
     context::Context,
     module::{Linkage, Module},
     targets::TargetData,
     types::FunctionType,
-    values::{BasicValueEnum, FunctionValue, GlobalValue, IntValue},
+    values::{BasicValueEnum, FunctionValue, IntValue},
 };
 
 pub struct LLVMCodegen<'a, 'ctx> {
     context: LLVMCodeGenContext<'a, 'ctx>,
     stmts: &'ctx [ThrushStatement<'ctx>],
     current: usize,
-    function: Option<FunctionValue<'ctx>>,
+    current_function: Option<FunctionValue<'ctx>>,
     loop_exit_block: Option<BasicBlock<'ctx>>,
     loop_start_block: Option<BasicBlock<'ctx>>,
     deallocators_emited: bool,
@@ -49,7 +48,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
             context: LLVMCodeGenContext::new(module, context, builder, target_data, diagnostician),
             stmts,
             current: 0,
-            function: None,
+            current_function: None,
             loop_exit_block: None,
             loop_start_block: None,
             deallocators_emited: false,
@@ -58,8 +57,8 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
     }
 
     fn start(&mut self) {
-        self.declare_basics();
-        self.declare();
+        self.init_functions();
+        self.init_constants();
 
         while !self.is_end() {
             let stmt: &ThrushStatement = self.advance();
@@ -67,12 +66,74 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         }
     }
 
-    fn codegen(&mut self, stmt: &'ctx ThrushStatement) -> ThrushStatement<'ctx> {
+    fn codegen(&mut self, stmt: &'ctx ThrushStatement) {
+        self.codegen_function_parts(stmt);
+    }
+
+    fn codegen_function_parts(&mut self, stmt: &'ctx ThrushStatement) {
+        /* ######################################################################
+
+
+            LLVM CODEGEN | FUNCTIONS - START
+
+
+        ########################################################################*/
+
         let llvm_builder: &Builder = self.context.get_llvm_builder();
         let llvm_context: &Context = self.context.get_llvm_context();
 
         match stmt {
-            ThrushStatement::Block { stmts, span, .. } => {
+            ThrushStatement::Function { .. } => {
+                self.build_function(stmt.as_llvm_function_proto());
+            }
+
+            ThrushStatement::EntryPoint { body, .. } => {
+                self.current_function = Some(self.entrypoint());
+
+                self.codegen(body);
+
+                llvm_builder
+                    .build_return(Some(&llvm_context.i32_type().const_int(0, false)))
+                    .unwrap();
+            }
+
+            ThrushStatement::Return {
+                expression, kind, ..
+            } => {
+                self.deallocators_emited = true;
+
+                deallocator::dealloc(
+                    &self.context,
+                    self.context.get_allocated_symbols(),
+                    expression.as_ref(),
+                );
+
+                valuegen::build(&mut self.context, stmt, kind);
+            }
+
+            stmt => self.codegen_code_block(stmt),
+        }
+
+        /* ######################################################################
+
+
+            LLVM CODEGEN | FUNCTIONS - END
+
+
+        ########################################################################*/
+    }
+
+    fn codegen_code_block(&mut self, stmt: &'ctx ThrushStatement) {
+        /* ######################################################################
+
+
+            LLVM CODEGEN | CODE BLOCK - START
+
+
+        ########################################################################*/
+
+        match stmt {
+            ThrushStatement::Block { stmts, .. } => {
                 self.context.begin_scope();
 
                 stmts.iter().for_each(|stmt| {
@@ -86,93 +147,142 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 self.deallocators_emited = false;
 
                 self.context.end_scope();
-
-                ThrushStatement::Null { span: *span }
             }
+
+            stmt => self.codegen_conditionals(stmt),
+        }
+
+        /* ######################################################################
+
+
+            LLVM CODEGEN | CODE BLOCK - END
+
+
+        ########################################################################*/
+    }
+
+    fn codegen_conditionals(&mut self, stmt: &'ctx ThrushStatement) {
+        /* ######################################################################
+
+
+            LLVM CODEGEN | IF - ELIF - ELSE - START
+
+
+        ########################################################################*/
+
+        let llvm_builder: &Builder = self.context.get_llvm_builder();
+        let llvm_context: &Context = self.context.get_llvm_context();
+
+        match stmt {
             ThrushStatement::If {
                 cond,
                 block,
                 elfs,
                 otherwise,
-                span,
                 ..
             } => {
-                let compiled_if_cond: IntValue<'ctx> =
-                    self.codegen(cond).as_llvm_value().into_int_value();
+                if let Some(current_function) = self.current_function {
+                    let if_comparison: IntValue<'ctx> =
+                        valuegen::build(&mut self.context, cond, &ThrushType::Bool)
+                            .into_int_value();
 
-                let then_block: BasicBlock =
-                    llvm_context.append_basic_block(self.function.unwrap(), "if");
+                    let then_block: BasicBlock =
+                        llvm_context.append_basic_block(current_function, "if");
 
-                let else_if_cond: BasicBlock =
-                    llvm_context.append_basic_block(self.function.unwrap(), "elseif");
+                    let else_if_cond: BasicBlock =
+                        llvm_context.append_basic_block(current_function, "elseif");
 
-                let else_if_body: BasicBlock =
-                    llvm_context.append_basic_block(self.function.unwrap(), "elseif_body");
+                    let else_if_body: BasicBlock =
+                        llvm_context.append_basic_block(current_function, "elseif_body");
 
-                let else_block: BasicBlock =
-                    llvm_context.append_basic_block(self.function.unwrap(), "else");
+                    let else_block: BasicBlock =
+                        llvm_context.append_basic_block(current_function, "else");
 
-                let merge_block: BasicBlock =
-                    llvm_context.append_basic_block(self.function.unwrap(), "merge");
+                    let merge_block: BasicBlock =
+                        llvm_context.append_basic_block(current_function, "merge");
 
-                if !elfs.is_empty() {
-                    llvm_builder
-                        .build_conditional_branch(compiled_if_cond, then_block, else_if_cond)
-                        .unwrap();
-                } else if otherwise.is_some() && elfs.is_empty() {
-                    llvm_builder
-                        .build_conditional_branch(compiled_if_cond, then_block, else_block)
-                        .unwrap();
-                } else {
-                    llvm_builder
-                        .build_conditional_branch(compiled_if_cond, then_block, merge_block)
-                        .unwrap();
-                }
+                    if !elfs.is_empty() {
+                        llvm_builder
+                            .build_conditional_branch(if_comparison, then_block, else_if_cond)
+                            .unwrap();
+                    } else if otherwise.is_some() && elfs.is_empty() {
+                        llvm_builder
+                            .build_conditional_branch(if_comparison, then_block, else_block)
+                            .unwrap();
+                    } else {
+                        llvm_builder
+                            .build_conditional_branch(if_comparison, then_block, merge_block)
+                            .unwrap();
+                    }
 
-                llvm_builder.position_at_end(then_block);
+                    llvm_builder.position_at_end(then_block);
 
-                self.codegen(block);
+                    self.codegen(block);
 
-                if !block.has_return() && !block.has_break() && !block.has_continue() {
-                    llvm_builder
-                        .build_unconditional_branch(merge_block)
-                        .unwrap();
-                }
+                    if !block.has_return() && !block.has_break() && !block.has_continue() {
+                        llvm_builder
+                            .build_unconditional_branch(merge_block)
+                            .unwrap();
+                    }
 
-                if !elfs.is_empty() {
-                    llvm_builder.position_at_end(else_if_cond);
-                } else {
-                    llvm_builder.position_at_end(merge_block);
-                }
+                    if !elfs.is_empty() {
+                        llvm_builder.position_at_end(else_if_cond);
+                    } else {
+                        llvm_builder.position_at_end(merge_block);
+                    }
 
-                if !elfs.is_empty() {
-                    let mut current_block: BasicBlock = else_if_body;
+                    if !elfs.is_empty() {
+                        let mut current_block: BasicBlock = else_if_body;
 
-                    for (index, instr) in elfs.iter().enumerate() {
-                        if let ThrushStatement::Elif { cond, block, .. } = instr {
-                            let compiled_else_if_cond: IntValue =
-                                self.codegen(cond).as_llvm_value().into_int_value();
+                        for (index, instr) in elfs.iter().enumerate() {
+                            if let ThrushStatement::Elif { cond, block, .. } = instr {
+                                let compiled_else_if_cond: IntValue =
+                                    valuegen::build(&mut self.context, cond, &ThrushType::Bool)
+                                        .into_int_value();
 
-                            let elif_body: BasicBlock = current_block;
+                                let elif_body: BasicBlock = current_block;
 
-                            let next_block: BasicBlock = if index + 1 < elfs.len() {
-                                llvm_context
-                                    .append_basic_block(self.function.unwrap(), "elseif_body")
-                            } else if otherwise.is_some() {
-                                else_block
-                            } else {
-                                merge_block
-                            };
+                                let next_block: BasicBlock = if index + 1 < elfs.len() {
+                                    llvm_context.append_basic_block(current_function, "elseif_body")
+                                } else if otherwise.is_some() {
+                                    else_block
+                                } else {
+                                    merge_block
+                                };
 
-                            llvm_builder
-                                .build_conditional_branch(
-                                    compiled_else_if_cond,
-                                    elif_body,
-                                    next_block,
-                                )
-                                .unwrap();
+                                llvm_builder
+                                    .build_conditional_branch(
+                                        compiled_else_if_cond,
+                                        elif_body,
+                                        next_block,
+                                    )
+                                    .unwrap();
 
-                            llvm_builder.position_at_end(elif_body);
+                                llvm_builder.position_at_end(elif_body);
+
+                                self.codegen(block);
+
+                                if !block.has_return()
+                                    && !block.has_break()
+                                    && !block.has_continue()
+                                {
+                                    llvm_builder
+                                        .build_unconditional_branch(merge_block)
+                                        .unwrap();
+                                }
+
+                                if index + 1 < elfs.len() {
+                                    llvm_builder.position_at_end(next_block);
+                                    current_block = llvm_context
+                                        .append_basic_block(current_function, "elseif_body");
+                                }
+                            }
+                        }
+                    }
+
+                    if let Some(otherwise) = otherwise {
+                        if let ThrushStatement::Else { block, .. } = &**otherwise {
+                            llvm_builder.position_at_end(else_block);
 
                             self.codegen(block);
 
@@ -181,371 +291,295 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                                     .build_unconditional_branch(merge_block)
                                     .unwrap();
                             }
-
-                            if index + 1 < elfs.len() {
-                                llvm_builder.position_at_end(next_block);
-                                current_block = llvm_context
-                                    .append_basic_block(self.function.unwrap(), "elseif_body");
-                            }
                         }
                     }
-                }
 
-                if let Some(otherwise) = otherwise {
-                    if let ThrushStatement::Else { block, .. } = &**otherwise {
-                        llvm_builder.position_at_end(else_block);
-
-                        self.codegen(block);
-
-                        if !block.has_return() && !block.has_break() && !block.has_continue() {
-                            llvm_builder
-                                .build_unconditional_branch(merge_block)
-                                .unwrap();
-                        }
+                    if !elfs.is_empty() || otherwise.is_some() {
+                        llvm_builder.position_at_end(merge_block);
                     }
+
+                    if elfs.is_empty() {
+                        let _ = else_if_cond.remove_from_function();
+                        let _ = else_if_body.remove_from_function();
+                    }
+
+                    if otherwise.is_none() {
+                        let _ = else_block.remove_from_function();
+                    }
+
+                    return;
                 }
 
-                if !elfs.is_empty() || otherwise.is_some() {
-                    llvm_builder.position_at_end(merge_block);
-                }
-
-                if elfs.is_empty() {
-                    let _ = else_if_cond.remove_from_function();
-                    let _ = else_if_body.remove_from_function();
-                }
-
-                if otherwise.is_none() {
-                    let _ = else_block.remove_from_function();
-                }
-
-                ThrushStatement::Null { span: *span }
+                logging::log(
+                    LoggingType::Panic,
+                    "The current function could not be obtained at code generation time.",
+                );
             }
-            ThrushStatement::While {
-                cond, block, span, ..
-            } => {
-                let function: FunctionValue = self.function.unwrap();
+            stmt => self.codegen_loops(stmt),
+        }
 
-                let cond_block: BasicBlock = llvm_context.append_basic_block(function, "while");
+        /* ######################################################################
 
-                llvm_builder.build_unconditional_branch(cond_block).unwrap();
 
-                llvm_builder.position_at_end(cond_block);
+            LLVM CODEGEN | IF - ELIF - ELSE - END
 
-                let conditional: IntValue =
-                    self.codegen(cond.as_ref()).as_llvm_value().into_int_value();
 
-                let then_block: BasicBlock =
-                    llvm_context.append_basic_block(function, "while_body");
-                let exit_block: BasicBlock =
-                    llvm_context.append_basic_block(function, "while_exit");
+        ########################################################################*/
+    }
 
-                self.loop_exit_block = Some(exit_block);
+    fn codegen_loops(&mut self, stmt: &'ctx ThrushStatement) {
+        /* ######################################################################
 
-                llvm_builder
-                    .build_conditional_branch(conditional, then_block, exit_block)
-                    .unwrap();
 
-                llvm_builder.position_at_end(then_block);
+            LLVM CODEGEN | LOOPS - START
 
-                self.codegen(block);
 
-                let exit_brancher = llvm_builder.build_unconditional_branch(cond_block).unwrap();
+        ########################################################################*/
 
-                if block.has_break() {
-                    exit_brancher.remove_from_basic_block();
-                }
+        let llvm_builder: &Builder = self.context.get_llvm_builder();
+        let llvm_context: &Context = self.context.get_llvm_context();
 
-                llvm_builder.position_at_end(exit_block);
-
-                ThrushStatement::Null { span: *span }
-            }
-            ThrushStatement::Loop { block, span } => {
-                let function: FunctionValue = self.function.unwrap();
-                let loop_start_block: BasicBlock =
-                    llvm_context.append_basic_block(function, "loop");
-
-                llvm_builder
-                    .build_unconditional_branch(loop_start_block)
-                    .unwrap();
-
-                llvm_builder.position_at_end(loop_start_block);
-
-                let loop_exit_block: BasicBlock =
-                    llvm_context.append_basic_block(self.function.unwrap(), "loop_exit");
-
-                self.loop_exit_block = Some(loop_exit_block);
-
-                self.codegen(block);
-
-                if !block.has_return() && !block.has_break() && !block.has_continue() {
-                    let _ = loop_exit_block.remove_from_function();
+        match stmt {
+            ThrushStatement::While { cond, block, .. } => {
+                if let Some(current_function) = self.current_function {
+                    let condition_block: BasicBlock =
+                        llvm_context.append_basic_block(current_function, "while");
 
                     llvm_builder
-                        .build_unconditional_branch(
-                            self.function.unwrap().get_last_basic_block().unwrap(),
-                        )
+                        .build_unconditional_branch(condition_block)
                         .unwrap();
-                } else {
-                    llvm_builder.position_at_end(loop_exit_block);
+
+                    llvm_builder.position_at_end(condition_block);
+
+                    let conditional: IntValue =
+                        valuegen::build(&mut self.context, cond, &ThrushType::Bool)
+                            .into_int_value();
+
+                    let then_block: BasicBlock =
+                        llvm_context.append_basic_block(current_function, "while_body");
+                    let exit_block: BasicBlock =
+                        llvm_context.append_basic_block(current_function, "while_exit");
+
+                    self.loop_exit_block = Some(exit_block);
+
+                    llvm_builder
+                        .build_conditional_branch(conditional, then_block, exit_block)
+                        .unwrap();
+
+                    llvm_builder.position_at_end(then_block);
+
+                    self.codegen(block);
+
+                    let exit_brancher = llvm_builder
+                        .build_unconditional_branch(condition_block)
+                        .unwrap();
+
+                    if block.has_break() {
+                        exit_brancher.remove_from_basic_block();
+                    }
+
+                    llvm_builder.position_at_end(exit_block);
+
+                    return;
                 }
 
-                ThrushStatement::Null { span: *span }
+                logging::log(
+                    LoggingType::Panic,
+                    "The current function could not be obtained at code generation time.",
+                );
+            }
+            ThrushStatement::Loop { block, .. } => {
+                if let Some(function) = self.current_function {
+                    let loop_start_block: BasicBlock =
+                        llvm_context.append_basic_block(function, "loop");
+
+                    llvm_builder
+                        .build_unconditional_branch(loop_start_block)
+                        .unwrap();
+
+                    llvm_builder.position_at_end(loop_start_block);
+
+                    let loop_exit_block: BasicBlock =
+                        llvm_context.append_basic_block(function, "loop_exit");
+
+                    self.loop_exit_block = Some(loop_exit_block);
+
+                    self.codegen(block);
+
+                    if !block.has_return() && !block.has_break() && !block.has_continue() {
+                        let _ = loop_exit_block.remove_from_function();
+
+                        llvm_builder
+                            .build_unconditional_branch(function.get_last_basic_block().unwrap())
+                            .unwrap();
+                    } else {
+                        llvm_builder.position_at_end(loop_exit_block);
+                    }
+
+                    return;
+                }
+
+                logging::log(
+                    LoggingType::Panic,
+                    "The current function could not be obtained at code generation time.",
+                );
             }
             ThrushStatement::For {
                 local,
                 cond,
                 actions,
                 block,
-                span,
                 ..
             } => {
-                let function: FunctionValue = self.function.unwrap();
+                if let Some(current_function) = self.current_function {
+                    self.codegen(local.as_ref());
 
-                self.codegen(local.as_ref());
+                    let start_block: BasicBlock =
+                        llvm_context.append_basic_block(current_function, "for");
 
-                let start_block: BasicBlock = llvm_context.append_basic_block(function, "for");
+                    self.loop_start_block = Some(start_block);
 
-                self.loop_start_block = Some(start_block);
+                    llvm_builder
+                        .build_unconditional_branch(start_block)
+                        .unwrap();
 
-                llvm_builder
-                    .build_unconditional_branch(start_block)
-                    .unwrap();
+                    llvm_builder.position_at_end(start_block);
 
-                llvm_builder.position_at_end(start_block);
+                    let condition: IntValue =
+                        valuegen::build(&mut self.context, cond, &ThrushType::Bool)
+                            .into_int_value();
 
-                let conditional: IntValue =
-                    self.codegen(cond.as_ref()).as_llvm_value().into_int_value();
+                    let then_block: BasicBlock =
+                        llvm_context.append_basic_block(current_function, "for_body");
+                    let exit_block: BasicBlock =
+                        llvm_context.append_basic_block(current_function, "for_exit");
 
-                let then_block: BasicBlock = llvm_context.append_basic_block(function, "for_body");
-                let exit_block: BasicBlock = llvm_context.append_basic_block(function, "for_exit");
+                    llvm_builder
+                        .build_conditional_branch(condition, then_block, exit_block)
+                        .unwrap();
 
-                llvm_builder
-                    .build_conditional_branch(conditional, then_block, exit_block)
-                    .unwrap();
+                    self.loop_exit_block = Some(exit_block);
 
-                self.loop_exit_block = Some(exit_block);
+                    llvm_builder.position_at_end(then_block);
 
-                llvm_builder.position_at_end(then_block);
+                    if actions.is_pre_unaryop() {
+                        self.codegen(block.as_ref());
 
-                if actions.is_pre_unaryop() {
-                    self.codegen(block.as_ref());
-                    self.codegen(actions.as_ref());
-                } else {
-                    self.codegen(actions.as_ref());
-                    self.codegen(block.as_ref());
+                        let _ = valuegen::build(&mut self.context, actions, &ThrushType::Void);
+                    } else {
+                        let _ = valuegen::build(&mut self.context, actions, &ThrushType::Void);
+
+                        self.codegen(block.as_ref());
+                    }
+
+                    let exit_brancher = llvm_builder
+                        .build_unconditional_branch(start_block)
+                        .unwrap();
+
+                    if block.has_break() {
+                        exit_brancher.remove_from_basic_block();
+                    }
+
+                    llvm_builder.position_at_end(exit_block);
+
+                    return;
                 }
 
-                let exit_brancher = llvm_builder
-                    .build_unconditional_branch(start_block)
-                    .unwrap();
-
-                if block.has_break() {
-                    exit_brancher.remove_from_basic_block();
-                }
-
-                llvm_builder.position_at_end(exit_block);
-
-                ThrushStatement::Null { span: *span }
+                logging::log(
+                    LoggingType::Panic,
+                    "The current function could not be obtained at code generation time.",
+                );
             }
 
-            ThrushStatement::Break { span, .. } => {
+            ThrushStatement::Break { .. } => {
                 llvm_builder
                     .build_unconditional_branch(self.loop_exit_block.unwrap())
                     .unwrap();
-
-                ThrushStatement::Null { span: *span }
             }
 
-            ThrushStatement::Continue { span, .. } => {
+            ThrushStatement::Continue { .. } => {
                 llvm_builder
                     .build_unconditional_branch(self.loop_start_block.unwrap())
                     .unwrap();
-
-                ThrushStatement::Null { span: *span }
             }
 
-            ThrushStatement::FunctionParameter {
-                name,
-                kind,
-                position,
-                is_mutable,
-                span,
-                ..
-            } => {
-                self.build_function_parameter((name, kind, *position, *is_mutable));
+            stmt => self.codegen_variables(stmt),
+        }
 
-                ThrushStatement::Null { span: *span }
-            }
+        /* ######################################################################
 
-            ThrushStatement::Function { span, .. } => {
-                let function_prototype: LLVMFunctionPrototype = stmt.as_llvm_function_proto();
 
-                self.build_function(function_prototype);
+            LLVM CODEGEN | LOOPS - END
 
-                ThrushStatement::Null { span: *span }
-            }
 
-            ThrushStatement::Return {
-                expression,
-                kind,
-                span,
-                ..
-            } => {
-                self.deallocators_emited = true;
+        ########################################################################*/
+    }
 
-                deallocator::dealloc(
-                    &self.context,
-                    self.context.get_allocated_symbols(),
-                    expression.as_ref(),
-                );
+    fn codegen_variables(&mut self, stmt: &'ctx ThrushStatement) {
+        /* ######################################################################
 
-                valuegen::build(stmt, kind, &mut self.context);
 
-                ThrushStatement::Null { span: *span }
-            }
+            LLVM CODEGEN | VARIABLES - START
 
-            ThrushStatement::Str { span, .. } => ThrushStatement::LLVMValue(
-                valuegen::build(stmt, &ThrushType::Void, &mut self.context),
-                *span,
-            ),
 
+        ########################################################################*/
+
+        match stmt {
             ThrushStatement::Local {
-                name,
-                kind,
-                value,
-                span,
-                ..
+                name, kind, value, ..
             } => {
                 local::build((name, kind, value), &mut self.context);
-
-                ThrushStatement::Null { span: *span }
             }
 
             ThrushStatement::LLI {
-                name,
-                kind,
-                value,
-                span,
+                name, kind, value, ..
             } => {
                 llis::build(name, kind, value, &mut self.context);
-
-                ThrushStatement::Null { span: *span }
             }
 
-            ThrushStatement::Mut { kind, span, .. } => {
-                valuegen::build(stmt, kind, &mut self.context);
-
-                ThrushStatement::Null { span: *span }
-            }
-
-            ThrushStatement::BinaryOp {
-                operator,
-                left,
-                right,
-                kind: binaryop_type,
-                span,
-                ..
-            } => {
-                if binaryop_type.is_integer_type() {
-                    return ThrushStatement::LLVMValue(
-                        binaryop::integer::integer_binaryop(
-                            (left, operator, right),
-                            binaryop_type,
-                            &mut self.context,
-                        ),
-                        *span,
-                    );
-                }
-
-                if binaryop_type.is_float_type() {
-                    return ThrushStatement::LLVMValue(
-                        binaryop::float::float_binaryop(
-                            (left, operator, right),
-                            binaryop_type,
-                            &mut self.context,
-                        ),
-                        *span,
-                    );
-                }
-
-                if binaryop_type.is_bool_type() {
-                    return ThrushStatement::LLVMValue(
-                        binaryop::boolean::bool_binaryop(
-                            (left, operator, right),
-                            binaryop_type,
-                            &mut self.context,
-                        ),
-                        *span,
-                    );
-                }
-
-                unreachable!()
-            }
-
-            ThrushStatement::UnaryOp {
-                operator,
-                kind,
-                expression,
-                span,
-                ..
-            } => ThrushStatement::LLVMValue(
-                unaryop::unary_op(&self.context, (operator, kind, expression)),
-                *span,
-            ),
-
-            ThrushStatement::EntryPoint { body, span, .. } => {
-                self.function = Some(self.build_entrypoint());
-
-                self.declare_constants();
-
-                self.codegen(body);
-
-                llvm_builder
-                    .build_return(Some(&llvm_context.i32_type().const_int(0, false)))
-                    .unwrap();
-
-                ThrushStatement::Null { span: *span }
-            }
-
-            ThrushStatement::Call { kind, span, .. } => {
-                ThrushStatement::LLVMValue(valuegen::build(stmt, kind, &mut self.context), *span)
-            }
-
-            ThrushStatement::Reference {
-                kind: ref_type,
-                span,
-                ..
-            } => ThrushStatement::LLVMValue(
-                valuegen::build(stmt, ref_type, &mut self.context),
-                *span,
-            ),
-
-            ThrushStatement::Boolean { value, span, .. } => ThrushStatement::LLVMValue(
-                llvm_context.bool_type().const_int(*value, false).into(),
-                *span,
-            ),
-
-            ThrushStatement::Address { span, .. } => ThrushStatement::LLVMValue(
-                valuegen::build(stmt, &ThrushType::Void, &mut self.context),
-                *span,
-            ),
-
-            ThrushStatement::Write { span, .. } => {
-                valuegen::build(stmt, &ThrushType::Void, &mut self.context);
-                ThrushStatement::Null { span: *span }
-            }
-
-            ThrushStatement::Null { span, .. } | ThrushStatement::Const { span, .. } => {
-                ThrushStatement::Null { span: *span }
-            }
-
-            any => ThrushStatement::Null {
-                span: any.get_span(),
-            },
+            stmt => self.codegen_loose_expression(stmt),
         }
+
+        /* ######################################################################
+
+
+            LLVM CODEGEN | VARIABLES - END
+
+
+        ########################################################################*/
     }
 
-    fn build_entrypoint(&mut self) -> FunctionValue<'ctx> {
+    fn codegen_loose_expression(&mut self, stmt: &'ctx ThrushStatement) {
+        /* ######################################################################
+
+
+            LLVM CODEGEN | LOOSE EXPRESSIONS - START
+
+
+        ########################################################################*/
+
+        match stmt {
+            ThrushStatement::Mut { kind, .. } => {
+                valuegen::build(&mut self.context, stmt, kind);
+            }
+
+            ThrushStatement::Write { .. } => {
+                valuegen::build(&mut self.context, stmt, &ThrushType::Void);
+            }
+
+            _ => (),
+        }
+
+        /* ######################################################################
+
+
+            LLVM CODEGEN | LOOSE EXPRESSIONS - END
+
+
+        ########################################################################*/
+    }
+
+    fn entrypoint(&mut self) -> FunctionValue<'ctx> {
         let llvm_module: &Module = self.context.get_llvm_module();
         let llvm_context: &Context = self.context.get_llvm_context();
         let llvm_builder: &Builder = self.context.get_llvm_builder();
@@ -565,17 +599,32 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         let parameter_type: &ThrushType = parameter.1;
         let parameter_position: u32 = parameter.2;
 
-        let value: BasicValueEnum = self
-            .function
-            .unwrap()
-            .get_nth_param(parameter_position)
-            .unwrap();
+        if let Some(current_function) = self.current_function {
+            if let Some(raw_value_llvm_parameter) =
+                current_function.get_nth_param(parameter_position)
+            {
+                self.context.alloc_function_parameter(
+                    parameter_name,
+                    parameter_type,
+                    raw_value_llvm_parameter,
+                );
 
-        self.context
-            .alloc_function_parameter(parameter_name, parameter_type, value);
+                return;
+            }
+
+            logging::log(
+                LoggingType::Panic,
+                "The value of a parameter of an LLVM function could not be obtained at code generation time.",
+            );
+        }
+
+        logging::log(
+            LoggingType::Panic,
+            "The current function could not be obtained at code generation time for build an function parameter.",
+        );
     }
 
-    fn declare(&mut self) {
+    fn init_functions(&mut self) {
         self.stmts.iter().for_each(|stmt| {
             if stmt.is_function() {
                 self.declare_function(stmt);
@@ -583,7 +632,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         });
     }
 
-    fn declare_constants(&mut self) {
+    fn init_constants(&mut self) {
         self.stmts.iter().for_each(|stmt| {
             if let ThrushStatement::Const {
                 name,
@@ -593,7 +642,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 ..
             } = stmt
             {
-                let value: BasicValueEnum = valuegen::build(value, kind, &mut self.context);
+                let value: BasicValueEnum = valuegen::build(&mut self.context, value, kind);
                 self.context.alloc_constant(name, kind, value, attributes);
             }
         });
@@ -659,7 +708,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
             function.set_linkage(Linkage::LinkerPrivate);
         }
 
-        self.function = Some(function);
+        self.current_function = Some(function);
 
         self.context.add_function(
             function_name,
@@ -687,7 +736,16 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         llvm_builder.position_at_end(entry);
 
         function_parameters.iter().for_each(|parameter| {
-            self.codegen(parameter);
+            if let ThrushStatement::FunctionParameter {
+                name,
+                kind,
+                position,
+                is_mutable,
+                ..
+            } = parameter
+            {
+                self.build_function_parameter((name, kind, *position, *is_mutable));
+            }
         });
 
         self.codegen(function_body);
@@ -697,27 +755,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         }
     }
 
-    fn declare_basics(&mut self) {
-        let llvm_module: &Module = self.context.get_llvm_module();
-        let llvm_context: &Context = self.context.get_llvm_context();
-
-        let stderr: GlobalValue = llvm_module.add_global(
-            llvm_context.ptr_type(AddressSpace::default()),
-            Some(AddressSpace::default()),
-            "stderr",
-        );
-
-        stderr.set_linkage(Linkage::External);
-
-        let stdout: GlobalValue = llvm_module.add_global(
-            llvm_context.ptr_type(AddressSpace::default()),
-            Some(AddressSpace::default()),
-            "stdout",
-        );
-
-        stdout.set_linkage(Linkage::External);
-    }
-
+    #[must_use]
     #[inline]
     fn advance(&mut self) -> &'ctx ThrushStatement<'ctx> {
         let stmt: &ThrushStatement = &self.stmts[self.current];

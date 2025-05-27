@@ -24,18 +24,6 @@ pub fn build_type(parser_ctx: &mut ParserContext<'_>) -> Result<ThrushType, Thru
             let tk: &Token = parser_ctx.advance()?;
             let span: Span = tk.span;
 
-            if tk_kind.is_mut()
-                && !parser_ctx.get_type_ctx().get_position().is_parameter()
-                && !parser_ctx.get_type_ctx().get_position().is_bind_parameter()
-            {
-                return Err(ThrushCompilerIssue::Error(
-                    String::from("Syntax error"),
-                    String::from("Mutable types is only allowed in function and bind parameters."),
-                    None,
-                    span,
-                ));
-            }
-
             if tk_kind.is_me()
                 && !parser_ctx
                     .get_type_ctx()
@@ -54,8 +42,23 @@ pub fn build_type(parser_ctx: &mut ParserContext<'_>) -> Result<ThrushType, Thru
                 return Ok(ThrushType::Me(None));
             }
 
+            if tk_kind.is_mut()
+                && !parser_ctx.get_type_ctx().get_position().is_parameter()
+                && !parser_ctx.get_type_ctx().get_position().is_bind_parameter()
+                && !parser_ctx.get_type_ctx().get_position().is_local()
+            {
+                return Err(ThrushCompilerIssue::Error(
+                    String::from("Syntax error"),
+                    String::from(
+                        "Mutable type is only allowed in functions parameters and locals definitions.",
+                    ),
+                    None,
+                    span,
+                ));
+            }
+
             if tk_kind.is_mut() {
-                return Ok(ThrushType::Mut(build_type(parser_ctx)?.into()));
+                return Ok(ThrushType::Mut(self::build_type(parser_ctx)?.into()));
             }
 
             match tk_kind.as_type() {

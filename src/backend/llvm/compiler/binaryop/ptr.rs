@@ -7,6 +7,7 @@ use inkwell::{
 
 use crate::{
     backend::llvm::compiler::{context::LLVMCodeGenContext, predicates, valuegen},
+    standard::logging::{self, LoggingType},
     types::{
         backend::llvm::types::LLVMBinaryOp,
         frontend::{
@@ -41,10 +42,10 @@ pub fn ptr_operation<'ctx>(
 pub fn ptr_binaryop<'ctx>(
     binary: LLVMBinaryOp<'ctx>,
     target_type: &ThrushType,
-    symbols: &mut LLVMCodeGenContext<'_, 'ctx>,
+    context: &mut LLVMCodeGenContext<'_, 'ctx>,
 ) -> BasicValueEnum<'ctx> {
-    let context: &Context = symbols.get_llvm_context();
-    let builder: &Builder = symbols.get_llvm_builder();
+    let llvm_context: &Context = context.get_llvm_context();
+    let llvm_builder: &Builder = context.get_llvm_builder();
 
     /* ######################################################################
 
@@ -60,10 +61,11 @@ pub fn ptr_binaryop<'ctx>(
         ThrushStatement::NullPtr { .. },
     ) = binary
     {
-        let left_compiled: BasicValueEnum = valuegen::build(binary.0, target_type, symbols);
-        let right_compiled: PointerValue = context.ptr_type(AddressSpace::default()).const_null();
+        let left_compiled: BasicValueEnum = valuegen::build(context, binary.0, target_type);
+        let right_compiled: PointerValue =
+            llvm_context.ptr_type(AddressSpace::default()).const_null();
 
-        return ptr_operation(builder, left_compiled, right_compiled.into(), binary.1);
+        return ptr_operation(llvm_builder, left_compiled, right_compiled.into(), binary.1);
     }
 
     if let (
@@ -72,11 +74,20 @@ pub fn ptr_binaryop<'ctx>(
         ThrushStatement::Call { .. },
     ) = binary
     {
-        let left_compiled: PointerValue = context.ptr_type(AddressSpace::default()).const_null();
-        let right_compiled: BasicValueEnum = valuegen::build(binary.2, target_type, symbols);
+        let left_compiled: PointerValue =
+            llvm_context.ptr_type(AddressSpace::default()).const_null();
+        let right_compiled: BasicValueEnum = valuegen::build(context, binary.2, target_type);
 
-        return ptr_operation(builder, left_compiled.into(), right_compiled, binary.1);
+        return ptr_operation(llvm_builder, left_compiled.into(), right_compiled, binary.1);
     }
 
-    todo!()
+    logging::log(
+        LoggingType::Panic,
+        &format!(
+            "Could not process a pointer binary operation '{} {} {}'.",
+            binary.0, binary.1, binary.2
+        ),
+    );
+
+    unreachable!()
 }

@@ -68,7 +68,7 @@ impl<'a, 'ctx> LLVMCodeGenContext<'a, 'ctx> {
             self.context,
             self.builder,
             kind,
-            kind.is_heap_allocated(self.context, &self.target_data),
+            kind.is_probably_heap_allocated(self.context, &self.target_data),
         );
 
         let local: SymbolAllocated =

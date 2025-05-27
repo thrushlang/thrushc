@@ -86,9 +86,9 @@ pub fn float<'ctx>(
 }
 
 pub fn build<'ctx>(
-    expression: &'ctx ThrushStatement,
-    cast_target: &ThrushType,
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
+    expression: &'ctx ThrushStatement,
+    cast: &ThrushType,
 ) -> BasicValueEnum<'ctx> {
     let llvm_module: &Module = context.get_llvm_module();
     let llvm_context: &Context = context.get_llvm_context();
@@ -114,7 +114,7 @@ pub fn build<'ctx>(
     {
         let mut float: FloatValue = float(llvm_builder, llvm_context, kind, *value, *signed);
 
-        if let Some(casted_float) = cast::float(context, cast_target, kind, float.into()) {
+        if let Some(casted_float) = cast::float(context, cast, kind, float.into()) {
             float = casted_float.into_float_value();
         }
 
@@ -130,7 +130,7 @@ pub fn build<'ctx>(
     {
         let mut integer: IntValue = integer(llvm_context, kind, *value, *signed);
 
-        if let Some(casted_integer) = cast::integer(context, cast_target, kind, integer.into()) {
+        if let Some(casted_integer) = cast::integer(context, cast, kind, integer.into()) {
             integer = casted_integer.into_int_value();
         }
 
@@ -162,11 +162,11 @@ pub fn build<'ctx>(
         ..
     } = expression
     {
-        let write_value: BasicValueEnum = self::build(write_value, write_type, context);
+        let write_value: BasicValueEnum = self::build(context, write_value, write_type);
 
         if let Some(expression) = write_to.1.as_ref() {
             let compiled_expression: PointerValue =
-                self::build(expression, &ThrushType::Void, context).into_pointer_value();
+                self::build(context, expression, &ThrushType::Void).into_pointer_value();
 
             if let Ok(store) = llvm_builder.build_store(compiled_expression, write_value) {
                 let target_data: &TargetData = context.get_target_data();
@@ -202,10 +202,7 @@ pub fn build<'ctx>(
     } = expression
     {
         if let ThrushStatement::Reference { name, .. } = &**from {
-            let reference: PointerValue = context
-                .get_allocated_symbol(name)
-                .take()
-                .into_pointer_value();
+            let reference: PointerValue = context.get_allocated_symbol(name).raw_load();
 
             let cast_type: PointerType =
                 typegen::generate_type(llvm_context, cast_type).into_pointer_type();
@@ -217,13 +214,13 @@ pub fn build<'ctx>(
 
         logging::log(
             LoggingType::Panic,
-            &format!("Pointer casting could not be completed from: '{}'.", from),
+            &format!("Pointer casting could not be perform from: '{}'.", from),
         );
     }
 
     if let ThrushStatement::Load { load, kind, .. } = expression {
         if let Some(expression) = &load.1 {
-            let ptr: PointerValue = self::build(expression, kind, context).into_pointer_value();
+            let ptr: PointerValue = self::build(context, expression, kind).into_pointer_value();
 
             return memory::load_anon(context, kind, ptr);
         }
@@ -247,7 +244,7 @@ pub fn build<'ctx>(
 
         indexes.iter().for_each(|indexe| {
             let mut compiled_indexe: BasicValueEnum =
-                self::build(indexe, &ThrushType::U32, context);
+                self::build(context, indexe, &ThrushType::U32);
 
             if let Some(casted_index) = cast::integer(
                 context,
@@ -298,7 +295,7 @@ pub fn build<'ctx>(
             return last_memory_calculation.into();
         }
 
-        if context.get_position().in_call() && cast_target.is_mut_type() {
+        if context.get_position().in_call() && cast.is_mut_type() {
             return last_memory_calculation.into();
         }
 
@@ -313,10 +310,7 @@ pub fn build<'ctx>(
     {
         let symbol: SymbolAllocated = context.get_allocated_symbol(name);
 
-        if cast_target.is_mut_type()
-            && context.get_position().in_call()
-            && !identificator.is_constant()
-        {
+        if cast.is_mut_type() && context.get_position().in_call() && !identificator.is_constant() {
             return symbol.take();
         }
 
@@ -332,23 +326,21 @@ pub fn build<'ctx>(
     } = expression
     {
         if binaryop_type.is_float_type() {
-            return binaryop::float::float_binaryop((left, operator, right), cast_target, context);
+            return binaryop::float::float_binaryop(context, (left, operator, right), cast);
         }
 
         if binaryop_type.is_integer_type() {
-            return binaryop::integer::integer_binaryop(
-                (left, operator, right),
-                cast_target,
-                context,
-            );
+            return binaryop::integer::integer_binaryop(context, (left, operator, right), cast);
         }
 
         if binaryop_type.is_bool_type() {
-            return binaryop::boolean::bool_binaryop((left, operator, right), cast_target, context);
+            return binaryop::boolean::bool_binaryop(context, (left, operator, right), cast);
         }
 
-        println!("{:?}", expression);
-        unreachable!()
+        logging::log(
+            LoggingType::Panic,
+            "Could not process a binary operation of invalid type.",
+        );
     }
 
     if let ThrushStatement::UnaryOp {
@@ -376,8 +368,8 @@ pub fn build<'ctx>(
         let value_type: &ThrushType = value.get_type_unwrapped();
 
         if let Some(expression) = source_expression {
-            let source: BasicValueEnum = build(expression, kind, context);
-            let value: BasicValueEnum = build(value, kind, context);
+            let source: BasicValueEnum = self::build(context, expression, kind);
+            let value: BasicValueEnum = self::build(context, value, kind);
 
             memory::store_anon(
                 context,
@@ -393,7 +385,7 @@ pub fn build<'ctx>(
         if let Some(name) = source_name {
             let symbol: SymbolAllocated = context.get_allocated_symbol(name);
 
-            let expr: BasicValueEnum = build(value, kind, context);
+            let expr: BasicValueEnum = self::build(context, value, kind);
 
             symbol.store(context, memory::load_maybe(context, value_type, expr));
 
@@ -436,11 +428,11 @@ pub fn build<'ctx>(
             let arg_position: usize = arg.0;
             let arg_expr: &ThrushStatement = arg.1;
 
-            let cast_target: &ThrushType = function_arguments_types
+            let cast: &ThrushType = function_arguments_types
                 .get(arg_position)
                 .unwrap_or(&ThrushType::Void);
 
-            compiled_args.push(self::build(arg_expr, cast_target, context).into());
+            compiled_args.push(self::build(context, arg_expr, cast).into());
         });
 
         let call: CallSiteValue = llvm_builder
@@ -453,18 +445,18 @@ pub fn build<'ctx>(
             let llvm_context: &Context = context.get_llvm_context();
             let return_value: BasicValueEnum = call.try_as_basic_value().unwrap_left();
 
-            if call_type.is_heap_allocated(llvm_context, context.get_target_data()) {
+            if call_type.is_probably_heap_allocated(llvm_context, context.get_target_data()) {
                 context.add_scope_call((call_type, return_value));
             }
 
-            if cast_target.is_mut_type() && context.get_position().in_call() {
+            if cast.is_mut_type() && context.get_position().in_call() {
                 context.set_position_irrelevant();
                 return return_value;
             }
 
-            if call_type.is_heap_allocated(llvm_context, context.get_target_data())
+            if call_type.is_probably_heap_allocated(llvm_context, context.get_target_data())
                 && previous_position.in_local()
-                || call_type.is_heap_allocated(llvm_context, context.get_target_data())
+                || call_type.is_probably_heap_allocated(llvm_context, context.get_target_data())
                     && previous_position.in_call()
             {
                 context.set_position_irrelevant();
@@ -497,7 +489,7 @@ pub fn build<'ctx>(
         }
 
         if let Some(expression) = expression {
-            let _ = llvm_builder.build_return(Some(&build(expression, kind, context)));
+            let _ = llvm_builder.build_return(Some(&self::build(context, expression, kind)));
             return default.into();
         }
 
@@ -505,7 +497,7 @@ pub fn build<'ctx>(
     }
 
     if let ThrushStatement::Group { expression, .. } = expression {
-        return self::build(expression, cast_target, context);
+        return self::build(context, expression, cast);
     }
 
     println!("{:?}", expression);

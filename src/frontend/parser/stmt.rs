@@ -159,6 +159,10 @@ pub fn build_methods<'instr>(
 
         parser_ctx
             .get_mut_control_ctx()
+            .set_sync_position(SyncPosition::Declaration);
+
+        parser_ctx
+            .get_mut_control_ctx()
             .set_instr_position(InstructionPosition::Methods);
 
         binds.push(bind);
@@ -202,6 +206,10 @@ fn build_method<'instr>(
     declare: bool,
     parser_ctx: &mut ParserContext<'instr>,
 ) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
+    parser_ctx
+        .get_mut_control_ctx()
+        .set_sync_position(SyncPosition::Statement);
+
     parser_ctx.consume(
         TokenKind::Fn,
         String::from("Syntax error"),
@@ -1685,17 +1693,12 @@ pub fn build_function<'instr>(
 
     let function_body: Rc<ThrushStatement> = self::build_block(parser_ctx)?.into();
 
+    parser_ctx
+        .get_mut_control_ctx()
+        .set_sync_position(SyncPosition::Declaration);
+
     parser_ctx.get_mut_symbols().end_parameters();
     parser_ctx.get_mut_control_ctx().set_inside_function(false);
-
-    if !return_type.is_void_type() && !function_body.has_return() {
-        return Err(ThrushCompilerIssue::Error(
-            String::from("Syntax error"),
-            format!("Missing return with type '{}'.", return_type),
-            None,
-            span,
-        ));
-    }
 
     if let ThrushStatement::Function { body, .. } = &mut function {
         *body = function_body;

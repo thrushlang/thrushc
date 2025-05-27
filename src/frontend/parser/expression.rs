@@ -160,14 +160,24 @@ fn casts<'instr>(
     let mut expression: ThrushStatement = self::cmp(parser_ctx)?;
 
     if parser_ctx.match_token(TokenKind::CastPtr)? {
+        let expression_span: Span = expression.get_span();
         let span: Span = parser_ctx.previous().span;
 
-        if !expression.is_ref_lli() && !expression.is_ref_local() {
+        if !expression.is_reference() {
             return Err(ThrushCompilerIssue::Error(
                 String::from("Syntax error"),
-                String::from("Expected Low Level instruction (LLI) or local reference."),
+                String::from("Expected any value reference."),
                 None,
-                span,
+                expression_span,
+            ));
+        }
+
+        if !expression.is_reference_allocated() {
+            return Err(ThrushCompilerIssue::Error(
+                String::from("Syntax error"),
+                String::from("Expected allocated value reference."),
+                None,
+                expression_span,
             ));
         }
 
@@ -452,7 +462,7 @@ fn primary<'instr>(
                 let name: &str = identifier_tk.lexeme;
 
                 if let Ok(reference) = self::build_reference(parser_ctx, name, span) {
-                    if !reference.is_ref_lli() {
+                    if !reference.is_reference_lli() {
                         return Err(ThrushCompilerIssue::Error(
                             String::from("Syntax error"),
                             String::from("Expected low level instruction (LLI), reference."),
@@ -540,7 +550,7 @@ fn primary<'instr>(
 
             let expression: ThrushStatement = self::build_expr(parser_ctx)?;
 
-            if !expression.is_ref() {
+            if !expression.is_reference() {
                 return Err(ThrushCompilerIssue::Error(
                     String::from("Syntax error"),
                     String::from("Only local references can be pre-incremented."),
@@ -569,7 +579,7 @@ fn primary<'instr>(
 
             let expression: ThrushStatement = self::build_expr(parser_ctx)?;
 
-            if !expression.is_ref() {
+            if !expression.is_reference() {
                 return Err(ThrushCompilerIssue::Error(
                     String::from("Syntax error"),
                     String::from("Only local references can be pre-decremented."),
@@ -971,6 +981,7 @@ fn build_reference<'instr>(
             kind: constant_type,
             span,
             identificator: ReferenceIndentificator::Constant,
+            is_allocated: true,
         });
     }
 
@@ -981,11 +992,14 @@ fn build_reference<'instr>(
             .get_parameter_by_id(parameter_id, span)?;
         let parameter_type: ThrushType = parameter.get_type();
 
+        let is_allocated: bool = parameter_type.is_mut_type();
+
         return Ok(ThrushStatement::Reference {
             name,
             kind: parameter_type,
             span,
             identificator: ReferenceIndentificator::FunctionParameter,
+            is_allocated,
         });
     }
 
@@ -1001,11 +1015,14 @@ fn build_reference<'instr>(
 
         let lli_type: ThrushType = parameter.get_type();
 
+        let is_allocated: bool = lli_type.is_ptr_type();
+
         return Ok(ThrushStatement::Reference {
             name,
             kind: lli_type,
             span,
             identificator: ReferenceIndentificator::LowLevelInstruction,
+            is_allocated,
         });
     }
 
@@ -1032,6 +1049,7 @@ fn build_reference<'instr>(
         kind: local_type.clone(),
         span,
         identificator: ReferenceIndentificator::Local,
+        is_allocated: true,
     };
 
     if parser_ctx.match_token(TokenKind::PlusPlus)?

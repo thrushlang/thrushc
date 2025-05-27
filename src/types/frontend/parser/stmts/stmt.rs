@@ -57,8 +57,6 @@ pub enum ThrushStatement<'ctx> {
         span: Span,
     },
 
-    LLVMValue(BasicValueEnum<'ctx>, Span),
-
     // Structures
     Struct {
         name: &'ctx str,
@@ -242,6 +240,7 @@ pub enum ThrushStatement<'ctx> {
         kind: ThrushType,
         span: Span,
         identificator: ReferenceIndentificator,
+        is_allocated: bool,
     },
 
     // Mutation
@@ -498,7 +497,6 @@ impl<'ctx> ThrushStatement<'ctx> {
             ThrushStatement::LLI { span, .. } => *span,
 
             ThrushStatement::Null { span } => *span,
-            ThrushStatement::LLVMValue(_, span) => *span,
             ThrushStatement::Block { span, .. } => *span,
             ThrushStatement::Loop { span, .. } => *span,
             ThrushStatement::EntryPoint { span, .. } => *span,
@@ -566,14 +564,6 @@ impl<'ctx> ThrushStatement<'ctx> {
         } = self
         {
             return (operator, kind, expression);
-        }
-
-        unreachable!()
-    }
-
-    pub fn as_llvm_value(&self) -> &BasicValueEnum<'ctx> {
-        if let ThrushStatement::LLVMValue(llvm_value, _) = self {
-            return llvm_value;
         }
 
         unreachable!()
@@ -777,27 +767,27 @@ impl ThrushStatement<'_> {
     }
 
     #[inline]
-    pub const fn is_ref(&self) -> bool {
+    pub const fn is_reference(&self) -> bool {
         matches!(self, ThrushStatement::Reference { .. })
     }
 
     #[inline]
-    pub const fn is_ref_lli(&self) -> bool {
+    pub const fn is_reference_allocated(&self) -> bool {
         matches!(
             self,
             ThrushStatement::Reference {
-                identificator: ReferenceIndentificator::LowLevelInstruction,
+                is_allocated: true,
                 ..
             }
         )
     }
 
     #[inline]
-    pub const fn is_ref_local(&self) -> bool {
+    pub const fn is_reference_lli(&self) -> bool {
         matches!(
             self,
             ThrushStatement::Reference {
-                identificator: ReferenceIndentificator::Local,
+                identificator: ReferenceIndentificator::LowLevelInstruction,
                 ..
             }
         )

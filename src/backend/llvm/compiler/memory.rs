@@ -85,7 +85,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
                         llvm_context,
                         llvm_builder,
                         kind,
-                        kind.is_heap_allocated(llvm_context, context.get_target_data()),
+                        kind.is_probably_heap_allocated(llvm_context, context.get_target_data()),
                     );
 
                     self::store_anon(context, ptr_allocated, value);
@@ -116,7 +116,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
 
         match self {
             Self::Local { ptr, kind } => {
-                if kind.is_heap_allocated(llvm_context, target_data) {
+                if kind.is_probably_heap_allocated(llvm_context, target_data) {
                     if context.get_position().in_call() {
                         let loaded_value: BasicValueEnum =
                             llvm_builder.build_load(llvm_type, *ptr, "").unwrap();
@@ -144,7 +144,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
                 if value.is_pointer_value() {
                     let ptr: PointerValue = value.into_pointer_value();
 
-                    if kind.is_heap_allocated(llvm_context, target_data) {
+                    if kind.is_probably_heap_allocated(llvm_context, target_data) {
                         if context.get_position().in_call() {
                             let loaded_value: BasicValueEnum =
                                 llvm_builder.build_load(llvm_type, ptr, "").unwrap();
@@ -221,6 +221,15 @@ impl<'ctx> SymbolAllocated<'ctx> {
         }
     }
 
+    pub fn raw_load(&self) -> PointerValue<'ctx> {
+        match self {
+            Self::Local { ptr, .. } => *ptr,
+            Self::Constant { ptr, .. } => *ptr,
+            Self::LowLevelInstruction { value, .. } => value.into_pointer_value(),
+            Self::Parameter { value, .. } => value.into_pointer_value(),
+        }
+    }
+
     pub fn dealloc(&self, context: &LLVMCodeGenContext<'_, '_>) {
         let llvm_context: &Context = context.get_llvm_context();
         let llvm_builder: &Builder = context.get_llvm_builder();
@@ -228,7 +237,9 @@ impl<'ctx> SymbolAllocated<'ctx> {
         let target_data: &TargetData = context.get_target_data();
 
         match self {
-            Self::Local { ptr, kind, .. } if kind.is_heap_allocated(llvm_context, target_data) => {
+            Self::Local { ptr, kind, .. }
+                if kind.is_probably_heap_allocated(llvm_context, target_data) =>
+            {
                 if kind.has_any_recursive_type() {
                     if let Some(last_block) = llvm_builder.get_insert_block() {
                         let recursive_paths: Vec<(ThrushType, Vec<u32>)> =
@@ -251,7 +262,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
             }
 
             Self::Parameter { value, kind, .. }
-                if kind.is_heap_allocated(llvm_context, target_data)
+                if kind.is_probably_heap_allocated(llvm_context, target_data)
                     && value.is_pointer_value() =>
             {
                 let ptr: PointerValue = value.into_pointer_value();

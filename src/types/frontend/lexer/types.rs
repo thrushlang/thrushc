@@ -207,7 +207,11 @@ impl ThrushType {
         )
     }
 
-    pub fn is_heap_allocated(&self, llvm_context: &Context, target_data: &TargetData) -> bool {
+    pub fn is_probably_heap_allocated(
+        &self,
+        llvm_context: &Context,
+        target_data: &TargetData,
+    ) -> bool {
         target_data.get_abi_size(&typegen::generate_type(llvm_context, self)) >= 128
             || self.is_recursive_type()
     }
@@ -325,7 +329,7 @@ impl LLVMDeallocator for ThrushType {
         let llvm_context: &Context = context.get_llvm_context();
         let target_data: &TargetData = context.get_target_data();
 
-        if self.is_heap_allocated(llvm_context, target_data) && value.is_pointer_value() {
+        if self.is_probably_heap_allocated(llvm_context, target_data) && value.is_pointer_value() {
             let ptr: PointerValue = value.into_pointer_value();
 
             if self.has_any_recursive_type() {

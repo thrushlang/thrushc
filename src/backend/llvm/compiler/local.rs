@@ -55,7 +55,7 @@ fn build_local_mut<'ctx>(local: LLVMLocal<'ctx>, context: &mut LLVMCodeGenContex
 
     let symbol: SymbolAllocated = context.get_allocated_symbol(local.0);
 
-    let expression: BasicValueEnum = valuegen::build(local_value, local.1, context);
+    let expression: BasicValueEnum = valuegen::build(context, local_value, local.1);
 
     symbol.store(context, expression);
 }
@@ -65,7 +65,7 @@ fn build_local_ptr<'ctx>(local: LLVMLocal<'ctx>, context: &mut LLVMCodeGenContex
 
     let symbol: SymbolAllocated = context.get_allocated_symbol(local.0);
 
-    let expression: BasicValueEnum = valuegen::build(local_value, &ThrushType::Ptr(None), context);
+    let expression: BasicValueEnum = valuegen::build(context, local_value, &ThrushType::Ptr(None));
 
     symbol.store(context, expression);
 }
@@ -75,7 +75,7 @@ fn build_local_str<'ctx>(local: LLVMLocal<'ctx>, context: &mut LLVMCodeGenContex
 
     let symbol: SymbolAllocated = context.get_allocated_symbol(local.0);
 
-    let expression: BasicValueEnum = valuegen::build(local_value, local.1, context);
+    let expression: BasicValueEnum = valuegen::build(context, local_value, local.1);
 
     symbol.store(context, expression);
 }
@@ -87,7 +87,7 @@ fn build_local_integer<'ctx>(local: LLVMLocal<'ctx>, context: &mut LLVMCodeGenCo
 
     let symbol: SymbolAllocated = context.get_allocated_symbol(local_name);
 
-    let expression: BasicValueEnum = valuegen::build(local_value, local_type, context);
+    let expression: BasicValueEnum = valuegen::build(context, local_value, local_type);
 
     symbol.store(context, expression);
 }
@@ -99,7 +99,7 @@ fn build_local_float<'ctx>(local: LLVMLocal<'ctx>, context: &mut LLVMCodeGenCont
 
     let symbol: SymbolAllocated = context.get_allocated_symbol(local_name);
 
-    let expression: BasicValueEnum = valuegen::build(local_value, local_type, context);
+    let expression: BasicValueEnum = valuegen::build(context, local_value, local_type);
 
     symbol.store(context, expression);
 }
@@ -111,7 +111,7 @@ fn build_local_boolean<'ctx>(local: LLVMLocal<'ctx>, context: &mut LLVMCodeGenCo
 
     let symbol: SymbolAllocated = context.get_allocated_symbol(local_name);
 
-    let expression: BasicValueEnum = valuegen::build(local_value, local_type, context);
+    let expression: BasicValueEnum = valuegen::build(context, local_value, local_type);
 
     symbol.store(context, expression);
 }
@@ -133,7 +133,7 @@ fn build_local_structure<'ctx>(local: LLVMLocal<'ctx>, context: &mut LLVMCodeGen
             let expr_type: &ThrushType = &argument.2;
             let expr_index: u32 = argument.3;
 
-            let mut expr: BasicValueEnum = valuegen::build(expr, expr_type, context);
+            let mut expr: BasicValueEnum = valuegen::build(context, expr, expr_type);
 
             if expr_type.is_recursive_type() {
                 let src_ptr: PointerValue = expr.into_pointer_value();
@@ -154,7 +154,7 @@ fn build_local_structure<'ctx>(local: LLVMLocal<'ctx>, context: &mut LLVMCodeGen
             memory::store_anon(context, field_memory_address_position, expr);
         });
     } else {
-        let expression: BasicValueEnum = valuegen::build(local_value, local_type, context);
+        let expression: BasicValueEnum = valuegen::build(context, local_value, local_type);
 
         symbol.store(context, expression);
     }

@@ -1,6 +1,6 @@
 #![allow(clippy::only_used_in_recursion)]
 
-use marks::{TypeCheckerTypeContext, TypeCheckerTypePosition};
+use marks::{TypeCheckerTypeCheckSource, TypeCheckerTypeContext, TypeCheckerTypePosition};
 use table::TypeCheckerSymbolsTable;
 
 use crate::{
@@ -121,9 +121,14 @@ impl<'stmts> TypeChecker<'stmts> {
         {
             let from_type: &ThrushType = value.get_value_type()?;
 
-            if let Err(mismatch_type_error) =
-                self.is_mismatch_type(target_type, from_type, Some(value), None, span)
-            {
+            if let Err(mismatch_type_error) = self.is_mismatch_type(
+                target_type,
+                from_type,
+                Some(value),
+                None,
+                span,
+                TypeCheckerTypeCheckSource::default(),
+            ) {
                 self.add_error(mismatch_type_error);
             }
 
@@ -131,19 +136,38 @@ impl<'stmts> TypeChecker<'stmts> {
         }
 
         if let ThrushStatement::Function {
-            body, return_type, ..
+            body,
+            return_type,
+            span,
+            ..
         } = stmt
         {
             self.type_ctx
                 .set_type_position(TypeCheckerTypePosition::Function);
             self.type_ctx.set_function_type(return_type);
 
-            if let Err(type_error) = self.check_stmt(body) {
-                self.add_error(type_error);
+            if body.is_block() {
+                if let Err(type_error) = self.check_stmt(body) {
+                    self.add_error(type_error);
+                }
+
+                if !body.has_return() {
+                    if let Err(mismatch_type_error) = self.is_mismatch_type(
+                        return_type,
+                        &ThrushType::Void,
+                        None,
+                        None,
+                        span,
+                        TypeCheckerTypeCheckSource::default(),
+                    ) {
+                        self.add_error(mismatch_type_error);
+                    }
+                }
             }
 
             self.type_ctx
                 .set_type_position(TypeCheckerTypePosition::None);
+
             self.type_ctx.set_function_type(&ThrushType::Void);
 
             return Ok(());
@@ -175,9 +199,14 @@ impl<'stmts> TypeChecker<'stmts> {
 
             let local_value_type: &ThrushType = local_value.get_value_type()?;
 
-            if let Err(mismatch_type_error) =
-                self.is_mismatch_type(local_type, local_value_type, Some(local_value), None, span)
-            {
+            if let Err(mismatch_type_error) = self.is_mismatch_type(
+                local_type,
+                local_value_type,
+                Some(local_value),
+                None,
+                span,
+                TypeCheckerTypeCheckSource::Local,
+            ) {
                 self.add_error(mismatch_type_error);
             }
 
@@ -197,9 +226,14 @@ impl<'stmts> TypeChecker<'stmts> {
         {
             let lli_value_type: &ThrushType = lli_value.get_value_type()?;
 
-            if let Err(mismatch_type_error) =
-                self.is_mismatch_type(lli_type, lli_value_type, Some(lli_value), None, span)
-            {
+            if let Err(mismatch_type_error) = self.is_mismatch_type(
+                lli_type,
+                lli_value_type,
+                Some(lli_value),
+                None,
+                span,
+                TypeCheckerTypeCheckSource::default(),
+            ) {
                 self.add_error(mismatch_type_error);
             }
 
@@ -293,9 +327,14 @@ impl<'stmts> TypeChecker<'stmts> {
                         let from_type: &ThrushType = expr.get_value_type()?;
                         let span: Span = expr.get_span();
 
-                        if let Err(mismatched_types_error) =
-                            self.is_mismatch_type(target_type, from_type, Some(expr), None, &span)
-                        {
+                        if let Err(mismatched_types_error) = self.is_mismatch_type(
+                            target_type,
+                            from_type,
+                            Some(expr),
+                            None,
+                            &span,
+                            TypeCheckerTypeCheckSource::Call,
+                        ) {
                             self.add_error(mismatched_types_error);
                         }
                     }
@@ -348,9 +387,14 @@ impl<'stmts> TypeChecker<'stmts> {
                         let from_type: &ThrushType = arg.get_value_type()?;
                         let span: Span = arg.get_span();
 
-                        if let Err(mismatched_types_error) =
-                            self.is_mismatch_type(target_type, from_type, Some(arg), None, &span)
-                        {
+                        if let Err(mismatched_types_error) = self.is_mismatch_type(
+                            target_type,
+                            from_type,
+                            Some(arg),
+                            None,
+                            &span,
+                            TypeCheckerTypeCheckSource::Call,
+                        ) {
                             self.add_error(mismatched_types_error);
                         }
                     }
@@ -391,6 +435,7 @@ impl<'stmts> TypeChecker<'stmts> {
                         Some(value),
                         None,
                         span,
+                        TypeCheckerTypeCheckSource::default(),
                     ) {
                         self.add_error(mismatched_types_error);
                     }
@@ -414,6 +459,7 @@ impl<'stmts> TypeChecker<'stmts> {
                     Some(value),
                     None,
                     span,
+                    TypeCheckerTypeCheckSource::default(),
                 ) {
                     self.add_error(mismatched_types_error);
                 }
@@ -446,6 +492,7 @@ impl<'stmts> TypeChecker<'stmts> {
                 expression.as_deref(),
                 None,
                 span,
+                TypeCheckerTypeCheckSource::default(),
             ) {
                 self.add_error(mismatched_types_error);
             }
@@ -461,6 +508,7 @@ impl<'stmts> TypeChecker<'stmts> {
                 Some(cond),
                 None,
                 span,
+                TypeCheckerTypeCheckSource::default(),
             ) {
                 self.add_error(mismatched_types_error);
             }
@@ -473,6 +521,7 @@ impl<'stmts> TypeChecker<'stmts> {
                         Some(cond),
                         None,
                         span,
+                        TypeCheckerTypeCheckSource::default(),
                     ) {
                         self.add_error(mismatched_types_error);
                     }
@@ -498,6 +547,7 @@ impl<'stmts> TypeChecker<'stmts> {
                     Some(expression),
                     None,
                     &expression_span,
+                    TypeCheckerTypeCheckSource::default(),
                 ) {
                     self.add_error(mismatched_types_error);
                 }
@@ -518,6 +568,7 @@ impl<'stmts> TypeChecker<'stmts> {
                 expression.as_deref(),
                 None,
                 span,
+                TypeCheckerTypeCheckSource::default(),
             ) {
                 self.add_error(mismatched_types_error);
             }
@@ -596,6 +647,7 @@ impl<'stmts> TypeChecker<'stmts> {
         expression: Option<&ThrushStatement>,
         operator: Option<&TokenKind>,
         span: &Span,
+        source: TypeCheckerTypeCheckSource,
     ) -> Result<(), ThrushCompilerIssue> {
         let error: ThrushCompilerIssue = ThrushCompilerIssue::Error(
             String::from("Mismatched types"),
@@ -610,7 +662,14 @@ impl<'stmts> TypeChecker<'stmts> {
             ..
         }) = expression
         {
-            return self.is_mismatch_type(target_type, expression_type, None, Some(operator), span);
+            return self.is_mismatch_type(
+                target_type,
+                expression_type,
+                None,
+                Some(operator),
+                span,
+                source,
+            );
         }
 
         if let Some(ThrushStatement::UnaryOp {
@@ -619,7 +678,14 @@ impl<'stmts> TypeChecker<'stmts> {
             ..
         }) = expression
         {
-            return self.is_mismatch_type(target_type, expression_type, None, Some(operator), span);
+            return self.is_mismatch_type(
+                target_type,
+                expression_type,
+                None,
+                Some(operator),
+                span,
+                source,
+            );
         }
 
         if let Some(ThrushStatement::Group {
@@ -634,6 +700,7 @@ impl<'stmts> TypeChecker<'stmts> {
                 Some(expression),
                 None,
                 span,
+                source,
             );
         }
 
@@ -647,7 +714,7 @@ impl<'stmts> TypeChecker<'stmts> {
 
                 target_fields.iter().zip(from_fields.iter()).try_for_each(
                     |(target_field, from_field)| {
-                        self.is_mismatch_type(target_field, from_field, None, None, span)
+                        self.is_mismatch_type(target_field, from_field, None, None, span, source)
                     },
                 )?;
 
@@ -681,8 +748,8 @@ impl<'stmts> TypeChecker<'stmts> {
                     | TokenKind::RShift,
                 )
                 | None,
-            ) if !target_type.is_mut_type() => {
-                self.is_mismatch_type(target_type, from_type, expression, operator, span)?;
+            ) if !target_type.is_mut_type() && source.is_local() => {
+                self.is_mismatch_type(target_type, from_type, expression, operator, span, source)?;
 
                 Ok(())
             }
@@ -708,8 +775,8 @@ impl<'stmts> TypeChecker<'stmts> {
                     | TokenKind::RShift,
                 )
                 | None,
-            ) if !any_type.is_mut_type() => {
-                self.is_mismatch_type(target_type, any_type, expression, operator, span)?;
+            ) if !any_type.is_mut_type() && source.is_local() => {
+                self.is_mismatch_type(target_type, any_type, expression, operator, span, source)?;
 
                 Ok(())
             }
@@ -736,14 +803,14 @@ impl<'stmts> TypeChecker<'stmts> {
                 )
                 | None,
             ) => {
-                self.is_mismatch_type(target_type, from_type, expression, operator, span)?;
+                self.is_mismatch_type(target_type, from_type, expression, operator, span, source)?;
 
                 Ok(())
             }
 
             (ThrushType::Ptr(None), ThrushType::Ptr(None), None) => Ok(()),
             (ThrushType::Ptr(Some(target_type)), ThrushType::Ptr(Some(from_type)), None) => {
-                self.is_mismatch_type(target_type, from_type, expression, operator, span)?;
+                self.is_mismatch_type(target_type, from_type, expression, operator, span, source)?;
 
                 Ok(())
             }
