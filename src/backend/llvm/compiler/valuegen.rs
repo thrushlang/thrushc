@@ -152,7 +152,6 @@ pub fn build<'ctx>(
     } = expression
     {
         let site_allocation: memory::LLVMAllocationSite = site_allocation.to_llvm_allocation_site();
-
         return memory::alloc_anon(site_allocation, context, type_to_alloc).into();
     }
 
@@ -170,7 +169,7 @@ pub fn build<'ctx>(
                 self::build(expression, &ThrushType::Void, context).into_pointer_value();
 
             if let Ok(store) = llvm_builder.build_store(compiled_expression, write_value) {
-                let target_data: &TargetData = &context.target_data;
+                let target_data: &TargetData = context.get_target_data();
 
                 let preferred_memory_alignment: u32 =
                     target_data.get_preferred_alignment(&compiled_expression.get_type());
@@ -194,19 +193,26 @@ pub fn build<'ctx>(
                 .const_null()
                 .into();
         }
+
+        logging::log(LoggingType::Panic, "Could not get value of 'write' LLI");
     }
 
     if let ThrushStatement::CastPtr {
         from, cast_type, ..
     } = expression
     {
-        let ptr: PointerValue = self::build(from, cast_type, context).into_pointer_value();
+        if let ThrushStatement::Reference { name, .. } = &**from {
+            let reference: PointerValue = context
+                .get_allocated_symbol(name)
+                .take()
+                .into_pointer_value();
 
-        let cast_type: PointerType =
-            typegen::generate_type(llvm_context, cast_type).into_pointer_type();
+            let cast_type: PointerType =
+                typegen::generate_type(llvm_context, cast_type).into_pointer_type();
 
-        if let Ok(casted_ptr) = llvm_builder.build_pointer_cast(ptr, cast_type, "") {
-            return casted_ptr.into();
+            if let Ok(casted_ptr) = llvm_builder.build_pointer_cast(reference, cast_type, "") {
+                return casted_ptr.into();
+            }
         }
 
         logging::log(
@@ -230,6 +236,8 @@ pub fn build<'ctx>(
 
             return memory::load_anon(context, kind, ptr);
         }
+
+        logging::log(LoggingType::Panic, "Could not get value of 'load' LLI.");
     }
 
     if let ThrushStatement::Address { name, indexes, .. } = expression {
@@ -393,6 +401,8 @@ pub fn build<'ctx>(
 
             return expr;
         }
+
+        logging::log(LoggingType::Panic, "Could not get value of an mutation.");
     }
 
     if let ThrushStatement::Call {
@@ -430,7 +440,7 @@ pub fn build<'ctx>(
                 .get(arg_position)
                 .unwrap_or(&ThrushType::Void);
 
-            compiled_args.push(build(arg_expr, cast_target, context).into());
+            compiled_args.push(self::build(arg_expr, cast_target, context).into());
         });
 
         let call: CallSiteValue = llvm_builder
@@ -443,7 +453,7 @@ pub fn build<'ctx>(
             let llvm_context: &Context = context.get_llvm_context();
             let return_value: BasicValueEnum = call.try_as_basic_value().unwrap_left();
 
-            if call_type.is_heap_allocated(llvm_context, &context.target_data) {
+            if call_type.is_heap_allocated(llvm_context, context.get_target_data()) {
                 context.add_scope_call((call_type, return_value));
             }
 
@@ -452,9 +462,10 @@ pub fn build<'ctx>(
                 return return_value;
             }
 
-            if call_type.is_heap_allocated(llvm_context, &context.target_data)
+            if call_type.is_heap_allocated(llvm_context, context.get_target_data())
                 && previous_position.in_local()
-                || previous_position.in_call()
+                || call_type.is_heap_allocated(llvm_context, context.get_target_data())
+                    && previous_position.in_call()
             {
                 context.set_position_irrelevant();
 
@@ -478,25 +489,23 @@ pub fn build<'ctx>(
         expression, kind, ..
     } = expression
     {
-        let null: PointerValue = llvm_context.ptr_type(AddressSpace::default()).const_null();
+        let default: PointerValue = llvm_context.ptr_type(AddressSpace::default()).const_null();
 
         if expression.is_none() {
-            llvm_builder.build_return(None).unwrap();
-
-            return null.into();
+            let _ = llvm_builder.build_return(None);
+            return default.into();
         }
 
         if let Some(expression) = expression {
-            llvm_builder
-                .build_return(Some(&build(expression, kind, context)))
-                .unwrap();
+            let _ = llvm_builder.build_return(Some(&build(expression, kind, context)));
+            return default.into();
         }
 
-        return null.into();
+        logging::log(LoggingType::Panic, "Could not get value of an return.");
     }
 
     if let ThrushStatement::Group { expression, .. } = expression {
-        return build(expression, cast_target, context);
+        return self::build(expression, cast_target, context);
     }
 
     println!("{:?}", expression);

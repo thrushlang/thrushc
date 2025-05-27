@@ -28,7 +28,7 @@ pub struct LLVMCodeGenContext<'a, 'ctx> {
     builder: &'ctx Builder<'ctx>,
     position: LLVMCodeGenContextPosition,
     previous_position: LLVMCodeGenContextPosition,
-    pub target_data: TargetData,
+    target_data: TargetData,
     diagnostician: Diagnostician,
     constants: HashMap<&'ctx str, SymbolAllocated<'ctx>>,
     functions: HashMap<&'ctx str, LLVMFunction<'ctx>>,
@@ -222,6 +222,10 @@ impl<'a, 'ctx> LLVMCodeGenContext<'a, 'ctx> {
 
     pub fn get_diagnostician(&self) -> &Diagnostician {
         &self.diagnostician
+    }
+
+    pub fn get_target_data(&self) -> &TargetData {
+        &self.target_data
     }
 
     pub fn get_llvm_calls(&self) -> &LLVMScopeCalls<'ctx> {

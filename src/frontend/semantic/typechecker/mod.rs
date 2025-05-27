@@ -506,10 +506,30 @@ impl<'stmts> TypeChecker<'stmts> {
             return Ok(());
         }
 
+        if let ThrushStatement::Return {
+            expression,
+            kind,
+            span,
+        } = stmt
+        {
+            if let Err(mismatched_types_error) = self.is_mismatch_type(
+                self.type_ctx.get_function_type(),
+                kind,
+                expression.as_deref(),
+                None,
+                span,
+            ) {
+                self.add_error(mismatched_types_error);
+            }
+
+            return Ok(());
+        }
+
         if let ThrushStatement::Load { .. }
         | ThrushStatement::Write { .. }
         | ThrushStatement::Address { .. }
-        | ThrushStatement::Alloc { .. } = stmt
+        | ThrushStatement::Alloc { .. }
+        | ThrushStatement::CastPtr { .. } = stmt
         {
             return Ok(());
         }

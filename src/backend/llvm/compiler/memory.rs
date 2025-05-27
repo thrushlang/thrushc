@@ -85,7 +85,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
                         llvm_context,
                         llvm_builder,
                         kind,
-                        kind.is_heap_allocated(llvm_context, &context.target_data),
+                        kind.is_heap_allocated(llvm_context, context.get_target_data()),
                     );
 
                     self::store_anon(context, ptr_allocated, value);
@@ -103,7 +103,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
         let llvm_context: &Context = context.get_llvm_context();
         let llvm_builder: &Builder = context.get_llvm_builder();
 
-        let target_data: &TargetData = &context.target_data;
+        let target_data: &TargetData = context.get_target_data();
 
         let thrush_type: &ThrushType = self.get_type();
 
@@ -191,7 +191,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
         let llvm_context: &Context = context.get_llvm_context();
         let llvm_builder: &Builder = context.get_llvm_builder();
 
-        let target_data: &TargetData = &context.target_data;
+        let target_data: &TargetData = context.get_target_data();
 
         let thrush_type: &ThrushType = self.get_type();
         let llvm_type: BasicTypeEnum = typegen::generate_subtype(llvm_context, thrush_type);
@@ -225,7 +225,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
         let llvm_context: &Context = context.get_llvm_context();
         let llvm_builder: &Builder = context.get_llvm_builder();
 
-        let target_data: &TargetData = &context.target_data;
+        let target_data: &TargetData = context.get_target_data();
 
         match self {
             Self::Local { ptr, kind, .. } if kind.is_heap_allocated(llvm_context, target_data) => {
@@ -553,7 +553,7 @@ pub fn store_anon<'ctx>(
     value: BasicValueEnum<'ctx>,
 ) {
     let llvm_builder: &Builder = context.get_llvm_builder();
-    let target_data: &TargetData = &context.target_data;
+    let target_data: &TargetData = context.get_target_data();
 
     let preferred_memory_alignment: u32 = target_data.get_preferred_alignment(&ptr.get_type());
 
@@ -572,7 +572,9 @@ pub fn load_anon<'ctx>(
 
     let llvm_type: BasicTypeEnum = typegen::generate_subtype(llvm_context, kind);
 
-    let preferred_alignment: u32 = context.target_data.get_preferred_alignment(&llvm_type);
+    let preferred_alignment: u32 = context
+        .get_target_data()
+        .get_preferred_alignment(&llvm_type);
 
     let loaded_value: BasicValueEnum = llvm_builder.build_load(llvm_type, ptr, "").unwrap();
 
@@ -604,11 +606,12 @@ pub fn alloc_anon<'ctx>(
     let llvm_module: &Module = context.get_llvm_module();
     let llvm_context: &Context = context.get_llvm_context();
     let llvm_builder: &Builder = context.get_llvm_builder();
-    let target_data: &TargetData = &context.target_data;
 
     let llvm_type: BasicTypeEnum = typegen::generate_subtype(llvm_context, kind);
 
-    let preferred_memory_alignment: u32 = target_data.get_preferred_alignment(&llvm_type);
+    let preferred_memory_alignment: u32 = context
+        .get_target_data()
+        .get_preferred_alignment(&llvm_type);
 
     match site {
         LLVMAllocationSite::Stack => {
@@ -656,7 +659,9 @@ pub fn memcpy<'ctx>(
 
     let llvm_type: BasicTypeEnum = typegen::generate_type(llvm_context, kind);
 
-    let llvm_preferred_alignment: u32 = context.target_data.get_preferred_alignment(&llvm_type);
+    let llvm_preferred_alignment: u32 = context
+        .get_target_data()
+        .get_preferred_alignment(&llvm_type);
 
     if let Some(size) = llvm_type.size_of() {
         let _ = llvm_builder.build_memcpy(

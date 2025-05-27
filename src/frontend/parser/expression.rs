@@ -162,10 +162,10 @@ fn casts<'instr>(
     if parser_ctx.match_token(TokenKind::CastPtr)? {
         let span: Span = parser_ctx.previous().span;
 
-        if !expression.is_ref_lli() {
+        if !expression.is_ref_lli() && !expression.is_ref_local() {
             return Err(ThrushCompilerIssue::Error(
                 String::from("Syntax error"),
-                String::from("Expected lli reference."),
+                String::from("Expected Low Level instruction (LLI) or local reference."),
                 None,
                 span,
             ));
@@ -427,7 +427,7 @@ fn primary<'instr>(
                 return Err(ThrushCompilerIssue::Error(
                     String::from("Attemping to access an invalid pointer"),
                     format!(
-                        "Load low-level instruction is only allowed for pointer types or memory address, not '{}'. ",
+                        "Load a low-level instruction is only allowed for pointer types or memory address, not '{}'. ",
                         expression_type
                     ),
                     None,
@@ -446,49 +446,40 @@ fn primary<'instr>(
             let write_tk: &Token = parser_ctx.advance()?;
             let span: Span = write_tk.span;
 
-            parser_ctx.consume(
-                TokenKind::LBracket,
-                String::from("Syntax error"),
-                String::from("Expected '['."),
-            )?;
-
-            let write_type: ThrushType = typegen::build_type(parser_ctx)?;
-
-            parser_ctx.consume(
-                TokenKind::RBracket,
-                String::from("Syntax error"),
-                String::from("Expected ']'."),
-            )?;
-
-            let value: ThrushStatement = self::build_expr(parser_ctx)?;
-
-            parser_ctx.consume(
-                TokenKind::Comma,
-                String::from("Syntax error"),
-                String::from("Expected ','."),
-            )?;
-
-            if parser_ctx.check(TokenKind::Identifier) {
-                let identifier_tk: &Token = parser_ctx.consume(
-                    TokenKind::Identifier,
-                    String::from("Syntax error"),
-                    String::from("Expected 'identifier'."),
-                )?;
+            if parser_ctx.match_token(TokenKind::Identifier)? {
+                let identifier_tk: &Token = parser_ctx.previous();
 
                 let name: &str = identifier_tk.lexeme;
 
-                self::build_reference(parser_ctx, name, span)?;
+                if let Ok(reference) = self::build_reference(parser_ctx, name, span) {
+                    if !reference.is_ref_lli() {
+                        return Err(ThrushCompilerIssue::Error(
+                            String::from("Syntax error"),
+                            String::from("Expected low level instruction (LLI), reference."),
+                            None,
+                            span,
+                        ));
+                    }
+                }
+
+                parser_ctx.consume(
+                    TokenKind::Comma,
+                    String::from("Syntax error"),
+                    String::from("Expected ','."),
+                )?;
+
+                let value: ThrushStatement = self::build_expr(parser_ctx)?;
+                let write_type: &ThrushType = value.get_value_type()?;
 
                 return Ok(ThrushStatement::Write {
                     write_to: (Some(name), None),
-                    write_value: value.into(),
-                    write_type,
+                    write_value: value.clone().into(),
+                    write_type: write_type.clone(),
                     span,
                 });
             }
 
-            let expression: ThrushStatement = build_expr(parser_ctx)?;
-
+            let expression: ThrushStatement = self::build_expr(parser_ctx)?;
             let expression_type: &ThrushType = expression.get_value_type()?;
 
             if !expression_type.is_ptr_type() && !expression_type.is_address_type() {
@@ -503,10 +494,20 @@ fn primary<'instr>(
                 ));
             }
 
+            parser_ctx.consume(
+                TokenKind::Comma,
+                String::from("Syntax error"),
+                String::from("Expected ','."),
+            )?;
+
+            let value: ThrushStatement = self::build_expr(parser_ctx)?;
+
+            let write_type: &ThrushType = value.get_value_type()?;
+
             ThrushStatement::Write {
                 write_to: (None, Some(expression.into())),
-                write_value: value.into(),
-                write_type,
+                write_value: value.clone().into(),
+                write_type: write_type.clone(),
                 span,
             }
         }

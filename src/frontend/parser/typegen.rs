@@ -11,7 +11,7 @@ use crate::{
                 },
                 types::{CustomTypeFields, StructFields},
             },
-            symbols::types::{CustomTypeSymbol, FoundSymbolId, Struct},
+            symbols::types::{CustomTypeSymbol, Struct},
         },
     },
 };
@@ -62,7 +62,7 @@ pub fn build_type(parser_ctx: &mut ParserContext<'_>) -> Result<ThrushType, Thru
                 ty if ty.is_integer_type() => Ok(ty),
                 ty if ty.is_float_type() => Ok(ty),
                 ty if ty.is_bool_type() => Ok(ty),
-                ty if ty.is_ptr_type() && parser_ctx.check(TokenKind::LBracket) => {
+                ty if ty.is_ptr_type() && parser_ctx.check(TokenKind::Less) => {
                     Ok(build_recursive_type(parser_ctx, ThrushType::Ptr(None))?)
                 }
                 ty if ty.is_ptr_type() => Ok(ty),
@@ -141,22 +141,22 @@ fn build_recursive_type(
     mut before_type: ThrushType,
 ) -> Result<ThrushType, ThrushCompilerIssue> {
     parser_ctx.consume(
-        TokenKind::LBracket,
+        TokenKind::Less,
         String::from("Syntax error"),
-        String::from("Expected '['."),
+        String::from("Expected '<'."),
     )?;
 
     if let ThrushType::Ptr(_) = &mut before_type {
-        let mut inner_type: ThrushType = build_type(parser_ctx)?;
+        let mut inner_type: ThrushType = self::build_type(parser_ctx)?;
 
-        while parser_ctx.check(TokenKind::LBracket) {
-            inner_type = build_recursive_type(parser_ctx, inner_type)?;
+        while parser_ctx.check(TokenKind::Less) {
+            inner_type = self::build_recursive_type(parser_ctx, inner_type)?;
         }
 
         parser_ctx.consume(
-            TokenKind::RBracket,
+            TokenKind::Greater,
             String::from("Syntax error"),
-            String::from("Expected ']'."),
+            String::from("Expected '>'."),
         )?;
 
         return Ok(ThrushType::Ptr(Some(inner_type.into())));

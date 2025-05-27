@@ -83,7 +83,7 @@ pub fn function_type<'ctx>(
         }
         ThrushType::Struct(..) => {
             let is_heap_allocated_type: bool =
-                kind.is_heap_allocated(llvm_context, &context.target_data);
+                kind.is_heap_allocated(llvm_context, context.get_target_data());
 
             if is_heap_allocated_type {
                 return llvm_context

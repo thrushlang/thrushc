@@ -323,7 +323,7 @@ impl LLVMDeallocator for ThrushType {
     fn dealloc(&self, context: &LLVMCodeGenContext<'_, '_>, value: BasicValueEnum<'_>) {
         let llvm_builder: &Builder = context.get_llvm_builder();
         let llvm_context: &Context = context.get_llvm_context();
-        let target_data: &TargetData = &context.target_data;
+        let target_data: &TargetData = context.get_target_data();
 
         if self.is_heap_allocated(llvm_context, target_data) && value.is_pointer_value() {
             let ptr: PointerValue = value.into_pointer_value();

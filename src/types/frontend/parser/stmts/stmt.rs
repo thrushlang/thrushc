@@ -793,6 +793,17 @@ impl ThrushStatement<'_> {
     }
 
     #[inline]
+    pub const fn is_ref_local(&self) -> bool {
+        matches!(
+            self,
+            ThrushStatement::Reference {
+                identificator: ReferenceIndentificator::Local,
+                ..
+            }
+        )
+    }
+
+    #[inline]
     pub const fn is_pre_unaryop(&self) -> bool {
         matches!(self, ThrushStatement::UnaryOp { is_pre: true, .. })
     }
@@ -835,6 +846,7 @@ impl ThrushStatement<'_> {
                 | ThrushStatement::Load { .. }
                 | ThrushStatement::Address { .. }
                 | ThrushStatement::Alloc { .. }
+                | ThrushStatement::CastPtr { .. }
         )
     }
 

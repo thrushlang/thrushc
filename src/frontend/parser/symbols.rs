@@ -122,23 +122,32 @@ impl<'instr> SymbolsTable<'instr> {
 
     pub fn new_local(
         &mut self,
-        scope_pos: usize,
         name: &'instr str,
         local: LocalSymbol<'instr>,
         span: Span,
     ) -> Result<(), ThrushCompilerIssue> {
-        if self.locals[scope_pos - 1].contains_key(name) {
-            return Err(ThrushCompilerIssue::Error(
-                String::from("Local variable already declared"),
-                format!("'{}' local variable already declared before.", name),
-                None,
-                span,
-            ));
+        if let Some(last_scope) = self.locals.last_mut() {
+            if last_scope.contains_key(name) {
+                return Err(ThrushCompilerIssue::Error(
+                    String::from("Local variable already declared"),
+                    format!("'{}' local variable already declared before.", name),
+                    None,
+                    span,
+                ));
+            }
+
+            last_scope.insert(name, local);
+
+            return Ok(());
         }
 
-        self.locals[scope_pos - 1].insert(name, local);
-
-        Ok(())
+        return Err(ThrushCompilerIssue::Bug(
+            String::from("Last scope not caught"),
+            String::from("The last scope could not be obtained."),
+            span,
+            CompilationPosition::Parser,
+            line!(),
+        ));
     }
 
     pub fn new_constant(

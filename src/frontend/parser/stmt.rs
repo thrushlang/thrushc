@@ -1241,7 +1241,7 @@ fn build_instr<'instr>(
     if !value.is_lli() {
         return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
-            String::from("LLI was expected."),
+            String::from("Low Level Instruction (LLI) was expected."),
             None,
             value.get_span(),
         ));
@@ -1332,11 +1332,8 @@ fn build_local<'instr>(
 
     let local_type: ThrushType = typegen::build_type(parser_ctx)?;
 
-    let scope: usize = parser_ctx.get_scope();
-
     if parser_ctx.match_token(TokenKind::SemiColon)? {
         parser_ctx.get_mut_symbols().new_local(
-            scope,
             name,
             (local_type.clone(), is_mutable, true, span),
             span,
@@ -1356,7 +1353,6 @@ fn build_local<'instr>(
     }
 
     parser_ctx.get_mut_symbols().new_local(
-        scope,
         name,
         (local_type.clone(), is_mutable, false, span),
         span,

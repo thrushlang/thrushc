@@ -61,6 +61,14 @@ impl<'linter> Linter<'linter> {
     }
 
     pub fn analyze_stmt(&mut self, stmt: &'linter ThrushStatement) {
+        /* ######################################################################
+
+
+            LINTER STMTS | START
+
+
+        ########################################################################*/
+
         if let ThrushStatement::EntryPoint { body, .. } = stmt {
             self.analyze_stmt(body);
         }
@@ -85,6 +93,44 @@ impl<'linter> Linter<'linter> {
             }
         }
 
+        if let ThrushStatement::LLI {
+            name, span, value, ..
+        } = stmt
+        {
+            self.symbols.new_lli(name, (*span, false));
+
+            self.analyze_stmt(value);
+        }
+
+        if let ThrushStatement::Local {
+            name,
+            value,
+            span,
+            is_mutable,
+            ..
+        } = stmt
+        {
+            self.symbols.new_local(name, (*span, false, !is_mutable));
+
+            self.analyze_stmt(value);
+        }
+
+        /* ######################################################################
+
+
+            LINTER STMTS | END
+
+
+        ########################################################################*/
+
+        /* ######################################################################
+
+
+            LINTER EXPRESSIONS | START
+
+
+        ########################################################################*/
+
         if let ThrushStatement::BinaryOp { left, right, .. } = stmt {
             self.analyze_stmt(left);
             self.analyze_stmt(right);
@@ -104,6 +150,25 @@ impl<'linter> Linter<'linter> {
             self.generate_scoped_warnings();
 
             self.end_scope();
+        }
+
+        if let ThrushStatement::CastPtr { from, .. } = stmt {
+            self.analyze_stmt(from);
+        }
+
+        if let ThrushStatement::Address { name, span, .. } = stmt {
+            if let Some(local) = self.symbols.get_local_info(name) {
+                local.1 = true;
+                return;
+            }
+
+            self.add_bug(ThrushCompilerIssue::Bug(
+                String::from("Reference not caught"),
+                format!("Could not get reference with name '{}'.", name),
+                *span,
+                CompilationPosition::Linter,
+                line!(),
+            ));
         }
 
         if let ThrushStatement::Load { load, .. } = stmt {
@@ -136,28 +201,6 @@ impl<'linter> Linter<'linter> {
             self.analyze_stmt(block);
         }
 
-        if let ThrushStatement::LLI {
-            name, span, value, ..
-        } = stmt
-        {
-            self.symbols.new_lli(name, (*span, false));
-
-            self.analyze_stmt(value);
-        }
-
-        if let ThrushStatement::Local {
-            name,
-            value,
-            span,
-            is_mutable,
-            ..
-        } = stmt
-        {
-            self.symbols.new_local(name, (*span, false, !is_mutable));
-
-            self.analyze_stmt(value);
-        }
-
         if let ThrushStatement::Constructor {
             name,
             arguments,
@@ -184,9 +227,17 @@ impl<'linter> Linter<'linter> {
             ));
         }
 
-        if let ThrushStatement::Call { name, span, .. } = stmt {
+        if let ThrushStatement::Call {
+            name, span, args, ..
+        } = stmt
+        {
             if let Some(function) = self.symbols.get_function_info(name) {
                 function.1 = true;
+
+                args.iter().for_each(|arg| {
+                    self.analyze_stmt(arg);
+                });
+
                 return;
             }
 
@@ -272,6 +323,14 @@ impl<'linter> Linter<'linter> {
                 ));
             }
         }
+
+        /* ######################################################################
+
+
+            LINTER EXPRESSIONS | END
+
+
+        ########################################################################*/
     }
 
     pub fn generate_scoped_warnings(&mut self) {
