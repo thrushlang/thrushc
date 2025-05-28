@@ -5,7 +5,7 @@
 
 # The Thrush Compiler 
 
-The Thrush Compiler is tasked with converting Thrush source code (`.th`) into native code for each architecture, using either Just In Time (**JIT**) or Ahead Of Time (**AOT**) compilation modes, leveraging the LLVM infrastructure (**LLVM-C API**) during the process.
+The Thrush Compiler is tasked with converting Thrush source code (`.th`) into native code for each architecture, using Ahead Of Time (**AOT**) compilation mode, leveraging the LLVM infrastructure (**LLVM-C API**) during the process.
 
 # ¿How it works?
 
@@ -17,7 +17,7 @@ The code generation is in 3 phases.
 
 - Intermediate Code Generation (``LLVM IR``).
 - Emit object files (``.o``). 
-- Linking.
+- Linking with LLVM Linker (``LLD``).
 
 In summary:
 
