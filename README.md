@@ -67,12 +67,3 @@ Now you need to compile the compiler with Rust.
 ```console
 cargo run -- --help
 ```
-
-## Install a toolchain
-
-To create binaries with the compiler, you need the pre-compiled toolchain for each operating system. Find your operating system and architecture.
-
-- **[Thrush Programming Language Toolchains](https://github.com/thrushlang/toolchains)**.
-
-> [!NOTE]  
-> In the future the **Thorium Package Manager** will do this for you when you use the command `thorium install`.
