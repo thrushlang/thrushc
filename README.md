@@ -25,6 +25,11 @@ In summary:
   <img src= "https://github.com/thrushlang/thrushc/blob/master/assets/how%20it%20works%20(thrushc)%20v1.3.png" style= "width: 1hv; height: 1hv;"> </img>
 </p>
 
+## Compilation dependencies
+
+- ``libc`` C Standard Library.
+- ``crt`` C Runtime.
+
 # Getting Started
 
 ## Start
