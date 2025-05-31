@@ -26,3 +26,28 @@ pub type LinterStructs<'linter> = HashMap<&'linter str, LinterStructFieldsInfo<'
 
 pub type LinterFunctionParameterInfo = (Span, bool, bool);
 pub type LinterFunctionParameters<'linter> = HashMap<&'linter str, LinterFunctionParameterInfo>;
+
+#[derive(Debug, Clone, Copy)]
+pub enum LinterAttributeApplicant {
+    Function,
+    Struct,
+    Constant,
+    Method,
+}
+
+#[derive(Debug, Clone, PartialEq, Hash, Eq)]
+pub enum LLVMAttributeComparator {
+    Extern,
+    Convention,
+    Public,
+    Ignore,
+    Hot,
+    NoInline,
+    InlineHint,
+    MinSize,
+    AlwaysInline,
+    SafeStack,
+    StrongStack,
+    WeakStack,
+    PreciseFloats,
+}

@@ -18,4 +18,4 @@ pub type Constructor<'instr> = (
     Vec<(&'instr str, ThrushStatement<'instr>, ThrushType, u32)>,
 );
 
-pub type CompilerAttributes<'ctx> = Vec<LLVMAttribute<'ctx>>;
+pub type ThrushAttributes<'ctx> = Vec<LLVMAttribute<'ctx>>;

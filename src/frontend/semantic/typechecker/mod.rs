@@ -14,7 +14,7 @@ use crate::{
     },
     types::frontend::{
         lexer::{tokenkind::TokenKind, types::ThrushType},
-        parser::stmts::{stmt::ThrushStatement, traits::CompilerAttributesExtensions},
+        parser::stmts::{stmt::ThrushStatement, traits::ThrushAttributesExtensions},
     },
 };
 
@@ -197,6 +197,15 @@ impl<'stmts> TypeChecker<'stmts> {
         {
             self.symbols.new_local(name, local_type);
 
+            if self.check_mismatch_type(&ThrushType::Void, local_type) {
+                self.add_error(ThrushCompilerIssue::Error(
+                    String::from("Type not allowed"),
+                    String::from("The void type is not permissible as a runtime value."),
+                    None,
+                    *span,
+                ));
+            }
+
             let local_value_type: &ThrushType = local_value.get_value_type()?;
 
             if let Err(mismatch_type_error) = self.is_mismatch_type(
@@ -225,6 +234,15 @@ impl<'stmts> TypeChecker<'stmts> {
         } = stmt
         {
             let lli_value_type: &ThrushType = lli_value.get_value_type()?;
+
+            if self.check_mismatch_type(&ThrushType::Void, lli_type) {
+                self.add_error(ThrushCompilerIssue::Error(
+                    String::from("Type not allowed"),
+                    String::from("The void type is not permissible as a runtime value."),
+                    None,
+                    *span,
+                ));
+            }
 
             if let Err(mismatch_type_error) = self.is_mismatch_type(
                 lli_type,
@@ -994,8 +1012,14 @@ impl<'stmts> TypeChecker<'stmts> {
                 | None,
             ) => Ok(()),
 
+            (ThrushType::Void, ThrushType::Void, None) => Ok(()),
+
             _ => Err(error),
         }
+    }
+
+    fn check_mismatch_type(&self, target_type: &ThrushType, from_type: &ThrushType) -> bool {
+        target_type == from_type
     }
 
     fn check_binaryop(
@@ -1311,8 +1335,8 @@ impl<'stmts> TypeChecker<'stmts> {
             .iter()
             .filter(|stmt| stmt.is_methods())
             .for_each(|stmt| {
-                if let ThrushStatement::Methods { name, binds, .. } = stmt {
-                    let binds: Vec<(&'stmts str, &'stmts [ThrushType])> = binds
+                if let ThrushStatement::Methods { name, methods, .. } = stmt {
+                    let methods: Vec<(&'stmts str, &'stmts [ThrushType])> = methods
                         .iter()
                         .filter_map(|stmt| match stmt {
                             ThrushStatement::Method {
@@ -1325,7 +1349,7 @@ impl<'stmts> TypeChecker<'stmts> {
                         })
                         .collect();
 
-                    self.symbols.new_methods(name, binds);
+                    self.symbols.new_methods(name, methods);
                 }
             });
     }

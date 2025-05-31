@@ -2,8 +2,6 @@
 
 use std::rc::Rc;
 
-use inkwell::values::BasicValueEnum;
-
 use crate::{
     frontend::lexer::span::Span,
     standard::errors::{position::CompilationPosition, standard::ThrushCompilerIssue},
@@ -16,7 +14,7 @@ use crate::{
 use super::{
     ident::ReferenceIndentificator,
     sites::LLIAllocationSite,
-    types::{CompilerAttributes, Constructor, EnumFields, StructFields},
+    types::{Constructor, EnumFields, StructFields, ThrushAttributes},
 };
 
 #[derive(Debug, Clone)]
@@ -63,6 +61,7 @@ pub enum ThrushStatement<'ctx> {
         fields: StructFields<'ctx>,
         kind: ThrushType,
         span: Span,
+        attributes: ThrushAttributes<'ctx>,
     },
 
     Constructor {
@@ -74,7 +73,7 @@ pub enum ThrushStatement<'ctx> {
 
     Methods {
         name: String,
-        binds: Vec<ThrushStatement<'ctx>>,
+        methods: Vec<ThrushStatement<'ctx>>,
         span: Span,
     },
 
@@ -84,7 +83,7 @@ pub enum ThrushStatement<'ctx> {
         parameters_types: Vec<ThrushType>,
         body: Rc<ThrushStatement<'ctx>>,
         return_type: ThrushType,
-        attributes: CompilerAttributes<'ctx>,
+        attributes: ThrushAttributes<'ctx>,
         span: Span,
     },
 
@@ -207,7 +206,7 @@ pub enum ThrushStatement<'ctx> {
         parameter_types: Vec<ThrushType>,
         body: Rc<ThrushStatement<'ctx>>,
         return_type: ThrushType,
-        attributes: CompilerAttributes<'ctx>,
+        attributes: ThrushAttributes<'ctx>,
         span: Span,
     },
     Return {
@@ -221,7 +220,7 @@ pub enum ThrushStatement<'ctx> {
         name: &'ctx str,
         kind: ThrushType,
         value: Rc<ThrushStatement<'ctx>>,
-        attributes: CompilerAttributes<'ctx>,
+        attributes: ThrushAttributes<'ctx>,
         span: Span,
     },
 
@@ -263,7 +262,7 @@ pub enum ThrushStatement<'ctx> {
     Alloc {
         type_to_alloc: ThrushType,
         site_allocation: LLIAllocationSite,
-        attributes: CompilerAttributes<'ctx>,
+        attributes: ThrushAttributes<'ctx>,
         span: Span,
     },
 

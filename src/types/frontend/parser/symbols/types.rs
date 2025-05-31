@@ -4,14 +4,14 @@ use crate::{
     frontend::lexer::span::Span,
     types::frontend::{
         lexer::types::ThrushType,
-        parser::stmts::types::{CompilerAttributes, CustomTypeFields, EnumFields},
+        parser::stmts::types::{CustomTypeFields, EnumFields, ThrushAttributes},
     },
 };
 
 pub type Struct<'instr> = (
     &'instr str,
     Vec<(&'instr str, ThrushType, u32, Span)>,
-    CompilerAttributes<'instr>,
+    ThrushAttributes<'instr>,
     Methods<'instr>,
 );
 
@@ -42,9 +42,9 @@ pub type FoundSymbolId<'instr> = (
     Option<(&'instr str, usize)>,
 );
 
-pub type CustomTypeSymbol<'ctx> = (CustomTypeFields<'ctx>, CompilerAttributes<'ctx>);
-pub type EnumSymbol<'ctx> = (EnumFields<'ctx>, CompilerAttributes<'ctx>);
-pub type ConstantSymbol<'instr> = (ThrushType, CompilerAttributes<'instr>);
+pub type CustomTypeSymbol<'ctx> = (CustomTypeFields<'ctx>, ThrushAttributes<'ctx>);
+pub type EnumSymbol<'ctx> = (EnumFields<'ctx>, ThrushAttributes<'ctx>);
+pub type ConstantSymbol<'instr> = (ThrushType, ThrushAttributes<'instr>);
 
 pub type LLISymbol<'instr> = (ThrushType, Span);
 pub type LocalSymbol<'instr> = (ThrushType, bool, bool, Span);

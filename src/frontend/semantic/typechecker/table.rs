@@ -34,8 +34,8 @@ impl<'symbol> TypeCheckerSymbolsTable<'symbol> {
         self.functions.insert(name, function);
     }
 
-    pub fn new_methods(&mut self, name: &'symbol str, binds: TypeCheckerAllMethods<'symbol>) {
-        self.methods.insert(name, binds);
+    pub fn new_methods(&mut self, name: &'symbol str, methods: TypeCheckerAllMethods<'symbol>) {
+        self.methods.insert(name, methods);
     }
 
     pub fn get_local(&self, name: &'symbol str) -> Option<TypeCheckerLocal<'symbol>> {

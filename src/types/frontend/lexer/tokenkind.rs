@@ -1,4 +1,4 @@
-use crate::backend::llvm::compiler::attributes::LLVMAttribute;
+use crate::{backend::llvm::compiler::attributes::LLVMAttribute, frontend::lexer::span::Span};
 
 use super::types::ThrushType;
 
@@ -124,18 +124,18 @@ pub enum TokenKind {
 
 impl TokenKind {
     #[inline(always)]
-    pub const fn as_compiler_attribute<'ctx>(self) -> Option<LLVMAttribute<'ctx>> {
+    pub const fn as_compiler_attribute<'ctx>(self, span: Span) -> Option<LLVMAttribute<'ctx>> {
         match self {
-            TokenKind::Ignore => Some(LLVMAttribute::Ignore),
-            TokenKind::MinSize => Some(LLVMAttribute::MinSize),
-            TokenKind::NoInline => Some(LLVMAttribute::NoInline),
-            TokenKind::AlwaysInline => Some(LLVMAttribute::AlwaysInline),
-            TokenKind::InlineHint => Some(LLVMAttribute::InlineHint),
-            TokenKind::Hot => Some(LLVMAttribute::Hot),
-            TokenKind::SafeStack => Some(LLVMAttribute::SafeStack),
-            TokenKind::WeakStack => Some(LLVMAttribute::WeakStack),
-            TokenKind::StrongStack => Some(LLVMAttribute::StrongStack),
-            TokenKind::PreciseFloats => Some(LLVMAttribute::PreciseFloats),
+            TokenKind::Ignore => Some(LLVMAttribute::Ignore(span)),
+            TokenKind::MinSize => Some(LLVMAttribute::MinSize(span)),
+            TokenKind::NoInline => Some(LLVMAttribute::NoInline(span)),
+            TokenKind::AlwaysInline => Some(LLVMAttribute::AlwaysInline(span)),
+            TokenKind::InlineHint => Some(LLVMAttribute::InlineHint(span)),
+            TokenKind::Hot => Some(LLVMAttribute::Hot(span)),
+            TokenKind::SafeStack => Some(LLVMAttribute::SafeStack(span)),
+            TokenKind::WeakStack => Some(LLVMAttribute::WeakStack(span)),
+            TokenKind::StrongStack => Some(LLVMAttribute::StrongStack(span)),
+            TokenKind::PreciseFloats => Some(LLVMAttribute::PreciseFloats(span)),
             _ => None,
         }
     }

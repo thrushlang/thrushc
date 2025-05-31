@@ -1,7 +1,10 @@
 use crate::{
     frontend::lexer::span::Span,
     standard::errors::standard::ThrushCompilerIssue,
-    types::frontend::{lexer::types::ThrushType, parser::symbols::types::Methods},
+    types::frontend::{
+        lexer::types::ThrushType, linter::types::LLVMAttributeComparator,
+        parser::symbols::types::Methods,
+    },
 };
 
 use super::types::{EnumField, EnumFields, StructFields};
@@ -60,8 +63,14 @@ pub trait ConstructorExtensions {
     fn get_type(&self) -> ThrushType;
 }
 
-pub trait CompilerAttributesExtensions {
-    fn has_ffi_attribute(&self) -> bool;
+pub trait ThrushAttributesExtensions {
+    fn has_extern_attribute(&self) -> bool;
     fn has_ignore_attribute(&self) -> bool;
     fn has_public_attribute(&self) -> bool;
+    fn has_hot_attr(&self) -> bool;
+    fn has_inline_attr(&self) -> bool;
+    fn has_noinline_attr(&self) -> bool;
+    fn has_minsize_attr(&self) -> bool;
+    fn has_inlinealways_attr(&self) -> bool;
+    fn match_attr(&self, cmp: LLVMAttributeComparator) -> Option<Span>;
 }

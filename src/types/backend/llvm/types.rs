@@ -5,7 +5,7 @@ use crate::{
     backend::llvm::compiler::memory::SymbolAllocated,
     types::frontend::{
         lexer::{tokenkind::TokenKind, types::ThrushType},
-        parser::stmts::{stmt::ThrushStatement, types::CompilerAttributes},
+        parser::stmts::{stmt::ThrushStatement, types::ThrushAttributes},
     },
 };
 
@@ -34,7 +34,7 @@ pub type LLVMFunctionPrototype<'ctx> = (
     &'ctx [ThrushStatement<'ctx>],
     &'ctx [ThrushType],
     &'ctx ThrushStatement<'ctx>,
-    &'ctx CompilerAttributes<'ctx>,
+    &'ctx ThrushAttributes<'ctx>,
 );
 
 pub type LLVMFunctionCall<'ctx> = (&'ctx str, &'ctx ThrushType, &'ctx [ThrushStatement<'ctx>]);

@@ -1,19 +1,25 @@
 use std::fmt::Display;
 
-use crate::types::frontend::lexer::types::ThrushType;
+use crate::{
+    frontend::lexer::span::Span,
+    types::frontend::{
+        lexer::types::ThrushType,
+        linter::{traits::LLVMAttributeComparatorExtensions, types::LLVMAttributeComparator},
+    },
+};
 
 use super::{
     stmt::ThrushStatement,
     traits::{
-        CompilerAttributesExtensions, ConstructorExtensions, CustomTypeFieldsExtensions,
-        StructFieldsExtensions,
+        ConstructorExtensions, CustomTypeFieldsExtensions, StructFieldsExtensions,
+        ThrushAttributesExtensions,
     },
-    types::{CompilerAttributes, Constructor, CustomTypeFields, StructFields},
+    types::{Constructor, CustomTypeFields, StructFields, ThrushAttributes},
 };
 
-impl CompilerAttributesExtensions for CompilerAttributes<'_> {
-    fn has_ffi_attribute(&self) -> bool {
-        self.iter().any(|attr| attr.is_ffi_attribute())
+impl ThrushAttributesExtensions for ThrushAttributes<'_> {
+    fn has_extern_attribute(&self) -> bool {
+        self.iter().any(|attr| attr.is_extern_attribute())
     }
 
     fn has_ignore_attribute(&self) -> bool {
@@ -22,6 +28,34 @@ impl CompilerAttributesExtensions for CompilerAttributes<'_> {
 
     fn has_public_attribute(&self) -> bool {
         self.iter().any(|attr| attr.is_public_attribute())
+    }
+
+    fn has_hot_attr(&self) -> bool {
+        self.iter().any(|attr| attr.is_hot_attribute())
+    }
+
+    fn has_inline_attr(&self) -> bool {
+        self.iter().any(|attr| attr.is_inline_attribute())
+    }
+
+    fn has_minsize_attr(&self) -> bool {
+        self.iter().any(|attr| attr.is_minsize_attribute())
+    }
+
+    fn has_inlinealways_attr(&self) -> bool {
+        self.iter().any(|attr| attr.is_alwaysinline_attribute())
+    }
+
+    fn has_noinline_attr(&self) -> bool {
+        self.iter().any(|attr| attr.is_noinline_attribute())
+    }
+
+    fn match_attr(&self, cmp: LLVMAttributeComparator) -> Option<Span> {
+        if let Some(attr_found) = self.iter().find(|attr| attr.into_llvm_attr_cmp() == cmp) {
+            return Some(attr_found.get_span());
+        }
+
+        None
     }
 }
 

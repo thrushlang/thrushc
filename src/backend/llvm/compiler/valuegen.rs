@@ -7,8 +7,8 @@ use crate::standard::logging::{self, LoggingType};
 use crate::types::backend::llvm::types::LLVMFunction;
 use crate::types::frontend::lexer::types::ThrushType;
 use crate::types::frontend::parser::stmts::stmt::ThrushStatement;
-use crate::types::frontend::parser::stmts::traits::CompilerAttributesExtensions;
-use crate::types::frontend::parser::stmts::types::CompilerAttributes;
+use crate::types::frontend::parser::stmts::traits::ThrushAttributesExtensions;
+use crate::types::frontend::parser::stmts::types::ThrushAttributes;
 
 use super::context::LLVMCodeGenContext;
 use super::typegen;
@@ -509,7 +509,7 @@ pub fn alloc_constant<'ctx>(
     name: &str,
     llvm_type: BasicTypeEnum<'ctx>,
     llvm_value: BasicValueEnum<'ctx>,
-    attributes: &'ctx CompilerAttributes<'ctx>,
+    attributes: &'ctx ThrushAttributes<'ctx>,
 ) -> PointerValue<'ctx> {
     let global: GlobalValue = module.add_global(llvm_type, Some(AddressSpace::default()), name);
 

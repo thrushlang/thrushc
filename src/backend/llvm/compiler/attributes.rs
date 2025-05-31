@@ -6,39 +6,85 @@ use inkwell::{
     values::FunctionValue,
 };
 
+use crate::frontend::lexer::span::Span;
+
 use super::conventions::CallConvention;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub enum LLVMAttribute<'ctx> {
-    FFI(&'ctx str),
-    Convention(CallConvention),
-    Public,
-    Ignore,
-    Hot,
-    NoInline,
-    InlineHint,
-    MinSize,
-    AlwaysInline,
-    SafeStack,
-    StrongStack,
-    WeakStack,
-    PreciseFloats,
+    Extern(&'ctx str, Span),
+    Convention(CallConvention, Span),
+    Public(Span),
+    Ignore(Span),
+    Hot(Span),
+    NoInline(Span),
+    InlineHint(Span),
+    MinSize(Span),
+    AlwaysInline(Span),
+    SafeStack(Span),
+    StrongStack(Span),
+    WeakStack(Span),
+    PreciseFloats(Span),
 }
 
 impl LLVMAttribute<'_> {
     #[inline]
-    pub const fn is_ffi_attribute(&self) -> bool {
-        matches!(self, LLVMAttribute::FFI(_))
+    pub const fn is_extern_attribute(&self) -> bool {
+        matches!(self, LLVMAttribute::Extern(..))
+    }
+
+    #[inline]
+    pub const fn is_hot_attribute(&self) -> bool {
+        matches!(self, LLVMAttribute::Hot(..))
     }
 
     #[inline]
     pub const fn is_ignore_attribute(&self) -> bool {
-        matches!(self, LLVMAttribute::Ignore)
+        matches!(self, LLVMAttribute::Ignore(..))
     }
 
     #[inline]
     pub const fn is_public_attribute(&self) -> bool {
-        matches!(self, LLVMAttribute::Public)
+        matches!(self, LLVMAttribute::Public(..))
+    }
+
+    #[inline]
+    pub const fn is_noinline_attribute(&self) -> bool {
+        matches!(self, LLVMAttribute::NoInline(..))
+    }
+
+    #[inline]
+    pub const fn is_inline_attribute(&self) -> bool {
+        matches!(self, LLVMAttribute::InlineHint(..))
+    }
+
+    #[inline]
+    pub const fn is_alwaysinline_attribute(&self) -> bool {
+        matches!(self, LLVMAttribute::AlwaysInline(..))
+    }
+
+    #[inline]
+    pub const fn is_minsize_attribute(&self) -> bool {
+        matches!(self, LLVMAttribute::MinSize(..))
+    }
+
+    #[inline]
+    pub fn get_span(&self) -> Span {
+        match self {
+            LLVMAttribute::Extern(_, span) => *span,
+            LLVMAttribute::Convention(_, span) => *span,
+            LLVMAttribute::Public(span) => *span,
+            LLVMAttribute::Ignore(span) => *span,
+            LLVMAttribute::Hot(span) => *span,
+            LLVMAttribute::NoInline(span) => *span,
+            LLVMAttribute::InlineHint(span) => *span,
+            LLVMAttribute::MinSize(span) => *span,
+            LLVMAttribute::AlwaysInline(span) => *span,
+            LLVMAttribute::SafeStack(span) => *span,
+            LLVMAttribute::StrongStack(span) => *span,
+            LLVMAttribute::WeakStack(span) => *span,
+            LLVMAttribute::PreciseFloats(span) => *span,
+        }
     }
 }
 
@@ -71,7 +117,7 @@ impl<'ctx> AttributeBuilder<'ctx> {
                 self.attributes
                     .iter()
                     .for_each(|attribute| match attribute {
-                        LLVMAttribute::AlwaysInline => {
+                        LLVMAttribute::AlwaysInline(..) => {
                             function.add_attribute(
                                 AttributeLoc::Function,
                                 self.context.create_enum_attribute(
@@ -81,7 +127,7 @@ impl<'ctx> AttributeBuilder<'ctx> {
                             );
                         }
 
-                        LLVMAttribute::InlineHint => {
+                        LLVMAttribute::InlineHint(..) => {
                             function.add_attribute(
                                 AttributeLoc::Function,
                                 self.context.create_enum_attribute(
@@ -91,7 +137,7 @@ impl<'ctx> AttributeBuilder<'ctx> {
                             );
                         }
 
-                        LLVMAttribute::NoInline => {
+                        LLVMAttribute::NoInline(..) => {
                             function.add_attribute(
                                 AttributeLoc::Function,
                                 self.context.create_enum_attribute(
@@ -101,7 +147,7 @@ impl<'ctx> AttributeBuilder<'ctx> {
                             );
                         }
 
-                        LLVMAttribute::Hot => {
+                        LLVMAttribute::Hot(..) => {
                             function.add_attribute(
                                 AttributeLoc::Function,
                                 self.context.create_enum_attribute(
@@ -111,7 +157,7 @@ impl<'ctx> AttributeBuilder<'ctx> {
                             );
                         }
 
-                        LLVMAttribute::MinSize => {
+                        LLVMAttribute::MinSize(..) => {
                             function.add_attribute(
                                 AttributeLoc::Function,
                                 self.context.create_enum_attribute(
@@ -121,7 +167,7 @@ impl<'ctx> AttributeBuilder<'ctx> {
                             );
                         }
 
-                        LLVMAttribute::SafeStack => {
+                        LLVMAttribute::SafeStack(..) => {
                             function.add_attribute(
                                 AttributeLoc::Function,
                                 self.context.create_enum_attribute(
@@ -131,7 +177,7 @@ impl<'ctx> AttributeBuilder<'ctx> {
                             );
                         }
 
-                        LLVMAttribute::WeakStack => {
+                        LLVMAttribute::WeakStack(..) => {
                             function.add_attribute(
                                 AttributeLoc::Function,
                                 self.context.create_enum_attribute(
@@ -141,7 +187,7 @@ impl<'ctx> AttributeBuilder<'ctx> {
                             );
                         }
 
-                        LLVMAttribute::StrongStack => {
+                        LLVMAttribute::StrongStack(..) => {
                             function.add_attribute(
                                 AttributeLoc::Function,
                                 self.context.create_enum_attribute(
@@ -151,7 +197,7 @@ impl<'ctx> AttributeBuilder<'ctx> {
                             );
                         }
 
-                        LLVMAttribute::PreciseFloats => {
+                        LLVMAttribute::PreciseFloats(..) => {
                             function.add_attribute(
                                 AttributeLoc::Function,
                                 self.context.create_enum_attribute(
@@ -161,7 +207,7 @@ impl<'ctx> AttributeBuilder<'ctx> {
                             );
                         }
 
-                        LLVMAttribute::Convention(new_call_convention) => {
+                        LLVMAttribute::Convention(new_call_convention, ..) => {
                             *call_convention = *new_call_convention as u32;
                         }
 

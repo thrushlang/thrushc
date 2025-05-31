@@ -4,11 +4,11 @@ use inkwell::{
     builder::Builder,
     context::Context,
     targets::TargetData,
-    values::{BasicValueEnum, FunctionValue, PointerValue},
+    values::{BasicValueEnum, PointerValue},
 };
 
 use crate::{
-    backend::llvm::compiler::{context::LLVMCodeGenContext, memory, typegen},
+    backend::llvm::compiler::{context::LLVMCodeGenContext, typegen},
     frontend::{lexer::span::Span, parser::symbols::SymbolsTable},
     standard::errors::standard::ThrushCompilerIssue,
     types::{
@@ -393,20 +393,18 @@ impl PartialEq for ThrushType {
     }
 }
 
-pub fn generate_methods(
-    original_bindings: Vec<ThrushStatement>,
-) -> Result<Methods, ThrushCompilerIssue> {
-    let mut bindings: Methods = Vec::with_capacity(original_bindings.len());
+pub fn generate_methods(original: Vec<ThrushStatement>) -> Result<Methods, ThrushCompilerIssue> {
+    let mut methods: Methods = Vec::with_capacity(original.len());
 
-    for binding in original_bindings {
-        bindings.push((
-            binding.get_method_name()?,
-            binding.get_method_type()?,
-            binding.get_method_parameters_types()?,
+    for method in original {
+        methods.push((
+            method.get_method_name()?,
+            method.get_method_type()?,
+            method.get_method_parameters_types()?,
         ));
     }
 
-    Ok(bindings)
+    Ok(methods)
 }
 
 pub fn decompose_struct_property(

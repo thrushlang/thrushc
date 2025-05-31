@@ -642,7 +642,8 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 ..
             } = stmt
             {
-                let value: BasicValueEnum = valuegen::build(&mut self.context, value, kind);
+                let value: BasicValueEnum =
+                    valuegen::build(&mut self.context, value, &ThrushType::Void);
                 self.context.alloc_constant(name, kind, value, attributes);
             }
         });
@@ -663,24 +664,24 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         let mut call_convention: u32 = CallConvention::Standard as u32;
         let mut ignore_args: bool = false;
         let mut is_public: bool = false;
-        let mut ffi: Option<&str> = None;
+        let mut extern_name: Option<&str> = None;
 
         function_attributes
             .iter()
             .for_each(|attribute| match attribute {
-                LLVMAttribute::Public => {
+                LLVMAttribute::Public(..) => {
                     is_public = true;
                 }
-                LLVMAttribute::FFI(ffi_found) => {
-                    ffi = Some(ffi_found);
+                LLVMAttribute::Extern(name, ..) => {
+                    extern_name = Some(name);
                 }
-                LLVMAttribute::Ignore => {
+                LLVMAttribute::Ignore(..) => {
                     ignore_args = true;
                 }
                 _ => (),
             });
 
-        let llvm_function_name: &str = if let Some(ffi_name) = ffi {
+        let llvm_function_name: &str = if let Some(ffi_name) = extern_name {
             ffi_name
         } else {
             function_name
@@ -704,7 +705,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
 
         attribute_builder.add_function_attributes(&mut call_convention);
 
-        if !is_public && ffi.is_none() {
+        if !is_public && extern_name.is_none() {
             function.set_linkage(Linkage::LinkerPrivate);
         }
 

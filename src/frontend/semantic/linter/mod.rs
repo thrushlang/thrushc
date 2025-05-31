@@ -14,6 +14,7 @@ use crate::{
     types::frontend::parser::stmts::stmt::ThrushStatement,
 };
 
+pub mod attributes;
 mod table;
 
 pub struct Linter<'linter> {
@@ -50,11 +51,11 @@ impl<'linter> Linter<'linter> {
 
         self.generate_warnings();
 
-        self.bugs.iter().for_each(|warn| {
-            self.diagnostician.build_diagnostic(warn, LoggingType::Bug);
+        self.bugs.iter().for_each(|bug: &ThrushCompilerIssue| {
+            self.diagnostician.build_diagnostic(bug, LoggingType::Bug);
         });
 
-        self.warnings.iter().for_each(|warn| {
+        self.warnings.iter().for_each(|warn: &ThrushCompilerIssue| {
             self.diagnostician
                 .build_diagnostic(warn, LoggingType::Warning);
         });

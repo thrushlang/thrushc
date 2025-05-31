@@ -16,8 +16,8 @@ use crate::{
         parser::{
             stmts::{
                 stmt::ThrushStatement,
-                traits::{CompilerAttributesExtensions, StructFieldsExtensions},
-                types::{CompilerAttributes, CustomTypeFields, EnumFields, StructFields},
+                traits::{StructFieldsExtensions, ThrushAttributesExtensions},
+                types::{CustomTypeFields, EnumFields, StructFields, ThrushAttributes},
             },
             symbols::types::{Methods, ParametersTypes},
         },
@@ -146,7 +146,7 @@ pub fn build_methods<'instr>(
         .get_symbols()
         .contains_structure(&struct_name, span)?;
 
-    let mut binds: Vec<ThrushStatement> = Vec::with_capacity(50);
+    let mut methods: Vec<ThrushStatement> = Vec::with_capacity(50);
 
     parser_ctx.consume(
         TokenKind::LBrace,
@@ -165,7 +165,7 @@ pub fn build_methods<'instr>(
             .get_mut_control_ctx()
             .set_instr_position(InstructionPosition::Methods);
 
-        binds.push(bind);
+        methods.push(bind);
     }
 
     parser_ctx.consume(
@@ -183,7 +183,7 @@ pub fn build_methods<'instr>(
         .set_instr_position(InstructionPosition::NoRelevant);
 
     if declare {
-        let bindings_generated: Methods = types::generate_methods(binds.clone())?;
+        let bindings_generated: Methods = types::generate_methods(methods.clone())?;
 
         parser_ctx.get_mut_symbols().add_methods(
             &struct_name,
@@ -197,7 +197,7 @@ pub fn build_methods<'instr>(
 
     Ok(ThrushStatement::Methods {
         name: struct_name,
-        binds,
+        methods,
         span,
     })
 }
@@ -348,7 +348,7 @@ fn build_method<'instr>(
         .get_mut_type_ctx()
         .set_function_type(return_type.clone());
 
-    let bind_attributes: CompilerAttributes =
+    let bind_attributes: ThrushAttributes =
         self::build_attributes(parser_ctx, &[TokenKind::LBrace])?;
 
     if !declare {
@@ -788,7 +788,7 @@ pub fn build_custom_type<'instr>(
         String::from("Expected '='."),
     )?;
 
-    let custom_type_attributes: CompilerAttributes =
+    let custom_type_attributes: ThrushAttributes =
         self::build_attributes(parser_ctx, &[TokenKind::LBrace])?;
 
     parser_ctx.consume(
@@ -850,7 +850,7 @@ pub fn build_enum<'instr>(
 
     let span: Span = name.span;
 
-    let enum_attributes: CompilerAttributes =
+    let enum_attributes: ThrushAttributes =
         self::build_attributes(parser_ctx, &[TokenKind::LBrace])?;
 
     parser_ctx.consume(
@@ -1004,8 +1004,7 @@ pub fn build_struct<'instr>(
     let struct_name: &str = name.lexeme;
     let span: Span = name.span;
 
-    let struct_attributes: CompilerAttributes =
-        self::build_attributes(parser_ctx, &[TokenKind::LBrace])?;
+    let attributes: ThrushAttributes = self::build_attributes(parser_ctx, &[TokenKind::LBrace])?;
 
     parser_ctx.consume(
         TokenKind::LBrace,
@@ -1099,7 +1098,7 @@ pub fn build_struct<'instr>(
             (
                 struct_name,
                 fields_types.1,
-                struct_attributes,
+                attributes,
                 Vec::with_capacity(100),
             ),
             span,
@@ -1112,6 +1111,7 @@ pub fn build_struct<'instr>(
         name: struct_name,
         fields: fields_types.clone(),
         kind: fields_types.get_type(),
+        attributes,
         span,
     })
 }
@@ -1152,8 +1152,7 @@ pub fn build_const<'instr>(
 
     let const_type: ThrushType = typegen::build_type(parser_ctx)?;
 
-    let const_attributes: CompilerAttributes =
-        self::build_attributes(parser_ctx, &[TokenKind::Eq])?;
+    let const_attributes: ThrushAttributes = self::build_attributes(parser_ctx, &[TokenKind::Eq])?;
 
     parser_ctx.consume(
         TokenKind::Eq,
@@ -1637,22 +1636,10 @@ pub fn build_function<'instr>(
         .get_mut_type_ctx()
         .set_function_type(return_type.clone());
 
-    let function_attributes: CompilerAttributes =
+    let function_attributes: ThrushAttributes =
         self::build_attributes(parser_ctx, &[TokenKind::SemiColon, TokenKind::LBrace])?;
 
-    let function_has_ffi: bool = function_attributes.has_ffi_attribute();
     let function_has_ignore: bool = function_attributes.has_ignore_attribute();
-
-    if function_has_ignore && !function_has_ffi {
-        return Err(ThrushCompilerIssue::Error(
-            String::from("Syntax error"),
-            String::from(
-                "The '@ignore' attribute can only be used if the function contains the '@extern' attribute.",
-            ),
-            None,
-            span,
-        ));
-    }
 
     let mut function: ThrushStatement = ThrushStatement::Function {
         name: function_name,
@@ -1664,18 +1651,16 @@ pub fn build_function<'instr>(
         span,
     };
 
-    if function_has_ffi || declare {
-        if declare {
-            parser_ctx.get_mut_symbols().new_function(
-                function_name,
-                (
-                    return_type,
-                    ParametersTypes::new(parameters_types),
-                    function_has_ignore,
-                ),
-                span,
-            )?;
-        }
+    if declare {
+        parser_ctx.get_mut_symbols().new_function(
+            function_name,
+            (
+                return_type,
+                ParametersTypes::new(parameters_types),
+                function_has_ignore,
+            ),
+            span,
+        )?;
 
         parser_ctx.consume(
             TokenKind::SemiColon,
@@ -1718,30 +1703,35 @@ pub fn build_function<'instr>(
 pub fn build_attributes<'instr>(
     parser_ctx: &mut ParserContext<'instr>,
     limits: &[TokenKind],
-) -> Result<CompilerAttributes<'instr>, ThrushCompilerIssue> {
-    let mut compiler_attributes: CompilerAttributes = Vec::with_capacity(10);
+) -> Result<ThrushAttributes<'instr>, ThrushCompilerIssue> {
+    let mut compiler_attributes: ThrushAttributes = Vec::with_capacity(10);
 
     while !limits.contains(&parser_ctx.peek().kind) {
-        match parser_ctx.peek().kind {
+        let current_tk: &Token = parser_ctx.peek();
+        let span: Span = current_tk.span;
+
+        match current_tk.kind {
             TokenKind::Extern => {
-                compiler_attributes.push(LLVMAttribute::FFI(self::build_external_attribute(
-                    parser_ctx,
-                )?));
+                compiler_attributes.push(LLVMAttribute::Extern(
+                    self::build_external_attribute(parser_ctx)?,
+                    span,
+                ));
             }
 
             TokenKind::Convention => {
                 compiler_attributes.push(LLVMAttribute::Convention(
                     self::build_call_convention_attribute(parser_ctx)?,
+                    span,
                 ));
             }
 
             TokenKind::Public => {
-                compiler_attributes.push(self::LLVMAttribute::Public);
+                compiler_attributes.push(self::LLVMAttribute::Public(span));
                 parser_ctx.only_advance()?;
             }
 
-            attribute if attribute.as_compiler_attribute().is_some() => {
-                if let Some(compiler_attribute) = attribute.as_compiler_attribute() {
+            attribute if attribute.as_compiler_attribute(span).is_some() => {
+                if let Some(compiler_attribute) = attribute.as_compiler_attribute(span) {
                     compiler_attributes.push(compiler_attribute);
                     parser_ctx.only_advance()?;
                 }

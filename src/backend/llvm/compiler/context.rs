@@ -8,7 +8,7 @@ use {
         standard::diagnostic::Diagnostician,
         types::{
             backend::llvm::types::{LLVMFunction, LLVMScopeCall, LLVMScopeCalls, SymbolsAllocated},
-            frontend::{lexer::types::ThrushType, parser::stmts::types::CompilerAttributes},
+            frontend::{lexer::types::ThrushType, parser::stmts::types::ThrushAttributes},
         },
     },
     ahash::AHashMap as HashMap,
@@ -98,7 +98,7 @@ impl<'a, 'ctx> LLVMCodeGenContext<'a, 'ctx> {
         name: &'ctx str,
         kind: &'ctx ThrushType,
         value: BasicValueEnum<'ctx>,
-        attributes: &'ctx CompilerAttributes<'ctx>,
+        attributes: &'ctx ThrushAttributes<'ctx>,
     ) {
         let ptr_allocated: PointerValue = valuegen::alloc_constant(
             self.module,
