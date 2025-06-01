@@ -16,9 +16,9 @@ use inkwell::{
 };
 
 use crate::{
-    backend::llvm::{
-        self,
-        compilers::{clang::Clang, gcc::GCC},
+    backend::{
+        linking::compilers::{clang::Clang, gcc::GCC},
+        llvm::{self},
     },
     frontend::{
         lexer::{Lexer, token::Token},
