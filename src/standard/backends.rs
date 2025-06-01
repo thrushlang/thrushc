@@ -30,6 +30,7 @@ pub struct CompilersConfiguration {
     compiler_args: Vec<String>,
     custom_gcc: Option<PathBuf>,
     custom_clang: Option<PathBuf>,
+    debug_clang_commands: bool,
 }
 
 #[derive(Debug)]
@@ -164,11 +165,12 @@ impl LLVMModificatorPasses {
 impl CompilersConfiguration {
     pub fn new() -> Self {
         Self {
-            use_clang: true,
+            use_clang: false,
             use_gcc: false,
             compiler_args: Vec::with_capacity(50),
             custom_gcc: None,
             custom_clang: None,
+            debug_clang_commands: false,
         }
     }
 
@@ -192,12 +194,20 @@ impl CompilersConfiguration {
         self.custom_gcc = Some(value);
     }
 
+    pub fn set_debug_clang_commands(&mut self, value: bool) {
+        self.debug_clang_commands = value;
+    }
+
     pub fn get_args(&self) -> &[String] {
         &self.compiler_args
     }
 
     pub fn get_custom_clang(&self) -> Option<&PathBuf> {
         self.custom_clang.as_ref()
+    }
+
+    pub fn get_debug_clang_commands(&self) -> bool {
+        self.debug_clang_commands
     }
 
     pub fn get_custom_gcc(&self) -> Option<&PathBuf> {

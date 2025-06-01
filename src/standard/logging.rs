@@ -17,6 +17,7 @@ pub enum LoggingType {
     Warning,
     Panic,
     Bug,
+    Info,
 }
 
 impl LoggingType {
@@ -26,6 +27,7 @@ impl LoggingType {
             LoggingType::Warning => "WARN".yellow().bold(),
             LoggingType::Panic => "PANIC".bold().bright_red().underline(),
             LoggingType::Bug => "BUG".bold().bright_red().underline(),
+            LoggingType::Info => "INFO".custom_color((141, 141, 142)).bold(),
         }
     }
 
@@ -35,6 +37,7 @@ impl LoggingType {
             LoggingType::Warning => msg.yellow().bold(),
             LoggingType::Panic => msg.bright_red().underline(),
             LoggingType::Bug => msg.bold().bright_red().underline(),
+            LoggingType::Info => msg.custom_color((141, 141, 142)).bold(),
         }
     }
 
@@ -52,6 +55,10 @@ impl LoggingType {
 
     pub fn is_bug(&self) -> bool {
         matches!(self, LoggingType::Bug)
+    }
+
+    pub fn is_info(&self) -> bool {
+        matches!(self, LoggingType::Info)
     }
 }
 
@@ -80,7 +87,7 @@ pub fn log(ltype: LoggingType, msg: &str) {
         return;
     }
 
-    if ltype.is_warn() {
+    if ltype.is_warn() || ltype.is_info() {
         io::stderr()
             .write_all(format!("{} {}", ltype.to_styled(), msg).as_bytes())
             .unwrap();

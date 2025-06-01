@@ -16,7 +16,10 @@ use inkwell::{
 };
 
 use crate::{
-    backend::llvm::{self, compilers::clang::Clang},
+    backend::llvm::{
+        self,
+        compilers::{clang::Clang, gcc::GCC},
+    },
     frontend::{
         lexer::{Lexer, token::Token},
         parser::{Parser, ParserContext},
@@ -74,8 +77,8 @@ impl<'thrushc> TheThrushCompiler<'thrushc> {
         if llvm_backend.get_compilers_configuration().use_clang() {
             match Clang::new(
                 self.get_compiled_files(),
-                self.options.get_build_dir(),
                 llvm_backend.get_compilers_configuration(),
+                llvm_backend.get_target_triple(),
             )
             .link()
             {
@@ -102,6 +105,50 @@ impl<'thrushc> TheThrushCompiler<'thrushc> {
                     );
                 }
             }
+        } else if llvm_backend.get_compilers_configuration().use_gcc() {
+            match GCC::new(
+                self.get_compiled_files(),
+                llvm_backend.get_compilers_configuration(),
+            )
+            .link()
+            {
+                Ok(gcc_time) => {
+                    self.llvm_time += gcc_time;
+
+                    logging::write(
+                        logging::OutputIn::Stdout,
+                        &format!(
+                            "{} {}\n",
+                            "Linking".custom_color((141, 141, 142)).bold(),
+                            "FINISHED".bright_green().bold()
+                        ),
+                    );
+                }
+                Err(_) => {
+                    logging::write(
+                        logging::OutputIn::Stderr,
+                        &format!(
+                            "\r{} {}\n",
+                            "Linking".custom_color((141, 141, 142)).bold(),
+                            "FAILED".bright_red().bold()
+                        ),
+                    );
+                }
+            }
+        } else {
+            logging::log(
+                LoggingType::Error,
+                "No compiler for linking was specified, use -clang or -gcc or see --help.",
+            );
+
+            logging::write(
+                logging::OutputIn::Stderr,
+                &format!(
+                    "\r{} {}\n",
+                    "Linking".custom_color((141, 141, 142)).bold(),
+                    "FAILED".bright_red().bold()
+                ),
+            );
         }
 
         (self.thrushc_time.as_millis(), self.llvm_time.as_millis())

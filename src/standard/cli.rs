@@ -1,3 +1,6 @@
+use std::path::Path;
+use std::process::Command;
+
 use super::backends::LLVMModificatorPasses;
 use super::misc::{CompilerOptions, Emitable, ThrushOptimization};
 
@@ -142,6 +145,15 @@ impl CommandLine {
             "-clang" => {
                 self.advance();
 
+                if self
+                    .options
+                    .get_llvm_backend_options()
+                    .get_compilers_configuration()
+                    .use_gcc()
+                {
+                    self.report_error("Can't use '-clang' with -gcc activated.");
+                }
+
                 if !self.options.use_llvm() {
                     self.report_error(&format!(
                         "Can't use '{}' without '-llvm' flag previously.",
@@ -153,6 +165,22 @@ impl CommandLine {
                     .get_mut_llvm_backend_options()
                     .get_mut_compilers_configuration()
                     .set_use_clang(true);
+            }
+
+            "--debug-clang-commands" => {
+                self.advance();
+
+                if !self.options.use_llvm() {
+                    self.report_error(&format!(
+                        "Can't use '{}' without '-llvm' flag previously.",
+                        argument
+                    ));
+                }
+
+                self.options
+                    .get_mut_llvm_backend_options()
+                    .get_mut_compilers_configuration()
+                    .set_debug_clang_commands(true);
             }
 
             "-custom-clang" => {
@@ -168,8 +196,8 @@ impl CommandLine {
                 let custom_clang: &str = self.peek();
                 let custom_clang_path: PathBuf = PathBuf::from(custom_clang);
 
-                if !custom_clang_path.exists() {
-                    self.report_error("Path to the indicated external Clang does not exist.");
+                if !custom_clang_path.exists() && !self.probe_as_command(&custom_clang_path) {
+                    self.report_error("Indicated external C compiler clang does not exist.");
                 }
 
                 self.options
@@ -183,17 +211,33 @@ impl CommandLine {
             "-gcc" => {
                 self.advance();
 
+                if self
+                    .options
+                    .get_llvm_backend_options()
+                    .get_compilers_configuration()
+                    .use_clang()
+                {
+                    self.report_error("Can't use '-gcc' with -clang activated.");
+                }
+
                 let custom_gcc: &str = self.peek();
                 let custom_gcc_path: PathBuf = PathBuf::from(custom_gcc);
 
-                if !custom_gcc_path.exists() {
-                    self.report_error("Path to the indicated external GNU Compiler Colllection (gcc) does not exist.");
+                if !custom_gcc_path.exists() && !self.probe_as_command(&custom_gcc_path) {
+                    self.report_error(
+                        "Indicated external C compiler GNU Compiler Colllection (gcc) does not exist.",
+                    );
                 }
 
                 self.options
                     .get_mut_llvm_backend_options()
                     .get_mut_compilers_configuration()
                     .set_custom_gcc(custom_gcc_path);
+
+                self.options
+                    .get_mut_llvm_backend_options()
+                    .get_mut_compilers_configuration()
+                    .set_use_gcc(true);
 
                 self.advance();
             }
@@ -601,10 +645,11 @@ impl CommandLine {
         logging::write(
             logging::OutputIn::Stderr,
             &format!(
-                "{} {} {}\n",
+                "{} {} [{}] {}\n",
                 "•".bold(),
                 "-gcc".custom_color((141, 141, 142)).bold(),
-                "Enable embedded GNU Compiler Collection (gcc) to link.",
+                "\"/usr/bin/gcc\"",
+                "Speciefies GNU Compiler Collection (gcc) to link.",
             ),
         );
 
@@ -616,17 +661,6 @@ impl CommandLine {
                 "-custom-clang".custom_color((141, 141, 142)).bold(),
                 "\"/usr/bin/clang\"",
                 "Specifies the path for use of an external clang to link.",
-            ),
-        );
-
-        logging::write(
-            logging::OutputIn::Stderr,
-            &format!(
-                "{} {} [{}] {}\n",
-                "•".bold(),
-                "-custom-gcc".custom_color((141, 141, 142)).bold(),
-                "\"/usr/bin/gcc\"",
-                "Specifies the path of use of an external gcc to link.",
             ),
         );
 
@@ -754,7 +788,23 @@ impl CommandLine {
             ),
         );
 
+        logging::write(logging::OutputIn::Stderr, "Useful flags:\n\n");
+
+        logging::write(
+            logging::OutputIn::Stderr,
+            &format!(
+                "{} {} {}\n",
+                "•".bold(),
+                "--debug-clang-command".custom_color((141, 141, 142)).bold(),
+                "Displays the generated command for clang."
+            ),
+        );
+
         process::exit(1);
+    }
+
+    fn probe_as_command(&self, path: &Path) -> bool {
+        Command::new(path).output().is_ok()
     }
 
     fn advance(&mut self) {
