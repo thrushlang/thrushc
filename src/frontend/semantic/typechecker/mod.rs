@@ -739,11 +739,7 @@ impl<'stmts> TypeChecker<'stmts> {
                 Ok(())
             }
 
-            (ThrushType::Me(_), ThrushType::Me(_), None) => Ok(()),
-
-            (ThrushType::Me(_), ThrushType::Struct(_, _), None) => Ok(()),
-
-            (ThrushType::Struct(_, _) | ThrushType::Me(_), ThrushType::Ptr(_), None) => Ok(()),
+            (ThrushType::Struct(_, _), ThrushType::Ptr(_), None) => Ok(()),
 
             (
                 target_type,

@@ -16,13 +16,13 @@ use inkwell::{
 };
 
 use crate::{
-    backend::llvm::{self, linkers::lld::LLVMLinker},
+    backend::llvm::{self, compilers::clang::Clang},
     frontend::{
         lexer::{Lexer, token::Token},
         parser::{Parser, ParserContext},
     },
     standard::{
-        backends::{LLVMBackend, LLVMExecutableFlavor},
+        backends::LLVMBackend,
         diagnostic::Diagnostician,
         logging::{self, LoggingType},
         misc::{CompilerFile, CompilerOptions, Emitable, Emited, ThrushOptimization},
@@ -62,16 +62,47 @@ impl<'thrushc> TheThrushCompiler<'thrushc> {
             return (self.thrushc_time.as_millis(), self.llvm_time.as_millis());
         }
 
-        let executable_flavor: LLVMExecutableFlavor = llvm_backend.get_executable_flavor();
+        logging::write(
+            logging::OutputIn::Stdout,
+            &format!(
+                "{} {}\n",
+                "Linking".custom_color((141, 141, 142)).bold(),
+                "RUNNING".bright_green().bold()
+            ),
+        );
 
-        let linker_time: Duration = LLVMLinker::new(
-            self.get_compiled_files(),
-            llvm_backend.get_linker_flags(),
-            executable_flavor.into_llvm_linker_flavor(),
-        )
-        .link();
+        if llvm_backend.get_compilers_configuration().use_clang() {
+            match Clang::new(
+                self.get_compiled_files(),
+                self.options.get_build_dir(),
+                llvm_backend.get_compilers_configuration(),
+            )
+            .link()
+            {
+                Ok(clang_time) => {
+                    self.llvm_time += clang_time;
 
-        self.llvm_time += linker_time;
+                    logging::write(
+                        logging::OutputIn::Stdout,
+                        &format!(
+                            "{} {}\n",
+                            "Linking".custom_color((141, 141, 142)).bold(),
+                            "FINISHED".bright_green().bold()
+                        ),
+                    );
+                }
+                Err(_) => {
+                    logging::write(
+                        logging::OutputIn::Stderr,
+                        &format!(
+                            "\r{} {}\n",
+                            "Linking".custom_color((141, 141, 142)).bold(),
+                            "FAILED".bright_red().bold()
+                        ),
+                    );
+                }
+            }
+        }
 
         (self.thrushc_time.as_millis(), self.llvm_time.as_millis())
     }

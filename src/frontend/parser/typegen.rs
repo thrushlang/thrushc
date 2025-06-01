@@ -24,24 +24,6 @@ pub fn build_type(parser_ctx: &mut ParserContext<'_>) -> Result<ThrushType, Thru
             let tk: &Token = parser_ctx.advance()?;
             let span: Span = tk.span;
 
-            if tk_kind.is_me()
-                && !parser_ctx
-                    .get_type_ctx()
-                    .get_position()
-                    .is_structure_field()
-            {
-                return Err(ThrushCompilerIssue::Error(
-                    String::from("Syntax error"),
-                    String::from("Self types 'Me' is only allowed in structure fields."),
-                    None,
-                    span,
-                ));
-            }
-
-            if tk_kind.is_me() {
-                return Ok(ThrushType::Me(None));
-            }
-
             if tk_kind.is_mut()
                 && !parser_ctx.get_type_ctx().get_position().is_parameter()
                 && !parser_ctx.get_type_ctx().get_position().is_bind_parameter()

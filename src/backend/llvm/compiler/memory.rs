@@ -2,12 +2,11 @@
 
 use inkwell::{
     AddressSpace,
-    basic_block::BasicBlock,
     context::Context,
-    module::{Linkage, Module},
+    module::Module,
     targets::TargetData,
-    types::{BasicType, BasicTypeEnum, FunctionType},
-    values::{FunctionValue, IntValue},
+    types::{BasicType, BasicTypeEnum},
+    values::IntValue,
 };
 
 use crate::{
@@ -21,7 +20,7 @@ use inkwell::{
     values::{BasicValue, BasicValueEnum, PointerValue},
 };
 
-use super::{context::LLVMCodeGenContext, utils, valuegen};
+use super::{context::LLVMCodeGenContext, valuegen};
 
 #[derive(Debug, Clone)]
 pub enum SymbolAllocated<'ctx> {
@@ -230,68 +229,6 @@ impl<'ctx> SymbolAllocated<'ctx> {
         }
     }
 
-    pub fn dealloc(&self, context: &LLVMCodeGenContext<'_, '_>) {
-        let llvm_context: &Context = context.get_llvm_context();
-        let llvm_builder: &Builder = context.get_llvm_builder();
-
-        let target_data: &TargetData = context.get_target_data();
-
-        match self {
-            Self::Local { ptr, kind, .. }
-                if kind.is_probably_heap_allocated(llvm_context, target_data) =>
-            {
-                if kind.has_any_recursive_type() {
-                    if let Some(last_block) = llvm_builder.get_insert_block() {
-                        let recursive_paths: Vec<(ThrushType, Vec<u32>)> =
-                            kind.get_recursive_type_paths();
-
-                        let deallocator: FunctionValue =
-                            self::create_deallocator(context, kind, &recursive_paths);
-
-                        llvm_builder.position_at_end(last_block);
-
-                        let _ = llvm_builder.build_call(deallocator, &[(*ptr).into()], "");
-
-                        llvm_builder.position_at_end(last_block);
-
-                        return;
-                    }
-                }
-
-                let _ = llvm_builder.build_free(*ptr);
-            }
-
-            Self::Parameter { value, kind, .. }
-                if kind.is_probably_heap_allocated(llvm_context, target_data)
-                    && value.is_pointer_value() =>
-            {
-                let ptr: PointerValue = value.into_pointer_value();
-
-                if kind.has_any_recursive_type() {
-                    if let Some(last_block) = llvm_builder.get_insert_block() {
-                        let dealloc_paths: Vec<(ThrushType, Vec<u32>)> =
-                            kind.get_recursive_type_paths();
-
-                        let deallocator: FunctionValue =
-                            self::create_deallocator(context, kind, &dealloc_paths);
-
-                        llvm_builder.position_at_end(last_block);
-
-                        let _ = llvm_builder.build_call(deallocator, &[ptr.into()], "");
-
-                        llvm_builder.position_at_end(last_block);
-
-                        return;
-                    }
-                }
-
-                let _ = llvm_builder.build_free(ptr);
-            }
-
-            _ => (),
-        }
-    }
-
     pub fn gep(
         &self,
         context: &'ctx Context,
@@ -412,150 +349,6 @@ impl<'ctx> SymbolAllocated<'ctx> {
             Self::LowLevelInstruction { value, .. } => *value,
         }
     }
-}
-
-pub fn create_deallocator<'ctx>(
-    context: &'ctx LLVMCodeGenContext<'_, '_>,
-    kind: &'ctx ThrushType,
-    indexes_to_dealloc: &[(ThrushType, Vec<u32>)],
-) -> FunctionValue<'ctx> {
-    let llvm_context: &Context = context.get_llvm_context();
-    let llvm_builder: &Builder = context.get_llvm_builder();
-    let llvm_module: &Module = context.get_llvm_module();
-
-    let llvm_type: BasicTypeEnum = typegen::generate_type(llvm_context, kind);
-
-    let deallocator_type: FunctionType = llvm_context.void_type().fn_type(
-        &[llvm_context.ptr_type(AddressSpace::default()).into()],
-        false,
-    );
-
-    let randomness_length: usize = utils::generate_random_range(40);
-    let deallocator_name: String =
-        utils::generate_random_function_name("thrush_deallocator", randomness_length);
-
-    let deallocator: FunctionValue = llvm_module.add_function(
-        &deallocator_name,
-        deallocator_type,
-        Some(Linkage::LinkerPrivate),
-    );
-
-    if let Some(param) = deallocator.get_first_param() {
-        let ptr: PointerValue = param.into_pointer_value();
-        let entry_block: BasicBlock = llvm_context.append_basic_block(deallocator, "");
-
-        llvm_builder.position_at_end(entry_block);
-
-        let last_block: BasicBlock = entry_block;
-
-        indexes_to_dealloc.iter().for_each(|raw_indexe| {
-            let raw_indexes: &[u32] = &raw_indexe.1;
-
-            let field_deallocator: FunctionValue =
-                self::create_field_deallocator(context, raw_indexe);
-
-            llvm_builder.position_at_end(last_block);
-
-            let ordered_indexes: Vec<IntValue<'_>> = raw_indexes
-                .iter()
-                .map(|indexe| llvm_context.i32_type().const_int((*indexe).into(), false))
-                .collect();
-
-            if let Ok(address) =
-                unsafe { llvm_builder.build_gep(llvm_type, ptr, &ordered_indexes, "") }
-            {
-                let ptr_loaded = llvm_builder
-                    .build_load(llvm_context.ptr_type(AddressSpace::default()), address, "")
-                    .unwrap();
-
-                llvm_builder
-                    .build_call(field_deallocator, &[ptr_loaded.into()], "")
-                    .unwrap();
-            }
-        });
-
-        let _ = llvm_builder.build_free(ptr);
-        let _ = llvm_builder.build_return(None);
-    }
-
-    deallocator
-}
-
-fn create_field_deallocator<'ctx>(
-    context: &'ctx LLVMCodeGenContext<'_, '_>,
-    indexe: &(ThrushType, Vec<u32>),
-) -> FunctionValue<'ctx> {
-    let llvm_context: &Context = context.get_llvm_context();
-    let llvm_builder: &Builder = context.get_llvm_builder();
-    let llvm_module: &Module = context.get_llvm_module();
-
-    let field_deallocator_type: FunctionType = llvm_context.void_type().fn_type(
-        &[llvm_context.ptr_type(AddressSpace::default()).into()],
-        false,
-    );
-
-    let randomness_length: usize = utils::generate_random_range(40);
-    let field_deallocator_name: String =
-        utils::generate_random_function_name("thrush_field_deallocator", randomness_length);
-
-    let field_deallocator: FunctionValue = llvm_module.add_function(
-        &field_deallocator_name,
-        field_deallocator_type,
-        Some(Linkage::LinkerPrivate),
-    );
-
-    if let Some(param) = field_deallocator.get_first_param() {
-        let ptr: PointerValue = param.into_pointer_value();
-
-        let entry_block: BasicBlock = llvm_context.append_basic_block(field_deallocator, "");
-        let recursive_block: BasicBlock = llvm_context.append_basic_block(field_deallocator, "");
-        let out_block: BasicBlock = llvm_context.append_basic_block(field_deallocator, "");
-
-        llvm_builder.position_at_end(entry_block);
-
-        let is_null_ptr_cmp: IntValue = llvm_builder
-            .build_int_compare(
-                inkwell::IntPredicate::NE,
-                ptr,
-                llvm_context.ptr_type(AddressSpace::default()).const_null(),
-                "",
-            )
-            .unwrap();
-
-        let _ = llvm_builder.build_conditional_branch(is_null_ptr_cmp, recursive_block, out_block);
-
-        llvm_builder.position_at_end(recursive_block);
-
-        let raw_dealloc_type: &ThrushType = &indexe.0;
-        let raw_indexes: &[u32] = &indexe.1;
-
-        let dealloc_type: BasicTypeEnum = typegen::generate_type(llvm_context, raw_dealloc_type);
-
-        let indexes: Vec<IntValue<'_>> = raw_indexes
-            .iter()
-            .map(|indexe| llvm_context.i32_type().const_int((*indexe).into(), false))
-            .collect();
-
-        if let Ok(address) = unsafe { llvm_builder.build_gep(dealloc_type, ptr, &indexes, "") } {
-            let ptr_loaded: BasicValueEnum = llvm_builder
-                .build_load(llvm_context.ptr_type(AddressSpace::default()), address, "")
-                .unwrap();
-
-            llvm_builder
-                .build_call(field_deallocator, &[ptr_loaded.into()], "")
-                .unwrap();
-
-            let _ = llvm_builder.build_free(ptr);
-
-            let _ = llvm_builder.build_return(None);
-        }
-
-        llvm_builder.position_at_end(out_block);
-
-        let _ = llvm_builder.build_return(None);
-    }
-
-    field_deallocator
 }
 
 pub fn store_anon<'ctx>(

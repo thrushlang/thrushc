@@ -91,7 +91,6 @@ pub enum TokenKind {
     Or,
     Return,
     This,
-    Me,
     True,
     Local,
     Const,
@@ -236,11 +235,6 @@ impl TokenKind {
     }
 
     #[inline(always)]
-    pub const fn is_me(&self) -> bool {
-        matches!(self, TokenKind::Me)
-    }
-
-    #[inline(always)]
     pub const fn is_function_keyword(&self) -> bool {
         matches!(self, TokenKind::Fn)
     }
@@ -294,7 +288,6 @@ impl TokenKind {
             || self.is_str()
             || self.is_void()
             || self.is_mut()
-            || self.is_me()
     }
 
     #[inline(always)]

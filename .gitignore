@@ -7,3 +7,4 @@
 build
 builder/target
 dist
+embedded

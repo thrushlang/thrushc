@@ -1,4 +1,4 @@
-use super::backends::{LLVMExecutableFlavor, LLVMModificatorPasses};
+use super::backends::LLVMModificatorPasses;
 use super::misc::{CompilerOptions, Emitable, ThrushOptimization};
 
 use super::logging::{self, LoggingType};
@@ -13,10 +13,20 @@ use {
     },
 };
 
+#[derive(Debug)]
 pub struct CommandLine {
     options: CompilerOptions,
     args: Vec<String>,
     current: usize,
+    position: CommandLinePosition,
+}
+
+#[derive(Debug, Clone, Copy, Default)]
+pub enum CommandLinePosition {
+    #[default]
+    ThrushCompiler,
+
+    ExternalCompiler,
 }
 
 impl CommandLine {
@@ -25,14 +35,15 @@ impl CommandLine {
             options: CompilerOptions::new(),
             args,
             current: 0,
+            position: CommandLinePosition::default(),
         };
 
-        command_line.build_command_line();
+        command_line.build();
 
         command_line
     }
 
-    fn build_command_line(&mut self) {
+    fn build(&mut self) {
         self.args.remove(0);
 
         if self.args.is_empty() {
@@ -116,6 +127,77 @@ impl CommandLine {
                 self.advance();
             }
 
+            "-start" => {
+                self.advance();
+
+                self.position = CommandLinePosition::ExternalCompiler;
+            }
+
+            "-end" => {
+                self.advance();
+
+                self.position = CommandLinePosition::ThrushCompiler;
+            }
+
+            "-clang" => {
+                self.advance();
+
+                if !self.options.use_llvm() {
+                    self.report_error(&format!(
+                        "Can't use '{}' without '-llvm' flag previously.",
+                        argument
+                    ));
+                }
+
+                self.options
+                    .get_mut_llvm_backend_options()
+                    .get_mut_compilers_configuration()
+                    .set_use_clang(true);
+            }
+
+            "-custom-clang" => {
+                self.advance();
+
+                if !self.options.use_llvm() {
+                    self.report_error(&format!(
+                        "Can't use '{}' without '-llvm' flag previously.",
+                        argument
+                    ));
+                }
+
+                let custom_clang: &str = self.peek();
+                let custom_clang_path: PathBuf = PathBuf::from(custom_clang);
+
+                if !custom_clang_path.exists() {
+                    self.report_error("Path to the indicated external Clang does not exist.");
+                }
+
+                self.options
+                    .get_mut_llvm_backend_options()
+                    .get_mut_compilers_configuration()
+                    .set_custom_clang(custom_clang_path);
+
+                self.advance();
+            }
+
+            "-gcc" => {
+                self.advance();
+
+                let custom_gcc: &str = self.peek();
+                let custom_gcc_path: PathBuf = PathBuf::from(custom_gcc);
+
+                if !custom_gcc_path.exists() {
+                    self.report_error("Path to the indicated external GNU Compiler Colllection (gcc) does not exist.");
+                }
+
+                self.options
+                    .get_mut_llvm_backend_options()
+                    .get_mut_compilers_configuration()
+                    .set_custom_gcc(custom_gcc_path);
+
+                self.advance();
+            }
+
             "--llvm-opt-passes" => {
                 self.advance();
 
@@ -158,55 +240,7 @@ impl CommandLine {
                 self.advance();
             }
 
-            "-llvm-exec-flavor" | "-llvm-executable-flavor" => {
-                self.advance();
-
-                if !self.options.use_llvm() {
-                    self.report_error(&format!(
-                        "Can't use '{}' without '-llvm' flag previously.",
-                        argument
-                    ));
-                }
-
-                let flavor: &str = self.peek();
-
-                if !utils::is_supported_llvm_executable_flavor(flavor) {
-                    self.report_error(&format!(
-                        "Unknown LLVM executable flavor: '{}'. See 'print-supported-executable-flavors' command.",
-                        flavor
-                    ));
-                }
-
-                let flavor: LLVMExecutableFlavor =
-                    LLVMExecutableFlavor::raw_str_into_llvm_executable_flavor(flavor);
-
-                self.options
-                    .get_mut_llvm_backend_options()
-                    .set_executable_flavor(flavor);
-
-                self.advance();
-            }
-
-            "-llvm-linker-flags" | "-llvm-lkflags" => {
-                self.advance();
-
-                if !self.options.use_llvm() {
-                    self.report_error(&format!(
-                        "Can't use '{}' without '-llvm' flag previously.",
-                        argument
-                    ));
-                }
-
-                let linker_flags: String = self.peek().to_string();
-
-                self.options
-                    .get_mut_llvm_backend_options()
-                    .set_linker_flags(linker_flags);
-
-                self.advance();
-            }
-
-            "-llvm-cpu-target" => {
+            "-cpu" => {
                 self.advance();
 
                 if !self.options.use_llvm() {
@@ -232,7 +266,7 @@ impl CommandLine {
                 self.advance();
             }
 
-            "-llvm-opt" => {
+            "-opt" => {
                 self.advance();
 
                 if !self.options.use_llvm() {
@@ -261,7 +295,7 @@ impl CommandLine {
                 self.advance();
             }
 
-            "-llvm-emit" => {
+            "-emit" => {
                 self.advance();
 
                 if !self.options.use_llvm()
@@ -328,7 +362,7 @@ impl CommandLine {
                 self.advance();
             }
 
-            "-llvm-target-triple" => {
+            "-target" => {
                 self.advance();
 
                 if !self.options.use_llvm() {
@@ -434,10 +468,19 @@ impl CommandLine {
             any => {
                 self.advance();
 
-                self.report_error(&format!(
-                    "'{}' Unrecognized flag or command. Use '-help' for more information.",
-                    any
-                ));
+                if self.position.at_any_other_compiler() && self.options.use_llvm() {
+                    self.options
+                        .get_mut_llvm_backend_options()
+                        .get_mut_compilers_configuration()
+                        .add_compiler_arg(any.to_string());
+
+                    return;
+                }
+
+                logging::log(
+                    LoggingType::Panic,
+                    &format!("Unknown argument: \"{}\".", any),
+                );
             }
         }
     }
@@ -541,11 +584,73 @@ impl CommandLine {
                 "{} {} {}\n",
                 "•".bold(),
                 "-build-dir".custom_color((141, 141, 142)).bold(),
-                "Set the compiler build directory.",
+                "Set the build directory.",
             ),
         );
 
-        logging::write(logging::OutputIn::Stderr, "\nLLVM Compiler flags:\n\n");
+        logging::write(
+            logging::OutputIn::Stderr,
+            &format!(
+                "{} {} {}\n",
+                "•".bold(),
+                "-clang".custom_color((141, 141, 142)).bold(),
+                "Enable embedded Clang to link.",
+            ),
+        );
+
+        logging::write(
+            logging::OutputIn::Stderr,
+            &format!(
+                "{} {} {}\n",
+                "•".bold(),
+                "-gcc".custom_color((141, 141, 142)).bold(),
+                "Enable embedded GNU Compiler Collection (gcc) to link.",
+            ),
+        );
+
+        logging::write(
+            logging::OutputIn::Stderr,
+            &format!(
+                "{} {} [{}] {}\n",
+                "•".bold(),
+                "-custom-clang".custom_color((141, 141, 142)).bold(),
+                "\"/usr/bin/clang\"",
+                "Specifies the path for use of an external clang to link.",
+            ),
+        );
+
+        logging::write(
+            logging::OutputIn::Stderr,
+            &format!(
+                "{} {} [{}] {}\n",
+                "•".bold(),
+                "-custom-gcc".custom_color((141, 141, 142)).bold(),
+                "\"/usr/bin/gcc\"",
+                "Specifies the path of use of an external gcc to link.",
+            ),
+        );
+
+        logging::write(
+            logging::OutputIn::Stderr,
+            &format!(
+                "{} {} {}\n",
+                "•".bold(),
+                "-start".custom_color((141, 141, 142)).bold(),
+                "Marks the start of the arguments for the active external or embedded compiler.",
+            ),
+        );
+
+        logging::write(
+            logging::OutputIn::Stderr,
+            &format!(
+                "{} {} {}\n",
+                "•".bold(),
+                "-end".custom_color((141, 141, 142)).bold(),
+                "Marks the end of the arguments for the active external or embedded compiler.",
+            ),
+        );
+
+        logging::write(logging::OutputIn::Stderr, "\nCompiler flags:\n\n");
 
         logging::write(
             logging::OutputIn::Stderr,
@@ -562,35 +667,9 @@ impl CommandLine {
             &format!(
                 "{} {} [{}] {}\n",
                 "•".bold(),
-                "-llvm-target-triple".custom_color((141, 141, 142)).bold(),
-                "\"target-triple\"",
-                "Set the LLVM target triple.",
-            ),
-        );
-
-        logging::write(
-            logging::OutputIn::Stderr,
-            &format!(
-                "{} {} | {} [{}] {}\n",
-                "•".bold(),
-                "-llvm-exec-flavor".custom_color((141, 141, 142)).bold(),
-                "-llvm-executable-flavor"
-                    .custom_color((141, 141, 142))
-                    .bold(),
-                "\"elf\"",
-                "Set the LLVM executable flavor.",
-            ),
-        );
-
-        logging::write(
-            logging::OutputIn::Stderr,
-            &format!(
-                "{} {} | {} [{}] {}\n",
-                "•".bold(),
-                "-llvm-lkflags".custom_color((141, 141, 142)).bold(),
-                "-llvm-linkerflags".custom_color((141, 141, 142)).bold(),
-                "\"-lc;-lpthread\"",
-                "Pass flags to the LLVM linker.",
+                "-cpu".custom_color((141, 141, 142)).bold(),
+                "\"haswell\"",
+                "Specify the CPU to optimize.",
             ),
         );
 
@@ -599,7 +678,18 @@ impl CommandLine {
             &format!(
                 "{} {} [{}] {}\n",
                 "•".bold(),
-                "-llvm-emit".custom_color((141, 141, 142)).bold(),
+                "-target".custom_color((141, 141, 142)).bold(),
+                "\"x86_64-pc-linux-gnu\"",
+                "Set the LLVM target triple.",
+            ),
+        );
+
+        logging::write(
+            logging::OutputIn::Stderr,
+            &format!(
+                "{} {} [{}] {}\n",
+                "•".bold(),
+                "-emit".custom_color((141, 141, 142)).bold(),
                 "llvm-bc|llvm-ir|asm|raw-llvm-ir|raw-llvm-bc|raw-asm|obj|ast|tokens",
                 "Compile the code into specified representation.",
             ),
@@ -610,16 +700,13 @@ impl CommandLine {
             &format!(
                 "{} {} [{}] {}\n",
                 "•".bold(),
-                "-llvm-opt".custom_color((141, 141, 142)).bold(),
+                "-opt".custom_color((141, 141, 142)).bold(),
                 "O0|O1|O2|mcqueen",
                 "LLVM optimization level.",
             ),
         );
 
-        logging::write(
-            logging::OutputIn::Stderr,
-            "\nExtra LLVM compiler flags:\n\n",
-        );
+        logging::write(logging::OutputIn::Stderr, "\nExtra compiler flags:\n\n");
 
         logging::write(
             logging::OutputIn::Stderr,
@@ -696,5 +783,11 @@ impl CommandLine {
 
     pub fn get_options(&self) -> &CompilerOptions {
         &self.options
+    }
+}
+
+impl CommandLinePosition {
+    pub fn at_any_other_compiler(&self) -> bool {
+        matches!(self, CommandLinePosition::ExternalCompiler)
     }
 }

@@ -1,5 +1,3 @@
-use std::iter;
-
 use inkwell::values::StructValue;
 
 use inkwell::{
@@ -9,8 +7,6 @@ use inkwell::{
     types::ArrayType,
     values::GlobalValue,
 };
-use rand::Rng;
-use rand::rngs::ThreadRng;
 
 pub fn build_str_constant<'ctx>(
     module: &Module<'ctx>,
@@ -40,25 +36,4 @@ pub fn build_str_constant<'ctx>(
         ],
         false,
     )
-}
-
-#[inline]
-pub fn generate_random_function_name(prefix: &str, length: usize) -> String {
-    format!("{}_{}", prefix, generate_random_suffix(length))
-}
-
-#[inline]
-pub fn generate_random_range(max: usize) -> usize {
-    rand::rng().random_range(0..max)
-}
-
-fn generate_random_suffix(length: usize) -> String {
-    let letters: String = String::from("abcdefghijklmnopqrstuvwxyz0123456789");
-    let mut rng: ThreadRng = rand::rng();
-
-    iter::repeat(())
-        .map(|_| rng.random_range(0..letters.len()))
-        .map(|i| letters.chars().nth(i).unwrap())
-        .take(length)
-        .collect()
 }

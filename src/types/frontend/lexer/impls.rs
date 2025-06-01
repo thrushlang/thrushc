@@ -126,7 +126,6 @@ impl std::fmt::Display for TokenKind {
             TokenKind::Str => write!(f, "str"),
             TokenKind::Char => write!(f, "char"),
             TokenKind::Ptr => write!(f, "ptr"),
-            TokenKind::Me => write!(f, "me"),
             TokenKind::Static => write!(f, "static!"),
             TokenKind::Heap => write!(f, "heap!"),
             TokenKind::Stack => write!(f, "stack!"),
@@ -177,12 +176,6 @@ impl std::fmt::Display for ThrushType {
             }
             ThrushType::Address => {
                 write!(f, "memory address")
-            }
-            ThrushType::Me(None) => {
-                write!(f, "Me")
-            }
-            ThrushType::Me(Some(nested_type)) => {
-                write!(f, "Me[{}]", nested_type)
             }
             ThrushType::Void => write!(f, "void"),
         }

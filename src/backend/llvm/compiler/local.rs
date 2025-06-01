@@ -3,7 +3,7 @@ use crate::types::{backend::llvm::types::LLVMLocal, frontend::lexer::types::Thru
 use super::{
     ThrushStatement,
     context::{LLVMCodeGenContext, LLVMCodeGenContextPosition},
-    memory::{self, LLVMAllocationSite, SymbolAllocated},
+    memory::{self, SymbolAllocated},
     valuegen,
 };
 
@@ -133,20 +133,7 @@ fn build_local_structure<'ctx>(local: LLVMLocal<'ctx>, context: &mut LLVMCodeGen
             let expr_type: &ThrushType = &argument.2;
             let expr_index: u32 = argument.3;
 
-            let mut expr: BasicValueEnum = valuegen::build(context, expr, expr_type);
-
-            if expr_type.is_recursive_type() {
-                let src_ptr: PointerValue = expr.into_pointer_value();
-
-                if !src_ptr.is_null() {
-                    let dest_ptr: PointerValue =
-                        memory::alloc_anon(LLVMAllocationSite::Heap, context, expr_type);
-
-                    memory::memcpy(context, dest_ptr, src_ptr, expr_type);
-
-                    expr = dest_ptr.into();
-                }
-            }
+            let expr: BasicValueEnum = valuegen::build(context, expr, expr_type);
 
             let field_memory_address_position: PointerValue =
                 symbol.gep_struct(llvm_context, llvm_builder, expr_index);

@@ -7,13 +7,13 @@ use crate::types::frontend::parser::stmts::stmt::ThrushStatement;
 
 use super::super::compiler::attributes::LLVMAttribute;
 
+use super::llis;
 use super::{
     attributes::{AttributeBuilder, LLVMAttributeApplicant},
     context::LLVMCodeGenContext,
     conventions::CallConvention,
     local, typegen, valuegen,
 };
-use super::{deallocator, llis};
 
 use inkwell::{
     basic_block::BasicBlock,
@@ -32,7 +32,6 @@ pub struct LLVMCodegen<'a, 'ctx> {
     current_function: Option<FunctionValue<'ctx>>,
     loop_exit_block: Option<BasicBlock<'ctx>>,
     loop_start_block: Option<BasicBlock<'ctx>>,
-    deallocators_emited: bool,
 }
 
 impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
@@ -51,7 +50,6 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
             current_function: None,
             loop_exit_block: None,
             loop_start_block: None,
-            deallocators_emited: false,
         }
         .start();
     }
@@ -97,17 +95,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                     .unwrap();
             }
 
-            ThrushStatement::Return {
-                expression, kind, ..
-            } => {
-                self.deallocators_emited = true;
-
-                deallocator::dealloc(
-                    &self.context,
-                    self.context.get_allocated_symbols(),
-                    expression.as_ref(),
-                );
-
+            ThrushStatement::Return { kind, .. } => {
                 valuegen::build(&mut self.context, stmt, kind);
             }
 
@@ -139,12 +127,6 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 stmts.iter().for_each(|stmt| {
                     self.codegen(stmt);
                 });
-
-                if !self.deallocators_emited {
-                    deallocator::dealloc_all(&self.context, self.context.get_allocated_symbols());
-                }
-
-                self.deallocators_emited = false;
 
                 self.context.end_scope();
             }

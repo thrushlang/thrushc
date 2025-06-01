@@ -45,10 +45,6 @@ pub enum TypeCheckerTypeCheckSource {
 }
 
 impl TypeCheckerTypeCheckSource {
-    pub fn is_call(&self) -> bool {
-        matches!(self, TypeCheckerTypeCheckSource::Call)
-    }
-
     pub fn is_local(&self) -> bool {
         matches!(self, TypeCheckerTypeCheckSource::Local)
     }

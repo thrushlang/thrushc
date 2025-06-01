@@ -26,7 +26,6 @@ lazy_static! {
         keywords.insert(b"methods", TokenKind::Methods);
         keywords.insert(b"this", TokenKind::This);
         keywords.insert(b"pass", TokenKind::Pass);
-        keywords.insert(b"Me", TokenKind::Me);
         keywords.insert(b"match", TokenKind::Match);
         keywords.insert(b"pattern", TokenKind::Pattern);
         keywords.insert(b"instr", TokenKind::Instr);

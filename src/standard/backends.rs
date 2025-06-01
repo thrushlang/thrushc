@@ -1,7 +1,6 @@
-use std::env;
+use std::path::PathBuf;
 
 use inkwell::targets::{CodeModel, RelocMode, TargetMachine, TargetTriple};
-use lld::LldFlavor;
 
 use crate::standard::logging;
 
@@ -16,14 +15,6 @@ use super::misc::{Emitable, ThrushOptimization};
 ########################################################################*/
 
 #[derive(Debug, Clone, Copy)]
-pub enum LLVMExecutableFlavor {
-    Wasm,
-    MachO,
-    Elf,
-    Coff,
-}
-
-#[derive(Debug, Clone, Copy)]
 pub enum LLVMModificatorPasses {
     LoopVectorization,
     LoopUnroll,
@@ -33,17 +24,25 @@ pub enum LLVMModificatorPasses {
 }
 
 #[derive(Debug)]
+pub struct CompilersConfiguration {
+    use_clang: bool,
+    use_gcc: bool,
+    compiler_args: Vec<String>,
+    custom_gcc: Option<PathBuf>,
+    custom_clang: Option<PathBuf>,
+}
+
+#[derive(Debug)]
 pub struct LLVMBackend {
     target_cpu: String,
     target_triple: TargetTriple,
-    executable_flavor: LLVMExecutableFlavor,
     optimization: ThrushOptimization,
     emit: Vec<Emitable>,
     reloc_mode: RelocMode,
     code_model: CodeModel,
     modificator_passes: Vec<LLVMModificatorPasses>,
     opt_passes: String,
-    linker_flags: String,
+    compilers_config: CompilersConfiguration,
 }
 
 impl LLVMBackend {
@@ -51,14 +50,13 @@ impl LLVMBackend {
         Self {
             target_cpu: String::with_capacity(100),
             target_triple: TargetMachine::get_default_triple(),
-            executable_flavor: LLVMExecutableFlavor::default(),
             optimization: ThrushOptimization::None,
             emit: Vec::with_capacity(10),
             reloc_mode: RelocMode::Default,
             code_model: CodeModel::Default,
             modificator_passes: Vec::with_capacity(10),
             opt_passes: String::with_capacity(100),
-            linker_flags: String::with_capacity(100),
+            compilers_config: CompilersConfiguration::new(),
         }
     }
 
@@ -102,16 +100,8 @@ impl LLVMBackend {
         !self.emit.is_empty()
     }
 
-    pub fn get_linker_flags(&self) -> &str {
-        self.linker_flags.as_str()
-    }
-
     pub fn contains_emitable(&self, emit: Emitable) -> bool {
         self.emit.contains(&emit)
-    }
-
-    pub fn set_linker_flags(&mut self, lk_flags: String) {
-        self.linker_flags = lk_flags;
     }
 
     pub fn get_target_cpu(&self) -> &str {
@@ -120,14 +110,6 @@ impl LLVMBackend {
 
     pub fn set_target_cpu(&mut self, target_cpu: String) {
         self.target_cpu = target_cpu;
-    }
-
-    pub fn set_executable_flavor(&mut self, flavor: LLVMExecutableFlavor) {
-        self.executable_flavor = flavor;
-    }
-
-    pub fn get_executable_flavor(&self) -> LLVMExecutableFlavor {
-        self.executable_flavor
     }
 
     pub fn get_opt_passes(&self) -> &str {
@@ -140,6 +122,14 @@ impl LLVMBackend {
 
     pub fn get_modificator_passes(&self) -> &[LLVMModificatorPasses] {
         &self.modificator_passes
+    }
+
+    pub fn get_compilers_configuration(&self) -> &CompilersConfiguration {
+        &self.compilers_config
+    }
+
+    pub fn get_mut_compilers_configuration(&mut self) -> &mut CompilersConfiguration {
+        &mut self.compilers_config
     }
 
     pub fn set_modificator_passes(&mut self, modificator_passes: Vec<LLVMModificatorPasses>) {
@@ -171,59 +161,54 @@ impl LLVMModificatorPasses {
     }
 }
 
-impl LLVMExecutableFlavor {
-    pub fn into_llvm_linker_flavor(self) -> LldFlavor {
-        match self {
-            LLVMExecutableFlavor::Wasm => LldFlavor::Wasm,
-            LLVMExecutableFlavor::MachO => LldFlavor::MachO,
-            LLVMExecutableFlavor::Elf => LldFlavor::Elf,
-            LLVMExecutableFlavor::Coff => LldFlavor::Coff,
+impl CompilersConfiguration {
+    pub fn new() -> Self {
+        Self {
+            use_clang: true,
+            use_gcc: false,
+            compiler_args: Vec::with_capacity(50),
+            custom_gcc: None,
+            custom_clang: None,
         }
     }
 
-    pub fn raw_str_into_llvm_executable_flavor(raw: &str) -> LLVMExecutableFlavor {
-        match raw {
-            "wasm" => LLVMExecutableFlavor::Wasm,
-            "mach0" => LLVMExecutableFlavor::MachO,
-            "elf" => LLVMExecutableFlavor::Elf,
-            "coff" => LLVMExecutableFlavor::Coff,
-            _ => {
-                logging::log(
-                    logging::LoggingType::Panic,
-                    &format!(
-                        "Incompatible LLVM executable flavor '{}' for compilation.",
-                        raw
-                    ),
-                );
-
-                unreachable!()
-            }
-        }
+    pub fn set_use_clang(&mut self, value: bool) {
+        self.use_clang = value;
     }
 
-    pub fn default() -> Self {
-        match env::consts::OS {
-            "windows" => LLVMExecutableFlavor::Coff,
-            "linux" => LLVMExecutableFlavor::Elf,
-            _ => {
-                logging::log(
-                    logging::LoggingType::Panic,
-                    &format!(
-                        "Incompatible host operating system '{}' for compilation.",
-                        env::consts::OS
-                    ),
-                );
+    pub fn set_use_gcc(&mut self, value: bool) {
+        self.use_gcc = value;
+    }
 
-                unreachable!()
-            }
-        }
+    pub fn add_compiler_arg(&mut self, value: String) {
+        self.compiler_args.push(value);
+    }
+
+    pub fn set_custom_clang(&mut self, value: PathBuf) {
+        self.custom_clang = Some(value);
+    }
+
+    pub fn set_custom_gcc(&mut self, value: PathBuf) {
+        self.custom_gcc = Some(value);
+    }
+
+    pub fn get_args(&self) -> &[String] {
+        &self.compiler_args
+    }
+
+    pub fn get_custom_clang(&self) -> Option<&PathBuf> {
+        self.custom_clang.as_ref()
+    }
+
+    pub fn get_custom_gcc(&self) -> Option<&PathBuf> {
+        self.custom_gcc.as_ref()
+    }
+
+    pub fn use_clang(&self) -> bool {
+        self.use_clang
+    }
+
+    pub fn use_gcc(&self) -> bool {
+        self.use_gcc
     }
 }
-
-/* ######################################################################
-
-
-    LLVM BACKEND - END
-
-
-########################################################################*/
