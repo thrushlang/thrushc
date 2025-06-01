@@ -85,6 +85,13 @@ impl CommandLine {
                 self.options.set_use_llvm_backend(true);
             }
 
+            /* ######################################################################
+
+
+                LLVM BACKEND | CLI USEFUL COMMANDS - START
+
+
+            ########################################################################*/
             "llvm-print-target-triples" => {
                 self.advance();
 
@@ -114,14 +121,23 @@ impl CommandLine {
                 process::exit(0);
             }
 
-            "llvm-print-executable-flavors" => {
-                self.advance();
+            /* ######################################################################
 
-                utils::print_supported_llvm_executables_flavors();
 
-                process::exit(0);
-            }
+                LLVM BACKEND | CLI USEFUL COMMANDS - END
 
+
+            ########################################################################*/
+
+
+
+            /* ######################################################################
+
+
+                THRUSH COMPILER | GENERAL FLAGS - START
+
+
+            ########################################################################*/
             "-build-dir" => {
                 self.advance();
 
@@ -165,22 +181,6 @@ impl CommandLine {
                     .get_mut_llvm_backend_options()
                     .get_mut_compilers_configuration()
                     .set_use_clang(true);
-            }
-
-            "--debug-clang-commands" => {
-                self.advance();
-
-                if !self.options.use_llvm() {
-                    self.report_error(&format!(
-                        "Can't use '{}' without '-llvm' flag previously.",
-                        argument
-                    ));
-                }
-
-                self.options
-                    .get_mut_llvm_backend_options()
-                    .get_mut_compilers_configuration()
-                    .set_debug_clang_commands(true);
             }
 
             "-custom-clang" => {
@@ -242,48 +242,22 @@ impl CommandLine {
                 self.advance();
             }
 
-            "--llvm-opt-passes" => {
-                self.advance();
+            /* ######################################################################
 
-                if !self.options.use_llvm() {
-                    self.report_error(&format!(
-                        "Can't use '{}' without '-llvm' flag previously.",
-                        argument
-                    ));
-                }
 
-                let extra_opt_passes: String = self.peek().to_string();
+                THRUSH COMPILER | GENERAL FLAGS - END
 
-                self.options
-                    .get_mut_llvm_backend_options()
-                    .set_opt_passes(extra_opt_passes);
 
-                self.advance();
-            }
+            ########################################################################*/
 
-            "--llvm-modificator-opt-passes" => {
-                self.advance();
 
-                if !self.options.use_llvm() {
-                    self.report_error(&format!(
-                        "Can't use '{}' without '-llvm' flag previously.",
-                        argument
-                    ));
-                }
+            /* ######################################################################
 
-                let raw_modificator_passes: &str = self.peek();
-                let modificator_passes: Vec<LLVMModificatorPasses> =
-                    LLVMModificatorPasses::raw_str_into_llvm_modificator_passes(
-                        raw_modificator_passes,
-                    );
 
-                self.options
-                    .get_mut_llvm_backend_options()
-                    .set_modificator_passes(modificator_passes);
+                LLVM COMPILER | GENERAL FLAGS - START
 
-                self.advance();
-            }
 
+            ########################################################################*/
             "-cpu" => {
                 self.advance();
 
@@ -482,6 +456,119 @@ impl CommandLine {
                 self.advance();
             }
 
+            /* ######################################################################
+
+
+                LLVM COMPILER | GENERAL FLAGS - END
+
+
+            ########################################################################*/
+
+
+            /* ######################################################################
+
+
+                LLVM COMPILER | EXTRA FLAGS - START
+
+
+            ########################################################################*/
+            "--llvm-opt-passes" => {
+                self.advance();
+
+                if !self.options.use_llvm() {
+                    self.report_error(&format!(
+                        "Can't use '{}' without '-llvm' flag previously.",
+                        argument
+                    ));
+                }
+
+                let extra_opt_passes: String = self.peek().to_string();
+
+                self.options
+                    .get_mut_llvm_backend_options()
+                    .set_opt_passes(extra_opt_passes);
+
+                self.advance();
+            }
+
+            "--llvm-modificator-opt-passes" => {
+                self.advance();
+
+                if !self.options.use_llvm() {
+                    self.report_error(&format!(
+                        "Can't use '{}' without '-llvm' flag previously.",
+                        argument
+                    ));
+                }
+
+                let raw_modificator_passes: &str = self.peek();
+                let modificator_passes: Vec<LLVMModificatorPasses> =
+                    LLVMModificatorPasses::raw_str_into_llvm_modificator_passes(
+                        raw_modificator_passes,
+                    );
+
+                self.options
+                    .get_mut_llvm_backend_options()
+                    .set_modificator_passes(modificator_passes);
+
+                self.advance();
+            }
+
+            /* ######################################################################
+
+
+                LLVM COMPILER | EXTRA FLAGS - END
+
+
+            ########################################################################*/
+
+
+            /* ######################################################################
+
+
+                THRUSH COMPILER | USEFUL FLAGS - START
+
+
+            ########################################################################*/
+            "--debug-clang-commands" => {
+                self.advance();
+
+                if !self.options.use_llvm() {
+                    self.report_error(&format!(
+                        "Can't use '{}' without '-llvm' flag previously.",
+                        argument
+                    ));
+                }
+
+                self.options
+                    .get_mut_llvm_backend_options()
+                    .get_mut_compilers_configuration()
+                    .set_debug_clang_commands(true);
+            }
+
+            "--debug-gcc-commands" => {
+                self.advance();
+
+                if !self.options.use_llvm() {
+                    self.report_error(&format!(
+                        "Can't use '{}' without '-llvm' flag previously.",
+                        argument
+                    ));
+                }
+
+                self.options
+                    .get_mut_llvm_backend_options()
+                    .get_mut_compilers_configuration()
+                    .set_debug_gcc_commands(true);
+            }
+
+            /* ######################################################################
+
+
+                THRUSH COMPILER | USEFUL FLAGS - END
+
+
+            ########################################################################*/
             possible_file_path
                 if PathBuf::from(possible_file_path).exists()
                     && possible_file_path.ends_with(".th") =>
@@ -605,18 +692,6 @@ impl CommandLine {
                     .custom_color((141, 141, 142))
                     .bold(),
                 "Show the host LLVM target-triple.",
-            ),
-        );
-
-        logging::write(
-            logging::OutputIn::Stderr,
-            &format!(
-                "{} {} {}\n\n",
-                "•".bold(),
-                "llvm-print-executable-flavors"
-                    .custom_color((141, 141, 142))
-                    .bold(),
-                "Show the LLVM executable flavors.",
             ),
         );
 
@@ -796,7 +871,17 @@ impl CommandLine {
                 "{} {} {}\n",
                 "•".bold(),
                 "--debug-clang-command".custom_color((141, 141, 142)).bold(),
-                "Displays the generated command for clang."
+                "Displays the generated command for Clang."
+            ),
+        );
+
+        logging::write(
+            logging::OutputIn::Stderr,
+            &format!(
+                "{} {} {}\n",
+                "•".bold(),
+                "--debug-gcc-commands".custom_color((141, 141, 142)).bold(),
+                "Displays the generated command for GCC."
             ),
         );
 

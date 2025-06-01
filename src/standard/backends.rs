@@ -31,6 +31,7 @@ pub struct CompilersConfiguration {
     custom_gcc: Option<PathBuf>,
     custom_clang: Option<PathBuf>,
     debug_clang_commands: bool,
+    debug_gcc_commands: bool,
 }
 
 #[derive(Debug)]
@@ -171,6 +172,7 @@ impl CompilersConfiguration {
             custom_gcc: None,
             custom_clang: None,
             debug_clang_commands: false,
+            debug_gcc_commands: false,
         }
     }
 
@@ -198,6 +200,10 @@ impl CompilersConfiguration {
         self.debug_clang_commands = value;
     }
 
+    pub fn set_debug_gcc_commands(&mut self, value: bool) {
+        self.debug_gcc_commands = value;
+    }
+
     pub fn get_args(&self) -> &[String] {
         &self.compiler_args
     }
@@ -208,6 +214,10 @@ impl CompilersConfiguration {
 
     pub fn get_debug_clang_commands(&self) -> bool {
         self.debug_clang_commands
+    }
+
+    pub fn get_debug_gcc_commands(&self) -> bool {
+        self.debug_gcc_commands
     }
 
     pub fn get_custom_gcc(&self) -> Option<&PathBuf> {

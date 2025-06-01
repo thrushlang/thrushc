@@ -54,7 +54,7 @@ impl<'clang> GCC<'clang> {
         gcc_command.args(self.config.get_args().iter());
         gcc_command.args(self.files.iter());
 
-        if self.config.get_debug_clang_commands() {
+        if self.config.get_debug_gcc_commands() {
             logging::log(
                 LoggingType::Info,
                 &format!("Generated GCC Command: {:?}\n", gcc_command),
