@@ -1,12 +1,13 @@
 #!/usr/bin/env fish
-
 # Build and package script for thrushc
 # Usage: ./build-release.fish [debug|release]
+# This script should be run from the /scripts directory
 
 set -l build_mode "release"
-set -l target_dir "target"
+set -l project_root ".."
+set -l target_dir "$project_root/target"
 set -l binary_name "thrushc"
-set -l dist_dir "dist/linux"
+set -l dist_dir "$project_root/dist/linux"
 
 if test (count $argv) -gt 0
     set build_mode $argv[1]
@@ -17,8 +18,8 @@ if not contains $build_mode "debug" "release"
     exit 1
 end
 
-if not test -f "Cargo.toml"
-    echo "Error: Cargo.toml not found. Run this script from the project root."
+if not test -f "$project_root/Cargo.toml"
+    echo "Error: Cargo.toml not found. Make sure this script is run from the /scripts directory."
     exit 1
 end
 
@@ -35,30 +36,41 @@ end
 
 echo "Building project in $build_mode mode..."
 
+# Change to project root directory for cargo build
+pushd "$project_root"
+
 if test "$build_mode" = "release"
     cargo build --release
-    set binary_path "$target_dir/release/$binary_name"
+    set binary_path "target/release/$binary_name"
 else
     cargo build
-    set binary_path "$target_dir/debug/$binary_name"
+    set binary_path "target/debug/$binary_name"
 end
 
-if test $status -ne 0
+set build_result $status
+popd
+
+if test $build_result -ne 0
     echo "Error: Build failed."
     exit 1
 end
 
-if not test -f "$binary_path"
-    echo "Error: Binary '$binary_name' not found at $binary_path"
+if test "$build_mode" = "release"
+    set source_binary "$target_dir/release/$binary_name"
+else
+    set source_binary "$target_dir/debug/$binary_name"
+end
+
+if not test -f "$source_binary"
+    echo "Error: Binary '$binary_name' not found at $source_binary"
     exit 1
 end
 
 echo "Build completed successfully."
 
 mkdir -p "$dist_dir"
-
 set dist_binary "$dist_dir/$binary_name"
-cp "$binary_path" "$dist_binary"
+cp "$source_binary" "$dist_binary"
 
 if test "$build_mode" = "release"; and command -q strip
     echo "Stripping binary..."
@@ -72,10 +84,8 @@ end
 
 echo "Compressing binary with UPX..."
 upx --best "$dist_binary"
-
 if test $status -eq 0
     echo "Binary compressed successfully."
-    
     set final_size (du -h "$dist_binary" | cut -f1)
     echo "Final binary: $dist_binary ($final_size)"
     echo "Build and packaging completed."
