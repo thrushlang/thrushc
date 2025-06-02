@@ -2,7 +2,7 @@ use colored::Colorize;
 
 use crate::standard::constants::LLVM_TARGET_TRIPLES_X86_64;
 
-use super::constants::{LLVM_EXECUTABLES_FLAVORS, LLVM_X86_64_SUPPORTED_CPUS};
+use super::constants::LLVM_X86_64_SUPPORTED_CPUS;
 
 /* ######################################################################
 
@@ -12,27 +12,12 @@ use super::constants::{LLVM_EXECUTABLES_FLAVORS, LLVM_X86_64_SUPPORTED_CPUS};
 
 ########################################################################*/
 
-pub fn is_supported_llvm_executable_flavor(flavor: &str) -> bool {
-    LLVM_EXECUTABLES_FLAVORS.contains(&flavor)
-}
-
 pub fn is_supported_llvm_cpu_target(cpu_target: &str) -> bool {
     LLVM_X86_64_SUPPORTED_CPUS.contains(&cpu_target)
 }
 
 pub fn is_supported_llvm_target_triple(target: &str) -> bool {
     LLVM_TARGET_TRIPLES_X86_64.contains(&target)
-}
-
-pub fn print_supported_llvm_executables_flavors() {
-    println!(
-        "Supported LLVM executable flavors count: {}\n",
-        LLVM_EXECUTABLES_FLAVORS.len()
-    );
-
-    for flavor in LLVM_EXECUTABLES_FLAVORS {
-        println!("- {}", flavor);
-    }
 }
 
 pub fn print_llvm_supported_cpus() {

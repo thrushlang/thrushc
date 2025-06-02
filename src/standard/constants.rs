@@ -174,8 +174,6 @@ pub const LLVM_X86_64_SUPPORTED_CPUS: [&str; 128] = [
     "znver5",
 ];
 
-pub const LLVM_EXECUTABLES_FLAVORS: [&str; 4] = ["wasm", "mach0", "elf", "coff"];
-
 /* ######################################################################
 
 

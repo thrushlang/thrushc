@@ -2,18 +2,14 @@ use std::path::Path;
 use std::process::Command;
 
 use super::backends::LLVMModificatorPasses;
-use super::misc::{CompilerOptions, Emitable, ThrushOptimization};
-
 use super::logging::{self, LoggingType};
+use super::misc::{CompilerOptions, Emitable, ThrushOptimization};
 use super::utils;
 
 use {
     colored::Colorize,
     inkwell::targets::{CodeModel, RelocMode, TargetMachine, TargetTriple},
-    std::{
-        path::PathBuf,
-        process::{self},
-    },
+    std::{collections::HashMap, path::PathBuf, process},
 };
 
 #[derive(Debug)]
@@ -22,39 +18,82 @@ pub struct CommandLine {
     args: Vec<String>,
     current: usize,
     position: CommandLinePosition,
+    validation_cache: HashMap<String, bool>,
 }
 
 #[derive(Debug, Clone, Copy, Default)]
 pub enum CommandLinePosition {
     #[default]
     ThrushCompiler,
-
     ExternalCompiler,
 }
 
+#[derive(Debug)]
+struct ParsedArg {
+    key: String,
+    value: Option<String>,
+}
+
+impl ParsedArg {
+    fn new(arg: &str) -> Self {
+        if let Some(eq_pos) = arg.find('=') {
+            let (key, value) = arg.split_at(eq_pos);
+            Self {
+                key: key.to_string(),
+                value: Some(value[1..].to_string()),
+            }
+        } else {
+            Self {
+                key: arg.to_string(),
+                value: None,
+            }
+        }
+    }
+}
+
 impl CommandLine {
-    pub fn parse(args: Vec<String>) -> CommandLine {
-        let mut command_line: CommandLine = Self {
+    pub fn parse(mut args: Vec<String>) -> CommandLine {
+        let processed_args: Vec<String> = Self::preprocess_args(&mut args);
+
+        let mut command_line = Self {
             options: CompilerOptions::new(),
-            args,
+            args: processed_args,
             current: 0,
             position: CommandLinePosition::default(),
+            validation_cache: HashMap::with_capacity(100),
         };
 
         command_line.build();
-
         command_line
     }
 
-    fn build(&mut self) {
-        self.args.remove(0);
+    fn preprocess_args(args: &mut Vec<String>) -> Vec<String> {
+        let mut processed: Vec<String> = Vec::with_capacity(args.len() * 2);
 
+        if !args.is_empty() {
+            args.remove(0);
+        }
+
+        for arg in args.iter() {
+            let parsed = ParsedArg::new(arg);
+            processed.push(parsed.key);
+
+            if let Some(value) = parsed.value {
+                processed.push(value);
+            }
+        }
+
+        processed
+    }
+
+    fn build(&mut self) {
         if self.args.is_empty() {
             self.show_help();
         }
 
         while !self.is_eof() {
-            self.analyze(self.args[self.current].clone());
+            let argument = self.args[self.current].clone();
+            self.analyze(argument);
         }
 
         if !self.options.is_build_dir_setted() {
@@ -65,18 +104,17 @@ impl CommandLine {
     }
 
     fn analyze(&mut self, argument: String) {
-        match argument.trim() {
+        let arg: &str = argument.as_str();
+
+        match arg {
             "help" | "-h" | "--help" => {
                 self.advance();
-
                 self.show_help();
             }
 
             "version" | "-v" | "--version" => {
                 self.advance();
-
                 println!("{}", env!("CARGO_PKG_VERSION"));
-
                 process::exit(0);
             }
 
@@ -85,97 +123,49 @@ impl CommandLine {
                 self.options.set_use_llvm_backend(true);
             }
 
-            /* ######################################################################
-
-
-                LLVM BACKEND | CLI USEFUL COMMANDS - START
-
-
-            ########################################################################*/
             "llvm-print-target-triples" => {
                 self.advance();
-
                 utils::print_llvm_supported_targets_triples();
-
                 process::exit(0);
             }
 
             "llvm-print-host-target-triple" => {
                 self.advance();
-
                 println!(
                     "{}",
                     TargetMachine::get_default_triple()
                         .as_str()
                         .to_string_lossy()
                 );
-
                 process::exit(0);
             }
 
             "llvm-print-supported-cpus" => {
                 self.advance();
-
                 utils::print_llvm_supported_cpus();
-
                 process::exit(0);
             }
 
-            /* ######################################################################
-
-
-                LLVM BACKEND | CLI USEFUL COMMANDS - END
-
-
-            ########################################################################*/
-
-
-
-            /* ######################################################################
-
-
-                THRUSH COMPILER | GENERAL FLAGS - START
-
-
-            ########################################################################*/
             "-build-dir" => {
                 self.advance();
-
                 self.options.set_build_dir(self.peek().into());
-
                 self.advance();
             }
 
             "-start" => {
                 self.advance();
-
                 self.position = CommandLinePosition::ExternalCompiler;
             }
 
             "-end" => {
                 self.advance();
-
                 self.position = CommandLinePosition::ThrushCompiler;
             }
 
             "-clang" => {
                 self.advance();
-
-                if self
-                    .options
-                    .get_llvm_backend_options()
-                    .get_compilers_configuration()
-                    .use_gcc()
-                {
-                    self.report_error("Can't use '-clang' with -gcc activated.");
-                }
-
-                if !self.options.use_llvm() {
-                    self.report_error(&format!(
-                        "Can't use '{}' without '-llvm' flag previously.",
-                        argument
-                    ));
-                }
+                self.validate_llvm_required(arg);
+                self.validate_not_gcc_active();
 
                 self.options
                     .get_mut_llvm_backend_options()
@@ -185,19 +175,13 @@ impl CommandLine {
 
             "-custom-clang" => {
                 self.advance();
+                self.validate_llvm_required(arg);
 
-                if !self.options.use_llvm() {
-                    self.report_error(&format!(
-                        "Can't use '{}' without '-llvm' flag previously.",
-                        argument
-                    ));
-                }
+                let custom_clang = self.peek();
+                let custom_clang_path = PathBuf::from(custom_clang);
 
-                let custom_clang: &str = self.peek();
-                let custom_clang_path: PathBuf = PathBuf::from(custom_clang);
-
-                if !custom_clang_path.exists() && !self.probe_as_command(&custom_clang_path) {
-                    self.report_error("Indicated external C compiler clang does not exist.");
+                if !self.validate_compiler_path(&custom_clang_path) {
+                    self.report_error("Indicated external C compiler Clang doesn't exist.");
                 }
 
                 self.options
@@ -210,69 +194,34 @@ impl CommandLine {
 
             "-gcc" => {
                 self.advance();
+                self.validate_not_clang_active();
 
-                if self
-                    .options
-                    .get_llvm_backend_options()
-                    .get_compilers_configuration()
-                    .use_clang()
-                {
-                    self.report_error("Can't use '-gcc' with -clang activated.");
-                }
+                let custom_gcc = self.peek();
+                let custom_gcc_path = PathBuf::from(custom_gcc);
 
-                let custom_gcc: &str = self.peek();
-                let custom_gcc_path: PathBuf = PathBuf::from(custom_gcc);
-
-                if !custom_gcc_path.exists() && !self.probe_as_command(&custom_gcc_path) {
+                if !self.validate_compiler_path(&custom_gcc_path) {
                     self.report_error(
-                        "Indicated external C compiler GNU Compiler Colllection (gcc) does not exist.",
+                        "Indicated external C compiler GNU Compiler Collection (GCC) doesn't exist.",
                     );
                 }
 
-                self.options
-                    .get_mut_llvm_backend_options()
-                    .get_mut_compilers_configuration()
-                    .set_custom_gcc(custom_gcc_path);
-
-                self.options
-                    .get_mut_llvm_backend_options()
-                    .get_mut_compilers_configuration()
-                    .set_use_gcc(true);
+                let backend_options = self.options.get_mut_llvm_backend_options();
+                let compiler_config = backend_options.get_mut_compilers_configuration();
+                compiler_config.set_custom_gcc(custom_gcc_path);
+                compiler_config.set_use_gcc(true);
 
                 self.advance();
             }
 
-            /* ######################################################################
-
-
-                THRUSH COMPILER | GENERAL FLAGS - END
-
-
-            ########################################################################*/
-
-
-            /* ######################################################################
-
-
-                LLVM COMPILER | GENERAL FLAGS - START
-
-
-            ########################################################################*/
             "-cpu" => {
                 self.advance();
+                self.validate_llvm_required(arg);
 
-                if !self.options.use_llvm() {
+                let target_cpu = self.peek().to_string();
+
+                if !self.validate_llvm_cpu(&target_cpu) {
                     self.report_error(&format!(
-                        "Can't use '{}' without '-llvm' flag previously.",
-                        argument
-                    ));
-                }
-
-                let target_cpu: String = self.peek().to_string();
-
-                if !utils::is_supported_llvm_cpu_target(&target_cpu) {
-                    self.report_error(&format!(
-                        "Unknown CPU target: '{}'. See 'print-supported-cpus' command.",
+                        "Unknown CPU target: '{}'. See 'llvm-print-supported-cpus' command.",
                         target_cpu
                     ));
                 }
@@ -286,26 +235,9 @@ impl CommandLine {
 
             "-opt" => {
                 self.advance();
+                self.validate_llvm_required(arg);
 
-                if !self.options.use_llvm() {
-                    self.report_error(&format!(
-                        "Can't use '{}' without '-llvm' flag previously.",
-                        argument
-                    ));
-                }
-
-                let opt: ThrushOptimization = match self.peek() {
-                    "O0" => ThrushOptimization::None,
-                    "O1" => ThrushOptimization::Low,
-                    "O2" => ThrushOptimization::Mid,
-                    "size" => ThrushOptimization::Size,
-                    "mcqueen" => ThrushOptimization::Mcqueen,
-                    any => {
-                        self.report_error(&format!("Unknown LLVM optimization level: '{}'.", any));
-                        ThrushOptimization::default()
-                    }
-                };
-
+                let opt = self.parse_optimization_level(self.peek());
                 self.options
                     .get_mut_llvm_backend_options()
                     .set_optimization(opt);
@@ -315,82 +247,21 @@ impl CommandLine {
 
             "-emit" => {
                 self.advance();
+                self.validate_emit_llvm_required(arg);
 
-                if !self.options.use_llvm()
-                    && [
-                        "raw-llvm-ir",
-                        "raw-llvm-bc",
-                        "raw-asm",
-                        "obj",
-                        "llvm-bc",
-                        "llvm-ir",
-                        "asm",
-                    ]
-                    .contains(&self.peek())
-                {
-                    self.report_error(&format!(
-                        "Can't use '{}' without '-llvm' flag previously.",
-                        argument
-                    ));
-                }
-
-                match self.peek() {
-                    "llvm-bc" => self
-                        .options
-                        .get_mut_llvm_backend_options()
-                        .add_emit_option(Emitable::LLVMBitcode),
-                    "llvm-ir" => self
-                        .options
-                        .get_mut_llvm_backend_options()
-                        .add_emit_option(Emitable::LLVMIR),
-                    "asm" => self
-                        .options
-                        .get_mut_llvm_backend_options()
-                        .add_emit_option(Emitable::Assembly),
-                    "raw-llvm-bc" => self
-                        .options
-                        .get_mut_llvm_backend_options()
-                        .add_emit_option(Emitable::RawLLVMBitcode),
-                    "raw-llvm-ir" => self
-                        .options
-                        .get_mut_llvm_backend_options()
-                        .add_emit_option(Emitable::RawLLVMIR),
-                    "raw-asm" => self
-                        .options
-                        .get_mut_llvm_backend_options()
-                        .add_emit_option(Emitable::RawAssembly),
-                    "obj" => self
-                        .options
-                        .get_mut_llvm_backend_options()
-                        .add_emit_option(Emitable::Object),
-                    "ast" => self
-                        .options
-                        .get_mut_llvm_backend_options()
-                        .add_emit_option(Emitable::AST),
-                    "tokens" => self
-                        .options
-                        .get_mut_llvm_backend_options()
-                        .add_emit_option(Emitable::Tokens),
-
-                    any => {
-                        self.report_error(&format!("Unknown LLVM emit option: '{}'.", any));
-                    }
-                }
+                let emitable = self.parse_emit_option(self.peek());
+                self.options
+                    .get_mut_llvm_backend_options()
+                    .add_emit_option(emitable);
 
                 self.advance();
             }
 
             "-target" => {
                 self.advance();
+                self.validate_llvm_required(arg);
 
-                if !self.options.use_llvm() {
-                    self.report_error(&format!(
-                        "Can't use '{}' without '-llvm' flag previously.",
-                        argument
-                    ));
-                }
-
-                let raw_target_triple: &str = self.peek();
+                let raw_target_triple = self.peek();
 
                 if !utils::is_supported_llvm_target_triple(raw_target_triple) {
                     self.report_error(&format!(
@@ -399,8 +270,7 @@ impl CommandLine {
                     ));
                 }
 
-                let target_triple: TargetTriple = TargetTriple::create(raw_target_triple);
-
+                let target_triple = TargetTriple::create(raw_target_triple);
                 self.options
                     .get_mut_llvm_backend_options()
                     .set_target_triple(target_triple);
@@ -410,24 +280,9 @@ impl CommandLine {
 
             "-llvm-reloc" => {
                 self.advance();
+                self.validate_llvm_required(arg);
 
-                if !self.options.use_llvm() {
-                    self.report_error(&format!(
-                        "Can't use '{}' without '-llvm' flag previously.",
-                        argument
-                    ));
-                }
-
-                let reloc_mode: RelocMode = match self.peek() {
-                    "dynamic-no-pic" => RelocMode::DynamicNoPic,
-                    "pic" => RelocMode::PIC,
-                    "static" => RelocMode::Static,
-                    any => {
-                        self.report_error(&format!("Unknown LLVM reloc mode: '{}'.", any));
-                        RelocMode::default()
-                    }
-                };
-
+                let reloc_mode = self.parse_reloc_mode(self.peek());
                 self.options
                     .get_mut_llvm_backend_options()
                     .set_reloc_mode(reloc_mode);
@@ -437,18 +292,7 @@ impl CommandLine {
 
             "-llvm-code-model" => {
                 self.advance();
-
-                let code_model: CodeModel = match self.peek() {
-                    "small" => CodeModel::Small,
-                    "medium" => CodeModel::Medium,
-                    "large" => CodeModel::Large,
-                    "kernel" => CodeModel::Kernel,
-                    any => {
-                        self.report_error(&format!("Unknown LLVM code model: '{}'.", any));
-                        CodeModel::default()
-                    }
-                };
-
+                let code_model = self.parse_code_model(self.peek());
                 self.options
                     .get_mut_llvm_backend_options()
                     .set_code_model(code_model);
@@ -456,34 +300,11 @@ impl CommandLine {
                 self.advance();
             }
 
-            /* ######################################################################
-
-
-                LLVM COMPILER | GENERAL FLAGS - END
-
-
-            ########################################################################*/
-
-
-            /* ######################################################################
-
-
-                LLVM COMPILER | EXTRA FLAGS - START
-
-
-            ########################################################################*/
             "--llvm-opt-passes" => {
                 self.advance();
+                self.validate_llvm_required(arg);
 
-                if !self.options.use_llvm() {
-                    self.report_error(&format!(
-                        "Can't use '{}' without '-llvm' flag previously.",
-                        argument
-                    ));
-                }
-
-                let extra_opt_passes: String = self.peek().to_string();
-
+                let extra_opt_passes = self.peek().to_string();
                 self.options
                     .get_mut_llvm_backend_options()
                     .set_opt_passes(extra_opt_passes);
@@ -493,16 +314,10 @@ impl CommandLine {
 
             "--llvm-modificator-opt-passes" => {
                 self.advance();
+                self.validate_llvm_required(arg);
 
-                if !self.options.use_llvm() {
-                    self.report_error(&format!(
-                        "Can't use '{}' without '-llvm' flag previously.",
-                        argument
-                    ));
-                }
-
-                let raw_modificator_passes: &str = self.peek();
-                let modificator_passes: Vec<LLVMModificatorPasses> =
+                let raw_modificator_passes = self.peek();
+                let modificator_passes =
                     LLVMModificatorPasses::raw_str_into_llvm_modificator_passes(
                         raw_modificator_passes,
                     );
@@ -514,31 +329,9 @@ impl CommandLine {
                 self.advance();
             }
 
-            /* ######################################################################
-
-
-                LLVM COMPILER | EXTRA FLAGS - END
-
-
-            ########################################################################*/
-
-
-            /* ######################################################################
-
-
-                THRUSH COMPILER | USEFUL FLAGS - START
-
-
-            ########################################################################*/
             "--debug-clang-commands" => {
                 self.advance();
-
-                if !self.options.use_llvm() {
-                    self.report_error(&format!(
-                        "Can't use '{}' without '-llvm' flag previously.",
-                        argument
-                    ));
-                }
+                self.validate_llvm_required(arg);
 
                 self.options
                     .get_mut_llvm_backend_options()
@@ -548,13 +341,7 @@ impl CommandLine {
 
             "--debug-gcc-commands" => {
                 self.advance();
-
-                if !self.options.use_llvm() {
-                    self.report_error(&format!(
-                        "Can't use '{}' without '-llvm' flag previously.",
-                        argument
-                    ));
-                }
+                self.validate_llvm_required(arg);
 
                 self.options
                     .get_mut_llvm_backend_options()
@@ -562,61 +349,220 @@ impl CommandLine {
                     .set_debug_gcc_commands(true);
             }
 
-            /* ######################################################################
-
-
-                THRUSH COMPILER | USEFUL FLAGS - END
-
-
-            ########################################################################*/
-            possible_file_path
-                if PathBuf::from(possible_file_path).exists()
-                    && possible_file_path.ends_with(".th") =>
-            {
+            possible_file_path if self.is_thrush_file(possible_file_path) => {
                 self.advance();
-
-                let mut file_path: PathBuf = PathBuf::from(possible_file_path);
-
-                let file_name: String = file_path.file_name().map_or_else(
-                    || {
-                        logging::log(
-                            LoggingType::Panic,
-                            &format!("Unknown file name '{}'.", file_path.display()),
-                        );
-
-                        String::from("unknown.th")
-                    },
-                    |name| name.to_string_lossy().to_string(),
-                );
-
-                if let Ok(canonicalized_path) = file_path.canonicalize() {
-                    file_path = canonicalized_path;
-                }
-
-                self.options.new_file(file_name, file_path);
+                self.handle_thrush_file(possible_file_path);
             }
 
             any => {
                 self.advance();
-
-                if self.position.at_any_other_compiler() && self.options.use_llvm() {
-                    self.options
-                        .get_mut_llvm_backend_options()
-                        .get_mut_compilers_configuration()
-                        .add_compiler_arg(any.to_string());
-
-                    return;
-                }
-
-                logging::log(
-                    LoggingType::Panic,
-                    &format!("Unknown argument: \"{}\".", any),
-                );
+                self.handle_unknown_argument(any);
             }
         }
     }
 
-    fn show_help(&self) {
+    fn validate_llvm_required(&self, arg: &str) {
+        if !self.options.use_llvm() {
+            self.report_error(&format!(
+                "Can't use '{}' without '-llvm' flag previously.",
+                arg
+            ));
+        }
+    }
+
+    fn validate_emit_llvm_required(&self, arg: &str) {
+        if !self.options.use_llvm() {
+            let llvm_emit_options: [&'static str; 7] = [
+                "raw-llvm-ir",
+                "raw-llvm-bc",
+                "raw-asm",
+                "obj",
+                "llvm-bc",
+                "llvm-ir",
+                "asm",
+            ];
+
+            if llvm_emit_options.contains(&self.peek()) {
+                self.report_error(&format!(
+                    "Can't use '{}' without '-llvm' flag previously.",
+                    arg
+                ));
+            }
+        }
+    }
+
+    fn validate_not_gcc_active(&self) {
+        if self
+            .options
+            .get_llvm_backend_options()
+            .get_compilers_configuration()
+            .use_gcc()
+        {
+            self.report_error("Can't use '-clang' with -gcc activated.");
+        }
+    }
+
+    fn validate_not_clang_active(&self) {
+        if self
+            .options
+            .get_llvm_backend_options()
+            .get_compilers_configuration()
+            .use_clang()
+        {
+            self.report_error("Can't use '-gcc' with -clang activated.");
+        }
+    }
+
+    fn validate_compiler_path(&mut self, path: &Path) -> bool {
+        let path_str: String = path.to_string_lossy().to_string();
+
+        if let Some(&result) = self.validation_cache.get(&path_str) {
+            return result;
+        }
+
+        let exists: bool = path.exists() || self.probe_as_command(path);
+        self.validation_cache.insert(path_str, exists);
+
+        exists
+    }
+
+    fn validate_llvm_cpu(&mut self, cpu: &str) -> bool {
+        if let Some(&result) = self.validation_cache.get(cpu) {
+            return result;
+        }
+
+        let is_supported: bool = utils::is_supported_llvm_cpu_target(cpu);
+
+        self.validation_cache.insert(cpu.to_string(), is_supported);
+
+        is_supported
+    }
+
+    fn parse_optimization_level(&self, opt_str: &str) -> ThrushOptimization {
+        match opt_str {
+            "O0" => ThrushOptimization::None,
+            "O1" => ThrushOptimization::Low,
+            "O2" => ThrushOptimization::Mid,
+            "size" => ThrushOptimization::Size,
+            "mcqueen" => ThrushOptimization::Mcqueen,
+            any => {
+                self.report_error(&format!("Unknown LLVM optimization level: '{}'.", any));
+            }
+        }
+    }
+
+    fn parse_emit_option(&self, emit_str: &str) -> Emitable {
+        match emit_str {
+            "llvm-bc" => Emitable::LLVMBitcode,
+            "llvm-ir" => Emitable::LLVMIR,
+            "asm" => Emitable::Assembly,
+            "raw-llvm-bc" => Emitable::RawLLVMBitcode,
+            "raw-llvm-ir" => Emitable::RawLLVMIR,
+            "raw-asm" => Emitable::RawAssembly,
+            "obj" => Emitable::Object,
+            "ast" => Emitable::AST,
+            "tokens" => Emitable::Tokens,
+            any => {
+                self.report_error(&format!("Unknown LLVM emit option: '{}'.", any));
+            }
+        }
+    }
+
+    fn parse_reloc_mode(&self, reloc_str: &str) -> RelocMode {
+        match reloc_str {
+            "dynamic-no-pic" => RelocMode::DynamicNoPic,
+            "pic" => RelocMode::PIC,
+            "static" => RelocMode::Static,
+            any => {
+                self.report_error(&format!("Unknown LLVM reloc mode: '{}'.", any));
+            }
+        }
+    }
+
+    fn parse_code_model(&self, model_str: &str) -> CodeModel {
+        match model_str {
+            "small" => CodeModel::Small,
+            "medium" => CodeModel::Medium,
+            "large" => CodeModel::Large,
+            "kernel" => CodeModel::Kernel,
+            any => {
+                self.report_error(&format!("Unknown LLVM code model: '{}'.", any));
+            }
+        }
+    }
+
+    fn is_thrush_file(&self, path: &str) -> bool {
+        PathBuf::from(path).exists() && path.ends_with(".th")
+    }
+
+    fn handle_thrush_file(&mut self, file_path: &str) {
+        let mut path: PathBuf = PathBuf::from(file_path);
+
+        let file_name: String = path.file_name().map_or_else(
+            || {
+                logging::log(
+                    LoggingType::Panic,
+                    &format!("Unknown file name '{}'.", path.display()),
+                );
+                String::from("unknown.th")
+            },
+            |name| name.to_string_lossy().to_string(),
+        );
+
+        if let Ok(canonicalized_path) = path.canonicalize() {
+            path = canonicalized_path;
+        }
+
+        self.options.new_file(file_name, path);
+    }
+
+    fn handle_unknown_argument(&mut self, arg: &str) {
+        if self.position.at_any_other_compiler() && self.options.use_llvm() {
+            self.options
+                .get_mut_llvm_backend_options()
+                .get_mut_compilers_configuration()
+                .add_compiler_arg(arg.to_string());
+            return;
+        }
+
+        logging::log(
+            LoggingType::Panic,
+            &format!("Unknown argument: \"{}\".", arg),
+        );
+    }
+
+    fn advance(&mut self) {
+        if self.is_eof() {
+            self.report_error("Expected value after flag or command.");
+        }
+        self.current += 1;
+    }
+
+    fn peek(&self) -> &str {
+        if self.is_eof() {
+            self.report_error("Expected value after flag or command.");
+        }
+        &self.args[self.current]
+    }
+
+    fn is_eof(&self) -> bool {
+        self.current >= self.args.len()
+    }
+
+    fn probe_as_command(&self, path: &Path) -> bool {
+        Command::new(path).output().is_ok()
+    }
+
+    fn report_error(&self, msg: &str) -> ! {
+        logging::log(LoggingType::Panic, msg);
+        unreachable!()
+    }
+
+    pub fn get_options(&self) -> &CompilerOptions {
+        &self.options
+    }
+
+    fn show_help(&self) -> ! {
         logging::write(
             logging::OutputIn::Stderr,
             &format!(
@@ -863,7 +809,7 @@ impl CommandLine {
             ),
         );
 
-        logging::write(logging::OutputIn::Stderr, "Useful flags:\n\n");
+        logging::write(logging::OutputIn::Stderr, "\nUseful flags:\n\n");
 
         logging::write(
             logging::OutputIn::Stderr,
@@ -886,38 +832,6 @@ impl CommandLine {
         );
 
         process::exit(1);
-    }
-
-    fn probe_as_command(&self, path: &Path) -> bool {
-        Command::new(path).output().is_ok()
-    }
-
-    fn advance(&mut self) {
-        if self.is_eof() {
-            self.report_error("Expected value after flag or command.");
-        }
-
-        self.current += 1;
-    }
-
-    fn peek(&self) -> &str {
-        if self.is_eof() {
-            self.report_error("Expected value after flag or command.");
-        }
-
-        &self.args[self.current]
-    }
-
-    fn is_eof(&self) -> bool {
-        self.current >= self.args.len()
-    }
-
-    fn report_error(&self, msg: &str) {
-        logging::log(LoggingType::Panic, msg);
-    }
-
-    pub fn get_options(&self) -> &CompilerOptions {
-        &self.options
     }
 }
 
