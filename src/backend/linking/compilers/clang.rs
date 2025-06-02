@@ -13,8 +13,11 @@ use crate::standard::{
 
 use super::decompressor;
 
+#[cfg(target_os = "linux")]
 pub static LINUX_X86_64_CLANG: &[u8] =
     include_bytes!("../../../../embedded/compilers/linux/clang/clang-linux-x86_64.tar.xz");
+
+#[cfg(target_os = "linux")]
 pub static LINUX_X86_64_CLANG_MANIFEST: &str =
     include_str!("../../../../embedded/compilers/linux/clang/clang-manifest.json");
 

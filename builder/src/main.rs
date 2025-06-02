@@ -21,8 +21,7 @@ use std::{
 
 mod utils;
 
-const THRUSH_LLVM_C_APIS_GITHUB_URL: &str =
-    "https://api.github.com/repos/thrushlang/toolchains/releases";
+const GITHUB_RELEASES: &str = "https://api.github.com/repos/thrushlang/toolchains/releases";
 
 #[derive(Debug, PartialEq)]
 enum LoggingType {
@@ -84,153 +83,277 @@ impl Builder {
     }
 
     pub fn install(&self) {
-        if self.build_path.exists() {
-            self::log(
-                LoggingType::Log,
-                "The Thrush Compiler dependencies are already exists.\n",
-            );
+        if !self.build_path.exists() {
+            let _ = fs::create_dir_all(&self.build_path);
 
-            return;
+            if let Err(err) = self.install_llvm_c_api() {
+                self::log(LoggingType::Panic, &err);
+            }
+
+            log(LoggingType::Log, "LLVM C API installed.\n");
         }
 
-        let _ = fs::create_dir_all(&self.build_path);
+        if let Ok(thrushc_home) = self.get_thrushc_home() {
+            if !thrushc_home.join("embedded").exists() {
+                if let Err(error) = self.install_embedded_compilers() {
+                    self::log(LoggingType::Panic, &error);
+                }
 
-        if let Err(err) = self.install_llvm_c_api() {
-            self::log(LoggingType::Panic, &err);
+                log(LoggingType::Log, "Embedded compilers installed.\n");
+            }
         }
 
         self::log(
             LoggingType::Log,
-            "\nThe Thrush Compiler dependencies are succesfully installed.\n",
+            "The Thrush Compiler dependencies are succesfully installed.\n",
         );
     }
 
-    fn install_llvm_c_api(&self) -> Result<(), String> {
-        if let Ok(mut llvm_c_apis) = isahc::get(THRUSH_LLVM_C_APIS_GITHUB_URL) {
-            if let Ok(llvm_c_apis_json) = llvm_c_apis.json::<Value>() {
-                let all_llvm_c_apis: &Vec<Value> =
-                    llvm_c_apis_json.as_array().expect("Expected 'array' type.");
+    fn install_embedded_compilers(&self) -> Result<(), String> {
+        log(LoggingType::Log, "Installing embedded compilers...\n");
 
-                let latest_llvm_c_api: Option<&Value> = all_llvm_c_apis
-                    .iter()
-                    .filter(|llvm_c_api| {
-                        let llvm_c_api = llvm_c_api.as_object().unwrap();
+        let mut releases: Response<Body> = isahc::get(GITHUB_RELEASES)
+            .map_err(|_| "Unable to get releases of embedded compilers.")?;
 
-                        let tag_name_to_find: &'static str = if cfg!(target_os = "windows") {
-                            "LLVM-C-API-WINDOWS"
-                        } else {
-                            "LLVM-C-API-LINUX"
-                        };
+        let releases_json: Value = releases
+            .json::<Value>()
+            .map_err(|_| "Unable to convert github releases to json format.")?;
 
-                        llvm_c_api
-                            .get("tag_name")
-                            .expect("Expected to get 'tag_name' field.")
-                            .as_str()
-                            .expect("Expected '&str' type.")
-                            .starts_with(tag_name_to_find)
-                    })
-                    .max_by(|left, right| {
-                        let left: &Map<String, Value> =
-                            left.as_object().expect("Expected 'object' type.");
+        let raw_releases_json: &Vec<Value> = releases_json
+            .as_array()
+            .ok_or("Unable to convert github releases json format to array.")?;
 
-                        let right: &Map<String, Value> =
-                            right.as_object().expect("Expected 'object' type.");
+        let tag_to_find: &'static str = if cfg!(target_os = "windows") {
+            "CLANG-WINDOWS"
+        } else {
+            "CLANG-LINUX"
+        };
 
-                        let tag_name_pattern_to_replace: &'static str =
-                            if cfg!(target_os = "windows") {
-                                "LLVM-C-API-WINDOWS-v"
-                            } else {
-                                "LLVM-C-API-LINUX-v"
-                            };
+        let tag_name_pattern_to_replace: &'static str = if cfg!(target_os = "windows") {
+            "CLANG-WINDOWS-v"
+        } else {
+            "CLANG-LINUX-v"
+        };
 
-                        let left_tag_name: String = left
-                            .get("tag_name")
-                            .expect("Expected to get 'tag_name' field.")
-                            .as_str()
-                            .expect("Expected '&str' type.")
-                            .replace(tag_name_pattern_to_replace, "");
+        let latest_embedded_compiler: Option<&Map<String, Value>> = raw_releases_json
+            .iter()
+            .filter_map(|release| {
+                let release_obj = release.as_object()?;
+                let tag_name = release_obj.get("tag_name")?.as_str()?;
 
-                        let right_tag_name: String = right
-                            .get("tag_name")
-                            .expect("Expected to get 'tag_name' field.")
-                            .as_str()
-                            .expect("Expected '&str' type.")
-                            .replace(tag_name_pattern_to_replace, "");
-
-                        let left_version: u8 = left_tag_name
-                            .split('.')
-                            .filter_map(|x| x.parse::<u8>().ok())
-                            .collect::<Vec<_>>()
-                            .iter()
-                            .sum();
-
-                        let right_version: u8 = right_tag_name
-                            .split('.')
-                            .filter_map(|x| x.parse::<u8>().ok())
-                            .collect::<Vec<_>>()
-                            .iter()
-                            .sum();
-
-                        left_version.cmp(&right_version)
-                    });
-
-                if latest_llvm_c_api.is_none() {
-                    return Err("No windows LLVM-C APIs found.".into());
+                if tag_name.starts_with(tag_to_find) {
+                    Some(release_obj)
+                } else {
+                    None
                 }
+            })
+            .max_by(|left, right| {
+                let extract_version_sum = |item: &&Map<String, Value>| -> u8 {
+                    if let Some(tag_name) = item.get("tag_name").and_then(|v| v.as_str()) {
+                        if tag_name.starts_with(tag_name_pattern_to_replace) {
+                            let version_string = tag_name.replace(tag_name_pattern_to_replace, "");
+                            return version_string
+                                .split('.')
+                                .filter_map(|x| x.parse::<u8>().ok())
+                                .sum();
+                        }
+                    }
+                    0
+                };
 
-                if let Some(latest_llvm_c_api) = latest_llvm_c_api {
-                    let llvm_c_api: &Map<String, Value> = latest_llvm_c_api
-                        .as_object()
-                        .expect("Expected 'object' type.");
+                let left_version = extract_version_sum(left);
+                let right_version = extract_version_sum(right);
+                left_version.cmp(&right_version)
+            });
 
-                    let assets: &Vec<Value> = llvm_c_api
-                        .get("assets")
-                        .expect("Expected to get 'assets' field.")
-                        .as_array()
-                        .expect("Expected 'array' type");
+        let embedded_compiler: &Map<String, Value> = latest_embedded_compiler
+            .ok_or("No embedded compiler was found for the current operating system.")?;
 
-                    let links: Vec<&str> = assets
-                        .iter()
-                        .map(|asset| {
-                            let asset: &Map<String, Value> =
-                                asset.as_object().expect("Expected 'object' type.");
+        let assets = embedded_compiler
+            .get("assets")
+            .and_then(|v| v.as_array())
+            .ok_or("Unable to get assets from the latest embedded compiler.")?;
 
-                            asset
-                                .get("browser_download_url")
-                                .expect("Expecteed to get 'browser_download_url' field.")
-                                .as_str()
-                                .expect("Expected '&str' type.")
-                        })
-                        .collect();
+        let mut links: Vec<&str> = Vec::with_capacity(10);
+        let mut names: Vec<&str> = Vec::with_capacity(10);
 
-                    let names: Vec<&str> = assets
-                        .iter()
-                        .map(|asset| {
-                            let asset: &Map<String, Value> =
-                                asset.as_object().expect("Expected 'object' type.");
-
-                            asset
-                                .get("name")
-                                .expect("Expecteed to get 'name' field.")
-                                .as_str()
-                                .expect("Expected '&str' type.")
-                        })
-                        .collect();
-
-                    self.download_and_install_llvm_libraries(links, names)?;
-
-                    return Ok(());
+        for asset in assets {
+            if let Some(asset_obj) = asset.as_object() {
+                if let Some(url) = asset_obj
+                    .get("browser_download_url")
+                    .and_then(|v| v.as_str())
+                {
+                    if let Some(name) = asset_obj.get("name").and_then(|v| v.as_str()) {
+                        links.push(url);
+                        names.push(name);
+                    }
                 }
             }
-
-            return Err(
-                "The request 'https://api.github.com/repos/thrushlang/toolchains/releases' could not be transformed into json.".into(),
-            );
         }
 
-        Err(
-            "A request could not be made to 'https://api.github.com/repos/thrushlang/toolchains/releases'.".into(),
-        )
+        if links.is_empty() || names.is_empty() {
+            return Err("No valid assets found in the latest embedded compiler release.".into());
+        }
+
+        self.download_and_install_embedded_compilers(links, names)
+    }
+
+    fn install_llvm_c_api(&self) -> Result<(), String> {
+        log(LoggingType::Log, "Installing LLVM C API...\n");
+
+        let mut llvm_c_apis: Response<Body> = isahc::get(GITHUB_RELEASES)
+            .map_err(|_| "Could not make request to GitHub releases API.".to_string())?;
+
+        let llvm_c_apis_json: Value = llvm_c_apis
+            .json::<Value>()
+            .map_err(|_| "Could not parse response as JSON.".to_string())?;
+
+        let all_llvm_c_apis: &Vec<Value> = llvm_c_apis_json
+            .as_array()
+            .ok_or("Expected array in JSON response.")?;
+
+        let tag_name_to_find: &'static str = if cfg!(target_os = "windows") {
+            "LLVM-C-API-WINDOWS"
+        } else {
+            "LLVM-C-API-LINUX"
+        };
+
+        let tag_name_pattern_to_replace: &'static str = if cfg!(target_os = "windows") {
+            "LLVM-C-API-WINDOWS-v"
+        } else {
+            "LLVM-C-API-LINUX-v"
+        };
+
+        let latest_llvm_c_api: Option<&Value> = all_llvm_c_apis
+            .iter()
+            .filter_map(|llvm_c_api| {
+                let obj = llvm_c_api.as_object()?;
+                let tag_name = obj.get("tag_name")?.as_str()?;
+
+                if tag_name.starts_with(tag_name_to_find) {
+                    Some(llvm_c_api)
+                } else {
+                    None
+                }
+            })
+            .max_by(|left, right| {
+                let extract_version = |item: &Value| -> u8 {
+                    if let Some(obj) = item.as_object() {
+                        if let Some(tag_name) = obj.get("tag_name").and_then(|v| v.as_str()) {
+                            let version_string = tag_name.replace(tag_name_pattern_to_replace, "");
+                            return version_string
+                                .split('.')
+                                .filter_map(|x| x.parse::<u8>().ok())
+                                .sum();
+                        }
+                    }
+                    0
+                };
+
+                let left_version = extract_version(left);
+                let right_version = extract_version(right);
+                left_version.cmp(&right_version)
+            });
+
+        if let Some(latest_llvm_c_api) = latest_llvm_c_api {
+            if let Some(llvm_c_api) = latest_llvm_c_api.as_object() {
+                if let Some(assets) = llvm_c_api.get("assets").and_then(|v| v.as_array()) {
+                    let mut links: Vec<&str> = Vec::with_capacity(10);
+                    let mut names: Vec<&str> = Vec::with_capacity(10);
+
+                    for asset in assets {
+                        if let Some(asset_obj) = asset.as_object() {
+                            if let Some(download_url) = asset_obj
+                                .get("browser_download_url")
+                                .and_then(|v| v.as_str())
+                            {
+                                if let Some(name) = asset_obj.get("name").and_then(|v| v.as_str()) {
+                                    links.push(download_url);
+                                    names.push(name);
+                                }
+                            }
+                        }
+                    }
+
+                    if !links.is_empty() && !names.is_empty() {
+                        return self.download_and_install_llvm_libraries(links, names);
+                    }
+                }
+            }
+        }
+
+        Err("No compatible LLVM-C API releases found.".to_string())
+    }
+
+    fn download_and_install_embedded_compilers(
+        &self,
+        links: Vec<&str>,
+        names: Vec<&str>,
+    ) -> Result<(), String> {
+        if links.len() != names.len() {
+            return Err("Links and names have different lengths.".to_string());
+        }
+
+        let client: HttpClient = HttpClient::builder()
+            .redirect_policy(RedirectPolicy::Follow)
+            .build()
+            .map_err(|e| format!("Failed to create HTTP client: {}", e))?;
+
+        for (link, name) in links.iter().zip(names.iter()) {
+            let full_path: PathBuf = if cfg!(target_os = "linux") {
+                let thrushc_path: PathBuf = self.get_thrushc_home()?;
+
+                let base_path: PathBuf = if name.contains("clang") {
+                    thrushc_path.join("embedded/compilers/linux/clang")
+                } else {
+                    thrushc_path.join("embedded/compilers/linux")
+                };
+
+                let _ = fs::create_dir_all(&base_path);
+
+                base_path.join(name)
+            } else {
+                let thrushc_path: PathBuf = self.get_thrushc_home()?;
+
+                let base_path: PathBuf = if name.contains("clang") {
+                    thrushc_path.join("embedded/compilers/windows/clang")
+                } else {
+                    thrushc_path.join("embedded/compilers/windows")
+                };
+
+                let _ = fs::create_dir_all(&base_path);
+
+                base_path.join(name)
+            };
+
+            if full_path.exists() {
+                continue;
+            }
+
+            let mut response: Response<Body> = client
+                .get(link.to_string())
+                .map_err(|e| format!("Failed to download {}: {}", link, e))?;
+
+            if !response.status().is_success() {
+                return Err(format!(
+                    "Failed to download {}: HTTP {}",
+                    link,
+                    response.status()
+                ));
+            }
+
+            let bytes = response
+                .bytes()
+                .map_err(|e| format!("Failed to read response for {}: {}", link, e))?;
+
+            let mut file = File::create(&full_path)
+                .map_err(|e| format!("Failed to create file {:?}: {}", full_path, e))?;
+
+            file.write_all(&bytes)
+                .map_err(|e| format!("Failed to write to file {:?}: {}", full_path, e))?;
+        }
+
+        Ok(())
     }
 
     fn download_and_install_llvm_libraries(
@@ -253,6 +376,10 @@ impl Builder {
             let mut response: Response<Body> = client
                 .get(link.to_string())
                 .map_err(|e| format!("Failed to download {}: {}", link, e))?;
+
+            if full_path.exists() {
+                continue;
+            }
 
             if !response.status().is_success() {
                 return Err(format!(
@@ -312,6 +439,22 @@ impl Builder {
         }
 
         Ok(())
+    }
+
+    fn get_thrushc_home(&self) -> Result<PathBuf, String> {
+        if let Ok(current_dir) = env::current_dir() {
+            for ancestor in current_dir.ancestors() {
+                if let Some(file_name_os_str) = ancestor.file_name() {
+                    if let Some(file_name_str) = file_name_os_str.to_str() {
+                        if file_name_str == "thrushc" {
+                            return Ok(ancestor.to_path_buf());
+                        }
+                    }
+                }
+            }
+        }
+
+        Err("No 'thrushc' found.".into())
     }
 
     fn decompress_file(&self, file_path: &Path) -> Result<(), String> {
