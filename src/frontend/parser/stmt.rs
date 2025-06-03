@@ -26,7 +26,7 @@ use crate::{
 
 use super::{
     ParserContext,
-    contexts::{InstructionPosition, MethodsType, SyncPosition, TypePosition},
+    contexts::{InstructionPosition, MethodsType, SyncPosition},
     expression, typegen,
 };
 
@@ -260,10 +260,6 @@ fn build_method<'instr>(
             continue;
         }
 
-        parser_ctx
-            .get_mut_type_ctx()
-            .set_position(TypePosition::BindParameter);
-
         if this_is_declared && parser_ctx.check(TokenKind::This) {
             return Err(ThrushCompilerIssue::Error(
                 String::from("Syntax error"),
@@ -326,10 +322,6 @@ fn build_method<'instr>(
         }
 
         bind_parameters_types.push(parameter_type.clone());
-
-        parser_ctx
-            .get_mut_type_ctx()
-            .set_position(TypePosition::NoRelevant);
 
         bind_parameters.push(ThrushStatement::BindParameter {
             name: parameter_name,
@@ -1030,10 +1022,6 @@ pub fn build_struct<'instr>(
             let field_name: &str = field_tk.lexeme;
             let field_span: Span = field_tk.span;
 
-            parser_ctx
-                .get_mut_type_ctx()
-                .set_position(TypePosition::StructureField);
-
             parser_ctx.consume(
                 TokenKind::Colon,
                 String::from("Syntax error"),
@@ -1047,10 +1035,6 @@ pub fn build_struct<'instr>(
                 .push((field_name, field_type, field_position, field_span));
 
             field_position += 1;
-
-            parser_ctx
-                .get_mut_type_ctx()
-                .set_position(TypePosition::NoRelevant);
 
             if parser_ctx.check(TokenKind::RBrace) {
                 break;
@@ -1190,10 +1174,6 @@ pub fn build_const<'instr>(
 fn build_instr<'instr>(
     parser_ctx: &mut ParserContext<'instr>,
 ) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
-    parser_ctx
-        .get_mut_type_ctx()
-        .set_position(TypePosition::Instr);
-
     let instr_tk: &Token = parser_ctx.consume(
         TokenKind::Instr,
         String::from("Syntax error"),
@@ -1245,15 +1225,6 @@ fn build_instr<'instr>(
 
     let value: ThrushStatement = expression::build_expr(parser_ctx)?;
 
-    if !value.is_lli() {
-        return Err(ThrushCompilerIssue::Error(
-            String::from("Syntax error"),
-            String::from("Low Level Instruction (LLI) was expected."),
-            None,
-            value.get_span(),
-        ));
-    }
-
     if value.is_write() {
         return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
@@ -1273,10 +1244,6 @@ fn build_instr<'instr>(
         .get_mut_symbols()
         .new_lli(name, (instr_type.clone(), span), span)?;
 
-    parser_ctx
-        .get_mut_type_ctx()
-        .set_position(TypePosition::NoRelevant);
-
     let lli: ThrushStatement = ThrushStatement::LLI {
         name,
         kind: instr_type,
@@ -1290,10 +1257,6 @@ fn build_instr<'instr>(
 fn build_local<'instr>(
     parser_ctx: &mut ParserContext<'instr>,
 ) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
-    parser_ctx
-        .get_mut_type_ctx()
-        .set_position(TypePosition::Local);
-
     let local_tk: &Token = parser_ctx.consume(
         TokenKind::Local,
         String::from("Syntax error"),
@@ -1346,10 +1309,6 @@ fn build_local<'instr>(
             span,
         )?;
 
-        parser_ctx
-            .get_mut_type_ctx()
-            .set_position(TypePosition::NoRelevant);
-
         return Ok(ThrushStatement::Local {
             name,
             kind: local_type,
@@ -1378,10 +1337,6 @@ fn build_local<'instr>(
         String::from("Syntax error"),
         String::from("Expected ';'."),
     )?;
-
-    parser_ctx
-        .get_mut_type_ctx()
-        .set_position(TypePosition::NoRelevant);
 
     let local: ThrushStatement = ThrushStatement::Local {
         name,
@@ -1567,10 +1522,6 @@ pub fn build_function<'instr>(
             continue;
         }
 
-        parser_ctx
-            .get_mut_type_ctx()
-            .set_position(TypePosition::Parameter);
-
         let is_mutable: bool = parser_ctx.match_token(TokenKind::Mut)?;
 
         let parameter_tk: &Token = parser_ctx.consume(
@@ -1598,10 +1549,6 @@ pub fn build_function<'instr>(
                 parameter_span,
             ));
         }
-
-        parser_ctx
-            .get_mut_type_ctx()
-            .set_position(TypePosition::NoRelevant);
 
         parameters_types.push(parameter_type.clone());
 

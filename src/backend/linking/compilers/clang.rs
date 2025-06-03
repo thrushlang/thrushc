@@ -21,6 +21,14 @@ pub static LINUX_X86_64_CLANG: &[u8] =
 pub static LINUX_X86_64_CLANG_MANIFEST: &str =
     include_str!("../../../../embedded/compilers/linux/clang/clang-manifest.json");
 
+#[cfg(target_os = "windows")]
+pub static WINDOWS_X86_64_CLANG: &[u8] =
+    include_bytes!("../../../../embedded/compilers/windows/clang/clang-windows-x86_64.zip");
+
+#[cfg(target_os = "windows")]
+pub static WINDOWS_X86_64_CLANG_MANIFEST: &str =
+    include_str!("../../../../embedded/compilers/linux/clang/clang-manifest.json");
+
 pub struct Clang<'clang> {
     files: &'clang [PathBuf],
     config: &'clang CompilersConfiguration,
@@ -43,19 +51,18 @@ impl<'clang> Clang<'clang> {
     pub fn link(&self) -> Result<Duration, ()> {
         let start_time: Instant = Instant::now();
 
-        if cfg!(target_os = "linux") {
+        #[cfg(target_os = "linux")]
+        {
             if self.config.use_clang() {
                 let embedded_raw_clang: (&'static [u8], &'static str, PathBuf, PathBuf, PathBuf) =
-                    self::get_x86_64_linux_clang();
-
+                    get_x86_64_linux_clang();
                 let clang_raw_bytes: &'static [u8] = embedded_raw_clang.0;
                 let clang_manifest: &'static str = embedded_raw_clang.1;
-
                 let clang_manifest_path: PathBuf = embedded_raw_clang.2;
                 let clang_tar_path: PathBuf = embedded_raw_clang.3;
                 let clang_output_path: PathBuf = embedded_raw_clang.4;
 
-                if let Ok(clang_path) = decompressor::dump_x86_64_linux_clang(
+                if let Ok(clang_path) = decompressor::dump_x86_64_clang(
                     clang_manifest,
                     clang_raw_bytes,
                     clang_manifest_path,
@@ -80,15 +87,56 @@ impl<'clang> Clang<'clang> {
                 return Err(());
             }
 
-            return Err(());
-        } else {
-            logging::log(
-                LoggingType::Error,
-                "C compiler 'clang' is not soported for the current operating system.",
-            );
+            Err(())
         }
 
-        Err(())
+        #[cfg(target_os = "windows")]
+        {
+            if self.config.use_clang() {
+                let embedded_raw_clang: (&'static [u8], &'static str, PathBuf, PathBuf, PathBuf) =
+                    get_x86_64_windows_clang();
+                let clang_raw_bytes: &'static [u8] = embedded_raw_clang.0;
+                let clang_manifest: &'static str = embedded_raw_clang.1;
+                let clang_manifest_path: PathBuf = embedded_raw_clang.2;
+                let clang_tar_path: PathBuf = embedded_raw_clang.3;
+                let clang_output_path: PathBuf = embedded_raw_clang.4;
+
+                if let Ok(clang_path) = decompressor::dump_x86_64_clang(
+                    clang_manifest,
+                    clang_raw_bytes,
+                    clang_manifest_path,
+                    clang_tar_path,
+                    clang_output_path,
+                ) {
+                    if self.handle_command(&mut self.build_clang_command(&clang_path)) {
+                        return Ok(start_time.elapsed());
+                    }
+
+                    return Err(());
+                }
+
+                return Err(());
+            }
+
+            if let Some(custom_clang) = self.config.get_custom_clang() {
+                if self.handle_command(&mut self.build_clang_command(custom_clang)) {
+                    return Ok(start_time.elapsed());
+                }
+                return Err(());
+            }
+
+            return Err(());
+        }
+
+        #[cfg(not(any(target_os = "linux", target_os = "windows")))]
+        {
+            logging::log(
+                LoggingType::Error,
+                "C compiler 'clang' is not supported for the current operating system.",
+            );
+
+            Err(())
+        }
     }
 
     pub fn build_clang_command(&self, clang_path: &Path) -> Command {
@@ -139,12 +187,24 @@ impl<'clang> Clang<'clang> {
     }
 }
 
+#[cfg(target_os = "linux")]
 pub fn get_x86_64_linux_clang() -> (&'static [u8], &'static str, PathBuf, PathBuf, PathBuf) {
     (
         LINUX_X86_64_CLANG,
         LINUX_X86_64_CLANG_MANIFEST,
         PathBuf::from("clang-manifest.json"),
-        PathBuf::from("clang.tar.xz"),
+        PathBuf::from("clang-linux-x86_64.tar.xz"),
         PathBuf::from("clang-17"),
+    )
+}
+
+#[cfg(target_os = "windows")]
+pub fn get_x86_64_windows_clang() -> (&'static [u8], &'static str, PathBuf, PathBuf, PathBuf) {
+    (
+        WINDOWS_X86_64_CLANG,
+        WINDOWS_X86_64_CLANG_MANIFEST,
+        PathBuf::from("clang-manifest.json"),
+        PathBuf::from("clang-windows-x86_64.zip"),
+        PathBuf::from("bin"),
     )
 }

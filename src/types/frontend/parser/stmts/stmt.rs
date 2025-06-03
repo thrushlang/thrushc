@@ -293,6 +293,12 @@ pub enum ThrushStatement<'ctx> {
         span: Span,
     },
 
+    Transmute {
+        from: Rc<ThrushStatement<'ctx>>,
+        cast_type: ThrushType,
+        span: Span,
+    },
+
     // Expressions
     Call {
         name: &'ctx str,
@@ -352,7 +358,7 @@ impl<'ctx> ThrushStatement<'ctx> {
             ThrushStatement::Str { kind, .. } => Ok(kind),
             ThrushStatement::Boolean { kind, .. } => Ok(kind),
             ThrushStatement::Char { kind, .. } => Ok(kind),
-            ThrushStatement::Address { .. } => Ok(&ThrushType::Address),
+            ThrushStatement::Address { kind, .. } => Ok(kind),
             ThrushStatement::Constructor { kind, .. } => Ok(kind),
             ThrushStatement::Load { kind, .. } => Ok(kind),
             ThrushStatement::Property { kind, .. } => Ok(kind),
@@ -389,7 +395,7 @@ impl<'ctx> ThrushStatement<'ctx> {
             ThrushStatement::Str { kind, .. } => Ok(kind),
             ThrushStatement::Boolean { kind, .. } => Ok(kind),
             ThrushStatement::Char { kind, .. } => Ok(kind),
-            ThrushStatement::Address { .. } => Ok(&ThrushType::Address),
+            ThrushStatement::Address { kind, .. } => Ok(kind),
             ThrushStatement::Constructor { kind, .. } => Ok(kind),
             ThrushStatement::Load { kind, .. } => Ok(kind),
             ThrushStatement::Property { kind, .. } => Ok(kind),
@@ -399,15 +405,19 @@ impl<'ctx> ThrushStatement<'ctx> {
                 type_to_alloc: kind,
                 ..
             } => Ok(kind),
+            ThrushStatement::FunctionParameter { kind, .. } => Ok(kind),
             ThrushStatement::MethodCall { kind, .. } => Ok(kind),
             ThrushStatement::EnumValue { kind, .. } => Ok(kind),
             ThrushStatement::CastPtr {
                 cast_type: kind, ..
             } => Ok(kind),
+            ThrushStatement::Transmute {
+                cast_type: kind, ..
+            } => Ok(kind),
 
             _ => Err(ThrushCompilerIssue::Error(
                 String::from("Syntax error"),
-                String::from("Expected a valid statemant to get a type."),
+                String::from("Expected a valid statement to get a type."),
                 None,
                 self.get_span(),
             )),
@@ -430,7 +440,7 @@ impl<'ctx> ThrushStatement<'ctx> {
             ThrushStatement::Str { kind, .. } => kind,
             ThrushStatement::Boolean { kind, .. } => kind,
             ThrushStatement::Char { kind, .. } => kind,
-            ThrushStatement::Address { .. } => &ThrushType::Address,
+            ThrushStatement::Address { kind, .. } => kind,
             ThrushStatement::Constructor { kind, .. } => kind,
             ThrushStatement::Load { kind, .. } => kind,
             ThrushStatement::Property { kind, .. } => kind,
@@ -463,6 +473,7 @@ impl<'ctx> ThrushStatement<'ctx> {
             ThrushStatement::Group { span, .. } => *span,
             ThrushStatement::UnaryOp { span, .. } => *span,
             ThrushStatement::CastPtr { span, .. } => *span,
+            ThrushStatement::Transmute { span, .. } => *span,
 
             ThrushStatement::Str { span, .. } => *span,
             ThrushStatement::Boolean { span, .. } => *span,

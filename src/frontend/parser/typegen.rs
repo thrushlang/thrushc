@@ -24,32 +24,18 @@ pub fn build_type(parser_ctx: &mut ParserContext<'_>) -> Result<ThrushType, Thru
             let tk: &Token = parser_ctx.advance()?;
             let span: Span = tk.span;
 
-            if tk_kind.is_mut()
-                && !parser_ctx.get_type_ctx().get_position().is_parameter()
-                && !parser_ctx.get_type_ctx().get_position().is_bind_parameter()
-                && !parser_ctx.get_type_ctx().get_position().is_local()
-            {
-                return Err(ThrushCompilerIssue::Error(
-                    String::from("Syntax error"),
-                    String::from(
-                        "Mutable type is only allowed in functions parameters and locals definitions.",
-                    ),
-                    None,
-                    span,
-                ));
-            }
-
             if tk_kind.is_mut() {
                 return Ok(ThrushType::Mut(self::build_type(parser_ctx)?.into()));
             }
 
-            match tk_kind.as_type() {
+            match tk_kind.as_type(span)? {
                 ty if ty.is_integer_type() => Ok(ty),
                 ty if ty.is_float_type() => Ok(ty),
                 ty if ty.is_bool_type() => Ok(ty),
-                ty if ty.is_ptr_type() && parser_ctx.check(TokenKind::Less) => {
-                    Ok(build_recursive_type(parser_ctx, ThrushType::Ptr(None))?)
-                }
+                ty if ty.is_address_type() => Ok(ty),
+                ty if ty.is_ptr_type() && parser_ctx.check(TokenKind::Less) => Ok(
+                    self::build_recursive_type(parser_ctx, ThrushType::Ptr(None))?,
+                ),
                 ty if ty.is_ptr_type() => Ok(ty),
                 ty if ty.is_void_type() => Ok(ty),
                 ty if ty.is_str_type() => Ok(ty),

@@ -15,6 +15,7 @@ pub trait ConstantSymbolExtensions {
 
 pub trait LLISymbolExtensions {
     fn get_type(&self) -> ThrushType;
+    fn get_span(&self) -> Span;
 }
 
 pub trait FunctionExtensions {

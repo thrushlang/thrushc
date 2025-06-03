@@ -74,8 +74,7 @@ pub fn function_type<'ctx>(
         ThrushType::Str => llvm_context
             .ptr_type(AddressSpace::default())
             .fn_type(&parameters_types, ignore_args),
-
-        ThrushType::Address => {
+        ThrushType::Addr => {
             generate_type(llvm_context, kind).fn_type(&parameters_types, ignore_args)
         }
         ThrushType::Ptr(_) => {
@@ -118,7 +117,7 @@ pub fn generate_type<'ctx>(llvm_context: &'ctx Context, kind: &ThrushType) -> Ba
             thrush_integer_to_llvm_type(llvm_context, kind).into()
         }
         kind if kind.is_float_type() => type_float_to_llvm_float_type(llvm_context, kind).into(),
-        ThrushType::Ptr(_) | ThrushType::Address | ThrushType::Mut(..) => {
+        ThrushType::Ptr(_) | ThrushType::Addr | ThrushType::Mut(..) => {
             llvm_context.ptr_type(AddressSpace::default()).into()
         }
         kind if kind.is_str_type() => llvm_context

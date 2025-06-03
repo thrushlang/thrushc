@@ -57,6 +57,10 @@ impl LLISymbolExtensions for LLISymbol<'_> {
     fn get_type(&self) -> ThrushType {
         self.0.clone()
     }
+
+    fn get_span(&self) -> Span {
+        self.1
+    }
 }
 
 impl ParametersTypes {

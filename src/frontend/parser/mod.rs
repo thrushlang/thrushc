@@ -6,7 +6,7 @@ pub mod symbols;
 pub mod typegen;
 
 use ahash::AHashMap as HashMap;
-use contexts::{MethodsType, ParserControlContext, ParserTypeContext, SyncPosition, TypePosition};
+use contexts::{MethodsType, ParserControlContext, ParserTypeContext, SyncPosition};
 use symbols::SymbolsTable;
 
 use crate::backend::llvm::compiler::builtins;
@@ -222,7 +222,6 @@ impl<'instr> ParserContext<'instr> {
         }
 
         self.control_ctx.set_sync_position(SyncPosition::NoRelevant);
-        self.type_ctx.set_position(TypePosition::NoRelevant);
         self.type_ctx.set_this_methods_type(MethodsType::NoRelevant);
 
         self.symbols.end_parameters();

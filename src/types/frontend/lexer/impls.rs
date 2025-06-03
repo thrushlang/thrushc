@@ -132,7 +132,9 @@ impl std::fmt::Display for TokenKind {
             TokenKind::Address => write!(f, "address"),
             TokenKind::Load => write!(f, "load"),
             TokenKind::Alloc => write!(f, "alloc"),
+            TokenKind::Addr => write!(f, "addr"),
             TokenKind::CastPtr => write!(f, "castptr"),
+            TokenKind::Transmute => write!(f, "transmute"),
             TokenKind::Void => write!(f, "void"),
         }
     }
@@ -174,7 +176,7 @@ impl std::fmt::Display for ThrushType {
 
                 write!(f, "ptr")
             }
-            ThrushType::Address => {
+            ThrushType::Addr => {
                 write!(f, "memory address")
             }
             ThrushType::Void => write!(f, "void"),

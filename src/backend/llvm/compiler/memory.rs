@@ -451,29 +451,3 @@ pub fn alloc_anon<'ctx>(
             .as_pointer_value(),
     }
 }
-
-pub fn memcpy<'ctx>(
-    context: &LLVMCodeGenContext<'_, 'ctx>,
-    dst: PointerValue<'ctx>,
-    src: PointerValue<'ctx>,
-    kind: &ThrushType,
-) {
-    let llvm_builder: &Builder = context.get_llvm_builder();
-    let llvm_context: &Context = context.get_llvm_context();
-
-    let llvm_type: BasicTypeEnum = typegen::generate_type(llvm_context, kind);
-
-    let llvm_preferred_alignment: u32 = context
-        .get_target_data()
-        .get_preferred_alignment(&llvm_type);
-
-    if let Some(size) = llvm_type.size_of() {
-        let _ = llvm_builder.build_memcpy(
-            dst,
-            llvm_preferred_alignment * 2,
-            src,
-            llvm_preferred_alignment,
-            size,
-        );
-    }
-}

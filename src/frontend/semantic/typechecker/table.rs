@@ -38,12 +38,10 @@ impl<'symbol> TypeCheckerSymbolsTable<'symbol> {
         self.methods.insert(name, methods);
     }
 
-    pub fn get_local(&self, name: &'symbol str) -> Option<TypeCheckerLocal<'symbol>> {
-        for scope in (0..=self.scope - 1).rev() {
-            if let Some(scope) = self.locals.get(scope) {
-                if let Some(local) = scope.get(name) {
-                    return Some(local);
-                }
+    pub fn get_local(&mut self, name: &'symbol str) -> Option<TypeCheckerLocal<'symbol>> {
+        for scope in self.locals.iter_mut().rev() {
+            if let Some(any) = scope.get_mut(name) {
+                return Some(any);
             }
         }
 

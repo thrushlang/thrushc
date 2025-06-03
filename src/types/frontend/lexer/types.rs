@@ -56,7 +56,7 @@ pub enum ThrushType {
     Struct(String, Vec<Arc<ThrushType>>),
 
     // Address
-    Address,
+    Addr,
 
     // Void Type
     Void,
@@ -170,7 +170,7 @@ impl ThrushType {
 
     #[inline(always)]
     pub const fn is_address_type(&self) -> bool {
-        matches!(self, ThrushType::Address)
+        matches!(self, ThrushType::Addr)
     }
 
     #[inline(always)]

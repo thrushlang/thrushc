@@ -24,7 +24,8 @@ impl<'clang> GCC<'clang> {
     pub fn link(&self) -> Result<Duration, ()> {
         let start_time: Instant = Instant::now();
 
-        if cfg!(target_os = "linux") {
+        #[cfg(target_os = "linux")]
+        {
             if let Some(gcc_path) = self.config.get_custom_gcc() {
                 if self.config.use_gcc() {
                     if self.handle_command(&mut self.build_gcc_command(gcc_path)) {
@@ -35,15 +36,18 @@ impl<'clang> GCC<'clang> {
                 }
             }
 
-            return Err(());
-        } else {
+            Err(())
+        }
+
+        #[cfg(not(target_os = "linux"))]
+        {
             logging::log(
                 LoggingType::Error,
                 "C compiler 'GCC' is not soported for the current operating system.",
             );
-        }
 
-        Err(())
+            return Err(());
+        }
     }
 
     pub fn build_gcc_command(&self, gcc_path: &Path) -> Command {

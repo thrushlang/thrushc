@@ -14,6 +14,7 @@ lazy_static = "1.5.0"
 tar = "0.4.44"
 xz2 = "0.1.7"
 json = "0.12.4"
+zip = "2.3.0"
 
 llvm-sys = { path = "wrappers/llvm/llvm-sys", features = ["force-static"] }
 inkwell = { path = "wrappers/llvm/inkwell", features = [

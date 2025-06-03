@@ -21,6 +21,7 @@ const MINIMAL_ENUMS_CAPACITY: usize = 255;
 const MINIMAL_STRUCTS_CAPACITY: usize = 255;
 const MINIMAL_PARAMETERS_CAPACITY: usize = 10;
 
+#[derive(Debug)]
 pub struct LinterSymbolsTable<'linter> {
     functions: LinterFunctions<'linter>,
     constants: LinterConstants<'linter>,
@@ -219,9 +220,9 @@ impl<'linter> LinterSymbolsTable<'linter> {
     }
 
     pub fn get_local_info(&mut self, name: &'linter str) -> Option<&mut LinterLocalInfo> {
-        for i in (0..=self.scope - 1).rev() {
-            if self.locals[i].contains_key(name) {
-                return Some(self.locals[i].get_mut(name).unwrap());
+        for scope in self.locals.iter_mut().rev() {
+            if let Some(local) = scope.get_mut(name) {
+                return Some(local);
             }
         }
 
@@ -229,9 +230,9 @@ impl<'linter> LinterSymbolsTable<'linter> {
     }
 
     pub fn get_lli_info(&mut self, name: &'linter str) -> Option<&mut LinterLLIInfo> {
-        for i in (0..=self.scope - 1).rev() {
-            if self.llis[i].contains_key(name) {
-                return Some(self.llis[i].get_mut(name).unwrap());
+        for scope in self.llis.iter_mut().rev() {
+            if let Some(lli) = scope.get_mut(name) {
+                return Some(lli);
             }
         }
 

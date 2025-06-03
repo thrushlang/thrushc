@@ -214,7 +214,24 @@ pub fn build<'ctx>(
 
         logging::log(
             LoggingType::Panic,
-            &format!("Pointer casting could not be perform from: '{}'.", from),
+            &format!(
+                "Pointer casting could not be perform at 'castpr' from: '{}'.",
+                from
+            ),
+        );
+    }
+
+    if let ThrushStatement::Transmute { from, .. } = expression {
+        if let ThrushStatement::Reference { name, .. } = &**from {
+            return context.get_allocated_symbol(name).raw_load().into();
+        }
+
+        logging::log(
+            LoggingType::Panic,
+            &format!(
+                "Pointer casting could not be perform at 'transmute' from: '{}'.",
+                from
+            ),
         );
     }
 

@@ -136,6 +136,7 @@ impl<'stmts> TypeChecker<'stmts> {
         }
 
         if let ThrushStatement::Function {
+            parameters,
             body,
             return_type,
             span,
@@ -145,6 +146,17 @@ impl<'stmts> TypeChecker<'stmts> {
             self.type_ctx
                 .set_type_position(TypeCheckerTypePosition::Function);
             self.type_ctx.set_function_type(return_type);
+
+            for parameter in parameters.iter() {
+                if self.check_mismatch_type(&ThrushType::Void, parameter.get_value_type()?) {
+                    self.add_error(ThrushCompilerIssue::Error(
+                        String::from("Type not allowed"),
+                        String::from("The void type isn't valid a runtime value."),
+                        None,
+                        *span,
+                    ));
+                }
+            }
 
             if body.is_block() {
                 if let Err(type_error) = self.check_stmt(body) {
@@ -200,12 +212,11 @@ impl<'stmts> TypeChecker<'stmts> {
             if self.check_mismatch_type(&ThrushType::Void, local_type) {
                 self.add_error(ThrushCompilerIssue::Error(
                     String::from("Type not allowed"),
-                    String::from("The void type is not permissible as a runtime value."),
+                    String::from("The void type isn't valid a runtime value."),
                     None,
                     *span,
                 ));
             }
-
             let local_value_type: &ThrushType = local_value.get_value_type()?;
 
             if let Err(mismatch_type_error) = self.is_mismatch_type(
@@ -238,7 +249,7 @@ impl<'stmts> TypeChecker<'stmts> {
             if self.check_mismatch_type(&ThrushType::Void, lli_type) {
                 self.add_error(ThrushCompilerIssue::Error(
                     String::from("Type not allowed"),
-                    String::from("The void type is not permissible as a runtime value."),
+                    String::from("The void type isn't valid a runtime value."),
                     None,
                     *span,
                 ));
@@ -598,7 +609,8 @@ impl<'stmts> TypeChecker<'stmts> {
         | ThrushStatement::Write { .. }
         | ThrushStatement::Address { .. }
         | ThrushStatement::Alloc { .. }
-        | ThrushStatement::CastPtr { .. } = stmt
+        | ThrushStatement::CastPtr { .. }
+        | ThrushStatement::Transmute { .. } = stmt
         {
             return Ok(());
         }
@@ -740,6 +752,7 @@ impl<'stmts> TypeChecker<'stmts> {
             }
 
             (ThrushType::Struct(_, _), ThrushType::Ptr(_), None) => Ok(()),
+            (ThrushType::Addr, ThrushType::Addr, None) => Ok(()),
 
             (
                 target_type,

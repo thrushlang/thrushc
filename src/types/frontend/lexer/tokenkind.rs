@@ -1,4 +1,7 @@
-use crate::{backend::llvm::compiler::attributes::LLVMAttribute, frontend::lexer::span::Span};
+use crate::{
+    backend::llvm::compiler::attributes::LLVMAttribute, frontend::lexer::span::Span,
+    standard::errors::standard::ThrushCompilerIssue,
+};
 
 use super::types::ThrushType;
 
@@ -66,6 +69,7 @@ pub enum TokenKind {
     Load,
     Write,
     CastPtr,
+    Transmute,
     Heap,
     Stack,
     Static,
@@ -117,6 +121,7 @@ pub enum TokenKind {
     Str,
     Ptr,
     Void,
+    Addr,
 
     Eof,
 }
@@ -230,6 +235,11 @@ impl TokenKind {
     }
 
     #[inline(always)]
+    pub const fn is_address(&self) -> bool {
+        matches!(self, TokenKind::Addr)
+    }
+
+    #[inline(always)]
     pub const fn is_mut(&self) -> bool {
         matches!(self, TokenKind::Mut)
     }
@@ -280,7 +290,7 @@ impl TokenKind {
     }
 
     #[inline(always)]
-    pub const fn is_type(&self) -> bool {
+    pub fn is_type(&self) -> bool {
         self.is_integer()
             || self.is_float()
             || self.is_bool()
@@ -288,32 +298,40 @@ impl TokenKind {
             || self.is_str()
             || self.is_void()
             || self.is_mut()
+            || self.is_address()
     }
 
     #[inline(always)]
-    pub fn as_type(&self) -> ThrushType {
+    pub fn as_type(&self, span: Span) -> Result<ThrushType, ThrushCompilerIssue> {
         match self {
-            TokenKind::Char => ThrushType::Char,
+            TokenKind::Char => Ok(ThrushType::Char),
 
-            TokenKind::S8 => ThrushType::S8,
-            TokenKind::S16 => ThrushType::S16,
-            TokenKind::S32 => ThrushType::S32,
-            TokenKind::S64 => ThrushType::S64,
+            TokenKind::S8 => Ok(ThrushType::S8),
+            TokenKind::S16 => Ok(ThrushType::S16),
+            TokenKind::S32 => Ok(ThrushType::S32),
+            TokenKind::S64 => Ok(ThrushType::S64),
 
-            TokenKind::U8 => ThrushType::U8,
-            TokenKind::U16 => ThrushType::U16,
-            TokenKind::U32 => ThrushType::U32,
-            TokenKind::U64 => ThrushType::U64,
+            TokenKind::U8 => Ok(ThrushType::U8),
+            TokenKind::U16 => Ok(ThrushType::U16),
+            TokenKind::U32 => Ok(ThrushType::U32),
+            TokenKind::U64 => Ok(ThrushType::U64),
 
-            TokenKind::Bool => ThrushType::Bool,
+            TokenKind::Bool => Ok(ThrushType::Bool),
 
-            TokenKind::F32 => ThrushType::F32,
-            TokenKind::F64 => ThrushType::F64,
+            TokenKind::F32 => Ok(ThrushType::F32),
+            TokenKind::F64 => Ok(ThrushType::F64),
 
-            TokenKind::Str => ThrushType::Str,
-            TokenKind::Ptr => ThrushType::Ptr(None),
+            TokenKind::Str => Ok(ThrushType::Str),
+            TokenKind::Ptr => Ok(ThrushType::Ptr(None)),
+            TokenKind::Addr => Ok(ThrushType::Addr),
+            TokenKind::Void => Ok(ThrushType::Void),
 
-            _ => ThrushType::Void,
+            any => Err(ThrushCompilerIssue::Error(
+                "Syntax error".into(),
+                format!("{} isn't a valid type.", any),
+                None,
+                span,
+            )),
         }
     }
 }

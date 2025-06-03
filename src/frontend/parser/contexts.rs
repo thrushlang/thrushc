@@ -7,16 +7,6 @@ pub enum MethodsType {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub enum TypePosition {
-    Instr,
-    Local,
-    Parameter,
-    BindParameter,
-    StructureField,
-    NoRelevant,
-}
-
-#[derive(Debug, Clone, Copy)]
 pub enum InstructionPosition {
     Methods,
     Method,
@@ -46,7 +36,6 @@ pub struct ParserControlContext {
 pub struct ParserTypeContext {
     function_type: ThrushType,
     methods_type: MethodsType,
-    position: TypePosition,
     bind_instance: bool,
 }
 
@@ -55,17 +44,8 @@ impl ParserTypeContext {
         Self {
             function_type: ThrushType::Void,
             methods_type: MethodsType::NoRelevant,
-            position: TypePosition::NoRelevant,
             bind_instance: false,
         }
-    }
-
-    pub fn get_position(&self) -> TypePosition {
-        self.position
-    }
-
-    pub fn set_position(&mut self, new_position: TypePosition) {
-        self.position = new_position;
     }
 
     pub fn set_function_type(&mut self, new_type: ThrushType) {
@@ -160,24 +140,6 @@ impl ParserControlContext {
 
     pub fn set_unreacheable_code_scope(&mut self, scope: usize) {
         self.unreacheable_code = scope;
-    }
-}
-
-impl TypePosition {
-    pub fn is_parameter(&self) -> bool {
-        matches!(self, TypePosition::Parameter)
-    }
-
-    pub fn is_bind_parameter(&self) -> bool {
-        matches!(self, TypePosition::BindParameter)
-    }
-
-    pub fn is_structure_field(&self) -> bool {
-        matches!(self, TypePosition::StructureField)
-    }
-
-    pub fn is_local(&self) -> bool {
-        matches!(self, TypePosition::Local)
     }
 }
 
