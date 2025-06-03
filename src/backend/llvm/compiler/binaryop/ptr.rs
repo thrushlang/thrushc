@@ -61,7 +61,7 @@ pub fn ptr_binaryop<'ctx>(
         ThrushStatement::NullPtr { .. },
     ) = binary
     {
-        let left_compiled: BasicValueEnum = valuegen::build(context, binary.0, target_type);
+        let left_compiled: BasicValueEnum = valuegen::compile(context, binary.0, target_type);
         let right_compiled: PointerValue =
             llvm_context.ptr_type(AddressSpace::default()).const_null();
 
@@ -76,7 +76,7 @@ pub fn ptr_binaryop<'ctx>(
     {
         let left_compiled: PointerValue =
             llvm_context.ptr_type(AddressSpace::default()).const_null();
-        let right_compiled: BasicValueEnum = valuegen::build(context, binary.2, target_type);
+        let right_compiled: BasicValueEnum = valuegen::compile(context, binary.2, target_type);
 
         return ptr_operation(llvm_builder, left_compiled.into(), right_compiled, binary.1);
     }

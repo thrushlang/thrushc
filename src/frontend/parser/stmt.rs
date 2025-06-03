@@ -706,7 +706,7 @@ fn build_conditional<'instr>(
 
         let elif_condition: ThrushStatement = expression::build_expr(parser_ctx)?;
 
-        let elif_body: ThrushStatement = build_block(parser_ctx)?;
+        let elif_body: ThrushStatement = self::build_block(parser_ctx)?;
 
         if !elif_body.has_block() {
             continue;
@@ -723,7 +723,7 @@ fn build_conditional<'instr>(
 
     if parser_ctx.match_token(TokenKind::Else)? {
         let span: Span = parser_ctx.previous().span;
-        let else_body: ThrushStatement = build_block(parser_ctx)?;
+        let else_body: ThrushStatement = self::build_block(parser_ctx)?;
 
         if else_body.has_block() {
             otherwise = Some(
@@ -1225,15 +1225,6 @@ fn build_instr<'instr>(
 
     let value: ThrushStatement = expression::build_expr(parser_ctx)?;
 
-    if value.is_write() {
-        return Err(ThrushCompilerIssue::Error(
-            String::from("Syntax error"),
-            String::from("Write LLI is cannot be used as a value."),
-            None,
-            value.get_span(),
-        ));
-    }
-
     parser_ctx.consume(
         TokenKind::SemiColon,
         String::from("Syntax error"),
@@ -1552,14 +1543,6 @@ pub fn build_function<'instr>(
 
         parameters_types.push(parameter_type.clone());
 
-        if !declare {
-            parser_ctx.get_mut_symbols().new_parameter(
-                parameter_name,
-                (parameter_type.clone(), false, is_mutable, parameter_span),
-                parameter_span,
-            )?;
-        }
-
         parameters.push(ThrushStatement::FunctionParameter {
             name: parameter_name,
             kind: parameter_type,
@@ -1609,25 +1592,37 @@ pub fn build_function<'instr>(
             span,
         )?;
 
-        parser_ctx.consume(
-            TokenKind::SemiColon,
-            String::from("Syntax error"),
-            String::from("Expected ';'."),
-        )?;
+        if parser_ctx.match_token(TokenKind::SemiColon)? {
+            return Ok(function);
+        }
 
-        parser_ctx.get_mut_symbols().end_parameters();
-        parser_ctx.get_mut_control_ctx().set_inside_function(false);
+        return Ok(ThrushStatement::Null { span });
+    }
 
+    for parameter in parameters.iter() {
+        if let ThrushStatement::FunctionParameter {
+            name,
+            kind,
+            is_mutable,
+            span,
+            ..
+        } = parameter
+        {
+            parser_ctx.get_mut_symbols().new_parameter(
+                name,
+                (kind.clone(), false, *is_mutable, *span),
+                *span,
+            )?;
+        }
+    }
+
+    if parser_ctx.match_token(TokenKind::SemiColon)? {
         return Ok(function);
     }
 
     parser_ctx.get_mut_control_ctx().set_inside_function(true);
 
     let function_body: Rc<ThrushStatement> = self::build_block(parser_ctx)?.into();
-
-    parser_ctx
-        .get_mut_control_ctx()
-        .set_sync_position(SyncPosition::Declaration);
 
     parser_ctx.get_mut_symbols().end_parameters();
     parser_ctx.get_mut_control_ctx().set_inside_function(false);

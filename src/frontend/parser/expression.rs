@@ -85,7 +85,7 @@ pub fn build_expr<'instr>(
 fn or<'instr>(
     parser_ctx: &mut ParserContext<'instr>,
 ) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
-    let mut expression: ThrushStatement = and(parser_ctx)?;
+    let mut expression: ThrushStatement = self::and(parser_ctx)?;
 
     while parser_ctx.match_token(TokenKind::Or)? {
         let operator_tk: &Token = parser_ctx.previous();
@@ -159,62 +159,15 @@ fn casts<'instr>(
 ) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
     let mut expression: ThrushStatement = self::cmp(parser_ctx)?;
 
-    if parser_ctx.match_token(TokenKind::CastPtr)? {
-        let expression_span: Span = expression.get_span();
-        let span: Span = parser_ctx.previous().span;
-
-        if !expression.is_reference() {
-            return Err(ThrushCompilerIssue::Error(
-                String::from("Syntax error"),
-                String::from("Expected any value reference."),
-                None,
-                expression_span,
-            ));
-        }
-
-        if !expression.is_reference_allocated() {
-            return Err(ThrushCompilerIssue::Error(
-                String::from("Syntax error"),
-                String::from("Expected allocated value reference."),
-                None,
-                expression_span,
-            ));
-        }
-
-        let cast_type: ThrushType = typegen::build_type(parser_ctx)?;
-
-        if !cast_type.is_ptr_type() {
-            return Err(ThrushCompilerIssue::Error(
-                String::from("Syntax error"),
-                String::from("Expected any pointer type."),
-                None,
-                span,
-            ));
-        }
-
-        expression = ThrushStatement::CastPtr {
-            from: expression.into(),
-            cast_type,
-            span,
-        };
-    } else if parser_ctx.match_token(TokenKind::Transmute)? {
+    if parser_ctx.match_token(TokenKind::CastRaw)? {
         let expression_span: Span = expression.get_span();
 
         let span: Span = parser_ctx.previous().span;
 
-        if !expression.is_reference_lli() {
-            return Err(ThrushCompilerIssue::Error(
-                String::from("Syntax error"),
-                String::from("Expected LLI reference."),
-                None,
-                expression_span,
-            ));
-        }
-
         if !expression.is_reference_allocated() {
             return Err(ThrushCompilerIssue::Error(
                 String::from("Syntax error"),
-                String::from("Expected allocated LLI reference."),
+                String::from("Expected allocated reference."),
                 None,
                 expression_span,
             ));
@@ -226,7 +179,28 @@ fn casts<'instr>(
             cast_type = ThrushType::Mut(cast_type.into());
         }
 
-        expression = ThrushStatement::Transmute {
+        expression = ThrushStatement::CastRaw {
+            from: expression.into(),
+            cast_type,
+            span,
+        };
+    } else if parser_ctx.match_token(TokenKind::Cast)? {
+        let expression_span: Span = expression.get_span();
+
+        let span: Span = parser_ctx.previous().span;
+
+        if !expression.is_reference_allocated() {
+            return Err(ThrushCompilerIssue::Error(
+                String::from("Syntax error"),
+                String::from("Expected allocated reference."),
+                None,
+                expression_span,
+            ));
+        }
+
+        let cast_type: ThrushType = typegen::build_type(parser_ctx)?;
+
+        expression = ThrushStatement::Cast {
             from: expression.into(),
             cast_type,
             span,
@@ -465,6 +439,15 @@ fn primary<'instr>(
                     ));
                 }
 
+                if !reference.is_reference_allocated() {
+                    return Err(ThrushCompilerIssue::Error(
+                        "Syntax error".into(),
+                        "Expected Low Level Instruction (LLI) allocated.".into(),
+                        None,
+                        span,
+                    ));
+                }
+
                 return Ok(ThrushStatement::Load {
                     load: (Some(name), None),
                     kind: load_type,
@@ -473,20 +456,6 @@ fn primary<'instr>(
             }
 
             let expression: ThrushStatement = self::build_expr(parser_ctx)?;
-
-            let expression_type: &ThrushType = expression.get_value_type()?;
-
-            if !expression_type.is_ptr_type() && !expression_type.is_address_type() {
-                return Err(ThrushCompilerIssue::Error(
-                    "Attemping to access an invalid pointer".into(),
-                    format!(
-                        "Load a low-level instruction is only allowed for pointer types or memory address, not '{}'. ",
-                        expression_type
-                    ),
-                    None,
-                    span,
-                ));
-            }
 
             ThrushStatement::Load {
                 load: (None, Some(expression.into())),
@@ -923,7 +892,7 @@ fn build_method_call<'instr>(
             continue;
         }
 
-        let expression: ThrushStatement = build_expr(parser_ctx)?;
+        let expression: ThrushStatement = self::build_expr(parser_ctx)?;
 
         args.push(expression);
     }
@@ -1164,58 +1133,16 @@ fn build_address<'instr>(
 ) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
     let object: FoundSymbolId = parser_ctx.get_symbols().get_symbols_id(name, span)?;
 
-    let lli_id: (&str, usize) = object.expected_lli(span)?;
-
-    let lli: &LLISymbol = parser_ctx
-        .get_symbols()
-        .get_lli_by_id(lli_id.0, lli_id.1, span)?;
-
-    let lli_type: ThrushType = lli.0.clone();
-
-    if !lli_type.is_ptr_type() && !lli_type.is_struct_type() && !lli_type.is_str_type() {
-        return Err(ThrushCompilerIssue::Error(
-            String::from("Syntax error"),
-            format!(
-                "Indexe is only allowed for pointers and structs, not '{}'. ",
-                lli_type
-            ),
-            None,
-            lli.get_span(),
-        ));
-    }
+    object.expected_lli(span)?;
 
     let mut indexes: Vec<ThrushStatement> = Vec::with_capacity(10);
 
     let index: ThrushStatement = self::build_expr(parser_ctx)?;
 
-    if !index.is_unsigned_integer()? || !index.is_anyu32bit_integer()? {
-        return Err(ThrushCompilerIssue::Error(
-            String::from("Syntax error"),
-            format!(
-                "Expected unsigned integer type (u8, u16, u32), not {}. ",
-                index.get_value_type()?,
-            ),
-            None,
-            index.get_span(),
-        ));
-    }
-
     indexes.push(index);
 
     while parser_ctx.match_token(TokenKind::Comma)? {
         let index: ThrushStatement = self::build_expr(parser_ctx)?;
-
-        if !index.is_unsigned_integer()? || !index.is_anyu32bit_integer()? {
-            return Err(ThrushCompilerIssue::Error(
-                String::from("Syntax error"),
-                format!(
-                    "Expected unsigned integer type (u8, u16, u32), not {}. ",
-                    index.get_value_type()?,
-                ),
-                None,
-                index.get_span(),
-            ));
-        }
 
         indexes.push(index);
     }
@@ -1258,12 +1185,22 @@ fn build_function_call<'instr>(
     let function_type: ThrushType = function.get_type();
     let mut args: Vec<ThrushStatement> = Vec::with_capacity(10);
 
-    while parser_ctx.peek().kind != TokenKind::RParen {
-        if parser_ctx.match_token(TokenKind::Comma)? {
-            continue;
+    loop {
+        if parser_ctx.check(TokenKind::RParen) {
+            break;
         }
 
-        let expression: ThrushStatement = build_expr(parser_ctx)?;
+        let expression: ThrushStatement = self::build_expr(parser_ctx)?;
+
+        if parser_ctx.check(TokenKind::RParen) {
+            break;
+        } else {
+            parser_ctx.consume(
+                TokenKind::Comma,
+                String::from("Syntax error"),
+                String::from("Expected ','."),
+            )?;
+        }
 
         if expression.is_constructor() {
             return Err(ThrushCompilerIssue::Error(

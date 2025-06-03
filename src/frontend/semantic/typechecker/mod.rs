@@ -22,17 +22,20 @@ mod marks;
 mod table;
 
 #[derive(Debug)]
-pub struct TypeChecker<'stmts> {
-    stmts: &'stmts [ThrushStatement<'stmts>],
+pub struct TypeChecker<'type_checker> {
+    stmts: &'type_checker [ThrushStatement<'type_checker>],
     position: usize,
     errors: Vec<ThrushCompilerIssue>,
-    type_ctx: TypeCheckerTypeContext<'stmts>,
-    symbols: TypeCheckerSymbolsTable<'stmts>,
+    type_ctx: TypeCheckerTypeContext<'type_checker>,
+    symbols: TypeCheckerSymbolsTable<'type_checker>,
     diagnostician: Diagnostician,
 }
 
-impl<'stmts> TypeChecker<'stmts> {
-    pub fn new(stmts: &'stmts [ThrushStatement<'stmts>], file: &'stmts CompilerFile) -> Self {
+impl<'type_checker> TypeChecker<'type_checker> {
+    pub fn new(
+        stmts: &'type_checker [ThrushStatement<'type_checker>],
+        file: &'type_checker CompilerFile,
+    ) -> Self {
         Self {
             stmts,
             position: 0,
@@ -49,7 +52,7 @@ impl<'stmts> TypeChecker<'stmts> {
         while !self.is_eof() {
             let current_stmt: &ThrushStatement = self.peek();
 
-            if let Err(type_error) = self.check_stmt(current_stmt) {
+            if let Err(type_error) = self.analyze_stmt(current_stmt) {
                 self.add_error(type_error);
             }
 
@@ -68,9 +71,12 @@ impl<'stmts> TypeChecker<'stmts> {
         false
     }
 
-    fn check_stmt(&mut self, stmt: &'stmts ThrushStatement) -> Result<(), ThrushCompilerIssue> {
+    fn analyze_stmt(
+        &mut self,
+        stmt: &'type_checker ThrushStatement,
+    ) -> Result<(), ThrushCompilerIssue> {
         if let ThrushStatement::EntryPoint { body, .. } = stmt {
-            if let Err(type_error) = self.check_stmt(body) {
+            if let Err(type_error) = self.analyze_stmt(body) {
                 self.add_error(type_error);
             }
 
@@ -85,27 +91,19 @@ impl<'stmts> TypeChecker<'stmts> {
             ..
         } = stmt
         {
-            if let Err(type_error) = self.check_stmt(local) {
+            if let Err(type_error) = self.analyze_stmt(local) {
                 self.add_error(type_error);
             }
 
-            if let Err(type_error) = self.check_stmt(cond) {
+            if let Err(type_error) = self.analyze_stmt(cond) {
                 self.add_error(type_error);
             }
 
-            if let Err(type_error) = self.check_stmt(actions) {
+            if let Err(type_error) = self.analyze_stmt(actions) {
                 self.add_error(type_error);
             }
 
-            if let Err(type_error) = self.check_stmt(block) {
-                self.add_error(type_error);
-            }
-
-            return Ok(());
-        }
-
-        if let ThrushStatement::Group { expression, .. } = stmt {
-            if let Err(type_error) = self.check_stmt(expression) {
+            if let Err(type_error) = self.analyze_stmt(block) {
                 self.add_error(type_error);
             }
 
@@ -121,7 +119,7 @@ impl<'stmts> TypeChecker<'stmts> {
         {
             let from_type: &ThrushType = value.get_value_type()?;
 
-            if let Err(mismatch_type_error) = self.is_mismatch_type(
+            if let Err(mismatch_type_error) = self.validate_types(
                 target_type,
                 from_type,
                 Some(value),
@@ -159,12 +157,12 @@ impl<'stmts> TypeChecker<'stmts> {
             }
 
             if body.is_block() {
-                if let Err(type_error) = self.check_stmt(body) {
+                if let Err(type_error) = self.analyze_stmt(body) {
                     self.add_error(type_error);
                 }
 
                 if !body.has_return() {
-                    if let Err(mismatch_type_error) = self.is_mismatch_type(
+                    if let Err(mismatch_type_error) = self.validate_types(
                         return_type,
                         &ThrushType::Void,
                         None,
@@ -185,20 +183,6 @@ impl<'stmts> TypeChecker<'stmts> {
             return Ok(());
         }
 
-        if let ThrushStatement::Block { stmts, .. } = stmt {
-            self.begin_scope();
-
-            stmts.iter().for_each(|stmt| {
-                if let Err(type_error) = self.check_stmt(stmt) {
-                    self.add_error(type_error);
-                }
-            });
-
-            self.end_scope();
-
-            return Ok(());
-        }
-
         if let ThrushStatement::Local {
             name,
             kind: local_type,
@@ -211,15 +195,15 @@ impl<'stmts> TypeChecker<'stmts> {
 
             if self.check_mismatch_type(&ThrushType::Void, local_type) {
                 self.add_error(ThrushCompilerIssue::Error(
-                    String::from("Type not allowed"),
-                    String::from("The void type isn't valid a runtime value."),
+                    "Syntax error".into(),
+                    "The void type isn't valid value.".into(),
                     None,
                     *span,
                 ));
             }
             let local_value_type: &ThrushType = local_value.get_value_type()?;
 
-            if let Err(mismatch_type_error) = self.is_mismatch_type(
+            if let Err(mismatch_type_error) = self.validate_types(
                 local_type,
                 local_value_type,
                 Some(local_value),
@@ -230,7 +214,7 @@ impl<'stmts> TypeChecker<'stmts> {
                 self.add_error(mismatch_type_error);
             }
 
-            if let Err(type_error) = self.check_stmt(local_value) {
+            if let Err(type_error) = self.analyze_stmt(local_value) {
                 self.add_error(type_error);
             }
 
@@ -238,24 +222,36 @@ impl<'stmts> TypeChecker<'stmts> {
         }
 
         if let ThrushStatement::LLI {
+            name,
             kind: lli_type,
             value: lli_value,
             span,
             ..
         } = stmt
         {
+            self.symbols.new_lli(name, (lli_type, *span));
+
             let lli_value_type: &ThrushType = lli_value.get_value_type()?;
 
             if self.check_mismatch_type(&ThrushType::Void, lli_type) {
                 self.add_error(ThrushCompilerIssue::Error(
-                    String::from("Type not allowed"),
-                    String::from("The void type isn't valid a runtime value."),
+                    "Syntax error".into(),
+                    "The void type isn't valid value.".into(),
                     None,
                     *span,
                 ));
             }
 
-            if let Err(mismatch_type_error) = self.is_mismatch_type(
+            if !lli_value_type.is_mut_ptr_type() && !lli_value_type.is_ptr_type() {
+                self.add_error(ThrushCompilerIssue::Error(
+                    "Syntax error".into(),
+                    "Expected always 'mut ptr<T>' or 'ptr<T>' type.".into(),
+                    None,
+                    *span,
+                ));
+            }
+
+            if let Err(mismatch_type_error) = self.validate_types(
                 lli_type,
                 lli_value_type,
                 Some(lli_value),
@@ -266,12 +262,95 @@ impl<'stmts> TypeChecker<'stmts> {
                 self.add_error(mismatch_type_error);
             }
 
-            if let Err(type_error) = self.check_stmt(lli_value) {
+            if let Err(type_error) = self.analyze_stmt(lli_value) {
                 self.add_error(type_error);
             }
 
             return Ok(());
         }
+
+        if let ThrushStatement::Return {
+            expression, span, ..
+        } = stmt
+        {
+            let from_type = if let Some(expression) = expression {
+                expression.get_value_type()?
+            } else {
+                &ThrushType::Void
+            };
+
+            if let Err(error) = self.validate_types(
+                self.type_ctx.get_function_type(),
+                from_type,
+                expression.as_deref(),
+                None,
+                span,
+                TypeCheckerTypeCheckSource::default(),
+            ) {
+                self.add_error(error);
+            }
+        }
+
+        if let ThrushStatement::If {
+            cond, elfs, span, ..
+        } = stmt
+        {
+            if let Err(error) = self.validate_types(
+                &ThrushType::Bool,
+                cond.get_value_type()?,
+                Some(cond),
+                None,
+                span,
+                TypeCheckerTypeCheckSource::default(),
+            ) {
+                self.add_error(error);
+            }
+
+            for elif in elfs.iter() {
+                if let ThrushStatement::Elif { cond, span, .. } = elif {
+                    if let Err(error) = self.validate_types(
+                        &ThrushType::Bool,
+                        cond.get_value_type()?,
+                        Some(cond),
+                        None,
+                        span,
+                        TypeCheckerTypeCheckSource::default(),
+                    ) {
+                        self.add_error(error);
+                    }
+                }
+            }
+
+            return Ok(());
+        }
+
+        if let ThrushStatement::Return {
+            expression,
+            kind,
+            span,
+        } = stmt
+        {
+            if let Err(error) = self.validate_types(
+                self.type_ctx.get_function_type(),
+                kind,
+                expression.as_deref(),
+                None,
+                span,
+                TypeCheckerTypeCheckSource::default(),
+            ) {
+                self.add_error(error);
+            }
+
+            return Ok(());
+        }
+
+        /* ######################################################################
+
+
+            TYPE CHECKER EXPRESSIONS - START
+
+
+        ########################################################################*/
 
         if let ThrushStatement::BinaryOp {
             left,
@@ -290,11 +369,11 @@ impl<'stmts> TypeChecker<'stmts> {
                 self.add_error(mismatch_type_error);
             }
 
-            if let Err(type_error) = self.check_stmt(left) {
+            if let Err(type_error) = self.analyze_stmt(left) {
                 self.add_error(type_error);
             }
 
-            if let Err(type_error) = self.check_stmt(right) {
+            if let Err(type_error) = self.analyze_stmt(right) {
                 self.add_error(type_error);
             }
 
@@ -314,7 +393,48 @@ impl<'stmts> TypeChecker<'stmts> {
                 self.add_error(mismatch_type_error);
             }
 
-            if let Err(type_error) = self.check_stmt(expression) {
+            if let Err(type_error) = self.analyze_stmt(expression) {
+                self.add_error(type_error);
+            }
+
+            return Ok(());
+        }
+
+        if let ThrushStatement::Cast {
+            from,
+            cast_type,
+            span,
+        } = stmt
+        {
+            let from_type: &ThrushType = from.get_value_type()?;
+
+            if !cast_type.is_primitive() {
+                self.add_error(ThrushCompilerIssue::Error(
+                    "Syntax error".into(),
+                    "Value is not a primitive type.".into(),
+                    None,
+                    *span,
+                ));
+            }
+
+            if !cast_type.is_primitive() {
+                self.add_error(ThrushCompilerIssue::Error(
+                    "Syntax error".into(),
+                    "Cast type is not a primitive type.".into(),
+                    None,
+                    *span,
+                ));
+            }
+
+            if let Err(error) = self.validate_type_cast(cast_type, from_type, span) {
+                self.add_error(error);
+            }
+
+            return Ok(());
+        }
+
+        if let ThrushStatement::Group { expression, .. } = stmt {
+            if let Err(type_error) = self.analyze_stmt(expression) {
                 self.add_error(type_error);
             }
 
@@ -351,22 +471,22 @@ impl<'stmts> TypeChecker<'stmts> {
                     return Ok(());
                 }
 
-                if !ignore_more_arguments {
-                    for (target_type, expr) in parameter_types.iter().zip(args.iter()) {
-                        let from_type: &ThrushType = expr.get_value_type()?;
-                        let span: Span = expr.get_span();
+                for (target_type, expr) in parameter_types.iter().zip(args.iter()) {
+                    let from_type: &ThrushType = expr.get_value_type()?;
+                    let span: Span = expr.get_span();
 
-                        if let Err(mismatched_types_error) = self.is_mismatch_type(
-                            target_type,
-                            from_type,
-                            Some(expr),
-                            None,
-                            &span,
-                            TypeCheckerTypeCheckSource::Call,
-                        ) {
-                            self.add_error(mismatched_types_error);
-                        }
+                    if let Err(error) = self.validate_types(
+                        target_type,
+                        from_type,
+                        Some(expr),
+                        None,
+                        &span,
+                        TypeCheckerTypeCheckSource::Call,
+                    ) {
+                        self.add_error(error);
                     }
+
+                    self.analyze_stmt(expr)?;
                 }
 
                 return Ok(());
@@ -412,20 +532,22 @@ impl<'stmts> TypeChecker<'stmts> {
                         return Ok(());
                     }
 
-                    for (target_type, arg) in types.iter().zip(args.iter()) {
-                        let from_type: &ThrushType = arg.get_value_type()?;
-                        let span: Span = arg.get_span();
+                    for (target_type, expr) in types.iter().zip(args.iter()) {
+                        let from_type: &ThrushType = expr.get_value_type()?;
+                        let span: Span = expr.get_span();
 
-                        if let Err(mismatched_types_error) = self.is_mismatch_type(
+                        if let Err(error) = self.validate_types(
                             target_type,
                             from_type,
-                            Some(arg),
+                            Some(expr),
                             None,
                             &span,
                             TypeCheckerTypeCheckSource::Call,
                         ) {
-                            self.add_error(mismatched_types_error);
+                            self.add_error(error);
                         }
+
+                        self.analyze_stmt(expr)?;
                     }
 
                     return Ok(());
@@ -458,7 +580,7 @@ impl<'stmts> TypeChecker<'stmts> {
         {
             if let (Some(local_name), None) = source {
                 if let Some(local_type) = self.symbols.get_local(local_name) {
-                    if let Err(mismatched_types_error) = self.is_mismatch_type(
+                    if let Err(error) = self.validate_types(
                         local_type,
                         value.get_value_type()?,
                         Some(value),
@@ -466,7 +588,7 @@ impl<'stmts> TypeChecker<'stmts> {
                         span,
                         TypeCheckerTypeCheckSource::default(),
                     ) {
-                        self.add_error(mismatched_types_error);
+                        self.add_error(error);
                     }
 
                     return Ok(());
@@ -482,7 +604,7 @@ impl<'stmts> TypeChecker<'stmts> {
             }
 
             if let (None, Some(expression)) = source {
-                if let Err(mismatched_types_error) = self.is_mismatch_type(
+                if let Err(error) = self.validate_types(
                     expression.get_value_type()?,
                     value.get_value_type()?,
                     Some(value),
@@ -490,7 +612,7 @@ impl<'stmts> TypeChecker<'stmts> {
                     span,
                     TypeCheckerTypeCheckSource::default(),
                 ) {
-                    self.add_error(mismatched_types_error);
+                    self.add_error(error);
                 }
 
                 return Ok(());
@@ -505,61 +627,6 @@ impl<'stmts> TypeChecker<'stmts> {
             ));
         }
 
-        if let ThrushStatement::Return {
-            expression, span, ..
-        } = stmt
-        {
-            let from_type = if let Some(expression) = expression {
-                expression.get_value_type()?
-            } else {
-                &ThrushType::Void
-            };
-
-            if let Err(mismatched_types_error) = self.is_mismatch_type(
-                self.type_ctx.get_function_type(),
-                from_type,
-                expression.as_deref(),
-                None,
-                span,
-                TypeCheckerTypeCheckSource::default(),
-            ) {
-                self.add_error(mismatched_types_error);
-            }
-        }
-
-        if let ThrushStatement::If {
-            cond, elfs, span, ..
-        } = stmt
-        {
-            if let Err(mismatched_types_error) = self.is_mismatch_type(
-                &ThrushType::Bool,
-                cond.get_value_type()?,
-                Some(cond),
-                None,
-                span,
-                TypeCheckerTypeCheckSource::default(),
-            ) {
-                self.add_error(mismatched_types_error);
-            }
-
-            for elif in elfs.iter() {
-                if let ThrushStatement::Elif { cond, span, .. } = elif {
-                    if let Err(mismatched_types_error) = self.is_mismatch_type(
-                        &ThrushType::Bool,
-                        cond.get_value_type()?,
-                        Some(cond),
-                        None,
-                        span,
-                        TypeCheckerTypeCheckSource::default(),
-                    ) {
-                        self.add_error(mismatched_types_error);
-                    }
-                }
-            }
-
-            return Ok(());
-        }
-
         if let ThrushStatement::Constructor { arguments, .. } = stmt {
             let args: &[(&str, ThrushStatement<'_>, ThrushType, u32)] = &arguments.1;
 
@@ -570,7 +637,7 @@ impl<'stmts> TypeChecker<'stmts> {
                 let target_type: &ThrushType = &arg.2;
                 let from_type: &ThrushType = expression.get_value_type()?;
 
-                if let Err(mismatched_types_error) = self.is_mismatch_type(
+                if let Err(error) = self.validate_types(
                     target_type,
                     from_type,
                     Some(expression),
@@ -578,28 +645,96 @@ impl<'stmts> TypeChecker<'stmts> {
                     &expression_span,
                     TypeCheckerTypeCheckSource::default(),
                 ) {
-                    self.add_error(mismatched_types_error);
+                    self.add_error(error);
                 }
             }
 
             return Ok(());
         }
 
-        if let ThrushStatement::Return {
-            expression,
-            kind,
+        if let ThrushStatement::Block { stmts, .. } = stmt {
+            self.begin_scope();
+
+            stmts.iter().for_each(|stmt| {
+                if let Err(type_error) = self.analyze_stmt(stmt) {
+                    self.add_error(type_error);
+                }
+            });
+
+            self.end_scope();
+
+            return Ok(());
+        }
+
+        if let ThrushStatement::Address {
+            name,
+            indexes,
             span,
+            ..
         } = stmt
         {
-            if let Err(mismatched_types_error) = self.is_mismatch_type(
-                self.type_ctx.get_function_type(),
-                kind,
-                expression.as_deref(),
-                None,
-                span,
-                TypeCheckerTypeCheckSource::default(),
-            ) {
-                self.add_error(mismatched_types_error);
+            if let Some(lli) = self.symbols.get_lli(name) {
+                let any_type: &ThrushType = lli.0;
+
+                if !any_type.is_mut_ptr_type() && !any_type.is_ptr_type() {
+                    self.add_error(ThrushCompilerIssue::Error(
+                        "Syntax error".into(),
+                        "Expected 'mut ptr<T>' or 'ptr<T>'.".into(),
+                        None,
+                        *span,
+                    ));
+                }
+            }
+
+            for indexe in indexes {
+                if !indexe.is_unsigned_integer()? || !indexe.is_anyu32bit_integer()? {
+                    self.add_error(ThrushCompilerIssue::Error(
+                        "Syntax error".into(),
+                        "Expected any unsigned integer less than or equal to 32 bits.".into(),
+                        None,
+                        *span,
+                    ));
+                }
+            }
+
+            return Ok(());
+        }
+
+        if let ThrushStatement::Load { load, .. } = stmt {
+            if let Some(name) = load.0 {
+                if let Some(any) = self.symbols.get_lli(name) {
+                    let any_type: &ThrushType = any.0;
+                    let any_span: Span = any.1;
+
+                    if !any_type.is_mut_ptr_type()
+                        && !any_type.is_ptr_type()
+                        && !any_type.is_address_type()
+                    {
+                        self.add_error(ThrushCompilerIssue::Error(
+                            "Syntax error".into(),
+                            "Expected 'mut ptr<T>', ptr<T> or 'addr' type.".into(),
+                            None,
+                            any_span,
+                        ));
+                    }
+                }
+            }
+
+            if let Some(any) = &load.1 {
+                let any_type: &ThrushType = any.get_value_type()?;
+                let any_span: Span = any.get_span();
+
+                if !any_type.is_mut_ptr_type()
+                    && !any_type.is_ptr_type()
+                    && !any_type.is_address_type()
+                {
+                    self.add_error(ThrushCompilerIssue::Error(
+                        "Syntax error".into(),
+                        "Expected 'mut ptr<T>', ptr<T> or 'addr' type.".into(),
+                        None,
+                        any_span,
+                    ));
+                }
             }
 
             return Ok(());
@@ -609,8 +744,7 @@ impl<'stmts> TypeChecker<'stmts> {
         | ThrushStatement::Write { .. }
         | ThrushStatement::Address { .. }
         | ThrushStatement::Alloc { .. }
-        | ThrushStatement::CastPtr { .. }
-        | ThrushStatement::Transmute { .. } = stmt
+        | ThrushStatement::CastRaw { .. } = stmt
         {
             return Ok(());
         }
@@ -659,6 +793,14 @@ impl<'stmts> TypeChecker<'stmts> {
             return Ok(());
         }
 
+        /* ######################################################################
+
+
+            TYPE CHECKER EXPRESSIONS - END
+
+
+        ########################################################################*/
+
         self.errors.push(ThrushCompilerIssue::Bug(
             String::from("Expression not caught"),
             String::from("The expression could not be caught for processing."),
@@ -670,7 +812,28 @@ impl<'stmts> TypeChecker<'stmts> {
         Ok(())
     }
 
-    pub fn is_mismatch_type(
+    fn validate_type_cast(
+        &self,
+        cast_type: &ThrushType,
+        from_type: &ThrushType,
+        span: &Span,
+    ) -> Result<(), ThrushCompilerIssue> {
+        if (cast_type.is_integer_type() && from_type.is_integer_type())
+            || (cast_type.is_float_type() && from_type.is_float_type())
+            || (cast_type.is_bool_type() && from_type.is_bool_type())
+        {
+            Ok(())
+        } else {
+            Err(ThrushCompilerIssue::Error(
+                "Syntax error".into(),
+                format!("Cannot cast '{}' to '{}'", from_type, cast_type),
+                None,
+                *span,
+            ))
+        }
+    }
+
+    pub fn validate_types(
         &self,
         target_type: &ThrushType,
         from_type: &ThrushType,
@@ -692,7 +855,7 @@ impl<'stmts> TypeChecker<'stmts> {
             ..
         }) = expression
         {
-            return self.is_mismatch_type(
+            return self.validate_types(
                 target_type,
                 expression_type,
                 None,
@@ -708,7 +871,7 @@ impl<'stmts> TypeChecker<'stmts> {
             ..
         }) = expression
         {
-            return self.is_mismatch_type(
+            return self.validate_types(
                 target_type,
                 expression_type,
                 None,
@@ -724,7 +887,7 @@ impl<'stmts> TypeChecker<'stmts> {
             ..
         }) = expression
         {
-            return self.is_mismatch_type(
+            return self.validate_types(
                 target_type,
                 expression_type,
                 Some(expression),
@@ -744,7 +907,7 @@ impl<'stmts> TypeChecker<'stmts> {
 
                 target_fields.iter().zip(from_fields.iter()).try_for_each(
                     |(target_field, from_field)| {
-                        self.is_mismatch_type(target_field, from_field, None, None, span, source)
+                        self.validate_types(target_field, from_field, None, None, span, source)
                     },
                 )?;
 
@@ -776,7 +939,7 @@ impl<'stmts> TypeChecker<'stmts> {
                 )
                 | None,
             ) if !target_type.is_mut_type() && source.is_local() => {
-                self.is_mismatch_type(target_type, from_type, expression, operator, span, source)?;
+                self.validate_types(target_type, from_type, expression, operator, span, source)?;
 
                 Ok(())
             }
@@ -803,7 +966,7 @@ impl<'stmts> TypeChecker<'stmts> {
                 )
                 | None,
             ) if !any_type.is_mut_type() && source.is_local() => {
-                self.is_mismatch_type(target_type, any_type, expression, operator, span, source)?;
+                self.validate_types(target_type, any_type, expression, operator, span, source)?;
 
                 Ok(())
             }
@@ -830,14 +993,14 @@ impl<'stmts> TypeChecker<'stmts> {
                 )
                 | None,
             ) => {
-                self.is_mismatch_type(target_type, from_type, expression, operator, span, source)?;
+                self.validate_types(target_type, from_type, expression, operator, span, source)?;
 
                 Ok(())
             }
 
             (ThrushType::Ptr(None), ThrushType::Ptr(None), None) => Ok(()),
             (ThrushType::Ptr(Some(target_type)), ThrushType::Ptr(Some(from_type)), None) => {
-                self.is_mismatch_type(target_type, from_type, expression, operator, span, source)?;
+                self.validate_types(target_type, from_type, expression, operator, span, source)?;
 
                 Ok(())
             }
@@ -1345,7 +1508,7 @@ impl<'stmts> TypeChecker<'stmts> {
             .filter(|stmt| stmt.is_methods())
             .for_each(|stmt| {
                 if let ThrushStatement::Methods { name, methods, .. } = stmt {
-                    let methods: Vec<(&'stmts str, &'stmts [ThrushType])> = methods
+                    let methods: Vec<(&str, &[ThrushType])> = methods
                         .iter()
                         .filter_map(|stmt| match stmt {
                             ThrushStatement::Method {
@@ -1381,7 +1544,7 @@ impl<'stmts> TypeChecker<'stmts> {
         }
     }
 
-    fn peek(&self) -> &'stmts ThrushStatement<'stmts> {
+    fn peek(&self) -> &'type_checker ThrushStatement<'type_checker> {
         &self.stmts[self.position]
     }
 

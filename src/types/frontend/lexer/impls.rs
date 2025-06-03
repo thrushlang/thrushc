@@ -133,8 +133,8 @@ impl std::fmt::Display for TokenKind {
             TokenKind::Load => write!(f, "load"),
             TokenKind::Alloc => write!(f, "alloc"),
             TokenKind::Addr => write!(f, "addr"),
-            TokenKind::CastPtr => write!(f, "castptr"),
-            TokenKind::Transmute => write!(f, "transmute"),
+            TokenKind::CastRaw => write!(f, "castraw"),
+            TokenKind::Cast => write!(f, "cast"),
             TokenKind::Void => write!(f, "void"),
         }
     }

@@ -7,7 +7,7 @@ use {
     crate::{
         standard::diagnostic::Diagnostician,
         types::{
-            backend::llvm::types::{LLVMFunction, LLVMScopeCall, LLVMScopeCalls, SymbolsAllocated},
+            backend::llvm::types::LLVMFunction,
             frontend::{lexer::types::ThrushType, parser::stmts::types::ThrushAttributes},
         },
     },
@@ -33,7 +33,6 @@ pub struct LLVMCodeGenContext<'a, 'ctx> {
     constants: HashMap<&'ctx str, SymbolAllocated<'ctx>>,
     functions: HashMap<&'ctx str, LLVMFunction<'ctx>>,
     blocks: Vec<HashMap<&'ctx str, SymbolAllocated<'ctx>>>,
-    llvm_calls: LLVMScopeCalls<'ctx>,
     lift_instructions: HashMap<&'ctx str, SymbolAllocated<'ctx>>,
     scope: usize,
 }
@@ -57,7 +56,6 @@ impl<'a, 'ctx> LLVMCodeGenContext<'a, 'ctx> {
             constants: HashMap::with_capacity(100),
             functions: HashMap::with_capacity(100),
             blocks: Vec::with_capacity(255),
-            llvm_calls: Vec::with_capacity(100),
             lift_instructions: HashMap::with_capacity(100),
             scope: 0,
         }
@@ -130,10 +128,6 @@ impl<'a, 'ctx> LLVMCodeGenContext<'a, 'ctx> {
         self.functions.insert(name, function);
     }
 
-    pub fn get_allocated_symbols(&self) -> SymbolsAllocated {
-        self.blocks.last().cloned().unwrap()
-    }
-
     pub fn get_allocated_symbol(&self, name: &str) -> SymbolAllocated<'ctx> {
         if let Some(constant) = self.constants.get(name) {
             return constant.clone();
@@ -184,7 +178,6 @@ impl<'a, 'ctx> LLVMCodeGenContext<'a, 'ctx> {
         self.blocks.pop();
 
         self.lift_instructions.clear();
-        self.llvm_calls.clear();
 
         self.scope -= 1;
     }
@@ -226,14 +219,6 @@ impl<'a, 'ctx> LLVMCodeGenContext<'a, 'ctx> {
 
     pub fn get_target_data(&self) -> &TargetData {
         &self.target_data
-    }
-
-    pub fn get_llvm_calls(&self) -> &LLVMScopeCalls<'ctx> {
-        &self.llvm_calls
-    }
-
-    pub fn add_scope_call(&mut self, call: LLVMScopeCall<'ctx>) {
-        self.llvm_calls.push(call);
     }
 }
 

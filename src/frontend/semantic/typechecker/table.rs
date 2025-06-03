@@ -3,8 +3,9 @@ use ahash::AHashMap as HashMap;
 use crate::types::frontend::{
     lexer::types::ThrushType,
     typechecker::types::{
-        TypeCheckerAllMethods, TypeCheckerFunction, TypeCheckerFunctions, TypeCheckerLocal,
-        TypeCheckerLocals, TypeCheckerMethod, TypeCheckerMethods,
+        TypeCheckerAllMethods, TypeCheckerFunction, TypeCheckerFunctions, TypeCheckerLLI,
+        TypeCheckerLLIs, TypeCheckerLocal, TypeCheckerLocals, TypeCheckerMethod,
+        TypeCheckerMethods,
     },
 };
 
@@ -12,6 +13,7 @@ use crate::types::frontend::{
 pub struct TypeCheckerSymbolsTable<'symbol> {
     functions: TypeCheckerFunctions<'symbol>,
     locals: TypeCheckerLocals<'symbol>,
+    llis: TypeCheckerLLIs<'symbol>,
     methods: TypeCheckerMethods<'symbol>,
     scope: usize,
 }
@@ -21,6 +23,7 @@ impl<'symbol> TypeCheckerSymbolsTable<'symbol> {
         Self {
             functions: HashMap::with_capacity(100),
             locals: Vec::with_capacity(255),
+            llis: Vec::with_capacity(255),
             methods: HashMap::with_capacity(100),
             scope: 0,
         }
@@ -28,6 +31,10 @@ impl<'symbol> TypeCheckerSymbolsTable<'symbol> {
 
     pub fn new_local(&mut self, name: &'symbol str, local: TypeCheckerLocal<'symbol>) {
         self.locals.last_mut().unwrap().insert(name, local);
+    }
+
+    pub fn new_lli(&mut self, name: &'symbol str, lli: TypeCheckerLLI<'symbol>) {
+        self.llis.last_mut().unwrap().insert(name, lli);
     }
 
     pub fn new_function(&mut self, name: &'symbol str, function: (&'symbol [ThrushType], bool)) {
@@ -42,6 +49,16 @@ impl<'symbol> TypeCheckerSymbolsTable<'symbol> {
         for scope in self.locals.iter_mut().rev() {
             if let Some(any) = scope.get_mut(name) {
                 return Some(any);
+            }
+        }
+
+        None
+    }
+
+    pub fn get_lli(&mut self, name: &'symbol str) -> Option<TypeCheckerLLI<'symbol>> {
+        for scope in self.llis.iter_mut().rev() {
+            if let Some(any) = scope.get_mut(name) {
+                return Some(*any);
             }
         }
 
@@ -82,12 +99,14 @@ impl<'symbol> TypeCheckerSymbolsTable<'symbol> {
     }
 
     pub fn begin_scope(&mut self) {
+        self.llis.push(HashMap::with_capacity(255));
         self.locals.push(HashMap::with_capacity(255));
 
         self.scope += 1;
     }
 
     pub fn end_scope(&mut self) {
+        self.llis.pop();
         self.locals.pop();
 
         self.scope -= 1;

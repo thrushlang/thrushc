@@ -109,19 +109,6 @@ pub enum ThrushStatement<'ctx> {
         span: Span,
     },
 
-    // Enums
-
-    /*
-
-        // EXAMPLE:
-
-        enum Colors {
-            Red : s32 = x0FF0000;
-            Green : s32 = x00FF00;
-            Blue : s64 = x0000FF;
-        };
-
-    */
     // Conditionals
     If {
         cond: Rc<ThrushStatement<'ctx>>,
@@ -287,13 +274,13 @@ pub enum ThrushStatement<'ctx> {
     },
 
     // Casts
-    CastPtr {
+    CastRaw {
         from: Rc<ThrushStatement<'ctx>>,
         cast_type: ThrushType,
         span: Span,
     },
 
-    Transmute {
+    Cast {
         from: Rc<ThrushStatement<'ctx>>,
         cast_type: ThrushType,
         span: Span,
@@ -408,16 +395,16 @@ impl<'ctx> ThrushStatement<'ctx> {
             ThrushStatement::FunctionParameter { kind, .. } => Ok(kind),
             ThrushStatement::MethodCall { kind, .. } => Ok(kind),
             ThrushStatement::EnumValue { kind, .. } => Ok(kind),
-            ThrushStatement::CastPtr {
+            ThrushStatement::CastRaw {
                 cast_type: kind, ..
             } => Ok(kind),
-            ThrushStatement::Transmute {
+            ThrushStatement::Cast {
                 cast_type: kind, ..
             } => Ok(kind),
 
             _ => Err(ThrushCompilerIssue::Error(
                 String::from("Syntax error"),
-                String::from("Expected a valid statement to get a type."),
+                String::from("Expected a valid value to get a type."),
                 None,
                 self.get_span(),
             )),
@@ -450,9 +437,9 @@ impl<'ctx> ThrushStatement<'ctx> {
             ThrushStatement::BindParameter { kind, .. } => kind,
             ThrushStatement::Return { kind, .. } => kind,
             ThrushStatement::EnumValue { kind, .. } => kind,
-            ThrushStatement::CastPtr {
-                cast_type: kind, ..
-            } => kind,
+
+            ThrushStatement::CastRaw { cast_type, .. } => cast_type,
+            ThrushStatement::Cast { cast_type, .. } => cast_type,
 
             any => {
                 panic!("Attempting to unwrap a null type: {:?}.", any)
@@ -472,8 +459,8 @@ impl<'ctx> ThrushStatement<'ctx> {
             ThrushStatement::BinaryOp { span, .. } => *span,
             ThrushStatement::Group { span, .. } => *span,
             ThrushStatement::UnaryOp { span, .. } => *span,
-            ThrushStatement::CastPtr { span, .. } => *span,
-            ThrushStatement::Transmute { span, .. } => *span,
+            ThrushStatement::CastRaw { span, .. } => *span,
+            ThrushStatement::Cast { span, .. } => *span,
 
             ThrushStatement::Str { span, .. } => *span,
             ThrushStatement::Boolean { span, .. } => *span,
@@ -846,7 +833,8 @@ impl ThrushStatement<'_> {
                 | ThrushStatement::Load { .. }
                 | ThrushStatement::Address { .. }
                 | ThrushStatement::Alloc { .. }
-                | ThrushStatement::CastPtr { .. }
+                | ThrushStatement::Cast { .. }
+                | ThrushStatement::CastRaw { .. }
         )
     }
 

@@ -17,10 +17,10 @@ pub mod valuegen;
 
 use {
     crate::{
-        standard::diagnostic::Diagnostician, types::frontend::parser::stmts::stmt::ThrushStatement,
+        backend::llvm::compiler::context::LLVMCodeGenContext,
+        types::frontend::parser::stmts::stmt::ThrushStatement,
     },
     codegen::LLVMCodegen,
-    inkwell::{builder::Builder, context::Context, module::Module, targets::TargetData},
 };
 
 pub struct LLVMCompiler;
@@ -28,13 +28,9 @@ pub struct LLVMCompiler;
 impl<'a, 'ctx> LLVMCompiler {
     #[inline]
     pub fn compile(
-        module: &'a Module<'ctx>,
-        builder: &'ctx Builder<'ctx>,
-        context: &'ctx Context,
+        context: &'a mut LLVMCodeGenContext<'a, 'ctx>,
         stmts: &'ctx [ThrushStatement<'ctx>],
-        target_data: TargetData,
-        diagnostician: Diagnostician,
     ) {
-        LLVMCodegen::generate(module, builder, context, stmts, target_data, diagnostician);
+        LLVMCodegen::generate(context, stmts);
     }
 }

@@ -1,14 +1,17 @@
 use std::sync::Arc;
 
-use inkwell::{context::Context, targets::TargetData};
+use inkwell::{context::Context, targets::TargetData, types::BasicTypeEnum};
 
 use crate::{
-    backend::llvm::compiler::typegen,
+    backend::llvm::compiler::{context::LLVMCodeGenContext, typegen},
     frontend::{lexer::span::Span, parser::symbols::SymbolsTable},
     standard::errors::standard::ThrushCompilerIssue,
-    types::frontend::parser::{
-        stmts::{stmt::ThrushStatement, traits::StructExtensions, types::StructFields},
-        symbols::types::{Methods, Struct},
+    types::frontend::{
+        lexer::traits::LLVMTypeExtensions,
+        parser::{
+            stmts::{stmt::ThrushStatement, traits::StructExtensions, types::StructFields},
+            symbols::types::{Methods, Struct},
+        },
     },
 };
 
@@ -60,6 +63,19 @@ pub enum ThrushType {
 
     // Void Type
     Void,
+}
+
+impl LLVMTypeExtensions for ThrushType {
+    fn is_same_size(&self, context: &LLVMCodeGenContext<'_, '_>, other: &ThrushType) -> bool {
+        let llvm_context: &Context = context.get_llvm_context();
+
+        let a_llvm_type: BasicTypeEnum = typegen::generate_type(llvm_context, self);
+        let b_llvm_type: BasicTypeEnum = typegen::generate_type(llvm_context, other);
+
+        let target_data: &TargetData = context.get_target_data();
+
+        target_data.get_abi_size(&a_llvm_type) == target_data.get_abi_size(&b_llvm_type)
+    }
 }
 
 impl ThrushType {
@@ -211,6 +227,15 @@ impl ThrushType {
                 | ThrushType::U64
                 | ThrushType::Char
         )
+    }
+
+    #[inline(always)]
+    pub const fn is_primitive(&self) -> bool {
+        self.is_integer_type()
+            || self.is_float_type()
+            || self.is_bool_type()
+            || self.is_ptr_type()
+            || self.is_ptr_type()
     }
 }
 

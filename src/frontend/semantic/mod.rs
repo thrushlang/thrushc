@@ -8,17 +8,17 @@ pub mod attrchecker;
 pub mod linter;
 pub mod typechecker;
 
-pub struct SemanticAnalyzer<'semantic_analysis> {
-    type_checker: TypeChecker<'semantic_analysis>,
-    attr_checker: AttributeChecker<'semantic_analysis>,
-    linter: Linter<'semantic_analysis>,
-    attr_linter: AttributesLinter<'semantic_analysis>,
+pub struct SemanticAnalyzer<'semantic_analyzer> {
+    type_checker: TypeChecker<'semantic_analyzer>,
+    attr_checker: AttributeChecker<'semantic_analyzer>,
+    linter: Linter<'semantic_analyzer>,
+    attr_linter: AttributesLinter<'semantic_analyzer>,
 }
 
-impl<'semantic_analysis> SemanticAnalyzer<'semantic_analysis> {
+impl<'semantic_analyzer> SemanticAnalyzer<'semantic_analyzer> {
     pub fn new(
-        stmts: &'semantic_analysis [ThrushStatement],
-        file: &'semantic_analysis CompilerFile,
+        stmts: &'semantic_analyzer [ThrushStatement<'semantic_analyzer>],
+        file: &'semantic_analyzer CompilerFile,
     ) -> Self {
         let type_checker: TypeChecker = TypeChecker::new(stmts, file);
         let attr_checker: AttributeChecker = AttributeChecker::new(stmts, file);

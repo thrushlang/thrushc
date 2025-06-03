@@ -13,7 +13,7 @@ use inkwell::{
     values::{BasicValueEnum, PointerValue},
 };
 
-pub fn build<'ctx>(local: LLVMLocal<'ctx>, context: &mut LLVMCodeGenContext<'_, 'ctx>) {
+pub fn compile<'ctx>(local: LLVMLocal<'ctx>, context: &mut LLVMCodeGenContext<'_, 'ctx>) {
     let local_type: &ThrushType = local.1;
 
     context.alloc_local(local.0, local.1);
@@ -55,7 +55,7 @@ fn build_local_mut<'ctx>(local: LLVMLocal<'ctx>, context: &mut LLVMCodeGenContex
 
     let symbol: SymbolAllocated = context.get_allocated_symbol(local.0);
 
-    let expression: BasicValueEnum = valuegen::build(context, local_value, local.1);
+    let expression: BasicValueEnum = valuegen::compile(context, local_value, local.1);
 
     symbol.store(context, expression);
 }
@@ -65,7 +65,8 @@ fn build_local_ptr<'ctx>(local: LLVMLocal<'ctx>, context: &mut LLVMCodeGenContex
 
     let symbol: SymbolAllocated = context.get_allocated_symbol(local.0);
 
-    let expression: BasicValueEnum = valuegen::build(context, local_value, &ThrushType::Ptr(None));
+    let expression: BasicValueEnum =
+        valuegen::compile(context, local_value, &ThrushType::Ptr(None));
 
     symbol.store(context, expression);
 }
@@ -75,7 +76,7 @@ fn build_local_str<'ctx>(local: LLVMLocal<'ctx>, context: &mut LLVMCodeGenContex
 
     let symbol: SymbolAllocated = context.get_allocated_symbol(local.0);
 
-    let expression: BasicValueEnum = valuegen::build(context, local_value, local.1);
+    let expression: BasicValueEnum = valuegen::compile(context, local_value, local.1);
 
     symbol.store(context, expression);
 }
@@ -87,7 +88,7 @@ fn build_local_integer<'ctx>(local: LLVMLocal<'ctx>, context: &mut LLVMCodeGenCo
 
     let symbol: SymbolAllocated = context.get_allocated_symbol(local_name);
 
-    let expression: BasicValueEnum = valuegen::build(context, local_value, local_type);
+    let expression: BasicValueEnum = valuegen::compile(context, local_value, local_type);
 
     symbol.store(context, expression);
 }
@@ -99,7 +100,7 @@ fn build_local_float<'ctx>(local: LLVMLocal<'ctx>, context: &mut LLVMCodeGenCont
 
     let symbol: SymbolAllocated = context.get_allocated_symbol(local_name);
 
-    let expression: BasicValueEnum = valuegen::build(context, local_value, local_type);
+    let expression: BasicValueEnum = valuegen::compile(context, local_value, local_type);
 
     symbol.store(context, expression);
 }
@@ -111,7 +112,7 @@ fn build_local_boolean<'ctx>(local: LLVMLocal<'ctx>, context: &mut LLVMCodeGenCo
 
     let symbol: SymbolAllocated = context.get_allocated_symbol(local_name);
 
-    let expression: BasicValueEnum = valuegen::build(context, local_value, local_type);
+    let expression: BasicValueEnum = valuegen::compile(context, local_value, local_type);
 
     symbol.store(context, expression);
 }
@@ -133,7 +134,7 @@ fn build_local_structure<'ctx>(local: LLVMLocal<'ctx>, context: &mut LLVMCodeGen
             let expr_type: &ThrushType = &argument.2;
             let expr_index: u32 = argument.3;
 
-            let expr: BasicValueEnum = valuegen::build(context, expr, expr_type);
+            let expr: BasicValueEnum = valuegen::compile(context, expr, expr_type);
 
             let field_memory_address_position: PointerValue =
                 symbol.gep_struct(llvm_context, llvm_builder, expr_index);
@@ -141,7 +142,7 @@ fn build_local_structure<'ctx>(local: LLVMLocal<'ctx>, context: &mut LLVMCodeGen
             memory::store_anon(context, field_memory_address_position, expr);
         });
     } else {
-        let expression: BasicValueEnum = valuegen::build(context, local_value, local_type);
+        let expression: BasicValueEnum = valuegen::compile(context, local_value, local_type);
 
         symbol.store(context, expression);
     }

@@ -5,6 +5,7 @@ use crate::backend::llvm::compiler::memory::{self, SymbolAllocated};
 use crate::backend::llvm::compiler::{binaryop, builtins, cast, unaryop, utils};
 use crate::standard::logging::{self, LoggingType};
 use crate::types::backend::llvm::types::LLVMFunction;
+use crate::types::frontend::lexer::traits::LLVMTypeExtensions;
 use crate::types::frontend::lexer::types::ThrushType;
 use crate::types::frontend::parser::stmts::stmt::ThrushStatement;
 use crate::types::frontend::parser::stmts::traits::ThrushAttributesExtensions;
@@ -15,7 +16,7 @@ use super::typegen;
 
 use inkwell::module::{Linkage, Module};
 use inkwell::targets::TargetData;
-use inkwell::types::{BasicTypeEnum, PointerType};
+use inkwell::types::BasicTypeEnum;
 
 use inkwell::AddressSpace;
 use inkwell::values::{
@@ -85,7 +86,7 @@ pub fn float<'ctx>(
     }
 }
 
-pub fn build<'ctx>(
+pub fn compile<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     expression: &'ctx ThrushStatement,
     cast: &ThrushType,
@@ -93,6 +94,14 @@ pub fn build<'ctx>(
     let llvm_module: &Module = context.get_llvm_module();
     let llvm_context: &Context = context.get_llvm_context();
     let llvm_builder: &Builder = context.get_llvm_builder();
+
+    /* ######################################################################
+
+
+        BASICS EXPRESSIONS - START
+
+
+    ########################################################################*/
 
     if let ThrushStatement::NullPtr { .. } = expression {
         return llvm_context
@@ -145,6 +154,138 @@ pub fn build<'ctx>(
         return llvm_context.bool_type().const_int(*value, false).into();
     }
 
+    if let ThrushStatement::Call {
+        name,
+        args: call_args,
+        kind: call_type,
+        ..
+    } = expression
+    {
+        if *name == "sizeof!" {
+            return builtins::build_sizeof(context, (name, call_type, call_args));
+        }
+
+        if *name == "is_signed!" {
+            return builtins::build_is_signed(context, (name, call_type, call_args));
+        }
+
+        context.set_position(LLVMCodeGenContextPosition::Call);
+
+        let previous_position: LLVMCodeGenContextPosition = context.get_previous_position();
+
+        let function: LLVMFunction = context.get_function(name);
+        let function_arguments_types: &[ThrushType] = function.1;
+        let function_convention: u32 = function.2;
+
+        let llvm_function: FunctionValue = function.0;
+
+        let mut compiled_args: Vec<BasicMetadataValueEnum> = Vec::with_capacity(call_args.len());
+
+        call_args.iter().enumerate().for_each(|arg| {
+            let arg_position: usize = arg.0;
+            let arg_expr: &ThrushStatement = arg.1;
+
+            let cast: &ThrushType = function_arguments_types
+                .get(arg_position)
+                .unwrap_or(&ThrushType::Void);
+
+            compiled_args.push(self::compile(context, arg_expr, cast).into());
+        });
+
+        let call: CallSiteValue = llvm_builder
+            .build_call(llvm_function, &compiled_args, "")
+            .unwrap();
+
+        call.set_call_convention(function_convention);
+
+        if !call_type.is_void_type() {
+            let llvm_context: &Context = context.get_llvm_context();
+            let return_value: BasicValueEnum = call.try_as_basic_value().unwrap_left();
+
+            if cast.is_mut_type() && context.get_position().in_call() {
+                context.set_position_irrelevant();
+                return return_value;
+            }
+
+            if call_type.is_probably_heap_allocated(llvm_context, context.get_target_data())
+                && previous_position.in_local()
+                || call_type.is_probably_heap_allocated(llvm_context, context.get_target_data())
+                    && previous_position.in_call()
+            {
+                context.set_position_irrelevant();
+
+                return memory::load_anon(context, call_type, return_value.into_pointer_value());
+            }
+
+            context.set_position_irrelevant();
+
+            return call.try_as_basic_value().unwrap_left();
+        }
+
+        context.set_position_irrelevant();
+
+        return llvm_context
+            .ptr_type(AddressSpace::default())
+            .const_null()
+            .into();
+    }
+
+    if let ThrushStatement::BinaryOp {
+        left,
+        operator,
+        right,
+        kind: binaryop_type,
+        ..
+    } = expression
+    {
+        if binaryop_type.is_float_type() {
+            return binaryop::float::float_binaryop(context, (left, operator, right), cast);
+        }
+
+        if binaryop_type.is_integer_type() {
+            return binaryop::integer::integer_binaryop(context, (left, operator, right), cast);
+        }
+
+        if binaryop_type.is_bool_type() {
+            return binaryop::boolean::bool_binaryop(context, (left, operator, right), cast);
+        }
+
+        logging::log(
+            LoggingType::Panic,
+            "Could not process a binary operation of invalid type.",
+        );
+    }
+
+    if let ThrushStatement::UnaryOp {
+        operator,
+        kind,
+        expression,
+        ..
+    } = expression
+    {
+        return unaryop::unary_op(context, (operator, kind, expression));
+    }
+
+    if let ThrushStatement::Group { expression, .. } = expression {
+        return self::compile(context, expression, cast);
+    }
+
+    /* ######################################################################
+
+
+        BASICS EXPRESSIONS - END
+
+
+    ########################################################################*/
+
+    /* ######################################################################
+
+
+        LOW LEVEL INSTRUCTIONS - START
+
+
+    ########################################################################*/
+
     if let ThrushStatement::Alloc {
         type_to_alloc,
         site_allocation,
@@ -162,11 +303,11 @@ pub fn build<'ctx>(
         ..
     } = expression
     {
-        let write_value: BasicValueEnum = self::build(context, write_value, write_type);
+        let write_value: BasicValueEnum = self::compile(context, write_value, write_type);
 
         if let Some(expression) = write_to.1.as_ref() {
             let compiled_expression: PointerValue =
-                self::build(context, expression, &ThrushType::Void).into_pointer_value();
+                self::compile(context, expression, &ThrushType::Void).into_pointer_value();
 
             if let Ok(store) = llvm_builder.build_store(compiled_expression, write_value) {
                 let target_data: &TargetData = context.get_target_data();
@@ -197,56 +338,18 @@ pub fn build<'ctx>(
         logging::log(LoggingType::Panic, "Could not get value of 'write' LLI");
     }
 
-    if let ThrushStatement::CastPtr {
-        from, cast_type, ..
-    } = expression
-    {
-        if let ThrushStatement::Reference { name, .. } = &**from {
-            let reference: PointerValue = context.get_allocated_symbol(name).raw_load();
-
-            let cast_type: PointerType =
-                typegen::generate_type(llvm_context, cast_type).into_pointer_type();
-
-            if let Ok(casted_ptr) = llvm_builder.build_pointer_cast(reference, cast_type, "") {
-                return casted_ptr.into();
-            }
-        }
-
-        logging::log(
-            LoggingType::Panic,
-            &format!(
-                "Pointer casting could not be perform at 'castpr' from: '{}'.",
-                from
-            ),
-        );
-    }
-
-    if let ThrushStatement::Transmute { from, .. } = expression {
-        if let ThrushStatement::Reference { name, .. } = &**from {
-            return context.get_allocated_symbol(name).raw_load().into();
-        }
-
-        logging::log(
-            LoggingType::Panic,
-            &format!(
-                "Pointer casting could not be perform at 'transmute' from: '{}'.",
-                from
-            ),
-        );
-    }
-
     if let ThrushStatement::Load { load, kind, .. } = expression {
-        if let Some(expression) = &load.1 {
-            let ptr: PointerValue = self::build(context, expression, kind).into_pointer_value();
-
-            return memory::load_anon(context, kind, ptr);
-        }
-
         if let Some(ref_name) = load.0 {
             let ptr: PointerValue = context
                 .get_allocated_symbol(ref_name)
                 .load(context)
                 .into_pointer_value();
+
+            return memory::load_anon(context, kind, ptr);
+        }
+
+        if let Some(expression) = &load.1 {
+            let ptr: PointerValue = self::compile(context, expression, kind).into_pointer_value();
 
             return memory::load_anon(context, kind, ptr);
         }
@@ -261,7 +364,7 @@ pub fn build<'ctx>(
 
         indexes.iter().for_each(|indexe| {
             let mut compiled_indexe: BasicValueEnum =
-                self::build(context, indexe, &ThrushType::U32);
+                self::compile(context, indexe, &ThrushType::U32);
 
             if let Some(casted_index) = cast::integer(
                 context,
@@ -279,6 +382,111 @@ pub fn build<'ctx>(
             .gep(llvm_context, llvm_builder, &compiled_indexes)
             .into();
     }
+
+    /* ######################################################################
+
+
+        LOW LEVEL INSTRUCTIONS - END
+
+
+    ########################################################################*/
+
+    /* ######################################################################
+
+
+        CASTS - START
+
+
+    ########################################################################*/
+
+    if let ThrushStatement::Cast {
+        from, cast_type, ..
+    } = expression
+    {
+        if let ThrushStatement::Reference {
+            name,
+            kind: from_type,
+            ..
+        } = &**from
+        {
+            let val: BasicValueEnum = context.get_allocated_symbol(name).load(context);
+            let target_type: BasicTypeEnum = typegen::generate_subtype(llvm_context, cast_type);
+
+            if from_type.is_same_size(context, cast_type) {
+                if let Ok(casted_value) = llvm_builder.build_bit_cast(val, target_type, "") {
+                    return casted_value;
+                }
+            }
+
+            if val.is_int_value() && target_type.is_int_type() {
+                if let Ok(casted_value) = llvm_builder.build_int_cast(
+                    val.into_int_value(),
+                    target_type.into_int_type(),
+                    "",
+                ) {
+                    return casted_value.into();
+                }
+            }
+
+            if val.is_float_value() && target_type.is_float_type() {
+                if let Ok(casted_value) = llvm_builder.build_float_cast(
+                    val.into_float_value(),
+                    target_type.into_float_type(),
+                    "",
+                ) {
+                    return casted_value.into();
+                }
+            }
+
+            if val.is_pointer_value() && target_type.is_pointer_type() {
+                if let Ok(casted_ptr) = llvm_builder.build_pointer_cast(
+                    val.into_pointer_value(),
+                    target_type.into_pointer_type(),
+                    "",
+                ) {
+                    return casted_ptr.into();
+                }
+            }
+        }
+
+        logging::log(
+            LoggingType::Panic,
+            &format!(
+                "Pointer casting could not be perform at 'cast' from: '{}'.",
+                from
+            ),
+        );
+    }
+
+    if let ThrushStatement::CastRaw { from, .. } = expression {
+        if let ThrushStatement::Reference { name, .. } = &**from {
+            return context.get_allocated_symbol(name).raw_load().into();
+        }
+
+        logging::log(
+            LoggingType::Panic,
+            &format!(
+                "Pointer casting could not be perform at 'transmute' from: '{}'.",
+                from
+            ),
+        );
+    }
+
+    /* ######################################################################
+
+
+        CASTS - END
+
+
+    ########################################################################*/
+
+    /* ######################################################################
+
+
+        REFERENCES OPERATIONS - START
+
+
+    ########################################################################*/
 
     if let ThrushStatement::Property {
         name,
@@ -334,41 +542,13 @@ pub fn build<'ctx>(
         return symbol.load(context);
     }
 
-    if let ThrushStatement::BinaryOp {
-        left,
-        operator,
-        right,
-        kind: binaryop_type,
-        ..
-    } = expression
-    {
-        if binaryop_type.is_float_type() {
-            return binaryop::float::float_binaryop(context, (left, operator, right), cast);
-        }
+    /* ######################################################################
 
-        if binaryop_type.is_integer_type() {
-            return binaryop::integer::integer_binaryop(context, (left, operator, right), cast);
-        }
 
-        if binaryop_type.is_bool_type() {
-            return binaryop::boolean::bool_binaryop(context, (left, operator, right), cast);
-        }
+        REFERENCES OPERATIONS - END
 
-        logging::log(
-            LoggingType::Panic,
-            "Could not process a binary operation of invalid type.",
-        );
-    }
 
-    if let ThrushStatement::UnaryOp {
-        operator,
-        kind,
-        expression,
-        ..
-    } = expression
-    {
-        return unaryop::unary_op(context, (operator, kind, expression));
-    }
+    ########################################################################*/
 
     if let ThrushStatement::Mut {
         source,
@@ -385,8 +565,8 @@ pub fn build<'ctx>(
         let value_type: &ThrushType = value.get_type_unwrapped();
 
         if let Some(expression) = source_expression {
-            let source: BasicValueEnum = self::build(context, expression, kind);
-            let value: BasicValueEnum = self::build(context, value, kind);
+            let source: BasicValueEnum = self::compile(context, expression, kind);
+            let value: BasicValueEnum = self::compile(context, value, kind);
 
             memory::store_anon(
                 context,
@@ -402,7 +582,7 @@ pub fn build<'ctx>(
         if let Some(name) = source_name {
             let symbol: SymbolAllocated = context.get_allocated_symbol(name);
 
-            let expr: BasicValueEnum = self::build(context, value, kind);
+            let expr: BasicValueEnum = self::compile(context, value, kind);
 
             symbol.store(context, memory::load_maybe(context, value_type, expr));
 
@@ -412,86 +592,6 @@ pub fn build<'ctx>(
         }
 
         logging::log(LoggingType::Panic, "Could not get value of an mutation.");
-    }
-
-    if let ThrushStatement::Call {
-        name,
-        args: call_args,
-        kind: call_type,
-        ..
-    } = expression
-    {
-        if *name == "sizeof!" {
-            return builtins::build_sizeof(context, (name, call_type, call_args));
-        }
-
-        if *name == "is_signed!" {
-            return builtins::build_is_signed(context, (name, call_type, call_args));
-        }
-
-        context.set_position(LLVMCodeGenContextPosition::Call);
-
-        let previous_position: LLVMCodeGenContextPosition = context.get_previous_position();
-
-        let function: LLVMFunction = context.get_function(name);
-        let function_arguments_types: &[ThrushType] = function.1;
-        let function_convention: u32 = function.2;
-
-        let llvm_function: FunctionValue = function.0;
-
-        let mut compiled_args: Vec<BasicMetadataValueEnum> = Vec::with_capacity(call_args.len());
-
-        call_args.iter().enumerate().for_each(|arg| {
-            let arg_position: usize = arg.0;
-            let arg_expr: &ThrushStatement = arg.1;
-
-            let cast: &ThrushType = function_arguments_types
-                .get(arg_position)
-                .unwrap_or(&ThrushType::Void);
-
-            compiled_args.push(self::build(context, arg_expr, cast).into());
-        });
-
-        let call: CallSiteValue = llvm_builder
-            .build_call(llvm_function, &compiled_args, "")
-            .unwrap();
-
-        call.set_call_convention(function_convention);
-
-        if !call_type.is_void_type() {
-            let llvm_context: &Context = context.get_llvm_context();
-            let return_value: BasicValueEnum = call.try_as_basic_value().unwrap_left();
-
-            if call_type.is_probably_heap_allocated(llvm_context, context.get_target_data()) {
-                context.add_scope_call((call_type, return_value));
-            }
-
-            if cast.is_mut_type() && context.get_position().in_call() {
-                context.set_position_irrelevant();
-                return return_value;
-            }
-
-            if call_type.is_probably_heap_allocated(llvm_context, context.get_target_data())
-                && previous_position.in_local()
-                || call_type.is_probably_heap_allocated(llvm_context, context.get_target_data())
-                    && previous_position.in_call()
-            {
-                context.set_position_irrelevant();
-
-                return memory::load_anon(context, call_type, return_value.into_pointer_value());
-            }
-
-            context.set_position_irrelevant();
-
-            return call.try_as_basic_value().unwrap_left();
-        }
-
-        context.set_position_irrelevant();
-
-        return llvm_context
-            .ptr_type(AddressSpace::default())
-            .const_null()
-            .into();
     }
 
     if let ThrushStatement::Return {
@@ -506,15 +606,11 @@ pub fn build<'ctx>(
         }
 
         if let Some(expression) = expression {
-            let _ = llvm_builder.build_return(Some(&self::build(context, expression, kind)));
+            let _ = llvm_builder.build_return(Some(&self::compile(context, expression, kind)));
             return default.into();
         }
 
         logging::log(LoggingType::Panic, "Could not get value of an return.");
-    }
-
-    if let ThrushStatement::Group { expression, .. } = expression {
-        return self::build(context, expression, cast);
     }
 
     println!("{:?}", expression);

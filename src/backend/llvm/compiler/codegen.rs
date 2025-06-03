@@ -2,7 +2,6 @@ use crate::standard::logging::{self, LoggingType};
 use crate::types::backend::llvm::types::{LLVMFunctionParameter, LLVMFunctionPrototype};
 use crate::types::frontend::lexer::types::ThrushType;
 
-use crate::standard::diagnostic::Diagnostician;
 use crate::types::frontend::parser::stmts::stmt::ThrushStatement;
 
 use super::super::compiler::attributes::LLVMAttribute;
@@ -20,13 +19,12 @@ use inkwell::{
     builder::Builder,
     context::Context,
     module::{Linkage, Module},
-    targets::TargetData,
     types::FunctionType,
     values::{BasicValueEnum, FunctionValue, IntValue},
 };
 
 pub struct LLVMCodegen<'a, 'ctx> {
-    context: LLVMCodeGenContext<'a, 'ctx>,
+    context: &'a mut LLVMCodeGenContext<'a, 'ctx>,
     stmts: &'ctx [ThrushStatement<'ctx>],
     current: usize,
     current_function: Option<FunctionValue<'ctx>>,
@@ -36,15 +34,11 @@ pub struct LLVMCodegen<'a, 'ctx> {
 
 impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
     pub fn generate(
-        module: &'a Module<'ctx>,
-        builder: &'ctx Builder<'ctx>,
-        context: &'ctx Context,
+        context: &'a mut LLVMCodeGenContext<'a, 'ctx>,
         stmts: &'ctx [ThrushStatement<'ctx>],
-        target_data: TargetData,
-        diagnostician: Diagnostician,
     ) {
         Self {
-            context: LLVMCodeGenContext::new(module, context, builder, target_data, diagnostician),
+            context,
             stmts,
             current: 0,
             current_function: None,
@@ -96,7 +90,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
             }
 
             ThrushStatement::Return { kind, .. } => {
-                valuegen::build(&mut self.context, stmt, kind);
+                valuegen::compile(self.context, stmt, kind);
             }
 
             stmt => self.codegen_code_block(stmt),
@@ -165,8 +159,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
             } => {
                 if let Some(current_function) = self.current_function {
                     let if_comparison: IntValue<'ctx> =
-                        valuegen::build(&mut self.context, cond, &ThrushType::Bool)
-                            .into_int_value();
+                        valuegen::compile(self.context, cond, &ThrushType::Bool).into_int_value();
 
                     let then_block: BasicBlock =
                         llvm_context.append_basic_block(current_function, "if");
@@ -219,7 +212,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                         for (index, instr) in elfs.iter().enumerate() {
                             if let ThrushStatement::Elif { cond, block, .. } = instr {
                                 let compiled_else_if_cond: IntValue =
-                                    valuegen::build(&mut self.context, cond, &ThrushType::Bool)
+                                    valuegen::compile(self.context, cond, &ThrushType::Bool)
                                         .into_int_value();
 
                                 let elif_body: BasicBlock = current_block;
@@ -334,8 +327,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                     llvm_builder.position_at_end(condition_block);
 
                     let conditional: IntValue =
-                        valuegen::build(&mut self.context, cond, &ThrushType::Bool)
-                            .into_int_value();
+                        valuegen::compile(self.context, cond, &ThrushType::Bool).into_int_value();
 
                     let then_block: BasicBlock =
                         llvm_context.append_basic_block(current_function, "while_body");
@@ -428,8 +420,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                     llvm_builder.position_at_end(start_block);
 
                     let condition: IntValue =
-                        valuegen::build(&mut self.context, cond, &ThrushType::Bool)
-                            .into_int_value();
+                        valuegen::compile(self.context, cond, &ThrushType::Bool).into_int_value();
 
                     let then_block: BasicBlock =
                         llvm_context.append_basic_block(current_function, "for_body");
@@ -447,9 +438,9 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                     if actions.is_pre_unaryop() {
                         self.codegen(block.as_ref());
 
-                        let _ = valuegen::build(&mut self.context, actions, &ThrushType::Void);
+                        let _ = valuegen::compile(self.context, actions, &ThrushType::Void);
                     } else {
-                        let _ = valuegen::build(&mut self.context, actions, &ThrushType::Void);
+                        let _ = valuegen::compile(self.context, actions, &ThrushType::Void);
 
                         self.codegen(block.as_ref());
                     }
@@ -510,13 +501,13 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
             ThrushStatement::Local {
                 name, kind, value, ..
             } => {
-                local::build((name, kind, value), &mut self.context);
+                local::compile((name, kind, value), self.context);
             }
 
             ThrushStatement::LLI {
                 name, kind, value, ..
             } => {
-                llis::build(name, kind, value, &mut self.context);
+                llis::compile(name, kind, value, self.context);
             }
 
             stmt => self.codegen_loose_expression(stmt),
@@ -542,11 +533,15 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
 
         match stmt {
             ThrushStatement::Mut { kind, .. } => {
-                valuegen::build(&mut self.context, stmt, kind);
+                valuegen::compile(self.context, stmt, kind);
             }
 
             ThrushStatement::Write { .. } => {
-                valuegen::build(&mut self.context, stmt, &ThrushType::Void);
+                valuegen::compile(self.context, stmt, &ThrushType::Void);
+            }
+
+            ThrushStatement::Call { .. } => {
+                valuegen::compile(self.context, stmt, &ThrushType::Void);
             }
 
             _ => (),
@@ -625,7 +620,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
             } = stmt
             {
                 let value: BasicValueEnum =
-                    valuegen::build(&mut self.context, value, &ThrushType::Void);
+                    valuegen::compile(self.context, value, &ThrushType::Void);
                 self.context.alloc_constant(name, kind, value, attributes);
             }
         });
@@ -670,7 +665,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         };
 
         let function_type: FunctionType = typegen::function_type(
-            &self.context,
+            self.context,
             function_type,
             function_parameters,
             ignore_args,

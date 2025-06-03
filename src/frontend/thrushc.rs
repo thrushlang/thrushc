@@ -18,7 +18,7 @@ use inkwell::{
 use crate::{
     backend::{
         linking::compilers::{clang::Clang, gcc::GCC},
-        llvm::{self},
+        llvm::{self, compiler::context::LLVMCodeGenContext},
     },
     frontend::{
         lexer::{Lexer, token::Token},
@@ -204,38 +204,6 @@ impl<'thrushc> TheThrushCompiler<'thrushc> {
 
         let stmts: &[ThrushStatement] = parser_context.get_stmts();
 
-        let semantic_analysis_throwed_errors: bool = SemanticAnalyzer::new(stmts, file).check();
-
-        if parser_throwed_errors || semantic_analysis_throwed_errors {
-            logging::write(
-                logging::OutputIn::Stderr,
-                &format!(
-                    "{} {} {}\n",
-                    "Compilation".custom_color((141, 141, 142)).bold(),
-                    "FAILED".bright_red().bold(),
-                    &file.path.to_string_lossy()
-                ),
-            );
-
-            return;
-        }
-
-        if self.emit_after_frontend(llvm_backend, build_dir, file, Emited::Statements(stmts)) {
-            self.thrushc_time += thrushc_time.elapsed();
-
-            logging::write(
-                logging::OutputIn::Stdout,
-                &format!(
-                    "{} {} {}\n",
-                    "Compilation".custom_color((141, 141, 142)).bold(),
-                    "FINISHED".bright_green().bold(),
-                    &file.path.to_string_lossy()
-                ),
-            );
-
-            return;
-        }
-
         let llvm_context: Context = Context::create();
         let llvm_builder: Builder = llvm_context.create_builder();
         let llvm_module: Module = llvm_context.create_module(&file.name);
@@ -276,14 +244,47 @@ impl<'thrushc> TheThrushCompiler<'thrushc> {
 
         llvm_module.set_data_layout(&target_machine.get_target_data().get_data_layout());
 
-        llvm::compiler::LLVMCompiler::compile(
+        let mut llvm_codegen_context: LLVMCodeGenContext = LLVMCodeGenContext::new(
             &llvm_module,
-            &llvm_builder,
             &llvm_context,
-            stmts,
+            &llvm_builder,
             target_machine.get_target_data(),
             Diagnostician::new(file),
         );
+
+        let semantic_analysis_throwed_errors: bool = SemanticAnalyzer::new(stmts, file).check();
+
+        if parser_throwed_errors || semantic_analysis_throwed_errors {
+            logging::write(
+                logging::OutputIn::Stderr,
+                &format!(
+                    "{} {} {}\n",
+                    "Compilation".custom_color((141, 141, 142)).bold(),
+                    "FAILED".bright_red().bold(),
+                    &file.path.to_string_lossy()
+                ),
+            );
+
+            return;
+        }
+
+        if self.emit_after_frontend(llvm_backend, build_dir, file, Emited::Statements(stmts)) {
+            self.thrushc_time += thrushc_time.elapsed();
+
+            logging::write(
+                logging::OutputIn::Stdout,
+                &format!(
+                    "{} {} {}\n",
+                    "Compilation".custom_color((141, 141, 142)).bold(),
+                    "FINISHED".bright_green().bold(),
+                    &file.path.to_string_lossy()
+                ),
+            );
+
+            return;
+        }
+
+        llvm::compiler::LLVMCompiler::compile(&mut llvm_codegen_context, stmts);
 
         if self.emit_before_optimization(
             llvm_backend,

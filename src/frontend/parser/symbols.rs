@@ -324,8 +324,8 @@ impl<'instr> SymbolsTable<'instr> {
         }
 
         Err(ThrushCompilerIssue::Error(
-            String::from("Reference not found"),
-            format!("'{}' is not declared or defined.", name),
+            String::from("Not found"),
+            format!("'{}' isn't declared or defined.", name),
             None,
             span,
         ))
@@ -343,8 +343,8 @@ impl<'instr> SymbolsTable<'instr> {
         }
 
         Err(ThrushCompilerIssue::Error(
-            String::from("Expected low level instruction reference"),
-            String::from("Expected LLI but found something else."),
+            String::from("Not found"),
+            String::from("LLI not found at local scope."),
             None,
             span,
         ))
@@ -361,8 +361,8 @@ impl<'instr> SymbolsTable<'instr> {
         }
 
         Err(ThrushCompilerIssue::Error(
-            String::from("Expected struct reference"),
-            String::from("Expected struct but found something else."),
+            String::from("Not found"),
+            String::from("Struct not found at global scope."),
             None,
             span,
         ))
@@ -379,8 +379,8 @@ impl<'instr> SymbolsTable<'instr> {
         }
 
         Err(ThrushCompilerIssue::Error(
-            String::from("Expected function reference"),
-            String::from("Expected function but found something else."),
+            String::from("Not found"),
+            String::from("Function not found at global scope."),
             None,
             span,
         ))
@@ -397,8 +397,8 @@ impl<'instr> SymbolsTable<'instr> {
         }
 
         Err(ThrushCompilerIssue::Error(
-            String::from("Expected enum reference"),
-            String::from("Expected enum but found something else."),
+            String::from("Not found"),
+            String::from("Enum not found at global scope."),
             None,
             span,
         ))
@@ -415,8 +415,8 @@ impl<'instr> SymbolsTable<'instr> {
         }
 
         Err(ThrushCompilerIssue::Error(
-            String::from("Expected custom type reference"),
-            String::from("Expected custom type but found something else."),
+            String::from("Not found"),
+            String::from("Custom type not found at global scope."),
             None,
             span,
         ))
@@ -434,8 +434,8 @@ impl<'instr> SymbolsTable<'instr> {
         }
 
         Err(ThrushCompilerIssue::Error(
-            String::from("Expected local reference"),
-            String::from("Expected local but found something else."),
+            String::from("Not found"),
+            String::from("Local not found at local scope."),
             None,
             span,
         ))
@@ -452,8 +452,8 @@ impl<'instr> SymbolsTable<'instr> {
         }
 
         Err(ThrushCompilerIssue::Error(
-            String::from("Expected constant reference"),
-            String::from("Expected constant but found something else."),
+            String::from("Not found"),
+            String::from("Constant not found at global scope."),
             None,
             span,
         ))
@@ -470,8 +470,8 @@ impl<'instr> SymbolsTable<'instr> {
         }
 
         Err(ThrushCompilerIssue::Error(
-            String::from("Expected parameter reference"),
-            String::from("Expected parameter but found something else."),
+            String::from("Not found"),
+            String::from("Parameter not found in this scope."),
             None,
             span,
         ))

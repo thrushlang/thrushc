@@ -117,6 +117,20 @@ impl<'linter> Linter<'linter> {
             self.analyze_stmt(value);
         }
 
+        if let ThrushStatement::For {
+            local,
+            actions,
+            cond,
+            block,
+            ..
+        } = stmt
+        {
+            self.analyze_stmt(local);
+            self.analyze_stmt(actions);
+            self.analyze_stmt(cond);
+            self.analyze_stmt(block);
+        }
+
         /* ######################################################################
 
 
@@ -173,11 +187,11 @@ impl<'linter> Linter<'linter> {
             self.analyze_stmt(write_value);
         }
 
-        if let ThrushStatement::CastPtr { from, .. } = stmt {
+        if let ThrushStatement::Cast { from, .. } = stmt {
             self.analyze_stmt(from);
         }
 
-        if let ThrushStatement::Transmute { from, .. } = stmt {
+        if let ThrushStatement::CastRaw { from, .. } = stmt {
             self.analyze_stmt(from);
         }
 
@@ -206,20 +220,6 @@ impl<'linter> Linter<'linter> {
             if let Some(expr) = &load.1 {
                 self.analyze_stmt(expr);
             }
-        }
-
-        if let ThrushStatement::For {
-            local,
-            actions,
-            cond,
-            block,
-            ..
-        } = stmt
-        {
-            self.analyze_stmt(local);
-            self.analyze_stmt(actions);
-            self.analyze_stmt(cond);
-            self.analyze_stmt(block);
         }
 
         if let ThrushStatement::Constructor {
