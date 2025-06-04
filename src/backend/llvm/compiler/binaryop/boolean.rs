@@ -170,9 +170,7 @@ pub fn bool_binaryop<'ctx>(
             || binary.0.get_type_unwrapped().is_bool_type()
         {
             return integer_binaryop(context, binary, cast);
-        } else if binary.2.get_type_unwrapped().is_mut_ptr_type()
-            || binary.2.get_type_unwrapped().is_ptr_type()
-        {
+        } else if binary.2.get_type_unwrapped().is_ptr_type() {
             return ptr_binaryop(binary, cast, context);
         }
 
@@ -201,9 +199,7 @@ pub fn bool_binaryop<'ctx>(
             || binary.2.get_type_unwrapped().is_bool_type()
         {
             return integer_binaryop(context, binary, cast);
-        } else if binary.2.get_type_unwrapped().is_mut_ptr_type()
-            || binary.2.get_type_unwrapped().is_ptr_type()
-        {
+        } else if binary.2.get_type_unwrapped().is_ptr_type() {
             return ptr_binaryop(binary, cast, context);
         }
     }

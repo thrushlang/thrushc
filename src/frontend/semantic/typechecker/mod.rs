@@ -242,10 +242,10 @@ impl<'type_checker> TypeChecker<'type_checker> {
                 ));
             }
 
-            if !lli_value_type.is_mut_ptr_type() && !lli_value_type.is_ptr_type() {
+            if !lli_value_type.is_ptr_type() {
                 self.add_error(ThrushCompilerIssue::Error(
                     "Syntax error".into(),
-                    "Expected always 'mut ptr<T>' or 'ptr<T>' type.".into(),
+                    "Expected always 'ptr<T>' type.".into(),
                     None,
                     *span,
                 ));
@@ -339,6 +339,10 @@ impl<'type_checker> TypeChecker<'type_checker> {
                 TypeCheckerTypeCheckSource::default(),
             ) {
                 self.add_error(error);
+            }
+
+            if let Some(expr) = expression {
+                self.analyze_stmt(expr)?;
             }
 
             return Ok(());
@@ -734,7 +738,25 @@ impl<'type_checker> TypeChecker<'type_checker> {
             return Ok(());
         }
 
-        if let ThrushStatement::CastRawMut {
+        if let ThrushStatement::Deref { load, .. } = stmt {
+            let load_type: &ThrushType = load.get_value_type()?;
+            let load_span: Span = load.get_span();
+
+            if !load_type.is_ptr_type() {
+                self.add_error(ThrushCompilerIssue::Error(
+                    "Syntax error".into(),
+                    "Expected 'ptr<T>' || 'ptr' type.".into(),
+                    None,
+                    load_span,
+                ));
+            }
+
+            self.analyze_stmt(load)?;
+
+            return Ok(());
+        }
+
+        if let ThrushStatement::CastRaw {
             from,
             cast_type,
             span,

@@ -458,7 +458,29 @@ pub fn compile<'ctx>(
         );
     }
 
-    if let ThrushStatement::RawPtr { from, span, .. } = expression {
+    if let ThrushStatement::Deref { load, kind, .. } = expression {
+        if let ThrushStatement::Reference { name, .. } = &**load {
+            let raw_value: PointerValue = context.get_allocated_symbol(name).raw_load();
+            return memory::load_anon(context, kind, raw_value);
+        }
+
+        if let ThrushStatement::Deref { load, kind, .. } = &**load {
+            let subderef: BasicValueEnum = self::compile(context, load, kind);
+
+            if subderef.is_pointer_value() {
+                return memory::load_anon(context, kind, subderef.into_pointer_value());
+            }
+
+            return subderef;
+        }
+
+        logging::log(
+            LoggingType::Panic,
+            &format!("Unable to deref pointer: '{}'.", load),
+        );
+    }
+
+    if let ThrushStatement::RawPtr { from, .. } = expression {
         if let ThrushStatement::Reference { name, .. } = &**from {
             return context.get_allocated_symbol(name).raw_load().into();
         }
@@ -469,7 +491,7 @@ pub fn compile<'ctx>(
         );
     }
 
-    if let ThrushStatement::CastRawMut { from, .. } = expression {
+    if let ThrushStatement::CastRaw { from, .. } = expression {
         if let ThrushStatement::Reference { name, .. } = &**from {
             return context.get_allocated_symbol(name).raw_load().into();
         }

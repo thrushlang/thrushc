@@ -279,8 +279,14 @@ pub enum ThrushStatement<'ctx> {
         span: Span,
     },
 
+    Deref {
+        load: Rc<ThrushStatement<'ctx>>,
+        kind: ThrushType,
+        span: Span,
+    },
+
     // Casts
-    CastRawMut {
+    CastRaw {
         from: Rc<ThrushStatement<'ctx>>,
         cast_type: ThrushType,
         span: Span,
@@ -402,7 +408,8 @@ impl<'ctx> ThrushStatement<'ctx> {
             ThrushStatement::MethodCall { kind, .. } => Ok(kind),
             ThrushStatement::EnumValue { kind, .. } => Ok(kind),
             ThrushStatement::RawPtr { kind, .. } => Ok(kind),
-            ThrushStatement::CastRawMut {
+            ThrushStatement::Deref { kind, .. } => Ok(kind),
+            ThrushStatement::CastRaw {
                 cast_type: kind, ..
             } => Ok(kind),
             ThrushStatement::Cast {
@@ -445,8 +452,9 @@ impl<'ctx> ThrushStatement<'ctx> {
             ThrushStatement::Return { kind, .. } => kind,
             ThrushStatement::EnumValue { kind, .. } => kind,
             ThrushStatement::RawPtr { kind, .. } => kind,
+            ThrushStatement::Deref { kind, .. } => kind,
 
-            ThrushStatement::CastRawMut { cast_type, .. } => cast_type,
+            ThrushStatement::CastRaw { cast_type, .. } => cast_type,
             ThrushStatement::Cast { cast_type, .. } => cast_type,
 
             any => {
@@ -467,9 +475,10 @@ impl<'ctx> ThrushStatement<'ctx> {
             ThrushStatement::BinaryOp { span, .. } => *span,
             ThrushStatement::Group { span, .. } => *span,
             ThrushStatement::UnaryOp { span, .. } => *span,
-            ThrushStatement::CastRawMut { span, .. } => *span,
+            ThrushStatement::CastRaw { span, .. } => *span,
             ThrushStatement::Cast { span, .. } => *span,
             ThrushStatement::RawPtr { span, .. } => *span,
+            ThrushStatement::Deref { span, .. } => *span,
 
             ThrushStatement::Str { span, .. } => *span,
             ThrushStatement::Boolean { span, .. } => *span,
@@ -843,7 +852,7 @@ impl ThrushStatement<'_> {
                 | ThrushStatement::Address { .. }
                 | ThrushStatement::Alloc { .. }
                 | ThrushStatement::Cast { .. }
-                | ThrushStatement::CastRawMut { .. }
+                | ThrushStatement::CastRaw { .. }
         )
     }
 

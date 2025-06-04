@@ -79,6 +79,14 @@ impl LLVMTypeExtensions for ThrushType {
 }
 
 impl ThrushType {
+    pub fn deref_ptr(&self) -> ThrushType {
+        if let ThrushType::Ptr(Some(any)) = self {
+            return (**any).clone();
+        }
+
+        self.clone()
+    }
+
     pub fn match_first_depth(&self, other: &ThrushType) -> bool {
         if let ThrushType::Ptr(Some(any)) = self {
             return **any == *other;
@@ -134,16 +142,6 @@ impl ThrushType {
         target_data: &TargetData,
     ) -> bool {
         target_data.get_abi_size(&typegen::generate_type(llvm_context, self)) >= 128
-    }
-
-    pub fn is_mut_ptr_type(&self) -> bool {
-        if let ThrushType::Mut(subtype) = self {
-            if let ThrushType::Ptr(_) = &**subtype {
-                return true;
-            }
-        }
-
-        false
     }
 
     pub fn is_mut_numeric_type(&self) -> bool {
@@ -250,8 +248,9 @@ impl ThrushType {
 impl PartialEq for ThrushType {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
-            (ThrushType::Struct(_, fields1), ThrushType::Struct(_, fields2)) => {
+            (ThrushType::Struct(a, fields1), ThrushType::Struct(b, fields2)) => {
                 fields1.len() == fields2.len()
+                    && a == b
                     && fields1
                         .iter()
                         .zip(fields2.iter())

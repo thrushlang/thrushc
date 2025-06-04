@@ -37,8 +37,10 @@ impl<'semantic_analyzer> SemanticAnalyzer<'semantic_analyzer> {
         let type_checker_throw_errors: bool = self.type_checker.check();
         let attr_checker_throw_errors: bool = self.attr_checker.check();
 
-        self.linter.check();
-        self.attr_linter.check();
+        if !type_checker_throw_errors && !attr_checker_throw_errors {
+            self.linter.check();
+            self.attr_linter.check();
+        }
 
         type_checker_throw_errors || attr_checker_throw_errors
     }

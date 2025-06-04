@@ -131,6 +131,13 @@ impl<'linter> Linter<'linter> {
             self.analyze_stmt(block);
         }
 
+        if let ThrushStatement::Return {
+            expression: Some(expr),
+            ..
+        } = stmt
+        {
+            self.analyze_stmt(expr);
+        }
         /* ######################################################################
 
 
@@ -191,7 +198,7 @@ impl<'linter> Linter<'linter> {
             self.analyze_stmt(from);
         }
 
-        if let ThrushStatement::CastRawMut { from, .. } = stmt {
+        if let ThrushStatement::CastRaw { from, .. } = stmt {
             self.analyze_stmt(from);
         }
 

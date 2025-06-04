@@ -133,7 +133,8 @@ impl std::fmt::Display for TokenKind {
             TokenKind::Load => write!(f, "load"),
             TokenKind::Alloc => write!(f, "alloc"),
             TokenKind::Addr => write!(f, "addr"),
-            TokenKind::CastRawMut => write!(f, "castrawmut"),
+            TokenKind::Deref => write!(f, "deref"),
+            TokenKind::CastRaw => write!(f, "castraw"),
             TokenKind::RawPtr => write!(f, "rawptr"),
             TokenKind::Cast => write!(f, "cast"),
             TokenKind::Void => write!(f, "void"),
@@ -169,10 +170,10 @@ impl std::fmt::Display for ThrushType {
             }
             ThrushType::Ptr(nested_type) => {
                 if let Some(nested_type) = nested_type {
-                    let _ = write!(f, "ptr[");
+                    let _ = write!(f, "ptr<");
                     let _ = write!(f, "{}", nested_type);
 
-                    return write!(f, "]");
+                    return write!(f, ">");
                 }
 
                 write!(f, "ptr")
