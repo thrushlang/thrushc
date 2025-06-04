@@ -33,15 +33,15 @@ impl<'semantic_analyzer> SemanticAnalyzer<'semantic_analyzer> {
         }
     }
 
-    pub fn check(&mut self) -> bool {
+    pub fn check(&mut self, parser_throwed_errors: bool) -> bool {
         let type_checker_throw_errors: bool = self.type_checker.check();
         let attr_checker_throw_errors: bool = self.attr_checker.check();
 
-        if !type_checker_throw_errors && !attr_checker_throw_errors {
+        if !type_checker_throw_errors && !attr_checker_throw_errors && !parser_throwed_errors {
             self.linter.check();
             self.attr_linter.check();
         }
 
-        type_checker_throw_errors || attr_checker_throw_errors
+        type_checker_throw_errors || attr_checker_throw_errors || parser_throwed_errors
     }
 }

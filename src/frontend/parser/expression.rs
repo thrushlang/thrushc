@@ -357,7 +357,7 @@ fn primary<'instr>(
             let reference_tk: &Token = parser_ctx.consume(
                 TokenKind::Identifier,
                 "Syntax error".into(),
-                "Expected 'identifier'.".into(),
+                "Expected 'reference'.".into(),
             )?;
 
             let ref_name: &str = reference_tk.lexeme;
@@ -368,7 +368,7 @@ fn primary<'instr>(
             if !reference.is_reference_allocated() {
                 return Err(ThrushCompilerIssue::Error(
                     String::from("Syntax error"),
-                    String::from("Expected reference allocated."),
+                    String::from("Expected allocated reference."),
                     None,
                     span,
                 ));
@@ -377,8 +377,15 @@ fn primary<'instr>(
             let mut reference_type: ThrushType = reference.get_value_type()?.clone();
 
             if !reference_type.is_ptr_type() {
-                reference_type = ThrushType::Ptr(Some(reference_type.into()));
+                if !reference_type.is_mut_type() {
+                    reference_type = ThrushType::Ptr(Some(reference_type.into()));
+                } else {
+                    let defered_type: ThrushType = reference_type.defer_mut_all();
+                    reference_type = ThrushType::Ptr(Some(defered_type.into()));
+                }
             }
+
+            println!("{:?}", reference_type);
 
             ThrushStatement::RawPtr {
                 from: reference.into(),
@@ -460,7 +467,7 @@ fn primary<'instr>(
                 let identifier_tk: &Token = parser_ctx.consume(
                     TokenKind::Identifier,
                     String::from("Syntax error"),
-                    String::from("Expected 'identifier'."),
+                    String::from("Expected 'reference'."),
                 )?;
 
                 let name: &str = identifier_tk.lexeme;
@@ -578,7 +585,7 @@ fn primary<'instr>(
             let identifier_tk: &Token = parser_ctx.consume(
                 TokenKind::Identifier,
                 String::from("Syntax error"),
-                String::from("Expected 'identifier'."),
+                String::from("Expected 'reference'."),
             )?;
 
             let name: &str = identifier_tk.lexeme;
@@ -1230,16 +1237,6 @@ fn build_function_call<'instr>(
 
         let expression: ThrushStatement = self::build_expr(parser_ctx)?;
 
-        if parser_ctx.check(TokenKind::RParen) {
-            break;
-        } else {
-            parser_ctx.consume(
-                TokenKind::Comma,
-                String::from("Syntax error"),
-                String::from("Expected ','."),
-            )?;
-        }
-
         if expression.is_constructor() {
             return Err(ThrushCompilerIssue::Error(
                 String::from("Syntax error"),
@@ -1250,6 +1247,16 @@ fn build_function_call<'instr>(
         }
 
         args.push(expression);
+
+        if parser_ctx.check(TokenKind::RParen) {
+            break;
+        } else {
+            parser_ctx.consume(
+                TokenKind::Comma,
+                String::from("Syntax error"),
+                String::from("Expected ','."),
+            )?;
+        }
     }
 
     parser_ctx.consume(
@@ -1518,7 +1525,7 @@ pub fn build_deref<'instr>(
         if !reference.is_reference_allocated() {
             return Err(ThrushCompilerIssue::Error(
                 String::from("Syntax error"),
-                String::from("Expected reference allocated."),
+                String::from("Expected allocated reference."),
                 None,
                 ref_span,
             ));

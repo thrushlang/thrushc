@@ -79,6 +79,14 @@ impl LLVMTypeExtensions for ThrushType {
 }
 
 impl ThrushType {
+    pub fn defer_mut_all(&self) -> ThrushType {
+        if let ThrushType::Mut(inner_type) = self {
+            return inner_type.defer_mut_all();
+        }
+
+        self.clone()
+    }
+
     pub fn is_nested_ptr(&self) -> bool {
         if let ThrushType::Ptr(Some(ptr)) = self {
             if let ThrushType::Ptr(..) = &**ptr {

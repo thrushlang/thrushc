@@ -252,7 +252,8 @@ impl<'thrushc> TheThrushCompiler<'thrushc> {
             Diagnostician::new(file),
         );
 
-        let semantic_analysis_throwed_errors: bool = SemanticAnalyzer::new(stmts, file).check();
+        let semantic_analysis_throwed_errors: bool =
+            SemanticAnalyzer::new(stmts, file).check(parser_throwed_errors);
 
         if parser_throwed_errors || semantic_analysis_throwed_errors {
             logging::write(
