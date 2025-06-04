@@ -79,6 +79,16 @@ impl LLVMTypeExtensions for ThrushType {
 }
 
 impl ThrushType {
+    pub fn is_nested_ptr(&self) -> bool {
+        if let ThrushType::Ptr(Some(ptr)) = self {
+            if let ThrushType::Ptr(..) = &**ptr {
+                return true;
+            }
+        }
+
+        false
+    }
+
     pub fn deref_ptr(&self) -> ThrushType {
         if let ThrushType::Ptr(Some(any)) = self {
             return (**any).clone();

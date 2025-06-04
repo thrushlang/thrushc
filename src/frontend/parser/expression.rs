@@ -422,9 +422,7 @@ fn primary<'instr>(
 
             let mut alloc_type: ThrushType = typegen::build_type(parser_ctx)?;
 
-            if !alloc_type.is_ptr_type() {
-                alloc_type = ThrushType::Ptr(Some(alloc_type.into()));
-            }
+            alloc_type = ThrushType::Ptr(Some(alloc_type.into()));
 
             let attributes: Vec<LLVMAttribute> = if parser_ctx.match_token(TokenKind::LBrace)? {
                 stmt::build_attributes(parser_ctx, &[TokenKind::RBrace, TokenKind::SemiColon])?
@@ -512,15 +510,15 @@ fn primary<'instr>(
 
                 let name: &str = identifier_tk.lexeme;
 
-                if let Ok(reference) = self::build_reference(parser_ctx, name, span) {
-                    if !reference.is_reference_lli() {
-                        return Err(ThrushCompilerIssue::Error(
-                            "Syntax error".into(),
-                            "Expected LLI, reference.".into(),
-                            None,
-                            span,
-                        ));
-                    }
+                let reference: ThrushStatement = self::build_reference(parser_ctx, name, span)?;
+
+                if !reference.is_reference_lli() {
+                    return Err(ThrushCompilerIssue::Error(
+                        "Syntax error".into(),
+                        "Expected LLI, reference.".into(),
+                        None,
+                        span,
+                    ));
                 }
 
                 parser_ctx.consume(
@@ -529,13 +527,14 @@ fn primary<'instr>(
                     "Expected ','.".into(),
                 )?;
 
+                let write_type: ThrushType = typegen::build_type(parser_ctx)?;
+
                 let value: ThrushStatement = self::build_expr(parser_ctx)?;
-                let write_type: &ThrushType = value.get_value_type()?;
 
                 return Ok(ThrushStatement::Write {
                     write_to: (Some(name), None),
                     write_value: value.clone().into(),
-                    write_type: write_type.clone(),
+                    write_type,
                     span,
                 });
             }
@@ -561,14 +560,14 @@ fn primary<'instr>(
                 String::from("Expected ','."),
             )?;
 
-            let value: ThrushStatement = self::build_expr(parser_ctx)?;
+            let write_type: ThrushType = typegen::build_type(parser_ctx)?;
 
-            let write_type: &ThrushType = value.get_value_type()?;
+            let value: ThrushStatement = self::build_expr(parser_ctx)?;
 
             ThrushStatement::Write {
                 write_to: (None, Some(expression.into())),
                 write_value: value.clone().into(),
-                write_type: write_type.clone(),
+                write_type,
                 span,
             }
         }

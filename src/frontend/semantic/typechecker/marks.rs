@@ -1,3 +1,5 @@
+#![allow(clippy::upper_case_acronyms)]
+
 use crate::types::frontend::lexer::types::ThrushType;
 
 #[derive(Debug, Default, Clone, Copy)]
@@ -39,6 +41,7 @@ impl<'types> TypeCheckerTypeContext<'types> {
 pub enum TypeCheckerTypeCheckSource {
     Local,
     Call,
+    LLI,
 
     #[default]
     NoRelevant,
@@ -47,5 +50,9 @@ pub enum TypeCheckerTypeCheckSource {
 impl TypeCheckerTypeCheckSource {
     pub fn is_local(&self) -> bool {
         matches!(self, TypeCheckerTypeCheckSource::Local)
+    }
+
+    pub fn is_lli(&self) -> bool {
+        matches!(self, TypeCheckerTypeCheckSource::LLI)
     }
 }

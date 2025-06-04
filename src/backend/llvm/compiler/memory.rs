@@ -374,7 +374,7 @@ pub fn load_anon<'ctx>(
     let llvm_context: &Context = context.get_llvm_context();
     let llvm_builder: &Builder = context.get_llvm_builder();
 
-    let llvm_type: BasicTypeEnum = typegen::generate_subtype(llvm_context, kind);
+    let llvm_type: BasicTypeEnum = typegen::generate_type(llvm_context, kind);
 
     let preferred_alignment: u32 = context
         .get_target_data()
@@ -406,12 +406,17 @@ pub fn alloc_anon<'ctx>(
     site: LLVMAllocationSite,
     context: &LLVMCodeGenContext<'_, 'ctx>,
     kind: &ThrushType,
+    without_subtyped: bool,
 ) -> PointerValue<'ctx> {
     let llvm_module: &Module = context.get_llvm_module();
     let llvm_context: &Context = context.get_llvm_context();
     let llvm_builder: &Builder = context.get_llvm_builder();
 
-    let llvm_type: BasicTypeEnum = typegen::generate_subtype(llvm_context, kind);
+    let llvm_type: BasicTypeEnum = if without_subtyped {
+        typegen::generate_type(llvm_context, kind)
+    } else {
+        typegen::generate_subtype(llvm_context, kind)
+    };
 
     let preferred_memory_alignment: u32 = context
         .get_target_data()

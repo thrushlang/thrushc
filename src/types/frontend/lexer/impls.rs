@@ -170,10 +170,10 @@ impl std::fmt::Display for ThrushType {
             }
             ThrushType::Ptr(nested_type) => {
                 if let Some(nested_type) = nested_type {
-                    let _ = write!(f, "ptr<");
+                    let _ = write!(f, "ptr[");
                     let _ = write!(f, "{}", nested_type);
 
-                    return write!(f, ">");
+                    return write!(f, "]");
                 }
 
                 write!(f, "ptr")

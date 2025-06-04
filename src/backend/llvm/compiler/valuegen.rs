@@ -1,7 +1,7 @@
 use std::rc::Rc;
 
 use crate::backend::llvm::compiler::context::LLVMCodeGenContextPosition;
-use crate::backend::llvm::compiler::memory::{self, SymbolAllocated};
+use crate::backend::llvm::compiler::memory::{self, LLVMAllocationSite, SymbolAllocated};
 use crate::backend::llvm::compiler::{binaryop, builtins, cast, unaryop, utils};
 use crate::standard::logging::{self, LoggingType};
 use crate::types::backend::llvm::types::LLVMFunction;
@@ -292,8 +292,15 @@ pub fn compile<'ctx>(
         ..
     } = expression
     {
-        let site_allocation: memory::LLVMAllocationSite = site_allocation.to_llvm_allocation_site();
-        return memory::alloc_anon(site_allocation, context, type_to_alloc).into();
+        let site_allocation: LLVMAllocationSite = site_allocation.to_llvm_allocation_site();
+
+        return memory::alloc_anon(
+            site_allocation,
+            context,
+            type_to_alloc,
+            type_to_alloc.is_nested_ptr(),
+        )
+        .into();
     }
 
     if let ThrushStatement::Write {
@@ -458,26 +465,8 @@ pub fn compile<'ctx>(
         );
     }
 
-    if let ThrushStatement::Deref { load, kind, .. } = expression {
-        if let ThrushStatement::Reference { name, .. } = &**load {
-            let raw_value: PointerValue = context.get_allocated_symbol(name).raw_load();
-            return memory::load_anon(context, kind, raw_value);
-        }
-
-        if let ThrushStatement::Deref { load, kind, .. } = &**load {
-            let subderef: BasicValueEnum = self::compile(context, load, kind);
-
-            if subderef.is_pointer_value() {
-                return memory::load_anon(context, kind, subderef.into_pointer_value());
-            }
-
-            return subderef;
-        }
-
-        logging::log(
-            LoggingType::Panic,
-            &format!("Unable to deref pointer: '{}'.", load),
-        );
+    if let ThrushStatement::Deref { .. } = expression {
+        return self::compile_deref(context, expression);
     }
 
     if let ThrushStatement::RawPtr { from, .. } = expression {
@@ -667,4 +656,34 @@ pub fn alloc_constant<'ctx>(
     global.set_constant(true);
 
     global.as_pointer_value()
+}
+
+fn compile_deref<'ctx>(
+    context: &LLVMCodeGenContext<'_, 'ctx>,
+    expression: &ThrushStatement,
+) -> BasicValueEnum<'ctx> {
+    match expression {
+        ThrushStatement::Deref { load, kind, .. } => {
+            let load_value: BasicValueEnum = compile_deref(context, load);
+
+            if load_value.is_pointer_value() {
+                return memory::load_anon(context, kind, load_value.into_pointer_value());
+            }
+
+            load_value
+        }
+        ThrushStatement::Reference { name, .. } => {
+            // Obtener el puntero asociado al símbolo
+            let raw_value: PointerValue = context.get_allocated_symbol(name).raw_load();
+            raw_value.into()
+        }
+        _ => {
+            logging::log(
+                LoggingType::Panic,
+                &format!("Unable to compile expression: '{:?}'.", expression),
+            );
+            // Devolver un valor por defecto o lanzar un error
+            panic!("Unsupported expression");
+        }
+    }
 }

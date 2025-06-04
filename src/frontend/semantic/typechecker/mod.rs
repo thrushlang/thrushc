@@ -257,7 +257,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
                 Some(lli_value),
                 None,
                 span,
-                TypeCheckerTypeCheckSource::default(),
+                TypeCheckerTypeCheckSource::LLI,
             ) {
                 self.add_error(mismatch_type_error);
             }
@@ -797,12 +797,30 @@ impl<'type_checker> TypeChecker<'type_checker> {
             return Ok(());
         }
 
-        if let ThrushStatement::Load { .. }
-        | ThrushStatement::Write { .. }
-        | ThrushStatement::Address { .. }
-        | ThrushStatement::Alloc { .. }
-        | ThrushStatement::RawPtr { .. } = stmt
+        if let ThrushStatement::Write {
+            write_value,
+            write_type,
+            ..
+        } = stmt
         {
+            let write_value_type: &ThrushType = write_value.get_value_type()?;
+            let write_value_span: Span = write_value.get_span();
+
+            if let Err(error) = self.validate_types(
+                write_type,
+                write_value_type,
+                Some(write_value),
+                None,
+                &write_value_span,
+                TypeCheckerTypeCheckSource::default(),
+            ) {
+                self.add_error(error);
+            }
+
+            return Ok(());
+        }
+
+        if let ThrushStatement::Alloc { .. } | ThrushStatement::RawPtr { .. } = stmt {
             return Ok(());
         }
 
@@ -1058,6 +1076,20 @@ impl<'type_checker> TypeChecker<'type_checker> {
             (ThrushType::Ptr(None), ThrushType::Ptr(None), None) => Ok(()),
             (ThrushType::Ptr(Some(target_type)), ThrushType::Ptr(Some(from_type)), None) => {
                 self.validate_types(target_type, from_type, expression, operator, span, source)?;
+
+                Ok(())
+            }
+
+            (ThrushType::Ptr(any), other, None) if source.is_lli() => {
+                if let Some(ptr_sub_type) = any {
+                    if **ptr_sub_type == *other {
+                        return Ok(());
+                    }
+
+                    self.validate_types(ptr_sub_type, other, expression, operator, span, source)?;
+                } else {
+                    return Err(error);
+                }
 
                 Ok(())
             }
