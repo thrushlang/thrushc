@@ -676,10 +676,10 @@ impl<'type_checker> TypeChecker<'type_checker> {
             if let Some(lli) = self.symbols.get_lli(name) {
                 let any_type: &ThrushType = lli.0;
 
-                if !any_type.is_mut_ptr_type() && !any_type.is_ptr_type() {
+                if !any_type.is_ptr_type() {
                     self.add_error(ThrushCompilerIssue::Error(
                         "Syntax error".into(),
-                        "Expected 'mut ptr<T>' or 'ptr<T>'.".into(),
+                        "Expected 'ptr<T>'.".into(),
                         None,
                         *span,
                     ));
@@ -706,10 +706,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
                     let any_type: &ThrushType = any.0;
                     let any_span: Span = any.1;
 
-                    if !any_type.is_mut_ptr_type()
-                        && !any_type.is_ptr_type()
-                        && !any_type.is_address_type()
-                    {
+                    if !any_type.is_ptr_type() && !any_type.is_address_type() {
                         self.add_error(ThrushCompilerIssue::Error(
                             "Syntax error".into(),
                             "Expected 'mut ptr<T>', ptr<T> or 'addr' type.".into(),
@@ -724,13 +721,10 @@ impl<'type_checker> TypeChecker<'type_checker> {
                 let any_type: &ThrushType = any.get_value_type()?;
                 let any_span: Span = any.get_span();
 
-                if !any_type.is_mut_ptr_type()
-                    && !any_type.is_ptr_type()
-                    && !any_type.is_address_type()
-                {
+                if !any_type.is_ptr_type() && !any_type.is_address_type() {
                     self.add_error(ThrushCompilerIssue::Error(
                         "Syntax error".into(),
-                        "Expected 'mut ptr<T>', ptr<T> or 'addr' type.".into(),
+                        "Expected 'ptr<T>', ptr<T> or 'addr' type.".into(),
                         None,
                         any_span,
                     ));
@@ -740,11 +734,52 @@ impl<'type_checker> TypeChecker<'type_checker> {
             return Ok(());
         }
 
+        if let ThrushStatement::CastRawMut {
+            from,
+            cast_type,
+            span,
+        } = stmt
+        {
+            let from_type: &ThrushType = from.get_value_type()?;
+            let from_span: Span = from.get_span();
+
+            if !from_type.is_ptr_type() {
+                self.add_error(ThrushCompilerIssue::Error(
+                    "Syntax error".into(),
+                    "Expected 'ptr<T>' type.".into(),
+                    None,
+                    from_span,
+                ));
+            }
+
+            if cast_type.is_ptr_type() {
+                self.add_error(ThrushCompilerIssue::Error(
+                    "Syntax error".into(),
+                    "A non-raw type 'ptr<T>' was expected.".into(),
+                    None,
+                    from_span,
+                ));
+            }
+
+            if !from_type.match_first_depth(cast_type) {
+                self.add_error(ThrushCompilerIssue::Error(
+                    "Syntax error".into(),
+                    format!("Cannot cast '{}' to '{}'.", from_type, cast_type),
+                    None,
+                    *span,
+                ));
+            }
+
+            self.analyze_stmt(from)?;
+
+            return Ok(());
+        }
+
         if let ThrushStatement::Load { .. }
         | ThrushStatement::Write { .. }
         | ThrushStatement::Address { .. }
         | ThrushStatement::Alloc { .. }
-        | ThrushStatement::CastRaw { .. } = stmt
+        | ThrushStatement::RawPtr { .. } = stmt
         {
             return Ok(());
         }

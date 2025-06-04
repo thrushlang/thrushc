@@ -159,7 +159,7 @@ fn casts<'instr>(
 ) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
     let mut expression: ThrushStatement = self::cmp(parser_ctx)?;
 
-    if parser_ctx.match_token(TokenKind::CastRaw)? {
+    if parser_ctx.match_token(TokenKind::CastRawMut)? {
         let expression_span: Span = expression.get_span();
 
         let span: Span = parser_ctx.previous().span;
@@ -179,7 +179,7 @@ fn casts<'instr>(
             cast_type = ThrushType::Mut(cast_type.into());
         }
 
-        expression = ThrushStatement::CastRaw {
+        expression = ThrushStatement::CastRawMut {
             from: expression.into(),
             cast_type,
             span,
@@ -348,6 +348,44 @@ fn primary<'instr>(
     parser_ctx: &mut ParserContext<'instr>,
 ) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
     let primary: ThrushStatement = match &parser_ctx.peek().kind {
+        TokenKind::RawPtr => {
+            let raw_ptr_tk: &Token = parser_ctx.advance()?;
+            let span: Span = raw_ptr_tk.span;
+
+            let reference_tk: &Token = parser_ctx.consume(
+                TokenKind::Identifier,
+                "Syntax error".into(),
+                "Expected 'identifier'.".into(),
+            )?;
+
+            let ref_name: &str = reference_tk.lexeme;
+            let ref_span: Span = reference_tk.span;
+
+            let reference: ThrushStatement = self::build_reference(parser_ctx, ref_name, ref_span)?;
+
+            if !reference.is_reference_allocated() {
+                return Err(ThrushCompilerIssue::Error(
+                    String::from("Syntax error"),
+                    String::from("Expected reference allocated."),
+                    None,
+                    span,
+                ));
+            }
+
+            let mut reference_type: ThrushType = reference.get_value_type()?.clone();
+
+            if !reference_type.is_mut_ptr_type() {
+                reference_type =
+                    ThrushType::Mut(ThrushType::Ptr(Some(reference_type.into())).into());
+            }
+
+            ThrushStatement::RawPtr {
+                from: reference.into(),
+                kind: reference_type,
+                span,
+            }
+        }
+
         TokenKind::Alloc => {
             let alloc_tk: &Token = parser_ctx.advance()?;
             let span: Span = alloc_tk.span;

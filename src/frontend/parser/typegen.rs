@@ -25,7 +25,27 @@ pub fn build_type(parser_ctx: &mut ParserContext<'_>) -> Result<ThrushType, Thru
             let span: Span = tk.span;
 
             if tk_kind.is_mut() {
-                return Ok(ThrushType::Mut(self::build_type(parser_ctx)?.into()));
+                let inner_type: ThrushType = self::build_type(parser_ctx)?;
+
+                if inner_type.is_mut_type() {
+                    return Err(ThrushCompilerIssue::Error(
+                        String::from("Syntax error"),
+                        "Nested mutable type 'mut mut T' aren't allowed.".into(),
+                        None,
+                        span,
+                    ));
+                }
+
+                if inner_type.is_ptr_type() {
+                    return Err(ThrushCompilerIssue::Error(
+                        String::from("Syntax error"),
+                        "Mutable pointers 'mut ptr<T>' aren't allowed.".into(),
+                        None,
+                        span,
+                    ));
+                }
+
+                return Ok(ThrushType::Mut(inner_type.into()));
             }
 
             match tk_kind.as_type(span)? {

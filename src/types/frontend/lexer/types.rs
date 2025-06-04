@@ -79,6 +79,14 @@ impl LLVMTypeExtensions for ThrushType {
 }
 
 impl ThrushType {
+    pub fn match_first_depth(&self, other: &ThrushType) -> bool {
+        if let ThrushType::Ptr(Some(any)) = self {
+            return **any == *other;
+        }
+
+        false
+    }
+
     #[must_use]
     pub fn precompute_type(&self, other: &ThrushType) -> &ThrushType {
         match (self, other) {

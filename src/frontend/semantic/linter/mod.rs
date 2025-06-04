@@ -191,7 +191,11 @@ impl<'linter> Linter<'linter> {
             self.analyze_stmt(from);
         }
 
-        if let ThrushStatement::CastRaw { from, .. } = stmt {
+        if let ThrushStatement::CastRawMut { from, .. } = stmt {
+            self.analyze_stmt(from);
+        }
+
+        if let ThrushStatement::RawPtr { from, .. } = stmt {
             self.analyze_stmt(from);
         }
 

@@ -458,7 +458,18 @@ pub fn compile<'ctx>(
         );
     }
 
-    if let ThrushStatement::CastRaw { from, .. } = expression {
+    if let ThrushStatement::RawPtr { from, span, .. } = expression {
+        if let ThrushStatement::Reference { name, .. } = &**from {
+            return context.get_allocated_symbol(name).raw_load().into();
+        }
+
+        logging::log(
+            LoggingType::Panic,
+            &format!("Unable to convert reference to raw pointer: '{}'.", from),
+        );
+    }
+
+    if let ThrushStatement::CastRawMut { from, .. } = expression {
         if let ThrushStatement::Reference { name, .. } = &**from {
             return context.get_allocated_symbol(name).raw_load().into();
         }
@@ -466,7 +477,7 @@ pub fn compile<'ctx>(
         logging::log(
             LoggingType::Panic,
             &format!(
-                "Pointer casting could not be perform at 'transmute' from: '{}'.",
+                "Pointer casting could not be perform at 'castrawmut' from: '{}'.",
                 from
             ),
         );
