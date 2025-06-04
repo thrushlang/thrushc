@@ -242,10 +242,10 @@ impl<'type_checker> TypeChecker<'type_checker> {
                 ));
             }
 
-            if !lli_value_type.is_ptr_type() {
+            if !lli_value_type.is_ptr_type() && !lli_value_type.is_address_type() {
                 self.add_error(ThrushCompilerIssue::Error(
                     "Syntax error".into(),
-                    "Expected always 'ptr<T>' type.".into(),
+                    "Expected always 'ptr<T>' or addr type.".into(),
                     None,
                     *span,
                 ));
@@ -680,10 +680,10 @@ impl<'type_checker> TypeChecker<'type_checker> {
             if let Some(lli) = self.symbols.get_lli(name) {
                 let any_type: &ThrushType = lli.0;
 
-                if !any_type.is_ptr_type() {
+                if !any_type.is_ptr_type() && !any_type.is_address_type() {
                     self.add_error(ThrushCompilerIssue::Error(
                         "Syntax error".into(),
-                        "Expected 'ptr<T>'.".into(),
+                        "Expected 'ptr<T>' or addr type.".into(),
                         None,
                         *span,
                     ));
@@ -728,7 +728,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
                 if !any_type.is_ptr_type() && !any_type.is_address_type() {
                     self.add_error(ThrushCompilerIssue::Error(
                         "Syntax error".into(),
-                        "Expected 'ptr<T>', ptr<T> or 'addr' type.".into(),
+                        "Expected ' ptr<T> or 'addr' type.".into(),
                         None,
                         any_span,
                     ));
