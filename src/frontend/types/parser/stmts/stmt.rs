@@ -706,6 +706,20 @@ impl<'ctx> ThrushStatement<'ctx> {
         ))
     }
 
+    pub fn get_str_raw_bytes(&self) -> Result<Vec<char>, ThrushCompilerIssue> {
+        if let ThrushStatement::Str { bytes, .. } = self {
+            return Ok(bytes.iter().map(|byte| char::from(*byte)).collect());
+        }
+
+        Err(ThrushCompilerIssue::Bug(
+            String::from("Str not caught"),
+            String::from("Expected a str value."),
+            self.get_span(),
+            CompilationPosition::Parser,
+            line!(),
+        ))
+    }
+
     pub fn get_method_type(&self) -> Result<ThrushType, ThrushCompilerIssue> {
         if let ThrushStatement::Method { return_type, .. } = self {
             return Ok(return_type.clone());
@@ -914,6 +928,11 @@ impl ThrushStatement<'_> {
     }
 
     #[inline]
+    pub const fn is_str(&self) -> bool {
+        matches!(self, ThrushStatement::Str { .. })
+    }
+
+    #[inline]
     pub const fn is_constant(&self) -> bool {
         matches!(self, ThrushStatement::Const { .. })
     }
@@ -926,24 +945,6 @@ impl ThrushStatement<'_> {
     #[inline]
     pub const fn is_binary(&self) -> bool {
         matches!(self, ThrushStatement::BinaryOp { .. })
-    }
-
-    #[inline]
-    pub const fn is_lli(&self) -> bool {
-        matches!(
-            self,
-            ThrushStatement::Write { .. }
-                | ThrushStatement::Load { .. }
-                | ThrushStatement::Address { .. }
-                | ThrushStatement::Alloc { .. }
-                | ThrushStatement::Cast { .. }
-                | ThrushStatement::CastRaw { .. }
-        )
-    }
-
-    #[inline]
-    pub const fn is_write(&self) -> bool {
-        matches!(self, ThrushStatement::Write { .. })
     }
 
     #[inline]

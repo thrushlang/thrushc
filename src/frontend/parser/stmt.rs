@@ -1532,24 +1532,44 @@ pub fn build_assembler_function<'instr>(
     )?;
 
     let mut assembler: String = String::with_capacity(100);
-    let mut assembler_token_pos: usize = 0;
+    let mut assembler_instruction_pos: usize = 0;
 
     loop {
         if parser_ctx.check(TokenKind::RBrace) {
             break;
         }
 
-        let current_token: &Token = parser_ctx.peek();
+        let raw_str: ThrushStatement = expression::build_expr(parser_ctx)?;
+        let raw_str_span: Span = raw_str.get_span();
 
-        if assembler_token_pos != 0 {
-            assembler.push(' ');
+        if !raw_str.is_str() {
+            return Err(ThrushCompilerIssue::Error(
+                "Syntax error".into(),
+                "Expected str value.".into(),
+                None,
+                raw_str_span,
+            ));
         }
 
-        assembler.push_str(current_token.lexeme);
+        let asm_instruction: Vec<char> = raw_str.get_str_raw_bytes()?;
 
-        parser_ctx.advance()?;
+        if assembler_instruction_pos != 0 {
+            assembler.push('\n');
+        }
 
-        assembler_token_pos += 1;
+        assembler.extend(asm_instruction);
+
+        if parser_ctx.check(TokenKind::RBrace) {
+            break;
+        } else {
+            parser_ctx.consume(
+                TokenKind::Comma,
+                String::from("Syntax error"),
+                String::from("Expected ','."),
+            )?;
+        }
+
+        assembler_instruction_pos += 1;
     }
 
     parser_ctx.consume(
@@ -1565,24 +1585,44 @@ pub fn build_assembler_function<'instr>(
     )?;
 
     let mut constraints: String = String::with_capacity(100);
-    let mut constrains_token_pos: usize = 0;
+    let mut constraints_instruction_pos: usize = 0;
 
     loop {
         if parser_ctx.check(TokenKind::RBrace) {
             break;
         }
 
-        let current_token: &Token = parser_ctx.peek();
+        let raw_str: ThrushStatement = expression::build_expr(parser_ctx)?;
+        let raw_str_span: Span = raw_str.get_span();
 
-        if constrains_token_pos != 0 {
-            constraints.push(' ');
+        if !raw_str.is_str() {
+            return Err(ThrushCompilerIssue::Error(
+                "Syntax error".into(),
+                "Expected str value.".into(),
+                None,
+                raw_str_span,
+            ));
         }
 
-        constraints.push_str(current_token.lexeme);
+        let constraint_instruction: Vec<char> = raw_str.get_str_raw_bytes()?;
 
-        parser_ctx.advance()?;
+        if constraints_instruction_pos != 0 {
+            constraints.push('\n');
+        }
 
-        constrains_token_pos += 1;
+        constraints.extend(constraint_instruction);
+
+        if parser_ctx.check(TokenKind::RBrace) {
+            break;
+        } else {
+            parser_ctx.consume(
+                TokenKind::Comma,
+                String::from("Syntax error"),
+                String::from("Expected ','."),
+            )?;
+        }
+
+        constraints_instruction_pos += 1;
     }
 
     parser_ctx.consume(
