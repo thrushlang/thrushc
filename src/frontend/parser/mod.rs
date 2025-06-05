@@ -17,7 +17,7 @@ use crate::core::errors::standard::ThrushCompilerIssue;
 use crate::frontend::lexer::token::Token;
 use crate::frontend::lexer::tokenkind::TokenKind;
 use crate::frontend::types::parser::stmts::stmt::ThrushStatement;
-use crate::frontend::types::symbols::types::Functions;
+use crate::frontend::types::symbols::types::{AssemblerFunctions, Functions};
 
 const MINIMAL_STATEMENT_CAPACITY: usize = 100_000;
 const MINIMAL_GLOBAL_CAPACITY: usize = 2024;
@@ -75,6 +75,7 @@ impl<'instr> Parser<'instr> {
 impl<'instr> ParserContext<'instr> {
     pub fn new(tokens: &'instr [Token<'instr>], file: &'instr CompilerFile) -> Self {
         let mut functions: Functions = HashMap::with_capacity(MINIMAL_GLOBAL_CAPACITY);
+        let asm_functions: AssemblerFunctions = HashMap::with_capacity(MINIMAL_GLOBAL_CAPACITY);
 
         builtins::include(&mut functions);
 
@@ -87,7 +88,7 @@ impl<'instr> ParserContext<'instr> {
             current: 0,
             scope: 0,
             diagnostician: Diagnostician::new(file),
-            symbols: SymbolsTable::with_functions(functions),
+            symbols: SymbolsTable::with_functions(functions, asm_functions),
         }
     }
 
@@ -424,6 +425,16 @@ impl<'instr> ParserContext<'instr> {
             .for_each(|(pos, _)| {
                 self.current = pos;
                 let _ = stmt::build_function(self, true);
+                self.current = 0;
+            });
+
+        self.tokens
+            .iter()
+            .enumerate()
+            .filter(|(_, token)| token.kind.is_asm_function_keyword())
+            .for_each(|(pos, _)| {
+                self.current = pos;
+                let _ = stmt::build_assembler_function(self, true);
                 self.current = 0;
             });
     }

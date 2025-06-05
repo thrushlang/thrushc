@@ -5,7 +5,7 @@ use {
         typegen, valuegen,
     },
     crate::{
-        backend::types::representations::LLVMFunction,
+        backend::types::representations::{LLVMAssemblerFunction, LLVMFunction},
         core::diagnostic::diagnostician::Diagnostician,
         frontend::types::{lexer::ThrushType, parser::stmts::types::ThrushAttributes},
     },
@@ -30,8 +30,9 @@ pub struct LLVMCodeGenContext<'a, 'ctx> {
     diagnostician: Diagnostician,
     constants: HashMap<&'ctx str, SymbolAllocated<'ctx>>,
     functions: HashMap<&'ctx str, LLVMFunction<'ctx>>,
-    blocks: Vec<HashMap<&'ctx str, SymbolAllocated<'ctx>>>,
+    asm_functions: HashMap<&'ctx str, LLVMAssemblerFunction<'ctx>>,
     lift_instructions: HashMap<&'ctx str, SymbolAllocated<'ctx>>,
+    blocks: Vec<HashMap<&'ctx str, SymbolAllocated<'ctx>>>,
     scope: usize,
 }
 
@@ -53,8 +54,9 @@ impl<'a, 'ctx> LLVMCodeGenContext<'a, 'ctx> {
             diagnostician,
             constants: HashMap::with_capacity(100),
             functions: HashMap::with_capacity(100),
-            blocks: Vec::with_capacity(255),
+            asm_functions: HashMap::with_capacity(100),
             lift_instructions: HashMap::with_capacity(100),
+            blocks: Vec::with_capacity(255),
             scope: 0,
         }
     }
@@ -126,6 +128,14 @@ impl<'a, 'ctx> LLVMCodeGenContext<'a, 'ctx> {
         self.functions.insert(name, function);
     }
 
+    pub fn add_assembler_function(
+        &mut self,
+        name: &'ctx str,
+        function: LLVMAssemblerFunction<'ctx>,
+    ) {
+        self.asm_functions.insert(name, function);
+    }
+
     pub fn get_allocated_symbol(&self, name: &str) -> SymbolAllocated<'ctx> {
         if let Some(constant) = self.constants.get(name) {
             return constant.clone();
@@ -156,6 +166,22 @@ impl<'a, 'ctx> LLVMCodeGenContext<'a, 'ctx> {
         logging::log(
             LoggingType::Panic,
             &format!("Unable to get '{}' function in global frame.", name),
+        );
+
+        unreachable!()
+    }
+
+    pub fn get_asm_function(&self, name: &str) -> LLVMAssemblerFunction<'ctx> {
+        if let Some(asm_function) = self.asm_functions.get(name) {
+            return *asm_function;
+        }
+
+        logging::log(
+            LoggingType::Panic,
+            &format!(
+                "Unable to get '{}' assembler function in global frame.",
+                name
+            ),
         );
 
         unreachable!()

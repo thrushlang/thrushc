@@ -20,6 +20,10 @@ impl Display for LLVMAttribute<'_> {
             LLVMAttribute::MinSize(..) => write!(f, "@minsize "),
             LLVMAttribute::Hot(..) => write!(f, "@hot "),
             LLVMAttribute::Ignore(..) => write!(f, "@ignore "),
+            LLVMAttribute::AsmThrow(..) => write!(f, "@asmthrow "),
+            LLVMAttribute::AsmDialect(..) => write!(f, "@asmdialect "),
+            LLVMAttribute::AsmSideEffects(..) => write!(f, "@asmeffects "),
+            LLVMAttribute::AsmAlignStack(..) => write!(f, "@asmalingstack "),
         }
     }
 }

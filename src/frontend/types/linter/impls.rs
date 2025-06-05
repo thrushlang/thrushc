@@ -18,6 +18,10 @@ impl LLVMAttributeComparatorExtensions for LLVMAttribute<'_> {
             LLVMAttribute::StrongStack(..) => LLVMAttributeComparator::StrongStack,
             LLVMAttribute::WeakStack(..) => LLVMAttributeComparator::WeakStack,
             LLVMAttribute::PreciseFloats(..) => LLVMAttributeComparator::PreciseFloats,
+            LLVMAttribute::AsmAlignStack(..) => LLVMAttributeComparator::AsmAlignStack,
+            LLVMAttribute::AsmDialect(..) => LLVMAttributeComparator::AsmDialect,
+            LLVMAttribute::AsmThrow(..) => LLVMAttributeComparator::AsmThrow,
+            LLVMAttribute::AsmSideEffects(..) => LLVMAttributeComparator::AsmSideEffects,
         }
     }
 }

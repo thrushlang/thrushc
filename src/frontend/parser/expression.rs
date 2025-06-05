@@ -21,8 +21,8 @@ use crate::{
                     LocalSymbolExtensions, MethodExtensions, MethodsExtensions,
                 },
                 types::{
-                    ConstantSymbol, FoundSymbolId, Function, LLISymbol, LocalSymbol, MethodDef,
-                    Methods, ParameterSymbol, Struct,
+                    AssemblerFunction, ConstantSymbol, FoundSymbolId, Function, LLISymbol,
+                    LocalSymbol, MethodDef, Methods, ParameterSymbol, Struct,
                 },
             },
         },
@@ -106,7 +106,7 @@ fn or<'instr>(
 fn and<'instr>(
     parser_ctx: &mut ParserContext<'instr>,
 ) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
-    let mut expression: ThrushStatement = equality(parser_ctx)?;
+    let mut expression: ThrushStatement = self::equality(parser_ctx)?;
 
     while parser_ctx.match_token(TokenKind::And)? {
         let operator_tk: &Token = parser_ctx.previous();
@@ -161,24 +161,45 @@ fn casts<'instr>(
 
         let span: Span = parser_ctx.previous().span;
 
-        if !expression.is_reference_allocated() {
+        if !expression.is_allocated()? {
             return Err(ThrushCompilerIssue::Error(
                 String::from("Syntax error"),
-                String::from("Expected allocated reference."),
+                String::from("Expected an allocated value."),
                 None,
                 expression_span,
             ));
         }
 
-        let mut cast_type: ThrushType = typegen::build_type(parser_ctx)?;
+        let mut cast: ThrushType = typegen::build_type(parser_ctx)?;
 
-        if !cast_type.is_mut_type() {
-            cast_type = ThrushType::Mut(cast_type.into());
+        if !cast.is_mut_type() {
+            cast = ThrushType::Mut(cast.into());
         }
 
         expression = ThrushStatement::CastRaw {
             from: expression.into(),
-            cast_type,
+            cast,
+            span,
+        };
+    } else if parser_ctx.match_token(TokenKind::CastPtr)? {
+        let expression_span: Span = expression.get_span();
+
+        let span: Span = parser_ctx.previous().span;
+
+        if !expression.is_allocated()? {
+            return Err(ThrushCompilerIssue::Error(
+                String::from("Syntax error"),
+                String::from("Expected an allocated value."),
+                None,
+                expression_span,
+            ));
+        }
+
+        let cast: ThrushType = typegen::build_type(parser_ctx)?;
+
+        expression = ThrushStatement::CastPtr {
+            from: expression.into(),
+            cast,
             span,
         };
     } else if parser_ctx.match_token(TokenKind::Cast)? {
@@ -186,20 +207,20 @@ fn casts<'instr>(
 
         let span: Span = parser_ctx.previous().span;
 
-        if !expression.is_reference_allocated() {
+        if !expression.is_allocated()? {
             return Err(ThrushCompilerIssue::Error(
                 String::from("Syntax error"),
-                String::from("Expected allocated reference."),
+                String::from("Expected an allocated value."),
                 None,
                 expression_span,
             ));
         }
 
-        let cast_type: ThrushType = typegen::build_type(parser_ctx)?;
+        let cast: ThrushType = typegen::build_type(parser_ctx)?;
 
         expression = ThrushStatement::Cast {
             from: expression.into(),
-            cast_type,
+            cast,
             span,
         };
     }
@@ -210,7 +231,7 @@ fn casts<'instr>(
 fn cmp<'instr>(
     parser_ctx: &mut ParserContext<'instr>,
 ) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
-    let mut expression: ThrushStatement = term(parser_ctx)?;
+    let mut expression: ThrushStatement = self::term(parser_ctx)?;
 
     if parser_ctx.match_token(TokenKind::Greater)?
         || parser_ctx.match_token(TokenKind::GreaterEq)?
@@ -238,7 +259,7 @@ fn cmp<'instr>(
 fn term<'instr>(
     parser_ctx: &mut ParserContext<'instr>,
 ) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
-    let mut expression: ThrushStatement = factor(parser_ctx)?;
+    let mut expression: ThrushStatement = self::factor(parser_ctx)?;
 
     while parser_ctx.match_token(TokenKind::Plus)?
         || parser_ctx.match_token(TokenKind::Minus)?
@@ -729,6 +750,21 @@ fn primary<'instr>(
             ThrushStatement::new_float(float_type, float_value, false, span)
         }
 
+        TokenKind::CallAsm => {
+            parser_ctx.only_advance()?;
+
+            let asm_function_name_tk: &Token<'_> = parser_ctx.consume(
+                TokenKind::Identifier,
+                "Syntax error".into(),
+                "Expected 'identifier'.".into(),
+            )?;
+
+            let name: &str = asm_function_name_tk.lexeme;
+            let span: Span = asm_function_name_tk.span;
+
+            self::build_asm_function_call(parser_ctx, name, span)?
+        }
+
         TokenKind::Identifier => {
             let identifier_tk: &Token = parser_ctx.advance()?;
 
@@ -1210,6 +1246,71 @@ fn build_address<'instr>(
     })
 }
 
+fn build_asm_function_call<'instr>(
+    parser_ctx: &mut ParserContext<'instr>,
+    name: &'instr str,
+    span: Span,
+) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
+    let object: FoundSymbolId = parser_ctx.get_symbols().get_symbols_id(name, span)?;
+
+    let asm_function_id: &str = object.expected_asm_function(span)?;
+
+    let asm_function: AssemblerFunction = parser_ctx
+        .get_symbols()
+        .get_asm_function_by_id(span, asm_function_id)?;
+
+    let function_type: ThrushType = asm_function.get_type();
+    let mut args: Vec<ThrushStatement> = Vec::with_capacity(10);
+
+    parser_ctx.consume(
+        TokenKind::LParen,
+        String::from("Syntax error"),
+        String::from("Expected '('."),
+    )?;
+
+    loop {
+        if parser_ctx.check(TokenKind::RParen) {
+            break;
+        }
+
+        let expression: ThrushStatement = self::build_expr(parser_ctx)?;
+
+        if expression.is_constructor() {
+            return Err(ThrushCompilerIssue::Error(
+                String::from("Syntax error"),
+                String::from("Constructor should be stored in a local variable."),
+                None,
+                expression.get_span(),
+            ));
+        }
+
+        args.push(expression);
+
+        if parser_ctx.check(TokenKind::RParen) {
+            break;
+        } else {
+            parser_ctx.consume(
+                TokenKind::Comma,
+                String::from("Syntax error"),
+                String::from("Expected ','."),
+            )?;
+        }
+    }
+
+    parser_ctx.consume(
+        TokenKind::RParen,
+        String::from("Syntax error"),
+        String::from("Expected ')'."),
+    )?;
+
+    Ok(ThrushStatement::AsmCall {
+        name,
+        args,
+        kind: function_type,
+        span,
+    })
+}
+
 fn build_function_call<'instr>(
     parser_ctx: &mut ParserContext<'instr>,
     name: &'instr str,
@@ -1517,10 +1618,10 @@ pub fn build_deref<'instr>(
 
         let reference: ThrushStatement = self::build_reference(parser_ctx, ref_name, ref_span)?;
 
-        if !reference.is_reference_allocated() {
+        if !reference.is_allocated()? {
             return Err(ThrushCompilerIssue::Error(
                 String::from("Syntax error"),
-                String::from("Expected allocated reference."),
+                String::from("Expected an allocated value."),
                 None,
                 ref_span,
             ));

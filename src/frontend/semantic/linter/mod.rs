@@ -9,7 +9,10 @@ use crate::{
         diagnostic::diagnostician::Diagnostician,
         errors::{position::CompilationPosition, standard::ThrushCompilerIssue},
     },
-    frontend::{lexer::span::Span, types::parser::stmts::stmt::ThrushStatement},
+    frontend::{
+        lexer::span::Span,
+        types::parser::stmts::{stmt::ThrushStatement, traits::ThrushAttributesExtensions},
+    },
 };
 
 pub mod attributes;
@@ -192,6 +195,10 @@ impl<'linter> Linter<'linter> {
             self.analyze_stmt(write_value);
         }
 
+        if let ThrushStatement::CastPtr { from, .. } = stmt {
+            self.analyze_stmt(from);
+        }
+
         if let ThrushStatement::Cast { from, .. } = stmt {
             self.analyze_stmt(from);
         }
@@ -251,6 +258,29 @@ impl<'linter> Linter<'linter> {
             self.add_bug(ThrushCompilerIssue::Bug(
                 String::from("Structure not caught"),
                 format!("Could not get named struct with name '{}'.", name),
+                *span,
+                CompilationPosition::Linter,
+                line!(),
+            ));
+        }
+
+        if let ThrushStatement::AsmCall {
+            name, span, args, ..
+        } = stmt
+        {
+            if let Some(asm_function) = self.symbols.get_asm_function_info(name) {
+                asm_function.1 = true;
+
+                args.iter().for_each(|arg| {
+                    self.analyze_stmt(arg);
+                });
+
+                return;
+            }
+
+            self.add_bug(ThrushCompilerIssue::Bug(
+                String::from("Call not caught"),
+                format!("Could not get named assembler function '{}'.", name),
                 *span,
                 CompilationPosition::Linter,
                 line!(),
@@ -464,6 +494,22 @@ impl<'linter> Linter<'linter> {
             });
 
         self.symbols
+            .get_all_asm_functions()
+            .iter()
+            .for_each(|(name, info)| {
+                let span: Span = info.0;
+                let used: bool = info.1;
+
+                if !used {
+                    self.warnings.push(ThrushCompilerIssue::Warning(
+                        String::from("Assembler function not used"),
+                        format!("'{}' not used.", name),
+                        span,
+                    ));
+                }
+            });
+
+        self.symbols
             .get_all_enums()
             .iter()
             .for_each(|(name, info)| {
@@ -531,8 +577,15 @@ impl<'linter> Linter<'linter> {
             .iter()
             .filter(|instruction| instruction.is_constant())
             .for_each(|instruction| {
-                if let ThrushStatement::Const { name, span, .. } = instruction {
-                    self.symbols.new_constant(name, (*span, false));
+                if let ThrushStatement::Const {
+                    name,
+                    span,
+                    attributes,
+                    ..
+                } = instruction
+                {
+                    self.symbols
+                        .new_constant(name, (*span, attributes.has_public_attribute()));
                 }
             });
 
@@ -541,7 +594,11 @@ impl<'linter> Linter<'linter> {
             .filter(|stmt| stmt.is_struct())
             .for_each(|stmt| {
                 if let ThrushStatement::Struct {
-                    name, fields, span, ..
+                    name,
+                    fields,
+                    span,
+                    attributes,
+                    ..
                 } = stmt
                 {
                     let mut converted_fields: HashMap<&str, (Span, bool)> =
@@ -554,8 +611,10 @@ impl<'linter> Linter<'linter> {
                         converted_fields.insert(field_name, (span, false));
                     }
 
-                    self.symbols
-                        .new_struct(name, (converted_fields, *span, false));
+                    self.symbols.new_struct(
+                        name,
+                        (converted_fields, *span, attributes.has_public_attribute()),
+                    );
                 }
             });
 
@@ -586,8 +645,31 @@ impl<'linter> Linter<'linter> {
             .iter()
             .filter(|stmt| stmt.is_function())
             .for_each(|stmt| {
-                if let ThrushStatement::Function { name, span, .. } = stmt {
-                    self.symbols.new_function(name, (*span, false));
+                if let ThrushStatement::Function {
+                    name,
+                    span,
+                    attributes,
+                    ..
+                } = stmt
+                {
+                    self.symbols
+                        .new_function(name, (*span, attributes.has_public_attribute()));
+                }
+            });
+
+        self.stmts
+            .iter()
+            .filter(|stmt| stmt.is_asm_function())
+            .for_each(|stmt| {
+                if let ThrushStatement::AssemblerFunction {
+                    name,
+                    span,
+                    attributes,
+                    ..
+                } = stmt
+                {
+                    self.symbols
+                        .new_asm_function(name, (*span, attributes.has_public_attribute()));
                 }
             });
     }

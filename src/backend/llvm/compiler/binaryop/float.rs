@@ -1,5 +1,5 @@
 use crate::{
-    backend::llvm::compiler::predicates,
+    backend::llvm::compiler::{predicates, valuegen::ExpressionModificator},
     core::console::logging::{self, LoggingType},
     frontend::{
         lexer::tokenkind::TokenKind,
@@ -198,7 +198,12 @@ pub fn float_binaryop<'ctx>(
         ThrushStatement::UnaryOp { .. },
     ) = binary
     {
-        let mut left_compiled: BasicValueEnum = valuegen::compile(context, binary.0, cast);
+        let mut left_compiled: BasicValueEnum = valuegen::compile(
+            context,
+            binary.0,
+            cast,
+            ExpressionModificator::new(false, true),
+        );
 
         let right_dissasembled: UnaryOperation = binary.2.as_unaryop();
 
@@ -246,7 +251,13 @@ pub fn float_binaryop<'ctx>(
         let left_dissasembled: UnaryOperation = binary.0.as_unaryop();
 
         let mut left_compiled: BasicValueEnum = unaryop::unary_op(context, left_dissasembled);
-        let mut right_compiled: BasicValueEnum = valuegen::compile(context, binary.2, cast);
+
+        let mut right_compiled: BasicValueEnum = valuegen::compile(
+            context,
+            binary.2,
+            cast,
+            ExpressionModificator::new(false, true),
+        );
 
         if let Some(new_left_compiled) = cast::float(
             context,
@@ -342,7 +353,12 @@ pub fn float_binaryop<'ctx>(
         ThrushStatement::UnaryOp { .. },
     ) = binary
     {
-        let mut left_compiled: BasicValueEnum = valuegen::compile(context, binary.0, cast);
+        let mut left_compiled: BasicValueEnum = valuegen::compile(
+            context,
+            binary.0,
+            cast,
+            ExpressionModificator::new(false, true),
+        );
 
         let right_dissasembled: UnaryOperation = binary.2.as_unaryop();
 
@@ -594,9 +610,19 @@ pub fn float_binaryop<'ctx>(
         },
     ) = binary
     {
-        let mut left_compiled: BasicValueEnum = valuegen::compile(context, binary.0, cast);
+        let mut left_compiled: BasicValueEnum = valuegen::compile(
+            context,
+            binary.0,
+            cast,
+            ExpressionModificator::new(false, true),
+        );
 
-        let mut right_compiled: BasicValueEnum = valuegen::compile(context, binary.2, cast);
+        let mut right_compiled: BasicValueEnum = valuegen::compile(
+            context,
+            binary.2,
+            cast,
+            ExpressionModificator::new(false, true),
+        );
 
         if let Some(new_left_compiled) = cast::float(context, cast, left_call_type, left_compiled) {
             left_compiled = new_left_compiled;
@@ -647,7 +673,12 @@ pub fn float_binaryop<'ctx>(
             *left_signed,
         );
 
-        let mut right_compiled: BasicValueEnum = valuegen::compile(context, binary.2, cast);
+        let mut right_compiled: BasicValueEnum = valuegen::compile(
+            context,
+            binary.2,
+            cast,
+            ExpressionModificator::new(false, true),
+        );
 
         if let Some(new_left_compiled) = cast::float(context, cast, left_type, left_compiled.into())
         {
@@ -691,7 +722,12 @@ pub fn float_binaryop<'ctx>(
         },
     ) = binary
     {
-        let mut left_compiled: BasicValueEnum = valuegen::compile(context, binary.0, cast);
+        let mut left_compiled: BasicValueEnum = valuegen::compile(
+            context,
+            binary.0,
+            cast,
+            ExpressionModificator::new(false, true),
+        );
 
         let mut right_compiled: FloatValue = valuegen::float(
             llvm_builder,
@@ -739,8 +775,19 @@ pub fn float_binaryop<'ctx>(
         },
     ) = binary
     {
-        let mut left_compiled: BasicValueEnum = valuegen::compile(context, binary.0, cast);
-        let mut right_compiled: BasicValueEnum = valuegen::compile(context, binary.2, cast);
+        let mut left_compiled: BasicValueEnum = valuegen::compile(
+            context,
+            binary.0,
+            cast,
+            ExpressionModificator::new(false, true),
+        );
+
+        let mut right_compiled: BasicValueEnum = valuegen::compile(
+            context,
+            binary.2,
+            cast,
+            ExpressionModificator::new(false, true),
+        );
 
         if let Some(new_left_compiled) = cast::float(context, cast, left_type, left_compiled) {
             left_compiled = new_left_compiled;
@@ -780,9 +827,19 @@ pub fn float_binaryop<'ctx>(
         },
     ) = binary
     {
-        let mut left_compiled: BasicValueEnum = valuegen::compile(context, binary.0, cast);
+        let mut left_compiled: BasicValueEnum = valuegen::compile(
+            context,
+            binary.0,
+            cast,
+            ExpressionModificator::new(false, true),
+        );
 
-        let mut right_compiled: BasicValueEnum = valuegen::compile(context, binary.2, cast);
+        let mut right_compiled: BasicValueEnum = valuegen::compile(
+            context,
+            binary.2,
+            cast,
+            ExpressionModificator::new(false, true),
+        );
 
         if let Some(new_left_compiled) = cast::float(context, cast, left_call_type, left_compiled) {
             left_compiled = new_left_compiled;
@@ -826,7 +883,13 @@ pub fn float_binaryop<'ctx>(
 
         let mut left_compiled: BasicValueEnum =
             self::float_binaryop(context, left_dissasembled, cast);
-        let mut right_compiled: BasicValueEnum = valuegen::compile(context, binary.2, cast);
+
+        let mut right_compiled: BasicValueEnum = valuegen::compile(
+            context,
+            binary.2,
+            cast,
+            ExpressionModificator::new(false, true),
+        );
 
         if let Some(new_left_compiled) = cast::float(context, cast, left_type, left_compiled) {
             left_compiled = new_left_compiled;
@@ -868,7 +931,12 @@ pub fn float_binaryop<'ctx>(
         },
     ) = binary
     {
-        let mut left_compiled: BasicValueEnum = valuegen::compile(context, binary.0, cast);
+        let mut left_compiled: BasicValueEnum = valuegen::compile(
+            context,
+            binary.0,
+            cast,
+            ExpressionModificator::new(false, true),
+        );
 
         let right_dissasembled: BinaryOperation = right_instr.as_binary();
 
@@ -918,8 +986,19 @@ pub fn float_binaryop<'ctx>(
         },
     ) = binary
     {
-        let mut left_compiled: BasicValueEnum = valuegen::compile(context, binary.0, cast);
-        let mut right_compiled: BasicValueEnum = valuegen::compile(context, binary.2, cast);
+        let mut left_compiled: BasicValueEnum = valuegen::compile(
+            context,
+            binary.0,
+            cast,
+            ExpressionModificator::new(false, true),
+        );
+
+        let mut right_compiled: BasicValueEnum = valuegen::compile(
+            context,
+            binary.2,
+            cast,
+            ExpressionModificator::new(false, true),
+        );
 
         if let Some(new_left_compiled) = cast::float(context, cast, left_type, left_compiled) {
             left_compiled = new_left_compiled;
@@ -967,7 +1046,12 @@ pub fn float_binaryop<'ctx>(
             *left_signed,
         );
 
-        let mut right_compiled: BasicValueEnum = valuegen::compile(context, binary.2, cast);
+        let mut right_compiled: BasicValueEnum = valuegen::compile(
+            context,
+            binary.2,
+            cast,
+            ExpressionModificator::new(false, true),
+        );
 
         if let Some(new_left_compiled) = cast::float(context, cast, left_type, left_compiled.into())
         {
@@ -1008,7 +1092,12 @@ pub fn float_binaryop<'ctx>(
         },
     ) = binary
     {
-        let mut left_compiled: BasicValueEnum = valuegen::compile(context, binary.0, cast);
+        let mut left_compiled: BasicValueEnum = valuegen::compile(
+            context,
+            binary.0,
+            cast,
+            ExpressionModificator::new(false, true),
+        );
 
         let mut right_compiled: FloatValue = valuegen::float(
             llvm_builder,
@@ -1063,7 +1152,12 @@ pub fn float_binaryop<'ctx>(
         },
     ) = binary
     {
-        let mut left_compiled: BasicValueEnum = valuegen::compile(context, binary.0, cast);
+        let mut left_compiled: BasicValueEnum = valuegen::compile(
+            context,
+            binary.0,
+            cast,
+            ExpressionModificator::new(false, true),
+        );
 
         if let Some(new_left_compiled) = cast::float(context, cast, left_type, left_compiled) {
             left_compiled = new_left_compiled;
@@ -1110,7 +1204,12 @@ pub fn float_binaryop<'ctx>(
         let mut left_compiled: FloatValue =
             self::float_binaryop(context, left_dissasembled, cast).into_float_value();
 
-        let mut right_compiled: BasicValueEnum = valuegen::compile(context, binary.2, cast);
+        let mut right_compiled: BasicValueEnum = valuegen::compile(
+            context,
+            binary.2,
+            cast,
+            ExpressionModificator::new(false, true),
+        );
 
         if let Some(new_left_compiled) = cast::float(context, cast, left_type, left_compiled.into())
         {

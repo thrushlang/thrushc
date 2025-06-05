@@ -1,17 +1,15 @@
 use ahash::AHashMap as HashMap;
 
-use crate::{
-    frontend::types::lexer::ThrushType,
-    frontend::types::typechecker::types::{
-        TypeCheckerAllMethods, TypeCheckerFunction, TypeCheckerFunctions, TypeCheckerLLI,
-        TypeCheckerLLIs, TypeCheckerLocal, TypeCheckerLocals, TypeCheckerMethod,
-        TypeCheckerMethods,
-    },
+use crate::frontend::types::typechecker::types::{
+    TypeCheckerAllMethods, TypeCheckerAssemblerFunction, TypeCheckerAssemblerFunctions,
+    TypeCheckerFunction, TypeCheckerFunctions, TypeCheckerLLI, TypeCheckerLLIs, TypeCheckerLocal,
+    TypeCheckerLocals, TypeCheckerMethod, TypeCheckerMethods,
 };
 
 #[derive(Debug)]
 pub struct TypeCheckerSymbolsTable<'symbol> {
     functions: TypeCheckerFunctions<'symbol>,
+    asm_functions: TypeCheckerAssemblerFunctions<'symbol>,
     locals: TypeCheckerLocals<'symbol>,
     llis: TypeCheckerLLIs<'symbol>,
     methods: TypeCheckerMethods<'symbol>,
@@ -22,6 +20,7 @@ impl<'symbol> TypeCheckerSymbolsTable<'symbol> {
     pub fn new() -> Self {
         Self {
             functions: HashMap::with_capacity(100),
+            asm_functions: HashMap::with_capacity(100),
             locals: Vec::with_capacity(255),
             llis: Vec::with_capacity(255),
             methods: HashMap::with_capacity(100),
@@ -37,7 +36,15 @@ impl<'symbol> TypeCheckerSymbolsTable<'symbol> {
         self.llis.last_mut().unwrap().insert(name, lli);
     }
 
-    pub fn new_function(&mut self, name: &'symbol str, function: (&'symbol [ThrushType], bool)) {
+    pub fn new_asm_function(
+        &mut self,
+        name: &'symbol str,
+        function: TypeCheckerAssemblerFunction<'symbol>,
+    ) {
+        self.asm_functions.insert(name, function);
+    }
+
+    pub fn new_function(&mut self, name: &'symbol str, function: TypeCheckerFunction<'symbol>) {
         self.functions.insert(name, function);
     }
 
@@ -67,6 +74,13 @@ impl<'symbol> TypeCheckerSymbolsTable<'symbol> {
 
     pub fn get_function(&self, name: &'symbol str) -> Option<&TypeCheckerFunction<'symbol>> {
         self.functions.get(name)
+    }
+
+    pub fn get_asm_function(
+        &self,
+        name: &'symbol str,
+    ) -> Option<&TypeCheckerAssemblerFunction<'symbol>> {
+        self.asm_functions.get(name)
     }
 
     pub fn split_method_call_name(

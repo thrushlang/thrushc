@@ -8,6 +8,10 @@ pub type LinterConstants<'linter> = HashMap<&'linter str, LinterConstantInfo>;
 pub type LinterLLIInfo<'symbol> = (Span, bool);
 pub type LinterLLIs<'symbol> = Vec<HashMap<&'symbol str, LinterLLIInfo<'symbol>>>;
 
+pub type LinterAssemblerFunctionInfo<'linter> = (Span, bool);
+pub type LinterAssemblerFunctions<'linter> =
+    HashMap<&'linter str, LinterAssemblerFunctionInfo<'linter>>;
+
 pub type LinterFunctionInfo<'linter> = (Span, bool);
 pub type LinterFunctions<'linter> = HashMap<&'linter str, LinterFunctionInfo<'linter>>;
 
@@ -50,4 +54,9 @@ pub enum LLVMAttributeComparator {
     StrongStack,
     WeakStack,
     PreciseFloats,
+
+    AsmThrow,
+    AsmDialect,
+    AsmAlignStack,
+    AsmSideEffects,
 }

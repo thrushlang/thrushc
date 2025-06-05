@@ -54,6 +54,7 @@ pub trait FoundSymbolEither<'instr> {
     fn expected_enum(&self, span: Span) -> Result<&'instr str, ThrushCompilerIssue>;
     fn expected_struct(&self, span: Span) -> Result<&'instr str, ThrushCompilerIssue>;
     fn expected_parameter(&self, span: Span) -> Result<&'instr str, ThrushCompilerIssue>;
+    fn expected_asm_function(&self, span: Span) -> Result<&'instr str, ThrushCompilerIssue>;
 }
 
 pub trait StructFieldsExtensions {
@@ -73,5 +74,11 @@ pub trait ThrushAttributesExtensions {
     fn has_noinline_attr(&self) -> bool;
     fn has_minsize_attr(&self) -> bool;
     fn has_inlinealways_attr(&self) -> bool;
+
+    fn has_asmalignstack_attribute(&self) -> bool;
+    fn has_asmthrow_attribute(&self) -> bool;
+    fn has_asmsideffects_attribute(&self) -> bool;
+    fn has_asmdialect_attribute(&self) -> bool;
+
     fn match_attr(&self, cmp: LLVMAttributeComparator) -> Option<Span>;
 }

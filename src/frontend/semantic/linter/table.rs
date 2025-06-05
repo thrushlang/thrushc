@@ -1,17 +1,21 @@
 use ahash::AHashMap as HashMap;
 
-use crate::{
-    frontend::lexer::span::Span,
-    frontend::types::linter::types::{
-        LinterConstantInfo, LinterConstants, LinterEnumFieldInfo, LinterEnums,
-        LinterEnumsFieldsInfo, LinterFunctionInfo, LinterFunctionParameterInfo,
-        LinterFunctionParameters, LinterFunctions, LinterLLIInfo, LinterLLIs, LinterLocalInfo,
-        LinterLocals, LinterStructFieldInfo, LinterStructFieldsInfo, LinterStructs,
+use crate::frontend::{
+    lexer::span::Span,
+    types::{
+        linter::types::{
+            LinterAssemblerFunctionInfo, LinterAssemblerFunctions, LinterConstantInfo,
+            LinterConstants, LinterEnumFieldInfo, LinterEnums, LinterEnumsFieldsInfo,
+            LinterFunctionInfo, LinterFunctionParameterInfo, LinterFunctionParameters,
+            LinterFunctions, LinterLLIInfo, LinterLLIs, LinterLocalInfo, LinterLocals,
+            LinterStructFieldInfo, LinterStructFieldsInfo, LinterStructs,
+        },
+        parser::stmts::stmt::ThrushStatement,
     },
-    frontend::types::parser::stmts::stmt::ThrushStatement,
 };
 
 const MINIMAL_FUNCTIONS_CAPACITY: usize = 255;
+const MINIMAL_ASM_FUNCTIONS_CAPACITY: usize = 255;
 const MINIMAL_CONSTANTS_CAPACITY: usize = 255;
 const MINIMAL_LOCALS_CAPACITY: usize = 255;
 const MINIMAL_LLIS_CAPACITY: usize = 255;
@@ -22,6 +26,7 @@ const MINIMAL_PARAMETERS_CAPACITY: usize = 10;
 #[derive(Debug)]
 pub struct LinterSymbolsTable<'linter> {
     functions: LinterFunctions<'linter>,
+    asm_functions: LinterAssemblerFunctions<'linter>,
     constants: LinterConstants<'linter>,
     enums: LinterEnums<'linter>,
     structs: LinterStructs<'linter>,
@@ -35,6 +40,7 @@ impl<'linter> LinterSymbolsTable<'linter> {
     pub fn new() -> Self {
         Self {
             functions: HashMap::with_capacity(MINIMAL_FUNCTIONS_CAPACITY),
+            asm_functions: HashMap::with_capacity(MINIMAL_ASM_FUNCTIONS_CAPACITY),
             constants: HashMap::with_capacity(MINIMAL_CONSTANTS_CAPACITY),
             enums: HashMap::with_capacity(MINIMAL_ENUMS_CAPACITY),
             structs: HashMap::with_capacity(MINIMAL_STRUCTS_CAPACITY),
@@ -43,6 +49,14 @@ impl<'linter> LinterSymbolsTable<'linter> {
             parameters: HashMap::with_capacity(MINIMAL_PARAMETERS_CAPACITY),
             scope: 0,
         }
+    }
+
+    pub fn new_asm_function(
+        &mut self,
+        name: &'linter str,
+        info: LinterAssemblerFunctionInfo<'linter>,
+    ) {
+        self.asm_functions.insert(name, info);
     }
 
     pub fn new_function(&mut self, name: &'linter str, info: LinterFunctionInfo<'linter>) {
@@ -93,6 +107,10 @@ impl<'linter> LinterSymbolsTable<'linter> {
         &self.functions
     }
 
+    pub fn get_all_asm_functions(&self) -> &LinterAssemblerFunctions {
+        &self.asm_functions
+    }
+
     pub fn new_local(&mut self, name: &'linter str, info: LinterLocalInfo) {
         if let Some(scope) = self.locals.last_mut() {
             scope.insert(name, info);
@@ -121,6 +139,13 @@ impl<'linter> LinterSymbolsTable<'linter> {
 
     pub fn destroy_all_parameters(&mut self) {
         self.parameters.clear();
+    }
+
+    pub fn get_asm_function_info(
+        &mut self,
+        name: &'linter str,
+    ) -> Option<&mut LinterAssemblerFunctionInfo<'linter>> {
+        self.asm_functions.get_mut(name)
     }
 
     pub fn get_function_info(

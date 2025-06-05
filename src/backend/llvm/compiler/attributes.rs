@@ -25,6 +25,12 @@ pub enum LLVMAttribute<'ctx> {
     StrongStack(Span),
     WeakStack(Span),
     PreciseFloats(Span),
+
+    // Assembler Attributes
+    AsmThrow(Span),
+    AsmDialect(&'ctx str, Span),
+    AsmAlignStack(Span),
+    AsmSideEffects(Span),
 }
 
 impl LLVMAttribute<'_> {
@@ -69,6 +75,26 @@ impl LLVMAttribute<'_> {
     }
 
     #[inline]
+    pub const fn is_asmsideeffects_attribute(&self) -> bool {
+        matches!(self, LLVMAttribute::AsmSideEffects(..))
+    }
+
+    #[inline]
+    pub const fn is_asmthrow_attribute(&self) -> bool {
+        matches!(self, LLVMAttribute::AsmThrow(..))
+    }
+
+    #[inline]
+    pub const fn is_asmalingstack_attribute(&self) -> bool {
+        matches!(self, LLVMAttribute::AsmAlignStack(..))
+    }
+
+    #[inline]
+    pub const fn is_asmdialect_attribute(&self) -> bool {
+        matches!(self, LLVMAttribute::AsmDialect(..))
+    }
+
+    #[inline]
     pub fn get_span(&self) -> Span {
         match self {
             LLVMAttribute::Extern(_, span) => *span,
@@ -84,6 +110,10 @@ impl LLVMAttribute<'_> {
             LLVMAttribute::StrongStack(span) => *span,
             LLVMAttribute::WeakStack(span) => *span,
             LLVMAttribute::PreciseFloats(span) => *span,
+            LLVMAttribute::AsmThrow(span) => *span,
+            LLVMAttribute::AsmDialect(_, span) => *span,
+            LLVMAttribute::AsmSideEffects(span) => *span,
+            LLVMAttribute::AsmAlignStack(span) => *span,
         }
     }
 }

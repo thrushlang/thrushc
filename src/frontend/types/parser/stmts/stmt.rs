@@ -3,12 +3,18 @@
 use std::rc::Rc;
 
 use crate::{
-    core::errors::{position::CompilationPosition, standard::ThrushCompilerIssue},
+    core::{
+        console::logging::{self, LoggingType},
+        errors::{position::CompilationPosition, standard::ThrushCompilerIssue},
+    },
     frontend::{
         lexer::{span::Span, tokenkind::TokenKind},
         types::{
             lexer::ThrushType,
-            representations::{BinaryOperation, FunctionRepresentation, UnaryOperation},
+            representations::{
+                AssemblerFunctionRepresentation, BinaryOperation, FunctionRepresentation,
+                UnaryOperation,
+            },
         },
     },
 };
@@ -181,12 +187,19 @@ pub enum ThrushStatement<'ctx> {
         body: Rc<ThrushStatement<'ctx>>,
         span: Span,
     },
-
-    FunctionParameter {
+    AssemblerFunction {
         name: &'ctx str,
+        parameters: Vec<ThrushStatement<'ctx>>,
+        parameters_types: Vec<ThrushType>,
+        assembler: String,
+        constraints: String,
+        return_type: ThrushType,
+        attributes: ThrushAttributes<'ctx>,
+        span: Span,
+    },
+    AssemblerFunctionParameter {
         kind: ThrushType,
         position: u32,
-        is_mutable: bool,
         span: Span,
     },
     Function {
@@ -196,6 +209,13 @@ pub enum ThrushStatement<'ctx> {
         body: Rc<ThrushStatement<'ctx>>,
         return_type: ThrushType,
         attributes: ThrushAttributes<'ctx>,
+        span: Span,
+    },
+    FunctionParameter {
+        name: &'ctx str,
+        kind: ThrushType,
+        position: u32,
+        is_mutable: bool,
         span: Span,
     },
     Return {
@@ -290,18 +310,30 @@ pub enum ThrushStatement<'ctx> {
     // Casts
     CastRaw {
         from: Rc<ThrushStatement<'ctx>>,
-        cast_type: ThrushType,
+        cast: ThrushType,
         span: Span,
     },
 
     Cast {
         from: Rc<ThrushStatement<'ctx>>,
-        cast_type: ThrushType,
+        cast: ThrushType,
+        span: Span,
+    },
+
+    CastPtr {
+        from: Rc<ThrushStatement<'ctx>>,
+        cast: ThrushType,
         span: Span,
     },
 
     // Expressions
     Call {
+        name: &'ctx str,
+        args: Vec<ThrushStatement<'ctx>>,
+        kind: ThrushType,
+        span: Span,
+    },
+    AsmCall {
         name: &'ctx str,
         args: Vec<ThrushStatement<'ctx>>,
         kind: ThrushType,
@@ -349,6 +381,7 @@ impl<'ctx> ThrushStatement<'ctx> {
             ThrushStatement::Float { kind, .. } => Ok(kind),
             ThrushStatement::Local { kind, .. } => Ok(kind),
             ThrushStatement::Mut { kind, .. } => Ok(kind),
+            ThrushStatement::AssemblerFunctionParameter { kind, .. } => Ok(kind),
             ThrushStatement::FunctionParameter { kind, .. } => Ok(kind),
             ThrushStatement::Reference { kind, .. } => Ok(kind),
             ThrushStatement::Call { kind, .. } => Ok(kind),
@@ -407,20 +440,20 @@ impl<'ctx> ThrushStatement<'ctx> {
                 ..
             } => Ok(kind),
             ThrushStatement::FunctionParameter { kind, .. } => Ok(kind),
+            ThrushStatement::AssemblerFunctionParameter { kind, .. } => Ok(kind),
             ThrushStatement::MethodCall { kind, .. } => Ok(kind),
             ThrushStatement::EnumValue { kind, .. } => Ok(kind),
             ThrushStatement::RawPtr { kind, .. } => Ok(kind),
             ThrushStatement::Deref { kind, .. } => Ok(kind),
-            ThrushStatement::CastRaw {
-                cast_type: kind, ..
-            } => Ok(kind),
-            ThrushStatement::Cast {
-                cast_type: kind, ..
-            } => Ok(kind),
+            ThrushStatement::CastRaw { cast: kind, .. } => Ok(kind),
+            ThrushStatement::Cast { cast: kind, .. } => Ok(kind),
+            ThrushStatement::CastPtr { cast: kind, .. } => Ok(kind),
+
+            ThrushStatement::AsmCall { kind, .. } => Ok(kind),
 
             _ => Err(ThrushCompilerIssue::Error(
                 String::from("Syntax error"),
-                String::from("Expected a valid value to get a type."),
+                String::from("Expected a value to get a type."),
                 None,
                 self.get_span(),
             )),
@@ -434,6 +467,7 @@ impl<'ctx> ThrushStatement<'ctx> {
             ThrushStatement::Local { kind, .. } => kind,
             ThrushStatement::Mut { kind, .. } => kind,
             ThrushStatement::FunctionParameter { kind, .. } => kind,
+            ThrushStatement::AssemblerFunctionParameter { kind, .. } => kind,
             ThrushStatement::Reference { kind, .. } => kind,
             ThrushStatement::Call { kind, .. } => kind,
             ThrushStatement::BinaryOp { kind, .. } => kind,
@@ -456,11 +490,18 @@ impl<'ctx> ThrushStatement<'ctx> {
             ThrushStatement::RawPtr { kind, .. } => kind,
             ThrushStatement::Deref { kind, .. } => kind,
 
-            ThrushStatement::CastRaw { cast_type, .. } => cast_type,
-            ThrushStatement::Cast { cast_type, .. } => cast_type,
+            ThrushStatement::CastPtr { cast: kind, .. } => kind,
+            ThrushStatement::CastRaw { cast: kind, .. } => kind,
+            ThrushStatement::Cast { cast: kind, .. } => kind,
+            ThrushStatement::AsmCall { kind, .. } => kind,
 
             any => {
-                panic!("Attempting to unwrap a null type: {:?}.", any)
+                logging::log(
+                    LoggingType::Panic,
+                    &format!("Unable to get type of stmt: '{}'", any),
+                );
+
+                unreachable!()
             }
         }
     }
@@ -481,6 +522,7 @@ impl<'ctx> ThrushStatement<'ctx> {
             ThrushStatement::Cast { span, .. } => *span,
             ThrushStatement::RawPtr { span, .. } => *span,
             ThrushStatement::Deref { span, .. } => *span,
+            ThrushStatement::CastPtr { span, .. } => *span,
 
             ThrushStatement::Str { span, .. } => *span,
             ThrushStatement::Boolean { span, .. } => *span,
@@ -493,7 +535,6 @@ impl<'ctx> ThrushStatement<'ctx> {
             ThrushStatement::Write { span, .. } => *span,
             ThrushStatement::Const { span, .. } => *span,
             ThrushStatement::This { span, .. } => *span,
-            ThrushStatement::MethodCall { span, .. } => *span,
             ThrushStatement::BindParameter { span, .. } => *span,
             ThrushStatement::Return { span, .. } => *span,
             ThrushStatement::Enum { span, .. } => *span,
@@ -518,7 +559,12 @@ impl<'ctx> ThrushStatement<'ctx> {
             ThrushStatement::Loop { span, .. } => *span,
             ThrushStatement::EntryPoint { span, .. } => *span,
             ThrushStatement::Function { span, .. } => *span,
+            ThrushStatement::AssemblerFunction { span, .. } => *span,
+            ThrushStatement::AssemblerFunctionParameter { span, .. } => *span,
             ThrushStatement::Alloc { span, .. } => *span,
+
+            ThrushStatement::MethodCall { span, .. } => *span,
+            ThrushStatement::AsmCall { span, .. } => *span,
         }
     }
 
@@ -530,7 +576,33 @@ impl<'ctx> ThrushStatement<'ctx> {
         }
     }
 
-    pub fn into_function_representation(&self) -> FunctionRepresentation {
+    pub fn as_asm_function_representation(&self) -> AssemblerFunctionRepresentation {
+        if let ThrushStatement::AssemblerFunction {
+            name,
+            assembler,
+            constraints,
+            parameters_types,
+            parameters,
+            return_type,
+            attributes,
+            ..
+        } = self
+        {
+            return (
+                name,
+                assembler,
+                constraints,
+                return_type,
+                parameters,
+                parameters_types,
+                attributes,
+            );
+        }
+
+        unreachable!()
+    }
+
+    pub fn as_function_representation(&self) -> FunctionRepresentation {
         if let ThrushStatement::Function {
             name,
             parameters,
@@ -789,6 +861,13 @@ impl ThrushStatement<'_> {
     }
 
     #[inline]
+    pub fn is_allocated(&self) -> Result<bool, ThrushCompilerIssue> {
+        let kind: &ThrushType = self.get_value_type()?;
+
+        Ok(kind.is_ptr_type() || kind.is_mut_type())
+    }
+
+    #[inline]
     pub const fn is_reference_allocated(&self) -> bool {
         matches!(
             self,
@@ -818,6 +897,10 @@ impl ThrushStatement<'_> {
     #[inline]
     pub const fn is_function(&self) -> bool {
         matches!(self, ThrushStatement::Function { .. })
+    }
+
+    pub const fn is_asm_function(&self) -> bool {
+        matches!(self, ThrushStatement::AssemblerFunction { .. })
     }
 
     #[inline]

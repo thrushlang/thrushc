@@ -32,7 +32,10 @@ lazy_static! {
         keywords.insert(b"mut", TokenKind::Mut);
         keywords.insert(b"nullptr", TokenKind::NullPtr);
         keywords.insert(b"cast", TokenKind::Cast);
-        keywords.insert(b"castrawmut", TokenKind::CastRaw);
+        keywords.insert(b"castraw", TokenKind::CastRaw);
+        keywords.insert(b"castptr", TokenKind::CastPtr);
+        keywords.insert(b"asmfn", TokenKind::AsmFn);
+        keywords.insert(b"callasm", TokenKind::CallAsm);
         keywords.insert(b"deref", TokenKind::Deref);
         keywords.insert(b"rawptr", TokenKind::RawPtr);
         keywords.insert(b"type", TokenKind::Type);
@@ -45,7 +48,14 @@ lazy_static! {
         keywords.insert(b"addr", TokenKind::Addr);
         keywords.insert(b"load", TokenKind::Load);
         keywords.insert(b"write", TokenKind::Write);
+
         keywords.insert(b"@import", TokenKind::Import);
+
+        keywords.insert(b"@asmalingstack", TokenKind::AsmAlignStack);
+        keywords.insert(b"@asmdialect", TokenKind::AsmDialect);
+        keywords.insert(b"@asmthrow", TokenKind::AsmThrow);
+        keywords.insert(b"@asmeffects", TokenKind::AsmSideEffects);
+
         keywords.insert(b"@public", TokenKind::Public);
         keywords.insert(b"@extern", TokenKind::Extern);
         keywords.insert(b"@ignore", TokenKind::Ignore);

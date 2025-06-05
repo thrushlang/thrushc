@@ -27,6 +27,16 @@ pub type FunctionRepresentation<'ctx> = (
     &'ctx ThrushAttributes<'ctx>,
 );
 
+pub type AssemblerFunctionRepresentation<'ctx> = (
+    &'ctx str,
+    &'ctx str,
+    &'ctx str,
+    &'ctx ThrushType,
+    &'ctx [ThrushStatement<'ctx>],
+    &'ctx [ThrushType],
+    &'ctx ThrushAttributes<'ctx>,
+);
+
 pub type FunctionCall<'ctx> = (&'ctx str, &'ctx ThrushType, &'ctx [ThrushStatement<'ctx>]);
 
 pub type FunctionParameter<'ctx> = (&'ctx str, &'ctx ThrushType, u32, bool);

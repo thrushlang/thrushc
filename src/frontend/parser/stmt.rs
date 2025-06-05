@@ -63,6 +63,7 @@ pub fn parse<'instr>(
             TokenKind::Struct => Ok(self::build_struct(parser_ctx, false)?),
             TokenKind::Enum => Ok(self::build_enum(parser_ctx, false)?),
             TokenKind::Fn => Ok(self::build_function(parser_ctx, false)?),
+            TokenKind::AsmFn => Ok(self::build_assembler_function(parser_ctx, false)?),
             TokenKind::Const => Ok(self::build_const(parser_ctx, false)?),
             TokenKind::Methods => Ok(self::build_methods(parser_ctx, false)?),
 
@@ -100,7 +101,7 @@ fn statement<'instr>(
 
 pub fn build_methods<'instr>(
     parser_ctx: &mut ParserContext<'instr>,
-    declare: bool,
+    declare_forward: bool,
 ) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
     parser_ctx
         .get_mut_control_ctx()
@@ -154,7 +155,7 @@ pub fn build_methods<'instr>(
     )?;
 
     while parser_ctx.peek().kind != TokenKind::RBrace {
-        let bind: ThrushStatement = self::build_method(declare, parser_ctx)?;
+        let bind: ThrushStatement = self::build_method(declare_forward, parser_ctx)?;
 
         parser_ctx
             .get_mut_control_ctx()
@@ -181,7 +182,7 @@ pub fn build_methods<'instr>(
         .get_mut_control_ctx()
         .set_instr_position(InstructionPosition::NoRelevant);
 
-    if declare {
+    if declare_forward {
         let bindings_generated: Methods = generate_methods(methods.clone())?;
 
         parser_ctx.get_mut_symbols().add_methods(
@@ -202,7 +203,7 @@ pub fn build_methods<'instr>(
 }
 
 fn build_method<'instr>(
-    declare: bool,
+    declare_forward: bool,
     parser_ctx: &mut ParserContext<'instr>,
 ) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
     parser_ctx
@@ -252,18 +253,18 @@ fn build_method<'instr>(
     let mut bind_parameters_types: Vec<ThrushType> = Vec::with_capacity(10);
     let mut bind_position: u32 = 0;
 
-    let mut this_is_declared: bool = false;
+    let mut this_is_declare_forwardd: bool = false;
 
     while !parser_ctx.match_token(TokenKind::RParen)? {
         if parser_ctx.match_token(TokenKind::Comma)? {
             continue;
         }
 
-        if this_is_declared && parser_ctx.check(TokenKind::This) {
+        if this_is_declare_forwardd && parser_ctx.check(TokenKind::This) {
             return Err(ThrushCompilerIssue::Error(
                 String::from("Syntax error"),
                 String::from(
-                    "'This' keyword is already declared. Multiple instances are not allowed.",
+                    "'This' keyword is already declare_forwardd. Multiple instances are not allowed.",
                 ),
                 None,
                 bind_name_tk.span,
@@ -288,7 +289,7 @@ fn build_method<'instr>(
                 span: this_tk.span,
             });
 
-            this_is_declared = true;
+            this_is_declare_forwardd = true;
 
             continue;
         }
@@ -312,7 +313,7 @@ fn build_method<'instr>(
 
         let parameter_type: ThrushType = typegen::build_type(parser_ctx)?;
 
-        if !declare {
+        if !declare_forward {
             parser_ctx.get_mut_symbols().new_parameter(
                 parameter_name,
                 (parameter_type.clone(), false, is_mutable, parameter_span),
@@ -342,12 +343,12 @@ fn build_method<'instr>(
     let bind_attributes: ThrushAttributes =
         self::build_attributes(parser_ctx, &[TokenKind::LBrace])?;
 
-    if !declare {
+    if !declare_forward {
         parser_ctx.get_mut_control_ctx().set_inside_bind(true);
 
         parser_ctx
             .get_mut_type_ctx()
-            .set_bind_instance(this_is_declared);
+            .set_bind_instance(this_is_declare_forwardd);
 
         let bind_body: ThrushStatement = self::build_block(parser_ctx)?;
 
@@ -746,7 +747,7 @@ fn build_conditional<'instr>(
 
 pub fn build_custom_type<'instr>(
     parser_ctx: &mut ParserContext<'instr>,
-    declare: bool,
+    declare_forward: bool,
 ) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
     let type_tk: &Token = parser_ctx.consume(
         TokenKind::Type,
@@ -801,7 +802,7 @@ pub fn build_custom_type<'instr>(
         String::from("Expected '}'."),
     )?;
 
-    if declare {
+    if declare_forward {
         parser_ctx.get_mut_symbols().new_custom_type(
             custom_type_name,
             (custom_type_fields, custom_type_attributes),
@@ -814,7 +815,7 @@ pub fn build_custom_type<'instr>(
 
 pub fn build_enum<'instr>(
     parser_ctx: &mut ParserContext<'instr>,
-    declare: bool,
+    declare_forward: bool,
 ) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
     let enum_tk: &Token = parser_ctx.consume(
         TokenKind::Enum,
@@ -952,7 +953,7 @@ pub fn build_enum<'instr>(
         String::from("Expected ';'."),
     )?;
 
-    if declare {
+    if declare_forward {
         parser_ctx
             .get_mut_symbols()
             .new_enum(enum_name, (enum_fields, enum_attributes), span)?;
@@ -969,7 +970,7 @@ pub fn build_enum<'instr>(
 
 pub fn build_struct<'instr>(
     parser_ctx: &mut ParserContext<'instr>,
-    declare: bool,
+    declare_forward: bool,
 ) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
     let struct_tk: &Token = parser_ctx.consume(
         TokenKind::Struct,
@@ -1075,7 +1076,7 @@ pub fn build_struct<'instr>(
         String::from("Expected '}'."),
     )?;
 
-    if declare {
+    if declare_forward {
         parser_ctx.get_mut_symbols().new_struct(
             struct_name,
             (
@@ -1101,7 +1102,7 @@ pub fn build_struct<'instr>(
 
 pub fn build_const<'instr>(
     parser_ctx: &mut ParserContext<'instr>,
-    declare: bool,
+    declare_forward: bool,
 ) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
     parser_ctx.consume(
         TokenKind::Const,
@@ -1153,7 +1154,7 @@ pub fn build_const<'instr>(
         String::from("Expected ';'."),
     )?;
 
-    if declare {
+    if declare_forward {
         parser_ctx
             .get_mut_symbols()
             .new_constant(name, (const_type, const_attributes), span)?;
@@ -1444,9 +1445,181 @@ fn build_block<'instr>(
     Ok(ThrushStatement::Block { stmts, span })
 }
 
+pub fn build_assembler_function<'instr>(
+    parser_ctx: &mut ParserContext<'instr>,
+    declare_forward: bool,
+) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
+    parser_ctx.consume(
+        TokenKind::AsmFn,
+        String::from("Syntax error"),
+        String::from("Expected 'asmfn' keyword."),
+    )?;
+
+    let asm_function_name_tk: &Token = parser_ctx.consume(
+        TokenKind::Identifier,
+        String::from("Syntax error"),
+        String::from("Expected name to the function."),
+    )?;
+
+    let asm_function_name: &str = asm_function_name_tk.lexeme;
+    let span: Span = asm_function_name_tk.span;
+
+    if !parser_ctx.is_main_scope() {
+        return Err(ThrushCompilerIssue::Error(
+            String::from("Syntax error"),
+            String::from("Assembler functions can only be defined globally."),
+            None,
+            span,
+        ));
+    }
+
+    parser_ctx.consume(
+        TokenKind::LParen,
+        String::from("Syntax error"),
+        String::from("Expected '('."),
+    )?;
+
+    let mut parameters: Vec<ThrushStatement> = Vec::with_capacity(10);
+    let mut parameters_types: Vec<ThrushType> = Vec::with_capacity(10);
+
+    let mut parameter_position: u32 = 0;
+
+    loop {
+        if parser_ctx.check(TokenKind::RParen) {
+            break;
+        }
+
+        let parameter_span: Span = parser_ctx.peek().span;
+        let parameter_type: ThrushType = typegen::build_type(parser_ctx)?;
+
+        parameters_types.push(parameter_type.clone());
+
+        parameters.push(ThrushStatement::AssemblerFunctionParameter {
+            kind: parameter_type,
+            position: parameter_position,
+            span: parameter_span,
+        });
+
+        parameter_position += 1;
+
+        if parser_ctx.check(TokenKind::RParen) {
+            break;
+        } else {
+            parser_ctx.consume(
+                TokenKind::Comma,
+                String::from("Syntax error"),
+                String::from("Expected ','."),
+            )?;
+        }
+    }
+
+    parser_ctx.consume(
+        TokenKind::RParen,
+        String::from("Syntax error"),
+        String::from("Expected ')'."),
+    )?;
+
+    let return_type: ThrushType = typegen::build_type(parser_ctx)?;
+
+    let attributes: ThrushAttributes = self::build_attributes(parser_ctx, &[TokenKind::LBrace])?;
+
+    let is_public: bool = attributes.has_public_attribute();
+
+    parser_ctx.consume(
+        TokenKind::LBrace,
+        String::from("Syntax error"),
+        String::from("Expected '{'."),
+    )?;
+
+    let mut assembler: String = String::with_capacity(100);
+    let mut assembler_token_pos: usize = 0;
+
+    loop {
+        if parser_ctx.check(TokenKind::RBrace) {
+            break;
+        }
+
+        let current_token: &Token = parser_ctx.peek();
+
+        if assembler_token_pos != 0 {
+            assembler.push(' ');
+        }
+
+        assembler.push_str(current_token.lexeme);
+
+        parser_ctx.advance()?;
+
+        assembler_token_pos += 1;
+    }
+
+    parser_ctx.consume(
+        TokenKind::RBrace,
+        String::from("Syntax error"),
+        String::from("Expected '}'."),
+    )?;
+
+    parser_ctx.consume(
+        TokenKind::LBrace,
+        String::from("Syntax error"),
+        String::from("Expected '{'."),
+    )?;
+
+    let mut constraints: String = String::with_capacity(100);
+    let mut constrains_token_pos: usize = 0;
+
+    loop {
+        if parser_ctx.check(TokenKind::RBrace) {
+            break;
+        }
+
+        let current_token: &Token = parser_ctx.peek();
+
+        if constrains_token_pos != 0 {
+            constraints.push(' ');
+        }
+
+        constraints.push_str(current_token.lexeme);
+
+        parser_ctx.advance()?;
+
+        constrains_token_pos += 1;
+    }
+
+    parser_ctx.consume(
+        TokenKind::RBrace,
+        String::from("Syntax error"),
+        String::from("Expected '}'."),
+    )?;
+
+    if declare_forward {
+        parser_ctx.get_mut_symbols().new_asm_function(
+            asm_function_name,
+            (
+                return_type,
+                ParametersTypes::new(parameters_types),
+                is_public,
+            ),
+            span,
+        )?;
+
+        return Ok(ThrushStatement::Null { span });
+    }
+
+    Ok(ThrushStatement::AssemblerFunction {
+        name: asm_function_name,
+        parameters,
+        parameters_types,
+        assembler,
+        constraints,
+        return_type,
+        attributes,
+        span,
+    })
+}
+
 pub fn build_function<'instr>(
     parser_ctx: &mut ParserContext<'instr>,
-    declare: bool,
+    declare_forward: bool,
 ) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
     parser_ctx.consume(
         TokenKind::Fn,
@@ -1466,23 +1639,14 @@ pub fn build_function<'instr>(
     if !parser_ctx.is_main_scope() {
         return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
-            String::from("Functions are only defined globally."),
-            None,
-            span,
-        ));
-    }
-
-    if parser_ctx.is_unreacheable_code() {
-        return Err(ThrushCompilerIssue::Error(
-            String::from("Syntax error"),
-            String::from("Unreacheable code."),
+            String::from("Functions can only be defined globally."),
             None,
             span,
         ));
     }
 
     if function_name == "main" {
-        if declare {
+        if declare_forward {
             return Ok(ThrushStatement::Null { span });
         }
 
@@ -1496,20 +1660,20 @@ pub fn build_function<'instr>(
         return entrypoint;
     }
 
-    let mut parameters: Vec<ThrushStatement> = Vec::with_capacity(10);
-    let mut parameters_types: Vec<ThrushType> = Vec::with_capacity(10);
-
     parser_ctx.consume(
         TokenKind::LParen,
         String::from("Syntax error"),
         String::from("Expected '('."),
     )?;
 
+    let mut parameters: Vec<ThrushStatement> = Vec::with_capacity(10);
+    let mut parameters_types: Vec<ThrushType> = Vec::with_capacity(10);
+
     let mut parameter_position: u32 = 0;
 
-    while parser_ctx.peek().kind != TokenKind::RParen {
-        if parser_ctx.match_token(TokenKind::Comma)? {
-            continue;
+    loop {
+        if parser_ctx.check(TokenKind::RParen) {
+            break;
         }
 
         let is_mutable: bool = parser_ctx.match_token(TokenKind::Mut)?;
@@ -1531,15 +1695,6 @@ pub fn build_function<'instr>(
 
         let parameter_type: ThrushType = typegen::build_type(parser_ctx)?;
 
-        if parameter_type.is_void_type() {
-            return Err(ThrushCompilerIssue::Error(
-                String::from("Syntax error"),
-                String::from("Void type are not allowed as type parameter."),
-                None,
-                parameter_span,
-            ));
-        }
-
         parameters_types.push(parameter_type.clone());
 
         parameters.push(ThrushStatement::FunctionParameter {
@@ -1551,6 +1706,16 @@ pub fn build_function<'instr>(
         });
 
         parameter_position += 1;
+
+        if parser_ctx.check(TokenKind::RParen) {
+            break;
+        } else {
+            parser_ctx.consume(
+                TokenKind::Comma,
+                String::from("Syntax error"),
+                String::from("Expected ','."),
+            )?;
+        }
     }
 
     parser_ctx.consume(
@@ -1580,7 +1745,7 @@ pub fn build_function<'instr>(
         span,
     };
 
-    if declare {
+    if declare_forward {
         parser_ctx.get_mut_symbols().new_function(
             function_name,
             (

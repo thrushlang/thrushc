@@ -5,9 +5,9 @@ use crate::{
         types::{
             lexer::MethodsApplicant,
             symbols::types::{
-                ConstantSymbol, Constants, CustomTypeSymbol, CustomTypes, EnumSymbol, Enums,
-                FoundSymbolId, Function, Functions, LLISymbol, LLIs, LocalSymbol, Locals, Methods,
-                ParameterSymbol, Parameters, Struct, Structs,
+                AssemblerFunction, AssemblerFunctions, ConstantSymbol, Constants, CustomTypeSymbol,
+                CustomTypes, EnumSymbol, Enums, FoundSymbolId, Function, Functions, LLISymbol,
+                LLIs, LocalSymbol, Locals, Methods, ParameterSymbol, Parameters, Struct, Structs,
             },
         },
     },
@@ -31,18 +31,23 @@ pub struct SymbolsTable<'instr> {
     llis: LLIs<'instr>,
     structs: Structs<'instr>,
     functions: Functions<'instr>,
+    asm_functions: AssemblerFunctions<'instr>,
     enums: Enums<'instr>,
     parameters: Parameters<'instr>,
 }
 
 impl<'instr> SymbolsTable<'instr> {
-    pub fn with_functions(functions: HashMap<&'instr str, Function<'instr>>) -> Self {
+    pub fn with_functions(
+        functions: Functions<'instr>,
+        asm_functions: AssemblerFunctions<'instr>,
+    ) -> Self {
         Self {
             custom_types: HashMap::with_capacity(MINIMAL_CUSTOM_TYPE_CAPACITY),
             constants: HashMap::with_capacity(MINIMAL_CONSTANTS_CAPACITY),
             locals: Vec::with_capacity(MINIMAL_LOCALS_CAPACITY),
             llis: Vec::with_capacity(MINIMAL_LLIS_CAPACITY),
             functions,
+            asm_functions,
             structs: HashMap::with_capacity(MINIMAL_STRUCTURE_CAPACITY),
             enums: HashMap::with_capacity(MINIMAL_ENUMS_CAPACITY),
             parameters: HashMap::with_capacity(MINIMAL_PARAMETERS_CAPACITY),
@@ -232,6 +237,26 @@ impl<'instr> SymbolsTable<'instr> {
         Ok(())
     }
 
+    pub fn new_asm_function(
+        &mut self,
+        name: &'instr str,
+        function: AssemblerFunction<'instr>,
+        span: Span,
+    ) -> Result<(), ThrushCompilerIssue> {
+        if self.asm_functions.contains_key(name) {
+            return Err(ThrushCompilerIssue::Error(
+                String::from("Assembly function already declared"),
+                format!("'{}' assembler function already declared before.", name),
+                None,
+                span,
+            ));
+        }
+
+        self.asm_functions.insert(name, function);
+
+        Ok(())
+    }
+
     pub fn new_function(
         &mut self,
         name: &'instr str,
@@ -290,38 +315,62 @@ impl<'instr> SymbolsTable<'instr> {
         span: Span,
     ) -> Result<FoundSymbolId<'instr>, ThrushCompilerIssue> {
         if self.custom_types.contains_key(name) {
-            return Ok((None, None, None, None, Some(name), None, None, None));
+            return Ok((None, None, None, None, Some(name), None, None, None, None));
         }
 
         if self.constants.contains_key(name) {
-            return Ok((None, None, None, Some(name), None, None, None, None));
+            return Ok((None, None, None, Some(name), None, None, None, None, None));
         }
 
         if self.structs.contains_key(name) {
-            return Ok((Some(name), None, None, None, None, None, None, None));
+            return Ok((Some(name), None, None, None, None, None, None, None, None));
         }
 
         if self.enums.contains_key(name) {
-            return Ok((None, None, Some(name), None, None, None, None, None));
+            return Ok((None, None, Some(name), None, None, None, None, None, None));
         }
 
         if self.functions.contains_key(name) {
-            return Ok((None, Some(name), None, None, None, None, None, None));
+            return Ok((None, Some(name), None, None, None, None, None, None, None));
         }
 
         if self.parameters.contains_key(name) {
-            return Ok((None, None, None, None, None, Some(name), None, None));
+            return Ok((None, None, None, None, None, Some(name), None, None, None));
+        }
+
+        if self.asm_functions.contains_key(name) {
+            return Ok((None, None, None, None, None, None, Some(name), None, None));
         }
 
         for (idx, scope) in self.llis.iter().enumerate().rev() {
             if scope.contains_key(name) {
-                return Ok((None, None, None, None, None, None, Some((name, idx)), None));
+                return Ok((
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    Some((name, idx)),
+                    None,
+                ));
             }
         }
 
         for (idx, scope) in self.locals.iter().enumerate().rev() {
             if scope.contains_key(name) {
-                return Ok((None, None, None, None, None, None, None, Some((name, idx))));
+                return Ok((
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    Some((name, idx)),
+                ));
             }
         }
 
@@ -365,6 +414,24 @@ impl<'instr> SymbolsTable<'instr> {
         Err(ThrushCompilerIssue::Error(
             String::from("Not found"),
             String::from("Struct not found at global scope."),
+            None,
+            span,
+        ))
+    }
+
+    #[inline]
+    pub fn get_asm_function_by_id(
+        &self,
+        span: Span,
+        asm_func_id: &'instr str,
+    ) -> Result<AssemblerFunction<'instr>, ThrushCompilerIssue> {
+        if let Some(asm_function) = self.asm_functions.get(asm_func_id).cloned() {
+            return Ok(asm_function);
+        }
+
+        Err(ThrushCompilerIssue::Error(
+            String::from("Not found"),
+            String::from("Assembler function not found at global scope."),
             None,
             span,
         ))

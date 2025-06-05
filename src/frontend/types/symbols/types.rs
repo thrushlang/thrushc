@@ -16,6 +16,7 @@ pub type Methods<'instr> = Vec<(&'instr str, ThrushType, Vec<ThrushType>)>;
 pub type MethodDef<'instr> = &'instr (&'instr str, ThrushType, Vec<ThrushType>);
 
 pub type Function<'instr> = (ThrushType, ParametersTypes, bool);
+pub type AssemblerFunction<'instr> = (ThrushType, ParametersTypes, bool);
 
 #[derive(Debug, Clone)]
 pub struct ParametersTypes(pub Vec<ThrushType>);
@@ -29,6 +30,7 @@ pub struct ParametersTypes(pub Vec<ThrushType>);
 ########################################################################*/
 
 pub type FoundSymbolId<'instr> = (
+    Option<&'instr str>,
     Option<&'instr str>,
     Option<&'instr str>,
     Option<&'instr str>,
@@ -54,6 +56,7 @@ pub type Parameters<'instr> = HashMap<&'instr str, ParameterSymbol<'instr>>;
 pub type Structs<'instr> = HashMap<&'instr str, Struct<'instr>>;
 pub type Enums<'instr> = HashMap<&'instr str, EnumSymbol<'instr>>;
 pub type Functions<'instr> = HashMap<&'instr str, Function<'instr>>;
+pub type AssemblerFunctions<'instr> = HashMap<&'instr str, AssemblerFunction<'instr>>;
 
 pub type LLIs<'instr> = Vec<HashMap<&'instr str, LLISymbol<'instr>>>;
 pub type Locals<'instr> = Vec<HashMap<&'instr str, LocalSymbol<'instr>>>;

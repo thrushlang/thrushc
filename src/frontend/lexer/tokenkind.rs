@@ -60,6 +60,10 @@ pub enum TokenKind {
     StrongStack,
     PreciseFloats,
     Convention,
+    AsmAlignStack,
+    AsmDialect,
+    AsmThrow,
+    AsmSideEffects,
 
     // --- Keywords ---
     Alloc,
@@ -68,6 +72,8 @@ pub enum TokenKind {
     Load,
     Write,
     CastRaw,
+    CastPtr,
+    AsmFn,
     Deref,
     Cast,
     Heap,
@@ -78,6 +84,7 @@ pub enum TokenKind {
     Methods,
     Mut,
     RawPtr,
+    CallAsm,
     Ref,
     Type,
     Enum,
@@ -248,6 +255,11 @@ impl TokenKind {
     #[must_use]
     pub const fn is_function_keyword(&self) -> bool {
         matches!(self, TokenKind::Fn)
+    }
+
+    #[must_use]
+    pub const fn is_asm_function_keyword(&self) -> bool {
+        matches!(self, TokenKind::AsmFn)
     }
 
     #[must_use]

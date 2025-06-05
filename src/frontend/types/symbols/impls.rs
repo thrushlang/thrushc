@@ -185,45 +185,6 @@ impl FoundSymbolExtension for FoundSymbolId<'_> {
 }
 
 impl<'instr> FoundSymbolEither<'instr> for FoundSymbolId<'instr> {
-    fn expected_custom_type(&self, span: Span) -> Result<&'instr str, ThrushCompilerIssue> {
-        if let Some(type_id) = self.4 {
-            return Ok(type_id);
-        }
-
-        Err(ThrushCompilerIssue::Error(
-            String::from("Expected custom type reference"),
-            String::from("Expected custom type but found something else."),
-            None,
-            span,
-        ))
-    }
-
-    fn expected_constant(&self, span: Span) -> Result<&'instr str, ThrushCompilerIssue> {
-        if let Some(const_id) = self.3 {
-            return Ok(const_id);
-        }
-
-        Err(ThrushCompilerIssue::Error(
-            String::from("Expected constant reference"),
-            String::from("Expected constant but found something else."),
-            None,
-            span,
-        ))
-    }
-
-    fn expected_enum(&self, span: Span) -> Result<&'instr str, ThrushCompilerIssue> {
-        if let Some(name) = self.2 {
-            return Ok(name);
-        }
-
-        Err(ThrushCompilerIssue::Error(
-            String::from("Expected enum reference"),
-            String::from("Expected enum but found something else."),
-            None,
-            span,
-        ))
-    }
-
     fn expected_struct(&self, span: Span) -> Result<&'instr str, ThrushCompilerIssue> {
         if let Some(name) = self.0 {
             return Ok(name);
@@ -250,6 +211,45 @@ impl<'instr> FoundSymbolEither<'instr> for FoundSymbolId<'instr> {
         ))
     }
 
+    fn expected_enum(&self, span: Span) -> Result<&'instr str, ThrushCompilerIssue> {
+        if let Some(name) = self.2 {
+            return Ok(name);
+        }
+
+        Err(ThrushCompilerIssue::Error(
+            String::from("Expected enum reference"),
+            String::from("Expected enum but found something else."),
+            None,
+            span,
+        ))
+    }
+
+    fn expected_constant(&self, span: Span) -> Result<&'instr str, ThrushCompilerIssue> {
+        if let Some(const_id) = self.3 {
+            return Ok(const_id);
+        }
+
+        Err(ThrushCompilerIssue::Error(
+            String::from("Expected constant reference"),
+            String::from("Expected constant but found something else."),
+            None,
+            span,
+        ))
+    }
+
+    fn expected_custom_type(&self, span: Span) -> Result<&'instr str, ThrushCompilerIssue> {
+        if let Some(type_id) = self.4 {
+            return Ok(type_id);
+        }
+
+        Err(ThrushCompilerIssue::Error(
+            String::from("Expected custom type reference"),
+            String::from("Expected custom type but found something else."),
+            None,
+            span,
+        ))
+    }
+
     fn expected_parameter(&self, span: Span) -> Result<&'instr str, ThrushCompilerIssue> {
         if let Some(name) = self.5 {
             return Ok(name);
@@ -263,8 +263,21 @@ impl<'instr> FoundSymbolEither<'instr> for FoundSymbolId<'instr> {
         ))
     }
 
+    fn expected_asm_function(&self, span: Span) -> Result<&'instr str, ThrushCompilerIssue> {
+        if let Some(name) = self.6 {
+            return Ok(name);
+        }
+
+        Err(ThrushCompilerIssue::Error(
+            String::from("Expected assembler function reference"),
+            String::from("Expected assembler function but found something else."),
+            None,
+            span,
+        ))
+    }
+
     fn expected_lli(&self, span: Span) -> Result<(&'instr str, usize), ThrushCompilerIssue> {
-        if let Some((name, scope_idx)) = self.6 {
+        if let Some((name, scope_idx)) = self.7 {
             return Ok((name, scope_idx));
         }
 
@@ -277,7 +290,7 @@ impl<'instr> FoundSymbolEither<'instr> for FoundSymbolId<'instr> {
     }
 
     fn expected_local(&self, span: Span) -> Result<(&'instr str, usize), ThrushCompilerIssue> {
-        if let Some((name, scope_idx)) = self.7 {
+        if let Some((name, scope_idx)) = self.8 {
             return Ok((name, scope_idx));
         }
 

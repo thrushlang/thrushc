@@ -50,6 +50,22 @@ impl ThrushAttributesExtensions for ThrushAttributes<'_> {
         self.iter().any(|attr| attr.is_noinline_attribute())
     }
 
+    fn has_asmalignstack_attribute(&self) -> bool {
+        self.iter().any(|attr| attr.is_asmalingstack_attribute())
+    }
+
+    fn has_asmdialect_attribute(&self) -> bool {
+        self.iter().any(|attr| attr.is_asmdialect_attribute())
+    }
+
+    fn has_asmsideffects_attribute(&self) -> bool {
+        self.iter().any(|attr| attr.is_asmsideeffects_attribute())
+    }
+
+    fn has_asmthrow_attribute(&self) -> bool {
+        self.iter().any(|attr| attr.is_asmthrow_attribute())
+    }
+
     fn match_attr(&self, cmp: LLVMAttributeComparator) -> Option<Span> {
         if let Some(attr_found) = self.iter().find(|attr| attr.into_llvm_attr_cmp() == cmp) {
             return Some(attr_found.get_span());

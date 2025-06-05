@@ -134,6 +134,24 @@ impl<'type_checker> TypeChecker<'type_checker> {
             return Ok(());
         }
 
+        if let ThrushStatement::AssemblerFunction {
+            parameters, span, ..
+        } = stmt
+        {
+            for parameter in parameters.iter() {
+                if self.check_mismatch_type(&ThrushType::Void, parameter.get_value_type()?) {
+                    self.add_error(ThrushCompilerIssue::Error(
+                        String::from("Type not allowed"),
+                        String::from("The void type isn't valid a runtime value."),
+                        None,
+                        *span,
+                    ));
+                }
+            }
+
+            return Ok(());
+        }
+
         if let ThrushStatement::Function {
             parameters,
             body,
@@ -270,28 +288,6 @@ impl<'type_checker> TypeChecker<'type_checker> {
             return Ok(());
         }
 
-        if let ThrushStatement::Return {
-            expression, span, ..
-        } = stmt
-        {
-            let from_type = if let Some(expression) = expression {
-                expression.get_value_type()?
-            } else {
-                &ThrushType::Void
-            };
-
-            if let Err(error) = self.validate_types(
-                self.type_ctx.get_function_type(),
-                from_type,
-                expression.as_deref(),
-                None,
-                span,
-                TypeCheckerTypeCheckSource::default(),
-            ) {
-                self.add_error(error);
-            }
-        }
-
         if let ThrushStatement::If {
             cond, elfs, span, ..
         } = stmt
@@ -405,39 +401,6 @@ impl<'type_checker> TypeChecker<'type_checker> {
             return Ok(());
         }
 
-        if let ThrushStatement::Cast {
-            from,
-            cast_type,
-            span,
-        } = stmt
-        {
-            let from_type: &ThrushType = from.get_value_type()?;
-
-            if !cast_type.is_primitive() {
-                self.add_error(ThrushCompilerIssue::Error(
-                    "Syntax error".into(),
-                    "Value is not a primitive type.".into(),
-                    None,
-                    *span,
-                ));
-            }
-
-            if !cast_type.is_primitive() {
-                self.add_error(ThrushCompilerIssue::Error(
-                    "Syntax error".into(),
-                    "Cast type is not a primitive type.".into(),
-                    None,
-                    *span,
-                ));
-            }
-
-            if let Err(error) = self.validate_type_cast(cast_type, from_type, span) {
-                self.add_error(error);
-            }
-
-            return Ok(());
-        }
-
         if let ThrushStatement::Group { expression, .. } = stmt {
             if let Err(type_error) = self.analyze_stmt(expression) {
                 self.add_error(type_error);
@@ -500,6 +463,66 @@ impl<'type_checker> TypeChecker<'type_checker> {
             self.errors.push(ThrushCompilerIssue::Bug(
                 String::from("Call not caught"),
                 format!("Could not get named function '{}'.", name),
+                *span,
+                CompilationPosition::TypeChecker,
+                line!(),
+            ));
+        }
+
+        if let ThrushStatement::AsmCall {
+            name, args, span, ..
+        } = stmt
+        {
+            if let Some(function) = self.symbols.get_asm_function(name) {
+                let parameter_types: &[ThrushType] = function.0;
+                let ignore_more_arguments: bool = function.1;
+
+                let parameter_types_size: usize = parameter_types.len();
+
+                let mut parameter_types_displayed: String = String::with_capacity(100);
+
+                parameter_types.iter().for_each(|parameter_type| {
+                    parameter_types_displayed.push_str(&format!("{} ", parameter_type));
+                });
+
+                if args.len() != parameter_types_size && !ignore_more_arguments {
+                    self.add_error(ThrushCompilerIssue::Error(
+                        String::from("Syntax error"),
+                        format!(
+                            "Expected \"{}\" arguments, with types \"{}\".",
+                            parameter_types_size, parameter_types_displayed
+                        ),
+                        None,
+                        *span,
+                    ));
+
+                    return Ok(());
+                }
+
+                for (target_type, expr) in parameter_types.iter().zip(args.iter()) {
+                    let from_type: &ThrushType = expr.get_value_type()?;
+                    let span: Span = expr.get_span();
+
+                    if let Err(error) = self.validate_types(
+                        target_type,
+                        from_type,
+                        Some(expr),
+                        None,
+                        &span,
+                        TypeCheckerTypeCheckSource::Call,
+                    ) {
+                        self.add_error(error);
+                    }
+
+                    self.analyze_stmt(expr)?;
+                }
+
+                return Ok(());
+            }
+
+            self.errors.push(ThrushCompilerIssue::Bug(
+                String::from("Call not caught"),
+                format!("Could not get named assembler function '{}'.", name),
                 *span,
                 CompilationPosition::TypeChecker,
                 line!(),
@@ -757,12 +780,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
             return Ok(());
         }
 
-        if let ThrushStatement::CastRaw {
-            from,
-            cast_type,
-            span,
-        } = stmt
-        {
+        if let ThrushStatement::CastRaw { from, cast, span } = stmt {
             let from_type: &ThrushType = from.get_value_type()?;
             let from_span: Span = from.get_span();
 
@@ -775,7 +793,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
                 ));
             }
 
-            if cast_type.is_ptr_type() {
+            if cast.is_ptr_type() {
                 self.add_error(ThrushCompilerIssue::Error(
                     "Syntax error".into(),
                     "A non-raw type 'ptr<T>' was expected.".into(),
@@ -784,16 +802,52 @@ impl<'type_checker> TypeChecker<'type_checker> {
                 ));
             }
 
-            if !from_type.match_first_depth(cast_type) {
+            if !from_type.match_first_depth(cast) {
                 self.add_error(ThrushCompilerIssue::Error(
                     "Syntax error".into(),
-                    format!("Cannot cast '{}' to '{}'.", from_type, cast_type),
+                    format!("Cannot cast '{}' to '{}'.", from_type, cast),
                     None,
                     *span,
                 ));
             }
 
             self.analyze_stmt(from)?;
+
+            return Ok(());
+        }
+
+        if let ThrushStatement::CastPtr { from, cast, span } = stmt {
+            let from_type: &ThrushType = from.get_value_type()?;
+
+            if !from_type.is_ptr_type() {
+                self.add_error(ThrushCompilerIssue::Error(
+                    "Syntax error".into(),
+                    "Expected 'ptr<T>' type.".into(),
+                    None,
+                    *span,
+                ));
+            }
+
+            if !cast.is_ptr_type() {
+                self.add_error(ThrushCompilerIssue::Error(
+                    "Syntax error".into(),
+                    "Expected 'ptr<T>' type.".into(),
+                    None,
+                    *span,
+                ));
+            }
+
+            self.analyze_stmt(from)?;
+
+            return Ok(());
+        }
+
+        if let ThrushStatement::Cast { from, cast, span } = stmt {
+            let from_type: &ThrushType = from.get_value_type()?;
+
+            if let Err(error) = self.validate_type_cast(cast, from_type, span) {
+                self.add_error(error);
+            }
 
             return Ok(());
         }
@@ -897,7 +951,6 @@ impl<'type_checker> TypeChecker<'type_checker> {
         if (cast_type.is_integer_type() && from_type.is_integer_type())
             || (cast_type.is_float_type() && from_type.is_float_type())
             || (cast_type.is_bool_type() && from_type.is_bool_type())
-            || (cast_type.is_ptr_type() && from_type.is_ptr_type())
         {
             Ok(())
         } else {
@@ -1578,6 +1631,22 @@ impl<'type_checker> TypeChecker<'type_checker> {
     }
 
     pub fn init(&mut self) {
+        self.stmts
+            .iter()
+            .filter(|stmt| stmt.is_asm_function())
+            .for_each(|stmt| {
+                if let ThrushStatement::AssemblerFunction {
+                    name,
+                    parameters_types: types,
+                    attributes,
+                    ..
+                } = stmt
+                {
+                    self.symbols
+                        .new_asm_function(name, (types, attributes.has_public_attribute()));
+                }
+            });
+
         self.stmts
             .iter()
             .filter(|stmt| stmt.is_function())

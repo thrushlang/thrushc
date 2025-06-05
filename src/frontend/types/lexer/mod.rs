@@ -256,15 +256,6 @@ impl ThrushType {
                 | ThrushType::Char
         )
     }
-
-    #[inline(always)]
-    pub const fn is_primitive(&self) -> bool {
-        self.is_integer_type()
-            || self.is_float_type()
-            || self.is_bool_type()
-            || self.is_ptr_type()
-            || self.is_ptr_type()
-    }
 }
 
 impl PartialEq for ThrushType {
