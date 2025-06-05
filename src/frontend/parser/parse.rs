@@ -1,6 +1,6 @@
 use crate::{
-    frontend::lexer::span::Span, standard::errors::standard::ThrushCompilerIssue,
-    types::frontend::lexer::types::ThrushType,
+    core::errors::standard::ThrushCompilerIssue,
+    frontend::{lexer::span::Span, types::lexer::ThrushType},
 };
 
 pub fn float(lexeme: &str, span: Span) -> Result<(ThrushType, f64), ThrushCompilerIssue> {

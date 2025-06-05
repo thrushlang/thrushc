@@ -2,7 +2,9 @@ use attrchecker::AttributeChecker;
 use linter::{Linter, attributes::AttributesLinter};
 use typechecker::TypeChecker;
 
-use crate::{standard::misc::CompilerFile, types::frontend::parser::stmts::stmt::ThrushStatement};
+use crate::{
+    core::compiler::options::CompilerFile, frontend::types::parser::stmts::stmt::ThrushStatement,
+};
 
 pub mod attrchecker;
 pub mod linter;
@@ -34,14 +36,18 @@ impl<'semantic_analyzer> SemanticAnalyzer<'semantic_analyzer> {
     }
 
     pub fn check(&mut self, parser_throwed_errors: bool) -> bool {
-        let type_checker_throw_errors: bool = self.type_checker.check();
-        let attr_checker_throw_errors: bool = self.attr_checker.check();
+        if !parser_throwed_errors {
+            let type_checker_throw_errors: bool = self.type_checker.check();
+            let attr_checker_throw_errors: bool = self.attr_checker.check();
 
-        if !type_checker_throw_errors && !attr_checker_throw_errors && !parser_throwed_errors {
-            self.linter.check();
-            self.attr_linter.check();
+            if !type_checker_throw_errors && !attr_checker_throw_errors && !parser_throwed_errors {
+                self.linter.check();
+                self.attr_linter.check();
+            }
+
+            return type_checker_throw_errors || attr_checker_throw_errors || parser_throwed_errors;
         }
 
-        type_checker_throw_errors || attr_checker_throw_errors || parser_throwed_errors
+        true
     }
 }

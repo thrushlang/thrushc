@@ -1,12 +1,14 @@
 use crate::{
-    frontend::lexer::span::Span,
-    standard::errors::{position::CompilationPosition, standard::ThrushCompilerIssue},
-    types::frontend::{
-        lexer::types::MethodsApplicant,
-        parser::symbols::types::{
-            ConstantSymbol, Constants, CustomTypeSymbol, CustomTypes, EnumSymbol, Enums,
-            FoundSymbolId, Function, Functions, LLISymbol, LLIs, LocalSymbol, Locals, Methods,
-            ParameterSymbol, Parameters, Struct, Structs,
+    core::errors::{position::CompilationPosition, standard::ThrushCompilerIssue},
+    frontend::{
+        lexer::span::Span,
+        types::{
+            lexer::MethodsApplicant,
+            symbols::types::{
+                ConstantSymbol, Constants, CustomTypeSymbol, CustomTypes, EnumSymbol, Enums,
+                FoundSymbolId, Function, Functions, LLISymbol, LLIs, LocalSymbol, Locals, Methods,
+                ParameterSymbol, Parameters, Struct, Structs,
+            },
         },
     },
 };

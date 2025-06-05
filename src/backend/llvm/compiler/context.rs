@@ -5,11 +5,9 @@ use {
         typegen, valuegen,
     },
     crate::{
-        standard::diagnostic::Diagnostician,
-        types::{
-            backend::llvm::types::LLVMFunction,
-            frontend::{lexer::types::ThrushType, parser::stmts::types::ThrushAttributes},
-        },
+        backend::types::representations::LLVMFunction,
+        core::diagnostic::diagnostician::Diagnostician,
+        frontend::types::{lexer::ThrushType, parser::stmts::types::ThrushAttributes},
     },
     ahash::AHashMap as HashMap,
     inkwell::{

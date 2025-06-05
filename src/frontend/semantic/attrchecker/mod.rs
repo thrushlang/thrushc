@@ -1,12 +1,14 @@
 use ahash::AHashSet;
 
 use crate::{
-    standard::{
-        constants::MINIMAL_ERROR_CAPACITY, diagnostic::Diagnostician,
-        errors::standard::ThrushCompilerIssue, logging, misc::CompilerFile,
+    core::{
+        compiler::options::CompilerFile,
+        console::logging::{self, LoggingType},
+        diagnostic::diagnostician::Diagnostician,
+        errors::standard::ThrushCompilerIssue,
     },
-    types::frontend::{
-        attrchecker::types::AttributeCheckerAttributeApplicant,
+    frontend::types::{
+        attrchecker::AttributeCheckerAttributeApplicant,
         linter::{traits::LLVMAttributeComparatorExtensions, types::LLVMAttributeComparator},
         parser::stmts::{
             stmt::ThrushStatement, traits::ThrushAttributesExtensions, types::ThrushAttributes,
@@ -29,7 +31,7 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
     ) -> Self {
         Self {
             stmts,
-            errors: Vec::with_capacity(MINIMAL_ERROR_CAPACITY),
+            errors: Vec::with_capacity(100),
             currrent: 0,
             dignostician: Diagnostician::new(file),
         }
@@ -47,7 +49,7 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
         if !self.errors.is_empty() {
             self.errors.iter().for_each(|error| {
                 self.dignostician
-                    .build_diagnostic(error, logging::LoggingType::Error);
+                    .build_diagnostic(error, LoggingType::Error);
             });
 
             return true;
@@ -195,7 +197,7 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
     fn peek(&self) -> &'attr_checker ThrushStatement<'attr_checker> {
         self.stmts.get(self.currrent).unwrap_or_else(|| {
             logging::log(
-                logging::LoggingType::Panic,
+                LoggingType::Panic,
                 "Attemping to get a statement in invalid position at Attribute Checker.",
             );
 

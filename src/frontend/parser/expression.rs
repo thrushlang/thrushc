@@ -1,14 +1,11 @@
 use crate::{
     backend::llvm::compiler::attributes::LLVMAttribute,
-    frontend::lexer::{span::Span, token::Token},
-    standard::errors::standard::ThrushCompilerIssue,
-    types::frontend::{
-        lexer::{
-            tokenkind::TokenKind,
-            types::{self, ThrushType},
-        },
-        parser::{
-            stmts::{
+    core::errors::standard::ThrushCompilerIssue,
+    frontend::{
+        lexer::{span::Span, token::Token, tokenkind::TokenKind},
+        types::{
+            lexer::{ThrushType, decompose_struct_property},
+            parser::stmts::{
                 ident::ReferenceIndentificator,
                 sites::LLIAllocationSite,
                 stmt::ThrushStatement,
@@ -1001,7 +998,7 @@ fn build_property<'instr>(
 
     property_names.reverse();
 
-    let decomposed: (ThrushType, Vec<(ThrushType, u32)>) = types::decompose_struct_property(
+    let decomposed: (ThrushType, Vec<(ThrushType, u32)>) = decompose_struct_property(
         0,
         property_names,
         local_type.clone(),

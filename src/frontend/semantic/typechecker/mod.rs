@@ -4,17 +4,18 @@ use marks::{TypeCheckerTypeCheckSource, TypeCheckerTypeContext, TypeCheckerTypeP
 use table::TypeCheckerSymbolsTable;
 
 use crate::{
-    frontend::lexer::span::Span,
-    standard::{
-        constants::MINIMAL_ERROR_CAPACITY,
-        diagnostic::Diagnostician,
+    core::{
+        compiler::options::CompilerFile,
+        console::logging::LoggingType,
+        diagnostic::diagnostician::Diagnostician,
         errors::{position::CompilationPosition, standard::ThrushCompilerIssue},
-        logging::LoggingType,
-        misc::CompilerFile,
     },
-    types::frontend::{
-        lexer::{tokenkind::TokenKind, types::ThrushType},
-        parser::stmts::{stmt::ThrushStatement, traits::ThrushAttributesExtensions},
+    frontend::{
+        lexer::{span::Span, tokenkind::TokenKind},
+        types::{
+            lexer::ThrushType,
+            parser::stmts::{stmt::ThrushStatement, traits::ThrushAttributesExtensions},
+        },
     },
 };
 
@@ -39,7 +40,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
         Self {
             stmts,
             position: 0,
-            errors: Vec::with_capacity(MINIMAL_ERROR_CAPACITY),
+            errors: Vec::with_capacity(100),
             type_ctx: TypeCheckerTypeContext::new(),
             symbols: TypeCheckerSymbolsTable::new(),
             diagnostician: Diagnostician::new(file),

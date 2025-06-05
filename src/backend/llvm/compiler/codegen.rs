@@ -1,8 +1,10 @@
-use crate::standard::logging::{self, LoggingType};
-use crate::types::backend::llvm::types::{LLVMFunctionParameter, LLVMFunctionPrototype};
-use crate::types::frontend::lexer::types::ThrushType;
+#![allow(clippy::collapsible_if)]
 
-use crate::types::frontend::parser::stmts::stmt::ThrushStatement;
+use crate::core::console::logging::{self, LoggingType};
+use crate::frontend::types::lexer::ThrushType;
+use crate::frontend::types::representations::{FunctionParameter, FunctionRepresentation};
+
+use crate::frontend::types::parser::stmts::stmt::ThrushStatement;
 
 use super::super::compiler::attributes::LLVMAttribute;
 
@@ -76,7 +78,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
 
         match stmt {
             ThrushStatement::Function { .. } => {
-                self.build_function(stmt.as_llvm_function_proto());
+                self.build_function(stmt.into_function_representation());
             }
 
             ThrushStatement::EntryPoint { body, .. } => {
@@ -84,13 +86,44 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
 
                 self.codegen(body);
 
-                llvm_builder
+                if llvm_builder
                     .build_return(Some(&llvm_context.i32_type().const_int(0, false)))
-                    .unwrap();
+                    .is_err()
+                {
+                    logging::log(
+                        LoggingType::Panic,
+                        "Unable to build the return of entrypoint. ",
+                    );
+                }
             }
 
-            ThrushStatement::Return { kind, .. } => {
-                valuegen::compile(self.context, stmt, kind);
+            ThrushStatement::Return {
+                expression, kind, ..
+            } => {
+                if expression.is_none() {
+                    if llvm_builder.build_return(None).is_err() {
+                        {
+                            logging::log(
+                                LoggingType::Panic,
+                                "Unable to build the return instruction at code generation time. ",
+                            );
+                        }
+                    }
+                }
+
+                if let Some(expression) = expression {
+                    if llvm_builder
+                        .build_return(Some(&valuegen::compile(self.context, expression, kind)))
+                        .is_err()
+                    {
+                        {
+                            logging::log(
+                                LoggingType::Panic,
+                                "Unable to build the return instruction at code generation time. ",
+                            );
+                        }
+                    };
+                }
             }
 
             stmt => self.codegen_code_block(stmt),
@@ -571,7 +604,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         main
     }
 
-    fn build_function_parameter(&mut self, parameter: LLVMFunctionParameter<'ctx>) {
+    fn build_function_parameter(&mut self, parameter: FunctionParameter<'ctx>) {
         let parameter_name: &str = parameter.0;
         let parameter_type: &ThrushType = parameter.1;
         let parameter_position: u32 = parameter.2;
@@ -630,7 +663,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         let llvm_module: &Module = self.context.get_llvm_module();
         let llvm_context: &Context = self.context.get_llvm_context();
 
-        let function: LLVMFunctionPrototype = stmt.as_llvm_function_proto();
+        let function: FunctionRepresentation = stmt.into_function_representation();
 
         let function_name: &str = function.0;
         let function_type: &ThrushType = function.1;
@@ -694,7 +727,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         );
     }
 
-    fn build_function(&mut self, function: LLVMFunctionPrototype<'ctx>) {
+    fn build_function(&mut self, function: FunctionRepresentation<'ctx>) {
         let llvm_context: &Context = self.context.get_llvm_context();
         let llvm_builder: &Builder<'_> = self.context.get_llvm_builder();
 

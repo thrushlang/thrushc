@@ -1,7 +1,7 @@
-use crate::types::backend::llvm::types::LLVMUnaryOp;
-use crate::types::frontend::lexer::tokenkind::TokenKind;
-use crate::types::frontend::lexer::types::ThrushType;
-use crate::types::frontend::parser::stmts::stmt::ThrushStatement;
+use crate::frontend::lexer::tokenkind::TokenKind;
+use crate::frontend::types::lexer::ThrushType;
+use crate::frontend::types::parser::stmts::stmt::ThrushStatement;
+use crate::frontend::types::representations::UnaryOperation;
 
 use super::{context::LLVMCodeGenContext, memory::SymbolAllocated, valuegen};
 
@@ -15,7 +15,7 @@ use inkwell::{
 
 pub fn unary_op<'ctx>(
     context: &LLVMCodeGenContext<'_, 'ctx>,
-    unary: LLVMUnaryOp<'ctx>,
+    unary: UnaryOperation<'ctx>,
 ) -> BasicValueEnum<'ctx> {
     let llvm_builder: &Builder = context.get_llvm_builder();
     let llvm_context: &Context = context.get_llvm_context();

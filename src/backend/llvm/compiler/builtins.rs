@@ -1,11 +1,9 @@
 use crate::{
-    standard::logging::{self, LoggingType},
-    types::{
-        backend::llvm::types::LLVMFunctionCall,
-        frontend::{
-            lexer::types::ThrushType,
-            parser::symbols::types::{Functions, ParametersTypes},
-        },
+    core::console::logging::{self, LoggingType},
+    frontend::types::{
+        lexer::ThrushType,
+        representations::FunctionCall,
+        symbols::types::{Functions, ParametersTypes},
     },
 };
 
@@ -40,7 +38,7 @@ pub fn include(functions: &mut Functions) {
 
 pub fn build_sizeof<'ctx>(
     context: &LLVMCodeGenContext<'_, 'ctx>,
-    call: LLVMFunctionCall<'ctx>,
+    call: FunctionCall<'ctx>,
 ) -> BasicValueEnum<'ctx> {
     let llvm_context: &Context = context.get_llvm_context();
 
@@ -75,38 +73,6 @@ pub fn build_sizeof<'ctx>(
         return context.get_allocated_symbol(name).get_size();
     }
 
-    /*if let ThrushStatement::ComplexType(kind, _, _) = value {
-        match kind {
-            kind if kind.is_integer_type() || kind.is_bool_type() => {
-                return typegen::type_int_to_llvm_int_type(context, kind)
-                    .size_of()
-                    .into();
-            }
-
-            kind if kind.is_float_type() => {
-                return typegen::type_float_to_llvm_float_type(context, kind)
-                    .size_of()
-                    .into();
-            }
-
-            kind if kind.is_ptr_type() => {
-                return context.ptr_type(AddressSpace::default()).size_of().into();
-            }
-
-            what => {
-                logging::log(
-                    LoggingType::Panic,
-                    &format!(
-                        "Built-in 'sizeof()' cannot get the size of '{}' type.",
-                        what
-                    ),
-                );
-
-                unreachable!()
-            }
-        }
-    } */
-
     logging::log(
         LoggingType::Panic,
         &format!(
@@ -120,7 +86,7 @@ pub fn build_sizeof<'ctx>(
 
 pub fn build_is_signed<'ctx>(
     context: &LLVMCodeGenContext<'_, 'ctx>,
-    call: LLVMFunctionCall<'ctx>,
+    call: FunctionCall<'ctx>,
 ) -> BasicValueEnum<'ctx> {
     let llvm_context: &Context = context.get_llvm_context();
     let llvm_builder: &Builder = context.get_llvm_builder();

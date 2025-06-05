@@ -3,15 +3,13 @@ use ahash::AHashMap as HashMap;
 use table::LinterSymbolsTable;
 
 use crate::{
-    frontend::lexer::span::Span,
-    standard::{
-        constants::{MINIMAL_BUGS_CAPACITY, MINIMAL_WARNINGS_CAPACITY},
-        diagnostic::Diagnostician,
+    core::{
+        compiler::options::CompilerFile,
+        console::logging::{self, LoggingType},
+        diagnostic::diagnostician::Diagnostician,
         errors::{position::CompilationPosition, standard::ThrushCompilerIssue},
-        logging::{self, LoggingType},
-        misc::CompilerFile,
     },
-    types::frontend::parser::stmts::stmt::ThrushStatement,
+    frontend::{lexer::span::Span, types::parser::stmts::stmt::ThrushStatement},
 };
 
 pub mod attributes;
@@ -32,8 +30,8 @@ impl<'linter> Linter<'linter> {
         Self {
             stmts,
             current: 0,
-            warnings: Vec::with_capacity(MINIMAL_WARNINGS_CAPACITY),
-            bugs: Vec::with_capacity(MINIMAL_BUGS_CAPACITY),
+            warnings: Vec::with_capacity(100),
+            bugs: Vec::with_capacity(100),
             diagnostician: Diagnostician::new(file),
             symbols: LinterSymbolsTable::new(),
         }

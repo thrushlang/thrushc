@@ -18,7 +18,7 @@ pub mod valuegen;
 use {
     crate::{
         backend::llvm::compiler::context::LLVMCodeGenContext,
-        types::frontend::parser::stmts::stmt::ThrushStatement,
+        frontend::types::parser::stmts::stmt::ThrushStatement,
     },
     codegen::LLVMCodegen,
 };

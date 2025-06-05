@@ -1,8 +1,8 @@
 use ahash::AHashMap as HashMap;
 
-use crate::types::frontend::{
-    lexer::types::ThrushType,
-    typechecker::types::{
+use crate::{
+    frontend::types::lexer::ThrushType,
+    frontend::types::typechecker::types::{
         TypeCheckerAllMethods, TypeCheckerFunction, TypeCheckerFunctions, TypeCheckerLLI,
         TypeCheckerLLIs, TypeCheckerLocal, TypeCheckerLocals, TypeCheckerMethod,
         TypeCheckerMethods,

@@ -1,4 +1,4 @@
-use crate::types::frontend::lexer::types::ThrushType;
+use crate::frontend::types::lexer::ThrushType;
 
 #[derive(Debug, Clone)]
 pub enum MethodsType {

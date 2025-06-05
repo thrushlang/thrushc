@@ -1,6 +1,6 @@
 #![allow(clippy::upper_case_acronyms)]
 
-use crate::types::frontend::lexer::types::ThrushType;
+use crate::frontend::types::lexer::ThrushType;
 
 #[derive(Debug, Default, Clone, Copy)]
 pub enum TypeCheckerTypePosition {

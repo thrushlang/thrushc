@@ -10,15 +10,14 @@ use contexts::{MethodsType, ParserControlContext, ParserTypeContext, SyncPositio
 use symbols::SymbolsTable;
 
 use crate::backend::llvm::compiler::builtins;
+use crate::core::compiler::options::CompilerFile;
+use crate::core::console::logging::{self, LoggingType};
+use crate::core::diagnostic::diagnostician::Diagnostician;
+use crate::core::errors::standard::ThrushCompilerIssue;
 use crate::frontend::lexer::token::Token;
-use crate::standard::constants::MINIMAL_ERROR_CAPACITY;
-use crate::standard::diagnostic::Diagnostician;
-use crate::standard::errors::standard::ThrushCompilerIssue;
-use crate::standard::logging::{self, LoggingType};
-use crate::standard::misc::CompilerFile;
-use crate::types::frontend::lexer::tokenkind::TokenKind;
-use crate::types::frontend::parser::stmts::stmt::ThrushStatement;
-use crate::types::frontend::parser::symbols::types::Functions;
+use crate::frontend::lexer::tokenkind::TokenKind;
+use crate::frontend::types::parser::stmts::stmt::ThrushStatement;
+use crate::frontend::types::symbols::types::Functions;
 
 const MINIMAL_STATEMENT_CAPACITY: usize = 100_000;
 const MINIMAL_GLOBAL_CAPACITY: usize = 2024;
@@ -82,7 +81,7 @@ impl<'instr> ParserContext<'instr> {
         Self {
             tokens,
             stmts: Vec::with_capacity(MINIMAL_STATEMENT_CAPACITY),
-            errors: Vec::with_capacity(MINIMAL_ERROR_CAPACITY),
+            errors: Vec::with_capacity(100),
             control_ctx: ParserControlContext::new(),
             type_ctx: ParserTypeContext::new(),
             current: 0,

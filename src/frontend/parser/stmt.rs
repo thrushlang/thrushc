@@ -4,17 +4,15 @@ use ahash::AHashMap as HashMap;
 
 use crate::{
     backend::llvm::compiler::{attributes::LLVMAttribute, conventions::CallConvention},
-    frontend::lexer::{span::Span, token::Token},
-    lazy_static,
-    standard::errors::standard::ThrushCompilerIssue,
-    types::frontend::{
-        lexer::{
-            tokenkind::TokenKind,
-            traits::ThrushStructTypeExtensions,
-            types::{self, MethodsApplicant, ThrushStructType, ThrushType},
-        },
-        parser::{
-            stmts::{
+    core::errors::standard::ThrushCompilerIssue,
+    frontend::{
+        lexer::{span::Span, token::Token, tokenkind::TokenKind},
+        types::{
+            lexer::{
+                MethodsApplicant, ThrushStructType, ThrushType, generate_methods,
+                traits::ThrushStructTypeExtensions,
+            },
+            parser::stmts::{
                 stmt::ThrushStatement,
                 traits::{StructFieldsExtensions, ThrushAttributesExtensions},
                 types::{CustomTypeFields, EnumFields, StructFields, ThrushAttributes},
@@ -22,6 +20,7 @@ use crate::{
             symbols::types::{Methods, ParametersTypes},
         },
     },
+    lazy_static,
 };
 
 use super::{
@@ -183,7 +182,7 @@ pub fn build_methods<'instr>(
         .set_instr_position(InstructionPosition::NoRelevant);
 
     if declare {
-        let bindings_generated: Methods = types::generate_methods(methods.clone())?;
+        let bindings_generated: Methods = generate_methods(methods.clone())?;
 
         parser_ctx.get_mut_symbols().add_methods(
             &struct_name,

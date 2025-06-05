@@ -1,12 +1,11 @@
 use crate::{
-    standard::{
-        constants::MINIMAL_WARNINGS_CAPACITY,
-        diagnostic::Diagnostician,
+    core::{
+        compiler::options::CompilerFile,
+        console::logging::{self, LoggingType},
+        diagnostic::diagnostician::Diagnostician,
         errors::standard::ThrushCompilerIssue,
-        logging::{self, LoggingType},
-        misc::CompilerFile,
     },
-    types::frontend::{
+    frontend::types::{
         linter::{
             traits::LLVMAttributeComparatorExtensions,
             types::{LLVMAttributeComparator, LinterAttributeApplicant},
@@ -32,7 +31,7 @@ impl<'attr_linter> AttributesLinter<'attr_linter> {
     ) -> Self {
         Self {
             stmts,
-            warnings: Vec::with_capacity(MINIMAL_WARNINGS_CAPACITY),
+            warnings: Vec::with_capacity(100),
             current: 0,
             dignostician: Diagnostician::new(file),
         }

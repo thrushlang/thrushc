@@ -5,18 +5,19 @@ use span::Span;
 use token::Token;
 
 use crate::{
-    standard::errors::standard::ThrushCompilerIssue, types::frontend::lexer::tokenkind::TokenKind,
+    core::{
+        compiler::options::CompilerFile,
+        console::logging::LoggingType,
+        diagnostic::diagnostician::Diagnostician,
+        errors::{lexer::ThrushLexerPanic, standard::ThrushCompilerIssue},
+    },
+    frontend::lexer::tokenkind::TokenKind,
 };
-
-use crate::standard::errors::lexer::ThrushLexerPanic;
-use crate::standard::logging::LoggingType;
-use crate::standard::misc::CompilerFile;
-
-use super::super::standard::{constants::MINIMAL_ERROR_CAPACITY, diagnostic::Diagnostician};
 
 pub mod keywords;
 pub mod span;
 pub mod token;
+pub mod tokenkind;
 
 const MAXIMUM_TOKENS_CAPACITY: usize = 1_000_000;
 const MAXIMUM_BYTES_TO_LEX: usize = 1_000_000;
@@ -36,7 +37,7 @@ impl<'a> Lexer<'a> {
     pub fn lex(code: &'a [u8], file: &'a CompilerFile) -> Result<Vec<Token<'a>>, ThrushLexerPanic> {
         Self {
             tokens: Vec::with_capacity(MAXIMUM_TOKENS_CAPACITY),
-            errors: Vec::with_capacity(MINIMAL_ERROR_CAPACITY),
+            errors: Vec::with_capacity(100),
             code,
             start: 0,
             current: 0,

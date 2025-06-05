@@ -10,7 +10,7 @@ use tar::Archive;
 use xz2::bufread::XzDecoder;
 use zip::{ZipArchive, read::ZipFile};
 
-use crate::standard::logging::{self, LoggingType};
+use crate::core::console::logging::{self, LoggingType};
 
 pub fn dump_x86_64_clang(
     clang_raw_manifest: &str,

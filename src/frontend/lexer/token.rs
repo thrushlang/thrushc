@@ -1,6 +1,6 @@
 use crate::{
-    standard::errors::standard::ThrushCompilerIssue,
-    types::frontend::{lexer::tokenkind::TokenKind, parser::stmts::traits::TokenExtensions},
+    core::errors::standard::ThrushCompilerIssue,
+    frontend::{lexer::tokenkind::TokenKind, types::parser::stmts::traits::TokenExtensions},
 };
 
 use super::span::Span;

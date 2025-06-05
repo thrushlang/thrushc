@@ -6,9 +6,9 @@ use std::{
     time::{Duration, Instant},
 };
 
-use crate::standard::{
-    backends::CompilersConfiguration,
-    logging::{self, LoggingType},
+use crate::core::{
+    compiler::backends::CompilersConfiguration,
+    console::logging::{self, LoggingType},
 };
 
 pub struct GCC<'clang> {

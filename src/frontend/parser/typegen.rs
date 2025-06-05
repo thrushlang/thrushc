@@ -1,10 +1,10 @@
 use crate::{
-    frontend::lexer::{span::Span, token::Token},
-    standard::errors::standard::ThrushCompilerIssue,
-    types::frontend::{
-        lexer::{tokenkind::TokenKind, types::ThrushType},
-        parser::{
-            stmts::{
+    core::errors::standard::ThrushCompilerIssue,
+    frontend::{
+        lexer::{span::Span, token::Token, tokenkind::TokenKind},
+        types::{
+            lexer::ThrushType,
+            parser::stmts::{
                 traits::{
                     CustomTypeFieldsExtensions, FoundSymbolEither, FoundSymbolExtension,
                     StructExtensions, StructFieldsExtensions,
@@ -30,7 +30,7 @@ pub fn build_type(parser_ctx: &mut ParserContext<'_>) -> Result<ThrushType, Thru
                 if inner_type.is_mut_type() {
                     return Err(ThrushCompilerIssue::Error(
                         String::from("Syntax error"),
-                        "Nested mutable type 'mut mut T' aren't allowed.".into(),
+                        "Nested mutable type 'mut mut T' aren't allowed as type.".into(),
                         None,
                         span,
                     ));
@@ -39,7 +39,7 @@ pub fn build_type(parser_ctx: &mut ParserContext<'_>) -> Result<ThrushType, Thru
                 if inner_type.is_ptr_type() {
                     return Err(ThrushCompilerIssue::Error(
                         String::from("Syntax error"),
-                        "Mutable pointers 'mut ptr<T>' aren't allowed.".into(),
+                        "Mutable pointer 'mut ptr<T>' aren't allowed as type.".into(),
                         None,
                         span,
                     ));

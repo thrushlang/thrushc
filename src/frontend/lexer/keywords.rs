@@ -1,4 +1,4 @@
-use crate::{lazy_static, types::frontend::lexer::tokenkind::TokenKind};
+use crate::{frontend::lexer::tokenkind::TokenKind, lazy_static};
 
 use ahash::AHashMap as HashMap;
 

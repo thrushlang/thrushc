@@ -3,13 +3,13 @@ use std::rc::Rc;
 use crate::backend::llvm::compiler::context::LLVMCodeGenContextPosition;
 use crate::backend::llvm::compiler::memory::{self, LLVMAllocationSite, SymbolAllocated};
 use crate::backend::llvm::compiler::{binaryop, builtins, cast, unaryop, utils};
-use crate::standard::logging::{self, LoggingType};
-use crate::types::backend::llvm::types::LLVMFunction;
-use crate::types::frontend::lexer::traits::LLVMTypeExtensions;
-use crate::types::frontend::lexer::types::ThrushType;
-use crate::types::frontend::parser::stmts::stmt::ThrushStatement;
-use crate::types::frontend::parser::stmts::traits::ThrushAttributesExtensions;
-use crate::types::frontend::parser::stmts::types::ThrushAttributes;
+use crate::backend::types::representations::LLVMFunction;
+use crate::core::console::logging::{self, LoggingType};
+use crate::frontend::types::lexer::ThrushType;
+use crate::frontend::types::lexer::traits::LLVMTypeExtensions;
+use crate::frontend::types::parser::stmts::stmt::ThrushStatement;
+use crate::frontend::types::parser::stmts::traits::ThrushAttributesExtensions;
+use crate::frontend::types::parser::stmts::types::ThrushAttributes;
 
 use super::context::LLVMCodeGenContext;
 use super::typegen;
@@ -614,25 +614,6 @@ pub fn compile<'ctx>(
         }
 
         logging::log(LoggingType::Panic, "Could not get value of an mutation.");
-    }
-
-    if let ThrushStatement::Return {
-        expression, kind, ..
-    } = expression
-    {
-        let default: PointerValue = llvm_context.ptr_type(AddressSpace::default()).const_null();
-
-        if expression.is_none() {
-            let _ = llvm_builder.build_return(None);
-            return default.into();
-        }
-
-        if let Some(expression) = expression {
-            let _ = llvm_builder.build_return(Some(&self::compile(context, expression, kind)));
-            return default.into();
-        }
-
-        logging::log(LoggingType::Panic, "Could not get value of an return.");
     }
 
     println!("{:?}", expression);

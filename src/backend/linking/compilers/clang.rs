@@ -6,9 +6,9 @@ use std::{
 
 use inkwell::targets::TargetTriple;
 
-use crate::standard::{
-    backends::CompilersConfiguration,
-    logging::{self, LoggingType},
+use crate::core::{
+    compiler::backends::CompilersConfiguration,
+    console::logging::{self, LoggingType},
 };
 
 use super::decompressor;

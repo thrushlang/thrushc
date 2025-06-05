@@ -5,12 +5,12 @@ use {
     },
     crate::{
         backend::llvm::compiler::{binaryop::ptr::ptr_binaryop, context::LLVMCodeGenContext},
-        standard::logging::{self, LoggingType},
-        types::{
-            backend::llvm::types::LLVMBinaryOp,
-            frontend::{
-                lexer::{tokenkind::TokenKind, types::ThrushType},
-                parser::stmts::stmt::ThrushStatement,
+        core::console::logging::{self, LoggingType},
+        frontend::{
+            lexer::tokenkind::TokenKind,
+            types::{
+                lexer::ThrushType, parser::stmts::stmt::ThrushStatement,
+                representations::BinaryOperation,
             },
         },
     },
@@ -19,7 +19,7 @@ use {
 
 pub fn bool_binaryop<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
-    binary: LLVMBinaryOp<'ctx>,
+    binary: BinaryOperation<'ctx>,
     cast: &ThrushType,
 ) -> BasicValueEnum<'ctx> {
     if let (

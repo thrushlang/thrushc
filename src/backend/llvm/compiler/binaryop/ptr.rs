@@ -7,12 +7,12 @@ use inkwell::{
 
 use crate::{
     backend::llvm::compiler::{context::LLVMCodeGenContext, predicates, valuegen},
-    standard::logging::{self, LoggingType},
-    types::{
-        backend::llvm::types::LLVMBinaryOp,
-        frontend::{
-            lexer::{tokenkind::TokenKind, types::ThrushType},
-            parser::stmts::stmt::ThrushStatement,
+    core::console::logging::{self, LoggingType},
+    frontend::{
+        lexer::tokenkind::TokenKind,
+        types::{
+            lexer::ThrushType, parser::stmts::stmt::ThrushStatement,
+            representations::BinaryOperation,
         },
     },
 };
@@ -40,7 +40,7 @@ pub fn ptr_operation<'ctx>(
 }
 
 pub fn ptr_binaryop<'ctx>(
-    binary: LLVMBinaryOp<'ctx>,
+    binary: BinaryOperation<'ctx>,
     target_type: &ThrushType,
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
 ) -> BasicValueEnum<'ctx> {

@@ -1,14 +1,15 @@
 mod backend;
+mod core;
 mod frontend;
-mod standard;
-mod types;
 
 use {
+    crate::core::{
+        compiler::thrushc::TheThrushCompiler,
+        console::{cli::CLI, logging},
+    },
     colored::{Colorize, control},
-    frontend::thrushc::TheThrushCompiler,
     inkwell::targets::{InitializationConfig, Target},
     lazy_static::lazy_static,
-    standard::{cli::CommandLine, logging},
     std::{env, process, time::Instant},
 };
 
@@ -17,7 +18,7 @@ fn main() {
         control::set_override(true);
     }
 
-    let cli: CommandLine = CommandLine::parse(env::args().collect());
+    let cli: CLI = CLI::parse(env::args().collect());
 
     Target::initialize_all(&InitializationConfig::default());
 

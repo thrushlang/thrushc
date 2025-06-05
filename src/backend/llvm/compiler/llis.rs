@@ -1,6 +1,8 @@
 use inkwell::values::BasicValueEnum;
 
-use crate::types::frontend::{lexer::types::ThrushType, parser::stmts::stmt::ThrushStatement};
+use crate::{
+    frontend::types::lexer::ThrushType, frontend::types::parser::stmts::stmt::ThrushStatement,
+};
 
 use super::{context::LLVMCodeGenContext, valuegen};
 
