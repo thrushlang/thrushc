@@ -897,6 +897,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
         if (cast_type.is_integer_type() && from_type.is_integer_type())
             || (cast_type.is_float_type() && from_type.is_float_type())
             || (cast_type.is_bool_type() && from_type.is_bool_type())
+            || (cast_type.is_ptr_type() && from_type.is_ptr_type())
         {
             Ok(())
         } else {

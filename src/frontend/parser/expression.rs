@@ -382,8 +382,6 @@ fn primary<'instr>(
                 }
             }
 
-            println!("{:?}", reference_type);
-
             ThrushStatement::RawPtr {
                 from: reference.into(),
                 kind: reference_type,
