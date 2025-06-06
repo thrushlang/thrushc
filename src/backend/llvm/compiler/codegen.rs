@@ -1,5 +1,6 @@
 #![allow(clippy::collapsible_if)]
 
+use crate::backend::llvm::compiler::utils;
 use crate::backend::llvm::compiler::valuegen::ExpressionModificator;
 use crate::core::console::logging::{self, LoggingType};
 use crate::frontend::types::lexer::ThrushType;
@@ -21,7 +22,7 @@ use super::{
     local, typegen, valuegen,
 };
 
-use inkwell::values::PointerValue;
+use inkwell::values::{BasicMetadataValueEnum, PointerValue};
 use inkwell::{
     basic_block::BasicBlock,
     builder::Builder,
@@ -85,7 +86,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
 
         match stmt {
             ThrushStatement::Function { .. } => {
-                self.build_function(stmt.as_function_representation());
+                self.compile_function(stmt.as_function_representation());
             }
 
             ThrushStatement::EntryPoint { body, .. } => {
@@ -98,7 +99,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                     .is_err()
                 {
                     logging::log(
-                        LoggingType::Panic,
+                        LoggingType::Bug,
                         "Unable to build the return of entrypoint. ",
                     );
                 }
@@ -111,7 +112,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                     if llvm_builder.build_return(None).is_err() {
                         {
                             logging::log(
-                                LoggingType::Panic,
+                                LoggingType::Bug,
                                 "Unable to build the return instruction at code generation time. ",
                             );
                         }
@@ -130,7 +131,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                     {
                         {
                             logging::log(
-                                LoggingType::Panic,
+                                LoggingType::Bug,
                                 "Unable to build the return instruction at code generation time. ",
                             );
                         }
@@ -340,7 +341,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 }
 
                 logging::log(
-                    LoggingType::Panic,
+                    LoggingType::Bug,
                     "The current function could not be obtained at code generation time.",
                 );
             }
@@ -417,7 +418,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 }
 
                 logging::log(
-                    LoggingType::Panic,
+                    LoggingType::Bug,
                     "The current function could not be obtained at code generation time.",
                 );
             }
@@ -453,7 +454,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 }
 
                 logging::log(
-                    LoggingType::Panic,
+                    LoggingType::Bug,
                     "The current function could not be obtained at code generation time.",
                 );
             }
@@ -533,7 +534,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 }
 
                 logging::log(
-                    LoggingType::Panic,
+                    LoggingType::Bug,
                     "The current function could not be obtained at code generation time.",
                 );
             }
@@ -633,15 +634,6 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 );
             }
 
-            ThrushStatement::AsmCall { .. } => {
-                valuegen::compile(
-                    self.context,
-                    stmt,
-                    &ThrushType::Void,
-                    ExpressionModificator::new(false, false),
-                );
-            }
-
             _ => (),
         }
 
@@ -669,7 +661,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         main
     }
 
-    fn build_function_parameter(&mut self, parameter: FunctionParameter<'ctx>) {
+    fn compile_function_parameter(&mut self, parameter: FunctionParameter<'ctx>) {
         let parameter_name: &str = parameter.0;
         let parameter_type: &ThrushType = parameter.1;
         let parameter_position: u32 = parameter.2;
@@ -688,16 +680,63 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
             }
 
             logging::log(
-                LoggingType::Panic,
+                LoggingType::Bug,
                 "The value of a parameter of an LLVM function could not be obtained at code generation time.",
             );
         }
 
         logging::log(
-            LoggingType::Panic,
+            LoggingType::Bug,
             "The current function could not be obtained at code generation time for build an function parameter.",
         );
     }
+
+    fn compile_function(&mut self, function: FunctionRepresentation<'ctx>) {
+        let llvm_context: &Context = self.context.get_llvm_context();
+        let llvm_builder: &Builder = self.context.get_llvm_builder();
+
+        let function_name: &str = function.0;
+        let function_type: &ThrushType = function.1;
+        let function_parameters: &[ThrushStatement<'ctx>] = function.2;
+        let function_body: &ThrushStatement = function.4;
+
+        if function_body.is_null() {
+            return;
+        }
+
+        let llvm_function: FunctionValue = self.context.get_function(function_name).0;
+
+        let entry: BasicBlock = llvm_context.append_basic_block(llvm_function, "");
+
+        llvm_builder.position_at_end(entry);
+
+        function_parameters.iter().for_each(|parameter| {
+            if let ThrushStatement::FunctionParameter {
+                name,
+                kind,
+                position,
+                is_mutable,
+                ..
+            } = parameter
+            {
+                self.compile_function_parameter((name, kind, *position, *is_mutable));
+            }
+        });
+
+        self.codegen(function_body);
+
+        if function_type.is_void_type() {
+            llvm_builder.build_return(None).unwrap();
+        }
+    }
+
+    /* ######################################################################
+
+
+        CODEGEN FORWARD DECLARATION | START
+
+
+    ########################################################################*/
 
     fn init_functions(&mut self) {
         self.stmts.iter().for_each(|stmt| {
@@ -710,7 +749,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
     fn init_assembler_functions(&mut self) {
         self.stmts.iter().for_each(|stmt| {
             if stmt.is_asm_function() {
-                self.declare_assembler_function(stmt);
+                self.compile_asm_functions(stmt);
             }
         });
     }
@@ -736,8 +775,12 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         });
     }
 
-    fn declare_assembler_function(&mut self, stmt: &'ctx ThrushStatement) {
+    fn compile_asm_functions(&mut self, stmt: &'ctx ThrushStatement) {
+        let llvm_module: &Module = self.context.get_llvm_module();
         let llvm_context: &Context = self.context.get_llvm_context();
+        let llvm_builder: &Builder = self.context.get_llvm_builder();
+
+        let last_builder_block: Option<BasicBlock> = llvm_builder.get_insert_block();
 
         let asm_function: AssemblerFunctionRepresentation = stmt.as_asm_function_representation();
 
@@ -749,9 +792,21 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         let asm_function_parameters_types: &[ThrushType] = asm_function.5;
         let asm_function_attributes: &ThrushAttributes = asm_function.6;
 
+        let mut call_convention: u32 = CallConvention::Standard as u32;
+
         let sideeffects: bool = asm_function_attributes.has_asmsideffects_attribute();
         let align_stack: bool = asm_function_attributes.has_asmalignstack_attribute();
         let can_throw: bool = asm_function_attributes.has_asmthrow_attribute();
+        let is_public: bool = asm_function_attributes.has_public_attribute();
+
+        asm_function_attributes.iter().for_each(|attribute| {
+            if let LLVMAttribute::Convention(call_conv, _) = attribute {
+                call_convention = (*call_conv) as u32;
+            }
+        });
+
+        let truly_function_name: String =
+            utils::generate_assembler_function_name(asm_function_name);
 
         let asm_function_type: FunctionType = typegen::function_type(
             self.context,
@@ -760,7 +815,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
             false,
         );
 
-        let llvm_asm_function: PointerValue = llvm_context.create_inline_asm(
+        let asm_function_ptr: PointerValue = llvm_context.create_inline_asm(
             asm_function_type,
             asm_function_assembler,
             asm_function_constraints,
@@ -770,12 +825,67 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
             can_throw,
         );
 
-        self.context.add_assembler_function(
+        let llvm_asm_function: FunctionValue =
+            llvm_module.add_function(&truly_function_name, asm_function_type, None);
+
+        if !is_public {
+            llvm_asm_function.set_linkage(Linkage::LinkerPrivate);
+        }
+
+        let entry: BasicBlock = llvm_context.append_basic_block(llvm_asm_function, "");
+
+        llvm_builder.position_at_end(entry);
+
+        let args: Vec<BasicMetadataValueEnum> = llvm_asm_function
+            .get_param_iter()
+            .map(|param| param.into())
+            .collect();
+
+        if let Ok(asm_fn_call) =
+            llvm_builder.build_indirect_call(asm_function_type, asm_function_ptr, &args, "")
+        {
+            match (
+                asm_function_return_type.is_void_type(),
+                asm_fn_call.try_as_basic_value().left(),
+            ) {
+                (false, Some(return_value)) => {
+                    llvm_builder.build_return(Some(&return_value))
+            .map_err(|_| {
+                logging::log(
+                    LoggingType::Bug,
+                    "Failed to create return terminator with value in assembly function generation.",
+                );
+            })
+            .ok();
+                }
+                _ => {
+                    llvm_builder.build_return(None)
+            .map_err(|_| {
+                logging::log(
+                    LoggingType::Bug,
+                    "Failed to create void return terminator in assembly function generation.",
+                );
+            })
+            .ok();
+                }
+            }
+        } else {
+            logging::log(
+                LoggingType::Bug,
+                "Unable to create indirect call for call assembly function.",
+            );
+        }
+
+        if let Some(previous_block) = last_builder_block {
+            llvm_builder.position_at_end(previous_block);
+        }
+
+        self.context.add_function(
             asm_function_name,
             (
-                asm_function_type,
                 llvm_asm_function,
                 asm_function_parameters_types,
+                call_convention,
             ),
         );
     }
@@ -790,24 +900,24 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         let function_type: &ThrushType = function.1;
         let function_parameters: &[ThrushStatement<'ctx>] = function.2;
         let function_parameters_types: &[ThrushType] = function.3;
-        let function_attributes: &[LLVMAttribute] = function.5;
+        let function_attributes: &ThrushAttributes = function.5;
+
+        let ignore_args: bool = function_attributes.has_ignore_attribute();
+        let is_public: bool = function_attributes.has_public_attribute();
+
+        let mut extern_name: Option<&str> = None;
 
         let mut call_convention: u32 = CallConvention::Standard as u32;
-        let mut ignore_args: bool = false;
-        let mut is_public: bool = false;
-        let mut extern_name: Option<&str> = None;
 
         function_attributes
             .iter()
             .for_each(|attribute| match attribute {
-                LLVMAttribute::Public(..) => {
-                    is_public = true;
-                }
                 LLVMAttribute::Extern(name, ..) => {
                     extern_name = Some(name);
                 }
-                LLVMAttribute::Ignore(..) => {
-                    ignore_args = true;
+
+                LLVMAttribute::Convention(call_conv, _) => {
+                    call_convention = (*call_conv) as u32;
                 }
                 _ => (),
             });
@@ -848,44 +958,13 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         );
     }
 
-    fn build_function(&mut self, function: FunctionRepresentation<'ctx>) {
-        let llvm_context: &Context = self.context.get_llvm_context();
-        let llvm_builder: &Builder = self.context.get_llvm_builder();
+    /* ######################################################################
 
-        let function_name: &str = function.0;
-        let function_type: &ThrushType = function.1;
-        let function_parameters: &[ThrushStatement<'ctx>] = function.2;
-        let function_body: &ThrushStatement = function.4;
 
-        if function_body.is_null() {
-            return;
-        }
+        CODEGEN FORWARD DECLARATION | END
 
-        let llvm_function: FunctionValue = self.context.get_function(function_name).0;
 
-        let entry: BasicBlock = llvm_context.append_basic_block(llvm_function, "");
-
-        llvm_builder.position_at_end(entry);
-
-        function_parameters.iter().for_each(|parameter| {
-            if let ThrushStatement::FunctionParameter {
-                name,
-                kind,
-                position,
-                is_mutable,
-                ..
-            } = parameter
-            {
-                self.build_function_parameter((name, kind, *position, *is_mutable));
-            }
-        });
-
-        self.codegen(function_body);
-
-        if function_type.is_void_type() {
-            llvm_builder.build_return(None).unwrap();
-        }
-    }
+    ########################################################################*/
 
     #[must_use]
     #[inline]

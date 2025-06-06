@@ -414,115 +414,16 @@ impl<'type_checker> TypeChecker<'type_checker> {
         } = stmt
         {
             if let Some(function) = self.symbols.get_function(name) {
-                let parameter_types: &[ThrushType] = function.0;
-                let ignore_more_arguments: bool = function.1;
+                return self.validate_call(*function, args, span);
+            }
 
-                let parameter_types_size: usize = parameter_types.len();
-
-                let mut parameter_types_displayed: String = String::with_capacity(100);
-
-                parameter_types.iter().for_each(|parameter_type| {
-                    parameter_types_displayed.push_str(&format!("{} ", parameter_type));
-                });
-
-                if args.len() != parameter_types_size && !ignore_more_arguments {
-                    self.add_error(ThrushCompilerIssue::Error(
-                        String::from("Syntax error"),
-                        format!(
-                            "Expected \"{}\" arguments, with types \"{}\".",
-                            parameter_types_size, parameter_types_displayed
-                        ),
-                        None,
-                        *span,
-                    ));
-
-                    return Ok(());
-                }
-
-                for (target_type, expr) in parameter_types.iter().zip(args.iter()) {
-                    let from_type: &ThrushType = expr.get_value_type()?;
-                    let span: Span = expr.get_span();
-
-                    if let Err(error) = self.validate_types(
-                        target_type,
-                        from_type,
-                        Some(expr),
-                        None,
-                        &span,
-                        TypeCheckerTypeCheckSource::Call,
-                    ) {
-                        self.add_error(error);
-                    }
-
-                    self.analyze_stmt(expr)?;
-                }
-
-                return Ok(());
+            if let Some(asm_function) = self.symbols.get_asm_function(name) {
+                return self.validate_call(*asm_function, args, span);
             }
 
             self.errors.push(ThrushCompilerIssue::Bug(
                 String::from("Call not caught"),
-                format!("Could not get named function '{}'.", name),
-                *span,
-                CompilationPosition::TypeChecker,
-                line!(),
-            ));
-        }
-
-        if let ThrushStatement::AsmCall {
-            name, args, span, ..
-        } = stmt
-        {
-            if let Some(function) = self.symbols.get_asm_function(name) {
-                let parameter_types: &[ThrushType] = function.0;
-                let ignore_more_arguments: bool = function.1;
-
-                let parameter_types_size: usize = parameter_types.len();
-
-                let mut parameter_types_displayed: String = String::with_capacity(100);
-
-                parameter_types.iter().for_each(|parameter_type| {
-                    parameter_types_displayed.push_str(&format!("{} ", parameter_type));
-                });
-
-                if args.len() != parameter_types_size && !ignore_more_arguments {
-                    self.add_error(ThrushCompilerIssue::Error(
-                        String::from("Syntax error"),
-                        format!(
-                            "Expected \"{}\" arguments, with types \"{}\".",
-                            parameter_types_size, parameter_types_displayed
-                        ),
-                        None,
-                        *span,
-                    ));
-
-                    return Ok(());
-                }
-
-                for (target_type, expr) in parameter_types.iter().zip(args.iter()) {
-                    let from_type: &ThrushType = expr.get_value_type()?;
-                    let span: Span = expr.get_span();
-
-                    if let Err(error) = self.validate_types(
-                        target_type,
-                        from_type,
-                        Some(expr),
-                        None,
-                        &span,
-                        TypeCheckerTypeCheckSource::Call,
-                    ) {
-                        self.add_error(error);
-                    }
-
-                    self.analyze_stmt(expr)?;
-                }
-
-                return Ok(());
-            }
-
-            self.errors.push(ThrushCompilerIssue::Bug(
-                String::from("Call not caught"),
-                format!("Could not get named assembler function '{}'.", name),
+                format!("Could not get named any function '{}'.", name),
                 *span,
                 CompilationPosition::TypeChecker,
                 line!(),
@@ -961,6 +862,57 @@ impl<'type_checker> TypeChecker<'type_checker> {
                 *span,
             ))
         }
+    }
+
+    fn validate_call(
+        &mut self,
+        data: (&[ThrushType], bool),
+        args: &'type_checker [ThrushStatement],
+        span: &Span,
+    ) -> Result<(), ThrushCompilerIssue> {
+        let (parameter_types, ignore_more_arguments) = data;
+
+        let parameter_types_size: usize = parameter_types.len();
+        let mut parameter_types_displayed: String = String::with_capacity(100);
+
+        parameter_types.iter().for_each(|parameter_type| {
+            parameter_types_displayed.push_str(&format!("{} ", parameter_type));
+        });
+
+        if args.len() != parameter_types_size && !ignore_more_arguments {
+            self.add_error(ThrushCompilerIssue::Error(
+                String::from("Syntax error"),
+                format!(
+                    "Expected {} arguments with types '{}', got {}.",
+                    parameter_types_size,
+                    parameter_types_displayed,
+                    args.len()
+                ),
+                None,
+                *span,
+            ));
+            return Ok(());
+        }
+
+        for (target_type, expr) in parameter_types.iter().zip(args.iter()) {
+            let from_type: &ThrushType = expr.get_value_type()?;
+            let expr_span: Span = expr.get_span();
+
+            if let Err(error) = self.validate_types(
+                target_type,
+                from_type,
+                Some(expr),
+                None,
+                &expr_span,
+                TypeCheckerTypeCheckSource::Call,
+            ) {
+                self.add_error(error);
+            }
+
+            self.analyze_stmt(expr)?;
+        }
+
+        Ok(())
     }
 
     pub fn validate_types(

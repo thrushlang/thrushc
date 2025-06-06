@@ -4,6 +4,7 @@ use colored::Colorize;
 
 #[derive(Debug, Clone, Copy)]
 pub enum CompilationPosition {
+    Lexer,
     Parser,
     TypeChecker,
     Linter,
@@ -15,6 +16,7 @@ impl Display for CompilationPosition {
             Self::Linter => write!(f, "{}", "Linter".bright_magenta().bold()),
             Self::Parser => write!(f, "{}", "Parser".red().bold()),
             Self::TypeChecker => write!(f, "{}", "Type Checking".bright_yellow().bold()),
+            Self::Lexer => write!(f, "{}", "Lexer".bright_blue().bold()),
         }
     }
 }

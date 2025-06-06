@@ -34,6 +34,7 @@ pub trait FoundSymbolExtension {
     fn is_structure(&self) -> bool;
     fn is_enum(&self) -> bool;
     fn is_function(&self) -> bool;
+    fn is_function_asm(&self) -> bool;
     fn is_parameter(&self) -> bool;
     fn is_lli(&self) -> bool;
 }

@@ -5,7 +5,7 @@ use {
         typegen, valuegen,
     },
     crate::{
-        backend::types::representations::{LLVMAssemblerFunction, LLVMFunction},
+        backend::types::representations::LLVMFunction,
         core::diagnostic::diagnostician::Diagnostician,
         frontend::types::{lexer::ThrushType, parser::stmts::types::ThrushAttributes},
     },
@@ -30,9 +30,8 @@ pub struct LLVMCodeGenContext<'a, 'ctx> {
     diagnostician: Diagnostician,
     constants: HashMap<&'ctx str, SymbolAllocated<'ctx>>,
     functions: HashMap<&'ctx str, LLVMFunction<'ctx>>,
-    asm_functions: HashMap<&'ctx str, LLVMAssemblerFunction<'ctx>>,
     lift_instructions: HashMap<&'ctx str, SymbolAllocated<'ctx>>,
-    blocks: Vec<HashMap<&'ctx str, SymbolAllocated<'ctx>>>,
+    scopes: Vec<HashMap<&'ctx str, SymbolAllocated<'ctx>>>,
     scope: usize,
 }
 
@@ -54,13 +53,14 @@ impl<'a, 'ctx> LLVMCodeGenContext<'a, 'ctx> {
             diagnostician,
             constants: HashMap::with_capacity(100),
             functions: HashMap::with_capacity(100),
-            asm_functions: HashMap::with_capacity(100),
             lift_instructions: HashMap::with_capacity(100),
-            blocks: Vec::with_capacity(255),
+            scopes: Vec::with_capacity(255),
             scope: 0,
         }
     }
+}
 
+impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
     pub fn alloc_local(&mut self, name: &'ctx str, kind: &'ctx ThrushType) {
         let ptr_allocated: PointerValue = valuegen::alloc(
             self.context,
@@ -72,7 +72,7 @@ impl<'a, 'ctx> LLVMCodeGenContext<'a, 'ctx> {
         let local: SymbolAllocated =
             SymbolAllocated::new(self, SymbolToAllocate::Local, ptr_allocated.into(), kind);
 
-        if let Some(last_block) = self.blocks.last_mut() {
+        if let Some(last_block) = self.scopes.last_mut() {
             last_block.insert(name, local);
         }
     }
@@ -86,7 +86,7 @@ impl<'a, 'ctx> LLVMCodeGenContext<'a, 'ctx> {
         let lli: SymbolAllocated =
             SymbolAllocated::new(self, SymbolToAllocate::LowLevelInstruction, value, kind);
 
-        if let Some(last_block) = self.blocks.last_mut() {
+        if let Some(last_block) = self.scopes.last_mut() {
             last_block.insert(name, lli);
         }
     }
@@ -124,31 +124,19 @@ impl<'a, 'ctx> LLVMCodeGenContext<'a, 'ctx> {
         self.lift_instructions.insert(name, symbol_allocated);
     }
 
-    pub fn add_function(&mut self, name: &'ctx str, function: LLVMFunction<'ctx>) {
-        self.functions.insert(name, function);
-    }
-
-    pub fn add_assembler_function(
-        &mut self,
-        name: &'ctx str,
-        function: LLVMAssemblerFunction<'ctx>,
-    ) {
-        self.asm_functions.insert(name, function);
-    }
-
     pub fn get_allocated_symbol(&self, name: &str) -> SymbolAllocated<'ctx> {
         if let Some(constant) = self.constants.get(name) {
             return constant.clone();
         }
 
         for position in (0..self.scope).rev() {
-            if let Some(allocated_symbol) = self.blocks[position].get(name) {
+            if let Some(allocated_symbol) = self.scopes[position].get(name) {
                 return allocated_symbol.clone();
             }
         }
 
         logging::log(
-            LoggingType::Panic,
+            LoggingType::Bug,
             &format!(
                 "Unable to get '{}' allocated object at frame pointer number #{}.",
                 name, self.scope
@@ -164,45 +152,35 @@ impl<'a, 'ctx> LLVMCodeGenContext<'a, 'ctx> {
         }
 
         logging::log(
-            LoggingType::Panic,
+            LoggingType::Bug,
             &format!("Unable to get '{}' function in global frame.", name),
         );
 
         unreachable!()
     }
 
-    pub fn get_asm_function(&self, name: &str) -> LLVMAssemblerFunction<'ctx> {
-        if let Some(asm_function) = self.asm_functions.get(name) {
-            return *asm_function;
-        }
-
-        logging::log(
-            LoggingType::Panic,
-            &format!(
-                "Unable to get '{}' assembler function in global frame.",
-                name
-            ),
-        );
-
-        unreachable!()
+    pub fn add_function(&mut self, name: &'ctx str, function: LLVMFunction<'ctx>) {
+        self.functions.insert(name, function);
     }
 
     pub fn begin_scope(&mut self) {
-        self.blocks.push(HashMap::with_capacity(256));
+        self.scopes.push(HashMap::with_capacity(256));
 
-        self.blocks
-            .last_mut()
-            .unwrap()
-            .extend(self.lift_instructions.clone());
+        if let Some(last_block_scope) = self.scopes.last_mut() {
+            last_block_scope.extend(self.lift_instructions.clone());
+        } else {
+            logging::log(
+                LoggingType::Bug,
+                "Unable to get of last scope at code generation time.",
+            );
+        }
 
         self.scope += 1;
     }
 
     pub fn end_scope(&mut self) {
-        self.blocks.pop();
-
+        self.scopes.pop();
         self.lift_instructions.clear();
-
         self.scope -= 1;
     }
 }

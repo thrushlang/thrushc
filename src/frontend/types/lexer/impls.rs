@@ -82,7 +82,6 @@ impl std::fmt::Display for TokenKind {
             TokenKind::AsmFn => write!(f, "asmfn"),
             TokenKind::Bang => write!(f, "!"),
             TokenKind::BangEq => write!(f, "!="),
-            TokenKind::CallAsm => write!(f, "callasm"),
             TokenKind::Cast => write!(f, "cast"),
             TokenKind::CastPtr => write!(f, "castptr"),
             TokenKind::CastRaw => write!(f, "castraw"),

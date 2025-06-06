@@ -264,12 +264,12 @@ impl<'linter> Linter<'linter> {
             ));
         }
 
-        if let ThrushStatement::AsmCall {
+        if let ThrushStatement::Call {
             name, span, args, ..
         } = stmt
         {
-            if let Some(asm_function) = self.symbols.get_asm_function_info(name) {
-                asm_function.1 = true;
+            if let Some(function) = self.symbols.get_function_info(name) {
+                function.1 = true;
 
                 args.iter().for_each(|arg| {
                     self.analyze_stmt(arg);
@@ -278,21 +278,8 @@ impl<'linter> Linter<'linter> {
                 return;
             }
 
-            self.add_bug(ThrushCompilerIssue::Bug(
-                String::from("Call not caught"),
-                format!("Could not get named assembler function '{}'.", name),
-                *span,
-                CompilationPosition::Linter,
-                line!(),
-            ));
-        }
-
-        if let ThrushStatement::Call {
-            name, span, args, ..
-        } = stmt
-        {
-            if let Some(function) = self.symbols.get_function_info(name) {
-                function.1 = true;
+            if let Some(asm_function) = self.symbols.get_asm_function_info(name) {
+                asm_function.1 = true;
 
                 args.iter().for_each(|arg| {
                     self.analyze_stmt(arg);

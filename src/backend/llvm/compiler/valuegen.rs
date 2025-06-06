@@ -3,7 +3,7 @@ use std::rc::Rc;
 use crate::backend::llvm::compiler::context::LLVMCodeGenContextPosition;
 use crate::backend::llvm::compiler::memory::{self, LLVMAllocationSite, SymbolAllocated};
 use crate::backend::llvm::compiler::{binaryop, builtins, cast, unaryop, utils};
-use crate::backend::types::representations::{LLVMAssemblerFunction, LLVMFunction};
+use crate::backend::types::representations::LLVMFunction;
 use crate::core::console::logging::{self, LoggingType};
 use crate::frontend::types::lexer::ThrushType;
 use crate::frontend::types::lexer::traits::LLVMTypeExtensions;
@@ -16,12 +16,11 @@ use super::typegen;
 
 use inkwell::module::{Linkage, Module};
 use inkwell::targets::TargetData;
-use inkwell::types::{BasicTypeEnum, FunctionType, PointerType};
+use inkwell::types::{BasicTypeEnum, PointerType};
 
 use inkwell::AddressSpace;
 use inkwell::values::{
-    BasicMetadataValueEnum, BasicValueEnum, CallSiteValue, FloatValue, FunctionValue, GlobalValue,
-    IntValue,
+    BasicMetadataValueEnum, BasicValueEnum, FloatValue, FunctionValue, GlobalValue, IntValue,
 };
 use inkwell::{builder::Builder, context::Context, values::PointerValue};
 
@@ -163,86 +162,6 @@ pub fn compile<'ctx>(
 
     if let ThrushStatement::Boolean { value, .. } = expr {
         return llvm_context.bool_type().const_int(*value, false).into();
-    }
-
-    if let ThrushStatement::AsmCall {
-        name,
-        args: call_args,
-        kind: call_type,
-        ..
-    } = expr
-    {
-        context.set_position(LLVMCodeGenContextPosition::Call);
-
-        let previous_position: LLVMCodeGenContextPosition = context.get_previous_position();
-
-        let function: LLVMAssemblerFunction = context.get_asm_function(name);
-
-        let llvm_type_asm_function: FunctionType = function.0;
-        let llvm_asm_function: PointerValue = function.1;
-        let function_arguments_types: &[ThrushType] = function.2;
-
-        let mut compiled_args: Vec<BasicMetadataValueEnum> = Vec::with_capacity(call_args.len());
-
-        call_args.iter().enumerate().for_each(|arg| {
-            let arg_position: usize = arg.0;
-            let arg_expr: &ThrushStatement = arg.1;
-
-            let cast: &ThrushType = function_arguments_types
-                .get(arg_position)
-                .unwrap_or(&ThrushType::Void);
-
-            compiled_args.push(
-                self::compile(context, arg_expr, cast, ExpressionModificator::default()).into(),
-            );
-        });
-
-        if let Ok(indirect_call) = llvm_builder.build_indirect_call(
-            llvm_type_asm_function,
-            llvm_asm_function,
-            &compiled_args,
-            "",
-        ) {
-            if !call_type.is_void_type() {
-                let llvm_context: &Context = context.get_llvm_context();
-                let return_value: BasicValueEnum = indirect_call.try_as_basic_value().unwrap_left();
-
-                if cast.is_mut_type() && context.get_position().in_call() {
-                    context.set_position_irrelevant();
-                    return return_value;
-                }
-
-                if call_type.is_probably_heap_allocated(llvm_context, context.get_target_data())
-                    && previous_position.in_local()
-                    || call_type.is_probably_heap_allocated(llvm_context, context.get_target_data())
-                        && previous_position.in_call()
-                {
-                    context.set_position_irrelevant();
-
-                    return memory::load_anon(
-                        context,
-                        call_type,
-                        return_value.into_pointer_value(),
-                    );
-                }
-
-                context.set_position_irrelevant();
-
-                return indirect_call.try_as_basic_value().unwrap_left();
-            }
-
-            context.set_position_irrelevant();
-
-            return llvm_context
-                .ptr_type(AddressSpace::default())
-                .const_null()
-                .into();
-        }
-
-        logging::log(
-            LoggingType::Panic,
-            "Unable to create indirect function assembler call at code generation time.",
-        );
     }
 
     if let ThrushStatement::Call {

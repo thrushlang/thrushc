@@ -1489,12 +1489,20 @@ pub fn build_assembler_function<'instr>(
             break;
         }
 
-        let parameter_span: Span = parser_ctx.peek().span;
+        let parameter_name_tk: &'instr Token = parser_ctx.consume(
+            TokenKind::Identifier,
+            String::from("Syntax error"),
+            String::from("Expected 'identifier'."),
+        )?;
+
+        let parameter_name: &str = parameter_name_tk.lexeme;
+        let parameter_span: Span = parameter_name_tk.span;
         let parameter_type: ThrushType = typegen::build_type(parser_ctx)?;
 
         parameters_types.push(parameter_type.clone());
 
         parameters.push(ThrushStatement::AssemblerFunctionParameter {
+            name: parameter_name,
             kind: parameter_type,
             position: parameter_position,
             span: parameter_span,
@@ -1532,7 +1540,7 @@ pub fn build_assembler_function<'instr>(
     )?;
 
     let mut assembler: String = String::with_capacity(100);
-    let mut assembler_instruction_pos: usize = 0;
+    let mut assembler_pos: usize = 0;
 
     loop {
         if parser_ctx.check(TokenKind::RBrace) {
@@ -1545,19 +1553,19 @@ pub fn build_assembler_function<'instr>(
         if !raw_str.is_str() {
             return Err(ThrushCompilerIssue::Error(
                 "Syntax error".into(),
-                "Expected str value.".into(),
+                "Expected string literal value.".into(),
                 None,
                 raw_str_span,
             ));
         }
 
-        let asm_instruction: Vec<char> = raw_str.get_str_raw_bytes()?;
+        let assembly: &str = raw_str.get_str_content()?;
 
-        if assembler_instruction_pos != 0 {
+        if assembler_pos != 0 {
             assembler.push('\n');
         }
 
-        assembler.extend(asm_instruction);
+        assembler.push_str(assembly);
 
         if parser_ctx.check(TokenKind::RBrace) {
             break;
@@ -1569,7 +1577,7 @@ pub fn build_assembler_function<'instr>(
             )?;
         }
 
-        assembler_instruction_pos += 1;
+        assembler_pos += 1;
     }
 
     parser_ctx.consume(
@@ -1585,7 +1593,7 @@ pub fn build_assembler_function<'instr>(
     )?;
 
     let mut constraints: String = String::with_capacity(100);
-    let mut constraints_instruction_pos: usize = 0;
+    let mut constraint_pos: usize = 0;
 
     loop {
         if parser_ctx.check(TokenKind::RBrace) {
@@ -1598,19 +1606,19 @@ pub fn build_assembler_function<'instr>(
         if !raw_str.is_str() {
             return Err(ThrushCompilerIssue::Error(
                 "Syntax error".into(),
-                "Expected str value.".into(),
+                "Expected string literal value.".into(),
                 None,
                 raw_str_span,
             ));
         }
 
-        let constraint_instruction: Vec<char> = raw_str.get_str_raw_bytes()?;
+        let constraint: &str = raw_str.get_str_content()?;
 
-        if constraints_instruction_pos != 0 {
+        if constraint_pos != 0 {
             constraints.push('\n');
         }
 
-        constraints.extend(constraint_instruction);
+        constraints.push_str(constraint);
 
         if parser_ctx.check(TokenKind::RBrace) {
             break;
@@ -1622,7 +1630,7 @@ pub fn build_assembler_function<'instr>(
             )?;
         }
 
-        constraints_instruction_pos += 1;
+        constraint_pos += 1;
     }
 
     parser_ctx.consume(

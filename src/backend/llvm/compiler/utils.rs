@@ -37,3 +37,7 @@ pub fn build_str_constant<'ctx>(
         false,
     )
 }
+
+pub fn generate_assembler_function_name(function_name: &str) -> String {
+    format!("__assembler_fn_{}", function_name)
+}

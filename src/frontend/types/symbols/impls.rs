@@ -179,8 +179,12 @@ impl FoundSymbolExtension for FoundSymbolId<'_> {
         self.5.is_some()
     }
 
-    fn is_lli(&self) -> bool {
+    fn is_function_asm(&self) -> bool {
         self.6.is_some()
+    }
+
+    fn is_lli(&self) -> bool {
+        self.7.is_some()
     }
 }
 

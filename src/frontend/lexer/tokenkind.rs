@@ -84,7 +84,6 @@ pub enum TokenKind {
     Methods,
     Mut,
     RawPtr,
-    CallAsm,
     Ref,
     Type,
     Enum,

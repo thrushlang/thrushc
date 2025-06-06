@@ -35,7 +35,6 @@ lazy_static! {
         keywords.insert(b"castraw", TokenKind::CastRaw);
         keywords.insert(b"castptr", TokenKind::CastPtr);
         keywords.insert(b"asmfn", TokenKind::AsmFn);
-        keywords.insert(b"callasm", TokenKind::CallAsm);
         keywords.insert(b"deref", TokenKind::Deref);
         keywords.insert(b"rawptr", TokenKind::RawPtr);
         keywords.insert(b"type", TokenKind::Type);

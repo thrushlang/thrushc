@@ -63,7 +63,7 @@ impl<'a> Lexer<'a> {
             self.start = self.current;
             self.start_span();
 
-            if let Err(error) = self.scan() {
+            if let Err(error) = self.analyze() {
                 self.errors.push(error)
             }
         }
@@ -86,7 +86,7 @@ impl<'a> Lexer<'a> {
         Ok(mem::take(&mut self.tokens))
     }
 
-    fn scan(&mut self) -> Result<(), ThrushCompilerIssue> {
+    fn analyze(&mut self) -> Result<(), ThrushCompilerIssue> {
         match self.advance() {
             b'[' => self.make(TokenKind::LBracket),
             b']' => self.make(TokenKind::RBracket),
@@ -116,10 +116,8 @@ impl<'a> Lexer<'a> {
                     let span: Span = Span::new(self.line, self.span);
 
                     return Err(ThrushCompilerIssue::Error(
-                        String::from("Syntax Error"),
-                        String::from(
-                            "Unterminated multiline comment. Did you forget to close the comment with a '*/'?",
-                        ),
+                        "Syntax error".into(),
+                        "Unterminated multiline comment. Did you forget to close the comment with a '*/'?".into(),
                         None,
                         span,
                     ));
@@ -162,8 +160,8 @@ impl<'a> Lexer<'a> {
                 let span: Span = Span::new(self.line, self.span);
 
                 return Err(ThrushCompilerIssue::Error(
-                    String::from("Unknown character"),
-                    String::from("The compiler does not know how to handle this character."),
+                    "Unknown character".into(),
+                    "This character isn't recognized.".into(),
                     None,
                     span,
                 ));
@@ -174,17 +172,14 @@ impl<'a> Lexer<'a> {
     }
 
     fn identifier(&mut self) -> Result<(), ThrushCompilerIssue> {
-        while self.is_alpha(self.peek())
-            || self.peek().is_ascii_digit()
-            || self.peek() == b'!' && self.peek() != b':'
-        {
+        while self.is_identifier_boundary() {
             self.advance();
         }
 
-        let code: &[u8] = &self.code[self.start..self.current];
+        let lexeme: &[u8] = &self.code[self.start..self.current];
 
-        if let Some(token_type) = THRUSH_KEYWORDS.get(code) {
-            self.make(*token_type);
+        if let Some(keyword) = THRUSH_KEYWORDS.get(lexeme) {
+            self.make(*keyword);
         } else {
             self.make(TokenKind::Identifier);
         }
@@ -196,14 +191,7 @@ impl<'a> Lexer<'a> {
         let mut is_hexadecimal: bool = false;
         let mut is_binary: bool = false;
 
-        while self.peek().is_ascii_digit()
-            || self.peek() == b'_'
-            || self.peek() == b'.'
-            || self.peek() == b'x'
-            || self.peek() == b'b'
-            || is_hexadecimal
-            || is_binary
-        {
+        while self.is_number_boundary(is_hexadecimal, is_binary) {
             if is_hexadecimal && self.previous() == b'0' && self.peek() == b'x' {
                 self.end_span();
 
@@ -249,13 +237,13 @@ impl<'a> Lexer<'a> {
 
         self.end_span();
 
-        let lexeme: &str = self.lexeme();
-
-        self.check_number(lexeme)?;
-
         let span: Span = Span::new(self.line, self.span);
 
+        let lexeme: &str = self.lexeme(span)?;
+
         if lexeme.contains(".") {
+            self.check_float_format(lexeme)?;
+
             self.tokens.push(Token {
                 lexeme,
                 kind: TokenKind::Float,
@@ -264,6 +252,8 @@ impl<'a> Lexer<'a> {
 
             return Ok(());
         }
+
+        self.check_integer_format(lexeme)?;
 
         self.tokens.push(Token {
             lexeme,
@@ -275,16 +265,7 @@ impl<'a> Lexer<'a> {
     }
 
     #[inline]
-    fn check_number(&mut self, lexeme: &str) -> Result<(), ThrushCompilerIssue> {
-        if lexeme.contains('.') {
-            return self.parse_float(lexeme);
-        }
-
-        self.parse_integer(lexeme)
-    }
-
-    #[inline]
-    fn parse_float(&self, lexeme: &str) -> Result<(), ThrushCompilerIssue> {
+    fn check_float_format(&self, lexeme: &str) -> Result<(), ThrushCompilerIssue> {
         let dot_count: usize = lexeme.bytes().filter(|&b| b == b'.').count();
 
         let span: Span = Span::new(self.line, self.span);
@@ -292,7 +273,7 @@ impl<'a> Lexer<'a> {
         if dot_count > 1 {
             return Err(ThrushCompilerIssue::Error(
                 String::from("Syntax error"),
-                String::from("Float values should only contain one dot."),
+                String::from("Float number should only contain one dot."),
                 None,
                 span,
             ));
@@ -308,14 +289,14 @@ impl<'a> Lexer<'a> {
 
         Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
-            String::from("Out of bounds."),
+            String::from("Out of bounds float."),
             None,
             span,
         ))
     }
 
     #[inline]
-    fn parse_integer(&self, lexeme: &str) -> Result<(), ThrushCompilerIssue> {
+    fn check_integer_format(&self, lexeme: &str) -> Result<(), ThrushCompilerIssue> {
         const I8_MIN: isize = -128;
         const I8_MAX: isize = 127;
         const I16_MIN: isize = -32768;
@@ -333,107 +314,11 @@ impl<'a> Lexer<'a> {
         let span: Span = Span::new(self.line, self.span);
 
         if lexeme.starts_with("0x") {
-            let cleaned_lexeme: String = lexeme
-                .strip_prefix("0x")
-                .unwrap_or(&lexeme.replace("0x", ""))
-                .replace("_", "");
-
-            return match isize::from_str_radix(&cleaned_lexeme, 16) {
-                Ok(num) => {
-                    if (I8_MIN..=I8_MAX).contains(&num)
-                        || (I16_MIN..=I16_MAX).contains(&num)
-                        || (I32_MIN..=I32_MAX).contains(&num)
-                        || (isize::MIN..=isize::MAX).contains(&num)
-                    {
-                        return Ok(());
-                    } else {
-                        return Err(ThrushCompilerIssue::Error(
-                            String::from("Syntax error"),
-                            String::from("Out of bounds signed hexadecimal format."),
-                            None,
-                            span,
-                        ));
-                    }
-                }
-
-                Err(_) => match usize::from_str_radix(&cleaned_lexeme, 16) {
-                    Ok(num) => {
-                        if (U8_MIN..=U8_MAX).contains(&num)
-                            || (U16_MIN..=U16_MAX).contains(&num)
-                            || (U32_MIN..=U32_MAX).contains(&num)
-                            || (usize::MIN..=usize::MAX).contains(&num)
-                        {
-                            return Ok(());
-                        } else {
-                            return Err(ThrushCompilerIssue::Error(
-                                String::from("Syntax error"),
-                                String::from("Out of bounds unsigned hexadecimal format."),
-                                None,
-                                span,
-                            ));
-                        }
-                    }
-
-                    Err(_) => Err(ThrushCompilerIssue::Error(
-                        String::from("Syntax error"),
-                        String::from("Invalid numeric hexadecimal format."),
-                        None,
-                        span,
-                    )),
-                },
-            };
+            return self.check_integer_hex_format(lexeme, span);
         }
 
         if lexeme.starts_with("0b") {
-            let cleaned_lexeme: String = lexeme
-                .strip_prefix("0b")
-                .unwrap_or(&lexeme.replace("0b", ""))
-                .replace("_", "");
-
-            return match isize::from_str_radix(&cleaned_lexeme, 2) {
-                Ok(num) => {
-                    if (I8_MIN..=I8_MAX).contains(&num)
-                        || (I16_MIN..=I16_MAX).contains(&num)
-                        || (I32_MIN..=I32_MAX).contains(&num)
-                        || (isize::MIN..=isize::MAX).contains(&num)
-                    {
-                        return Ok(());
-                    } else {
-                        return Err(ThrushCompilerIssue::Error(
-                            String::from("Syntax error"),
-                            String::from("Out of bounds signed binary format."),
-                            None,
-                            span,
-                        ));
-                    }
-                }
-
-                Err(_) => match usize::from_str_radix(&cleaned_lexeme, 2) {
-                    Ok(num) => {
-                        if (U8_MIN..=U8_MAX).contains(&num)
-                            || (U16_MIN..=U16_MAX).contains(&num)
-                            || (U32_MIN..=U32_MAX).contains(&num)
-                            || (usize::MIN..=usize::MAX).contains(&num)
-                        {
-                            return Ok(());
-                        } else {
-                            return Err(ThrushCompilerIssue::Error(
-                                String::from("Syntax error"),
-                                String::from("Out of bounds unsigned binary format."),
-                                None,
-                                span,
-                            ));
-                        }
-                    }
-
-                    Err(_) => Err(ThrushCompilerIssue::Error(
-                        String::from("Syntax error"),
-                        String::from("Invalid binary format."),
-                        None,
-                        span,
-                    )),
-                },
-            };
+            return self.check_integer_binary_format(lexeme, span);
         }
 
         match lexeme.parse::<usize>() {
@@ -447,7 +332,7 @@ impl<'a> Lexer<'a> {
                 } else {
                     Err(ThrushCompilerIssue::Error(
                         String::from("Syntax error"),
-                        String::from("Out of bounds."),
+                        String::from("Out of bounds integer."),
                         None,
                         span,
                     ))
@@ -465,7 +350,7 @@ impl<'a> Lexer<'a> {
                     } else {
                         Err(ThrushCompilerIssue::Error(
                             String::from("Syntax error"),
-                            String::from("Out of bounds."),
+                            String::from("Out of bounds integer."),
                             None,
                             span,
                         ))
@@ -474,7 +359,147 @@ impl<'a> Lexer<'a> {
 
                 Err(_) => Err(ThrushCompilerIssue::Error(
                     String::from("Syntax error"),
-                    String::from("Out of bounds."),
+                    String::from("Out of bounds integer."),
+                    None,
+                    span,
+                )),
+            },
+        }
+    }
+
+    fn check_integer_binary_format(
+        &self,
+        lexeme: &str,
+        span: Span,
+    ) -> Result<(), ThrushCompilerIssue> {
+        const I8_MIN: isize = -128;
+        const I8_MAX: isize = 127;
+        const I16_MIN: isize = -32768;
+        const I16_MAX: isize = 32767;
+        const I32_MIN: isize = -2147483648;
+        const I32_MAX: isize = 2147483647;
+
+        const U8_MIN: usize = 0;
+        const U8_MAX: usize = 255;
+        const U16_MIN: usize = 0;
+        const U16_MAX: usize = 65535;
+        const U32_MIN: usize = 0;
+        const U32_MAX: usize = 4294967295;
+
+        let cleaned_lexeme: String = lexeme
+            .strip_prefix("0b")
+            .unwrap_or(&lexeme.replace("0b", ""))
+            .replace("_", "");
+
+        match isize::from_str_radix(&cleaned_lexeme, 2) {
+            Ok(num) => {
+                if (I8_MIN..=I8_MAX).contains(&num)
+                    || (I16_MIN..=I16_MAX).contains(&num)
+                    || (I32_MIN..=I32_MAX).contains(&num)
+                    || (isize::MIN..=isize::MAX).contains(&num)
+                {
+                    Ok(())
+                } else {
+                    Err(ThrushCompilerIssue::Error(
+                        String::from("Syntax error"),
+                        String::from("Out of bounds signed binary format."),
+                        None,
+                        span,
+                    ))
+                }
+            }
+
+            Err(_) => match usize::from_str_radix(&cleaned_lexeme, 2) {
+                Ok(num) => {
+                    if (U8_MIN..=U8_MAX).contains(&num)
+                        || (U16_MIN..=U16_MAX).contains(&num)
+                        || (U32_MIN..=U32_MAX).contains(&num)
+                        || (usize::MIN..=usize::MAX).contains(&num)
+                    {
+                        Ok(())
+                    } else {
+                        Err(ThrushCompilerIssue::Error(
+                            String::from("Syntax error"),
+                            String::from("Out of bounds unsigned binary format."),
+                            None,
+                            span,
+                        ))
+                    }
+                }
+
+                Err(_) => Err(ThrushCompilerIssue::Error(
+                    String::from("Syntax error"),
+                    String::from("Invalid binary format."),
+                    None,
+                    span,
+                )),
+            },
+        }
+    }
+
+    fn check_integer_hex_format(
+        &self,
+        lexeme: &str,
+        span: Span,
+    ) -> Result<(), ThrushCompilerIssue> {
+        const I8_MIN: isize = -128;
+        const I8_MAX: isize = 127;
+        const I16_MIN: isize = -32768;
+        const I16_MAX: isize = 32767;
+        const I32_MIN: isize = -2147483648;
+        const I32_MAX: isize = 2147483647;
+
+        const U8_MIN: usize = 0;
+        const U8_MAX: usize = 255;
+        const U16_MIN: usize = 0;
+        const U16_MAX: usize = 65535;
+        const U32_MIN: usize = 0;
+        const U32_MAX: usize = 4294967295;
+
+        let cleaned_lexeme: String = lexeme
+            .strip_prefix("0x")
+            .unwrap_or(&lexeme.replace("0x", ""))
+            .replace("_", "");
+
+        match isize::from_str_radix(&cleaned_lexeme, 16) {
+            Ok(num) => {
+                if (I8_MIN..=I8_MAX).contains(&num)
+                    || (I16_MIN..=I16_MAX).contains(&num)
+                    || (I32_MIN..=I32_MAX).contains(&num)
+                    || (isize::MIN..=isize::MAX).contains(&num)
+                {
+                    Ok(())
+                } else {
+                    Err(ThrushCompilerIssue::Error(
+                        String::from("Syntax error"),
+                        String::from("Out of bounds signed hexadecimal format."),
+                        None,
+                        span,
+                    ))
+                }
+            }
+
+            Err(_) => match usize::from_str_radix(&cleaned_lexeme, 16) {
+                Ok(num) => {
+                    if (U8_MIN..=U8_MAX).contains(&num)
+                        || (U16_MIN..=U16_MAX).contains(&num)
+                        || (U32_MIN..=U32_MAX).contains(&num)
+                        || (usize::MIN..=usize::MAX).contains(&num)
+                    {
+                        Ok(())
+                    } else {
+                        Err(ThrushCompilerIssue::Error(
+                            String::from("Syntax error"),
+                            String::from("Out of bounds unsigned hexadecimal format."),
+                            None,
+                            span,
+                        ))
+                    }
+                }
+
+                Err(_) => Err(ThrushCompilerIssue::Error(
+                    String::from("Syntax error"),
+                    String::from("Invalid numeric hexadecimal format."),
                     None,
                     span,
                 )),
@@ -483,7 +508,7 @@ impl<'a> Lexer<'a> {
     }
 
     fn char(&mut self) -> Result<(), ThrushCompilerIssue> {
-        while self.peek() != b'\'' && !self.end() {
+        while self.is_char_boundary() {
             self.advance();
         }
 
@@ -511,7 +536,7 @@ impl<'a> Lexer<'a> {
             ));
         }
 
-        let lexeme: &str = self.shrink_lexeme();
+        let lexeme: &str = self.shrink_lexeme(span)?;
 
         self.tokens.push(Token {
             kind: TokenKind::Char,
@@ -534,9 +559,7 @@ impl<'a> Lexer<'a> {
         if self.peek() != b'"' {
             return Err(ThrushCompilerIssue::Error(
                 String::from("Syntax error"),
-                String::from(
-                    "Unclosed literal str. Did you forget to close the literal str with a '\"'?",
-                ),
+                String::from("Unclosed literal string. Did you forget to close it with a '\"'?"),
                 None,
                 span,
             ));
@@ -544,7 +567,7 @@ impl<'a> Lexer<'a> {
 
         self.advance();
 
-        let lexeme: &str = self.shrink_lexeme();
+        let lexeme: &str = self.shrink_lexeme(span)?;
 
         self.tokens.push(Token {
             kind: TokenKind::Str,
@@ -558,15 +581,22 @@ impl<'a> Lexer<'a> {
     fn make(&mut self, kind: TokenKind) {
         self.end_span();
 
-        self.tokens.push(Token {
-            lexeme: self.lexeme(),
-            kind,
-            span: Span::new(self.line, self.span),
-        });
+        let span: Span = Span::new(self.line, self.span);
+
+        let lexeme: Result<&str, ThrushCompilerIssue> = self.lexeme(span);
+
+        match lexeme {
+            Ok(lexeme) => {
+                self.tokens.push(Token { lexeme, kind, span });
+            }
+            Err(error) => {
+                self.add_error(error);
+            }
+        }
     }
 
-    fn char_match(&mut self, ch: u8) -> bool {
-        if !self.end() && self.code[self.current] == ch {
+    fn char_match(&mut self, byte: u8) -> bool {
+        if !self.end() && self.code[self.current] == byte {
             self.current += 1;
             return true;
         }
@@ -575,22 +605,38 @@ impl<'a> Lexer<'a> {
     }
 
     fn advance(&mut self) -> u8 {
-        let char: u8 = self.code[self.current];
+        let byte: u8 = self.code[self.current];
         self.current += 1;
 
-        char
+        byte
     }
 
-    #[must_use]
     #[inline]
-    fn lexeme(&self) -> &'a str {
-        core::str::from_utf8(&self.code[self.start..self.current]).unwrap_or("�")
+    fn lexeme(&self, span: Span) -> Result<&'a str, ThrushCompilerIssue> {
+        if let Ok(lexeme) = core::str::from_utf8(&self.code[self.start..self.current]) {
+            return Ok(lexeme);
+        }
+
+        Err(ThrushCompilerIssue::Error(
+            "Syntax error".into(),
+            "Invalid utf-8 code.".into(),
+            None,
+            span,
+        ))
     }
 
-    #[must_use]
     #[inline]
-    fn shrink_lexeme(&self) -> &'a str {
-        core::str::from_utf8(&self.code[self.start + 1..self.current - 1]).unwrap_or("�")
+    fn shrink_lexeme(&self, span: Span) -> Result<&'a str, ThrushCompilerIssue> {
+        if let Ok(lexeme) = core::str::from_utf8(&self.code[self.start + 1..self.current - 1]) {
+            return Ok(lexeme);
+        }
+
+        Err(ThrushCompilerIssue::Error(
+            "Syntax error".into(),
+            "Invalid utf-8 code.".into(),
+            None,
+            span,
+        ))
     }
 
     #[inline]
@@ -635,13 +681,43 @@ impl<'a> Lexer<'a> {
 
     #[must_use]
     #[inline]
+    fn is_number_boundary(&self, is_hexadecimal: bool, is_binary: bool) -> bool {
+        self.peek().is_ascii_digit()
+            || self.peek() == b'_'
+            || self.peek() == b'.'
+            || self.peek() == b'x'
+            || self.peek() == b'b'
+            || is_hexadecimal
+            || is_binary
+    }
+
+    #[must_use]
+    #[inline]
+    fn is_identifier_boundary(&self) -> bool {
+        self.is_alpha(self.peek())
+            || self.peek().is_ascii_digit()
+            || self.peek() == b'!' && self.peek() != b':'
+    }
+
+    #[must_use]
+    #[inline]
+    fn is_char_boundary(&self) -> bool {
+        self.peek() != b'\'' && !self.end()
+    }
+
+    #[must_use]
+    #[inline]
     fn end(&self) -> bool {
         self.current >= self.code.len()
     }
 
     #[must_use]
     #[inline]
-    fn is_alpha(&self, char: u8) -> bool {
-        char.is_ascii_lowercase() || char.is_ascii_uppercase() || char == b'_'
+    fn is_alpha(&self, byte: u8) -> bool {
+        byte.is_ascii_lowercase() || byte.is_ascii_uppercase() || byte == b'_'
+    }
+
+    fn add_error(&mut self, error: ThrushCompilerIssue) {
+        self.errors.push(error);
     }
 }
