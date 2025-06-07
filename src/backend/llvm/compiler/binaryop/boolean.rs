@@ -7,7 +7,7 @@ use {
         backend::llvm::compiler::{binaryop::ptr::ptr_binaryop, context::LLVMCodeGenContext},
         core::console::logging::{self, LoggingType},
         frontend::{
-            lexer::tokenkind::TokenKind,
+            lexer::tokentype::TokenType,
             types::{
                 lexer::ThrushType, parser::stmts::stmt::ThrushStatement,
                 representations::BinaryOperation,
@@ -26,14 +26,14 @@ pub fn bool_binaryop<'ctx>(
         ThrushStatement::Integer { .. }
         | ThrushStatement::Float { .. }
         | ThrushStatement::Boolean { .. },
-        TokenKind::BangEq
-        | TokenKind::EqEq
-        | TokenKind::LessEq
-        | TokenKind::Less
-        | TokenKind::Greater
-        | TokenKind::GreaterEq
-        | TokenKind::And
-        | TokenKind::Or,
+        TokenType::BangEq
+        | TokenType::EqEq
+        | TokenType::LessEq
+        | TokenType::Less
+        | TokenType::Greater
+        | TokenType::GreaterEq
+        | TokenType::And
+        | TokenType::Or,
         ThrushStatement::Integer { .. }
         | ThrushStatement::Float { .. }
         | ThrushStatement::Boolean { .. },
@@ -52,14 +52,14 @@ pub fn bool_binaryop<'ctx>(
 
     if let (
         ThrushStatement::Call { .. },
-        TokenKind::BangEq
-        | TokenKind::EqEq
-        | TokenKind::LessEq
-        | TokenKind::Less
-        | TokenKind::Greater
-        | TokenKind::GreaterEq
-        | TokenKind::And
-        | TokenKind::Or,
+        TokenType::BangEq
+        | TokenType::EqEq
+        | TokenType::LessEq
+        | TokenType::Less
+        | TokenType::Greater
+        | TokenType::GreaterEq
+        | TokenType::And
+        | TokenType::Or,
         ThrushStatement::Call { .. },
     ) = binary
     {
@@ -76,14 +76,14 @@ pub fn bool_binaryop<'ctx>(
 
     if let (
         ThrushStatement::Reference { .. },
-        TokenKind::BangEq
-        | TokenKind::EqEq
-        | TokenKind::LessEq
-        | TokenKind::Less
-        | TokenKind::Greater
-        | TokenKind::GreaterEq
-        | TokenKind::And
-        | TokenKind::Or,
+        TokenType::BangEq
+        | TokenType::EqEq
+        | TokenType::LessEq
+        | TokenType::Less
+        | TokenType::Greater
+        | TokenType::GreaterEq
+        | TokenType::And
+        | TokenType::Or,
         ThrushStatement::Reference { .. },
     ) = binary
     {
@@ -100,14 +100,14 @@ pub fn bool_binaryop<'ctx>(
 
     if let (
         ThrushStatement::Reference { .. },
-        TokenKind::BangEq
-        | TokenKind::EqEq
-        | TokenKind::LessEq
-        | TokenKind::Less
-        | TokenKind::Greater
-        | TokenKind::GreaterEq
-        | TokenKind::And
-        | TokenKind::Or,
+        TokenType::BangEq
+        | TokenType::EqEq
+        | TokenType::LessEq
+        | TokenType::Less
+        | TokenType::Greater
+        | TokenType::GreaterEq
+        | TokenType::And
+        | TokenType::Or,
         ThrushStatement::Integer { .. }
         | ThrushStatement::Float { .. }
         | ThrushStatement::Boolean { .. },
@@ -126,14 +126,14 @@ pub fn bool_binaryop<'ctx>(
         ThrushStatement::Integer { .. }
         | ThrushStatement::Float { .. }
         | ThrushStatement::Boolean { .. },
-        TokenKind::BangEq
-        | TokenKind::EqEq
-        | TokenKind::LessEq
-        | TokenKind::Less
-        | TokenKind::Greater
-        | TokenKind::GreaterEq
-        | TokenKind::And
-        | TokenKind::Or,
+        TokenType::BangEq
+        | TokenType::EqEq
+        | TokenType::LessEq
+        | TokenType::Less
+        | TokenType::Greater
+        | TokenType::GreaterEq
+        | TokenType::And
+        | TokenType::Or,
         ThrushStatement::Reference { .. },
     ) = binary
     {
@@ -153,14 +153,14 @@ pub fn bool_binaryop<'ctx>(
         | ThrushStatement::Float { .. }
         | ThrushStatement::Boolean { .. }
         | ThrushStatement::NullPtr { .. },
-        TokenKind::BangEq
-        | TokenKind::EqEq
-        | TokenKind::LessEq
-        | TokenKind::Less
-        | TokenKind::Greater
-        | TokenKind::GreaterEq
-        | TokenKind::And
-        | TokenKind::Or,
+        TokenType::BangEq
+        | TokenType::EqEq
+        | TokenType::LessEq
+        | TokenType::Less
+        | TokenType::Greater
+        | TokenType::GreaterEq
+        | TokenType::And
+        | TokenType::Or,
         ThrushStatement::Call { .. },
     ) = binary
     {
@@ -179,14 +179,14 @@ pub fn bool_binaryop<'ctx>(
 
     if let (
         ThrushStatement::Call { .. },
-        TokenKind::BangEq
-        | TokenKind::EqEq
-        | TokenKind::LessEq
-        | TokenKind::Less
-        | TokenKind::Greater
-        | TokenKind::GreaterEq
-        | TokenKind::And
-        | TokenKind::Or,
+        TokenType::BangEq
+        | TokenType::EqEq
+        | TokenType::LessEq
+        | TokenType::Less
+        | TokenType::Greater
+        | TokenType::GreaterEq
+        | TokenType::And
+        | TokenType::Or,
         ThrushStatement::Integer { .. }
         | ThrushStatement::Float { .. }
         | ThrushStatement::Boolean { .. }
@@ -206,14 +206,14 @@ pub fn bool_binaryop<'ctx>(
 
     if let (
         ThrushStatement::Reference { .. },
-        TokenKind::BangEq
-        | TokenKind::EqEq
-        | TokenKind::LessEq
-        | TokenKind::Less
-        | TokenKind::Greater
-        | TokenKind::GreaterEq
-        | TokenKind::And
-        | TokenKind::Or,
+        TokenType::BangEq
+        | TokenType::EqEq
+        | TokenType::LessEq
+        | TokenType::Less
+        | TokenType::Greater
+        | TokenType::GreaterEq
+        | TokenType::And
+        | TokenType::Or,
         ThrushStatement::Call { .. },
     ) = binary
     {
@@ -228,14 +228,14 @@ pub fn bool_binaryop<'ctx>(
 
     if let (
         ThrushStatement::Call { .. },
-        TokenKind::BangEq
-        | TokenKind::EqEq
-        | TokenKind::LessEq
-        | TokenKind::Less
-        | TokenKind::Greater
-        | TokenKind::GreaterEq
-        | TokenKind::And
-        | TokenKind::Or,
+        TokenType::BangEq
+        | TokenType::EqEq
+        | TokenType::LessEq
+        | TokenType::Less
+        | TokenType::Greater
+        | TokenType::GreaterEq
+        | TokenType::And
+        | TokenType::Or,
         ThrushStatement::Reference { .. },
     ) = binary
     {
@@ -252,7 +252,7 @@ pub fn bool_binaryop<'ctx>(
 
     if let (
         ThrushStatement::BinaryOp { .. },
-        TokenKind::And | TokenKind::Or,
+        TokenType::And | TokenType::Or,
         ThrushStatement::BinaryOp { .. },
     ) = binary
     {
@@ -276,7 +276,7 @@ pub fn bool_binaryop<'ctx>(
 
     if let (
         ThrushStatement::Group { .. },
-        TokenKind::And | TokenKind::Or,
+        TokenType::And | TokenType::Or,
         ThrushStatement::Group { .. },
     ) = binary
     {
@@ -300,7 +300,7 @@ pub fn bool_binaryop<'ctx>(
 
     if let (
         ThrushStatement::Group { .. },
-        TokenKind::And | TokenKind::Or,
+        TokenType::And | TokenType::Or,
         ThrushStatement::BinaryOp { .. },
     ) = binary
     {
@@ -324,7 +324,7 @@ pub fn bool_binaryop<'ctx>(
 
     if let (
         ThrushStatement::BinaryOp { .. },
-        TokenKind::And | TokenKind::Or,
+        TokenType::And | TokenType::Or,
         ThrushStatement::Group { .. },
     ) = binary
     {

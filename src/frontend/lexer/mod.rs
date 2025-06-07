@@ -3,6 +3,7 @@ use std::{mem, process};
 use keywords::THRUSH_KEYWORDS;
 use span::Span;
 use token::Token;
+use unicode_categories::UnicodeCategories;
 
 use crate::{
     core::{
@@ -11,21 +12,21 @@ use crate::{
         diagnostic::diagnostician::Diagnostician,
         errors::{lexer::ThrushLexerPanic, standard::ThrushCompilerIssue},
     },
-    frontend::lexer::tokenkind::TokenKind,
+    frontend::lexer::tokentype::TokenType,
 };
 
 pub mod keywords;
 pub mod span;
 pub mod token;
-pub mod tokenkind;
+pub mod tokentype;
 
 const MAXIMUM_TOKENS_CAPACITY: usize = 1_000_000;
 const MAXIMUM_BYTES_TO_LEX: usize = 1_000_000;
 
-pub struct Lexer<'a> {
-    tokens: Vec<Token<'a>>,
+pub struct Lexer {
+    tokens: Vec<Token>,
     errors: Vec<ThrushCompilerIssue>,
-    code: &'a [u8],
+    code: Vec<char>,
     start: usize,
     current: usize,
     line: usize,
@@ -33,8 +34,10 @@ pub struct Lexer<'a> {
     diagnostician: Diagnostician,
 }
 
-impl<'a> Lexer<'a> {
-    pub fn lex(code: &'a [u8], file: &'a CompilerFile) -> Result<Vec<Token<'a>>, ThrushLexerPanic> {
+impl Lexer {
+    pub fn lex(raw_code: &str, file: &CompilerFile) -> Result<Vec<Token>, ThrushLexerPanic> {
+        let code: Vec<char> = raw_code.chars().collect();
+
         Self {
             tokens: Vec::with_capacity(MAXIMUM_TOKENS_CAPACITY),
             errors: Vec::with_capacity(100),
@@ -48,7 +51,7 @@ impl<'a> Lexer<'a> {
         .start()
     }
 
-    fn start(&mut self) -> Result<Vec<Token<'a>>, ThrushLexerPanic> {
+    fn start(&mut self) -> Result<Vec<Token>, ThrushLexerPanic> {
         if self.code.len() > MAXIMUM_BYTES_TO_LEX {
             return Err(ThrushLexerPanic::TooBigFile(
                 self.diagnostician.get_file_path(),
@@ -64,7 +67,7 @@ impl<'a> Lexer<'a> {
             self.start_span();
 
             if let Err(error) = self.analyze() {
-                self.errors.push(error)
+                self.add_error(error);
             }
         }
 
@@ -78,8 +81,9 @@ impl<'a> Lexer<'a> {
         };
 
         self.tokens.push(Token {
-            lexeme: "",
-            kind: TokenKind::Eof,
+            lexeme: String::new(),
+            ascii_lexeme: String::new(),
+            kind: TokenType::Eof,
             span: Span::new(self.line, self.span),
         });
 
@@ -88,27 +92,27 @@ impl<'a> Lexer<'a> {
 
     fn analyze(&mut self) -> Result<(), ThrushCompilerIssue> {
         match self.advance() {
-            b'[' => self.make(TokenKind::LBracket),
-            b']' => self.make(TokenKind::RBracket),
-            b'(' => self.make(TokenKind::LParen),
-            b')' => self.make(TokenKind::RParen),
-            b'{' => self.make(TokenKind::LBrace),
-            b'}' => self.make(TokenKind::RBrace),
-            b',' => self.make(TokenKind::Comma),
-            b'.' if self.char_match(b'.') && self.char_match(b'.') => self.make(TokenKind::Pass),
-            b'.' if self.char_match(b'.') => self.make(TokenKind::Range),
-            b'.' => self.make(TokenKind::Dot),
-            b'%' => self.make(TokenKind::Arith),
-            b'*' => self.make(TokenKind::Star),
-            b'/' if self.char_match(b'/') => loop {
-                if self.peek() == b'\n' || self.end() {
+            '[' => self.make(TokenType::LBracket),
+            ']' => self.make(TokenType::RBracket),
+            '(' => self.make(TokenType::LParen),
+            ')' => self.make(TokenType::RParen),
+            '{' => self.make(TokenType::LBrace),
+            '}' => self.make(TokenType::RBrace),
+            ',' => self.make(TokenType::Comma),
+            '.' if self.char_match('.') && self.char_match('.') => self.make(TokenType::Pass),
+            '.' if self.char_match('.') => self.make(TokenType::Range),
+            '.' => self.make(TokenType::Dot),
+            '%' => self.make(TokenType::Arith),
+            '*' => self.make(TokenType::Star),
+            '/' if self.char_match('/') => loop {
+                if self.peek() == '\n' || self.end() {
                     break;
                 }
 
                 self.advance();
             },
-            b'/' if self.char_match(b'*') => loop {
-                if self.char_match(b'*') && self.char_match(b'/') {
+            '/' if self.char_match('*') => loop {
+                if self.char_match('*') && self.char_match('/') {
                     break;
                 } else if self.end() {
                     self.end_span();
@@ -125,35 +129,35 @@ impl<'a> Lexer<'a> {
 
                 self.advance();
             },
-            b'/' => self.make(TokenKind::Slash),
-            b';' => self.make(TokenKind::SemiColon),
-            b'-' if self.char_match(b'-') => self.make(TokenKind::MinusMinus),
-            b'-' if self.char_match(b'=') => self.make(TokenKind::MinusEq),
-            b'-' if self.char_match(b'>') => self.make(TokenKind::Arrow),
-            b'-' => self.make(TokenKind::Minus),
-            b'+' if self.char_match(b'+') => self.make(TokenKind::PlusPlus),
-            b'+' if self.char_match(b'=') => self.make(TokenKind::PlusEq),
-            b'+' => self.make(TokenKind::Plus),
-            b':' if self.char_match(b':') => self.make(TokenKind::ColonColon),
-            b':' => self.make(TokenKind::Colon),
-            b'!' if self.char_match(b'=') => self.make(TokenKind::BangEq),
-            b'!' => self.make(TokenKind::Bang),
-            b'=' if self.char_match(b'=') => self.make(TokenKind::EqEq),
-            b'=' => self.make(TokenKind::Eq),
-            b'<' if self.char_match(b'=') => self.make(TokenKind::LessEq),
-            b'<' if self.char_match(b'<') => self.make(TokenKind::LShift),
-            b'<' => self.make(TokenKind::Less),
-            b'>' if self.char_match(b'=') => self.make(TokenKind::GreaterEq),
-            b'>' if self.char_match(b'>') => self.make(TokenKind::RShift),
-            b'>' => self.make(TokenKind::Greater),
-            b'|' if self.char_match(b'|') => self.make(TokenKind::Or),
-            b'&' if self.char_match(b'&') => self.make(TokenKind::And),
-            b' ' | b'\r' | b'\t' => {}
-            b'\n' => self.line += 1,
-            b'\'' => self.char()?,
-            b'"' => self.string()?,
-            b'0'..=b'9' => self.number()?,
-            b'a'..=b'z' | b'A'..=b'Z' | b'_' | b'@' => self.identifier()?,
+            '/' => self.make(TokenType::Slash),
+            ';' => self.make(TokenType::SemiColon),
+            '-' if self.char_match('-') => self.make(TokenType::MinusMinus),
+            '-' if self.char_match('=') => self.make(TokenType::MinusEq),
+            '-' if self.char_match('>') => self.make(TokenType::Arrow),
+            '-' => self.make(TokenType::Minus),
+            '+' if self.char_match('+') => self.make(TokenType::PlusPlus),
+            '+' if self.char_match('=') => self.make(TokenType::PlusEq),
+            '+' => self.make(TokenType::Plus),
+            ':' if self.char_match(':') => self.make(TokenType::ColonColon),
+            ':' => self.make(TokenType::Colon),
+            '!' if self.char_match('=') => self.make(TokenType::BangEq),
+            '!' => self.make(TokenType::Bang),
+            '=' if self.char_match('=') => self.make(TokenType::EqEq),
+            '=' => self.make(TokenType::Eq),
+            '<' if self.char_match('=') => self.make(TokenType::LessEq),
+            '<' if self.char_match('<') => self.make(TokenType::LShift),
+            '<' => self.make(TokenType::Less),
+            '>' if self.char_match('=') => self.make(TokenType::GreaterEq),
+            '>' if self.char_match('>') => self.make(TokenType::RShift),
+            '>' => self.make(TokenType::Greater),
+            '|' if self.char_match('|') => self.make(TokenType::Or),
+            '&' if self.char_match('&') => self.make(TokenType::And),
+            ' ' | '\r' | '\t' => {}
+            '\n' => self.line += 1,
+            '\'' => self.char()?,
+            '"' => self.string()?,
+            '0'..='9' => self.number()?,
+            identifier if self.is_identifier_boundary(identifier) => self.identifier()?,
             _ => {
                 self.end_span();
 
@@ -172,16 +176,18 @@ impl<'a> Lexer<'a> {
     }
 
     fn identifier(&mut self) -> Result<(), ThrushCompilerIssue> {
-        while self.is_identifier_boundary() {
+        while self.is_identifier_boundary(self.peek()) {
             self.advance();
         }
 
-        let lexeme: &[u8] = &self.code[self.start..self.current];
+        let mut lexeme: String = String::with_capacity(100);
 
-        if let Some(keyword) = THRUSH_KEYWORDS.get(lexeme) {
+        lexeme.extend(&self.code[self.start..self.current]);
+
+        if let Some(keyword) = THRUSH_KEYWORDS.get(lexeme.as_str()) {
             self.make(*keyword);
         } else {
-            self.make(TokenKind::Identifier);
+            self.make(TokenType::Identifier);
         }
 
         Ok(())
@@ -192,7 +198,7 @@ impl<'a> Lexer<'a> {
         let mut is_binary: bool = false;
 
         while self.is_number_boundary(is_hexadecimal, is_binary) {
-            if is_hexadecimal && self.previous() == b'0' && self.peek() == b'x' {
+            if is_hexadecimal && self.previous() == '0' && self.peek() == 'x' {
                 self.end_span();
 
                 return Err(ThrushCompilerIssue::Error(
@@ -203,7 +209,7 @@ impl<'a> Lexer<'a> {
                 ));
             }
 
-            if is_binary && self.previous() == b'0' && self.peek() == b'b' {
+            if is_binary && self.previous() == '0' && self.peek() == 'b' {
                 self.end_span();
 
                 return Err(ThrushCompilerIssue::Error(
@@ -224,11 +230,11 @@ impl<'a> Lexer<'a> {
                 break;
             }
 
-            if self.peek() == b'x' && self.peek_next().is_ascii_alphanumeric() {
+            if self.peek() == 'x' && self.peek_next().is_ascii_alphanumeric() {
                 is_hexadecimal = true;
             }
 
-            if self.peek() == b'b' && self.peek_next().is_ascii_digit() {
+            if self.peek() == 'b' && self.peek_next().is_ascii_digit() {
                 is_binary = true;
             }
 
@@ -239,25 +245,27 @@ impl<'a> Lexer<'a> {
 
         let span: Span = Span::new(self.line, self.span);
 
-        let lexeme: &str = self.lexeme(span)?;
+        let lexeme: String = self.lexeme();
 
         if lexeme.contains(".") {
-            self.check_float_format(lexeme)?;
+            self.check_float_format(&lexeme)?;
 
             self.tokens.push(Token {
                 lexeme,
-                kind: TokenKind::Float,
+                ascii_lexeme: String::new(),
+                kind: TokenType::Float,
                 span,
             });
 
             return Ok(());
         }
 
-        self.check_integer_format(lexeme)?;
+        self.check_integer_format(&lexeme)?;
 
         self.tokens.push(Token {
             lexeme,
-            kind: TokenKind::Integer,
+            ascii_lexeme: String::new(),
+            kind: TokenType::Integer,
             span,
         });
 
@@ -516,7 +524,7 @@ impl<'a> Lexer<'a> {
 
         let span: Span = Span::new(self.line, self.span);
 
-        if self.peek() != b'\'' {
+        if self.peek() != '\'' {
             return Err(ThrushCompilerIssue::Error(
                 String::from("Syntax error"),
                 String::from("Unclosed char. Did you forget to close the char with a \'?"),
@@ -536,10 +544,11 @@ impl<'a> Lexer<'a> {
             ));
         }
 
-        let lexeme: &str = self.shrink_lexeme(span)?;
+        let lexeme: String = self.shrink_lexeme();
 
         self.tokens.push(Token {
-            kind: TokenKind::Char,
+            kind: TokenType::Char,
+            ascii_lexeme: String::default(),
             lexeme,
             span,
         });
@@ -556,7 +565,7 @@ impl<'a> Lexer<'a> {
 
         let span: Span = Span::new(self.line, self.span);
 
-        if self.peek() != b'"' {
+        if self.peek() != '"' {
             return Err(ThrushCompilerIssue::Error(
                 String::from("Syntax error"),
                 String::from("Unclosed literal string. Did you forget to close it with a '\"'?"),
@@ -567,10 +576,11 @@ impl<'a> Lexer<'a> {
 
         self.advance();
 
-        let lexeme: &str = self.shrink_lexeme(span)?;
+        let lexeme: String = self.shrink_lexeme();
 
         self.tokens.push(Token {
-            kind: TokenKind::Str,
+            kind: TokenType::Str,
+            ascii_lexeme: String::default(),
             lexeme,
             span,
         });
@@ -578,25 +588,29 @@ impl<'a> Lexer<'a> {
         Ok(())
     }
 
-    fn make(&mut self, kind: TokenKind) {
+    fn make(&mut self, kind: TokenType) {
         self.end_span();
 
         let span: Span = Span::new(self.line, self.span);
 
-        let lexeme: Result<&str, ThrushCompilerIssue> = self.lexeme(span);
+        let lexeme: String = self.lexeme();
 
-        match lexeme {
-            Ok(lexeme) => {
-                self.tokens.push(Token { lexeme, kind, span });
-            }
-            Err(error) => {
-                self.add_error(error);
-            }
-        }
+        let ascii_lexeme: String = if kind.is_identifier() {
+            self.fix_unicode_lexeme(&lexeme)
+        } else {
+            String::default()
+        };
+
+        self.tokens.push(Token {
+            lexeme,
+            ascii_lexeme,
+            kind,
+            span,
+        });
     }
 
-    fn char_match(&mut self, byte: u8) -> bool {
-        if !self.end() && self.code[self.current] == byte {
+    fn char_match(&mut self, char: char) -> bool {
+        if !self.end() && self.code[self.current] == char {
             self.current += 1;
             return true;
         }
@@ -604,39 +618,21 @@ impl<'a> Lexer<'a> {
         false
     }
 
-    fn advance(&mut self) -> u8 {
-        let byte: u8 = self.code[self.current];
+    fn advance(&mut self) -> char {
+        let byte: char = self.code[self.current];
         self.current += 1;
 
         byte
     }
 
     #[inline]
-    fn lexeme(&self, span: Span) -> Result<&'a str, ThrushCompilerIssue> {
-        if let Ok(lexeme) = core::str::from_utf8(&self.code[self.start..self.current]) {
-            return Ok(lexeme);
-        }
-
-        Err(ThrushCompilerIssue::Error(
-            "Syntax error".into(),
-            "Invalid utf-8 code.".into(),
-            None,
-            span,
-        ))
+    fn lexeme(&self) -> String {
+        String::from_iter(&self.code[self.start..self.current])
     }
 
     #[inline]
-    fn shrink_lexeme(&self, span: Span) -> Result<&'a str, ThrushCompilerIssue> {
-        if let Ok(lexeme) = core::str::from_utf8(&self.code[self.start + 1..self.current - 1]) {
-            return Ok(lexeme);
-        }
-
-        Err(ThrushCompilerIssue::Error(
-            "Syntax error".into(),
-            "Invalid utf-8 code.".into(),
-            None,
-            span,
-        ))
+    fn shrink_lexeme(&self) -> String {
+        String::from_iter(&self.code[self.start + 1..self.current - 1])
     }
 
     #[inline]
@@ -650,24 +646,24 @@ impl<'a> Lexer<'a> {
     }
 
     #[inline]
-    fn peek_next(&self) -> u8 {
+    fn peek_next(&self) -> char {
         if self.current + 1 >= self.code.len() {
-            return b'\0';
+            return '\0';
         }
 
         self.code[self.current + 1]
     }
 
     #[must_use]
-    fn previous(&self) -> u8 {
+    fn previous(&self) -> char {
         self.code[self.current - 1]
     }
 
     #[must_use]
     #[inline]
-    fn peek(&self) -> u8 {
+    fn peek(&self) -> char {
         if self.end() {
-            return b'\0';
+            return '\0';
         }
 
         self.code[self.current]
@@ -676,33 +672,60 @@ impl<'a> Lexer<'a> {
     #[must_use]
     #[inline]
     fn is_string_boundary(&self) -> bool {
-        self.peek() != b'"' && !self.end()
+        self.peek() != '"' && !self.end()
     }
 
     #[must_use]
     #[inline]
     fn is_number_boundary(&self, is_hexadecimal: bool, is_binary: bool) -> bool {
         self.peek().is_ascii_digit()
-            || self.peek() == b'_'
-            || self.peek() == b'.'
-            || self.peek() == b'x'
-            || self.peek() == b'b'
+            || self.peek() == '_'
+            || self.peek() == '.'
+            || self.peek() == 'x'
+            || self.peek() == 'b'
             || is_hexadecimal
             || is_binary
     }
 
     #[must_use]
     #[inline]
-    fn is_identifier_boundary(&self) -> bool {
-        self.is_alpha(self.peek())
-            || self.peek().is_ascii_digit()
-            || self.peek() == b'!' && self.peek() != b':'
+    fn is_identifier_boundary(&self, peeked: char) -> bool {
+        peeked.is_alphanumeric()
+            || (peeked == '!' && self.peek() != ':')
+            || peeked.is_symbol_other()
+    }
+
+    fn fix_unicode_lexeme(&self, lexeme: &str) -> String {
+        let mut fixed_unicode_string: String = String::with_capacity(500);
+
+        lexeme.chars().for_each(|char| {
+            if self.is_ascii_char(char) {
+                fixed_unicode_string.push(char);
+            } else {
+                let mut utf8_buf: [u8; 4] = [0u8; 4];
+
+                let utf8_bytes: &[u8] = char.encode_utf8(&mut utf8_buf).as_bytes();
+
+                utf8_bytes.iter().for_each(|byte| {
+                    fixed_unicode_string.push_str(&format!("{:02X}", byte));
+                });
+            }
+        });
+
+        fixed_unicode_string
+    }
+
+    fn is_ascii_char(&self, char: char) -> bool {
+        self.is_alpha_char(char)
+            || char.is_ascii_digit()
+            || char == '!' && char != ':'
+            || char == '_'
     }
 
     #[must_use]
     #[inline]
     fn is_char_boundary(&self) -> bool {
-        self.peek() != b'\'' && !self.end()
+        self.peek() != '\'' && !self.end()
     }
 
     #[must_use]
@@ -713,8 +736,8 @@ impl<'a> Lexer<'a> {
 
     #[must_use]
     #[inline]
-    fn is_alpha(&self, byte: u8) -> bool {
-        byte.is_ascii_lowercase() || byte.is_ascii_uppercase() || byte == b'_'
+    fn is_alpha_char(&self, char: char) -> bool {
+        char.is_ascii_lowercase() || char.is_ascii_uppercase()
     }
 
     fn add_error(&mut self, error: ThrushCompilerIssue) {

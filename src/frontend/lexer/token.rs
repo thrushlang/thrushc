@@ -1,26 +1,43 @@
 use crate::{
     core::errors::{position::CompilationPosition, standard::ThrushCompilerIssue},
-    frontend::{lexer::tokenkind::TokenKind, types::parser::stmts::traits::TokenExtensions},
+    frontend::{lexer::tokentype::TokenType, types::parser::stmts::traits::TokenExtensions},
 };
 
 use super::span::Span;
 
 #[derive(Debug)]
-pub struct Token<'token> {
-    pub lexeme: &'token str,
-    pub kind: TokenKind,
+pub struct Token {
+    pub lexeme: String,
+    pub ascii_lexeme: String,
+    pub kind: TokenType,
     pub span: Span,
 }
 
-impl TokenExtensions for str {
-    fn to_bytes(&self, span: Span) -> Result<Vec<u8>, ThrushCompilerIssue> {
-        let source: &[u8] = self.as_bytes();
+impl TokenExtensions for Token {
+    fn get_lexeme(&self) -> &str {
+        &self.lexeme
+    }
+
+    fn get_ascii_lexeme(&self) -> &str {
+        &self.ascii_lexeme
+    }
+
+    fn get_span(&self) -> Span {
+        self.span
+    }
+
+    fn get_type(&self) -> TokenType {
+        self.kind
+    }
+
+    fn fix_lexeme_scapes(&self, span: Span) -> Result<Vec<u8>, ThrushCompilerIssue> {
+        let source: &[u8] = self.lexeme.as_bytes();
 
         let mut parsed_string: Vec<u8> = Vec::with_capacity(source.len());
 
         let mut idx: usize = 0;
 
-        while idx < self.len() {
+        while idx < source.len() {
             if let Some(byte) = source.get(idx) {
                 if *byte == b'\\' {
                     idx += 1;
@@ -65,7 +82,7 @@ impl TokenExtensions for str {
         Ok(parsed_string)
     }
 
-    fn get_first_byte(&self) -> u64 {
-        self.as_bytes()[0] as u64
+    fn get_lexeme_first_byte(&self) -> u64 {
+        self.lexeme.as_bytes()[0] as u64
     }
 }

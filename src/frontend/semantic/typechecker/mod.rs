@@ -11,7 +11,7 @@ use crate::{
         errors::{position::CompilationPosition, standard::ThrushCompilerIssue},
     },
     frontend::{
-        lexer::{span::Span, tokenkind::TokenKind},
+        lexer::{span::Span, tokentype::TokenType},
         types::{
             lexer::ThrushType,
             parser::stmts::{stmt::ThrushStatement, traits::ThrushAttributesExtensions},
@@ -920,7 +920,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
         target_type: &ThrushType,
         from_type: &ThrushType,
         expression: Option<&ThrushStatement>,
-        operator: Option<&TokenKind>,
+        operator: Option<&TokenType>,
         span: &Span,
         source: TypeCheckerTypeCheckSource,
     ) -> Result<(), ThrushCompilerIssue> {
@@ -1003,21 +1003,21 @@ impl<'type_checker> TypeChecker<'type_checker> {
                 target_type,
                 ThrushType::Mut(from_type),
                 Some(
-                    TokenKind::BangEq
-                    | TokenKind::EqEq
-                    | TokenKind::LessEq
-                    | TokenKind::Less
-                    | TokenKind::Greater
-                    | TokenKind::GreaterEq
-                    | TokenKind::And
-                    | TokenKind::Or
-                    | TokenKind::Bang
-                    | TokenKind::Plus
-                    | TokenKind::Minus
-                    | TokenKind::Slash
-                    | TokenKind::Star
-                    | TokenKind::LShift
-                    | TokenKind::RShift,
+                    TokenType::BangEq
+                    | TokenType::EqEq
+                    | TokenType::LessEq
+                    | TokenType::Less
+                    | TokenType::Greater
+                    | TokenType::GreaterEq
+                    | TokenType::And
+                    | TokenType::Or
+                    | TokenType::Bang
+                    | TokenType::Plus
+                    | TokenType::Minus
+                    | TokenType::Slash
+                    | TokenType::Star
+                    | TokenType::LShift
+                    | TokenType::RShift,
                 )
                 | None,
             ) if !target_type.is_mut_type() && source.is_local() => {
@@ -1030,21 +1030,21 @@ impl<'type_checker> TypeChecker<'type_checker> {
                 ThrushType::Mut(target_type),
                 any_type,
                 Some(
-                    TokenKind::BangEq
-                    | TokenKind::EqEq
-                    | TokenKind::LessEq
-                    | TokenKind::Less
-                    | TokenKind::Greater
-                    | TokenKind::GreaterEq
-                    | TokenKind::And
-                    | TokenKind::Or
-                    | TokenKind::Bang
-                    | TokenKind::Plus
-                    | TokenKind::Minus
-                    | TokenKind::Slash
-                    | TokenKind::Star
-                    | TokenKind::LShift
-                    | TokenKind::RShift,
+                    TokenType::BangEq
+                    | TokenType::EqEq
+                    | TokenType::LessEq
+                    | TokenType::Less
+                    | TokenType::Greater
+                    | TokenType::GreaterEq
+                    | TokenType::And
+                    | TokenType::Or
+                    | TokenType::Bang
+                    | TokenType::Plus
+                    | TokenType::Minus
+                    | TokenType::Slash
+                    | TokenType::Star
+                    | TokenType::LShift
+                    | TokenType::RShift,
                 )
                 | None,
             ) if !any_type.is_mut_type() && source.is_local() => {
@@ -1057,21 +1057,21 @@ impl<'type_checker> TypeChecker<'type_checker> {
                 ThrushType::Mut(target_type),
                 ThrushType::Mut(from_type),
                 Some(
-                    TokenKind::BangEq
-                    | TokenKind::EqEq
-                    | TokenKind::LessEq
-                    | TokenKind::Less
-                    | TokenKind::Greater
-                    | TokenKind::GreaterEq
-                    | TokenKind::And
-                    | TokenKind::Or
-                    | TokenKind::Bang
-                    | TokenKind::Plus
-                    | TokenKind::Minus
-                    | TokenKind::Slash
-                    | TokenKind::Star
-                    | TokenKind::LShift
-                    | TokenKind::RShift,
+                    TokenType::BangEq
+                    | TokenType::EqEq
+                    | TokenType::LessEq
+                    | TokenType::Less
+                    | TokenType::Greater
+                    | TokenType::GreaterEq
+                    | TokenType::And
+                    | TokenType::Or
+                    | TokenType::Bang
+                    | TokenType::Plus
+                    | TokenType::Minus
+                    | TokenType::Slash
+                    | TokenType::Star
+                    | TokenType::LShift
+                    | TokenType::RShift,
                 )
                 | None,
             ) => {
@@ -1105,15 +1105,15 @@ impl<'type_checker> TypeChecker<'type_checker> {
                 ThrushType::Bool,
                 ThrushType::Bool,
                 Some(
-                    TokenKind::BangEq
-                    | TokenKind::EqEq
-                    | TokenKind::LessEq
-                    | TokenKind::Less
-                    | TokenKind::Greater
-                    | TokenKind::GreaterEq
-                    | TokenKind::And
-                    | TokenKind::Or
-                    | TokenKind::Bang,
+                    TokenType::BangEq
+                    | TokenType::EqEq
+                    | TokenType::LessEq
+                    | TokenType::Less
+                    | TokenType::Greater
+                    | TokenType::GreaterEq
+                    | TokenType::And
+                    | TokenType::Or
+                    | TokenType::Bang,
                 )
                 | None,
             ) => Ok(()),
@@ -1121,14 +1121,14 @@ impl<'type_checker> TypeChecker<'type_checker> {
                 ThrushType::S8,
                 ThrushType::S8 | ThrushType::U8,
                 Some(
-                    TokenKind::Plus
-                    | TokenKind::Minus
-                    | TokenKind::Slash
-                    | TokenKind::Star
-                    | TokenKind::LShift
-                    | TokenKind::RShift
-                    | TokenKind::PlusPlus
-                    | TokenKind::MinusMinus,
+                    TokenType::Plus
+                    | TokenType::Minus
+                    | TokenType::Slash
+                    | TokenType::Star
+                    | TokenType::LShift
+                    | TokenType::RShift
+                    | TokenType::PlusPlus
+                    | TokenType::MinusMinus,
                 )
                 | None,
             ) => Ok(()),
@@ -1136,14 +1136,14 @@ impl<'type_checker> TypeChecker<'type_checker> {
                 ThrushType::S16,
                 ThrushType::S16 | ThrushType::S8 | ThrushType::U16 | ThrushType::U8,
                 Some(
-                    TokenKind::Plus
-                    | TokenKind::Minus
-                    | TokenKind::Slash
-                    | TokenKind::Star
-                    | TokenKind::LShift
-                    | TokenKind::RShift
-                    | TokenKind::PlusPlus
-                    | TokenKind::MinusMinus,
+                    TokenType::Plus
+                    | TokenType::Minus
+                    | TokenType::Slash
+                    | TokenType::Star
+                    | TokenType::LShift
+                    | TokenType::RShift
+                    | TokenType::PlusPlus
+                    | TokenType::MinusMinus,
                 )
                 | None,
             ) => Ok(()),
@@ -1156,14 +1156,14 @@ impl<'type_checker> TypeChecker<'type_checker> {
                 | ThrushType::U16
                 | ThrushType::U8,
                 Some(
-                    TokenKind::Plus
-                    | TokenKind::Minus
-                    | TokenKind::Slash
-                    | TokenKind::Star
-                    | TokenKind::LShift
-                    | TokenKind::RShift
-                    | TokenKind::PlusPlus
-                    | TokenKind::MinusMinus,
+                    TokenType::Plus
+                    | TokenType::Minus
+                    | TokenType::Slash
+                    | TokenType::Star
+                    | TokenType::LShift
+                    | TokenType::RShift
+                    | TokenType::PlusPlus
+                    | TokenType::MinusMinus,
                 )
                 | None,
             ) => Ok(()),
@@ -1178,14 +1178,14 @@ impl<'type_checker> TypeChecker<'type_checker> {
                 | ThrushType::U16
                 | ThrushType::U8,
                 Some(
-                    TokenKind::Plus
-                    | TokenKind::Minus
-                    | TokenKind::Slash
-                    | TokenKind::Star
-                    | TokenKind::LShift
-                    | TokenKind::RShift
-                    | TokenKind::PlusPlus
-                    | TokenKind::MinusMinus,
+                    TokenType::Plus
+                    | TokenType::Minus
+                    | TokenType::Slash
+                    | TokenType::Star
+                    | TokenType::LShift
+                    | TokenType::RShift
+                    | TokenType::PlusPlus
+                    | TokenType::MinusMinus,
                 )
                 | None,
             ) => Ok(()),
@@ -1193,14 +1193,14 @@ impl<'type_checker> TypeChecker<'type_checker> {
                 ThrushType::U8,
                 ThrushType::U8,
                 Some(
-                    TokenKind::Plus
-                    | TokenKind::Minus
-                    | TokenKind::Slash
-                    | TokenKind::Star
-                    | TokenKind::LShift
-                    | TokenKind::RShift
-                    | TokenKind::PlusPlus
-                    | TokenKind::MinusMinus,
+                    TokenType::Plus
+                    | TokenType::Minus
+                    | TokenType::Slash
+                    | TokenType::Star
+                    | TokenType::LShift
+                    | TokenType::RShift
+                    | TokenType::PlusPlus
+                    | TokenType::MinusMinus,
                 )
                 | None,
             ) => Ok(()),
@@ -1208,14 +1208,14 @@ impl<'type_checker> TypeChecker<'type_checker> {
                 ThrushType::U16,
                 ThrushType::U16 | ThrushType::U8,
                 Some(
-                    TokenKind::Plus
-                    | TokenKind::Minus
-                    | TokenKind::Slash
-                    | TokenKind::Star
-                    | TokenKind::LShift
-                    | TokenKind::RShift
-                    | TokenKind::PlusPlus
-                    | TokenKind::MinusMinus,
+                    TokenType::Plus
+                    | TokenType::Minus
+                    | TokenType::Slash
+                    | TokenType::Star
+                    | TokenType::LShift
+                    | TokenType::RShift
+                    | TokenType::PlusPlus
+                    | TokenType::MinusMinus,
                 )
                 | None,
             ) => Ok(()),
@@ -1223,14 +1223,14 @@ impl<'type_checker> TypeChecker<'type_checker> {
                 ThrushType::U32,
                 ThrushType::U32 | ThrushType::U16 | ThrushType::U8,
                 Some(
-                    TokenKind::Plus
-                    | TokenKind::Minus
-                    | TokenKind::Slash
-                    | TokenKind::Star
-                    | TokenKind::LShift
-                    | TokenKind::RShift
-                    | TokenKind::PlusPlus
-                    | TokenKind::MinusMinus,
+                    TokenType::Plus
+                    | TokenType::Minus
+                    | TokenType::Slash
+                    | TokenType::Star
+                    | TokenType::LShift
+                    | TokenType::RShift
+                    | TokenType::PlusPlus
+                    | TokenType::MinusMinus,
                 )
                 | None,
             ) => Ok(()),
@@ -1238,14 +1238,14 @@ impl<'type_checker> TypeChecker<'type_checker> {
                 ThrushType::U64,
                 ThrushType::U64 | ThrushType::U32 | ThrushType::U16 | ThrushType::U8,
                 Some(
-                    TokenKind::Plus
-                    | TokenKind::Minus
-                    | TokenKind::Slash
-                    | TokenKind::Star
-                    | TokenKind::LShift
-                    | TokenKind::RShift
-                    | TokenKind::PlusPlus
-                    | TokenKind::MinusMinus,
+                    TokenType::Plus
+                    | TokenType::Minus
+                    | TokenType::Slash
+                    | TokenType::Star
+                    | TokenType::LShift
+                    | TokenType::RShift
+                    | TokenType::PlusPlus
+                    | TokenType::MinusMinus,
                 )
                 | None,
             ) => Ok(()),
@@ -1253,14 +1253,14 @@ impl<'type_checker> TypeChecker<'type_checker> {
                 ThrushType::F32,
                 ThrushType::F32,
                 Some(
-                    TokenKind::Plus
-                    | TokenKind::Minus
-                    | TokenKind::Slash
-                    | TokenKind::Star
-                    | TokenKind::LShift
-                    | TokenKind::RShift
-                    | TokenKind::PlusPlus
-                    | TokenKind::MinusMinus,
+                    TokenType::Plus
+                    | TokenType::Minus
+                    | TokenType::Slash
+                    | TokenType::Star
+                    | TokenType::LShift
+                    | TokenType::RShift
+                    | TokenType::PlusPlus
+                    | TokenType::MinusMinus,
                 )
                 | None,
             ) => Ok(()),
@@ -1268,14 +1268,14 @@ impl<'type_checker> TypeChecker<'type_checker> {
                 ThrushType::F64,
                 ThrushType::F64 | ThrushType::F32,
                 Some(
-                    TokenKind::Plus
-                    | TokenKind::Minus
-                    | TokenKind::Slash
-                    | TokenKind::Star
-                    | TokenKind::LShift
-                    | TokenKind::RShift
-                    | TokenKind::PlusPlus
-                    | TokenKind::MinusMinus,
+                    TokenType::Plus
+                    | TokenType::Minus
+                    | TokenType::Slash
+                    | TokenType::Star
+                    | TokenType::LShift
+                    | TokenType::RShift
+                    | TokenType::PlusPlus
+                    | TokenType::MinusMinus,
                 )
                 | None,
             ) => Ok(()),
@@ -1292,43 +1292,43 @@ impl<'type_checker> TypeChecker<'type_checker> {
 
     fn check_binaryop(
         &self,
-        operator: &TokenKind,
+        operator: &TokenType,
         a: &ThrushType,
         b: &ThrushType,
         span: Span,
     ) -> Result<(), ThrushCompilerIssue> {
         match operator {
-            TokenKind::Star | TokenKind::Slash | TokenKind::Minus | TokenKind::Plus => {
+            TokenType::Star | TokenType::Slash | TokenType::Minus | TokenType::Plus => {
                 self.check_binary_arithmetic(operator, a, b, span)
             }
-            TokenKind::BangEq | TokenKind::EqEq => self.check_binary_equality(operator, a, b, span),
-            TokenKind::LessEq | TokenKind::Less | TokenKind::GreaterEq | TokenKind::Greater => {
+            TokenType::BangEq | TokenType::EqEq => self.check_binary_equality(operator, a, b, span),
+            TokenType::LessEq | TokenType::Less | TokenType::GreaterEq | TokenType::Greater => {
                 self.check_binary_comparasion(operator, a, b, span)
             }
-            TokenKind::LShift | TokenKind::RShift => self.check_binary_shift(operator, a, b, span),
-            TokenKind::And | TokenKind::Or => self.check_binary_gate(operator, a, b, span),
+            TokenType::LShift | TokenType::RShift => self.check_binary_shift(operator, a, b, span),
+            TokenType::And | TokenType::Or => self.check_binary_gate(operator, a, b, span),
             _ => Ok(()),
         }
     }
 
     fn check_unary(
         &self,
-        operator: &TokenKind,
+        operator: &TokenType,
         a: &ThrushType,
         span: Span,
     ) -> Result<(), ThrushCompilerIssue> {
         match operator {
-            TokenKind::Minus | TokenKind::PlusPlus | TokenKind::MinusMinus => {
+            TokenType::Minus | TokenType::PlusPlus | TokenType::MinusMinus => {
                 self.check_general_unary(operator, a, span)
             }
-            TokenKind::Bang => self.check_unary_instr_bang(a, span),
+            TokenType::Bang => self.check_unary_instr_bang(a, span),
             _ => Ok(()),
         }
     }
 
     fn check_binary_arithmetic(
         &self,
-        operator: &TokenKind,
+        operator: &TokenType,
         a: &ThrushType,
         b: &ThrushType,
         span: Span,
@@ -1378,7 +1378,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
 
     fn check_binary_equality(
         &self,
-        operator: &TokenKind,
+        operator: &TokenType,
         a: &ThrushType,
         b: &ThrushType,
         span: Span,
@@ -1428,7 +1428,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
 
     fn check_binary_comparasion(
         &self,
-        operator: &TokenKind,
+        operator: &TokenType,
         a: &ThrushType,
         b: &ThrushType,
         span: Span,
@@ -1478,7 +1478,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
 
     fn check_binary_gate(
         &self,
-        operator: &TokenKind,
+        operator: &TokenType,
         a: &ThrushType,
         b: &ThrushType,
         span: Span,
@@ -1500,7 +1500,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
 
     fn check_binary_shift(
         &self,
-        operator: &TokenKind,
+        operator: &TokenType,
         a: &ThrushType,
         b: &ThrushType,
         span: Span,
@@ -1546,7 +1546,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
 
     fn check_general_unary(
         &self,
-        operator: &TokenKind,
+        operator: &TokenType,
         a: &ThrushType,
         span: Span,
     ) -> Result<(), ThrushCompilerIssue> {

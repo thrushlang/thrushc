@@ -6,7 +6,7 @@ use crate::{
     backend::llvm::compiler::{attributes::LLVMAttribute, conventions::CallConvention},
     core::errors::standard::ThrushCompilerIssue,
     frontend::{
-        lexer::{span::Span, token::Token, tokenkind::TokenKind},
+        lexer::{span::Span, token::Token, tokentype::TokenType},
         types::{
             lexer::{
                 MethodsApplicant, ThrushStructType, ThrushType, generate_methods,
@@ -14,7 +14,7 @@ use crate::{
             },
             parser::stmts::{
                 stmt::ThrushStatement,
-                traits::{StructFieldsExtensions, ThrushAttributesExtensions},
+                traits::{StructFieldsExtensions, ThrushAttributesExtensions, TokenExtensions},
                 types::{CustomTypeFields, EnumFields, StructFields, ThrushAttributes},
             },
             symbols::types::{Methods, ParametersTypes},
@@ -59,13 +59,13 @@ pub fn parse<'instr>(
 
     let statement: Result<ThrushStatement<'instr>, ThrushCompilerIssue> =
         match &parser_ctx.peek().kind {
-            TokenKind::Type => Ok(self::build_custom_type(parser_ctx, false)?),
-            TokenKind::Struct => Ok(self::build_struct(parser_ctx, false)?),
-            TokenKind::Enum => Ok(self::build_enum(parser_ctx, false)?),
-            TokenKind::Fn => Ok(self::build_function(parser_ctx, false)?),
-            TokenKind::AsmFn => Ok(self::build_assembler_function(parser_ctx, false)?),
-            TokenKind::Const => Ok(self::build_const(parser_ctx, false)?),
-            TokenKind::Methods => Ok(self::build_methods(parser_ctx, false)?),
+            TokenType::Type => Ok(self::build_custom_type(parser_ctx, false)?),
+            TokenType::Struct => Ok(self::build_struct(parser_ctx, false)?),
+            TokenType::Enum => Ok(self::build_enum(parser_ctx, false)?),
+            TokenType::Fn => Ok(self::build_function(parser_ctx, false)?),
+            TokenType::AsmFn => Ok(self::build_assembler_function(parser_ctx, false)?),
+            TokenType::Const => Ok(self::build_const(parser_ctx, false)?),
+            TokenType::Methods => Ok(self::build_methods(parser_ctx, false)?),
 
             _ => Ok(statement(parser_ctx)?),
         };
@@ -82,16 +82,16 @@ fn statement<'instr>(
 
     let statement: Result<ThrushStatement<'instr>, ThrushCompilerIssue> =
         match &parser_ctx.peek().kind {
-            TokenKind::LBrace => Ok(self::build_block(parser_ctx)?),
-            TokenKind::Return => Ok(self::build_return(parser_ctx)?),
-            TokenKind::Local => Ok(self::build_local(parser_ctx)?),
-            TokenKind::Instr => Ok(self::build_instr(parser_ctx)?),
-            TokenKind::For => Ok(self::build_for_loop(parser_ctx)?),
-            TokenKind::If => Ok(self::build_conditional(parser_ctx)?),
-            TokenKind::While => Ok(self::build_while_loop(parser_ctx)?),
-            TokenKind::Continue => Ok(self::build_continue(parser_ctx)?),
-            TokenKind::Break => Ok(self::build_break(parser_ctx)?),
-            TokenKind::Loop => Ok(self::build_loop(parser_ctx)?),
+            TokenType::LBrace => Ok(self::build_block(parser_ctx)?),
+            TokenType::Return => Ok(self::build_return(parser_ctx)?),
+            TokenType::Local => Ok(self::build_local(parser_ctx)?),
+            TokenType::Instr => Ok(self::build_instr(parser_ctx)?),
+            TokenType::For => Ok(self::build_for_loop(parser_ctx)?),
+            TokenType::If => Ok(self::build_conditional(parser_ctx)?),
+            TokenType::While => Ok(self::build_while_loop(parser_ctx)?),
+            TokenType::Continue => Ok(self::build_continue(parser_ctx)?),
+            TokenType::Break => Ok(self::build_break(parser_ctx)?),
+            TokenType::Loop => Ok(self::build_loop(parser_ctx)?),
 
             _ => Ok(expression::build_expression(parser_ctx)?),
         };
@@ -108,12 +108,12 @@ pub fn build_methods<'instr>(
         .set_instr_position(InstructionPosition::Methods);
 
     let bindings_tk: &Token = parser_ctx.consume(
-        TokenKind::Methods,
+        TokenType::Methods,
         String::from("Syntax error"),
         String::from("Expected 'methods' keyword."),
     )?;
 
-    let span: Span = bindings_tk.span;
+    let span: Span = bindings_tk.get_span();
 
     if !parser_ctx.is_main_scope() {
         return Err(ThrushCompilerIssue::Error(
@@ -149,12 +149,12 @@ pub fn build_methods<'instr>(
     let mut methods: Vec<ThrushStatement> = Vec::with_capacity(50);
 
     parser_ctx.consume(
-        TokenKind::LBrace,
+        TokenType::LBrace,
         String::from("Syntax error"),
         String::from("Expected '{'."),
     )?;
 
-    while parser_ctx.peek().kind != TokenKind::RBrace {
+    while parser_ctx.peek().kind != TokenType::RBrace {
         let bind: ThrushStatement = self::build_method(declare_forward, parser_ctx)?;
 
         parser_ctx
@@ -169,7 +169,7 @@ pub fn build_methods<'instr>(
     }
 
     parser_ctx.consume(
-        TokenKind::RBrace,
+        TokenType::RBrace,
         String::from("Syntax error"),
         String::from("Expected '}'."),
     )?;
@@ -211,20 +211,19 @@ fn build_method<'instr>(
         .set_sync_position(SyncPosition::Statement);
 
     parser_ctx.consume(
-        TokenKind::Fn,
+        TokenType::Fn,
         String::from("Syntax error"),
         String::from("Expected 'fn' keyword."),
     )?;
 
     let bind_name_tk: &Token = parser_ctx.consume(
-        TokenKind::Identifier,
+        TokenType::Identifier,
         String::from("Syntax error"),
         String::from("Expected name to the method definition."),
     )?;
 
-    let bind_name: &str = bind_name_tk.lexeme;
-
-    let span: Span = bind_name_tk.span;
+    let bind_name: &str = bind_name_tk.get_lexeme();
+    let span: Span = bind_name_tk.get_span();
 
     if !parser_ctx
         .get_control_ctx()
@@ -244,7 +243,7 @@ fn build_method<'instr>(
         .set_instr_position(InstructionPosition::Method);
 
     parser_ctx.consume(
-        TokenKind::LParen,
+        TokenType::LParen,
         String::from("Syntax error"),
         String::from("Expected '('."),
     )?;
@@ -255,30 +254,30 @@ fn build_method<'instr>(
 
     let mut this_is_declare_forwardd: bool = false;
 
-    while !parser_ctx.match_token(TokenKind::RParen)? {
-        if parser_ctx.match_token(TokenKind::Comma)? {
+    while !parser_ctx.match_token(TokenType::RParen)? {
+        if parser_ctx.match_token(TokenType::Comma)? {
             continue;
         }
 
-        if this_is_declare_forwardd && parser_ctx.check(TokenKind::This) {
+        if this_is_declare_forwardd && parser_ctx.check(TokenType::This) {
             return Err(ThrushCompilerIssue::Error(
                 String::from("Syntax error"),
                 String::from(
                     "'This' keyword is already declare_forwardd. Multiple instances are not allowed.",
                 ),
                 None,
-                bind_name_tk.span,
+                bind_name_tk.get_span(),
             ));
         }
 
-        if parser_ctx.check(TokenKind::This) {
+        if parser_ctx.check(TokenType::This) {
             let this_tk: &Token = parser_ctx.consume(
-                TokenKind::This,
+                TokenType::This,
                 String::from("Syntax error"),
                 String::from("Expected 'this' keyword."),
             )?;
 
-            let is_mutable: bool = parser_ctx.match_token(TokenKind::Mut)?;
+            let is_mutable: bool = parser_ctx.match_token(TokenType::Mut)?;
 
             bind_parameters.push(ThrushStatement::This {
                 kind: parser_ctx
@@ -286,7 +285,7 @@ fn build_method<'instr>(
                     .get_this_methods_type()
                     .dissamble(),
                 is_mutable,
-                span: this_tk.span,
+                span: this_tk.get_span(),
             });
 
             this_is_declare_forwardd = true;
@@ -294,19 +293,19 @@ fn build_method<'instr>(
             continue;
         }
 
-        let is_mutable: bool = parser_ctx.match_token(TokenKind::Mut)?;
+        let is_mutable: bool = parser_ctx.match_token(TokenType::Mut)?;
 
         let parameter_tk: &Token = parser_ctx.consume(
-            TokenKind::Identifier,
+            TokenType::Identifier,
             String::from("Syntax error"),
             String::from("Expected parameter name."),
         )?;
 
-        let parameter_name: &str = parameter_tk.lexeme;
-        let parameter_span: Span = parameter_tk.span;
+        let parameter_name: &str = parameter_tk.get_lexeme();
+        let parameter_span: Span = parameter_tk.get_span();
 
         parser_ctx.consume(
-            TokenKind::Colon,
+            TokenType::Colon,
             String::from("Syntax error"),
             String::from("Expected ':'."),
         )?;
@@ -341,7 +340,7 @@ fn build_method<'instr>(
         .set_function_type(return_type.clone());
 
     let bind_attributes: ThrushAttributes =
-        self::build_attributes(parser_ctx, &[TokenKind::LBrace])?;
+        self::build_attributes(parser_ctx, &[TokenType::LBrace])?;
 
     if !declare_forward {
         parser_ctx.get_mut_control_ctx().set_inside_bind(true);
@@ -388,18 +387,18 @@ fn build_entry_point<'instr>(
             String::from("Duplicated entrypoint"),
             String::from("The language not support two entrypoints. :>"),
             None,
-            parser_ctx.previous().span,
+            parser_ctx.previous().get_span(),
         ));
     }
 
     parser_ctx.consume(
-        TokenKind::LParen,
+        TokenType::LParen,
         String::from("Syntax error"),
         String::from("Expected '('."),
     )?;
 
     parser_ctx.consume(
-        TokenKind::RParen,
+        TokenType::RParen,
         String::from("Syntax error"),
         String::from("Expected ')'."),
     )?;
@@ -416,7 +415,7 @@ fn build_for_loop<'instr>(
     parser_ctx: &mut ParserContext<'instr>,
 ) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
     let for_tk: &Token = parser_ctx.consume(
-        TokenKind::For,
+        TokenType::For,
         String::from("Syntax error"),
         String::from("Expected 'for' keyword."),
     )?;
@@ -466,7 +465,7 @@ fn build_loop<'instr>(
     parser_ctx: &mut ParserContext<'instr>,
 ) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
     let loop_tk: &Token = parser_ctx.consume(
-        TokenKind::Loop,
+        TokenType::Loop,
         String::from("Syntax error"),
         String::from("Expected 'loop' keyword."),
     )?;
@@ -495,7 +494,7 @@ fn build_loop<'instr>(
 
     parser_ctx.get_mut_control_ctx().set_inside_loop(true);
 
-    let block: ThrushStatement = build_block(parser_ctx)?;
+    let block: ThrushStatement = self::build_block(parser_ctx)?;
 
     let scope: usize = parser_ctx.get_scope();
 
@@ -517,19 +516,19 @@ fn build_while_loop<'instr>(
     parser_ctx: &mut ParserContext<'instr>,
 ) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
     let while_tk: &Token = parser_ctx.consume(
-        TokenKind::While,
+        TokenType::While,
         String::from("Syntax error"),
         String::from("Expected 'while' keyword."),
     )?;
 
-    let while_span: Span = while_tk.span;
+    let span: Span = while_tk.get_span();
 
     if parser_ctx.is_unreacheable_code() {
         return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("Unreacheable code."),
             None,
-            while_span,
+            span,
         ));
     }
 
@@ -538,19 +537,19 @@ fn build_while_loop<'instr>(
     {
         return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
-            String::from("While loop must be placed inside a function or a bind."),
+            String::from("While loop must be placed inside a function or a structure method."),
             None,
-            while_span,
+            span,
         ));
     }
 
-    let conditional: ThrushStatement = expression::build_expr(parser_ctx)?;
-    let block: ThrushStatement = build_block(parser_ctx)?;
+    let cond: ThrushStatement = expression::build_expr(parser_ctx)?;
+    let block: ThrushStatement = self::build_block(parser_ctx)?;
 
     Ok(ThrushStatement::While {
-        cond: conditional.into(),
+        cond: cond.into(),
         block: block.into(),
-        span: while_span,
+        span,
     })
 }
 
@@ -558,7 +557,7 @@ fn build_continue<'instr>(
     parser_ctx: &mut ParserContext<'instr>,
 ) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
     let continue_tk: &Token = parser_ctx.consume(
-        TokenKind::Continue,
+        TokenType::Continue,
         String::from("Syntax error"),
         String::from("Expected 'continue' keyword."),
     )?;
@@ -601,7 +600,7 @@ fn build_continue<'instr>(
     }
 
     parser_ctx.consume(
-        TokenKind::SemiColon,
+        TokenType::SemiColon,
         String::from("Syntax error"),
         String::from("Expected ';'."),
     )?;
@@ -613,12 +612,12 @@ fn build_break<'instr>(
     parser_ctx: &mut ParserContext<'instr>,
 ) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
     let break_tk: &Token = parser_ctx.consume(
-        TokenKind::Break,
+        TokenType::Break,
         String::from("Syntax error"),
         String::from("Expected 'break' keyword."),
     )?;
 
-    let span: Span = break_tk.span;
+    let span: Span = break_tk.get_span();
 
     if parser_ctx.is_unreacheable_code() {
         return Err(ThrushCompilerIssue::Error(
@@ -656,7 +655,7 @@ fn build_break<'instr>(
     }
 
     parser_ctx.consume(
-        TokenKind::SemiColon,
+        TokenType::SemiColon,
         String::from("Syntax error"),
         String::from("Expected ';'."),
     )?;
@@ -668,12 +667,12 @@ fn build_conditional<'instr>(
     parser_ctx: &mut ParserContext<'instr>,
 ) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
     let if_tk: &Token = parser_ctx.consume(
-        TokenKind::If,
+        TokenType::If,
         String::from("Syntax error"),
         String::from("Expected 'if' keyword."),
     )?;
 
-    let span: Span = if_tk.span;
+    let span: Span = if_tk.get_span();
 
     if !parser_ctx.get_control_ctx().get_inside_function()
         && !parser_ctx.get_control_ctx().get_inside_bind()
@@ -696,12 +695,11 @@ fn build_conditional<'instr>(
     }
 
     let if_condition: ThrushStatement = expression::build_expr(parser_ctx)?;
-
-    let if_body: Rc<ThrushStatement> = Rc::new(build_block(parser_ctx)?);
+    let if_body: ThrushStatement = self::build_block(parser_ctx)?;
 
     let mut elfs: Vec<ThrushStatement> = Vec::with_capacity(10);
 
-    while parser_ctx.match_token(TokenKind::Elif)? {
+    while parser_ctx.match_token(TokenType::Elif)? {
         let span: Span = parser_ctx.previous().span;
 
         let elif_condition: ThrushStatement = expression::build_expr(parser_ctx)?;
@@ -721,7 +719,7 @@ fn build_conditional<'instr>(
 
     let mut otherwise: Option<Rc<ThrushStatement>> = None;
 
-    if parser_ctx.match_token(TokenKind::Else)? {
+    if parser_ctx.match_token(TokenType::Else)? {
         let span: Span = parser_ctx.previous().span;
         let else_body: ThrushStatement = self::build_block(parser_ctx)?;
 
@@ -737,8 +735,8 @@ fn build_conditional<'instr>(
     }
 
     Ok(ThrushStatement::If {
-        cond: Rc::new(if_condition),
-        block: if_body,
+        cond: if_condition.into(),
+        block: if_body.into(),
         elfs,
         otherwise,
         span,
@@ -750,7 +748,7 @@ pub fn build_custom_type<'instr>(
     declare_forward: bool,
 ) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
     let type_tk: &Token = parser_ctx.consume(
-        TokenKind::Type,
+        TokenType::Type,
         String::from("Syntax error"),
         String::from("Expected 'type' keyword."),
     )?;
@@ -760,44 +758,44 @@ pub fn build_custom_type<'instr>(
             String::from("Syntax error"),
             String::from("Types are only defined globally."),
             None,
-            type_tk.span,
+            type_tk.get_span(),
         ));
     }
 
     let name: &Token = parser_ctx.consume(
-        TokenKind::Identifier,
+        TokenType::Identifier,
         String::from("Syntax error"),
         String::from("Expected type name."),
     )?;
 
-    let custom_type_name: &str = name.lexeme;
+    let custom_type_name: &str = name.get_lexeme();
 
-    let span: Span = name.span;
+    let span: Span = name.get_span();
 
     parser_ctx.consume(
-        TokenKind::Eq,
+        TokenType::Eq,
         String::from("Syntax error"),
         String::from("Expected '='."),
     )?;
 
     let custom_type_attributes: ThrushAttributes =
-        self::build_attributes(parser_ctx, &[TokenKind::LBrace])?;
+        self::build_attributes(parser_ctx, &[TokenType::LBrace])?;
 
     parser_ctx.consume(
-        TokenKind::LBrace,
+        TokenType::LBrace,
         String::from("Syntax error"),
         String::from("Expected '{'."),
     )?;
 
     let mut custom_type_fields: CustomTypeFields = Vec::with_capacity(10);
 
-    while parser_ctx.peek().kind != TokenKind::RBrace {
+    while parser_ctx.peek().kind != TokenType::RBrace {
         let kind: ThrushType = typegen::build_type(parser_ctx)?;
         custom_type_fields.push(kind);
     }
 
     parser_ctx.consume(
-        TokenKind::RBrace,
+        TokenType::RBrace,
         String::from("Syntax error"),
         String::from("Expected '}'."),
     )?;
@@ -818,7 +816,7 @@ pub fn build_enum<'instr>(
     declare_forward: bool,
 ) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
     let enum_tk: &Token = parser_ctx.consume(
-        TokenKind::Enum,
+        TokenType::Enum,
         String::from("Syntax error"),
         String::from("Expected 'enum'."),
     )?;
@@ -828,25 +826,24 @@ pub fn build_enum<'instr>(
             String::from("Syntax error"),
             String::from("Enums are only defined globally."),
             None,
-            enum_tk.span,
+            enum_tk.get_span(),
         ));
     }
 
     let name: &Token = parser_ctx.consume(
-        TokenKind::Identifier,
+        TokenType::Identifier,
         String::from("Syntax error"),
         String::from("Expected enum name."),
     )?;
 
-    let enum_name: &str = name.lexeme;
-
-    let span: Span = name.span;
+    let enum_name: &str = name.get_lexeme();
+    let span: Span = name.get_span();
 
     let enum_attributes: ThrushAttributes =
-        self::build_attributes(parser_ctx, &[TokenKind::LBrace])?;
+        self::build_attributes(parser_ctx, &[TokenType::LBrace])?;
 
     parser_ctx.consume(
-        TokenKind::LBrace,
+        TokenType::LBrace,
         String::from("Syntax error"),
         String::from("Expected '{'."),
     )?;
@@ -857,18 +854,18 @@ pub fn build_enum<'instr>(
     let mut default_integer_value: u64 = 0;
 
     loop {
-        if parser_ctx.check(TokenKind::RBrace) {
+        if parser_ctx.check(TokenType::RBrace) {
             break;
         }
 
-        if parser_ctx.match_token(TokenKind::Identifier)? {
+        if parser_ctx.match_token(TokenType::Identifier)? {
             let field_tk: &Token = parser_ctx.previous();
 
-            let name: &str = field_tk.lexeme;
-            let span: Span = field_tk.span;
+            let name: &str = field_tk.get_lexeme();
+            let span: Span = field_tk.get_span();
 
             parser_ctx.consume(
-                TokenKind::Colon,
+                TokenType::Colon,
                 String::from("Syntax error"),
                 String::from("Expected ':'."),
             )?;
@@ -884,7 +881,7 @@ pub fn build_enum<'instr>(
                 ));
             }
 
-            if parser_ctx.match_token(TokenKind::SemiColon)? {
+            if parser_ctx.match_token(TokenType::SemiColon)? {
                 let field_value: ThrushStatement = if field_type.is_float_type() {
                     ThrushStatement::new_float(field_type, default_float_value, false, span)
                 } else if field_type.is_bool_type() {
@@ -913,7 +910,7 @@ pub fn build_enum<'instr>(
             }
 
             parser_ctx.consume(
-                TokenKind::Eq,
+                TokenType::Eq,
                 String::from("Syntax error"),
                 String::from("Expected '='."),
             )?;
@@ -923,7 +920,7 @@ pub fn build_enum<'instr>(
             expression.throw_attemping_use_jit(expression.get_span())?;
 
             parser_ctx.consume(
-                TokenKind::SemiColon,
+                TokenType::SemiColon,
                 String::from("Syntax error"),
                 String::from("Expected ';'."),
             )?;
@@ -937,18 +934,18 @@ pub fn build_enum<'instr>(
             String::from("Syntax error"),
             String::from("Expected identifier in enum field."),
             None,
-            parser_ctx.advance()?.span,
+            parser_ctx.advance()?.get_span(),
         ));
     }
 
     parser_ctx.consume(
-        TokenKind::RBrace,
+        TokenType::RBrace,
         String::from("Syntax error"),
         String::from("Expected '}'."),
     )?;
 
     parser_ctx.consume(
-        TokenKind::SemiColon,
+        TokenType::SemiColon,
         String::from("Syntax error"),
         String::from("Expected ';'."),
     )?;
@@ -973,7 +970,7 @@ pub fn build_struct<'instr>(
     declare_forward: bool,
 ) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
     let struct_tk: &Token = parser_ctx.consume(
-        TokenKind::Struct,
+        TokenType::Struct,
         String::from("Syntax error"),
         String::from("Expected 'struct' keyword."),
     )?;
@@ -983,23 +980,23 @@ pub fn build_struct<'instr>(
             String::from("Syntax error"),
             String::from("Structs are only defined globally."),
             None,
-            struct_tk.span,
+            struct_tk.get_span(),
         ));
     }
 
     let name: &Token = parser_ctx.consume(
-        TokenKind::Identifier,
+        TokenType::Identifier,
         String::from("Syntax error"),
         String::from("Expected structure name."),
     )?;
 
-    let struct_name: &str = name.lexeme;
-    let span: Span = name.span;
+    let struct_name: &str = name.get_lexeme();
+    let span: Span = name.get_span();
 
-    let attributes: ThrushAttributes = self::build_attributes(parser_ctx, &[TokenKind::LBrace])?;
+    let attributes: ThrushAttributes = self::build_attributes(parser_ctx, &[TokenType::LBrace])?;
 
     parser_ctx.consume(
-        TokenKind::LBrace,
+        TokenType::LBrace,
         String::from("Syntax error"),
         String::from("Expected '{'."),
     )?;
@@ -1008,22 +1005,22 @@ pub fn build_struct<'instr>(
     let mut field_position: u32 = 0;
 
     loop {
-        if parser_ctx.check(TokenKind::RBrace) {
+        if parser_ctx.check(TokenType::RBrace) {
             break;
         }
 
-        if parser_ctx.check(TokenKind::Identifier) {
+        if parser_ctx.check(TokenType::Identifier) {
             let field_tk: &Token = parser_ctx.consume(
-                TokenKind::Identifier,
+                TokenType::Identifier,
                 String::from("Syntax error"),
                 String::from("Expected identifier."),
             )?;
 
-            let field_name: &str = field_tk.lexeme;
-            let field_span: Span = field_tk.span;
+            let field_name: &str = field_tk.get_lexeme();
+            let field_span: Span = field_tk.get_span();
 
             parser_ctx.consume(
-                TokenKind::Colon,
+                TokenType::Colon,
                 String::from("Syntax error"),
                 String::from("Expected ':'."),
             )?;
@@ -1036,17 +1033,15 @@ pub fn build_struct<'instr>(
 
             field_position += 1;
 
-            if parser_ctx.check(TokenKind::RBrace) {
+            if parser_ctx.check(TokenType::RBrace) {
                 break;
-            }
-
-            if parser_ctx.match_token(TokenKind::Comma)? {
-                if parser_ctx.check(TokenKind::RBrace) {
+            } else if parser_ctx.match_token(TokenType::Comma)? {
+                if parser_ctx.check(TokenType::RBrace) {
                     break;
                 }
-            } else if parser_ctx.check_to(TokenKind::Identifier, 0) {
+            } else if parser_ctx.check_to(TokenType::Identifier, 0) {
                 parser_ctx.consume(
-                    TokenKind::Comma,
+                    TokenType::Comma,
                     String::from("Syntax error"),
                     String::from("Expected ','."),
                 )?;
@@ -1055,7 +1050,7 @@ pub fn build_struct<'instr>(
                     String::from("Syntax error"),
                     String::from("Expected identifier."),
                     None,
-                    parser_ctx.previous().span,
+                    parser_ctx.previous().get_span(),
                 ));
             }
         } else {
@@ -1065,13 +1060,13 @@ pub fn build_struct<'instr>(
                 String::from("Syntax error"),
                 String::from("Expected structure fields identifiers."),
                 None,
-                parser_ctx.previous().span,
+                parser_ctx.previous().get_span(),
             ));
         }
     }
 
     parser_ctx.consume(
-        TokenKind::RBrace,
+        TokenType::RBrace,
         String::from("Syntax error"),
         String::from("Expected '}'."),
     )?;
@@ -1105,13 +1100,13 @@ pub fn build_const<'instr>(
     declare_forward: bool,
 ) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
     parser_ctx.consume(
-        TokenKind::Const,
+        TokenType::Const,
         String::from("Syntax error"),
         String::from("Expected 'const' keyword."),
     )?;
 
     let const_tk: &Token = parser_ctx.consume(
-        TokenKind::Identifier,
+        TokenType::Identifier,
         String::from("Syntax error"),
         String::from("Expected name."),
     )?;
@@ -1125,21 +1120,21 @@ pub fn build_const<'instr>(
         ));
     }
 
-    let name: &str = const_tk.lexeme;
-    let span: Span = const_tk.span;
+    let name: &str = const_tk.get_lexeme();
+    let span: Span = const_tk.get_span();
 
     parser_ctx.consume(
-        TokenKind::Colon,
+        TokenType::Colon,
         String::from("Syntax error"),
         String::from("Expected ':'."),
     )?;
 
     let const_type: ThrushType = typegen::build_type(parser_ctx)?;
 
-    let const_attributes: ThrushAttributes = self::build_attributes(parser_ctx, &[TokenKind::Eq])?;
+    let const_attributes: ThrushAttributes = self::build_attributes(parser_ctx, &[TokenType::Eq])?;
 
     parser_ctx.consume(
-        TokenKind::Eq,
+        TokenType::Eq,
         String::from("Syntax error"),
         String::from("Expected '='."),
     )?;
@@ -1149,7 +1144,7 @@ pub fn build_const<'instr>(
     value.throw_attemping_use_jit(span)?;
 
     parser_ctx.consume(
-        TokenKind::SemiColon,
+        TokenType::SemiColon,
         String::from("Syntax error"),
         String::from("Expected ';'."),
     )?;
@@ -1175,12 +1170,12 @@ fn build_instr<'instr>(
     parser_ctx: &mut ParserContext<'instr>,
 ) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
     let instr_tk: &Token = parser_ctx.consume(
-        TokenKind::Instr,
+        TokenType::Instr,
         String::from("Syntax error"),
         String::from("Expected 'instr' keyword."),
     )?;
 
-    let span: Span = instr_tk.span;
+    let span: Span = instr_tk.get_span();
 
     if parser_ctx.is_main_scope() {
         return Err(ThrushCompilerIssue::Error(
@@ -1201,16 +1196,16 @@ fn build_instr<'instr>(
     }
 
     let instr_tk: &Token = parser_ctx.consume(
-        TokenKind::Identifier,
+        TokenType::Identifier,
         String::from("Syntax error"),
         String::from("Expected name."),
     )?;
 
-    let name: &str = instr_tk.lexeme;
-    let span: Span = instr_tk.span;
+    let name: &str = instr_tk.get_lexeme();
+    let span: Span = instr_tk.get_span();
 
     parser_ctx.consume(
-        TokenKind::Colon,
+        TokenType::Colon,
         String::from("Syntax error"),
         String::from("Expected ':'."),
     )?;
@@ -1218,7 +1213,7 @@ fn build_instr<'instr>(
     let instr_type: ThrushType = typegen::build_type(parser_ctx)?;
 
     parser_ctx.consume(
-        TokenKind::Eq,
+        TokenType::Eq,
         String::from("Syntax error"),
         String::from("Expected '='."),
     )?;
@@ -1226,7 +1221,7 @@ fn build_instr<'instr>(
     let value: ThrushStatement = expression::build_expr(parser_ctx)?;
 
     parser_ctx.consume(
-        TokenKind::SemiColon,
+        TokenType::SemiColon,
         String::from("Syntax error"),
         String::from("Expected ';'."),
     )?;
@@ -1249,12 +1244,12 @@ fn build_local<'instr>(
     parser_ctx: &mut ParserContext<'instr>,
 ) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
     let local_tk: &Token = parser_ctx.consume(
-        TokenKind::Local,
+        TokenType::Local,
         String::from("Syntax error"),
         String::from("Expected 'local' keyword."),
     )?;
 
-    let span: Span = local_tk.span;
+    let span: Span = local_tk.get_span();
 
     if parser_ctx.is_main_scope() {
         return Err(ThrushCompilerIssue::Error(
@@ -1274,26 +1269,26 @@ fn build_local<'instr>(
         ));
     }
 
-    let is_mutable: bool = parser_ctx.match_token(TokenKind::Mut)?;
+    let is_mutable: bool = parser_ctx.match_token(TokenType::Mut)?;
 
     let local_tk: &Token = parser_ctx.consume(
-        TokenKind::Identifier,
+        TokenType::Identifier,
         String::from("Syntax error"),
         String::from("Expected name."),
     )?;
 
-    let name: &str = local_tk.lexeme;
-    let span: Span = local_tk.span;
+    let name: &str = local_tk.get_lexeme();
+    let span: Span = local_tk.get_span();
 
     parser_ctx.consume(
-        TokenKind::Colon,
+        TokenType::Colon,
         String::from("Syntax error"),
         String::from("Expected ':'."),
     )?;
 
     let local_type: ThrushType = typegen::build_type(parser_ctx)?;
 
-    if parser_ctx.match_token(TokenKind::SemiColon)? {
+    if parser_ctx.match_token(TokenType::SemiColon)? {
         parser_ctx.get_mut_symbols().new_local(
             name,
             (local_type.clone(), is_mutable, true, span),
@@ -1316,7 +1311,7 @@ fn build_local<'instr>(
     )?;
 
     parser_ctx.consume(
-        TokenKind::Eq,
+        TokenType::Eq,
         String::from("Syntax error"),
         String::from("Expected '='."),
     )?;
@@ -1324,7 +1319,7 @@ fn build_local<'instr>(
     let value: ThrushStatement = expression::build_expr(parser_ctx)?;
 
     parser_ctx.consume(
-        TokenKind::SemiColon,
+        TokenType::SemiColon,
         String::from("Syntax error"),
         String::from("Expected ';'."),
     )?;
@@ -1344,12 +1339,12 @@ fn build_return<'instr>(
     parser_ctx: &mut ParserContext<'instr>,
 ) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
     let return_tk: &Token = parser_ctx.consume(
-        TokenKind::Return,
+        TokenType::Return,
         String::from("Syntax error"),
         String::from("Expected 'return' keyword."),
     )?;
 
-    let span: Span = return_tk.span;
+    let span: Span = return_tk.get_span();
 
     if !parser_ctx.get_control_ctx().get_inside_function()
         && !parser_ctx.get_control_ctx().get_inside_bind()
@@ -1371,7 +1366,7 @@ fn build_return<'instr>(
         ));
     }
 
-    if parser_ctx.match_token(TokenKind::SemiColon)? {
+    if parser_ctx.match_token(TokenType::SemiColon)? {
         if parser_ctx.get_type_ctx().get_function_type().is_void_type() {
             return Ok(ThrushStatement::Null { span });
         }
@@ -1386,7 +1381,7 @@ fn build_return<'instr>(
     let value: ThrushStatement = expression::build_expr(parser_ctx)?;
 
     parser_ctx.consume(
-        TokenKind::SemiColon,
+        TokenType::SemiColon,
         String::from("Syntax error"),
         String::from("Expected ';'."),
     )?;
@@ -1402,12 +1397,12 @@ fn build_block<'instr>(
     parser_ctx: &mut ParserContext<'instr>,
 ) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
     let block_tk: &Token = parser_ctx.consume(
-        TokenKind::LBrace,
+        TokenType::LBrace,
         String::from("Syntax error"),
         String::from("Expected '{'."),
     )?;
 
-    let span: Span = block_tk.span;
+    let span: Span = block_tk.get_span();
 
     if parser_ctx.is_unreacheable_code() {
         return Err(ThrushCompilerIssue::Error(
@@ -1434,7 +1429,7 @@ fn build_block<'instr>(
 
     let mut stmts: Vec<ThrushStatement> = Vec::with_capacity(100);
 
-    while !parser_ctx.match_token(TokenKind::RBrace)? {
+    while !parser_ctx.match_token(TokenType::RBrace)? {
         let stmt: ThrushStatement = self::statement(parser_ctx)?;
         stmts.push(stmt)
     }
@@ -1450,19 +1445,21 @@ pub fn build_assembler_function<'instr>(
     declare_forward: bool,
 ) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
     parser_ctx.consume(
-        TokenKind::AsmFn,
+        TokenType::AsmFn,
         String::from("Syntax error"),
         String::from("Expected 'asmfn' keyword."),
     )?;
 
     let asm_function_name_tk: &Token = parser_ctx.consume(
-        TokenKind::Identifier,
+        TokenType::Identifier,
         String::from("Syntax error"),
         String::from("Expected name to the function."),
     )?;
 
-    let asm_function_name: &str = asm_function_name_tk.lexeme;
-    let span: Span = asm_function_name_tk.span;
+    let asm_function_name: &str = asm_function_name_tk.get_lexeme();
+    let asm_function_ascii_name: &str = asm_function_name_tk.get_ascii_lexeme();
+
+    let span: Span = asm_function_name_tk.get_span();
 
     if !parser_ctx.is_main_scope() {
         return Err(ThrushCompilerIssue::Error(
@@ -1474,7 +1471,7 @@ pub fn build_assembler_function<'instr>(
     }
 
     parser_ctx.consume(
-        TokenKind::LParen,
+        TokenType::LParen,
         String::from("Syntax error"),
         String::from("Expected '('."),
     )?;
@@ -1485,18 +1482,19 @@ pub fn build_assembler_function<'instr>(
     let mut parameter_position: u32 = 0;
 
     loop {
-        if parser_ctx.check(TokenKind::RParen) {
+        if parser_ctx.check(TokenType::RParen) {
             break;
         }
 
         let parameter_name_tk: &'instr Token = parser_ctx.consume(
-            TokenKind::Identifier,
+            TokenType::Identifier,
             String::from("Syntax error"),
             String::from("Expected 'identifier'."),
         )?;
 
-        let parameter_name: &str = parameter_name_tk.lexeme;
-        let parameter_span: Span = parameter_name_tk.span;
+        let parameter_name: &str = parameter_name_tk.get_lexeme();
+        let parameter_span: Span = parameter_name_tk.get_span();
+
         let parameter_type: ThrushType = typegen::build_type(parser_ctx)?;
 
         parameters_types.push(parameter_type.clone());
@@ -1510,11 +1508,11 @@ pub fn build_assembler_function<'instr>(
 
         parameter_position += 1;
 
-        if parser_ctx.check(TokenKind::RParen) {
+        if parser_ctx.check(TokenType::RParen) {
             break;
         } else {
             parser_ctx.consume(
-                TokenKind::Comma,
+                TokenType::Comma,
                 String::from("Syntax error"),
                 String::from("Expected ','."),
             )?;
@@ -1522,19 +1520,19 @@ pub fn build_assembler_function<'instr>(
     }
 
     parser_ctx.consume(
-        TokenKind::RParen,
+        TokenType::RParen,
         String::from("Syntax error"),
         String::from("Expected ')'."),
     )?;
 
     let return_type: ThrushType = typegen::build_type(parser_ctx)?;
 
-    let attributes: ThrushAttributes = self::build_attributes(parser_ctx, &[TokenKind::LBrace])?;
+    let attributes: ThrushAttributes = self::build_attributes(parser_ctx, &[TokenType::LBrace])?;
 
     let is_public: bool = attributes.has_public_attribute();
 
     parser_ctx.consume(
-        TokenKind::LBrace,
+        TokenType::LBrace,
         String::from("Syntax error"),
         String::from("Expected '{'."),
     )?;
@@ -1543,7 +1541,7 @@ pub fn build_assembler_function<'instr>(
     let mut assembler_pos: usize = 0;
 
     loop {
-        if parser_ctx.check(TokenKind::RBrace) {
+        if parser_ctx.check(TokenType::RBrace) {
             break;
         }
 
@@ -1567,11 +1565,11 @@ pub fn build_assembler_function<'instr>(
 
         assembler.push_str(assembly);
 
-        if parser_ctx.check(TokenKind::RBrace) {
+        if parser_ctx.check(TokenType::RBrace) {
             break;
         } else {
             parser_ctx.consume(
-                TokenKind::Comma,
+                TokenType::Comma,
                 String::from("Syntax error"),
                 String::from("Expected ','."),
             )?;
@@ -1581,13 +1579,13 @@ pub fn build_assembler_function<'instr>(
     }
 
     parser_ctx.consume(
-        TokenKind::RBrace,
+        TokenType::RBrace,
         String::from("Syntax error"),
         String::from("Expected '}'."),
     )?;
 
     parser_ctx.consume(
-        TokenKind::LBrace,
+        TokenType::LBrace,
         String::from("Syntax error"),
         String::from("Expected '{'."),
     )?;
@@ -1596,7 +1594,7 @@ pub fn build_assembler_function<'instr>(
     let mut constraint_pos: usize = 0;
 
     loop {
-        if parser_ctx.check(TokenKind::RBrace) {
+        if parser_ctx.check(TokenType::RBrace) {
             break;
         }
 
@@ -1620,11 +1618,11 @@ pub fn build_assembler_function<'instr>(
 
         constraints.push_str(constraint);
 
-        if parser_ctx.check(TokenKind::RBrace) {
+        if parser_ctx.check(TokenType::RBrace) {
             break;
         } else {
             parser_ctx.consume(
-                TokenKind::Comma,
+                TokenType::Comma,
                 String::from("Syntax error"),
                 String::from("Expected ','."),
             )?;
@@ -1634,7 +1632,7 @@ pub fn build_assembler_function<'instr>(
     }
 
     parser_ctx.consume(
-        TokenKind::RBrace,
+        TokenType::RBrace,
         String::from("Syntax error"),
         String::from("Expected '}'."),
     )?;
@@ -1655,6 +1653,7 @@ pub fn build_assembler_function<'instr>(
 
     Ok(ThrushStatement::AssemblerFunction {
         name: asm_function_name,
+        ascii_name: asm_function_ascii_name,
         parameters,
         parameters_types,
         assembler,
@@ -1670,19 +1669,21 @@ pub fn build_function<'instr>(
     declare_forward: bool,
 ) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
     parser_ctx.consume(
-        TokenKind::Fn,
+        TokenType::Fn,
         String::from("Syntax error"),
         String::from("Expected 'fn' keyword."),
     )?;
 
     let function_name_tk: &Token = parser_ctx.consume(
-        TokenKind::Identifier,
+        TokenType::Identifier,
         String::from("Syntax error"),
         String::from("Expected name to the function."),
     )?;
 
-    let function_name: &str = function_name_tk.lexeme;
-    let span: Span = function_name_tk.span;
+    let function_name: &str = function_name_tk.get_lexeme();
+    let function_ascii_name: &str = function_name_tk.get_ascii_lexeme();
+
+    let span: Span = function_name_tk.get_span();
 
     if !parser_ctx.is_main_scope() {
         return Err(ThrushCompilerIssue::Error(
@@ -1709,7 +1710,7 @@ pub fn build_function<'instr>(
     }
 
     parser_ctx.consume(
-        TokenKind::LParen,
+        TokenType::LParen,
         String::from("Syntax error"),
         String::from("Expected '('."),
     )?;
@@ -1720,23 +1721,23 @@ pub fn build_function<'instr>(
     let mut parameter_position: u32 = 0;
 
     loop {
-        if parser_ctx.check(TokenKind::RParen) {
+        if parser_ctx.check(TokenType::RParen) {
             break;
         }
 
-        let is_mutable: bool = parser_ctx.match_token(TokenKind::Mut)?;
+        let is_mutable: bool = parser_ctx.match_token(TokenType::Mut)?;
 
         let parameter_tk: &Token = parser_ctx.consume(
-            TokenKind::Identifier,
+            TokenType::Identifier,
             String::from("Syntax error"),
             String::from("Expected parameter name."),
         )?;
 
-        let parameter_name: &str = parameter_tk.lexeme;
-        let parameter_span: Span = parameter_tk.span;
+        let parameter_name: &str = parameter_tk.get_lexeme();
+        let parameter_span: Span = parameter_tk.get_span();
 
         parser_ctx.consume(
-            TokenKind::Colon,
+            TokenType::Colon,
             String::from("Syntax error"),
             String::from("Expected ':'."),
         )?;
@@ -1755,11 +1756,11 @@ pub fn build_function<'instr>(
 
         parameter_position += 1;
 
-        if parser_ctx.check(TokenKind::RParen) {
+        if parser_ctx.check(TokenType::RParen) {
             break;
         } else {
             parser_ctx.consume(
-                TokenKind::Comma,
+                TokenType::Comma,
                 String::from("Syntax error"),
                 String::from("Expected ','."),
             )?;
@@ -1767,7 +1768,7 @@ pub fn build_function<'instr>(
     }
 
     parser_ctx.consume(
-        TokenKind::RParen,
+        TokenType::RParen,
         String::from("Syntax error"),
         String::from("Expected ')'."),
     )?;
@@ -1779,12 +1780,13 @@ pub fn build_function<'instr>(
         .set_function_type(return_type.clone());
 
     let function_attributes: ThrushAttributes =
-        self::build_attributes(parser_ctx, &[TokenKind::SemiColon, TokenKind::LBrace])?;
+        self::build_attributes(parser_ctx, &[TokenType::SemiColon, TokenType::LBrace])?;
 
     let function_has_ignore: bool = function_attributes.has_ignore_attribute();
 
     let mut function: ThrushStatement = ThrushStatement::Function {
         name: function_name,
+        ascii_name: function_ascii_name,
         parameters: parameters.clone(),
         parameter_types: parameters_types.clone(),
         body: ThrushStatement::Null { span }.into(),
@@ -1804,7 +1806,7 @@ pub fn build_function<'instr>(
             span,
         )?;
 
-        if parser_ctx.match_token(TokenKind::SemiColon)? {
+        if parser_ctx.match_token(TokenType::SemiColon)? {
             return Ok(function);
         }
 
@@ -1828,7 +1830,7 @@ pub fn build_function<'instr>(
         }
     }
 
-    if parser_ctx.match_token(TokenKind::SemiColon)? {
+    if parser_ctx.match_token(TokenType::SemiColon)? {
         return Ok(function);
     }
 
@@ -1856,7 +1858,7 @@ pub fn build_function<'instr>(
 
 pub fn build_attributes<'instr>(
     parser_ctx: &mut ParserContext<'instr>,
-    limits: &[TokenKind],
+    limits: &[TokenType],
 ) -> Result<ThrushAttributes<'instr>, ThrushCompilerIssue> {
     let mut compiler_attributes: ThrushAttributes = Vec::with_capacity(10);
 
@@ -1865,21 +1867,21 @@ pub fn build_attributes<'instr>(
         let span: Span = current_tk.span;
 
         match current_tk.kind {
-            TokenKind::Extern => {
+            TokenType::Extern => {
                 compiler_attributes.push(LLVMAttribute::Extern(
                     self::build_external_attribute(parser_ctx)?,
                     span,
                 ));
             }
 
-            TokenKind::Convention => {
+            TokenType::Convention => {
                 compiler_attributes.push(LLVMAttribute::Convention(
                     self::build_call_convention_attribute(parser_ctx)?,
                     span,
                 ));
             }
 
-            TokenKind::Public => {
+            TokenType::Public => {
                 compiler_attributes.push(self::LLVMAttribute::Public(span));
                 parser_ctx.only_advance()?;
             }
@@ -1912,21 +1914,21 @@ fn build_external_attribute<'instr>(
     parser_ctx.only_advance()?;
 
     parser_ctx.consume(
-        TokenKind::LParen,
+        TokenType::LParen,
         String::from("Syntax error"),
         String::from("Expected '('."),
     )?;
 
     let name: &Token = parser_ctx.consume(
-        TokenKind::Str,
+        TokenType::Str,
         String::from("Syntax error"),
         String::from("Expected a literal 'str' for @extern(\"FFI NAME\")."),
     )?;
 
-    let ffi_name: &str = name.lexeme;
+    let ffi_name: &str = name.get_lexeme();
 
     parser_ctx.consume(
-        TokenKind::RParen,
+        TokenType::RParen,
         String::from("Syntax error"),
         String::from("Expected ')'."),
     )?;
@@ -1940,13 +1942,13 @@ fn build_call_convention_attribute(
     parser_ctx.only_advance()?;
 
     parser_ctx.consume(
-        TokenKind::LParen,
+        TokenType::LParen,
         String::from("Syntax error"),
         String::from("Expected '('."),
     )?;
 
     let convention_tk: &Token = parser_ctx.consume(
-        TokenKind::Str,
+        TokenType::Str,
         String::from("Syntax error"),
         String::from("Expected a literal 'str' for @convention(\"CONVENTION NAME\")."),
     )?;
@@ -1956,7 +1958,7 @@ fn build_call_convention_attribute(
 
     if let Some(call_convention) = CALL_CONVENTIONS.get(name) {
         parser_ctx.consume(
-            TokenKind::RParen,
+            TokenType::RParen,
             String::from("Syntax error"),
             String::from("Expected ')'."),
         )?;
@@ -1965,7 +1967,7 @@ fn build_call_convention_attribute(
     }
 
     parser_ctx.consume(
-        TokenKind::RParen,
+        TokenType::RParen,
         String::from("Syntax error"),
         String::from("Expected ')'."),
     )?;

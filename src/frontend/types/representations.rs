@@ -1,5 +1,5 @@
 use crate::frontend::{
-    lexer::tokenkind::TokenKind,
+    lexer::tokentype::TokenType,
     types::{
         lexer::ThrushType,
         parser::stmts::{stmt::ThrushStatement, types::ThrushAttributes},
@@ -8,17 +8,18 @@ use crate::frontend::{
 
 pub type BinaryOperation<'ctx> = (
     &'ctx ThrushStatement<'ctx>,
-    &'ctx TokenKind,
+    &'ctx TokenType,
     &'ctx ThrushStatement<'ctx>,
 );
 
 pub type UnaryOperation<'ctx> = (
-    &'ctx TokenKind,
+    &'ctx TokenType,
     &'ctx ThrushType,
     &'ctx ThrushStatement<'ctx>,
 );
 
 pub type FunctionRepresentation<'ctx> = (
+    &'ctx str,
     &'ctx str,
     &'ctx ThrushType,
     &'ctx [ThrushStatement<'ctx>],
@@ -28,6 +29,7 @@ pub type FunctionRepresentation<'ctx> = (
 );
 
 pub type AssemblerFunctionRepresentation<'ctx> = (
+    &'ctx str,
     &'ctx str,
     &'ctx str,
     &'ctx str,

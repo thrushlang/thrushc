@@ -2,7 +2,7 @@ use crate::{
     backend::llvm::compiler::{predicates, valuegen::ExpressionModificator},
     core::console::logging::{self, LoggingType},
     frontend::{
-        lexer::tokenkind::TokenKind,
+        lexer::tokentype::TokenType,
         types::{
             lexer::ThrushType,
             representations::{BinaryOperation, UnaryOperation},
@@ -22,13 +22,13 @@ pub fn float_operation<'ctx>(
     builder: &Builder<'ctx>,
     mut left: FloatValue<'ctx>,
     mut right: FloatValue<'ctx>,
-    operator: &TokenKind,
+    operator: &TokenType,
 ) -> BasicValueEnum<'ctx> {
     match operator {
-        TokenKind::Plus => builder.build_float_add(left, right, "").unwrap().into(),
-        TokenKind::Minus => builder.build_float_sub(left, right, "").unwrap().into(),
-        TokenKind::Star => builder.build_float_mul(left, right, "").unwrap().into(),
-        TokenKind::Slash => builder.build_float_div(left, right, "").unwrap().into(),
+        TokenType::Plus => builder.build_float_add(left, right, "").unwrap().into(),
+        TokenType::Minus => builder.build_float_sub(left, right, "").unwrap().into(),
+        TokenType::Star => builder.build_float_mul(left, right, "").unwrap().into(),
+        TokenType::Slash => builder.build_float_div(left, right, "").unwrap().into(),
         op if op.is_logical_type() => {
             if left.get_type() != right.get_type() {
                 left = builder
@@ -75,16 +75,16 @@ pub fn float_binaryop<'ctx>(
             signed: left_signed,
             ..
         },
-        TokenKind::Plus
-        | TokenKind::Slash
-        | TokenKind::Minus
-        | TokenKind::Star
-        | TokenKind::BangEq
-        | TokenKind::EqEq
-        | TokenKind::LessEq
-        | TokenKind::Less
-        | TokenKind::Greater
-        | TokenKind::GreaterEq,
+        TokenType::Plus
+        | TokenType::Slash
+        | TokenType::Minus
+        | TokenType::Star
+        | TokenType::BangEq
+        | TokenType::EqEq
+        | TokenType::LessEq
+        | TokenType::Less
+        | TokenType::Greater
+        | TokenType::GreaterEq,
         ThrushStatement::Float {
             kind: right_type,
             value: right_num,
@@ -133,16 +133,16 @@ pub fn float_binaryop<'ctx>(
 
     if let (
         ThrushStatement::UnaryOp { .. },
-        TokenKind::Plus
-        | TokenKind::Slash
-        | TokenKind::Minus
-        | TokenKind::Star
-        | TokenKind::BangEq
-        | TokenKind::EqEq
-        | TokenKind::LessEq
-        | TokenKind::Less
-        | TokenKind::Greater
-        | TokenKind::GreaterEq,
+        TokenType::Plus
+        | TokenType::Slash
+        | TokenType::Minus
+        | TokenType::Star
+        | TokenType::BangEq
+        | TokenType::EqEq
+        | TokenType::LessEq
+        | TokenType::Less
+        | TokenType::Greater
+        | TokenType::GreaterEq,
         ThrushStatement::UnaryOp { .. },
     ) = binary
     {
@@ -185,16 +185,16 @@ pub fn float_binaryop<'ctx>(
             kind: left_call_type,
             ..
         },
-        TokenKind::Plus
-        | TokenKind::Slash
-        | TokenKind::Minus
-        | TokenKind::Star
-        | TokenKind::BangEq
-        | TokenKind::EqEq
-        | TokenKind::LessEq
-        | TokenKind::Less
-        | TokenKind::Greater
-        | TokenKind::GreaterEq,
+        TokenType::Plus
+        | TokenType::Slash
+        | TokenType::Minus
+        | TokenType::Star
+        | TokenType::BangEq
+        | TokenType::EqEq
+        | TokenType::LessEq
+        | TokenType::Less
+        | TokenType::Greater
+        | TokenType::GreaterEq,
         ThrushStatement::UnaryOp { .. },
     ) = binary
     {
@@ -232,16 +232,16 @@ pub fn float_binaryop<'ctx>(
 
     if let (
         ThrushStatement::UnaryOp { .. },
-        TokenKind::Plus
-        | TokenKind::Slash
-        | TokenKind::Minus
-        | TokenKind::Star
-        | TokenKind::BangEq
-        | TokenKind::EqEq
-        | TokenKind::LessEq
-        | TokenKind::Less
-        | TokenKind::Greater
-        | TokenKind::GreaterEq,
+        TokenType::Plus
+        | TokenType::Slash
+        | TokenType::Minus
+        | TokenType::Star
+        | TokenType::BangEq
+        | TokenType::EqEq
+        | TokenType::LessEq
+        | TokenType::Less
+        | TokenType::Greater
+        | TokenType::GreaterEq,
         ThrushStatement::Call {
             kind: right_call_type,
             ..
@@ -289,16 +289,16 @@ pub fn float_binaryop<'ctx>(
             signed: left_signed,
             ..
         },
-        TokenKind::Plus
-        | TokenKind::Slash
-        | TokenKind::Minus
-        | TokenKind::Star
-        | TokenKind::BangEq
-        | TokenKind::EqEq
-        | TokenKind::LessEq
-        | TokenKind::Less
-        | TokenKind::Greater
-        | TokenKind::GreaterEq,
+        TokenType::Plus
+        | TokenType::Slash
+        | TokenType::Minus
+        | TokenType::Star
+        | TokenType::BangEq
+        | TokenType::EqEq
+        | TokenType::LessEq
+        | TokenType::Less
+        | TokenType::Greater
+        | TokenType::GreaterEq,
         ThrushStatement::UnaryOp { .. },
     ) = binary
     {
@@ -340,16 +340,16 @@ pub fn float_binaryop<'ctx>(
         ThrushStatement::Reference {
             kind: left_type, ..
         },
-        TokenKind::Plus
-        | TokenKind::Slash
-        | TokenKind::Minus
-        | TokenKind::Star
-        | TokenKind::BangEq
-        | TokenKind::EqEq
-        | TokenKind::LessEq
-        | TokenKind::Less
-        | TokenKind::Greater
-        | TokenKind::GreaterEq,
+        TokenType::Plus
+        | TokenType::Slash
+        | TokenType::Minus
+        | TokenType::Star
+        | TokenType::BangEq
+        | TokenType::EqEq
+        | TokenType::LessEq
+        | TokenType::Less
+        | TokenType::Greater
+        | TokenType::GreaterEq,
         ThrushStatement::UnaryOp { .. },
     ) = binary
     {
@@ -387,16 +387,16 @@ pub fn float_binaryop<'ctx>(
 
     if let (
         ThrushStatement::UnaryOp { .. },
-        TokenKind::Plus
-        | TokenKind::Slash
-        | TokenKind::Minus
-        | TokenKind::Star
-        | TokenKind::BangEq
-        | TokenKind::EqEq
-        | TokenKind::LessEq
-        | TokenKind::Less
-        | TokenKind::Greater
-        | TokenKind::GreaterEq,
+        TokenType::Plus
+        | TokenType::Slash
+        | TokenType::Minus
+        | TokenType::Star
+        | TokenType::BangEq
+        | TokenType::EqEq
+        | TokenType::LessEq
+        | TokenType::Less
+        | TokenType::Greater
+        | TokenType::GreaterEq,
         ThrushStatement::Reference {
             name: right_name,
             kind: right_type,
@@ -436,16 +436,16 @@ pub fn float_binaryop<'ctx>(
         ThrushStatement::BinaryOp {
             kind: left_type, ..
         },
-        TokenKind::Plus
-        | TokenKind::Slash
-        | TokenKind::Minus
-        | TokenKind::Star
-        | TokenKind::BangEq
-        | TokenKind::EqEq
-        | TokenKind::LessEq
-        | TokenKind::Less
-        | TokenKind::Greater
-        | TokenKind::GreaterEq,
+        TokenType::Plus
+        | TokenType::Slash
+        | TokenType::Minus
+        | TokenType::Star
+        | TokenType::BangEq
+        | TokenType::EqEq
+        | TokenType::LessEq
+        | TokenType::Less
+        | TokenType::Greater
+        | TokenType::GreaterEq,
         ThrushStatement::UnaryOp { .. },
     ) = binary
     {
@@ -486,16 +486,16 @@ pub fn float_binaryop<'ctx>(
             kind: left_type,
             ..
         },
-        TokenKind::Plus
-        | TokenKind::Slash
-        | TokenKind::Minus
-        | TokenKind::Star
-        | TokenKind::BangEq
-        | TokenKind::EqEq
-        | TokenKind::LessEq
-        | TokenKind::Less
-        | TokenKind::Greater
-        | TokenKind::GreaterEq,
+        TokenType::Plus
+        | TokenType::Slash
+        | TokenType::Minus
+        | TokenType::Star
+        | TokenType::BangEq
+        | TokenType::EqEq
+        | TokenType::LessEq
+        | TokenType::Less
+        | TokenType::Greater
+        | TokenType::GreaterEq,
         ThrushStatement::UnaryOp { .. },
     ) = binary
     {
@@ -532,16 +532,16 @@ pub fn float_binaryop<'ctx>(
 
     if let (
         ThrushStatement::UnaryOp { .. },
-        TokenKind::Plus
-        | TokenKind::Slash
-        | TokenKind::Minus
-        | TokenKind::Star
-        | TokenKind::BangEq
-        | TokenKind::EqEq
-        | TokenKind::LessEq
-        | TokenKind::Less
-        | TokenKind::Greater
-        | TokenKind::GreaterEq,
+        TokenType::Plus
+        | TokenType::Slash
+        | TokenType::Minus
+        | TokenType::Star
+        | TokenType::BangEq
+        | TokenType::EqEq
+        | TokenType::LessEq
+        | TokenType::Less
+        | TokenType::Greater
+        | TokenType::GreaterEq,
         ThrushStatement::Group {
             expression: right_instr,
             kind: right_type,
@@ -594,16 +594,16 @@ pub fn float_binaryop<'ctx>(
             kind: left_call_type,
             ..
         },
-        TokenKind::Plus
-        | TokenKind::Slash
-        | TokenKind::Minus
-        | TokenKind::Star
-        | TokenKind::BangEq
-        | TokenKind::EqEq
-        | TokenKind::LessEq
-        | TokenKind::Less
-        | TokenKind::Greater
-        | TokenKind::GreaterEq,
+        TokenType::Plus
+        | TokenType::Slash
+        | TokenType::Minus
+        | TokenType::Star
+        | TokenType::BangEq
+        | TokenType::EqEq
+        | TokenType::LessEq
+        | TokenType::Less
+        | TokenType::Greater
+        | TokenType::GreaterEq,
         ThrushStatement::Call {
             kind: right_call_type,
             ..
@@ -649,16 +649,16 @@ pub fn float_binaryop<'ctx>(
             signed: left_signed,
             ..
         },
-        TokenKind::Plus
-        | TokenKind::Slash
-        | TokenKind::Minus
-        | TokenKind::Star
-        | TokenKind::BangEq
-        | TokenKind::EqEq
-        | TokenKind::LessEq
-        | TokenKind::Less
-        | TokenKind::Greater
-        | TokenKind::GreaterEq,
+        TokenType::Plus
+        | TokenType::Slash
+        | TokenType::Minus
+        | TokenType::Star
+        | TokenType::BangEq
+        | TokenType::EqEq
+        | TokenType::LessEq
+        | TokenType::Less
+        | TokenType::Greater
+        | TokenType::GreaterEq,
         ThrushStatement::Call {
             kind: right_call_type,
             ..
@@ -704,16 +704,16 @@ pub fn float_binaryop<'ctx>(
             kind: left_call_type,
             ..
         },
-        TokenKind::Plus
-        | TokenKind::Slash
-        | TokenKind::Minus
-        | TokenKind::Star
-        | TokenKind::BangEq
-        | TokenKind::EqEq
-        | TokenKind::LessEq
-        | TokenKind::Less
-        | TokenKind::Greater
-        | TokenKind::GreaterEq,
+        TokenType::Plus
+        | TokenType::Slash
+        | TokenType::Minus
+        | TokenType::Star
+        | TokenType::BangEq
+        | TokenType::EqEq
+        | TokenType::LessEq
+        | TokenType::Less
+        | TokenType::Greater
+        | TokenType::GreaterEq,
         ThrushStatement::Float {
             kind: right_type,
             value: right_num,
@@ -759,16 +759,16 @@ pub fn float_binaryop<'ctx>(
         ThrushStatement::Reference {
             kind: left_type, ..
         },
-        TokenKind::Plus
-        | TokenKind::Slash
-        | TokenKind::Minus
-        | TokenKind::Star
-        | TokenKind::BangEq
-        | TokenKind::EqEq
-        | TokenKind::LessEq
-        | TokenKind::Less
-        | TokenKind::Greater
-        | TokenKind::GreaterEq,
+        TokenType::Plus
+        | TokenType::Slash
+        | TokenType::Minus
+        | TokenType::Star
+        | TokenType::BangEq
+        | TokenType::EqEq
+        | TokenType::LessEq
+        | TokenType::Less
+        | TokenType::Greater
+        | TokenType::GreaterEq,
         ThrushStatement::Call {
             kind: right_call_type,
             ..
@@ -812,16 +812,16 @@ pub fn float_binaryop<'ctx>(
             kind: left_call_type,
             ..
         },
-        TokenKind::Plus
-        | TokenKind::Slash
-        | TokenKind::Minus
-        | TokenKind::Star
-        | TokenKind::BangEq
-        | TokenKind::EqEq
-        | TokenKind::LessEq
-        | TokenKind::Less
-        | TokenKind::Greater
-        | TokenKind::GreaterEq,
+        TokenType::Plus
+        | TokenType::Slash
+        | TokenType::Minus
+        | TokenType::Star
+        | TokenType::BangEq
+        | TokenType::EqEq
+        | TokenType::LessEq
+        | TokenType::Less
+        | TokenType::Greater
+        | TokenType::GreaterEq,
         ThrushStatement::Reference {
             kind: right_type, ..
         },
@@ -863,16 +863,16 @@ pub fn float_binaryop<'ctx>(
             kind: left_type,
             ..
         },
-        TokenKind::Plus
-        | TokenKind::Slash
-        | TokenKind::Minus
-        | TokenKind::Star
-        | TokenKind::BangEq
-        | TokenKind::EqEq
-        | TokenKind::LessEq
-        | TokenKind::Less
-        | TokenKind::Greater
-        | TokenKind::GreaterEq,
+        TokenType::Plus
+        | TokenType::Slash
+        | TokenType::Minus
+        | TokenType::Star
+        | TokenType::BangEq
+        | TokenType::EqEq
+        | TokenType::LessEq
+        | TokenType::Less
+        | TokenType::Greater
+        | TokenType::GreaterEq,
         ThrushStatement::Call {
             kind: right_call_type,
             ..
@@ -914,16 +914,16 @@ pub fn float_binaryop<'ctx>(
             kind: left_call_type,
             ..
         },
-        TokenKind::Plus
-        | TokenKind::Slash
-        | TokenKind::Minus
-        | TokenKind::Star
-        | TokenKind::BangEq
-        | TokenKind::EqEq
-        | TokenKind::LessEq
-        | TokenKind::Less
-        | TokenKind::Greater
-        | TokenKind::GreaterEq,
+        TokenType::Plus
+        | TokenType::Slash
+        | TokenType::Minus
+        | TokenType::Star
+        | TokenType::BangEq
+        | TokenType::EqEq
+        | TokenType::LessEq
+        | TokenType::Less
+        | TokenType::Greater
+        | TokenType::GreaterEq,
         ThrushStatement::Group {
             expression: right_instr,
             kind: right_type,
@@ -971,16 +971,16 @@ pub fn float_binaryop<'ctx>(
         ThrushStatement::Reference {
             kind: left_type, ..
         },
-        TokenKind::Plus
-        | TokenKind::Slash
-        | TokenKind::Minus
-        | TokenKind::Star
-        | TokenKind::BangEq
-        | TokenKind::EqEq
-        | TokenKind::LessEq
-        | TokenKind::Less
-        | TokenKind::Greater
-        | TokenKind::GreaterEq,
+        TokenType::Plus
+        | TokenType::Slash
+        | TokenType::Minus
+        | TokenType::Star
+        | TokenType::BangEq
+        | TokenType::EqEq
+        | TokenType::LessEq
+        | TokenType::Less
+        | TokenType::Greater
+        | TokenType::GreaterEq,
         ThrushStatement::Reference {
             kind: right_type, ..
         },
@@ -1023,16 +1023,16 @@ pub fn float_binaryop<'ctx>(
             signed: left_signed,
             ..
         },
-        TokenKind::Plus
-        | TokenKind::Slash
-        | TokenKind::Minus
-        | TokenKind::Star
-        | TokenKind::BangEq
-        | TokenKind::EqEq
-        | TokenKind::LessEq
-        | TokenKind::Less
-        | TokenKind::Greater
-        | TokenKind::GreaterEq,
+        TokenType::Plus
+        | TokenType::Slash
+        | TokenType::Minus
+        | TokenType::Star
+        | TokenType::BangEq
+        | TokenType::EqEq
+        | TokenType::LessEq
+        | TokenType::Less
+        | TokenType::Greater
+        | TokenType::GreaterEq,
         ThrushStatement::Reference {
             kind: right_type, ..
         },
@@ -1074,16 +1074,16 @@ pub fn float_binaryop<'ctx>(
         ThrushStatement::Reference {
             kind: left_type, ..
         },
-        TokenKind::Plus
-        | TokenKind::Slash
-        | TokenKind::Minus
-        | TokenKind::Star
-        | TokenKind::BangEq
-        | TokenKind::EqEq
-        | TokenKind::LessEq
-        | TokenKind::Less
-        | TokenKind::Greater
-        | TokenKind::GreaterEq,
+        TokenType::Plus
+        | TokenType::Slash
+        | TokenType::Minus
+        | TokenType::Star
+        | TokenType::BangEq
+        | TokenType::EqEq
+        | TokenType::LessEq
+        | TokenType::Less
+        | TokenType::Greater
+        | TokenType::GreaterEq,
         ThrushStatement::Float {
             kind: right_type,
             value: right_num,
@@ -1137,16 +1137,16 @@ pub fn float_binaryop<'ctx>(
         ThrushStatement::Reference {
             kind: left_type, ..
         },
-        TokenKind::Plus
-        | TokenKind::Slash
-        | TokenKind::Minus
-        | TokenKind::Star
-        | TokenKind::BangEq
-        | TokenKind::EqEq
-        | TokenKind::LessEq
-        | TokenKind::Less
-        | TokenKind::Greater
-        | TokenKind::GreaterEq,
+        TokenType::Plus
+        | TokenType::Slash
+        | TokenType::Minus
+        | TokenType::Star
+        | TokenType::BangEq
+        | TokenType::EqEq
+        | TokenType::LessEq
+        | TokenType::Less
+        | TokenType::Greater
+        | TokenType::GreaterEq,
         ThrushStatement::BinaryOp {
             kind: right_type, ..
         },
@@ -1184,16 +1184,16 @@ pub fn float_binaryop<'ctx>(
         ThrushStatement::BinaryOp {
             kind: left_type, ..
         },
-        TokenKind::Plus
-        | TokenKind::Slash
-        | TokenKind::Minus
-        | TokenKind::Star
-        | TokenKind::BangEq
-        | TokenKind::EqEq
-        | TokenKind::LessEq
-        | TokenKind::Less
-        | TokenKind::Greater
-        | TokenKind::GreaterEq,
+        TokenType::Plus
+        | TokenType::Slash
+        | TokenType::Minus
+        | TokenType::Star
+        | TokenType::BangEq
+        | TokenType::EqEq
+        | TokenType::LessEq
+        | TokenType::Less
+        | TokenType::Greater
+        | TokenType::GreaterEq,
         ThrushStatement::Reference {
             kind: right_type, ..
         },
@@ -1235,16 +1235,16 @@ pub fn float_binaryop<'ctx>(
             signed: left_signed,
             ..
         },
-        TokenKind::Plus
-        | TokenKind::Slash
-        | TokenKind::Minus
-        | TokenKind::Star
-        | TokenKind::BangEq
-        | TokenKind::EqEq
-        | TokenKind::LessEq
-        | TokenKind::Less
-        | TokenKind::Greater
-        | TokenKind::GreaterEq,
+        TokenType::Plus
+        | TokenType::Slash
+        | TokenType::Minus
+        | TokenType::Star
+        | TokenType::BangEq
+        | TokenType::EqEq
+        | TokenType::LessEq
+        | TokenType::Less
+        | TokenType::Greater
+        | TokenType::GreaterEq,
         ThrushStatement::BinaryOp {
             kind: right_type, ..
         },
@@ -1281,16 +1281,16 @@ pub fn float_binaryop<'ctx>(
         ThrushStatement::BinaryOp {
             kind: left_type, ..
         },
-        TokenKind::Plus
-        | TokenKind::Slash
-        | TokenKind::Minus
-        | TokenKind::Star
-        | TokenKind::BangEq
-        | TokenKind::EqEq
-        | TokenKind::LessEq
-        | TokenKind::Less
-        | TokenKind::Greater
-        | TokenKind::GreaterEq,
+        TokenType::Plus
+        | TokenType::Slash
+        | TokenType::Minus
+        | TokenType::Star
+        | TokenType::BangEq
+        | TokenType::EqEq
+        | TokenType::LessEq
+        | TokenType::Less
+        | TokenType::Greater
+        | TokenType::GreaterEq,
         ThrushStatement::Float {
             kind: right_type,
             value: right_num,
@@ -1330,16 +1330,16 @@ pub fn float_binaryop<'ctx>(
         ThrushStatement::BinaryOp {
             kind: left_type, ..
         },
-        TokenKind::Plus
-        | TokenKind::Slash
-        | TokenKind::Minus
-        | TokenKind::Star
-        | TokenKind::BangEq
-        | TokenKind::EqEq
-        | TokenKind::LessEq
-        | TokenKind::Less
-        | TokenKind::Greater
-        | TokenKind::GreaterEq,
+        TokenType::Plus
+        | TokenType::Slash
+        | TokenType::Minus
+        | TokenType::Star
+        | TokenType::BangEq
+        | TokenType::EqEq
+        | TokenType::LessEq
+        | TokenType::Less
+        | TokenType::Greater
+        | TokenType::GreaterEq,
         ThrushStatement::BinaryOp {
             kind: right_type, ..
         },
@@ -1385,16 +1385,16 @@ pub fn float_binaryop<'ctx>(
             kind: left_type,
             ..
         },
-        TokenKind::Plus
-        | TokenKind::Slash
-        | TokenKind::Minus
-        | TokenKind::Star
-        | TokenKind::BangEq
-        | TokenKind::EqEq
-        | TokenKind::LessEq
-        | TokenKind::Less
-        | TokenKind::Greater
-        | TokenKind::GreaterEq,
+        TokenType::Plus
+        | TokenType::Slash
+        | TokenType::Minus
+        | TokenType::Star
+        | TokenType::BangEq
+        | TokenType::EqEq
+        | TokenType::LessEq
+        | TokenType::Less
+        | TokenType::Greater
+        | TokenType::GreaterEq,
         ThrushStatement::Group {
             expression: right_instr,
             kind: right_type,
@@ -1434,16 +1434,16 @@ pub fn float_binaryop<'ctx>(
             kind: left_type,
             ..
         },
-        TokenKind::Plus
-        | TokenKind::Slash
-        | TokenKind::Minus
-        | TokenKind::Star
-        | TokenKind::BangEq
-        | TokenKind::EqEq
-        | TokenKind::LessEq
-        | TokenKind::Less
-        | TokenKind::Greater
-        | TokenKind::GreaterEq,
+        TokenType::Plus
+        | TokenType::Slash
+        | TokenType::Minus
+        | TokenType::Star
+        | TokenType::BangEq
+        | TokenType::EqEq
+        | TokenType::LessEq
+        | TokenType::Less
+        | TokenType::Greater
+        | TokenType::GreaterEq,
         ThrushStatement::Float {
             kind: right_type,
             value: right_num,
@@ -1486,16 +1486,16 @@ pub fn float_binaryop<'ctx>(
             signed: left_signed,
             ..
         },
-        TokenKind::Plus
-        | TokenKind::Slash
-        | TokenKind::Minus
-        | TokenKind::Star
-        | TokenKind::BangEq
-        | TokenKind::EqEq
-        | TokenKind::LessEq
-        | TokenKind::Less
-        | TokenKind::Greater
-        | TokenKind::GreaterEq,
+        TokenType::Plus
+        | TokenType::Slash
+        | TokenType::Minus
+        | TokenType::Star
+        | TokenType::BangEq
+        | TokenType::EqEq
+        | TokenType::LessEq
+        | TokenType::Less
+        | TokenType::Greater
+        | TokenType::GreaterEq,
         ThrushStatement::Group {
             expression,
             kind: right_type,
@@ -1536,16 +1536,16 @@ pub fn float_binaryop<'ctx>(
             kind: left_type,
             ..
         },
-        TokenKind::Plus
-        | TokenKind::Slash
-        | TokenKind::Minus
-        | TokenKind::Star
-        | TokenKind::BangEq
-        | TokenKind::EqEq
-        | TokenKind::LessEq
-        | TokenKind::Less
-        | TokenKind::Greater
-        | TokenKind::GreaterEq,
+        TokenType::Plus
+        | TokenType::Slash
+        | TokenType::Minus
+        | TokenType::Star
+        | TokenType::BangEq
+        | TokenType::EqEq
+        | TokenType::LessEq
+        | TokenType::Less
+        | TokenType::Greater
+        | TokenType::GreaterEq,
         ThrushStatement::BinaryOp {
             kind: right_type, ..
         },
@@ -1581,16 +1581,16 @@ pub fn float_binaryop<'ctx>(
         ThrushStatement::BinaryOp {
             kind: left_type, ..
         },
-        TokenKind::Plus
-        | TokenKind::Slash
-        | TokenKind::Minus
-        | TokenKind::Star
-        | TokenKind::BangEq
-        | TokenKind::EqEq
-        | TokenKind::LessEq
-        | TokenKind::Less
-        | TokenKind::Greater
-        | TokenKind::GreaterEq,
+        TokenType::Plus
+        | TokenType::Slash
+        | TokenType::Minus
+        | TokenType::Star
+        | TokenType::BangEq
+        | TokenType::EqEq
+        | TokenType::LessEq
+        | TokenType::Less
+        | TokenType::Greater
+        | TokenType::GreaterEq,
         ThrushStatement::Group {
             expression,
             kind: right_type,

@@ -8,6 +8,7 @@ authors = ["Kevin Benavides <https://github.com/DevCheckOG>"]
 readme = "README.md"
 
 [dependencies]
+unicode_categories = "0.1.1"
 colored = "3.0.0"
 ahash = "0.8.11"
 lazy_static = "1.5.0"

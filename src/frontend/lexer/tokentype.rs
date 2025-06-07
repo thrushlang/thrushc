@@ -5,7 +5,7 @@ use crate::{
 };
 
 #[derive(Debug, PartialEq, Clone, Copy)]
-pub enum TokenKind {
+pub enum TokenType {
     // --- Operators ---
     LParen,     // ' ( '
     RParen,     // ' ) '
@@ -133,34 +133,17 @@ pub enum TokenKind {
     Eof,
 }
 
-impl TokenKind {
-    #[must_use]
-    pub const fn as_compiler_attribute<'ctx>(self, span: Span) -> Option<LLVMAttribute<'ctx>> {
-        match self {
-            TokenKind::Ignore => Some(LLVMAttribute::Ignore(span)),
-            TokenKind::MinSize => Some(LLVMAttribute::MinSize(span)),
-            TokenKind::NoInline => Some(LLVMAttribute::NoInline(span)),
-            TokenKind::AlwaysInline => Some(LLVMAttribute::AlwaysInline(span)),
-            TokenKind::InlineHint => Some(LLVMAttribute::InlineHint(span)),
-            TokenKind::Hot => Some(LLVMAttribute::Hot(span)),
-            TokenKind::SafeStack => Some(LLVMAttribute::SafeStack(span)),
-            TokenKind::WeakStack => Some(LLVMAttribute::WeakStack(span)),
-            TokenKind::StrongStack => Some(LLVMAttribute::StrongStack(span)),
-            TokenKind::PreciseFloats => Some(LLVMAttribute::PreciseFloats(span)),
-            _ => None,
-        }
-    }
-
+impl TokenType {
     #[must_use]
     pub const fn is_logical_type(&self) -> bool {
         matches!(
             self,
-            TokenKind::BangEq
-                | TokenKind::EqEq
-                | TokenKind::LessEq
-                | TokenKind::Less
-                | TokenKind::Greater
-                | TokenKind::GreaterEq
+            TokenType::BangEq
+                | TokenType::EqEq
+                | TokenType::LessEq
+                | TokenType::Less
+                | TokenType::Greater
+                | TokenType::GreaterEq
         )
     }
 
@@ -168,13 +151,13 @@ impl TokenKind {
     pub const fn is_sync_declaration(&self) -> bool {
         matches!(
             self,
-            TokenKind::Import
-                | TokenKind::Type
-                | TokenKind::Struct
-                | TokenKind::Fn
-                | TokenKind::Enum
-                | TokenKind::Const
-                | TokenKind::Methods
+            TokenType::Import
+                | TokenType::Type
+                | TokenType::Struct
+                | TokenType::Fn
+                | TokenType::Enum
+                | TokenType::Const
+                | TokenType::Methods
         )
     }
 
@@ -182,17 +165,17 @@ impl TokenKind {
     pub const fn is_sync_statement(&self) -> bool {
         matches!(
             self,
-            TokenKind::LBrace
-                | TokenKind::Return
-                | TokenKind::Local
-                | TokenKind::For
-                | TokenKind::New
-                | TokenKind::If
-                | TokenKind::Match
-                | TokenKind::While
-                | TokenKind::Continue
-                | TokenKind::Break
-                | TokenKind::Loop
+            TokenType::LBrace
+                | TokenType::Return
+                | TokenType::Local
+                | TokenType::For
+                | TokenType::New
+                | TokenType::If
+                | TokenType::Match
+                | TokenType::While
+                | TokenType::Continue
+                | TokenType::Break
+                | TokenType::Loop
         )
     }
 
@@ -200,104 +183,104 @@ impl TokenKind {
     pub const fn is_sync_expression(&self) -> bool {
         matches!(
             self,
-            TokenKind::SemiColon | TokenKind::LBrace | TokenKind::RBrace
+            TokenType::SemiColon | TokenType::LBrace | TokenType::RBrace
         )
     }
 
     pub const fn is_logical_gate(&self) -> bool {
-        matches!(self, TokenKind::And | TokenKind::Or)
+        matches!(self, TokenType::And | TokenType::Or)
     }
 
     pub const fn is_struct_keyword(&self) -> bool {
-        matches!(self, TokenKind::Struct)
+        matches!(self, TokenType::Struct)
     }
 
     pub const fn is_methods_keyword(&self) -> bool {
-        matches!(self, TokenKind::Methods)
+        matches!(self, TokenType::Methods)
     }
 
     #[must_use]
     pub const fn is_type_keyword(&self) -> bool {
-        matches!(self, TokenKind::Type)
+        matches!(self, TokenType::Type)
     }
 
     #[must_use]
     pub const fn is_const_keyword(&self) -> bool {
-        matches!(self, TokenKind::Const)
+        matches!(self, TokenType::Const)
     }
 
     #[must_use]
     pub const fn is_enum_keyword(&self) -> bool {
-        matches!(self, TokenKind::Enum)
+        matches!(self, TokenType::Enum)
     }
 
     #[must_use]
     pub const fn is_plusplus_operator(&self) -> bool {
-        matches!(self, TokenKind::PlusPlus)
+        matches!(self, TokenType::PlusPlus)
     }
 
     #[must_use]
     pub const fn is_minus_operator(&self) -> bool {
-        matches!(self, TokenKind::Minus)
+        matches!(self, TokenType::Minus)
     }
 
     #[must_use]
     pub const fn is_address(&self) -> bool {
-        matches!(self, TokenKind::Addr)
+        matches!(self, TokenType::Addr)
     }
 
     #[must_use]
     pub const fn is_mut(&self) -> bool {
-        matches!(self, TokenKind::Mut)
+        matches!(self, TokenType::Mut)
     }
 
     #[must_use]
     pub const fn is_function_keyword(&self) -> bool {
-        matches!(self, TokenKind::Fn)
+        matches!(self, TokenType::Fn)
     }
 
     #[must_use]
     pub const fn is_asm_function_keyword(&self) -> bool {
-        matches!(self, TokenKind::AsmFn)
+        matches!(self, TokenType::AsmFn)
     }
 
     #[must_use]
     pub const fn is_void(&self) -> bool {
-        matches!(self, TokenKind::Void)
+        matches!(self, TokenType::Void)
     }
 
     #[must_use]
     pub const fn is_bool(&self) -> bool {
-        matches!(self, TokenKind::Bool)
+        matches!(self, TokenType::Bool)
     }
 
     pub const fn is_str(&self) -> bool {
-        matches!(self, TokenKind::Str)
+        matches!(self, TokenType::Str)
     }
 
     #[must_use]
     pub const fn is_ptr(&self) -> bool {
-        matches!(self, TokenKind::Ptr)
+        matches!(self, TokenType::Ptr)
     }
 
     #[must_use]
     pub const fn is_float(&self) -> bool {
-        matches!(self, TokenKind::F32 | TokenKind::F64)
+        matches!(self, TokenType::F32 | TokenType::F64)
     }
 
     #[must_use]
     pub fn is_integer(&self) -> bool {
         matches!(
             self,
-            TokenKind::S8
-                | TokenKind::S16
-                | TokenKind::S32
-                | TokenKind::S64
-                | TokenKind::U8
-                | TokenKind::U16
-                | TokenKind::U32
-                | TokenKind::U64
-                | TokenKind::Char
+            TokenType::S8
+                | TokenType::S16
+                | TokenType::S32
+                | TokenType::S64
+                | TokenType::U8
+                | TokenType::U16
+                | TokenType::U32
+                | TokenType::U64
+                | TokenType::Char
         )
     }
 
@@ -313,29 +296,53 @@ impl TokenKind {
             || self.is_address()
     }
 
+    #[must_use]
+    pub fn is_identifier(&self) -> bool {
+        matches!(self, TokenType::Identifier)
+    }
+}
+
+impl TokenType {
+    #[must_use]
+    pub fn as_compiler_attribute<'ctx>(self, span: Span) -> Option<LLVMAttribute<'ctx>> {
+        match self {
+            TokenType::Ignore => Some(LLVMAttribute::Ignore(span)),
+            TokenType::MinSize => Some(LLVMAttribute::MinSize(span)),
+            TokenType::NoInline => Some(LLVMAttribute::NoInline(span)),
+            TokenType::AlwaysInline => Some(LLVMAttribute::AlwaysInline(span)),
+            TokenType::InlineHint => Some(LLVMAttribute::InlineHint(span)),
+            TokenType::Hot => Some(LLVMAttribute::Hot(span)),
+            TokenType::SafeStack => Some(LLVMAttribute::SafeStack(span)),
+            TokenType::WeakStack => Some(LLVMAttribute::WeakStack(span)),
+            TokenType::StrongStack => Some(LLVMAttribute::StrongStack(span)),
+            TokenType::PreciseFloats => Some(LLVMAttribute::PreciseFloats(span)),
+            _ => None,
+        }
+    }
+
     pub fn as_type(&self, span: Span) -> Result<ThrushType, ThrushCompilerIssue> {
         match self {
-            TokenKind::Char => Ok(ThrushType::Char),
+            TokenType::Char => Ok(ThrushType::Char),
 
-            TokenKind::S8 => Ok(ThrushType::S8),
-            TokenKind::S16 => Ok(ThrushType::S16),
-            TokenKind::S32 => Ok(ThrushType::S32),
-            TokenKind::S64 => Ok(ThrushType::S64),
+            TokenType::S8 => Ok(ThrushType::S8),
+            TokenType::S16 => Ok(ThrushType::S16),
+            TokenType::S32 => Ok(ThrushType::S32),
+            TokenType::S64 => Ok(ThrushType::S64),
 
-            TokenKind::U8 => Ok(ThrushType::U8),
-            TokenKind::U16 => Ok(ThrushType::U16),
-            TokenKind::U32 => Ok(ThrushType::U32),
-            TokenKind::U64 => Ok(ThrushType::U64),
+            TokenType::U8 => Ok(ThrushType::U8),
+            TokenType::U16 => Ok(ThrushType::U16),
+            TokenType::U32 => Ok(ThrushType::U32),
+            TokenType::U64 => Ok(ThrushType::U64),
 
-            TokenKind::Bool => Ok(ThrushType::Bool),
+            TokenType::Bool => Ok(ThrushType::Bool),
 
-            TokenKind::F32 => Ok(ThrushType::F32),
-            TokenKind::F64 => Ok(ThrushType::F64),
+            TokenType::F32 => Ok(ThrushType::F32),
+            TokenType::F64 => Ok(ThrushType::F64),
 
-            TokenKind::Str => Ok(ThrushType::Str),
-            TokenKind::Ptr => Ok(ThrushType::Ptr(None)),
-            TokenKind::Addr => Ok(ThrushType::Addr),
-            TokenKind::Void => Ok(ThrushType::Void),
+            TokenType::Str => Ok(ThrushType::Str),
+            TokenType::Ptr => Ok(ThrushType::Ptr(None)),
+            TokenType::Addr => Ok(ThrushType::Addr),
+            TokenType::Void => Ok(ThrushType::Void),
 
             any => Err(ThrushCompilerIssue::Error(
                 "Syntax error".into(),

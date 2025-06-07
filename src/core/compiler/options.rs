@@ -36,7 +36,7 @@ pub enum Emitable {
 
 #[derive(Debug)]
 pub enum Emited<'emited> {
-    Tokens(&'emited [Token<'emited>]),
+    Tokens(&'emited [Token]),
     Statements(&'emited [ThrushStatement<'emited>]),
 }
 

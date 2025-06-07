@@ -13,7 +13,7 @@ use crate::{
     },
     core::console::logging::{self, LoggingType},
     frontend::{
-        lexer::tokenkind::TokenKind,
+        lexer::tokentype::TokenType,
         types::{
             lexer::ThrushType, parser::stmts::stmt::ThrushStatement,
             representations::BinaryOperation,
@@ -25,7 +25,7 @@ pub fn ptr_operation<'ctx>(
     builder: &Builder<'ctx>,
     left: BasicValueEnum<'ctx>,
     right: BasicValueEnum<'ctx>,
-    operator: &TokenKind,
+    operator: &TokenType,
 ) -> BasicValueEnum<'ctx> {
     if left.is_pointer_value() && right.is_pointer_value() {
         let left: PointerValue = left.into_pointer_value();
@@ -61,7 +61,7 @@ pub fn ptr_binaryop<'ctx>(
 
     if let (
         ThrushStatement::Call { .. },
-        TokenKind::EqEq | TokenKind::BangEq,
+        TokenType::EqEq | TokenType::BangEq,
         ThrushStatement::NullPtr { .. },
     ) = binary
     {
@@ -79,7 +79,7 @@ pub fn ptr_binaryop<'ctx>(
 
     if let (
         ThrushStatement::NullPtr { .. },
-        TokenKind::EqEq | TokenKind::BangEq,
+        TokenType::EqEq | TokenType::BangEq,
         ThrushStatement::Call { .. },
     ) = binary
     {

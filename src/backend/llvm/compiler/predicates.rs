@@ -1,50 +1,50 @@
 use inkwell::{FloatPredicate, IntPredicate};
 
-use crate::frontend::lexer::tokenkind::TokenKind;
+use crate::frontend::lexer::tokentype::TokenType;
 
 #[must_use]
-pub fn integer(operator: &TokenKind, left_signed: bool, right_signed: bool) -> IntPredicate {
+pub fn integer(operator: &TokenType, left_signed: bool, right_signed: bool) -> IntPredicate {
     match operator {
-        TokenKind::EqEq => IntPredicate::EQ,
-        TokenKind::BangEq => IntPredicate::NE,
-        TokenKind::Greater if !left_signed && !right_signed => IntPredicate::UGT,
-        TokenKind::Greater if left_signed && !right_signed => IntPredicate::SGT,
-        TokenKind::Greater if !left_signed && right_signed => IntPredicate::SGT,
-        TokenKind::Greater if left_signed && right_signed => IntPredicate::SGT,
-        TokenKind::GreaterEq if !left_signed && !right_signed => IntPredicate::UGE,
-        TokenKind::GreaterEq if left_signed && !right_signed => IntPredicate::SGE,
-        TokenKind::GreaterEq if !left_signed && right_signed => IntPredicate::SGE,
-        TokenKind::GreaterEq if left_signed && right_signed => IntPredicate::SGE,
-        TokenKind::Less if !left_signed && !right_signed => IntPredicate::ULT,
-        TokenKind::Less if left_signed && !right_signed => IntPredicate::SLT,
-        TokenKind::Less if !left_signed && right_signed => IntPredicate::SLT,
-        TokenKind::Less if left_signed && right_signed => IntPredicate::SLT,
-        TokenKind::LessEq if !left_signed && !right_signed => IntPredicate::ULE,
-        TokenKind::LessEq if left_signed && !right_signed => IntPredicate::SLE,
-        TokenKind::LessEq if !left_signed && right_signed => IntPredicate::SLE,
-        TokenKind::LessEq if left_signed && right_signed => IntPredicate::SLE,
+        TokenType::EqEq => IntPredicate::EQ,
+        TokenType::BangEq => IntPredicate::NE,
+        TokenType::Greater if !left_signed && !right_signed => IntPredicate::UGT,
+        TokenType::Greater if left_signed && !right_signed => IntPredicate::SGT,
+        TokenType::Greater if !left_signed && right_signed => IntPredicate::SGT,
+        TokenType::Greater if left_signed && right_signed => IntPredicate::SGT,
+        TokenType::GreaterEq if !left_signed && !right_signed => IntPredicate::UGE,
+        TokenType::GreaterEq if left_signed && !right_signed => IntPredicate::SGE,
+        TokenType::GreaterEq if !left_signed && right_signed => IntPredicate::SGE,
+        TokenType::GreaterEq if left_signed && right_signed => IntPredicate::SGE,
+        TokenType::Less if !left_signed && !right_signed => IntPredicate::ULT,
+        TokenType::Less if left_signed && !right_signed => IntPredicate::SLT,
+        TokenType::Less if !left_signed && right_signed => IntPredicate::SLT,
+        TokenType::Less if left_signed && right_signed => IntPredicate::SLT,
+        TokenType::LessEq if !left_signed && !right_signed => IntPredicate::ULE,
+        TokenType::LessEq if left_signed && !right_signed => IntPredicate::SLE,
+        TokenType::LessEq if !left_signed && right_signed => IntPredicate::SLE,
+        TokenType::LessEq if left_signed && right_signed => IntPredicate::SLE,
         _ => unreachable!(),
     }
 }
 
 #[must_use]
-pub fn pointer(operator: &TokenKind) -> IntPredicate {
+pub fn pointer(operator: &TokenType) -> IntPredicate {
     match operator {
-        TokenKind::EqEq => IntPredicate::EQ,
-        TokenKind::BangEq => IntPredicate::NE,
+        TokenType::EqEq => IntPredicate::EQ,
+        TokenType::BangEq => IntPredicate::NE,
         _ => unreachable!(),
     }
 }
 
 #[must_use]
-pub fn float(operator: &TokenKind) -> FloatPredicate {
+pub fn float(operator: &TokenType) -> FloatPredicate {
     match operator {
-        TokenKind::EqEq => FloatPredicate::OEQ,
-        TokenKind::BangEq => FloatPredicate::ONE,
-        TokenKind::Greater => FloatPredicate::OGT,
-        TokenKind::GreaterEq => FloatPredicate::OGE,
-        TokenKind::Less => FloatPredicate::OLT,
-        TokenKind::LessEq => FloatPredicate::OLE,
+        TokenType::EqEq => FloatPredicate::OEQ,
+        TokenType::BangEq => FloatPredicate::ONE,
+        TokenType::Greater => FloatPredicate::OGT,
+        TokenType::GreaterEq => FloatPredicate::OGE,
+        TokenType::Less => FloatPredicate::OLT,
+        TokenType::LessEq => FloatPredicate::OLE,
         _ => unreachable!(),
     }
 }

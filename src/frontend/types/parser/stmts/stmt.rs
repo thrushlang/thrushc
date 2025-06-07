@@ -8,7 +8,7 @@ use crate::{
         errors::{position::CompilationPosition, standard::ThrushCompilerIssue},
     },
     frontend::{
-        lexer::{span::Span, tokenkind::TokenKind},
+        lexer::{span::Span, tokentype::TokenType},
         types::{
             lexer::ThrushType,
             representations::{
@@ -189,6 +189,7 @@ pub enum ThrushStatement<'ctx> {
     },
     AssemblerFunction {
         name: &'ctx str,
+        ascii_name: &'ctx str,
         parameters: Vec<ThrushStatement<'ctx>>,
         parameters_types: Vec<ThrushType>,
         assembler: String,
@@ -205,6 +206,7 @@ pub enum ThrushStatement<'ctx> {
     },
     Function {
         name: &'ctx str,
+        ascii_name: &'ctx str,
         parameters: Vec<ThrushStatement<'ctx>>,
         parameter_types: Vec<ThrushType>,
         body: Rc<ThrushStatement<'ctx>>,
@@ -342,13 +344,13 @@ pub enum ThrushStatement<'ctx> {
     },
     BinaryOp {
         left: Rc<ThrushStatement<'ctx>>,
-        operator: TokenKind,
+        operator: TokenType,
         right: Rc<ThrushStatement<'ctx>>,
         kind: ThrushType,
         span: Span,
     },
     UnaryOp {
-        operator: TokenKind,
+        operator: TokenType,
         kind: ThrushType,
         expression: Rc<ThrushStatement<'ctx>>,
         is_pre: bool,
@@ -570,6 +572,7 @@ impl<'ctx> ThrushStatement<'ctx> {
     pub fn as_asm_function_representation(&self) -> AssemblerFunctionRepresentation {
         if let ThrushStatement::AssemblerFunction {
             name,
+            ascii_name,
             assembler,
             constraints,
             parameters_types,
@@ -581,6 +584,7 @@ impl<'ctx> ThrushStatement<'ctx> {
         {
             return (
                 name,
+                ascii_name,
                 assembler,
                 constraints,
                 return_type,
@@ -596,6 +600,7 @@ impl<'ctx> ThrushStatement<'ctx> {
     pub fn as_function_representation(&self) -> FunctionRepresentation {
         if let ThrushStatement::Function {
             name,
+            ascii_name,
             parameters,
             parameter_types,
             body,
@@ -606,6 +611,7 @@ impl<'ctx> ThrushStatement<'ctx> {
         {
             return (
                 name,
+                ascii_name,
                 return_type,
                 parameters,
                 parameter_types,
@@ -779,7 +785,7 @@ impl<'ctx> ThrushStatement<'ctx> {
 }
 
 impl ThrushStatement<'_> {
-    pub fn cast_signess(&mut self, operator: TokenKind) {
+    pub fn cast_signess(&mut self, operator: TokenType) {
         if let ThrushStatement::Integer { kind, signed, .. } = self {
             if operator.is_minus_operator() {
                 *kind = kind.narrowing_cast();

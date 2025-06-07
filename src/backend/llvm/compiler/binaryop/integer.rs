@@ -4,7 +4,7 @@ use {
         backend::llvm::compiler::{cast, predicates, valuegen::ExpressionModificator},
         core::console::logging::{self, LoggingType},
         frontend::{
-            lexer::tokenkind::TokenKind,
+            lexer::tokentype::TokenType,
             types::{
                 lexer::ThrushType,
                 representations::{BinaryOperation, UnaryOperation},
@@ -24,7 +24,7 @@ pub fn int_operation<'ctx>(
     left: BasicValueEnum<'ctx>,
     right: BasicValueEnum<'ctx>,
     signatures: (bool, bool),
-    operator: &TokenKind,
+    operator: &TokenType,
 ) -> BasicValueEnum<'ctx> {
     let llvm_context: &Context = context.get_llvm_context();
     let llvm_builder: &Builder = context.get_llvm_builder();
@@ -34,31 +34,31 @@ pub fn int_operation<'ctx>(
         let mut right: IntValue = right.into_int_value();
 
         return match operator {
-            TokenKind::Plus => llvm_builder
+            TokenType::Plus => llvm_builder
                 .build_int_nsw_add(left, right, "")
                 .unwrap()
                 .into(),
-            TokenKind::Minus => llvm_builder
+            TokenType::Minus => llvm_builder
                 .build_int_nsw_sub(left, right, "")
                 .unwrap()
                 .into(),
-            TokenKind::Star => llvm_builder
+            TokenType::Star => llvm_builder
                 .build_int_nsw_mul(left, right, "")
                 .unwrap()
                 .into(),
-            TokenKind::Slash if signatures.0 || signatures.1 => llvm_builder
+            TokenType::Slash if signatures.0 || signatures.1 => llvm_builder
                 .build_int_signed_div(left, right, "")
                 .unwrap()
                 .into(),
-            TokenKind::Slash if !signatures.0 && !signatures.1 => llvm_builder
+            TokenType::Slash if !signatures.0 && !signatures.1 => llvm_builder
                 .build_int_unsigned_div(left, right, "")
                 .unwrap()
                 .into(),
-            TokenKind::LShift => llvm_builder
+            TokenType::LShift => llvm_builder
                 .build_left_shift(left, right, "")
                 .unwrap()
                 .into(),
-            TokenKind::RShift => llvm_builder
+            TokenType::RShift => llvm_builder
                 .build_right_shift(left, right, signatures.0 || signatures.1, "")
                 .unwrap()
                 .into(),
@@ -106,11 +106,11 @@ pub fn int_operation<'ctx>(
                         .unwrap()
                 }
 
-                if let TokenKind::And = op {
+                if let TokenType::And = op {
                     return llvm_builder.build_and(left, right, "").unwrap().into();
                 }
 
-                if let TokenKind::Or = op {
+                if let TokenType::Or = op {
                     return llvm_builder.build_or(left, right, "").unwrap().into();
                 }
 
@@ -154,20 +154,20 @@ pub fn integer_binaryop<'ctx>(
 
     if let (
         ThrushStatement::Property { .. },
-        TokenKind::Plus
-        | TokenKind::Slash
-        | TokenKind::Minus
-        | TokenKind::Star
-        | TokenKind::BangEq
-        | TokenKind::EqEq
-        | TokenKind::LessEq
-        | TokenKind::Less
-        | TokenKind::Greater
-        | TokenKind::GreaterEq
-        | TokenKind::LShift
-        | TokenKind::RShift
-        | TokenKind::And
-        | TokenKind::Or,
+        TokenType::Plus
+        | TokenType::Slash
+        | TokenType::Minus
+        | TokenType::Star
+        | TokenType::BangEq
+        | TokenType::EqEq
+        | TokenType::LessEq
+        | TokenType::Less
+        | TokenType::Greater
+        | TokenType::GreaterEq
+        | TokenType::LShift
+        | TokenType::RShift
+        | TokenType::And
+        | TokenType::Or,
         ThrushStatement::Property { .. },
     ) = binary
     {
@@ -199,20 +199,20 @@ pub fn integer_binaryop<'ctx>(
 
     if let (
         ThrushStatement::Property { .. },
-        TokenKind::Plus
-        | TokenKind::Slash
-        | TokenKind::Minus
-        | TokenKind::Star
-        | TokenKind::BangEq
-        | TokenKind::EqEq
-        | TokenKind::LessEq
-        | TokenKind::Less
-        | TokenKind::Greater
-        | TokenKind::GreaterEq
-        | TokenKind::LShift
-        | TokenKind::RShift
-        | TokenKind::And
-        | TokenKind::Or,
+        TokenType::Plus
+        | TokenType::Slash
+        | TokenType::Minus
+        | TokenType::Star
+        | TokenType::BangEq
+        | TokenType::EqEq
+        | TokenType::LessEq
+        | TokenType::Less
+        | TokenType::Greater
+        | TokenType::GreaterEq
+        | TokenType::LShift
+        | TokenType::RShift
+        | TokenType::And
+        | TokenType::Or,
         ThrushStatement::Property { .. },
     ) = binary
     {
@@ -256,7 +256,7 @@ pub fn integer_binaryop<'ctx>(
             value: left,
             ..
         },
-        TokenKind::BangEq | TokenKind::EqEq | TokenKind::And | TokenKind::Or,
+        TokenType::BangEq | TokenType::EqEq | TokenType::And | TokenType::Or,
         ThrushStatement::Boolean {
             kind: right_type,
             value: right,
@@ -282,7 +282,7 @@ pub fn integer_binaryop<'ctx>(
             value: left,
             ..
         },
-        TokenKind::BangEq | TokenKind::EqEq | TokenKind::And | TokenKind::Or,
+        TokenType::BangEq | TokenType::EqEq | TokenType::And | TokenType::Or,
         ThrushStatement::UnaryOp {
             kind: right_type, ..
         },
@@ -317,7 +317,7 @@ pub fn integer_binaryop<'ctx>(
         ThrushStatement::UnaryOp {
             kind: left_type, ..
         },
-        TokenKind::BangEq | TokenKind::EqEq | TokenKind::And | TokenKind::Or,
+        TokenType::BangEq | TokenType::EqEq | TokenType::And | TokenType::Or,
         ThrushStatement::Boolean {
             kind: right_type,
             value: right,
@@ -357,7 +357,7 @@ pub fn integer_binaryop<'ctx>(
             value: left,
             ..
         },
-        TokenKind::BangEq | TokenKind::EqEq | TokenKind::And | TokenKind::Or,
+        TokenType::BangEq | TokenType::EqEq | TokenType::And | TokenType::Or,
         ThrushStatement::Reference {
             kind: right_type, ..
         },
@@ -395,7 +395,7 @@ pub fn integer_binaryop<'ctx>(
         ThrushStatement::Reference {
             kind: left_type, ..
         },
-        TokenKind::BangEq | TokenKind::EqEq | TokenKind::And | TokenKind::Or,
+        TokenType::BangEq | TokenType::EqEq | TokenType::And | TokenType::Or,
         ThrushStatement::Boolean {
             kind: right_type,
             value: right,
@@ -446,7 +446,7 @@ pub fn integer_binaryop<'ctx>(
             byte: left,
             ..
         },
-        TokenKind::BangEq | TokenKind::EqEq,
+        TokenType::BangEq | TokenType::EqEq,
         ThrushStatement::Char {
             kind: right_type,
             byte: right,
@@ -454,7 +454,7 @@ pub fn integer_binaryop<'ctx>(
         },
     ) = binary
     {
-        let operator: &TokenKind = binary.1;
+        let operator: &TokenType = binary.1;
 
         let left_compiled: IntValue = valuegen::integer(llvm_context, left_type, *left, false);
         let right_compiled: IntValue = valuegen::integer(llvm_context, right_type, *right, false);
@@ -482,16 +482,16 @@ pub fn integer_binaryop<'ctx>(
         ThrushStatement::UnaryOp {
             kind: left_type, ..
         },
-        TokenKind::Plus
-        | TokenKind::Slash
-        | TokenKind::Minus
-        | TokenKind::Star
-        | TokenKind::LShift
-        | TokenKind::RShift
-        | TokenKind::BangEq
-        | TokenKind::EqEq
-        | TokenKind::And
-        | TokenKind::Or,
+        TokenType::Plus
+        | TokenType::Slash
+        | TokenType::Minus
+        | TokenType::Star
+        | TokenType::LShift
+        | TokenType::RShift
+        | TokenType::BangEq
+        | TokenType::EqEq
+        | TokenType::And
+        | TokenType::Or,
         ThrushStatement::UnaryOp {
             kind: right_type, ..
         },
@@ -530,20 +530,20 @@ pub fn integer_binaryop<'ctx>(
             kind: left_call_type,
             ..
         },
-        TokenKind::Plus
-        | TokenKind::Slash
-        | TokenKind::Minus
-        | TokenKind::Star
-        | TokenKind::BangEq
-        | TokenKind::EqEq
-        | TokenKind::LessEq
-        | TokenKind::Less
-        | TokenKind::Greater
-        | TokenKind::GreaterEq
-        | TokenKind::LShift
-        | TokenKind::RShift
-        | TokenKind::And
-        | TokenKind::Or,
+        TokenType::Plus
+        | TokenType::Slash
+        | TokenType::Minus
+        | TokenType::Star
+        | TokenType::BangEq
+        | TokenType::EqEq
+        | TokenType::LessEq
+        | TokenType::Less
+        | TokenType::Greater
+        | TokenType::GreaterEq
+        | TokenType::LShift
+        | TokenType::RShift
+        | TokenType::And
+        | TokenType::Or,
         ThrushStatement::UnaryOp {
             kind: right_type, ..
         },
@@ -587,20 +587,20 @@ pub fn integer_binaryop<'ctx>(
         ThrushStatement::UnaryOp {
             kind: left_type, ..
         },
-        TokenKind::Plus
-        | TokenKind::Slash
-        | TokenKind::Minus
-        | TokenKind::Star
-        | TokenKind::BangEq
-        | TokenKind::EqEq
-        | TokenKind::LessEq
-        | TokenKind::Less
-        | TokenKind::Greater
-        | TokenKind::GreaterEq
-        | TokenKind::LShift
-        | TokenKind::RShift
-        | TokenKind::And
-        | TokenKind::Or,
+        TokenType::Plus
+        | TokenType::Slash
+        | TokenType::Minus
+        | TokenType::Star
+        | TokenType::BangEq
+        | TokenType::EqEq
+        | TokenType::LessEq
+        | TokenType::Less
+        | TokenType::Greater
+        | TokenType::GreaterEq
+        | TokenType::LShift
+        | TokenType::RShift
+        | TokenType::And
+        | TokenType::Or,
         ThrushStatement::Call {
             kind: right_call_type,
             ..
@@ -647,20 +647,20 @@ pub fn integer_binaryop<'ctx>(
             signed: left_signed,
             ..
         },
-        TokenKind::Plus
-        | TokenKind::Slash
-        | TokenKind::Minus
-        | TokenKind::Star
-        | TokenKind::BangEq
-        | TokenKind::EqEq
-        | TokenKind::LessEq
-        | TokenKind::Less
-        | TokenKind::Greater
-        | TokenKind::GreaterEq
-        | TokenKind::LShift
-        | TokenKind::RShift
-        | TokenKind::And
-        | TokenKind::Or,
+        TokenType::Plus
+        | TokenType::Slash
+        | TokenType::Minus
+        | TokenType::Star
+        | TokenType::BangEq
+        | TokenType::EqEq
+        | TokenType::LessEq
+        | TokenType::Less
+        | TokenType::Greater
+        | TokenType::GreaterEq
+        | TokenType::LShift
+        | TokenType::RShift
+        | TokenType::And
+        | TokenType::Or,
         ThrushStatement::UnaryOp {
             kind: right_type, ..
         },
@@ -699,20 +699,20 @@ pub fn integer_binaryop<'ctx>(
         ThrushStatement::UnaryOp {
             kind: left_type, ..
         },
-        TokenKind::Plus
-        | TokenKind::Slash
-        | TokenKind::Minus
-        | TokenKind::Star
-        | TokenKind::BangEq
-        | TokenKind::EqEq
-        | TokenKind::LessEq
-        | TokenKind::Less
-        | TokenKind::Greater
-        | TokenKind::GreaterEq
-        | TokenKind::LShift
-        | TokenKind::RShift
-        | TokenKind::And
-        | TokenKind::Or,
+        TokenType::Plus
+        | TokenType::Slash
+        | TokenType::Minus
+        | TokenType::Star
+        | TokenType::BangEq
+        | TokenType::EqEq
+        | TokenType::LessEq
+        | TokenType::Less
+        | TokenType::Greater
+        | TokenType::GreaterEq
+        | TokenType::LShift
+        | TokenType::RShift
+        | TokenType::And
+        | TokenType::Or,
         ThrushStatement::Integer {
             kind: right_type,
             value: right_num,
@@ -754,20 +754,20 @@ pub fn integer_binaryop<'ctx>(
         ThrushStatement::Reference {
             kind: left_type, ..
         },
-        TokenKind::Plus
-        | TokenKind::Slash
-        | TokenKind::Minus
-        | TokenKind::Star
-        | TokenKind::BangEq
-        | TokenKind::EqEq
-        | TokenKind::LessEq
-        | TokenKind::Less
-        | TokenKind::Greater
-        | TokenKind::GreaterEq
-        | TokenKind::LShift
-        | TokenKind::RShift
-        | TokenKind::And
-        | TokenKind::Or,
+        TokenType::Plus
+        | TokenType::Slash
+        | TokenType::Minus
+        | TokenType::Star
+        | TokenType::BangEq
+        | TokenType::EqEq
+        | TokenType::LessEq
+        | TokenType::Less
+        | TokenType::Greater
+        | TokenType::GreaterEq
+        | TokenType::LShift
+        | TokenType::RShift
+        | TokenType::And
+        | TokenType::Or,
         ThrushStatement::UnaryOp {
             kind: right_type, ..
         },
@@ -808,20 +808,20 @@ pub fn integer_binaryop<'ctx>(
         ThrushStatement::UnaryOp {
             kind: left_type, ..
         },
-        TokenKind::Plus
-        | TokenKind::Slash
-        | TokenKind::Minus
-        | TokenKind::Star
-        | TokenKind::BangEq
-        | TokenKind::EqEq
-        | TokenKind::LessEq
-        | TokenKind::Less
-        | TokenKind::Greater
-        | TokenKind::GreaterEq
-        | TokenKind::LShift
-        | TokenKind::RShift
-        | TokenKind::And
-        | TokenKind::Or,
+        TokenType::Plus
+        | TokenType::Slash
+        | TokenType::Minus
+        | TokenType::Star
+        | TokenType::BangEq
+        | TokenType::EqEq
+        | TokenType::LessEq
+        | TokenType::Less
+        | TokenType::Greater
+        | TokenType::GreaterEq
+        | TokenType::LShift
+        | TokenType::RShift
+        | TokenType::And
+        | TokenType::Or,
         ThrushStatement::Reference {
             kind: right_type, ..
         },
@@ -862,20 +862,20 @@ pub fn integer_binaryop<'ctx>(
         ThrushStatement::BinaryOp {
             kind: left_type, ..
         },
-        TokenKind::Plus
-        | TokenKind::Slash
-        | TokenKind::Minus
-        | TokenKind::Star
-        | TokenKind::BangEq
-        | TokenKind::EqEq
-        | TokenKind::LessEq
-        | TokenKind::Less
-        | TokenKind::Greater
-        | TokenKind::GreaterEq
-        | TokenKind::LShift
-        | TokenKind::RShift
-        | TokenKind::And
-        | TokenKind::Or,
+        TokenType::Plus
+        | TokenType::Slash
+        | TokenType::Minus
+        | TokenType::Star
+        | TokenType::BangEq
+        | TokenType::EqEq
+        | TokenType::LessEq
+        | TokenType::Less
+        | TokenType::Greater
+        | TokenType::GreaterEq
+        | TokenType::LShift
+        | TokenType::RShift
+        | TokenType::And
+        | TokenType::Or,
         ThrushStatement::UnaryOp {
             kind: right_type, ..
         },
@@ -918,20 +918,20 @@ pub fn integer_binaryop<'ctx>(
             kind: left_type,
             ..
         },
-        TokenKind::Plus
-        | TokenKind::Slash
-        | TokenKind::Minus
-        | TokenKind::Star
-        | TokenKind::BangEq
-        | TokenKind::EqEq
-        | TokenKind::LessEq
-        | TokenKind::Less
-        | TokenKind::Greater
-        | TokenKind::GreaterEq
-        | TokenKind::LShift
-        | TokenKind::RShift
-        | TokenKind::And
-        | TokenKind::Or,
+        TokenType::Plus
+        | TokenType::Slash
+        | TokenType::Minus
+        | TokenType::Star
+        | TokenType::BangEq
+        | TokenType::EqEq
+        | TokenType::LessEq
+        | TokenType::Less
+        | TokenType::Greater
+        | TokenType::GreaterEq
+        | TokenType::LShift
+        | TokenType::RShift
+        | TokenType::And
+        | TokenType::Or,
         ThrushStatement::UnaryOp {
             kind: right_type, ..
         },
@@ -972,20 +972,20 @@ pub fn integer_binaryop<'ctx>(
         ThrushStatement::UnaryOp {
             kind: left_type, ..
         },
-        TokenKind::Plus
-        | TokenKind::Slash
-        | TokenKind::Minus
-        | TokenKind::Star
-        | TokenKind::BangEq
-        | TokenKind::EqEq
-        | TokenKind::LessEq
-        | TokenKind::Less
-        | TokenKind::Greater
-        | TokenKind::GreaterEq
-        | TokenKind::LShift
-        | TokenKind::RShift
-        | TokenKind::And
-        | TokenKind::Or,
+        TokenType::Plus
+        | TokenType::Slash
+        | TokenType::Minus
+        | TokenType::Star
+        | TokenType::BangEq
+        | TokenType::EqEq
+        | TokenType::LessEq
+        | TokenType::Less
+        | TokenType::Greater
+        | TokenType::GreaterEq
+        | TokenType::LShift
+        | TokenType::RShift
+        | TokenType::And
+        | TokenType::Or,
         ThrushStatement::Group {
             expression: right_instr,
             kind: right_type,
@@ -1037,20 +1037,20 @@ pub fn integer_binaryop<'ctx>(
             kind: left_call_type,
             ..
         },
-        TokenKind::Plus
-        | TokenKind::Slash
-        | TokenKind::Minus
-        | TokenKind::Star
-        | TokenKind::BangEq
-        | TokenKind::EqEq
-        | TokenKind::LessEq
-        | TokenKind::Less
-        | TokenKind::Greater
-        | TokenKind::GreaterEq
-        | TokenKind::LShift
-        | TokenKind::RShift
-        | TokenKind::And
-        | TokenKind::Or,
+        TokenType::Plus
+        | TokenType::Slash
+        | TokenType::Minus
+        | TokenType::Star
+        | TokenType::BangEq
+        | TokenType::EqEq
+        | TokenType::LessEq
+        | TokenType::Less
+        | TokenType::Greater
+        | TokenType::GreaterEq
+        | TokenType::LShift
+        | TokenType::RShift
+        | TokenType::And
+        | TokenType::Or,
         ThrushStatement::Call {
             kind: right_call_type,
             ..
@@ -1101,20 +1101,20 @@ pub fn integer_binaryop<'ctx>(
             signed: left_signed,
             ..
         },
-        TokenKind::Plus
-        | TokenKind::Slash
-        | TokenKind::Minus
-        | TokenKind::Star
-        | TokenKind::BangEq
-        | TokenKind::EqEq
-        | TokenKind::LessEq
-        | TokenKind::Less
-        | TokenKind::Greater
-        | TokenKind::GreaterEq
-        | TokenKind::LShift
-        | TokenKind::RShift
-        | TokenKind::And
-        | TokenKind::Or,
+        TokenType::Plus
+        | TokenType::Slash
+        | TokenType::Minus
+        | TokenType::Star
+        | TokenType::BangEq
+        | TokenType::EqEq
+        | TokenType::LessEq
+        | TokenType::Less
+        | TokenType::Greater
+        | TokenType::GreaterEq
+        | TokenType::LShift
+        | TokenType::RShift
+        | TokenType::And
+        | TokenType::Or,
         ThrushStatement::Call {
             kind: right_call_type,
             ..
@@ -1160,20 +1160,20 @@ pub fn integer_binaryop<'ctx>(
             kind: left_call_type,
             ..
         },
-        TokenKind::Plus
-        | TokenKind::Slash
-        | TokenKind::Minus
-        | TokenKind::Star
-        | TokenKind::BangEq
-        | TokenKind::EqEq
-        | TokenKind::LessEq
-        | TokenKind::Less
-        | TokenKind::Greater
-        | TokenKind::GreaterEq
-        | TokenKind::LShift
-        | TokenKind::RShift
-        | TokenKind::And
-        | TokenKind::Or,
+        TokenType::Plus
+        | TokenType::Slash
+        | TokenType::Minus
+        | TokenType::Star
+        | TokenType::BangEq
+        | TokenType::EqEq
+        | TokenType::LessEq
+        | TokenType::Less
+        | TokenType::Greater
+        | TokenType::GreaterEq
+        | TokenType::LShift
+        | TokenType::RShift
+        | TokenType::And
+        | TokenType::Or,
         ThrushStatement::Integer {
             kind: right_type,
             value: right_num,
@@ -1219,20 +1219,20 @@ pub fn integer_binaryop<'ctx>(
         ThrushStatement::Reference {
             kind: left_type, ..
         },
-        TokenKind::Plus
-        | TokenKind::Slash
-        | TokenKind::Minus
-        | TokenKind::Star
-        | TokenKind::BangEq
-        | TokenKind::EqEq
-        | TokenKind::LessEq
-        | TokenKind::Less
-        | TokenKind::Greater
-        | TokenKind::GreaterEq
-        | TokenKind::LShift
-        | TokenKind::RShift
-        | TokenKind::And
-        | TokenKind::Or,
+        TokenType::Plus
+        | TokenType::Slash
+        | TokenType::Minus
+        | TokenType::Star
+        | TokenType::BangEq
+        | TokenType::EqEq
+        | TokenType::LessEq
+        | TokenType::Less
+        | TokenType::Greater
+        | TokenType::GreaterEq
+        | TokenType::LShift
+        | TokenType::RShift
+        | TokenType::And
+        | TokenType::Or,
         ThrushStatement::Call {
             kind: right_call_type,
             ..
@@ -1280,20 +1280,20 @@ pub fn integer_binaryop<'ctx>(
             kind: left_call_type,
             ..
         },
-        TokenKind::Plus
-        | TokenKind::Slash
-        | TokenKind::Minus
-        | TokenKind::Star
-        | TokenKind::BangEq
-        | TokenKind::EqEq
-        | TokenKind::LessEq
-        | TokenKind::Less
-        | TokenKind::Greater
-        | TokenKind::GreaterEq
-        | TokenKind::LShift
-        | TokenKind::RShift
-        | TokenKind::And
-        | TokenKind::Or,
+        TokenType::Plus
+        | TokenType::Slash
+        | TokenType::Minus
+        | TokenType::Star
+        | TokenType::BangEq
+        | TokenType::EqEq
+        | TokenType::LessEq
+        | TokenType::Less
+        | TokenType::Greater
+        | TokenType::GreaterEq
+        | TokenType::LShift
+        | TokenType::RShift
+        | TokenType::And
+        | TokenType::Or,
         ThrushStatement::Reference {
             name: right_name,
             kind: right_type,
@@ -1338,20 +1338,20 @@ pub fn integer_binaryop<'ctx>(
             kind: left_type,
             ..
         },
-        TokenKind::Plus
-        | TokenKind::Slash
-        | TokenKind::Minus
-        | TokenKind::Star
-        | TokenKind::BangEq
-        | TokenKind::EqEq
-        | TokenKind::LessEq
-        | TokenKind::Less
-        | TokenKind::Greater
-        | TokenKind::GreaterEq
-        | TokenKind::LShift
-        | TokenKind::RShift
-        | TokenKind::And
-        | TokenKind::Or,
+        TokenType::Plus
+        | TokenType::Slash
+        | TokenType::Minus
+        | TokenType::Star
+        | TokenType::BangEq
+        | TokenType::EqEq
+        | TokenType::LessEq
+        | TokenType::Less
+        | TokenType::Greater
+        | TokenType::GreaterEq
+        | TokenType::LShift
+        | TokenType::RShift
+        | TokenType::And
+        | TokenType::Or,
         ThrushStatement::Call {
             kind: right_call_type,
             ..
@@ -1397,20 +1397,20 @@ pub fn integer_binaryop<'ctx>(
             kind: left_call_type,
             ..
         },
-        TokenKind::Plus
-        | TokenKind::Slash
-        | TokenKind::Minus
-        | TokenKind::Star
-        | TokenKind::BangEq
-        | TokenKind::EqEq
-        | TokenKind::LessEq
-        | TokenKind::Less
-        | TokenKind::Greater
-        | TokenKind::GreaterEq
-        | TokenKind::LShift
-        | TokenKind::RShift
-        | TokenKind::And
-        | TokenKind::Or,
+        TokenType::Plus
+        | TokenType::Slash
+        | TokenType::Minus
+        | TokenType::Star
+        | TokenType::BangEq
+        | TokenType::EqEq
+        | TokenType::LessEq
+        | TokenType::Less
+        | TokenType::Greater
+        | TokenType::GreaterEq
+        | TokenType::LShift
+        | TokenType::RShift
+        | TokenType::And
+        | TokenType::Or,
         ThrushStatement::Group {
             expression: right_instr,
             kind: right_type,
@@ -1466,20 +1466,20 @@ pub fn integer_binaryop<'ctx>(
             signed: left_signed,
             ..
         },
-        TokenKind::Plus
-        | TokenKind::Slash
-        | TokenKind::Minus
-        | TokenKind::Star
-        | TokenKind::BangEq
-        | TokenKind::EqEq
-        | TokenKind::LessEq
-        | TokenKind::Less
-        | TokenKind::Greater
-        | TokenKind::GreaterEq
-        | TokenKind::LShift
-        | TokenKind::RShift
-        | TokenKind::And
-        | TokenKind::Or,
+        TokenType::Plus
+        | TokenType::Slash
+        | TokenType::Minus
+        | TokenType::Star
+        | TokenType::BangEq
+        | TokenType::EqEq
+        | TokenType::LessEq
+        | TokenType::Less
+        | TokenType::Greater
+        | TokenType::GreaterEq
+        | TokenType::LShift
+        | TokenType::RShift
+        | TokenType::And
+        | TokenType::Or,
         ThrushStatement::Integer {
             kind: right_type,
             value: right_num,
@@ -1521,20 +1521,20 @@ pub fn integer_binaryop<'ctx>(
             signed: left_signed,
             ..
         },
-        TokenKind::Plus
-        | TokenKind::Slash
-        | TokenKind::Minus
-        | TokenKind::Star
-        | TokenKind::BangEq
-        | TokenKind::EqEq
-        | TokenKind::LessEq
-        | TokenKind::Less
-        | TokenKind::Greater
-        | TokenKind::GreaterEq
-        | TokenKind::LShift
-        | TokenKind::RShift
-        | TokenKind::And
-        | TokenKind::Or,
+        TokenType::Plus
+        | TokenType::Slash
+        | TokenType::Minus
+        | TokenType::Star
+        | TokenType::BangEq
+        | TokenType::EqEq
+        | TokenType::LessEq
+        | TokenType::Less
+        | TokenType::Greater
+        | TokenType::GreaterEq
+        | TokenType::LShift
+        | TokenType::RShift
+        | TokenType::And
+        | TokenType::Or,
         ThrushStatement::Reference {
             name,
             kind: right_type,
@@ -1570,20 +1570,20 @@ pub fn integer_binaryop<'ctx>(
         ThrushStatement::Reference {
             kind: left_type, ..
         },
-        TokenKind::Plus
-        | TokenKind::Slash
-        | TokenKind::Minus
-        | TokenKind::Star
-        | TokenKind::BangEq
-        | TokenKind::EqEq
-        | TokenKind::LessEq
-        | TokenKind::Less
-        | TokenKind::Greater
-        | TokenKind::GreaterEq
-        | TokenKind::LShift
-        | TokenKind::RShift
-        | TokenKind::And
-        | TokenKind::Or,
+        TokenType::Plus
+        | TokenType::Slash
+        | TokenType::Minus
+        | TokenType::Star
+        | TokenType::BangEq
+        | TokenType::EqEq
+        | TokenType::LessEq
+        | TokenType::Less
+        | TokenType::Greater
+        | TokenType::GreaterEq
+        | TokenType::LShift
+        | TokenType::RShift
+        | TokenType::And
+        | TokenType::Or,
         ThrushStatement::Reference {
             kind: right_type, ..
         },
@@ -1627,20 +1627,20 @@ pub fn integer_binaryop<'ctx>(
         ThrushStatement::BinaryOp {
             kind: left_type, ..
         },
-        TokenKind::Plus
-        | TokenKind::Slash
-        | TokenKind::Minus
-        | TokenKind::Star
-        | TokenKind::BangEq
-        | TokenKind::EqEq
-        | TokenKind::LessEq
-        | TokenKind::Less
-        | TokenKind::Greater
-        | TokenKind::GreaterEq
-        | TokenKind::LShift
-        | TokenKind::RShift
-        | TokenKind::And
-        | TokenKind::Or,
+        TokenType::Plus
+        | TokenType::Slash
+        | TokenType::Minus
+        | TokenType::Star
+        | TokenType::BangEq
+        | TokenType::EqEq
+        | TokenType::LessEq
+        | TokenType::Less
+        | TokenType::Greater
+        | TokenType::GreaterEq
+        | TokenType::LShift
+        | TokenType::RShift
+        | TokenType::And
+        | TokenType::Or,
         ThrushStatement::Reference {
             kind: right_type, ..
         },
@@ -1684,20 +1684,20 @@ pub fn integer_binaryop<'ctx>(
         ThrushStatement::Reference {
             kind: left_type, ..
         },
-        TokenKind::Plus
-        | TokenKind::Slash
-        | TokenKind::Minus
-        | TokenKind::Star
-        | TokenKind::BangEq
-        | TokenKind::EqEq
-        | TokenKind::LessEq
-        | TokenKind::Less
-        | TokenKind::Greater
-        | TokenKind::GreaterEq
-        | TokenKind::LShift
-        | TokenKind::RShift
-        | TokenKind::And
-        | TokenKind::Or,
+        TokenType::Plus
+        | TokenType::Slash
+        | TokenType::Minus
+        | TokenType::Star
+        | TokenType::BangEq
+        | TokenType::EqEq
+        | TokenType::LessEq
+        | TokenType::Less
+        | TokenType::Greater
+        | TokenType::GreaterEq
+        | TokenType::LShift
+        | TokenType::RShift
+        | TokenType::And
+        | TokenType::Or,
         ThrushStatement::BinaryOp {
             kind: right_type, ..
         },
@@ -1742,20 +1742,20 @@ pub fn integer_binaryop<'ctx>(
             signed: left_signed,
             ..
         },
-        TokenKind::Plus
-        | TokenKind::Slash
-        | TokenKind::Minus
-        | TokenKind::Star
-        | TokenKind::BangEq
-        | TokenKind::EqEq
-        | TokenKind::LessEq
-        | TokenKind::Less
-        | TokenKind::Greater
-        | TokenKind::GreaterEq
-        | TokenKind::LShift
-        | TokenKind::RShift
-        | TokenKind::And
-        | TokenKind::Or,
+        TokenType::Plus
+        | TokenType::Slash
+        | TokenType::Minus
+        | TokenType::Star
+        | TokenType::BangEq
+        | TokenType::EqEq
+        | TokenType::LessEq
+        | TokenType::Less
+        | TokenType::Greater
+        | TokenType::GreaterEq
+        | TokenType::LShift
+        | TokenType::RShift
+        | TokenType::And
+        | TokenType::Or,
         ThrushStatement::BinaryOp {
             kind: right_type, ..
         },
@@ -1794,20 +1794,20 @@ pub fn integer_binaryop<'ctx>(
         ThrushStatement::BinaryOp {
             kind: left_type, ..
         },
-        TokenKind::Plus
-        | TokenKind::Slash
-        | TokenKind::Minus
-        | TokenKind::Star
-        | TokenKind::BangEq
-        | TokenKind::EqEq
-        | TokenKind::LessEq
-        | TokenKind::Less
-        | TokenKind::Greater
-        | TokenKind::GreaterEq
-        | TokenKind::LShift
-        | TokenKind::RShift
-        | TokenKind::And
-        | TokenKind::Or,
+        TokenType::Plus
+        | TokenType::Slash
+        | TokenType::Minus
+        | TokenType::Star
+        | TokenType::BangEq
+        | TokenType::EqEq
+        | TokenType::LessEq
+        | TokenType::Less
+        | TokenType::Greater
+        | TokenType::GreaterEq
+        | TokenType::LShift
+        | TokenType::RShift
+        | TokenType::And
+        | TokenType::Or,
         ThrushStatement::Integer {
             kind: right_type,
             value: right_num,
@@ -1851,20 +1851,20 @@ pub fn integer_binaryop<'ctx>(
             kind: left_type,
             ..
         },
-        TokenKind::Plus
-        | TokenKind::Slash
-        | TokenKind::Minus
-        | TokenKind::Star
-        | TokenKind::BangEq
-        | TokenKind::EqEq
-        | TokenKind::LessEq
-        | TokenKind::Less
-        | TokenKind::Greater
-        | TokenKind::GreaterEq
-        | TokenKind::LShift
-        | TokenKind::RShift
-        | TokenKind::And
-        | TokenKind::Or,
+        TokenType::Plus
+        | TokenType::Slash
+        | TokenType::Minus
+        | TokenType::Star
+        | TokenType::BangEq
+        | TokenType::EqEq
+        | TokenType::LessEq
+        | TokenType::Less
+        | TokenType::Greater
+        | TokenType::GreaterEq
+        | TokenType::LShift
+        | TokenType::RShift
+        | TokenType::And
+        | TokenType::Or,
         ThrushStatement::Integer {
             kind: right_type,
             value: right_num,
@@ -1903,20 +1903,20 @@ pub fn integer_binaryop<'ctx>(
             kind: left_type,
             ..
         },
-        TokenKind::Plus
-        | TokenKind::Slash
-        | TokenKind::Minus
-        | TokenKind::Star
-        | TokenKind::BangEq
-        | TokenKind::EqEq
-        | TokenKind::LessEq
-        | TokenKind::Less
-        | TokenKind::Greater
-        | TokenKind::GreaterEq
-        | TokenKind::LShift
-        | TokenKind::RShift
-        | TokenKind::And
-        | TokenKind::Or,
+        TokenType::Plus
+        | TokenType::Slash
+        | TokenType::Minus
+        | TokenType::Star
+        | TokenType::BangEq
+        | TokenType::EqEq
+        | TokenType::LessEq
+        | TokenType::Less
+        | TokenType::Greater
+        | TokenType::GreaterEq
+        | TokenType::LShift
+        | TokenType::RShift
+        | TokenType::And
+        | TokenType::Or,
         ThrushStatement::Integer {
             kind: right_type,
             value: right_num,
@@ -1961,20 +1961,20 @@ pub fn integer_binaryop<'ctx>(
             signed: left_signed,
             ..
         },
-        TokenKind::Plus
-        | TokenKind::Slash
-        | TokenKind::Minus
-        | TokenKind::Star
-        | TokenKind::BangEq
-        | TokenKind::EqEq
-        | TokenKind::LessEq
-        | TokenKind::Less
-        | TokenKind::Greater
-        | TokenKind::GreaterEq
-        | TokenKind::LShift
-        | TokenKind::RShift
-        | TokenKind::And
-        | TokenKind::Or,
+        TokenType::Plus
+        | TokenType::Slash
+        | TokenType::Minus
+        | TokenType::Star
+        | TokenType::BangEq
+        | TokenType::EqEq
+        | TokenType::LessEq
+        | TokenType::Less
+        | TokenType::Greater
+        | TokenType::GreaterEq
+        | TokenType::LShift
+        | TokenType::RShift
+        | TokenType::And
+        | TokenType::Or,
         ThrushStatement::Group {
             expression,
             kind: right_type,
@@ -2023,20 +2023,20 @@ pub fn integer_binaryop<'ctx>(
         ThrushStatement::BinaryOp {
             kind: left_type, ..
         },
-        TokenKind::Plus
-        | TokenKind::Slash
-        | TokenKind::Minus
-        | TokenKind::Star
-        | TokenKind::BangEq
-        | TokenKind::EqEq
-        | TokenKind::LessEq
-        | TokenKind::Less
-        | TokenKind::Greater
-        | TokenKind::GreaterEq
-        | TokenKind::LShift
-        | TokenKind::RShift
-        | TokenKind::And
-        | TokenKind::Or,
+        TokenType::Plus
+        | TokenType::Slash
+        | TokenType::Minus
+        | TokenType::Star
+        | TokenType::BangEq
+        | TokenType::EqEq
+        | TokenType::LessEq
+        | TokenType::Less
+        | TokenType::Greater
+        | TokenType::GreaterEq
+        | TokenType::LShift
+        | TokenType::RShift
+        | TokenType::And
+        | TokenType::Or,
         ThrushStatement::BinaryOp {
             kind: right_type, ..
         },
@@ -2090,20 +2090,20 @@ pub fn integer_binaryop<'ctx>(
             kind: left_type,
             ..
         },
-        TokenKind::Plus
-        | TokenKind::Slash
-        | TokenKind::Minus
-        | TokenKind::Star
-        | TokenKind::BangEq
-        | TokenKind::EqEq
-        | TokenKind::LessEq
-        | TokenKind::Less
-        | TokenKind::Greater
-        | TokenKind::GreaterEq
-        | TokenKind::LShift
-        | TokenKind::RShift
-        | TokenKind::And
-        | TokenKind::Or,
+        TokenType::Plus
+        | TokenType::Slash
+        | TokenType::Minus
+        | TokenType::Star
+        | TokenType::BangEq
+        | TokenType::EqEq
+        | TokenType::LessEq
+        | TokenType::Less
+        | TokenType::Greater
+        | TokenType::GreaterEq
+        | TokenType::LShift
+        | TokenType::RShift
+        | TokenType::And
+        | TokenType::Or,
         ThrushStatement::Group {
             expression: right_instr,
             kind: right_type,
@@ -2151,20 +2151,20 @@ pub fn integer_binaryop<'ctx>(
             kind: left_type,
             ..
         },
-        TokenKind::Plus
-        | TokenKind::Slash
-        | TokenKind::Minus
-        | TokenKind::Star
-        | TokenKind::BangEq
-        | TokenKind::EqEq
-        | TokenKind::LessEq
-        | TokenKind::Less
-        | TokenKind::Greater
-        | TokenKind::GreaterEq
-        | TokenKind::LShift
-        | TokenKind::RShift
-        | TokenKind::And
-        | TokenKind::Or,
+        TokenType::Plus
+        | TokenType::Slash
+        | TokenType::Minus
+        | TokenType::Star
+        | TokenType::BangEq
+        | TokenType::EqEq
+        | TokenType::LessEq
+        | TokenType::Less
+        | TokenType::Greater
+        | TokenType::GreaterEq
+        | TokenType::LShift
+        | TokenType::RShift
+        | TokenType::And
+        | TokenType::Or,
         ThrushStatement::BinaryOp {
             kind: right_type, ..
         },
@@ -2208,20 +2208,20 @@ pub fn integer_binaryop<'ctx>(
         ThrushStatement::BinaryOp {
             kind: left_type, ..
         },
-        TokenKind::Plus
-        | TokenKind::Slash
-        | TokenKind::Minus
-        | TokenKind::Star
-        | TokenKind::BangEq
-        | TokenKind::EqEq
-        | TokenKind::LessEq
-        | TokenKind::Less
-        | TokenKind::Greater
-        | TokenKind::GreaterEq
-        | TokenKind::LShift
-        | TokenKind::RShift
-        | TokenKind::And
-        | TokenKind::Or,
+        TokenType::Plus
+        | TokenType::Slash
+        | TokenType::Minus
+        | TokenType::Star
+        | TokenType::BangEq
+        | TokenType::EqEq
+        | TokenType::LessEq
+        | TokenType::Less
+        | TokenType::Greater
+        | TokenType::GreaterEq
+        | TokenType::LShift
+        | TokenType::RShift
+        | TokenType::And
+        | TokenType::Or,
         ThrushStatement::Group {
             expression,
             kind: right_type,

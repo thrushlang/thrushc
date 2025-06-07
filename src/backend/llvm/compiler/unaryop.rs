@@ -1,4 +1,4 @@
-use crate::frontend::lexer::tokenkind::TokenKind;
+use crate::frontend::lexer::tokentype::TokenType;
 use crate::frontend::types::lexer::ThrushType;
 use crate::frontend::types::parser::stmts::stmt::ThrushStatement;
 use crate::frontend::types::representations::UnaryOperation;
@@ -21,7 +21,7 @@ pub fn unary_op<'ctx>(
     let llvm_context: &Context = context.get_llvm_context();
 
     if let (
-        TokenKind::PlusPlus | TokenKind::MinusMinus,
+        TokenType::PlusPlus | TokenType::MinusMinus,
         _,
         ThrushStatement::Reference {
             name,
@@ -66,7 +66,7 @@ pub fn unary_op<'ctx>(
     }
 
     if let (
-        TokenKind::Bang,
+        TokenType::Bang,
         _,
         ThrushStatement::Reference {
             name: ref_name,
@@ -91,7 +91,7 @@ pub fn unary_op<'ctx>(
     }
 
     if let (
-        TokenKind::Minus,
+        TokenType::Minus,
         _,
         ThrushStatement::Reference {
             name,
@@ -115,7 +115,7 @@ pub fn unary_op<'ctx>(
         return result.into();
     }
 
-    if let (TokenKind::Bang, _, ThrushStatement::Boolean { value, .. }) = unary {
+    if let (TokenType::Bang, _, ThrushStatement::Boolean { value, .. }) = unary {
         let value: IntValue = valuegen::integer(llvm_context, &ThrushType::Bool, *value, false);
         let result: IntValue = llvm_builder.build_not(value, "").unwrap();
 
@@ -123,7 +123,7 @@ pub fn unary_op<'ctx>(
     }
 
     if let (
-        TokenKind::Minus,
+        TokenType::Minus,
         _,
         ThrushStatement::Integer {
             kind,
@@ -144,7 +144,7 @@ pub fn unary_op<'ctx>(
     }
 
     if let (
-        TokenKind::Minus,
+        TokenType::Minus,
         _,
         ThrushStatement::Float {
             kind,

@@ -2,6 +2,7 @@
 
 use crate::backend::llvm::compiler::utils;
 use crate::backend::llvm::compiler::valuegen::ExpressionModificator;
+use crate::backend::types::representations::LLVMFunction;
 use crate::core::console::logging::{self, LoggingType};
 use crate::frontend::types::lexer::ThrushType;
 use crate::frontend::types::parser::stmts::traits::ThrushAttributesExtensions;
@@ -695,16 +696,19 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         let llvm_context: &Context = self.context.get_llvm_context();
         let llvm_builder: &Builder = self.context.get_llvm_builder();
 
-        let function_name: &str = function.0;
-        let function_type: &ThrushType = function.1;
-        let function_parameters: &[ThrushStatement<'ctx>] = function.2;
-        let function_body: &ThrushStatement = function.4;
+        let function_ascii_name: &str = function.1;
+        let function_type: &ThrushType = function.2;
+        let function_parameters: &[ThrushStatement<'ctx>] = function.3;
+        let function_body: &ThrushStatement = function.5;
 
         if function_body.is_null() {
             return;
         }
 
-        let llvm_function: FunctionValue = self.context.get_function(function_name).0;
+        let get_llvm_function: LLVMFunction = self.context.get_function(function_ascii_name);
+        let llvm_function_value: FunctionValue = get_llvm_function.0;
+
+        let llvm_function: FunctionValue = llvm_function_value;
 
         let entry: BasicBlock = llvm_context.append_basic_block(llvm_function, "");
 
@@ -785,12 +789,13 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         let asm_function: AssemblerFunctionRepresentation = stmt.as_asm_function_representation();
 
         let asm_function_name: &str = asm_function.0;
-        let asm_function_assembler: String = asm_function.1.to_string();
-        let asm_function_constraints: String = asm_function.2.to_string();
-        let asm_function_return_type: &ThrushType = asm_function.3;
-        let asm_function_parameters: &[ThrushStatement] = asm_function.4;
-        let asm_function_parameters_types: &[ThrushType] = asm_function.5;
-        let asm_function_attributes: &ThrushAttributes = asm_function.6;
+        let asm_function_ascii_name: &str = asm_function.1;
+        let asm_function_assembler: String = asm_function.2.to_string();
+        let asm_function_constraints: String = asm_function.3.to_string();
+        let asm_function_return_type: &ThrushType = asm_function.4;
+        let asm_function_parameters: &[ThrushStatement] = asm_function.5;
+        let asm_function_parameters_types: &[ThrushType] = asm_function.6;
+        let asm_function_attributes: &ThrushAttributes = asm_function.7;
 
         let mut call_convention: u32 = CallConvention::Standard as u32;
 
@@ -806,7 +811,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         });
 
         let truly_function_name: String =
-            utils::generate_assembler_function_name(asm_function_name);
+            utils::generate_assembler_function_name(asm_function_ascii_name);
 
         let asm_function_type: FunctionType = typegen::function_type(
             self.context,
@@ -897,10 +902,11 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         let function: FunctionRepresentation = stmt.as_function_representation();
 
         let function_name: &str = function.0;
-        let function_type: &ThrushType = function.1;
-        let function_parameters: &[ThrushStatement<'ctx>] = function.2;
-        let function_parameters_types: &[ThrushType] = function.3;
-        let function_attributes: &ThrushAttributes = function.5;
+        let function_ascii_name: &str = function.1;
+        let function_type: &ThrushType = function.2;
+        let function_parameters: &[ThrushStatement<'ctx>] = function.3;
+        let function_parameters_types: &[ThrushType] = function.4;
+        let function_attributes: &ThrushAttributes = function.6;
 
         let ignore_args: bool = function_attributes.has_ignore_attribute();
         let is_public: bool = function_attributes.has_public_attribute();
@@ -925,7 +931,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         let llvm_function_name: &str = if let Some(ffi_name) = extern_name {
             ffi_name
         } else {
-            function_name
+            function_ascii_name
         };
 
         let function_type: FunctionType = typegen::function_type(

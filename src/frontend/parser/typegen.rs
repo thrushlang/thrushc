@@ -1,13 +1,13 @@
 use crate::{
     core::errors::standard::ThrushCompilerIssue,
     frontend::{
-        lexer::{span::Span, token::Token, tokenkind::TokenKind},
+        lexer::{span::Span, token::Token, tokentype::TokenType},
         types::{
             lexer::ThrushType,
             parser::stmts::{
                 traits::{
                     CustomTypeFieldsExtensions, FoundSymbolEither, FoundSymbolExtension,
-                    StructExtensions, StructFieldsExtensions,
+                    StructExtensions, StructFieldsExtensions, TokenExtensions,
                 },
                 types::{CustomTypeFields, StructFields},
             },
@@ -53,7 +53,7 @@ pub fn build_type(parser_ctx: &mut ParserContext<'_>) -> Result<ThrushType, Thru
                 ty if ty.is_float_type() => Ok(ty),
                 ty if ty.is_bool_type() => Ok(ty),
                 ty if ty.is_address_type() => Ok(ty),
-                ty if ty.is_ptr_type() && parser_ctx.check(TokenKind::LBracket) => Ok(
+                ty if ty.is_ptr_type() && parser_ctx.check(TokenType::LBracket) => Ok(
                     self::build_recursive_type(parser_ctx, ThrushType::Ptr(None))?,
                 ),
                 ty if ty.is_ptr_type() => Ok(ty),
@@ -72,11 +72,11 @@ pub fn build_type(parser_ctx: &mut ParserContext<'_>) -> Result<ThrushType, Thru
             }
         }
 
-        TokenKind::Identifier => {
+        TokenType::Identifier => {
             let identifier_tk: &Token = parser_ctx.advance()?;
 
-            let name: &str = identifier_tk.lexeme;
-            let span: Span = identifier_tk.span;
+            let name: &str = identifier_tk.get_lexeme();
+            let span: Span = identifier_tk.get_span();
 
             if let Ok(object) = parser_ctx.get_symbols().get_symbols_id(name, span) {
                 if object.is_structure() {
@@ -132,7 +132,7 @@ fn build_recursive_type(
     mut before_type: ThrushType,
 ) -> Result<ThrushType, ThrushCompilerIssue> {
     parser_ctx.consume(
-        TokenKind::LBracket,
+        TokenType::LBracket,
         String::from("Syntax error"),
         String::from("Expected '['."),
     )?;
@@ -140,12 +140,12 @@ fn build_recursive_type(
     if let ThrushType::Ptr(_) = &mut before_type {
         let mut inner_type: ThrushType = self::build_type(parser_ctx)?;
 
-        while parser_ctx.check(TokenKind::LBracket) {
+        while parser_ctx.check(TokenType::LBracket) {
             inner_type = self::build_recursive_type(parser_ctx, inner_type)?;
         }
 
         parser_ctx.consume(
-            TokenKind::RBracket,
+            TokenType::RBracket,
             String::from("Syntax error"),
             String::from("Expected ']'."),
         )?;

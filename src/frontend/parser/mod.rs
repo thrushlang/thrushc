@@ -15,7 +15,7 @@ use crate::core::console::logging::{self, LoggingType};
 use crate::core::diagnostic::diagnostician::Diagnostician;
 use crate::core::errors::standard::ThrushCompilerIssue;
 use crate::frontend::lexer::token::Token;
-use crate::frontend::lexer::tokenkind::TokenKind;
+use crate::frontend::lexer::tokentype::TokenType;
 use crate::frontend::types::parser::stmts::stmt::ThrushStatement;
 use crate::frontend::types::symbols::types::{AssemblerFunctions, Functions};
 
@@ -24,7 +24,7 @@ const MINIMAL_GLOBAL_CAPACITY: usize = 2024;
 
 pub struct ParserContext<'instr> {
     stmts: Vec<ThrushStatement<'instr>>,
-    tokens: &'instr [Token<'instr>],
+    tokens: &'instr [Token],
     errors: Vec<ThrushCompilerIssue>,
 
     control_ctx: ParserControlContext,
@@ -37,13 +37,13 @@ pub struct ParserContext<'instr> {
 }
 
 pub struct Parser<'instr> {
-    tokens: &'instr [Token<'instr>],
+    tokens: &'instr [Token],
     file: &'instr CompilerFile,
 }
 
 impl<'instr> Parser<'instr> {
     pub fn parse(
-        tokens: &'instr [Token<'instr>],
+        tokens: &'instr [Token],
         file: &'instr CompilerFile,
     ) -> (ParserContext<'instr>, bool) {
         Self { tokens, file }.start()
@@ -73,7 +73,7 @@ impl<'instr> Parser<'instr> {
 }
 
 impl<'instr> ParserContext<'instr> {
-    pub fn new(tokens: &'instr [Token<'instr>], file: &'instr CompilerFile) -> Self {
+    pub fn new(tokens: &'instr [Token], file: &'instr CompilerFile) -> Self {
         let mut functions: Functions = HashMap::with_capacity(MINIMAL_GLOBAL_CAPACITY);
         let asm_functions: AssemblerFunctions = HashMap::with_capacity(MINIMAL_GLOBAL_CAPACITY);
 
@@ -107,10 +107,10 @@ impl<'instr> ParserContext<'instr> {
 
     pub fn consume(
         &mut self,
-        kind: TokenKind,
+        kind: TokenType,
         title: String,
         help: String,
-    ) -> Result<&'instr Token<'instr>, ThrushCompilerIssue> {
+    ) -> Result<&'instr Token, ThrushCompilerIssue> {
         if self.peek().kind == kind {
             return self.advance();
         }
@@ -123,7 +123,7 @@ impl<'instr> ParserContext<'instr> {
         ))
     }
 
-    pub fn match_token(&mut self, kind: TokenKind) -> Result<bool, ThrushCompilerIssue> {
+    pub fn match_token(&mut self, kind: TokenType) -> Result<bool, ThrushCompilerIssue> {
         if self.peek().kind == kind {
             self.only_advance()?;
             return Ok(true);
@@ -146,7 +146,7 @@ impl<'instr> ParserContext<'instr> {
         ))
     }
 
-    pub fn advance(&mut self) -> Result<&'instr Token<'instr>, ThrushCompilerIssue> {
+    pub fn advance(&mut self) -> Result<&'instr Token, ThrushCompilerIssue> {
         if !self.is_eof() {
             self.current += 1;
             return Ok(self.previous());
@@ -280,7 +280,7 @@ impl<'instr> ParserContext<'instr> {
     }
 
     #[must_use]
-    pub fn check(&self, kind: TokenKind) -> bool {
+    pub fn check(&self, kind: TokenType) -> bool {
         if self.is_eof() {
             return false;
         }
@@ -289,7 +289,7 @@ impl<'instr> ParserContext<'instr> {
     }
 
     #[must_use]
-    pub fn check_to(&self, kind: TokenKind, changer: usize) -> bool {
+    pub fn check_to(&self, kind: TokenType, changer: usize) -> bool {
         if self.is_eof() {
             return false;
         }
@@ -308,11 +308,11 @@ impl<'instr> ParserContext<'instr> {
 
     #[must_use]
     pub fn is_eof(&self) -> bool {
-        self.peek().kind == TokenKind::Eof
+        self.peek().kind == TokenType::Eof
     }
 
     #[must_use]
-    pub fn peek(&self) -> &'instr Token<'instr> {
+    pub fn peek(&self) -> &'instr Token {
         self.tokens.get(self.current).unwrap_or_else(|| {
             logging::log(
                 LoggingType::Panic,
@@ -324,7 +324,7 @@ impl<'instr> ParserContext<'instr> {
     }
 
     #[must_use]
-    pub fn previous(&self) -> &'instr Token<'instr> {
+    pub fn previous(&self) -> &'instr Token {
         self.tokens.get(self.current - 1).unwrap_or_else(|| {
             logging::log(
                 LoggingType::Panic,
@@ -348,13 +348,13 @@ impl<'instr> ParserContext<'instr> {
                 let lbrace_count: usize = self.tokens[self.current..limit_pos]
                     .iter()
                     .rev()
-                    .filter(|tk| matches!(tk.kind, TokenKind::LBrace))
+                    .filter(|tk| matches!(tk.kind, TokenType::LBrace))
                     .count();
 
                 let rbrace_count: usize = self.tokens[self.current..limit_pos]
                     .iter()
                     .rev()
-                    .filter(|tk| matches!(tk.kind, TokenKind::RBrace))
+                    .filter(|tk| matches!(tk.kind, TokenType::RBrace))
                     .count();
 
                 let diff: usize = if lbrace_count > rbrace_count {

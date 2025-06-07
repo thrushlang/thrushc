@@ -168,12 +168,12 @@ impl<'thrushc> TheThrushCompiler<'thrushc> {
             ),
         );
 
-        let source_code: &[u8] = &self.get_source_code(&file.path);
+        let source_code: String = self.get_source_code(&file.path);
 
         let llvm_backend: &LLVMBackend = self.options.get_llvm_backend_options();
         let build_dir: &PathBuf = self.options.get_build_dir();
 
-        let tokens: Vec<Token> = match Lexer::lex(source_code, file) {
+        let tokens: Vec<Token> = match Lexer::lex(&source_code, file) {
             Ok(tokens) => tokens,
             Err(error) => {
                 logging::log(logging::LoggingType::Panic, &error.display());
@@ -545,7 +545,7 @@ impl<'thrushc> TheThrushCompiler<'thrushc> {
         self.compiled_files.push(path);
     }
 
-    fn get_source_code(&self, file_path: &Path) -> Vec<u8> {
+    fn get_source_code(&self, file_path: &Path) -> String {
         match self.read_file_to_string_buffered(file_path) {
             Ok(code) => code,
             _ => {
@@ -559,13 +559,21 @@ impl<'thrushc> TheThrushCompiler<'thrushc> {
         }
     }
 
-    fn read_file_to_string_buffered(&self, path: &Path) -> Result<Vec<u8>, io::Error> {
-        let file: File = File::open(path)?;
-        let mut reader: BufReader<File> = BufReader::new(file);
+    fn read_file_to_string_buffered(&self, path: &Path) -> Result<String, ()> {
+        if let Ok(file) = File::open(path) {
+            let mut reader: BufReader<File> = BufReader::new(file);
 
-        let mut buffer: Vec<u8> = Vec::with_capacity(100_000);
-        reader.read_to_end(&mut buffer)?;
+            let mut buffer: Vec<u8> = Vec::with_capacity(100_000);
 
-        Ok(buffer)
+            if reader.read_to_end(&mut buffer).is_err() {
+                return Err(());
+            }
+
+            if let Ok(code) = String::from_utf8(buffer) {
+                return Ok(code);
+            }
+        }
+
+        Err(())
     }
 }
