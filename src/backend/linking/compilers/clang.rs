@@ -62,7 +62,7 @@ impl<'clang> Clang<'clang> {
                 let clang_tar_path: PathBuf = embedded_raw_clang.3;
                 let clang_output_path: PathBuf = embedded_raw_clang.4;
 
-                if let Ok(clang_path) = decompressor::dump_x86_64_clang(
+                if let Ok(clang_path) = decompressor::dump_x86_64_clang_linux(
                     clang_manifest,
                     clang_raw_bytes,
                     clang_manifest_path,
@@ -101,7 +101,7 @@ impl<'clang> Clang<'clang> {
                 let clang_tar_path: PathBuf = embedded_raw_clang.3;
                 let clang_output_path: PathBuf = embedded_raw_clang.4;
 
-                if let Ok(clang_path) = decompressor::dump_x86_64_clang(
+                if let Ok(clang_path) = decompressor::dump_x86_64_clang_windows(
                     clang_manifest,
                     clang_raw_bytes,
                     clang_manifest_path,

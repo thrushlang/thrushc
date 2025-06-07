@@ -27,6 +27,7 @@ const GITHUB_RELEASES: &str = "https://api.github.com/repos/thrushlang/toolchain
 enum LoggingType {
     Error,
     Panic,
+    Warning,
     Log,
 }
 
@@ -36,6 +37,7 @@ impl LoggingType {
             LoggingType::Error => "ERROR".bright_red().bold(),
             LoggingType::Panic => "PANIC".bold().bright_red().underline(),
             LoggingType::Log => "LOG".custom_color((141, 141, 142)).bold(),
+            LoggingType::Warning => "WARNING".bright_yellow().bold(),
         }
     }
 
@@ -45,6 +47,10 @@ impl LoggingType {
 
     fn is_err(&self) -> bool {
         matches!(self, LoggingType::Error)
+    }
+
+    fn is_warn(&self) -> bool {
+        matches!(self, LoggingType::Warning)
     }
 }
 
@@ -58,6 +64,14 @@ fn log(ltype: LoggingType, msg: &str) {
     }
 
     if ltype.is_err() {
+        io::stderr()
+            .write_all(format!("{} {}\n  ", ltype.to_styled(), msg.bold()).as_bytes())
+            .unwrap();
+
+        return;
+    }
+
+    if ltype.is_warn() {
         io::stderr()
             .write_all(format!("{} {}\n  ", ltype.to_styled(), msg.bold()).as_bytes())
             .unwrap();
@@ -83,15 +97,13 @@ impl Builder {
     }
 
     pub fn install(&self) {
-        if !self.build_path.exists() {
-            let _ = fs::create_dir_all(&self.build_path);
+        self.reset_build_path();
 
-            if let Err(err) = self.install_llvm_c_api() {
-                self::log(LoggingType::Panic, &err);
-            }
-
-            log(LoggingType::Log, "LLVM C API installed.\n");
+        if let Err(err) = self.install_llvm_c_api() {
+            self::log(LoggingType::Panic, &err);
         }
+
+        log(LoggingType::Log, "LLVM C API installed.\n");
 
         if let Ok(thrushc_home) = self.get_thrushc_home() {
             if !thrushc_home.join("embedded").exists() {
@@ -100,6 +112,11 @@ impl Builder {
                 }
 
                 log(LoggingType::Log, "Embedded compilers installed.\n");
+            } else {
+                log(
+                    LoggingType::Warning,
+                    "The built-in compilers were pre-installed.\n",
+                );
             }
         }
 
@@ -501,6 +518,11 @@ impl Builder {
             "'{}' could not be made executable.",
             file_path.display()
         ))
+    }
+
+    fn reset_build_path(&self) {
+        let _ = fs::remove_dir_all(&self.build_path);
+        let _ = fs::create_dir_all(&self.build_path);
     }
 }
 
