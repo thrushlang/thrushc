@@ -27,7 +27,7 @@ pub static WINDOWS_X86_64_CLANG: &[u8] =
 
 #[cfg(target_os = "windows")]
 pub static WINDOWS_X86_64_CLANG_MANIFEST: &str =
-    include_str!("../../../../embedded/compilers/linux/clang/clang-manifest.json");
+    include_str!("../../../../embedded/compilers/windows/clang/clang-manifest.json");
 
 pub struct Clang<'clang> {
     files: &'clang [PathBuf],
