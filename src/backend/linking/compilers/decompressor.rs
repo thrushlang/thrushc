@@ -12,13 +12,14 @@ use tar::Archive;
 use xz2::bufread::XzDecoder;
 
 #[cfg(target_os = "windows")]
-use io::{self};
+use std::io::{self};
 
 #[cfg(target_os = "windows")]
 use zip::{ZipArchive, read::ZipFile};
 
 use crate::core::console::logging::{self, LoggingType};
 
+#[cfg(target_os = "linux")]
 pub fn dump_x86_64_clang_linux(
     clang_raw_manifest: &str,
     clang_raw_bytes: &[u8],
@@ -193,7 +194,7 @@ fn decompress_zip(zip_path: PathBuf, extract_to: PathBuf) -> zip::result::ZipRes
         let outpath: PathBuf = Path::new(&extract_to).join(file.name());
 
         if file.name().ends_with('/') {
-            std::fs::create_dir_all(&outpath)?;
+            fs::create_dir_all(&outpath)?;
         } else {
             if let Some(parent) = outpath.parent() {
                 fs::create_dir_all(parent)?;

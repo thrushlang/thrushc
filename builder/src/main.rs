@@ -403,39 +403,17 @@ impl Builder {
         for name in names.iter() {
             let full_path: PathBuf = self.build_path.join(name);
 
-            if full_path.exists() {
-                if name == &"llvm-config" {
-                    if cfg!(target_os = "linux") {
-                        self.make_executable(&full_path)?;
-                    }
-
-                    let bin_dir: PathBuf = self.build_path.join("bin");
-
-                    if !bin_dir.exists() {
-                        fs::create_dir_all(&bin_dir).map_err(|e| {
-                            format!("Failed to create bin directory {:?}: {}", bin_dir, e)
-                        })?;
-                    }
-
-                    let output_path: PathBuf = bin_dir.join(name);
-
-                    if full_path.exists() && !output_path.exists() {
-                        fs::copy(&full_path, &output_path).map_err(|e| {
-                            format!("Failed to copy llvm-config to {:?}: {}", output_path, e)
-                        })?;
-
-                        let _ = fs::remove_file(&full_path);
-                    }
-                }
-
-                if full_path
-                    .extension()
-                    .is_some_and(|extension| extension == "xz")
-                {
-                    self.decompress_file(&full_path)?;
-                    let _ = fs::remove_file(&full_path);
-                }
+            if full_path
+                .extension()
+                .is_some_and(|extension| extension == "xz" || extension == "zip")
+            {
+                self.decompress_file(&full_path)?;
+                let _ = fs::remove_file(&full_path);
             }
+        }
+
+        if cfg!(target_os = "linux") {
+            self.make_executable(&self.build_path.join("bin/llvm-config"))?;
         }
 
         Ok(())
