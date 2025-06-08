@@ -25,8 +25,6 @@ pub struct LLVMCodeGenContext<'a, 'ctx> {
     module: &'a Module<'ctx>,
     context: &'ctx Context,
     builder: &'ctx Builder<'ctx>,
-    position: LLVMCodeGenContextPosition,
-    previous_position: LLVMCodeGenContextPosition,
     target_data: TargetData,
 
     functions: LLVMFunctions<'ctx>,
@@ -48,8 +46,6 @@ impl<'a, 'ctx> LLVMCodeGenContext<'a, 'ctx> {
             module,
             context,
             builder,
-            position: LLVMCodeGenContextPosition::default(),
-            previous_position: LLVMCodeGenContextPosition::default(),
             target_data,
             constants: HashMap::with_capacity(100),
             functions: HashMap::with_capacity(100),
@@ -196,48 +192,7 @@ impl<'a, 'ctx> LLVMCodeGenContext<'a, 'ctx> {
         self.builder
     }
 
-    pub fn set_position(&mut self, new_position: LLVMCodeGenContextPosition) {
-        self.previous_position = self.position;
-        self.position = new_position;
-    }
-
-    pub fn get_position(&self) -> LLVMCodeGenContextPosition {
-        self.position
-    }
-
-    pub fn get_previous_position(&self) -> LLVMCodeGenContextPosition {
-        self.previous_position
-    }
-
-    pub fn set_position_irrelevant(&mut self) {
-        self.position = LLVMCodeGenContextPosition::NoRelevant;
-    }
-
     pub fn get_target_data(&self) -> &TargetData {
         &self.target_data
-    }
-}
-
-#[derive(Debug, Default, Clone, Copy)]
-pub enum LLVMCodeGenContextPosition {
-    Local,
-    Call,
-    Mutation,
-
-    #[default]
-    NoRelevant,
-}
-
-impl LLVMCodeGenContextPosition {
-    pub fn in_local(&self) -> bool {
-        matches!(self, LLVMCodeGenContextPosition::Local)
-    }
-
-    pub fn in_call(&self) -> bool {
-        matches!(self, LLVMCodeGenContextPosition::Call)
-    }
-
-    pub fn in_mutation(&self) -> bool {
-        matches!(self, LLVMCodeGenContextPosition::Mutation)
     }
 }

@@ -7,7 +7,7 @@ use crate::{
 
 use super::{
     ThrushStatement,
-    context::{LLVMCodeGenContext, LLVMCodeGenContextPosition},
+    context::LLVMCodeGenContext,
     memory::{self, SymbolAllocated},
     valuegen,
 };
@@ -24,7 +24,6 @@ pub fn compile<'ctx>(local: Local<'ctx>, context: &mut LLVMCodeGenContext<'_, 'c
     let attributes: &ThrushAttributes = local.3;
 
     context.alloc_local(local_name, local_type, attributes);
-    context.set_position(LLVMCodeGenContextPosition::Local);
 
     if local_type.is_str_type() {
         compile_local_str(local, context);
@@ -49,8 +48,6 @@ pub fn compile<'ctx>(local: Local<'ctx>, context: &mut LLVMCodeGenContext<'_, 'c
     if local_type.is_mut_type() {
         compile_local_mut(local, context);
     }
-
-    context.set_position_irrelevant();
 }
 
 fn compile_local_mut<'ctx>(local: Local<'ctx>, context: &mut LLVMCodeGenContext<'_, 'ctx>) {

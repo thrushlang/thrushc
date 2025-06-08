@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use crate::backend::llvm::compiler::context::LLVMCodeGenContextPosition;
+use crate::backend::llvm::compiler::attributes::LLVMAttribute;
 use crate::backend::llvm::compiler::memory::{self, LLVMAllocationSite, SymbolAllocated};
 use crate::backend::llvm::compiler::{binaryop, builtins, cast, unaryop, utils};
 use crate::backend::types::representations::LLVMFunction;
@@ -11,17 +11,19 @@ use crate::frontend::types::parser::stmts::stmt::ThrushStatement;
 use crate::frontend::types::parser::stmts::traits::ThrushAttributesExtensions;
 use crate::frontend::types::parser::stmts::types::ThrushAttributes;
 
+use crate::backend::types::traits::AssemblerFunctionExtensions;
+
 use super::context::LLVMCodeGenContext;
 use super::typegen;
 
 use inkwell::module::{Linkage, Module};
 use inkwell::targets::TargetData;
-use inkwell::types::{BasicTypeEnum, PointerType};
+use inkwell::types::{BasicTypeEnum, FunctionType, PointerType};
 
-use inkwell::AddressSpace;
 use inkwell::values::{
     BasicMetadataValueEnum, BasicValueEnum, FloatValue, FunctionValue, GlobalValue, IntValue,
 };
+use inkwell::{AddressSpace, InlineAsmDialect};
 use inkwell::{builder::Builder, context::Context, values::PointerValue};
 
 pub fn alloc<'ctx>(
@@ -166,7 +168,7 @@ pub fn compile<'ctx>(
         ..
     } = expr
     {
-        let mut integer: IntValue = integer(llvm_context, kind, *value, *signed);
+        let mut integer: IntValue = self::integer(llvm_context, kind, *value, *signed);
 
         if modificator.get_do_cast() {
             if let Some(casted_integer) = cast::integer(context, cast, kind, integer.into()) {
@@ -197,10 +199,6 @@ pub fn compile<'ctx>(
             return builtins::build_is_signed(context, (name, kind, args));
         }
 
-        context.set_position(LLVMCodeGenContextPosition::Call);
-
-        let previous_position: LLVMCodeGenContextPosition = context.get_previous_position();
-
         let function: LLVMFunction = context.get_function(name);
         let function_arguments_types: &[ThrushType] = function.1;
         let function_convention: u32 = function.2;
@@ -218,7 +216,13 @@ pub fn compile<'ctx>(
                 .unwrap_or(&ThrushType::Void);
 
             compiled_args.push(
-                self::compile(context, arg_expr, cast, ExpressionModificator::default()).into(),
+                self::compile(
+                    context,
+                    arg_expr,
+                    cast,
+                    ExpressionModificator::new(cast.is_mut_type() || cast.is_ptr_type(), true),
+                )
+                .into(),
             );
         });
 
@@ -226,30 +230,14 @@ pub fn compile<'ctx>(
             call.set_call_convention(function_convention);
 
             if !kind.is_void_type() {
-                let llvm_context: &Context = context.get_llvm_context();
                 let return_value: BasicValueEnum = call.try_as_basic_value().unwrap_left();
 
-                if cast.is_mut_type() && context.get_position().in_call() {
-                    context.set_position_irrelevant();
+                if modificator.get_load_raw() {
                     return return_value;
                 }
 
-                if kind.is_probably_heap_allocated(llvm_context, context.get_target_data())
-                    && previous_position.in_local()
-                    || kind.is_probably_heap_allocated(llvm_context, context.get_target_data())
-                        && previous_position.in_call()
-                {
-                    context.set_position_irrelevant();
-
-                    return memory::load_anon(context, kind, return_value.into_pointer_value());
-                }
-
-                context.set_position_irrelevant();
-
-                return call.try_as_basic_value().unwrap_left();
+                return return_value;
             }
-
-            context.set_position_irrelevant();
 
             return llvm_context
                 .ptr_type(AddressSpace::default())
@@ -597,31 +585,18 @@ pub fn compile<'ctx>(
             }
         });
 
-        if context.get_position().in_mutation() {
-            return last_memory_calculation.into();
-        }
-
-        if context.get_position().in_call() && cast.is_mut_type() {
+        if modificator.get_load_raw() {
             return last_memory_calculation.into();
         }
 
         return memory::load_anon(context, kind, last_memory_calculation);
     }
 
-    if let ThrushStatement::Reference {
-        name,
-        identificator,
-        ..
-    } = expr
-    {
+    if let ThrushStatement::Reference { name, .. } = expr {
         let symbol: SymbolAllocated = context.get_allocated_symbol(name);
 
         if modificator.get_load_raw() {
             return symbol.raw_load().into();
-        }
-
-        if cast.is_mut_type() && context.get_position().in_call() && !identificator.is_constant() {
-            return symbol.take();
         }
 
         return symbol.load(context);
@@ -635,6 +610,69 @@ pub fn compile<'ctx>(
 
     ########################################################################*/
 
+    if let ThrushStatement::AsmValue {
+        assembler,
+        constraints,
+        args,
+        kind,
+        attributes,
+        ..
+    } = expr
+    {
+        let asm_function_type: FunctionType = typegen::function_type(context, kind, args, false);
+
+        let compiled_args: Vec<BasicMetadataValueEnum> = args
+            .iter()
+            .map(|arg| self::compile(context, arg, cast, modificator).into())
+            .collect();
+
+        let mut syntax: InlineAsmDialect = InlineAsmDialect::Intel;
+        let sideeffects: bool = attributes.has_asmsideffects_attribute();
+        let align_stack: bool = attributes.has_asmalignstack_attribute();
+        let can_throw: bool = attributes.has_asmthrow_attribute();
+
+        attributes.iter().for_each(|attribute| {
+            if let LLVMAttribute::AsmSyntax(new_syntax, ..) = *attribute {
+                syntax = str::assembler_syntax_attr_to_inline_assembler_dialect(new_syntax);
+            }
+        });
+
+        let fn_inline_assembler: PointerValue = llvm_context.create_inline_asm(
+            asm_function_type,
+            assembler.to_string(),
+            constraints.to_string(),
+            sideeffects,
+            align_stack,
+            Some(syntax),
+            can_throw,
+        );
+
+        if let Ok(indirect_call) = llvm_builder.build_indirect_call(
+            asm_function_type,
+            fn_inline_assembler,
+            &compiled_args,
+            "",
+        ) {
+            if !kind.is_void_type() {
+                let return_value: BasicValueEnum = indirect_call.try_as_basic_value().unwrap_left();
+
+                if modificator.get_load_raw() {
+                    return return_value;
+                }
+
+                return return_value;
+            }
+
+            return llvm_context
+                .ptr_type(AddressSpace::default())
+                .const_null()
+                .into();
+        }
+
+        logging::log(LoggingType::Bug, "Unable to build inline assembler value");
+        unreachable!()
+    }
+
     if let ThrushStatement::Mut {
         source,
         kind,
@@ -642,8 +680,6 @@ pub fn compile<'ctx>(
         ..
     } = expr
     {
-        context.set_position(LLVMCodeGenContextPosition::Mutation);
-
         let source_name: Option<&str> = source.0;
         let source_expr: Option<&Rc<ThrushStatement<'_>>> = source.1.as_ref();
 
@@ -651,7 +687,7 @@ pub fn compile<'ctx>(
 
         if let Some(expr) = source_expr {
             let source: BasicValueEnum =
-                self::compile(context, expr, kind, ExpressionModificator::new(false, true));
+                self::compile(context, expr, kind, ExpressionModificator::new(true, true));
 
             let value: BasicValueEnum = self::compile(
                 context,
@@ -665,8 +701,6 @@ pub fn compile<'ctx>(
                 source.into_pointer_value(),
                 memory::load_maybe(context, value_type, value),
             );
-
-            context.set_position_irrelevant();
 
             return source;
         }
@@ -682,8 +716,6 @@ pub fn compile<'ctx>(
             );
 
             symbol.store(context, memory::load_maybe(context, value_type, expr));
-
-            context.set_position_irrelevant();
 
             return expr;
         }

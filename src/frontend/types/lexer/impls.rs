@@ -33,6 +33,7 @@ impl std::fmt::Display for TokenType {
             TokenType::While => write!(f, "while"),
             TokenType::Write => write!(f, "write"),
             TokenType::Local => write!(f, "local"),
+            TokenType::Asm => write!(f, "asm"),
             // Types
             TokenType::Address => write!(f, "address"),
             TokenType::Bool => write!(f, "bool"),

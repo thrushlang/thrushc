@@ -101,8 +101,12 @@ impl ThrushType {
         false
     }
 
-    pub fn deref_ptr(&self) -> ThrushType {
+    pub fn deref(&self) -> ThrushType {
         if let ThrushType::Ptr(Some(any)) = self {
+            return (**any).clone();
+        }
+
+        if let ThrushType::Mut(any) = self {
             return (**any).clone();
         }
 

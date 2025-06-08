@@ -3,6 +3,7 @@ use crate::{
     core::errors::standard::ThrushCompilerIssue,
     frontend::{
         lexer::{span::Span, token::Token, tokentype::TokenType},
+        parser::expression,
         types::{
             lexer::{ThrushType, decompose_struct_property},
             parser::stmts::{
@@ -13,7 +14,7 @@ use crate::{
                     ConstructorExtensions, EnumExtensions, EnumFieldsExtensions, FoundSymbolEither,
                     FoundSymbolExtension, StructExtensions, TokenExtensions,
                 },
-                types::{Constructor, EnumField, EnumFields},
+                types::{Constructor, EnumField, EnumFields, ThrushAttributes},
             },
             symbols::{
                 traits::{
@@ -846,6 +847,8 @@ fn primary<'instr>(
         TokenType::This => self::build_this(parser_ctx)?,
         TokenType::New => self::build_constructor(parser_ctx)?,
 
+        TokenType::Asm => self::build_asm_code_block(parser_ctx)?,
+
         TokenType::Pass => ThrushStatement::Pass {
             span: parser_ctx.advance()?.get_span(),
         },
@@ -913,14 +916,33 @@ fn build_method_call<'instr>(
 
     let mut args: Vec<ThrushStatement> = Vec::with_capacity(10);
 
-    while parser_ctx.peek().kind != TokenType::RParen {
-        if parser_ctx.match_token(TokenType::Comma)? {
-            continue;
+    loop {
+        if parser_ctx.check(TokenType::RParen) {
+            break;
         }
 
         let expression: ThrushStatement = self::build_expr(parser_ctx)?;
 
+        if expression.is_constructor() {
+            return Err(ThrushCompilerIssue::Error(
+                String::from("Syntax error"),
+                String::from("Constructor should be stored in a local variable."),
+                None,
+                expression.get_span(),
+            ));
+        }
+
         args.push(expression);
+
+        if parser_ctx.check(TokenType::RParen) {
+            break;
+        } else {
+            parser_ctx.consume(
+                TokenType::Comma,
+                String::from("Syntax error"),
+                String::from("Expected ','."),
+            )?;
+        }
     }
 
     parser_ctx.consume(
@@ -1501,18 +1523,9 @@ pub fn build_deref<'instr>(
             deref_count += 1;
         }
 
-        let reference_tk: &Token = parser_ctx.consume(
-            TokenType::Identifier,
-            "Syntax error".into(),
-            "Expected 'identifier'.".into(),
-        )?;
+        let expr: ThrushStatement = expression::build_expr(parser_ctx)?;
 
-        let ref_name: &str = reference_tk.get_lexeme();
-        let ref_span: Span = reference_tk.get_span();
-
-        let reference: ThrushStatement = self::build_reference(parser_ctx, ref_name, ref_span)?;
-
-        reference
+        expr
     };
 
     let mut current_type: ThrushType = current_expr.get_value_type()?.clone();
@@ -1520,12 +1533,183 @@ pub fn build_deref<'instr>(
     for _ in 0..deref_count {
         current_expr = ThrushStatement::Deref {
             load: current_expr.clone().into(),
-            kind: current_type.deref_ptr(),
+            kind: current_type.deref(),
             span,
         };
 
-        current_type = current_type.deref_ptr();
+        current_type = current_type.deref();
     }
 
     Ok(current_expr)
+}
+
+fn build_asm_code_block<'instr>(
+    parser_ctx: &mut ParserContext<'instr>,
+) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
+    let asm_tk: &Token = parser_ctx.consume(
+        TokenType::Asm,
+        String::from("Syntax error"),
+        String::from("Expected 'asm' keyword."),
+    )?;
+
+    let span: Span = asm_tk.get_span();
+
+    let mut args: Vec<ThrushStatement> = Vec::with_capacity(10);
+
+    let attributes: ThrushAttributes =
+        stmt::build_attributes(parser_ctx, &[TokenType::LParen, TokenType::LBrace])?;
+
+    if parser_ctx.match_token(TokenType::LParen)? {
+        loop {
+            if parser_ctx.check(TokenType::RParen) {
+                break;
+            }
+
+            let expr: ThrushStatement = self::build_expression(parser_ctx)?;
+
+            if expr.is_constructor() {
+                return Err(ThrushCompilerIssue::Error(
+                    String::from("Syntax error"),
+                    String::from("Constructor should be stored in a local variable."),
+                    None,
+                    expr.get_span(),
+                ));
+            }
+
+            args.push(expr);
+
+            if parser_ctx.check(TokenType::RParen) {
+                break;
+            } else {
+                parser_ctx.consume(
+                    TokenType::Colon,
+                    String::from("Syntax error"),
+                    String::from("Expected ','."),
+                )?;
+            }
+        }
+
+        parser_ctx.consume(
+            TokenType::RParen,
+            String::from("Syntax error"),
+            String::from("Expected ')'."),
+        )?;
+    }
+
+    parser_ctx.consume(
+        TokenType::LBrace,
+        String::from("Syntax error"),
+        String::from("Expected '{'."),
+    )?;
+
+    let mut assembler: String = String::with_capacity(100);
+    let mut assembler_pos: usize = 0;
+
+    loop {
+        if parser_ctx.check(TokenType::RBrace) {
+            break;
+        }
+
+        let raw_str: ThrushStatement = self::build_expr(parser_ctx)?;
+        let raw_str_span: Span = raw_str.get_span();
+
+        if !raw_str.is_str() {
+            return Err(ThrushCompilerIssue::Error(
+                "Syntax error".into(),
+                "Expected string literal value.".into(),
+                None,
+                raw_str_span,
+            ));
+        }
+
+        let assembly: &str = raw_str.get_str_content()?;
+
+        if assembler_pos != 0 {
+            assembler.push('\n');
+        }
+
+        assembler.push_str(assembly);
+
+        if parser_ctx.check(TokenType::RBrace) {
+            break;
+        } else {
+            parser_ctx.consume(
+                TokenType::Comma,
+                String::from("Syntax error"),
+                String::from("Expected ','."),
+            )?;
+        }
+
+        assembler_pos += 1;
+    }
+
+    parser_ctx.consume(
+        TokenType::RBrace,
+        String::from("Syntax error"),
+        String::from("Expected '}'."),
+    )?;
+
+    parser_ctx.consume(
+        TokenType::LBrace,
+        String::from("Syntax error"),
+        String::from("Expected '{'."),
+    )?;
+
+    let mut constraints: String = String::with_capacity(100);
+    let mut constraint_pos: usize = 0;
+
+    loop {
+        if parser_ctx.check(TokenType::RBrace) {
+            break;
+        }
+
+        let raw_str: ThrushStatement = self::build_expr(parser_ctx)?;
+        let raw_str_span: Span = raw_str.get_span();
+
+        if !raw_str.is_str() {
+            return Err(ThrushCompilerIssue::Error(
+                "Syntax error".into(),
+                "Expected string literal value.".into(),
+                None,
+                raw_str_span,
+            ));
+        }
+
+        let constraint: &str = raw_str.get_str_content()?;
+
+        if constraint_pos != 0 {
+            constraints.push('\n');
+        }
+
+        constraints.push_str(constraint);
+
+        if parser_ctx.check(TokenType::RBrace) {
+            break;
+        } else {
+            parser_ctx.consume(
+                TokenType::Comma,
+                String::from("Syntax error"),
+                String::from("Expected ','."),
+            )?;
+        }
+
+        constraint_pos += 1;
+    }
+
+    parser_ctx.consume(
+        TokenType::RBrace,
+        String::from("Syntax error"),
+        String::from("Expected '}'."),
+    )?;
+
+    let asm_type: ThrushType = typegen::build_type(parser_ctx)?;
+
+    Ok(ThrushStatement::AsmValue {
+        assembler,
+        constraints,
+        args,
+        kind: asm_type,
+        attributes,
+        span,
+    })
 }

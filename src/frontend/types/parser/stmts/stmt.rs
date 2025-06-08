@@ -343,6 +343,14 @@ pub enum ThrushStatement<'ctx> {
         kind: ThrushType,
         span: Span,
     },
+    AsmValue {
+        assembler: String,
+        constraints: String,
+        args: Vec<ThrushStatement<'ctx>>,
+        kind: ThrushType,
+        attributes: ThrushAttributes<'ctx>,
+        span: Span,
+    },
     BinaryOp {
         left: Rc<ThrushStatement<'ctx>>,
         operator: TokenType,
@@ -446,6 +454,7 @@ impl<'ctx> ThrushStatement<'ctx> {
             ThrushStatement::CastRaw { cast: kind, .. } => Ok(kind),
             ThrushStatement::Cast { cast: kind, .. } => Ok(kind),
             ThrushStatement::CastPtr { cast: kind, .. } => Ok(kind),
+            ThrushStatement::AsmValue { kind, .. } => Ok(kind),
 
             _ => Err(ThrushCompilerIssue::Error(
                 String::from("Syntax error"),
@@ -485,6 +494,7 @@ impl<'ctx> ThrushStatement<'ctx> {
             ThrushStatement::EnumValue { kind, .. } => kind,
             ThrushStatement::RawPtr { kind, .. } => kind,
             ThrushStatement::Deref { kind, .. } => kind,
+            ThrushStatement::AsmValue { kind, .. } => kind,
 
             ThrushStatement::CastPtr { cast: kind, .. } => kind,
             ThrushStatement::CastRaw { cast: kind, .. } => kind,
@@ -518,6 +528,7 @@ impl<'ctx> ThrushStatement<'ctx> {
             ThrushStatement::RawPtr { span, .. } => *span,
             ThrushStatement::Deref { span, .. } => *span,
             ThrushStatement::CastPtr { span, .. } => *span,
+            ThrushStatement::AsmValue { span, .. } => *span,
 
             ThrushStatement::Str { span, .. } => *span,
             ThrushStatement::Boolean { span, .. } => *span,

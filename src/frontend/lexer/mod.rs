@@ -691,6 +691,7 @@ impl Lexer {
     #[inline]
     fn is_identifier_boundary(&self, peeked: char) -> bool {
         peeked.is_alphanumeric()
+            || peeked == '_'
             || peeked == '@'
             || (peeked == '!' && self.peek() != ':')
             || peeked.is_symbol_other()

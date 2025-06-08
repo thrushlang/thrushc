@@ -5,6 +5,7 @@ pub mod cast;
 pub mod codegen;
 pub mod context;
 pub mod conventions;
+pub mod jit;
 pub mod llis;
 pub mod local;
 pub mod memory;

@@ -5,7 +5,9 @@ use std::process::Command;
 
 use crate::core::{
     compiler::{
-        backends::LLVMModificatorPasses,
+        backends::{
+            JITConfiguration, LLVMBackend, LLVMModificatorPasses, LinkingCompilersConfiguration,
+        },
         options::{CompilerOptions, Emitable, ThrushOptimization},
     },
     console::logging::{self, LoggingType},
@@ -176,7 +178,7 @@ impl CLI {
 
                 self.options
                     .get_mut_llvm_backend_options()
-                    .get_mut_compilers_configuration()
+                    .get_mut_linking_compilers_configuration()
                     .set_use_clang(true);
             }
 
@@ -184,8 +186,8 @@ impl CLI {
                 self.advance();
                 self.validate_llvm_required(arg);
 
-                let custom_clang = self.peek();
-                let custom_clang_path = PathBuf::from(custom_clang);
+                let custom_clang: &str = self.peek();
+                let custom_clang_path: PathBuf = PathBuf::from(custom_clang);
 
                 if !self.validate_compiler_path(&custom_clang_path) {
                     self.report_error("Indicated external C compiler Clang doesn't exist.");
@@ -193,7 +195,7 @@ impl CLI {
 
                 self.options
                     .get_mut_llvm_backend_options()
-                    .get_mut_compilers_configuration()
+                    .get_mut_linking_compilers_configuration()
                     .set_custom_clang(custom_clang_path);
 
                 self.advance();
@@ -203,8 +205,8 @@ impl CLI {
                 self.advance();
                 self.validate_not_clang_active();
 
-                let custom_gcc = self.peek();
-                let custom_gcc_path = PathBuf::from(custom_gcc);
+                let custom_gcc: &str = self.peek();
+                let custom_gcc_path: PathBuf = PathBuf::from(custom_gcc);
 
                 if !self.validate_compiler_path(&custom_gcc_path) {
                     self.report_error(
@@ -212,19 +214,73 @@ impl CLI {
                     );
                 }
 
-                let backend_options = self.options.get_mut_llvm_backend_options();
-                let compiler_config = backend_options.get_mut_compilers_configuration();
+                let backend_options: &mut LLVMBackend = self.options.get_mut_llvm_backend_options();
+                let compiler_config: &mut LinkingCompilersConfiguration =
+                    backend_options.get_mut_linking_compilers_configuration();
+
                 compiler_config.set_custom_gcc(custom_gcc_path);
                 compiler_config.set_use_gcc(true);
 
                 self.advance();
             }
 
+            "-jit" => {
+                self.advance();
+                self.validate_llvm_required(arg);
+
+                self.options
+                    .get_mut_llvm_backend_options()
+                    .set_jit_config(JITConfiguration::new());
+            }
+
+            "-jit-c" => {
+                self.advance();
+
+                self.validate_llvm_required(arg);
+                self.validate_jit_required(arg);
+
+                let raw_libc_path: &str = self.peek();
+                let libc_path: PathBuf = PathBuf::from(raw_libc_path);
+
+                self.validate_jit_path(&libc_path);
+
+                if let Some(jit_config) = self
+                    .options
+                    .get_mut_llvm_backend_options()
+                    .get_mut_jit_config()
+                {
+                    jit_config.set_libc_path(libc_path);
+                } else {
+                    self.report_error("Couldn't get llvm jit configuration.");
+                }
+            }
+
+            "-jit-lib" => {
+                self.advance();
+                self.validate_llvm_required(arg);
+                self.validate_jit_required(arg);
+
+                let raw_lib_path: &str = self.peek();
+                let lib_path: PathBuf = PathBuf::from(raw_lib_path);
+
+                self.validate_jit_path(&lib_path);
+
+                if let Some(jit_config) = self
+                    .options
+                    .get_mut_llvm_backend_options()
+                    .get_mut_jit_config()
+                {
+                    jit_config.add_jit_library(lib_path);
+                } else {
+                    self.report_error("Couldn't get llvm jit configuration.");
+                }
+            }
+
             "-cpu" => {
                 self.advance();
                 self.validate_llvm_required(arg);
 
-                let target_cpu = self.peek().to_string();
+                let target_cpu: String = self.peek().to_string();
 
                 if !self.validate_llvm_cpu(&target_cpu) {
                     self.report_error(&format!(
@@ -244,7 +300,8 @@ impl CLI {
                 self.advance();
                 self.validate_llvm_required(arg);
 
-                let opt = self.parse_optimization_level(self.peek());
+                let opt: ThrushOptimization = self.parse_optimization_level(self.peek());
+
                 self.options
                     .get_mut_llvm_backend_options()
                     .set_optimization(opt);
@@ -256,7 +313,8 @@ impl CLI {
                 self.advance();
                 self.validate_emit_llvm_required(arg);
 
-                let emitable = self.parse_emit_option(self.peek());
+                let emitable: Emitable = self.parse_emit_option(self.peek());
+
                 self.options
                     .get_mut_llvm_backend_options()
                     .add_emit_option(emitable);
@@ -268,7 +326,7 @@ impl CLI {
                 self.advance();
                 self.validate_llvm_required(arg);
 
-                let raw_target_triple = self.peek();
+                let raw_target_triple: &str = self.peek();
 
                 if !utils::is_supported_llvm_target_triple(raw_target_triple) {
                     self.report_error(&format!(
@@ -277,7 +335,8 @@ impl CLI {
                     ));
                 }
 
-                let target_triple = TargetTriple::create(raw_target_triple);
+                let target_triple: TargetTriple = TargetTriple::create(raw_target_triple);
+
                 self.options
                     .get_mut_llvm_backend_options()
                     .set_target_triple(target_triple);
@@ -289,7 +348,8 @@ impl CLI {
                 self.advance();
                 self.validate_llvm_required(arg);
 
-                let reloc_mode = self.parse_reloc_mode(self.peek());
+                let reloc_mode: RelocMode = self.parse_reloc_mode(self.peek());
+
                 self.options
                     .get_mut_llvm_backend_options()
                     .set_reloc_mode(reloc_mode);
@@ -299,7 +359,9 @@ impl CLI {
 
             "--code-model" => {
                 self.advance();
-                let code_model = self.parse_code_model(self.peek());
+
+                let code_model: CodeModel = self.parse_code_model(self.peek());
+
                 self.options
                     .get_mut_llvm_backend_options()
                     .set_code_model(code_model);
@@ -311,7 +373,8 @@ impl CLI {
                 self.advance();
                 self.validate_llvm_required(arg);
 
-                let extra_opt_passes = self.peek().to_string();
+                let extra_opt_passes: String = self.peek().to_string();
+
                 self.options
                     .get_mut_llvm_backend_options()
                     .set_opt_passes(extra_opt_passes);
@@ -342,7 +405,7 @@ impl CLI {
 
                 self.options
                     .get_mut_llvm_backend_options()
-                    .get_mut_compilers_configuration()
+                    .get_mut_linking_compilers_configuration()
                     .set_debug_clang_commands(true);
             }
 
@@ -352,7 +415,7 @@ impl CLI {
 
                 self.options
                     .get_mut_llvm_backend_options()
-                    .get_mut_compilers_configuration()
+                    .get_mut_linking_compilers_configuration()
                     .set_debug_gcc_commands(true);
             }
 
@@ -374,6 +437,40 @@ impl CLI {
                 "Can't use '{}' without '-llvm' flag previously.",
                 arg
             ));
+        }
+    }
+
+    fn validate_jit_required(&self, arg: &str) {
+        if self
+            .options
+            .get_llvm_backend_options()
+            .get_jit_config()
+            .is_none()
+        {
+            self.report_error(&format!(
+                "Can't use '{}' without '-jit' flag previously.",
+                arg
+            ));
+        }
+    }
+
+    fn validate_jit_path(&self, path: &Path) {
+        if !path.exists() {
+            self.report_error(&format!("The path '{}' does not exist.", path.display()))
+        }
+
+        if let Some(extension) = path.extension() {
+            if extension != "so" && extension != "dll" {
+                self.report_error(&format!(
+                    "The path '{}' must end with a file with the .so or .dll extension.",
+                    path.display()
+                ))
+            }
+        } else {
+            self.report_error(&format!(
+                "The path '{}' must contain a path to a file with an extension.",
+                path.display()
+            ))
         }
     }
 
@@ -402,7 +499,7 @@ impl CLI {
         if self
             .options
             .get_llvm_backend_options()
-            .get_compilers_configuration()
+            .get_linking_compilers_configuration()
             .use_gcc()
         {
             self.report_error("Can't use '-clang' with -gcc activated.");
@@ -413,7 +510,7 @@ impl CLI {
         if self
             .options
             .get_llvm_backend_options()
-            .get_compilers_configuration()
+            .get_linking_compilers_configuration()
             .use_clang()
         {
             self.report_error("Can't use '-gcc' with -clang activated.");
@@ -527,7 +624,7 @@ impl CLI {
         if self.position.at_any_other_compiler() && self.options.use_llvm() {
             self.options
                 .get_mut_llvm_backend_options()
-                .get_mut_compilers_configuration()
+                .get_mut_linking_compilers_configuration()
                 .add_compiler_arg(arg.to_string());
             return;
         }
@@ -765,6 +862,40 @@ impl CLI {
                 "-opt".custom_color((141, 141, 142)).bold(),
                 "O0|O1|O2|mcqueen",
                 "Optimization level.",
+            ),
+        );
+
+        logging::write(logging::OutputIn::Stderr, "\nJIT Compiler flags:\n\n");
+
+        logging::write(
+            logging::OutputIn::Stderr,
+            &format!(
+                "{} {} {}\n",
+                "•".bold(),
+                "-jit".custom_color((141, 141, 142)).bold(),
+                "Enables the use of the Just-In-Time Compiler and its settings."
+            ),
+        );
+
+        logging::write(
+            logging::OutputIn::Stderr,
+            &format!(
+                "{} {} [{}] {}\n",
+                "•".bold(),
+                "-jit-c".custom_color((141, 141, 142)).bold(),
+                "\"/usr/lib/libc.so\"",
+                "Specifies the path to the C Standard Library Interface for the JIT to use."
+            ),
+        );
+
+        logging::write(
+            logging::OutputIn::Stderr,
+            &format!(
+                "{} {} [{}] {}\n",
+                "•".bold(),
+                "-jit-lib".custom_color((141, 141, 142)).bold(),
+                "\"/usr/lib/my_lib.so\"",
+                "Specifies a path to a custom library for use by the JIT."
             ),
         );
 

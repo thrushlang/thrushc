@@ -180,6 +180,12 @@ impl<'linter> Linter<'linter> {
             self.end_scope();
         }
 
+        if let ThrushStatement::AsmValue { args, .. } = stmt {
+            args.iter().for_each(|arg| {
+                self.analyze_stmt(arg);
+            });
+        }
+
         if let ThrushStatement::Write {
             write_to,
             write_value,

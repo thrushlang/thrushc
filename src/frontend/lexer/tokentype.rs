@@ -74,6 +74,7 @@ pub enum TokenType {
     CastRaw,
     CastPtr,
     AsmFn,
+    Asm,
     Deref,
     Cast,
     Heap,

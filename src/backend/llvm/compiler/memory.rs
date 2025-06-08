@@ -93,22 +93,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
         let preferred_memory_alignment: u32 = target_data.get_preferred_alignment(&llvm_type);
 
         match self {
-            Self::Local { ptr, kind } => {
-                if kind.is_probably_heap_allocated(llvm_context, target_data) {
-                    if context.get_position().in_call() {
-                        let loaded_value: BasicValueEnum =
-                            llvm_builder.build_load(llvm_type, *ptr, "").unwrap();
-
-                        if let Some(load_instruction) = loaded_value.as_instruction_value() {
-                            let _ = load_instruction.set_alignment(preferred_memory_alignment);
-                        }
-
-                        return loaded_value;
-                    }
-
-                    return (*ptr).into();
-                }
-
+            Self::Local { ptr, .. } => {
                 let loaded_value: BasicValueEnum =
                     llvm_builder.build_load(llvm_type, *ptr, "").unwrap();
 
@@ -118,24 +103,9 @@ impl<'ctx> SymbolAllocated<'ctx> {
 
                 loaded_value
             }
-            Self::Parameter { value, kind } => {
+            Self::Parameter { value, .. } => {
                 if value.is_pointer_value() {
                     let ptr: PointerValue = value.into_pointer_value();
-
-                    if kind.is_probably_heap_allocated(llvm_context, target_data) {
-                        if context.get_position().in_call() {
-                            let loaded_value: BasicValueEnum =
-                                llvm_builder.build_load(llvm_type, ptr, "").unwrap();
-
-                            if let Some(load_instruction) = value.as_instruction_value() {
-                                let _ = load_instruction.set_alignment(preferred_memory_alignment);
-                            }
-
-                            return loaded_value;
-                        }
-
-                        return *value;
-                    }
 
                     let loaded_value: BasicValueEnum =
                         llvm_builder.build_load(llvm_type, ptr, "").unwrap();
@@ -301,13 +271,6 @@ impl<'ctx> SymbolAllocated<'ctx> {
                     unreachable!()
                 })
                 .into(),
-        }
-    }
-
-    pub fn take(&self) -> BasicValueEnum<'ctx> {
-        match self {
-            Self::Local { ptr, .. } | Self::Constant { ptr, .. } => (*ptr).into(),
-            Self::Parameter { value, .. } | Self::LowLevelInstruction { value, .. } => *value,
         }
     }
 

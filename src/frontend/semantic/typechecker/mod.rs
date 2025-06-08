@@ -1,6 +1,6 @@
 #![allow(clippy::only_used_in_recursion)]
 
-use marks::{TypeCheckerTypeCheckSource, TypeCheckerTypeContext, TypeCheckerTypePosition};
+use marks::TypeCheckerTypeCheckSource;
 use table::TypeCheckerSymbolsTable;
 
 use crate::{
@@ -27,7 +27,6 @@ pub struct TypeChecker<'type_checker> {
     stmts: &'type_checker [ThrushStatement<'type_checker>],
     position: usize,
     errors: Vec<ThrushCompilerIssue>,
-    type_ctx: TypeCheckerTypeContext<'type_checker>,
     symbols: TypeCheckerSymbolsTable<'type_checker>,
     diagnostician: Diagnostician,
 }
@@ -41,7 +40,6 @@ impl<'type_checker> TypeChecker<'type_checker> {
             stmts,
             position: 0,
             errors: Vec::with_capacity(100),
-            type_ctx: TypeCheckerTypeContext::new(),
             symbols: TypeCheckerSymbolsTable::new(),
             diagnostician: Diagnostician::new(file),
         }
@@ -160,10 +158,6 @@ impl<'type_checker> TypeChecker<'type_checker> {
             ..
         } = stmt
         {
-            self.type_ctx
-                .set_type_position(TypeCheckerTypePosition::Function);
-            self.type_ctx.set_function_type(return_type);
-
             for parameter in parameters.iter() {
                 if self.check_mismatch_type(&ThrushType::Void, parameter.get_value_type()?) {
                     self.add_error(ThrushCompilerIssue::Error(
@@ -193,11 +187,6 @@ impl<'type_checker> TypeChecker<'type_checker> {
                     }
                 }
             }
-
-            self.type_ctx
-                .set_type_position(TypeCheckerTypePosition::None);
-
-            self.type_ctx.set_function_type(&ThrushType::Void);
 
             return Ok(());
         }
@@ -337,18 +326,18 @@ impl<'type_checker> TypeChecker<'type_checker> {
             span,
         } = stmt
         {
-            if let Err(error) = self.validate_types(
-                self.type_ctx.get_function_type(),
-                kind,
-                expression.as_deref(),
-                None,
-                span,
-                TypeCheckerTypeCheckSource::default(),
-            ) {
-                self.add_error(error);
-            }
-
             if let Some(expr) = expression {
+                if let Err(error) = self.validate_types(
+                    kind,
+                    expr.get_value_type()?,
+                    Some(expr),
+                    None,
+                    span,
+                    TypeCheckerTypeCheckSource::default(),
+                ) {
+                    self.add_error(error);
+                }
+
                 self.analyze_stmt(expr)?;
             }
 
@@ -786,7 +775,15 @@ impl<'type_checker> TypeChecker<'type_checker> {
             return Ok(());
         }
 
-        if let ThrushStatement::Alloc { .. } | ThrushStatement::RawPtr { .. } = stmt {
+        if let ThrushStatement::AsmValue { .. } = stmt {
+            return Ok(());
+        }
+
+        if let ThrushStatement::RawPtr { .. } = stmt {
+            return Ok(());
+        }
+
+        if let ThrushStatement::Alloc { .. } = stmt {
             return Ok(());
         }
 
@@ -1009,35 +1006,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
                 Ok(())
             }
 
-            (ThrushType::Struct(_, _), ThrushType::Ptr(_), None) => Ok(()),
             (ThrushType::Addr, ThrushType::Addr, None) => Ok(()),
-
-            (
-                target_type,
-                ThrushType::Mut(from_type),
-                Some(
-                    TokenType::BangEq
-                    | TokenType::EqEq
-                    | TokenType::LessEq
-                    | TokenType::Less
-                    | TokenType::Greater
-                    | TokenType::GreaterEq
-                    | TokenType::And
-                    | TokenType::Or
-                    | TokenType::Bang
-                    | TokenType::Plus
-                    | TokenType::Minus
-                    | TokenType::Slash
-                    | TokenType::Star
-                    | TokenType::LShift
-                    | TokenType::RShift,
-                )
-                | None,
-            ) if !target_type.is_mut_type() && source.is_local() => {
-                self.validate_types(target_type, from_type, expression, operator, span, source)?;
-
-                Ok(())
-            }
 
             (
                 ThrushType::Mut(target_type),
@@ -1060,7 +1029,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
                     | TokenType::RShift,
                 )
                 | None,
-            ) if !any_type.is_mut_type() && source.is_local() => {
+            ) if source.is_local() => {
                 self.validate_types(target_type, any_type, expression, operator, span, source)?;
 
                 Ok(())

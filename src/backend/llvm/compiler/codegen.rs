@@ -127,7 +127,10 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                             self.context,
                             expression,
                             kind,
-                            ExpressionModificator::new(false, true),
+                            ExpressionModificator::new(
+                                kind.is_mut_type() || kind.is_ptr_type(),
+                                true,
+                            ),
                         )))
                         .is_err()
                     {
@@ -632,6 +635,15 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
             }
 
             ThrushStatement::Call { .. } => {
+                valuegen::compile(
+                    self.context,
+                    stmt,
+                    &ThrushType::Void,
+                    ExpressionModificator::new(false, false),
+                );
+            }
+
+            ThrushStatement::AsmValue { .. } => {
                 valuegen::compile(
                     self.context,
                     stmt,

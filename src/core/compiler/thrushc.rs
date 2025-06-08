@@ -22,7 +22,7 @@ use crate::{
     },
     core::{
         compiler::{
-            backends::LLVMBackend,
+            backends::{LLVMBackend, LinkingCompilersConfiguration},
             options::{CompilerFile, CompilerOptions, Emitable, Emited, ThrushOptimization},
         },
         console::logging::{self, LoggingType},
@@ -74,10 +74,13 @@ impl<'thrushc> TheThrushCompiler<'thrushc> {
             ),
         );
 
-        if llvm_backend.get_compilers_configuration().use_clang() {
+        let linking_compiler_configuration: &LinkingCompilersConfiguration =
+            llvm_backend.get_linking_compilers_configuration();
+
+        if linking_compiler_configuration.use_clang() {
             match Clang::new(
                 self.get_compiled_files(),
-                llvm_backend.get_compilers_configuration(),
+                linking_compiler_configuration,
                 llvm_backend.get_target_triple(),
             )
             .link()
@@ -105,13 +108,8 @@ impl<'thrushc> TheThrushCompiler<'thrushc> {
                     );
                 }
             }
-        } else if llvm_backend.get_compilers_configuration().use_gcc() {
-            match GCC::new(
-                self.get_compiled_files(),
-                llvm_backend.get_compilers_configuration(),
-            )
-            .link()
-            {
+        } else if linking_compiler_configuration.use_gcc() {
+            match GCC::new(self.get_compiled_files(), linking_compiler_configuration).link() {
                 Ok(gcc_time) => {
                     self.llvm_time += gcc_time;
 

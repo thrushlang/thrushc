@@ -7,7 +7,7 @@ use std::{
 use inkwell::targets::TargetTriple;
 
 use crate::core::{
-    compiler::backends::CompilersConfiguration,
+    compiler::backends::LinkingCompilersConfiguration,
     console::logging::{self, LoggingType},
 };
 
@@ -31,14 +31,14 @@ pub static WINDOWS_X86_64_CLANG_MANIFEST: &str =
 
 pub struct Clang<'clang> {
     files: &'clang [PathBuf],
-    config: &'clang CompilersConfiguration,
+    config: &'clang LinkingCompilersConfiguration,
     target: &'clang TargetTriple,
 }
 
 impl<'clang> Clang<'clang> {
     pub fn new(
         files: &'clang [PathBuf],
-        config: &'clang CompilersConfiguration,
+        config: &'clang LinkingCompilersConfiguration,
         target: &'clang TargetTriple,
     ) -> Self {
         Self {

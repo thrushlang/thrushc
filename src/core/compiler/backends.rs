@@ -25,7 +25,7 @@ pub enum LLVMModificatorPasses {
 }
 
 #[derive(Debug)]
-pub struct CompilersConfiguration {
+pub struct LinkingCompilersConfiguration {
     use_clang: bool,
     use_gcc: bool,
     compiler_args: Vec<String>,
@@ -33,6 +33,12 @@ pub struct CompilersConfiguration {
     custom_clang: Option<PathBuf>,
     debug_clang_commands: bool,
     debug_gcc_commands: bool,
+}
+
+#[derive(Debug)]
+pub struct JITConfiguration {
+    libc_path: Option<PathBuf>,
+    libraries: Vec<PathBuf>,
 }
 
 #[derive(Debug)]
@@ -45,7 +51,8 @@ pub struct LLVMBackend {
     code_model: CodeModel,
     modificator_passes: Vec<LLVMModificatorPasses>,
     opt_passes: String,
-    compilers_config: CompilersConfiguration,
+    linking_compilers_config: LinkingCompilersConfiguration,
+    jit_config: Option<JITConfiguration>,
 }
 
 impl LLVMBackend {
@@ -59,7 +66,8 @@ impl LLVMBackend {
             code_model: CodeModel::Default,
             modificator_passes: Vec::with_capacity(10),
             opt_passes: String::with_capacity(100),
-            compilers_config: CompilersConfiguration::new(),
+            linking_compilers_config: LinkingCompilersConfiguration::new(),
+            jit_config: None,
         }
     }
 
@@ -127,16 +135,30 @@ impl LLVMBackend {
         &self.modificator_passes
     }
 
-    pub fn get_compilers_configuration(&self) -> &CompilersConfiguration {
-        &self.compilers_config
+    pub fn get_linking_compilers_configuration(&self) -> &LinkingCompilersConfiguration {
+        &self.linking_compilers_config
     }
 
-    pub fn get_mut_compilers_configuration(&mut self) -> &mut CompilersConfiguration {
-        &mut self.compilers_config
+    pub fn get_mut_linking_compilers_configuration(
+        &mut self,
+    ) -> &mut LinkingCompilersConfiguration {
+        &mut self.linking_compilers_config
     }
 
     pub fn set_modificator_passes(&mut self, modificator_passes: Vec<LLVMModificatorPasses>) {
         self.modificator_passes = modificator_passes;
+    }
+
+    pub fn set_jit_config(&mut self, jit: JITConfiguration) {
+        self.jit_config = Some(jit);
+    }
+
+    pub fn get_jit_config(&self) -> Option<&JITConfiguration> {
+        self.jit_config.as_ref()
+    }
+
+    pub fn get_mut_jit_config(&mut self) -> Option<&mut JITConfiguration> {
+        self.jit_config.as_mut()
     }
 }
 
@@ -164,7 +186,7 @@ impl LLVMModificatorPasses {
     }
 }
 
-impl CompilersConfiguration {
+impl LinkingCompilersConfiguration {
     pub fn new() -> Self {
         Self {
             use_clang: false,
@@ -231,5 +253,22 @@ impl CompilersConfiguration {
 
     pub fn use_gcc(&self) -> bool {
         self.use_gcc
+    }
+}
+
+impl JITConfiguration {
+    pub fn new() -> Self {
+        Self {
+            libc_path: None,
+            libraries: Vec::with_capacity(10),
+        }
+    }
+
+    pub fn set_libc_path(&mut self, value: PathBuf) {
+        self.libc_path = Some(value);
+    }
+
+    pub fn add_jit_library(&mut self, value: PathBuf) {
+        self.libraries.push(value);
     }
 }

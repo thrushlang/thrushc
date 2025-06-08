@@ -7,17 +7,17 @@ use std::{
 };
 
 use crate::core::{
-    compiler::backends::CompilersConfiguration,
+    compiler::backends::LinkingCompilersConfiguration,
     console::logging::{self, LoggingType},
 };
 
 pub struct GCC<'clang> {
     files: &'clang [PathBuf],
-    config: &'clang CompilersConfiguration,
+    config: &'clang LinkingCompilersConfiguration,
 }
 
 impl<'clang> GCC<'clang> {
-    pub fn new(files: &'clang [PathBuf], config: &'clang CompilersConfiguration) -> Self {
+    pub fn new(files: &'clang [PathBuf], config: &'clang LinkingCompilersConfiguration) -> Self {
         Self { files, config }
     }
 
