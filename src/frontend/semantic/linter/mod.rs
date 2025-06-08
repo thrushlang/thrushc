@@ -155,6 +155,10 @@ impl<'linter> Linter<'linter> {
 
         ########################################################################*/
 
+        if let ThrushStatement::Group { expression, .. } = stmt {
+            self.analyze_stmt(expression);
+        }
+
         if let ThrushStatement::BinaryOp { left, right, .. } = stmt {
             self.analyze_stmt(left);
             self.analyze_stmt(right);

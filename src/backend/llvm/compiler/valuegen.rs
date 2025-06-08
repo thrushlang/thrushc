@@ -249,6 +249,10 @@ pub fn compile<'ctx>(
         );
     }
 
+    if let ThrushStatement::Group { expression, .. } = expr {
+        return self::compile(context, expression, cast, ExpressionModificator::default());
+    }
+
     if let ThrushStatement::BinaryOp {
         left,
         operator,
@@ -269,6 +273,10 @@ pub fn compile<'ctx>(
             return binaryop::boolean::bool_binaryop(context, (left, operator, right), cast);
         }
 
+        if binaryop_type.is_ptr_type() {
+            return binaryop::ptr::ptr_binaryop(context, (left, operator, right), cast);
+        }
+
         logging::log(
             LoggingType::Panic,
             "Could not process a binary operation of invalid type.",
@@ -283,10 +291,6 @@ pub fn compile<'ctx>(
     } = expr
     {
         return unaryop::unary_op(context, (operator, kind, expression));
-    }
-
-    if let ThrushStatement::Group { expression, .. } = expr {
-        return self::compile(context, expression, cast, ExpressionModificator::default());
     }
 
     /* ######################################################################
