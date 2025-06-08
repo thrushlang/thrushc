@@ -80,10 +80,12 @@ pub trait ThrushAttributesExtensions {
     fn has_minsize_attr(&self) -> bool;
     fn has_inlinealways_attr(&self) -> bool;
 
+    fn has_stack_attr(&self) -> bool;
+    fn has_heap_attr(&self) -> bool;
+
     fn has_asmalignstack_attribute(&self) -> bool;
     fn has_asmthrow_attribute(&self) -> bool;
     fn has_asmsideffects_attribute(&self) -> bool;
-    fn has_asmdialect_attribute(&self) -> bool;
 
     fn match_attr(&self, cmp: LLVMAttributeComparator) -> Option<Span>;
 }

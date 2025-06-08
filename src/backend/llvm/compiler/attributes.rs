@@ -26,9 +26,13 @@ pub enum LLVMAttribute<'ctx> {
     WeakStack(Span),
     PreciseFloats(Span),
 
+    // Memory Management
+    Stack(Span),
+    Heap(Span),
+
     // Assembler Attributes
     AsmThrow(Span),
-    AsmDialect(&'ctx str, Span),
+    AsmSyntax(&'ctx str, Span),
     AsmAlignStack(Span),
     AsmSideEffects(Span),
 }
@@ -75,6 +79,16 @@ impl LLVMAttribute<'_> {
     }
 
     #[inline]
+    pub const fn is_heap_attribute(&self) -> bool {
+        matches!(self, LLVMAttribute::Heap(..))
+    }
+
+    #[inline]
+    pub const fn is_stack_attribute(&self) -> bool {
+        matches!(self, LLVMAttribute::Stack(..))
+    }
+
+    #[inline]
     pub const fn is_asmsideeffects_attribute(&self) -> bool {
         matches!(self, LLVMAttribute::AsmSideEffects(..))
     }
@@ -87,11 +101,6 @@ impl LLVMAttribute<'_> {
     #[inline]
     pub const fn is_asmalingstack_attribute(&self) -> bool {
         matches!(self, LLVMAttribute::AsmAlignStack(..))
-    }
-
-    #[inline]
-    pub const fn is_asmdialect_attribute(&self) -> bool {
-        matches!(self, LLVMAttribute::AsmDialect(..))
     }
 
     #[inline]
@@ -111,9 +120,11 @@ impl LLVMAttribute<'_> {
             LLVMAttribute::WeakStack(span) => *span,
             LLVMAttribute::PreciseFloats(span) => *span,
             LLVMAttribute::AsmThrow(span) => *span,
-            LLVMAttribute::AsmDialect(_, span) => *span,
+            LLVMAttribute::AsmSyntax(_, span) => *span,
             LLVMAttribute::AsmSideEffects(span) => *span,
             LLVMAttribute::AsmAlignStack(span) => *span,
+            LLVMAttribute::Stack(span) => *span,
+            LLVMAttribute::Heap(span) => *span,
         }
     }
 }

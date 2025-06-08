@@ -1,6 +1,14 @@
 use std::fmt::Display;
 
-use crate::backend::llvm::compiler::{attributes::LLVMAttribute, conventions::CallConvention};
+use inkwell::InlineAsmDialect;
+
+use crate::{
+    backend::{
+        llvm::compiler::{attributes::LLVMAttribute, conventions::CallConvention},
+        types::traits::AssemblerFunctionExtensions,
+    },
+    core::console::logging::{self, LoggingType},
+};
 
 impl Display for LLVMAttribute<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -12,6 +20,8 @@ impl Display for LLVMAttribute<'_> {
             LLVMAttribute::Convention(convention, ..) => {
                 write!(f, "@convention(\"{}\")", convention)
             }
+            LLVMAttribute::Stack(..) => write!(f, "@stack"),
+            LLVMAttribute::Heap(..) => write!(f, "@heap"),
             LLVMAttribute::Public(..) => write!(f, "@public"),
             LLVMAttribute::StrongStack(..) => write!(f, "@strongstack"),
             LLVMAttribute::WeakStack(..) => write!(f, "@weakstack"),
@@ -21,7 +31,7 @@ impl Display for LLVMAttribute<'_> {
             LLVMAttribute::Hot(..) => write!(f, "@hot"),
             LLVMAttribute::Ignore(..) => write!(f, "@ignore"),
             LLVMAttribute::AsmThrow(..) => write!(f, "@asmthrow"),
-            LLVMAttribute::AsmDialect(..) => write!(f, "@asmdialect"),
+            LLVMAttribute::AsmSyntax(..) => write!(f, "@asmsyntax"),
             LLVMAttribute::AsmSideEffects(..) => write!(f, "@asmeffects"),
             LLVMAttribute::AsmAlignStack(..) => write!(f, "@asmalingstack"),
         }
@@ -40,6 +50,26 @@ impl Display for CallConvention {
             CallConvention::Tail => write!(f, "tail"),
             CallConvention::Swift => write!(f, "swift"),
             CallConvention::HiPE => write!(f, "erlang"),
+        }
+    }
+}
+
+impl AssemblerFunctionExtensions for str {
+    fn assembler_syntax_attr_to_inline_assembler_dialect(syntax: &str) -> InlineAsmDialect {
+        match syntax {
+            "INTEL" => InlineAsmDialect::Intel,
+            "ATT" => InlineAsmDialect::ATT,
+            any => {
+                logging::log(
+                    LoggingType::Bug,
+                    &format!(
+                        "Unable to translate '{}' to proper inline assembler dialect.",
+                        any
+                    ),
+                );
+
+                unreachable!()
+            }
         }
     }
 }

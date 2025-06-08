@@ -7,6 +7,8 @@ impl LLVMAttributeComparatorExtensions for LLVMAttribute<'_> {
         match self {
             LLVMAttribute::Extern(..) => LLVMAttributeComparator::Extern,
             LLVMAttribute::Convention(..) => LLVMAttributeComparator::Convention,
+            LLVMAttribute::Stack(..) => LLVMAttributeComparator::Stack,
+            LLVMAttribute::Heap(..) => LLVMAttributeComparator::Heap,
             LLVMAttribute::Public(..) => LLVMAttributeComparator::Public,
             LLVMAttribute::Ignore(..) => LLVMAttributeComparator::Ignore,
             LLVMAttribute::Hot(..) => LLVMAttributeComparator::Hot,
@@ -19,7 +21,7 @@ impl LLVMAttributeComparatorExtensions for LLVMAttribute<'_> {
             LLVMAttribute::WeakStack(..) => LLVMAttributeComparator::WeakStack,
             LLVMAttribute::PreciseFloats(..) => LLVMAttributeComparator::PreciseFloats,
             LLVMAttribute::AsmAlignStack(..) => LLVMAttributeComparator::AsmAlignStack,
-            LLVMAttribute::AsmDialect(..) => LLVMAttributeComparator::AsmDialect,
+            LLVMAttribute::AsmSyntax(..) => LLVMAttributeComparator::AsmSyntax,
             LLVMAttribute::AsmThrow(..) => LLVMAttributeComparator::AsmThrow,
             LLVMAttribute::AsmSideEffects(..) => LLVMAttributeComparator::AsmSideEffects,
         }

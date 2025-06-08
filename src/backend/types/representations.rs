@@ -1,5 +1,11 @@
+use ahash::AHashMap as HashMap;
 use inkwell::values::FunctionValue;
 
-use crate::frontend::types::lexer::ThrushType;
+use crate::{backend::llvm::compiler::memory::SymbolAllocated, frontend::types::lexer::ThrushType};
 
 pub type LLVMFunction<'ctx> = (FunctionValue<'ctx>, &'ctx [ThrushType], u32);
+
+pub type LLVMFunctions<'ctx> = HashMap<&'ctx str, LLVMFunction<'ctx>>;
+pub type LLVMConstants<'ctx> = HashMap<&'ctx str, SymbolAllocated<'ctx>>;
+pub type LLVMInstructions<'ctx> = Vec<HashMap<&'ctx str, SymbolAllocated<'ctx>>>;
+pub type LLVMFunctionsParameters<'ctx> = HashMap<&'ctx str, SymbolAllocated<'ctx>>;

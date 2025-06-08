@@ -5,8 +5,9 @@ use {
         typegen, valuegen,
     },
     crate::{
-        backend::types::representations::LLVMFunction,
-        core::diagnostic::diagnostician::Diagnostician,
+        backend::types::representations::{
+            LLVMConstants, LLVMFunction, LLVMFunctions, LLVMFunctionsParameters, LLVMInstructions,
+        },
         frontend::types::{lexer::ThrushType, parser::stmts::types::ThrushAttributes},
     },
     ahash::AHashMap as HashMap,
@@ -27,11 +28,12 @@ pub struct LLVMCodeGenContext<'a, 'ctx> {
     position: LLVMCodeGenContextPosition,
     previous_position: LLVMCodeGenContextPosition,
     target_data: TargetData,
-    diagnostician: Diagnostician,
-    constants: HashMap<&'ctx str, SymbolAllocated<'ctx>>,
-    functions: HashMap<&'ctx str, LLVMFunction<'ctx>>,
-    lift_instructions: HashMap<&'ctx str, SymbolAllocated<'ctx>>,
-    scopes: Vec<HashMap<&'ctx str, SymbolAllocated<'ctx>>>,
+
+    functions: LLVMFunctions<'ctx>,
+    parameters: LLVMFunctionsParameters<'ctx>,
+    constants: LLVMConstants<'ctx>,
+    instructions: LLVMInstructions<'ctx>,
+
     scope: usize,
 }
 
@@ -41,7 +43,6 @@ impl<'a, 'ctx> LLVMCodeGenContext<'a, 'ctx> {
         context: &'ctx Context,
         builder: &'ctx Builder<'ctx>,
         target_data: TargetData,
-        diagnostician: Diagnostician,
     ) -> Self {
         Self {
             module,
@@ -50,29 +51,28 @@ impl<'a, 'ctx> LLVMCodeGenContext<'a, 'ctx> {
             position: LLVMCodeGenContextPosition::default(),
             previous_position: LLVMCodeGenContextPosition::default(),
             target_data,
-            diagnostician,
             constants: HashMap::with_capacity(100),
             functions: HashMap::with_capacity(100),
-            lift_instructions: HashMap::with_capacity(100),
-            scopes: Vec::with_capacity(255),
+            parameters: HashMap::with_capacity(100),
+            instructions: Vec::with_capacity(255),
             scope: 0,
         }
     }
 }
 
 impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
-    pub fn alloc_local(&mut self, name: &'ctx str, kind: &'ctx ThrushType) {
-        let ptr_allocated: PointerValue = valuegen::alloc(
-            self.context,
-            self.builder,
-            kind,
-            kind.is_probably_heap_allocated(self.context, &self.target_data),
-        );
+    pub fn alloc_local(
+        &mut self,
+        name: &'ctx str,
+        kind: &'ctx ThrushType,
+        attributes: &'ctx ThrushAttributes<'ctx>,
+    ) {
+        let ptr: PointerValue = valuegen::alloc(self, kind, attributes);
 
         let local: SymbolAllocated =
-            SymbolAllocated::new(self, SymbolToAllocate::Local, ptr_allocated.into(), kind);
+            SymbolAllocated::new(SymbolToAllocate::Local, ptr.into(), kind);
 
-        if let Some(last_block) = self.scopes.last_mut() {
+        if let Some(last_block) = self.instructions.last_mut() {
             last_block.insert(name, local);
         }
     }
@@ -84,9 +84,9 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
         kind: &'ctx ThrushType,
     ) {
         let lli: SymbolAllocated =
-            SymbolAllocated::new(self, SymbolToAllocate::LowLevelInstruction, value, kind);
+            SymbolAllocated::new(SymbolToAllocate::LowLevelInstruction, value, kind);
 
-        if let Some(last_block) = self.scopes.last_mut() {
+        if let Some(last_block) = self.instructions.last_mut() {
             last_block.insert(name, lli);
         }
     }
@@ -98,7 +98,7 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
         value: BasicValueEnum<'ctx>,
         attributes: &'ctx ThrushAttributes<'ctx>,
     ) {
-        let ptr_allocated: PointerValue = valuegen::alloc_constant(
+        let ptr: PointerValue = valuegen::alloc_constant(
             self.module,
             name,
             typegen::generate_type(self.context, kind),
@@ -107,7 +107,7 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
         );
 
         let symbol_allocated: SymbolAllocated =
-            SymbolAllocated::new(self, SymbolToAllocate::Constant, ptr_allocated.into(), kind);
+            SymbolAllocated::new(SymbolToAllocate::Constant, ptr.into(), kind);
 
         self.constants.insert(name, symbol_allocated);
     }
@@ -119,19 +119,23 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
         value: BasicValueEnum<'ctx>,
     ) {
         let symbol_allocated: SymbolAllocated =
-            SymbolAllocated::new(self, SymbolToAllocate::Parameter, value, kind);
+            SymbolAllocated::new(SymbolToAllocate::Parameter, value, kind);
 
-        self.lift_instructions.insert(name, symbol_allocated);
+        self.parameters.insert(name, symbol_allocated);
     }
 
     pub fn get_allocated_symbol(&self, name: &str) -> SymbolAllocated<'ctx> {
+        if let Some(fn_parameter) = self.parameters.get(name) {
+            return *fn_parameter;
+        }
+
         if let Some(constant) = self.constants.get(name) {
-            return constant.clone();
+            return *constant;
         }
 
         for position in (0..self.scope).rev() {
-            if let Some(allocated_symbol) = self.scopes[position].get(name) {
-                return allocated_symbol.clone();
+            if let Some(instruction) = self.instructions[position].get(name) {
+                return *instruction;
             }
         }
 
@@ -164,24 +168,18 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
     }
 
     pub fn begin_scope(&mut self) {
-        self.scopes.push(HashMap::with_capacity(256));
-
-        if let Some(last_block_scope) = self.scopes.last_mut() {
-            last_block_scope.extend(self.lift_instructions.clone());
-        } else {
-            logging::log(
-                LoggingType::Bug,
-                "Unable to get of last scope at code generation time.",
-            );
-        }
+        self.instructions.push(HashMap::with_capacity(256));
 
         self.scope += 1;
     }
 
     pub fn end_scope(&mut self) {
-        self.scopes.pop();
-        self.lift_instructions.clear();
+        self.instructions.pop();
         self.scope -= 1;
+
+        if self.scope == 0 {
+            self.parameters.clear();
+        }
     }
 }
 
@@ -213,10 +211,6 @@ impl<'a, 'ctx> LLVMCodeGenContext<'a, 'ctx> {
 
     pub fn set_position_irrelevant(&mut self) {
         self.position = LLVMCodeGenContextPosition::NoRelevant;
-    }
-
-    pub fn get_diagnostician(&self) -> &Diagnostician {
-        &self.diagnostician
     }
 
     pub fn get_target_data(&self) -> &TargetData {

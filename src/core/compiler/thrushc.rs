@@ -1,6 +1,6 @@
 use std::{
     fs::{File, write},
-    io::{self, BufReader, Read},
+    io::{BufReader, Read},
     path::{Path, PathBuf},
     time::{Duration, Instant},
 };
@@ -26,7 +26,6 @@ use crate::{
             options::{CompilerFile, CompilerOptions, Emitable, Emited, ThrushOptimization},
         },
         console::logging::{self, LoggingType},
-        diagnostic::diagnostician::Diagnostician,
     },
     frontend::{
         lexer::{Lexer, token::Token},
@@ -250,7 +249,6 @@ impl<'thrushc> TheThrushCompiler<'thrushc> {
             &llvm_context,
             &llvm_builder,
             target_machine.get_target_data(),
-            Diagnostician::new(file),
         );
 
         let semantic_analysis_throwed_errors: bool =

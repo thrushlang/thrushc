@@ -2,7 +2,7 @@
 
 use crate::backend::llvm::compiler::utils;
 use crate::backend::llvm::compiler::valuegen::ExpressionModificator;
-use crate::backend::types::representations::LLVMFunction;
+use crate::backend::types::{representations::LLVMFunction, traits::AssemblerFunctionExtensions};
 use crate::core::console::logging::{self, LoggingType};
 use crate::frontend::types::lexer::ThrushType;
 use crate::frontend::types::parser::stmts::traits::ThrushAttributesExtensions;
@@ -23,6 +23,7 @@ use super::{
     local, typegen, valuegen,
 };
 
+use inkwell::InlineAsmDialect;
 use inkwell::values::{BasicMetadataValueEnum, PointerValue};
 use inkwell::{
     basic_block::BasicBlock,
@@ -575,9 +576,13 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
 
         match stmt {
             ThrushStatement::Local {
-                name, kind, value, ..
+                name,
+                kind,
+                value,
+                attributes,
+                ..
             } => {
-                local::compile((name, kind, value), self.context);
+                local::compile((name, kind, value, attributes), self.context);
             }
 
             ThrushStatement::LLI {
@@ -753,7 +758,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
     fn init_assembler_functions(&mut self) {
         self.stmts.iter().for_each(|stmt| {
             if stmt.is_asm_function() {
-                self.compile_asm_functions(stmt);
+                self.compile_asm_function(stmt);
             }
         });
     }
@@ -779,7 +784,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         });
     }
 
-    fn compile_asm_functions(&mut self, stmt: &'ctx ThrushStatement) {
+    fn compile_asm_function(&mut self, stmt: &'ctx ThrushStatement) {
         let llvm_module: &Module = self.context.get_llvm_module();
         let llvm_context: &Context = self.context.get_llvm_context();
         let llvm_builder: &Builder = self.context.get_llvm_builder();
@@ -799,6 +804,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
 
         let mut call_convention: u32 = CallConvention::Standard as u32;
 
+        let mut syntax: InlineAsmDialect = InlineAsmDialect::Intel;
         let sideeffects: bool = asm_function_attributes.has_asmsideffects_attribute();
         let align_stack: bool = asm_function_attributes.has_asmalignstack_attribute();
         let can_throw: bool = asm_function_attributes.has_asmthrow_attribute();
@@ -807,6 +813,10 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         asm_function_attributes.iter().for_each(|attribute| {
             if let LLVMAttribute::Convention(call_conv, _) = attribute {
                 call_convention = (*call_conv) as u32;
+            }
+
+            if let LLVMAttribute::AsmSyntax(new_syntax, ..) = *attribute {
+                syntax = str::assembler_syntax_attr_to_inline_assembler_dialect(new_syntax);
             }
         });
 
@@ -826,7 +836,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
             asm_function_constraints,
             sideeffects,
             align_stack,
-            None,
+            Some(syntax),
             can_throw,
         );
 

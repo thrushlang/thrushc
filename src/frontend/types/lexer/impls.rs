@@ -58,7 +58,7 @@ impl std::fmt::Display for TokenType {
             // Attributes
             TokenType::AlwaysInline => write!(f, "@alwaysinline"),
             TokenType::AsmAlignStack => write!(f, "@asmalignstack"),
-            TokenType::AsmDialect => write!(f, "@asmdialect"),
+            TokenType::AsmSyntax => write!(f, "@asmsyntax"),
             TokenType::AsmSideEffects => write!(f, "@asmeffects"),
             TokenType::AsmThrow => write!(f, "@asmthrow"),
             TokenType::Convention => write!(f, "@convention"),

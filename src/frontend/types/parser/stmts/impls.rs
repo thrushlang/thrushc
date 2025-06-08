@@ -26,6 +26,14 @@ impl ThrushAttributesExtensions for ThrushAttributes<'_> {
         self.iter().any(|attr| attr.is_ignore_attribute())
     }
 
+    fn has_heap_attr(&self) -> bool {
+        self.iter().any(|attr| attr.is_heap_attribute())
+    }
+
+    fn has_stack_attr(&self) -> bool {
+        self.iter().any(|attr| attr.is_stack_attribute())
+    }
+
     fn has_public_attribute(&self) -> bool {
         self.iter().any(|attr| attr.is_public_attribute())
     }
@@ -52,10 +60,6 @@ impl ThrushAttributesExtensions for ThrushAttributes<'_> {
 
     fn has_asmalignstack_attribute(&self) -> bool {
         self.iter().any(|attr| attr.is_asmalingstack_attribute())
-    }
-
-    fn has_asmdialect_attribute(&self) -> bool {
-        self.iter().any(|attr| attr.is_asmdialect_attribute())
     }
 
     fn has_asmsideffects_attribute(&self) -> bool {

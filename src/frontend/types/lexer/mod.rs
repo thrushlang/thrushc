@@ -73,12 +73,12 @@ impl LLVMTypeExtensions for ThrushType {
     fn is_same_size(&self, context: &LLVMCodeGenContext<'_, '_>, other: &ThrushType) -> bool {
         let llvm_context: &Context = context.get_llvm_context();
 
-        let a_llvm_type: BasicTypeEnum = typegen::generate_type(llvm_context, self);
-        let b_llvm_type: BasicTypeEnum = typegen::generate_type(llvm_context, other);
+        let a_llvm_type: BasicTypeEnum = typegen::generate_subtype(llvm_context, self);
+        let b_llvm_type: BasicTypeEnum = typegen::generate_subtype(llvm_context, other);
 
         let target_data: &TargetData = context.get_target_data();
 
-        target_data.get_abi_size(&a_llvm_type) == target_data.get_abi_size(&b_llvm_type)
+        target_data.get_bit_size(&a_llvm_type) == target_data.get_bit_size(&b_llvm_type)
     }
 }
 
@@ -168,7 +168,10 @@ impl ThrushType {
 
     pub fn is_mut_numeric_type(&self) -> bool {
         if let ThrushType::Mut(subtype) = self {
-            return subtype.is_integer_type() || subtype.is_float_type();
+            return subtype.is_integer_type()
+                || subtype.is_float_type()
+                || subtype.is_bool_type()
+                || subtype.is_char_type();
         }
 
         false

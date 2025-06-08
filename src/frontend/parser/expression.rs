@@ -157,18 +157,7 @@ fn casts<'instr>(
     let mut expression: ThrushStatement = self::cmp(parser_ctx)?;
 
     if parser_ctx.match_token(TokenType::CastRaw)? {
-        let expression_span: Span = expression.get_span();
-
         let span: Span = parser_ctx.previous().span;
-
-        if !expression.is_allocated()? {
-            return Err(ThrushCompilerIssue::Error(
-                String::from("Syntax error"),
-                String::from("Expected an allocated value."),
-                None,
-                expression_span,
-            ));
-        }
 
         let mut cast: ThrushType = typegen::build_type(parser_ctx)?;
 
@@ -182,18 +171,7 @@ fn casts<'instr>(
             span,
         };
     } else if parser_ctx.match_token(TokenType::CastPtr)? {
-        let expression_span: Span = expression.get_span();
-
         let span: Span = parser_ctx.previous().get_span();
-
-        if !expression.is_allocated()? {
-            return Err(ThrushCompilerIssue::Error(
-                String::from("Syntax error"),
-                String::from("Expected an allocated value."),
-                None,
-                expression_span,
-            ));
-        }
 
         let cast: ThrushType = typegen::build_type(parser_ctx)?;
 
@@ -203,18 +181,7 @@ fn casts<'instr>(
             span,
         };
     } else if parser_ctx.match_token(TokenType::Cast)? {
-        let expression_span: Span = expression.get_span();
-
         let span: Span = parser_ctx.previous().get_span();
-
-        if !expression.is_allocated()? {
-            return Err(ThrushCompilerIssue::Error(
-                String::from("Syntax error"),
-                String::from("Expected an allocated value."),
-                None,
-                expression_span,
-            ));
-        }
 
         let cast: ThrushType = typegen::build_type(parser_ctx)?;
 
@@ -1544,15 +1511,6 @@ pub fn build_deref<'instr>(
         let ref_span: Span = reference_tk.get_span();
 
         let reference: ThrushStatement = self::build_reference(parser_ctx, ref_name, ref_span)?;
-
-        if !reference.is_allocated()? {
-            return Err(ThrushCompilerIssue::Error(
-                String::from("Syntax error"),
-                String::from("Expected an allocated value."),
-                None,
-                ref_span,
-            ));
-        }
 
         reference
     };

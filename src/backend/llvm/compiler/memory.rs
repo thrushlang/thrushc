@@ -20,9 +20,9 @@ use inkwell::{
     values::{BasicValue, BasicValueEnum, PointerValue},
 };
 
-use super::{context::LLVMCodeGenContext, valuegen};
+use super::context::LLVMCodeGenContext;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub enum SymbolAllocated<'ctx> {
     Local {
         ptr: PointerValue<'ctx>,
@@ -59,7 +59,6 @@ pub enum LLVMAllocationSite {
 
 impl<'ctx> SymbolAllocated<'ctx> {
     pub fn new(
-        context: &LLVMCodeGenContext<'_, 'ctx>,
         allocate: SymbolToAllocate,
         value: BasicValueEnum<'ctx>,
         kind: &'ctx ThrushType,
@@ -73,27 +72,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
                 ptr: value.into_pointer_value(),
                 kind,
             },
-            SymbolToAllocate::Parameter => {
-                let llvm_builder: &Builder = context.get_llvm_builder();
-                let llvm_context: &Context = context.get_llvm_context();
-
-                let mut value: BasicValueEnum<'ctx> = value;
-
-                if !kind.is_mut_type() {
-                    let ptr_allocated: PointerValue = valuegen::alloc(
-                        llvm_context,
-                        llvm_builder,
-                        kind,
-                        kind.is_probably_heap_allocated(llvm_context, context.get_target_data()),
-                    );
-
-                    self::store_anon(context, ptr_allocated, value);
-
-                    value = ptr_allocated.into();
-                }
-
-                Self::Parameter { value, kind }
-            }
+            SymbolToAllocate::Parameter => Self::Parameter { value, kind },
             SymbolToAllocate::LowLevelInstruction => Self::LowLevelInstruction { value, kind },
         }
     }

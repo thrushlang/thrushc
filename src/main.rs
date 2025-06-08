@@ -45,8 +45,8 @@ fn main() {
                 .custom_color((141, 141, 142))
                 .bold(),
             "Compile time report".custom_color((141, 141, 142)).bold(),
-            format_args!("Thrush Compiler: {}ms", thrushc_time.to_string()),
-            format_args!("Linking: {}ms", linker_time.to_string()),
+            format_args!("Thrush Compiler: {}ms", thrushc_time),
+            format_args!("Linking: {}ms", linker_time),
             "─────────────────────────────────────────"
                 .custom_color((141, 141, 142))
                 .bold(),

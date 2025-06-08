@@ -40,9 +40,6 @@ lazy_static! {
         keywords.insert("type", TokenType::Type);
         keywords.insert("enum", TokenType::Enum);
         keywords.insert("alloc", TokenType::Alloc);
-        keywords.insert("heap!", TokenType::Heap);
-        keywords.insert("stack!", TokenType::Stack);
-        keywords.insert("static!", TokenType::Static);
         keywords.insert("address", TokenType::Address);
         keywords.insert("addr", TokenType::Addr);
         keywords.insert("load", TokenType::Load);
@@ -51,10 +48,13 @@ lazy_static! {
         keywords.insert("@import", TokenType::Import);
 
         keywords.insert("@asmalingstack", TokenType::AsmAlignStack);
-        keywords.insert("@asmdialect", TokenType::AsmDialect);
+        keywords.insert("@asmsyntax", TokenType::AsmSyntax);
         keywords.insert("@asmthrow", TokenType::AsmThrow);
         keywords.insert("@asmeffects", TokenType::AsmSideEffects);
 
+        keywords.insert("@heap", TokenType::Heap);
+        keywords.insert("@stack", TokenType::Stack);
+        keywords.insert("@static", TokenType::Static);
         keywords.insert("@public", TokenType::Public);
         keywords.insert("@extern", TokenType::Extern);
         keywords.insert("@ignore", TokenType::Ignore);

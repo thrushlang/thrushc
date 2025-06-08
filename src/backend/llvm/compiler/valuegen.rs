@@ -25,18 +25,39 @@ use inkwell::values::{
 use inkwell::{builder::Builder, context::Context, values::PointerValue};
 
 pub fn alloc<'ctx>(
-    context: &'ctx Context,
-    builder: &Builder<'ctx>,
+    context: &LLVMCodeGenContext<'_, 'ctx>,
     kind: &ThrushType,
-    heap: bool,
+    attributes: &'ctx ThrushAttributes<'ctx>,
 ) -> PointerValue<'ctx> {
-    let llvm_type: BasicTypeEnum = typegen::generate_subtype(context, kind);
+    let llvm_context: &Context = context.get_llvm_context();
+    let llvm_builder: &Builder = context.get_llvm_builder();
 
-    if heap {
-        return builder.build_malloc(llvm_type, "").unwrap();
+    let target_data: &TargetData = context.get_target_data();
+
+    let llvm_type: BasicTypeEnum = typegen::generate_subtype(llvm_context, kind);
+
+    if attributes.has_heap_attr() {
+        if let Ok(allocated_heap_ptr) = llvm_builder.build_malloc(llvm_type, "") {
+            return allocated_heap_ptr;
+        }
+    } else if attributes.has_stack_attr() {
+        if let Ok(allocated_stack_ptr) = llvm_builder.build_alloca(llvm_type, "") {
+            return allocated_stack_ptr;
+        }
+    } else if kind.is_probably_heap_allocated(llvm_context, target_data) {
+        if let Ok(allocated_heap_ptr) = llvm_builder.build_malloc(llvm_type, "") {
+            return allocated_heap_ptr;
+        }
+    } else if let Ok(allocated_stack_ptr) = llvm_builder.build_alloca(llvm_type, "") {
+        return allocated_stack_ptr;
     }
 
-    builder.build_alloca(llvm_type, "").unwrap()
+    logging::log(
+        LoggingType::Bug,
+        &format!("Unable to allocate pointer with type: '{}'.", kind),
+    );
+
+    unreachable!()
 }
 
 pub fn integer<'ctx>(
@@ -165,18 +186,15 @@ pub fn compile<'ctx>(
     }
 
     if let ThrushStatement::Call {
-        name,
-        args: call_args,
-        kind: call_type,
-        ..
+        name, args, kind, ..
     } = expr
     {
         if *name == "sizeof!" {
-            return builtins::build_sizeof(context, (name, call_type, call_args));
+            return builtins::build_sizeof(context, (name, kind, args));
         }
 
         if *name == "is_signed!" {
-            return builtins::build_is_signed(context, (name, call_type, call_args));
+            return builtins::build_is_signed(context, (name, kind, args));
         }
 
         context.set_position(LLVMCodeGenContextPosition::Call);
@@ -189,9 +207,9 @@ pub fn compile<'ctx>(
 
         let llvm_function: FunctionValue = function.0;
 
-        let mut compiled_args: Vec<BasicMetadataValueEnum> = Vec::with_capacity(call_args.len());
+        let mut compiled_args: Vec<BasicMetadataValueEnum> = Vec::with_capacity(args.len());
 
-        call_args.iter().enumerate().for_each(|arg| {
+        args.iter().enumerate().for_each(|arg| {
             let arg_position: usize = arg.0;
             let arg_expr: &ThrushStatement = arg.1;
 
@@ -207,7 +225,7 @@ pub fn compile<'ctx>(
         if let Ok(call) = llvm_builder.build_call(llvm_function, &compiled_args, "") {
             call.set_call_convention(function_convention);
 
-            if !call_type.is_void_type() {
+            if !kind.is_void_type() {
                 let llvm_context: &Context = context.get_llvm_context();
                 let return_value: BasicValueEnum = call.try_as_basic_value().unwrap_left();
 
@@ -216,18 +234,14 @@ pub fn compile<'ctx>(
                     return return_value;
                 }
 
-                if call_type.is_probably_heap_allocated(llvm_context, context.get_target_data())
+                if kind.is_probably_heap_allocated(llvm_context, context.get_target_data())
                     && previous_position.in_local()
-                    || call_type.is_probably_heap_allocated(llvm_context, context.get_target_data())
+                    || kind.is_probably_heap_allocated(llvm_context, context.get_target_data())
                         && previous_position.in_call()
                 {
                     context.set_position_irrelevant();
 
-                    return memory::load_anon(
-                        context,
-                        call_type,
-                        return_value.into_pointer_value(),
-                    );
+                    return memory::load_anon(context, kind, return_value.into_pointer_value());
                 }
 
                 context.set_position_irrelevant();

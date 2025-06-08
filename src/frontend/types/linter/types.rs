@@ -55,8 +55,11 @@ pub enum LLVMAttributeComparator {
     WeakStack,
     PreciseFloats,
 
+    Stack,
+    Heap,
+
     AsmThrow,
-    AsmDialect,
+    AsmSyntax,
     AsmAlignStack,
     AsmSideEffects,
 }

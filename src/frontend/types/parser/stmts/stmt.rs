@@ -241,6 +241,7 @@ pub enum ThrushStatement<'ctx> {
         name: &'ctx str,
         kind: ThrushType,
         value: Rc<ThrushStatement<'ctx>>,
+        attributes: ThrushAttributes<'ctx>,
         is_mutable: bool,
         span: Span,
     },

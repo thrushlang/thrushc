@@ -1,6 +1,8 @@
 use crate::{
     backend::llvm::compiler::valuegen::ExpressionModificator,
-    frontend::types::{lexer::ThrushType, representations::Local},
+    frontend::types::{
+        lexer::ThrushType, parser::stmts::types::ThrushAttributes, representations::Local,
+    },
 };
 
 use super::{
@@ -17,43 +19,41 @@ use inkwell::{
 };
 
 pub fn compile<'ctx>(local: Local<'ctx>, context: &mut LLVMCodeGenContext<'_, 'ctx>) {
+    let local_name: &'ctx str = local.0;
     let local_type: &ThrushType = local.1;
+    let attributes: &ThrushAttributes = local.3;
 
-    context.alloc_local(local.0, local.1);
+    context.alloc_local(local_name, local_type, attributes);
     context.set_position(LLVMCodeGenContextPosition::Local);
 
-    if local_type.is_ptr_type() {
-        build_local_ptr(local, context);
-    }
-
     if local_type.is_str_type() {
-        build_local_str(local, context);
+        compile_local_str(local, context);
     }
 
     if local_type.is_struct_type() {
-        build_local_structure(local, context);
+        compile_local_structure(local, context);
     }
 
     if local_type.is_integer_type() {
-        build_local_integer(local, context);
+        compile_local_integer(local, context);
     }
 
     if local_type.is_float_type() {
-        build_local_float(local, context);
+        compile_local_float(local, context);
     }
 
     if local_type.is_bool_type() {
-        build_local_boolean(local, context);
+        compile_local_boolean(local, context);
     }
 
     if local_type.is_mut_type() {
-        build_local_mut(local, context);
+        compile_local_mut(local, context);
     }
 
     context.set_position_irrelevant();
 }
 
-fn build_local_mut<'ctx>(local: Local<'ctx>, context: &mut LLVMCodeGenContext<'_, 'ctx>) {
+fn compile_local_mut<'ctx>(local: Local<'ctx>, context: &mut LLVMCodeGenContext<'_, 'ctx>) {
     let local_value: &ThrushStatement = local.2;
 
     let symbol: SymbolAllocated = context.get_allocated_symbol(local.0);
@@ -68,22 +68,7 @@ fn build_local_mut<'ctx>(local: Local<'ctx>, context: &mut LLVMCodeGenContext<'_
     symbol.store(context, expression);
 }
 
-fn build_local_ptr<'ctx>(local: Local<'ctx>, context: &mut LLVMCodeGenContext<'_, 'ctx>) {
-    let local_value: &ThrushStatement = local.2;
-
-    let symbol: SymbolAllocated = context.get_allocated_symbol(local.0);
-
-    let expression: BasicValueEnum = valuegen::compile(
-        context,
-        local_value,
-        &ThrushType::Ptr(None),
-        ExpressionModificator::new(false, true),
-    );
-
-    symbol.store(context, expression);
-}
-
-fn build_local_str<'ctx>(local: Local<'ctx>, context: &mut LLVMCodeGenContext<'_, 'ctx>) {
+fn compile_local_str<'ctx>(local: Local<'ctx>, context: &mut LLVMCodeGenContext<'_, 'ctx>) {
     let local_value: &ThrushStatement = local.2;
 
     let symbol: SymbolAllocated = context.get_allocated_symbol(local.0);
@@ -98,7 +83,7 @@ fn build_local_str<'ctx>(local: Local<'ctx>, context: &mut LLVMCodeGenContext<'_
     symbol.store(context, expression);
 }
 
-fn build_local_integer<'ctx>(local: Local<'ctx>, context: &mut LLVMCodeGenContext<'_, 'ctx>) {
+fn compile_local_integer<'ctx>(local: Local<'ctx>, context: &mut LLVMCodeGenContext<'_, 'ctx>) {
     let local_name: &str = local.0;
     let local_type: &ThrushType = local.1;
     let local_value: &ThrushStatement = local.2;
@@ -115,7 +100,7 @@ fn build_local_integer<'ctx>(local: Local<'ctx>, context: &mut LLVMCodeGenContex
     symbol.store(context, expression);
 }
 
-fn build_local_float<'ctx>(local: Local<'ctx>, context: &mut LLVMCodeGenContext<'_, 'ctx>) {
+fn compile_local_float<'ctx>(local: Local<'ctx>, context: &mut LLVMCodeGenContext<'_, 'ctx>) {
     let local_name: &str = local.0;
     let local_type: &ThrushType = local.1;
     let local_value: &ThrushStatement = local.2;
@@ -132,7 +117,7 @@ fn build_local_float<'ctx>(local: Local<'ctx>, context: &mut LLVMCodeGenContext<
     symbol.store(context, expression);
 }
 
-fn build_local_boolean<'ctx>(local: Local<'ctx>, context: &mut LLVMCodeGenContext<'_, 'ctx>) {
+fn compile_local_boolean<'ctx>(local: Local<'ctx>, context: &mut LLVMCodeGenContext<'_, 'ctx>) {
     let local_name: &str = local.0;
     let local_type: &ThrushType = local.1;
     let local_value: &ThrushStatement = local.2;
@@ -149,7 +134,7 @@ fn build_local_boolean<'ctx>(local: Local<'ctx>, context: &mut LLVMCodeGenContex
     symbol.store(context, expression);
 }
 
-fn build_local_structure<'ctx>(local: Local<'ctx>, context: &mut LLVMCodeGenContext<'_, 'ctx>) {
+fn compile_local_structure<'ctx>(local: Local<'ctx>, context: &mut LLVMCodeGenContext<'_, 'ctx>) {
     let local_type: &ThrushType = local.1;
     let local_value: &ThrushStatement = local.2;
 

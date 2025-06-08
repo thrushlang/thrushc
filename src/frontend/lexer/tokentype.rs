@@ -61,7 +61,7 @@ pub enum TokenType {
     PreciseFloats,
     Convention,
     AsmAlignStack,
-    AsmDialect,
+    AsmSyntax,
     AsmThrow,
     AsmSideEffects,
 
@@ -316,6 +316,11 @@ impl TokenType {
             TokenType::WeakStack => Some(LLVMAttribute::WeakStack(span)),
             TokenType::StrongStack => Some(LLVMAttribute::StrongStack(span)),
             TokenType::PreciseFloats => Some(LLVMAttribute::PreciseFloats(span)),
+            TokenType::Stack => Some(LLVMAttribute::Stack(span)),
+            TokenType::Heap => Some(LLVMAttribute::Heap(span)),
+            TokenType::AsmThrow => Some(LLVMAttribute::AsmThrow(span)),
+            TokenType::AsmSideEffects => Some(LLVMAttribute::AsmSideEffects(span)),
+            TokenType::AsmAlignStack => Some(LLVMAttribute::AsmAlignStack(span)),
             _ => None,
         }
     }

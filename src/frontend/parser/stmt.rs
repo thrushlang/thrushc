@@ -1288,6 +1288,9 @@ fn build_local<'instr>(
 
     let local_type: ThrushType = typegen::build_type(parser_ctx)?;
 
+    let attributes: ThrushAttributes =
+        self::build_attributes(parser_ctx, &[TokenType::SemiColon, TokenType::Eq])?;
+
     if parser_ctx.match_token(TokenType::SemiColon)? {
         parser_ctx.get_mut_symbols().new_local(
             name,
@@ -1299,6 +1302,7 @@ fn build_local<'instr>(
             name,
             kind: local_type,
             value: ThrushStatement::Null { span }.into(),
+            attributes,
             is_mutable,
             span,
         });
@@ -1328,6 +1332,7 @@ fn build_local<'instr>(
         name,
         kind: local_type,
         value: value.into(),
+        attributes,
         is_mutable,
         span,
     };
@@ -1886,6 +1891,11 @@ pub fn build_attributes<'instr>(
                 parser_ctx.only_advance()?;
             }
 
+            TokenType::AsmSyntax => compiler_attributes.push(LLVMAttribute::AsmSyntax(
+                self::build_assembler_syntax_attribute(parser_ctx)?,
+                span,
+            )),
+
             attribute if attribute.as_compiler_attribute(span).is_some() => {
                 if let Some(compiler_attribute) = attribute.as_compiler_attribute(span) {
                     compiler_attributes.push(compiler_attribute);
@@ -1922,7 +1932,7 @@ fn build_external_attribute<'instr>(
     let name: &Token = parser_ctx.consume(
         TokenType::Str,
         String::from("Syntax error"),
-        String::from("Expected a literal 'str' for @extern(\"FFI NAME\")."),
+        String::from("Expected a string literal for @extern(\"FFI NAME\")."),
     )?;
 
     let ffi_name: &str = name.get_lexeme();
@@ -1934,6 +1944,49 @@ fn build_external_attribute<'instr>(
     )?;
 
     Ok(ffi_name)
+}
+
+fn build_assembler_syntax_attribute<'instr>(
+    parser_ctx: &mut ParserContext<'instr>,
+) -> Result<&'instr str, ThrushCompilerIssue> {
+    parser_ctx.only_advance()?;
+
+    parser_ctx.consume(
+        TokenType::LParen,
+        String::from("Syntax error"),
+        String::from("Expected '('."),
+    )?;
+
+    let syntax_tk: &Token = parser_ctx.consume(
+        TokenType::Str,
+        String::from("Syntax error"),
+        String::from("Expected a string literal for @asmsyntax(\"INTEL\")."),
+    )?;
+
+    let specified_syntax: &str = syntax_tk.get_lexeme();
+    let syntax_span: Span = syntax_tk.get_span();
+
+    let syntaxes: [&'static str; 2] = ["ATT", "INTEL"];
+
+    if !syntaxes.contains(&specified_syntax) {
+        return Err(ThrushCompilerIssue::Error(
+            "Syntax error".into(),
+            format!(
+                "Unknown assembler syntax, valid are '{}'.",
+                syntaxes.join(", ")
+            ),
+            None,
+            syntax_span,
+        ));
+    }
+
+    parser_ctx.consume(
+        TokenType::RParen,
+        String::from("Syntax error"),
+        String::from("Expected ')'."),
+    )?;
+
+    Ok(specified_syntax)
 }
 
 fn build_call_convention_attribute(
