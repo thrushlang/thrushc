@@ -18,10 +18,13 @@ use super::typegen;
 
 use inkwell::module::{Linkage, Module};
 use inkwell::targets::TargetData;
-use inkwell::types::{BasicTypeEnum, FunctionType, PointerType};
+use inkwell::types::{
+    ArrayType, BasicTypeEnum, FloatType, FunctionType, IntType, PointerType, StructType,
+};
 
 use inkwell::values::{
-    BasicMetadataValueEnum, BasicValueEnum, FloatValue, FunctionValue, GlobalValue, IntValue,
+    ArrayValue, BasicMetadataValueEnum, BasicValueEnum, FloatValue, FunctionValue, GlobalValue,
+    IntValue, StructValue,
 };
 use inkwell::{AddressSpace, InlineAsmDialect};
 use inkwell::{builder::Builder, context::Context, values::PointerValue};
@@ -109,7 +112,7 @@ pub fn float<'ctx>(
 }
 
 #[derive(Debug, Clone, Copy, Default)]
-pub struct ExpressionModificator {
+pub struct CompileChanges {
     load_raw: bool,
     do_cast: bool,
 }
@@ -118,7 +121,7 @@ pub fn compile<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     expr: &'ctx ThrushStatement,
     cast: &ThrushType,
-    modificator: ExpressionModificator,
+    changes: CompileChanges,
 ) -> BasicValueEnum<'ctx> {
     let llvm_module: &Module = context.get_llvm_module();
     let llvm_context: &Context = context.get_llvm_context();
@@ -152,7 +155,7 @@ pub fn compile<'ctx>(
     {
         let mut float: FloatValue = float(llvm_builder, llvm_context, kind, *value, *signed);
 
-        if modificator.get_do_cast() {
+        if changes.do_cast() {
             if let Some(casted_float) = cast::float(context, cast, kind, float.into()) {
                 float = casted_float.into_float_value();
             }
@@ -170,7 +173,7 @@ pub fn compile<'ctx>(
     {
         let mut integer: IntValue = self::integer(llvm_context, kind, *value, *signed);
 
-        if modificator.get_do_cast() {
+        if changes.do_cast() {
             if let Some(casted_integer) = cast::integer(context, cast, kind, integer.into()) {
                 integer = casted_integer.into_int_value();
             }
@@ -220,7 +223,7 @@ pub fn compile<'ctx>(
                     context,
                     arg_expr,
                     cast,
-                    ExpressionModificator::new(cast.is_mut_type() || cast.is_ptr_type(), true),
+                    CompileChanges::new(cast.is_mut_type() || cast.is_ptr_type(), true),
                 )
                 .into(),
             );
@@ -232,7 +235,7 @@ pub fn compile<'ctx>(
             if !kind.is_void_type() {
                 let return_value: BasicValueEnum = call.try_as_basic_value().unwrap_left();
 
-                if modificator.get_load_raw() {
+                if changes.load_raw() {
                     return return_value;
                 }
 
@@ -252,7 +255,7 @@ pub fn compile<'ctx>(
     }
 
     if let ThrushStatement::Group { expression, .. } = expr {
-        return self::compile(context, expression, cast, ExpressionModificator::default());
+        return self::compile(context, expression, cast, CompileChanges::default());
     }
 
     if let ThrushStatement::BinaryOp {
@@ -335,21 +338,13 @@ pub fn compile<'ctx>(
         ..
     } = expr
     {
-        let write_value: BasicValueEnum = self::compile(
-            context,
-            write_value,
-            write_type,
-            ExpressionModificator::default(),
-        );
+        let write_value: BasicValueEnum =
+            self::compile(context, write_value, write_type, CompileChanges::default());
 
         if let Some(expr) = write_to.1.as_ref() {
-            let compiled_expr: PointerValue = self::compile(
-                context,
-                expr,
-                &ThrushType::Void,
-                ExpressionModificator::default(),
-            )
-            .into_pointer_value();
+            let compiled_expr: PointerValue =
+                self::compile(context, expr, &ThrushType::Void, CompileChanges::default())
+                    .into_pointer_value();
 
             if let Ok(store) = llvm_builder.build_store(compiled_expr, write_value) {
                 let target_data: &TargetData = context.get_target_data();
@@ -392,8 +387,7 @@ pub fn compile<'ctx>(
 
         if let Some(expr) = &load.1 {
             let ptr: PointerValue =
-                self::compile(context, expr, kind, ExpressionModificator::default())
-                    .into_pointer_value();
+                self::compile(context, expr, kind, CompileChanges::default()).into_pointer_value();
 
             return memory::load_anon(context, kind, ptr);
         }
@@ -404,27 +398,13 @@ pub fn compile<'ctx>(
     if let ThrushStatement::Address { name, indexes, .. } = expr {
         let symbol: SymbolAllocated = context.get_allocated_symbol(name);
 
-        let mut compiled_indexes: Vec<IntValue> = Vec::with_capacity(10);
-
-        indexes.iter().for_each(|indexe| {
-            let mut compiled_indexe: BasicValueEnum = self::compile(
-                context,
-                indexe,
-                &ThrushType::U32,
-                ExpressionModificator::default(),
-            );
-
-            if let Some(casted_index) = cast::integer(
-                context,
-                &ThrushType::U32,
-                indexe.get_type_unwrapped(),
-                compiled_indexe,
-            ) {
-                compiled_indexe = casted_index;
-            }
-
-            compiled_indexes.push(compiled_indexe.into_int_value());
-        });
+        let compiled_indexes: Vec<IntValue> = indexes
+            .iter()
+            .map(|indexe| {
+                self::compile(context, indexe, &ThrushType::U32, CompileChanges::default())
+                    .into_int_value()
+            })
+            .collect();
 
         return symbol
             .gep(llvm_context, llvm_builder, &compiled_indexes)
@@ -449,7 +429,7 @@ pub fn compile<'ctx>(
 
     if let ThrushStatement::CastPtr { from, cast, .. } = expr {
         let ptr: BasicValueEnum =
-            self::compile(context, from, cast, ExpressionModificator::new(true, false));
+            self::compile(context, from, cast, CompileChanges::new(true, false));
 
         if ptr.is_pointer_value() {
             let to: PointerType = typegen::generate_type(llvm_context, cast).into_pointer_type();
@@ -468,8 +448,7 @@ pub fn compile<'ctx>(
     }
 
     if let ThrushStatement::Cast { from, cast, .. } = expr {
-        let val: BasicValueEnum =
-            self::compile(context, from, cast, ExpressionModificator::default());
+        let val: BasicValueEnum = self::compile(context, from, cast, CompileChanges::default());
 
         let from_type: &ThrushType = from.get_type_unwrapped();
 
@@ -513,12 +492,12 @@ pub fn compile<'ctx>(
             context,
             from,
             &ThrushType::Void,
-            ExpressionModificator::new(true, false),
+            CompileChanges::new(true, false),
         );
     }
 
     if let ThrushStatement::CastRaw { from, cast, .. } = expr {
-        return self::compile(context, from, cast, ExpressionModificator::new(true, true));
+        return self::compile(context, from, cast, CompileChanges::new(true, true));
     }
 
     /* ######################################################################
@@ -585,7 +564,7 @@ pub fn compile<'ctx>(
             }
         });
 
-        if modificator.get_load_raw() {
+        if changes.load_raw() {
             return last_memory_calculation.into();
         }
 
@@ -595,7 +574,7 @@ pub fn compile<'ctx>(
     if let ThrushStatement::Reference { name, .. } = expr {
         let symbol: SymbolAllocated = context.get_allocated_symbol(name);
 
-        if modificator.get_load_raw() {
+        if changes.load_raw() {
             return symbol.raw_load().into();
         }
 
@@ -623,7 +602,7 @@ pub fn compile<'ctx>(
 
         let compiled_args: Vec<BasicMetadataValueEnum> = args
             .iter()
-            .map(|arg| self::compile(context, arg, cast, modificator).into())
+            .map(|arg| self::compile(context, arg, cast, changes).into())
             .collect();
 
         let mut syntax: InlineAsmDialect = InlineAsmDialect::Intel;
@@ -656,7 +635,7 @@ pub fn compile<'ctx>(
             if !kind.is_void_type() {
                 let return_value: BasicValueEnum = indirect_call.try_as_basic_value().unwrap_left();
 
-                if modificator.get_load_raw() {
+                if changes.load_raw() {
                     return return_value;
                 }
 
@@ -687,20 +666,12 @@ pub fn compile<'ctx>(
 
         if let Some(expr) = source_expr {
             let source: BasicValueEnum =
-                self::compile(context, expr, kind, ExpressionModificator::new(true, true));
+                self::compile(context, expr, kind, CompileChanges::new(true, true));
 
-            let value: BasicValueEnum = self::compile(
-                context,
-                value,
-                kind,
-                ExpressionModificator::new(false, true),
-            );
+            let value: BasicValueEnum =
+                self::compile(context, value, kind, CompileChanges::new(false, true));
 
-            memory::store_anon(
-                context,
-                source.into_pointer_value(),
-                memory::load_maybe(context, value_type, value),
-            );
+            memory::store_anon(context, source.into_pointer_value(), value_type, value);
 
             return source;
         }
@@ -708,19 +679,36 @@ pub fn compile<'ctx>(
         if let Some(name) = source_name {
             let symbol: SymbolAllocated = context.get_allocated_symbol(name);
 
-            let expr: BasicValueEnum = self::compile(
-                context,
-                value,
-                kind,
-                ExpressionModificator::new(false, true),
-            );
+            let value: BasicValueEnum =
+                self::compile(context, value, kind, CompileChanges::new(false, true));
 
-            symbol.store(context, memory::load_maybe(context, value_type, expr));
+            symbol.store(context, value);
 
-            return expr;
+            return value;
         }
 
         logging::log(LoggingType::Panic, "Could not get value of an mutation.");
+    }
+
+    if let ThrushStatement::Array { items, kind, .. } = expr {
+        let array_type: &ThrushType = if cast.is_fixedarray_type() || cast.is_mut_array_type() {
+            cast.get_array_type()
+        } else {
+            kind.get_array_type()
+        };
+
+        let llvm_array_type: BasicTypeEnum = typegen::generate_type(llvm_context, array_type);
+
+        if expr.is_array_constant() {
+            let values: Vec<BasicValueEnum> = items
+                .iter()
+                .map(|item| self::compile(context, item, array_type, changes))
+                .collect();
+
+            return self::compile_constant_array(llvm_array_type, &values);
+        } else {
+            return self::compile_array(context, items, kind, &changes);
+        }
     }
 
     println!("{:?}", expr);
@@ -765,21 +753,129 @@ fn compile_deref<'ctx>(
             context,
             expr,
             &ThrushType::Void,
-            ExpressionModificator::new(true, false),
+            CompileChanges::new(true, false),
         ),
     }
 }
 
-impl ExpressionModificator {
+fn compile_array<'ctx>(
+    context: &mut LLVMCodeGenContext<'_, 'ctx>,
+    items: &'ctx [ThrushStatement],
+    kind: &'ctx ThrushType,
+    changes: &CompileChanges,
+) -> BasicValueEnum<'ctx> {
+    let llvm_context: &Context = context.get_llvm_context();
+    let llvm_builder: &Builder = context.get_llvm_builder();
+
+    let array_ptr: PointerValue =
+        memory::alloc_anon(LLVMAllocationSite::Stack, context, kind, true);
+
+    let array_ptr_type: BasicTypeEnum = typegen::generate_type(llvm_context, kind);
+
+    for (idx, item) in items.iter().enumerate() {
+        let llvm_idx: IntValue = llvm_context.i32_type().const_int(idx as u64, false);
+
+        let element_ptr: PointerValue = unsafe {
+            llvm_builder.build_gep(
+                array_ptr_type,
+                array_ptr,
+                &[llvm_context.i32_type().const_zero(), llvm_idx],
+                "",
+            )
+        }
+        .unwrap_or_else(|_| {
+            logging::log(
+                LoggingType::Bug,
+                "Unable to calculate memory address of an element of a array.",
+            );
+
+            unreachable!()
+        });
+
+        let compiled_item = self::compile(context, item, kind.get_array_type(), *changes);
+
+        memory::store_anon(
+            context,
+            element_ptr,
+            item.get_type_unwrapped(),
+            compiled_item,
+        );
+    }
+
+    if changes.load_raw() {
+        return array_ptr.into();
+    }
+
+    memory::load_anon(context, kind, array_ptr)
+}
+fn compile_constant_array<'ctx>(
+    kind: BasicTypeEnum<'ctx>,
+    values: &[BasicValueEnum<'ctx>],
+) -> BasicValueEnum<'ctx> {
+    if kind.is_int_type() {
+        let array_type: IntType = kind.into_int_type();
+        let values: Vec<IntValue> = values.iter().map(|value| value.into_int_value()).collect();
+        return array_type.const_array(&values).into();
+    }
+
+    if kind.is_float_type() {
+        let array_type: FloatType = kind.into_float_type();
+        let values: Vec<FloatValue> = values
+            .iter()
+            .map(|value| value.into_float_value())
+            .collect();
+
+        return array_type.const_array(&values).into();
+    }
+
+    if kind.is_array_type() {
+        let array_type: ArrayType = kind.into_array_type();
+        let values: Vec<ArrayValue> = values
+            .iter()
+            .map(|value| value.into_array_value())
+            .collect();
+
+        return array_type.const_array(&values).into();
+    }
+
+    if kind.is_struct_type() {
+        let array_type: StructType = kind.into_struct_type();
+        let values: Vec<StructValue> = values
+            .iter()
+            .map(|value| value.into_struct_value())
+            .collect();
+
+        return array_type.const_array(&values).into();
+    }
+
+    if kind.is_pointer_type() {
+        let array_type: PointerType = kind.into_pointer_type();
+        let values: Vec<PointerValue> = values
+            .iter()
+            .map(|value| value.into_pointer_value())
+            .collect();
+
+        return array_type.const_array(&values).into();
+    }
+
+    logging::log(
+        LoggingType::Bug,
+        "An attempt was made to create an LLVM array from an incompatible type.",
+    );
+
+    unreachable!()
+}
+
+impl CompileChanges {
     pub fn new(load_raw: bool, do_cast: bool) -> Self {
         Self { load_raw, do_cast }
     }
 
-    pub fn get_load_raw(&self) -> bool {
+    pub fn load_raw(&self) -> bool {
         self.load_raw
     }
 
-    pub fn get_do_cast(&self) -> bool {
+    pub fn do_cast(&self) -> bool {
         self.do_cast
     }
 }

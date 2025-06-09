@@ -296,12 +296,16 @@ impl<'ctx> SymbolAllocated<'ctx> {
 pub fn store_anon<'ctx>(
     context: &LLVMCodeGenContext<'_, '_>,
     ptr: PointerValue<'ctx>,
+    kind: &ThrushType,
     value: BasicValueEnum<'ctx>,
 ) {
+    let llvm_context: &Context = context.get_llvm_context();
     let llvm_builder: &Builder = context.get_llvm_builder();
+
     let target_data: &TargetData = context.get_target_data();
 
-    let preferred_memory_alignment: u32 = target_data.get_preferred_alignment(&ptr.get_type());
+    let llvm_type: BasicTypeEnum = typegen::generate_type(llvm_context, kind);
+    let preferred_memory_alignment: u32 = target_data.get_preferred_alignment(&llvm_type);
 
     if let Ok(store) = llvm_builder.build_store(ptr, value) {
         let _ = store.set_alignment(preferred_memory_alignment);
@@ -329,19 +333,6 @@ pub fn load_anon<'ctx>(
     }
 
     loaded_value
-}
-
-pub fn load_maybe<'ctx>(
-    context: &LLVMCodeGenContext<'_, 'ctx>,
-    kind: &ThrushType,
-    value: BasicValueEnum<'ctx>,
-) -> BasicValueEnum<'ctx> {
-    if value.is_pointer_value() {
-        let new_value: BasicValueEnum = self::load_anon(context, kind, value.into_pointer_value());
-        return new_value;
-    }
-
-    value
 }
 
 pub fn alloc_anon<'ctx>(

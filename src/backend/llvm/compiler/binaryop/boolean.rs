@@ -3,7 +3,7 @@ use {
         backend::llvm::compiler::{
             context::LLVMCodeGenContext,
             predicates,
-            valuegen::{self, ExpressionModificator},
+            valuegen::{self, CompileChanges},
         },
         core::console::logging::{self, LoggingType},
         frontend::{
@@ -81,19 +81,11 @@ pub fn bool_binaryop<'ctx>(
         _,
     ) = binary
     {
-        let left_compiled: BasicValueEnum = valuegen::compile(
-            context,
-            binary.0,
-            cast,
-            ExpressionModificator::new(false, true),
-        );
+        let left_compiled: BasicValueEnum =
+            valuegen::compile(context, binary.0, cast, CompileChanges::new(false, true));
 
-        let right_compiled: BasicValueEnum = valuegen::compile(
-            context,
-            binary.2,
-            cast,
-            ExpressionModificator::new(false, true),
-        );
+        let right_compiled: BasicValueEnum =
+            valuegen::compile(context, binary.2, cast, CompileChanges::new(false, true));
 
         return self::bool_operation(context, left_compiled, right_compiled, binary.1);
     }

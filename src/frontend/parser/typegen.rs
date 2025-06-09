@@ -2,9 +2,11 @@ use crate::{
     core::errors::standard::ThrushCompilerIssue,
     frontend::{
         lexer::{span::Span, token::Token, tokentype::TokenType},
+        parser::expression,
         types::{
             lexer::ThrushType,
             parser::stmts::{
+                stmt::ThrushStatement,
                 traits::{
                     CustomTypeFieldsExtensions, FoundSymbolEither, FoundSymbolExtension,
                     StructExtensions, StructFieldsExtensions, TokenExtensions,
@@ -46,6 +48,61 @@ pub fn build_type(parser_ctx: &mut ParserContext<'_>) -> Result<ThrushType, Thru
                 }
 
                 return Ok(ThrushType::Mut(inner_type.into()));
+            }
+
+            if tk_kind.is_array() {
+                parser_ctx.consume(
+                    TokenType::LBracket,
+                    String::from("Syntax error"),
+                    String::from("Expected '['."),
+                )?;
+
+                let array_type: ThrushType = self::build_type(parser_ctx)?;
+
+                parser_ctx.consume(
+                    TokenType::SemiColon,
+                    String::from("Syntax error"),
+                    String::from("Expected ';'."),
+                )?;
+
+                let size: ThrushStatement = expression::build_expr(parser_ctx)?;
+
+                if !size.is_integer() {
+                    return Err(ThrushCompilerIssue::Error(
+                        String::from("Syntax error"),
+                        "Expected integer value.".into(),
+                        None,
+                        span,
+                    ));
+                }
+
+                if !size.is_anyu32bit_integer()? {
+                    return Err(ThrushCompilerIssue::Error(
+                        String::from("Syntax error"),
+                        "Expected any unsigned 32 bits integer value.".into(),
+                        None,
+                        span,
+                    ));
+                }
+
+                let raw_array_size: u64 = size.get_integer_value()?;
+
+                if let Ok(array_size) = u32::try_from(raw_array_size) {
+                    parser_ctx.consume(
+                        TokenType::RBracket,
+                        String::from("Syntax error"),
+                        String::from("Expected ']'."),
+                    )?;
+
+                    return Ok(ThrushType::FixedArray(array_type.into(), array_size));
+                }
+
+                return Err(ThrushCompilerIssue::Error(
+                    String::from("Syntax error"),
+                    "Expected any unsigned 32 bits integer value.".into(),
+                    None,
+                    span,
+                ));
             }
 
             match tk_kind.as_type(span)? {

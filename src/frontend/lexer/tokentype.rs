@@ -130,6 +130,7 @@ pub enum TokenType {
     Ptr,
     Void,
     Addr,
+    Array,
 
     Eof,
 }
@@ -260,6 +261,11 @@ impl TokenType {
     }
 
     #[must_use]
+    pub const fn is_array(&self) -> bool {
+        matches!(self, TokenType::Array)
+    }
+
+    #[must_use]
     pub const fn is_ptr(&self) -> bool {
         matches!(self, TokenType::Ptr)
     }
@@ -290,6 +296,7 @@ impl TokenType {
         self.is_integer()
             || self.is_float()
             || self.is_bool()
+            || self.is_array()
             || self.is_ptr()
             || self.is_str()
             || self.is_void()

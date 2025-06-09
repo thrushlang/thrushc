@@ -221,9 +221,34 @@ impl<'linter> Linter<'linter> {
             self.analyze_stmt(from);
         }
 
-        if let ThrushStatement::Address { name, span, .. } = stmt {
-            if let Some(local) = self.symbols.get_lli_info(name) {
+        if let ThrushStatement::Address {
+            name,
+            span,
+            indexes,
+            ..
+        } = stmt
+        {
+            indexes.iter().for_each(|indexe| {
+                self.analyze_stmt(indexe);
+            });
+
+            if let Some(local) = self.symbols.get_local_info(name) {
                 local.1 = true;
+                return;
+            }
+
+            if let Some(parameter) = self.symbols.get_parameter_info(name) {
+                parameter.1 = true;
+                return;
+            }
+
+            if let Some(lli) = self.symbols.get_lli_info(name) {
+                lli.1 = true;
+                return;
+            }
+
+            if let Some(constant) = self.symbols.get_constant_info(name) {
+                constant.1 = true;
                 return;
             }
 
@@ -237,9 +262,25 @@ impl<'linter> Linter<'linter> {
         }
 
         if let ThrushStatement::Load { load, .. } = stmt {
-            if let Some(reference_name) = load.0 {
-                if let Some(lli) = self.symbols.get_lli_info(reference_name) {
+            if let Some(name) = load.0 {
+                if let Some(local) = self.symbols.get_local_info(name) {
+                    local.1 = true;
+                    return;
+                }
+
+                if let Some(parameter) = self.symbols.get_parameter_info(name) {
+                    parameter.1 = true;
+                    return;
+                }
+
+                if let Some(lli) = self.symbols.get_lli_info(name) {
                     lli.1 = true;
+                    return;
+                }
+
+                if let Some(constant) = self.symbols.get_constant_info(name) {
+                    constant.1 = true;
+                    return;
                 }
             }
 
@@ -335,6 +376,12 @@ impl<'linter> Linter<'linter> {
                 CompilationPosition::Linter,
                 line!(),
             ));
+        }
+
+        if let ThrushStatement::Array { items, .. } = stmt {
+            items.iter().for_each(|item| {
+                self.analyze_stmt(item);
+            });
         }
 
         if let ThrushStatement::EnumValue {

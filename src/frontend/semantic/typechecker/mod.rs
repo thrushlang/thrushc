@@ -775,11 +775,50 @@ impl<'type_checker> TypeChecker<'type_checker> {
             return Ok(());
         }
 
-        if let ThrushStatement::AsmValue { .. } = stmt {
+        if let ThrushStatement::Array { items, kind, span } = stmt {
+            if kind.is_void_type() {
+                return Err(ThrushCompilerIssue::Error(
+                    "Syntax error".into(),
+                    "At least one element was expected.".into(),
+                    None,
+                    *span,
+                ));
+            }
+
+            let array_type: &ThrushType = kind.get_array_type();
+
+            for item in items.iter() {
+                if let Err(error) = self.validate_types(
+                    array_type,
+                    item.get_value_type()?,
+                    Some(item),
+                    None,
+                    &item.get_span(),
+                    TypeCheckerTypeCheckSource::default(),
+                ) {
+                    self.add_error(error);
+                }
+
+                self.analyze_stmt(item)?;
+            }
+
             return Ok(());
         }
 
-        if let ThrushStatement::RawPtr { .. } = stmt {
+        if let ThrushStatement::RawPtr { from, span, .. } = stmt {
+            if !from.is_reference() {
+                self.add_error(ThrushCompilerIssue::Error(
+                    "Syntax error".into(),
+                    "A reference to a value was expected.".into(),
+                    None,
+                    *span,
+                ));
+            }
+
+            return Ok(());
+        }
+
+        if let ThrushStatement::AsmValue { .. } = stmt {
             return Ok(());
         }
 
@@ -1007,6 +1046,19 @@ impl<'type_checker> TypeChecker<'type_checker> {
             }
 
             (ThrushType::Addr, ThrushType::Addr, None) => Ok(()),
+
+            (
+                ThrushType::FixedArray(type_a, size_a),
+                ThrushType::FixedArray(type_b, size_b),
+                None,
+            ) => {
+                if size_a == size_b {
+                    self.validate_types(type_a, type_b, None, None, span, source)?;
+                    return Ok(());
+                }
+
+                Err(error)
+            }
 
             (
                 ThrushType::Mut(target_type),

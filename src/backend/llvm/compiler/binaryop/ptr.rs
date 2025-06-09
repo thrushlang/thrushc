@@ -7,7 +7,7 @@ use crate::{
     backend::llvm::compiler::{
         context::LLVMCodeGenContext,
         predicates,
-        valuegen::{self, ExpressionModificator},
+        valuegen::{self, CompileChanges},
     },
     core::console::logging::{self, LoggingType},
     frontend::{
@@ -63,14 +63,14 @@ pub fn ptr_binaryop<'ctx>(
             context,
             binary.0,
             target_type,
-            ExpressionModificator::new(false, true),
+            CompileChanges::new(false, true),
         );
 
         let right_compiled: BasicValueEnum = valuegen::compile(
             context,
             binary.2,
             target_type,
-            ExpressionModificator::new(false, true),
+            CompileChanges::new(false, true),
         );
 
         return ptr_operation(llvm_builder, left_compiled, right_compiled, binary.1);

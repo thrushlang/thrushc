@@ -1,7 +1,7 @@
 use {
     super::super::{context::LLVMCodeGenContext, valuegen},
     crate::{
-        backend::llvm::compiler::{predicates, valuegen::ExpressionModificator},
+        backend::llvm::compiler::{predicates, valuegen::CompileChanges},
         core::console::logging::{self, LoggingType},
         frontend::{
             lexer::tokentype::TokenType,
@@ -162,19 +162,11 @@ pub fn integer_binaryop<'ctx>(
         _,
     ) = binary
     {
-        let left_compiled: BasicValueEnum = valuegen::compile(
-            context,
-            binary.0,
-            cast,
-            ExpressionModificator::new(false, true),
-        );
+        let left_compiled: BasicValueEnum =
+            valuegen::compile(context, binary.0, cast, CompileChanges::new(false, true));
 
-        let right_compiled: BasicValueEnum = valuegen::compile(
-            context,
-            binary.2,
-            cast,
-            ExpressionModificator::new(false, true),
-        );
+        let right_compiled: BasicValueEnum =
+            valuegen::compile(context, binary.2, cast, CompileChanges::new(false, true));
 
         return int_operation(
             context,

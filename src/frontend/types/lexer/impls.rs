@@ -40,16 +40,12 @@ impl std::fmt::Display for TokenType {
             TokenType::Char => write!(f, "char"),
             TokenType::F32 => write!(f, "f32"),
             TokenType::F64 => write!(f, "f64"),
-            TokenType::Float => write!(f, "number"),
-            TokenType::Heap => write!(f, "heap!"),
-            TokenType::Integer => write!(f, "number"),
             TokenType::Ptr => write!(f, "ptr"),
+            TokenType::Array => write!(f, "array"),
             TokenType::S8 => write!(f, "s8"),
             TokenType::S16 => write!(f, "s16"),
             TokenType::S32 => write!(f, "s32"),
             TokenType::S64 => write!(f, "s64"),
-            TokenType::Stack => write!(f, "stack!"),
-            TokenType::Static => write!(f, "static!"),
             TokenType::Str => write!(f, "str"),
             TokenType::U8 => write!(f, "u8"),
             TokenType::U16 => write!(f, "u16"),
@@ -57,6 +53,9 @@ impl std::fmt::Display for TokenType {
             TokenType::U64 => write!(f, "u64"),
             TokenType::Void => write!(f, "void"),
             // Attributes
+            TokenType::Stack => write!(f, "@stack"),
+            TokenType::Static => write!(f, "@static"),
+            TokenType::Heap => write!(f, "@heap"),
             TokenType::AlwaysInline => write!(f, "@alwaysinline"),
             TokenType::AsmAlignStack => write!(f, "@asmalignstack"),
             TokenType::AsmSyntax => write!(f, "@asmsyntax"),
@@ -76,6 +75,8 @@ impl std::fmt::Display for TokenType {
             TokenType::StrongStack => write!(f, "@strongstack"),
             TokenType::WeakStack => write!(f, "@weakstack"),
             // Operators, Punctuation, and Special Constructs
+            TokenType::Float => write!(f, "integer"),
+            TokenType::Integer => write!(f, "float"),
             TokenType::Addr => write!(f, "addr"),
             TokenType::Alloc => write!(f, "alloc"),
             TokenType::Arith => write!(f, "%"),
@@ -144,8 +145,11 @@ impl std::fmt::Display for ThrushType {
             ThrushType::Str => write!(f, "str"),
             ThrushType::Char => write!(f, "char"),
             ThrushType::Mut(any_type) => write!(f, "mut {}", any_type),
+            ThrushType::FixedArray(kind, size) => {
+                write!(f, "[{}; {}]", kind, size)
+            }
             ThrushType::Struct(name, fields) => {
-                let _ = write!(f, "struct {} {{ ", name);
+                write!(f, "struct {} {{ ", name)?;
 
                 fields.iter().for_each(|field| {
                     let _ = write!(f, "{} ", field);

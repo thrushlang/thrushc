@@ -6,6 +6,7 @@ use inkwell::{
     types::{BasicMetadataTypeEnum, FloatType, IntType},
 };
 
+use crate::core::console::logging::{self, LoggingType};
 use crate::frontend::types::lexer::ThrushType;
 use crate::frontend::types::parser::stmts::stmt::ThrushStatement;
 
@@ -23,6 +24,7 @@ pub fn thrush_integer_to_llvm_type<'ctx>(
         ThrushType::S64 | ThrushType::U64 => llvm_context.i64_type(),
         ThrushType::Bool => llvm_context.bool_type(),
         ThrushType::Mut(subtype) => thrush_integer_to_llvm_type(llvm_context, subtype),
+        ThrushType::FixedArray(subtype, _) => thrush_integer_to_llvm_type(llvm_context, subtype),
 
         _ => unreachable!(),
     }
@@ -37,6 +39,8 @@ pub fn type_float_to_llvm_float_type<'ctx>(
         ThrushType::F32 => llvm_context.f32_type(),
         ThrushType::F64 => llvm_context.f64_type(),
         ThrushType::Mut(subtype) => type_float_to_llvm_float_type(llvm_context, subtype),
+        ThrushType::FixedArray(subtype, _) => type_float_to_llvm_float_type(llvm_context, subtype),
+
         _ => unreachable!(),
     }
 }
@@ -81,21 +85,14 @@ pub fn function_type<'ctx>(
             generate_type(llvm_context, kind).fn_type(&parameters_types, ignore_args)
         }
         ThrushType::Struct(..) => {
-            let is_heap_allocated_type: bool =
-                kind.is_probably_heap_allocated(llvm_context, context.get_target_data());
-
-            if is_heap_allocated_type {
-                return llvm_context
-                    .ptr_type(AddressSpace::default())
-                    .fn_type(&parameters_types, ignore_args);
-            }
-
             generate_type(llvm_context, kind).fn_type(&parameters_types, ignore_args)
         }
         ThrushType::Mut(..) => {
             generate_type(llvm_context, kind).fn_type(&parameters_types, ignore_args)
         }
-
+        ThrushType::FixedArray(..) => {
+            generate_type(llvm_context, kind).fn_type(&parameters_types, ignore_args)
+        }
         ThrushType::Bool => llvm_context
             .bool_type()
             .fn_type(&parameters_types, ignore_args),
@@ -116,10 +113,9 @@ pub fn generate_type<'ctx>(llvm_context: &'ctx Context, kind: &ThrushType) -> Ba
         kind if kind.is_bool_type() || kind.is_integer_type() || kind.is_char_type() => {
             thrush_integer_to_llvm_type(llvm_context, kind).into()
         }
+
         kind if kind.is_float_type() => type_float_to_llvm_float_type(llvm_context, kind).into(),
-        ThrushType::Ptr(_) | ThrushType::Addr | ThrushType::Mut(..) => {
-            llvm_context.ptr_type(AddressSpace::default()).into()
-        }
+
         kind if kind.is_str_type() => llvm_context
             .struct_type(
                 &[
@@ -129,17 +125,34 @@ pub fn generate_type<'ctx>(llvm_context: &'ctx Context, kind: &ThrushType) -> Ba
                 false,
             )
             .into(),
+
+        ThrushType::Ptr(_) | ThrushType::Addr | ThrushType::Mut(..) => {
+            llvm_context.ptr_type(AddressSpace::default()).into()
+        }
+
         ThrushType::Struct(_, fields) => {
             let mut field_types: Vec<BasicTypeEnum> = Vec::with_capacity(10);
 
             fields.iter().for_each(|field| {
-                field_types.push(generate_subtype(llvm_context, field));
+                field_types.push(self::generate_type(llvm_context, field));
             });
 
             llvm_context.struct_type(&field_types, false).into()
         }
 
-        _ => unreachable!(),
+        ThrushType::FixedArray(kind, size) => {
+            let arraytype: BasicTypeEnum = self::generate_type(llvm_context, kind);
+            arraytype.array_type(*size).into()
+        }
+
+        any => {
+            logging::log(
+                LoggingType::Bug,
+                &format!("Unable to create a LLVM Type from '{}' type.", any),
+            );
+
+            unreachable!()
+        }
     }
 }
 

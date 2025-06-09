@@ -7,7 +7,10 @@ use inkwell::{context::Context, targets::TargetData, types::BasicTypeEnum};
 
 use crate::{
     backend::llvm::compiler::{context::LLVMCodeGenContext, typegen},
-    core::errors::standard::ThrushCompilerIssue,
+    core::{
+        console::logging::{self, LoggingType},
+        errors::standard::ThrushCompilerIssue,
+    },
     frontend::{
         lexer::span::Span,
         parser::symbols::SymbolsTable,
@@ -62,6 +65,9 @@ pub enum ThrushType {
     // Struct Type
     Struct(String, Vec<Arc<ThrushType>>),
 
+    // Fixed FixedArray
+    FixedArray(Arc<ThrushType>, u32),
+
     // Address
     Addr,
 
@@ -91,16 +97,6 @@ impl ThrushType {
         self.clone()
     }
 
-    pub fn is_nested_ptr(&self) -> bool {
-        if let ThrushType::Ptr(Some(ptr)) = self {
-            if let ThrushType::Ptr(..) = &**ptr {
-                return true;
-            }
-        }
-
-        false
-    }
-
     pub fn deref(&self) -> ThrushType {
         if let ThrushType::Ptr(Some(any)) = self {
             return (**any).clone();
@@ -119,6 +115,33 @@ impl ThrushType {
         }
 
         false
+    }
+
+    pub fn is_nested_ptr(&self) -> bool {
+        if let ThrushType::Ptr(Some(ptr)) = self {
+            if let ThrushType::Ptr(..) = &**ptr {
+                return true;
+            }
+        }
+
+        false
+    }
+
+    pub fn get_array_type(&self) -> &ThrushType {
+        if let ThrushType::FixedArray(array_type, _) = self {
+            return array_type.as_ref();
+        }
+
+        if let ThrushType::Mut(array_type) = self {
+            return array_type.get_array_type();
+        }
+
+        logging::log(
+            LoggingType::Bug,
+            "The array type could not be obtained from an array.",
+        );
+
+        unreachable!()
     }
 
     #[must_use]
@@ -181,6 +204,14 @@ impl ThrushType {
         false
     }
 
+    pub fn is_mut_array_type(&self) -> bool {
+        if let ThrushType::Mut(subtype) = self {
+            return subtype.is_fixedarray_type();
+        }
+
+        false
+    }
+
     pub fn into_structure_type(self) -> ThrushStructType {
         if let ThrushType::Struct(name, types) = self {
             return (name, types);
@@ -207,6 +238,11 @@ impl ThrushType {
     #[inline(always)]
     pub const fn is_struct_type(&self) -> bool {
         matches!(self, ThrushType::Struct(..))
+    }
+
+    #[inline(always)]
+    pub const fn is_fixedarray_type(&self) -> bool {
+        matches!(self, ThrushType::FixedArray(..))
     }
 
     #[inline(always)]
@@ -275,6 +311,10 @@ impl PartialEq for ThrushType {
                         .iter()
                         .zip(fields2.iter())
                         .all(|(f1, f2)| f1.as_ref() == f2.as_ref())
+            }
+
+            (ThrushType::FixedArray(type_a, size_a), ThrushType::FixedArray(type_b, size_b)) => {
+                type_a == type_b && size_a == size_b
             }
 
             (ThrushType::Mut(target), ThrushType::Mut(from)) => target == from,

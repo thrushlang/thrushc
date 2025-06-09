@@ -1,7 +1,7 @@
 use inkwell::values::BasicValueEnum;
 
 use crate::{
-    backend::llvm::compiler::valuegen::ExpressionModificator,
+    backend::llvm::compiler::valuegen::CompileChanges,
     frontend::types::{lexer::ThrushType, parser::stmts::stmt::ThrushStatement},
 };
 
@@ -13,12 +13,8 @@ pub fn compile<'ctx>(
     expression: &'ctx ThrushStatement,
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
 ) {
-    let value: BasicValueEnum = valuegen::compile(
-        context,
-        expression,
-        kind,
-        ExpressionModificator::new(false, true),
-    );
+    let value: BasicValueEnum =
+        valuegen::compile(context, expression, kind, CompileChanges::new(false, true));
 
     context.alloc_low_level_instruction(name, value, kind);
 }

@@ -284,6 +284,25 @@ impl<'thrushc> TheThrushCompiler<'thrushc> {
 
         llvm::compiler::LLVMCompiler::compile(&mut llvm_codegen_context, stmts);
 
+        if let Err(codegen_error) = llvm_module.verify() {
+            logging::log(
+                LoggingType::BackendPanic,
+                codegen_error.to_string().trim_end(),
+            );
+
+            logging::write(
+                logging::OutputIn::Stderr,
+                &format!(
+                    "\r{} {} {}\n",
+                    "Compilation".custom_color((141, 141, 142)).bold(),
+                    "FAILED".bright_red().bold(),
+                    &file.path.to_string_lossy()
+                ),
+            );
+
+            return;
+        }
+
         if self.emit_before_optimization(
             llvm_backend,
             &llvm_module,

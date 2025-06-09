@@ -59,6 +59,12 @@ pub enum ThrushStatement<'ctx> {
         span: Span,
     },
 
+    Array {
+        items: Vec<ThrushStatement<'ctx>>,
+        kind: ThrushType,
+        span: Span,
+    },
+
     NullPtr {
         span: Span,
     },
@@ -435,6 +441,7 @@ impl<'ctx> ThrushStatement<'ctx> {
             ThrushStatement::Str { kind, .. } => Ok(kind),
             ThrushStatement::Boolean { kind, .. } => Ok(kind),
             ThrushStatement::Char { kind, .. } => Ok(kind),
+            ThrushStatement::Array { kind, .. } => Ok(kind),
             ThrushStatement::Address { kind, .. } => Ok(kind),
             ThrushStatement::Constructor { kind, .. } => Ok(kind),
             ThrushStatement::Load { kind, .. } => Ok(kind),
@@ -481,6 +488,7 @@ impl<'ctx> ThrushStatement<'ctx> {
 
             ThrushStatement::Str { kind, .. } => kind,
             ThrushStatement::Boolean { kind, .. } => kind,
+            ThrushStatement::Array { kind, .. } => kind,
             ThrushStatement::Char { kind, .. } => kind,
             ThrushStatement::Address { kind, .. } => kind,
             ThrushStatement::Constructor { kind, .. } => kind,
@@ -532,6 +540,7 @@ impl<'ctx> ThrushStatement<'ctx> {
 
             ThrushStatement::Str { span, .. } => *span,
             ThrushStatement::Boolean { span, .. } => *span,
+            ThrushStatement::Array { span, .. } => *span,
             ThrushStatement::Char { span, .. } => *span,
             ThrushStatement::Address { span, .. } => *span,
             ThrushStatement::Constructor { span, .. } => *span,
@@ -635,38 +644,6 @@ impl<'ctx> ThrushStatement<'ctx> {
         unreachable!()
     }
 
-    pub fn as_binary(&self) -> BinaryOperation {
-        if let ThrushStatement::BinaryOp {
-            left,
-            operator,
-            right,
-            ..
-        } = self
-        {
-            return (&**left, operator, &**right);
-        }
-
-        if let ThrushStatement::Group { expression, .. } = self {
-            return expression.as_binary();
-        }
-
-        unreachable!()
-    }
-
-    pub fn as_unaryop(&self) -> UnaryOperation {
-        if let ThrushStatement::UnaryOp {
-            operator,
-            kind,
-            expression,
-            ..
-        } = self
-        {
-            return (operator, kind, expression);
-        }
-
-        unreachable!()
-    }
-
     pub fn get_reference_type(&self) -> Result<ThrushType, ThrushCompilerIssue> {
         if let ThrushStatement::Reference { kind, .. } = self {
             return Ok(kind.clone());
@@ -717,7 +694,7 @@ impl<'ctx> ThrushStatement<'ctx> {
 
     pub fn get_str_content(&self) -> Result<&str, ThrushCompilerIssue> {
         if let ThrushStatement::Str { bytes, .. } = self {
-            if let Ok(content) = std::str::from_utf8(&bytes) {
+            if let Ok(content) = std::str::from_utf8(bytes) {
                 return Ok(content);
             }
 
@@ -733,6 +710,20 @@ impl<'ctx> ThrushStatement<'ctx> {
         Err(ThrushCompilerIssue::Bug(
             String::from("Str not caught"),
             String::from("Expected a str value."),
+            self.get_span(),
+            CompilationPosition::Parser,
+            line!(),
+        ))
+    }
+
+    pub fn get_integer_value(&self) -> Result<u64, ThrushCompilerIssue> {
+        if let ThrushStatement::Integer { value, .. } = self {
+            return Ok(*value);
+        }
+
+        Err(ThrushCompilerIssue::Bug(
+            String::from("Integer not caught"),
+            String::from("Expected a integer value"),
             self.get_span(),
             CompilationPosition::Parser,
             line!(),
@@ -894,32 +885,14 @@ impl ThrushStatement<'_> {
     }
 
     #[inline]
-    pub fn is_allocated(&self) -> Result<bool, ThrushCompilerIssue> {
-        let kind: &ThrushType = self.get_value_type()?;
-
-        Ok(kind.is_ptr_type() || kind.is_mut_type())
-    }
-
-    #[inline]
-    pub const fn is_reference_allocated(&self) -> bool {
-        matches!(
-            self,
-            ThrushStatement::Reference {
-                is_allocated: true,
-                ..
+    pub fn is_array_constant(&self) -> bool {
+        match self {
+            ThrushStatement::Array { items, .. } => {
+                items.iter().all(|item| item.is_array_constant())
             }
-        )
-    }
-
-    #[inline]
-    pub const fn is_reference_lli(&self) -> bool {
-        matches!(
-            self,
-            ThrushStatement::Reference {
-                identificator: ReferenceIndentificator::LowLevelInstruction,
-                ..
-            }
-        )
+            ThrushStatement::Reference { .. } => false,
+            _ => true,
+        }
     }
 
     #[inline]

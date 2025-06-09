@@ -13,7 +13,7 @@ pub fn integer<'ctx>(
     let llvm_builder: &Builder = context.get_llvm_builder();
     let llvm_context: &Context = context.get_llvm_context();
 
-    if target_type.is_bool_type() || target_type.is_void_type() || from_type == target_type {
+    if !target_type.is_integer_type() || !from_type.is_integer_type() {
         return None;
     }
 
@@ -39,7 +39,7 @@ pub fn float<'ctx>(
     let llvm_builder: &Builder = context.get_llvm_builder();
     let llvm_context: &Context = context.get_llvm_context();
 
-    if target_type.is_bool_type() || target_type.is_void_type() || from_type == target_type {
+    if !target_type.is_float_type() || !from_type.is_float_type() {
         return None;
     }
 

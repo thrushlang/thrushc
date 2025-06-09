@@ -1,7 +1,7 @@
 #![allow(clippy::collapsible_if)]
 
 use crate::backend::llvm::compiler::utils;
-use crate::backend::llvm::compiler::valuegen::ExpressionModificator;
+use crate::backend::llvm::compiler::valuegen::CompileChanges;
 use crate::backend::types::{representations::LLVMFunction, traits::AssemblerFunctionExtensions};
 use crate::core::console::logging::{self, LoggingType};
 use crate::frontend::types::lexer::ThrushType;
@@ -127,10 +127,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                             self.context,
                             expression,
                             kind,
-                            ExpressionModificator::new(
-                                kind.is_mut_type() || kind.is_ptr_type(),
-                                true,
-                            ),
+                            CompileChanges::new(kind.is_mut_type() || kind.is_ptr_type(), true),
                         )))
                         .is_err()
                     {
@@ -213,7 +210,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                         self.context,
                         cond,
                         &ThrushType::Bool,
-                        ExpressionModificator::new(false, true),
+                        CompileChanges::new(false, true),
                     )
                     .into_int_value();
 
@@ -271,7 +268,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                                     self.context,
                                     cond,
                                     &ThrushType::Bool,
-                                    ExpressionModificator::new(false, true),
+                                    CompileChanges::new(false, true),
                                 )
                                 .into_int_value();
 
@@ -390,7 +387,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                         self.context,
                         cond,
                         &ThrushType::Bool,
-                        ExpressionModificator::new(false, true),
+                        CompileChanges::new(false, true),
                     )
                     .into_int_value();
 
@@ -488,7 +485,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                         self.context,
                         cond,
                         &ThrushType::Bool,
-                        ExpressionModificator::new(false, true),
+                        CompileChanges::new(false, true),
                     )
                     .into_int_value();
 
@@ -512,14 +509,14 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                             self.context,
                             actions,
                             &ThrushType::Void,
-                            ExpressionModificator::new(false, false),
+                            CompileChanges::new(false, false),
                         );
                     } else {
                         let _ = valuegen::compile(
                             self.context,
                             actions,
                             &ThrushType::Void,
-                            ExpressionModificator::new(false, false),
+                            CompileChanges::new(false, false),
                         );
 
                         self.codegen(block.as_ref());
@@ -617,12 +614,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
 
         match stmt {
             ThrushStatement::Mut { kind, .. } => {
-                valuegen::compile(
-                    self.context,
-                    stmt,
-                    kind,
-                    ExpressionModificator::new(false, true),
-                );
+                valuegen::compile(self.context, stmt, kind, CompileChanges::new(false, true));
             }
 
             ThrushStatement::Write { .. } => {
@@ -630,7 +622,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                     self.context,
                     stmt,
                     &ThrushType::Void,
-                    ExpressionModificator::new(false, false),
+                    CompileChanges::new(false, false),
                 );
             }
 
@@ -639,7 +631,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                     self.context,
                     stmt,
                     &ThrushType::Void,
-                    ExpressionModificator::new(false, false),
+                    CompileChanges::new(false, false),
                 );
             }
 
@@ -648,7 +640,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                     self.context,
                     stmt,
                     &ThrushType::Void,
-                    ExpressionModificator::new(false, false),
+                    CompileChanges::new(false, false),
                 );
             }
 
@@ -789,7 +781,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                     self.context,
                     value,
                     &ThrushType::Void,
-                    ExpressionModificator::new(false, false),
+                    CompileChanges::new(false, false),
                 );
                 self.context.alloc_constant(name, kind, value, attributes);
             }

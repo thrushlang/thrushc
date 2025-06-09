@@ -13,6 +13,7 @@ pub enum OutputIn {
 
 #[derive(Debug, PartialEq)]
 pub enum LoggingType {
+    BackendPanic,
     Error,
     Warning,
     Panic,
@@ -23,6 +24,7 @@ pub enum LoggingType {
 impl LoggingType {
     pub fn to_styled(&self) -> ColoredString {
         match self {
+            LoggingType::BackendPanic => "BACKEND PANIC".bright_red().bold(),
             LoggingType::Error => "ERROR".bright_red().bold(),
             LoggingType::Warning => "WARN".yellow().bold(),
             LoggingType::Panic => "PANIC".bold().bright_red().underline(),
@@ -33,6 +35,7 @@ impl LoggingType {
 
     pub fn text_with_color(&self, msg: &str) -> ColoredString {
         match self {
+            LoggingType::BackendPanic => msg.bright_red().bold(),
             LoggingType::Error => msg.bright_red().bold(),
             LoggingType::Warning => msg.yellow().bold(),
             LoggingType::Panic => msg.bright_red().underline(),
@@ -60,6 +63,10 @@ impl LoggingType {
     pub fn is_info(&self) -> bool {
         matches!(self, LoggingType::Info)
     }
+
+    pub fn is_backend_panic(&self) -> bool {
+        matches!(self, LoggingType::BackendPanic)
+    }
 }
 
 pub fn log(ltype: LoggingType, msg: &str) {
@@ -82,6 +89,27 @@ pub fn log(ltype: LoggingType, msg: &str) {
     if ltype.is_err() {
         io::stderr()
             .write_all(format!("{} {}\n  ", ltype.to_styled(), msg).as_bytes())
+            .unwrap();
+
+        return;
+    }
+
+    if ltype.is_backend_panic() {
+        io::stderr()
+            .write_all(format!("\n{} {}", ltype.to_styled(), msg).as_bytes())
+            .unwrap();
+
+        io::stderr()
+            .write_all(
+                format!(
+                    "\nMaybe this is a issue... Report it in: '{}'.\n\n",
+                    "https://github.com/thrushlang/thrushc/issues/"
+                        .bold()
+                        .bright_red()
+                        .underline()
+                )
+                .as_bytes(),
+            )
             .unwrap();
 
         return;

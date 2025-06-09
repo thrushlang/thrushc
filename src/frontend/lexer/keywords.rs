@@ -85,6 +85,7 @@ lazy_static! {
         keywords.insert("char", TokenType::Char);
         keywords.insert("ptr", TokenType::Ptr);
         keywords.insert("str", TokenType::Str);
+        keywords.insert("array", TokenType::Array);
         keywords.insert("void", TokenType::Void);
 
         keywords
