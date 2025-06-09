@@ -58,6 +58,12 @@ pub fn function_type<'ctx>(
         }
     });
 
+    if kind.is_void_type() {
+        return llvm_context
+            .void_type()
+            .fn_type(&parameters_types, ignore_args);
+    }
+
     self::generate_type(llvm_context, kind).fn_type(&parameters_types, ignore_args)
 }
 

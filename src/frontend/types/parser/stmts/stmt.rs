@@ -604,8 +604,11 @@ impl<'ctx> ThrushStatement<'ctx> {
             return *is_mutable;
         }
 
-        if let ThrushStatement::Reference { is_mutable, .. } = self {
-            return *is_mutable;
+        if let ThrushStatement::Reference {
+            is_mutable, kind, ..
+        } = self
+        {
+            return *is_mutable || kind.is_ptr_type() || kind.is_address_type();
         }
 
         if let ThrushStatement::Property { reference, .. } = self {

@@ -553,28 +553,52 @@ pub fn compile<'ctx>(
 
         let last_indexe_position: u32 = indexes[0].1;
 
-        let mut last_memory_calculation: PointerValue =
-            symbol.gep_struct(llvm_context, llvm_builder, last_indexe_position);
+        if symbol.is_pointer() {
+            let mut last_memory_calculation: PointerValue =
+                symbol.gep_struct(llvm_context, llvm_builder, last_indexe_position);
 
-        indexes.iter().skip(1).for_each(|indexe| {
-            let llvm_indexe_type: BasicTypeEnum = typegen::generate_type(llvm_context, &indexe.0);
-            let indexe_position: u32 = indexe.1;
+            indexes.iter().skip(1).for_each(|indexe| {
+                let llvm_indexe_type: BasicTypeEnum =
+                    typegen::generate_type(llvm_context, &indexe.0);
+                let indexe_position: u32 = indexe.1;
 
-            if let Ok(new_memory_calculation) = llvm_builder.build_struct_gep(
-                llvm_indexe_type,
-                last_memory_calculation,
-                indexe_position,
-                "",
-            ) {
-                last_memory_calculation = new_memory_calculation;
+                if let Ok(new_memory_calculation) = llvm_builder.build_struct_gep(
+                    llvm_indexe_type,
+                    last_memory_calculation,
+                    indexe_position,
+                    "",
+                ) {
+                    last_memory_calculation = new_memory_calculation;
+                }
+            });
+
+            if changes.load_raw() {
+                return last_memory_calculation.into();
             }
-        });
 
-        if changes.load_raw() {
-            return last_memory_calculation.into();
+            return memory::load_anon(context, kind, last_memory_calculation);
+        } else {
+            let mut last_value: BasicValueEnum =
+                symbol.extract_value(llvm_builder, last_indexe_position);
+
+            indexes.iter().skip(1).for_each(|indexe| {
+                let indexe_position: u32 = indexe.1;
+
+                if last_value.is_struct_value() {
+                    let last_value_struct_value: StructValue = last_value.into_struct_value();
+
+                    if let Ok(new_extracted_value) = llvm_builder.build_extract_value(
+                        last_value_struct_value,
+                        indexe_position,
+                        "",
+                    ) {
+                        last_value = new_extracted_value;
+                    }
+                }
+            });
+
+            return last_value;
         }
-
-        return memory::load_anon(context, kind, last_memory_calculation);
     }
 
     if let ThrushStatement::Reference { name, .. } = expr {

@@ -26,6 +26,7 @@ use crate::{
             options::{CompilerFile, CompilerOptions, Emitable, Emited, ThrushOptimization},
         },
         console::logging::{self, LoggingType},
+        diagnostic::diagnostician::Diagnostician,
     },
     frontend::{
         lexer::{Lexer, token::Token},
@@ -248,6 +249,7 @@ impl<'thrushc> TheThrushCompiler<'thrushc> {
             &llvm_context,
             &llvm_builder,
             target_machine.get_target_data(),
+            Diagnostician::new(file),
         );
 
         llvm::compiler::LLVMCompiler::compile(&mut llvm_codegen_context, stmts);

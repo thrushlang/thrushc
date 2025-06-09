@@ -8,6 +8,7 @@ use {
         backend::types::representations::{
             LLVMConstants, LLVMFunction, LLVMFunctions, LLVMFunctionsParameters, LLVMInstructions,
         },
+        core::diagnostic::diagnostician::Diagnostician,
         frontend::types::{lexer::ThrushType, parser::stmts::types::ThrushAttributes},
     },
     ahash::AHashMap as HashMap,
@@ -33,6 +34,8 @@ pub struct LLVMCodeGenContext<'a, 'ctx> {
     instructions: LLVMInstructions<'ctx>,
 
     scope: usize,
+
+    diagnostician: Diagnostician,
 }
 
 impl<'a, 'ctx> LLVMCodeGenContext<'a, 'ctx> {
@@ -41,6 +44,7 @@ impl<'a, 'ctx> LLVMCodeGenContext<'a, 'ctx> {
         context: &'ctx Context,
         builder: &'ctx Builder<'ctx>,
         target_data: TargetData,
+        diagnostician: Diagnostician,
     ) -> Self {
         Self {
             module,
@@ -52,6 +56,7 @@ impl<'a, 'ctx> LLVMCodeGenContext<'a, 'ctx> {
             parameters: HashMap::with_capacity(100),
             instructions: Vec::with_capacity(255),
             scope: 0,
+            diagnostician,
         }
     }
 }
@@ -180,19 +185,28 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
 }
 
 impl<'a, 'ctx> LLVMCodeGenContext<'a, 'ctx> {
+    #[inline]
     pub fn get_llvm_module(&self) -> &'a Module<'ctx> {
         self.module
     }
 
+    #[inline]
     pub fn get_llvm_context(&self) -> &'ctx Context {
         self.context
     }
 
+    #[inline]
     pub fn get_llvm_builder(&self) -> &'ctx Builder<'ctx> {
         self.builder
     }
 
+    #[inline]
     pub fn get_target_data(&self) -> &TargetData {
         &self.target_data
+    }
+
+    #[inline]
+    pub fn get_diagnostician(&self) -> &Diagnostician {
+        &self.diagnostician
     }
 }

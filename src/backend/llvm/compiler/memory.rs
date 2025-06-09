@@ -6,7 +6,7 @@ use inkwell::{
     module::Module,
     targets::TargetData,
     types::{BasicType, BasicTypeEnum},
-    values::IntValue,
+    values::{IntValue, StructValue},
 };
 
 use crate::{
@@ -237,6 +237,37 @@ impl<'ctx> SymbolAllocated<'ctx> {
         }
     }
 
+    pub fn extract_value(&self, builder: &Builder<'ctx>, index: u32) -> BasicValueEnum<'ctx> {
+        match self {
+            Self::Parameter { value, .. } | Self::LowLevelInstruction { value, .. } => {
+                if value.is_struct_value() {
+                    let struct_value: StructValue = value.into_struct_value();
+                    if let Ok(extracted_value) =
+                        builder.build_extract_value(struct_value, index, "")
+                    {
+                        return extracted_value;
+                    }
+                }
+
+                logging::log(
+                    LoggingType::Bug,
+                    "Unable to get a value of an structure in code generation time at memory management.",
+                );
+
+                unreachable!()
+            }
+
+            _ => {
+                logging::log(
+                    LoggingType::Bug,
+                    "Unable to get a value of an structure in code generation time at memory management.",
+                );
+
+                unreachable!()
+            }
+        }
+    }
+
     pub fn gep_struct(
         &self,
         context: &'ctx Context,
@@ -316,6 +347,15 @@ impl<'ctx> SymbolAllocated<'ctx> {
             Self::Constant { ptr, .. } => (*ptr).into(),
             Self::Parameter { value, .. } => *value,
             Self::LowLevelInstruction { value, .. } => *value,
+        }
+    }
+
+    pub fn is_pointer(&self) -> bool {
+        match self {
+            Self::Local { .. } => true,
+            Self::Constant { .. } => true,
+            Self::Parameter { value, .. } => value.is_pointer_value(),
+            Self::LowLevelInstruction { value, .. } => value.is_pointer_value(),
         }
     }
 }

@@ -503,10 +503,13 @@ impl<'type_checker> TypeChecker<'type_checker> {
             if let (Some(reference), None) = source {
                 let reference_type: &ThrushType = reference.get_value_type()?;
 
-                if !reference_type.is_ptr_type() && !reference_type.is_mut_type() {
+                if !reference_type.is_ptr_type()
+                    && !reference_type.is_mut_type()
+                    && !reference_type.is_address_type()
+                {
                     self.add_error(ThrushCompilerIssue::Error(
                         "Syntax error".into(),
-                        "Expected 'mut T', 'ptr<T>', or 'ptr' type.".into(),
+                        "Expected 'ptr<T>', 'ptr', 'mut T' or 'addr' type.".into(),
                         None,
                         *span,
                     ));
@@ -527,10 +530,13 @@ impl<'type_checker> TypeChecker<'type_checker> {
             if let (None, Some(source)) = source {
                 let source_type: &ThrushType = source.get_value_type()?;
 
-                if !source_type.is_ptr_type() && !source_type.is_mut_type() {
+                if !source_type.is_ptr_type()
+                    && !source_type.is_mut_type()
+                    && !source_type.is_address_type()
+                {
                     self.add_error(ThrushCompilerIssue::Error(
                         "Syntax error".into(),
-                        "Expected 'mut T', 'ptr<T>', or 'ptr' type.".into(),
+                        "Expected 'ptr<T>', 'ptr', 'mut T' or 'addr' type.".into(),
                         None,
                         *span,
                     ));
@@ -721,10 +727,12 @@ impl<'type_checker> TypeChecker<'type_checker> {
         if let ThrushStatement::CastPtr { from, cast, span } = stmt {
             let from_type: &ThrushType = from.get_value_type()?;
 
-            if !from_type.is_ptr_type() && !from_type.is_mut_type() {
+            if !from_type.is_ptr_type() && !from_type.is_mut_type() && !from_type.is_address_type()
+            {
                 self.add_error(ThrushCompilerIssue::Error(
                     "Syntax error".into(),
-                    "Expected 'ptr<T>', 'ptr', or 'mut T' type for cast to raw pointer.".into(),
+                    "Expected 'ptr<T>', 'ptr', 'addr', or 'mut T' type for cast to raw pointer."
+                        .into(),
                     None,
                     *span,
                 ));

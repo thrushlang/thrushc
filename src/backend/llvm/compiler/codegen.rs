@@ -87,10 +87,6 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         let llvm_context: &Context = self.context.get_llvm_context();
 
         match stmt {
-            ThrushStatement::Function { .. } => {
-                self.compile_function(stmt.as_function_representation());
-            }
-
             ThrushStatement::EntryPoint { body, .. } => {
                 self.current_function = Some(self.entrypoint());
 
@@ -105,6 +101,10 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                         "Unable to build the return of entrypoint. ",
                     );
                 }
+            }
+
+            ThrushStatement::Function { .. } => {
+                self.compile_function(stmt.as_function_representation());
             }
 
             ThrushStatement::Return {
@@ -671,34 +671,27 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         main
     }
 
-    fn compile_function_parameter(&mut self, parameter: FunctionParameter<'ctx>) {
+    fn compile_function_parameter(
+        &mut self,
+        llvm_function: FunctionValue<'ctx>,
+        parameter: FunctionParameter<'ctx>,
+    ) {
         let parameter_name: &str = parameter.0;
         let parameter_type: &ThrushType = parameter.1;
         let parameter_position: u32 = parameter.2;
 
-        if let Some(current_function) = self.current_function {
-            if let Some(raw_value_llvm_parameter) =
-                current_function.get_nth_param(parameter_position)
-            {
-                self.context.alloc_function_parameter(
-                    parameter_name,
-                    parameter_type,
-                    raw_value_llvm_parameter,
-                );
-
-                return;
-            }
-
+        if let Some(raw_value_llvm_parameter) = llvm_function.get_nth_param(parameter_position) {
+            self.context.alloc_function_parameter(
+                parameter_name,
+                parameter_type,
+                raw_value_llvm_parameter,
+            );
+        } else {
             logging::log(
                 LoggingType::Bug,
                 "The value of a parameter of an LLVM function could not be obtained at code generation time.",
             );
         }
-
-        logging::log(
-            LoggingType::Bug,
-            "The current function could not be obtained at code generation time for build an function parameter.",
-        );
     }
 
     fn compile_function(&mut self, function: FunctionRepresentation<'ctx>) {
@@ -732,13 +725,16 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 ..
             } = parameter
             {
-                self.compile_function_parameter((name, kind, *position, *is_mutable));
+                self.compile_function_parameter(
+                    llvm_function,
+                    (name, kind, *position, *is_mutable),
+                );
             }
         });
 
         self.codegen(function_body);
 
-        if function_type.is_void_type() {
+        if !function_body.has_return() && function_type.is_void_type() {
             llvm_builder.build_return(None).unwrap();
         }
     }

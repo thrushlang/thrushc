@@ -801,11 +801,13 @@ pub fn build_custom_type<'instr>(
     )?;
 
     if declare_forward {
-        parser_ctx.get_mut_symbols().new_custom_type(
+        if let Err(error) = parser_ctx.get_mut_symbols().new_custom_type(
             custom_type_name,
             (custom_type_fields, custom_type_attributes),
             span,
-        )?;
+        ) {
+            parser_ctx.add_error(error);
+        }
     }
 
     Ok(ThrushStatement::Null { span })
@@ -951,9 +953,13 @@ pub fn build_enum<'instr>(
     )?;
 
     if declare_forward {
-        parser_ctx
-            .get_mut_symbols()
-            .new_enum(enum_name, (enum_fields, enum_attributes), span)?;
+        if let Err(error) =
+            parser_ctx
+                .get_mut_symbols()
+                .new_enum(enum_name, (enum_fields, enum_attributes), span)
+        {
+            parser_ctx.add_error(error);
+        }
 
         return Ok(ThrushStatement::Null { span });
     }
@@ -1072,7 +1078,7 @@ pub fn build_struct<'instr>(
     )?;
 
     if declare_forward {
-        parser_ctx.get_mut_symbols().new_struct(
+        if let Err(error) = parser_ctx.get_mut_symbols().new_struct(
             struct_name,
             (
                 struct_name,
@@ -1081,7 +1087,9 @@ pub fn build_struct<'instr>(
                 Vec::with_capacity(100),
             ),
             span,
-        )?;
+        ) {
+            parser_ctx.add_error(error);
+        }
 
         return Ok(ThrushStatement::Null { span });
     }
@@ -1150,9 +1158,13 @@ pub fn build_const<'instr>(
     )?;
 
     if declare_forward {
-        parser_ctx
-            .get_mut_symbols()
-            .new_constant(name, (const_type, const_attributes), span)?;
+        if let Err(error) =
+            parser_ctx
+                .get_mut_symbols()
+                .new_constant(name, (const_type, const_attributes), span)
+        {
+            parser_ctx.add_error(error);
+        }
 
         return Ok(ThrushStatement::Null { span });
     }
@@ -1643,7 +1655,7 @@ pub fn build_assembler_function<'instr>(
     )?;
 
     if declare_forward {
-        parser_ctx.get_mut_symbols().new_asm_function(
+        if let Err(error) = parser_ctx.get_mut_symbols().new_asm_function(
             asm_function_name,
             (
                 return_type,
@@ -1651,7 +1663,9 @@ pub fn build_assembler_function<'instr>(
                 is_public,
             ),
             span,
-        )?;
+        ) {
+            parser_ctx.add_error(error);
+        }
 
         return Ok(ThrushStatement::Null { span });
     }
@@ -1801,7 +1815,7 @@ pub fn build_function<'instr>(
     };
 
     if declare_forward {
-        parser_ctx.get_mut_symbols().new_function(
+        if let Err(error) = parser_ctx.get_mut_symbols().new_function(
             function_name,
             (
                 return_type,
@@ -1809,7 +1823,9 @@ pub fn build_function<'instr>(
                 function_has_ignore,
             ),
             span,
-        )?;
+        ) {
+            parser_ctx.add_error(error);
+        }
 
         if parser_ctx.match_token(TokenType::SemiColon)? {
             return Ok(function);
