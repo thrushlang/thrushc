@@ -263,7 +263,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
             if !lli_value_type.is_ptr_type() && !lli_value_type.is_address_type() {
                 self.add_error(ThrushCompilerIssue::Error(
                     "Syntax error".into(),
-                    "Expected always 'ptr<T>' or addr type.".into(),
+                    "Expected always 'ptr<T>', 'ptr', or addr type.".into(),
                     None,
                     *span,
                 ));
@@ -775,6 +775,19 @@ impl<'type_checker> TypeChecker<'type_checker> {
             return Ok(());
         }
 
+        if let ThrushStatement::RawPtr { from, span, .. } = stmt {
+            if !from.is_reference() {
+                self.add_error(ThrushCompilerIssue::Error(
+                    "Syntax error".into(),
+                    "A reference to a value was expected.".into(),
+                    None,
+                    *span,
+                ));
+            }
+
+            return Ok(());
+        }
+
         if let ThrushStatement::Array { items, kind, span } = stmt {
             if kind.is_void_type() {
                 return Err(ThrushCompilerIssue::Error(
@@ -800,19 +813,6 @@ impl<'type_checker> TypeChecker<'type_checker> {
                 }
 
                 self.analyze_stmt(item)?;
-            }
-
-            return Ok(());
-        }
-
-        if let ThrushStatement::RawPtr { from, span, .. } = stmt {
-            if !from.is_reference() {
-                self.add_error(ThrushCompilerIssue::Error(
-                    "Syntax error".into(),
-                    "A reference to a value was expected.".into(),
-                    None,
-                    *span,
-                ));
             }
 
             return Ok(());

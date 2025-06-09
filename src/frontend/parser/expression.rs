@@ -1721,9 +1721,14 @@ fn build_array<'instr>(
         String::from("Expected ']'."),
     )?;
 
-    if let Some(first_item) = items.first() {
+    if let Some(item) = items.iter().max_by(|x, y| {
+        let x_type: &ThrushType = x.get_value_type().unwrap_or(&ThrushType::Void);
+        let y_type: &ThrushType = y.get_value_type().unwrap_or(&ThrushType::Void);
+
+        x_type.get_cast_herarchy().cmp(&y_type.get_cast_herarchy())
+    }) {
         if let Ok(size) = u32::try_from(items.len()) {
-            array_type = ThrushType::FixedArray(first_item.get_value_type()?.clone().into(), size)
+            array_type = ThrushType::FixedArray(item.get_value_type()?.clone().into(), size)
         } else {
             return Err(ThrushCompilerIssue::Error(
                 "Syntax error".into(),

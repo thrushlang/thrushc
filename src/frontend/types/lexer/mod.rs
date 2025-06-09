@@ -299,6 +299,39 @@ impl ThrushType {
                 | ThrushType::Char
         )
     }
+
+    #[inline]
+    pub fn get_cast_herarchy(&self) -> u8 {
+        match self {
+            ThrushType::Void => 0,
+
+            ThrushType::Bool => 1,
+            ThrushType::Char => 2,
+            ThrushType::Str => 3,
+
+            ThrushType::S8 => 4,
+            ThrushType::S16 => 5,
+            ThrushType::S32 => 6,
+            ThrushType::S64 => 7,
+
+            ThrushType::U8 => 8,
+            ThrushType::U16 => 9,
+            ThrushType::U32 => 10,
+            ThrushType::U64 => 11,
+
+            ThrushType::F32 => 12,
+            ThrushType::F64 => 13,
+
+            ThrushType::Mut(subtype) => subtype.get_cast_herarchy(),
+
+            ThrushType::Addr => 14,
+            ThrushType::Ptr(Some(subtype)) => subtype.get_cast_herarchy(),
+            ThrushType::Ptr(None) => 15,
+
+            ThrushType::FixedArray(..) => 116,
+            ThrushType::Struct(..) => 17,
+        }
+    }
 }
 
 impl PartialEq for ThrushType {

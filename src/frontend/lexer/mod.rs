@@ -742,6 +742,7 @@ impl Lexer {
         char.is_ascii_lowercase() || char.is_ascii_uppercase()
     }
 
+    #[inline]
     fn add_error(&mut self, error: ThrushCompilerIssue) {
         self.errors.push(error);
     }

@@ -57,55 +57,12 @@ pub fn function_type<'ctx>(
 
     parameters.iter().for_each(|parameter| {
         if let ThrushStatement::FunctionParameter { kind, .. } = parameter {
-            let llvm_type: BasicMetadataTypeEnum = generate_type(llvm_context, kind).into();
+            let llvm_type: BasicMetadataTypeEnum = self::generate_type(llvm_context, kind).into();
             parameters_types.push(llvm_type);
         }
     });
 
-    match kind {
-        ThrushType::S8 | ThrushType::U8 | ThrushType::Char => llvm_context
-            .i8_type()
-            .fn_type(&parameters_types, ignore_args),
-        ThrushType::S16 | ThrushType::U16 => llvm_context
-            .i16_type()
-            .fn_type(&parameters_types, ignore_args),
-        ThrushType::S32 | ThrushType::U32 => llvm_context
-            .i32_type()
-            .fn_type(&parameters_types, ignore_args),
-        ThrushType::S64 | ThrushType::U64 => llvm_context
-            .i64_type()
-            .fn_type(&parameters_types, ignore_args),
-        ThrushType::Str => llvm_context
-            .ptr_type(AddressSpace::default())
-            .fn_type(&parameters_types, ignore_args),
-        ThrushType::Addr => {
-            generate_type(llvm_context, kind).fn_type(&parameters_types, ignore_args)
-        }
-        ThrushType::Ptr(_) => {
-            generate_type(llvm_context, kind).fn_type(&parameters_types, ignore_args)
-        }
-        ThrushType::Struct(..) => {
-            generate_type(llvm_context, kind).fn_type(&parameters_types, ignore_args)
-        }
-        ThrushType::Mut(..) => {
-            generate_type(llvm_context, kind).fn_type(&parameters_types, ignore_args)
-        }
-        ThrushType::FixedArray(..) => {
-            generate_type(llvm_context, kind).fn_type(&parameters_types, ignore_args)
-        }
-        ThrushType::Bool => llvm_context
-            .bool_type()
-            .fn_type(&parameters_types, ignore_args),
-        ThrushType::F32 => llvm_context
-            .f32_type()
-            .fn_type(&parameters_types, ignore_args),
-        ThrushType::F64 => llvm_context
-            .f64_type()
-            .fn_type(&parameters_types, ignore_args),
-        ThrushType::Void => llvm_context
-            .void_type()
-            .fn_type(&parameters_types, ignore_args),
-    }
+    self::generate_type(llvm_context, kind).fn_type(&parameters_types, ignore_args)
 }
 
 pub fn generate_type<'ctx>(llvm_context: &'ctx Context, kind: &ThrushType) -> BasicTypeEnum<'ctx> {

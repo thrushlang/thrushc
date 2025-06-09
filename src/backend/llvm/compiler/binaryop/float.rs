@@ -1,5 +1,5 @@
 use crate::{
-    backend::llvm::compiler::{predicates, valuegen::CompileChanges},
+    backend::llvm::compiler::{cast, predicates, valuegen::CompileChanges},
     core::console::logging::{self, LoggingType},
     frontend::{
         lexer::tokentype::TokenType,
@@ -15,31 +15,35 @@ use inkwell::{
 };
 
 pub fn float_operation<'ctx>(
-    builder: &Builder<'ctx>,
-    mut left: FloatValue<'ctx>,
-    mut right: FloatValue<'ctx>,
+    context: &mut LLVMCodeGenContext<'_, 'ctx>,
+    left: FloatValue<'ctx>,
+    right: FloatValue<'ctx>,
     operator: &TokenType,
 ) -> BasicValueEnum<'ctx> {
+    let llvm_builder: &Builder = context.get_llvm_builder();
+
     match operator {
-        TokenType::Plus => builder.build_float_add(left, right, "").unwrap().into(),
-        TokenType::Minus => builder.build_float_sub(left, right, "").unwrap().into(),
-        TokenType::Star => builder.build_float_mul(left, right, "").unwrap().into(),
-        TokenType::Slash => builder.build_float_div(left, right, "").unwrap().into(),
+        TokenType::Plus => llvm_builder
+            .build_float_add(left, right, "")
+            .unwrap()
+            .into(),
+        TokenType::Minus => llvm_builder
+            .build_float_sub(left, right, "")
+            .unwrap()
+            .into(),
+        TokenType::Star => llvm_builder
+            .build_float_mul(left, right, "")
+            .unwrap()
+            .into(),
+        TokenType::Slash => llvm_builder
+            .build_float_div(left, right, "")
+            .unwrap()
+            .into(),
 
         op if op.is_logical_type() => {
-            if left.get_type() != right.get_type() {
-                left = builder
-                    .build_float_cast(left, right.get_type(), "")
-                    .unwrap()
-            }
+            let (left, right) = cast::float_together(context, left, right);
 
-            if right.get_type() != left.get_type() {
-                right = builder
-                    .build_float_cast(right, left.get_type(), "")
-                    .unwrap()
-            }
-
-            builder
+            llvm_builder
                 .build_float_compare(predicates::float(operator), left, right, "")
                 .unwrap()
                 .into()
@@ -61,8 +65,6 @@ pub fn float_binaryop<'ctx>(
     binary: BinaryOperation<'ctx>,
     cast: &ThrushType,
 ) -> BasicValueEnum<'ctx> {
-    let llvm_builder: &Builder = context.get_llvm_builder();
-
     if let (
         _,
         TokenType::Plus
@@ -85,7 +87,7 @@ pub fn float_binaryop<'ctx>(
             valuegen::compile(context, binary.2, cast, CompileChanges::new(false, true));
 
         return float_operation(
-            llvm_builder,
+            context,
             left_compiled.into_float_value(),
             right_compiled.into_float_value(),
             binary.1,

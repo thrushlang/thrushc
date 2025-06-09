@@ -26,6 +26,7 @@ use inkwell::values::{
     ArrayValue, BasicMetadataValueEnum, BasicValueEnum, FloatValue, FunctionValue, GlobalValue,
     IntValue, StructValue,
 };
+
 use inkwell::{AddressSpace, InlineAsmDialect};
 use inkwell::{builder::Builder, context::Context, values::PointerValue};
 
@@ -376,9 +377,9 @@ pub fn compile<'ctx>(
     }
 
     if let ThrushStatement::Load { load, kind, .. } = expr {
-        if let Some(ref_name) = load.0 {
+        if let Some(name) = load.0 {
             let ptr: PointerValue = context
-                .get_allocated_symbol(ref_name)
+                .get_allocated_symbol(name)
                 .load(context)
                 .into_pointer_value();
 
@@ -401,8 +402,13 @@ pub fn compile<'ctx>(
         let compiled_indexes: Vec<IntValue> = indexes
             .iter()
             .map(|indexe| {
-                self::compile(context, indexe, &ThrushType::U32, CompileChanges::default())
-                    .into_int_value()
+                self::compile(
+                    context,
+                    indexe,
+                    &ThrushType::U32,
+                    CompileChanges::new(false, true),
+                )
+                .into_int_value()
             })
             .collect();
 

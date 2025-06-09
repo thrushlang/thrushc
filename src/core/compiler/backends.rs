@@ -62,7 +62,7 @@ impl LLVMBackend {
             target_triple: TargetMachine::get_default_triple(),
             optimization: ThrushOptimization::None,
             emit: Vec::with_capacity(10),
-            reloc_mode: RelocMode::Default,
+            reloc_mode: RelocMode::PIC,
             code_model: CodeModel::Default,
             modificator_passes: Vec::with_capacity(10),
             opt_passes: String::with_capacity(100),

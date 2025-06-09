@@ -94,22 +94,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
 
         match self {
             Self::Local { ptr, .. } => {
-                let loaded_value: BasicValueEnum =
-                    llvm_builder.build_load(llvm_type, *ptr, "").unwrap();
-
-                if let Some(load_instruction) = loaded_value.as_instruction_value() {
-                    let _ = load_instruction.set_alignment(preferred_memory_alignment);
-                }
-
-                loaded_value
-            }
-            Self::Parameter { value, .. } => {
-                if value.is_pointer_value() {
-                    let ptr: PointerValue = value.into_pointer_value();
-
-                    let loaded_value: BasicValueEnum =
-                        llvm_builder.build_load(llvm_type, ptr, "").unwrap();
-
+                if let Ok(loaded_value) = llvm_builder.build_load(llvm_type, *ptr, "") {
                     if let Some(load_instruction) = loaded_value.as_instruction_value() {
                         let _ = load_instruction.set_alignment(preferred_memory_alignment);
                     }
@@ -117,18 +102,51 @@ impl<'ctx> SymbolAllocated<'ctx> {
                     return loaded_value;
                 }
 
+                logging::log(
+                    LoggingType::Bug,
+                    "Unable to load local value at code generation time.",
+                );
+
+                unreachable!()
+            }
+            Self::Parameter { value, .. } => {
+                if value.is_pointer_value() {
+                    let ptr: PointerValue = value.into_pointer_value();
+
+                    if let Ok(loaded_value) = llvm_builder.build_load(llvm_type, ptr, "") {
+                        if let Some(load_instruction) = loaded_value.as_instruction_value() {
+                            let _ = load_instruction.set_alignment(preferred_memory_alignment);
+                        }
+
+                        return loaded_value;
+                    }
+
+                    logging::log(
+                        LoggingType::Bug,
+                        "Unable to load local value at code generation time.",
+                    );
+
+                    unreachable!()
+                }
+
                 *value
             }
 
             Self::Constant { ptr, .. } => {
-                let loaded_value: BasicValueEnum =
-                    llvm_builder.build_load(llvm_type, *ptr, "").unwrap();
+                if let Ok(loaded_value) = llvm_builder.build_load(llvm_type, *ptr, "") {
+                    if let Some(load_instruction) = loaded_value.as_instruction_value() {
+                        let _ = load_instruction.set_alignment(preferred_memory_alignment);
+                    }
 
-                if let Some(load_instruction) = loaded_value.as_instruction_value() {
-                    let _ = load_instruction.set_alignment(preferred_memory_alignment);
+                    return loaded_value;
                 }
 
-                loaded_value
+                logging::log(
+                    LoggingType::Bug,
+                    "Unable to load local value at code generation time.",
+                );
+
+                unreachable!()
             }
 
             Self::LowLevelInstruction { value, .. } => *value,
@@ -209,6 +227,11 @@ impl<'ctx> SymbolAllocated<'ctx> {
                     };
                 }
 
+                logging::log(
+                    LoggingType::Bug,
+                    "Unable to calculate pointer position at code generation time at memory management.",
+                );
+
                 unreachable!()
             }
         }
@@ -236,6 +259,11 @@ impl<'ctx> SymbolAllocated<'ctx> {
                         .unwrap();
                 }
 
+                logging::log(
+                    LoggingType::Bug,
+                    "Unable to calculate pointer position at code generation time at memory management.",
+                );
+
                 unreachable!()
             }
         }
@@ -245,7 +273,6 @@ impl<'ctx> SymbolAllocated<'ctx> {
         match self {
             Self::Local { ptr, .. } => ptr.get_type().size_of().into(),
             Self::Constant { ptr, .. } => ptr.get_type().size_of().into(),
-
             Self::Parameter { value, .. } => value
                 .get_type()
                 .size_of()

@@ -1,7 +1,7 @@
 use {
     super::super::{context::LLVMCodeGenContext, valuegen},
     crate::{
-        backend::llvm::compiler::{predicates, valuegen::CompileChanges},
+        backend::llvm::compiler::{cast, predicates, valuegen::CompileChanges},
         core::console::logging::{self, LoggingType},
         frontend::{
             lexer::tokentype::TokenType,
@@ -13,7 +13,6 @@ use {
         context::Context,
         values::{BasicValueEnum, IntValue},
     },
-    std::cmp::Ordering,
 };
 
 pub fn int_operation<'ctx>(
@@ -61,23 +60,7 @@ pub fn int_operation<'ctx>(
                 .into(),
 
             op if op.is_logical_type() => {
-                match left
-                    .get_type()
-                    .get_bit_width()
-                    .cmp(&right.get_type().get_bit_width())
-                {
-                    Ordering::Greater => {
-                        right = llvm_builder
-                            .build_int_cast_sign_flag(right, left.get_type(), signatures.0, "")
-                            .unwrap();
-                    }
-                    Ordering::Less => {
-                        left = llvm_builder
-                            .build_int_cast_sign_flag(left, right.get_type(), signatures.1, "")
-                            .unwrap();
-                    }
-                    _ => {}
-                }
+                let (left, right) = cast::integer_together(context, left, right);
 
                 llvm_builder
                     .build_int_compare(

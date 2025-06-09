@@ -1,6 +1,7 @@
 use {
     crate::{
         backend::llvm::compiler::{
+            cast,
             context::LLVMCodeGenContext,
             predicates,
             valuegen::{self, CompileChanges},
@@ -30,10 +31,14 @@ pub fn bool_operation<'ctx>(
         let right: IntValue = right.into_int_value();
 
         return match operator {
-            op if op.is_logical_type() => llvm_builder
-                .build_int_compare(predicates::integer(operator, false, false), left, right, "")
-                .unwrap()
-                .into(),
+            op if op.is_logical_type() => {
+                let (left, right) = cast::integer_together(context, left, right);
+
+                llvm_builder
+                    .build_int_compare(predicates::integer(operator, false, false), left, right, "")
+                    .unwrap()
+                    .into()
+            }
 
             op if op.is_logical_gate() => {
                 if let TokenType::And = op {

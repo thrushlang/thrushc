@@ -72,24 +72,38 @@ impl LoggingType {
 pub fn log(ltype: LoggingType, msg: &str) {
     if ltype.is_bug() {
         io::stderr()
-            .write_all(format!("{} {}\n  ", ltype.to_styled(), msg).as_bytes())
-            .unwrap();
+            .write_all(format!("{} {}\n", ltype.to_styled(), msg).as_bytes())
+            .unwrap_or_default();
+
+        io::stderr()
+            .write_all(
+                format!(
+                    "\nThis is a {} at code generation time. Report it in: '{}'.\n",
+                    "critical issue".bold().bright_red().underline(),
+                    "https://github.com/thrushlang/thrushc/issues/"
+                        .bold()
+                        .bright_red()
+                        .underline(),
+                )
+                .as_bytes(),
+            )
+            .unwrap_or_default();
 
         process::exit(1);
     }
 
     if ltype.is_panic() {
         io::stderr()
-            .write_all(format!("{} {}\n  ", ltype.to_styled(), msg).as_bytes())
-            .unwrap();
+            .write_all(format!("{} {}\n", ltype.to_styled(), msg).as_bytes())
+            .unwrap_or(());
 
         process::exit(1);
     }
 
     if ltype.is_err() {
         io::stderr()
-            .write_all(format!("{} {}\n  ", ltype.to_styled(), msg).as_bytes())
-            .unwrap();
+            .write_all(format!("{} {}\n", ltype.to_styled(), msg).as_bytes())
+            .unwrap_or_default();
 
         return;
     }
@@ -97,12 +111,12 @@ pub fn log(ltype: LoggingType, msg: &str) {
     if ltype.is_backend_panic() {
         io::stderr()
             .write_all(format!("\n{} {}", ltype.to_styled(), msg).as_bytes())
-            .unwrap();
+            .unwrap_or_default();
 
         io::stderr()
             .write_all(
                 format!(
-                    "\nMaybe this is a issue... Report it in: '{}'.\n\n",
+                    "\n\nMaybe this is a issue... Report it in: '{}'.\n",
                     "https://github.com/thrushlang/thrushc/issues/"
                         .bold()
                         .bright_red()
@@ -110,7 +124,17 @@ pub fn log(ltype: LoggingType, msg: &str) {
                 )
                 .as_bytes(),
             )
-            .unwrap();
+            .unwrap_or(());
+
+        io::stderr()
+            .write_all(
+                format!(
+                    "\n{} It isn't a issue if:\n• Comes from the assembler thing.\n\n",
+                    "NOTE".bold().underline().bright_red()
+                )
+                .as_bytes(),
+            )
+            .unwrap_or_default();
 
         return;
     }
@@ -118,14 +142,14 @@ pub fn log(ltype: LoggingType, msg: &str) {
     if ltype.is_warn() || ltype.is_info() {
         io::stderr()
             .write_all(format!("{} {}", ltype.to_styled(), msg).as_bytes())
-            .unwrap();
+            .unwrap_or_default();
 
         return;
     }
 
     io::stdout()
         .write_all(format!("{} {}", ltype.to_styled(), msg).as_bytes())
-        .unwrap();
+        .unwrap_or_default();
 }
 
 pub fn write(output_in: OutputIn, text: &str) {
