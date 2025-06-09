@@ -155,6 +155,18 @@ impl<'linter> Linter<'linter> {
 
         ########################################################################*/
 
+        if let ThrushStatement::Block { stmts, .. } = stmt {
+            self.begin_scope();
+
+            stmts.iter().for_each(|stmt| {
+                self.analyze_stmt(stmt);
+            });
+
+            self.generate_scoped_warnings();
+
+            self.end_scope();
+        }
+
         if let ThrushStatement::Group { expression, .. } = stmt {
             self.analyze_stmt(expression);
         }
@@ -166,18 +178,6 @@ impl<'linter> Linter<'linter> {
 
         if let ThrushStatement::UnaryOp { expression, .. } = stmt {
             self.analyze_stmt(expression);
-        }
-
-        if let ThrushStatement::Block { stmts, .. } = stmt {
-            self.begin_scope();
-
-            stmts.iter().for_each(|stmt| {
-                self.analyze_stmt(stmt);
-            });
-
-            self.generate_scoped_warnings();
-
-            self.end_scope();
         }
 
         if let ThrushStatement::AsmValue { args, .. } = stmt {
@@ -219,6 +219,46 @@ impl<'linter> Linter<'linter> {
 
         if let ThrushStatement::RawPtr { from, .. } = stmt {
             self.analyze_stmt(from);
+        }
+
+        if let ThrushStatement::Index {
+            name,
+            indexes,
+            span,
+            ..
+        } = stmt
+        {
+            indexes.iter().for_each(|indexe| {
+                self.analyze_stmt(indexe);
+            });
+
+            if let Some(local) = self.symbols.get_local_info(name) {
+                local.1 = true;
+                return;
+            }
+
+            if let Some(parameter) = self.symbols.get_parameter_info(name) {
+                parameter.1 = true;
+                return;
+            }
+
+            if let Some(lli) = self.symbols.get_lli_info(name) {
+                lli.1 = true;
+                return;
+            }
+
+            if let Some(constant) = self.symbols.get_constant_info(name) {
+                constant.1 = true;
+                return;
+            }
+
+            self.add_bug(ThrushCompilerIssue::Bug(
+                String::from("Reference not caught"),
+                format!("Could not get reference with name '{}'.", name),
+                *span,
+                CompilationPosition::Linter,
+                line!(),
+            ));
         }
 
         if let ThrushStatement::Address {
@@ -412,15 +452,17 @@ impl<'linter> Linter<'linter> {
         }
 
         if let ThrushStatement::Mut { source, span, .. } = stmt {
-            if let Some(local_name) = source.0 {
-                if let Some(local) = self.symbols.get_local_info(local_name) {
+            if let Some(reference) = &source.0 {
+                let reference_name: &str = reference.get_unwrapped_reference_name();
+
+                if let Some(local) = self.symbols.get_local_info(reference_name) {
                     local.1 = true;
                     return;
                 }
 
                 self.add_bug(ThrushCompilerIssue::Bug(
                     String::from("Mutable expression not caught"),
-                    format!("Could not mutable reference with name '{}'.", local_name),
+                    format!("Could not mutable reference with name '{}'.", reference),
                     *span,
                     CompilationPosition::Linter,
                     line!(),

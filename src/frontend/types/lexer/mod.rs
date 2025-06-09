@@ -89,6 +89,22 @@ impl LLVMTypeExtensions for ThrushType {
 }
 
 impl ThrushType {
+    pub fn defer_all(&self) -> ThrushType {
+        if let ThrushType::Mut(inner_type) = self {
+            return inner_type.defer_all();
+        }
+
+        if let ThrushType::Ptr(Some(inner_type)) = self {
+            return inner_type.defer_all();
+        }
+
+        if let ThrushType::FixedArray(inner_type, ..) = self {
+            return inner_type.defer_all();
+        }
+
+        self.clone()
+    }
+
     pub fn defer_mut_all(&self) -> ThrushType {
         if let ThrushType::Mut(inner_type) = self {
             return inner_type.defer_mut_all();
@@ -142,6 +158,35 @@ impl ThrushType {
         );
 
         unreachable!()
+    }
+
+    pub fn get_type_with_depth(&self, depth: usize) -> &ThrushType {
+        if depth == 0 {
+            return self;
+        }
+
+        match self {
+            ThrushType::Mut(inner_type) => inner_type.get_type_with_depth(depth - 1),
+            ThrushType::Ptr(Some(inner_type)) => inner_type.get_type_with_depth(depth - 1),
+            ThrushType::FixedArray(element_type, _) => element_type.get_type_with_depth(depth - 1),
+            ThrushType::Struct(_, _) => self,
+            ThrushType::S8
+            | ThrushType::S16
+            | ThrushType::S32
+            | ThrushType::S64
+            | ThrushType::U8
+            | ThrushType::U16
+            | ThrushType::U32
+            | ThrushType::U64
+            | ThrushType::F32
+            | ThrushType::F64
+            | ThrushType::Bool
+            | ThrushType::Char
+            | ThrushType::Str
+            | ThrushType::Addr
+            | ThrushType::Void
+            | ThrushType::Ptr(None) => self,
+        }
     }
 
     #[must_use]
@@ -301,7 +346,7 @@ impl ThrushType {
     }
 
     #[inline]
-    pub fn get_cast_herarchy(&self) -> u8 {
+    pub fn get_array_type_herarchy(&self) -> u8 {
         match self {
             ThrushType::Void => 0,
 
@@ -322,10 +367,10 @@ impl ThrushType {
             ThrushType::F32 => 12,
             ThrushType::F64 => 13,
 
-            ThrushType::Mut(subtype) => subtype.get_cast_herarchy(),
+            ThrushType::Mut(subtype) => subtype.get_array_type_herarchy(),
 
             ThrushType::Addr => 14,
-            ThrushType::Ptr(Some(subtype)) => subtype.get_cast_herarchy(),
+            ThrushType::Ptr(Some(subtype)) => subtype.get_array_type_herarchy(),
             ThrushType::Ptr(None) => 15,
 
             ThrushType::FixedArray(..) => 116,

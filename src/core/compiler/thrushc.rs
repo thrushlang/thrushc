@@ -55,13 +55,15 @@ impl<'thrushc> TheThrushCompiler<'thrushc> {
     }
 
     pub fn compile(&mut self) -> (u128, u128) {
+        let mut compilation_interrumped: bool = false;
+
         self.files.iter().for_each(|file| {
-            self.compile_file(file);
+            compilation_interrumped = self.compile_file(file).is_err();
         });
 
         let llvm_backend: &LLVMBackend = self.options.get_llvm_backend_options();
 
-        if llvm_backend.was_emited() || self.compiled_files.is_empty() {
+        if compilation_interrumped || llvm_backend.was_emited() || self.compiled_files.is_empty() {
             return (self.thrushc_time.as_millis(), self.llvm_time.as_millis());
         }
 
@@ -152,8 +154,8 @@ impl<'thrushc> TheThrushCompiler<'thrushc> {
         (self.thrushc_time.as_millis(), self.llvm_time.as_millis())
     }
 
-    fn compile_file(&mut self, file: &'thrushc CompilerFile) {
-        let thrushc_time: Instant = Instant::now();
+    fn compile_file(&mut self, file: &'thrushc CompilerFile) -> Result<(), ()> {
+        let archive_time: Instant = Instant::now();
 
         logging::write(
             logging::OutputIn::Stdout,
@@ -179,19 +181,7 @@ impl<'thrushc> TheThrushCompiler<'thrushc> {
         };
 
         if self.emit_after_frontend(llvm_backend, build_dir, file, Emited::Tokens(&tokens)) {
-            self.thrushc_time += thrushc_time.elapsed();
-
-            logging::write(
-                logging::OutputIn::Stdout,
-                &format!(
-                    "{} {} {}\n",
-                    "Compilation".custom_color((141, 141, 142)).bold(),
-                    "FINISHED".bright_green().bold(),
-                    &file.path.to_string_lossy()
-                ),
-            );
-
-            return;
+            return self.finish_archive_compilation(archive_time, file);
         }
 
         let parser: (ParserContext, bool) = Parser::parse(&tokens, file);
@@ -201,6 +191,17 @@ impl<'thrushc> TheThrushCompiler<'thrushc> {
         let parser_throwed_errors: bool = parser_result.1;
 
         let stmts: &[ThrushStatement] = parser_context.get_stmts();
+
+        let semantic_analysis_throwed_errors: bool =
+            SemanticAnalyzer::new(stmts, file).check(parser_throwed_errors);
+
+        if parser_throwed_errors || semantic_analysis_throwed_errors {
+            return self.interrupt_archive_compilation(archive_time, file);
+        }
+
+        if self.emit_after_frontend(llvm_backend, build_dir, file, Emited::Statements(stmts)) {
+            return self.finish_archive_compilation(archive_time, file);
+        }
 
         let llvm_context: Context = Context::create();
         let llvm_builder: Builder = llvm_context.create_builder();
@@ -249,59 +250,9 @@ impl<'thrushc> TheThrushCompiler<'thrushc> {
             target_machine.get_target_data(),
         );
 
-        let semantic_analysis_throwed_errors: bool =
-            SemanticAnalyzer::new(stmts, file).check(parser_throwed_errors);
-
-        if parser_throwed_errors || semantic_analysis_throwed_errors {
-            logging::write(
-                logging::OutputIn::Stderr,
-                &format!(
-                    "{} {} {}\n",
-                    "Compilation".custom_color((141, 141, 142)).bold(),
-                    "FAILED".bright_red().bold(),
-                    &file.path.to_string_lossy()
-                ),
-            );
-
-            return;
-        }
-
-        if self.emit_after_frontend(llvm_backend, build_dir, file, Emited::Statements(stmts)) {
-            self.thrushc_time += thrushc_time.elapsed();
-
-            logging::write(
-                logging::OutputIn::Stdout,
-                &format!(
-                    "{} {} {}\n",
-                    "Compilation".custom_color((141, 141, 142)).bold(),
-                    "FINISHED".bright_green().bold(),
-                    &file.path.to_string_lossy()
-                ),
-            );
-
-            return;
-        }
-
         llvm::compiler::LLVMCompiler::compile(&mut llvm_codegen_context, stmts);
 
-        if let Err(codegen_error) = llvm_module.verify() {
-            logging::log(
-                LoggingType::BackendPanic,
-                codegen_error.to_string().trim_end(),
-            );
-
-            logging::write(
-                logging::OutputIn::Stderr,
-                &format!(
-                    "\r{} {} {}\n",
-                    "Compilation".custom_color((141, 141, 142)).bold(),
-                    "FAILED".bright_red().bold(),
-                    &file.path.to_string_lossy()
-                ),
-            );
-
-            return;
-        }
+        self.validate_codegen(&llvm_module, file)?;
 
         if self.emit_before_optimization(
             llvm_backend,
@@ -310,19 +261,7 @@ impl<'thrushc> TheThrushCompiler<'thrushc> {
             build_dir,
             file,
         ) {
-            self.thrushc_time += thrushc_time.elapsed();
-
-            logging::write(
-                logging::OutputIn::Stdout,
-                &format!(
-                    "{} {} {}\n",
-                    "Compilation".custom_color((141, 141, 142)).bold(),
-                    "FINISHED".bright_green().bold(),
-                    &file.path.to_string_lossy()
-                ),
-            );
-
-            return;
+            return self.finish_archive_compilation(archive_time, file);
         }
 
         llvm::compiler::passes::LLVMOptimizer::new(
@@ -341,19 +280,7 @@ impl<'thrushc> TheThrushCompiler<'thrushc> {
             build_dir,
             file,
         ) {
-            self.thrushc_time += thrushc_time.elapsed();
-
-            logging::write(
-                logging::OutputIn::Stdout,
-                &format!(
-                    "{} {} {}\n",
-                    "Compilation".custom_color((141, 141, 142)).bold(),
-                    "FINISHED".bright_green().bold(),
-                    &file.path.to_string_lossy()
-                ),
-            );
-
-            return;
+            return self.finish_archive_compilation(archive_time, file);
         }
 
         let object_file_path: PathBuf = build_dir.join(format!("{}.o", &file.name));
@@ -380,6 +307,71 @@ impl<'thrushc> TheThrushCompiler<'thrushc> {
                 &file.path.to_string_lossy()
             ),
         );
+
+        Ok(())
+    }
+
+    fn interrupt_archive_compilation(
+        &mut self,
+        archive_time: Instant,
+        file: &CompilerFile,
+    ) -> Result<(), ()> {
+        self.thrushc_time += archive_time.elapsed();
+
+        logging::write(
+            logging::OutputIn::Stderr,
+            &format!(
+                "{} {} {}\n",
+                "Compilation".custom_color((141, 141, 142)).bold(),
+                "FAILED".bright_red().bold(),
+                &file.path.to_string_lossy()
+            ),
+        );
+
+        Err(())
+    }
+
+    fn finish_archive_compilation(
+        &mut self,
+        archive_time: Instant,
+        file: &CompilerFile,
+    ) -> Result<(), ()> {
+        self.thrushc_time += archive_time.elapsed();
+
+        logging::write(
+            logging::OutputIn::Stdout,
+            &format!(
+                "{} {} {}\n",
+                "Compilation".custom_color((141, 141, 142)).bold(),
+                "FINISHED".bright_green().bold(),
+                &file.path.to_string_lossy()
+            ),
+        );
+
+        Ok(())
+    }
+
+    fn validate_codegen(&self, llvm_module: &Module, file: &CompilerFile) -> Result<(), ()> {
+        if let Err(codegen_error) = llvm_module.verify() {
+            logging::log(
+                LoggingType::BackendPanic,
+                codegen_error.to_string().trim_end(),
+            );
+
+            logging::write(
+                logging::OutputIn::Stderr,
+                &format!(
+                    "\r{} {} {}\n",
+                    "Compilation".custom_color((141, 141, 142)).bold(),
+                    "FAILED".bright_red().bold(),
+                    &file.path.to_string_lossy()
+                ),
+            );
+
+            return Err(());
+        }
+
+        Ok(())
     }
 
     fn emit_after_frontend(

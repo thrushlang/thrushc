@@ -33,24 +33,24 @@ use crate::{
 use super::{ParserContext, contexts::SyncPosition, parse, stmt, typegen};
 
 pub fn build_expression<'instr>(
-    parser_ctx: &mut ParserContext<'instr>,
+    parser_context: &mut ParserContext<'instr>,
 ) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
-    parser_ctx
+    parser_context
         .get_mut_control_ctx()
         .set_sync_position(SyncPosition::Expression);
 
-    if parser_ctx.is_unreacheable_code() {
+    if parser_context.is_unreacheable_code() {
         return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("Unreacheable code."),
             None,
-            parser_ctx.peek().get_span(),
+            parser_context.peek().get_span(),
         ));
     }
 
-    let expression: ThrushStatement = self::or(parser_ctx)?;
+    let expression: ThrushStatement = self::or(parser_context)?;
 
-    parser_ctx.consume(
+    parser_context.consume(
         TokenType::SemiColon,
         String::from("Syntax error"),
         String::from("Expected ';'."),
@@ -60,37 +60,37 @@ pub fn build_expression<'instr>(
 }
 
 pub fn build_expr<'instr>(
-    parser_ctx: &mut ParserContext<'instr>,
+    parser_context: &mut ParserContext<'instr>,
 ) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
-    parser_ctx
+    parser_context
         .get_mut_control_ctx()
         .set_sync_position(SyncPosition::Expression);
 
-    if parser_ctx.is_unreacheable_code() {
+    if parser_context.is_unreacheable_code() {
         return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("Unreacheable code."),
             None,
-            parser_ctx.peek().get_span(),
+            parser_context.peek().get_span(),
         ));
     }
 
-    let expr: ThrushStatement = or(parser_ctx)?;
+    let expr: ThrushStatement = or(parser_context)?;
 
     Ok(expr)
 }
 
 fn or<'instr>(
-    parser_ctx: &mut ParserContext<'instr>,
+    parser_context: &mut ParserContext<'instr>,
 ) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
-    let mut expression: ThrushStatement = self::and(parser_ctx)?;
+    let mut expression: ThrushStatement = self::and(parser_context)?;
 
-    while parser_ctx.match_token(TokenType::Or)? {
-        let operator_tk: &Token = parser_ctx.previous();
+    while parser_context.match_token(TokenType::Or)? {
+        let operator_tk: &Token = parser_context.previous();
         let operator: TokenType = operator_tk.kind;
         let span: Span = operator_tk.get_span();
 
-        let right: ThrushStatement = self::and(parser_ctx)?;
+        let right: ThrushStatement = self::and(parser_context)?;
 
         expression = ThrushStatement::BinaryOp {
             left: expression.into(),
@@ -105,16 +105,16 @@ fn or<'instr>(
 }
 
 fn and<'instr>(
-    parser_ctx: &mut ParserContext<'instr>,
+    parser_context: &mut ParserContext<'instr>,
 ) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
-    let mut expression: ThrushStatement = self::equality(parser_ctx)?;
+    let mut expression: ThrushStatement = self::equality(parser_context)?;
 
-    while parser_ctx.match_token(TokenType::And)? {
-        let operator_tk: &Token = parser_ctx.previous();
+    while parser_context.match_token(TokenType::And)? {
+        let operator_tk: &Token = parser_context.previous();
         let operator: TokenType = operator_tk.kind;
         let span: Span = operator_tk.span;
 
-        let right: ThrushStatement = self::equality(parser_ctx)?;
+        let right: ThrushStatement = self::equality(parser_context)?;
 
         expression = ThrushStatement::BinaryOp {
             left: expression.into(),
@@ -129,16 +129,18 @@ fn and<'instr>(
 }
 
 fn equality<'instr>(
-    parser_ctx: &mut ParserContext<'instr>,
+    parser_context: &mut ParserContext<'instr>,
 ) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
-    let mut expression: ThrushStatement = self::casts(parser_ctx)?;
+    let mut expression: ThrushStatement = self::casts(parser_context)?;
 
-    if parser_ctx.match_token(TokenType::BangEq)? || parser_ctx.match_token(TokenType::EqEq)? {
-        let operator_tk: &Token = parser_ctx.previous();
+    if parser_context.match_token(TokenType::BangEq)?
+        || parser_context.match_token(TokenType::EqEq)?
+    {
+        let operator_tk: &Token = parser_context.previous();
         let operator: TokenType = operator_tk.kind;
         let span: Span = operator_tk.get_span();
 
-        let right: ThrushStatement = self::casts(parser_ctx)?;
+        let right: ThrushStatement = self::casts(parser_context)?;
 
         expression = ThrushStatement::BinaryOp {
             left: expression.into(),
@@ -153,14 +155,14 @@ fn equality<'instr>(
 }
 
 fn casts<'instr>(
-    parser_ctx: &mut ParserContext<'instr>,
+    parser_context: &mut ParserContext<'instr>,
 ) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
-    let mut expression: ThrushStatement = self::cmp(parser_ctx)?;
+    let mut expression: ThrushStatement = self::cmp(parser_context)?;
 
-    if parser_ctx.match_token(TokenType::CastRaw)? {
-        let span: Span = parser_ctx.previous().span;
+    if parser_context.match_token(TokenType::CastRaw)? {
+        let span: Span = parser_context.previous().span;
 
-        let mut cast: ThrushType = typegen::build_type(parser_ctx)?;
+        let mut cast: ThrushType = typegen::build_type(parser_context)?;
 
         if !cast.is_mut_type() {
             cast = ThrushType::Mut(cast.into());
@@ -171,20 +173,20 @@ fn casts<'instr>(
             cast,
             span,
         };
-    } else if parser_ctx.match_token(TokenType::CastPtr)? {
-        let span: Span = parser_ctx.previous().get_span();
+    } else if parser_context.match_token(TokenType::CastPtr)? {
+        let span: Span = parser_context.previous().get_span();
 
-        let cast: ThrushType = typegen::build_type(parser_ctx)?;
+        let cast: ThrushType = typegen::build_type(parser_context)?;
 
         expression = ThrushStatement::CastPtr {
             from: expression.into(),
             cast,
             span,
         };
-    } else if parser_ctx.match_token(TokenType::Cast)? {
-        let span: Span = parser_ctx.previous().get_span();
+    } else if parser_context.match_token(TokenType::Cast)? {
+        let span: Span = parser_context.previous().get_span();
 
-        let cast: ThrushType = typegen::build_type(parser_ctx)?;
+        let cast: ThrushType = typegen::build_type(parser_context)?;
 
         expression = ThrushStatement::Cast {
             from: expression.into(),
@@ -197,20 +199,20 @@ fn casts<'instr>(
 }
 
 fn cmp<'instr>(
-    parser_ctx: &mut ParserContext<'instr>,
+    parser_context: &mut ParserContext<'instr>,
 ) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
-    let mut expression: ThrushStatement = self::term(parser_ctx)?;
+    let mut expression: ThrushStatement = self::term(parser_context)?;
 
-    if parser_ctx.match_token(TokenType::Greater)?
-        || parser_ctx.match_token(TokenType::GreaterEq)?
-        || parser_ctx.match_token(TokenType::Less)?
-        || parser_ctx.match_token(TokenType::LessEq)?
+    if parser_context.match_token(TokenType::Greater)?
+        || parser_context.match_token(TokenType::GreaterEq)?
+        || parser_context.match_token(TokenType::Less)?
+        || parser_context.match_token(TokenType::LessEq)?
     {
-        let operator_tk: &Token = parser_ctx.previous();
+        let operator_tk: &Token = parser_context.previous();
         let operator: TokenType = operator_tk.get_type();
         let span: Span = operator_tk.get_span();
 
-        let right: ThrushStatement = self::term(parser_ctx)?;
+        let right: ThrushStatement = self::term(parser_context)?;
 
         expression = ThrushStatement::BinaryOp {
             left: expression.into(),
@@ -225,20 +227,20 @@ fn cmp<'instr>(
 }
 
 fn term<'instr>(
-    parser_ctx: &mut ParserContext<'instr>,
+    parser_context: &mut ParserContext<'instr>,
 ) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
-    let mut expression: ThrushStatement = self::factor(parser_ctx)?;
+    let mut expression: ThrushStatement = self::factor(parser_context)?;
 
-    while parser_ctx.match_token(TokenType::Plus)?
-        || parser_ctx.match_token(TokenType::Minus)?
-        || parser_ctx.match_token(TokenType::LShift)?
-        || parser_ctx.match_token(TokenType::RShift)?
+    while parser_context.match_token(TokenType::Plus)?
+        || parser_context.match_token(TokenType::Minus)?
+        || parser_context.match_token(TokenType::LShift)?
+        || parser_context.match_token(TokenType::RShift)?
     {
-        let operator_tk: &Token = parser_ctx.previous();
+        let operator_tk: &Token = parser_context.previous();
         let operator: TokenType = operator_tk.get_type();
         let span: Span = operator_tk.get_span();
 
-        let right: ThrushStatement = self::factor(parser_ctx)?;
+        let right: ThrushStatement = self::factor(parser_context)?;
 
         let left_type: &ThrushType = expression.get_value_type()?;
         let right_type: &ThrushType = right.get_value_type()?;
@@ -258,16 +260,18 @@ fn term<'instr>(
 }
 
 fn factor<'instr>(
-    parser_ctx: &mut ParserContext<'instr>,
+    parser_context: &mut ParserContext<'instr>,
 ) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
-    let mut expression: ThrushStatement = unary(parser_ctx)?;
+    let mut expression: ThrushStatement = unary(parser_context)?;
 
-    while parser_ctx.match_token(TokenType::Slash)? || parser_ctx.match_token(TokenType::Star)? {
-        let operator_tk: &Token = parser_ctx.previous();
+    while parser_context.match_token(TokenType::Slash)?
+        || parser_context.match_token(TokenType::Star)?
+    {
+        let operator_tk: &Token = parser_context.previous();
         let operator: TokenType = operator_tk.get_type();
         let span: Span = operator_tk.get_span();
 
-        let right: ThrushStatement = self::unary(parser_ctx)?;
+        let right: ThrushStatement = self::unary(parser_context)?;
 
         let left_type: &ThrushType = expression.get_value_type()?;
         let right_type: &ThrushType = right.get_value_type()?;
@@ -287,14 +291,14 @@ fn factor<'instr>(
 }
 
 fn unary<'instr>(
-    parser_ctx: &mut ParserContext<'instr>,
+    parser_context: &mut ParserContext<'instr>,
 ) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
-    if parser_ctx.match_token(TokenType::Bang)? {
-        let operator_tk: &Token = parser_ctx.previous();
+    if parser_context.match_token(TokenType::Bang)? {
+        let operator_tk: &Token = parser_context.previous();
         let operator: TokenType = operator_tk.kind;
         let span: Span = operator_tk.span;
 
-        let expression: ThrushStatement = self::primary(parser_ctx)?;
+        let expression: ThrushStatement = self::primary(parser_context)?;
 
         return Ok(ThrushStatement::UnaryOp {
             operator,
@@ -305,12 +309,12 @@ fn unary<'instr>(
         });
     }
 
-    if parser_ctx.match_token(TokenType::Minus)? {
-        let operator_tk: &Token = parser_ctx.previous();
+    if parser_context.match_token(TokenType::Minus)? {
+        let operator_tk: &Token = parser_context.previous();
         let operator: TokenType = operator_tk.get_type();
         let span: Span = operator_tk.get_span();
 
-        let mut expression: ThrushStatement = self::primary(parser_ctx)?;
+        let mut expression: ThrushStatement = self::primary(parser_context)?;
 
         expression.cast_signess(operator);
 
@@ -325,24 +329,24 @@ fn unary<'instr>(
         });
     }
 
-    let instr: ThrushStatement = primary(parser_ctx)?;
+    let instr: ThrushStatement = primary(parser_context)?;
 
     Ok(instr)
 }
 
 fn primary<'instr>(
-    parser_ctx: &mut ParserContext<'instr>,
+    parser_context: &mut ParserContext<'instr>,
 ) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
-    let primary: ThrushStatement = match &parser_ctx.peek().kind {
-        TokenType::LBracket => self::build_array(parser_ctx)?,
+    let primary: ThrushStatement = match &parser_context.peek().kind {
+        TokenType::LBracket => self::build_array(parser_context)?,
 
-        TokenType::Deref => self::build_deref(parser_ctx)?,
+        TokenType::Deref => self::build_deref(parser_context)?,
 
         TokenType::RawPtr => {
-            let raw_ptr_tk: &Token = parser_ctx.advance()?;
+            let raw_ptr_tk: &Token = parser_context.advance()?;
             let span: Span = raw_ptr_tk.get_span();
 
-            let reference_tk: &Token = parser_ctx.consume(
+            let reference_tk: &Token = parser_context.consume(
                 TokenType::Identifier,
                 "Syntax error".into(),
                 "Expected 'reference'.".into(),
@@ -351,7 +355,8 @@ fn primary<'instr>(
             let ref_name: &str = reference_tk.get_lexeme();
             let ref_span: Span = reference_tk.get_span();
 
-            let reference: ThrushStatement = self::build_reference(parser_ctx, ref_name, ref_span)?;
+            let reference: ThrushStatement =
+                self::build_reference(parser_context, ref_name, ref_span)?;
 
             let mut reference_type: ThrushType = reference.get_value_type()?.clone();
 
@@ -372,20 +377,20 @@ fn primary<'instr>(
         }
 
         TokenType::Alloc => {
-            let alloc_tk: &Token = parser_ctx.advance()?;
+            let alloc_tk: &Token = parser_context.advance()?;
             let span: Span = alloc_tk.get_span();
 
-            let site_allocation: LLIAllocationSite = match parser_ctx.peek().kind {
+            let site_allocation: LLIAllocationSite = match parser_context.peek().kind {
                 TokenType::Heap => {
-                    parser_ctx.only_advance()?;
+                    parser_context.only_advance()?;
                     LLIAllocationSite::Heap
                 }
                 TokenType::Stack => {
-                    parser_ctx.only_advance()?;
+                    parser_context.only_advance()?;
                     LLIAllocationSite::Stack
                 }
                 TokenType::Static => {
-                    parser_ctx.only_advance()?;
+                    parser_context.only_advance()?;
                     LLIAllocationSite::Static
                 }
                 _ => {
@@ -398,23 +403,23 @@ fn primary<'instr>(
                 }
             };
 
-            parser_ctx.consume(
+            parser_context.consume(
                 TokenType::LBrace,
                 "Syntax error".into(),
                 "Expected '{'.".into(),
             )?;
 
-            let mut alloc_type: ThrushType = typegen::build_type(parser_ctx)?;
+            let mut alloc_type: ThrushType = typegen::build_type(parser_context)?;
 
             alloc_type = ThrushType::Ptr(Some(alloc_type.into()));
 
-            let attributes: Vec<LLVMAttribute> = if parser_ctx.match_token(TokenType::LBrace)? {
-                stmt::build_attributes(parser_ctx, &[TokenType::RBrace, TokenType::SemiColon])?
+            let attributes: Vec<LLVMAttribute> = if parser_context.match_token(TokenType::LBrace)? {
+                stmt::build_attributes(parser_context, &[TokenType::RBrace, TokenType::SemiColon])?
             } else {
                 Vec::new()
             };
 
-            parser_ctx.consume(
+            parser_context.consume(
                 TokenType::RBrace,
                 "Syntax error".into(),
                 "Expected '}'.".into(),
@@ -429,19 +434,19 @@ fn primary<'instr>(
         }
 
         TokenType::Load => {
-            let load_tk: &Token = parser_ctx.advance()?;
+            let load_tk: &Token = parser_context.advance()?;
             let span: Span = load_tk.get_span();
 
-            let load_type: ThrushType = typegen::build_type(parser_ctx)?;
+            let load_type: ThrushType = typegen::build_type(parser_context)?;
 
-            parser_ctx.consume(
+            parser_context.consume(
                 TokenType::Comma,
                 "Syntax error".into(),
                 "Expected ','.".into(),
             )?;
 
-            if parser_ctx.check(TokenType::Identifier) {
-                let identifier_tk: &Token = parser_ctx.consume(
+            if parser_context.check(TokenType::Identifier) {
+                let identifier_tk: &Token = parser_context.consume(
                     TokenType::Identifier,
                     String::from("Syntax error"),
                     String::from("Expected 'identifier'."),
@@ -449,7 +454,7 @@ fn primary<'instr>(
 
                 let name: &str = identifier_tk.get_lexeme();
 
-                self::build_reference(parser_ctx, name, span)?;
+                self::build_reference(parser_context, name, span)?;
 
                 return Ok(ThrushStatement::Load {
                     load: (Some(name), None),
@@ -458,7 +463,7 @@ fn primary<'instr>(
                 });
             }
 
-            let expression: ThrushStatement = self::build_expr(parser_ctx)?;
+            let expression: ThrushStatement = self::build_expr(parser_context)?;
 
             ThrushStatement::Load {
                 load: (None, Some(expression.into())),
@@ -468,25 +473,25 @@ fn primary<'instr>(
         }
 
         TokenType::Write => {
-            let write_tk: &Token = parser_ctx.advance()?;
+            let write_tk: &Token = parser_context.advance()?;
             let span: Span = write_tk.span;
 
-            if parser_ctx.match_token(TokenType::Identifier)? {
-                let identifier_tk: &Token = parser_ctx.previous();
+            if parser_context.match_token(TokenType::Identifier)? {
+                let identifier_tk: &Token = parser_context.previous();
 
                 let name: &str = identifier_tk.get_lexeme();
 
-                self::build_reference(parser_ctx, name, span)?;
+                self::build_reference(parser_context, name, span)?;
 
-                parser_ctx.consume(
+                parser_context.consume(
                     TokenType::Comma,
                     "Syntax error".into(),
                     "Expected ','.".into(),
                 )?;
 
-                let write_type: ThrushType = typegen::build_type(parser_ctx)?;
+                let write_type: ThrushType = typegen::build_type(parser_context)?;
 
-                let value: ThrushStatement = self::build_expr(parser_ctx)?;
+                let value: ThrushStatement = self::build_expr(parser_context)?;
 
                 return Ok(ThrushStatement::Write {
                     write_to: (Some(name), None),
@@ -496,16 +501,16 @@ fn primary<'instr>(
                 });
             }
 
-            let expression: ThrushStatement = self::build_expr(parser_ctx)?;
+            let expression: ThrushStatement = self::build_expr(parser_context)?;
 
-            parser_ctx.consume(
+            parser_context.consume(
                 TokenType::Comma,
                 String::from("Syntax error"),
                 String::from("Expected ','."),
             )?;
 
-            let write_type: ThrushType = typegen::build_type(parser_ctx)?;
-            let value: ThrushStatement = self::build_expr(parser_ctx)?;
+            let write_type: ThrushType = typegen::build_type(parser_context)?;
+            let value: ThrushStatement = self::build_expr(parser_context)?;
 
             ThrushStatement::Write {
                 write_to: (None, Some(expression.into())),
@@ -516,9 +521,9 @@ fn primary<'instr>(
         }
 
         TokenType::Address => {
-            parser_ctx.only_advance()?;
+            parser_context.only_advance()?;
 
-            let identifier_tk: &Token = parser_ctx.consume(
+            let identifier_tk: &Token = parser_context.consume(
                 TokenType::Identifier,
                 "Syntax error".into(),
                 "Expected 'identifier'.".into(),
@@ -527,21 +532,21 @@ fn primary<'instr>(
             let name: &str = identifier_tk.get_lexeme();
             let span: Span = identifier_tk.get_span();
 
-            parser_ctx.consume(
+            parser_context.consume(
                 TokenType::LBrace,
                 "Syntax error".into(),
                 "Expected '{'.".into(),
             )?;
 
-            return self::build_address(parser_ctx, name, span);
+            return self::build_address(parser_context, name, span);
         }
 
         TokenType::PlusPlus => {
-            let operator_tk: &Token = parser_ctx.advance()?;
+            let operator_tk: &Token = parser_context.advance()?;
             let operator: TokenType = operator_tk.get_type();
             let span: Span = operator_tk.get_span();
 
-            let expression: ThrushStatement = self::build_expr(parser_ctx)?;
+            let expression: ThrushStatement = self::build_expr(parser_context)?;
 
             if !expression.is_reference() {
                 return Err(ThrushCompilerIssue::Error(
@@ -566,11 +571,11 @@ fn primary<'instr>(
         }
 
         TokenType::MinusMinus => {
-            let operator_tk: &Token = parser_ctx.advance()?;
+            let operator_tk: &Token = parser_context.advance()?;
             let operator: TokenType = operator_tk.get_type();
             let span: Span = operator_tk.get_span();
 
-            let expression: ThrushStatement = self::build_expr(parser_ctx)?;
+            let expression: ThrushStatement = self::build_expr(parser_context)?;
 
             if !expression.is_reference() {
                 return Err(ThrushCompilerIssue::Error(
@@ -595,9 +600,9 @@ fn primary<'instr>(
         }
 
         TokenType::LParen => {
-            let span: Span = parser_ctx.advance()?.get_span();
+            let span: Span = parser_context.advance()?.get_span();
 
-            let expression: ThrushStatement = build_expr(parser_ctx)?;
+            let expression: ThrushStatement = build_expr(parser_context)?;
 
             let kind: &ThrushType = expression.get_value_type()?;
 
@@ -610,7 +615,7 @@ fn primary<'instr>(
                 ));
             }
 
-            parser_ctx.consume(
+            parser_context.consume(
                 TokenType::RParen,
                 "Syntax error".into(),
                 "Expected ')'.".into(),
@@ -624,25 +629,25 @@ fn primary<'instr>(
         }
 
         TokenType::Str => {
-            let str_tk: &Token = parser_ctx.advance()?;
+            let str_tk: &Token = parser_context.advance()?;
             let span: Span = str_tk.get_span();
 
             ThrushStatement::new_str(ThrushType::Str, str_tk.fix_lexeme_scapes(span)?, span)
         }
 
         TokenType::Char => {
-            let char_tk: &Token = parser_ctx.advance()?;
+            let char_tk: &Token = parser_context.advance()?;
             let span: Span = char_tk.get_span();
 
             ThrushStatement::new_char(ThrushType::Char, char_tk.get_lexeme_first_byte(), span)
         }
 
         TokenType::NullPtr => ThrushStatement::NullPtr {
-            span: parser_ctx.advance()?.span,
+            span: parser_context.advance()?.span,
         },
 
         TokenType::Integer => {
-            let integer_tk: &Token = parser_ctx.advance()?;
+            let integer_tk: &Token = parser_context.advance()?;
             let integer: &str = integer_tk.get_lexeme();
             let span: Span = integer_tk.get_span();
 
@@ -655,7 +660,7 @@ fn primary<'instr>(
         }
 
         TokenType::Float => {
-            let float_tk: &Token = parser_ctx.advance()?;
+            let float_tk: &Token = parser_context.advance()?;
 
             let float: &str = float_tk.get_lexeme();
             let span: Span = float_tk.get_span();
@@ -669,87 +674,57 @@ fn primary<'instr>(
         }
 
         TokenType::Identifier => {
-            let identifier_tk: &Token = parser_ctx.advance()?;
+            let identifier_tk: &Token = parser_context.advance()?;
 
             let name: &str = identifier_tk.get_lexeme();
             let span: Span = identifier_tk.get_span();
 
-            let symbol: FoundSymbolId = parser_ctx.get_symbols().get_symbols_id(name, span)?;
+            let symbol: FoundSymbolId = parser_context.get_symbols().get_symbols_id(name, span)?;
 
-            if parser_ctx.match_token(TokenType::Eq)? {
-                let object: FoundSymbolId = parser_ctx.get_symbols().get_symbols_id(name, span)?;
+            if parser_context.match_token(TokenType::Eq)? {
+                let reference: ThrushStatement = self::build_reference(parser_context, name, span)?;
+                let reference_type: &ThrushType = reference.get_value_type()?;
 
-                if object.is_constant() {
-                    return Err(ThrushCompilerIssue::Error(
-                        "Syntax error".into(),
-                        "Constants cannot be mutated.".into(),
-                        None,
-                        span,
-                    ));
-                }
-
-                if object.is_lli() {
-                    return Err(ThrushCompilerIssue::Error(
-                        "Syntax error".into(),
-                        "LLI's cannot be mutated.".into(),
-                        None,
-                        span,
-                    ));
-                }
-
-                let local_position: (&str, usize) = object.expected_local(span)?;
-
-                let local: &LocalSymbol = parser_ctx.get_symbols().get_local_by_id(
-                    local_position.0,
-                    local_position.1,
-                    span,
-                )?;
-
-                let local_span: Span = local.get_span();
-
-                let local_type: ThrushType = local.0.clone();
-
-                if !local.is_mutable() {
-                    return Err(ThrushCompilerIssue::Error(
-                        "Syntax error".into(),
-                        "Make mutable the local.".into(),
-                        None,
-                        local_span,
-                    ));
-                }
-
-                let expression: ThrushStatement = self::build_expr(parser_ctx)?;
+                let expression: ThrushStatement = self::build_expr(parser_context)?;
 
                 return Ok(ThrushStatement::Mut {
-                    source: (Some(name), None),
+                    source: (Some(reference.clone().into()), None),
                     value: expression.into(),
-                    kind: local_type,
+                    kind: reference_type.clone(),
                     span,
                 });
             }
 
-            if parser_ctx.match_token(TokenType::Arrow)? {
-                return self::build_enum_field(parser_ctx, name, span);
+            if parser_context.match_token(TokenType::LBracket)? {
+                let index: ThrushStatement = self::build_index(parser_context, name, span)?;
+
+                if parser_context.match_token(TokenType::Eq)? {
+                    let expr: ThrushStatement = self::build_expr(parser_context)?;
+
+                    return Ok(ThrushStatement::Mut {
+                        source: (None, Some(index.clone().into())),
+                        value: expr.into(),
+                        kind: index.get_value_type()?.clone(),
+                        span,
+                    });
+                }
+
+                return Ok(index);
             }
 
-            if parser_ctx.match_token(TokenType::LParen)? {
-                return self::build_function_call(parser_ctx, name, span);
+            if parser_context.match_token(TokenType::Arrow)? {
+                return self::build_enum_field(parser_context, name, span);
             }
 
-            if parser_ctx.match_token(TokenType::Dot)? {
-                let property: ThrushStatement = self::build_property(parser_ctx, name, span)?;
+            if parser_context.match_token(TokenType::LParen)? {
+                return self::build_function_call(parser_context, name, span);
+            }
 
-                if parser_ctx.match_token(TokenType::Eq)? {
-                    let expr: ThrushStatement = self::build_expr(parser_ctx)?;
+            if parser_context.match_token(TokenType::Dot)? {
+                let property: ThrushStatement = self::build_property(parser_context, name, span)?;
 
-                    if !property.is_mutable() {
-                        return Err(ThrushCompilerIssue::Error(
-                            "Syntax error".into(),
-                            "Make mutable the parameter or local with this property.".into(),
-                            None,
-                            property.get_span(),
-                        ));
-                    }
+                if parser_context.match_token(TokenType::Eq)? {
+                    let expr: ThrushStatement = self::build_expr(parser_context)?;
 
                     return Ok(ThrushStatement::Mut {
                         source: (None, Some(property.clone().into())),
@@ -762,8 +737,8 @@ fn primary<'instr>(
                 return Ok(property);
             }
 
-            if parser_ctx.match_token(TokenType::ColonColon)? {
-                return self::build_method_call(parser_ctx, name, span);
+            if parser_context.match_token(TokenType::ColonColon)? {
+                return self::build_method_call(parser_context, name, span);
             }
 
             if symbol.is_enum() {
@@ -785,28 +760,28 @@ fn primary<'instr>(
                 ));
             }
 
-            self::build_reference(parser_ctx, name, span)?
+            self::build_reference(parser_context, name, span)?
         }
 
         TokenType::True => {
-            ThrushStatement::new_boolean(ThrushType::Bool, 1, parser_ctx.advance()?.span)
+            ThrushStatement::new_boolean(ThrushType::Bool, 1, parser_context.advance()?.span)
         }
 
         TokenType::False => {
-            ThrushStatement::new_boolean(ThrushType::Bool, 0, parser_ctx.advance()?.span)
+            ThrushStatement::new_boolean(ThrushType::Bool, 0, parser_context.advance()?.span)
         }
 
-        TokenType::This => self::build_this(parser_ctx)?,
-        TokenType::New => self::build_constructor(parser_ctx)?,
+        TokenType::This => self::build_this(parser_context)?,
+        TokenType::New => self::build_constructor(parser_context)?,
 
-        TokenType::Asm => self::build_asm_code_block(parser_ctx)?,
+        TokenType::Asm => self::build_asm_code_block(parser_context)?,
 
         TokenType::Pass => ThrushStatement::Pass {
-            span: parser_ctx.advance()?.get_span(),
+            span: parser_context.advance()?.get_span(),
         },
 
         _ => {
-            let previous: &Token = parser_ctx.advance()?;
+            let previous: &Token = parser_context.advance()?;
 
             return Err(ThrushCompilerIssue::Error(
                 "Syntax error".into(),
@@ -821,19 +796,19 @@ fn primary<'instr>(
 }
 
 fn build_method_call<'instr>(
-    parser_ctx: &mut ParserContext<'instr>,
+    parser_context: &mut ParserContext<'instr>,
     name: &'instr str,
     span: Span,
 ) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
-    let symbol: FoundSymbolId = parser_ctx.get_symbols().get_symbols_id(name, span)?;
+    let symbol: FoundSymbolId = parser_context.get_symbols().get_symbols_id(name, span)?;
 
     let structure_id: &str = symbol.expected_struct(span)?;
 
-    let structure: Struct = parser_ctx
+    let structure: Struct = parser_context
         .get_symbols()
         .get_struct_by_id(structure_id, span)?;
 
-    let method_tk: &Token = parser_ctx.consume(
+    let method_tk: &Token = parser_context.consume(
         TokenType::Identifier,
         String::from("Syntax error"),
         String::from("Expected method name."),
@@ -860,7 +835,7 @@ fn build_method_call<'instr>(
     let method_name: &str = method.get_name();
     let method_type: ThrushType = method.get_type();
 
-    parser_ctx.consume(
+    parser_context.consume(
         TokenType::LParen,
         String::from("Syntax error"),
         String::from("Expected '('."),
@@ -869,11 +844,11 @@ fn build_method_call<'instr>(
     let mut args: Vec<ThrushStatement> = Vec::with_capacity(10);
 
     loop {
-        if parser_ctx.check(TokenType::RParen) {
+        if parser_context.check(TokenType::RParen) {
             break;
         }
 
-        let expression: ThrushStatement = self::build_expr(parser_ctx)?;
+        let expression: ThrushStatement = self::build_expr(parser_context)?;
 
         if expression.is_constructor() {
             return Err(ThrushCompilerIssue::Error(
@@ -886,10 +861,10 @@ fn build_method_call<'instr>(
 
         args.push(expression);
 
-        if parser_ctx.check(TokenType::RParen) {
+        if parser_context.check(TokenType::RParen) {
             break;
         } else {
-            parser_ctx.consume(
+            parser_context.consume(
                 TokenType::Comma,
                 String::from("Syntax error"),
                 String::from("Expected ','."),
@@ -897,7 +872,7 @@ fn build_method_call<'instr>(
         }
     }
 
-    parser_ctx.consume(
+    parser_context.consume(
         TokenType::RParen,
         String::from("Syntax error"),
         String::from("Expected ')'."),
@@ -914,25 +889,16 @@ fn build_method_call<'instr>(
 }
 
 fn build_property<'instr>(
-    parser_ctx: &mut ParserContext<'instr>,
+    parser_context: &mut ParserContext<'instr>,
     name: &'instr str,
     span: Span,
 ) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
-    let symbol: FoundSymbolId = parser_ctx.get_symbols().get_symbols_id(name, span)?;
-
-    let local_position: (&str, usize) = symbol.expected_local(span)?;
-
-    let local: &LocalSymbol =
-        parser_ctx
-            .get_symbols()
-            .get_local_by_id(local_position.0, local_position.1, span)?;
-
-    let local_type: ThrushType = local.get_type();
-    let is_mutable: bool = local.is_mutable();
+    let reference: ThrushStatement = self::build_reference(parser_context, name, span)?;
+    let reference_type: ThrushType = reference.get_stmt_type()?.clone();
 
     let mut property_names: Vec<&'instr str> = Vec::with_capacity(10);
 
-    let first_property: &Token = parser_ctx.consume(
+    let first_property: &Token = parser_context.consume(
         TokenType::Identifier,
         String::from("Syntax error"),
         String::from("Expected property name."),
@@ -942,8 +908,8 @@ fn build_property<'instr>(
 
     property_names.push(first_property.get_lexeme());
 
-    while parser_ctx.match_token(TokenType::Dot)? {
-        let property: &Token = parser_ctx.consume(
+    while parser_context.match_token(TokenType::Dot)? {
+        let property: &Token = parser_context.consume(
             TokenType::Identifier,
             String::from("Syntax error"),
             String::from("Expected property name."),
@@ -959,30 +925,32 @@ fn build_property<'instr>(
     let decomposed: (ThrushType, Vec<(ThrushType, u32)>) = decompose_struct_property(
         0,
         property_names,
-        local_type.clone(),
-        parser_ctx.get_symbols(),
+        reference_type,
+        parser_context.get_symbols(),
         span,
     )?;
 
     Ok(ThrushStatement::Property {
         name,
+        reference: reference.into(),
         indexes: decomposed.1,
         kind: decomposed.0,
-        is_mutable,
         span,
     })
 }
 
 fn build_reference<'instr>(
-    parser_ctx: &mut ParserContext<'instr>,
+    parser_context: &mut ParserContext<'instr>,
     name: &'instr str,
     span: Span,
 ) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
-    let symbol: FoundSymbolId = parser_ctx.get_symbols().get_symbols_id(name, span)?;
+    let symbol: FoundSymbolId = parser_context.get_symbols().get_symbols_id(name, span)?;
 
     if symbol.is_constant() {
         let const_id: &str = symbol.expected_constant(span)?;
-        let constant: ConstantSymbol = parser_ctx.get_symbols().get_const_by_id(const_id, span)?;
+        let constant: ConstantSymbol = parser_context
+            .get_symbols()
+            .get_const_by_id(const_id, span)?;
         let constant_type: ThrushType = constant.get_type();
 
         return Ok(ThrushStatement::Reference {
@@ -990,23 +958,26 @@ fn build_reference<'instr>(
             kind: constant_type,
             span,
             identificator: ReferenceIndentificator::Constant,
+            is_mutable: false,
             is_allocated: true,
         });
     }
 
     if symbol.is_parameter() {
         let parameter_id: &str = symbol.expected_parameter(span)?;
-        let parameter: ParameterSymbol = parser_ctx
+        let parameter: ParameterSymbol = parser_context
             .get_symbols()
             .get_parameter_by_id(parameter_id, span)?;
         let parameter_type: ThrushType = parameter.get_type();
 
+        let is_mutable: bool = parameter.is_mutable();
         let is_allocated: bool = parameter_type.is_mut_type();
 
         return Ok(ThrushStatement::Reference {
             name,
             kind: parameter_type,
             span,
+            is_mutable,
             identificator: ReferenceIndentificator::FunctionParameter,
             is_allocated,
         });
@@ -1018,7 +989,7 @@ fn build_reference<'instr>(
         let lli_name: &str = lli_id.0;
         let scope_idx: usize = lli_id.1;
 
-        let parameter: &LLISymbol = parser_ctx
+        let parameter: &LLISymbol = parser_context
             .get_symbols()
             .get_lli_by_id(lli_name, scope_idx, span)?;
 
@@ -1030,6 +1001,7 @@ fn build_reference<'instr>(
             name,
             kind: lli_type,
             span,
+            is_mutable: false,
             identificator: ReferenceIndentificator::LowLevelInstruction,
             is_allocated,
         });
@@ -1038,9 +1010,11 @@ fn build_reference<'instr>(
     let local_position: (&str, usize) = symbol.expected_local(span)?;
 
     let local: &LocalSymbol =
-        parser_ctx
+        parser_context
             .get_symbols()
             .get_local_by_id(local_position.0, local_position.1, span)?;
+
+    let is_mutable: bool = local.is_mutable();
 
     let local_type: ThrushType = local.get_type();
 
@@ -1057,14 +1031,15 @@ fn build_reference<'instr>(
         name,
         kind: local_type.clone(),
         span,
+        is_mutable,
         identificator: ReferenceIndentificator::Local,
         is_allocated: true,
     };
 
-    if parser_ctx.match_token(TokenType::PlusPlus)?
-        | parser_ctx.match_token(TokenType::MinusMinus)?
+    if parser_context.match_token(TokenType::PlusPlus)?
+        | parser_context.match_token(TokenType::MinusMinus)?
     {
-        let operator_tk: &Token = parser_ctx.previous();
+        let operator_tk: &Token = parser_context.previous();
         let operator: TokenType = operator_tk.get_type();
         let span: Span = operator_tk.get_span();
 
@@ -1083,19 +1058,19 @@ fn build_reference<'instr>(
 }
 
 fn build_enum_field<'instr>(
-    parser_ctx: &mut ParserContext<'instr>,
+    parser_context: &mut ParserContext<'instr>,
     name: &'instr str,
     span: Span,
 ) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
-    let object: FoundSymbolId = parser_ctx.get_symbols().get_symbols_id(name, span)?;
+    let object: FoundSymbolId = parser_context.get_symbols().get_symbols_id(name, span)?;
     let enum_id: &str = object.expected_enum(span)?;
 
-    let union: EnumFields = parser_ctx
+    let union: EnumFields = parser_context
         .get_symbols()
         .get_enum_by_id(enum_id, span)?
         .get_fields();
 
-    let field_tk: &Token = parser_ctx.consume(
+    let field_tk: &Token = parser_context.consume(
         TokenType::Identifier,
         String::from("Syntax error"),
         String::from("Expected enum name."),
@@ -1127,25 +1102,25 @@ fn build_enum_field<'instr>(
 }
 
 fn build_address<'instr>(
-    parser_ctx: &mut ParserContext<'instr>,
+    parser_context: &mut ParserContext<'instr>,
     name: &'instr str,
     span: Span,
 ) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
     let mut indexes: Vec<ThrushStatement> = Vec::with_capacity(10);
 
     loop {
-        if parser_ctx.check(TokenType::RBrace) {
+        if parser_context.check(TokenType::RBrace) {
             break;
         }
 
-        let index: ThrushStatement = self::build_expr(parser_ctx)?;
+        let index: ThrushStatement = self::build_expr(parser_context)?;
 
         indexes.push(index);
 
-        if parser_ctx.check(TokenType::RBrace) {
+        if parser_context.check(TokenType::RBrace) {
             break;
         } else {
-            parser_ctx.consume(
+            parser_context.consume(
                 TokenType::Comma,
                 String::from("Syntax error"),
                 String::from("Expected ','."),
@@ -1153,7 +1128,7 @@ fn build_address<'instr>(
         }
     }
 
-    parser_ctx.consume(
+    parser_context.consume(
         TokenType::RBrace,
         String::from("Syntax error"),
         String::from("Expected '}'."),
@@ -1177,22 +1152,22 @@ fn build_address<'instr>(
 }
 
 fn build_function_call<'instr>(
-    parser_ctx: &mut ParserContext<'instr>,
+    parser_context: &mut ParserContext<'instr>,
     name: &'instr str,
     span: Span,
 ) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
-    let object: FoundSymbolId = parser_ctx.get_symbols().get_symbols_id(name, span)?;
+    let object: FoundSymbolId = parser_context.get_symbols().get_symbols_id(name, span)?;
 
     let function_type: ThrushType = if object.is_function_asm() {
         let asm_function_id: &str = object.expected_asm_function(span)?;
-        let asm_function: AssemblerFunction = parser_ctx
+        let asm_function: AssemblerFunction = parser_context
             .get_symbols()
             .get_asm_function_by_id(span, asm_function_id)?;
 
         asm_function.get_type()
     } else {
         let function_id: &str = object.expected_function(span)?;
-        let function: Function = parser_ctx
+        let function: Function = parser_context
             .get_symbols()
             .get_function_by_id(span, function_id)?;
 
@@ -1202,11 +1177,11 @@ fn build_function_call<'instr>(
     let mut args: Vec<ThrushStatement> = Vec::with_capacity(10);
 
     loop {
-        if parser_ctx.check(TokenType::RParen) {
+        if parser_context.check(TokenType::RParen) {
             break;
         }
 
-        let expression: ThrushStatement = self::build_expr(parser_ctx)?;
+        let expression: ThrushStatement = self::build_expr(parser_context)?;
 
         if expression.is_constructor() {
             return Err(ThrushCompilerIssue::Error(
@@ -1219,10 +1194,10 @@ fn build_function_call<'instr>(
 
         args.push(expression);
 
-        if parser_ctx.check(TokenType::RParen) {
+        if parser_context.check(TokenType::RParen) {
             break;
         } else {
-            parser_ctx.consume(
+            parser_context.consume(
                 TokenType::Comma,
                 String::from("Syntax error"),
                 String::from("Expected ','."),
@@ -1230,7 +1205,7 @@ fn build_function_call<'instr>(
         }
     }
 
-    parser_ctx.consume(
+    parser_context.consume(
         TokenType::RParen,
         String::from("Syntax error"),
         String::from("Expected ')'."),
@@ -1245,9 +1220,9 @@ fn build_function_call<'instr>(
 }
 
 fn build_this<'instr>(
-    parser_ctx: &mut ParserContext<'instr>,
+    parser_context: &mut ParserContext<'instr>,
 ) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
-    let this_tk: &Token = parser_ctx.consume(
+    let this_tk: &Token = parser_context.consume(
         TokenType::This,
         String::from("Syntax error"),
         String::from("Expected 'this' keyword."),
@@ -1255,7 +1230,7 @@ fn build_this<'instr>(
 
     let span: Span = this_tk.get_span();
 
-    if !parser_ctx
+    if !parser_context
         .get_type_ctx()
         .get_this_methods_type()
         .is_struct_type()
@@ -1268,7 +1243,7 @@ fn build_this<'instr>(
         ));
     }
 
-    if !parser_ctx
+    if !parser_context
         .get_mut_control_ctx()
         .get_instr_position()
         .is_method()
@@ -1281,7 +1256,7 @@ fn build_this<'instr>(
         ));
     }
 
-    if !parser_ctx.get_type_ctx().get_bind_instance() {
+    if !parser_context.get_type_ctx().get_bind_instance() {
         return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from(
@@ -1292,16 +1267,16 @@ fn build_this<'instr>(
         ));
     }
 
-    if parser_ctx.match_token(TokenType::Dot)? {
-        return build_property(parser_ctx, "this", span);
+    if parser_context.match_token(TokenType::Dot)? {
+        return build_property(parser_context, "this", span);
     }
 
-    let this_type: ThrushType = parser_ctx
+    let this_type: ThrushType = parser_context
         .get_type_ctx()
         .get_this_methods_type()
         .dissamble();
 
-    let is_mutable: bool = parser_ctx.match_token(TokenType::Mut)?;
+    let is_mutable: bool = parser_context.match_token(TokenType::Mut)?;
 
     Ok(ThrushStatement::This {
         kind: this_type,
@@ -1311,15 +1286,15 @@ fn build_this<'instr>(
 }
 
 fn build_constructor<'instr>(
-    parser_ctx: &mut ParserContext<'instr>,
+    parser_context: &mut ParserContext<'instr>,
 ) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
-    let new_tk: &Token = parser_ctx.consume(
+    let new_tk: &Token = parser_context.consume(
         TokenType::New,
         String::from("Syntax error"),
         String::from("Expected 'new' keyword."),
     )?;
 
-    if parser_ctx.is_unreacheable_code() {
+    if parser_context.is_unreacheable_code() {
         return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("Unreacheable code."),
@@ -1328,7 +1303,7 @@ fn build_constructor<'instr>(
         ));
     }
 
-    let name: &Token = parser_ctx.consume(
+    let name: &Token = parser_context.consume(
         TokenType::Identifier,
         String::from("Syntax error"),
         String::from("Expected structure reference."),
@@ -1337,10 +1312,10 @@ fn build_constructor<'instr>(
     let struct_name: &str = name.get_lexeme();
     let span: Span = name.get_span();
 
-    let struct_found: Struct = parser_ctx.get_symbols().get_struct(struct_name, span)?;
+    let struct_found: Struct = parser_context.get_symbols().get_struct(struct_name, span)?;
     let fields_required: usize = struct_found.get_fields().1.len();
 
-    parser_ctx.consume(
+    parser_context.consume(
         TokenType::LBrace,
         String::from("Syntax error"),
         String::from("Expected '{'."),
@@ -1351,16 +1326,16 @@ fn build_constructor<'instr>(
     let mut amount: usize = 0;
 
     loop {
-        if parser_ctx.check(TokenType::RBrace) {
+        if parser_context.check(TokenType::RBrace) {
             break;
         }
 
-        if parser_ctx.match_token(TokenType::Identifier)? {
-            let field_tk: &Token = parser_ctx.previous();
+        if parser_context.match_token(TokenType::Identifier)? {
+            let field_tk: &Token = parser_context.previous();
             let field_span: Span = field_tk.span;
             let field_name: &str = field_tk.get_lexeme();
 
-            parser_ctx.consume(
+            parser_context.consume(
                 TokenType::Colon,
                 String::from("Syntax error"),
                 String::from("Expected ':'."),
@@ -1384,7 +1359,7 @@ fn build_constructor<'instr>(
                 ));
             }
 
-            let expression: ThrushStatement = self::build_expr(parser_ctx)?;
+            let expression: ThrushStatement = self::build_expr(parser_context)?;
 
             if expression.is_constructor() {
                 return Err(ThrushCompilerIssue::Error(
@@ -1403,16 +1378,16 @@ fn build_constructor<'instr>(
 
             amount += 1;
 
-            if parser_ctx.check(TokenType::RBrace) {
+            if parser_context.check(TokenType::RBrace) {
                 break;
             }
 
-            if parser_ctx.match_token(TokenType::Comma)? {
-                if parser_ctx.check(TokenType::RBrace) {
+            if parser_context.match_token(TokenType::Comma)? {
+                if parser_context.check(TokenType::RBrace) {
                     break;
                 }
-            } else if parser_ctx.check_to(TokenType::Identifier, 0) {
-                parser_ctx.consume(
+            } else if parser_context.check_to(TokenType::Identifier, 0) {
+                parser_context.consume(
                     TokenType::Comma,
                     String::from("Syntax error"),
                     String::from("Expected ','."),
@@ -1422,7 +1397,7 @@ fn build_constructor<'instr>(
                     String::from("Syntax error"),
                     String::from("Expected identifier."),
                     None,
-                    parser_ctx.previous().get_span(),
+                    parser_context.previous().get_span(),
                 ));
             }
         } else {
@@ -1449,7 +1424,7 @@ fn build_constructor<'instr>(
         ));
     }
 
-    parser_ctx.consume(
+    parser_context.consume(
         TokenType::RBrace,
         String::from("Syntax error"),
         String::from("Expected '}'."),
@@ -1464,16 +1439,16 @@ fn build_constructor<'instr>(
 }
 
 pub fn build_deref<'instr>(
-    parser_ctx: &mut ParserContext<'instr>,
+    parser_context: &mut ParserContext<'instr>,
 ) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
-    let initial_deref_tk: &Token = parser_ctx.advance()?;
+    let initial_deref_tk: &Token = parser_context.advance()?;
     let span: Span = initial_deref_tk.span;
 
     let mut deref_count: u64 = 1;
 
     let mut current_expr: ThrushStatement = {
-        while parser_ctx.check(TokenType::Deref) {
-            parser_ctx.consume(
+        while parser_context.check(TokenType::Deref) {
+            parser_context.consume(
                 TokenType::Deref,
                 "Syntax error".into(),
                 "Expected 'deref'.".into(),
@@ -1481,7 +1456,7 @@ pub fn build_deref<'instr>(
             deref_count += 1;
         }
 
-        let expr: ThrushStatement = expression::build_expr(parser_ctx)?;
+        let expr: ThrushStatement = expression::build_expr(parser_context)?;
 
         expr
     };
@@ -1502,9 +1477,9 @@ pub fn build_deref<'instr>(
 }
 
 fn build_asm_code_block<'instr>(
-    parser_ctx: &mut ParserContext<'instr>,
+    parser_context: &mut ParserContext<'instr>,
 ) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
-    let asm_tk: &Token = parser_ctx.consume(
+    let asm_tk: &Token = parser_context.consume(
         TokenType::Asm,
         String::from("Syntax error"),
         String::from("Expected 'asm' keyword."),
@@ -1515,15 +1490,15 @@ fn build_asm_code_block<'instr>(
     let mut args: Vec<ThrushStatement> = Vec::with_capacity(10);
 
     let attributes: ThrushAttributes =
-        stmt::build_attributes(parser_ctx, &[TokenType::LParen, TokenType::LBrace])?;
+        stmt::build_attributes(parser_context, &[TokenType::LParen, TokenType::LBrace])?;
 
-    if parser_ctx.match_token(TokenType::LParen)? {
+    if parser_context.match_token(TokenType::LParen)? {
         loop {
-            if parser_ctx.check(TokenType::RParen) {
+            if parser_context.check(TokenType::RParen) {
                 break;
             }
 
-            let expr: ThrushStatement = self::build_expression(parser_ctx)?;
+            let expr: ThrushStatement = self::build_expression(parser_context)?;
 
             if expr.is_constructor() {
                 return Err(ThrushCompilerIssue::Error(
@@ -1536,10 +1511,10 @@ fn build_asm_code_block<'instr>(
 
             args.push(expr);
 
-            if parser_ctx.check(TokenType::RParen) {
+            if parser_context.check(TokenType::RParen) {
                 break;
             } else {
-                parser_ctx.consume(
+                parser_context.consume(
                     TokenType::Colon,
                     String::from("Syntax error"),
                     String::from("Expected ','."),
@@ -1547,14 +1522,14 @@ fn build_asm_code_block<'instr>(
             }
         }
 
-        parser_ctx.consume(
+        parser_context.consume(
             TokenType::RParen,
             String::from("Syntax error"),
             String::from("Expected ')'."),
         )?;
     }
 
-    parser_ctx.consume(
+    parser_context.consume(
         TokenType::LBrace,
         String::from("Syntax error"),
         String::from("Expected '{'."),
@@ -1564,11 +1539,11 @@ fn build_asm_code_block<'instr>(
     let mut assembler_pos: usize = 0;
 
     loop {
-        if parser_ctx.check(TokenType::RBrace) {
+        if parser_context.check(TokenType::RBrace) {
             break;
         }
 
-        let raw_str: ThrushStatement = self::build_expr(parser_ctx)?;
+        let raw_str: ThrushStatement = self::build_expr(parser_context)?;
         let raw_str_span: Span = raw_str.get_span();
 
         if !raw_str.is_str() {
@@ -1588,10 +1563,10 @@ fn build_asm_code_block<'instr>(
 
         assembler.push_str(assembly);
 
-        if parser_ctx.check(TokenType::RBrace) {
+        if parser_context.check(TokenType::RBrace) {
             break;
         } else {
-            parser_ctx.consume(
+            parser_context.consume(
                 TokenType::Comma,
                 String::from("Syntax error"),
                 String::from("Expected ','."),
@@ -1601,13 +1576,13 @@ fn build_asm_code_block<'instr>(
         assembler_pos += 1;
     }
 
-    parser_ctx.consume(
+    parser_context.consume(
         TokenType::RBrace,
         String::from("Syntax error"),
         String::from("Expected '}'."),
     )?;
 
-    parser_ctx.consume(
+    parser_context.consume(
         TokenType::LBrace,
         String::from("Syntax error"),
         String::from("Expected '{'."),
@@ -1617,11 +1592,11 @@ fn build_asm_code_block<'instr>(
     let mut constraint_pos: usize = 0;
 
     loop {
-        if parser_ctx.check(TokenType::RBrace) {
+        if parser_context.check(TokenType::RBrace) {
             break;
         }
 
-        let raw_str: ThrushStatement = self::build_expr(parser_ctx)?;
+        let raw_str: ThrushStatement = self::build_expr(parser_context)?;
         let raw_str_span: Span = raw_str.get_span();
 
         if !raw_str.is_str() {
@@ -1641,10 +1616,10 @@ fn build_asm_code_block<'instr>(
 
         constraints.push_str(constraint);
 
-        if parser_ctx.check(TokenType::RBrace) {
+        if parser_context.check(TokenType::RBrace) {
             break;
         } else {
-            parser_ctx.consume(
+            parser_context.consume(
                 TokenType::Comma,
                 String::from("Syntax error"),
                 String::from("Expected ','."),
@@ -1654,13 +1629,13 @@ fn build_asm_code_block<'instr>(
         constraint_pos += 1;
     }
 
-    parser_ctx.consume(
+    parser_context.consume(
         TokenType::RBrace,
         String::from("Syntax error"),
         String::from("Expected '}'."),
     )?;
 
-    let asm_type: ThrushType = typegen::build_type(parser_ctx)?;
+    let asm_type: ThrushType = typegen::build_type(parser_context)?;
 
     Ok(ThrushStatement::AsmValue {
         assembler,
@@ -1673,9 +1648,9 @@ fn build_asm_code_block<'instr>(
 }
 
 fn build_array<'instr>(
-    parser_ctx: &mut ParserContext<'instr>,
+    parser_context: &mut ParserContext<'instr>,
 ) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
-    let array_start_tk: &Token = parser_ctx.consume(
+    let array_start_tk: &Token = parser_context.consume(
         TokenType::LBracket,
         String::from("Syntax error"),
         String::from("Expected '['."),
@@ -1687,11 +1662,11 @@ fn build_array<'instr>(
     let mut items: Vec<ThrushStatement> = Vec::with_capacity(100);
 
     loop {
-        if parser_ctx.check(TokenType::RBracket) {
+        if parser_context.check(TokenType::RBracket) {
             break;
         }
 
-        let item: ThrushStatement = self::build_expr(parser_ctx)?;
+        let item: ThrushStatement = self::build_expr(parser_context)?;
 
         if item.is_constructor() {
             return Err(ThrushCompilerIssue::Error(
@@ -1704,10 +1679,10 @@ fn build_array<'instr>(
 
         items.push(item);
 
-        if parser_ctx.check(TokenType::RBracket) {
+        if parser_context.check(TokenType::RBracket) {
             break;
         } else {
-            parser_ctx.consume(
+            parser_context.consume(
                 TokenType::Comma,
                 String::from("Syntax error"),
                 String::from("Expected ','."),
@@ -1715,7 +1690,7 @@ fn build_array<'instr>(
         }
     }
 
-    parser_ctx.consume(
+    parser_context.consume(
         TokenType::RBracket,
         String::from("Syntax error"),
         String::from("Expected ']'."),
@@ -1725,7 +1700,9 @@ fn build_array<'instr>(
         let x_type: &ThrushType = x.get_value_type().unwrap_or(&ThrushType::Void);
         let y_type: &ThrushType = y.get_value_type().unwrap_or(&ThrushType::Void);
 
-        x_type.get_cast_herarchy().cmp(&y_type.get_cast_herarchy())
+        x_type
+            .get_array_type_herarchy()
+            .cmp(&y_type.get_array_type_herarchy())
     }) {
         if let Ok(size) = u32::try_from(items.len()) {
             array_type = ThrushType::FixedArray(item.get_value_type()?.clone().into(), size)
@@ -1742,6 +1719,68 @@ fn build_array<'instr>(
     Ok(ThrushStatement::Array {
         items,
         kind: array_type,
+        span,
+    })
+}
+
+pub fn build_index<'instr>(
+    parser_context: &mut ParserContext<'instr>,
+    name: &'instr str,
+    span: Span,
+) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
+    let reference: ThrushStatement = self::build_reference(parser_context, name, span)?;
+    let reference_type: &ThrushType = reference.get_value_type()?;
+
+    let mut indexes: Vec<ThrushStatement> = Vec::with_capacity(50);
+
+    loop {
+        if parser_context.check(TokenType::RBracket) {
+            break;
+        }
+
+        let indexe: ThrushStatement = expression::build_expr(parser_context)?;
+
+        indexes.push(indexe);
+
+        if parser_context.check(TokenType::RBracket) {
+            break;
+        } else {
+            parser_context.consume(
+                TokenType::Comma,
+                String::from("Syntax error"),
+                String::from("Expected ','."),
+            )?;
+        }
+    }
+
+    parser_context.consume(
+        TokenType::RBracket,
+        String::from("Syntax error"),
+        String::from("Expected ']'."),
+    )?;
+
+    let mut index_type: ThrushType = ThrushType::Mut(
+        reference_type
+            .get_type_with_depth(indexes.len())
+            .clone()
+            .into(),
+    );
+
+    if parser_context.match_token(TokenType::LParen)? {
+        index_type = typegen::build_type(parser_context)?;
+
+        parser_context.consume(
+            TokenType::RParen,
+            String::from("Syntax error"),
+            String::from("Expected ')'."),
+        )?;
+    }
+
+    Ok(ThrushStatement::Index {
+        name,
+        reference: reference.into(),
+        indexes,
+        kind: index_type,
         span,
     })
 }

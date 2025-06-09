@@ -1,8 +1,6 @@
-use std::rc::Rc;
-
 use crate::backend::llvm::compiler::attributes::LLVMAttribute;
 use crate::backend::llvm::compiler::memory::{self, LLVMAllocationSite, SymbolAllocated};
-use crate::backend::llvm::compiler::{binaryop, builtins, cast, unaryop, utils};
+use crate::backend::llvm::compiler::{binaryop, builtins, cast, unaryop, utils, valuegen};
 use crate::backend::types::representations::LLVMFunction;
 use crate::core::console::logging::{self, LoggingType};
 use crate::frontend::types::lexer::ThrushType;
@@ -154,10 +152,12 @@ pub fn compile<'ctx>(
         ..
     } = expr
     {
-        let mut float: FloatValue = float(llvm_builder, llvm_context, kind, *value, *signed);
+        let cast: ThrushType = cast.defer_all();
+
+        let mut float: FloatValue = self::float(llvm_builder, llvm_context, kind, *value, *signed);
 
         if changes.do_cast() {
-            if let Some(casted_float) = cast::float(context, cast, kind, float.into()) {
+            if let Some(casted_float) = cast::float(context, &cast, kind, float.into()) {
                 float = casted_float.into_float_value();
             }
         }
@@ -172,10 +172,12 @@ pub fn compile<'ctx>(
         ..
     } = expr
     {
+        let cast: ThrushType = cast.defer_all();
+
         let mut integer: IntValue = self::integer(llvm_context, kind, *value, *signed);
 
         if changes.do_cast() {
-            if let Some(casted_integer) = cast::integer(context, cast, kind, integer.into()) {
+            if let Some(casted_integer) = cast::integer(context, &cast, kind, integer.into()) {
                 integer = casted_integer.into_int_value();
             }
         }
@@ -399,7 +401,7 @@ pub fn compile<'ctx>(
     if let ThrushStatement::Address { name, indexes, .. } = expr {
         let symbol: SymbolAllocated = context.get_allocated_symbol(name);
 
-        let compiled_indexes: Vec<IntValue> = indexes
+        let indexes: Vec<IntValue> = indexes
             .iter()
             .map(|indexe| {
                 self::compile(
@@ -412,9 +414,7 @@ pub fn compile<'ctx>(
             })
             .collect();
 
-        return symbol
-            .gep(llvm_context, llvm_builder, &compiled_indexes)
-            .into();
+        return symbol.gep(llvm_context, llvm_builder, &indexes).into();
     }
 
     /* ######################################################################
@@ -665,12 +665,21 @@ pub fn compile<'ctx>(
         ..
     } = expr
     {
-        let source_name: Option<&str> = source.0;
-        let source_expr: Option<&Rc<ThrushStatement<'_>>> = source.1.as_ref();
-
         let value_type: &ThrushType = value.get_type_unwrapped();
 
-        if let Some(expr) = source_expr {
+        if let Some(reference) = &source.0 {
+            let symbol: SymbolAllocated =
+                context.get_allocated_symbol(reference.get_unwrapped_reference_name());
+
+            let value: BasicValueEnum =
+                self::compile(context, value, kind, CompileChanges::new(false, true));
+
+            symbol.store(context, value);
+
+            return value;
+        }
+
+        if let Some(expr) = &source.1 {
             let source: BasicValueEnum =
                 self::compile(context, expr, kind, CompileChanges::new(true, true));
 
@@ -680,17 +689,6 @@ pub fn compile<'ctx>(
             memory::store_anon(context, source.into_pointer_value(), value_type, value);
 
             return source;
-        }
-
-        if let Some(name) = source_name {
-            let symbol: SymbolAllocated = context.get_allocated_symbol(name);
-
-            let value: BasicValueEnum =
-                self::compile(context, value, kind, CompileChanges::new(false, true));
-
-            symbol.store(context, value);
-
-            return value;
         }
 
         logging::log(LoggingType::Panic, "Could not get value of an mutation.");
@@ -717,7 +715,50 @@ pub fn compile<'ctx>(
         }
     }
 
-    println!("{:?}", expr);
+    if let ThrushStatement::Index {
+        name,
+        indexes,
+        kind,
+        ..
+    } = expr
+    {
+        let symbol: SymbolAllocated = context.get_allocated_symbol(name);
+
+        let mut ordered_indexes: Vec<IntValue> = Vec::with_capacity(indexes.len() * 2);
+
+        indexes.iter().for_each(|indexe| {
+            let inner: IntValue = valuegen::integer(llvm_context, &ThrushType::U32, 0, false);
+
+            let index: IntValue = self::compile(
+                context,
+                indexe,
+                &ThrushType::U32,
+                CompileChanges::new(false, true),
+            )
+            .into_int_value();
+
+            ordered_indexes.push(inner);
+            ordered_indexes.push(index);
+        });
+
+        let gep: PointerValue = symbol.gep(llvm_context, llvm_builder, &ordered_indexes);
+
+        if changes.load_raw() {
+            return gep.into();
+        }
+
+        if kind.is_mut_type() {
+            return gep.into();
+        }
+
+        return memory::load_anon(context, kind, gep);
+    }
+
+    logging::log(
+        LoggingType::Bug,
+        &format!("Unable to compile unknown expression: '{}'.", expr),
+    );
+
     unreachable!()
 }
 

@@ -499,48 +499,50 @@ impl<'type_checker> TypeChecker<'type_checker> {
             ));
         }
 
-        if let ThrushStatement::Mut {
-            source,
-            value,
-            span,
-            ..
-        } = stmt
-        {
-            if let (Some(local_name), None) = source {
-                if let Some(local_type) = self.symbols.get_local(local_name) {
-                    if let Err(error) = self.validate_types(
-                        local_type,
-                        value.get_value_type()?,
-                        Some(value),
-                        None,
-                        span,
-                        TypeCheckerTypeCheckSource::default(),
-                    ) {
-                        self.add_error(error);
-                    }
+        if let ThrushStatement::Mut { source, span, .. } = stmt {
+            if let (Some(reference), None) = source {
+                let reference_type: &ThrushType = reference.get_value_type()?;
 
-                    return Ok(());
+                if !reference_type.is_ptr_type() && !reference_type.is_mut_type() {
+                    self.add_error(ThrushCompilerIssue::Error(
+                        "Syntax error".into(),
+                        "Expected 'mut T', 'ptr<T>', or 'ptr' type.".into(),
+                        None,
+                        *span,
+                    ));
                 }
 
-                self.errors.push(ThrushCompilerIssue::Bug(
-                    String::from("Could not catch a local"),
-                    String::from("A location could not be obtained for processing."),
-                    *span,
-                    CompilationPosition::TypeChecker,
-                    line!(),
-                ));
+                if !reference.is_mutable() {
+                    return Err(ThrushCompilerIssue::Error(
+                        "Syntax error".into(),
+                        "Expected mutable reference.".into(),
+                        None,
+                        reference.get_span(),
+                    ));
+                }
+
+                return Ok(());
             }
 
-            if let (None, Some(expression)) = source {
-                if let Err(error) = self.validate_types(
-                    expression.get_value_type()?,
-                    value.get_value_type()?,
-                    Some(value),
-                    None,
-                    span,
-                    TypeCheckerTypeCheckSource::default(),
-                ) {
-                    self.add_error(error);
+            if let (None, Some(source)) = source {
+                let source_type: &ThrushType = source.get_value_type()?;
+
+                if !source_type.is_ptr_type() && !source_type.is_mut_type() {
+                    self.add_error(ThrushCompilerIssue::Error(
+                        "Syntax error".into(),
+                        "Expected 'mut T', 'ptr<T>', or 'ptr' type.".into(),
+                        None,
+                        *span,
+                    ));
+                }
+
+                if !source.is_mutable() {
+                    return Err(ThrushCompilerIssue::Error(
+                        "Syntax error".into(),
+                        "Expected mutable reference.".into(),
+                        None,
+                        source.get_span(),
+                    ));
                 }
 
                 return Ok(());
@@ -814,6 +816,32 @@ impl<'type_checker> TypeChecker<'type_checker> {
 
                 self.analyze_stmt(item)?;
             }
+
+            return Ok(());
+        }
+
+        if let ThrushStatement::Index {
+            reference,
+            indexes,
+            span,
+            ..
+        } = stmt
+        {
+            if !reference.is_local_reference()
+                && !reference.is_function_parameter_reference_allocated()
+                && !reference.is_lli_reference_allocated()
+            {
+                self.add_error(ThrushCompilerIssue::Error(
+                    "Syntax error".into(),
+                    "Expected a direct reference not a value.".into(),
+                    None,
+                    *span,
+                ));
+            }
+
+            indexes
+                .iter()
+                .try_for_each(|indexe| self.analyze_stmt(indexe))?;
 
             return Ok(());
         }

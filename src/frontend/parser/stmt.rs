@@ -711,8 +711,8 @@ fn build_conditional<'instr>(
         }
 
         elfs.push(ThrushStatement::Elif {
-            cond: Rc::new(elif_condition),
-            block: Rc::new(elif_body),
+            cond: elif_condition.into(),
+            block: elif_body.into(),
             span,
         });
     }
@@ -1841,13 +1841,13 @@ pub fn build_function<'instr>(
 
     parser_ctx.get_mut_control_ctx().set_inside_function(true);
 
-    let function_body: Rc<ThrushStatement> = self::build_block(parser_ctx)?.into();
+    let function_body: ThrushStatement = self::build_block(parser_ctx)?;
 
     parser_ctx.get_mut_symbols().end_parameters();
     parser_ctx.get_mut_control_ctx().set_inside_function(false);
 
     if let ThrushStatement::Function { body, .. } = &mut function {
-        *body = function_body;
+        *body = function_body.into();
     }
 
     Ok(function)

@@ -59,8 +59,17 @@ pub enum ThrushStatement<'ctx> {
         span: Span,
     },
 
+    // Arrays
     Array {
         items: Vec<ThrushStatement<'ctx>>,
+        kind: ThrushType,
+        span: Span,
+    },
+
+    Index {
+        name: &'ctx str,
+        reference: Rc<ThrushStatement<'ctx>>,
+        indexes: Vec<ThrushStatement<'ctx>>,
         kind: ThrushType,
         span: Span,
     },
@@ -117,9 +126,9 @@ pub enum ThrushStatement<'ctx> {
 
     Property {
         name: &'ctx str,
+        reference: Rc<ThrushStatement<'ctx>>,
         indexes: Vec<(ThrushType, u32)>,
         kind: ThrushType,
-        is_mutable: bool,
         span: Span,
     },
 
@@ -258,12 +267,16 @@ pub enum ThrushStatement<'ctx> {
         kind: ThrushType,
         span: Span,
         identificator: ReferenceIndentificator,
+        is_mutable: bool,
         is_allocated: bool,
     },
 
     // Mutation
     Mut {
-        source: (Option<&'ctx str>, Option<Rc<ThrushStatement<'ctx>>>),
+        source: (
+            Option<Rc<ThrushStatement<'ctx>>>,
+            Option<Rc<ThrushStatement<'ctx>>>,
+        ),
         value: Rc<ThrushStatement<'ctx>>,
         kind: ThrushType,
         span: Span,
@@ -417,6 +430,8 @@ impl<'ctx> ThrushStatement<'ctx> {
             ThrushStatement::MethodCall { kind, .. } => Ok(kind),
             ThrushStatement::BindParameter { kind, .. } => Ok(kind),
             ThrushStatement::EnumValue { kind, .. } => Ok(kind),
+            ThrushStatement::Array { kind, .. } => Ok(kind),
+            ThrushStatement::Index { kind, .. } => Ok(kind),
 
             _ => Err(ThrushCompilerIssue::Error(
                 String::from("Syntax error"),
@@ -442,6 +457,7 @@ impl<'ctx> ThrushStatement<'ctx> {
             ThrushStatement::Boolean { kind, .. } => Ok(kind),
             ThrushStatement::Char { kind, .. } => Ok(kind),
             ThrushStatement::Array { kind, .. } => Ok(kind),
+            ThrushStatement::Index { kind, .. } => Ok(kind),
             ThrushStatement::Address { kind, .. } => Ok(kind),
             ThrushStatement::Constructor { kind, .. } => Ok(kind),
             ThrushStatement::Load { kind, .. } => Ok(kind),
@@ -541,6 +557,7 @@ impl<'ctx> ThrushStatement<'ctx> {
             ThrushStatement::Str { span, .. } => *span,
             ThrushStatement::Boolean { span, .. } => *span,
             ThrushStatement::Array { span, .. } => *span,
+            ThrushStatement::Index { span, .. } => *span,
             ThrushStatement::Char { span, .. } => *span,
             ThrushStatement::Address { span, .. } => *span,
             ThrushStatement::Constructor { span, .. } => *span,
@@ -583,11 +600,23 @@ impl<'ctx> ThrushStatement<'ctx> {
     }
 
     pub fn is_mutable(&self) -> bool {
-        match self {
-            ThrushStatement::Local { is_mutable, .. } => *is_mutable,
-            ThrushStatement::Property { is_mutable, .. } => *is_mutable,
-            _ => false,
+        if let ThrushStatement::Local { is_mutable, .. } = self {
+            return *is_mutable;
         }
+
+        if let ThrushStatement::Reference { is_mutable, .. } = self {
+            return *is_mutable;
+        }
+
+        if let ThrushStatement::Property { reference, .. } = self {
+            return reference.is_mutable();
+        }
+
+        if let ThrushStatement::Index { reference, .. } = self {
+            return reference.is_mutable();
+        }
+
+        false
     }
 
     pub fn as_asm_function_representation(&self) -> AssemblerFunctionRepresentation {
@@ -651,7 +680,7 @@ impl<'ctx> ThrushStatement<'ctx> {
 
         Err(ThrushCompilerIssue::Bug(
             String::from("Reference not caught"),
-            String::from("Expected a local reference."),
+            String::from("Expected a reference."),
             self.get_span(),
             CompilationPosition::Parser,
             line!(),
@@ -700,7 +729,7 @@ impl<'ctx> ThrushStatement<'ctx> {
 
             return Err(ThrushCompilerIssue::Bug(
                 String::from("Not parsed"),
-                String::from("Could not process a str as a utf-8 value.."),
+                String::from("Could not process a str as a utf-8 value."),
                 self.get_span(),
                 CompilationPosition::Parser,
                 line!(),
@@ -714,6 +743,15 @@ impl<'ctx> ThrushStatement<'ctx> {
             CompilationPosition::Parser,
             line!(),
         ))
+    }
+
+    pub fn get_unwrapped_reference_name(&self) -> &str {
+        if let ThrushStatement::Reference { name, .. } = self {
+            return name;
+        }
+
+        logging::log(LoggingType::Bug, "Unable to get a reference name.");
+        unreachable!()
     }
 
     pub fn get_integer_value(&self) -> Result<u64, ThrushCompilerIssue> {
@@ -893,6 +931,41 @@ impl ThrushStatement<'_> {
             ThrushStatement::Reference { .. } => false,
             _ => true,
         }
+    }
+
+    #[inline]
+    pub const fn is_local_reference(&self) -> bool {
+        matches!(
+            self,
+            ThrushStatement::Reference {
+                identificator: ReferenceIndentificator::Local,
+                ..
+            }
+        )
+    }
+
+    #[inline]
+    pub const fn is_function_parameter_reference_allocated(&self) -> bool {
+        matches!(
+            self,
+            ThrushStatement::Reference {
+                identificator: ReferenceIndentificator::FunctionParameter,
+                kind: ThrushType::Ptr(_) | ThrushType::Mut(_),
+                ..
+            }
+        )
+    }
+
+    #[inline]
+    pub const fn is_lli_reference_allocated(&self) -> bool {
+        matches!(
+            self,
+            ThrushStatement::Reference {
+                identificator: ReferenceIndentificator::LowLevelInstruction,
+                kind: ThrushType::Ptr(_) | ThrushType::Addr,
+                ..
+            }
+        )
     }
 
     #[inline]
