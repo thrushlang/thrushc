@@ -5,7 +5,7 @@ use crate::{
         lexer::{span::Span, token::Token, tokentype::TokenType},
         parser::expression,
         types::{
-            lexer::{ThrushType, decompose_struct_property, traits::ThrushTypeMutableExtensions},
+            lexer::{ThrushType, decompose_struct_property},
             parser::stmts::{
                 ident::ReferenceIndentificator,
                 sites::LLIAllocationSite,
@@ -342,40 +342,6 @@ fn primary<'instr>(
 
         TokenType::Deref => self::build_deref(parser_context)?,
 
-        TokenType::RawPtr => {
-            let raw_ptr_tk: &Token = parser_context.advance()?;
-            let span: Span = raw_ptr_tk.get_span();
-
-            let reference_tk: &Token = parser_context.consume(
-                TokenType::Identifier,
-                "Syntax error".into(),
-                "Expected 'reference'.".into(),
-            )?;
-
-            let ref_name: &str = reference_tk.get_lexeme();
-            let ref_span: Span = reference_tk.get_span();
-
-            let reference: ThrushStatement =
-                self::build_reference(parser_context, ref_name, ref_span)?;
-
-            let mut reference_type: ThrushType = reference.get_value_type()?.clone();
-
-            if !reference_type.is_ptr_type() {
-                if reference_type.is_mut_type() {
-                    let defered_type: ThrushType = reference_type.defer_mut_all();
-                    reference_type = ThrushType::Ptr(Some(defered_type.into()));
-                } else {
-                    reference_type = ThrushType::Ptr(Some(reference_type.into()));
-                }
-            }
-
-            ThrushStatement::RawPtr {
-                from: reference.into(),
-                kind: reference_type,
-                span,
-            }
-        }
-
         TokenType::Alloc => {
             let alloc_tk: &Token = parser_context.advance()?;
             let span: Span = alloc_tk.get_span();
@@ -478,10 +444,9 @@ fn primary<'instr>(
 
             if parser_context.match_token(TokenType::Identifier)? {
                 let identifier_tk: &Token = parser_context.previous();
-
                 let name: &str = identifier_tk.get_lexeme();
 
-                self::build_reference(parser_context, name, span)?;
+                let reference: ThrushStatement = self::build_reference(parser_context, name, span)?;
 
                 parser_context.consume(
                     TokenType::Comma,
@@ -494,7 +459,7 @@ fn primary<'instr>(
                 let value: ThrushStatement = self::build_expr(parser_context)?;
 
                 return Ok(ThrushStatement::Write {
-                    write_to: (Some(name), None),
+                    write_to: (Some((name, reference.into())), None),
                     write_value: value.clone().into(),
                     write_type,
                     span,
@@ -521,24 +486,40 @@ fn primary<'instr>(
         }
 
         TokenType::Address => {
-            parser_context.only_advance()?;
+            let address_tk: &Token = parser_context.advance()?;
+            let address_span: Span = address_tk.get_span();
 
-            let identifier_tk: &Token = parser_context.consume(
-                TokenType::Identifier,
-                "Syntax error".into(),
-                "Expected 'identifier'.".into(),
-            )?;
+            if parser_context.match_token(TokenType::Identifier)? {
+                let identifier_tk: &Token = parser_context.previous();
 
-            let name: &str = identifier_tk.get_lexeme();
-            let span: Span = identifier_tk.get_span();
+                let name: &str = identifier_tk.get_lexeme();
+                let span: Span = identifier_tk.get_span();
 
-            parser_context.consume(
-                TokenType::LBrace,
-                "Syntax error".into(),
-                "Expected '{'.".into(),
-            )?;
+                let reference: ThrushStatement = self::build_reference(parser_context, name, span)?;
 
-            return self::build_address(parser_context, name, span);
+                let indexes: Vec<ThrushStatement> =
+                    self::build_address_indexes(parser_context, span)?;
+
+                return Ok(ThrushStatement::Address {
+                    address_to: (Some((name, reference.into())), None),
+                    indexes,
+                    kind: ThrushType::Addr,
+                    span: address_span,
+                });
+            }
+
+            let expr: ThrushStatement = self::build_expr(parser_context)?;
+            let expr_span: Span = expr.get_span();
+
+            let indexes: Vec<ThrushStatement> =
+                self::build_address_indexes(parser_context, expr_span)?;
+
+            return Ok(ThrushStatement::Address {
+                address_to: (None, Some(expr.into())),
+                indexes,
+                kind: ThrushType::Addr,
+                span: address_span,
+            });
         }
 
         TokenType::PlusPlus => {
@@ -683,20 +664,22 @@ fn primary<'instr>(
 
             if parser_context.match_token(TokenType::Eq)? {
                 let reference: ThrushStatement = self::build_reference(parser_context, name, span)?;
-                let reference_type: &ThrushType = reference.get_value_type()?;
+                let reference_type: ThrushType = reference.get_value_type()?.clone();
 
                 let expression: ThrushStatement = self::build_expr(parser_context)?;
 
                 return Ok(ThrushStatement::Mut {
                     source: (Some((name, reference.clone().into())), None),
                     value: expression.into(),
-                    kind: reference_type.clone(),
+                    kind: ThrushType::Void,
+                    cast_type: reference_type,
                     span,
                 });
             }
 
             if parser_context.match_token(TokenType::LBracket)? {
                 let index: ThrushStatement = self::build_index(parser_context, name, span)?;
+                let index_type: ThrushType = index.get_value_type()?.clone();
 
                 if parser_context.match_token(TokenType::Eq)? {
                     let expr: ThrushStatement = self::build_expr(parser_context)?;
@@ -704,7 +687,8 @@ fn primary<'instr>(
                     return Ok(ThrushStatement::Mut {
                         source: (None, Some(index.clone().into())),
                         value: expr.into(),
-                        kind: index.get_value_type()?.clone(),
+                        kind: ThrushType::Void,
+                        cast_type: index_type,
                         span,
                     });
                 }
@@ -722,6 +706,7 @@ fn primary<'instr>(
 
             if parser_context.match_token(TokenType::Dot)? {
                 let property: ThrushStatement = self::build_property(parser_context, name, span)?;
+                let property_type: ThrushType = property.get_value_type()?.clone();
 
                 if parser_context.match_token(TokenType::Eq)? {
                     let expr: ThrushStatement = self::build_expr(parser_context)?;
@@ -729,7 +714,8 @@ fn primary<'instr>(
                     return Ok(ThrushStatement::Mut {
                         source: (None, Some(property.clone().into())),
                         value: expr.into(),
-                        kind: property.get_value_type()?.clone(),
+                        kind: ThrushType::Void,
+                        cast_type: property_type,
                         span,
                     });
                 }
@@ -1104,59 +1090,6 @@ fn build_enum_field<'instr>(
         name: canonical_name,
         value: field_value.into(),
         kind: field_type,
-        span,
-    })
-}
-
-fn build_address<'instr>(
-    parser_context: &mut ParserContext<'instr>,
-    name: &'instr str,
-    span: Span,
-) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
-    let reference: ThrushStatement = self::build_reference(parser_context, name, span)?;
-
-    let mut indexes: Vec<ThrushStatement> = Vec::with_capacity(10);
-
-    loop {
-        if parser_context.check(TokenType::RBrace) {
-            break;
-        }
-
-        let index: ThrushStatement = self::build_expr(parser_context)?;
-
-        indexes.push(index);
-
-        if parser_context.check(TokenType::RBrace) {
-            break;
-        } else {
-            parser_context.consume(
-                TokenType::Comma,
-                String::from("Syntax error"),
-                String::from("Expected ','."),
-            )?;
-        }
-    }
-
-    parser_context.consume(
-        TokenType::RBrace,
-        String::from("Syntax error"),
-        String::from("Expected '}'."),
-    )?;
-
-    if indexes.is_empty() {
-        return Err(ThrushCompilerIssue::Error(
-            String::from("Syntax error"),
-            "At least one index was expected.".into(),
-            None,
-            span,
-        ));
-    }
-
-    Ok(ThrushStatement::Address {
-        name,
-        reference: reference.into(),
-        indexes,
-        kind: ThrushType::Addr,
         span,
     })
 }
@@ -1793,4 +1726,54 @@ pub fn build_index<'instr>(
         kind: index_type,
         span,
     })
+}
+
+fn build_address_indexes<'instr>(
+    parser_context: &mut ParserContext<'instr>,
+    span: Span,
+) -> Result<Vec<ThrushStatement<'instr>>, ThrushCompilerIssue> {
+    parser_context.consume(
+        TokenType::LBrace,
+        String::from("Syntax error"),
+        String::from("Expected '{'."),
+    )?;
+
+    let mut indexes: Vec<ThrushStatement> = Vec::with_capacity(10);
+
+    loop {
+        if parser_context.check(TokenType::RBrace) {
+            break;
+        }
+
+        let index: ThrushStatement = self::build_expr(parser_context)?;
+
+        indexes.push(index);
+
+        if parser_context.check(TokenType::RBrace) {
+            break;
+        } else {
+            parser_context.consume(
+                TokenType::Comma,
+                String::from("Syntax error"),
+                String::from("Expected ','."),
+            )?;
+        }
+    }
+
+    parser_context.consume(
+        TokenType::RBrace,
+        String::from("Syntax error"),
+        String::from("Expected '}'."),
+    )?;
+
+    if indexes.is_empty() {
+        return Err(ThrushCompilerIssue::Error(
+            String::from("Syntax error"),
+            "At least one index was expected.".into(),
+            None,
+            span,
+        ));
+    }
+
+    Ok(indexes)
 }

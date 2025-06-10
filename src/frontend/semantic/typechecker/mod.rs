@@ -66,6 +66,11 @@ impl<'type_checker> TypeChecker<'type_checker> {
             self.advance();
         }
 
+        self.warnings.iter().for_each(|warn| {
+            self.diagnostician
+                .build_diagnostic(warn, LoggingType::Warning);
+        });
+
         if !self.errors.is_empty() {
             self.errors.iter().for_each(|error| {
                 self.diagnostician
@@ -583,19 +588,6 @@ impl<'type_checker> TypeChecker<'type_checker> {
             return Ok(());
         }
 
-        if let ThrushStatement::RawPtr { from, span, .. } = stmt {
-            if !from.is_reference() {
-                self.add_error(ThrushCompilerIssue::Error(
-                    "Syntax error".into(),
-                    "A reference to a value was expected.".into(),
-                    None,
-                    *span,
-                ));
-            }
-
-            return Ok(());
-        }
-
         /* ######################################################################
 
 
@@ -613,11 +605,47 @@ impl<'type_checker> TypeChecker<'type_checker> {
         ########################################################################*/
 
         if let ThrushStatement::Write {
+            write_to,
             write_value,
             write_type,
             ..
         } = stmt
         {
+            if let Some(any_reference) = &write_to.0 {
+                let reference: &ThrushStatement = &any_reference.1;
+                let reference_type: &ThrushType = reference.get_value_type()?;
+                let reference_span: Span = reference.get_span();
+
+                if !reference_type.is_ptr_type()
+                    && !reference_type.is_address_type()
+                    && !reference_type.is_mut_type()
+                {
+                    self.add_error(ThrushCompilerIssue::Error(
+                        "Syntax error".into(),
+                        "Expected 'ptr<T>', 'ptr', 'addr', or 'mut T' type.".into(),
+                        None,
+                        reference_span,
+                    ));
+                }
+            }
+
+            if let Some(expr) = &write_to.1 {
+                let expr_type: &ThrushType = expr.get_value_type()?;
+                let expr_span: Span = expr.get_span();
+
+                if !expr_type.is_ptr_type()
+                    && !expr_type.is_address_type()
+                    && !expr_type.is_mut_type()
+                {
+                    self.add_error(ThrushCompilerIssue::Error(
+                        "Syntax error".into(),
+                        "Expected 'ptr<T>', 'ptr', 'addr', or 'mut T' type.".into(),
+                        None,
+                        expr_span,
+                    ));
+                }
+            }
+
             let write_value_type: &ThrushType = write_value.get_value_type()?;
             let write_value_span: Span = write_value.get_span();
 
@@ -636,57 +664,14 @@ impl<'type_checker> TypeChecker<'type_checker> {
         }
 
         if let ThrushStatement::Address {
-            reference,
+            address_to,
             indexes,
             span,
             ..
         } = stmt
         {
-            let reference_type: &ThrushType = reference.get_value_type()?;
-
-            if !reference_type.is_ptr_type() && !reference_type.is_address_type() {
-                self.add_error(ThrushCompilerIssue::Error(
-                    "Syntax error".into(),
-                    "Expected 'ptr<T>', 'ptr' or addr type.".into(),
-                    None,
-                    *span,
-                ));
-            }
-
-            if reference_type.is_ptr_type() && !reference_type.is_typed_ptr() {
-                self.add_error(ThrushCompilerIssue::Error(
-                    "Syntax error".into(),
-                    "Expected raw typed pointer ptr<T>.".into(),
-                    None,
-                    *span,
-                ));
-            }
-
-            if reference_type.is_address_type() {
-                self.add_warning(ThrushCompilerIssue::Warning(
-                    "Undefined behavior".into(), 
-                    "Maybe this value at runtime or backend compilation causes panics, because is anything at runtime and compilation and pointer arithmetic is dangerous.".into(), 
-                    *span
-                ));
-            }
-
-            for indexe in indexes {
-                if !indexe.is_unsigned_integer()? || !indexe.is_anyu32bit_integer()? {
-                    self.add_error(ThrushCompilerIssue::Error(
-                        "Syntax error".into(),
-                        "Expected any unsigned integer less than or equal to 32 bits.".into(),
-                        None,
-                        *span,
-                    ));
-                }
-            }
-
-            return Ok(());
-        }
-
-        if let ThrushStatement::Load { value, .. } = stmt {
-            if let Some(any_reference) = &value.0 {
-                let reference: &ThrushStatement = &*any_reference.1;
+            if let Some(reference_any) = &address_to.0 {
+                let reference: &ThrushStatement = &reference_any.1;
 
                 let reference_type: &ThrushType = reference.get_value_type()?;
                 let reference_span: Span = reference.get_span();
@@ -699,6 +684,109 @@ impl<'type_checker> TypeChecker<'type_checker> {
                         reference_span,
                     ));
                 }
+
+                if reference_type.is_ptr_type() && !reference_type.is_typed_ptr() {
+                    self.add_error(ThrushCompilerIssue::Error(
+                        "Syntax error".into(),
+                        "Expected raw typed pointer ptr<T>.".into(),
+                        None,
+                        reference_span,
+                    ));
+                } else if reference_type.is_ptr_type()
+                    && reference_type.is_typed_ptr()
+                    && !reference_type.is_ptr_struct_type()
+                    && !reference_type.is_ptr_array_type()
+                {
+                    self.add_error(ThrushCompilerIssue::Error(
+                        "Syntax error".into(),
+                        "Expected raw typed pointer type with deep type.".into(),
+                        None,
+                        reference_span,
+                    ));
+                }
+
+                if reference_type.is_address_type() {
+                    self.add_warning(ThrushCompilerIssue::Warning(
+                        "Undefined behavior".into(), 
+                        "*Maybe* this value at runtime causes undefined behavior because it is anything at runtime, and memory calculation needs valid pointers or deep types.".into(), 
+                       reference_span
+                    ));
+                }
+            }
+
+            if let Some(expr) = &address_to.1 {
+                let expr_type: &ThrushType = expr.get_value_type()?;
+                let expr_span: Span = expr.get_span();
+
+                if !expr_type.is_ptr_type() && !expr_type.is_address_type() {
+                    self.add_error(ThrushCompilerIssue::Error(
+                        "Syntax error".into(),
+                        "Expected 'ptr<T>', 'ptr', or 'addr' type.".into(),
+                        None,
+                        expr_span,
+                    ));
+                }
+
+                if expr_type.is_ptr_type() && !expr_type.is_typed_ptr() {
+                    self.add_error(ThrushCompilerIssue::Error(
+                        "Syntax error".into(),
+                        "Expected raw typed pointer ptr<T>.".into(),
+                        None,
+                        expr_span,
+                    ));
+                } else if expr_type.is_ptr_type()
+                    && expr_type.is_typed_ptr()
+                    && !expr_type.is_ptr_struct_type()
+                    && !expr_type.is_ptr_array_type()
+                {
+                    self.add_error(ThrushCompilerIssue::Error(
+                        "Syntax error".into(),
+                        "Expected raw typed pointer type with deep type.".into(),
+                        None,
+                        expr_span,
+                    ));
+                }
+
+                if expr_type.is_address_type() {
+                    self.add_warning(ThrushCompilerIssue::Warning(
+                        "Undefined behavior".into(), 
+                        "*Maybe* this value at runtime causes undefined behavior because it is anything at runtime, and memory calculation needs valid pointers or deep types.".into(), 
+                        expr_span
+                    ));
+                }
+            }
+
+            for indexe in indexes {
+                if !indexe.is_unsigned_integer()? || !indexe.is_anyu32bit_integer()? {
+                    self.add_error(ThrushCompilerIssue::Error(
+                        "Syntax error".into(),
+                        "Expected any unsigned integer value less than or equal to 32 bits.".into(),
+                        None,
+                        *span,
+                    ));
+                }
+            }
+
+            return Ok(());
+        }
+
+        if let ThrushStatement::Load { value, .. } = stmt {
+            if let Some(any_reference) = &value.0 {
+                let reference: &ThrushStatement = &any_reference.1;
+
+                let reference_type: &ThrushType = reference.get_value_type()?;
+                let reference_span: Span = reference.get_span();
+
+                if !reference_type.is_ptr_type() && !reference_type.is_address_type() {
+                    self.add_error(ThrushCompilerIssue::Error(
+                        "Syntax error".into(),
+                        "Expected 'ptr<T>', 'ptr', or 'addr' type.".into(),
+                        None,
+                        reference_span,
+                    ));
+                }
+
+                self.analyze_stmt(reference)?;
             }
 
             if let Some(expr) = &value.1 {
@@ -713,6 +801,8 @@ impl<'type_checker> TypeChecker<'type_checker> {
                         expr_span,
                     ));
                 }
+
+                self.analyze_stmt(expr)?;
             }
 
             return Ok(());
@@ -884,11 +974,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
         if let ThrushStatement::Block { stmts, .. } = stmt {
             self.begin_scope();
 
-            stmts.iter().for_each(|stmt| {
-                if let Err(type_error) = self.analyze_stmt(stmt) {
-                    self.add_error(type_error);
-                }
-            });
+            stmts.iter().try_for_each(|stmt| self.analyze_stmt(stmt))?;
 
             self.end_scope();
 
@@ -897,16 +983,13 @@ impl<'type_checker> TypeChecker<'type_checker> {
 
         if let ThrushStatement::Mut { source, span, .. } = stmt {
             if let (Some(any_reference), None) = source {
-                let reference: &ThrushStatement = &*any_reference.1;
+                let reference: &ThrushStatement = &any_reference.1;
                 let reference_type: &ThrushType = reference.get_value_type()?;
 
-                if !reference_type.is_ptr_type()
-                    && !reference_type.is_mut_type()
-                    && !reference_type.is_address_type()
-                {
+                if !reference_type.is_ptr_type() && !reference_type.is_mut_type() {
                     self.add_error(ThrushCompilerIssue::Error(
                         "Syntax error".into(),
-                        "Expected 'ptr<T>', 'ptr', 'mut T' or 'addr' type.".into(),
+                        "Expected 'ptr<T>', 'ptr', or 'mut T' type.".into(),
                         None,
                         *span,
                     ));
@@ -927,13 +1010,10 @@ impl<'type_checker> TypeChecker<'type_checker> {
             if let (None, Some(source)) = source {
                 let source_type: &ThrushType = source.get_value_type()?;
 
-                if !source_type.is_ptr_type()
-                    && !source_type.is_mut_type()
-                    && !source_type.is_address_type()
-                {
+                if !source_type.is_ptr_type() && !source_type.is_mut_type() {
                     self.add_error(ThrushCompilerIssue::Error(
                         "Syntax error".into(),
-                        "Expected 'ptr<T>', 'ptr', 'mut T' or 'addr' type.".into(),
+                        "Expected 'ptr<T>', 'ptr', or 'mut T' type.".into(),
                         None,
                         *span,
                     ));
@@ -1025,7 +1105,41 @@ impl<'type_checker> TypeChecker<'type_checker> {
             if !reference.is_allocated_reference() {
                 self.add_error(ThrushCompilerIssue::Error(
                     "Syntax error".into(),
-                    "Expected a 'ptr<T>', 'ptr', 'addr', or 'mut T' type.".into(),
+                    "Expected a allocated value.".into(),
+                    None,
+                    *span,
+                ));
+            }
+
+            let reference_type: &ThrushType = reference.get_value_type()?;
+
+            if reference_type.is_ptr_type() && !reference_type.is_typed_ptr() {
+                self.add_error(ThrushCompilerIssue::Error(
+                    "Syntax error".into(),
+                    "Expected raw typed pointer ptr<T>.".into(),
+                    None,
+                    *span,
+                ));
+            } else if reference_type.is_ptr_type()
+                && reference_type.is_typed_ptr()
+                && !reference_type.is_ptr_struct_type()
+                && !reference_type.is_ptr_array_type()
+            {
+                self.add_error(ThrushCompilerIssue::Error(
+                    "Syntax error".into(),
+                    "Expected raw typed pointer type with deep type.".into(),
+                    None,
+                    *span,
+                ));
+            }
+
+            if reference_type.is_mut_type()
+                && !reference_type.is_mut_array_type()
+                && !reference_type.is_mut_struct_type()
+            {
+                self.add_error(ThrushCompilerIssue::Error(
+                    "Syntax error".into(),
+                    "Expected mutable type with deep type.".into(),
                     None,
                     *span,
                 ));
@@ -1045,7 +1159,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
             if !reference_type.is_struct_type() && !reference_type.is_mut_struct_type() {
                 self.add_error(ThrushCompilerIssue::Error(
                     "Syntax error".into(),
-                    "Expected struct type reference.".into(),
+                    "Expected reference with struct type.".into(),
                     None,
                     reference_span,
                 ));
@@ -1910,11 +2024,11 @@ impl<'type_checker> TypeChecker<'type_checker> {
         self.symbols.end_scope();
     }
 
-    fn add_error(&mut self, error: ThrushCompilerIssue) {
-        self.errors.push(error);
+    fn add_warning(&mut self, warning: ThrushCompilerIssue) {
+        self.warnings.push(warning);
     }
 
-    fn add_warning(&mut self, error: ThrushCompilerIssue) {
+    fn add_error(&mut self, error: ThrushCompilerIssue) {
         self.errors.push(error);
     }
 

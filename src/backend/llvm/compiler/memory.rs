@@ -104,7 +104,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
 
                 logging::log(
                     LoggingType::Bug,
-                    "Unable to load local value at code generation time.",
+                    "Unable to load value at memory manipulation.",
                 );
 
                 unreachable!()
@@ -123,7 +123,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
 
                     logging::log(
                         LoggingType::Bug,
-                        "Unable to load local value at code generation time.",
+                        "Unable to load value at memory manipulation.",
                     );
 
                     unreachable!()
@@ -143,7 +143,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
 
                 logging::log(
                     LoggingType::Bug,
-                    "Unable to load local value at code generation time.",
+                    "Unable to load value at memory manipulation.",
                 );
 
                 unreachable!()
@@ -229,7 +229,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
 
                 logging::log(
                     LoggingType::Bug,
-                    "Unable to calculate pointer position at code generation time at memory management.",
+                    "Unable to calculate pointer position at memory manipulation.",
                 );
 
                 unreachable!()
@@ -251,7 +251,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
 
                 logging::log(
                     LoggingType::Bug,
-                    "Unable to get a value of an structure in code generation time at memory management.",
+                    "Unable to get a value of an structure at memory manipulation.",
                 );
 
                 unreachable!()
@@ -260,7 +260,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
             _ => {
                 logging::log(
                     LoggingType::Bug,
-                    "Unable to get a value of an structure in code generation time at memory management.",
+                    "Unable to get a value of an structure at memory manipulation.",
                 );
 
                 unreachable!()
@@ -292,7 +292,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
 
                 logging::log(
                     LoggingType::Bug,
-                    "Unable to calculate pointer position at code generation time at memory management.",
+                    "Unable to get struct element pointer position at memory manipulation.",
                 );
 
                 unreachable!()
@@ -455,4 +455,32 @@ pub fn alloc_anon<'ctx>(
             .add_global(llvm_type, Some(AddressSpace::default()), "")
             .as_pointer_value(),
     }
+}
+
+pub fn gep_anon<'ctx>(
+    context: &LLVMCodeGenContext<'_, 'ctx>,
+    ptr: PointerValue<'ctx>,
+    kind: &ThrushType,
+    indexes: &[IntValue<'ctx>],
+) -> PointerValue<'ctx> {
+    let llvm_context: &Context = context.get_llvm_context();
+    let llvm_builder: &Builder = context.get_llvm_builder();
+
+    if let Ok(ptr) = unsafe {
+        llvm_builder.build_gep(
+            typegen::generate_subtype(llvm_context, kind),
+            ptr,
+            indexes,
+            "",
+        )
+    } {
+        return ptr;
+    }
+
+    logging::log(
+        LoggingType::Bug,
+        "Unable to get pointer element at memory manipulation.",
+    );
+
+    unreachable!()
 }

@@ -32,7 +32,7 @@ pub fn build_type(parser_ctx: &mut ParserContext<'_>) -> Result<ThrushType, Thru
                 if inner_type.is_mut_type() {
                     return Err(ThrushCompilerIssue::Error(
                         String::from("Syntax error"),
-                        "Nested mutable type 'mut mut T' aren't allowed as type.".into(),
+                        "Nested mutable type 'mut mut T' ins't type.".into(),
                         None,
                         span,
                     ));
@@ -41,7 +41,7 @@ pub fn build_type(parser_ctx: &mut ParserContext<'_>) -> Result<ThrushType, Thru
                 if inner_type.is_ptr_type() {
                     return Err(ThrushCompilerIssue::Error(
                         String::from("Syntax error"),
-                        "Mutable pointer 'mut ptr<T>' aren't allowed as type.".into(),
+                        "Mutable pointer type 'mut ptr<T>', or 'mut ptr' isn't type.".into(),
                         None,
                         span,
                     ));

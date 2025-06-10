@@ -252,7 +252,7 @@ pub fn compile<'ctx>(
         }
 
         logging::log(
-            LoggingType::Panic,
+            LoggingType::Bug,
             "Unable to create a function call at code generation time.",
         );
     }
@@ -286,7 +286,7 @@ pub fn compile<'ctx>(
         }
 
         logging::log(
-            LoggingType::Panic,
+            LoggingType::Bug,
             "Could not process a binary operation of invalid type.",
         );
     }
@@ -341,22 +341,36 @@ pub fn compile<'ctx>(
         ..
     } = expr
     {
-        let write_value: BasicValueEnum =
-            self::compile(context, write_value, write_type, CompileChanges::default());
+        let value: BasicValueEnum = self::compile(
+            context,
+            write_value,
+            write_type,
+            CompileChanges::new(false, true),
+        );
+
+        if let Some(reference) = &write_to.0 {
+            let reference_name: &str = reference.0;
+
+            let symbol: SymbolAllocated = context.get_allocated_symbol(reference_name);
+
+            symbol.store(context, value);
+
+            return llvm_context
+                .ptr_type(AddressSpace::default())
+                .const_null()
+                .into();
+        }
 
         if let Some(expr) = write_to.1.as_ref() {
-            let compiled_expr: PointerValue =
-                self::compile(context, expr, &ThrushType::Void, CompileChanges::default())
-                    .into_pointer_value();
+            let expr: PointerValue = self::compile(
+                context,
+                expr,
+                &ThrushType::Void,
+                CompileChanges::new(true, true),
+            )
+            .into_pointer_value();
 
-            if let Ok(store) = llvm_builder.build_store(compiled_expr, write_value) {
-                let target_data: &TargetData = context.get_target_data();
-
-                let preferred_memory_alignment: u32 =
-                    target_data.get_preferred_alignment(&compiled_expr.get_type());
-
-                let _ = store.set_alignment(preferred_memory_alignment);
-            }
+            memory::store_anon(context, expr, write_type, value);
 
             return llvm_context
                 .ptr_type(AddressSpace::default())
@@ -364,18 +378,7 @@ pub fn compile<'ctx>(
                 .into();
         }
 
-        if let Some(ref_name) = write_to.0 {
-            let symbol: SymbolAllocated = context.get_allocated_symbol(ref_name);
-
-            symbol.store(context, write_value);
-
-            return llvm_context
-                .ptr_type(AddressSpace::default())
-                .const_null()
-                .into();
-        }
-
-        logging::log(LoggingType::Panic, "Could not get value of 'write' LLI");
+        logging::log(LoggingType::Bug, "Could not get value of 'write' LLI");
     }
 
     if let ThrushStatement::Load { value, kind, .. } = expr {
@@ -397,26 +400,63 @@ pub fn compile<'ctx>(
             return memory::load_anon(context, ptr, kind);
         }
 
-        logging::log(LoggingType::Panic, "Could not get value of 'load' LLI.");
+        logging::log(LoggingType::Bug, "Could not get value of 'load' LLI.");
     }
 
-    if let ThrushStatement::Address { name, indexes, .. } = expr {
-        let symbol: SymbolAllocated = context.get_allocated_symbol(name);
+    if let ThrushStatement::Address {
+        address_to,
+        indexes,
+        ..
+    } = expr
+    {
+        if let Some(any_reference) = &address_to.0 {
+            let reference_name: &str = any_reference.0;
 
-        let indexes: Vec<IntValue> = indexes
-            .iter()
-            .map(|indexe| {
-                self::compile(
-                    context,
-                    indexe,
-                    &ThrushType::U32,
-                    CompileChanges::new(false, true),
-                )
-                .into_int_value()
-            })
-            .collect();
+            let symbol: SymbolAllocated = context.get_allocated_symbol(reference_name);
 
-        return symbol.gep(llvm_context, llvm_builder, &indexes).into();
+            let indexes: Vec<IntValue> = indexes
+                .iter()
+                .map(|indexe| {
+                    self::compile(
+                        context,
+                        indexe,
+                        &ThrushType::U32,
+                        CompileChanges::new(false, true),
+                    )
+                    .into_int_value()
+                })
+                .collect();
+
+            return symbol.gep(llvm_context, llvm_builder, &indexes).into();
+        }
+
+        if let Some(expr) = &address_to.1 {
+            let kind: &ThrushType = expr.get_type_unwrapped();
+
+            let ptr: PointerValue =
+                self::compile(context, expr, kind, CompileChanges::new(true, false))
+                    .into_pointer_value();
+
+            let indexes: Vec<IntValue> = indexes
+                .iter()
+                .map(|indexe| {
+                    self::compile(
+                        context,
+                        indexe,
+                        &ThrushType::U32,
+                        CompileChanges::new(false, true),
+                    )
+                    .into_int_value()
+                })
+                .collect();
+
+            return memory::gep_anon(context, ptr, kind, &indexes).into();
+        }
+
+        logging::log(
+            LoggingType::Bug,
+            "Unable to get pointer element at value generation time.",
+        );
     }
 
     /* ######################################################################
@@ -450,7 +490,7 @@ pub fn compile<'ctx>(
         }
 
         logging::log(
-            LoggingType::Panic,
+            LoggingType::Bug,
             &format!("Unable to cast pointer to specific type: '{}'.", from),
         );
     }
@@ -487,20 +527,11 @@ pub fn compile<'ctx>(
         }
 
         logging::log(
-            LoggingType::Panic,
+            LoggingType::Bug,
             &format!(
                 "Primitive casting could not be perform at 'cast' from: '{}'.",
                 from
             ),
-        );
-    }
-
-    if let ThrushStatement::RawPtr { from, .. } = expr {
-        return self::compile(
-            context,
-            from,
-            &ThrushType::Void,
-            CompileChanges::new(true, false),
         );
     }
 
@@ -677,8 +708,8 @@ pub fn compile<'ctx>(
 
     if let ThrushStatement::Mut {
         source,
-        kind,
         value,
+        cast_type,
         ..
     } = expr
     {
@@ -690,7 +721,7 @@ pub fn compile<'ctx>(
             let symbol: SymbolAllocated = context.get_allocated_symbol(reference_name);
 
             let value: BasicValueEnum =
-                self::compile(context, value, kind, CompileChanges::new(false, true));
+                self::compile(context, value, cast_type, CompileChanges::new(false, true));
 
             symbol.store(context, value);
 
@@ -699,17 +730,17 @@ pub fn compile<'ctx>(
 
         if let Some(expr) = &source.1 {
             let source: BasicValueEnum =
-                self::compile(context, expr, kind, CompileChanges::new(true, true));
+                self::compile(context, expr, cast_type, CompileChanges::new(true, true));
 
             let value: BasicValueEnum =
-                self::compile(context, value, kind, CompileChanges::new(false, true));
+                self::compile(context, value, cast_type, CompileChanges::new(false, true));
 
             memory::store_anon(context, source.into_pointer_value(), value_type, value);
 
             return source;
         }
 
-        logging::log(LoggingType::Panic, "Could not get value of an mutation.");
+        logging::log(LoggingType::Bug, "Could not get value of an mutation.");
     }
 
     if let ThrushStatement::Array { items, kind, .. } = expr {

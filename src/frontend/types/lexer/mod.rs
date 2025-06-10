@@ -167,6 +167,38 @@ impl ThrushTypePointerExtensions for ThrushType {
 
         true
     }
+
+    fn is_ptr_struct_type(&self) -> bool {
+        if let ThrushType::Ptr(Some(inner)) = self {
+            return inner.is_ptr_struct_type();
+        }
+
+        if let ThrushType::Ptr(None) = self {
+            return false;
+        }
+
+        if let ThrushType::Struct(..) = self {
+            return true;
+        }
+
+        false
+    }
+
+    fn is_ptr_array_type(&self) -> bool {
+        if let ThrushType::Ptr(Some(inner)) = self {
+            return inner.is_ptr_array_type();
+        }
+
+        if let ThrushType::Ptr(None) = self {
+            return false;
+        }
+
+        if let ThrushType::FixedArray(..) = self {
+            return true;
+        }
+
+        false
+    }
 }
 
 impl LLVMTypeExtensions for ThrushType {

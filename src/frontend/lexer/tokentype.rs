@@ -84,8 +84,6 @@ pub enum TokenType {
     Import,
     Methods,
     Mut,
-    RawPtr,
-    Ref,
     Type,
     Enum,
     And,

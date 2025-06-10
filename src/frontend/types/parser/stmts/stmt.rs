@@ -1,4 +1,5 @@
 #![allow(clippy::upper_case_acronyms)]
+#![allow(clippy::type_complexity)]
 
 use std::rc::Rc;
 
@@ -276,6 +277,7 @@ pub enum ThrushStatement<'ctx> {
         ),
         value: Rc<ThrushStatement<'ctx>>,
         kind: ThrushType,
+        cast_type: ThrushType,
         span: Span,
     },
 
@@ -296,15 +298,20 @@ pub enum ThrushStatement<'ctx> {
     },
 
     Address {
-        name: &'ctx str,
-        reference: Rc<ThrushStatement<'ctx>>,
+        address_to: (
+            Option<(&'ctx str, Rc<ThrushStatement<'ctx>>)>,
+            Option<Rc<ThrushStatement<'ctx>>>,
+        ),
         indexes: Vec<ThrushStatement<'ctx>>,
         kind: ThrushType,
         span: Span,
     },
 
     Write {
-        write_to: (Option<&'ctx str>, Option<Rc<ThrushStatement<'ctx>>>),
+        write_to: (
+            Option<(&'ctx str, Rc<ThrushStatement<'ctx>>)>,
+            Option<Rc<ThrushStatement<'ctx>>>,
+        ),
         write_value: Rc<ThrushStatement<'ctx>>,
         write_type: ThrushType,
         span: Span,
@@ -341,12 +348,6 @@ pub enum ThrushStatement<'ctx> {
     CastPtr {
         from: Rc<ThrushStatement<'ctx>>,
         cast: ThrushType,
-        span: Span,
-    },
-
-    RawPtr {
-        from: Rc<ThrushStatement<'ctx>>,
-        kind: ThrushType,
         span: Span,
     },
 
@@ -478,7 +479,6 @@ impl<'ctx> ThrushStatement<'ctx> {
             ThrushStatement::AssemblerFunctionParameter { kind, .. } => Ok(kind),
             ThrushStatement::MethodCall { kind, .. } => Ok(kind),
             ThrushStatement::EnumValue { kind, .. } => Ok(kind),
-            ThrushStatement::RawPtr { kind, .. } => Ok(kind),
             ThrushStatement::Deref { kind, .. } => Ok(kind),
             ThrushStatement::CastRaw { cast: kind, .. } => Ok(kind),
             ThrushStatement::Cast { cast: kind, .. } => Ok(kind),
@@ -522,7 +522,6 @@ impl<'ctx> ThrushStatement<'ctx> {
             ThrushStatement::BindParameter { kind, .. } => kind,
             ThrushStatement::Return { kind, .. } => kind,
             ThrushStatement::EnumValue { kind, .. } => kind,
-            ThrushStatement::RawPtr { kind, .. } => kind,
             ThrushStatement::Deref { kind, .. } => kind,
             ThrushStatement::AsmValue { kind, .. } => kind,
 
@@ -555,7 +554,6 @@ impl<'ctx> ThrushStatement<'ctx> {
             ThrushStatement::UnaryOp { span, .. } => *span,
             ThrushStatement::CastRaw { span, .. } => *span,
             ThrushStatement::Cast { span, .. } => *span,
-            ThrushStatement::RawPtr { span, .. } => *span,
             ThrushStatement::Deref { span, .. } => *span,
             ThrushStatement::CastPtr { span, .. } => *span,
             ThrushStatement::AsmValue { span, .. } => *span,
