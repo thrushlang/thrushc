@@ -30,7 +30,7 @@ pub enum MethodsApplicant {
     Struct,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub enum ThrushType {
     // Signed Integer Type
     S8,
@@ -55,7 +55,7 @@ pub enum ThrushType {
     Char,
 
     // Str Type
-    Str,
+    Str(Arc<ThrushType>),
 
     // Mutable Type
     Mut(Arc<ThrushType>),
@@ -73,13 +73,14 @@ pub enum ThrushType {
     Addr,
 
     // Void Type
+    #[default]
     Void,
 }
 
 impl ThrushTypeMutableExtensions for ThrushType {
-    fn is_mut_array_type(&self) -> bool {
+    fn is_mut_fixed_array_type(&self) -> bool {
         if let ThrushType::Mut(inner) = self {
-            return inner.is_mut_array_type();
+            return inner.is_mut_fixed_array_type();
         }
 
         if let ThrushType::FixedArray(..) = self {
@@ -184,9 +185,9 @@ impl ThrushTypePointerExtensions for ThrushType {
         false
     }
 
-    fn is_ptr_array_type(&self) -> bool {
+    fn is_ptr_fixed_array_type(&self) -> bool {
         if let ThrushType::Ptr(Some(inner)) = self {
-            return inner.is_ptr_array_type();
+            return inner.is_ptr_fixed_array_type();
         }
 
         if let ThrushType::Ptr(None) = self {
@@ -292,7 +293,7 @@ impl ThrushType {
             | ThrushType::F64
             | ThrushType::Bool
             | ThrushType::Char
-            | ThrushType::Str
+            | ThrushType::Str(..)
             | ThrushType::Addr
             | ThrushType::Void
             | ThrushType::Ptr(None) => self,
@@ -369,7 +370,7 @@ impl ThrushType {
     }
 
     #[inline(always)]
-    pub const fn is_fixedarray_type(&self) -> bool {
+    pub const fn is_fixed_array_type(&self) -> bool {
         matches!(self, ThrushType::FixedArray(..))
     }
 
@@ -395,7 +396,7 @@ impl ThrushType {
 
     #[inline(always)]
     pub const fn is_str_type(&self) -> bool {
-        matches!(self, ThrushType::Str)
+        matches!(self, ThrushType::Str(..))
     }
 
     #[inline(always)]
@@ -429,13 +430,13 @@ impl ThrushType {
     }
 
     #[inline]
-    pub fn get_array_type_herarchy(&self) -> u8 {
+    pub fn get_fixed_array_type_herarchy(&self) -> u8 {
         match self {
             ThrushType::Void => 0,
 
             ThrushType::Bool => 1,
             ThrushType::Char => 2,
-            ThrushType::Str => 3,
+            ThrushType::Str(..) => 3,
 
             ThrushType::S8 => 4,
             ThrushType::S16 => 5,
@@ -450,13 +451,13 @@ impl ThrushType {
             ThrushType::F32 => 12,
             ThrushType::F64 => 13,
 
-            ThrushType::Mut(subtype) => subtype.get_array_type_herarchy(),
+            ThrushType::Mut(subtype) => subtype.get_fixed_array_type_herarchy(),
 
             ThrushType::Addr => 14,
-            ThrushType::Ptr(Some(subtype)) => subtype.get_array_type_herarchy(),
+            ThrushType::Ptr(Some(subtype)) => subtype.get_fixed_array_type_herarchy(),
             ThrushType::Ptr(None) => 15,
 
-            ThrushType::FixedArray(..) => 116,
+            ThrushType::FixedArray(..) => 16,
             ThrushType::Struct(..) => 17,
         }
     }
@@ -493,7 +494,7 @@ impl PartialEq for ThrushType {
             (ThrushType::Ptr(None), ThrushType::Ptr(None)) => true,
             (ThrushType::Ptr(Some(target)), ThrushType::Ptr(Some(from))) => target == from,
             (ThrushType::Void, ThrushType::Void) => true,
-            (ThrushType::Str, ThrushType::Str) => true,
+            (ThrushType::Str(..), ThrushType::Str(..)) => true,
             (ThrushType::Bool, ThrushType::Bool) => true,
 
             _ => false,

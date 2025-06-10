@@ -141,8 +141,14 @@ pub fn compile<'ctx>(
             .into();
     }
 
-    if let ThrushStatement::Str { bytes, .. } = expr {
-        return utils::build_str_constant(llvm_module, llvm_context, bytes).into();
+    if let ThrushStatement::Str { bytes, kind, .. } = expr {
+        let ptr: PointerValue = utils::build_str_constant(llvm_module, llvm_context, bytes);
+
+        if changes.load_raw() {
+            return ptr.into();
+        }
+
+        return memory::load_anon(context, ptr, kind);
     }
 
     if let ThrushStatement::Float {
@@ -539,6 +545,13 @@ pub fn compile<'ctx>(
         return self::compile(context, from, cast, CompileChanges::new(true, true));
     }
 
+    if let ThrushStatement::Raw { reference, .. } = expr {
+        let reference_name: &str = reference.0;
+        let symbol: SymbolAllocated = context.get_allocated_symbol(reference_name);
+
+        return symbol.raw_load().into();
+    }
+
     /* ######################################################################
 
 
@@ -745,9 +758,9 @@ pub fn compile<'ctx>(
 
     if let ThrushStatement::Array { items, kind, .. } = expr {
         if expr.is_constant_array() {
-            return self::compile_constant_array(context, cast, kind, items, changes);
+            return self::compile_constant_fixed_array(context, cast, kind, items, changes);
         } else {
-            return self::compile_array(context, kind, items, changes);
+            return self::compile_fixed_array(context, kind, items, changes);
         }
     }
 
@@ -843,7 +856,7 @@ fn compile_deref<'ctx>(
     }
 }
 
-fn compile_array<'ctx>(
+fn compile_fixed_array<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     kind: &'ctx ThrushType,
     items: &'ctx [ThrushStatement],
@@ -893,7 +906,7 @@ fn compile_array<'ctx>(
 
     memory::load_anon(context, array_ptr, kind)
 }
-fn compile_constant_array<'ctx>(
+fn compile_constant_fixed_array<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     cast: &ThrushType,
     kind: &ThrushType,
@@ -902,7 +915,7 @@ fn compile_constant_array<'ctx>(
 ) -> BasicValueEnum<'ctx> {
     let llvm_context: &Context = context.get_llvm_context();
 
-    let array_type: &ThrushType = if cast.is_fixedarray_type() || cast.is_mut_array_type() {
+    let array_type: &ThrushType = if cast.is_fixed_array_type() || cast.is_mut_fixed_array_type() {
         cast.get_array_type()
     } else {
         kind.get_array_type()

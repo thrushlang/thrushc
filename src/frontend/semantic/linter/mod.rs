@@ -360,6 +360,15 @@ impl<'linter> Linter<'linter> {
             self.analyze_stmt(from);
         }
 
+        if let ThrushStatement::Raw {
+            reference: any_reference,
+            ..
+        } = stmt
+        {
+            let reference: &ThrushStatement = &any_reference.1;
+            self.analyze_stmt(reference);
+        }
+
         /* ######################################################################
 
 

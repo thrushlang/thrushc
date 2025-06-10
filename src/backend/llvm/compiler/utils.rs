@@ -1,4 +1,4 @@
-use inkwell::values::StructValue;
+use inkwell::values::PointerValue;
 
 use inkwell::{
     AddressSpace,
@@ -12,7 +12,7 @@ pub fn build_str_constant<'ctx>(
     module: &Module<'ctx>,
     context: &'ctx Context,
     bytes: &'ctx [u8],
-) -> StructValue<'ctx> {
+) -> PointerValue<'ctx> {
     let fixed_str_size: u32 = if !bytes.is_empty() {
         bytes.len() as u32 + 1
     } else {
@@ -26,16 +26,7 @@ pub fn build_str_constant<'ctx>(
     global.set_initializer(&context.const_string(bytes, true));
     global.set_constant(true);
 
-    context.const_struct(
-        &[
-            global.as_pointer_value().into(),
-            context
-                .i64_type()
-                .const_int(fixed_str_size as u64, false)
-                .into(),
-        ],
-        false,
-    )
+    global.as_pointer_value()
 }
 
 pub fn generate_assembler_function_name(function_name: &str) -> String {

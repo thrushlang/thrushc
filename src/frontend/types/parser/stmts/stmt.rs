@@ -18,7 +18,7 @@ use crate::{
 };
 
 use super::{
-    ident::ReferenceIndentificator,
+    ident::ReferenceIdentificator,
     sites::LLIAllocationSite,
     types::{Constructor, EnumFields, StructFields, ThrushAttributes},
 };
@@ -264,7 +264,7 @@ pub enum ThrushStatement<'ctx> {
         name: &'ctx str,
         kind: ThrushType,
         span: Span,
-        identificator: ReferenceIndentificator,
+        identificator: ReferenceIdentificator,
         is_mutable: bool,
         is_allocated: bool,
     },
@@ -348,6 +348,11 @@ pub enum ThrushStatement<'ctx> {
     CastPtr {
         from: Rc<ThrushStatement<'ctx>>,
         cast: ThrushType,
+        span: Span,
+    },
+    Raw {
+        reference: (&'ctx str, Rc<ThrushStatement<'ctx>>),
+        kind: ThrushType,
         span: Span,
     },
 
@@ -480,6 +485,7 @@ impl<'ctx> ThrushStatement<'ctx> {
             ThrushStatement::MethodCall { kind, .. } => Ok(kind),
             ThrushStatement::EnumValue { kind, .. } => Ok(kind),
             ThrushStatement::Deref { kind, .. } => Ok(kind),
+            ThrushStatement::Raw { kind, .. } => Ok(kind),
             ThrushStatement::CastRaw { cast: kind, .. } => Ok(kind),
             ThrushStatement::Cast { cast: kind, .. } => Ok(kind),
             ThrushStatement::CastPtr { cast: kind, .. } => Ok(kind),
@@ -525,6 +531,7 @@ impl<'ctx> ThrushStatement<'ctx> {
             ThrushStatement::Deref { kind, .. } => kind,
             ThrushStatement::AsmValue { kind, .. } => kind,
 
+            ThrushStatement::Raw { kind, .. } => kind,
             ThrushStatement::CastPtr { cast: kind, .. } => kind,
             ThrushStatement::CastRaw { cast: kind, .. } => kind,
             ThrushStatement::Cast { cast: kind, .. } => kind,
@@ -552,6 +559,7 @@ impl<'ctx> ThrushStatement<'ctx> {
             ThrushStatement::BinaryOp { span, .. } => *span,
             ThrushStatement::Group { span, .. } => *span,
             ThrushStatement::UnaryOp { span, .. } => *span,
+            ThrushStatement::Raw { span, .. } => *span,
             ThrushStatement::CastRaw { span, .. } => *span,
             ThrushStatement::Cast { span, .. } => *span,
             ThrushStatement::Deref { span, .. } => *span,
@@ -752,15 +760,6 @@ impl<'ctx> ThrushStatement<'ctx> {
         ))
     }
 
-    pub fn get_unwrapped_reference_name(&self) -> &str {
-        if let ThrushStatement::Reference { name, .. } = self {
-            return name;
-        }
-
-        logging::log(LoggingType::Bug, "Unable to get a reference name.");
-        unreachable!()
-    }
-
     pub fn get_integer_value(&self) -> Result<u64, ThrushCompilerIssue> {
         if let ThrushStatement::Integer { value, .. } = self {
             return Ok(*value);
@@ -828,7 +827,7 @@ impl<'ctx> ThrushStatement<'ctx> {
     }
 
     pub fn new_str(kind: ThrushType, bytes: Vec<u8>, span: Span) -> ThrushStatement<'ctx> {
-        ThrushStatement::Str { kind, bytes, span }
+        ThrushStatement::Str { bytes, kind, span }
     }
 }
 
@@ -927,6 +926,17 @@ impl ThrushStatement<'_> {
     #[inline]
     pub const fn is_reference(&self) -> bool {
         matches!(self, ThrushStatement::Reference { .. })
+    }
+
+    #[inline]
+    pub const fn is_local_reference(&self) -> bool {
+        matches!(
+            self,
+            ThrushStatement::Reference {
+                identificator: ReferenceIdentificator::Local,
+                ..
+            }
+        )
     }
 
     #[inline]

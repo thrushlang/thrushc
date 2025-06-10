@@ -110,8 +110,8 @@ impl<'type_checker> TypeChecker<'type_checker> {
             for parameter in parameters.iter() {
                 if self.check_mismatch_type(&ThrushType::Void, parameter.get_value_type()?) {
                     self.add_error(ThrushCompilerIssue::Error(
-                        String::from("Type not allowed"),
-                        String::from("The void type isn't valid a runtime value."),
+                        "Type error".into(),
+                        "The void type isn't a value.".into(),
                         None,
                         *span,
                     ));
@@ -132,8 +132,8 @@ impl<'type_checker> TypeChecker<'type_checker> {
             for parameter in parameters.iter() {
                 if self.check_mismatch_type(&ThrushType::Void, parameter.get_value_type()?) {
                     self.add_error(ThrushCompilerIssue::Error(
-                        String::from("Type not allowed"),
-                        String::from("The void type isn't valid a runtime value."),
+                        "Type error".into(),
+                        "The void type isn't a value.".into(),
                         None,
                         *span,
                     ));
@@ -205,8 +205,8 @@ impl<'type_checker> TypeChecker<'type_checker> {
 
             if self.check_mismatch_type(&ThrushType::Void, local_type) {
                 self.add_error(ThrushCompilerIssue::Error(
-                    "Syntax error".into(),
-                    "The void type isn't valid value.".into(),
+                    "Type error".into(),
+                    "The void type isn't a value.".into(),
                     None,
                     *span,
                 ));
@@ -214,8 +214,8 @@ impl<'type_checker> TypeChecker<'type_checker> {
 
             if local_type.is_ptr_type() {
                 self.add_error(ThrushCompilerIssue::Error(
-                    "Syntax error".into(),
-                    "Pointer types 'ptr<T>' or 'ptr' can only be used in Low Level Instructions (LLI), use them instead.".into(),
+                    "Type error".into(),
+                    "Raw pointer type 'ptr<T>', or 'ptr' can only be used in Low Level Instructions (LLI), use them instead.".into(),
                     None,
                     *span,
                 ));
@@ -255,8 +255,8 @@ impl<'type_checker> TypeChecker<'type_checker> {
 
             if self.check_mismatch_type(&ThrushType::Void, lli_type) {
                 self.add_error(ThrushCompilerIssue::Error(
-                    "Syntax error".into(),
-                    "The void type isn't valid value.".into(),
+                    "Type error".into(),
+                    "The void type isn't a value.".into(),
                     None,
                     *span,
                 ));
@@ -264,8 +264,8 @@ impl<'type_checker> TypeChecker<'type_checker> {
 
             if !lli_value_type.is_ptr_type() && !lli_value_type.is_address_type() {
                 self.add_error(ThrushCompilerIssue::Error(
-                    "Syntax error".into(),
-                    "Expected always 'ptr<T>', 'ptr', or addr type.".into(),
+                    "Type error".into(),
+                    "Expected always 'ptr<T>', 'ptr', or 'addr' type.".into(),
                     None,
                     *span,
                 ));
@@ -486,7 +486,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
 
             if !value_type.is_ptr_type() && !value_type.is_mut_type() {
                 self.add_error(ThrushCompilerIssue::Error(
-                    "Syntax error".into(),
+                    "Type error".into(),
                     "Expected 'ptr<T>', 'ptr', or 'mut T' type for dereference.".into(),
                     None,
                     value_span,
@@ -520,7 +520,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
 
             if !from_type.is_ptr_type() && !from_type.is_mut_type() {
                 self.add_error(ThrushCompilerIssue::Error(
-                    "Syntax error".into(),
+                    "Type error".into(),
                     "Expected 'ptr<T>', 'ptr', or 'mut T' type for cast.".into(),
                     None,
                     from_span,
@@ -529,7 +529,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
 
             if cast.is_ptr_type() {
                 self.add_error(ThrushCompilerIssue::Error(
-                    "Syntax error".into(),
+                    "Type error".into(),
                     "A non-raw type 'ptr<T>', or 'ptr' was expected.".into(),
                     None,
                     from_span,
@@ -538,7 +538,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
 
             if from_type.get_type_with_depth(1) != cast {
                 self.add_error(ThrushCompilerIssue::Error(
-                    "Syntax error".into(),
+                    "Type error".into(),
                     format!("Cannot cast '{}' to '{}'.", from_type, cast),
                     None,
                     *span,
@@ -553,11 +553,14 @@ impl<'type_checker> TypeChecker<'type_checker> {
         if let ThrushStatement::CastPtr { from, cast, span } = stmt {
             let from_type: &ThrushType = from.get_value_type()?;
 
-            if !from_type.is_ptr_type() && !from_type.is_mut_type() && !from_type.is_address_type()
+            if !from_type.is_ptr_type()
+                && !from_type.is_mut_type()
+                && !from_type.is_address_type()
+                && !from.is_str()
             {
                 self.add_error(ThrushCompilerIssue::Error(
-                    "Syntax error".into(),
-                    "Expected 'ptr<T>', 'ptr', 'addr', or 'mut T' type for cast to raw pointer."
+                    "Type error".into(),
+                    "Expected 'ptr<T>', 'ptr', 'addr', 'str',  or 'mut T' type for cast to raw pointer."
                         .into(),
                     None,
                     *span,
@@ -566,7 +569,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
 
             if !cast.is_ptr_type() {
                 self.add_error(ThrushCompilerIssue::Error(
-                    "Syntax error".into(),
+                    "Type error".into(),
                     "Expected 'ptr<T>', or 'ptr' raw pointer type.".into(),
                     None,
                     *span,
@@ -584,6 +587,39 @@ impl<'type_checker> TypeChecker<'type_checker> {
             if let Err(error) = self.validate_type_cast(cast, from_type, span) {
                 self.add_error(error);
             }
+
+            return Ok(());
+        }
+
+        if let ThrushStatement::Raw {
+            reference: any_reference,
+            ..
+        } = stmt
+        {
+            let reference: &ThrushStatement = &any_reference.1;
+
+            let reference_type: &ThrushType = reference.get_value_type()?;
+            let reference_span: Span = reference.get_span();
+
+            if !reference.is_local_reference() {
+                self.add_error(ThrushCompilerIssue::Error(
+                    "Type error".into(),
+                    "Expected local reference.".into(),
+                    None,
+                    reference_span,
+                ));
+            }
+
+            if reference_type.is_ptr_type() {
+                self.add_error(ThrushCompilerIssue::Error(
+                    "Type error".into(),
+                    "It's already a raw pointer.".into(),
+                    None,
+                    reference_span,
+                ));
+            }
+
+            self.analyze_stmt(reference)?;
 
             return Ok(());
         }
@@ -621,7 +657,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
                     && !reference_type.is_mut_type()
                 {
                     self.add_error(ThrushCompilerIssue::Error(
-                        "Syntax error".into(),
+                        "Type error".into(),
                         "Expected 'ptr<T>', 'ptr', 'addr', or 'mut T' type.".into(),
                         None,
                         reference_span,
@@ -638,7 +674,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
                     && !expr_type.is_mut_type()
                 {
                     self.add_error(ThrushCompilerIssue::Error(
-                        "Syntax error".into(),
+                        "Type error".into(),
                         "Expected 'ptr<T>', 'ptr', 'addr', or 'mut T' type.".into(),
                         None,
                         expr_span,
@@ -678,7 +714,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
 
                 if !reference_type.is_ptr_type() && !reference_type.is_address_type() {
                     self.add_error(ThrushCompilerIssue::Error(
-                        "Syntax error".into(),
+                        "Type error".into(),
                         "Expected 'ptr<T>', 'ptr', or 'addr' type.".into(),
                         None,
                         reference_span,
@@ -687,7 +723,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
 
                 if reference_type.is_ptr_type() && !reference_type.is_typed_ptr() {
                     self.add_error(ThrushCompilerIssue::Error(
-                        "Syntax error".into(),
+                        "Type error".into(),
                         "Expected raw typed pointer ptr<T>.".into(),
                         None,
                         reference_span,
@@ -695,10 +731,10 @@ impl<'type_checker> TypeChecker<'type_checker> {
                 } else if reference_type.is_ptr_type()
                     && reference_type.is_typed_ptr()
                     && !reference_type.is_ptr_struct_type()
-                    && !reference_type.is_ptr_array_type()
+                    && !reference_type.is_ptr_fixed_array_type()
                 {
                     self.add_error(ThrushCompilerIssue::Error(
-                        "Syntax error".into(),
+                        "Type error".into(),
                         "Expected raw typed pointer type with deep type.".into(),
                         None,
                         reference_span,
@@ -720,7 +756,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
 
                 if !expr_type.is_ptr_type() && !expr_type.is_address_type() {
                     self.add_error(ThrushCompilerIssue::Error(
-                        "Syntax error".into(),
+                        "Type error".into(),
                         "Expected 'ptr<T>', 'ptr', or 'addr' type.".into(),
                         None,
                         expr_span,
@@ -729,7 +765,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
 
                 if expr_type.is_ptr_type() && !expr_type.is_typed_ptr() {
                     self.add_error(ThrushCompilerIssue::Error(
-                        "Syntax error".into(),
+                        "Type error".into(),
                         "Expected raw typed pointer ptr<T>.".into(),
                         None,
                         expr_span,
@@ -737,10 +773,10 @@ impl<'type_checker> TypeChecker<'type_checker> {
                 } else if expr_type.is_ptr_type()
                     && expr_type.is_typed_ptr()
                     && !expr_type.is_ptr_struct_type()
-                    && !expr_type.is_ptr_array_type()
+                    && !expr_type.is_ptr_fixed_array_type()
                 {
                     self.add_error(ThrushCompilerIssue::Error(
-                        "Syntax error".into(),
+                        "Type error".into(),
                         "Expected raw typed pointer type with deep type.".into(),
                         None,
                         expr_span,
@@ -759,7 +795,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
             for indexe in indexes {
                 if !indexe.is_unsigned_integer()? || !indexe.is_anyu32bit_integer()? {
                     self.add_error(ThrushCompilerIssue::Error(
-                        "Syntax error".into(),
+                        "Type error".into(),
                         "Expected any unsigned integer value less than or equal to 32 bits.".into(),
                         None,
                         *span,
@@ -779,7 +815,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
 
                 if !reference_type.is_ptr_type() && !reference_type.is_address_type() {
                     self.add_error(ThrushCompilerIssue::Error(
-                        "Syntax error".into(),
+                        "Type error".into(),
                         "Expected 'ptr<T>', 'ptr', or 'addr' type.".into(),
                         None,
                         reference_span,
@@ -795,7 +831,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
 
                 if !expr_type.is_ptr_type() && !expr_type.is_address_type() {
                     self.add_error(ThrushCompilerIssue::Error(
-                        "Syntax error".into(),
+                        "Type error".into(),
                         "Expected 'ptr<T>', 'ptr' or 'addr' type.".into(),
                         None,
                         expr_span,
@@ -920,7 +956,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
 
                     if args.len() != types_size {
                         self.add_error(ThrushCompilerIssue::Error(
-                            String::from("Syntax error"),
+                            String::from("Type error"),
                             format!(
                                 "Expected \"{}\" arguments, with types \"{}\".",
                                 types_size, types_displayed
@@ -988,7 +1024,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
 
                 if !reference_type.is_ptr_type() && !reference_type.is_mut_type() {
                     self.add_error(ThrushCompilerIssue::Error(
-                        "Syntax error".into(),
+                        "Type error".into(),
                         "Expected 'ptr<T>', 'ptr', or 'mut T' type.".into(),
                         None,
                         *span,
@@ -997,7 +1033,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
 
                 if !reference.is_mutable() {
                     return Err(ThrushCompilerIssue::Error(
-                        "Syntax error".into(),
+                        "Type error".into(),
                         "Expected mutable reference.".into(),
                         None,
                         reference.get_span(),
@@ -1012,7 +1048,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
 
                 if !source_type.is_ptr_type() && !source_type.is_mut_type() {
                     self.add_error(ThrushCompilerIssue::Error(
-                        "Syntax error".into(),
+                        "Type error".into(),
                         "Expected 'ptr<T>', 'ptr', or 'mut T' type.".into(),
                         None,
                         *span,
@@ -1021,7 +1057,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
 
                 if !source.is_mutable() {
                     return Err(ThrushCompilerIssue::Error(
-                        "Syntax error".into(),
+                        "Type error".into(),
                         "Expected mutable reference.".into(),
                         None,
                         source.get_span(),
@@ -1068,7 +1104,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
         if let ThrushStatement::Array { items, kind, span } = stmt {
             if kind.is_void_type() {
                 return Err(ThrushCompilerIssue::Error(
-                    "Syntax error".into(),
+                    "Type error".into(),
                     "An element is expected.".into(),
                     None,
                     *span,
@@ -1104,7 +1140,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
         {
             if !reference.is_allocated_reference() {
                 self.add_error(ThrushCompilerIssue::Error(
-                    "Syntax error".into(),
+                    "Type error".into(),
                     "Expected a allocated value.".into(),
                     None,
                     *span,
@@ -1115,7 +1151,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
 
             if reference_type.is_ptr_type() && !reference_type.is_typed_ptr() {
                 self.add_error(ThrushCompilerIssue::Error(
-                    "Syntax error".into(),
+                    "Type error".into(),
                     "Expected raw typed pointer ptr<T>.".into(),
                     None,
                     *span,
@@ -1123,10 +1159,10 @@ impl<'type_checker> TypeChecker<'type_checker> {
             } else if reference_type.is_ptr_type()
                 && reference_type.is_typed_ptr()
                 && !reference_type.is_ptr_struct_type()
-                && !reference_type.is_ptr_array_type()
+                && !reference_type.is_ptr_fixed_array_type()
             {
                 self.add_error(ThrushCompilerIssue::Error(
-                    "Syntax error".into(),
+                    "Type error".into(),
                     "Expected raw typed pointer type with deep type.".into(),
                     None,
                     *span,
@@ -1134,11 +1170,11 @@ impl<'type_checker> TypeChecker<'type_checker> {
             }
 
             if reference_type.is_mut_type()
-                && !reference_type.is_mut_array_type()
+                && !reference_type.is_mut_fixed_array_type()
                 && !reference_type.is_mut_struct_type()
             {
                 self.add_error(ThrushCompilerIssue::Error(
-                    "Syntax error".into(),
+                    "Type error".into(),
                     "Expected mutable type with deep type.".into(),
                     None,
                     *span,
@@ -1158,7 +1194,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
 
             if !reference_type.is_struct_type() && !reference_type.is_mut_struct_type() {
                 self.add_error(ThrushCompilerIssue::Error(
-                    "Syntax error".into(),
+                    "Type error".into(),
                     "Expected reference with struct type.".into(),
                     None,
                     reference_span,
@@ -1249,7 +1285,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
             Ok(())
         } else {
             Err(ThrushCompilerIssue::Error(
-                "Syntax error".into(),
+                "Type error".into(),
                 format!("Cannot cast '{}' to '{}'", from_type, cast_type),
                 None,
                 *span,
@@ -1274,7 +1310,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
 
         if args.len() != parameter_types_size && !ignore_more_arguments {
             self.add_error(ThrushCompilerIssue::Error(
-                String::from("Syntax error"),
+                String::from("Type error"),
                 format!(
                     "Expected {} arguments with types '{}', got {}.",
                     parameter_types_size,
@@ -1374,7 +1410,13 @@ impl<'type_checker> TypeChecker<'type_checker> {
 
         match (target_type, from_type, operator) {
             (ThrushType::Char, ThrushType::Char, None) => Ok(()),
-            (ThrushType::Str, ThrushType::Str, None) => Ok(()),
+            (ThrushType::Str(type_a), ThrushType::Str(type_b), None) => {
+                if type_a == type_b {
+                    return Ok(());
+                }
+
+                Err(error)
+            }
             (ThrushType::Struct(_, target_fields), ThrushType::Struct(_, from_fields), None) => {
                 if target_fields.len() != from_fields.len() {
                     return Err(error);

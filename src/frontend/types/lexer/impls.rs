@@ -83,6 +83,7 @@ impl std::fmt::Display for TokenType {
             TokenType::Cast => write!(f, "cast"),
             TokenType::CastPtr => write!(f, "castptr"),
             TokenType::CastRaw => write!(f, "castraw"),
+            TokenType::Raw => write!(f, "raw"),
             TokenType::Colon => write!(f, ":"),
             TokenType::ColonColon => write!(f, "::"),
             TokenType::Comma => write!(f, ","),
@@ -137,7 +138,7 @@ impl std::fmt::Display for ThrushType {
             ThrushType::F32 => write!(f, "f32"),
             ThrushType::F64 => write!(f, "f64"),
             ThrushType::Bool => write!(f, "bool"),
-            ThrushType::Str => write!(f, "str"),
+            ThrushType::Str(inner) => write!(f, "str{}", inner),
             ThrushType::Char => write!(f, "char"),
             ThrushType::Mut(any_type) => write!(f, "mut {}", any_type),
             ThrushType::FixedArray(kind, size) => {

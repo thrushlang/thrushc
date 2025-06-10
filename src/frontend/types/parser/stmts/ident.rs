@@ -1,5 +1,5 @@
 #[derive(Debug, Clone, Copy)]
-pub enum ReferenceIndentificator {
+pub enum ReferenceIdentificator {
     FunctionParameter,
     Constant,
     Local,

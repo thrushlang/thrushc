@@ -105,6 +105,67 @@ pub fn build_type(parser_ctx: &mut ParserContext<'_>) -> Result<ThrushType, Thru
                 ));
             }
 
+            if tk_kind.is_str() {
+                parser_ctx.consume(
+                    TokenType::LBracket,
+                    String::from("Syntax error"),
+                    String::from("Expected '['."),
+                )?;
+
+                parser_ctx.consume(
+                    TokenType::U8,
+                    String::from("Syntax error"),
+                    String::from("Expected 'u8'."),
+                )?;
+
+                parser_ctx.consume(
+                    TokenType::SemiColon,
+                    String::from("Syntax error"),
+                    String::from("Expected ';'."),
+                )?;
+
+                let size: ThrushStatement = expression::build_expr(parser_ctx)?;
+
+                if !size.is_integer() {
+                    return Err(ThrushCompilerIssue::Error(
+                        String::from("Syntax error"),
+                        "Expected integer value.".into(),
+                        None,
+                        span,
+                    ));
+                }
+
+                if !size.is_anyu32bit_integer()? {
+                    return Err(ThrushCompilerIssue::Error(
+                        String::from("Syntax error"),
+                        "Expected any unsigned 32 bits integer value.".into(),
+                        None,
+                        span,
+                    ));
+                }
+
+                let raw_array_size: u64 = size.get_integer_value()?;
+
+                if let Ok(array_size) = u32::try_from(raw_array_size) {
+                    parser_ctx.consume(
+                        TokenType::RBracket,
+                        String::from("Syntax error"),
+                        String::from("Expected ']'."),
+                    )?;
+
+                    return Ok(ThrushType::Str(
+                        ThrushType::FixedArray(ThrushType::U8.into(), array_size).into(),
+                    ));
+                }
+
+                return Err(ThrushCompilerIssue::Error(
+                    String::from("Syntax error"),
+                    "Expected any unsigned 32 bits integer value.".into(),
+                    None,
+                    span,
+                ));
+            }
+
             match tk_kind.as_type(span)? {
                 ty if ty.is_integer_type() => Ok(ty),
                 ty if ty.is_float_type() => Ok(ty),
@@ -115,7 +176,6 @@ pub fn build_type(parser_ctx: &mut ParserContext<'_>) -> Result<ThrushType, Thru
                 ),
                 ty if ty.is_ptr_type() => Ok(ty),
                 ty if ty.is_void_type() => Ok(ty),
-                ty if ty.is_str_type() => Ok(ty),
 
                 what_heck => Err(ThrushCompilerIssue::Error(
                     String::from("Syntax error"),

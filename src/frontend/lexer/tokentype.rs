@@ -73,6 +73,7 @@ pub enum TokenType {
     Write,
     CastRaw,
     CastPtr,
+    Raw,
     AsmFn,
     Asm,
     Deref,
@@ -350,7 +351,6 @@ impl TokenType {
             TokenType::F32 => Ok(ThrushType::F32),
             TokenType::F64 => Ok(ThrushType::F64),
 
-            TokenType::Str => Ok(ThrushType::Str),
             TokenType::Ptr => Ok(ThrushType::Ptr(None)),
             TokenType::Addr => Ok(ThrushType::Addr),
             TokenType::Void => Ok(ThrushType::Void),

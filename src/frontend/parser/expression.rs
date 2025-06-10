@@ -5,9 +5,9 @@ use crate::{
         lexer::{span::Span, token::Token, tokentype::TokenType},
         parser::expression,
         types::{
-            lexer::{ThrushType, decompose_struct_property},
+            lexer::{ThrushType, decompose_struct_property, traits::ThrushTypeMutableExtensions},
             parser::stmts::{
-                ident::ReferenceIndentificator,
+                ident::ReferenceIdentificator,
                 sites::LLIAllocationSite,
                 stmt::ThrushStatement,
                 traits::{
@@ -342,6 +342,37 @@ fn primary<'instr>(
 
         TokenType::Deref => self::build_deref(parser_context)?,
 
+        TokenType::Raw => {
+            let raw_tk: &Token = parser_context.advance()?;
+            let span: Span = raw_tk.get_span();
+
+            let identifier_tk: &Token = parser_context.consume(
+                TokenType::Identifier,
+                String::from("Syntax error"),
+                String::from("Expected 'identifier'."),
+            )?;
+
+            let reference_name: &str = identifier_tk.get_lexeme();
+
+            let reference: ThrushStatement =
+                self::build_reference(parser_context, reference_name, span)?;
+
+            let mut reference_type: ThrushType = reference.get_value_type()?.clone();
+
+            if reference_type.is_mut_type() {
+                let deferenced_type: ThrushType = reference_type.defer_mut_all();
+                reference_type = deferenced_type;
+            }
+
+            reference_type = ThrushType::Ptr(Some(reference_type.into()));
+
+            ThrushStatement::Raw {
+                reference: (reference_name, reference.into()),
+                kind: reference_type,
+                span,
+            }
+        }
+
         TokenType::Alloc => {
             let alloc_tk: &Token = parser_context.advance()?;
             let span: Span = alloc_tk.get_span();
@@ -419,6 +450,7 @@ fn primary<'instr>(
                 )?;
 
                 let reference_name: &str = identifier_tk.get_lexeme();
+
                 let reference: ThrushStatement =
                     self::build_reference(parser_context, reference_name, span)?;
 
@@ -613,7 +645,22 @@ fn primary<'instr>(
             let str_tk: &Token = parser_context.advance()?;
             let span: Span = str_tk.get_span();
 
-            ThrushStatement::new_str(ThrushType::Str, str_tk.fix_lexeme_scapes(span)?, span)
+            let bytes: Vec<u8> = str_tk.fix_lexeme_scapes(span)?;
+
+            if let Ok(size) = u32::try_from(bytes.len()) {
+                return Ok(ThrushStatement::new_str(
+                    ThrushType::Str(ThrushType::FixedArray(ThrushType::U8.into(), size).into()),
+                    bytes,
+                    span,
+                ));
+            }
+
+            return Err(ThrushCompilerIssue::Error(
+                "Syntax error".into(),
+                "Could not get the size of a string, because it's too large.".into(),
+                None,
+                span,
+            ));
         }
 
         TokenType::Char => {
@@ -945,7 +992,7 @@ fn build_reference<'instr>(
             name,
             kind: constant_type,
             span,
-            identificator: ReferenceIndentificator::Constant,
+            identificator: ReferenceIdentificator::Constant,
             is_mutable: false,
             is_allocated: true,
         });
@@ -971,7 +1018,7 @@ fn build_reference<'instr>(
             kind: parameter_type,
             span,
             is_mutable,
-            identificator: ReferenceIndentificator::FunctionParameter,
+            identificator: ReferenceIdentificator::FunctionParameter,
             is_allocated,
         });
     }
@@ -995,7 +1042,7 @@ fn build_reference<'instr>(
             kind: lli_type,
             span,
             is_mutable: false,
-            identificator: ReferenceIndentificator::LowLevelInstruction,
+            identificator: ReferenceIdentificator::LowLevelInstruction,
             is_allocated,
         });
     }
@@ -1025,7 +1072,7 @@ fn build_reference<'instr>(
         kind: local_type.clone(),
         span,
         is_mutable,
-        identificator: ReferenceIndentificator::Local,
+        identificator: ReferenceIdentificator::Local,
         is_allocated: true,
     };
 
@@ -1644,8 +1691,8 @@ fn build_array<'instr>(
         let y_type: &ThrushType = y.get_value_type().unwrap_or(&ThrushType::Void);
 
         x_type
-            .get_array_type_herarchy()
-            .cmp(&y_type.get_array_type_herarchy())
+            .get_fixed_array_type_herarchy()
+            .cmp(&y_type.get_fixed_array_type_herarchy())
     }) {
         if let Ok(size) = u32::try_from(items.len()) {
             array_type = ThrushType::FixedArray(item.get_value_type()?.clone().into(), size)
