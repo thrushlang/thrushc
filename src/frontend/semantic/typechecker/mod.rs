@@ -553,18 +553,42 @@ impl<'type_checker> TypeChecker<'type_checker> {
         if let ThrushStatement::CastPtr { from, cast, span } = stmt {
             let from_type: &ThrushType = from.get_value_type()?;
 
-            if !from_type.is_ptr_type()
-                && !from_type.is_mut_type()
-                && !from_type.is_address_type()
-                && !from.is_str()
-            {
-                self.add_error(ThrushCompilerIssue::Error(
-                    "Type error".into(),
-                    "Expected 'ptr<T>', 'ptr', 'addr', 'str',  or 'mut T' type for cast to raw pointer."
-                        .into(),
-                    None,
-                    *span,
-                ));
+            if from.is_reference() {
+                if !from.is_local_reference() {
+                    self.add_error(ThrushCompilerIssue::Error(
+                        "Cast error".into(),
+                        "Expected a reference to local value.".into(),
+                        None,
+                        *span,
+                    ));
+                }
+
+                if from_type.is_ptr_type() || from_type.is_mut_type() || from_type.is_address_type()
+                {
+                    self.add_error(ThrushCompilerIssue::Error(
+                        "Type error".into(),
+                        "A non-raw type 'ptr<T>', 'ptr', 'addr' or mutable 'mut T' was expected."
+                            .into(),
+                        None,
+                        *span,
+                    ));
+                }
+            } else {
+                if !from_type.is_ptr_type()
+                    && !from_type.is_mut_type()
+                    && !from_type.is_address_type()
+                    && !from.is_str()
+                {
+                    self.add_error(ThrushCompilerIssue::Error(
+                        "Type error".into(),
+                        "Expected 'ptr<T>', 'ptr', 'addr', 'str',  or 'mut T' type for cast to raw pointer."
+                            .into(),
+                        None,
+                        *span,
+                    ));
+                }
+
+                self.analyze_stmt(from)?;
             }
 
             if !cast.is_ptr_type() {
@@ -576,8 +600,6 @@ impl<'type_checker> TypeChecker<'type_checker> {
                 ));
             }
 
-            self.analyze_stmt(from)?;
-
             return Ok(());
         }
 
@@ -587,39 +609,6 @@ impl<'type_checker> TypeChecker<'type_checker> {
             if let Err(error) = self.validate_type_cast(cast, from_type, span) {
                 self.add_error(error);
             }
-
-            return Ok(());
-        }
-
-        if let ThrushStatement::Raw {
-            reference: any_reference,
-            ..
-        } = stmt
-        {
-            let reference: &ThrushStatement = &any_reference.1;
-
-            let reference_type: &ThrushType = reference.get_value_type()?;
-            let reference_span: Span = reference.get_span();
-
-            if !reference.is_local_reference() {
-                self.add_error(ThrushCompilerIssue::Error(
-                    "Type error".into(),
-                    "Expected local reference.".into(),
-                    None,
-                    reference_span,
-                ));
-            }
-
-            if reference_type.is_ptr_type() {
-                self.add_error(ThrushCompilerIssue::Error(
-                    "Type error".into(),
-                    "It's already a raw pointer.".into(),
-                    None,
-                    reference_span,
-                ));
-            }
-
-            self.analyze_stmt(reference)?;
 
             return Ok(());
         }

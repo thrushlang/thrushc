@@ -73,7 +73,6 @@ pub enum TokenType {
     Write,
     CastRaw,
     CastPtr,
-    Raw,
     AsmFn,
     Asm,
     Deref,

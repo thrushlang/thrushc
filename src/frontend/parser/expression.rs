@@ -5,7 +5,7 @@ use crate::{
         lexer::{span::Span, token::Token, tokentype::TokenType},
         parser::expression,
         types::{
-            lexer::{ThrushType, decompose_struct_property, traits::ThrushTypeMutableExtensions},
+            lexer::{self, ThrushType},
             parser::stmts::{
                 ident::ReferenceIdentificator,
                 sites::LLIAllocationSite,
@@ -341,37 +341,6 @@ fn primary<'instr>(
         TokenType::LBracket => self::build_array(parser_context)?,
 
         TokenType::Deref => self::build_deref(parser_context)?,
-
-        TokenType::Raw => {
-            let raw_tk: &Token = parser_context.advance()?;
-            let span: Span = raw_tk.get_span();
-
-            let identifier_tk: &Token = parser_context.consume(
-                TokenType::Identifier,
-                String::from("Syntax error"),
-                String::from("Expected 'identifier'."),
-            )?;
-
-            let reference_name: &str = identifier_tk.get_lexeme();
-
-            let reference: ThrushStatement =
-                self::build_reference(parser_context, reference_name, span)?;
-
-            let mut reference_type: ThrushType = reference.get_value_type()?.clone();
-
-            if reference_type.is_mut_type() {
-                let deferenced_type: ThrushType = reference_type.defer_mut_all();
-                reference_type = deferenced_type;
-            }
-
-            reference_type = ThrushType::Ptr(Some(reference_type.into()));
-
-            ThrushStatement::Raw {
-                reference: (reference_name, reference.into()),
-                kind: reference_type,
-                span,
-            }
-        }
 
         TokenType::Alloc => {
             let alloc_tk: &Token = parser_context.advance()?;
@@ -955,7 +924,7 @@ fn build_property<'instr>(
 
     property_names.reverse();
 
-    let decomposed: (ThrushType, Vec<(ThrushType, u32)>) = decompose_struct_property(
+    let decomposed: (ThrushType, Vec<(ThrushType, u32)>) = lexer::decompose_struct_property(
         0,
         property_names,
         reference_type,

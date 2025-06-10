@@ -59,7 +59,31 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
     }
 
     fn analyze_stmt(&mut self, stmt: &'attr_checker ThrushStatement) {
-        if let ThrushStatement::Function { attributes, .. } = stmt {
+        if let ThrushStatement::Function {
+            attributes,
+            body,
+            span,
+            ..
+        } = stmt
+        {
+            if !body.is_null() && attributes.has_extern_attribute() {
+                if let Some(span) = attributes.match_attr(LLVMAttributeComparator::Extern) {
+                    self.add_error(ThrushCompilerIssue::Error(
+                        "Attribute error".into(),
+                        "External functions cannot have a body.".into(),
+                        None,
+                        span,
+                    ));
+                } else {
+                    self.add_error(ThrushCompilerIssue::Error(
+                        "Attribute error".into(),
+                        "External functions cannot have a body.".into(),
+                        None,
+                        *span,
+                    ));
+                }
+            }
+
             self.analyze_attrs(attributes, AttributeCheckerAttributeApplicant::Function);
         }
 

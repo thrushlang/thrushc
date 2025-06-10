@@ -312,11 +312,11 @@ fn build_method<'instr>(
         let parameter_type: ThrushType = typegen::build_type(parser_ctx)?;
 
         if !declare_forward {
-            parser_ctx.get_mut_symbols().new_parameter(
+            /*parser_ctx.get_mut_symbols().new_parameter(
                 parameter_name,
                 (parameter_type.clone(), false, is_mutable, parameter_span),
                 parameter_span,
-            )?;
+            )?;*/
         }
 
         bind_parameters_types.push(parameter_type.clone());
@@ -1793,10 +1793,6 @@ pub fn build_function<'instr>(
 
     let return_type: ThrushType = typegen::build_type(parser_ctx)?;
 
-    parser_ctx
-        .get_mut_type_ctx()
-        .set_function_type(return_type.clone());
-
     let function_attributes: ThrushAttributes =
         self::build_attributes(parser_ctx, &[TokenType::SemiColon, TokenType::LBrace])?;
 
@@ -1833,28 +1829,17 @@ pub fn build_function<'instr>(
         return Ok(ThrushStatement::Null { span });
     }
 
-    for parameter in parameters.iter() {
-        if let ThrushStatement::FunctionParameter {
-            name,
-            kind,
-            is_mutable,
-            span,
-            ..
-        } = parameter
-        {
-            parser_ctx.get_mut_symbols().new_parameter(
-                name,
-                (kind.clone(), false, *is_mutable, *span),
-                *span,
-            )?;
-        }
-    }
-
     if parser_ctx.match_token(TokenType::SemiColon)? {
         return Ok(function);
     }
 
     parser_ctx.get_mut_control_ctx().set_inside_function(true);
+
+    parser_ctx
+        .get_mut_type_ctx()
+        .set_function_type(return_type.clone());
+
+    parser_ctx.get_mut_symbols().start_parameters(&parameters)?;
 
     let function_body: ThrushStatement = self::build_block(parser_ctx)?;
 

@@ -545,13 +545,6 @@ pub fn compile<'ctx>(
         return self::compile(context, from, cast, CompileChanges::new(true, true));
     }
 
-    if let ThrushStatement::Raw { reference, .. } = expr {
-        let reference_name: &str = reference.0;
-        let symbol: SymbolAllocated = context.get_allocated_symbol(reference_name);
-
-        return symbol.raw_load().into();
-    }
-
     /* ######################################################################
 
 

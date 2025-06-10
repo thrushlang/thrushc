@@ -4,6 +4,7 @@ use crate::{
         lexer::span::Span,
         types::{
             lexer::MethodsApplicant,
+            parser::stmts::stmt::ThrushStatement,
             symbols::types::{
                 AssemblerFunction, AssemblerFunctions, ConstantSymbol, Constants, CustomTypeSymbol,
                 CustomTypes, EnumSymbol, Enums, FoundSymbolId, Function, Functions, LLISymbol,
@@ -77,22 +78,32 @@ impl<'instr> SymbolsTable<'instr> {
 }
 
 impl<'instr> SymbolsTable<'instr> {
-    pub fn new_parameter(
+    pub fn start_parameters(
         &mut self,
-        name: &'instr str,
-        parameter: ParameterSymbol<'instr>,
-        span: Span,
+        parameters: &[ThrushStatement<'instr>],
     ) -> Result<(), ThrushCompilerIssue> {
-        if self.parameters.contains_key(name) {
-            return Err(ThrushCompilerIssue::Error(
-                String::from("Parameter already declared"),
-                format!("'{}' parameter already declared before.", name),
-                None,
+        for parameter in parameters.iter() {
+            if let ThrushStatement::FunctionParameter {
+                name,
+                kind,
+                is_mutable,
                 span,
-            ));
-        }
+                ..
+            } = parameter
+            {
+                if self.parameters.contains_key(name) {
+                    return Err(ThrushCompilerIssue::Error(
+                        String::from("Parameter already declared"),
+                        format!("'{}' parameter already declared before.", name),
+                        None,
+                        *span,
+                    ));
+                }
 
-        self.parameters.insert(name, parameter);
+                self.parameters
+                    .insert(name, (kind.clone(), *is_mutable, false, *span));
+            }
+        }
 
         Ok(())
     }

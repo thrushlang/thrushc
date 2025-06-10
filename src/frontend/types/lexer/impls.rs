@@ -83,7 +83,6 @@ impl std::fmt::Display for TokenType {
             TokenType::Cast => write!(f, "cast"),
             TokenType::CastPtr => write!(f, "castptr"),
             TokenType::CastRaw => write!(f, "castraw"),
-            TokenType::Raw => write!(f, "raw"),
             TokenType::Colon => write!(f, ":"),
             TokenType::ColonColon => write!(f, "::"),
             TokenType::Comma => write!(f, ","),

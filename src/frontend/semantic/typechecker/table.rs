@@ -52,26 +52,6 @@ impl<'symbol> TypeCheckerSymbolsTable<'symbol> {
         self.methods.insert(name, methods);
     }
 
-    pub fn get_local(&mut self, name: &'symbol str) -> Option<TypeCheckerLocal<'symbol>> {
-        for scope in self.locals.iter_mut().rev() {
-            if let Some(any) = scope.get_mut(name) {
-                return Some(any);
-            }
-        }
-
-        None
-    }
-
-    pub fn get_lli(&mut self, name: &'symbol str) -> Option<TypeCheckerLLI<'symbol>> {
-        for scope in self.llis.iter_mut().rev() {
-            if let Some(any) = scope.get_mut(name) {
-                return Some(*any);
-            }
-        }
-
-        None
-    }
-
     pub fn get_function(&self, name: &'symbol str) -> Option<&TypeCheckerFunction<'symbol>> {
         self.functions.get(name)
     }

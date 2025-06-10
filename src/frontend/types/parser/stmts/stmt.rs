@@ -350,11 +350,6 @@ pub enum ThrushStatement<'ctx> {
         cast: ThrushType,
         span: Span,
     },
-    Raw {
-        reference: (&'ctx str, Rc<ThrushStatement<'ctx>>),
-        kind: ThrushType,
-        span: Span,
-    },
 
     // Expressions
     Call {
@@ -485,7 +480,6 @@ impl<'ctx> ThrushStatement<'ctx> {
             ThrushStatement::MethodCall { kind, .. } => Ok(kind),
             ThrushStatement::EnumValue { kind, .. } => Ok(kind),
             ThrushStatement::Deref { kind, .. } => Ok(kind),
-            ThrushStatement::Raw { kind, .. } => Ok(kind),
             ThrushStatement::CastRaw { cast: kind, .. } => Ok(kind),
             ThrushStatement::Cast { cast: kind, .. } => Ok(kind),
             ThrushStatement::CastPtr { cast: kind, .. } => Ok(kind),
@@ -531,7 +525,6 @@ impl<'ctx> ThrushStatement<'ctx> {
             ThrushStatement::Deref { kind, .. } => kind,
             ThrushStatement::AsmValue { kind, .. } => kind,
 
-            ThrushStatement::Raw { kind, .. } => kind,
             ThrushStatement::CastPtr { cast: kind, .. } => kind,
             ThrushStatement::CastRaw { cast: kind, .. } => kind,
             ThrushStatement::Cast { cast: kind, .. } => kind,
@@ -559,7 +552,6 @@ impl<'ctx> ThrushStatement<'ctx> {
             ThrushStatement::BinaryOp { span, .. } => *span,
             ThrushStatement::Group { span, .. } => *span,
             ThrushStatement::UnaryOp { span, .. } => *span,
-            ThrushStatement::Raw { span, .. } => *span,
             ThrushStatement::CastRaw { span, .. } => *span,
             ThrushStatement::Cast { span, .. } => *span,
             ThrushStatement::Deref { span, .. } => *span,

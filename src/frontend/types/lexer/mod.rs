@@ -395,11 +395,6 @@ impl ThrushType {
     }
 
     #[inline(always)]
-    pub const fn is_str_type(&self) -> bool {
-        matches!(self, ThrushType::Str(..))
-    }
-
-    #[inline(always)]
     pub const fn is_numeric(&self) -> bool {
         self.is_integer_type() || self.is_float_type() || self.is_char_type() || self.is_bool_type()
     }
