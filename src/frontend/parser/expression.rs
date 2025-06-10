@@ -5,7 +5,7 @@ use crate::{
         lexer::{span::Span, token::Token, tokentype::TokenType},
         parser::expression,
         types::{
-            lexer::{ThrushType, decompose_struct_property},
+            lexer::{ThrushType, decompose_struct_property, traits::ThrushTypeMutableExtensions},
             parser::stmts::{
                 ident::ReferenceIndentificator,
                 sites::LLIAllocationSite,
@@ -245,7 +245,7 @@ fn term<'instr>(
         let left_type: &ThrushType = expression.get_value_type()?;
         let right_type: &ThrushType = right.get_value_type()?;
 
-        let kind: &ThrushType = left_type.precompute_type(right_type);
+        let kind: &ThrushType = left_type.precompute_numeric_type(right_type);
 
         expression = ThrushStatement::BinaryOp {
             left: expression.clone().into(),
@@ -276,7 +276,7 @@ fn factor<'instr>(
         let left_type: &ThrushType = expression.get_value_type()?;
         let right_type: &ThrushType = right.get_value_type()?;
 
-        let kind: &ThrushType = left_type.precompute_type(right_type);
+        let kind: &ThrushType = left_type.precompute_numeric_type(right_type);
 
         expression = ThrushStatement::BinaryOp {
             left: expression.clone().into(),
@@ -361,11 +361,11 @@ fn primary<'instr>(
             let mut reference_type: ThrushType = reference.get_value_type()?.clone();
 
             if !reference_type.is_ptr_type() {
-                if !reference_type.is_mut_type() {
-                    reference_type = ThrushType::Ptr(Some(reference_type.into()));
-                } else {
+                if reference_type.is_mut_type() {
                     let defered_type: ThrushType = reference_type.defer_mut_all();
                     reference_type = ThrushType::Ptr(Some(defered_type.into()));
+                } else {
+                    reference_type = ThrushType::Ptr(Some(reference_type.into()));
                 }
             }
 
@@ -452,12 +452,12 @@ fn primary<'instr>(
                     String::from("Expected 'identifier'."),
                 )?;
 
-                let name: &str = identifier_tk.get_lexeme();
-
-                self::build_reference(parser_context, name, span)?;
+                let reference_name: &str = identifier_tk.get_lexeme();
+                let reference: ThrushStatement =
+                    self::build_reference(parser_context, reference_name, span)?;
 
                 return Ok(ThrushStatement::Load {
-                    load: (Some(name), None),
+                    value: (Some((reference_name, reference.into())), None),
                     kind: load_type,
                     span,
                 });
@@ -466,7 +466,7 @@ fn primary<'instr>(
             let expression: ThrushStatement = self::build_expr(parser_context)?;
 
             ThrushStatement::Load {
-                load: (None, Some(expression.into())),
+                value: (None, Some(expression.into())),
                 kind: load_type,
                 span,
             }
@@ -688,7 +688,7 @@ fn primary<'instr>(
                 let expression: ThrushStatement = self::build_expr(parser_context)?;
 
                 return Ok(ThrushStatement::Mut {
-                    source: (Some(reference.clone().into()), None),
+                    source: (Some((name, reference.clone().into())), None),
                     value: expression.into(),
                     kind: reference_type.clone(),
                     span,
@@ -948,9 +948,11 @@ fn build_reference<'instr>(
 
     if symbol.is_constant() {
         let const_id: &str = symbol.expected_constant(span)?;
+
         let constant: ConstantSymbol = parser_context
             .get_symbols()
             .get_const_by_id(const_id, span)?;
+
         let constant_type: ThrushType = constant.get_type();
 
         return Ok(ThrushStatement::Reference {
@@ -965,13 +967,18 @@ fn build_reference<'instr>(
 
     if symbol.is_parameter() {
         let parameter_id: &str = symbol.expected_parameter(span)?;
+
         let parameter: ParameterSymbol = parser_context
             .get_symbols()
             .get_parameter_by_id(parameter_id, span)?;
+
         let parameter_type: ThrushType = parameter.get_type();
 
         let is_mutable: bool = parameter.is_mutable();
-        let is_allocated: bool = parameter_type.is_mut_type();
+
+        let is_allocated: bool = parameter_type.is_mut_type()
+            || parameter_type.is_ptr_type()
+            || parameter_type.is_address_type();
 
         return Ok(ThrushStatement::Reference {
             name,
@@ -995,7 +1002,7 @@ fn build_reference<'instr>(
 
         let lli_type: ThrushType = parameter.get_type();
 
-        let is_allocated: bool = lli_type.is_ptr_type();
+        let is_allocated: bool = lli_type.is_ptr_type() || lli_type.is_address_type();
 
         return Ok(ThrushStatement::Reference {
             name,
@@ -1106,6 +1113,8 @@ fn build_address<'instr>(
     name: &'instr str,
     span: Span,
 ) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
+    let reference: ThrushStatement = self::build_reference(parser_context, name, span)?;
+
     let mut indexes: Vec<ThrushStatement> = Vec::with_capacity(10);
 
     loop {
@@ -1145,6 +1154,7 @@ fn build_address<'instr>(
 
     Ok(ThrushStatement::Address {
         name,
+        reference: reference.into(),
         indexes,
         kind: ThrushType::Addr,
         span,
@@ -1465,7 +1475,7 @@ pub fn build_deref<'instr>(
 
     for _ in 0..deref_count {
         current_expr = ThrushStatement::Deref {
-            load: current_expr.clone().into(),
+            value: current_expr.clone().into(),
             kind: current_type.deref(),
             span,
         };

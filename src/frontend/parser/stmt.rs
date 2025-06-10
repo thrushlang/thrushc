@@ -9,8 +9,8 @@ use crate::{
         lexer::{span::Span, token::Token, tokentype::TokenType},
         types::{
             lexer::{
-                MethodsApplicant, ThrushStructType, ThrushType, generate_methods,
-                traits::ThrushStructTypeExtensions,
+                MethodsApplicant, ThrushType, generate_methods,
+                traits::ThrushTypeStructTypeExtensions,
             },
             parser::stmts::{
                 stmt::ThrushStatement,
@@ -139,8 +139,7 @@ pub fn build_methods<'instr>(
         .get_mut_type_ctx()
         .set_this_methods_type(MethodsType::Struct(kind.clone()));
 
-    let struct_type: ThrushStructType = kind.into_structure_type();
-    let struct_name: String = struct_type.get_name();
+    let struct_name: String = kind.parser_get_struct_name(span)?;
 
     parser_ctx
         .get_symbols()

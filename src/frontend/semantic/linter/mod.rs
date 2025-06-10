@@ -64,17 +64,17 @@ impl<'linter> Linter<'linter> {
     }
 
     pub fn analyze_stmt(&mut self, stmt: &'linter ThrushStatement) {
-        /* ######################################################################
-
-
-            LINTER STMTS | START
-
-
-        ########################################################################*/
-
         if let ThrushStatement::EntryPoint { body, .. } = stmt {
             self.analyze_stmt(body);
         }
+
+        /* ######################################################################
+
+
+            LINTER DECLARATIONS | START
+
+
+        ########################################################################*/
 
         if let ThrushStatement::Enum { fields, .. } = stmt {
             fields.iter().for_each(|field| {
@@ -118,6 +118,46 @@ impl<'linter> Linter<'linter> {
             self.analyze_stmt(value);
         }
 
+        /* ######################################################################
+
+
+            LINTER TERMINATOR | START
+
+
+        ########################################################################*/
+
+        if let ThrushStatement::Return {
+            expression: Some(expr),
+            ..
+        } = stmt
+        {
+            self.analyze_stmt(expr);
+        }
+
+        /* ######################################################################
+
+
+            LINTER TERMINATOR | END
+
+
+        ########################################################################*/
+
+        /* ######################################################################
+
+
+            LINTER DECLARATIONS | END
+
+
+        ########################################################################*/
+
+        /* ######################################################################
+
+
+            LINTER LOOPS | START
+
+
+        ########################################################################*/
+
         if let ThrushStatement::For {
             local,
             actions,
@@ -132,17 +172,192 @@ impl<'linter> Linter<'linter> {
             self.analyze_stmt(block);
         }
 
-        if let ThrushStatement::Return {
-            expression: Some(expr),
-            ..
-        } = stmt
-        {
-            self.analyze_stmt(expr);
+        if let ThrushStatement::While { cond, block, .. } = stmt {
+            self.analyze_stmt(cond);
+            self.analyze_stmt(block);
         }
+
+        if let ThrushStatement::Loop { block, .. } = stmt {
+            self.analyze_stmt(block);
+        }
+
         /* ######################################################################
 
 
-            LINTER STMTS | END
+            LINTER LOOPS | END
+
+
+        ########################################################################*/
+
+        /* ######################################################################
+
+
+            LINTER DEREFERENCE | START
+
+
+        ########################################################################*/
+
+        if let ThrushStatement::Deref { value, .. } = stmt {
+            self.analyze_stmt(value);
+        }
+
+        /* ######################################################################
+
+
+            LINTER DEREFERENCE | END
+
+
+        ########################################################################*/
+
+        /* ######################################################################
+
+
+            LINTER LLI | START
+
+
+        ########################################################################*/
+
+        if let ThrushStatement::Write {
+            write_to,
+            write_value,
+            ..
+        } = stmt
+        {
+            if let Some(name) = write_to.0 {
+                if let Some(local) = self.symbols.get_local_info(name) {
+                    local.1 = true;
+                    return;
+                }
+
+                if let Some(parameter) = self.symbols.get_parameter_info(name) {
+                    parameter.1 = true;
+                    return;
+                }
+
+                if let Some(lli) = self.symbols.get_lli_info(name) {
+                    lli.1 = true;
+                    return;
+                }
+
+                if let Some(constant) = self.symbols.get_constant_info(name) {
+                    constant.1 = true;
+                    return;
+                }
+            }
+
+            if let Some(expr) = &write_to.1 {
+                self.analyze_stmt(expr);
+            }
+
+            self.analyze_stmt(write_value);
+        }
+
+        if let ThrushStatement::Address {
+            name,
+            span,
+            indexes,
+            ..
+        } = stmt
+        {
+            indexes.iter().for_each(|indexe| {
+                self.analyze_stmt(indexe);
+            });
+
+            if let Some(local) = self.symbols.get_local_info(name) {
+                local.1 = true;
+                return;
+            }
+
+            if let Some(parameter) = self.symbols.get_parameter_info(name) {
+                parameter.1 = true;
+                return;
+            }
+
+            if let Some(lli) = self.symbols.get_lli_info(name) {
+                lli.1 = true;
+                return;
+            }
+
+            if let Some(constant) = self.symbols.get_constant_info(name) {
+                constant.1 = true;
+                return;
+            }
+
+            self.add_bug(ThrushCompilerIssue::Bug(
+                String::from("Reference not caught"),
+                format!("Could not get reference with name '{}'.", name),
+                *span,
+                CompilationPosition::Linter,
+                line!(),
+            ));
+        }
+
+        if let ThrushStatement::Load { value, .. } = stmt {
+            if let Some(any_reference) = &value.0 {
+                let name: &str = any_reference.0;
+
+                if let Some(local) = self.symbols.get_local_info(name) {
+                    local.1 = true;
+                    return;
+                }
+
+                if let Some(parameter) = self.symbols.get_parameter_info(name) {
+                    parameter.1 = true;
+                    return;
+                }
+
+                if let Some(lli) = self.symbols.get_lli_info(name) {
+                    lli.1 = true;
+                    return;
+                }
+
+                if let Some(constant) = self.symbols.get_constant_info(name) {
+                    constant.1 = true;
+                    return;
+                }
+            }
+
+            if let Some(expr) = &value.1 {
+                self.analyze_stmt(expr);
+            }
+        }
+
+        /* ######################################################################
+
+
+            LINTER LLI | END
+
+
+        ########################################################################*/
+
+        /* ######################################################################
+
+
+            LINTER CASTS | START
+
+
+        ########################################################################*/
+
+        if let ThrushStatement::CastPtr { from, .. } = stmt {
+            self.analyze_stmt(from);
+        }
+
+        if let ThrushStatement::Cast { from, .. } = stmt {
+            self.analyze_stmt(from);
+        }
+
+        if let ThrushStatement::CastRaw { from, .. } = stmt {
+            self.analyze_stmt(from);
+        }
+
+        if let ThrushStatement::RawPtr { from, .. } = stmt {
+            self.analyze_stmt(from);
+        }
+
+        /* ######################################################################
+
+
+            LINTER CASTS | END
 
 
         ########################################################################*/
@@ -186,41 +401,6 @@ impl<'linter> Linter<'linter> {
             });
         }
 
-        if let ThrushStatement::Write {
-            write_to,
-            write_value,
-            ..
-        } = stmt
-        {
-            if let Some(reference_name) = write_to.0 {
-                if let Some(lli) = self.symbols.get_lli_info(reference_name) {
-                    lli.1 = true;
-                }
-            }
-
-            if let Some(expr) = &write_to.1 {
-                self.analyze_stmt(expr);
-            }
-
-            self.analyze_stmt(write_value);
-        }
-
-        if let ThrushStatement::CastPtr { from, .. } = stmt {
-            self.analyze_stmt(from);
-        }
-
-        if let ThrushStatement::Cast { from, .. } = stmt {
-            self.analyze_stmt(from);
-        }
-
-        if let ThrushStatement::CastRaw { from, .. } = stmt {
-            self.analyze_stmt(from);
-        }
-
-        if let ThrushStatement::RawPtr { from, .. } = stmt {
-            self.analyze_stmt(from);
-        }
-
         if let ThrushStatement::Index {
             name,
             indexes,
@@ -259,74 +439,6 @@ impl<'linter> Linter<'linter> {
                 CompilationPosition::Linter,
                 line!(),
             ));
-        }
-
-        if let ThrushStatement::Address {
-            name,
-            span,
-            indexes,
-            ..
-        } = stmt
-        {
-            indexes.iter().for_each(|indexe| {
-                self.analyze_stmt(indexe);
-            });
-
-            if let Some(local) = self.symbols.get_local_info(name) {
-                local.1 = true;
-                return;
-            }
-
-            if let Some(parameter) = self.symbols.get_parameter_info(name) {
-                parameter.1 = true;
-                return;
-            }
-
-            if let Some(lli) = self.symbols.get_lli_info(name) {
-                lli.1 = true;
-                return;
-            }
-
-            if let Some(constant) = self.symbols.get_constant_info(name) {
-                constant.1 = true;
-                return;
-            }
-
-            self.add_bug(ThrushCompilerIssue::Bug(
-                String::from("Reference not caught"),
-                format!("Could not get reference with name '{}'.", name),
-                *span,
-                CompilationPosition::Linter,
-                line!(),
-            ));
-        }
-
-        if let ThrushStatement::Load { load, .. } = stmt {
-            if let Some(name) = load.0 {
-                if let Some(local) = self.symbols.get_local_info(name) {
-                    local.1 = true;
-                    return;
-                }
-
-                if let Some(parameter) = self.symbols.get_parameter_info(name) {
-                    parameter.1 = true;
-                    return;
-                }
-
-                if let Some(lli) = self.symbols.get_lli_info(name) {
-                    lli.1 = true;
-                    return;
-                }
-
-                if let Some(constant) = self.symbols.get_constant_info(name) {
-                    constant.1 = true;
-                    return;
-                }
-            }
-
-            if let Some(expr) = &load.1 {
-                self.analyze_stmt(expr);
-            }
         }
 
         if let ThrushStatement::Constructor {
@@ -452,17 +564,32 @@ impl<'linter> Linter<'linter> {
         }
 
         if let ThrushStatement::Mut { source, span, .. } = stmt {
-            if let Some(reference) = &source.0 {
-                let reference_name: &str = reference.get_unwrapped_reference_name();
+            if let Some(any_reference) = &source.0 {
+                let name: &str = any_reference.0;
 
-                if let Some(local) = self.symbols.get_local_info(reference_name) {
+                if let Some(local) = self.symbols.get_local_info(name) {
                     local.1 = true;
+                    return;
+                }
+
+                if let Some(parameter) = self.symbols.get_parameter_info(name) {
+                    parameter.1 = true;
+                    return;
+                }
+
+                if let Some(lli) = self.symbols.get_lli_info(name) {
+                    lli.1 = true;
+                    return;
+                }
+
+                if let Some(constant) = self.symbols.get_constant_info(name) {
+                    constant.1 = true;
                     return;
                 }
 
                 self.add_bug(ThrushCompilerIssue::Bug(
                     String::from("Mutable expression not caught"),
-                    format!("Could not mutable reference with name '{}'.", reference),
+                    format!("Could not mutable reference with name '{}'.", name),
                     *span,
                     CompilationPosition::Linter,
                     line!(),

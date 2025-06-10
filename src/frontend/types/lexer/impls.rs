@@ -1,7 +1,4 @@
-use crate::frontend::{
-    lexer::tokentype::TokenType,
-    types::lexer::{ThrushStructType, ThrushType, traits::ThrushStructTypeExtensions},
-};
+use crate::frontend::{lexer::tokentype::TokenType, types::lexer::ThrushType};
 
 impl std::fmt::Display for TokenType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -172,11 +169,5 @@ impl std::fmt::Display for ThrushType {
             }
             ThrushType::Void => write!(f, "void"),
         }
-    }
-}
-
-impl ThrushStructTypeExtensions for ThrushStructType {
-    fn get_name(&self) -> String {
-        self.0.clone()
     }
 }

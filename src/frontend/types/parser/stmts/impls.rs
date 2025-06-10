@@ -258,13 +258,10 @@ impl Display for ThrushStatement<'_> {
             }
 
             ThrushStatement::Mut { source, value, .. } => {
-                if let (Some(reference), _) = source {
-                    write!(
-                        f,
-                        "{} = {}",
-                        reference.get_unwrapped_reference_name(),
-                        value
-                    )?;
+                if let (Some(any_reference), _) = source {
+                    let reference_name: &str = any_reference.0;
+
+                    write!(f, "{} = {}", reference_name, value)?;
                 }
 
                 if let (_, Some(expr)) = source {

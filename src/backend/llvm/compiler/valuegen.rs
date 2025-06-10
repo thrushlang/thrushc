@@ -4,7 +4,7 @@ use crate::backend::llvm::compiler::{binaryop, builtins, cast, unaryop, utils, v
 use crate::backend::types::representations::LLVMFunction;
 use crate::core::console::logging::{self, LoggingType};
 use crate::frontend::types::lexer::ThrushType;
-use crate::frontend::types::lexer::traits::LLVMTypeExtensions;
+use crate::frontend::types::lexer::traits::{LLVMTypeExtensions, ThrushTypeMutableExtensions};
 use crate::frontend::types::parser::stmts::stmt::ThrushStatement;
 use crate::frontend::types::parser::stmts::traits::ThrushAttributesExtensions;
 use crate::frontend::types::parser::stmts::types::ThrushAttributes;
@@ -378,21 +378,23 @@ pub fn compile<'ctx>(
         logging::log(LoggingType::Panic, "Could not get value of 'write' LLI");
     }
 
-    if let ThrushStatement::Load { load, kind, .. } = expr {
-        if let Some(name) = load.0 {
+    if let ThrushStatement::Load { value, kind, .. } = expr {
+        if let Some(any_reference) = &value.0 {
+            let name: &str = any_reference.0;
+
             let ptr: PointerValue = context
                 .get_allocated_symbol(name)
                 .load(context)
                 .into_pointer_value();
 
-            return memory::load_anon(context, kind, ptr);
+            return memory::load_anon(context, ptr, kind);
         }
 
-        if let Some(expr) = &load.1 {
+        if let Some(expr) = &value.1 {
             let ptr: PointerValue =
                 self::compile(context, expr, kind, CompileChanges::default()).into_pointer_value();
 
-            return memory::load_anon(context, kind, ptr);
+            return memory::load_anon(context, ptr, kind);
         }
 
         logging::log(LoggingType::Panic, "Could not get value of 'load' LLI.");
@@ -551,53 +553,46 @@ pub fn compile<'ctx>(
     {
         let symbol: SymbolAllocated = context.get_allocated_symbol(name);
 
-        let last_indexe_position: u32 = indexes[0].1;
+        let first_idx: u32 = indexes[0].1;
 
         if symbol.is_pointer() {
-            let mut last_memory_calculation: PointerValue =
-                symbol.gep_struct(llvm_context, llvm_builder, last_indexe_position);
+            let mut ptr: PointerValue = symbol.gep_struct(llvm_context, llvm_builder, first_idx);
 
             indexes.iter().skip(1).for_each(|indexe| {
                 let llvm_indexe_type: BasicTypeEnum =
                     typegen::generate_type(llvm_context, &indexe.0);
-                let indexe_position: u32 = indexe.1;
 
-                if let Ok(new_memory_calculation) = llvm_builder.build_struct_gep(
-                    llvm_indexe_type,
-                    last_memory_calculation,
-                    indexe_position,
-                    "",
-                ) {
-                    last_memory_calculation = new_memory_calculation;
+                let depth: u32 = indexe.1;
+
+                if let Ok(new_ptr) = llvm_builder.build_struct_gep(llvm_indexe_type, ptr, depth, "")
+                {
+                    ptr = new_ptr;
                 }
             });
 
             if changes.load_raw() {
-                return last_memory_calculation.into();
+                return ptr.into();
             }
 
-            return memory::load_anon(context, kind, last_memory_calculation);
+            return memory::load_anon(context, ptr, kind);
         } else {
-            let mut last_value: BasicValueEnum =
-                symbol.extract_value(llvm_builder, last_indexe_position);
+            let mut value: BasicValueEnum = symbol.extract_value(llvm_builder, first_idx);
 
             indexes.iter().skip(1).for_each(|indexe| {
-                let indexe_position: u32 = indexe.1;
+                let depth: u32 = indexe.1;
 
-                if last_value.is_struct_value() {
-                    let last_value_struct_value: StructValue = last_value.into_struct_value();
+                if value.is_struct_value() {
+                    let value_struct_value: StructValue = value.into_struct_value();
 
-                    if let Ok(new_extracted_value) = llvm_builder.build_extract_value(
-                        last_value_struct_value,
-                        indexe_position,
-                        "",
-                    ) {
-                        last_value = new_extracted_value;
+                    if let Ok(new_extracted_value) =
+                        llvm_builder.build_extract_value(value_struct_value, depth, "")
+                    {
+                        value = new_extracted_value;
                     }
                 }
             });
 
-            return last_value;
+            return value;
         }
     }
 
@@ -630,12 +625,13 @@ pub fn compile<'ctx>(
     {
         let asm_function_type: FunctionType = typegen::function_type(context, kind, args, false);
 
-        let compiled_args: Vec<BasicMetadataValueEnum> = args
+        let args: Vec<BasicMetadataValueEnum> = args
             .iter()
             .map(|arg| self::compile(context, arg, cast, changes).into())
             .collect();
 
         let mut syntax: InlineAsmDialect = InlineAsmDialect::Intel;
+
         let sideeffects: bool = attributes.has_asmsideffects_attribute();
         let align_stack: bool = attributes.has_asmalignstack_attribute();
         let can_throw: bool = attributes.has_asmthrow_attribute();
@@ -656,12 +652,9 @@ pub fn compile<'ctx>(
             can_throw,
         );
 
-        if let Ok(indirect_call) = llvm_builder.build_indirect_call(
-            asm_function_type,
-            fn_inline_assembler,
-            &compiled_args,
-            "",
-        ) {
+        if let Ok(indirect_call) =
+            llvm_builder.build_indirect_call(asm_function_type, fn_inline_assembler, &args, "")
+        {
             if !kind.is_void_type() {
                 let return_value: BasicValueEnum = indirect_call.try_as_basic_value().unwrap_left();
 
@@ -691,9 +684,10 @@ pub fn compile<'ctx>(
     {
         let value_type: &ThrushType = value.get_type_unwrapped();
 
-        if let Some(reference) = &source.0 {
-            let symbol: SymbolAllocated =
-                context.get_allocated_symbol(reference.get_unwrapped_reference_name());
+        if let Some(any_reference) = &source.0 {
+            let reference_name: &str = any_reference.0;
+
+            let symbol: SymbolAllocated = context.get_allocated_symbol(reference_name);
 
             let value: BasicValueEnum =
                 self::compile(context, value, kind, CompileChanges::new(false, true));
@@ -719,23 +713,10 @@ pub fn compile<'ctx>(
     }
 
     if let ThrushStatement::Array { items, kind, .. } = expr {
-        let array_type: &ThrushType = if cast.is_fixedarray_type() || cast.is_mut_array_type() {
-            cast.get_array_type()
+        if expr.is_constant_array() {
+            return self::compile_constant_array(context, cast, kind, items, changes);
         } else {
-            kind.get_array_type()
-        };
-
-        let llvm_array_type: BasicTypeEnum = typegen::generate_type(llvm_context, array_type);
-
-        if expr.is_array_constant() {
-            let values: Vec<BasicValueEnum> = items
-                .iter()
-                .map(|item| self::compile(context, item, array_type, changes))
-                .collect();
-
-            return self::compile_constant_array(llvm_array_type, &values);
-        } else {
-            return self::compile_array(context, items, kind, &changes);
+            return self::compile_array(context, kind, items, changes);
         }
     }
 
@@ -751,9 +732,9 @@ pub fn compile<'ctx>(
         let mut ordered_indexes: Vec<IntValue> = Vec::with_capacity(indexes.len() * 2);
 
         indexes.iter().for_each(|indexe| {
-            let inner: IntValue = valuegen::integer(llvm_context, &ThrushType::U32, 0, false);
+            let base: IntValue = valuegen::integer(llvm_context, &ThrushType::U32, 0, false);
 
-            let index: IntValue = self::compile(
+            let depth: IntValue = self::compile(
                 context,
                 indexe,
                 &ThrushType::U32,
@@ -761,21 +742,21 @@ pub fn compile<'ctx>(
             )
             .into_int_value();
 
-            ordered_indexes.push(inner);
-            ordered_indexes.push(index);
+            ordered_indexes.push(base);
+            ordered_indexes.push(depth);
         });
 
-        let gep: PointerValue = symbol.gep(llvm_context, llvm_builder, &ordered_indexes);
+        let ptr: PointerValue = symbol.gep(llvm_context, llvm_builder, &ordered_indexes);
 
         if changes.load_raw() {
-            return gep.into();
+            return ptr.into();
         }
 
         if kind.is_mut_type() {
-            return gep.into();
+            return ptr.into();
         }
 
-        return memory::load_anon(context, kind, gep);
+        return memory::load_anon(context, ptr, kind);
     }
 
     logging::log(
@@ -810,14 +791,16 @@ fn compile_deref<'ctx>(
     expr: &'ctx ThrushStatement,
 ) -> BasicValueEnum<'ctx> {
     match expr {
-        ThrushStatement::Deref { load, kind, .. } => {
-            let load_value: BasicValueEnum = self::compile_deref(context, load);
+        ThrushStatement::Deref { value, kind, .. } => {
+            let value: BasicValueEnum = self::compile_deref(context, value);
 
-            if load_value.is_pointer_value() {
-                return memory::load_anon(context, kind, load_value.into_pointer_value());
+            if value.is_pointer_value() {
+                let ptr: PointerValue = value.into_pointer_value();
+
+                return memory::load_anon(context, ptr, kind);
             }
 
-            load_value
+            value
         }
 
         expr => self::compile(
@@ -831,9 +814,9 @@ fn compile_deref<'ctx>(
 
 fn compile_array<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
-    items: &'ctx [ThrushStatement],
     kind: &'ctx ThrushType,
-    changes: &CompileChanges,
+    items: &'ctx [ThrushStatement],
+    changes: CompileChanges,
 ) -> BasicValueEnum<'ctx> {
     let llvm_context: &Context = context.get_llvm_context();
     let llvm_builder: &Builder = context.get_llvm_builder();
@@ -863,7 +846,7 @@ fn compile_array<'ctx>(
             unreachable!()
         });
 
-        let compiled_item = self::compile(context, item, kind.get_array_type(), *changes);
+        let compiled_item = self::compile(context, item, kind.get_array_type(), changes);
 
         memory::store_anon(
             context,
@@ -877,20 +860,40 @@ fn compile_array<'ctx>(
         return array_ptr.into();
     }
 
-    memory::load_anon(context, kind, array_ptr)
+    memory::load_anon(context, array_ptr, kind)
 }
 fn compile_constant_array<'ctx>(
-    kind: BasicTypeEnum<'ctx>,
-    values: &[BasicValueEnum<'ctx>],
+    context: &mut LLVMCodeGenContext<'_, 'ctx>,
+    cast: &ThrushType,
+    kind: &ThrushType,
+    items: &'ctx [ThrushStatement],
+    changes: CompileChanges,
 ) -> BasicValueEnum<'ctx> {
-    if kind.is_int_type() {
-        let array_type: IntType = kind.into_int_type();
+    let llvm_context: &Context = context.get_llvm_context();
+
+    let array_type: &ThrushType = if cast.is_fixedarray_type() || cast.is_mut_array_type() {
+        cast.get_array_type()
+    } else {
+        kind.get_array_type()
+    };
+
+    let array_type: BasicTypeEnum = typegen::generate_type(llvm_context, array_type);
+
+    let values: Vec<BasicValueEnum> = items
+        .iter()
+        .map(|item| self::compile(context, item, cast, changes))
+        .collect();
+
+    if array_type.is_int_type() {
+        let array_type: IntType = array_type.into_int_type();
         let values: Vec<IntValue> = values.iter().map(|value| value.into_int_value()).collect();
+
         return array_type.const_array(&values).into();
     }
 
-    if kind.is_float_type() {
-        let array_type: FloatType = kind.into_float_type();
+    if array_type.is_float_type() {
+        let array_type: FloatType = array_type.into_float_type();
+
         let values: Vec<FloatValue> = values
             .iter()
             .map(|value| value.into_float_value())
@@ -899,8 +902,9 @@ fn compile_constant_array<'ctx>(
         return array_type.const_array(&values).into();
     }
 
-    if kind.is_array_type() {
-        let array_type: ArrayType = kind.into_array_type();
+    if array_type.is_array_type() {
+        let array_type: ArrayType = array_type.into_array_type();
+
         let values: Vec<ArrayValue> = values
             .iter()
             .map(|value| value.into_array_value())
@@ -909,8 +913,8 @@ fn compile_constant_array<'ctx>(
         return array_type.const_array(&values).into();
     }
 
-    if kind.is_struct_type() {
-        let array_type: StructType = kind.into_struct_type();
+    if array_type.is_struct_type() {
+        let array_type: StructType = array_type.into_struct_type();
         let values: Vec<StructValue> = values
             .iter()
             .map(|value| value.into_struct_value())
@@ -919,8 +923,9 @@ fn compile_constant_array<'ctx>(
         return array_type.const_array(&values).into();
     }
 
-    if kind.is_pointer_type() {
-        let array_type: PointerType = kind.into_pointer_type();
+    if array_type.is_pointer_type() {
+        let array_type: PointerType = array_type.into_pointer_type();
+
         let values: Vec<PointerValue> = values
             .iter()
             .map(|value| value.into_pointer_value())

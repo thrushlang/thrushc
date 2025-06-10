@@ -381,8 +381,8 @@ pub fn store_anon<'ctx>(
 
 pub fn load_anon<'ctx>(
     context: &LLVMCodeGenContext<'_, 'ctx>,
-    kind: &ThrushType,
     ptr: PointerValue<'ctx>,
+    kind: &ThrushType,
 ) -> BasicValueEnum<'ctx> {
     let llvm_context: &Context = context.get_llvm_context();
     let llvm_builder: &Builder = context.get_llvm_builder();

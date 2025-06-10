@@ -11,10 +11,7 @@ use crate::{
         lexer::{span::Span, tokentype::TokenType},
         types::{
             lexer::ThrushType,
-            representations::{
-                AssemblerFunctionRepresentation, BinaryOperation, FunctionRepresentation,
-                UnaryOperation,
-            },
+            representations::{AssemblerFunctionRepresentation, FunctionRepresentation},
         },
     },
 };
@@ -274,7 +271,7 @@ pub enum ThrushStatement<'ctx> {
     // Mutation
     Mut {
         source: (
-            Option<Rc<ThrushStatement<'ctx>>>,
+            Option<(&'ctx str, Rc<ThrushStatement<'ctx>>)>,
             Option<Rc<ThrushStatement<'ctx>>>,
         ),
         value: Rc<ThrushStatement<'ctx>>,
@@ -300,6 +297,7 @@ pub enum ThrushStatement<'ctx> {
 
     Address {
         name: &'ctx str,
+        reference: Rc<ThrushStatement<'ctx>>,
         indexes: Vec<ThrushStatement<'ctx>>,
         kind: ThrushType,
         span: Span,
@@ -313,19 +311,16 @@ pub enum ThrushStatement<'ctx> {
     },
 
     Load {
-        load: (Option<&'ctx str>, Option<Rc<ThrushStatement<'ctx>>>),
-        kind: ThrushType,
-        span: Span,
-    },
-
-    RawPtr {
-        from: Rc<ThrushStatement<'ctx>>,
+        value: (
+            Option<(&'ctx str, Rc<ThrushStatement<'ctx>>)>,
+            Option<Rc<ThrushStatement<'ctx>>>,
+        ),
         kind: ThrushType,
         span: Span,
     },
 
     Deref {
-        load: Rc<ThrushStatement<'ctx>>,
+        value: Rc<ThrushStatement<'ctx>>,
         kind: ThrushType,
         span: Span,
     },
@@ -349,6 +344,12 @@ pub enum ThrushStatement<'ctx> {
         span: Span,
     },
 
+    RawPtr {
+        from: Rc<ThrushStatement<'ctx>>,
+        kind: ThrushType,
+        span: Span,
+    },
+
     // Expressions
     Call {
         name: &'ctx str,
@@ -356,12 +357,14 @@ pub enum ThrushStatement<'ctx> {
         kind: ThrushType,
         span: Span,
     },
+
     MethodCall {
         name: String,
         args: Vec<ThrushStatement<'ctx>>,
         kind: ThrushType,
         span: Span,
     },
+
     AsmValue {
         assembler: String,
         constraints: String,
@@ -370,6 +373,7 @@ pub enum ThrushStatement<'ctx> {
         attributes: ThrushAttributes<'ctx>,
         span: Span,
     },
+
     BinaryOp {
         left: Rc<ThrushStatement<'ctx>>,
         operator: TokenType,
@@ -377,6 +381,7 @@ pub enum ThrushStatement<'ctx> {
         kind: ThrushType,
         span: Span,
     },
+
     UnaryOp {
         operator: TokenType,
         kind: ThrushType,
@@ -384,6 +389,7 @@ pub enum ThrushStatement<'ctx> {
         is_pre: bool,
         span: Span,
     },
+
     Group {
         expression: Rc<ThrushStatement<'ctx>>,
         kind: ThrushType,
@@ -435,7 +441,7 @@ impl<'ctx> ThrushStatement<'ctx> {
 
             _ => Err(ThrushCompilerIssue::Error(
                 String::from("Syntax error"),
-                String::from("Expected a valid statemant to get a type."),
+                String::from("Expected a valid statement to get a type."),
                 None,
                 self.get_span(),
             )),
@@ -926,10 +932,10 @@ impl ThrushStatement<'_> {
     }
 
     #[inline]
-    pub fn is_array_constant(&self) -> bool {
+    pub fn is_constant_array(&self) -> bool {
         match self {
             ThrushStatement::Array { items, .. } => {
-                items.iter().all(|item| item.is_array_constant())
+                items.iter().all(|item| item.is_constant_array())
             }
             ThrushStatement::Reference { .. } => false,
             _ => true,
@@ -937,35 +943,11 @@ impl ThrushStatement<'_> {
     }
 
     #[inline]
-    pub const fn is_local_reference(&self) -> bool {
+    pub const fn is_allocated_reference(&self) -> bool {
         matches!(
             self,
             ThrushStatement::Reference {
-                identificator: ReferenceIndentificator::Local,
-                ..
-            }
-        )
-    }
-
-    #[inline]
-    pub const fn is_function_parameter_reference_allocated(&self) -> bool {
-        matches!(
-            self,
-            ThrushStatement::Reference {
-                identificator: ReferenceIndentificator::FunctionParameter,
-                kind: ThrushType::Ptr(_) | ThrushType::Mut(_),
-                ..
-            }
-        )
-    }
-
-    #[inline]
-    pub const fn is_lli_reference_allocated(&self) -> bool {
-        matches!(
-            self,
-            ThrushStatement::Reference {
-                identificator: ReferenceIndentificator::LowLevelInstruction,
-                kind: ThrushType::Ptr(_) | ThrushType::Addr,
+                is_allocated: true,
                 ..
             }
         )

@@ -15,14 +15,15 @@ use crate::{
         lexer::span::Span,
         parser::symbols::SymbolsTable,
         types::{
-            lexer::traits::LLVMTypeExtensions,
+            lexer::traits::{
+                LLVMTypeExtensions, ThrushTypeMutableExtensions, ThrushTypeNumericExtensions,
+                ThrushTypePointerExtensions, ThrushTypeStructTypeExtensions,
+            },
             parser::stmts::{stmt::ThrushStatement, traits::StructExtensions, types::StructFields},
             symbols::types::{Methods, Struct},
         },
     },
 };
-
-pub type ThrushStructType = (String, Vec<Arc<ThrushType>>);
 
 #[derive(Debug, Clone, Copy)]
 pub enum MethodsApplicant {
@@ -75,6 +76,99 @@ pub enum ThrushType {
     Void,
 }
 
+impl ThrushTypeMutableExtensions for ThrushType {
+    fn is_mut_array_type(&self) -> bool {
+        if let ThrushType::Mut(inner) = self {
+            return inner.is_mut_array_type();
+        }
+
+        if let ThrushType::FixedArray(..) = self {
+            return true;
+        }
+
+        false
+    }
+
+    fn is_mut_struct_type(&self) -> bool {
+        if let ThrushType::Mut(inner) = self {
+            return inner.is_mut_struct_type();
+        }
+
+        if let ThrushType::Struct(..) = self {
+            return true;
+        }
+
+        false
+    }
+
+    fn is_mut_numeric_type(&self) -> bool {
+        if let ThrushType::Mut(inner) = self {
+            return inner.is_mut_numeric_type();
+        }
+
+        if self.is_integer_type()
+            || self.is_bool_type()
+            || self.is_char_type()
+            || self.is_float_type()
+        {
+            return true;
+        }
+
+        false
+    }
+
+    fn defer_mut_all(&self) -> ThrushType {
+        if let ThrushType::Mut(inner_type) = self {
+            return inner_type.defer_mut_all();
+        }
+
+        self.clone()
+    }
+}
+
+impl ThrushTypeNumericExtensions for ThrushType {
+    fn is_numeric_type(&self) -> bool {
+        if self.is_integer_type()
+            || self.is_bool_type()
+            || self.is_char_type()
+            || self.is_float_type()
+        {
+            return true;
+        }
+
+        false
+    }
+}
+
+impl ThrushTypeStructTypeExtensions for ThrushType {
+    fn parser_get_struct_name(&self, span: Span) -> Result<String, ThrushCompilerIssue> {
+        if let ThrushType::Struct(name, ..) = self {
+            return Ok(name.clone());
+        }
+
+        Err(ThrushCompilerIssue::Error(
+            String::from("Syntax error"),
+            String::from("Expected struct type."),
+            None,
+            span,
+        ))
+    }
+}
+
+impl ThrushTypePointerExtensions for ThrushType {
+    fn is_typed_ptr(&self) -> bool {
+        if let ThrushType::Ptr(Some(inner)) = self {
+            return inner.is_typed_ptr();
+        }
+
+        if let ThrushType::Ptr(None) = self {
+            return false;
+        }
+
+        true
+    }
+}
+
 impl LLVMTypeExtensions for ThrushType {
     fn is_same_size(&self, context: &LLVMCodeGenContext<'_, '_>, other: &ThrushType) -> bool {
         let llvm_context: &Context = context.get_llvm_context();
@@ -105,14 +199,6 @@ impl ThrushType {
         self.clone()
     }
 
-    pub fn defer_mut_all(&self) -> ThrushType {
-        if let ThrushType::Mut(inner_type) = self {
-            return inner_type.defer_mut_all();
-        }
-
-        self.clone()
-    }
-
     pub fn deref(&self) -> ThrushType {
         if let ThrushType::Ptr(Some(any)) = self {
             return (**any).clone();
@@ -123,14 +209,6 @@ impl ThrushType {
         }
 
         self.clone()
-    }
-
-    pub fn match_first_depth(&self, other: &ThrushType) -> bool {
-        if let ThrushType::Ptr(Some(any)) = self {
-            return **any == *other;
-        }
-
-        false
     }
 
     pub fn is_nested_ptr(&self) -> bool {
@@ -190,7 +268,7 @@ impl ThrushType {
     }
 
     #[must_use]
-    pub fn precompute_type(&self, other: &ThrushType) -> &ThrushType {
+    pub fn precompute_numeric_type(&self, other: &ThrushType) -> &ThrushType {
         match (self, other) {
             (ThrushType::S64, _) | (_, ThrushType::S64) => &ThrushType::S64,
             (ThrushType::S32, _) | (_, ThrushType::S32) => &ThrushType::S32,
@@ -205,8 +283,8 @@ impl ThrushType {
             (ThrushType::F64, _) | (_, ThrushType::F64) => &ThrushType::F64,
             (ThrushType::F32, _) | (_, ThrushType::F32) => &ThrushType::F32,
 
-            (ThrushType::Mut(a_subtype), ThrushType::Mut(b_subtype)) => {
-                a_subtype.precompute_type(b_subtype)
+            (ThrushType::Mut(a_inner), ThrushType::Mut(b_inner)) => {
+                a_inner.precompute_numeric_type(b_inner)
             }
 
             _ => self,
@@ -236,33 +314,6 @@ impl ThrushType {
         target_data: &TargetData,
     ) -> bool {
         target_data.get_abi_size(&typegen::generate_type(llvm_context, self)) >= 128
-    }
-
-    pub fn is_mut_numeric_type(&self) -> bool {
-        if let ThrushType::Mut(subtype) = self {
-            return subtype.is_integer_type()
-                || subtype.is_float_type()
-                || subtype.is_bool_type()
-                || subtype.is_char_type();
-        }
-
-        false
-    }
-
-    pub fn is_mut_array_type(&self) -> bool {
-        if let ThrushType::Mut(subtype) = self {
-            return subtype.is_fixedarray_type();
-        }
-
-        false
-    }
-
-    pub fn into_structure_type(self) -> ThrushStructType {
-        if let ThrushType::Struct(name, types) = self {
-            return (name, types);
-        }
-
-        unreachable!()
     }
 
     #[inline(always)]
