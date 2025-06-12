@@ -1,18 +1,5 @@
 use crate::frontend::types::lexer::ThrushType;
 
-#[derive(Debug, Clone)]
-pub enum MethodsType {
-    Struct(ThrushType),
-    NoRelevant,
-}
-
-#[derive(Debug, Clone, Copy)]
-pub enum InstructionPosition {
-    Methods,
-    Method,
-    NoRelevant,
-}
-
 #[derive(Debug, Clone, Copy)]
 pub enum SyncPosition {
     Statement,
@@ -24,7 +11,6 @@ pub enum SyncPosition {
 #[derive(Debug)]
 pub struct ParserControlContext {
     sync_position: SyncPosition,
-    instr_position: InstructionPosition,
     entry_point: bool,
     inside_function: bool,
     inside_bind: bool,
@@ -35,16 +21,12 @@ pub struct ParserControlContext {
 #[derive(Debug)]
 pub struct ParserTypeContext {
     function_type: ThrushType,
-    methods_type: MethodsType,
-    bind_instance: bool,
 }
 
 impl ParserTypeContext {
     pub fn new() -> Self {
         Self {
             function_type: ThrushType::Void,
-            methods_type: MethodsType::NoRelevant,
-            bind_instance: false,
         }
     }
 
@@ -55,29 +37,12 @@ impl ParserTypeContext {
     pub fn get_function_type(&self) -> ThrushType {
         self.function_type.clone()
     }
-
-    pub fn get_this_methods_type(&self) -> &MethodsType {
-        &self.methods_type
-    }
-
-    pub fn set_this_methods_type(&mut self, new_type: MethodsType) {
-        self.methods_type = new_type;
-    }
-
-    pub fn set_bind_instance(&mut self, value: bool) {
-        self.bind_instance = value;
-    }
-
-    pub fn get_bind_instance(&self) -> bool {
-        self.bind_instance
-    }
 }
 
 impl ParserControlContext {
     pub fn new() -> Self {
         Self {
             sync_position: SyncPosition::NoRelevant,
-            instr_position: InstructionPosition::NoRelevant,
             entry_point: false,
             inside_function: false,
             inside_bind: false,
@@ -92,14 +57,6 @@ impl ParserControlContext {
 
     pub fn set_sync_position(&mut self, new_sync_position: SyncPosition) {
         self.sync_position = new_sync_position;
-    }
-
-    pub fn get_instr_position(&self) -> InstructionPosition {
-        self.instr_position
-    }
-
-    pub fn set_instr_position(&mut self, new_instr_position: InstructionPosition) {
-        self.instr_position = new_instr_position;
     }
 
     pub fn set_entrypoint(&mut self, value: bool) {
@@ -140,28 +97,5 @@ impl ParserControlContext {
 
     pub fn set_unreacheable_code_scope(&mut self, scope: usize) {
         self.unreacheable_code = scope;
-    }
-}
-
-impl InstructionPosition {
-    pub fn is_methods(&self) -> bool {
-        matches!(self, InstructionPosition::Methods)
-    }
-
-    pub fn is_method(&self) -> bool {
-        matches!(self, InstructionPosition::Method)
-    }
-}
-
-impl MethodsType {
-    pub fn is_struct_type(&self) -> bool {
-        matches!(self, MethodsType::Struct(_))
-    }
-
-    pub fn dissamble(&self) -> ThrushType {
-        match self {
-            MethodsType::Struct(tp) => tp.clone(),
-            MethodsType::NoRelevant => ThrushType::Void,
-        }
     }
 }

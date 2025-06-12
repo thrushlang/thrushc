@@ -16,14 +16,11 @@ impl std::fmt::Display for TokenType {
             TokenType::For => write!(f, "for"),
             TokenType::If => write!(f, "if"),
             TokenType::Loop => write!(f, "loop"),
-            TokenType::Match => write!(f, "match"),
             TokenType::Mut => write!(f, "mut"),
             TokenType::New => write!(f, "new"),
             TokenType::Or => write!(f, "or"),
-            TokenType::Pattern => write!(f, "pattern"),
             TokenType::Return => write!(f, "return"),
             TokenType::Struct => write!(f, "struct"),
-            TokenType::This => write!(f, "this"),
             TokenType::True => write!(f, "true"),
             TokenType::Type => write!(f, "type"),
             TokenType::While => write!(f, "while"),
@@ -80,8 +77,7 @@ impl std::fmt::Display for TokenType {
             TokenType::AsmFn => write!(f, "asmfn"),
             TokenType::Bang => write!(f, "!"),
             TokenType::BangEq => write!(f, "!="),
-            TokenType::Cast => write!(f, "cast"),
-            TokenType::CastPtr => write!(f, "castptr"),
+            TokenType::As => write!(f, "as"),
             TokenType::CastRaw => write!(f, "castraw"),
             TokenType::Colon => write!(f, ":"),
             TokenType::ColonColon => write!(f, "::"),
@@ -102,7 +98,6 @@ impl std::fmt::Display for TokenType {
             TokenType::Load => write!(f, "load"),
             TokenType::LParen => write!(f, "("),
             TokenType::LShift => write!(f, "<<"),
-            TokenType::Methods => write!(f, "methods"),
             TokenType::Minus => write!(f, "-"),
             TokenType::MinusEq => write!(f, "-="),
             TokenType::MinusMinus => write!(f, "--"),
@@ -119,6 +114,9 @@ impl std::fmt::Display for TokenType {
             TokenType::SemiColon => write!(f, ";"),
             TokenType::Slash => write!(f, "/"),
             TokenType::Star => write!(f, "*"),
+
+            // Builtins
+            TokenType::SizeOf => write!(f, "sizeof"),
         }
     }
 }

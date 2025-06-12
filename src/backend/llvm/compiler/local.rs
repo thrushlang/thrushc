@@ -22,6 +22,7 @@ pub fn compile<'ctx>(local: Local<'ctx>, context: &mut LLVMCodeGenContext<'_, 'c
     let local_name: &'ctx str = local.0;
     let local_type: &ThrushType = local.1;
     let local_value: &'ctx ThrushStatement<'ctx> = local.2;
+
     let attributes: &ThrushAttributes = local.3;
 
     context.alloc_local(local_name, local_type, attributes);
@@ -33,18 +34,13 @@ pub fn compile<'ctx>(local: Local<'ctx>, context: &mut LLVMCodeGenContext<'_, 'c
 
     let symbol: SymbolAllocated = context.get_allocated_symbol(local.0);
 
-    let expression: BasicValueEnum = valuegen::compile(
-        context,
-        local_value,
-        local_type,
-        CompileChanges::new(false, true),
-    );
+    let expression: BasicValueEnum =
+        valuegen::compile(context, local_value, CompileChanges::new(false));
 
     symbol.store(context, expression);
 }
 
 fn compile_local_structure<'ctx>(local: Local<'ctx>, context: &mut LLVMCodeGenContext<'_, 'ctx>) {
-    let local_type: &ThrushType = local.1;
     let local_value: &ThrushStatement = local.2;
 
     let symbol: SymbolAllocated = context.get_allocated_symbol(local.0);
@@ -60,8 +56,7 @@ fn compile_local_structure<'ctx>(local: Local<'ctx>, context: &mut LLVMCodeGenCo
             let expr_type: &ThrushType = &argument.2;
             let expr_index: u32 = argument.3;
 
-            let expr: BasicValueEnum =
-                valuegen::compile(context, expr, expr_type, CompileChanges::new(false, true));
+            let expr: BasicValueEnum = valuegen::compile(context, expr, CompileChanges::new(false));
 
             let field_memory_address_position: PointerValue =
                 symbol.gep_struct(llvm_context, llvm_builder, expr_index);
@@ -69,12 +64,8 @@ fn compile_local_structure<'ctx>(local: Local<'ctx>, context: &mut LLVMCodeGenCo
             memory::store_anon(context, field_memory_address_position, expr_type, expr);
         });
     } else {
-        let expression: BasicValueEnum = valuegen::compile(
-            context,
-            local_value,
-            local_type,
-            CompileChanges::new(false, true),
-        );
+        let expression: BasicValueEnum =
+            valuegen::compile(context, local_value, CompileChanges::new(false));
 
         symbol.store(context, expression);
     }

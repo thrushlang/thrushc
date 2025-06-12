@@ -3,26 +3,17 @@ use crate::{
     frontend::{
         lexer::span::Span,
         types::{
-            lexer::MethodsApplicant,
             parser::stmts::stmt::ThrushStatement,
             symbols::types::{
                 AssemblerFunction, AssemblerFunctions, ConstantSymbol, Constants, CustomTypeSymbol,
                 CustomTypes, EnumSymbol, Enums, FoundSymbolId, Function, Functions, LLISymbol,
-                LLIs, LocalSymbol, Locals, Methods, ParameterSymbol, Parameters, Struct, Structs,
+                LLIs, LocalSymbol, Locals, ParameterSymbol, Parameters, Struct, Structs,
             },
         },
     },
 };
 
 use ahash::AHashMap as HashMap;
-
-const MINIMAL_CUSTOM_TYPE_CAPACITY: usize = 255;
-const MINIMAL_CONSTANTS_CAPACITY: usize = 255;
-const MINIMAL_STRUCTURE_CAPACITY: usize = 255;
-const MINIMAL_ENUMS_CAPACITY: usize = 255;
-const MINIMAL_LOCALS_CAPACITY: usize = 255;
-const MINIMAL_LLIS_CAPACITY: usize = 255;
-const MINIMAL_PARAMETERS_CAPACITY: usize = 255;
 
 #[derive(Clone, Debug, Default)]
 pub struct SymbolsTable<'instr> {
@@ -43,24 +34,21 @@ impl<'instr> SymbolsTable<'instr> {
         asm_functions: AssemblerFunctions<'instr>,
     ) -> Self {
         Self {
-            custom_types: HashMap::with_capacity(MINIMAL_CUSTOM_TYPE_CAPACITY),
-            constants: HashMap::with_capacity(MINIMAL_CONSTANTS_CAPACITY),
-            locals: Vec::with_capacity(MINIMAL_LOCALS_CAPACITY),
-            llis: Vec::with_capacity(MINIMAL_LLIS_CAPACITY),
+            custom_types: HashMap::with_capacity(255),
+            constants: HashMap::with_capacity(255),
+            locals: Vec::with_capacity(255),
+            llis: Vec::with_capacity(255),
             functions,
             asm_functions,
-            structs: HashMap::with_capacity(MINIMAL_STRUCTURE_CAPACITY),
-            enums: HashMap::with_capacity(MINIMAL_ENUMS_CAPACITY),
-            parameters: HashMap::with_capacity(MINIMAL_PARAMETERS_CAPACITY),
+            structs: HashMap::with_capacity(255),
+            enums: HashMap::with_capacity(255),
+            parameters: HashMap::with_capacity(255),
         }
     }
 
     pub fn begin_scope(&mut self) {
-        self.locals
-            .push(HashMap::with_capacity(MINIMAL_LOCALS_CAPACITY));
-
-        self.llis
-            .push(HashMap::with_capacity(MINIMAL_LLIS_CAPACITY));
+        self.locals.push(HashMap::with_capacity(255));
+        self.llis.push(HashMap::with_capacity(255));
     }
 
     pub fn end_scope(&mut self) {
@@ -284,36 +272,6 @@ impl<'instr> SymbolsTable<'instr> {
         }
 
         self.functions.insert(name, function);
-
-        Ok(())
-    }
-
-    pub fn add_methods(
-        &mut self,
-        name: &str,
-        methods: Methods<'instr>,
-        applicant: MethodsApplicant,
-        span: Span,
-    ) -> Result<(), ThrushCompilerIssue> {
-        match applicant {
-            MethodsApplicant::Struct => {
-                let structure: &mut Struct = self.get_struct_mut(name, span)?;
-                structure.3 = methods;
-            }
-        }
-
-        Ok(())
-    }
-
-    pub fn contains_structure(&self, name: &str, span: Span) -> Result<(), ThrushCompilerIssue> {
-        if !self.structs.contains_key(name) {
-            return Err(ThrushCompilerIssue::Error(
-                String::from("Structure not found"),
-                format!("'{}' structure not defined or declared yet.", name),
-                None,
-                span,
-            ));
-        }
 
         Ok(())
     }
@@ -564,24 +522,6 @@ impl<'instr> SymbolsTable<'instr> {
         span: Span,
     ) -> Result<Struct<'instr>, ThrushCompilerIssue> {
         if let Some(struct_fields) = self.structs.get(name).cloned() {
-            return Ok(struct_fields);
-        }
-
-        Err(ThrushCompilerIssue::Error(
-            String::from("Structure not found"),
-            format!("'{}' structure not defined.", name),
-            None,
-            span,
-        ))
-    }
-
-    #[inline]
-    pub fn get_struct_mut(
-        &mut self,
-        name: &str,
-        span: Span,
-    ) -> Result<&mut Struct<'instr>, ThrushCompilerIssue> {
-        if let Some(struct_fields) = self.structs.get_mut(name) {
             return Ok(struct_fields);
         }
 

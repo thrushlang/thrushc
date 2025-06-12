@@ -1,5 +1,6 @@
 use crate::frontend::lexer::tokentype::TokenType;
 use crate::frontend::types::lexer::ThrushType;
+use crate::frontend::types::lexer::traits::ThrushTypeMutableExtensions;
 use crate::frontend::types::parser::stmts::stmt::ThrushStatement;
 use crate::frontend::types::representations::UnaryOperation;
 

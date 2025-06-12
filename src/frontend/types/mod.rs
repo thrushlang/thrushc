@@ -5,3 +5,4 @@ pub mod parser;
 pub mod representations;
 pub mod symbols;
 pub mod typechecker;
+pub mod typeresolver;

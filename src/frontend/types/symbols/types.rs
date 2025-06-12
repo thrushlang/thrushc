@@ -9,11 +9,7 @@ pub type Struct<'instr> = (
     &'instr str,
     Vec<(&'instr str, ThrushType, u32, Span)>,
     ThrushAttributes<'instr>,
-    Methods<'instr>,
 );
-
-pub type Methods<'instr> = Vec<(&'instr str, ThrushType, Vec<ThrushType>)>;
-pub type MethodDef<'instr> = &'instr (&'instr str, ThrushType, Vec<ThrushType>);
 
 pub type Function<'instr> = (ThrushType, ParametersTypes, bool);
 pub type AssemblerFunction<'instr> = (ThrushType, ParametersTypes, bool);

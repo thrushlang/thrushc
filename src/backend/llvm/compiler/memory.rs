@@ -5,7 +5,7 @@ use inkwell::{
     context::Context,
     module::Module,
     targets::TargetData,
-    types::{BasicType, BasicTypeEnum},
+    types::BasicTypeEnum,
     values::{IntValue, StructValue},
 };
 
@@ -297,38 +297,6 @@ impl<'ctx> SymbolAllocated<'ctx> {
 
                 unreachable!()
             }
-        }
-    }
-
-    pub fn get_size(&self) -> BasicValueEnum<'ctx> {
-        match self {
-            Self::Local { ptr, .. } => ptr.get_type().size_of().into(),
-            Self::Constant { ptr, .. } => ptr.get_type().size_of().into(),
-            Self::Parameter { value, .. } => value
-                .get_type()
-                .size_of()
-                .unwrap_or_else(|| {
-                    logging::log(
-                        LoggingType::Panic,
-                        "Built-in sizeof!(), cannot be get size of an function parameter.",
-                    );
-
-                    unreachable!()
-                })
-                .into(),
-
-            Self::LowLevelInstruction { value, .. } => value
-                .get_type()
-                .size_of()
-                .unwrap_or_else(|| {
-                    logging::log(
-                        LoggingType::Panic,
-                        "Built-in sizeof!(), cannot be get size of an Low Level Instruction.",
-                    );
-
-                    unreachable!()
-                })
-                .into(),
         }
     }
 

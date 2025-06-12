@@ -1,10 +1,12 @@
 use crate::backend::llvm::compiler::attributes::LLVMAttribute;
 use crate::backend::llvm::compiler::memory::{self, LLVMAllocationSite, SymbolAllocated};
-use crate::backend::llvm::compiler::{binaryop, builtins, cast, unaryop, utils, valuegen};
+use crate::backend::llvm::compiler::{binaryop, builtins, unaryop, utils, valuegen};
 use crate::backend::types::representations::LLVMFunction;
 use crate::core::console::logging::{self, LoggingType};
 use crate::frontend::types::lexer::ThrushType;
-use crate::frontend::types::lexer::traits::{LLVMTypeExtensions, ThrushTypeMutableExtensions};
+use crate::frontend::types::lexer::traits::{
+    LLVMTypeExtensions, ThrushTypeMutableExtensions, ThrushTypePointerExtensions,
+};
 use crate::frontend::types::parser::stmts::stmt::ThrushStatement;
 use crate::frontend::types::parser::stmts::traits::ThrushAttributesExtensions;
 use crate::frontend::types::parser::stmts::types::ThrushAttributes;
@@ -17,7 +19,7 @@ use super::typegen;
 use inkwell::module::{Linkage, Module};
 use inkwell::targets::TargetData;
 use inkwell::types::{
-    ArrayType, BasicTypeEnum, FloatType, FunctionType, IntType, PointerType, StructType,
+    ArrayType, BasicType, BasicTypeEnum, FloatType, FunctionType, IntType, PointerType, StructType,
 };
 
 use inkwell::values::{
@@ -113,13 +115,11 @@ pub fn float<'ctx>(
 #[derive(Debug, Clone, Copy, Default)]
 pub struct CompileChanges {
     load_raw: bool,
-    do_cast: bool,
 }
 
 pub fn compile<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     expr: &'ctx ThrushStatement,
-    cast: &ThrushType,
     changes: CompileChanges,
 ) -> BasicValueEnum<'ctx> {
     let llvm_module: &Module = context.get_llvm_module();
@@ -129,7 +129,7 @@ pub fn compile<'ctx>(
     /* ######################################################################
 
 
-        BASICS exprS - START
+        EXPRESSIONS - START
 
 
     ########################################################################*/
@@ -158,17 +158,7 @@ pub fn compile<'ctx>(
         ..
     } = expr
     {
-        let cast: ThrushType = cast.defer_all();
-
-        let mut float: FloatValue = self::float(llvm_builder, llvm_context, kind, *value, *signed);
-
-        if changes.do_cast() {
-            if let Some(casted_float) = cast::float(context, &cast, kind, float.into()) {
-                float = casted_float.into_float_value();
-            }
-        }
-
-        return float.into();
+        return self::float(llvm_builder, llvm_context, kind, *value, *signed).into();
     }
 
     if let ThrushStatement::Integer {
@@ -178,17 +168,7 @@ pub fn compile<'ctx>(
         ..
     } = expr
     {
-        let cast: ThrushType = cast.defer_all();
-
-        let mut integer: IntValue = self::integer(llvm_context, kind, *value, *signed);
-
-        if changes.do_cast() {
-            if let Some(casted_integer) = cast::integer(context, &cast, kind, integer.into()) {
-                integer = casted_integer.into_int_value();
-            }
-        }
-
-        return integer.into();
+        return self::integer(llvm_context, kind, *value, *signed).into();
     }
 
     if let ThrushStatement::Char { byte, .. } = expr {
@@ -203,10 +183,6 @@ pub fn compile<'ctx>(
         name, args, kind, ..
     } = expr
     {
-        if *name == "sizeof!" {
-            return builtins::build_sizeof(context, (name, kind, args));
-        }
-
         if *name == "is_signed!" {
             return builtins::build_is_signed(context, (name, kind, args));
         }
@@ -231,8 +207,7 @@ pub fn compile<'ctx>(
                 self::compile(
                     context,
                     arg_expr,
-                    cast,
-                    CompileChanges::new(cast.is_mut_type() || cast.is_ptr_type(), true),
+                    CompileChanges::new(cast.is_mut_type() || cast.is_ptr_type()),
                 )
                 .into(),
             );
@@ -264,7 +239,7 @@ pub fn compile<'ctx>(
     }
 
     if let ThrushStatement::Group { expression, .. } = expr {
-        return self::compile(context, expression, cast, CompileChanges::default());
+        return self::compile(context, expression, changes);
     }
 
     if let ThrushStatement::BinaryOp {
@@ -276,19 +251,19 @@ pub fn compile<'ctx>(
     } = expr
     {
         if binaryop_type.is_float_type() {
-            return binaryop::float::float_binaryop(context, (left, operator, right), cast);
+            return binaryop::float::float_binaryop(context, (left, operator, right));
         }
 
         if binaryop_type.is_integer_type() {
-            return binaryop::integer::integer_binaryop(context, (left, operator, right), cast);
+            return binaryop::integer::integer_binaryop(context, (left, operator, right));
         }
 
         if binaryop_type.is_bool_type() {
-            return binaryop::boolean::bool_binaryop(context, (left, operator, right), cast);
+            return binaryop::boolean::bool_binaryop(context, (left, operator, right));
         }
 
         if binaryop_type.is_ptr_type() {
-            return binaryop::ptr::ptr_binaryop(context, (left, operator, right), cast);
+            return binaryop::ptr::ptr_binaryop(context, (left, operator, right));
         }
 
         logging::log(
@@ -310,7 +285,39 @@ pub fn compile<'ctx>(
     /* ######################################################################
 
 
-        BASICS exprS - END
+        EXPRESSIONS - END
+
+
+    ########################################################################*/
+
+    /* ######################################################################
+
+
+        BUILTINS - START
+
+
+    ########################################################################*/
+
+    if let ThrushStatement::SizeOf { sizeof, .. } = expr {
+        let sizeof_type: BasicTypeEnum = typegen::generate_type(llvm_context, sizeof);
+
+        return sizeof_type
+            .size_of()
+            .unwrap_or_else(|| {
+                logging::log(
+                    LoggingType::Panic,
+                    &format!("Unable to get size of the type: '{}'.", sizeof),
+                );
+
+                unreachable!()
+            })
+            .into();
+    }
+
+    /* ######################################################################
+
+
+        BUILTINS - END
 
 
     ########################################################################*/
@@ -335,7 +342,7 @@ pub fn compile<'ctx>(
             site_allocation,
             context,
             type_to_alloc,
-            type_to_alloc.is_nested_ptr(),
+            type_to_alloc.is_all_ptr(),
         )
         .into();
     }
@@ -347,12 +354,7 @@ pub fn compile<'ctx>(
         ..
     } = expr
     {
-        let value: BasicValueEnum = self::compile(
-            context,
-            write_value,
-            write_type,
-            CompileChanges::new(false, true),
-        );
+        let value: BasicValueEnum = self::compile(context, write_value, CompileChanges::new(false));
 
         if let Some(reference) = &write_to.0 {
             let reference_name: &str = reference.0;
@@ -368,13 +370,8 @@ pub fn compile<'ctx>(
         }
 
         if let Some(expr) = write_to.1.as_ref() {
-            let expr: PointerValue = self::compile(
-                context,
-                expr,
-                &ThrushType::Void,
-                CompileChanges::new(true, true),
-            )
-            .into_pointer_value();
+            let expr: PointerValue =
+                self::compile(context, expr, CompileChanges::new(true)).into_pointer_value();
 
             memory::store_anon(context, expr, write_type, value);
 
@@ -401,7 +398,7 @@ pub fn compile<'ctx>(
 
         if let Some(expr) = &value.1 {
             let ptr: PointerValue =
-                self::compile(context, expr, kind, CompileChanges::default()).into_pointer_value();
+                self::compile(context, expr, CompileChanges::default()).into_pointer_value();
 
             return memory::load_anon(context, ptr, kind);
         }
@@ -423,13 +420,7 @@ pub fn compile<'ctx>(
             let indexes: Vec<IntValue> = indexes
                 .iter()
                 .map(|indexe| {
-                    self::compile(
-                        context,
-                        indexe,
-                        &ThrushType::U32,
-                        CompileChanges::new(false, true),
-                    )
-                    .into_int_value()
+                    self::compile(context, indexe, CompileChanges::new(false)).into_int_value()
                 })
                 .collect();
 
@@ -440,19 +431,12 @@ pub fn compile<'ctx>(
             let kind: &ThrushType = expr.get_type_unwrapped();
 
             let ptr: PointerValue =
-                self::compile(context, expr, kind, CompileChanges::new(true, false))
-                    .into_pointer_value();
+                self::compile(context, expr, CompileChanges::new(true)).into_pointer_value();
 
             let indexes: Vec<IntValue> = indexes
                 .iter()
                 .map(|indexe| {
-                    self::compile(
-                        context,
-                        indexe,
-                        &ThrushType::U32,
-                        CompileChanges::new(false, true),
-                    )
-                    .into_int_value()
+                    self::compile(context, indexe, CompileChanges::new(false)).into_int_value()
                 })
                 .collect();
 
@@ -481,54 +465,51 @@ pub fn compile<'ctx>(
 
     ########################################################################*/
 
-    if let ThrushStatement::CastPtr { from, cast, .. } = expr {
-        let ptr: BasicValueEnum =
-            self::compile(context, from, cast, CompileChanges::new(true, false));
+    if let ThrushStatement::As { from, cast, .. } = expr {
+        if cast.is_ptr_type() || cast.is_str_type() || cast.is_mut_any_nonumeric_type() {
+            let val: BasicValueEnum = self::compile(context, from, CompileChanges::new(true));
 
-        if ptr.is_pointer_value() {
-            let to: PointerType = typegen::generate_type(llvm_context, cast).into_pointer_type();
+            if val.is_pointer_value() {
+                let to: PointerType =
+                    typegen::generate_type(llvm_context, cast).into_pointer_type();
 
-            if let Ok(casted_ptr) =
-                llvm_builder.build_pointer_cast(ptr.into_pointer_value(), to, "")
-            {
-                return casted_ptr.into();
+                if let Ok(casted_ptr) =
+                    llvm_builder.build_pointer_cast(val.into_pointer_value(), to, "")
+                {
+                    return casted_ptr.into();
+                }
             }
-        }
+        } else {
+            let val: BasicValueEnum = self::compile(context, from, CompileChanges::default());
 
-        logging::log(
-            LoggingType::Bug,
-            &format!("Unable to cast pointer to specific type: '{}'.", from),
-        );
-    }
+            let from_type: &ThrushType = from.get_type_unwrapped();
 
-    if let ThrushStatement::Cast { from, cast, .. } = expr {
-        let val: BasicValueEnum = self::compile(context, from, cast, CompileChanges::default());
+            let target_type: BasicTypeEnum = typegen::generate_subtype(llvm_context, cast);
 
-        let from_type: &ThrushType = from.get_type_unwrapped();
-
-        let target_type: BasicTypeEnum = typegen::generate_subtype(llvm_context, cast);
-
-        if from_type.is_same_size(context, cast) {
-            if let Ok(casted_value) = llvm_builder.build_bit_cast(val, target_type, "") {
-                return casted_value;
+            if from_type.is_same_size(context, cast) {
+                if let Ok(casted_value) = llvm_builder.build_bit_cast(val, target_type, "") {
+                    return casted_value;
+                }
             }
-        }
 
-        if val.is_int_value() && target_type.is_int_type() {
-            if let Ok(casted_value) =
-                llvm_builder.build_int_cast(val.into_int_value(), target_type.into_int_type(), "")
-            {
-                return casted_value.into();
+            if val.is_int_value() && target_type.is_int_type() {
+                if let Ok(casted_value) = llvm_builder.build_int_cast(
+                    val.into_int_value(),
+                    target_type.into_int_type(),
+                    "",
+                ) {
+                    return casted_value.into();
+                }
             }
-        }
 
-        if val.is_float_value() && target_type.is_float_type() {
-            if let Ok(casted_value) = llvm_builder.build_float_cast(
-                val.into_float_value(),
-                target_type.into_float_type(),
-                "",
-            ) {
-                return casted_value.into();
+            if val.is_float_value() && target_type.is_float_type() {
+                if let Ok(casted_value) = llvm_builder.build_float_cast(
+                    val.into_float_value(),
+                    target_type.into_float_type(),
+                    "",
+                ) {
+                    return casted_value.into();
+                }
             }
         }
 
@@ -541,8 +522,8 @@ pub fn compile<'ctx>(
         );
     }
 
-    if let ThrushStatement::CastRaw { from, cast, .. } = expr {
-        return self::compile(context, from, cast, CompileChanges::new(true, true));
+    if let ThrushStatement::CastRaw { from, .. } = expr {
+        return self::compile(context, from, CompileChanges::new(true));
     }
 
     /* ######################################################################
@@ -664,7 +645,7 @@ pub fn compile<'ctx>(
 
         let args: Vec<BasicMetadataValueEnum> = args
             .iter()
-            .map(|arg| self::compile(context, arg, cast, changes).into())
+            .map(|arg| self::compile(context, arg, changes).into())
             .collect();
 
         let mut syntax: InlineAsmDialect = InlineAsmDialect::Intel;
@@ -712,13 +693,7 @@ pub fn compile<'ctx>(
         unreachable!()
     }
 
-    if let ThrushStatement::Mut {
-        source,
-        value,
-        cast_type,
-        ..
-    } = expr
-    {
+    if let ThrushStatement::Mut { source, value, .. } = expr {
         let value_type: &ThrushType = value.get_type_unwrapped();
 
         if let Some(any_reference) = &source.0 {
@@ -726,8 +701,7 @@ pub fn compile<'ctx>(
 
             let symbol: SymbolAllocated = context.get_allocated_symbol(reference_name);
 
-            let value: BasicValueEnum =
-                self::compile(context, value, cast_type, CompileChanges::new(false, true));
+            let value: BasicValueEnum = self::compile(context, value, CompileChanges::new(false));
 
             symbol.store(context, value);
 
@@ -735,11 +709,8 @@ pub fn compile<'ctx>(
         }
 
         if let Some(expr) = &source.1 {
-            let source: BasicValueEnum =
-                self::compile(context, expr, cast_type, CompileChanges::new(true, true));
-
-            let value: BasicValueEnum =
-                self::compile(context, value, cast_type, CompileChanges::new(false, true));
+            let source: BasicValueEnum = self::compile(context, expr, CompileChanges::new(true));
+            let value: BasicValueEnum = self::compile(context, value, CompileChanges::new(false));
 
             memory::store_anon(context, source.into_pointer_value(), value_type, value);
 
@@ -751,49 +722,85 @@ pub fn compile<'ctx>(
 
     if let ThrushStatement::Array { items, kind, .. } = expr {
         if expr.is_constant_array() {
-            return self::compile_constant_fixed_array(context, cast, kind, items, changes);
+            return self::compile_constant_fixed_array(context, kind, items, changes);
         } else {
             return self::compile_fixed_array(context, kind, items, changes);
         }
     }
 
     if let ThrushStatement::Index {
-        name,
+        index_to,
         indexes,
         kind,
         ..
     } = expr
     {
-        let symbol: SymbolAllocated = context.get_allocated_symbol(name);
+        if let Some(any_reference) = &index_to.0 {
+            let name: &str = any_reference.0;
 
-        let mut ordered_indexes: Vec<IntValue> = Vec::with_capacity(indexes.len() * 2);
+            let symbol: SymbolAllocated = context.get_allocated_symbol(name);
 
-        indexes.iter().for_each(|indexe| {
-            let base: IntValue = valuegen::integer(llvm_context, &ThrushType::U32, 0, false);
+            let mut ordered_indexes: Vec<IntValue> = Vec::with_capacity(indexes.len() * 2);
 
-            let depth: IntValue = self::compile(
-                context,
-                indexe,
-                &ThrushType::U32,
-                CompileChanges::new(false, true),
-            )
-            .into_int_value();
+            indexes.iter().for_each(|indexe| {
+                if kind.is_mut_fixed_array_type() || kind.is_ptr_fixed_array_type() {
+                    let base: IntValue =
+                        valuegen::integer(llvm_context, &ThrushType::U32, 0, false);
 
-            ordered_indexes.push(base);
-            ordered_indexes.push(depth);
-        });
+                    ordered_indexes.push(base);
+                }
 
-        let ptr: PointerValue = symbol.gep(llvm_context, llvm_builder, &ordered_indexes);
+                let depth: IntValue =
+                    self::compile(context, indexe, CompileChanges::default()).into_int_value();
 
-        if changes.load_raw() {
-            return ptr.into();
+                ordered_indexes.push(depth);
+            });
+
+            let ptr: PointerValue = symbol.gep(llvm_context, llvm_builder, &ordered_indexes);
+
+            if changes.load_raw() {
+                return ptr.into();
+            }
+
+            return memory::load_anon(context, ptr, kind);
         }
 
-        if kind.is_mut_type() {
-            return ptr.into();
+        if let Some(expr) = &index_to.1 {
+            let expr: PointerValue =
+                self::compile(context, expr, CompileChanges::new(true)).into_pointer_value();
+
+            let mut ordered_indexes: Vec<IntValue> = Vec::with_capacity(indexes.len() * 2);
+
+            indexes.iter().for_each(|indexe| {
+                if kind.is_mut_fixed_array_type() || kind.is_ptr_fixed_array_type() {
+                    let base: IntValue =
+                        valuegen::integer(llvm_context, &ThrushType::U32, 0, false);
+
+                    ordered_indexes.push(base);
+                }
+
+                let depth: IntValue =
+                    self::compile(context, indexe, CompileChanges::default()).into_int_value();
+
+                ordered_indexes.push(depth);
+            });
+
+            let ptr: PointerValue = memory::gep_anon(context, expr, kind, &ordered_indexes);
+
+            if changes.load_raw() {
+                return ptr.into();
+            }
+
+            return memory::load_anon(context, ptr, kind);
         }
 
-        return memory::load_anon(context, ptr, kind);
+        logging::log(
+            LoggingType::Bug,
+            &format!(
+                "A memory address calculation could not be performed with the expression: '{}'.",
+                expr
+            ),
+        );
     }
 
     logging::log(
@@ -840,12 +847,7 @@ fn compile_deref<'ctx>(
             value
         }
 
-        expr => self::compile(
-            context,
-            expr,
-            &ThrushType::Void,
-            CompileChanges::new(true, false),
-        ),
+        expr => self::compile(context, expr, CompileChanges::new(true)),
     }
 }
 
@@ -883,7 +885,7 @@ fn compile_fixed_array<'ctx>(
             unreachable!()
         });
 
-        let compiled_item = self::compile(context, item, kind.get_array_type(), changes);
+        let compiled_item: BasicValueEnum = self::compile(context, item, changes);
 
         memory::store_anon(
             context,
@@ -901,24 +903,19 @@ fn compile_fixed_array<'ctx>(
 }
 fn compile_constant_fixed_array<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
-    cast: &ThrushType,
     kind: &ThrushType,
     items: &'ctx [ThrushStatement],
     changes: CompileChanges,
 ) -> BasicValueEnum<'ctx> {
     let llvm_context: &Context = context.get_llvm_context();
 
-    let array_type: &ThrushType = if cast.is_fixed_array_type() || cast.is_mut_fixed_array_type() {
-        cast.get_array_type()
-    } else {
-        kind.get_array_type()
-    };
+    let array_type: &ThrushType = kind.get_array_type();
 
     let array_type: BasicTypeEnum = typegen::generate_type(llvm_context, array_type);
 
     let values: Vec<BasicValueEnum> = items
         .iter()
-        .map(|item| self::compile(context, item, cast, changes))
+        .map(|item| self::compile(context, item, changes))
         .collect();
 
     if array_type.is_int_type() {
@@ -980,15 +977,11 @@ fn compile_constant_fixed_array<'ctx>(
 }
 
 impl CompileChanges {
-    pub fn new(load_raw: bool, do_cast: bool) -> Self {
-        Self { load_raw, do_cast }
+    pub fn new(load_raw: bool) -> Self {
+        Self { load_raw }
     }
 
     pub fn load_raw(&self) -> bool {
         self.load_raw
-    }
-
-    pub fn do_cast(&self) -> bool {
-        self.do_cast
     }
 }

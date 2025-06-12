@@ -13,8 +13,7 @@ pub fn compile<'ctx>(
     expression: &'ctx ThrushStatement,
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
 ) {
-    let value: BasicValueEnum =
-        valuegen::compile(context, expression, kind, CompileChanges::new(false, true));
+    let value: BasicValueEnum = valuegen::compile(context, expression, CompileChanges::new(false));
 
     context.alloc_low_level_instruction(name, value, kind);
 }

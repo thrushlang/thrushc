@@ -7,14 +7,11 @@ use {
             valuegen::{self, CompileChanges},
         },
         core::console::logging::{self, LoggingType},
-        frontend::{
-            lexer::tokentype::TokenType,
-            types::{lexer::ThrushType, representations::BinaryOperation},
-        },
+        frontend::{lexer::tokentype::TokenType, types::representations::BinaryOperation},
     },
     inkwell::{
         builder::Builder,
-        values::{BasicValueEnum, IntValue},
+        values::{BasicValueEnum, FloatValue, IntValue},
     },
 };
 
@@ -30,15 +27,13 @@ pub fn bool_operation<'ctx>(
         let left: IntValue = left.into_int_value();
         let right: IntValue = right.into_int_value();
 
-        return match operator {
-            op if op.is_logical_type() => {
-                let (left, right) = cast::integer_together(context, left, right);
+        let (left, right) = cast::integer_together(context, left, right);
 
-                llvm_builder
-                    .build_int_compare(predicates::integer(operator, false, false), left, right, "")
-                    .unwrap()
-                    .into()
-            }
+        return match operator {
+            op if op.is_logical_type() => llvm_builder
+                .build_int_compare(predicates::integer(operator, false, false), left, right, "")
+                .unwrap()
+                .into(),
 
             op if op.is_logical_gate() => {
                 if let TokenType::And = op {
@@ -60,6 +55,22 @@ pub fn bool_operation<'ctx>(
         };
     }
 
+    if left.is_float_value() && right.is_float_value() {
+        let left: FloatValue = left.into_float_value();
+        let right: FloatValue = right.into_float_value();
+
+        let (left, right) = cast::float_together(context, left, right);
+
+        return match operator {
+            op if op.is_logical_type() => llvm_builder
+                .build_float_compare(predicates::float(operator), left, right, "")
+                .unwrap()
+                .into(),
+
+            _ => unreachable!(),
+        };
+    }
+
     logging::log(
         LoggingType::Bug,
         "Unable to perform boolean binary operation without two int values.",
@@ -71,7 +82,6 @@ pub fn bool_operation<'ctx>(
 pub fn bool_binaryop<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     binary: BinaryOperation<'ctx>,
-    cast: &ThrushType,
 ) -> BasicValueEnum<'ctx> {
     if let (
         _,
@@ -87,10 +97,10 @@ pub fn bool_binaryop<'ctx>(
     ) = binary
     {
         let left_compiled: BasicValueEnum =
-            valuegen::compile(context, binary.0, cast, CompileChanges::new(false, true));
+            valuegen::compile(context, binary.0, CompileChanges::new(false));
 
         let right_compiled: BasicValueEnum =
-            valuegen::compile(context, binary.2, cast, CompileChanges::new(false, true));
+            valuegen::compile(context, binary.2, CompileChanges::new(false));
 
         return self::bool_operation(context, left_compiled, right_compiled, binary.1);
     }

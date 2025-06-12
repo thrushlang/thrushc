@@ -10,10 +10,7 @@ use crate::{
         valuegen::{self, CompileChanges},
     },
     core::console::logging::{self, LoggingType},
-    frontend::{
-        lexer::tokentype::TokenType,
-        types::{lexer::ThrushType, representations::BinaryOperation},
-    },
+    frontend::{lexer::tokentype::TokenType, types::representations::BinaryOperation},
 };
 
 pub fn ptr_operation<'ctx>(
@@ -54,24 +51,15 @@ pub fn ptr_operation<'ctx>(
 pub fn ptr_binaryop<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     binary: BinaryOperation<'ctx>,
-    target_type: &ThrushType,
 ) -> BasicValueEnum<'ctx> {
     let llvm_builder: &Builder = context.get_llvm_builder();
 
     if let (_, TokenType::EqEq | TokenType::BangEq, _) = binary {
-        let left_compiled: BasicValueEnum = valuegen::compile(
-            context,
-            binary.0,
-            target_type,
-            CompileChanges::new(false, true),
-        );
+        let left_compiled: BasicValueEnum =
+            valuegen::compile(context, binary.0, CompileChanges::new(false));
 
-        let right_compiled: BasicValueEnum = valuegen::compile(
-            context,
-            binary.2,
-            target_type,
-            CompileChanges::new(false, true),
-        );
+        let right_compiled: BasicValueEnum =
+            valuegen::compile(context, binary.2, CompileChanges::new(false));
 
         return ptr_operation(llvm_builder, left_compiled, right_compiled, binary.1);
     }

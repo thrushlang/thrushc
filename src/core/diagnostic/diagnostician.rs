@@ -250,11 +250,12 @@ impl<'a> Diagnostic<'a> {
         logging::write(
             logging::OutputIn::Stderr,
             &format!(
-                "{} {} at {}:{}\n",
-                "-->".blink(),
+                "{} {}:{}\n",
                 format_args!(
                     "{}",
-                    logging_type.text_with_color(path.to_string_lossy().as_ref())
+                    logging_type
+                        .text_with_color(path.to_string_lossy().as_ref())
+                        .underline()
                 ),
                 logging_type.text_with_color(&self.span.get_line().to_string()),
                 logging_type.text_with_color(&self.span.get_span_start().to_string()),

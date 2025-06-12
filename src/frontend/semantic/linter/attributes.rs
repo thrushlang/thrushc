@@ -64,16 +64,6 @@ impl<'attr_linter> AttributesLinter<'attr_linter> {
         if let ThrushStatement::Const { attributes, .. } = stmt {
             self.analyze_attributes(attributes, LinterAttributeApplicant::Constant);
         }
-
-        if let ThrushStatement::Method { attributes, .. } = stmt {
-            self.analyze_attributes(attributes, LinterAttributeApplicant::Method);
-        }
-
-        if let ThrushStatement::Methods { methods, .. } = stmt {
-            methods.iter().for_each(|method| {
-                self.analyze_stmt(method);
-            });
-        }
     }
 
     fn analyze_attributes(
@@ -82,7 +72,7 @@ impl<'attr_linter> AttributesLinter<'attr_linter> {
         applicant: LinterAttributeApplicant,
     ) {
         match applicant {
-            LinterAttributeApplicant::Function | LinterAttributeApplicant::Method => {
+            LinterAttributeApplicant::Function => {
                 if attributes.has_inlinealways_attr()
                     && attributes.has_hot_attr()
                     && attributes.has_minsize_attr()

@@ -21,11 +21,9 @@ use crate::{
 use super::{
     traits::{
         ConstantSymbolExtensions, FunctionExtensions, LLISymbolExtensions, LocalSymbolExtensions,
-        MethodExtensions, MethodsExtensions,
     },
     types::{
-        ConstantSymbol, FoundSymbolId, Function, LLISymbol, LocalSymbol, MethodDef, Methods,
-        ParametersTypes, Struct,
+        ConstantSymbol, FoundSymbolId, Function, LLISymbol, LocalSymbol, ParametersTypes, Struct,
     },
 };
 
@@ -107,30 +105,6 @@ impl Display for ParametersTypes {
     }
 }
 
-impl MethodsExtensions for Methods<'_> {
-    fn contains_method(&self, name: &str) -> bool {
-        self.iter().any(|binding| binding.0 == name)
-    }
-
-    fn get_method(&self, name: &str) -> MethodDef {
-        self.iter().find(|binding| binding.0 == name).unwrap()
-    }
-}
-
-impl MethodExtensions for MethodDef<'_> {
-    fn get_name(&self) -> &str {
-        self.0
-    }
-
-    fn get_parameters_types(&self) -> &[ThrushType] {
-        &self.2
-    }
-
-    fn get_type(&self) -> ThrushType {
-        self.1.clone()
-    }
-}
-
 impl<'a> StructExtensions<'a> for Struct<'a> {
     fn contains_field(&self, name: &str) -> bool {
         self.1.iter().any(|field| field.0 == name)
@@ -147,10 +121,6 @@ impl<'a> StructExtensions<'a> for Struct<'a> {
 
     fn get_fields(&self) -> StructFields<'a> {
         (self.0, self.1.clone())
-    }
-
-    fn get_methods(&self) -> Methods<'a> {
-        self.3.clone()
     }
 }
 

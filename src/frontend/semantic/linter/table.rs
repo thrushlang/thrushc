@@ -180,22 +180,6 @@ impl<'linter> LinterSymbolsTable<'linter> {
         self.structs.get_mut(name)
     }
 
-    pub fn get_struct_field_info(
-        &mut self,
-        struct_name: &'linter str,
-        field_name: &'linter str,
-    ) -> Option<&mut LinterStructFieldInfo> {
-        if let Some(raw_struct_fields) = self.get_struct_info(struct_name) {
-            let struct_fields: &mut HashMap<&'linter str, (Span, bool)> = &mut raw_struct_fields.0;
-
-            if let Some(struct_field) = struct_fields.get_mut(field_name) {
-                return Some(struct_field);
-            }
-        }
-
-        None
-    }
-
     pub fn split_property_name(
         &mut self,
         from: &'linter str,

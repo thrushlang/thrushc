@@ -2,9 +2,7 @@ use crate::{
     core::errors::standard::ThrushCompilerIssue,
     frontend::{
         lexer::{span::Span, tokentype::TokenType},
-        types::{
-            lexer::ThrushType, linter::types::LLVMAttributeComparator, symbols::types::Methods,
-        },
+        types::{lexer::ThrushType, linter::types::LLVMAttributeComparator},
     },
 };
 
@@ -47,7 +45,6 @@ pub trait StructExtensions<'a> {
     fn contains_field(&self, name: &str) -> bool;
     fn get_field_type(&self, name: &str) -> Option<ThrushType>;
     fn get_fields(&self) -> StructFields<'a>;
-    fn get_methods(&self) -> Methods<'a>;
 }
 
 pub trait FoundSymbolEither<'instr> {

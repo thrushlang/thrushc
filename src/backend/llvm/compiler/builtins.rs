@@ -7,25 +7,16 @@ use crate::{
     },
 };
 
-use super::{ThrushStatement, cast, context::LLVMCodeGenContext, memory::SymbolAllocated, typegen};
+use super::{ThrushStatement, cast, context::LLVMCodeGenContext, memory::SymbolAllocated};
 
 use inkwell::{
     FloatPredicate,
     builder::Builder,
     context::Context,
-    types::StructType,
     values::{BasicValueEnum, IntValue},
 };
 
 pub fn include(functions: &mut Functions) {
-    functions.insert(
-        "sizeof!",
-        (
-            ThrushType::S64,
-            ParametersTypes::new(Vec::from([ThrushType::Ptr(None)])),
-            false,
-        ),
-    );
     functions.insert(
         "is_signed!",
         (
@@ -34,54 +25,6 @@ pub fn include(functions: &mut Functions) {
             false,
         ),
     );
-}
-
-pub fn build_sizeof<'ctx>(
-    context: &LLVMCodeGenContext<'_, 'ctx>,
-    call: FunctionCall<'ctx>,
-) -> BasicValueEnum<'ctx> {
-    let llvm_context: &Context = context.get_llvm_context();
-
-    let value: &ThrushStatement = &call.2[0];
-
-    if let ThrushStatement::Reference {
-        name,
-        kind: ref_type,
-        span,
-        ..
-    } = value
-    {
-        if ref_type.is_struct_type() {
-            let llvm_type: StructType =
-                typegen::generate_type(llvm_context, ref_type).into_struct_type();
-
-            let structure_size: IntValue = llvm_type.size_of().unwrap_or_else(|| {
-                logging::log(
-                    LoggingType::Panic,
-                    &format!(
-                        "Built-in 'sizeof()' cannot get the size of local reference '{}' at '{}'.",
-                        name, span,
-                    ),
-                );
-
-                unreachable!()
-            });
-
-            return structure_size.into();
-        }
-
-        return context.get_allocated_symbol(name).get_size();
-    }
-
-    logging::log(
-        LoggingType::Panic,
-        &format!(
-            "Builtin 'sizeof!' cannot get the size of '{}' type.",
-            value.get_type_unwrapped()
-        ),
-    );
-
-    unreachable!()
 }
 
 pub fn build_is_signed<'ctx>(

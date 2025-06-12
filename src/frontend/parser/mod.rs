@@ -6,7 +6,8 @@ pub mod symbols;
 pub mod typegen;
 
 use ahash::AHashMap as HashMap;
-use contexts::{MethodsType, ParserControlContext, ParserTypeContext, SyncPosition};
+
+use contexts::{ParserControlContext, ParserTypeContext, SyncPosition};
 use symbols::SymbolsTable;
 
 use crate::backend::llvm::compiler::builtins;
@@ -222,7 +223,6 @@ impl<'instr> ParserContext<'instr> {
         }
 
         self.control_ctx.set_sync_position(SyncPosition::NoRelevant);
-        self.type_ctx.set_this_methods_type(MethodsType::NoRelevant);
 
         self.symbols.end_parameters();
 
@@ -275,8 +275,8 @@ impl<'instr> ParserContext<'instr> {
         self.errors.push(error);
     }
 
-    pub fn get_stmts(&self) -> &[ThrushStatement<'instr>] {
-        self.stmts.as_slice()
+    pub fn get_stmts(&mut self) -> &mut [ThrushStatement<'instr>] {
+        &mut self.stmts
     }
 
     #[must_use]
@@ -395,16 +395,6 @@ impl<'instr> ParserContext<'instr> {
             .for_each(|(pos, _)| {
                 self.current = pos;
                 let _ = stmt::build_struct(self, true);
-                self.current = 0;
-            });
-
-        self.tokens
-            .iter()
-            .enumerate()
-            .filter(|(_, token)| token.kind.is_methods_keyword())
-            .for_each(|(pos, _)| {
-                self.current = pos;
-                let _ = stmt::build_methods(self, true);
                 self.current = 0;
             });
 

@@ -1,8 +1,6 @@
 #![allow(clippy::upper_case_acronyms)]
 #![allow(clippy::type_complexity)]
 
-use std::rc::Rc;
-
 use crate::{
     core::{
         console::logging::{self, LoggingType},
@@ -65,9 +63,12 @@ pub enum ThrushStatement<'ctx> {
     },
 
     Index {
-        name: &'ctx str,
-        reference: Rc<ThrushStatement<'ctx>>,
+        index_to: (
+            Option<(&'ctx str, Box<ThrushStatement<'ctx>>)>,
+            Option<Box<ThrushStatement<'ctx>>>,
+        ),
         indexes: Vec<ThrushStatement<'ctx>>,
+        is_mutable: bool,
         kind: ThrushType,
         span: Span,
     },
@@ -92,39 +93,9 @@ pub enum ThrushStatement<'ctx> {
         span: Span,
     },
 
-    Methods {
-        name: String,
-        methods: Vec<ThrushStatement<'ctx>>,
-        span: Span,
-    },
-
-    Method {
-        name: &'ctx str,
-        parameters: Vec<ThrushStatement<'ctx>>,
-        parameters_types: Vec<ThrushType>,
-        body: Rc<ThrushStatement<'ctx>>,
-        return_type: ThrushType,
-        attributes: ThrushAttributes<'ctx>,
-        span: Span,
-    },
-
-    This {
-        kind: ThrushType,
-        is_mutable: bool,
-        span: Span,
-    },
-
-    BindParameter {
-        name: &'ctx str,
-        kind: ThrushType,
-        position: u32,
-        is_mutable: bool,
-        span: Span,
-    },
-
     Property {
         name: &'ctx str,
-        reference: Rc<ThrushStatement<'ctx>>,
+        reference: Box<ThrushStatement<'ctx>>,
         indexes: Vec<(ThrushType, u32)>,
         kind: ThrushType,
         span: Span,
@@ -132,37 +103,37 @@ pub enum ThrushStatement<'ctx> {
 
     // Conditionals
     If {
-        cond: Rc<ThrushStatement<'ctx>>,
-        block: Rc<ThrushStatement<'ctx>>,
+        cond: Box<ThrushStatement<'ctx>>,
+        block: Box<ThrushStatement<'ctx>>,
         elfs: Vec<ThrushStatement<'ctx>>,
-        otherwise: Option<Rc<ThrushStatement<'ctx>>>,
+        otherwise: Option<Box<ThrushStatement<'ctx>>>,
         span: Span,
     },
     Elif {
-        cond: Rc<ThrushStatement<'ctx>>,
-        block: Rc<ThrushStatement<'ctx>>,
+        cond: Box<ThrushStatement<'ctx>>,
+        block: Box<ThrushStatement<'ctx>>,
         span: Span,
     },
     Else {
-        block: Rc<ThrushStatement<'ctx>>,
+        block: Box<ThrushStatement<'ctx>>,
         span: Span,
     },
 
     // Loops
     For {
-        local: Rc<ThrushStatement<'ctx>>,
-        cond: Rc<ThrushStatement<'ctx>>,
-        actions: Rc<ThrushStatement<'ctx>>,
-        block: Rc<ThrushStatement<'ctx>>,
+        local: Box<ThrushStatement<'ctx>>,
+        cond: Box<ThrushStatement<'ctx>>,
+        actions: Box<ThrushStatement<'ctx>>,
+        block: Box<ThrushStatement<'ctx>>,
         span: Span,
     },
     While {
-        cond: Rc<ThrushStatement<'ctx>>,
-        block: Rc<ThrushStatement<'ctx>>,
+        cond: Box<ThrushStatement<'ctx>>,
+        block: Box<ThrushStatement<'ctx>>,
         span: Span,
     },
     Loop {
-        block: Rc<ThrushStatement<'ctx>>,
+        block: Box<ThrushStatement<'ctx>>,
         span: Span,
     },
 
@@ -188,7 +159,7 @@ pub enum ThrushStatement<'ctx> {
     },
     EnumValue {
         name: String,
-        value: Rc<ThrushStatement<'ctx>>,
+        value: Box<ThrushStatement<'ctx>>,
         kind: ThrushType,
         span: Span,
     },
@@ -197,7 +168,7 @@ pub enum ThrushStatement<'ctx> {
 
     // Entrypoint -> fn main() {}
     EntryPoint {
-        body: Rc<ThrushStatement<'ctx>>,
+        body: Box<ThrushStatement<'ctx>>,
         span: Span,
     },
     AssemblerFunction {
@@ -222,7 +193,7 @@ pub enum ThrushStatement<'ctx> {
         ascii_name: &'ctx str,
         parameters: Vec<ThrushStatement<'ctx>>,
         parameter_types: Vec<ThrushType>,
-        body: Rc<ThrushStatement<'ctx>>,
+        body: Box<ThrushStatement<'ctx>>,
         return_type: ThrushType,
         attributes: ThrushAttributes<'ctx>,
         span: Span,
@@ -235,7 +206,7 @@ pub enum ThrushStatement<'ctx> {
         span: Span,
     },
     Return {
-        expression: Option<Rc<ThrushStatement<'ctx>>>,
+        expression: Option<Box<ThrushStatement<'ctx>>>,
         kind: ThrushType,
         span: Span,
     },
@@ -244,7 +215,7 @@ pub enum ThrushStatement<'ctx> {
     Const {
         name: &'ctx str,
         kind: ThrushType,
-        value: Rc<ThrushStatement<'ctx>>,
+        value: Box<ThrushStatement<'ctx>>,
         attributes: ThrushAttributes<'ctx>,
         span: Span,
     },
@@ -253,8 +224,9 @@ pub enum ThrushStatement<'ctx> {
     Local {
         name: &'ctx str,
         kind: ThrushType,
-        value: Rc<ThrushStatement<'ctx>>,
+        value: Box<ThrushStatement<'ctx>>,
         attributes: ThrushAttributes<'ctx>,
+        undefined: bool,
         is_mutable: bool,
         span: Span,
     },
@@ -272,10 +244,10 @@ pub enum ThrushStatement<'ctx> {
     // Mutation
     Mut {
         source: (
-            Option<(&'ctx str, Rc<ThrushStatement<'ctx>>)>,
-            Option<Rc<ThrushStatement<'ctx>>>,
+            Option<(&'ctx str, Box<ThrushStatement<'ctx>>)>,
+            Option<Box<ThrushStatement<'ctx>>>,
         ),
-        value: Rc<ThrushStatement<'ctx>>,
+        value: Box<ThrushStatement<'ctx>>,
         kind: ThrushType,
         cast_type: ThrushType,
         span: Span,
@@ -285,7 +257,7 @@ pub enum ThrushStatement<'ctx> {
     LLI {
         name: &'ctx str,
         kind: ThrushType,
-        value: Rc<ThrushStatement<'ctx>>,
+        value: Box<ThrushStatement<'ctx>>,
         span: Span,
     },
 
@@ -299,8 +271,8 @@ pub enum ThrushStatement<'ctx> {
 
     Address {
         address_to: (
-            Option<(&'ctx str, Rc<ThrushStatement<'ctx>>)>,
-            Option<Rc<ThrushStatement<'ctx>>>,
+            Option<(&'ctx str, Box<ThrushStatement<'ctx>>)>,
+            Option<Box<ThrushStatement<'ctx>>>,
         ),
         indexes: Vec<ThrushStatement<'ctx>>,
         kind: ThrushType,
@@ -309,44 +281,38 @@ pub enum ThrushStatement<'ctx> {
 
     Write {
         write_to: (
-            Option<(&'ctx str, Rc<ThrushStatement<'ctx>>)>,
-            Option<Rc<ThrushStatement<'ctx>>>,
+            Option<(&'ctx str, Box<ThrushStatement<'ctx>>)>,
+            Option<Box<ThrushStatement<'ctx>>>,
         ),
-        write_value: Rc<ThrushStatement<'ctx>>,
+        write_value: Box<ThrushStatement<'ctx>>,
         write_type: ThrushType,
         span: Span,
     },
 
     Load {
         value: (
-            Option<(&'ctx str, Rc<ThrushStatement<'ctx>>)>,
-            Option<Rc<ThrushStatement<'ctx>>>,
+            Option<(&'ctx str, Box<ThrushStatement<'ctx>>)>,
+            Option<Box<ThrushStatement<'ctx>>>,
         ),
         kind: ThrushType,
         span: Span,
     },
 
     Deref {
-        value: Rc<ThrushStatement<'ctx>>,
+        value: Box<ThrushStatement<'ctx>>,
         kind: ThrushType,
         span: Span,
     },
 
     // Casts
     CastRaw {
-        from: Rc<ThrushStatement<'ctx>>,
+        from: Box<ThrushStatement<'ctx>>,
         cast: ThrushType,
         span: Span,
     },
 
-    Cast {
-        from: Rc<ThrushStatement<'ctx>>,
-        cast: ThrushType,
-        span: Span,
-    },
-
-    CastPtr {
-        from: Rc<ThrushStatement<'ctx>>,
+    As {
+        from: Box<ThrushStatement<'ctx>>,
         cast: ThrushType,
         span: Span,
     },
@@ -354,13 +320,6 @@ pub enum ThrushStatement<'ctx> {
     // Expressions
     Call {
         name: &'ctx str,
-        args: Vec<ThrushStatement<'ctx>>,
-        kind: ThrushType,
-        span: Span,
-    },
-
-    MethodCall {
-        name: String,
         args: Vec<ThrushStatement<'ctx>>,
         kind: ThrushType,
         span: Span,
@@ -376,9 +335,9 @@ pub enum ThrushStatement<'ctx> {
     },
 
     BinaryOp {
-        left: Rc<ThrushStatement<'ctx>>,
+        left: Box<ThrushStatement<'ctx>>,
         operator: TokenType,
-        right: Rc<ThrushStatement<'ctx>>,
+        right: Box<ThrushStatement<'ctx>>,
         kind: ThrushType,
         span: Span,
     },
@@ -386,13 +345,20 @@ pub enum ThrushStatement<'ctx> {
     UnaryOp {
         operator: TokenType,
         kind: ThrushType,
-        expression: Rc<ThrushStatement<'ctx>>,
+        expression: Box<ThrushStatement<'ctx>>,
         is_pre: bool,
         span: Span,
     },
 
     Group {
-        expression: Rc<ThrushStatement<'ctx>>,
+        expression: Box<ThrushStatement<'ctx>>,
+        kind: ThrushType,
+        span: Span,
+    },
+
+    // Builtins
+    SizeOf {
+        sizeof: ThrushType,
         kind: ThrushType,
         span: Span,
     },
@@ -406,83 +372,125 @@ pub enum ThrushStatement<'ctx> {
     },
 }
 
-impl<'ctx> ThrushStatement<'ctx> {
+impl ThrushStatement<'_> {
     pub fn get_stmt_type(&self) -> Result<&ThrushType, ThrushCompilerIssue> {
         match self {
+            // Primitive Types & Literals
             ThrushStatement::Integer { kind, .. } => Ok(kind),
             ThrushStatement::Float { kind, .. } => Ok(kind),
-            ThrushStatement::Local { kind, .. } => Ok(kind),
-            ThrushStatement::Mut { kind, .. } => Ok(kind),
-            ThrushStatement::AssemblerFunctionParameter { kind, .. } => Ok(kind),
-            ThrushStatement::FunctionParameter { kind, .. } => Ok(kind),
-            ThrushStatement::Reference { kind, .. } => Ok(kind),
-            ThrushStatement::Call { kind, .. } => Ok(kind),
-            ThrushStatement::BinaryOp { kind, .. } => Ok(kind),
-            ThrushStatement::Group { kind, .. } => Ok(kind),
-            ThrushStatement::UnaryOp { kind, .. } => Ok(kind),
-
-            ThrushStatement::Str { kind, .. } => Ok(kind),
             ThrushStatement::Boolean { kind, .. } => Ok(kind),
             ThrushStatement::Char { kind, .. } => Ok(kind),
-            ThrushStatement::Address { kind, .. } => Ok(kind),
-            ThrushStatement::Constructor { kind, .. } => Ok(kind),
-            ThrushStatement::Load { kind, .. } => Ok(kind),
-            ThrushStatement::Property { kind, .. } => Ok(kind),
+            ThrushStatement::Str { kind, .. } => Ok(kind),
             ThrushStatement::NullPtr { .. } => Ok(&ThrushType::Ptr(None)),
-            ThrushStatement::This { kind, .. } => Ok(kind),
+            ThrushStatement::Null { .. } => Ok(&ThrushType::Void),
+
+            // Variables & Memory Operations
+            ThrushStatement::Local { kind, .. } => Ok(kind),
+            ThrushStatement::Mut { kind, .. } => Ok(kind),
+            ThrushStatement::Reference { kind, .. } => Ok(kind),
+            ThrushStatement::Address { kind, .. } => Ok(kind),
+            ThrushStatement::Load { kind, .. } => Ok(kind),
             ThrushStatement::Alloc {
                 type_to_alloc: kind,
                 ..
             } => Ok(kind),
-            ThrushStatement::MethodCall { kind, .. } => Ok(kind),
-            ThrushStatement::BindParameter { kind, .. } => Ok(kind),
+            ThrushStatement::Deref { kind, .. } => Ok(kind),
+            ThrushStatement::Write {
+                write_type: kind, ..
+            } => Ok(kind),
+
+            // Function-Related Operations
+            ThrushStatement::FunctionParameter { kind, .. } => Ok(kind),
+            ThrushStatement::AssemblerFunctionParameter { kind, .. } => Ok(kind),
+            ThrushStatement::Call { kind, .. } => Ok(kind),
+            ThrushStatement::Return { kind, .. } => Ok(kind),
+            ThrushStatement::EntryPoint { .. } => Ok(&ThrushType::Void),
+            ThrushStatement::Function { return_type, .. } => Ok(return_type),
+            ThrushStatement::AssemblerFunction { return_type, .. } => Ok(return_type),
+
+            // Expressions & Operators
+            ThrushStatement::BinaryOp { kind, .. } => Ok(kind),
+            ThrushStatement::UnaryOp { kind, .. } => Ok(kind),
+            ThrushStatement::Group { kind, .. } => Ok(kind),
+            ThrushStatement::Index { kind, .. } => Ok(kind),
+            ThrushStatement::SizeOf { kind, .. } => Ok(kind),
+            ThrushStatement::AsmValue { kind, .. } => Ok(kind),
+
+            // Composite Types
+            ThrushStatement::Constructor { kind, .. } => Ok(kind),
+            ThrushStatement::Property { kind, .. } => Ok(kind),
             ThrushStatement::EnumValue { kind, .. } => Ok(kind),
             ThrushStatement::Array { kind, .. } => Ok(kind),
-            ThrushStatement::Index { kind, .. } => Ok(kind),
+            ThrushStatement::Struct { kind, .. } => Ok(kind),
+            ThrushStatement::Enum { .. } => Ok(&ThrushType::Void),
 
-            _ => Err(ThrushCompilerIssue::Error(
-                String::from("Syntax error"),
-                String::from("Expected a valid statement to get a type."),
-                None,
-                self.get_span(),
-            )),
+            // Type Conversions
+            ThrushStatement::As { cast, .. } => Ok(cast),
+            ThrushStatement::CastRaw { cast, .. } => Ok(cast),
+
+            // Control Flow
+            ThrushStatement::If { .. } => Ok(&ThrushType::Void),
+            ThrushStatement::Elif { .. } => Ok(&ThrushType::Void),
+            ThrushStatement::Else { .. } => Ok(&ThrushType::Void),
+            ThrushStatement::For { .. } => Ok(&ThrushType::Void),
+            ThrushStatement::While { .. } => Ok(&ThrushType::Void),
+            ThrushStatement::Loop { .. } => Ok(&ThrushType::Void),
+            ThrushStatement::Break { .. } => Ok(&ThrushType::Void),
+            ThrushStatement::Continue { .. } => Ok(&ThrushType::Void),
+            ThrushStatement::Block { .. } => Ok(&ThrushType::Void),
+
+            // Constants & Low-Level Instructions
+            ThrushStatement::Const { kind, .. } => Ok(kind),
+            ThrushStatement::LLI { kind, .. } => Ok(kind),
+            ThrushStatement::Pass { .. } => Ok(&ThrushType::Void),
         }
     }
 
     pub fn get_value_type(&self) -> Result<&ThrushType, ThrushCompilerIssue> {
         match self {
+            // Primitive values
             ThrushStatement::Integer { kind, .. } => Ok(kind),
             ThrushStatement::Float { kind, .. } => Ok(kind),
-            ThrushStatement::Mut { kind, .. } => Ok(kind),
-            ThrushStatement::Reference { kind, .. } => Ok(kind),
-            ThrushStatement::Call { kind, .. } => Ok(kind),
-            ThrushStatement::BinaryOp { kind, .. } => Ok(kind),
-            ThrushStatement::Group { kind, .. } => Ok(kind),
-            ThrushStatement::UnaryOp { kind, .. } => Ok(kind),
-
-            ThrushStatement::Str { kind, .. } => Ok(kind),
             ThrushStatement::Boolean { kind, .. } => Ok(kind),
             ThrushStatement::Char { kind, .. } => Ok(kind),
-            ThrushStatement::Array { kind, .. } => Ok(kind),
-            ThrushStatement::Index { kind, .. } => Ok(kind),
-            ThrushStatement::Address { kind, .. } => Ok(kind),
-            ThrushStatement::Constructor { kind, .. } => Ok(kind),
-            ThrushStatement::Load { kind, .. } => Ok(kind),
-            ThrushStatement::Property { kind, .. } => Ok(kind),
+            ThrushStatement::Str { kind, .. } => Ok(kind),
             ThrushStatement::NullPtr { .. } => Ok(&ThrushType::Ptr(None)),
-            ThrushStatement::This { kind, .. } => Ok(kind),
+
+            // Variables and references
+            ThrushStatement::Local { kind, .. } => Ok(kind),
+            ThrushStatement::Mut { kind, .. } => Ok(kind),
+            ThrushStatement::Reference { kind, .. } => Ok(kind),
+            ThrushStatement::FunctionParameter { kind, .. } => Ok(kind),
+            ThrushStatement::AssemblerFunctionParameter { kind, .. } => Ok(kind),
+
+            // Memory operations
+            ThrushStatement::Load { kind, .. } => Ok(kind),
+            ThrushStatement::Address { kind, .. } => Ok(kind),
+            ThrushStatement::Deref { kind, .. } => Ok(kind),
             ThrushStatement::Alloc {
                 type_to_alloc: kind,
                 ..
             } => Ok(kind),
-            ThrushStatement::FunctionParameter { kind, .. } => Ok(kind),
-            ThrushStatement::AssemblerFunctionParameter { kind, .. } => Ok(kind),
-            ThrushStatement::MethodCall { kind, .. } => Ok(kind),
+
+            // Composite types
+            ThrushStatement::Array { kind, .. } => Ok(kind),
+            ThrushStatement::Constructor { kind, .. } => Ok(kind),
+            ThrushStatement::Property { kind, .. } => Ok(kind),
             ThrushStatement::EnumValue { kind, .. } => Ok(kind),
-            ThrushStatement::Deref { kind, .. } => Ok(kind),
+
+            // Expressions
+            ThrushStatement::Call { kind, .. } => Ok(kind),
+            ThrushStatement::BinaryOp { kind, .. } => Ok(kind),
+            ThrushStatement::UnaryOp { kind, .. } => Ok(kind),
+            ThrushStatement::Group { kind, .. } => Ok(kind),
+            ThrushStatement::Index { kind, .. } => Ok(kind),
+
+            // Type operations
+            ThrushStatement::As { cast: kind, .. } => Ok(kind),
             ThrushStatement::CastRaw { cast: kind, .. } => Ok(kind),
-            ThrushStatement::Cast { cast: kind, .. } => Ok(kind),
-            ThrushStatement::CastPtr { cast: kind, .. } => Ok(kind),
+            ThrushStatement::SizeOf { kind, .. } => Ok(kind),
+
+            // ASM Code Block
             ThrushStatement::AsmValue { kind, .. } => Ok(kind),
 
             _ => Err(ThrushCompilerIssue::Error(
@@ -496,43 +504,55 @@ impl<'ctx> ThrushStatement<'ctx> {
 
     pub fn get_type_unwrapped(&self) -> &ThrushType {
         match self {
+            // Primitive values
             ThrushStatement::Integer { kind, .. } => kind,
             ThrushStatement::Float { kind, .. } => kind,
+            ThrushStatement::Boolean { kind, .. } => kind,
+            ThrushStatement::Char { kind, .. } => kind,
+            ThrushStatement::Str { kind, .. } => kind,
+            ThrushStatement::NullPtr { .. } => &ThrushType::Ptr(None),
+
+            // Variables and references
             ThrushStatement::Local { kind, .. } => kind,
             ThrushStatement::Mut { kind, .. } => kind,
+            ThrushStatement::Reference { kind, .. } => kind,
             ThrushStatement::FunctionParameter { kind, .. } => kind,
             ThrushStatement::AssemblerFunctionParameter { kind, .. } => kind,
-            ThrushStatement::Reference { kind, .. } => kind,
+
+            // Memory operations
+            ThrushStatement::Load { kind, .. } => kind,
+            ThrushStatement::Address { kind, .. } => kind,
+            ThrushStatement::Deref { kind, .. } => kind,
+            ThrushStatement::Alloc {
+                type_to_alloc: kind,
+                ..
+            } => kind,
+
+            // Composite types
+            ThrushStatement::Array { kind, .. } => kind,
+            ThrushStatement::Constructor { kind, .. } => kind,
+            ThrushStatement::Property { kind, .. } => kind,
+            ThrushStatement::EnumValue { kind, .. } => kind,
+
+            // Expressions
             ThrushStatement::Call { kind, .. } => kind,
             ThrushStatement::BinaryOp { kind, .. } => kind,
-            ThrushStatement::Group { kind, .. } => kind,
             ThrushStatement::UnaryOp { kind, .. } => kind,
+            ThrushStatement::Group { kind, .. } => kind,
+            ThrushStatement::Index { kind, .. } => kind,
 
-            ThrushStatement::Str { kind, .. } => kind,
-            ThrushStatement::Boolean { kind, .. } => kind,
-            ThrushStatement::Array { kind, .. } => kind,
-            ThrushStatement::Char { kind, .. } => kind,
-            ThrushStatement::Address { kind, .. } => kind,
-            ThrushStatement::Constructor { kind, .. } => kind,
-            ThrushStatement::Load { kind, .. } => kind,
-            ThrushStatement::Property { kind, .. } => kind,
-            ThrushStatement::NullPtr { .. } => &ThrushType::Ptr(None),
-            ThrushStatement::This { kind, .. } => kind,
-            ThrushStatement::MethodCall { kind, .. } => kind,
-            ThrushStatement::BindParameter { kind, .. } => kind,
-            ThrushStatement::Return { kind, .. } => kind,
-            ThrushStatement::EnumValue { kind, .. } => kind,
-            ThrushStatement::Deref { kind, .. } => kind,
-            ThrushStatement::AsmValue { kind, .. } => kind,
-
-            ThrushStatement::CastPtr { cast: kind, .. } => kind,
+            // Type operations
+            ThrushStatement::As { cast: kind, .. } => kind,
             ThrushStatement::CastRaw { cast: kind, .. } => kind,
-            ThrushStatement::Cast { cast: kind, .. } => kind,
+            ThrushStatement::SizeOf { kind, .. } => kind,
+
+            // ASM Code Block
+            ThrushStatement::AsmValue { kind, .. } => kind,
 
             any => {
                 logging::log(
                     LoggingType::Panic,
-                    &format!("Unable to get type of stmt: '{}'", any),
+                    &format!("Unable to get type of stmt: '{}'.", any),
                 );
 
                 unreachable!()
@@ -542,69 +562,80 @@ impl<'ctx> ThrushStatement<'ctx> {
 
     pub fn get_span(&self) -> Span {
         match self {
+            // Primitive values and literals
             ThrushStatement::Integer { span, .. } => *span,
             ThrushStatement::Float { span, .. } => *span,
-            ThrushStatement::Local { span, .. } => *span,
-            ThrushStatement::Mut { span, .. } => *span,
-            ThrushStatement::FunctionParameter { span, .. } => *span,
-            ThrushStatement::Reference { span, .. } => *span,
-            ThrushStatement::Call { span, .. } => *span,
-            ThrushStatement::BinaryOp { span, .. } => *span,
-            ThrushStatement::Group { span, .. } => *span,
-            ThrushStatement::UnaryOp { span, .. } => *span,
-            ThrushStatement::CastRaw { span, .. } => *span,
-            ThrushStatement::Cast { span, .. } => *span,
-            ThrushStatement::Deref { span, .. } => *span,
-            ThrushStatement::CastPtr { span, .. } => *span,
-            ThrushStatement::AsmValue { span, .. } => *span,
-
-            ThrushStatement::Str { span, .. } => *span,
             ThrushStatement::Boolean { span, .. } => *span,
-            ThrushStatement::Array { span, .. } => *span,
-            ThrushStatement::Index { span, .. } => *span,
             ThrushStatement::Char { span, .. } => *span,
-            ThrushStatement::Address { span, .. } => *span,
-            ThrushStatement::Constructor { span, .. } => *span,
-            ThrushStatement::Load { span, .. } => *span,
-            ThrushStatement::Property { span, .. } => *span,
-            ThrushStatement::NullPtr { span } => *span,
-            ThrushStatement::Write { span, .. } => *span,
+            ThrushStatement::Str { span, .. } => *span,
+            ThrushStatement::NullPtr { span, .. } => *span,
+            ThrushStatement::Null { span, .. } => *span,
+
+            // Variables and declarations
+            ThrushStatement::Local { span, .. } => *span,
             ThrushStatement::Const { span, .. } => *span,
-            ThrushStatement::This { span, .. } => *span,
-            ThrushStatement::BindParameter { span, .. } => *span,
-            ThrushStatement::Return { span, .. } => *span,
-            ThrushStatement::Enum { span, .. } => *span,
-            ThrushStatement::EnumValue { span, .. } => *span,
-            ThrushStatement::Struct { span, .. } => *span,
-
-            ThrushStatement::Else { span, .. } => *span,
-            ThrushStatement::Elif { span, .. } => *span,
-            ThrushStatement::If { span, .. } => *span,
-
-            ThrushStatement::Continue { span, .. } => *span,
-            ThrushStatement::Break { span, .. } => *span,
-            ThrushStatement::While { span, .. } => *span,
-            ThrushStatement::For { span, .. } => *span,
-            ThrushStatement::Pass { span } => *span,
-            ThrushStatement::Method { span, .. } => *span,
-            ThrushStatement::Methods { span, .. } => *span,
-            ThrushStatement::LLI { span, .. } => *span,
-
-            ThrushStatement::Null { span } => *span,
-            ThrushStatement::Block { span, .. } => *span,
-            ThrushStatement::Loop { span, .. } => *span,
-            ThrushStatement::EntryPoint { span, .. } => *span,
-            ThrushStatement::Function { span, .. } => *span,
-            ThrushStatement::AssemblerFunction { span, .. } => *span,
+            ThrushStatement::FunctionParameter { span, .. } => *span,
             ThrushStatement::AssemblerFunctionParameter { span, .. } => *span,
+
+            // Memory operations
+            ThrushStatement::Mut { span, .. } => *span,
+            ThrushStatement::Reference { span, .. } => *span,
+            ThrushStatement::Address { span, .. } => *span,
+            ThrushStatement::Load { span, .. } => *span,
+            ThrushStatement::Deref { span, .. } => *span,
+            ThrushStatement::Write { span, .. } => *span,
             ThrushStatement::Alloc { span, .. } => *span,
 
-            ThrushStatement::MethodCall { span, .. } => *span,
+            // Composite types
+            ThrushStatement::Array { span, .. } => *span,
+            ThrushStatement::Struct { span, .. } => *span,
+            ThrushStatement::Enum { span, .. } => *span,
+            ThrushStatement::EnumValue { span, .. } => *span,
+            ThrushStatement::Constructor { span, .. } => *span,
+            ThrushStatement::Property { span, .. } => *span,
+
+            // Expressions and operators
+            ThrushStatement::Call { span, .. } => *span,
+            ThrushStatement::BinaryOp { span, .. } => *span,
+            ThrushStatement::UnaryOp { span, .. } => *span,
+            ThrushStatement::Group { span, .. } => *span,
+            ThrushStatement::Index { span, .. } => *span,
+            ThrushStatement::SizeOf { span, .. } => *span,
+
+            // Type conversions
+            ThrushStatement::As { span, .. } => *span,
+            ThrushStatement::CastRaw { span, .. } => *span,
+
+            // Control flow
+            ThrushStatement::If { span, .. } => *span,
+            ThrushStatement::Elif { span, .. } => *span,
+            ThrushStatement::Else { span, .. } => *span,
+            ThrushStatement::While { span, .. } => *span,
+            ThrushStatement::For { span, .. } => *span,
+            ThrushStatement::Loop { span, .. } => *span,
+            ThrushStatement::Break { span, .. } => *span,
+            ThrushStatement::Continue { span, .. } => *span,
+            ThrushStatement::Block { span, .. } => *span,
+
+            // Functions
+            ThrushStatement::Function { span, .. } => *span,
+            ThrushStatement::AssemblerFunction { span, .. } => *span,
+            ThrushStatement::EntryPoint { span, .. } => *span,
+            ThrushStatement::Return { span, .. } => *span,
+
+            // Low-level and special operations
+            ThrushStatement::AsmValue { span, .. } => *span,
+            ThrushStatement::LLI { span, .. } => *span,
+            ThrushStatement::Pass { span, .. } => *span,
         }
     }
 
     pub fn is_mutable(&self) -> bool {
         if let ThrushStatement::Local { is_mutable, .. } = self {
+            return *is_mutable;
+        }
+
+        if let ThrushStatement::Index { is_mutable, .. } = self {
             return *is_mutable;
         }
 
@@ -616,10 +647,6 @@ impl<'ctx> ThrushStatement<'ctx> {
         }
 
         if let ThrushStatement::Property { reference, .. } = self {
-            return reference.is_mutable();
-        }
-
-        if let ThrushStatement::Index { reference, .. } = self {
             return reference.is_mutable();
         }
 
@@ -694,40 +721,6 @@ impl<'ctx> ThrushStatement<'ctx> {
         ))
     }
 
-    pub fn get_method_name(&self) -> Result<&'ctx str, ThrushCompilerIssue> {
-        if let ThrushStatement::Method { name, .. } = self {
-            return Ok(name);
-        }
-
-        Err(ThrushCompilerIssue::Bug(
-            String::from("Method not caught"),
-            String::from("Expected a method definition reference."),
-            self.get_span(),
-            CompilationPosition::Parser,
-            line!(),
-        ))
-    }
-
-    pub fn get_method_parameters_types(&self) -> Result<Vec<ThrushType>, ThrushCompilerIssue> {
-        if let ThrushStatement::Method { parameters, .. } = self {
-            let mut parameters_types: Vec<ThrushType> = Vec::with_capacity(10);
-
-            for parameter in parameters {
-                parameters_types.push(parameter.get_stmt_type()?.clone());
-            }
-
-            return Ok(parameters_types);
-        }
-
-        Err(ThrushCompilerIssue::Bug(
-            String::from("Method not caught"),
-            String::from("Expected a method definition reference."),
-            self.get_span(),
-            CompilationPosition::Parser,
-            line!(),
-        ))
-    }
-
     pub fn get_str_content(&self) -> Result<&str, ThrushCompilerIssue> {
         if let ThrushStatement::Str { bytes, .. } = self {
             if let Ok(content) = std::str::from_utf8(bytes) {
@@ -760,20 +753,6 @@ impl<'ctx> ThrushStatement<'ctx> {
         Err(ThrushCompilerIssue::Bug(
             String::from("Integer not caught"),
             String::from("Expected a integer value"),
-            self.get_span(),
-            CompilationPosition::Parser,
-            line!(),
-        ))
-    }
-
-    pub fn get_method_type(&self) -> Result<ThrushType, ThrushCompilerIssue> {
-        if let ThrushStatement::Method { return_type, .. } = self {
-            return Ok(return_type.clone());
-        }
-
-        Err(ThrushCompilerIssue::Bug(
-            String::from("Method not caught"),
-            String::from("Expected a method definition reference."),
             self.get_span(),
             CompilationPosition::Parser,
             line!(),
@@ -908,7 +887,15 @@ impl ThrushStatement<'_> {
     }
 
     #[inline]
-    pub fn is_anyu32bit_integer(&self) -> Result<bool, ThrushCompilerIssue> {
+    pub fn is_moreu32bit_integer(&self) -> Result<bool, ThrushCompilerIssue> {
+        Ok(matches!(
+            self.get_value_type()?,
+            ThrushType::U32 | ThrushType::U64
+        ))
+    }
+
+    #[inline]
+    pub fn is_lessu32bit_integer(&self) -> Result<bool, ThrushCompilerIssue> {
         Ok(matches!(
             self.get_value_type()?,
             ThrushType::U8 | ThrushType::U16 | ThrushType::U32
@@ -918,17 +905,6 @@ impl ThrushStatement<'_> {
     #[inline]
     pub const fn is_reference(&self) -> bool {
         matches!(self, ThrushStatement::Reference { .. })
-    }
-
-    #[inline]
-    pub const fn is_local_reference(&self) -> bool {
-        matches!(
-            self,
-            ThrushStatement::Reference {
-                identificator: ReferenceIdentificator::Local,
-                ..
-            }
-        )
     }
 
     #[inline]
@@ -943,7 +919,7 @@ impl ThrushStatement<'_> {
     }
 
     #[inline]
-    pub const fn is_allocated_reference(&self) -> bool {
+    pub fn is_allocated_reference(&self) -> bool {
         matches!(
             self,
             ThrushStatement::Reference {
@@ -954,91 +930,87 @@ impl ThrushStatement<'_> {
     }
 
     #[inline]
-    pub const fn is_pre_unaryop(&self) -> bool {
+    pub fn is_pre_unaryop(&self) -> bool {
         matches!(self, ThrushStatement::UnaryOp { is_pre: true, .. })
     }
 
     #[inline]
-    pub const fn is_function(&self) -> bool {
+    pub fn is_function(&self) -> bool {
         matches!(self, ThrushStatement::Function { .. })
     }
 
-    pub const fn is_asm_function(&self) -> bool {
+    #[inline]
+    pub fn is_asm_function(&self) -> bool {
         matches!(self, ThrushStatement::AssemblerFunction { .. })
     }
 
     #[inline]
-    pub const fn is_struct(&self) -> bool {
+    pub fn is_struct(&self) -> bool {
         matches!(self, ThrushStatement::Struct { .. })
     }
 
     #[inline]
-    pub const fn is_enum(&self) -> bool {
+    pub fn is_enum(&self) -> bool {
         matches!(self, ThrushStatement::Enum { .. })
     }
 
     #[inline]
-    pub const fn is_str(&self) -> bool {
+    pub fn is_str(&self) -> bool {
         matches!(self, ThrushStatement::Str { .. })
     }
 
     #[inline]
-    pub const fn is_constant(&self) -> bool {
+    pub fn is_constant(&self) -> bool {
         matches!(self, ThrushStatement::Const { .. })
     }
 
     #[inline]
-    pub const fn is_constructor(&self) -> bool {
+    pub fn is_constructor(&self) -> bool {
         matches!(self, ThrushStatement::Constructor { .. })
     }
 
     #[inline]
-    pub const fn is_binary(&self) -> bool {
+    pub fn is_binary(&self) -> bool {
         matches!(self, ThrushStatement::BinaryOp { .. })
     }
 
     #[inline]
-    pub const fn is_methods(&self) -> bool {
-        matches!(self, ThrushStatement::Methods { .. })
-    }
-
-    #[inline]
-    pub const fn is_group(&self) -> bool {
+    pub fn is_group(&self) -> bool {
         matches!(self, ThrushStatement::Group { .. })
     }
 
     #[inline]
-    pub const fn is_null(&self) -> bool {
+    pub fn is_null(&self) -> bool {
         matches!(self, ThrushStatement::Null { .. })
     }
 
     #[inline]
-    pub const fn is_integer(&self) -> bool {
+    pub fn is_integer(&self) -> bool {
         matches!(self, ThrushStatement::Integer { .. })
     }
 
     #[inline]
-    pub const fn is_bool(&self) -> bool {
+    pub fn is_bool(&self) -> bool {
         matches!(self, ThrushStatement::Boolean { .. })
     }
 
     #[inline]
-    pub const fn is_float(&self) -> bool {
+    pub fn is_float(&self) -> bool {
         matches!(self, ThrushStatement::Float { .. })
     }
 
     #[inline]
-    pub const fn is_return(&self) -> bool {
+    pub fn is_return(&self) -> bool {
         matches!(self, ThrushStatement::Return { .. })
     }
 
     #[inline]
-    pub const fn is_break(&self) -> bool {
+    pub fn is_break(&self) -> bool {
         matches!(self, ThrushStatement::Break { .. })
     }
 
     #[inline]
-    pub const fn is_continue(&self) -> bool {
+    pub fn is_continue(&self) -> bool {
         matches!(self, ThrushStatement::Continue { .. })
     }
 }

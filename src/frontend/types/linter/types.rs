@@ -36,7 +36,6 @@ pub enum LinterAttributeApplicant {
     Function,
     Struct,
     Constant,
-    Method,
 }
 
 #[derive(Debug, Clone, PartialEq, Hash, Eq)]

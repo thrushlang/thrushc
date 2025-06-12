@@ -72,17 +72,16 @@ pub enum TokenType {
     Load,
     Write,
     CastRaw,
-    CastPtr,
     AsmFn,
     Asm,
     Deref,
-    Cast,
+    As,
     Heap,
     Stack,
     Static,
     New,
     Import,
-    Methods,
+    SizeOf,
     Mut,
     Type,
     Enum,
@@ -94,13 +93,10 @@ pub enum TokenType {
     For,
     Continue,
     Break,
-    Match,
-    Pattern,
     If,
     Elif,
     Or,
     Return,
-    This,
     True,
     Local,
     Const,
@@ -157,7 +153,6 @@ impl TokenType {
                 | TokenType::Fn
                 | TokenType::Enum
                 | TokenType::Const
-                | TokenType::Methods
         )
     }
 
@@ -171,7 +166,6 @@ impl TokenType {
                 | TokenType::For
                 | TokenType::New
                 | TokenType::If
-                | TokenType::Match
                 | TokenType::While
                 | TokenType::Continue
                 | TokenType::Break
@@ -193,10 +187,6 @@ impl TokenType {
 
     pub const fn is_struct_keyword(&self) -> bool {
         matches!(self, TokenType::Struct)
-    }
-
-    pub const fn is_methods_keyword(&self) -> bool {
-        matches!(self, TokenType::Methods)
     }
 
     #[must_use]

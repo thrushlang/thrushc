@@ -23,17 +23,12 @@ lazy_static! {
         keywords.insert("return", TokenType::Return);
         keywords.insert("break", TokenType::Break);
         keywords.insert("continue", TokenType::Continue);
-        keywords.insert("methods", TokenType::Methods);
-        keywords.insert("this", TokenType::This);
         keywords.insert("pass", TokenType::Pass);
-        keywords.insert("match", TokenType::Match);
-        keywords.insert("pattern", TokenType::Pattern);
         keywords.insert("instr", TokenType::Instr);
         keywords.insert("mut", TokenType::Mut);
         keywords.insert("nullptr", TokenType::NullPtr);
-        keywords.insert("cast", TokenType::Cast);
+        keywords.insert("as", TokenType::As);
         keywords.insert("castraw", TokenType::CastRaw);
-        keywords.insert("castptr", TokenType::CastPtr);
         keywords.insert("asmfn", TokenType::AsmFn);
         keywords.insert("asm", TokenType::Asm);
         keywords.insert("deref", TokenType::Deref);
@@ -44,6 +39,8 @@ lazy_static! {
         keywords.insert("addr", TokenType::Addr);
         keywords.insert("load", TokenType::Load);
         keywords.insert("write", TokenType::Write);
+
+        keywords.insert("sizeof", TokenType::SizeOf);
 
         keywords.insert("@import", TokenType::Import);
 

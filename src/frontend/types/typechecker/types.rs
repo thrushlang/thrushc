@@ -14,7 +14,3 @@ pub type TypeCheckerAssemblerFunctions<'symbol> =
 
 pub type TypeCheckerFunction<'symbol> = (&'symbol [ThrushType], bool);
 pub type TypeCheckerFunctions<'symbol> = HashMap<&'symbol str, TypeCheckerFunction<'symbol>>;
-
-pub type TypeCheckerMethod<'symbol> = &'symbol [ThrushType];
-pub type TypeCheckerAllMethods<'symbol> = Vec<(&'symbol str, TypeCheckerMethod<'symbol>)>;
-pub type TypeCheckerMethods<'symbol> = HashMap<&'symbol str, TypeCheckerAllMethods<'symbol>>;

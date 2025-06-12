@@ -3,5 +3,4 @@ pub enum AttributeCheckerAttributeApplicant {
     Function,
     Constant,
     Struct,
-    Method,
 }

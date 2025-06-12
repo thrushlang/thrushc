@@ -1,5 +1,3 @@
-use std::rc::Rc;
-
 use ahash::AHashMap as HashMap;
 
 use crate::{
@@ -8,26 +6,19 @@ use crate::{
     frontend::{
         lexer::{span::Span, token::Token, tokentype::TokenType},
         types::{
-            lexer::{
-                MethodsApplicant, ThrushType, generate_methods,
-                traits::ThrushTypeStructTypeExtensions,
-            },
+            lexer::ThrushType,
             parser::stmts::{
                 stmt::ThrushStatement,
                 traits::{StructFieldsExtensions, ThrushAttributesExtensions, TokenExtensions},
                 types::{CustomTypeFields, EnumFields, StructFields, ThrushAttributes},
             },
-            symbols::types::{Methods, ParametersTypes},
+            symbols::types::ParametersTypes,
         },
     },
     lazy_static,
 };
 
-use super::{
-    ParserContext,
-    contexts::{InstructionPosition, MethodsType, SyncPosition},
-    expression, typegen,
-};
+use super::{ParserContext, contexts::SyncPosition, expression, typegen};
 
 const CALL_CONVENTIONS_CAPACITY: usize = 10;
 
@@ -64,8 +55,6 @@ pub fn parse<'instr>(
             TokenType::Enum => Ok(self::build_enum(parser_ctx, false)?),
             TokenType::Fn => Ok(self::build_function(parser_ctx, false)?),
             TokenType::AsmFn => Ok(self::build_assembler_function(parser_ctx, false)?),
-            TokenType::Const => Ok(self::build_const(parser_ctx, false)?),
-            TokenType::Methods => Ok(self::build_methods(parser_ctx, false)?),
 
             _ => Ok(statement(parser_ctx)?),
         };
@@ -97,283 +86,6 @@ fn statement<'instr>(
         };
 
     statement
-}
-
-pub fn build_methods<'instr>(
-    parser_ctx: &mut ParserContext<'instr>,
-    declare_forward: bool,
-) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
-    parser_ctx
-        .get_mut_control_ctx()
-        .set_instr_position(InstructionPosition::Methods);
-
-    let bindings_tk: &Token = parser_ctx.consume(
-        TokenType::Methods,
-        String::from("Syntax error"),
-        String::from("Expected 'methods' keyword."),
-    )?;
-
-    let span: Span = bindings_tk.get_span();
-
-    if !parser_ctx.is_main_scope() {
-        return Err(ThrushCompilerIssue::Error(
-            String::from("Syntax error"),
-            String::from("Methods are only defined globally."),
-            None,
-            span,
-        ));
-    }
-
-    let kind: ThrushType = typegen::build_type(parser_ctx)?;
-
-    if !kind.is_struct_type() {
-        return Err(ThrushCompilerIssue::Error(
-            String::from("Syntax error"),
-            String::from("Expected struct type."),
-            None,
-            span,
-        ));
-    }
-
-    parser_ctx
-        .get_mut_type_ctx()
-        .set_this_methods_type(MethodsType::Struct(kind.clone()));
-
-    let struct_name: String = kind.parser_get_struct_name(span)?;
-
-    parser_ctx
-        .get_symbols()
-        .contains_structure(&struct_name, span)?;
-
-    let mut methods: Vec<ThrushStatement> = Vec::with_capacity(50);
-
-    parser_ctx.consume(
-        TokenType::LBrace,
-        String::from("Syntax error"),
-        String::from("Expected '{'."),
-    )?;
-
-    while parser_ctx.peek().kind != TokenType::RBrace {
-        let bind: ThrushStatement = self::build_method(declare_forward, parser_ctx)?;
-
-        parser_ctx
-            .get_mut_control_ctx()
-            .set_sync_position(SyncPosition::Declaration);
-
-        parser_ctx
-            .get_mut_control_ctx()
-            .set_instr_position(InstructionPosition::Methods);
-
-        methods.push(bind);
-    }
-
-    parser_ctx.consume(
-        TokenType::RBrace,
-        String::from("Syntax error"),
-        String::from("Expected '}'."),
-    )?;
-
-    parser_ctx
-        .get_mut_type_ctx()
-        .set_this_methods_type(MethodsType::NoRelevant);
-
-    parser_ctx
-        .get_mut_control_ctx()
-        .set_instr_position(InstructionPosition::NoRelevant);
-
-    if declare_forward {
-        let bindings_generated: Methods = generate_methods(methods.clone())?;
-
-        parser_ctx.get_mut_symbols().add_methods(
-            &struct_name,
-            bindings_generated,
-            MethodsApplicant::Struct,
-            span,
-        )?;
-
-        return Ok(ThrushStatement::Null { span });
-    }
-
-    Ok(ThrushStatement::Methods {
-        name: struct_name,
-        methods,
-        span,
-    })
-}
-
-fn build_method<'instr>(
-    declare_forward: bool,
-    parser_ctx: &mut ParserContext<'instr>,
-) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
-    parser_ctx
-        .get_mut_control_ctx()
-        .set_sync_position(SyncPosition::Statement);
-
-    parser_ctx.consume(
-        TokenType::Fn,
-        String::from("Syntax error"),
-        String::from("Expected 'fn' keyword."),
-    )?;
-
-    let bind_name_tk: &Token = parser_ctx.consume(
-        TokenType::Identifier,
-        String::from("Syntax error"),
-        String::from("Expected name to the method definition."),
-    )?;
-
-    let bind_name: &str = bind_name_tk.get_lexeme();
-    let span: Span = bind_name_tk.get_span();
-
-    if !parser_ctx
-        .get_control_ctx()
-        .get_instr_position()
-        .is_methods()
-    {
-        return Err(ThrushCompilerIssue::Error(
-            String::from("Syntax error"),
-            String::from("Expected method definition inside the methods context definition."),
-            None,
-            bind_name_tk.span,
-        ));
-    }
-
-    parser_ctx
-        .get_mut_control_ctx()
-        .set_instr_position(InstructionPosition::Method);
-
-    parser_ctx.consume(
-        TokenType::LParen,
-        String::from("Syntax error"),
-        String::from("Expected '('."),
-    )?;
-
-    let mut bind_parameters: Vec<ThrushStatement> = Vec::with_capacity(10);
-    let mut bind_parameters_types: Vec<ThrushType> = Vec::with_capacity(10);
-    let mut bind_position: u32 = 0;
-
-    let mut this_is_declare_forwardd: bool = false;
-
-    while !parser_ctx.match_token(TokenType::RParen)? {
-        if parser_ctx.match_token(TokenType::Comma)? {
-            continue;
-        }
-
-        if this_is_declare_forwardd && parser_ctx.check(TokenType::This) {
-            return Err(ThrushCompilerIssue::Error(
-                String::from("Syntax error"),
-                String::from(
-                    "'This' keyword is already declare_forwardd. Multiple instances are not allowed.",
-                ),
-                None,
-                bind_name_tk.get_span(),
-            ));
-        }
-
-        if parser_ctx.check(TokenType::This) {
-            let this_tk: &Token = parser_ctx.consume(
-                TokenType::This,
-                String::from("Syntax error"),
-                String::from("Expected 'this' keyword."),
-            )?;
-
-            let is_mutable: bool = parser_ctx.match_token(TokenType::Mut)?;
-
-            bind_parameters.push(ThrushStatement::This {
-                kind: parser_ctx
-                    .get_type_ctx()
-                    .get_this_methods_type()
-                    .dissamble(),
-                is_mutable,
-                span: this_tk.get_span(),
-            });
-
-            this_is_declare_forwardd = true;
-
-            continue;
-        }
-
-        let is_mutable: bool = parser_ctx.match_token(TokenType::Mut)?;
-
-        let parameter_tk: &Token = parser_ctx.consume(
-            TokenType::Identifier,
-            String::from("Syntax error"),
-            String::from("Expected parameter name."),
-        )?;
-
-        let parameter_name: &str = parameter_tk.get_lexeme();
-        let parameter_span: Span = parameter_tk.get_span();
-
-        parser_ctx.consume(
-            TokenType::Colon,
-            String::from("Syntax error"),
-            String::from("Expected ':'."),
-        )?;
-
-        let parameter_type: ThrushType = typegen::build_type(parser_ctx)?;
-
-        if !declare_forward {
-            /*parser_ctx.get_mut_symbols().new_parameter(
-                parameter_name,
-                (parameter_type.clone(), false, is_mutable, parameter_span),
-                parameter_span,
-            )?;*/
-        }
-
-        bind_parameters_types.push(parameter_type.clone());
-
-        bind_parameters.push(ThrushStatement::BindParameter {
-            name: parameter_name,
-            kind: parameter_type,
-            position: bind_position,
-            is_mutable,
-            span: parameter_span,
-        });
-
-        bind_position += 1;
-    }
-
-    let return_type: ThrushType = typegen::build_type(parser_ctx)?;
-
-    parser_ctx
-        .get_mut_type_ctx()
-        .set_function_type(return_type.clone());
-
-    let bind_attributes: ThrushAttributes =
-        self::build_attributes(parser_ctx, &[TokenType::LBrace])?;
-
-    if !declare_forward {
-        parser_ctx.get_mut_control_ctx().set_inside_bind(true);
-
-        parser_ctx
-            .get_mut_type_ctx()
-            .set_bind_instance(this_is_declare_forwardd);
-
-        let bind_body: ThrushStatement = self::build_block(parser_ctx)?;
-
-        parser_ctx.get_mut_symbols().end_parameters();
-        parser_ctx.get_mut_control_ctx().set_inside_bind(false);
-        parser_ctx.get_mut_type_ctx().set_bind_instance(false);
-
-        parser_ctx
-            .get_mut_control_ctx()
-            .set_instr_position(InstructionPosition::NoRelevant);
-
-        return Ok(ThrushStatement::Method {
-            name: bind_name,
-            parameters: bind_parameters,
-            parameters_types: bind_parameters_types,
-            body: bind_body.into(),
-            return_type,
-            attributes: bind_attributes,
-            span,
-        });
-    }
-
-    parser_ctx
-        .get_mut_control_ctx()
-        .set_instr_position(InstructionPosition::NoRelevant);
-
-    Ok(ThrushStatement::Null { span })
 }
 
 fn build_entry_point<'instr>(
@@ -716,7 +428,7 @@ fn build_conditional<'instr>(
         });
     }
 
-    let mut otherwise: Option<Rc<ThrushStatement>> = None;
+    let mut otherwise: Option<Box<ThrushStatement>> = None;
 
     if parser_ctx.match_token(TokenType::Else)? {
         let span: Span = parser_ctx.previous().span;
@@ -1079,12 +791,7 @@ pub fn build_struct<'instr>(
     if declare_forward {
         if let Err(error) = parser_ctx.get_mut_symbols().new_struct(
             struct_name,
-            (
-                struct_name,
-                fields_types.1,
-                attributes,
-                Vec::with_capacity(100),
-            ),
+            (struct_name, fields_types.1, attributes),
             span,
         ) {
             parser_ctx.add_error(error);
@@ -1314,6 +1021,7 @@ fn build_local<'instr>(
             kind: local_type,
             value: ThrushStatement::Null { span }.into(),
             attributes,
+            undefined: true,
             is_mutable,
             span,
         });
@@ -1344,6 +1052,7 @@ fn build_local<'instr>(
         kind: local_type,
         value: value.into(),
         attributes,
+        undefined: false,
         is_mutable,
         span,
     };

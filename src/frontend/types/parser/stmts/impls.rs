@@ -283,30 +283,6 @@ impl Display for ThrushStatement<'_> {
                 write!(f, "while {} {}", cond, block)
             }
 
-            ThrushStatement::Method {
-                name,
-                parameters,
-                body,
-                return_type,
-                ..
-            } => {
-                write!(f, "def {}(", name)?;
-
-                for (index, param) in parameters.iter().enumerate() {
-                    write!(f, "{}", param)?;
-
-                    if index > 0 {
-                        write!(f, ", ")?;
-                    }
-                }
-
-                write!(f, ") ")?;
-                write!(f, "{} ", return_type)?;
-                write!(f, "{}", body)?;
-
-                Ok(())
-            }
-
             ThrushStatement::EntryPoint { body, .. } => {
                 write!(f, "fn main() {}", body)
             }

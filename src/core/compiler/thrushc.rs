@@ -31,7 +31,7 @@ use crate::{
     frontend::{
         lexer::{Lexer, token::Token},
         parser::{Parser, ParserContext},
-        semantic::SemanticAnalyzer,
+        semantic::{SemanticAnalyzer, typeresolver::TypeResolver},
         types::parser::stmts::stmt::ThrushStatement,
     },
 };
@@ -188,10 +188,13 @@ impl<'thrushc> TheThrushCompiler<'thrushc> {
         let parser: (ParserContext, bool) = Parser::parse(&tokens, file);
 
         let parser_result: (ParserContext, bool) = parser;
-        let parser_context: ParserContext = parser_result.0;
         let parser_throwed_errors: bool = parser_result.1;
 
-        let stmts: &[ThrushStatement] = parser_context.get_stmts();
+        let mut parser_context: ParserContext = parser_result.0;
+
+        let raw_stmts: &mut [ThrushStatement] = parser_context.get_stmts();
+
+        let stmts: &[ThrushStatement] = TypeResolver::resolve(raw_stmts);
 
         let semantic_analysis_throwed_errors: bool =
             SemanticAnalyzer::new(stmts, file).check(parser_throwed_errors);

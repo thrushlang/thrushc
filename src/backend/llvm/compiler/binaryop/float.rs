@@ -1,10 +1,7 @@
 use crate::{
     backend::llvm::compiler::{cast, predicates, valuegen::CompileChanges},
     core::console::logging::{self, LoggingType},
-    frontend::{
-        lexer::tokentype::TokenType,
-        types::{lexer::ThrushType, representations::BinaryOperation},
-    },
+    frontend::{lexer::tokentype::TokenType, types::representations::BinaryOperation},
 };
 
 use super::super::{context::LLVMCodeGenContext, valuegen};
@@ -21,6 +18,8 @@ pub fn float_operation<'ctx>(
     operator: &TokenType,
 ) -> BasicValueEnum<'ctx> {
     let llvm_builder: &Builder = context.get_llvm_builder();
+
+    let (left, right) = cast::float_together(context, left, right);
 
     match operator {
         TokenType::Plus => llvm_builder
@@ -40,14 +39,10 @@ pub fn float_operation<'ctx>(
             .unwrap()
             .into(),
 
-        op if op.is_logical_type() => {
-            let (left, right) = cast::float_together(context, left, right);
-
-            llvm_builder
-                .build_float_compare(predicates::float(operator), left, right, "")
-                .unwrap()
-                .into()
-        }
+        op if op.is_logical_type() => llvm_builder
+            .build_float_compare(predicates::float(operator), left, right, "")
+            .unwrap()
+            .into(),
 
         _ => {
             logging::log(
@@ -63,7 +58,6 @@ pub fn float_operation<'ctx>(
 pub fn float_binaryop<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     binary: BinaryOperation<'ctx>,
-    cast: &ThrushType,
 ) -> BasicValueEnum<'ctx> {
     if let (
         _,
@@ -81,10 +75,10 @@ pub fn float_binaryop<'ctx>(
     ) = binary
     {
         let left_compiled: BasicValueEnum =
-            valuegen::compile(context, binary.0, cast, CompileChanges::new(false, true));
+            valuegen::compile(context, binary.0, CompileChanges::new(false));
 
         let right_compiled: BasicValueEnum =
-            valuegen::compile(context, binary.2, cast, CompileChanges::new(false, true));
+            valuegen::compile(context, binary.2, CompileChanges::new(false));
 
         return float_operation(
             context,

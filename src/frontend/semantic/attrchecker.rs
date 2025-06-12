@@ -94,16 +94,6 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
         if let ThrushStatement::Const { attributes, .. } = stmt {
             self.analyze_attrs(attributes, AttributeCheckerAttributeApplicant::Constant);
         }
-
-        if let ThrushStatement::Method { attributes, .. } = stmt {
-            self.analyze_attrs(attributes, AttributeCheckerAttributeApplicant::Method);
-        }
-
-        if let ThrushStatement::Methods { methods, .. } = stmt {
-            methods.iter().for_each(|method| {
-                self.analyze_stmt(method);
-            });
-        }
     }
 
     fn analyze_attrs(
@@ -112,8 +102,7 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
         applicant: AttributeCheckerAttributeApplicant,
     ) {
         match applicant {
-            AttributeCheckerAttributeApplicant::Function
-            | AttributeCheckerAttributeApplicant::Method => {
+            AttributeCheckerAttributeApplicant::Function => {
                 let repeated_attrs: ThrushAttributes = self.get_repeated_attrs(attributes);
 
                 repeated_attrs.iter().for_each(|attr| {

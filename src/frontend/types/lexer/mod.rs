@@ -17,18 +17,13 @@ use crate::{
         types::{
             lexer::traits::{
                 LLVMTypeExtensions, ThrushTypeMutableExtensions, ThrushTypeNumericExtensions,
-                ThrushTypePointerExtensions, ThrushTypeStructTypeExtensions,
+                ThrushTypePointerExtensions,
             },
-            parser::stmts::{stmt::ThrushStatement, traits::StructExtensions, types::StructFields},
-            symbols::types::{Methods, Struct},
+            parser::stmts::{traits::StructExtensions, types::StructFields},
+            symbols::types::Struct,
         },
     },
 };
-
-#[derive(Debug, Clone, Copy)]
-pub enum MethodsApplicant {
-    Struct,
-}
 
 #[derive(Debug, Clone, Default)]
 pub enum ThrushType {
@@ -78,13 +73,21 @@ pub enum ThrushType {
 }
 
 impl ThrushTypeMutableExtensions for ThrushType {
-    fn is_mut_fixed_array_type(&self) -> bool {
+    fn is_mut_integer(&self) -> bool {
         if let ThrushType::Mut(inner) = self {
-            return inner.is_mut_fixed_array_type();
+            if inner.is_integer_type() {
+                return true;
+            }
         }
 
-        if let ThrushType::FixedArray(..) = self {
-            return true;
+        false
+    }
+
+    fn is_mut_fixed_array_type(&self) -> bool {
+        if let ThrushType::Mut(inner) = self {
+            if let ThrushType::FixedArray(..) = &**inner {
+                return true;
+            }
         }
 
         false
@@ -92,11 +95,9 @@ impl ThrushTypeMutableExtensions for ThrushType {
 
     fn is_mut_struct_type(&self) -> bool {
         if let ThrushType::Mut(inner) = self {
-            return inner.is_mut_struct_type();
-        }
-
-        if let ThrushType::Struct(..) = self {
-            return true;
+            if let ThrushType::Struct(..) = &**inner {
+                return true;
+            }
         }
 
         false
@@ -104,15 +105,23 @@ impl ThrushTypeMutableExtensions for ThrushType {
 
     fn is_mut_numeric_type(&self) -> bool {
         if let ThrushType::Mut(inner) = self {
-            return inner.is_mut_numeric_type();
+            if inner.is_integer_type()
+                || inner.is_bool_type()
+                || inner.is_char_type()
+                || inner.is_float_type()
+            {
+                return true;
+            }
         }
 
-        if self.is_integer_type()
-            || self.is_bool_type()
-            || self.is_char_type()
-            || self.is_float_type()
-        {
-            return true;
+        false
+    }
+
+    fn is_mut_any_nonumeric_type(&self) -> bool {
+        if let ThrushType::Mut(inner) = self {
+            if inner.is_struct_type() || inner.is_fixed_array_type() {
+                return true;
+            }
         }
 
         false
@@ -141,22 +150,19 @@ impl ThrushTypeNumericExtensions for ThrushType {
     }
 }
 
-impl ThrushTypeStructTypeExtensions for ThrushType {
-    fn parser_get_struct_name(&self, span: Span) -> Result<String, ThrushCompilerIssue> {
-        if let ThrushType::Struct(name, ..) = self {
-            return Ok(name.clone());
+impl ThrushTypePointerExtensions for ThrushType {
+    fn is_all_ptr(&self) -> bool {
+        if let ThrushType::Ptr(Some(ptr)) = self {
+            return ptr.is_all_ptr();
         }
 
-        Err(ThrushCompilerIssue::Error(
-            String::from("Syntax error"),
-            String::from("Expected struct type."),
-            None,
-            span,
-        ))
-    }
-}
+        if let ThrushType::Ptr(None) = self {
+            return true;
+        }
 
-impl ThrushTypePointerExtensions for ThrushType {
+        false
+    }
+
     fn is_typed_ptr(&self) -> bool {
         if let ThrushType::Ptr(Some(inner)) = self {
             return inner.is_typed_ptr();
@@ -171,7 +177,15 @@ impl ThrushTypePointerExtensions for ThrushType {
 
     fn is_ptr_struct_type(&self) -> bool {
         if let ThrushType::Ptr(Some(inner)) = self {
-            return inner.is_ptr_struct_type();
+            return inner.is_ptr_struct_type_inner();
+        }
+
+        false
+    }
+
+    fn is_ptr_struct_type_inner(&self) -> bool {
+        if let ThrushType::Ptr(Some(inner)) = self {
+            return inner.is_ptr_struct_type_inner();
         }
 
         if let ThrushType::Ptr(None) = self {
@@ -186,6 +200,14 @@ impl ThrushTypePointerExtensions for ThrushType {
     }
 
     fn is_ptr_fixed_array_type(&self) -> bool {
+        if let ThrushType::Ptr(Some(inner)) = self {
+            return inner.is_ptr_fixed_array_type_inner();
+        }
+
+        false
+    }
+
+    fn is_ptr_fixed_array_type_inner(&self) -> bool {
         if let ThrushType::Ptr(Some(inner)) = self {
             return inner.is_ptr_fixed_array_type();
         }
@@ -216,22 +238,6 @@ impl LLVMTypeExtensions for ThrushType {
 }
 
 impl ThrushType {
-    pub fn defer_all(&self) -> ThrushType {
-        if let ThrushType::Mut(inner_type) = self {
-            return inner_type.defer_all();
-        }
-
-        if let ThrushType::Ptr(Some(inner_type)) = self {
-            return inner_type.defer_all();
-        }
-
-        if let ThrushType::FixedArray(inner_type, ..) = self {
-            return inner_type.defer_all();
-        }
-
-        self.clone()
-    }
-
     pub fn deref(&self) -> ThrushType {
         if let ThrushType::Ptr(Some(any)) = self {
             return (**any).clone();
@@ -242,16 +248,6 @@ impl ThrushType {
         }
 
         self.clone()
-    }
-
-    pub fn is_nested_ptr(&self) -> bool {
-        if let ThrushType::Ptr(Some(ptr)) = self {
-            if let ThrushType::Ptr(..) = &**ptr {
-                return true;
-            }
-        }
-
-        false
     }
 
     pub fn get_array_type(&self) -> &ThrushType {
@@ -269,6 +265,35 @@ impl ThrushType {
         );
 
         unreachable!()
+    }
+
+    pub fn get_array_base_type(&self) -> &ThrushType {
+        if let ThrushType::FixedArray(array_type, _) = self {
+            return array_type.get_array_base_type();
+        }
+
+        if let ThrushType::Mut(array_type) = self {
+            return array_type.get_array_base_type();
+        }
+
+        self
+    }
+
+    #[inline]
+    pub fn get_base_type(&self) -> ThrushType {
+        if let ThrushType::FixedArray(inner, _) = self {
+            return inner.get_base_type();
+        }
+
+        if let ThrushType::Mut(inner) = self {
+            return inner.get_base_type();
+        }
+
+        if let ThrushType::Ptr(Some(inner)) = self {
+            return inner.get_base_type();
+        }
+
+        self.clone()
     }
 
     pub fn get_type_with_depth(&self, depth: usize) -> &ThrushType {
@@ -350,58 +375,63 @@ impl ThrushType {
     }
 
     #[inline(always)]
-    pub const fn is_char_type(&self) -> bool {
+    pub fn is_char_type(&self) -> bool {
         matches!(self, ThrushType::Char)
     }
 
     #[inline(always)]
-    pub const fn is_void_type(&self) -> bool {
+    pub fn is_void_type(&self) -> bool {
         matches!(self, ThrushType::Void)
     }
 
     #[inline(always)]
-    pub const fn is_bool_type(&self) -> bool {
+    pub fn is_bool_type(&self) -> bool {
         matches!(self, ThrushType::Bool)
     }
 
     #[inline(always)]
-    pub const fn is_struct_type(&self) -> bool {
+    pub fn is_struct_type(&self) -> bool {
         matches!(self, ThrushType::Struct(..))
     }
 
     #[inline(always)]
-    pub const fn is_fixed_array_type(&self) -> bool {
+    pub fn is_fixed_array_type(&self) -> bool {
         matches!(self, ThrushType::FixedArray(..))
     }
 
     #[inline(always)]
-    pub const fn is_float_type(&self) -> bool {
+    pub fn is_float_type(&self) -> bool {
         matches!(self, ThrushType::F32 | ThrushType::F64)
     }
 
     #[inline(always)]
-    pub const fn is_ptr_type(&self) -> bool {
+    pub fn is_ptr_type(&self) -> bool {
         matches!(self, ThrushType::Ptr(_))
     }
 
     #[inline(always)]
-    pub const fn is_address_type(&self) -> bool {
+    pub fn is_address_type(&self) -> bool {
         matches!(self, ThrushType::Addr)
     }
 
     #[inline(always)]
-    pub const fn is_mut_type(&self) -> bool {
+    pub fn is_str_type(&self) -> bool {
+        matches!(self, ThrushType::Str(..))
+    }
+
+    #[inline(always)]
+    pub fn is_mut_type(&self) -> bool {
         matches!(self, ThrushType::Mut(_))
     }
 
     #[inline(always)]
-    pub const fn is_numeric(&self) -> bool {
+    pub fn is_numeric(&self) -> bool {
         self.is_integer_type() || self.is_float_type() || self.is_char_type() || self.is_bool_type()
     }
 
     #[must_use]
     #[inline(always)]
-    pub const fn is_signed_integer_type(&self) -> bool {
+    pub fn is_signed_integer_type(&self) -> bool {
         matches!(
             self,
             ThrushType::S8 | ThrushType::S16 | ThrushType::S32 | ThrushType::S64
@@ -409,7 +439,7 @@ impl ThrushType {
     }
 
     #[inline(always)]
-    pub const fn is_integer_type(&self) -> bool {
+    pub fn is_integer_type(&self) -> bool {
         matches!(
             self,
             ThrushType::S8
@@ -497,34 +527,47 @@ impl PartialEq for ThrushType {
     }
 }
 
-pub fn generate_methods(original: Vec<ThrushStatement>) -> Result<Methods, ThrushCompilerIssue> {
-    let mut methods: Methods = Vec::with_capacity(original.len());
-
-    for method in original {
-        methods.push((
-            method.get_method_name()?,
-            method.get_method_type()?,
-            method.get_method_parameters_types()?,
-        ));
-    }
-
-    Ok(methods)
-}
-
 pub fn decompose_struct_property(
     mut position: usize,
     property_names: Vec<&'_ str>,
-    struct_type: ThrushType,
+    base_type: ThrushType,
     symbols_table: &SymbolsTable<'_>,
     span: Span,
 ) -> Result<(ThrushType, Vec<(ThrushType, u32)>), ThrushCompilerIssue> {
     let mut gep_indices: Vec<(ThrushType, u32)> = Vec::with_capacity(10);
 
+    let mut is_parent_mut: bool = false;
+    let mut is_parent_ptr: bool = false;
+
     if position >= property_names.len() {
-        return Ok((struct_type.clone(), gep_indices));
+        return Ok((base_type.clone(), gep_indices));
     }
 
-    if let ThrushType::Struct(name, _) = &struct_type {
+    let current_type: &ThrushType = match &base_type {
+        ThrushType::Mut(inner_type) => {
+            is_parent_mut = true;
+            inner_type
+        }
+
+        ThrushType::Ptr(inner_ptr) => {
+            is_parent_ptr = true;
+
+            if let Some(inner_type) = inner_ptr {
+                inner_type
+            } else {
+                return Err(ThrushCompilerIssue::Error(
+                    "Type error".into(),
+                    "Properties of an non-typed pointer 'ptr' cannot be accessed.".into(),
+                    None,
+                    span,
+                ));
+            }
+        }
+
+        _ => &base_type,
+    };
+
+    if let ThrushType::Struct(name, _) = current_type {
         let structure: Struct = symbols_table.get_struct(name, span)?;
         let fields: StructFields = structure.get_fields();
 
@@ -537,7 +580,16 @@ pub fn decompose_struct_property(
             .find(|field| field.1.0 == field_name);
 
         if let Some((index, (_, field_type, ..))) = field_with_index {
-            gep_indices.push((field_type.clone(), index as u32));
+            let mut adjusted_field_type: ThrushType = field_type.clone();
+
+            if is_parent_mut {
+                adjusted_field_type = ThrushType::Mut(adjusted_field_type.into());
+            }
+            if is_parent_ptr {
+                adjusted_field_type = ThrushType::Ptr(Some(adjusted_field_type.into()));
+            }
+
+            gep_indices.push((adjusted_field_type.clone(), index as u32));
 
             position += 1;
 
@@ -549,9 +601,31 @@ pub fn decompose_struct_property(
                 span,
             )?;
 
+            for (ty, _) in &mut nested_indices {
+                let mut adjusted_ty: ThrushType = ty.clone();
+
+                if is_parent_mut {
+                    adjusted_ty = ThrushType::Mut(adjusted_ty.into());
+                }
+
+                if is_parent_ptr {
+                    adjusted_ty = ThrushType::Ptr(Some(adjusted_ty.into()));
+                }
+
+                *ty = adjusted_ty;
+            }
+
             gep_indices.append(&mut nested_indices);
 
-            return Ok((result_type, gep_indices));
+            let final_result_type = if is_parent_mut {
+                ThrushType::Mut(result_type.into())
+            } else if is_parent_ptr {
+                ThrushType::Ptr(Some(result_type.into()))
+            } else {
+                result_type
+            };
+
+            return Ok((final_result_type, gep_indices));
         }
 
         return Err(ThrushCompilerIssue::Error(
@@ -574,5 +648,5 @@ pub fn decompose_struct_property(
         ));
     }
 
-    Ok((struct_type.clone(), gep_indices))
+    Ok((base_type.clone(), gep_indices))
 }

@@ -39,8 +39,8 @@ pub struct LLVMCodegen<'a, 'ctx> {
     stmts: &'ctx [ThrushStatement<'ctx>],
     current: usize,
     current_function: Option<FunctionValue<'ctx>>,
-    loop_exit_block: Option<BasicBlock<'ctx>>,
-    loop_start_block: Option<BasicBlock<'ctx>>,
+    exit_loop_block: Option<BasicBlock<'ctx>>,
+    start_loop_block: Option<BasicBlock<'ctx>>,
 }
 
 impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
@@ -53,8 +53,8 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
             stmts,
             current: 0,
             current_function: None,
-            loop_exit_block: None,
-            loop_start_block: None,
+            exit_loop_block: None,
+            start_loop_block: None,
         }
         .start();
     }
@@ -126,8 +126,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                         .build_return(Some(&valuegen::compile(
                             self.context,
                             expression,
-                            kind,
-                            CompileChanges::new(kind.is_mut_type() || kind.is_ptr_type(), true),
+                            CompileChanges::new(kind.is_mut_type() || kind.is_ptr_type()),
                         )))
                         .is_err()
                     {
@@ -206,13 +205,9 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 ..
             } => {
                 if let Some(current_function) = self.current_function {
-                    let if_comparison: IntValue<'ctx> = valuegen::compile(
-                        self.context,
-                        cond,
-                        &ThrushType::Bool,
-                        CompileChanges::new(false, true),
-                    )
-                    .into_int_value();
+                    let if_comparison: IntValue<'ctx> =
+                        valuegen::compile(self.context, cond, CompileChanges::default())
+                            .into_int_value();
 
                     let then_block: BasicBlock =
                         llvm_context.append_basic_block(current_function, "if");
@@ -267,8 +262,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                                 let compiled_else_if_cond: IntValue = valuegen::compile(
                                     self.context,
                                     cond,
-                                    &ThrushType::Bool,
-                                    CompileChanges::new(false, true),
+                                    CompileChanges::default(),
                                 )
                                 .into_int_value();
 
@@ -383,20 +377,16 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
 
                     llvm_builder.position_at_end(condition_block);
 
-                    let conditional: IntValue = valuegen::compile(
-                        self.context,
-                        cond,
-                        &ThrushType::Bool,
-                        CompileChanges::new(false, true),
-                    )
-                    .into_int_value();
+                    let conditional: IntValue =
+                        valuegen::compile(self.context, cond, CompileChanges::default())
+                            .into_int_value();
 
                     let then_block: BasicBlock =
                         llvm_context.append_basic_block(current_function, "while_body");
                     let exit_block: BasicBlock =
                         llvm_context.append_basic_block(current_function, "while_exit");
 
-                    self.loop_exit_block = Some(exit_block);
+                    self.exit_loop_block = Some(exit_block);
 
                     llvm_builder
                         .build_conditional_branch(conditional, then_block, exit_block)
@@ -426,30 +416,30 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
             }
             ThrushStatement::Loop { block, .. } => {
                 if let Some(function) = self.current_function {
-                    let loop_start_block: BasicBlock =
+                    let start_loop_block: BasicBlock =
                         llvm_context.append_basic_block(function, "loop");
 
                     llvm_builder
-                        .build_unconditional_branch(loop_start_block)
+                        .build_unconditional_branch(start_loop_block)
                         .unwrap();
 
-                    llvm_builder.position_at_end(loop_start_block);
+                    llvm_builder.position_at_end(start_loop_block);
 
-                    let loop_exit_block: BasicBlock =
+                    let exit_loop_block: BasicBlock =
                         llvm_context.append_basic_block(function, "loop_exit");
 
-                    self.loop_exit_block = Some(loop_exit_block);
+                    self.exit_loop_block = Some(exit_loop_block);
 
                     self.codegen(block);
 
                     if !block.has_return() && !block.has_break() && !block.has_continue() {
-                        let _ = loop_exit_block.remove_from_function();
+                        let _ = exit_loop_block.remove_from_function();
 
                         llvm_builder
                             .build_unconditional_branch(function.get_last_basic_block().unwrap())
                             .unwrap();
                     } else {
-                        llvm_builder.position_at_end(loop_exit_block);
+                        llvm_builder.position_at_end(exit_loop_block);
                     }
 
                     return;
@@ -473,7 +463,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                     let start_block: BasicBlock =
                         llvm_context.append_basic_block(current_function, "for");
 
-                    self.loop_start_block = Some(start_block);
+                    self.start_loop_block = Some(start_block);
 
                     llvm_builder
                         .build_unconditional_branch(start_block)
@@ -481,13 +471,9 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
 
                     llvm_builder.position_at_end(start_block);
 
-                    let condition: IntValue = valuegen::compile(
-                        self.context,
-                        cond,
-                        &ThrushType::Bool,
-                        CompileChanges::new(false, true),
-                    )
-                    .into_int_value();
+                    let condition: IntValue =
+                        valuegen::compile(self.context, cond, CompileChanges::default())
+                            .into_int_value();
 
                     let then_block: BasicBlock =
                         llvm_context.append_basic_block(current_function, "for_body");
@@ -498,26 +484,16 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                         .build_conditional_branch(condition, then_block, exit_block)
                         .unwrap();
 
-                    self.loop_exit_block = Some(exit_block);
+                    self.exit_loop_block = Some(exit_block);
 
                     llvm_builder.position_at_end(then_block);
 
                     if actions.is_pre_unaryop() {
                         self.codegen(block.as_ref());
 
-                        let _ = valuegen::compile(
-                            self.context,
-                            actions,
-                            &ThrushType::Void,
-                            CompileChanges::new(false, false),
-                        );
+                        let _ = valuegen::compile(self.context, actions, CompileChanges::default());
                     } else {
-                        let _ = valuegen::compile(
-                            self.context,
-                            actions,
-                            &ThrushType::Void,
-                            CompileChanges::new(false, false),
-                        );
+                        let _ = valuegen::compile(self.context, actions, CompileChanges::default());
 
                         self.codegen(block.as_ref());
                     }
@@ -543,13 +519,13 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
 
             ThrushStatement::Break { .. } => {
                 llvm_builder
-                    .build_unconditional_branch(self.loop_exit_block.unwrap())
+                    .build_unconditional_branch(self.exit_loop_block.unwrap())
                     .unwrap();
             }
 
             ThrushStatement::Continue { .. } => {
                 llvm_builder
-                    .build_unconditional_branch(self.loop_start_block.unwrap())
+                    .build_unconditional_branch(self.start_loop_block.unwrap())
                     .unwrap();
             }
 
@@ -580,8 +556,14 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 kind,
                 value,
                 attributes,
+                undefined,
                 ..
             } => {
+                if *undefined {
+                    self.context.alloc_local(name, kind, attributes);
+                    return;
+                }
+
                 local::compile((name, kind, value, attributes), self.context);
             }
 
@@ -613,35 +595,17 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         ########################################################################*/
 
         match stmt {
-            ThrushStatement::Mut { kind, .. } => {
-                valuegen::compile(self.context, stmt, kind, CompileChanges::new(false, true));
+            ThrushStatement::Mut { .. } => {
+                valuegen::compile(self.context, stmt, CompileChanges::default());
             }
-
             ThrushStatement::Write { .. } => {
-                valuegen::compile(
-                    self.context,
-                    stmt,
-                    &ThrushType::Void,
-                    CompileChanges::new(false, false),
-                );
+                valuegen::compile(self.context, stmt, CompileChanges::default());
             }
-
             ThrushStatement::Call { .. } => {
-                valuegen::compile(
-                    self.context,
-                    stmt,
-                    &ThrushType::Void,
-                    CompileChanges::new(false, false),
-                );
+                valuegen::compile(self.context, stmt, CompileChanges::default());
             }
-
             ThrushStatement::AsmValue { .. } => {
-                valuegen::compile(
-                    self.context,
-                    stmt,
-                    &ThrushType::Void,
-                    CompileChanges::new(false, false),
-                );
+                valuegen::compile(self.context, stmt, CompileChanges::default());
             }
 
             _ => (),
@@ -716,6 +680,8 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
 
         llvm_builder.position_at_end(entry);
 
+        self.current_function = Some(llvm_function);
+
         function_parameters.iter().for_each(|parameter| {
             if let ThrushStatement::FunctionParameter {
                 name,
@@ -773,12 +739,9 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 ..
             } = stmt
             {
-                let value: BasicValueEnum = valuegen::compile(
-                    self.context,
-                    value,
-                    &ThrushType::Void,
-                    CompileChanges::new(false, false),
-                );
+                let value: BasicValueEnum =
+                    valuegen::compile(self.context, value, CompileChanges::default());
+
                 self.context.alloc_constant(name, kind, value, attributes);
             }
         });
