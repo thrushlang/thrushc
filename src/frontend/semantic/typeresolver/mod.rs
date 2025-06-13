@@ -90,7 +90,13 @@ impl<'typer> TypeResolver {
             ThrushStatement::BinaryOp {
                 left, right, kind, ..
             } => {
-                if let Some(array_items_target_type) = typer_ctx.get_array_items_target_type() {
+                if let Some(mut_target_type) = typer_ctx.get_mut_target_type() {
+                    if Self::is_compatible_numeric_cast(mut_target_type, kind) {
+                        *kind = mut_target_type.clone();
+                    }
+                } else if let Some(array_items_target_type) =
+                    typer_ctx.get_array_items_target_type()
+                {
                     if Self::is_compatible_numeric_cast(array_items_target_type, kind) {
                         *kind = array_items_target_type.clone();
                     }
@@ -111,7 +117,13 @@ impl<'typer> TypeResolver {
             ThrushStatement::Call {
                 name, args, kind, ..
             } => {
-                if let Some(array_items_target_type) = typer_ctx.get_array_items_target_type() {
+                if let Some(mut_target_type) = typer_ctx.get_mut_target_type() {
+                    if Self::is_compatible_numeric_cast(mut_target_type, kind) {
+                        *kind = mut_target_type.clone();
+                    }
+                } else if let Some(array_items_target_type) =
+                    typer_ctx.get_array_items_target_type()
+                {
                     if Self::is_compatible_numeric_cast(array_items_target_type, kind) {
                         *kind = array_items_target_type.clone();
                     }
@@ -137,7 +149,13 @@ impl<'typer> TypeResolver {
             }
 
             ThrushStatement::Integer { kind, .. } => {
-                if let Some(array_items_target_type) = typer_ctx.get_array_items_target_type() {
+                if let Some(mut_target_type) = typer_ctx.get_mut_target_type() {
+                    if Self::is_compatible_numeric_cast(mut_target_type, kind) {
+                        *kind = mut_target_type.clone();
+                    }
+                } else if let Some(array_items_target_type) =
+                    typer_ctx.get_array_items_target_type()
+                {
                     if Self::is_compatible_numeric_cast(array_items_target_type, kind) {
                         *kind = array_items_target_type.clone();
                     }
@@ -153,7 +171,13 @@ impl<'typer> TypeResolver {
             }
 
             ThrushStatement::Float { kind, .. } => {
-                if let Some(array_items_target_type) = typer_ctx.get_array_items_target_type() {
+                if let Some(mut_target_type) = typer_ctx.get_mut_target_type() {
+                    if Self::is_compatible_numeric_cast(mut_target_type, kind) {
+                        *kind = mut_target_type.clone();
+                    }
+                } else if let Some(array_items_target_type) =
+                    typer_ctx.get_array_items_target_type()
+                {
                     if Self::is_compatible_numeric_cast(array_items_target_type, kind) {
                         *kind = array_items_target_type.clone();
                     }
@@ -172,6 +196,10 @@ impl<'typer> TypeResolver {
                 if let Some(array_items_target_type) = typer_ctx.get_array_items_target_type() {
                     if Self::is_compatible_numeric_cast(array_items_target_type, kind) {
                         *kind = array_items_target_type.clone();
+                    }
+                } else if let Some(mut_target_type) = typer_ctx.get_mut_target_type() {
+                    if Self::is_compatible_numeric_cast(mut_target_type, kind) {
+                        *kind = mut_target_type.clone();
                     }
                 } else if let Some(call_arg_target_type) = typer_ctx.get_call_arg_target_type() {
                     if Self::is_compatible_numeric_cast(call_arg_target_type, kind) {

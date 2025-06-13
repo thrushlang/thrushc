@@ -23,6 +23,7 @@ pub fn integer(operator: &TokenType, left_signed: bool, right_signed: bool) -> I
         TokenType::LessEq if left_signed && !right_signed => IntPredicate::SLE,
         TokenType::LessEq if !left_signed && right_signed => IntPredicate::SLE,
         TokenType::LessEq if left_signed && right_signed => IntPredicate::SLE,
+
         _ => unreachable!(),
     }
 }
@@ -32,6 +33,7 @@ pub fn pointer(operator: &TokenType) -> IntPredicate {
     match operator {
         TokenType::EqEq => IntPredicate::EQ,
         TokenType::BangEq => IntPredicate::NE,
+
         _ => unreachable!(),
     }
 }
@@ -45,6 +47,7 @@ pub fn float(operator: &TokenType) -> FloatPredicate {
         TokenType::GreaterEq => FloatPredicate::OGE,
         TokenType::Less => FloatPredicate::OLT,
         TokenType::LessEq => FloatPredicate::OLE,
+
         _ => unreachable!(),
     }
 }

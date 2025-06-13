@@ -15,7 +15,7 @@ impl Display for CompilationPosition {
         match self {
             Self::Linter => write!(f, "{}", "Linter".bright_magenta().bold()),
             Self::Parser => write!(f, "{}", "Parser".red().bold()),
-            Self::TypeChecker => write!(f, "{}", "Type Checking".bright_yellow().bold()),
+            Self::TypeChecker => write!(f, "{}", "Type Checker".bright_yellow().bold()),
             Self::Lexer => write!(f, "{}", "Lexer".bright_blue().bold()),
         }
     }

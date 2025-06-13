@@ -7,7 +7,7 @@ use crate::{
         lexer::{span::Span, token::Token, tokentype::TokenType},
         parser::expression,
         types::{
-            lexer::{self, ThrushType, traits::ThrushTypeMutableExtensions},
+            lexer::{self, ThrushType},
             parser::stmts::{
                 ident::ReferenceIdentificator,
                 sites::LLIAllocationSite,

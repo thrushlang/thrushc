@@ -145,6 +145,51 @@ impl<'linter> Linter<'linter> {
         /* ######################################################################
 
 
+            LINTER CONDITIONALS | START
+
+
+        ########################################################################*/
+
+        if let ThrushStatement::If {
+            cond,
+            block,
+            elfs,
+            otherwise,
+            ..
+        } = stmt
+        {
+            self.analyze_stmt(cond);
+            self.analyze_stmt(block);
+
+            elfs.iter().for_each(|elif| {
+                self.analyze_stmt(elif);
+            });
+
+            if let Some(otherwise) = otherwise {
+                self.analyze_stmt(otherwise);
+            }
+        }
+
+        if let ThrushStatement::Elif { cond, block, .. } = stmt {
+            self.analyze_stmt(cond);
+            self.analyze_stmt(block);
+        }
+
+        if let ThrushStatement::Else { block, .. } = stmt {
+            self.analyze_stmt(block);
+        }
+
+        /* ######################################################################
+
+
+            LINTER CONDITIONALS | END
+
+
+        ########################################################################*/
+
+        /* ######################################################################
+
+
             LINTER DECLARATIONS | END
 
 

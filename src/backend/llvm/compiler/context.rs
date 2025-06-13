@@ -51,10 +51,10 @@ impl<'a, 'ctx> LLVMCodeGenContext<'a, 'ctx> {
             context,
             builder,
             target_data,
-            constants: HashMap::with_capacity(100),
-            functions: HashMap::with_capacity(100),
-            parameters: HashMap::with_capacity(100),
-            instructions: Vec::with_capacity(255),
+            constants: HashMap::with_capacity(10000),
+            functions: HashMap::with_capacity(10000),
+            parameters: HashMap::with_capacity(10),
+            instructions: Vec::with_capacity(1000),
             scope: 0,
             diagnostician,
         }
@@ -75,6 +75,11 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
 
         if let Some(last_block) = self.instructions.last_mut() {
             last_block.insert(name, local);
+        } else {
+            logging::log(
+                LoggingType::Bug,
+                "The last frame of symbols could not be obtained.",
+            );
         }
     }
 
@@ -89,6 +94,11 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
 
         if let Some(last_block) = self.instructions.last_mut() {
             last_block.insert(name, lli);
+        } else {
+            logging::log(
+                LoggingType::Bug,
+                "The last frame of symbols could not be obtained.",
+            );
         }
     }
 

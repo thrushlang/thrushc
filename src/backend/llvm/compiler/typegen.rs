@@ -114,6 +114,7 @@ pub fn generate_subtype<'ctx>(
     match kind {
         ThrushType::Ptr(Some(subtype)) => generate_subtype(llvm_context, subtype),
         ThrushType::Mut(subtype) => generate_subtype(llvm_context, subtype),
+
         _ => generate_type(llvm_context, kind),
     }
 }

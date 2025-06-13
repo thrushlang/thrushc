@@ -66,6 +66,25 @@ pub fn alloc<'ctx>(
     unreachable!()
 }
 
+pub fn alloc_constant<'ctx>(
+    module: &Module<'ctx>,
+    name: &str,
+    llvm_type: BasicTypeEnum<'ctx>,
+    llvm_value: BasicValueEnum<'ctx>,
+    attributes: &'ctx ThrushAttributes<'ctx>,
+) -> PointerValue<'ctx> {
+    let global: GlobalValue = module.add_global(llvm_type, Some(AddressSpace::default()), name);
+
+    if !attributes.has_public_attribute() {
+        global.set_linkage(Linkage::LinkerPrivate)
+    }
+
+    global.set_initializer(&llvm_value);
+    global.set_constant(true);
+
+    global.as_pointer_value()
+}
+
 pub fn integer<'ctx>(
     context: &'ctx Context,
     kind: &'ctx ThrushType,
@@ -87,6 +106,7 @@ pub fn integer<'ctx>(
         ThrushType::U32 => context.i32_type().const_int(number, false),
         ThrushType::U64 => context.i64_type().const_int(number, false),
         ThrushType::Bool => context.bool_type().const_int(number, false),
+
         _ => unreachable!(),
     }
 }
@@ -108,6 +128,7 @@ pub fn float<'ctx>(
             .build_float_neg(context.f64_type().const_float(number), "")
             .unwrap(),
         ThrushType::F64 => context.f64_type().const_float(number),
+
         _ => unreachable!(),
     }
 }
@@ -116,6 +137,8 @@ pub fn float<'ctx>(
 pub struct CompileChanges {
     load_raw: bool,
 }
+
+// IDEA DE RAW GEN, CONTRA PARTE CRUDA DE PUNTEROS.
 
 pub fn compile<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
@@ -809,25 +832,6 @@ pub fn compile<'ctx>(
     );
 
     unreachable!()
-}
-
-pub fn alloc_constant<'ctx>(
-    module: &Module<'ctx>,
-    name: &str,
-    llvm_type: BasicTypeEnum<'ctx>,
-    llvm_value: BasicValueEnum<'ctx>,
-    attributes: &'ctx ThrushAttributes<'ctx>,
-) -> PointerValue<'ctx> {
-    let global: GlobalValue = module.add_global(llvm_type, Some(AddressSpace::default()), name);
-
-    if !attributes.has_public_attribute() {
-        global.set_linkage(Linkage::LinkerPrivate)
-    }
-
-    global.set_initializer(&llvm_value);
-    global.set_constant(true);
-
-    global.as_pointer_value()
 }
 
 fn compile_deref<'ctx>(

@@ -1,6 +1,5 @@
 use crate::frontend::lexer::tokentype::TokenType;
 use crate::frontend::types::lexer::ThrushType;
-use crate::frontend::types::lexer::traits::ThrushTypeMutableExtensions;
 use crate::frontend::types::parser::stmts::stmt::ThrushStatement;
 use crate::frontend::types::representations::UnaryOperation;
 
@@ -32,6 +31,7 @@ pub fn unary_op<'ctx>(
     ) = unary
     {
         let symbol: SymbolAllocated = context.get_allocated_symbol(name);
+        let operator: &TokenType = unary.0;
 
         if ref_type.is_integer_type() {
             let int: IntValue = symbol.load(context).into_int_value();
@@ -39,7 +39,7 @@ pub fn unary_op<'ctx>(
             let modifier: IntValue =
                 typegen::thrush_integer_to_llvm_type(llvm_context, ref_type).const_int(1, false);
 
-            let result: IntValue = if unary.0.is_plusplus_operator() {
+            let result: IntValue = if operator.is_plusplus_operator() {
                 llvm_builder.build_int_nsw_add(int, modifier, "").unwrap()
             } else {
                 llvm_builder.build_int_nsw_sub(int, modifier, "").unwrap()
@@ -55,7 +55,7 @@ pub fn unary_op<'ctx>(
         let modifier: FloatValue =
             typegen::type_float_to_llvm_float_type(llvm_context, ref_type).const_float(1.0);
 
-        let result: FloatValue = if unary.0.is_plusplus_operator() {
+        let result: FloatValue = if operator.is_plusplus_operator() {
             llvm_builder.build_float_add(float, modifier, "").unwrap()
         } else {
             llvm_builder.build_float_sub(float, modifier, "").unwrap()

@@ -73,16 +73,6 @@ pub enum ThrushType {
 }
 
 impl ThrushTypeMutableExtensions for ThrushType {
-    fn is_mut_integer(&self) -> bool {
-        if let ThrushType::Mut(inner) = self {
-            if inner.is_integer_type() {
-                return true;
-            }
-        }
-
-        false
-    }
-
     fn is_mut_fixed_array_type(&self) -> bool {
         if let ThrushType::Mut(inner) = self {
             if let ThrushType::FixedArray(..) = &**inner {

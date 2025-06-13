@@ -8,7 +8,6 @@ pub trait LLVMTypeExtensions {
 
 pub trait ThrushTypeMutableExtensions {
     fn is_mut_fixed_array_type(&self) -> bool;
-    fn is_mut_integer(&self) -> bool;
     fn is_mut_struct_type(&self) -> bool;
     fn is_mut_numeric_type(&self) -> bool;
     fn is_mut_any_nonumeric_type(&self) -> bool;

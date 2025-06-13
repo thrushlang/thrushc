@@ -37,7 +37,6 @@ use inkwell::{
 pub struct LLVMCodegen<'a, 'ctx> {
     context: &'a mut LLVMCodeGenContext<'a, 'ctx>,
     stmts: &'ctx [ThrushStatement<'ctx>],
-    current: usize,
     current_function: Option<FunctionValue<'ctx>>,
     exit_loop_block: Option<BasicBlock<'ctx>>,
     start_loop_block: Option<BasicBlock<'ctx>>,
@@ -51,7 +50,6 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         Self {
             context,
             stmts,
-            current: 0,
             current_function: None,
             exit_loop_block: None,
             start_loop_block: None,
@@ -64,10 +62,9 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         self.init_functions();
         self.init_constants();
 
-        while !self.is_end() {
-            let stmt: &ThrushStatement = self.advance();
+        self.stmts.iter().for_each(|stmt| {
             self.codegen(stmt);
-        }
+        });
     }
 
     fn codegen(&mut self, stmt: &'ctx ThrushStatement) {
@@ -98,7 +95,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 {
                     logging::log(
                         LoggingType::Bug,
-                        "Unable to build the return of entrypoint. ",
+                        "Unable to build the return of entrypoint.",
                     );
                 }
             }
@@ -115,7 +112,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                         {
                             logging::log(
                                 LoggingType::Bug,
-                                "Unable to build the return instruction at code generation time. ",
+                                "Unable to build the return instruction at code generation time.",
                             );
                         }
                     }
@@ -133,7 +130,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                         {
                             logging::log(
                                 LoggingType::Bug,
-                                "Unable to build the return instruction at code generation time. ",
+                                "Unable to build the return instruction at code generation time.",
                             );
                         }
                     };
@@ -703,6 +700,8 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         if !function_body.has_return() && function_type.is_void_type() {
             llvm_builder.build_return(None).unwrap();
         }
+
+        self.current_function = None;
     }
 
     /* ######################################################################
@@ -944,19 +943,4 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
 
 
     ########################################################################*/
-
-    #[must_use]
-    #[inline]
-    fn advance(&mut self) -> &'ctx ThrushStatement<'ctx> {
-        let stmt: &ThrushStatement = &self.stmts[self.current];
-        self.current += 1;
-
-        stmt
-    }
-
-    #[must_use]
-    #[inline]
-    fn is_end(&self) -> bool {
-        self.current >= self.stmts.len()
-    }
 }
