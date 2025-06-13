@@ -59,17 +59,13 @@ impl<'typer> TypeResolver {
             }
 
             ThrushStatement::Local { kind, value, .. } => {
-                let target_type: ThrushType = kind.get_base_type();
-
-                typer_ctx.set_numeric_target_type(target_type);
+                typer_ctx.set_numeric_target_type(kind.clone());
                 Self::swap_types(value, typer_ctx, symbols);
                 typer_ctx.reset_numeric_target_type();
             }
 
             ThrushStatement::LLI { kind, value, .. } => {
-                let target_type: ThrushType = kind.get_base_type();
-
-                typer_ctx.set_numeric_target_type(target_type);
+                typer_ctx.set_numeric_target_type(kind.clone());
                 Self::swap_types(value, typer_ctx, symbols);
                 typer_ctx.reset_numeric_target_type();
             }
@@ -226,20 +222,16 @@ impl<'typer> TypeResolver {
                 if let Some(any_reference) = &mut source.0 {
                     let reference: &mut Box<ThrushStatement> = &mut any_reference.1;
 
-                    if let Ok(raw_target_type) = reference.get_value_type() {
-                        let target_type: ThrushType = raw_target_type.get_base_type();
-
-                        typer_ctx.set_mut_target_type(target_type);
+                    if let Ok(target_type) = reference.get_value_type() {
+                        typer_ctx.set_mut_target_type(target_type.clone());
 
                         Self::swap_types(value, typer_ctx, symbols);
 
                         typer_ctx.reset_mut_target_type()
                     }
                 } else if let Some(expr) = &mut source.1 {
-                    if let Ok(raw_target_type) = expr.get_value_type() {
-                        let target_type: ThrushType = raw_target_type.get_base_type();
-
-                        typer_ctx.set_mut_target_type(target_type);
+                    if let Ok(target_type) = expr.get_value_type() {
+                        typer_ctx.set_mut_target_type(target_type.clone());
 
                         Self::swap_types(value, typer_ctx, symbols);
 
@@ -262,6 +254,14 @@ impl<'typer> TypeResolver {
             (ThrushType::U64, ThrushType::U32 | ThrushType::U16 | ThrushType::U8) => true,
 
             (ThrushType::F64, ThrushType::F32) => true,
+
+            (ThrushType::Mut(target_type), from_type) => {
+                Self::is_compatible_numeric_cast(target_type, from_type)
+            }
+
+            (target_type, ThrushType::Mut(from_type)) => {
+                Self::is_compatible_numeric_cast(target_type, from_type)
+            }
 
             (ThrushType::FixedArray(target_type, ..), ThrushType::FixedArray(from_type, ..)) => {
                 Self::is_compatible_numeric_cast(target_type, from_type)

@@ -707,20 +707,6 @@ impl ThrushStatement<'_> {
         unreachable!()
     }
 
-    pub fn get_reference_type(&self) -> Result<ThrushType, ThrushCompilerIssue> {
-        if let ThrushStatement::Reference { kind, .. } = self {
-            return Ok(kind.clone());
-        }
-
-        Err(ThrushCompilerIssue::Bug(
-            String::from("Reference not caught"),
-            String::from("Expected a reference."),
-            self.get_span(),
-            CompilationPosition::Parser,
-            line!(),
-        ))
-    }
-
     pub fn get_str_content(&self) -> Result<&str, ThrushCompilerIssue> {
         if let ThrushStatement::Str { bytes, .. } = self {
             if let Ok(content) = std::str::from_utf8(bytes) {
@@ -913,8 +899,11 @@ impl ThrushStatement<'_> {
             ThrushStatement::Array { items, .. } => {
                 items.iter().all(|item| item.is_constant_array())
             }
-            ThrushStatement::Reference { .. } => false,
-            _ => true,
+
+            ThrushStatement::Integer { .. } => true,
+            ThrushStatement::Float { .. } => true,
+
+            _ => false,
         }
     }
 

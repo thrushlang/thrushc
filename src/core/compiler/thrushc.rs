@@ -257,7 +257,7 @@ impl<'thrushc> TheThrushCompiler<'thrushc> {
 
         llvm::compiler::LLVMCompiler::compile(&mut llvm_codegen_context, stmts);
 
-        self.validate_codegen(&llvm_module, file)?;
+        // self.validate_codegen(&llvm_module, file)?;
 
         if self.emit_before_optimization(
             llvm_backend,

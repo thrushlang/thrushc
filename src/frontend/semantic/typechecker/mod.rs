@@ -812,7 +812,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
             if sizeof.is_void_type() {
                 self.add_error(ThrushCompilerIssue::Error(
                     "Type error".into(),
-                    "The void type isn't a value at runtime.".into(),
+                    "The void type isn't a value.".into(),
                     None,
                     *span,
                 ));
@@ -876,6 +876,26 @@ impl<'type_checker> TypeChecker<'type_checker> {
                 self.check_unary(operator, expression.get_value_type()?, *span)
             {
                 self.add_error(mismatch_type_error);
+            }
+
+            if let TokenType::PlusPlus | TokenType::MinusMinus = *operator {
+                if !expression.is_reference() {
+                    self.add_error(ThrushCompilerIssue::Error(
+                        "Type error".into(),
+                        "Expected a reference.".into(),
+                        None,
+                        *span,
+                    ));
+                }
+
+                if !expression.is_mutable() {
+                    self.add_error(ThrushCompilerIssue::Error(
+                        "Type error".into(),
+                        "Expected a mutable reference.".into(),
+                        None,
+                        *span,
+                    ));
+                }
             }
 
             if let Err(type_error) = self.analyze_stmt(expression) {
@@ -1628,7 +1648,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
             TokenType::Minus | TokenType::PlusPlus | TokenType::MinusMinus => {
                 self.check_general_unary(operator, a, span)
             }
-            TokenType::Bang => self.check_unary_instr_bang(a, span),
+            TokenType::Bang => self.check_unary_bang(a, span),
             _ => Ok(()),
         }
     }
@@ -1833,11 +1853,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
         ))
     }
 
-    fn check_unary_instr_bang(
-        &self,
-        a: &ThrushType,
-        span: Span,
-    ) -> Result<(), ThrushCompilerIssue> {
+    fn check_unary_bang(&self, a: &ThrushType, span: Span) -> Result<(), ThrushCompilerIssue> {
         if let ThrushType::Bool = a {
             return Ok(());
         }

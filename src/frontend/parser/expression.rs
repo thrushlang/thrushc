@@ -372,7 +372,9 @@ fn primary<'instr>(
 
             alloc_type = ThrushType::Ptr(Some(alloc_type.into()));
 
-            let attributes: Vec<LLVMAttribute> = if parser_context.match_token(TokenType::LBrace)? {
+            let attributes: Vec<LLVMAttribute> = if !parser_context
+                .match_token(TokenType::RBrace)?
+            {
                 stmt::build_attributes(parser_context, &[TokenType::RBrace, TokenType::SemiColon])?
             } else {
                 Vec::new()
@@ -523,21 +525,12 @@ fn primary<'instr>(
 
             let expression: ThrushStatement = self::build_expr(parser_context)?;
 
-            if !expression.is_reference() {
-                return Err(ThrushCompilerIssue::Error(
-                    "Syntax error".into(),
-                    "Only local references can be pre-incremented.".into(),
-                    None,
-                    expression.get_span(),
-                ));
-            }
-
-            let reftype: ThrushType = expression.get_reference_type()?;
+            let expression_type: &ThrushType = expression.get_value_type()?;
 
             let unaryop: ThrushStatement = ThrushStatement::UnaryOp {
                 operator,
-                expression: expression.into(),
-                kind: reftype,
+                expression: expression.clone().into(),
+                kind: expression_type.clone(),
                 is_pre: true,
                 span,
             };
@@ -551,22 +544,12 @@ fn primary<'instr>(
             let span: Span = operator_tk.get_span();
 
             let expression: ThrushStatement = self::build_expr(parser_context)?;
-
-            if !expression.is_reference() {
-                return Err(ThrushCompilerIssue::Error(
-                    "Syntax error".into(),
-                    "Only local references can be pre-decremented.".into(),
-                    None,
-                    expression.get_span(),
-                ));
-            }
-
-            let reftype: ThrushType = expression.get_reference_type()?;
+            let expression_type: &ThrushType = expression.get_value_type()?;
 
             let unaryop: ThrushStatement = ThrushStatement::UnaryOp {
                 operator,
-                expression: expression.into(),
-                kind: reftype,
+                expression: expression.clone().into(),
+                kind: expression_type.clone(),
                 is_pre: true,
                 span,
             };
@@ -579,7 +562,7 @@ fn primary<'instr>(
 
             let expression: ThrushStatement = build_expr(parser_context)?;
 
-            let kind: &ThrushType = expression.get_value_type()?;
+            let expression_type: &ThrushType = expression.get_value_type()?;
 
             parser_context.consume(
                 TokenType::RParen,
@@ -589,7 +572,7 @@ fn primary<'instr>(
 
             return Ok(ThrushStatement::Group {
                 expression: expression.clone().into(),
-                kind: kind.clone(),
+                kind: expression_type.clone(),
                 span,
             });
         }
@@ -1226,6 +1209,7 @@ pub fn build_deref<'instr>(
                 "Syntax error".into(),
                 "Expected 'deref'.".into(),
             )?;
+
             deref_count += 1;
         }
 
@@ -1236,7 +1220,7 @@ pub fn build_deref<'instr>(
 
     let mut current_type: ThrushType = current_expr.get_value_type()?.clone();
 
-    for _ in 0..deref_count {
+    (0..deref_count).for_each(|_| {
         current_expr = ThrushStatement::Deref {
             value: current_expr.clone().into(),
             kind: current_type.deref(),
@@ -1244,7 +1228,7 @@ pub fn build_deref<'instr>(
         };
 
         current_type = current_type.deref();
-    }
+    });
 
     Ok(current_expr)
 }
