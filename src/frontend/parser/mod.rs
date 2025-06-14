@@ -10,7 +10,6 @@ use ahash::AHashMap as HashMap;
 use contexts::{ParserControlContext, ParserTypeContext, SyncPosition};
 use symbols::SymbolsTable;
 
-use crate::backend::llvm::compiler::builtins;
 use crate::core::compiler::options::CompilerFile;
 use crate::core::console::logging::{self, LoggingType};
 use crate::core::diagnostic::diagnostician::Diagnostician;
@@ -75,10 +74,8 @@ impl<'instr> Parser<'instr> {
 
 impl<'instr> ParserContext<'instr> {
     pub fn new(tokens: &'instr [Token], file: &'instr CompilerFile) -> Self {
-        let mut functions: Functions = HashMap::with_capacity(MINIMAL_GLOBAL_CAPACITY);
+        let functions: Functions = HashMap::with_capacity(MINIMAL_GLOBAL_CAPACITY);
         let asm_functions: AssemblerFunctions = HashMap::with_capacity(MINIMAL_GLOBAL_CAPACITY);
-
-        builtins::include(&mut functions);
 
         Self {
             tokens,
@@ -275,8 +272,8 @@ impl<'instr> ParserContext<'instr> {
         self.errors.push(error);
     }
 
-    pub fn get_stmts(&mut self) -> &mut [ThrushStatement<'instr>] {
-        &mut self.stmts
+    pub fn get_stmts(&self) -> &[ThrushStatement<'instr>] {
+        &self.stmts
     }
 
     #[must_use]

@@ -71,7 +71,6 @@ pub enum TokenType {
     Instr,
     Load,
     Write,
-    CastRaw,
     AsmFn,
     Asm,
     Deref,

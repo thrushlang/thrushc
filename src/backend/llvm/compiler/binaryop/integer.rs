@@ -1,9 +1,12 @@
 use {
     super::super::{context::LLVMCodeGenContext, valuegen},
     crate::{
-        backend::llvm::compiler::{cast, predicates, valuegen::CompileChanges},
+        backend::llvm::compiler::{cast, predicates},
         core::console::logging::{self, LoggingType},
-        frontend::{lexer::tokentype::TokenType, types::representations::BinaryOperation},
+        frontend::{
+            lexer::tokentype::TokenType,
+            types::{lexer::ThrushType, representations::BinaryOperation},
+        },
     },
     inkwell::{
         builder::Builder,
@@ -105,6 +108,7 @@ pub fn int_operation<'ctx>(
 pub fn integer_binaryop<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     binary: BinaryOperation<'ctx>,
+    cast_type: Option<&ThrushType>,
 ) -> BasicValueEnum<'ctx> {
     if let (
         _,
@@ -125,21 +129,20 @@ pub fn integer_binaryop<'ctx>(
         _,
     ) = binary
     {
-        let left_compiled: BasicValueEnum =
-            valuegen::compile(context, binary.0, CompileChanges::new(false));
+        let operator: &TokenType = binary.1;
 
-        let right_compiled: BasicValueEnum =
-            valuegen::compile(context, binary.2, CompileChanges::new(false));
+        let left: BasicValueEnum = valuegen::compile(context, binary.0, cast_type);
+        let right: BasicValueEnum = valuegen::compile(context, binary.2, cast_type);
 
         return int_operation(
             context,
-            left_compiled,
-            right_compiled,
+            left,
+            right,
             (
                 binary.0.get_type_unwrapped().is_signed_integer_type(),
                 binary.2.get_type_unwrapped().is_signed_integer_type(),
             ),
-            binary.1,
+            operator,
         );
     }
 

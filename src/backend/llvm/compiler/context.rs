@@ -71,7 +71,7 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
         let ptr: PointerValue = valuegen::alloc(self, kind, attributes);
 
         let local: SymbolAllocated =
-            SymbolAllocated::new(SymbolToAllocate::Local, ptr.into(), kind);
+            SymbolAllocated::new(SymbolToAllocate::Local, kind, ptr.into());
 
         if let Some(last_block) = self.instructions.last_mut() {
             last_block.insert(name, local);
@@ -86,11 +86,11 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
     pub fn alloc_low_level_instruction(
         &mut self,
         name: &'ctx str,
-        value: BasicValueEnum<'ctx>,
         kind: &'ctx ThrushType,
+        value: BasicValueEnum<'ctx>,
     ) {
         let lli: SymbolAllocated =
-            SymbolAllocated::new(SymbolToAllocate::LowLevelInstruction, value, kind);
+            SymbolAllocated::new(SymbolToAllocate::LowLevelInstruction, kind, value);
 
         if let Some(last_block) = self.instructions.last_mut() {
             last_block.insert(name, lli);
@@ -118,7 +118,7 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
         );
 
         let symbol_allocated: SymbolAllocated =
-            SymbolAllocated::new(SymbolToAllocate::Constant, ptr.into(), kind);
+            SymbolAllocated::new(SymbolToAllocate::Constant, kind, ptr.into());
 
         self.constants.insert(name, symbol_allocated);
     }
@@ -130,7 +130,7 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
         value: BasicValueEnum<'ctx>,
     ) {
         let symbol_allocated: SymbolAllocated =
-            SymbolAllocated::new(SymbolToAllocate::Parameter, value, kind);
+            SymbolAllocated::new(SymbolToAllocate::Parameter, kind, value);
 
         self.parameters.insert(name, symbol_allocated);
     }

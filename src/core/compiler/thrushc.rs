@@ -31,7 +31,7 @@ use crate::{
     frontend::{
         lexer::{Lexer, token::Token},
         parser::{Parser, ParserContext},
-        semantic::{SemanticAnalyzer, typeresolver::TypeResolver},
+        semantic::SemanticAnalyzer,
         types::parser::stmts::stmt::ThrushStatement,
     },
 };
@@ -190,11 +190,9 @@ impl<'thrushc> TheThrushCompiler<'thrushc> {
         let parser_result: (ParserContext, bool) = parser;
         let parser_throwed_errors: bool = parser_result.1;
 
-        let mut parser_context: ParserContext = parser_result.0;
+        let parser_context: ParserContext = parser_result.0;
 
-        let raw_stmts: &mut [ThrushStatement] = parser_context.get_stmts();
-
-        let stmts: &[ThrushStatement] = TypeResolver::resolve(raw_stmts);
+        let stmts: &[ThrushStatement] = parser_context.get_stmts();
 
         let semantic_analysis_throwed_errors: bool =
             SemanticAnalyzer::new(stmts, file).check(parser_throwed_errors);
@@ -257,7 +255,7 @@ impl<'thrushc> TheThrushCompiler<'thrushc> {
 
         llvm::compiler::LLVMCompiler::compile(&mut llvm_codegen_context, stmts);
 
-        // self.validate_codegen(&llvm_module, file)?;
+        self.validate_codegen(&llvm_module, file)?;
 
         if self.emit_before_optimization(
             llvm_backend,

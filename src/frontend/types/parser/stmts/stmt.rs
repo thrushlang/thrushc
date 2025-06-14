@@ -305,12 +305,6 @@ pub enum ThrushStatement<'ctx> {
     },
 
     // Casts
-    CastRaw {
-        from: Box<ThrushStatement<'ctx>>,
-        cast: ThrushType,
-        span: Span,
-    },
-
     As {
         from: Box<ThrushStatement<'ctx>>,
         cast: ThrushType,
@@ -426,7 +420,6 @@ impl ThrushStatement<'_> {
 
             // Type Conversions
             ThrushStatement::As { cast, .. } => Ok(cast),
-            ThrushStatement::CastRaw { cast, .. } => Ok(cast),
 
             // Control Flow
             ThrushStatement::If { .. } => Ok(&ThrushType::Void),
@@ -487,7 +480,6 @@ impl ThrushStatement<'_> {
 
             // Type operations
             ThrushStatement::As { cast: kind, .. } => Ok(kind),
-            ThrushStatement::CastRaw { cast: kind, .. } => Ok(kind),
             ThrushStatement::SizeOf { kind, .. } => Ok(kind),
 
             // ASM Code Block
@@ -543,7 +535,6 @@ impl ThrushStatement<'_> {
 
             // Type operations
             ThrushStatement::As { cast: kind, .. } => kind,
-            ThrushStatement::CastRaw { cast: kind, .. } => kind,
             ThrushStatement::SizeOf { kind, .. } => kind,
 
             // ASM Code Block
@@ -604,7 +595,6 @@ impl ThrushStatement<'_> {
 
             // Type conversions
             ThrushStatement::As { span, .. } => *span,
-            ThrushStatement::CastRaw { span, .. } => *span,
 
             // Control flow
             ThrushStatement::If { span, .. } => *span,
@@ -902,6 +892,7 @@ impl ThrushStatement<'_> {
 
             ThrushStatement::Integer { .. } => true,
             ThrushStatement::Float { .. } => true,
+            ThrushStatement::Boolean { .. } => true,
 
             _ => false,
         }
@@ -956,16 +947,6 @@ impl ThrushStatement<'_> {
     #[inline]
     pub fn is_constructor(&self) -> bool {
         matches!(self, ThrushStatement::Constructor { .. })
-    }
-
-    #[inline]
-    pub fn is_binary(&self) -> bool {
-        matches!(self, ThrushStatement::BinaryOp { .. })
-    }
-
-    #[inline]
-    pub fn is_group(&self) -> bool {
-        matches!(self, ThrushStatement::Group { .. })
     }
 
     #[inline]

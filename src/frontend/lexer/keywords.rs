@@ -28,7 +28,6 @@ lazy_static! {
         keywords.insert("mut", TokenType::Mut);
         keywords.insert("nullptr", TokenType::NullPtr);
         keywords.insert("as", TokenType::As);
-        keywords.insert("castraw", TokenType::CastRaw);
         keywords.insert("asmfn", TokenType::AsmFn);
         keywords.insert("asm", TokenType::Asm);
         keywords.insert("deref", TokenType::Deref);

@@ -1,7 +1,6 @@
 #![allow(clippy::collapsible_if)]
 
-use crate::backend::llvm::compiler::utils;
-use crate::backend::llvm::compiler::valuegen::CompileChanges;
+use crate::backend::llvm::compiler::{mutation, rawgen, utils};
 use crate::backend::types::{representations::LLVMFunction, traits::AssemblerFunctionExtensions};
 use crate::core::console::logging::{self, LoggingType};
 use crate::frontend::types::lexer::ThrushType;
@@ -119,11 +118,29 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 }
 
                 if let Some(expression) = expression {
-                    if llvm_builder
+                    let expression_type: &ThrushType = expression.get_type_unwrapped();
+
+                    if expression_type.is_ptr_type() || expression_type.is_mut_type() {
+                        if llvm_builder
+                            .build_return(Some(&rawgen::compile(
+                                self.context,
+                                expression,
+                                Some(kind),
+                            )))
+                            .is_err()
+                        {
+                            {
+                                logging::log(
+                                    LoggingType::Bug,
+                                    "Unable to build the return instruction at code generation time.",
+                                );
+                            }
+                        };
+                    } else if llvm_builder
                         .build_return(Some(&valuegen::compile(
                             self.context,
                             expression,
-                            CompileChanges::new(kind.is_mut_type() || kind.is_ptr_type()),
+                            Some(kind),
                         )))
                         .is_err()
                     {
@@ -203,7 +220,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
             } => {
                 if let Some(current_function) = self.current_function {
                     let if_comparison: IntValue<'ctx> =
-                        valuegen::compile(self.context, cond, CompileChanges::default())
+                        valuegen::compile(self.context, cond, Some(&ThrushType::Bool))
                             .into_int_value();
 
                     let then_block: BasicBlock =
@@ -256,12 +273,9 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
 
                         for (index, instr) in elfs.iter().enumerate() {
                             if let ThrushStatement::Elif { cond, block, .. } = instr {
-                                let compiled_else_if_cond: IntValue = valuegen::compile(
-                                    self.context,
-                                    cond,
-                                    CompileChanges::default(),
-                                )
-                                .into_int_value();
+                                let compiled_else_if_cond: IntValue =
+                                    valuegen::compile(self.context, cond, Some(&ThrushType::Bool))
+                                        .into_int_value();
 
                                 let elif_body: BasicBlock = current_block;
 
@@ -375,7 +389,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                     llvm_builder.position_at_end(condition_block);
 
                     let conditional: IntValue =
-                        valuegen::compile(self.context, cond, CompileChanges::default())
+                        valuegen::compile(self.context, cond, Some(&ThrushType::Bool))
                             .into_int_value();
 
                     let then_block: BasicBlock =
@@ -469,7 +483,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                     llvm_builder.position_at_end(start_block);
 
                     let condition: IntValue =
-                        valuegen::compile(self.context, cond, CompileChanges::default())
+                        valuegen::compile(self.context, cond, Some(&ThrushType::Bool))
                             .into_int_value();
 
                     let then_block: BasicBlock =
@@ -488,9 +502,9 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                     if actions.is_pre_unaryop() {
                         self.codegen(block.as_ref());
 
-                        let _ = valuegen::compile(self.context, actions, CompileChanges::default());
+                        let _ = valuegen::compile(self.context, actions, None);
                     } else {
-                        let _ = valuegen::compile(self.context, actions, CompileChanges::default());
+                        let _ = valuegen::compile(self.context, actions, None);
 
                         self.codegen(block.as_ref());
                     }
@@ -593,16 +607,19 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
 
         match stmt {
             ThrushStatement::Mut { .. } => {
-                valuegen::compile(self.context, stmt, CompileChanges::default());
+                mutation::compile(self.context, stmt);
             }
+
             ThrushStatement::Write { .. } => {
-                valuegen::compile(self.context, stmt, CompileChanges::default());
+                valuegen::compile(self.context, stmt, None);
             }
+
             ThrushStatement::Call { .. } => {
-                valuegen::compile(self.context, stmt, CompileChanges::default());
+                valuegen::compile(self.context, stmt, None);
             }
+
             ThrushStatement::AsmValue { .. } => {
-                valuegen::compile(self.context, stmt, CompileChanges::default());
+                valuegen::compile(self.context, stmt, None);
             }
 
             _ => (),
@@ -738,8 +755,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 ..
             } = stmt
             {
-                let value: BasicValueEnum =
-                    valuegen::compile(self.context, value, CompileChanges::default());
+                let value: BasicValueEnum = valuegen::compile(self.context, value, Some(kind));
 
                 self.context.alloc_constant(name, kind, value, attributes);
             }

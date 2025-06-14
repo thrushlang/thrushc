@@ -24,6 +24,8 @@ pub fn thrush_integer_to_llvm_type<'ctx>(
         ThrushType::S64 | ThrushType::U64 => llvm_context.i64_type(),
         ThrushType::Bool => llvm_context.bool_type(),
 
+        ThrushType::Mut(any) => thrush_integer_to_llvm_type(llvm_context, any),
+
         _ => unreachable!(),
     }
 }
@@ -36,6 +38,8 @@ pub fn type_float_to_llvm_float_type<'ctx>(
     match kind {
         ThrushType::F32 => llvm_context.f32_type(),
         ThrushType::F64 => llvm_context.f64_type(),
+
+        ThrushType::Mut(any) => type_float_to_llvm_float_type(llvm_context, any),
 
         _ => unreachable!(),
     }

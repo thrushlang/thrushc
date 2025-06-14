@@ -7,7 +7,7 @@ use crate::{
     backend::llvm::compiler::{
         context::LLVMCodeGenContext,
         predicates,
-        valuegen::{self, CompileChanges},
+        valuegen::{self},
     },
     core::console::logging::{self, LoggingType},
     frontend::{lexer::tokentype::TokenType, types::representations::BinaryOperation},
@@ -55,13 +55,11 @@ pub fn ptr_binaryop<'ctx>(
     let llvm_builder: &Builder = context.get_llvm_builder();
 
     if let (_, TokenType::EqEq | TokenType::BangEq, _) = binary {
-        let left_compiled: BasicValueEnum =
-            valuegen::compile(context, binary.0, CompileChanges::new(false));
+        let operator: &TokenType = binary.1;
+        let left: BasicValueEnum = valuegen::compile(context, binary.0, None);
+        let right: BasicValueEnum = valuegen::compile(context, binary.2, None);
 
-        let right_compiled: BasicValueEnum =
-            valuegen::compile(context, binary.2, CompileChanges::new(false));
-
-        return ptr_operation(llvm_builder, left_compiled, right_compiled, binary.1);
+        return ptr_operation(llvm_builder, left, right, operator);
     }
 
     logging::log(

@@ -240,50 +240,20 @@ impl ThrushType {
         self.clone()
     }
 
-    pub fn get_array_type(&self) -> &ThrushType {
-        if let ThrushType::FixedArray(array_type, _) = self {
-            return array_type.as_ref();
-        }
-
-        if let ThrushType::Mut(array_type) = self {
-            return array_type.get_array_type();
-        }
-
-        logging::log(
-            LoggingType::Bug,
-            "The array type could not be obtained from an array.",
-        );
-
-        unreachable!()
-    }
-
     pub fn get_array_base_type(&self) -> &ThrushType {
-        if let ThrushType::FixedArray(array_type, _) = self {
-            return array_type.get_array_base_type();
-        }
-
-        if let ThrushType::Mut(array_type) = self {
-            return array_type.get_array_base_type();
-        }
-
-        self
-    }
-
-    #[inline]
-    pub fn get_base_type(&self) -> ThrushType {
         if let ThrushType::FixedArray(inner, _) = self {
-            return inner.get_base_type();
+            return inner.get_array_base_type();
         }
 
         if let ThrushType::Mut(inner) = self {
-            return inner.get_base_type();
+            return inner.get_array_base_type();
         }
 
         if let ThrushType::Ptr(Some(inner)) = self {
-            return inner.get_base_type();
+            return inner.get_array_base_type();
         }
 
-        self.clone()
+        self
     }
 
     pub fn get_type_with_depth(&self, depth: usize) -> &ThrushType {
@@ -442,6 +412,24 @@ impl ThrushType {
                 | ThrushType::U64
                 | ThrushType::Char
         )
+    }
+
+    #[inline(always)]
+    pub fn is_mut_integer_type(&self) -> bool {
+        if let ThrushType::Mut(inner) = self {
+            return inner.is_integer_type();
+        }
+
+        false
+    }
+
+    #[inline(always)]
+    pub fn is_mut_float_type(&self) -> bool {
+        if let ThrushType::Mut(inner) = self {
+            return inner.is_float_type();
+        }
+
+        false
     }
 
     #[inline]

@@ -1,5 +1,7 @@
 #![allow(clippy::upper_case_acronyms)]
 
+use std::process;
+
 use inkwell::{
     builder::Builder, context::Context, execution_engine::ExecutionEngine, module::Module,
 };
@@ -45,10 +47,10 @@ impl<'a, 'ctx> LLVMJIT<'a, 'ctx> {
         }
 
         logging::log(
-            LoggingType::Panic,
+            LoggingType::Error,
             "Unable to locate C Standard Library Interface for the LLVM Just In Time Compiler.",
         );
 
-        unreachable!()
+        process::exit(1);
     }
 }

@@ -690,38 +690,31 @@ impl Lexer {
     #[must_use]
     #[inline]
     fn is_identifier_boundary(&self, peeked: char) -> bool {
-        peeked.is_alphanumeric()
-            || peeked == '_'
-            || peeked == '@'
-            || (peeked == '!' && self.peek() != ':')
-            || peeked.is_symbol_other()
+        peeked.is_alphanumeric() || peeked.is_symbol_other() || peeked == '_' || peeked == '@'
     }
 
     fn fix_unicode_lexeme(&self, lexeme: &str) -> String {
-        let mut fixed_unicode_string: String = String::with_capacity(500);
+        let mut scaped_unicode_string: String = String::with_capacity(100);
 
         lexeme.chars().for_each(|char| {
             if self.is_ascii_char(char) {
-                fixed_unicode_string.push(char);
+                scaped_unicode_string.push(char);
             } else {
                 let mut utf8_buf: [u8; 4] = [0u8; 4];
 
                 let utf8_bytes: &[u8] = char.encode_utf8(&mut utf8_buf).as_bytes();
 
                 utf8_bytes.iter().for_each(|byte| {
-                    fixed_unicode_string.push_str(&format!("{:02X}", byte));
+                    scaped_unicode_string.push_str(&format!("{:02X}", byte));
                 });
             }
         });
 
-        fixed_unicode_string
+        scaped_unicode_string
     }
 
-    fn is_ascii_char(&self, char: char) -> bool {
-        self.is_alpha_char(char)
-            || char.is_ascii_digit()
-            || char == '!' && char != ':'
-            || char == '_'
+    fn is_ascii_char(&self, peeked: char) -> bool {
+        self.is_alpha_char(peeked) || peeked.is_ascii_digit() || peeked == '_' || peeked == '@'
     }
 
     #[must_use]

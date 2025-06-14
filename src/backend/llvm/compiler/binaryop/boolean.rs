@@ -4,10 +4,13 @@ use {
             cast,
             context::LLVMCodeGenContext,
             predicates,
-            valuegen::{self, CompileChanges},
+            valuegen::{self},
         },
         core::console::logging::{self, LoggingType},
-        frontend::{lexer::tokentype::TokenType, types::representations::BinaryOperation},
+        frontend::{
+            lexer::tokentype::TokenType,
+            types::{lexer::ThrushType, representations::BinaryOperation},
+        },
     },
     inkwell::{
         builder::Builder,
@@ -82,6 +85,7 @@ pub fn bool_operation<'ctx>(
 pub fn bool_binaryop<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     binary: BinaryOperation<'ctx>,
+    cast_type: Option<&ThrushType>,
 ) -> BasicValueEnum<'ctx> {
     if let (
         _,
@@ -96,13 +100,12 @@ pub fn bool_binaryop<'ctx>(
         _,
     ) = binary
     {
-        let left_compiled: BasicValueEnum =
-            valuegen::compile(context, binary.0, CompileChanges::new(false));
+        let operator: &TokenType = binary.1;
 
-        let right_compiled: BasicValueEnum =
-            valuegen::compile(context, binary.2, CompileChanges::new(false));
+        let left: BasicValueEnum = valuegen::compile(context, binary.0, cast_type);
+        let right: BasicValueEnum = valuegen::compile(context, binary.2, cast_type);
 
-        return self::bool_operation(context, left_compiled, right_compiled, binary.1);
+        return self::bool_operation(context, left, right, operator);
     }
 
     logging::log(

@@ -161,21 +161,7 @@ fn casts<'instr>(
 ) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
     let mut expression: ThrushStatement = self::cmp(parser_context)?;
 
-    if parser_context.match_token(TokenType::CastRaw)? {
-        let span: Span = parser_context.previous().span;
-
-        let mut cast: ThrushType = typegen::build_type(parser_context)?;
-
-        if !cast.is_mut_type() {
-            cast = ThrushType::Mut(cast.into());
-        }
-
-        expression = ThrushStatement::CastRaw {
-            from: expression.into(),
-            cast,
-            span,
-        };
-    } else if parser_context.match_token(TokenType::As)? {
+    if parser_context.match_token(TokenType::As)? {
         let span: Span = parser_context.previous().get_span();
 
         let cast: ThrushType = typegen::build_type(parser_context)?;

@@ -9,7 +9,6 @@ use crate::{
 pub mod attrchecker;
 pub mod linter;
 pub mod typechecker;
-pub mod typeresolver;
 
 pub struct SemanticAnalyzer<'semantic_analyzer> {
     type_checker: TypeChecker<'semantic_analyzer>,

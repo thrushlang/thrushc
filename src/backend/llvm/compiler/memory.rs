@@ -60,8 +60,8 @@ pub enum LLVMAllocationSite {
 impl<'ctx> SymbolAllocated<'ctx> {
     pub fn new(
         allocate: SymbolToAllocate,
-        value: BasicValueEnum<'ctx>,
         kind: &'ctx ThrushType,
+        value: BasicValueEnum<'ctx>,
     ) -> Self {
         match allocate {
             SymbolToAllocate::Local => Self::Local {

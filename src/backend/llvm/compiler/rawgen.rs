@@ -1,7 +1,7 @@
 use crate::backend::llvm::compiler::attributes::LLVMAttribute;
 use crate::backend::llvm::compiler::memory::{self, LLVMAllocationSite, SymbolAllocated};
 use crate::backend::llvm::compiler::{
-    binaryop, cast, floatgen, intgen, rawgen, unaryop, utils, valuegen,
+    binaryop, floatgen, intgen, rawgen, unaryop, utils, valuegen,
 };
 use crate::backend::types::representations::LLVMFunction;
 use crate::core::console::logging::{self, LoggingType};
@@ -11,81 +11,25 @@ use crate::frontend::types::lexer::traits::{
 };
 use crate::frontend::types::parser::stmts::stmt::ThrushStatement;
 use crate::frontend::types::parser::stmts::traits::ThrushAttributesExtensions;
-use crate::frontend::types::parser::stmts::types::ThrushAttributes;
 
 use crate::backend::types::traits::AssemblerFunctionExtensions;
 
 use super::context::LLVMCodeGenContext;
 use super::typegen;
 
-use inkwell::module::{Linkage, Module};
-use inkwell::targets::TargetData;
+use inkwell::module::Module;
+
 use inkwell::types::{
     ArrayType, BasicType, BasicTypeEnum, FloatType, FunctionType, IntType, PointerType, StructType,
 };
 
 use inkwell::values::{
-    ArrayValue, BasicMetadataValueEnum, BasicValueEnum, FloatValue, FunctionValue, GlobalValue,
-    IntValue, StructValue,
+    ArrayValue, BasicMetadataValueEnum, BasicValueEnum, FloatValue, FunctionValue, IntValue,
+    StructValue,
 };
 
 use inkwell::{AddressSpace, InlineAsmDialect};
 use inkwell::{builder::Builder, context::Context, values::PointerValue};
-
-pub fn alloc<'ctx>(
-    context: &LLVMCodeGenContext<'_, 'ctx>,
-    kind: &ThrushType,
-    attributes: &'ctx ThrushAttributes<'ctx>,
-) -> PointerValue<'ctx> {
-    let llvm_context: &Context = context.get_llvm_context();
-    let llvm_builder: &Builder = context.get_llvm_builder();
-
-    let target_data: &TargetData = context.get_target_data();
-
-    let llvm_type: BasicTypeEnum = typegen::generate_subtype(llvm_context, kind);
-
-    if attributes.has_heap_attr() {
-        if let Ok(allocated_heap_ptr) = llvm_builder.build_malloc(llvm_type, "") {
-            return allocated_heap_ptr;
-        }
-    } else if attributes.has_stack_attr() {
-        if let Ok(allocated_stack_ptr) = llvm_builder.build_alloca(llvm_type, "") {
-            return allocated_stack_ptr;
-        }
-    } else if kind.is_probably_heap_allocated(llvm_context, target_data) {
-        if let Ok(allocated_heap_ptr) = llvm_builder.build_malloc(llvm_type, "") {
-            return allocated_heap_ptr;
-        }
-    } else if let Ok(allocated_stack_ptr) = llvm_builder.build_alloca(llvm_type, "") {
-        return allocated_stack_ptr;
-    }
-
-    logging::log(
-        LoggingType::Bug,
-        &format!("Unable to allocate pointer with type: '{}'.", kind),
-    );
-
-    unreachable!()
-}
-
-pub fn alloc_constant<'ctx>(
-    module: &Module<'ctx>,
-    name: &str,
-    llvm_type: BasicTypeEnum<'ctx>,
-    llvm_value: BasicValueEnum<'ctx>,
-    attributes: &'ctx ThrushAttributes<'ctx>,
-) -> PointerValue<'ctx> {
-    let global: GlobalValue = module.add_global(llvm_type, Some(AddressSpace::default()), name);
-
-    if !attributes.has_public_attribute() {
-        global.set_linkage(Linkage::LinkerPrivate)
-    }
-
-    global.set_initializer(&llvm_value);
-    global.set_constant(true);
-
-    global.as_pointer_value()
-}
 
 pub fn compile<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
@@ -111,10 +55,9 @@ pub fn compile<'ctx>(
             .into();
     }
 
-    if let ThrushStatement::Str { bytes, kind, .. } = expr {
+    if let ThrushStatement::Str { bytes, .. } = expr {
         let ptr: PointerValue = utils::build_str_constant(llvm_module, llvm_context, bytes);
-
-        return memory::load_anon(context, ptr, kind);
+        return ptr.into();
     }
 
     if let ThrushStatement::Float {
@@ -124,16 +67,7 @@ pub fn compile<'ctx>(
         ..
     } = expr
     {
-        let mut float: BasicValueEnum =
-            floatgen::float(llvm_builder, llvm_context, kind, *value, *signed).into();
-
-        if let Some(cast_type) = cast_type {
-            if let Some(casted_float) = cast::float(context, cast_type, kind, float) {
-                float = casted_float;
-            }
-        }
-
-        return float;
+        return floatgen::float(llvm_builder, llvm_context, kind, *value, *signed).into();
     }
 
     if let ThrushStatement::Integer {
@@ -143,15 +77,7 @@ pub fn compile<'ctx>(
         ..
     } = expr
     {
-        let mut int: BasicValueEnum = intgen::integer(llvm_context, kind, *value, *signed).into();
-
-        if let Some(cast_type) = cast_type {
-            if let Some(casted_int) = cast::integer(context, cast_type, kind, int) {
-                int = casted_int;
-            }
-        }
-
-        return int;
+        return intgen::integer(llvm_context, kind, *value, *signed).into();
     }
 
     if let ThrushStatement::Char { byte, .. } = expr {
@@ -176,18 +102,11 @@ pub fn compile<'ctx>(
 
         args.iter().enumerate().for_each(|arg| {
             let arg_position: usize = arg.0;
-            let expr: &ThrushStatement = arg.1;
+            let arg_expr: &ThrushStatement = arg.1;
 
             let cast_type: Option<&ThrushType> = function_arguments_types.get(arg_position);
 
-            let compiled_arg: BasicValueEnum =
-                if cast_type.is_some_and(|cast_type| cast_type.is_ptr_type()) {
-                    rawgen::compile(context, expr, cast_type)
-                } else {
-                    self::compile(context, expr, cast_type)
-                };
-
-            compiled_args.push(compiled_arg.into());
+            compiled_args.push(self::compile(context, arg_expr, cast_type).into());
         });
 
         if let Ok(call) = llvm_builder.build_call(llvm_function, &compiled_args, "") {
@@ -223,15 +142,21 @@ pub fn compile<'ctx>(
     {
         if binaryop_type.is_float_type() {
             return binaryop::float::float_binaryop(context, (left, operator, right), cast_type);
-        } else if binaryop_type.is_integer_type() {
+        }
+
+        if binaryop_type.is_integer_type() {
             return binaryop::integer::integer_binaryop(
                 context,
                 (left, operator, right),
                 cast_type,
             );
-        } else if binaryop_type.is_bool_type() {
+        }
+
+        if binaryop_type.is_bool_type() {
             return binaryop::boolean::bool_binaryop(context, (left, operator, right), cast_type);
-        } else if binaryop_type.is_ptr_type() {
+        }
+
+        if binaryop_type.is_ptr_type() {
             return binaryop::ptr::ptr_binaryop(context, (left, operator, right));
         }
 
@@ -323,7 +248,7 @@ pub fn compile<'ctx>(
         ..
     } = expr
     {
-        let value: BasicValueEnum = self::compile(context, write_value, Some(write_type));
+        let value: BasicValueEnum = valuegen::compile(context, write_value, Some(write_type));
 
         if let Some(reference) = &write_to.0 {
             let reference_name: &str = reference.0;
@@ -339,7 +264,7 @@ pub fn compile<'ctx>(
         }
 
         if let Some(expr) = write_to.1.as_ref() {
-            let expr: PointerValue = rawgen::compile(context, expr, None).into_pointer_value();
+            let expr: PointerValue = self::compile(context, expr, None).into_pointer_value();
 
             memory::store_anon(context, expr, write_type, value);
 
@@ -365,7 +290,7 @@ pub fn compile<'ctx>(
         }
 
         if let Some(expr) = &value.1 {
-            let ptr: PointerValue = rawgen::compile(context, expr, None).into_pointer_value();
+            let ptr: PointerValue = self::compile(context, expr, None).into_pointer_value();
 
             return memory::load_anon(context, ptr, kind);
         }
@@ -397,12 +322,12 @@ pub fn compile<'ctx>(
         if let Some(expr) = &address_to.1 {
             let kind: &ThrushType = expr.get_type_unwrapped();
 
-            let ptr: PointerValue = rawgen::compile(context, expr, None).into_pointer_value();
+            let ptr: PointerValue = self::compile(context, expr, None).into_pointer_value();
 
             let indexes: Vec<IntValue> = indexes
                 .iter()
                 .map(|indexe| {
-                    self::compile(context, indexe, Some(&ThrushType::U32)).into_int_value()
+                    valuegen::compile(context, indexe, Some(&ThrushType::U32)).into_int_value()
                 })
                 .collect();
 
@@ -433,7 +358,7 @@ pub fn compile<'ctx>(
 
     if let ThrushStatement::As { from, cast, .. } = expr {
         if cast.is_ptr_type() || cast.is_str_type() || cast.is_mut_any_nonumeric_type() {
-            let val: BasicValueEnum = rawgen::compile(context, from, None);
+            let val: BasicValueEnum = self::compile(context, from, None);
 
             if val.is_pointer_value() {
                 let to: PointerType =
@@ -446,7 +371,7 @@ pub fn compile<'ctx>(
                 }
             }
         } else {
-            let val: BasicValueEnum = self::compile(context, from, None);
+            let val: BasicValueEnum = valuegen::compile(context, from, None);
 
             let from_type: &ThrushType = from.get_type_unwrapped();
 
@@ -524,13 +449,7 @@ pub fn compile<'ctx>(
 
     ########################################################################*/
 
-    if let ThrushStatement::Property {
-        name,
-        indexes,
-        kind,
-        ..
-    } = expr
-    {
+    if let ThrushStatement::Property { name, indexes, .. } = expr {
         let symbol: SymbolAllocated = context.get_allocated_symbol(name);
 
         let first_idx: u32 = indexes[0].1;
@@ -550,7 +469,7 @@ pub fn compile<'ctx>(
                 }
             });
 
-            return memory::load_anon(context, ptr, kind);
+            return ptr.into();
         } else {
             let mut value: BasicValueEnum = symbol.extract_value(llvm_builder, first_idx);
 
@@ -574,8 +493,7 @@ pub fn compile<'ctx>(
 
     if let ThrushStatement::Reference { name, .. } = expr {
         let symbol: SymbolAllocated = context.get_allocated_symbol(name);
-
-        return symbol.load(context);
+        return symbol.raw_load().into();
     }
 
     /* ######################################################################
@@ -599,7 +517,7 @@ pub fn compile<'ctx>(
 
         let args: Vec<BasicMetadataValueEnum> = args
             .iter()
-            .map(|arg| self::compile(context, arg, None).into())
+            .map(|arg| valuegen::compile(context, arg, None).into())
             .collect();
 
         let mut syntax: InlineAsmDialect = InlineAsmDialect::Intel;
@@ -628,7 +546,9 @@ pub fn compile<'ctx>(
             llvm_builder.build_indirect_call(asm_function_type, fn_inline_assembler, &args, "")
         {
             if !kind.is_void_type() {
-                return indirect_call.try_as_basic_value().unwrap_left();
+                let return_value: BasicValueEnum = indirect_call.try_as_basic_value().unwrap_left();
+
+                return return_value;
             }
 
             return llvm_context
@@ -638,6 +558,7 @@ pub fn compile<'ctx>(
         }
 
         logging::log(LoggingType::Bug, "Unable to build inline assembler value.");
+
         unreachable!()
     }
 
@@ -682,11 +603,11 @@ pub fn compile<'ctx>(
 
             let ptr: PointerValue = symbol.gep(llvm_context, llvm_builder, &ordered_indexes);
 
-            return memory::load_anon(context, ptr, kind);
+            return ptr.into();
         }
 
         if let Some(expr) = &index_to.1 {
-            let expr: PointerValue = rawgen::compile(context, expr, None).into_pointer_value();
+            let expr: PointerValue = self::compile(context, expr, None).into_pointer_value();
 
             let mut ordered_indexes: Vec<IntValue> = Vec::with_capacity(indexes.len() * 2);
 
@@ -709,7 +630,7 @@ pub fn compile<'ctx>(
 
             let ptr: PointerValue = memory::gep_anon(context, expr, kind, &ordered_indexes);
 
-            return memory::load_anon(context, ptr, kind);
+            return ptr.into();
         }
 
         logging::log(
@@ -747,7 +668,7 @@ fn deref<'ctx>(
             value
         }
 
-        expr => rawgen::compile(context, expr, cast_type),
+        expr => self::compile(context, expr, cast_type),
     }
 }
 

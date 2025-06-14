@@ -78,7 +78,6 @@ impl std::fmt::Display for TokenType {
             TokenType::Bang => write!(f, "!"),
             TokenType::BangEq => write!(f, "!="),
             TokenType::As => write!(f, "as"),
-            TokenType::CastRaw => write!(f, "castraw"),
             TokenType::Colon => write!(f, ":"),
             TokenType::ColonColon => write!(f, "::"),
             TokenType::Comma => write!(f, ","),
