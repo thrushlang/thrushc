@@ -134,7 +134,7 @@ impl std::fmt::Display for ThrushType {
             ThrushType::F32 => write!(f, "f32"),
             ThrushType::F64 => write!(f, "f64"),
             ThrushType::Bool => write!(f, "bool"),
-            ThrushType::Str(inner) => write!(f, "str{}", inner),
+            ThrushType::Str => write!(f, "str"),
             ThrushType::Char => write!(f, "char"),
             ThrushType::Mut(any_type) => write!(f, "mut {}", any_type),
             ThrushType::FixedArray(kind, size) => {

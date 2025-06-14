@@ -571,8 +571,9 @@ fn primary<'instr>(
 
             if let Ok(size) = u32::try_from(bytes.len()) {
                 return Ok(ThrushStatement::new_str(
-                    ThrushType::Str(ThrushType::FixedArray(ThrushType::U8.into(), size).into()),
                     bytes,
+                    ThrushType::Str,
+                    ThrushType::FixedArray(ThrushType::U8.into(), size).into(),
                     span,
                 ));
             }

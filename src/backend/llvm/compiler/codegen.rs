@@ -118,9 +118,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 }
 
                 if let Some(expression) = expression {
-                    let expression_type: &ThrushType = expression.get_type_unwrapped();
-
-                    if expression_type.is_ptr_type() || expression_type.is_mut_type() {
+                    if kind.is_ptr_type() || kind.is_mut_type() {
                         if llvm_builder
                             .build_return(Some(&rawgen::compile(
                                 self.context,

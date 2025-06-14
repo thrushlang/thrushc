@@ -107,59 +107,11 @@ pub fn build_type(
                 ));
             }
 
-            if tk_kind.is_str() {
-                parser_context.consume(
-                    TokenType::LBracket,
-                    String::from("Syntax error"),
-                    String::from("Expected '['."),
-                )?;
-
-                let size: ThrushStatement = expression::build_expr(parser_context)?;
-
-                if !size.is_integer() {
-                    return Err(ThrushCompilerIssue::Error(
-                        String::from("Syntax error"),
-                        "Expected integer value.".into(),
-                        None,
-                        span,
-                    ));
-                }
-
-                if !size.is_unsigned_integer()? || !size.is_lessu32bit_integer()? {
-                    return Err(ThrushCompilerIssue::Error(
-                        String::from("Syntax error"),
-                        "Expected any unsigned integer value less than or equal to 32 bits.".into(),
-                        None,
-                        span,
-                    ));
-                }
-
-                let raw_array_size: u64 = size.get_integer_value()?;
-
-                if let Ok(array_size) = u32::try_from(raw_array_size) {
-                    parser_context.consume(
-                        TokenType::RBracket,
-                        String::from("Syntax error"),
-                        String::from("Expected ']'."),
-                    )?;
-
-                    return Ok(ThrushType::Str(
-                        ThrushType::FixedArray(ThrushType::U8.into(), array_size).into(),
-                    ));
-                }
-
-                return Err(ThrushCompilerIssue::Error(
-                    String::from("Syntax error"),
-                    "Expected any unsigned 32 bits integer value.".into(),
-                    None,
-                    span,
-                ));
-            }
-
             match tk_kind.as_type(span)? {
                 ty if ty.is_integer_type() => Ok(ty),
                 ty if ty.is_float_type() => Ok(ty),
                 ty if ty.is_bool_type() => Ok(ty),
+                ty if ty.is_str_type() => Ok(ty),
                 ty if ty.is_address_type() => Ok(ty),
                 ty if ty.is_ptr_type() && parser_context.check(TokenType::LBracket) => Ok(
                     self::build_recursive_type(parser_context, ThrushType::Ptr(None))?,

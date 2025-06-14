@@ -24,8 +24,9 @@ use super::{
 #[derive(Debug, Clone)]
 pub enum ThrushStatement<'ctx> {
     Str {
-        kind: ThrushType,
         bytes: Vec<u8>,
+        kind: ThrushType,
+        raw_type: ThrushType,
         span: Span,
     },
 
@@ -773,8 +774,18 @@ impl<'ctx> ThrushStatement<'ctx> {
         ThrushStatement::Char { kind, byte, span }
     }
 
-    pub fn new_str(kind: ThrushType, bytes: Vec<u8>, span: Span) -> ThrushStatement<'ctx> {
-        ThrushStatement::Str { bytes, kind, span }
+    pub fn new_str(
+        bytes: Vec<u8>,
+        kind: ThrushType,
+        raw_type: ThrushType,
+        span: Span,
+    ) -> ThrushStatement<'ctx> {
+        ThrushStatement::Str {
+            bytes,
+            kind,
+            raw_type,
+            span,
+        }
     }
 }
 

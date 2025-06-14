@@ -7,10 +7,7 @@ use inkwell::{context::Context, targets::TargetData, types::BasicTypeEnum};
 
 use crate::{
     backend::llvm::compiler::{context::LLVMCodeGenContext, typegen},
-    core::{
-        console::logging::{self, LoggingType},
-        errors::standard::ThrushCompilerIssue,
-    },
+    core::errors::standard::ThrushCompilerIssue,
     frontend::{
         lexer::span::Span,
         parser::symbols::SymbolsTable,
@@ -50,7 +47,7 @@ pub enum ThrushType {
     Char,
 
     // Str Type
-    Str(Arc<ThrushType>),
+    Str,
 
     // Mutable Type
     Mut(Arc<ThrushType>),
@@ -100,16 +97,6 @@ impl ThrushTypeMutableExtensions for ThrushType {
                 || inner.is_char_type()
                 || inner.is_float_type()
             {
-                return true;
-            }
-        }
-
-        false
-    }
-
-    fn is_mut_any_nonumeric_type(&self) -> bool {
-        if let ThrushType::Mut(inner) = self {
-            if inner.is_struct_type() || inner.is_fixed_array_type() {
                 return true;
             }
         }
@@ -278,7 +265,7 @@ impl ThrushType {
             | ThrushType::F64
             | ThrushType::Bool
             | ThrushType::Char
-            | ThrushType::Str(..)
+            | ThrushType::Str
             | ThrushType::Addr
             | ThrushType::Void
             | ThrushType::Ptr(None) => self,
@@ -376,7 +363,7 @@ impl ThrushType {
 
     #[inline(always)]
     pub fn is_str_type(&self) -> bool {
-        matches!(self, ThrushType::Str(..))
+        matches!(self, ThrushType::Str)
     }
 
     #[inline(always)]
@@ -439,7 +426,7 @@ impl ThrushType {
 
             ThrushType::Bool => 1,
             ThrushType::Char => 2,
-            ThrushType::Str(..) => 3,
+            ThrushType::Str => 3,
 
             ThrushType::S8 => 4,
             ThrushType::S16 => 5,
@@ -497,7 +484,7 @@ impl PartialEq for ThrushType {
             (ThrushType::Ptr(None), ThrushType::Ptr(None)) => true,
             (ThrushType::Ptr(Some(target)), ThrushType::Ptr(Some(from))) => target == from,
             (ThrushType::Void, ThrushType::Void) => true,
-            (ThrushType::Str(..), ThrushType::Str(..)) => true,
+            (ThrushType::Str, ThrushType::Str) => true,
             (ThrushType::Bool, ThrushType::Bool) => true,
 
             _ => false,

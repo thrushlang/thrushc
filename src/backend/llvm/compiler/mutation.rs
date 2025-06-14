@@ -27,10 +27,10 @@ pub fn compile<'ctx>(context: &mut LLVMCodeGenContext<'_, 'ctx>, expr: &'ctx Thr
         }
 
         if let Some(expr) = &source.1 {
-            let source: BasicValueEnum = rawgen::compile(context, expr, None);
+            let ptr: BasicValueEnum = rawgen::compile(context, expr, None);
             let value: BasicValueEnum = valuegen::compile(context, value, None);
 
-            memory::store_anon(context, source.into_pointer_value(), value_type, value);
+            memory::store_anon(context, ptr.into_pointer_value(), value_type, value);
 
             return;
         }

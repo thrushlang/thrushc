@@ -180,14 +180,14 @@ pub fn compile<'ctx>(
 
             let cast_type: Option<&ThrushType> = function_arguments_types.get(arg_position);
 
-            let compiled_arg: BasicValueEnum =
-                if cast_type.is_some_and(|cast_type| cast_type.is_ptr_type()) {
-                    rawgen::compile(context, expr, cast_type)
-                } else {
-                    self::compile(context, expr, cast_type)
-                };
+            let arg: BasicValueEnum = if cast_type.is_some_and(|cast_type| cast_type.is_ptr_type())
+            {
+                rawgen::compile(context, expr, cast_type)
+            } else {
+                self::compile(context, expr, cast_type)
+            };
 
-            compiled_args.push(compiled_arg.into());
+            compiled_args.push(arg.into());
         });
 
         if let Ok(call) = llvm_builder.build_call(llvm_function, &compiled_args, "") {
@@ -207,10 +207,6 @@ pub fn compile<'ctx>(
             LoggingType::Bug,
             "Unable to create a function call at code generation time.",
         );
-    }
-
-    if let ThrushStatement::Group { expression, .. } = expr {
-        return self::compile(context, expression, cast_type);
     }
 
     if let ThrushStatement::BinaryOp {
@@ -249,6 +245,10 @@ pub fn compile<'ctx>(
     } = expr
     {
         return unaryop::unary_op(context, (operator, kind, expression), cast_type);
+    }
+
+    if let ThrushStatement::Group { expression, .. } = expr {
+        return self::compile(context, expression, cast_type);
     }
 
     /* ######################################################################
@@ -432,7 +432,29 @@ pub fn compile<'ctx>(
     ########################################################################*/
 
     if let ThrushStatement::As { from, cast, .. } = expr {
-        if cast.is_ptr_type() || cast.is_str_type() || cast.is_mut_any_nonumeric_type() {
+        let from_type: &ThrushType = from.get_type_unwrapped();
+
+        if from_type.is_str_type() && cast.is_ptr_type() {
+            let val: BasicValueEnum = rawgen::compile(context, from, None);
+
+            if val.is_pointer_value() {
+                let raw_str_ptr: PointerValue = val.into_pointer_value();
+
+                let str_loaded: BasicValueEnum = memory::load_anon(context, raw_str_ptr, from_type);
+                let str_structure: StructValue = str_loaded.into_struct_value();
+
+                if let Ok(cstr) = llvm_builder.build_extract_value(str_structure, 0, "") {
+                    let to: PointerType =
+                        typegen::generate_type(llvm_context, cast).into_pointer_type();
+
+                    if let Ok(casted_ptr) =
+                        llvm_builder.build_pointer_cast(cstr.into_pointer_value(), to, "")
+                    {
+                        return casted_ptr.into();
+                    }
+                }
+            }
+        } else if cast.is_ptr_type() || cast.is_mut_type() {
             let val: BasicValueEnum = rawgen::compile(context, from, None);
 
             if val.is_pointer_value() {
@@ -641,14 +663,6 @@ pub fn compile<'ctx>(
         unreachable!()
     }
 
-    if let ThrushStatement::Array { items, kind, .. } = expr {
-        if expr.is_constant_array() {
-            return self::constant_fixed_array(context, kind, items, cast_type);
-        } else {
-            return self::fixed_array(context, kind, items, cast_type);
-        }
-    }
-
     if let ThrushStatement::Index {
         index_to,
         indexes,
@@ -719,6 +733,14 @@ pub fn compile<'ctx>(
                 expr
             ),
         );
+    }
+
+    if let ThrushStatement::Array { items, kind, .. } = expr {
+        if expr.is_constant_array() {
+            return self::constant_fixed_array(context, kind, items, cast_type);
+        } else {
+            return self::fixed_array(context, kind, items, cast_type);
+        }
     }
 
     logging::log(

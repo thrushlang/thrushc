@@ -1,3 +1,4 @@
+use inkwell::types::StructType;
 use inkwell::values::PointerValue;
 
 use inkwell::{
@@ -13,20 +14,45 @@ pub fn build_str_constant<'ctx>(
     context: &'ctx Context,
     bytes: &'ctx [u8],
 ) -> PointerValue<'ctx> {
-    let fixed_str_size: u32 = if !bytes.is_empty() {
+    let fixed_cstr_size: u32 = if !bytes.is_empty() {
         bytes.len() as u32 + 1
     } else {
         bytes.len() as u32
     };
 
-    let kind: ArrayType = context.i8_type().array_type(fixed_str_size);
-    let global: GlobalValue = module.add_global(kind, Some(AddressSpace::default()), "");
+    let cstr_type: ArrayType = context.i8_type().array_type(fixed_cstr_size);
+    let cstr: GlobalValue = module.add_global(cstr_type, Some(AddressSpace::default()), "");
 
-    global.set_linkage(Linkage::LinkerPrivate);
-    global.set_initializer(&context.const_string(bytes, true));
-    global.set_constant(true);
+    cstr.set_linkage(Linkage::LinkerPrivate);
+    cstr.set_initializer(&context.const_string(bytes, true));
+    cstr.set_unnamed_addr(true);
+    cstr.set_constant(true);
 
-    global.as_pointer_value()
+    let str_type: StructType = context.struct_type(
+        &[
+            context.ptr_type(AddressSpace::default()).into(),
+            context.i64_type().into(),
+        ],
+        false,
+    );
+    let str: GlobalValue = module.add_global(str_type, Some(AddressSpace::default()), "");
+
+    str.set_linkage(Linkage::LinkerPrivate);
+    str.set_initializer(
+        &context.const_struct(
+            &[
+                cstr.as_pointer_value().into(),
+                context
+                    .i64_type()
+                    .const_int(fixed_cstr_size as u64, false)
+                    .into(),
+            ],
+            false,
+        ),
+    );
+
+    str.set_constant(true);
+    str.as_pointer_value()
 }
 
 pub fn generate_assembler_function_name(function_name: &str) -> String {

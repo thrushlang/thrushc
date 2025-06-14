@@ -533,10 +533,15 @@ impl<'type_checker> TypeChecker<'type_checker> {
 
         ########################################################################*/
 
-        if let ThrushStatement::As { from, cast, span } = stmt {
+        if let ThrushStatement::As {
+            from,
+            cast: cast_type,
+            span,
+        } = stmt
+        {
             let from_type: &ThrushType = from.get_value_type()?;
 
-            if let Err(error) = self.validate_type_cast(cast, from_type, span) {
+            if let Err(error) = self.validate_type_cast(from_type, cast_type, span) {
                 self.add_error(error);
             }
 
@@ -1211,14 +1216,14 @@ impl<'type_checker> TypeChecker<'type_checker> {
 
     fn validate_type_cast(
         &self,
-        cast_type: &ThrushType,
         from_type: &ThrushType,
+        cast_type: &ThrushType,
         span: &Span,
     ) -> Result<(), ThrushCompilerIssue> {
         if (from_type.is_numeric_type() && cast_type.is_numeric_type())
             || (from_type.is_mut_numeric_type() && cast_type.is_numeric_type())
             || (from_type.is_mut_type() || from_type.is_ptr_type() && cast_type.is_ptr_type())
-            || (from_type.is_ptr_type() || cast_type.is_mut_any_nonumeric_type())
+            || (from_type.is_ptr_type() || cast_type.is_mut_type())
             || (from_type.is_str_type() && cast_type.is_ptr_type())
         {
             Ok(())
@@ -1344,13 +1349,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
 
         match (target_type, from_type, operator) {
             (ThrushType::Char, ThrushType::Char, None) => Ok(()),
-            (ThrushType::Str(type_a), ThrushType::Str(type_b), None) => {
-                if type_a == type_b {
-                    return Ok(());
-                }
-
-                Err(error)
-            }
+            (ThrushType::Str, ThrushType::Str, None) => Ok(()),
             (ThrushType::Struct(_, target_fields), ThrushType::Struct(_, from_fields), None) => {
                 if target_fields.len() != from_fields.len() {
                     return Err(error);

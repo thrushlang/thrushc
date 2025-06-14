@@ -79,7 +79,15 @@ pub fn generate_type<'ctx>(llvm_context: &'ctx Context, kind: &ThrushType) -> Ba
 
         kind if kind.is_float_type() => type_float_to_llvm_float_type(llvm_context, kind).into(),
 
-        ThrushType::Str(byte_type) => generate_type(llvm_context, byte_type),
+        ThrushType::Str => llvm_context
+            .struct_type(
+                &[
+                    llvm_context.ptr_type(AddressSpace::default()).into(),
+                    llvm_context.i64_type().into(),
+                ],
+                false,
+            )
+            .into(),
 
         ThrushType::Ptr(_) | ThrushType::Addr | ThrushType::Mut(..) => {
             llvm_context.ptr_type(AddressSpace::default()).into()
