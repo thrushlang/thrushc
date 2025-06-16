@@ -2,11 +2,15 @@ use {
     super::{
         super::super::super::logging::{self, LoggingType},
         memory::{SymbolAllocated, SymbolToAllocate},
-        typegen, valuegen,
+        typegen,
     },
     crate::{
-        backend::types::representations::{
-            LLVMConstants, LLVMFunction, LLVMFunctions, LLVMFunctionsParameters, LLVMInstructions,
+        backend::{
+            llvm::compiler::alloc::{self},
+            types::representations::{
+                LLVMConstants, LLVMFunction, LLVMFunctions, LLVMFunctionsParameters,
+                LLVMInstructions,
+            },
         },
         core::diagnostic::diagnostician::Diagnostician,
         frontend::types::{lexer::ThrushType, parser::stmts::types::ThrushAttributes},
@@ -68,7 +72,7 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
         kind: &'ctx ThrushType,
         attributes: &'ctx ThrushAttributes<'ctx>,
     ) {
-        let ptr: PointerValue = valuegen::alloc(self, kind, attributes);
+        let ptr: PointerValue = alloc::alloc(self, kind, attributes);
 
         let local: SymbolAllocated =
             SymbolAllocated::new(SymbolToAllocate::Local, kind, ptr.into());
@@ -109,7 +113,7 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
         value: BasicValueEnum<'ctx>,
         attributes: &'ctx ThrushAttributes<'ctx>,
     ) {
-        let ptr: PointerValue = valuegen::alloc_constant(
+        let ptr: PointerValue = alloc::constant(
             self.module,
             name,
             typegen::generate_type(self.context, kind),

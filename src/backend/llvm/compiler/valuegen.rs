@@ -1,805 +1,690 @@
+#![allow(clippy::upper_case_acronyms)]
+#![allow(clippy::type_complexity)]
+
+use super::context::LLVMCodeGenContext;
+use super::typegen;
 use crate::backend::llvm::compiler::attributes::LLVMAttribute;
 use crate::backend::llvm::compiler::memory::{self, LLVMAllocationSite, SymbolAllocated};
 use crate::backend::llvm::compiler::{
     binaryop, cast, floatgen, intgen, rawgen, unaryop, utils, valuegen,
 };
-use crate::backend::types::representations::LLVMFunction;
+
+use crate::backend::types::traits::AssemblerFunctionExtensions;
 use crate::core::console::logging::{self, LoggingType};
+use crate::frontend::lexer::tokentype::TokenType;
 use crate::frontend::types::lexer::ThrushType;
 use crate::frontend::types::lexer::traits::{
     LLVMTypeExtensions, ThrushTypeMutableExtensions, ThrushTypePointerExtensions,
 };
+use crate::frontend::types::parser::stmts::sites::LLIAllocationSite;
 use crate::frontend::types::parser::stmts::stmt::ThrushStatement;
 use crate::frontend::types::parser::stmts::traits::ThrushAttributesExtensions;
 use crate::frontend::types::parser::stmts::types::ThrushAttributes;
 
-use crate::backend::types::traits::AssemblerFunctionExtensions;
-
-use super::context::LLVMCodeGenContext;
-use super::typegen;
-
-use inkwell::module::{Linkage, Module};
-use inkwell::targets::TargetData;
-use inkwell::types::{
-    ArrayType, BasicType, BasicTypeEnum, FloatType, FunctionType, IntType, PointerType, StructType,
-};
-
+use inkwell::types::{BasicType, BasicTypeEnum, FunctionType, PointerType};
 use inkwell::values::{
-    ArrayValue, BasicMetadataValueEnum, BasicValueEnum, FloatValue, FunctionValue, GlobalValue,
-    IntValue, StructValue,
+    BasicMetadataValueEnum, BasicValueEnum, FunctionValue, IntValue, PointerValue, StructValue,
 };
-
 use inkwell::{AddressSpace, InlineAsmDialect};
-use inkwell::{builder::Builder, context::Context, values::PointerValue};
-
-pub fn alloc<'ctx>(
-    context: &LLVMCodeGenContext<'_, 'ctx>,
-    kind: &ThrushType,
-    attributes: &'ctx ThrushAttributes<'ctx>,
-) -> PointerValue<'ctx> {
-    let llvm_context: &Context = context.get_llvm_context();
-    let llvm_builder: &Builder = context.get_llvm_builder();
-
-    let target_data: &TargetData = context.get_target_data();
-
-    let llvm_type: BasicTypeEnum = typegen::generate_subtype(llvm_context, kind);
-
-    if attributes.has_heap_attr() {
-        if let Ok(allocated_heap_ptr) = llvm_builder.build_malloc(llvm_type, "") {
-            return allocated_heap_ptr;
-        }
-    } else if attributes.has_stack_attr() {
-        if let Ok(allocated_stack_ptr) = llvm_builder.build_alloca(llvm_type, "") {
-            return allocated_stack_ptr;
-        }
-    } else if kind.is_probably_heap_allocated(llvm_context, target_data) {
-        if let Ok(allocated_heap_ptr) = llvm_builder.build_malloc(llvm_type, "") {
-            return allocated_heap_ptr;
-        }
-    } else if let Ok(allocated_stack_ptr) = llvm_builder.build_alloca(llvm_type, "") {
-        return allocated_stack_ptr;
-    }
-
-    logging::log(
-        LoggingType::Bug,
-        &format!("Unable to allocate pointer with type: '{}'.", kind),
-    );
-
-    unreachable!()
-}
-
-pub fn alloc_constant<'ctx>(
-    module: &Module<'ctx>,
-    name: &str,
-    llvm_type: BasicTypeEnum<'ctx>,
-    llvm_value: BasicValueEnum<'ctx>,
-    attributes: &'ctx ThrushAttributes<'ctx>,
-) -> PointerValue<'ctx> {
-    let global: GlobalValue = module.add_global(llvm_type, Some(AddressSpace::default()), name);
-
-    if !attributes.has_public_attribute() {
-        global.set_linkage(Linkage::LinkerPrivate)
-    }
-
-    global.set_initializer(&llvm_value);
-    global.set_constant(true);
-
-    global.as_pointer_value()
-}
+use inkwell::{builder::Builder, context::Context};
+use std::fmt::Display;
 
 pub fn compile<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     expr: &'ctx ThrushStatement,
     cast_type: Option<&ThrushType>,
 ) -> BasicValueEnum<'ctx> {
-    let llvm_module: &Module = context.get_llvm_module();
+    match expr {
+        ThrushStatement::NullPtr { .. } => self::compile_null_ptr(context),
+        ThrushStatement::Str { bytes, kind, .. } => self::compile_string(context, bytes, kind),
+        ThrushStatement::Float {
+            kind,
+            value,
+            signed,
+            ..
+        } => self::compile_float(context, kind, *value, *signed, cast_type),
+        ThrushStatement::Integer {
+            kind,
+            value,
+            signed,
+            ..
+        } => self::compile_integer(context, kind, *value, *signed, cast_type),
+        ThrushStatement::Char { byte, .. } => self::compile_char(context, *byte),
+        ThrushStatement::Boolean { value, .. } => self::compile_boolean(context, *value),
+        ThrushStatement::Call {
+            name, args, kind, ..
+        } => self::compile_function_call(context, name, args, kind, cast_type),
+        ThrushStatement::BinaryOp {
+            left,
+            operator,
+            right,
+            kind: binaryop_type,
+            ..
+        } => self::compile_binary_op(context, left, operator, right, binaryop_type, cast_type),
+        ThrushStatement::UnaryOp {
+            operator,
+            kind,
+            expression,
+            ..
+        } => self::compile_unary_op(context, operator, kind, expression, cast_type),
+        ThrushStatement::Group { expression, .. } => self::compile(context, expression, cast_type),
+        ThrushStatement::SizeOf { sizeof, .. } => self::compile_sizeof(context, sizeof),
+        ThrushStatement::Alloc {
+            type_to_alloc,
+            site_allocation,
+            ..
+        } => self::compile_alloc(context, type_to_alloc, site_allocation),
+        ThrushStatement::Write {
+            write_to,
+            write_type,
+            write_value,
+            ..
+        } => self::compile_write(context, write_to, write_type, write_value),
+        ThrushStatement::Load { value, kind, .. } => self::compile_load(context, value, kind),
+        ThrushStatement::Address {
+            address_to,
+            indexes,
+            ..
+        } => self::compile_address(context, address_to, indexes),
+        ThrushStatement::As { from, cast, .. } => self::compile_cast(context, from, cast),
+        ThrushStatement::Deref { value, kind, .. } => {
+            self::compile_deref(context, value, kind, cast_type)
+        }
+        ThrushStatement::Property {
+            name,
+            indexes,
+            kind,
+            ..
+        } => self::compile_property(context, name, indexes, kind),
+        ThrushStatement::Reference { name, .. } => self::compile_reference(context, name),
+        ThrushStatement::AsmValue {
+            assembler,
+            constraints,
+            args,
+            kind,
+            attributes,
+            ..
+        } => self::compile_inline_asm(context, assembler, constraints, args, kind, attributes),
+        ThrushStatement::Index {
+            index_to, indexes, ..
+        } => self::compile_index(context, index_to, indexes),
+        ThrushStatement::Array { items, kind, .. } => {
+            self::compile_array(context, kind, items, cast_type)
+        }
+        _ => self::handle_unknown_expression(context, expr),
+    }
+}
+
+fn compile_float<'ctx>(
+    context: &mut LLVMCodeGenContext<'_, 'ctx>,
+    kind: &'ctx ThrushType,
+    value: f64,
+    signed: bool,
+    cast_type: Option<&ThrushType>,
+) -> BasicValueEnum<'ctx> {
+    let mut float: BasicValueEnum = floatgen::float(
+        context.get_llvm_builder(),
+        context.get_llvm_context(),
+        kind,
+        value,
+        signed,
+    )
+    .into();
+
+    if let Some(cast_type) = cast_type {
+        if let Some(casted_float) = cast::float(context, cast_type, kind, float) {
+            float = casted_float;
+        }
+    }
+
+    float
+}
+
+fn compile_integer<'ctx>(
+    context: &mut LLVMCodeGenContext<'_, 'ctx>,
+    kind: &'ctx ThrushType,
+    value: u64,
+    signed: bool,
+    cast_type: Option<&ThrushType>,
+) -> BasicValueEnum<'ctx> {
+    let mut int: BasicValueEnum =
+        intgen::integer(context.get_llvm_context(), kind, value, signed).into();
+
+    if let Some(cast_type) = cast_type {
+        if let Some(casted_int) = cast::integer(context, cast_type, kind, int) {
+            int = casted_int;
+        }
+    }
+
+    int
+}
+
+fn compile_char<'ctx>(context: &LLVMCodeGenContext<'_, 'ctx>, byte: u64) -> BasicValueEnum<'ctx> {
+    context
+        .get_llvm_context()
+        .i8_type()
+        .const_int(byte, false)
+        .into()
+}
+
+fn compile_boolean<'ctx>(
+    context: &LLVMCodeGenContext<'_, 'ctx>,
+    value: u64,
+) -> BasicValueEnum<'ctx> {
+    context
+        .get_llvm_context()
+        .bool_type()
+        .const_int(value, false)
+        .into()
+}
+
+fn compile_function_call<'ctx>(
+    context: &mut LLVMCodeGenContext<'_, 'ctx>,
+    name: &str,
+    args: &'ctx [ThrushStatement],
+    kind: &ThrushType,
+    cast_type: Option<&ThrushType>,
+) -> BasicValueEnum<'ctx> {
+    let function: (FunctionValue<'_>, &[ThrushType], u32) = context.get_function(name);
+
+    let (llvm_function, function_arg_types, function_convention) =
+        (function.0, function.1, function.2);
+
+    let llvm_builder: &Builder = context.get_llvm_builder();
+
+    let compiled_args: Vec<BasicMetadataValueEnum> = args
+        .iter()
+        .enumerate()
+        .map(|(i, arg)| {
+            let arg_cast_type: Option<&ThrushType> = function_arg_types.get(i);
+
+            let arg: BasicValueEnum =
+                if arg_cast_type.is_some_and(|t| t.is_ptr_type() || t.is_mut_type()) {
+                    rawgen::compile(context, arg, arg_cast_type)
+                } else {
+                    self::compile(context, arg, arg_cast_type)
+                };
+
+            arg.into()
+        })
+        .collect();
+
+    let fn_value = match llvm_builder.build_call(llvm_function, &compiled_args, "") {
+        Ok(call) => {
+            call.set_call_convention(function_convention);
+            if !kind.is_void_type() {
+                call.try_as_basic_value().left().unwrap_or_else(|| {
+                    self::codegen_abort(format!("Function call '{}' returned no value", name));
+                    self::compile_null_ptr(context)
+                })
+            } else {
+                self::compile_null_ptr(context)
+            }
+        }
+        Err(_) => {
+            self::codegen_abort(format!("Failed to generate call to function '{}'", name));
+            self::compile_null_ptr(context)
+        }
+    };
+
+    if let Some(cast) = cast_type {
+        cast::try_cast(context, cast, kind, fn_value).unwrap_or(fn_value)
+    } else {
+        fn_value
+    }
+}
+
+fn compile_binary_op<'ctx>(
+    context: &mut LLVMCodeGenContext<'_, 'ctx>,
+    left: &'ctx ThrushStatement,
+    operator: &'ctx TokenType,
+    right: &'ctx ThrushStatement,
+    binaryop_type: &ThrushType,
+    cast_type: Option<&ThrushType>,
+) -> BasicValueEnum<'ctx> {
+    match binaryop_type {
+        t if t.is_float_type() => {
+            binaryop::float::float_binaryop(context, (left, operator, right), cast_type)
+        }
+        t if t.is_integer_type() => {
+            binaryop::integer::integer_binaryop(context, (left, operator, right), cast_type)
+        }
+        t if t.is_bool_type() => {
+            binaryop::boolean::bool_binaryop(context, (left, operator, right), cast_type)
+        }
+        t if t.is_ptr_type() => binaryop::ptr::ptr_binaryop(context, (left, operator, right)),
+        _ => {
+            self::codegen_abort(format!(
+                "Invalid type '{}' for binary operation",
+                binaryop_type
+            ));
+
+            self::compile_null_ptr(context)
+        }
+    }
+}
+
+fn compile_unary_op<'ctx>(
+    context: &mut LLVMCodeGenContext<'_, 'ctx>,
+    operator: &'ctx TokenType,
+    kind: &'ctx ThrushType,
+    expression: &'ctx ThrushStatement,
+    cast_type: Option<&ThrushType>,
+) -> BasicValueEnum<'ctx> {
+    unaryop::unary_op(context, (operator, kind, expression), cast_type)
+}
+
+fn compile_sizeof<'ctx>(
+    context: &LLVMCodeGenContext<'_, 'ctx>,
+    sizeof: &ThrushType,
+) -> BasicValueEnum<'ctx> {
+    let sizeof_type = typegen::generate_type(context.get_llvm_context(), sizeof);
+    match sizeof_type.size_of() {
+        Some(size) => size.into(),
+        None => {
+            self::codegen_abort(format!("Unable to get size of type '{}'", sizeof));
+            unreachable!()
+        }
+    }
+}
+
+fn compile_alloc<'ctx>(
+    context: &mut LLVMCodeGenContext<'_, 'ctx>,
+    type_to_alloc: &ThrushType,
+    site_allocation: &LLIAllocationSite,
+) -> BasicValueEnum<'ctx> {
+    let site: LLVMAllocationSite = site_allocation.to_llvm_allocation_site();
+
+    memory::alloc_anon(site, context, type_to_alloc, type_to_alloc.is_all_ptr()).into()
+}
+
+fn compile_write<'ctx>(
+    context: &mut LLVMCodeGenContext<'_, 'ctx>,
+    write_to: &'ctx (
+        Option<(&'ctx str, Box<ThrushStatement<'ctx>>)>,
+        Option<Box<ThrushStatement<'ctx>>>,
+    ),
+    write_type: &'ctx ThrushType,
+    write_value: &'ctx ThrushStatement,
+) -> BasicValueEnum<'ctx> {
+    let value = self::compile(context, write_value, Some(write_type)); // Recursive
+    match write_to {
+        (Some((name, _)), _) => {
+            let symbol = context.get_allocated_symbol(name);
+            symbol.store(context, value);
+            self::compile_null_ptr(context)
+        }
+        (_, Some(expr)) => {
+            let ptr: PointerValue = rawgen::compile(context, expr, None).into_pointer_value();
+            memory::store_anon(context, ptr, write_type, value);
+
+            self::compile_null_ptr(context)
+        }
+        _ => {
+            self::codegen_abort("Invalid write target in expression");
+            self::compile_null_ptr(context)
+        }
+    }
+}
+
+fn compile_load<'ctx>(
+    context: &mut LLVMCodeGenContext<'_, 'ctx>,
+    value: &'ctx (
+        Option<(&'ctx str, Box<ThrushStatement<'ctx>>)>,
+        Option<Box<ThrushStatement<'ctx>>>,
+    ),
+    kind: &ThrushType,
+) -> BasicValueEnum<'ctx> {
+    match value {
+        (Some((name, _)), _) => {
+            let ptr: PointerValue = context.get_allocated_symbol(name).raw_load();
+
+            memory::load_anon(context, ptr, kind)
+        }
+        (_, Some(expr)) => {
+            let ptr: PointerValue = rawgen::compile(context, expr, None).into_pointer_value();
+
+            memory::load_anon(context, ptr, kind)
+        }
+        _ => {
+            self::codegen_abort("Invalid load target in expression");
+            self::compile_null_ptr(context)
+        }
+    }
+}
+
+fn compile_address<'ctx>(
+    context: &mut LLVMCodeGenContext<'_, 'ctx>,
+    address_to: &'ctx (
+        Option<(&'ctx str, Box<ThrushStatement<'ctx>>)>,
+        Option<Box<ThrushStatement<'ctx>>>,
+    ),
+    indexes: &'ctx [ThrushStatement],
+) -> BasicValueEnum<'ctx> {
     let llvm_context: &Context = context.get_llvm_context();
     let llvm_builder: &Builder = context.get_llvm_builder();
 
-    /* ######################################################################
-
-
-        EXPRESSIONS - START
-
-
-    ########################################################################*/
-
-    if let ThrushStatement::NullPtr { .. } = expr {
-        return llvm_context
-            .ptr_type(AddressSpace::default())
-            .const_null()
-            .into();
-    }
-
-    if let ThrushStatement::Str { bytes, kind, .. } = expr {
-        let ptr: PointerValue = utils::build_str_constant(llvm_module, llvm_context, bytes);
-
-        return memory::load_anon(context, ptr, kind);
-    }
-
-    if let ThrushStatement::Float {
-        kind,
-        value,
-        signed,
-        ..
-    } = expr
-    {
-        let mut float: BasicValueEnum =
-            floatgen::float(llvm_builder, llvm_context, kind, *value, *signed).into();
-
-        if let Some(cast_type) = cast_type {
-            if let Some(casted_float) = cast::float(context, cast_type, kind, float) {
-                float = casted_float;
-            }
-        }
-
-        return float;
-    }
-
-    if let ThrushStatement::Integer {
-        kind,
-        value,
-        signed,
-        ..
-    } = expr
-    {
-        let mut int: BasicValueEnum = intgen::integer(llvm_context, kind, *value, *signed).into();
-
-        if let Some(cast_type) = cast_type {
-            if let Some(casted_int) = cast::integer(context, cast_type, kind, int) {
-                int = casted_int;
-            }
-        }
-
-        return int;
-    }
-
-    if let ThrushStatement::Char { byte, .. } = expr {
-        return llvm_context.i8_type().const_int(*byte, false).into();
-    }
-
-    if let ThrushStatement::Boolean { value, .. } = expr {
-        return llvm_context.bool_type().const_int(*value, false).into();
-    }
-
-    if let ThrushStatement::Call {
-        name, args, kind, ..
-    } = expr
-    {
-        let function: LLVMFunction = context.get_function(name);
-        let function_arguments_types: &[ThrushType] = function.1;
-        let function_convention: u32 = function.2;
-
-        let llvm_function: FunctionValue = function.0;
-
-        let mut compiled_args: Vec<BasicMetadataValueEnum> = Vec::with_capacity(args.len());
-
-        args.iter().enumerate().for_each(|arg| {
-            let arg_position: usize = arg.0;
-            let expr: &ThrushStatement = arg.1;
-
-            let cast_type: Option<&ThrushType> = function_arguments_types.get(arg_position);
-
-            let arg: BasicValueEnum = if cast_type.is_some_and(|cast_type| cast_type.is_ptr_type())
-            {
-                rawgen::compile(context, expr, cast_type)
-            } else {
-                self::compile(context, expr, cast_type)
-            };
-
-            compiled_args.push(arg.into());
-        });
-
-        if let Ok(call) = llvm_builder.build_call(llvm_function, &compiled_args, "") {
-            call.set_call_convention(function_convention);
-
-            if !kind.is_void_type() {
-                return call.try_as_basic_value().unwrap_left();
-            }
-
-            return llvm_context
-                .ptr_type(AddressSpace::default())
-                .const_null()
-                .into();
-        }
-
-        logging::log(
-            LoggingType::Bug,
-            "Unable to create a function call at code generation time.",
-        );
-    }
-
-    if let ThrushStatement::BinaryOp {
-        left,
-        operator,
-        right,
-        kind: binaryop_type,
-        ..
-    } = expr
-    {
-        if binaryop_type.is_float_type() {
-            return binaryop::float::float_binaryop(context, (left, operator, right), cast_type);
-        } else if binaryop_type.is_integer_type() {
-            return binaryop::integer::integer_binaryop(
-                context,
-                (left, operator, right),
-                cast_type,
-            );
-        } else if binaryop_type.is_bool_type() {
-            return binaryop::boolean::bool_binaryop(context, (left, operator, right), cast_type);
-        } else if binaryop_type.is_ptr_type() {
-            return binaryop::ptr::ptr_binaryop(context, (left, operator, right));
-        }
-
-        logging::log(
-            LoggingType::Bug,
-            "Could not process a binary operation of invalid type.",
-        );
-    }
-
-    if let ThrushStatement::UnaryOp {
-        operator,
-        kind,
-        expression,
-        ..
-    } = expr
-    {
-        return unaryop::unary_op(context, (operator, kind, expression), cast_type);
-    }
-
-    if let ThrushStatement::Group { expression, .. } = expr {
-        return self::compile(context, expression, cast_type);
-    }
-
-    /* ######################################################################
-
-
-        EXPRESSIONS - END
-
-
-    ########################################################################*/
-
-    /* ######################################################################
-
-
-        BUILTINS - START
-
-
-    ########################################################################*/
-
-    if let ThrushStatement::SizeOf { sizeof, .. } = expr {
-        let sizeof_type: BasicTypeEnum = typegen::generate_type(llvm_context, sizeof);
-
-        return sizeof_type
-            .size_of()
-            .unwrap_or_else(|| {
-                logging::log(
-                    LoggingType::Panic,
-                    &format!("Unable to get size of the type: '{}'.", sizeof),
-                );
-
-                unreachable!()
-            })
-            .into();
-    }
-
-    /* ######################################################################
-
-
-        BUILTINS - END
-
-
-    ########################################################################*/
-
-    /* ######################################################################
-
-
-        LOW LEVEL INSTRUCTIONS - START
-
-
-    ########################################################################*/
-
-    if let ThrushStatement::Alloc {
-        type_to_alloc,
-        site_allocation,
-        ..
-    } = expr
-    {
-        let site_allocation: LLVMAllocationSite = site_allocation.to_llvm_allocation_site();
-
-        return memory::alloc_anon(
-            site_allocation,
-            context,
-            type_to_alloc,
-            type_to_alloc.is_all_ptr(),
-        )
-        .into();
-    }
-
-    if let ThrushStatement::Write {
-        write_to,
-        write_type,
-        write_value,
-        ..
-    } = expr
-    {
-        let value: BasicValueEnum = self::compile(context, write_value, Some(write_type));
-
-        if let Some(reference) = &write_to.0 {
-            let reference_name: &str = reference.0;
-
-            let symbol: SymbolAllocated = context.get_allocated_symbol(reference_name);
-
-            symbol.store(context, value);
-
-            return llvm_context
-                .ptr_type(AddressSpace::default())
-                .const_null()
-                .into();
-        }
-
-        if let Some(expr) = write_to.1.as_ref() {
-            let expr: PointerValue = rawgen::compile(context, expr, None).into_pointer_value();
-
-            memory::store_anon(context, expr, write_type, value);
-
-            return llvm_context
-                .ptr_type(AddressSpace::default())
-                .const_null()
-                .into();
-        }
-
-        logging::log(LoggingType::Bug, "Could not get value of 'write' LLI.");
-    }
-
-    if let ThrushStatement::Load { value, kind, .. } = expr {
-        if let Some(any_reference) = &value.0 {
-            let name: &str = any_reference.0;
-
-            let ptr: PointerValue = context
-                .get_allocated_symbol(name)
-                .load(context)
-                .into_pointer_value();
-
-            return memory::load_anon(context, ptr, kind);
-        }
-
-        if let Some(expr) = &value.1 {
-            let ptr: PointerValue = rawgen::compile(context, expr, None).into_pointer_value();
-
-            return memory::load_anon(context, ptr, kind);
-        }
-
-        logging::log(LoggingType::Bug, "Could not get value of 'load' LLI.");
-    }
-
-    if let ThrushStatement::Address {
-        address_to,
-        indexes,
-        ..
-    } = expr
-    {
-        if let Some(any_reference) = &address_to.0 {
-            let reference_name: &str = any_reference.0;
-
-            let symbol: SymbolAllocated = context.get_allocated_symbol(reference_name);
-
-            let indexes: Vec<IntValue> = indexes
-                .iter()
-                .map(|indexe| {
-                    valuegen::compile(context, indexe, Some(&ThrushType::U32)).into_int_value()
-                })
-                .collect();
-
-            return symbol.gep(llvm_context, llvm_builder, &indexes).into();
-        }
-
-        if let Some(expr) = &address_to.1 {
-            let kind: &ThrushType = expr.get_type_unwrapped();
-
-            let ptr: PointerValue = rawgen::compile(context, expr, None).into_pointer_value();
-
-            let indexes: Vec<IntValue> = indexes
-                .iter()
-                .map(|indexe| {
-                    self::compile(context, indexe, Some(&ThrushType::U32)).into_int_value()
-                })
-                .collect();
-
-            return memory::gep_anon(context, ptr, kind, &indexes).into();
-        }
-
-        logging::log(
-            LoggingType::Bug,
-            "Unable to get pointer element at value generation time.",
-        );
-    }
-
-    /* ######################################################################
-
-
-        LOW LEVEL INSTRUCTIONS - END
-
-
-    ########################################################################*/
-
-    /* ######################################################################
-
-
-        CASTS - START
-
-
-    ########################################################################*/
-
-    if let ThrushStatement::As { from, cast, .. } = expr {
-        let from_type: &ThrushType = from.get_type_unwrapped();
-
-        if from_type.is_str_type() && cast.is_ptr_type() {
-            let val: BasicValueEnum = rawgen::compile(context, from, None);
-
-            if val.is_pointer_value() {
-                let raw_str_ptr: PointerValue = val.into_pointer_value();
-
-                let str_loaded: BasicValueEnum = memory::load_anon(context, raw_str_ptr, from_type);
-                let str_structure: StructValue = str_loaded.into_struct_value();
-
-                if let Ok(cstr) = llvm_builder.build_extract_value(str_structure, 0, "") {
-                    let to: PointerType =
-                        typegen::generate_type(llvm_context, cast).into_pointer_type();
-
-                    if let Ok(casted_ptr) =
-                        llvm_builder.build_pointer_cast(cstr.into_pointer_value(), to, "")
-                    {
-                        return casted_ptr.into();
-                    }
-                }
-            }
-        } else if cast.is_ptr_type() || cast.is_mut_type() {
-            let val: BasicValueEnum = rawgen::compile(context, from, None);
-
-            if val.is_pointer_value() {
-                let to: PointerType =
-                    typegen::generate_type(llvm_context, cast).into_pointer_type();
-
-                if let Ok(casted_ptr) =
-                    llvm_builder.build_pointer_cast(val.into_pointer_value(), to, "")
-                {
-                    return casted_ptr.into();
-                }
-            }
-        } else {
-            let val: BasicValueEnum = self::compile(context, from, None);
-
-            let from_type: &ThrushType = from.get_type_unwrapped();
-
-            let target_type: BasicTypeEnum = typegen::generate_subtype(llvm_context, cast);
-
-            if from_type.is_same_size(context, cast) {
-                if let Ok(casted_value) = llvm_builder.build_bit_cast(val, target_type, "") {
-                    return casted_value;
-                }
-            }
-
-            if val.is_int_value() && target_type.is_int_type() {
-                if let Ok(casted_value) = llvm_builder.build_int_cast(
-                    val.into_int_value(),
-                    target_type.into_int_type(),
-                    "",
-                ) {
-                    return casted_value.into();
-                }
-            }
-
-            if val.is_float_value() && target_type.is_float_type() {
-                if let Ok(casted_value) = llvm_builder.build_float_cast(
-                    val.into_float_value(),
-                    target_type.into_float_type(),
-                    "",
-                ) {
-                    return casted_value.into();
-                }
-            }
-        }
-
-        logging::log(
-            LoggingType::Bug,
-            &format!(
-                "Primitive casting could not be perform at 'cast' from: '{}'.",
-                from
-            ),
-        );
-    }
-
-    /* ######################################################################
-
-
-        CASTS - END
-
-
-    ########################################################################*/
-
-    /* ######################################################################
-
-
-        DEFERENCE OPERATION - START
-
-
-    ########################################################################*/
-
-    if let ThrushStatement::Deref { .. } = expr {
-        return self::deref(context, expr, cast_type);
-    }
-
-    /* ######################################################################
-
-
-        DEFERENCE OPERATION - END
-
-
-    ########################################################################*/
-
-    /* ######################################################################
-
-
-        REFERENCES OPERATIONS - START
-
-
-    ########################################################################*/
-
-    if let ThrushStatement::Property {
-        name,
-        indexes,
-        kind,
-        ..
-    } = expr
-    {
-        let symbol: SymbolAllocated = context.get_allocated_symbol(name);
-
-        let first_idx: u32 = indexes[0].1;
-
-        if symbol.is_pointer() {
-            let mut ptr: PointerValue = symbol.gep_struct(llvm_context, llvm_builder, first_idx);
-
-            indexes.iter().skip(1).for_each(|indexe| {
-                let llvm_indexe_type: BasicTypeEnum =
-                    typegen::generate_type(llvm_context, &indexe.0);
-
-                let depth: u32 = indexe.1;
-
-                if let Ok(new_ptr) = llvm_builder.build_struct_gep(llvm_indexe_type, ptr, depth, "")
-                {
-                    ptr = new_ptr;
-                }
-            });
-
-            return memory::load_anon(context, ptr, kind);
-        } else {
-            let mut value: BasicValueEnum = symbol.extract_value(llvm_builder, first_idx);
-
-            indexes.iter().skip(1).for_each(|indexe| {
-                let depth: u32 = indexe.1;
-
-                if value.is_struct_value() {
-                    let value_struct_value: StructValue = value.into_struct_value();
-
-                    if let Ok(new_extracted_value) =
-                        llvm_builder.build_extract_value(value_struct_value, depth, "")
-                    {
-                        value = new_extracted_value;
-                    }
-                }
-            });
-
-            return value;
-        }
-    }
-
-    if let ThrushStatement::Reference { name, .. } = expr {
-        let symbol: SymbolAllocated = context.get_allocated_symbol(name);
-
-        return symbol.load(context);
-    }
-
-    /* ######################################################################
-
-
-        REFERENCES OPERATIONS - END
-
-
-    ########################################################################*/
-
-    if let ThrushStatement::AsmValue {
-        assembler,
-        constraints,
-        args,
-        kind,
-        attributes,
-        ..
-    } = expr
-    {
-        let asm_function_type: FunctionType = typegen::function_type(context, kind, args, false);
-
-        let args: Vec<BasicMetadataValueEnum> = args
-            .iter()
-            .map(|arg| self::compile(context, arg, None).into())
-            .collect();
-
-        let mut syntax: InlineAsmDialect = InlineAsmDialect::Intel;
-
-        let sideeffects: bool = attributes.has_asmsideffects_attribute();
-        let align_stack: bool = attributes.has_asmalignstack_attribute();
-        let can_throw: bool = attributes.has_asmthrow_attribute();
-
-        attributes.iter().for_each(|attribute| {
-            if let LLVMAttribute::AsmSyntax(new_syntax, ..) = *attribute {
-                syntax = str::assembler_syntax_attr_to_inline_assembler_dialect(new_syntax);
-            }
-        });
-
-        let fn_inline_assembler: PointerValue = llvm_context.create_inline_asm(
-            asm_function_type,
-            assembler.to_string(),
-            constraints.to_string(),
-            sideeffects,
-            align_stack,
-            Some(syntax),
-            can_throw,
-        );
-
-        if let Ok(indirect_call) =
-            llvm_builder.build_indirect_call(asm_function_type, fn_inline_assembler, &args, "")
-        {
-            if !kind.is_void_type() {
-                return indirect_call.try_as_basic_value().unwrap_left();
-            }
-
-            return llvm_context
-                .ptr_type(AddressSpace::default())
-                .const_null()
-                .into();
-        }
-
-        logging::log(LoggingType::Bug, "Unable to build inline assembler value.");
-        unreachable!()
-    }
-
-    if let ThrushStatement::Index {
-        index_to,
-        indexes,
-        kind,
-        ..
-    } = expr
-    {
-        if let Some(any_reference) = &index_to.0 {
-            let name: &str = any_reference.0;
-
+    let indexes: Vec<IntValue> = indexes
+        .iter()
+        .map(|index| self::compile(context, index, Some(&ThrushType::U32)).into_int_value()) // Recursive
+        .collect();
+
+    match address_to {
+        (Some((name, _)), _) => {
             let symbol: SymbolAllocated = context.get_allocated_symbol(name);
 
-            let mut ordered_indexes: Vec<IntValue> = Vec::with_capacity(indexes.len() * 2);
-
-            indexes.iter().for_each(|indexe| {
-                if kind.is_mut_fixed_array_type() || kind.is_ptr_fixed_array_type() {
-                    let base: IntValue = intgen::integer(llvm_context, &ThrushType::U32, 0, false);
-
-                    let depth: IntValue =
-                        valuegen::compile(context, indexe, Some(&ThrushType::U32)).into_int_value();
-
-                    ordered_indexes.push(base);
-                    ordered_indexes.push(depth);
-                } else {
-                    let depth: IntValue =
-                        valuegen::compile(context, indexe, Some(&ThrushType::U64)).into_int_value();
-
-                    ordered_indexes.push(depth);
-                }
-            });
-
-            let ptr: PointerValue = symbol.gep(llvm_context, llvm_builder, &ordered_indexes);
-
-            return memory::load_anon(context, ptr, kind);
+            symbol.gep(llvm_context, llvm_builder, &indexes).into()
         }
+        (_, Some(expr)) => {
+            let kind: &ThrushType = expr.get_type_unwrapped();
+            let ptr: PointerValue = rawgen::compile(context, expr, None).into_pointer_value();
 
-        if let Some(expr) = &index_to.1 {
-            let expr: PointerValue = rawgen::compile(context, expr, None).into_pointer_value();
-
-            let mut ordered_indexes: Vec<IntValue> = Vec::with_capacity(indexes.len() * 2);
-
-            indexes.iter().for_each(|indexe| {
-                if kind.is_mut_fixed_array_type() || kind.is_ptr_fixed_array_type() {
-                    let base: IntValue = intgen::integer(llvm_context, &ThrushType::U32, 0, false);
-
-                    let depth: IntValue =
-                        valuegen::compile(context, indexe, Some(&ThrushType::U32)).into_int_value();
-
-                    ordered_indexes.push(base);
-                    ordered_indexes.push(depth);
-                } else {
-                    let depth: IntValue =
-                        valuegen::compile(context, indexe, Some(&ThrushType::U64)).into_int_value();
-
-                    ordered_indexes.push(depth);
-                }
-            });
-
-            let ptr: PointerValue = memory::gep_anon(context, expr, kind, &ordered_indexes);
-
-            return memory::load_anon(context, ptr, kind);
+            memory::gep_anon(context, ptr, kind, &indexes).into()
         }
-
-        logging::log(
-            LoggingType::Bug,
-            &format!(
-                "A memory address calculation could not be performed with the expression: '{}'.",
-                expr
-            ),
-        );
-    }
-
-    if let ThrushStatement::Array { items, kind, .. } = expr {
-        if expr.is_constant_array() {
-            return self::constant_fixed_array(context, kind, items, cast_type);
-        } else {
-            return self::fixed_array(context, kind, items, cast_type);
+        _ => {
+            self::codegen_abort("Invalid address target in expression".to_string());
+            self::compile_null_ptr(context)
         }
     }
-
-    logging::log(
-        LoggingType::Bug,
-        &format!("Unable to compile unknown expression: '{}'.", expr),
-    );
-
-    unreachable!()
 }
 
-fn deref<'ctx>(
+fn compile_cast<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
-    expr: &'ctx ThrushStatement,
+    from: &'ctx ThrushStatement,
+    cast: &ThrushType,
+) -> BasicValueEnum<'ctx> {
+    let from_type: &ThrushType = from.get_type_unwrapped();
+    let llvm_context: &Context = context.get_llvm_context();
+    let llvm_builder: &Builder = context.get_llvm_builder();
+
+    if from_type.is_str_type() && cast.is_ptr_type() {
+        let val: BasicValueEnum = rawgen::compile(context, from, None);
+
+        if val.is_pointer_value() {
+            let raw_str_ptr: PointerValue = val.into_pointer_value();
+            let str_loaded: BasicValueEnum = memory::load_anon(context, raw_str_ptr, from_type);
+            let str_structure: StructValue = str_loaded.into_struct_value();
+
+            match llvm_builder.build_extract_value(str_structure, 0, "") {
+                Ok(cstr) => {
+                    let to = typegen::generate_type(llvm_context, cast).into_pointer_type();
+                    match llvm_builder.build_pointer_cast(cstr.into_pointer_value(), to, "") {
+                        Ok(casted_ptr) => return casted_ptr.into(),
+                        Err(_) => self::codegen_abort(format!(
+                            "Failed to cast string pointer in '{}'",
+                            from
+                        )),
+                    }
+                }
+                Err(_) => {
+                    self::codegen_abort(format!("Failed to extract string value in '{}'", from))
+                }
+            }
+        }
+    } else if cast.is_ptr_type() || cast.is_mut_type() {
+        let val: BasicValueEnum = rawgen::compile(context, from, None);
+
+        if val.is_pointer_value() {
+            let to: PointerType = typegen::generate_type(llvm_context, cast).into_pointer_type();
+            match llvm_builder.build_pointer_cast(val.into_pointer_value(), to, "") {
+                Ok(casted_ptr) => return casted_ptr.into(),
+                Err(_) => self::codegen_abort(format!("Failed to cast pointer in '{}'", from)),
+            }
+        }
+    } else {
+        let val: BasicValueEnum = self::compile(context, from, None);
+        let target_type: BasicTypeEnum = typegen::generate_subtype(llvm_context, cast);
+
+        if from_type.is_same_size(context, cast) {
+            match llvm_builder.build_bit_cast(val, target_type, "") {
+                Ok(casted_value) => return casted_value,
+                Err(_) => self::codegen_abort(format!(
+                    "Failed bit cast from '{}' to '{}'",
+                    from_type, cast
+                )),
+            }
+        }
+        if val.is_int_value() && target_type.is_int_type() {
+            match llvm_builder.build_int_cast(val.into_int_value(), target_type.into_int_type(), "")
+            {
+                Ok(casted_value) => return casted_value.into(),
+                Err(_) => self::codegen_abort(format!(
+                    "Failed integer cast from '{}' to '{}'",
+                    from_type, cast
+                )),
+            }
+        }
+        if val.is_float_value() && target_type.is_float_type() {
+            match llvm_builder.build_float_cast(
+                val.into_float_value(),
+                target_type.into_float_type(),
+                "",
+            ) {
+                Ok(casted_value) => return casted_value.into(),
+                Err(_) => self::codegen_abort(format!(
+                    "Failed float cast from '{}' to '{}'",
+                    from_type, cast
+                )),
+            }
+        }
+    }
+
+    self::codegen_abort(format!(
+        "Unsupported cast from '{}' to '{}'",
+        from_type, cast
+    ));
+
+    self::compile_null_ptr(context)
+}
+
+fn compile_deref<'ctx>(
+    context: &mut LLVMCodeGenContext<'_, 'ctx>,
+    value: &'ctx ThrushStatement,
+    kind: &ThrushType,
     cast_type: Option<&ThrushType>,
 ) -> BasicValueEnum<'ctx> {
-    match expr {
-        ThrushStatement::Deref { value, kind, .. } => {
-            let value: BasicValueEnum = self::deref(context, value, Some(kind));
+    let val: BasicValueEnum = self::compile(context, value, Some(kind));
 
-            if value.is_pointer_value() {
-                let ptr: PointerValue = value.into_pointer_value();
-
-                return memory::load_anon(context, ptr, kind);
-            }
-
+    let deref_value: BasicValueEnum = if val.is_pointer_value() {
+        memory::load_anon(context, val.into_pointer_value(), kind)
+    } else {
+        self::codegen_abort(format!(
+            "Cannot dereference non-pointer value in '{}'",
             value
-        }
+        ));
 
-        expr => rawgen::compile(context, expr, cast_type),
+        val
+    };
+
+    if let Some(cast) = cast_type {
+        cast::try_cast(context, cast, kind, deref_value).unwrap_or(deref_value)
+    } else {
+        deref_value
+    }
+}
+
+fn compile_property<'ctx>(
+    context: &mut LLVMCodeGenContext<'_, 'ctx>,
+    name: &str,
+    indexes: &[(ThrushType, u32)],
+    kind: &ThrushType,
+) -> BasicValueEnum<'ctx> {
+    let symbol: SymbolAllocated = context.get_allocated_symbol(name);
+
+    let llvm_context: &Context = context.get_llvm_context();
+    let llvm_builder: &Builder = context.get_llvm_builder();
+
+    if symbol.is_pointer() {
+        let mut ptr: PointerValue = symbol.gep_struct(llvm_context, llvm_builder, indexes[0].1);
+
+        for index in indexes.iter().skip(1) {
+            let index_type: BasicTypeEnum = typegen::generate_type(llvm_context, &index.0);
+
+            match llvm_builder.build_struct_gep(index_type, ptr, index.1, "") {
+                Ok(new_ptr) => ptr = new_ptr,
+                Err(_) => {
+                    self::codegen_abort(format!(
+                        "Failed to access property at index {} for '{}'",
+                        index.1, name
+                    ));
+
+                    return self::compile_null_ptr(context);
+                }
+            }
+        }
+        memory::load_anon(context, ptr, kind)
+    } else {
+        let mut value = symbol.extract_value(llvm_builder, indexes[0].1);
+        for index in indexes.iter().skip(1) {
+            if value.is_struct_value() {
+                match llvm_builder.build_extract_value(value.into_struct_value(), index.1, "") {
+                    Ok(new_value) => value = new_value,
+                    Err(_) => {
+                        self::codegen_abort(format!(
+                            "Failed to extract value at index {} for '{}'",
+                            index.1, name
+                        ));
+
+                        return self::compile_null_ptr(context);
+                    }
+                }
+            }
+        }
+        value
+    }
+}
+
+fn compile_reference<'ctx>(
+    context: &mut LLVMCodeGenContext<'_, 'ctx>,
+    name: &str,
+) -> BasicValueEnum<'ctx> {
+    context.get_allocated_symbol(name).load(context)
+}
+
+fn compile_inline_asm<'ctx>(
+    context: &mut LLVMCodeGenContext<'_, 'ctx>,
+    assembler: &str,
+    constraints: &str,
+    args: &'ctx [ThrushStatement],
+    kind: &ThrushType,
+    attributes: &ThrushAttributes,
+) -> BasicValueEnum<'ctx> {
+    let llvm_context: &Context = context.get_llvm_context();
+    let llvm_builder: &Builder = context.get_llvm_builder();
+
+    let asm_function_type: FunctionType = typegen::function_type(context, kind, args, false);
+
+    let compiled_args: Vec<BasicMetadataValueEnum> = args
+        .iter()
+        .map(|arg| self::compile(context, arg, None).into()) // Recursive
+        .collect();
+
+    let mut syntax: InlineAsmDialect = InlineAsmDialect::Intel;
+
+    let sideeffects: bool = attributes.has_asmsideffects_attribute();
+    let align_stack: bool = attributes.has_asmalignstack_attribute();
+    let can_throw: bool = attributes.has_asmthrow_attribute();
+
+    for attr in attributes {
+        if let LLVMAttribute::AsmSyntax(new_syntax, ..) = *attr {
+            syntax = str::assembler_syntax_attr_to_inline_assembler_dialect(new_syntax);
+        }
+    }
+
+    let fn_inline_assembler: PointerValue = llvm_context.create_inline_asm(
+        asm_function_type,
+        assembler.to_string(),
+        constraints.to_string(),
+        sideeffects,
+        align_stack,
+        Some(syntax),
+        can_throw,
+    );
+
+    match llvm_builder.build_indirect_call(
+        asm_function_type,
+        fn_inline_assembler,
+        &compiled_args,
+        "",
+    ) {
+        Ok(call) if !kind.is_void_type() => call.try_as_basic_value().left().unwrap_or_else(|| {
+            self::codegen_abort("Inline assembler returned no value");
+
+            self::compile_null_ptr(context)
+        }),
+        Ok(_) => self::compile_null_ptr(context),
+        Err(_) => {
+            self::codegen_abort("Failed to build inline assembler");
+
+            self::compile_null_ptr(context)
+        }
+    }
+}
+
+fn compile_index<'ctx>(
+    context: &mut LLVMCodeGenContext<'_, 'ctx>,
+    index_to: &'ctx (
+        Option<(&'ctx str, Box<ThrushStatement<'ctx>>)>,
+        Option<Box<ThrushStatement<'ctx>>>,
+    ),
+    indexes: &'ctx [ThrushStatement],
+) -> BasicValueEnum<'ctx> {
+    let llvm_context: &Context = context.get_llvm_context();
+    let llvm_builder: &Builder = context.get_llvm_builder();
+
+    match index_to {
+        (Some((name, _)), _) => {
+            let symbol: SymbolAllocated = context.get_allocated_symbol(name);
+            let symbol_type: &ThrushType = symbol.get_type();
+
+            let ordered_indexes: Vec<IntValue> =
+                self::compute_indexes(context, indexes, symbol_type);
+
+            symbol
+                .gep(llvm_context, llvm_builder, &ordered_indexes)
+                .into()
+        }
+        (_, Some(expr)) => {
+            let expr_ptr: PointerValue = rawgen::compile(context, expr, None).into_pointer_value();
+            let expr_type: &ThrushType = expr.get_type_unwrapped();
+
+            let ordered_indexes: Vec<IntValue> = self::compute_indexes(context, indexes, expr_type);
+
+            memory::gep_anon(context, expr_ptr, expr_type, &ordered_indexes).into()
+        }
+        _ => {
+            self::codegen_abort("Invalid index target in expression");
+            self::compile_null_ptr(context)
+        }
+    }
+}
+
+fn compile_array<'ctx>(
+    context: &mut LLVMCodeGenContext<'_, 'ctx>,
+    kind: &ThrushType,
+    items: &'ctx [ThrushStatement],
+    cast_type: Option<&ThrushType>,
+) -> BasicValueEnum<'ctx> {
+    if items
+        .iter()
+        .all(|item| item.is_integer() || item.is_float() || item.is_bool())
+    {
+        self::constant_fixed_array(context, kind, items, cast_type)
+    } else {
+        self::fixed_array(context, kind, items, cast_type)
     }
 }
 
 fn fixed_array<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
-    kind: &'ctx ThrushType,
+    kind: &ThrushType,
     items: &'ctx [ThrushStatement],
     cast_type: Option<&ThrushType>,
 ) -> BasicValueEnum<'ctx> {
     let llvm_context: &Context = context.get_llvm_context();
     let llvm_builder: &Builder = context.get_llvm_builder();
-
-    let array_items_type: &ThrushType = if let Some(cast_type) = cast_type {
-        cast_type.get_array_base_type()
-    } else {
-        kind.get_array_base_type()
-    };
-
-    let array_type: &ThrushType = if let Some(cast_type) = cast_type {
-        if cast_type.is_mut_fixed_array_type()
-            || cast_type.is_ptr_fixed_array_type()
-            || cast_type.is_fixed_array_type()
-        {
-            cast_type
-        } else {
-            kind
-        }
-    } else {
-        kind.get_array_base_type()
-    };
+    let array_type: &ThrushType = self::get_array_type(kind, cast_type);
+    let array_items_type: &ThrushType = array_type.get_array_base_type();
 
     let array_ptr: PointerValue =
         memory::alloc_anon(LLVMAllocationSite::Stack, context, array_type, true);
@@ -809,26 +694,27 @@ fn fixed_array<'ctx>(
     for (idx, item) in items.iter().enumerate() {
         let llvm_idx: IntValue = llvm_context.i32_type().const_int(idx as u64, false);
 
-        let element_ptr: PointerValue = unsafe {
+        match unsafe {
             llvm_builder.build_gep(
                 array_ptr_type,
                 array_ptr,
                 &[llvm_context.i32_type().const_zero(), llvm_idx],
                 "",
             )
+        } {
+            Ok(element_ptr) => {
+                let value: BasicValueEnum = self::compile(context, item, Some(array_items_type));
+                memory::store_anon(context, element_ptr, item.get_type_unwrapped(), value);
+            }
+            Err(_) => {
+                self::codegen_abort(format!(
+                    "Failed to calculate memory address for array element at index {}",
+                    idx
+                ));
+
+                return self::compile_null_ptr(context);
+            }
         }
-        .unwrap_or_else(|_| {
-            logging::log(
-                LoggingType::Bug,
-                "Unable to calculate memory address of an element of a array.",
-            );
-
-            unreachable!()
-        });
-
-        let value: BasicValueEnum = self::compile(context, item, Some(array_items_type));
-
-        memory::store_anon(context, element_ptr, item.get_type_unwrapped(), value);
     }
 
     memory::load_anon(context, array_ptr, kind)
@@ -842,19 +728,13 @@ fn constant_fixed_array<'ctx>(
 ) -> BasicValueEnum<'ctx> {
     let llvm_context: &Context = context.get_llvm_context();
 
-    let array_item_type: &ThrushType = if let Some(cast_type) = cast_type {
-        cast_type.get_array_base_type()
-    } else {
-        kind.get_array_base_type()
-    };
-
+    let array_item_type: &ThrushType = self::get_array_type(kind, cast_type).get_array_base_type();
     let array_type: BasicTypeEnum = typegen::generate_type(llvm_context, array_item_type);
 
     let values: Vec<BasicValueEnum> = items
         .iter()
         .map(|item| {
             let item_type = item.get_type_unwrapped();
-
             if item_type.is_ptr_type() || item_type.is_mut_type() {
                 rawgen::compile(context, item, Some(array_item_type))
             } else {
@@ -863,60 +743,134 @@ fn constant_fixed_array<'ctx>(
         })
         .collect();
 
-    if array_type.is_int_type() {
-        let array_type: IntType = array_type.into_int_type();
-        let values: Vec<IntValue> = values.iter().map(|value| value.into_int_value()).collect();
+    match array_type {
+        t if t.is_int_type() => t
+            .into_int_type()
+            .const_array(
+                &values
+                    .iter()
+                    .map(|v| v.into_int_value())
+                    .collect::<Vec<_>>(),
+            )
+            .into(),
+        t if t.is_float_type() => t
+            .into_float_type()
+            .const_array(
+                &values
+                    .iter()
+                    .map(|v| v.into_float_value())
+                    .collect::<Vec<_>>(),
+            )
+            .into(),
+        t if t.is_array_type() => t
+            .into_array_type()
+            .const_array(
+                &values
+                    .iter()
+                    .map(|v| v.into_array_value())
+                    .collect::<Vec<_>>(),
+            )
+            .into(),
+        t if t.is_struct_type() => t
+            .into_struct_type()
+            .const_array(
+                &values
+                    .iter()
+                    .map(|v| v.into_struct_value())
+                    .collect::<Vec<_>>(),
+            )
+            .into(),
+        t if t.is_pointer_type() => t
+            .into_pointer_type()
+            .const_array(
+                &values
+                    .iter()
+                    .map(|v| v.into_pointer_value())
+                    .collect::<Vec<_>>(),
+            )
+            .into(),
+        _ => {
+            self::codegen_abort(format!(
+                "Incompatible type '{}' for constant array",
+                array_item_type
+            ));
 
-        return array_type.const_array(&values).into();
+            self::compile_null_ptr(context)
+        }
     }
+}
 
-    if array_type.is_float_type() {
-        let array_type: FloatType = array_type.into_float_type();
-
-        let values: Vec<FloatValue> = values
-            .iter()
-            .map(|value| value.into_float_value())
-            .collect();
-
-        return array_type.const_array(&values).into();
+fn get_array_type<'ctx>(
+    kind: &'ctx ThrushType,
+    cast_type: Option<&'ctx ThrushType>,
+) -> &'ctx ThrushType {
+    if let Some(cast_type) = cast_type {
+        if cast_type.is_mut_fixed_array_type()
+            || cast_type.is_ptr_fixed_array_type()
+            || cast_type.is_fixed_array_type()
+        {
+            cast_type
+        } else {
+            kind
+        }
+    } else {
+        kind
     }
+}
 
-    if array_type.is_array_type() {
-        let array_type: ArrayType = array_type.into_array_type();
+fn compute_indexes<'ctx>(
+    context: &mut LLVMCodeGenContext<'_, 'ctx>,
+    indexes: &'ctx [ThrushStatement],
+    kind: &'ctx ThrushType,
+) -> Vec<IntValue<'ctx>> {
+    let llvm_context = context.get_llvm_context();
+    indexes
+        .iter()
+        .flat_map(|index| {
+            if kind.is_fixed_array_type()
+                || kind.is_mut_fixed_array_type()
+                || kind.is_ptr_fixed_array_type()
+            {
+                let base: IntValue = intgen::integer(llvm_context, &ThrushType::U32, 0, false);
+                let depth: IntValue =
+                    valuegen::compile(context, index, Some(&ThrushType::U32)).into_int_value();
+                vec![base, depth]
+            } else {
+                let depth =
+                    valuegen::compile(context, index, Some(&ThrushType::U64)).into_int_value();
+                vec![depth]
+            }
+        })
+        .collect()
+}
 
-        let values: Vec<ArrayValue> = values
-            .iter()
-            .map(|value| value.into_array_value())
-            .collect();
+fn compile_null_ptr<'ctx>(context: &LLVMCodeGenContext<'_, 'ctx>) -> BasicValueEnum<'ctx> {
+    context
+        .get_llvm_context()
+        .ptr_type(AddressSpace::default())
+        .const_null()
+        .into()
+}
 
-        return array_type.const_array(&values).into();
-    }
+fn compile_string<'ctx>(
+    context: &mut LLVMCodeGenContext<'_, 'ctx>,
+    bytes: &'ctx [u8],
+    kind: &ThrushType,
+) -> BasicValueEnum<'ctx> {
+    let ptr: PointerValue =
+        utils::build_str_constant(context.get_llvm_module(), context.get_llvm_context(), bytes);
 
-    if array_type.is_struct_type() {
-        let array_type: StructType = array_type.into_struct_type();
-        let values: Vec<StructValue> = values
-            .iter()
-            .map(|value| value.into_struct_value())
-            .collect();
+    memory::load_anon(context, ptr, kind)
+}
 
-        return array_type.const_array(&values).into();
-    }
+fn handle_unknown_expression<'ctx, T: Display>(
+    context: &LLVMCodeGenContext<'_, 'ctx>,
+    expr: T,
+) -> BasicValueEnum<'ctx> {
+    self::codegen_abort(format!("Unsupported expression: '{}'", expr));
+    self::compile_null_ptr(context)
+}
 
-    if array_type.is_pointer_type() {
-        let array_type: PointerType = array_type.into_pointer_type();
-
-        let values: Vec<PointerValue> = values
-            .iter()
-            .map(|value| value.into_pointer_value())
-            .collect();
-
-        return array_type.const_array(&values).into();
-    }
-
-    logging::log(
-        LoggingType::Bug,
-        "An attempt was made to create an LLVM array from an incompatible type.",
-    );
-
-    unreachable!()
+fn codegen_abort<T: Display>(message: T) {
+    logging::log(LoggingType::Bug, &format!("CODE GENERATION: '{}'", message));
 }

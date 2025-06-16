@@ -1254,7 +1254,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
 
         if args.len() != parameter_types_size && !ignore_more_arguments {
             self.add_error(ThrushCompilerIssue::Error(
-                String::from("Type error"),
+                "Type error".into(),
                 format!(
                     "Expected {} arguments with types '{}', got {}.",
                     parameter_types_size,
@@ -1264,6 +1264,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
                 None,
                 *span,
             ));
+
             return Ok(());
         }
 
@@ -1894,7 +1895,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
                 } = stmt
                 {
                     self.symbols
-                        .new_function(name, (types, attributes.has_public_attribute()));
+                        .new_function(name, (types, attributes.has_ignore_attribute()));
                 }
             });
     }

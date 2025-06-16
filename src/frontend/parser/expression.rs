@@ -573,7 +573,7 @@ fn primary<'instr>(
                 return Ok(ThrushStatement::new_str(
                     bytes,
                     ThrushType::Str,
-                    ThrushType::FixedArray(ThrushType::U8.into(), size).into(),
+                    ThrushType::FixedArray(ThrushType::U8.into(), size),
                     span,
                 ));
             }

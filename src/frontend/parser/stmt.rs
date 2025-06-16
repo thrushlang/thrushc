@@ -1460,8 +1460,8 @@ pub fn build_function<'instr>(
             String::from("Expected parameter name."),
         )?;
 
-        let parameter_name: &str = parameter_tk.get_lexeme();
-        let parameter_span: Span = parameter_tk.get_span();
+        let name: &str = parameter_tk.get_lexeme();
+        let span: Span = parameter_tk.get_span();
 
         parser_ctx.consume(
             TokenType::Colon,
@@ -1474,11 +1474,11 @@ pub fn build_function<'instr>(
         parameters_types.push(parameter_type.clone());
 
         parameters.push(ThrushStatement::FunctionParameter {
-            name: parameter_name,
+            name,
             kind: parameter_type,
             position: parameter_position,
             is_mutable,
-            span: parameter_span,
+            span,
         });
 
         parameter_position += 1;

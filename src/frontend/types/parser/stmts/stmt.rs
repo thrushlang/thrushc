@@ -895,21 +895,6 @@ impl ThrushStatement<'_> {
     }
 
     #[inline]
-    pub fn is_constant_array(&self) -> bool {
-        match self {
-            ThrushStatement::Array { items, .. } => {
-                items.iter().all(|item| item.is_constant_array())
-            }
-
-            ThrushStatement::Integer { .. } => true,
-            ThrushStatement::Float { .. } => true,
-            ThrushStatement::Boolean { .. } => true,
-
-            _ => false,
-        }
-    }
-
-    #[inline]
     pub fn is_allocated_reference(&self) -> bool {
         matches!(
             self,

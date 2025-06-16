@@ -107,17 +107,28 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
 
                 repeated_attrs.iter().for_each(|attr| {
                     self.add_error(ThrushCompilerIssue::Error(
-                        String::from("Repeated attribute"),
-                        String::from("Repetitive attributes are disallowed."),
+                        "Repeated attribute".into(),
+                        "Repetitive attributes are disallowed.".into(),
                         None,
                         attr.get_span(),
                     ));
                 });
 
+                if attributes.has_extern_attribute() && !attributes.has_public_attribute() {
+                    if let Some(span) = attributes.match_attr(LLVMAttributeComparator::Extern) {
+                        self.add_error(ThrushCompilerIssue::Error(
+                            "Missing attribute".into(),
+                            "External functions always have public visibility. Add the '@public' attribute.".into(),
+                            None,
+                            span,
+                        ));
+                    }
+                }
+
                 if !attributes.has_extern_attribute() && attributes.has_ignore_attribute() {
                     if let Some(span) = attributes.match_attr(LLVMAttributeComparator::Ignore) {
                         self.add_error(ThrushCompilerIssue::Error(
-                            String::from("Attribute conflict"),
+                            String::from("Attribute error"),
                             String::from("The @ignore attribute requires the function to be annotated with @extern(\"something\")."),
                             None,
                             span,
