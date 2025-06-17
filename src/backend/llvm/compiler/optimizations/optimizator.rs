@@ -1,6 +1,6 @@
 use inkwell::{context::Context, module::Module};
 
-use crate::backend::llvm::compiler::optimizations::inline;
+use crate::backend::llvm::compiler::optimizations::{inline, size};
 
 #[derive(Debug)]
 pub struct LLVMCompilerOptimizer<'a, 'ctx> {
@@ -16,6 +16,7 @@ impl<'a, 'ctx> LLVMCompilerOptimizer<'a, 'ctx> {
     pub fn optimize(&self) {
         self.module.get_functions().for_each(|llvm_function| {
             inline::apply(self.context, llvm_function);
+            size::apply(self.context, llvm_function);
         });
     }
 }

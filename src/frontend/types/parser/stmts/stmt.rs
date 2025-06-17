@@ -56,7 +56,14 @@ pub enum ThrushStatement<'ctx> {
         span: Span,
     },
 
-    // Arrays
+    // Fixed Array
+    FixedArray {
+        items: Vec<ThrushStatement<'ctx>>,
+        kind: ThrushType,
+        span: Span,
+    },
+
+    // Array
     Array {
         items: Vec<ThrushStatement<'ctx>>,
         kind: ThrushType,
@@ -201,6 +208,7 @@ pub enum ThrushStatement<'ctx> {
     },
     FunctionParameter {
         name: &'ctx str,
+        ascii_name: &'ctx str,
         kind: ThrushType,
         position: u32,
         is_mutable: bool,
@@ -416,6 +424,7 @@ impl ThrushStatement<'_> {
             ThrushStatement::Constructor { kind, .. } => Ok(kind),
             ThrushStatement::Property { kind, .. } => Ok(kind),
             ThrushStatement::EnumValue { kind, .. } => Ok(kind),
+            ThrushStatement::FixedArray { kind, .. } => Ok(kind),
             ThrushStatement::Array { kind, .. } => Ok(kind),
             ThrushStatement::Struct { kind, .. } => Ok(kind),
             ThrushStatement::Enum { .. } => Ok(&ThrushType::Void),
@@ -468,6 +477,7 @@ impl ThrushStatement<'_> {
             } => Ok(kind),
 
             // Composite types
+            ThrushStatement::FixedArray { kind, .. } => Ok(kind),
             ThrushStatement::Array { kind, .. } => Ok(kind),
             ThrushStatement::Constructor { kind, .. } => Ok(kind),
             ThrushStatement::Property { kind, .. } => Ok(kind),
@@ -523,7 +533,7 @@ impl ThrushStatement<'_> {
             } => kind,
 
             // Composite types
-            ThrushStatement::Array { kind, .. } => kind,
+            ThrushStatement::FixedArray { kind, .. } => kind,
             ThrushStatement::Constructor { kind, .. } => kind,
             ThrushStatement::Property { kind, .. } => kind,
             ThrushStatement::EnumValue { kind, .. } => kind,
@@ -580,7 +590,9 @@ impl ThrushStatement<'_> {
             ThrushStatement::Alloc { span, .. } => *span,
 
             // Composite types
+            ThrushStatement::FixedArray { span, .. } => *span,
             ThrushStatement::Array { span, .. } => *span,
+
             ThrushStatement::Struct { span, .. } => *span,
             ThrushStatement::Enum { span, .. } => *span,
             ThrushStatement::EnumValue { span, .. } => *span,

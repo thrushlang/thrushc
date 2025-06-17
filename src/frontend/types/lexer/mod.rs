@@ -61,6 +61,9 @@ pub enum ThrushType {
     // Fixed FixedArray
     FixedArray(Arc<ThrushType>, u32),
 
+    // Array Type
+    Array(Arc<ThrushType>),
+
     // Address
     Addr,
 
@@ -73,6 +76,16 @@ impl ThrushTypeMutableExtensions for ThrushType {
     fn is_mut_fixed_array_type(&self) -> bool {
         if let ThrushType::Mut(inner) = self {
             if let ThrushType::FixedArray(..) = &**inner {
+                return true;
+            }
+        }
+
+        false
+    }
+
+    fn is_mut_array_type(&self) -> bool {
+        if let ThrushType::Mut(inner) = self {
+            if let ThrushType::Array(..) = &**inner {
                 return true;
             }
         }
@@ -199,6 +212,30 @@ impl ThrushTypePointerExtensions for ThrushType {
 
         false
     }
+
+    fn is_ptr_array_type(&self) -> bool {
+        if let ThrushType::Ptr(Some(inner)) = self {
+            return inner.is_ptr_array_type_inner();
+        }
+
+        false
+    }
+
+    fn is_ptr_array_type_inner(&self) -> bool {
+        if let ThrushType::Ptr(Some(inner)) = self {
+            return inner.is_ptr_array_type();
+        }
+
+        if let ThrushType::Ptr(None) = self {
+            return false;
+        }
+
+        if let ThrushType::Array(..) = self {
+            return true;
+        }
+
+        false
+    }
 }
 
 impl LLVMTypeExtensions for ThrushType {
@@ -228,7 +265,11 @@ impl ThrushType {
     }
 
     pub fn get_array_base_type(&self) -> &ThrushType {
-        if let ThrushType::FixedArray(inner, _) = self {
+        if let ThrushType::Array(inner, ..) = self {
+            return inner.get_array_base_type();
+        }
+
+        if let ThrushType::FixedArray(inner, ..) = self {
             return inner.get_array_base_type();
         }
 
@@ -252,6 +293,7 @@ impl ThrushType {
             ThrushType::Mut(inner_type) => inner_type.get_type_with_depth(depth - 1),
             ThrushType::Ptr(Some(inner_type)) => inner_type.get_type_with_depth(depth - 1),
             ThrushType::FixedArray(element_type, _) => element_type.get_type_with_depth(depth - 1),
+            ThrushType::Array(element_type) => element_type.get_type_with_depth(depth - 1),
             ThrushType::Struct(_, _) => self,
             ThrushType::S8
             | ThrushType::S16
@@ -347,6 +389,11 @@ impl ThrushType {
     }
 
     #[inline(always)]
+    pub fn is_array_type(&self) -> bool {
+        matches!(self, ThrushType::Array(..))
+    }
+
+    #[inline(always)]
     pub fn is_float_type(&self) -> bool {
         matches!(self, ThrushType::F32 | ThrushType::F64)
     }
@@ -401,26 +448,8 @@ impl ThrushType {
         )
     }
 
-    #[inline(always)]
-    pub fn is_mut_integer_type(&self) -> bool {
-        if let ThrushType::Mut(inner) = self {
-            return inner.is_integer_type();
-        }
-
-        false
-    }
-
-    #[inline(always)]
-    pub fn is_mut_float_type(&self) -> bool {
-        if let ThrushType::Mut(inner) = self {
-            return inner.is_float_type();
-        }
-
-        false
-    }
-
     #[inline]
-    pub fn get_fixed_array_type_herarchy(&self) -> u8 {
+    pub fn get_array_type_herarchy(&self) -> u8 {
         match self {
             ThrushType::Void => 0,
 
@@ -441,14 +470,15 @@ impl ThrushType {
             ThrushType::F32 => 12,
             ThrushType::F64 => 13,
 
-            ThrushType::Mut(subtype) => subtype.get_fixed_array_type_herarchy(),
+            ThrushType::Mut(subtype) => subtype.get_array_type_herarchy(),
 
             ThrushType::Addr => 14,
-            ThrushType::Ptr(Some(subtype)) => subtype.get_fixed_array_type_herarchy(),
+            ThrushType::Ptr(Some(subtype)) => subtype.get_array_type_herarchy(),
             ThrushType::Ptr(None) => 15,
 
             ThrushType::FixedArray(..) => 16,
-            ThrushType::Struct(..) => 17,
+            ThrushType::Array(..) => 17,
+            ThrushType::Struct(..) => 18,
         }
     }
 }

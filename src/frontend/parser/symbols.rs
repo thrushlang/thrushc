@@ -133,7 +133,7 @@ impl<'instr> SymbolsTable<'instr> {
         span: Span,
     ) -> Result<(), ThrushCompilerIssue> {
         if let Some(last_scope) = self.locals.last_mut() {
-            if last_scope.contains_key(name) {
+            if last_scope.contains_key(name) || self.parameters.contains_key(name) {
                 return Err(ThrushCompilerIssue::Error(
                     String::from("Local variable already declared"),
                     format!("'{}' local variable already declared before.", name),

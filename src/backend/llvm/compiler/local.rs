@@ -26,7 +26,8 @@ pub fn compile<'ctx>(local: Local<'ctx>, context: &mut LLVMCodeGenContext<'_, 'c
     context.alloc_local(local_name, ascii_name, local_type, attributes);
 
     if local_type.is_struct_type() {
-        compile_local_structure(local, context);
+        self::compile_local_structure(local, context);
+
         return;
     }
 

@@ -581,7 +581,7 @@ impl<'linter> Linter<'linter> {
             ));
         }
 
-        if let ThrushStatement::Array { items, .. } = stmt {
+        if let ThrushStatement::FixedArray { items, .. } = stmt {
             items.iter().for_each(|item| {
                 self.analyze_stmt(item);
             });

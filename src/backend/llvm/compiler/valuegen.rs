@@ -27,6 +27,7 @@ use inkwell::values::{
 };
 use inkwell::{AddressSpace, InlineAsmDialect};
 use inkwell::{builder::Builder, context::Context};
+
 use std::fmt::Display;
 
 pub fn compile<'ctx>(
@@ -108,8 +109,8 @@ pub fn compile<'ctx>(
         ThrushStatement::Index {
             index_to, indexes, ..
         } => self::compile_index(context, index_to, indexes),
-        ThrushStatement::Array { items, kind, .. } => {
-            self::compile_array(context, kind, items, cast_type)
+        ThrushStatement::FixedArray { items, kind, .. } => {
+            self::compile_fixed_array(context, kind, items, cast_type)
         }
         _ => self::handle_unknown_expression(context, expr),
     }
@@ -659,7 +660,7 @@ fn compile_index<'ctx>(
     }
 }
 
-fn compile_array<'ctx>(
+fn compile_fixed_array<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     kind: &ThrushType,
     items: &'ctx [ThrushStatement],
@@ -683,7 +684,7 @@ fn fixed_array<'ctx>(
 ) -> BasicValueEnum<'ctx> {
     let llvm_context: &Context = context.get_llvm_context();
     let llvm_builder: &Builder = context.get_llvm_builder();
-    let array_type: &ThrushType = self::get_array_type(kind, cast_type);
+    let array_type: &ThrushType = self::get_fixed_array_type(kind, cast_type);
     let array_items_type: &ThrushType = array_type.get_array_base_type();
 
     let array_ptr: PointerValue =
@@ -728,7 +729,8 @@ fn constant_fixed_array<'ctx>(
 ) -> BasicValueEnum<'ctx> {
     let llvm_context: &Context = context.get_llvm_context();
 
-    let array_item_type: &ThrushType = self::get_array_type(kind, cast_type).get_array_base_type();
+    let array_item_type: &ThrushType =
+        self::get_fixed_array_type(kind, cast_type).get_array_base_type();
     let array_type: BasicTypeEnum = typegen::generate_type(llvm_context, array_item_type);
 
     let values: Vec<BasicValueEnum> = items
@@ -800,7 +802,7 @@ fn constant_fixed_array<'ctx>(
     }
 }
 
-fn get_array_type<'ctx>(
+fn get_fixed_array_type<'ctx>(
     kind: &'ctx ThrushType,
     cast_type: Option<&'ctx ThrushType>,
 ) -> &'ctx ThrushType {

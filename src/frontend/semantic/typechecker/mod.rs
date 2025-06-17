@@ -1009,7 +1009,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
             return Ok(());
         }
 
-        if let ThrushStatement::Array { items, kind, span } = stmt {
+        if let ThrushStatement::FixedArray { items, kind, span } = stmt {
             if kind.is_void_type() {
                 return Err(ThrushCompilerIssue::Error(
                     "Type error".into(),
@@ -1215,7 +1215,10 @@ impl<'type_checker> TypeChecker<'type_checker> {
         span: &Span,
     ) -> Result<(), ThrushCompilerIssue> {
         if (from_type.is_numeric_type() && cast_type.is_numeric_type())
-            || (from_type.is_numeric_type() && is_allocated_ref && cast_type.is_ptr_type())
+            || (from_type.is_numeric_type()
+                || from_type.is_array_type()
+                || from_type.is_fixed_array_type()
+                || from_type.is_struct_type() && is_allocated_ref && cast_type.is_ptr_type())
             || (from_type.is_mut_numeric_type() && cast_type.is_numeric_type())
             || (from_type.is_mut_type() || from_type.is_ptr_type() && cast_type.is_ptr_type())
             || (from_type.is_ptr_type() || cast_type.is_mut_type())

@@ -79,6 +79,7 @@ pub enum TokenType {
     Stack,
     Static,
     New,
+    Fixed,
     Import,
     SizeOf,
     Mut,
@@ -201,11 +202,6 @@ impl TokenType {
     #[must_use]
     pub const fn is_enum_keyword(&self) -> bool {
         matches!(self, TokenType::Enum)
-    }
-
-    #[must_use]
-    pub const fn is_plusplus_operator(&self) -> bool {
-        matches!(self, TokenType::PlusPlus)
     }
 
     #[must_use]

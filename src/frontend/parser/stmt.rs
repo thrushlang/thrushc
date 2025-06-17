@@ -1465,6 +1465,8 @@ pub fn build_function<'instr>(
         )?;
 
         let name: &str = parameter_tk.get_lexeme();
+        let ascii_name: &str = parameter_tk.get_ascii_lexeme();
+
         let span: Span = parameter_tk.get_span();
 
         parser_ctx.consume(
@@ -1479,6 +1481,7 @@ pub fn build_function<'instr>(
 
         parameters.push(ThrushStatement::FunctionParameter {
             name,
+            ascii_name,
             kind: parameter_type,
             position: parameter_position,
             is_mutable,

@@ -89,6 +89,7 @@ impl std::fmt::Display for TokenType {
             TokenType::Greater => write!(f, ">"),
             TokenType::GreaterEq => write!(f, ">="),
             TokenType::Identifier => write!(f, "identifier"),
+            TokenType::Fixed => write!(f, "fixed"),
             TokenType::Instr => write!(f, "instr"),
             TokenType::LBrace => write!(f, "{{"),
             TokenType::LBracket => write!(f, "["),
@@ -139,6 +140,9 @@ impl std::fmt::Display for ThrushType {
             ThrushType::Mut(any_type) => write!(f, "mut {}", any_type),
             ThrushType::FixedArray(kind, size) => {
                 write!(f, "[{}; {}]", kind, size)
+            }
+            ThrushType::Array(kind) => {
+                write!(f, "[{}]", kind)
             }
             ThrushType::Struct(name, fields) => {
                 write!(f, "struct {} {{ ", name)?;

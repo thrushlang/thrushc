@@ -8,8 +8,8 @@ pub fn float(lexeme: &str, span: Span) -> Result<(ThrushType, f64), ThrushCompil
 
     if dot_count > 1 {
         return Err(ThrushCompilerIssue::Error(
-            String::from("Syntax error"),
-            String::from("Float values should only contain one dot."),
+            "Syntax error".into(),
+            "Float values should only contain one dot.".into(),
             None,
             span,
         ));
@@ -24,8 +24,8 @@ pub fn float(lexeme: &str, span: Span) -> Result<(ThrushType, f64), ThrushCompil
     }
 
     Err(ThrushCompilerIssue::Error(
-        String::from("Syntax error"),
-        String::from("Out of bounds."),
+        "Syntax error".into(),
+        "Out of bounds.".into(),
         None,
         span,
     ))
@@ -64,8 +64,8 @@ pub fn integer(lexeme: &str, span: Span) -> Result<(ThrushType, u64), ThrushComp
                     return Ok((ThrushType::S64, number as u64));
                 } else {
                     return Err(ThrushCompilerIssue::Error(
-                        String::from("Syntax error"),
-                        String::from("Out of bounds signed hexadecimal format."),
+                        "Syntax error".into(),
+                        "Out of bounds signed hexadecimal format.".into(),
                         None,
                         span,
                     ));
@@ -84,8 +84,8 @@ pub fn integer(lexeme: &str, span: Span) -> Result<(ThrushType, u64), ThrushComp
                         return Ok((ThrushType::U64, number as u64));
                     } else {
                         return Err(ThrushCompilerIssue::Error(
-                            String::from("Syntax error"),
-                            String::from("Out of bounds unsigned hexadecimal format."),
+                            "Syntax error".into(),
+                            "Out of bounds unsigned hexadecimal format.".into(),
                             None,
                             span,
                         ));
@@ -93,8 +93,8 @@ pub fn integer(lexeme: &str, span: Span) -> Result<(ThrushType, u64), ThrushComp
                 }
 
                 Err(_) => Err(ThrushCompilerIssue::Error(
-                    String::from("Syntax error"),
-                    String::from("Invalid numeric hexadecimal format."),
+                    "Syntax error".into(),
+                    "Invalid numeric hexadecimal format.".into(),
                     None,
                     span,
                 )),

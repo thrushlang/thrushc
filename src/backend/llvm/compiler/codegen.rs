@@ -654,10 +654,13 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         parameter: FunctionParameter<'ctx>,
     ) {
         let parameter_name: &str = parameter.0;
-        let parameter_type: &ThrushType = parameter.1;
-        let parameter_position: u32 = parameter.2;
+        let parameter_ascii_name: &str = parameter.1;
+        let parameter_type: &ThrushType = parameter.2;
+        let parameter_position: u32 = parameter.3;
 
         if let Some(raw_value_llvm_parameter) = llvm_function.get_nth_param(parameter_position) {
+            raw_value_llvm_parameter.set_name(parameter_ascii_name);
+
             self.context.alloc_function_parameter(
                 parameter_name,
                 parameter_type,
@@ -698,6 +701,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         function_parameters.iter().for_each(|parameter| {
             if let ThrushStatement::FunctionParameter {
                 name,
+                ascii_name,
                 kind,
                 position,
                 is_mutable,
@@ -706,7 +710,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
             {
                 self.compile_function_parameter(
                     llvm_function,
-                    (name, kind, *position, *is_mutable),
+                    (name, ascii_name, kind, *position, *is_mutable),
                 );
             }
         });
