@@ -138,7 +138,7 @@ pub fn dump_x86_64_clang_windows(
 
         if File::open(&compressed_file).is_err() {
             if self::decompress_zip(compressed_file, llvm_backend).is_ok() {
-                let canonical_windows_clang_path: PathBuf = output_path.join("clang.exe");
+                let canonical_windows_clang_path: PathBuf = output_path.join("bin/clang.exe");
 
                 if canonical_windows_clang_path.exists() {
                     return Ok(canonical_windows_clang_path);
@@ -164,6 +164,8 @@ pub fn dump_x86_64_clang_windows(
             logging::LoggingType::Error,
             "Failed to open Clang compressed at windows.",
         );
+
+        return Err(());
     }
 
     logging::log(
