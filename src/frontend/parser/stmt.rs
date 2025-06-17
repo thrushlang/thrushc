@@ -996,6 +996,8 @@ fn build_local<'instr>(
     )?;
 
     let name: &str = local_tk.get_lexeme();
+    let ascii_name: &str = local_tk.get_ascii_lexeme();
+
     let span: Span = local_tk.get_span();
 
     parser_ctx.consume(
@@ -1018,6 +1020,7 @@ fn build_local<'instr>(
 
         return Ok(ThrushStatement::Local {
             name,
+            ascii_name,
             kind: local_type,
             value: ThrushStatement::Null { span }.into(),
             attributes,
@@ -1049,6 +1052,7 @@ fn build_local<'instr>(
 
     let local: ThrushStatement = ThrushStatement::Local {
         name,
+        ascii_name,
         kind: local_type,
         value: value.into(),
         attributes,
@@ -1669,13 +1673,13 @@ fn build_assembler_syntax_attribute<'instr>(
     let syntax_tk: &Token = parser_ctx.consume(
         TokenType::Str,
         String::from("Syntax error"),
-        String::from("Expected a string literal for @asmsyntax(\"INTEL\")."),
+        String::from("Expected a string literal for @asmsyntax(\"Intel\")."),
     )?;
 
     let specified_syntax: &str = syntax_tk.get_lexeme();
     let syntax_span: Span = syntax_tk.get_span();
 
-    let syntaxes: [&'static str; 2] = ["ATT", "INTEL"];
+    let syntaxes: [&'static str; 2] = ["Intel", "AT&T"];
 
     if !syntaxes.contains(&specified_syntax) {
         return Err(ThrushCompilerIssue::Error(

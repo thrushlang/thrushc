@@ -261,15 +261,6 @@ impl<'type_checker> TypeChecker<'type_checker> {
                 ));
             }
 
-            if !lli_value_type.is_ptr_type() && !lli_value_type.is_address_type() {
-                self.add_error(ThrushCompilerIssue::Error(
-                    "Type error".into(),
-                    "Expected always 'ptr<T>', 'ptr', or 'addr' type.".into(),
-                    None,
-                    *span,
-                ));
-            }
-
             if let Err(mismatch_type_error) =
                 self.validate_types(lli_type, lli_value_type, Some(lli_value), None, None, span)
             {
@@ -541,7 +532,9 @@ impl<'type_checker> TypeChecker<'type_checker> {
         {
             let from_type: &ThrushType = from.get_value_type()?;
 
-            if let Err(error) = self.validate_type_cast(from_type, cast_type, span) {
+            if let Err(error) =
+                self.validate_type_cast(from_type, cast_type, from.is_allocated_reference(), span)
+            {
                 self.add_error(error);
             }
 
@@ -1218,13 +1211,15 @@ impl<'type_checker> TypeChecker<'type_checker> {
         &self,
         from_type: &ThrushType,
         cast_type: &ThrushType,
+        is_allocated_ref: bool,
         span: &Span,
     ) -> Result<(), ThrushCompilerIssue> {
         if (from_type.is_numeric_type() && cast_type.is_numeric_type())
+            || (from_type.is_numeric_type() && is_allocated_ref && cast_type.is_ptr_type())
             || (from_type.is_mut_numeric_type() && cast_type.is_numeric_type())
             || (from_type.is_mut_type() || from_type.is_ptr_type() && cast_type.is_ptr_type())
             || (from_type.is_ptr_type() || cast_type.is_mut_type())
-            || (from_type.is_str_type() && cast_type.is_ptr_type())
+            || (from_type.is_str_type() && is_allocated_ref && cast_type.is_ptr_type())
         {
             Ok(())
         } else {

@@ -69,10 +69,11 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
     pub fn alloc_local(
         &mut self,
         name: &'ctx str,
+        ascii_name: &'ctx str,
         kind: &'ctx ThrushType,
         attributes: &'ctx ThrushAttributes<'ctx>,
     ) {
-        let ptr: PointerValue = alloc::alloc(self, kind, attributes);
+        let ptr: PointerValue = alloc::alloc(self, ascii_name, kind, attributes);
 
         let local: SymbolAllocated =
             SymbolAllocated::new(SymbolToAllocate::Local, kind, ptr.into());
@@ -87,7 +88,7 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
         }
     }
 
-    pub fn alloc_low_level_instruction(
+    pub fn alloc_lli(
         &mut self,
         name: &'ctx str,
         kind: &'ctx ThrushType,

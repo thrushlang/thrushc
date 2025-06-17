@@ -224,6 +224,7 @@ pub enum ThrushStatement<'ctx> {
     // Locals variables
     Local {
         name: &'ctx str,
+        ascii_name: &'ctx str,
         kind: ThrushType,
         value: Box<ThrushStatement<'ctx>>,
         attributes: ThrushAttributes<'ctx>,

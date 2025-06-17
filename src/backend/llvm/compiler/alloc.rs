@@ -20,6 +20,7 @@ use crate::{
 
 pub fn alloc<'ctx>(
     context: &LLVMCodeGenContext<'_, 'ctx>,
+    name: &str,
     kind: &ThrushType,
     attributes: &'ctx ThrushAttributes<'ctx>,
 ) -> PointerValue<'ctx> {
@@ -32,19 +33,20 @@ pub fn alloc<'ctx>(
         attributes.has_stack_attr(),
         kind.is_probably_heap_allocated(llvm_context, target_data),
     ) {
-        (true, _, _) => self::try_alloc_heap(context, llvm_type, kind),
-        (false, true, _) => self::try_alloc_stack(context, llvm_type, kind),
-        (false, false, true) => self::try_alloc_heap(context, llvm_type, kind),
-        _ => self::try_alloc_stack(context, llvm_type, kind),
+        (true, _, _) => self::try_alloc_heap(context, llvm_type, name, kind),
+        (false, true, _) => self::try_alloc_stack(context, llvm_type, name, kind),
+        (false, false, true) => self::try_alloc_heap(context, llvm_type, name, kind),
+        _ => self::try_alloc_stack(context, llvm_type, name, kind),
     }
 }
 
 fn try_alloc_heap<'ctx>(
     context: &LLVMCodeGenContext<'_, 'ctx>,
     llvm_type: BasicTypeEnum<'ctx>,
+    name: &str,
     kind: &ThrushType,
 ) -> PointerValue<'ctx> {
-    match context.get_llvm_builder().build_malloc(llvm_type, "") {
+    match context.get_llvm_builder().build_malloc(llvm_type, name) {
         Ok(ptr) => ptr,
         Err(_) => {
             self::codegen_abort(format!(
@@ -60,9 +62,10 @@ fn try_alloc_heap<'ctx>(
 fn try_alloc_stack<'ctx>(
     context: &LLVMCodeGenContext<'_, 'ctx>,
     llvm_type: BasicTypeEnum<'ctx>,
+    name: &str,
     kind: &ThrushType,
 ) -> PointerValue<'ctx> {
-    match context.get_llvm_builder().build_alloca(llvm_type, "") {
+    match context.get_llvm_builder().build_alloca(llvm_type, name) {
         Ok(ptr) => ptr,
         Err(_) => {
             self::codegen_abort(format!(

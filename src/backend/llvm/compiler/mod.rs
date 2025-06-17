@@ -12,7 +12,7 @@ pub mod llis;
 pub mod local;
 pub mod memory;
 pub mod mutation;
-pub mod passes;
+pub mod optimizations;
 pub mod predicates;
 pub mod rawgen;
 pub mod typegen;

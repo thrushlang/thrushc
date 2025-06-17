@@ -562,6 +562,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         match stmt {
             ThrushStatement::Local {
                 name,
+                ascii_name,
                 kind,
                 value,
                 attributes,
@@ -569,11 +570,11 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 ..
             } => {
                 if *undefined {
-                    self.context.alloc_local(name, kind, attributes);
+                    self.context.alloc_local(name, ascii_name, kind, attributes);
                     return;
                 }
 
-                local::compile((name, kind, value, attributes), self.context);
+                local::compile((name, ascii_name, kind, value, attributes), self.context);
             }
 
             ThrushStatement::LLI {

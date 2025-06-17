@@ -1229,6 +1229,8 @@ fn build_asm_code_block<'instr>(
         String::from("Expected 'asm' keyword."),
     )?;
 
+    let asm_type: ThrushType = typegen::build_type(parser_context)?;
+
     let span: Span = asm_tk.get_span();
 
     let mut args: Vec<ThrushStatement> = Vec::with_capacity(10);
@@ -1378,8 +1380,6 @@ fn build_asm_code_block<'instr>(
         String::from("Syntax error"),
         String::from("Expected '}'."),
     )?;
-
-    let asm_type: ThrushType = typegen::build_type(parser_context)?;
 
     Ok(ThrushStatement::AsmValue {
         assembler,

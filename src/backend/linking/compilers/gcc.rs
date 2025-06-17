@@ -26,8 +26,8 @@ impl<'clang> GCC<'clang> {
 
         #[cfg(target_os = "linux")]
         {
-            if let Some(gcc_path) = self.config.get_custom_gcc() {
-                if self.config.use_gcc() {
+            if self.config.use_gcc() {
+                if let Some(gcc_path) = self.config.get_custom_gcc() {
                     if self.handle_command(&mut self.build_gcc_command(gcc_path)) {
                         return Ok(start_time.elapsed());
                     }

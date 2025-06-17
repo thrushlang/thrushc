@@ -17,12 +17,13 @@ use inkwell::{
 
 pub fn compile<'ctx>(local: Local<'ctx>, context: &mut LLVMCodeGenContext<'_, 'ctx>) {
     let local_name: &str = local.0;
-    let local_type: &ThrushType = local.1;
-    let local_value: &ThrushStatement = local.2;
+    let ascii_name: &str = local.1;
+    let local_type: &ThrushType = local.2;
+    let local_value: &ThrushStatement = local.3;
 
-    let attributes: &ThrushAttributes = local.3;
+    let attributes: &ThrushAttributes = local.4;
 
-    context.alloc_local(local_name, local_type, attributes);
+    context.alloc_local(local_name, ascii_name, local_type, attributes);
 
     if local_type.is_struct_type() {
         compile_local_structure(local, context);
@@ -37,7 +38,7 @@ pub fn compile<'ctx>(local: Local<'ctx>, context: &mut LLVMCodeGenContext<'_, 'c
 }
 
 fn compile_local_structure<'ctx>(local: Local<'ctx>, context: &mut LLVMCodeGenContext<'_, 'ctx>) {
-    let local_value: &ThrushStatement = local.2;
+    let local_value: &ThrushStatement = local.3;
 
     let symbol: SymbolAllocated = context.get_allocated_symbol(local.0);
 

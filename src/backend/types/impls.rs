@@ -57,8 +57,8 @@ impl Display for CallConvention {
 impl AssemblerFunctionExtensions for str {
     fn assembler_syntax_attr_to_inline_assembler_dialect(syntax: &str) -> InlineAsmDialect {
         match syntax {
-            "INTEL" => InlineAsmDialect::Intel,
-            "ATT" => InlineAsmDialect::ATT,
+            "Intel" => InlineAsmDialect::Intel,
+            "AT&T" => InlineAsmDialect::ATT,
             any => {
                 logging::log(
                     LoggingType::Bug,

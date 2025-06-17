@@ -13,11 +13,11 @@ pub fn compile<'ctx>(
     expr: &'ctx ThrushStatement,
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
 ) {
-    let value: BasicValueEnum = if kind.is_ptr_type() {
+    let value: BasicValueEnum = if kind.is_ptr_type() || kind.is_mut_type() {
         rawgen::compile(context, expr, Some(kind))
     } else {
         valuegen::compile(context, expr, Some(kind))
     };
 
-    context.alloc_low_level_instruction(name, kind, value);
+    context.alloc_lli(name, kind, value);
 }
