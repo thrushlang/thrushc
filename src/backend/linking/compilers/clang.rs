@@ -54,6 +54,14 @@ impl<'clang> Clang<'clang> {
         #[cfg(target_os = "linux")]
         {
             if self.config.use_clang() {
+                if let Some(custom_clang) = self.config.get_custom_clang() {
+                    if self.handle_command(&mut self.build_clang_command(custom_clang)) {
+                        return Ok(start_time.elapsed());
+                    }
+
+                    return Err(());
+                }
+
                 let embedded_raw_clang: (&'static [u8], &'static str, PathBuf, PathBuf, PathBuf) =
                     get_x86_64_linux_clang();
                 let clang_raw_bytes: &'static [u8] = embedded_raw_clang.0;
@@ -79,20 +87,19 @@ impl<'clang> Clang<'clang> {
                 return Err(());
             }
 
-            if let Some(custom_clang) = self.config.get_custom_clang() {
-                if self.handle_command(&mut self.build_clang_command(custom_clang)) {
-                    return Ok(start_time.elapsed());
-                }
-
-                return Err(());
-            }
-
             Err(())
         }
 
         #[cfg(target_os = "windows")]
         {
             if self.config.use_clang() {
+                if let Some(custom_clang) = self.config.get_custom_clang() {
+                    if self.handle_command(&mut self.build_clang_command(custom_clang)) {
+                        return Ok(start_time.elapsed());
+                    }
+                    return Err(());
+                }
+
                 let embedded_raw_clang: (&'static [u8], &'static str, PathBuf, PathBuf, PathBuf) =
                     get_x86_64_windows_clang();
                 let clang_raw_bytes: &'static [u8] = embedded_raw_clang.0;
@@ -115,13 +122,6 @@ impl<'clang> Clang<'clang> {
                     return Err(());
                 }
 
-                return Err(());
-            }
-
-            if let Some(custom_clang) = self.config.get_custom_clang() {
-                if self.handle_command(&mut self.build_clang_command(custom_clang)) {
-                    return Ok(start_time.elapsed());
-                }
                 return Err(());
             }
 
