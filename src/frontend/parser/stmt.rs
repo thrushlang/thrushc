@@ -14,7 +14,7 @@ use crate::{
                 traits::{StructFieldsExtensions, ThrushAttributesExtensions, TokenExtensions},
                 types::{CustomTypeFields, EnumFields, StructFields, ThrushAttributes},
             },
-            symbols::types::ParametersTypes,
+            parser::symbols::types::ParametersTypes,
         },
     },
     lazy_static,

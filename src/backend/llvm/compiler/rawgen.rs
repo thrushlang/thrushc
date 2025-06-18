@@ -4,7 +4,7 @@
 use super::context::LLVMCodeGenContext;
 use super::typegen;
 use crate::backend::llvm::compiler::attributes::LLVMAttribute;
-use crate::backend::llvm::compiler::memory::{self, SymbolAllocated};
+use crate::backend::llvm::compiler::memory::{self, LLVMAllocationSite, SymbolAllocated};
 use crate::backend::llvm::compiler::{builtins, cast, intgen, rawgen, utils, valuegen};
 use crate::backend::types::representations::LLVMFunction;
 use crate::backend::types::traits::AssemblerFunctionExtensions;
@@ -14,6 +14,7 @@ use crate::frontend::types::lexer::traits::{
     ThrushTypeMutableExtensions, ThrushTypePointerExtensions,
 };
 
+use crate::frontend::types::parser::stmts::sites::LLIAllocationSite;
 use crate::frontend::types::parser::stmts::stmt::ThrushStatement;
 use crate::frontend::types::parser::stmts::traits::ThrushAttributesExtensions;
 use crate::frontend::types::parser::stmts::types::ThrushAttributes;
@@ -51,6 +52,12 @@ pub fn compile<'ctx>(
         ThrushStatement::Property { name, indexes, .. } => {
             self::compile_property(context, name, indexes)
         }
+
+        ThrushStatement::Alloc {
+            type_to_alloc,
+            site_allocation,
+            ..
+        } => self::compile_alloc(context, type_to_alloc, site_allocation),
 
         ThrushStatement::MemCpy {
             source,
@@ -283,6 +290,16 @@ fn compile_property<'ctx>(
     }
 
     ptr.into()
+}
+
+fn compile_alloc<'ctx>(
+    context: &mut LLVMCodeGenContext<'_, 'ctx>,
+    type_to_alloc: &ThrushType,
+    site_allocation: &LLIAllocationSite,
+) -> BasicValueEnum<'ctx> {
+    let site: LLVMAllocationSite = site_allocation.to_llvm_allocation_site();
+
+    memory::alloc_anon(site, context, type_to_alloc, type_to_alloc.is_all_ptr()).into()
 }
 
 fn compile_reference<'ctx>(

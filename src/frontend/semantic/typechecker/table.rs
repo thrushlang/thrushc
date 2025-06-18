@@ -1,6 +1,6 @@
 use ahash::AHashMap as HashMap;
 
-use crate::frontend::types::typechecker::types::{
+use crate::frontend::types::semantic::typechecker::types::{
     TypeCheckerAssemblerFunction, TypeCheckerAssemblerFunctions, TypeCheckerFunction,
     TypeCheckerFunctions, TypeCheckerLLI, TypeCheckerLLIs, TypeCheckerLocal, TypeCheckerLocals,
 };

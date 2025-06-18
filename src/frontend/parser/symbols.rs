@@ -4,7 +4,7 @@ use crate::{
         lexer::span::Span,
         types::{
             parser::stmts::stmt::ThrushStatement,
-            symbols::types::{
+            parser::symbols::types::{
                 AssemblerFunction, AssemblerFunctions, ConstantSymbol, Constants, CustomTypeSymbol,
                 CustomTypes, EnumSymbol, Enums, FoundSymbolId, Function, Functions, LLISymbol,
                 LLIs, LocalSymbol, Locals, ParameterSymbol, Parameters, Struct, Structs,

@@ -3,8 +3,8 @@ use crate::backend::llvm::compiler::{cast, floatgen};
 use crate::core::console::logging;
 use crate::frontend::lexer::tokentype::TokenType;
 use crate::frontend::types::lexer::ThrushType;
+use crate::frontend::types::parser::repr::UnaryOperation;
 use crate::frontend::types::parser::stmts::stmt::ThrushStatement;
-use crate::frontend::types::representations::UnaryOperation;
 
 use super::{context::LLVMCodeGenContext, memory::SymbolAllocated};
 

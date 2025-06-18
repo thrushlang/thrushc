@@ -6,12 +6,12 @@ use crate::{
         errors::standard::ThrushCompilerIssue,
     },
     frontend::types::{
-        linter::{
-            traits::LLVMAttributeComparatorExtensions,
-            types::{LLVMAttributeComparator, LinterAttributeApplicant},
-        },
         parser::stmts::{
             stmt::ThrushStatement, traits::ThrushAttributesExtensions, types::ThrushAttributes,
+        },
+        semantic::linter::{
+            traits::LLVMAttributeComparatorExtensions,
+            types::{LLVMAttributeComparator, LinterAttributeApplicant},
         },
     },
 };

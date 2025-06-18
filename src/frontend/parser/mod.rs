@@ -17,7 +17,7 @@ use crate::core::errors::standard::ThrushCompilerIssue;
 use crate::frontend::lexer::token::Token;
 use crate::frontend::lexer::tokentype::TokenType;
 use crate::frontend::types::parser::stmts::stmt::ThrushStatement;
-use crate::frontend::types::symbols::types::{AssemblerFunctions, Functions};
+use crate::frontend::types::parser::symbols::types::{AssemblerFunctions, Functions};
 
 const MINIMAL_STATEMENT_CAPACITY: usize = 100_000;
 const MINIMAL_GLOBAL_CAPACITY: usize = 2024;

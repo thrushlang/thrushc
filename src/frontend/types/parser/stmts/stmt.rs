@@ -12,7 +12,7 @@ use crate::{
         lexer::{span::Span, tokentype::TokenType},
         types::{
             lexer::ThrushType,
-            representations::{AssemblerFunctionRepresentation, FunctionRepresentation},
+            parser::repr::{AssemblerFunctionRepresentation, FunctionRepresentation},
         },
     },
 };

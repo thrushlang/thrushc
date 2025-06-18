@@ -10,7 +10,7 @@ use crate::{
         valuegen::{self},
     },
     core::console::logging::{self, LoggingType},
-    frontend::{lexer::tokentype::TokenType, types::representations::BinaryOperation},
+    frontend::{lexer::tokentype::TokenType, types::parser::repr::BinaryOperation},
 };
 
 pub fn ptr_operation<'ctx>(

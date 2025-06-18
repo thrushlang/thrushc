@@ -3,7 +3,7 @@ use crate::{
     core::console::logging::{self, LoggingType},
     frontend::{
         lexer::tokentype::TokenType,
-        types::{lexer::ThrushType, representations::BinaryOperation},
+        types::{lexer::ThrushType, parser::repr::BinaryOperation},
     },
 };
 

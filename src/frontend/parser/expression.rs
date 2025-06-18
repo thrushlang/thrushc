@@ -20,7 +20,7 @@ use crate::{
                 },
                 types::{Constructor, EnumField, EnumFields, ThrushAttributes},
             },
-            symbols::{
+            parser::symbols::{
                 traits::{
                     ConstantSymbolExtensions, FunctionExtensions, LLISymbolExtensions,
                     LocalSymbolExtensions,
@@ -366,9 +366,7 @@ fn primary<'instr>(
 
             alloc_type = ThrushType::Ptr(Some(alloc_type.into()));
 
-            let attributes: Vec<LLVMAttribute> = if !parser_context
-                .match_token(TokenType::RBrace)?
-            {
+            let attributes: Vec<LLVMAttribute> = if !parser_context.check(TokenType::RBrace) {
                 stmt::build_attributes(parser_context, &[TokenType::RBrace, TokenType::SemiColon])?
             } else {
                 Vec::new()

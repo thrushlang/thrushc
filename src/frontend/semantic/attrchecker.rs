@@ -8,10 +8,12 @@ use crate::{
         errors::standard::ThrushCompilerIssue,
     },
     frontend::types::{
-        attrchecker::types::AttributeCheckerAttributeApplicant,
-        linter::{traits::LLVMAttributeComparatorExtensions, types::LLVMAttributeComparator},
         parser::stmts::{
             stmt::ThrushStatement, traits::ThrushAttributesExtensions, types::ThrushAttributes,
+        },
+        semantic::{
+            attrchecker::types::AttributeCheckerAttributeApplicant,
+            linter::{traits::LLVMAttributeComparatorExtensions, types::LLVMAttributeComparator},
         },
     },
 };

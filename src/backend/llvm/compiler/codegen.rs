@@ -1,14 +1,14 @@
 #![allow(clippy::collapsible_if)]
 
-use crate::backend::llvm::compiler::{mutation, rawgen, utils};
+use crate::backend::llvm::compiler::{builtins, mutation, rawgen, utils};
 use crate::backend::types::{representations::LLVMFunction, traits::AssemblerFunctionExtensions};
 use crate::core::console::logging::{self, LoggingType};
 use crate::frontend::types::lexer::ThrushType;
-use crate::frontend::types::parser::stmts::traits::ThrushAttributesExtensions;
-use crate::frontend::types::parser::stmts::types::ThrushAttributes;
-use crate::frontend::types::representations::{
+use crate::frontend::types::parser::repr::{
     AssemblerFunctionRepresentation, FunctionParameter, FunctionRepresentation,
 };
+use crate::frontend::types::parser::stmts::traits::ThrushAttributesExtensions;
+use crate::frontend::types::parser::stmts::types::ThrushAttributes;
 
 use crate::frontend::types::parser::stmts::stmt::ThrushStatement;
 
@@ -621,13 +621,66 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 valuegen::compile(self.context, stmt, None);
             }
 
-            _ => (),
+            stmt => self.codegen_builtins(stmt),
         }
 
         /* ######################################################################
 
 
             LLVM CODEGEN | LOOSE EXPRESSIONS - END
+
+
+        ########################################################################*/
+    }
+
+    fn codegen_builtins(&mut self, stmt: &'ctx ThrushStatement) {
+        /* ######################################################################
+
+
+            LLVM CODEGEN | BUILTINS - START
+
+
+        ########################################################################*/
+
+        match stmt {
+            ThrushStatement::MemCpy {
+                source,
+                destination,
+                size,
+                ..
+            } => {
+                builtins::memcpy::compile(self.context, source, destination, size);
+            }
+
+            ThrushStatement::MemMove {
+                source,
+                destination,
+                size,
+                ..
+            } => {
+                builtins::memmove::compile(self.context, source, destination, size);
+            }
+
+            ThrushStatement::MemSet {
+                destination,
+                new_size,
+                size,
+                ..
+            } => {
+                builtins::memset::compile(self.context, destination, new_size, size);
+            }
+
+            ThrushStatement::SizeOf { sizeof, .. } => {
+                builtins::sizeof::compile(self.context, sizeof);
+            }
+
+            _ => (),
+        }
+
+        /* ######################################################################
+
+
+            LLVM CODEGEN | BUILTINS - END
 
 
         ########################################################################*/

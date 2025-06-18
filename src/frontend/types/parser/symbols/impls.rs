@@ -13,7 +13,7 @@ use crate::{
                 },
                 types::{EnumField, EnumFields, StructFields},
             },
-            symbols::types::EnumSymbol,
+            parser::symbols::types::EnumSymbol,
         },
     },
 };

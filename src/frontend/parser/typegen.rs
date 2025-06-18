@@ -13,7 +13,7 @@ use crate::{
                 },
                 types::{CustomTypeFields, StructFields},
             },
-            symbols::types::{CustomTypeSymbol, Struct},
+            parser::symbols::types::{CustomTypeSymbol, Struct},
         },
     },
 };

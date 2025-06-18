@@ -34,9 +34,11 @@ pub fn compile<'ctx>(
 
     let target_data: &TargetData = context.get_target_data();
 
-    let src_type: BasicTypeEnum = typegen::generate_type(llvm_context, source.get_type_unwrapped());
+    let src_type: BasicTypeEnum =
+        typegen::generate_subtype(llvm_context, source.get_type_unwrapped());
+
     let dest_type: BasicTypeEnum =
-        typegen::generate_type(llvm_context, destination.get_type_unwrapped());
+        typegen::generate_subtype(llvm_context, destination.get_type_unwrapped());
 
     let src_alignment: u32 = target_data.get_preferred_alignment(&src_type);
     let dest_alignment: u32 = target_data.get_preferred_alignment(&dest_type);

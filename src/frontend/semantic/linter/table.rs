@@ -2,15 +2,13 @@ use ahash::AHashMap as HashMap;
 
 use crate::frontend::{
     lexer::span::Span,
-    types::{
-        linter::types::{
-            LinterAssemblerFunctionInfo, LinterAssemblerFunctions, LinterConstantInfo,
-            LinterConstants, LinterEnumFieldInfo, LinterEnums, LinterEnumsFieldsInfo,
-            LinterFunctionInfo, LinterFunctionParameterInfo, LinterFunctionParameters,
-            LinterFunctions, LinterLLIInfo, LinterLLIs, LinterLocalInfo, LinterLocals,
-            LinterStructFieldInfo, LinterStructFieldsInfo, LinterStructs,
-        },
-        parser::stmts::stmt::ThrushStatement,
+    types::parser::stmts::stmt::ThrushStatement,
+    types::semantic::linter::types::{
+        LinterAssemblerFunctionInfo, LinterAssemblerFunctions, LinterConstantInfo, LinterConstants,
+        LinterEnumFieldInfo, LinterEnums, LinterEnumsFieldsInfo, LinterFunctionInfo,
+        LinterFunctionParameterInfo, LinterFunctionParameters, LinterFunctions, LinterLLIInfo,
+        LinterLLIs, LinterLocalInfo, LinterLocals, LinterStructFieldInfo, LinterStructFieldsInfo,
+        LinterStructs,
     },
 };
 

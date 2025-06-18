@@ -2,7 +2,7 @@ use crate::{
     core::errors::standard::ThrushCompilerIssue,
     frontend::{
         lexer::{span::Span, tokentype::TokenType},
-        types::{lexer::ThrushType, linter::types::LLVMAttributeComparator},
+        types::{lexer::ThrushType, semantic::linter::types::LLVMAttributeComparator},
     },
 };
 

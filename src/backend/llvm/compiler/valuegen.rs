@@ -82,12 +82,6 @@ pub fn compile<'ctx>(
 
         ThrushStatement::SizeOf { sizeof, .. } => builtins::sizeof::compile(context, sizeof),
 
-        ThrushStatement::Alloc {
-            type_to_alloc,
-            site_allocation,
-            ..
-        } => self::compile_alloc(context, type_to_alloc, site_allocation),
-
         ThrushStatement::Write {
             write_to,
             write_type,

@@ -17,7 +17,7 @@ use crate::{
                 ThrushTypePointerExtensions,
             },
             parser::stmts::{traits::StructExtensions, types::StructFields},
-            symbols::types::Struct,
+            parser::symbols::types::Struct,
         },
     },
 };

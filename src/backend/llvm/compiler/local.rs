@@ -1,5 +1,5 @@
 use crate::frontend::types::{
-    lexer::ThrushType, parser::stmts::types::ThrushAttributes, representations::Local,
+    lexer::ThrushType, parser::repr::Local, parser::stmts::types::ThrushAttributes,
 };
 
 use super::{

@@ -4,7 +4,9 @@ use crate::frontend::{
     lexer::span::Span,
     types::{
         lexer::ThrushType,
-        linter::{traits::LLVMAttributeComparatorExtensions, types::LLVMAttributeComparator},
+        semantic::linter::{
+            traits::LLVMAttributeComparatorExtensions, types::LLVMAttributeComparator,
+        },
     },
 };
 
