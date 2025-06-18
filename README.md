@@ -13,7 +13,7 @@ You can see the syntax of the language properly in the repository: __https://git
 
 ## Minimal dependencies of executables dispatched by ``thrushc``
 
-- ``libc`` C Standard Library.
+- ``libc`` C Standard Library Interface.
 - ``crt`` C Runtime.
 
 # ¿How it works?
