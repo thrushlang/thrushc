@@ -5,28 +5,67 @@
 
 # The Thrush Compiler 
 
-The Thrush Compiler is tasked with converting Thrush source code (`.th`) into machine code for each architecture, using Ahead Of Time (**AOT**) compilation mode, leveraging the LLVM infrastructure (**LLVM-C API**) during the process.
+The Thrush compiler is responsible for transferring the source code from Thrush ``.th`` files directly to the target specified by the programmer. 
+
+## Compilation Modes
+
+### AOT
+
+By default, the compiler compiles AOT to the target specified by the programmer, which means that it does __not execute the code at compile time__.
+
+### JIT
+
+The compiler will in the future have the ability to __execute code at compile time__, with a system that links the necessary C libraries at compile time, something that the JIT of some programming languages ​​does.
+
+### Target Architectures
+
+> [!WARNING]
+> This doesn't mean it has the ability to compile 100% for every architecture, since compilation depends on whether the host system has certain tools required to output compiled code for that architecture. However, the assembler should theoretically output without problems.
+
+This represents all possible combinations of triple targets or targets, which the compiler can compile with the backend it has available.
+
+### LLVM Targets
+
+The compiler supports all triple targets, in addition to the architectures supported by the entire LLVM-C API.
+
+- ``x86_64``
+- ``AArch64``
+- ``RISC-V``
+- ``ARM``
+- ``MIPS``
+- ``PowerPC``
+- ``SystemZ``
+- ``AMDGPU``
+- ``Hexagon``
+- ``Lanai``
+- ``LoongArch``
+- ``MSP430``
+- ``NVPTX``
+- ``SPARC``
+- ``XCore``
+- ``BPF``
+- ``SPIR-V``
+- ``WebAssembly``
 
 ## Syntax 
 
 You can see the syntax of the language properly in the repository: __https://github.com/thrushlang/syntax__
 
-## Minimal dependencies of executables dispatched by ``thrushc``
-
-- ``libc`` C Standard Library Interface.
-- ``crt`` C Runtime.
-
 # ¿How it works?
 
 Currently, the only backend available for the thrush compiler to compile is the current LLVM, using the LLVM-C API. 
 
-By default the compiler has the LLVM-C API fully embedded, in addition to multiple linkers; Avoiding any direct external dependencies.
+#### Embedded Clang
+
+The compiler has Clang compiled for Linux & Windows inside the executable in case the programmer does not have access to it; however, you can specify a custom Clang & GCC.
+
+#### Code Generations Phases
 
 The code generation is in 3 phases. 
 
 - Intermediate Code Generation (``LLVM IR``).
 - Emit object files (``.o``). 
-- Linking with LLVM Linker (``LLD``).
+- Linking with some linker through the ``Clang`` or ``GCC`` C compilers.
 
 In summary:
 
