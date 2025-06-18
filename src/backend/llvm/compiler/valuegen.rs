@@ -6,7 +6,7 @@ use super::typegen;
 use crate::backend::llvm::compiler::attributes::LLVMAttribute;
 use crate::backend::llvm::compiler::memory::{self, LLVMAllocationSite, SymbolAllocated};
 use crate::backend::llvm::compiler::{
-    array, binaryop, cast, floatgen, intgen, rawgen, unaryop, utils, valuegen,
+    array, binaryop, builtins, cast, floatgen, intgen, rawgen, unaryop, utils, valuegen,
 };
 
 use crate::backend::types::traits::AssemblerFunctionExtensions;
@@ -21,7 +21,7 @@ use crate::frontend::types::parser::stmts::stmt::ThrushStatement;
 use crate::frontend::types::parser::stmts::traits::ThrushAttributesExtensions;
 use crate::frontend::types::parser::stmts::types::ThrushAttributes;
 
-use inkwell::types::{BasicType, BasicTypeEnum, FunctionType, PointerType};
+use inkwell::types::{BasicTypeEnum, FunctionType, PointerType};
 use inkwell::values::{
     BasicMetadataValueEnum, BasicValueEnum, FunctionValue, IntValue, PointerValue, StructValue,
 };
@@ -29,6 +29,7 @@ use inkwell::{AddressSpace, InlineAsmDialect};
 use inkwell::{builder::Builder, context::Context};
 
 use std::fmt::Display;
+use std::rc::Rc;
 
 pub fn compile<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
@@ -79,7 +80,7 @@ pub fn compile<'ctx>(
 
         ThrushStatement::Group { expression, .. } => self::compile(context, expression, cast_type),
 
-        ThrushStatement::SizeOf { sizeof, .. } => self::compile_sizeof(context, sizeof),
+        ThrushStatement::SizeOf { sizeof, .. } => builtins::sizeof::compile(context, sizeof),
 
         ThrushStatement::Alloc {
             type_to_alloc,
@@ -302,20 +303,6 @@ fn compile_unary_op<'ctx>(
     unaryop::unary_op(context, (operator, kind, expression), cast_type)
 }
 
-fn compile_sizeof<'ctx>(
-    context: &LLVMCodeGenContext<'_, 'ctx>,
-    sizeof: &ThrushType,
-) -> BasicValueEnum<'ctx> {
-    let sizeof_type = typegen::generate_type(context.get_llvm_context(), sizeof);
-    match sizeof_type.size_of() {
-        Some(size) => size.into(),
-        None => {
-            self::codegen_abort(format!("Unable to get size of type '{}'", sizeof));
-            unreachable!()
-        }
-    }
-}
-
 fn compile_alloc<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     type_to_alloc: &ThrushType,
@@ -329,8 +316,8 @@ fn compile_alloc<'ctx>(
 fn compile_write<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     write_to: &'ctx (
-        Option<(&'ctx str, Box<ThrushStatement<'ctx>>)>,
-        Option<Box<ThrushStatement<'ctx>>>,
+        Option<(&'ctx str, Rc<ThrushStatement<'ctx>>)>,
+        Option<Rc<ThrushStatement<'ctx>>>,
     ),
     write_type: &'ctx ThrushType,
     write_value: &'ctx ThrushStatement,
@@ -359,8 +346,8 @@ fn compile_write<'ctx>(
 fn compile_load<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     value: &'ctx (
-        Option<(&'ctx str, Box<ThrushStatement<'ctx>>)>,
-        Option<Box<ThrushStatement<'ctx>>>,
+        Option<(&'ctx str, Rc<ThrushStatement<'ctx>>)>,
+        Option<Rc<ThrushStatement<'ctx>>>,
     ),
     kind: &ThrushType,
 ) -> BasicValueEnum<'ctx> {
@@ -385,8 +372,8 @@ fn compile_load<'ctx>(
 fn compile_address<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     address_to: &'ctx (
-        Option<(&'ctx str, Box<ThrushStatement<'ctx>>)>,
-        Option<Box<ThrushStatement<'ctx>>>,
+        Option<(&'ctx str, Rc<ThrushStatement<'ctx>>)>,
+        Option<Rc<ThrushStatement<'ctx>>>,
     ),
     indexes: &'ctx [ThrushStatement],
 ) -> BasicValueEnum<'ctx> {
@@ -653,8 +640,8 @@ fn compile_inline_asm<'ctx>(
 fn compile_index<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     index_to: &'ctx (
-        Option<(&'ctx str, Box<ThrushStatement<'ctx>>)>,
-        Option<Box<ThrushStatement<'ctx>>>,
+        Option<(&'ctx str, Rc<ThrushStatement<'ctx>>)>,
+        Option<Rc<ThrushStatement<'ctx>>>,
     ),
     indexes: &'ctx [ThrushStatement],
 ) -> BasicValueEnum<'ctx> {

@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use ahash::AHashMap as HashMap;
 
 use crate::{
@@ -428,7 +430,7 @@ fn build_conditional<'instr>(
         });
     }
 
-    let mut otherwise: Option<Box<ThrushStatement>> = None;
+    let mut otherwise: Option<Rc<ThrushStatement>> = None;
 
     if parser_ctx.match_token(TokenType::Else)? {
         let span: Span = parser_ctx.previous().span;

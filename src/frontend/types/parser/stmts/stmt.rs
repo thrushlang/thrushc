@@ -1,6 +1,8 @@
 #![allow(clippy::upper_case_acronyms)]
 #![allow(clippy::type_complexity)]
 
+use std::rc::Rc;
+
 use crate::{
     core::{
         console::logging::{self, LoggingType},
@@ -72,8 +74,8 @@ pub enum ThrushStatement<'ctx> {
 
     Index {
         index_to: (
-            Option<(&'ctx str, Box<ThrushStatement<'ctx>>)>,
-            Option<Box<ThrushStatement<'ctx>>>,
+            Option<(&'ctx str, Rc<ThrushStatement<'ctx>>)>,
+            Option<Rc<ThrushStatement<'ctx>>>,
         ),
         indexes: Vec<ThrushStatement<'ctx>>,
         is_mutable: bool,
@@ -103,7 +105,7 @@ pub enum ThrushStatement<'ctx> {
 
     Property {
         name: &'ctx str,
-        reference: Box<ThrushStatement<'ctx>>,
+        reference: Rc<ThrushStatement<'ctx>>,
         indexes: Vec<(ThrushType, u32)>,
         kind: ThrushType,
         span: Span,
@@ -111,37 +113,37 @@ pub enum ThrushStatement<'ctx> {
 
     // Conditionals
     If {
-        cond: Box<ThrushStatement<'ctx>>,
-        block: Box<ThrushStatement<'ctx>>,
+        cond: Rc<ThrushStatement<'ctx>>,
+        block: Rc<ThrushStatement<'ctx>>,
         elfs: Vec<ThrushStatement<'ctx>>,
-        otherwise: Option<Box<ThrushStatement<'ctx>>>,
+        otherwise: Option<Rc<ThrushStatement<'ctx>>>,
         span: Span,
     },
     Elif {
-        cond: Box<ThrushStatement<'ctx>>,
-        block: Box<ThrushStatement<'ctx>>,
+        cond: Rc<ThrushStatement<'ctx>>,
+        block: Rc<ThrushStatement<'ctx>>,
         span: Span,
     },
     Else {
-        block: Box<ThrushStatement<'ctx>>,
+        block: Rc<ThrushStatement<'ctx>>,
         span: Span,
     },
 
     // Loops
     For {
-        local: Box<ThrushStatement<'ctx>>,
-        cond: Box<ThrushStatement<'ctx>>,
-        actions: Box<ThrushStatement<'ctx>>,
-        block: Box<ThrushStatement<'ctx>>,
+        local: Rc<ThrushStatement<'ctx>>,
+        cond: Rc<ThrushStatement<'ctx>>,
+        actions: Rc<ThrushStatement<'ctx>>,
+        block: Rc<ThrushStatement<'ctx>>,
         span: Span,
     },
     While {
-        cond: Box<ThrushStatement<'ctx>>,
-        block: Box<ThrushStatement<'ctx>>,
+        cond: Rc<ThrushStatement<'ctx>>,
+        block: Rc<ThrushStatement<'ctx>>,
         span: Span,
     },
     Loop {
-        block: Box<ThrushStatement<'ctx>>,
+        block: Rc<ThrushStatement<'ctx>>,
         span: Span,
     },
 
@@ -167,7 +169,7 @@ pub enum ThrushStatement<'ctx> {
     },
     EnumValue {
         name: String,
-        value: Box<ThrushStatement<'ctx>>,
+        value: Rc<ThrushStatement<'ctx>>,
         kind: ThrushType,
         span: Span,
     },
@@ -176,7 +178,7 @@ pub enum ThrushStatement<'ctx> {
 
     // Entrypoint -> fn main() {}
     EntryPoint {
-        body: Box<ThrushStatement<'ctx>>,
+        body: Rc<ThrushStatement<'ctx>>,
         span: Span,
     },
     AssemblerFunction {
@@ -201,7 +203,7 @@ pub enum ThrushStatement<'ctx> {
         ascii_name: &'ctx str,
         parameters: Vec<ThrushStatement<'ctx>>,
         parameter_types: Vec<ThrushType>,
-        body: Box<ThrushStatement<'ctx>>,
+        body: Rc<ThrushStatement<'ctx>>,
         return_type: ThrushType,
         attributes: ThrushAttributes<'ctx>,
         span: Span,
@@ -215,7 +217,7 @@ pub enum ThrushStatement<'ctx> {
         span: Span,
     },
     Return {
-        expression: Option<Box<ThrushStatement<'ctx>>>,
+        expression: Option<Rc<ThrushStatement<'ctx>>>,
         kind: ThrushType,
         span: Span,
     },
@@ -224,7 +226,7 @@ pub enum ThrushStatement<'ctx> {
     Const {
         name: &'ctx str,
         kind: ThrushType,
-        value: Box<ThrushStatement<'ctx>>,
+        value: Rc<ThrushStatement<'ctx>>,
         attributes: ThrushAttributes<'ctx>,
         span: Span,
     },
@@ -234,7 +236,7 @@ pub enum ThrushStatement<'ctx> {
         name: &'ctx str,
         ascii_name: &'ctx str,
         kind: ThrushType,
-        value: Box<ThrushStatement<'ctx>>,
+        value: Rc<ThrushStatement<'ctx>>,
         attributes: ThrushAttributes<'ctx>,
         undefined: bool,
         is_mutable: bool,
@@ -254,10 +256,10 @@ pub enum ThrushStatement<'ctx> {
     // Mutation
     Mut {
         source: (
-            Option<(&'ctx str, Box<ThrushStatement<'ctx>>)>,
-            Option<Box<ThrushStatement<'ctx>>>,
+            Option<(&'ctx str, Rc<ThrushStatement<'ctx>>)>,
+            Option<Rc<ThrushStatement<'ctx>>>,
         ),
-        value: Box<ThrushStatement<'ctx>>,
+        value: Rc<ThrushStatement<'ctx>>,
         kind: ThrushType,
         cast_type: ThrushType,
         span: Span,
@@ -267,7 +269,7 @@ pub enum ThrushStatement<'ctx> {
     LLI {
         name: &'ctx str,
         kind: ThrushType,
-        value: Box<ThrushStatement<'ctx>>,
+        value: Rc<ThrushStatement<'ctx>>,
         span: Span,
     },
 
@@ -281,8 +283,8 @@ pub enum ThrushStatement<'ctx> {
 
     Address {
         address_to: (
-            Option<(&'ctx str, Box<ThrushStatement<'ctx>>)>,
-            Option<Box<ThrushStatement<'ctx>>>,
+            Option<(&'ctx str, Rc<ThrushStatement<'ctx>>)>,
+            Option<Rc<ThrushStatement<'ctx>>>,
         ),
         indexes: Vec<ThrushStatement<'ctx>>,
         kind: ThrushType,
@@ -291,32 +293,32 @@ pub enum ThrushStatement<'ctx> {
 
     Write {
         write_to: (
-            Option<(&'ctx str, Box<ThrushStatement<'ctx>>)>,
-            Option<Box<ThrushStatement<'ctx>>>,
+            Option<(&'ctx str, Rc<ThrushStatement<'ctx>>)>,
+            Option<Rc<ThrushStatement<'ctx>>>,
         ),
-        write_value: Box<ThrushStatement<'ctx>>,
+        write_value: Rc<ThrushStatement<'ctx>>,
         write_type: ThrushType,
         span: Span,
     },
 
     Load {
         value: (
-            Option<(&'ctx str, Box<ThrushStatement<'ctx>>)>,
-            Option<Box<ThrushStatement<'ctx>>>,
+            Option<(&'ctx str, Rc<ThrushStatement<'ctx>>)>,
+            Option<Rc<ThrushStatement<'ctx>>>,
         ),
         kind: ThrushType,
         span: Span,
     },
 
     Deref {
-        value: Box<ThrushStatement<'ctx>>,
+        value: Rc<ThrushStatement<'ctx>>,
         kind: ThrushType,
         span: Span,
     },
 
     // Casts
     As {
-        from: Box<ThrushStatement<'ctx>>,
+        from: Rc<ThrushStatement<'ctx>>,
         cast: ThrushType,
         span: Span,
     },
@@ -339,9 +341,9 @@ pub enum ThrushStatement<'ctx> {
     },
 
     BinaryOp {
-        left: Box<ThrushStatement<'ctx>>,
+        left: Rc<ThrushStatement<'ctx>>,
         operator: TokenType,
-        right: Box<ThrushStatement<'ctx>>,
+        right: Rc<ThrushStatement<'ctx>>,
         kind: ThrushType,
         span: Span,
     },
@@ -349,13 +351,13 @@ pub enum ThrushStatement<'ctx> {
     UnaryOp {
         operator: TokenType,
         kind: ThrushType,
-        expression: Box<ThrushStatement<'ctx>>,
+        expression: Rc<ThrushStatement<'ctx>>,
         is_pre: bool,
         span: Span,
     },
 
     Group {
-        expression: Box<ThrushStatement<'ctx>>,
+        expression: Rc<ThrushStatement<'ctx>>,
         kind: ThrushType,
         span: Span,
     },
@@ -367,6 +369,31 @@ pub enum ThrushStatement<'ctx> {
         span: Span,
     },
 
+    MemCpy {
+        source: Rc<ThrushStatement<'ctx>>,
+        destination: Rc<ThrushStatement<'ctx>>,
+        size: Rc<ThrushStatement<'ctx>>,
+        kind: ThrushType,
+        span: Span,
+    },
+
+    MemMove {
+        source: Rc<ThrushStatement<'ctx>>,
+        destination: Rc<ThrushStatement<'ctx>>,
+        size: Rc<ThrushStatement<'ctx>>,
+        kind: ThrushType,
+        span: Span,
+    },
+
+    MemSet {
+        destination: Rc<ThrushStatement<'ctx>>,
+        new_size: Rc<ThrushStatement<'ctx>>,
+        size: Rc<ThrushStatement<'ctx>>,
+        kind: ThrushType,
+        span: Span,
+    },
+
+    // Extra
     Pass {
         span: Span,
     },
@@ -417,8 +444,13 @@ impl ThrushStatement<'_> {
             ThrushStatement::UnaryOp { kind, .. } => Ok(kind),
             ThrushStatement::Group { kind, .. } => Ok(kind),
             ThrushStatement::Index { kind, .. } => Ok(kind),
-            ThrushStatement::SizeOf { kind, .. } => Ok(kind),
             ThrushStatement::AsmValue { kind, .. } => Ok(kind),
+
+            // Builtins
+            ThrushStatement::SizeOf { kind, .. } => Ok(kind),
+            ThrushStatement::MemCpy { kind, .. } => Ok(kind),
+            ThrushStatement::MemMove { kind, .. } => Ok(kind),
+            ThrushStatement::MemSet { kind, .. } => Ok(kind),
 
             // Composite Types
             ThrushStatement::Constructor { kind, .. } => Ok(kind),
@@ -492,7 +524,11 @@ impl ThrushStatement<'_> {
 
             // Type operations
             ThrushStatement::As { cast: kind, .. } => Ok(kind),
+
+            // Builtins
             ThrushStatement::SizeOf { kind, .. } => Ok(kind),
+            ThrushStatement::MemCpy { kind, .. } => Ok(kind),
+            ThrushStatement::MemMove { kind, .. } => Ok(kind),
 
             // ASM Code Block
             ThrushStatement::AsmValue { kind, .. } => Ok(kind),
@@ -547,7 +583,11 @@ impl ThrushStatement<'_> {
 
             // Type operations
             ThrushStatement::As { cast: kind, .. } => kind,
+
+            // Builtins
             ThrushStatement::SizeOf { kind, .. } => kind,
+            ThrushStatement::MemCpy { kind, .. } => kind,
+            ThrushStatement::MemSet { kind, .. } => kind,
 
             // ASM Code Block
             ThrushStatement::AsmValue { kind, .. } => kind,
@@ -605,10 +645,15 @@ impl ThrushStatement<'_> {
             ThrushStatement::UnaryOp { span, .. } => *span,
             ThrushStatement::Group { span, .. } => *span,
             ThrushStatement::Index { span, .. } => *span,
-            ThrushStatement::SizeOf { span, .. } => *span,
 
             // Type conversions
             ThrushStatement::As { span, .. } => *span,
+
+            // Builtins
+            ThrushStatement::SizeOf { span, .. } => *span,
+            ThrushStatement::MemCpy { span, .. } => *span,
+            ThrushStatement::MemMove { span, .. } => *span,
+            ThrushStatement::MemSet { span, .. } => *span,
 
             // Control flow
             ThrushStatement::If { span, .. } => *span,

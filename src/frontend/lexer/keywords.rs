@@ -38,10 +38,12 @@ lazy_static! {
         keywords.insert("addr", TokenType::Addr);
         keywords.insert("load", TokenType::Load);
         keywords.insert("write", TokenType::Write);
-
         keywords.insert("fixed", TokenType::Fixed);
 
         keywords.insert("sizeof", TokenType::SizeOf);
+        keywords.insert("memset", TokenType::MemSet);
+        keywords.insert("memmove", TokenType::MemMove);
+        keywords.insert("memcpy", TokenType::MemCpy);
 
         keywords.insert("@import", TokenType::Import);
 

@@ -1,5 +1,7 @@
 #![allow(clippy::type_complexity)]
 
+use std::rc::Rc;
+
 use crate::{
     backend::llvm::compiler::attributes::LLVMAttribute,
     core::errors::{position::CompilationPosition, standard::ThrushCompilerIssue},
@@ -318,9 +320,13 @@ fn primary<'instr>(
     let primary: ThrushStatement = match &parser_context.peek().kind {
         TokenType::Fixed => self::build_fixed_array(parser_context)?,
         TokenType::LBracket => self::build_array(parser_context)?,
-
         TokenType::Deref => self::build_deref(parser_context)?,
+
         TokenType::SizeOf => self::build_sizeof(parser_context)?,
+        TokenType::MemSet => self::build_memset(parser_context)?,
+        TokenType::MemMove => self::build_memmove(parser_context)?,
+        TokenType::MemCpy => self::build_memcpy(parser_context)?,
+
         TokenType::Asm => self::build_asm_code_block(parser_context)?,
 
         TokenType::Alloc => {
@@ -1549,8 +1555,8 @@ pub fn build_index<'instr>(
     span: Span,
 ) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
     let index_to: (
-        Option<(&str, Box<ThrushStatement>)>,
-        Option<Box<ThrushStatement>>,
+        Option<(&str, Rc<ThrushStatement>)>,
+        Option<Rc<ThrushStatement>>,
     ) = if let Some(name) = reference {
         let reference: ThrushStatement = self::build_reference(parser_context, name, span)?;
 
@@ -1697,7 +1703,13 @@ pub fn build_sizeof<'instr>(
     let sizeof_tk: &Token = parser_context.consume(
         TokenType::SizeOf,
         String::from("Syntax error"),
-        String::from("Expected 'sizeof'."),
+        String::from("Expected 'sizeof' keyword."),
+    )?;
+
+    parser_context.consume(
+        TokenType::LParen,
+        String::from("Syntax error"),
+        String::from("Expected '('."),
     )?;
 
     let sizeof_span: Span = sizeof_tk.get_span();
@@ -1712,6 +1724,12 @@ pub fn build_sizeof<'instr>(
 
         let reference_type: &ThrushType = reference.get_value_type()?;
 
+        parser_context.consume(
+            TokenType::RParen,
+            String::from("Syntax error"),
+            String::from("Expected ')'."),
+        )?;
+
         return Ok(ThrushStatement::SizeOf {
             sizeof: reference_type.clone(),
             kind: ThrushType::U64,
@@ -1721,9 +1739,165 @@ pub fn build_sizeof<'instr>(
 
     let sizeof_type: ThrushType = typegen::build_type(parser_context)?;
 
+    parser_context.consume(
+        TokenType::RParen,
+        String::from("Syntax error"),
+        String::from("Expected ')'."),
+    )?;
+
     Ok(ThrushStatement::SizeOf {
         sizeof: sizeof_type,
         kind: ThrushType::U64,
         span: sizeof_span,
+    })
+}
+
+pub fn build_memcpy<'instr>(
+    parser_context: &mut ParserContext<'instr>,
+) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
+    let memcpy_tk: &Token = parser_context.consume(
+        TokenType::MemCpy,
+        String::from("Syntax error"),
+        String::from("Expected 'memcpy' keyword."),
+    )?;
+
+    parser_context.consume(
+        TokenType::LParen,
+        String::from("Syntax error"),
+        String::from("Expected '('."),
+    )?;
+
+    let span: Span = memcpy_tk.get_span();
+
+    let source: ThrushStatement = self::build_expr(parser_context)?;
+
+    parser_context.consume(
+        TokenType::Comma,
+        String::from("Syntax error"),
+        String::from("Expected ','."),
+    )?;
+
+    let destination: ThrushStatement = self::build_expr(parser_context)?;
+
+    parser_context.consume(
+        TokenType::Comma,
+        String::from("Syntax error"),
+        String::from("Expected ','."),
+    )?;
+
+    let size: ThrushStatement = self::build_expr(parser_context)?;
+
+    parser_context.consume(
+        TokenType::RParen,
+        String::from("Syntax error"),
+        String::from("Expected ')'."),
+    )?;
+
+    Ok(ThrushStatement::MemCpy {
+        source: source.into(),
+        destination: destination.into(),
+        size: size.into(),
+        kind: ThrushType::Ptr(None),
+        span,
+    })
+}
+
+pub fn build_memmove<'instr>(
+    parser_context: &mut ParserContext<'instr>,
+) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
+    let memcpy_tk: &Token = parser_context.consume(
+        TokenType::MemMove,
+        String::from("Syntax error"),
+        String::from("Expected 'memmove' keyword."),
+    )?;
+
+    parser_context.consume(
+        TokenType::LParen,
+        String::from("Syntax error"),
+        String::from("Expected '('."),
+    )?;
+
+    let span: Span = memcpy_tk.get_span();
+
+    let source: ThrushStatement = self::build_expr(parser_context)?;
+
+    parser_context.consume(
+        TokenType::Comma,
+        String::from("Syntax error"),
+        String::from("Expected ','."),
+    )?;
+
+    let destination: ThrushStatement = self::build_expr(parser_context)?;
+
+    parser_context.consume(
+        TokenType::Comma,
+        String::from("Syntax error"),
+        String::from("Expected ','."),
+    )?;
+
+    let size: ThrushStatement = self::build_expr(parser_context)?;
+
+    parser_context.consume(
+        TokenType::RParen,
+        String::from("Syntax error"),
+        String::from("Expected ')'."),
+    )?;
+
+    Ok(ThrushStatement::MemMove {
+        source: source.into(),
+        destination: destination.into(),
+        size: size.into(),
+        kind: ThrushType::Ptr(None),
+        span,
+    })
+}
+
+pub fn build_memset<'instr>(
+    parser_context: &mut ParserContext<'instr>,
+) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
+    let memcpy_tk: &Token = parser_context.consume(
+        TokenType::MemSet,
+        String::from("Syntax error"),
+        String::from("Expected 'memset' keyword."),
+    )?;
+
+    parser_context.consume(
+        TokenType::LParen,
+        String::from("Syntax error"),
+        String::from("Expected '('."),
+    )?;
+
+    let span: Span = memcpy_tk.get_span();
+
+    let destination: ThrushStatement = self::build_expr(parser_context)?;
+
+    parser_context.consume(
+        TokenType::Comma,
+        String::from("Syntax error"),
+        String::from("Expected ','."),
+    )?;
+
+    let new_size: ThrushStatement = self::build_expr(parser_context)?;
+
+    parser_context.consume(
+        TokenType::Comma,
+        String::from("Syntax error"),
+        String::from("Expected ','."),
+    )?;
+
+    let size: ThrushStatement = self::build_expr(parser_context)?;
+
+    parser_context.consume(
+        TokenType::RParen,
+        String::from("Syntax error"),
+        String::from("Expected ')'."),
+    )?;
+
+    Ok(ThrushStatement::MemSet {
+        destination: destination.into(),
+        new_size: new_size.into(),
+        size: size.into(),
+        kind: ThrushType::Ptr(None),
+        span,
     })
 }

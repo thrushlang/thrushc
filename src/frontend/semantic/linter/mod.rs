@@ -659,6 +659,58 @@ impl<'linter> Linter<'linter> {
 
 
         ########################################################################*/
+
+        /* ######################################################################
+
+
+            LINTER BUILTINS | START
+
+
+        ########################################################################*/
+
+        if let ThrushStatement::MemSet {
+            destination,
+            new_size,
+            size,
+            ..
+        } = stmt
+        {
+            self.analyze_stmt(destination);
+            self.analyze_stmt(new_size);
+            self.analyze_stmt(size);
+        }
+
+        if let ThrushStatement::MemMove {
+            source,
+            destination,
+            size,
+            ..
+        } = stmt
+        {
+            self.analyze_stmt(source);
+            self.analyze_stmt(destination);
+            self.analyze_stmt(size);
+        }
+
+        if let ThrushStatement::MemCpy {
+            source,
+            destination,
+            size,
+            ..
+        } = stmt
+        {
+            self.analyze_stmt(source);
+            self.analyze_stmt(destination);
+            self.analyze_stmt(size);
+        }
+
+        /* ######################################################################
+
+
+            LINTER BUILTINS | END
+
+
+        ########################################################################*/
     }
 
     pub fn generate_scoped_warnings(&mut self) {

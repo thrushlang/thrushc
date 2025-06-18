@@ -778,6 +778,153 @@ impl<'type_checker> TypeChecker<'type_checker> {
 
 
         ########################################################################*/
+        if let ThrushStatement::MemSet {
+            destination,
+            new_size,
+            size,
+            ..
+        } = stmt
+        {
+            let destination_type: &ThrushType = destination.get_value_type()?;
+            let destination_span: Span = destination.get_span();
+
+            let new_size_span: Span = new_size.get_span();
+            let size_span: Span = size.get_span();
+
+            if !destination_type.is_ptr_type()
+                && !destination_type.is_address_type()
+                && !destination_type.is_mut_type()
+            {
+                self.add_error(ThrushCompilerIssue::Error(
+                    "Type error".into(),
+                    "Expected 'ptr<T>', 'ptr', 'addr', or 'mut T' type.".into(),
+                    None,
+                    destination_span,
+                ));
+            }
+
+            if !new_size.is_unsigned_integer()? || !new_size.is_moreu32bit_integer()? {
+                self.add_error(ThrushCompilerIssue::Error(
+                    "Type error".into(),
+                    "Expected any unsigned integer value more than or equal to 32 bits.".into(),
+                    None,
+                    new_size_span,
+                ));
+            }
+
+            if !size.is_unsigned_integer()? || !size.is_moreu32bit_integer()? {
+                self.add_error(ThrushCompilerIssue::Error(
+                    "Type error".into(),
+                    "Expected any unsigned integer value more than or equal to 32 bits.".into(),
+                    None,
+                    size_span,
+                ));
+            }
+
+            return Ok(());
+        }
+
+        if let ThrushStatement::MemMove {
+            source,
+            destination,
+            size,
+            ..
+        } = stmt
+        {
+            let source_type: &ThrushType = source.get_value_type()?;
+            let source_span: Span = source.get_span();
+
+            let destination_type: &ThrushType = destination.get_value_type()?;
+            let destination_span: Span = destination.get_span();
+
+            let size_span: Span = size.get_span();
+
+            if !source_type.is_ptr_type()
+                && !source_type.is_address_type()
+                && !source_type.is_mut_type()
+            {
+                self.add_error(ThrushCompilerIssue::Error(
+                    "Type error".into(),
+                    "Expected 'ptr<T>', 'ptr', 'addr', or 'mut T' type.".into(),
+                    None,
+                    source_span,
+                ));
+            }
+
+            if !destination_type.is_ptr_type()
+                && !destination_type.is_address_type()
+                && !destination_type.is_mut_type()
+            {
+                self.add_error(ThrushCompilerIssue::Error(
+                    "Type error".into(),
+                    "Expected 'ptr<T>', 'ptr', 'addr', or 'mut T' type.".into(),
+                    None,
+                    destination_span,
+                ));
+            }
+
+            if !size.is_unsigned_integer()? || !size.is_moreu32bit_integer()? {
+                self.add_error(ThrushCompilerIssue::Error(
+                    "Type error".into(),
+                    "Expected any unsigned integer value more than or equal to 32 bits.".into(),
+                    None,
+                    size_span,
+                ));
+            }
+
+            return Ok(());
+        }
+
+        if let ThrushStatement::MemCpy {
+            source,
+            destination,
+            size,
+            ..
+        } = stmt
+        {
+            let source_type: &ThrushType = source.get_value_type()?;
+            let source_span: Span = source.get_span();
+
+            let destination_type: &ThrushType = destination.get_value_type()?;
+            let destination_span: Span = destination.get_span();
+
+            let size_span: Span = size.get_span();
+
+            if !source_type.is_ptr_type()
+                && !source_type.is_address_type()
+                && !source_type.is_mut_type()
+            {
+                self.add_error(ThrushCompilerIssue::Error(
+                    "Type error".into(),
+                    "Expected 'ptr<T>', 'ptr', 'addr', or 'mut T' type.".into(),
+                    None,
+                    source_span,
+                ));
+            }
+
+            if !destination_type.is_ptr_type()
+                && !destination_type.is_address_type()
+                && !destination_type.is_mut_type()
+            {
+                self.add_error(ThrushCompilerIssue::Error(
+                    "Type error".into(),
+                    "Expected 'ptr<T>', 'ptr', 'addr', or 'mut T' type.".into(),
+                    None,
+                    destination_span,
+                ));
+            }
+
+            if !size.is_unsigned_integer()? || !size.is_moreu32bit_integer()? {
+                self.add_error(ThrushCompilerIssue::Error(
+                    "Type error".into(),
+                    "Expected any unsigned integer value more than or equal to 32 bits.".into(),
+                    None,
+                    size_span,
+                ));
+            }
+
+            return Ok(());
+        }
 
         if let ThrushStatement::SizeOf { sizeof, span, .. } = stmt {
             if sizeof.is_void_type() {

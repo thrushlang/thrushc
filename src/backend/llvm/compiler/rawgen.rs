@@ -5,7 +5,7 @@ use super::context::LLVMCodeGenContext;
 use super::typegen;
 use crate::backend::llvm::compiler::attributes::LLVMAttribute;
 use crate::backend::llvm::compiler::memory::{self, SymbolAllocated};
-use crate::backend::llvm::compiler::{cast, intgen, rawgen, utils, valuegen};
+use crate::backend::llvm::compiler::{builtins, cast, intgen, rawgen, utils, valuegen};
 use crate::backend::types::representations::LLVMFunction;
 use crate::backend::types::traits::AssemblerFunctionExtensions;
 use crate::core::console::logging::{self, LoggingType};
@@ -24,6 +24,7 @@ use inkwell::values::{
 use inkwell::{AddressSpace, InlineAsmDialect};
 use inkwell::{builder::Builder, context::Context};
 use std::fmt::Display;
+use std::rc::Rc;
 
 pub fn compile<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
@@ -50,6 +51,27 @@ pub fn compile<'ctx>(
         ThrushStatement::Property { name, indexes, .. } => {
             self::compile_property(context, name, indexes)
         }
+
+        ThrushStatement::MemCpy {
+            source,
+            destination,
+            size,
+            ..
+        } => builtins::memcpy::compile(context, source, destination, size),
+
+        ThrushStatement::MemMove {
+            source,
+            destination,
+            size,
+            ..
+        } => builtins::memmove::compile(context, source, destination, size),
+
+        ThrushStatement::MemSet {
+            destination,
+            new_size,
+            size,
+            ..
+        } => builtins::memset::compile(context, destination, new_size, size),
 
         ThrushStatement::Reference { name, .. } => self::compile_reference(context, name),
 
@@ -334,8 +356,8 @@ fn compile_inline_asm<'ctx>(
 fn compile_index<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     index_to: &'ctx (
-        Option<(&'ctx str, Box<ThrushStatement<'ctx>>)>,
-        Option<Box<ThrushStatement<'ctx>>>,
+        Option<(&'ctx str, Rc<ThrushStatement<'ctx>>)>,
+        Option<Rc<ThrushStatement<'ctx>>>,
     ),
     indexes: &'ctx [ThrushStatement],
 ) -> BasicValueEnum<'ctx> {
