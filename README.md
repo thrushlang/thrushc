@@ -65,7 +65,7 @@ The code generation is in 3 phases.
 
 - Intermediate Code Generation (``LLVM IR``).
 - Emit object files (``.o``). 
-- Linking with some linker through the ``Clang`` or ``GCC`` C compilers.
+- Linking with some linker through the ``Clang`` or ``GCC`` C compilers. ~ *Rust 2015 be like*
 
 In summary:
 
