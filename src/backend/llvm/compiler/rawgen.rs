@@ -61,7 +61,6 @@ pub fn compile<'ctx>(
     }
 }
 
-
 fn compile_function_call<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     name: &str,
@@ -410,5 +409,8 @@ fn handle_unknown_expression<'ctx, T: Display>(
 }
 
 fn codegen_abort<T: Display>(message: T) {
-    logging::log(LoggingType::Bug, &format!("CODE GENERATION: {}.", message));
+    logging::log(
+        LoggingType::Bug,
+        &format!("CODE GENERATION: '{}'.", message),
+    );
 }

@@ -39,6 +39,8 @@ lazy_static! {
         keywords.insert("load", TokenType::Load);
         keywords.insert("write", TokenType::Write);
 
+        keywords.insert("fixed", TokenType::Fixed);
+
         keywords.insert("sizeof", TokenType::SizeOf);
 
         keywords.insert("@import", TokenType::Import);

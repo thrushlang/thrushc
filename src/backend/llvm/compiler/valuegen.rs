@@ -112,6 +112,9 @@ pub fn compile<'ctx>(
         ThrushStatement::FixedArray { items, kind, .. } => {
             self::compile_fixed_array(context, kind, items, cast_type)
         }
+        ThrushStatement::Array { items, kind, .. } => {
+            self::compile_array(context, kind, items, cast_type)
+        }
         _ => self::handle_unknown_expression(context, expr),
     }
 }
@@ -317,7 +320,8 @@ fn compile_write<'ctx>(
         }
         (_, Some(expr)) => {
             let ptr: PointerValue = rawgen::compile(context, expr, None).into_pointer_value();
-            memory::store_anon(context, ptr, write_type, value);
+
+            memory::store_anon(context, ptr, value);
 
             self::compile_null_ptr(context)
         }
@@ -660,6 +664,86 @@ fn compile_index<'ctx>(
     }
 }
 
+fn compile_array<'ctx>(
+    context: &mut LLVMCodeGenContext<'_, 'ctx>,
+    kind: &ThrushType,
+    items: &'ctx [ThrushStatement],
+    cast_type: Option<&ThrushType>,
+) -> BasicValueEnum<'ctx> {
+    let llvm_context: &Context = context.get_llvm_context();
+    let llvm_builder: &Builder = context.get_llvm_builder();
+
+    let base_array_type: &ThrushType = self::get_array_type(kind, cast_type);
+    let array_items_type: &ThrushType = base_array_type.get_array_type();
+
+    let array_type: ThrushType =
+        ThrushType::FixedArray(array_items_type.clone().into(), items.len() as u32);
+
+    let array_wrapper_ptr: PointerValue =
+        if let Some(preferred_site_allocation) = context.get_site_allocation() {
+            memory::alloc_anon(preferred_site_allocation, context, base_array_type, true)
+        } else {
+            memory::alloc_anon(LLVMAllocationSite::Stack, context, base_array_type, true)
+        };
+
+    let array_ptr: PointerValue =
+        if let Some(preferred_site_allocation) = context.get_site_allocation() {
+            memory::alloc_anon(preferred_site_allocation, context, &array_type, true)
+        } else {
+            memory::alloc_anon(LLVMAllocationSite::Stack, context, &array_type, true)
+        };
+
+    let array_wrapper_type: BasicTypeEnum = typegen::generate_type(llvm_context, base_array_type);
+    let array_ptr_type: BasicTypeEnum = typegen::generate_type(llvm_context, &array_type);
+
+    for (idx, item) in items.iter().enumerate() {
+        let llvm_idx: IntValue = llvm_context.i32_type().const_int(idx as u64, false);
+
+        match unsafe {
+            llvm_builder.build_in_bounds_gep(
+                array_ptr_type,
+                array_ptr,
+                &[llvm_context.i32_type().const_zero(), llvm_idx],
+                "",
+            )
+        } {
+            Ok(element_ptr) => {
+                let value: BasicValueEnum = self::compile(context, item, Some(array_items_type));
+                memory::store_anon(context, element_ptr, value);
+            }
+            Err(_) => {
+                self::codegen_abort(format!(
+                    "Failed to calculate memory address for array element at index '{}'",
+                    idx
+                ));
+
+                return self::compile_null_ptr(context);
+            }
+        }
+    }
+
+    let array_ptr_gep: PointerValue = llvm_builder
+        .build_struct_gep(array_wrapper_type, array_wrapper_ptr, 0, "")
+        .unwrap();
+
+    memory::store_anon(context, array_ptr_gep, array_ptr.into());
+
+    let array_size_gep: PointerValue = llvm_builder
+        .build_struct_gep(array_wrapper_type, array_wrapper_ptr, 1, "")
+        .unwrap();
+
+    memory::store_anon(
+        context,
+        array_size_gep,
+        llvm_context
+            .i64_type()
+            .const_int(items.len() as u64, false)
+            .into(),
+    );
+
+    memory::load_anon(context, array_wrapper_ptr, base_array_type)
+}
+
 fn compile_fixed_array<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     kind: &ThrushType,
@@ -684,11 +768,16 @@ fn fixed_array<'ctx>(
 ) -> BasicValueEnum<'ctx> {
     let llvm_context: &Context = context.get_llvm_context();
     let llvm_builder: &Builder = context.get_llvm_builder();
+
     let array_type: &ThrushType = self::get_fixed_array_type(kind, cast_type);
-    let array_items_type: &ThrushType = array_type.get_array_base_type();
+    let array_items_type: &ThrushType = array_type.get_fixed_array_base_type();
 
     let array_ptr: PointerValue =
-        memory::alloc_anon(LLVMAllocationSite::Stack, context, array_type, true);
+        if let Some(preferred_site_allocation) = context.get_site_allocation() {
+            memory::alloc_anon(preferred_site_allocation, context, array_type, true)
+        } else {
+            memory::alloc_anon(LLVMAllocationSite::Stack, context, array_type, true)
+        };
 
     let array_ptr_type: BasicTypeEnum = typegen::generate_type(llvm_context, array_type);
 
@@ -705,7 +794,7 @@ fn fixed_array<'ctx>(
         } {
             Ok(element_ptr) => {
                 let value: BasicValueEnum = self::compile(context, item, Some(array_items_type));
-                memory::store_anon(context, element_ptr, item.get_type_unwrapped(), value);
+                memory::store_anon(context, element_ptr, value);
             }
             Err(_) => {
                 self::codegen_abort(format!(
@@ -730,7 +819,7 @@ fn constant_fixed_array<'ctx>(
     let llvm_context: &Context = context.get_llvm_context();
 
     let array_item_type: &ThrushType =
-        self::get_fixed_array_type(kind, cast_type).get_array_base_type();
+        self::get_fixed_array_type(kind, cast_type).get_fixed_array_base_type();
     let array_type: BasicTypeEnum = typegen::generate_type(llvm_context, array_item_type);
 
     let values: Vec<BasicValueEnum> = items
@@ -820,6 +909,24 @@ fn get_fixed_array_type<'ctx>(
     }
 }
 
+fn get_array_type<'ctx>(
+    kind: &'ctx ThrushType,
+    cast_type: Option<&'ctx ThrushType>,
+) -> &'ctx ThrushType {
+    if let Some(cast_type) = cast_type {
+        if cast_type.is_mut_array_type()
+            || cast_type.is_ptr_array_type()
+            || cast_type.is_array_type()
+        {
+            cast_type
+        } else {
+            kind
+        }
+    } else {
+        kind
+    }
+}
+
 fn compute_indexes<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     indexes: &'ctx [ThrushStatement],
@@ -874,5 +981,8 @@ fn handle_unknown_expression<'ctx, T: Display>(
 }
 
 fn codegen_abort<T: Display>(message: T) {
-    logging::log(LoggingType::Bug, &format!("CODE GENERATION: '{}'", message));
+    logging::log(
+        LoggingType::Bug,
+        &format!("CODE GENERATION: '{}'.", message),
+    );
 }

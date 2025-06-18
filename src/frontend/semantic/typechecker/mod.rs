@@ -68,16 +68,16 @@ impl<'type_checker> TypeChecker<'type_checker> {
             self.advance();
         }
 
-        self.bugs.iter().for_each(|warn| {
-            self.diagnostician.build_diagnostic(warn, LoggingType::Bug);
-        });
-
         self.warnings.iter().for_each(|warn| {
             self.diagnostician
                 .build_diagnostic(warn, LoggingType::Warning);
         });
 
-        if !self.errors.is_empty() {
+        if !self.errors.is_empty() || !self.bugs.is_empty() {
+            self.bugs.iter().for_each(|warn| {
+                self.diagnostician.build_diagnostic(warn, LoggingType::Bug);
+            });
+
             self.errors.iter().for_each(|error| {
                 self.diagnostician
                     .build_diagnostic(error, LoggingType::Error);
@@ -1019,12 +1019,49 @@ impl<'type_checker> TypeChecker<'type_checker> {
                 ));
             }
 
+            let array_type: &ThrushType = kind.get_fixed_array_base_type();
+
+            for item in items.iter() {
+                let item_type: &ThrushType = item.get_value_type()?.get_fixed_array_base_type();
+
+                if let Err(error) = self.validate_types(
+                    array_type,
+                    item_type,
+                    Some(item),
+                    None,
+                    None,
+                    &item.get_span(),
+                ) {
+                    self.add_error(error);
+                }
+
+                self.analyze_stmt(item)?;
+            }
+
+            return Ok(());
+        }
+
+        if let ThrushStatement::Array {
+            items, kind, span, ..
+        } = stmt
+        {
+            if kind.is_void_type() {
+                return Err(ThrushCompilerIssue::Error(
+                    "Type error".into(),
+                    "An element is expected.".into(),
+                    None,
+                    *span,
+                ));
+            }
+
             let array_type: &ThrushType = kind.get_array_base_type();
 
             for item in items.iter() {
+                let item_type: &ThrushType = item.get_value_type()?.get_array_base_type();
+
                 if let Err(error) = self.validate_types(
                     array_type,
-                    item.get_value_type()?,
+                    item_type,
                     Some(item),
                     None,
                     None,
@@ -1376,6 +1413,12 @@ impl<'type_checker> TypeChecker<'type_checker> {
                 }
 
                 Err(error)
+            }
+
+            (ThrushType::Array(target_type), ThrushType::Array(from_type), None) => {
+                self.validate_types(target_type, from_type, None, None, position, span)?;
+
+                Ok(())
             }
 
             (

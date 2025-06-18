@@ -25,8 +25,13 @@ pub fn compile<'ctx>(local: Local<'ctx>, context: &mut LLVMCodeGenContext<'_, 'c
 
     context.alloc_local(local_name, ascii_name, local_type, attributes);
 
+    context.set_site_allocation(memory::get_memory_site_allocation_from_attributes(
+        attributes,
+    ));
+
     if local_type.is_struct_type() {
         self::compile_local_structure(local, context);
+        context.reset_site_allocation();
 
         return;
     }
@@ -36,6 +41,8 @@ pub fn compile<'ctx>(local: Local<'ctx>, context: &mut LLVMCodeGenContext<'_, 'c
     let expression: BasicValueEnum = valuegen::compile(context, local_value, Some(local_type));
 
     symbol.store(context, expression);
+
+    context.reset_site_allocation();
 }
 
 fn compile_local_structure<'ctx>(local: Local<'ctx>, context: &mut LLVMCodeGenContext<'_, 'ctx>) {
@@ -60,7 +67,7 @@ fn compile_local_structure<'ctx>(local: Local<'ctx>, context: &mut LLVMCodeGenCo
             let field_memory_address_position: PointerValue =
                 symbol.gep_struct(llvm_context, llvm_builder, expr_index);
 
-            memory::store_anon(context, field_memory_address_position, expr_cast_type, expr);
+            memory::store_anon(context, field_memory_address_position, expr);
         });
     }
 }

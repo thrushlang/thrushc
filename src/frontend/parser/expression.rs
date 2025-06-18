@@ -317,7 +317,7 @@ fn primary<'instr>(
 ) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
     let primary: ThrushStatement = match &parser_context.peek().kind {
         TokenType::Fixed => self::build_fixed_array(parser_context)?,
-        TokenType::Array => self::build_array(parser_context)?,
+        TokenType::LBracket => self::build_array(parser_context)?,
 
         TokenType::Deref => self::build_deref(parser_context)?,
         TokenType::SizeOf => self::build_sizeof(parser_context)?,

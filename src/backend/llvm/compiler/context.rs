@@ -6,7 +6,10 @@ use {
     },
     crate::{
         backend::{
-            llvm::compiler::alloc::{self},
+            llvm::compiler::{
+                alloc::{self},
+                memory::LLVMAllocationSite,
+            },
             types::representations::{
                 LLVMConstants, LLVMFunction, LLVMFunctions, LLVMFunctionsParameters,
                 LLVMInstructions,
@@ -39,6 +42,8 @@ pub struct LLVMCodeGenContext<'a, 'ctx> {
 
     scope: usize,
 
+    site_allocation: Option<LLVMAllocationSite>,
+
     diagnostician: Diagnostician,
 }
 
@@ -60,6 +65,7 @@ impl<'a, 'ctx> LLVMCodeGenContext<'a, 'ctx> {
             parameters: HashMap::with_capacity(10),
             instructions: Vec::with_capacity(1000),
             scope: 0,
+            site_allocation: None,
             diagnostician,
         }
     }
@@ -181,6 +187,18 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
 
     pub fn add_function(&mut self, name: &'ctx str, function: LLVMFunction<'ctx>) {
         self.functions.insert(name, function);
+    }
+
+    pub fn set_site_allocation(&mut self, site: LLVMAllocationSite) {
+        self.site_allocation = Some(site);
+    }
+
+    pub fn reset_site_allocation(&mut self) {
+        self.site_allocation = None;
+    }
+
+    pub fn get_site_allocation(&self) -> Option<LLVMAllocationSite> {
+        self.site_allocation
     }
 
     pub fn begin_scope(&mut self) {

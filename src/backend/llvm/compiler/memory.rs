@@ -12,7 +12,10 @@ use inkwell::{
 use crate::{
     backend::llvm::compiler::typegen,
     core::console::logging::{self, LoggingType},
-    frontend::types::lexer::ThrushType,
+    frontend::types::{
+        lexer::ThrushType,
+        parser::stmts::{traits::ThrushAttributesExtensions, types::ThrushAttributes},
+    },
 };
 
 use inkwell::{
@@ -331,16 +334,13 @@ impl<'ctx> SymbolAllocated<'ctx> {
 pub fn store_anon<'ctx>(
     context: &LLVMCodeGenContext<'_, '_>,
     ptr: PointerValue<'ctx>,
-    kind: &ThrushType,
     value: BasicValueEnum<'ctx>,
 ) {
-    let llvm_context: &Context = context.get_llvm_context();
     let llvm_builder: &Builder = context.get_llvm_builder();
 
     let target_data: &TargetData = context.get_target_data();
 
-    let llvm_type: BasicTypeEnum = typegen::generate_type(llvm_context, kind);
-    let preferred_memory_alignment: u32 = target_data.get_preferred_alignment(&llvm_type);
+    let preferred_memory_alignment: u32 = target_data.get_preferred_alignment(&value.get_type());
 
     if let Ok(store) = llvm_builder.build_store(ptr, value) {
         let _ = store.set_alignment(preferred_memory_alignment);
@@ -451,4 +451,14 @@ pub fn gep_anon<'ctx>(
     );
 
     unreachable!()
+}
+
+pub fn get_memory_site_allocation_from_attributes(
+    attributes: &ThrushAttributes,
+) -> LLVMAllocationSite {
+    if attributes.has_heap_attr() {
+        return LLVMAllocationSite::Heap;
+    }
+
+    LLVMAllocationSite::Stack
 }

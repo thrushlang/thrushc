@@ -60,6 +60,11 @@ impl ThrushOptimization {
             ThrushOptimization::Mcqueen | ThrushOptimization::Size => OptimizationLevel::Aggressive,
         }
     }
+
+    #[inline]
+    pub fn is_none_opt(self) -> bool {
+        matches!(self, ThrushOptimization::None)
+    }
 }
 
 impl CompilerFile {

@@ -267,11 +267,13 @@ impl<'thrushc> TheThrushCompiler<'thrushc> {
             return self.finish_archive_compilation(archive_time, file);
         }
 
-        llvm::compiler::optimizations::optimizator::LLVMCompilerOptimizer::new(
-            &llvm_module,
-            &llvm_context,
-        )
-        .optimize();
+        if thrush_opt.is_none_opt() {
+            llvm::compiler::optimizations::optimizator::LLVMCompilerOptimizer::new(
+                &llvm_module,
+                &llvm_context,
+            )
+            .optimize();
+        }
 
         llvm::compiler::optimizations::passes::LLVMOptimizer::new(
             &llvm_module,

@@ -7,13 +7,11 @@ use crate::{
         rawgen, valuegen,
     },
     core::console::logging::{self, LoggingType},
-    frontend::types::{lexer::ThrushType, parser::stmts::stmt::ThrushStatement},
+    frontend::types::parser::stmts::stmt::ThrushStatement,
 };
 
 pub fn compile<'ctx>(context: &mut LLVMCodeGenContext<'_, 'ctx>, expr: &'ctx ThrushStatement) {
     if let ThrushStatement::Mut { source, value, .. } = expr {
-        let value_type: &ThrushType = value.get_type_unwrapped();
-
         if let Some(any_reference) = &source.0 {
             let reference_name: &str = any_reference.0;
 
@@ -30,7 +28,7 @@ pub fn compile<'ctx>(context: &mut LLVMCodeGenContext<'_, 'ctx>, expr: &'ctx Thr
             let ptr: BasicValueEnum = rawgen::compile(context, expr, None);
             let value: BasicValueEnum = valuegen::compile(context, value, None);
 
-            memory::store_anon(context, ptr.into_pointer_value(), value_type, value);
+            memory::store_anon(context, ptr.into_pointer_value(), value);
 
             return;
         }

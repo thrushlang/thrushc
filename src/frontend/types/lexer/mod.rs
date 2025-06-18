@@ -264,12 +264,24 @@ impl ThrushType {
         self.clone()
     }
 
-    pub fn get_array_base_type(&self) -> &ThrushType {
-        if let ThrushType::Array(inner, ..) = self {
-            return inner.get_array_base_type();
+    pub fn get_fixed_array_base_type(&self) -> &ThrushType {
+        if let ThrushType::FixedArray(inner, ..) = self {
+            return inner.get_fixed_array_base_type();
         }
 
-        if let ThrushType::FixedArray(inner, ..) = self {
+        if let ThrushType::Mut(inner) = self {
+            return inner.get_fixed_array_base_type();
+        }
+
+        if let ThrushType::Ptr(Some(inner)) = self {
+            return inner.get_fixed_array_base_type();
+        }
+
+        self
+    }
+
+    pub fn get_array_base_type(&self) -> &ThrushType {
+        if let ThrushType::Array(inner, ..) = self {
             return inner.get_array_base_type();
         }
 
@@ -279,6 +291,14 @@ impl ThrushType {
 
         if let ThrushType::Ptr(Some(inner)) = self {
             return inner.get_array_base_type();
+        }
+
+        self
+    }
+
+    pub fn get_array_type(&self) -> &ThrushType {
+        if let ThrushType::Array(inner, ..) = self {
+            return inner.get_fixed_array_base_type();
         }
 
         self
@@ -500,6 +520,8 @@ impl PartialEq for ThrushType {
             }
 
             (ThrushType::Mut(target), ThrushType::Mut(from)) => target == from,
+            (ThrushType::Array(target), ThrushType::Array(from)) => target == from,
+
             (ThrushType::Char, ThrushType::Char) => true,
             (ThrushType::S8, ThrushType::S8) => true,
             (ThrushType::S16, ThrushType::S16) => true,
