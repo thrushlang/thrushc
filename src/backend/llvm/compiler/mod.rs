@@ -1,4 +1,5 @@
 pub mod alloc;
+pub mod array;
 pub mod attributes;
 pub mod binaryop;
 pub mod cast;

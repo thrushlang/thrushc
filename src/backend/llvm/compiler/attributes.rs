@@ -12,6 +12,7 @@ use super::conventions::CallConvention;
 
 #[derive(Debug, Clone, Copy)]
 pub enum LLVMAttribute<'ctx> {
+    // Function Attributes
     Extern(&'ctx str, Span),
     Convention(CallConvention, Span),
     Public(Span),
@@ -39,67 +40,67 @@ pub enum LLVMAttribute<'ctx> {
 
 impl LLVMAttribute<'_> {
     #[inline]
-    pub const fn is_extern_attribute(&self) -> bool {
+    pub fn is_extern_attribute(&self) -> bool {
         matches!(self, LLVMAttribute::Extern(..))
     }
 
     #[inline]
-    pub const fn is_hot_attribute(&self) -> bool {
+    pub fn is_hot_attribute(&self) -> bool {
         matches!(self, LLVMAttribute::Hot(..))
     }
 
     #[inline]
-    pub const fn is_ignore_attribute(&self) -> bool {
+    pub fn is_ignore_attribute(&self) -> bool {
         matches!(self, LLVMAttribute::Ignore(..))
     }
 
     #[inline]
-    pub const fn is_public_attribute(&self) -> bool {
+    pub fn is_public_attribute(&self) -> bool {
         matches!(self, LLVMAttribute::Public(..))
     }
 
     #[inline]
-    pub const fn is_noinline_attribute(&self) -> bool {
+    pub fn is_noinline_attribute(&self) -> bool {
         matches!(self, LLVMAttribute::NoInline(..))
     }
 
     #[inline]
-    pub const fn is_inline_attribute(&self) -> bool {
+    pub fn is_inline_attribute(&self) -> bool {
         matches!(self, LLVMAttribute::InlineHint(..))
     }
 
     #[inline]
-    pub const fn is_alwaysinline_attribute(&self) -> bool {
+    pub fn is_alwaysinline_attribute(&self) -> bool {
         matches!(self, LLVMAttribute::AlwaysInline(..))
     }
 
     #[inline]
-    pub const fn is_minsize_attribute(&self) -> bool {
+    pub fn is_minsize_attribute(&self) -> bool {
         matches!(self, LLVMAttribute::MinSize(..))
     }
 
     #[inline]
-    pub const fn is_heap_attribute(&self) -> bool {
+    pub fn is_heap_attribute(&self) -> bool {
         matches!(self, LLVMAttribute::Heap(..))
     }
 
     #[inline]
-    pub const fn is_stack_attribute(&self) -> bool {
+    pub fn is_stack_attribute(&self) -> bool {
         matches!(self, LLVMAttribute::Stack(..))
     }
 
     #[inline]
-    pub const fn is_asmsideeffects_attribute(&self) -> bool {
+    pub fn is_asmsideeffects_attribute(&self) -> bool {
         matches!(self, LLVMAttribute::AsmSideEffects(..))
     }
 
     #[inline]
-    pub const fn is_asmthrow_attribute(&self) -> bool {
+    pub fn is_asmthrow_attribute(&self) -> bool {
         matches!(self, LLVMAttribute::AsmThrow(..))
     }
 
     #[inline]
-    pub const fn is_asmalingstack_attribute(&self) -> bool {
+    pub fn is_asmalingstack_attribute(&self) -> bool {
         matches!(self, LLVMAttribute::AsmAlignStack(..))
     }
 

@@ -31,6 +31,7 @@ pub fn compile<'ctx>(local: Local<'ctx>, context: &mut LLVMCodeGenContext<'_, 'c
 
     if local_type.is_struct_type() {
         self::compile_local_structure(local, context);
+
         context.reset_site_allocation();
 
         return;

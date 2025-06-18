@@ -32,19 +32,27 @@ pub fn compile<'ctx>(
 ) -> BasicValueEnum<'ctx> {
     match expr {
         ThrushStatement::NullPtr { .. } => self::compile_null_ptr(context),
+
         ThrushStatement::Str { bytes, .. } => self::compile_string(context, bytes),
+
         ThrushStatement::Call {
             name, args, kind, ..
         } => compile_function_call(context, name, args, kind, cast_type),
+
         ThrushStatement::Group { expression, .. } => self::compile(context, expression, cast_type),
+
         ThrushStatement::As { from, cast, .. } => self::compile_cast(context, from, cast),
+
         ThrushStatement::Deref { value, kind, .. } => {
             self::compile_deref(context, value, kind, cast_type)
         }
+
         ThrushStatement::Property { name, indexes, .. } => {
             self::compile_property(context, name, indexes)
         }
+
         ThrushStatement::Reference { name, .. } => self::compile_reference(context, name),
+
         ThrushStatement::AsmValue {
             assembler,
             constraints,
@@ -53,6 +61,7 @@ pub fn compile<'ctx>(
             attributes,
             ..
         } => self::compile_inline_asm(context, assembler, constraints, args, kind, attributes),
+
         ThrushStatement::Index {
             index_to, indexes, ..
         } => self::compile_index(context, index_to, indexes),

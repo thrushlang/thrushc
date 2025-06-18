@@ -359,7 +359,7 @@ pub fn load_anon<'ctx>(
 
     let preferred_alignment: u32 = context
         .get_target_data()
-        .get_preferred_alignment(&llvm_type);
+        .get_preferred_alignment(&ptr.get_type());
 
     let loaded_value: BasicValueEnum = llvm_builder.build_load(llvm_type, ptr, "").unwrap();
 

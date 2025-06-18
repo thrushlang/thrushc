@@ -25,7 +25,7 @@ fn main() {
     if !cli.get_options().use_llvm() {
         logging::log(
             logging::LoggingType::Panic,
-            "Select a backend infrastructure for example: '-llvm'.",
+            "Select a backend infrastructure for example: '-llvm' for use the LLVM Backend.",
         );
     }
 
