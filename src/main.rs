@@ -14,9 +14,12 @@ use {
 };
 
 fn main() {
-    if cfg!(target_os = "windows") {
-        control::set_override(true);
+    #[cfg(target_os = "windows")]
+    {
+        control::set_virtual_terminal(true);
     }
+
+    control::set_override(true);
 
     let cli: CLI = CLI::parse(env::args().collect());
 
