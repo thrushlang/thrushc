@@ -1,4 +1,2 @@
-pub mod memcpy;
-pub mod memmove;
-pub mod memset;
+pub mod mem;
 pub mod sizeof;

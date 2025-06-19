@@ -9,6 +9,7 @@ pub mod context;
 pub mod conventions;
 pub mod floatgen;
 pub mod intgen;
+pub mod intrinsics;
 pub mod jit;
 pub mod lli;
 pub mod local;

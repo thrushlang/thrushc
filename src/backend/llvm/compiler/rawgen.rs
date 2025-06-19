@@ -57,21 +57,21 @@ pub fn compile<'ctx>(
             destination,
             size,
             ..
-        } => builtins::memcpy::compile(context, source, destination, size),
+        } => builtins::mem::memcpy::compile(context, source, destination, size),
 
         ThrushStatement::MemMove {
             source,
             destination,
             size,
             ..
-        } => builtins::memmove::compile(context, source, destination, size),
+        } => builtins::mem::memmove::compile(context, source, destination, size),
 
         ThrushStatement::MemSet {
             destination,
             new_size,
             size,
             ..
-        } => builtins::memset::compile(context, destination, new_size, size),
+        } => builtins::mem::memset::compile(context, destination, new_size, size),
 
         ThrushStatement::Reference { name, .. } => self::compile_reference(context, name),
 

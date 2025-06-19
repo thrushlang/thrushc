@@ -648,7 +648,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 size,
                 ..
             } => {
-                builtins::memcpy::compile(self.context, source, destination, size);
+                builtins::mem::memcpy::compile(self.context, source, destination, size);
             }
 
             ThrushStatement::MemMove {
@@ -657,7 +657,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 size,
                 ..
             } => {
-                builtins::memmove::compile(self.context, source, destination, size);
+                builtins::mem::memmove::compile(self.context, source, destination, size);
             }
 
             ThrushStatement::MemSet {
@@ -666,7 +666,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 size,
                 ..
             } => {
-                builtins::memset::compile(self.context, destination, new_size, size);
+                builtins::mem::memset::compile(self.context, destination, new_size, size);
             }
 
             ThrushStatement::SizeOf { sizeof, .. } => {
