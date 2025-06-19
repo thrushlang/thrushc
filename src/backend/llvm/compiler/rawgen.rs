@@ -4,8 +4,8 @@
 use super::context::LLVMCodeGenContext;
 use super::typegen;
 use crate::backend::llvm::compiler::attributes::LLVMAttribute;
-use crate::backend::llvm::compiler::memory::{self, LLVMAllocationSite, SymbolAllocated};
-use crate::backend::llvm::compiler::{builtins, cast, intgen, rawgen, utils, valuegen};
+use crate::backend::llvm::compiler::memory::{self, SymbolAllocated};
+use crate::backend::llvm::compiler::{builtins, cast, intgen, lli, rawgen, utils, valuegen};
 use crate::backend::types::representations::LLVMFunction;
 use crate::backend::types::traits::AssemblerFunctionExtensions;
 use crate::core::console::logging::{self, LoggingType};
@@ -14,7 +14,6 @@ use crate::frontend::types::lexer::traits::{
     ThrushTypeMutableExtensions, ThrushTypePointerExtensions,
 };
 
-use crate::frontend::types::parser::stmts::sites::LLIAllocationSite;
 use crate::frontend::types::parser::stmts::stmt::ThrushStatement;
 use crate::frontend::types::parser::stmts::traits::ThrushAttributesExtensions;
 use crate::frontend::types::parser::stmts::types::ThrushAttributes;
@@ -53,12 +52,6 @@ pub fn compile<'ctx>(
             self::compile_property(context, name, indexes)
         }
 
-        ThrushStatement::Alloc {
-            type_to_alloc,
-            site_allocation,
-            ..
-        } => self::compile_alloc(context, type_to_alloc, site_allocation),
-
         ThrushStatement::MemCpy {
             source,
             destination,
@@ -95,7 +88,7 @@ pub fn compile<'ctx>(
             index_to, indexes, ..
         } => self::compile_index(context, index_to, indexes),
 
-        _ => self::handle_unknown_expression(context, expr),
+        _ => lli::compile(context, expr, cast_type),
     }
 }
 
@@ -292,16 +285,6 @@ fn compile_property<'ctx>(
     ptr.into()
 }
 
-fn compile_alloc<'ctx>(
-    context: &mut LLVMCodeGenContext<'_, 'ctx>,
-    type_to_alloc: &ThrushType,
-    site_allocation: &LLIAllocationSite,
-) -> BasicValueEnum<'ctx> {
-    let site: LLVMAllocationSite = site_allocation.to_llvm_allocation_site();
-
-    memory::alloc_anon(site, context, type_to_alloc, type_to_alloc.is_all_ptr()).into()
-}
-
 fn compile_reference<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     name: &str,
@@ -432,14 +415,6 @@ fn compute_indexes<'ctx>(
         .collect()
 }
 
-fn compile_null_ptr<'ctx>(context: &LLVMCodeGenContext<'_, 'ctx>) -> BasicValueEnum<'ctx> {
-    context
-        .get_llvm_context()
-        .ptr_type(AddressSpace::default())
-        .const_null()
-        .into()
-}
-
 fn compile_string<'ctx>(
     context: &LLVMCodeGenContext<'_, 'ctx>,
     bytes: &'ctx [u8],
@@ -447,13 +422,12 @@ fn compile_string<'ctx>(
     utils::build_str_constant(context.get_llvm_module(), context.get_llvm_context(), bytes).into()
 }
 
-fn handle_unknown_expression<'ctx, T: Display>(
-    context: &LLVMCodeGenContext<'_, 'ctx>,
-    expr: T,
-) -> BasicValueEnum<'ctx> {
-    self::codegen_abort(format!("Unsupported expression: '{}'", expr));
-
-    compile_null_ptr(context)
+fn compile_null_ptr<'ctx>(context: &LLVMCodeGenContext<'_, 'ctx>) -> BasicValueEnum<'ctx> {
+    context
+        .get_llvm_context()
+        .ptr_type(AddressSpace::default())
+        .const_null()
+        .into()
 }
 
 fn codegen_abort<T: Display>(message: T) {

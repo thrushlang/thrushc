@@ -4,9 +4,9 @@
 use super::context::LLVMCodeGenContext;
 use super::typegen;
 use crate::backend::llvm::compiler::attributes::LLVMAttribute;
-use crate::backend::llvm::compiler::memory::{self, LLVMAllocationSite, SymbolAllocated};
+use crate::backend::llvm::compiler::memory::{self, SymbolAllocated};
 use crate::backend::llvm::compiler::{
-    array, binaryop, builtins, cast, floatgen, intgen, rawgen, unaryop, utils, valuegen,
+    array, binaryop, builtins, cast, floatgen, intgen, lli, rawgen, unaryop, utils, valuegen,
 };
 
 use crate::backend::types::traits::AssemblerFunctionExtensions;
@@ -16,7 +16,6 @@ use crate::frontend::types::lexer::ThrushType;
 use crate::frontend::types::lexer::traits::{
     LLVMTypeExtensions, ThrushTypeMutableExtensions, ThrushTypePointerExtensions,
 };
-use crate::frontend::types::parser::stmts::sites::LLIAllocationSite;
 use crate::frontend::types::parser::stmts::stmt::ThrushStatement;
 use crate::frontend::types::parser::stmts::traits::ThrushAttributesExtensions;
 use crate::frontend::types::parser::stmts::types::ThrushAttributes;
@@ -82,21 +81,6 @@ pub fn compile<'ctx>(
 
         ThrushStatement::SizeOf { sizeof, .. } => builtins::sizeof::compile(context, sizeof),
 
-        ThrushStatement::Write {
-            write_to,
-            write_type,
-            write_value,
-            ..
-        } => self::compile_write(context, write_to, write_type, write_value),
-
-        ThrushStatement::Load { value, kind, .. } => self::compile_load(context, value, kind),
-
-        ThrushStatement::Address {
-            address_to,
-            indexes,
-            ..
-        } => self::compile_address(context, address_to, indexes),
-
         ThrushStatement::As { from, cast, .. } => self::compile_cast(context, from, cast),
 
         ThrushStatement::Deref { value, kind, .. } => {
@@ -133,7 +117,7 @@ pub fn compile<'ctx>(
             array::compile_array(context, kind, items, cast_type)
         }
 
-        _ => self::handle_unknown_expression(context, expr),
+        _ => lli::compile(context, expr, cast_type),
     }
 }
 
@@ -295,107 +279,6 @@ fn compile_unary_op<'ctx>(
     cast_type: Option<&ThrushType>,
 ) -> BasicValueEnum<'ctx> {
     unaryop::unary_op(context, (operator, kind, expression), cast_type)
-}
-
-fn compile_alloc<'ctx>(
-    context: &mut LLVMCodeGenContext<'_, 'ctx>,
-    type_to_alloc: &ThrushType,
-    site_allocation: &LLIAllocationSite,
-) -> BasicValueEnum<'ctx> {
-    let site: LLVMAllocationSite = site_allocation.to_llvm_allocation_site();
-
-    memory::alloc_anon(site, context, type_to_alloc, type_to_alloc.is_all_ptr()).into()
-}
-
-fn compile_write<'ctx>(
-    context: &mut LLVMCodeGenContext<'_, 'ctx>,
-    write_to: &'ctx (
-        Option<(&'ctx str, Rc<ThrushStatement<'ctx>>)>,
-        Option<Rc<ThrushStatement<'ctx>>>,
-    ),
-    write_type: &'ctx ThrushType,
-    write_value: &'ctx ThrushStatement,
-) -> BasicValueEnum<'ctx> {
-    let value = self::compile(context, write_value, Some(write_type)); // Recursive
-    match write_to {
-        (Some((name, _)), _) => {
-            let symbol = context.get_allocated_symbol(name);
-            symbol.store(context, value);
-            self::compile_null_ptr(context)
-        }
-        (_, Some(expr)) => {
-            let ptr: PointerValue = rawgen::compile(context, expr, None).into_pointer_value();
-
-            memory::store_anon(context, ptr, value);
-
-            self::compile_null_ptr(context)
-        }
-        _ => {
-            self::codegen_abort("Invalid write target in expression");
-            self::compile_null_ptr(context)
-        }
-    }
-}
-
-fn compile_load<'ctx>(
-    context: &mut LLVMCodeGenContext<'_, 'ctx>,
-    value: &'ctx (
-        Option<(&'ctx str, Rc<ThrushStatement<'ctx>>)>,
-        Option<Rc<ThrushStatement<'ctx>>>,
-    ),
-    kind: &ThrushType,
-) -> BasicValueEnum<'ctx> {
-    match value {
-        (Some((name, _)), _) => {
-            let ptr: PointerValue = context.get_allocated_symbol(name).raw_load();
-
-            memory::load_anon(context, ptr, kind)
-        }
-        (_, Some(expr)) => {
-            let ptr: PointerValue = rawgen::compile(context, expr, None).into_pointer_value();
-
-            memory::load_anon(context, ptr, kind)
-        }
-        _ => {
-            self::codegen_abort("Invalid load target in expression");
-            self::compile_null_ptr(context)
-        }
-    }
-}
-
-fn compile_address<'ctx>(
-    context: &mut LLVMCodeGenContext<'_, 'ctx>,
-    address_to: &'ctx (
-        Option<(&'ctx str, Rc<ThrushStatement<'ctx>>)>,
-        Option<Rc<ThrushStatement<'ctx>>>,
-    ),
-    indexes: &'ctx [ThrushStatement],
-) -> BasicValueEnum<'ctx> {
-    let llvm_context: &Context = context.get_llvm_context();
-    let llvm_builder: &Builder = context.get_llvm_builder();
-
-    let indexes: Vec<IntValue> = indexes
-        .iter()
-        .map(|index| self::compile(context, index, Some(&ThrushType::U32)).into_int_value()) // Recursive
-        .collect();
-
-    match address_to {
-        (Some((name, _)), _) => {
-            let symbol: SymbolAllocated = context.get_allocated_symbol(name);
-
-            symbol.gep(llvm_context, llvm_builder, &indexes).into()
-        }
-        (_, Some(expr)) => {
-            let kind: &ThrushType = expr.get_type_unwrapped();
-            let ptr: PointerValue = rawgen::compile(context, expr, None).into_pointer_value();
-
-            memory::gep_anon(context, ptr, kind, &indexes).into()
-        }
-        _ => {
-            self::codegen_abort("Invalid address target in expression".to_string());
-            self::compile_null_ptr(context)
-        }
-    }
 }
 
 fn compile_cast<'ctx>(
@@ -695,14 +578,6 @@ fn compute_indexes<'ctx>(
         .collect()
 }
 
-fn compile_null_ptr<'ctx>(context: &LLVMCodeGenContext<'_, 'ctx>) -> BasicValueEnum<'ctx> {
-    context
-        .get_llvm_context()
-        .ptr_type(AddressSpace::default())
-        .const_null()
-        .into()
-}
-
 fn compile_string<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     bytes: &'ctx [u8],
@@ -714,12 +589,12 @@ fn compile_string<'ctx>(
     memory::load_anon(context, ptr, kind)
 }
 
-fn handle_unknown_expression<'ctx, T: Display>(
-    context: &LLVMCodeGenContext<'_, 'ctx>,
-    expr: T,
-) -> BasicValueEnum<'ctx> {
-    self::codegen_abort(format!("Unsupported expression: '{}'", expr));
-    self::compile_null_ptr(context)
+fn compile_null_ptr<'ctx>(context: &LLVMCodeGenContext<'_, 'ctx>) -> BasicValueEnum<'ctx> {
+    context
+        .get_llvm_context()
+        .ptr_type(AddressSpace::default())
+        .const_null()
+        .into()
 }
 
 fn codegen_abort<T: Display>(message: T) {

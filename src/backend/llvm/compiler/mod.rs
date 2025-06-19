@@ -10,7 +10,7 @@ pub mod conventions;
 pub mod floatgen;
 pub mod intgen;
 pub mod jit;
-pub mod llis;
+pub mod lli;
 pub mod local;
 pub mod memory;
 pub mod mutation;

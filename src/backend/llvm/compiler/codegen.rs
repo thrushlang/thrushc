@@ -1,6 +1,6 @@
 #![allow(clippy::collapsible_if)]
 
-use crate::backend::llvm::compiler::{builtins, mutation, rawgen, utils};
+use crate::backend::llvm::compiler::{builtins, lli, mutation, rawgen, utils};
 use crate::backend::types::{representations::LLVMFunction, traits::AssemblerFunctionExtensions};
 use crate::core::console::logging::{self, LoggingType};
 use crate::frontend::types::lexer::ThrushType;
@@ -14,7 +14,6 @@ use crate::frontend::types::parser::stmts::stmt::ThrushStatement;
 
 use super::super::compiler::attributes::LLVMAttribute;
 
-use super::llis;
 use super::{
     attributes::{AttributeBuilder, LLVMAttributeApplicant},
     context::LLVMCodeGenContext,
@@ -574,13 +573,13 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                     return;
                 }
 
-                local::compile((name, ascii_name, kind, value, attributes), self.context);
+                local::new((name, ascii_name, kind, value, attributes), self.context);
             }
 
             ThrushStatement::LLI {
                 name, kind, value, ..
             } => {
-                llis::compile(name, kind, value, self.context);
+                lli::new(name, kind, value, self.context);
             }
 
             stmt => self.codegen_loose_expression(stmt),

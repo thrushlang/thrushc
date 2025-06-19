@@ -15,7 +15,7 @@ use inkwell::{
     values::{BasicValueEnum, PointerValue},
 };
 
-pub fn compile<'ctx>(local: Local<'ctx>, context: &mut LLVMCodeGenContext<'_, 'ctx>) {
+pub fn new<'ctx>(local: Local<'ctx>, context: &mut LLVMCodeGenContext<'_, 'ctx>) {
     let local_name: &str = local.0;
     let ascii_name: &str = local.1;
     let local_type: &ThrushType = local.2;
