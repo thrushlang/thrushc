@@ -16,6 +16,7 @@ use crate::{
 };
 
 pub mod attributes;
+mod builtins;
 mod table;
 
 #[derive(Debug)]
@@ -650,6 +651,8 @@ impl<'linter> Linter<'linter> {
             if let Some(expr) = &source.1 {
                 self.analyze_stmt(expr);
             }
+
+            return;
         }
 
         /* ######################################################################
@@ -668,40 +671,8 @@ impl<'linter> Linter<'linter> {
 
         ########################################################################*/
 
-        if let ThrushStatement::MemSet {
-            destination,
-            new_size,
-            size,
-            ..
-        } = stmt
-        {
-            self.analyze_stmt(destination);
-            self.analyze_stmt(new_size);
-            self.analyze_stmt(size);
-        }
-
-        if let ThrushStatement::MemMove {
-            source,
-            destination,
-            size,
-            ..
-        } = stmt
-        {
-            self.analyze_stmt(source);
-            self.analyze_stmt(destination);
-            self.analyze_stmt(size);
-        }
-
-        if let ThrushStatement::MemCpy {
-            source,
-            destination,
-            size,
-            ..
-        } = stmt
-        {
-            self.analyze_stmt(source);
-            self.analyze_stmt(destination);
-            self.analyze_stmt(size);
+        if let ThrushStatement::Builtin { builtin, .. } = stmt {
+            builtins::analyze_builtin(self, builtin);
         }
 
         /* ######################################################################

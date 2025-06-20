@@ -4,6 +4,7 @@
 use std::rc::Rc;
 
 use crate::{
+    backend::llvm::compiler::builtins::Builtin,
     core::{
         console::logging::{self, LoggingType},
         errors::{position::CompilationPosition, standard::ThrushCompilerIssue},
@@ -28,7 +29,6 @@ pub enum ThrushStatement<'ctx> {
     Str {
         bytes: Vec<u8>,
         kind: ThrushType,
-        raw_type: ThrushType,
         span: Span,
     },
 
@@ -369,26 +369,8 @@ pub enum ThrushStatement<'ctx> {
         span: Span,
     },
 
-    MemCpy {
-        source: Rc<ThrushStatement<'ctx>>,
-        destination: Rc<ThrushStatement<'ctx>>,
-        size: Rc<ThrushStatement<'ctx>>,
-        kind: ThrushType,
-        span: Span,
-    },
-
-    MemMove {
-        source: Rc<ThrushStatement<'ctx>>,
-        destination: Rc<ThrushStatement<'ctx>>,
-        size: Rc<ThrushStatement<'ctx>>,
-        kind: ThrushType,
-        span: Span,
-    },
-
-    MemSet {
-        destination: Rc<ThrushStatement<'ctx>>,
-        new_size: Rc<ThrushStatement<'ctx>>,
-        size: Rc<ThrushStatement<'ctx>>,
+    Builtin {
+        builtin: Builtin<'ctx>,
         kind: ThrushType,
         span: Span,
     },
@@ -448,9 +430,7 @@ impl ThrushStatement<'_> {
 
             // Builtins
             ThrushStatement::SizeOf { kind, .. } => Ok(kind),
-            ThrushStatement::MemCpy { kind, .. } => Ok(kind),
-            ThrushStatement::MemMove { kind, .. } => Ok(kind),
-            ThrushStatement::MemSet { kind, .. } => Ok(kind),
+            ThrushStatement::Builtin { kind, .. } => Ok(kind),
 
             // Composite Types
             ThrushStatement::Constructor { kind, .. } => Ok(kind),
@@ -527,8 +507,7 @@ impl ThrushStatement<'_> {
 
             // Builtins
             ThrushStatement::SizeOf { kind, .. } => Ok(kind),
-            ThrushStatement::MemCpy { kind, .. } => Ok(kind),
-            ThrushStatement::MemMove { kind, .. } => Ok(kind),
+            ThrushStatement::Builtin { kind, .. } => Ok(kind),
 
             // ASM Code Block
             ThrushStatement::AsmValue { kind, .. } => Ok(kind),
@@ -586,8 +565,7 @@ impl ThrushStatement<'_> {
 
             // Builtins
             ThrushStatement::SizeOf { kind, .. } => kind,
-            ThrushStatement::MemCpy { kind, .. } => kind,
-            ThrushStatement::MemSet { kind, .. } => kind,
+            ThrushStatement::Builtin { kind, .. } => kind,
 
             // ASM Code Block
             ThrushStatement::AsmValue { kind, .. } => kind,
@@ -651,9 +629,7 @@ impl ThrushStatement<'_> {
 
             // Builtins
             ThrushStatement::SizeOf { span, .. } => *span,
-            ThrushStatement::MemCpy { span, .. } => *span,
-            ThrushStatement::MemMove { span, .. } => *span,
-            ThrushStatement::MemSet { span, .. } => *span,
+            ThrushStatement::Builtin { span, .. } => *span,
 
             // Control flow
             ThrushStatement::If { span, .. } => *span,
@@ -832,18 +808,8 @@ impl<'ctx> ThrushStatement<'ctx> {
         ThrushStatement::Char { kind, byte, span }
     }
 
-    pub fn new_str(
-        bytes: Vec<u8>,
-        kind: ThrushType,
-        raw_type: ThrushType,
-        span: Span,
-    ) -> ThrushStatement<'ctx> {
-        ThrushStatement::Str {
-            bytes,
-            kind,
-            raw_type,
-            span,
-        }
+    pub fn new_str(bytes: Vec<u8>, kind: ThrushType, span: Span) -> ThrushStatement<'ctx> {
+        ThrushStatement::Str { bytes, kind, span }
     }
 }
 
@@ -948,7 +914,7 @@ impl ThrushStatement<'_> {
     }
 
     #[inline]
-    pub const fn is_reference(&self) -> bool {
+    pub fn is_reference(&self) -> bool {
         matches!(self, ThrushStatement::Reference { .. })
     }
 

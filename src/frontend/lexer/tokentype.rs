@@ -82,9 +82,6 @@ pub enum TokenType {
     Fixed,
     Import,
     SizeOf,
-    MemCpy,
-    MemMove,
-    MemSet,
     Mut,
     Type,
     Enum,
@@ -106,6 +103,12 @@ pub enum TokenType {
     While,
     Loop,
     NullPtr,
+
+    // -- Builtins --
+    MemCpy,
+    MemMove,
+    MemSet,
+    Sqrt,
 
     // --- Types ---
     S8,

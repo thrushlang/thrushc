@@ -58,7 +58,7 @@ pub fn parse<'instr>(
             TokenType::Fn => Ok(self::build_function(parser_ctx, false)?),
             TokenType::AsmFn => Ok(self::build_assembler_function(parser_ctx, false)?),
 
-            _ => Ok(statement(parser_ctx)?),
+            _ => Ok(self::statement(parser_ctx)?),
         };
 
     statement

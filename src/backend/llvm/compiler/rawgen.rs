@@ -52,26 +52,7 @@ pub fn compile<'ctx>(
             self::compile_property(context, name, indexes)
         }
 
-        ThrushStatement::MemCpy {
-            source,
-            destination,
-            size,
-            ..
-        } => builtins::mem::memcpy::compile(context, source, destination, size),
-
-        ThrushStatement::MemMove {
-            source,
-            destination,
-            size,
-            ..
-        } => builtins::mem::memmove::compile(context, source, destination, size),
-
-        ThrushStatement::MemSet {
-            destination,
-            new_size,
-            size,
-            ..
-        } => builtins::mem::memset::compile(context, destination, new_size, size),
+        ThrushStatement::Builtin { builtin, .. } => builtins::compile(context, builtin),
 
         ThrushStatement::Reference { name, .. } => self::compile_reference(context, name),
 

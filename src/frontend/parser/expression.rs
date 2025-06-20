@@ -7,27 +7,29 @@ use crate::{
     core::errors::{position::CompilationPosition, standard::ThrushCompilerIssue},
     frontend::{
         lexer::{span::Span, token::Token, tokentype::TokenType},
-        parser::expression,
+        parser::{builtins, expression},
         types::{
             lexer::{self, ThrushType},
-            parser::stmts::{
-                ident::ReferenceIdentificator,
-                sites::LLIAllocationSite,
-                stmt::ThrushStatement,
-                traits::{
-                    ConstructorExtensions, EnumExtensions, EnumFieldsExtensions, FoundSymbolEither,
-                    FoundSymbolExtension, StructExtensions, TokenExtensions,
+            parser::{
+                stmts::{
+                    ident::ReferenceIdentificator,
+                    sites::LLIAllocationSite,
+                    stmt::ThrushStatement,
+                    traits::{
+                        ConstructorExtensions, EnumExtensions, EnumFieldsExtensions,
+                        FoundSymbolEither, FoundSymbolExtension, StructExtensions, TokenExtensions,
+                    },
+                    types::{Constructor, EnumField, EnumFields, ThrushAttributes},
                 },
-                types::{Constructor, EnumField, EnumFields, ThrushAttributes},
-            },
-            parser::symbols::{
-                traits::{
-                    ConstantSymbolExtensions, FunctionExtensions, LLISymbolExtensions,
-                    LocalSymbolExtensions,
-                },
-                types::{
-                    AssemblerFunction, ConstantSymbol, FoundSymbolId, Function, LLISymbol,
-                    LocalSymbol, ParameterSymbol, Struct,
+                symbols::{
+                    traits::{
+                        ConstantSymbolExtensions, FunctionExtensions, LLISymbolExtensions,
+                        LocalSymbolExtensions,
+                    },
+                    types::{
+                        AssemblerFunction, ConstantSymbol, FoundSymbolId, Function, LLISymbol,
+                        LocalSymbol, ParameterSymbol, Struct,
+                    },
                 },
             },
         },
@@ -323,9 +325,10 @@ fn primary<'instr>(
         TokenType::Deref => self::build_deref(parser_context)?,
 
         TokenType::SizeOf => self::build_sizeof(parser_context)?,
-        TokenType::MemSet => self::build_memset(parser_context)?,
-        TokenType::MemMove => self::build_memmove(parser_context)?,
-        TokenType::MemCpy => self::build_memcpy(parser_context)?,
+
+        TokenType::MemSet => builtins::build_memset(parser_context)?,
+        TokenType::MemMove => builtins::build_memmove(parser_context)?,
+        TokenType::MemCpy => builtins::build_memcpy(parser_context)?,
 
         TokenType::Asm => self::build_asm_code_block(parser_context)?,
 
@@ -575,21 +578,7 @@ fn primary<'instr>(
 
             let bytes: Vec<u8> = str_tk.fix_lexeme_scapes(span)?;
 
-            if let Ok(size) = u32::try_from(bytes.len()) {
-                return Ok(ThrushStatement::new_str(
-                    bytes,
-                    ThrushType::Str,
-                    ThrushType::FixedArray(ThrushType::U8.into(), size),
-                    span,
-                ));
-            }
-
-            return Err(ThrushCompilerIssue::Error(
-                "Syntax error".into(),
-                "Could not get the size of a string, because it's too large.".into(),
-                None,
-                span,
-            ));
+            ThrushStatement::new_str(bytes, ThrushType::Str, span)
         }
 
         TokenType::Char => {
@@ -1747,155 +1736,5 @@ pub fn build_sizeof<'instr>(
         sizeof: sizeof_type,
         kind: ThrushType::U64,
         span: sizeof_span,
-    })
-}
-
-pub fn build_memcpy<'instr>(
-    parser_context: &mut ParserContext<'instr>,
-) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
-    let memcpy_tk: &Token = parser_context.consume(
-        TokenType::MemCpy,
-        String::from("Syntax error"),
-        String::from("Expected 'memcpy' keyword."),
-    )?;
-
-    parser_context.consume(
-        TokenType::LParen,
-        String::from("Syntax error"),
-        String::from("Expected '('."),
-    )?;
-
-    let span: Span = memcpy_tk.get_span();
-
-    let source: ThrushStatement = self::build_expr(parser_context)?;
-
-    parser_context.consume(
-        TokenType::Comma,
-        String::from("Syntax error"),
-        String::from("Expected ','."),
-    )?;
-
-    let destination: ThrushStatement = self::build_expr(parser_context)?;
-
-    parser_context.consume(
-        TokenType::Comma,
-        String::from("Syntax error"),
-        String::from("Expected ','."),
-    )?;
-
-    let size: ThrushStatement = self::build_expr(parser_context)?;
-
-    parser_context.consume(
-        TokenType::RParen,
-        String::from("Syntax error"),
-        String::from("Expected ')'."),
-    )?;
-
-    Ok(ThrushStatement::MemCpy {
-        source: source.into(),
-        destination: destination.into(),
-        size: size.into(),
-        kind: ThrushType::Ptr(None),
-        span,
-    })
-}
-
-pub fn build_memmove<'instr>(
-    parser_context: &mut ParserContext<'instr>,
-) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
-    let memcpy_tk: &Token = parser_context.consume(
-        TokenType::MemMove,
-        String::from("Syntax error"),
-        String::from("Expected 'memmove' keyword."),
-    )?;
-
-    parser_context.consume(
-        TokenType::LParen,
-        String::from("Syntax error"),
-        String::from("Expected '('."),
-    )?;
-
-    let span: Span = memcpy_tk.get_span();
-
-    let source: ThrushStatement = self::build_expr(parser_context)?;
-
-    parser_context.consume(
-        TokenType::Comma,
-        String::from("Syntax error"),
-        String::from("Expected ','."),
-    )?;
-
-    let destination: ThrushStatement = self::build_expr(parser_context)?;
-
-    parser_context.consume(
-        TokenType::Comma,
-        String::from("Syntax error"),
-        String::from("Expected ','."),
-    )?;
-
-    let size: ThrushStatement = self::build_expr(parser_context)?;
-
-    parser_context.consume(
-        TokenType::RParen,
-        String::from("Syntax error"),
-        String::from("Expected ')'."),
-    )?;
-
-    Ok(ThrushStatement::MemMove {
-        source: source.into(),
-        destination: destination.into(),
-        size: size.into(),
-        kind: ThrushType::Ptr(None),
-        span,
-    })
-}
-
-pub fn build_memset<'instr>(
-    parser_context: &mut ParserContext<'instr>,
-) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
-    let memcpy_tk: &Token = parser_context.consume(
-        TokenType::MemSet,
-        String::from("Syntax error"),
-        String::from("Expected 'memset' keyword."),
-    )?;
-
-    parser_context.consume(
-        TokenType::LParen,
-        String::from("Syntax error"),
-        String::from("Expected '('."),
-    )?;
-
-    let span: Span = memcpy_tk.get_span();
-
-    let destination: ThrushStatement = self::build_expr(parser_context)?;
-
-    parser_context.consume(
-        TokenType::Comma,
-        String::from("Syntax error"),
-        String::from("Expected ','."),
-    )?;
-
-    let new_size: ThrushStatement = self::build_expr(parser_context)?;
-
-    parser_context.consume(
-        TokenType::Comma,
-        String::from("Syntax error"),
-        String::from("Expected ','."),
-    )?;
-
-    let size: ThrushStatement = self::build_expr(parser_context)?;
-
-    parser_context.consume(
-        TokenType::RParen,
-        String::from("Syntax error"),
-        String::from("Expected ')'."),
-    )?;
-
-    Ok(ThrushStatement::MemSet {
-        destination: destination.into(),
-        new_size: new_size.into(),
-        size: size.into(),
-        kind: ThrushType::Ptr(None),
-        span,
     })
 }

@@ -120,6 +120,7 @@ impl std::fmt::Display for TokenType {
             TokenType::MemSet => write!(f, "memset"),
             TokenType::MemMove => write!(f, "memmove"),
             TokenType::MemCpy => write!(f, "memcpy"),
+            TokenType::Sqrt => write!(f, "sqrt"),
         }
     }
 }

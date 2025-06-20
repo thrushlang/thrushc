@@ -620,57 +620,8 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 valuegen::compile(self.context, stmt, None);
             }
 
-            stmt => self.codegen_builtins(stmt),
-        }
-
-        /* ######################################################################
-
-
-            LLVM CODEGEN | LOOSE EXPRESSIONS - END
-
-
-        ########################################################################*/
-    }
-
-    fn codegen_builtins(&mut self, stmt: &'ctx ThrushStatement) {
-        /* ######################################################################
-
-
-            LLVM CODEGEN | BUILTINS - START
-
-
-        ########################################################################*/
-
-        match stmt {
-            ThrushStatement::MemCpy {
-                source,
-                destination,
-                size,
-                ..
-            } => {
-                builtins::mem::memcpy::compile(self.context, source, destination, size);
-            }
-
-            ThrushStatement::MemMove {
-                source,
-                destination,
-                size,
-                ..
-            } => {
-                builtins::mem::memmove::compile(self.context, source, destination, size);
-            }
-
-            ThrushStatement::MemSet {
-                destination,
-                new_size,
-                size,
-                ..
-            } => {
-                builtins::mem::memset::compile(self.context, destination, new_size, size);
-            }
-
-            ThrushStatement::SizeOf { sizeof, .. } => {
-                builtins::sizeof::compile(self.context, sizeof);
+            ThrushStatement::Builtin { builtin, .. } => {
+                builtins::compile(self.context, builtin);
             }
 
             _ => (),
@@ -679,7 +630,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         /* ######################################################################
 
 
-            LLVM CODEGEN | BUILTINS - END
+            LLVM CODEGEN | LOOSE EXPRESSIONS - END
 
 
         ########################################################################*/

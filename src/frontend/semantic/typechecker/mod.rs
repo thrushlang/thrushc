@@ -25,6 +25,7 @@ use crate::{
     },
 };
 
+mod builtins;
 mod position;
 mod table;
 
@@ -89,7 +90,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
         false
     }
 
-    fn analyze_stmt(
+    pub fn analyze_stmt(
         &mut self,
         stmt: &'type_checker ThrushStatement,
     ) -> Result<(), ThrushCompilerIssue> {
@@ -778,150 +779,8 @@ impl<'type_checker> TypeChecker<'type_checker> {
 
 
         ########################################################################*/
-        if let ThrushStatement::MemSet {
-            destination,
-            new_size,
-            size,
-            ..
-        } = stmt
-        {
-            let destination_type: &ThrushType = destination.get_value_type()?;
-            let destination_span: Span = destination.get_span();
-
-            let new_size_span: Span = new_size.get_span();
-            let size_span: Span = size.get_span();
-
-            if !destination_type.is_ptr_type()
-                && !destination_type.is_address_type()
-                && !destination_type.is_mut_type()
-            {
-                self.add_error(ThrushCompilerIssue::Error(
-                    "Type error".into(),
-                    "Expected 'ptr<T>', 'ptr', 'addr', or 'mut T' type.".into(),
-                    None,
-                    destination_span,
-                ));
-            }
-
-            if !new_size.is_unsigned_integer()? || !new_size.is_moreu32bit_integer()? {
-                self.add_error(ThrushCompilerIssue::Error(
-                    "Type error".into(),
-                    "Expected any unsigned integer value more than or equal to 32 bits.".into(),
-                    None,
-                    new_size_span,
-                ));
-            }
-
-            if !size.is_unsigned_integer()? || !size.is_moreu32bit_integer()? {
-                self.add_error(ThrushCompilerIssue::Error(
-                    "Type error".into(),
-                    "Expected any unsigned integer value more than or equal to 32 bits.".into(),
-                    None,
-                    size_span,
-                ));
-            }
-
-            return Ok(());
-        }
-
-        if let ThrushStatement::MemMove {
-            source,
-            destination,
-            size,
-            ..
-        } = stmt
-        {
-            let source_type: &ThrushType = source.get_value_type()?;
-            let source_span: Span = source.get_span();
-
-            let destination_type: &ThrushType = destination.get_value_type()?;
-            let destination_span: Span = destination.get_span();
-
-            let size_span: Span = size.get_span();
-
-            if !source_type.is_ptr_type()
-                && !source_type.is_address_type()
-                && !source_type.is_mut_type()
-            {
-                self.add_error(ThrushCompilerIssue::Error(
-                    "Type error".into(),
-                    "Expected 'ptr<T>', 'ptr', 'addr', or 'mut T' type.".into(),
-                    None,
-                    source_span,
-                ));
-            }
-
-            if !destination_type.is_ptr_type()
-                && !destination_type.is_address_type()
-                && !destination_type.is_mut_type()
-            {
-                self.add_error(ThrushCompilerIssue::Error(
-                    "Type error".into(),
-                    "Expected 'ptr<T>', 'ptr', 'addr', or 'mut T' type.".into(),
-                    None,
-                    destination_span,
-                ));
-            }
-
-            if !size.is_unsigned_integer()? || !size.is_moreu32bit_integer()? {
-                self.add_error(ThrushCompilerIssue::Error(
-                    "Type error".into(),
-                    "Expected any unsigned integer value more than or equal to 32 bits.".into(),
-                    None,
-                    size_span,
-                ));
-            }
-
-            return Ok(());
-        }
-
-        if let ThrushStatement::MemCpy {
-            source,
-            destination,
-            size,
-            ..
-        } = stmt
-        {
-            let source_type: &ThrushType = source.get_value_type()?;
-            let source_span: Span = source.get_span();
-
-            let destination_type: &ThrushType = destination.get_value_type()?;
-            let destination_span: Span = destination.get_span();
-
-            let size_span: Span = size.get_span();
-
-            if !source_type.is_ptr_type()
-                && !source_type.is_address_type()
-                && !source_type.is_mut_type()
-            {
-                self.add_error(ThrushCompilerIssue::Error(
-                    "Type error".into(),
-                    "Expected 'ptr<T>', 'ptr', 'addr', or 'mut T' type.".into(),
-                    None,
-                    source_span,
-                ));
-            }
-
-            if !destination_type.is_ptr_type()
-                && !destination_type.is_address_type()
-                && !destination_type.is_mut_type()
-            {
-                self.add_error(ThrushCompilerIssue::Error(
-                    "Type error".into(),
-                    "Expected 'ptr<T>', 'ptr', 'addr', or 'mut T' type.".into(),
-                    None,
-                    destination_span,
-                ));
-            }
-
-            if !size.is_unsigned_integer()? || !size.is_moreu32bit_integer()? {
-                self.add_error(ThrushCompilerIssue::Error(
-                    "Type error".into(),
-                    "Expected any unsigned integer value more than or equal to 32 bits.".into(),
-                    None,
-                    size_span,
-                ));
-            }
+        if let ThrushStatement::Builtin { builtin, span, .. } = stmt {
+            builtins::validate_builtin(self, builtin, *span)?;
 
             return Ok(());
         }
@@ -2088,37 +1947,37 @@ impl<'type_checker> TypeChecker<'type_checker> {
             });
     }
 
-    fn begin_scope(&mut self) {
+    pub fn begin_scope(&mut self) {
         self.symbols.begin_scope();
     }
 
-    fn end_scope(&mut self) {
+    pub fn end_scope(&mut self) {
         self.symbols.end_scope();
     }
 
-    fn add_warning(&mut self, warning: ThrushCompilerIssue) {
+    pub fn add_warning(&mut self, warning: ThrushCompilerIssue) {
         self.warnings.push(warning);
     }
 
-    fn add_error(&mut self, error: ThrushCompilerIssue) {
+    pub fn add_error(&mut self, error: ThrushCompilerIssue) {
         self.errors.push(error);
     }
 
-    fn add_bug(&mut self, error: ThrushCompilerIssue) {
+    pub fn add_bug(&mut self, error: ThrushCompilerIssue) {
         self.bugs.push(error);
     }
 
-    fn advance(&mut self) {
+    pub fn advance(&mut self) {
         if !self.is_eof() {
             self.position += 1;
         }
     }
 
-    fn peek(&self) -> &'type_checker ThrushStatement<'type_checker> {
+    pub fn peek(&self) -> &'type_checker ThrushStatement<'type_checker> {
         &self.stmts[self.position]
     }
 
-    fn is_eof(&self) -> bool {
+    pub fn is_eof(&self) -> bool {
         self.position >= self.stmts.len()
     }
 }
