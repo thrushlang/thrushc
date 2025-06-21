@@ -35,7 +35,7 @@ pub fn validate_builtin<'type_checker>(
         _ => {
             typechecker.add_bug(ThrushCompilerIssue::Bug(
                 "Expression not caught".into(),
-                "The expression could not be caught for processing.".into(),
+                "Expression could not be caught for processing.".into(),
                 span,
                 CompilationPosition::TypeChecker,
                 line!(),

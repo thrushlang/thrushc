@@ -4,10 +4,8 @@ use table::TypeCheckerSymbolsTable;
 
 use crate::{
     core::{
-        compiler::options::CompilerFile,
-        console::logging::LoggingType,
-        diagnostic::diagnostician::Diagnostician,
-        errors::{position::CompilationPosition, standard::ThrushCompilerIssue},
+        compiler::options::CompilerFile, console::logging::LoggingType,
+        diagnostic::diagnostician::Diagnostician, errors::standard::ThrushCompilerIssue,
     },
     frontend::{
         lexer::{span::Span, tokentype::TokenType},
@@ -15,10 +13,7 @@ use crate::{
         types::{
             lexer::{
                 ThrushType,
-                traits::{
-                    ThrushTypeMutableExtensions, ThrushTypeNumericExtensions,
-                    ThrushTypePointerExtensions,
-                },
+                traits::{ThrushTypeMutableExtensions, ThrushTypeNumericExtensions},
             },
             parser::stmts::{stmt::ThrushStatement, traits::ThrushAttributesExtensions},
         },
@@ -26,7 +21,20 @@ use crate::{
 };
 
 mod builtins;
+mod call;
+mod casts;
+mod conditionals;
+mod constant;
+mod deref;
+mod expressions;
+mod exprvalidations;
+mod functions;
+mod lli;
+mod local;
+mod loops;
 mod position;
+mod terminator;
+
 mod table;
 
 #[derive(Debug)]
@@ -62,8 +70,8 @@ impl<'type_checker> TypeChecker<'type_checker> {
         while !self.is_eof() {
             let current_stmt: &ThrushStatement = self.peek();
 
-            if let Err(type_error) = self.analyze_stmt(current_stmt) {
-                self.add_error(type_error);
+            if let Err(error) = self.analyze_stmt(current_stmt) {
+                self.add_error(error);
             }
 
             self.advance();
@@ -94,13 +102,33 @@ impl<'type_checker> TypeChecker<'type_checker> {
         &mut self,
         stmt: &'type_checker ThrushStatement,
     ) -> Result<(), ThrushCompilerIssue> {
-        if let ThrushStatement::EntryPoint { body, .. } = stmt {
-            if let Err(type_error) = self.analyze_stmt(body) {
-                self.add_error(type_error);
-            }
+        /* ######################################################################
 
-            return Ok(());
+
+            TYPE CHECKER FUNCTIONS - START
+
+
+        ########################################################################*/
+
+        if let ThrushStatement::EntryPoint { .. } = stmt {
+            return functions::validate_function(self, stmt);
         }
+
+        if let ThrushStatement::AssemblerFunction { .. } = stmt {
+            return functions::validate_function(self, stmt);
+        }
+
+        if let ThrushStatement::Function { .. } = stmt {
+            return functions::validate_function(self, stmt);
+        }
+
+        /* ######################################################################
+
+
+            TYPE CHECKER FUNCTIONS - END
+
+
+        ########################################################################*/
 
         /* ######################################################################
 
@@ -110,60 +138,6 @@ impl<'type_checker> TypeChecker<'type_checker> {
 
         ########################################################################*/
 
-        if let ThrushStatement::AssemblerFunction {
-            parameters, span, ..
-        } = stmt
-        {
-            for parameter in parameters.iter() {
-                if parameter.get_value_type()?.is_void_type() {
-                    self.add_error(ThrushCompilerIssue::Error(
-                        "Type error".into(),
-                        "The void type isn't a value.".into(),
-                        None,
-                        *span,
-                    ));
-                }
-            }
-
-            return Ok(());
-        }
-
-        if let ThrushStatement::Function {
-            parameters,
-            body,
-            return_type,
-            span,
-            ..
-        } = stmt
-        {
-            for parameter in parameters.iter() {
-                if parameter.get_stmt_type()?.is_void_type() {
-                    self.add_error(ThrushCompilerIssue::Error(
-                        "Type error".into(),
-                        "The void type isn't a value.".into(),
-                        None,
-                        *span,
-                    ));
-                }
-            }
-
-            if body.is_block() {
-                if let Err(type_error) = self.analyze_stmt(body) {
-                    self.add_error(type_error);
-                }
-
-                if !body.has_return() {
-                    if let Err(mismatch_type_error) =
-                        self.validate_types(return_type, &ThrushType::Void, None, None, None, span)
-                    {
-                        self.add_error(mismatch_type_error);
-                    }
-                }
-            }
-
-            return Ok(());
-        }
-
         if let ThrushStatement::Struct { .. } = stmt {
             return Ok(());
         }
@@ -172,105 +146,24 @@ impl<'type_checker> TypeChecker<'type_checker> {
             return Ok(());
         }
 
-        if let ThrushStatement::Const {
-            kind: target_type,
-            value,
-            span,
-            ..
-        } = stmt
-        {
-            let from_type: &ThrushType = value.get_value_type()?;
-
-            if let Err(mismatch_type_error) =
-                self.validate_types(target_type, from_type, Some(value), None, None, span)
-            {
-                self.add_error(mismatch_type_error);
-            }
-
-            return Ok(());
+        if let ThrushStatement::Const { .. } = stmt {
+            return constant::validate_constant(self, stmt);
         }
 
-        if let ThrushStatement::Local {
-            name,
-            kind: local_type,
-            value: local_value,
-            span,
-            undefined,
-            ..
-        } = stmt
-        {
-            self.symbols.new_local(name, local_type);
-
-            if local_type.is_void_type() {
-                self.add_error(ThrushCompilerIssue::Error(
-                    "Type error".into(),
-                    "The void type isn't a value.".into(),
-                    None,
-                    *span,
-                ));
-            }
-
-            if local_type.is_ptr_type() {
-                self.add_error(ThrushCompilerIssue::Error(
-                    "Type error".into(),
-                    "Raw pointer type 'ptr<T>', or 'ptr' can only be used in Low Level Instructions (LLI), use them instead.".into(),
-                    None,
-                    *span,
-                ));
-            }
-
-            if !*undefined {
-                let local_value_type: &ThrushType = local_value.get_value_type()?;
-
-                if let Err(mismatch_type_error) = self.validate_types(
-                    local_type,
-                    local_value_type,
-                    Some(local_value),
-                    None,
-                    Some(TypeCheckerPosition::Local),
-                    span,
-                ) {
-                    self.add_error(mismatch_type_error);
-                }
-
-                if let Err(type_error) = self.analyze_stmt(local_value) {
-                    self.add_error(type_error);
-                }
-            }
-
-            return Ok(());
+        if let ThrushStatement::Local { .. } = stmt {
+            return local::validate_local(self, stmt);
         }
 
-        if let ThrushStatement::LLI {
-            name,
-            kind: lli_type,
-            value: lli_value,
-            span,
-            ..
-        } = stmt
-        {
-            self.symbols.new_lli(name, (lli_type, *span));
+        if let ThrushStatement::LLI { .. } = stmt {
+            return lli::validate_lli(self, stmt);
+        }
 
-            let lli_value_type: &ThrushType = lli_value.get_value_type()?;
+        if let ThrushStatement::Block { stmts, .. } = stmt {
+            self.begin_scope();
 
-            if lli_type.is_void_type() {
-                self.add_error(ThrushCompilerIssue::Error(
-                    "Type error".into(),
-                    "The void type isn't a value.".into(),
-                    None,
-                    *span,
-                ));
-            }
+            stmts.iter().try_for_each(|stmt| self.analyze_stmt(stmt))?;
 
-            if let Err(mismatch_type_error) =
-                self.validate_types(lli_type, lli_value_type, Some(lli_value), None, None, span)
-            {
-                self.add_error(mismatch_type_error);
-            }
-
-            if let Err(type_error) = self.analyze_stmt(lli_value) {
-                self.add_error(type_error);
-            }
+            self.end_scope();
 
             return Ok(());
         }
@@ -291,61 +184,20 @@ impl<'type_checker> TypeChecker<'type_checker> {
 
         ########################################################################*/
 
-        if let ThrushStatement::If {
-            cond,
-            elfs,
-            block,
-            otherwise,
-            span,
-            ..
-        } = stmt
-        {
-            if let Err(error) = self.validate_types(
-                &ThrushType::Bool,
-                cond.get_value_type()?,
-                Some(cond),
-                None,
-                None,
-                span,
-            ) {
-                self.add_error(error);
-            }
-
-            elfs.iter().try_for_each(|elif| self.analyze_stmt(elif))?;
-
-            if let Some(otherwise) = otherwise {
-                self.analyze_stmt(otherwise)?;
-            }
-
-            self.analyze_stmt(cond)?;
-            self.analyze_stmt(block)?;
+        if let ThrushStatement::If { .. } = stmt {
+            conditionals::validate_conditional(self, stmt)?;
 
             return Ok(());
         }
 
-        if let ThrushStatement::Elif {
-            cond, block, span, ..
-        } = stmt
-        {
-            if let Err(error) = self.validate_types(
-                &ThrushType::Bool,
-                cond.get_value_type()?,
-                Some(cond),
-                None,
-                None,
-                span,
-            ) {
-                self.add_error(error);
-            }
-
-            self.analyze_stmt(cond)?;
-            self.analyze_stmt(block)?;
+        if let ThrushStatement::Elif { .. } = stmt {
+            conditionals::validate_conditional(self, stmt)?;
 
             return Ok(());
         }
 
-        if let ThrushStatement::Else { block, .. } = stmt {
-            self.analyze_stmt(block)?;
+        if let ThrushStatement::Else { .. } = stmt {
+            conditionals::validate_conditional(self, stmt)?;
 
             return Ok(());
         }
@@ -366,54 +218,16 @@ impl<'type_checker> TypeChecker<'type_checker> {
 
         ########################################################################*/
 
-        if let ThrushStatement::For {
-            local,
-            cond,
-            actions,
-            block,
-            ..
-        } = stmt
-        {
-            if let Err(type_error) = self.analyze_stmt(local) {
-                self.add_error(type_error);
-            }
-
-            if let Err(type_error) = self.analyze_stmt(cond) {
-                self.add_error(type_error);
-            }
-
-            if let Err(type_error) = self.analyze_stmt(actions) {
-                self.add_error(type_error);
-            }
-
-            if let Err(type_error) = self.analyze_stmt(block) {
-                self.add_error(type_error);
-            }
-
-            return Ok(());
+        if let ThrushStatement::For { .. } = stmt {
+            return loops::validate_loop(self, stmt);
         }
 
-        if let ThrushStatement::While { cond, block, .. } = stmt {
-            if let Err(error) = self.validate_types(
-                &ThrushType::Bool,
-                cond.get_value_type()?,
-                Some(cond),
-                None,
-                None,
-                &cond.get_span(),
-            ) {
-                self.add_error(error);
-            }
-
-            self.analyze_stmt(block)?;
-
-            return Ok(());
+        if let ThrushStatement::While { .. } = stmt {
+            return loops::validate_loop(self, stmt);
         }
 
-        if let ThrushStatement::Loop { block, .. } = stmt {
-            self.analyze_stmt(block)?;
-
-            return Ok(());
+        if let ThrushStatement::Loop { .. } = stmt {
+            return loops::validate_loop(self, stmt);
         }
 
         /* ######################################################################
@@ -432,11 +246,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
 
         ########################################################################*/
 
-        if let ThrushStatement::Continue { .. } = stmt {
-            return Ok(());
-        }
-
-        if let ThrushStatement::Break { .. } = stmt {
+        if let ThrushStatement::Continue { .. } | ThrushStatement::Break { .. } = stmt {
             return Ok(());
         }
 
@@ -456,23 +266,8 @@ impl<'type_checker> TypeChecker<'type_checker> {
 
         ########################################################################*/
 
-        if let ThrushStatement::Return {
-            expression,
-            kind,
-            span,
-        } = stmt
-        {
-            if let Some(expr) = expression {
-                if let Err(error) =
-                    self.validate_types(kind, expr.get_value_type()?, Some(expr), None, None, span)
-                {
-                    self.add_error(error);
-                }
-
-                self.analyze_stmt(expr)?;
-            }
-
-            return Ok(());
+        if let ThrushStatement::Return { .. } = stmt {
+            return terminator::validate_terminator(self, stmt);
         }
 
         /* ######################################################################
@@ -491,22 +286,8 @@ impl<'type_checker> TypeChecker<'type_checker> {
 
         ########################################################################*/
 
-        if let ThrushStatement::Deref { value, .. } = stmt {
-            let value_type: &ThrushType = value.get_value_type()?;
-            let value_span: Span = value.get_span();
-
-            if !value_type.is_ptr_type() && !value_type.is_mut_type() {
-                self.add_error(ThrushCompilerIssue::Error(
-                    "Type error".into(),
-                    "Expected 'ptr<T>', 'ptr', or 'mut T' type for dereference.".into(),
-                    None,
-                    value_span,
-                ));
-            }
-
-            self.analyze_stmt(value)?;
-
-            return Ok(());
+        if let ThrushStatement::Deref { .. } = stmt {
+            return deref::validate_dereference(self, stmt);
         }
 
         /* ######################################################################
@@ -525,23 +306,8 @@ impl<'type_checker> TypeChecker<'type_checker> {
 
         ########################################################################*/
 
-        if let ThrushStatement::As {
-            from,
-            cast: cast_type,
-            span,
-        } = stmt
-        {
-            let from_type: &ThrushType = from.get_value_type()?;
-
-            if let Err(error) =
-                self.validate_type_cast(from_type, cast_type, from.is_allocated_reference(), span)
-            {
-                self.add_error(error);
-            }
-
-            self.analyze_stmt(from)?;
-
-            return Ok(());
+        if let ThrushStatement::As { .. } = stmt {
+            return casts::validate_cast_as(self, stmt);
         }
 
         /* ######################################################################
@@ -560,208 +326,16 @@ impl<'type_checker> TypeChecker<'type_checker> {
 
         ########################################################################*/
 
-        if let ThrushStatement::Write {
-            write_to,
-            write_value,
-            write_type,
-            ..
-        } = stmt
-        {
-            if let Some(any_reference) = &write_to.0 {
-                let reference: &ThrushStatement = &any_reference.1;
-                let reference_type: &ThrushType = reference.get_value_type()?;
-                let reference_span: Span = reference.get_span();
-
-                if !reference_type.is_ptr_type()
-                    && !reference_type.is_address_type()
-                    && !reference_type.is_mut_type()
-                {
-                    self.add_error(ThrushCompilerIssue::Error(
-                        "Type error".into(),
-                        "Expected 'ptr<T>', 'ptr', 'addr', or 'mut T' type.".into(),
-                        None,
-                        reference_span,
-                    ));
-                }
-            }
-
-            if let Some(expr) = &write_to.1 {
-                let expr_type: &ThrushType = expr.get_value_type()?;
-                let expr_span: Span = expr.get_span();
-
-                if !expr_type.is_ptr_type()
-                    && !expr_type.is_address_type()
-                    && !expr_type.is_mut_type()
-                {
-                    self.add_error(ThrushCompilerIssue::Error(
-                        "Type error".into(),
-                        "Expected 'ptr<T>', 'ptr', 'addr', or 'mut T' type.".into(),
-                        None,
-                        expr_span,
-                    ));
-                }
-            }
-
-            let write_value_type: &ThrushType = write_value.get_value_type()?;
-            let write_value_span: Span = write_value.get_span();
-
-            if let Err(error) = self.validate_types(
-                write_type,
-                write_value_type,
-                Some(write_value),
-                None,
-                None,
-                &write_value_span,
-            ) {
-                self.add_error(error);
-            }
-
-            return Ok(());
+        if let ThrushStatement::Write { .. } = stmt {
+            return lli::validate_lli(self, stmt);
         }
 
-        if let ThrushStatement::Address {
-            address_to,
-            indexes,
-            span,
-            ..
-        } = stmt
-        {
-            if let Some(reference_any) = &address_to.0 {
-                let reference: &ThrushStatement = &reference_any.1;
-
-                let reference_type: &ThrushType = reference.get_value_type()?;
-                let reference_span: Span = reference.get_span();
-
-                if !reference_type.is_ptr_type() && !reference_type.is_address_type() {
-                    self.add_error(ThrushCompilerIssue::Error(
-                        "Type error".into(),
-                        "Expected 'ptr<T>', 'ptr', or 'addr' type.".into(),
-                        None,
-                        reference_span,
-                    ));
-                }
-
-                if reference_type.is_ptr_type() && !reference_type.is_typed_ptr() {
-                    self.add_error(ThrushCompilerIssue::Error(
-                        "Type error".into(),
-                        "Expected raw typed pointer ptr<T>.".into(),
-                        None,
-                        reference_span,
-                    ));
-                } else if reference_type.is_ptr_type()
-                    && reference_type.is_typed_ptr()
-                    && !reference_type.is_ptr_struct_type()
-                    && !reference_type.is_ptr_fixed_array_type()
-                {
-                    self.add_error(ThrushCompilerIssue::Error(
-                        "Type error".into(),
-                        "Expected raw typed pointer type with deep type.".into(),
-                        None,
-                        reference_span,
-                    ));
-                }
-
-                if reference_type.is_address_type() {
-                    self.add_warning(ThrushCompilerIssue::Warning(
-                        "Undefined behavior".into(), 
-                        "*Maybe* this value at runtime causes undefined behavior because it is anything at runtime, and memory calculation needs valid pointers or deep types.".into(), 
-                       reference_span
-                    ));
-                }
-            }
-
-            if let Some(expr) = &address_to.1 {
-                let expr_type: &ThrushType = expr.get_value_type()?;
-                let expr_span: Span = expr.get_span();
-
-                if !expr_type.is_ptr_type() && !expr_type.is_address_type() {
-                    self.add_error(ThrushCompilerIssue::Error(
-                        "Type error".into(),
-                        "Expected 'ptr<T>', 'ptr', or 'addr' type.".into(),
-                        None,
-                        expr_span,
-                    ));
-                }
-
-                if expr_type.is_ptr_type() && !expr_type.is_typed_ptr() {
-                    self.add_error(ThrushCompilerIssue::Error(
-                        "Type error".into(),
-                        "Expected raw typed pointer ptr<T>.".into(),
-                        None,
-                        expr_span,
-                    ));
-                } else if expr_type.is_ptr_type()
-                    && expr_type.is_typed_ptr()
-                    && !expr_type.is_ptr_struct_type()
-                    && !expr_type.is_ptr_fixed_array_type()
-                {
-                    self.add_error(ThrushCompilerIssue::Error(
-                        "Type error".into(),
-                        "Expected raw typed pointer type with deep type.".into(),
-                        None,
-                        expr_span,
-                    ));
-                }
-
-                if expr_type.is_address_type() {
-                    self.add_warning(ThrushCompilerIssue::Warning(
-                        "Undefined behavior".into(), 
-                        "*Maybe* this value at runtime causes undefined behavior because it is anything at runtime, and memory calculation needs valid pointers or deep types.".into(), 
-                        expr_span
-                    ));
-                }
-            }
-
-            for indexe in indexes {
-                if !indexe.is_unsigned_integer()? || !indexe.is_moreu32bit_integer()? {
-                    self.add_error(ThrushCompilerIssue::Error(
-                        "Type error".into(),
-                        "Expected any unsigned integer value more than or equal to 32 bits.".into(),
-                        None,
-                        *span,
-                    ));
-                }
-            }
-
-            return Ok(());
+        if let ThrushStatement::Address { .. } = stmt {
+            return lli::validate_lli(self, stmt);
         }
 
-        if let ThrushStatement::Load { value, .. } = stmt {
-            if let Some(any_reference) = &value.0 {
-                let reference: &ThrushStatement = &any_reference.1;
-
-                let reference_type: &ThrushType = reference.get_value_type()?;
-                let reference_span: Span = reference.get_span();
-
-                if !reference_type.is_ptr_type() && !reference_type.is_address_type() {
-                    self.add_error(ThrushCompilerIssue::Error(
-                        "Type error".into(),
-                        "Expected 'ptr<T>', 'ptr', or 'addr' type.".into(),
-                        None,
-                        reference_span,
-                    ));
-                }
-
-                self.analyze_stmt(reference)?;
-            }
-
-            if let Some(expr) = &value.1 {
-                let expr_type: &ThrushType = expr.get_value_type()?;
-                let expr_span: Span = expr.get_span();
-
-                if !expr_type.is_ptr_type() && !expr_type.is_address_type() {
-                    self.add_error(ThrushCompilerIssue::Error(
-                        "Type error".into(),
-                        "Expected 'ptr<T>', 'ptr' or 'addr' type.".into(),
-                        None,
-                        expr_span,
-                    ));
-                }
-
-                self.analyze_stmt(expr)?;
-            }
-
-            return Ok(());
+        if let ThrushStatement::Load { .. } = stmt {
+            return lli::validate_lli(self, stmt);
         }
 
         /* ######################################################################
@@ -780,9 +354,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
 
         ########################################################################*/
         if let ThrushStatement::Builtin { builtin, span, .. } = stmt {
-            builtins::validate_builtin(self, builtin, *span)?;
-
-            return Ok(());
+            return builtins::validate_builtin(self, builtin, *span);
         }
 
         if let ThrushStatement::SizeOf { sizeof, span, .. } = stmt {
@@ -814,422 +386,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
 
         ########################################################################*/
 
-        if let ThrushStatement::BinaryOp {
-            left,
-            operator,
-            right,
-            span,
-            ..
-        } = stmt
-        {
-            if let Err(mismatch_type_error) = self.check_binaryop(
-                operator,
-                left.get_value_type()?,
-                right.get_value_type()?,
-                *span,
-            ) {
-                self.add_error(mismatch_type_error);
-            }
-
-            if let Err(type_error) = self.analyze_stmt(left) {
-                self.add_error(type_error);
-            }
-
-            if let Err(type_error) = self.analyze_stmt(right) {
-                self.add_error(type_error);
-            }
-
-            return Ok(());
-        }
-
-        if let ThrushStatement::UnaryOp {
-            operator,
-            expression,
-            span,
-            ..
-        } = stmt
-        {
-            if let Err(mismatch_type_error) =
-                self.check_unary(operator, expression.get_value_type()?, *span)
-            {
-                self.add_error(mismatch_type_error);
-            }
-
-            if let TokenType::PlusPlus | TokenType::MinusMinus = *operator {
-                if !expression.is_reference() {
-                    self.add_error(ThrushCompilerIssue::Error(
-                        "Type error".into(),
-                        "Expected a reference.".into(),
-                        None,
-                        *span,
-                    ));
-                }
-
-                if !expression.is_mutable() {
-                    self.add_error(ThrushCompilerIssue::Error(
-                        "Type error".into(),
-                        "Expected a mutable reference.".into(),
-                        None,
-                        *span,
-                    ));
-                }
-            }
-
-            if let Err(type_error) = self.analyze_stmt(expression) {
-                self.add_error(type_error);
-            }
-
-            return Ok(());
-        }
-
-        if let ThrushStatement::Group { expression, .. } = stmt {
-            if let Err(type_error) = self.analyze_stmt(expression) {
-                self.add_error(type_error);
-            }
-
-            return Ok(());
-        }
-
-        if let ThrushStatement::Call {
-            name, args, span, ..
-        } = stmt
-        {
-            if let Some(function) = self.symbols.get_function(name) {
-                return self.validate_call(*function, args, span);
-            }
-
-            if let Some(asm_function) = self.symbols.get_asm_function(name) {
-                return self.validate_call(*asm_function, args, span);
-            }
-
-            self.errors.push(ThrushCompilerIssue::Bug(
-                String::from("Call not caught"),
-                format!("Could not get named any function '{}'.", name),
-                *span,
-                CompilationPosition::TypeChecker,
-                line!(),
-            ));
-        }
-
-        if let ThrushStatement::Block { stmts, .. } = stmt {
-            self.begin_scope();
-
-            stmts.iter().try_for_each(|stmt| self.analyze_stmt(stmt))?;
-
-            self.end_scope();
-
-            return Ok(());
-        }
-
-        if let ThrushStatement::Mut {
-            source,
-            value,
-            span,
-            ..
-        } = stmt
-        {
-            if let (Some(any_reference), None) = source {
-                let reference: &ThrushStatement = &any_reference.1;
-                let reference_type: &ThrushType = reference.get_value_type()?;
-
-                if !reference_type.is_ptr_type() && !reference_type.is_mut_type() {
-                    self.add_error(ThrushCompilerIssue::Error(
-                        "Type error".into(),
-                        "Expected 'ptr<T>', 'ptr', or 'mut T' type.".into(),
-                        None,
-                        *span,
-                    ));
-                }
-
-                if !reference.is_mutable() {
-                    self.add_error(ThrushCompilerIssue::Error(
-                        "Type error".into(),
-                        "Expected mutable reference.".into(),
-                        None,
-                        reference.get_span(),
-                    ));
-                }
-
-                self.analyze_stmt(value)?;
-
-                return Ok(());
-            }
-
-            if let (None, Some(source)) = source {
-                let source_type: &ThrushType = source.get_value_type()?;
-
-                if !source_type.is_ptr_type() && !source_type.is_mut_type() {
-                    self.add_error(ThrushCompilerIssue::Error(
-                        "Type error".into(),
-                        "Expected 'ptr<T>', 'ptr', or 'mut T' type.".into(),
-                        None,
-                        *span,
-                    ));
-                }
-
-                if !source.is_mutable() {
-                    self.add_error(ThrushCompilerIssue::Error(
-                        "Type error".into(),
-                        "Expected mutable reference.".into(),
-                        None,
-                        source.get_span(),
-                    ));
-                }
-
-                self.analyze_stmt(value)?;
-
-                return Ok(());
-            }
-
-            self.errors.push(ThrushCompilerIssue::Bug(
-                String::from("Non-trapped mutable expression."),
-                String::from("The mutable expression could not be caught for processing."),
-                *span,
-                CompilationPosition::TypeChecker,
-                line!(),
-            ));
-        }
-
-        if let ThrushStatement::Constructor { arguments, .. } = stmt {
-            let args: &[(&str, ThrushStatement<'_>, ThrushType, u32)] = &arguments.1;
-
-            for arg in args.iter() {
-                let expression: &ThrushStatement = &arg.1;
-                let expression_span: Span = expression.get_span();
-
-                let target_type: &ThrushType = &arg.2;
-                let from_type: &ThrushType = expression.get_value_type()?;
-
-                if let Err(error) = self.validate_types(
-                    target_type,
-                    from_type,
-                    Some(expression),
-                    None,
-                    None,
-                    &expression_span,
-                ) {
-                    self.add_error(error);
-                }
-            }
-
-            return Ok(());
-        }
-
-        if let ThrushStatement::FixedArray { items, kind, span } = stmt {
-            if kind.is_void_type() {
-                return Err(ThrushCompilerIssue::Error(
-                    "Type error".into(),
-                    "An element is expected.".into(),
-                    None,
-                    *span,
-                ));
-            }
-
-            let array_type: &ThrushType = kind.get_fixed_array_base_type();
-
-            for item in items.iter() {
-                let item_type: &ThrushType = item.get_value_type()?.get_fixed_array_base_type();
-
-                if let Err(error) = self.validate_types(
-                    array_type,
-                    item_type,
-                    Some(item),
-                    None,
-                    None,
-                    &item.get_span(),
-                ) {
-                    self.add_error(error);
-                }
-
-                self.analyze_stmt(item)?;
-            }
-
-            return Ok(());
-        }
-
-        if let ThrushStatement::Array {
-            items, kind, span, ..
-        } = stmt
-        {
-            if kind.is_void_type() {
-                return Err(ThrushCompilerIssue::Error(
-                    "Type error".into(),
-                    "An element is expected.".into(),
-                    None,
-                    *span,
-                ));
-            }
-
-            let array_type: &ThrushType = kind.get_array_base_type();
-
-            for item in items.iter() {
-                let item_type: &ThrushType = item.get_value_type()?.get_array_base_type();
-
-                if let Err(error) = self.validate_types(
-                    array_type,
-                    item_type,
-                    Some(item),
-                    None,
-                    None,
-                    &item.get_span(),
-                ) {
-                    self.add_error(error);
-                }
-
-                self.analyze_stmt(item)?;
-            }
-
-            return Ok(());
-        }
-
-        if let ThrushStatement::Index {
-            index_to,
-            indexes,
-            span,
-            ..
-        } = stmt
-        {
-            if let Some(any_reference) = &index_to.0 {
-                let reference: &ThrushStatement = &any_reference.1;
-
-                if !reference.is_allocated_reference() {
-                    self.add_error(ThrushCompilerIssue::Error(
-                        "Type error".into(),
-                        "Expected a allocated value.".into(),
-                        None,
-                        *span,
-                    ));
-                }
-
-                let reference_type: &ThrushType = reference.get_value_type()?;
-
-                if reference_type.is_ptr_type() && !reference_type.is_typed_ptr() {
-                    self.add_error(ThrushCompilerIssue::Error(
-                        "Type error".into(),
-                        "Expected raw typed pointer ptr<T>.".into(),
-                        None,
-                        *span,
-                    ));
-                } else if reference_type.is_ptr_type()
-                    && reference_type.is_typed_ptr()
-                    && reference_type.is_all_ptr()
-                {
-                    self.add_error(ThrushCompilerIssue::Error(
-                        "Type error".into(),
-                        "Expected raw typed pointer type with deep type.".into(),
-                        None,
-                        *span,
-                    ));
-                }
-            }
-
-            if let Some(expr) = &index_to.1 {
-                let expr_type: &ThrushType = expr.get_stmt_type()?;
-
-                if expr_type.is_ptr_type() && !expr_type.is_typed_ptr() {
-                    self.add_error(ThrushCompilerIssue::Error(
-                        "Type error".into(),
-                        "Expected raw typed pointer ptr<T>.".into(),
-                        None,
-                        *span,
-                    ));
-                } else if expr_type.is_ptr_type()
-                    && expr_type.is_typed_ptr()
-                    && expr_type.is_all_ptr()
-                {
-                    self.add_error(ThrushCompilerIssue::Error(
-                        "Type error".into(),
-                        "Expected raw typed pointer type with deep type.".into(),
-                        None,
-                        *span,
-                    ));
-                }
-            }
-
-            for indexe in indexes {
-                if !indexe.is_unsigned_integer()? || !indexe.is_moreu32bit_integer()? {
-                    self.add_error(ThrushCompilerIssue::Error(
-                        "Type error".into(),
-                        "Expected any unsigned integer value more than or equal to 32 bits.".into(),
-                        None,
-                        *span,
-                    ));
-                }
-
-                self.analyze_stmt(indexe)?;
-            }
-
-            return Ok(());
-        }
-
-        if let ThrushStatement::Property { reference, .. } = stmt {
-            let reference_type: &ThrushType = reference.get_value_type()?;
-            let reference_span: Span = reference.get_span();
-
-            if !reference_type.is_struct_type()
-                && !reference_type.is_mut_struct_type()
-                && !reference_type.is_ptr_struct_type()
-            {
-                self.add_error(ThrushCompilerIssue::Error(
-                    "Type error".into(),
-                    "Expected reference with a struct type.".into(),
-                    None,
-                    reference_span,
-                ));
-            }
-
-            self.analyze_stmt(reference)?;
-
-            return Ok(());
-        }
-
-        if let ThrushStatement::AsmValue { .. } = stmt {
-            return Ok(());
-        }
-
-        if let ThrushStatement::Alloc { .. } = stmt {
-            return Ok(());
-        }
-
-        if let ThrushStatement::EnumValue { .. } = stmt {
-            return Ok(());
-        }
-
-        if let ThrushStatement::Reference { .. } = stmt {
-            return Ok(());
-        }
-
-        if let ThrushStatement::Integer { .. } = stmt {
-            return Ok(());
-        }
-
-        if let ThrushStatement::Boolean { .. } = stmt {
-            return Ok(());
-        }
-
-        if let ThrushStatement::Str { .. } = stmt {
-            return Ok(());
-        }
-
-        if let ThrushStatement::Float { .. } = stmt {
-            return Ok(());
-        }
-
-        if let ThrushStatement::Null { .. } = stmt {
-            return Ok(());
-        }
-
-        if let ThrushStatement::NullPtr { .. } = stmt {
-            return Ok(());
-        }
-
-        if let ThrushStatement::Char { .. } = stmt {
-            return Ok(());
-        }
-
-        if let ThrushStatement::Pass { .. } = stmt {
-            return Ok(());
-        }
+        expressions::validate_expression(self, stmt)
 
         /* ######################################################################
 
@@ -1238,16 +395,6 @@ impl<'type_checker> TypeChecker<'type_checker> {
 
 
         ########################################################################*/
-
-        self.add_bug(ThrushCompilerIssue::Bug(
-            String::from("Expression not caught"),
-            String::from("The expression could not be caught for processing."),
-            stmt.get_span(),
-            CompilationPosition::TypeChecker,
-            line!(),
-        ));
-
-        Ok(())
     }
 
     fn validate_type_cast(
@@ -1276,53 +423,6 @@ impl<'type_checker> TypeChecker<'type_checker> {
                 *span,
             ))
         }
-    }
-
-    fn validate_call(
-        &mut self,
-        data: (&[ThrushType], bool),
-        args: &'type_checker [ThrushStatement],
-        span: &Span,
-    ) -> Result<(), ThrushCompilerIssue> {
-        let (parameter_types, ignore_more_arguments) = data;
-
-        let parameter_types_size: usize = parameter_types.len();
-        let mut parameter_types_displayed: String = String::with_capacity(100);
-
-        parameter_types.iter().for_each(|parameter_type| {
-            parameter_types_displayed.push_str(&format!("{} ", parameter_type));
-        });
-
-        if args.len() != parameter_types_size && !ignore_more_arguments {
-            self.add_error(ThrushCompilerIssue::Error(
-                "Type error".into(),
-                format!(
-                    "Expected {} arguments with types '{}', got {}.",
-                    parameter_types_size,
-                    parameter_types_displayed,
-                    args.len()
-                ),
-                None,
-                *span,
-            ));
-
-            return Ok(());
-        }
-
-        for (target_type, expr) in parameter_types.iter().zip(args.iter()) {
-            let from_type: &ThrushType = expr.get_value_type()?;
-            let expr_span: Span = expr.get_span();
-
-            if let Err(error) =
-                self.validate_types(target_type, from_type, Some(expr), None, None, &expr_span)
-            {
-                self.add_error(error);
-            }
-        }
-
-        args.iter().try_for_each(|arg| self.analyze_stmt(arg))?;
-
-        Ok(())
     }
 
     pub fn validate_types(
@@ -1449,7 +549,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
                 )
                 | None,
             ) if position.is_some_and(|position| position.at_local())
-                && !from_type.is_mut_type() =>
+                && !from_type.is_mut_type() && !from_type.is_ptr_type() =>
             {
                 self.validate_types(target_type, from_type, expression, operator, position, span)?;
 
@@ -1664,255 +764,6 @@ impl<'type_checker> TypeChecker<'type_checker> {
         }
     }
 
-    fn check_binaryop(
-        &self,
-        operator: &TokenType,
-        a: &ThrushType,
-        b: &ThrushType,
-        span: Span,
-    ) -> Result<(), ThrushCompilerIssue> {
-        match operator {
-            TokenType::Star | TokenType::Slash | TokenType::Minus | TokenType::Plus => {
-                self.check_binary_arithmetic(operator, a, b, span)
-            }
-            TokenType::BangEq | TokenType::EqEq => self.check_binary_equality(operator, a, b, span),
-            TokenType::LessEq | TokenType::Less | TokenType::GreaterEq | TokenType::Greater => {
-                self.check_binary_comparasion(operator, a, b, span)
-            }
-            TokenType::LShift | TokenType::RShift => self.check_binary_shift(operator, a, b, span),
-            TokenType::And | TokenType::Or => self.check_binary_gate(operator, a, b, span),
-            _ => Ok(()),
-        }
-    }
-
-    fn check_unary(
-        &self,
-        operator: &TokenType,
-        a: &ThrushType,
-        span: Span,
-    ) -> Result<(), ThrushCompilerIssue> {
-        match operator {
-            TokenType::Minus | TokenType::PlusPlus | TokenType::MinusMinus => {
-                self.check_general_unary(operator, a, span)
-            }
-            TokenType::Bang => self.check_unary_bang(a, span),
-            _ => Ok(()),
-        }
-    }
-
-    fn check_binary_arithmetic(
-        &self,
-        operator: &TokenType,
-        a: &ThrushType,
-        b: &ThrushType,
-        span: Span,
-    ) -> Result<(), ThrushCompilerIssue> {
-        match (a, b) {
-            (
-                ThrushType::S8
-                | ThrushType::S16
-                | ThrushType::S32
-                | ThrushType::S64
-                | ThrushType::U8
-                | ThrushType::U16
-                | ThrushType::U32
-                | ThrushType::U64,
-                ThrushType::S8
-                | ThrushType::S16
-                | ThrushType::S32
-                | ThrushType::S64
-                | ThrushType::U8
-                | ThrushType::U16
-                | ThrushType::U32
-                | ThrushType::U64,
-            ) => Ok(()),
-
-            (ThrushType::F32 | ThrushType::F64, ThrushType::F32 | ThrushType::F64) => Ok(()),
-
-            _ => Err(ThrushCompilerIssue::Error(
-                String::from("Mismatched Types"),
-                format!("Arithmetic ({} {} {}) isn't allowed.", a, operator, b),
-                None,
-                span,
-            )),
-        }
-    }
-
-    fn check_binary_equality(
-        &self,
-        operator: &TokenType,
-        a: &ThrushType,
-        b: &ThrushType,
-        span: Span,
-    ) -> Result<(), ThrushCompilerIssue> {
-        if matches!(
-            (a, b),
-            (
-                ThrushType::S8
-                    | ThrushType::S16
-                    | ThrushType::S32
-                    | ThrushType::S64
-                    | ThrushType::U8
-                    | ThrushType::U16
-                    | ThrushType::U32
-                    | ThrushType::U64,
-                ThrushType::S8
-                    | ThrushType::S16
-                    | ThrushType::S32
-                    | ThrushType::S64
-                    | ThrushType::U8
-                    | ThrushType::U16
-                    | ThrushType::U32
-                    | ThrushType::U64,
-            ) | (
-                ThrushType::F32 | ThrushType::F64,
-                ThrushType::F32 | ThrushType::F64
-            ) | (ThrushType::Bool, ThrushType::Bool)
-                | (ThrushType::Char, ThrushType::Char)
-        ) {
-            return Ok(());
-        }
-
-        if a.is_ptr_type() && b.is_ptr_type() {
-            return Ok(());
-        }
-
-        Err(ThrushCompilerIssue::Error(
-            String::from("Mismatched Types"),
-            format!("Logical ({} {} {}) isn't allowed.", a, operator, b),
-            None,
-            span,
-        ))
-    }
-
-    fn check_binary_comparasion(
-        &self,
-        operator: &TokenType,
-        a: &ThrushType,
-        b: &ThrushType,
-        span: Span,
-    ) -> Result<(), ThrushCompilerIssue> {
-        if let (
-            ThrushType::S8
-            | ThrushType::S16
-            | ThrushType::S32
-            | ThrushType::S64
-            | ThrushType::U8
-            | ThrushType::U16
-            | ThrushType::U32
-            | ThrushType::U64,
-            ThrushType::S8
-            | ThrushType::S16
-            | ThrushType::S32
-            | ThrushType::S64
-            | ThrushType::U8
-            | ThrushType::U16
-            | ThrushType::U32
-            | ThrushType::U64,
-        ) = (a, b)
-        {
-            return Ok(());
-        } else if let (ThrushType::F32 | ThrushType::F64, ThrushType::F32 | ThrushType::F64) =
-            (a, b)
-        {
-            return Ok(());
-        }
-
-        Err(ThrushCompilerIssue::Error(
-            String::from("Mismatched Types"),
-            format!("Logical ({} {} {}) isn't allowed.", a, operator, b),
-            None,
-            span,
-        ))
-    }
-
-    fn check_binary_gate(
-        &self,
-        operator: &TokenType,
-        a: &ThrushType,
-        b: &ThrushType,
-        span: Span,
-    ) -> Result<(), ThrushCompilerIssue> {
-        if let (ThrushType::Bool, ThrushType::Bool) = (a, b) {
-            return Ok(());
-        }
-
-        Err(ThrushCompilerIssue::Error(
-            String::from("Mismatched Types"),
-            format!("Logical ({} {} {}) isn't allowed.", a, operator, b),
-            None,
-            span,
-        ))
-    }
-
-    fn check_binary_shift(
-        &self,
-        operator: &TokenType,
-        a: &ThrushType,
-        b: &ThrushType,
-        span: Span,
-    ) -> Result<(), ThrushCompilerIssue> {
-        if let (
-            ThrushType::S8
-            | ThrushType::S16
-            | ThrushType::S32
-            | ThrushType::S64
-            | ThrushType::U8
-            | ThrushType::U16
-            | ThrushType::U32
-            | ThrushType::U64,
-            ThrushType::S8
-            | ThrushType::S16
-            | ThrushType::S32
-            | ThrushType::S64
-            | ThrushType::U8
-            | ThrushType::U16
-            | ThrushType::U32
-            | ThrushType::U64,
-        ) = (a, b)
-        {
-            return Ok(());
-        }
-
-        Err(ThrushCompilerIssue::Error(
-            String::from("Mismatched Types"),
-            format!("Arithmetic ({} {} {}) is not allowed.", a, operator, b),
-            None,
-            span,
-        ))
-    }
-
-    fn check_general_unary(
-        &self,
-        operator: &TokenType,
-        a: &ThrushType,
-        span: Span,
-    ) -> Result<(), ThrushCompilerIssue> {
-        if a.is_integer_type() || a.is_float_type() {
-            return Ok(());
-        }
-
-        Err(ThrushCompilerIssue::Error(
-            String::from("Mismatched Types"),
-            format!("Arithmetic '{}' with '{}' isn't allowed.", operator, a),
-            None,
-            span,
-        ))
-    }
-
-    fn check_unary_bang(&self, a: &ThrushType, span: Span) -> Result<(), ThrushCompilerIssue> {
-        if let ThrushType::Bool = a {
-            return Ok(());
-        }
-
-        Err(ThrushCompilerIssue::Error(
-            String::from("Mismatched Types"),
-            format!("Logical (!{}) isn't allowed.", a),
-            None,
-            span,
-        ))
-    }
-
     pub fn init(&mut self) {
         self.stmts
             .iter()
@@ -1947,14 +798,6 @@ impl<'type_checker> TypeChecker<'type_checker> {
             });
     }
 
-    pub fn begin_scope(&mut self) {
-        self.symbols.begin_scope();
-    }
-
-    pub fn end_scope(&mut self) {
-        self.symbols.end_scope();
-    }
-
     pub fn add_warning(&mut self, warning: ThrushCompilerIssue) {
         self.warnings.push(warning);
     }
@@ -1965,6 +808,14 @@ impl<'type_checker> TypeChecker<'type_checker> {
 
     pub fn add_bug(&mut self, error: ThrushCompilerIssue) {
         self.bugs.push(error);
+    }
+
+    pub fn begin_scope(&mut self) {
+        self.symbols.begin_scope();
+    }
+
+    pub fn end_scope(&mut self) {
+        self.symbols.end_scope();
     }
 
     pub fn advance(&mut self) {
