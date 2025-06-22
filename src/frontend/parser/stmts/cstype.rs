@@ -49,7 +49,7 @@ pub fn build_custom_type<'instr>(
         String::from("Expected '='."),
     )?;
 
-    let custom_typse_attributes: ThrushAttributes =
+    let custom_type_attributes: ThrushAttributes =
         attributes::build_attributes(parser_ctx, &[TokenType::LBrace])?;
 
     parser_ctx.consume(
