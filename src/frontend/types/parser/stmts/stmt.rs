@@ -833,6 +833,24 @@ impl ThrushStatement<'_> {
                 *signed = true;
             }
         }
+
+        if let ThrushStatement::Group { kind, .. } = self {
+            if kind.is_integer_type() && operator.is_minus_operator() {
+                *kind = kind.narrowing_cast();
+            }
+        }
+
+        if let ThrushStatement::UnaryOp { kind, .. } = self {
+            if kind.is_integer_type() && operator.is_minus_operator() {
+                *kind = kind.narrowing_cast();
+            }
+        }
+
+        if let ThrushStatement::BinaryOp { kind, .. } = self {
+            if kind.is_integer_type() && operator.is_minus_operator() {
+                *kind = kind.narrowing_cast();
+            }
+        }
     }
 
     pub fn throw_attemping_use_jit(&self, span: Span) -> Result<(), ThrushCompilerIssue> {

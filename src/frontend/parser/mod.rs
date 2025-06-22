@@ -2,6 +2,7 @@ pub mod attributes;
 pub mod builtins;
 pub mod contexts;
 pub mod expression;
+pub mod expressions;
 pub mod parse;
 pub mod stmt;
 pub mod stmts;

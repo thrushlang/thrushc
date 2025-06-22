@@ -2,22 +2,8 @@ use crate::{
     core::errors::standard::ThrushCompilerIssue,
     frontend::{
         lexer::{span::Span, token::Token, tokentype::TokenType},
-        parser::{
-            ParserContext, attributes,
-            stmts::{block, entrypoint},
-            typegen,
-        },
-        types::{
-            lexer::ThrushType,
-            parser::{
-                stmts::{
-                    stmt::ThrushStatement,
-                    traits::{ThrushAttributesExtensions, TokenExtensions},
-                    types::ThrushAttributes,
-                },
-                symbols::types::ParametersTypes,
-            },
-        },
+        parser::ParserContext,
+        types::parser::stmts::{stmt::ThrushStatement, traits::TokenExtensions},
     },
 };
 
