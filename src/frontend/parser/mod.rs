@@ -1,8 +1,10 @@
+pub mod attributes;
 pub mod builtins;
 pub mod contexts;
 pub mod expression;
 pub mod parse;
 pub mod stmt;
+pub mod stmts;
 pub mod symbols;
 pub mod typegen;
 
@@ -17,6 +19,7 @@ use crate::core::diagnostic::diagnostician::Diagnostician;
 use crate::core::errors::standard::ThrushCompilerIssue;
 use crate::frontend::lexer::token::Token;
 use crate::frontend::lexer::tokentype::TokenType;
+use crate::frontend::parser::stmts::{asmfunction, constant, cstype, function, structure, union};
 use crate::frontend::types::parser::stmts::stmt::ThrushStatement;
 use crate::frontend::types::parser::symbols::types::{AssemblerFunctions, Functions};
 
@@ -372,7 +375,7 @@ impl<'instr> ParserContext<'instr> {
             .filter(|(_, token)| token.kind.is_type_keyword())
             .for_each(|(pos, _)| {
                 self.current = pos;
-                let _ = stmt::build_custom_type(self, true);
+                let _ = cstype::build_custom_type(self, true);
                 self.current = 0;
             });
 
@@ -382,7 +385,7 @@ impl<'instr> ParserContext<'instr> {
             .filter(|(_, token)| token.kind.is_const_keyword())
             .for_each(|(pos, _)| {
                 self.current = pos;
-                let _ = stmt::build_const(self, true);
+                let _ = constant::build_const(self, true);
                 self.current = 0;
             });
 
@@ -392,17 +395,7 @@ impl<'instr> ParserContext<'instr> {
             .filter(|(_, token)| token.kind.is_struct_keyword())
             .for_each(|(pos, _)| {
                 self.current = pos;
-                let _ = stmt::build_struct(self, true);
-                self.current = 0;
-            });
-
-        self.tokens
-            .iter()
-            .enumerate()
-            .filter(|(_, token)| token.kind.is_enum_keyword())
-            .for_each(|(pos, _)| {
-                self.current = pos;
-                let _ = stmt::build_enum(self, true);
+                let _ = structure::build_structure(self, true);
                 self.current = 0;
             });
 
@@ -412,7 +405,17 @@ impl<'instr> ParserContext<'instr> {
             .filter(|(_, token)| token.kind.is_function_keyword())
             .for_each(|(pos, _)| {
                 self.current = pos;
-                let _ = stmt::build_function(self, true);
+                let _ = function::build_function(self, true);
+                self.current = 0;
+            });
+
+        self.tokens
+            .iter()
+            .enumerate()
+            .filter(|(_, token)| token.kind.is_enum_keyword())
+            .for_each(|(pos, _)| {
+                self.current = pos;
+                let _ = union::build_enum(self, true);
                 self.current = 0;
             });
 
@@ -422,7 +425,7 @@ impl<'instr> ParserContext<'instr> {
             .filter(|(_, token)| token.kind.is_asm_function_keyword())
             .for_each(|(pos, _)| {
                 self.current = pos;
-                let _ = stmt::build_assembler_function(self, true);
+                let _ = asmfunction::build_assembler_function(self, true);
                 self.current = 0;
             });
     }

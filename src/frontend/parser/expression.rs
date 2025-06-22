@@ -7,7 +7,7 @@ use crate::{
     core::errors::{position::CompilationPosition, standard::ThrushCompilerIssue},
     frontend::{
         lexer::{span::Span, token::Token, tokentype::TokenType},
-        parser::{builtins, expression},
+        parser::{attributes, builtins, expression},
         types::{
             lexer::{self, ThrushType},
             parser::{
@@ -36,7 +36,7 @@ use crate::{
     },
 };
 
-use super::{ParserContext, contexts::SyncPosition, parse, stmt, typegen};
+use super::{ParserContext, contexts::SyncPosition, parse, typegen};
 
 pub fn build_expression<'instr>(
     parser_context: &mut ParserContext<'instr>,
@@ -370,7 +370,10 @@ fn primary<'instr>(
             alloc_type = ThrushType::Ptr(Some(alloc_type.into()));
 
             let attributes: Vec<LLVMAttribute> = if !parser_context.check(TokenType::RBrace) {
-                stmt::build_attributes(parser_context, &[TokenType::RBrace, TokenType::SemiColon])?
+                attributes::build_attributes(
+                    parser_context,
+                    &[TokenType::RBrace, TokenType::SemiColon],
+                )?
             } else {
                 Vec::new()
             };
@@ -1231,7 +1234,7 @@ fn build_asm_code_block<'instr>(
     let mut args: Vec<ThrushStatement> = Vec::with_capacity(10);
 
     let attributes: ThrushAttributes =
-        stmt::build_attributes(parser_context, &[TokenType::LParen, TokenType::LBrace])?;
+        attributes::build_attributes(parser_context, &[TokenType::LParen, TokenType::LBrace])?;
 
     if parser_context.match_token(TokenType::LParen)? {
         loop {
