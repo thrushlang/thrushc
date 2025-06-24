@@ -1,6 +1,6 @@
 <img src= "https://github.com/thrushlang/thrushc/blob/master/assets/thrushlang-logo-v1.5.png" alt= "logo" style= "width: 80%; height: 80%;"> </img>
 
-## The Thrush Compiler | Source Code Tree
+## Thrush Programming Language | Compiler Source Code Tree
 
 This folder contains everything that the Thrush compiler represents, from its code generators, bounds checking processes, lexical analysis, abstract tree representation construction, optimizers, optimization pass handler, command line, diagnostics, and much more.
 
