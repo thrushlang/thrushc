@@ -8,10 +8,10 @@ use crate::{
             typegen,
         },
         types::{
+            ast::Ast,
             lexer::ThrushType,
             parser::{
                 stmts::{
-                    stmt::ThrushStatement,
                     traits::{ThrushAttributesExtensions, TokenExtensions},
                     types::ThrushAttributes,
                 },
@@ -21,10 +21,10 @@ use crate::{
     },
 };
 
-pub fn build_function<'instr>(
-    parser_ctx: &mut ParserContext<'instr>,
+pub fn build_function<'parser>(
+    parser_ctx: &mut ParserContext<'parser>,
     declare_forward: bool,
-) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
+) -> Result<Ast<'parser>, ThrushCompilerIssue> {
     parser_ctx.consume(
         TokenType::Fn,
         String::from("Syntax error"),
@@ -53,13 +53,12 @@ pub fn build_function<'instr>(
 
     if function_name == "main" {
         if declare_forward {
-            return Ok(ThrushStatement::Null { span });
+            return Ok(Ast::Null { span });
         }
 
         parser_ctx.get_mut_control_ctx().set_inside_function(true);
 
-        let entrypoint: Result<ThrushStatement, ThrushCompilerIssue> =
-            entrypoint::build_main(parser_ctx);
+        let entrypoint: Result<Ast, ThrushCompilerIssue> = entrypoint::build_main(parser_ctx);
 
         parser_ctx.get_mut_control_ctx().set_inside_function(false);
 
@@ -72,7 +71,7 @@ pub fn build_function<'instr>(
         String::from("Expected '('."),
     )?;
 
-    let mut parameters: Vec<ThrushStatement> = Vec::with_capacity(10);
+    let mut parameters: Vec<Ast> = Vec::with_capacity(10);
     let mut parameters_types: Vec<ThrushType> = Vec::with_capacity(10);
 
     let mut parameter_position: u32 = 0;
@@ -105,7 +104,7 @@ pub fn build_function<'instr>(
 
         parameters_types.push(parameter_type.clone());
 
-        parameters.push(ThrushStatement::FunctionParameter {
+        parameters.push(Ast::FunctionParameter {
             name,
             ascii_name,
             kind: parameter_type,
@@ -140,12 +139,12 @@ pub fn build_function<'instr>(
 
     let function_has_ignore: bool = function_attributes.has_ignore_attribute();
 
-    let mut function: ThrushStatement = ThrushStatement::Function {
+    let mut function: Ast = Ast::Function {
         name: function_name,
         ascii_name: function_ascii_name,
         parameters: parameters.clone(),
         parameter_types: parameters_types.clone(),
-        body: ThrushStatement::Null { span }.into(),
+        body: Ast::Null { span }.into(),
         return_type: return_type.clone(),
         attributes: function_attributes,
         span,
@@ -168,7 +167,7 @@ pub fn build_function<'instr>(
             return Ok(function);
         }
 
-        return Ok(ThrushStatement::Null { span });
+        return Ok(Ast::Null { span });
     }
 
     if parser_ctx.match_token(TokenType::SemiColon)? {
@@ -183,12 +182,12 @@ pub fn build_function<'instr>(
 
     parser_ctx.get_mut_symbols().start_parameters(&parameters)?;
 
-    let function_body: ThrushStatement = block::build_block(parser_ctx)?;
+    let function_body: Ast = block::build_block(parser_ctx)?;
 
     parser_ctx.get_mut_symbols().end_parameters();
     parser_ctx.get_mut_control_ctx().set_inside_function(false);
 
-    if let ThrushStatement::Function { body, .. } = &mut function {
+    if let Ast::Function { body, .. } = &mut function {
         *body = function_body.into();
     }
 

@@ -2,9 +2,7 @@ use attrchecker::AttributeChecker;
 use linter::{Linter, attributes::AttributesLinter};
 use typechecker::TypeChecker;
 
-use crate::{
-    core::compiler::options::CompilerFile, frontend::types::parser::stmts::stmt::ThrushStatement,
-};
+use crate::{core::compiler::options::CompilerFile, frontend::types::ast::Ast};
 
 pub mod attrchecker;
 pub mod linter;
@@ -19,13 +17,13 @@ pub struct SemanticAnalyzer<'semantic_analyzer> {
 
 impl<'semantic_analyzer> SemanticAnalyzer<'semantic_analyzer> {
     pub fn new(
-        stmts: &'semantic_analyzer [ThrushStatement<'semantic_analyzer>],
+        ast: &'semantic_analyzer [Ast<'semantic_analyzer>],
         file: &'semantic_analyzer CompilerFile,
     ) -> Self {
-        let type_checker: TypeChecker = TypeChecker::new(stmts, file);
-        let attr_checker: AttributeChecker = AttributeChecker::new(stmts, file);
-        let linter: Linter = Linter::new(stmts, file);
-        let attr_linter: AttributesLinter = AttributesLinter::new(stmts, file);
+        let type_checker: TypeChecker = TypeChecker::new(ast, file);
+        let attr_checker: AttributeChecker = AttributeChecker::new(ast, file);
+        let linter: Linter = Linter::new(ast, file);
+        let attr_linter: AttributesLinter = AttributesLinter::new(ast, file);
 
         Self {
             type_checker,

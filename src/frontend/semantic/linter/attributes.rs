@@ -6,9 +6,8 @@ use crate::{
         errors::standard::ThrushCompilerIssue,
     },
     frontend::types::{
-        parser::stmts::{
-            stmt::ThrushStatement, traits::ThrushAttributesExtensions, types::ThrushAttributes,
-        },
+        ast::Ast,
+        parser::stmts::{traits::ThrushAttributesExtensions, types::ThrushAttributes},
         semantic::linter::{
             traits::LLVMAttributeComparatorExtensions,
             types::{LLVMAttributeComparator, LinterAttributeApplicant},
@@ -18,19 +17,16 @@ use crate::{
 
 #[derive(Debug)]
 pub struct AttributesLinter<'attr_linter> {
-    stmts: &'attr_linter [ThrushStatement<'attr_linter>],
+    ast: &'attr_linter [Ast<'attr_linter>],
     warnings: Vec<ThrushCompilerIssue>,
     current: usize,
     dignostician: Diagnostician,
 }
 
 impl<'attr_linter> AttributesLinter<'attr_linter> {
-    pub fn new(
-        stmts: &'attr_linter [ThrushStatement<'attr_linter>],
-        file: &'attr_linter CompilerFile,
-    ) -> Self {
+    pub fn new(ast: &'attr_linter [Ast<'attr_linter>], file: &'attr_linter CompilerFile) -> Self {
         Self {
-            stmts,
+            ast,
             warnings: Vec::with_capacity(100),
             current: 0,
             dignostician: Diagnostician::new(file),
@@ -39,7 +35,7 @@ impl<'attr_linter> AttributesLinter<'attr_linter> {
 
     pub fn check(&mut self) {
         while !self.is_eof() {
-            let current_stmt: &ThrushStatement = self.peek();
+            let current_stmt: &Ast = self.peek();
 
             self.analyze_stmt(current_stmt);
 
@@ -52,16 +48,16 @@ impl<'attr_linter> AttributesLinter<'attr_linter> {
         });
     }
 
-    fn analyze_stmt(&mut self, stmt: &'attr_linter ThrushStatement) {
-        if let ThrushStatement::Function { attributes, .. } = stmt {
+    fn analyze_stmt(&mut self, stmt: &'attr_linter Ast) {
+        if let Ast::Function { attributes, .. } = stmt {
             self.analyze_attributes(attributes, LinterAttributeApplicant::Function);
         }
 
-        if let ThrushStatement::Struct { attributes, .. } = stmt {
+        if let Ast::Struct { attributes, .. } = stmt {
             self.analyze_attributes(attributes, LinterAttributeApplicant::Struct);
         }
 
-        if let ThrushStatement::Const { attributes, .. } = stmt {
+        if let Ast::Const { attributes, .. } = stmt {
             self.analyze_attributes(attributes, LinterAttributeApplicant::Constant);
         }
     }
@@ -132,11 +128,11 @@ impl<'attr_linter> AttributesLinter<'attr_linter> {
         }
     }
 
-    fn peek(&self) -> &'attr_linter ThrushStatement<'attr_linter> {
-        self.stmts.get(self.current).unwrap_or_else(|| {
+    fn peek(&self) -> &'attr_linter Ast<'attr_linter> {
+        self.ast.get(self.current).unwrap_or_else(|| {
             logging::log(
                 LoggingType::Panic,
-                "Attemping to get a statement in invalid position at Attributes Linter.",
+                "Attemping to get a statement in invalid position at attributes linter.",
             );
 
             unreachable!()
@@ -144,6 +140,6 @@ impl<'attr_linter> AttributesLinter<'attr_linter> {
     }
 
     fn is_eof(&self) -> bool {
-        self.current >= self.stmts.len()
+        self.current >= self.ast.len()
     }
 }

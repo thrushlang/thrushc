@@ -3,6 +3,7 @@ use std::fmt::Display;
 use crate::frontend::{
     lexer::span::Span,
     types::{
+        ast::Ast,
         lexer::ThrushType,
         semantic::linter::{
             traits::LLVMAttributeComparatorExtensions, types::LLVMAttributeComparator,
@@ -11,7 +12,6 @@ use crate::frontend::{
 };
 
 use super::{
-    stmt::ThrushStatement,
     traits::{
         ConstructorExtensions, CustomTypeFieldsExtensions, StructFieldsExtensions,
         ThrushAttributesExtensions,
@@ -101,30 +101,30 @@ impl CustomTypeFieldsExtensions for CustomTypeFields<'_> {
     }
 }
 
-impl PartialEq for ThrushStatement<'_> {
+impl PartialEq for Ast<'_> {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
-            (ThrushStatement::Integer { .. }, ThrushStatement::Integer { .. })
-            | (ThrushStatement::Float { .. }, ThrushStatement::Float { .. })
-            | (ThrushStatement::Str { .. }, ThrushStatement::Str { .. }) => true,
+            (Ast::Integer { .. }, Ast::Integer { .. })
+            | (Ast::Float { .. }, Ast::Float { .. })
+            | (Ast::Str { .. }, Ast::Str { .. }) => true,
             (left, right) => std::mem::discriminant(left) == std::mem::discriminant(right),
         }
     }
 }
 
-impl Display for ThrushStatement<'_> {
+impl Display for Ast<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            ThrushStatement::Null { .. } => write!(f, "null"),
-            ThrushStatement::Pass { .. } => write!(f, "pass"),
-            ThrushStatement::Char { byte, .. } => write!(f, "{}", byte),
-            ThrushStatement::Integer { value, .. } => write!(f, "{}", value),
-            ThrushStatement::Float { value, .. } => write!(f, "{}", value),
-            ThrushStatement::Boolean { value, .. } => write!(f, "{}", value),
-            ThrushStatement::Str { bytes, .. } => {
+            Ast::Null { .. } => write!(f, "null"),
+            Ast::Pass { .. } => write!(f, "pass"),
+            Ast::Char { byte, .. } => write!(f, "{}", byte),
+            Ast::Integer { value, .. } => write!(f, "{}", value),
+            Ast::Float { value, .. } => write!(f, "{}", value),
+            Ast::Boolean { value, .. } => write!(f, "{}", value),
+            Ast::Str { bytes, .. } => {
                 write!(f, "\"{}\"", String::from_utf8_lossy(bytes))
             }
-            ThrushStatement::Function {
+            Ast::Function {
                 name,
                 parameters,
                 parameter_types,
@@ -157,7 +157,7 @@ impl Display for ThrushStatement<'_> {
 
                 Ok(())
             }
-            ThrushStatement::Block { stmts, .. } => {
+            Ast::Block { stmts, .. } => {
                 let _ = write!(f, "{{ ");
 
                 for stmt in stmts {
@@ -168,7 +168,7 @@ impl Display for ThrushStatement<'_> {
 
                 Ok(())
             }
-            ThrushStatement::BinaryOp {
+            Ast::BinaryOp {
                 left,
                 operator,
                 right,
@@ -176,7 +176,7 @@ impl Display for ThrushStatement<'_> {
             } => {
                 write!(f, "{} {} {}", left, operator, right)
             }
-            ThrushStatement::UnaryOp {
+            Ast::UnaryOp {
                 operator,
                 expression,
                 is_pre,
@@ -188,13 +188,13 @@ impl Display for ThrushStatement<'_> {
                     write!(f, "{}{}", expression, operator)
                 }
             }
-            ThrushStatement::Break { .. } => {
+            Ast::Break { .. } => {
                 write!(f, "break")
             }
-            ThrushStatement::Continue { .. } => {
+            Ast::Continue { .. } => {
                 write!(f, "continue")
             }
-            ThrushStatement::For {
+            Ast::For {
                 local,
                 cond,
                 actions,
@@ -203,7 +203,7 @@ impl Display for ThrushStatement<'_> {
             } => {
                 write!(f, "for {} {} {} {}", local, cond, actions, block)
             }
-            ThrushStatement::Call { name, args, .. } => {
+            Ast::Call { name, args, .. } => {
                 write!(f, "{}(", name)?;
 
                 for (index, arg) in args.iter().enumerate() {
@@ -217,7 +217,7 @@ impl Display for ThrushStatement<'_> {
                 write!(f, ")")
             }
 
-            ThrushStatement::If {
+            Ast::If {
                 cond,
                 block,
                 elfs,
@@ -237,7 +237,7 @@ impl Display for ThrushStatement<'_> {
                 Ok(())
             }
 
-            ThrushStatement::Return { expression, .. } => {
+            Ast::Return { expression, .. } => {
                 if let Some(expr) = expression {
                     write!(f, "return {}", expr)?;
                 }
@@ -245,7 +245,7 @@ impl Display for ThrushStatement<'_> {
                 write!(f, "return")
             }
 
-            ThrushStatement::Local {
+            Ast::Local {
                 name,
                 kind,
                 value,
@@ -259,7 +259,7 @@ impl Display for ThrushStatement<'_> {
                 }
             }
 
-            ThrushStatement::Mut { source, value, .. } => {
+            Ast::Mut { source, value, .. } => {
                 if let (Some(any_reference), _) = source {
                     let reference_name: &str = any_reference.0;
 
@@ -273,27 +273,27 @@ impl Display for ThrushStatement<'_> {
                 Ok(())
             }
 
-            ThrushStatement::Reference { name, .. } => {
+            Ast::Reference { name, .. } => {
                 write!(f, "{}", name)
             }
 
-            ThrushStatement::Loop { block, .. } => {
+            Ast::Loop { block, .. } => {
                 write!(f, "loop {}", block)
             }
 
-            ThrushStatement::While { cond, block, .. } => {
+            Ast::While { cond, block, .. } => {
                 write!(f, "while {} {}", cond, block)
             }
 
-            ThrushStatement::EntryPoint { body, .. } => {
+            Ast::EntryPoint { body, .. } => {
                 write!(f, "fn main() {}", body)
             }
 
-            ThrushStatement::NullPtr { .. } => {
+            Ast::NullPtr { .. } => {
                 write!(f, "null")
             }
 
-            ThrushStatement::Group { expression, .. } => {
+            Ast::Group { expression, .. } => {
                 write!(f, "({})", expression)
             }
 

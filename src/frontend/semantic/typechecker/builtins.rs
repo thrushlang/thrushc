@@ -4,7 +4,7 @@ use crate::{
     frontend::{
         lexer::span::Span,
         semantic::typechecker::TypeChecker,
-        types::{lexer::ThrushType, parser::stmts::stmt::ThrushStatement},
+        types::{ast::Ast, lexer::ThrushType},
     },
 };
 
@@ -48,9 +48,9 @@ pub fn validate_builtin<'type_checker>(
 
 pub fn validate_memmove<'type_checker>(
     typechecker: &mut TypeChecker<'type_checker>,
-    destination: &'type_checker ThrushStatement,
-    source: &'type_checker ThrushStatement,
-    size: &'type_checker ThrushStatement,
+    destination: &'type_checker Ast,
+    source: &'type_checker Ast,
+    size: &'type_checker Ast,
 ) -> Result<(), ThrushCompilerIssue> {
     let source_type: &ThrushType = source.get_value_type()?;
     let source_span: Span = source.get_span();
@@ -90,18 +90,18 @@ pub fn validate_memmove<'type_checker>(
         ));
     }
 
-    typechecker.analyze_stmt(source)?;
-    typechecker.analyze_stmt(destination)?;
-    typechecker.analyze_stmt(size)?;
+    typechecker.analyze_ast(source)?;
+    typechecker.analyze_ast(destination)?;
+    typechecker.analyze_ast(size)?;
 
     Ok(())
 }
 
 pub fn validate_memcpy<'type_checker>(
     typechecker: &mut TypeChecker<'type_checker>,
-    destination: &'type_checker ThrushStatement,
-    source: &'type_checker ThrushStatement,
-    size: &'type_checker ThrushStatement,
+    destination: &'type_checker Ast,
+    source: &'type_checker Ast,
+    size: &'type_checker Ast,
 ) -> Result<(), ThrushCompilerIssue> {
     let source_type: &ThrushType = source.get_value_type()?;
     let source_span: Span = source.get_span();
@@ -141,18 +141,18 @@ pub fn validate_memcpy<'type_checker>(
         ));
     }
 
-    typechecker.analyze_stmt(source)?;
-    typechecker.analyze_stmt(destination)?;
-    typechecker.analyze_stmt(size)?;
+    typechecker.analyze_ast(source)?;
+    typechecker.analyze_ast(destination)?;
+    typechecker.analyze_ast(size)?;
 
     Ok(())
 }
 
 pub fn validate_memset<'type_checker>(
     typechecker: &mut TypeChecker<'type_checker>,
-    destination: &'type_checker ThrushStatement,
-    new_size: &'type_checker ThrushStatement,
-    size: &'type_checker ThrushStatement,
+    destination: &'type_checker Ast,
+    new_size: &'type_checker Ast,
+    size: &'type_checker Ast,
 ) -> Result<(), ThrushCompilerIssue> {
     let destination_type: &ThrushType = destination.get_value_type()?;
     let destination_span: Span = destination.get_span();
@@ -190,9 +190,9 @@ pub fn validate_memset<'type_checker>(
         ));
     }
 
-    typechecker.analyze_stmt(destination)?;
-    typechecker.analyze_stmt(new_size)?;
-    typechecker.analyze_stmt(size)?;
+    typechecker.analyze_ast(destination)?;
+    typechecker.analyze_ast(new_size)?;
+    typechecker.analyze_ast(size)?;
 
     Ok(())
 }

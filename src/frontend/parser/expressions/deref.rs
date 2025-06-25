@@ -3,19 +3,20 @@ use crate::{
     frontend::{
         lexer::{span::Span, token::Token, tokentype::TokenType},
         parser::{ParserContext, expression},
-        types::{lexer::ThrushType, parser::stmts::stmt::ThrushStatement},
+        types::ast::Ast,
+        types::lexer::ThrushType,
     },
 };
 
-pub fn build_dereference<'instr>(
-    parser_context: &mut ParserContext<'instr>,
-) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
+pub fn build_dereference<'parser>(
+    parser_context: &mut ParserContext<'parser>,
+) -> Result<Ast<'parser>, ThrushCompilerIssue> {
     let initial_deref_tk: &Token = parser_context.advance()?;
     let span: Span = initial_deref_tk.span;
 
     let mut deref_count: u64 = 1;
 
-    let mut current_expr: ThrushStatement = {
+    let mut current_expr: Ast = {
         while parser_context.check(TokenType::Deref) {
             parser_context.consume(
                 TokenType::Deref,
@@ -26,7 +27,7 @@ pub fn build_dereference<'instr>(
             deref_count += 1;
         }
 
-        let expr: ThrushStatement = expression::build_expr(parser_context)?;
+        let expr: Ast = expression::build_expr(parser_context)?;
 
         expr
     };
@@ -34,7 +35,7 @@ pub fn build_dereference<'instr>(
     let mut current_type: ThrushType = current_expr.get_value_type()?.clone();
 
     (0..deref_count).for_each(|_| {
-        current_expr = ThrushStatement::Deref {
+        current_expr = Ast::Deref {
             value: current_expr.clone().into(),
             kind: current_type.deref(),
             span,

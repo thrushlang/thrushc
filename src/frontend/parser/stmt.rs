@@ -9,7 +9,7 @@ use crate::{
             asmfunction, block, conditional, controlflow, cstype, function, lli, local, loops,
             structure, terminator, union,
         },
-        types::parser::stmts::stmt::ThrushStatement,
+        types::ast::Ast,
     },
     lazy_static,
 };
@@ -37,51 +37,49 @@ lazy_static! {
     };
 }
 
-pub fn parse<'instr>(
-    parser_ctx: &mut ParserContext<'instr>,
-) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
+pub fn parse<'parser>(
+    parser_ctx: &mut ParserContext<'parser>,
+) -> Result<Ast<'parser>, ThrushCompilerIssue> {
     parser_ctx
         .get_mut_control_ctx()
         .set_sync_position(SyncPosition::Declaration);
 
-    let statement: Result<ThrushStatement<'instr>, ThrushCompilerIssue> =
-        match &parser_ctx.peek().kind {
-            TokenType::Type => Ok(cstype::build_custom_type(parser_ctx, false)?),
-            TokenType::Struct => Ok(structure::build_structure(parser_ctx, false)?),
-            TokenType::Enum => Ok(union::build_enum(parser_ctx, false)?),
-            TokenType::Fn => Ok(function::build_function(parser_ctx, false)?),
-            TokenType::AsmFn => Ok(asmfunction::build_assembler_function(parser_ctx, false)?),
+    let statement: Result<Ast<'parser>, ThrushCompilerIssue> = match &parser_ctx.peek().kind {
+        TokenType::Type => Ok(cstype::build_custom_type(parser_ctx, false)?),
+        TokenType::Struct => Ok(structure::build_structure(parser_ctx, false)?),
+        TokenType::Enum => Ok(union::build_enum(parser_ctx, false)?),
+        TokenType::Fn => Ok(function::build_function(parser_ctx, false)?),
+        TokenType::AsmFn => Ok(asmfunction::build_assembler_function(parser_ctx, false)?),
 
-            _ => Ok(self::statement(parser_ctx)?),
-        };
+        _ => Ok(self::statement(parser_ctx)?),
+    };
 
     statement
 }
 
-pub fn statement<'instr>(
-    parser_ctx: &mut ParserContext<'instr>,
-) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
+pub fn statement<'parser>(
+    parser_ctx: &mut ParserContext<'parser>,
+) -> Result<Ast<'parser>, ThrushCompilerIssue> {
     parser_ctx
         .get_mut_control_ctx()
         .set_sync_position(SyncPosition::Statement);
 
-    let statement: Result<ThrushStatement<'instr>, ThrushCompilerIssue> =
-        match &parser_ctx.peek().kind {
-            TokenType::LBrace => Ok(block::build_block(parser_ctx)?),
-            TokenType::Return => Ok(terminator::build_return(parser_ctx)?),
-            TokenType::Local => Ok(local::build_local(parser_ctx)?),
-            TokenType::Instr => Ok(lli::build_lli(parser_ctx)?),
-            TokenType::If => Ok(conditional::build_conditional(parser_ctx)?),
+    let statement: Result<Ast<'parser>, ThrushCompilerIssue> = match &parser_ctx.peek().kind {
+        TokenType::LBrace => Ok(block::build_block(parser_ctx)?),
+        TokenType::Return => Ok(terminator::build_return(parser_ctx)?),
+        TokenType::Local => Ok(local::build_local(parser_ctx)?),
+        TokenType::Instr => Ok(lli::build_lli(parser_ctx)?),
+        TokenType::If => Ok(conditional::build_conditional(parser_ctx)?),
 
-            TokenType::For => Ok(loops::build_for_loop(parser_ctx)?),
-            TokenType::While => Ok(loops::build_while_loop(parser_ctx)?),
-            TokenType::Loop => Ok(loops::build_loop(parser_ctx)?),
+        TokenType::For => Ok(loops::build_for_loop(parser_ctx)?),
+        TokenType::While => Ok(loops::build_while_loop(parser_ctx)?),
+        TokenType::Loop => Ok(loops::build_loop(parser_ctx)?),
 
-            TokenType::Continue => Ok(controlflow::build_continue(parser_ctx)?),
-            TokenType::Break => Ok(controlflow::build_break(parser_ctx)?),
+        TokenType::Continue => Ok(controlflow::build_continue(parser_ctx)?),
+        TokenType::Break => Ok(controlflow::build_break(parser_ctx)?),
 
-            _ => Ok(expression::build_expression(parser_ctx)?),
-        };
+        _ => Ok(expression::build_expression(parser_ctx)?),
+    };
 
     statement
 }

@@ -5,7 +5,7 @@ use inkwell::{AddressSpace, values::BasicValueEnum};
 use crate::{
     backend::llvm::compiler::rawgen,
     core::console::logging::{self, LoggingType},
-    frontend::types::{lexer::ThrushType, parser::stmts::stmt::ThrushStatement},
+    frontend::types::{ast::Ast, lexer::ThrushType},
 };
 
 use super::{context::LLVMCodeGenContext, valuegen};
@@ -18,7 +18,7 @@ pub mod write;
 pub fn new<'ctx>(
     name: &'ctx str,
     kind: &'ctx ThrushType,
-    expr: &'ctx ThrushStatement,
+    expr: &'ctx Ast,
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
 ) {
     let value: BasicValueEnum = if kind.is_ptr_type() || kind.is_mut_type() {
@@ -32,26 +32,26 @@ pub fn new<'ctx>(
 
 pub fn compile<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
-    expr: &'ctx ThrushStatement,
+    expr: &'ctx Ast,
     cast_type: Option<&ThrushType>,
 ) -> BasicValueEnum<'ctx> {
     match expr {
-        ThrushStatement::Write {
+        Ast::Write {
             write_to,
             write_type,
             write_value,
             ..
         } => self::write::compile(context, write_to, write_type, write_value),
 
-        ThrushStatement::Load { value, kind, .. } => self::load::compile(context, value, kind),
+        Ast::Load { value, kind, .. } => self::load::compile(context, value, kind),
 
-        ThrushStatement::Address {
+        Ast::Address {
             address_to,
             indexes,
             ..
         } => self::address::compile(context, address_to, indexes),
 
-        ThrushStatement::Alloc {
+        Ast::Alloc {
             type_to_alloc,
             site_allocation,
             ..

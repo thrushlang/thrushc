@@ -27,20 +27,20 @@ use super::{
     },
 };
 
-impl<'a> EnumFieldsExtensions<'a> for EnumFields<'a> {
-    fn contain_field(&self, name: &'a str) -> bool {
+impl<'parser> EnumFieldsExtensions<'parser> for EnumFields<'parser> {
+    fn contain_field(&self, name: &'parser str) -> bool {
         self.iter().any(|enum_field| enum_field.0 == name)
     }
 
-    fn get_field(&self, name: &'a str) -> EnumField<'a> {
+    fn get_field(&self, name: &'parser str) -> EnumField<'parser> {
         self.iter()
             .find(|enum_field| enum_field.0 == name)
             .cloned()
             .unwrap()
     }
 }
-impl<'a> EnumExtensions<'a> for EnumSymbol<'a> {
-    fn get_fields(&self) -> EnumFields<'a> {
+impl<'parser> EnumExtensions<'parser> for EnumSymbol<'parser> {
+    fn get_fields(&self) -> EnumFields<'parser> {
         self.0.clone()
     }
 }
@@ -105,7 +105,7 @@ impl Display for ParametersTypes {
     }
 }
 
-impl<'a> StructExtensions<'a> for Struct<'a> {
+impl<'parser> StructExtensions<'parser> for Struct<'parser> {
     fn contains_field(&self, name: &str) -> bool {
         self.1.iter().any(|field| field.0 == name)
     }
@@ -119,7 +119,7 @@ impl<'a> StructExtensions<'a> for Struct<'a> {
         None
     }
 
-    fn get_fields(&self) -> StructFields<'a> {
+    fn get_fields(&self) -> StructFields<'parser> {
         (self.0, self.1.clone())
     }
 }
@@ -158,8 +158,8 @@ impl FoundSymbolExtension for FoundSymbolId<'_> {
     }
 }
 
-impl<'instr> FoundSymbolEither<'instr> for FoundSymbolId<'instr> {
-    fn expected_struct(&self, span: Span) -> Result<&'instr str, ThrushCompilerIssue> {
+impl<'parser> FoundSymbolEither<'parser> for FoundSymbolId<'parser> {
+    fn expected_struct(&self, span: Span) -> Result<&'parser str, ThrushCompilerIssue> {
         if let Some(name) = self.0 {
             return Ok(name);
         }
@@ -172,7 +172,7 @@ impl<'instr> FoundSymbolEither<'instr> for FoundSymbolId<'instr> {
         ))
     }
 
-    fn expected_function(&self, span: Span) -> Result<&'instr str, ThrushCompilerIssue> {
+    fn expected_function(&self, span: Span) -> Result<&'parser str, ThrushCompilerIssue> {
         if let Some(name) = self.1 {
             return Ok(name);
         }
@@ -185,7 +185,7 @@ impl<'instr> FoundSymbolEither<'instr> for FoundSymbolId<'instr> {
         ))
     }
 
-    fn expected_enum(&self, span: Span) -> Result<&'instr str, ThrushCompilerIssue> {
+    fn expected_enum(&self, span: Span) -> Result<&'parser str, ThrushCompilerIssue> {
         if let Some(name) = self.2 {
             return Ok(name);
         }
@@ -198,7 +198,7 @@ impl<'instr> FoundSymbolEither<'instr> for FoundSymbolId<'instr> {
         ))
     }
 
-    fn expected_constant(&self, span: Span) -> Result<&'instr str, ThrushCompilerIssue> {
+    fn expected_constant(&self, span: Span) -> Result<&'parser str, ThrushCompilerIssue> {
         if let Some(const_id) = self.3 {
             return Ok(const_id);
         }
@@ -211,7 +211,7 @@ impl<'instr> FoundSymbolEither<'instr> for FoundSymbolId<'instr> {
         ))
     }
 
-    fn expected_custom_type(&self, span: Span) -> Result<&'instr str, ThrushCompilerIssue> {
+    fn expected_custom_type(&self, span: Span) -> Result<&'parser str, ThrushCompilerIssue> {
         if let Some(type_id) = self.4 {
             return Ok(type_id);
         }
@@ -224,7 +224,7 @@ impl<'instr> FoundSymbolEither<'instr> for FoundSymbolId<'instr> {
         ))
     }
 
-    fn expected_parameter(&self, span: Span) -> Result<&'instr str, ThrushCompilerIssue> {
+    fn expected_parameter(&self, span: Span) -> Result<&'parser str, ThrushCompilerIssue> {
         if let Some(name) = self.5 {
             return Ok(name);
         }
@@ -237,7 +237,7 @@ impl<'instr> FoundSymbolEither<'instr> for FoundSymbolId<'instr> {
         ))
     }
 
-    fn expected_asm_function(&self, span: Span) -> Result<&'instr str, ThrushCompilerIssue> {
+    fn expected_asm_function(&self, span: Span) -> Result<&'parser str, ThrushCompilerIssue> {
         if let Some(name) = self.6 {
             return Ok(name);
         }
@@ -250,7 +250,7 @@ impl<'instr> FoundSymbolEither<'instr> for FoundSymbolId<'instr> {
         ))
     }
 
-    fn expected_lli(&self, span: Span) -> Result<(&'instr str, usize), ThrushCompilerIssue> {
+    fn expected_lli(&self, span: Span) -> Result<(&'parser str, usize), ThrushCompilerIssue> {
         if let Some((name, scope_idx)) = self.7 {
             return Ok((name, scope_idx));
         }
@@ -263,7 +263,7 @@ impl<'instr> FoundSymbolEither<'instr> for FoundSymbolId<'instr> {
         ))
     }
 
-    fn expected_local(&self, span: Span) -> Result<(&'instr str, usize), ThrushCompilerIssue> {
+    fn expected_local(&self, span: Span) -> Result<(&'parser str, usize), ThrushCompilerIssue> {
         if let Some((name, scope_idx)) = self.8 {
             return Ok((name, scope_idx));
         }

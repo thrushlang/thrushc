@@ -6,11 +6,11 @@ use crate::backend::llvm::compiler::memory::{self, LLVMAllocationSite};
 
 use crate::backend::llvm::compiler::{rawgen, valuegen};
 use crate::core::console::logging::{self, LoggingType};
+use crate::frontend::types::ast::Ast;
 use crate::frontend::types::lexer::ThrushType;
 use crate::frontend::types::lexer::traits::{
     ThrushTypeMutableExtensions, ThrushTypePointerExtensions,
 };
-use crate::frontend::types::parser::stmts::stmt::ThrushStatement;
 
 use inkwell::AddressSpace;
 use inkwell::types::BasicTypeEnum;
@@ -20,7 +20,7 @@ use inkwell::{builder::Builder, context::Context};
 pub fn compile_fixed_array<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     kind: &ThrushType,
-    items: &'ctx [ThrushStatement],
+    items: &'ctx [Ast],
     cast_type: Option<&ThrushType>,
 ) -> BasicValueEnum<'ctx> {
     if items
@@ -36,7 +36,7 @@ pub fn compile_fixed_array<'ctx>(
 fn fixed_array<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     kind: &ThrushType,
-    items: &'ctx [ThrushStatement],
+    items: &'ctx [Ast],
     cast_type: Option<&ThrushType>,
 ) -> BasicValueEnum<'ctx> {
     let llvm_context: &Context = context.get_llvm_context();
@@ -88,7 +88,7 @@ fn fixed_array<'ctx>(
 fn constant_fixed_array<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     kind: &ThrushType,
-    items: &'ctx [ThrushStatement],
+    items: &'ctx [Ast],
     cast_type: Option<&ThrushType>,
 ) -> BasicValueEnum<'ctx> {
     let llvm_context: &Context = context.get_llvm_context();
@@ -169,7 +169,7 @@ fn constant_fixed_array<'ctx>(
 pub fn compile_array<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     kind: &ThrushType,
-    items: &'ctx [ThrushStatement],
+    items: &'ctx [Ast],
     cast_type: Option<&ThrushType>,
 ) -> BasicValueEnum<'ctx> {
     let llvm_context: &Context = context.get_llvm_context();

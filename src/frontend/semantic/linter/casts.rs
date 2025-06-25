@@ -1,14 +1,12 @@
 use crate::{
     core::errors::{position::CompilationPosition, standard::ThrushCompilerIssue},
-    frontend::{
-        lexer::span::Span, semantic::linter::Linter, types::parser::stmts::stmt::ThrushStatement,
-    },
+    frontend::{lexer::span::Span, semantic::linter::Linter, types::ast::Ast},
 };
 
-pub fn analyze_cast<'linter>(linter: &mut Linter<'linter>, node: &'linter ThrushStatement) {
+pub fn analyze_cast<'linter>(linter: &mut Linter<'linter>, node: &'linter Ast) {
     match node {
-        ThrushStatement::As { from, .. } => {
-            linter.analyze_stmt(from);
+        Ast::As { from, .. } => {
+            linter.analyze_ast(from);
         }
 
         _ => {

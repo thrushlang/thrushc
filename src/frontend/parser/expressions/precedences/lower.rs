@@ -12,11 +12,11 @@ use crate::{
             parse, typegen,
         },
         types::{
+            ast::Ast,
             lexer::ThrushType,
             parser::{
                 stmts::{
                     sites::LLIAllocationSite,
-                    stmt::ThrushStatement,
                     traits::{FoundSymbolExtension, TokenExtensions},
                 },
                 symbols::types::FoundSymbolId,
@@ -25,10 +25,10 @@ use crate::{
     },
 };
 
-pub fn lower_precedence<'instr>(
-    parser_context: &mut ParserContext<'instr>,
-) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
-    let primary: ThrushStatement = match &parser_context.peek().kind {
+pub fn lower_precedence<'parser>(
+    parser_context: &mut ParserContext<'parser>,
+) -> Result<Ast<'parser>, ThrushCompilerIssue> {
+    let primary: Ast = match &parser_context.peek().kind {
         TokenType::Fixed => farray::build_fixed_array(parser_context)?,
         TokenType::LBracket => array::build_array(parser_context)?,
         TokenType::Deref => deref::build_dereference(parser_context)?,
@@ -93,7 +93,7 @@ pub fn lower_precedence<'instr>(
                 "Expected '}'.".into(),
             )?;
 
-            ThrushStatement::Alloc {
+            Ast::Alloc {
                 type_to_alloc: alloc_type,
                 site_allocation,
                 attributes,
@@ -122,19 +122,19 @@ pub fn lower_precedence<'instr>(
 
                 let reference_name: &str = identifier_tk.get_lexeme();
 
-                let reference: ThrushStatement =
+                let reference: Ast =
                     reference::build_reference(parser_context, reference_name, span)?;
 
-                return Ok(ThrushStatement::Load {
+                return Ok(Ast::Load {
                     value: (Some((reference_name, reference.into())), None),
                     kind: load_type,
                     span,
                 });
             }
 
-            let expression: ThrushStatement = expression::build_expr(parser_context)?;
+            let expression: Ast = expression::build_expr(parser_context)?;
 
-            ThrushStatement::Load {
+            Ast::Load {
                 value: (None, Some(expression.into())),
                 kind: load_type,
                 span,
@@ -149,8 +149,7 @@ pub fn lower_precedence<'instr>(
                 let identifier_tk: &Token = parser_context.previous();
                 let name: &str = identifier_tk.get_lexeme();
 
-                let reference: ThrushStatement =
-                    reference::build_reference(parser_context, name, span)?;
+                let reference: Ast = reference::build_reference(parser_context, name, span)?;
 
                 parser_context.consume(
                     TokenType::Comma,
@@ -160,9 +159,9 @@ pub fn lower_precedence<'instr>(
 
                 let write_type: ThrushType = typegen::build_type(parser_context)?;
 
-                let value: ThrushStatement = expression::build_expr(parser_context)?;
+                let value: Ast = expression::build_expr(parser_context)?;
 
-                return Ok(ThrushStatement::Write {
+                return Ok(Ast::Write {
                     write_to: (Some((name, reference.into())), None),
                     write_value: value.clone().into(),
                     write_type,
@@ -170,7 +169,7 @@ pub fn lower_precedence<'instr>(
                 });
             }
 
-            let expression: ThrushStatement = expression::build_expr(parser_context)?;
+            let expression: Ast = expression::build_expr(parser_context)?;
 
             parser_context.consume(
                 TokenType::Comma,
@@ -179,9 +178,9 @@ pub fn lower_precedence<'instr>(
             )?;
 
             let write_type: ThrushType = typegen::build_type(parser_context)?;
-            let value: ThrushStatement = expression::build_expr(parser_context)?;
+            let value: Ast = expression::build_expr(parser_context)?;
 
-            ThrushStatement::Write {
+            Ast::Write {
                 write_to: (None, Some(expression.into())),
                 write_value: value.clone().into(),
                 write_type,
@@ -199,13 +198,11 @@ pub fn lower_precedence<'instr>(
                 let name: &str = identifier_tk.get_lexeme();
                 let span: Span = identifier_tk.get_span();
 
-                let reference: ThrushStatement =
-                    reference::build_reference(parser_context, name, span)?;
+                let reference: Ast = reference::build_reference(parser_context, name, span)?;
 
-                let indexes: Vec<ThrushStatement> =
-                    address::build_address_indexes(parser_context, span)?;
+                let indexes: Vec<Ast> = address::build_address_indexes(parser_context, span)?;
 
-                return Ok(ThrushStatement::Address {
+                return Ok(Ast::Address {
                     address_to: (Some((name, reference.into())), None),
                     indexes,
                     kind: ThrushType::Addr,
@@ -213,13 +210,12 @@ pub fn lower_precedence<'instr>(
                 });
             }
 
-            let expr: ThrushStatement = expression::build_expr(parser_context)?;
+            let expr: Ast = expression::build_expr(parser_context)?;
             let expr_span: Span = expr.get_span();
 
-            let indexes: Vec<ThrushStatement> =
-                address::build_address_indexes(parser_context, expr_span)?;
+            let indexes: Vec<Ast> = address::build_address_indexes(parser_context, expr_span)?;
 
-            return Ok(ThrushStatement::Address {
+            return Ok(Ast::Address {
                 address_to: (None, Some(expr.into())),
                 indexes,
                 kind: ThrushType::Addr,
@@ -230,7 +226,7 @@ pub fn lower_precedence<'instr>(
         TokenType::LParen => {
             let span: Span = parser_context.advance()?.get_span();
 
-            let expression: ThrushStatement = expression::build_expr(parser_context)?;
+            let expression: Ast = expression::build_expr(parser_context)?;
 
             let expression_type: &ThrushType = expression.get_value_type()?;
 
@@ -240,7 +236,7 @@ pub fn lower_precedence<'instr>(
                 "Expected ')'.".into(),
             )?;
 
-            return Ok(ThrushStatement::Group {
+            return Ok(Ast::Group {
                 expression: expression.clone().into(),
                 kind: expression_type.clone(),
                 span,
@@ -253,17 +249,17 @@ pub fn lower_precedence<'instr>(
 
             let bytes: Vec<u8> = str_tk.fix_lexeme_scapes(span)?;
 
-            ThrushStatement::new_str(bytes, ThrushType::Str, span)
+            Ast::new_str(bytes, ThrushType::Str, span)
         }
 
         TokenType::Char => {
             let char_tk: &Token = parser_context.advance()?;
             let span: Span = char_tk.get_span();
 
-            ThrushStatement::new_char(ThrushType::Char, char_tk.get_lexeme_first_byte(), span)
+            Ast::new_char(ThrushType::Char, char_tk.get_lexeme_first_byte(), span)
         }
 
-        TokenType::NullPtr => ThrushStatement::NullPtr {
+        TokenType::NullPtr => Ast::NullPtr {
             span: parser_context.advance()?.span,
         },
 
@@ -277,7 +273,7 @@ pub fn lower_precedence<'instr>(
             let integer_type: ThrushType = parsed_integer.0;
             let integer_value: u64 = parsed_integer.1;
 
-            ThrushStatement::new_integer(integer_type, integer_value, false, span)
+            Ast::new_integer(integer_type, integer_value, false, span)
         }
 
         TokenType::Float => {
@@ -291,7 +287,7 @@ pub fn lower_precedence<'instr>(
             let float_type: ThrushType = parsed_float.0;
             let float_value: f64 = parsed_float.1;
 
-            ThrushStatement::new_float(float_type, float_value, false, span)
+            Ast::new_float(float_type, float_value, false, span)
         }
 
         TokenType::Identifier => {
@@ -303,14 +299,13 @@ pub fn lower_precedence<'instr>(
             let symbol: FoundSymbolId = parser_context.get_symbols().get_symbols_id(name, span)?;
 
             if parser_context.match_token(TokenType::Eq)? {
-                let reference: ThrushStatement =
-                    reference::build_reference(parser_context, name, span)?;
+                let reference: Ast = reference::build_reference(parser_context, name, span)?;
 
                 let reference_type: ThrushType = reference.get_value_type()?.clone();
 
-                let expression: ThrushStatement = expression::build_expr(parser_context)?;
+                let expression: Ast = expression::build_expr(parser_context)?;
 
-                return Ok(ThrushStatement::Mut {
+                return Ok(Ast::Mut {
                     source: (Some((name, reference.clone().into())), None),
                     value: expression.into(),
                     kind: ThrushType::Void,
@@ -320,15 +315,14 @@ pub fn lower_precedence<'instr>(
             }
 
             if parser_context.match_token(TokenType::LBracket)? {
-                let index: ThrushStatement =
-                    index::build_index(parser_context, Some(name), None, span)?;
+                let index: Ast = index::build_index(parser_context, Some(name), None, span)?;
 
                 let index_type: ThrushType = index.get_value_type()?.clone();
 
                 if parser_context.match_token(TokenType::Eq)? {
-                    let expr: ThrushStatement = expression::build_expr(parser_context)?;
+                    let expr: Ast = expression::build_expr(parser_context)?;
 
-                    return Ok(ThrushStatement::Mut {
+                    return Ok(Ast::Mut {
                         source: (None, Some(index.clone().into())),
                         value: expr.into(),
                         kind: ThrushType::Void,
@@ -349,15 +343,14 @@ pub fn lower_precedence<'instr>(
             }
 
             if parser_context.match_token(TokenType::Dot)? {
-                let property: ThrushStatement =
-                    property::build_property(parser_context, name, span)?;
+                let property: Ast = property::build_property(parser_context, name, span)?;
 
                 let property_type: ThrushType = property.get_value_type()?.clone();
 
                 if parser_context.match_token(TokenType::Eq)? {
-                    let expr: ThrushStatement = expression::build_expr(parser_context)?;
+                    let expr: Ast = expression::build_expr(parser_context)?;
 
-                    return Ok(ThrushStatement::Mut {
+                    return Ok(Ast::Mut {
                         source: (None, Some(property.clone().into())),
                         value: expr.into(),
                         kind: ThrushType::Void,
@@ -395,16 +388,12 @@ pub fn lower_precedence<'instr>(
             reference::build_reference(parser_context, name, span)?
         }
 
-        TokenType::True => {
-            ThrushStatement::new_boolean(ThrushType::Bool, 1, parser_context.advance()?.span)
-        }
-        TokenType::False => {
-            ThrushStatement::new_boolean(ThrushType::Bool, 0, parser_context.advance()?.span)
-        }
+        TokenType::True => Ast::new_boolean(ThrushType::Bool, 1, parser_context.advance()?.span),
+        TokenType::False => Ast::new_boolean(ThrushType::Bool, 0, parser_context.advance()?.span),
 
         TokenType::New => constructor::build_constructor(parser_context)?,
 
-        TokenType::Pass => ThrushStatement::Pass {
+        TokenType::Pass => Ast::Pass {
             span: parser_context.advance()?.get_span(),
         },
 

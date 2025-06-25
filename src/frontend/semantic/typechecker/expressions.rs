@@ -4,21 +4,21 @@ use crate::{
         lexer::{span::Span, tokentype::TokenType},
         semantic::typechecker::{TypeChecker, call, exprvalidations},
         types::{
+            ast::Ast,
             lexer::{
                 ThrushType,
                 traits::{ThrushTypeMutableExtensions, ThrushTypePointerExtensions},
             },
-            parser::stmts::stmt::ThrushStatement,
         },
     },
 };
 
 pub fn validate_expression<'type_checker>(
     typechecker: &mut TypeChecker<'type_checker>,
-    node: &'type_checker ThrushStatement,
+    node: &'type_checker Ast,
 ) -> Result<(), ThrushCompilerIssue> {
     match node {
-        ThrushStatement::BinaryOp {
+        Ast::BinaryOp {
             left,
             operator,
             right,
@@ -34,18 +34,18 @@ pub fn validate_expression<'type_checker>(
                 typechecker.add_error(mismatch_type_error);
             }
 
-            if let Err(type_error) = typechecker.analyze_stmt(left) {
+            if let Err(type_error) = typechecker.analyze_ast(left) {
                 typechecker.add_error(type_error);
             }
 
-            if let Err(type_error) = typechecker.analyze_stmt(right) {
+            if let Err(type_error) = typechecker.analyze_ast(right) {
                 typechecker.add_error(type_error);
             }
 
             Ok(())
         }
 
-        ThrushStatement::UnaryOp {
+        Ast::UnaryOp {
             operator,
             expression,
             span,
@@ -79,29 +79,29 @@ pub fn validate_expression<'type_checker>(
                 }
             }
 
-            if let Err(type_error) = typechecker.analyze_stmt(expression) {
+            if let Err(type_error) = typechecker.analyze_ast(expression) {
                 typechecker.add_error(type_error);
             }
 
             Ok(())
         }
 
-        ThrushStatement::Group { expression, .. } => {
-            if let Err(type_error) = typechecker.analyze_stmt(expression) {
+        Ast::Group { expression, .. } => {
+            if let Err(type_error) = typechecker.analyze_ast(expression) {
                 typechecker.add_error(type_error);
             }
 
             Ok(())
         }
 
-        ThrushStatement::Mut {
+        Ast::Mut {
             source,
             value,
             span,
             ..
         } => {
             if let (Some(any_reference), None) = source {
-                let reference: &ThrushStatement = &any_reference.1;
+                let reference: &Ast = &any_reference.1;
                 let reference_type: &ThrushType = reference.get_value_type()?;
 
                 if !reference_type.is_ptr_type() && !reference_type.is_mut_type() {
@@ -122,7 +122,7 @@ pub fn validate_expression<'type_checker>(
                     ));
                 }
 
-                typechecker.analyze_stmt(value)?;
+                typechecker.analyze_ast(value)?;
 
                 return Ok(());
             }
@@ -148,7 +148,7 @@ pub fn validate_expression<'type_checker>(
                     ));
                 }
 
-                typechecker.analyze_stmt(value)?;
+                typechecker.analyze_ast(value)?;
 
                 return Ok(());
             }
@@ -164,7 +164,7 @@ pub fn validate_expression<'type_checker>(
             Ok(())
         }
 
-        ThrushStatement::FixedArray { items, kind, span } => {
+        Ast::FixedArray { items, kind, span } => {
             if kind.is_void_type() {
                 return Err(ThrushCompilerIssue::Error(
                     "Type error".into(),
@@ -190,13 +190,13 @@ pub fn validate_expression<'type_checker>(
                     typechecker.add_error(error);
                 }
 
-                typechecker.analyze_stmt(item)
+                typechecker.analyze_ast(item)
             })?;
 
             Ok(())
         }
 
-        ThrushStatement::Array {
+        Ast::Array {
             items, kind, span, ..
         } => {
             if kind.is_void_type() {
@@ -224,20 +224,20 @@ pub fn validate_expression<'type_checker>(
                     typechecker.add_error(error);
                 }
 
-                typechecker.analyze_stmt(item)
+                typechecker.analyze_ast(item)
             })?;
 
             Ok(())
         }
 
-        ThrushStatement::Index {
+        Ast::Index {
             index_to,
             indexes,
             span,
             ..
         } => {
             if let Some(any_reference) = &index_to.0 {
-                let reference: &ThrushStatement = &any_reference.1;
+                let reference: &Ast = &any_reference.1;
 
                 if !reference.is_allocated_reference() {
                     typechecker.add_error(ThrushCompilerIssue::Error(
@@ -271,7 +271,7 @@ pub fn validate_expression<'type_checker>(
             }
 
             if let Some(expr) = &index_to.1 {
-                let expr_type: &ThrushType = expr.get_stmt_type()?;
+                let expr_type: &ThrushType = expr.get_any_type()?;
 
                 if expr_type.is_ptr_type() && !expr_type.is_typed_ptr() {
                     typechecker.add_error(ThrushCompilerIssue::Error(
@@ -303,13 +303,13 @@ pub fn validate_expression<'type_checker>(
                     ));
                 }
 
-                typechecker.analyze_stmt(indexe)
+                typechecker.analyze_ast(indexe)
             })?;
 
             Ok(())
         }
 
-        ThrushStatement::Property { reference, .. } => {
+        Ast::Property { reference, .. } => {
             let reference_type: &ThrushType = reference.get_value_type()?;
             let reference_span: Span = reference.get_span();
 
@@ -325,16 +325,16 @@ pub fn validate_expression<'type_checker>(
                 ));
             }
 
-            typechecker.analyze_stmt(reference)?;
+            typechecker.analyze_ast(reference)?;
 
             Ok(())
         }
 
-        ThrushStatement::Constructor { arguments, .. } => {
-            let args: &[(&str, ThrushStatement, ThrushType, u32)] = &arguments.1;
+        Ast::Constructor { arguments, .. } => {
+            let args: &[(&str, Ast, ThrushType, u32)] = &arguments.1;
 
             args.iter().try_for_each(|arg| {
-                let expression: &ThrushStatement = &arg.1;
+                let expression: &Ast = &arg.1;
                 let expression_span: Span = expression.get_span();
 
                 let target_type: &ThrushType = &arg.2;
@@ -357,7 +357,7 @@ pub fn validate_expression<'type_checker>(
             Ok(())
         }
 
-        ThrushStatement::Call {
+        Ast::Call {
             name, args, span, ..
         } => {
             if let Some(metadata) = typechecker.symbols.get_function(name) {
@@ -371,18 +371,18 @@ pub fn validate_expression<'type_checker>(
             Ok(())
         }
 
-        ThrushStatement::AsmValue { .. }
-        | ThrushStatement::Alloc { .. }
-        | ThrushStatement::EnumValue { .. }
-        | ThrushStatement::Reference { .. }
-        | ThrushStatement::Integer { .. }
-        | ThrushStatement::Boolean { .. }
-        | ThrushStatement::Str { .. }
-        | ThrushStatement::Float { .. }
-        | ThrushStatement::Null { .. }
-        | ThrushStatement::NullPtr { .. }
-        | ThrushStatement::Char { .. }
-        | ThrushStatement::Pass { .. } => Ok(()),
+        Ast::AsmValue { .. }
+        | Ast::Alloc { .. }
+        | Ast::EnumValue { .. }
+        | Ast::Reference { .. }
+        | Ast::Integer { .. }
+        | Ast::Boolean { .. }
+        | Ast::Str { .. }
+        | Ast::Float { .. }
+        | Ast::Null { .. }
+        | Ast::NullPtr { .. }
+        | Ast::Char { .. }
+        | Ast::Pass { .. } => Ok(()),
 
         _ => {
             let span: Span = node.get_span();

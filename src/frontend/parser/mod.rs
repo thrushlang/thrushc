@@ -21,40 +21,40 @@ use crate::core::errors::standard::ThrushCompilerIssue;
 use crate::frontend::lexer::token::Token;
 use crate::frontend::lexer::tokentype::TokenType;
 use crate::frontend::parser::stmts::{asmfunction, constant, cstype, function, structure, union};
-use crate::frontend::types::parser::stmts::stmt::ThrushStatement;
+use crate::frontend::types::ast::Ast;
 use crate::frontend::types::parser::symbols::types::{AssemblerFunctions, Functions};
 
 const MINIMAL_STATEMENT_CAPACITY: usize = 100_000;
 const MINIMAL_GLOBAL_CAPACITY: usize = 2024;
 
-pub struct ParserContext<'instr> {
-    stmts: Vec<ThrushStatement<'instr>>,
-    tokens: &'instr [Token],
+pub struct ParserContext<'parser> {
+    ast: Vec<Ast<'parser>>,
+    tokens: &'parser [Token],
     errors: Vec<ThrushCompilerIssue>,
 
     control_ctx: ParserControlContext,
     type_ctx: ParserTypeContext,
     diagnostician: Diagnostician,
-    symbols: SymbolsTable<'instr>,
+    symbols: SymbolsTable<'parser>,
 
     current: usize,
     scope: usize,
 }
 
-pub struct Parser<'instr> {
-    tokens: &'instr [Token],
-    file: &'instr CompilerFile,
+pub struct Parser<'parser> {
+    tokens: &'parser [Token],
+    file: &'parser CompilerFile,
 }
 
-impl<'instr> Parser<'instr> {
+impl<'parser> Parser<'parser> {
     pub fn parse(
-        tokens: &'instr [Token],
-        file: &'instr CompilerFile,
-    ) -> (ParserContext<'instr>, bool) {
+        tokens: &'parser [Token],
+        file: &'parser CompilerFile,
+    ) -> (ParserContext<'parser>, bool) {
         Self { tokens, file }.start()
     }
 
-    fn start(&mut self) -> (ParserContext<'instr>, bool) {
+    fn start(&mut self) -> (ParserContext<'parser>, bool) {
         let mut parser_ctx: ParserContext = ParserContext::new(self.tokens, self.file);
 
         parser_ctx.init();
@@ -77,21 +77,21 @@ impl<'instr> Parser<'instr> {
     }
 }
 
-impl<'instr> ParserContext<'instr> {
-    pub fn new(tokens: &'instr [Token], file: &'instr CompilerFile) -> Self {
+impl<'parser> ParserContext<'parser> {
+    pub fn new(tokens: &'parser [Token], file: &'parser CompilerFile) -> Self {
         let functions: Functions = HashMap::with_capacity(MINIMAL_GLOBAL_CAPACITY);
         let asm_functions: AssemblerFunctions = HashMap::with_capacity(MINIMAL_GLOBAL_CAPACITY);
 
         Self {
             tokens,
-            stmts: Vec::with_capacity(MINIMAL_STATEMENT_CAPACITY),
+            ast: Vec::with_capacity(MINIMAL_STATEMENT_CAPACITY),
             errors: Vec::with_capacity(100),
             control_ctx: ParserControlContext::new(),
             type_ctx: ParserTypeContext::new(),
-            current: 0,
-            scope: 0,
             diagnostician: Diagnostician::new(file),
             symbols: SymbolsTable::with_functions(functions, asm_functions),
+            current: 0,
+            scope: 0,
         }
     }
 
@@ -113,7 +113,7 @@ impl<'instr> ParserContext<'instr> {
         kind: TokenType,
         title: String,
         help: String,
-    ) -> Result<&'instr Token, ThrushCompilerIssue> {
+    ) -> Result<&'parser Token, ThrushCompilerIssue> {
         if self.peek().kind == kind {
             return self.advance();
         }
@@ -149,7 +149,7 @@ impl<'instr> ParserContext<'instr> {
         ))
     }
 
-    pub fn advance(&mut self) -> Result<&'instr Token, ThrushCompilerIssue> {
+    pub fn advance(&mut self) -> Result<&'parser Token, ThrushCompilerIssue> {
         if !self.is_eof() {
             self.current += 1;
             return Ok(self.previous());
@@ -237,11 +237,11 @@ impl<'instr> ParserContext<'instr> {
         self.control_ctx.get_unreacheable_code_scope() == self.scope && !self.is_main_scope()
     }
 
-    pub fn get_symbols(&self) -> &SymbolsTable<'instr> {
+    pub fn get_symbols(&self) -> &SymbolsTable<'parser> {
         &self.symbols
     }
 
-    pub fn get_mut_symbols(&mut self) -> &mut SymbolsTable<'instr> {
+    pub fn get_mut_symbols(&mut self) -> &mut SymbolsTable<'parser> {
         &mut self.symbols
     }
 
@@ -269,16 +269,16 @@ impl<'instr> ParserContext<'instr> {
         &mut self.scope
     }
 
-    pub fn add_stmt(&mut self, stmt: ThrushStatement<'instr>) {
-        self.stmts.push(stmt);
+    pub fn add_stmt(&mut self, stmt: Ast<'parser>) {
+        self.ast.push(stmt);
     }
 
     pub fn add_error(&mut self, error: ThrushCompilerIssue) {
         self.errors.push(error);
     }
 
-    pub fn get_stmts(&self) -> &[ThrushStatement<'instr>] {
-        &self.stmts
+    pub fn get_ast(&self) -> &[Ast<'parser>] {
+        &self.ast
     }
 
     #[must_use]
@@ -314,7 +314,7 @@ impl<'instr> ParserContext<'instr> {
     }
 
     #[must_use]
-    pub fn peek(&self) -> &'instr Token {
+    pub fn peek(&self) -> &'parser Token {
         self.tokens.get(self.current).unwrap_or_else(|| {
             logging::log(
                 LoggingType::Panic,
@@ -326,7 +326,7 @@ impl<'instr> ParserContext<'instr> {
     }
 
     #[must_use]
-    pub fn previous(&self) -> &'instr Token {
+    pub fn previous(&self) -> &'parser Token {
         self.tokens.get(self.current - 1).unwrap_or_else(|| {
             logging::log(
                 LoggingType::Panic,

@@ -3,9 +3,9 @@ use crate::{
     frontend::{
         lexer::{span::Span, token::Token, tokentype::TokenType},
         parser::{ParserContext, expression},
+        types::ast::Ast,
         types::parser::{
             stmts::{
-                stmt::ThrushStatement,
                 traits::{ConstructorExtensions, StructExtensions, TokenExtensions},
                 types::Constructor,
             },
@@ -14,9 +14,9 @@ use crate::{
     },
 };
 
-pub fn build_constructor<'instr>(
-    parser_context: &mut ParserContext<'instr>,
-) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
+pub fn build_constructor<'parser>(
+    parser_context: &mut ParserContext<'parser>,
+) -> Result<Ast<'parser>, ThrushCompilerIssue> {
     let new_tk: &Token = parser_context.consume(
         TokenType::New,
         String::from("Syntax error"),
@@ -88,7 +88,7 @@ pub fn build_constructor<'instr>(
                 ));
             }
 
-            let expression: ThrushStatement = expression::build_expr(parser_context)?;
+            let expression: Ast = expression::build_expr(parser_context)?;
 
             if expression.is_constructor() {
                 return Err(ThrushCompilerIssue::Error(
@@ -159,7 +159,7 @@ pub fn build_constructor<'instr>(
         String::from("Expected '}'."),
     )?;
 
-    Ok(ThrushStatement::Constructor {
+    Ok(Ast::Constructor {
         name: struct_name,
         arguments: arguments.clone(),
         kind: arguments.get_type(),

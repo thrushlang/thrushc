@@ -1,12 +1,12 @@
 #![allow(clippy::upper_case_acronyms)]
-#![allow(clippy::type_complexity)]
 
 use super::context::LLVMCodeGenContext;
 use super::typegen;
 use crate::backend::llvm::compiler::attributes::LLVMAttribute;
 use crate::backend::llvm::compiler::memory::{self, SymbolAllocated};
 use crate::backend::llvm::compiler::{builtins, cast, intgen, lli, rawgen, utils, valuegen};
-use crate::backend::types::representations::LLVMFunction;
+use crate::backend::types::LLVMEitherExpression;
+use crate::backend::types::repr::LLVMFunction;
 use crate::backend::types::traits::AssemblerFunctionExtensions;
 use crate::core::console::logging::{self, LoggingType};
 use crate::frontend::types::lexer::ThrushType;
@@ -14,7 +14,7 @@ use crate::frontend::types::lexer::traits::{
     ThrushTypeMutableExtensions, ThrushTypePointerExtensions,
 };
 
-use crate::frontend::types::parser::stmts::stmt::ThrushStatement;
+use crate::frontend::types::ast::Ast;
 use crate::frontend::types::parser::stmts::traits::ThrushAttributesExtensions;
 use crate::frontend::types::parser::stmts::types::ThrushAttributes;
 use inkwell::types::{BasicTypeEnum, FunctionType, PointerType};
@@ -24,39 +24,34 @@ use inkwell::values::{
 use inkwell::{AddressSpace, InlineAsmDialect};
 use inkwell::{builder::Builder, context::Context};
 use std::fmt::Display;
-use std::rc::Rc;
 
 pub fn compile<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
-    expr: &'ctx ThrushStatement,
+    expr: &'ctx Ast,
     cast_type: Option<&ThrushType>,
 ) -> BasicValueEnum<'ctx> {
     match expr {
-        ThrushStatement::NullPtr { .. } => self::compile_null_ptr(context),
+        Ast::NullPtr { .. } => self::compile_null_ptr(context),
 
-        ThrushStatement::Str { bytes, .. } => self::compile_string(context, bytes),
+        Ast::Str { bytes, .. } => self::compile_string(context, bytes),
 
-        ThrushStatement::Call {
+        Ast::Call {
             name, args, kind, ..
         } => compile_function_call(context, name, args, kind, cast_type),
 
-        ThrushStatement::Group { expression, .. } => self::compile(context, expression, cast_type),
+        Ast::Group { expression, .. } => self::compile(context, expression, cast_type),
 
-        ThrushStatement::As { from, cast, .. } => self::compile_cast(context, from, cast),
+        Ast::As { from, cast, .. } => self::compile_cast(context, from, cast),
 
-        ThrushStatement::Deref { value, kind, .. } => {
-            self::compile_deref(context, value, kind, cast_type)
-        }
+        Ast::Deref { value, kind, .. } => self::compile_deref(context, value, kind, cast_type),
 
-        ThrushStatement::Property { name, indexes, .. } => {
-            self::compile_property(context, name, indexes)
-        }
+        Ast::Property { name, indexes, .. } => self::compile_property(context, name, indexes),
 
-        ThrushStatement::Builtin { builtin, .. } => builtins::compile(context, builtin),
+        Ast::Builtin { builtin, .. } => builtins::compile(context, builtin),
 
-        ThrushStatement::Reference { name, .. } => self::compile_reference(context, name),
+        Ast::Reference { name, .. } => self::compile_reference(context, name),
 
-        ThrushStatement::AsmValue {
+        Ast::AsmValue {
             assembler,
             constraints,
             args,
@@ -65,7 +60,7 @@ pub fn compile<'ctx>(
             ..
         } => self::compile_inline_asm(context, assembler, constraints, args, kind, attributes),
 
-        ThrushStatement::Index {
+        Ast::Index {
             index_to, indexes, ..
         } => self::compile_index(context, index_to, indexes),
 
@@ -76,7 +71,7 @@ pub fn compile<'ctx>(
 fn compile_function_call<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     name: &str,
-    args: &'ctx [ThrushStatement],
+    args: &'ctx [Ast],
     kind: &'ctx ThrushType,
     cast_type: Option<&ThrushType>,
 ) -> BasicValueEnum<'ctx> {
@@ -132,7 +127,7 @@ fn compile_function_call<'ctx>(
 
 fn compile_cast<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
-    from: &'ctx ThrushStatement,
+    from: &'ctx Ast,
     cast: &ThrushType,
 ) -> BasicValueEnum<'ctx> {
     let from_type: &ThrushType = from.get_type_unwrapped();
@@ -202,7 +197,7 @@ fn compile_cast<'ctx>(
 
 fn compile_deref<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
-    value: &'ctx ThrushStatement,
+    value: &'ctx Ast,
     kind: &ThrushType,
     cast_type: Option<&ThrushType>,
 ) -> BasicValueEnum<'ctx> {
@@ -278,7 +273,7 @@ fn compile_inline_asm<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     assembler: &str,
     constraints: &str,
-    args: &'ctx [ThrushStatement],
+    args: &'ctx [Ast],
     kind: &ThrushType,
     attributes: &ThrushAttributes,
 ) -> BasicValueEnum<'ctx> {
@@ -336,11 +331,8 @@ fn compile_inline_asm<'ctx>(
 
 fn compile_index<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
-    index_to: &'ctx (
-        Option<(&'ctx str, Rc<ThrushStatement<'ctx>>)>,
-        Option<Rc<ThrushStatement<'ctx>>>,
-    ),
-    indexes: &'ctx [ThrushStatement],
+    index_to: &'ctx LLVMEitherExpression<'ctx>,
+    indexes: &'ctx [Ast],
 ) -> BasicValueEnum<'ctx> {
     let llvm_context: &Context = context.get_llvm_context();
     let llvm_builder: &Builder = context.get_llvm_builder();
@@ -374,7 +366,7 @@ fn compile_index<'ctx>(
 
 fn compute_indexes<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
-    indexes: &'ctx [ThrushStatement],
+    indexes: &'ctx [Ast],
     kind: &'ctx ThrushType,
 ) -> Vec<IntValue<'ctx>> {
     let llvm_context: &Context = context.get_llvm_context();

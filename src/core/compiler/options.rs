@@ -2,7 +2,7 @@
 
 use {
     super::backends::LLVMBackend,
-    crate::frontend::{lexer::token::Token, types::parser::stmts::stmt::ThrushStatement},
+    crate::frontend::{lexer::token::Token, types::ast::Ast},
     inkwell::OptimizationLevel,
     std::path::PathBuf,
 };
@@ -37,7 +37,7 @@ pub enum Emitable {
 #[derive(Debug)]
 pub enum Emited<'emited> {
     Tokens(&'emited [Token]),
-    Statements(&'emited [ThrushStatement<'emited>]),
+    Ast(&'emited [Ast<'emited>]),
 }
 
 #[derive(Default, Debug, Clone, Copy)]

@@ -8,10 +8,10 @@ use crate::{
     },
 };
 
-pub fn build_attributes<'instr>(
-    parser_ctx: &mut ParserContext<'instr>,
+pub fn build_attributes<'parser>(
+    parser_ctx: &mut ParserContext<'parser>,
     limits: &[TokenType],
-) -> Result<ThrushAttributes<'instr>, ThrushCompilerIssue> {
+) -> Result<ThrushAttributes<'parser>, ThrushCompilerIssue> {
     let mut compiler_attributes: ThrushAttributes = Vec::with_capacity(10);
 
     while !limits.contains(&parser_ctx.peek().kind) {
@@ -57,9 +57,9 @@ pub fn build_attributes<'instr>(
     Ok(compiler_attributes)
 }
 
-fn build_external_attribute<'instr>(
-    parser_ctx: &mut ParserContext<'instr>,
-) -> Result<&'instr str, ThrushCompilerIssue> {
+fn build_external_attribute<'parser>(
+    parser_ctx: &mut ParserContext<'parser>,
+) -> Result<&'parser str, ThrushCompilerIssue> {
     parser_ctx.only_advance()?;
 
     parser_ctx.consume(
@@ -85,9 +85,9 @@ fn build_external_attribute<'instr>(
     Ok(ffi_name)
 }
 
-fn build_assembler_syntax_attribute<'instr>(
-    parser_ctx: &mut ParserContext<'instr>,
-) -> Result<&'instr str, ThrushCompilerIssue> {
+fn build_assembler_syntax_attribute<'parser>(
+    parser_ctx: &mut ParserContext<'parser>,
+) -> Result<&'parser str, ThrushCompilerIssue> {
     parser_ctx.only_advance()?;
 
     parser_ctx.consume(

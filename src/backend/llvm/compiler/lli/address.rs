@@ -16,16 +16,13 @@ use crate::{
         rawgen, valuegen,
     },
     core::console::logging::{self, LoggingType},
-    frontend::types::{lexer::ThrushType, parser::stmts::stmt::ThrushStatement},
+    frontend::types::{ast::Ast, lexer::ThrushType},
 };
 
 pub fn compile<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
-    address_to: &'ctx (
-        Option<(&'ctx str, Rc<ThrushStatement<'ctx>>)>,
-        Option<Rc<ThrushStatement<'ctx>>>,
-    ),
-    indexes: &'ctx [ThrushStatement],
+    address_to: &'ctx (Option<(&'ctx str, Rc<Ast<'ctx>>)>, Option<Rc<Ast<'ctx>>>),
+    indexes: &'ctx [Ast],
 ) -> BasicValueEnum<'ctx> {
     let llvm_context: &Context = context.get_llvm_context();
     let llvm_builder: &Builder = context.get_llvm_builder();

@@ -3,16 +3,16 @@ use crate::{
     frontend::{
         lexer::span::Span,
         semantic::typechecker::TypeChecker,
-        types::{lexer::ThrushType, parser::stmts::stmt::ThrushStatement},
+        types::{ast::Ast, lexer::ThrushType},
     },
 };
 
 pub fn validate_conditional<'type_checker>(
     typechecker: &mut TypeChecker<'type_checker>,
-    node: &'type_checker ThrushStatement,
+    node: &'type_checker Ast,
 ) -> Result<(), ThrushCompilerIssue> {
     match node {
-        ThrushStatement::If {
+        Ast::If {
             cond,
             block,
             elfs,
@@ -31,19 +31,19 @@ pub fn validate_conditional<'type_checker>(
             }
 
             elfs.iter()
-                .try_for_each(|elif| typechecker.analyze_stmt(elif))?;
+                .try_for_each(|elif| typechecker.analyze_ast(elif))?;
 
             if let Some(otherwise) = otherwise {
-                typechecker.analyze_stmt(otherwise)?;
+                typechecker.analyze_ast(otherwise)?;
             }
 
-            typechecker.analyze_stmt(cond)?;
-            typechecker.analyze_stmt(block)?;
+            typechecker.analyze_ast(cond)?;
+            typechecker.analyze_ast(block)?;
 
             Ok(())
         }
 
-        ThrushStatement::Elif { cond, block, span } => {
+        Ast::Elif { cond, block, span } => {
             if let Err(error) = typechecker.validate_types(
                 &ThrushType::Bool,
                 cond.get_value_type()?,
@@ -55,14 +55,14 @@ pub fn validate_conditional<'type_checker>(
                 typechecker.add_error(error);
             }
 
-            typechecker.analyze_stmt(cond)?;
-            typechecker.analyze_stmt(block)?;
+            typechecker.analyze_ast(cond)?;
+            typechecker.analyze_ast(block)?;
 
             Ok(())
         }
 
-        ThrushStatement::Else { block, .. } => {
-            typechecker.analyze_stmt(block)?;
+        Ast::Else { block, .. } => {
+            typechecker.analyze_ast(block)?;
 
             Ok(())
         }

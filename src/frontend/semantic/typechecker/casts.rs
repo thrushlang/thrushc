@@ -3,16 +3,16 @@ use crate::{
     frontend::{
         lexer::span::Span,
         semantic::typechecker::TypeChecker,
-        types::{lexer::ThrushType, parser::stmts::stmt::ThrushStatement},
+        types::{ast::Ast, lexer::ThrushType},
     },
 };
 
 pub fn validate_cast_as<'type_checker>(
     typechecker: &mut TypeChecker<'type_checker>,
-    node: &'type_checker ThrushStatement,
+    node: &'type_checker Ast,
 ) -> Result<(), ThrushCompilerIssue> {
     match node {
-        ThrushStatement::As {
+        Ast::As {
             from,
             cast: cast_type,
             span,
@@ -28,7 +28,7 @@ pub fn validate_cast_as<'type_checker>(
                 typechecker.add_error(error);
             }
 
-            typechecker.analyze_stmt(from)?;
+            typechecker.analyze_ast(from)?;
 
             Ok(())
         }

@@ -10,15 +10,12 @@ use inkwell::{
 use crate::{
     backend::llvm::compiler::{context::LLVMCodeGenContext, memory, rawgen},
     core::console::logging::{self, LoggingType},
-    frontend::types::{lexer::ThrushType, parser::stmts::stmt::ThrushStatement},
+    frontend::types::{ast::Ast, lexer::ThrushType},
 };
 
 pub fn compile<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
-    value: &'ctx (
-        Option<(&'ctx str, Rc<ThrushStatement<'ctx>>)>,
-        Option<Rc<ThrushStatement<'ctx>>>,
-    ),
+    value: &'ctx (Option<(&'ctx str, Rc<Ast<'ctx>>)>, Option<Rc<Ast<'ctx>>>),
     kind: &ThrushType,
 ) -> BasicValueEnum<'ctx> {
     match value {

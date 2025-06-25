@@ -1,32 +1,30 @@
 use crate::{
     core::errors::{position::CompilationPosition, standard::ThrushCompilerIssue},
-    frontend::{
-        lexer::span::Span, semantic::linter::Linter, types::parser::stmts::stmt::ThrushStatement,
-    },
+    frontend::{lexer::span::Span, semantic::linter::Linter, types::ast::Ast},
 };
 
-pub fn analyze_loop<'linter>(linter: &mut Linter<'linter>, node: &'linter ThrushStatement) {
+pub fn analyze_loop<'linter>(linter: &mut Linter<'linter>, node: &'linter Ast) {
     match node {
-        ThrushStatement::For {
+        Ast::For {
             local,
             actions,
             cond,
             block,
             ..
         } => {
-            linter.analyze_stmt(local);
-            linter.analyze_stmt(actions);
-            linter.analyze_stmt(cond);
-            linter.analyze_stmt(block);
+            linter.analyze_ast(local);
+            linter.analyze_ast(actions);
+            linter.analyze_ast(cond);
+            linter.analyze_ast(block);
         }
 
-        ThrushStatement::While { cond, block, .. } => {
-            linter.analyze_stmt(cond);
-            linter.analyze_stmt(block);
+        Ast::While { cond, block, .. } => {
+            linter.analyze_ast(cond);
+            linter.analyze_ast(block);
         }
 
-        ThrushStatement::Loop { block, .. } => {
-            linter.analyze_stmt(block);
+        Ast::Loop { block, .. } => {
+            linter.analyze_ast(block);
         }
 
         _ => {

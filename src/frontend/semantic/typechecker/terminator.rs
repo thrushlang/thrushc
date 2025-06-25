@@ -1,17 +1,14 @@
 use crate::{
     core::errors::{position::CompilationPosition, standard::ThrushCompilerIssue},
-    frontend::{
-        lexer::span::Span, semantic::typechecker::TypeChecker,
-        types::parser::stmts::stmt::ThrushStatement,
-    },
+    frontend::{lexer::span::Span, semantic::typechecker::TypeChecker, types::ast::Ast},
 };
 
 pub fn validate_terminator<'type_checker>(
     typechecker: &mut TypeChecker<'type_checker>,
-    node: &'type_checker ThrushStatement,
+    node: &'type_checker Ast,
 ) -> Result<(), ThrushCompilerIssue> {
     match node {
-        ThrushStatement::Return {
+        Ast::Return {
             expression,
             kind,
             span,
@@ -28,7 +25,7 @@ pub fn validate_terminator<'type_checker>(
                     typechecker.add_error(error);
                 }
 
-                typechecker.analyze_stmt(expr)?;
+                typechecker.analyze_ast(expr)?;
             }
 
             Ok(())

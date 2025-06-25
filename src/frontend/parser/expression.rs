@@ -1,20 +1,16 @@
 use crate::{
     core::errors::standard::ThrushCompilerIssue,
     frontend::{
-        lexer::{span::Span, token::Token, tokentype::TokenType},
-        parser::expressions::{precedences::or, reference},
-        types::{
-            lexer::ThrushType,
-            parser::stmts::{stmt::ThrushStatement, traits::TokenExtensions},
-        },
+        lexer::tokentype::TokenType, parser::expressions::precedences::or, types::ast::Ast,
+        types::parser::stmts::traits::TokenExtensions,
     },
 };
 
-use super::{ParserContext, contexts::SyncPosition, typegen};
+use super::{ParserContext, contexts::SyncPosition};
 
-pub fn build_expression<'instr>(
-    parser_context: &mut ParserContext<'instr>,
-) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
+pub fn build_expression<'parser>(
+    parser_context: &mut ParserContext<'parser>,
+) -> Result<Ast<'parser>, ThrushCompilerIssue> {
     parser_context
         .get_mut_control_ctx()
         .set_sync_position(SyncPosition::Expression);
@@ -28,7 +24,7 @@ pub fn build_expression<'instr>(
         ));
     }
 
-    let expression: ThrushStatement = or::or_precedence(parser_context)?;
+    let expression: Ast = or::or_precedence(parser_context)?;
 
     parser_context.consume(
         TokenType::SemiColon,
@@ -39,9 +35,9 @@ pub fn build_expression<'instr>(
     Ok(expression)
 }
 
-pub fn build_expr<'instr>(
-    parser_context: &mut ParserContext<'instr>,
-) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
+pub fn build_expr<'parser>(
+    parser_context: &mut ParserContext<'parser>,
+) -> Result<Ast<'parser>, ThrushCompilerIssue> {
     parser_context
         .get_mut_control_ctx()
         .set_sync_position(SyncPosition::Expression);
@@ -55,7 +51,7 @@ pub fn build_expr<'instr>(
         ));
     }
 
-    let expr: ThrushStatement = or::or_precedence(parser_context)?;
+    let expr: Ast = or::or_precedence(parser_context)?;
 
     Ok(expr)
 }

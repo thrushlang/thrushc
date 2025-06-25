@@ -4,19 +4,20 @@ use crate::{
         lexer::{span::Span, token::Token, tokentype::TokenType},
         parser::{ParserContext, expressions::reference},
         types::{
+            ast::Ast,
             lexer::{ThrushType, decompose_struct_property},
-            parser::stmts::{stmt::ThrushStatement, traits::TokenExtensions},
+            parser::stmts::traits::TokenExtensions,
         },
     },
 };
 
-pub fn build_property<'instr>(
-    parser_context: &mut ParserContext<'instr>,
-    name: &'instr str,
+pub fn build_property<'parser>(
+    parser_context: &mut ParserContext<'parser>,
+    name: &'parser str,
     span: Span,
-) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
-    let reference: ThrushStatement = reference::build_reference(parser_context, name, span)?;
-    let reference_type: ThrushType = reference.get_stmt_type()?.clone();
+) -> Result<Ast<'parser>, ThrushCompilerIssue> {
+    let reference: Ast = reference::build_reference(parser_context, name, span)?;
+    let reference_type: ThrushType = reference.get_any_type()?.clone();
 
     let mut property_names: Vec<&str> = Vec::with_capacity(10);
 
@@ -52,7 +53,7 @@ pub fn build_property<'instr>(
         span,
     )?;
 
-    Ok(ThrushStatement::Property {
+    Ok(Ast::Property {
         name,
         reference: reference.into(),
         indexes: decomposed.1,

@@ -1,7 +1,7 @@
 #![allow(clippy::collapsible_if)]
 
 use crate::backend::llvm::compiler::{builtins, lli, mutation, rawgen, utils};
-use crate::backend::types::{representations::LLVMFunction, traits::AssemblerFunctionExtensions};
+use crate::backend::types::{repr::LLVMFunction, traits::AssemblerFunctionExtensions};
 use crate::core::console::logging::{self, LoggingType};
 use crate::frontend::types::lexer::ThrushType;
 use crate::frontend::types::parser::repr::{
@@ -10,7 +10,7 @@ use crate::frontend::types::parser::repr::{
 use crate::frontend::types::parser::stmts::traits::ThrushAttributesExtensions;
 use crate::frontend::types::parser::stmts::types::ThrushAttributes;
 
-use crate::frontend::types::parser::stmts::stmt::ThrushStatement;
+use crate::frontend::types::ast::Ast;
 
 use super::super::compiler::attributes::LLVMAttribute;
 
@@ -34,20 +34,17 @@ use inkwell::{
 
 pub struct LLVMCodegen<'a, 'ctx> {
     context: &'a mut LLVMCodeGenContext<'a, 'ctx>,
-    stmts: &'ctx [ThrushStatement<'ctx>],
+    ast: &'ctx [Ast<'ctx>],
     current_function: Option<FunctionValue<'ctx>>,
     exit_loop_block: Option<BasicBlock<'ctx>>,
     start_loop_block: Option<BasicBlock<'ctx>>,
 }
 
 impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
-    pub fn generate(
-        context: &'a mut LLVMCodeGenContext<'a, 'ctx>,
-        stmts: &'ctx [ThrushStatement<'ctx>],
-    ) {
+    pub fn generate(context: &'a mut LLVMCodeGenContext<'a, 'ctx>, ast: &'ctx [Ast<'ctx>]) {
         Self {
             context,
-            stmts,
+            ast,
             current_function: None,
             exit_loop_block: None,
             start_loop_block: None,
@@ -60,16 +57,16 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         self.init_functions();
         self.init_constants();
 
-        self.stmts.iter().for_each(|stmt| {
+        self.ast.iter().for_each(|stmt| {
             self.codegen(stmt);
         });
     }
 
-    fn codegen(&mut self, stmt: &'ctx ThrushStatement) {
+    fn codegen(&mut self, stmt: &'ctx Ast) {
         self.codegen_function_parts(stmt);
     }
 
-    fn codegen_function_parts(&mut self, stmt: &'ctx ThrushStatement) {
+    fn codegen_function_parts(&mut self, stmt: &'ctx Ast) {
         /* ######################################################################
 
 
@@ -82,7 +79,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         let llvm_context: &Context = self.context.get_llvm_context();
 
         match stmt {
-            ThrushStatement::EntryPoint { body, .. } => {
+            Ast::EntryPoint { body, .. } => {
                 self.current_function = Some(self.entrypoint());
 
                 self.codegen(body);
@@ -98,11 +95,11 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 }
             }
 
-            ThrushStatement::Function { .. } => {
+            Ast::Function { .. } => {
                 self.compile_function(stmt.as_function_representation());
             }
 
-            ThrushStatement::Return {
+            Ast::Return {
                 expression, kind, ..
             } => {
                 if expression.is_none() {
@@ -163,7 +160,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         ########################################################################*/
     }
 
-    fn codegen_code_block(&mut self, stmt: &'ctx ThrushStatement) {
+    fn codegen_code_block(&mut self, stmt: &'ctx Ast) {
         /* ######################################################################
 
 
@@ -173,7 +170,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         ########################################################################*/
 
         match stmt {
-            ThrushStatement::Block { stmts, .. } => {
+            Ast::Block { stmts, .. } => {
                 self.context.begin_scope();
 
                 stmts.iter().for_each(|stmt| {
@@ -195,7 +192,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         ########################################################################*/
     }
 
-    fn codegen_conditionals(&mut self, stmt: &'ctx ThrushStatement) {
+    fn codegen_conditionals(&mut self, stmt: &'ctx Ast) {
         /* ######################################################################
 
 
@@ -208,7 +205,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         let llvm_context: &Context = self.context.get_llvm_context();
 
         match stmt {
-            ThrushStatement::If {
+            Ast::If {
                 cond,
                 block,
                 elfs,
@@ -269,7 +266,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                         let mut current_block: BasicBlock = else_if_body;
 
                         for (index, instr) in elfs.iter().enumerate() {
-                            if let ThrushStatement::Elif { cond, block, .. } = instr {
+                            if let Ast::Elif { cond, block, .. } = instr {
                                 let compiled_else_if_cond: IntValue =
                                     valuegen::compile(self.context, cond, Some(&ThrushType::Bool))
                                         .into_int_value();
@@ -315,7 +312,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                     }
 
                     if let Some(otherwise) = otherwise {
-                        if let ThrushStatement::Else { block, .. } = &**otherwise {
+                        if let Ast::Else { block, .. } = &**otherwise {
                             llvm_builder.position_at_end(else_block);
 
                             self.codegen(block);
@@ -361,7 +358,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         ########################################################################*/
     }
 
-    fn codegen_loops(&mut self, stmt: &'ctx ThrushStatement) {
+    fn codegen_loops(&mut self, stmt: &'ctx Ast) {
         /* ######################################################################
 
 
@@ -374,7 +371,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         let llvm_context: &Context = self.context.get_llvm_context();
 
         match stmt {
-            ThrushStatement::While { cond, block, .. } => {
+            Ast::While { cond, block, .. } => {
                 if let Some(current_function) = self.current_function {
                     let condition_block: BasicBlock =
                         llvm_context.append_basic_block(current_function, "while");
@@ -422,7 +419,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                     "The current function could not be obtained at code generation time.",
                 );
             }
-            ThrushStatement::Loop { block, .. } => {
+            Ast::Loop { block, .. } => {
                 if let Some(function) = self.current_function {
                     let start_loop_block: BasicBlock =
                         llvm_context.append_basic_block(function, "loop");
@@ -458,7 +455,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                     "The current function could not be obtained at code generation time.",
                 );
             }
-            ThrushStatement::For {
+            Ast::For {
                 local,
                 cond,
                 actions,
@@ -525,13 +522,13 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 );
             }
 
-            ThrushStatement::Break { .. } => {
+            Ast::Break { .. } => {
                 llvm_builder
                     .build_unconditional_branch(self.exit_loop_block.unwrap())
                     .unwrap();
             }
 
-            ThrushStatement::Continue { .. } => {
+            Ast::Continue { .. } => {
                 llvm_builder
                     .build_unconditional_branch(self.start_loop_block.unwrap())
                     .unwrap();
@@ -549,7 +546,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         ########################################################################*/
     }
 
-    fn codegen_variables(&mut self, stmt: &'ctx ThrushStatement) {
+    fn codegen_variables(&mut self, stmt: &'ctx Ast) {
         /* ######################################################################
 
 
@@ -559,7 +556,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         ########################################################################*/
 
         match stmt {
-            ThrushStatement::Local {
+            Ast::Local {
                 name,
                 ascii_name,
                 kind,
@@ -576,7 +573,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 local::new((name, ascii_name, kind, value, attributes), self.context);
             }
 
-            ThrushStatement::LLI {
+            Ast::LLI {
                 name, kind, value, ..
             } => {
                 lli::new(name, kind, value, self.context);
@@ -594,7 +591,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         ########################################################################*/
     }
 
-    fn codegen_loose_expression(&mut self, stmt: &'ctx ThrushStatement) {
+    fn codegen_loose_expression(&mut self, stmt: &'ctx Ast) {
         /* ######################################################################
 
 
@@ -604,23 +601,23 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         ########################################################################*/
 
         match stmt {
-            ThrushStatement::Mut { .. } => {
+            Ast::Mut { .. } => {
                 mutation::compile(self.context, stmt);
             }
 
-            ThrushStatement::Write { .. } => {
+            Ast::Write { .. } => {
                 valuegen::compile(self.context, stmt, None);
             }
 
-            ThrushStatement::Call { .. } => {
+            Ast::Call { .. } => {
                 valuegen::compile(self.context, stmt, None);
             }
 
-            ThrushStatement::AsmValue { .. } => {
+            Ast::AsmValue { .. } => {
                 valuegen::compile(self.context, stmt, None);
             }
 
-            ThrushStatement::Builtin { builtin, .. } => {
+            Ast::Builtin { builtin, .. } => {
                 builtins::compile(self.context, builtin);
             }
 
@@ -683,8 +680,8 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
 
         let function_ascii_name: &str = function.1;
         let function_type: &ThrushType = function.2;
-        let function_parameters: &[ThrushStatement<'ctx>] = function.3;
-        let function_body: &ThrushStatement = function.5;
+        let function_parameters: &[Ast<'ctx>] = function.3;
+        let function_body: &Ast = function.5;
 
         if function_body.is_null() {
             return;
@@ -702,7 +699,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         self.current_function = Some(llvm_function);
 
         function_parameters.iter().for_each(|parameter| {
-            if let ThrushStatement::FunctionParameter {
+            if let Ast::FunctionParameter {
                 name,
                 ascii_name,
                 kind,
@@ -736,7 +733,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
     ########################################################################*/
 
     fn init_functions(&mut self) {
-        self.stmts.iter().for_each(|stmt| {
+        self.ast.iter().for_each(|stmt| {
             if stmt.is_function() {
                 self.declare_function(stmt);
             }
@@ -744,7 +741,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
     }
 
     fn init_assembler_functions(&mut self) {
-        self.stmts.iter().for_each(|stmt| {
+        self.ast.iter().for_each(|stmt| {
             if stmt.is_asm_function() {
                 self.compile_asm_function(stmt);
             }
@@ -752,8 +749,8 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
     }
 
     fn init_constants(&mut self) {
-        self.stmts.iter().for_each(|stmt| {
-            if let ThrushStatement::Const {
+        self.ast.iter().for_each(|stmt| {
+            if let Ast::Const {
                 name,
                 kind,
                 value,
@@ -768,7 +765,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         });
     }
 
-    fn compile_asm_function(&mut self, stmt: &'ctx ThrushStatement) {
+    fn compile_asm_function(&mut self, stmt: &'ctx Ast) {
         let llvm_module: &Module = self.context.get_llvm_module();
         let llvm_context: &Context = self.context.get_llvm_context();
         let llvm_builder: &Builder = self.context.get_llvm_builder();
@@ -782,7 +779,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         let asm_function_assembler: String = asm_function.2.to_string();
         let asm_function_constraints: String = asm_function.3.to_string();
         let asm_function_return_type: &ThrushType = asm_function.4;
-        let asm_function_parameters: &[ThrushStatement] = asm_function.5;
+        let asm_function_parameters: &[Ast] = asm_function.5;
         let asm_function_parameters_types: &[ThrushType] = asm_function.6;
         let asm_function_attributes: &ThrushAttributes = asm_function.7;
 
@@ -889,7 +886,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         );
     }
 
-    fn declare_function(&mut self, stmt: &'ctx ThrushStatement) {
+    fn declare_function(&mut self, stmt: &'ctx Ast) {
         let llvm_module: &Module = self.context.get_llvm_module();
         let llvm_context: &Context = self.context.get_llvm_context();
 
@@ -898,7 +895,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         let function_name: &str = function.0;
         let function_ascii_name: &str = function.1;
         let function_type: &ThrushType = function.2;
-        let function_parameters: &[ThrushStatement<'ctx>] = function.3;
+        let function_parameters: &[Ast<'ctx>] = function.3;
         let function_parameters_types: &[ThrushType] = function.4;
         let function_attributes: &ThrushAttributes = function.6;
 

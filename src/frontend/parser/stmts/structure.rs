@@ -4,9 +4,9 @@ use crate::{
         lexer::{span::Span, token::Token, tokentype::TokenType},
         parser::{ParserContext, attributes, typegen},
         types::{
+            ast::Ast,
             lexer::ThrushType,
             parser::stmts::{
-                stmt::ThrushStatement,
                 traits::{StructFieldsExtensions, TokenExtensions},
                 types::{StructFields, ThrushAttributes},
             },
@@ -14,10 +14,10 @@ use crate::{
     },
 };
 
-pub fn build_structure<'instr>(
-    parser_ctx: &mut ParserContext<'instr>,
+pub fn build_structure<'parser>(
+    parser_ctx: &mut ParserContext<'parser>,
     declare_forward: bool,
-) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
+) -> Result<Ast<'parser>, ThrushCompilerIssue> {
     let struct_tk: &Token = parser_ctx.consume(
         TokenType::Struct,
         String::from("Syntax error"),
@@ -130,10 +130,10 @@ pub fn build_structure<'instr>(
             parser_ctx.add_error(error);
         }
 
-        return Ok(ThrushStatement::Null { span });
+        return Ok(Ast::Null { span });
     }
 
-    Ok(ThrushStatement::Struct {
+    Ok(Ast::Struct {
         name: struct_name,
         fields: fields_types.clone(),
         kind: fields_types.get_type(),

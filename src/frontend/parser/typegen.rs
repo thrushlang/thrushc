@@ -4,9 +4,9 @@ use crate::{
         lexer::{span::Span, token::Token, tokentype::TokenType},
         parser::expression,
         types::{
+            ast::Ast,
             lexer::ThrushType,
             parser::stmts::{
-                stmt::ThrushStatement,
                 traits::{
                     CustomTypeFieldsExtensions, FoundSymbolEither, FoundSymbolExtension,
                     StructExtensions, StructFieldsExtensions, TokenExtensions,
@@ -68,7 +68,7 @@ pub fn build_type(
                         String::from("Expected ';'."),
                     )?;
 
-                    let size: ThrushStatement = expression::build_expr(parser_context)?;
+                    let size: Ast = expression::build_expr(parser_context)?;
 
                     if !size.is_integer() {
                         return Err(ThrushCompilerIssue::Error(

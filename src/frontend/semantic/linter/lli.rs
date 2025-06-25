@@ -1,20 +1,18 @@
 use crate::{
     core::errors::{position::CompilationPosition, standard::ThrushCompilerIssue},
-    frontend::{
-        lexer::span::Span, semantic::linter::Linter, types::parser::stmts::stmt::ThrushStatement,
-    },
+    frontend::{lexer::span::Span, semantic::linter::Linter, types::ast::Ast},
 };
 
-pub fn analyze_lli<'linter>(linter: &mut Linter<'linter>, node: &'linter ThrushStatement) {
+pub fn analyze_lli<'linter>(linter: &mut Linter<'linter>, node: &'linter Ast) {
     match node {
-        ThrushStatement::LLI {
+        Ast::LLI {
             name, span, value, ..
         } => {
             linter.symbols.new_lli(name, (*span, false));
-            linter.analyze_stmt(value);
+            linter.analyze_ast(value);
         }
 
-        ThrushStatement::Write {
+        Ast::Write {
             write_to,
             write_value,
             ..
@@ -44,20 +42,20 @@ pub fn analyze_lli<'linter>(linter: &mut Linter<'linter>, node: &'linter ThrushS
             }
 
             if let Some(expr) = &write_to.1 {
-                linter.analyze_stmt(expr);
+                linter.analyze_ast(expr);
             }
 
-            linter.analyze_stmt(write_value);
+            linter.analyze_ast(write_value);
         }
 
-        ThrushStatement::Address {
+        Ast::Address {
             address_to,
             span,
             indexes,
             ..
         } => {
             indexes.iter().for_each(|indexe| {
-                linter.analyze_stmt(indexe);
+                linter.analyze_ast(indexe);
             });
 
             if let Some(any_reference) = &address_to.0 {
@@ -93,11 +91,11 @@ pub fn analyze_lli<'linter>(linter: &mut Linter<'linter>, node: &'linter ThrushS
             }
 
             if let Some(expr) = &address_to.1 {
-                linter.analyze_stmt(expr);
+                linter.analyze_ast(expr);
             }
         }
 
-        ThrushStatement::Load { value, .. } => {
+        Ast::Load { value, .. } => {
             if let Some(any_reference) = &value.0 {
                 let name: &str = any_reference.0;
 
@@ -123,7 +121,7 @@ pub fn analyze_lli<'linter>(linter: &mut Linter<'linter>, node: &'linter ThrushS
             }
 
             if let Some(expr) = &value.1 {
-                linter.analyze_stmt(expr);
+                linter.analyze_ast(expr);
             }
         }
 

@@ -32,7 +32,7 @@ use crate::{
         lexer::{Lexer, token::Token},
         parser::{Parser, ParserContext},
         semantic::SemanticAnalyzer,
-        types::parser::stmts::stmt::ThrushStatement,
+        types::ast::Ast,
     },
 };
 
@@ -192,16 +192,16 @@ impl<'thrushc> TheThrushCompiler<'thrushc> {
 
         let parser_context: ParserContext = parser_result.0;
 
-        let stmts: &[ThrushStatement] = parser_context.get_stmts();
+        let ast: &[Ast] = parser_context.get_ast();
 
         let semantic_analysis_throwed_errors: bool =
-            SemanticAnalyzer::new(stmts, file).check(parser_throwed_errors);
+            SemanticAnalyzer::new(ast, file).check(parser_throwed_errors);
 
         if parser_throwed_errors || semantic_analysis_throwed_errors {
             return self.interrupt_archive_compilation(archive_time, file);
         }
 
-        if self.emit_after_frontend(llvm_backend, build_dir, file, Emited::Statements(stmts)) {
+        if self.emit_after_frontend(llvm_backend, build_dir, file, Emited::Ast(ast)) {
             return self.finish_archive_compilation(archive_time, file);
         }
 
@@ -253,7 +253,7 @@ impl<'thrushc> TheThrushCompiler<'thrushc> {
             Diagnostician::new(file),
         );
 
-        llvm::compiler::LLVMCompiler::compile(&mut llvm_codegen_context, stmts);
+        llvm::compiler::LLVMCompiler::compile(&mut llvm_codegen_context, ast);
 
         self.validate_codegen(&llvm_module, file)?;
 
@@ -404,7 +404,7 @@ impl<'thrushc> TheThrushCompiler<'thrushc> {
         }
 
         if llvm_backend.contains_emitable(Emitable::AST) {
-            if let Emited::Statements(stmts) = emited {
+            if let Emited::Ast(stmts) = emited {
                 let _ = write(
                     build_dir.join(format!("{}.ast", file.name)),
                     format!("{:#?}", stmts),

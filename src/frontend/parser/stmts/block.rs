@@ -3,13 +3,14 @@ use crate::{
     frontend::{
         lexer::{span::Span, token::Token, tokentype::TokenType},
         parser::{ParserContext, stmt},
-        types::parser::stmts::{stmt::ThrushStatement, traits::TokenExtensions},
+        types::ast::Ast,
+        types::parser::stmts::traits::TokenExtensions,
     },
 };
 
-pub fn build_block<'instr>(
-    parser_ctx: &mut ParserContext<'instr>,
-) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
+pub fn build_block<'parser>(
+    parser_ctx: &mut ParserContext<'parser>,
+) -> Result<Ast<'parser>, ThrushCompilerIssue> {
     let block_tk: &Token = parser_ctx.consume(
         TokenType::LBrace,
         String::from("Syntax error"),
@@ -41,15 +42,15 @@ pub fn build_block<'instr>(
     *parser_ctx.get_mut_scope() += 1;
     parser_ctx.get_mut_symbols().begin_scope();
 
-    let mut stmts: Vec<ThrushStatement> = Vec::with_capacity(100);
+    let mut stmts: Vec<Ast> = Vec::with_capacity(100);
 
     while !parser_ctx.match_token(TokenType::RBrace)? {
-        let stmt: ThrushStatement = stmt::statement(parser_ctx)?;
+        let stmt: Ast = stmt::statement(parser_ctx)?;
         stmts.push(stmt)
     }
 
     parser_ctx.get_mut_symbols().end_scope();
     *parser_ctx.get_mut_scope() -= 1;
 
-    Ok(ThrushStatement::Block { stmts, span })
+    Ok(Ast::Block { stmts, span })
 }

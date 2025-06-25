@@ -2,13 +2,12 @@ use ahash::AHashMap as HashMap;
 
 use crate::frontend::{
     lexer::span::Span,
-    types::parser::stmts::stmt::ThrushStatement,
+    types::ast::Ast,
     types::semantic::linter::types::{
         LinterAssemblerFunctionInfo, LinterAssemblerFunctions, LinterConstantInfo, LinterConstants,
         LinterEnumFieldInfo, LinterEnums, LinterEnumsFieldsInfo, LinterFunctionInfo,
         LinterFunctionParameterInfo, LinterFunctionParameters, LinterFunctions, LinterLLIInfo,
-        LinterLLIs, LinterLocalInfo, LinterLocals, LinterStructFieldInfo, LinterStructFieldsInfo,
-        LinterStructs,
+        LinterLLIs, LinterLocalInfo, LinterLocals, LinterStructFieldsInfo, LinterStructs,
     },
 };
 
@@ -121,9 +120,9 @@ impl<'linter> LinterSymbolsTable<'linter> {
         }
     }
 
-    pub fn bulk_declare_parameters(&mut self, parameters: &'linter [ThrushStatement]) {
+    pub fn bulk_declare_parameters(&mut self, parameters: &'linter [Ast]) {
         parameters.iter().for_each(|parameter| {
-            if let ThrushStatement::FunctionParameter {
+            if let Ast::FunctionParameter {
                 name,
                 is_mutable,
                 span,
@@ -176,21 +175,6 @@ impl<'linter> LinterSymbolsTable<'linter> {
         name: &'linter str,
     ) -> Option<&mut LinterStructFieldsInfo<'linter>> {
         self.structs.get_mut(name)
-    }
-
-    pub fn split_property_name(
-        &mut self,
-        from: &'linter str,
-    ) -> Option<(&'linter str, &'linter str)> {
-        let splitted: Vec<&str> = from.split(".").collect();
-
-        if let Some(struct_name) = splitted.first() {
-            if let Some(field_name) = splitted.get(1) {
-                return Some((struct_name, field_name));
-            }
-        }
-
-        None
     }
 
     pub fn get_enum_field_info(

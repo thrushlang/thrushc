@@ -4,9 +4,9 @@ use crate::{
         lexer::{span::Span, token::Token, tokentype::TokenType},
         parser::{ParserContext, attributes, expression, typegen},
         types::{
+            ast::Ast,
             lexer::ThrushType,
             parser::stmts::{
-                stmt::ThrushStatement,
                 traits::TokenExtensions,
                 types::{EnumFields, ThrushAttributes},
             },
@@ -14,10 +14,10 @@ use crate::{
     },
 };
 
-pub fn build_enum<'instr>(
-    parser_ctx: &mut ParserContext<'instr>,
+pub fn build_enum<'parser>(
+    parser_ctx: &mut ParserContext<'parser>,
     declare_forward: bool,
-) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
+) -> Result<Ast<'parser>, ThrushCompilerIssue> {
     let enum_tk: &Token = parser_ctx.consume(
         TokenType::Enum,
         String::from("Syntax error"),
@@ -85,10 +85,10 @@ pub fn build_enum<'instr>(
             }
 
             if parser_ctx.match_token(TokenType::SemiColon)? {
-                let field_value: ThrushStatement = if field_type.is_float_type() {
-                    ThrushStatement::new_float(field_type, default_float_value, false, span)
+                let field_value: Ast = if field_type.is_float_type() {
+                    Ast::new_float(field_type, default_float_value, false, span)
                 } else if field_type.is_bool_type() {
-                    ThrushStatement::new_boolean(field_type, default_integer_value, span)
+                    Ast::new_boolean(field_type, default_integer_value, span)
                 } else if field_type.is_char_type() {
                     if default_integer_value > char::MAX as u64 {
                         return Err(ThrushCompilerIssue::Error(
@@ -99,9 +99,9 @@ pub fn build_enum<'instr>(
                         ));
                     }
 
-                    ThrushStatement::new_char(field_type, default_integer_value, span)
+                    Ast::new_char(field_type, default_integer_value, span)
                 } else {
-                    ThrushStatement::new_integer(field_type, default_integer_value, false, span)
+                    Ast::new_integer(field_type, default_integer_value, false, span)
                 };
 
                 enum_fields.push((name, field_value));
@@ -118,7 +118,7 @@ pub fn build_enum<'instr>(
                 String::from("Expected '='."),
             )?;
 
-            let expression: ThrushStatement = expression::build_expr(parser_ctx)?;
+            let expression: Ast = expression::build_expr(parser_ctx)?;
 
             expression.throw_attemping_use_jit(expression.get_span())?;
 
@@ -162,10 +162,10 @@ pub fn build_enum<'instr>(
             parser_ctx.add_error(error);
         }
 
-        return Ok(ThrushStatement::Null { span });
+        return Ok(Ast::Null { span });
     }
 
-    Ok(ThrushStatement::Enum {
+    Ok(Ast::Enum {
         name: enum_name,
         fields: enum_fields,
         span,

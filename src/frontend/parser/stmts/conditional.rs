@@ -5,13 +5,14 @@ use crate::{
     frontend::{
         lexer::{span::Span, token::Token, tokentype::TokenType},
         parser::{ParserContext, expression, stmts::block},
-        types::parser::stmts::{stmt::ThrushStatement, traits::TokenExtensions},
+        types::ast::Ast,
+        types::parser::stmts::traits::TokenExtensions,
     },
 };
 
-pub fn build_conditional<'instr>(
-    parser_ctx: &mut ParserContext<'instr>,
-) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
+pub fn build_conditional<'parser>(
+    parser_ctx: &mut ParserContext<'parser>,
+) -> Result<Ast<'parser>, ThrushCompilerIssue> {
     let if_tk: &Token = parser_ctx.consume(
         TokenType::If,
         String::from("Syntax error"),
@@ -40,38 +41,38 @@ pub fn build_conditional<'instr>(
         ));
     }
 
-    let if_condition: ThrushStatement = expression::build_expr(parser_ctx)?;
-    let if_body: ThrushStatement = block::build_block(parser_ctx)?;
+    let if_condition: Ast = expression::build_expr(parser_ctx)?;
+    let if_body: Ast = block::build_block(parser_ctx)?;
 
-    let mut elfs: Vec<ThrushStatement> = Vec::with_capacity(10);
+    let mut elfs: Vec<Ast> = Vec::with_capacity(10);
 
     while parser_ctx.match_token(TokenType::Elif)? {
         let span: Span = parser_ctx.previous().span;
 
-        let elif_condition: ThrushStatement = expression::build_expr(parser_ctx)?;
+        let elif_condition: Ast = expression::build_expr(parser_ctx)?;
 
-        let elif_body: ThrushStatement = block::build_block(parser_ctx)?;
+        let elif_body: Ast = block::build_block(parser_ctx)?;
 
         if !elif_body.has_block() {
             continue;
         }
 
-        elfs.push(ThrushStatement::Elif {
+        elfs.push(Ast::Elif {
             cond: elif_condition.into(),
             block: elif_body.into(),
             span,
         });
     }
 
-    let mut otherwise: Option<Rc<ThrushStatement>> = None;
+    let mut otherwise: Option<Rc<Ast>> = None;
 
     if parser_ctx.match_token(TokenType::Else)? {
         let span: Span = parser_ctx.previous().span;
-        let else_body: ThrushStatement = block::build_block(parser_ctx)?;
+        let else_body: Ast = block::build_block(parser_ctx)?;
 
         if else_body.has_block() {
             otherwise = Some(
-                ThrushStatement::Else {
+                Ast::Else {
                     block: else_body.into(),
                     span,
                 }
@@ -80,7 +81,7 @@ pub fn build_conditional<'instr>(
         }
     }
 
-    Ok(ThrushStatement::If {
+    Ok(Ast::If {
         cond: if_condition.into(),
         block: if_body.into(),
         elfs,

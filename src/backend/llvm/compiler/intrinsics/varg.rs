@@ -1,8 +1,6 @@
 use inkwell::{AddressSpace, context::Context};
 
-use crate::backend::{
-    llvm::compiler::context::LLVMCodeGenContext, types::representations::LLVMInstrinsic,
-};
+use crate::backend::{llvm::compiler::context::LLVMCodeGenContext, types::repr::LLVMInstrinsic};
 
 #[inline]
 pub fn start_instrinsic<'ctx>(context: &LLVMCodeGenContext<'_, 'ctx>) -> LLVMInstrinsic<'ctx> {

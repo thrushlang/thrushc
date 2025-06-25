@@ -3,13 +3,14 @@ use crate::{
     frontend::{
         lexer::{span::Span, tokentype::TokenType},
         parser::{ParserContext, stmts::block},
-        types::parser::stmts::{stmt::ThrushStatement, traits::TokenExtensions},
+        types::ast::Ast,
+        types::parser::stmts::traits::TokenExtensions,
     },
 };
 
-pub fn build_main<'instr>(
-    parser_ctx: &mut ParserContext<'instr>,
-) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
+pub fn build_main<'parser>(
+    parser_ctx: &mut ParserContext<'parser>,
+) -> Result<Ast<'parser>, ThrushCompilerIssue> {
     let span: Span = parser_ctx.previous().span;
 
     if parser_ctx.get_control_ctx().get_entrypoint() {
@@ -35,7 +36,7 @@ pub fn build_main<'instr>(
 
     parser_ctx.get_mut_control_ctx().set_entrypoint(true);
 
-    Ok(ThrushStatement::EntryPoint {
+    Ok(Ast::EntryPoint {
         body: block::build_block(parser_ctx)?.into(),
         span,
     })

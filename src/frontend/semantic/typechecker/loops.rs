@@ -3,42 +3,42 @@ use crate::{
     frontend::{
         lexer::span::Span,
         semantic::typechecker::TypeChecker,
-        types::{lexer::ThrushType, parser::stmts::stmt::ThrushStatement},
+        types::{ast::Ast, lexer::ThrushType},
     },
 };
 
 pub fn validate_loop<'type_checker>(
     typechecker: &mut TypeChecker<'type_checker>,
-    node: &'type_checker ThrushStatement,
+    node: &'type_checker Ast,
 ) -> Result<(), ThrushCompilerIssue> {
     match node {
-        ThrushStatement::For {
+        Ast::For {
             local,
             cond,
             actions,
             block,
             ..
         } => {
-            if let Err(error) = typechecker.analyze_stmt(local) {
+            if let Err(error) = typechecker.analyze_ast(local) {
                 typechecker.add_error(error);
             }
 
-            if let Err(error) = typechecker.analyze_stmt(cond) {
+            if let Err(error) = typechecker.analyze_ast(cond) {
                 typechecker.add_error(error);
             }
 
-            if let Err(error) = typechecker.analyze_stmt(actions) {
+            if let Err(error) = typechecker.analyze_ast(actions) {
                 typechecker.add_error(error);
             }
 
-            if let Err(error) = typechecker.analyze_stmt(block) {
+            if let Err(error) = typechecker.analyze_ast(block) {
                 typechecker.add_error(error);
             }
 
             Ok(())
         }
 
-        ThrushStatement::While { cond, block, .. } => {
+        Ast::While { cond, block, .. } => {
             if let Err(error) = typechecker.validate_types(
                 &ThrushType::Bool,
                 cond.get_value_type()?,
@@ -50,13 +50,13 @@ pub fn validate_loop<'type_checker>(
                 typechecker.add_error(error);
             }
 
-            typechecker.analyze_stmt(block)?;
+            typechecker.analyze_ast(block)?;
 
             Ok(())
         }
 
-        ThrushStatement::Loop { block, .. } => {
-            typechecker.analyze_stmt(block)?;
+        Ast::Loop { block, .. } => {
+            typechecker.analyze_ast(block)?;
 
             Ok(())
         }

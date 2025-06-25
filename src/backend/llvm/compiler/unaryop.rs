@@ -1,11 +1,9 @@
-use crate::backend::llvm::compiler::intgen::{self};
-use crate::backend::llvm::compiler::{cast, floatgen, valuegen};
+use crate::backend::llvm::compiler::{cast, valuegen};
 use crate::core::console::logging;
 use crate::frontend::lexer::tokentype::TokenType;
-use crate::frontend::parser::expression;
+use crate::frontend::types::ast::Ast;
 use crate::frontend::types::lexer::ThrushType;
 use crate::frontend::types::parser::repr::UnaryOperation;
-use crate::frontend::types::parser::stmts::stmt::ThrushStatement;
 
 use super::{context::LLVMCodeGenContext, memory::SymbolAllocated};
 
@@ -23,11 +21,9 @@ pub fn unary_op<'ctx>(
     cast_type: Option<&ThrushType>,
 ) -> BasicValueEnum<'ctx> {
     match unary {
-        (
-            TokenType::PlusPlus | TokenType::MinusMinus,
-            _,
-            ThrushStatement::Reference { name, kind, .. },
-        ) => compile_increment_decrement_ref(context, name, unary.0, kind, cast_type),
+        (TokenType::PlusPlus | TokenType::MinusMinus, _, Ast::Reference { name, kind, .. }) => {
+            compile_increment_decrement_ref(context, name, unary.0, kind, cast_type)
+        }
 
         (TokenType::PlusPlus | TokenType::MinusMinus, _, expr) => {
             compile_increment_decrement(context, unary.0, expr, cast_type)
@@ -131,7 +127,7 @@ fn compile_increment_decrement_ref<'ctx>(
 fn compile_increment_decrement<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     operator: &TokenType,
-    expression: &'ctx ThrushStatement,
+    expression: &'ctx Ast,
     cast_type: Option<&ThrushType>,
 ) -> BasicValueEnum<'ctx> {
     let llvm_builder: &Builder = context.get_llvm_builder();
@@ -210,7 +206,7 @@ fn compile_increment_decrement<'ctx>(
 
 fn compile_logical_negation<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
-    expr: &'ctx ThrushStatement,
+    expr: &'ctx Ast,
     cast_type: Option<&ThrushType>,
 ) -> BasicValueEnum<'ctx> {
     let llvm_builder: &Builder = context.get_llvm_builder();
@@ -252,7 +248,7 @@ fn compile_logical_negation<'ctx>(
 
 fn compile_arithmetic_negation<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
-    expr: &'ctx ThrushStatement,
+    expr: &'ctx Ast,
     cast_type: Option<&ThrushType>,
 ) -> BasicValueEnum<'ctx> {
     let llvm_builder: &Builder = context.get_llvm_builder();

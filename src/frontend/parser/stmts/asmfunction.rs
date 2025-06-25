@@ -4,10 +4,10 @@ use crate::{
         lexer::{span::Span, token::Token, tokentype::TokenType},
         parser::{ParserContext, attributes, expression, typegen},
         types::{
+            ast::Ast,
             lexer::ThrushType,
             parser::{
                 stmts::{
-                    stmt::ThrushStatement,
                     traits::{ThrushAttributesExtensions, TokenExtensions},
                     types::ThrushAttributes,
                 },
@@ -17,10 +17,10 @@ use crate::{
     },
 };
 
-pub fn build_assembler_function<'instr>(
-    parser_ctx: &mut ParserContext<'instr>,
+pub fn build_assembler_function<'parser>(
+    parser_ctx: &mut ParserContext<'parser>,
     declare_forward: bool,
-) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
+) -> Result<Ast<'parser>, ThrushCompilerIssue> {
     parser_ctx.consume(
         TokenType::AsmFn,
         String::from("Syntax error"),
@@ -53,7 +53,7 @@ pub fn build_assembler_function<'instr>(
         String::from("Expected '('."),
     )?;
 
-    let mut parameters: Vec<ThrushStatement> = Vec::with_capacity(10);
+    let mut parameters: Vec<Ast> = Vec::with_capacity(10);
     let mut parameters_types: Vec<ThrushType> = Vec::with_capacity(10);
 
     let mut parameter_position: u32 = 0;
@@ -63,7 +63,7 @@ pub fn build_assembler_function<'instr>(
             break;
         }
 
-        let parameter_name_tk: &'instr Token = parser_ctx.consume(
+        let parameter_name_tk: &'parser Token = parser_ctx.consume(
             TokenType::Identifier,
             String::from("Syntax error"),
             String::from("Expected 'identifier'."),
@@ -76,7 +76,7 @@ pub fn build_assembler_function<'instr>(
 
         parameters_types.push(parameter_type.clone());
 
-        parameters.push(ThrushStatement::AssemblerFunctionParameter {
+        parameters.push(Ast::AssemblerFunctionParameter {
             name: parameter_name,
             kind: parameter_type,
             position: parameter_position,
@@ -123,7 +123,7 @@ pub fn build_assembler_function<'instr>(
             break;
         }
 
-        let raw_str: ThrushStatement = expression::build_expr(parser_ctx)?;
+        let raw_str: Ast = expression::build_expr(parser_ctx)?;
         let raw_str_span: Span = raw_str.get_span();
 
         if !raw_str.is_str() {
@@ -176,7 +176,7 @@ pub fn build_assembler_function<'instr>(
             break;
         }
 
-        let raw_str: ThrushStatement = expression::build_expr(parser_ctx)?;
+        let raw_str: Ast = expression::build_expr(parser_ctx)?;
         let raw_str_span: Span = raw_str.get_span();
 
         if !raw_str.is_str() {
@@ -228,10 +228,10 @@ pub fn build_assembler_function<'instr>(
             parser_ctx.add_error(error);
         }
 
-        return Ok(ThrushStatement::Null { span });
+        return Ok(Ast::Null { span });
     }
 
-    Ok(ThrushStatement::AssemblerFunction {
+    Ok(Ast::AssemblerFunction {
         name: asm_function_name,
         ascii_name: asm_function_ascii_name,
         parameters,

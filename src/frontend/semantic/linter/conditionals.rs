@@ -1,38 +1,36 @@
 use crate::{
     core::errors::{position::CompilationPosition, standard::ThrushCompilerIssue},
-    frontend::{
-        lexer::span::Span, semantic::linter::Linter, types::parser::stmts::stmt::ThrushStatement,
-    },
+    frontend::{lexer::span::Span, semantic::linter::Linter, types::ast::Ast},
 };
 
-pub fn analyze_conditional<'linter>(linter: &mut Linter<'linter>, node: &'linter ThrushStatement) {
+pub fn analyze_conditional<'linter>(linter: &mut Linter<'linter>, node: &'linter Ast) {
     match node {
-        ThrushStatement::If {
+        Ast::If {
             cond,
             block,
             elfs,
             otherwise,
             ..
         } => {
-            linter.analyze_stmt(cond);
-            linter.analyze_stmt(block);
+            linter.analyze_ast(cond);
+            linter.analyze_ast(block);
 
             elfs.iter().for_each(|elif| {
-                linter.analyze_stmt(elif);
+                linter.analyze_ast(elif);
             });
 
             if let Some(otherwise) = otherwise {
-                linter.analyze_stmt(otherwise);
+                linter.analyze_ast(otherwise);
             }
         }
 
-        ThrushStatement::Elif { cond, block, .. } => {
-            linter.analyze_stmt(cond);
-            linter.analyze_stmt(block);
+        Ast::Elif { cond, block, .. } => {
+            linter.analyze_ast(cond);
+            linter.analyze_ast(block);
         }
 
-        ThrushStatement::Else { block, .. } => {
-            linter.analyze_stmt(block);
+        Ast::Else { block, .. } => {
+            linter.analyze_ast(block);
         }
 
         _ => {

@@ -17,13 +17,13 @@ pub trait TokenExtensions {
     fn get_lexeme_first_byte(&self) -> u64;
 }
 
-pub trait EnumFieldsExtensions<'a> {
-    fn contain_field(&self, name: &'a str) -> bool;
-    fn get_field(&self, name: &'a str) -> EnumField<'a>;
+pub trait EnumFieldsExtensions<'parser> {
+    fn contain_field(&self, name: &'parser str) -> bool;
+    fn get_field(&self, name: &'parser str) -> EnumField<'parser>;
 }
 
-pub trait EnumExtensions<'a> {
-    fn get_fields(&self) -> EnumFields<'a>;
+pub trait EnumExtensions<'parser> {
+    fn get_fields(&self) -> EnumFields<'parser>;
 }
 
 pub trait CustomTypeFieldsExtensions {
@@ -41,22 +41,22 @@ pub trait FoundSymbolExtension {
     fn is_lli(&self) -> bool;
 }
 
-pub trait StructExtensions<'a> {
+pub trait StructExtensions<'parser> {
     fn contains_field(&self, name: &str) -> bool;
     fn get_field_type(&self, name: &str) -> Option<ThrushType>;
-    fn get_fields(&self) -> StructFields<'a>;
+    fn get_fields(&self) -> StructFields<'parser>;
 }
 
-pub trait FoundSymbolEither<'instr> {
-    fn expected_custom_type(&self, span: Span) -> Result<&'instr str, ThrushCompilerIssue>;
-    fn expected_constant(&self, span: Span) -> Result<&'instr str, ThrushCompilerIssue>;
-    fn expected_local(&self, span: Span) -> Result<(&'instr str, usize), ThrushCompilerIssue>;
-    fn expected_lli(&self, span: Span) -> Result<(&'instr str, usize), ThrushCompilerIssue>;
-    fn expected_function(&self, span: Span) -> Result<&'instr str, ThrushCompilerIssue>;
-    fn expected_enum(&self, span: Span) -> Result<&'instr str, ThrushCompilerIssue>;
-    fn expected_struct(&self, span: Span) -> Result<&'instr str, ThrushCompilerIssue>;
-    fn expected_parameter(&self, span: Span) -> Result<&'instr str, ThrushCompilerIssue>;
-    fn expected_asm_function(&self, span: Span) -> Result<&'instr str, ThrushCompilerIssue>;
+pub trait FoundSymbolEither<'parser> {
+    fn expected_custom_type(&self, span: Span) -> Result<&'parser str, ThrushCompilerIssue>;
+    fn expected_constant(&self, span: Span) -> Result<&'parser str, ThrushCompilerIssue>;
+    fn expected_local(&self, span: Span) -> Result<(&'parser str, usize), ThrushCompilerIssue>;
+    fn expected_lli(&self, span: Span) -> Result<(&'parser str, usize), ThrushCompilerIssue>;
+    fn expected_function(&self, span: Span) -> Result<&'parser str, ThrushCompilerIssue>;
+    fn expected_enum(&self, span: Span) -> Result<&'parser str, ThrushCompilerIssue>;
+    fn expected_struct(&self, span: Span) -> Result<&'parser str, ThrushCompilerIssue>;
+    fn expected_parameter(&self, span: Span) -> Result<&'parser str, ThrushCompilerIssue>;
+    fn expected_asm_function(&self, span: Span) -> Result<&'parser str, ThrushCompilerIssue>;
 }
 
 pub trait StructFieldsExtensions {

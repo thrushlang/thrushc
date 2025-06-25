@@ -6,13 +6,14 @@ use crate::{
             ParserContext, expression,
             stmts::{block, local},
         },
-        types::parser::stmts::{stmt::ThrushStatement, traits::TokenExtensions},
+        types::ast::Ast,
+        types::parser::stmts::traits::TokenExtensions,
     },
 };
 
-pub fn build_for_loop<'instr>(
-    parser_ctx: &mut ParserContext<'instr>,
-) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
+pub fn build_for_loop<'parser>(
+    parser_ctx: &mut ParserContext<'parser>,
+) -> Result<Ast<'parser>, ThrushCompilerIssue> {
     let for_tk: &Token = parser_ctx.consume(
         TokenType::For,
         String::from("Syntax error"),
@@ -41,18 +42,18 @@ pub fn build_for_loop<'instr>(
         ));
     }
 
-    let local: ThrushStatement = local::build_local(parser_ctx)?;
+    let local: Ast = local::build_local(parser_ctx)?;
 
-    let cond: ThrushStatement = expression::build_expression(parser_ctx)?;
-    let actions: ThrushStatement = expression::build_expression(parser_ctx)?;
+    let cond: Ast = expression::build_expression(parser_ctx)?;
+    let actions: Ast = expression::build_expression(parser_ctx)?;
 
     parser_ctx.get_mut_control_ctx().set_inside_loop(true);
 
-    let body: ThrushStatement = block::build_block(parser_ctx)?;
+    let body: Ast = block::build_block(parser_ctx)?;
 
     parser_ctx.get_mut_control_ctx().set_inside_loop(false);
 
-    Ok(ThrushStatement::For {
+    Ok(Ast::For {
         local: local.into(),
         cond: cond.into(),
         actions: actions.into(),
@@ -61,9 +62,9 @@ pub fn build_for_loop<'instr>(
     })
 }
 
-pub fn build_loop<'instr>(
-    parser_ctx: &mut ParserContext<'instr>,
-) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
+pub fn build_loop<'parser>(
+    parser_ctx: &mut ParserContext<'parser>,
+) -> Result<Ast<'parser>, ThrushCompilerIssue> {
     let loop_tk: &Token = parser_ctx.consume(
         TokenType::Loop,
         String::from("Syntax error"),
@@ -94,7 +95,7 @@ pub fn build_loop<'instr>(
 
     parser_ctx.get_mut_control_ctx().set_inside_loop(true);
 
-    let block: ThrushStatement = block::build_block(parser_ctx)?;
+    let block: Ast = block::build_block(parser_ctx)?;
 
     let scope: usize = parser_ctx.get_scope();
 
@@ -106,15 +107,15 @@ pub fn build_loop<'instr>(
 
     parser_ctx.get_mut_control_ctx().set_inside_loop(false);
 
-    Ok(ThrushStatement::Loop {
+    Ok(Ast::Loop {
         block: block.into(),
         span: loop_span,
     })
 }
 
-pub fn build_while_loop<'instr>(
-    parser_ctx: &mut ParserContext<'instr>,
-) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
+pub fn build_while_loop<'parser>(
+    parser_ctx: &mut ParserContext<'parser>,
+) -> Result<Ast<'parser>, ThrushCompilerIssue> {
     let while_tk: &Token = parser_ctx.consume(
         TokenType::While,
         String::from("Syntax error"),
@@ -143,10 +144,10 @@ pub fn build_while_loop<'instr>(
         ));
     }
 
-    let cond: ThrushStatement = expression::build_expr(parser_ctx)?;
-    let block: ThrushStatement = block::build_block(parser_ctx)?;
+    let cond: Ast = expression::build_expr(parser_ctx)?;
+    let block: Ast = block::build_block(parser_ctx)?;
 
-    Ok(ThrushStatement::While {
+    Ok(Ast::While {
         cond: cond.into(),
         block: block.into(),
         span,

@@ -3,39 +3,39 @@ use crate::{
     frontend::{
         lexer::span::Span,
         semantic::linter::Linter,
-        types::{lexer::ThrushType, parser::stmts::stmt::ThrushStatement},
+        types::{ast::Ast, lexer::ThrushType},
     },
 };
 
-pub fn analyze_expression<'linter>(linter: &mut Linter<'linter>, node: &'linter ThrushStatement) {
+pub fn analyze_expression<'linter>(linter: &mut Linter<'linter>, node: &'linter Ast) {
     match node {
-        ThrushStatement::Group { expression, .. } => {
-            linter.analyze_stmt(expression);
+        Ast::Group { expression, .. } => {
+            linter.analyze_ast(expression);
         }
 
-        ThrushStatement::BinaryOp { left, right, .. } => {
-            linter.analyze_stmt(left);
-            linter.analyze_stmt(right);
+        Ast::BinaryOp { left, right, .. } => {
+            linter.analyze_ast(left);
+            linter.analyze_ast(right);
         }
 
-        ThrushStatement::UnaryOp { expression, .. } => {
-            linter.analyze_stmt(expression);
+        Ast::UnaryOp { expression, .. } => {
+            linter.analyze_ast(expression);
         }
 
-        ThrushStatement::AsmValue { args, .. } => {
+        Ast::AsmValue { args, .. } => {
             args.iter().for_each(|arg| {
-                linter.analyze_stmt(arg);
+                linter.analyze_ast(arg);
             });
         }
 
-        ThrushStatement::Index {
+        Ast::Index {
             index_to,
             indexes,
             span,
             ..
         } => {
             indexes.iter().for_each(|indexe| {
-                linter.analyze_stmt(indexe);
+                linter.analyze_ast(indexe);
             });
 
             if let Some(any_reference) = &index_to.0 {
@@ -71,21 +71,21 @@ pub fn analyze_expression<'linter>(linter: &mut Linter<'linter>, node: &'linter 
             }
 
             if let Some(expr) = &index_to.1 {
-                linter.analyze_stmt(expr);
+                linter.analyze_ast(expr);
             }
         }
 
-        ThrushStatement::Constructor {
+        Ast::Constructor {
             name,
             arguments,
             span,
             ..
         } => {
-            let constructor_args: &[(&str, ThrushStatement, ThrushType, u32)] = &arguments.1;
+            let constructor_args: &[(&str, Ast, ThrushType, u32)] = &arguments.1;
 
             constructor_args.iter().for_each(|arg| {
-                let stmt: &ThrushStatement = &arg.1;
-                linter.analyze_stmt(stmt);
+                let stmt: &Ast = &arg.1;
+                linter.analyze_ast(stmt);
             });
 
             if let Some(structure) = linter.symbols.get_struct_info(name) {
@@ -101,14 +101,14 @@ pub fn analyze_expression<'linter>(linter: &mut Linter<'linter>, node: &'linter 
                 line!(),
             ));
         }
-        ThrushStatement::Call {
+        Ast::Call {
             name, span, args, ..
         } => {
             if let Some(function) = linter.symbols.get_function_info(name) {
                 function.1 = true;
 
                 args.iter().for_each(|arg| {
-                    linter.analyze_stmt(arg);
+                    linter.analyze_ast(arg);
                 });
 
                 return;
@@ -118,7 +118,7 @@ pub fn analyze_expression<'linter>(linter: &mut Linter<'linter>, node: &'linter 
                 asm_function.1 = true;
 
                 args.iter().for_each(|arg| {
-                    linter.analyze_stmt(arg);
+                    linter.analyze_ast(arg);
                 });
 
                 return;
@@ -133,7 +133,7 @@ pub fn analyze_expression<'linter>(linter: &mut Linter<'linter>, node: &'linter 
             ));
         }
 
-        ThrushStatement::Reference { name, span, .. } => {
+        Ast::Reference { name, span, .. } => {
             if let Some(local) = linter.symbols.get_local_info(name) {
                 local.1 = true;
                 return;
@@ -163,13 +163,13 @@ pub fn analyze_expression<'linter>(linter: &mut Linter<'linter>, node: &'linter 
             ));
         }
 
-        ThrushStatement::FixedArray { items, .. } | ThrushStatement::Array { items, .. } => {
+        Ast::FixedArray { items, .. } | Ast::Array { items, .. } => {
             items.iter().for_each(|item| {
-                linter.analyze_stmt(item);
+                linter.analyze_ast(item);
             });
         }
 
-        ThrushStatement::Mut { source, span, .. } => {
+        Ast::Mut { source, span, .. } => {
             if let Some(any_reference) = &source.0 {
                 let name: &str = any_reference.0;
 
@@ -203,11 +203,11 @@ pub fn analyze_expression<'linter>(linter: &mut Linter<'linter>, node: &'linter 
             }
 
             if let Some(expr) = &source.1 {
-                linter.analyze_stmt(expr);
+                linter.analyze_ast(expr);
             }
         }
 
-        ThrushStatement::EnumValue {
+        Ast::EnumValue {
             name, value, span, ..
         } => {
             if let Some((enum_name, field_name)) = linter.symbols.split_enum_field_name(name) {
@@ -220,7 +220,7 @@ pub fn analyze_expression<'linter>(linter: &mut Linter<'linter>, node: &'linter 
                     enum_field.1 = true;
                 }
 
-                linter.analyze_stmt(value);
+                linter.analyze_ast(value);
 
                 return;
             }

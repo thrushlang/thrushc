@@ -10,8 +10,8 @@ use crate::{
         errors::standard::ThrushCompilerIssue,
     },
     frontend::{
-        lexer::span::Span,
-        types::parser::stmts::{stmt::ThrushStatement, traits::ThrushAttributesExtensions},
+        lexer::span::Span, types::ast::Ast,
+        types::parser::stmts::traits::ThrushAttributesExtensions,
     },
 };
 
@@ -32,7 +32,7 @@ mod terminator;
 
 #[derive(Debug)]
 pub struct Linter<'linter> {
-    stmts: &'linter [ThrushStatement<'linter>],
+    ast: &'linter [Ast<'linter>],
     current: usize,
     warnings: Vec<ThrushCompilerIssue>,
     bugs: Vec<ThrushCompilerIssue>,
@@ -41,9 +41,9 @@ pub struct Linter<'linter> {
 }
 
 impl<'linter> Linter<'linter> {
-    pub fn new(stmts: &'linter [ThrushStatement], file: &'linter CompilerFile) -> Self {
+    pub fn new(ast: &'linter [Ast], file: &'linter CompilerFile) -> Self {
         Self {
-            stmts,
+            ast,
             current: 0,
             warnings: Vec::with_capacity(100),
             bugs: Vec::with_capacity(100),
@@ -56,9 +56,9 @@ impl<'linter> Linter<'linter> {
         self.init();
 
         while !self.is_eof() {
-            let stmt: &ThrushStatement = self.peek();
+            let stmt: &Ast = self.peek();
 
-            self.analyze_stmt(stmt);
+            self.analyze_ast(stmt);
 
             self.advance();
         }
@@ -75,7 +75,7 @@ impl<'linter> Linter<'linter> {
         });
     }
 
-    pub fn analyze_stmt(&mut self, stmt: &'linter ThrushStatement) {
+    pub fn analyze_ast(&mut self, stmt: &'linter Ast) {
         /* ######################################################################
 
 
@@ -84,7 +84,7 @@ impl<'linter> Linter<'linter> {
 
         ########################################################################*/
 
-        if let ThrushStatement::EntryPoint { .. } | ThrushStatement::Function { .. } = stmt {
+        if let Ast::EntryPoint { .. } | Ast::Function { .. } = stmt {
             functions::analyze_function(self, stmt);
         }
 
@@ -104,11 +104,11 @@ impl<'linter> Linter<'linter> {
 
         ########################################################################*/
 
-        if let ThrushStatement::Block { stmts, .. } = stmt {
+        if let Ast::Block { stmts, .. } = stmt {
             self.begin_scope();
 
             stmts.iter().for_each(|stmt| {
-                self.analyze_stmt(stmt);
+                self.analyze_ast(stmt);
             });
 
             self.generate_scoped_warnings();
@@ -132,15 +132,15 @@ impl<'linter> Linter<'linter> {
 
         ########################################################################*/
 
-        if let ThrushStatement::Enum { .. } = stmt {
+        if let Ast::Enum { .. } = stmt {
             enums::analyze_enum(self, stmt);
         }
 
-        if let ThrushStatement::LLI { .. } = stmt {
+        if let Ast::LLI { .. } = stmt {
             lli::analyze_lli(self, stmt);
         }
 
-        if let ThrushStatement::Local { .. } = stmt {
+        if let Ast::Local { .. } = stmt {
             local::analyze_local(self, stmt);
         }
 
@@ -152,7 +152,7 @@ impl<'linter> Linter<'linter> {
 
         ########################################################################*/
 
-        if let ThrushStatement::Return { .. } = stmt {
+        if let Ast::Return { .. } = stmt {
             terminator::analyze_terminator(self, stmt);
         }
 
@@ -172,15 +172,15 @@ impl<'linter> Linter<'linter> {
 
         ########################################################################*/
 
-        if let ThrushStatement::If { .. } = stmt {
+        if let Ast::If { .. } = stmt {
             conditionals::analyze_conditional(self, stmt);
         }
 
-        if let ThrushStatement::Elif { .. } = stmt {
+        if let Ast::Elif { .. } = stmt {
             conditionals::analyze_conditional(self, stmt);
         }
 
-        if let ThrushStatement::Else { .. } = stmt {
+        if let Ast::Else { .. } = stmt {
             conditionals::analyze_conditional(self, stmt);
         }
 
@@ -200,15 +200,15 @@ impl<'linter> Linter<'linter> {
 
         ########################################################################*/
 
-        if let ThrushStatement::For { .. } = stmt {
+        if let Ast::For { .. } = stmt {
             loops::analyze_loop(self, stmt);
         }
 
-        if let ThrushStatement::While { .. } = stmt {
+        if let Ast::While { .. } = stmt {
             loops::analyze_loop(self, stmt);
         }
 
-        if let ThrushStatement::Loop { .. } = stmt {
+        if let Ast::Loop { .. } = stmt {
             loops::analyze_loop(self, stmt);
         }
 
@@ -228,7 +228,7 @@ impl<'linter> Linter<'linter> {
 
         ########################################################################*/
 
-        if let ThrushStatement::Deref { .. } = stmt {
+        if let Ast::Deref { .. } = stmt {
             deref::analyze_dereference(self, stmt);
         }
 
@@ -248,15 +248,15 @@ impl<'linter> Linter<'linter> {
 
         ########################################################################*/
 
-        if let ThrushStatement::Write { .. } = stmt {
+        if let Ast::Write { .. } = stmt {
             lli::analyze_lli(self, stmt);
         }
 
-        if let ThrushStatement::Address { .. } = stmt {
+        if let Ast::Address { .. } = stmt {
             lli::analyze_lli(self, stmt);
         }
 
-        if let ThrushStatement::Load { .. } = stmt {
+        if let Ast::Load { .. } = stmt {
             lli::analyze_lli(self, stmt);
         }
 
@@ -276,7 +276,7 @@ impl<'linter> Linter<'linter> {
 
         ########################################################################*/
 
-        if let ThrushStatement::As { .. } = stmt {
+        if let Ast::As { .. } = stmt {
             casts::analyze_cast(self, stmt);
         }
 
@@ -296,7 +296,7 @@ impl<'linter> Linter<'linter> {
 
         ########################################################################*/
 
-        if let ThrushStatement::Builtin { builtin, .. } = stmt {
+        if let Ast::Builtin { builtin, .. } = stmt {
             builtins::analyze_builtin(self, builtin);
         }
 
@@ -507,11 +507,11 @@ impl<'linter> Linter<'linter> {
     }
 
     pub fn init(&mut self) {
-        self.stmts
+        self.ast
             .iter()
             .filter(|instruction| instruction.is_constant())
             .for_each(|instruction| {
-                if let ThrushStatement::Const {
+                if let Ast::Const {
                     name,
                     span,
                     attributes,
@@ -523,11 +523,11 @@ impl<'linter> Linter<'linter> {
                 }
             });
 
-        self.stmts
+        self.ast
             .iter()
             .filter(|stmt| stmt.is_struct())
             .for_each(|stmt| {
-                if let ThrushStatement::Struct {
+                if let Ast::Struct {
                     name,
                     fields,
                     span,
@@ -552,11 +552,11 @@ impl<'linter> Linter<'linter> {
                 }
             });
 
-        self.stmts
+        self.ast
             .iter()
             .filter(|stmt| stmt.is_enum())
             .for_each(|stmt| {
-                if let ThrushStatement::Enum {
+                if let Ast::Enum {
                     name, fields, span, ..
                 } = stmt
                 {
@@ -575,11 +575,11 @@ impl<'linter> Linter<'linter> {
                 }
             });
 
-        self.stmts
+        self.ast
             .iter()
             .filter(|stmt| stmt.is_function())
             .for_each(|stmt| {
-                if let ThrushStatement::Function {
+                if let Ast::Function {
                     name,
                     span,
                     attributes,
@@ -591,11 +591,11 @@ impl<'linter> Linter<'linter> {
                 }
             });
 
-        self.stmts
+        self.ast
             .iter()
             .filter(|stmt| stmt.is_asm_function())
             .for_each(|stmt| {
-                if let ThrushStatement::AssemblerFunction {
+                if let Ast::AssemblerFunction {
                     name,
                     span,
                     attributes,
@@ -626,8 +626,8 @@ impl<'linter> Linter<'linter> {
         }
     }
 
-    fn peek(&self) -> &'linter ThrushStatement<'linter> {
-        self.stmts.get(self.current).unwrap_or_else(|| {
+    fn peek(&self) -> &'linter Ast<'linter> {
+        self.ast.get(self.current).unwrap_or_else(|| {
             logging::log(
                 LoggingType::Panic,
                 "Attempting to get instruction in invalid current position.",
@@ -638,6 +638,6 @@ impl<'linter> Linter<'linter> {
     }
 
     fn is_eof(&self) -> bool {
-        self.current >= self.stmts.len()
+        self.current >= self.ast.len()
     }
 }

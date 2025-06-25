@@ -4,16 +4,13 @@ use crate::{
     frontend::{
         lexer::{span::Span, token::Token, tokentype::TokenType},
         parser::{ParserContext, expression},
-        types::{
-            lexer::ThrushType,
-            parser::stmts::{stmt::ThrushStatement, traits::TokenExtensions},
-        },
+        types::{ast::Ast, lexer::ThrushType, parser::stmts::traits::TokenExtensions},
     },
 };
 
-pub fn build_sqrt<'instr>(
-    parser_context: &mut ParserContext<'instr>,
-) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
+pub fn build_sqrt<'parser>(
+    parser_context: &mut ParserContext<'parser>,
+) -> Result<Ast<'parser>, ThrushCompilerIssue> {
     let sqrt_tk: &Token = parser_context.consume(
         TokenType::Sqrt,
         String::from("Syntax error"),
@@ -28,7 +25,7 @@ pub fn build_sqrt<'instr>(
 
     let span: Span = sqrt_tk.get_span();
 
-    let value: ThrushStatement = expression::build_expr(parser_context)?;
+    let value: Ast = expression::build_expr(parser_context)?;
 
     parser_context.consume(
         TokenType::RParen,
@@ -36,7 +33,7 @@ pub fn build_sqrt<'instr>(
         String::from("Expected ')'."),
     )?;
 
-    Ok(ThrushStatement::Builtin {
+    Ok(Ast::Builtin {
         builtin: Builtin::Sqrt {
             value: value.into(),
         },
@@ -45,9 +42,9 @@ pub fn build_sqrt<'instr>(
     })
 }
 
-pub fn build_memcpy<'instr>(
-    parser_context: &mut ParserContext<'instr>,
-) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
+pub fn build_memcpy<'parser>(
+    parser_context: &mut ParserContext<'parser>,
+) -> Result<Ast<'parser>, ThrushCompilerIssue> {
     let memcpy_tk: &Token = parser_context.consume(
         TokenType::MemCpy,
         String::from("Syntax error"),
@@ -62,7 +59,7 @@ pub fn build_memcpy<'instr>(
 
     let span: Span = memcpy_tk.get_span();
 
-    let source: ThrushStatement = expression::build_expr(parser_context)?;
+    let source: Ast = expression::build_expr(parser_context)?;
 
     parser_context.consume(
         TokenType::Comma,
@@ -70,7 +67,7 @@ pub fn build_memcpy<'instr>(
         String::from("Expected ','."),
     )?;
 
-    let destination: ThrushStatement = expression::build_expr(parser_context)?;
+    let destination: Ast = expression::build_expr(parser_context)?;
 
     parser_context.consume(
         TokenType::Comma,
@@ -78,7 +75,7 @@ pub fn build_memcpy<'instr>(
         String::from("Expected ','."),
     )?;
 
-    let size: ThrushStatement = expression::build_expr(parser_context)?;
+    let size: Ast = expression::build_expr(parser_context)?;
 
     parser_context.consume(
         TokenType::RParen,
@@ -86,7 +83,7 @@ pub fn build_memcpy<'instr>(
         String::from("Expected ')'."),
     )?;
 
-    Ok(ThrushStatement::Builtin {
+    Ok(Ast::Builtin {
         builtin: Builtin::MemCpy {
             source: source.into(),
             destination: destination.into(),
@@ -97,9 +94,9 @@ pub fn build_memcpy<'instr>(
     })
 }
 
-pub fn build_memmove<'instr>(
-    parser_context: &mut ParserContext<'instr>,
-) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
+pub fn build_memmove<'parser>(
+    parser_context: &mut ParserContext<'parser>,
+) -> Result<Ast<'parser>, ThrushCompilerIssue> {
     let memcpy_tk: &Token = parser_context.consume(
         TokenType::MemMove,
         String::from("Syntax error"),
@@ -114,7 +111,7 @@ pub fn build_memmove<'instr>(
 
     let span: Span = memcpy_tk.get_span();
 
-    let source: ThrushStatement = expression::build_expr(parser_context)?;
+    let source: Ast = expression::build_expr(parser_context)?;
 
     parser_context.consume(
         TokenType::Comma,
@@ -122,7 +119,7 @@ pub fn build_memmove<'instr>(
         String::from("Expected ','."),
     )?;
 
-    let destination: ThrushStatement = expression::build_expr(parser_context)?;
+    let destination: Ast = expression::build_expr(parser_context)?;
 
     parser_context.consume(
         TokenType::Comma,
@@ -130,7 +127,7 @@ pub fn build_memmove<'instr>(
         String::from("Expected ','."),
     )?;
 
-    let size: ThrushStatement = expression::build_expr(parser_context)?;
+    let size: Ast = expression::build_expr(parser_context)?;
 
     parser_context.consume(
         TokenType::RParen,
@@ -138,7 +135,7 @@ pub fn build_memmove<'instr>(
         String::from("Expected ')'."),
     )?;
 
-    Ok(ThrushStatement::Builtin {
+    Ok(Ast::Builtin {
         builtin: Builtin::MemMove {
             source: source.into(),
             destination: destination.into(),
@@ -149,9 +146,9 @@ pub fn build_memmove<'instr>(
     })
 }
 
-pub fn build_memset<'instr>(
-    parser_context: &mut ParserContext<'instr>,
-) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
+pub fn build_memset<'parser>(
+    parser_context: &mut ParserContext<'parser>,
+) -> Result<Ast<'parser>, ThrushCompilerIssue> {
     let memcpy_tk: &Token = parser_context.consume(
         TokenType::MemSet,
         String::from("Syntax error"),
@@ -166,7 +163,7 @@ pub fn build_memset<'instr>(
 
     let span: Span = memcpy_tk.get_span();
 
-    let destination: ThrushStatement = expression::build_expr(parser_context)?;
+    let destination: Ast = expression::build_expr(parser_context)?;
 
     parser_context.consume(
         TokenType::Comma,
@@ -174,7 +171,7 @@ pub fn build_memset<'instr>(
         String::from("Expected ','."),
     )?;
 
-    let new_size: ThrushStatement = expression::build_expr(parser_context)?;
+    let new_size: Ast = expression::build_expr(parser_context)?;
 
     parser_context.consume(
         TokenType::Comma,
@@ -182,7 +179,7 @@ pub fn build_memset<'instr>(
         String::from("Expected ','."),
     )?;
 
-    let size: ThrushStatement = expression::build_expr(parser_context)?;
+    let size: Ast = expression::build_expr(parser_context)?;
 
     parser_context.consume(
         TokenType::RParen,
@@ -190,7 +187,7 @@ pub fn build_memset<'instr>(
         String::from("Expected ')'."),
     )?;
 
-    Ok(ThrushStatement::Builtin {
+    Ok(Ast::Builtin {
         builtin: Builtin::MemSet {
             destination: destination.into(),
             new_size: new_size.into(),

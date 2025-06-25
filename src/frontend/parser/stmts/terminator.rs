@@ -3,16 +3,13 @@ use crate::{
     frontend::{
         lexer::{span::Span, token::Token, tokentype::TokenType},
         parser::{ParserContext, expression},
-        types::{
-            lexer::ThrushType,
-            parser::stmts::{stmt::ThrushStatement, traits::TokenExtensions},
-        },
+        types::{ast::Ast, lexer::ThrushType, parser::stmts::traits::TokenExtensions},
     },
 };
 
-pub fn build_return<'instr>(
-    parser_ctx: &mut ParserContext<'instr>,
-) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
+pub fn build_return<'parser>(
+    parser_ctx: &mut ParserContext<'parser>,
+) -> Result<Ast<'parser>, ThrushCompilerIssue> {
     let return_tk: &Token = parser_ctx.consume(
         TokenType::Return,
         String::from("Syntax error"),
@@ -43,17 +40,17 @@ pub fn build_return<'instr>(
 
     if parser_ctx.match_token(TokenType::SemiColon)? {
         if parser_ctx.get_type_ctx().get_function_type().is_void_type() {
-            return Ok(ThrushStatement::Null { span });
+            return Ok(Ast::Null { span });
         }
 
-        return Ok(ThrushStatement::Return {
+        return Ok(Ast::Return {
             expression: None,
             kind: ThrushType::Void,
             span,
         });
     }
 
-    let value: ThrushStatement = expression::build_expr(parser_ctx)?;
+    let value: Ast = expression::build_expr(parser_ctx)?;
 
     parser_ctx.consume(
         TokenType::SemiColon,
@@ -61,7 +58,7 @@ pub fn build_return<'instr>(
         String::from("Expected ';'."),
     )?;
 
-    Ok(ThrushStatement::Return {
+    Ok(Ast::Return {
         expression: Some(value.into()),
         kind: parser_ctx.get_type_ctx().get_function_type().clone(),
         span,

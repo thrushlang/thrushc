@@ -3,16 +3,13 @@ use crate::{
     frontend::{
         lexer::{span::Span, token::Token, tokentype::TokenType},
         parser::{ParserContext, expression},
-        types::{
-            lexer::ThrushType,
-            parser::stmts::{stmt::ThrushStatement, traits::TokenExtensions},
-        },
+        types::{ast::Ast, lexer::ThrushType, parser::stmts::traits::TokenExtensions},
     },
 };
 
-pub fn build_array<'instr>(
-    parser_context: &mut ParserContext<'instr>,
-) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
+pub fn build_array<'parser>(
+    parser_context: &mut ParserContext<'parser>,
+) -> Result<Ast<'parser>, ThrushCompilerIssue> {
     let array_start_tk: &Token = parser_context.consume(
         TokenType::LBracket,
         String::from("Syntax error"),
@@ -22,14 +19,14 @@ pub fn build_array<'instr>(
     let span: Span = array_start_tk.get_span();
 
     let mut array_type: ThrushType = ThrushType::Void;
-    let mut items: Vec<ThrushStatement> = Vec::with_capacity(100);
+    let mut items: Vec<Ast> = Vec::with_capacity(100);
 
     loop {
         if parser_context.check(TokenType::RBracket) {
             break;
         }
 
-        let item: ThrushStatement = expression::build_expr(parser_context)?;
+        let item: Ast = expression::build_expr(parser_context)?;
 
         if item.is_constructor() {
             return Err(ThrushCompilerIssue::Error(
@@ -70,7 +67,7 @@ pub fn build_array<'instr>(
         array_type = ThrushType::Array(item.get_value_type()?.clone().into())
     }
 
-    Ok(ThrushStatement::Array {
+    Ok(Ast::Array {
         items,
         kind: array_type,
         span,

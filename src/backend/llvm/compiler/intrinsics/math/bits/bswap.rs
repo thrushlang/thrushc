@@ -1,7 +1,7 @@
 use inkwell::context::Context;
 
 use crate::backend::{
-    llvm::compiler::context::LLVMCodeGenContext, types::representations::LLVMInstrinsic,
+    llvm::compiler::context::LLVMCodeGenContext, types::repr::LLVMInstrinsic,
 };
 
 #[inline]

@@ -4,11 +4,11 @@ use crate::{
         lexer::{span::Span, token::Token, tokentype::TokenType},
         parser::ParserContext,
         types::{
+            ast::Ast,
             lexer::ThrushType,
             parser::{
                 stmts::{
                     ident::ReferenceIdentificator,
-                    stmt::ThrushStatement,
                     traits::{FoundSymbolEither, FoundSymbolExtension, TokenExtensions},
                 },
                 symbols::{
@@ -24,11 +24,11 @@ use crate::{
     },
 };
 
-pub fn build_reference<'instr>(
-    parser_context: &mut ParserContext<'instr>,
-    name: &'instr str,
+pub fn build_reference<'parser>(
+    parser_context: &mut ParserContext<'parser>,
+    name: &'parser str,
     span: Span,
-) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
+) -> Result<Ast<'parser>, ThrushCompilerIssue> {
     let symbol: FoundSymbolId = parser_context.get_symbols().get_symbols_id(name, span)?;
 
     if symbol.is_constant() {
@@ -40,7 +40,7 @@ pub fn build_reference<'instr>(
 
         let constant_type: ThrushType = constant.get_type();
 
-        return Ok(ThrushStatement::Reference {
+        return Ok(Ast::Reference {
             name,
             kind: constant_type,
             span,
@@ -65,7 +65,7 @@ pub fn build_reference<'instr>(
             || parameter_type.is_ptr_type()
             || parameter_type.is_address_type();
 
-        return Ok(ThrushStatement::Reference {
+        return Ok(Ast::Reference {
             name,
             kind: parameter_type,
             span,
@@ -89,7 +89,7 @@ pub fn build_reference<'instr>(
 
         let is_allocated: bool = lli_type.is_ptr_type() || lli_type.is_address_type();
 
-        return Ok(ThrushStatement::Reference {
+        return Ok(Ast::Reference {
             name,
             kind: lli_type,
             span,
@@ -110,7 +110,7 @@ pub fn build_reference<'instr>(
 
     let local_type: ThrushType = local.get_type();
 
-    let reference: ThrushStatement = ThrushStatement::Reference {
+    let reference: Ast = Ast::Reference {
         name,
         kind: local_type.clone(),
         span,
@@ -126,7 +126,7 @@ pub fn build_reference<'instr>(
         let operator: TokenType = operator_tk.get_type();
         let span: Span = operator_tk.get_span();
 
-        let unaryop: ThrushStatement = ThrushStatement::UnaryOp {
+        let unaryop: Ast = Ast::UnaryOp {
             operator,
             expression: reference.into(),
             kind: local_type,

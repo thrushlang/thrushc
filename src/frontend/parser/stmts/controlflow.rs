@@ -3,13 +3,14 @@ use crate::{
     frontend::{
         lexer::{span::Span, token::Token, tokentype::TokenType},
         parser::ParserContext,
-        types::parser::stmts::{stmt::ThrushStatement, traits::TokenExtensions},
+        types::ast::Ast,
+        types::parser::stmts::traits::TokenExtensions,
     },
 };
 
-pub fn build_continue<'instr>(
-    parser_ctx: &mut ParserContext<'instr>,
-) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
+pub fn build_continue<'parser>(
+    parser_ctx: &mut ParserContext<'parser>,
+) -> Result<Ast<'parser>, ThrushCompilerIssue> {
     let continue_tk: &Token = parser_ctx.consume(
         TokenType::Continue,
         String::from("Syntax error"),
@@ -59,12 +60,12 @@ pub fn build_continue<'instr>(
         String::from("Expected ';'."),
     )?;
 
-    Ok(ThrushStatement::Continue { span })
+    Ok(Ast::Continue { span })
 }
 
-pub fn build_break<'instr>(
-    parser_ctx: &mut ParserContext<'instr>,
-) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
+pub fn build_break<'parser>(
+    parser_ctx: &mut ParserContext<'parser>,
+) -> Result<Ast<'parser>, ThrushCompilerIssue> {
     let break_tk: &Token = parser_ctx.consume(
         TokenType::Break,
         String::from("Syntax error"),
@@ -114,5 +115,5 @@ pub fn build_break<'instr>(
         String::from("Expected ';'."),
     )?;
 
-    Ok(ThrushStatement::Break { span })
+    Ok(Ast::Break { span })
 }

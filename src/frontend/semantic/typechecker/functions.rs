@@ -3,24 +3,24 @@ use crate::{
     frontend::{
         lexer::span::Span,
         semantic::typechecker::TypeChecker,
-        types::{lexer::ThrushType, parser::stmts::stmt::ThrushStatement},
+        types::{ast::Ast, lexer::ThrushType},
     },
 };
 
 pub fn validate_function<'type_checker>(
     typechecker: &mut TypeChecker<'type_checker>,
-    node: &'type_checker ThrushStatement,
+    node: &'type_checker Ast,
 ) -> Result<(), ThrushCompilerIssue> {
     match node {
-        ThrushStatement::EntryPoint { body, .. } => {
-            if let Err(type_error) = typechecker.analyze_stmt(body) {
+        Ast::EntryPoint { body, .. } => {
+            if let Err(type_error) = typechecker.analyze_ast(body) {
                 typechecker.add_error(type_error);
             }
 
             Ok(())
         }
 
-        ThrushStatement::AssemblerFunction {
+        Ast::AssemblerFunction {
             parameters, span, ..
         } => {
             parameters.iter().try_for_each(|parameter| {
@@ -39,7 +39,7 @@ pub fn validate_function<'type_checker>(
             Ok(())
         }
 
-        ThrushStatement::Function {
+        Ast::Function {
             parameters,
             body,
             return_type,
@@ -47,7 +47,7 @@ pub fn validate_function<'type_checker>(
             ..
         } => {
             parameters.iter().try_for_each(|parameter| {
-                if parameter.get_stmt_type()?.is_void_type() {
+                if parameter.get_any_type()?.is_void_type() {
                     typechecker.add_error(ThrushCompilerIssue::Error(
                         "Type error".into(),
                         "The void type isn't a value.".into(),
@@ -60,7 +60,7 @@ pub fn validate_function<'type_checker>(
             })?;
 
             if body.is_block() {
-                if let Err(type_error) = typechecker.analyze_stmt(body) {
+                if let Err(type_error) = typechecker.analyze_ast(body) {
                     typechecker.add_error(type_error);
                 }
 

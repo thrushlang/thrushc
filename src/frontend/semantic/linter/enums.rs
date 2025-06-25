@@ -1,16 +1,14 @@
 use crate::{
     core::errors::{position::CompilationPosition, standard::ThrushCompilerIssue},
-    frontend::{
-        lexer::span::Span, semantic::linter::Linter, types::parser::stmts::stmt::ThrushStatement,
-    },
+    frontend::{lexer::span::Span, semantic::linter::Linter, types::ast::Ast},
 };
 
-pub fn analyze_enum<'linter>(linter: &mut Linter<'linter>, node: &'linter ThrushStatement) {
+pub fn analyze_enum<'linter>(linter: &mut Linter<'linter>, node: &'linter Ast) {
     match node {
-        ThrushStatement::Enum { fields, .. } => {
+        Ast::Enum { fields, .. } => {
             fields.iter().for_each(|field| {
-                let expr: &ThrushStatement = &field.1;
-                linter.analyze_stmt(expr);
+                let expr: &Ast = &field.1;
+                linter.analyze_ast(expr);
             });
         }
 

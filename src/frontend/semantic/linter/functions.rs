@@ -1,25 +1,21 @@
 use crate::{
     core::errors::{position::CompilationPosition, standard::ThrushCompilerIssue},
-    frontend::{
-        lexer::span::Span,
-        semantic::linter::Linter,
-        types::{ parser::stmts::stmt::ThrushStatement},
-    },
+    frontend::{lexer::span::Span, semantic::linter::Linter, types::ast::Ast},
 };
 
-pub fn analyze_function<'linter>(linter: &mut Linter<'linter>, node: &'linter ThrushStatement) {
+pub fn analyze_function<'linter>(linter: &mut Linter<'linter>, node: &'linter Ast) {
     match node {
-        ThrushStatement::EntryPoint { body, .. } => {
-            linter.analyze_stmt(body);
+        Ast::EntryPoint { body, .. } => {
+            linter.analyze_ast(body);
         }
 
-        ThrushStatement::Function {
+        Ast::Function {
             parameters, body, ..
         } => {
             if body.is_block() {
                 linter.symbols.bulk_declare_parameters(parameters);
 
-                linter.analyze_stmt(body);
+                linter.analyze_ast(body);
 
                 linter.symbols.destroy_all_parameters();
             }

@@ -3,16 +3,16 @@ use crate::{
     frontend::{
         lexer::span::Span,
         semantic::typechecker::TypeChecker,
-        types::{lexer::ThrushType, parser::stmts::stmt::ThrushStatement},
+        types::{ast::Ast, lexer::ThrushType},
     },
 };
 
 pub fn validate_dereference<'type_checker>(
     typechecker: &mut TypeChecker<'type_checker>,
-    node: &'type_checker ThrushStatement,
+    node: &'type_checker Ast,
 ) -> Result<(), ThrushCompilerIssue> {
     match node {
-        ThrushStatement::Deref { value, .. } => {
+        Ast::Deref { value, .. } => {
             let value_type: &ThrushType = value.get_value_type()?;
             let value_span: Span = value.get_span();
 
@@ -25,7 +25,7 @@ pub fn validate_dereference<'type_checker>(
                 ));
             }
 
-            typechecker.analyze_stmt(value)?;
+            typechecker.analyze_ast(value)?;
 
             Ok(())
         }

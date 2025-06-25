@@ -4,9 +4,9 @@ use crate::{
         lexer::{span::Span, token::Token, tokentype::TokenType},
         parser::{ParserContext, attributes, typegen},
         types::{
+            ast::Ast,
             lexer::ThrushType,
             parser::stmts::{
-                stmt::ThrushStatement,
                 traits::TokenExtensions,
                 types::{CustomTypeFields, ThrushAttributes},
             },
@@ -14,10 +14,10 @@ use crate::{
     },
 };
 
-pub fn build_custom_type<'instr>(
-    parser_ctx: &mut ParserContext<'instr>,
+pub fn build_custom_type<'parser>(
+    parser_ctx: &mut ParserContext<'parser>,
     declare_forward: bool,
-) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
+) -> Result<Ast<'parser>, ThrushCompilerIssue> {
     let type_tk: &Token = parser_ctx.consume(
         TokenType::Type,
         String::from("Syntax error"),
@@ -81,5 +81,5 @@ pub fn build_custom_type<'instr>(
         }
     }
 
-    Ok(ThrushStatement::Null { span })
+    Ok(Ast::Null { span })
 }

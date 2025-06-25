@@ -1,13 +1,11 @@
 use crate::{
     core::errors::{position::CompilationPosition, standard::ThrushCompilerIssue},
-    frontend::{
-        lexer::span::Span, semantic::linter::Linter, types::parser::stmts::stmt::ThrushStatement,
-    },
+    frontend::{lexer::span::Span, semantic::linter::Linter, types::ast::Ast},
 };
 
-pub fn analyze_local<'linter>(linter: &mut Linter<'linter>, node: &'linter ThrushStatement) {
+pub fn analyze_local<'linter>(linter: &mut Linter<'linter>, node: &'linter Ast) {
     match node {
-        ThrushStatement::Local {
+        Ast::Local {
             name,
             value,
             span,
@@ -15,7 +13,7 @@ pub fn analyze_local<'linter>(linter: &mut Linter<'linter>, node: &'linter Thrus
             ..
         } => {
             linter.symbols.new_local(name, (*span, false, !is_mutable));
-            linter.analyze_stmt(value);
+            linter.analyze_ast(value);
         }
 
         _ => {

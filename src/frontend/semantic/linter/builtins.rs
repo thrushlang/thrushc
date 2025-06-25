@@ -7,9 +7,9 @@ pub fn analyze_builtin<'linter>(linter: &mut Linter<'linter>, builtin: &'linter 
             destination,
             size,
         } => {
-            linter.analyze_stmt(source);
-            linter.analyze_stmt(destination);
-            linter.analyze_stmt(size);
+            linter.analyze_ast(source);
+            linter.analyze_ast(destination);
+            linter.analyze_ast(size);
         }
 
         Builtin::MemMove {
@@ -17,9 +17,9 @@ pub fn analyze_builtin<'linter>(linter: &mut Linter<'linter>, builtin: &'linter 
             destination,
             size,
         } => {
-            linter.analyze_stmt(source);
-            linter.analyze_stmt(destination);
-            linter.analyze_stmt(size);
+            linter.analyze_ast(source);
+            linter.analyze_ast(destination);
+            linter.analyze_ast(size);
         }
 
         Builtin::MemSet {
@@ -27,9 +27,9 @@ pub fn analyze_builtin<'linter>(linter: &mut Linter<'linter>, builtin: &'linter 
             new_size,
             size,
         } => {
-            linter.analyze_stmt(destination);
-            linter.analyze_stmt(new_size);
-            linter.analyze_stmt(size);
+            linter.analyze_ast(destination);
+            linter.analyze_ast(new_size);
+            linter.analyze_ast(size);
         }
 
         _ => (),

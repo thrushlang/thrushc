@@ -24,10 +24,7 @@ pub mod utils;
 pub mod valuegen;
 
 use {
-    crate::{
-        backend::llvm::compiler::context::LLVMCodeGenContext,
-        frontend::types::parser::stmts::stmt::ThrushStatement,
-    },
+    crate::{backend::llvm::compiler::context::LLVMCodeGenContext, frontend::types::ast::Ast},
     codegen::LLVMCodegen,
 };
 
@@ -35,10 +32,7 @@ pub struct LLVMCompiler;
 
 impl<'a, 'ctx> LLVMCompiler {
     #[inline]
-    pub fn compile(
-        context: &'a mut LLVMCodeGenContext<'a, 'ctx>,
-        stmts: &'ctx [ThrushStatement<'ctx>],
-    ) {
-        LLVMCodegen::generate(context, stmts);
+    pub fn compile(context: &'a mut LLVMCodeGenContext<'a, 'ctx>, ast: &'ctx [Ast<'ctx>]) {
+        LLVMCodegen::generate(context, ast);
     }
 }

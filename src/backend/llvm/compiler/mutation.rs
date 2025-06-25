@@ -7,11 +7,11 @@ use crate::{
         rawgen, valuegen,
     },
     core::console::logging::{self, LoggingType},
-    frontend::types::parser::stmts::stmt::ThrushStatement,
+    frontend::types::ast::Ast,
 };
 
-pub fn compile<'ctx>(context: &mut LLVMCodeGenContext<'_, 'ctx>, expr: &'ctx ThrushStatement) {
-    if let ThrushStatement::Mut { source, value, .. } = expr {
+pub fn compile<'ctx>(context: &mut LLVMCodeGenContext<'_, 'ctx>, expr: &'ctx Ast) {
+    if let Ast::Mut { source, value, .. } = expr {
         if let Some(any_reference) = &source.0 {
             let reference_name: &str = any_reference.0;
 

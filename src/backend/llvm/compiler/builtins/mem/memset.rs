@@ -12,14 +12,14 @@ use inkwell::{
 use crate::{
     backend::llvm::compiler::{context::LLVMCodeGenContext, rawgen, typegen, valuegen},
     core::console::logging::{self, LoggingType},
-    frontend::types::{lexer::ThrushType, parser::stmts::stmt::ThrushStatement},
+    frontend::types::{ast::Ast, lexer::ThrushType},
 };
 
 pub fn compile<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
-    destination: &'ctx ThrushStatement,
-    new_size: &'ctx ThrushStatement,
-    size: &'ctx ThrushStatement,
+    destination: &'ctx Ast,
+    new_size: &'ctx Ast,
+    size: &'ctx Ast,
 ) -> BasicValueEnum<'ctx> {
     let llvm_context: &Context = context.get_llvm_context();
     let llvm_builder: &Builder = context.get_llvm_builder();

@@ -11,11 +11,12 @@ use crate::{
         lexer::{span::Span, tokentype::TokenType},
         semantic::typechecker::position::TypeCheckerPosition,
         types::{
+            ast::Ast,
             lexer::{
                 ThrushType,
                 traits::{ThrushTypeMutableExtensions, ThrushTypeNumericExtensions},
             },
-            parser::stmts::{stmt::ThrushStatement, traits::ThrushAttributesExtensions},
+            parser::stmts::traits::ThrushAttributesExtensions,
         },
     },
 };
@@ -39,7 +40,7 @@ mod table;
 
 #[derive(Debug)]
 pub struct TypeChecker<'type_checker> {
-    stmts: &'type_checker [ThrushStatement<'type_checker>],
+    ast: &'type_checker [Ast<'type_checker>],
     position: usize,
     bugs: Vec<ThrushCompilerIssue>,
     errors: Vec<ThrushCompilerIssue>,
@@ -50,11 +51,11 @@ pub struct TypeChecker<'type_checker> {
 
 impl<'type_checker> TypeChecker<'type_checker> {
     pub fn new(
-        stmts: &'type_checker [ThrushStatement<'type_checker>],
+        ast: &'type_checker [Ast<'type_checker>],
         file: &'type_checker CompilerFile,
     ) -> Self {
         Self {
-            stmts,
+            ast,
             position: 0,
             bugs: Vec::with_capacity(100),
             errors: Vec::with_capacity(100),
@@ -68,9 +69,9 @@ impl<'type_checker> TypeChecker<'type_checker> {
         self.init();
 
         while !self.is_eof() {
-            let current_stmt: &ThrushStatement = self.peek();
+            let current_stmt: &Ast = self.peek();
 
-            if let Err(error) = self.analyze_stmt(current_stmt) {
+            if let Err(error) = self.analyze_ast(current_stmt) {
                 self.add_error(error);
             }
 
@@ -98,10 +99,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
         false
     }
 
-    pub fn analyze_stmt(
-        &mut self,
-        stmt: &'type_checker ThrushStatement,
-    ) -> Result<(), ThrushCompilerIssue> {
+    pub fn analyze_ast(&mut self, stmt: &'type_checker Ast) -> Result<(), ThrushCompilerIssue> {
         /* ######################################################################
 
 
@@ -110,15 +108,15 @@ impl<'type_checker> TypeChecker<'type_checker> {
 
         ########################################################################*/
 
-        if let ThrushStatement::EntryPoint { .. } = stmt {
+        if let Ast::EntryPoint { .. } = stmt {
             return functions::validate_function(self, stmt);
         }
 
-        if let ThrushStatement::AssemblerFunction { .. } = stmt {
+        if let Ast::AssemblerFunction { .. } = stmt {
             return functions::validate_function(self, stmt);
         }
 
-        if let ThrushStatement::Function { .. } = stmt {
+        if let Ast::Function { .. } = stmt {
             return functions::validate_function(self, stmt);
         }
 
@@ -138,30 +136,30 @@ impl<'type_checker> TypeChecker<'type_checker> {
 
         ########################################################################*/
 
-        if let ThrushStatement::Struct { .. } = stmt {
+        if let Ast::Struct { .. } = stmt {
             return Ok(());
         }
 
-        if let ThrushStatement::Enum { .. } = stmt {
+        if let Ast::Enum { .. } = stmt {
             return Ok(());
         }
 
-        if let ThrushStatement::Const { .. } = stmt {
+        if let Ast::Const { .. } = stmt {
             return constant::validate_constant(self, stmt);
         }
 
-        if let ThrushStatement::Local { .. } = stmt {
+        if let Ast::Local { .. } = stmt {
             return local::validate_local(self, stmt);
         }
 
-        if let ThrushStatement::LLI { .. } = stmt {
+        if let Ast::LLI { .. } = stmt {
             return lli::validate_lli(self, stmt);
         }
 
-        if let ThrushStatement::Block { stmts, .. } = stmt {
+        if let Ast::Block { stmts, .. } = stmt {
             self.begin_scope();
 
-            stmts.iter().try_for_each(|stmt| self.analyze_stmt(stmt))?;
+            stmts.iter().try_for_each(|stmt| self.analyze_ast(stmt))?;
 
             self.end_scope();
 
@@ -184,19 +182,19 @@ impl<'type_checker> TypeChecker<'type_checker> {
 
         ########################################################################*/
 
-        if let ThrushStatement::If { .. } = stmt {
+        if let Ast::If { .. } = stmt {
             conditionals::validate_conditional(self, stmt)?;
 
             return Ok(());
         }
 
-        if let ThrushStatement::Elif { .. } = stmt {
+        if let Ast::Elif { .. } = stmt {
             conditionals::validate_conditional(self, stmt)?;
 
             return Ok(());
         }
 
-        if let ThrushStatement::Else { .. } = stmt {
+        if let Ast::Else { .. } = stmt {
             conditionals::validate_conditional(self, stmt)?;
 
             return Ok(());
@@ -218,15 +216,15 @@ impl<'type_checker> TypeChecker<'type_checker> {
 
         ########################################################################*/
 
-        if let ThrushStatement::For { .. } = stmt {
+        if let Ast::For { .. } = stmt {
             return loops::validate_loop(self, stmt);
         }
 
-        if let ThrushStatement::While { .. } = stmt {
+        if let Ast::While { .. } = stmt {
             return loops::validate_loop(self, stmt);
         }
 
-        if let ThrushStatement::Loop { .. } = stmt {
+        if let Ast::Loop { .. } = stmt {
             return loops::validate_loop(self, stmt);
         }
 
@@ -246,7 +244,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
 
         ########################################################################*/
 
-        if let ThrushStatement::Continue { .. } | ThrushStatement::Break { .. } = stmt {
+        if let Ast::Continue { .. } | Ast::Break { .. } = stmt {
             return Ok(());
         }
 
@@ -266,7 +264,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
 
         ########################################################################*/
 
-        if let ThrushStatement::Return { .. } = stmt {
+        if let Ast::Return { .. } = stmt {
             return terminator::validate_terminator(self, stmt);
         }
 
@@ -286,7 +284,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
 
         ########################################################################*/
 
-        if let ThrushStatement::Deref { .. } = stmt {
+        if let Ast::Deref { .. } = stmt {
             return deref::validate_dereference(self, stmt);
         }
 
@@ -306,7 +304,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
 
         ########################################################################*/
 
-        if let ThrushStatement::As { .. } = stmt {
+        if let Ast::As { .. } = stmt {
             return casts::validate_cast_as(self, stmt);
         }
 
@@ -326,15 +324,15 @@ impl<'type_checker> TypeChecker<'type_checker> {
 
         ########################################################################*/
 
-        if let ThrushStatement::Write { .. } = stmt {
+        if let Ast::Write { .. } = stmt {
             return lli::validate_lli(self, stmt);
         }
 
-        if let ThrushStatement::Address { .. } = stmt {
+        if let Ast::Address { .. } = stmt {
             return lli::validate_lli(self, stmt);
         }
 
-        if let ThrushStatement::Load { .. } = stmt {
+        if let Ast::Load { .. } = stmt {
             return lli::validate_lli(self, stmt);
         }
 
@@ -353,11 +351,11 @@ impl<'type_checker> TypeChecker<'type_checker> {
 
 
         ########################################################################*/
-        if let ThrushStatement::Builtin { builtin, span, .. } = stmt {
+        if let Ast::Builtin { builtin, span, .. } = stmt {
             return builtins::validate_builtin(self, builtin, *span);
         }
 
-        if let ThrushStatement::SizeOf { sizeof, span, .. } = stmt {
+        if let Ast::SizeOf { sizeof, span, .. } = stmt {
             if sizeof.is_void_type() {
                 self.add_error(ThrushCompilerIssue::Error(
                     "Type error".into(),
@@ -429,7 +427,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
         &self,
         target_type: &ThrushType,
         from_type: &ThrushType,
-        expression: Option<&ThrushStatement>,
+        expression: Option<&Ast>,
         operator: Option<&TokenType>,
         position: Option<TypeCheckerPosition>,
         span: &Span,
@@ -441,7 +439,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
             *span,
         );
 
-        if let Some(ThrushStatement::BinaryOp {
+        if let Some(Ast::BinaryOp {
             operator,
             kind: expression_type,
             ..
@@ -457,7 +455,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
             );
         }
 
-        if let Some(ThrushStatement::UnaryOp {
+        if let Some(Ast::UnaryOp {
             operator,
             kind: expression_type,
             ..
@@ -473,7 +471,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
             );
         }
 
-        if let Some(ThrushStatement::Group {
+        if let Some(Ast::Group {
             expression,
             kind: expression_type,
             ..
@@ -765,11 +763,11 @@ impl<'type_checker> TypeChecker<'type_checker> {
     }
 
     pub fn init(&mut self) {
-        self.stmts
+        self.ast
             .iter()
             .filter(|stmt| stmt.is_asm_function())
             .for_each(|stmt| {
-                if let ThrushStatement::AssemblerFunction {
+                if let Ast::AssemblerFunction {
                     name,
                     parameters_types: types,
                     attributes,
@@ -781,11 +779,11 @@ impl<'type_checker> TypeChecker<'type_checker> {
                 }
             });
 
-        self.stmts
+        self.ast
             .iter()
             .filter(|stmt| stmt.is_function())
             .for_each(|stmt| {
-                if let ThrushStatement::Function {
+                if let Ast::Function {
                     name,
                     parameter_types: types,
                     attributes,
@@ -824,11 +822,11 @@ impl<'type_checker> TypeChecker<'type_checker> {
         }
     }
 
-    pub fn peek(&self) -> &'type_checker ThrushStatement<'type_checker> {
-        &self.stmts[self.position]
+    pub fn peek(&self) -> &'type_checker Ast<'type_checker> {
+        &self.ast[self.position]
     }
 
     pub fn is_eof(&self) -> bool {
-        self.position >= self.stmts.len()
+        self.position >= self.ast.len()
     }
 }

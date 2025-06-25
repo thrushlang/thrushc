@@ -3,16 +3,13 @@ use crate::{
     frontend::{
         lexer::{span::Span, token::Token, tokentype::TokenType},
         parser::{ParserContext, expression, typegen},
-        types::{
-            lexer::ThrushType,
-            parser::stmts::{stmt::ThrushStatement, traits::TokenExtensions},
-        },
+        types::{ast::Ast, lexer::ThrushType, parser::stmts::traits::TokenExtensions},
     },
 };
 
-pub fn build_lli<'instr>(
-    parser_ctx: &mut ParserContext<'instr>,
-) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
+pub fn build_lli<'parser>(
+    parser_ctx: &mut ParserContext<'parser>,
+) -> Result<Ast<'parser>, ThrushCompilerIssue> {
     let instr_tk: &Token = parser_ctx.consume(
         TokenType::Instr,
         String::from("Syntax error"),
@@ -62,7 +59,7 @@ pub fn build_lli<'instr>(
         String::from("Expected '='."),
     )?;
 
-    let value: ThrushStatement = expression::build_expr(parser_ctx)?;
+    let value: Ast = expression::build_expr(parser_ctx)?;
 
     parser_ctx.consume(
         TokenType::SemiColon,
@@ -74,7 +71,7 @@ pub fn build_lli<'instr>(
         .get_mut_symbols()
         .new_lli(name, (instr_type.clone(), span), span)?;
 
-    let lli: ThrushStatement = ThrushStatement::LLI {
+    let lli: Ast = Ast::LLI {
         name,
         kind: instr_type,
         value: value.into(),

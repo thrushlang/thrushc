@@ -3,16 +3,13 @@ use crate::{
     frontend::{
         lexer::{span::Span, token::Token, tokentype::TokenType},
         parser::{ParserContext, expressions::reference, typegen},
-        types::{
-            lexer::ThrushType,
-            parser::stmts::{stmt::ThrushStatement, traits::TokenExtensions},
-        },
+        types::{ast::Ast, lexer::ThrushType, parser::stmts::traits::TokenExtensions},
     },
 };
 
-pub fn build_sizeof<'instr>(
-    parser_context: &mut ParserContext<'instr>,
-) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
+pub fn build_sizeof<'parser>(
+    parser_context: &mut ParserContext<'parser>,
+) -> Result<Ast<'parser>, ThrushCompilerIssue> {
     let sizeof_tk: &Token = parser_context.consume(
         TokenType::SizeOf,
         String::from("Syntax error"),
@@ -33,7 +30,7 @@ pub fn build_sizeof<'instr>(
         let name: &str = identifier_tk.get_lexeme();
         let span: Span = identifier_tk.get_span();
 
-        let reference: ThrushStatement = reference::build_reference(parser_context, name, span)?;
+        let reference: Ast = reference::build_reference(parser_context, name, span)?;
 
         let reference_type: &ThrushType = reference.get_value_type()?;
 
@@ -43,7 +40,7 @@ pub fn build_sizeof<'instr>(
             String::from("Expected ')'."),
         )?;
 
-        return Ok(ThrushStatement::SizeOf {
+        return Ok(Ast::SizeOf {
             sizeof: reference_type.clone(),
             kind: ThrushType::U64,
             span: sizeof_span,
@@ -58,7 +55,7 @@ pub fn build_sizeof<'instr>(
         String::from("Expected ')'."),
     )?;
 
-    Ok(ThrushStatement::SizeOf {
+    Ok(Ast::SizeOf {
         sizeof: sizeof_type,
         kind: ThrushType::U64,
         span: sizeof_span,

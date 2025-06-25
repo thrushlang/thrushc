@@ -4,17 +4,16 @@ use crate::{
         lexer::{span::Span, token::Token, tokentype::TokenType},
         parser::{ParserContext, attributes, expression, typegen},
         types::{
+            ast::Ast,
             lexer::ThrushType,
-            parser::stmts::{
-                stmt::ThrushStatement, traits::TokenExtensions, types::ThrushAttributes,
-            },
+            parser::stmts::{traits::TokenExtensions, types::ThrushAttributes},
         },
     },
 };
 
-pub fn build_local<'instr>(
-    parser_ctx: &mut ParserContext<'instr>,
-) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
+pub fn build_local<'parser>(
+    parser_ctx: &mut ParserContext<'parser>,
+) -> Result<Ast<'parser>, ThrushCompilerIssue> {
     let local_tk: &Token = parser_ctx.consume(
         TokenType::Local,
         String::from("Syntax error"),
@@ -72,11 +71,11 @@ pub fn build_local<'instr>(
             span,
         )?;
 
-        return Ok(ThrushStatement::Local {
+        return Ok(Ast::Local {
             name,
             ascii_name,
             kind: local_type,
-            value: ThrushStatement::Null { span }.into(),
+            value: Ast::Null { span }.into(),
             attributes,
             undefined: true,
             is_mutable,
@@ -96,7 +95,7 @@ pub fn build_local<'instr>(
         String::from("Expected '='."),
     )?;
 
-    let value: ThrushStatement = expression::build_expr(parser_ctx)?;
+    let value: Ast = expression::build_expr(parser_ctx)?;
 
     parser_ctx.consume(
         TokenType::SemiColon,
@@ -104,7 +103,7 @@ pub fn build_local<'instr>(
         String::from("Expected ';'."),
     )?;
 
-    let local: ThrushStatement = ThrushStatement::Local {
+    let local: Ast = Ast::Local {
         name,
         ascii_name,
         kind: local_type,

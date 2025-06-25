@@ -4,17 +4,16 @@ use crate::{
         lexer::{span::Span, token::Token, tokentype::TokenType},
         parser::{ParserContext, attributes, expression, typegen},
         types::{
+            ast::Ast,
             lexer::ThrushType,
-            parser::stmts::{
-                stmt::ThrushStatement, traits::TokenExtensions, types::ThrushAttributes,
-            },
+            parser::stmts::{traits::TokenExtensions, types::ThrushAttributes},
         },
     },
 };
 
-pub fn build_asm_code_block<'instr>(
-    parser_context: &mut ParserContext<'instr>,
-) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
+pub fn build_asm_code_block<'parser>(
+    parser_context: &mut ParserContext<'parser>,
+) -> Result<Ast<'parser>, ThrushCompilerIssue> {
     let asm_tk: &Token = parser_context.consume(
         TokenType::Asm,
         String::from("Syntax error"),
@@ -25,7 +24,7 @@ pub fn build_asm_code_block<'instr>(
 
     let span: Span = asm_tk.get_span();
 
-    let mut args: Vec<ThrushStatement> = Vec::with_capacity(10);
+    let mut args: Vec<Ast> = Vec::with_capacity(10);
 
     let attributes: ThrushAttributes =
         attributes::build_attributes(parser_context, &[TokenType::LParen, TokenType::LBrace])?;
@@ -36,7 +35,7 @@ pub fn build_asm_code_block<'instr>(
                 break;
             }
 
-            let expr: ThrushStatement = expression::build_expression(parser_context)?;
+            let expr: Ast = expression::build_expression(parser_context)?;
 
             if expr.is_constructor() {
                 return Err(ThrushCompilerIssue::Error(
@@ -81,7 +80,7 @@ pub fn build_asm_code_block<'instr>(
             break;
         }
 
-        let raw_str: ThrushStatement = expression::build_expr(parser_context)?;
+        let raw_str: Ast = expression::build_expr(parser_context)?;
         let raw_str_span: Span = raw_str.get_span();
 
         if !raw_str.is_str() {
@@ -134,7 +133,7 @@ pub fn build_asm_code_block<'instr>(
             break;
         }
 
-        let raw_str: ThrushStatement = expression::build_expr(parser_context)?;
+        let raw_str: Ast = expression::build_expr(parser_context)?;
         let raw_str_span: Span = raw_str.get_span();
 
         if !raw_str.is_str() {
@@ -173,7 +172,7 @@ pub fn build_asm_code_block<'instr>(
         String::from("Expected '}'."),
     )?;
 
-    Ok(ThrushStatement::AsmValue {
+    Ok(Ast::AsmValue {
         assembler,
         constraints,
         args,

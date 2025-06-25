@@ -3,7 +3,7 @@ use crate::frontend::types::{
 };
 
 use super::{
-    ThrushStatement,
+    Ast,
     context::LLVMCodeGenContext,
     memory::{self, SymbolAllocated},
     valuegen,
@@ -18,8 +18,10 @@ use inkwell::{
 pub fn new<'ctx>(local: Local<'ctx>, context: &mut LLVMCodeGenContext<'_, 'ctx>) {
     let local_name: &str = local.0;
     let ascii_name: &str = local.1;
+
     let local_type: &ThrushType = local.2;
-    let local_value: &ThrushStatement = local.3;
+
+    let local_value: &Ast = local.3;
 
     let attributes: &ThrushAttributes = local.4;
 
@@ -47,18 +49,18 @@ pub fn new<'ctx>(local: Local<'ctx>, context: &mut LLVMCodeGenContext<'_, 'ctx>)
 }
 
 fn compile_local_structure<'ctx>(local: Local<'ctx>, context: &mut LLVMCodeGenContext<'_, 'ctx>) {
-    let local_value: &ThrushStatement = local.3;
+    let local_value: &Ast = local.3;
 
     let symbol: SymbolAllocated = context.get_allocated_symbol(local.0);
 
-    if let ThrushStatement::Constructor { arguments, .. } = local_value {
+    if let Ast::Constructor { arguments, .. } = local_value {
         let llvm_builder: &Builder = context.get_llvm_builder();
         let llvm_context: &Context = context.get_llvm_context();
 
-        let expressions: &[(&str, ThrushStatement, ThrushType, u32)] = &arguments.1;
+        let expressions: &[(&str, Ast, ThrushType, u32)] = &arguments.1;
 
         expressions.iter().for_each(|argument| {
-            let expr: &ThrushStatement = &argument.1;
+            let expr: &Ast = &argument.1;
             let expr_index: u32 = argument.3;
 
             let expr_cast_type: &ThrushType = &argument.2;

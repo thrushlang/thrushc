@@ -3,16 +3,16 @@ use crate::{
     frontend::{
         lexer::span::Span,
         semantic::typechecker::{TypeChecker, position::TypeCheckerPosition},
-        types::{lexer::ThrushType, parser::stmts::stmt::ThrushStatement},
+        types::{ast::Ast, lexer::ThrushType},
     },
 };
 
 pub fn validate_local<'type_checker>(
     typechecker: &mut TypeChecker<'type_checker>,
-    node: &'type_checker ThrushStatement,
+    node: &'type_checker Ast,
 ) -> Result<(), ThrushCompilerIssue> {
     match node {
-        ThrushStatement::Local {
+        Ast::Local {
             name,
             kind: local_type,
             value: local_value,
@@ -54,7 +54,7 @@ pub fn validate_local<'type_checker>(
                     typechecker.add_error(mismatch_type_error);
                 }
 
-                if let Err(type_error) = typechecker.analyze_stmt(local_value) {
+                if let Err(type_error) = typechecker.analyze_ast(local_value) {
                     typechecker.add_error(type_error);
                 }
             }

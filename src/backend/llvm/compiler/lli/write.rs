@@ -10,17 +10,14 @@ use inkwell::{
 use crate::{
     backend::llvm::compiler::{context::LLVMCodeGenContext, memory, rawgen, valuegen},
     core::console::logging::{self, LoggingType},
-    frontend::types::{lexer::ThrushType, parser::stmts::stmt::ThrushStatement},
+    frontend::types::{ast::Ast, lexer::ThrushType},
 };
 
 pub fn compile<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
-    write_to: &'ctx (
-        Option<(&'ctx str, Rc<ThrushStatement<'ctx>>)>,
-        Option<Rc<ThrushStatement<'ctx>>>,
-    ),
+    write_to: &'ctx (Option<(&'ctx str, Rc<Ast<'ctx>>)>, Option<Rc<Ast<'ctx>>>),
     write_type: &'ctx ThrushType,
-    write_value: &'ctx ThrushStatement,
+    write_value: &'ctx Ast,
 ) -> BasicValueEnum<'ctx> {
     let value: BasicValueEnum = valuegen::compile(context, write_value, Some(write_type));
 

@@ -5,7 +5,7 @@ use inkwell::{AddressSpace, values::BasicValueEnum};
 use crate::{
     backend::llvm::compiler::context::LLVMCodeGenContext,
     core::console::logging::{self, LoggingType},
-    frontend::types::parser::stmts::stmt::ThrushStatement,
+    frontend::types::ast::Ast,
 };
 
 pub mod math;
@@ -16,36 +16,36 @@ pub mod sizeof;
 pub enum Builtin<'ctx> {
     // Memory Builtins
     MemCpy {
-        source: Rc<ThrushStatement<'ctx>>,
-        destination: Rc<ThrushStatement<'ctx>>,
-        size: Rc<ThrushStatement<'ctx>>,
+        source: Rc<Ast<'ctx>>,
+        destination: Rc<Ast<'ctx>>,
+        size: Rc<Ast<'ctx>>,
     },
     MemMove {
-        source: Rc<ThrushStatement<'ctx>>,
-        destination: Rc<ThrushStatement<'ctx>>,
-        size: Rc<ThrushStatement<'ctx>>,
+        source: Rc<Ast<'ctx>>,
+        destination: Rc<Ast<'ctx>>,
+        size: Rc<Ast<'ctx>>,
     },
     MemSet {
-        destination: Rc<ThrushStatement<'ctx>>,
-        new_size: Rc<ThrushStatement<'ctx>>,
-        size: Rc<ThrushStatement<'ctx>>,
+        destination: Rc<Ast<'ctx>>,
+        new_size: Rc<Ast<'ctx>>,
+        size: Rc<Ast<'ctx>>,
     },
 
     // Math Builtins
     Sqrt {
-        value: Rc<ThrushStatement<'ctx>>,
+        value: Rc<Ast<'ctx>>,
     },
     Sin {
-        value: Rc<ThrushStatement<'ctx>>,
+        value: Rc<Ast<'ctx>>,
     },
     Cos {
-        value: Rc<ThrushStatement<'ctx>>,
+        value: Rc<Ast<'ctx>>,
     },
     Floor {
-        value: Rc<ThrushStatement<'ctx>>,
+        value: Rc<Ast<'ctx>>,
     },
     Trunc {
-        value: Rc<ThrushStatement<'ctx>>,
+        value: Rc<Ast<'ctx>>,
     },
 }
 

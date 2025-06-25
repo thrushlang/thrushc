@@ -10,7 +10,7 @@ use {
                 alloc::{self},
                 memory::LLVMAllocationSite,
             },
-            types::representations::{
+            types::repr::{
                 LLVMConstants, LLVMFunction, LLVMFunctions, LLVMFunctionsParameters,
                 LLVMInstructions,
             },

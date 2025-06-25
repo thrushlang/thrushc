@@ -4,18 +4,18 @@ use crate::{
         lexer::span::Span,
         semantic::typechecker::TypeChecker,
         types::{
+            ast::Ast,
             lexer::{ThrushType, traits::ThrushTypePointerExtensions},
-            parser::stmts::stmt::ThrushStatement,
         },
     },
 };
 
 pub fn validate_lli<'type_checker>(
     typechecker: &mut TypeChecker<'type_checker>,
-    node: &'type_checker ThrushStatement,
+    node: &'type_checker Ast,
 ) -> Result<(), ThrushCompilerIssue> {
     match node {
-        ThrushStatement::LLI {
+        Ast::LLI {
             name,
             kind: lli_type,
             value: lli_value,
@@ -35,22 +35,27 @@ pub fn validate_lli<'type_checker>(
                 ));
             }
 
-            if let Err(mismatch_type_error) =
-                typechecker.validate_types(lli_type, lli_value_type, Some(lli_value), None, None, span)
-            {
+            if let Err(mismatch_type_error) = typechecker.validate_types(
+                lli_type,
+                lli_value_type,
+                Some(lli_value),
+                None,
+                None,
+                span,
+            ) {
                 typechecker.add_error(mismatch_type_error);
             }
 
-            if let Err(type_error) = typechecker.analyze_stmt(lli_value) {
+            if let Err(type_error) = typechecker.analyze_ast(lli_value) {
                 typechecker.add_error(type_error);
             }
 
             Ok(())
         }
 
-        ThrushStatement::Load { value, .. } => {
+        Ast::Load { value, .. } => {
             if let Some(any_reference) = &value.0 {
-                let reference: &ThrushStatement = &any_reference.1;
+                let reference: &Ast = &any_reference.1;
 
                 let reference_type: &ThrushType = reference.get_value_type()?;
                 let reference_span: Span = reference.get_span();
@@ -64,7 +69,7 @@ pub fn validate_lli<'type_checker>(
                     ));
                 }
 
-                typechecker.analyze_stmt(reference)?;
+                typechecker.analyze_ast(reference)?;
             }
 
             if let Some(expr) = &value.1 {
@@ -80,20 +85,20 @@ pub fn validate_lli<'type_checker>(
                     ));
                 }
 
-                typechecker.analyze_stmt(expr)?;
+                typechecker.analyze_ast(expr)?;
             }
 
             Ok(())
         }
 
-        ThrushStatement::Address {
+        Ast::Address {
             address_to,
             indexes,
             span,
             ..
         } => {
             if let Some(reference_any) = &address_to.0 {
-                let reference: &ThrushStatement = &reference_any.1;
+                let reference: &Ast = &reference_any.1;
 
                 let reference_type: &ThrushType = reference.get_value_type()?;
                 let reference_span: Span = reference.get_span();
@@ -194,14 +199,14 @@ pub fn validate_lli<'type_checker>(
             Ok(())
         }
 
-        ThrushStatement::Write {
+        Ast::Write {
             write_to,
             write_value,
             write_type,
             ..
         } => {
             if let Some(any_reference) = &write_to.0 {
-                let reference: &ThrushStatement = &any_reference.1;
+                let reference: &Ast = &any_reference.1;
                 let reference_type: &ThrushType = reference.get_value_type()?;
                 let reference_span: Span = reference.get_span();
 

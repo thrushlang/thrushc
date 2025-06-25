@@ -3,14 +3,14 @@ use crate::{
     frontend::{
         lexer::span::Span,
         semantic::typechecker::TypeChecker,
-        types::{lexer::ThrushType, parser::stmts::stmt::ThrushStatement},
+        types::{ast::Ast, lexer::ThrushType},
     },
 };
 
 pub fn validate_call<'type_checker>(
     typechecker: &mut TypeChecker<'type_checker>,
     metadata: (&[ThrushType], bool),
-    args: &'type_checker [ThrushStatement],
+    args: &'type_checker [Ast],
     span: &Span,
 ) -> Result<(), ThrushCompilerIssue> {
     let (parameter_types, ignore_more_arguments) = metadata;
@@ -47,19 +47,29 @@ pub fn validate_call<'type_checker>(
         return Ok(());
     }
 
-    for (target_type, expr) in parameter_types.iter().zip(args.iter()) {
-        let from_type: &ThrushType = expr.get_value_type()?;
-        let expr_span: Span = expr.get_span();
+    parameter_types
+        .iter()
+        .zip(args.iter())
+        .try_for_each(|(target_type, expr)| {
+            let from_type: &ThrushType = expr.get_value_type()?;
+            let expr_span: Span = expr.get_span();
 
-        if let Err(error) =
-            typechecker.validate_types(target_type, from_type, Some(expr), None, None, &expr_span)
-        {
-            typechecker.add_error(error);
-        }
-    }
+            if let Err(error) = typechecker.validate_types(
+                target_type,
+                from_type,
+                Some(expr),
+                None,
+                None,
+                &expr_span,
+            ) {
+                typechecker.add_error(error);
+            }
+
+            Ok(())
+        })?;
 
     args.iter()
-        .try_for_each(|arg| typechecker.analyze_stmt(arg))?;
+        .try_for_each(|arg| typechecker.analyze_ast(arg))?;
 
     Ok(())
 }

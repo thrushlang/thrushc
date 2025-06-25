@@ -3,7 +3,7 @@ use crate::{
     frontend::{
         lexer::span::Span,
         types::{
-            parser::stmts::stmt::ThrushStatement,
+            ast::Ast,
             parser::symbols::types::{
                 AssemblerFunction, AssemblerFunctions, ConstantSymbol, Constants, CustomTypeSymbol,
                 CustomTypes, EnumSymbol, Enums, FoundSymbolId, Function, Functions, LLISymbol,
@@ -16,22 +16,22 @@ use crate::{
 use ahash::AHashMap as HashMap;
 
 #[derive(Clone, Debug, Default)]
-pub struct SymbolsTable<'instr> {
-    custom_types: CustomTypes<'instr>,
-    constants: Constants<'instr>,
-    locals: Locals<'instr>,
-    llis: LLIs<'instr>,
-    structs: Structs<'instr>,
-    functions: Functions<'instr>,
-    asm_functions: AssemblerFunctions<'instr>,
-    enums: Enums<'instr>,
-    parameters: Parameters<'instr>,
+pub struct SymbolsTable<'parser> {
+    custom_types: CustomTypes<'parser>,
+    constants: Constants<'parser>,
+    locals: Locals<'parser>,
+    llis: LLIs<'parser>,
+    structs: Structs<'parser>,
+    functions: Functions<'parser>,
+    asm_functions: AssemblerFunctions<'parser>,
+    enums: Enums<'parser>,
+    parameters: Parameters<'parser>,
 }
 
-impl<'instr> SymbolsTable<'instr> {
+impl<'parser> SymbolsTable<'parser> {
     pub fn with_functions(
-        functions: Functions<'instr>,
-        asm_functions: AssemblerFunctions<'instr>,
+        functions: Functions<'parser>,
+        asm_functions: AssemblerFunctions<'parser>,
     ) -> Self {
         Self {
             custom_types: HashMap::with_capacity(255),
@@ -65,13 +65,13 @@ impl<'instr> SymbolsTable<'instr> {
     }
 }
 
-impl<'instr> SymbolsTable<'instr> {
+impl<'parser> SymbolsTable<'parser> {
     pub fn start_parameters(
         &mut self,
-        parameters: &[ThrushStatement<'instr>],
+        parameters: &[Ast<'parser>],
     ) -> Result<(), ThrushCompilerIssue> {
         for parameter in parameters.iter() {
-            if let ThrushStatement::FunctionParameter {
+            if let Ast::FunctionParameter {
                 name,
                 kind,
                 is_mutable,
@@ -98,8 +98,8 @@ impl<'instr> SymbolsTable<'instr> {
 
     pub fn new_lli(
         &mut self,
-        name: &'instr str,
-        lli: LLISymbol<'instr>,
+        name: &'parser str,
+        lli: LLISymbol<'parser>,
         span: Span,
     ) -> Result<(), ThrushCompilerIssue> {
         if let Some(last_scope) = self.llis.last_mut() {
@@ -128,8 +128,8 @@ impl<'instr> SymbolsTable<'instr> {
 
     pub fn new_local(
         &mut self,
-        name: &'instr str,
-        local: LocalSymbol<'instr>,
+        name: &'parser str,
+        local: LocalSymbol<'parser>,
         span: Span,
     ) -> Result<(), ThrushCompilerIssue> {
         if let Some(last_scope) = self.locals.last_mut() {
@@ -158,8 +158,8 @@ impl<'instr> SymbolsTable<'instr> {
 
     pub fn new_constant(
         &mut self,
-        name: &'instr str,
-        constant: ConstantSymbol<'instr>,
+        name: &'parser str,
+        constant: ConstantSymbol<'parser>,
         span: Span,
     ) -> Result<(), ThrushCompilerIssue> {
         if self.constants.contains_key(name) {
@@ -178,8 +178,8 @@ impl<'instr> SymbolsTable<'instr> {
 
     pub fn new_custom_type(
         &mut self,
-        name: &'instr str,
-        custom_type: CustomTypeSymbol<'instr>,
+        name: &'parser str,
+        custom_type: CustomTypeSymbol<'parser>,
         span: Span,
     ) -> Result<(), ThrushCompilerIssue> {
         if self.constants.contains_key(name) {
@@ -198,8 +198,8 @@ impl<'instr> SymbolsTable<'instr> {
 
     pub fn new_struct(
         &mut self,
-        name: &'instr str,
-        field_types: Struct<'instr>,
+        name: &'parser str,
+        field_types: Struct<'parser>,
         span: Span,
     ) -> Result<(), ThrushCompilerIssue> {
         if self.structs.contains_key(name) {
@@ -218,8 +218,8 @@ impl<'instr> SymbolsTable<'instr> {
 
     pub fn new_enum(
         &mut self,
-        name: &'instr str,
-        union: EnumSymbol<'instr>,
+        name: &'parser str,
+        union: EnumSymbol<'parser>,
         span: Span,
     ) -> Result<(), ThrushCompilerIssue> {
         if self.enums.contains_key(name) {
@@ -238,8 +238,8 @@ impl<'instr> SymbolsTable<'instr> {
 
     pub fn new_asm_function(
         &mut self,
-        name: &'instr str,
-        function: AssemblerFunction<'instr>,
+        name: &'parser str,
+        function: AssemblerFunction<'parser>,
         span: Span,
     ) -> Result<(), ThrushCompilerIssue> {
         if self.asm_functions.contains_key(name) {
@@ -258,8 +258,8 @@ impl<'instr> SymbolsTable<'instr> {
 
     pub fn new_function(
         &mut self,
-        name: &'instr str,
-        function: Function<'instr>,
+        name: &'parser str,
+        function: Function<'parser>,
         span: Span,
     ) -> Result<(), ThrushCompilerIssue> {
         if self.functions.contains_key(name) {
@@ -277,12 +277,12 @@ impl<'instr> SymbolsTable<'instr> {
     }
 }
 
-impl<'instr> SymbolsTable<'instr> {
+impl<'parser> SymbolsTable<'parser> {
     pub fn get_symbols_id(
         &self,
-        name: &'instr str,
+        name: &'parser str,
         span: Span,
-    ) -> Result<FoundSymbolId<'instr>, ThrushCompilerIssue> {
+    ) -> Result<FoundSymbolId<'parser>, ThrushCompilerIssue> {
         if self.custom_types.contains_key(name) {
             return Ok((None, None, None, None, Some(name), None, None, None, None));
         }
@@ -354,10 +354,10 @@ impl<'instr> SymbolsTable<'instr> {
     #[inline]
     pub fn get_lli_by_id(
         &self,
-        lli_id: &'instr str,
+        lli_id: &'parser str,
         scope_idx: usize,
         span: Span,
-    ) -> Result<&LLISymbol<'instr>, ThrushCompilerIssue> {
+    ) -> Result<&LLISymbol<'parser>, ThrushCompilerIssue> {
         if let Some(lli) = self.llis[scope_idx].get(lli_id) {
             return Ok(lli);
         }
@@ -373,9 +373,9 @@ impl<'instr> SymbolsTable<'instr> {
     #[inline]
     pub fn get_struct_by_id(
         &self,
-        struct_id: &'instr str,
+        struct_id: &'parser str,
         span: Span,
-    ) -> Result<Struct<'instr>, ThrushCompilerIssue> {
+    ) -> Result<Struct<'parser>, ThrushCompilerIssue> {
         if let Some(structure) = self.structs.get(struct_id).cloned() {
             return Ok(structure);
         }
@@ -392,8 +392,8 @@ impl<'instr> SymbolsTable<'instr> {
     pub fn get_asm_function_by_id(
         &self,
         span: Span,
-        asm_func_id: &'instr str,
-    ) -> Result<AssemblerFunction<'instr>, ThrushCompilerIssue> {
+        asm_func_id: &'parser str,
+    ) -> Result<AssemblerFunction<'parser>, ThrushCompilerIssue> {
         if let Some(asm_function) = self.asm_functions.get(asm_func_id).cloned() {
             return Ok(asm_function);
         }
@@ -410,8 +410,8 @@ impl<'instr> SymbolsTable<'instr> {
     pub fn get_function_by_id(
         &self,
         span: Span,
-        func_id: &'instr str,
-    ) -> Result<Function<'instr>, ThrushCompilerIssue> {
+        func_id: &'parser str,
+    ) -> Result<Function<'parser>, ThrushCompilerIssue> {
         if let Some(function) = self.functions.get(func_id).cloned() {
             return Ok(function);
         }
@@ -427,9 +427,9 @@ impl<'instr> SymbolsTable<'instr> {
     #[inline]
     pub fn get_enum_by_id(
         &self,
-        enum_id: &'instr str,
+        enum_id: &'parser str,
         span: Span,
-    ) -> Result<EnumSymbol<'instr>, ThrushCompilerIssue> {
+    ) -> Result<EnumSymbol<'parser>, ThrushCompilerIssue> {
         if let Some(enum_found) = self.enums.get(enum_id).cloned() {
             return Ok(enum_found);
         }
@@ -445,9 +445,9 @@ impl<'instr> SymbolsTable<'instr> {
     #[inline]
     pub fn get_custom_type_by_id(
         &self,
-        custom_type_id: &'instr str,
+        custom_type_id: &'parser str,
         span: Span,
-    ) -> Result<CustomTypeSymbol<'instr>, ThrushCompilerIssue> {
+    ) -> Result<CustomTypeSymbol<'parser>, ThrushCompilerIssue> {
         if let Some(custom_type) = self.custom_types.get(custom_type_id).cloned() {
             return Ok(custom_type);
         }
@@ -463,10 +463,10 @@ impl<'instr> SymbolsTable<'instr> {
     #[inline]
     pub fn get_local_by_id(
         &self,
-        local_id: &'instr str,
+        local_id: &'parser str,
         scope_idx: usize,
         span: Span,
-    ) -> Result<&LocalSymbol<'instr>, ThrushCompilerIssue> {
+    ) -> Result<&LocalSymbol<'parser>, ThrushCompilerIssue> {
         if let Some(local) = self.locals[scope_idx].get(local_id) {
             return Ok(local);
         }
@@ -482,9 +482,9 @@ impl<'instr> SymbolsTable<'instr> {
     #[inline]
     pub fn get_const_by_id(
         &self,
-        const_id: &'instr str,
+        const_id: &'parser str,
         span: Span,
-    ) -> Result<ConstantSymbol<'instr>, ThrushCompilerIssue> {
+    ) -> Result<ConstantSymbol<'parser>, ThrushCompilerIssue> {
         if let Some(constant) = self.constants.get(const_id).cloned() {
             return Ok(constant);
         }
@@ -500,9 +500,9 @@ impl<'instr> SymbolsTable<'instr> {
     #[inline]
     pub fn get_parameter_by_id(
         &self,
-        parameter_id: &'instr str,
+        parameter_id: &'parser str,
         span: Span,
-    ) -> Result<ParameterSymbol<'instr>, ThrushCompilerIssue> {
+    ) -> Result<ParameterSymbol<'parser>, ThrushCompilerIssue> {
         if let Some(parameter) = self.parameters.get(parameter_id).cloned() {
             return Ok(parameter);
         }
@@ -520,7 +520,7 @@ impl<'instr> SymbolsTable<'instr> {
         &self,
         name: &str,
         span: Span,
-    ) -> Result<Struct<'instr>, ThrushCompilerIssue> {
+    ) -> Result<Struct<'parser>, ThrushCompilerIssue> {
         if let Some(struct_fields) = self.structs.get(name).cloned() {
             return Ok(struct_fields);
         }

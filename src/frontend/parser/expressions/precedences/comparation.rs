@@ -3,17 +3,14 @@ use crate::{
     frontend::{
         lexer::{span::Span, token::Token, tokentype::TokenType},
         parser::{ParserContext, expressions::precedences::term},
-        types::{
-            lexer::ThrushType,
-            parser::stmts::{stmt::ThrushStatement, traits::TokenExtensions},
-        },
+        types::{ast::Ast, lexer::ThrushType, parser::stmts::traits::TokenExtensions},
     },
 };
 
-pub fn cmp_precedence<'instr>(
-    parser_context: &mut ParserContext<'instr>,
-) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
-    let mut expression: ThrushStatement = term::term_precedence(parser_context)?;
+pub fn cmp_precedence<'parser>(
+    parser_context: &mut ParserContext<'parser>,
+) -> Result<Ast<'parser>, ThrushCompilerIssue> {
+    let mut expression: Ast = term::term_precedence(parser_context)?;
 
     if parser_context.match_token(TokenType::Greater)?
         || parser_context.match_token(TokenType::GreaterEq)?
@@ -25,9 +22,9 @@ pub fn cmp_precedence<'instr>(
         let operator: TokenType = operator_tk.get_type();
         let span: Span = operator_tk.get_span();
 
-        let right: ThrushStatement = term::term_precedence(parser_context)?;
+        let right: Ast = term::term_precedence(parser_context)?;
 
-        expression = ThrushStatement::BinaryOp {
+        expression = Ast::BinaryOp {
             left: expression.into(),
             operator,
             right: right.into(),

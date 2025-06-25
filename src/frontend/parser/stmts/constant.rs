@@ -4,18 +4,17 @@ use crate::{
         lexer::{span::Span, token::Token, tokentype::TokenType},
         parser::{ParserContext, attributes, expression, typegen},
         types::{
+            ast::Ast,
             lexer::ThrushType,
-            parser::stmts::{
-                stmt::ThrushStatement, traits::TokenExtensions, types::ThrushAttributes,
-            },
+            parser::stmts::{traits::TokenExtensions, types::ThrushAttributes},
         },
     },
 };
 
-pub fn build_const<'instr>(
-    parser_ctx: &mut ParserContext<'instr>,
+pub fn build_const<'parser>(
+    parser_ctx: &mut ParserContext<'parser>,
     declare_forward: bool,
-) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
+) -> Result<Ast<'parser>, ThrushCompilerIssue> {
     parser_ctx.consume(
         TokenType::Const,
         String::from("Syntax error"),
@@ -57,7 +56,7 @@ pub fn build_const<'instr>(
         String::from("Expected '='."),
     )?;
 
-    let value: ThrushStatement = expression::build_expr(parser_ctx)?;
+    let value: Ast = expression::build_expr(parser_ctx)?;
 
     value.throw_attemping_use_jit(span)?;
 
@@ -76,10 +75,10 @@ pub fn build_const<'instr>(
             parser_ctx.add_error(error);
         }
 
-        return Ok(ThrushStatement::Null { span });
+        return Ok(Ast::Null { span });
     }
 
-    Ok(ThrushStatement::Const {
+    Ok(Ast::Const {
         name,
         kind: const_type,
         value: value.into(),

@@ -3,13 +3,11 @@ use crate::{
     frontend::{
         lexer::{span::Span, tokentype::TokenType},
         parser::{ParserContext, expression},
+        types::ast::Ast,
         types::{
             lexer::ThrushType,
             parser::{
-                stmts::{
-                    stmt::ThrushStatement,
-                    traits::{FoundSymbolEither, FoundSymbolExtension},
-                },
+                stmts::traits::{FoundSymbolEither, FoundSymbolExtension},
                 symbols::{
                     traits::FunctionExtensions,
                     types::{AssemblerFunction, FoundSymbolId, Function},
@@ -19,11 +17,11 @@ use crate::{
     },
 };
 
-pub fn build_call<'instr>(
-    parser_context: &mut ParserContext<'instr>,
-    name: &'instr str,
+pub fn build_call<'parser>(
+    parser_context: &mut ParserContext<'parser>,
+    name: &'parser str,
     span: Span,
-) -> Result<ThrushStatement<'instr>, ThrushCompilerIssue> {
+) -> Result<Ast<'parser>, ThrushCompilerIssue> {
     let object: FoundSymbolId = parser_context.get_symbols().get_symbols_id(name, span)?;
 
     let function_type: ThrushType = if object.is_function_asm() {
@@ -42,14 +40,14 @@ pub fn build_call<'instr>(
         function.get_type()
     };
 
-    let mut args: Vec<ThrushStatement> = Vec::with_capacity(10);
+    let mut args: Vec<Ast> = Vec::with_capacity(10);
 
     loop {
         if parser_context.check(TokenType::RParen) {
             break;
         }
 
-        let expression: ThrushStatement = expression::build_expr(parser_context)?;
+        let expression: Ast = expression::build_expr(parser_context)?;
 
         if expression.is_constructor() {
             return Err(ThrushCompilerIssue::Error(
@@ -79,7 +77,7 @@ pub fn build_call<'instr>(
         String::from("Expected ')'."),
     )?;
 
-    Ok(ThrushStatement::Call {
+    Ok(Ast::Call {
         name,
         args,
         kind: function_type,

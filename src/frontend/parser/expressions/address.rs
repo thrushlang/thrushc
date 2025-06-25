@@ -3,28 +3,28 @@ use crate::{
     frontend::{
         lexer::{span::Span, tokentype::TokenType},
         parser::{ParserContext, expression},
-        types::parser::stmts::stmt::ThrushStatement,
+        types::ast::Ast,
     },
 };
 
-pub fn build_address_indexes<'instr>(
-    parser_context: &mut ParserContext<'instr>,
+pub fn build_address_indexes<'parser>(
+    parser_context: &mut ParserContext<'parser>,
     span: Span,
-) -> Result<Vec<ThrushStatement<'instr>>, ThrushCompilerIssue> {
+) -> Result<Vec<Ast<'parser>>, ThrushCompilerIssue> {
     parser_context.consume(
         TokenType::LBrace,
         String::from("Syntax error"),
         String::from("Expected '{'."),
     )?;
 
-    let mut indexes: Vec<ThrushStatement> = Vec::with_capacity(10);
+    let mut indexes: Vec<Ast> = Vec::with_capacity(10);
 
     loop {
         if parser_context.check(TokenType::RBrace) {
             break;
         }
 
-        let index: ThrushStatement = expression::build_expr(parser_context)?;
+        let index: Ast = expression::build_expr(parser_context)?;
 
         indexes.push(index);
 

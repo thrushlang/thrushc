@@ -8,9 +8,8 @@ use crate::{
         errors::standard::ThrushCompilerIssue,
     },
     frontend::types::{
-        parser::stmts::{
-            stmt::ThrushStatement, traits::ThrushAttributesExtensions, types::ThrushAttributes,
-        },
+        ast::Ast,
+        parser::stmts::{traits::ThrushAttributesExtensions, types::ThrushAttributes},
         semantic::{
             attrchecker::types::AttributeCheckerAttributeApplicant,
             linter::{traits::LLVMAttributeComparatorExtensions, types::LLVMAttributeComparator},
@@ -20,7 +19,7 @@ use crate::{
 
 #[derive(Debug)]
 pub struct AttributeChecker<'attr_checker> {
-    stmts: &'attr_checker [ThrushStatement<'attr_checker>],
+    ast: &'attr_checker [Ast<'attr_checker>],
     errors: Vec<ThrushCompilerIssue>,
     currrent: usize,
     dignostician: Diagnostician,
@@ -28,11 +27,11 @@ pub struct AttributeChecker<'attr_checker> {
 
 impl<'attr_checker> AttributeChecker<'attr_checker> {
     pub fn new(
-        stmts: &'attr_checker [ThrushStatement<'attr_checker>],
+        ast: &'attr_checker [Ast<'attr_checker>],
         file: &'attr_checker CompilerFile,
     ) -> Self {
         Self {
-            stmts,
+            ast,
             errors: Vec::with_capacity(100),
             currrent: 0,
             dignostician: Diagnostician::new(file),
@@ -41,7 +40,7 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
 
     pub fn check(&mut self) -> bool {
         while !self.is_eof() {
-            let current_stmt: &ThrushStatement = self.peek();
+            let current_stmt: &Ast = self.peek();
 
             self.analyze_stmt(current_stmt);
 
@@ -60,8 +59,8 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
         false
     }
 
-    fn analyze_stmt(&mut self, stmt: &'attr_checker ThrushStatement) {
-        if let ThrushStatement::Function {
+    fn analyze_stmt(&mut self, stmt: &'attr_checker Ast) {
+        if let Ast::Function {
             attributes,
             body,
             span,
@@ -89,11 +88,11 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
             self.analyze_attrs(attributes, AttributeCheckerAttributeApplicant::Function);
         }
 
-        if let ThrushStatement::Struct { attributes, .. } = stmt {
+        if let Ast::Struct { attributes, .. } = stmt {
             self.analyze_attrs(attributes, AttributeCheckerAttributeApplicant::Struct);
         }
 
-        if let ThrushStatement::Const { attributes, .. } = stmt {
+        if let Ast::Const { attributes, .. } = stmt {
             self.analyze_attrs(attributes, AttributeCheckerAttributeApplicant::Constant);
         }
     }
@@ -220,8 +219,8 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
         }
     }
 
-    fn peek(&self) -> &'attr_checker ThrushStatement<'attr_checker> {
-        self.stmts.get(self.currrent).unwrap_or_else(|| {
+    fn peek(&self) -> &'attr_checker Ast<'attr_checker> {
+        self.ast.get(self.currrent).unwrap_or_else(|| {
             logging::log(
                 LoggingType::Panic,
                 "Attemping to get a statement in invalid position at Attribute Checker.",
@@ -232,6 +231,6 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
     }
 
     fn is_eof(&self) -> bool {
-        self.currrent >= self.stmts.len()
+        self.currrent >= self.ast.len()
     }
 }

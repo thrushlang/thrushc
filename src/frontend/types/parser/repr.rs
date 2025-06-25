@@ -1,30 +1,19 @@
 use crate::frontend::{
     lexer::tokentype::TokenType,
-    types::{
-        lexer::ThrushType,
-        parser::stmts::{stmt::ThrushStatement, types::ThrushAttributes},
-    },
+    types::{ast::Ast, lexer::ThrushType, parser::stmts::types::ThrushAttributes},
 };
 
-pub type BinaryOperation<'ctx> = (
-    &'ctx ThrushStatement<'ctx>,
-    &'ctx TokenType,
-    &'ctx ThrushStatement<'ctx>,
-);
+pub type BinaryOperation<'ctx> = (&'ctx Ast<'ctx>, &'ctx TokenType, &'ctx Ast<'ctx>);
 
-pub type UnaryOperation<'ctx> = (
-    &'ctx TokenType,
-    &'ctx ThrushType,
-    &'ctx ThrushStatement<'ctx>,
-);
+pub type UnaryOperation<'ctx> = (&'ctx TokenType, &'ctx ThrushType, &'ctx Ast<'ctx>);
 
 pub type FunctionRepresentation<'ctx> = (
     &'ctx str,
     &'ctx str,
     &'ctx ThrushType,
-    &'ctx [ThrushStatement<'ctx>],
+    &'ctx [Ast<'ctx>],
     &'ctx [ThrushType],
-    &'ctx ThrushStatement<'ctx>,
+    &'ctx Ast<'ctx>,
     &'ctx ThrushAttributes<'ctx>,
 );
 
@@ -34,7 +23,7 @@ pub type AssemblerFunctionRepresentation<'ctx> = (
     &'ctx str,
     &'ctx str,
     &'ctx ThrushType,
-    &'ctx [ThrushStatement<'ctx>],
+    &'ctx [Ast<'ctx>],
     &'ctx [ThrushType],
     &'ctx ThrushAttributes<'ctx>,
 );
@@ -45,6 +34,6 @@ pub type Local<'ctx> = (
     &'ctx str,
     &'ctx str,
     &'ctx ThrushType,
-    &'ctx ThrushStatement<'ctx>,
+    &'ctx Ast<'ctx>,
     &'ctx ThrushAttributes<'ctx>,
 );
