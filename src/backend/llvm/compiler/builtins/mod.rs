@@ -5,7 +5,7 @@ use inkwell::{AddressSpace, values::BasicValueEnum};
 use crate::{
     backend::llvm::compiler::context::LLVMCodeGenContext,
     core::console::logging::{self, LoggingType},
-    frontend::types::ast::Ast,
+    frontend::types::{ast::Ast, lexer::ThrushType},
 };
 
 pub mod math;
@@ -15,6 +15,10 @@ pub mod sizeof;
 #[derive(Debug, Clone)]
 pub enum Builtin<'ctx> {
     // Memory Builtins
+    AlignOf {
+        align_of: ThrushType,
+    },
+
     MemCpy {
         source: Rc<Ast<'ctx>>,
         destination: Rc<Ast<'ctx>>,
@@ -54,6 +58,8 @@ pub fn compile<'ctx>(
     builtin: &'ctx Builtin<'ctx>,
 ) -> BasicValueEnum<'ctx> {
     match builtin {
+        Builtin::AlignOf { align_of } => mem::alingof::compile(context, align_of),
+
         Builtin::MemCpy {
             source,
             destination,

@@ -105,6 +105,7 @@ pub enum TokenType {
     NullPtr,
 
     // -- Builtins --
+    AlignOf,
     MemCpy,
     MemMove,
     MemSet,
@@ -213,6 +214,16 @@ impl TokenType {
     #[must_use]
     pub const fn is_minus_operator(&self) -> bool {
         matches!(self, TokenType::Minus)
+    }
+
+    #[must_use]
+    pub const fn is_minus_minus_operator(&self) -> bool {
+        matches!(self, TokenType::MinusMinus)
+    }
+
+    #[must_use]
+    pub const fn is_plus_plus_operator(&self) -> bool {
+        matches!(self, TokenType::PlusPlus)
     }
 
     #[must_use]

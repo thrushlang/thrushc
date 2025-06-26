@@ -3,7 +3,7 @@ use crate::{
     core::errors::standard::ThrushCompilerIssue,
     frontend::{
         lexer::{span::Span, token::Token, tokentype::TokenType},
-        parser::{ParserContext, expression},
+        parser::{ParserContext, expression, expressions::reference, typegen},
         types::{ast::Ast, lexer::ThrushType, parser::stmts::traits::TokenExtensions},
     },
 };
@@ -192,6 +192,65 @@ pub fn build_memset<'parser>(
             destination: destination.into(),
             new_size: new_size.into(),
             size: size.into(),
+        },
+        kind: ThrushType::Ptr(None),
+        span,
+    })
+}
+
+pub fn build_alignof<'parser>(
+    parser_context: &mut ParserContext<'parser>,
+) -> Result<Ast<'parser>, ThrushCompilerIssue> {
+    let sizeof_tk: &Token = parser_context.consume(
+        TokenType::AlignOf,
+        "Syntax error".into(),
+        "Expected 'alignof' keyword.".into(),
+    )?;
+
+    parser_context.consume(
+        TokenType::LParen,
+        "Syntax error".into(),
+        "Expected '('.".into(),
+    )?;
+
+    let span: Span = sizeof_tk.get_span();
+
+    if parser_context.match_token(TokenType::Identifier)? {
+        let identifier_tk: &Token = parser_context.previous();
+
+        let name: &str = identifier_tk.get_lexeme();
+        let span: Span = identifier_tk.get_span();
+
+        let reference: Ast = reference::build_reference(parser_context, name, span)?;
+
+        let reference_type: &ThrushType = reference.get_value_type()?;
+
+        parser_context.consume(
+            TokenType::RParen,
+            String::from("Syntax error"),
+            String::from("Expected ')'."),
+        )?;
+
+        return Ok(Ast::Builtin {
+            builtin: Builtin::AlignOf {
+                align_of: reference_type.clone(),
+            },
+            kind: ThrushType::Ptr(None),
+            span,
+        });
+    }
+
+    let alignof_type: ThrushType = typegen::build_type(parser_context)?;
+
+    parser_context.consume(
+        TokenType::RParen,
+        "Syntax error".into(),
+        "Expected ')'.".into(),
+    )?;
+
+    Ok(Ast::Builtin {
+        builtin: Builtin::AlignOf {
+            align_of: alignof_type,
         },
         kind: ThrushType::Ptr(None),
         span,

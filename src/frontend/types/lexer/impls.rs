@@ -114,9 +114,10 @@ impl std::fmt::Display for TokenType {
             TokenType::SemiColon => write!(f, ";"),
             TokenType::Slash => write!(f, "/"),
             TokenType::Star => write!(f, "*"),
+            TokenType::SizeOf => write!(f, "sizeof"),
 
             // Builtins
-            TokenType::SizeOf => write!(f, "sizeof"),
+            TokenType::AlignOf => write!(f, "alignof"),
             TokenType::MemSet => write!(f, "memset"),
             TokenType::MemMove => write!(f, "memmove"),
             TokenType::MemCpy => write!(f, "memcpy"),

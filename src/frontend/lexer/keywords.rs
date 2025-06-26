@@ -44,6 +44,7 @@ lazy_static! {
         keywords.insert("memset", TokenType::MemSet);
         keywords.insert("memmove", TokenType::MemMove);
         keywords.insert("memcpy", TokenType::MemCpy);
+        keywords.insert("alignof", TokenType::AlignOf);
 
         keywords.insert("sqrt", TokenType::Sqrt);
 

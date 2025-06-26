@@ -3,45 +3,34 @@ use crate::{
     frontend::{
         lexer::{span::Span, token::Token, tokentype::TokenType},
         parser::{ParserContext, expression},
-        types::ast::Ast,
-        types::parser::{
-            stmts::{
-                traits::{ConstructorExtensions, StructExtensions, TokenExtensions},
-                types::Constructor,
+        types::{
+            ast::Ast,
+            parser::{
+                stmts::{
+                    traits::{ConstructorExtensions, StructExtensions, TokenExtensions},
+                    types::Constructor,
+                },
+                symbols::types::Struct,
             },
-            symbols::types::Struct,
         },
     },
 };
 
 pub fn build_constructor<'parser>(
+    name: &'parser str,
+    span: Span,
     parser_context: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, ThrushCompilerIssue> {
-    let new_tk: &Token = parser_context.consume(
-        TokenType::New,
-        String::from("Syntax error"),
-        String::from("Expected 'new' keyword."),
-    )?;
-
     if parser_context.is_unreacheable_code() {
         return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("Unreacheable code."),
             None,
-            new_tk.span,
+            parser_context.previous().span,
         ));
     }
 
-    let name: &Token = parser_context.consume(
-        TokenType::Identifier,
-        String::from("Syntax error"),
-        String::from("Expected structure reference."),
-    )?;
-
-    let struct_name: &str = name.get_lexeme();
-    let span: Span = name.get_span();
-
-    let struct_found: Struct = parser_context.get_symbols().get_struct(struct_name, span)?;
+    let struct_found: Struct = parser_context.get_symbols().get_struct(name, span)?;
     let fields_required: usize = struct_found.get_fields().1.len();
 
     parser_context.consume(
@@ -50,7 +39,7 @@ pub fn build_constructor<'parser>(
         String::from("Expected '{'."),
     )?;
 
-    let mut arguments: Constructor = (struct_name, Vec::with_capacity(10));
+    let mut arguments: Constructor = (name, Vec::with_capacity(10));
 
     let mut amount: usize = 0;
 
@@ -160,7 +149,7 @@ pub fn build_constructor<'parser>(
     )?;
 
     Ok(Ast::Constructor {
-        name: struct_name,
+        name,
         arguments: arguments.clone(),
         kind: arguments.get_type(),
         span,

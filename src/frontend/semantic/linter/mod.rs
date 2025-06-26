@@ -27,6 +27,7 @@ mod functions;
 mod lli;
 mod local;
 mod loops;
+mod marks;
 mod table;
 mod terminator;
 
@@ -85,7 +86,7 @@ impl<'linter> Linter<'linter> {
         ########################################################################*/
 
         if let Ast::EntryPoint { .. } | Ast::Function { .. } = stmt {
-            functions::analyze_function(self, stmt);
+            return functions::analyze_function(self, stmt);
         }
 
         /* ######################################################################
@@ -114,6 +115,8 @@ impl<'linter> Linter<'linter> {
             self.generate_scoped_warnings();
 
             self.end_scope();
+
+            return;
         }
 
         /* ######################################################################
@@ -133,15 +136,15 @@ impl<'linter> Linter<'linter> {
         ########################################################################*/
 
         if let Ast::Enum { .. } = stmt {
-            enums::analyze_enum(self, stmt);
+            return enums::analyze_enum(self, stmt);
         }
 
         if let Ast::LLI { .. } = stmt {
-            lli::analyze_lli(self, stmt);
+            return lli::analyze_lli(self, stmt);
         }
 
         if let Ast::Local { .. } = stmt {
-            local::analyze_local(self, stmt);
+            return local::analyze_local(self, stmt);
         }
 
         /* ######################################################################
@@ -153,7 +156,7 @@ impl<'linter> Linter<'linter> {
         ########################################################################*/
 
         if let Ast::Return { .. } = stmt {
-            terminator::analyze_terminator(self, stmt);
+            return terminator::analyze_terminator(self, stmt);
         }
 
         /* ######################################################################
@@ -173,15 +176,15 @@ impl<'linter> Linter<'linter> {
         ########################################################################*/
 
         if let Ast::If { .. } = stmt {
-            conditionals::analyze_conditional(self, stmt);
+            return conditionals::analyze_conditional(self, stmt);
         }
 
         if let Ast::Elif { .. } = stmt {
-            conditionals::analyze_conditional(self, stmt);
+            return conditionals::analyze_conditional(self, stmt);
         }
 
         if let Ast::Else { .. } = stmt {
-            conditionals::analyze_conditional(self, stmt);
+            return conditionals::analyze_conditional(self, stmt);
         }
 
         /* ######################################################################
@@ -201,15 +204,15 @@ impl<'linter> Linter<'linter> {
         ########################################################################*/
 
         if let Ast::For { .. } = stmt {
-            loops::analyze_loop(self, stmt);
+            return loops::analyze_loop(self, stmt);
         }
 
         if let Ast::While { .. } = stmt {
-            loops::analyze_loop(self, stmt);
+            return loops::analyze_loop(self, stmt);
         }
 
         if let Ast::Loop { .. } = stmt {
-            loops::analyze_loop(self, stmt);
+            return loops::analyze_loop(self, stmt);
         }
 
         /* ######################################################################
@@ -229,7 +232,7 @@ impl<'linter> Linter<'linter> {
         ########################################################################*/
 
         if let Ast::Deref { .. } = stmt {
-            deref::analyze_dereference(self, stmt);
+            return deref::analyze_dereference(self, stmt);
         }
 
         /* ######################################################################
@@ -249,15 +252,15 @@ impl<'linter> Linter<'linter> {
         ########################################################################*/
 
         if let Ast::Write { .. } = stmt {
-            lli::analyze_lli(self, stmt);
+            return lli::analyze_lli(self, stmt);
         }
 
         if let Ast::Address { .. } = stmt {
-            lli::analyze_lli(self, stmt);
+            return lli::analyze_lli(self, stmt);
         }
 
         if let Ast::Load { .. } = stmt {
-            lli::analyze_lli(self, stmt);
+            return lli::analyze_lli(self, stmt);
         }
 
         /* ######################################################################
@@ -277,7 +280,7 @@ impl<'linter> Linter<'linter> {
         ########################################################################*/
 
         if let Ast::As { .. } = stmt {
-            casts::analyze_cast(self, stmt);
+            return casts::analyze_cast(self, stmt);
         }
 
         /* ######################################################################
@@ -297,7 +300,7 @@ impl<'linter> Linter<'linter> {
         ########################################################################*/
 
         if let Ast::Builtin { builtin, .. } = stmt {
-            builtins::analyze_builtin(self, builtin);
+            return builtins::analyze_builtin(self, builtin);
         }
 
         /* ######################################################################

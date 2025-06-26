@@ -35,6 +35,7 @@ pub fn lower_precedence<'parser>(
 
         TokenType::SizeOf => sizeof::build_sizeof(parser_context)?,
 
+        TokenType::AlignOf => builtins::build_alignof(parser_context)?,
         TokenType::MemSet => builtins::build_memset(parser_context)?,
         TokenType::MemMove => builtins::build_memmove(parser_context)?,
         TokenType::MemCpy => builtins::build_memcpy(parser_context)?,
@@ -366,6 +367,10 @@ pub fn lower_precedence<'parser>(
                 return Ok(property);
             }
 
+            if parser_context.match_token(TokenType::LBrace)? {
+                return constructor::build_constructor(name, span, parser_context);
+            }
+
             if symbol.is_enum() {
                 return Err(ThrushCompilerIssue::Error(
                     "Syntax error".into(),
@@ -390,8 +395,6 @@ pub fn lower_precedence<'parser>(
 
         TokenType::True => Ast::new_boolean(ThrushType::Bool, 1, parser_context.advance()?.span),
         TokenType::False => Ast::new_boolean(ThrushType::Bool, 0, parser_context.advance()?.span),
-
-        TokenType::New => constructor::build_constructor(parser_context)?,
 
         TokenType::Pass => Ast::Pass {
             span: parser_context.advance()?.get_span(),

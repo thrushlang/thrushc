@@ -42,7 +42,7 @@ pub fn build_sizeof<'parser>(
 
         return Ok(Ast::SizeOf {
             sizeof: reference_type.clone(),
-            kind: ThrushType::U64,
+            kind: ThrushType::U32,
             span: sizeof_span,
         });
     }
@@ -57,7 +57,7 @@ pub fn build_sizeof<'parser>(
 
     Ok(Ast::SizeOf {
         sizeof: sizeof_type,
-        kind: ThrushType::U64,
+        kind: ThrushType::U32,
         span: sizeof_span,
     })
 }

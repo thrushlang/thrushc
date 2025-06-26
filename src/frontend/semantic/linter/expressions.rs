@@ -2,7 +2,10 @@ use crate::{
     core::errors::{position::CompilationPosition, standard::ThrushCompilerIssue},
     frontend::{
         lexer::span::Span,
-        semantic::linter::Linter,
+        semantic::linter::{
+            Linter,
+            marks::{mutable, used},
+        },
         types::{ast::Ast, lexer::ThrushType},
     },
 };
@@ -18,7 +21,21 @@ pub fn analyze_expression<'linter>(linter: &mut Linter<'linter>, node: &'linter 
             linter.analyze_ast(right);
         }
 
-        Ast::UnaryOp { expression, .. } => {
+        Ast::UnaryOp {
+            operator,
+            expression,
+            ..
+        } => {
+            if expression.is_reference() {
+                if let Ast::Reference { name, .. } = &**expression {
+                    used::mark_as_used(linter, name);
+
+                    if operator.is_minus_minus_operator() || operator.is_plus_plus_operator() {
+                        mutable::mark_as_mutated(linter, name);
+                    }
+                }
+            }
+
             linter.analyze_ast(expression);
         }
 
@@ -29,45 +46,19 @@ pub fn analyze_expression<'linter>(linter: &mut Linter<'linter>, node: &'linter 
         }
 
         Ast::Index {
-            index_to,
-            indexes,
-            span,
-            ..
+            index_to, indexes, ..
         } => {
             indexes.iter().for_each(|indexe| {
                 linter.analyze_ast(indexe);
             });
 
             if let Some(any_reference) = &index_to.0 {
-                let name = any_reference.0;
+                let name: &str = any_reference.0;
+                let reference: &Ast = &any_reference.1;
 
-                if let Some(local) = linter.symbols.get_local_info(name) {
-                    local.1 = true;
-                    return;
-                }
+                linter.analyze_ast(reference);
 
-                if let Some(parameter) = linter.symbols.get_parameter_info(name) {
-                    parameter.1 = true;
-                    return;
-                }
-
-                if let Some(lli) = linter.symbols.get_lli_info(name) {
-                    lli.1 = true;
-                    return;
-                }
-
-                if let Some(constant) = linter.symbols.get_constant_info(name) {
-                    constant.1 = true;
-                    return;
-                }
-
-                linter.add_bug(ThrushCompilerIssue::Bug(
-                    String::from("Reference not caught"),
-                    format!("Could not get reference with name '{}'.", name),
-                    *span,
-                    CompilationPosition::Linter,
-                    line!(),
-                ));
+                used::mark_as_used(linter, name);
             }
 
             if let Some(expr) = &index_to.1 {
@@ -133,34 +124,8 @@ pub fn analyze_expression<'linter>(linter: &mut Linter<'linter>, node: &'linter 
             ));
         }
 
-        Ast::Reference { name, span, .. } => {
-            if let Some(local) = linter.symbols.get_local_info(name) {
-                local.1 = true;
-                return;
-            }
-
-            if let Some(parameter) = linter.symbols.get_parameter_info(name) {
-                parameter.1 = true;
-                return;
-            }
-
-            if let Some(lli) = linter.symbols.get_lli_info(name) {
-                lli.1 = true;
-                return;
-            }
-
-            if let Some(constant) = linter.symbols.get_constant_info(name) {
-                constant.1 = true;
-                return;
-            }
-
-            linter.add_bug(ThrushCompilerIssue::Bug(
-                String::from("Reference not caught"),
-                format!("Could not get reference with name '{}'.", name),
-                *span,
-                CompilationPosition::Linter,
-                line!(),
-            ));
+        Ast::Reference { name, .. } => {
+            used::mark_as_used(linter, name);
         }
 
         Ast::FixedArray { items, .. } | Ast::Array { items, .. } => {
@@ -169,37 +134,10 @@ pub fn analyze_expression<'linter>(linter: &mut Linter<'linter>, node: &'linter 
             });
         }
 
-        Ast::Mut { source, span, .. } => {
+        Ast::Mut { source, .. } => {
             if let Some(any_reference) = &source.0 {
                 let name: &str = any_reference.0;
-
-                if let Some(local) = linter.symbols.get_local_info(name) {
-                    local.1 = true;
-                    return;
-                }
-
-                if let Some(parameter) = linter.symbols.get_parameter_info(name) {
-                    parameter.1 = true;
-                    return;
-                }
-
-                if let Some(lli) = linter.symbols.get_lli_info(name) {
-                    lli.1 = true;
-                    return;
-                }
-
-                if let Some(constant) = linter.symbols.get_constant_info(name) {
-                    constant.1 = true;
-                    return;
-                }
-
-                linter.add_bug(ThrushCompilerIssue::Bug(
-                    String::from("Mutable expression not caught"),
-                    format!("Could not mutable reference with name '{}'.", name),
-                    *span,
-                    CompilationPosition::Linter,
-                    line!(),
-                ));
+                mutable::mark_as_mutated(linter, name);
             }
 
             if let Some(expr) = &source.1 {
@@ -233,6 +171,17 @@ pub fn analyze_expression<'linter>(linter: &mut Linter<'linter>, node: &'linter 
                 line!(),
             ));
         }
+
+        Ast::Alloc { .. }
+        | Ast::Integer { .. }
+        | Ast::Boolean { .. }
+        | Ast::Str { .. }
+        | Ast::Float { .. }
+        | Ast::Null { .. }
+        | Ast::NullPtr { .. }
+        | Ast::Char { .. }
+        | Ast::Pass { .. }
+        | Ast::SizeOf { .. } => (),
 
         _ => {
             let span: Span = node.get_span();

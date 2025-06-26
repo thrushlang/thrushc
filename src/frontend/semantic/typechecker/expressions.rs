@@ -250,6 +250,15 @@ pub fn validate_expression<'type_checker>(
 
                 let reference_type: &ThrushType = reference.get_value_type()?;
 
+                if !reference_type.is_ptr_type() && !reference_type.is_mut_type() {
+                    typechecker.add_error(ThrushCompilerIssue::Error(
+                        "Type error".into(),
+                        "Expected 'ptr<T>', 'ptr', or 'mut T' type.".into(),
+                        None,
+                        *span,
+                    ));
+                }
+
                 if reference_type.is_ptr_type() && !reference_type.is_typed_ptr() {
                     typechecker.add_error(ThrushCompilerIssue::Error(
                         "Type error".into(),
@@ -267,11 +276,29 @@ pub fn validate_expression<'type_checker>(
                         None,
                         *span,
                     ));
+                } else if !reference_type.is_mut_array_type()
+                    && reference_type.is_mut_fixed_array_type()
+                {
+                    typechecker.add_error(ThrushCompilerIssue::Error(
+                        "Type error".into(),
+                        "Expected deep type, array, or fixed array.".into(),
+                        None,
+                        *span,
+                    ));
                 }
             }
 
             if let Some(expr) = &index_to.1 {
                 let expr_type: &ThrushType = expr.get_any_type()?;
+
+                if !expr_type.is_ptr_type() && !expr_type.is_mut_type() {
+                    typechecker.add_error(ThrushCompilerIssue::Error(
+                        "Type error".into(),
+                        "Expected 'ptr<T>', 'ptr', or 'mut T' type.".into(),
+                        None,
+                        *span,
+                    ));
+                }
 
                 if expr_type.is_ptr_type() && !expr_type.is_typed_ptr() {
                     typechecker.add_error(ThrushCompilerIssue::Error(
@@ -287,6 +314,13 @@ pub fn validate_expression<'type_checker>(
                     typechecker.add_error(ThrushCompilerIssue::Error(
                         "Type error".into(),
                         "Expected raw typed pointer type with deep type.".into(),
+                        None,
+                        *span,
+                    ));
+                } else if !expr_type.is_mut_array_type() && expr_type.is_mut_fixed_array_type() {
+                    typechecker.add_error(ThrushCompilerIssue::Error(
+                        "Type error".into(),
+                        "Expected deep type, array, or fixed array.".into(),
                         None,
                         *span,
                     ));
