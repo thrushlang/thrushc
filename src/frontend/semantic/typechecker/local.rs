@@ -34,7 +34,7 @@ pub fn validate_local<'type_checker>(
             if local_type.is_ptr_type() {
                 typechecker.add_error(ThrushCompilerIssue::Error(
                     "Type error".into(),
-                    "Raw pointer type 'ptr<T>', or 'ptr' can only be used in Low Level Instructions (LLI), use them instead.".into(),
+                    "Raw pointer type 'ptr[T]', or 'ptr' can only be used in Low Level Instructions (LLI), use them instead.".into(),
                     None,
                     *span,
                 ));

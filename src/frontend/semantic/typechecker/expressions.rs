@@ -159,7 +159,7 @@ pub fn validate_expression<'type_checker>(
                 if !source_type.is_ptr_type() && !source_type.is_mut_type() {
                     typechecker.add_error(ThrushCompilerIssue::Error(
                         "Type error".into(),
-                        "Expected 'ptr<T>', 'ptr', or 'mut T' type.".into(),
+                        "Expected 'ptr[T]', 'ptr', or 'mut T' type.".into(),
                         None,
                         *span,
                     ));
@@ -303,7 +303,7 @@ pub fn validate_expression<'type_checker>(
                 if reference_type.is_ptr_type() && !reference_type.is_typed_ptr() {
                     typechecker.add_error(ThrushCompilerIssue::Error(
                         "Type error".into(),
-                        "Expected raw typed pointer ptr<T>.".into(),
+                        "Expected raw typed pointer ptr[T].".into(),
                         None,
                         *span,
                     ));
@@ -337,7 +337,7 @@ pub fn validate_expression<'type_checker>(
                 if expr_type.is_ptr_type() && !expr_type.is_typed_ptr() {
                     typechecker.add_error(ThrushCompilerIssue::Error(
                         "Type error".into(),
-                        "Expected raw typed pointer ptr<T>.".into(),
+                        "Expected raw typed pointer ptr[T].".into(),
                         None,
                         *span,
                     ));

@@ -63,7 +63,7 @@ pub fn validate_memmove<'type_checker>(
     if !source_type.is_ptr_type() && !source_type.is_address_type() && !source_type.is_mut_type() {
         typechecker.add_error(ThrushCompilerIssue::Error(
             "Type error".into(),
-            "Expected 'ptr<T>', 'ptr', 'addr', or 'mut T' type.".into(),
+            "Expected 'ptr[T]', 'ptr', 'addr', or 'mut T' type.".into(),
             None,
             source_span,
         ));
@@ -75,7 +75,7 @@ pub fn validate_memmove<'type_checker>(
     {
         typechecker.add_error(ThrushCompilerIssue::Error(
             "Type error".into(),
-            "Expected 'ptr<T>', 'ptr', 'addr', or 'mut T' type.".into(),
+            "Expected 'ptr[T]', 'ptr', 'addr', or 'mut T' type.".into(),
             None,
             destination_span,
         ));
@@ -114,7 +114,7 @@ pub fn validate_memcpy<'type_checker>(
     if !source_type.is_ptr_type() && !source_type.is_address_type() && !source_type.is_mut_type() {
         typechecker.add_error(ThrushCompilerIssue::Error(
             "Type error".into(),
-            "Expected 'ptr<T>', 'ptr', 'addr', or 'mut T' type.".into(),
+            "Expected 'ptr[T]', 'ptr', 'addr', or 'mut T' type.".into(),
             None,
             source_span,
         ));
@@ -126,7 +126,7 @@ pub fn validate_memcpy<'type_checker>(
     {
         typechecker.add_error(ThrushCompilerIssue::Error(
             "Type error".into(),
-            "Expected 'ptr<T>', 'ptr', 'addr', or 'mut T' type.".into(),
+            "Expected 'ptr[T]', 'ptr', 'addr', or 'mut T' type.".into(),
             None,
             destination_span,
         ));
