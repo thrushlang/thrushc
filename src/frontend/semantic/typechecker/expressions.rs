@@ -100,14 +100,16 @@ pub fn validate_expression<'type_checker>(
             span,
             ..
         } => {
+            let value_type: &ThrushType = value.get_value_type()?;
+
             if let (Some(any_reference), None) = source {
                 let reference: &Ast = &any_reference.1;
                 let reference_type: &ThrushType = reference.get_value_type()?;
 
-                if !reference_type.is_ptr_type() && !reference_type.is_mut_type() {
+                if !reference.is_allocated_reference() {
                     typechecker.add_error(ThrushCompilerIssue::Error(
                         "Type error".into(),
-                        "Expected 'ptr<T>', 'ptr', or 'mut T' type.".into(),
+                        "Expected mutable, or pointer reference.".into(),
                         None,
                         *span,
                     ));
@@ -120,6 +122,30 @@ pub fn validate_expression<'type_checker>(
                         None,
                         reference.get_span(),
                     ));
+                }
+
+                if reference_type.is_mut_type() {
+                    let reference_type: ThrushType = reference_type.defer_mut_all();
+
+                    if let Err(error) = typechecker.validate_types(
+                        &reference_type,
+                        value_type,
+                        Some(value),
+                        None,
+                        None,
+                        span,
+                    ) {
+                        typechecker.add_error(error);
+                    }
+                } else if let Err(error) = typechecker.validate_types(
+                    reference_type,
+                    value_type,
+                    Some(value),
+                    None,
+                    None,
+                    span,
+                ) {
+                    typechecker.add_error(error);
                 }
 
                 typechecker.analyze_ast(value)?;
@@ -146,6 +172,30 @@ pub fn validate_expression<'type_checker>(
                         None,
                         source.get_span(),
                     ));
+                }
+
+                if source_type.is_mut_type() {
+                    let source_type: ThrushType = source_type.defer_mut_all();
+
+                    if let Err(error) = typechecker.validate_types(
+                        &source_type,
+                        value_type,
+                        Some(value),
+                        None,
+                        None,
+                        span,
+                    ) {
+                        typechecker.add_error(error);
+                    }
+                } else if let Err(error) = typechecker.validate_types(
+                    source_type,
+                    value_type,
+                    Some(value),
+                    None,
+                    None,
+                    span,
+                ) {
+                    typechecker.add_error(error);
                 }
 
                 typechecker.analyze_ast(value)?;
@@ -250,15 +300,6 @@ pub fn validate_expression<'type_checker>(
 
                 let reference_type: &ThrushType = reference.get_value_type()?;
 
-                if !reference_type.is_ptr_type() && !reference_type.is_mut_type() {
-                    typechecker.add_error(ThrushCompilerIssue::Error(
-                        "Type error".into(),
-                        "Expected 'ptr<T>', 'ptr', or 'mut T' type.".into(),
-                        None,
-                        *span,
-                    ));
-                }
-
                 if reference_type.is_ptr_type() && !reference_type.is_typed_ptr() {
                     typechecker.add_error(ThrushCompilerIssue::Error(
                         "Type error".into(),
@@ -277,7 +318,9 @@ pub fn validate_expression<'type_checker>(
                         *span,
                     ));
                 } else if !reference_type.is_mut_array_type()
-                    && reference_type.is_mut_fixed_array_type()
+                    && !reference_type.is_mut_fixed_array_type()
+                    && !reference_type.is_array_type()
+                    && !reference_type.is_fixed_array_type()
                 {
                     typechecker.add_error(ThrushCompilerIssue::Error(
                         "Type error".into(),
@@ -290,15 +333,6 @@ pub fn validate_expression<'type_checker>(
 
             if let Some(expr) = &index_to.1 {
                 let expr_type: &ThrushType = expr.get_any_type()?;
-
-                if !expr_type.is_ptr_type() && !expr_type.is_mut_type() {
-                    typechecker.add_error(ThrushCompilerIssue::Error(
-                        "Type error".into(),
-                        "Expected 'ptr<T>', 'ptr', or 'mut T' type.".into(),
-                        None,
-                        *span,
-                    ));
-                }
 
                 if expr_type.is_ptr_type() && !expr_type.is_typed_ptr() {
                     typechecker.add_error(ThrushCompilerIssue::Error(
@@ -317,7 +351,11 @@ pub fn validate_expression<'type_checker>(
                         None,
                         *span,
                     ));
-                } else if !expr_type.is_mut_array_type() && expr_type.is_mut_fixed_array_type() {
+                } else if !expr_type.is_mut_array_type()
+                    && !expr_type.is_mut_fixed_array_type()
+                    && !expr_type.is_array_type()
+                    && !expr_type.is_fixed_array_type()
+                {
                     typechecker.add_error(ThrushCompilerIssue::Error(
                         "Type error".into(),
                         "Expected deep type, array, or fixed array.".into(),
