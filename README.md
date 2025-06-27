@@ -106,3 +106,11 @@ Now you need to compile the compiler with Rust.
 ```console
 cargo run -- --help
 ```
+
+# Curiosities
+
+## ¿Why is this language not bootstrapped?
+ 
+We understand that it's possible to create a compiler wrapper, which would involve developing an overriding compiler to compile the current compiler. However, this process is quite labor-intensive. It is advisable to reserve this for the development stage, once a community has emerged that is dedicated to supporting the compiler.
+
+For more information about compiler bootstrapping: https://bootstrappable.org/
