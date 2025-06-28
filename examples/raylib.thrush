@@ -49,7 +49,6 @@ fn main() {
 
     }
 
-
     // De-Initialization
     //--------------------------------------------------------------------------------------
     CloseWindow();        // Close window and OpenGL context
