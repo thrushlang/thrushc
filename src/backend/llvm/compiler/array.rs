@@ -4,7 +4,7 @@ use super::context::LLVMCodeGenContext;
 use super::typegen;
 use crate::backend::llvm::compiler::memory::{self, LLVMAllocationSite};
 
-use crate::backend::llvm::compiler::{rawgen, valuegen};
+use crate::backend::llvm::compiler::{ptrgen, valuegen};
 use crate::core::console::logging::{self, LoggingType};
 use crate::frontend::types::ast::Ast;
 use crate::frontend::types::lexer::ThrushType;
@@ -102,7 +102,7 @@ fn constant_fixed_array<'ctx>(
         .map(|item| {
             let item_type = item.get_type_unwrapped();
             if item_type.is_ptr_type() || item_type.is_mut_type() {
-                rawgen::compile(context, item, Some(array_item_type))
+                ptrgen::compile(context, item, Some(array_item_type))
             } else {
                 valuegen::compile(context, item, Some(array_item_type))
             }
@@ -294,7 +294,7 @@ fn compile_null_ptr<'ctx>(context: &LLVMCodeGenContext<'_, 'ctx>) -> BasicValueE
 
 fn codegen_abort<T: Display>(message: T) {
     logging::log(
-        LoggingType::Bug,
+        LoggingType::BackendPanic,
         &format!("CODE GENERATION: '{}'.", message),
     );
 }

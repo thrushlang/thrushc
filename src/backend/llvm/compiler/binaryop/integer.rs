@@ -10,6 +10,7 @@ use {
     },
     inkwell::{
         builder::Builder,
+        context::Context,
         values::{BasicValueEnum, IntValue},
     },
 };
@@ -21,6 +22,7 @@ pub fn int_operation<'ctx>(
     signatures: (bool, bool),
     operator: &TokenType,
 ) -> BasicValueEnum<'ctx> {
+    let llvm_context: &Context = context.get_llvm_context();
     let llvm_builder: &Builder = context.get_llvm_builder();
 
     if left.is_int_value() && right.is_int_value() {
@@ -71,16 +73,24 @@ pub fn int_operation<'ctx>(
 
             op if op.is_logical_gate() => {
                 if let TokenType::And = op {
-                    return llvm_builder.build_and(left, right, "").unwrap().into();
+                    if let Ok(and) = llvm_builder.build_and(left, right, "") {
+                        return and.into();
+                    }
+
+                    return llvm_context.bool_type().const_zero().into();
                 }
 
                 if let TokenType::Or = op {
-                    return llvm_builder.build_or(left, right, "").unwrap().into();
+                    if let Ok(or) = llvm_builder.build_or(left, right, "") {
+                        return or.into();
+                    }
+
+                    return llvm_context.bool_type().const_zero().into();
                 }
 
                 logging::log(
-                    LoggingType::Bug,
-                    "Unable to perform integer binary operation without valid logical gate.",
+                    LoggingType::BackendPanic,
+                    "Cannot perform integer binary operation without a valid logical gate.",
                 );
 
                 unreachable!()
@@ -88,8 +98,8 @@ pub fn int_operation<'ctx>(
 
             _ => {
                 logging::log(
-                    LoggingType::Bug,
-                    "Unable to perform integer binary operation without valid operator.",
+                    LoggingType::BackendPanic,
+                    "Cannot perform integer binary operation without a valid operator.",
                 );
 
                 unreachable!()
@@ -98,8 +108,8 @@ pub fn int_operation<'ctx>(
     }
 
     logging::log(
-        LoggingType::Bug,
-        "Unable to perform integer binary operation without int values.",
+        LoggingType::BackendPanic,
+        "Cannot perform integer binary operation without integer values.",
     );
 
     unreachable!()
@@ -149,7 +159,7 @@ pub fn integer_binaryop<'ctx>(
     logging::log(
         LoggingType::Panic,
         &format!(
-            "Could not process a integer binary operation '{} {} {}'.",
+            "Cannot perform integer binary operation '{} {} {}'.",
             binary.0, binary.1, binary.2
         ),
     );

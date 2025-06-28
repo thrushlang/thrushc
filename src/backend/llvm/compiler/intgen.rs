@@ -1,6 +1,9 @@
 use inkwell::{context::Context, values::IntValue};
 
-use crate::frontend::types::lexer::ThrushType;
+use crate::{
+    core::console::logging::{self, LoggingType},
+    frontend::types::lexer::ThrushType,
+};
 
 pub fn integer<'ctx>(
     context: &'ctx Context,
@@ -24,6 +27,13 @@ pub fn integer<'ctx>(
         ThrushType::U64 => context.i64_type().const_int(number, false),
         ThrushType::Bool => context.bool_type().const_int(number, false),
 
-        _ => unreachable!(),
+        what => {
+            logging::log(
+                LoggingType::BackendPanic,
+                &format!("Unsupported integer type: {:#?}", what),
+            );
+
+            unreachable!()
+        }
     }
 }

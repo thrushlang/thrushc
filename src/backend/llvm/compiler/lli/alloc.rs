@@ -7,14 +7,14 @@ use crate::{
     },
     frontend::types::{
         lexer::{ThrushType, traits::ThrushTypePointerExtensions},
-        parser::stmts::sites::LLIAllocationSite,
+        parser::stmts::sites::AllocationSite,
     },
 };
 
 pub fn compile<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     type_to_alloc: &ThrushType,
-    site_allocation: &LLIAllocationSite,
+    site_allocation: &AllocationSite,
 ) -> BasicValueEnum<'ctx> {
     let site: LLVMAllocationSite = site_allocation.to_llvm_allocation_site();
 

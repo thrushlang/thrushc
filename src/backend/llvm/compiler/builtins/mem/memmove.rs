@@ -10,7 +10,7 @@ use inkwell::{
 };
 
 use crate::{
-    backend::llvm::compiler::{context::LLVMCodeGenContext, rawgen, typegen, valuegen},
+    backend::llvm::compiler::{context::LLVMCodeGenContext, ptrgen, typegen, valuegen},
     core::console::logging::{self, LoggingType},
     frontend::types::{ast::Ast, lexer::ThrushType},
 };
@@ -25,10 +25,10 @@ pub fn compile<'ctx>(
     let llvm_builder: &Builder = context.get_llvm_builder();
 
     let src: PointerValue =
-        rawgen::compile(context, source, Some(&ThrushType::Ptr(None))).into_pointer_value();
+        ptrgen::compile(context, source, Some(&ThrushType::Ptr(None))).into_pointer_value();
 
     let dest: PointerValue =
-        rawgen::compile(context, destination, Some(&ThrushType::Ptr(None))).into_pointer_value();
+        ptrgen::compile(context, destination, Some(&ThrushType::Ptr(None))).into_pointer_value();
 
     let size: IntValue = valuegen::compile(context, size, None).into_int_value();
 
@@ -53,7 +53,7 @@ pub fn compile<'ctx>(
 
 fn codegen_abort<T: Display>(message: T) {
     logging::log(
-        LoggingType::Bug,
+        LoggingType::BackendPanic,
         &format!("CODE GENERATION: '{}'.", message),
     );
 }

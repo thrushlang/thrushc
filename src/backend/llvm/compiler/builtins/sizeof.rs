@@ -5,7 +5,7 @@ use inkwell::{
 };
 
 use crate::{
-    backend::llvm::compiler::{context::LLVMCodeGenContext, typegen},
+    backend::llvm::compiler::{cast, context::LLVMCodeGenContext, typegen},
     core::console::logging::{self, LoggingType},
     frontend::types::lexer::ThrushType,
 };
@@ -13,12 +13,13 @@ use crate::{
 pub fn compile<'ctx>(
     context: &LLVMCodeGenContext<'_, 'ctx>,
     sizeof_type: &ThrushType,
+    cast_type: Option<&ThrushType>,
 ) -> BasicValueEnum<'ctx> {
     let llvm_context: &Context = context.get_llvm_context();
 
     let llvm_type: BasicTypeEnum = typegen::generate_type(llvm_context, sizeof_type);
 
-    llvm_type
+    let mut sizeof_value: BasicValueEnum = llvm_type
         .size_of()
         .unwrap_or_else(|| {
             logging::log(
@@ -27,5 +28,13 @@ pub fn compile<'ctx>(
             );
             unreachable!()
         })
-        .into()
+        .into();
+
+    if let Some(cast_type) = cast_type {
+        if let Some(casted_size) = cast::try_cast(context, cast_type, sizeof_type, sizeof_value) {
+            sizeof_value = casted_size;
+        }
+    }
+
+    sizeof_value
 }

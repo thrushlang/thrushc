@@ -18,7 +18,7 @@ use crate::{
             lexer::ThrushType,
             parser::stmts::{
                 ident::ReferenceIdentificator,
-                sites::LLIAllocationSite,
+                sites::AllocationSite,
                 types::{Constructor, EnumFields, StructFields, ThrushAttributes},
             },
         },
@@ -271,7 +271,7 @@ pub enum Ast<'ctx> {
     // Pointer Manipulation
     Alloc {
         type_to_alloc: ThrushType,
-        site_allocation: LLIAllocationSite,
+        site_allocation: AllocationSite,
         attributes: ThrushAttributes<'ctx>,
         span: Span,
     },

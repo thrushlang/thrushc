@@ -56,9 +56,10 @@ pub enum Builtin<'ctx> {
 pub fn compile<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     builtin: &'ctx Builtin<'ctx>,
+    cast_type: Option<&ThrushType>,
 ) -> BasicValueEnum<'ctx> {
     match builtin {
-        Builtin::AlignOf { align_of } => mem::alingof::compile(context, align_of),
+        Builtin::AlignOf { align_of } => mem::alingof::compile(context, align_of, cast_type),
 
         Builtin::MemCpy {
             source,
@@ -89,7 +90,7 @@ pub fn compile<'ctx>(
 
 fn codegen_abort<T: Display>(message: T) {
     logging::log(
-        LoggingType::Bug,
+        LoggingType::BackendPanic,
         &format!("CODE GENERATION: '{}'.", message),
     );
 }

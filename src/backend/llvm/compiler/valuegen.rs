@@ -5,7 +5,7 @@ use super::typegen;
 use crate::backend::llvm::compiler::attributes::LLVMAttribute;
 use crate::backend::llvm::compiler::memory::{self, SymbolAllocated};
 use crate::backend::llvm::compiler::{
-    array, binaryop, builtins, cast, floatgen, intgen, lli, rawgen, unaryop, utils, valuegen,
+    array, binaryop, builtins, cast, floatgen, intgen, lli, ptrgen, unaryop, utils, valuegen,
 };
 
 use crate::backend::types::LLVMEitherExpression;
@@ -35,10 +35,14 @@ pub fn compile<'ctx>(
     cast_type: Option<&ThrushType>,
 ) -> BasicValueEnum<'ctx> {
     match expr {
+        // Literal Expressions
+        // Compiles a null pointer literal
         Ast::NullPtr { .. } => self::compile_null_ptr(context),
 
+        // Compiles a string literal
         Ast::Str { bytes, kind, .. } => self::compile_string(context, bytes, kind),
 
+        // Compiles a floating-point literal
         Ast::Float {
             kind,
             value,
@@ -46,6 +50,7 @@ pub fn compile<'ctx>(
             ..
         } => self::compile_float(context, kind, *value, *signed, cast_type),
 
+        // Compiles an integer literal
         Ast::Integer {
             kind,
             value,
@@ -53,14 +58,23 @@ pub fn compile<'ctx>(
             ..
         } => self::compile_integer(context, kind, *value, *signed, cast_type),
 
+        // Compiles a character literal
         Ast::Char { byte, .. } => self::compile_char(context, *byte),
 
+        // Compiles a boolean literal
         Ast::Boolean { value, .. } => self::compile_boolean(context, *value),
 
+        // Function and Built-in Calls
+        // Compiles a function call
         Ast::Call {
             name, args, kind, ..
         } => self::compile_function_call(context, name, args, kind, cast_type),
 
+        // Compiles a sizeof operation
+        Ast::SizeOf { sizeof, .. } => builtins::sizeof::compile(context, sizeof, cast_type),
+
+        // Operations
+        // Compiles a binary operation (e.g., a + b)
         Ast::BinaryOp {
             left,
             operator,
@@ -69,6 +83,7 @@ pub fn compile<'ctx>(
             ..
         } => self::compile_binary_op(context, left, operator, right, binaryop_type, cast_type),
 
+        // Compiles a unary operation (e.g., -x)
         Ast::UnaryOp {
             operator,
             kind,
@@ -76,14 +91,11 @@ pub fn compile<'ctx>(
             ..
         } => self::compile_unary_op(context, operator, kind, expression, cast_type),
 
-        Ast::Group { expression, .. } => self::compile(context, expression, cast_type),
+        // Symbol/Property Access
+        // Compiles a reference to a variable or symbol
+        Ast::Reference { name, .. } => self::compile_reference(context, name),
 
-        Ast::SizeOf { sizeof, .. } => builtins::sizeof::compile(context, sizeof),
-
-        Ast::As { from, cast, .. } => self::compile_cast(context, from, cast),
-
-        Ast::Deref { value, kind, .. } => self::compile_deref(context, value, kind, cast_type),
-
+        // Compiles property access (e.g., struct field or array)
         Ast::Property {
             name,
             indexes,
@@ -91,8 +103,33 @@ pub fn compile<'ctx>(
             ..
         } => self::compile_property(context, name, indexes, kind),
 
-        Ast::Reference { name, .. } => self::compile_reference(context, name),
+        // Memory Access Operations
+        // Compiles an indexing operation (e.g., array access)
+        Ast::Index {
+            index_to, indexes, ..
+        } => self::compile_index(context, index_to, indexes),
 
+        // Compiles a dereference operation (e.g., *pointer)
+        Ast::Deref { value, kind, .. } => self::compile_deref(context, value, kind, cast_type),
+
+        // Array Operations
+        // Compiles a fixed-size array
+        Ast::FixedArray { items, kind, .. } => {
+            array::compile_fixed_array(context, kind, items, cast_type)
+        }
+
+        // Compiles a dynamic array
+        Ast::Array { items, kind, .. } => array::compile_array(context, kind, items, cast_type),
+
+        // Type/Structural Operations
+        // Compiles a grouped expression (e.g., parenthesized)
+        Ast::Group { expression, .. } => self::compile(context, expression, cast_type),
+
+        // Compiles a type cast operation
+        Ast::As { from, cast, .. } => self::compile_cast(context, from, cast),
+
+        // Low-Level Operations
+        // Compiles inline assembly code
         Ast::AsmValue {
             assembler,
             constraints,
@@ -102,16 +139,8 @@ pub fn compile<'ctx>(
             ..
         } => self::compile_inline_asm(context, assembler, constraints, args, kind, attributes),
 
-        Ast::Index {
-            index_to, indexes, ..
-        } => self::compile_index(context, index_to, indexes),
-
-        Ast::FixedArray { items, kind, .. } => {
-            array::compile_fixed_array(context, kind, items, cast_type)
-        }
-
-        Ast::Array { items, kind, .. } => array::compile_array(context, kind, items, cast_type),
-
+        // Fallback
+        // Fallback for unhandled AST variants
         _ => lli::compile(context, expr, cast_type),
     }
 }
@@ -201,7 +230,7 @@ fn compile_function_call<'ctx>(
 
             let arg: BasicValueEnum =
                 if arg_cast_type.is_some_and(|t| t.is_ptr_type() || t.is_mut_type()) {
-                    rawgen::compile(context, arg, arg_cast_type)
+                    ptrgen::compile(context, arg, arg_cast_type)
                 } else {
                     self::compile(context, arg, arg_cast_type)
                 };
@@ -286,7 +315,7 @@ fn compile_cast<'ctx>(
     let llvm_builder: &Builder = context.get_llvm_builder();
 
     if from_type.is_str_type() && cast.is_ptr_type() {
-        let val: BasicValueEnum = rawgen::compile(context, from, None);
+        let val: BasicValueEnum = ptrgen::compile(context, from, None);
 
         if val.is_pointer_value() {
             let raw_str_ptr: PointerValue = val.into_pointer_value();
@@ -310,7 +339,7 @@ fn compile_cast<'ctx>(
             }
         }
     } else if cast.is_ptr_type() || cast.is_mut_type() {
-        let val: BasicValueEnum = rawgen::compile(context, from, None);
+        let val: BasicValueEnum = ptrgen::compile(context, from, None);
 
         if val.is_pointer_value() {
             let to: PointerType = typegen::generate_type(llvm_context, cast).into_pointer_type();
@@ -530,7 +559,7 @@ fn compile_index<'ctx>(
                 .into()
         }
         (_, Some(expr)) => {
-            let expr_ptr: PointerValue = rawgen::compile(context, expr, None).into_pointer_value();
+            let expr_ptr: PointerValue = ptrgen::compile(context, expr, None).into_pointer_value();
             let expr_type: &ThrushType = expr.get_type_unwrapped();
 
             let ordered_indexes: Vec<IntValue> = self::compute_indexes(context, indexes, expr_type);
@@ -591,7 +620,7 @@ fn compile_null_ptr<'ctx>(context: &LLVMCodeGenContext<'_, 'ctx>) -> BasicValueE
 
 fn codegen_abort<T: Display>(message: T) {
     logging::log(
-        LoggingType::Bug,
+        LoggingType::BackendPanic,
         &format!("CODE GENERATION: '{}'.", message),
     );
 }

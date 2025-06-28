@@ -17,7 +17,7 @@ pub mod memory;
 pub mod mutation;
 pub mod optimizations;
 pub mod predicates;
-pub mod rawgen;
+pub mod ptrgen;
 pub mod typegen;
 pub mod unaryop;
 pub mod utils;

@@ -1,6 +1,9 @@
 use inkwell::{FloatPredicate, IntPredicate};
 
-use crate::frontend::lexer::tokentype::TokenType;
+use crate::{
+    core::console::logging::{self, LoggingType},
+    frontend::lexer::tokentype::TokenType,
+};
 
 #[must_use]
 pub fn integer(operator: &TokenType, left_signed: bool, right_signed: bool) -> IntPredicate {
@@ -24,7 +27,13 @@ pub fn integer(operator: &TokenType, left_signed: bool, right_signed: bool) -> I
         TokenType::LessEq if !left_signed && right_signed => IntPredicate::SLE,
         TokenType::LessEq if left_signed && right_signed => IntPredicate::SLE,
 
-        _ => unreachable!(),
+        _ => {
+            logging::log(
+                LoggingType::BackendPanic,
+                "Incompatible precedence for integers.",
+            );
+            unreachable!()
+        }
     }
 }
 
@@ -34,7 +43,14 @@ pub fn pointer(operator: &TokenType) -> IntPredicate {
         TokenType::EqEq => IntPredicate::EQ,
         TokenType::BangEq => IntPredicate::NE,
 
-        _ => unreachable!(),
+        _ => {
+            logging::log(
+                LoggingType::BackendPanic,
+                "Incompatible precedence for pointers.",
+            );
+
+            unreachable!()
+        }
     }
 }
 
@@ -48,6 +64,13 @@ pub fn float(operator: &TokenType) -> FloatPredicate {
         TokenType::Less => FloatPredicate::OLT,
         TokenType::LessEq => FloatPredicate::OLE,
 
-        _ => unreachable!(),
+        _ => {
+            logging::log(
+                LoggingType::BackendPanic,
+                "Incompatible precedence for floats.",
+            );
+
+            unreachable!()
+        }
     }
 }

@@ -1,5 +1,5 @@
 use crate::backend::llvm::compiler::{cast, valuegen};
-use crate::core::console::logging;
+use crate::core::console::logging::{self, LoggingType};
 use crate::frontend::lexer::tokentype::TokenType;
 use crate::frontend::types::ast::Ast;
 use crate::frontend::types::lexer::ThrushType;
@@ -30,6 +30,7 @@ pub fn unary_op<'ctx>(
         }
 
         (TokenType::Bang, _, expr) => compile_logical_negation(context, expr, cast_type),
+
         (TokenType::Minus, _, expr) => compile_arithmetic_negation(context, expr, cast_type),
 
         _ => {
@@ -51,6 +52,7 @@ fn compile_increment_decrement_ref<'ctx>(
 ) -> BasicValueEnum<'ctx> {
     let llvm_builder: &Builder = context.get_llvm_builder();
     let llvm_context: &Context = context.get_llvm_context();
+
     let symbol: SymbolAllocated = context.get_allocated_symbol(name);
 
     match kind {
@@ -58,7 +60,7 @@ fn compile_increment_decrement_ref<'ctx>(
             let int: IntValue = symbol.load(context).into_int_value();
 
             let modifier: IntValue =
-                typegen::thrush_integer_to_llvm_type(llvm_context, kind).const_int(1, false);
+                typegen::integer_to_llvm_type(llvm_context, kind).const_int(1, false);
 
             let mut result: BasicValueEnum = match operator {
                 TokenType::PlusPlus => match llvm_builder.build_int_nsw_add(int, modifier, "") {
@@ -81,7 +83,14 @@ fn compile_increment_decrement_ref<'ctx>(
                         unreachable!()
                     }
                 },
-                _ => unreachable!(),
+                _ => {
+                    logging::log(
+                        LoggingType::Bug,
+                        "Unknown operator compared to reference increment and decrement in unary operation.",
+                    );
+
+                    unreachable!()
+                }
             };
 
             symbol.store(context, result);
@@ -141,7 +150,7 @@ fn compile_increment_decrement<'ctx>(
             let int: IntValue = value.into_int_value();
 
             let modifier: IntValue =
-                typegen::thrush_integer_to_llvm_type(llvm_context, kind).const_int(1, false);
+                typegen::integer_to_llvm_type(llvm_context, kind).const_int(1, false);
 
             let mut result: BasicValueEnum = match operator {
                 TokenType::PlusPlus => match llvm_builder.build_int_nsw_add(int, modifier, "") {
@@ -151,6 +160,7 @@ fn compile_increment_decrement<'ctx>(
                             logging::LoggingType::Bug,
                             "Failed to compile an incrementer.",
                         );
+
                         unreachable!()
                     }
                 },
@@ -164,7 +174,15 @@ fn compile_increment_decrement<'ctx>(
                         unreachable!()
                     }
                 },
-                _ => unreachable!(),
+
+                _ => {
+                    logging::log(
+                        LoggingType::Bug,
+                        "Unknown operator compared to increment and decrement in unary operation.",
+                    );
+
+                    unreachable!()
+                }
             };
 
             if let Some(cast_type) = cast_type {
@@ -186,11 +204,20 @@ fn compile_increment_decrement<'ctx>(
                     .build_float_add(float, modifier, "")
                     .unwrap()
                     .into(),
+
                 TokenType::MinusMinus => llvm_builder
                     .build_float_sub(float, modifier, "")
                     .unwrap()
                     .into(),
-                _ => unreachable!(),
+
+                _ => {
+                    logging::log(
+                        LoggingType::Bug,
+                        "Unknown operator compared to increment and decrement in unary operation.",
+                    );
+
+                    unreachable!()
+                }
             };
 
             if let Some(cast_type) = cast_type {
@@ -218,30 +245,37 @@ fn compile_logical_negation<'ctx>(
         kind if kind.is_integer_type() || kind.is_bool_type() => {
             let int: IntValue = value.into_int_value();
 
-            let mut result: BasicValueEnum = llvm_builder.build_not(int, "").unwrap().into();
+            if let Ok(result) = llvm_builder.build_int_neg(int, "") {
+                let mut result: BasicValueEnum = result.into();
 
-            if let Some(cast_type) = cast_type {
-                if let Some(casted_int) = cast::integer(context, cast_type, kind, result) {
-                    result = casted_int;
+                if let Some(cast_type) = cast_type {
+                    if let Some(casted_int) = cast::integer(context, cast_type, kind, result) {
+                        result = casted_int;
+                    }
                 }
+
+                return result;
             }
 
-            result
+            int.into()
         }
 
         _ => {
             let float: FloatValue = value.into_float_value();
 
-            let mut result: BasicValueEnum =
-                llvm_builder.build_float_neg(float, "").unwrap().into();
+            if let Ok(result) = llvm_builder.build_float_neg(float, "") {
+                let mut result: BasicValueEnum = result.into();
 
-            if let Some(cast_type) = cast_type {
-                if let Some(casted_float) = cast::float(context, cast_type, kind, result) {
-                    result = casted_float;
+                if let Some(cast_type) = cast_type {
+                    if let Some(casted_float) = cast::float(context, cast_type, kind, result) {
+                        result = casted_float;
+                    }
                 }
+
+                return result;
             }
 
-            result
+            float.into()
         }
     }
 }
@@ -260,30 +294,37 @@ fn compile_arithmetic_negation<'ctx>(
         kind if kind.is_integer_type() || kind.is_bool_type() => {
             let int: IntValue = value.into_int_value();
 
-            let mut result: BasicValueEnum = llvm_builder.build_not(int, "").unwrap().into();
+            if let Ok(result) = llvm_builder.build_int_neg(int, "") {
+                let mut result: BasicValueEnum = result.into();
 
-            if let Some(cast_type) = cast_type {
-                if let Some(casted_int) = cast::integer(context, cast_type, kind, result) {
-                    result = casted_int;
+                if let Some(cast_type) = cast_type {
+                    if let Some(casted_int) = cast::integer(context, cast_type, kind, result) {
+                        result = casted_int;
+                    }
                 }
+
+                return result;
             }
 
-            result
+            int.into()
         }
 
         _ => {
             let float: FloatValue = value.into_float_value();
 
-            let mut result: BasicValueEnum =
-                llvm_builder.build_float_neg(float, "").unwrap().into();
+            if let Ok(result) = llvm_builder.build_float_neg(float, "") {
+                let mut result: BasicValueEnum = result.into();
 
-            if let Some(cast_type) = cast_type {
-                if let Some(casted_float) = cast::float(context, cast_type, kind, result) {
-                    result = casted_float;
+                if let Some(cast_type) = cast_type {
+                    if let Some(casted_float) = cast::float(context, cast_type, kind, result) {
+                        result = casted_float;
+                    }
                 }
+
+                return result;
             }
 
-            result
+            float.into()
         }
     }
 }

@@ -3,13 +3,14 @@ use inkwell::{
 };
 
 use crate::{
-    backend::llvm::compiler::{context::LLVMCodeGenContext, typegen},
+    backend::llvm::compiler::{cast, context::LLVMCodeGenContext, typegen},
     frontend::types::lexer::ThrushType,
 };
 
 pub fn compile<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     alingof_type: &'ctx ThrushType,
+    cast_type: Option<&ThrushType>,
 ) -> BasicValueEnum<'ctx> {
     let llvm_context: &Context = context.get_llvm_context();
 
@@ -19,8 +20,17 @@ pub fn compile<'ctx>(
 
     let alignment: u32 = target_data.get_preferred_alignment(&llvm_type);
 
-    llvm_context
+    let mut alignment: BasicValueEnum = llvm_context
         .i32_type()
         .const_int(alignment.into(), false)
-        .into()
+        .into();
+
+    if let Some(cast_type) = cast_type {
+        if let Some(casted_alignment) = cast::try_cast(context, cast_type, alingof_type, alignment)
+        {
+            alignment = casted_alignment;
+        }
+    }
+
+    alignment
 }

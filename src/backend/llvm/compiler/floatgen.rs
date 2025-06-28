@@ -1,6 +1,9 @@
 use inkwell::{builder::Builder, context::Context, values::FloatValue};
 
-use crate::frontend::types::lexer::ThrushType;
+use crate::{
+    core::console::logging::{self, LoggingType},
+    frontend::types::lexer::ThrushType,
+};
 
 pub fn float<'ctx>(
     builder: &Builder<'ctx>,
@@ -19,6 +22,13 @@ pub fn float<'ctx>(
             .unwrap(),
         ThrushType::F64 => context.f64_type().const_float(number),
 
-        _ => unreachable!(),
+        what => {
+            logging::log(
+                LoggingType::BackendPanic,
+                &format!("Unsupported integer type: {:#?}", what),
+            );
+
+            unreachable!()
+        }
     }
 }

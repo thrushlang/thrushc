@@ -4,7 +4,7 @@ use crate::{
     backend::llvm::compiler::{
         context::LLVMCodeGenContext,
         memory::{self, SymbolAllocated},
-        rawgen, valuegen,
+        ptrgen, valuegen,
     },
     core::console::logging::{self, LoggingType},
     frontend::types::ast::Ast,
@@ -25,7 +25,7 @@ pub fn compile<'ctx>(context: &mut LLVMCodeGenContext<'_, 'ctx>, expr: &'ctx Ast
         }
 
         if let Some(expr) = &source.1 {
-            let ptr: BasicValueEnum = rawgen::compile(context, expr, None);
+            let ptr: BasicValueEnum = ptrgen::compile(context, expr, None);
             let value: BasicValueEnum = valuegen::compile(context, value, None);
 
             memory::store_anon(context, ptr.into_pointer_value(), value);
@@ -33,8 +33,11 @@ pub fn compile<'ctx>(context: &mut LLVMCodeGenContext<'_, 'ctx>, expr: &'ctx Ast
             return;
         }
 
-        logging::log(LoggingType::Bug, "Could not get value of an mutation.");
+        logging::log(
+            LoggingType::BackendPanic,
+            "The source of a mutation could not be obtained.",
+        );
     }
 
-    logging::log(LoggingType::Bug, "Couldn't perform mutation.");
+    logging::log(LoggingType::BackendPanic, "A mutation cannot be executed.");
 }

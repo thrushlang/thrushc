@@ -1,6 +1,6 @@
 #![allow(clippy::collapsible_if)]
 
-use crate::backend::llvm::compiler::{builtins, lli, mutation, rawgen, utils};
+use crate::backend::llvm::compiler::{builtins, lli, mutation, ptrgen, utils};
 use crate::backend::types::{repr::LLVMFunction, traits::AssemblerFunctionExtensions};
 use crate::core::console::logging::{self, LoggingType};
 use crate::frontend::types::lexer::ThrushType;
@@ -53,7 +53,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
     }
 
     fn start(&mut self) {
-        self.init_assembler_functions();
+        self.init_asm_functions();
         self.init_functions();
         self.init_constants();
 
@@ -89,7 +89,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                     .is_err()
                 {
                     logging::log(
-                        LoggingType::Bug,
+                        LoggingType::BackendPanic,
                         "Unable to build the return of entrypoint.",
                     );
                 }
@@ -106,7 +106,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                     if llvm_builder.build_return(None).is_err() {
                         {
                             logging::log(
-                                LoggingType::Bug,
+                                LoggingType::BackendPanic,
                                 "Unable to build the return instruction at code generation time.",
                             );
                         }
@@ -116,7 +116,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 if let Some(expression) = expression {
                     if kind.is_ptr_type() || kind.is_mut_type() {
                         if llvm_builder
-                            .build_return(Some(&rawgen::compile(
+                            .build_return(Some(&ptrgen::compile(
                                 self.context,
                                 expression,
                                 Some(kind),
@@ -125,7 +125,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                         {
                             {
                                 logging::log(
-                                    LoggingType::Bug,
+                                    LoggingType::BackendPanic,
                                     "Unable to build the return instruction at code generation time.",
                                 );
                             }
@@ -140,7 +140,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                     {
                         {
                             logging::log(
-                                LoggingType::Bug,
+                                LoggingType::BackendPanic,
                                 "Unable to build the return instruction at code generation time.",
                             );
                         }
@@ -342,7 +342,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 }
 
                 logging::log(
-                    LoggingType::Bug,
+                    LoggingType::BackendPanic,
                     "The current function could not be obtained at code generation time.",
                 );
             }
@@ -415,7 +415,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 }
 
                 logging::log(
-                    LoggingType::Bug,
+                    LoggingType::BackendPanic,
                     "The current function could not be obtained at code generation time.",
                 );
             }
@@ -451,7 +451,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 }
 
                 logging::log(
-                    LoggingType::Bug,
+                    LoggingType::BackendPanic,
                     "The current function could not be obtained at code generation time.",
                 );
             }
@@ -517,7 +517,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 }
 
                 logging::log(
-                    LoggingType::Bug,
+                    LoggingType::BackendPanic,
                     "The current function could not be obtained at code generation time.",
                 );
             }
@@ -618,7 +618,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
             }
 
             Ast::Builtin { builtin, .. } => {
-                builtins::compile(self.context, builtin);
+                builtins::compile(self.context, builtin, None);
             }
 
             _ => (),
@@ -668,7 +668,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
             );
         } else {
             logging::log(
-                LoggingType::Bug,
+                LoggingType::BackendPanic,
                 "The value of a parameter of an LLVM function could not be obtained at code generation time.",
             );
         }
@@ -740,7 +740,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         });
     }
 
-    fn init_assembler_functions(&mut self) {
+    fn init_asm_functions(&mut self) {
         self.ast.iter().for_each(|stmt| {
             if stmt.is_asm_function() {
                 self.compile_asm_function(stmt);
@@ -764,6 +764,14 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
             }
         });
     }
+
+    /* ######################################################################
+
+
+        CODEGEN FORWARD DECLARATION | END
+
+
+    ########################################################################*/
 
     fn compile_asm_function(&mut self, stmt: &'ctx Ast) {
         let llvm_module: &Module = self.context.get_llvm_module();
@@ -848,7 +856,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                     llvm_builder.build_return(Some(&return_value))
             .map_err(|_| {
                 logging::log(
-                    LoggingType::Bug,
+                    LoggingType::BackendPanic,
                     "Failed to create return terminator with value in assembly function generation.",
                 );
             })
@@ -858,7 +866,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                     llvm_builder.build_return(None)
             .map_err(|_| {
                 logging::log(
-                    LoggingType::Bug,
+                    LoggingType::BackendPanic,
                     "Failed to create void return terminator in assembly function generation.",
                 );
             })
@@ -867,7 +875,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
             }
         } else {
             logging::log(
-                LoggingType::Bug,
+                LoggingType::BackendPanic,
                 "Unable to create indirect call for call assembly function.",
             );
         }
@@ -954,12 +962,4 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
             (function, function_parameters_types, call_convention),
         );
     }
-
-    /* ######################################################################
-
-
-        CODEGEN FORWARD DECLARATION | END
-
-
-    ########################################################################*/
 }

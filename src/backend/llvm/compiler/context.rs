@@ -88,7 +88,7 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
             last_block.insert(name, local);
         } else {
             logging::log(
-                LoggingType::Bug,
+                LoggingType::BackendPanic,
                 "The last frame of symbols could not be obtained.",
             );
         }
@@ -107,7 +107,7 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
             last_block.insert(name, lli);
         } else {
             logging::log(
-                LoggingType::Bug,
+                LoggingType::BackendPanic,
                 "The last frame of symbols could not be obtained.",
             );
         }
@@ -162,7 +162,7 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
         }
 
         logging::log(
-            LoggingType::Bug,
+            LoggingType::BackendPanic,
             &format!(
                 "Unable to get '{}' allocated object at frame pointer number #{}.",
                 name, self.scope
@@ -178,7 +178,7 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
         }
 
         logging::log(
-            LoggingType::Bug,
+            LoggingType::BackendPanic,
             &format!("Unable to get '{}' function in global frame.", name),
         );
 

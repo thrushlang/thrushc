@@ -4,7 +4,7 @@ use super::context::LLVMCodeGenContext;
 use super::typegen;
 use crate::backend::llvm::compiler::attributes::LLVMAttribute;
 use crate::backend::llvm::compiler::memory::{self, SymbolAllocated};
-use crate::backend::llvm::compiler::{builtins, cast, intgen, lli, rawgen, utils, valuegen};
+use crate::backend::llvm::compiler::{builtins, cast, intgen, lli, ptrgen, utils, valuegen};
 use crate::backend::types::LLVMEitherExpression;
 use crate::backend::types::repr::LLVMFunction;
 use crate::backend::types::traits::AssemblerFunctionExtensions;
@@ -31,26 +31,36 @@ pub fn compile<'ctx>(
     cast_type: Option<&ThrushType>,
 ) -> BasicValueEnum<'ctx> {
     match expr {
+        // Compiles a null pointer literal
         Ast::NullPtr { .. } => self::compile_null_ptr(context),
 
+        // Compiles a string literal
         Ast::Str { bytes, .. } => self::compile_string(context, bytes),
 
+        // Compiles a function call
         Ast::Call {
             name, args, kind, ..
         } => compile_function_call(context, name, args, kind, cast_type),
 
+        // Compiles a grouped expression (e.g., parenthesized)
         Ast::Group { expression, .. } => self::compile(context, expression, cast_type),
 
+        // Compiles a type cast operation
         Ast::As { from, cast, .. } => self::compile_cast(context, from, cast),
 
+        // Compiles a dereference operation (e.g., *pointer)
         Ast::Deref { value, kind, .. } => self::compile_deref(context, value, kind, cast_type),
 
+        // Compiles property access (e.g., struct field or array)
         Ast::Property { name, indexes, .. } => self::compile_property(context, name, indexes),
 
-        Ast::Builtin { builtin, .. } => builtins::compile(context, builtin),
+        // Compiles a built-in function or operation
+        Ast::Builtin { builtin, .. } => builtins::compile(context, builtin, cast_type),
 
+        // Compiles a reference to a variable or symbol
         Ast::Reference { name, .. } => self::compile_reference(context, name),
 
+        // Compiles inline assembly code
         Ast::AsmValue {
             assembler,
             constraints,
@@ -60,10 +70,12 @@ pub fn compile<'ctx>(
             ..
         } => self::compile_inline_asm(context, assembler, constraints, args, kind, attributes),
 
+        // Compiles an indexing operation (e.g., array access)
         Ast::Index {
             index_to, indexes, ..
         } => self::compile_index(context, index_to, indexes),
 
+        // Fallback for unhandled AST variants
         _ => lli::compile(context, expr, cast_type),
     }
 }
@@ -135,7 +147,7 @@ fn compile_cast<'ctx>(
     let llvm_context: &Context = context.get_llvm_context();
     let llvm_builder: &Builder = context.get_llvm_builder();
 
-    let val: BasicValueEnum = rawgen::compile(context, from, None);
+    let val: BasicValueEnum = ptrgen::compile(context, from, None);
 
     if !val.is_pointer_value() {
         self::codegen_abort(format!(
@@ -350,7 +362,7 @@ fn compile_index<'ctx>(
                 .into()
         }
         (_, Some(expr)) => {
-            let expr_ptr: PointerValue = rawgen::compile(context, expr, None).into_pointer_value();
+            let expr_ptr: PointerValue = ptrgen::compile(context, expr, None).into_pointer_value();
             let expr_type: &ThrushType = expr.get_type_unwrapped();
 
             let ordered_indexes: Vec<IntValue> = self::compute_indexes(context, indexes, expr_type);
@@ -405,7 +417,7 @@ fn compile_null_ptr<'ctx>(context: &LLVMCodeGenContext<'_, 'ctx>) -> BasicValueE
 
 fn codegen_abort<T: Display>(message: T) {
     logging::log(
-        LoggingType::Bug,
+        LoggingType::BackendPanic,
         &format!("CODE GENERATION: '{}'.", message),
     );
 }

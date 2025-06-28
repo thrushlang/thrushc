@@ -3,7 +3,6 @@ use std::fmt::Display;
 use inkwell::{AddressSpace, values::BasicValueEnum};
 
 use crate::{
-    backend::llvm::compiler::rawgen,
     core::console::logging::{self, LoggingType},
     frontend::types::{ast::Ast, lexer::ThrushType},
 };
@@ -21,11 +20,7 @@ pub fn new<'ctx>(
     expr: &'ctx Ast,
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
 ) {
-    let value: BasicValueEnum = if kind.is_ptr_type() || kind.is_mut_type() {
-        rawgen::compile(context, expr, Some(kind))
-    } else {
-        valuegen::compile(context, expr, Some(kind))
-    };
+    let value: BasicValueEnum = valuegen::compile(context, expr, Some(kind));
 
     context.alloc_lli(name, kind, value);
 }
@@ -43,7 +38,7 @@ pub fn compile<'ctx>(
             ..
         } => self::write::compile(context, write_to, write_type, write_value),
 
-        Ast::Load { value, kind, .. } => self::load::compile(context, value, kind),
+        Ast::Load { value, kind, .. } => self::load::compile(context, value, kind, cast_type),
 
         Ast::Address {
             address_to,
@@ -70,10 +65,7 @@ fn handle_unknown_expression<'ctx, T: Display>(
 }
 
 fn codegen_abort<T: Display>(message: T) {
-    logging::log(
-        LoggingType::Bug,
-        &format!("CODE GENERATION: '{}'.", message),
-    );
+    logging::log(LoggingType::BackendPanic, &format!("{}.", message));
 }
 
 fn compile_null_ptr<'ctx>(context: &LLVMCodeGenContext<'_, 'ctx>) -> BasicValueEnum<'ctx> {

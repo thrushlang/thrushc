@@ -14,6 +14,7 @@ use {
     },
     inkwell::{
         builder::Builder,
+        context::Context,
         values::{BasicValueEnum, FloatValue, IntValue},
     },
 };
@@ -24,6 +25,7 @@ pub fn bool_operation<'ctx>(
     right: BasicValueEnum<'ctx>,
     operator: &TokenType,
 ) -> BasicValueEnum<'ctx> {
+    let llvm_context: &Context = context.get_llvm_context();
     let llvm_builder: &Builder = context.get_llvm_builder();
 
     if left.is_int_value() && right.is_int_value() {
@@ -40,21 +42,34 @@ pub fn bool_operation<'ctx>(
 
             op if op.is_logical_gate() => {
                 if let TokenType::And = op {
-                    return llvm_builder.build_and(left, right, "").unwrap().into();
-                }
+                    if let Ok(and) = llvm_builder.build_and(left, right, "") {
+                        return and.into();
+                    }
 
-                if let TokenType::Or = op {
-                    return llvm_builder.build_or(left, right, "").unwrap().into();
+                    return llvm_context.bool_type().const_zero().into();
+                } else if let TokenType::Or = op {
+                    if let Ok(or) = llvm_builder.build_or(left, right, "") {
+                        return or.into();
+                    }
+
+                    return llvm_context.bool_type().const_zero().into();
                 }
 
                 logging::log(
-                    LoggingType::Bug,
-                    "Unable to perform boolean binary operation without valid gate.",
+                    LoggingType::BackendPanic,
+                    "Cannot perform boolean binary operation without a valid gate.",
                 );
 
                 unreachable!()
             }
-            _ => unreachable!(),
+            _ => {
+                logging::log(
+                    LoggingType::BackendPanic,
+                    "Cannot perform boolean binary operation without a valid operator.",
+                );
+
+                unreachable!()
+            }
         };
     }
 
@@ -75,8 +90,8 @@ pub fn bool_operation<'ctx>(
     }
 
     logging::log(
-        LoggingType::Bug,
-        "Unable to perform boolean binary operation without two int values.",
+        LoggingType::BackendPanic,
+        "Cannot perform boolean binary operation without two integer values.",
     );
 
     unreachable!()
@@ -111,7 +126,7 @@ pub fn bool_binaryop<'ctx>(
     logging::log(
         LoggingType::Panic,
         &format!(
-            "Could not process a boolean binary operation '{} {} {}'.",
+            "Cannot perform process a boolean binary operation '{} {} {}'.",
             binary.0, binary.1, binary.2
         ),
     );

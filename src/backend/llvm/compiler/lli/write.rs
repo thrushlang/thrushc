@@ -8,7 +8,7 @@ use inkwell::{
 };
 
 use crate::{
-    backend::llvm::compiler::{context::LLVMCodeGenContext, memory, rawgen, valuegen},
+    backend::llvm::compiler::{context::LLVMCodeGenContext, memory, ptrgen, valuegen},
     core::console::logging::{self, LoggingType},
     frontend::types::{ast::Ast, lexer::ThrushType},
 };
@@ -28,7 +28,7 @@ pub fn compile<'ctx>(
             self::compile_null_ptr(context)
         }
         (_, Some(expr)) => {
-            let ptr: PointerValue = rawgen::compile(context, expr, None).into_pointer_value();
+            let ptr: PointerValue = ptrgen::compile(context, expr, None).into_pointer_value();
 
             memory::store_anon(context, ptr, value);
 
@@ -43,7 +43,7 @@ pub fn compile<'ctx>(
 
 fn codegen_abort<T: Display>(message: T) {
     logging::log(
-        LoggingType::Bug,
+        LoggingType::BackendPanic,
         &format!("CODE GENERATION: '{}'.", message),
     );
 }

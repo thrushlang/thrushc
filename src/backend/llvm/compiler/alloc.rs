@@ -95,5 +95,8 @@ pub fn constant<'ctx>(
 }
 
 fn codegen_abort<T: Display>(message: T) {
-    logging::log(LoggingType::Bug, &format!("CODE GENERATION: '{}'", message));
+    logging::log(
+        LoggingType::BackendPanic,
+        &format!("CODE GENERATION: '{}'", message),
+    );
 }

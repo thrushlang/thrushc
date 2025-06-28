@@ -78,11 +78,7 @@ pub fn integer<'ctx>(
     let llvm_builder: &Builder = context.get_llvm_builder();
     let llvm_context: &Context = context.get_llvm_context();
 
-    if target_type.is_ptr_type() || from_type.is_ptr_type() {
-        return None;
-    }
-
-    if !from.is_int_value() {
+    if !from_type.is_integer_type() || !target_type.is_integer_type() {
         return None;
     }
 
@@ -90,7 +86,7 @@ pub fn integer<'ctx>(
         llvm_builder
             .build_int_cast_sign_flag(
                 from.into_int_value(),
-                typegen::thrush_integer_to_llvm_type(llvm_context, target_type),
+                typegen::integer_to_llvm_type(llvm_context, target_type),
                 from_type.is_signed_integer_type(),
                 "",
             )
@@ -108,11 +104,7 @@ pub fn float<'ctx>(
     let llvm_builder: &Builder = context.get_llvm_builder();
     let llvm_context: &Context = context.get_llvm_context();
 
-    if target_type.is_ptr_type() || from_type.is_ptr_type() {
-        return None;
-    }
-
-    if !from.is_float_value() {
+    if !from_type.is_float_type() || !target_type.is_float_type() {
         return None;
     }
 
@@ -134,10 +126,6 @@ pub fn try_cast<'ctx>(
     from_type: &ThrushType,
     from: BasicValueEnum<'ctx>,
 ) -> Option<BasicValueEnum<'ctx>> {
-    if target_type.is_ptr_type() || from_type.is_ptr_type() {
-        return None;
-    }
-
     if from.is_float_value() {
         return float(context, target_type, from_type, from);
     }

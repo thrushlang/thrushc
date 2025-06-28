@@ -49,8 +49,8 @@ pub fn float_operation<'ctx>(
 
         _ => {
             logging::log(
-                LoggingType::Bug,
-                "Unable to perform float binary operation without valid operator.",
+                LoggingType::BackendPanic,
+                "Cannot perform float binary operation without a valid operator.",
             );
 
             unreachable!()
@@ -94,7 +94,7 @@ pub fn float_binaryop<'ctx>(
     logging::log(
         LoggingType::Panic,
         &format!(
-            "Could not process a float binary operation '{} {} {}'.",
+            "Cannot perform process a float binary operation '{} {} {}'.",
             binary.0, binary.1, binary.2
         ),
     );

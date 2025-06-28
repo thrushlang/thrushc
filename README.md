@@ -107,7 +107,7 @@ Now you need to compile the compiler with Rust.
 cargo run -- --help
 ```
 
-# Curiosities
+# Additional Information
 
 ## ¿Why is this language not bootstrapped?
  

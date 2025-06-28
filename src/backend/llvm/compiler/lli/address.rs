@@ -13,7 +13,7 @@ use crate::{
     backend::llvm::compiler::{
         context::LLVMCodeGenContext,
         memory::{self, SymbolAllocated},
-        rawgen, valuegen,
+        ptrgen, valuegen,
     },
     core::console::logging::{self, LoggingType},
     frontend::types::{ast::Ast, lexer::ThrushType},
@@ -40,7 +40,7 @@ pub fn compile<'ctx>(
         }
         (_, Some(expr)) => {
             let kind: &ThrushType = expr.get_type_unwrapped();
-            let ptr: PointerValue = rawgen::compile(context, expr, None).into_pointer_value();
+            let ptr: PointerValue = ptrgen::compile(context, expr, None).into_pointer_value();
 
             memory::gep_anon(context, ptr, kind, &indexes).into()
         }
@@ -52,10 +52,7 @@ pub fn compile<'ctx>(
 }
 
 fn codegen_abort<T: Display>(message: T) {
-    logging::log(
-        LoggingType::Bug,
-        &format!("CODE GENERATION: '{}'.", message),
-    );
+    logging::log(LoggingType::BackendPanic, &format!("{}.", message));
 }
 
 fn compile_null_ptr<'ctx>(context: &LLVMCodeGenContext<'_, 'ctx>) -> BasicValueEnum<'ctx> {

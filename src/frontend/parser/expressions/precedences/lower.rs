@@ -16,7 +16,7 @@ use crate::{
             lexer::ThrushType,
             parser::{
                 stmts::{
-                    sites::LLIAllocationSite,
+                    sites::AllocationSite,
                     traits::{FoundSymbolExtension, TokenExtensions},
                 },
                 symbols::types::FoundSymbolId,
@@ -46,18 +46,18 @@ pub fn lower_precedence<'parser>(
             let alloc_tk: &Token = parser_context.advance()?;
             let span: Span = alloc_tk.get_span();
 
-            let site_allocation: LLIAllocationSite = match parser_context.peek().kind {
+            let site_allocation: AllocationSite = match parser_context.peek().kind {
                 TokenType::Heap => {
                     parser_context.only_advance()?;
-                    LLIAllocationSite::Heap
+                    AllocationSite::Heap
                 }
                 TokenType::Stack => {
                     parser_context.only_advance()?;
-                    LLIAllocationSite::Stack
+                    AllocationSite::Stack
                 }
                 TokenType::Static => {
                     parser_context.only_advance()?;
-                    LLIAllocationSite::Static
+                    AllocationSite::Static
                 }
                 _ => {
                     return Err(ThrushCompilerIssue::Error(

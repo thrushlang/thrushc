@@ -13,10 +13,7 @@ use crate::frontend::types::lexer::ThrushType;
 use super::context::LLVMCodeGenContext;
 
 #[inline]
-pub fn thrush_integer_to_llvm_type<'ctx>(
-    llvm_context: &'ctx Context,
-    kind: &ThrushType,
-) -> IntType<'ctx> {
+pub fn integer_to_llvm_type<'ctx>(llvm_context: &'ctx Context, kind: &ThrushType) -> IntType<'ctx> {
     match kind {
         ThrushType::S8 | ThrushType::U8 | ThrushType::Char => llvm_context.i8_type(),
         ThrushType::S16 | ThrushType::U16 => llvm_context.i16_type(),
@@ -24,7 +21,7 @@ pub fn thrush_integer_to_llvm_type<'ctx>(
         ThrushType::S64 | ThrushType::U64 => llvm_context.i64_type(),
         ThrushType::Bool => llvm_context.bool_type(),
 
-        ThrushType::Mut(any) => thrush_integer_to_llvm_type(llvm_context, any),
+        ThrushType::Mut(any) => integer_to_llvm_type(llvm_context, any),
 
         _ => unreachable!(),
     }
@@ -74,7 +71,7 @@ pub fn function_type<'ctx>(
 pub fn generate_type<'ctx>(llvm_context: &'ctx Context, kind: &ThrushType) -> BasicTypeEnum<'ctx> {
     match kind {
         kind if kind.is_bool_type() || kind.is_integer_type() || kind.is_char_type() => {
-            thrush_integer_to_llvm_type(llvm_context, kind).into()
+            integer_to_llvm_type(llvm_context, kind).into()
         }
 
         kind if kind.is_float_type() => type_float_to_llvm_float_type(llvm_context, kind).into(),
@@ -110,7 +107,7 @@ pub fn generate_type<'ctx>(llvm_context: &'ctx Context, kind: &ThrushType) -> Ba
 
         any => {
             logging::log(
-                LoggingType::Bug,
+                LoggingType::BackendPanic,
                 &format!("Unable to create a LLVM Type from '{}' type.", any),
             );
 

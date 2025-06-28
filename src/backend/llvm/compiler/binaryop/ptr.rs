@@ -31,8 +31,8 @@ pub fn ptr_operation<'ctx>(
 
             _ => {
                 logging::log(
-                    LoggingType::Bug,
-                    "Unable to perform pointer binary operation without valid operator.",
+                    LoggingType::BackendPanic,
+                    "Cannot perform pointer binary operation without a valid operator.",
                 );
 
                 unreachable!()
@@ -41,8 +41,8 @@ pub fn ptr_operation<'ctx>(
     }
 
     logging::log(
-        LoggingType::Bug,
-        "Unable to perform pointer binary operation without two pointer values.",
+        LoggingType::BackendPanic,
+        "Cannot perform pointer binary operation without two pointers.",
     );
 
     unreachable!()
@@ -63,9 +63,9 @@ pub fn ptr_binaryop<'ctx>(
     }
 
     logging::log(
-        LoggingType::Panic,
+        LoggingType::BackendPanic,
         &format!(
-            "Could not process a pointer binary operation '{} {} {}'.",
+            "Cannot perform a pointer binary operation '{} {} {}'.",
             binary.0, binary.1, binary.2
         ),
     );

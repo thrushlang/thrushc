@@ -8,7 +8,7 @@ use inkwell::{
 };
 
 use crate::{
-    backend::llvm::compiler::{context::LLVMCodeGenContext, memory, rawgen},
+    backend::llvm::compiler::{cast, context::LLVMCodeGenContext, memory, ptrgen},
     core::console::logging::{self, LoggingType},
     frontend::types::{ast::Ast, lexer::ThrushType},
 };
@@ -17,15 +17,16 @@ pub fn compile<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     value: &'ctx (Option<(&'ctx str, Rc<Ast<'ctx>>)>, Option<Rc<Ast<'ctx>>>),
     kind: &ThrushType,
+    cast_type: Option<&ThrushType>,
 ) -> BasicValueEnum<'ctx> {
-    match value {
+    let mut value: BasicValueEnum = match value {
         (Some((name, _)), _) => {
             let ptr: PointerValue = context.get_allocated_symbol(name).raw_load();
 
             memory::load_anon(context, ptr, kind)
         }
         (_, Some(expr)) => {
-            let ptr: PointerValue = rawgen::compile(context, expr, None).into_pointer_value();
+            let ptr: PointerValue = ptrgen::compile(context, expr, None).into_pointer_value();
 
             memory::load_anon(context, ptr, kind)
         }
@@ -33,14 +34,19 @@ pub fn compile<'ctx>(
             self::codegen_abort("Invalid load target in expression");
             self::compile_null_ptr(context)
         }
+    };
+
+    if let Some(cast_type) = cast_type {
+        if let Some(casted_value) = cast::try_cast(context, cast_type, kind, value) {
+            value = casted_value;
+        }
     }
+
+    value
 }
 
 fn codegen_abort<T: Display>(message: T) {
-    logging::log(
-        LoggingType::Bug,
-        &format!("CODE GENERATION: '{}'.", message),
-    );
+    logging::log(LoggingType::BackendPanic, &format!("{}.", message));
 }
 
 fn compile_null_ptr<'ctx>(context: &LLVMCodeGenContext<'_, 'ctx>) -> BasicValueEnum<'ctx> {
