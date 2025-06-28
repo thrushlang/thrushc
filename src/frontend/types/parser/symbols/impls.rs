@@ -198,7 +198,7 @@ impl<'parser> FoundSymbolEither<'parser> for FoundSymbolId<'parser> {
         ))
     }
 
-    fn expected_constant(&self, span: Span) -> Result<&'parser str, ThrushCompilerIssue> {
+    fn expected_constant(&self, span: Span) -> Result<(&'parser str, usize), ThrushCompilerIssue> {
         if let Some(const_id) = self.3 {
             return Ok(const_id);
         }

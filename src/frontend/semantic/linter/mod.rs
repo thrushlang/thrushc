@@ -20,6 +20,7 @@ pub mod attributes;
 mod builtins;
 mod casts;
 mod conditionals;
+mod constant;
 mod deref;
 mod enums;
 mod expressions;
@@ -104,6 +105,10 @@ impl<'linter> Linter<'linter> {
 
 
         ########################################################################*/
+
+        if let Ast::Const { .. } = stmt {
+            return constant::analyze_constant(self, stmt);
+        }
 
         if let Ast::Block { stmts, .. } = stmt {
             self.begin_scope();

@@ -82,6 +82,10 @@ pub fn integer<'ctx>(
         return None;
     }
 
+    if from_type == target_type {
+        return None;
+    }
+
     Some(
         llvm_builder
             .build_int_cast_sign_flag(
@@ -105,6 +109,10 @@ pub fn float<'ctx>(
     let llvm_context: &Context = context.get_llvm_context();
 
     if !from_type.is_float_type() || !target_type.is_float_type() {
+        return None;
+    }
+
+    if from_type == target_type {
         return None;
     }
 

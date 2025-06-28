@@ -6,8 +6,8 @@ use crate::{
     frontend::{
         lexer::tokentype::TokenType,
         parser::stmts::{
-            asmfunction, block, conditional, controlflow, cstype, function, lli, local, loops,
-            structure, terminator, union,
+            asmfunction, block, conditional, constant, controlflow, cstype, function, lli, local,
+            loops, structure, terminator, union,
         },
         types::ast::Ast,
     },
@@ -67,8 +67,11 @@ pub fn statement<'parser>(
     let statement: Result<Ast<'parser>, ThrushCompilerIssue> = match &parser_ctx.peek().kind {
         TokenType::LBrace => Ok(block::build_block(parser_ctx)?),
         TokenType::Return => Ok(terminator::build_return(parser_ctx)?),
+
+        TokenType::Const => Ok(constant::build_const(parser_ctx, false)?),
         TokenType::Local => Ok(local::build_local(parser_ctx)?),
         TokenType::Instr => Ok(lli::build_lli(parser_ctx)?),
+
         TokenType::If => Ok(conditional::build_conditional(parser_ctx)?),
 
         TokenType::For => Ok(loops::build_for_loop(parser_ctx)?),

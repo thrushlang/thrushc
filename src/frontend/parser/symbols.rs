@@ -35,7 +35,7 @@ impl<'parser> SymbolsTable<'parser> {
     ) -> Self {
         Self {
             custom_types: HashMap::with_capacity(255),
-            constants: HashMap::with_capacity(255),
+            constants: Vec::with_capacity(255),
             locals: Vec::with_capacity(255),
             llis: Vec::with_capacity(255),
             functions,
@@ -47,11 +47,13 @@ impl<'parser> SymbolsTable<'parser> {
     }
 
     pub fn begin_scope(&mut self) {
+        self.constants.push(HashMap::with_capacity(255));
         self.locals.push(HashMap::with_capacity(255));
         self.llis.push(HashMap::with_capacity(255));
     }
 
     pub fn end_scope(&mut self) {
+        self.constants.pop();
         self.locals.pop();
         self.llis.pop();
     }
@@ -162,18 +164,28 @@ impl<'parser> SymbolsTable<'parser> {
         constant: ConstantSymbol<'parser>,
         span: Span,
     ) -> Result<(), ThrushCompilerIssue> {
-        if self.constants.contains_key(name) {
-            return Err(ThrushCompilerIssue::Error(
-                String::from("Constant already declared"),
-                format!("'{}' constant already declared before.", name),
-                None,
-                span,
-            ));
+        if let Some(last_scope) = self.constants.last_mut() {
+            if last_scope.contains_key(name) {
+                return Err(ThrushCompilerIssue::Error(
+                    String::from("Constant already declared"),
+                    format!("'{}' constant already declared before.", name),
+                    None,
+                    span,
+                ));
+            }
+
+            last_scope.insert(name, constant);
+
+            return Ok(());
         }
 
-        self.constants.insert(name, constant);
-
-        Ok(())
+        return Err(ThrushCompilerIssue::Bug(
+            String::from("Last scope not caught"),
+            String::from("The last scope could not be obtained."),
+            span,
+            CompilationPosition::Parser,
+            line!(),
+        ));
     }
 
     pub fn new_custom_type(
@@ -182,7 +194,7 @@ impl<'parser> SymbolsTable<'parser> {
         custom_type: CustomTypeSymbol<'parser>,
         span: Span,
     ) -> Result<(), ThrushCompilerIssue> {
-        if self.constants.contains_key(name) {
+        if self.custom_types.contains_key(name) {
             return Err(ThrushCompilerIssue::Error(
                 String::from("Custom type already declared"),
                 format!("'{}' custom type already declared before.", name),
@@ -287,8 +299,20 @@ impl<'parser> SymbolsTable<'parser> {
             return Ok((None, None, None, None, Some(name), None, None, None, None));
         }
 
-        if self.constants.contains_key(name) {
-            return Ok((None, None, None, Some(name), None, None, None, None, None));
+        for (idx, scope) in self.constants.iter().enumerate().rev() {
+            if scope.contains_key(name) {
+                return Ok((
+                    None,
+                    None,
+                    None,
+                    Some((name, idx)),
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                ));
+            }
         }
 
         if self.structs.contains_key(name) {
@@ -483,9 +507,10 @@ impl<'parser> SymbolsTable<'parser> {
     pub fn get_const_by_id(
         &self,
         const_id: &'parser str,
+        scope_idx: usize,
         span: Span,
     ) -> Result<ConstantSymbol<'parser>, ThrushCompilerIssue> {
-        if let Some(constant) = self.constants.get(const_id).cloned() {
+        if let Some(constant) = self.constants[scope_idx].get(const_id).cloned() {
             return Ok(constant);
         }
 

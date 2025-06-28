@@ -55,8 +55,8 @@ impl<'clang> GCC<'clang> {
 
         gcc_command.arg("-v");
 
-        gcc_command.args(self.config.get_args().iter());
         gcc_command.args(self.files.iter());
+        gcc_command.args(self.config.get_args().iter());
 
         if self.config.get_debug_gcc_commands() {
             logging::log(

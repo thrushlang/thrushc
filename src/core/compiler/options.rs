@@ -104,6 +104,10 @@ impl CompilerOptions {
     }
 
     pub fn new_file(&mut self, name: String, path: PathBuf) {
+        if self.files.iter().any(|file| file.path == path) {
+            return;
+        }
+
         self.files.push(CompilerFile::new(name, path));
     }
 

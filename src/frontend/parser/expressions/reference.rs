@@ -32,11 +32,14 @@ pub fn build_reference<'parser>(
     let symbol: FoundSymbolId = parser_context.get_symbols().get_symbols_id(name, span)?;
 
     if symbol.is_constant() {
-        let const_id: &str = symbol.expected_constant(span)?;
+        let constant: (&str, usize) = symbol.expected_constant(span)?;
+
+        let const_id: &str = constant.0;
+        let scope_idx: usize = constant.1;
 
         let constant: ConstantSymbol = parser_context
             .get_symbols()
-            .get_const_by_id(const_id, span)?;
+            .get_const_by_id(const_id, scope_idx, span)?;
 
         let constant_type: ThrushType = constant.get_type();
 

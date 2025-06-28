@@ -85,15 +85,17 @@ pub fn build_enum<'parser>(
             }
 
             if parser_ctx.match_token(TokenType::SemiColon)? {
-                let field_value: Ast = if field_type.is_float_type() {
+                let field_value: Ast = if field_type.is_integer_type() {
+                    Ast::new_integer(field_type, default_integer_value, false, span)
+                } else if field_type.is_float_type() {
                     Ast::new_float(field_type, default_float_value, false, span)
                 } else if field_type.is_bool_type() {
                     Ast::new_boolean(field_type, default_integer_value, span)
                 } else if field_type.is_char_type() {
                     if default_integer_value > char::MAX as u64 {
                         return Err(ThrushCompilerIssue::Error(
-                            String::from("Syntax error"),
-                            String::from("Char overflow."),
+                            "Syntax error".into(),
+                            "Char overflow.".into(),
                             None,
                             span,
                         ));
@@ -101,7 +103,12 @@ pub fn build_enum<'parser>(
 
                     Ast::new_char(field_type, default_integer_value, span)
                 } else {
-                    Ast::new_integer(field_type, default_integer_value, false, span)
+                    return Err(ThrushCompilerIssue::Error(
+                        "Syntax error".into(),
+                        "Expected integer, boolean, char or floating-point types.".into(),
+                        None,
+                        span,
+                    ));
                 };
 
                 enum_fields.push((name, field_value));
@@ -112,15 +119,24 @@ pub fn build_enum<'parser>(
                 continue;
             }
 
-            parser_ctx.consume(
-                TokenType::Eq,
-                String::from("Syntax error"),
-                String::from("Expected '='."),
-            )?;
+            parser_ctx.consume(TokenType::Eq, "Syntax error".into(), "Expected '='.".into())?;
 
             let expression: Ast = expression::build_expr(parser_ctx)?;
+            let expression_type: &ThrushType = expression.get_value_type()?;
+            let expression_span: Span = expression.get_span();
 
-            expression.throw_attemping_use_jit(expression.get_span())?;
+            if !expression_type.is_integer_type()
+                && !expression_type.is_float_type()
+                && !expression_type.is_bool_type()
+                && !expression_type.is_char_type()
+            {
+                return Err(ThrushCompilerIssue::Error(
+                    "Syntax error".into(),
+                    "Expected integer, boolean, char or floating-point types.".into(),
+                    None,
+                    expression_span,
+                ));
+            }
 
             parser_ctx.consume(
                 TokenType::SemiColon,
@@ -134,8 +150,8 @@ pub fn build_enum<'parser>(
         }
 
         return Err(ThrushCompilerIssue::Error(
-            String::from("Syntax error"),
-            String::from("Expected identifier in enum field."),
+            "Syntax error".into(),
+            "Expected identifier in enum field.".into(),
             None,
             parser_ctx.advance()?.get_span(),
         ));
@@ -143,14 +159,14 @@ pub fn build_enum<'parser>(
 
     parser_ctx.consume(
         TokenType::RBrace,
-        String::from("Syntax error"),
-        String::from("Expected '}'."),
+        "Syntax error".into(),
+        "Expected '}'.".into(),
     )?;
 
     parser_ctx.consume(
         TokenType::SemiColon,
-        String::from("Syntax error"),
-        String::from("Expected ';'."),
+        "Syntax error".into(),
+        "Expected ';'.".into(),
     )?;
 
     if declare_forward {

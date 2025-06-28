@@ -49,7 +49,7 @@ pub trait StructExtensions<'parser> {
 
 pub trait FoundSymbolEither<'parser> {
     fn expected_custom_type(&self, span: Span) -> Result<&'parser str, ThrushCompilerIssue>;
-    fn expected_constant(&self, span: Span) -> Result<&'parser str, ThrushCompilerIssue>;
+    fn expected_constant(&self, span: Span) -> Result<(&'parser str, usize), ThrushCompilerIssue>;
     fn expected_local(&self, span: Span) -> Result<(&'parser str, usize), ThrushCompilerIssue>;
     fn expected_lli(&self, span: Span) -> Result<(&'parser str, usize), ThrushCompilerIssue>;
     fn expected_function(&self, span: Span) -> Result<&'parser str, ThrushCompilerIssue>;

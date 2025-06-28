@@ -34,16 +34,15 @@ pub fn unary_precedence<'parser>(
         let operator: TokenType = operator_tk.get_type();
         let span: Span = operator_tk.get_span();
 
-        let mut expression: Ast = equality::equality_precedence(parser_context)?;
-
-        expression.cast_signess(operator);
+        let expression: Ast = equality::equality_precedence(parser_context)?;
 
         let expression_type: &ThrushType = expression.get_value_type()?;
+        let kind: ThrushType = expression_type.narrowing_cast();
 
         return Ok(Ast::UnaryOp {
             operator,
             expression: expression.clone().into(),
-            kind: expression_type.clone(),
+            kind,
             is_pre: false,
             span,
         });

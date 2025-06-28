@@ -17,32 +17,23 @@ pub fn build_const<'parser>(
 ) -> Result<Ast<'parser>, ThrushCompilerIssue> {
     parser_ctx.consume(
         TokenType::Const,
-        String::from("Syntax error"),
-        String::from("Expected 'const' keyword."),
+        "Syntax error".into(),
+        "Expected 'const' keyword.".into(),
     )?;
 
     let const_tk: &Token = parser_ctx.consume(
         TokenType::Identifier,
-        String::from("Syntax error"),
-        String::from("Expected name."),
+        "Syntax error".into(),
+        "Expected name.".into(),
     )?;
-
-    if !parser_ctx.is_main_scope() {
-        return Err(ThrushCompilerIssue::Error(
-            String::from("Syntax error"),
-            String::from("Constants are only defined globally."),
-            None,
-            const_tk.span,
-        ));
-    }
 
     let name: &str = const_tk.get_lexeme();
     let span: Span = const_tk.get_span();
 
     parser_ctx.consume(
         TokenType::Colon,
-        String::from("Syntax error"),
-        String::from("Expected ':'."),
+        "Syntax error".into(),
+        "Expected ':'.".into(),
     )?;
 
     let const_type: ThrushType = typegen::build_type(parser_ctx)?;
@@ -50,33 +41,37 @@ pub fn build_const<'parser>(
     let const_attributes: ThrushAttributes =
         attributes::build_attributes(parser_ctx, &[TokenType::Eq])?;
 
-    parser_ctx.consume(
-        TokenType::Eq,
-        String::from("Syntax error"),
-        String::from("Expected '='."),
-    )?;
+    parser_ctx.consume(TokenType::Eq, "Syntax error".into(), "Expected '='.".into())?;
 
     let value: Ast = expression::build_expr(parser_ctx)?;
 
-    value.throw_attemping_use_jit(span)?;
+    let expression_type: &ThrushType = value.get_value_type()?;
+    let expression_span: Span = value.get_span();
+
+    if !expression_type.is_integer_type()
+        && !expression_type.is_float_type()
+        && !expression_type.is_bool_type()
+        && !expression_type.is_char_type()
+    {
+        return Err(ThrushCompilerIssue::Error(
+            "Syntax error".into(),
+            "Expected integer, boolean, char or floating-point types.".into(),
+            None,
+            expression_span,
+        ));
+    }
 
     parser_ctx.consume(
         TokenType::SemiColon,
-        String::from("Syntax error"),
-        String::from("Expected ';'."),
+        "Syntax error".into(),
+        "Expected ';'.".into(),
     )?;
 
-    if declare_forward {
-        if let Err(error) =
-            parser_ctx
-                .get_mut_symbols()
-                .new_constant(name, (const_type, const_attributes), span)
-        {
-            parser_ctx.add_error(error);
-        }
-
-        return Ok(Ast::Null { span });
-    }
+    parser_ctx.get_mut_symbols().new_constant(
+        name,
+        (const_type.clone(), const_attributes.clone()),
+        span,
+    )?;
 
     Ok(Ast::Const {
         name,

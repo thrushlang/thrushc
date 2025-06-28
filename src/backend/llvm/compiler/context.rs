@@ -10,10 +10,7 @@ use {
                 alloc::{self},
                 memory::LLVMAllocationSite,
             },
-            types::repr::{
-                LLVMConstants, LLVMFunction, LLVMFunctions, LLVMFunctionsParameters,
-                LLVMInstructions,
-            },
+            types::repr::{LLVMFunction, LLVMFunctions, LLVMFunctionsParameters, LLVMInstructions},
         },
         core::diagnostic::diagnostician::Diagnostician,
         frontend::types::{lexer::ThrushType, parser::stmts::types::ThrushAttributes},
@@ -37,7 +34,6 @@ pub struct LLVMCodeGenContext<'a, 'ctx> {
 
     functions: LLVMFunctions<'ctx>,
     parameters: LLVMFunctionsParameters<'ctx>,
-    constants: LLVMConstants<'ctx>,
     instructions: LLVMInstructions<'ctx>,
 
     scope: usize,
@@ -60,7 +56,6 @@ impl<'a, 'ctx> LLVMCodeGenContext<'a, 'ctx> {
             context,
             builder,
             target_data,
-            constants: HashMap::with_capacity(10000),
             functions: HashMap::with_capacity(10000),
             parameters: HashMap::with_capacity(10),
             instructions: Vec::with_capacity(1000),
@@ -128,10 +123,17 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
             attributes,
         );
 
-        let symbol_allocated: SymbolAllocated =
+        let constant: SymbolAllocated =
             SymbolAllocated::new(SymbolToAllocate::Constant, kind, ptr.into());
 
-        self.constants.insert(name, symbol_allocated);
+        if let Some(last_block) = self.instructions.last_mut() {
+            last_block.insert(name, constant);
+        } else {
+            logging::log(
+                LoggingType::BackendPanic,
+                "The last frame of symbols could not be obtained.",
+            );
+        }
     }
 
     pub fn alloc_function_parameter(
@@ -149,10 +151,6 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
     pub fn get_allocated_symbol(&self, name: &str) -> SymbolAllocated<'ctx> {
         if let Some(fn_parameter) = self.parameters.get(name) {
             return *fn_parameter;
-        }
-
-        if let Some(constant) = self.constants.get(name) {
-            return *constant;
         }
 
         for position in (0..self.scope).rev() {

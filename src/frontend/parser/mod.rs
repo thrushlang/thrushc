@@ -20,7 +20,7 @@ use crate::core::diagnostic::diagnostician::Diagnostician;
 use crate::core::errors::standard::ThrushCompilerIssue;
 use crate::frontend::lexer::token::Token;
 use crate::frontend::lexer::tokentype::TokenType;
-use crate::frontend::parser::stmts::{asmfunction, constant, cstype, function, structure, union};
+use crate::frontend::parser::stmts::{asmfunction, cstype, function, structure, union};
 use crate::frontend::types::ast::Ast;
 use crate::frontend::types::parser::symbols::types::{AssemblerFunctions, Functions};
 
@@ -377,16 +377,6 @@ impl<'parser> ParserContext<'parser> {
             .for_each(|(pos, _)| {
                 self.current = pos;
                 let _ = cstype::build_custom_type(self, true);
-                self.current = 0;
-            });
-
-        self.tokens
-            .iter()
-            .enumerate()
-            .filter(|(_, token)| token.kind.is_const_keyword())
-            .for_each(|(pos, _)| {
-                self.current = pos;
-                let _ = constant::build_const(self, true);
                 self.current = 0;
             });
 

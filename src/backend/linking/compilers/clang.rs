@@ -147,8 +147,8 @@ impl<'clang> Clang<'clang> {
         clang_command.arg("-target");
         clang_command.arg(self.target.as_str().to_string_lossy().into_owned());
 
-        clang_command.args(self.config.get_args().iter());
         clang_command.args(self.files.iter());
+        clang_command.args(self.config.get_args().iter());
 
         if self.config.get_debug_clang_commands() {
             logging::log(

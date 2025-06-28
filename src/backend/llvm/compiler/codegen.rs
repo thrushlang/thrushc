@@ -55,7 +55,6 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
     fn start(&mut self) {
         self.init_asm_functions();
         self.init_functions();
-        self.init_constants();
 
         self.ast.iter().for_each(|stmt| {
             self.codegen(stmt);
@@ -573,6 +572,17 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 local::new((name, ascii_name, kind, value, attributes), self.context);
             }
 
+            Ast::Const {
+                name,
+                kind,
+                value,
+                attributes,
+                ..
+            } => {
+                let value: BasicValueEnum = valuegen::compile(self.context, value, Some(kind));
+                self.context.alloc_constant(name, kind, value, attributes);
+            }
+
             Ast::LLI {
                 name, kind, value, ..
             } => {
@@ -744,23 +754,6 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         self.ast.iter().for_each(|stmt| {
             if stmt.is_asm_function() {
                 self.compile_asm_function(stmt);
-            }
-        });
-    }
-
-    fn init_constants(&mut self) {
-        self.ast.iter().for_each(|stmt| {
-            if let Ast::Const {
-                name,
-                kind,
-                value,
-                attributes,
-                ..
-            } = stmt
-            {
-                let value: BasicValueEnum = valuegen::compile(self.context, value, Some(kind));
-
-                self.context.alloc_constant(name, kind, value, attributes);
             }
         });
     }

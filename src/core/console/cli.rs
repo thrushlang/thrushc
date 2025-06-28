@@ -596,7 +596,15 @@ impl CLI {
     }
 
     fn is_thrush_file(&self, path: &str) -> bool {
-        PathBuf::from(path).exists() && path.ends_with(".th")
+        let path: PathBuf = PathBuf::from(path);
+
+        if let Some(extension) = path.extension() {
+            if path.exists() && path.is_file() && (extension.eq("th") || extension.eq("thrush")) {
+                return true;
+            }
+        }
+
+        false
     }
 
     fn handle_thrush_file(&mut self, file_path: &str) {
@@ -608,7 +616,8 @@ impl CLI {
                     LoggingType::Panic,
                     &format!("Unknown file name '{}'.", path.display()),
                 );
-                String::from("unknown.th")
+
+                String::default()
             },
             |name| name.to_string_lossy().to_string(),
         );
@@ -626,6 +635,7 @@ impl CLI {
                 .get_mut_llvm_backend_options()
                 .get_mut_linking_compilers_configuration()
                 .add_compiler_arg(arg.to_string());
+
             return;
         }
 
@@ -865,7 +875,7 @@ impl CLI {
             ),
         );
 
-        logging::write(logging::OutputIn::Stderr, "\nJIT Compiler flags:\n\n");
+        /* logging::write(logging::OutputIn::Stderr, "\nJIT Compiler flags:\n\n");
 
         logging::write(
             logging::OutputIn::Stderr,
@@ -897,7 +907,7 @@ impl CLI {
                 "\"/usr/lib/my_lib.so\"",
                 "Specifies a path to a custom library for use by the JIT."
             ),
-        );
+        ); */
 
         logging::write(logging::OutputIn::Stderr, "\nExtra compiler flags:\n\n");
 

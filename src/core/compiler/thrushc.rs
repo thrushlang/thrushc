@@ -12,7 +12,7 @@ use inkwell::{
     builder::Builder,
     context::Context,
     module::Module,
-    targets::{FileType, Target, TargetMachine, TargetTriple},
+    targets::{FileType, InitializationConfig, Target, TargetMachine, TargetTriple},
 };
 
 use crate::{
@@ -40,7 +40,7 @@ pub struct TheThrushCompiler<'thrushc> {
     compiled_files: Vec<PathBuf>,
     files: &'thrushc [CompilerFile],
     options: &'thrushc CompilerOptions,
-    llvm_time: Duration,
+    linking_time: Duration,
     thrushc_time: Duration,
 }
 
@@ -50,22 +50,36 @@ impl<'thrushc> TheThrushCompiler<'thrushc> {
             compiled_files: Vec::with_capacity(files.len()),
             files,
             options,
-            llvm_time: Duration::default(),
+            linking_time: Duration::default(),
             thrushc_time: Duration::default(),
         }
     }
 
     pub fn compile(&mut self) -> (u128, u128) {
-        let mut compilation_interrumped: bool = false;
+        let mut interrumped: bool = false;
+
+        if self.options.use_llvm() {
+            Target::initialize_all(&InitializationConfig::default());
+        } else {
+            logging::write(
+                logging::OutputIn::Stderr,
+                &format!(
+                    "{} {} {}\n",
+                    "Compilation".custom_color((141, 141, 142)).bold(),
+                    "FAILED".bright_red().bold(),
+                    "GCC is not supported yet. Please use LLVM Infrastructure with '-llvm' flag."
+                ),
+            );
+        }
 
         self.files.iter().for_each(|file| {
-            compilation_interrumped = self.compile_file(file).is_err();
+            interrumped = self.compile_file_with_llvm(file).is_err();
         });
 
         let llvm_backend: &LLVMBackend = self.options.get_llvm_backend_options();
 
-        if compilation_interrumped || llvm_backend.was_emited() || self.compiled_files.is_empty() {
-            return (self.thrushc_time.as_millis(), self.llvm_time.as_millis());
+        if interrumped || llvm_backend.was_emited() || self.compiled_files.is_empty() {
+            return (self.thrushc_time.as_millis(), self.linking_time.as_millis());
         }
 
         logging::write(
@@ -89,7 +103,7 @@ impl<'thrushc> TheThrushCompiler<'thrushc> {
             .link()
             {
                 Ok(clang_time) => {
-                    self.llvm_time += clang_time;
+                    self.linking_time += clang_time;
 
                     logging::write(
                         logging::OutputIn::Stdout,
@@ -114,7 +128,7 @@ impl<'thrushc> TheThrushCompiler<'thrushc> {
         } else if linking_compiler_configuration.use_gcc() {
             match GCC::new(self.get_compiled_files(), linking_compiler_configuration).link() {
                 Ok(gcc_time) => {
-                    self.llvm_time += gcc_time;
+                    self.linking_time += gcc_time;
 
                     logging::write(
                         logging::OutputIn::Stdout,
@@ -152,10 +166,10 @@ impl<'thrushc> TheThrushCompiler<'thrushc> {
             );
         }
 
-        (self.thrushc_time.as_millis(), self.llvm_time.as_millis())
+        (self.thrushc_time.as_millis(), self.linking_time.as_millis())
     }
 
-    fn compile_file(&mut self, file: &'thrushc CompilerFile) -> Result<(), ()> {
+    fn compile_file_with_llvm(&mut self, file: &'thrushc CompilerFile) -> Result<(), ()> {
         let archive_time: Instant = Instant::now();
 
         logging::write(

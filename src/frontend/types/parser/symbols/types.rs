@@ -29,7 +29,7 @@ pub type FoundSymbolId<'instr> = (
     Option<&'instr str>,
     Option<&'instr str>,
     Option<&'instr str>,
-    Option<&'instr str>,
+    Option<(&'instr str, usize)>,
     Option<&'instr str>,
     Option<&'instr str>,
     Option<&'instr str>,
@@ -46,7 +46,7 @@ pub type LocalSymbol<'instr> = (ThrushType, bool, bool, Span);
 pub type ParameterSymbol<'instr> = (ThrushType, bool, bool, Span);
 
 pub type CustomTypes<'instr> = HashMap<&'instr str, CustomTypeSymbol<'instr>>;
-pub type Constants<'instr> = HashMap<&'instr str, ConstantSymbol<'instr>>;
+pub type Constants<'instr> = Vec<HashMap<&'instr str, ConstantSymbol<'instr>>>;
 
 pub type Parameters<'instr> = HashMap<&'instr str, ParameterSymbol<'instr>>;
 pub type Structs<'instr> = HashMap<&'instr str, Struct<'instr>>;
