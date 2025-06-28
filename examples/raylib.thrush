@@ -14,15 +14,14 @@ fn BeginDrawing() void @public @extern("BeginDrawing");
 fn EndDrawing() void @public @extern("EndDrawing");
 fn CloseWindow() void @public @extern("CloseWindow");
 
-
 //------------------------------------------------------------------------------------
 // Program main entry point
 //------------------------------------------------------------------------------------
 
-
-// Initialization
-//--------------------------------------------------------------------------------------
 fn main() {
+        
+    // Initialization
+    //--------------------------------------------------------------------------------------    
 
     const screenWidth: u32 = 800;
     const screenHeight: u32 = 450;
