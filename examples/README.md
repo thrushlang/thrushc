@@ -3,6 +3,6 @@
 ## Thrush Programming Language | Examples
 
 > [!WARNING]  
-> Examples may not compile if the compiler has not reached beta or stable.
+> Examples may not compile if the compiler has not reached beta.
 
-This folder includes straightforward examples of general Thrush usage. However, some examples may not function properly with the compiler, as it is still being refined until the beta version is released.
+This folder contains simple examples demonstrating the general usage of the Thrush programming language. However, please note that some examples may not function correctly with the compiler, as it is still under development for a stable beta version.
