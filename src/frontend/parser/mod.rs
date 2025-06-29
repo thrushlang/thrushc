@@ -20,7 +20,6 @@ use crate::core::diagnostic::diagnostician::Diagnostician;
 use crate::core::errors::standard::ThrushCompilerIssue;
 use crate::frontend::lexer::token::Token;
 use crate::frontend::lexer::tokentype::TokenType;
-use crate::frontend::parser::stmts::{asmfunction, cstype, function, structure, union};
 use crate::frontend::types::ast::Ast;
 use crate::frontend::types::parser::symbols::types::{AssemblerFunctions, Functions};
 
@@ -57,7 +56,7 @@ impl<'parser> Parser<'parser> {
     fn start(&mut self) -> (ParserContext<'parser>, bool) {
         let mut parser_ctx: ParserContext = ParserContext::new(self.tokens, self.file);
 
-        parser_ctx.init();
+        parser_ctx.forward();
 
         while !parser_ctx.is_eof() {
             match stmt::parse(&mut parser_ctx) {
@@ -228,7 +227,6 @@ impl<'parser> ParserContext<'parser> {
 
         self.symbols.end_parameters();
 
-        self.control_ctx.set_inside_bind(false);
         self.control_ctx.set_inside_function(false);
         self.control_ctx.set_inside_loop(false);
     }
@@ -369,55 +367,7 @@ impl<'parser> ParserContext<'parser> {
             })
     }
 
-    pub fn init(&mut self) {
-        self.tokens
-            .iter()
-            .enumerate()
-            .filter(|(_, token)| token.kind.is_type_keyword())
-            .for_each(|(pos, _)| {
-                self.current = pos;
-                let _ = cstype::build_custom_type(self, true);
-                self.current = 0;
-            });
-
-        self.tokens
-            .iter()
-            .enumerate()
-            .filter(|(_, token)| token.kind.is_struct_keyword())
-            .for_each(|(pos, _)| {
-                self.current = pos;
-                let _ = structure::build_structure(self, true);
-                self.current = 0;
-            });
-
-        self.tokens
-            .iter()
-            .enumerate()
-            .filter(|(_, token)| token.kind.is_function_keyword())
-            .for_each(|(pos, _)| {
-                self.current = pos;
-                let _ = function::build_function(self, true);
-                self.current = 0;
-            });
-
-        self.tokens
-            .iter()
-            .enumerate()
-            .filter(|(_, token)| token.kind.is_enum_keyword())
-            .for_each(|(pos, _)| {
-                self.current = pos;
-                let _ = union::build_enum(self, true);
-                self.current = 0;
-            });
-
-        self.tokens
-            .iter()
-            .enumerate()
-            .filter(|(_, token)| token.kind.is_asm_function_keyword())
-            .for_each(|(pos, _)| {
-                self.current = pos;
-                let _ = asmfunction::build_assembler_function(self, true);
-                self.current = 0;
-            });
+    pub fn forward(&mut self) {
+        stmt::parse_forward(self);
     }
 }

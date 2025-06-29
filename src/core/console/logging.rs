@@ -14,6 +14,7 @@ pub enum OutputIn {
 #[derive(Debug, PartialEq)]
 pub enum LoggingType {
     BackendPanic,
+    BackendBug,
     Error,
     Warning,
     Panic,
@@ -25,6 +26,7 @@ impl LoggingType {
     pub fn to_styled(&self) -> ColoredString {
         match self {
             LoggingType::BackendPanic => "BACKEND PANIC".bright_red().bold(),
+            LoggingType::BackendBug => "BACKEND BUG".bold().bright_red().underline(),
             LoggingType::Error => "ERROR".bright_red().bold(),
             LoggingType::Warning => "WARN".yellow().bold(),
             LoggingType::Panic => "PANIC".bold().bright_red().underline(),
@@ -36,6 +38,7 @@ impl LoggingType {
     pub fn text_with_color(&self, msg: &str) -> ColoredString {
         match self {
             LoggingType::BackendPanic => msg.bright_red().bold(),
+            LoggingType::BackendBug => msg.bold().bright_red().underline(),
             LoggingType::Error => msg.bright_red().bold(),
             LoggingType::Warning => msg.yellow().bold(),
             LoggingType::Panic => msg.bright_red().underline(),
@@ -67,6 +70,10 @@ impl LoggingType {
     pub fn is_backend_panic(&self) -> bool {
         matches!(self, LoggingType::BackendPanic)
     }
+
+    pub fn is_backend_bug(&self) -> bool {
+        matches!(self, LoggingType::BackendBug)
+    }
 }
 
 pub fn log(ltype: LoggingType, msg: &str) {
@@ -95,6 +102,27 @@ pub fn log(ltype: LoggingType, msg: &str) {
     if ltype.is_panic() {
         io::stderr()
             .write_all(format!("{} {}\n", ltype.to_styled(), msg).as_bytes())
+            .unwrap_or(());
+
+        process::exit(1);
+    }
+
+    if ltype.is_backend_bug() {
+        io::stderr()
+            .write_all(format!("\n{} {}", ltype.to_styled(), msg).as_bytes())
+            .unwrap_or_default();
+
+        io::stderr()
+            .write_all(
+                format!(
+                    "\n\nMaybe this is a issue... Report it in: '{}'.\n\n",
+                    "https://github.com/thrushlang/thrushc/issues/"
+                        .bold()
+                        .bright_red()
+                        .underline()
+                )
+                .as_bytes(),
+            )
             .unwrap_or(());
 
         process::exit(1);

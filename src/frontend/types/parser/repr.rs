@@ -7,6 +7,14 @@ pub type BinaryOperation<'ctx> = (&'ctx Ast<'ctx>, &'ctx TokenType, &'ctx Ast<'c
 
 pub type UnaryOperation<'ctx> = (&'ctx TokenType, &'ctx ThrushType, &'ctx Ast<'ctx>);
 
+pub type ConstantRepresentation<'ctx> = (
+    &'ctx str,
+    &'ctx str,
+    &'ctx ThrushType,
+    &'ctx Ast<'ctx>,
+    &'ctx ThrushAttributes<'ctx>,
+);
+
 pub type FunctionRepresentation<'ctx> = (
     &'ctx str,
     &'ctx str,

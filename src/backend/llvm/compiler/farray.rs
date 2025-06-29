@@ -4,7 +4,7 @@ use super::context::LLVMCodeGenContext;
 use super::typegen;
 use crate::backend::llvm::compiler::memory::{self, LLVMAllocationSite};
 
-use crate::backend::llvm::compiler::valuegen;
+use crate::backend::llvm::compiler::{constgen, valuegen};
 use crate::core::console::logging::{self, LoggingType};
 use crate::frontend::types::ast::Ast;
 use crate::frontend::types::lexer::ThrushType;
@@ -14,7 +14,20 @@ use inkwell::types::BasicTypeEnum;
 use inkwell::values::{BasicValueEnum, IntValue, PointerValue};
 use inkwell::{builder::Builder, context::Context};
 
-pub fn compile_array<'ctx>(
+pub fn compile_fixed_array<'ctx>(
+    context: &mut LLVMCodeGenContext<'_, 'ctx>,
+    kind: &ThrushType,
+    items: &'ctx [Ast],
+    cast_type: Option<&ThrushType>,
+) -> BasicValueEnum<'ctx> {
+    if items.iter().all(|item| item.is_constant_value()) {
+        constgen::constant_fixed_array(context, cast_type.unwrap_or(kind), items)
+    } else {
+        self::fixed_array(context, kind, items, cast_type)
+    }
+}
+
+fn fixed_array<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     kind: &ThrushType,
     items: &'ctx [Ast],
@@ -23,34 +36,23 @@ pub fn compile_array<'ctx>(
     let llvm_context: &Context = context.get_llvm_context();
     let llvm_builder: &Builder = context.get_llvm_builder();
 
-    let base_array_type: &ThrushType = cast_type.unwrap_or(kind);
-    let array_items_type: &ThrushType = base_array_type.get_array_type();
-
-    let array_type: ThrushType =
-        ThrushType::FixedArray(array_items_type.clone().into(), items.len() as u32);
-
-    let array_wrapper_ptr: PointerValue =
-        if let Some(preferred_site_allocation) = context.get_site_allocation() {
-            memory::alloc_anon(preferred_site_allocation, context, base_array_type, true)
-        } else {
-            memory::alloc_anon(LLVMAllocationSite::Stack, context, base_array_type, true)
-        };
+    let array_type: &ThrushType = cast_type.unwrap_or(kind);
+    let array_items_type: &ThrushType = array_type.get_fixed_array_base_type();
 
     let array_ptr: PointerValue =
         if let Some(preferred_site_allocation) = context.get_site_allocation() {
-            memory::alloc_anon(preferred_site_allocation, context, &array_type, true)
+            memory::alloc_anon(preferred_site_allocation, context, array_type, true)
         } else {
-            memory::alloc_anon(LLVMAllocationSite::Stack, context, &array_type, true)
+            memory::alloc_anon(LLVMAllocationSite::Stack, context, array_type, true)
         };
 
-    let array_wrapper_type: BasicTypeEnum = typegen::generate_type(llvm_context, base_array_type);
-    let array_ptr_type: BasicTypeEnum = typegen::generate_type(llvm_context, &array_type);
+    let array_ptr_type: BasicTypeEnum = typegen::generate_type(llvm_context, array_type);
 
     for (idx, item) in items.iter().enumerate() {
         let llvm_idx: IntValue = llvm_context.i32_type().const_int(idx as u64, false);
 
         match unsafe {
-            llvm_builder.build_in_bounds_gep(
+            llvm_builder.build_gep(
                 array_ptr_type,
                 array_ptr,
                 &[llvm_context.i32_type().const_zero(), llvm_idx],
@@ -65,7 +67,7 @@ pub fn compile_array<'ctx>(
             }
             Err(_) => {
                 self::codegen_abort(format!(
-                    "Failed to calculate memory address for array element at index '{}'",
+                    "Failed to calculate memory address for array element at index {}",
                     idx
                 ));
 
@@ -74,26 +76,7 @@ pub fn compile_array<'ctx>(
         }
     }
 
-    let array_ptr_gep: PointerValue = llvm_builder
-        .build_struct_gep(array_wrapper_type, array_wrapper_ptr, 0, "")
-        .unwrap();
-
-    memory::store_anon(context, array_ptr_gep, array_ptr.into());
-
-    let array_size_gep: PointerValue = llvm_builder
-        .build_struct_gep(array_wrapper_type, array_wrapper_ptr, 1, "")
-        .unwrap();
-
-    memory::store_anon(
-        context,
-        array_size_gep,
-        llvm_context
-            .i64_type()
-            .const_int(items.len() as u64, false)
-            .into(),
-    );
-
-    memory::load_anon(context, array_wrapper_ptr, base_array_type)
+    memory::load_anon(context, array_ptr, kind)
 }
 
 fn compile_null_ptr<'ctx>(context: &LLVMCodeGenContext<'_, 'ctx>) -> BasicValueEnum<'ctx> {

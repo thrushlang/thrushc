@@ -7,7 +7,7 @@ use crate::{
 
 pub fn integer<'ctx>(
     context: &'ctx Context,
-    kind: &'ctx ThrushType,
+    kind: &ThrushType,
     number: u64,
     signed: bool,
 ) -> IntValue<'ctx> {
@@ -29,8 +29,8 @@ pub fn integer<'ctx>(
 
         what => {
             logging::log(
-                LoggingType::BackendPanic,
-                &format!("Unsupported integer type: {:#?}", what),
+                LoggingType::BackendBug,
+                &format!("Unsupported integer type: '{:#?}'.", what),
             );
 
             unreachable!()

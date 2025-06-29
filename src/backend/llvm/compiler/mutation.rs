@@ -34,10 +34,10 @@ pub fn compile<'ctx>(context: &mut LLVMCodeGenContext<'_, 'ctx>, expr: &'ctx Ast
         }
 
         logging::log(
-            LoggingType::BackendPanic,
+            LoggingType::BackendBug,
             "The source of a mutation could not be obtained.",
         );
     }
 
-    logging::log(LoggingType::BackendPanic, "A mutation cannot be executed.");
+    logging::log(LoggingType::BackendBug, "A mutation cannot be executed.");
 }

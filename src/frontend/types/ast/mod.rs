@@ -222,6 +222,7 @@ pub enum Ast<'ctx> {
     // Constants
     Const {
         name: &'ctx str,
+        ascii_name: &'ctx str,
         kind: ThrushType,
         value: Rc<Ast<'ctx>>,
         attributes: ThrushAttributes<'ctx>,

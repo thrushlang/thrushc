@@ -1,11 +1,12 @@
 #![allow(clippy::collapsible_if)]
 
-use crate::backend::llvm::compiler::{builtins, lli, mutation, ptrgen, utils};
+use crate::backend::llvm::compiler::{builtins, constgen, lli, mutation, ptrgen};
 use crate::backend::types::{repr::LLVMFunction, traits::AssemblerFunctionExtensions};
 use crate::core::console::logging::{self, LoggingType};
 use crate::frontend::types::lexer::ThrushType;
 use crate::frontend::types::parser::repr::{
-    AssemblerFunctionRepresentation, FunctionParameter, FunctionRepresentation,
+    AssemblerFunctionRepresentation, ConstantRepresentation, FunctionParameter,
+    FunctionRepresentation,
 };
 use crate::frontend::types::parser::stmts::traits::ThrushAttributesExtensions;
 use crate::frontend::types::parser::stmts::types::ThrushAttributes;
@@ -49,12 +50,11 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
             exit_loop_block: None,
             start_loop_block: None,
         }
-        .start();
+        .compile();
     }
 
-    fn start(&mut self) {
-        self.init_asm_functions();
-        self.init_functions();
+    fn compile(&mut self) {
+        self.forward_all();
 
         self.ast.iter().for_each(|stmt| {
             self.codegen(stmt);
@@ -62,14 +62,14 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
     }
 
     fn codegen(&mut self, stmt: &'ctx Ast) {
-        self.codegen_function_parts(stmt);
+        self.codegen_declaration(stmt);
     }
 
-    fn codegen_function_parts(&mut self, stmt: &'ctx Ast) {
+    fn codegen_declaration(&mut self, stmt: &'ctx Ast) {
         /* ######################################################################
 
 
-            LLVM CODEGEN | FUNCTIONS - START
+            LLVM CODEGEN | DECLARATIONS - START
 
 
         ########################################################################*/
@@ -81,71 +81,28 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
             Ast::EntryPoint { body, .. } => {
                 self.current_function = Some(self.entrypoint());
 
-                self.codegen(body);
+                self.codegen_code_block(body);
 
                 if llvm_builder
                     .build_return(Some(&llvm_context.i32_type().const_int(0, false)))
                     .is_err()
                 {
                     logging::log(
-                        LoggingType::BackendPanic,
+                        LoggingType::BackendBug,
                         "Unable to build the return of entrypoint.",
                     );
                 }
             }
 
-            Ast::Function { .. } => {
+            Ast::Function { body, .. } => {
+                if body.is_null() {
+                    return;
+                }
+
                 self.compile_function(stmt.as_function_representation());
             }
 
-            Ast::Return {
-                expression, kind, ..
-            } => {
-                if expression.is_none() {
-                    if llvm_builder.build_return(None).is_err() {
-                        {
-                            logging::log(
-                                LoggingType::BackendPanic,
-                                "Unable to build the return instruction at code generation time.",
-                            );
-                        }
-                    }
-                }
-
-                if let Some(expression) = expression {
-                    if kind.is_ptr_type() || kind.is_mut_type() {
-                        if llvm_builder
-                            .build_return(Some(&ptrgen::compile(
-                                self.context,
-                                expression,
-                                Some(kind),
-                            )))
-                            .is_err()
-                        {
-                            {
-                                logging::log(
-                                    LoggingType::BackendPanic,
-                                    "Unable to build the return instruction at code generation time.",
-                                );
-                            }
-                        };
-                    } else if llvm_builder
-                        .build_return(Some(&valuegen::compile(
-                            self.context,
-                            expression,
-                            Some(kind),
-                        )))
-                        .is_err()
-                    {
-                        {
-                            logging::log(
-                                LoggingType::BackendPanic,
-                                "Unable to build the return instruction at code generation time.",
-                            );
-                        }
-                    };
-                }
-            }
+            Ast::Const { .. } => (),
 
             stmt => self.codegen_code_block(stmt),
         }
@@ -153,7 +110,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         /* ######################################################################
 
 
-            LLVM CODEGEN | FUNCTIONS - END
+            LLVM CODEGEN | DECLARATIONS - END
 
 
         ########################################################################*/
@@ -173,13 +130,13 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 self.context.begin_scope();
 
                 stmts.iter().for_each(|stmt| {
-                    self.codegen(stmt);
+                    self.stmt(stmt);
                 });
 
                 self.context.end_scope();
             }
 
-            stmt => self.codegen_conditionals(stmt),
+            stmt => self.stmt(stmt),
         }
 
         /* ######################################################################
@@ -189,6 +146,10 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
 
 
         ########################################################################*/
+    }
+
+    fn stmt(&mut self, stmt: &'ctx Ast) {
+        self.codegen_conditionals(stmt);
     }
 
     fn codegen_conditionals(&mut self, stmt: &'ctx Ast) {
@@ -341,7 +302,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 }
 
                 logging::log(
-                    LoggingType::BackendPanic,
+                    LoggingType::BackendBug,
                     "The current function could not be obtained at code generation time.",
                 );
             }
@@ -414,10 +375,11 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 }
 
                 logging::log(
-                    LoggingType::BackendPanic,
+                    LoggingType::BackendBug,
                     "The current function could not be obtained at code generation time.",
                 );
             }
+
             Ast::Loop { block, .. } => {
                 if let Some(function) = self.current_function {
                     let start_loop_block: BasicBlock =
@@ -450,10 +412,11 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 }
 
                 logging::log(
-                    LoggingType::BackendPanic,
+                    LoggingType::BackendBug,
                     "The current function could not be obtained at code generation time.",
                 );
             }
+
             Ast::For {
                 local,
                 cond,
@@ -516,7 +479,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 }
 
                 logging::log(
-                    LoggingType::BackendPanic,
+                    LoggingType::BackendBug,
                     "The current function could not be obtained at code generation time.",
                 );
             }
@@ -574,13 +537,16 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
 
             Ast::Const {
                 name,
+                ascii_name,
                 kind,
                 value,
                 attributes,
                 ..
             } => {
-                let value: BasicValueEnum = valuegen::compile(self.context, value, Some(kind));
-                self.context.alloc_constant(name, kind, value, attributes);
+                let value: BasicValueEnum = constgen::compile(self.context, kind, value);
+
+                self.context
+                    .alloc_local_constant(name, ascii_name, kind, value, attributes);
             }
 
             Ast::LLI {
@@ -589,7 +555,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 lli::new(name, kind, value, self.context);
             }
 
-            stmt => self.codegen_loose_expression(stmt),
+            stmt => self.codegen_terminator(stmt),
         }
 
         /* ######################################################################
@@ -601,11 +567,88 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         ########################################################################*/
     }
 
-    fn codegen_loose_expression(&mut self, stmt: &'ctx Ast) {
+    fn codegen_terminator(&mut self, stmt: &'ctx Ast) {
         /* ######################################################################
 
 
-            LLVM CODEGEN | LOOSE EXPRESSIONS - START
+            LLVM CODEGEN | TERMINATOR - START
+
+
+        ########################################################################*/
+
+        let llvm_builder: &Builder = self.context.get_llvm_builder();
+
+        match stmt {
+            Ast::Return {
+                expression, kind, ..
+            } => {
+                if expression.is_none() {
+                    if llvm_builder.build_return(None).is_err() {
+                        {
+                            logging::log(
+                                LoggingType::BackendBug,
+                                "Unable to build the return instruction at code generation time.",
+                            );
+                        }
+                    }
+                }
+
+                if let Some(expression) = expression {
+                    if kind.is_ptr_type() || kind.is_mut_type() {
+                        if llvm_builder
+                            .build_return(Some(&ptrgen::compile(
+                                self.context,
+                                expression,
+                                Some(kind),
+                            )))
+                            .is_err()
+                        {
+                            {
+                                logging::log(
+                                    LoggingType::BackendBug,
+                                    "Unable to build the return instruction at code generation time.",
+                                );
+                            }
+                        };
+                    } else if llvm_builder
+                        .build_return(Some(&valuegen::compile(
+                            self.context,
+                            expression,
+                            Some(kind),
+                        )))
+                        .is_err()
+                    {
+                        {
+                            logging::log(
+                                LoggingType::BackendBug,
+                                "Unable to build the return instruction at code generation time.",
+                            );
+                        }
+                    };
+                }
+            }
+
+            any => self.expressions(any),
+        }
+
+        /* ######################################################################
+
+
+            LLVM CODEGEN | TERMINATOR - END
+
+
+        ########################################################################*/
+    }
+
+    fn expressions(&mut self, stmt: &'ctx Ast) {
+        self.codegen_loose_expression_or_statement(stmt);
+    }
+
+    fn codegen_loose_expression_or_statement(&mut self, stmt: &'ctx Ast) {
+        /* ######################################################################
+
+
+            LLVM CODEGEN | LOOSE EXPRESSIONS || STATEMENTS - START
 
 
         ########################################################################*/
@@ -637,7 +680,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         /* ######################################################################
 
 
-            LLVM CODEGEN | LOOSE EXPRESSIONS - END
+            LLVM CODEGEN | LOOSE EXPRESSIONS || STATEMENTS - END
 
 
         ########################################################################*/
@@ -663,22 +706,22 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         llvm_function: FunctionValue<'ctx>,
         parameter: FunctionParameter<'ctx>,
     ) {
-        let parameter_name: &str = parameter.0;
-        let parameter_ascii_name: &str = parameter.1;
+        let name: &str = parameter.0;
+        let ascii_name: &str = parameter.1;
+
         let parameter_type: &ThrushType = parameter.2;
         let parameter_position: u32 = parameter.3;
 
         if let Some(raw_value_llvm_parameter) = llvm_function.get_nth_param(parameter_position) {
-            raw_value_llvm_parameter.set_name(parameter_ascii_name);
-
             self.context.alloc_function_parameter(
-                parameter_name,
+                name,
+                ascii_name,
                 parameter_type,
                 raw_value_llvm_parameter,
             );
         } else {
             logging::log(
-                LoggingType::BackendPanic,
+                LoggingType::BackendBug,
                 "The value of a parameter of an LLVM function could not be obtained at code generation time.",
             );
         }
@@ -692,10 +735,6 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         let function_type: &ThrushType = function.2;
         let function_parameters: &[Ast<'ctx>] = function.3;
         let function_body: &Ast = function.5;
-
-        if function_body.is_null() {
-            return;
-        }
 
         let get_llvm_function: LLVMFunction = self.context.get_function(function_ascii_name);
         let llvm_function_value: FunctionValue = get_llvm_function.0;
@@ -725,7 +764,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
             }
         });
 
-        self.codegen(function_body);
+        self.codegen_code_block(function_body);
 
         if !function_body.has_return() && function_type.is_void_type() {
             llvm_builder.build_return(None).unwrap();
@@ -742,18 +781,18 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
 
     ########################################################################*/
 
-    fn init_functions(&mut self) {
-        self.ast.iter().for_each(|stmt| {
-            if stmt.is_function() {
-                self.declare_function(stmt);
+    fn forward_all(&mut self) {
+        self.ast.iter().for_each(|any_ast| {
+            if any_ast.is_asm_function() {
+                self.compile_asm_function(any_ast);
             }
-        });
-    }
 
-    fn init_asm_functions(&mut self) {
-        self.ast.iter().for_each(|stmt| {
-            if stmt.is_asm_function() {
-                self.compile_asm_function(stmt);
+            if any_ast.is_function() {
+                self.declare_function(any_ast);
+            }
+
+            if any_ast.is_constant() {
+                self.declare_constant(any_ast);
             }
         });
     }
@@ -766,12 +805,26 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
 
     ########################################################################*/
 
+    fn declare_constant(&mut self, stmt: &'ctx Ast) {
+        let constant: ConstantRepresentation = stmt.as_constant_representation();
+
+        let name: &str = constant.0;
+        let ascii_name: &str = constant.1;
+
+        let constant_type: &ThrushType = constant.2;
+        let value: &Ast = constant.3;
+        let attributes: &ThrushAttributes = constant.4;
+
+        let value: BasicValueEnum = constgen::compile(self.context, constant_type, value);
+
+        self.context
+            .alloc_global_constant(name, ascii_name, constant_type, value, attributes);
+    }
+
     fn compile_asm_function(&mut self, stmt: &'ctx Ast) {
         let llvm_module: &Module = self.context.get_llvm_module();
         let llvm_context: &Context = self.context.get_llvm_context();
         let llvm_builder: &Builder = self.context.get_llvm_builder();
-
-        let last_builder_block: Option<BasicBlock> = llvm_builder.get_insert_block();
 
         let asm_function: AssemblerFunctionRepresentation = stmt.as_asm_function_representation();
 
@@ -802,8 +855,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
             }
         });
 
-        let truly_function_name: String =
-            utils::generate_assembler_function_name(asm_function_ascii_name);
+        let truly_function_name: String = format!("__assembler_fn_{}", asm_function_ascii_name);
 
         let asm_function_type: FunctionType = typegen::function_type(
             self.context,
@@ -829,6 +881,8 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
             llvm_asm_function.set_linkage(Linkage::LinkerPrivate);
         }
 
+        let original_block: Option<BasicBlock> = llvm_builder.get_insert_block();
+
         let entry: BasicBlock = llvm_context.append_basic_block(llvm_asm_function, "");
 
         llvm_builder.position_at_end(entry);
@@ -849,7 +903,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                     llvm_builder.build_return(Some(&return_value))
             .map_err(|_| {
                 logging::log(
-                    LoggingType::BackendPanic,
+                    LoggingType::BackendBug,
                     "Failed to create return terminator with value in assembly function generation.",
                 );
             })
@@ -859,7 +913,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                     llvm_builder.build_return(None)
             .map_err(|_| {
                 logging::log(
-                    LoggingType::BackendPanic,
+                    LoggingType::BackendBug,
                     "Failed to create void return terminator in assembly function generation.",
                 );
             })
@@ -868,13 +922,13 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
             }
         } else {
             logging::log(
-                LoggingType::BackendPanic,
+                LoggingType::BackendBug,
                 "Unable to create indirect call for call assembly function.",
             );
         }
 
-        if let Some(previous_block) = last_builder_block {
-            llvm_builder.position_at_end(previous_block);
+        if let Some(original_block) = original_block {
+            llvm_builder.position_at_end(original_block);
         }
 
         self.context.add_function(

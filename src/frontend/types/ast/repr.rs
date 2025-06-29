@@ -1,6 +1,10 @@
 use crate::frontend::types::{
     ast::Ast,
-    parser::repr::{AssemblerFunctionRepresentation, FunctionRepresentation},
+    lexer::ThrushType,
+    parser::{
+        repr::{AssemblerFunctionRepresentation, ConstantRepresentation, FunctionRepresentation},
+        stmts::types::ThrushAttributes,
+    },
 };
 
 impl Ast<'_> {
@@ -27,6 +31,22 @@ impl Ast<'_> {
                 parameters_types,
                 attributes,
             );
+        }
+
+        unreachable!()
+    }
+
+    pub fn as_constant_representation(&self) -> ConstantRepresentation {
+        if let Ast::Const {
+            name,
+            ascii_name,
+            kind,
+            value,
+            attributes,
+            ..
+        } = self
+        {
+            return (name, ascii_name, kind, &**value, attributes);
         }
 
         unreachable!()

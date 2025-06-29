@@ -29,7 +29,7 @@ pub fn integer(operator: &TokenType, left_signed: bool, right_signed: bool) -> I
 
         _ => {
             logging::log(
-                LoggingType::BackendPanic,
+                LoggingType::BackendBug,
                 "Incompatible precedence for integers.",
             );
             unreachable!()
@@ -45,7 +45,7 @@ pub fn pointer(operator: &TokenType) -> IntPredicate {
 
         _ => {
             logging::log(
-                LoggingType::BackendPanic,
+                LoggingType::BackendBug,
                 "Incompatible precedence for pointers.",
             );
 
@@ -66,7 +66,7 @@ pub fn float(operator: &TokenType) -> FloatPredicate {
 
         _ => {
             logging::log(
-                LoggingType::BackendPanic,
+                LoggingType::BackendBug,
                 "Incompatible precedence for floats.",
             );
 

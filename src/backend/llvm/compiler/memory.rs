@@ -106,7 +106,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
                 }
 
                 logging::log(
-                    LoggingType::BackendPanic,
+                    LoggingType::BackendBug,
                     "Unable to load value at memory manipulation.",
                 );
 
@@ -125,7 +125,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
                     }
 
                     logging::log(
-                        LoggingType::BackendPanic,
+                        LoggingType::BackendBug,
                         "Unable to load value at memory manipulation.",
                     );
 
@@ -145,7 +145,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
                 }
 
                 logging::log(
-                    LoggingType::BackendPanic,
+                    LoggingType::BackendBug,
                     "Unable to load value at memory manipulation.",
                 );
 
@@ -231,7 +231,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
                 }
 
                 logging::log(
-                    LoggingType::BackendPanic,
+                    LoggingType::BackendBug,
                     "Unable to calculate pointer position at memory manipulation.",
                 );
 
@@ -253,7 +253,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
                 }
 
                 logging::log(
-                    LoggingType::BackendPanic,
+                    LoggingType::BackendBug,
                     "Unable to get a value of an structure at memory manipulation.",
                 );
 
@@ -262,7 +262,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
 
             _ => {
                 logging::log(
-                    LoggingType::BackendPanic,
+                    LoggingType::BackendBug,
                     "Unable to get a value of an structure at memory manipulation.",
                 );
 
@@ -294,7 +294,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
                 }
 
                 logging::log(
-                    LoggingType::BackendPanic,
+                    LoggingType::BackendBug,
                     "Unable to get struct element pointer position at memory manipulation.",
                 );
 
@@ -446,7 +446,7 @@ pub fn gep_anon<'ctx>(
     }
 
     logging::log(
-        LoggingType::BackendPanic,
+        LoggingType::BackendBug,
         "Unable to get pointer element at memory manipulation.",
     );
 

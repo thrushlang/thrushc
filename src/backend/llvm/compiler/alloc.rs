@@ -6,7 +6,7 @@ use inkwell::{
     module::{Linkage, Module},
     targets::TargetData,
     types::BasicTypeEnum,
-    values::{BasicValueEnum, PointerValue},
+    values::{BasicValueEnum, GlobalValue, PointerValue},
 };
 
 use crate::{
@@ -85,18 +85,17 @@ pub fn constant<'ctx>(
     llvm_value: BasicValueEnum<'ctx>,
     attributes: &'ctx ThrushAttributes<'ctx>,
 ) -> PointerValue<'ctx> {
-    let global = module.add_global(llvm_type, Some(AddressSpace::default()), name);
+    let global: GlobalValue = module.add_global(llvm_type, Some(AddressSpace::default()), name);
+
     if !attributes.has_public_attribute() {
         global.set_linkage(Linkage::LinkerPrivate);
     }
+
     global.set_initializer(&llvm_value);
     global.set_constant(true);
     global.as_pointer_value()
 }
 
 fn codegen_abort<T: Display>(message: T) {
-    logging::log(
-        LoggingType::BackendPanic,
-        &format!("CODE GENERATION: '{}'", message),
-    );
+    logging::log(LoggingType::BackendBug, &format!("{}", message));
 }

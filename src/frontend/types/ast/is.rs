@@ -60,11 +60,6 @@ impl Ast<'_> {
     }
 
     #[inline]
-    pub fn is_block(&self) -> bool {
-        matches!(self, Ast::Block { .. })
-    }
-
-    #[inline]
     pub fn is_unsigned_integer(&self) -> Result<bool, ThrushCompilerIssue> {
         Ok(matches!(
             self.get_value_type()?,
@@ -86,6 +81,31 @@ impl Ast<'_> {
             self.get_value_type()?,
             ThrushType::U8 | ThrushType::U16 | ThrushType::U32
         ))
+    }
+
+    #[inline]
+    pub fn is_constant_value(&self) -> bool {
+        if matches!(
+            self,
+            Ast::Integer { .. }
+                | Ast::Float { .. }
+                | Ast::Boolean { .. }
+                | Ast::Char { .. }
+                | Ast::Str { .. }
+        ) {
+            return true;
+        }
+
+        if let Ast::FixedArray { items, .. } = self {
+            return items.iter().all(|item| item.is_constant_value());
+        }
+
+        false
+    }
+
+    #[inline]
+    pub fn is_block(&self) -> bool {
+        matches!(self, Ast::Block { .. })
     }
 
     #[inline]
@@ -152,16 +172,6 @@ impl Ast<'_> {
     #[inline]
     pub fn is_integer(&self) -> bool {
         matches!(self, Ast::Integer { .. })
-    }
-
-    #[inline]
-    pub fn is_bool(&self) -> bool {
-        matches!(self, Ast::Boolean { .. })
-    }
-
-    #[inline]
-    pub fn is_float(&self) -> bool {
-        matches!(self, Ast::Float { .. })
     }
 
     #[inline]

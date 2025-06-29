@@ -28,9 +28,7 @@ pub fn build_continue<'parser>(
         ));
     }
 
-    if !parser_ctx.get_control_ctx().get_inside_function()
-        && !parser_ctx.get_control_ctx().get_inside_bind()
-    {
+    if !parser_ctx.get_control_ctx().get_inside_function() {
         return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("Continue must be placed inside a function or a bind."),
@@ -98,12 +96,10 @@ pub fn build_break<'parser>(
         ));
     }
 
-    if !parser_ctx.get_control_ctx().get_inside_function()
-        && !parser_ctx.get_control_ctx().get_inside_bind()
-    {
+    if !parser_ctx.get_control_ctx().get_inside_function() {
         return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
-            String::from("Break must be placed inside a function or a bind."),
+            String::from("Break must be placed inside a function."),
             None,
             span,
         ));

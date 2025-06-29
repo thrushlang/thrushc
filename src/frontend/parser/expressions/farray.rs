@@ -37,8 +37,8 @@ pub fn build_fixed_array<'parser>(
 
         if item.is_constructor() {
             return Err(ThrushCompilerIssue::Error(
-                String::from("Syntax error"),
-                String::from("Constructor should be stored in a local variable."),
+                "Syntax error".into(),
+                "Constructor should be stored in a local variable.".into(),
                 None,
                 item.get_span(),
             ));

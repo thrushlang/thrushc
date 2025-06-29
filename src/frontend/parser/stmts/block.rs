@@ -28,12 +28,10 @@ pub fn build_block<'parser>(
         ));
     }
 
-    if !parser_ctx.get_control_ctx().get_inside_function()
-        && !parser_ctx.get_control_ctx().get_inside_bind()
-    {
+    if !parser_ctx.get_control_ctx().get_inside_function() {
         return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
-            String::from("Block of code must be placed inside a function or a bind."),
+            String::from("Block of code must be placed inside a function."),
             None,
             span,
         ));

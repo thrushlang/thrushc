@@ -89,7 +89,7 @@ pub fn int_operation<'ctx>(
                 }
 
                 logging::log(
-                    LoggingType::BackendPanic,
+                    LoggingType::BackendBug,
                     "Cannot perform integer binary operation without a valid logical gate.",
                 );
 
@@ -98,7 +98,7 @@ pub fn int_operation<'ctx>(
 
             _ => {
                 logging::log(
-                    LoggingType::BackendPanic,
+                    LoggingType::BackendBug,
                     "Cannot perform integer binary operation without a valid operator.",
                 );
 
@@ -108,7 +108,7 @@ pub fn int_operation<'ctx>(
     }
 
     logging::log(
-        LoggingType::BackendPanic,
+        LoggingType::BackendBug,
         "Cannot perform integer binary operation without integer values.",
     );
 

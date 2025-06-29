@@ -56,7 +56,7 @@ pub fn bool_operation<'ctx>(
                 }
 
                 logging::log(
-                    LoggingType::BackendPanic,
+                    LoggingType::BackendBug,
                     "Cannot perform boolean binary operation without a valid gate.",
                 );
 
@@ -64,7 +64,7 @@ pub fn bool_operation<'ctx>(
             }
             _ => {
                 logging::log(
-                    LoggingType::BackendPanic,
+                    LoggingType::BackendBug,
                     "Cannot perform boolean binary operation without a valid operator.",
                 );
 
@@ -90,7 +90,7 @@ pub fn bool_operation<'ctx>(
     }
 
     logging::log(
-        LoggingType::BackendPanic,
+        LoggingType::BackendBug,
         "Cannot perform boolean binary operation without two integer values.",
     );
 

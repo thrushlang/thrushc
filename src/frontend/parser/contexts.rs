@@ -11,9 +11,9 @@ pub enum SyncPosition {
 #[derive(Debug)]
 pub struct ParserControlContext {
     sync_position: SyncPosition,
+
     entry_point: bool,
     inside_function: bool,
-    inside_bind: bool,
     inside_loop: bool,
     unreacheable_code: usize,
 }
@@ -45,7 +45,6 @@ impl ParserControlContext {
             sync_position: SyncPosition::NoRelevant,
             entry_point: false,
             inside_function: false,
-            inside_bind: false,
             inside_loop: false,
             unreacheable_code: 0,
         }
@@ -81,14 +80,6 @@ impl ParserControlContext {
 
     pub fn get_inside_loop(&self) -> bool {
         self.inside_loop
-    }
-
-    pub fn set_inside_bind(&mut self, value: bool) {
-        self.inside_bind = value;
-    }
-
-    pub fn get_inside_bind(&self) -> bool {
-        self.inside_bind
     }
 
     pub fn get_unreacheable_code_scope(&self) -> usize {

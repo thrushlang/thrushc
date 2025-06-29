@@ -107,7 +107,7 @@ pub fn generate_type<'ctx>(llvm_context: &'ctx Context, kind: &ThrushType) -> Ba
 
         any => {
             logging::log(
-                LoggingType::BackendPanic,
+                LoggingType::BackendBug,
                 &format!("Unable to create a LLVM Type from '{}' type.", any),
             );
 

@@ -18,9 +18,7 @@ pub fn build_return<'parser>(
 
     let span: Span = return_tk.get_span();
 
-    if !parser_ctx.get_control_ctx().get_inside_function()
-        && !parser_ctx.get_control_ctx().get_inside_bind()
-    {
+    if !parser_ctx.get_control_ctx().get_inside_function() {
         return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("Return outside of bind or function."),

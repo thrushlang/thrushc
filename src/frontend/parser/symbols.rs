@@ -5,9 +5,10 @@ use crate::{
         types::{
             ast::Ast,
             parser::symbols::types::{
-                AssemblerFunction, AssemblerFunctions, ConstantSymbol, Constants, CustomTypeSymbol,
-                CustomTypes, EnumSymbol, Enums, FoundSymbolId, Function, Functions, LLISymbol,
-                LLIs, LocalSymbol, Locals, ParameterSymbol, Parameters, Struct, Structs,
+                AssemblerFunction, AssemblerFunctions, ConstantSymbol, CustomTypeSymbol,
+                CustomTypes, EnumSymbol, Enums, FoundSymbolId, Function, Functions,
+                GlobalConstants, LLISymbol, LLIs, LocalConstants, LocalSymbol, Locals,
+                ParameterSymbol, Parameters, Struct, Structs,
             },
         },
     },
@@ -18,7 +19,10 @@ use ahash::AHashMap as HashMap;
 #[derive(Clone, Debug, Default)]
 pub struct SymbolsTable<'parser> {
     custom_types: CustomTypes<'parser>,
-    constants: Constants<'parser>,
+
+    global_constants: GlobalConstants<'parser>,
+    constants: LocalConstants<'parser>,
+
     locals: Locals<'parser>,
     llis: LLIs<'parser>,
     structs: Structs<'parser>,
@@ -35,6 +39,7 @@ impl<'parser> SymbolsTable<'parser> {
     ) -> Self {
         Self {
             custom_types: HashMap::with_capacity(255),
+            global_constants: HashMap::with_capacity(255),
             constants: Vec::with_capacity(255),
             locals: Vec::with_capacity(255),
             llis: Vec::with_capacity(255),
@@ -156,6 +161,26 @@ impl<'parser> SymbolsTable<'parser> {
             CompilationPosition::Parser,
             line!(),
         ));
+    }
+
+    pub fn new_global_constant(
+        &mut self,
+        name: &'parser str,
+        constant: ConstantSymbol<'parser>,
+        span: Span,
+    ) -> Result<(), ThrushCompilerIssue> {
+        if self.global_constants.contains_key(name) {
+            return Err(ThrushCompilerIssue::Error(
+                "Constant already declared".into(),
+                format!("'{}' constant already declared before.", name),
+                None,
+                span,
+            ));
+        }
+
+        self.global_constants.insert(name, constant);
+
+        Ok(())
     }
 
     pub fn new_constant(
@@ -315,6 +340,20 @@ impl<'parser> SymbolsTable<'parser> {
             }
         }
 
+        if self.global_constants.contains_key(name) {
+            return Ok((
+                None,
+                None,
+                None,
+                Some((name, 0)),
+                None,
+                None,
+                None,
+                None,
+                None,
+            ));
+        }
+
         if self.structs.contains_key(name) {
             return Ok((Some(name), None, None, None, None, None, None, None, None));
         }
@@ -388,7 +427,7 @@ impl<'parser> SymbolsTable<'parser> {
 
         Err(ThrushCompilerIssue::Error(
             String::from("Not found"),
-            String::from("LLI not found at local scope."),
+            String::from("LLI not found."),
             None,
             span,
         ))
@@ -406,7 +445,7 @@ impl<'parser> SymbolsTable<'parser> {
 
         Err(ThrushCompilerIssue::Error(
             String::from("Not found"),
-            String::from("Struct not found at global scope."),
+            String::from("Struct not found."),
             None,
             span,
         ))
@@ -424,7 +463,7 @@ impl<'parser> SymbolsTable<'parser> {
 
         Err(ThrushCompilerIssue::Error(
             String::from("Not found"),
-            String::from("Assembler function not found at global scope."),
+            String::from("Assembler function not found."),
             None,
             span,
         ))
@@ -441,8 +480,8 @@ impl<'parser> SymbolsTable<'parser> {
         }
 
         Err(ThrushCompilerIssue::Error(
-            String::from("Not found"),
-            String::from("Function not found at global scope."),
+            "Not found".into(),
+            "Function not found.".into(),
             None,
             span,
         ))
@@ -459,8 +498,8 @@ impl<'parser> SymbolsTable<'parser> {
         }
 
         Err(ThrushCompilerIssue::Error(
-            String::from("Not found"),
-            String::from("Enum not found at global scope."),
+            "Not found".into(),
+            "Enum not found.".into(),
             None,
             span,
         ))
@@ -477,8 +516,8 @@ impl<'parser> SymbolsTable<'parser> {
         }
 
         Err(ThrushCompilerIssue::Error(
-            String::from("Not found"),
-            String::from("Custom type not found at global scope."),
+            "Not found".into(),
+            "Custom type not found.".into(),
             None,
             span,
         ))
@@ -496,8 +535,8 @@ impl<'parser> SymbolsTable<'parser> {
         }
 
         Err(ThrushCompilerIssue::Error(
-            String::from("Not found"),
-            String::from("Local not found at local scope."),
+            "Not found".into(),
+            "Local not found.".into(),
             None,
             span,
         ))
@@ -510,13 +549,29 @@ impl<'parser> SymbolsTable<'parser> {
         scope_idx: usize,
         span: Span,
     ) -> Result<ConstantSymbol<'parser>, ThrushCompilerIssue> {
-        if let Some(constant) = self.constants[scope_idx].get(const_id).cloned() {
-            return Ok(constant);
+        if scope_idx == 0 {
+            if let Some(constant) = self.global_constants.get(const_id).cloned() {
+                return Ok(constant);
+            }
+        }
+
+        if let Some(scope) = self.constants.get(scope_idx) {
+            if let Some(local_const) = scope.get(const_id).cloned() {
+                return Ok(local_const);
+            }
+        } else {
+            return Err(ThrushCompilerIssue::Bug(
+                String::from("Last scope not caught"),
+                String::from("The last scope could not be obtained."),
+                span,
+                CompilationPosition::Parser,
+                line!(),
+            ));
         }
 
         Err(ThrushCompilerIssue::Error(
-            String::from("Not found"),
-            String::from("Constant not found at global scope."),
+            "Not found".into(),
+            "Constant not found.".into(),
             None,
             span,
         ))

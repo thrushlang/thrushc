@@ -5,8 +5,10 @@ pub mod binaryop;
 pub mod builtins;
 pub mod cast;
 pub mod codegen;
+pub mod constgen;
 pub mod context;
 pub mod conventions;
+pub mod farray;
 pub mod floatgen;
 pub mod intgen;
 pub mod intrinsics;
@@ -18,9 +20,9 @@ pub mod mutation;
 pub mod optimizations;
 pub mod predicates;
 pub mod ptrgen;
+pub mod string;
 pub mod typegen;
 pub mod unaryop;
-pub mod utils;
 pub mod valuegen;
 
 use {

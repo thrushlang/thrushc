@@ -21,12 +21,10 @@ pub fn build_conditional<'parser>(
 
     let span: Span = if_tk.get_span();
 
-    if !parser_ctx.get_control_ctx().get_inside_function()
-        && !parser_ctx.get_control_ctx().get_inside_bind()
-    {
+    if !parser_ctx.get_control_ctx().get_inside_function() {
         return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
-            String::from("Conditionals must be placed inside a function or a bind."),
+            String::from("Conditionals must be placed inside a function."),
             None,
             span,
         ));

@@ -5,7 +5,8 @@ use super::typegen;
 use crate::backend::llvm::compiler::attributes::LLVMAttribute;
 use crate::backend::llvm::compiler::memory::{self, SymbolAllocated};
 use crate::backend::llvm::compiler::{
-    array, binaryop, builtins, cast, floatgen, intgen, lli, ptrgen, unaryop, utils, valuegen,
+    array, binaryop, builtins, cast, farray, floatgen, intgen, lli, ptrgen, string, unaryop,
+    valuegen,
 };
 
 use crate::backend::types::LLVMEitherExpression;
@@ -115,7 +116,7 @@ pub fn compile<'ctx>(
         // Array Operations
         // Compiles a fixed-size array
         Ast::FixedArray { items, kind, .. } => {
-            array::compile_fixed_array(context, kind, items, cast_type)
+            farray::compile_fixed_array(context, kind, items, cast_type)
         }
 
         // Compiles a dynamic array
@@ -605,7 +606,7 @@ fn compile_string<'ctx>(
     kind: &ThrushType,
 ) -> BasicValueEnum<'ctx> {
     let ptr: PointerValue =
-        utils::build_str_constant(context.get_llvm_module(), context.get_llvm_context(), bytes);
+        string::compile_str_constant(context.get_llvm_module(), context.get_llvm_context(), bytes);
 
     memory::load_anon(context, ptr, kind)
 }
@@ -619,8 +620,5 @@ fn compile_null_ptr<'ctx>(context: &LLVMCodeGenContext<'_, 'ctx>) -> BasicValueE
 }
 
 fn codegen_abort<T: Display>(message: T) {
-    logging::log(
-        LoggingType::BackendPanic,
-        &format!("CODE GENERATION: '{}'.", message),
-    );
+    logging::log(LoggingType::BackendBug, &format!("{}", message));
 }

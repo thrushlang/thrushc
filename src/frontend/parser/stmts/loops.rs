@@ -31,9 +31,7 @@ pub fn build_for_loop<'parser>(
         ));
     }
 
-    if !parser_ctx.get_control_ctx().get_inside_function()
-        && !parser_ctx.get_control_ctx().get_inside_bind()
-    {
+    if !parser_ctx.get_control_ctx().get_inside_function() {
         return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("For loop must be placed inside a function or a bind."),
@@ -82,9 +80,7 @@ pub fn build_loop<'parser>(
         ));
     }
 
-    if !parser_ctx.get_control_ctx().get_inside_function()
-        && !parser_ctx.get_control_ctx().get_inside_bind()
-    {
+    if !parser_ctx.get_control_ctx().get_inside_function() {
         return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("Loop must be placed inside a function or a bind."),
@@ -133,9 +129,7 @@ pub fn build_while_loop<'parser>(
         ));
     }
 
-    if !parser_ctx.get_control_ctx().get_inside_function()
-        && !parser_ctx.get_control_ctx().get_inside_bind()
-    {
+    if !parser_ctx.get_control_ctx().get_inside_function() {
         return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("While loop must be placed inside a function or a structure method."),

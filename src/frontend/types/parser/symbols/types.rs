@@ -5,14 +5,14 @@ use crate::{
     frontend::{lexer::span::Span, types::lexer::ThrushType},
 };
 
-pub type Struct<'instr> = (
-    &'instr str,
-    Vec<(&'instr str, ThrushType, u32, Span)>,
-    ThrushAttributes<'instr>,
+pub type Struct<'parser> = (
+    &'parser str,
+    Vec<(&'parser str, ThrushType, u32, Span)>,
+    ThrushAttributes<'parser>,
 );
 
-pub type Function<'instr> = (ThrushType, ParametersTypes, bool);
-pub type AssemblerFunction<'instr> = (ThrushType, ParametersTypes, bool);
+pub type Function<'parser> = (ThrushType, ParametersTypes, bool);
+pub type AssemblerFunction<'parser> = (ThrushType, ParametersTypes, bool);
 
 #[derive(Debug, Clone)]
 pub struct ParametersTypes(pub Vec<ThrushType>);
@@ -25,34 +25,35 @@ pub struct ParametersTypes(pub Vec<ThrushType>);
 
 ########################################################################*/
 
-pub type FoundSymbolId<'instr> = (
-    Option<&'instr str>,
-    Option<&'instr str>,
-    Option<&'instr str>,
-    Option<(&'instr str, usize)>,
-    Option<&'instr str>,
-    Option<&'instr str>,
-    Option<&'instr str>,
-    Option<(&'instr str, usize)>,
-    Option<(&'instr str, usize)>,
+pub type FoundSymbolId<'parser> = (
+    Option<&'parser str>,
+    Option<&'parser str>,
+    Option<&'parser str>,
+    Option<(&'parser str, usize)>,
+    Option<&'parser str>,
+    Option<&'parser str>,
+    Option<&'parser str>,
+    Option<(&'parser str, usize)>,
+    Option<(&'parser str, usize)>,
 );
 
 pub type CustomTypeSymbol<'ctx> = (CustomTypeFields<'ctx>, ThrushAttributes<'ctx>);
 pub type EnumSymbol<'ctx> = (EnumFields<'ctx>, ThrushAttributes<'ctx>);
-pub type ConstantSymbol<'instr> = (ThrushType, ThrushAttributes<'instr>);
+pub type ConstantSymbol<'parser> = (ThrushType, ThrushAttributes<'parser>);
 
-pub type LLISymbol<'instr> = (ThrushType, Span);
-pub type LocalSymbol<'instr> = (ThrushType, bool, bool, Span);
-pub type ParameterSymbol<'instr> = (ThrushType, bool, bool, Span);
+pub type LLISymbol<'parser> = (ThrushType, Span);
+pub type LocalSymbol<'parser> = (ThrushType, bool, bool, Span);
+pub type ParameterSymbol<'parser> = (ThrushType, bool, bool, Span);
 
-pub type CustomTypes<'instr> = HashMap<&'instr str, CustomTypeSymbol<'instr>>;
-pub type Constants<'instr> = Vec<HashMap<&'instr str, ConstantSymbol<'instr>>>;
+pub type CustomTypes<'parser> = HashMap<&'parser str, CustomTypeSymbol<'parser>>;
+pub type LocalConstants<'parser> = Vec<HashMap<&'parser str, ConstantSymbol<'parser>>>;
+pub type GlobalConstants<'parser> = HashMap<&'parser str, ConstantSymbol<'parser>>;
 
-pub type Parameters<'instr> = HashMap<&'instr str, ParameterSymbol<'instr>>;
-pub type Structs<'instr> = HashMap<&'instr str, Struct<'instr>>;
-pub type Enums<'instr> = HashMap<&'instr str, EnumSymbol<'instr>>;
-pub type Functions<'instr> = HashMap<&'instr str, Function<'instr>>;
-pub type AssemblerFunctions<'instr> = HashMap<&'instr str, AssemblerFunction<'instr>>;
+pub type Parameters<'parser> = HashMap<&'parser str, ParameterSymbol<'parser>>;
+pub type Structs<'parser> = HashMap<&'parser str, Struct<'parser>>;
+pub type Enums<'parser> = HashMap<&'parser str, EnumSymbol<'parser>>;
+pub type Functions<'parser> = HashMap<&'parser str, Function<'parser>>;
+pub type AssemblerFunctions<'parser> = HashMap<&'parser str, AssemblerFunction<'parser>>;
 
-pub type LLIs<'instr> = Vec<HashMap<&'instr str, LLISymbol<'instr>>>;
-pub type Locals<'instr> = Vec<HashMap<&'instr str, LocalSymbol<'instr>>>;
+pub type LLIs<'parser> = Vec<HashMap<&'parser str, LLISymbol<'parser>>>;
+pub type Locals<'parser> = Vec<HashMap<&'parser str, LocalSymbol<'parser>>>;

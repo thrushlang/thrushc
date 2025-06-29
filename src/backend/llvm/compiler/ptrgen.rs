@@ -4,7 +4,7 @@ use super::context::LLVMCodeGenContext;
 use super::typegen;
 use crate::backend::llvm::compiler::attributes::LLVMAttribute;
 use crate::backend::llvm::compiler::memory::{self, SymbolAllocated};
-use crate::backend::llvm::compiler::{builtins, cast, intgen, lli, ptrgen, utils, valuegen};
+use crate::backend::llvm::compiler::{builtins, cast, intgen, lli, ptrgen, string, valuegen};
 use crate::backend::types::LLVMEitherExpression;
 use crate::backend::types::repr::LLVMFunction;
 use crate::backend::types::traits::AssemblerFunctionExtensions;
@@ -387,13 +387,15 @@ fn compute_indexes<'ctx>(
         .iter()
         .flat_map(|index| {
             if kind.is_mut_fixed_array_type() || kind.is_ptr_fixed_array_type() {
-                let base = intgen::integer(llvm_context, &ThrushType::U32, 0, false);
-                let depth =
+                let base: IntValue = intgen::integer(llvm_context, &ThrushType::U32, 0, false);
+                let depth: IntValue =
                     valuegen::compile(context, index, Some(&ThrushType::U32)).into_int_value();
+
                 vec![base, depth]
             } else {
-                let depth =
+                let depth: IntValue =
                     valuegen::compile(context, index, Some(&ThrushType::U64)).into_int_value();
+
                 vec![depth]
             }
         })
@@ -404,7 +406,8 @@ fn compile_string<'ctx>(
     context: &LLVMCodeGenContext<'_, 'ctx>,
     bytes: &'ctx [u8],
 ) -> BasicValueEnum<'ctx> {
-    utils::build_str_constant(context.get_llvm_module(), context.get_llvm_context(), bytes).into()
+    string::compile_str_constant(context.get_llvm_module(), context.get_llvm_context(), bytes)
+        .into()
 }
 
 fn compile_null_ptr<'ctx>(context: &LLVMCodeGenContext<'_, 'ctx>) -> BasicValueEnum<'ctx> {
@@ -416,8 +419,5 @@ fn compile_null_ptr<'ctx>(context: &LLVMCodeGenContext<'_, 'ctx>) -> BasicValueE
 }
 
 fn codegen_abort<T: Display>(message: T) {
-    logging::log(
-        LoggingType::BackendPanic,
-        &format!("CODE GENERATION: '{}'.", message),
-    );
+    logging::log(LoggingType::BackendBug, &format!("{}", message));
 }

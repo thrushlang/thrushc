@@ -65,7 +65,7 @@ fn handle_unknown_expression<'ctx, T: Display>(
 }
 
 fn codegen_abort<T: Display>(message: T) {
-    logging::log(LoggingType::BackendPanic, &format!("{}.", message));
+    logging::log(LoggingType::BackendBug, &format!("{}", message));
 }
 
 fn compile_null_ptr<'ctx>(context: &LLVMCodeGenContext<'_, 'ctx>) -> BasicValueEnum<'ctx> {

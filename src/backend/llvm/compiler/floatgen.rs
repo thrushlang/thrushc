@@ -8,7 +8,7 @@ use crate::{
 pub fn float<'ctx>(
     builder: &Builder<'ctx>,
     context: &'ctx Context,
-    kind: &'ctx ThrushType,
+    kind: &ThrushType,
     number: f64,
     signed: bool,
 ) -> FloatValue<'ctx> {
@@ -24,8 +24,8 @@ pub fn float<'ctx>(
 
         what => {
             logging::log(
-                LoggingType::BackendPanic,
-                &format!("Unsupported integer type: {:#?}", what),
+                LoggingType::BackendBug,
+                &format!("Unsupported integer type: '{:#?}'.", what),
             );
 
             unreachable!()

@@ -47,6 +47,7 @@ pub fn parse<'parser>(
     let statement: Result<Ast<'parser>, ThrushCompilerIssue> = match &parser_ctx.peek().kind {
         TokenType::Type => Ok(cstype::build_custom_type(parser_ctx, false)?),
         TokenType::Struct => Ok(structure::build_structure(parser_ctx, false)?),
+        TokenType::Const => Ok(constant::build_global_const(parser_ctx, false)?),
         TokenType::Enum => Ok(union::build_enum(parser_ctx, false)?),
         TokenType::Fn => Ok(function::build_function(parser_ctx, false)?),
         TokenType::AsmFn => Ok(asmfunction::build_assembler_function(parser_ctx, false)?),
@@ -55,6 +56,50 @@ pub fn parse<'parser>(
     };
 
     statement
+}
+
+pub fn parse_forward(parser_ctx: &mut ParserContext) {
+    let mut entered_at_block: bool = false;
+
+    while !parser_ctx.is_eof() {
+        match &parser_ctx.peek().kind {
+            TokenType::Type if !entered_at_block => {
+                let _ = cstype::build_custom_type(parser_ctx, true);
+            }
+            TokenType::Struct if !entered_at_block => {
+                let _ = structure::build_structure(parser_ctx, true);
+            }
+            TokenType::Const if !entered_at_block => {
+                let _ = constant::build_global_const(parser_ctx, true);
+            }
+            TokenType::Enum if !entered_at_block => {
+                let _ = union::build_enum(parser_ctx, true);
+            }
+            TokenType::Fn if !entered_at_block => {
+                let _ = function::build_function(parser_ctx, true);
+            }
+
+            TokenType::AsmFn if !entered_at_block => {
+                let _ = asmfunction::build_assembler_function(parser_ctx, true);
+            }
+
+            TokenType::LBrace => {
+                entered_at_block = true;
+                let _ = parser_ctx.only_advance();
+            }
+
+            TokenType::RBrace => {
+                entered_at_block = false;
+                let _ = parser_ctx.only_advance();
+            }
+
+            _ => {
+                let _ = parser_ctx.only_advance();
+            }
+        }
+    }
+
+    parser_ctx.current = 0;
 }
 
 pub fn statement<'parser>(
@@ -68,7 +113,7 @@ pub fn statement<'parser>(
         TokenType::LBrace => Ok(block::build_block(parser_ctx)?),
         TokenType::Return => Ok(terminator::build_return(parser_ctx)?),
 
-        TokenType::Const => Ok(constant::build_const(parser_ctx, false)?),
+        TokenType::Const => Ok(constant::build_const(parser_ctx)?),
         TokenType::Local => Ok(local::build_local(parser_ctx)?),
         TokenType::Instr => Ok(lli::build_lli(parser_ctx)?),
 
