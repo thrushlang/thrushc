@@ -81,10 +81,10 @@ pub fn validate_memmove<'type_checker>(
         ));
     }
 
-    if !size.is_unsigned_integer()? || !size.is_moreu32bit_integer()? {
+    if !size.is_unsigned_integer()? {
         typechecker.add_error(ThrushCompilerIssue::Error(
             "Type error".into(),
-            "Expected any unsigned integer value more than or equal to 32 bits.".into(),
+            "Expected any unsigned integer value.".into(),
             None,
             size_span,
         ));
@@ -132,10 +132,10 @@ pub fn validate_memcpy<'type_checker>(
         ));
     }
 
-    if !size.is_unsigned_integer()? || !size.is_moreu32bit_integer()? {
+    if !size.is_unsigned_integer()? {
         typechecker.add_error(ThrushCompilerIssue::Error(
             "Type error".into(),
-            "Expected any unsigned integer value more than or equal to 32 bits.".into(),
+            "Expected any unsigned integer value.".into(),
             None,
             size_span,
         ));
@@ -166,25 +166,25 @@ pub fn validate_memset<'type_checker>(
     {
         typechecker.add_error(ThrushCompilerIssue::Error(
             "Type error".into(),
-            "Expected 'ptr<T>', 'ptr', 'addr', or 'mut T' type.".into(),
+            "Expected 'ptr[T]', 'ptr', 'addr', or 'mut T' type.".into(),
             None,
             destination_span,
         ));
     }
 
-    if !new_size.is_unsigned_integer()? || !new_size.is_moreu32bit_integer()? {
+    if !new_size.is_unsigned_integer()? {
         typechecker.add_error(ThrushCompilerIssue::Error(
             "Type error".into(),
-            "Expected any unsigned integer value more than or equal to 32 bits.".into(),
+            "Expected any unsigned integer value.".into(),
             None,
             new_size_span,
         ));
     }
 
-    if !size.is_unsigned_integer()? || !size.is_moreu32bit_integer()? {
+    if !size.is_unsigned_integer()? {
         typechecker.add_error(ThrushCompilerIssue::Error(
             "Type error".into(),
-            "Expected any unsigned integer value more than or equal to 32 bits.".into(),
+            "Expected any unsigned integer value.".into(),
             None,
             size_span,
         ));

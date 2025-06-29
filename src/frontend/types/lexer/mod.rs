@@ -75,9 +75,7 @@ pub enum ThrushType {
 impl ThrushTypeMutableExtensions for ThrushType {
     fn is_mut_fixed_array_type(&self) -> bool {
         if let ThrushType::Mut(inner) = self {
-            if let ThrushType::FixedArray(..) = &**inner {
-                return true;
-            }
+            return inner.is_fixed_array_type();
         }
 
         false
@@ -85,9 +83,7 @@ impl ThrushTypeMutableExtensions for ThrushType {
 
     fn is_mut_array_type(&self) -> bool {
         if let ThrushType::Mut(inner) = self {
-            if let ThrushType::Array(..) = &**inner {
-                return true;
-            }
+            return inner.is_array_type();
         }
 
         false
@@ -95,9 +91,7 @@ impl ThrushTypeMutableExtensions for ThrushType {
 
     fn is_mut_struct_type(&self) -> bool {
         if let ThrushType::Mut(inner) = self {
-            if let ThrushType::Struct(..) = &**inner {
-                return true;
-            }
+            return inner.is_struct_type();
         }
 
         false
@@ -129,9 +123,9 @@ impl ThrushTypeMutableExtensions for ThrushType {
 impl ThrushTypeNumericExtensions for ThrushType {
     fn is_numeric_type(&self) -> bool {
         if self.is_integer_type()
+            || self.is_float_type()
             || self.is_bool_type()
             || self.is_char_type()
-            || self.is_float_type()
         {
             return true;
         }
@@ -167,23 +161,7 @@ impl ThrushTypePointerExtensions for ThrushType {
 
     fn is_ptr_struct_type(&self) -> bool {
         if let ThrushType::Ptr(Some(inner)) = self {
-            return inner.is_ptr_struct_type_inner();
-        }
-
-        false
-    }
-
-    fn is_ptr_struct_type_inner(&self) -> bool {
-        if let ThrushType::Ptr(Some(inner)) = self {
-            return inner.is_ptr_struct_type_inner();
-        }
-
-        if let ThrushType::Ptr(None) = self {
-            return false;
-        }
-
-        if let ThrushType::Struct(..) = self {
-            return true;
+            return inner.is_struct_type();
         }
 
         false
@@ -191,47 +169,7 @@ impl ThrushTypePointerExtensions for ThrushType {
 
     fn is_ptr_fixed_array_type(&self) -> bool {
         if let ThrushType::Ptr(Some(inner)) = self {
-            return inner.is_ptr_fixed_array_type_inner();
-        }
-
-        false
-    }
-
-    fn is_ptr_fixed_array_type_inner(&self) -> bool {
-        if let ThrushType::Ptr(Some(inner)) = self {
-            return inner.is_ptr_fixed_array_type();
-        }
-
-        if let ThrushType::Ptr(None) = self {
-            return false;
-        }
-
-        if let ThrushType::FixedArray(..) = self {
-            return true;
-        }
-
-        false
-    }
-
-    fn is_ptr_array_type(&self) -> bool {
-        if let ThrushType::Ptr(Some(inner)) = self {
-            return inner.is_ptr_array_type_inner();
-        }
-
-        false
-    }
-
-    fn is_ptr_array_type_inner(&self) -> bool {
-        if let ThrushType::Ptr(Some(inner)) = self {
-            return inner.is_ptr_array_type();
-        }
-
-        if let ThrushType::Ptr(None) = self {
-            return false;
-        }
-
-        if let ThrushType::Array(..) = self {
-            return true;
+            return inner.is_fixed_array_type();
         }
 
         false
@@ -310,10 +248,12 @@ impl ThrushType {
         }
 
         match self {
-            ThrushType::Mut(inner_type) => inner_type.get_type_with_depth(depth - 1),
+            ThrushType::Mut(inner_type) => inner_type.get_type_with_depth(depth + 1 - 1),
+            ThrushType::FixedArray(element_type, _) => {
+                element_type.get_type_with_depth(depth + 1 - 1)
+            }
+            ThrushType::Array(element_type) => element_type.get_type_with_depth(depth + 1 - 1),
             ThrushType::Ptr(Some(inner_type)) => inner_type.get_type_with_depth(depth - 1),
-            ThrushType::FixedArray(element_type, _) => element_type.get_type_with_depth(depth - 1),
-            ThrushType::Array(element_type) => element_type.get_type_with_depth(depth - 1),
             ThrushType::Struct(_, _) => self,
             ThrushType::S8
             | ThrushType::S16

@@ -71,7 +71,8 @@ fn printArray(arr: mut array[u32; 7], size: u32) void {
     print(space as ptr);                           // Print a newline after the array
 }
 
-fn main() {
+fn main() u32 {
+
     local unsorted_array: mut array[u32; 7] = fixed[64, 34, 25, 12, 22, 11, 90]; // Initialize array with 7 elements
     local unsorted_array_fmt: str = "Original array: "; // String for the unsorted array
     local sorted_array_fmt: str = "Sorted array: ";     // String for the sorted array
@@ -81,4 +82,7 @@ fn main() {
     quickSort(unsorted_array, 0, 6);       // Sort the array (indices 0 to 6)
     print(sorted_array_fmt as ptr);        // Print "Sorted array: "
     printArray(unsorted_array, 7);         // Print the sorted array
+
+    return 0;
+
 }

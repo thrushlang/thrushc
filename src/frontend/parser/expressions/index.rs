@@ -5,7 +5,7 @@ use crate::{
         parser::{ParserContext, expression, expressions::reference},
         types::{
             ast::{Ast, metadata::index::IndexMetadata, types::AstEitherExpression},
-            lexer::{ThrushType, traits::ThrushTypeMutableExtensions},
+            lexer::ThrushType,
         },
     },
 };
@@ -89,28 +89,12 @@ pub fn build_index<'parser>(
         String::from("Expected ']'."),
     )?;
 
-    let fixed_depth: usize = if index_type.is_fixed_array_type() || index_type.is_array_type() {
-        1
-    } else if index_type.is_mut_fixed_array_type() || index_type.is_mut_array_type() {
-        2
-    } else {
-        0
-    };
-
     let index_type: ThrushType = if index_type.is_ptr_type() {
         ThrushType::Ptr(Some(
-            index_type
-                .get_type_with_depth(fixed_depth + indexes.len())
-                .clone()
-                .into(),
+            index_type.get_type_with_depth(indexes.len()).clone().into(),
         ))
     } else {
-        ThrushType::Mut(
-            index_type
-                .get_type_with_depth(fixed_depth + indexes.len())
-                .clone()
-                .into(),
-        )
+        ThrushType::Mut(index_type.get_type_with_depth(indexes.len()).clone().into())
     };
 
     Ok(Ast::Index {

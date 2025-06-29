@@ -126,7 +126,8 @@ pub fn validate_lli<'type_checker>(
                 {
                     typechecker.add_error(ThrushCompilerIssue::Error(
                         "Type error".into(),
-                        "Expected raw typed pointer type with deep type.".into(),
+                        "Expected raw typed pointer type with deep type 'struct T', or 'array[T; N]'."
+                            .into(),
                         None,
                         reference_span,
                     ));
@@ -168,7 +169,7 @@ pub fn validate_lli<'type_checker>(
                 {
                     typechecker.add_error(ThrushCompilerIssue::Error(
                         "Type error".into(),
-                        "Expected raw typed pointer type with deep type.".into(),
+                        "Expected raw typed pointer type with deep type 'struct T', or 'array[T; N]'.".into(),
                         None,
                         expr_span,
                     ));
@@ -184,10 +185,10 @@ pub fn validate_lli<'type_checker>(
             }
 
             indexes.iter().try_for_each(|indexe| {
-                if !indexe.is_unsigned_integer()? || !indexe.is_moreu32bit_integer()? {
+                if !indexe.is_unsigned_integer()? {
                     typechecker.add_error(ThrushCompilerIssue::Error(
                         "Type error".into(),
-                        "Expected any unsigned integer value more than or equal to 32 bits.".into(),
+                        "Expected any unsigned integer value.".into(),
                         None,
                         *span,
                     ));

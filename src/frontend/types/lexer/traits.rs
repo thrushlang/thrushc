@@ -22,9 +22,5 @@ pub trait ThrushTypePointerExtensions {
     fn is_typed_ptr(&self) -> bool;
     fn is_all_ptr(&self) -> bool;
     fn is_ptr_struct_type(&self) -> bool;
-    fn is_ptr_struct_type_inner(&self) -> bool;
     fn is_ptr_fixed_array_type(&self) -> bool;
-    fn is_ptr_fixed_array_type_inner(&self) -> bool;
-    fn is_ptr_array_type(&self) -> bool;
-    fn is_ptr_array_type_inner(&self) -> bool;
 }

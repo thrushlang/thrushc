@@ -4,7 +4,9 @@ use super::context::LLVMCodeGenContext;
 use super::typegen;
 use crate::backend::llvm::compiler::attributes::LLVMAttribute;
 use crate::backend::llvm::compiler::memory::{self, SymbolAllocated};
-use crate::backend::llvm::compiler::{builtins, cast, intgen, lli, ptrgen, string, valuegen};
+use crate::backend::llvm::compiler::{
+    builtins, cast, intgen, lli, mutation, ptrgen, string, valuegen,
+};
 use crate::backend::types::LLVMEitherExpression;
 use crate::backend::types::repr::LLVMFunction;
 use crate::backend::types::traits::AssemblerFunctionExtensions;
@@ -74,6 +76,9 @@ pub fn compile<'ctx>(
         Ast::Index {
             index_to, indexes, ..
         } => self::compile_index(context, index_to, indexes),
+
+        // Value Mutation
+        Ast::Mut { .. } => mutation::compile(context, expr),
 
         // Fallback for unhandled AST variants
         _ => lli::compile(context, expr, cast_type),
@@ -388,6 +393,7 @@ fn compute_indexes<'ctx>(
         .flat_map(|index| {
             if kind.is_mut_fixed_array_type() || kind.is_ptr_fixed_array_type() {
                 let base: IntValue = intgen::integer(llvm_context, &ThrushType::U32, 0, false);
+
                 let depth: IntValue =
                     valuegen::compile(context, index, Some(&ThrushType::U32)).into_int_value();
 

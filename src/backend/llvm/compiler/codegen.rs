@@ -1,6 +1,8 @@
 #![allow(clippy::collapsible_if)]
 
-use crate::backend::llvm::compiler::{builtins, constgen, lli, mutation, ptrgen, unaryop};
+use crate::backend::llvm::compiler::{
+    binaryop, builtins, constgen, lli, mutation, ptrgen, unaryop,
+};
 use crate::backend::types::{repr::LLVMFunction, traits::AssemblerFunctionExtensions};
 use crate::core::console::logging::{self, LoggingType};
 use crate::frontend::types::ast::metadata::local::LocalMetadata;
@@ -57,16 +59,16 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
     fn compile(&mut self) {
         self.forward_all();
 
-        self.ast.iter().for_each(|stmt| {
-            self.codegen(stmt);
+        self.ast.iter().for_each(|ast| {
+            self.codegen(ast);
         });
     }
 
-    fn codegen(&mut self, stmt: &'ctx Ast) {
-        self.codegen_declaration(stmt);
+    fn codegen(&mut self, decl: &'ctx Ast) {
+        self.codegen_declaration(decl);
     }
 
-    fn codegen_declaration(&mut self, stmt: &'ctx Ast) {
+    fn codegen_declaration(&mut self, decl: &'ctx Ast) {
         /* ######################################################################
 
 
@@ -75,24 +77,11 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
 
         ########################################################################*/
 
-        let llvm_builder: &Builder = self.context.get_llvm_builder();
-        let llvm_context: &Context = self.context.get_llvm_context();
-
-        match stmt {
+        match decl {
             Ast::EntryPoint { body, .. } => {
                 self.current_function = Some(self.entrypoint());
 
                 self.codegen_code_block(body);
-
-                if llvm_builder
-                    .build_return(Some(&llvm_context.i32_type().const_int(0, false)))
-                    .is_err()
-                {
-                    logging::log(
-                        LoggingType::BackendBug,
-                        "Unable to build the return of entrypoint.",
-                    );
-                }
             }
 
             Ast::Function { body, .. } => {
@@ -100,7 +89,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                     return;
                 }
 
-                self.compile_function(stmt);
+                self.compile_function(decl);
             }
 
             _ => (),
@@ -172,7 +161,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 ..
             } => {
                 if let Some(current_function) = self.current_function {
-                    let if_comparison: IntValue<'ctx> =
+                    let if_comparison: IntValue =
                         valuegen::compile(self.context, cond, Some(&ThrushType::Bool))
                             .into_int_value();
 
@@ -347,6 +336,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
 
                     let then_block: BasicBlock =
                         llvm_context.append_basic_block(current_function, "while_body");
+
                     let exit_block: BasicBlock =
                         llvm_context.append_basic_block(current_function, "while_exit");
 
@@ -364,7 +354,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                         .build_unconditional_branch(condition_block)
                         .unwrap();
 
-                    if block.has_break() {
+                    if block.has_break() || block.has_return() {
                         exit_brancher.remove_from_basic_block();
                     }
 
@@ -424,7 +414,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 ..
             } => {
                 if let Some(current_function) = self.current_function {
-                    self.stmt(local.as_ref());
+                    self.stmt(local);
 
                     let start_block: BasicBlock =
                         llvm_context.append_basic_block(current_function, "for");
@@ -454,19 +444,12 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
 
                     llvm_builder.position_at_end(then_block);
 
-                    if actions.is_unaryop() {
-                        if actions.is_pre_unaryop() {
-                            self.codegen_code_block(block.as_ref());
-
-                            let _ = valuegen::compile(self.context, actions, None);
-                        } else {
-                            let _ = valuegen::compile(self.context, actions, None);
-
-                            self.codegen_code_block(block.as_ref());
-                        }
+                    if actions.is_before_unary() {
+                        self.codegen_code_block(block);
+                        let _ = valuegen::compile(self.context, actions, None);
                     } else {
-                        self.stmt(actions.as_ref());
-                        self.codegen_code_block(block.as_ref());
+                        let _ = valuegen::compile(self.context, actions, None);
+                        self.codegen_code_block(block);
                     }
 
                     let exit_brancher = llvm_builder
@@ -647,10 +630,10 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
     }
 
     fn expressions(&mut self, stmt: &'ctx Ast) {
-        self.codegen_loose_expression_or_statement(stmt);
+        self.codegen_loose(stmt);
     }
 
-    fn codegen_loose_expression_or_statement(&mut self, stmt: &'ctx Ast) {
+    fn codegen_loose(&mut self, stmt: &'ctx Ast) {
         /* ######################################################################
 
 
@@ -660,6 +643,43 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         ########################################################################*/
 
         match stmt {
+            Ast::UnaryOp {
+                operator,
+                kind,
+                expression,
+                ..
+            } => {
+                unaryop::unary_op(self.context, (operator, kind, expression), None);
+            }
+
+            Ast::BinaryOp {
+                left,
+                operator,
+                right,
+                kind,
+                ..
+            } => {
+                if kind.is_integer_type() {
+                    binaryop::integer::integer_binaryop(
+                        self.context,
+                        (left, operator, right),
+                        None,
+                    );
+                }
+
+                if kind.is_float_type() {
+                    binaryop::float::float_binaryop(self.context, (left, operator, right), None);
+                }
+
+                if kind.is_bool_type() {
+                    binaryop::boolean::bool_binaryop(self.context, (left, operator, right), None);
+                }
+
+                if kind.is_ptr_type() {
+                    binaryop::pointer::ptr_binaryop(self.context, (left, operator, right));
+                }
+            }
+
             Ast::Mut { .. } => {
                 mutation::compile(self.context, stmt);
             }
@@ -678,15 +698,6 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
 
             Ast::Builtin { builtin, .. } => {
                 builtins::compile(self.context, builtin, None);
-            }
-
-            Ast::UnaryOp {
-                operator,
-                kind,
-                expression,
-                ..
-            } => {
-                unaryop::unary_op(self.context, (operator, kind, expression), None);
             }
 
             _ => (),

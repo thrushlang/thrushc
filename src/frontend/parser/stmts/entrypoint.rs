@@ -3,8 +3,7 @@ use crate::{
     frontend::{
         lexer::{span::Span, tokentype::TokenType},
         parser::{ParserContext, stmts::block},
-        types::ast::Ast,
-        types::parser::stmts::traits::TokenExtensions,
+        types::{ast::Ast, lexer::ThrushType, parser::stmts::traits::TokenExtensions},
     },
 };
 
@@ -15,8 +14,8 @@ pub fn build_main<'parser>(
 
     if parser_ctx.get_control_ctx().get_entrypoint() {
         return Err(ThrushCompilerIssue::Error(
-            String::from("Duplicated entrypoint"),
-            String::from("The language not support two entrypoints. :>"),
+            "Duplicated entrypoint".into(),
+            "The language not support two entrypoints. :>".into(),
             None,
             parser_ctx.previous().get_span(),
         ));
@@ -24,17 +23,27 @@ pub fn build_main<'parser>(
 
     parser_ctx.consume(
         TokenType::LParen,
-        String::from("Syntax error"),
-        String::from("Expected '('."),
+        "Syntax error".into(),
+        "Expected '('.".into(),
     )?;
 
     parser_ctx.consume(
         TokenType::RParen,
-        String::from("Syntax error"),
-        String::from("Expected ')'."),
+        "Syntax error".into(),
+        "Expected ')'.".into(),
+    )?;
+
+    parser_ctx.consume(
+        TokenType::U32,
+        "Syntax error".into(),
+        "Expected 'u32'.".into(),
     )?;
 
     parser_ctx.get_mut_control_ctx().set_entrypoint(true);
+
+    parser_ctx
+        .get_mut_type_ctx()
+        .set_function_type(ThrushType::U32);
 
     Ok(Ast::EntryPoint {
         body: block::build_block(parser_ctx)?.into(),

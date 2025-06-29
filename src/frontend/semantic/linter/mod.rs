@@ -120,7 +120,7 @@ impl<'linter> Linter<'linter> {
             self.begin_scope();
 
             stmts.iter().for_each(|stmt| {
-                self.analyze_ast(stmt);
+                self.analyze_ast_stmt(stmt);
             });
 
             self.generate_scoped_warnings();

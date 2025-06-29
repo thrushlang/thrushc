@@ -12,9 +12,22 @@ pub fn validate_function<'type_checker>(
     node: &'type_checker Ast,
 ) -> Result<(), ThrushCompilerIssue> {
     match node {
-        Ast::EntryPoint { body, .. } => {
+        Ast::EntryPoint { body, span, .. } => {
             if let Err(type_error) = typechecker.analyze_ast(body) {
                 typechecker.add_error(type_error);
+            }
+
+            if !body.has_return() {
+                if let Err(mismatch_type_error) = typechecker.validate_types(
+                    &ThrushType::U32,
+                    &ThrushType::Void,
+                    None,
+                    None,
+                    None,
+                    span,
+                ) {
+                    typechecker.add_error(mismatch_type_error);
+                }
             }
 
             Ok(())

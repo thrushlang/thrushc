@@ -1,6 +1,6 @@
 use crate::{
     core::errors::standard::ThrushCompilerIssue,
-    frontend::types::{ast::Ast, lexer::ThrushType, parser::stmts::ident::ReferenceIdentificator},
+    frontend::types::{ast::Ast, lexer::ThrushType},
 };
 
 impl Ast<'_> {
@@ -69,14 +69,6 @@ impl Ast<'_> {
     }
 
     #[inline]
-    pub fn is_moreu32bit_integer(&self) -> Result<bool, ThrushCompilerIssue> {
-        Ok(matches!(
-            self.get_value_type()?,
-            ThrushType::U32 | ThrushType::U64
-        ))
-    }
-
-    #[inline]
     pub fn is_lessu32bit_integer(&self) -> Result<bool, ThrushCompilerIssue> {
         Ok(matches!(
             self.get_value_type()?,
@@ -114,28 +106,6 @@ impl Ast<'_> {
     }
 
     #[inline]
-    pub fn is_local_reference(&self) -> bool {
-        matches!(
-            self,
-            Ast::Reference {
-                identificator: ReferenceIdentificator::Local,
-                ..
-            }
-        )
-    }
-
-    #[inline]
-    pub fn is_parameter_reference(&self) -> bool {
-        matches!(
-            self,
-            Ast::Reference {
-                identificator: ReferenceIdentificator::FunctionParameter,
-                ..
-            }
-        )
-    }
-
-    #[inline]
     pub fn is_block(&self) -> bool {
         matches!(self, Ast::Block { .. })
     }
@@ -146,13 +116,8 @@ impl Ast<'_> {
     }
 
     #[inline]
-    pub fn is_pre_unaryop(&self) -> bool {
+    pub fn is_before_unary(&self) -> bool {
         matches!(self, Ast::UnaryOp { is_pre: true, .. })
-    }
-
-    #[inline]
-    pub fn is_unaryop(&self) -> bool {
-        matches!(self, Ast::UnaryOp { .. })
     }
 
     #[inline]

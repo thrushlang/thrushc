@@ -535,12 +535,24 @@ impl<'type_checker> TypeChecker<'type_checker> {
                 )
                 | None,
             ) if position.is_some_and(|position| position.at_local())
+                && !from_type.is_mut_type()
                 && !from_type.is_ptr_type() =>
             {
                 self.validate_types(target_type, from_type, expression, operator, position, span)?;
 
                 Ok(())
             }
+
+            (
+                ThrushType::Mut(..),
+                ThrushType::Mut(..),
+                _
+            ) if position.is_some_and(|position| position.at_local())  => Err(ThrushCompilerIssue::Error(
+                "Syntax error".into(),
+                "Memory aliasing isn't allowed at high-level pointers; use Low Level Instructions (LLI) instead.".into(),
+                None,
+                *span,
+            )),
 
             (
                 ThrushType::Mut(target_type),

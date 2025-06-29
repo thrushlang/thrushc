@@ -5,8 +5,8 @@ use super::typegen;
 use crate::backend::llvm::compiler::attributes::LLVMAttribute;
 use crate::backend::llvm::compiler::memory::{self, SymbolAllocated};
 use crate::backend::llvm::compiler::{
-    array, binaryop, builtins, cast, farray, floatgen, intgen, lli, ptrgen, string, unaryop,
-    valuegen,
+    array, binaryop, builtins, cast, farray, floatgen, intgen, lli, mutation, ptrgen, string,
+    unaryop, valuegen,
 };
 
 use crate::backend::types::LLVMEitherExpression;
@@ -15,9 +15,7 @@ use crate::core::console::logging::{self, LoggingType};
 use crate::frontend::lexer::tokentype::TokenType;
 use crate::frontend::types::ast::Ast;
 use crate::frontend::types::lexer::ThrushType;
-use crate::frontend::types::lexer::traits::{
-    LLVMTypeExtensions, ThrushTypeMutableExtensions, ThrushTypePointerExtensions,
-};
+use crate::frontend::types::lexer::traits::{LLVMTypeExtensions, ThrushTypeMutableExtensions};
 use crate::frontend::types::parser::stmts::traits::ThrushAttributesExtensions;
 use crate::frontend::types::parser::stmts::types::ThrushAttributes;
 
@@ -139,6 +137,9 @@ pub fn compile<'ctx>(
             attributes,
             ..
         } => self::compile_inline_asm(context, assembler, constraints, args, kind, attributes),
+
+        // Value Mutation
+        Ast::Mut { .. } => mutation::compile(context, expr),
 
         // Fallback
         // Fallback for unhandled AST variants
@@ -283,7 +284,7 @@ fn compile_binary_op<'ctx>(
         t if t.is_bool_type() => {
             binaryop::boolean::bool_binaryop(context, (left, operator, right), cast_type)
         }
-        t if t.is_ptr_type() => binaryop::ptr::ptr_binaryop(context, (left, operator, right)),
+        t if t.is_ptr_type() => binaryop::pointer::ptr_binaryop(context, (left, operator, right)),
 
         _ => {
             self::codegen_abort(format!(
@@ -583,17 +584,17 @@ fn compute_indexes<'ctx>(
     indexes
         .iter()
         .flat_map(|index| {
-            if kind.is_fixed_array_type()
-                || kind.is_mut_fixed_array_type()
-                || kind.is_ptr_fixed_array_type()
-            {
+            if kind.is_fixed_array_type() || kind.is_mut_fixed_array_type() {
                 let base: IntValue = intgen::integer(llvm_context, &ThrushType::U32, 0, false);
+
                 let depth: IntValue =
                     valuegen::compile(context, index, Some(&ThrushType::U32)).into_int_value();
+
                 vec![base, depth]
             } else {
-                let depth =
+                let depth: IntValue =
                     valuegen::compile(context, index, Some(&ThrushType::U64)).into_int_value();
+
                 vec![depth]
             }
         })
