@@ -33,6 +33,8 @@ pub fn lower_precedence<'parser>(
         TokenType::LBracket => array::build_array(parser_context)?,
         TokenType::Deref => deref::build_dereference(parser_context)?,
 
+        TokenType::New => constructor::build_constructor(parser_context)?,
+
         TokenType::SizeOf => sizeof::build_sizeof(parser_context)?,
 
         TokenType::AlignOf => builtins::build_alignof(parser_context)?,
@@ -301,24 +303,18 @@ pub fn lower_precedence<'parser>(
 
             if parser_context.match_token(TokenType::Eq)? {
                 let reference: Ast = reference::build_reference(parser_context, name, span)?;
-
-                let reference_type: ThrushType = reference.get_value_type()?.clone();
-
                 let expression: Ast = expression::build_expr(parser_context)?;
 
                 return Ok(Ast::Mut {
                     source: (Some((name, reference.clone().into())), None),
                     value: expression.into(),
                     kind: ThrushType::Void,
-                    cast_type: reference_type,
                     span,
                 });
             }
 
             if parser_context.match_token(TokenType::LBracket)? {
                 let index: Ast = index::build_index(parser_context, Some(name), None, span)?;
-
-                let index_type: ThrushType = index.get_value_type()?.clone();
 
                 if parser_context.match_token(TokenType::Eq)? {
                     let expr: Ast = expression::build_expr(parser_context)?;
@@ -327,7 +323,6 @@ pub fn lower_precedence<'parser>(
                         source: (None, Some(index.clone().into())),
                         value: expr.into(),
                         kind: ThrushType::Void,
-                        cast_type: index_type,
                         span,
                     });
                 }
@@ -346,8 +341,6 @@ pub fn lower_precedence<'parser>(
             if parser_context.match_token(TokenType::Dot)? {
                 let property: Ast = property::build_property(parser_context, name, span)?;
 
-                let property_type: ThrushType = property.get_value_type()?.clone();
-
                 if parser_context.match_token(TokenType::Eq)? {
                     let expr: Ast = expression::build_expr(parser_context)?;
 
@@ -355,7 +348,6 @@ pub fn lower_precedence<'parser>(
                         source: (None, Some(property.clone().into())),
                         value: expr.into(),
                         kind: ThrushType::Void,
-                        cast_type: property_type,
                         span,
                     });
                 }
@@ -365,10 +357,6 @@ pub fn lower_precedence<'parser>(
                 }
 
                 return Ok(property);
-            }
-
-            if parser_context.match_token(TokenType::LBrace)? {
-                return constructor::build_constructor(name, span, parser_context);
             }
 
             if symbol.is_enum() {

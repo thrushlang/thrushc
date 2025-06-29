@@ -4,7 +4,7 @@ use crate::{
         lexer::{span::Span, token::Token, tokentype::TokenType},
         parser::{ParserContext, attributes, expression, typegen},
         types::{
-            ast::Ast,
+            ast::{Ast, metadata::local::LocalMetadata},
             lexer::ThrushType,
             parser::stmts::{traits::TokenExtensions, types::ThrushAttributes},
         },
@@ -77,8 +77,7 @@ pub fn build_local<'parser>(
             kind: local_type,
             value: Ast::Null { span }.into(),
             attributes,
-            undefined: true,
-            is_mutable,
+            metadata: LocalMetadata::new(true, is_mutable),
             span,
         });
     }
@@ -109,8 +108,7 @@ pub fn build_local<'parser>(
         kind: local_type,
         value: value.into(),
         attributes,
-        undefined: false,
-        is_mutable,
+        metadata: LocalMetadata::new(false, is_mutable),
         span,
     };
 

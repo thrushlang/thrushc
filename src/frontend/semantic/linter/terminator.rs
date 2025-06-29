@@ -9,7 +9,7 @@ pub fn analyze_terminator<'linter>(linter: &mut Linter<'linter>, node: &'linter 
             expression: Some(expr),
             ..
         } => {
-            linter.analyze_ast(expr);
+            linter.analyze_ast_expr(expr);
         }
 
         _ => {

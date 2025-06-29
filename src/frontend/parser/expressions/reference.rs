@@ -4,7 +4,7 @@ use crate::{
         lexer::{span::Span, token::Token, tokentype::TokenType},
         parser::ParserContext,
         types::{
-            ast::Ast,
+            ast::{Ast, metadata::reference::ReferenceMetadata},
             lexer::ThrushType,
             parser::{
                 stmts::{
@@ -48,8 +48,7 @@ pub fn build_reference<'parser>(
             kind: constant_type,
             span,
             identificator: ReferenceIdentificator::Constant,
-            is_mutable: false,
-            is_allocated: true,
+            metadata: ReferenceMetadata::new(true, false),
         });
     }
 
@@ -72,9 +71,8 @@ pub fn build_reference<'parser>(
             name,
             kind: parameter_type,
             span,
-            is_mutable,
             identificator: ReferenceIdentificator::FunctionParameter,
-            is_allocated,
+            metadata: ReferenceMetadata::new(is_allocated, is_mutable),
         });
     }
 
@@ -96,9 +94,8 @@ pub fn build_reference<'parser>(
             name,
             kind: lli_type,
             span,
-            is_mutable: false,
             identificator: ReferenceIdentificator::LowLevelInstruction,
-            is_allocated,
+            metadata: ReferenceMetadata::new(is_allocated, false),
         });
     }
 
@@ -117,9 +114,8 @@ pub fn build_reference<'parser>(
         name,
         kind: local_type.clone(),
         span,
-        is_mutable,
         identificator: ReferenceIdentificator::Local,
-        is_allocated: true,
+        metadata: ReferenceMetadata::new(true, is_mutable),
     };
 
     if parser_context.match_token(TokenType::PlusPlus)?

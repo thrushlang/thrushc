@@ -8,7 +8,7 @@ use crate::{
             typegen,
         },
         types::{
-            ast::Ast,
+            ast::{Ast, metadata::fnparameter::FunctionParameterMetadata},
             lexer::ThrushType,
             parser::{
                 stmts::{
@@ -109,7 +109,7 @@ pub fn build_function<'parser>(
             ascii_name,
             kind: parameter_type,
             position: parameter_position,
-            is_mutable,
+            metadata: FunctionParameterMetadata::new(is_mutable),
             span,
         });
 

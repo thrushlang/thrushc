@@ -1,9 +1,7 @@
 use crate::frontend::types::{
     ast::Ast,
-    lexer::ThrushType,
-    parser::{
-        repr::{AssemblerFunctionRepresentation, ConstantRepresentation, FunctionRepresentation},
-        stmts::types::ThrushAttributes,
+    parser::repr::{
+        AssemblerFunctionRepresentation, ConstantRepresentation, FunctionRepresentation,
     },
 };
 

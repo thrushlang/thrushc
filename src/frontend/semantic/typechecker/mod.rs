@@ -182,19 +182,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
 
         ########################################################################*/
 
-        if let Ast::If { .. } = stmt {
-            conditionals::validate_conditional(self, stmt)?;
-
-            return Ok(());
-        }
-
-        if let Ast::Elif { .. } = stmt {
-            conditionals::validate_conditional(self, stmt)?;
-
-            return Ok(());
-        }
-
-        if let Ast::Else { .. } = stmt {
+        if let Ast::If { .. } | Ast::Elif { .. } | Ast::Else { .. } = stmt {
             conditionals::validate_conditional(self, stmt)?;
 
             return Ok(());
@@ -547,7 +535,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
                 )
                 | None,
             ) if position.is_some_and(|position| position.at_local())
-                && !from_type.is_mut_type() && !from_type.is_ptr_type() =>
+                && !from_type.is_ptr_type() =>
             {
                 self.validate_types(target_type, from_type, expression, operator, position, span)?;
 
@@ -555,8 +543,8 @@ impl<'type_checker> TypeChecker<'type_checker> {
             }
 
             (
-                ThrushType::Mut(..),
-                ThrushType::Mut(..),
+                ThrushType::Mut(target_type),
+                ThrushType::Mut(from_type),
                 Some(
                     TokenType::BangEq
                     | TokenType::EqEq
@@ -575,12 +563,11 @@ impl<'type_checker> TypeChecker<'type_checker> {
                     | TokenType::RShift,
                 )
                 | None,
-            ) => Err(ThrushCompilerIssue::Error(
-                "Syntax error".into(),
-                "Memory aliasing isn't allowed at high-level pointers; use Low Level Instructions (LLI) instead.".into(),
-                None,
-                *span,
-            )),
+            ) => {
+                self.validate_types(target_type, from_type, expression, operator, position, span)?;
+
+                Ok(())
+            }
 
             (ThrushType::Ptr(None), ThrushType::Ptr(None), None) => Ok(()),
             (ThrushType::Ptr(Some(target_type)), ThrushType::Ptr(Some(from_type)), None) => {
@@ -607,7 +594,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
             ) => Ok(()),
             (
                 ThrushType::S8,
-                ThrushType::S8,
+                ThrushType::S8 | ThrushType::U8,
                 Some(
                     TokenType::Plus
                     | TokenType::Minus
@@ -622,7 +609,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
             ) => Ok(()),
             (
                 ThrushType::S16,
-                ThrushType::S16 | ThrushType::S8,
+                ThrushType::S16 | ThrushType::U16 | ThrushType::U8 | ThrushType::S8,
                 Some(
                     TokenType::Plus
                     | TokenType::Minus
@@ -637,7 +624,12 @@ impl<'type_checker> TypeChecker<'type_checker> {
             ) => Ok(()),
             (
                 ThrushType::S32,
-                ThrushType::S32 | ThrushType::S16 | ThrushType::S8,
+                ThrushType::S32
+                | ThrushType::U32
+                | ThrushType::S16
+                | ThrushType::U16
+                | ThrushType::S8
+                | ThrushType::U8,
                 Some(
                     TokenType::Plus
                     | TokenType::Minus
@@ -652,7 +644,14 @@ impl<'type_checker> TypeChecker<'type_checker> {
             ) => Ok(()),
             (
                 ThrushType::S64,
-                ThrushType::S64 | ThrushType::S32 | ThrushType::S16 | ThrushType::S8,
+                ThrushType::S64
+                | ThrushType::U64
+                | ThrushType::S32
+                | ThrushType::U32
+                | ThrushType::S16
+                | ThrushType::U16
+                | ThrushType::S8
+                | ThrushType::U8,
                 Some(
                     TokenType::Plus
                     | TokenType::Minus

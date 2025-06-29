@@ -12,19 +12,19 @@ pub fn analyze_loop<'linter>(linter: &mut Linter<'linter>, node: &'linter Ast) {
             block,
             ..
         } => {
-            linter.analyze_ast(local);
-            linter.analyze_ast(actions);
-            linter.analyze_ast(cond);
-            linter.analyze_ast(block);
+            linter.analyze_ast_stmt(local);
+            linter.analyze_ast_expr(actions);
+            linter.analyze_ast_expr(cond);
+            linter.analyze_ast_expr(block);
         }
 
         Ast::While { cond, block, .. } => {
-            linter.analyze_ast(cond);
-            linter.analyze_ast(block);
+            linter.analyze_ast_expr(cond);
+            linter.analyze_ast_stmt(block);
         }
 
         Ast::Loop { block, .. } => {
-            linter.analyze_ast(block);
+            linter.analyze_ast_stmt(block);
         }
 
         _ => {

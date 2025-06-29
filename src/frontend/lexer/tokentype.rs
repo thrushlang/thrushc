@@ -192,30 +192,6 @@ impl TokenType {
         matches!(self, TokenType::And | TokenType::Or)
     }
 
-    pub const fn is_struct_keyword(&self) -> bool {
-        matches!(self, TokenType::Struct)
-    }
-
-    #[must_use]
-    pub const fn is_type_keyword(&self) -> bool {
-        matches!(self, TokenType::Type)
-    }
-
-    #[must_use]
-    pub const fn is_const_keyword(&self) -> bool {
-        matches!(self, TokenType::Const)
-    }
-
-    #[must_use]
-    pub const fn is_enum_keyword(&self) -> bool {
-        matches!(self, TokenType::Enum)
-    }
-
-    #[must_use]
-    pub const fn is_minus_operator(&self) -> bool {
-        matches!(self, TokenType::Minus)
-    }
-
     #[must_use]
     pub const fn is_minus_minus_operator(&self) -> bool {
         matches!(self, TokenType::MinusMinus)
@@ -234,16 +210,6 @@ impl TokenType {
     #[must_use]
     pub const fn is_mut(&self) -> bool {
         matches!(self, TokenType::Mut)
-    }
-
-    #[must_use]
-    pub const fn is_function_keyword(&self) -> bool {
-        matches!(self, TokenType::Fn)
-    }
-
-    #[must_use]
-    pub const fn is_asm_function_keyword(&self) -> bool {
-        matches!(self, TokenType::AsmFn)
     }
 
     #[must_use]

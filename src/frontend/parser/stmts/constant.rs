@@ -4,7 +4,7 @@ use crate::{
         lexer::{span::Span, token::Token, tokentype::TokenType},
         parser::{ParserContext, attributes, expression, typegen},
         types::{
-            ast::Ast,
+            ast::{Ast, metadata::constant::ConstantMetadata},
             lexer::ThrushType,
             parser::stmts::{traits::TokenExtensions, types::ThrushAttributes},
         },
@@ -75,6 +75,7 @@ pub fn build_const<'parser>(
         kind: const_type,
         value: value.into(),
         attributes: const_attributes,
+        metadata: ConstantMetadata::new(false),
         span,
     })
 }
@@ -146,6 +147,7 @@ pub fn build_global_const<'parser>(
         kind: const_type,
         value: value.into(),
         attributes: const_attributes,
+        metadata: ConstantMetadata::new(true),
         span,
     })
 }

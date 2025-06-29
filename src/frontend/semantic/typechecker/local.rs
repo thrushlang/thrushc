@@ -3,7 +3,10 @@ use crate::{
     frontend::{
         lexer::span::Span,
         semantic::typechecker::{TypeChecker, position::TypeCheckerPosition},
-        types::{ast::Ast, lexer::ThrushType},
+        types::{
+            ast::{Ast, metadata::local::LocalMetadata},
+            lexer::ThrushType,
+        },
     },
 };
 
@@ -17,10 +20,12 @@ pub fn validate_local<'type_checker>(
             kind: local_type,
             value: local_value,
             span,
-            undefined,
+            metadata,
             ..
         } => {
             typechecker.symbols.new_local(name, local_type);
+
+            let metadata: &LocalMetadata = metadata;
 
             if local_type.is_void_type() {
                 typechecker.add_error(ThrushCompilerIssue::Error(
@@ -40,7 +45,7 @@ pub fn validate_local<'type_checker>(
                 ));
             }
 
-            if !*undefined {
+            if !metadata.is_undefined() {
                 let local_value_type: &ThrushType = local_value.get_value_type()?;
 
                 if let Err(mismatch_type_error) = typechecker.validate_types(

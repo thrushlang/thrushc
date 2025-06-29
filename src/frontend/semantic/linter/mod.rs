@@ -55,7 +55,7 @@ impl<'linter> Linter<'linter> {
     }
 
     pub fn check(&mut self) {
-        self.init();
+        self.forward_all();
 
         while !self.is_eof() {
             let stmt: &Ast = self.peek();
@@ -81,7 +81,7 @@ impl<'linter> Linter<'linter> {
         /* ######################################################################
 
 
-            LINTER FUNCTIONS | START
+            LINTER DECLARATIONS | START
 
 
         ########################################################################*/
@@ -90,14 +90,20 @@ impl<'linter> Linter<'linter> {
             return functions::analyze_function(self, stmt);
         }
 
+        if let Ast::Enum { .. } = stmt {
+            enums::analyze_enum(self, stmt);
+        }
+
         /* ######################################################################
 
 
-            LINTER FUNCTIONS | END
+            LINTER DECLARATIONS | END
 
 
         ########################################################################*/
+    }
 
+    pub fn analyze_ast_stmt(&mut self, stmt: &'linter Ast) {
         /* ######################################################################
 
 
@@ -127,22 +133,10 @@ impl<'linter> Linter<'linter> {
         /* ######################################################################
 
 
-            LINTER STATEMENTS | END
+            LINTER VARIABLES | START
 
 
         ########################################################################*/
-
-        /* ######################################################################
-
-
-            LINTER DECLARATIONS | START
-
-
-        ########################################################################*/
-
-        if let Ast::Enum { .. } = stmt {
-            return enums::analyze_enum(self, stmt);
-        }
 
         if let Ast::LLI { .. } = stmt {
             return lli::analyze_lli(self, stmt);
@@ -151,6 +145,14 @@ impl<'linter> Linter<'linter> {
         if let Ast::Local { .. } = stmt {
             return local::analyze_local(self, stmt);
         }
+
+        /* ######################################################################
+
+
+            LINTER VARIABLES | END
+
+
+        ########################################################################*/
 
         /* ######################################################################
 
@@ -319,20 +321,24 @@ impl<'linter> Linter<'linter> {
         /* ######################################################################
 
 
+            LINTER STATEMENTS | END
+
+
+        ########################################################################*/
+
+        /* ######################################################################
+
+
             LINTER EXPRESSIONS | START
 
 
         ########################################################################*/
 
-        expressions::analyze_expression(self, stmt);
+        self.analyze_ast_expr(stmt);
+    }
 
-        /* ######################################################################
-
-
-            LINTER EXPRESSIONS | END
-
-
-        ########################################################################*/
+    pub fn analyze_ast_expr(&mut self, expr: &'linter Ast) {
+        expressions::analyze_expression(self, expr);
     }
 
     pub fn generate_scoped_warnings(&mut self) {
@@ -404,7 +410,7 @@ impl<'linter> Linter<'linter> {
 
     pub fn generate_warnings(&mut self) {
         self.symbols
-            .get_all_constants()
+            .get_global_all_constants()
             .iter()
             .for_each(|(name, info)| {
                 let span: Span = info.0;
@@ -514,20 +520,13 @@ impl<'linter> Linter<'linter> {
             });
     }
 
-    pub fn init(&mut self) {
+    pub fn forward_all(&mut self) {
         self.ast
             .iter()
-            .filter(|instruction| instruction.is_constant())
-            .for_each(|instruction| {
-                if let Ast::Const {
-                    name,
-                    span,
-                    attributes,
-                    ..
-                } = instruction
-                {
-                    self.symbols
-                        .new_constant(name, (*span, attributes.has_public_attribute()));
+            .filter(|ast| ast.is_constant())
+            .for_each(|ast| {
+                if let Ast::Const { name, span, .. } = ast {
+                    self.symbols.new_global_constant(name, (*span, false));
                 }
             });
 

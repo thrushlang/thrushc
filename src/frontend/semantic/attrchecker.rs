@@ -40,9 +40,9 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
 
     pub fn check(&mut self) -> bool {
         while !self.is_eof() {
-            let current_stmt: &Ast = self.peek();
+            let ast: &Ast = self.peek();
 
-            self.analyze_stmt(current_stmt);
+            self.analyze_ast(ast);
 
             self.advance();
         }
@@ -59,13 +59,25 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
         false
     }
 
-    fn analyze_stmt(&mut self, stmt: &'attr_checker Ast) {
+    fn analyze_ast(&mut self, ast: &'attr_checker Ast) {
+        /* ######################################################################
+
+
+            TYPE CHECKER DECLARATIONS - START
+
+
+        ########################################################################*/
+
+        if let Ast::EntryPoint { body, .. } = ast {
+            self.analyze_ast(body);
+        }
+
         if let Ast::Function {
             attributes,
             body,
             span,
             ..
-        } = stmt
+        } = ast
         {
             if !body.is_null() && attributes.has_extern_attribute() {
                 if let Some(span) = attributes.match_attr(LLVMAttributeComparator::Extern) {
@@ -85,16 +97,69 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
                 }
             }
 
+            if !body.is_null() {
+                self.analyze_ast(body);
+            }
+
             self.analyze_attrs(attributes, AttributeCheckerAttributeApplicant::Function);
         }
 
-        if let Ast::Struct { attributes, .. } = stmt {
+        if let Ast::Struct { attributes, .. } = ast {
             self.analyze_attrs(attributes, AttributeCheckerAttributeApplicant::Struct);
         }
 
-        if let Ast::Const { attributes, .. } = stmt {
+        if let Ast::Enum { attributes, .. } = ast {
+            self.analyze_attrs(attributes, AttributeCheckerAttributeApplicant::Enum);
+        }
+
+        /* ######################################################################
+
+
+            TYPE CHECKER DECLARATIONS - END
+
+
+        ########################################################################*/
+
+        /* ######################################################################
+
+
+            TYPE CHECKER STATEMENTS - START
+
+
+        ########################################################################*/
+
+        if let Ast::Block { stmts, .. } = ast {
+            stmts.iter().for_each(|stmt| {
+                self.analyze_ast(stmt);
+            });
+        }
+
+        if let Ast::Const {
+            attributes,
+            metadata,
+            span,
+            ..
+        } = ast
+        {
+            if !metadata.is_global() && attributes.has_public_attribute() {
+                self.add_error(ThrushCompilerIssue::Error(
+                    "Attribute error".into(),
+                    "Local constants cannot have public visibility.".into(),
+                    None,
+                    *span,
+                ));
+            }
+
             self.analyze_attrs(attributes, AttributeCheckerAttributeApplicant::Constant);
         }
+
+        /* ######################################################################
+
+
+            TYPE CHECKER STATEMENTS - END
+
+
+        ########################################################################*/
     }
 
     fn analyze_attrs(
@@ -129,8 +194,8 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
                 if !attributes.has_extern_attribute() && attributes.has_ignore_attribute() {
                     if let Some(span) = attributes.match_attr(LLVMAttributeComparator::Ignore) {
                         self.add_error(ThrushCompilerIssue::Error(
-                            String::from("Attribute error"),
-                            String::from("The @ignore attribute requires the function to be annotated with @extern(\"something\")."),
+                            "Attribute error".into(),
+                            "The @ignore attribute requires the function to be annotated with @extern(\"something\").".into(),
                             None,
                             span,
                         ));
@@ -140,10 +205,8 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
                 if attributes.has_inlinealways_attr() && attributes.has_inline_attr() {
                     if let Some(span) = attributes.match_attr(LLVMAttributeComparator::InlineHint) {
                         self.add_error(ThrushCompilerIssue::Error(
-                            String::from("Illogical attribute"),
-                            String::from(
-                                "The attribute is not valid. Use either '@alwaysinline' or '@inline' attribute.",
-                            ),
+                            "Illogical attribute".into(),
+                            "The attribute is not valid. Use either '@alwaysinline' or '@inline' attribute.".into(),
                             None,
                             span,
                         ));
@@ -153,10 +216,8 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
                 if attributes.has_inline_attr() && attributes.has_noinline_attr() {
                     if let Some(span) = attributes.match_attr(LLVMAttributeComparator::NoInline) {
                         self.add_error(ThrushCompilerIssue::Error(
-                            String::from("Illogical attribute"),
-                            String::from(
-                                "The attribute is not valid. Use either '@noinline' or '@inline' attribute.",
-                            ),
+                            "Illogical attribute".into(),
+                            "The attribute is not valid. Use either '@noinline' or '@inline' attribute.".into(),
                             None,
                             span,
                         ));
@@ -178,7 +239,8 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
             }
 
             AttributeCheckerAttributeApplicant::Constant
-            | AttributeCheckerAttributeApplicant::Struct => {
+            | AttributeCheckerAttributeApplicant::Struct
+            | AttributeCheckerAttributeApplicant::Enum => {
                 let repeated_attrs: ThrushAttributes = self.get_repeated_attrs(attributes);
 
                 repeated_attrs.iter().for_each(|attr| {

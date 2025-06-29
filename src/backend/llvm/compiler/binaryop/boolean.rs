@@ -24,9 +24,13 @@ pub fn bool_operation<'ctx>(
     left: BasicValueEnum<'ctx>,
     right: BasicValueEnum<'ctx>,
     operator: &TokenType,
+    signatures: (bool, bool),
 ) -> BasicValueEnum<'ctx> {
     let llvm_context: &Context = context.get_llvm_context();
     let llvm_builder: &Builder = context.get_llvm_builder();
+
+    let left_signed: bool = signatures.0;
+    let right_signed: bool = signatures.1;
 
     if left.is_int_value() && right.is_int_value() {
         let left: IntValue = left.into_int_value();
@@ -36,7 +40,12 @@ pub fn bool_operation<'ctx>(
 
         return match operator {
             op if op.is_logical_type() => llvm_builder
-                .build_int_compare(predicates::integer(operator, false, false), left, right, "")
+                .build_int_compare(
+                    predicates::integer(operator, left_signed, right_signed),
+                    left,
+                    right,
+                    "",
+                )
                 .unwrap()
                 .into(),
 
@@ -120,7 +129,16 @@ pub fn bool_binaryop<'ctx>(
         let left: BasicValueEnum = valuegen::compile(context, binary.0, cast_type);
         let right: BasicValueEnum = valuegen::compile(context, binary.2, cast_type);
 
-        return self::bool_operation(context, left, right, operator);
+        return self::bool_operation(
+            context,
+            left,
+            right,
+            operator,
+            (
+                binary.0.get_type_unwrapped().is_signed_integer_type(),
+                binary.2.get_type_unwrapped().is_signed_integer_type(),
+            ),
+        );
     }
 
     logging::log(

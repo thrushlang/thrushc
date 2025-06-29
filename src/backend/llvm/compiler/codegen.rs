@@ -1,8 +1,9 @@
 #![allow(clippy::collapsible_if)]
 
-use crate::backend::llvm::compiler::{builtins, constgen, lli, mutation, ptrgen};
+use crate::backend::llvm::compiler::{builtins, constgen, lli, mutation, ptrgen, unaryop};
 use crate::backend::types::{repr::LLVMFunction, traits::AssemblerFunctionExtensions};
 use crate::core::console::logging::{self, LoggingType};
+use crate::frontend::types::ast::metadata::local::LocalMetadata;
 use crate::frontend::types::lexer::ThrushType;
 use crate::frontend::types::parser::repr::{
     AssemblerFunctionRepresentation, ConstantRepresentation, FunctionParameter,
@@ -99,12 +100,10 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                     return;
                 }
 
-                self.compile_function(stmt.as_function_representation());
+                self.compile_function(stmt);
             }
 
-            Ast::Const { .. } => (),
-
-            stmt => self.codegen_code_block(stmt),
+            _ => (),
         }
 
         /* ######################################################################
@@ -130,7 +129,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 self.context.begin_scope();
 
                 stmts.iter().for_each(|stmt| {
-                    self.stmt(stmt);
+                    self.codegen_code_block(stmt);
                 });
 
                 self.context.end_scope();
@@ -208,7 +207,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
 
                     llvm_builder.position_at_end(then_block);
 
-                    self.codegen(block);
+                    self.codegen_code_block(block);
 
                     if !block.has_return() && !block.has_break() && !block.has_continue() {
                         llvm_builder
@@ -251,7 +250,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
 
                                 llvm_builder.position_at_end(elif_body);
 
-                                self.codegen(block);
+                                self.codegen_code_block(block);
 
                                 if !block.has_return()
                                     && !block.has_break()
@@ -359,7 +358,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
 
                     llvm_builder.position_at_end(then_block);
 
-                    self.codegen(block);
+                    self.codegen_code_block(block);
 
                     let exit_brancher = llvm_builder
                         .build_unconditional_branch(condition_block)
@@ -396,7 +395,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
 
                     self.exit_loop_block = Some(exit_loop_block);
 
-                    self.codegen(block);
+                    self.codegen_code_block(block);
 
                     if !block.has_return() && !block.has_break() && !block.has_continue() {
                         let _ = exit_loop_block.remove_from_function();
@@ -425,7 +424,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 ..
             } => {
                 if let Some(current_function) = self.current_function {
-                    self.codegen(local.as_ref());
+                    self.stmt(local.as_ref());
 
                     let start_block: BasicBlock =
                         llvm_context.append_basic_block(current_function, "for");
@@ -455,14 +454,19 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
 
                     llvm_builder.position_at_end(then_block);
 
-                    if actions.is_pre_unaryop() {
-                        self.codegen(block.as_ref());
+                    if actions.is_unaryop() {
+                        if actions.is_pre_unaryop() {
+                            self.codegen_code_block(block.as_ref());
 
-                        let _ = valuegen::compile(self.context, actions, None);
+                            let _ = valuegen::compile(self.context, actions, None);
+                        } else {
+                            let _ = valuegen::compile(self.context, actions, None);
+
+                            self.codegen_code_block(block.as_ref());
+                        }
                     } else {
-                        let _ = valuegen::compile(self.context, actions, None);
-
-                        self.codegen(block.as_ref());
+                        self.stmt(actions.as_ref());
+                        self.codegen_code_block(block.as_ref());
                     }
 
                     let exit_brancher = llvm_builder
@@ -524,10 +528,12 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 kind,
                 value,
                 attributes,
-                undefined,
+                metadata,
                 ..
             } => {
-                if *undefined {
+                let metadata: &LocalMetadata = metadata;
+
+                if metadata.is_undefined() {
                     self.context.alloc_local(name, ascii_name, kind, attributes);
                     return;
                 }
@@ -674,6 +680,15 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 builtins::compile(self.context, builtin, None);
             }
 
+            Ast::UnaryOp {
+                operator,
+                kind,
+                expression,
+                ..
+            } => {
+                unaryop::unary_op(self.context, (operator, kind, expression), None);
+            }
+
             _ => (),
         }
 
@@ -727,9 +742,11 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         }
     }
 
-    fn compile_function(&mut self, function: FunctionRepresentation<'ctx>) {
+    fn compile_function(&mut self, raw_function: &'ctx Ast) {
         let llvm_context: &Context = self.context.get_llvm_context();
         let llvm_builder: &Builder = self.context.get_llvm_builder();
+
+        let function: FunctionRepresentation = raw_function.as_function_representation();
 
         let function_ascii_name: &str = function.1;
         let function_type: &ThrushType = function.2;
@@ -753,21 +770,22 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 ascii_name,
                 kind,
                 position,
-                is_mutable,
                 ..
             } = parameter
             {
-                self.compile_function_parameter(
-                    llvm_function,
-                    (name, ascii_name, kind, *position, *is_mutable),
-                );
+                self.compile_function_parameter(llvm_function, (name, ascii_name, kind, *position));
             }
         });
 
         self.codegen_code_block(function_body);
 
         if !function_body.has_return() && function_type.is_void_type() {
-            llvm_builder.build_return(None).unwrap();
+            if llvm_builder.build_return(None).is_err() {
+                logging::log(
+                    LoggingType::BackendBug,
+                    "Unable to build the return instruction at code generation time.",
+                );
+            }
         }
 
         self.current_function = None;
@@ -784,7 +802,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
     fn forward_all(&mut self) {
         self.ast.iter().for_each(|any_ast| {
             if any_ast.is_asm_function() {
-                self.compile_asm_function(any_ast);
+                self.declare_asm_function(any_ast);
             }
 
             if any_ast.is_function() {
@@ -821,7 +839,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
             .alloc_global_constant(name, ascii_name, constant_type, value, attributes);
     }
 
-    fn compile_asm_function(&mut self, stmt: &'ctx Ast) {
+    fn declare_asm_function(&mut self, stmt: &'ctx Ast) {
         let llvm_module: &Module = self.context.get_llvm_module();
         let llvm_context: &Context = self.context.get_llvm_context();
         let llvm_builder: &Builder = self.context.get_llvm_builder();
@@ -838,8 +856,8 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         let asm_function_attributes: &ThrushAttributes = asm_function.7;
 
         let mut call_convention: u32 = CallConvention::Standard as u32;
-
         let mut syntax: InlineAsmDialect = InlineAsmDialect::Intel;
+
         let sideeffects: bool = asm_function_attributes.has_asmsideffects_attribute();
         let align_stack: bool = asm_function_attributes.has_asmalignstack_attribute();
         let can_throw: bool = asm_function_attributes.has_asmthrow_attribute();
@@ -954,12 +972,11 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         let function_parameters_types: &[ThrushType] = function.4;
         let function_attributes: &ThrushAttributes = function.6;
 
+        let mut extern_name: Option<&str> = None;
+        let mut call_convention: u32 = CallConvention::Standard as u32;
+
         let ignore_args: bool = function_attributes.has_ignore_attribute();
         let is_public: bool = function_attributes.has_public_attribute();
-
-        let mut extern_name: Option<&str> = None;
-
-        let mut call_convention: u32 = CallConvention::Standard as u32;
 
         function_attributes
             .iter()

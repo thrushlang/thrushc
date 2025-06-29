@@ -9,7 +9,7 @@ pub fn analyze_lli<'linter>(linter: &mut Linter<'linter>, node: &'linter Ast) {
             name, span, value, ..
         } => {
             linter.symbols.new_lli(name, (*span, false));
-            linter.analyze_ast(value);
+            linter.analyze_ast_expr(value);
         }
 
         Ast::Write {
@@ -19,14 +19,14 @@ pub fn analyze_lli<'linter>(linter: &mut Linter<'linter>, node: &'linter Ast) {
         } => {
             if let Some(any_reference) = &write_to.0 {
                 let reference: &Ast = &any_reference.1;
-                linter.analyze_ast(reference);
+                linter.analyze_ast_expr(reference);
             }
 
             if let Some(expr) = &write_to.1 {
-                linter.analyze_ast(expr);
+                linter.analyze_ast_expr(expr);
             }
 
-            linter.analyze_ast(write_value);
+            linter.analyze_ast_expr(write_value);
         }
 
         Ast::Address {
@@ -35,27 +35,27 @@ pub fn analyze_lli<'linter>(linter: &mut Linter<'linter>, node: &'linter Ast) {
             ..
         } => {
             indexes.iter().for_each(|indexe| {
-                linter.analyze_ast(indexe);
+                linter.analyze_ast_expr(indexe);
             });
 
             if let Some(any_reference) = &address_to.0 {
                 let reference: &Ast = &any_reference.1;
-                linter.analyze_ast(reference);
+                linter.analyze_ast_expr(reference);
             }
 
             if let Some(expr) = &address_to.1 {
-                linter.analyze_ast(expr);
+                linter.analyze_ast_expr(expr);
             }
         }
 
         Ast::Load { value, .. } => {
             if let Some(any_reference) = &value.0 {
                 let reference: &Ast = &any_reference.1;
-                linter.analyze_ast(reference);
+                linter.analyze_ast_expr(reference);
             }
 
             if let Some(expr) = &value.1 {
-                linter.analyze_ast(expr);
+                linter.analyze_ast_expr(expr);
             }
         }
 

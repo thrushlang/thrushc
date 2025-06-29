@@ -3,7 +3,7 @@ use std::fmt::Display;
 use crate::frontend::{
     lexer::span::Span,
     types::{
-        ast::Ast,
+        ast::{Ast, metadata::local::LocalMetadata},
         lexer::ThrushType,
         semantic::linter::{
             traits::LLVMAttributeComparatorExtensions, types::LLVMAttributeComparator,
@@ -249,10 +249,12 @@ impl Display for Ast<'_> {
                 name,
                 kind,
                 value,
-                is_mutable,
+                metadata,
                 ..
             } => {
-                if *is_mutable {
+                let local_metadata: &LocalMetadata = metadata;
+
+                if local_metadata.is_mutable() {
                     write!(f, "let mut {} : {} = {}", name, kind, value)
                 } else {
                     write!(f, "let {} : {} = {}", name, kind, value)

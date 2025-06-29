@@ -1,6 +1,10 @@
 use crate::{
     core::errors::{position::CompilationPosition, standard::ThrushCompilerIssue},
-    frontend::{lexer::span::Span, semantic::linter::Linter, types::ast::Ast},
+    frontend::{
+        lexer::span::Span,
+        semantic::linter::Linter,
+        types::ast::{Ast, metadata::local::LocalMetadata},
+    },
 };
 
 pub fn analyze_local<'linter>(linter: &mut Linter<'linter>, node: &'linter Ast) {
@@ -9,11 +13,16 @@ pub fn analyze_local<'linter>(linter: &mut Linter<'linter>, node: &'linter Ast) 
             name,
             value,
             span,
-            is_mutable,
+            metadata,
             ..
         } => {
-            linter.symbols.new_local(name, (*span, false, !is_mutable));
-            linter.analyze_ast(value);
+            let metadata: &LocalMetadata = metadata;
+
+            linter
+                .symbols
+                .new_local(name, (*span, false, !metadata.is_mutable()));
+
+            linter.analyze_ast_expr(value);
         }
 
         _ => {

@@ -6,7 +6,7 @@ use crate::{
 pub fn analyze_cast<'linter>(linter: &mut Linter<'linter>, node: &'linter Ast) {
     match node {
         Ast::As { from, .. } => {
-            linter.analyze_ast(from);
+            linter.analyze_ast_expr(from);
         }
 
         _ => {

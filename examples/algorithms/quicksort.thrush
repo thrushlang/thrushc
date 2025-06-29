@@ -1,0 +1,84 @@
+/* ******************************************************************************************
+*
+*   QuickSort - Algorithm
+*
+*   Copyright (c) 2025 Kevin Benavides
+*
+******************************************************************************************* */
+
+// External declaration for the C printf function, used for printing output to the console.
+fn print(fmt: ptr) s32 @public @ignore @extern("printf");
+
+// Swaps two elements in the array at the specified indices i and j.
+// Parameters:
+//   arr: A mutable array of 7 unsigned 32-bit integers.
+//   i: The first index (signed 32-bit integer) for swapping.
+//   j: The second index (signed 32-bit integer) for swapping.
+fn swap(mut arr: mut array[u32; 7], i: s32, j: s32) void {
+    local temp: u32 = deref arr[i as u32]; // Store the value at arr[i] in a temporary variable
+    arr[i as u32] = deref arr[j as u32];  // Assign the value at arr[j] to arr[i]
+    arr[j as u32] = temp;                 // Assign the temporary value to arr[j]
+}
+
+// Partitions the array around a pivot, placing elements less than or equal to the pivot
+// to its left and greater elements to its right.
+// Parameters:
+//   arr: A mutable array of 7 unsigned 32-bit integers.
+//   low: The starting index of the subarray (inclusive, signed 32-bit integer).
+//   high: The ending index of the subarray (inclusive, signed 32-bit integer).
+// Returns: The index where the pivot is placed after partitioning.
+// Note: The loop iterates from low to high-1 to avoid comparing the pivot (arr[high]).
+// The ++j increment is performed at the end of the loop to match original syntax.
+fn partition(mut arr: mut array[u32; 7], low: s32, high: s32) s32 {
+    local pivot: u32 = deref arr[high as u32]; // Choose the last element as the pivot
+    local mut i: s32 = low - 1;                // Initialize i to low-1 for tracking smaller elements
+    
+    for local mut j: s32 = low; j < high; ++j; { // Iterate from low to high-1
+        if (deref(arr[j as u32])) <= pivot {     // If current element is less than or equal to pivot
+            i++;                                 // Increment i to point to the next position for a smaller element
+            swap(arr, i, j);                     // Swap elements at i and j
+        }
+    }
+    
+    swap(arr, i + 1, high);                    // Place the pivot in its final position
+    return i + 1;                              // Return the pivot's index
+}
+
+// Recursively sorts the array using the QuickSort algorithm.
+// Parameters:
+//   arr: A mutable array of 7 unsigned 32-bit integers.
+//   low: The starting index of the subarray (inclusive, signed 32-bit integer).
+//   high: The ending index of the subarray (inclusive, signed 32-bit integer).
+fn quickSort(arr: mut array[u32; 7], low: s32, high: s32) void {
+    if (low < high) {                          // Proceed only if the subarray has more than one element
+        local pi: s32 = partition(arr, low, high); // Partition the array and get the pivot index
+        quickSort(arr, low, pi - 1);           // Recursively sort the left subarray
+        quickSort(arr, pi + 1, high);          // Recursively sort the right subarray
+    }
+}
+
+// Prints the elements of the array followed by a newline.
+// Parameters:
+//   arr: A mutable array of 7 unsigned 32-bit integers.
+//   size: The number of elements to print (unsigned 32-bit integer).
+fn printArray(arr: mut array[u32; 7], size: u32) void {
+    for local mut idx: u32 = 0; idx < size; ++idx; { // Iterate over the array from index 0 to size-1
+        local content_fmt: str = "%d ";              // Format string for printing an integer
+        print(content_fmt as ptr, deref arr[idx]);   // Print the current element
+    }
+
+    local space: str = "\n";                       // Newline character
+    print(space as ptr);                           // Print a newline after the array
+}
+
+fn main() {
+    local unsorted_array: mut array[u32; 7] = fixed[64, 34, 25, 12, 22, 11, 90]; // Initialize array with 7 elements
+    local unsorted_array_fmt: str = "Original array: "; // String for the unsorted array
+    local sorted_array_fmt: str = "Sorted array: ";     // String for the sorted array
+
+    print(unsorted_array_fmt as ptr);      // Print "Original array: "
+    printArray(unsorted_array, 7);         // Print the unsorted array
+    quickSort(unsorted_array, 0, 6);       // Sort the array (indices 0 to 6)
+    print(sorted_array_fmt as ptr);        // Print "Sorted array: "
+    printArray(unsorted_array, 7);         // Print the sorted array
+}

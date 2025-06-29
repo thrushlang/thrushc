@@ -17,8 +17,6 @@ use crate::{
 };
 
 pub fn build_constructor<'parser>(
-    name: &'parser str,
-    span: Span,
     parser_context: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, ThrushCompilerIssue> {
     if parser_context.is_unreacheable_code() {
@@ -29,6 +27,21 @@ pub fn build_constructor<'parser>(
             parser_context.previous().span,
         ));
     }
+
+    parser_context.consume(
+        TokenType::New,
+        "Syntax error".into(),
+        "Expected 'new' keyword.".into(),
+    )?;
+
+    let struct_tk: &Token = parser_context.consume(
+        TokenType::Identifier,
+        "Syntax error".into(),
+        "Expected 'identifier' keyword.".into(),
+    )?;
+
+    let name: &str = struct_tk.get_lexeme();
+    let span: Span = struct_tk.get_span();
 
     let struct_found: Struct = parser_context.get_symbols().get_struct(name, span)?;
     let fields_required: usize = struct_found.get_fields().1.len();

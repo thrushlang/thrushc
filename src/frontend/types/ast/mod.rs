@@ -2,6 +2,7 @@
 
 mod get;
 mod is;
+pub mod metadata;
 mod new;
 mod repr;
 pub mod types;
@@ -13,7 +14,13 @@ use crate::{
     frontend::{
         lexer::{span::Span, tokentype::TokenType},
         types::{
-            ast::types::AstEitherExpression,
+            ast::{
+                metadata::{
+                    constant::ConstantMetadata, fnparameter::FunctionParameterMetadata,
+                    index::IndexMetadata, local::LocalMetadata, reference::ReferenceMetadata,
+                },
+                types::AstEitherExpression,
+            },
             lexer::ThrushType,
             parser::stmts::{
                 ident::ReferenceIdentificator,
@@ -75,8 +82,8 @@ pub enum Ast<'ctx> {
     Index {
         index_to: AstEitherExpression<'ctx>,
         indexes: Vec<Ast<'ctx>>,
-        is_mutable: bool,
         kind: ThrushType,
+        metadata: IndexMetadata,
         span: Span,
     },
 
@@ -162,6 +169,7 @@ pub enum Ast<'ctx> {
     Enum {
         name: &'ctx str,
         fields: EnumFields<'ctx>,
+        attributes: ThrushAttributes<'ctx>,
         span: Span,
     },
     EnumValue {
@@ -210,7 +218,7 @@ pub enum Ast<'ctx> {
         ascii_name: &'ctx str,
         kind: ThrushType,
         position: u32,
-        is_mutable: bool,
+        metadata: FunctionParameterMetadata,
         span: Span,
     },
     Return {
@@ -226,6 +234,7 @@ pub enum Ast<'ctx> {
         kind: ThrushType,
         value: Rc<Ast<'ctx>>,
         attributes: ThrushAttributes<'ctx>,
+        metadata: ConstantMetadata,
         span: Span,
     },
 
@@ -236,8 +245,7 @@ pub enum Ast<'ctx> {
         kind: ThrushType,
         value: Rc<Ast<'ctx>>,
         attributes: ThrushAttributes<'ctx>,
-        undefined: bool,
-        is_mutable: bool,
+        metadata: LocalMetadata,
         span: Span,
     },
 
@@ -245,10 +253,9 @@ pub enum Ast<'ctx> {
     Reference {
         name: &'ctx str,
         kind: ThrushType,
-        span: Span,
         identificator: ReferenceIdentificator,
-        is_mutable: bool,
-        is_allocated: bool,
+        metadata: ReferenceMetadata,
+        span: Span,
     },
 
     // Mutation
@@ -256,7 +263,6 @@ pub enum Ast<'ctx> {
         source: AstEitherExpression<'ctx>,
         value: Rc<Ast<'ctx>>,
         kind: ThrushType,
-        cast_type: ThrushType,
         span: Span,
     },
 

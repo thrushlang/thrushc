@@ -5,8 +5,11 @@ use crate::{
 
 pub fn analyze_constant<'linter>(linter: &mut Linter<'linter>, node: &'linter Ast) {
     match node {
-        Ast::Const { value, .. } => {
-            linter.analyze_ast(value);
+        Ast::Const {
+            name, value, span, ..
+        } => {
+            linter.symbols.new_local_constant(name, (*span, false));
+            linter.analyze_ast_expr(value);
         }
 
         _ => {

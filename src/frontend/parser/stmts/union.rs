@@ -184,6 +184,7 @@ pub fn build_enum<'parser>(
     Ok(Ast::Enum {
         name: enum_name,
         fields: enum_fields,
+        attributes: enum_attributes,
         span,
     })
 }

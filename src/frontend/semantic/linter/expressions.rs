@@ -10,15 +10,15 @@ use crate::{
     },
 };
 
-pub fn analyze_expression<'linter>(linter: &mut Linter<'linter>, node: &'linter Ast) {
-    match node {
+pub fn analyze_expression<'linter>(linter: &mut Linter<'linter>, expr: &'linter Ast) {
+    match expr {
         Ast::Group { expression, .. } => {
-            linter.analyze_ast(expression);
+            linter.analyze_ast_expr(expression);
         }
 
         Ast::BinaryOp { left, right, .. } => {
-            linter.analyze_ast(left);
-            linter.analyze_ast(right);
+            linter.analyze_ast_expr(left);
+            linter.analyze_ast_expr(right);
         }
 
         Ast::UnaryOp {
@@ -36,12 +36,12 @@ pub fn analyze_expression<'linter>(linter: &mut Linter<'linter>, node: &'linter 
                 }
             }
 
-            linter.analyze_ast(expression);
+            linter.analyze_ast_expr(expression);
         }
 
         Ast::AsmValue { args, .. } => {
             args.iter().for_each(|arg| {
-                linter.analyze_ast(arg);
+                linter.analyze_ast_expr(arg);
             });
         }
 
@@ -49,20 +49,20 @@ pub fn analyze_expression<'linter>(linter: &mut Linter<'linter>, node: &'linter 
             index_to, indexes, ..
         } => {
             indexes.iter().for_each(|indexe| {
-                linter.analyze_ast(indexe);
+                linter.analyze_ast_expr(indexe);
             });
 
             if let Some(any_reference) = &index_to.0 {
                 let name: &str = any_reference.0;
                 let reference: &Ast = &any_reference.1;
 
-                linter.analyze_ast(reference);
+                linter.analyze_ast_expr(reference);
 
                 used::mark_as_used(linter, name);
             }
 
             if let Some(expr) = &index_to.1 {
-                linter.analyze_ast(expr);
+                linter.analyze_ast_expr(expr);
             }
         }
 
@@ -76,7 +76,7 @@ pub fn analyze_expression<'linter>(linter: &mut Linter<'linter>, node: &'linter 
 
             constructor_args.iter().for_each(|arg| {
                 let stmt: &Ast = &arg.1;
-                linter.analyze_ast(stmt);
+                linter.analyze_ast_expr(stmt);
             });
 
             if let Some(structure) = linter.symbols.get_struct_info(name) {
@@ -99,7 +99,7 @@ pub fn analyze_expression<'linter>(linter: &mut Linter<'linter>, node: &'linter 
                 function.1 = true;
 
                 args.iter().for_each(|arg| {
-                    linter.analyze_ast(arg);
+                    linter.analyze_ast_expr(arg);
                 });
 
                 return;
@@ -109,7 +109,7 @@ pub fn analyze_expression<'linter>(linter: &mut Linter<'linter>, node: &'linter 
                 asm_function.1 = true;
 
                 args.iter().for_each(|arg| {
-                    linter.analyze_ast(arg);
+                    linter.analyze_ast_expr(arg);
                 });
 
                 return;
@@ -130,7 +130,7 @@ pub fn analyze_expression<'linter>(linter: &mut Linter<'linter>, node: &'linter 
 
         Ast::FixedArray { items, .. } | Ast::Array { items, .. } => {
             items.iter().for_each(|item| {
-                linter.analyze_ast(item);
+                linter.analyze_ast_expr(item);
             });
         }
 
@@ -141,7 +141,7 @@ pub fn analyze_expression<'linter>(linter: &mut Linter<'linter>, node: &'linter 
             }
 
             if let Some(expr) = &source.1 {
-                linter.analyze_ast(expr);
+                linter.analyze_ast_expr(expr);
             }
         }
 
@@ -158,7 +158,7 @@ pub fn analyze_expression<'linter>(linter: &mut Linter<'linter>, node: &'linter 
                     enum_field.1 = true;
                 }
 
-                linter.analyze_ast(value);
+                linter.analyze_ast_expr(value);
 
                 return;
             }
@@ -184,7 +184,7 @@ pub fn analyze_expression<'linter>(linter: &mut Linter<'linter>, node: &'linter 
         | Ast::SizeOf { .. } => (),
 
         _ => {
-            let span: Span = node.get_span();
+            let span: Span = expr.get_span();
 
             linter.add_bug(ThrushCompilerIssue::Bug(
                 "Expression not caught".into(),

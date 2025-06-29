@@ -8,7 +8,7 @@ pub fn analyze_enum<'linter>(linter: &mut Linter<'linter>, node: &'linter Ast) {
         Ast::Enum { fields, .. } => {
             fields.iter().for_each(|field| {
                 let expr: &Ast = &field.1;
-                linter.analyze_ast(expr);
+                linter.analyze_ast_expr(expr);
             });
         }
 

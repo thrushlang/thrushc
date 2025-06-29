@@ -1,23 +1,24 @@
 use crate::{
     core::errors::standard::ThrushCompilerIssue,
-    frontend::types::{ast::Ast, lexer::ThrushType},
+    frontend::types::{ast::Ast, lexer::ThrushType, parser::stmts::ident::ReferenceIdentificator},
 };
 
 impl Ast<'_> {
     pub fn is_mutable(&self) -> bool {
-        if let Ast::Local { is_mutable, .. } = self {
-            return *is_mutable;
+        if let Ast::Local { metadata, .. } = self {
+            return metadata.is_mutable();
         }
 
-        if let Ast::Index { is_mutable, .. } = self {
-            return *is_mutable;
+        if let Ast::FunctionParameter { metadata, .. } = self {
+            return metadata.is_mutable();
         }
 
-        if let Ast::Reference {
-            is_mutable, kind, ..
-        } = self
-        {
-            return *is_mutable || kind.is_ptr_type() || kind.is_address_type();
+        if let Ast::Index { metadata, .. } = self {
+            return metadata.is_mutable();
+        }
+
+        if let Ast::Reference { metadata, .. } = self {
+            return metadata.is_mutable();
         }
 
         if let Ast::Property { reference, .. } = self {
@@ -104,6 +105,37 @@ impl Ast<'_> {
     }
 
     #[inline]
+    pub fn is_allocated_reference(&self) -> bool {
+        if let Ast::Reference { metadata, .. } = self {
+            return metadata.is_allocated();
+        }
+
+        false
+    }
+
+    #[inline]
+    pub fn is_local_reference(&self) -> bool {
+        matches!(
+            self,
+            Ast::Reference {
+                identificator: ReferenceIdentificator::Local,
+                ..
+            }
+        )
+    }
+
+    #[inline]
+    pub fn is_parameter_reference(&self) -> bool {
+        matches!(
+            self,
+            Ast::Reference {
+                identificator: ReferenceIdentificator::FunctionParameter,
+                ..
+            }
+        )
+    }
+
+    #[inline]
     pub fn is_block(&self) -> bool {
         matches!(self, Ast::Block { .. })
     }
@@ -114,19 +146,13 @@ impl Ast<'_> {
     }
 
     #[inline]
-    pub fn is_allocated_reference(&self) -> bool {
-        matches!(
-            self,
-            Ast::Reference {
-                is_allocated: true,
-                ..
-            }
-        )
+    pub fn is_pre_unaryop(&self) -> bool {
+        matches!(self, Ast::UnaryOp { is_pre: true, .. })
     }
 
     #[inline]
-    pub fn is_pre_unaryop(&self) -> bool {
-        matches!(self, Ast::UnaryOp { is_pre: true, .. })
+    pub fn is_unaryop(&self) -> bool {
+        matches!(self, Ast::UnaryOp { .. })
     }
 
     #[inline]

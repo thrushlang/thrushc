@@ -118,7 +118,7 @@ pub fn validate_expression<'type_checker>(
                 if !reference.is_mutable() {
                     typechecker.add_error(ThrushCompilerIssue::Error(
                         "Type error".into(),
-                        "Expected mutable reference.".into(),
+                        "The original reference must be mutable.".into(),
                         None,
                         reference.get_span(),
                     ));
@@ -168,7 +168,7 @@ pub fn validate_expression<'type_checker>(
                 if !source.is_mutable() {
                     typechecker.add_error(ThrushCompilerIssue::Error(
                         "Type error".into(),
-                        "Expected mutable reference.".into(),
+                        "The original reference must be mutable.".into(),
                         None,
                         source.get_span(),
                     ));
