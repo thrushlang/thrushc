@@ -14,7 +14,7 @@ pub struct ParserControlContext {
 
     entry_point: bool,
     inside_function: bool,
-    inside_loop: bool,
+    loop_depth: usize,
     unreacheable_code: usize,
 }
 
@@ -45,7 +45,7 @@ impl ParserControlContext {
             sync_position: SyncPosition::NoRelevant,
             entry_point: false,
             inside_function: false,
-            inside_loop: false,
+            loop_depth: 0,
             unreacheable_code: 0,
         }
     }
@@ -74,12 +74,20 @@ impl ParserControlContext {
         self.inside_function
     }
 
-    pub fn set_inside_loop(&mut self, value: bool) {
-        self.inside_loop = value;
+    pub fn increment_loop_depth(&mut self) {
+        self.loop_depth += 1;
     }
 
-    pub fn get_inside_loop(&self) -> bool {
-        self.inside_loop
+    pub fn decrement_loop_depth(&mut self) {
+        self.loop_depth -= 1;
+    }
+
+    pub fn reset_loop_depth(&mut self) {
+        self.loop_depth = 0;
+    }
+
+    pub fn is_inside_loop(&self) -> bool {
+        self.loop_depth > 0
     }
 
     pub fn get_unreacheable_code_scope(&self) -> usize {

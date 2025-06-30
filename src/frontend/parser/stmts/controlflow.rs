@@ -43,7 +43,7 @@ pub fn build_continue<'parser>(
         .get_mut_control_ctx()
         .set_unreacheable_code_scope(scope);
 
-    if !parser_ctx.get_control_ctx().get_inside_loop() {
+    if !parser_ctx.get_control_ctx().is_inside_loop() {
         return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("The flow changer of a loop must go inside one."),
@@ -87,7 +87,7 @@ pub fn build_break<'parser>(
         .get_mut_control_ctx()
         .set_unreacheable_code_scope(scope);
 
-    if !parser_ctx.get_control_ctx().get_inside_loop() {
+    if !parser_ctx.get_control_ctx().is_inside_loop() {
         return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("The flow changer of a loop must go inside one."),

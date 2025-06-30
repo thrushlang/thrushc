@@ -34,7 +34,7 @@ pub fn build_for_loop<'parser>(
     if !parser_ctx.get_control_ctx().get_inside_function() {
         return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
-            String::from("For loop must be placed inside a function or a bind."),
+            String::from("For loop must be placed inside a function."),
             None,
             span,
         ));
@@ -45,11 +45,11 @@ pub fn build_for_loop<'parser>(
     let cond: Ast = expression::build_expression(parser_ctx)?;
     let actions: Ast = expression::build_expression(parser_ctx)?;
 
-    parser_ctx.get_mut_control_ctx().set_inside_loop(true);
+    parser_ctx.get_mut_control_ctx().increment_loop_depth();
 
     let body: Ast = block::build_block(parser_ctx)?;
 
-    parser_ctx.get_mut_control_ctx().set_inside_loop(false);
+    parser_ctx.get_mut_control_ctx().decrement_loop_depth();
 
     Ok(Ast::For {
         local: local.into(),
@@ -83,13 +83,13 @@ pub fn build_loop<'parser>(
     if !parser_ctx.get_control_ctx().get_inside_function() {
         return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
-            String::from("Loop must be placed inside a function or a bind."),
+            String::from("Loop must be placed inside a function."),
             None,
             loop_span,
         ));
     }
 
-    parser_ctx.get_mut_control_ctx().set_inside_loop(true);
+    parser_ctx.get_mut_control_ctx().increment_loop_depth();
 
     let block: Ast = block::build_block(parser_ctx)?;
 
@@ -101,7 +101,7 @@ pub fn build_loop<'parser>(
             .set_unreacheable_code_scope(scope);
     }
 
-    parser_ctx.get_mut_control_ctx().set_inside_loop(false);
+    parser_ctx.get_mut_control_ctx().decrement_loop_depth();
 
     Ok(Ast::Loop {
         block: block.into(),
@@ -132,7 +132,7 @@ pub fn build_while_loop<'parser>(
     if !parser_ctx.get_control_ctx().get_inside_function() {
         return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
-            String::from("While loop must be placed inside a function or a structure method."),
+            String::from("While loop must be placed inside a function."),
             None,
             span,
         ));

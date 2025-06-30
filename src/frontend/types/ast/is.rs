@@ -38,7 +38,13 @@ impl Ast<'_> {
 
     pub fn has_return(&self) -> bool {
         if let Ast::Block { stmts, .. } = self {
-            return stmts.iter().any(|stmt| stmt.is_return());
+            return stmts.iter().any(|stmt| {
+                if let Ast::If { block, .. } = stmt {
+                    block.has_return()
+                } else {
+                    stmt.is_return()
+                }
+            });
         }
 
         false
@@ -46,7 +52,13 @@ impl Ast<'_> {
 
     pub fn has_break(&self) -> bool {
         if let Ast::Block { stmts, .. } = self {
-            return stmts.iter().any(|stmt| stmt.is_break());
+            return stmts.iter().any(|stmt| {
+                if let Ast::If { block, .. } = stmt {
+                    block.has_break()
+                } else {
+                    stmt.is_break()
+                }
+            });
         }
 
         false
@@ -54,7 +66,13 @@ impl Ast<'_> {
 
     pub fn has_continue(&self) -> bool {
         if let Ast::Block { stmts, .. } = self {
-            return stmts.iter().any(|stmt| stmt.is_continue());
+            return stmts.iter().any(|stmt| {
+                if let Ast::If { block, .. } = stmt {
+                    block.has_continue()
+                } else {
+                    stmt.is_continue()
+                }
+            });
         }
 
         false

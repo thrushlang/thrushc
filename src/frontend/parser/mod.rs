@@ -228,7 +228,7 @@ impl<'parser> ParserContext<'parser> {
         self.symbols.end_parameters();
 
         self.control_ctx.set_inside_function(false);
-        self.control_ctx.set_inside_loop(false);
+        self.control_ctx.reset_loop_depth();
     }
 
     pub fn is_unreacheable_code(&self) -> bool {

@@ -254,6 +254,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
 
                                 if index + 1 < elfs.len() {
                                     llvm_builder.position_at_end(next_block);
+
                                     current_block = llvm_context
                                         .append_basic_block(current_function, "elseif_body");
                                 }
@@ -265,7 +266,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                         if let Ast::Else { block, .. } = &**otherwise {
                             llvm_builder.position_at_end(else_block);
 
-                            self.codegen(block);
+                            self.codegen_code_block(block);
 
                             if !block.has_return() && !block.has_break() && !block.has_continue() {
                                 let _ = llvm_builder.build_unconditional_branch(merge_block);
@@ -340,7 +341,13 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                     let exit_block: BasicBlock =
                         llvm_context.append_basic_block(current_function, "while_exit");
 
-                    self.exit_loop_block = Some(exit_block);
+                    if block.has_break() || block.has_return() {
+                        self.exit_loop_block = Some(exit_block);
+                    }
+
+                    if block.has_continue() {
+                        self.start_loop_block = Some(condition_block);
+                    }
 
                     llvm_builder
                         .build_conditional_branch(conditional, then_block, exit_block)
@@ -350,7 +357,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
 
                     self.codegen_code_block(block);
 
-                    if !block.has_break() && !block.has_return() {
+                    if !block.has_break() || !block.has_return() || !block.has_continue() {
                         let _ = llvm_builder.build_unconditional_branch(condition_block);
                     }
 
@@ -379,11 +386,17 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                     let exit_loop_block: BasicBlock =
                         llvm_context.append_basic_block(function, "loop_exit");
 
-                    self.exit_loop_block = Some(exit_loop_block);
+                    if block.has_break() || block.has_return() {
+                        self.exit_loop_block = Some(exit_loop_block);
+                    }
+
+                    if block.has_continue() {
+                        self.start_loop_block = Some(start_loop_block);
+                    }
 
                     self.codegen_code_block(block);
 
-                    if !block.has_return() && !block.has_break() && !block.has_continue() {
+                    if !block.has_return() || !block.has_break() || !block.has_continue() {
                         let _ = exit_loop_block.remove_from_function();
                         let _ = llvm_builder
                             .build_unconditional_branch(function.get_last_basic_block().unwrap());
@@ -408,12 +421,10 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 ..
             } => {
                 if let Some(current_function) = self.current_function {
-                    self.stmt(local);
+                    self.codegen_variables(local);
 
                     let start_block: BasicBlock =
                         llvm_context.append_basic_block(current_function, "for");
-
-                    self.start_loop_block = Some(start_block);
 
                     let _ = llvm_builder.build_unconditional_branch(start_block);
 
@@ -433,7 +444,13 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                         .build_conditional_branch(condition, then_block, exit_block)
                         .unwrap();
 
-                    self.exit_loop_block = Some(exit_block);
+                    if block.has_break() || block.has_return() {
+                        self.exit_loop_block = Some(exit_block);
+                    }
+
+                    if block.has_continue() {
+                        self.start_loop_block = Some(start_block);
+                    }
 
                     llvm_builder.position_at_end(then_block);
 
@@ -445,7 +462,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                         self.codegen_code_block(block);
                     }
 
-                    if !block.has_break() && !block.has_return() {
+                    if !block.has_break() || !block.has_return() || !block.has_continue() {
                         let _ = llvm_builder.build_unconditional_branch(start_block);
                     }
 
@@ -461,11 +478,29 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
             }
 
             Ast::Break { .. } => {
-                let _ = llvm_builder.build_unconditional_branch(self.exit_loop_block.unwrap());
+                let _ = llvm_builder.build_unconditional_branch(
+                    self.exit_loop_block.unwrap_or_else(|| {
+                        logging::log(
+                            LoggingType::BackendBug,
+                            "Loop end block could not be obtained at code generation time.",
+                        );
+
+                        unreachable!()
+                    }),
+                );
             }
 
             Ast::Continue { .. } => {
-                let _ = llvm_builder.build_unconditional_branch(self.start_loop_block.unwrap());
+                let _ = llvm_builder.build_unconditional_branch(
+                    self.start_loop_block.unwrap_or_else(|| {
+                        logging::log(
+                            LoggingType::BackendBug,
+                            "Loop start block could not be obtained at code generation time.",
+                        );
+
+                        unreachable!()
+                    }),
+                );
             }
 
             stmt => self.codegen_variables(stmt),
