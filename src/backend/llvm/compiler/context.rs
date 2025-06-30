@@ -8,7 +8,7 @@ use {
         backend::{
             llvm::compiler::{
                 alloc::{self},
-                memory::LLVMAllocationSite,
+                anchors::PointerAnchor,
             },
             types::repr::{
                 LLVMFunction, LLVMFunctions, LLVMFunctionsParameters, LLVMGlobalConstants,
@@ -39,12 +39,12 @@ pub struct LLVMCodeGenContext<'a, 'ctx> {
     local_constants: LLVMLocalConstants<'ctx>,
 
     functions: LLVMFunctions<'ctx>,
-    parameters: LLVMFunctionsParameters<'ctx>,
     instructions: LLVMInstructions<'ctx>,
+    parameters: LLVMFunctionsParameters<'ctx>,
+
+    ptr_anchor: Option<PointerAnchor<'ctx>>,
 
     scope: usize,
-
-    site_allocation: Option<LLVMAllocationSite>,
 
     diagnostician: Diagnostician,
 }
@@ -66,11 +66,14 @@ impl<'a, 'ctx> LLVMCodeGenContext<'a, 'ctx> {
             global_constants: HashMap::with_capacity(1000),
             local_constants: Vec::with_capacity(1000),
 
-            functions: HashMap::with_capacity(10000),
-            parameters: HashMap::with_capacity(10),
+            functions: HashMap::with_capacity(1000),
             instructions: Vec::with_capacity(1000),
+            parameters: HashMap::with_capacity(10),
+
+            ptr_anchor: None,
+
             scope: 0,
-            site_allocation: None,
+
             diagnostician,
         }
     }
@@ -229,22 +232,12 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
         unreachable!()
     }
 
-    pub fn add_function(&mut self, name: &'ctx str, function: LLVMFunction<'ctx>) {
+    pub fn new_function(&mut self, name: &'ctx str, function: LLVMFunction<'ctx>) {
         self.functions.insert(name, function);
     }
+}
 
-    pub fn set_site_allocation(&mut self, site: LLVMAllocationSite) {
-        self.site_allocation = Some(site);
-    }
-
-    pub fn reset_site_allocation(&mut self) {
-        self.site_allocation = None;
-    }
-
-    pub fn get_site_allocation(&self) -> Option<LLVMAllocationSite> {
-        self.site_allocation
-    }
-
+impl LLVMCodeGenContext<'_, '_> {
     pub fn begin_scope(&mut self) {
         self.local_constants.push(HashMap::with_capacity(256));
         self.instructions.push(HashMap::with_capacity(256));
@@ -260,6 +253,20 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
         if self.scope == 0 {
             self.parameters.clear();
         }
+    }
+}
+
+impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
+    pub fn set_pointer_anchor(&mut self, anchor: PointerAnchor<'ctx>) {
+        self.ptr_anchor = Some(anchor);
+    }
+
+    pub fn get_pointer_anchor(&mut self) -> Option<PointerAnchor<'ctx>> {
+        self.ptr_anchor
+    }
+
+    pub fn clear_pointer_anchor(&mut self) {
+        self.ptr_anchor = None;
     }
 }
 

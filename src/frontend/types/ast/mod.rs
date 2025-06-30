@@ -102,7 +102,7 @@ pub enum Ast<'ctx> {
 
     Constructor {
         name: &'ctx str,
-        arguments: Constructor<'ctx>,
+        args: Constructor<'ctx>,
         kind: ThrushType,
         span: Span,
     },

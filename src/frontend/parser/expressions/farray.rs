@@ -35,15 +35,6 @@ pub fn build_fixed_array<'parser>(
 
         let item: Ast = expression::build_expr(parser_context)?;
 
-        if item.is_constructor() {
-            return Err(ThrushCompilerIssue::Error(
-                "Syntax error".into(),
-                "Constructor should be stored in a local variable.".into(),
-                None,
-                item.get_span(),
-            ));
-        }
-
         items.push(item);
 
         if parser_context.check(TokenType::RBracket) {

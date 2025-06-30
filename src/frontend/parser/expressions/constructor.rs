@@ -52,7 +52,7 @@ pub fn build_constructor<'parser>(
         String::from("Expected '{'."),
     )?;
 
-    let mut arguments: Constructor = (name, Vec::with_capacity(10));
+    let mut args: Constructor = Vec::with_capacity(10);
 
     let mut amount: usize = 0;
 
@@ -92,19 +92,8 @@ pub fn build_constructor<'parser>(
 
             let expression: Ast = expression::build_expr(parser_context)?;
 
-            if expression.is_constructor() {
-                return Err(ThrushCompilerIssue::Error(
-                    String::from("Syntax error"),
-                    String::from("Constructor should be stored in a local variable."),
-                    None,
-                    field_span,
-                ));
-            }
-
             if let Some(target_type) = struct_found.get_field_type(field_name) {
-                arguments
-                    .1
-                    .push((field_name, expression, target_type, amount as u32));
+                args.push((field_name, expression, target_type, amount as u32));
             }
 
             amount += 1;
@@ -141,7 +130,7 @@ pub fn build_constructor<'parser>(
         }
     }
 
-    let amount_fields: usize = arguments.1.len();
+    let amount_fields: usize = args.len();
 
     if amount_fields != fields_required {
         return Err(ThrushCompilerIssue::Error(
@@ -163,8 +152,8 @@ pub fn build_constructor<'parser>(
 
     Ok(Ast::Constructor {
         name,
-        arguments: arguments.clone(),
-        kind: arguments.get_type(),
+        args: args.clone(),
+        kind: args.get_type(name),
         span,
     })
 }

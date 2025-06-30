@@ -60,7 +60,7 @@ pub fn compile_str_constant<'ctx>(
 
 pub fn compile_str<'ctx>(
     context: &LLVMCodeGenContext<'_, 'ctx>,
-    bytes: &'ctx [u8],
+    bytes: &[u8],
 ) -> StructValue<'ctx> {
     let llvm_module: &Module = context.get_llvm_module();
     let llvm_context: &Context = context.get_llvm_context();

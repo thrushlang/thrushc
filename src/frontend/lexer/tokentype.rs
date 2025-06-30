@@ -83,6 +83,7 @@ pub enum TokenType {
     Import,
     SizeOf,
     Mut,
+    Halloc,
     Type,
     Enum,
     And,
@@ -109,7 +110,6 @@ pub enum TokenType {
     MemCpy,
     MemMove,
     MemSet,
-    Sqrt,
 
     // --- Types ---
     S8,

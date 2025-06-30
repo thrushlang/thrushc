@@ -9,10 +9,12 @@ use {
         },
     },
     inkwell::{
+        AddressSpace,
         builder::Builder,
         context::Context,
         values::{BasicValueEnum, IntValue},
     },
+    std::fmt::Display,
 };
 
 pub fn int_operation<'ctx>(
@@ -88,31 +90,23 @@ pub fn int_operation<'ctx>(
                     return llvm_context.bool_type().const_zero().into();
                 }
 
-                logging::log(
-                    LoggingType::BackendBug,
+                self::codegen_abort(
                     "Cannot perform integer binary operation without a valid logical gate.",
                 );
-
-                unreachable!()
+                self::compile_null_ptr(context)
             }
 
             _ => {
-                logging::log(
-                    LoggingType::BackendBug,
+                self::codegen_abort(
                     "Cannot perform integer binary operation without a valid operator.",
                 );
-
-                unreachable!()
+                self::compile_null_ptr(context)
             }
         };
     }
 
-    logging::log(
-        LoggingType::BackendBug,
-        "Cannot perform integer binary operation without integer values.",
-    );
-
-    unreachable!()
+    self::codegen_abort("Cannot perform integer binary operation without integer values.");
+    self::compile_null_ptr(context)
 }
 
 pub fn integer_binaryop<'ctx>(
@@ -156,13 +150,22 @@ pub fn integer_binaryop<'ctx>(
         );
     }
 
-    logging::log(
-        LoggingType::Panic,
-        &format!(
-            "Cannot perform integer binary operation '{} {} {}'.",
-            binary.0, binary.1, binary.2
-        ),
-    );
+    self::codegen_abort(format!(
+        "Cannot perform integer binary operation '{} {} {}'.",
+        binary.0, binary.1, binary.2
+    ));
 
-    unreachable!()
+    self::compile_null_ptr(context)
+}
+
+fn codegen_abort<T: Display>(message: T) {
+    logging::log(LoggingType::BackendBug, &format!("{}", message));
+}
+
+fn compile_null_ptr<'ctx>(context: &LLVMCodeGenContext<'_, 'ctx>) -> BasicValueEnum<'ctx> {
+    context
+        .get_llvm_context()
+        .ptr_type(AddressSpace::default())
+        .const_null()
+        .into()
 }

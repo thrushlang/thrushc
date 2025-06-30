@@ -14,10 +14,12 @@ use crate::{
         types::{
             lexer::traits::{
                 LLVMTypeExtensions, ThrushTypeMutableExtensions, ThrushTypeNumericExtensions,
-                ThrushTypePointerExtensions,
+                ThrushTypePointerExtensions, ThrushTypeStructExtensions,
             },
-            parser::stmts::{traits::StructExtensions, types::StructFields},
-            parser::symbols::types::Struct,
+            parser::{
+                stmts::{traits::StructExtensions, types::StructFields},
+                symbols::types::Struct,
+            },
         },
     },
 };
@@ -70,6 +72,16 @@ pub enum ThrushType {
     // Void Type
     #[default]
     Void,
+}
+
+impl ThrushTypeStructExtensions for ThrushType {
+    fn get_struct_fields(&self) -> &[Arc<ThrushType>] {
+        if let ThrushType::Struct(_, fields) = self {
+            return fields;
+        }
+
+        &[]
+    }
 }
 
 impl ThrushTypeMutableExtensions for ThrushType {
@@ -204,7 +216,7 @@ impl ThrushType {
 
     pub fn get_fixed_array_base_type(&self) -> &ThrushType {
         if let ThrushType::FixedArray(inner, ..) = self {
-            return inner.get_fixed_array_base_type();
+            return inner;
         }
 
         if let ThrushType::Mut(inner) = self {
@@ -220,7 +232,7 @@ impl ThrushType {
 
     pub fn get_array_base_type(&self) -> &ThrushType {
         if let ThrushType::Array(inner, ..) = self {
-            return inner.get_array_base_type();
+            return inner;
         }
 
         if let ThrushType::Mut(inner) = self {
@@ -229,14 +241,6 @@ impl ThrushType {
 
         if let ThrushType::Ptr(Some(inner)) = self {
             return inner.get_array_base_type();
-        }
-
-        self
-    }
-
-    pub fn get_array_type(&self) -> &ThrushType {
-        if let ThrushType::Array(inner, ..) = self {
-            return inner.get_fixed_array_base_type();
         }
 
         self

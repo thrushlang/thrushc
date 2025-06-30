@@ -93,6 +93,10 @@ impl Ast<'_> {
             return items.iter().all(|item| item.is_constant_value());
         }
 
+        if let Ast::Constructor { args, .. } = self {
+            return args.iter().all(|arg| arg.1.is_constant_value());
+        }
+
         false
     }
 
@@ -148,11 +152,6 @@ impl Ast<'_> {
     #[inline]
     pub fn is_constant(&self) -> bool {
         matches!(self, Ast::Const { .. })
-    }
-
-    #[inline]
-    pub fn is_constructor(&self) -> bool {
-        matches!(self, Ast::Constructor { .. })
     }
 
     #[inline]

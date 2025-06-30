@@ -12,10 +12,7 @@ use inkwell::{
 use crate::{
     backend::llvm::compiler::typegen,
     core::console::logging::{self, LoggingType},
-    frontend::types::{
-        lexer::ThrushType,
-        parser::stmts::{traits::ThrushAttributesExtensions, types::ThrushAttributes},
-    },
+    frontend::types::lexer::ThrushType,
 };
 
 use inkwell::{
@@ -451,14 +448,4 @@ pub fn gep_anon<'ctx>(
     );
 
     unreachable!()
-}
-
-pub fn get_memory_site_allocation_from_attributes(
-    attributes: &ThrushAttributes,
-) -> LLVMAllocationSite {
-    if attributes.has_heap_attr() {
-        return LLVMAllocationSite::Heap;
-    }
-
-    LLVMAllocationSite::Stack
 }

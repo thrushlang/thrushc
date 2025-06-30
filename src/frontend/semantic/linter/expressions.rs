@@ -6,7 +6,7 @@ use crate::{
             Linter,
             marks::{mutable, used},
         },
-        types::{ast::Ast, lexer::ThrushType},
+        types::{ast::Ast, parser::stmts::types::Constructor},
     },
 };
 
@@ -67,14 +67,11 @@ pub fn analyze_expression<'linter>(linter: &mut Linter<'linter>, expr: &'linter 
         }
 
         Ast::Constructor {
-            name,
-            arguments,
-            span,
-            ..
+            name, args, span, ..
         } => {
-            let constructor_args: &[(&str, Ast, ThrushType, u32)] = &arguments.1;
+            let args: &Constructor = args;
 
-            constructor_args.iter().for_each(|arg| {
+            args.iter().for_each(|arg| {
                 let stmt: &Ast = &arg.1;
                 linter.analyze_ast_expr(stmt);
             });

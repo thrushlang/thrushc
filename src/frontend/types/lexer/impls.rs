@@ -27,6 +27,7 @@ impl std::fmt::Display for TokenType {
             TokenType::Write => write!(f, "write"),
             TokenType::Local => write!(f, "local"),
             TokenType::Asm => write!(f, "asm"),
+
             // Types
             TokenType::Address => write!(f, "address"),
             TokenType::Bool => write!(f, "bool"),
@@ -121,7 +122,7 @@ impl std::fmt::Display for TokenType {
             TokenType::MemSet => write!(f, "memset"),
             TokenType::MemMove => write!(f, "memmove"),
             TokenType::MemCpy => write!(f, "memcpy"),
-            TokenType::Sqrt => write!(f, "sqrt"),
+            TokenType::Halloc => write!(f, "halloc"),
         }
     }
 }

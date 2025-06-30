@@ -1,4 +1,5 @@
 pub mod alloc;
+pub mod anchors;
 pub mod array;
 pub mod attributes;
 pub mod binaryop;
@@ -21,6 +22,7 @@ pub mod optimizations;
 pub mod predicates;
 pub mod ptrgen;
 pub mod string;
+pub mod structgen;
 pub mod typegen;
 pub mod unaryop;
 pub mod valuegen;

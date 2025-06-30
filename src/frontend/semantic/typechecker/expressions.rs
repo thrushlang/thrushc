@@ -9,6 +9,7 @@ use crate::{
                 ThrushType,
                 traits::{ThrushTypeMutableExtensions, ThrushTypePointerExtensions},
             },
+            parser::stmts::types::Constructor,
         },
     },
 };
@@ -227,11 +228,9 @@ pub fn validate_expression<'type_checker>(
             let array_type: &ThrushType = kind.get_fixed_array_base_type();
 
             items.iter().try_for_each(|item| {
-                let item_type: &ThrushType = item.get_value_type()?.get_fixed_array_base_type();
-
                 if let Err(error) = typechecker.validate_types(
                     array_type,
-                    item_type,
+                    item.get_value_type()?,
                     Some(item),
                     None,
                     None,
@@ -261,11 +260,9 @@ pub fn validate_expression<'type_checker>(
             let array_type: &ThrushType = kind.get_array_base_type();
 
             items.iter().try_for_each(|item| {
-                let item_type: &ThrushType = item.get_value_type()?.get_array_base_type();
-
                 if let Err(error) = typechecker.validate_types(
                     array_type,
-                    item_type,
+                    item.get_value_type()?,
                     Some(item),
                     None,
                     None,
@@ -402,8 +399,8 @@ pub fn validate_expression<'type_checker>(
             Ok(())
         }
 
-        Ast::Constructor { arguments, .. } => {
-            let args: &[(&str, Ast, ThrushType, u32)] = &arguments.1;
+        Ast::Constructor { args, .. } => {
+            let args: &Constructor = args;
 
             args.iter().try_for_each(|arg| {
                 let expression: &Ast = &arg.1;

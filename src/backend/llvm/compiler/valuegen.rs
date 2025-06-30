@@ -6,7 +6,7 @@ use crate::backend::llvm::compiler::attributes::LLVMAttribute;
 use crate::backend::llvm::compiler::memory::{self, SymbolAllocated};
 use crate::backend::llvm::compiler::{
     array, binaryop, builtins, cast, farray, floatgen, intgen, lli, mutation, ptrgen, string,
-    unaryop, valuegen,
+    structgen, unaryop, valuegen,
 };
 
 use crate::backend::types::LLVMEitherExpression;
@@ -72,6 +72,10 @@ pub fn compile<'ctx>(
         // Compiles a sizeof operation
         Ast::SizeOf { sizeof, .. } => builtins::sizeof::compile(context, sizeof, cast_type),
 
+        // Type/Structural Operations
+        // Compiles a grouped expression (e.g., parenthesized)
+        Ast::Group { expression, .. } => self::compile(context, expression, cast_type),
+
         // Operations
         // Compiles a binary operation (e.g., a + b)
         Ast::BinaryOp {
@@ -120,9 +124,10 @@ pub fn compile<'ctx>(
         // Compiles a dynamic array
         Ast::Array { items, kind, .. } => array::compile_array(context, kind, items, cast_type),
 
-        // Type/Structural Operations
-        // Compiles a grouped expression (e.g., parenthesized)
-        Ast::Group { expression, .. } => self::compile(context, expression, cast_type),
+        // Compiles a struct constructor
+        Ast::Constructor { args, kind, .. } => {
+            structgen::compile_struct(context, args, kind, cast_type)
+        }
 
         // Compiles a type cast operation
         Ast::As { from, cast, .. } => self::compile_cast(context, from, cast),
@@ -495,7 +500,7 @@ fn compile_inline_asm<'ctx>(
 
     let compiled_args: Vec<BasicMetadataValueEnum> = args
         .iter()
-        .map(|arg| self::compile(context, arg, None).into()) // Recursive
+        .map(|arg| self::compile(context, arg, None).into())
         .collect();
 
     let mut syntax: InlineAsmDialect = InlineAsmDialect::Intel;

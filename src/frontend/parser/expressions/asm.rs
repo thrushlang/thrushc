@@ -37,15 +37,6 @@ pub fn build_asm_code_block<'parser>(
 
             let expr: Ast = expression::build_expression(parser_context)?;
 
-            if expr.is_constructor() {
-                return Err(ThrushCompilerIssue::Error(
-                    String::from("Syntax error"),
-                    String::from("Constructor should be stored in a local variable."),
-                    None,
-                    expr.get_span(),
-                ));
-            }
-
             args.push(expr);
 
             if parser_context.check(TokenType::RParen) {

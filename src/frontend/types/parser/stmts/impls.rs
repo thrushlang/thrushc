@@ -89,9 +89,9 @@ impl StructFieldsExtensions for StructFields<'_> {
 }
 
 impl ConstructorExtensions for Constructor<'_> {
-    fn get_type(&self) -> ThrushType {
-        let types: Vec<ThrushType> = self.1.iter().map(|field| field.2.clone()).collect();
-        ThrushType::create_structure_type(self.0.to_string(), types.as_slice())
+    fn get_type(&self, name: &str) -> ThrushType {
+        let types: Vec<ThrushType> = self.iter().map(|field| field.2.clone()).collect();
+        ThrushType::create_structure_type(name.to_string(), types.as_slice())
     }
 }
 

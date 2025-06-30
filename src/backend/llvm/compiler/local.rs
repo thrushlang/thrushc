@@ -1,76 +1,38 @@
-use crate::frontend::types::{
-    lexer::ThrushType, parser::repr::Local, parser::stmts::types::ThrushAttributes,
+use crate::{
+    backend::llvm::compiler::anchors::PointerAnchor,
+    frontend::types::{
+        lexer::ThrushType,
+        parser::{repr::Local, stmts::types::ThrushAttributes},
+    },
 };
 
-use super::{
-    Ast,
-    context::LLVMCodeGenContext,
-    memory::{self, SymbolAllocated},
-    valuegen,
-};
+use super::{Ast, context::LLVMCodeGenContext, memory::SymbolAllocated, valuegen};
 
-use inkwell::{
-    builder::Builder,
-    context::Context,
-    values::{BasicValueEnum, PointerValue},
-};
+use inkwell::values::BasicValueEnum;
 
 pub fn new<'ctx>(local: Local<'ctx>, context: &mut LLVMCodeGenContext<'_, 'ctx>) {
     let local_name: &str = local.0;
     let ascii_name: &str = local.1;
 
     let local_type: &ThrushType = local.2;
-
     let local_value: &Ast = local.3;
 
     let attributes: &ThrushAttributes = local.4;
 
     context.alloc_local(local_name, ascii_name, local_type, attributes);
 
-    context.set_site_allocation(memory::get_memory_site_allocation_from_attributes(
-        attributes,
+    let symbol: SymbolAllocated = context.get_allocated_symbol(local.0);
+
+    context.set_pointer_anchor(PointerAnchor::new(
+        symbol.get_value().into_pointer_value(),
+        false,
     ));
 
-    if local_type.is_struct_type() {
-        self::compile_local_structure(local, context);
+    let value: BasicValueEnum = valuegen::compile(context, local_value, Some(local_type));
 
-        context.reset_site_allocation();
+    context.clear_pointer_anchor();
 
-        return;
-    }
-
-    let symbol: SymbolAllocated = context.get_allocated_symbol(local.0);
-
-    let expression: BasicValueEnum = valuegen::compile(context, local_value, Some(local_type));
-
-    symbol.store(context, expression);
-
-    context.reset_site_allocation();
-}
-
-fn compile_local_structure<'ctx>(local: Local<'ctx>, context: &mut LLVMCodeGenContext<'_, 'ctx>) {
-    let local_value: &Ast = local.3;
-
-    let symbol: SymbolAllocated = context.get_allocated_symbol(local.0);
-
-    if let Ast::Constructor { arguments, .. } = local_value {
-        let llvm_builder: &Builder = context.get_llvm_builder();
-        let llvm_context: &Context = context.get_llvm_context();
-
-        let expressions: &[(&str, Ast, ThrushType, u32)] = &arguments.1;
-
-        expressions.iter().for_each(|argument| {
-            let expr: &Ast = &argument.1;
-            let expr_index: u32 = argument.3;
-
-            let expr_cast_type: &ThrushType = &argument.2;
-
-            let expr: BasicValueEnum = valuegen::compile(context, expr, Some(expr_cast_type));
-
-            let field_memory_address_position: PointerValue =
-                symbol.gep_struct(llvm_context, llvm_builder, expr_index);
-
-            memory::store_anon(context, field_memory_address_position, expr);
-        });
+    if !value.is_pointer_value() {
+        symbol.store(context, value);
     }
 }

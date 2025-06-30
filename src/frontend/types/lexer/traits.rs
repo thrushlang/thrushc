@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use crate::{
     backend::llvm::compiler::context::LLVMCodeGenContext, frontend::types::lexer::ThrushType,
 };
@@ -23,4 +25,8 @@ pub trait ThrushTypePointerExtensions {
     fn is_all_ptr(&self) -> bool;
     fn is_ptr_struct_type(&self) -> bool;
     fn is_ptr_fixed_array_type(&self) -> bool;
+}
+
+pub trait ThrushTypeStructExtensions {
+    fn get_struct_fields(&self) -> &[Arc<ThrushType>];
 }

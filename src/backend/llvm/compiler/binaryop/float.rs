@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use crate::{
     backend::llvm::compiler::{cast, predicates},
     core::console::logging::{self, LoggingType},
@@ -10,6 +12,7 @@ use crate::{
 use super::super::{context::LLVMCodeGenContext, valuegen};
 
 use inkwell::{
+    AddressSpace,
     builder::Builder,
     values::{BasicValueEnum, FloatValue},
 };
@@ -48,12 +51,8 @@ pub fn float_operation<'ctx>(
             .into(),
 
         _ => {
-            logging::log(
-                LoggingType::BackendPanic,
-                "Cannot perform float binary operation without a valid operator.",
-            );
-
-            unreachable!()
+            self::codegen_abort("Cannot perform float binary operation without a valid operator.");
+            self::compile_null_ptr(context)
         }
     }
 }
@@ -91,13 +90,22 @@ pub fn float_binaryop<'ctx>(
         );
     }
 
-    logging::log(
-        LoggingType::Panic,
-        &format!(
-            "Cannot perform process a float binary operation '{} {} {}'.",
-            binary.0, binary.1, binary.2
-        ),
-    );
+    self::codegen_abort(format!(
+        "Cannot perform process a float binary operation '{} {} {}'.",
+        binary.0, binary.1, binary.2
+    ));
 
-    unreachable!()
+    self::compile_null_ptr(context)
+}
+
+fn codegen_abort<T: Display>(message: T) {
+    logging::log(LoggingType::BackendBug, &format!("{}", message));
+}
+
+fn compile_null_ptr<'ctx>(context: &LLVMCodeGenContext<'_, 'ctx>) -> BasicValueEnum<'ctx> {
+    context
+        .get_llvm_context()
+        .ptr_type(AddressSpace::default())
+        .const_null()
+        .into()
 }

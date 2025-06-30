@@ -1,19 +1,22 @@
-use std::fmt::Display;
+use std::{fmt::Display, sync::Arc};
 
 use inkwell::{AddressSpace, context::Context, types::BasicTypeEnum, values::BasicValueEnum};
 
 use crate::{
     backend::llvm::compiler::{
-        context::LLVMCodeGenContext, floatgen, intgen, ptrgen, string, typegen, valuegen,
+        constgen, context::LLVMCodeGenContext, floatgen, intgen, string, typegen,
     },
     core::console::logging::{self, LoggingType},
-    frontend::types::{ast::Ast, lexer::ThrushType},
+    frontend::types::{
+        ast::Ast,
+        lexer::{ThrushType, traits::ThrushTypeStructExtensions},
+    },
 };
 
 pub fn compile<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
-    kind: &'ctx ThrushType,
-    ast: &'ctx Ast,
+    kind: &ThrushType,
+    ast: &Ast,
 ) -> BasicValueEnum<'ctx> {
     match ast {
         Ast::Integer { value, signed, .. } => self::compile_integer(context, kind, *value, *signed),
@@ -33,6 +36,11 @@ pub fn compile<'ctx>(
 
         Ast::Str { bytes, .. } => string::compile_str(context, bytes).into(),
 
+        Ast::Constructor { args, kind, .. } => {
+            let fields: Vec<&Ast> = args.iter().map(|raw_arg| &raw_arg.1).collect();
+            self::constant_struct(context, kind, fields)
+        }
+
         _ => {
             self::codegen_abort("Cannot perform constant expression.");
             self::compile_null_ptr(context)
@@ -40,10 +48,28 @@ pub fn compile<'ctx>(
     }
 }
 
+pub fn constant_struct<'ctx>(
+    context: &mut LLVMCodeGenContext<'_, 'ctx>,
+    kind: &ThrushType,
+    fields: Vec<&Ast>,
+) -> BasicValueEnum<'ctx> {
+    let llvm_context: &Context = context.get_llvm_context();
+
+    let struct_fields_types: &[Arc<ThrushType>] = kind.get_struct_fields();
+
+    let fields: Vec<BasicValueEnum> = fields
+        .iter()
+        .zip(struct_fields_types)
+        .map(|(field, kind)| constgen::compile(context, kind, field))
+        .collect();
+
+    llvm_context.const_struct(&fields, false).into()
+}
+
 pub fn constant_fixed_array<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     kind: &ThrushType,
-    items: &'ctx [Ast],
+    items: &[Ast],
 ) -> BasicValueEnum<'ctx> {
     let llvm_context: &Context = context.get_llvm_context();
 
@@ -53,15 +79,7 @@ pub fn constant_fixed_array<'ctx>(
 
     let values: Vec<BasicValueEnum> = items
         .iter()
-        .map(|item| {
-            let item_type: &ThrushType = item.get_type_unwrapped();
-
-            if item_type.is_ptr_type() || item_type.is_mut_type() {
-                ptrgen::compile(context, item, Some(array_item_type))
-            } else {
-                valuegen::compile(context, item, Some(array_item_type))
-            }
-        })
+        .map(|item| constgen::compile(context, array_item_type, item))
         .collect();
 
     match array_type {
@@ -123,7 +141,7 @@ pub fn constant_fixed_array<'ctx>(
 
 fn compile_integer<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
-    kind: &'ctx ThrushType,
+    kind: &ThrushType,
     value: u64,
     signed: bool,
 ) -> BasicValueEnum<'ctx> {
@@ -135,7 +153,7 @@ fn compile_integer<'ctx>(
 
 fn compile_float<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
-    kind: &'ctx ThrushType,
+    kind: &ThrushType,
     value: f64,
     signed: bool,
 ) -> BasicValueEnum<'ctx> {

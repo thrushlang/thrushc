@@ -49,15 +49,6 @@ pub fn build_call<'parser>(
 
         let expression: Ast = expression::build_expr(parser_context)?;
 
-        if expression.is_constructor() {
-            return Err(ThrushCompilerIssue::Error(
-                String::from("Syntax error"),
-                String::from("Constructor should be stored in a local variable."),
-                None,
-                expression.get_span(),
-            ));
-        }
-
         args.push(expression);
 
         if parser_context.check(TokenType::RParen) {

@@ -64,7 +64,7 @@ pub trait StructFieldsExtensions {
 }
 
 pub trait ConstructorExtensions {
-    fn get_type(&self) -> ThrushType;
+    fn get_type(&self, name: &str) -> ThrushType;
 }
 
 pub trait ThrushAttributesExtensions {
