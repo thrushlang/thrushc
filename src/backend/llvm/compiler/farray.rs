@@ -58,8 +58,6 @@ fn compile_fixed_array_with_anchor<'ctx>(
 
     let array_items_type: &ThrushType = array_type.get_fixed_array_base_type();
 
-    let array_ptr_type: BasicTypeEnum = typegen::generate_type(llvm_context, array_type);
-
     let items: Vec<BasicValueEnum> = items
         .iter()
         .map(|item| valuegen::compile(context, item, Some(array_items_type)))
@@ -68,9 +66,11 @@ fn compile_fixed_array_with_anchor<'ctx>(
     for (idx, item) in items.iter().enumerate() {
         let llvm_idx: IntValue = llvm_context.i32_type().const_int(idx as u64, false);
 
+        let array_type: BasicTypeEnum = typegen::generate_subtype(llvm_context, array_type);
+
         match unsafe {
             llvm_builder.build_gep(
-                array_ptr_type,
+                array_type,
                 array_ptr,
                 &[llvm_context.i32_type().const_zero(), llvm_idx],
                 "",
@@ -108,8 +108,6 @@ fn compile_fixed_array_without_anchor<'ctx>(
     let array_ptr: PointerValue =
         memory::alloc_anon(LLVMAllocationSite::Stack, context, array_type, true);
 
-    let array_ptr_type: BasicTypeEnum = typegen::generate_type(llvm_context, array_type);
-
     let items: Vec<BasicValueEnum> = items
         .iter()
         .map(|item| valuegen::compile(context, item, Some(array_items_type)))
@@ -118,9 +116,11 @@ fn compile_fixed_array_without_anchor<'ctx>(
     for (idx, item) in items.iter().enumerate() {
         let llvm_idx: IntValue = llvm_context.i32_type().const_int(idx as u64, false);
 
+        let array_type: BasicTypeEnum = typegen::generate_subtype(llvm_context, array_type);
+
         match unsafe {
             llvm_builder.build_gep(
-                array_ptr_type,
+                array_type,
                 array_ptr,
                 &[llvm_context.i32_type().const_zero(), llvm_idx],
                 "",
