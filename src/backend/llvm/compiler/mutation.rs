@@ -24,7 +24,7 @@ pub fn compile<'ctx>(
 
                 let cast_type: &ThrushType = reference.get_type_unwrapped();
 
-                let symbol: SymbolAllocated = context.get_allocated_symbol(reference_name);
+                let symbol: SymbolAllocated = context.get_symbol(reference_name);
 
                 let value: BasicValueEnum = valuegen::compile(context, value, Some(cast_type));
 

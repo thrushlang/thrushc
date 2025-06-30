@@ -502,11 +502,10 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 let metadata: &LocalMetadata = metadata;
 
                 if metadata.is_undefined() {
-                    self.context.alloc_local(name, ascii_name, kind, attributes);
-                    return;
+                    self.context.new_local(name, ascii_name, kind, attributes);
+                } else {
+                    local::new((name, ascii_name, kind, value, attributes), self.context);
                 }
-
-                local::new((name, ascii_name, kind, value, attributes), self.context);
             }
 
             Ast::Const {
@@ -520,7 +519,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 let value: BasicValueEnum = constgen::compile(self.context, kind, value);
 
                 self.context
-                    .alloc_local_constant(name, ascii_name, kind, value, attributes);
+                    .new_local_constant(name, ascii_name, kind, value, attributes);
             }
 
             Ast::LLI {
@@ -724,7 +723,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         let parameter_position: u32 = parameter.3;
 
         if let Some(raw_value_llvm_parameter) = llvm_function.get_nth_param(parameter_position) {
-            self.context.alloc_function_parameter(
+            self.context.new_fn_parameter(
                 name,
                 ascii_name,
                 parameter_type,
@@ -825,14 +824,14 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         let name: &str = constant.0;
         let ascii_name: &str = constant.1;
 
-        let constant_type: &ThrushType = constant.2;
+        let kind: &ThrushType = constant.2;
         let value: &Ast = constant.3;
         let attributes: &ThrushAttributes = constant.4;
 
-        let value: BasicValueEnum = constgen::compile(self.context, constant_type, value);
+        let value: BasicValueEnum = constgen::compile(self.context, kind, value);
 
         self.context
-            .alloc_global_constant(name, ascii_name, constant_type, value, attributes);
+            .new_global_constant(name, ascii_name, kind, value, attributes);
     }
 
     fn declare_asm_function(&mut self, stmt: &'ctx Ast) {

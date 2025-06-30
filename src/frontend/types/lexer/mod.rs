@@ -252,11 +252,9 @@ impl ThrushType {
         }
 
         match self {
-            ThrushType::Mut(inner_type) => inner_type.get_type_with_depth(depth + 1 - 1),
-            ThrushType::FixedArray(element_type, _) => {
-                element_type.get_type_with_depth(depth + 1 - 1)
-            }
-            ThrushType::Array(element_type) => element_type.get_type_with_depth(depth + 1 - 1),
+            ThrushType::FixedArray(element_type, _) => element_type.get_type_with_depth(depth),
+            ThrushType::Array(element_type) => element_type.get_type_with_depth(depth),
+            ThrushType::Mut(inner_type) => inner_type.get_type_with_depth(depth),
             ThrushType::Ptr(Some(inner_type)) => inner_type.get_type_with_depth(depth - 1),
             ThrushType::Struct(_, _) => self,
             ThrushType::S8
@@ -294,9 +292,7 @@ impl ThrushType {
             (ThrushType::F64, _) | (_, ThrushType::F64) => &ThrushType::F64,
             (ThrushType::F32, _) | (_, ThrushType::F32) => &ThrushType::F32,
 
-            (ThrushType::Mut(a_inner), ThrushType::Mut(b_inner)) => {
-                a_inner.precompute_numeric_type(b_inner)
-            }
+            (ThrushType::Mut(a), ThrushType::Mut(b)) => a.precompute_numeric_type(b),
 
             _ => self,
         }
@@ -308,6 +304,12 @@ impl ThrushType {
             ThrushType::U16 => ThrushType::S16,
             ThrushType::U32 => ThrushType::S32,
             ThrushType::U64 => ThrushType::S64,
+
+            ThrushType::S8 => ThrushType::U8,
+            ThrushType::S16 => ThrushType::U16,
+            ThrushType::S32 => ThrushType::U32,
+            ThrushType::S64 => ThrushType::U64,
+
             _ => self.clone(),
         }
     }
@@ -545,8 +547,7 @@ pub fn decompose_struct_property(
 
             if is_parent_mut {
                 adjusted_field_type = ThrushType::Mut(adjusted_field_type.into());
-            }
-            if is_parent_ptr {
+            } else if is_parent_ptr {
                 adjusted_field_type = ThrushType::Ptr(Some(adjusted_field_type.into()));
             }
 
@@ -567,9 +568,7 @@ pub fn decompose_struct_property(
 
                 if is_parent_mut {
                     adjusted_ty = ThrushType::Mut(adjusted_ty.into());
-                }
-
-                if is_parent_ptr {
+                } else if is_parent_ptr {
                     adjusted_ty = ThrushType::Ptr(Some(adjusted_ty.into()));
                 }
 

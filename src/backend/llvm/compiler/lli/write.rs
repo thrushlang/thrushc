@@ -8,7 +8,11 @@ use inkwell::{
 };
 
 use crate::{
-    backend::llvm::compiler::{context::LLVMCodeGenContext, memory, ptrgen, valuegen},
+    backend::llvm::compiler::{
+        context::LLVMCodeGenContext,
+        memory::{self, SymbolAllocated},
+        ptrgen, valuegen,
+    },
     core::console::logging::{self, LoggingType},
     frontend::types::{ast::Ast, lexer::ThrushType},
 };
@@ -23,8 +27,10 @@ pub fn compile<'ctx>(
 
     match write_to {
         (Some((name, _)), _) => {
-            let symbol = context.get_allocated_symbol(name);
+            let symbol: SymbolAllocated = context.get_symbol(name);
+
             symbol.store(context, value);
+
             self::compile_null_ptr(context)
         }
         (_, Some(expr)) => {

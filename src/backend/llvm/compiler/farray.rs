@@ -64,15 +64,14 @@ fn compile_fixed_array_with_anchor<'ctx>(
         .collect();
 
     for (idx, item) in items.iter().enumerate() {
-        let llvm_idx: IntValue = llvm_context.i32_type().const_int(idx as u64, false);
-
+        let idx: IntValue = llvm_context.i32_type().const_int(idx as u64, false);
         let array_type: BasicTypeEnum = typegen::generate_subtype(llvm_context, array_type);
 
         match unsafe {
             llvm_builder.build_gep(
                 array_type,
                 array_ptr,
-                &[llvm_context.i32_type().const_zero(), llvm_idx],
+                &[llvm_context.i32_type().const_zero(), idx],
                 "",
             )
         } {
@@ -114,15 +113,14 @@ fn compile_fixed_array_without_anchor<'ctx>(
         .collect();
 
     for (idx, item) in items.iter().enumerate() {
-        let llvm_idx: IntValue = llvm_context.i32_type().const_int(idx as u64, false);
-
+        let idx: IntValue = llvm_context.i32_type().const_int(idx as u64, false);
         let array_type: BasicTypeEnum = typegen::generate_subtype(llvm_context, array_type);
 
         match unsafe {
             llvm_builder.build_gep(
                 array_type,
                 array_ptr,
-                &[llvm_context.i32_type().const_zero(), llvm_idx],
+                &[llvm_context.i32_type().const_zero(), idx],
                 "",
             )
         } {

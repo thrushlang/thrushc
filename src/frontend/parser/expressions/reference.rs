@@ -7,10 +7,7 @@ use crate::{
             ast::{Ast, metadata::reference::ReferenceMetadata},
             lexer::ThrushType,
             parser::{
-                stmts::{
-                    ident::ReferenceIdentificator,
-                    traits::{FoundSymbolEither, FoundSymbolExtension, TokenExtensions},
-                },
+                stmts::traits::{FoundSymbolEither, FoundSymbolExtension, TokenExtensions},
                 symbols::{
                     traits::{
                         ConstantSymbolExtensions, LLISymbolExtensions, LocalSymbolExtensions,
@@ -47,7 +44,6 @@ pub fn build_reference<'parser>(
             name,
             kind: constant_type,
             span,
-            identificator: ReferenceIdentificator::Constant,
             metadata: ReferenceMetadata::new(true, false),
         });
     }
@@ -71,7 +67,6 @@ pub fn build_reference<'parser>(
             name,
             kind: parameter_type,
             span,
-            identificator: ReferenceIdentificator::FunctionParameter,
             metadata: ReferenceMetadata::new(is_allocated, is_mutable),
         });
     }
@@ -94,7 +89,6 @@ pub fn build_reference<'parser>(
             name,
             kind: lli_type,
             span,
-            identificator: ReferenceIdentificator::LowLevelInstruction,
             metadata: ReferenceMetadata::new(is_allocated, false),
         });
     }
@@ -114,7 +108,6 @@ pub fn build_reference<'parser>(
         name,
         kind: local_type.clone(),
         span,
-        identificator: ReferenceIdentificator::Local,
         metadata: ReferenceMetadata::new(true, is_mutable),
     };
 

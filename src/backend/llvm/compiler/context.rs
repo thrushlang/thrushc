@@ -26,6 +26,7 @@ use {
         targets::TargetData,
         values::{BasicValueEnum, PointerValue},
     },
+    std::fmt::Display,
 };
 
 #[derive(Debug)]
@@ -80,7 +81,7 @@ impl<'a, 'ctx> LLVMCodeGenContext<'a, 'ctx> {
 }
 
 impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
-    pub fn alloc_local(
+    pub fn new_local(
         &mut self,
         name: &'ctx str,
         ascii_name: &'ctx str,
@@ -102,7 +103,7 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
         }
     }
 
-    pub fn alloc_lli(
+    pub fn new_lli(
         &mut self,
         name: &'ctx str,
         kind: &'ctx ThrushType,
@@ -121,7 +122,7 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
         }
     }
 
-    pub fn alloc_local_constant(
+    pub fn new_local_constant(
         &mut self,
         name: &'ctx str,
         ascii_name: &'ctx str,
@@ -150,7 +151,7 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
         }
     }
 
-    pub fn alloc_global_constant(
+    pub fn new_global_constant(
         &mut self,
         name: &'ctx str,
         ascii_name: &'ctx str,
@@ -172,7 +173,7 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
         self.global_constants.insert(name, constant);
     }
 
-    pub fn alloc_function_parameter(
+    pub fn new_fn_parameter(
         &mut self,
         name: &'ctx str,
         ascii_name: &'ctx str,
@@ -185,51 +186,6 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
             SymbolAllocated::new(SymbolToAllocate::Parameter, kind, value);
 
         self.parameters.insert(name, symbol_allocated);
-    }
-
-    pub fn get_allocated_symbol(&self, name: &str) -> SymbolAllocated<'ctx> {
-        if let Some(fn_parameter) = self.parameters.get(name) {
-            return *fn_parameter;
-        }
-
-        if let Some(global_constant) = self.global_constants.get(name) {
-            return *global_constant;
-        }
-
-        for position in (0..self.scope).rev() {
-            if let Some(local_constant) = self.local_constants[position].get(name) {
-                return *local_constant;
-            }
-        }
-
-        for position in (0..self.scope).rev() {
-            if let Some(instruction) = self.instructions[position].get(name) {
-                return *instruction;
-            }
-        }
-
-        logging::log(
-            LoggingType::BackendBug,
-            &format!(
-                "Unable to get '{}' allocated object at frame pointer number #{}.",
-                name, self.scope
-            ),
-        );
-
-        unreachable!()
-    }
-
-    pub fn get_function(&self, name: &str) -> LLVMFunction<'ctx> {
-        if let Some(function) = self.functions.get(name) {
-            return *function;
-        }
-
-        logging::log(
-            LoggingType::BackendBug,
-            &format!("Unable to get '{}' function in global frame.", name),
-        );
-
-        unreachable!()
     }
 
     pub fn new_function(&mut self, name: &'ctx str, function: LLVMFunction<'ctx>) {
@@ -271,6 +227,48 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
 }
 
 impl<'a, 'ctx> LLVMCodeGenContext<'a, 'ctx> {
+    pub fn get_symbol(&self, name: &str) -> SymbolAllocated<'ctx> {
+        if let Some(fn_parameter) = self.parameters.get(name) {
+            return *fn_parameter;
+        }
+
+        if let Some(global_constant) = self.global_constants.get(name) {
+            return *global_constant;
+        }
+
+        for position in (0..self.scope).rev() {
+            if let Some(local_constant) = self.local_constants[position].get(name) {
+                return *local_constant;
+            }
+        }
+
+        for position in (0..self.scope).rev() {
+            if let Some(instruction) = self.instructions[position].get(name) {
+                return *instruction;
+            }
+        }
+
+        self::codegen_abort(format!(
+            "Unable to get '{}' allocated object at frame pointer number #{}.",
+            name, self.scope
+        ));
+
+        unreachable!()
+    }
+
+    pub fn get_function(&self, name: &str) -> LLVMFunction<'ctx> {
+        if let Some(function) = self.functions.get(name) {
+            return *function;
+        }
+
+        self::codegen_abort(format!(
+            "Unable to get '{}' function in global frame.",
+            name
+        ));
+
+        unreachable!()
+    }
+
     #[inline]
     pub fn get_llvm_module(&self) -> &'a Module<'ctx> {
         self.module
@@ -295,4 +293,8 @@ impl<'a, 'ctx> LLVMCodeGenContext<'a, 'ctx> {
     pub fn get_diagnostician(&self) -> &Diagnostician {
         &self.diagnostician
     }
+}
+
+fn codegen_abort<T: Display>(message: T) {
+    logging::log(LoggingType::BackendBug, &format!("{}", message));
 }

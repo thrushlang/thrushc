@@ -22,7 +22,7 @@ pub fn new<'ctx>(
 ) {
     let value: BasicValueEnum = valuegen::compile(context, expr, Some(kind));
 
-    context.alloc_lli(name, kind, value);
+    context.new_lli(name, kind, value);
 }
 
 pub fn compile<'ctx>(
@@ -52,16 +52,11 @@ pub fn compile<'ctx>(
             ..
         } => self::alloc::compile(context, type_to_alloc, site_allocation),
 
-        _ => handle_unknown_expression(context, expr),
+        _ => {
+            self::codegen_abort("Failed to compile low-level instruction. Unknown expression.");
+            self::compile_null_ptr(context)
+        }
     }
-}
-
-fn handle_unknown_expression<'ctx, T: Display>(
-    context: &LLVMCodeGenContext<'_, 'ctx>,
-    expr: T,
-) -> BasicValueEnum<'ctx> {
-    self::codegen_abort(format!("Unsupported expression: '{}'", expr));
-    self::compile_null_ptr(context)
 }
 
 fn codegen_abort<T: Display>(message: T) {

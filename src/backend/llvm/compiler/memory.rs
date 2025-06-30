@@ -1,5 +1,7 @@
 #![allow(clippy::enum_variant_names)]
 
+use std::fmt::Display;
+
 use inkwell::{
     AddressSpace,
     context::Context,
@@ -90,23 +92,19 @@ impl<'ctx> SymbolAllocated<'ctx> {
         }
 
         let llvm_type: BasicTypeEnum = typegen::generate_subtype(llvm_context, thrush_type);
-        let preferred_memory_alignment: u32 = target_data.get_preferred_alignment(&llvm_type);
+        let mem_alignment: u32 = target_data.get_preferred_alignment(&llvm_type);
 
         match self {
             Self::Local { ptr, .. } => {
                 if let Ok(loaded_value) = llvm_builder.build_load(llvm_type, *ptr, "") {
                     if let Some(load_instruction) = loaded_value.as_instruction_value() {
-                        let _ = load_instruction.set_alignment(preferred_memory_alignment);
+                        let _ = load_instruction.set_alignment(mem_alignment);
                     }
 
                     return loaded_value;
                 }
 
-                logging::log(
-                    LoggingType::BackendBug,
-                    "Unable to load value at memory manipulation.",
-                );
-
+                self::codegen_abort("Unable to load value at memory manipulation.");
                 unreachable!()
             }
             Self::Parameter { value, .. } => {
@@ -115,17 +113,13 @@ impl<'ctx> SymbolAllocated<'ctx> {
 
                     if let Ok(loaded_value) = llvm_builder.build_load(llvm_type, ptr, "") {
                         if let Some(load_instruction) = loaded_value.as_instruction_value() {
-                            let _ = load_instruction.set_alignment(preferred_memory_alignment);
+                            let _ = load_instruction.set_alignment(mem_alignment);
                         }
 
                         return loaded_value;
                     }
 
-                    logging::log(
-                        LoggingType::BackendBug,
-                        "Unable to load value at memory manipulation.",
-                    );
-
+                    self::codegen_abort("Unable to load value at memory manipulation.");
                     unreachable!()
                 }
 
@@ -135,17 +129,13 @@ impl<'ctx> SymbolAllocated<'ctx> {
             Self::Constant { ptr, .. } => {
                 if let Ok(loaded_value) = llvm_builder.build_load(llvm_type, *ptr, "") {
                     if let Some(load_instruction) = loaded_value.as_instruction_value() {
-                        let _ = load_instruction.set_alignment(preferred_memory_alignment);
+                        let _ = load_instruction.set_alignment(mem_alignment);
                     }
 
                     return loaded_value;
                 }
 
-                logging::log(
-                    LoggingType::BackendBug,
-                    "Unable to load value at memory manipulation.",
-                );
-
+                self::codegen_abort("Unable to load value at memory manipulation.");
                 unreachable!()
             }
 
@@ -162,24 +152,24 @@ impl<'ctx> SymbolAllocated<'ctx> {
         let thrush_type: &ThrushType = self.get_type();
         let llvm_type: BasicTypeEnum = typegen::generate_subtype(llvm_context, thrush_type);
 
-        let preferred_memory_alignment: u32 = target_data.get_preferred_alignment(&llvm_type);
+        let mem_alignment: u32 = target_data.get_preferred_alignment(&llvm_type);
 
         match self {
             Self::Local { ptr, .. } => {
                 if let Ok(store) = llvm_builder.build_store(*ptr, new_value) {
-                    let _ = store.set_alignment(preferred_memory_alignment);
+                    let _ = store.set_alignment(mem_alignment);
                 }
             }
 
             Self::Parameter { value, .. } if value.is_pointer_value() => {
                 if let Ok(store) = llvm_builder.build_store(value.into_pointer_value(), new_value) {
-                    let _ = store.set_alignment(preferred_memory_alignment);
+                    let _ = store.set_alignment(mem_alignment);
                 }
             }
 
             Self::LowLevelInstruction { value, .. } if value.is_pointer_value() => {
                 if let Ok(store) = llvm_builder.build_store(value.into_pointer_value(), new_value) {
-                    let _ = store.set_alignment(preferred_memory_alignment);
+                    let _ = store.set_alignment(mem_alignment);
                 }
             }
 
@@ -227,10 +217,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
                     };
                 }
 
-                logging::log(
-                    LoggingType::BackendBug,
-                    "Unable to calculate pointer position at memory manipulation.",
-                );
+                self::codegen_abort("Unable to calculate pointer position at memory manipulation.");
 
                 unreachable!()
             }
@@ -249,8 +236,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
                     }
                 }
 
-                logging::log(
-                    LoggingType::BackendBug,
+                self::codegen_abort(
                     "Unable to get a value of an structure at memory manipulation.",
                 );
 
@@ -258,8 +244,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
             }
 
             _ => {
-                logging::log(
-                    LoggingType::BackendBug,
+                self::codegen_abort(
                     "Unable to get a value of an structure at memory manipulation.",
                 );
 
@@ -290,8 +275,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
                         .unwrap();
                 }
 
-                logging::log(
-                    LoggingType::BackendBug,
+                self::codegen_abort(
                     "Unable to get struct element pointer position at memory manipulation.",
                 );
 
@@ -337,10 +321,10 @@ pub fn store_anon<'ctx>(
 
     let target_data: &TargetData = context.get_target_data();
 
-    let preferred_memory_alignment: u32 = target_data.get_preferred_alignment(&value.get_type());
+    let mem_alignment: u32 = target_data.get_preferred_alignment(&value.get_type());
 
     if let Ok(store) = llvm_builder.build_store(ptr, value) {
-        let _ = store.set_alignment(preferred_memory_alignment);
+        let _ = store.set_alignment(mem_alignment);
     }
 }
 
@@ -383,7 +367,7 @@ pub fn alloc_anon<'ctx>(
         typegen::generate_subtype(llvm_context, kind)
     };
 
-    let preferred_memory_alignment: u32 = context
+    let mem_alignment: u32 = context
         .get_target_data()
         .get_preferred_alignment(&llvm_type);
 
@@ -391,17 +375,13 @@ pub fn alloc_anon<'ctx>(
         LLVMAllocationSite::Stack => {
             if let Ok(ptr) = llvm_builder.build_alloca(llvm_type, "") {
                 if let Some(instruction) = ptr.as_instruction() {
-                    let _ = instruction.set_alignment(preferred_memory_alignment);
+                    let _ = instruction.set_alignment(mem_alignment);
                 }
 
                 return ptr;
             }
 
-            logging::log(
-                LoggingType::Panic,
-                &format!("Cannot assign type to stack: '{}'.", kind),
-            );
-
+            self::codegen_abort(format!("Cannot assign type to stack: '{}'.", kind));
             unreachable!()
         }
         LLVMAllocationSite::Heap => {
@@ -409,11 +389,7 @@ pub fn alloc_anon<'ctx>(
                 return ptr;
             }
 
-            logging::log(
-                LoggingType::Panic,
-                &format!("Cannot assign type to heap: '{}'.", kind),
-            );
-
+            self::codegen_abort(format!("Cannot assign type to heap: '{}'.", kind));
             unreachable!()
         }
         LLVMAllocationSite::Static => llvm_module
@@ -442,10 +418,10 @@ pub fn gep_anon<'ctx>(
         return ptr;
     }
 
-    logging::log(
-        LoggingType::BackendBug,
-        "Unable to get pointer element at memory manipulation.",
-    );
-
+    self::codegen_abort("Unable to get pointer element at memory manipulation.");
     unreachable!()
+}
+
+fn codegen_abort<T: Display>(message: T) {
+    logging::log(LoggingType::BackendBug, &format!("{}", message));
 }

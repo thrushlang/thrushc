@@ -19,9 +19,9 @@ pub fn new<'ctx>(local: Local<'ctx>, context: &mut LLVMCodeGenContext<'_, 'ctx>)
 
     let attributes: &ThrushAttributes = local.4;
 
-    context.alloc_local(local_name, ascii_name, local_type, attributes);
+    context.new_local(local_name, ascii_name, local_type, attributes);
 
-    let symbol: SymbolAllocated = context.get_allocated_symbol(local.0);
+    let symbol: SymbolAllocated = context.get_symbol(local_name);
 
     context.set_pointer_anchor(PointerAnchor::new(
         symbol.get_value().into_pointer_value(),
@@ -30,9 +30,13 @@ pub fn new<'ctx>(local: Local<'ctx>, context: &mut LLVMCodeGenContext<'_, 'ctx>)
 
     let value: BasicValueEnum = valuegen::compile(context, local_value, Some(local_type));
 
-    context.clear_pointer_anchor();
-
-    if !value.is_pointer_value() {
+    if let Some(anchor) = context.get_pointer_anchor() {
+        if !anchor.is_triggered() {
+            symbol.store(context, value);
+        }
+    } else {
         symbol.store(context, value);
     }
+
+    context.clear_pointer_anchor();
 }

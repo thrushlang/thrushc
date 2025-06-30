@@ -243,7 +243,7 @@ fn compile_property<'ctx>(
     name: &str,
     indexes: &[(ThrushType, u32)],
 ) -> BasicValueEnum<'ctx> {
-    let symbol: SymbolAllocated = context.get_allocated_symbol(name);
+    let symbol: SymbolAllocated = context.get_symbol(name);
 
     let llvm_context: &Context = context.get_llvm_context();
     let llvm_builder: &Builder = context.get_llvm_builder();
@@ -282,7 +282,7 @@ fn compile_reference<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     name: &str,
 ) -> BasicValueEnum<'ctx> {
-    let symbol = context.get_allocated_symbol(name);
+    let symbol = context.get_symbol(name);
     symbol.raw_load().into()
 }
 
@@ -356,7 +356,7 @@ fn compile_index<'ctx>(
 
     match index_to {
         (Some((name, _)), _) => {
-            let symbol: SymbolAllocated = context.get_allocated_symbol(name);
+            let symbol: SymbolAllocated = context.get_symbol(name);
             let symbol_type: &ThrushType = symbol.get_type();
 
             let ordered_indexes: Vec<IntValue> =

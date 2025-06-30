@@ -23,7 +23,6 @@ use crate::{
             },
             lexer::ThrushType,
             parser::stmts::{
-                ident::ReferenceIdentificator,
                 sites::AllocationSite,
                 types::{Constructor, EnumFields, StructFields, ThrushAttributes},
             },
@@ -253,7 +252,6 @@ pub enum Ast<'ctx> {
     Reference {
         name: &'ctx str,
         kind: ThrushType,
-        identificator: ReferenceIdentificator,
         metadata: ReferenceMetadata,
         span: Span,
     },
