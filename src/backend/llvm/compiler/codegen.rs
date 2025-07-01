@@ -1,7 +1,10 @@
 #![allow(clippy::collapsible_if)]
 
+use std::fmt::Display;
+
+use crate::backend::llvm::compiler::loops::{self, forloop, infloop, whileloop};
 use crate::backend::llvm::compiler::{
-    binaryop, builtins, constgen, lli, mutation, ptrgen, unaryop,
+    binaryop, builtins, conditional, constgen, lli, mutation, terminator, unaryop,
 };
 use crate::backend::types::{repr::LLVMFunction, traits::AssemblerFunctionExtensions};
 use crate::core::console::logging::{self, LoggingType};
@@ -33,27 +36,17 @@ use inkwell::{
     context::Context,
     module::{Linkage, Module},
     types::FunctionType,
-    values::{BasicValueEnum, FunctionValue, IntValue},
+    values::{BasicValueEnum, FunctionValue},
 };
 
 pub struct LLVMCodegen<'a, 'ctx> {
     context: &'a mut LLVMCodeGenContext<'a, 'ctx>,
     ast: &'ctx [Ast<'ctx>],
-    current_function: Option<FunctionValue<'ctx>>,
-    exit_loop_block: Option<BasicBlock<'ctx>>,
-    start_loop_block: Option<BasicBlock<'ctx>>,
 }
 
 impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
     pub fn generate(context: &'a mut LLVMCodeGenContext<'a, 'ctx>, ast: &'ctx [Ast<'ctx>]) {
-        Self {
-            context,
-            ast,
-            current_function: None,
-            exit_loop_block: None,
-            start_loop_block: None,
-        }
-        .compile();
+        Self { context, ast }.compile();
     }
 
     fn compile(&mut self) {
@@ -68,7 +61,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         self.codegen_declaration(decl);
     }
 
-    fn codegen_declaration(&mut self, decl: &'ctx Ast) {
+    pub fn codegen_declaration(&mut self, decl: &'ctx Ast) {
         /* ######################################################################
 
 
@@ -79,7 +72,9 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
 
         match decl {
             Ast::EntryPoint { body, .. } => {
-                self.current_function = Some(self.entrypoint());
+                let entrypoint: FunctionValue = self.entrypoint();
+
+                self.context.set_current_fn(entrypoint);
 
                 self.codegen_code_block(body);
             }
@@ -104,7 +99,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         ########################################################################*/
     }
 
-    fn codegen_code_block(&mut self, stmt: &'ctx Ast) {
+    pub fn codegen_code_block(&mut self, stmt: &'ctx Ast) {
         /* ######################################################################
 
 
@@ -140,7 +135,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         self.codegen_conditionals(stmt);
     }
 
-    fn codegen_conditionals(&mut self, stmt: &'ctx Ast) {
+    pub fn codegen_conditionals(&mut self, stmt: &'ctx Ast) {
         /* ######################################################################
 
 
@@ -149,152 +144,9 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
 
         ########################################################################*/
 
-        let llvm_builder: &Builder = self.context.get_llvm_builder();
-        let llvm_context: &Context = self.context.get_llvm_context();
-
         match stmt {
-            Ast::If {
-                cond,
-                block,
-                elfs,
-                otherwise,
-                ..
-            } => {
-                if let Some(current_function) = self.current_function {
-                    let if_comparison: IntValue =
-                        valuegen::compile(self.context, cond, Some(&ThrushType::Bool))
-                            .into_int_value();
+            Ast::If { .. } => conditional::compile(self, stmt),
 
-                    let then_block: BasicBlock =
-                        llvm_context.append_basic_block(current_function, "if");
-
-                    let else_if_cond: BasicBlock =
-                        llvm_context.append_basic_block(current_function, "elseif");
-
-                    let else_if_body: BasicBlock =
-                        llvm_context.append_basic_block(current_function, "elseif_body");
-
-                    let else_block: BasicBlock =
-                        llvm_context.append_basic_block(current_function, "else");
-
-                    let merge_block: BasicBlock =
-                        llvm_context.append_basic_block(current_function, "merge");
-
-                    if !elfs.is_empty() {
-                        let _ = llvm_builder.build_conditional_branch(
-                            if_comparison,
-                            then_block,
-                            else_if_cond,
-                        );
-                    } else if otherwise.is_some() && elfs.is_empty() {
-                        let _ = llvm_builder.build_conditional_branch(
-                            if_comparison,
-                            then_block,
-                            else_block,
-                        );
-                    } else {
-                        let _ = llvm_builder.build_conditional_branch(
-                            if_comparison,
-                            then_block,
-                            merge_block,
-                        );
-                    }
-
-                    llvm_builder.position_at_end(then_block);
-
-                    self.codegen_code_block(block);
-
-                    if !block.has_return() && !block.has_break() && !block.has_continue() {
-                        let _ = llvm_builder.build_unconditional_branch(merge_block);
-                    }
-
-                    if !elfs.is_empty() {
-                        llvm_builder.position_at_end(else_if_cond);
-                    } else {
-                        llvm_builder.position_at_end(merge_block);
-                    }
-
-                    if !elfs.is_empty() {
-                        let mut current_block: BasicBlock = else_if_body;
-
-                        for (index, instr) in elfs.iter().enumerate() {
-                            if let Ast::Elif { cond, block, .. } = instr {
-                                let compiled_else_if_cond: IntValue =
-                                    valuegen::compile(self.context, cond, Some(&ThrushType::Bool))
-                                        .into_int_value();
-
-                                let elif_body: BasicBlock = current_block;
-
-                                let next_block: BasicBlock = if index + 1 < elfs.len() {
-                                    llvm_context.append_basic_block(current_function, "elseif_body")
-                                } else if otherwise.is_some() {
-                                    else_block
-                                } else {
-                                    merge_block
-                                };
-
-                                llvm_builder
-                                    .build_conditional_branch(
-                                        compiled_else_if_cond,
-                                        elif_body,
-                                        next_block,
-                                    )
-                                    .unwrap();
-
-                                llvm_builder.position_at_end(elif_body);
-
-                                self.codegen_code_block(block);
-
-                                if !block.has_return()
-                                    && !block.has_break()
-                                    && !block.has_continue()
-                                {
-                                    let _ = llvm_builder.build_unconditional_branch(merge_block);
-                                }
-
-                                if index + 1 < elfs.len() {
-                                    llvm_builder.position_at_end(next_block);
-
-                                    current_block = llvm_context
-                                        .append_basic_block(current_function, "elseif_body");
-                                }
-                            }
-                        }
-                    }
-
-                    if let Some(otherwise) = otherwise {
-                        if let Ast::Else { block, .. } = &**otherwise {
-                            llvm_builder.position_at_end(else_block);
-
-                            self.codegen_code_block(block);
-
-                            if !block.has_return() && !block.has_break() && !block.has_continue() {
-                                let _ = llvm_builder.build_unconditional_branch(merge_block);
-                            }
-                        }
-                    }
-
-                    if !elfs.is_empty() || otherwise.is_some() {
-                        llvm_builder.position_at_end(merge_block);
-                    }
-
-                    if elfs.is_empty() {
-                        let _ = else_if_cond.remove_from_function();
-                        let _ = else_if_body.remove_from_function();
-                    }
-
-                    if otherwise.is_none() {
-                        let _ = else_block.remove_from_function();
-                    }
-
-                    return;
-                }
-
-                logging::log(
-                    LoggingType::BackendBug,
-                    "The current function could not be obtained at code generation time.",
-                );
-            }
             stmt => self.codegen_loops(stmt),
         }
 
@@ -307,7 +159,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         ########################################################################*/
     }
 
-    fn codegen_loops(&mut self, stmt: &'ctx Ast) {
+    pub fn codegen_loops(&mut self, stmt: &'ctx Ast) {
         /* ######################################################################
 
 
@@ -316,192 +168,13 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
 
         ########################################################################*/
 
-        let llvm_builder: &Builder = self.context.get_llvm_builder();
-        let llvm_context: &Context = self.context.get_llvm_context();
-
         match stmt {
-            Ast::While { cond, block, .. } => {
-                if let Some(current_function) = self.current_function {
-                    let condition_block: BasicBlock =
-                        llvm_context.append_basic_block(current_function, "while");
+            Ast::While { .. } => whileloop::compile(self, stmt),
+            Ast::Loop { .. } => infloop::compile(self, stmt),
+            Ast::For { .. } => forloop::compile(self, stmt),
 
-                    llvm_builder
-                        .build_unconditional_branch(condition_block)
-                        .unwrap();
-
-                    llvm_builder.position_at_end(condition_block);
-
-                    let conditional: IntValue =
-                        valuegen::compile(self.context, cond, Some(&ThrushType::Bool))
-                            .into_int_value();
-
-                    let then_block: BasicBlock =
-                        llvm_context.append_basic_block(current_function, "while_body");
-
-                    let exit_block: BasicBlock =
-                        llvm_context.append_basic_block(current_function, "while_exit");
-
-                    if block.has_break() || block.has_return() {
-                        self.exit_loop_block = Some(exit_block);
-                    }
-
-                    if block.has_continue() {
-                        self.start_loop_block = Some(condition_block);
-                    }
-
-                    llvm_builder
-                        .build_conditional_branch(conditional, then_block, exit_block)
-                        .unwrap();
-
-                    llvm_builder.position_at_end(then_block);
-
-                    self.codegen_code_block(block);
-
-                    if !block.has_break() || !block.has_return() || !block.has_continue() {
-                        let _ = llvm_builder.build_unconditional_branch(condition_block);
-                    }
-
-                    llvm_builder.position_at_end(exit_block);
-
-                    return;
-                }
-
-                logging::log(
-                    LoggingType::BackendBug,
-                    "The current function could not be obtained at code generation time.",
-                );
-            }
-
-            Ast::Loop { block, .. } => {
-                if let Some(function) = self.current_function {
-                    let start_loop_block: BasicBlock =
-                        llvm_context.append_basic_block(function, "loop");
-
-                    llvm_builder
-                        .build_unconditional_branch(start_loop_block)
-                        .unwrap();
-
-                    llvm_builder.position_at_end(start_loop_block);
-
-                    let exit_loop_block: BasicBlock =
-                        llvm_context.append_basic_block(function, "loop_exit");
-
-                    if block.has_break() || block.has_return() {
-                        self.exit_loop_block = Some(exit_loop_block);
-                    }
-
-                    if block.has_continue() {
-                        self.start_loop_block = Some(start_loop_block);
-                    }
-
-                    self.codegen_code_block(block);
-
-                    if !block.has_return() || !block.has_break() || !block.has_continue() {
-                        let _ = exit_loop_block.remove_from_function();
-                        let _ = llvm_builder
-                            .build_unconditional_branch(function.get_last_basic_block().unwrap());
-                    } else {
-                        llvm_builder.position_at_end(exit_loop_block);
-                    }
-
-                    return;
-                }
-
-                logging::log(
-                    LoggingType::BackendBug,
-                    "The current function could not be obtained at code generation time.",
-                );
-            }
-
-            Ast::For {
-                local,
-                cond,
-                actions,
-                block,
-                ..
-            } => {
-                if let Some(current_function) = self.current_function {
-                    self.codegen_variables(local);
-
-                    let start_block: BasicBlock =
-                        llvm_context.append_basic_block(current_function, "for");
-
-                    let _ = llvm_builder.build_unconditional_branch(start_block);
-
-                    llvm_builder.position_at_end(start_block);
-
-                    let condition: IntValue =
-                        valuegen::compile(self.context, cond, Some(&ThrushType::Bool))
-                            .into_int_value();
-
-                    let then_block: BasicBlock =
-                        llvm_context.append_basic_block(current_function, "for_body");
-
-                    let exit_block: BasicBlock =
-                        llvm_context.append_basic_block(current_function, "for_exit");
-
-                    llvm_builder
-                        .build_conditional_branch(condition, then_block, exit_block)
-                        .unwrap();
-
-                    if block.has_break() || block.has_return() {
-                        self.exit_loop_block = Some(exit_block);
-                    }
-
-                    if block.has_continue() {
-                        self.start_loop_block = Some(start_block);
-                    }
-
-                    llvm_builder.position_at_end(then_block);
-
-                    if actions.is_before_unary() {
-                        self.codegen_code_block(block);
-                        let _ = valuegen::compile(self.context, actions, None);
-                    } else {
-                        let _ = valuegen::compile(self.context, actions, None);
-                        self.codegen_code_block(block);
-                    }
-
-                    if !block.has_break() || !block.has_return() || !block.has_continue() {
-                        let _ = llvm_builder.build_unconditional_branch(start_block);
-                    }
-
-                    llvm_builder.position_at_end(exit_block);
-
-                    return;
-                }
-
-                logging::log(
-                    LoggingType::BackendBug,
-                    "The current function could not be obtained at code generation time.",
-                );
-            }
-
-            Ast::Break { .. } => {
-                let _ = llvm_builder.build_unconditional_branch(
-                    self.exit_loop_block.unwrap_or_else(|| {
-                        logging::log(
-                            LoggingType::BackendBug,
-                            "Loop end block could not be obtained at code generation time.",
-                        );
-
-                        unreachable!()
-                    }),
-                );
-            }
-
-            Ast::Continue { .. } => {
-                let _ = llvm_builder.build_unconditional_branch(
-                    self.start_loop_block.unwrap_or_else(|| {
-                        logging::log(
-                            LoggingType::BackendBug,
-                            "Loop start block could not be obtained at code generation time.",
-                        );
-
-                        unreachable!()
-                    }),
-                );
-            }
+            Ast::Break { .. } => loops::controlflow::loopbreak::compile(self, stmt),
+            Ast::Continue { .. } => loops::controlflow::loopjump::compile(self, stmt),
 
             stmt => self.codegen_variables(stmt),
         }
@@ -515,7 +188,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         ########################################################################*/
     }
 
-    fn codegen_variables(&mut self, stmt: &'ctx Ast) {
+    pub fn codegen_variables(&mut self, stmt: &'ctx Ast) {
         /* ######################################################################
 
 
@@ -539,7 +212,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 if metadata.is_undefined() {
                     self.context.new_local(name, ascii_name, kind, attributes);
                 } else {
-                    local::new((name, ascii_name, kind, value, attributes), self.context);
+                    local::new(self.context, (name, ascii_name, kind, value, attributes));
                 }
             }
 
@@ -548,19 +221,18 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 ascii_name,
                 kind,
                 value,
-                attributes,
                 ..
             } => {
                 let value: BasicValueEnum = constgen::compile(self.context, kind, value);
 
                 self.context
-                    .new_local_constant(name, ascii_name, kind, value, attributes);
+                    .new_local_constant(name, ascii_name, kind, value);
             }
 
             Ast::LLI {
                 name, kind, value, ..
             } => {
-                lli::new(name, kind, value, self.context);
+                lli::new(self.context, name, kind, value);
             }
 
             stmt => self.codegen_terminator(stmt),
@@ -575,7 +247,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         ########################################################################*/
     }
 
-    fn codegen_terminator(&mut self, stmt: &'ctx Ast) {
+    pub fn codegen_terminator(&mut self, stmt: &'ctx Ast) {
         /* ######################################################################
 
 
@@ -584,56 +256,9 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
 
         ########################################################################*/
 
-        let llvm_builder: &Builder = self.context.get_llvm_builder();
-
         match stmt {
-            Ast::Return {
-                expression, kind, ..
-            } => {
-                if expression.is_none() {
-                    if llvm_builder.build_return(None).is_err() {
-                        {
-                            logging::log(
-                                LoggingType::BackendBug,
-                                "Unable to build the return instruction at code generation time.",
-                            );
-                        }
-                    }
-                }
-
-                if let Some(expression) = expression {
-                    if kind.is_ptr_type() || kind.is_mut_type() {
-                        if llvm_builder
-                            .build_return(Some(&ptrgen::compile(
-                                self.context,
-                                expression,
-                                Some(kind),
-                            )))
-                            .is_err()
-                        {
-                            {
-                                logging::log(
-                                    LoggingType::BackendBug,
-                                    "Unable to build the return instruction at code generation time.",
-                                );
-                            }
-                        };
-                    } else if llvm_builder
-                        .build_return(Some(&valuegen::compile(
-                            self.context,
-                            expression,
-                            Some(kind),
-                        )))
-                        .is_err()
-                    {
-                        {
-                            logging::log(
-                                LoggingType::BackendBug,
-                                "Unable to build the return instruction at code generation time.",
-                            );
-                        }
-                    };
-                }
+            Ast::Return { .. } => {
+                terminator::compile(self, stmt);
             }
 
             any => self.expressions(any),
@@ -652,7 +277,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         self.codegen_loose(stmt);
     }
 
-    fn codegen_loose(&mut self, stmt: &'ctx Ast) {
+    pub fn codegen_loose(&mut self, stmt: &'ctx Ast) {
         /* ######################################################################
 
 
@@ -697,6 +322,11 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 if kind.is_ptr_type() {
                     binaryop::pointer::ptr_binaryop(self.context, (left, operator, right));
                 }
+
+                self::codegen_abort(format!(
+                    "Could not compile binary operation with type '{}'.",
+                    kind
+                ));
             }
 
             Ast::Mut { .. } => {
@@ -765,8 +395,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 raw_value_llvm_parameter,
             );
         } else {
-            logging::log(
-                LoggingType::BackendBug,
+            self::codegen_abort(
                 "The value of a parameter of an LLVM function could not be obtained at code generation time.",
             );
         }
@@ -792,7 +421,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
 
         llvm_builder.position_at_end(entry);
 
-        self.current_function = Some(llvm_function);
+        self.context.set_current_fn(llvm_function);
 
         function_parameters.iter().for_each(|parameter| {
             if let Ast::FunctionParameter {
@@ -811,14 +440,13 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
 
         if !function_body.has_return() && function_type.is_void_type() {
             if llvm_builder.build_return(None).is_err() {
-                logging::log(
-                    LoggingType::BackendBug,
+                self::codegen_abort(
                     "Unable to build the return instruction at code generation time.",
                 );
             }
         }
 
-        self.current_function = None;
+        self.context.clear_current_fn();
     }
 
     /* ######################################################################
@@ -903,7 +531,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
             }
         });
 
-        let truly_function_name: String = format!("__assembler_fn_{}", asm_function_ascii_name);
+        let truly_function_name: String = format!("__asm_fn_{}", asm_function_ascii_name);
 
         let asm_function_type: FunctionType = typegen::function_type(
             self.context,
@@ -950,29 +578,21 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 (false, Some(return_value)) => {
                     llvm_builder.build_return(Some(&return_value))
             .map_err(|_| {
-                logging::log(
-                    LoggingType::BackendBug,
-                    "Failed to create return terminator with value in assembly function generation.",
-                );
+                self::codegen_abort(
+                    "Failed to create return terminator with value in assembly function generation.");
             })
             .ok();
                 }
                 _ => {
                     llvm_builder.build_return(None)
             .map_err(|_| {
-                logging::log(
-                    LoggingType::BackendBug,
-                    "Failed to create void return terminator in assembly function generation.",
-                );
+                self::codegen_abort("Failed to create void return terminator in assembly function generation.",);
             })
             .ok();
                 }
             }
         } else {
-            logging::log(
-                LoggingType::BackendBug,
-                "Unable to create indirect call for call assembly function.",
-            );
+            self::codegen_abort("Unable to create indirect call for call assembly function.");
         }
 
         if let Some(original_block) = original_block {
@@ -1034,26 +654,40 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
             ignore_args,
         );
 
-        let function: FunctionValue =
+        let llvm_function: FunctionValue =
             llvm_module.add_function(llvm_function_name, function_type, None);
 
         let mut attribute_builder: AttributeBuilder = AttributeBuilder::new(
             llvm_context,
             function_attributes,
-            LLVMAttributeApplicant::Function(function),
+            LLVMAttributeApplicant::Function(llvm_function),
         );
 
         attribute_builder.add_function_attributes(&mut call_convention);
 
         if !is_public && extern_name.is_none() {
-            function.set_linkage(Linkage::LinkerPrivate);
+            llvm_function.set_linkage(Linkage::LinkerPrivate);
         }
 
-        self.current_function = Some(function);
+        self.context.set_current_fn(llvm_function);
 
         self.context.new_function(
             function_name,
-            (function, function_parameters_types, call_convention),
+            (llvm_function, function_parameters_types, call_convention),
         );
     }
+}
+
+impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
+    pub fn get_mut_context(&mut self) -> &mut LLVMCodeGenContext<'a, 'ctx> {
+        self.context
+    }
+
+    pub fn get_context(&self) -> &LLVMCodeGenContext<'a, 'ctx> {
+        self.context
+    }
+}
+
+fn codegen_abort<T: Display>(message: T) {
+    logging::log(LoggingType::BackendBug, &format!("{}", message));
 }

@@ -36,7 +36,7 @@ fn bubbleSort(mut arr: mut array[u32; 7], size: s32) void {
             }
         }
 
-        if swapped == false { // If no swaps occurred, array is sorted, so exit early
+        if !swapped { // If no swaps occurred, array is sorted, so exit early
             break;
         }
     

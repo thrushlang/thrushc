@@ -15,10 +15,10 @@ pub mod load;
 pub mod write;
 
 pub fn new<'ctx>(
+    context: &mut LLVMCodeGenContext<'_, 'ctx>,
     name: &'ctx str,
     kind: &'ctx ThrushType,
     expr: &'ctx Ast,
-    context: &mut LLVMCodeGenContext<'_, 'ctx>,
 ) {
     let value: BasicValueEnum = valuegen::compile(context, expr, Some(kind));
 

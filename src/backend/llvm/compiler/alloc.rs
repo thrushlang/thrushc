@@ -78,7 +78,23 @@ fn try_alloc_stack<'ctx>(
     }
 }
 
-pub fn constant<'ctx>(
+pub fn local_constant<'ctx>(
+    module: &Module<'ctx>,
+    name: &str,
+    llvm_type: BasicTypeEnum<'ctx>,
+    llvm_value: BasicValueEnum<'ctx>,
+) -> PointerValue<'ctx> {
+    let global: GlobalValue = module.add_global(llvm_type, Some(AddressSpace::default()), name);
+
+    global.set_linkage(Linkage::LinkerPrivate);
+
+    global.set_initializer(&llvm_value);
+    global.set_constant(true);
+
+    global.as_pointer_value()
+}
+
+pub fn global_constant<'ctx>(
     module: &Module<'ctx>,
     name: &str,
     llvm_type: BasicTypeEnum<'ctx>,
@@ -93,6 +109,7 @@ pub fn constant<'ctx>(
 
     global.set_initializer(&llvm_value);
     global.set_constant(true);
+
     global.as_pointer_value()
 }
 

@@ -20,11 +20,12 @@ use {
     },
     ahash::AHashMap as HashMap,
     inkwell::{
+        basic_block::BasicBlock,
         builder::Builder,
         context::Context,
         module::Module,
         targets::TargetData,
-        values::{BasicValueEnum, PointerValue},
+        values::{BasicValueEnum, FunctionValue, PointerValue},
     },
     std::fmt::Display,
 };
@@ -44,6 +45,11 @@ pub struct LLVMCodeGenContext<'a, 'ctx> {
     parameters: LLVMFunctionsParameters<'ctx>,
 
     ptr_anchor: Option<PointerAnchor<'ctx>>,
+
+    begin_loop_block: Option<BasicBlock<'ctx>>,
+    end_loop_block: Option<BasicBlock<'ctx>>,
+
+    function: Option<FunctionValue<'ctx>>,
 
     scope: usize,
 
@@ -72,6 +78,11 @@ impl<'a, 'ctx> LLVMCodeGenContext<'a, 'ctx> {
             parameters: HashMap::with_capacity(10),
 
             ptr_anchor: None,
+
+            begin_loop_block: None,
+            end_loop_block: None,
+
+            function: None,
 
             scope: 0,
 
@@ -128,14 +139,12 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
         ascii_name: &'ctx str,
         kind: &'ctx ThrushType,
         value: BasicValueEnum<'ctx>,
-        attributes: &'ctx ThrushAttributes<'ctx>,
     ) {
-        let ptr: PointerValue = alloc::constant(
+        let ptr: PointerValue = alloc::local_constant(
             self.module,
             ascii_name,
             typegen::generate_type(self.context, kind),
             value,
-            attributes,
         );
 
         let constant: SymbolAllocated =
@@ -159,7 +168,7 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
         value: BasicValueEnum<'ctx>,
         attributes: &'ctx ThrushAttributes<'ctx>,
     ) {
-        let ptr: PointerValue = alloc::constant(
+        let ptr: PointerValue = alloc::global_constant(
             self.module,
             ascii_name,
             typegen::generate_type(self.context, kind),
@@ -209,6 +218,38 @@ impl LLVMCodeGenContext<'_, '_> {
         if self.scope == 0 {
             self.parameters.clear();
         }
+    }
+}
+
+impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
+    pub fn set_begin_loop_block(&mut self, block: BasicBlock<'ctx>) {
+        self.begin_loop_block = Some(block);
+    }
+
+    pub fn get_begin_loop_block(&self) -> Option<BasicBlock<'ctx>> {
+        self.begin_loop_block
+    }
+
+    pub fn set_end_loop_block(&mut self, block: BasicBlock<'ctx>) {
+        self.end_loop_block = Some(block);
+    }
+
+    pub fn get_end_loop_block(&self) -> Option<BasicBlock<'ctx>> {
+        self.end_loop_block
+    }
+}
+
+impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
+    pub fn set_current_fn(&mut self, new_function: FunctionValue<'ctx>) {
+        self.function = Some(new_function);
+    }
+
+    pub fn get_current_fn(&mut self) -> Option<FunctionValue<'ctx>> {
+        self.function
+    }
+
+    pub fn clear_current_fn(&mut self) {
+        self.function = None;
     }
 }
 

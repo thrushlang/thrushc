@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use crate::backend::llvm::compiler::{cast, valuegen};
 use crate::core::console::logging::{self, LoggingType};
 use crate::frontend::lexer::tokentype::TokenType;
@@ -9,6 +11,7 @@ use super::{context::LLVMCodeGenContext, memory::SymbolAllocated};
 
 use super::typegen;
 
+use inkwell::AddressSpace;
 use inkwell::{
     builder::Builder,
     context::Context,
@@ -24,14 +27,12 @@ pub fn unary_op<'ctx>(
         (TokenType::PlusPlus | TokenType::MinusMinus, _, Ast::Reference { name, kind, .. }) => {
             self::compile_increment_decrement_ref(context, name, unary.0, kind, cast_type)
         }
-
         (TokenType::PlusPlus | TokenType::MinusMinus, _, expr) => {
             self::compile_increment_decrement(context, unary.0, expr, cast_type)
         }
 
-        (TokenType::Bang, _, expr) => compile_logical_negation(context, expr, cast_type),
-
-        (TokenType::Minus, _, expr) => compile_arithmetic_negation(context, expr, cast_type),
+        (TokenType::Bang, _, expr) => self::compile_logical_negation(context, expr, cast_type),
+        (TokenType::Minus, _, expr) => self::compile_arithmetic_negation(context, expr, cast_type),
 
         _ => {
             logging::log(
@@ -242,7 +243,43 @@ fn compile_logical_negation<'ctx>(
     let kind: &ThrushType = expr.get_type_unwrapped();
 
     match kind {
-        kind if kind.is_integer_type() || kind.is_bool_type() => {
+        kind if kind.is_bool_type() => {
+            let int: IntValue = value.into_int_value();
+
+            if let Ok(result) = llvm_builder.build_not(int, "") {
+                let mut result: BasicValueEnum = result.into();
+
+                if let Some(cast_type) = cast_type {
+                    if let Some(casted_int) = cast::integer(context, cast_type, kind, result) {
+                        result = casted_int;
+                    }
+                }
+
+                return result;
+            }
+
+            int.into()
+        }
+
+        _ => {
+            self::codegen_abort("Cannot perform a logical negation.");
+            self::compile_null_ptr(context)
+        }
+    }
+}
+
+fn compile_arithmetic_negation<'ctx>(
+    context: &mut LLVMCodeGenContext<'_, 'ctx>,
+    expr: &'ctx Ast,
+    cast_type: Option<&ThrushType>,
+) -> BasicValueEnum<'ctx> {
+    let llvm_builder: &Builder = context.get_llvm_builder();
+
+    let value: BasicValueEnum = valuegen::compile(context, expr, cast_type);
+    let kind: &ThrushType = expr.get_type_unwrapped();
+
+    match kind {
+        kind if kind.is_integer_type() => {
             let int: IntValue = value.into_int_value();
 
             if let Ok(result) = llvm_builder.build_int_neg(int, "") {
@@ -280,51 +317,14 @@ fn compile_logical_negation<'ctx>(
     }
 }
 
-fn compile_arithmetic_negation<'ctx>(
-    context: &mut LLVMCodeGenContext<'_, 'ctx>,
-    expr: &'ctx Ast,
-    cast_type: Option<&ThrushType>,
-) -> BasicValueEnum<'ctx> {
-    let llvm_builder: &Builder = context.get_llvm_builder();
+fn compile_null_ptr<'ctx>(context: &LLVMCodeGenContext<'_, 'ctx>) -> BasicValueEnum<'ctx> {
+    context
+        .get_llvm_context()
+        .ptr_type(AddressSpace::default())
+        .const_null()
+        .into()
+}
 
-    let value: BasicValueEnum = valuegen::compile(context, expr, cast_type);
-    let kind: &ThrushType = expr.get_type_unwrapped();
-
-    match kind {
-        kind if kind.is_integer_type() || kind.is_bool_type() => {
-            let int: IntValue = value.into_int_value();
-
-            if let Ok(result) = llvm_builder.build_int_neg(int, "") {
-                let mut result: BasicValueEnum = result.into();
-
-                if let Some(cast_type) = cast_type {
-                    if let Some(casted_int) = cast::integer(context, cast_type, kind, result) {
-                        result = casted_int;
-                    }
-                }
-
-                return result;
-            }
-
-            int.into()
-        }
-
-        _ => {
-            let float: FloatValue = value.into_float_value();
-
-            if let Ok(result) = llvm_builder.build_float_neg(float, "") {
-                let mut result: BasicValueEnum = result.into();
-
-                if let Some(cast_type) = cast_type {
-                    if let Some(casted_float) = cast::float(context, cast_type, kind, result) {
-                        result = casted_float;
-                    }
-                }
-
-                return result;
-            }
-
-            float.into()
-        }
-    }
+fn codegen_abort<T: Display>(message: T) {
+    logging::log(LoggingType::BackendBug, &format!("{}", message));
 }

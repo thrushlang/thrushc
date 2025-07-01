@@ -1,0 +1,66 @@
+#![allow(clippy::collapsible_if)]
+
+use std::fmt::Display;
+
+use inkwell::builder::Builder;
+
+use crate::{
+    backend::llvm::compiler::{codegen::LLVMCodegen, ptrgen, valuegen},
+    core::console::logging::{self, LoggingType},
+    frontend::types::ast::Ast,
+};
+
+pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, stmt: &'ctx Ast<'ctx>) {
+    if let Ast::Return {
+        expression, kind, ..
+    } = stmt
+    {
+        let llvm_builder: &Builder = codegen.get_context().get_llvm_builder();
+
+        if expression.is_none() {
+            if llvm_builder.build_return(None).is_err() {
+                {
+                    self::codegen_abort("Unable to build the terminator at code generation time.");
+                }
+            }
+        }
+
+        if let Some(expression) = expression {
+            if kind.is_ptr_type() || kind.is_mut_type() {
+                if llvm_builder
+                    .build_return(Some(&ptrgen::compile(
+                        codegen.get_mut_context(),
+                        expression,
+                        Some(kind),
+                    )))
+                    .is_err()
+                {
+                    {
+                        self::codegen_abort(
+                            "Unable to build the terminator at code generation time.",
+                        );
+                    }
+                };
+            } else if llvm_builder
+                .build_return(Some(&valuegen::compile(
+                    codegen.get_mut_context(),
+                    expression,
+                    Some(kind),
+                )))
+                .is_err()
+            {
+                {
+                    self::codegen_abort("Unable to build the terminator at code generation time.");
+                }
+            };
+        } else {
+            self::codegen_abort("Unable to build the terminator at code generation time.");
+        }
+    } else {
+        self::codegen_abort("Expected terminator to compile.");
+    }
+}
+
+fn codegen_abort<T: Display>(message: T) {
+    logging::log(LoggingType::BackendBug, &format!("{}", message));
+}

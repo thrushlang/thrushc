@@ -10,7 +10,7 @@ use super::{Ast, context::LLVMCodeGenContext, memory::SymbolAllocated, valuegen}
 
 use inkwell::values::BasicValueEnum;
 
-pub fn new<'ctx>(local: Local<'ctx>, context: &mut LLVMCodeGenContext<'_, 'ctx>) {
+pub fn new<'ctx>(context: &mut LLVMCodeGenContext<'_, 'ctx>, local: Local<'ctx>) {
     let local_name: &str = local.0;
     let ascii_name: &str = local.1;
 
