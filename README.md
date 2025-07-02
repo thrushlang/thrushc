@@ -10,13 +10,13 @@ The **Thrush Compiler** efficiently transfers source code from Thrush files dire
 ### Target Architectures
 
 > [!WARNING]
-> This doesn't mean it has the ability to compile 100% for every architecture, since compilation depends on whether the host system has certain tools required to output compiled code for that architecture. However, the assembler should theoretically output without problems.
+> While the compiler itself can theoretically generate code for these architectures, successful compilation into executable files (like .o files or final binaries) ultimately depends on your host system having the necessary toolchain components (e.g., assemblers, linkers, system libraries) for that specific target. The assembler should, however, produce output without issues.
 
-This represents all possible combinations of triple targets or targets, which the compiler can compile with the backend it has available.
+### LLVM
 
-### LLVM Targets
+#### LLVM Targets
 
-The compiler supports all triple targets, in addition to the architectures supported by the entire LLVM-C API.
+Beyond the standard triple targets, the compiler also supports all architectures available through the **[LLVM](https://llvm.org)**-C API. These include:
 
 - ``x86_64``
 - ``AArch64``
@@ -89,7 +89,7 @@ cargo run
 Now you need to have Rust installed with a recent version.
 
 - \>= **[Rust](https://www.rust-lang.org/)** (v1.18.5) 
-- **[Rust](https://www.rust-lang.org/)** 2024 Edition
+- Rust 2024 Edition
 
 Now you need to compile the compiler with Rust. 
 
