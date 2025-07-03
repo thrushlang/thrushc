@@ -5,7 +5,7 @@ use inkwell::{basic_block::BasicBlock, builder::Builder, context::Context, value
 use crate::{
     backend::llvm::compiler::{codegen::LLVMCodegen, valuegen},
     core::console::logging::{self, LoggingType},
-    frontend::types::{ast::Ast, lexer::ThrushType},
+    frontend::types::{ast::Ast, lexer::Type},
 };
 
 pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, stmt: &'ctx Ast<'ctx>) {
@@ -31,7 +31,7 @@ pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, stmt: &'ctx Ast<'ctx>)
                 llvm_builder.position_at_end(start_block);
 
                 let condition: IntValue =
-                    valuegen::compile(codegen.get_mut_context(), cond, Some(&ThrushType::Bool))
+                    valuegen::compile(codegen.get_mut_context(), cond, Some(&Type::Bool))
                         .into_int_value();
 
                 let then_block: BasicBlock = llvm_context.append_basic_block(function, "for_body");

@@ -2,8 +2,8 @@ use crate::{
     core::errors::{position::CompilationPosition, standard::ThrushCompilerIssue},
     frontend::{
         lexer::span::Span,
-        semantic::typechecker::TypeChecker,
-        types::{ast::Ast, lexer::ThrushType},
+        semantic::typechecker::{TypeChecker, bounds},
+        types::{ast::Ast, lexer::Type},
     },
 };
 
@@ -17,11 +17,11 @@ pub fn validate_cast_as<'type_checker>(
             cast: cast_type,
             span,
         } => {
-            let from_type: &ThrushType = from.get_value_type()?;
+            let from_type: &Type = from.get_value_type()?;
 
-            if let Err(error) = typechecker.validate_type_cast(
-                from_type,
+            if let Err(error) = bounds::cast::check_type_cast(
                 cast_type,
+                from_type,
                 from.is_allocated_reference(),
                 span,
             ) {

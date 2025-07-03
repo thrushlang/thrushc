@@ -3,7 +3,7 @@ use crate::{
     frontend::{
         lexer::span::Span,
         semantic::typechecker::TypeChecker,
-        types::{ast::Ast, lexer::ThrushType},
+        types::{ast::Ast, lexer::Type},
     },
 };
 
@@ -13,7 +13,7 @@ pub fn validate_dereference<'type_checker>(
 ) -> Result<(), ThrushCompilerIssue> {
     match node {
         Ast::Deref { value, .. } => {
-            let value_type: &ThrushType = value.get_value_type()?;
+            let value_type: &Type = value.get_value_type()?;
             let value_span: Span = value.get_span();
 
             if !value_type.is_ptr_type() && !value_type.is_mut_type() {

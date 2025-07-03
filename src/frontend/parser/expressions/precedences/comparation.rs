@@ -3,7 +3,7 @@ use crate::{
     frontend::{
         lexer::{span::Span, token::Token, tokentype::TokenType},
         parser::{ParserContext, expressions::precedences::term},
-        types::{ast::Ast, lexer::ThrushType, parser::stmts::traits::TokenExtensions},
+        types::{ast::Ast, lexer::Type, parser::stmts::traits::TokenExtensions},
     },
 };
 
@@ -28,7 +28,7 @@ pub fn cmp_precedence<'parser>(
             left: expression.into(),
             operator,
             right: right.into(),
-            kind: ThrushType::Bool,
+            kind: Type::Bool,
             span,
         };
     }

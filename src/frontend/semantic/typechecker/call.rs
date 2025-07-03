@@ -2,14 +2,14 @@ use crate::{
     core::errors::standard::ThrushCompilerIssue,
     frontend::{
         lexer::span::Span,
-        semantic::typechecker::TypeChecker,
-        types::{ast::Ast, lexer::ThrushType},
+        semantic::typechecker::{TypeChecker, bounds},
+        types::{ast::Ast, lexer::Type},
     },
 };
 
 pub fn validate_call<'type_checker>(
     typechecker: &mut TypeChecker<'type_checker>,
-    metadata: (&[ThrushType], bool),
+    metadata: (&[Type], bool),
     args: &'type_checker [Ast],
     span: &Span,
 ) -> Result<(), ThrushCompilerIssue> {
@@ -51,17 +51,12 @@ pub fn validate_call<'type_checker>(
         .iter()
         .zip(args.iter())
         .try_for_each(|(target_type, expr)| {
-            let from_type: &ThrushType = expr.get_value_type()?;
+            let from_type: &Type = expr.get_value_type()?;
             let expr_span: Span = expr.get_span();
 
-            if let Err(error) = typechecker.validate_types(
-                target_type,
-                from_type,
-                Some(expr),
-                None,
-                None,
-                &expr_span,
-            ) {
+            if let Err(error) =
+                bounds::checking::check(target_type, from_type, Some(expr), None, None, &expr_span)
+            {
                 typechecker.add_error(error);
             }
 

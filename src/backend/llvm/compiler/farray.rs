@@ -8,7 +8,7 @@ use crate::backend::llvm::compiler::memory::{self, LLVMAllocationSite};
 use crate::backend::llvm::compiler::valuegen;
 use crate::core::console::logging::{self, LoggingType};
 use crate::frontend::types::ast::Ast;
-use crate::frontend::types::lexer::ThrushType;
+use crate::frontend::types::lexer::Type;
 
 use inkwell::AddressSpace;
 use inkwell::types::BasicTypeEnum;
@@ -17,18 +17,18 @@ use inkwell::{builder::Builder, context::Context};
 
 pub fn compile_fixed_array<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
-    kind: &ThrushType,
+    kind: &Type,
     items: &'ctx [Ast],
-    cast_type: Option<&ThrushType>,
+    cast_type: Option<&Type>,
 ) -> BasicValueEnum<'ctx> {
     self::fixed_array(context, kind, items, cast_type)
 }
 
 fn fixed_array<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
-    kind: &ThrushType,
+    kind: &Type,
     items: &'ctx [Ast],
-    cast_type: Option<&ThrushType>,
+    cast_type: Option<&Type>,
 ) -> BasicValueEnum<'ctx> {
     if let Some(anchor) = context.get_pointer_anchor() {
         if !anchor.is_triggered() {
@@ -43,20 +43,20 @@ fn fixed_array<'ctx>(
 
 fn compile_fixed_array_with_anchor<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
-    kind: &ThrushType,
+    kind: &Type,
     items: &'ctx [Ast],
-    cast_type: Option<&ThrushType>,
+    cast_type: Option<&Type>,
     anchor: PointerAnchor<'ctx>,
 ) -> BasicValueEnum<'ctx> {
     let llvm_context: &Context = context.get_llvm_context();
     let llvm_builder: &Builder = context.get_llvm_builder();
 
     let array_ptr: PointerValue = anchor.get_pointer();
-    let array_type: &ThrushType = cast_type.unwrap_or(kind);
+    let array_type: &Type = cast_type.unwrap_or(kind);
 
     context.set_pointer_anchor(PointerAnchor::new(array_ptr, true));
 
-    let array_items_type: &ThrushType = array_type.get_fixed_array_base_type();
+    let array_items_type: &Type = array_type.get_fixed_array_base_type();
 
     let items: Vec<BasicValueEnum> = items
         .iter()
@@ -65,6 +65,7 @@ fn compile_fixed_array_with_anchor<'ctx>(
 
     for (idx, item) in items.iter().enumerate() {
         let idx: IntValue = llvm_context.i32_type().const_int(idx as u64, false);
+
         let array_type: BasicTypeEnum = typegen::generate_subtype(llvm_context, array_type);
 
         match unsafe {
@@ -94,15 +95,15 @@ fn compile_fixed_array_with_anchor<'ctx>(
 
 fn compile_fixed_array_without_anchor<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
-    kind: &ThrushType,
+    kind: &Type,
     items: &'ctx [Ast],
-    cast_type: Option<&ThrushType>,
+    cast_type: Option<&Type>,
 ) -> BasicValueEnum<'ctx> {
     let llvm_context: &Context = context.get_llvm_context();
     let llvm_builder: &Builder = context.get_llvm_builder();
 
-    let array_type: &ThrushType = cast_type.unwrap_or(kind);
-    let array_items_type: &ThrushType = array_type.get_fixed_array_base_type();
+    let array_type: &Type = cast_type.unwrap_or(kind);
+    let array_items_type: &Type = array_type.get_fixed_array_base_type();
 
     let array_ptr: PointerValue =
         memory::alloc_anon(LLVMAllocationSite::Stack, context, array_type, true);
@@ -114,6 +115,7 @@ fn compile_fixed_array_without_anchor<'ctx>(
 
     for (idx, item) in items.iter().enumerate() {
         let idx: IntValue = llvm_context.i32_type().const_int(idx as u64, false);
+
         let array_type: BasicTypeEnum = typegen::generate_subtype(llvm_context, array_type);
 
         match unsafe {

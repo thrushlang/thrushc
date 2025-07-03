@@ -5,7 +5,7 @@ use crate::{
         parser::expression,
         types::{
             ast::Ast,
-            lexer::ThrushType,
+            lexer::Type,
             parser::stmts::{
                 traits::{
                     CustomTypeFieldsExtensions, FoundSymbolEither, FoundSymbolExtension,
@@ -20,16 +20,14 @@ use crate::{
 
 use super::ParserContext;
 
-pub fn build_type(
-    parser_context: &mut ParserContext<'_>,
-) -> Result<ThrushType, ThrushCompilerIssue> {
-    let builded_type: Result<ThrushType, ThrushCompilerIssue> = match parser_context.peek().kind {
+pub fn build_type(parser_context: &mut ParserContext<'_>) -> Result<Type, ThrushCompilerIssue> {
+    let builded_type: Result<Type, ThrushCompilerIssue> = match parser_context.peek().kind {
         tk_kind if tk_kind.is_type() => {
             let tk: &Token = parser_context.advance()?;
             let span: Span = tk.span;
 
             if tk_kind.is_mut() {
-                let inner_type: ThrushType = self::build_type(parser_context)?;
+                let inner_type: Type = self::build_type(parser_context)?;
 
                 if inner_type.is_mut_type() {
                     return Err(ThrushCompilerIssue::Error(
@@ -49,7 +47,7 @@ pub fn build_type(
                     ));
                 }
 
-                return Ok(ThrushType::Mut(inner_type.into()));
+                return Ok(Type::Mut(inner_type.into()));
             }
 
             if tk_kind.is_array() {
@@ -59,7 +57,7 @@ pub fn build_type(
                     String::from("Expected '['."),
                 )?;
 
-                let array_type: ThrushType = self::build_type(parser_context)?;
+                let array_type: Type = self::build_type(parser_context)?;
 
                 if parser_context.check(TokenType::SemiColon) {
                     parser_context.consume(
@@ -98,7 +96,7 @@ pub fn build_type(
                             String::from("Expected ']'."),
                         )?;
 
-                        return Ok(ThrushType::FixedArray(array_type.into(), array_size));
+                        return Ok(Type::FixedArray(array_type.into(), array_size));
                     }
 
                     return Err(ThrushCompilerIssue::Error(
@@ -115,7 +113,7 @@ pub fn build_type(
                     String::from("Expected ']'."),
                 )?;
 
-                return Ok(ThrushType::Array(array_type.into()));
+                return Ok(Type::Array(array_type.into()));
             }
 
             match tk_kind.as_type(span)? {
@@ -124,9 +122,9 @@ pub fn build_type(
                 ty if ty.is_bool_type() => Ok(ty),
                 ty if ty.is_str_type() => Ok(ty),
                 ty if ty.is_address_type() => Ok(ty),
-                ty if ty.is_ptr_type() && parser_context.check(TokenType::LBracket) => Ok(
-                    self::build_recursive_type(parser_context, ThrushType::Ptr(None))?,
-                ),
+                ty if ty.is_ptr_type() && parser_context.check(TokenType::LBracket) => {
+                    Ok(self::build_recursive_type(parser_context, Type::Ptr(None))?)
+                }
                 ty if ty.is_ptr_type() => Ok(ty),
                 ty if ty.is_void_type() => Ok(ty),
 
@@ -197,16 +195,16 @@ pub fn build_type(
 
 fn build_recursive_type(
     parser_context: &mut ParserContext<'_>,
-    mut before_type: ThrushType,
-) -> Result<ThrushType, ThrushCompilerIssue> {
+    mut before_type: Type,
+) -> Result<Type, ThrushCompilerIssue> {
     parser_context.consume(
         TokenType::LBracket,
         String::from("Syntax error"),
         String::from("Expected '['."),
     )?;
 
-    if let ThrushType::Ptr(_) = &mut before_type {
-        let mut inner_type: ThrushType = self::build_type(parser_context)?;
+    if let Type::Ptr(_) = &mut before_type {
+        let mut inner_type: Type = self::build_type(parser_context)?;
 
         while parser_context.check(TokenType::LBracket) {
             inner_type = self::build_recursive_type(parser_context, inner_type)?;
@@ -218,7 +216,7 @@ fn build_recursive_type(
             String::from("Expected ']'."),
         )?;
 
-        return Ok(ThrushType::Ptr(Some(inner_type.into())));
+        return Ok(Type::Ptr(Some(inner_type.into())));
     }
 
     Err(ThrushCompilerIssue::Error(

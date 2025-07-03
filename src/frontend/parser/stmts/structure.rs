@@ -5,7 +5,7 @@ use crate::{
         parser::{ParserContext, attributes, typegen},
         types::{
             ast::Ast,
-            lexer::ThrushType,
+            lexer::Type,
             parser::stmts::{
                 traits::{StructFieldsExtensions, TokenExtensions},
                 types::{StructFields, ThrushAttributes},
@@ -75,7 +75,7 @@ pub fn build_structure<'parser>(
                 String::from("Expected ':'."),
             )?;
 
-            let field_type: ThrushType = typegen::build_type(parser_ctx)?;
+            let field_type: Type = typegen::build_type(parser_ctx)?;
 
             fields_types
                 .1

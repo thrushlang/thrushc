@@ -2,12 +2,12 @@ use crate::{
     core::errors::{position::CompilationPosition, standard::ThrushCompilerIssue},
     frontend::{
         lexer::{span::Span, tokentype::TokenType},
-        semantic::typechecker::{TypeChecker, call, exprvalidations},
+        semantic::typechecker::{TypeChecker, bounds, call, validations},
         types::{
             ast::Ast,
             lexer::{
-                ThrushType,
-                traits::{ThrushTypeMutableExtensions, ThrushTypePointerExtensions},
+                Type,
+                traits::{TypeMutableExtensions, TypePointerExtensions},
             },
             parser::stmts::types::Constructor,
         },
@@ -26,7 +26,7 @@ pub fn validate_expression<'type_checker>(
             span,
             ..
         } => {
-            if let Err(mismatch_type_error) = exprvalidations::binary::validate_binary(
+            if let Err(mismatch_type_error) = validations::binary::validate_binary(
                 operator,
                 left.get_value_type()?,
                 right.get_value_type()?,
@@ -52,11 +52,9 @@ pub fn validate_expression<'type_checker>(
             span,
             ..
         } => {
-            if let Err(mismatch_type_error) = exprvalidations::unary::validate_unary(
-                operator,
-                expression.get_value_type()?,
-                *span,
-            ) {
+            if let Err(mismatch_type_error) =
+                validations::unary::validate_unary(operator, expression.get_value_type()?, *span)
+            {
                 typechecker.add_error(mismatch_type_error);
             }
 
@@ -101,11 +99,11 @@ pub fn validate_expression<'type_checker>(
             span,
             ..
         } => {
-            let value_type: &ThrushType = value.get_value_type()?;
+            let value_type: &Type = value.get_value_type()?;
 
             if let (Some(any_reference), None) = source {
                 let reference: &Ast = &any_reference.1;
-                let reference_type: &ThrushType = reference.get_value_type()?;
+                let reference_type: &Type = reference.get_value_type()?;
 
                 if !reference.is_allocated_reference() {
                     typechecker.add_error(ThrushCompilerIssue::Error(
@@ -126,9 +124,9 @@ pub fn validate_expression<'type_checker>(
                 }
 
                 if reference_type.is_mut_type() {
-                    let reference_type: ThrushType = reference_type.defer_mut_all();
+                    let reference_type: Type = reference_type.defer_mut_all();
 
-                    if let Err(error) = typechecker.validate_types(
+                    if let Err(error) = bounds::checking::check(
                         &reference_type,
                         value_type,
                         Some(value),
@@ -138,7 +136,7 @@ pub fn validate_expression<'type_checker>(
                     ) {
                         typechecker.add_error(error);
                     }
-                } else if let Err(error) = typechecker.validate_types(
+                } else if let Err(error) = bounds::checking::check(
                     reference_type,
                     value_type,
                     Some(value),
@@ -155,7 +153,7 @@ pub fn validate_expression<'type_checker>(
             }
 
             if let (None, Some(source)) = source {
-                let source_type: &ThrushType = source.get_value_type()?;
+                let source_type: &Type = source.get_value_type()?;
 
                 if !source_type.is_ptr_type() && !source_type.is_mut_type() {
                     typechecker.add_error(ThrushCompilerIssue::Error(
@@ -176,9 +174,9 @@ pub fn validate_expression<'type_checker>(
                 }
 
                 if source_type.is_mut_type() {
-                    let source_type: ThrushType = source_type.defer_mut_all();
+                    let source_type: Type = source_type.defer_mut_all();
 
-                    if let Err(error) = typechecker.validate_types(
+                    if let Err(error) = bounds::checking::check(
                         &source_type,
                         value_type,
                         Some(value),
@@ -188,14 +186,9 @@ pub fn validate_expression<'type_checker>(
                     ) {
                         typechecker.add_error(error);
                     }
-                } else if let Err(error) = typechecker.validate_types(
-                    source_type,
-                    value_type,
-                    Some(value),
-                    None,
-                    None,
-                    span,
-                ) {
+                } else if let Err(error) =
+                    bounds::checking::check(source_type, value_type, Some(value), None, None, span)
+                {
                     typechecker.add_error(error);
                 }
 
@@ -225,10 +218,10 @@ pub fn validate_expression<'type_checker>(
                 ));
             }
 
-            let array_type: &ThrushType = kind.get_fixed_array_base_type();
+            let array_type: &Type = kind.get_fixed_array_base_type();
 
             items.iter().try_for_each(|item| {
-                if let Err(error) = typechecker.validate_types(
+                if let Err(error) = bounds::checking::check(
                     array_type,
                     item.get_value_type()?,
                     Some(item),
@@ -257,10 +250,10 @@ pub fn validate_expression<'type_checker>(
                 ));
             }
 
-            let array_type: &ThrushType = kind.get_array_base_type();
+            let array_type: &Type = kind.get_array_base_type();
 
             items.iter().try_for_each(|item| {
-                if let Err(error) = typechecker.validate_types(
+                if let Err(error) = bounds::checking::check(
                     array_type,
                     item.get_value_type()?,
                     Some(item),
@@ -295,7 +288,7 @@ pub fn validate_expression<'type_checker>(
                     ));
                 }
 
-                let reference_type: &ThrushType = reference.get_value_type()?;
+                let reference_type: &Type = reference.get_value_type()?;
 
                 if reference_type.is_ptr_type() && !reference_type.is_typed_ptr() {
                     typechecker.add_error(ThrushCompilerIssue::Error(
@@ -329,7 +322,7 @@ pub fn validate_expression<'type_checker>(
             }
 
             if let Some(expr) = &index_to.1 {
-                let expr_type: &ThrushType = expr.get_any_type()?;
+                let expr_type: &Type = expr.get_any_type()?;
 
                 if expr_type.is_ptr_type() && !expr_type.is_typed_ptr() {
                     typechecker.add_error(ThrushCompilerIssue::Error(
@@ -379,7 +372,7 @@ pub fn validate_expression<'type_checker>(
         }
 
         Ast::Property { reference, .. } => {
-            let reference_type: &ThrushType = reference.get_value_type()?;
+            let reference_type: &Type = reference.get_value_type()?;
             let reference_span: Span = reference.get_span();
 
             if !reference_type.is_struct_type()
@@ -406,10 +399,10 @@ pub fn validate_expression<'type_checker>(
                 let expression: &Ast = &arg.1;
                 let expression_span: Span = expression.get_span();
 
-                let target_type: &ThrushType = &arg.2;
-                let from_type: &ThrushType = expression.get_value_type()?;
+                let target_type: &Type = &arg.2;
+                let from_type: &Type = expression.get_value_type()?;
 
-                if let Err(error) = typechecker.validate_types(
+                if let Err(error) = bounds::checking::check(
                     target_type,
                     from_type,
                     Some(expression),

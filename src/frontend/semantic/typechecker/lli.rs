@@ -2,10 +2,10 @@ use crate::{
     core::errors::{position::CompilationPosition, standard::ThrushCompilerIssue},
     frontend::{
         lexer::span::Span,
-        semantic::typechecker::TypeChecker,
+        semantic::typechecker::{TypeChecker, bounds},
         types::{
             ast::Ast,
-            lexer::{ThrushType, traits::ThrushTypePointerExtensions},
+            lexer::{Type, traits::TypePointerExtensions},
         },
     },
 };
@@ -24,7 +24,7 @@ pub fn validate_lli<'type_checker>(
         } => {
             typechecker.symbols.new_lli(name, (lli_type, *span));
 
-            let lli_value_type: &ThrushType = lli_value.get_value_type()?;
+            let lli_value_type: &Type = lli_value.get_value_type()?;
 
             if lli_type.is_void_type() {
                 typechecker.add_error(ThrushCompilerIssue::Error(
@@ -35,15 +35,10 @@ pub fn validate_lli<'type_checker>(
                 ));
             }
 
-            if let Err(mismatch_type_error) = typechecker.validate_types(
-                lli_type,
-                lli_value_type,
-                Some(lli_value),
-                None,
-                None,
-                span,
-            ) {
-                typechecker.add_error(mismatch_type_error);
+            if let Err(error) =
+                bounds::checking::check(lli_type, lli_value_type, Some(lli_value), None, None, span)
+            {
+                typechecker.add_error(error);
             }
 
             if let Err(type_error) = typechecker.analyze_ast(lli_value) {
@@ -57,7 +52,7 @@ pub fn validate_lli<'type_checker>(
             if let Some(any_reference) = &value.0 {
                 let reference: &Ast = &any_reference.1;
 
-                let reference_type: &ThrushType = reference.get_value_type()?;
+                let reference_type: &Type = reference.get_value_type()?;
                 let reference_span: Span = reference.get_span();
 
                 if !reference_type.is_ptr_type() && !reference_type.is_address_type() {
@@ -73,7 +68,7 @@ pub fn validate_lli<'type_checker>(
             }
 
             if let Some(expr) = &value.1 {
-                let expr_type: &ThrushType = expr.get_value_type()?;
+                let expr_type: &Type = expr.get_value_type()?;
                 let expr_span: Span = expr.get_span();
 
                 if !expr_type.is_ptr_type() && !expr_type.is_address_type() {
@@ -100,7 +95,7 @@ pub fn validate_lli<'type_checker>(
             if let Some(reference_any) = &address_to.0 {
                 let reference: &Ast = &reference_any.1;
 
-                let reference_type: &ThrushType = reference.get_value_type()?;
+                let reference_type: &Type = reference.get_value_type()?;
                 let reference_span: Span = reference.get_span();
 
                 if !reference_type.is_ptr_type() && !reference_type.is_address_type() {
@@ -143,7 +138,7 @@ pub fn validate_lli<'type_checker>(
             }
 
             if let Some(expr) = &address_to.1 {
-                let expr_type: &ThrushType = expr.get_value_type()?;
+                let expr_type: &Type = expr.get_value_type()?;
                 let expr_span: Span = expr.get_span();
 
                 if !expr_type.is_ptr_type() && !expr_type.is_address_type() {
@@ -208,7 +203,7 @@ pub fn validate_lli<'type_checker>(
         } => {
             if let Some(any_reference) = &write_to.0 {
                 let reference: &Ast = &any_reference.1;
-                let reference_type: &ThrushType = reference.get_value_type()?;
+                let reference_type: &Type = reference.get_value_type()?;
                 let reference_span: Span = reference.get_span();
 
                 if !reference_type.is_ptr_type()
@@ -225,7 +220,7 @@ pub fn validate_lli<'type_checker>(
             }
 
             if let Some(expr) = &write_to.1 {
-                let expr_type: &ThrushType = expr.get_value_type()?;
+                let expr_type: &Type = expr.get_value_type()?;
                 let expr_span: Span = expr.get_span();
 
                 if !expr_type.is_ptr_type()
@@ -241,10 +236,10 @@ pub fn validate_lli<'type_checker>(
                 }
             }
 
-            let write_value_type: &ThrushType = write_value.get_value_type()?;
+            let write_value_type: &Type = write_value.get_value_type()?;
             let write_value_span: Span = write_value.get_span();
 
-            if let Err(error) = typechecker.validate_types(
+            if let Err(error) = bounds::checking::check(
                 write_type,
                 write_value_type,
                 Some(write_value),

@@ -21,7 +21,7 @@ use crate::{
                 },
                 types::AstEitherExpression,
             },
-            lexer::ThrushType,
+            lexer::Type,
             parser::stmts::{
                 sites::AllocationSite,
                 types::{Constructor, EnumFields, StructFields, ThrushAttributes},
@@ -34,31 +34,31 @@ use crate::{
 pub enum Ast<'ctx> {
     Str {
         bytes: Vec<u8>,
-        kind: ThrushType,
+        kind: Type,
         span: Span,
     },
 
     Char {
-        kind: ThrushType,
+        kind: Type,
         byte: u64,
         span: Span,
     },
 
     Boolean {
-        kind: ThrushType,
+        kind: Type,
         value: u64,
         span: Span,
     },
 
     Integer {
-        kind: ThrushType,
+        kind: Type,
         value: u64,
         signed: bool,
         span: Span,
     },
 
     Float {
-        kind: ThrushType,
+        kind: Type,
         value: f64,
         signed: bool,
         span: Span,
@@ -67,21 +67,21 @@ pub enum Ast<'ctx> {
     // Fixed Array
     FixedArray {
         items: Vec<Ast<'ctx>>,
-        kind: ThrushType,
+        kind: Type,
         span: Span,
     },
 
     // Array
     Array {
         items: Vec<Ast<'ctx>>,
-        kind: ThrushType,
+        kind: Type,
         span: Span,
     },
 
     Index {
         index_to: AstEitherExpression<'ctx>,
         indexes: Vec<Ast<'ctx>>,
-        kind: ThrushType,
+        kind: Type,
         metadata: IndexMetadata,
         span: Span,
     },
@@ -94,7 +94,7 @@ pub enum Ast<'ctx> {
     Struct {
         name: &'ctx str,
         fields: StructFields<'ctx>,
-        kind: ThrushType,
+        kind: Type,
         span: Span,
         attributes: ThrushAttributes<'ctx>,
     },
@@ -102,15 +102,15 @@ pub enum Ast<'ctx> {
     Constructor {
         name: &'ctx str,
         args: Constructor<'ctx>,
-        kind: ThrushType,
+        kind: Type,
         span: Span,
     },
 
     Property {
         name: &'ctx str,
         reference: Rc<Ast<'ctx>>,
-        indexes: Vec<(ThrushType, u32)>,
-        kind: ThrushType,
+        indexes: Vec<(Type, u32)>,
+        kind: Type,
         span: Span,
     },
 
@@ -174,7 +174,7 @@ pub enum Ast<'ctx> {
     EnumValue {
         name: String,
         value: Rc<Ast<'ctx>>,
-        kind: ThrushType,
+        kind: Type,
         span: Span,
     },
 
@@ -189,16 +189,16 @@ pub enum Ast<'ctx> {
         name: &'ctx str,
         ascii_name: &'ctx str,
         parameters: Vec<Ast<'ctx>>,
-        parameters_types: Vec<ThrushType>,
+        parameters_types: Vec<Type>,
         assembler: String,
         constraints: String,
-        return_type: ThrushType,
+        return_type: Type,
         attributes: ThrushAttributes<'ctx>,
         span: Span,
     },
     AssemblerFunctionParameter {
         name: &'ctx str,
-        kind: ThrushType,
+        kind: Type,
         position: u32,
         span: Span,
     },
@@ -206,23 +206,23 @@ pub enum Ast<'ctx> {
         name: &'ctx str,
         ascii_name: &'ctx str,
         parameters: Vec<Ast<'ctx>>,
-        parameter_types: Vec<ThrushType>,
+        parameter_types: Vec<Type>,
         body: Rc<Ast<'ctx>>,
-        return_type: ThrushType,
+        return_type: Type,
         attributes: ThrushAttributes<'ctx>,
         span: Span,
     },
     FunctionParameter {
         name: &'ctx str,
         ascii_name: &'ctx str,
-        kind: ThrushType,
+        kind: Type,
         position: u32,
         metadata: FunctionParameterMetadata,
         span: Span,
     },
     Return {
         expression: Option<Rc<Ast<'ctx>>>,
-        kind: ThrushType,
+        kind: Type,
         span: Span,
     },
 
@@ -230,7 +230,7 @@ pub enum Ast<'ctx> {
     Const {
         name: &'ctx str,
         ascii_name: &'ctx str,
-        kind: ThrushType,
+        kind: Type,
         value: Rc<Ast<'ctx>>,
         attributes: ThrushAttributes<'ctx>,
         metadata: ConstantMetadata,
@@ -241,7 +241,7 @@ pub enum Ast<'ctx> {
     Local {
         name: &'ctx str,
         ascii_name: &'ctx str,
-        kind: ThrushType,
+        kind: Type,
         value: Rc<Ast<'ctx>>,
         attributes: ThrushAttributes<'ctx>,
         metadata: LocalMetadata,
@@ -251,7 +251,7 @@ pub enum Ast<'ctx> {
     // Reference
     Reference {
         name: &'ctx str,
-        kind: ThrushType,
+        kind: Type,
         metadata: ReferenceMetadata,
         span: Span,
     },
@@ -260,21 +260,21 @@ pub enum Ast<'ctx> {
     Mut {
         source: AstEitherExpression<'ctx>,
         value: Rc<Ast<'ctx>>,
-        kind: ThrushType,
+        kind: Type,
         span: Span,
     },
 
     // Low Level Instruction
     LLI {
         name: &'ctx str,
-        kind: ThrushType,
+        kind: Type,
         value: Rc<Ast<'ctx>>,
         span: Span,
     },
 
     // Pointer Manipulation
     Alloc {
-        type_to_alloc: ThrushType,
+        type_to_alloc: Type,
         site_allocation: AllocationSite,
         attributes: ThrushAttributes<'ctx>,
         span: Span,
@@ -283,33 +283,33 @@ pub enum Ast<'ctx> {
     Address {
         address_to: AstEitherExpression<'ctx>,
         indexes: Vec<Ast<'ctx>>,
-        kind: ThrushType,
+        kind: Type,
         span: Span,
     },
 
     Write {
         write_to: AstEitherExpression<'ctx>,
         write_value: Rc<Ast<'ctx>>,
-        write_type: ThrushType,
+        write_type: Type,
         span: Span,
     },
 
     Load {
         value: AstEitherExpression<'ctx>,
-        kind: ThrushType,
+        kind: Type,
         span: Span,
     },
 
     Deref {
         value: Rc<Ast<'ctx>>,
-        kind: ThrushType,
+        kind: Type,
         span: Span,
     },
 
     // Casts
     As {
         from: Rc<Ast<'ctx>>,
-        cast: ThrushType,
+        cast: Type,
         span: Span,
     },
 
@@ -317,7 +317,7 @@ pub enum Ast<'ctx> {
     Call {
         name: &'ctx str,
         args: Vec<Ast<'ctx>>,
-        kind: ThrushType,
+        kind: Type,
         span: Span,
     },
 
@@ -325,7 +325,7 @@ pub enum Ast<'ctx> {
         assembler: String,
         constraints: String,
         args: Vec<Ast<'ctx>>,
-        kind: ThrushType,
+        kind: Type,
         attributes: ThrushAttributes<'ctx>,
         span: Span,
     },
@@ -334,13 +334,13 @@ pub enum Ast<'ctx> {
         left: Rc<Ast<'ctx>>,
         operator: TokenType,
         right: Rc<Ast<'ctx>>,
-        kind: ThrushType,
+        kind: Type,
         span: Span,
     },
 
     UnaryOp {
         operator: TokenType,
-        kind: ThrushType,
+        kind: Type,
         expression: Rc<Ast<'ctx>>,
         is_pre: bool,
         span: Span,
@@ -348,20 +348,20 @@ pub enum Ast<'ctx> {
 
     Group {
         expression: Rc<Ast<'ctx>>,
-        kind: ThrushType,
+        kind: Type,
         span: Span,
     },
 
     // Builtins
     SizeOf {
-        sizeof: ThrushType,
-        kind: ThrushType,
+        sizeof: Type,
+        kind: Type,
         span: Span,
     },
 
     Builtin {
         builtin: Builtin<'ctx>,
-        kind: ThrushType,
+        kind: Type,
         span: Span,
     },
 

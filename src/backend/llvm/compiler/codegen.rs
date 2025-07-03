@@ -9,7 +9,7 @@ use crate::backend::llvm::compiler::{
 use crate::backend::types::{repr::LLVMFunction, traits::AssemblerFunctionExtensions};
 use crate::core::console::logging::{self, LoggingType};
 use crate::frontend::types::ast::metadata::local::LocalMetadata;
-use crate::frontend::types::lexer::ThrushType;
+use crate::frontend::types::lexer::Type;
 use crate::frontend::types::parser::repr::{
     AssemblerFunctionRepresentation, ConstantRepresentation, FunctionParameter,
     FunctionRepresentation,
@@ -384,7 +384,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         let name: &str = parameter.0;
         let ascii_name: &str = parameter.1;
 
-        let parameter_type: &ThrushType = parameter.2;
+        let parameter_type: &Type = parameter.2;
         let parameter_position: u32 = parameter.3;
 
         if let Some(raw_value_llvm_parameter) = llvm_function.get_nth_param(parameter_position) {
@@ -408,7 +408,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         let function: FunctionRepresentation = raw_function.as_function_representation();
 
         let function_ascii_name: &str = function.1;
-        let function_type: &ThrushType = function.2;
+        let function_type: &Type = function.2;
         let function_parameters: &[Ast<'ctx>] = function.3;
         let function_body: &Ast = function.5;
 
@@ -487,7 +487,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         let name: &str = constant.0;
         let ascii_name: &str = constant.1;
 
-        let kind: &ThrushType = constant.2;
+        let kind: &Type = constant.2;
         let value: &Ast = constant.3;
         let attributes: &ThrushAttributes = constant.4;
 
@@ -508,9 +508,9 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         let asm_function_ascii_name: &str = asm_function.1;
         let asm_function_assembler: String = asm_function.2.to_string();
         let asm_function_constraints: String = asm_function.3.to_string();
-        let asm_function_return_type: &ThrushType = asm_function.4;
+        let asm_function_return_type: &Type = asm_function.4;
         let asm_function_parameters: &[Ast] = asm_function.5;
-        let asm_function_parameters_types: &[ThrushType] = asm_function.6;
+        let asm_function_parameters_types: &[Type] = asm_function.6;
         let asm_function_attributes: &ThrushAttributes = asm_function.7;
 
         let mut call_convention: u32 = CallConvention::Standard as u32;
@@ -617,9 +617,9 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
 
         let function_name: &str = function.0;
         let function_ascii_name: &str = function.1;
-        let function_type: &ThrushType = function.2;
+        let function_type: &Type = function.2;
         let function_parameters: &[Ast<'ctx>] = function.3;
-        let function_parameters_types: &[ThrushType] = function.4;
+        let function_parameters_types: &[Type] = function.4;
         let function_attributes: &ThrushAttributes = function.6;
 
         let mut extern_name: Option<&str> = None;

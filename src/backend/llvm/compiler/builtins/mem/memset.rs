@@ -12,7 +12,7 @@ use inkwell::{
 use crate::{
     backend::llvm::compiler::{context::LLVMCodeGenContext, ptrgen, typegen, valuegen},
     core::console::logging::{self, LoggingType},
-    frontend::types::{ast::Ast, lexer::ThrushType},
+    frontend::types::{ast::Ast, lexer::Type},
 };
 
 pub fn compile<'ctx>(
@@ -25,7 +25,7 @@ pub fn compile<'ctx>(
     let llvm_builder: &Builder = context.get_llvm_builder();
 
     let dest: PointerValue =
-        ptrgen::compile(context, destination, Some(&ThrushType::Ptr(None))).into_pointer_value();
+        ptrgen::compile(context, destination, Some(&Type::Ptr(None))).into_pointer_value();
 
     let new_size: IntValue = valuegen::compile(context, new_size, None).into_int_value();
     let size: IntValue = valuegen::compile(context, size, None).into_int_value();

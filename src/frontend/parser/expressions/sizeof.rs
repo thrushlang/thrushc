@@ -3,7 +3,7 @@ use crate::{
     frontend::{
         lexer::{span::Span, token::Token, tokentype::TokenType},
         parser::{ParserContext, expressions::reference, typegen},
-        types::{ast::Ast, lexer::ThrushType, parser::stmts::traits::TokenExtensions},
+        types::{ast::Ast, lexer::Type, parser::stmts::traits::TokenExtensions},
     },
 };
 
@@ -32,7 +32,7 @@ pub fn build_sizeof<'parser>(
 
         let reference: Ast = reference::build_reference(parser_context, name, span)?;
 
-        let reference_type: &ThrushType = reference.get_value_type()?;
+        let reference_type: &Type = reference.get_value_type()?;
 
         parser_context.consume(
             TokenType::RParen,
@@ -42,12 +42,12 @@ pub fn build_sizeof<'parser>(
 
         return Ok(Ast::SizeOf {
             sizeof: reference_type.clone(),
-            kind: ThrushType::U32,
+            kind: Type::U32,
             span: sizeof_span,
         });
     }
 
-    let sizeof_type: ThrushType = typegen::build_type(parser_context)?;
+    let sizeof_type: Type = typegen::build_type(parser_context)?;
 
     parser_context.consume(
         TokenType::RParen,
@@ -57,7 +57,7 @@ pub fn build_sizeof<'parser>(
 
     Ok(Ast::SizeOf {
         sizeof: sizeof_type,
-        kind: ThrushType::U32,
+        kind: Type::U32,
         span: sizeof_span,
     })
 }

@@ -7,7 +7,7 @@ use inkwell::{
     values::{BasicValueEnum, FloatValue, IntValue},
 };
 
-use crate::frontend::types::lexer::ThrushType;
+use crate::frontend::types::lexer::Type;
 
 use super::{context::LLVMCodeGenContext, typegen};
 
@@ -71,8 +71,8 @@ pub fn float_together<'ctx>(
 }
 pub fn integer<'ctx>(
     context: &LLVMCodeGenContext<'_, 'ctx>,
-    target_type: &ThrushType,
-    from_type: &ThrushType,
+    target_type: &Type,
+    from_type: &Type,
     from: BasicValueEnum<'ctx>,
 ) -> Option<BasicValueEnum<'ctx>> {
     let llvm_builder: &Builder = context.get_llvm_builder();
@@ -101,8 +101,8 @@ pub fn integer<'ctx>(
 
 pub fn float<'ctx>(
     context: &LLVMCodeGenContext<'_, 'ctx>,
-    target_type: &ThrushType,
-    from_type: &ThrushType,
+    target_type: &Type,
+    from_type: &Type,
     from: BasicValueEnum<'ctx>,
 ) -> Option<BasicValueEnum<'ctx>> {
     let llvm_builder: &Builder = context.get_llvm_builder();
@@ -130,8 +130,8 @@ pub fn float<'ctx>(
 
 pub fn try_cast<'ctx>(
     context: &LLVMCodeGenContext<'_, 'ctx>,
-    target_type: &ThrushType,
-    from_type: &ThrushType,
+    target_type: &Type,
+    from_type: &Type,
     from: BasicValueEnum<'ctx>,
 ) -> Option<BasicValueEnum<'ctx>> {
     if from.is_float_value() {

@@ -6,7 +6,7 @@ use crate::{
             ParserContext, expression,
             expressions::precedences::equality::{self},
         },
-        types::{ast::Ast, lexer::ThrushType, parser::stmts::traits::TokenExtensions},
+        types::{ast::Ast, lexer::Type, parser::stmts::traits::TokenExtensions},
     },
 };
 
@@ -23,7 +23,7 @@ pub fn unary_precedence<'parser>(
         return Ok(Ast::UnaryOp {
             operator,
             expression: expression.into(),
-            kind: ThrushType::Bool,
+            kind: Type::Bool,
             is_pre: false,
             span,
         });
@@ -36,8 +36,8 @@ pub fn unary_precedence<'parser>(
 
         let expression: Ast = equality::equality_precedence(parser_context)?;
 
-        let expression_type: &ThrushType = expression.get_value_type()?;
-        let kind: ThrushType = expression_type.narrowing_cast();
+        let expression_type: &Type = expression.get_value_type()?;
+        let kind: Type = expression_type.narrowing_cast();
 
         return Ok(Ast::UnaryOp {
             operator,
@@ -55,7 +55,7 @@ pub fn unary_precedence<'parser>(
 
         let expression: Ast = expression::build_expr(parser_context)?;
 
-        let expression_type: &ThrushType = expression.get_value_type()?;
+        let expression_type: &Type = expression.get_value_type()?;
 
         let unaryop: Ast = Ast::UnaryOp {
             operator,
@@ -74,7 +74,7 @@ pub fn unary_precedence<'parser>(
         let span: Span = operator_tk.get_span();
 
         let expression: Ast = expression::build_expr(parser_context)?;
-        let expression_type: &ThrushType = expression.get_value_type()?;
+        let expression_type: &Type = expression.get_value_type()?;
 
         let unaryop: Ast = Ast::UnaryOp {
             operator,

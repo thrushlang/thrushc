@@ -5,7 +5,7 @@ use {
         core::console::logging::{self, LoggingType},
         frontend::{
             lexer::tokentype::TokenType,
-            types::{lexer::ThrushType, parser::repr::BinaryOperation},
+            types::{lexer::Type, parser::repr::BinaryOperation},
         },
     },
     inkwell::{
@@ -112,7 +112,7 @@ pub fn int_operation<'ctx>(
 pub fn integer_binaryop<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     binary: BinaryOperation<'ctx>,
-    cast_type: Option<&ThrushType>,
+    cast_type: Option<&Type>,
 ) -> BasicValueEnum<'ctx> {
     if let (
         _,

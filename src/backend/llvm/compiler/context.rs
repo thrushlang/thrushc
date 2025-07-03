@@ -16,7 +16,7 @@ use {
             },
         },
         core::diagnostic::diagnostician::Diagnostician,
-        frontend::types::{lexer::ThrushType, parser::stmts::types::ThrushAttributes},
+        frontend::types::{lexer::Type, parser::stmts::types::ThrushAttributes},
     },
     ahash::AHashMap as HashMap,
     inkwell::{
@@ -96,7 +96,7 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
         &mut self,
         name: &'ctx str,
         ascii_name: &'ctx str,
-        kind: &'ctx ThrushType,
+        kind: &'ctx Type,
         attributes: &'ctx ThrushAttributes<'ctx>,
     ) {
         let ptr: PointerValue = alloc::alloc(self, ascii_name, kind, attributes);
@@ -114,12 +114,7 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
         }
     }
 
-    pub fn new_lli(
-        &mut self,
-        name: &'ctx str,
-        kind: &'ctx ThrushType,
-        value: BasicValueEnum<'ctx>,
-    ) {
+    pub fn new_lli(&mut self, name: &'ctx str, kind: &'ctx Type, value: BasicValueEnum<'ctx>) {
         let lli: SymbolAllocated =
             SymbolAllocated::new(SymbolToAllocate::LowLevelInstruction, kind, value);
 
@@ -137,7 +132,7 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
         &mut self,
         name: &'ctx str,
         ascii_name: &'ctx str,
-        kind: &'ctx ThrushType,
+        kind: &'ctx Type,
         value: BasicValueEnum<'ctx>,
     ) {
         let ptr: PointerValue = alloc::local_constant(
@@ -164,7 +159,7 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
         &mut self,
         name: &'ctx str,
         ascii_name: &'ctx str,
-        kind: &'ctx ThrushType,
+        kind: &'ctx Type,
         value: BasicValueEnum<'ctx>,
         attributes: &'ctx ThrushAttributes<'ctx>,
     ) {
@@ -186,7 +181,7 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
         &mut self,
         name: &'ctx str,
         ascii_name: &'ctx str,
-        kind: &'ctx ThrushType,
+        kind: &'ctx Type,
         value: BasicValueEnum<'ctx>,
     ) {
         value.set_name(ascii_name);

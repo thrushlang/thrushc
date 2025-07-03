@@ -5,12 +5,12 @@ use crate::{
     },
     frontend::{
         lexer::span::Span,
-        types::{ast::Ast, lexer::ThrushType},
+        types::{ast::Ast, lexer::Type},
     },
 };
 
 impl Ast<'_> {
-    pub fn get_any_type(&self) -> Result<&ThrushType, ThrushCompilerIssue> {
+    pub fn get_any_type(&self) -> Result<&Type, ThrushCompilerIssue> {
         match self {
             // Primitive Types & Literals
             Ast::Integer { kind, .. } => Ok(kind),
@@ -18,8 +18,8 @@ impl Ast<'_> {
             Ast::Boolean { kind, .. } => Ok(kind),
             Ast::Char { kind, .. } => Ok(kind),
             Ast::Str { kind, .. } => Ok(kind),
-            Ast::NullPtr { .. } => Ok(&ThrushType::Ptr(None)),
-            Ast::Null { .. } => Ok(&ThrushType::Void),
+            Ast::NullPtr { .. } => Ok(&Type::Ptr(None)),
+            Ast::Null { .. } => Ok(&Type::Void),
 
             // Variables & Memory Operations
             Ast::Local { kind, .. } => Ok(kind),
@@ -41,7 +41,7 @@ impl Ast<'_> {
             Ast::AssemblerFunctionParameter { kind, .. } => Ok(kind),
             Ast::Call { kind, .. } => Ok(kind),
             Ast::Return { kind, .. } => Ok(kind),
-            Ast::EntryPoint { .. } => Ok(&ThrushType::Void),
+            Ast::EntryPoint { .. } => Ok(&Type::Void),
             Ast::Function { return_type, .. } => Ok(return_type),
             Ast::AssemblerFunction { return_type, .. } => Ok(return_type),
 
@@ -63,30 +63,30 @@ impl Ast<'_> {
             Ast::FixedArray { kind, .. } => Ok(kind),
             Ast::Array { kind, .. } => Ok(kind),
             Ast::Struct { kind, .. } => Ok(kind),
-            Ast::Enum { .. } => Ok(&ThrushType::Void),
+            Ast::Enum { .. } => Ok(&Type::Void),
 
             // Type Conversions
             Ast::As { cast, .. } => Ok(cast),
 
             // Control Flow
-            Ast::If { .. } => Ok(&ThrushType::Void),
-            Ast::Elif { .. } => Ok(&ThrushType::Void),
-            Ast::Else { .. } => Ok(&ThrushType::Void),
-            Ast::For { .. } => Ok(&ThrushType::Void),
-            Ast::While { .. } => Ok(&ThrushType::Void),
-            Ast::Loop { .. } => Ok(&ThrushType::Void),
-            Ast::Break { .. } => Ok(&ThrushType::Void),
-            Ast::Continue { .. } => Ok(&ThrushType::Void),
-            Ast::Block { .. } => Ok(&ThrushType::Void),
+            Ast::If { .. } => Ok(&Type::Void),
+            Ast::Elif { .. } => Ok(&Type::Void),
+            Ast::Else { .. } => Ok(&Type::Void),
+            Ast::For { .. } => Ok(&Type::Void),
+            Ast::While { .. } => Ok(&Type::Void),
+            Ast::Loop { .. } => Ok(&Type::Void),
+            Ast::Break { .. } => Ok(&Type::Void),
+            Ast::Continue { .. } => Ok(&Type::Void),
+            Ast::Block { .. } => Ok(&Type::Void),
 
             // Constants & Low-Level Instructions
             Ast::Const { kind, .. } => Ok(kind),
             Ast::LLI { kind, .. } => Ok(kind),
-            Ast::Pass { .. } => Ok(&ThrushType::Void),
+            Ast::Pass { .. } => Ok(&Type::Void),
         }
     }
 
-    pub fn get_value_type(&self) -> Result<&ThrushType, ThrushCompilerIssue> {
+    pub fn get_value_type(&self) -> Result<&Type, ThrushCompilerIssue> {
         match self {
             // Primitive values
             Ast::Integer { kind, .. } => Ok(kind),
@@ -94,7 +94,7 @@ impl Ast<'_> {
             Ast::Boolean { kind, .. } => Ok(kind),
             Ast::Char { kind, .. } => Ok(kind),
             Ast::Str { kind, .. } => Ok(kind),
-            Ast::NullPtr { .. } => Ok(&ThrushType::Ptr(None)),
+            Ast::NullPtr { .. } => Ok(&Type::Ptr(None)),
 
             // Variables and references
             Ast::Local { kind, .. } => Ok(kind),
@@ -145,7 +145,7 @@ impl Ast<'_> {
         }
     }
 
-    pub fn get_type_unwrapped(&self) -> &ThrushType {
+    pub fn get_type_unwrapped(&self) -> &Type {
         match self {
             // Primitive values
             Ast::Integer { kind, .. } => kind,
@@ -153,7 +153,7 @@ impl Ast<'_> {
             Ast::Boolean { kind, .. } => kind,
             Ast::Char { kind, .. } => kind,
             Ast::Str { kind, .. } => kind,
-            Ast::NullPtr { .. } => &ThrushType::Ptr(None),
+            Ast::NullPtr { .. } => &Type::Ptr(None),
 
             // Variables and references
             Ast::Local { kind, .. } => kind,

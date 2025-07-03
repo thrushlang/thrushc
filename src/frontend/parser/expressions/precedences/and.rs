@@ -3,7 +3,7 @@ use crate::{
     frontend::{
         lexer::{span::Span, token::Token, tokentype::TokenType},
         parser::{ParserContext, expressions::precedences::unary},
-        types::{ast::Ast, lexer::ThrushType},
+        types::{ast::Ast, lexer::Type},
     },
 };
 
@@ -24,7 +24,7 @@ pub fn and_precedence<'parser>(
             left: expression.into(),
             operator,
             right: right.into(),
-            kind: ThrushType::Bool,
+            kind: Type::Bool,
             span,
         }
     }

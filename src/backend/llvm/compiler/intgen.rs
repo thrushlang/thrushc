@@ -2,30 +2,30 @@ use inkwell::{context::Context, values::IntValue};
 
 use crate::{
     core::console::logging::{self, LoggingType},
-    frontend::types::lexer::ThrushType,
+    frontend::types::lexer::Type,
 };
 
 pub fn integer<'ctx>(
     context: &'ctx Context,
-    kind: &ThrushType,
+    kind: &Type,
     number: u64,
     signed: bool,
 ) -> IntValue<'ctx> {
     match kind {
-        ThrushType::Char => context.i8_type().const_int(number, signed).const_neg(),
-        ThrushType::S8 if signed => context.i8_type().const_int(number, signed).const_neg(),
-        ThrushType::S8 => context.i8_type().const_int(number, signed),
-        ThrushType::S16 if signed => context.i16_type().const_int(number, signed).const_neg(),
-        ThrushType::S16 => context.i16_type().const_int(number, signed),
-        ThrushType::S32 if signed => context.i32_type().const_int(number, signed).const_neg(),
-        ThrushType::S32 => context.i32_type().const_int(number, signed),
-        ThrushType::S64 if signed => context.i64_type().const_int(number, signed).const_neg(),
-        ThrushType::S64 => context.i64_type().const_int(number, signed),
-        ThrushType::U8 => context.i8_type().const_int(number, false),
-        ThrushType::U16 => context.i16_type().const_int(number, false),
-        ThrushType::U32 => context.i32_type().const_int(number, false),
-        ThrushType::U64 => context.i64_type().const_int(number, false),
-        ThrushType::Bool => context.bool_type().const_int(number, false),
+        Type::Char => context.i8_type().const_int(number, signed).const_neg(),
+        Type::S8 if signed => context.i8_type().const_int(number, signed).const_neg(),
+        Type::S8 => context.i8_type().const_int(number, signed),
+        Type::S16 if signed => context.i16_type().const_int(number, signed).const_neg(),
+        Type::S16 => context.i16_type().const_int(number, signed),
+        Type::S32 if signed => context.i32_type().const_int(number, signed).const_neg(),
+        Type::S32 => context.i32_type().const_int(number, signed),
+        Type::S64 if signed => context.i64_type().const_int(number, signed).const_neg(),
+        Type::S64 => context.i64_type().const_int(number, signed),
+        Type::U8 => context.i8_type().const_int(number, false),
+        Type::U16 => context.i16_type().const_int(number, false),
+        Type::U32 => context.i32_type().const_int(number, false),
+        Type::U64 => context.i64_type().const_int(number, false),
+        Type::Bool => context.bool_type().const_int(number, false),
 
         what => {
             logging::log(

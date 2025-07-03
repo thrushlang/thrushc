@@ -2,8 +2,8 @@ use crate::{
     core::errors::{position::CompilationPosition, standard::ThrushCompilerIssue},
     frontend::{
         lexer::span::Span,
-        semantic::typechecker::TypeChecker,
-        types::{ast::Ast, lexer::ThrushType},
+        semantic::typechecker::{TypeChecker, bounds},
+        types::{ast::Ast, lexer::Type},
     },
 };
 
@@ -18,12 +18,12 @@ pub fn validate_constant<'type_checker>(
             span,
             ..
         } => {
-            let from_type: &ThrushType = value.get_value_type()?;
+            let from_type: &Type = value.get_value_type()?;
 
-            if let Err(mismatch_type_error) =
-                typechecker.validate_types(target_type, from_type, Some(value), None, None, span)
+            if let Err(error) =
+                bounds::checking::check(target_type, from_type, Some(value), None, None, span)
             {
-                typechecker.add_error(mismatch_type_error);
+                typechecker.add_error(error);
             }
 
             Ok(())

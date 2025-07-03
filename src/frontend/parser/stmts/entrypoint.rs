@@ -3,7 +3,7 @@ use crate::{
     frontend::{
         lexer::{span::Span, tokentype::TokenType},
         parser::{ParserContext, stmts::block},
-        types::{ast::Ast, lexer::ThrushType, parser::stmts::traits::TokenExtensions},
+        types::{ast::Ast, lexer::Type, parser::stmts::traits::TokenExtensions},
     },
 };
 
@@ -41,9 +41,7 @@ pub fn build_main<'parser>(
 
     parser_ctx.get_mut_control_ctx().set_entrypoint(true);
 
-    parser_ctx
-        .get_mut_type_ctx()
-        .set_function_type(ThrushType::U32);
+    parser_ctx.get_mut_type_ctx().set_function_type(Type::U32);
 
     Ok(Ast::EntryPoint {
         body: block::build_block(parser_ctx)?.into(),

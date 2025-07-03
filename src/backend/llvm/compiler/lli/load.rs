@@ -10,14 +10,14 @@ use inkwell::{
 use crate::{
     backend::llvm::compiler::{cast, context::LLVMCodeGenContext, memory, ptrgen},
     core::console::logging::{self, LoggingType},
-    frontend::types::{ast::Ast, lexer::ThrushType},
+    frontend::types::{ast::Ast, lexer::Type},
 };
 
 pub fn compile<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     value: &'ctx (Option<(&'ctx str, Rc<Ast<'ctx>>)>, Option<Rc<Ast<'ctx>>>),
-    kind: &ThrushType,
-    cast_type: Option<&ThrushType>,
+    kind: &Type,
+    cast_type: Option<&Type>,
 ) -> BasicValueEnum<'ctx> {
     let mut value: BasicValueEnum = match value {
         (Some((name, _)), _) => {

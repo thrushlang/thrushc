@@ -3,7 +3,7 @@ use crate::{
     frontend::{
         lexer::{span::Span, token::Token, tokentype::TokenType},
         parser::{ParserContext, expression, typegen},
-        types::{ast::Ast, lexer::ThrushType, parser::stmts::traits::TokenExtensions},
+        types::{ast::Ast, lexer::Type, parser::stmts::traits::TokenExtensions},
     },
 };
 
@@ -51,7 +51,7 @@ pub fn build_lli<'parser>(
         String::from("Expected ':'."),
     )?;
 
-    let instr_type: ThrushType = typegen::build_type(parser_ctx)?;
+    let instr_type: Type = typegen::build_type(parser_ctx)?;
 
     parser_ctx.consume(
         TokenType::Eq,

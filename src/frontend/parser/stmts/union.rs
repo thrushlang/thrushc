@@ -5,7 +5,7 @@ use crate::{
         parser::{ParserContext, attributes, expression, typegen},
         types::{
             ast::Ast,
-            lexer::ThrushType,
+            lexer::Type,
             parser::stmts::{
                 traits::TokenExtensions,
                 types::{EnumFields, ThrushAttributes},
@@ -73,7 +73,7 @@ pub fn build_enum<'parser>(
                 String::from("Expected ':'."),
             )?;
 
-            let field_type: ThrushType = typegen::build_type(parser_ctx)?;
+            let field_type: Type = typegen::build_type(parser_ctx)?;
 
             if !field_type.is_numeric() {
                 return Err(ThrushCompilerIssue::Error(
@@ -122,7 +122,7 @@ pub fn build_enum<'parser>(
             parser_ctx.consume(TokenType::Eq, "Syntax error".into(), "Expected '='.".into())?;
 
             let expression: Ast = expression::build_expr(parser_ctx)?;
-            let expression_type: &ThrushType = expression.get_value_type()?;
+            let expression_type: &Type = expression.get_value_type()?;
             let expression_span: Span = expression.get_span();
 
             if !expression_type.is_integer_type()

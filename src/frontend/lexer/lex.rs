@@ -1,0 +1,96 @@
+use crate::{
+    core::errors::standard::ThrushCompilerIssue,
+    frontend::lexer::{
+        Lexer, character, identifier, number, span::Span, string, tokentype::TokenType,
+    },
+};
+
+pub fn analyze(lexer: &mut Lexer) -> Result<(), ThrushCompilerIssue> {
+    match lexer.advance() {
+        '[' => lexer.make(TokenType::LBracket),
+        ']' => lexer.make(TokenType::RBracket),
+        '(' => lexer.make(TokenType::LParen),
+        ')' => lexer.make(TokenType::RParen),
+        '{' => lexer.make(TokenType::LBrace),
+        '}' => lexer.make(TokenType::RBrace),
+        ',' => lexer.make(TokenType::Comma),
+        '.' if lexer.char_match('.') && lexer.char_match('.') => lexer.make(TokenType::Pass),
+        '.' if lexer.char_match('.') => lexer.make(TokenType::Range),
+        '.' => lexer.make(TokenType::Dot),
+        '%' => lexer.make(TokenType::Arith),
+        '*' => lexer.make(TokenType::Star),
+        '/' if lexer.char_match('/') => loop {
+            if lexer.peek() == '\n' || lexer.end() {
+                break;
+            }
+
+            lexer.advance();
+        },
+        '/' if lexer.char_match('*') => loop {
+            if lexer.char_match('*') {
+                continue;
+            } else if lexer.char_match('/') {
+                break;
+            } else if lexer.end() {
+                lexer.end_span();
+
+                let span: Span = Span::new(lexer.line, lexer.span);
+
+                return Err(ThrushCompilerIssue::Error(
+                        "Syntax error".into(),
+                        "Unterminated multiline comment. Did you forget to close the comment with a '*/'?".into(),
+                        None,
+                        span,
+                    ));
+            }
+
+            lexer.advance();
+        },
+        '/' => lexer.make(TokenType::Slash),
+        ';' => lexer.make(TokenType::SemiColon),
+        '-' if lexer.char_match('-') => lexer.make(TokenType::MinusMinus),
+        '-' if lexer.char_match('=') => lexer.make(TokenType::MinusEq),
+        '-' if lexer.char_match('>') => lexer.make(TokenType::Arrow),
+        '-' => lexer.make(TokenType::Minus),
+        '+' if lexer.char_match('+') => lexer.make(TokenType::PlusPlus),
+        '+' if lexer.char_match('=') => lexer.make(TokenType::PlusEq),
+        '+' => lexer.make(TokenType::Plus),
+        ':' if lexer.char_match(':') => lexer.make(TokenType::ColonColon),
+        ':' => lexer.make(TokenType::Colon),
+        '!' if lexer.char_match('=') => lexer.make(TokenType::BangEq),
+        '!' => lexer.make(TokenType::Bang),
+        '=' if lexer.char_match('=') => lexer.make(TokenType::EqEq),
+        '=' => lexer.make(TokenType::Eq),
+        '<' if lexer.char_match('=') => lexer.make(TokenType::LessEq),
+        '<' if lexer.char_match('<') => lexer.make(TokenType::LShift),
+        '<' => lexer.make(TokenType::Less),
+        '>' if lexer.char_match('=') => lexer.make(TokenType::GreaterEq),
+        '>' if lexer.char_match('>') => lexer.make(TokenType::RShift),
+        '>' => lexer.make(TokenType::Greater),
+        '|' if lexer.char_match('|') => lexer.make(TokenType::Or),
+        '&' if lexer.char_match('&') => lexer.make(TokenType::And),
+        ' ' | '\r' | '\t' => {}
+        '\n' => lexer.line += 1,
+
+        '\'' => character::lex(lexer)?,
+        '"' => string::lex(lexer)?,
+        '0'..='9' => number::lex(lexer)?,
+
+        identifier if lexer.is_identifier_boundary(identifier) => identifier::lex(lexer)?,
+
+        _ => {
+            lexer.end_span();
+
+            let span: Span = Span::new(lexer.line, lexer.span);
+
+            return Err(ThrushCompilerIssue::Error(
+                "Unknown character".into(),
+                "This character isn't recognized.".into(),
+                None,
+                span,
+            ));
+        }
+    }
+
+    Ok(())
+}

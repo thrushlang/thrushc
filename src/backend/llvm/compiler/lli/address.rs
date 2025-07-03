@@ -16,7 +16,7 @@ use crate::{
         ptrgen, valuegen,
     },
     core::console::logging::{self, LoggingType},
-    frontend::types::{ast::Ast, lexer::ThrushType},
+    frontend::types::{ast::Ast, lexer::Type},
 };
 
 pub fn compile<'ctx>(
@@ -29,7 +29,7 @@ pub fn compile<'ctx>(
 
     let indexes: Vec<IntValue> = indexes
         .iter()
-        .map(|index| valuegen::compile(context, index, Some(&ThrushType::U32)).into_int_value())
+        .map(|index| valuegen::compile(context, index, Some(&Type::U32)).into_int_value())
         .collect();
 
     match address_to {
@@ -39,7 +39,7 @@ pub fn compile<'ctx>(
             symbol.gep(llvm_context, llvm_builder, &indexes).into()
         }
         (_, Some(expr)) => {
-            let kind: &ThrushType = expr.get_type_unwrapped();
+            let kind: &Type = expr.get_type_unwrapped();
             let ptr: PointerValue = ptrgen::compile(context, expr, None).into_pointer_value();
 
             memory::gep_anon(context, ptr, kind, &indexes).into()

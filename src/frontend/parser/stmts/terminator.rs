@@ -3,7 +3,7 @@ use crate::{
     frontend::{
         lexer::{span::Span, token::Token, tokentype::TokenType},
         parser::{ParserContext, expression},
-        types::{ast::Ast, lexer::ThrushType, parser::stmts::traits::TokenExtensions},
+        types::{ast::Ast, lexer::Type, parser::stmts::traits::TokenExtensions},
     },
 };
 
@@ -43,7 +43,7 @@ pub fn build_return<'parser>(
 
         return Ok(Ast::Return {
             expression: None,
-            kind: ThrushType::Void,
+            kind: Type::Void,
             span,
         });
     }

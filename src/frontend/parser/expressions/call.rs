@@ -5,7 +5,7 @@ use crate::{
         parser::{ParserContext, expression},
         types::ast::Ast,
         types::{
-            lexer::ThrushType,
+            lexer::Type,
             parser::{
                 stmts::traits::{FoundSymbolEither, FoundSymbolExtension},
                 symbols::{
@@ -24,7 +24,7 @@ pub fn build_call<'parser>(
 ) -> Result<Ast<'parser>, ThrushCompilerIssue> {
     let object: FoundSymbolId = parser_context.get_symbols().get_symbols_id(name, span)?;
 
-    let function_type: ThrushType = if object.is_function_asm() {
+    let function_type: Type = if object.is_function_asm() {
         let asm_function_id: &str = object.expected_asm_function(span)?;
         let asm_function: AssemblerFunction = parser_context
             .get_symbols()

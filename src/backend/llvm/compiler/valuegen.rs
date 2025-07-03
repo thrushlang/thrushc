@@ -14,8 +14,8 @@ use crate::backend::types::traits::AssemblerFunctionExtensions;
 use crate::core::console::logging::{self, LoggingType};
 use crate::frontend::lexer::tokentype::TokenType;
 use crate::frontend::types::ast::Ast;
-use crate::frontend::types::lexer::ThrushType;
-use crate::frontend::types::lexer::traits::{LLVMTypeExtensions, ThrushTypeMutableExtensions};
+use crate::frontend::types::lexer::Type;
+use crate::frontend::types::lexer::traits::{LLVMTypeExtensions, TypeMutableExtensions};
 use crate::frontend::types::parser::stmts::traits::ThrushAttributesExtensions;
 use crate::frontend::types::parser::stmts::types::ThrushAttributes;
 
@@ -31,7 +31,7 @@ use std::fmt::Display;
 pub fn compile<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     expr: &'ctx Ast,
-    cast_type: Option<&ThrushType>,
+    cast_type: Option<&Type>,
 ) -> BasicValueEnum<'ctx> {
     match expr {
         // Literal Expressions
@@ -154,10 +154,10 @@ pub fn compile<'ctx>(
 
 fn compile_float<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
-    kind: &'ctx ThrushType,
+    kind: &'ctx Type,
     value: f64,
     signed: bool,
-    cast_type: Option<&ThrushType>,
+    cast_type: Option<&Type>,
 ) -> BasicValueEnum<'ctx> {
     let mut float: BasicValueEnum = floatgen::float(
         context.get_llvm_builder(),
@@ -179,10 +179,10 @@ fn compile_float<'ctx>(
 
 fn compile_integer<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
-    kind: &'ctx ThrushType,
+    kind: &'ctx Type,
     value: u64,
     signed: bool,
-    cast_type: Option<&ThrushType>,
+    cast_type: Option<&Type>,
 ) -> BasicValueEnum<'ctx> {
     let mut int: BasicValueEnum =
         intgen::integer(context.get_llvm_context(), kind, value, signed).into();
@@ -219,10 +219,10 @@ fn compile_function_call<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     name: &str,
     args: &'ctx [Ast],
-    kind: &ThrushType,
-    cast_type: Option<&ThrushType>,
+    kind: &Type,
+    cast_type: Option<&Type>,
 ) -> BasicValueEnum<'ctx> {
-    let function: (FunctionValue<'_>, &[ThrushType], u32) = context.get_function(name);
+    let function: (FunctionValue<'_>, &[Type], u32) = context.get_function(name);
 
     let (llvm_function, function_arg_types, function_convention) =
         (function.0, function.1, function.2);
@@ -233,7 +233,7 @@ fn compile_function_call<'ctx>(
         .iter()
         .enumerate()
         .map(|(i, arg)| {
-            let arg_cast_type: Option<&ThrushType> = function_arg_types.get(i);
+            let arg_cast_type: Option<&Type> = function_arg_types.get(i);
 
             let arg: BasicValueEnum =
                 if arg_cast_type.is_some_and(|t| t.is_ptr_type() || t.is_mut_type()) {
@@ -276,8 +276,8 @@ fn compile_binary_op<'ctx>(
     left: &'ctx Ast,
     operator: &'ctx TokenType,
     right: &'ctx Ast,
-    binaryop_type: &ThrushType,
-    cast_type: Option<&ThrushType>,
+    binaryop_type: &Type,
+    cast_type: Option<&Type>,
 ) -> BasicValueEnum<'ctx> {
     match binaryop_type {
         t if t.is_float_type() => {
@@ -305,9 +305,9 @@ fn compile_binary_op<'ctx>(
 fn compile_unary_op<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     operator: &'ctx TokenType,
-    kind: &'ctx ThrushType,
+    kind: &'ctx Type,
     expression: &'ctx Ast,
-    cast_type: Option<&ThrushType>,
+    cast_type: Option<&Type>,
 ) -> BasicValueEnum<'ctx> {
     unaryop::unary_op(context, (operator, kind, expression), cast_type)
 }
@@ -315,9 +315,9 @@ fn compile_unary_op<'ctx>(
 fn compile_cast<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     from: &'ctx Ast,
-    cast: &ThrushType,
+    cast: &Type,
 ) -> BasicValueEnum<'ctx> {
-    let from_type: &ThrushType = from.get_type_unwrapped();
+    let from_type: &Type = from.get_type_unwrapped();
     let llvm_context: &Context = context.get_llvm_context();
     let llvm_builder: &Builder = context.get_llvm_builder();
 
@@ -404,8 +404,8 @@ fn compile_cast<'ctx>(
 fn compile_deref<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     value: &'ctx Ast,
-    kind: &ThrushType,
-    cast_type: Option<&ThrushType>,
+    kind: &Type,
+    cast_type: Option<&Type>,
 ) -> BasicValueEnum<'ctx> {
     let val: BasicValueEnum = self::compile(context, value, Some(kind));
 
@@ -430,8 +430,8 @@ fn compile_deref<'ctx>(
 fn compile_property<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     name: &str,
-    indexes: &[(ThrushType, u32)],
-    kind: &ThrushType,
+    indexes: &[(Type, u32)],
+    kind: &Type,
 ) -> BasicValueEnum<'ctx> {
     let symbol: SymbolAllocated = context.get_symbol(name);
 
@@ -490,7 +490,7 @@ fn compile_inline_asm<'ctx>(
     assembler: &str,
     constraints: &str,
     args: &'ctx [Ast],
-    kind: &ThrushType,
+    kind: &Type,
     attributes: &ThrushAttributes,
 ) -> BasicValueEnum<'ctx> {
     let llvm_context: &Context = context.get_llvm_context();
@@ -556,7 +556,7 @@ fn compile_index<'ctx>(
     match index_to {
         (Some((name, _)), _) => {
             let symbol: SymbolAllocated = context.get_symbol(name);
-            let symbol_type: &ThrushType = symbol.get_type();
+            let symbol_type: &Type = symbol.get_type();
 
             let ordered_indexes: Vec<IntValue> =
                 self::compute_indexes(context, indexes, symbol_type);
@@ -567,7 +567,7 @@ fn compile_index<'ctx>(
         }
         (_, Some(expr)) => {
             let expr_ptr: PointerValue = ptrgen::compile(context, expr, None).into_pointer_value();
-            let expr_type: &ThrushType = expr.get_type_unwrapped();
+            let expr_type: &Type = expr.get_type_unwrapped();
 
             let ordered_indexes: Vec<IntValue> = self::compute_indexes(context, indexes, expr_type);
 
@@ -583,22 +583,22 @@ fn compile_index<'ctx>(
 fn compute_indexes<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     indexes: &'ctx [Ast],
-    kind: &'ctx ThrushType,
+    kind: &'ctx Type,
 ) -> Vec<IntValue<'ctx>> {
     let llvm_context = context.get_llvm_context();
     indexes
         .iter()
         .flat_map(|index| {
             if kind.is_fixed_array_type() || kind.is_mut_fixed_array_type() {
-                let base: IntValue = intgen::integer(llvm_context, &ThrushType::U32, 0, false);
+                let base: IntValue = intgen::integer(llvm_context, &Type::U32, 0, false);
 
                 let depth: IntValue =
-                    valuegen::compile(context, index, Some(&ThrushType::U32)).into_int_value();
+                    valuegen::compile(context, index, Some(&Type::U32)).into_int_value();
 
                 vec![base, depth]
             } else {
                 let depth: IntValue =
-                    valuegen::compile(context, index, Some(&ThrushType::U64)).into_int_value();
+                    valuegen::compile(context, index, Some(&Type::U64)).into_int_value();
 
                 vec![depth]
             }
@@ -609,7 +609,7 @@ fn compute_indexes<'ctx>(
 fn compile_string<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     bytes: &'ctx [u8],
-    kind: &ThrushType,
+    kind: &Type,
 ) -> BasicValueEnum<'ctx> {
     let ptr: PointerValue =
         string::compile_str_constant(context.get_llvm_module(), context.get_llvm_context(), bytes);

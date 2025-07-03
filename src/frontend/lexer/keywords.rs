@@ -3,7 +3,7 @@ use crate::{frontend::lexer::tokentype::TokenType, lazy_static};
 use ahash::AHashMap as HashMap;
 
 lazy_static! {
-    pub static ref THRUSH_KEYWORDS: HashMap<&'static str, TokenType> = {
+    pub static ref KEYWORDS: HashMap<&'static str, TokenType> = {
         let mut keywords: HashMap<&'static str, TokenType> = HashMap::with_capacity(100);
 
         keywords.insert("local", TokenType::Local);

@@ -1,7 +1,7 @@
 use crate::{
     backend::llvm::compiler::anchors::PointerAnchor,
     frontend::types::{
-        lexer::ThrushType,
+        lexer::Type,
         parser::{repr::Local, stmts::types::ThrushAttributes},
     },
 };
@@ -14,7 +14,7 @@ pub fn new<'ctx>(context: &mut LLVMCodeGenContext<'_, 'ctx>, local: Local<'ctx>)
     let local_name: &str = local.0;
     let ascii_name: &str = local.1;
 
-    let local_type: &ThrushType = local.2;
+    let local_type: &Type = local.2;
     let local_value: &Ast = local.3;
 
     let attributes: &ThrushAttributes = local.4;

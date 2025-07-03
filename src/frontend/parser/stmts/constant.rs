@@ -5,7 +5,7 @@ use crate::{
         parser::{ParserContext, attributes, expression, typegen},
         types::{
             ast::{Ast, metadata::constant::ConstantMetadata},
-            lexer::ThrushType,
+            lexer::Type,
             parser::stmts::{traits::TokenExtensions, types::ThrushAttributes},
         },
     },
@@ -37,7 +37,7 @@ pub fn build_const<'parser>(
         "Expected ':'.".into(),
     )?;
 
-    let const_type: ThrushType = typegen::build_type(parser_ctx)?;
+    let const_type: Type = typegen::build_type(parser_ctx)?;
 
     let const_attributes: ThrushAttributes =
         attributes::build_attributes(parser_ctx, &[TokenType::Eq])?;
@@ -107,7 +107,7 @@ pub fn build_global_const<'parser>(
         "Expected ':'.".into(),
     )?;
 
-    let const_type: ThrushType = typegen::build_type(parser_ctx)?;
+    let const_type: Type = typegen::build_type(parser_ctx)?;
 
     let const_attributes: ThrushAttributes =
         attributes::build_attributes(parser_ctx, &[TokenType::Eq])?;

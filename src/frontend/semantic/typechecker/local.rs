@@ -2,10 +2,10 @@ use crate::{
     core::errors::{position::CompilationPosition, standard::ThrushCompilerIssue},
     frontend::{
         lexer::span::Span,
-        semantic::typechecker::{TypeChecker, position::TypeCheckerPosition},
+        semantic::typechecker::{TypeChecker, bounds, position::TypeCheckerPosition},
         types::{
             ast::{Ast, metadata::local::LocalMetadata},
-            lexer::ThrushType,
+            lexer::Type,
         },
     },
 };
@@ -36,19 +36,10 @@ pub fn validate_local<'type_checker>(
                 ));
             }
 
-            if local_type.is_ptr_type() {
-                typechecker.add_error(ThrushCompilerIssue::Error(
-                    "Type error".into(),
-                    "Raw pointer type 'ptr[T]', or 'ptr' can only be used in Low Level Instructions (LLI), use them instead.".into(),
-                    None,
-                    *span,
-                ));
-            }
-
             if !metadata.is_undefined() {
-                let local_value_type: &ThrushType = local_value.get_value_type()?;
+                let local_value_type: &Type = local_value.get_value_type()?;
 
-                if let Err(mismatch_type_error) = typechecker.validate_types(
+                if let Err(error) = bounds::checking::check(
                     local_type,
                     local_value_type,
                     Some(local_value),
@@ -56,7 +47,7 @@ pub fn validate_local<'type_checker>(
                     Some(TypeCheckerPosition::Local),
                     span,
                 ) {
-                    typechecker.add_error(mismatch_type_error);
+                    typechecker.add_error(error);
                 }
 
                 if let Err(type_error) = typechecker.analyze_ast(local_value) {

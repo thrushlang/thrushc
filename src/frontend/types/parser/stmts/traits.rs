@@ -2,7 +2,7 @@ use crate::{
     core::errors::standard::ThrushCompilerIssue,
     frontend::{
         lexer::{span::Span, tokentype::TokenType},
-        types::{lexer::ThrushType, semantic::linter::types::LLVMAttributeComparator},
+        types::{lexer::Type, semantic::linter::types::LLVMAttributeComparator},
     },
 };
 
@@ -27,7 +27,7 @@ pub trait EnumExtensions<'parser> {
 }
 
 pub trait CustomTypeFieldsExtensions {
-    fn get_type(&self) -> ThrushType;
+    fn get_type(&self) -> Type;
 }
 
 pub trait FoundSymbolExtension {
@@ -43,7 +43,7 @@ pub trait FoundSymbolExtension {
 
 pub trait StructExtensions<'parser> {
     fn contains_field(&self, name: &str) -> bool;
-    fn get_field_type(&self, name: &str) -> Option<ThrushType>;
+    fn get_field_type(&self, name: &str) -> Option<Type>;
     fn get_fields(&self) -> StructFields<'parser>;
 }
 
@@ -60,11 +60,11 @@ pub trait FoundSymbolEither<'parser> {
 }
 
 pub trait StructFieldsExtensions {
-    fn get_type(&self) -> ThrushType;
+    fn get_type(&self) -> Type;
 }
 
 pub trait ConstructorExtensions {
-    fn get_type(&self, name: &str) -> ThrushType;
+    fn get_type(&self, name: &str) -> Type;
 }
 
 pub trait ThrushAttributesExtensions {

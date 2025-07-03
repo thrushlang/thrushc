@@ -4,7 +4,7 @@ use crate::{
         lexer::{span::Span, token::Token, tokentype::TokenType},
         parser::{ParserContext, expression},
         types::ast::Ast,
-        types::{lexer::ThrushType, parser::stmts::traits::TokenExtensions},
+        types::{lexer::Type, parser::stmts::traits::TokenExtensions},
     },
 };
 
@@ -25,7 +25,7 @@ pub fn build_fixed_array<'parser>(
 
     let span: Span = array_start_tk.get_span();
 
-    let mut array_type: ThrushType = ThrushType::Void;
+    let mut array_type: Type = Type::Void;
     let mut items: Vec<Ast> = Vec::with_capacity(100);
 
     loop {
@@ -55,15 +55,15 @@ pub fn build_fixed_array<'parser>(
     )?;
 
     if let Some(item) = items.iter().max_by(|a, b| {
-        let a_type: &ThrushType = a.get_value_type().unwrap_or(&ThrushType::Void);
-        let b_type: &ThrushType = b.get_value_type().unwrap_or(&ThrushType::Void);
+        let a_type: &Type = a.get_value_type().unwrap_or(&Type::Void);
+        let b_type: &Type = b.get_value_type().unwrap_or(&Type::Void);
 
         a_type
             .get_array_type_herarchy()
             .cmp(&b_type.get_array_type_herarchy())
     }) {
         if let Ok(size) = u32::try_from(items.len()) {
-            array_type = ThrushType::FixedArray(item.get_value_type()?.clone().into(), size)
+            array_type = Type::FixedArray(item.get_value_type()?.clone().into(), size)
         } else {
             return Err(ThrushCompilerIssue::Error(
                 "Syntax error".into(),

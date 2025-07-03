@@ -4,7 +4,7 @@ use crate::frontend::{
     lexer::span::Span,
     types::{
         ast::{Ast, metadata::local::LocalMetadata},
-        lexer::ThrushType,
+        lexer::Type,
         semantic::linter::{
             traits::LLVMAttributeComparatorExtensions, types::LLVMAttributeComparator,
         },
@@ -82,22 +82,22 @@ impl ThrushAttributesExtensions for ThrushAttributes<'_> {
 }
 
 impl StructFieldsExtensions for StructFields<'_> {
-    fn get_type(&self) -> ThrushType {
-        let types: Vec<ThrushType> = self.1.iter().map(|field| field.1.clone()).collect();
-        ThrushType::create_structure_type(self.0.to_string(), types.as_slice())
+    fn get_type(&self) -> Type {
+        let types: Vec<Type> = self.1.iter().map(|field| field.1.clone()).collect();
+        Type::create_structure_type(self.0.to_string(), types.as_slice())
     }
 }
 
 impl ConstructorExtensions for Constructor<'_> {
-    fn get_type(&self, name: &str) -> ThrushType {
-        let types: Vec<ThrushType> = self.iter().map(|field| field.2.clone()).collect();
-        ThrushType::create_structure_type(name.to_string(), types.as_slice())
+    fn get_type(&self, name: &str) -> Type {
+        let types: Vec<Type> = self.iter().map(|field| field.2.clone()).collect();
+        Type::create_structure_type(name.to_string(), types.as_slice())
     }
 }
 
 impl CustomTypeFieldsExtensions for CustomTypeFields<'_> {
-    fn get_type(&self) -> ThrushType {
-        ThrushType::create_structure_type(String::new(), self)
+    fn get_type(&self) -> Type {
+        Type::create_structure_type(String::new(), self)
     }
 }
 

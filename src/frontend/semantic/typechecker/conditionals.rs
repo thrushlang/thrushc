@@ -2,8 +2,8 @@ use crate::{
     core::errors::{position::CompilationPosition, standard::ThrushCompilerIssue},
     frontend::{
         lexer::span::Span,
-        semantic::typechecker::TypeChecker,
-        types::{ast::Ast, lexer::ThrushType},
+        semantic::typechecker::{TypeChecker, bounds},
+        types::{ast::Ast, lexer::Type},
     },
 };
 
@@ -19,8 +19,8 @@ pub fn validate_conditional<'type_checker>(
             otherwise,
             span,
         } => {
-            if let Err(error) = typechecker.validate_types(
-                &ThrushType::Bool,
+            if let Err(error) = bounds::checking::check(
+                &Type::Bool,
                 cond.get_value_type()?,
                 Some(cond),
                 None,
@@ -44,8 +44,8 @@ pub fn validate_conditional<'type_checker>(
         }
 
         Ast::Elif { cond, block, span } => {
-            if let Err(error) = typechecker.validate_types(
-                &ThrushType::Bool,
+            if let Err(error) = bounds::checking::check(
+                &Type::Bool,
                 cond.get_value_type()?,
                 Some(cond),
                 None,

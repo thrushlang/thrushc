@@ -13,7 +13,7 @@ use crate::{
     backend::llvm::compiler::{context::LLVMCodeGenContext, typegen},
     core::console::logging::{self, LoggingType},
     frontend::types::{
-        lexer::ThrushType,
+        lexer::Type,
         parser::stmts::{traits::ThrushAttributesExtensions, types::ThrushAttributes},
     },
 };
@@ -21,11 +21,12 @@ use crate::{
 pub fn alloc<'ctx>(
     context: &LLVMCodeGenContext<'_, 'ctx>,
     name: &str,
-    kind: &ThrushType,
+    kind: &Type,
     attributes: &'ctx ThrushAttributes<'ctx>,
 ) -> PointerValue<'ctx> {
     let llvm_context: &Context = context.get_llvm_context();
     let target_data: &TargetData = context.get_target_data();
+
     let llvm_type: BasicTypeEnum = typegen::generate_subtype(llvm_context, kind);
 
     match (
@@ -44,7 +45,7 @@ fn try_alloc_heap<'ctx>(
     context: &LLVMCodeGenContext<'_, 'ctx>,
     llvm_type: BasicTypeEnum<'ctx>,
     name: &str,
-    kind: &ThrushType,
+    kind: &Type,
 ) -> PointerValue<'ctx> {
     match context.get_llvm_builder().build_malloc(llvm_type, name) {
         Ok(ptr) => ptr,
@@ -63,7 +64,7 @@ fn try_alloc_stack<'ctx>(
     context: &LLVMCodeGenContext<'_, 'ctx>,
     llvm_type: BasicTypeEnum<'ctx>,
     name: &str,
-    kind: &ThrushType,
+    kind: &Type,
 ) -> PointerValue<'ctx> {
     match context.get_llvm_builder().build_alloca(llvm_type, name) {
         Ok(ptr) => ptr,

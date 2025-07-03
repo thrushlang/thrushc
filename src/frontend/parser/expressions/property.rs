@@ -5,7 +5,7 @@ use crate::{
         parser::{ParserContext, expressions::reference},
         types::{
             ast::Ast,
-            lexer::{ThrushType, decompose_struct_property},
+            lexer::{Type, decompose_struct_property},
             parser::stmts::traits::TokenExtensions,
         },
     },
@@ -17,7 +17,7 @@ pub fn build_property<'parser>(
     span: Span,
 ) -> Result<Ast<'parser>, ThrushCompilerIssue> {
     let reference: Ast = reference::build_reference(parser_context, name, span)?;
-    let reference_type: ThrushType = reference.get_any_type()?.clone();
+    let reference_type: Type = reference.get_any_type()?.clone();
 
     let mut property_names: Vec<&str> = Vec::with_capacity(10);
 
@@ -45,7 +45,7 @@ pub fn build_property<'parser>(
 
     property_names.reverse();
 
-    let decomposed: (ThrushType, Vec<(ThrushType, u32)>) = decompose_struct_property(
+    let decomposed: (Type, Vec<(Type, u32)>) = decompose_struct_property(
         0,
         property_names,
         reference_type,

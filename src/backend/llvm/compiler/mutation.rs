@@ -9,7 +9,7 @@ use crate::{
         ptrgen, valuegen,
     },
     core::console::logging::{self, LoggingType},
-    frontend::types::{ast::Ast, lexer::ThrushType},
+    frontend::types::{ast::Ast, lexer::Type},
 };
 
 pub fn compile<'ctx>(
@@ -22,7 +22,7 @@ pub fn compile<'ctx>(
                 let reference_name: &str = any_reference.0;
                 let reference: &Ast = &any_reference.1;
 
-                let cast_type: &ThrushType = reference.get_type_unwrapped();
+                let cast_type: &Type = reference.get_type_unwrapped();
 
                 let symbol: SymbolAllocated = context.get_symbol(reference_name);
 
@@ -34,7 +34,7 @@ pub fn compile<'ctx>(
             }
 
             (None, Some(expr)) => {
-                let cast_type: &ThrushType = expr.get_type_unwrapped();
+                let cast_type: &Type = expr.get_type_unwrapped();
 
                 let ptr: BasicValueEnum = ptrgen::compile(context, expr, None);
                 let value: BasicValueEnum = valuegen::compile(context, value, Some(cast_type));

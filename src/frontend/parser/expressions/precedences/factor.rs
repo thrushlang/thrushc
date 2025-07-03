@@ -3,7 +3,7 @@ use crate::{
     frontend::{
         lexer::{span::Span, token::Token, tokentype::TokenType},
         parser::{ParserContext, expressions::precedences::lower},
-        types::{ast::Ast, lexer::ThrushType, parser::stmts::traits::TokenExtensions},
+        types::{ast::Ast, lexer::Type, parser::stmts::traits::TokenExtensions},
     },
 };
 
@@ -21,10 +21,10 @@ pub fn factor<'parser>(
 
         let right: Ast = lower::lower_precedence(parser_context)?;
 
-        let left_type: &ThrushType = expression.get_value_type()?;
-        let right_type: &ThrushType = right.get_value_type()?;
+        let left_type: &Type = expression.get_value_type()?;
+        let right_type: &Type = right.get_value_type()?;
 
-        let kind: &ThrushType = left_type.precompute_numeric_type(right_type);
+        let kind: &Type = left_type.precompute_numeric_type(right_type);
 
         expression = Ast::BinaryOp {
             left: expression.clone().into(),

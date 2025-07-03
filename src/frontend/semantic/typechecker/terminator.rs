@@ -1,6 +1,10 @@
 use crate::{
     core::errors::{position::CompilationPosition, standard::ThrushCompilerIssue},
-    frontend::{lexer::span::Span, semantic::typechecker::TypeChecker, types::ast::Ast},
+    frontend::{
+        lexer::span::Span,
+        semantic::typechecker::{TypeChecker, bounds},
+        types::ast::Ast,
+    },
 };
 
 pub fn validate_terminator<'type_checker>(
@@ -14,7 +18,7 @@ pub fn validate_terminator<'type_checker>(
             span,
         } => {
             if let Some(expr) = expression {
-                if let Err(error) = typechecker.validate_types(
+                if let Err(error) = bounds::checking::check(
                     kind,
                     expr.get_value_type()?,
                     Some(expr),

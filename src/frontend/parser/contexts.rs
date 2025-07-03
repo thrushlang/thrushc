@@ -1,4 +1,4 @@
-use crate::frontend::types::lexer::ThrushType;
+use crate::frontend::types::lexer::Type;
 
 #[derive(Debug, Clone, Copy)]
 pub enum SyncPosition {
@@ -20,21 +20,21 @@ pub struct ParserControlContext {
 
 #[derive(Debug)]
 pub struct ParserTypeContext {
-    function_type: ThrushType,
+    function_type: Type,
 }
 
 impl ParserTypeContext {
     pub fn new() -> Self {
         Self {
-            function_type: ThrushType::Void,
+            function_type: Type::Void,
         }
     }
 
-    pub fn set_function_type(&mut self, new_type: ThrushType) {
+    pub fn set_function_type(&mut self, new_type: Type) {
         self.function_type = new_type;
     }
 
-    pub fn get_function_type(&self) -> ThrushType {
+    pub fn get_function_type(&self) -> Type {
         self.function_type.clone()
     }
 }

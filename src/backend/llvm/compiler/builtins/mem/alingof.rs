@@ -4,13 +4,13 @@ use inkwell::{
 
 use crate::{
     backend::llvm::compiler::{cast, context::LLVMCodeGenContext, typegen},
-    frontend::types::lexer::ThrushType,
+    frontend::types::lexer::Type,
 };
 
 pub fn compile<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
-    alingof_type: &'ctx ThrushType,
-    cast_type: Option<&ThrushType>,
+    alingof_type: &'ctx Type,
+    cast_type: Option<&Type>,
 ) -> BasicValueEnum<'ctx> {
     let llvm_context: &Context = context.get_llvm_context();
 

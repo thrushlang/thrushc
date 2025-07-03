@@ -9,7 +9,7 @@ use crate::{
         },
         types::{
             ast::{Ast, metadata::fnparameter::FunctionParameterMetadata},
-            lexer::ThrushType,
+            lexer::Type,
             parser::{
                 stmts::{
                     traits::{ThrushAttributesExtensions, TokenExtensions},
@@ -72,7 +72,7 @@ pub fn build_function<'parser>(
     )?;
 
     let mut parameters: Vec<Ast> = Vec::with_capacity(10);
-    let mut parameters_types: Vec<ThrushType> = Vec::with_capacity(10);
+    let mut parameters_types: Vec<Type> = Vec::with_capacity(10);
 
     let mut parameter_position: u32 = 0;
 
@@ -100,7 +100,7 @@ pub fn build_function<'parser>(
             String::from("Expected ':'."),
         )?;
 
-        let parameter_type: ThrushType = typegen::build_type(parser_ctx)?;
+        let parameter_type: Type = typegen::build_type(parser_ctx)?;
 
         parameters_types.push(parameter_type.clone());
 
@@ -132,7 +132,7 @@ pub fn build_function<'parser>(
         String::from("Expected ')'."),
     )?;
 
-    let return_type: ThrushType = typegen::build_type(parser_ctx)?;
+    let return_type: Type = typegen::build_type(parser_ctx)?;
 
     let function_attributes: ThrushAttributes =
         attributes::build_attributes(parser_ctx, &[TokenType::SemiColon, TokenType::LBrace])?;

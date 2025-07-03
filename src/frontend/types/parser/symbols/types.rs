@@ -2,20 +2,20 @@ use ahash::AHashMap as HashMap;
 
 use crate::{
     frontend::types::parser::stmts::types::{CustomTypeFields, EnumFields, ThrushAttributes},
-    frontend::{lexer::span::Span, types::lexer::ThrushType},
+    frontend::{lexer::span::Span, types::lexer::Type},
 };
 
 pub type Struct<'parser> = (
     &'parser str,
-    Vec<(&'parser str, ThrushType, u32, Span)>,
+    Vec<(&'parser str, Type, u32, Span)>,
     ThrushAttributes<'parser>,
 );
 
-pub type Function<'parser> = (ThrushType, ParametersTypes, bool);
-pub type AssemblerFunction<'parser> = (ThrushType, ParametersTypes, bool);
+pub type Function<'parser> = (Type, ParametersTypes, bool);
+pub type AssemblerFunction<'parser> = (Type, ParametersTypes, bool);
 
 #[derive(Debug, Clone)]
-pub struct ParametersTypes(pub Vec<ThrushType>);
+pub struct ParametersTypes(pub Vec<Type>);
 
 /* ######################################################################
 
@@ -39,11 +39,11 @@ pub type FoundSymbolId<'parser> = (
 
 pub type CustomTypeSymbol<'ctx> = (CustomTypeFields<'ctx>, ThrushAttributes<'ctx>);
 pub type EnumSymbol<'ctx> = (EnumFields<'ctx>, ThrushAttributes<'ctx>);
-pub type ConstantSymbol<'parser> = (ThrushType, ThrushAttributes<'parser>);
+pub type ConstantSymbol<'parser> = (Type, ThrushAttributes<'parser>);
 
-pub type LLISymbol<'parser> = (ThrushType, Span);
-pub type LocalSymbol<'parser> = (ThrushType, bool, bool, Span);
-pub type ParameterSymbol<'parser> = (ThrushType, bool, bool, Span);
+pub type LLISymbol<'parser> = (Type, Span);
+pub type LocalSymbol<'parser> = (Type, bool, bool, Span);
+pub type ParameterSymbol<'parser> = (Type, bool, bool, Span);
 
 pub type CustomTypes<'parser> = HashMap<&'parser str, CustomTypeSymbol<'parser>>;
 pub type LocalConstants<'parser> = Vec<HashMap<&'parser str, ConstantSymbol<'parser>>>;

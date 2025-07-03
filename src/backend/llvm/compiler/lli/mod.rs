@@ -4,7 +4,7 @@ use inkwell::{AddressSpace, values::BasicValueEnum};
 
 use crate::{
     core::console::logging::{self, LoggingType},
-    frontend::types::{ast::Ast, lexer::ThrushType},
+    frontend::types::{ast::Ast, lexer::Type},
 };
 
 use super::{context::LLVMCodeGenContext, valuegen};
@@ -17,7 +17,7 @@ pub mod write;
 pub fn new<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     name: &'ctx str,
-    kind: &'ctx ThrushType,
+    kind: &'ctx Type,
     expr: &'ctx Ast,
 ) {
     let value: BasicValueEnum = valuegen::compile(context, expr, Some(kind));
@@ -28,7 +28,7 @@ pub fn new<'ctx>(
 pub fn compile<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     expr: &'ctx Ast,
-    cast_type: Option<&ThrushType>,
+    cast_type: Option<&Type>,
 ) -> BasicValueEnum<'ctx> {
     match expr {
         Ast::Write {

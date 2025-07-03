@@ -8,7 +8,7 @@ use crate::backend::llvm::compiler::memory::{self, LLVMAllocationSite};
 use crate::backend::llvm::compiler::valuegen;
 use crate::core::console::logging::{self, LoggingType};
 use crate::frontend::types::ast::Ast;
-use crate::frontend::types::lexer::ThrushType;
+use crate::frontend::types::lexer::Type;
 
 use inkwell::AddressSpace;
 use inkwell::types::BasicTypeEnum;
@@ -17,9 +17,9 @@ use inkwell::{builder::Builder, context::Context};
 
 pub fn compile_array<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
-    kind: &ThrushType,
+    kind: &Type,
     items: &'ctx [Ast],
-    cast_type: Option<&ThrushType>,
+    cast_type: Option<&Type>,
 ) -> BasicValueEnum<'ctx> {
     if let Some(anchor) = context.get_pointer_anchor() {
         if !anchor.is_triggered() {
@@ -34,18 +34,17 @@ pub fn compile_array<'ctx>(
 
 pub fn compile_fixed_array_without_anchor<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
-    kind: &ThrushType,
+    kind: &Type,
     items: &'ctx [Ast],
-    cast_type: Option<&ThrushType>,
+    cast_type: Option<&Type>,
 ) -> BasicValueEnum<'ctx> {
     let llvm_context: &Context = context.get_llvm_context();
     let llvm_builder: &Builder = context.get_llvm_builder();
 
-    let base_array_type: &ThrushType = cast_type.unwrap_or(kind);
-    let array_items_type: &ThrushType = base_array_type.get_array_base_type();
+    let base_array_type: &Type = cast_type.unwrap_or(kind);
+    let array_items_type: &Type = base_array_type.get_array_base_type();
 
-    let array_type: ThrushType =
-        ThrushType::FixedArray(array_items_type.clone().into(), items.len() as u32);
+    let array_type: Type = Type::FixedArray(array_items_type.clone().into(), items.len() as u32);
 
     let array_wrapper_ptr: PointerValue =
         memory::alloc_anon(LLVMAllocationSite::Stack, context, base_array_type, true);
@@ -110,19 +109,18 @@ pub fn compile_fixed_array_without_anchor<'ctx>(
 
 fn compile_fixed_array_with_anchor<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
-    kind: &ThrushType,
+    kind: &Type,
     items: &'ctx [Ast],
-    cast_type: Option<&ThrushType>,
+    cast_type: Option<&Type>,
     anchor: PointerAnchor<'ctx>,
 ) -> BasicValueEnum<'ctx> {
     let llvm_context: &Context = context.get_llvm_context();
     let llvm_builder: &Builder = context.get_llvm_builder();
 
-    let base_array_type: &ThrushType = cast_type.unwrap_or(kind);
-    let array_items_type: &ThrushType = base_array_type.get_fixed_array_base_type();
+    let base_array_type: &Type = cast_type.unwrap_or(kind);
+    let array_items_type: &Type = base_array_type.get_fixed_array_base_type();
 
-    let array_type: ThrushType =
-        ThrushType::FixedArray(array_items_type.clone().into(), items.len() as u32);
+    let array_type: Type = Type::FixedArray(array_items_type.clone().into(), items.len() as u32);
 
     let array_wrapper_ptr: PointerValue = anchor.get_pointer();
 

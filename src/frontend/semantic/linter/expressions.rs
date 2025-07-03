@@ -3,7 +3,7 @@ use crate::{
     frontend::{
         lexer::span::Span,
         semantic::linter::{
-            Linter,
+            Linter, casts, deref,
             marks::{mutable, used},
         },
         types::{ast::Ast, parser::stmts::types::Constructor},
@@ -168,6 +168,9 @@ pub fn analyze_expression<'linter>(linter: &mut Linter<'linter>, expr: &'linter 
                 line!(),
             ));
         }
+
+        Ast::As { .. } => casts::analyze_cast(linter, expr),
+        Ast::Deref { .. } => deref::analyze_dereference(linter, expr),
 
         Ast::Alloc { .. }
         | Ast::Integer { .. }

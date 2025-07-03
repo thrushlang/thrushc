@@ -5,7 +5,7 @@ use crate::{
     frontend::{
         lexer::span::Span,
         types::{
-            lexer::ThrushType,
+            lexer::Type,
             parser::stmts::{
                 traits::{
                     EnumExtensions, EnumFieldsExtensions, FoundSymbolEither, FoundSymbolExtension,
@@ -58,25 +58,25 @@ impl LocalSymbolExtensions for LocalSymbol<'_> {
         self.3
     }
 
-    fn get_type(&self) -> ThrushType {
+    fn get_type(&self) -> Type {
         self.0.clone()
     }
 }
 
 impl ConstantSymbolExtensions for ConstantSymbol<'_> {
-    fn get_type(&self) -> ThrushType {
+    fn get_type(&self) -> Type {
         self.0.clone()
     }
 }
 
 impl FunctionExtensions for Function<'_> {
-    fn get_type(&self) -> ThrushType {
+    fn get_type(&self) -> Type {
         self.0.clone()
     }
 }
 
 impl LLISymbolExtensions for LLISymbol<'_> {
-    fn get_type(&self) -> ThrushType {
+    fn get_type(&self) -> Type {
         self.0.clone()
     }
 
@@ -86,7 +86,7 @@ impl LLISymbolExtensions for LLISymbol<'_> {
 }
 
 impl ParametersTypes {
-    pub fn new(inner: Vec<ThrushType>) -> Self {
+    pub fn new(inner: Vec<Type>) -> Self {
         Self(inner)
     }
 }
@@ -110,9 +110,9 @@ impl<'parser> StructExtensions<'parser> for Struct<'parser> {
         self.1.iter().any(|field| field.0 == name)
     }
 
-    fn get_field_type(&self, name: &str) -> Option<ThrushType> {
+    fn get_field_type(&self, name: &str) -> Option<Type> {
         if let Some(field) = self.1.iter().find(|field| field.0 == name) {
-            let field_type: ThrushType = field.1.clone();
+            let field_type: Type = field.1.clone();
             return Some(field_type);
         }
 

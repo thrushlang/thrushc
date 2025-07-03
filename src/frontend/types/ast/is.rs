@@ -1,6 +1,6 @@
 use crate::{
     core::errors::standard::ThrushCompilerIssue,
-    frontend::types::{ast::Ast, lexer::ThrushType},
+    frontend::types::{ast::Ast, lexer::Type},
 };
 
 impl Ast<'_> {
@@ -82,7 +82,7 @@ impl Ast<'_> {
     pub fn is_unsigned_integer(&self) -> Result<bool, ThrushCompilerIssue> {
         Ok(matches!(
             self.get_value_type()?,
-            ThrushType::U8 | ThrushType::U16 | ThrushType::U32 | ThrushType::U64
+            Type::U8 | Type::U16 | Type::U32 | Type::U64
         ))
     }
 
@@ -90,7 +90,7 @@ impl Ast<'_> {
     pub fn is_lessu32bit_integer(&self) -> Result<bool, ThrushCompilerIssue> {
         Ok(matches!(
             self.get_value_type()?,
-            ThrushType::U8 | ThrushType::U16 | ThrushType::U32
+            Type::U8 | Type::U16 | Type::U32
         ))
     }
 

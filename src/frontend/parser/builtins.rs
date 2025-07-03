@@ -4,7 +4,7 @@ use crate::{
     frontend::{
         lexer::{span::Span, token::Token, tokentype::TokenType},
         parser::{ParserContext, expression, expressions::reference, typegen},
-        types::{ast::Ast, lexer::ThrushType, parser::stmts::traits::TokenExtensions},
+        types::{ast::Ast, lexer::Type, parser::stmts::traits::TokenExtensions},
     },
 };
 
@@ -55,7 +55,7 @@ pub fn build_memcpy<'parser>(
             destination: destination.into(),
             size: size.into(),
         },
-        kind: ThrushType::Ptr(None),
+        kind: Type::Ptr(None),
         span,
     })
 }
@@ -107,7 +107,7 @@ pub fn build_memmove<'parser>(
             destination: destination.into(),
             size: size.into(),
         },
-        kind: ThrushType::Ptr(None),
+        kind: Type::Ptr(None),
         span,
     })
 }
@@ -159,7 +159,7 @@ pub fn build_memset<'parser>(
             new_size: new_size.into(),
             size: size.into(),
         },
-        kind: ThrushType::Ptr(None),
+        kind: Type::Ptr(None),
         span,
     })
 }
@@ -189,7 +189,7 @@ pub fn build_alignof<'parser>(
 
         let reference: Ast = reference::build_reference(parser_context, name, span)?;
 
-        let reference_type: &ThrushType = reference.get_value_type()?;
+        let reference_type: &Type = reference.get_value_type()?;
 
         parser_context.consume(
             TokenType::RParen,
@@ -201,12 +201,12 @@ pub fn build_alignof<'parser>(
             builtin: Builtin::AlignOf {
                 align_of: reference_type.clone(),
             },
-            kind: ThrushType::Ptr(None),
+            kind: Type::Ptr(None),
             span,
         });
     }
 
-    let alignof_type: ThrushType = typegen::build_type(parser_context)?;
+    let alignof_type: Type = typegen::build_type(parser_context)?;
 
     parser_context.consume(
         TokenType::RParen,
@@ -218,7 +218,7 @@ pub fn build_alignof<'parser>(
         builtin: Builtin::AlignOf {
             align_of: alignof_type,
         },
-        kind: ThrushType::Ptr(None),
+        kind: Type::Ptr(None),
         span,
     })
 }

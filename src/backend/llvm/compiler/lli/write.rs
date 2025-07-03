@@ -14,13 +14,13 @@ use crate::{
         ptrgen, valuegen,
     },
     core::console::logging::{self, LoggingType},
-    frontend::types::{ast::Ast, lexer::ThrushType},
+    frontend::types::{ast::Ast, lexer::Type},
 };
 
 pub fn compile<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     write_to: &'ctx (Option<(&'ctx str, Rc<Ast<'ctx>>)>, Option<Rc<Ast<'ctx>>>),
-    write_type: &'ctx ThrushType,
+    write_type: &'ctx Type,
     write_value: &'ctx Ast,
 ) -> BasicValueEnum<'ctx> {
     let value: BasicValueEnum = valuegen::compile(context, write_value, Some(write_type));

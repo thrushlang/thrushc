@@ -5,7 +5,7 @@ use crate::{
         parser::{ParserContext, attributes, expression, typegen},
         types::{
             ast::Ast,
-            lexer::ThrushType,
+            lexer::Type,
             parser::stmts::{traits::TokenExtensions, types::ThrushAttributes},
         },
     },
@@ -20,7 +20,7 @@ pub fn build_asm_code_block<'parser>(
         String::from("Expected 'asm' keyword."),
     )?;
 
-    let asm_type: ThrushType = typegen::build_type(parser_context)?;
+    let asm_type: Type = typegen::build_type(parser_context)?;
 
     let span: Span = asm_tk.get_span();
 

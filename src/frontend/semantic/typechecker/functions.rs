@@ -2,8 +2,8 @@ use crate::{
     core::errors::{position::CompilationPosition, standard::ThrushCompilerIssue},
     frontend::{
         lexer::span::Span,
-        semantic::typechecker::TypeChecker,
-        types::{ast::Ast, lexer::ThrushType},
+        semantic::typechecker::{TypeChecker, bounds},
+        types::{ast::Ast, lexer::Type},
     },
 };
 
@@ -18,15 +18,10 @@ pub fn validate_function<'type_checker>(
             }
 
             if !body.has_return() {
-                if let Err(mismatch_type_error) = typechecker.validate_types(
-                    &ThrushType::U32,
-                    &ThrushType::Void,
-                    None,
-                    None,
-                    None,
-                    span,
-                ) {
-                    typechecker.add_error(mismatch_type_error);
+                if let Err(error) =
+                    bounds::checking::check(&Type::U32, &Type::Void, None, None, None, span)
+                {
+                    typechecker.add_error(error);
                 }
             }
 
@@ -78,15 +73,10 @@ pub fn validate_function<'type_checker>(
                 }
 
                 if !body.has_return() {
-                    if let Err(mismatch_type_error) = typechecker.validate_types(
-                        return_type,
-                        &ThrushType::Void,
-                        None,
-                        None,
-                        None,
-                        span,
-                    ) {
-                        typechecker.add_error(mismatch_type_error);
+                    if let Err(error) =
+                        bounds::checking::check(return_type, &Type::Void, None, None, None, span)
+                    {
+                        typechecker.add_error(error);
                     }
                 }
             }

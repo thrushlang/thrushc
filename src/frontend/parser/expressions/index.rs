@@ -5,7 +5,7 @@ use crate::{
         parser::{ParserContext, expression, expressions::reference},
         types::{
             ast::{Ast, metadata::index::IndexMetadata, types::AstEitherExpression},
-            lexer::ThrushType,
+            lexer::Type,
         },
     },
 };
@@ -27,7 +27,7 @@ pub fn build_index<'parser>(
         (None, Some(expr.into()))
     };
 
-    let index_type: &ThrushType = match index_to {
+    let index_type: &Type = match index_to {
         (Some(ref any_reference), None) => {
             let reference: &Ast = &any_reference.1;
             reference.get_value_type()?
@@ -89,12 +89,12 @@ pub fn build_index<'parser>(
         String::from("Expected ']'."),
     )?;
 
-    let index_type: ThrushType = if index_type.is_ptr_type() {
-        ThrushType::Ptr(Some(
+    let index_type: Type = if index_type.is_ptr_type() {
+        Type::Ptr(Some(
             index_type.get_type_with_depth(indexes.len()).clone().into(),
         ))
     } else {
-        ThrushType::Mut(index_type.get_type_with_depth(indexes.len()).clone().into())
+        Type::Mut(index_type.get_type_with_depth(indexes.len()).clone().into())
     };
 
     Ok(Ast::Index {

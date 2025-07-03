@@ -5,7 +5,7 @@ use crate::{
         parser::{ParserContext, attributes, typegen},
         types::{
             ast::Ast,
-            lexer::ThrushType,
+            lexer::Type,
             parser::stmts::{
                 traits::TokenExtensions,
                 types::{CustomTypeFields, ThrushAttributes},
@@ -61,7 +61,7 @@ pub fn build_custom_type<'parser>(
     let mut custom_type_fields: CustomTypeFields = Vec::with_capacity(10);
 
     while parser_ctx.peek().kind != TokenType::RBrace {
-        let kind: ThrushType = typegen::build_type(parser_ctx)?;
+        let kind: Type = typegen::build_type(parser_ctx)?;
         custom_type_fields.push(kind);
     }
 

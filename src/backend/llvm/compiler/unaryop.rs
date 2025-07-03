@@ -4,7 +4,7 @@ use crate::backend::llvm::compiler::{cast, valuegen};
 use crate::core::console::logging::{self, LoggingType};
 use crate::frontend::lexer::tokentype::TokenType;
 use crate::frontend::types::ast::Ast;
-use crate::frontend::types::lexer::ThrushType;
+use crate::frontend::types::lexer::Type;
 use crate::frontend::types::parser::repr::UnaryOperation;
 
 use super::{context::LLVMCodeGenContext, memory::SymbolAllocated};
@@ -21,7 +21,7 @@ use inkwell::{
 pub fn unary_op<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     unary: UnaryOperation<'ctx>,
-    cast_type: Option<&ThrushType>,
+    cast_type: Option<&Type>,
 ) -> BasicValueEnum<'ctx> {
     match unary {
         (TokenType::PlusPlus | TokenType::MinusMinus, _, Ast::Reference { name, kind, .. }) => {
@@ -48,8 +48,8 @@ fn compile_increment_decrement_ref<'ctx>(
     context: &LLVMCodeGenContext<'_, 'ctx>,
     name: &str,
     operator: &TokenType,
-    kind: &ThrushType,
-    cast_type: Option<&ThrushType>,
+    kind: &Type,
+    cast_type: Option<&Type>,
 ) -> BasicValueEnum<'ctx> {
     let llvm_builder: &Builder = context.get_llvm_builder();
     let llvm_context: &Context = context.get_llvm_context();
@@ -138,13 +138,13 @@ fn compile_increment_decrement<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     operator: &TokenType,
     expression: &'ctx Ast,
-    cast_type: Option<&ThrushType>,
+    cast_type: Option<&Type>,
 ) -> BasicValueEnum<'ctx> {
     let llvm_builder: &Builder = context.get_llvm_builder();
     let llvm_context: &Context = context.get_llvm_context();
 
     let value: BasicValueEnum = valuegen::compile(context, expression, cast_type);
-    let kind: &ThrushType = expression.get_type_unwrapped();
+    let kind: &Type = expression.get_type_unwrapped();
 
     match kind {
         kind if kind.is_integer_type() => {
@@ -235,12 +235,12 @@ fn compile_increment_decrement<'ctx>(
 fn compile_logical_negation<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     expr: &'ctx Ast,
-    cast_type: Option<&ThrushType>,
+    cast_type: Option<&Type>,
 ) -> BasicValueEnum<'ctx> {
     let llvm_builder: &Builder = context.get_llvm_builder();
 
     let value: BasicValueEnum = valuegen::compile(context, expr, cast_type);
-    let kind: &ThrushType = expr.get_type_unwrapped();
+    let kind: &Type = expr.get_type_unwrapped();
 
     match kind {
         kind if kind.is_bool_type() => {
@@ -271,12 +271,12 @@ fn compile_logical_negation<'ctx>(
 fn compile_arithmetic_negation<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     expr: &'ctx Ast,
-    cast_type: Option<&ThrushType>,
+    cast_type: Option<&Type>,
 ) -> BasicValueEnum<'ctx> {
     let llvm_builder: &Builder = context.get_llvm_builder();
 
     let value: BasicValueEnum = valuegen::compile(context, expr, cast_type);
-    let kind: &ThrushType = expr.get_type_unwrapped();
+    let kind: &Type = expr.get_type_unwrapped();
 
     match kind {
         kind if kind.is_integer_type() => {

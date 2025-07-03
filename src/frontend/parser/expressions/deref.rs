@@ -4,7 +4,7 @@ use crate::{
         lexer::{span::Span, token::Token, tokentype::TokenType},
         parser::{ParserContext, expression},
         types::ast::Ast,
-        types::lexer::ThrushType,
+        types::lexer::Type,
     },
 };
 
@@ -32,7 +32,7 @@ pub fn build_dereference<'parser>(
         expr
     };
 
-    let mut current_type: ThrushType = current_expr.get_value_type()?.clone();
+    let mut current_type: Type = current_expr.get_value_type()?.clone();
 
     (0..deref_count).for_each(|_| {
         current_expr = Ast::Deref {

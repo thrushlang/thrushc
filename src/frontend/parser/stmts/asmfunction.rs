@@ -5,7 +5,7 @@ use crate::{
         parser::{ParserContext, attributes, expression, typegen},
         types::{
             ast::Ast,
-            lexer::ThrushType,
+            lexer::Type,
             parser::{
                 stmts::{
                     traits::{ThrushAttributesExtensions, TokenExtensions},
@@ -54,7 +54,7 @@ pub fn build_assembler_function<'parser>(
     )?;
 
     let mut parameters: Vec<Ast> = Vec::with_capacity(10);
-    let mut parameters_types: Vec<ThrushType> = Vec::with_capacity(10);
+    let mut parameters_types: Vec<Type> = Vec::with_capacity(10);
 
     let mut parameter_position: u32 = 0;
 
@@ -72,7 +72,7 @@ pub fn build_assembler_function<'parser>(
         let parameter_name: &str = parameter_name_tk.get_lexeme();
         let parameter_span: Span = parameter_name_tk.get_span();
 
-        let parameter_type: ThrushType = typegen::build_type(parser_ctx)?;
+        let parameter_type: Type = typegen::build_type(parser_ctx)?;
 
         parameters_types.push(parameter_type.clone());
 
@@ -102,7 +102,7 @@ pub fn build_assembler_function<'parser>(
         String::from("Expected ')'."),
     )?;
 
-    let return_type: ThrushType = typegen::build_type(parser_ctx)?;
+    let return_type: Type = typegen::build_type(parser_ctx)?;
 
     let attributes: ThrushAttributes =
         attributes::build_attributes(parser_ctx, &[TokenType::LBrace])?;

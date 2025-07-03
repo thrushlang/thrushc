@@ -2,13 +2,13 @@ use crate::{
     core::errors::standard::ThrushCompilerIssue,
     frontend::{
         lexer::{span::Span, tokentype::TokenType},
-        types::lexer::ThrushType,
+        types::lexer::Type,
     },
 };
 
 pub fn validate_unary(
     operator: &TokenType,
-    a: &ThrushType,
+    a: &Type,
     span: Span,
 ) -> Result<(), ThrushCompilerIssue> {
     match operator {
@@ -24,7 +24,7 @@ pub fn validate_unary(
 
 fn validate_general_unary(
     operator: &TokenType,
-    a: &ThrushType,
+    a: &Type,
     span: Span,
 ) -> Result<(), ThrushCompilerIssue> {
     if a.is_integer_type() || a.is_float_type() {
@@ -39,8 +39,8 @@ fn validate_general_unary(
     ))
 }
 
-fn validate_unary_bang(a: &ThrushType, span: Span) -> Result<(), ThrushCompilerIssue> {
-    if let ThrushType::Bool = a {
+fn validate_unary_bang(a: &Type, span: Span) -> Result<(), ThrushCompilerIssue> {
+    if let Type::Bool = a {
         return Ok(());
     }
 

@@ -14,7 +14,7 @@ use inkwell::{
 use crate::{
     backend::llvm::compiler::typegen,
     core::console::logging::{self, LoggingType},
-    frontend::types::lexer::ThrushType,
+    frontend::types::lexer::Type,
 };
 
 use inkwell::{
@@ -28,19 +28,19 @@ use super::context::LLVMCodeGenContext;
 pub enum SymbolAllocated<'ctx> {
     Local {
         ptr: PointerValue<'ctx>,
-        kind: &'ctx ThrushType,
+        kind: &'ctx Type,
     },
     Constant {
         ptr: PointerValue<'ctx>,
-        kind: &'ctx ThrushType,
+        kind: &'ctx Type,
     },
     LowLevelInstruction {
         value: BasicValueEnum<'ctx>,
-        kind: &'ctx ThrushType,
+        kind: &'ctx Type,
     },
     Parameter {
         value: BasicValueEnum<'ctx>,
-        kind: &'ctx ThrushType,
+        kind: &'ctx Type,
     },
 }
 
@@ -60,11 +60,7 @@ pub enum LLVMAllocationSite {
 }
 
 impl<'ctx> SymbolAllocated<'ctx> {
-    pub fn new(
-        allocate: SymbolToAllocate,
-        kind: &'ctx ThrushType,
-        value: BasicValueEnum<'ctx>,
-    ) -> Self {
+    pub fn new(allocate: SymbolToAllocate, kind: &'ctx Type, value: BasicValueEnum<'ctx>) -> Self {
         match allocate {
             SymbolToAllocate::Local => Self::Local {
                 ptr: value.into_pointer_value(),
@@ -85,7 +81,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
 
         let target_data: &TargetData = context.get_target_data();
 
-        let thrush_type: &ThrushType = self.get_type();
+        let thrush_type: &Type = self.get_type();
 
         if thrush_type.is_ptr_type() {
             return self.get_value();
@@ -149,7 +145,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
 
         let target_data: &TargetData = context.get_target_data();
 
-        let thrush_type: &ThrushType = self.get_type();
+        let thrush_type: &Type = self.get_type();
         let llvm_type: BasicTypeEnum = typegen::generate_subtype(llvm_context, thrush_type);
 
         let mem_alignment: u32 = target_data.get_preferred_alignment(&llvm_type);
@@ -284,7 +280,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
         }
     }
 
-    pub fn get_type(&self) -> &'ctx ThrushType {
+    pub fn get_type(&self) -> &'ctx Type {
         match self {
             Self::Local { kind, .. } => kind,
             Self::Constant { kind, .. } => kind,
@@ -331,7 +327,7 @@ pub fn store_anon<'ctx>(
 pub fn load_anon<'ctx>(
     context: &LLVMCodeGenContext<'_, 'ctx>,
     ptr: PointerValue<'ctx>,
-    kind: &ThrushType,
+    kind: &Type,
 ) -> BasicValueEnum<'ctx> {
     let llvm_context: &Context = context.get_llvm_context();
     let llvm_builder: &Builder = context.get_llvm_builder();
@@ -354,7 +350,7 @@ pub fn load_anon<'ctx>(
 pub fn alloc_anon<'ctx>(
     site: LLVMAllocationSite,
     context: &LLVMCodeGenContext<'_, 'ctx>,
-    kind: &ThrushType,
+    kind: &Type,
     without_subtyped: bool,
 ) -> PointerValue<'ctx> {
     let llvm_module: &Module = context.get_llvm_module();
@@ -401,7 +397,7 @@ pub fn alloc_anon<'ctx>(
 pub fn gep_anon<'ctx>(
     context: &LLVMCodeGenContext<'_, 'ctx>,
     ptr: PointerValue<'ctx>,
-    kind: &ThrushType,
+    kind: &Type,
     indexes: &[IntValue<'ctx>],
 ) -> PointerValue<'ctx> {
     let llvm_context: &Context = context.get_llvm_context();

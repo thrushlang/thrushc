@@ -13,8 +13,8 @@ use crate::{
         parser::symbols::SymbolsTable,
         types::{
             lexer::traits::{
-                LLVMTypeExtensions, ThrushTypeMutableExtensions, ThrushTypeNumericExtensions,
-                ThrushTypePointerExtensions, ThrushTypeStructExtensions,
+                LLVMTypeExtensions, TypeMutableExtensions, TypeNumericExtensions,
+                TypePointerExtensions, TypeStructExtensions,
             },
             parser::{
                 stmts::{traits::StructExtensions, types::StructFields},
@@ -25,7 +25,7 @@ use crate::{
 };
 
 #[derive(Debug, Clone, Default)]
-pub enum ThrushType {
+pub enum Type {
     // Signed Integer Type
     S8,
     S16,
@@ -52,19 +52,19 @@ pub enum ThrushType {
     Str,
 
     // Mutable Type
-    Mut(Arc<ThrushType>),
+    Mut(Arc<Type>),
 
     // Ptr Type
-    Ptr(Option<Arc<ThrushType>>),
+    Ptr(Option<Arc<Type>>),
 
     // Struct Type
-    Struct(String, Vec<Arc<ThrushType>>),
+    Struct(String, Vec<Arc<Type>>),
 
     // Fixed FixedArray
-    FixedArray(Arc<ThrushType>, u32),
+    FixedArray(Arc<Type>, u32),
 
     // Array Type
-    Array(Arc<ThrushType>),
+    Array(Arc<Type>),
 
     // Address
     Addr,
@@ -74,9 +74,9 @@ pub enum ThrushType {
     Void,
 }
 
-impl ThrushTypeStructExtensions for ThrushType {
-    fn get_struct_fields(&self) -> &[Arc<ThrushType>] {
-        if let ThrushType::Struct(_, fields) = self {
+impl TypeStructExtensions for Type {
+    fn get_struct_fields(&self) -> &[Arc<Type>] {
+        if let Type::Struct(_, fields) = self {
             return fields;
         }
 
@@ -84,9 +84,9 @@ impl ThrushTypeStructExtensions for ThrushType {
     }
 }
 
-impl ThrushTypeMutableExtensions for ThrushType {
+impl TypeMutableExtensions for Type {
     fn is_mut_fixed_array_type(&self) -> bool {
-        if let ThrushType::Mut(inner) = self {
+        if let Type::Mut(inner) = self {
             return inner.is_fixed_array_type();
         }
 
@@ -94,7 +94,7 @@ impl ThrushTypeMutableExtensions for ThrushType {
     }
 
     fn is_mut_array_type(&self) -> bool {
-        if let ThrushType::Mut(inner) = self {
+        if let Type::Mut(inner) = self {
             return inner.is_array_type();
         }
 
@@ -102,7 +102,7 @@ impl ThrushTypeMutableExtensions for ThrushType {
     }
 
     fn is_mut_struct_type(&self) -> bool {
-        if let ThrushType::Mut(inner) = self {
+        if let Type::Mut(inner) = self {
             return inner.is_struct_type();
         }
 
@@ -110,7 +110,7 @@ impl ThrushTypeMutableExtensions for ThrushType {
     }
 
     fn is_mut_numeric_type(&self) -> bool {
-        if let ThrushType::Mut(inner) = self {
+        if let Type::Mut(inner) = self {
             if inner.is_integer_type()
                 || inner.is_bool_type()
                 || inner.is_char_type()
@@ -123,8 +123,8 @@ impl ThrushTypeMutableExtensions for ThrushType {
         false
     }
 
-    fn defer_mut_all(&self) -> ThrushType {
-        if let ThrushType::Mut(inner_type) = self {
+    fn defer_mut_all(&self) -> Type {
+        if let Type::Mut(inner_type) = self {
             return inner_type.defer_mut_all();
         }
 
@@ -132,7 +132,7 @@ impl ThrushTypeMutableExtensions for ThrushType {
     }
 }
 
-impl ThrushTypeNumericExtensions for ThrushType {
+impl TypeNumericExtensions for Type {
     fn is_numeric_type(&self) -> bool {
         if self.is_integer_type()
             || self.is_float_type()
@@ -146,13 +146,13 @@ impl ThrushTypeNumericExtensions for ThrushType {
     }
 }
 
-impl ThrushTypePointerExtensions for ThrushType {
+impl TypePointerExtensions for Type {
     fn is_all_ptr(&self) -> bool {
-        if let ThrushType::Ptr(Some(ptr)) = self {
+        if let Type::Ptr(Some(ptr)) = self {
             return ptr.is_all_ptr();
         }
 
-        if let ThrushType::Ptr(None) = self {
+        if let Type::Ptr(None) = self {
             return true;
         }
 
@@ -160,11 +160,11 @@ impl ThrushTypePointerExtensions for ThrushType {
     }
 
     fn is_typed_ptr(&self) -> bool {
-        if let ThrushType::Ptr(Some(inner)) = self {
+        if let Type::Ptr(Some(inner)) = self {
             return inner.is_typed_ptr();
         }
 
-        if let ThrushType::Ptr(None) = self {
+        if let Type::Ptr(None) = self {
             return false;
         }
 
@@ -172,7 +172,7 @@ impl ThrushTypePointerExtensions for ThrushType {
     }
 
     fn is_ptr_struct_type(&self) -> bool {
-        if let ThrushType::Ptr(Some(inner)) = self {
+        if let Type::Ptr(Some(inner)) = self {
             return inner.is_struct_type();
         }
 
@@ -180,7 +180,7 @@ impl ThrushTypePointerExtensions for ThrushType {
     }
 
     fn is_ptr_fixed_array_type(&self) -> bool {
-        if let ThrushType::Ptr(Some(inner)) = self {
+        if let Type::Ptr(Some(inner)) = self {
             return inner.is_fixed_array_type();
         }
 
@@ -188,12 +188,12 @@ impl ThrushTypePointerExtensions for ThrushType {
     }
 }
 
-impl LLVMTypeExtensions for ThrushType {
-    fn is_same_size(&self, context: &LLVMCodeGenContext<'_, '_>, other: &ThrushType) -> bool {
+impl LLVMTypeExtensions for Type {
+    fn is_same_size(&self, context: &LLVMCodeGenContext<'_, '_>, other: &Type) -> bool {
         let llvm_context: &Context = context.get_llvm_context();
 
-        let a_llvm_type: BasicTypeEnum = typegen::generate_subtype(llvm_context, self);
-        let b_llvm_type: BasicTypeEnum = typegen::generate_subtype(llvm_context, other);
+        let a_llvm_type: BasicTypeEnum = typegen::generate_type(llvm_context, self);
+        let b_llvm_type: BasicTypeEnum = typegen::generate_type(llvm_context, other);
 
         let target_data: &TargetData = context.get_target_data();
 
@@ -201,121 +201,121 @@ impl LLVMTypeExtensions for ThrushType {
     }
 }
 
-impl ThrushType {
-    pub fn deref(&self) -> ThrushType {
-        if let ThrushType::Ptr(Some(any)) = self {
+impl Type {
+    pub fn deref(&self) -> Type {
+        if let Type::Ptr(Some(any)) = self {
             return (**any).clone();
         }
 
-        if let ThrushType::Mut(any) = self {
+        if let Type::Mut(any) = self {
             return (**any).clone();
         }
 
         self.clone()
     }
 
-    pub fn get_fixed_array_base_type(&self) -> &ThrushType {
-        if let ThrushType::FixedArray(inner, ..) = self {
+    pub fn get_fixed_array_base_type(&self) -> &Type {
+        if let Type::FixedArray(inner, ..) = self {
             return inner;
         }
 
-        if let ThrushType::Mut(inner) = self {
+        if let Type::Mut(inner) = self {
             return inner.get_fixed_array_base_type();
         }
 
-        if let ThrushType::Ptr(Some(inner)) = self {
+        if let Type::Ptr(Some(inner)) = self {
             return inner.get_fixed_array_base_type();
         }
 
         self
     }
 
-    pub fn get_array_base_type(&self) -> &ThrushType {
-        if let ThrushType::Array(inner, ..) = self {
+    pub fn get_array_base_type(&self) -> &Type {
+        if let Type::Array(inner, ..) = self {
             return inner;
         }
 
-        if let ThrushType::Mut(inner) = self {
+        if let Type::Mut(inner) = self {
             return inner.get_array_base_type();
         }
 
-        if let ThrushType::Ptr(Some(inner)) = self {
+        if let Type::Ptr(Some(inner)) = self {
             return inner.get_array_base_type();
         }
 
         self
     }
 
-    pub fn get_type_with_depth(&self, depth: usize) -> &ThrushType {
+    pub fn get_type_with_depth(&self, depth: usize) -> &Type {
         if depth == 0 {
             return self;
         }
 
         match self {
-            ThrushType::FixedArray(element_type, _) => element_type.get_type_with_depth(depth),
-            ThrushType::Array(element_type) => element_type.get_type_with_depth(depth),
-            ThrushType::Mut(inner_type) => inner_type.get_type_with_depth(depth),
-            ThrushType::Ptr(Some(inner_type)) => inner_type.get_type_with_depth(depth - 1),
-            ThrushType::Struct(_, _) => self,
-            ThrushType::S8
-            | ThrushType::S16
-            | ThrushType::S32
-            | ThrushType::S64
-            | ThrushType::U8
-            | ThrushType::U16
-            | ThrushType::U32
-            | ThrushType::U64
-            | ThrushType::F32
-            | ThrushType::F64
-            | ThrushType::Bool
-            | ThrushType::Char
-            | ThrushType::Str
-            | ThrushType::Addr
-            | ThrushType::Void
-            | ThrushType::Ptr(None) => self,
+            Type::FixedArray(element_type, _) => element_type.get_type_with_depth(depth),
+            Type::Array(element_type) => element_type.get_type_with_depth(depth),
+            Type::Mut(inner_type) => inner_type.get_type_with_depth(depth),
+            Type::Ptr(Some(inner_type)) => inner_type.get_type_with_depth(depth - 1),
+            Type::Struct(_, _) => self,
+            Type::S8
+            | Type::S16
+            | Type::S32
+            | Type::S64
+            | Type::U8
+            | Type::U16
+            | Type::U32
+            | Type::U64
+            | Type::F32
+            | Type::F64
+            | Type::Bool
+            | Type::Char
+            | Type::Str
+            | Type::Addr
+            | Type::Void
+            | Type::Ptr(None) => self,
         }
     }
 
     #[must_use]
-    pub fn precompute_numeric_type(&self, other: &ThrushType) -> &ThrushType {
+    pub fn precompute_numeric_type(&self, other: &Type) -> &Type {
         match (self, other) {
-            (ThrushType::S64, _) | (_, ThrushType::S64) => &ThrushType::S64,
-            (ThrushType::S32, _) | (_, ThrushType::S32) => &ThrushType::S32,
-            (ThrushType::S16, _) | (_, ThrushType::S16) => &ThrushType::S16,
-            (ThrushType::S8, _) | (_, ThrushType::S8) => &ThrushType::S8,
+            (Type::S64, _) | (_, Type::S64) => &Type::S64,
+            (Type::S32, _) | (_, Type::S32) => &Type::S32,
+            (Type::S16, _) | (_, Type::S16) => &Type::S16,
+            (Type::S8, _) | (_, Type::S8) => &Type::S8,
 
-            (ThrushType::U64, _) | (_, ThrushType::U64) => &ThrushType::U64,
-            (ThrushType::U32, _) | (_, ThrushType::U32) => &ThrushType::U32,
-            (ThrushType::U16, _) | (_, ThrushType::U16) => &ThrushType::U16,
-            (ThrushType::U8, _) | (_, ThrushType::U8) => &ThrushType::U8,
+            (Type::U64, _) | (_, Type::U64) => &Type::U64,
+            (Type::U32, _) | (_, Type::U32) => &Type::U32,
+            (Type::U16, _) | (_, Type::U16) => &Type::U16,
+            (Type::U8, _) | (_, Type::U8) => &Type::U8,
 
-            (ThrushType::F64, _) | (_, ThrushType::F64) => &ThrushType::F64,
-            (ThrushType::F32, _) | (_, ThrushType::F32) => &ThrushType::F32,
+            (Type::F64, _) | (_, Type::F64) => &Type::F64,
+            (Type::F32, _) | (_, Type::F32) => &Type::F32,
 
-            (ThrushType::Mut(a), ThrushType::Mut(b)) => a.precompute_numeric_type(b),
+            (Type::Mut(a), Type::Mut(b)) => a.precompute_numeric_type(b),
 
             _ => self,
         }
     }
 
-    pub fn narrowing_cast(&self) -> ThrushType {
+    pub fn narrowing_cast(&self) -> Type {
         match self {
-            ThrushType::U8 => ThrushType::S8,
-            ThrushType::U16 => ThrushType::S16,
-            ThrushType::U32 => ThrushType::S32,
-            ThrushType::U64 => ThrushType::S64,
+            Type::U8 => Type::S8,
+            Type::U16 => Type::S16,
+            Type::U32 => Type::S32,
+            Type::U64 => Type::S64,
 
-            ThrushType::S8 => ThrushType::U8,
-            ThrushType::S16 => ThrushType::U16,
-            ThrushType::S32 => ThrushType::U32,
-            ThrushType::S64 => ThrushType::U64,
+            Type::S8 => Type::U8,
+            Type::S16 => Type::U16,
+            Type::S32 => Type::U32,
+            Type::S64 => Type::U64,
 
             _ => self.clone(),
         }
     }
 
-    pub fn create_structure_type(name: String, fields: &[ThrushType]) -> ThrushType {
-        ThrushType::Struct(
+    pub fn create_structure_type(name: String, fields: &[Type]) -> Type {
+        Type::Struct(
             name,
             fields.iter().map(|field| Arc::new(field.clone())).collect(),
         )
@@ -331,57 +331,57 @@ impl ThrushType {
 
     #[inline(always)]
     pub fn is_char_type(&self) -> bool {
-        matches!(self, ThrushType::Char)
+        matches!(self, Type::Char)
     }
 
     #[inline(always)]
     pub fn is_void_type(&self) -> bool {
-        matches!(self, ThrushType::Void)
+        matches!(self, Type::Void)
     }
 
     #[inline(always)]
     pub fn is_bool_type(&self) -> bool {
-        matches!(self, ThrushType::Bool)
+        matches!(self, Type::Bool)
     }
 
     #[inline(always)]
     pub fn is_struct_type(&self) -> bool {
-        matches!(self, ThrushType::Struct(..))
+        matches!(self, Type::Struct(..))
     }
 
     #[inline(always)]
     pub fn is_fixed_array_type(&self) -> bool {
-        matches!(self, ThrushType::FixedArray(..))
+        matches!(self, Type::FixedArray(..))
     }
 
     #[inline(always)]
     pub fn is_array_type(&self) -> bool {
-        matches!(self, ThrushType::Array(..))
+        matches!(self, Type::Array(..))
     }
 
     #[inline(always)]
     pub fn is_float_type(&self) -> bool {
-        matches!(self, ThrushType::F32 | ThrushType::F64)
+        matches!(self, Type::F32 | Type::F64)
     }
 
     #[inline(always)]
     pub fn is_ptr_type(&self) -> bool {
-        matches!(self, ThrushType::Ptr(_))
+        matches!(self, Type::Ptr(_))
     }
 
     #[inline(always)]
     pub fn is_address_type(&self) -> bool {
-        matches!(self, ThrushType::Addr)
+        matches!(self, Type::Addr)
     }
 
     #[inline(always)]
     pub fn is_str_type(&self) -> bool {
-        matches!(self, ThrushType::Str)
+        matches!(self, Type::Str)
     }
 
     #[inline(always)]
     pub fn is_mut_type(&self) -> bool {
-        matches!(self, ThrushType::Mut(_))
+        matches!(self, Type::Mut(_))
     }
 
     #[inline(always)]
@@ -392,67 +392,64 @@ impl ThrushType {
     #[must_use]
     #[inline(always)]
     pub fn is_signed_integer_type(&self) -> bool {
-        matches!(
-            self,
-            ThrushType::S8 | ThrushType::S16 | ThrushType::S32 | ThrushType::S64
-        )
+        matches!(self, Type::S8 | Type::S16 | Type::S32 | Type::S64)
     }
 
     #[inline(always)]
     pub fn is_integer_type(&self) -> bool {
         matches!(
             self,
-            ThrushType::S8
-                | ThrushType::S16
-                | ThrushType::S32
-                | ThrushType::S64
-                | ThrushType::U8
-                | ThrushType::U16
-                | ThrushType::U32
-                | ThrushType::U64
-                | ThrushType::Char
+            Type::S8
+                | Type::S16
+                | Type::S32
+                | Type::S64
+                | Type::U8
+                | Type::U16
+                | Type::U32
+                | Type::U64
+                | Type::Char
         )
     }
 
     #[inline]
     pub fn get_array_type_herarchy(&self) -> u8 {
         match self {
-            ThrushType::Void => 0,
+            Type::Void => 0,
 
-            ThrushType::Bool => 1,
-            ThrushType::Char => 2,
-            ThrushType::Str => 3,
+            Type::Bool => 1,
+            Type::Char => 2,
+            Type::Str => 3,
 
-            ThrushType::S8 => 4,
-            ThrushType::S16 => 5,
-            ThrushType::S32 => 6,
-            ThrushType::S64 => 7,
+            Type::S8 => 4,
+            Type::S16 => 5,
+            Type::S32 => 6,
+            Type::S64 => 7,
 
-            ThrushType::U8 => 8,
-            ThrushType::U16 => 9,
-            ThrushType::U32 => 10,
-            ThrushType::U64 => 11,
+            Type::U8 => 8,
+            Type::U16 => 9,
+            Type::U32 => 10,
+            Type::U64 => 11,
 
-            ThrushType::F32 => 12,
-            ThrushType::F64 => 13,
+            Type::F32 => 12,
+            Type::F64 => 13,
 
-            ThrushType::Mut(subtype) => subtype.get_array_type_herarchy(),
+            Type::Mut(subtype) => subtype.get_array_type_herarchy(),
 
-            ThrushType::Addr => 14,
-            ThrushType::Ptr(Some(subtype)) => subtype.get_array_type_herarchy(),
-            ThrushType::Ptr(None) => 15,
+            Type::Addr => 14,
+            Type::Ptr(Some(subtype)) => subtype.get_array_type_herarchy(),
+            Type::Ptr(None) => 15,
 
-            ThrushType::FixedArray(..) => 16,
-            ThrushType::Array(..) => 17,
-            ThrushType::Struct(..) => 18,
+            Type::FixedArray(..) => 16,
+            Type::Array(..) => 17,
+            Type::Struct(..) => 18,
         }
     }
 }
 
-impl PartialEq for ThrushType {
+impl PartialEq for Type {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
-            (ThrushType::Struct(a, fields1), ThrushType::Struct(b, fields2)) => {
+            (Type::Struct(a, fields1), Type::Struct(b, fields2)) => {
                 fields1.len() == fields2.len()
                     && a == b
                     && fields1
@@ -461,29 +458,29 @@ impl PartialEq for ThrushType {
                         .all(|(f1, f2)| f1.as_ref() == f2.as_ref())
             }
 
-            (ThrushType::FixedArray(type_a, size_a), ThrushType::FixedArray(type_b, size_b)) => {
+            (Type::FixedArray(type_a, size_a), Type::FixedArray(type_b, size_b)) => {
                 type_a == type_b && size_a == size_b
             }
 
-            (ThrushType::Mut(target), ThrushType::Mut(from)) => target == from,
-            (ThrushType::Array(target), ThrushType::Array(from)) => target == from,
+            (Type::Mut(target), Type::Mut(from)) => target == from,
+            (Type::Array(target), Type::Array(from)) => target == from,
 
-            (ThrushType::Char, ThrushType::Char) => true,
-            (ThrushType::S8, ThrushType::S8) => true,
-            (ThrushType::S16, ThrushType::S16) => true,
-            (ThrushType::S32, ThrushType::S32) => true,
-            (ThrushType::S64, ThrushType::S64) => true,
-            (ThrushType::U8, ThrushType::U8) => true,
-            (ThrushType::U16, ThrushType::U16) => true,
-            (ThrushType::U32, ThrushType::U32) => true,
-            (ThrushType::U64, ThrushType::U64) => true,
-            (ThrushType::F32, ThrushType::F32) => true,
-            (ThrushType::F64, ThrushType::F64) => true,
-            (ThrushType::Ptr(None), ThrushType::Ptr(None)) => true,
-            (ThrushType::Ptr(Some(target)), ThrushType::Ptr(Some(from))) => target == from,
-            (ThrushType::Void, ThrushType::Void) => true,
-            (ThrushType::Str, ThrushType::Str) => true,
-            (ThrushType::Bool, ThrushType::Bool) => true,
+            (Type::Char, Type::Char) => true,
+            (Type::S8, Type::S8) => true,
+            (Type::S16, Type::S16) => true,
+            (Type::S32, Type::S32) => true,
+            (Type::S64, Type::S64) => true,
+            (Type::U8, Type::U8) => true,
+            (Type::U16, Type::U16) => true,
+            (Type::U32, Type::U32) => true,
+            (Type::U64, Type::U64) => true,
+            (Type::F32, Type::F32) => true,
+            (Type::F64, Type::F64) => true,
+            (Type::Ptr(None), Type::Ptr(None)) => true,
+            (Type::Ptr(Some(target)), Type::Ptr(Some(from))) => target == from,
+            (Type::Void, Type::Void) => true,
+            (Type::Str, Type::Str) => true,
+            (Type::Bool, Type::Bool) => true,
 
             _ => false,
         }
@@ -493,11 +490,11 @@ impl PartialEq for ThrushType {
 pub fn decompose_struct_property(
     mut position: usize,
     property_names: Vec<&'_ str>,
-    base_type: ThrushType,
+    base_type: Type,
     symbols_table: &SymbolsTable<'_>,
     span: Span,
-) -> Result<(ThrushType, Vec<(ThrushType, u32)>), ThrushCompilerIssue> {
-    let mut gep_indices: Vec<(ThrushType, u32)> = Vec::with_capacity(10);
+) -> Result<(Type, Vec<(Type, u32)>), ThrushCompilerIssue> {
+    let mut gep_indices: Vec<(Type, u32)> = Vec::with_capacity(10);
 
     let mut is_parent_mut: bool = false;
     let mut is_parent_ptr: bool = false;
@@ -506,13 +503,13 @@ pub fn decompose_struct_property(
         return Ok((base_type.clone(), gep_indices));
     }
 
-    let current_type: &ThrushType = match &base_type {
-        ThrushType::Mut(inner_type) => {
+    let current_type: &Type = match &base_type {
+        Type::Mut(inner_type) => {
             is_parent_mut = true;
             inner_type
         }
 
-        ThrushType::Ptr(inner_ptr) => {
+        Type::Ptr(inner_ptr) => {
             is_parent_ptr = true;
 
             if let Some(inner_type) = inner_ptr {
@@ -530,7 +527,7 @@ pub fn decompose_struct_property(
         _ => &base_type,
     };
 
-    if let ThrushType::Struct(name, _) = current_type {
+    if let Type::Struct(name, _) = current_type {
         let structure: Struct = symbols_table.get_struct(name, span)?;
         let fields: StructFields = structure.get_fields();
 
@@ -543,12 +540,12 @@ pub fn decompose_struct_property(
             .find(|field| field.1.0 == field_name);
 
         if let Some((index, (_, field_type, ..))) = field_with_index {
-            let mut adjusted_field_type: ThrushType = field_type.clone();
+            let mut adjusted_field_type: Type = field_type.clone();
 
             if is_parent_mut {
-                adjusted_field_type = ThrushType::Mut(adjusted_field_type.into());
+                adjusted_field_type = Type::Mut(adjusted_field_type.into());
             } else if is_parent_ptr {
-                adjusted_field_type = ThrushType::Ptr(Some(adjusted_field_type.into()));
+                adjusted_field_type = Type::Ptr(Some(adjusted_field_type.into()));
             }
 
             gep_indices.push((adjusted_field_type.clone(), index as u32));
@@ -564,12 +561,12 @@ pub fn decompose_struct_property(
             )?;
 
             for (ty, _) in &mut nested_indices {
-                let mut adjusted_ty: ThrushType = ty.clone();
+                let mut adjusted_ty: Type = ty.clone();
 
                 if is_parent_mut {
-                    adjusted_ty = ThrushType::Mut(adjusted_ty.into());
+                    adjusted_ty = Type::Mut(adjusted_ty.into());
                 } else if is_parent_ptr {
-                    adjusted_ty = ThrushType::Ptr(Some(adjusted_ty.into()));
+                    adjusted_ty = Type::Ptr(Some(adjusted_ty.into()));
                 }
 
                 *ty = adjusted_ty;
@@ -578,9 +575,9 @@ pub fn decompose_struct_property(
             gep_indices.append(&mut nested_indices);
 
             let final_result_type = if is_parent_mut {
-                ThrushType::Mut(result_type.into())
+                Type::Mut(result_type.into())
             } else if is_parent_ptr {
-                ThrushType::Ptr(Some(result_type.into()))
+                Type::Ptr(Some(result_type.into()))
             } else {
                 result_type
             };

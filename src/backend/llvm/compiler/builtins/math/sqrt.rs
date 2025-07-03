@@ -11,7 +11,7 @@ use inkwell::{
 use crate::{
     backend::llvm::compiler::{context::LLVMCodeGenContext, intrinsics, valuegen},
     core::console::logging::{self, LoggingType},
-    frontend::types::{ast::Ast, lexer::ThrushType},
+    frontend::types::{ast::Ast, lexer::Type},
 };
 
 pub fn compile<'ctx>(
@@ -22,7 +22,7 @@ pub fn compile<'ctx>(
     let llvm_builder: &Builder = context.get_llvm_builder();
 
     match value.get_type_unwrapped() {
-        ThrushType::F32 => {
+        Type::F32 => {
             let fn_sqrt_type: (&str, FunctionType) =
                 intrinsics::math::sqrt::float_instrinsic(context);
 
@@ -36,7 +36,7 @@ pub fn compile<'ctx>(
                     llvm_module.add_function(fn_name, fn_type, None)
                 };
 
-            let value: BasicValueEnum = valuegen::compile(context, value, Some(&ThrushType::F32));
+            let value: BasicValueEnum = valuegen::compile(context, value, Some(&Type::F32));
 
             if let Ok(call) = llvm_builder.build_call(llvm_fn_value, &[value.into()], "") {
                 call.try_as_basic_value().unwrap_left()
@@ -46,7 +46,7 @@ pub fn compile<'ctx>(
             }
         }
 
-        ThrushType::F64 => {
+        Type::F64 => {
             let fn_sqrt_type: (&str, FunctionType) =
                 intrinsics::math::sqrt::double_instrinsic(context);
 
@@ -60,7 +60,7 @@ pub fn compile<'ctx>(
                     llvm_module.add_function(fn_name, fn_type, None)
                 };
 
-            let value: BasicValueEnum = valuegen::compile(context, value, Some(&ThrushType::F64));
+            let value: BasicValueEnum = valuegen::compile(context, value, Some(&Type::F64));
 
             if let Ok(call) = llvm_builder.build_call(llvm_fn_value, &[value.into()], "") {
                 call.try_as_basic_value().unwrap_left()

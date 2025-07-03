@@ -1,7 +1,7 @@
 use crate::{
     backend::llvm::compiler::attributes::LLVMAttribute,
     core::errors::standard::ThrushCompilerIssue,
-    frontend::{lexer::span::Span, types::lexer::ThrushType},
+    frontend::{lexer::span::Span, types::lexer::Type},
 };
 
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -299,30 +299,30 @@ impl TokenType {
         }
     }
 
-    pub fn as_type(&self, span: Span) -> Result<ThrushType, ThrushCompilerIssue> {
+    pub fn as_type(&self, span: Span) -> Result<Type, ThrushCompilerIssue> {
         match self {
-            TokenType::Char => Ok(ThrushType::Char),
+            TokenType::Char => Ok(Type::Char),
 
-            TokenType::S8 => Ok(ThrushType::S8),
-            TokenType::S16 => Ok(ThrushType::S16),
-            TokenType::S32 => Ok(ThrushType::S32),
-            TokenType::S64 => Ok(ThrushType::S64),
+            TokenType::S8 => Ok(Type::S8),
+            TokenType::S16 => Ok(Type::S16),
+            TokenType::S32 => Ok(Type::S32),
+            TokenType::S64 => Ok(Type::S64),
 
-            TokenType::U8 => Ok(ThrushType::U8),
-            TokenType::U16 => Ok(ThrushType::U16),
-            TokenType::U32 => Ok(ThrushType::U32),
-            TokenType::U64 => Ok(ThrushType::U64),
+            TokenType::U8 => Ok(Type::U8),
+            TokenType::U16 => Ok(Type::U16),
+            TokenType::U32 => Ok(Type::U32),
+            TokenType::U64 => Ok(Type::U64),
 
-            TokenType::Bool => Ok(ThrushType::Bool),
+            TokenType::Bool => Ok(Type::Bool),
 
-            TokenType::F32 => Ok(ThrushType::F32),
-            TokenType::F64 => Ok(ThrushType::F64),
+            TokenType::F32 => Ok(Type::F32),
+            TokenType::F64 => Ok(Type::F64),
 
-            TokenType::Str => Ok(ThrushType::Str),
+            TokenType::Str => Ok(Type::Str),
 
-            TokenType::Ptr => Ok(ThrushType::Ptr(None)),
-            TokenType::Addr => Ok(ThrushType::Addr),
-            TokenType::Void => Ok(ThrushType::Void),
+            TokenType::Ptr => Ok(Type::Ptr(None)),
+            TokenType::Addr => Ok(Type::Addr),
+            TokenType::Void => Ok(Type::Void),
 
             any => Err(ThrushCompilerIssue::Error(
                 "Syntax error".into(),

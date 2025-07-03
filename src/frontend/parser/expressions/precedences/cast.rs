@@ -3,7 +3,7 @@ use crate::{
     frontend::{
         lexer::{span::Span, tokentype::TokenType},
         parser::{ParserContext, expressions::precedences::comparation, typegen},
-        types::{ast::Ast, lexer::ThrushType, parser::stmts::traits::TokenExtensions},
+        types::{ast::Ast, lexer::Type, parser::stmts::traits::TokenExtensions},
     },
 };
 
@@ -15,7 +15,7 @@ pub fn cast_precedence<'parser>(
     if parser_context.match_token(TokenType::As)? {
         let span: Span = parser_context.previous().get_span();
 
-        let cast: ThrushType = typegen::build_type(parser_context)?;
+        let cast: Type = typegen::build_type(parser_context)?;
 
         expression = Ast::As {
             from: expression.into(),

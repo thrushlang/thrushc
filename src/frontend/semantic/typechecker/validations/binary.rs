@@ -2,14 +2,14 @@ use crate::{
     core::errors::standard::ThrushCompilerIssue,
     frontend::{
         lexer::{span::Span, tokentype::TokenType},
-        types::lexer::ThrushType,
+        types::lexer::Type,
     },
 };
 
 pub fn validate_binary(
     operator: &TokenType,
-    a: &ThrushType,
-    b: &ThrushType,
+    a: &Type,
+    b: &Type,
     span: Span,
 ) -> Result<(), ThrushCompilerIssue> {
     match operator {
@@ -28,11 +28,11 @@ pub fn validate_binary(
 
 fn validate_binary_gate(
     operator: &TokenType,
-    a: &ThrushType,
-    b: &ThrushType,
+    a: &Type,
+    b: &Type,
     span: Span,
 ) -> Result<(), ThrushCompilerIssue> {
-    if let (ThrushType::Bool, ThrushType::Bool) = (a, b) {
+    if let (Type::Bool, Type::Bool) = (a, b) {
         return Ok(());
     }
 
@@ -46,27 +46,13 @@ fn validate_binary_gate(
 
 fn validate_binary_shift(
     operator: &TokenType,
-    a: &ThrushType,
-    b: &ThrushType,
+    a: &Type,
+    b: &Type,
     span: Span,
 ) -> Result<(), ThrushCompilerIssue> {
     if let (
-        ThrushType::S8
-        | ThrushType::S16
-        | ThrushType::S32
-        | ThrushType::S64
-        | ThrushType::U8
-        | ThrushType::U16
-        | ThrushType::U32
-        | ThrushType::U64,
-        ThrushType::S8
-        | ThrushType::S16
-        | ThrushType::S32
-        | ThrushType::S64
-        | ThrushType::U8
-        | ThrushType::U16
-        | ThrushType::U32
-        | ThrushType::U64,
+        Type::S8 | Type::S16 | Type::S32 | Type::S64 | Type::U8 | Type::U16 | Type::U32 | Type::U64,
+        Type::S8 | Type::S16 | Type::S32 | Type::S64 | Type::U8 | Type::U16 | Type::U32 | Type::U64,
     ) = (a, b)
     {
         return Ok(());
@@ -82,31 +68,17 @@ fn validate_binary_shift(
 
 fn validate_binary_comparasion(
     operator: &TokenType,
-    a: &ThrushType,
-    b: &ThrushType,
+    a: &Type,
+    b: &Type,
     span: Span,
 ) -> Result<(), ThrushCompilerIssue> {
     if let (
-        ThrushType::S8
-        | ThrushType::S16
-        | ThrushType::S32
-        | ThrushType::S64
-        | ThrushType::U8
-        | ThrushType::U16
-        | ThrushType::U32
-        | ThrushType::U64,
-        ThrushType::S8
-        | ThrushType::S16
-        | ThrushType::S32
-        | ThrushType::S64
-        | ThrushType::U8
-        | ThrushType::U16
-        | ThrushType::U32
-        | ThrushType::U64,
+        Type::S8 | Type::S16 | Type::S32 | Type::S64 | Type::U8 | Type::U16 | Type::U32 | Type::U64,
+        Type::S8 | Type::S16 | Type::S32 | Type::S64 | Type::U8 | Type::U16 | Type::U32 | Type::U64,
     ) = (a, b)
     {
         return Ok(());
-    } else if let (ThrushType::F32 | ThrushType::F64, ThrushType::F32 | ThrushType::F64) = (a, b) {
+    } else if let (Type::F32 | Type::F64, Type::F32 | Type::F64) = (a, b) {
         return Ok(());
     }
 
@@ -120,34 +92,32 @@ fn validate_binary_comparasion(
 
 fn validate_binary_equality(
     operator: &TokenType,
-    a: &ThrushType,
-    b: &ThrushType,
+    a: &Type,
+    b: &Type,
     span: Span,
 ) -> Result<(), ThrushCompilerIssue> {
     if matches!(
         (a, b),
         (
-            ThrushType::S8
-                | ThrushType::S16
-                | ThrushType::S32
-                | ThrushType::S64
-                | ThrushType::U8
-                | ThrushType::U16
-                | ThrushType::U32
-                | ThrushType::U64,
-            ThrushType::S8
-                | ThrushType::S16
-                | ThrushType::S32
-                | ThrushType::S64
-                | ThrushType::U8
-                | ThrushType::U16
-                | ThrushType::U32
-                | ThrushType::U64,
-        ) | (
-            ThrushType::F32 | ThrushType::F64,
-            ThrushType::F32 | ThrushType::F64
-        ) | (ThrushType::Bool, ThrushType::Bool)
-            | (ThrushType::Char, ThrushType::Char)
+            Type::S8
+                | Type::S16
+                | Type::S32
+                | Type::S64
+                | Type::U8
+                | Type::U16
+                | Type::U32
+                | Type::U64,
+            Type::S8
+                | Type::S16
+                | Type::S32
+                | Type::S64
+                | Type::U8
+                | Type::U16
+                | Type::U32
+                | Type::U64,
+        ) | (Type::F32 | Type::F64, Type::F32 | Type::F64)
+            | (Type::Bool, Type::Bool)
+            | (Type::Char, Type::Char)
     ) {
         return Ok(());
     }
@@ -166,31 +136,31 @@ fn validate_binary_equality(
 
 fn validate_binary_arithmetic(
     operator: &TokenType,
-    a: &ThrushType,
-    b: &ThrushType,
+    a: &Type,
+    b: &Type,
     span: Span,
 ) -> Result<(), ThrushCompilerIssue> {
     match (a, b) {
         (
-            ThrushType::S8
-            | ThrushType::S16
-            | ThrushType::S32
-            | ThrushType::S64
-            | ThrushType::U8
-            | ThrushType::U16
-            | ThrushType::U32
-            | ThrushType::U64,
-            ThrushType::S8
-            | ThrushType::S16
-            | ThrushType::S32
-            | ThrushType::S64
-            | ThrushType::U8
-            | ThrushType::U16
-            | ThrushType::U32
-            | ThrushType::U64,
+            Type::S8
+            | Type::S16
+            | Type::S32
+            | Type::S64
+            | Type::U8
+            | Type::U16
+            | Type::U32
+            | Type::U64,
+            Type::S8
+            | Type::S16
+            | Type::S32
+            | Type::S64
+            | Type::U8
+            | Type::U16
+            | Type::U32
+            | Type::U64,
         ) => Ok(()),
 
-        (ThrushType::F32 | ThrushType::F64, ThrushType::F32 | ThrushType::F64) => Ok(()),
+        (Type::F32 | Type::F64, Type::F32 | Type::F64) => Ok(()),
 
         _ => Err(ThrushCompilerIssue::Error(
             String::from("Mismatched Types"),

@@ -5,7 +5,7 @@ use crate::{
         parser::ParserContext,
         types::{
             ast::{Ast, metadata::reference::ReferenceMetadata},
-            lexer::ThrushType,
+            lexer::Type,
             parser::{
                 stmts::traits::{FoundSymbolEither, FoundSymbolExtension, TokenExtensions},
                 symbols::{
@@ -38,7 +38,7 @@ pub fn build_reference<'parser>(
             .get_symbols()
             .get_const_by_id(const_id, scope_idx, span)?;
 
-        let constant_type: ThrushType = constant.get_type();
+        let constant_type: Type = constant.get_type();
 
         return Ok(Ast::Reference {
             name,
@@ -55,7 +55,7 @@ pub fn build_reference<'parser>(
             .get_symbols()
             .get_parameter_by_id(parameter_id, span)?;
 
-        let parameter_type: ThrushType = parameter.get_type();
+        let parameter_type: Type = parameter.get_type();
 
         let is_mutable: bool = parameter.is_mutable();
 
@@ -81,7 +81,7 @@ pub fn build_reference<'parser>(
             .get_symbols()
             .get_lli_by_id(lli_name, scope_idx, span)?;
 
-        let lli_type: ThrushType = parameter.get_type();
+        let lli_type: Type = parameter.get_type();
 
         let is_allocated: bool = lli_type.is_ptr_type() || lli_type.is_address_type();
 
@@ -102,7 +102,7 @@ pub fn build_reference<'parser>(
 
     let is_mutable: bool = local.is_mutable();
 
-    let local_type: ThrushType = local.get_type();
+    let local_type: Type = local.get_type();
 
     let reference: Ast = Ast::Reference {
         name,

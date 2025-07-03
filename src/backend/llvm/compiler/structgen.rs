@@ -8,8 +8,8 @@ use crate::backend::llvm::compiler::memory::{self, LLVMAllocationSite};
 
 use crate::backend::llvm::compiler::valuegen;
 use crate::core::console::logging::{self, LoggingType};
-use crate::frontend::types::lexer::ThrushType;
-use crate::frontend::types::lexer::traits::ThrushTypeStructExtensions;
+use crate::frontend::types::lexer::Type;
+use crate::frontend::types::lexer::traits::TypeStructExtensions;
 use crate::frontend::types::parser::stmts::types::Constructor;
 
 use inkwell::AddressSpace;
@@ -19,8 +19,8 @@ use inkwell::values::{BasicValueEnum, PointerValue};
 pub fn compile_struct<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     args: &'ctx Constructor,
-    kind: &ThrushType,
-    cast_type: Option<&ThrushType>,
+    kind: &Type,
+    cast_type: Option<&Type>,
 ) -> BasicValueEnum<'ctx> {
     if let Some(anchor) = context.get_pointer_anchor() {
         if !anchor.is_triggered() {
@@ -36,11 +36,11 @@ pub fn compile_struct<'ctx>(
 fn compile_struct_with_anchor<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     args: &'ctx Constructor,
-    kind: &ThrushType,
-    cast_type: Option<&ThrushType>,
+    kind: &Type,
+    cast_type: Option<&Type>,
     anchor: PointerAnchor<'ctx>,
 ) -> BasicValueEnum<'ctx> {
-    let struct_type: &ThrushType = cast_type.unwrap_or(kind);
+    let struct_type: &Type = cast_type.unwrap_or(kind);
 
     let struct_llvm_type: BasicTypeEnum =
         typegen::generate_type(context.get_llvm_context(), struct_type);
@@ -49,7 +49,7 @@ fn compile_struct_with_anchor<'ctx>(
 
     context.set_pointer_anchor(PointerAnchor::new(struct_ptr, true));
 
-    let struct_fields_types: &[Arc<ThrushType>] = struct_type.get_struct_fields();
+    let struct_fields_types: &[Arc<Type>] = struct_type.get_struct_fields();
 
     let fields: Vec<BasicValueEnum> = args
         .iter()
@@ -80,10 +80,10 @@ fn compile_struct_with_anchor<'ctx>(
 pub fn compile_struct_without_anchor<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     args: &'ctx Constructor,
-    kind: &ThrushType,
-    cast_type: Option<&ThrushType>,
+    kind: &Type,
+    cast_type: Option<&Type>,
 ) -> BasicValueEnum<'ctx> {
-    let struct_type: &ThrushType = cast_type.unwrap_or(kind);
+    let struct_type: &Type = cast_type.unwrap_or(kind);
 
     let struct_llvm_type: BasicTypeEnum =
         typegen::generate_type(context.get_llvm_context(), struct_type);
@@ -91,7 +91,7 @@ pub fn compile_struct_without_anchor<'ctx>(
     let struct_ptr: PointerValue =
         memory::alloc_anon(LLVMAllocationSite::Stack, context, struct_type, true);
 
-    let struct_fields_types: &[Arc<ThrushType>] = struct_type.get_struct_fields();
+    let struct_fields_types: &[Arc<Type>] = struct_type.get_struct_fields();
 
     let fields: Vec<BasicValueEnum> = args
         .iter()

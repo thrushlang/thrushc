@@ -9,13 +9,13 @@ use crate::{
     core::console::logging::{self, LoggingType},
     frontend::types::{
         ast::Ast,
-        lexer::{ThrushType, traits::ThrushTypeStructExtensions},
+        lexer::{Type, traits::TypeStructExtensions},
     },
 };
 
 pub fn compile<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
-    kind: &ThrushType,
+    kind: &Type,
     ast: &Ast,
 ) -> BasicValueEnum<'ctx> {
     match ast {
@@ -50,12 +50,12 @@ pub fn compile<'ctx>(
 
 pub fn constant_struct<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
-    kind: &ThrushType,
+    kind: &Type,
     fields: Vec<&Ast>,
 ) -> BasicValueEnum<'ctx> {
     let llvm_context: &Context = context.get_llvm_context();
 
-    let struct_fields_types: &[Arc<ThrushType>] = kind.get_struct_fields();
+    let struct_fields_types: &[Arc<Type>] = kind.get_struct_fields();
 
     let fields: Vec<BasicValueEnum> = fields
         .iter()
@@ -68,12 +68,12 @@ pub fn constant_struct<'ctx>(
 
 pub fn constant_fixed_array<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
-    kind: &ThrushType,
+    kind: &Type,
     items: &[Ast],
 ) -> BasicValueEnum<'ctx> {
     let llvm_context: &Context = context.get_llvm_context();
 
-    let array_item_type: &ThrushType = kind.get_fixed_array_base_type();
+    let array_item_type: &Type = kind.get_fixed_array_base_type();
 
     let array_type: BasicTypeEnum = typegen::generate_type(llvm_context, array_item_type);
 
@@ -141,7 +141,7 @@ pub fn constant_fixed_array<'ctx>(
 
 fn compile_integer<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
-    kind: &ThrushType,
+    kind: &Type,
     value: u64,
     signed: bool,
 ) -> BasicValueEnum<'ctx> {
@@ -153,7 +153,7 @@ fn compile_integer<'ctx>(
 
 fn compile_float<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
-    kind: &ThrushType,
+    kind: &Type,
     value: f64,
     signed: bool,
 ) -> BasicValueEnum<'ctx> {

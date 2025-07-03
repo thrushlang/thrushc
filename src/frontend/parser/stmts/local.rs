@@ -5,7 +5,7 @@ use crate::{
         parser::{ParserContext, attributes, expression, typegen},
         types::{
             ast::{Ast, metadata::local::LocalMetadata},
-            lexer::ThrushType,
+            lexer::Type,
             parser::stmts::{traits::TokenExtensions, types::ThrushAttributes},
         },
     },
@@ -59,7 +59,7 @@ pub fn build_local<'parser>(
         String::from("Expected ':'."),
     )?;
 
-    let local_type: ThrushType = typegen::build_type(parser_ctx)?;
+    let local_type: Type = typegen::build_type(parser_ctx)?;
 
     let attributes: ThrushAttributes =
         attributes::build_attributes(parser_ctx, &[TokenType::SemiColon, TokenType::Eq])?;
