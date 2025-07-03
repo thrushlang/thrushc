@@ -23,10 +23,7 @@ pub fn new<'ctx>(context: &mut LLVMCodeGenContext<'_, 'ctx>, local: Local<'ctx>)
 
     let symbol: SymbolAllocated = context.get_symbol(local_name);
 
-    context.set_pointer_anchor(PointerAnchor::new(
-        symbol.get_value().into_pointer_value(),
-        false,
-    ));
+    context.set_pointer_anchor(PointerAnchor::new(symbol.get_ptr(), false));
 
     let value: BasicValueEnum = valuegen::compile(context, local_value, Some(local_type));
 

@@ -21,7 +21,7 @@ pub fn compile<'ctx>(
 ) -> BasicValueEnum<'ctx> {
     let mut value: BasicValueEnum = match value {
         (Some((name, _)), _) => {
-            let ptr: PointerValue = context.get_symbol(name).raw_load();
+            let ptr: PointerValue = context.get_symbol(name).get_ptr();
 
             memory::load_anon(context, ptr, kind)
         }

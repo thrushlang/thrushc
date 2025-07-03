@@ -150,56 +150,56 @@ fn compile_cast<'ctx>(
     let llvm_context: &Context = context.get_llvm_context();
     let llvm_builder: &Builder = context.get_llvm_builder();
 
-    let val: BasicValueEnum = ptrgen::compile(context, from, None);
+    match (from_type, cast) {
+        (from_type, cast) if from_type.is_str_type() && cast.is_ptr_type() => {
+            let val: BasicValueEnum = ptrgen::compile(context, from, Some(cast));
 
-    if !val.is_pointer_value() {
-        self::codegen_abort(format!(
-            "Cannot cast non-pointer value in expression '{}'.",
-            from
-        ));
-
-        return self::compile_null_ptr(context);
-    }
-
-    let raw_ptr: PointerValue = val.into_pointer_value();
-    let to_type: PointerType = typegen::generate_type(llvm_context, cast).into_pointer_type();
-
-    match (
-        from_type.is_str_type(),
-        cast.is_ptr_type() || cast.is_mut_type(),
-    ) {
-        (true, true) => {
-            let str_loaded: BasicValueEnum = memory::load_anon(context, raw_ptr, from_type);
-            let str_structure: StructValue = str_loaded.into_struct_value();
+            let str_structure: StructValue = if val.is_pointer_value() {
+                let raw_str_ptr: PointerValue = val.into_pointer_value();
+                memory::load_anon(context, raw_str_ptr, from_type).into_struct_value()
+            } else {
+                val.into_struct_value()
+            };
 
             match llvm_builder.build_extract_value(str_structure, 0, "") {
-                Ok(cstr) => {
-                    match llvm_builder.build_pointer_cast(cstr.into_pointer_value(), to_type, "") {
-                        Ok(casted_ptr) => casted_ptr.into(),
-                        Err(_) => {
-                            self::codegen_abort(format!(
-                                "Failed to cast string pointer in '{}'",
-                                from
-                            ));
-
-                            self::compile_null_ptr(context)
-                        }
-                    }
-                }
+                Ok(cstr) => cstr,
                 Err(_) => {
-                    self::codegen_abort(format!("Failed to extract string value in '{}'", from));
+                    self::codegen_abort(format!(
+                        "Failed to extract string value from '{}' in cast to '{}'",
+                        from_type, cast
+                    ));
                     self::compile_null_ptr(context)
                 }
             }
         }
-        (false, true) => match llvm_builder.build_pointer_cast(raw_ptr, to_type, "") {
-            Ok(casted_ptr) => casted_ptr.into(),
-            Err(_) => {
-                self::codegen_abort(format!("Failed to cast pointer in '{}'", from));
+        (from_type, cast) if cast.is_ptr_type() || cast.is_mut_type() => {
+            let val: BasicValueEnum = ptrgen::compile(context, from, Some(cast));
+
+            if val.is_pointer_value() {
+                let to: PointerType =
+                    typegen::generate_type(llvm_context, cast).into_pointer_type();
+
+                match llvm_builder.build_pointer_cast(val.into_pointer_value(), to, "") {
+                    Ok(casted_ptr) => casted_ptr.into(),
+                    Err(_) => {
+                        self::codegen_abort(format!(
+                            "Failed to cast pointer from '{}' to '{}'",
+                            from_type, cast
+                        ));
+                        self::compile_null_ptr(context)
+                    }
+                }
+            } else {
+                self::codegen_abort(format!(
+                    "Expected pointer value for cast from '{}' to '{}'",
+                    from_type, cast
+                ));
+
                 self::compile_null_ptr(context)
             }
-        },
-        _ => {
+        }
+
+        (from_type, cast) => {
             self::codegen_abort(format!(
                 "Unsupported cast from '{}' to '{}'",
                 from_type, cast
@@ -280,8 +280,8 @@ fn compile_reference<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     name: &str,
 ) -> BasicValueEnum<'ctx> {
-    let symbol = context.get_symbol(name);
-    symbol.raw_load().into()
+    let symbol: SymbolAllocated = context.get_symbol(name);
+    symbol.get_ptr().into()
 }
 
 fn compile_inline_asm<'ctx>(
@@ -410,8 +410,7 @@ fn compile_string<'ctx>(
     context: &LLVMCodeGenContext<'_, 'ctx>,
     bytes: &'ctx [u8],
 ) -> BasicValueEnum<'ctx> {
-    string::compile_str_constant(context.get_llvm_module(), context.get_llvm_context(), bytes)
-        .into()
+    string::compile_str_constant(context, bytes).into()
 }
 
 fn compile_null_ptr<'ctx>(context: &LLVMCodeGenContext<'_, 'ctx>) -> BasicValueEnum<'ctx> {

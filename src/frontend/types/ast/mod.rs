@@ -16,8 +16,9 @@ use crate::{
         types::{
             ast::{
                 metadata::{
-                    constant::ConstantMetadata, fnparameter::FunctionParameterMetadata,
-                    index::IndexMetadata, local::LocalMetadata, reference::ReferenceMetadata,
+                    cast::CastMetadata, constant::ConstantMetadata,
+                    fnparameter::FunctionParameterMetadata, index::IndexMetadata,
+                    local::LocalMetadata, reference::ReferenceMetadata,
                 },
                 types::AstEitherExpression,
             },
@@ -310,6 +311,7 @@ pub enum Ast<'ctx> {
     As {
         from: Rc<Ast<'ctx>>,
         cast: Type,
+        metadata: CastMetadata,
         span: Span,
     },
 

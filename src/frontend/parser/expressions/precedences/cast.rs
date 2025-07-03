@@ -3,7 +3,11 @@ use crate::{
     frontend::{
         lexer::{span::Span, tokentype::TokenType},
         parser::{ParserContext, expressions::precedences::comparation, typegen},
-        types::{ast::Ast, lexer::Type, parser::stmts::traits::TokenExtensions},
+        types::{
+            ast::{Ast, metadata::cast::CastMetadata},
+            lexer::Type,
+            parser::stmts::traits::TokenExtensions,
+        },
     },
 };
 
@@ -17,9 +21,12 @@ pub fn cast_precedence<'parser>(
 
         let cast: Type = typegen::build_type(parser_context)?;
 
+        let is_constant: bool = expression.is_constant_value();
+
         expression = Ast::As {
             from: expression.into(),
             cast,
+            metadata: CastMetadata::new(is_constant),
             span,
         };
     }

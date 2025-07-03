@@ -136,14 +136,13 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
         value: BasicValueEnum<'ctx>,
     ) {
         let ptr: PointerValue = alloc::local_constant(
-            self.module,
+            self,
             ascii_name,
             typegen::generate_type(self.context, kind),
             value,
         );
 
-        let constant: SymbolAllocated =
-            SymbolAllocated::new(SymbolToAllocate::Constant, kind, ptr.into());
+        let constant: SymbolAllocated = SymbolAllocated::new_constant(ptr.into(), kind, value);
 
         if let Some(last_block) = self.local_constants.last_mut() {
             last_block.insert(name, constant);
@@ -164,15 +163,14 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
         attributes: &'ctx ThrushAttributes<'ctx>,
     ) {
         let ptr: PointerValue = alloc::global_constant(
-            self.module,
+            self,
             ascii_name,
             typegen::generate_type(self.context, kind),
             value,
             attributes,
         );
 
-        let constant: SymbolAllocated =
-            SymbolAllocated::new(SymbolToAllocate::Constant, kind, ptr.into());
+        let constant: SymbolAllocated = SymbolAllocated::new_constant(ptr.into(), kind, value);
 
         self.global_constants.insert(name, constant);
     }

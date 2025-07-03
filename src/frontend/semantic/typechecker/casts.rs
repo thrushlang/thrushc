@@ -16,6 +16,7 @@ pub fn validate_cast_as<'type_checker>(
             from,
             cast: cast_type,
             span,
+            ..
         } => {
             let from_type: &Type = from.get_value_type()?;
 

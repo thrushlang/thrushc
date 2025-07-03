@@ -222,7 +222,7 @@ fn compile_function_call<'ctx>(
     kind: &Type,
     cast_type: Option<&Type>,
 ) -> BasicValueEnum<'ctx> {
-    let function: (FunctionValue<'_>, &[Type], u32) = context.get_function(name);
+    let function: (FunctionValue, &[Type], u32) = context.get_function(name);
 
     let (llvm_function, function_arg_types, function_convention) =
         (function.0, function.1, function.2);
@@ -344,6 +344,24 @@ fn compile_cast<'ctx>(
                     self::codegen_abort(format!("Failed to extract string value in '{}'", from))
                 }
             }
+        } else {
+            let str_structure: StructValue = val.into_struct_value();
+
+            match llvm_builder.build_extract_value(str_structure, 0, "") {
+                Ok(cstr) => {
+                    let to = typegen::generate_type(llvm_context, cast).into_pointer_type();
+                    match llvm_builder.build_pointer_cast(cstr.into_pointer_value(), to, "") {
+                        Ok(casted_ptr) => return casted_ptr.into(),
+                        Err(_) => self::codegen_abort(format!(
+                            "Failed to cast string pointer in '{}'",
+                            from
+                        )),
+                    }
+                }
+                Err(_) => {
+                    self::codegen_abort(format!("Failed to extract string value in '{}'", from))
+                }
+            }
         }
     } else if cast.is_ptr_type() || cast.is_mut_type() {
         let val: BasicValueEnum = ptrgen::compile(context, from, None);
@@ -368,6 +386,7 @@ fn compile_cast<'ctx>(
                 )),
             }
         }
+
         if val.is_int_value() && target_type.is_int_type() {
             match llvm_builder.build_int_cast(val.into_int_value(), target_type.into_int_type(), "")
             {
@@ -378,6 +397,7 @@ fn compile_cast<'ctx>(
                 )),
             }
         }
+
         if val.is_float_value() && target_type.is_float_type() {
             match llvm_builder.build_float_cast(
                 val.into_float_value(),
@@ -611,8 +631,7 @@ fn compile_string<'ctx>(
     bytes: &'ctx [u8],
     kind: &Type,
 ) -> BasicValueEnum<'ctx> {
-    let ptr: PointerValue =
-        string::compile_str_constant(context.get_llvm_module(), context.get_llvm_context(), bytes);
+    let ptr: PointerValue = string::compile_str_constant(context, bytes);
 
     memory::load_anon(context, ptr, kind)
 }

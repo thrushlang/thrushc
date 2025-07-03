@@ -32,6 +32,7 @@ pub enum SymbolAllocated<'ctx> {
     },
     Constant {
         ptr: PointerValue<'ctx>,
+        value: BasicValueEnum<'ctx>,
         kind: &'ctx Type,
     },
     LowLevelInstruction {
@@ -47,7 +48,6 @@ pub enum SymbolAllocated<'ctx> {
 #[derive(Debug, Clone, Copy)]
 pub enum SymbolToAllocate {
     Local,
-    Constant,
     Parameter,
     LowLevelInstruction,
 }
@@ -66,12 +66,20 @@ impl<'ctx> SymbolAllocated<'ctx> {
                 ptr: value.into_pointer_value(),
                 kind,
             },
-            SymbolToAllocate::Constant => Self::Constant {
-                ptr: value.into_pointer_value(),
-                kind,
-            },
             SymbolToAllocate::Parameter => Self::Parameter { value, kind },
             SymbolToAllocate::LowLevelInstruction => Self::LowLevelInstruction { value, kind },
+        }
+    }
+
+    pub fn new_constant(
+        ptr: BasicValueEnum<'ctx>,
+        kind: &'ctx Type,
+        value: BasicValueEnum<'ctx>,
+    ) -> Self {
+        Self::Constant {
+            ptr: ptr.into_pointer_value(),
+            value,
+            kind,
         }
     }
 
@@ -84,7 +92,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
         let thrush_type: &Type = self.get_type();
 
         if thrush_type.is_ptr_type() {
-            return self.get_value();
+            return self.get_ptr().into();
         }
 
         let llvm_type: BasicTypeEnum = typegen::generate_subtype(llvm_context, thrush_type);
@@ -173,15 +181,6 @@ impl<'ctx> SymbolAllocated<'ctx> {
         }
     }
 
-    pub fn raw_load(&self) -> PointerValue<'ctx> {
-        match self {
-            Self::Local { ptr, .. } => *ptr,
-            Self::Constant { ptr, .. } => *ptr,
-            Self::LowLevelInstruction { value, .. } => value.into_pointer_value(),
-            Self::Parameter { value, .. } => value.into_pointer_value(),
-        }
-    }
-
     pub fn gep(
         &self,
         context: &'ctx Context,
@@ -189,7 +188,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
         indexes: &[IntValue<'ctx>],
     ) -> PointerValue<'ctx> {
         match self {
-            Self::Local { ptr, kind } | Self::Constant { ptr, kind } => unsafe {
+            Self::Local { ptr, kind } | Self::Constant { ptr, kind, .. } => unsafe {
                 builder
                     .build_in_bounds_gep(
                         typegen::generate_subtype(context, kind),
@@ -199,6 +198,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
                     )
                     .unwrap()
             },
+
             Self::Parameter { value, kind } | Self::LowLevelInstruction { value, kind } => {
                 if value.is_pointer_value() {
                     return unsafe {
@@ -256,7 +256,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
         index: u32,
     ) -> PointerValue<'ctx> {
         match self {
-            Self::Local { ptr, kind } | Self::Constant { ptr, kind } => builder
+            Self::Local { ptr, kind } | Self::Constant { ptr, kind, .. } => builder
                 .build_struct_gep(typegen::generate_subtype(context, kind), *ptr, index, "")
                 .unwrap(),
             Self::Parameter { value, kind } | Self::LowLevelInstruction { value, kind } => {
@@ -289,10 +289,19 @@ impl<'ctx> SymbolAllocated<'ctx> {
         }
     }
 
+    pub fn get_ptr(&self) -> PointerValue<'ctx> {
+        match self {
+            Self::Local { ptr, .. } => *ptr,
+            Self::Constant { ptr, .. } => *ptr,
+            Self::Parameter { value, .. } => value.into_pointer_value(),
+            Self::LowLevelInstruction { value, .. } => value.into_pointer_value(),
+        }
+    }
+
     pub fn get_value(&self) -> BasicValueEnum<'ctx> {
         match self {
             Self::Local { ptr, .. } => (*ptr).into(),
-            Self::Constant { ptr, .. } => (*ptr).into(),
+            Self::Constant { value, .. } => *value,
             Self::Parameter { value, .. } => *value,
             Self::LowLevelInstruction { value, .. } => *value,
         }

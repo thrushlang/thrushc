@@ -80,13 +80,21 @@ fn try_alloc_stack<'ctx>(
 }
 
 pub fn local_constant<'ctx>(
-    module: &Module<'ctx>,
+    context: &LLVMCodeGenContext<'_, 'ctx>,
     name: &str,
     llvm_type: BasicTypeEnum<'ctx>,
     llvm_value: BasicValueEnum<'ctx>,
 ) -> PointerValue<'ctx> {
-    let global: GlobalValue = module.add_global(llvm_type, Some(AddressSpace::default()), name);
+    let llvm_module: &Module = context.get_llvm_module();
 
+    let target_data: &TargetData = context.get_target_data();
+
+    let global: GlobalValue =
+        llvm_module.add_global(llvm_type, Some(AddressSpace::default()), name);
+
+    let alignment: u32 = target_data.get_preferred_alignment_of_global(&global);
+
+    global.set_alignment(alignment);
     global.set_linkage(Linkage::LinkerPrivate);
 
     global.set_initializer(&llvm_value);
@@ -96,13 +104,22 @@ pub fn local_constant<'ctx>(
 }
 
 pub fn global_constant<'ctx>(
-    module: &Module<'ctx>,
+    context: &LLVMCodeGenContext<'_, 'ctx>,
     name: &str,
     llvm_type: BasicTypeEnum<'ctx>,
     llvm_value: BasicValueEnum<'ctx>,
     attributes: &'ctx ThrushAttributes<'ctx>,
 ) -> PointerValue<'ctx> {
-    let global: GlobalValue = module.add_global(llvm_type, Some(AddressSpace::default()), name);
+    let llvm_module: &Module = context.get_llvm_module();
+
+    let target_data: &TargetData = context.get_target_data();
+
+    let global: GlobalValue =
+        llvm_module.add_global(llvm_type, Some(AddressSpace::default()), name);
+
+    let alignment: u32 = target_data.get_preferred_alignment_of_global(&global);
+
+    global.set_alignment(alignment);
 
     if !attributes.has_public_attribute() {
         global.set_linkage(Linkage::LinkerPrivate);
