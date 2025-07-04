@@ -41,7 +41,7 @@ lazy_static! {
         keywords.insert("fixed", TokenType::Fixed);
 
         keywords.insert("sizeof", TokenType::SizeOf);
-        keywords.insert("halloc", TokenType::Halloc);
+        keywords.insert("static", TokenType::Static);
         keywords.insert("memset", TokenType::MemSet);
         keywords.insert("memmove", TokenType::MemMove);
         keywords.insert("memcpy", TokenType::MemCpy);
@@ -56,7 +56,6 @@ lazy_static! {
 
         keywords.insert("@heap", TokenType::Heap);
         keywords.insert("@stack", TokenType::Stack);
-        keywords.insert("@static", TokenType::Static);
         keywords.insert("@public", TokenType::Public);
         keywords.insert("@extern", TokenType::Extern);
         keywords.insert("@ignore", TokenType::Ignore);

@@ -1,7 +1,7 @@
 use {
     crate::{
         backend::llvm::compiler::{
-            cast,
+            cast, constgen,
             context::LLVMCodeGenContext,
             predicates,
             valuegen::{self},
@@ -58,7 +58,9 @@ pub fn bool_operation<'ctx>(
                     }
 
                     return llvm_context.bool_type().const_zero().into();
-                } else if let TokenType::Or = op {
+                }
+
+                if let TokenType::Or = op {
                     if let Ok(or) = llvm_builder.build_or(left, right, "") {
                         return or.into();
                     }
@@ -105,6 +107,82 @@ pub fn bool_operation<'ctx>(
     self::compile_null_ptr(context)
 }
 
+pub fn const_bool_operation<'ctx>(
+    context: &LLVMCodeGenContext<'_, 'ctx>,
+    left: BasicValueEnum<'ctx>,
+    right: BasicValueEnum<'ctx>,
+    operator: &TokenType,
+    signatures: (bool, bool),
+) -> BasicValueEnum<'ctx> {
+    let left_signed: bool = signatures.0;
+    let right_signed: bool = signatures.1;
+
+    if left.is_int_value() && right.is_int_value() {
+        let left: IntValue = left.into_int_value();
+        let right: IntValue = right.into_int_value();
+
+        let (left, right) = cast::const_integer_together(left, right, signatures);
+
+        return match operator {
+            op if op.is_logical_type() => left
+                .const_int_compare(
+                    predicates::integer(operator, left_signed, right_signed),
+                    right,
+                )
+                .into(),
+
+            op if op.is_logical_gate() => {
+                if let TokenType::And = op {
+                    return left.const_and(right).into();
+                }
+
+                if let TokenType::Or = op {
+                    return left.const_or(right).into();
+                }
+
+                self::codegen_abort(
+                    "Cannot perform constant boolean binary operation without a valid gate.",
+                );
+
+                self::compile_null_ptr(context)
+            }
+            _ => {
+                self::codegen_abort(
+                    "Cannot perform constant boolean binary operation without a valid operator.",
+                );
+
+                self::compile_null_ptr(context)
+            }
+        };
+    }
+
+    if left.is_float_value() && right.is_float_value() {
+        let left: FloatValue = left.into_float_value();
+        let right: FloatValue = right.into_float_value();
+
+        let (left, right) = cast::const_float_together(left, right);
+
+        return match operator {
+            op if op.is_logical_type() => left
+                .const_compare(predicates::float(operator), right)
+                .into(),
+
+            _ => {
+                self::codegen_abort(
+                    "Cannot perform constant boolean binary operation without two float values.",
+                );
+                self::compile_null_ptr(context)
+            }
+        };
+    }
+
+    self::codegen_abort(
+        "Cannot perform constant boolean binary operation without two integer values.",
+    );
+
+    self::compile_null_ptr(context)
+}
+
 pub fn bool_binaryop<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     binary: BinaryOperation<'ctx>,
@@ -142,6 +220,49 @@ pub fn bool_binaryop<'ctx>(
 
     self::codegen_abort(format!(
         "Cannot perform process a boolean binary operation '{} {} {}'.",
+        binary.0, binary.1, binary.2
+    ));
+
+    self::compile_null_ptr(context)
+}
+
+pub fn const_bool_binaryop<'ctx>(
+    context: &mut LLVMCodeGenContext<'_, 'ctx>,
+    binary: BinaryOperation<'ctx>,
+    kind: &Type,
+) -> BasicValueEnum<'ctx> {
+    if let (
+        _,
+        TokenType::BangEq
+        | TokenType::EqEq
+        | TokenType::LessEq
+        | TokenType::Less
+        | TokenType::Greater
+        | TokenType::GreaterEq
+        | TokenType::And
+        | TokenType::Or,
+        _,
+    ) = binary
+    {
+        let operator: &TokenType = binary.1;
+
+        let left: BasicValueEnum = constgen::compile(context, binary.0, kind);
+        let right: BasicValueEnum = constgen::compile(context, binary.2, kind);
+
+        return self::const_bool_operation(
+            context,
+            left,
+            right,
+            operator,
+            (
+                binary.0.get_type_unwrapped().is_signed_integer_type(),
+                binary.2.get_type_unwrapped().is_signed_integer_type(),
+            ),
+        );
+    }
+
+    self::codegen_abort(format!(
+        "Cannot perform process a constant boolean binary operation '{} {} {}'.",
         binary.0, binary.1, binary.2
     ));
 

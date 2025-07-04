@@ -11,6 +11,42 @@ use crate::frontend::types::lexer::Type;
 
 use super::{context::LLVMCodeGenContext, typegen};
 
+/* ######################################################################
+
+
+    INTEGER CAST (TOGETHER)
+
+
+########################################################################*/
+
+pub fn const_integer_together<'ctx>(
+    left: IntValue<'ctx>,
+    right: IntValue<'ctx>,
+    signatures: (bool, bool),
+) -> (IntValue<'ctx>, IntValue<'ctx>) {
+    let left_is_signed: bool = signatures.0;
+    let right_is_signed: bool = signatures.1;
+
+    match left
+        .get_type()
+        .get_bit_width()
+        .cmp(&right.get_type().get_bit_width())
+    {
+        Ordering::Greater => {
+            let new_right: IntValue<'ctx> = right.const_cast(left.get_type(), right_is_signed);
+
+            (left, new_right)
+        }
+        Ordering::Less => {
+            let new_left: IntValue<'ctx> = left.const_cast(right.get_type(), left_is_signed);
+
+            (new_left, right)
+        }
+
+        _ => (left, right),
+    }
+}
+
 pub fn integer_together<'ctx>(
     context: &LLVMCodeGenContext<'_, 'ctx>,
     left: IntValue<'ctx>,
@@ -41,6 +77,40 @@ pub fn integer_together<'ctx>(
     }
 }
 
+/* ######################################################################
+
+
+    FLOAT CAST (TOGETHER)
+
+
+########################################################################*/
+
+pub fn const_float_together<'ctx>(
+    left: FloatValue<'ctx>,
+    right: FloatValue<'ctx>,
+) -> (FloatValue<'ctx>, FloatValue<'ctx>) {
+    let left_type: FloatType = left.get_type();
+    let right_type: FloatType = right.get_type();
+
+    if left_type == right_type {
+        return (left, right);
+    }
+
+    let new_left: FloatValue = if left_type != right_type {
+        left.const_cast(right_type)
+    } else {
+        left
+    };
+
+    let new_right: FloatValue = if right_type != left_type {
+        right.const_cast(left_type)
+    } else {
+        right
+    };
+
+    (new_left, new_right)
+}
+
 pub fn float_together<'ctx>(
     context: &LLVMCodeGenContext<'_, 'ctx>,
     left: FloatValue<'ctx>,
@@ -69,6 +139,15 @@ pub fn float_together<'ctx>(
 
     (new_left, new_right)
 }
+
+/* ######################################################################
+
+
+    INTEGER CAST
+
+
+########################################################################*/
+
 pub fn integer<'ctx>(
     context: &LLVMCodeGenContext<'_, 'ctx>,
     target_type: &Type,
@@ -99,6 +178,14 @@ pub fn integer<'ctx>(
     )
 }
 
+/* ######################################################################
+
+
+    FLOAT CAST
+
+
+########################################################################*/
+
 pub fn float<'ctx>(
     context: &LLVMCodeGenContext<'_, 'ctx>,
     target_type: &Type,
@@ -127,6 +214,14 @@ pub fn float<'ctx>(
             .into(),
     )
 }
+
+/* ######################################################################
+
+
+    INTELLIGENT CAST (TRY CAST)
+
+
+########################################################################*/
 
 pub fn try_cast<'ctx>(
     context: &LLVMCodeGenContext<'_, 'ctx>,

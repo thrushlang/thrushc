@@ -141,6 +141,18 @@ impl Ast<'_> {
             return true;
         }
 
+        if let Ast::Group { expression, .. } = self {
+            return expression.is_constant_value();
+        }
+
+        if let Ast::BinaryOp { left, right, .. } = self {
+            return left.is_constant_value() && right.is_constant_value();
+        }
+
+        if let Ast::UnaryOp { expression, .. } = self {
+            return expression.is_constant_value();
+        }
+
         if let Ast::Reference { metadata, .. } = self {
             return metadata.is_constant();
         }
@@ -184,7 +196,9 @@ impl Ast<'_> {
 
         false
     }
+}
 
+impl Ast<'_> {
     #[inline]
     pub fn is_unsigned_integer(&self) -> Result<bool, ThrushCompilerIssue> {
         Ok(matches!(

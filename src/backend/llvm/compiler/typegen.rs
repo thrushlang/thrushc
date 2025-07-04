@@ -118,9 +118,7 @@ pub fn generate_type<'ctx>(llvm_context: &'ctx Context, kind: &Type) -> BasicTyp
 
 pub fn generate_subtype<'ctx>(llvm_context: &'ctx Context, kind: &Type) -> BasicTypeEnum<'ctx> {
     match kind {
-        Type::Ptr(Some(subtype)) => generate_subtype(llvm_context, subtype),
-        Type::Mut(subtype) => generate_subtype(llvm_context, subtype),
-
-        _ => generate_type(llvm_context, kind),
+        Type::Mut(subtype) => self::generate_subtype(llvm_context, subtype),
+        _ => self::generate_type(llvm_context, kind),
     }
 }

@@ -223,10 +223,15 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 value,
                 ..
             } => {
-                let value: BasicValueEnum = constgen::compile(self.context, kind, value);
+                let value_type: &Type = value.get_type_unwrapped();
+
+                let value: BasicValueEnum = constgen::compile(self.context, value, kind);
+
+                let casted_value: BasicValueEnum =
+                    constgen::cast(self.context, value, value_type, kind);
 
                 self.context
-                    .new_local_constant(name, ascii_name, kind, value);
+                    .new_local_constant(name, ascii_name, kind, casted_value);
             }
 
             Ast::LLI {
@@ -468,7 +473,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
             }
 
             if any_ast.is_constant() {
-                self.declare_constant(any_ast);
+                self.declare_global_constant(any_ast);
             }
         });
     }
@@ -481,7 +486,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
 
     ########################################################################*/
 
-    fn declare_constant(&mut self, stmt: &'ctx Ast) {
+    fn declare_global_constant(&mut self, stmt: &'ctx Ast) {
         let constant: ConstantRepresentation = stmt.as_constant_representation();
 
         let name: &str = constant.0;
@@ -491,7 +496,10 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         let value: &Ast = constant.3;
         let attributes: &ThrushAttributes = constant.4;
 
-        let value: BasicValueEnum = constgen::compile(self.context, kind, value);
+        let constv: BasicValueEnum = constgen::compile(self.context, value, kind);
+        let constv_type: &Type = value.get_type_unwrapped();
+
+        let value: BasicValueEnum = constgen::cast(self.context, constv, constv_type, kind);
 
         self.context
             .new_global_constant(name, ascii_name, kind, value, attributes);

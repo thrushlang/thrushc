@@ -7,6 +7,7 @@ pub mod builtins;
 pub mod cast;
 pub mod codegen;
 pub mod conditional;
+pub mod constants;
 pub mod constgen;
 pub mod context;
 pub mod conventions;
