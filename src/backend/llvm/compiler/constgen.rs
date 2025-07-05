@@ -75,7 +75,7 @@ pub fn compile<'ctx>(
             ..
         } => {
             if binaryop_type.is_integer_type() {
-                return binaryop::integer::const_integer_binaryop(
+                return binaryop::constants::integer::const_integer_binaryop(
                     context,
                     (left, operator, right),
                     cast,
@@ -83,7 +83,7 @@ pub fn compile<'ctx>(
             }
 
             if binaryop_type.is_bool_type() {
-                return binaryop::boolean::const_bool_binaryop(
+                return binaryop::constants::boolean::const_bool_binaryop(
                     context,
                     (left, operator, right),
                     cast,
@@ -91,7 +91,7 @@ pub fn compile<'ctx>(
             }
 
             if binaryop_type.is_float_type() {
-                return binaryop::float::const_float_binaryop(
+                return binaryop::constants::float::const_float_binaryop(
                     context,
                     (left, operator, right),
                     cast,
@@ -99,7 +99,10 @@ pub fn compile<'ctx>(
             }
 
             if binaryop_type.is_ptr_type() {
-                return binaryop::pointer::const_ptr_binaryop(context, (left, operator, right));
+                return binaryop::constants::pointer::const_ptr_binaryop(
+                    context,
+                    (left, operator, right),
+                );
             }
 
             self::codegen_abort("Cannot perform constant binary expression.");

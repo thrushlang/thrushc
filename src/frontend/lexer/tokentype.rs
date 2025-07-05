@@ -137,7 +137,7 @@ pub enum TokenType {
 
 impl TokenType {
     #[must_use]
-    pub const fn is_logical_type(&self) -> bool {
+    pub const fn is_logical_operator(&self) -> bool {
         matches!(
             self,
             TokenType::BangEq

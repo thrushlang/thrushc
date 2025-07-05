@@ -1,48 +1,49 @@
-use std::fmt::Display;
-
-use inkwell::{
-    AddressSpace,
-    builder::Builder,
-    values::{BasicValueEnum, PointerValue},
-};
-
-use crate::{
-    backend::llvm::compiler::{
-        context::LLVMCodeGenContext,
-        predicates,
-        valuegen::{self},
+use {
+    crate::{
+        backend::llvm::compiler::{context::LLVMCodeGenContext, valuegen},
+        core::console::logging::{self, LoggingType},
+        frontend::{lexer::tokentype::TokenType, types::parser::repr::BinaryOperation},
     },
-    core::console::logging::{self, LoggingType},
-    frontend::{lexer::tokentype::TokenType, types::parser::repr::BinaryOperation},
+    inkwell::{
+        AddressSpace,
+        context::Context,
+        values::{BasicValueEnum, PointerValue},
+    },
+    std::fmt::Display,
 };
 
-pub fn ptr_operation<'ctx>(
+pub fn const_ptr_operation<'ctx>(
     context: &LLVMCodeGenContext<'_, 'ctx>,
     left: BasicValueEnum<'ctx>,
     right: BasicValueEnum<'ctx>,
     operator: &TokenType,
 ) -> BasicValueEnum<'ctx> {
-    let llvm_builder: &Builder = context.get_llvm_builder();
-
-    let cintgen_abort = |_| {
-        self::codegen_abort("Cannot perform pointer binary operation.");
-        unreachable!()
-    };
+    let llvm_context: &Context = context.get_llvm_context();
 
     if left.is_pointer_value() && right.is_pointer_value() {
         let lhs: PointerValue = left.into_pointer_value();
         let rhs: PointerValue = right.into_pointer_value();
 
         return match operator {
-            op if op.is_logical_operator() => llvm_builder
-                .build_int_compare(predicates::pointer(operator), lhs, rhs, "")
-                .unwrap_or_else(cintgen_abort)
-                .into(),
+            op if op.is_logical_operator() => match op {
+                TokenType::EqEq => llvm_context
+                    .bool_type()
+                    .const_int((lhs.is_null() == rhs.is_null()) as u64, false)
+                    .into(),
+
+                TokenType::BangEq => llvm_context
+                    .bool_type()
+                    .const_int((lhs.is_null() != rhs.is_null()) as u64, false)
+                    .into(),
+
+                _ => llvm_context.bool_type().const_zero().into(),
+            },
 
             _ => {
                 self::codegen_abort(
                     "Cannot perform pointer binary operation without a valid operator.",
                 );
+
                 self::compile_null_ptr(context)
             }
         };
@@ -52,7 +53,7 @@ pub fn ptr_operation<'ctx>(
     self::compile_null_ptr(context)
 }
 
-pub fn ptr_binaryop<'ctx>(
+pub fn const_ptr_binaryop<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     binary: BinaryOperation<'ctx>,
 ) -> BasicValueEnum<'ctx> {
@@ -62,11 +63,11 @@ pub fn ptr_binaryop<'ctx>(
         let left: BasicValueEnum = valuegen::compile(context, binary.0, None);
         let right: BasicValueEnum = valuegen::compile(context, binary.2, None);
 
-        return ptr_operation(context, left, right, operator);
+        return const_ptr_operation(context, left, right, operator);
     }
 
     self::codegen_abort(format!(
-        "Cannot perform a pointer binary operation '{} {} {}'.",
+        "Cannot perform a constant pointer binary operation '{} {} {}'.",
         binary.0, binary.1, binary.2
     ));
 

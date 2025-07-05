@@ -1,11 +1,6 @@
 use {
     crate::{
-        backend::llvm::compiler::{
-            cast,
-            context::LLVMCodeGenContext,
-            predicates,
-            valuegen::{self},
-        },
+        backend::llvm::compiler::{cast, constgen, context::LLVMCodeGenContext, predicates},
         core::console::logging::{self, LoggingType},
         frontend::{
             lexer::tokentype::TokenType,
@@ -14,71 +9,53 @@ use {
     },
     inkwell::{
         AddressSpace,
-        builder::Builder,
         values::{BasicValueEnum, FloatValue, IntValue},
     },
     std::fmt::Display,
 };
 
-pub fn bool_operation<'ctx>(
+pub fn const_bool_operation<'ctx>(
     context: &LLVMCodeGenContext<'_, 'ctx>,
-    left: BasicValueEnum<'ctx>,
-    right: BasicValueEnum<'ctx>,
+    lhs: BasicValueEnum<'ctx>,
+    rhs: BasicValueEnum<'ctx>,
     operator: &TokenType,
     signatures: (bool, bool),
 ) -> BasicValueEnum<'ctx> {
-    let llvm_builder: &Builder = context.get_llvm_builder();
-
     let left_signed: bool = signatures.0;
     let right_signed: bool = signatures.1;
 
-    let cintgen_abort = |_| {
-        self::codegen_abort("Cannot perform boolean binary operation.");
-        unreachable!()
-    };
+    if lhs.is_int_value() && rhs.is_int_value() {
+        let left: IntValue = lhs.into_int_value();
+        let right: IntValue = rhs.into_int_value();
 
-    if left.is_int_value() && right.is_int_value() {
-        let left: IntValue = left.into_int_value();
-        let right: IntValue = right.into_int_value();
-
-        let (left, right) = cast::integer_together(context, left, right);
+        let (left, right) = cast::const_integer_together(left, right, signatures);
 
         return match operator {
-            op if op.is_logical_operator() => llvm_builder
-                .build_int_compare(
+            op if op.is_logical_operator() => left
+                .const_int_compare(
                     predicates::integer(operator, left_signed, right_signed),
-                    left,
                     right,
-                    "",
                 )
-                .unwrap_or_else(cintgen_abort)
                 .into(),
 
             op if op.is_logical_gate() => {
                 if let TokenType::And = op {
-                    return llvm_builder
-                        .build_and(left, right, "")
-                        .unwrap_or_else(cintgen_abort)
-                        .into();
+                    return left.const_and(right).into();
                 }
 
                 if let TokenType::Or = op {
-                    return llvm_builder
-                        .build_or(left, right, "")
-                        .unwrap_or_else(cintgen_abort)
-                        .into();
+                    return left.const_or(right).into();
                 }
 
                 self::codegen_abort(
-                    "Cannot perform boolean binary operation without a valid gate.",
+                    "Cannot perform constant boolean binary operation without a valid gate.",
                 );
 
                 self::compile_null_ptr(context)
             }
-
             _ => {
                 self::codegen_abort(
-                    "Cannot perform boolean binary operation without a valid operator.",
+                    "Cannot perform constant boolean binary operation without a valid operator.",
                 );
 
                 self::compile_null_ptr(context)
@@ -86,35 +63,37 @@ pub fn bool_operation<'ctx>(
         };
     }
 
-    if left.is_float_value() && right.is_float_value() {
-        let left: FloatValue = left.into_float_value();
-        let right: FloatValue = right.into_float_value();
+    if lhs.is_float_value() && rhs.is_float_value() {
+        let left: FloatValue = lhs.into_float_value();
+        let right: FloatValue = rhs.into_float_value();
 
-        let (left, right) = cast::float_together(context, left, right);
+        let (left, right) = cast::const_float_together(left, right);
 
         return match operator {
-            op if op.is_logical_operator() => llvm_builder
-                .build_float_compare(predicates::float(operator), left, right, "")
-                .unwrap_or_else(cintgen_abort)
+            op if op.is_logical_operator() => left
+                .const_compare(predicates::float(operator), right)
                 .into(),
 
             _ => {
                 self::codegen_abort(
-                    "Cannot perform boolean binary operation without two float values.",
+                    "Cannot perform constant boolean binary operation without two float values.",
                 );
                 self::compile_null_ptr(context)
             }
         };
     }
 
-    self::codegen_abort("Cannot perform boolean binary operation without two integer values.");
+    self::codegen_abort(
+        "Cannot perform constant boolean binary operation without two integer values.",
+    );
+
     self::compile_null_ptr(context)
 }
 
-pub fn bool_binaryop<'ctx>(
+pub fn const_bool_binaryop<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     binary: BinaryOperation<'ctx>,
-    cast_type: Option<&Type>,
+    cast: &Type,
 ) -> BasicValueEnum<'ctx> {
     if let (
         _,
@@ -131,13 +110,13 @@ pub fn bool_binaryop<'ctx>(
     {
         let operator: &TokenType = binary.1;
 
-        let left: BasicValueEnum = valuegen::compile(context, binary.0, cast_type);
-        let right: BasicValueEnum = valuegen::compile(context, binary.2, cast_type);
+        let lhs: BasicValueEnum = constgen::compile(context, binary.0, cast);
+        let rhs: BasicValueEnum = constgen::compile(context, binary.2, cast);
 
-        return self::bool_operation(
+        return self::const_bool_operation(
             context,
-            left,
-            right,
+            lhs,
+            rhs,
             operator,
             (
                 binary.0.get_type_unwrapped().is_signed_integer_type(),
@@ -147,7 +126,7 @@ pub fn bool_binaryop<'ctx>(
     }
 
     self::codegen_abort(format!(
-        "Cannot perform process a boolean binary operation '{} {} {}'.",
+        "Cannot perform process a constant boolean binary operation '{} {} {}'.",
         binary.0, binary.1, binary.2
     ));
 

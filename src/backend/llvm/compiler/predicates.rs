@@ -32,6 +32,7 @@ pub fn integer(operator: &TokenType, left_signed: bool, right_signed: bool) -> I
                 LoggingType::BackendBug,
                 "Incompatible precedence for integers.",
             );
+
             unreachable!()
         }
     }
