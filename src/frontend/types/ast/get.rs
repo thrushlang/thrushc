@@ -83,6 +83,9 @@ impl Ast<'_> {
             Ast::Const { kind, .. } => Ok(kind),
             Ast::LLI { kind, .. } => Ok(kind),
             Ast::Pass { .. } => Ok(&Type::Void),
+
+            // Global Assembler
+            Ast::GlobalAssembler { .. } => Ok(&Type::Void),
         }
     }
 
@@ -135,6 +138,9 @@ impl Ast<'_> {
 
             // ASM Code Block
             Ast::AsmValue { kind, .. } => Ok(kind),
+
+            // Global Assembler
+            Ast::GlobalAssembler { .. } => Ok(&Type::Void),
 
             _ => Err(ThrushCompilerIssue::Error(
                 String::from("Syntax error"),
@@ -193,6 +199,9 @@ impl Ast<'_> {
 
             // ASM Code Block
             Ast::AsmValue { kind, .. } => kind,
+
+            // Global Assembler
+            Ast::GlobalAssembler { .. } => &Type::Void,
 
             any => {
                 logging::log(
@@ -276,30 +285,31 @@ impl Ast<'_> {
             Ast::AsmValue { span, .. } => *span,
             Ast::LLI { span, .. } => *span,
             Ast::Pass { span, .. } => *span,
+
+            // Global Assembler
+            Ast::GlobalAssembler { span, .. } => *span,
         }
     }
 
-    pub fn get_str_content(&self) -> Result<&str, ThrushCompilerIssue> {
+    pub fn get_str_content(&self, span: Span) -> Result<&str, ThrushCompilerIssue> {
         if let Ast::Str { bytes, .. } = self {
             if let Ok(content) = std::str::from_utf8(bytes) {
                 return Ok(content);
             }
 
-            return Err(ThrushCompilerIssue::Bug(
-                String::from("Not parsed"),
-                String::from("Could not process a str as a utf-8 value."),
-                self.get_span(),
-                CompilationPosition::Parser,
-                line!(),
+            return Err(ThrushCompilerIssue::Error(
+                "Syntax error".into(),
+                "Expected string literal.".into(),
+                None,
+                span,
             ));
         }
 
-        Err(ThrushCompilerIssue::Bug(
-            String::from("Str not caught"),
-            String::from("Expected a str value."),
-            self.get_span(),
-            CompilationPosition::Parser,
-            line!(),
+        Err(ThrushCompilerIssue::Error(
+            "Syntax error".into(),
+            "Expected string literal.".into(),
+            None,
+            span,
         ))
     }
 

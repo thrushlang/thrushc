@@ -94,6 +94,8 @@ impl<'linter> Linter<'linter> {
             enums::analyze_enum(self, stmt);
         }
 
+        if let Ast::GlobalAssembler { .. } = stmt {}
+
         /* ######################################################################
 
 

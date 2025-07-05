@@ -83,7 +83,7 @@ pub fn build_asm_code_block<'parser>(
             ));
         }
 
-        let assembly: &str = raw_str.get_str_content()?;
+        let assembly: &str = raw_str.get_str_content(raw_str_span)?;
 
         if assembler_pos != 0 {
             assembler.push('\n');
@@ -127,16 +127,7 @@ pub fn build_asm_code_block<'parser>(
         let raw_str: Ast = expression::build_expr(parser_context)?;
         let raw_str_span: Span = raw_str.get_span();
 
-        if !raw_str.is_str() {
-            return Err(ThrushCompilerIssue::Error(
-                "Syntax error".into(),
-                "Expected string literal value.".into(),
-                None,
-                raw_str_span,
-            ));
-        }
-
-        let constraint: &str = raw_str.get_str_content()?;
+        let constraint: &str = raw_str.get_str_content(raw_str_span)?;
 
         if constraint_pos != 0 {
             constraints.push('\n');

@@ -15,16 +15,16 @@ use crate::{
 };
 
 pub fn build_structure<'parser>(
-    parser_ctx: &mut ParserContext<'parser>,
+    parser_context: &mut ParserContext<'parser>,
     declare_forward: bool,
 ) -> Result<Ast<'parser>, ThrushCompilerIssue> {
-    let struct_tk: &Token = parser_ctx.consume(
+    let struct_tk: &Token = parser_context.consume(
         TokenType::Struct,
         String::from("Syntax error"),
         String::from("Expected 'struct' keyword."),
     )?;
 
-    if !parser_ctx.is_main_scope() {
+    if !parser_context.is_main_scope() {
         return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("Structs are only defined globally."),
@@ -33,7 +33,7 @@ pub fn build_structure<'parser>(
         ));
     }
 
-    let name: &Token = parser_ctx.consume(
+    let name: &Token = parser_context.consume(
         TokenType::Identifier,
         String::from("Syntax error"),
         String::from("Expected structure name."),
@@ -43,9 +43,9 @@ pub fn build_structure<'parser>(
     let span: Span = name.get_span();
 
     let attributes: ThrushAttributes =
-        attributes::build_attributes(parser_ctx, &[TokenType::LBrace])?;
+        attributes::build_attributes(parser_context, &[TokenType::LBrace])?;
 
-    parser_ctx.consume(
+    parser_context.consume(
         TokenType::LBrace,
         String::from("Syntax error"),
         String::from("Expected '{'."),
@@ -55,12 +55,12 @@ pub fn build_structure<'parser>(
     let mut field_position: u32 = 0;
 
     loop {
-        if parser_ctx.check(TokenType::RBrace) {
+        if parser_context.check(TokenType::RBrace) {
             break;
         }
 
-        if parser_ctx.check(TokenType::Identifier) {
-            let field_tk: &Token = parser_ctx.consume(
+        if parser_context.check(TokenType::Identifier) {
+            let field_tk: &Token = parser_context.consume(
                 TokenType::Identifier,
                 String::from("Syntax error"),
                 String::from("Expected identifier."),
@@ -69,13 +69,13 @@ pub fn build_structure<'parser>(
             let field_name: &str = field_tk.get_lexeme();
             let field_span: Span = field_tk.get_span();
 
-            parser_ctx.consume(
+            parser_context.consume(
                 TokenType::Colon,
                 String::from("Syntax error"),
                 String::from("Expected ':'."),
             )?;
 
-            let field_type: Type = typegen::build_type(parser_ctx)?;
+            let field_type: Type = typegen::build_type(parser_context)?;
 
             fields_types
                 .1
@@ -83,14 +83,14 @@ pub fn build_structure<'parser>(
 
             field_position += 1;
 
-            if parser_ctx.check(TokenType::RBrace) {
+            if parser_context.check(TokenType::RBrace) {
                 break;
-            } else if parser_ctx.match_token(TokenType::Comma)? {
-                if parser_ctx.check(TokenType::RBrace) {
+            } else if parser_context.match_token(TokenType::Comma)? {
+                if parser_context.check(TokenType::RBrace) {
                     break;
                 }
-            } else if parser_ctx.check_to(TokenType::Identifier, 0) {
-                parser_ctx.consume(
+            } else if parser_context.check_to(TokenType::Identifier, 0) {
+                parser_context.consume(
                     TokenType::Comma,
                     String::from("Syntax error"),
                     String::from("Expected ','."),
@@ -100,34 +100,34 @@ pub fn build_structure<'parser>(
                     String::from("Syntax error"),
                     String::from("Expected identifier."),
                     None,
-                    parser_ctx.previous().get_span(),
+                    parser_context.previous().get_span(),
                 ));
             }
         } else {
-            parser_ctx.only_advance()?;
+            parser_context.only_advance()?;
 
             return Err(ThrushCompilerIssue::Error(
                 String::from("Syntax error"),
                 String::from("Expected structure fields identifiers."),
                 None,
-                parser_ctx.previous().get_span(),
+                parser_context.previous().get_span(),
             ));
         }
     }
 
-    parser_ctx.consume(
+    parser_context.consume(
         TokenType::RBrace,
         String::from("Syntax error"),
         String::from("Expected '}'."),
     )?;
 
     if declare_forward {
-        if let Err(error) = parser_ctx.get_mut_symbols().new_struct(
+        if let Err(error) = parser_context.get_mut_symbols().new_struct(
             struct_name,
             (struct_name, fields_types.1, attributes),
             span,
         ) {
-            parser_ctx.add_error(error);
+            parser_context.add_error(error);
         }
 
         return Ok(Ast::Null { span });

@@ -15,16 +15,16 @@ use crate::{
 };
 
 pub fn build_enum<'parser>(
-    parser_ctx: &mut ParserContext<'parser>,
+    parser_context: &mut ParserContext<'parser>,
     declare_forward: bool,
 ) -> Result<Ast<'parser>, ThrushCompilerIssue> {
-    let enum_tk: &Token = parser_ctx.consume(
+    let enum_tk: &Token = parser_context.consume(
         TokenType::Enum,
         String::from("Syntax error"),
         String::from("Expected 'enum'."),
     )?;
 
-    if !parser_ctx.is_main_scope() {
+    if !parser_context.is_main_scope() {
         return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("Enums are only defined globally."),
@@ -33,7 +33,7 @@ pub fn build_enum<'parser>(
         ));
     }
 
-    let name: &Token = parser_ctx.consume(
+    let name: &Token = parser_context.consume(
         TokenType::Identifier,
         String::from("Syntax error"),
         String::from("Expected enum name."),
@@ -43,9 +43,9 @@ pub fn build_enum<'parser>(
     let span: Span = name.get_span();
 
     let enum_attributes: ThrushAttributes =
-        attributes::build_attributes(parser_ctx, &[TokenType::LBrace])?;
+        attributes::build_attributes(parser_context, &[TokenType::LBrace])?;
 
-    parser_ctx.consume(
+    parser_context.consume(
         TokenType::LBrace,
         String::from("Syntax error"),
         String::from("Expected '{'."),
@@ -57,23 +57,23 @@ pub fn build_enum<'parser>(
     let mut default_integer_value: u64 = 0;
 
     loop {
-        if parser_ctx.check(TokenType::RBrace) {
+        if parser_context.check(TokenType::RBrace) {
             break;
         }
 
-        if parser_ctx.match_token(TokenType::Identifier)? {
-            let field_tk: &Token = parser_ctx.previous();
+        if parser_context.match_token(TokenType::Identifier)? {
+            let field_tk: &Token = parser_context.previous();
 
             let name: &str = field_tk.get_lexeme();
             let span: Span = field_tk.get_span();
 
-            parser_ctx.consume(
+            parser_context.consume(
                 TokenType::Colon,
                 String::from("Syntax error"),
                 String::from("Expected ':'."),
             )?;
 
-            let field_type: Type = typegen::build_type(parser_ctx)?;
+            let field_type: Type = typegen::build_type(parser_context)?;
 
             if !field_type.is_numeric() {
                 return Err(ThrushCompilerIssue::Error(
@@ -84,7 +84,7 @@ pub fn build_enum<'parser>(
                 ));
             }
 
-            if parser_ctx.match_token(TokenType::SemiColon)? {
+            if parser_context.match_token(TokenType::SemiColon)? {
                 let field_value: Ast = if field_type.is_integer_type() {
                     Ast::new_integer(field_type, default_integer_value, false, span)
                 } else if field_type.is_float_type() {
@@ -119,9 +119,9 @@ pub fn build_enum<'parser>(
                 continue;
             }
 
-            parser_ctx.consume(TokenType::Eq, "Syntax error".into(), "Expected '='.".into())?;
+            parser_context.consume(TokenType::Eq, "Syntax error".into(), "Expected '='.".into())?;
 
-            let expression: Ast = expression::build_expr(parser_ctx)?;
+            let expression: Ast = expression::build_expr(parser_context)?;
             let expression_type: &Type = expression.get_value_type()?;
             let expression_span: Span = expression.get_span();
 
@@ -138,7 +138,7 @@ pub fn build_enum<'parser>(
                 ));
             }
 
-            parser_ctx.consume(
+            parser_context.consume(
                 TokenType::SemiColon,
                 String::from("Syntax error"),
                 String::from("Expected ';'."),
@@ -153,29 +153,29 @@ pub fn build_enum<'parser>(
             "Syntax error".into(),
             "Expected identifier in enum field.".into(),
             None,
-            parser_ctx.advance()?.get_span(),
+            parser_context.advance()?.get_span(),
         ));
     }
 
-    parser_ctx.consume(
+    parser_context.consume(
         TokenType::RBrace,
         "Syntax error".into(),
         "Expected '}'.".into(),
     )?;
 
-    parser_ctx.consume(
+    parser_context.consume(
         TokenType::SemiColon,
         "Syntax error".into(),
         "Expected ';'.".into(),
     )?;
 
     if declare_forward {
-        if let Err(error) =
-            parser_ctx
-                .get_mut_symbols()
-                .new_enum(enum_name, (enum_fields, enum_attributes), span)
-        {
-            parser_ctx.add_error(error);
+        if let Err(error) = parser_context.get_mut_symbols().new_enum(
+            enum_name,
+            (enum_fields, enum_attributes),
+            span,
+        ) {
+            parser_context.add_error(error);
         }
 
         return Ok(Ast::Null { span });

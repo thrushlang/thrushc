@@ -13,8 +13,8 @@ use crate::{
         parser::symbols::SymbolsTable,
         types::{
             lexer::traits::{
-                LLVMTypeExtensions, TypeMutableExtensions, TypeNumericExtensions,
-                TypePointerExtensions, TypeStructExtensions,
+                LLVMTypeExtensions, TypeMutableExtensions, TypePointerExtensions,
+                TypeStructExtensions,
             },
             parser::{
                 stmts::{traits::StructExtensions, types::StructFields},
@@ -129,20 +129,6 @@ impl TypeMutableExtensions for Type {
         }
 
         self.clone()
-    }
-}
-
-impl TypeNumericExtensions for Type {
-    fn is_numeric_type(&self) -> bool {
-        if self.is_integer_type()
-            || self.is_float_type()
-            || self.is_bool_type()
-            || self.is_char_type()
-        {
-            return true;
-        }
-
-        false
     }
 }
 

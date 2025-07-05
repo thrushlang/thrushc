@@ -30,6 +30,7 @@ lazy_static! {
         keywords.insert("as", TokenType::As);
         keywords.insert("asmfn", TokenType::AsmFn);
         keywords.insert("asm", TokenType::Asm);
+        keywords.insert("glasm", TokenType::Glasm);
         keywords.insert("deref", TokenType::Deref);
         keywords.insert("type", TokenType::Type);
         keywords.insert("enum", TokenType::Enum);

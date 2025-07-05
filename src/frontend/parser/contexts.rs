@@ -13,6 +13,7 @@ pub struct ParserControlContext {
     sync_position: SyncPosition,
 
     entry_point: bool,
+    global_asm: bool,
     inside_function: bool,
     loop_depth: usize,
     unreacheable_code: usize,
@@ -44,6 +45,7 @@ impl ParserControlContext {
         Self {
             sync_position: SyncPosition::NoRelevant,
             entry_point: false,
+            global_asm: false,
             inside_function: false,
             loop_depth: 0,
             unreacheable_code: 0,
@@ -56,6 +58,14 @@ impl ParserControlContext {
 
     pub fn set_sync_position(&mut self, new_sync_position: SyncPosition) {
         self.sync_position = new_sync_position;
+    }
+
+    pub fn set_global_asm(&mut self, value: bool) {
+        self.global_asm = value;
+    }
+
+    pub fn get_global_asm(&self) -> bool {
+        self.global_asm
     }
 
     pub fn set_entrypoint(&mut self, value: bool) {

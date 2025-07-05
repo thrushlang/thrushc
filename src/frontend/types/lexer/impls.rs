@@ -27,6 +27,7 @@ impl std::fmt::Display for TokenType {
             TokenType::Write => write!(f, "write"),
             TokenType::Local => write!(f, "local"),
             TokenType::Asm => write!(f, "asm"),
+            TokenType::Glasm => write!(f, "glasm"),
 
             // Types
             TokenType::Address => write!(f, "address"),

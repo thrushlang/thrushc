@@ -5,9 +5,12 @@ use crate::{
     core::errors::standard::ThrushCompilerIssue,
     frontend::{
         lexer::tokentype::TokenType,
-        parser::stmts::{
-            asmfunction, block, conditional, constant, controlflow, cstype, function, lli, local,
-            loops, structure, terminator, union,
+        parser::{
+            declarations::{asmfn, glasm, glconstant, structure, union},
+            stmts::{
+                block, conditional, constant, controlflow, cstype, function, lli, local, loops,
+                terminator,
+            },
         },
         types::ast::Ast,
     },
@@ -44,18 +47,19 @@ pub fn parse<'parser>(
         .get_mut_control_ctx()
         .set_sync_position(SyncPosition::Declaration);
 
-    let statement: Result<Ast<'parser>, ThrushCompilerIssue> = match &parser_ctx.peek().kind {
+    let declaration: Result<Ast<'parser>, ThrushCompilerIssue> = match &parser_ctx.peek().kind {
         TokenType::Type => Ok(cstype::build_custom_type(parser_ctx, false)?),
         TokenType::Struct => Ok(structure::build_structure(parser_ctx, false)?),
-        TokenType::Const => Ok(constant::build_global_const(parser_ctx, false)?),
+        TokenType::Const => Ok(glconstant::build_global_const(parser_ctx, false)?),
         TokenType::Enum => Ok(union::build_enum(parser_ctx, false)?),
         TokenType::Fn => Ok(function::build_function(parser_ctx, false)?),
-        TokenType::AsmFn => Ok(asmfunction::build_assembler_function(parser_ctx, false)?),
+        TokenType::AsmFn => Ok(asmfn::build_assembler_function(parser_ctx, false)?),
+        TokenType::Glasm => Ok(glasm::build_global_assembler(parser_ctx)?),
 
         _ => Ok(self::statement(parser_ctx)?),
     };
 
-    statement
+    declaration
 }
 
 pub fn parse_forward(parser_ctx: &mut ParserContext) {
@@ -70,7 +74,7 @@ pub fn parse_forward(parser_ctx: &mut ParserContext) {
                 let _ = structure::build_structure(parser_ctx, true);
             }
             TokenType::Const if !entered_at_block => {
-                let _ = constant::build_global_const(parser_ctx, true);
+                let _ = glconstant::build_global_const(parser_ctx, true);
             }
             TokenType::Enum if !entered_at_block => {
                 let _ = union::build_enum(parser_ctx, true);
@@ -78,9 +82,8 @@ pub fn parse_forward(parser_ctx: &mut ParserContext) {
             TokenType::Fn if !entered_at_block => {
                 let _ = function::build_function(parser_ctx, true);
             }
-
             TokenType::AsmFn if !entered_at_block => {
-                let _ = asmfunction::build_assembler_function(parser_ctx, true);
+                let _ = asmfn::build_assembler_function(parser_ctx, true);
             }
 
             TokenType::LBrace => {

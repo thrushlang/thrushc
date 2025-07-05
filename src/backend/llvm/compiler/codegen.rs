@@ -87,6 +87,12 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 self.compile_function(decl);
             }
 
+            Ast::GlobalAssembler { asm, .. } => {
+                let llvm_module: &Module = self.context.get_llvm_module();
+
+                llvm_module.set_inline_assembly(asm);
+            }
+
             _ => (),
         }
 

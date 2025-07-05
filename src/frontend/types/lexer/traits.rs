@@ -14,10 +14,6 @@ pub trait TypeMutableExtensions {
     fn defer_mut_all(&self) -> Type;
 }
 
-pub trait TypeNumericExtensions {
-    fn is_numeric_type(&self) -> bool;
-}
-
 pub trait TypePointerExtensions {
     fn is_typed_ptr(&self) -> bool;
     fn is_all_ptr(&self) -> bool;

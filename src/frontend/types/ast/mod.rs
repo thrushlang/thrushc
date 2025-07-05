@@ -65,6 +65,12 @@ pub enum Ast<'ctx> {
         span: Span,
     },
 
+    // Global Assembler
+    GlobalAssembler {
+        asm: String,
+        span: Span,
+    },
+
     // Fixed Array
     FixedArray {
         items: Vec<Ast<'ctx>>,

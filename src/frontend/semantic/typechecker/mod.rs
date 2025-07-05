@@ -124,6 +124,10 @@ impl<'type_checker> TypeChecker<'type_checker> {
 
         ########################################################################*/
 
+        if let Ast::GlobalAssembler { .. } = stmt {
+            return Ok(());
+        }
+
         if let Ast::Struct { .. } = stmt {
             return Ok(());
         }

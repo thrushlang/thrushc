@@ -1,14 +1,10 @@
-pub mod asmfunction;
 pub mod block;
 pub mod conditional;
 pub mod constant;
 pub mod controlflow;
 pub mod cstype;
-pub mod entrypoint;
 pub mod function;
 pub mod lli;
 pub mod local;
 pub mod loops;
-pub mod structure;
 pub mod terminator;
-pub mod union;

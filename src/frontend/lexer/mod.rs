@@ -178,12 +178,6 @@ impl Lexer {
 
     #[must_use]
     #[inline]
-    pub fn is_string_boundary(&self) -> bool {
-        self.peek() != '"' && !self.end()
-    }
-
-    #[must_use]
-    #[inline]
     pub fn is_number_boundary(&self, is_hexadecimal: bool, is_binary: bool) -> bool {
         self.peek().is_ascii_digit()
             || self.peek() == '_'

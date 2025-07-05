@@ -73,6 +73,7 @@ pub enum TokenType {
     Write,
     AsmFn,
     Asm,
+    Glasm,
     Deref,
     As,
     Heap,

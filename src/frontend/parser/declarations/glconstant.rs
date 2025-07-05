@@ -11,16 +11,17 @@ use crate::{
     },
 };
 
-pub fn build_const<'parser>(
-    parser_ctx: &mut ParserContext<'parser>,
+pub fn build_global_const<'parser>(
+    parser_context: &mut ParserContext<'parser>,
+    declare_forward: bool,
 ) -> Result<Ast<'parser>, ThrushCompilerIssue> {
-    parser_ctx.consume(
+    parser_context.consume(
         TokenType::Const,
         "Syntax error".into(),
         "Expected 'const' keyword.".into(),
     )?;
 
-    let const_tk: &Token = parser_ctx.consume(
+    let const_tk: &Token = parser_context.consume(
         TokenType::Identifier,
         "Syntax error".into(),
         "Expected name.".into(),
@@ -31,20 +32,20 @@ pub fn build_const<'parser>(
 
     let span: Span = const_tk.get_span();
 
-    parser_ctx.consume(
+    parser_context.consume(
         TokenType::Colon,
         "Syntax error".into(),
         "Expected ':'.".into(),
     )?;
 
-    let const_type: Type = typegen::build_type(parser_ctx)?;
+    let const_type: Type = typegen::build_type(parser_context)?;
 
     let const_attributes: ThrushAttributes =
-        attributes::build_attributes(parser_ctx, &[TokenType::Eq])?;
+        attributes::build_attributes(parser_context, &[TokenType::Eq])?;
 
-    parser_ctx.consume(TokenType::Eq, "Syntax error".into(), "Expected '='.".into())?;
+    parser_context.consume(TokenType::Eq, "Syntax error".into(), "Expected '='.".into())?;
 
-    let value: Ast = expression::build_expr(parser_ctx)?;
+    let value: Ast = expression::build_expr(parser_context)?;
 
     let expression_span: Span = value.get_span();
 
@@ -57,17 +58,19 @@ pub fn build_const<'parser>(
         ));
     }
 
-    parser_ctx.consume(
+    parser_context.consume(
         TokenType::SemiColon,
         "Syntax error".into(),
         "Expected ';'.".into(),
     )?;
 
-    parser_ctx.get_mut_symbols().new_constant(
-        name,
-        (const_type.clone(), const_attributes.clone()),
-        span,
-    )?;
+    if declare_forward {
+        parser_context.get_mut_symbols().new_global_constant(
+            name,
+            (const_type.clone(), const_attributes.clone()),
+            span,
+        )?;
+    }
 
     Ok(Ast::Const {
         name,
@@ -75,7 +78,7 @@ pub fn build_const<'parser>(
         kind: const_type,
         value: value.into(),
         attributes: const_attributes,
-        metadata: ConstantMetadata::new(false),
+        metadata: ConstantMetadata::new(true),
         span,
     })
 }

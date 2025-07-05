@@ -2,11 +2,7 @@ use crate::{
     core::errors::standard::ThrushCompilerIssue,
     frontend::{
         lexer::{span::Span, token::Token, tokentype::TokenType},
-        parser::{
-            ParserContext, attributes,
-            stmts::{block, entrypoint},
-            typegen,
-        },
+        parser::{ParserContext, attributes, declarations::entrypoint, stmts::block, typegen},
         types::{
             ast::{Ast, metadata::fnparameter::FunctionParameterMetadata},
             lexer::Type,

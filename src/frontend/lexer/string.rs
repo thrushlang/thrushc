@@ -4,26 +4,93 @@ use crate::{
 };
 
 pub fn lex(lexer: &mut Lexer) -> Result<(), ThrushCompilerIssue> {
-    while lexer.is_string_boundary() {
-        lexer.advance();
+    let mut found_end_quote: bool = false;
+
+    while !lexer.end() {
+        if lexer.peek() == '"' {
+            lexer.advance();
+            found_end_quote = true;
+
+            break;
+        }
+
+        self::advance_string_char(lexer)?;
     }
 
-    lexer.end_span();
+    let string_span: Span = Span::new(lexer.line, lexer.span);
+    let raw_lexeme: String = lexer.shrink_lexeme();
 
-    let span: Span = Span::new(lexer.line, lexer.span);
+    self::validate_and_finalize_string(lexer, found_end_quote, string_span, raw_lexeme)?;
 
-    if lexer.peek() != '"' {
+    Ok(())
+}
+
+fn handle_escape_sequence(lexer: &mut Lexer) -> Result<char, ThrushCompilerIssue> {
+    lexer.advance();
+
+    if lexer.end() {
+        lexer.end_span();
+
+        let span: Span = Span::new(lexer.line, lexer.span);
+
         return Err(ThrushCompilerIssue::Error(
-            String::from("Syntax error"),
-            String::from("Unclosed literal string. Did you forget to close it with a '\"'?"),
+            "Syntax error".into(),
+            "Unexpected end of file after escape character.".into(),
             None,
             span,
         ));
     }
 
-    lexer.advance();
+    let escaped_char: char = lexer.advance();
 
-    let lexeme: String = lexer.shrink_lexeme();
+    match escaped_char {
+        'n' => Ok('\n'),
+        't' => Ok('\t'),
+        'r' => Ok('\r'),
+        '\\' => Ok('\\'),
+        '0' => Ok('\0'),
+        '\'' => Ok('\''),
+        '"' => Ok('"'),
+
+        _ => {
+            lexer.end_span();
+
+            let span: Span = Span::new(lexer.line, lexer.span);
+
+            Err(ThrushCompilerIssue::Error(
+                "Syntax error".into(),
+                "Invalid escape sequence. Valid escapes are '\\n', '\\t', '\\r', '\\0', '\\\\', '\\'', and '\\\"'.".into(),
+                None,
+                span,
+            ))
+        }
+    }
+}
+
+fn advance_string_char(lexer: &mut Lexer) -> Result<char, ThrushCompilerIssue> {
+    let current_char: char = lexer.peek();
+
+    if current_char == '\\' {
+        self::handle_escape_sequence(lexer)
+    } else {
+        Ok(lexer.advance())
+    }
+}
+
+fn validate_and_finalize_string(
+    lexer: &mut Lexer,
+    found_end_quote: bool,
+    span: Span,
+    lexeme: String,
+) -> Result<(), ThrushCompilerIssue> {
+    if !found_end_quote {
+        return Err(ThrushCompilerIssue::Error(
+            "Syntax error".into(),
+            "Unclosed literal string. Did you forget to close it with a '\"'?".into(),
+            None,
+            span,
+        ));
+    }
 
     lexer.tokens.push(Token {
         kind: TokenType::Str,
