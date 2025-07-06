@@ -1,4 +1,4 @@
-<img src= "https://github.com/thrushlang/thrushc/blob/master/assets/thrushlang-logo-v1.6.png" alt= "logo" style= "width: 80%; height: 80%;"> </img>
+<img src= "https://github.com/thrushlang/thrushc/blob/master/assets/thrushlang-v1.6.png" alt= "logo" style= "width: 80%; height: 80%;"> </img>
 
 > [!WARNING]
 > The development of The **Thrush Compiler** (thrushc) is incomplete; build the program at your own risk, as it may contain errors.
