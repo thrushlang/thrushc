@@ -343,7 +343,7 @@ impl PartialEq for Type {
 pub fn decompose_property(
     mut position: usize,
     property_names: Vec<&'_ str>,
-    base_type: Type,
+    base_type: &Type,
     symbols_table: &SymbolsTable<'_>,
     span: Span,
 ) -> Result<(Type, Vec<(Type, u32)>), ThrushCompilerIssue> {
@@ -377,7 +377,7 @@ pub fn decompose_property(
             }
         }
 
-        _ => &base_type,
+        _ => base_type,
     };
 
     if let Type::Struct(name, _) = current_type {
@@ -408,7 +408,7 @@ pub fn decompose_property(
             let (result_type, mut nested_indices) = self::decompose_property(
                 position,
                 property_names,
-                field_type.clone(),
+                field_type,
                 symbols_table,
                 span,
             )?;

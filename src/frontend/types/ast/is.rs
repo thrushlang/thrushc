@@ -1,3 +1,5 @@
+use std::any;
+
 use crate::{
     core::errors::standard::ThrushCompilerIssue, frontend::types::ast::Ast,
     frontend::typesystem::types::Type,
@@ -190,8 +192,15 @@ impl Ast<'_> {
             return metadata.is_mutable();
         }
 
-        if let Ast::Property { reference, .. } = self {
-            return reference.is_mutable();
+        if let Ast::Property { source, .. } = self {
+            if let Some(any_reference) = &source.0 {
+                let reference: &Ast = &any_reference.1;
+                return reference.is_mutable();
+            }
+
+            if let Some(expr) = &source.1 {
+                return expr.is_mutable();
+            }
         }
 
         false

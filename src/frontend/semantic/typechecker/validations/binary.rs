@@ -16,12 +16,17 @@ pub fn validate_binary(
         TokenType::Star | TokenType::Slash | TokenType::Minus | TokenType::Plus => {
             self::validate_binary_arithmetic(operator, a, b, span)
         }
+
         TokenType::BangEq | TokenType::EqEq => self::validate_binary_equality(operator, a, b, span),
+
         TokenType::LessEq | TokenType::Less | TokenType::GreaterEq | TokenType::Greater => {
             self::validate_binary_comparasion(operator, a, b, span)
         }
+
         TokenType::LShift | TokenType::RShift => self::validate_binary_shift(operator, a, b, span),
+
         TokenType::And | TokenType::Or => self::validate_binary_gate(operator, a, b, span),
+
         _ => Ok(()),
     }
 }

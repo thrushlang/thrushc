@@ -131,7 +131,7 @@ pub fn lower_precedence<'parser>(
                     reference::build_reference(parser_context, reference_name, span)?;
 
                 return Ok(Ast::Load {
-                    value: (Some((reference_name, reference.into())), None),
+                    source: (Some((reference_name, reference.into())), None),
                     kind: load_type,
                     span,
                 });
@@ -140,7 +140,7 @@ pub fn lower_precedence<'parser>(
             let expression: Ast = expression::build_expr(parser_context)?;
 
             Ast::Load {
-                value: (None, Some(expression.into())),
+                source: (None, Some(expression.into())),
                 kind: load_type,
                 span,
             }
@@ -167,7 +167,7 @@ pub fn lower_precedence<'parser>(
                 let value: Ast = expression::build_expr(parser_context)?;
 
                 return Ok(Ast::Write {
-                    write_to: (Some((name, reference.into())), None),
+                    source: (Some((name, reference.into())), None),
                     write_value: value.clone().into(),
                     write_type,
                     span,
@@ -186,7 +186,7 @@ pub fn lower_precedence<'parser>(
             let value: Ast = expression::build_expr(parser_context)?;
 
             Ast::Write {
-                write_to: (None, Some(expression.into())),
+                source: (None, Some(expression.into())),
                 write_value: value.clone().into(),
                 write_type,
                 span,
@@ -208,7 +208,7 @@ pub fn lower_precedence<'parser>(
                 let indexes: Vec<Ast> = address::build_address_indexes(parser_context, span)?;
 
                 return Ok(Ast::Address {
-                    address_to: (Some((name, reference.into())), None),
+                    source: (Some((name, reference.into())), None),
                     indexes,
                     kind: Type::Addr,
                     span: address_span,
@@ -221,7 +221,7 @@ pub fn lower_precedence<'parser>(
             let indexes: Vec<Ast> = address::build_address_indexes(parser_context, expr_span)?;
 
             return Ok(Ast::Address {
-                address_to: (None, Some(expr.into())),
+                source: (None, Some(expr.into())),
                 indexes,
                 kind: Type::Addr,
                 span: address_span,
@@ -240,6 +240,14 @@ pub fn lower_precedence<'parser>(
                 "Syntax error".into(),
                 "Expected ')'.".into(),
             )?;
+
+            if parser_context.match_token(TokenType::Dot)? {
+                return property::build_property(
+                    parser_context,
+                    (None, Some(expression.into())),
+                    span,
+                );
+            }
 
             return Ok(Ast::Group {
                 expression: expression.clone().into(),
@@ -316,7 +324,13 @@ pub fn lower_precedence<'parser>(
             }
 
             if parser_context.match_token(TokenType::LBracket)? {
-                let index: Ast = index::build_index(parser_context, Some(name), None, span)?;
+                let reference: Ast = reference::build_reference(parser_context, name, span)?;
+
+                let index: Ast = index::build_index(
+                    parser_context,
+                    (Some((name, reference.into())), None),
+                    span,
+                )?;
 
                 if parser_context.match_token(TokenType::Eq)? {
                     let expr: Ast = expression::build_expr(parser_context)?;
@@ -341,7 +355,13 @@ pub fn lower_precedence<'parser>(
             }
 
             if parser_context.match_token(TokenType::Dot)? {
-                let property: Ast = property::build_property(parser_context, name, span)?;
+                let reference: Ast = reference::build_reference(parser_context, name, span)?;
+
+                let property: Ast = property::build_property(
+                    parser_context,
+                    (Some((name, reference.clone().into())), None),
+                    span,
+                )?;
 
                 if parser_context.match_token(TokenType::Eq)? {
                     let expr: Ast = expression::build_expr(parser_context)?;
@@ -355,7 +375,7 @@ pub fn lower_precedence<'parser>(
                 }
 
                 if parser_context.match_token(TokenType::LBracket)? {
-                    return index::build_index(parser_context, None, Some(property), span);
+                    return index::build_index(parser_context, (None, Some(property.into())), span);
                 }
 
                 return Ok(property);

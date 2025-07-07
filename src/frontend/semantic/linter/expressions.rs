@@ -46,13 +46,13 @@ pub fn analyze_expression<'linter>(linter: &mut Linter<'linter>, expr: &'linter 
         }
 
         Ast::Index {
-            index_to, indexes, ..
+            source, indexes, ..
         } => {
             indexes.iter().for_each(|indexe| {
                 linter.analyze_ast_expr(indexe);
             });
 
-            if let Some(any_reference) = &index_to.0 {
+            if let Some(any_reference) = &source.0 {
                 let name: &str = any_reference.0;
                 let reference: &Ast = &any_reference.1;
 
@@ -61,7 +61,7 @@ pub fn analyze_expression<'linter>(linter: &mut Linter<'linter>, expr: &'linter 
                 used::mark_as_used(linter, name);
             }
 
-            if let Some(expr) = &index_to.1 {
+            if let Some(expr) = &source.1 {
                 linter.analyze_ast_expr(expr);
             }
         }

@@ -1,6 +1,4 @@
-#![allow(clippy::type_complexity)]
-
-use std::{fmt::Display, rc::Rc};
+use std::fmt::Display;
 
 use inkwell::{
     AddressSpace,
@@ -10,17 +8,16 @@ use inkwell::{
 use crate::{
     backend::llvm::compiler::{cast, context::LLVMCodeGenContext, memory, ptrgen},
     core::console::logging::{self, LoggingType},
-    frontend::types::ast::Ast,
-    frontend::typesystem::types::Type,
+    frontend::{types::ast::types::AstEitherExpression, typesystem::types::Type},
 };
 
 pub fn compile<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
-    value: &'ctx (Option<(&'ctx str, Rc<Ast<'ctx>>)>, Option<Rc<Ast<'ctx>>>),
+    source: &'ctx AstEitherExpression<'ctx>,
     kind: &Type,
     cast_type: Option<&Type>,
 ) -> BasicValueEnum<'ctx> {
-    let mut value: BasicValueEnum = match value {
+    let mut value: BasicValueEnum = match source {
         (Some((name, _)), _) => {
             let ptr: PointerValue = context.get_symbol(name).get_ptr();
 

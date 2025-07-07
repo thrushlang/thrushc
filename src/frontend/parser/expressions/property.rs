@@ -1,20 +1,37 @@
 use crate::{
-    core::errors::standard::ThrushCompilerIssue,
+    core::errors::{position::CompilationPosition, standard::ThrushCompilerIssue},
     frontend::{
         lexer::{span::Span, token::Token, tokentype::TokenType},
-        parser::{ParserContext, expressions::reference},
-        types::{ast::Ast, parser::stmts::traits::TokenExtensions},
+        parser::ParserContext,
+        types::{
+            ast::{Ast, types::AstEitherExpression},
+            parser::stmts::traits::TokenExtensions,
+        },
         typesystem::{self, types::Type},
     },
 };
 
 pub fn build_property<'parser>(
     parser_context: &mut ParserContext<'parser>,
-    name: &'parser str,
+    source: AstEitherExpression<'parser>,
     span: Span,
 ) -> Result<Ast<'parser>, ThrushCompilerIssue> {
-    let reference: Ast = reference::build_reference(parser_context, name, span)?;
-    let reference_type: Type = reference.get_any_type()?.clone();
+    let source_type: &Type = match source {
+        (Some(ref any_reference), None) => {
+            let reference: &Ast = &any_reference.1;
+            reference.get_value_type()?
+        }
+        (None, Some(ref expr)) => expr.get_value_type()?,
+        _ => {
+            return Err(ThrushCompilerIssue::Bug(
+                String::from("Index not caught"),
+                String::from("Expected a expression or reference."),
+                span,
+                CompilationPosition::Parser,
+                line!(),
+            ));
+        }
+    };
 
     let mut property_names: Vec<&str> = Vec::with_capacity(10);
 
@@ -45,7 +62,7 @@ pub fn build_property<'parser>(
     let decomposed: (Type, Vec<(Type, u32)>) = typesystem::types::decompose_property(
         0,
         property_names,
-        reference_type,
+        source_type,
         parser_context.get_symbols(),
         span,
     )?;
@@ -54,8 +71,7 @@ pub fn build_property<'parser>(
     let indexes: Vec<(Type, u32)> = decomposed.1;
 
     Ok(Ast::Property {
-        name,
-        reference: reference.into(),
+        source,
         indexes,
         kind: property_type,
         span,

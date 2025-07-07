@@ -46,8 +46,8 @@ pub fn validate_lli<'type_checker>(
             Ok(())
         }
 
-        Ast::Load { value, .. } => {
-            if let Some(any_reference) = &value.0 {
+        Ast::Load { source, .. } => {
+            if let Some(any_reference) = &source.0 {
                 let reference: &Ast = &any_reference.1;
 
                 let reference_type: &Type = reference.get_value_type()?;
@@ -65,7 +65,7 @@ pub fn validate_lli<'type_checker>(
                 typechecker.analyze_ast(reference)?;
             }
 
-            if let Some(expr) = &value.1 {
+            if let Some(expr) = &source.1 {
                 let expr_type: &Type = expr.get_value_type()?;
                 let expr_span: Span = expr.get_span();
 
@@ -85,12 +85,12 @@ pub fn validate_lli<'type_checker>(
         }
 
         Ast::Address {
-            address_to,
+            source,
             indexes,
             span,
             ..
         } => {
-            if let Some(reference_any) = &address_to.0 {
+            if let Some(reference_any) = &source.0 {
                 let reference: &Ast = &reference_any.1;
 
                 let reference_type: &Type = reference.get_value_type()?;
@@ -135,7 +135,7 @@ pub fn validate_lli<'type_checker>(
                 }
             }
 
-            if let Some(expr) = &address_to.1 {
+            if let Some(expr) = &source.1 {
                 let expr_type: &Type = expr.get_value_type()?;
                 let expr_span: Span = expr.get_span();
 
@@ -194,12 +194,12 @@ pub fn validate_lli<'type_checker>(
         }
 
         Ast::Write {
-            write_to,
+            source,
             write_value,
             write_type,
             ..
         } => {
-            if let Some(any_reference) = &write_to.0 {
+            if let Some(any_reference) = &source.0 {
                 let reference: &Ast = &any_reference.1;
                 let reference_type: &Type = reference.get_value_type()?;
                 let reference_span: Span = reference.get_span();
@@ -217,7 +217,7 @@ pub fn validate_lli<'type_checker>(
                 }
             }
 
-            if let Some(expr) = &write_to.1 {
+            if let Some(expr) = &source.1 {
                 let expr_type: &Type = expr.get_value_type()?;
                 let expr_span: Span = expr.get_span();
 

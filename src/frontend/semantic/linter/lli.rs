@@ -13,16 +13,16 @@ pub fn analyze_lli<'linter>(linter: &mut Linter<'linter>, node: &'linter Ast) {
         }
 
         Ast::Write {
-            write_to,
+            source,
             write_value,
             ..
         } => {
-            if let Some(any_reference) = &write_to.0 {
+            if let Some(any_reference) = &source.0 {
                 let reference: &Ast = &any_reference.1;
                 linter.analyze_ast_expr(reference);
             }
 
-            if let Some(expr) = &write_to.1 {
+            if let Some(expr) = &source.1 {
                 linter.analyze_ast_expr(expr);
             }
 
@@ -30,31 +30,29 @@ pub fn analyze_lli<'linter>(linter: &mut Linter<'linter>, node: &'linter Ast) {
         }
 
         Ast::Address {
-            address_to,
-            indexes,
-            ..
+            source, indexes, ..
         } => {
             indexes.iter().for_each(|indexe| {
                 linter.analyze_ast_expr(indexe);
             });
 
-            if let Some(any_reference) = &address_to.0 {
+            if let Some(any_reference) = &source.0 {
                 let reference: &Ast = &any_reference.1;
                 linter.analyze_ast_expr(reference);
             }
 
-            if let Some(expr) = &address_to.1 {
+            if let Some(expr) = &source.1 {
                 linter.analyze_ast_expr(expr);
             }
         }
 
-        Ast::Load { value, .. } => {
-            if let Some(any_reference) = &value.0 {
+        Ast::Load { source, .. } => {
+            if let Some(any_reference) = &source.0 {
                 let reference: &Ast = &any_reference.1;
                 linter.analyze_ast_expr(reference);
             }
 
-            if let Some(expr) = &value.1 {
+            if let Some(expr) = &source.1 {
                 linter.analyze_ast_expr(expr);
             }
         }

@@ -2,7 +2,7 @@ use crate::{
     core::errors::{position::CompilationPosition, standard::ThrushCompilerIssue},
     frontend::{
         lexer::{span::Span, tokentype::TokenType},
-        parser::{ParserContext, expression, expressions::reference},
+        parser::{ParserContext, expression},
         types::ast::{Ast, metadata::index::IndexMetadata, types::AstEitherExpression},
         typesystem::types::Type,
     },
@@ -10,22 +10,10 @@ use crate::{
 
 pub fn build_index<'parser>(
     parser_context: &mut ParserContext<'parser>,
-    reference: Option<&'parser str>,
-    expr: Option<Ast<'parser>>,
+    source: AstEitherExpression<'parser>,
     span: Span,
 ) -> Result<Ast<'parser>, ThrushCompilerIssue> {
-    let index_to: AstEitherExpression = if let Some(name) = reference {
-        let reference: Ast = reference::build_reference(parser_context, name, span)?;
-
-        (Some((name, reference.into())), None)
-    } else if let Some(expr) = expr {
-        (None, Some(expr.into()))
-    } else {
-        let expr: Ast = expression::build_expr(parser_context)?;
-        (None, Some(expr.into()))
-    };
-
-    let index_type: &Type = match index_to {
+    let index_type: &Type = match source {
         (Some(ref any_reference), None) => {
             let reference: &Ast = &any_reference.1;
             reference.get_value_type()?
@@ -42,7 +30,7 @@ pub fn build_index<'parser>(
         }
     };
 
-    let is_mutable: bool = match index_to {
+    let is_mutable: bool = match source {
         (Some(ref any_reference), None) => {
             let reference: &Ast = &any_reference.1;
             reference.is_mutable()
@@ -104,7 +92,7 @@ pub fn build_index<'parser>(
     };
 
     Ok(Ast::Index {
-        index_to,
+        source,
         indexes,
         kind: index_type,
         metadata: IndexMetadata::new(is_mutable),

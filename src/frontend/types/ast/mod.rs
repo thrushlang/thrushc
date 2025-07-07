@@ -86,7 +86,7 @@ pub enum Ast<'ctx> {
     },
 
     Index {
-        index_to: AstEitherExpression<'ctx>,
+        source: AstEitherExpression<'ctx>,
         indexes: Vec<Ast<'ctx>>,
         kind: Type,
         metadata: IndexMetadata,
@@ -114,8 +114,7 @@ pub enum Ast<'ctx> {
     },
 
     Property {
-        name: &'ctx str,
-        reference: Rc<Ast<'ctx>>,
+        source: AstEitherExpression<'ctx>,
         indexes: Vec<(Type, u32)>,
         kind: Type,
         span: Span,
@@ -288,21 +287,21 @@ pub enum Ast<'ctx> {
     },
 
     Address {
-        address_to: AstEitherExpression<'ctx>,
+        source: AstEitherExpression<'ctx>,
         indexes: Vec<Ast<'ctx>>,
         kind: Type,
         span: Span,
     },
 
     Write {
-        write_to: AstEitherExpression<'ctx>,
+        source: AstEitherExpression<'ctx>,
         write_value: Rc<Ast<'ctx>>,
         write_type: Type,
         span: Span,
     },
 
     Load {
-        value: AstEitherExpression<'ctx>,
+        source: AstEitherExpression<'ctx>,
         kind: Type,
         span: Span,
     },

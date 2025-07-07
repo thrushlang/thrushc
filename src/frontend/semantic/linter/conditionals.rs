@@ -13,14 +13,14 @@ pub fn analyze_conditional<'linter>(linter: &mut Linter<'linter>, node: &'linter
             ..
         } => {
             linter.analyze_ast_expr(cond);
-            linter.analyze_ast_expr(block);
+            linter.analyze_ast_stmt(block);
 
             elfs.iter().for_each(|elif| {
-                linter.analyze_ast_expr(elif);
+                linter.analyze_ast_stmt(elif);
             });
 
             if let Some(otherwise) = otherwise {
-                linter.analyze_ast_expr(otherwise);
+                linter.analyze_ast_stmt(otherwise);
             }
         }
 

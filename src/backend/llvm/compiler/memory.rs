@@ -403,6 +403,28 @@ pub fn alloc_anon<'ctx>(
     }
 }
 
+pub fn get_struct_anon<'ctx>(
+    context: &LLVMCodeGenContext<'_, 'ctx>,
+    ptr: PointerValue<'ctx>,
+    kind: &Type,
+    index: u32,
+) -> PointerValue<'ctx> {
+    let llvm_context: &Context = context.get_llvm_context();
+    let llvm_builder: &Builder = context.get_llvm_builder();
+
+    if let Ok(ptr) = llvm_builder.build_struct_gep(
+        typegen::generate_subtype_with_all(llvm_context, kind),
+        ptr,
+        index,
+        "",
+    ) {
+        return ptr;
+    }
+
+    self::codegen_abort("Unable to get pointer element at memory manipulation.");
+    unreachable!()
+}
+
 pub fn gep_anon<'ctx>(
     context: &LLVMCodeGenContext<'_, 'ctx>,
     ptr: PointerValue<'ctx>,

@@ -15,7 +15,7 @@ pub fn analyze_loop<'linter>(linter: &mut Linter<'linter>, node: &'linter Ast) {
             linter.analyze_ast_stmt(local);
             linter.analyze_ast_expr(actions);
             linter.analyze_ast_expr(cond);
-            linter.analyze_ast_expr(block);
+            linter.analyze_ast_stmt(block);
         }
 
         Ast::While { cond, block, .. } => {

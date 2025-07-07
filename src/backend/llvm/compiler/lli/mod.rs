@@ -33,19 +33,17 @@ pub fn compile<'ctx>(
 ) -> BasicValueEnum<'ctx> {
     match expr {
         Ast::Write {
-            write_to,
+            source,
             write_type,
             write_value,
             ..
-        } => self::write::compile(context, write_to, write_type, write_value),
+        } => self::write::compile(context, source, write_type, write_value),
 
-        Ast::Load { value, kind, .. } => self::load::compile(context, value, kind, cast_type),
+        Ast::Load { source, kind, .. } => self::load::compile(context, source, kind, cast_type),
 
         Ast::Address {
-            address_to,
-            indexes,
-            ..
-        } => self::address::compile(context, address_to, indexes),
+            source, indexes, ..
+        } => self::address::compile(context, source, indexes),
 
         Ast::Alloc {
             type_to_alloc,

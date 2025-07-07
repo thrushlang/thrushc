@@ -1,6 +1,4 @@
-#![allow(clippy::type_complexity)]
-
-use std::{fmt::Display, rc::Rc};
+use std::fmt::Display;
 
 use inkwell::{
     AddressSpace,
@@ -16,12 +14,15 @@ use crate::{
         ptrgen, valuegen,
     },
     core::console::logging::{self, LoggingType},
-    frontend::{types::ast::Ast, typesystem::types::Type},
+    frontend::{
+        types::ast::{Ast, types::AstEitherExpression},
+        typesystem::types::Type,
+    },
 };
 
 pub fn compile<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
-    address_to: &'ctx (Option<(&'ctx str, Rc<Ast<'ctx>>)>, Option<Rc<Ast<'ctx>>>),
+    source: &'ctx AstEitherExpression<'ctx>,
     indexes: &'ctx [Ast],
 ) -> BasicValueEnum<'ctx> {
     let llvm_context: &Context = context.get_llvm_context();
@@ -32,7 +33,7 @@ pub fn compile<'ctx>(
         .map(|index| valuegen::compile(context, index, Some(&Type::U32)).into_int_value())
         .collect();
 
-    match address_to {
+    match source {
         (Some((name, _)), _) => {
             let symbol: SymbolAllocated = context.get_symbol(name);
 

@@ -38,6 +38,16 @@ impl TypePointerExtensions for Type {
         false
     }
 
+    fn is_nested_ptr_type(&self) -> bool {
+        if let Type::Ptr(Some(ptr)) = self {
+            if let Type::Ptr(_) = &**ptr {
+                return true;
+            }
+        }
+
+        false
+    }
+
     fn is_typed_ptr_type(&self) -> bool {
         if let Type::Ptr(Some(inner)) = self {
             return inner.is_typed_ptr_type();

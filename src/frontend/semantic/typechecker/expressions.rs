@@ -268,18 +268,18 @@ pub fn validate_expression<'type_checker>(
         }
 
         Ast::Index {
-            index_to,
+            source,
             indexes,
             span,
             ..
         } => {
-            if let Some(any_reference) = &index_to.0 {
+            if let Some(any_reference) = &source.0 {
                 let reference: &Ast = &any_reference.1;
 
                 if !reference.is_allocated_reference() {
                     typechecker.add_error(ThrushCompilerIssue::Error(
                         "Type error".into(),
-                        "Expected a allocated value.".into(),
+                        "An assigned value was expected, such as ptr[T], ptr, addr, or high-level pointer mut T.".into(),
                         None,
                         *span,
                     ));
@@ -287,24 +287,28 @@ pub fn validate_expression<'type_checker>(
 
                 let reference_type: &Type = reference.get_value_type()?;
 
-                if reference_type.is_ptr_type() && !reference_type.is_typed_ptr_type() {
-                    typechecker.add_error(ThrushCompilerIssue::Error(
-                        "Type error".into(),
-                        "Expected raw typed pointer ptr[T].".into(),
-                        None,
-                        *span,
-                    ));
-                } else if reference_type.is_ptr_type()
-                    && reference_type.is_typed_ptr_type()
-                    && reference_type.is_all_ptr_type()
-                {
-                    typechecker.add_error(ThrushCompilerIssue::Error(
-                        "Type error".into(),
-                        "Expected raw typed pointer type with deep type.".into(),
-                        None,
-                        *span,
-                    ));
-                } else if !reference_type.is_mut_array_type()
+                if reference_type.is_ptr_type() {
+                    if !reference_type.is_typed_ptr_type() {
+                        typechecker.add_error(ThrushCompilerIssue::Error(
+                            "Type error".into(),
+                            "Expected raw typed pointer ptr[T].".into(),
+                            None,
+                            *span,
+                        ));
+                    }
+
+                    if reference_type.is_typed_ptr_type() && reference_type.is_all_ptr_type() {
+                        typechecker.add_error(ThrushCompilerIssue::Error(
+                            "Type error".into(),
+                            "A raw typed pointer type was expected, with a typed internal type."
+                                .into(),
+                            None,
+                            *span,
+                        ));
+                    }
+                }
+
+                if !reference_type.is_mut_array_type()
                     && !reference_type.is_mut_fixed_array_type()
                     && !reference_type.is_array_type()
                     && !reference_type.is_fixed_array_type()
@@ -318,27 +322,31 @@ pub fn validate_expression<'type_checker>(
                 }
             }
 
-            if let Some(expr) = &index_to.1 {
+            if let Some(expr) = &source.1 {
                 let expr_type: &Type = expr.get_any_type()?;
 
-                if expr_type.is_ptr_type() && !expr_type.is_typed_ptr_type() {
-                    typechecker.add_error(ThrushCompilerIssue::Error(
-                        "Type error".into(),
-                        "Expected raw typed pointer ptr[T].".into(),
-                        None,
-                        *span,
-                    ));
-                } else if expr_type.is_ptr_type()
-                    && expr_type.is_typed_ptr_type()
-                    && expr_type.is_all_ptr_type()
-                {
-                    typechecker.add_error(ThrushCompilerIssue::Error(
-                        "Type error".into(),
-                        "Expected raw typed pointer type with deep type.".into(),
-                        None,
-                        *span,
-                    ));
-                } else if !expr_type.is_mut_array_type()
+                if expr_type.is_ptr_type() {
+                    if !expr_type.is_typed_ptr_type() {
+                        typechecker.add_error(ThrushCompilerIssue::Error(
+                            "Type error".into(),
+                            "Expected raw typed pointer ptr[T].".into(),
+                            None,
+                            *span,
+                        ));
+                    }
+
+                    if expr_type.is_typed_ptr_type() && expr_type.is_all_ptr_type() {
+                        typechecker.add_error(ThrushCompilerIssue::Error(
+                            "Type error".into(),
+                            "A raw typed pointer type was expected, with a typed internal type."
+                                .into(),
+                            None,
+                            *span,
+                        ));
+                    }
+                }
+
+                if !expr_type.is_mut_array_type()
                     && !expr_type.is_mut_fixed_array_type()
                     && !expr_type.is_array_type()
                     && !expr_type.is_fixed_array_type()
@@ -368,23 +376,50 @@ pub fn validate_expression<'type_checker>(
             Ok(())
         }
 
-        Ast::Property { reference, .. } => {
-            let reference_type: &Type = reference.get_value_type()?;
-            let reference_span: Span = reference.get_span();
+        Ast::Property { source, .. } => {
+            if let Some(any_reference) = &source.0 {
+                let reference: &Ast = &any_reference.1;
 
-            if !reference_type.is_struct_type()
-                && !reference_type.is_mut_struct_type()
-                && !reference_type.is_ptr_struct_type()
-            {
-                typechecker.add_error(ThrushCompilerIssue::Error(
-                    "Type error".into(),
-                    "Expected reference to a struct type.".into(),
-                    None,
-                    reference_span,
-                ));
+                let reference_type: &Type = reference.get_value_type()?;
+                let reference_span: Span = reference.get_span();
+
+                if !reference_type.is_struct_type()
+                    && !reference_type.is_mut_struct_type()
+                    && !reference_type.is_ptr_struct_type()
+                {
+                    typechecker.add_error(ThrushCompilerIssue::Error(
+                        "Type error".into(),
+                        "A structure type was expected within the high-level pointer 'mut T', the raw typed pointer 'mut T', or a structure 'struct T'.".into(),
+                        None,
+                        reference_span,
+                    ));
+                }
+
+                typechecker.analyze_ast(reference)?;
+
+                return Ok(());
             }
 
-            typechecker.analyze_ast(reference)?;
+            if let Some(expr) = &source.1 {
+                let expr_type: &Type = expr.get_value_type()?;
+                let expr_span: Span = expr.get_span();
+
+                if !expr_type.is_struct_type()
+                    && !expr_type.is_mut_struct_type()
+                    && !expr_type.is_ptr_struct_type()
+                {
+                    typechecker.add_error(ThrushCompilerIssue::Error(
+                        "Type error".into(),
+                        "A structure type was expected within the high-level pointer 'mut T', the raw typed pointer 'mut T', or a structure 'struct T'.".into(),
+                        None,
+                        expr_span,
+                    ));
+                }
+
+                typechecker.analyze_ast(expr)?;
+
+                return Ok(());
+            }
 
             Ok(())
         }

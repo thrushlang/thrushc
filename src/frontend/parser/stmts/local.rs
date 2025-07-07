@@ -95,7 +95,6 @@ pub fn build_local<'parser>(
     )?;
 
     let value: Ast = expression::build_expr(parser_ctx)?;
-    let value_type: &Type = value.get_value_type()?;
 
     parser_ctx.consume(
         TokenType::SemiColon,

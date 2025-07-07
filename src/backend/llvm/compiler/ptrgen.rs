@@ -13,6 +13,7 @@ use crate::backend::types::traits::AssemblerFunctionExtensions;
 use crate::core::console::logging::{self, LoggingType};
 
 use crate::frontend::types::ast::Ast;
+use crate::frontend::types::ast::types::AstEitherExpression;
 use crate::frontend::types::parser::stmts::traits::ThrushAttributesExtensions;
 use crate::frontend::types::parser::stmts::types::ThrushAttributes;
 use crate::frontend::typesystem::types::Type;
@@ -51,7 +52,9 @@ pub fn compile<'ctx>(
         Ast::Deref { value, kind, .. } => self::compile_deref(context, value, kind, cast_type),
 
         // Compiles property access (e.g., struct field or array)
-        Ast::Property { name, indexes, .. } => self::compile_property(context, name, indexes),
+        Ast::Property {
+            source, indexes, ..
+        } => self::compile_property(context, source, indexes),
 
         // Compiles a built-in function
         Ast::Builtin { builtin, .. } => builtins::compile(context, builtin, cast_type),
@@ -71,8 +74,8 @@ pub fn compile<'ctx>(
 
         // Compiles an indexing operation (e.g., array access)
         Ast::Index {
-            index_to, indexes, ..
-        } => self::compile_index(context, index_to, indexes),
+            source, indexes, ..
+        } => self::compile_index(context, source, indexes),
 
         // Value Mutation
         Ast::Mut { .. } => mutation::compile(context, expr),
@@ -242,42 +245,76 @@ fn compile_deref<'ctx>(
 
 fn compile_property<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
-    name: &str,
+    source: &'ctx AstEitherExpression<'ctx>,
     indexes: &[(Type, u32)],
 ) -> BasicValueEnum<'ctx> {
-    let symbol: SymbolAllocated = context.get_symbol(name);
-
     let llvm_context: &Context = context.get_llvm_context();
     let llvm_builder: &Builder = context.get_llvm_builder();
 
-    if !symbol.is_pointer() {
-        self::codegen_abort(format!(
-            "Symbol '{}' is not a pointer for property access.",
-            name
-        ));
+    match source {
+        (Some((name, _)), _) => {
+            let symbol: SymbolAllocated = context.get_symbol(name);
 
-        return self::compile_null_ptr(context);
-    }
-
-    let mut ptr: PointerValue = symbol.gep_struct(llvm_context, llvm_builder, indexes[0].1);
-
-    for index in indexes.iter().skip(1) {
-        let index_type: BasicTypeEnum = typegen::generate_type(llvm_context, &index.0);
-
-        match llvm_builder.build_struct_gep(index_type, ptr, index.1, "") {
-            Ok(new_ptr) => ptr = new_ptr,
-            Err(_) => {
+            if !symbol.is_pointer() {
                 self::codegen_abort(format!(
-                    "Failed to access property at index {} for '{}'.",
-                    index.1, name
+                    "Symbol '{}' is not a pointer for property access.",
+                    name
                 ));
 
                 return self::compile_null_ptr(context);
             }
+
+            let mut ptr: PointerValue = symbol.gep_struct(llvm_context, llvm_builder, indexes[0].1);
+
+            for index in indexes.iter().skip(1) {
+                let index_type: BasicTypeEnum = typegen::generate_type(llvm_context, &index.0);
+
+                match llvm_builder.build_struct_gep(index_type, ptr, index.1, "") {
+                    Ok(new_ptr) => ptr = new_ptr,
+                    Err(_) => {
+                        self::codegen_abort(format!(
+                            "Failed to access property at index {} for '{}'.",
+                            index.1, name
+                        ));
+
+                        return self::compile_null_ptr(context);
+                    }
+                }
+            }
+
+            ptr.into()
+        }
+
+        (_, Some(expr)) => {
+            let kind: &Type = expr.get_type_unwrapped();
+            let ptr: PointerValue = ptrgen::compile(context, expr, None).into_pointer_value();
+
+            let mut ptr: PointerValue = memory::get_struct_anon(context, ptr, kind, indexes[0].1);
+
+            for index in indexes.iter().skip(1) {
+                let index_type: BasicTypeEnum = typegen::generate_type(llvm_context, &index.0);
+
+                match llvm_builder.build_struct_gep(index_type, ptr, index.1, "") {
+                    Ok(new_ptr) => ptr = new_ptr,
+                    Err(_) => {
+                        self::codegen_abort(format!(
+                            "Failed to access property at index {} for expression.",
+                            index.1
+                        ));
+
+                        return self::compile_null_ptr(context);
+                    }
+                }
+            }
+
+            ptr.into()
+        }
+
+        _ => {
+            self::codegen_abort("Unable to compile property access.");
+            self::compile_null_ptr(context)
         }
     }
-
-    ptr.into()
 }
 
 fn compile_reference<'ctx>(
@@ -350,13 +387,13 @@ fn compile_inline_asm<'ctx>(
 
 fn compile_index<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
-    index_to: &'ctx LLVMEitherExpression<'ctx>,
+    source: &'ctx LLVMEitherExpression<'ctx>,
     indexes: &'ctx [Ast],
 ) -> BasicValueEnum<'ctx> {
     let llvm_context: &Context = context.get_llvm_context();
     let llvm_builder: &Builder = context.get_llvm_builder();
 
-    match index_to {
+    match source {
         (Some((name, _)), _) => {
             let symbol: SymbolAllocated = context.get_symbol(name);
             let symbol_type: &Type = symbol.get_type();

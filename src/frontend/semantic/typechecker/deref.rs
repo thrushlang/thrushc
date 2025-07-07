@@ -18,7 +18,8 @@ pub fn validate_dereference<'type_checker>(
             if !value_type.is_ptr_type() && !value_type.is_mut_type() {
                 typechecker.add_error(ThrushCompilerIssue::Error(
                     "Type error".into(),
-                    "Expected 'ptr[T]', 'ptr', or 'mut T' type for dereference.".into(),
+                    "Expected raw typed pointer 'ptr[T]', raw pointer 'ptr', or high-level pointer 'mut T' type for dereference."
+                        .into(),
                     None,
                     value_span,
                 ));

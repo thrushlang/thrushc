@@ -27,7 +27,7 @@ pub fn validate_call<'type_checker>(
         typechecker.add_error(ThrushCompilerIssue::Error(
             "Type error".into(),
             format!(
-                "Expected {} arguments not {}.",
+                "Expected arguments total '{}', not '{}'.",
                 parameter_types_size,
                 args.len()
             ),
@@ -38,7 +38,7 @@ pub fn validate_call<'type_checker>(
         typechecker.add_error(ThrushCompilerIssue::Error(
             "Type error".into(),
             format!(
-                "Expected arguments in order to '{}'.",
+                "Arguments were expected in the order: '{}'.",
                 parameter_types_displayed
             ),
             None,
