@@ -54,7 +54,7 @@ pub fn parse<'parser>(
         TokenType::Enum => Ok(union::build_enum(parser_ctx, false)?),
         TokenType::Fn => Ok(function::build_function(parser_ctx, false)?),
         TokenType::AsmFn => Ok(asmfn::build_assembler_function(parser_ctx, false)?),
-        TokenType::Glasm => Ok(glasm::build_global_assembler(parser_ctx)?),
+        TokenType::GlobalAsm => Ok(glasm::build_global_assembler(parser_ctx)?),
 
         _ => Ok(self::statement(parser_ctx)?),
     };

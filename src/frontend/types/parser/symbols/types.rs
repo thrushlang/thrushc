@@ -2,7 +2,7 @@ use ahash::AHashMap as HashMap;
 
 use crate::{
     frontend::types::parser::stmts::types::{CustomTypeFields, EnumFields, ThrushAttributes},
-    frontend::{lexer::span::Span, types::lexer::Type},
+    frontend::{lexer::span::Span, typesystem::types::Type},
 };
 
 pub type Struct<'parser> = (

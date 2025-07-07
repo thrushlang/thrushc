@@ -4,8 +4,8 @@ use crate::backend::llvm::compiler::{cast, valuegen};
 use crate::core::console::logging::{self, LoggingType};
 use crate::frontend::lexer::tokentype::TokenType;
 use crate::frontend::types::ast::Ast;
-use crate::frontend::types::lexer::Type;
 use crate::frontend::types::parser::repr::UnaryOperation;
+use crate::frontend::typesystem::types::Type;
 
 use super::{context::LLVMCodeGenContext, memory::SymbolAllocated};
 
@@ -21,18 +21,18 @@ use inkwell::{
 pub fn unary_op<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     unary: UnaryOperation<'ctx>,
-    cast_type: Option<&Type>,
+    cast: Option<&Type>,
 ) -> BasicValueEnum<'ctx> {
     match unary {
         (TokenType::PlusPlus | TokenType::MinusMinus, _, Ast::Reference { name, kind, .. }) => {
-            self::compile_increment_decrement_ref(context, name, unary.0, kind, cast_type)
+            self::compile_increment_decrement_ref(context, name, unary.0, kind, cast)
         }
         (TokenType::PlusPlus | TokenType::MinusMinus, _, expr) => {
-            self::compile_increment_decrement(context, unary.0, expr, cast_type)
+            self::compile_increment_decrement(context, unary.0, expr, cast)
         }
 
-        (TokenType::Bang, _, expr) => self::compile_logical_negation(context, expr, cast_type),
-        (TokenType::Minus, _, expr) => self::compile_arithmetic_negation(context, expr, cast_type),
+        (TokenType::Bang, _, expr) => self::compile_logical_negation(context, expr, cast),
+        (TokenType::Minus, _, expr) => self::compile_arithmetic_negation(context, expr, cast),
 
         _ => {
             logging::log(
@@ -49,7 +49,7 @@ fn compile_increment_decrement_ref<'ctx>(
     name: &str,
     operator: &TokenType,
     kind: &Type,
-    cast_type: Option<&Type>,
+    cast: Option<&Type>,
 ) -> BasicValueEnum<'ctx> {
     let llvm_builder: &Builder = context.get_llvm_builder();
     let llvm_context: &Context = context.get_llvm_context();
@@ -96,8 +96,8 @@ fn compile_increment_decrement_ref<'ctx>(
 
             symbol.store(context, result);
 
-            if let Some(cast_type) = cast_type {
-                if let Some(casted_int) = cast::integer(context, cast_type, kind, result) {
+            if let Some(cast) = cast {
+                if let Some(casted_int) = cast::integer(context, cast, kind, result) {
                     result = casted_int;
                 }
             }
@@ -122,8 +122,8 @@ fn compile_increment_decrement_ref<'ctx>(
                 _ => unreachable!(),
             };
 
-            if let Some(cast_type) = cast_type {
-                if let Some(casted_float) = cast::float(context, cast_type, kind, result) {
+            if let Some(cast) = cast {
+                if let Some(casted_float) = cast::float(context, cast, kind, result) {
                     result = casted_float;
                 }
             }
@@ -138,12 +138,12 @@ fn compile_increment_decrement<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     operator: &TokenType,
     expression: &'ctx Ast,
-    cast_type: Option<&Type>,
+    cast: Option<&Type>,
 ) -> BasicValueEnum<'ctx> {
     let llvm_builder: &Builder = context.get_llvm_builder();
     let llvm_context: &Context = context.get_llvm_context();
 
-    let value: BasicValueEnum = valuegen::compile(context, expression, cast_type);
+    let value: BasicValueEnum = valuegen::compile(context, expression, cast);
     let kind: &Type = expression.get_type_unwrapped();
 
     match kind {
@@ -186,8 +186,8 @@ fn compile_increment_decrement<'ctx>(
                 }
             };
 
-            if let Some(cast_type) = cast_type {
-                if let Some(casted_int) = cast::integer(context, cast_type, kind, result) {
+            if let Some(cast) = cast {
+                if let Some(casted_int) = cast::integer(context, cast, kind, result) {
                     result = casted_int;
                 }
             }
@@ -221,8 +221,8 @@ fn compile_increment_decrement<'ctx>(
                 }
             };
 
-            if let Some(cast_type) = cast_type {
-                if let Some(casted_float) = cast::float(context, cast_type, kind, result) {
+            if let Some(cast) = cast {
+                if let Some(casted_float) = cast::float(context, cast, kind, result) {
                     result = casted_float;
                 }
             }
@@ -235,11 +235,11 @@ fn compile_increment_decrement<'ctx>(
 fn compile_logical_negation<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     expr: &'ctx Ast,
-    cast_type: Option<&Type>,
+    cast: Option<&Type>,
 ) -> BasicValueEnum<'ctx> {
     let llvm_builder: &Builder = context.get_llvm_builder();
 
-    let value: BasicValueEnum = valuegen::compile(context, expr, cast_type);
+    let value: BasicValueEnum = valuegen::compile(context, expr, cast);
     let kind: &Type = expr.get_type_unwrapped();
 
     match kind {
@@ -249,8 +249,8 @@ fn compile_logical_negation<'ctx>(
             if let Ok(result) = llvm_builder.build_not(int, "") {
                 let mut result: BasicValueEnum = result.into();
 
-                if let Some(cast_type) = cast_type {
-                    if let Some(casted_int) = cast::integer(context, cast_type, kind, result) {
+                if let Some(cast) = cast {
+                    if let Some(casted_int) = cast::integer(context, cast, kind, result) {
                         result = casted_int;
                     }
                 }
@@ -271,11 +271,11 @@ fn compile_logical_negation<'ctx>(
 fn compile_arithmetic_negation<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     expr: &'ctx Ast,
-    cast_type: Option<&Type>,
+    cast: Option<&Type>,
 ) -> BasicValueEnum<'ctx> {
     let llvm_builder: &Builder = context.get_llvm_builder();
 
-    let value: BasicValueEnum = valuegen::compile(context, expr, cast_type);
+    let value: BasicValueEnum = valuegen::compile(context, expr, cast);
     let kind: &Type = expr.get_type_unwrapped();
 
     match kind {
@@ -285,8 +285,8 @@ fn compile_arithmetic_negation<'ctx>(
             if let Ok(result) = llvm_builder.build_int_neg(int, "") {
                 let mut result: BasicValueEnum = result.into();
 
-                if let Some(cast_type) = cast_type {
-                    if let Some(casted_int) = cast::integer(context, cast_type, kind, result) {
+                if let Some(cast) = cast {
+                    if let Some(casted_int) = cast::integer(context, cast, kind, result) {
                         result = casted_int;
                     }
                 }
@@ -303,8 +303,8 @@ fn compile_arithmetic_negation<'ctx>(
             if let Ok(result) = llvm_builder.build_float_neg(float, "") {
                 let mut result: BasicValueEnum = result.into();
 
-                if let Some(cast_type) = cast_type {
-                    if let Some(casted_float) = cast::float(context, cast_type, kind, result) {
+                if let Some(cast) = cast {
+                    if let Some(casted_float) = cast::float(context, cast, kind, result) {
                         result = casted_float;
                     }
                 }

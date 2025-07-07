@@ -1,9 +1,11 @@
 use std::sync::Arc;
 
-use crate::{backend::llvm::compiler::context::LLVMCodeGenContext, frontend::types::lexer::Type};
+use crate::{
+    backend::llvm::compiler::context::LLVMCodeGenContext, frontend::typesystem::types::Type,
+};
 
 pub trait LLVMTypeExtensions {
-    fn is_same_size(&self, context: &LLVMCodeGenContext<'_, '_>, other: &Type) -> bool;
+    fn llvm_is_same_bit_size(&self, context: &LLVMCodeGenContext<'_, '_>, other: &Type) -> bool;
 }
 
 pub trait TypeMutableExtensions {
@@ -15,8 +17,8 @@ pub trait TypeMutableExtensions {
 }
 
 pub trait TypePointerExtensions {
-    fn is_typed_ptr(&self) -> bool;
-    fn is_all_ptr(&self) -> bool;
+    fn is_typed_ptr_type(&self) -> bool;
+    fn is_all_ptr_type(&self) -> bool;
     fn is_ptr_struct_type(&self) -> bool;
     fn is_ptr_fixed_array_type(&self) -> bool;
 }

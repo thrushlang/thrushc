@@ -1,19 +1,14 @@
-use std::fmt::Display;
-
 use super::context::LLVMCodeGenContext;
-use super::typegen;
 use crate::backend::llvm::compiler::anchors::PointerAnchor;
 use crate::backend::llvm::compiler::memory::{self, LLVMAllocationSite};
 
 use crate::backend::llvm::compiler::valuegen;
-use crate::core::console::logging::{self, LoggingType};
 use crate::frontend::types::ast::Ast;
-use crate::frontend::types::lexer::Type;
+use crate::frontend::typesystem::types::Type;
 
 use inkwell::AddressSpace;
-use inkwell::types::BasicTypeEnum;
+use inkwell::context::Context;
 use inkwell::values::{BasicValueEnum, IntValue, PointerValue};
-use inkwell::{builder::Builder, context::Context};
 
 pub fn compile_fixed_array<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
@@ -49,7 +44,6 @@ fn compile_fixed_array_with_anchor<'ctx>(
     anchor: PointerAnchor<'ctx>,
 ) -> BasicValueEnum<'ctx> {
     let llvm_context: &Context = context.get_llvm_context();
-    let llvm_builder: &Builder = context.get_llvm_builder();
 
     let array_ptr: PointerValue = anchor.get_pointer();
     let array_type: &Type = cast_type.unwrap_or(kind);
@@ -66,28 +60,14 @@ fn compile_fixed_array_with_anchor<'ctx>(
     for (idx, item) in items.iter().enumerate() {
         let idx: IntValue = llvm_context.i32_type().const_int(idx as u64, false);
 
-        let array_type: BasicTypeEnum = typegen::generate_subtype(llvm_context, array_type);
+        let ptr: PointerValue = memory::gep_anon(
+            context,
+            array_ptr,
+            array_type,
+            &[llvm_context.i32_type().const_zero(), idx],
+        );
 
-        match unsafe {
-            llvm_builder.build_gep(
-                array_type,
-                array_ptr,
-                &[llvm_context.i32_type().const_zero(), idx],
-                "",
-            )
-        } {
-            Ok(ptr) => {
-                memory::store_anon(context, ptr, *item);
-            }
-            Err(_) => {
-                self::codegen_abort(format!(
-                    "Failed to calculate memory address for array element at index '{}'.",
-                    idx
-                ));
-
-                return self::compile_null_ptr(context);
-            }
-        }
+        memory::store_anon(context, ptr, *item);
     }
 
     self::compile_null_ptr(context)
@@ -100,13 +80,12 @@ fn compile_fixed_array_without_anchor<'ctx>(
     cast_type: Option<&Type>,
 ) -> BasicValueEnum<'ctx> {
     let llvm_context: &Context = context.get_llvm_context();
-    let llvm_builder: &Builder = context.get_llvm_builder();
 
     let array_type: &Type = cast_type.unwrap_or(kind);
     let array_items_type: &Type = array_type.get_fixed_array_base_type();
 
     let array_ptr: PointerValue =
-        memory::alloc_anon(LLVMAllocationSite::Stack, context, array_type, true);
+        memory::alloc_anon(LLVMAllocationSite::Stack, context, array_type);
 
     let items: Vec<BasicValueEnum> = items
         .iter()
@@ -116,28 +95,14 @@ fn compile_fixed_array_without_anchor<'ctx>(
     for (idx, item) in items.iter().enumerate() {
         let idx: IntValue = llvm_context.i32_type().const_int(idx as u64, false);
 
-        let array_type: BasicTypeEnum = typegen::generate_subtype(llvm_context, array_type);
+        let ptr: PointerValue = memory::gep_anon(
+            context,
+            array_ptr,
+            array_type,
+            &[llvm_context.i32_type().const_zero(), idx],
+        );
 
-        match unsafe {
-            llvm_builder.build_gep(
-                array_type,
-                array_ptr,
-                &[llvm_context.i32_type().const_zero(), idx],
-                "",
-            )
-        } {
-            Ok(ptr) => {
-                memory::store_anon(context, ptr, *item);
-            }
-            Err(_) => {
-                self::codegen_abort(format!(
-                    "Failed to calculate memory address for array element at index '{}'.",
-                    idx
-                ));
-
-                return self::compile_null_ptr(context);
-            }
-        }
+        memory::store_anon(context, ptr, *item);
     }
 
     memory::load_anon(context, array_ptr, array_type)
@@ -149,8 +114,4 @@ fn compile_null_ptr<'ctx>(context: &LLVMCodeGenContext<'_, 'ctx>) -> BasicValueE
         .ptr_type(AddressSpace::default())
         .const_null()
         .into()
-}
-
-fn codegen_abort<T: Display>(message: T) {
-    logging::log(LoggingType::BackendBug, &format!("{}", message));
 }

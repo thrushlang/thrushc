@@ -14,7 +14,7 @@ use inkwell::{
 use crate::{
     backend::llvm::compiler::typegen,
     core::console::logging::{self, LoggingType},
-    frontend::types::lexer::Type,
+    frontend::typesystem::types::Type,
 };
 
 use inkwell::{
@@ -191,7 +191,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
             Self::Local { ptr, kind } | Self::Constant { ptr, kind, .. } => unsafe {
                 builder
                     .build_in_bounds_gep(
-                        typegen::generate_subtype(context, kind),
+                        typegen::generate_subtype_with_all(context, kind),
                         *ptr,
                         indexes,
                         "",
@@ -204,7 +204,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
                     return unsafe {
                         builder
                             .build_in_bounds_gep(
-                                typegen::generate_subtype(context, kind),
+                                typegen::generate_subtype_with_all(context, kind),
                                 (*value).into_pointer_value(),
                                 indexes,
                                 "",
@@ -257,13 +257,18 @@ impl<'ctx> SymbolAllocated<'ctx> {
     ) -> PointerValue<'ctx> {
         match self {
             Self::Local { ptr, kind } | Self::Constant { ptr, kind, .. } => builder
-                .build_struct_gep(typegen::generate_subtype(context, kind), *ptr, index, "")
+                .build_struct_gep(
+                    typegen::generate_subtype_with_all(context, kind),
+                    *ptr,
+                    index,
+                    "",
+                )
                 .unwrap(),
             Self::Parameter { value, kind } | Self::LowLevelInstruction { value, kind } => {
                 if value.is_pointer_value() {
                     return builder
                         .build_struct_gep(
-                            typegen::generate_subtype(context, kind),
+                            typegen::generate_subtype_with_all(context, kind),
                             (*value).into_pointer_value(),
                             index,
                             "",
@@ -360,17 +365,12 @@ pub fn alloc_anon<'ctx>(
     site: LLVMAllocationSite,
     context: &LLVMCodeGenContext<'_, 'ctx>,
     kind: &Type,
-    without_subtyped: bool,
 ) -> PointerValue<'ctx> {
     let llvm_module: &Module = context.get_llvm_module();
     let llvm_context: &Context = context.get_llvm_context();
     let llvm_builder: &Builder = context.get_llvm_builder();
 
-    let llvm_type: BasicTypeEnum = if without_subtyped {
-        typegen::generate_type(llvm_context, kind)
-    } else {
-        typegen::generate_subtype(llvm_context, kind)
-    };
+    let llvm_type: BasicTypeEnum = typegen::generate_subtype(llvm_context, kind);
 
     let mem_alignment: u32 = context
         .get_target_data()
@@ -414,7 +414,7 @@ pub fn gep_anon<'ctx>(
 
     if let Ok(ptr) = unsafe {
         llvm_builder.build_gep(
-            typegen::generate_subtype(llvm_context, kind),
+            typegen::generate_subtype_with_all(llvm_context, kind),
             ptr,
             indexes,
             "",

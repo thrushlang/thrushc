@@ -9,6 +9,11 @@ use crate::{
 };
 
 pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, stmt: &'ctx Ast<'ctx>) {
+    let infloop_abort = |_| {
+        self::codegen_abort("Cannot compile infinite loop at code generation time.");
+        unreachable!()
+    };
+
     match codegen.get_mut_context().get_current_fn() {
         Some(function) => {
             if let Ast::Loop { block, .. } = stmt {
@@ -20,7 +25,7 @@ pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, stmt: &'ctx Ast<'ctx>)
 
                 llvm_builder
                     .build_unconditional_branch(start_loop_block)
-                    .unwrap();
+                    .unwrap_or_else(infloop_abort);
 
                 llvm_builder.position_at_end(start_loop_block);
 
@@ -54,7 +59,7 @@ pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, stmt: &'ctx Ast<'ctx>)
         }
 
         None => {
-            self::codegen_abort("No function is currently being compiled.");
+            self::codegen_abort("The function being compiled could not be obtained.");
         }
     }
 }

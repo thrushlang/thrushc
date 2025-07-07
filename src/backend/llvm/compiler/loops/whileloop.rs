@@ -5,10 +5,16 @@ use inkwell::{basic_block::BasicBlock, builder::Builder, context::Context, value
 use crate::{
     backend::llvm::compiler::{codegen::LLVMCodegen, valuegen},
     core::console::logging::{self, LoggingType},
-    frontend::types::{ast::Ast, lexer::Type},
+    frontend::types::ast::Ast,
+    frontend::typesystem::types::Type,
 };
 
 pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, stmt: &'ctx Ast<'ctx>) {
+    let whileloop_abort = |_| {
+        self::codegen_abort("Cannot compile while loop at code generation time.");
+        unreachable!()
+    };
+
     match codegen.get_mut_context().get_current_fn() {
         Some(function) => {
             if let Ast::While { cond, block, .. } = stmt {
@@ -20,7 +26,7 @@ pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, stmt: &'ctx Ast<'ctx>)
 
                 llvm_builder
                     .build_unconditional_branch(condition_block)
-                    .unwrap();
+                    .unwrap_or_else(whileloop_abort);
 
                 llvm_builder.position_at_end(condition_block);
 
@@ -58,12 +64,12 @@ pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, stmt: &'ctx Ast<'ctx>)
 
                 llvm_builder.position_at_end(exit_block);
             } else {
-                self::codegen_abort("Expected while loop  to compile.");
+                self::codegen_abort("Expected while loop to compile.");
             }
         }
 
         None => {
-            self::codegen_abort("No function is currently being compiled.");
+            self::codegen_abort("The function being compiled could not be obtained.");
         }
     }
 }

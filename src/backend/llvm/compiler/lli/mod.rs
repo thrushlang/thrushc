@@ -4,7 +4,8 @@ use inkwell::{AddressSpace, values::BasicValueEnum};
 
 use crate::{
     core::console::logging::{self, LoggingType},
-    frontend::types::{ast::Ast, lexer::Type},
+    frontend::types::ast::Ast,
+    frontend::typesystem::types::Type,
 };
 
 use super::{context::LLVMCodeGenContext, valuegen};

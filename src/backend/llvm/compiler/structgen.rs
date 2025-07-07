@@ -8,9 +8,9 @@ use crate::backend::llvm::compiler::memory::{self, LLVMAllocationSite};
 
 use crate::backend::llvm::compiler::valuegen;
 use crate::core::console::logging::{self, LoggingType};
-use crate::frontend::types::lexer::Type;
-use crate::frontend::types::lexer::traits::TypeStructExtensions;
 use crate::frontend::types::parser::stmts::types::Constructor;
+use crate::frontend::typesystem::traits::TypeStructExtensions;
+use crate::frontend::typesystem::types::Type;
 
 use inkwell::AddressSpace;
 use inkwell::types::BasicTypeEnum;
@@ -89,7 +89,7 @@ pub fn compile_struct_without_anchor<'ctx>(
         typegen::generate_type(context.get_llvm_context(), struct_type);
 
     let struct_ptr: PointerValue =
-        memory::alloc_anon(LLVMAllocationSite::Stack, context, struct_type, true);
+        memory::alloc_anon(LLVMAllocationSite::Stack, context, struct_type);
 
     let struct_fields_types: &[Arc<Type>] = struct_type.get_struct_fields();
 

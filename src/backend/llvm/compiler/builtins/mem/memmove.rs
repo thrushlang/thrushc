@@ -12,7 +12,7 @@ use inkwell::{
 use crate::{
     backend::llvm::compiler::{context::LLVMCodeGenContext, ptrgen, typegen, valuegen},
     core::console::logging::{self, LoggingType},
-    frontend::types::{ast::Ast, lexer::Type},
+    frontend::{types::ast::Ast, typesystem::types::Type},
 };
 
 pub fn compile<'ctx>(
@@ -35,10 +35,10 @@ pub fn compile<'ctx>(
     let target_data: &TargetData = context.get_target_data();
 
     let src_type: BasicTypeEnum =
-        typegen::generate_subtype(llvm_context, source.get_type_unwrapped());
+        typegen::generate_subtype_with_all(llvm_context, source.get_type_unwrapped());
 
     let dest_type: BasicTypeEnum =
-        typegen::generate_subtype(llvm_context, destination.get_type_unwrapped());
+        typegen::generate_subtype_with_all(llvm_context, destination.get_type_unwrapped());
 
     let src_alignment: u32 = target_data.get_preferred_alignment(&src_type);
     let dest_alignment: u32 = target_data.get_preferred_alignment(&dest_type);

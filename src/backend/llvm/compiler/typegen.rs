@@ -8,7 +8,7 @@ use inkwell::{
 
 use crate::core::console::logging::{self, LoggingType};
 use crate::frontend::types::ast::Ast;
-use crate::frontend::types::lexer::Type;
+use crate::frontend::typesystem::types::Type;
 
 use super::context::LLVMCodeGenContext;
 
@@ -119,6 +119,18 @@ pub fn generate_type<'ctx>(llvm_context: &'ctx Context, kind: &Type) -> BasicTyp
 pub fn generate_subtype<'ctx>(llvm_context: &'ctx Context, kind: &Type) -> BasicTypeEnum<'ctx> {
     match kind {
         Type::Mut(subtype) => self::generate_subtype(llvm_context, subtype),
+        _ => self::generate_type(llvm_context, kind),
+    }
+}
+
+pub fn generate_subtype_with_all<'ctx>(
+    llvm_context: &'ctx Context,
+    kind: &Type,
+) -> BasicTypeEnum<'ctx> {
+    match kind {
+        Type::Ptr(Some(subtype)) => self::generate_subtype_with_all(llvm_context, subtype),
+        Type::Mut(subtype) => self::generate_subtype_with_all(llvm_context, subtype),
+
         _ => self::generate_type(llvm_context, kind),
     }
 }

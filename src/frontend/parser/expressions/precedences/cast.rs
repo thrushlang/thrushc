@@ -2,19 +2,19 @@ use crate::{
     core::errors::standard::ThrushCompilerIssue,
     frontend::{
         lexer::{span::Span, tokentype::TokenType},
-        parser::{ParserContext, expressions::precedences::comparation, typegen},
+        parser::{ParserContext, expressions::precedences::cmp, typegen},
         types::{
             ast::{Ast, metadata::cast::CastMetadata},
-            lexer::Type,
             parser::stmts::traits::TokenExtensions,
         },
+        typesystem::types::Type,
     },
 };
 
 pub fn cast_precedence<'parser>(
     parser_context: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, ThrushCompilerIssue> {
-    let mut expression: Ast = comparation::cmp_precedence(parser_context)?;
+    let mut expression: Ast = cmp::cmp_precedence(parser_context)?;
 
     if parser_context.match_token(TokenType::As)? {
         let span: Span = parser_context.previous().get_span();

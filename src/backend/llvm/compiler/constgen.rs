@@ -8,11 +8,11 @@ use crate::{
         typegen,
     },
     core::console::logging::{self, LoggingType},
-    frontend::types::{
-        ast::Ast,
-        lexer::{
-            Type,
+    frontend::{
+        types::ast::Ast,
+        typesystem::{
             traits::{LLVMTypeExtensions, TypeStructExtensions},
+            types::Type,
         },
     },
 };
@@ -138,7 +138,7 @@ pub fn cast<'ctx>(
         }
 
         (_, cast_ty) if cast_ty.is_numeric() => {
-            if value_type.is_same_size(context, cast_ty) {
+            if value_type.llvm_is_same_bit_size(context, cast_ty) {
                 constants::bitcast::const_numeric_bitcast_cast(context, value, cast)
             } else {
                 constants::cast::numeric_cast(

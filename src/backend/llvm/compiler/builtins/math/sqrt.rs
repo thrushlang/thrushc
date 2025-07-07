@@ -11,7 +11,7 @@ use inkwell::{
 use crate::{
     backend::llvm::compiler::{context::LLVMCodeGenContext, intrinsics, valuegen},
     core::console::logging::{self, LoggingType},
-    frontend::types::{ast::Ast, lexer::Type},
+    frontend::{types::ast::Ast, typesystem::types::Type},
 };
 
 pub fn compile<'ctx>(

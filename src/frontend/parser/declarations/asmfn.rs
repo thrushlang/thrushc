@@ -5,7 +5,6 @@ use crate::{
         parser::{ParserContext, attributes, expression, typegen},
         types::{
             ast::Ast,
-            lexer::Type,
             parser::{
                 stmts::{
                     traits::{ThrushAttributesExtensions, TokenExtensions},
@@ -14,6 +13,7 @@ use crate::{
                 symbols::types::ParametersTypes,
             },
         },
+        typesystem::types::Type,
     },
 };
 

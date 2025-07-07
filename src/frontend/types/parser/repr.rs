@@ -1,6 +1,7 @@
 use crate::frontend::{
     lexer::tokentype::TokenType,
-    types::{ast::Ast, lexer::Type, parser::stmts::types::ThrushAttributes},
+    types::{ast::Ast, parser::stmts::types::ThrushAttributes},
+    typesystem::types::Type,
 };
 
 pub type BinaryOperation<'ctx> = (&'ctx Ast<'ctx>, &'ctx TokenType, &'ctx Ast<'ctx>);

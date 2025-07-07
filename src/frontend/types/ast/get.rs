@@ -3,10 +3,7 @@ use crate::{
         console::logging::{self, LoggingType},
         errors::{position::CompilationPosition, standard::ThrushCompilerIssue},
     },
-    frontend::{
-        lexer::span::Span,
-        types::{ast::Ast, lexer::Type},
-    },
+    frontend::{lexer::span::Span, types::ast::Ast, typesystem::types::Type},
 };
 
 impl Ast<'_> {

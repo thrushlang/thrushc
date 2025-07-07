@@ -14,7 +14,8 @@ use crate::{
         ptrgen, valuegen,
     },
     core::console::logging::{self, LoggingType},
-    frontend::types::{ast::Ast, lexer::Type},
+    frontend::types::ast::Ast,
+    frontend::typesystem::types::Type,
 };
 
 pub fn compile<'ctx>(

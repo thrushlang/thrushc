@@ -1,7 +1,4 @@
-use crate::frontend::{
-    lexer::span::Span,
-    types::{ast::Ast, lexer::Type},
-};
+use crate::frontend::{lexer::span::Span, types::ast::Ast, typesystem::types::Type};
 
 impl<'ctx> Ast<'ctx> {
     pub fn new_float(kind: Type, value: f64, signed: bool, span: Span) -> Ast<'ctx> {

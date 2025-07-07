@@ -4,11 +4,11 @@ use crate::frontend::{
     lexer::span::Span,
     types::{
         ast::{Ast, metadata::local::LocalMetadata},
-        lexer::Type,
         semantic::linter::{
             traits::LLVMAttributeComparatorExtensions, types::LLVMAttributeComparator,
         },
     },
+    typesystem::types::Type,
 };
 
 use super::{

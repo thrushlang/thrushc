@@ -3,8 +3,8 @@ use {
         backend::llvm::compiler::{cast, constgen, context::LLVMCodeGenContext, predicates},
         core::console::logging::{self, LoggingType},
         frontend::{
-            lexer::tokentype::TokenType,
-            types::{lexer::Type, parser::repr::BinaryOperation},
+            lexer::tokentype::TokenType, types::parser::repr::BinaryOperation,
+            typesystem::types::Type,
         },
     },
     inkwell::{

@@ -1,4 +1,4 @@
-use crate::frontend::{lexer::span::Span, types::lexer::Type};
+use crate::frontend::{lexer::span::Span, typesystem::types::Type};
 
 pub trait LocalSymbolExtensions {
     fn is_undefined(&self) -> bool;

@@ -52,6 +52,7 @@ impl<'a, 'ctx> LLVMOptimizer<'a, 'ctx> {
 
         match self.opt_level {
             OptimizationLevel::None => (),
+
             OptimizationLevel::Default => {
                 if let Err(error) = self.module.run_passes(
                     "default<O1>",
@@ -67,6 +68,7 @@ impl<'a, 'ctx> LLVMOptimizer<'a, 'ctx> {
                     );
                 }
             }
+
             OptimizationLevel::Less => {
                 if let Err(error) = self.module.run_passes(
                     "default<O2>",
@@ -82,6 +84,7 @@ impl<'a, 'ctx> LLVMOptimizer<'a, 'ctx> {
                     );
                 }
             }
+
             OptimizationLevel::Aggressive => {
                 if let Err(error) = self.module.run_passes(
                     "default<O3>",
@@ -107,15 +110,19 @@ impl<'a, 'ctx> LLVMOptimizer<'a, 'ctx> {
             LLVMModificatorPasses::LoopVectorization => {
                 passes_builder.set_loop_vectorization(true);
             }
+
             LLVMModificatorPasses::LoopUnroll => {
                 passes_builder.set_loop_unrolling(true);
             }
+
             LLVMModificatorPasses::LoopInterleaving => {
                 passes_builder.set_loop_interleaving(true);
             }
+
             LLVMModificatorPasses::LoopSimplifyVectorization => {
                 passes_builder.set_loop_slp_vectorization(true);
             }
+
             LLVMModificatorPasses::MergeFunctions => {
                 passes_builder.set_merge_functions(true);
             }

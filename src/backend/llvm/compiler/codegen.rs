@@ -9,13 +9,13 @@ use crate::backend::llvm::compiler::{
 use crate::backend::types::{repr::LLVMFunction, traits::AssemblerFunctionExtensions};
 use crate::core::console::logging::{self, LoggingType};
 use crate::frontend::types::ast::metadata::local::LocalMetadata;
-use crate::frontend::types::lexer::Type;
 use crate::frontend::types::parser::repr::{
     AssemblerFunctionRepresentation, ConstantRepresentation, FunctionParameter,
     FunctionRepresentation,
 };
 use crate::frontend::types::parser::stmts::traits::ThrushAttributesExtensions;
 use crate::frontend::types::parser::stmts::types::ThrushAttributes;
+use crate::frontend::typesystem::types::Type;
 
 use crate::frontend::types::ast::Ast;
 

@@ -3,10 +3,8 @@ use crate::{
     frontend::{
         lexer::span::Span,
         semantic::typechecker::{TypeChecker, bounds},
-        types::{
-            ast::Ast,
-            lexer::{Type, traits::TypePointerExtensions},
-        },
+        types::ast::Ast,
+        typesystem::{traits::TypePointerExtensions, types::Type},
     },
 };
 
@@ -107,7 +105,7 @@ pub fn validate_lli<'type_checker>(
                     ));
                 }
 
-                if reference_type.is_ptr_type() && !reference_type.is_typed_ptr() {
+                if reference_type.is_ptr_type() && !reference_type.is_typed_ptr_type() {
                     typechecker.add_error(ThrushCompilerIssue::Error(
                         "Type error".into(),
                         "Expected raw typed pointer ptr<T>.".into(),
@@ -115,7 +113,7 @@ pub fn validate_lli<'type_checker>(
                         reference_span,
                     ));
                 } else if reference_type.is_ptr_type()
-                    && reference_type.is_typed_ptr()
+                    && reference_type.is_typed_ptr_type()
                     && !reference_type.is_ptr_struct_type()
                     && !reference_type.is_ptr_fixed_array_type()
                 {
@@ -150,7 +148,7 @@ pub fn validate_lli<'type_checker>(
                     ));
                 }
 
-                if expr_type.is_ptr_type() && !expr_type.is_typed_ptr() {
+                if expr_type.is_ptr_type() && !expr_type.is_typed_ptr_type() {
                     typechecker.add_error(ThrushCompilerIssue::Error(
                         "Type error".into(),
                         "Expected raw typed pointer ptr<T>.".into(),
@@ -158,7 +156,7 @@ pub fn validate_lli<'type_checker>(
                         expr_span,
                     ));
                 } else if expr_type.is_ptr_type()
-                    && expr_type.is_typed_ptr()
+                    && expr_type.is_typed_ptr_type()
                     && !expr_type.is_ptr_struct_type()
                     && !expr_type.is_ptr_fixed_array_type()
                 {

@@ -1,9 +1,6 @@
 use crate::{
     backend::llvm::compiler::attributes::LLVMAttribute,
-    frontend::{
-        lexer::span::Span,
-        types::{ast::Ast, lexer::Type},
-    },
+    frontend::{lexer::span::Span, types::ast::Ast, typesystem::types::Type},
 };
 
 pub type StructFields<'ctx> = (&'ctx str, Vec<(&'ctx str, Type, u32, Span)>);

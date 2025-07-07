@@ -1,6 +1,6 @@
 use crate::{
-    core::errors::standard::ThrushCompilerIssue,
-    frontend::types::{ast::Ast, lexer::Type},
+    core::errors::standard::ThrushCompilerIssue, frontend::types::ast::Ast,
+    frontend::typesystem::types::Type,
 };
 
 impl Ast<'_> {

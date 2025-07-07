@@ -10,7 +10,7 @@ use inkwell::{
 use crate::{
     backend::llvm::compiler::{context::LLVMCodeGenContext, typegen},
     core::console::logging::{self, LoggingType},
-    frontend::types::lexer::Type,
+    frontend::typesystem::types::Type,
 };
 
 pub fn ptr_cast<'ctx>(

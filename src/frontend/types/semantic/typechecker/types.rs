@@ -1,6 +1,6 @@
 use ahash::AHashMap as HashMap;
 
-use crate::frontend::{lexer::span::Span, types::lexer::Type};
+use crate::frontend::{lexer::span::Span, typesystem::types::Type};
 
 pub type TypeCheckerLocal<'symbol> = &'symbol Type;
 pub type TypeCheckerLocals<'symbol> = Vec<HashMap<&'symbol str, TypeCheckerLocal<'symbol>>>;

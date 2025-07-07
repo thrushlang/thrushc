@@ -4,16 +4,14 @@ use crate::{
         lexer::{span::Span, tokentype::TokenType},
         parser::{ParserContext, expression},
         types::ast::Ast,
-        types::{
-            lexer::Type,
-            parser::{
-                stmts::traits::{FoundSymbolEither, FoundSymbolExtension},
-                symbols::{
-                    traits::FunctionExtensions,
-                    types::{AssemblerFunction, FoundSymbolId, Function},
-                },
+        types::parser::{
+            stmts::traits::{FoundSymbolEither, FoundSymbolExtension},
+            symbols::{
+                traits::FunctionExtensions,
+                types::{AssemblerFunction, FoundSymbolId, Function},
             },
         },
+        typesystem::types::Type,
     },
 };
 

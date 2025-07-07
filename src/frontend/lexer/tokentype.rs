@@ -1,7 +1,7 @@
 use crate::{
     backend::llvm::compiler::attributes::LLVMAttribute,
     core::errors::standard::ThrushCompilerIssue,
-    frontend::{lexer::span::Span, types::lexer::Type},
+    frontend::{lexer::span::Span, typesystem::types::Type},
 };
 
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -73,7 +73,7 @@ pub enum TokenType {
     Write,
     AsmFn,
     Asm,
-    Glasm,
+    GlobalAsm,
     Deref,
     As,
     Heap,

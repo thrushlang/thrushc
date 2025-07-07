@@ -6,7 +6,7 @@ use inkwell::{
 
 use crate::{
     backend::llvm::compiler::{context::LLVMCodeGenContext, typegen},
-    frontend::types::lexer::Type,
+    frontend::typesystem::types::Type,
 };
 
 pub fn const_numeric_bitcast_cast<'ctx>(

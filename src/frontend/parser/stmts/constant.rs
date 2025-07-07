@@ -5,9 +5,9 @@ use crate::{
         parser::{ParserContext, attributes, expression, typegen},
         types::{
             ast::{Ast, metadata::constant::ConstantMetadata},
-            lexer::Type,
             parser::stmts::{traits::TokenExtensions, types::ThrushAttributes},
         },
+        typesystem::types::Type,
     },
 };
 

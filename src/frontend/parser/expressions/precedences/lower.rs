@@ -13,7 +13,6 @@ use crate::{
         },
         types::{
             ast::Ast,
-            lexer::Type,
             parser::{
                 stmts::{
                     sites::AllocationSite,
@@ -22,6 +21,7 @@ use crate::{
                 symbols::types::FoundSymbolId,
             },
         },
+        typesystem::types::Type,
     },
 };
 

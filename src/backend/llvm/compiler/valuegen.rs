@@ -5,8 +5,8 @@ use super::typegen;
 use crate::backend::llvm::compiler::attributes::LLVMAttribute;
 use crate::backend::llvm::compiler::memory::{self, SymbolAllocated};
 use crate::backend::llvm::compiler::{
-    array, binaryop, builtins, cast, farray, floatgen, intgen, lli, mutation, ptrgen, string,
-    structgen, unaryop, valuegen,
+    array, binaryop, builtins, cast, farray, floatgen, indexes, intgen, lli, mutation, ptrgen,
+    string, structgen, unaryop,
 };
 
 use crate::backend::types::LLVMEitherExpression;
@@ -14,10 +14,10 @@ use crate::backend::types::traits::AssemblerFunctionExtensions;
 use crate::core::console::logging::{self, LoggingType};
 use crate::frontend::lexer::tokentype::TokenType;
 use crate::frontend::types::ast::Ast;
-use crate::frontend::types::lexer::Type;
-use crate::frontend::types::lexer::traits::{LLVMTypeExtensions, TypeMutableExtensions};
 use crate::frontend::types::parser::stmts::traits::ThrushAttributesExtensions;
 use crate::frontend::types::parser::stmts::types::ThrushAttributes;
+use crate::frontend::typesystem::traits::LLVMTypeExtensions;
+use crate::frontend::typesystem::types::Type;
 
 use inkwell::types::{BasicTypeEnum, FunctionType, PointerType};
 use inkwell::values::{
@@ -375,9 +375,9 @@ fn compile_cast<'ctx>(
         }
     } else {
         let val: BasicValueEnum = self::compile(context, from, None);
-        let target_type: BasicTypeEnum = typegen::generate_subtype(llvm_context, cast);
+        let target_type: BasicTypeEnum = typegen::generate_type(llvm_context, cast);
 
-        if from_type.is_same_size(context, cast) {
+        if from_type.llvm_is_same_bit_size(context, cast) {
             match llvm_builder.build_bit_cast(val, target_type, "") {
                 Ok(casted_value) => return casted_value,
                 Err(_) => self::codegen_abort(format!(
@@ -578,8 +578,7 @@ fn compile_index<'ctx>(
             let symbol: SymbolAllocated = context.get_symbol(name);
             let symbol_type: &Type = symbol.get_type();
 
-            let ordered_indexes: Vec<IntValue> =
-                self::compute_indexes(context, indexes, symbol_type);
+            let ordered_indexes: Vec<IntValue> = indexes::compile(context, indexes, symbol_type);
 
             symbol
                 .gep(llvm_context, llvm_builder, &ordered_indexes)
@@ -589,7 +588,7 @@ fn compile_index<'ctx>(
             let expr_ptr: PointerValue = ptrgen::compile(context, expr, None).into_pointer_value();
             let expr_type: &Type = expr.get_type_unwrapped();
 
-            let ordered_indexes: Vec<IntValue> = self::compute_indexes(context, indexes, expr_type);
+            let ordered_indexes: Vec<IntValue> = indexes::compile(context, indexes, expr_type);
 
             memory::gep_anon(context, expr_ptr, expr_type, &ordered_indexes).into()
         }
@@ -598,32 +597,6 @@ fn compile_index<'ctx>(
             self::compile_null_ptr(context)
         }
     }
-}
-
-fn compute_indexes<'ctx>(
-    context: &mut LLVMCodeGenContext<'_, 'ctx>,
-    indexes: &'ctx [Ast],
-    kind: &'ctx Type,
-) -> Vec<IntValue<'ctx>> {
-    let llvm_context = context.get_llvm_context();
-    indexes
-        .iter()
-        .flat_map(|index| {
-            if kind.is_fixed_array_type() || kind.is_mut_fixed_array_type() {
-                let base: IntValue = intgen::integer(llvm_context, &Type::U32, 0, false);
-
-                let depth: IntValue =
-                    valuegen::compile(context, index, Some(&Type::U32)).into_int_value();
-
-                vec![base, depth]
-            } else {
-                let depth: IntValue =
-                    valuegen::compile(context, index, Some(&Type::U64)).into_int_value();
-
-                vec![depth]
-            }
-        })
-        .collect()
 }
 
 fn compile_string<'ctx>(

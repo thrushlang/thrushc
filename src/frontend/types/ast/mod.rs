@@ -17,17 +17,17 @@ use crate::{
             ast::{
                 metadata::{
                     cast::CastMetadata, constant::ConstantMetadata,
-                    fnparameter::FunctionParameterMetadata, index::IndexMetadata,
-                    local::LocalMetadata, reference::ReferenceMetadata,
+                    fnparam::FunctionParameterMetadata, index::IndexMetadata, local::LocalMetadata,
+                    reference::ReferenceMetadata,
                 },
                 types::AstEitherExpression,
             },
-            lexer::Type,
             parser::stmts::{
                 sites::AllocationSite,
                 types::{Constructor, EnumFields, StructFields, ThrushAttributes},
             },
         },
+        typesystem::types::Type,
     },
 };
 

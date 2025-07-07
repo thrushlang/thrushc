@@ -2,7 +2,7 @@ use inkwell::{context::Context, values::IntValue};
 
 use crate::{
     core::console::logging::{self, LoggingType},
-    frontend::types::lexer::Type,
+    frontend::typesystem::types::Type,
 };
 
 pub fn integer<'ctx>(

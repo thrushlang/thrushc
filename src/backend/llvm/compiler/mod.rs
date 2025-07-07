@@ -13,6 +13,7 @@ pub mod context;
 pub mod conventions;
 pub mod farray;
 pub mod floatgen;
+pub mod indexes;
 pub mod intgen;
 pub mod intrinsics;
 pub mod jit;

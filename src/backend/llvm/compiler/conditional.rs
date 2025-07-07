@@ -5,7 +5,8 @@ use inkwell::{basic_block::BasicBlock, builder::Builder, context::Context, value
 use crate::{
     backend::llvm::compiler::{codegen::LLVMCodegen, valuegen},
     core::console::logging::{self, LoggingType},
-    frontend::types::{ast::Ast, lexer::Type},
+    frontend::types::ast::Ast,
+    frontend::typesystem::types::Type,
 };
 
 pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, stmt: &'ctx Ast<'ctx>) {

@@ -3,10 +3,8 @@ use crate::{
     frontend::{
         lexer::{span::Span, tokentype::TokenType},
         parser::{ParserContext, expression, expressions::reference},
-        types::{
-            ast::{Ast, metadata::index::IndexMetadata, types::AstEitherExpression},
-            lexer::Type,
-        },
+        types::ast::{Ast, metadata::index::IndexMetadata, types::AstEitherExpression},
+        typesystem::types::Type,
     },
 };
 

@@ -5,10 +5,16 @@ use inkwell::{basic_block::BasicBlock, builder::Builder, context::Context, value
 use crate::{
     backend::llvm::compiler::{codegen::LLVMCodegen, valuegen},
     core::console::logging::{self, LoggingType},
-    frontend::types::{ast::Ast, lexer::Type},
+    frontend::types::ast::Ast,
+    frontend::typesystem::types::Type,
 };
 
 pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, stmt: &'ctx Ast<'ctx>) {
+    let forloop_abort = |_| {
+        self::codegen_abort("Cannot compile for loop at code generation time.");
+        unreachable!()
+    };
+
     match codegen.get_mut_context().get_current_fn() {
         Some(function) => {
             if let Ast::For {
@@ -39,7 +45,7 @@ pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, stmt: &'ctx Ast<'ctx>)
 
                 llvm_builder
                     .build_conditional_branch(condition, then_block, exit_block)
-                    .unwrap();
+                    .unwrap_or_else(forloop_abort);
 
                 if block.has_break() || block.has_return() {
                     codegen.get_mut_context().set_end_loop_block(exit_block);
@@ -70,7 +76,7 @@ pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, stmt: &'ctx Ast<'ctx>)
         }
 
         None => {
-            self::codegen_abort("No function is currently being compiled.");
+            self::codegen_abort("The function being compiled could not be obtained.");
         }
     }
 }

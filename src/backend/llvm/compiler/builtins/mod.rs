@@ -5,7 +5,7 @@ use inkwell::{AddressSpace, values::BasicValueEnum};
 use crate::{
     backend::llvm::compiler::context::LLVMCodeGenContext,
     core::console::logging::{self, LoggingType},
-    frontend::types::{ast::Ast, lexer::Type},
+    frontend::{types::ast::Ast, typesystem::types::Type},
 };
 
 pub mod math;
@@ -82,8 +82,8 @@ pub fn compile<'ctx>(
         Builtin::Sqrt { value } => math::sqrt::compile(context, value),
 
         _ => {
-            codegen_abort("Builtin not implemented.");
-            compile_null_ptr(context)
+            self::codegen_abort("Builtin not implemented.");
+            self::compile_null_ptr(context)
         }
     }
 }

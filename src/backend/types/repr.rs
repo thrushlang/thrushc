@@ -1,7 +1,7 @@
 use ahash::AHashMap as HashMap;
 use inkwell::{types::FunctionType, values::FunctionValue};
 
-use crate::{backend::llvm::compiler::memory::SymbolAllocated, frontend::types::lexer::Type};
+use crate::{backend::llvm::compiler::memory::SymbolAllocated, frontend::typesystem::types::Type};
 
 pub type LLVMGlobalConstants<'ctx> = HashMap<&'ctx str, SymbolAllocated<'ctx>>;
 pub type LLVMLocalConstants<'ctx> = Vec<HashMap<&'ctx str, SymbolAllocated<'ctx>>>;

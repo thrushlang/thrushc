@@ -5,18 +5,15 @@ use crate::{
         context::LLVMCodeGenContext,
         memory::{self, LLVMAllocationSite},
     },
-    frontend::types::{
-        lexer::{Type, traits::TypePointerExtensions},
-        parser::stmts::sites::AllocationSite,
-    },
+    frontend::{types::parser::stmts::sites::AllocationSite, typesystem::types::Type},
 };
 
 pub fn compile<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
-    type_to_alloc: &Type,
+    alloc: &Type,
     site_allocation: &AllocationSite,
 ) -> BasicValueEnum<'ctx> {
     let site: LLVMAllocationSite = site_allocation.to_llvm_allocation_site();
 
-    memory::alloc_anon(site, context, type_to_alloc, type_to_alloc.is_all_ptr()).into()
+    memory::alloc_anon(site, context, alloc).into()
 }

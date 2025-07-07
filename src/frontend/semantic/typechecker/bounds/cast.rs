@@ -2,7 +2,7 @@ use crate::{
     core::errors::standard::ThrushCompilerIssue,
     frontend::{
         lexer::span::Span,
-        types::lexer::{Type, traits::TypeMutableExtensions},
+        typesystem::{traits::TypeMutableExtensions, types::Type},
     },
 };
 

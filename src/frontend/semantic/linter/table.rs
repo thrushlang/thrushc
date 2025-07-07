@@ -3,7 +3,7 @@ use ahash::AHashMap as HashMap;
 use crate::frontend::{
     lexer::span::Span,
     types::{
-        ast::{Ast, metadata::fnparameter::FunctionParameterMetadata},
+        ast::{Ast, metadata::fnparam::FunctionParameterMetadata},
         semantic::linter::types::{
             LinterAssemblerFunctionInfo, LinterAssemblerFunctions, LinterConstantInfo,
             LinterEnumFieldInfo, LinterEnums, LinterEnumsFieldsInfo, LinterFunctionInfo,

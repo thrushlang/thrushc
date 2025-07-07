@@ -5,12 +5,12 @@ use crate::{
         parser::{ParserContext, attributes, expression, typegen},
         types::{
             ast::Ast,
-            lexer::Type,
             parser::stmts::{
                 traits::TokenExtensions,
                 types::{EnumFields, ThrushAttributes},
             },
         },
+        typesystem::types::Type,
     },
 };
 

@@ -3,7 +3,8 @@ use crate::{
     frontend::{
         lexer::{span::Span, tokentype::TokenType},
         semantic::typechecker::position::TypeCheckerPosition,
-        types::{ast::Ast, lexer::Type},
+        types::ast::Ast,
+        typesystem::types::Type,
     },
 };
 

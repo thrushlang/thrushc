@@ -8,7 +8,6 @@ use crate::{
                 Ast,
                 metadata::reference::{ReferenceMetadata, ReferenceType},
             },
-            lexer::Type,
             parser::{
                 stmts::traits::{FoundSymbolEither, FoundSymbolExtension, TokenExtensions},
                 symbols::{
@@ -21,6 +20,7 @@ use crate::{
                 },
             },
         },
+        typesystem::types::Type,
     },
 };
 

@@ -3,13 +3,10 @@ use crate::{
     frontend::{
         lexer::{span::Span, tokentype::TokenType},
         semantic::typechecker::{TypeChecker, bounds, call, validations},
-        types::{
-            ast::Ast,
-            lexer::{
-                Type,
-                traits::{TypeMutableExtensions, TypePointerExtensions},
-            },
-            parser::stmts::types::Constructor,
+        types::{ast::Ast, parser::stmts::types::Constructor},
+        typesystem::{
+            traits::{TypeMutableExtensions, TypePointerExtensions},
+            types::Type,
         },
     },
 };
@@ -290,7 +287,7 @@ pub fn validate_expression<'type_checker>(
 
                 let reference_type: &Type = reference.get_value_type()?;
 
-                if reference_type.is_ptr_type() && !reference_type.is_typed_ptr() {
+                if reference_type.is_ptr_type() && !reference_type.is_typed_ptr_type() {
                     typechecker.add_error(ThrushCompilerIssue::Error(
                         "Type error".into(),
                         "Expected raw typed pointer ptr[T].".into(),
@@ -298,8 +295,8 @@ pub fn validate_expression<'type_checker>(
                         *span,
                     ));
                 } else if reference_type.is_ptr_type()
-                    && reference_type.is_typed_ptr()
-                    && reference_type.is_all_ptr()
+                    && reference_type.is_typed_ptr_type()
+                    && reference_type.is_all_ptr_type()
                 {
                     typechecker.add_error(ThrushCompilerIssue::Error(
                         "Type error".into(),
@@ -324,7 +321,7 @@ pub fn validate_expression<'type_checker>(
             if let Some(expr) = &index_to.1 {
                 let expr_type: &Type = expr.get_any_type()?;
 
-                if expr_type.is_ptr_type() && !expr_type.is_typed_ptr() {
+                if expr_type.is_ptr_type() && !expr_type.is_typed_ptr_type() {
                     typechecker.add_error(ThrushCompilerIssue::Error(
                         "Type error".into(),
                         "Expected raw typed pointer ptr[T].".into(),
@@ -332,8 +329,8 @@ pub fn validate_expression<'type_checker>(
                         *span,
                     ));
                 } else if expr_type.is_ptr_type()
-                    && expr_type.is_typed_ptr()
-                    && expr_type.is_all_ptr()
+                    && expr_type.is_typed_ptr_type()
+                    && expr_type.is_all_ptr_type()
                 {
                     typechecker.add_error(ThrushCompilerIssue::Error(
                         "Type error".into(),

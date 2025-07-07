@@ -4,8 +4,7 @@ use crate::{
         lexer::{span::Span, token::Token, tokentype::TokenType},
         parser::{ParserContext, attributes, declarations::entrypoint, stmts::block, typegen},
         types::{
-            ast::{Ast, metadata::fnparameter::FunctionParameterMetadata},
-            lexer::Type,
+            ast::{Ast, metadata::fnparam::FunctionParameterMetadata},
             parser::{
                 stmts::{
                     traits::{ThrushAttributesExtensions, TokenExtensions},
@@ -14,6 +13,7 @@ use crate::{
                 symbols::types::ParametersTypes,
             },
         },
+        typesystem::types::Type,
     },
 };
 

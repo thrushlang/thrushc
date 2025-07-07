@@ -4,7 +4,7 @@ use inkwell::{
 
 use crate::{
     backend::llvm::compiler::{cast, context::LLVMCodeGenContext, typegen},
-    frontend::types::lexer::Type,
+    frontend::typesystem::types::Type,
 };
 
 pub fn compile<'ctx>(

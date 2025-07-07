@@ -16,7 +16,8 @@ use {
             },
         },
         core::diagnostic::diagnostician::Diagnostician,
-        frontend::types::{lexer::Type, parser::stmts::types::ThrushAttributes},
+        frontend::types::parser::stmts::types::ThrushAttributes,
+        frontend::typesystem::types::Type,
     },
     ahash::AHashMap as HashMap,
     inkwell::{

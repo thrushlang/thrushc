@@ -12,10 +12,8 @@ use inkwell::{
 use crate::{
     backend::llvm::compiler::{context::LLVMCodeGenContext, typegen},
     core::console::logging::{self, LoggingType},
-    frontend::types::{
-        lexer::Type,
-        parser::stmts::{traits::ThrushAttributesExtensions, types::ThrushAttributes},
-    },
+    frontend::types::parser::stmts::{traits::ThrushAttributesExtensions, types::ThrushAttributes},
+    frontend::typesystem::types::Type,
 };
 
 pub fn alloc<'ctx>(

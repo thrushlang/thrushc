@@ -1,9 +1,7 @@
 use crate::{
     backend::llvm::compiler::anchors::PointerAnchor,
-    frontend::types::{
-        lexer::Type,
-        parser::{repr::Local, stmts::types::ThrushAttributes},
-    },
+    frontend::types::parser::{repr::Local, stmts::types::ThrushAttributes},
+    frontend::typesystem::types::Type,
 };
 
 use super::{Ast, context::LLVMCodeGenContext, memory::SymbolAllocated, valuegen};

@@ -7,7 +7,7 @@ use inkwell::{
     values::{BasicValueEnum, FloatValue, IntValue},
 };
 
-use crate::frontend::types::lexer::Type;
+use crate::frontend::typesystem::types::Type;
 
 use super::{context::LLVMCodeGenContext, typegen};
 

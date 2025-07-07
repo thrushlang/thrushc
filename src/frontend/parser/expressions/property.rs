@@ -3,11 +3,8 @@ use crate::{
     frontend::{
         lexer::{span::Span, token::Token, tokentype::TokenType},
         parser::{ParserContext, expressions::reference},
-        types::{
-            ast::Ast,
-            lexer::{Type, decompose_struct_property},
-            parser::stmts::traits::TokenExtensions,
-        },
+        types::{ast::Ast, parser::stmts::traits::TokenExtensions},
+        typesystem::{self, types::Type},
     },
 };
 
@@ -45,7 +42,7 @@ pub fn build_property<'parser>(
 
     property_names.reverse();
 
-    let decomposed: (Type, Vec<(Type, u32)>) = decompose_struct_property(
+    let decomposed: (Type, Vec<(Type, u32)>) = typesystem::types::decompose_property(
         0,
         property_names,
         reference_type,
@@ -53,11 +50,14 @@ pub fn build_property<'parser>(
         span,
     )?;
 
+    let property_type: Type = decomposed.0;
+    let indexes: Vec<(Type, u32)> = decomposed.1;
+
     Ok(Ast::Property {
         name,
         reference: reference.into(),
-        indexes: decomposed.1,
-        kind: decomposed.0,
+        indexes,
+        kind: property_type,
         span,
     })
 }

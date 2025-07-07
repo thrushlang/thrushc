@@ -1,9 +1,8 @@
 use crate::{
     core::errors::{position::CompilationPosition, standard::ThrushCompilerIssue},
     frontend::{
-        lexer::span::Span,
-        semantic::typechecker::TypeChecker,
-        types::{ast::Ast, lexer::Type},
+        lexer::span::Span, semantic::typechecker::TypeChecker, types::ast::Ast,
+        typesystem::types::Type,
     },
 };
 

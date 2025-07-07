@@ -10,7 +10,8 @@ use inkwell::{
 use crate::{
     backend::llvm::compiler::{cast, context::LLVMCodeGenContext, memory, ptrgen},
     core::console::logging::{self, LoggingType},
-    frontend::types::{ast::Ast, lexer::Type},
+    frontend::types::ast::Ast,
+    frontend::typesystem::types::Type,
 };
 
 pub fn compile<'ctx>(

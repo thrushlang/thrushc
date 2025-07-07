@@ -11,7 +11,7 @@ pub fn build_global_assembler<'parser>(
     parser_context: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, ThrushCompilerIssue> {
     let glasm_keyword_tk: &Token = parser_context.consume(
-        TokenType::Glasm,
+        TokenType::GlobalAsm,
         "Syntax error".into(),
         "Expected 'glasm' keyword.".into(),
     )?;

@@ -2,7 +2,7 @@ use inkwell::{builder::Builder, context::Context, values::FloatValue};
 
 use crate::{
     core::console::logging::{self, LoggingType},
-    frontend::types::lexer::Type,
+    frontend::typesystem::types::Type,
 };
 
 pub fn float<'ctx>(

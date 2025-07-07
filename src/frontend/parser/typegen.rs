@@ -5,7 +5,6 @@ use crate::{
         parser::expression,
         types::{
             ast::Ast,
-            lexer::Type,
             parser::stmts::{
                 traits::{
                     CustomTypeFieldsExtensions, FoundSymbolEither, FoundSymbolExtension,
@@ -15,6 +14,7 @@ use crate::{
             },
             parser::symbols::types::{CustomTypeSymbol, Struct},
         },
+        typesystem::types::Type,
     },
 };
 

@@ -5,7 +5,6 @@ use crate::{
     frontend::{
         lexer::span::Span,
         types::{
-            lexer::Type,
             parser::stmts::{
                 traits::{
                     EnumExtensions, EnumFieldsExtensions, FoundSymbolEither, FoundSymbolExtension,
@@ -15,6 +14,7 @@ use crate::{
             },
             parser::symbols::types::EnumSymbol,
         },
+        typesystem::types::Type,
     },
 };
 

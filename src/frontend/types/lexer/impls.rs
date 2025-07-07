@@ -1,4 +1,4 @@
-use crate::frontend::{lexer::tokentype::TokenType, types::lexer::Type};
+use crate::frontend::lexer::tokentype::TokenType;
 
 impl std::fmt::Display for TokenType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -27,7 +27,7 @@ impl std::fmt::Display for TokenType {
             TokenType::Write => write!(f, "write"),
             TokenType::Local => write!(f, "local"),
             TokenType::Asm => write!(f, "asm"),
-            TokenType::Glasm => write!(f, "glasm"),
+            TokenType::GlobalAsm => write!(f, "global_asm"),
 
             // Types
             TokenType::Address => write!(f, "address"),
@@ -123,56 +123,6 @@ impl std::fmt::Display for TokenType {
             TokenType::MemSet => write!(f, "memset"),
             TokenType::MemMove => write!(f, "memmove"),
             TokenType::MemCpy => write!(f, "memcpy"),
-        }
-    }
-}
-
-impl std::fmt::Display for Type {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Type::S8 => write!(f, "s8"),
-            Type::S16 => write!(f, "s16"),
-            Type::S32 => write!(f, "s32"),
-            Type::S64 => write!(f, "s64"),
-            Type::U8 => write!(f, "u8"),
-            Type::U16 => write!(f, "u16"),
-            Type::U32 => write!(f, "u32"),
-            Type::U64 => write!(f, "u64"),
-            Type::F32 => write!(f, "f32"),
-            Type::F64 => write!(f, "f64"),
-            Type::Bool => write!(f, "bool"),
-            Type::Str => write!(f, "str"),
-            Type::Char => write!(f, "char"),
-            Type::Mut(any_type) => write!(f, "mut {}", any_type),
-            Type::FixedArray(kind, size) => {
-                write!(f, "[{}; {}]", kind, size)
-            }
-            Type::Array(kind) => {
-                write!(f, "[{}]", kind)
-            }
-            Type::Struct(name, fields) => {
-                write!(f, "struct {} {{ ", name)?;
-
-                fields.iter().for_each(|field| {
-                    let _ = write!(f, "{} ", field);
-                });
-
-                write!(f, "}}")
-            }
-            Type::Ptr(nested_type) => {
-                if let Some(nested_type) = nested_type {
-                    let _ = write!(f, "ptr[");
-                    let _ = write!(f, "{}", nested_type);
-
-                    return write!(f, "]");
-                }
-
-                write!(f, "ptr")
-            }
-            Type::Addr => {
-                write!(f, "memory address")
-            }
-            Type::Void => write!(f, "void"),
         }
     }
 }

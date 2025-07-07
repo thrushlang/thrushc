@@ -3,7 +3,7 @@ use crate::{
     frontend::{
         lexer::span::Span,
         types::{
-            ast::{Ast, metadata::fnparameter::FunctionParameterMetadata},
+            ast::{Ast, metadata::fnparam::FunctionParameterMetadata},
             parser::symbols::types::{
                 AssemblerFunction, AssemblerFunctions, ConstantSymbol, CustomTypeSymbol,
                 CustomTypes, EnumSymbol, Enums, FoundSymbolId, Function, Functions,

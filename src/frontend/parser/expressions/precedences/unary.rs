@@ -6,7 +6,8 @@ use crate::{
             ParserContext, expression,
             expressions::precedences::equality::{self},
         },
-        types::{ast::Ast, lexer::Type, parser::stmts::traits::TokenExtensions},
+        types::{ast::Ast, parser::stmts::traits::TokenExtensions},
+        typesystem::types::Type,
     },
 };
 

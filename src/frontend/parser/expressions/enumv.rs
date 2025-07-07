@@ -5,7 +5,6 @@ use crate::{
         parser::ParserContext,
         types::{
             ast::Ast,
-            lexer::Type,
             parser::{
                 stmts::{
                     traits::{
@@ -16,6 +15,7 @@ use crate::{
                 symbols::types::FoundSymbolId,
             },
         },
+        typesystem::types::Type,
     },
 };
 
