@@ -5,7 +5,7 @@ use super::typegen;
 use crate::backend::llvm::compiler::attributes::LLVMAttribute;
 use crate::backend::llvm::compiler::memory::{self, SymbolAllocated};
 use crate::backend::llvm::compiler::{
-    builtins, cast, indexes, lli, mutation, ptrgen, string, valuegen,
+    builtins, cast, codegen, indexes, lli, mutation, ptrgen, string, valuegen,
 };
 use crate::backend::types::LLVMEitherExpression;
 use crate::backend::types::repr::LLVMFunction;
@@ -53,7 +53,7 @@ pub fn compile<'ctx>(
         // Compiles property access (e.g., struct field or array)
         Ast::Property { name, indexes, .. } => self::compile_property(context, name, indexes),
 
-        // Compiles a built-in function or operation
+        // Compiles a built-in function
         Ast::Builtin { builtin, .. } => builtins::compile(context, builtin, cast_type),
 
         // Compiles a reference to a variable or symbol
@@ -77,8 +77,20 @@ pub fn compile<'ctx>(
         // Value Mutation
         Ast::Mut { .. } => mutation::compile(context, expr),
 
-        // Fallback for unhandled AST variants
-        _ => lli::compile(context, expr, cast_type),
+        // Low-Level Operations
+        Ast::Write { .. } | Ast::Load { .. } | Ast::Address { .. } | Ast::Alloc { .. } => {
+            lli::compile(context, expr, cast_type)
+        }
+
+        // Fallback, Unknown expressions or statements
+        what => {
+            self::codegen_abort(format!(
+                "Failed to compile. Unknown expression or statement '{}'.",
+                what
+            ));
+
+            self::compile_null_ptr(context)
+        }
     }
 }
 
@@ -99,17 +111,10 @@ fn compile_function_call<'ctx>(
     let compiled_args: Vec<BasicMetadataValueEnum> = args
         .iter()
         .enumerate()
-        .map(|(i, arg)| {
-            let arg_cast_type: Option<&Type> = function_arg_types.get(i);
+        .map(|(idx, expr)| {
+            let cast_type: Option<&Type> = function_arg_types.get(idx);
 
-            let compiled_arg: BasicValueEnum =
-                if arg_cast_type.is_some_and(|t| t.is_ptr_type() || t.is_mut_type()) {
-                    self::compile(context, arg, arg_cast_type)
-                } else {
-                    valuegen::compile(context, arg, arg_cast_type)
-                };
-
-            compiled_arg.into()
+            codegen::compile_expr(context, expr, cast_type, true).into()
         })
         .collect();
 
@@ -119,7 +124,7 @@ fn compile_function_call<'ctx>(
             call.set_call_convention(function_convention);
             if !kind.is_void_type() {
                 call.try_as_basic_value().left().unwrap_or_else(|| {
-                    self::codegen_abort(format!("Function call '{}' returned no value", name));
+                    self::codegen_abort(format!("Function call '{}' returned no value.", name));
                     self::compile_null_ptr(context)
                 })
             } else {
@@ -127,7 +132,7 @@ fn compile_function_call<'ctx>(
             }
         }
         Err(_) => {
-            self::codegen_abort(format!("Failed to generate call to function '{}'", name));
+            self::codegen_abort(format!("Failed to generate call to function '{}'.", name));
             self::compile_null_ptr(context)
         }
     };
@@ -164,7 +169,7 @@ fn compile_cast<'ctx>(
                 Ok(cstr) => cstr,
                 Err(_) => {
                     self::codegen_abort(format!(
-                        "Failed to extract string value from '{}' in cast to '{}'",
+                        "Failed to extract string value from '{}' in cast to '{}'.",
                         from_type, cast
                     ));
                     self::compile_null_ptr(context)
@@ -221,7 +226,7 @@ fn compile_deref<'ctx>(
         memory::load_anon(context, val.into_pointer_value(), kind)
     } else {
         self::codegen_abort(format!(
-            "Cannot dereference non-pointer value in '{}'",
+            "Cannot dereference non-pointer value in '{}'.",
             value
         ));
 
@@ -247,7 +252,7 @@ fn compile_property<'ctx>(
 
     if !symbol.is_pointer() {
         self::codegen_abort(format!(
-            "Symbol '{}' is not a pointer for property access",
+            "Symbol '{}' is not a pointer for property access.",
             name
         ));
 
@@ -263,7 +268,7 @@ fn compile_property<'ctx>(
             Ok(new_ptr) => ptr = new_ptr,
             Err(_) => {
                 self::codegen_abort(format!(
-                    "Failed to access property at index {} for '{}'",
+                    "Failed to access property at index {} for '{}'.",
                     index.1, name
                 ));
 
@@ -330,14 +335,14 @@ fn compile_inline_asm<'ctx>(
         "",
     ) {
         Ok(call) if !kind.is_void_type() => call.try_as_basic_value().left().unwrap_or_else(|| {
-            self::codegen_abort("Inline assembler returned no value");
+            self::codegen_abort("Inline assembler returned no value.");
             self::compile_null_ptr(context)
         }),
 
         Ok(_) => compile_null_ptr(context),
 
         Err(_) => {
-            self::codegen_abort("Failed to build inline assembler");
+            self::codegen_abort("Failed to build inline assembler.");
             self::compile_null_ptr(context)
         }
     }
@@ -371,7 +376,7 @@ fn compile_index<'ctx>(
             memory::gep_anon(context, expr_ptr, expr_type, &ordered_indexes).into()
         }
         _ => {
-            self::codegen_abort("Invalid index target in expression");
+            self::codegen_abort("Invalid index target in expression.");
             self::compile_null_ptr(context)
         }
     }

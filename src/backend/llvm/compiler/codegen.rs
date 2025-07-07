@@ -4,7 +4,7 @@ use std::fmt::Display;
 
 use crate::backend::llvm::compiler::loops::{self, forloop, infloop, whileloop};
 use crate::backend::llvm::compiler::{
-    binaryop, builtins, conditional, constgen, lli, mutation, terminator, unaryop,
+    binaryop, builtins, conditional, constgen, lli, mutation, ptrgen, terminator, unaryop,
 };
 use crate::backend::types::{repr::LLVMFunction, traits::AssemblerFunctionExtensions};
 use crate::core::console::logging::{self, LoggingType};
@@ -699,6 +699,19 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
 
     pub fn get_context(&self) -> &LLVMCodeGenContext<'a, 'ctx> {
         self.context
+    }
+}
+
+pub fn compile_expr<'ctx>(
+    context: &mut LLVMCodeGenContext<'_, 'ctx>,
+    expr: &'ctx Ast,
+    cast_type: Option<&Type>,
+    hl_ptr: bool,
+) -> BasicValueEnum<'ctx> {
+    if cast_type.is_some_and(|cast| cast.is_ptr_type() || (cast.is_mut_type() && hl_ptr)) {
+        ptrgen::compile(context, expr, cast_type)
+    } else {
+        valuegen::compile(context, expr, cast_type)
     }
 }
 

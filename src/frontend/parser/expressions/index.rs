@@ -89,10 +89,18 @@ pub fn build_index<'parser>(
 
     let index_type: Type = if index_type.is_ptr_type() {
         Type::Ptr(Some(
-            index_type.get_type_with_depth(indexes.len()).clone().into(),
+            index_type
+                .get_inner_type_with_depth(indexes.len())
+                .clone()
+                .into(),
         ))
     } else {
-        Type::Mut(index_type.get_type_with_depth(indexes.len()).clone().into())
+        Type::Mut(
+            index_type
+                .get_inner_type_with_depth(indexes.len())
+                .clone()
+                .into(),
+        )
     };
 
     Ok(Ast::Index {

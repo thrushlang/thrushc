@@ -37,10 +37,12 @@ pub fn lower_precedence<'parser>(
 
         TokenType::SizeOf => sizeof::build_sizeof(parser_context)?,
 
-        TokenType::AlignOf => builtins::build_alignof(parser_context)?,
+        TokenType::Halloc => builtins::build_halloc(parser_context)?,
         TokenType::MemSet => builtins::build_memset(parser_context)?,
         TokenType::MemMove => builtins::build_memmove(parser_context)?,
         TokenType::MemCpy => builtins::build_memcpy(parser_context)?,
+
+        TokenType::AlignOf => builtins::build_alignof(parser_context)?,
 
         TokenType::Asm => asm::build_asm_code_block(parser_context)?,
 

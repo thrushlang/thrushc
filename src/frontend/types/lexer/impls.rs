@@ -119,6 +119,7 @@ impl std::fmt::Display for TokenType {
             TokenType::SizeOf => write!(f, "sizeof"),
 
             // Builtins
+            TokenType::Halloc => write!(f, "halloc"),
             TokenType::AlignOf => write!(f, "alignof"),
             TokenType::MemSet => write!(f, "memset"),
             TokenType::MemMove => write!(f, "memmove"),

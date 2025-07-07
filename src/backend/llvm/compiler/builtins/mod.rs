@@ -8,17 +8,15 @@ use crate::{
     frontend::{types::ast::Ast, typesystem::types::Type},
 };
 
-pub mod math;
 pub mod mem;
 pub mod sizeof;
 
 #[derive(Debug, Clone)]
 pub enum Builtin<'ctx> {
     // Memory Builtins
-    AlignOf {
-        align_of: Type,
+    Halloc {
+        alloc: Type,
     },
-
     MemCpy {
         source: Rc<Ast<'ctx>>,
         destination: Rc<Ast<'ctx>>,
@@ -33,6 +31,9 @@ pub enum Builtin<'ctx> {
         destination: Rc<Ast<'ctx>>,
         new_size: Rc<Ast<'ctx>>,
         size: Rc<Ast<'ctx>>,
+    },
+    AlignOf {
+        align_of: Type,
     },
 
     // Math Builtins
@@ -79,7 +80,7 @@ pub fn compile<'ctx>(
             size,
         } => mem::memset::compile(context, destination, new_size, size),
 
-        Builtin::Sqrt { value } => math::sqrt::compile(context, value),
+        Builtin::Halloc { alloc } => mem::halloc::compile(context, alloc),
 
         _ => {
             self::codegen_abort("Builtin not implemented.");

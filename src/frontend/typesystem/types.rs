@@ -1,9 +1,6 @@
 use std::sync::Arc;
 
-use inkwell::{context::Context, targets::TargetData};
-
 use crate::{
-    backend::llvm::compiler::typegen,
     core::errors::standard::ThrushCompilerIssue,
     frontend::{
         lexer::span::Span,
@@ -110,16 +107,16 @@ impl Type {
         self
     }
 
-    pub fn get_type_with_depth(&self, depth: usize) -> &Type {
+    pub fn get_inner_type_with_depth(&self, depth: usize) -> &Type {
         if depth == 0 {
             return self;
         }
 
         match self {
-            Type::FixedArray(element_type, _) => element_type.get_type_with_depth(depth),
-            Type::Array(element_type) => element_type.get_type_with_depth(depth),
-            Type::Mut(inner_type) => inner_type.get_type_with_depth(depth),
-            Type::Ptr(Some(inner_type)) => inner_type.get_type_with_depth(depth - 1),
+            Type::FixedArray(element_type, _) => element_type.get_inner_type_with_depth(depth),
+            Type::Array(element_type) => element_type.get_inner_type_with_depth(depth),
+            Type::Mut(inner_type) => inner_type.get_inner_type_with_depth(depth),
+            Type::Ptr(Some(inner_type)) => inner_type.get_inner_type_with_depth(depth - 1),
             Type::Struct(_, _) => self,
             Type::S8
             | Type::S16
@@ -183,14 +180,6 @@ impl Type {
             name,
             fields.iter().map(|field| Arc::new(field.clone())).collect(),
         )
-    }
-
-    pub fn is_probably_heap_allocated(
-        &self,
-        llvm_context: &Context,
-        target_data: &TargetData,
-    ) -> bool {
-        target_data.get_abi_size(&typegen::generate_type(llvm_context, self)) >= 128
     }
 
     #[inline(always)]

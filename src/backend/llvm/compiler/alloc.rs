@@ -23,18 +23,12 @@ pub fn alloc<'ctx>(
     attributes: &'ctx ThrushAttributes<'ctx>,
 ) -> PointerValue<'ctx> {
     let llvm_context: &Context = context.get_llvm_context();
-    let target_data: &TargetData = context.get_target_data();
 
     let llvm_type: BasicTypeEnum = typegen::generate_subtype(llvm_context, kind);
 
-    match (
-        attributes.has_heap_attr(),
-        attributes.has_stack_attr(),
-        kind.is_probably_heap_allocated(llvm_context, target_data),
-    ) {
-        (true, _, _) => self::try_alloc_heap(context, llvm_type, name, kind),
-        (false, true, _) => self::try_alloc_stack(context, llvm_type, name, kind),
-        (false, false, true) => self::try_alloc_heap(context, llvm_type, name, kind),
+    match (attributes.has_heap_attr(), attributes.has_stack_attr()) {
+        (true, _) => self::try_alloc_heap(context, llvm_type, name, kind),
+        (_, true) => self::try_alloc_stack(context, llvm_type, name, kind),
         _ => self::try_alloc_stack(context, llvm_type, name, kind),
     }
 }

@@ -16,7 +16,6 @@ pub mod floatgen;
 pub mod indexes;
 pub mod intgen;
 pub mod intrinsics;
-pub mod jit;
 pub mod lli;
 pub mod local;
 pub mod loops;

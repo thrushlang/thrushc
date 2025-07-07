@@ -31,6 +31,8 @@ pub fn validate_builtin<'type_checker>(
             size,
         } => self::validate_memcpy(typechecker, destination, source, size),
 
+        Builtin::Halloc { .. } | Builtin::AlignOf { .. } => Ok(()),
+
         _ => {
             typechecker.add_bug(ThrushCompilerIssue::Bug(
                 "Expression not caught".into(),

@@ -40,9 +40,10 @@ lazy_static! {
         keywords.insert("load", TokenType::Load);
         keywords.insert("write", TokenType::Write);
         keywords.insert("fixed", TokenType::Fixed);
-
-        keywords.insert("sizeof", TokenType::SizeOf);
         keywords.insert("static", TokenType::Static);
+
+        keywords.insert("halloc", TokenType::Halloc);
+        keywords.insert("sizeof", TokenType::SizeOf);
         keywords.insert("memset", TokenType::MemSet);
         keywords.insert("memmove", TokenType::MemMove);
         keywords.insert("memcpy", TokenType::MemCpy);

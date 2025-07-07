@@ -9,6 +9,40 @@ use crate::{
     },
 };
 
+pub fn build_halloc<'parser>(
+    parser_context: &mut ParserContext<'parser>,
+) -> Result<Ast<'parser>, ThrushCompilerIssue> {
+    let memcpy_tk: &Token = parser_context.consume(
+        TokenType::Halloc,
+        String::from("Syntax error"),
+        String::from("Expected 'halloc' keyword."),
+    )?;
+
+    parser_context.consume(
+        TokenType::LParen,
+        String::from("Syntax error"),
+        String::from("Expected '('."),
+    )?;
+
+    let span: Span = memcpy_tk.get_span();
+
+    let alloc: Type = typegen::build_type(parser_context)?;
+
+    parser_context.consume(
+        TokenType::RParen,
+        String::from("Syntax error"),
+        String::from("Expected ')'."),
+    )?;
+
+    Ok(Ast::Builtin {
+        builtin: Builtin::Halloc {
+            alloc: alloc.clone(),
+        },
+        kind: Type::Ptr(Some(alloc.into())),
+        span,
+    })
+}
+
 pub fn build_memcpy<'parser>(
     parser_context: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, ThrushCompilerIssue> {

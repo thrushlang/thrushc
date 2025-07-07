@@ -7,7 +7,7 @@ use inkwell::{
     values::{BasicValueEnum, FloatValue, IntValue},
 };
 
-use crate::frontend::typesystem::types::Type;
+use crate::frontend::typesystem::{traits::TypeMutableExtensions, types::Type};
 
 use super::{context::LLVMCodeGenContext, typegen};
 
@@ -157,11 +157,13 @@ pub fn integer<'ctx>(
     let llvm_builder: &Builder = context.get_llvm_builder();
     let llvm_context: &Context = context.get_llvm_context();
 
+    let target_type: Type = target_type.defer_mut_all();
+
     if !from_type.is_integer_type() || !target_type.is_integer_type() {
         return None;
     }
 
-    if from_type == target_type {
+    if *from_type == target_type {
         return None;
     }
 
@@ -169,7 +171,7 @@ pub fn integer<'ctx>(
         llvm_builder
             .build_int_cast_sign_flag(
                 from.into_int_value(),
-                typegen::integer_to_llvm_type(llvm_context, target_type),
+                typegen::integer_to_llvm_type(llvm_context, &target_type),
                 from_type.is_signed_integer_type(),
                 "",
             )
@@ -195,11 +197,13 @@ pub fn float<'ctx>(
     let llvm_builder: &Builder = context.get_llvm_builder();
     let llvm_context: &Context = context.get_llvm_context();
 
+    let target_type: Type = target_type.defer_mut_all();
+
     if !from_type.is_float_type() || !target_type.is_float_type() {
         return None;
     }
 
-    if from_type == target_type {
+    if *from_type == target_type {
         return None;
     }
 
@@ -207,7 +211,7 @@ pub fn float<'ctx>(
         llvm_builder
             .build_float_cast(
                 from.into_float_value(),
-                typegen::type_float_to_llvm_float_type(llvm_context, target_type),
+                typegen::type_float_to_llvm_float_type(llvm_context, &target_type),
                 "",
             )
             .unwrap()

@@ -83,6 +83,7 @@ pub enum TokenType {
     Fixed,
     Import,
     SizeOf,
+    Halloc,
     Mut,
     Type,
     Enum,

@@ -5,7 +5,7 @@ use std::fmt::Display;
 use inkwell::builder::Builder;
 
 use crate::{
-    backend::llvm::compiler::{codegen::LLVMCodegen, ptrgen, valuegen},
+    backend::llvm::compiler::codegen::{self, LLVMCodegen},
     core::console::logging::{self, LoggingType},
     frontend::types::ast::Ast,
 };
@@ -25,34 +25,18 @@ pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, stmt: &'ctx Ast<'ctx>)
             }
         }
 
-        if let Some(expression) = expression {
-            if kind.is_ptr_type() || kind.is_mut_type() {
-                if llvm_builder
-                    .build_return(Some(&ptrgen::compile(
-                        codegen.get_mut_context(),
-                        expression,
-                        Some(kind),
-                    )))
-                    .is_err()
-                {
-                    {
-                        self::codegen_abort(
-                            "Unable to build the terminator at code generation time.",
-                        );
-                    }
-                };
-            } else if llvm_builder
-                .build_return(Some(&valuegen::compile(
+        if let Some(expr) = expression {
+            if llvm_builder
+                .build_return(Some(&codegen::compile_expr(
                     codegen.get_mut_context(),
-                    expression,
+                    expr,
                     Some(kind),
+                    true,
                 )))
                 .is_err()
             {
-                {
-                    self::codegen_abort("Unable to build the terminator at code generation time.");
-                }
-            };
+                self::codegen_abort("Unable to build the terminator at code generation time.");
+            }
         } else {
             self::codegen_abort("Unable to build the terminator at code generation time.");
         }
