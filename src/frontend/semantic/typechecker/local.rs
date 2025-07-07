@@ -4,7 +4,7 @@ use crate::{
         lexer::span::Span,
         semantic::typechecker::{TypeChecker, bounds, position::TypeCheckerPosition},
         types::ast::{Ast, metadata::local::LocalMetadata},
-        typesystem::{traits::TypePointerExtensions, types::Type},
+        typesystem::types::Type,
     },
 };
 
@@ -38,16 +38,7 @@ pub fn validate_local<'type_checker>(
                 let mut local_value_type: Type = local_value.get_value_type()?.clone();
 
                 if local_value_type.is_ptr_type() {
-                    if local_type.is_ptr_type() && !local_type.is_nested_ptr_type() {
-                        typechecker.add_error(ThrushCompilerIssue::Error(
-                            "Type error".into(),
-                            "Expected ptr[ptr[T]] type.".into(),
-                            None,
-                            *span,
-                        ));
-                    } else {
-                        local_value_type = Type::Ptr(Some(local_value_type.into()));
-                    }
+                    local_value_type = Type::Ptr(Some(local_value_type.into()));
                 }
 
                 if let Err(error) = bounds::checking::check(

@@ -1,6 +1,8 @@
 pub mod and;
 pub mod cast;
 pub mod cmp;
+pub mod dot;
+pub mod eq;
 pub mod equality;
 pub mod factor;
 pub mod lower;

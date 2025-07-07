@@ -235,6 +235,26 @@ impl<'linter> Linter<'linter> {
         /* ######################################################################
 
 
+            TYPE CHECKER LOOP CONTROL FLOW - START
+
+
+        ########################################################################*/
+
+        if let Ast::Continue { .. } | Ast::Break { .. } = stmt {
+            return;
+        }
+
+        /* ######################################################################
+
+
+            TYPE CHECKER LOOP CONTROL FLOW - END
+
+
+        ########################################################################*/
+
+        /* ######################################################################
+
+
             LINTER DEREFERENCE | START
 
 
@@ -344,14 +364,11 @@ impl<'linter> Linter<'linter> {
     }
 
     pub fn generate_scoped_warnings(&mut self) {
-        self.symbols
-            .get_all_function_parameters()
-            .iter()
-            .for_each(|parameter| {
-                let name: &str = parameter.0;
-                let span: Span = parameter.1.0;
-                let used: bool = parameter.1.1;
-                let is_mutable_used: bool = parameter.1.2;
+        if let Some(last_scope) = self.symbols.get_all_function_parameters().last() {
+            last_scope.iter().for_each(|(name, info)| {
+                let span: Span = info.0;
+                let used: bool = info.1;
+                let is_mutable_used: bool = info.2;
 
                 if !used {
                     self.warnings.push(ThrushCompilerIssue::Warning(
@@ -369,6 +386,7 @@ impl<'linter> Linter<'linter> {
                     ));
                 }
             });
+        }
 
         if let Some(last_scope) = self.symbols.get_all_locals().last() {
             last_scope.iter().for_each(|(name, info)| {

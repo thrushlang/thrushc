@@ -262,15 +262,7 @@ impl Display for Ast<'_> {
             }
 
             Ast::Mut { source, value, .. } => {
-                if let (Some(any_reference), _) = source {
-                    let reference_name: &str = any_reference.0;
-
-                    write!(f, "{} = {}", reference_name, value)?;
-                }
-
-                if let (_, Some(expr)) = source {
-                    write!(f, "{} = {}", expr, value)?;
-                }
+                write!(f, "{} = {}", source, value)?;
 
                 Ok(())
             }

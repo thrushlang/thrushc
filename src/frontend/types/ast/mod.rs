@@ -264,7 +264,7 @@ pub enum Ast<'ctx> {
 
     // Mutation
     Mut {
-        source: AstEitherExpression<'ctx>,
+        source: Rc<Ast<'ctx>>,
         value: Rc<Ast<'ctx>>,
         kind: Type,
         span: Span,

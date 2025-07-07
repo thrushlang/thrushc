@@ -98,109 +98,44 @@ pub fn validate_expression<'type_checker>(
         } => {
             let value_type: &Type = value.get_value_type()?;
 
-            if let (Some(any_reference), None) = source {
-                let reference: &Ast = &any_reference.1;
-                let reference_type: &Type = reference.get_value_type()?;
+            let source_type: &Type = source.get_value_type()?;
 
-                if !reference.is_allocated_reference() {
-                    typechecker.add_error(ThrushCompilerIssue::Error(
-                        "Type error".into(),
-                        "Expected mutable, or pointer reference.".into(),
-                        None,
-                        *span,
-                    ));
-                }
-
-                if !reference.is_mutable() {
-                    typechecker.add_error(ThrushCompilerIssue::Error(
-                        "Type error".into(),
-                        "The reference must be mutable.".into(),
-                        None,
-                        reference.get_span(),
-                    ));
-                }
-
-                if reference_type.is_mut_type() {
-                    let reference_type: Type = reference_type.defer_mut_all();
-
-                    if let Err(error) = bounds::checking::check(
-                        &reference_type,
-                        value_type,
-                        Some(value),
-                        None,
-                        None,
-                        span,
-                    ) {
-                        typechecker.add_error(error);
-                    }
-                } else if let Err(error) = bounds::checking::check(
-                    reference_type,
-                    value_type,
-                    Some(value),
+            if !source.is_allocated_reference()
+                && !source_type.is_ptr_type()
+                && !source_type.is_mut_type()
+            {
+                typechecker.add_error(ThrushCompilerIssue::Error(
+                    "Type error".into(),
+                    "Expected 'ptr[T]', 'ptr', or 'mut T' type.".into(),
                     None,
-                    None,
-                    span,
-                ) {
-                    typechecker.add_error(error);
-                }
-
-                typechecker.analyze_ast(value)?;
-
-                return Ok(());
+                    *span,
+                ));
             }
 
-            if let (None, Some(source)) = source {
-                let source_type: &Type = source.get_value_type()?;
+            if !source.is_mutable() {
+                typechecker.add_error(ThrushCompilerIssue::Error(
+                    "Type error".into(),
+                    "The reference must be mutable.".into(),
+                    None,
+                    source.get_span(),
+                ));
+            }
 
-                if !source_type.is_ptr_type() && !source_type.is_mut_type() {
-                    typechecker.add_error(ThrushCompilerIssue::Error(
-                        "Type error".into(),
-                        "Expected 'ptr[T]', 'ptr', or 'mut T' type.".into(),
-                        None,
-                        *span,
-                    ));
-                }
+            if source_type.is_mut_type() {
+                let source_type: Type = source_type.defer_mut_all();
 
-                if !source.is_mutable() {
-                    typechecker.add_error(ThrushCompilerIssue::Error(
-                        "Type error".into(),
-                        "The reference must be mutable.".into(),
-                        None,
-                        source.get_span(),
-                    ));
-                }
-
-                if source_type.is_mut_type() {
-                    let source_type: Type = source_type.defer_mut_all();
-
-                    if let Err(error) = bounds::checking::check(
-                        &source_type,
-                        value_type,
-                        Some(value),
-                        None,
-                        None,
-                        span,
-                    ) {
-                        typechecker.add_error(error);
-                    }
-                } else if let Err(error) =
-                    bounds::checking::check(source_type, value_type, Some(value), None, None, span)
+                if let Err(error) =
+                    bounds::checking::check(&source_type, value_type, Some(value), None, None, span)
                 {
                     typechecker.add_error(error);
                 }
-
-                typechecker.analyze_ast(value)?;
-
-                return Ok(());
+            } else if let Err(error) =
+                bounds::checking::check(source_type, value_type, Some(value), None, None, span)
+            {
+                typechecker.add_error(error);
             }
 
-            typechecker.errors.push(ThrushCompilerIssue::Bug(
-                String::from("Non-trapped mutable expression."),
-                String::from("The mutable expression could not be caught for processing."),
-                *span,
-                CompilationPosition::TypeChecker,
-                line!(),
-            ));
+            typechecker.analyze_ast(value)?;
 
             Ok(())
         }

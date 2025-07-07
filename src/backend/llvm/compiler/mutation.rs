@@ -5,7 +5,7 @@ use inkwell::{AddressSpace, values::BasicValueEnum};
 use crate::{
     backend::llvm::compiler::{
         context::LLVMCodeGenContext,
-        memory::{self, SymbolAllocated},
+        memory::{self},
         ptrgen, valuegen,
     },
     core::console::logging::{self, LoggingType},
@@ -18,43 +18,16 @@ pub fn compile<'ctx>(
     expr: &'ctx Ast,
 ) -> BasicValueEnum<'ctx> {
     match expr {
-        Ast::Mut { source, value, .. } => match source {
-            (Some(any_reference), None) => {
-                let reference_name: &str = any_reference.0;
-                let reference: &Ast = &any_reference.1;
+        Ast::Mut { source, value, .. } => {
+            let cast_type: &Type = expr.get_type_unwrapped();
 
-                let cast_type: &Type = reference.get_type_unwrapped();
+            let ptr: BasicValueEnum = ptrgen::compile(context, source, None);
+            let value: BasicValueEnum = valuegen::compile(context, value, Some(cast_type));
 
-                let symbol: SymbolAllocated = context.get_symbol(reference_name);
+            memory::store_anon(context, ptr.into_pointer_value(), value);
 
-                let value: BasicValueEnum = valuegen::compile(context, value, Some(cast_type));
-
-                symbol.store(context, value);
-
-                self::compile_null_ptr(context)
-            }
-
-            (None, Some(expr)) => {
-                let cast_type: &Type = expr.get_type_unwrapped();
-
-                let ptr: BasicValueEnum = ptrgen::compile(context, expr, None);
-                let value: BasicValueEnum = valuegen::compile(context, value, Some(cast_type));
-
-                memory::store_anon(context, ptr.into_pointer_value(), value);
-
-                self::compile_null_ptr(context)
-            }
-
-            (None, None) => {
-                self::codegen_abort("A mutation must have a source.");
-                self::compile_null_ptr(context)
-            }
-
-            _ => {
-                self::codegen_abort("The source of a mutation could not be obtained.");
-                self::compile_null_ptr(context)
-            }
-        },
+            self::compile_null_ptr(context)
+        }
 
         _ => {
             self::codegen_abort("A mutation cannot be executed.");

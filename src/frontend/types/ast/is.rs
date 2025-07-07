@@ -1,5 +1,3 @@
-use std::any;
-
 use crate::{
     core::errors::standard::ThrushCompilerIssue, frontend::types::ast::Ast,
     frontend::typesystem::types::Type,

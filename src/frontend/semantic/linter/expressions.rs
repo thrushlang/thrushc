@@ -132,14 +132,7 @@ pub fn analyze_expression<'linter>(linter: &mut Linter<'linter>, expr: &'linter 
         }
 
         Ast::Mut { source, .. } => {
-            if let Some(any_reference) = &source.0 {
-                let name: &str = any_reference.0;
-                mutable::mark_as_mutated(linter, name);
-            }
-
-            if let Some(expr) = &source.1 {
-                linter.analyze_ast_expr(expr);
-            }
+            linter.analyze_ast_expr(source);
         }
 
         Ast::EnumValue {

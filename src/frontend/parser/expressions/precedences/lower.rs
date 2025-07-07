@@ -121,8 +121,8 @@ pub fn lower_precedence<'parser>(
             if parser_context.check(TokenType::Identifier) {
                 let identifier_tk: &Token = parser_context.consume(
                     TokenType::Identifier,
-                    String::from("Syntax error"),
-                    String::from("Expected 'identifier'."),
+                    "Syntax error".into(),
+                    "Expected 'identifier'.".into(),
                 )?;
 
                 let reference_name: &str = identifier_tk.get_lexeme();
@@ -178,8 +178,8 @@ pub fn lower_precedence<'parser>(
 
             parser_context.consume(
                 TokenType::Comma,
-                String::from("Syntax error"),
-                String::from("Expected ','."),
+                "Syntax error".into(),
+                "Expected ','.".into(),
             )?;
 
             let write_type: Type = typegen::build_type(parser_context)?;
@@ -240,14 +240,6 @@ pub fn lower_precedence<'parser>(
                 "Syntax error".into(),
                 "Expected ')'.".into(),
             )?;
-
-            if parser_context.match_token(TokenType::Dot)? {
-                return property::build_property(
-                    parser_context,
-                    (None, Some(expression.into())),
-                    span,
-                );
-            }
 
             return Ok(Ast::Group {
                 expression: expression.clone().into(),
@@ -311,18 +303,6 @@ pub fn lower_precedence<'parser>(
 
             let symbol: FoundSymbolId = parser_context.get_symbols().get_symbols_id(name, span)?;
 
-            if parser_context.match_token(TokenType::Eq)? {
-                let reference: Ast = reference::build_reference(parser_context, name, span)?;
-                let expression: Ast = expression::build_expr(parser_context)?;
-
-                return Ok(Ast::Mut {
-                    source: (Some((name, reference.clone().into())), None),
-                    value: expression.into(),
-                    kind: Type::Void,
-                    span,
-                });
-            }
-
             if parser_context.match_token(TokenType::LBracket)? {
                 let reference: Ast = reference::build_reference(parser_context, name, span)?;
 
@@ -331,17 +311,6 @@ pub fn lower_precedence<'parser>(
                     (Some((name, reference.into())), None),
                     span,
                 )?;
-
-                if parser_context.match_token(TokenType::Eq)? {
-                    let expr: Ast = expression::build_expr(parser_context)?;
-
-                    return Ok(Ast::Mut {
-                        source: (None, Some(index.clone().into())),
-                        value: expr.into(),
-                        kind: Type::Void,
-                        span,
-                    });
-                }
 
                 return Ok(index);
             }
@@ -362,17 +331,6 @@ pub fn lower_precedence<'parser>(
                     (Some((name, reference.clone().into())), None),
                     span,
                 )?;
-
-                if parser_context.match_token(TokenType::Eq)? {
-                    let expr: Ast = expression::build_expr(parser_context)?;
-
-                    return Ok(Ast::Mut {
-                        source: (None, Some(property.clone().into())),
-                        value: expr.into(),
-                        kind: Type::Void,
-                        span,
-                    });
-                }
 
                 if parser_context.match_token(TokenType::LBracket)? {
                     return index::build_index(parser_context, (None, Some(property.into())), span);

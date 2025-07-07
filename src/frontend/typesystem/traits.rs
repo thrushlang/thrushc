@@ -21,7 +21,6 @@ pub trait TypePointerExtensions {
     fn is_all_ptr_type(&self) -> bool;
     fn is_ptr_struct_type(&self) -> bool;
     fn is_ptr_fixed_array_type(&self) -> bool;
-    fn is_nested_ptr_type(&self) -> bool;
 }
 
 pub trait TypeStructExtensions {
