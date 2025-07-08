@@ -4,7 +4,7 @@ use crate::{
         lexer::{span::Span, token::Token, tokentype::TokenType},
         parser::{ParserContext, expr},
         types::ast::Ast,
-        typesystem::types::Type,
+        typesystem::{traits::DereferenceExtensions, types::Type},
     },
 };
 
@@ -37,11 +37,11 @@ pub fn build_dereference<'parser>(
     (0..deref_count).for_each(|_| {
         current_expr = Ast::Deref {
             value: current_expr.clone().into(),
-            kind: current_type.deref(),
+            kind: current_type.dereference(),
             span,
         };
 
-        current_type = current_type.deref();
+        current_type = current_type.dereference();
     });
 
     Ok(current_expr)

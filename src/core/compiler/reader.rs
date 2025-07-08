@@ -24,7 +24,7 @@ fn read_file_to_string_buffered(path: &Path) -> Result<String, ()> {
     if let Ok(file) = File::open(path) {
         let mut reader: BufReader<File> = BufReader::new(file);
 
-        let mut buffer: Vec<u8> = Vec::with_capacity(1000_000);
+        let mut buffer: Vec<u8> = Vec::with_capacity(1_000_000);
 
         if reader.read_to_end(&mut buffer).is_err() {
             return Err(());

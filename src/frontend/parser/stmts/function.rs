@@ -2,7 +2,9 @@ use crate::{
     core::errors::standard::ThrushCompilerIssue,
     frontend::{
         lexer::{span::Span, token::Token, tokentype::TokenType},
-        parser::{ParserContext, attributes, declarations::entrypoint, stmts::block, typegen},
+        parser::{
+            ParserContext, attributes, checks, declarations::entrypoint, stmts::block, typegen,
+        },
         types::{
             ast::{Ast, metadata::fnparam::FunctionParameterMetadata},
             parser::{
@@ -21,14 +23,7 @@ pub fn build_function<'parser>(
     parser_ctx: &mut ParserContext<'parser>,
     declare_forward: bool,
 ) -> Result<Ast<'parser>, ThrushCompilerIssue> {
-    if !parser_ctx.is_main_scope() {
-        return Err(ThrushCompilerIssue::Error(
-            "Syntax error".into(),
-            "It must be contained within the global scope.".into(),
-            None,
-            parser_ctx.peek().get_span(),
-        ));
-    }
+    checks::check_main_scope_state(parser_ctx)?;
 
     parser_ctx.consume(
         TokenType::Fn,

@@ -5,7 +5,7 @@ use crate::{
         semantic::typechecker::{TypeChecker, bounds, call, validations},
         types::{ast::Ast, parser::stmts::types::Constructor},
         typesystem::{
-            traits::{TypeMutableExtensions, TypePointerExtensions},
+            traits::{DereferenceExtensions, TypeMutableExtensions, TypePointerExtensions},
             types::Type,
         },
     },
@@ -122,11 +122,14 @@ pub fn validate_expression<'type_checker>(
             }
 
             if source_type.is_mut_type() {
-                let source_type: Type = source_type.defer_mut_all();
-
-                if let Err(error) =
-                    bounds::checking::check(&source_type, value_type, Some(value), None, None, span)
-                {
+                if let Err(error) = bounds::checking::check(
+                    &source_type.dereference_high_level_type(),
+                    value_type,
+                    Some(value),
+                    None,
+                    None,
+                    span,
+                ) {
                     typechecker.add_error(error);
                 }
             } else if let Err(error) =

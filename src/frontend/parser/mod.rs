@@ -173,11 +173,6 @@ impl<'parser> ParserContext<'parser> {
                 }
 
                 self.scope = 0;
-
-                self.control_ctx.set_inside_function(false);
-                self.symbols.clear_all_scopes();
-                self.symbols.end_parameters();
-                self.control_ctx.reset_loop_depth();
             }
 
             SyncPosition::Statement => {
@@ -196,8 +191,6 @@ impl<'parser> ParserContext<'parser> {
                 {
                     self.current += 1;
                 }
-
-                self.control_ctx.reset_loop_depth();
             }
 
             SyncPosition::Expression => {

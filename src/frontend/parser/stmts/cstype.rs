@@ -2,7 +2,7 @@ use crate::{
     core::errors::standard::ThrushCompilerIssue,
     frontend::{
         lexer::{span::Span, token::Token, tokentype::TokenType},
-        parser::{ParserContext, attributes, typegen},
+        parser::{ParserContext, attributes, checks, typegen},
         types::{
             ast::Ast,
             parser::stmts::{
@@ -18,14 +18,7 @@ pub fn build_custom_type<'parser>(
     parser_context: &mut ParserContext<'parser>,
     declare_forward: bool,
 ) -> Result<Ast<'parser>, ThrushCompilerIssue> {
-    if !parser_context.is_main_scope() {
-        return Err(ThrushCompilerIssue::Error(
-            String::from("Syntax error"),
-            String::from("Types are only defined globally."),
-            None,
-            parser_context.peek().get_span(),
-        ));
-    }
+    checks::check_main_scope_state(parser_context)?;
 
     parser_context.consume(
         TokenType::Type,

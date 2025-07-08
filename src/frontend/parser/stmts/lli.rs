@@ -2,7 +2,7 @@ use crate::{
     core::errors::standard::ThrushCompilerIssue,
     frontend::{
         lexer::{span::Span, token::Token, tokentype::TokenType},
-        parser::{ParserContext, expr, typegen},
+        parser::{ParserContext, checks, expr, typegen},
         types::{ast::Ast, parser::stmts::traits::TokenExtensions},
         typesystem::types::Type,
     },
@@ -11,23 +11,7 @@ use crate::{
 pub fn build_lli<'parser>(
     parser_ctx: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, ThrushCompilerIssue> {
-    if parser_ctx.is_main_scope() {
-        return Err(ThrushCompilerIssue::Error(
-            String::from("Syntax error"),
-            String::from("LLI's should be contained at local scope."),
-            None,
-            parser_ctx.peek().get_span(),
-        ));
-    }
-
-    if parser_ctx.is_unreacheable_code() {
-        return Err(ThrushCompilerIssue::Error(
-            String::from("Syntax error"),
-            String::from("Unreacheable code."),
-            None,
-            parser_ctx.peek().get_span(),
-        ));
-    }
+    self::check_state(parser_ctx)?;
 
     parser_ctx.consume(
         TokenType::Instr,
@@ -78,4 +62,9 @@ pub fn build_lli<'parser>(
     };
 
     Ok(lli)
+}
+
+fn check_state(parser_ctx: &mut ParserContext<'_>) -> Result<(), ThrushCompilerIssue> {
+    checks::check_unreacheable_state(parser_ctx)?;
+    checks::check_inside_function_state(parser_ctx)
 }

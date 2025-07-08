@@ -4,7 +4,7 @@ use crate::{
         lexer::{span::Span, token::Token, tokentype::TokenType},
         parser::{ParserContext, expressions::precedences::mutation},
         types::{ast::Ast, parser::stmts::traits::TokenExtensions},
-        typesystem::types::Type,
+        typesystem::{traits::CastTypeExtensions, types::Type},
     },
 };
 
@@ -25,13 +25,13 @@ pub fn factor<'parser>(
         let left_type: &Type = expression.get_value_type()?;
         let right_type: &Type = right.get_value_type()?;
 
-        let kind: &Type = left_type.precompute_numeric_type(right_type);
+        let kind: Type = left_type.precompute(right_type);
 
         expression = Ast::BinaryOp {
             left: expression.clone().into(),
             operator,
             right: right.into(),
-            kind: kind.clone(),
+            kind,
             span,
         };
     }

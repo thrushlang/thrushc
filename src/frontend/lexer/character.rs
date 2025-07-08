@@ -14,8 +14,8 @@ pub fn lex(lexer: &mut Lexer) -> Result<(), ThrushCompilerIssue> {
 
     if lexer.peek() != '\'' {
         return Err(ThrushCompilerIssue::Error(
-            String::from("Syntax error"),
-            String::from("Unclosed char. Did you forget to close the char with a \'?"),
+            "Syntax error".into(),
+            "Unclosed char. Did you forget to close the char with a '\''?.".into(),
             None,
             span,
         ));
@@ -23,10 +23,12 @@ pub fn lex(lexer: &mut Lexer) -> Result<(), ThrushCompilerIssue> {
 
     lexer.advance();
 
-    if lexer.shrink_lexeme().len() > 1 {
+    let lexeme: String = lexer.shrink_lexeme();
+
+    if lexeme.len() > 1 {
         return Err(ThrushCompilerIssue::Error(
-            String::from("Syntax error"),
-            String::from("A char data type only can contain one character."),
+            "Syntax error".into(),
+            "A character can only contain one byte.".into(),
             None,
             span,
         ));

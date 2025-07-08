@@ -35,7 +35,7 @@ fn handle_escape_sequence(lexer: &mut Lexer) -> Result<char, ThrushCompilerIssue
 
         return Err(ThrushCompilerIssue::Error(
             "Syntax error".into(),
-            "Unexpected end of file after escape character.".into(),
+            "Unexpected EOF after escape character.".into(),
             None,
             span,
         ));

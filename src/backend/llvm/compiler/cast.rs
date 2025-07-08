@@ -7,7 +7,7 @@ use inkwell::{
     values::{BasicValueEnum, FloatValue, IntValue},
 };
 
-use crate::frontend::typesystem::{traits::TypeMutableExtensions, types::Type};
+use crate::frontend::typesystem::{traits::DereferenceExtensions, types::Type};
 
 use super::{context::LLVMCodeGenContext, typegen};
 
@@ -157,7 +157,7 @@ pub fn integer<'ctx>(
     let llvm_builder: &Builder = context.get_llvm_builder();
     let llvm_context: &Context = context.get_llvm_context();
 
-    let target_type: Type = target_type.defer_mut_all();
+    let target_type: Type = target_type.dereference_high_level_type();
 
     if !from_type.is_integer_type() || !target_type.is_integer_type() {
         return None;
@@ -197,7 +197,7 @@ pub fn float<'ctx>(
     let llvm_builder: &Builder = context.get_llvm_builder();
     let llvm_context: &Context = context.get_llvm_context();
 
-    let target_type: Type = target_type.defer_mut_all();
+    let target_type: Type = target_type.dereference_high_level_type();
 
     if !from_type.is_float_type() || !target_type.is_float_type() {
         return None;

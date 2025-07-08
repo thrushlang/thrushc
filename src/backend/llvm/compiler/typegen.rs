@@ -21,7 +21,8 @@ pub fn integer_to_llvm_type<'ctx>(llvm_context: &'ctx Context, kind: &Type) -> I
         Type::S64 | Type::U64 => llvm_context.i64_type(),
         Type::Bool => llvm_context.bool_type(),
 
-        Type::Mut(any) => integer_to_llvm_type(llvm_context, any),
+        Type::Mut(any) => self::integer_to_llvm_type(llvm_context, any),
+        Type::Const(any) => self::integer_to_llvm_type(llvm_context, any),
 
         _ => unreachable!(),
     }
@@ -36,7 +37,8 @@ pub fn type_float_to_llvm_float_type<'ctx>(
         Type::F32 => llvm_context.f32_type(),
         Type::F64 => llvm_context.f64_type(),
 
-        Type::Mut(any) => type_float_to_llvm_float_type(llvm_context, any),
+        Type::Mut(any) => self::type_float_to_llvm_float_type(llvm_context, any),
+        Type::Const(any) => self::type_float_to_llvm_float_type(llvm_context, any),
 
         _ => unreachable!(),
     }
@@ -75,6 +77,8 @@ pub fn generate_type<'ctx>(llvm_context: &'ctx Context, kind: &Type) -> BasicTyp
         }
 
         kind if kind.is_float_type() => type_float_to_llvm_float_type(llvm_context, kind).into(),
+
+        Type::Const(any) => self::generate_type(llvm_context, any),
 
         Type::Str | Type::Array(..) => llvm_context
             .struct_type(
@@ -119,6 +123,8 @@ pub fn generate_type<'ctx>(llvm_context: &'ctx Context, kind: &Type) -> BasicTyp
 pub fn generate_subtype<'ctx>(llvm_context: &'ctx Context, kind: &Type) -> BasicTypeEnum<'ctx> {
     match kind {
         Type::Mut(subtype) => self::generate_subtype(llvm_context, subtype),
+        Type::Const(subtype) => self::generate_subtype(llvm_context, subtype),
+
         _ => self::generate_type(llvm_context, kind),
     }
 }
@@ -130,6 +136,7 @@ pub fn generate_subtype_with_all<'ctx>(
     match kind {
         Type::Ptr(Some(subtype)) => self::generate_subtype_with_all(llvm_context, subtype),
         Type::Mut(subtype) => self::generate_subtype_with_all(llvm_context, subtype),
+        Type::Const(subtype) => self::generate_subtype_with_all(llvm_context, subtype),
 
         _ => self::generate_type(llvm_context, kind),
     }

@@ -4,7 +4,7 @@ use crate::{
         lexer::{span::Span, tokentype::TokenType},
         parser::{ParserContext, expr},
         types::ast::{Ast, metadata::index::IndexMetadata, types::AstEitherExpression},
-        typesystem::types::Type,
+        typesystem::{traits::IndexTypeExtensions, types::Type},
     },
 };
 
@@ -77,18 +77,10 @@ pub fn build_index<'parser>(
 
     let index_type: Type = if index_type.is_ptr_type() {
         Type::Ptr(Some(
-            index_type
-                .get_inner_type_with_depth(indexes.len())
-                .clone()
-                .into(),
+            index_type.get_aprox_type(indexes.len()).clone().into(),
         ))
     } else {
-        Type::Mut(
-            index_type
-                .get_inner_type_with_depth(indexes.len())
-                .clone()
-                .into(),
-        )
+        Type::Mut(index_type.get_aprox_type(indexes.len()).clone().into())
     };
 
     Ok(Ast::Index {

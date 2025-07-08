@@ -32,7 +32,6 @@ use crate::{
         utils::rand,
     },
     frontend::{
-        self,
         lexer::{self, Lexer, token::Token},
         parser::{Parser, ParserContext},
         semantic::SemanticAnalyzer,

@@ -29,7 +29,7 @@ pub fn check(
         ..
     }) = expression
     {
-        return check(
+        return self::check(
             target_type,
             expression_type,
             None,
@@ -45,7 +45,7 @@ pub fn check(
         ..
     }) = expression
     {
-        return check(
+        return self::check(
             target_type,
             expression_type,
             None,
@@ -61,7 +61,7 @@ pub fn check(
         ..
     }) = expression
     {
-        return check(
+        return self::check(
             target_type,
             expression_type,
             Some(expression),
@@ -81,7 +81,7 @@ pub fn check(
 
                 target_fields.iter().zip(from_fields.iter()).try_for_each(
                     |(target_field, from_field)| {
-                        check(target_field, from_field, None, None, position, span)
+                        self::check(target_field, from_field, None, None, position, span)
                     },
                 )?;
 
@@ -90,13 +90,21 @@ pub fn check(
 
             (Type::Addr, Type::Addr, None) => Ok(()),
 
+            (Type::Const(target_type), Type::Const(from_type), None) => {
+                self::check(target_type, from_type, None, None, position, span)
+            }
+
+            (Type::Const(target_type), from_type, None) => {
+                self::check(target_type, from_type, None, None, position, span)
+            }
+
             (
                 Type::FixedArray(type_a, size_a),
                 Type::FixedArray(type_b, size_b),
                 None,
             ) => {
                 if size_a == size_b {
-                    check(type_a, type_b, None, None, position, span)?;
+                    self::check(type_a, type_b, None, None, position, span)?;
                     return Ok(());
                 }
 
@@ -104,7 +112,7 @@ pub fn check(
             }
 
             (Type::Array(target_type), Type::Array(from_type), None) => {
-                check(target_type, from_type, None, None, position, span)?;
+                self::check(target_type, from_type, None, None, position, span)?;
 
                 Ok(())
             }
@@ -134,7 +142,7 @@ pub fn check(
                 && !from_type.is_mut_type()
                 && !from_type.is_ptr_type() =>
             {
-                check(target_type, from_type, expression, operator, position, span)?;
+                self::check(target_type, from_type, expression, operator, position, span)?;
 
                 Ok(())
             }
@@ -172,14 +180,14 @@ pub fn check(
                 )
                 | None,
             ) => {
-                check(target_type, from_type, expression, operator, position, span)?;
+                self::check(target_type, from_type, expression, operator, position, span)?;
 
                 Ok(())
             }
 
             (Type::Ptr(None), Type::Ptr(None), None) => Ok(()),
             (Type::Ptr(Some(target_type)), Type::Ptr(Some(from_type)), None) => {
-                check(target_type, from_type, expression, operator, position, span)?;
+                self::check(target_type, from_type, expression, operator, position, span)?;
 
                 Ok(())
             }

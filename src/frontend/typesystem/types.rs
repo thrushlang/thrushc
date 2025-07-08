@@ -39,6 +39,9 @@ pub enum Type {
     // Str Type
     Str,
 
+    // Constant Type
+    Const(Arc<Type>),
+
     // Mutable Type
     Mut(Arc<Type>),
 
@@ -63,18 +66,6 @@ pub enum Type {
 }
 
 impl Type {
-    pub fn deref(&self) -> Type {
-        if let Type::Ptr(Some(any)) = self {
-            return (**any).clone();
-        }
-
-        if let Type::Mut(any) = self {
-            return (**any).clone();
-        }
-
-        self.clone()
-    }
-
     pub fn get_fixed_array_base_type(&self) -> &Type {
         if let Type::FixedArray(inner, ..) = self {
             return inner;
@@ -85,6 +76,10 @@ impl Type {
         }
 
         if let Type::Ptr(Some(inner)) = self {
+            return inner.get_fixed_array_base_type();
+        }
+
+        if let Type::Const(inner) = self {
             return inner.get_fixed_array_base_type();
         }
 
@@ -104,75 +99,11 @@ impl Type {
             return inner.get_array_base_type();
         }
 
+        if let Type::Const(inner) = self {
+            return inner.get_array_base_type();
+        }
+
         self
-    }
-
-    pub fn get_inner_type_with_depth(&self, depth: usize) -> &Type {
-        if depth == 0 {
-            return self;
-        }
-
-        match self {
-            Type::FixedArray(element_type, _) => element_type.get_inner_type_with_depth(depth),
-            Type::Array(element_type) => element_type.get_inner_type_with_depth(depth),
-            Type::Mut(inner_type) => inner_type.get_inner_type_with_depth(depth),
-            Type::Ptr(Some(inner_type)) => inner_type.get_inner_type_with_depth(depth - 1),
-            Type::Struct(_, _) => self,
-            Type::S8
-            | Type::S16
-            | Type::S32
-            | Type::S64
-            | Type::U8
-            | Type::U16
-            | Type::U32
-            | Type::U64
-            | Type::F32
-            | Type::F64
-            | Type::Bool
-            | Type::Char
-            | Type::Str
-            | Type::Addr
-            | Type::Void
-            | Type::Ptr(None) => self,
-        }
-    }
-
-    #[must_use]
-    pub fn precompute_numeric_type(&self, other: &Type) -> &Type {
-        match (self, other) {
-            (Type::S64, _) | (_, Type::S64) => &Type::S64,
-            (Type::S32, _) | (_, Type::S32) => &Type::S32,
-            (Type::S16, _) | (_, Type::S16) => &Type::S16,
-            (Type::S8, _) | (_, Type::S8) => &Type::S8,
-
-            (Type::U64, _) | (_, Type::U64) => &Type::U64,
-            (Type::U32, _) | (_, Type::U32) => &Type::U32,
-            (Type::U16, _) | (_, Type::U16) => &Type::U16,
-            (Type::U8, _) | (_, Type::U8) => &Type::U8,
-
-            (Type::F64, _) | (_, Type::F64) => &Type::F64,
-            (Type::F32, _) | (_, Type::F32) => &Type::F32,
-
-            (Type::Mut(a), Type::Mut(b)) => a.precompute_numeric_type(b),
-
-            _ => self,
-        }
-    }
-
-    pub fn narrowing_cast(&self) -> Type {
-        match self {
-            Type::U8 => Type::S8,
-            Type::U16 => Type::S16,
-            Type::U32 => Type::S32,
-            Type::U64 => Type::S64,
-
-            Type::S8 => Type::U8,
-            Type::S16 => Type::U16,
-            Type::S32 => Type::U32,
-            Type::S64 => Type::U64,
-
-            _ => self.clone(),
-        }
     }
 
     pub fn create_structure_type(name: String, fields: &[Type]) -> Type {
@@ -238,11 +169,15 @@ impl Type {
     }
 
     #[inline(always)]
+    pub fn is_const_type(&self) -> bool {
+        matches!(self, Type::Const(_))
+    }
+
+    #[inline(always)]
     pub fn is_numeric(&self) -> bool {
         self.is_integer_type() || self.is_float_type() || self.is_char_type() || self.is_bool_type()
     }
 
-    #[must_use]
     #[inline(always)]
     pub fn is_signed_integer_type(&self) -> bool {
         matches!(self, Type::S8 | Type::S16 | Type::S32 | Type::S64)
@@ -286,6 +221,7 @@ impl Type {
             Type::F32 => 12,
             Type::F64 => 13,
 
+            Type::Const(subtype) => subtype.get_array_type_herarchy(),
             Type::Mut(subtype) => subtype.get_array_type_herarchy(),
 
             Type::Addr => 14,
@@ -317,6 +253,7 @@ impl PartialEq for Type {
 
             (Type::Mut(target), Type::Mut(from)) => target == from,
             (Type::Array(target), Type::Array(from)) => target == from,
+            (Type::Const(target), Type::Const(from)) => target == from,
 
             (Type::Char, Type::Char) => true,
             (Type::S8, Type::S8) => true,

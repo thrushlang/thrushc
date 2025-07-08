@@ -7,7 +7,7 @@ use crate::{
             expressions::precedences::equality::{self},
         },
         types::{ast::Ast, parser::stmts::traits::TokenExtensions},
-        typesystem::types::Type,
+        typesystem::{traits::CastTypeExtensions, types::Type},
     },
 };
 
@@ -38,7 +38,7 @@ pub fn unary_precedence<'parser>(
         let expression: Ast = equality::equality_precedence(parser_context)?;
 
         let expression_type: &Type = expression.get_value_type()?;
-        let kind: Type = expression_type.narrowing_cast();
+        let kind: Type = expression_type.narrowing();
 
         return Ok(Ast::UnaryOp {
             operator,

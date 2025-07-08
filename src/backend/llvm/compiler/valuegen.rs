@@ -437,11 +437,6 @@ fn compile_deref<'ctx>(
     let deref_value: BasicValueEnum = if val.is_pointer_value() {
         memory::load_anon(context, val.into_pointer_value(), kind)
     } else {
-        self::codegen_abort(format!(
-            "Cannot dereference non-pointer value in '{}'.",
-            value
-        ));
-
         val
     };
 

@@ -13,7 +13,6 @@ pub trait TypeMutableExtensions {
     fn is_mut_array_type(&self) -> bool;
     fn is_mut_struct_type(&self) -> bool;
     fn is_mut_numeric_type(&self) -> bool;
-    fn defer_mut_all(&self) -> Type;
 }
 
 pub trait TypePointerExtensions {
@@ -25,4 +24,18 @@ pub trait TypePointerExtensions {
 
 pub trait TypeStructExtensions {
     fn get_struct_fields(&self) -> &[Arc<Type>];
+}
+
+pub trait IndexTypeExtensions {
+    fn get_aprox_type(&self, base_depth: usize) -> &Type;
+}
+
+pub trait CastTypeExtensions {
+    fn narrowing(&self) -> Type;
+    fn precompute(&self, other: &Type) -> Type;
+}
+
+pub trait DereferenceExtensions {
+    fn dereference(&self) -> Type;
+    fn dereference_high_level_type(&self) -> Type;
 }

@@ -6,7 +6,8 @@ use crate::{
     backend::llvm::compiler::{context::LLVMCodeGenContext, typegen},
     frontend::typesystem::{
         traits::{
-            LLVMTypeExtensions, TypeMutableExtensions, TypePointerExtensions, TypeStructExtensions,
+            CastTypeExtensions, DereferenceExtensions, IndexTypeExtensions, LLVMTypeExtensions,
+            TypeMutableExtensions, TypePointerExtensions, TypeStructExtensions,
         },
         types::Type,
     },
@@ -22,6 +23,39 @@ impl LLVMTypeExtensions for Type {
         let target_data: &TargetData = context.get_target_data();
 
         target_data.get_bit_size(&a_llvm_type) == target_data.get_bit_size(&b_llvm_type)
+    }
+}
+
+impl IndexTypeExtensions for Type {
+    fn get_aprox_type(&self, depth: usize) -> &Type {
+        if depth == 0 {
+            return self;
+        }
+
+        match self {
+            Type::FixedArray(element_type, _) => element_type.get_aprox_type(depth),
+            Type::Array(element_type) => element_type.get_aprox_type(depth),
+            Type::Mut(inner_type) => inner_type.get_aprox_type(depth),
+            Type::Const(inner_type) => inner_type.get_aprox_type(depth),
+            Type::Ptr(Some(inner_type)) => inner_type.get_aprox_type(depth - 1),
+            Type::Struct(_, _) => self,
+            Type::S8
+            | Type::S16
+            | Type::S32
+            | Type::S64
+            | Type::U8
+            | Type::U16
+            | Type::U32
+            | Type::U64
+            | Type::F32
+            | Type::F64
+            | Type::Bool
+            | Type::Char
+            | Type::Str
+            | Type::Addr
+            | Type::Void
+            | Type::Ptr(None) => self,
+        }
     }
 }
 
@@ -115,10 +149,72 @@ impl TypeMutableExtensions for Type {
 
         false
     }
+}
 
-    fn defer_mut_all(&self) -> Type {
+impl CastTypeExtensions for Type {
+    fn narrowing(&self) -> Type {
+        match self {
+            Type::U8 => Type::S8,
+            Type::U16 => Type::S16,
+            Type::U32 => Type::S32,
+            Type::U64 => Type::S64,
+
+            Type::S8 => Type::U8,
+            Type::S16 => Type::U16,
+            Type::S32 => Type::U32,
+            Type::S64 => Type::U64,
+
+            _ => self.clone(),
+        }
+    }
+
+    fn precompute(&self, other: &Type) -> Type {
+        match (self, other) {
+            (Type::S64, _) | (_, Type::S64) => Type::S64,
+            (Type::S32, _) | (_, Type::S32) => Type::S32,
+            (Type::S16, _) | (_, Type::S16) => Type::S16,
+            (Type::S8, _) | (_, Type::S8) => Type::S8,
+
+            (Type::U64, _) | (_, Type::U64) => Type::U64,
+            (Type::U32, _) | (_, Type::U32) => Type::U32,
+            (Type::U16, _) | (_, Type::U16) => Type::U16,
+            (Type::U8, _) | (_, Type::U8) => Type::U8,
+
+            (Type::F64, _) | (_, Type::F64) => Type::F64,
+            (Type::F32, _) | (_, Type::F32) => Type::F32,
+
+            (Type::Mut(lhs), Type::Mut(rhs)) => lhs.precompute(rhs),
+            (Type::Const(lhs), Type::Const(rhs)) => lhs.precompute(rhs),
+
+            _ => self.clone(),
+        }
+    }
+}
+
+impl DereferenceExtensions for Type {
+    fn dereference(&self) -> Type {
+        if let Type::Ptr(Some(any)) = self {
+            return (**any).clone();
+        }
+
+        if let Type::Mut(any) = self {
+            return (**any).clone();
+        }
+
+        if let Type::Const(any) = self {
+            return (**any).clone();
+        }
+
+        self.clone()
+    }
+
+    fn dereference_high_level_type(&self) -> Type {
         if let Type::Mut(inner_type) = self {
-            return inner_type.defer_mut_all();
+            return (**inner_type).clone();
+        }
+
+        if let Type::Const(inner_type) = self {
+            return inner_type.dereference_high_level_type();
         }
 
         self.clone()
@@ -141,7 +237,10 @@ impl std::fmt::Display for Type {
             Type::Bool => write!(f, "bool"),
             Type::Str => write!(f, "str"),
             Type::Char => write!(f, "char"),
-            Type::Mut(any_type) => write!(f, "mut {}", any_type),
+
+            Type::Mut(inner_type) => write!(f, "mut {}", inner_type),
+            Type::Const(inner_type) => write!(f, "const {}", inner_type),
+
             Type::FixedArray(kind, size) => {
                 write!(f, "[{}; {}]", kind, size)
             }

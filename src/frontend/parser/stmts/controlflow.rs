@@ -2,9 +2,8 @@ use crate::{
     core::errors::standard::ThrushCompilerIssue,
     frontend::{
         lexer::{span::Span, token::Token, tokentype::TokenType},
-        parser::ParserContext,
-        types::ast::Ast,
-        types::parser::stmts::traits::TokenExtensions,
+        parser::{ParserContext, checks},
+        types::{ast::Ast, parser::stmts::traits::TokenExtensions},
     },
 };
 
@@ -63,32 +62,7 @@ pub fn build_break<'parser>(
 }
 
 fn check_state(parser_context: &mut ParserContext) -> Result<(), ThrushCompilerIssue> {
-    if parser_context.is_unreacheable_code() {
-        return Err(ThrushCompilerIssue::Error(
-            "Syntax error".into(),
-            "Unreachable for execution.".into(),
-            None,
-            parser_context.peek().get_span(),
-        ));
-    }
-
-    if !parser_context.get_control_ctx().get_inside_function() {
-        return Err(ThrushCompilerIssue::Error(
-            "Syntax error".into(),
-            "A loop flow control must be inside a function.".into(),
-            None,
-            parser_context.peek().get_span(),
-        ));
-    }
-
-    if !parser_context.get_control_ctx().is_inside_loop() {
-        return Err(ThrushCompilerIssue::Error(
-            "Syntax error".into(),
-            "A loop flow control must be inside one.".into(),
-            None,
-            parser_context.peek().get_span(),
-        ));
-    }
-
-    Ok(())
+    checks::check_unreacheable_state(parser_context)?;
+    checks::check_inside_function_state(parser_context)?;
+    checks::check_inside_loop_state(parser_context)
 }

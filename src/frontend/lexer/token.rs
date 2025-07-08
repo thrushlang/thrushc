@@ -14,22 +14,6 @@ pub struct Token {
 }
 
 impl TokenExtensions for Token {
-    fn get_lexeme(&self) -> &str {
-        &self.lexeme
-    }
-
-    fn get_ascii_lexeme(&self) -> &str {
-        &self.ascii_lexeme
-    }
-
-    fn get_span(&self) -> Span {
-        self.span
-    }
-
-    fn get_type(&self) -> TokenType {
-        self.kind
-    }
-
     fn fix_lexeme_scapes(&self, span: Span) -> Result<Vec<u8>, ThrushCompilerIssue> {
         let source: &[u8] = self.lexeme.as_bytes();
 
@@ -50,18 +34,11 @@ impl TokenExtensions for Token {
                         Some(b'0') => parsed_string.push(b'\0'),
                         Some(b'\'') => parsed_string.push(b'\''),
                         Some(b'"') => parsed_string.push(b'"'),
-                        _ => {
-                            return Err(ThrushCompilerIssue::Error(
-                                String::from("Syntax Error"),
-                                String::from("Invalid escape sequence."),
-                                None,
-                                span,
-                            ));
-                        }
+
+                        _ => (),
                     }
 
                     idx += 1;
-
                     continue;
                 }
 
@@ -71,7 +48,7 @@ impl TokenExtensions for Token {
             } else {
                 return Err(ThrushCompilerIssue::Bug(
                     "Byte not caught".into(),
-                    "Unable to get byte for determinate next byte to parse at scape sequence parser.".into(),
+                    "Unable to get byte for determinate next byte to parse at scape sequence parsing.".into(),
                     span,
                     CompilationPosition::Lexer,
                     line!()
@@ -80,6 +57,22 @@ impl TokenExtensions for Token {
         }
 
         Ok(parsed_string)
+    }
+
+    fn get_lexeme(&self) -> &str {
+        &self.lexeme
+    }
+
+    fn get_ascii_lexeme(&self) -> &str {
+        &self.ascii_lexeme
+    }
+
+    fn get_span(&self) -> Span {
+        self.span
+    }
+
+    fn get_type(&self) -> TokenType {
+        self.kind
     }
 
     fn get_lexeme_first_byte(&self) -> u64 {

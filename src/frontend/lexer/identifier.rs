@@ -8,11 +8,7 @@ pub fn lex(lexer: &mut Lexer) -> Result<(), ThrushCompilerIssue> {
         lexer.advance();
     }
 
-    let mut lexeme: String = String::with_capacity(100);
-
-    lexeme.extend(&lexer.code[lexer.start..lexer.current]);
-
-    if let Some(keyword) = KEYWORDS.get(lexeme.as_str()) {
+    if let Some(keyword) = KEYWORDS.get(lexer.lexeme().as_str()) {
         lexer.make(*keyword);
     } else {
         lexer.make(TokenType::Identifier);

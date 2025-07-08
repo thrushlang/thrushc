@@ -34,6 +34,10 @@ pub fn build_type(parser_context: &mut ParserContext<'_>) -> Result<Type, Thrush
                 return self::build_array_type(parser_context, span);
             }
 
+            if tk_kind.is_const() {
+                return self::build_const_type(parser_context);
+            }
+
             match tk_kind.as_type(span)? {
                 ty if ty.is_integer_type() => Ok(ty),
                 ty if ty.is_float_type() => Ok(ty),
@@ -111,6 +115,39 @@ pub fn build_type(parser_context: &mut ParserContext<'_>) -> Result<Type, Thrush
     builded_type
 }
 
+fn build_mut_type(
+    parser_context: &mut ParserContext<'_>,
+    span: Span,
+) -> Result<Type, ThrushCompilerIssue> {
+    let inner_type: Type = self::build_type(parser_context)?;
+
+    if inner_type.is_mut_type() {
+        return Err(ThrushCompilerIssue::Error(
+            String::from("Syntax error"),
+            "Nested mutable type 'mut mut T' ins't allowed.".into(),
+            None,
+            span,
+        ));
+    }
+
+    if inner_type.is_ptr_type() {
+        return Err(ThrushCompilerIssue::Error(
+            String::from("Syntax error"),
+            "Mutable pointer type 'mut ptr<T>', or 'mut ptr' isn't allowed.".into(),
+            None,
+            span,
+        ));
+    }
+
+    Ok(Type::Mut(inner_type.into()))
+}
+
+fn build_const_type(parser_context: &mut ParserContext<'_>) -> Result<Type, ThrushCompilerIssue> {
+    let inner_type: Type = self::build_type(parser_context)?;
+
+    Ok(Type::Const(inner_type.into()))
+}
+
 fn build_array_type(
     parser_context: &mut ParserContext<'_>,
     span: Span,
@@ -177,33 +214,6 @@ fn build_array_type(
     )?;
 
     Ok(Type::Array(array_type.into()))
-}
-
-fn build_mut_type(
-    parser_context: &mut ParserContext<'_>,
-    span: Span,
-) -> Result<Type, ThrushCompilerIssue> {
-    let inner_type: Type = self::build_type(parser_context)?;
-
-    if inner_type.is_mut_type() {
-        return Err(ThrushCompilerIssue::Error(
-            String::from("Syntax error"),
-            "Nested mutable type 'mut mut T' ins't type.".into(),
-            None,
-            span,
-        ));
-    }
-
-    if inner_type.is_ptr_type() {
-        return Err(ThrushCompilerIssue::Error(
-            String::from("Syntax error"),
-            "Mutable pointer type 'mut ptr<T>', or 'mut ptr' isn't type.".into(),
-            None,
-            span,
-        ));
-    }
-
-    Ok(Type::Mut(inner_type.into()))
 }
 
 fn build_recursive_type(

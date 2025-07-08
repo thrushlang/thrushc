@@ -2,15 +2,13 @@ use std::fmt::Display;
 
 use inkwell::{
     AddressSpace,
-    context::Context,
     types::BasicTypeEnum,
     values::{BasicValueEnum, FloatValue, IntValue, PointerValue},
 };
 
 use crate::{
-    backend::llvm::compiler::{context::LLVMCodeGenContext, typegen},
+    backend::llvm::compiler::context::LLVMCodeGenContext,
     core::console::logging::{self, LoggingType},
-    frontend::typesystem::types::Type,
 };
 
 pub fn ptr_cast<'ctx>(
@@ -29,27 +27,20 @@ pub fn ptr_cast<'ctx>(
 }
 
 pub fn numeric_cast<'ctx>(
-    context: &LLVMCodeGenContext<'_, 'ctx>,
     value: BasicValueEnum<'ctx>,
-    cast: &Type,
+    cast: BasicTypeEnum<'ctx>,
     is_signed: bool,
 ) -> BasicValueEnum<'ctx> {
-    let llvm_context: &Context = context.get_llvm_context();
-
-    let llvm_type: BasicTypeEnum = typegen::generate_type(llvm_context, cast);
-
-    if value.is_int_value() && cast.is_integer_type() {
+    if value.is_int_value() && cast.is_int_type() {
         let integer: IntValue = value.into_int_value();
 
-        return integer
-            .const_cast(llvm_type.into_int_type(), is_signed)
-            .into();
+        return integer.const_cast(cast.into_int_type(), is_signed).into();
     }
 
     if value.is_float_value() && cast.is_float_type() {
         let float: FloatValue = value.into_float_value();
 
-        return float.const_cast(llvm_type.into_float_type()).into();
+        return float.const_cast(cast.into_float_type()).into();
     }
 
     value

@@ -83,7 +83,6 @@ pub enum TokenType {
     Fixed,
     Import,
     SizeOf,
-    Halloc,
     Mut,
     Type,
     Enum,
@@ -108,6 +107,7 @@ pub enum TokenType {
 
     // -- Builtins --
     AlignOf,
+    Halloc,
     MemCpy,
     MemMove,
     MemSet,
@@ -139,7 +139,7 @@ pub enum TokenType {
 
 impl TokenType {
     #[must_use]
-    pub const fn is_logical_operator(&self) -> bool {
+    pub fn is_logical_operator(&self) -> bool {
         matches!(
             self,
             TokenType::BangEq
@@ -152,7 +152,7 @@ impl TokenType {
     }
 
     #[must_use]
-    pub const fn is_sync_declaration(&self) -> bool {
+    pub fn is_sync_declaration(&self) -> bool {
         matches!(
             self,
             TokenType::Import
@@ -165,7 +165,7 @@ impl TokenType {
     }
 
     #[must_use]
-    pub const fn is_sync_statement(&self) -> bool {
+    pub fn is_sync_statement(&self) -> bool {
         matches!(
             self,
             TokenType::LBrace
@@ -182,64 +182,70 @@ impl TokenType {
     }
 
     #[must_use]
-    pub const fn is_sync_expression(&self) -> bool {
+    pub fn is_sync_expression(&self) -> bool {
         matches!(
             self,
             TokenType::SemiColon | TokenType::LBrace | TokenType::RBrace
         )
     }
 
-    pub const fn is_logical_gate(&self) -> bool {
+    #[must_use]
+    pub fn is_logical_gate(&self) -> bool {
         matches!(self, TokenType::And | TokenType::Or)
     }
 
     #[must_use]
-    pub const fn is_minus_minus_operator(&self) -> bool {
+    pub fn is_minus_minus_operator(&self) -> bool {
         matches!(self, TokenType::MinusMinus)
     }
 
     #[must_use]
-    pub const fn is_plus_plus_operator(&self) -> bool {
+    pub fn is_plus_plus_operator(&self) -> bool {
         matches!(self, TokenType::PlusPlus)
     }
 
     #[must_use]
-    pub const fn is_address(&self) -> bool {
+    pub fn is_address(&self) -> bool {
         matches!(self, TokenType::Addr)
     }
 
     #[must_use]
-    pub const fn is_mut(&self) -> bool {
+    pub fn is_mut(&self) -> bool {
         matches!(self, TokenType::Mut)
     }
 
     #[must_use]
-    pub const fn is_void(&self) -> bool {
+    pub fn is_void(&self) -> bool {
         matches!(self, TokenType::Void)
     }
 
     #[must_use]
-    pub const fn is_bool(&self) -> bool {
+    pub fn is_bool(&self) -> bool {
         matches!(self, TokenType::Bool)
     }
 
-    pub const fn is_str(&self) -> bool {
+    pub fn is_str(&self) -> bool {
         matches!(self, TokenType::Str)
     }
 
     #[must_use]
-    pub const fn is_array(&self) -> bool {
+    pub fn is_array(&self) -> bool {
         matches!(self, TokenType::Array)
     }
 
     #[must_use]
-    pub const fn is_ptr(&self) -> bool {
+    pub fn is_ptr(&self) -> bool {
         matches!(self, TokenType::Ptr)
     }
 
     #[must_use]
-    pub const fn is_float(&self) -> bool {
+    pub fn is_float(&self) -> bool {
         matches!(self, TokenType::F32 | TokenType::F64)
+    }
+
+    #[must_use]
+    pub fn is_const(&self) -> bool {
+        matches!(self, TokenType::Const)
     }
 
     #[must_use]
@@ -269,6 +275,7 @@ impl TokenType {
             || self.is_void()
             || self.is_mut()
             || self.is_address()
+            || self.is_const()
     }
 
     #[must_use]

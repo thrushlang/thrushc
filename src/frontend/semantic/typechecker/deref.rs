@@ -15,10 +15,11 @@ pub fn validate_dereference<'type_checker>(
             let value_type: &Type = value.get_value_type()?;
             let value_span: Span = value.get_span();
 
-            if !value_type.is_ptr_type() && !value_type.is_mut_type() {
+            if !value_type.is_ptr_type() && !value_type.is_mut_type() && !value_type.is_const_type()
+            {
                 typechecker.add_error(ThrushCompilerIssue::Error(
                     "Type error".into(),
-                    "Expected raw typed pointer 'ptr[T]', raw pointer 'ptr', or high-level pointer 'mut T' type for dereference."
+                    "Expected raw typed pointer 'ptr[T]', raw pointer 'ptr', constant 'const T', or high-level pointer 'mut T' type for dereference."
                         .into(),
                     None,
                     value_span,

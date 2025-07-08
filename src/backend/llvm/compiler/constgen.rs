@@ -40,7 +40,7 @@ pub fn compile<'ctx>(
             kind,
             signed,
             ..
-        } => self::compile_float(context, kind, *value, *signed),
+        } => self::compile_float(context, kind, *value, *signed, cast),
 
         // Boolean true/false cases
         Ast::Boolean { value, .. } => self::compile_boolean(context, *value),
@@ -141,12 +141,8 @@ pub fn cast<'ctx>(
             if value_type.llvm_is_same_bit_size(context, cast_ty) {
                 constants::bitcast::const_numeric_bitcast_cast(context, value, cast)
             } else {
-                constants::cast::numeric_cast(
-                    context,
-                    value,
-                    cast,
-                    value_type.is_signed_integer_type(),
-                )
+                let cast: BasicTypeEnum = typegen::generate_subtype_with_all(llvm_context, cast_ty);
+                constants::cast::numeric_cast(value, cast, value_type.is_signed_integer_type())
             }
         }
 
@@ -278,7 +274,9 @@ fn compile_integer<'ctx>(
     let int: BasicValueEnum =
         intgen::integer(context.get_llvm_context(), kind, value, signed).into();
 
-    constants::cast::numeric_cast(context, int, cast, signed)
+    let cast: BasicTypeEnum = typegen::generate_subtype_with_all(context.get_llvm_context(), cast);
+
+    constants::cast::numeric_cast(int, cast, signed)
 }
 
 fn compile_float<'ctx>(
@@ -286,6 +284,7 @@ fn compile_float<'ctx>(
     kind: &Type,
     value: f64,
     signed: bool,
+    cast: &Type,
 ) -> BasicValueEnum<'ctx> {
     let float: BasicValueEnum = floatgen::float(
         context.get_llvm_builder(),
@@ -296,7 +295,9 @@ fn compile_float<'ctx>(
     )
     .into();
 
-    constants::cast::numeric_cast(context, float, kind, signed)
+    let cast: BasicTypeEnum = typegen::generate_subtype_with_all(context.get_llvm_context(), cast);
+
+    constants::cast::numeric_cast(float, cast, false)
 }
 
 fn compile_boolean<'ctx>(
