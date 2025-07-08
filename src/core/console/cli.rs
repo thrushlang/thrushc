@@ -5,10 +5,11 @@ use std::process::Command;
 
 use crate::core::{
     compiler::{
-        backends::{
-            JITConfiguration, LLVMBackend, LLVMModificatorPasses, LinkingCompilersConfiguration,
-        },
+        backends::llvm::LLVMBackend,
+        jit::JITConfiguration,
+        linking::LinkingCompilersConfiguration,
         options::{CompilerOptions, Emitable, ThrushOptimization},
+        passes::LLVMModificatorPasses,
     },
     console::logging::{self, LoggingType},
 };
@@ -419,6 +420,31 @@ impl CLI {
                     .set_debug_gcc_commands(true);
             }
 
+            "--clean-tokens" => {
+                self.advance();
+                self.options.set_clean_tokens();
+            }
+
+            "--clean-assembler" => {
+                self.advance();
+                self.options.set_clean_assembler();
+            }
+
+            "--clean-llvm-ir" => {
+                self.advance();
+                self.options.set_clean_llvm_ir();
+            }
+
+            "--clean-llvm-bitcode" => {
+                self.advance();
+                self.options.set_clean_llvm_bitcode();
+            }
+
+            "--clean-objects" => {
+                self.advance();
+                self.options.set_clean_object();
+            }
+
             possible_file_path if self.is_thrush_file(possible_file_path) => {
                 self.advance();
                 self.handle_thrush_file(possible_file_path);
@@ -432,7 +458,7 @@ impl CLI {
     }
 
     fn validate_llvm_required(&self, arg: &str) {
-        if !self.options.use_llvm() {
+        if !self.options.get_use_llvm() {
             self.report_error(&format!(
                 "Can't use '{}' without '-llvm' flag previously.",
                 arg
@@ -475,7 +501,7 @@ impl CLI {
     }
 
     fn validate_emit_llvm_required(&self, arg: &str) {
-        if !self.options.use_llvm() {
+        if !self.options.get_use_llvm() {
             let llvm_emit_options: [&'static str; 7] = [
                 "raw-llvm-ir",
                 "raw-llvm-bc",
@@ -500,7 +526,7 @@ impl CLI {
             .options
             .get_llvm_backend_options()
             .get_linking_compilers_configuration()
-            .use_gcc()
+            .get_use_gcc()
         {
             self.report_error("Can't use '-clang' with -gcc activated.");
         }
@@ -511,7 +537,7 @@ impl CLI {
             .options
             .get_llvm_backend_options()
             .get_linking_compilers_configuration()
-            .use_clang()
+            .get_use_clang()
         {
             self.report_error("Can't use '-gcc' with -clang activated.");
         }
@@ -525,6 +551,7 @@ impl CLI {
         }
 
         let exists: bool = path.exists() || self.probe_as_command(path);
+
         self.validation_cache.insert(path_str, exists);
 
         exists
@@ -630,7 +657,7 @@ impl CLI {
     }
 
     fn handle_unknown_argument(&mut self, arg: &str) {
-        if self.position.at_any_other_compiler() && self.options.use_llvm() {
+        if self.position.at_any_other_compiler() && self.options.get_use_llvm() {
             self.options
                 .get_mut_llvm_backend_options()
                 .get_mut_linking_compilers_configuration()
@@ -691,7 +718,7 @@ impl CLI {
                 "\n\n{} {} {}\n\n",
                 "Usage:".bold(),
                 "thrushc".custom_color((141, 141, 142)).bold(),
-                "[--flags] [files]"
+                "[--flags] [files..]"
             ),
         );
 
@@ -973,7 +1000,57 @@ impl CLI {
                 "{} {} {}\n",
                 "•".bold(),
                 "--debug-gcc-commands".custom_color((141, 141, 142)).bold(),
-                "Displays the generated command for GCC."
+                "Displays the generated command for GCC.\n"
+            ),
+        );
+
+        logging::write(
+            logging::OutputIn::Stderr,
+            &format!(
+                "{} {} {}\n",
+                "•".bold(),
+                "--clean-tokens".custom_color((141, 141, 142)).bold(),
+                "Clean the compiler folder that holds the lexical analysis tokens."
+            ),
+        );
+
+        logging::write(
+            logging::OutputIn::Stderr,
+            &format!(
+                "{} {} {}\n",
+                "•".bold(),
+                "--clean-assembler".custom_color((141, 141, 142)).bold(),
+                "Clean the compiler folder containing emitted assembler."
+            ),
+        );
+
+        logging::write(
+            logging::OutputIn::Stderr,
+            &format!(
+                "{} {} {}\n",
+                "•".bold(),
+                "--clean-llvm-ir".custom_color((141, 141, 142)).bold(),
+                "Clean the compiler folder containing the emitted LLVM IR."
+            ),
+        );
+
+        logging::write(
+            logging::OutputIn::Stderr,
+            &format!(
+                "{} {} {}\n",
+                "•".bold(),
+                "--clean-llvm-bitcode".custom_color((141, 141, 142)).bold(),
+                "Clean the compiler folder containing emitted LLVM Bitcode."
+            ),
+        );
+
+        logging::write(
+            logging::OutputIn::Stderr,
+            &format!(
+                "{} {} {}\n",
+                "•".bold(),
+                "--clean-objects".custom_color((141, 141, 142)).bold(),
+                "Clean the compiler folder containing emitted object files."
             ),
         );
 

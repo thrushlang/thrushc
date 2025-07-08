@@ -2,7 +2,7 @@ use inkwell::{
     OptimizationLevel, module::Module, passes::PassBuilderOptions, targets::TargetMachine,
 };
 
-use crate::core::{compiler::backends::LLVMModificatorPasses, console::logging};
+use crate::core::{compiler::passes::LLVMModificatorPasses, console::logging};
 
 pub struct LLVMOptimizer<'a, 'ctx> {
     module: &'a Module<'ctx>,

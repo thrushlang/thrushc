@@ -11,10 +11,11 @@ use crate::{
         diagnostic::diagnostician::Diagnostician,
         errors::{lexer::ThrushLexerPanic, standard::ThrushCompilerIssue},
     },
-    frontend::lexer::tokentype::TokenType,
+    frontend::{lexer::tokentype::TokenType, types::lexer::types::Tokens},
 };
 
 pub mod keywords;
+pub mod printer;
 pub mod span;
 pub mod token;
 pub mod tokentype;
@@ -40,7 +41,7 @@ pub struct Lexer {
 }
 
 impl Lexer {
-    pub fn lex(raw_code: &str, file: &CompilerFile) -> Result<Vec<Token>, ThrushLexerPanic> {
+    pub fn lex(raw_code: &str, file: &CompilerFile) -> Result<Tokens, ThrushLexerPanic> {
         let code: Vec<char> = raw_code.chars().collect();
 
         Self {
@@ -56,7 +57,7 @@ impl Lexer {
         .start()
     }
 
-    fn start(&mut self) -> Result<Vec<Token>, ThrushLexerPanic> {
+    fn start(&mut self) -> Result<Tokens, ThrushLexerPanic> {
         if self.code.len() > MAXIMUM_BYTES_TO_LEX {
             return Err(ThrushLexerPanic::TooBigFile(
                 self.diagnostician.get_file_path(),

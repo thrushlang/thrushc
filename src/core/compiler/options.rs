@@ -1,8 +1,10 @@
 #![allow(non_camel_case_types, clippy::upper_case_acronyms)]
 
 use {
-    super::backends::LLVMBackend,
-    crate::frontend::{lexer::token::Token, types::ast::Ast},
+    crate::{
+        core::compiler::backends::llvm::LLVMBackend,
+        frontend::types::{ast::Ast, lexer::types::Tokens},
+    },
     inkwell::OptimizationLevel,
     std::path::PathBuf,
 };
@@ -13,6 +15,12 @@ pub struct CompilerOptions {
     llvm_backend: LLVMBackend,
     files: Vec<CompilerFile>,
     build_dir: PathBuf,
+
+    clean_tokens: bool,
+    clean_assembler: bool,
+    clean_object: bool,
+    clean_llvm_ir: bool,
+    clean_llvm_bitcode: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -36,7 +44,7 @@ pub enum Emitable {
 
 #[derive(Debug)]
 pub enum Emited<'emited> {
-    Tokens(&'emited [Token]),
+    Tokens(&'emited Tokens),
     Ast(&'emited [Ast<'emited>]),
 }
 
@@ -80,10 +88,58 @@ impl CompilerOptions {
             llvm_backend: LLVMBackend::new(),
             files: Vec::with_capacity(100),
             build_dir: PathBuf::new(),
+
+            clean_tokens: false,
+            clean_assembler: false,
+            clean_object: false,
+            clean_llvm_ir: false,
+            clean_llvm_bitcode: false,
         }
     }
+}
 
-    pub fn use_llvm(&self) -> bool {
+impl CompilerOptions {
+    pub fn new_file(&mut self, name: String, path: PathBuf) {
+        if self.files.iter().any(|file| file.path == path) {
+            return;
+        }
+
+        self.files.push(CompilerFile::new(name, path));
+    }
+}
+
+impl CompilerOptions {
+    pub fn set_use_llvm_backend(&mut self, use_llvm_backend: bool) {
+        self.use_llvm_backend = use_llvm_backend;
+    }
+
+    pub fn set_build_dir(&mut self, build_dir: PathBuf) {
+        self.build_dir = build_dir;
+    }
+
+    pub fn set_clean_tokens(&mut self) {
+        self.clean_tokens = true;
+    }
+
+    pub fn set_clean_assembler(&mut self) {
+        self.clean_assembler = true;
+    }
+
+    pub fn set_clean_object(&mut self) {
+        self.clean_object = true;
+    }
+
+    pub fn set_clean_llvm_ir(&mut self) {
+        self.clean_llvm_ir = true;
+    }
+
+    pub fn set_clean_llvm_bitcode(&mut self) {
+        self.clean_llvm_bitcode = true;
+    }
+}
+
+impl CompilerOptions {
+    pub fn get_use_llvm(&self) -> bool {
         self.use_llvm_backend
     }
 
@@ -103,20 +159,24 @@ impl CompilerOptions {
         &self.build_dir
     }
 
-    pub fn new_file(&mut self, name: String, path: PathBuf) {
-        if self.files.iter().any(|file| file.path == path) {
-            return;
-        }
-
-        self.files.push(CompilerFile::new(name, path));
+    pub fn get_clean_tokens(&self) -> bool {
+        self.clean_tokens
     }
 
-    pub fn set_use_llvm_backend(&mut self, use_llvm_backend: bool) {
-        self.use_llvm_backend = use_llvm_backend;
+    pub fn get_clean_assembler(&self) -> bool {
+        self.clean_assembler
     }
 
-    pub fn set_build_dir(&mut self, build_dir: PathBuf) {
-        self.build_dir = build_dir;
+    pub fn get_clean_object(&self) -> bool {
+        self.clean_object
+    }
+
+    pub fn get_clean_llvm_ir(&self) -> bool {
+        self.clean_llvm_ir
+    }
+
+    pub fn get_clean_llvm_bitcode(&self) -> bool {
+        self.clean_llvm_bitcode
     }
 
     pub fn is_build_dir_setted(&self) -> bool {

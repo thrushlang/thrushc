@@ -1,4 +1,9 @@
 pub mod backends;
 pub mod constants;
+pub mod emitters;
+pub mod jit;
+pub mod linking;
 pub mod options;
+pub mod passes;
+pub mod reader;
 pub mod thrushc;

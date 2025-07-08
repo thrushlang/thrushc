@@ -7,7 +7,7 @@ use std::{
 use inkwell::targets::TargetTriple;
 
 use crate::core::{
-    compiler::backends::LinkingCompilersConfiguration,
+    compiler::linking::LinkingCompilersConfiguration,
     console::logging::{self, LoggingType},
 };
 
@@ -53,7 +53,7 @@ impl<'clang> Clang<'clang> {
 
         #[cfg(target_os = "linux")]
         {
-            if self.config.use_clang() {
+            if self.config.get_use_clang() {
                 if let Some(custom_clang) = self.config.get_custom_clang() {
                     if self.handle_command(&mut self.build_clang_command(custom_clang)) {
                         return Ok(start_time.elapsed());

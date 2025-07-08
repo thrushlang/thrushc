@@ -15,6 +15,7 @@ pub enum OutputIn {
 pub enum LoggingType {
     BackendPanic,
     BackendBug,
+    FrontEndPanic,
     Error,
     Warning,
     Panic,
@@ -27,6 +28,7 @@ impl LoggingType {
         match self {
             LoggingType::BackendPanic => "BACKEND PANIC".bright_red().bold(),
             LoggingType::BackendBug => "BACKEND BUG".bold().bright_red().underline(),
+            LoggingType::FrontEndPanic => "FRONTEND PANIC".bright_red().bold(),
             LoggingType::Error => "ERROR".bright_red().bold(),
             LoggingType::Warning => "WARN".yellow().bold(),
             LoggingType::Panic => "PANIC".bold().bright_red().underline(),
@@ -39,6 +41,7 @@ impl LoggingType {
         match self {
             LoggingType::BackendPanic => msg.bright_red().bold(),
             LoggingType::BackendBug => msg.bold().bright_red().underline(),
+            LoggingType::FrontEndPanic => msg.bright_red().bold(),
             LoggingType::Error => msg.bright_red().bold(),
             LoggingType::Warning => msg.yellow().bold(),
             LoggingType::Panic => msg.bright_red().underline(),
@@ -73,6 +76,10 @@ impl LoggingType {
 
     pub fn is_backend_bug(&self) -> bool {
         matches!(self, LoggingType::BackendBug)
+    }
+
+    pub fn is_frontend_panic(&self) -> bool {
+        matches!(self, LoggingType::FrontEndPanic)
     }
 }
 
@@ -165,6 +172,14 @@ pub fn log(ltype: LoggingType, msg: &str) {
             .unwrap_or_default();
 
         return;
+    }
+
+    if ltype.is_frontend_panic() {
+        io::stderr()
+            .write_all(format!("\n{} {}", ltype.to_styled(), msg).as_bytes())
+            .unwrap_or_default();
+
+        process::exit(1);
     }
 
     if ltype.is_warn() || ltype.is_info() {

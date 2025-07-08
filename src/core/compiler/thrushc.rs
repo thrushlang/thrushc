@@ -1,6 +1,5 @@
 use std::{
-    fs::{File, write},
-    io::{BufReader, Read},
+    fs::write,
     path::{Path, PathBuf},
     time::{Duration, Instant},
 };
@@ -22,14 +21,19 @@ use crate::{
     },
     core::{
         compiler::{
-            backends::{LLVMBackend, LinkingCompilersConfiguration},
+            backends::llvm::LLVMBackend,
+            emitters,
+            linking::LinkingCompilersConfiguration,
             options::{CompilerFile, CompilerOptions, Emitable, Emited, ThrushOptimization},
+            reader,
         },
         console::logging::{self, LoggingType},
         diagnostic::diagnostician::Diagnostician,
+        utils::rand,
     },
     frontend::{
-        lexer::{Lexer, token::Token},
+        self,
+        lexer::{self, Lexer, token::Token},
         parser::{Parser, ParserContext},
         semantic::SemanticAnalyzer,
         types::ast::Ast,
@@ -58,7 +62,7 @@ impl<'thrushc> TheThrushCompiler<'thrushc> {
     pub fn compile(&mut self) -> (u128, u128) {
         let mut interrumped: bool = false;
 
-        if self.options.use_llvm() {
+        if self.options.get_use_llvm() {
             Target::initialize_all(&InitializationConfig::default());
         } else {
             logging::write(
@@ -78,7 +82,7 @@ impl<'thrushc> TheThrushCompiler<'thrushc> {
 
         let llvm_backend: &LLVMBackend = self.options.get_llvm_backend_options();
 
-        if interrumped || llvm_backend.was_emited() || self.compiled_files.is_empty() {
+        if interrumped || llvm_backend.get_was_emited() || self.compiled_files.is_empty() {
             return (self.thrushc_time.as_millis(), self.linking_time.as_millis());
         }
 
@@ -94,7 +98,7 @@ impl<'thrushc> TheThrushCompiler<'thrushc> {
         let linking_compiler_configuration: &LinkingCompilersConfiguration =
             llvm_backend.get_linking_compilers_configuration();
 
-        if linking_compiler_configuration.use_clang() {
+        if linking_compiler_configuration.get_use_clang() {
             match Clang::new(
                 self.get_compiled_files(),
                 linking_compiler_configuration,
@@ -125,7 +129,7 @@ impl<'thrushc> TheThrushCompiler<'thrushc> {
                     );
                 }
             }
-        } else if linking_compiler_configuration.use_gcc() {
+        } else if linking_compiler_configuration.get_use_gcc() {
             match GCC::new(self.get_compiled_files(), linking_compiler_configuration).link() {
                 Ok(gcc_time) => {
                     self.linking_time += gcc_time;
@@ -182,7 +186,7 @@ impl<'thrushc> TheThrushCompiler<'thrushc> {
             ),
         );
 
-        let source_code: String = self.get_source_code(&file.path);
+        let source_code: String = reader::get_file_source_code(&file.path);
 
         let llvm_backend: &LLVMBackend = self.options.get_llvm_backend_options();
         let build_dir: &PathBuf = self.options.get_build_dir();
@@ -190,7 +194,7 @@ impl<'thrushc> TheThrushCompiler<'thrushc> {
         let tokens: Vec<Token> = match Lexer::lex(&source_code, file) {
             Ok(tokens) => tokens,
             Err(error) => {
-                logging::log(logging::LoggingType::Panic, &error.display());
+                logging::log(logging::LoggingType::FrontEndPanic, &error.display());
                 unreachable!()
             }
         };
@@ -232,8 +236,8 @@ impl<'thrushc> TheThrushCompiler<'thrushc> {
 
         let target: Target = Target::from_triple(target_triple).unwrap_or_else(|_| {
             logging::log(
-                logging::LoggingType::Panic,
-                "Cannot generate a target from triple target.",
+                logging::LoggingType::BackendPanic,
+                "Cannot generate a target from LLVM target triple.",
             );
 
             unreachable!()
@@ -250,7 +254,7 @@ impl<'thrushc> TheThrushCompiler<'thrushc> {
             )
             .unwrap_or_else(|| {
                 logging::log(
-                    logging::LoggingType::Panic,
+                    logging::LoggingType::FrontEndPanic,
                     "Cannot generate a target machine from target.",
                 );
 
@@ -308,20 +312,10 @@ impl<'thrushc> TheThrushCompiler<'thrushc> {
             return self.finish_archive_compilation(archive_time, file);
         }
 
-        let object_file_path: PathBuf = build_dir.join(format!("{}.o", &file.name));
+        let compiled_file: PathBuf =
+            self.finish_obj_compilation(&llvm_module, &target_machine, build_dir, &file.name);
 
-        target_machine
-            .write_to_file(&llvm_module, FileType::Object, &object_file_path)
-            .unwrap_or_else(|_| {
-                logging::log(
-                    logging::LoggingType::Panic,
-                    &format!("'{}' cannot be emitted.", object_file_path.display()),
-                );
-
-                unreachable!()
-            });
-
-        self.add_compiled_file(object_file_path);
+        self.add_compiled_file(compiled_file);
 
         logging::write(
             logging::OutputIn::Stdout,
@@ -399,6 +393,33 @@ impl<'thrushc> TheThrushCompiler<'thrushc> {
         Ok(())
     }
 
+    fn finish_obj_compilation(
+        &mut self,
+        llvm_module: &Module,
+        target_machine: &TargetMachine,
+        build_dir: &Path,
+        file_name: &str,
+    ) -> PathBuf {
+        let obj_file_path: PathBuf = build_dir.join(format!(
+            "{}_{}.o",
+            rand::generate_random_string(),
+            file_name
+        ));
+
+        target_machine
+            .write_to_file(llvm_module, FileType::Object, &obj_file_path)
+            .unwrap_or_else(|_| {
+                logging::log(
+                    logging::LoggingType::FrontEndPanic,
+                    &format!("'{}' cannot be emitted.", obj_file_path.display()),
+                );
+
+                unreachable!()
+            });
+
+        obj_file_path
+    }
+
     fn emit_after_frontend(
         &self,
         llvm_backend: &LLVMBackend,
@@ -406,12 +427,13 @@ impl<'thrushc> TheThrushCompiler<'thrushc> {
         file: &CompilerFile,
         emited: Emited<'thrushc>,
     ) -> bool {
+        emitters::cleaner::auto_clean(self.options);
+
         if llvm_backend.contains_emitable(Emitable::Tokens) {
             if let Emited::Tokens(tokens) = emited {
-                let _ = write(
-                    build_dir.join(format!("{}.tokens", file.name)),
-                    format!("{:#?}", tokens),
-                );
+                if lexer::printer::print_to_file(tokens, build_dir, &file.name).is_err() {
+                    return false;
+                }
 
                 return true;
             }
@@ -439,52 +461,29 @@ impl<'thrushc> TheThrushCompiler<'thrushc> {
         build_dir: &Path,
         file: &CompilerFile,
     ) -> bool {
+        emitters::cleaner::auto_clean(self.options);
+
         if llvm_backend.contains_emitable(Emitable::RawLLVMIR) {
-            let llvm_ir_path: PathBuf = build_dir.join(format!("{}.ll", &file.name));
-
-            llvm_module
-                .print_to_file(&llvm_ir_path)
-                .unwrap_or_else(|_| {
-                    logging::log(
-                        logging::LoggingType::Panic,
-                        &format!("'{}' cannot be emitted.", llvm_ir_path.display()),
-                    );
-                    unreachable!()
-                });
-
-            return true;
+            return emitters::llvmir::emit_llvm_ir(llvm_module, build_dir, &file.name, true);
         }
 
         if llvm_backend.contains_emitable(Emitable::RawLLVMBitcode) {
-            let llvm_ir_path: PathBuf = build_dir.join(format!("{}.bc", &file.name));
-
-            if !llvm_module.write_bitcode_to_path(&llvm_ir_path) {
-                logging::log(
-                    logging::LoggingType::Panic,
-                    &format!("'{}' cannot be emitted.", llvm_ir_path.display()),
-                );
-                unreachable!()
-            }
-
-            return true;
+            return emitters::llvmbitcode::emit_llvm_bitcode(
+                llvm_module,
+                build_dir,
+                &file.name,
+                true,
+            );
         }
 
         if llvm_backend.contains_emitable(Emitable::RawAssembly) {
-            let llvm_ir_path: PathBuf = build_dir.join(format!("{}.s", &file.name));
-
-            if target_machine
-                .write_to_file(llvm_module, FileType::Assembly, &llvm_ir_path)
-                .is_err()
-            {
-                logging::log(
-                    logging::LoggingType::Panic,
-                    &format!("'{}' cannot be emitted.", llvm_ir_path.display()),
-                );
-
-                unreachable!()
-            }
-
-            return true;
+            return emitters::assembler::emit_llvm_assembler(
+                llvm_module,
+                target_machine,
+                build_dir,
+                &file.name,
+                true,
+            );
         }
 
         false
@@ -498,72 +497,39 @@ impl<'thrushc> TheThrushCompiler<'thrushc> {
         build_dir: &Path,
         file: &CompilerFile,
     ) -> bool {
+        emitters::cleaner::auto_clean(self.options);
+
         if llvm_backend.contains_emitable(Emitable::LLVMBitcode) {
-            let bitcode_path: PathBuf = build_dir.join(format!("{}.bc", &file.name));
-
-            if !llvm_module.write_bitcode_to_path(&bitcode_path) {
-                logging::log(
-                    logging::LoggingType::Panic,
-                    &format!("'{}' cannot be emitted.", bitcode_path.display()),
-                );
-
-                unreachable!()
-            }
-
-            return true;
+            return emitters::llvmbitcode::emit_llvm_bitcode(
+                llvm_module,
+                build_dir,
+                &file.name,
+                false,
+            );
         }
 
         if llvm_backend.contains_emitable(Emitable::LLVMIR) {
-            let llvm_ir_path: PathBuf = build_dir.join(format!("{}.ll", &file.name));
-
-            llvm_module
-                .print_to_file(&llvm_ir_path)
-                .unwrap_or_else(|_| {
-                    logging::log(
-                        logging::LoggingType::Panic,
-                        &format!("'{}' cannot be emitted.", llvm_ir_path.display()),
-                    );
-
-                    unreachable!()
-                });
-
-            return true;
+            return emitters::llvmir::emit_llvm_ir(llvm_module, build_dir, &file.name, false);
         }
 
         if llvm_backend.contains_emitable(Emitable::Assembly) {
-            let object_file_path: PathBuf = build_dir.join(format!("{}.s", &file.name));
-
-            if target_machine
-                .write_to_file(llvm_module, FileType::Assembly, &object_file_path)
-                .is_err()
-            {
-                logging::log(
-                    logging::LoggingType::Panic,
-                    &format!("'{}' cannot be emitted.", object_file_path.display()),
-                );
-
-                unreachable!()
-            }
-
-            return true;
+            return emitters::assembler::emit_llvm_assembler(
+                llvm_module,
+                target_machine,
+                build_dir,
+                &file.name,
+                false,
+            );
         }
 
         if llvm_backend.contains_emitable(Emitable::Object) {
-            let object_file_path: PathBuf = build_dir.join(format!("{}.o", &file.name));
-
-            if target_machine
-                .write_to_file(llvm_module, FileType::Object, &object_file_path)
-                .is_err()
-            {
-                logging::log(
-                    logging::LoggingType::Panic,
-                    &format!("'{}' cannot be emitted.", object_file_path.display()),
-                );
-
-                unreachable!()
-            }
-
-            return true;
+            return emitters::obj::emit_llvm_object(
+                llvm_module,
+                target_machine,
+                build_dir,
+                &file.name,
+                false,
+            );
         }
 
         false
@@ -575,37 +541,5 @@ impl<'thrushc> TheThrushCompiler<'thrushc> {
 
     fn add_compiled_file(&mut self, path: PathBuf) {
         self.compiled_files.push(path);
-    }
-
-    fn get_source_code(&self, file_path: &Path) -> String {
-        match self.read_file_to_string_buffered(file_path) {
-            Ok(code) => code,
-            _ => {
-                logging::log(
-                    LoggingType::Panic,
-                    &format!("'{}' file can't be read.", file_path.display()),
-                );
-
-                unreachable!()
-            }
-        }
-    }
-
-    fn read_file_to_string_buffered(&self, path: &Path) -> Result<String, ()> {
-        if let Ok(file) = File::open(path) {
-            let mut reader: BufReader<File> = BufReader::new(file);
-
-            let mut buffer: Vec<u8> = Vec::with_capacity(100_000);
-
-            if reader.read_to_end(&mut buffer).is_err() {
-                return Err(());
-            }
-
-            if let Ok(code) = String::from_utf8(buffer) {
-                return Ok(code);
-            }
-        }
-
-        Err(())
     }
 }
