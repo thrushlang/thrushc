@@ -5,14 +5,20 @@ use crate::{
     frontend::{
         lexer::span::Span,
         types::{
-            parser::stmts::{
-                traits::{
-                    EnumExtensions, EnumFieldsExtensions, FoundSymbolEither, FoundSymbolExtension,
-                    StructExtensions,
+            ast::metadata::staticvar::StaticMetadata,
+            parser::{
+                stmts::{
+                    traits::{
+                        EnumExtensions, EnumFieldsExtensions, FoundSymbolEither,
+                        FoundSymbolExtension, StructExtensions,
+                    },
+                    types::{EnumField, EnumFields, StructFields},
                 },
-                types::{EnumField, EnumFields, StructFields},
+                symbols::{
+                    traits::StaticSymbolExtensions,
+                    types::{EnumSymbol, StaticSymbol},
+                },
             },
-            parser::symbols::types::EnumSymbol,
         },
         typesystem::types::Type,
     },
@@ -52,6 +58,16 @@ impl LocalSymbolExtensions for LocalSymbol<'_> {
 
     fn get_type(&self) -> Type {
         self.0.clone()
+    }
+}
+
+impl StaticSymbolExtensions for StaticSymbol<'_> {
+    fn get_type(&self) -> Type {
+        self.0.clone()
+    }
+
+    fn get_metadata(&self) -> StaticMetadata {
+        self.1
     }
 }
 
@@ -125,24 +141,28 @@ impl FoundSymbolExtension for FoundSymbolId<'_> {
         self.2.is_some()
     }
 
-    fn is_constant(&self) -> bool {
+    fn is_static(&self) -> bool {
         self.3.is_some()
     }
 
-    fn is_custom_type(&self) -> bool {
+    fn is_constant(&self) -> bool {
         self.4.is_some()
     }
 
-    fn is_parameter(&self) -> bool {
+    fn is_custom_type(&self) -> bool {
         self.5.is_some()
     }
 
-    fn is_function_asm(&self) -> bool {
+    fn is_parameter(&self) -> bool {
         self.6.is_some()
     }
 
-    fn is_lli(&self) -> bool {
+    fn is_function_asm(&self) -> bool {
         self.7.is_some()
+    }
+
+    fn is_lli(&self) -> bool {
+        self.8.is_some()
     }
 }
 
@@ -186,8 +206,21 @@ impl<'parser> FoundSymbolEither<'parser> for FoundSymbolId<'parser> {
         ))
     }
 
+    fn expected_static(&self, span: Span) -> Result<(&'parser str, usize), ThrushCompilerIssue> {
+        if let Some(static_id) = self.3 {
+            return Ok(static_id);
+        }
+
+        Err(ThrushCompilerIssue::Error(
+            String::from("Expected static reference"),
+            String::from("Expected static but found something else."),
+            None,
+            span,
+        ))
+    }
+
     fn expected_constant(&self, span: Span) -> Result<(&'parser str, usize), ThrushCompilerIssue> {
-        if let Some(const_id) = self.3 {
+        if let Some(const_id) = self.4 {
             return Ok(const_id);
         }
 
@@ -200,7 +233,7 @@ impl<'parser> FoundSymbolEither<'parser> for FoundSymbolId<'parser> {
     }
 
     fn expected_custom_type(&self, span: Span) -> Result<&'parser str, ThrushCompilerIssue> {
-        if let Some(type_id) = self.4 {
+        if let Some(type_id) = self.5 {
             return Ok(type_id);
         }
 
@@ -239,7 +272,7 @@ impl<'parser> FoundSymbolEither<'parser> for FoundSymbolId<'parser> {
     }
 
     fn expected_lli(&self, span: Span) -> Result<(&'parser str, usize), ThrushCompilerIssue> {
-        if let Some((name, scope_idx)) = self.7 {
+        if let Some((name, scope_idx)) = self.8 {
             return Ok((name, scope_idx));
         }
 
@@ -252,7 +285,7 @@ impl<'parser> FoundSymbolEither<'parser> for FoundSymbolId<'parser> {
     }
 
     fn expected_local(&self, span: Span) -> Result<(&'parser str, usize), ThrushCompilerIssue> {
-        if let Some((name, scope_idx)) = self.8 {
+        if let Some((name, scope_idx)) = self.9 {
             return Ok((name, scope_idx));
         }
 

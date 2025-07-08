@@ -33,6 +33,7 @@ pub trait CustomTypeFieldsExtensions {
 
 pub trait FoundSymbolExtension {
     fn is_custom_type(&self) -> bool;
+    fn is_static(&self) -> bool;
     fn is_constant(&self) -> bool;
     fn is_structure(&self) -> bool;
     fn is_enum(&self) -> bool;
@@ -51,6 +52,7 @@ pub trait StructExtensions<'parser> {
 pub trait FoundSymbolEither<'parser> {
     fn expected_custom_type(&self, span: Span) -> Result<&'parser str, ThrushCompilerIssue>;
     fn expected_constant(&self, span: Span) -> Result<(&'parser str, usize), ThrushCompilerIssue>;
+    fn expected_static(&self, span: Span) -> Result<(&'parser str, usize), ThrushCompilerIssue>;
     fn expected_local(&self, span: Span) -> Result<(&'parser str, usize), ThrushCompilerIssue>;
     fn expected_lli(&self, span: Span) -> Result<(&'parser str, usize), ThrushCompilerIssue>;
     fn expected_function(&self, span: Span) -> Result<&'parser str, ThrushCompilerIssue>;

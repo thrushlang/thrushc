@@ -21,6 +21,7 @@ mod lli;
 mod local;
 mod loops;
 mod position;
+mod staticvar;
 mod symbols;
 mod terminator;
 mod validations;
@@ -133,6 +134,10 @@ impl<'type_checker> TypeChecker<'type_checker> {
 
         if let Ast::Enum { .. } = stmt {
             return Ok(());
+        }
+
+        if let Ast::Static { .. } = stmt {
+            return staticvar::validate_static(self, stmt);
         }
 
         if let Ast::Const { .. } = stmt {

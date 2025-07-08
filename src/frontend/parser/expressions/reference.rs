@@ -6,16 +6,21 @@ use crate::{
         types::{
             ast::{
                 Ast,
-                metadata::reference::{ReferenceMetadata, ReferenceType},
+                metadata::{
+                    reference::{ReferenceMetadata, ReferenceType},
+                    staticvar::StaticMetadata,
+                },
             },
             parser::{
                 stmts::traits::{FoundSymbolEither, FoundSymbolExtension, TokenExtensions},
                 symbols::{
                     traits::{
                         ConstantSymbolExtensions, LLISymbolExtensions, LocalSymbolExtensions,
+                        StaticSymbolExtensions,
                     },
                     types::{
                         ConstantSymbol, FoundSymbolId, LLISymbol, LocalSymbol, ParameterSymbol,
+                        StaticSymbol,
                     },
                 },
             },
@@ -30,6 +35,30 @@ pub fn build_reference<'parser>(
     span: Span,
 ) -> Result<Ast<'parser>, ThrushCompilerIssue> {
     let symbol: FoundSymbolId = parser_context.get_symbols().get_symbols_id(name, span)?;
+
+    if symbol.is_static() {
+        let static_var: (&str, usize) = symbol.expected_static(span)?;
+
+        let static_id: &str = static_var.0;
+        let scope_idx: usize = static_var.1;
+
+        let static_var: StaticSymbol = parser_context
+            .get_symbols()
+            .get_static_by_id(static_id, scope_idx, span)?;
+
+        let static_type: Type = static_var.get_type();
+
+        let metadata: StaticMetadata = static_var.get_metadata();
+
+        let is_mutable: bool = metadata.is_mutable();
+
+        return Ok(Ast::Reference {
+            name,
+            kind: static_type,
+            span,
+            metadata: ReferenceMetadata::new(true, is_mutable, ReferenceType::default()),
+        });
+    }
 
     if symbol.is_constant() {
         let constant: (&str, usize) = symbol.expected_constant(span)?;

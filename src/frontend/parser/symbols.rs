@@ -7,8 +7,8 @@ use crate::{
             parser::symbols::types::{
                 AssemblerFunction, AssemblerFunctions, ConstantSymbol, CustomTypeSymbol,
                 CustomTypes, EnumSymbol, Enums, FoundSymbolId, Function, Functions,
-                GlobalConstants, LLISymbol, LLIs, LocalConstants, LocalSymbol, Locals,
-                ParameterSymbol, Parameters, Struct, Structs,
+                GlobalConstants, GlobalStatics, LLISymbol, LLIs, LocalConstants, LocalStatics,
+                LocalSymbol, Locals, ParameterSymbol, Parameters, StaticSymbol, Struct, Structs,
             },
         },
     },
@@ -19,6 +19,9 @@ use ahash::AHashMap as HashMap;
 #[derive(Clone, Debug, Default)]
 pub struct SymbolsTable<'parser> {
     custom_types: CustomTypes<'parser>,
+
+    global_statics: GlobalStatics<'parser>,
+    statics: LocalStatics<'parser>,
 
     global_constants: GlobalConstants<'parser>,
     constants: LocalConstants<'parser>,
@@ -39,12 +42,19 @@ impl<'parser> SymbolsTable<'parser> {
     ) -> Self {
         Self {
             custom_types: HashMap::with_capacity(255),
+
+            global_statics: HashMap::with_capacity(255),
+            statics: Vec::with_capacity(255),
+
             global_constants: HashMap::with_capacity(255),
             constants: Vec::with_capacity(255),
+
             locals: Vec::with_capacity(255),
             llis: Vec::with_capacity(255),
+
             functions,
             asm_functions,
+
             structs: HashMap::with_capacity(255),
             enums: HashMap::with_capacity(255),
             parameters: HashMap::with_capacity(255),
@@ -54,12 +64,14 @@ impl<'parser> SymbolsTable<'parser> {
 
 impl SymbolsTable<'_> {
     pub fn begin_scope(&mut self) {
+        self.statics.push(HashMap::with_capacity(255));
         self.constants.push(HashMap::with_capacity(255));
         self.locals.push(HashMap::with_capacity(255));
         self.llis.push(HashMap::with_capacity(255));
     }
 
     pub fn end_scope(&mut self) {
+        self.statics.pop();
         self.constants.pop();
         self.locals.pop();
         self.llis.pop();
@@ -67,10 +79,6 @@ impl SymbolsTable<'_> {
 
     pub fn end_parameters(&mut self) {
         self.parameters.clear();
-    }
-
-    pub fn clear_all_scopes(&mut self) {
-        self.locals.clear();
     }
 }
 
@@ -154,6 +162,56 @@ impl<'parser> SymbolsTable<'parser> {
             }
 
             last_scope.insert(name, local);
+
+            return Ok(());
+        }
+
+        return Err(ThrushCompilerIssue::Bug(
+            String::from("Last scope not caught"),
+            String::from("The last scope could not be obtained."),
+            span,
+            CompilationPosition::Parser,
+            line!(),
+        ));
+    }
+
+    pub fn new_global_static(
+        &mut self,
+        name: &'parser str,
+        static_: StaticSymbol<'parser>,
+        span: Span,
+    ) -> Result<(), ThrushCompilerIssue> {
+        if self.global_statics.contains_key(name) {
+            return Err(ThrushCompilerIssue::Error(
+                "Static already declared".into(),
+                format!("'{}' static already declared before.", name),
+                None,
+                span,
+            ));
+        }
+
+        self.global_statics.insert(name, static_);
+
+        Ok(())
+    }
+
+    pub fn new_static(
+        &mut self,
+        name: &'parser str,
+        static_: StaticSymbol<'parser>,
+        span: Span,
+    ) -> Result<(), ThrushCompilerIssue> {
+        if let Some(last_scope) = self.statics.last_mut() {
+            if last_scope.contains_key(name) {
+                return Err(ThrushCompilerIssue::Error(
+                    String::from("Static already declared"),
+                    format!("'{}' static already declared before.", name),
+                    None,
+                    span,
+                ));
+            }
+
+            last_scope.insert(name, static_);
 
             return Ok(());
         }
@@ -324,13 +382,87 @@ impl<'parser> SymbolsTable<'parser> {
         name: &'parser str,
         span: Span,
     ) -> Result<FoundSymbolId<'parser>, ThrushCompilerIssue> {
-        if self.custom_types.contains_key(name) {
-            return Ok((None, None, None, None, Some(name), None, None, None, None));
+        if self.structs.contains_key(name) {
+            return Ok((
+                Some(name),
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+            ));
+        }
+
+        if self.functions.contains_key(name) {
+            return Ok((
+                None,
+                Some(name),
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+            ));
+        }
+
+        if self.enums.contains_key(name) {
+            return Ok((
+                None,
+                None,
+                Some(name),
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+            ));
+        }
+
+        for (idx, scope) in self.statics.iter().enumerate().rev() {
+            if scope.contains_key(name) {
+                return Ok((
+                    None,
+                    None,
+                    None,
+                    Some((name, idx)),
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                ));
+            }
+        }
+
+        if self.global_statics.contains_key(name) {
+            return Ok((
+                None,
+                None,
+                None,
+                Some((name, 0)),
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+            ));
         }
 
         for (idx, scope) in self.constants.iter().enumerate().rev() {
             if scope.contains_key(name) {
                 return Ok((
+                    None,
                     None,
                     None,
                     None,
@@ -349,6 +481,7 @@ impl<'parser> SymbolsTable<'parser> {
                 None,
                 None,
                 None,
+                None,
                 Some((name, 0)),
                 None,
                 None,
@@ -358,29 +491,55 @@ impl<'parser> SymbolsTable<'parser> {
             ));
         }
 
-        if self.structs.contains_key(name) {
-            return Ok((Some(name), None, None, None, None, None, None, None, None));
-        }
-
-        if self.enums.contains_key(name) {
-            return Ok((None, None, Some(name), None, None, None, None, None, None));
-        }
-
-        if self.functions.contains_key(name) {
-            return Ok((None, Some(name), None, None, None, None, None, None, None));
+        if self.custom_types.contains_key(name) {
+            return Ok((
+                None,
+                None,
+                None,
+                None,
+                None,
+                Some(name),
+                None,
+                None,
+                None,
+                None,
+            ));
         }
 
         if self.parameters.contains_key(name) {
-            return Ok((None, None, None, None, None, Some(name), None, None, None));
+            return Ok((
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                Some(name),
+                None,
+                None,
+                None,
+            ));
         }
 
         if self.asm_functions.contains_key(name) {
-            return Ok((None, None, None, None, None, None, Some(name), None, None));
+            return Ok((
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                Some(name),
+                None,
+                None,
+            ));
         }
 
         for (idx, scope) in self.llis.iter().enumerate().rev() {
             if scope.contains_key(name) {
                 return Ok((
+                    None,
                     None,
                     None,
                     None,
@@ -397,6 +556,7 @@ impl<'parser> SymbolsTable<'parser> {
         for (idx, scope) in self.locals.iter().enumerate().rev() {
             if scope.contains_key(name) {
                 return Ok((
+                    None,
                     None,
                     None,
                     None,
@@ -547,6 +707,41 @@ impl<'parser> SymbolsTable<'parser> {
     }
 
     #[inline]
+    pub fn get_static_by_id(
+        &self,
+        static_id: &'parser str,
+        scope_idx: usize,
+        span: Span,
+    ) -> Result<StaticSymbol<'parser>, ThrushCompilerIssue> {
+        if scope_idx == 0 {
+            if let Some(static_var) = self.global_statics.get(static_id).cloned() {
+                return Ok(static_var);
+            }
+        }
+
+        if let Some(scope) = self.statics.get(scope_idx) {
+            if let Some(static_var) = scope.get(static_id).cloned() {
+                return Ok(static_var);
+            }
+        } else {
+            return Err(ThrushCompilerIssue::Bug(
+                String::from("Last scope not caught"),
+                String::from("The last scope could not be obtained."),
+                span,
+                CompilationPosition::Parser,
+                line!(),
+            ));
+        }
+
+        Err(ThrushCompilerIssue::Error(
+            "Not found".into(),
+            "Static reference not found.".into(),
+            None,
+            span,
+        ))
+    }
+
+    #[inline]
     pub fn get_const_by_id(
         &self,
         const_id: &'parser str,
@@ -575,7 +770,7 @@ impl<'parser> SymbolsTable<'parser> {
 
         Err(ThrushCompilerIssue::Error(
             "Not found".into(),
-            "Constant not found.".into(),
+            "Constant reference not found.".into(),
             None,
             span,
         ))

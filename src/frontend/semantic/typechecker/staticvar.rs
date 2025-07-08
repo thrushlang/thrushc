@@ -8,12 +8,12 @@ use crate::{
     },
 };
 
-pub fn validate_constant<'type_checker>(
+pub fn validate_static<'type_checker>(
     typechecker: &mut TypeChecker<'type_checker>,
     node: &'type_checker Ast,
 ) -> Result<(), ThrushCompilerIssue> {
     match node {
-        Ast::Const {
+        Ast::Static {
             kind: target_type,
             value,
             span,
@@ -31,14 +31,9 @@ pub fn validate_constant<'type_checker>(
                 ));
             }
 
-            if let Err(error) = bounds::checking::check(
-                target_type,
-                &Type::Const(from_type.clone().into()),
-                Some(value),
-                None,
-                None,
-                span,
-            ) {
+            if let Err(error) =
+                bounds::checking::check(target_type, from_type, Some(value), None, None, span)
+            {
                 typechecker.add_error(error);
             }
 

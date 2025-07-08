@@ -2,6 +2,7 @@ pub mod attributes;
 pub mod builtins;
 pub mod checks;
 pub mod contexts;
+pub mod declaration;
 pub mod declarations;
 pub mod expr;
 pub mod expressions;
@@ -57,25 +58,25 @@ impl<'parser> Parser<'parser> {
     }
 
     fn start(&mut self) -> (ParserContext<'parser>, bool) {
-        let mut parser_ctx: ParserContext = ParserContext::new(self.tokens, self.file);
+        let mut parser_context: ParserContext = ParserContext::new(self.tokens, self.file);
 
-        parser_ctx.forward();
+        parser_context.declare_forward();
 
-        while !parser_ctx.is_eof() {
-            match stmt::declaration(&mut parser_ctx) {
+        while !parser_context.is_eof() {
+            match declaration::decl(&mut parser_context) {
                 Ok(instr) => {
-                    parser_ctx.add_stmt(instr);
+                    parser_context.add_stmt(instr);
                 }
                 Err(error) => {
-                    parser_ctx.add_error(error);
-                    parser_ctx.sync();
+                    parser_context.add_error(error);
+                    parser_context.sync();
                 }
             }
         }
 
-        let throwed_errors: bool = parser_ctx.verify();
+        let throwed_errors: bool = parser_context.verify();
 
-        (parser_ctx, throwed_errors)
+        (parser_context, throwed_errors)
     }
 }
 
@@ -168,62 +169,49 @@ impl<'parser> ParserContext<'parser> {
     pub fn sync(&mut self) {
         match self.control_ctx.get_sync_position() {
             SyncPosition::Declaration => {
-                while !self.is_eof() && !self.peek().kind.is_sync_declaration() {
-                    self.current += 1;
+                loop {
+                    if self.is_eof() {
+                        break;
+                    }
+
+                    if self.peek().kind.is_sync_declaration() {
+                        break;
+                    }
+
+                    let _ = self.only_advance();
                 }
 
                 self.scope = 0;
+                self.symbols.end_parameters();
             }
 
-            SyncPosition::Statement => {
-                if let Some((lbrace_count, rbrace_count, diff)) = self.get_peerless_scopes() {
-                    if lbrace_count != rbrace_count {
-                        for _ in 0..diff {
-                            self.scope = self.scope.saturating_sub(1);
-                            self.symbols.end_scope();
-                        }
-                    }
+            SyncPosition::Statement => loop {
+                if self.is_eof() {
+                    break;
                 }
 
-                while !self.is_eof()
-                    && !self.peek().kind.is_sync_declaration()
-                    && !self.peek().kind.is_sync_statement()
+                if self.peek().kind.is_sync_statement() || self.peek().kind.is_sync_declaration() {
+                    break;
+                }
+
+                let _ = self.only_advance();
+            },
+
+            SyncPosition::Expression => loop {
+                if self.is_eof() {
+                    break;
+                }
+
+                if self.peek().kind.is_sync_expression()
+                    || self.peek().kind.is_sync_statement()
+                    || self.peek().kind.is_sync_declaration()
                 {
-                    self.current += 1;
-                }
-            }
-
-            SyncPosition::Expression => {
-                if let Some((lbrace_count, rbrace_count, diff)) = self.get_peerless_scopes() {
-                    if lbrace_count != rbrace_count {
-                        for _ in 0..diff {
-                            self.scope = self.scope.saturating_sub(1);
-                            self.symbols.end_scope();
-                        }
-                    }
+                    break;
                 }
 
-                while !self.is_eof() {
-                    match self.peek().kind {
-                        any if any.is_sync_expression()
-                            || any.is_sync_statement()
-                            || any.is_sync_declaration() =>
-                        {
-                            self.current += 1;
+                let _ = self.only_advance();
+            },
 
-                            if self.peek().kind.is_sync_expression() {
-                                continue;
-                            }
-
-                            break;
-                        }
-
-                        _ => (),
-                    }
-
-                    self.current += 1;
-                }
-            }
             _ => {}
         }
 
@@ -244,16 +232,16 @@ impl<'parser> ParserContext<'parser> {
     }
 
     #[must_use]
-    pub fn check_to(&self, kind: TokenType, changer: usize) -> bool {
+    pub fn check_to(&self, kind: TokenType, modifier: usize) -> bool {
         if self.is_eof() {
             return false;
         }
 
-        if self.current + changer >= self.tokens.len() {
+        if self.current + modifier >= self.tokens.len() {
             return false;
         }
 
-        self.tokens[self.current + changer].kind == kind
+        self.tokens[self.current + modifier].kind == kind
     }
 
     #[must_use]
@@ -292,37 +280,7 @@ impl<'parser> ParserContext<'parser> {
         })
     }
 
-    fn get_peerless_scopes(&mut self) -> Option<(usize, usize, usize)> {
-        self.tokens[self.current..]
-            .iter()
-            .enumerate()
-            .find(|(_, tk)| tk.kind.is_sync_statement() || tk.kind.is_sync_declaration())
-            .map(|(i, _)| {
-                let limit_pos: usize = self.current + i;
-
-                let lbrace_count: usize = self.tokens[self.current..limit_pos]
-                    .iter()
-                    .rev()
-                    .filter(|tk| matches!(tk.kind, TokenType::LBrace))
-                    .count();
-
-                let rbrace_count: usize = self.tokens[self.current..limit_pos]
-                    .iter()
-                    .rev()
-                    .filter(|tk| matches!(tk.kind, TokenType::RBrace))
-                    .count();
-
-                let diff: usize = if lbrace_count > rbrace_count {
-                    lbrace_count - rbrace_count
-                } else {
-                    rbrace_count - lbrace_count
-                };
-
-                (lbrace_count, rbrace_count, diff)
-            })
-    }
-
-    pub fn forward(&mut self) {
+    pub fn declare_forward(&mut self) {
         stmt::parse_forward(self);
     }
 }

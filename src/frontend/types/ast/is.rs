@@ -1,6 +1,9 @@
 use crate::{
-    core::errors::standard::ThrushCompilerIssue, frontend::types::ast::Ast,
-    frontend::typesystem::types::Type,
+    core::errors::standard::ThrushCompilerIssue,
+    frontend::{
+        types::ast::{Ast, traits::LLVMAstExtensions},
+        typesystem::types::Type,
+    },
 };
 
 impl Ast<'_> {
@@ -47,6 +50,11 @@ impl Ast<'_> {
     #[inline]
     pub fn is_constant(&self) -> bool {
         matches!(self, Ast::Const { .. })
+    }
+
+    #[inline]
+    pub fn is_static(&self) -> bool {
+        matches!(self, Ast::Static { .. })
     }
 
     #[inline]
@@ -129,50 +137,6 @@ impl Ast<'_> {
 
 impl Ast<'_> {
     #[inline]
-    pub fn is_constant_value(&self) -> bool {
-        if matches!(
-            self,
-            Ast::Integer { .. }
-                | Ast::Float { .. }
-                | Ast::Boolean { .. }
-                | Ast::Char { .. }
-                | Ast::Str { .. }
-        ) {
-            return true;
-        }
-
-        if let Ast::Group { expression, .. } = self {
-            return expression.is_constant_value();
-        }
-
-        if let Ast::BinaryOp { left, right, .. } = self {
-            return left.is_constant_value() && right.is_constant_value();
-        }
-
-        if let Ast::UnaryOp { expression, .. } = self {
-            return expression.is_constant_value();
-        }
-
-        if let Ast::Reference { metadata, .. } = self {
-            return metadata.is_constant();
-        }
-
-        if let Ast::As { metadata, .. } = self {
-            return metadata.is_constant();
-        }
-
-        if let Ast::FixedArray { items, .. } = self {
-            return items.iter().all(|item| item.is_constant_value());
-        }
-
-        if let Ast::Constructor { args, .. } = self {
-            return args.iter().all(|arg| arg.1.is_constant_value());
-        }
-
-        false
-    }
-
-    #[inline]
     pub fn is_mutable(&self) -> bool {
         if let Ast::Local { metadata, .. } = self {
             return metadata.is_mutable();
@@ -226,6 +190,51 @@ impl Ast<'_> {
     pub fn is_allocated_ref(&self) -> bool {
         if let Ast::Reference { metadata, .. } = self {
             return metadata.is_allocated();
+        }
+
+        false
+    }
+}
+
+impl LLVMAstExtensions for Ast<'_> {
+    fn is_llvm_constant_value(&self) -> bool {
+        if matches!(
+            self,
+            Ast::Integer { .. }
+                | Ast::Float { .. }
+                | Ast::Boolean { .. }
+                | Ast::Char { .. }
+                | Ast::Str { .. }
+        ) {
+            return true;
+        }
+
+        if let Ast::Group { expression, .. } = self {
+            return expression.is_llvm_constant_value();
+        }
+
+        if let Ast::BinaryOp { left, right, .. } = self {
+            return left.is_llvm_constant_value() && right.is_llvm_constant_value();
+        }
+
+        if let Ast::UnaryOp { expression, .. } = self {
+            return expression.is_llvm_constant_value();
+        }
+
+        if let Ast::Reference { metadata, .. } = self {
+            return metadata.is_constant();
+        }
+
+        if let Ast::As { metadata, .. } = self {
+            return metadata.is_constant();
+        }
+
+        if let Ast::FixedArray { items, .. } = self {
+            return items.iter().all(|item| item.is_llvm_constant_value());
+        }
+
+        if let Ast::Constructor { args, .. } = self {
+            return args.iter().all(|arg| arg.1.is_llvm_constant_value());
         }
 
         false

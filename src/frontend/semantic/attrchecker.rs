@@ -144,13 +144,32 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
             if !metadata.is_global() && attributes.has_public_attribute() {
                 self.add_error(ThrushCompilerIssue::Error(
                     "Attribute error".into(),
-                    "Local constants cannot have public visibility.".into(),
+                    "Local constant cannot have public visibility.".into(),
                     None,
                     *span,
                 ));
             }
 
             self.analyze_attrs(attributes, AttributeCheckerAttributeApplicant::Constant);
+        }
+
+        if let Ast::Static {
+            attributes,
+            metadata,
+            span,
+            ..
+        } = ast
+        {
+            if !metadata.is_global() && attributes.has_public_attribute() {
+                self.add_error(ThrushCompilerIssue::Error(
+                    "Attribute error".into(),
+                    "Local static cannot have public visibility.".into(),
+                    None,
+                    *span,
+                ));
+            }
+
+            self.analyze_attrs(attributes, AttributeCheckerAttributeApplicant::Static);
         }
 
         /* ######################################################################
@@ -239,6 +258,7 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
             }
 
             AttributeCheckerAttributeApplicant::Constant
+            | AttributeCheckerAttributeApplicant::Static
             | AttributeCheckerAttributeApplicant::Struct
             | AttributeCheckerAttributeApplicant::Enum => {
                 let repeated_attrs: ThrushAttributes = self.get_repeated_attrs(attributes);

@@ -1,6 +1,10 @@
 use crate::frontend::semantic::linter::Linter;
 
 pub fn mark_as_mutated<'linter>(linter: &mut Linter<'linter>, name: &'linter str) {
+    if let Some(static_var) = linter.symbols.get_static_info(name) {
+        static_var.2 = true;
+    }
+
     if let Some(local) = linter.symbols.get_local_info(name) {
         local.2 = true;
         return;

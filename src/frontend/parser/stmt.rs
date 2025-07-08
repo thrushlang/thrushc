@@ -4,10 +4,10 @@ use crate::{
         lexer::tokentype::TokenType,
         parser::{
             checks,
-            declarations::{asmfn, glasm, glconstant, structure, union},
+            declarations::{asmfn, glconstant, glstatic, structure, union},
             stmts::{
                 block, conditional, constant, controlflow, cstype, function, lli, local, loops,
-                terminator,
+                lstatic, terminator,
             },
         },
         types::ast::Ast,
@@ -15,28 +15,6 @@ use crate::{
 };
 
 use super::{ParserContext, contexts::sync::SyncPosition, expr};
-
-pub fn declaration<'parser>(
-    parser_context: &mut ParserContext<'parser>,
-) -> Result<Ast<'parser>, ThrushCompilerIssue> {
-    parser_context
-        .get_mut_control_ctx()
-        .set_sync_position(SyncPosition::Declaration);
-
-    let declaration: Result<Ast<'parser>, ThrushCompilerIssue> = match &parser_context.peek().kind {
-        TokenType::Type => Ok(cstype::build_custom_type(parser_context, false)?),
-        TokenType::Struct => Ok(structure::build_structure(parser_context, false)?),
-        TokenType::Const => Ok(glconstant::build_global_const(parser_context, false)?),
-        TokenType::Enum => Ok(union::build_enum(parser_context, false)?),
-        TokenType::Fn => Ok(function::build_function(parser_context, false)?),
-        TokenType::AsmFn => Ok(asmfn::build_assembler_function(parser_context, false)?),
-        TokenType::GlobalAsm => Ok(glasm::build_global_assembler(parser_context)?),
-
-        _ => Ok(self::statement(parser_context)?),
-    };
-
-    declaration
-}
 
 pub fn statement<'parser>(
     parser_context: &mut ParserContext<'parser>,
@@ -51,6 +29,7 @@ pub fn statement<'parser>(
         TokenType::LBrace => Ok(block::build_block(parser_context)?),
         TokenType::Return => Ok(terminator::build_return(parser_context)?),
 
+        TokenType::Static => Ok(lstatic::build_static(parser_context)?),
         TokenType::Const => Ok(constant::build_const(parser_context)?),
         TokenType::Local => Ok(local::build_local(parser_context)?),
         TokenType::Instr => Ok(lli::build_lli(parser_context)?),
@@ -84,6 +63,9 @@ pub fn parse_forward(parser_context: &mut ParserContext) {
             }
             TokenType::Struct if !entered_at_block => {
                 let _ = structure::build_structure(parser_context, true);
+            }
+            TokenType::Static if !entered_at_block => {
+                let _ = glstatic::build_global_static(parser_context, true);
             }
             TokenType::Const if !entered_at_block => {
                 let _ = glconstant::build_global_const(parser_context, true);

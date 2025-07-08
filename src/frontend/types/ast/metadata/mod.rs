@@ -4,3 +4,4 @@ pub mod fnparam;
 pub mod index;
 pub mod local;
 pub mod reference;
+pub mod staticvar;

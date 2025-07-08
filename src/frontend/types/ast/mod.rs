@@ -5,6 +5,7 @@ mod is;
 pub mod metadata;
 mod new;
 mod repr;
+pub mod traits;
 pub mod types;
 
 use std::rc::Rc;
@@ -18,7 +19,7 @@ use crate::{
                 metadata::{
                     cast::CastMetadata, constant::ConstantMetadata,
                     fnparam::FunctionParameterMetadata, index::IndexMetadata, local::LocalMetadata,
-                    reference::ReferenceMetadata,
+                    reference::ReferenceMetadata, staticvar::StaticMetadata,
                 },
                 types::AstEitherExpression,
             },
@@ -229,6 +230,17 @@ pub enum Ast<'ctx> {
     Return {
         expression: Option<Rc<Ast<'ctx>>>,
         kind: Type,
+        span: Span,
+    },
+
+    // Static
+    Static {
+        name: &'ctx str,
+        ascii_name: &'ctx str,
+        kind: Type,
+        value: Rc<Ast<'ctx>>,
+        attributes: ThrushAttributes<'ctx>,
+        metadata: StaticMetadata,
         span: Span,
     },
 

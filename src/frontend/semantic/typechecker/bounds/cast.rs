@@ -49,8 +49,8 @@ pub fn check_type_cast(
     }
 
     if from_type.is_mut_type() && cast_type.is_mut_type() {
-        let lhs_type: &Type = from_type.get_type_with_depth(1);
-        let rhs_type: &Type = cast_type.get_type_with_depth(1);
+        let lhs_type: &Type = cast_type.get_type_with_depth(1);
+        let rhs_type: &Type = from_type.get_type_with_depth(1);
 
         self::check_type_cast(lhs_type, rhs_type, metadata, span)?;
 
@@ -58,8 +58,17 @@ pub fn check_type_cast(
     }
 
     if from_type.is_mut_type() && cast_type.is_ptr_type() {
-        let lhs_type: &Type = from_type.get_type_with_depth(1);
-        let rhs_type: &Type = cast_type.get_type_with_depth(1);
+        let lhs_type: &Type = cast_type.get_type_with_depth(1);
+        let rhs_type: &Type = from_type.get_type_with_depth(1);
+
+        self::check_type_cast(lhs_type, rhs_type, metadata, span)?;
+
+        return Ok(());
+    }
+
+    if from_type.is_const_type() && cast_type.is_ptr_type() {
+        let lhs_type: &Type = cast_type.get_type_with_depth(1);
+        let rhs_type: &Type = from_type.get_type_with_depth(1);
 
         self::check_type_cast(lhs_type, rhs_type, metadata, span)?;
 
@@ -67,8 +76,8 @@ pub fn check_type_cast(
     }
 
     if from_type.is_ptr_type() && cast_type.is_ptr_type() {
-        let lhs_type: &Type = from_type.get_type_with_depth(1);
-        let rhs_type: &Type = cast_type.get_type_with_depth(1);
+        let lhs_type: &Type = cast_type.get_type_with_depth(1);
+        let rhs_type: &Type = from_type.get_type_with_depth(1);
 
         self::check_type_cast(lhs_type, rhs_type, metadata, span)?;
 

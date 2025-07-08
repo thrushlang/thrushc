@@ -4,7 +4,7 @@ use crate::{
         lexer::{span::Span, tokentype::TokenType},
         parser::{ParserContext, expressions::precedences::cmp, typegen},
         types::{
-            ast::{Ast, metadata::cast::CastMetadata},
+            ast::{Ast, metadata::cast::CastMetadata, traits::LLVMAstExtensions},
             parser::stmts::traits::TokenExtensions,
         },
         typesystem::types::Type,
@@ -22,8 +22,9 @@ pub fn cast_precedence<'parser>(
 
         let cast: Type = typegen::build_type(parser_context)?;
 
-        let is_constant: bool = expression.is_constant_value();
-        let is_allocated = expression.is_allocated_ref()
+        let is_constant: bool = expression.is_llvm_constant_value();
+
+        let is_allocated: bool = expression.is_allocated_ref()
             || expression_type.is_mut_type()
             || expression_type.is_ptr_type();
 

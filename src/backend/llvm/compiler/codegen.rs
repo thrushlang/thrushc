@@ -11,7 +11,7 @@ use crate::core::console::logging::{self, LoggingType};
 use crate::frontend::types::ast::metadata::local::LocalMetadata;
 use crate::frontend::types::parser::repr::{
     AssemblerFunctionRepresentation, ConstantRepresentation, FunctionParameter,
-    FunctionRepresentation,
+    FunctionRepresentation, StaticRepresentation,
 };
 use crate::frontend::types::parser::stmts::traits::ThrushAttributesExtensions;
 use crate::frontend::types::parser::stmts::types::ThrushAttributes;
@@ -50,7 +50,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
     }
 
     fn compile(&mut self) {
-        self.forward_all();
+        self.declare_forward();
 
         self.ast.iter().for_each(|ast| {
             self.codegen(ast);
@@ -238,6 +238,24 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
 
                 self.context
                     .new_local_constant(name, ascii_name, kind, casted_value);
+            }
+
+            Ast::Static {
+                name,
+                ascii_name,
+                kind,
+                value,
+                ..
+            } => {
+                let value_type: &Type = value.get_type_unwrapped();
+
+                let value: BasicValueEnum = constgen::compile(self.context, value, kind);
+
+                let casted_value: BasicValueEnum =
+                    constgen::cast(self.context, value, value_type, kind);
+
+                self.context
+                    .new_local_static(name, ascii_name, kind, casted_value);
             }
 
             Ast::LLI {
@@ -468,7 +486,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
 
     ########################################################################*/
 
-    fn forward_all(&mut self) {
+    fn declare_forward(&mut self) {
         self.ast.iter().for_each(|any_ast| {
             if any_ast.is_asm_function() {
                 self.declare_asm_function(any_ast);
@@ -480,6 +498,10 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
 
             if any_ast.is_constant() {
                 self.declare_global_constant(any_ast);
+            }
+
+            if any_ast.is_static() {
+                self.declare_static(any_ast);
             }
         });
     }
@@ -509,6 +531,25 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
 
         self.context
             .new_global_constant(name, ascii_name, kind, value, attributes);
+    }
+
+    fn declare_static(&mut self, stmt: &'ctx Ast) {
+        let constant: StaticRepresentation = stmt.as_static_representation();
+
+        let name: &str = constant.0;
+        let ascii_name: &str = constant.1;
+
+        let kind: &Type = constant.2;
+        let value: &Ast = constant.3;
+        let attributes: &ThrushAttributes = constant.4;
+
+        let constv: BasicValueEnum = constgen::compile(self.context, value, kind);
+        let constv_type: &Type = value.get_type_unwrapped();
+
+        let value: BasicValueEnum = constgen::cast(self.context, constv, constv_type, kind);
+
+        self.context
+            .new_global_static(name, ascii_name, kind, value, attributes);
     }
 
     fn declare_asm_function(&mut self, stmt: &'ctx Ast) {

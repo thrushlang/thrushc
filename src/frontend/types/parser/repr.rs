@@ -8,6 +8,14 @@ pub type BinaryOperation<'ctx> = (&'ctx Ast<'ctx>, &'ctx TokenType, &'ctx Ast<'c
 
 pub type UnaryOperation<'ctx> = (&'ctx TokenType, &'ctx Type, &'ctx Ast<'ctx>);
 
+pub type StaticRepresentation<'ctx> = (
+    &'ctx str,
+    &'ctx str,
+    &'ctx Type,
+    &'ctx Ast<'ctx>,
+    &'ctx ThrushAttributes<'ctx>,
+);
+
 pub type ConstantRepresentation<'ctx> = (
     &'ctx str,
     &'ctx str,

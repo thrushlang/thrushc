@@ -30,6 +30,11 @@ pub enum SymbolAllocated<'ctx> {
         ptr: PointerValue<'ctx>,
         kind: &'ctx Type,
     },
+    Static {
+        ptr: PointerValue<'ctx>,
+        value: BasicValueEnum<'ctx>,
+        kind: &'ctx Type,
+    },
     Constant {
         ptr: PointerValue<'ctx>,
         value: BasicValueEnum<'ctx>,
@@ -77,6 +82,18 @@ impl<'ctx> SymbolAllocated<'ctx> {
         value: BasicValueEnum<'ctx>,
     ) -> Self {
         Self::Constant {
+            ptr: ptr.into_pointer_value(),
+            value,
+            kind,
+        }
+    }
+
+    pub fn new_static(
+        ptr: BasicValueEnum<'ctx>,
+        kind: &'ctx Type,
+        value: BasicValueEnum<'ctx>,
+    ) -> Self {
+        Self::Static {
             ptr: ptr.into_pointer_value(),
             value,
             kind,
@@ -143,6 +160,19 @@ impl<'ctx> SymbolAllocated<'ctx> {
                 unreachable!()
             }
 
+            Self::Static { ptr, .. } => {
+                if let Ok(loaded_value) = llvm_builder.build_load(llvm_type, *ptr, "") {
+                    if let Some(load_instruction) = loaded_value.as_instruction_value() {
+                        let _ = load_instruction.set_alignment(mem_alignment);
+                    }
+
+                    return loaded_value;
+                }
+
+                self::codegen_abort("Unable to load value at memory manipulation.");
+                unreachable!()
+            }
+
             Self::LowLevelInstruction { value, .. } => *value,
         }
     }
@@ -188,7 +218,9 @@ impl<'ctx> SymbolAllocated<'ctx> {
         indexes: &[IntValue<'ctx>],
     ) -> PointerValue<'ctx> {
         match self {
-            Self::Local { ptr, kind } | Self::Constant { ptr, kind, .. } => unsafe {
+            Self::Local { ptr, kind }
+            | Self::Constant { ptr, kind, .. }
+            | Self::Static { ptr, kind, .. } => unsafe {
                 builder
                     .build_in_bounds_gep(
                         typegen::generate_subtype_with_all(context, kind),
@@ -256,7 +288,9 @@ impl<'ctx> SymbolAllocated<'ctx> {
         index: u32,
     ) -> PointerValue<'ctx> {
         match self {
-            Self::Local { ptr, kind } | Self::Constant { ptr, kind, .. } => builder
+            Self::Local { ptr, kind }
+            | Self::Constant { ptr, kind, .. }
+            | Self::Static { ptr, kind, .. } => builder
                 .build_struct_gep(
                     typegen::generate_subtype_with_all(context, kind),
                     *ptr,
@@ -289,6 +323,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
         match self {
             Self::Local { kind, .. } => kind,
             Self::Constant { kind, .. } => kind,
+            Self::Static { kind, .. } => kind,
             Self::Parameter { kind, .. } => kind,
             Self::LowLevelInstruction { kind, .. } => kind,
         }
@@ -298,6 +333,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
         match self {
             Self::Local { ptr, .. } => *ptr,
             Self::Constant { ptr, .. } => *ptr,
+            Self::Static { ptr, .. } => *ptr,
             Self::Parameter { value, .. } => value.into_pointer_value(),
             Self::LowLevelInstruction { value, .. } => value.into_pointer_value(),
         }
@@ -307,6 +343,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
         match self {
             Self::Local { ptr, .. } => (*ptr).into(),
             Self::Constant { value, .. } => *value,
+            Self::Static { value, .. } => *value,
             Self::Parameter { value, .. } => *value,
             Self::LowLevelInstruction { value, .. } => *value,
         }
@@ -316,6 +353,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
         match self {
             Self::Local { .. } => true,
             Self::Constant { .. } => true,
+            Self::Static { .. } => true,
             Self::Parameter { value, .. } => value.is_pointer_value(),
             Self::LowLevelInstruction { value, .. } => value.is_pointer_value(),
         }

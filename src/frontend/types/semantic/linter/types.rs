@@ -2,6 +2,10 @@ use ahash::AHashMap as HashMap;
 
 use crate::frontend::lexer::span::Span;
 
+pub type LinterStaticInfo = (Span, bool, bool);
+pub type LinterGlobalStatics<'linter> = HashMap<&'linter str, LinterStaticInfo>;
+pub type LinterLocalStatics<'linter> = Vec<HashMap<&'linter str, LinterStaticInfo>>;
+
 pub type LinterConstantInfo = (Span, bool);
 pub type LinterGlobalConstants<'linter> = HashMap<&'linter str, LinterConstantInfo>;
 pub type LinterLocalConstants<'linter> = Vec<HashMap<&'linter str, LinterConstantInfo>>;

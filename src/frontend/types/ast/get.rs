@@ -18,6 +18,9 @@ impl Ast<'_> {
             Ast::NullPtr { .. } => Ok(&Type::Ptr(None)),
             Ast::Null { .. } => Ok(&Type::Void),
 
+            // Static
+            Ast::Static { kind, .. } => Ok(kind),
+
             // Variables & Memory Operations
             Ast::Local { kind, .. } => Ok(kind),
             Ast::Mut { kind, .. } => Ok(kind),
@@ -159,6 +162,9 @@ impl Ast<'_> {
             Ast::Str { kind, .. } => kind,
             Ast::NullPtr { .. } => &Type::Ptr(None),
 
+            // Static
+            Ast::Static { kind, .. } => kind,
+
             // Variables and references
             Ast::Local { kind, .. } => kind,
             Ast::Mut { kind, .. } => kind,
@@ -222,6 +228,9 @@ impl Ast<'_> {
             Ast::Str { span, .. } => *span,
             Ast::NullPtr { span, .. } => *span,
             Ast::Null { span, .. } => *span,
+
+            // Static
+            Ast::Static { span, .. } => *span,
 
             // Variables and declarations
             Ast::Local { span, .. } => *span,

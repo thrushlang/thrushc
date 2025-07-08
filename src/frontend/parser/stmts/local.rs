@@ -76,13 +76,7 @@ pub fn build_local<'parser>(
         String::from("Expected '='."),
     )?;
 
-    let value: Ast = expr::build_expr(parser_ctx)?;
-
-    parser_ctx.consume(
-        TokenType::SemiColon,
-        String::from("Syntax error"),
-        String::from("Expected ';'."),
-    )?;
+    let value: Ast = expr::build_expression(parser_ctx)?;
 
     let local: Ast = Ast::Local {
         name,

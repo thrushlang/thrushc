@@ -2,6 +2,7 @@ use crate::frontend::types::{
     ast::Ast,
     parser::repr::{
         AssemblerFunctionRepresentation, ConstantRepresentation, FunctionRepresentation,
+        StaticRepresentation,
     },
 };
 
@@ -29,6 +30,22 @@ impl Ast<'_> {
                 parameters_types,
                 attributes,
             );
+        }
+
+        unreachable!()
+    }
+
+    pub fn as_static_representation(&self) -> StaticRepresentation {
+        if let Ast::Static {
+            name,
+            ascii_name,
+            kind,
+            value,
+            attributes,
+            ..
+        } = self
+        {
+            return (name, ascii_name, kind, &**value, attributes);
         }
 
         unreachable!()

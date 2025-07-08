@@ -12,12 +12,11 @@ use {
             },
             types::repr::{
                 LLVMFunction, LLVMFunctions, LLVMFunctionsParameters, LLVMGlobalConstants,
-                LLVMInstructions, LLVMLocalConstants,
+                LLVMGlobalStatics, LLVMInstructions, LLVMLocalConstants, LLVMLocalStatics,
             },
         },
         core::diagnostic::diagnostician::Diagnostician,
-        frontend::types::parser::stmts::types::ThrushAttributes,
-        frontend::typesystem::types::Type,
+        frontend::{types::parser::stmts::types::ThrushAttributes, typesystem::types::Type},
     },
     ahash::AHashMap as HashMap,
     inkwell::{
@@ -37,6 +36,9 @@ pub struct LLVMCodeGenContext<'a, 'ctx> {
     context: &'ctx Context,
     builder: &'ctx Builder<'ctx>,
     target_data: TargetData,
+
+    global_statics: LLVMGlobalStatics<'ctx>,
+    local_statics: LLVMLocalStatics<'ctx>,
 
     global_constants: LLVMGlobalConstants<'ctx>,
     local_constants: LLVMLocalConstants<'ctx>,
@@ -70,6 +72,9 @@ impl<'a, 'ctx> LLVMCodeGenContext<'a, 'ctx> {
             context,
             builder,
             target_data,
+
+            global_statics: HashMap::with_capacity(1000),
+            local_statics: Vec::with_capacity(1000),
 
             global_constants: HashMap::with_capacity(1000),
             local_constants: Vec::with_capacity(1000),
@@ -176,6 +181,53 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
         self.global_constants.insert(name, constant);
     }
 
+    pub fn new_local_static(
+        &mut self,
+        name: &'ctx str,
+        ascii_name: &'ctx str,
+        kind: &'ctx Type,
+        value: BasicValueEnum<'ctx>,
+    ) {
+        let ptr: PointerValue = alloc::local_static(
+            self,
+            ascii_name,
+            typegen::generate_type(self.context, kind),
+            value,
+        );
+
+        let constant: SymbolAllocated = SymbolAllocated::new_static(ptr.into(), kind, value);
+
+        if let Some(last_block) = self.local_statics.last_mut() {
+            last_block.insert(name, constant);
+        } else {
+            logging::log(
+                LoggingType::BackendBug,
+                "The last frame of symbols could not be obtained.",
+            )
+        }
+    }
+
+    pub fn new_global_static(
+        &mut self,
+        name: &'ctx str,
+        ascii_name: &'ctx str,
+        kind: &'ctx Type,
+        value: BasicValueEnum<'ctx>,
+        attributes: &'ctx ThrushAttributes<'ctx>,
+    ) {
+        let ptr: PointerValue = alloc::global_static(
+            self,
+            ascii_name,
+            typegen::generate_type(self.context, kind),
+            value,
+            attributes,
+        );
+
+        let constant: SymbolAllocated = SymbolAllocated::new_static(ptr.into(), kind, value);
+
+        self.global_statics.insert(name, constant);
+    }
+
     pub fn new_fn_parameter(
         &mut self,
         name: &'ctx str,
@@ -198,6 +250,7 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
 
 impl LLVMCodeGenContext<'_, '_> {
     pub fn begin_scope(&mut self) {
+        self.local_statics.push(HashMap::with_capacity(256));
         self.local_constants.push(HashMap::with_capacity(256));
         self.instructions.push(HashMap::with_capacity(256));
 
@@ -205,8 +258,10 @@ impl LLVMCodeGenContext<'_, '_> {
     }
 
     pub fn end_scope(&mut self) {
+        self.local_statics.pop();
         self.local_constants.pop();
         self.instructions.pop();
+
         self.scope -= 1;
 
         if self.scope == 0 {
@@ -273,6 +328,16 @@ impl<'a, 'ctx> LLVMCodeGenContext<'a, 'ctx> {
 
         for position in (0..self.scope).rev() {
             if let Some(local_constant) = self.local_constants[position].get(name) {
+                return *local_constant;
+            }
+        }
+
+        if let Some(global_constant) = self.global_statics.get(name) {
+            return *global_constant;
+        }
+
+        for position in (0..self.scope).rev() {
+            if let Some(local_constant) = self.local_statics[position].get(name) {
                 return *local_constant;
             }
         }

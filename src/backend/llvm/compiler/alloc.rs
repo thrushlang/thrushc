@@ -10,10 +10,12 @@ use inkwell::{
 };
 
 use crate::{
-    backend::llvm::compiler::{context::LLVMCodeGenContext, typegen},
+    backend::llvm::compiler::{context::LLVMCodeGenContext, typegen, utils},
     core::console::logging::{self, LoggingType},
-    frontend::types::parser::stmts::{traits::ThrushAttributesExtensions, types::ThrushAttributes},
-    frontend::typesystem::types::Type,
+    frontend::{
+        types::parser::stmts::{traits::ThrushAttributesExtensions, types::ThrushAttributes},
+        typesystem::types::Type,
+    },
 };
 
 pub fn alloc<'ctx>(
@@ -43,7 +45,7 @@ fn try_alloc_heap<'ctx>(
         Ok(ptr) => ptr,
         Err(_) => {
             self::codegen_abort(format!(
-                "Failed to allocate heap memory for type '{}'",
+                "Failed to allocate heap memory for type '{}'.",
                 kind
             ));
 
@@ -62,7 +64,7 @@ fn try_alloc_stack<'ctx>(
         Ok(ptr) => ptr,
         Err(_) => {
             self::codegen_abort(format!(
-                "Failed to allocate stack memory for type '{}'",
+                "Failed to allocate stack memory for type '{}'.",
                 kind
             ));
 
@@ -73,7 +75,7 @@ fn try_alloc_stack<'ctx>(
 
 pub fn local_constant<'ctx>(
     context: &LLVMCodeGenContext<'_, 'ctx>,
-    name: &str,
+    ascii_name: &str,
     llvm_type: BasicTypeEnum<'ctx>,
     llvm_value: BasicValueEnum<'ctx>,
 ) -> PointerValue<'ctx> {
@@ -81,14 +83,17 @@ pub fn local_constant<'ctx>(
 
     let target_data: &TargetData = context.get_target_data();
 
+    let name: String = format!("{}.const.{}", utils::generate_random_string(), ascii_name);
+
     let global: GlobalValue =
-        llvm_module.add_global(llvm_type, Some(AddressSpace::default()), name);
+        llvm_module.add_global(llvm_type, Some(AddressSpace::default()), &name);
 
     let alignment: u32 = target_data.get_preferred_alignment_of_global(&global);
 
     global.set_alignment(alignment);
     global.set_linkage(Linkage::LinkerPrivate);
 
+    global.set_unnamed_addr(true);
     global.set_initializer(&llvm_value);
     global.set_constant(true);
 
@@ -97,7 +102,7 @@ pub fn local_constant<'ctx>(
 
 pub fn global_constant<'ctx>(
     context: &LLVMCodeGenContext<'_, 'ctx>,
-    name: &str,
+    ascii_name: &str,
     llvm_type: BasicTypeEnum<'ctx>,
     llvm_value: BasicValueEnum<'ctx>,
     attributes: &'ctx ThrushAttributes<'ctx>,
@@ -107,7 +112,63 @@ pub fn global_constant<'ctx>(
     let target_data: &TargetData = context.get_target_data();
 
     let global: GlobalValue =
-        llvm_module.add_global(llvm_type, Some(AddressSpace::default()), name);
+        llvm_module.add_global(llvm_type, Some(AddressSpace::default()), ascii_name);
+
+    let alignment: u32 = target_data.get_preferred_alignment_of_global(&global);
+
+    global.set_alignment(alignment);
+
+    if !attributes.has_public_attribute() {
+        global.set_linkage(Linkage::LinkerPrivate);
+    }
+
+    global.set_unnamed_addr(true);
+    global.set_alignment(alignment);
+    global.set_constant(true);
+
+    global.set_initializer(&llvm_value);
+
+    global.as_pointer_value()
+}
+
+pub fn local_static<'ctx>(
+    context: &LLVMCodeGenContext<'_, 'ctx>,
+    ascii_name: &str,
+    llvm_type: BasicTypeEnum<'ctx>,
+    llvm_value: BasicValueEnum<'ctx>,
+) -> PointerValue<'ctx> {
+    let llvm_module: &Module = context.get_llvm_module();
+
+    let target_data: &TargetData = context.get_target_data();
+
+    let name: String = format!("{}.static.{}", utils::generate_random_string(), ascii_name);
+
+    let global: GlobalValue =
+        llvm_module.add_global(llvm_type, Some(AddressSpace::default()), &name);
+
+    let alignment: u32 = target_data.get_preferred_alignment_of_global(&global);
+
+    global.set_alignment(alignment);
+    global.set_linkage(Linkage::LinkerPrivate);
+
+    global.set_initializer(&llvm_value);
+
+    global.as_pointer_value()
+}
+
+pub fn global_static<'ctx>(
+    context: &LLVMCodeGenContext<'_, 'ctx>,
+    ascii_name: &str,
+    llvm_type: BasicTypeEnum<'ctx>,
+    llvm_value: BasicValueEnum<'ctx>,
+    attributes: &'ctx ThrushAttributes<'ctx>,
+) -> PointerValue<'ctx> {
+    let llvm_module: &Module = context.get_llvm_module();
+
+    let target_data: &TargetData = context.get_target_data();
+
+    let global: GlobalValue =
+        llvm_module.add_global(llvm_type, Some(AddressSpace::default()), ascii_name);
 
     let alignment: u32 = target_data.get_preferred_alignment_of_global(&global);
 
@@ -118,7 +179,6 @@ pub fn global_constant<'ctx>(
     }
 
     global.set_initializer(&llvm_value);
-    global.set_constant(true);
 
     global.as_pointer_value()
 }

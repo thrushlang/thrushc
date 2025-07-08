@@ -7,4 +7,5 @@ pub mod function;
 pub mod lli;
 pub mod local;
 pub mod loops;
+pub mod lstatic;
 pub mod terminator;

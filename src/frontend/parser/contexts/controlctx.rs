@@ -56,11 +56,6 @@ impl ParserControlContext {
     }
 
     #[inline]
-    pub fn reset_loop_depth(&mut self) {
-        self.loop_depth = 0;
-    }
-
-    #[inline]
     pub fn set_unreacheable_code_scope(&mut self, scope: usize) {
         self.unreacheable_code = scope;
     }

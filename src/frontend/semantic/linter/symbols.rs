@@ -8,8 +8,9 @@ use crate::frontend::{
             LinterAssemblerFunctionInfo, LinterAssemblerFunctions, LinterConstantInfo,
             LinterEnumFieldInfo, LinterEnums, LinterEnumsFieldsInfo, LinterFunctionInfo,
             LinterFunctionParameterInfo, LinterFunctionParameters, LinterFunctions,
-            LinterGlobalConstants, LinterLLIInfo, LinterLLIs, LinterLocalConstants,
-            LinterLocalInfo, LinterLocals, LinterStructFieldsInfo, LinterStructs,
+            LinterGlobalConstants, LinterGlobalStatics, LinterLLIInfo, LinterLLIs,
+            LinterLocalConstants, LinterLocalInfo, LinterLocalStatics, LinterLocals,
+            LinterStaticInfo, LinterStructFieldsInfo, LinterStructs,
         },
     },
 };
@@ -28,6 +29,9 @@ pub struct LinterSymbolsTable<'linter> {
     functions: LinterFunctions<'linter>,
     asm_functions: LinterAssemblerFunctions<'linter>,
 
+    global_statics: LinterGlobalStatics<'linter>,
+    local_statics: LinterLocalStatics<'linter>,
+
     global_constants: LinterGlobalConstants<'linter>,
     local_constants: LinterLocalConstants<'linter>,
 
@@ -44,6 +48,9 @@ impl LinterSymbolsTable<'_> {
         Self {
             functions: HashMap::with_capacity(MINIMAL_FUNCTIONS_CAPACITY),
             asm_functions: HashMap::with_capacity(MINIMAL_ASM_FUNCTIONS_CAPACITY),
+
+            global_statics: HashMap::with_capacity(MINIMAL_CONSTANTS_CAPACITY),
+            local_statics: Vec::with_capacity(MINIMAL_CONSTANTS_CAPACITY),
 
             global_constants: HashMap::with_capacity(MINIMAL_CONSTANTS_CAPACITY),
             local_constants: Vec::with_capacity(MINIMAL_CONSTANTS_CAPACITY),
@@ -140,6 +147,20 @@ impl<'linter> LinterSymbolsTable<'linter> {
         None
     }
 
+    pub fn get_static_info(&mut self, name: &'linter str) -> Option<&mut LinterStaticInfo> {
+        for scope in self.local_statics.iter_mut().rev() {
+            if let Some(staticvar) = scope.get_mut(name) {
+                return Some(staticvar);
+            }
+        }
+
+        if let Some(glstatic) = self.global_statics.get_mut(name) {
+            return Some(glstatic);
+        }
+
+        None
+    }
+
     pub fn get_lli_info(&mut self, name: &'linter str) -> Option<&mut LinterLLIInfo> {
         for scope in self.llis.iter_mut().rev() {
             if let Some(lli) = scope.get_mut(name) {
@@ -168,8 +189,20 @@ impl<'linter> LinterSymbolsTable<'linter> {
         &self.enums
     }
 
-    pub fn get_global_all_constants(&self) -> &LinterGlobalConstants {
+    pub fn get_all_global_constants(&self) -> &LinterGlobalConstants {
         &self.global_constants
+    }
+
+    pub fn get_all_global_statics(&self) -> &LinterGlobalStatics {
+        &self.global_statics
+    }
+
+    pub fn get_all_local_constants(&self) -> &LinterLocalConstants {
+        &self.local_constants
+    }
+
+    pub fn get_all_locals_statics(&self) -> &LinterLocalStatics {
+        &self.local_statics
     }
 
     pub fn get_all_structs(&self) -> &LinterStructs {
@@ -216,6 +249,16 @@ impl<'linter> LinterSymbolsTable<'linter> {
 
     pub fn new_local_constant(&mut self, name: &'linter str, info: LinterConstantInfo) {
         if let Some(scope) = self.local_constants.last_mut() {
+            scope.insert(name, info);
+        }
+    }
+
+    pub fn new_global_static(&mut self, name: &'linter str, info: LinterStaticInfo) {
+        self.global_statics.insert(name, info);
+    }
+
+    pub fn new_local_static(&mut self, name: &'linter str, info: LinterStaticInfo) {
+        if let Some(scope) = self.local_statics.last_mut() {
             scope.insert(name, info);
         }
     }

@@ -2,6 +2,7 @@
 pub enum AttributeCheckerAttributeApplicant {
     Function,
     Constant,
+    Static,
     Struct,
     Enum,
 }

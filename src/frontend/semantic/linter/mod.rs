@@ -30,6 +30,7 @@ mod lli;
 mod local;
 mod loops;
 mod marks;
+mod staticvar;
 mod symbols;
 mod terminator;
 
@@ -114,6 +115,10 @@ impl<'linter> Linter<'linter> {
 
 
         ########################################################################*/
+
+        if let Ast::Static { .. } = stmt {
+            return staticvar::analyze_static(self, stmt);
+        }
 
         if let Ast::Const { .. } = stmt {
             return constant::analyze_constant(self, stmt);
@@ -365,30 +370,6 @@ impl<'linter> Linter<'linter> {
     }
 
     pub fn generate_scoped_warnings(&mut self) {
-        if let Some(last_scope) = self.symbols.get_all_function_parameters().last() {
-            last_scope.iter().for_each(|(name, info)| {
-                let span: Span = info.0;
-                let used: bool = info.1;
-                let is_mutable_used: bool = info.2;
-
-                if !used {
-                    self.warnings.push(ThrushCompilerIssue::Warning(
-                        String::from("Parameter not used"),
-                        format!("'{}' not used.", name),
-                        span,
-                    ));
-                }
-
-                if !is_mutable_used {
-                    self.warnings.push(ThrushCompilerIssue::Warning(
-                        String::from("Mutable parameter not used"),
-                        format!("'{}' not used.", name),
-                        span,
-                    ));
-                }
-            });
-        }
-
         if let Some(last_scope) = self.symbols.get_all_locals().last() {
             last_scope.iter().for_each(|(name, info)| {
                 let span: Span = info.0;
@@ -413,6 +394,45 @@ impl<'linter> Linter<'linter> {
             });
         }
 
+        if let Some(last_scope) = self.symbols.get_all_local_constants().last() {
+            last_scope.iter().for_each(|(name, info)| {
+                let span: Span = info.0;
+                let used: bool = info.1;
+
+                if !used {
+                    self.warnings.push(ThrushCompilerIssue::Warning(
+                        String::from("Local constant not used"),
+                        format!("'{}' not used.", name),
+                        span,
+                    ));
+                }
+            });
+        }
+
+        if let Some(last_scope) = self.symbols.get_all_locals_statics().last() {
+            last_scope.iter().for_each(|(name, info)| {
+                let span: Span = info.0;
+                let used: bool = info.1;
+                let is_mutable_used: bool = info.2;
+
+                if !used {
+                    self.warnings.push(ThrushCompilerIssue::Warning(
+                        String::from("Local Static not used"),
+                        format!("'{}' not used.", name),
+                        span,
+                    ));
+                }
+
+                if !is_mutable_used {
+                    self.warnings.push(ThrushCompilerIssue::Warning(
+                        String::from("Local mutable static not used"),
+                        format!("'{}' not used.", name),
+                        span,
+                    ));
+                }
+            });
+        }
+
         if let Some(last_scope) = self.symbols.get_all_llis().last() {
             last_scope.iter().for_each(|(name, info)| {
                 let span: Span = info.0;
@@ -420,7 +440,31 @@ impl<'linter> Linter<'linter> {
 
                 if !used {
                     self.warnings.push(ThrushCompilerIssue::Warning(
-                        String::from("Low Level Instruction not used"),
+                        String::from("LLI not used"),
+                        format!("'{}' not used.", name),
+                        span,
+                    ));
+                }
+            });
+        }
+
+        if let Some(last_scope) = self.symbols.get_all_function_parameters().last() {
+            last_scope.iter().for_each(|(name, info)| {
+                let span: Span = info.0;
+                let used: bool = info.1;
+                let is_mutable_used: bool = info.2;
+
+                if !used {
+                    self.warnings.push(ThrushCompilerIssue::Warning(
+                        String::from("Parameter not used"),
+                        format!("'{}' not used.", name),
+                        span,
+                    ));
+                }
+
+                if !is_mutable_used {
+                    self.warnings.push(ThrushCompilerIssue::Warning(
+                        String::from("Mutable parameter not used"),
                         format!("'{}' not used.", name),
                         span,
                     ));
@@ -431,7 +475,23 @@ impl<'linter> Linter<'linter> {
 
     pub fn generate_warnings(&mut self) {
         self.symbols
-            .get_global_all_constants()
+            .get_all_global_statics()
+            .iter()
+            .for_each(|(name, info)| {
+                let span: Span = info.0;
+                let used: bool = info.1;
+
+                if !used {
+                    self.warnings.push(ThrushCompilerIssue::Warning(
+                        "Static not used".into(),
+                        format!("'{}' not used.", name),
+                        span,
+                    ));
+                }
+            });
+
+        self.symbols
+            .get_all_global_constants()
             .iter()
             .for_each(|(name, info)| {
                 let span: Span = info.0;
@@ -542,6 +602,22 @@ impl<'linter> Linter<'linter> {
     }
 
     pub fn forward_all(&mut self) {
+        self.ast
+            .iter()
+            .filter(|ast| ast.is_static())
+            .for_each(|ast| {
+                if let Ast::Static {
+                    name,
+                    metadata,
+                    span,
+                    ..
+                } = ast
+                {
+                    self.symbols
+                        .new_global_static(name, (*span, false, !metadata.is_mutable()));
+                }
+            });
+
         self.ast
             .iter()
             .filter(|ast| ast.is_constant())

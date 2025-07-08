@@ -29,6 +29,7 @@ pub mod structgen;
 pub mod terminator;
 pub mod typegen;
 pub mod unaryop;
+pub mod utils;
 pub mod valuegen;
 
 use {
