@@ -20,6 +20,7 @@ mod functions;
 mod lli;
 mod local;
 mod loops;
+mod metadata;
 mod position;
 mod staticvar;
 mod symbols;

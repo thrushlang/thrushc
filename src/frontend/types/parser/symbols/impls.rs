@@ -1,7 +1,7 @@
 use std::fmt::Display;
 
 use crate::{
-    core::errors::standard::ThrushCompilerIssue,
+    core::errors::{position::CompilationPosition, standard::ThrushCompilerIssue},
     frontend::{
         lexer::span::Span,
         types::{
@@ -172,11 +172,12 @@ impl<'parser> FoundSymbolEither<'parser> for FoundSymbolId<'parser> {
             return Ok(name);
         }
 
-        Err(ThrushCompilerIssue::Error(
+        Err(ThrushCompilerIssue::Bug(
             String::from("Expected struct reference"),
             String::from("Expected struct but found something else."),
-            None,
             span,
+            CompilationPosition::Parser,
+            line!(),
         ))
     }
 
@@ -185,11 +186,12 @@ impl<'parser> FoundSymbolEither<'parser> for FoundSymbolId<'parser> {
             return Ok(name);
         }
 
-        Err(ThrushCompilerIssue::Error(
+        Err(ThrushCompilerIssue::Bug(
             String::from("Expected function reference"),
             String::from("Expected function but found something else."),
-            None,
             span,
+            CompilationPosition::Parser,
+            line!(),
         ))
     }
 
@@ -198,11 +200,12 @@ impl<'parser> FoundSymbolEither<'parser> for FoundSymbolId<'parser> {
             return Ok(name);
         }
 
-        Err(ThrushCompilerIssue::Error(
+        Err(ThrushCompilerIssue::Bug(
             String::from("Expected enum reference"),
             String::from("Expected enum but found something else."),
-            None,
             span,
+            CompilationPosition::Parser,
+            line!(),
         ))
     }
 
@@ -211,11 +214,12 @@ impl<'parser> FoundSymbolEither<'parser> for FoundSymbolId<'parser> {
             return Ok(static_id);
         }
 
-        Err(ThrushCompilerIssue::Error(
+        Err(ThrushCompilerIssue::Bug(
             String::from("Expected static reference"),
             String::from("Expected static but found something else."),
-            None,
             span,
+            CompilationPosition::Parser,
+            line!(),
         ))
     }
 
@@ -224,11 +228,12 @@ impl<'parser> FoundSymbolEither<'parser> for FoundSymbolId<'parser> {
             return Ok(const_id);
         }
 
-        Err(ThrushCompilerIssue::Error(
+        Err(ThrushCompilerIssue::Bug(
             String::from("Expected constant reference"),
             String::from("Expected constant but found something else."),
-            None,
             span,
+            CompilationPosition::Parser,
+            line!(),
         ))
     }
 
@@ -237,37 +242,40 @@ impl<'parser> FoundSymbolEither<'parser> for FoundSymbolId<'parser> {
             return Ok(type_id);
         }
 
-        Err(ThrushCompilerIssue::Error(
+        Err(ThrushCompilerIssue::Bug(
             String::from("Expected custom type reference"),
             String::from("Expected custom type but found something else."),
-            None,
             span,
+            CompilationPosition::Parser,
+            line!(),
         ))
     }
 
     fn expected_parameter(&self, span: Span) -> Result<&'parser str, ThrushCompilerIssue> {
-        if let Some(name) = self.5 {
-            return Ok(name);
-        }
-
-        Err(ThrushCompilerIssue::Error(
-            String::from("Expected parameter reference"),
-            String::from("Expected parameter but found something else."),
-            None,
-            span,
-        ))
-    }
-
-    fn expected_asm_function(&self, span: Span) -> Result<&'parser str, ThrushCompilerIssue> {
         if let Some(name) = self.6 {
             return Ok(name);
         }
 
-        Err(ThrushCompilerIssue::Error(
+        Err(ThrushCompilerIssue::Bug(
+            String::from("Expected parameter reference"),
+            String::from("Expected parameter but found something else."),
+            span,
+            CompilationPosition::Parser,
+            line!(),
+        ))
+    }
+
+    fn expected_asm_function(&self, span: Span) -> Result<&'parser str, ThrushCompilerIssue> {
+        if let Some(name) = self.7 {
+            return Ok(name);
+        }
+
+        Err(ThrushCompilerIssue::Bug(
             String::from("Expected assembler function reference"),
             String::from("Expected assembler function but found something else."),
-            None,
             span,
+            CompilationPosition::Parser,
+            line!(),
         ))
     }
 
@@ -276,11 +284,12 @@ impl<'parser> FoundSymbolEither<'parser> for FoundSymbolId<'parser> {
             return Ok((name, scope_idx));
         }
 
-        Err(ThrushCompilerIssue::Error(
+        Err(ThrushCompilerIssue::Bug(
             String::from("Expected low level instruction reference"),
             String::from("Expected LLI but found something else."),
-            None,
             span,
+            CompilationPosition::Parser,
+            line!(),
         ))
     }
 
@@ -289,11 +298,12 @@ impl<'parser> FoundSymbolEither<'parser> for FoundSymbolId<'parser> {
             return Ok((name, scope_idx));
         }
 
-        Err(ThrushCompilerIssue::Error(
+        Err(ThrushCompilerIssue::Bug(
             String::from("Expected local reference"),
             String::from("Expected local but found something else."),
-            None,
             span,
+            CompilationPosition::Parser,
+            line!(),
         ))
     }
 }

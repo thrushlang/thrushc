@@ -2,7 +2,7 @@ use crate::{
     core::errors::{position::CompilationPosition, standard::ThrushCompilerIssue},
     frontend::{
         lexer::span::Span,
-        semantic::typechecker::{TypeChecker, bounds},
+        semantic::typechecker::{TypeChecker, bounds, metadata::TypeCheckerExprMetadata},
         types::ast::Ast,
         typesystem::{traits::TypePointerExtensions, types::Type},
     },
@@ -16,13 +16,16 @@ pub fn validate_lli<'type_checker>(
         Ast::LLI {
             name,
             kind: lli_type,
-            value: lli_value,
+            value,
             span,
             ..
         } => {
             typechecker.symbols.new_lli(name, (lli_type, *span));
 
-            let lli_value_type: &Type = lli_value.get_value_type()?;
+            let metadata: TypeCheckerExprMetadata =
+                TypeCheckerExprMetadata::new(value.is_literal(), None, *span);
+
+            let value_type: &Type = value.get_value_type()?;
 
             if lli_type.is_void_type() {
                 typechecker.add_error(ThrushCompilerIssue::Error(
@@ -34,12 +37,12 @@ pub fn validate_lli<'type_checker>(
             }
 
             if let Err(error) =
-                bounds::checking::check(lli_type, lli_value_type, Some(lli_value), None, None, span)
+                bounds::checking::type_check(lli_type, value_type, Some(value), None, metadata)
             {
                 typechecker.add_error(error);
             }
 
-            if let Err(type_error) = typechecker.analyze_ast(lli_value) {
+            if let Err(type_error) = typechecker.analyze_ast(value) {
                 typechecker.add_error(type_error);
             }
 
@@ -47,18 +50,18 @@ pub fn validate_lli<'type_checker>(
         }
 
         Ast::Load { source, .. } => {
-            if let Some(any_reference) = &source.0 {
-                let reference: &Ast = &any_reference.1;
+            if let Some(left) = &source.0 {
+                let reference: &Ast = &left.1;
 
                 let reference_type: &Type = reference.get_value_type()?;
-                let reference_span: Span = reference.get_span();
+                let span: Span = reference.get_span();
 
                 if !reference_type.is_ptr_type() && !reference_type.is_address_type() {
                     typechecker.add_error(ThrushCompilerIssue::Error(
                         "Type error".into(),
                         "Expected 'ptr<T>', 'ptr', or 'addr' type.".into(),
                         None,
-                        reference_span,
+                        span,
                     ));
                 }
 
@@ -67,14 +70,14 @@ pub fn validate_lli<'type_checker>(
 
             if let Some(expr) = &source.1 {
                 let expr_type: &Type = expr.get_value_type()?;
-                let expr_span: Span = expr.get_span();
+                let span: Span = expr.get_span();
 
                 if !expr_type.is_ptr_type() && !expr_type.is_address_type() {
                     typechecker.add_error(ThrushCompilerIssue::Error(
                         "Type error".into(),
                         "Expected 'ptr<T>', 'ptr' or 'addr' type.".into(),
                         None,
-                        expr_span,
+                        span,
                     ));
                 }
 
@@ -94,14 +97,14 @@ pub fn validate_lli<'type_checker>(
                 let reference: &Ast = &reference_any.1;
 
                 let reference_type: &Type = reference.get_value_type()?;
-                let reference_span: Span = reference.get_span();
+                let span: Span = reference.get_span();
 
                 if !reference_type.is_ptr_type() && !reference_type.is_address_type() {
                     typechecker.add_error(ThrushCompilerIssue::Error(
                         "Type error".into(),
                         "Expected 'ptr<T>', 'ptr', or 'addr' type.".into(),
                         None,
-                        reference_span,
+                        span,
                     ));
                 }
 
@@ -110,7 +113,7 @@ pub fn validate_lli<'type_checker>(
                         "Type error".into(),
                         "Expected raw typed pointer ptr<T>.".into(),
                         None,
-                        reference_span,
+                        span,
                     ));
                 } else if reference_type.is_ptr_type()
                     && reference_type.is_typed_ptr_type()
@@ -122,7 +125,7 @@ pub fn validate_lli<'type_checker>(
                         "Expected raw typed pointer type with deep type 'struct T', or 'array[T; N]'."
                             .into(),
                         None,
-                        reference_span,
+                        span,
                     ));
                 }
 
@@ -130,21 +133,21 @@ pub fn validate_lli<'type_checker>(
                     typechecker.add_warning(ThrushCompilerIssue::Warning(
                         "Undefined behavior".into(), 
                         "*Maybe* this value at runtime causes undefined behavior because it is anything at runtime, and memory calculation needs valid pointers or deep types.".into(), 
-                       reference_span
+                       span
                     ));
                 }
             }
 
             if let Some(expr) = &source.1 {
                 let expr_type: &Type = expr.get_value_type()?;
-                let expr_span: Span = expr.get_span();
+                let span: Span = expr.get_span();
 
                 if !expr_type.is_ptr_type() && !expr_type.is_address_type() {
                     typechecker.add_error(ThrushCompilerIssue::Error(
                         "Type error".into(),
                         "Expected 'ptr<T>', 'ptr', or 'addr' type.".into(),
                         None,
-                        expr_span,
+                        span,
                     ));
                 }
 
@@ -153,7 +156,7 @@ pub fn validate_lli<'type_checker>(
                         "Type error".into(),
                         "Expected raw typed pointer ptr<T>.".into(),
                         None,
-                        expr_span,
+                        span,
                     ));
                 } else if expr_type.is_ptr_type()
                     && expr_type.is_typed_ptr_type()
@@ -164,7 +167,7 @@ pub fn validate_lli<'type_checker>(
                         "Type error".into(),
                         "Expected raw typed pointer type with deep type 'struct T', or 'array[T; N]'.".into(),
                         None,
-                        expr_span,
+                        span,
                     ));
                 }
 
@@ -172,7 +175,7 @@ pub fn validate_lli<'type_checker>(
                     typechecker.add_warning(ThrushCompilerIssue::Warning(
                         "Undefined behavior".into(), 
                         "*Maybe* this value at runtime causes undefined behavior because it is anything at runtime, and memory calculation needs valid pointers or deep types.".into(), 
-                        expr_span
+                        span
                     ));
                 }
             }
@@ -202,7 +205,7 @@ pub fn validate_lli<'type_checker>(
             if let Some(any_reference) = &source.0 {
                 let reference: &Ast = &any_reference.1;
                 let reference_type: &Type = reference.get_value_type()?;
-                let reference_span: Span = reference.get_span();
+                let span: Span = reference.get_span();
 
                 if !reference_type.is_ptr_type()
                     && !reference_type.is_address_type()
@@ -212,14 +215,14 @@ pub fn validate_lli<'type_checker>(
                         "Type error".into(),
                         "Expected 'ptr<T>', 'ptr', 'addr', or 'mut T' type.".into(),
                         None,
-                        reference_span,
+                        span,
                     ));
                 }
             }
 
             if let Some(expr) = &source.1 {
                 let expr_type: &Type = expr.get_value_type()?;
-                let expr_span: Span = expr.get_span();
+                let span: Span = expr.get_span();
 
                 if !expr_type.is_ptr_type()
                     && !expr_type.is_address_type()
@@ -229,21 +232,23 @@ pub fn validate_lli<'type_checker>(
                         "Type error".into(),
                         "Expected 'ptr<T>', 'ptr', 'addr', or 'mut T' type.".into(),
                         None,
-                        expr_span,
+                        span,
                     ));
                 }
             }
 
-            let write_value_type: &Type = write_value.get_value_type()?;
-            let write_value_span: Span = write_value.get_span();
+            let value_type: &Type = write_value.get_value_type()?;
+            let span: Span = write_value.get_span();
 
-            if let Err(error) = bounds::checking::check(
+            let metadata: TypeCheckerExprMetadata =
+                TypeCheckerExprMetadata::new(write_value.is_literal(), None, span);
+
+            if let Err(error) = bounds::checking::type_check(
                 write_type,
-                write_value_type,
+                value_type,
                 Some(write_value),
                 None,
-                None,
-                &write_value_span,
+                metadata,
             ) {
                 typechecker.add_error(error);
             }

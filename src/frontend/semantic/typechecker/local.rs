@@ -2,7 +2,9 @@ use crate::{
     core::errors::{position::CompilationPosition, standard::ThrushCompilerIssue},
     frontend::{
         lexer::span::Span,
-        semantic::typechecker::{TypeChecker, bounds, position::TypeCheckerPosition},
+        semantic::typechecker::{
+            TypeChecker, bounds, metadata::TypeCheckerExprMetadata, position::TypeCheckerPosition,
+        },
         types::ast::{Ast, metadata::local::LocalMetadata},
         typesystem::types::Type,
     },
@@ -25,6 +27,12 @@ pub fn validate_local<'type_checker>(
 
             let metadata: &LocalMetadata = metadata;
 
+            let type_metadata: TypeCheckerExprMetadata = TypeCheckerExprMetadata::new(
+                local_value.is_literal(),
+                Some(TypeCheckerPosition::Local),
+                *span,
+            );
+
             if local_type.is_void_type() {
                 typechecker.add_error(ThrushCompilerIssue::Error(
                     "Type error".into(),
@@ -41,13 +49,12 @@ pub fn validate_local<'type_checker>(
                     local_value_type = Type::Ptr(Some(local_value_type.into()));
                 }
 
-                if let Err(error) = bounds::checking::check(
+                if let Err(error) = bounds::checking::type_check(
                     local_type,
                     &local_value_type,
                     Some(local_value),
                     None,
-                    Some(TypeCheckerPosition::Local),
-                    span,
+                    type_metadata,
                 ) {
                     typechecker.add_error(error);
                 }

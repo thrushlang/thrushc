@@ -34,6 +34,7 @@ pub struct ParserContext<'parser> {
     ast: Vec<Ast<'parser>>,
     tokens: &'parser [Token],
     errors: Vec<ThrushCompilerIssue>,
+    bugs: Vec<ThrushCompilerIssue>,
 
     control_ctx: ParserControlContext,
     type_ctx: ParserTypeContext,
@@ -68,7 +69,12 @@ impl<'parser> Parser<'parser> {
                     parser_context.add_stmt(instr);
                 }
                 Err(error) => {
-                    parser_context.add_error(error);
+                    if error.is_bug() {
+                        parser_context.add_bug(error);
+                    } else {
+                        parser_context.add_error(error);
+                    }
+
                     parser_context.sync();
                 }
             }
@@ -89,6 +95,7 @@ impl<'parser> ParserContext<'parser> {
             tokens,
             ast: Vec::with_capacity(MINIMAL_STATEMENT_CAPACITY),
             errors: Vec::with_capacity(100),
+            bugs: Vec::with_capacity(100),
             control_ctx: ParserControlContext::new(),
             type_ctx: ParserTypeContext::new(),
             diagnostician: Diagnostician::new(file),
@@ -99,7 +106,11 @@ impl<'parser> ParserContext<'parser> {
     }
 
     pub fn verify(&mut self) -> bool {
-        if !self.errors.is_empty() {
+        if !self.errors.is_empty() || !self.bugs.is_empty() {
+            self.bugs.iter().for_each(|bug: &ThrushCompilerIssue| {
+                self.diagnostician.build_diagnostic(bug, LoggingType::Bug);
+            });
+
             self.errors.iter().for_each(|error: &ThrushCompilerIssue| {
                 self.diagnostician
                     .build_diagnostic(error, LoggingType::Error);
@@ -202,10 +213,12 @@ impl<'parser> ParserContext<'parser> {
                     break;
                 }
 
-                if self.peek().kind.is_sync_expression()
-                    || self.peek().kind.is_sync_statement()
-                    || self.peek().kind.is_sync_declaration()
-                {
+                if self.peek().kind.is_sync_statement() || self.peek().kind.is_sync_declaration() {
+                    break;
+                }
+
+                if self.peek().kind.is_sync_expression() {
+                    let _ = self.only_advance();
                     break;
                 }
 
@@ -330,5 +343,9 @@ impl<'parser> ParserContext<'parser> {
 
     pub fn add_error(&mut self, error: ThrushCompilerIssue) {
         self.errors.push(error);
+    }
+
+    pub fn add_bug(&mut self, error: ThrushCompilerIssue) {
+        self.bugs.push(error);
     }
 }

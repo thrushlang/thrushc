@@ -2,7 +2,7 @@ use crate::{
     core::errors::{position::CompilationPosition, standard::ThrushCompilerIssue},
     frontend::{
         lexer::span::Span,
-        semantic::typechecker::{TypeChecker, bounds},
+        semantic::typechecker::{TypeChecker, bounds, metadata::TypeCheckerExprMetadata},
         types::ast::{Ast, traits::LLVMAstExtensions},
         typesystem::types::Type,
     },
@@ -19,6 +19,9 @@ pub fn validate_constant<'type_checker>(
             span,
             ..
         } => {
+            let metadata: TypeCheckerExprMetadata =
+                TypeCheckerExprMetadata::new(value.is_literal(), None, *span);
+
             let from_type: &Type = value.get_value_type()?;
             let expression_span: Span = value.get_span();
 
@@ -31,13 +34,12 @@ pub fn validate_constant<'type_checker>(
                 ));
             }
 
-            if let Err(error) = bounds::checking::check(
+            if let Err(error) = bounds::checking::type_check(
                 target_type,
                 &Type::Const(from_type.clone().into()),
                 Some(value),
                 None,
-                None,
-                span,
+                metadata,
             ) {
                 typechecker.add_error(error);
             }

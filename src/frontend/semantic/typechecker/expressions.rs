@@ -2,7 +2,9 @@ use crate::{
     core::errors::{position::CompilationPosition, standard::ThrushCompilerIssue},
     frontend::{
         lexer::{span::Span, tokentype::TokenType},
-        semantic::typechecker::{TypeChecker, bounds, call, validations},
+        semantic::typechecker::{
+            TypeChecker, bounds, call, metadata::TypeCheckerExprMetadata, validations,
+        },
         types::{ast::Ast, parser::stmts::types::Constructor},
         typesystem::{
             traits::{DereferenceExtensions, TypeMutableExtensions, TypePointerExtensions},
@@ -96,8 +98,10 @@ pub fn validate_expression<'type_checker>(
             span,
             ..
         } => {
-            let value_type: &Type = value.get_value_type()?;
+            let metadata: TypeCheckerExprMetadata =
+                TypeCheckerExprMetadata::new(value.is_literal(), None, *span);
 
+            let value_type: &Type = value.get_value_type()?;
             let source_type: &Type = source.get_value_type()?;
 
             if !source.is_allocated_ref()
@@ -122,18 +126,17 @@ pub fn validate_expression<'type_checker>(
             }
 
             if source_type.is_mut_type() {
-                if let Err(error) = bounds::checking::check(
+                if let Err(error) = bounds::checking::type_check(
                     &source_type.dereference_high_level_type(),
                     value_type,
                     Some(value),
                     None,
-                    None,
-                    span,
+                    metadata,
                 ) {
                     typechecker.add_error(error);
                 }
             } else if let Err(error) =
-                bounds::checking::check(source_type, value_type, Some(value), None, None, span)
+                bounds::checking::type_check(source_type, value_type, Some(value), None, metadata)
             {
                 typechecker.add_error(error);
             }
@@ -156,13 +159,17 @@ pub fn validate_expression<'type_checker>(
             let array_type: &Type = kind.get_fixed_array_base_type();
 
             items.iter().try_for_each(|item| {
-                if let Err(error) = bounds::checking::check(
+                let span: Span = item.get_span();
+
+                let metadata: TypeCheckerExprMetadata =
+                    TypeCheckerExprMetadata::new(item.is_literal(), None, span);
+
+                if let Err(error) = bounds::checking::type_check(
                     array_type,
                     item.get_value_type()?,
                     Some(item),
                     None,
-                    None,
-                    &item.get_span(),
+                    metadata,
                 ) {
                     typechecker.add_error(error);
                 }
@@ -188,13 +195,17 @@ pub fn validate_expression<'type_checker>(
             let array_type: &Type = kind.get_array_base_type();
 
             items.iter().try_for_each(|item| {
-                if let Err(error) = bounds::checking::check(
+                let span: Span = item.get_span();
+
+                let metadata: TypeCheckerExprMetadata =
+                    TypeCheckerExprMetadata::new(item.is_literal(), None, span);
+
+                if let Err(error) = bounds::checking::type_check(
                     array_type,
                     item.get_value_type()?,
                     Some(item),
                     None,
-                    None,
-                    &item.get_span(),
+                    metadata,
                 ) {
                     typechecker.add_error(error);
                 }
@@ -366,20 +377,18 @@ pub fn validate_expression<'type_checker>(
             let args: &Constructor = args;
 
             args.iter().try_for_each(|arg| {
-                let expression: &Ast = &arg.1;
-                let expression_span: Span = expression.get_span();
+                let expr: &Ast = &arg.1;
+                let span: Span = expr.get_span();
 
                 let target_type: &Type = &arg.2;
-                let from_type: &Type = expression.get_value_type()?;
+                let from_type: &Type = expr.get_value_type()?;
 
-                if let Err(error) = bounds::checking::check(
-                    target_type,
-                    from_type,
-                    Some(expression),
-                    None,
-                    None,
-                    &expression_span,
-                ) {
+                let metadata: TypeCheckerExprMetadata =
+                    TypeCheckerExprMetadata::new(expr.is_literal(), None, span);
+
+                if let Err(error) =
+                    bounds::checking::type_check(target_type, from_type, Some(expr), None, metadata)
+                {
                     typechecker.add_error(error);
                 }
 

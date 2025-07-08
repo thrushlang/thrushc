@@ -2,7 +2,7 @@ use crate::{
     core::errors::standard::ThrushCompilerIssue,
     frontend::{
         lexer::span::Span,
-        semantic::typechecker::{TypeChecker, bounds},
+        semantic::typechecker::{TypeChecker, bounds, metadata::TypeCheckerExprMetadata},
         types::ast::Ast,
         typesystem::types::Type,
     },
@@ -53,10 +53,13 @@ pub fn validate_call<'type_checker>(
         .zip(args.iter())
         .try_for_each(|(target_type, expr)| {
             let from_type: &Type = expr.get_value_type()?;
-            let expr_span: Span = expr.get_span();
+            let span: Span = expr.get_span();
+
+            let metadata: TypeCheckerExprMetadata =
+                TypeCheckerExprMetadata::new(expr.is_literal(), None, span);
 
             if let Err(error) =
-                bounds::checking::check(target_type, from_type, Some(expr), None, None, &expr_span)
+                bounds::checking::type_check(target_type, from_type, Some(expr), None, metadata)
             {
                 typechecker.add_error(error);
             }

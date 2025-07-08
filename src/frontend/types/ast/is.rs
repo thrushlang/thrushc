@@ -8,6 +8,14 @@ use crate::{
 
 impl Ast<'_> {
     #[inline]
+    pub fn is_literal(&self) -> bool {
+        matches!(
+            self,
+            Ast::Integer { .. } | Ast::Float { .. } | Ast::Boolean { .. } | Ast::Char { .. }
+        )
+    }
+
+    #[inline]
     pub fn is_block(&self) -> bool {
         matches!(self, Ast::Block { .. })
     }

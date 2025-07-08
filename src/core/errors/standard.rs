@@ -8,3 +8,9 @@ pub enum ThrushCompilerIssue {
     Warning(String, String, Span),
     Bug(String, String, Span, CompilationPosition, u32),
 }
+
+impl ThrushCompilerIssue {
+    pub fn is_bug(&self) -> bool {
+        matches!(self, ThrushCompilerIssue::Bug(..))
+    }
+}

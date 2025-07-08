@@ -2,7 +2,7 @@ use crate::{
     core::errors::{position::CompilationPosition, standard::ThrushCompilerIssue},
     frontend::{
         lexer::span::Span,
-        semantic::typechecker::{TypeChecker, bounds},
+        semantic::typechecker::{TypeChecker, bounds, metadata::TypeCheckerExprMetadata},
         types::ast::Ast,
         typesystem::types::Type,
     },
@@ -20,13 +20,15 @@ pub fn validate_conditional<'type_checker>(
             otherwise,
             span,
         } => {
-            if let Err(error) = bounds::checking::check(
+            let metadata: TypeCheckerExprMetadata =
+                TypeCheckerExprMetadata::new(cond.is_literal(), None, *span);
+
+            if let Err(error) = bounds::checking::type_check(
                 &Type::Bool,
                 cond.get_value_type()?,
                 Some(cond),
                 None,
-                None,
-                span,
+                metadata,
             ) {
                 typechecker.add_error(error);
             }
@@ -45,13 +47,15 @@ pub fn validate_conditional<'type_checker>(
         }
 
         Ast::Elif { cond, block, span } => {
-            if let Err(error) = bounds::checking::check(
+            let metadata: TypeCheckerExprMetadata =
+                TypeCheckerExprMetadata::new(cond.is_literal(), None, *span);
+
+            if let Err(error) = bounds::checking::type_check(
                 &Type::Bool,
                 cond.get_value_type()?,
                 Some(cond),
                 None,
-                None,
-                span,
+                metadata,
             ) {
                 typechecker.add_error(error);
             }

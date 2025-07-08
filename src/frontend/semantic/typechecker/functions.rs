@@ -1,11 +1,6 @@
 use crate::{
     core::errors::{position::CompilationPosition, standard::ThrushCompilerIssue},
-    frontend::{
-        lexer::span::Span,
-        semantic::typechecker::{TypeChecker, bounds},
-        types::ast::Ast,
-        typesystem::types::Type,
-    },
+    frontend::{lexer::span::Span, semantic::typechecker::TypeChecker, types::ast::Ast},
 };
 
 pub fn validate_function<'type_checker>(
@@ -19,11 +14,12 @@ pub fn validate_function<'type_checker>(
             }
 
             if !body.has_return() {
-                if let Err(error) =
-                    bounds::checking::check(&Type::U32, &Type::Void, None, None, None, span)
-                {
-                    typechecker.add_error(error);
-                }
+                typechecker.add_error(ThrushCompilerIssue::Error(
+                    "Type error".into(),
+                    "Expected return with type 'u32'.".into(),
+                    None,
+                    *span,
+                ));
             }
 
             Ok(())
@@ -73,12 +69,13 @@ pub fn validate_function<'type_checker>(
                     typechecker.add_error(type_error);
                 }
 
-                if !body.has_return() {
-                    if let Err(error) =
-                        bounds::checking::check(return_type, &Type::Void, None, None, None, span)
-                    {
-                        typechecker.add_error(error);
-                    }
+                if !body.has_return() && !return_type.is_void_type() {
+                    typechecker.add_error(ThrushCompilerIssue::Error(
+                        "Type error".into(),
+                        format!("Expected return with type '{}'.", return_type),
+                        None,
+                        *span,
+                    ));
                 }
             }
 
