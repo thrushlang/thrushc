@@ -7,32 +7,28 @@ use crate::{
 };
 
 pub fn validate_binary(
-    operator: &TokenType,
+    op: &TokenType,
     a: &Type,
     b: &Type,
     span: Span,
 ) -> Result<(), ThrushCompilerIssue> {
-    match operator {
+    match op {
         TokenType::Star | TokenType::Slash | TokenType::Minus | TokenType::Plus => {
-            self::validate_binary_arithmetic(operator, a, b, span)
+            self::validate_binary_arithmetic(op, a, b, span)
         }
-
-        TokenType::BangEq | TokenType::EqEq => self::validate_binary_equality(operator, a, b, span),
-
+        TokenType::BangEq | TokenType::EqEq => self::validate_binary_equality(op, a, b, span),
         TokenType::LessEq | TokenType::Less | TokenType::GreaterEq | TokenType::Greater => {
-            self::validate_binary_comparasion(operator, a, b, span)
+            self::validate_binary_comparasion(op, a, b, span)
         }
-
-        TokenType::LShift | TokenType::RShift => self::validate_binary_shift(operator, a, b, span),
-
-        TokenType::And | TokenType::Or => self::validate_binary_gate(operator, a, b, span),
+        TokenType::LShift | TokenType::RShift => self::validate_binary_shift(op, a, b, span),
+        TokenType::And | TokenType::Or => self::validate_binary_gate(op, a, b, span),
 
         _ => Ok(()),
     }
 }
 
 fn validate_binary_gate(
-    operator: &TokenType,
+    op: &TokenType,
     a: &Type,
     b: &Type,
     span: Span,
@@ -43,14 +39,14 @@ fn validate_binary_gate(
 
     Err(ThrushCompilerIssue::Error(
         String::from("Mismatched Types"),
-        format!("Logical ({} {} {}) isn't allowed.", a, operator, b),
+        format!("'{} {} {}' isn't allowed.", a, op, b),
         None,
         span,
     ))
 }
 
 fn validate_binary_shift(
-    operator: &TokenType,
+    op: &TokenType,
     a: &Type,
     b: &Type,
     span: Span,
@@ -65,14 +61,14 @@ fn validate_binary_shift(
 
     Err(ThrushCompilerIssue::Error(
         String::from("Mismatched Types"),
-        format!("Arithmetic ({} {} {}) is not allowed.", a, operator, b),
+        format!("'{} {} {}' is not allowed.", a, op, b),
         None,
         span,
     ))
 }
 
 fn validate_binary_comparasion(
-    operator: &TokenType,
+    op: &TokenType,
     a: &Type,
     b: &Type,
     span: Span,
@@ -89,14 +85,14 @@ fn validate_binary_comparasion(
 
     Err(ThrushCompilerIssue::Error(
         String::from("Mismatched Types"),
-        format!("Logical ({} {} {}) isn't allowed.", a, operator, b),
+        format!("'{} {} {}' isn't allowed.", a, op, b),
         None,
         span,
     ))
 }
 
 fn validate_binary_equality(
-    operator: &TokenType,
+    op: &TokenType,
     a: &Type,
     b: &Type,
     span: Span,
@@ -133,14 +129,14 @@ fn validate_binary_equality(
 
     Err(ThrushCompilerIssue::Error(
         String::from("Mismatched Types"),
-        format!("Logical ({} {} {}) isn't allowed.", a, operator, b),
+        format!("'{} {} {}' isn't allowed.", a, op, b),
         None,
         span,
     ))
 }
 
 fn validate_binary_arithmetic(
-    operator: &TokenType,
+    op: &TokenType,
     a: &Type,
     b: &Type,
     span: Span,
@@ -169,7 +165,7 @@ fn validate_binary_arithmetic(
 
         _ => Err(ThrushCompilerIssue::Error(
             String::from("Mismatched Types"),
-            format!("Arithmetic ({} {} {}) isn't allowed.", a, operator, b),
+            format!("'{} {} {}' isn't allowed.", a, op, b),
             None,
             span,
         )),

@@ -29,11 +29,11 @@ pub fn lower_precedence<'parser>(
     parser_context: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, ThrushCompilerIssue> {
     let primary: Ast = match &parser_context.peek().kind {
+        TokenType::New => constructor::build_constructor(parser_context)?,
+
         TokenType::Fixed => farray::build_fixed_array(parser_context)?,
         TokenType::LBracket => array::build_array(parser_context)?,
         TokenType::Deref => deref::build_dereference(parser_context)?,
-
-        TokenType::New => constructor::build_constructor(parser_context)?,
 
         TokenType::SizeOf => sizeof::build_sizeof(parser_context)?,
 
@@ -55,18 +55,21 @@ pub fn lower_precedence<'parser>(
                     parser_context.only_advance()?;
                     AllocationSite::Heap
                 }
+
                 TokenType::Stack => {
                     parser_context.only_advance()?;
                     AllocationSite::Stack
                 }
+
                 TokenType::Static => {
                     parser_context.only_advance()?;
                     AllocationSite::Static
                 }
+
                 _ => {
                     return Err(ThrushCompilerIssue::Error(
-                        String::from("Syntax error"),
-                        String::from("Expected site allocation flag."),
+                        "Syntax error".into(),
+                        "Expected site allocation attribute.".into(),
                         None,
                         span,
                     ));
@@ -99,7 +102,7 @@ pub fn lower_precedence<'parser>(
             )?;
 
             Ast::Alloc {
-                type_to_alloc: alloc_type,
+                alloc: alloc_type,
                 site_allocation,
                 attributes,
                 span,

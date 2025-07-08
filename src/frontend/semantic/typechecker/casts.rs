@@ -16,17 +16,14 @@ pub fn validate_cast_as<'type_checker>(
         Ast::As {
             from,
             cast: cast_type,
+            metadata,
             span,
             ..
         } => {
             let from_type: &Type = from.get_value_type()?;
 
-            if let Err(error) = bounds::cast::check_type_cast(
-                cast_type,
-                from_type,
-                from.is_allocated_reference(),
-                span,
-            ) {
+            if let Err(error) = bounds::cast::check_type_cast(cast_type, from_type, metadata, span)
+            {
                 typechecker.add_error(error);
             }
 

@@ -19,6 +19,17 @@ pub fn validate_constant<'type_checker>(
             span,
             ..
         } => {
+            let expression_span: Span = value.get_span();
+
+            if !value.is_constant_value() {
+                return Err(ThrushCompilerIssue::Error(
+                    "Syntax error".into(),
+                    "Expected integer, floating-point, boolean, string, fixed array, or char constant types.".into(),
+                    None,
+                    expression_span,
+                ));
+            }
+
             let from_type: &Type = value.get_value_type()?;
 
             if let Err(error) =

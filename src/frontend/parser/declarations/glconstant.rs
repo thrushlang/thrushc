@@ -47,17 +47,6 @@ pub fn build_global_const<'parser>(
 
     let value: Ast = expr::build_expr(parser_context)?;
 
-    let expression_span: Span = value.get_span();
-
-    if !value.is_constant_value() {
-        return Err(ThrushCompilerIssue::Error(
-            "Syntax error".into(),
-            "Expected integer, floating-point, boolean, string, fixed array, or char constant types.".into(),
-            None,
-            expression_span,
-        ));
-    }
-
     parser_context.consume(
         TokenType::SemiColon,
         "Syntax error".into(),

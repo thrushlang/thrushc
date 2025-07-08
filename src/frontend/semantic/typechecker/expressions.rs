@@ -100,7 +100,7 @@ pub fn validate_expression<'type_checker>(
 
             let source_type: &Type = source.get_value_type()?;
 
-            if !source.is_allocated_reference()
+            if !source.is_allocated_ref()
                 && !source_type.is_ptr_type()
                 && !source_type.is_mut_type()
             {
@@ -214,7 +214,7 @@ pub fn validate_expression<'type_checker>(
             if let Some(any_reference) = &source.0 {
                 let reference: &Ast = &any_reference.1;
 
-                if !reference.is_allocated_reference() {
+                if !reference.is_allocated_ref() {
                     typechecker.add_error(ThrushCompilerIssue::Error(
                         "Type error".into(),
                         "An assigned value was expected, such as ptr[T], ptr, addr, or high-level pointer mut T.".into(),

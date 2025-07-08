@@ -7,7 +7,7 @@ use crate::{
     frontend::typesystem::{
         traits::{
             CastTypeExtensions, DereferenceExtensions, IndexTypeExtensions, LLVMTypeExtensions,
-            TypeMutableExtensions, TypePointerExtensions, TypeStructExtensions,
+            TypeExtensions, TypeMutableExtensions, TypePointerExtensions, TypeStructExtensions,
         },
         types::Type,
     },
@@ -23,6 +23,39 @@ impl LLVMTypeExtensions for Type {
         let target_data: &TargetData = context.get_target_data();
 
         target_data.get_bit_size(&a_llvm_type) == target_data.get_bit_size(&b_llvm_type)
+    }
+}
+
+impl TypeExtensions for Type {
+    fn get_type_with_depth(&self, base_depth: usize) -> &Type {
+        if base_depth == 0 {
+            return self;
+        }
+
+        match self {
+            Type::FixedArray(element_type, _) => element_type.get_aprox_type(base_depth - 1),
+            Type::Array(element_type) => element_type.get_aprox_type(base_depth - 1),
+            Type::Mut(inner_type) => inner_type.get_aprox_type(base_depth - 1),
+            Type::Const(inner_type) => inner_type.get_aprox_type(base_depth - 1),
+            Type::Ptr(Some(inner_type)) => inner_type.get_aprox_type(base_depth - 1),
+            Type::Struct(_, _) => self,
+            Type::S8
+            | Type::S16
+            | Type::S32
+            | Type::S64
+            | Type::U8
+            | Type::U16
+            | Type::U32
+            | Type::U64
+            | Type::F32
+            | Type::F64
+            | Type::Bool
+            | Type::Char
+            | Type::Str
+            | Type::Addr
+            | Type::Void
+            | Type::Ptr(None) => self,
+        }
     }
 }
 
@@ -131,20 +164,6 @@ impl TypeMutableExtensions for Type {
     fn is_mut_struct_type(&self) -> bool {
         if let Type::Mut(inner) = self {
             return inner.is_struct_type();
-        }
-
-        false
-    }
-
-    fn is_mut_numeric_type(&self) -> bool {
-        if let Type::Mut(inner) = self {
-            if inner.is_integer_type()
-                || inner.is_bool_type()
-                || inner.is_char_type()
-                || inner.is_float_type()
-            {
-                return true;
-            }
         }
 
         false

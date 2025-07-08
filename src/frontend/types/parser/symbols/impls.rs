@@ -46,16 +46,8 @@ impl<'parser> EnumExtensions<'parser> for EnumSymbol<'parser> {
 }
 
 impl LocalSymbolExtensions for LocalSymbol<'_> {
-    fn is_undefined(&self) -> bool {
-        self.2
-    }
-
     fn is_mutable(&self) -> bool {
         self.1
-    }
-
-    fn get_span(&self) -> Span {
-        self.3
     }
 
     fn get_type(&self) -> Type {
@@ -78,10 +70,6 @@ impl FunctionExtensions for Function<'_> {
 impl LLISymbolExtensions for LLISymbol<'_> {
     fn get_type(&self) -> Type {
         self.0.clone()
-    }
-
-    fn get_span(&self) -> Span {
-        self.1
     }
 }
 

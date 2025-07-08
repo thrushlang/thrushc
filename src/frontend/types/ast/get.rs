@@ -24,10 +24,7 @@ impl Ast<'_> {
             Ast::Reference { kind, .. } => Ok(kind),
             Ast::Address { kind, .. } => Ok(kind),
             Ast::Load { kind, .. } => Ok(kind),
-            Ast::Alloc {
-                type_to_alloc: kind,
-                ..
-            } => Ok(kind),
+            Ast::Alloc { alloc: kind, .. } => Ok(kind),
             Ast::Deref { kind, .. } => Ok(kind),
             Ast::Write {
                 write_type: kind, ..
@@ -76,13 +73,17 @@ impl Ast<'_> {
             Ast::Continue { .. } => Ok(&Type::Void),
             Ast::Block { .. } => Ok(&Type::Void),
 
-            // Constants & Low-Level Instructions
+            // Constants
             Ast::Const { kind, .. } => Ok(kind),
+
+            // Low-Level Instructions
             Ast::LLI { kind, .. } => Ok(kind),
-            Ast::Pass { .. } => Ok(&Type::Void),
 
             // Global Assembler
             Ast::GlobalAssembler { .. } => Ok(&Type::Void),
+
+            // Ignored
+            Ast::Pass { .. } => Ok(&Type::Void),
         }
     }
 
@@ -107,10 +108,7 @@ impl Ast<'_> {
             Ast::Load { kind, .. } => Ok(kind),
             Ast::Address { kind, .. } => Ok(kind),
             Ast::Deref { kind, .. } => Ok(kind),
-            Ast::Alloc {
-                type_to_alloc: kind,
-                ..
-            } => Ok(kind),
+            Ast::Alloc { alloc: kind, .. } => Ok(kind),
 
             // Composite types
             Ast::FixedArray { kind, .. } => Ok(kind),
@@ -138,6 +136,9 @@ impl Ast<'_> {
 
             // Global Assembler
             Ast::GlobalAssembler { .. } => Ok(&Type::Void),
+
+            // Ignored
+            Ast::Pass { .. } => Ok(&Type::Void),
 
             _ => Err(ThrushCompilerIssue::Error(
                 String::from("Syntax error"),
@@ -169,10 +170,7 @@ impl Ast<'_> {
             Ast::Load { kind, .. } => kind,
             Ast::Address { kind, .. } => kind,
             Ast::Deref { kind, .. } => kind,
-            Ast::Alloc {
-                type_to_alloc: kind,
-                ..
-            } => kind,
+            Ast::Alloc { alloc: kind, .. } => kind,
 
             // Composite types
             Ast::FixedArray { kind, .. } => kind,
@@ -199,6 +197,9 @@ impl Ast<'_> {
 
             // Global Assembler
             Ast::GlobalAssembler { .. } => &Type::Void,
+
+            // Ignored
+            Ast::Pass { .. } => &Type::Void,
 
             any => {
                 logging::log(

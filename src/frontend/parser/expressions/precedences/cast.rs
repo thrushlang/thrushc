@@ -18,15 +18,19 @@ pub fn cast_precedence<'parser>(
 
     if parser_context.match_token(TokenType::As)? {
         let span: Span = parser_context.previous().get_span();
+        let expression_type: &Type = expression.get_value_type()?;
 
         let cast: Type = typegen::build_type(parser_context)?;
 
         let is_constant: bool = expression.is_constant_value();
+        let is_allocated = expression.is_allocated_ref()
+            || expression_type.is_mut_type()
+            || expression_type.is_ptr_type();
 
         expression = Ast::As {
             from: expression.into(),
             cast,
-            metadata: CastMetadata::new(is_constant),
+            metadata: CastMetadata::new(is_constant, is_allocated),
             span,
         };
     }

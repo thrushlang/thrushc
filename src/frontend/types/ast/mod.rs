@@ -186,7 +186,7 @@ pub enum Ast<'ctx> {
 
     // Functions
 
-    // Entrypoint -> fn main() {}
+    // Entrypoint
     EntryPoint {
         body: Rc<Ast<'ctx>>,
         span: Span,
@@ -280,7 +280,7 @@ pub enum Ast<'ctx> {
 
     // Pointer Manipulation
     Alloc {
-        type_to_alloc: Type,
+        alloc: Type,
         site_allocation: AllocationSite,
         attributes: ThrushAttributes<'ctx>,
         span: Span,

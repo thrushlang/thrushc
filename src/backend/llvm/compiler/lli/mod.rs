@@ -46,10 +46,10 @@ pub fn compile<'ctx>(
         } => self::address::compile(context, source, indexes),
 
         Ast::Alloc {
-            type_to_alloc,
+            alloc,
             site_allocation,
             ..
-        } => self::alloc::compile(context, type_to_alloc, site_allocation),
+        } => self::alloc::compile(context, alloc, site_allocation),
 
         _ => {
             self::codegen_abort("Failed to compile low-level instruction. Unknown expression.");

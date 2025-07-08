@@ -33,7 +33,7 @@ fn validate_general_unary(
 
     Err(ThrushCompilerIssue::Error(
         String::from("Mismatched Types"),
-        format!("Arithmetic '{}' with '{}' isn't allowed.", operator, a),
+        format!("'{}' with '{}' isn't allowed.", operator, a),
         None,
         span,
     ))
@@ -46,7 +46,7 @@ fn validate_unary_bang(a: &Type, span: Span) -> Result<(), ThrushCompilerIssue> 
 
     Err(ThrushCompilerIssue::Error(
         String::from("Mismatched Types"),
-        format!("Logical (!{}) isn't allowed.", a),
+        format!("'!{}' isn't allowed.", a),
         None,
         span,
     ))

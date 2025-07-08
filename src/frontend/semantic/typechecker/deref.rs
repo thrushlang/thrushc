@@ -19,7 +19,7 @@ pub fn validate_dereference<'type_checker>(
             {
                 typechecker.add_error(ThrushCompilerIssue::Error(
                     "Type error".into(),
-                    "Expected raw typed pointer 'ptr[T]', raw pointer 'ptr', constant 'const T', or high-level pointer 'mut T' type for dereference."
+                    "Expected raw typed pointer 'ptr[T]', raw pointer 'ptr', high-level pointer 'mut T' type, or constant 'const T', for dereference."
                         .into(),
                     None,
                     value_span,

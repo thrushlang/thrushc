@@ -8,11 +8,14 @@ pub trait LLVMTypeExtensions {
     fn llvm_is_same_bit_size(&self, context: &LLVMCodeGenContext<'_, '_>, other: &Type) -> bool;
 }
 
+pub trait TypeExtensions {
+    fn get_type_with_depth(&self, base_depth: usize) -> &Type;
+}
+
 pub trait TypeMutableExtensions {
     fn is_mut_fixed_array_type(&self) -> bool;
     fn is_mut_array_type(&self) -> bool;
     fn is_mut_struct_type(&self) -> bool;
-    fn is_mut_numeric_type(&self) -> bool;
 }
 
 pub trait TypePointerExtensions {
