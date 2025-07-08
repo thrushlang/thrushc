@@ -2,7 +2,7 @@ use crate::{
     core::errors::standard::ThrushCompilerIssue,
     frontend::{
         lexer::{span::Span, token::Token, tokentype::TokenType},
-        parser::{ParserContext, attributes, expression, typegen},
+        parser::{ParserContext, attributes, checks, expr, typegen},
         types::{
             ast::Ast,
             parser::stmts::{
@@ -18,20 +18,13 @@ pub fn build_enum<'parser>(
     parser_context: &mut ParserContext<'parser>,
     declare_forward: bool,
 ) -> Result<Ast<'parser>, ThrushCompilerIssue> {
-    let enum_tk: &Token = parser_context.consume(
+    checks::check_main_scope_state(parser_context)?;
+
+    parser_context.consume(
         TokenType::Enum,
         String::from("Syntax error"),
         String::from("Expected 'enum'."),
     )?;
-
-    if !parser_context.is_main_scope() {
-        return Err(ThrushCompilerIssue::Error(
-            String::from("Syntax error"),
-            String::from("Enums are only defined globally."),
-            None,
-            enum_tk.get_span(),
-        ));
-    }
 
     let name: &Token = parser_context.consume(
         TokenType::Identifier,
@@ -121,7 +114,7 @@ pub fn build_enum<'parser>(
 
             parser_context.consume(TokenType::Eq, "Syntax error".into(), "Expected '='.".into())?;
 
-            let expression: Ast = expression::build_expr(parser_context)?;
+            let expression: Ast = expr::build_expr(parser_context)?;
             let expression_type: &Type = expression.get_value_type()?;
             let expression_span: Span = expression.get_span();
 

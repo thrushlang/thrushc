@@ -2,7 +2,7 @@ use crate::{
     core::errors::standard::ThrushCompilerIssue,
     frontend::{
         lexer::{span::Span, token::Token, tokentype::TokenType},
-        parser::{ParserContext, expression, typegen},
+        parser::{ParserContext, expr, typegen},
         types::{ast::Ast, parser::stmts::traits::TokenExtensions},
         typesystem::types::Type,
     },
@@ -11,20 +11,12 @@ use crate::{
 pub fn build_lli<'parser>(
     parser_ctx: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, ThrushCompilerIssue> {
-    let instr_tk: &Token = parser_ctx.consume(
-        TokenType::Instr,
-        String::from("Syntax error"),
-        String::from("Expected 'instr' keyword."),
-    )?;
-
-    let span: Span = instr_tk.get_span();
-
     if parser_ctx.is_main_scope() {
         return Err(ThrushCompilerIssue::Error(
             String::from("Syntax error"),
             String::from("LLI's should be contained at local scope."),
             None,
-            span,
+            parser_ctx.peek().get_span(),
         ));
     }
 
@@ -33,9 +25,15 @@ pub fn build_lli<'parser>(
             String::from("Syntax error"),
             String::from("Unreacheable code."),
             None,
-            span,
+            parser_ctx.peek().get_span(),
         ));
     }
+
+    parser_ctx.consume(
+        TokenType::Instr,
+        String::from("Syntax error"),
+        String::from("Expected 'instr' keyword."),
+    )?;
 
     let instr_tk: &Token = parser_ctx.consume(
         TokenType::Identifier,
@@ -60,7 +58,7 @@ pub fn build_lli<'parser>(
         String::from("Expected '='."),
     )?;
 
-    let value: Ast = expression::build_expr(parser_ctx)?;
+    let value: Ast = expr::build_expr(parser_ctx)?;
 
     parser_ctx.consume(
         TokenType::SemiColon,

@@ -2,7 +2,7 @@ use crate::{
     core::errors::standard::ThrushCompilerIssue,
     frontend::{
         lexer::{span::Span, token::Token, tokentype::TokenType},
-        parser::{ParserContext, expression},
+        parser::{ParserContext, expr},
         types::{
             ast::Ast,
             parser::{
@@ -19,15 +19,6 @@ use crate::{
 pub fn build_constructor<'parser>(
     parser_context: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, ThrushCompilerIssue> {
-    if parser_context.is_unreacheable_code() {
-        return Err(ThrushCompilerIssue::Error(
-            String::from("Syntax error"),
-            String::from("Unreacheable code."),
-            None,
-            parser_context.previous().span,
-        ));
-    }
-
     parser_context.consume(
         TokenType::New,
         "Syntax error".into(),
@@ -90,7 +81,7 @@ pub fn build_constructor<'parser>(
                 ));
             }
 
-            let expression: Ast = expression::build_expr(parser_context)?;
+            let expression: Ast = expr::build_expr(parser_context)?;
 
             if let Some(target_type) = struct_found.get_field_type(field_name) {
                 args.push((field_name, expression, target_type, amount as u32));

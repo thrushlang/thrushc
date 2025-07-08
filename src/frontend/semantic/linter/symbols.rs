@@ -39,7 +39,7 @@ pub struct LinterSymbolsTable<'linter> {
     scope: usize,
 }
 
-impl<'linter> LinterSymbolsTable<'linter> {
+impl LinterSymbolsTable<'_> {
     pub fn new() -> Self {
         Self {
             functions: HashMap::with_capacity(MINIMAL_FUNCTIONS_CAPACITY),
@@ -56,107 +56,9 @@ impl<'linter> LinterSymbolsTable<'linter> {
             scope: 0,
         }
     }
+}
 
-    pub fn new_asm_function(
-        &mut self,
-        name: &'linter str,
-        info: LinterAssemblerFunctionInfo<'linter>,
-    ) {
-        self.asm_functions.insert(name, info);
-    }
-
-    pub fn new_function(&mut self, name: &'linter str, info: LinterFunctionInfo<'linter>) {
-        self.functions.insert(name, info);
-    }
-
-    pub fn new_global_constant(&mut self, name: &'linter str, info: LinterConstantInfo) {
-        self.global_constants.insert(name, info);
-    }
-
-    pub fn new_local_constant(&mut self, name: &'linter str, info: LinterConstantInfo) {
-        if let Some(scope) = self.local_constants.last_mut() {
-            scope.insert(name, info);
-        }
-    }
-
-    pub fn new_parameter(&mut self, name: &'linter str, info: LinterFunctionParameterInfo) {
-        if let Some(scope) = self.parameters.last_mut() {
-            scope.insert(name, info);
-        }
-    }
-
-    pub fn new_enum(&mut self, name: &'linter str, info: LinterEnumsFieldsInfo<'linter>) {
-        self.enums.insert(name, info);
-    }
-
-    pub fn new_struct(&mut self, name: &'linter str, info: LinterStructFieldsInfo<'linter>) {
-        self.structs.insert(name, info);
-    }
-
-    pub fn get_all_function_parameters(&self) -> &LinterFunctionParameters {
-        &self.parameters
-    }
-
-    pub fn get_all_locals(&self) -> &LinterLocals {
-        &self.locals
-    }
-
-    pub fn get_all_llis(&self) -> &LinterLLIs {
-        &self.llis
-    }
-
-    pub fn get_all_enums(&self) -> &LinterEnums<'linter> {
-        &self.enums
-    }
-
-    pub fn get_global_all_constants(&self) -> &LinterGlobalConstants {
-        &self.global_constants
-    }
-
-    pub fn get_all_structs(&self) -> &LinterStructs {
-        &self.structs
-    }
-
-    pub fn get_all_functions(&self) -> &LinterFunctions {
-        &self.functions
-    }
-
-    pub fn get_all_asm_functions(&self) -> &LinterAssemblerFunctions {
-        &self.asm_functions
-    }
-
-    pub fn new_local(&mut self, name: &'linter str, info: LinterLocalInfo) {
-        if let Some(scope) = self.locals.last_mut() {
-            scope.insert(name, info);
-        }
-    }
-
-    pub fn new_lli(&mut self, name: &'linter str, info: LinterLLIInfo) {
-        if let Some(scope) = self.llis.last_mut() {
-            scope.insert(name, info);
-        }
-    }
-
-    pub fn bulk_declare_parameters(&mut self, parameters: &'linter [Ast]) {
-        parameters.iter().for_each(|parameter| {
-            if let Ast::FunctionParameter {
-                name,
-                span,
-                metadata,
-                ..
-            } = parameter
-            {
-                let metadata: &FunctionParameterMetadata = metadata;
-
-                self.new_parameter(name, (*span, false, !metadata.is_mutable()));
-            }
-        });
-    }
-
-    pub fn destroy_all_parameters(&mut self) {
-        self.parameters.clear();
-    }
-
+impl<'linter> LinterSymbolsTable<'linter> {
     pub fn get_asm_function_info(
         &mut self,
         name: &'linter str,
@@ -214,21 +116,6 @@ impl<'linter> LinterSymbolsTable<'linter> {
         None
     }
 
-    pub fn split_enum_field_name(
-        &mut self,
-        from: &'linter str,
-    ) -> Option<(&'linter str, &'linter str)> {
-        let splitted: Vec<&str> = from.split(".").collect();
-
-        if let Some(enum_name) = splitted.first() {
-            if let Some(field_name) = splitted.get(1) {
-                return Some((enum_name, field_name));
-            }
-        }
-
-        None
-    }
-
     pub fn get_local_info(&mut self, name: &'linter str) -> Option<&mut LinterLocalInfo> {
         for scope in self.locals.iter_mut().rev() {
             if let Some(local) = scope.get_mut(name) {
@@ -262,7 +149,93 @@ impl<'linter> LinterSymbolsTable<'linter> {
 
         None
     }
+}
 
+impl<'linter> LinterSymbolsTable<'linter> {
+    pub fn get_all_function_parameters(&self) -> &LinterFunctionParameters {
+        &self.parameters
+    }
+
+    pub fn get_all_locals(&self) -> &LinterLocals {
+        &self.locals
+    }
+
+    pub fn get_all_llis(&self) -> &LinterLLIs {
+        &self.llis
+    }
+
+    pub fn get_all_enums(&self) -> &LinterEnums<'linter> {
+        &self.enums
+    }
+
+    pub fn get_global_all_constants(&self) -> &LinterGlobalConstants {
+        &self.global_constants
+    }
+
+    pub fn get_all_structs(&self) -> &LinterStructs {
+        &self.structs
+    }
+
+    pub fn get_all_functions(&self) -> &LinterFunctions {
+        &self.functions
+    }
+
+    pub fn get_all_asm_functions(&self) -> &LinterAssemblerFunctions {
+        &self.asm_functions
+    }
+}
+
+impl<'linter> LinterSymbolsTable<'linter> {
+    pub fn new_local(&mut self, name: &'linter str, info: LinterLocalInfo) {
+        if let Some(scope) = self.locals.last_mut() {
+            scope.insert(name, info);
+        }
+    }
+
+    pub fn new_lli(&mut self, name: &'linter str, info: LinterLLIInfo) {
+        if let Some(scope) = self.llis.last_mut() {
+            scope.insert(name, info);
+        }
+    }
+
+    pub fn new_asm_function(
+        &mut self,
+        name: &'linter str,
+        info: LinterAssemblerFunctionInfo<'linter>,
+    ) {
+        self.asm_functions.insert(name, info);
+    }
+
+    pub fn new_function(&mut self, name: &'linter str, info: LinterFunctionInfo<'linter>) {
+        self.functions.insert(name, info);
+    }
+
+    pub fn new_global_constant(&mut self, name: &'linter str, info: LinterConstantInfo) {
+        self.global_constants.insert(name, info);
+    }
+
+    pub fn new_local_constant(&mut self, name: &'linter str, info: LinterConstantInfo) {
+        if let Some(scope) = self.local_constants.last_mut() {
+            scope.insert(name, info);
+        }
+    }
+
+    pub fn new_parameter(&mut self, name: &'linter str, info: LinterFunctionParameterInfo) {
+        if let Some(scope) = self.parameters.last_mut() {
+            scope.insert(name, info);
+        }
+    }
+
+    pub fn new_enum(&mut self, name: &'linter str, info: LinterEnumsFieldsInfo<'linter>) {
+        self.enums.insert(name, info);
+    }
+
+    pub fn new_struct(&mut self, name: &'linter str, info: LinterStructFieldsInfo<'linter>) {
+        self.structs.insert(name, info);
+    }
+}
+
+impl LinterSymbolsTable<'_> {
     pub fn begin_scope(&mut self) {
         self.parameters.push(HashMap::with_capacity(255));
         self.local_constants.push(HashMap::with_capacity(255));
@@ -279,5 +252,38 @@ impl<'linter> LinterSymbolsTable<'linter> {
         self.llis.pop();
 
         self.scope -= 1;
+    }
+}
+
+impl<'linter> LinterSymbolsTable<'linter> {
+    pub fn split_enum_field_name(
+        &mut self,
+        from: &'linter str,
+    ) -> Option<(&'linter str, &'linter str)> {
+        let splitted: Vec<&str> = from.split(".").collect();
+
+        if let Some(enum_name) = splitted.first() {
+            if let Some(field_name) = splitted.get(1) {
+                return Some((enum_name, field_name));
+            }
+        }
+
+        None
+    }
+
+    pub fn bulk_declare_parameters(&mut self, parameters: &'linter [Ast]) {
+        parameters.iter().for_each(|parameter| {
+            if let Ast::FunctionParameter {
+                name,
+                span,
+                metadata,
+                ..
+            } = parameter
+            {
+                let metadata: &FunctionParameterMetadata = metadata;
+
+                self.new_parameter(name, (*span, false, !metadata.is_mutable()));
+            }
+        });
     }
 }

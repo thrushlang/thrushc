@@ -2,7 +2,7 @@ use crate::{
     core::errors::standard::ThrushCompilerIssue,
     frontend::{
         lexer::{span::Span, tokentype::TokenType},
-        parser::{ParserContext, expression},
+        parser::{ParserContext, expr},
         types::ast::Ast,
         types::parser::{
             stmts::traits::{FoundSymbolEither, FoundSymbolExtension},
@@ -45,7 +45,7 @@ pub fn build_call<'parser>(
             break;
         }
 
-        let expression: Ast = expression::build_expr(parser_context)?;
+        let expression: Ast = expr::build_expr(parser_context)?;
 
         args.push(expression);
 

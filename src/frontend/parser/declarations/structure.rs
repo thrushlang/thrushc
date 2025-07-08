@@ -2,7 +2,7 @@ use crate::{
     core::errors::standard::ThrushCompilerIssue,
     frontend::{
         lexer::{span::Span, token::Token, tokentype::TokenType},
-        parser::{ParserContext, attributes, typegen},
+        parser::{ParserContext, attributes, checks, typegen},
         types::{
             ast::Ast,
             parser::stmts::{
@@ -18,20 +18,13 @@ pub fn build_structure<'parser>(
     parser_context: &mut ParserContext<'parser>,
     declare_forward: bool,
 ) -> Result<Ast<'parser>, ThrushCompilerIssue> {
-    let struct_tk: &Token = parser_context.consume(
+    checks::check_main_scope_state(parser_context)?;
+
+    parser_context.consume(
         TokenType::Struct,
         String::from("Syntax error"),
         String::from("Expected 'struct' keyword."),
     )?;
-
-    if !parser_context.is_main_scope() {
-        return Err(ThrushCompilerIssue::Error(
-            String::from("Syntax error"),
-            String::from("Structs are only defined globally."),
-            None,
-            struct_tk.get_span(),
-        ));
-    }
 
     let name: &Token = parser_context.consume(
         TokenType::Identifier,

@@ -37,11 +37,11 @@ pub fn analyze(lexer: &mut Lexer) -> Result<(), ThrushCompilerIssue> {
                 let span: Span = Span::new(lexer.line, lexer.span);
 
                 return Err(ThrushCompilerIssue::Error(
-                        "Syntax error".into(),
-                        "Unterminated multiline comment. Did you forget to close the comment with a '*/'?".into(),
-                        None,
-                        span,
-                    ));
+                    "Syntax error".into(),
+                    "Expected '*/'.".into(),
+                    None,
+                    span,
+                ));
             }
 
             lexer.advance();

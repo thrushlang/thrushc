@@ -21,6 +21,15 @@ pub fn build_function<'parser>(
     parser_ctx: &mut ParserContext<'parser>,
     declare_forward: bool,
 ) -> Result<Ast<'parser>, ThrushCompilerIssue> {
+    if !parser_ctx.is_main_scope() {
+        return Err(ThrushCompilerIssue::Error(
+            "Syntax error".into(),
+            "It must be contained within the global scope.".into(),
+            None,
+            parser_ctx.peek().get_span(),
+        ));
+    }
+
     parser_ctx.consume(
         TokenType::Fn,
         String::from("Syntax error"),
@@ -30,22 +39,13 @@ pub fn build_function<'parser>(
     let function_name_tk: &Token = parser_ctx.consume(
         TokenType::Identifier,
         String::from("Syntax error"),
-        String::from("Expected name to the function."),
+        String::from("Expected identifier."),
     )?;
 
     let function_name: &str = function_name_tk.get_lexeme();
     let function_ascii_name: &str = function_name_tk.get_ascii_lexeme();
 
     let span: Span = function_name_tk.get_span();
-
-    if !parser_ctx.is_main_scope() {
-        return Err(ThrushCompilerIssue::Error(
-            String::from("Syntax error"),
-            String::from("Functions can only be defined globally."),
-            None,
-            span,
-        ));
-    }
 
     if function_name == "main" {
         if declare_forward {
@@ -54,7 +54,8 @@ pub fn build_function<'parser>(
 
         parser_ctx.get_mut_control_ctx().set_inside_function(true);
 
-        let entrypoint: Result<Ast, ThrushCompilerIssue> = entrypoint::build_main(parser_ctx);
+        let entrypoint: Result<Ast, ThrushCompilerIssue> =
+            entrypoint::build_entrypoint(parser_ctx, span);
 
         parser_ctx.get_mut_control_ctx().set_inside_function(false);
 
@@ -130,10 +131,10 @@ pub fn build_function<'parser>(
 
     let return_type: Type = typegen::build_type(parser_ctx)?;
 
-    let function_attributes: ThrushAttributes =
+    let attributes: ThrushAttributes =
         attributes::build_attributes(parser_ctx, &[TokenType::SemiColon, TokenType::LBrace])?;
 
-    let function_has_ignore: bool = function_attributes.has_ignore_attribute();
+    let function_has_ignore: bool = attributes.has_ignore_attribute();
 
     let mut function: Ast = Ast::Function {
         name: function_name,
@@ -142,7 +143,7 @@ pub fn build_function<'parser>(
         parameter_types: parameters_types.clone(),
         body: Ast::Null { span }.into(),
         return_type: return_type.clone(),
-        attributes: function_attributes,
+        attributes,
         span,
     };
 

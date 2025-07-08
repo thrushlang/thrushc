@@ -3,18 +3,19 @@ use crate::{
     frontend::{
         lexer::{span::Span, token::Token, tokentype::TokenType},
         parser::{
-            ParserContext, expression,
+            ParserContext, checks, expr,
             stmts::{block, local},
         },
-        types::ast::Ast,
-        types::parser::stmts::traits::TokenExtensions,
+        types::{ast::Ast, parser::stmts::traits::TokenExtensions},
     },
 };
 
 pub fn build_for_loop<'parser>(
-    parser_ctx: &mut ParserContext<'parser>,
+    parser_context: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, ThrushCompilerIssue> {
-    let for_tk: &Token = parser_ctx.consume(
+    self::check_state(parser_context)?;
+
+    let for_tk: &Token = parser_context.consume(
         TokenType::For,
         String::from("Syntax error"),
         String::from("Expected 'for' keyword."),
@@ -22,34 +23,16 @@ pub fn build_for_loop<'parser>(
 
     let span: Span = for_tk.span;
 
-    if parser_ctx.is_unreacheable_code() {
-        return Err(ThrushCompilerIssue::Error(
-            String::from("Syntax error"),
-            String::from("Unreacheable code."),
-            None,
-            span,
-        ));
-    }
+    let local: Ast = local::build_local(parser_context)?;
 
-    if !parser_ctx.get_control_ctx().get_inside_function() {
-        return Err(ThrushCompilerIssue::Error(
-            String::from("Syntax error"),
-            String::from("For loop must be placed inside a function."),
-            None,
-            span,
-        ));
-    }
+    let cond: Ast = expr::build_expression(parser_context)?;
+    let actions: Ast = expr::build_expression(parser_context)?;
 
-    let local: Ast = local::build_local(parser_ctx)?;
+    parser_context.get_mut_control_ctx().increment_loop_depth();
 
-    let cond: Ast = expression::build_expression(parser_ctx)?;
-    let actions: Ast = expression::build_expression(parser_ctx)?;
+    let body: Ast = block::build_block(parser_context)?;
 
-    parser_ctx.get_mut_control_ctx().increment_loop_depth();
-
-    let body: Ast = block::build_block(parser_ctx)?;
-
-    parser_ctx.get_mut_control_ctx().decrement_loop_depth();
+    parser_context.get_mut_control_ctx().decrement_loop_depth();
 
     Ok(Ast::For {
         local: local.into(),
@@ -61,9 +44,11 @@ pub fn build_for_loop<'parser>(
 }
 
 pub fn build_loop<'parser>(
-    parser_ctx: &mut ParserContext<'parser>,
+    parser_context: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, ThrushCompilerIssue> {
-    let loop_tk: &Token = parser_ctx.consume(
+    self::check_state(parser_context)?;
+
+    let loop_tk: &Token = parser_context.consume(
         TokenType::Loop,
         String::from("Syntax error"),
         String::from("Expected 'loop' keyword."),
@@ -71,37 +56,19 @@ pub fn build_loop<'parser>(
 
     let loop_span: Span = loop_tk.span;
 
-    if parser_ctx.is_unreacheable_code() {
-        return Err(ThrushCompilerIssue::Error(
-            String::from("Syntax error"),
-            String::from("Unreacheable code."),
-            None,
-            loop_span,
-        ));
-    }
+    parser_context.get_mut_control_ctx().increment_loop_depth();
 
-    if !parser_ctx.get_control_ctx().get_inside_function() {
-        return Err(ThrushCompilerIssue::Error(
-            String::from("Syntax error"),
-            String::from("Loop must be placed inside a function."),
-            None,
-            loop_span,
-        ));
-    }
+    let block: Ast = block::build_block(parser_context)?;
 
-    parser_ctx.get_mut_control_ctx().increment_loop_depth();
-
-    let block: Ast = block::build_block(parser_ctx)?;
-
-    let scope: usize = parser_ctx.get_scope();
+    let scope: usize = parser_context.get_scope();
 
     if !block.has_break() && !block.has_return() && !block.has_continue() {
-        parser_ctx
+        parser_context
             .get_mut_control_ctx()
             .set_unreacheable_code_scope(scope);
     }
 
-    parser_ctx.get_mut_control_ctx().decrement_loop_depth();
+    parser_context.get_mut_control_ctx().decrement_loop_depth();
 
     Ok(Ast::Loop {
         block: block.into(),
@@ -110,9 +77,11 @@ pub fn build_loop<'parser>(
 }
 
 pub fn build_while_loop<'parser>(
-    parser_ctx: &mut ParserContext<'parser>,
+    parser_context: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, ThrushCompilerIssue> {
-    let while_tk: &Token = parser_ctx.consume(
+    self::check_state(parser_context)?;
+
+    let while_tk: &Token = parser_context.consume(
         TokenType::While,
         String::from("Syntax error"),
         String::from("Expected 'while' keyword."),
@@ -120,30 +89,17 @@ pub fn build_while_loop<'parser>(
 
     let span: Span = while_tk.get_span();
 
-    if parser_ctx.is_unreacheable_code() {
-        return Err(ThrushCompilerIssue::Error(
-            String::from("Syntax error"),
-            String::from("Unreacheable code."),
-            None,
-            span,
-        ));
-    }
-
-    if !parser_ctx.get_control_ctx().get_inside_function() {
-        return Err(ThrushCompilerIssue::Error(
-            String::from("Syntax error"),
-            String::from("While loop must be placed inside a function."),
-            None,
-            span,
-        ));
-    }
-
-    let cond: Ast = expression::build_expr(parser_ctx)?;
-    let block: Ast = block::build_block(parser_ctx)?;
+    let cond: Ast = expr::build_expr(parser_context)?;
+    let block: Ast = block::build_block(parser_context)?;
 
     Ok(Ast::While {
         cond: cond.into(),
         block: block.into(),
         span,
     })
+}
+
+fn check_state(parser_context: &mut ParserContext) -> Result<(), ThrushCompilerIssue> {
+    checks::check_unreacheable_state(parser_context)?;
+    checks::check_inside_function_state(parser_context)
 }

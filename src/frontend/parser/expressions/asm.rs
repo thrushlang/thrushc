@@ -2,7 +2,7 @@ use crate::{
     core::errors::standard::ThrushCompilerIssue,
     frontend::{
         lexer::{span::Span, token::Token, tokentype::TokenType},
-        parser::{ParserContext, attributes, expression, typegen},
+        parser::{ParserContext, attributes, expr, typegen},
         types::{
             ast::Ast,
             parser::stmts::{traits::TokenExtensions, types::ThrushAttributes},
@@ -35,7 +35,7 @@ pub fn build_asm_code_block<'parser>(
                 break;
             }
 
-            let expr: Ast = expression::build_expression(parser_context)?;
+            let expr: Ast = expr::build_expression(parser_context)?;
 
             args.push(expr);
 
@@ -71,7 +71,7 @@ pub fn build_asm_code_block<'parser>(
             break;
         }
 
-        let raw_str: Ast = expression::build_expr(parser_context)?;
+        let raw_str: Ast = expr::build_expr(parser_context)?;
         let raw_str_span: Span = raw_str.get_span();
 
         if !raw_str.is_str() {
@@ -124,7 +124,7 @@ pub fn build_asm_code_block<'parser>(
             break;
         }
 
-        let raw_str: Ast = expression::build_expr(parser_context)?;
+        let raw_str: Ast = expr::build_expr(parser_context)?;
         let raw_str_span: Span = raw_str.get_span();
 
         let constraint: &str = raw_str.get_str_content(raw_str_span)?;

@@ -3,7 +3,8 @@ use crate::{
     frontend::{
         lexer::span::Span,
         semantic::linter::{
-            Linter, casts, deref,
+            Linter, casts,
+            expressions::deref,
             marks::{mutable, used},
         },
         types::{ast::Ast, parser::stmts::types::Constructor},

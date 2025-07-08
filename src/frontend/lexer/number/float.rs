@@ -11,8 +11,8 @@ pub fn check_float_format(lexer: &Lexer, lexeme: &str) -> Result<(), ThrushCompi
 
     if dot_count > 1 {
         return Err(ThrushCompilerIssue::Error(
-            String::from("Syntax error"),
-            String::from("Float number should only contain one dot."),
+            "Syntax error".into(),
+            "Only one decimal marker was expected.".into(),
             None,
             span,
         ));
@@ -27,8 +27,8 @@ pub fn check_float_format(lexer: &Lexer, lexeme: &str) -> Result<(), ThrushCompi
     }
 
     Err(ThrushCompilerIssue::Error(
-        String::from("Syntax error"),
-        String::from("Out of bounds float."),
+        "Syntax error".into(),
+        "Float out of bounds.".into(),
         None,
         span,
     ))

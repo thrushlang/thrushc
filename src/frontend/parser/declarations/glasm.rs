@@ -2,7 +2,7 @@ use crate::{
     core::errors::standard::ThrushCompilerIssue,
     frontend::{
         lexer::{span::Span, token::Token, tokentype::TokenType},
-        parser::{ParserContext, expression},
+        parser::{ParserContext, checks, expr},
         types::{ast::Ast, parser::stmts::traits::TokenExtensions},
     },
 };
@@ -10,6 +10,8 @@ use crate::{
 pub fn build_global_assembler<'parser>(
     parser_context: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, ThrushCompilerIssue> {
+    checks::check_double_global_assembler_state(parser_context)?;
+
     let glasm_keyword_tk: &Token = parser_context.consume(
         TokenType::GlobalAsm,
         "Syntax error".into(),
@@ -18,22 +20,13 @@ pub fn build_global_assembler<'parser>(
 
     let span: Span = glasm_keyword_tk.get_span();
 
-    if parser_context.get_control_ctx().get_global_asm() {
-        return Err(ThrushCompilerIssue::Error(
-            "Syntax error".into(),
-            "Duplicated global assembler.".into(),
-            None,
-            glasm_keyword_tk.get_span(),
-        ));
-    }
-
     parser_context.consume(
         TokenType::LParen,
         "Syntax error".into(),
         "Expected '('.".into(),
     )?;
 
-    let assembler: Ast = expression::build_expr(parser_context)?;
+    let assembler: Ast = expr::build_expr(parser_context)?;
     let asssembler_span: Span = assembler.get_span();
 
     parser_context.consume(

@@ -1,18 +1,41 @@
-use crate::{
-    backend::llvm::compiler::{attributes::LLVMAttribute, conventions::CallConvention},
-    core::errors::standard::ThrushCompilerIssue,
-    frontend::{
-        lexer::{span::Span, token::Token, tokentype::TokenType},
-        parser::{ParserContext, stmt::CALL_CONVENTIONS},
-        types::parser::stmts::{traits::TokenExtensions, types::ThrushAttributes},
+use {
+    crate::{
+        backend::llvm::compiler::{attributes::LLVMAttribute, conventions::CallConvention},
+        core::errors::standard::ThrushCompilerIssue,
+        frontend::{
+            lexer::{span::Span, token::Token, tokentype::TokenType},
+            parser::ParserContext,
+            types::parser::stmts::{traits::TokenExtensions, types::ThrushAttributes},
+        },
     },
+    ahash::AHashMap as HashMap,
+    lazy_static::lazy_static,
 };
+
+lazy_static! {
+    pub static ref CALL_CONVENTIONS: HashMap<&'static [u8], CallConvention> = {
+        let mut call_conventions: HashMap<&'static [u8], CallConvention> =
+            HashMap::with_capacity(10);
+
+        call_conventions.insert(b"C", CallConvention::Standard);
+        call_conventions.insert(b"fast", CallConvention::Fast);
+        call_conventions.insert(b"tail", CallConvention::Tail);
+        call_conventions.insert(b"cold", CallConvention::Cold);
+        call_conventions.insert(b"weakReg", CallConvention::PreserveMost);
+        call_conventions.insert(b"strongReg", CallConvention::PreserveAll);
+        call_conventions.insert(b"swift", CallConvention::Swift);
+        call_conventions.insert(b"haskell", CallConvention::GHC);
+        call_conventions.insert(b"erlang", CallConvention::HiPE);
+
+        call_conventions
+    };
+}
 
 pub fn build_attributes<'parser>(
     parser_ctx: &mut ParserContext<'parser>,
     limits: &[TokenType],
 ) -> Result<ThrushAttributes<'parser>, ThrushCompilerIssue> {
-    let mut compiler_attributes: ThrushAttributes = Vec::with_capacity(10);
+    let mut attributes: ThrushAttributes = Vec::with_capacity(10);
 
     while !limits.contains(&parser_ctx.peek().kind) {
         let current_tk: &Token = parser_ctx.peek();
@@ -20,32 +43,32 @@ pub fn build_attributes<'parser>(
 
         match current_tk.kind {
             TokenType::Extern => {
-                compiler_attributes.push(LLVMAttribute::Extern(
+                attributes.push(LLVMAttribute::Extern(
                     self::build_external_attribute(parser_ctx)?,
                     span,
                 ));
             }
 
             TokenType::Convention => {
-                compiler_attributes.push(LLVMAttribute::Convention(
+                attributes.push(LLVMAttribute::Convention(
                     self::build_call_convention_attribute(parser_ctx)?,
                     span,
                 ));
             }
 
             TokenType::Public => {
-                compiler_attributes.push(self::LLVMAttribute::Public(span));
+                attributes.push(self::LLVMAttribute::Public(span));
                 parser_ctx.only_advance()?;
             }
 
-            TokenType::AsmSyntax => compiler_attributes.push(LLVMAttribute::AsmSyntax(
+            TokenType::AsmSyntax => attributes.push(LLVMAttribute::AsmSyntax(
                 self::build_assembler_syntax_attribute(parser_ctx)?,
                 span,
             )),
 
-            attribute if attribute.as_compiler_attribute(span).is_some() => {
-                if let Some(compiler_attribute) = attribute.as_compiler_attribute(span) {
-                    compiler_attributes.push(compiler_attribute);
+            attribute if attribute.is_attribute() => {
+                if let Some(compiler_attribute) = attribute.as_attribute(span) {
+                    attributes.push(compiler_attribute);
                     parser_ctx.only_advance()?;
                 }
             }
@@ -54,7 +77,7 @@ pub fn build_attributes<'parser>(
         }
     }
 
-    Ok(compiler_attributes)
+    Ok(attributes)
 }
 
 fn build_external_attribute<'parser>(

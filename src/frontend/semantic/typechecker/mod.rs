@@ -1,4 +1,4 @@
-use table::TypeCheckerSymbolsTable;
+use symbols::TypeCheckerSymbolsTable;
 
 use crate::{
     core::{
@@ -21,10 +21,9 @@ mod lli;
 mod local;
 mod loops;
 mod position;
+mod symbols;
 mod terminator;
 mod validations;
-
-mod table;
 
 #[derive(Debug)]
 pub struct TypeChecker<'type_checker> {
@@ -409,26 +408,6 @@ impl<'type_checker> TypeChecker<'type_checker> {
             });
     }
 
-    pub fn add_warning(&mut self, warning: ThrushCompilerIssue) {
-        self.warnings.push(warning);
-    }
-
-    pub fn add_error(&mut self, error: ThrushCompilerIssue) {
-        self.errors.push(error);
-    }
-
-    pub fn add_bug(&mut self, error: ThrushCompilerIssue) {
-        self.bugs.push(error);
-    }
-
-    pub fn begin_scope(&mut self) {
-        self.symbols.begin_scope();
-    }
-
-    pub fn end_scope(&mut self) {
-        self.symbols.end_scope();
-    }
-
     pub fn advance(&mut self) {
         if !self.is_eof() {
             self.position += 1;
@@ -441,5 +420,29 @@ impl<'type_checker> TypeChecker<'type_checker> {
 
     pub fn is_eof(&self) -> bool {
         self.position >= self.ast.len()
+    }
+}
+
+impl TypeChecker<'_> {
+    pub fn add_warning(&mut self, warning: ThrushCompilerIssue) {
+        self.warnings.push(warning);
+    }
+
+    pub fn add_error(&mut self, error: ThrushCompilerIssue) {
+        self.errors.push(error);
+    }
+
+    pub fn add_bug(&mut self, error: ThrushCompilerIssue) {
+        self.bugs.push(error);
+    }
+}
+
+impl TypeChecker<'_> {
+    pub fn begin_scope(&mut self) {
+        self.symbols.begin_scope();
+    }
+
+    pub fn end_scope(&mut self) {
+        self.symbols.end_scope();
     }
 }

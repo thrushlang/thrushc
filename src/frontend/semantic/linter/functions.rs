@@ -16,8 +16,6 @@ pub fn analyze_function<'linter>(linter: &mut Linter<'linter>, node: &'linter As
                 linter.symbols.bulk_declare_parameters(parameters);
 
                 linter.analyze_ast_stmt(body);
-
-                linter.symbols.destroy_all_parameters();
             }
         }
 

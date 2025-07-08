@@ -3,7 +3,7 @@ use crate::{
     frontend::{
         lexer::{span::Span, token::Token, tokentype::TokenType},
         parser::{
-            ParserContext, expression,
+            ParserContext, expr,
             expressions::precedences::equality::{self},
         },
         types::{ast::Ast, parser::stmts::traits::TokenExtensions},
@@ -54,7 +54,7 @@ pub fn unary_precedence<'parser>(
         let operator: TokenType = operator_tk.get_type();
         let span: Span = operator_tk.get_span();
 
-        let expression: Ast = expression::build_expr(parser_context)?;
+        let expression: Ast = expr::build_expr(parser_context)?;
 
         let expression_type: &Type = expression.get_value_type()?;
 
@@ -74,7 +74,7 @@ pub fn unary_precedence<'parser>(
         let operator: TokenType = operator_tk.get_type();
         let span: Span = operator_tk.get_span();
 
-        let expression: Ast = expression::build_expr(parser_context)?;
+        let expression: Ast = expr::build_expr(parser_context)?;
         let expression_type: &Type = expression.get_value_type()?;
 
         let unaryop: Ast = Ast::UnaryOp {

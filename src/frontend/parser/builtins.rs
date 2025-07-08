@@ -3,7 +3,7 @@ use crate::{
     core::errors::standard::ThrushCompilerIssue,
     frontend::{
         lexer::{span::Span, token::Token, tokentype::TokenType},
-        parser::{ParserContext, expression, expressions::reference, typegen},
+        parser::{ParserContext, expr, expressions::reference, typegen},
         types::{ast::Ast, parser::stmts::traits::TokenExtensions},
         typesystem::types::Type,
     },
@@ -60,7 +60,7 @@ pub fn build_memcpy<'parser>(
 
     let span: Span = memcpy_tk.get_span();
 
-    let source: Ast = expression::build_expr(parser_context)?;
+    let source: Ast = expr::build_expr(parser_context)?;
 
     parser_context.consume(
         TokenType::Comma,
@@ -68,7 +68,7 @@ pub fn build_memcpy<'parser>(
         String::from("Expected ','."),
     )?;
 
-    let destination: Ast = expression::build_expr(parser_context)?;
+    let destination: Ast = expr::build_expr(parser_context)?;
 
     parser_context.consume(
         TokenType::Comma,
@@ -76,7 +76,7 @@ pub fn build_memcpy<'parser>(
         String::from("Expected ','."),
     )?;
 
-    let size: Ast = expression::build_expr(parser_context)?;
+    let size: Ast = expr::build_expr(parser_context)?;
 
     parser_context.consume(
         TokenType::RParen,
@@ -112,7 +112,7 @@ pub fn build_memmove<'parser>(
 
     let span: Span = memcpy_tk.get_span();
 
-    let source: Ast = expression::build_expr(parser_context)?;
+    let source: Ast = expr::build_expr(parser_context)?;
 
     parser_context.consume(
         TokenType::Comma,
@@ -120,7 +120,7 @@ pub fn build_memmove<'parser>(
         String::from("Expected ','."),
     )?;
 
-    let destination: Ast = expression::build_expr(parser_context)?;
+    let destination: Ast = expr::build_expr(parser_context)?;
 
     parser_context.consume(
         TokenType::Comma,
@@ -128,7 +128,7 @@ pub fn build_memmove<'parser>(
         String::from("Expected ','."),
     )?;
 
-    let size: Ast = expression::build_expr(parser_context)?;
+    let size: Ast = expr::build_expr(parser_context)?;
 
     parser_context.consume(
         TokenType::RParen,
@@ -164,7 +164,7 @@ pub fn build_memset<'parser>(
 
     let span: Span = memcpy_tk.get_span();
 
-    let destination: Ast = expression::build_expr(parser_context)?;
+    let destination: Ast = expr::build_expr(parser_context)?;
 
     parser_context.consume(
         TokenType::Comma,
@@ -172,7 +172,7 @@ pub fn build_memset<'parser>(
         String::from("Expected ','."),
     )?;
 
-    let new_size: Ast = expression::build_expr(parser_context)?;
+    let new_size: Ast = expr::build_expr(parser_context)?;
 
     parser_context.consume(
         TokenType::Comma,
@@ -180,7 +180,7 @@ pub fn build_memset<'parser>(
         String::from("Expected ','."),
     )?;
 
-    let size: Ast = expression::build_expr(parser_context)?;
+    let size: Ast = expr::build_expr(parser_context)?;
 
     parser_context.consume(
         TokenType::RParen,

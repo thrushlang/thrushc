@@ -15,25 +15,25 @@ use crate::{
 };
 
 pub fn build_custom_type<'parser>(
-    parser_ctx: &mut ParserContext<'parser>,
+    parser_context: &mut ParserContext<'parser>,
     declare_forward: bool,
 ) -> Result<Ast<'parser>, ThrushCompilerIssue> {
-    let type_tk: &Token = parser_ctx.consume(
+    if !parser_context.is_main_scope() {
+        return Err(ThrushCompilerIssue::Error(
+            String::from("Syntax error"),
+            String::from("Types are only defined globally."),
+            None,
+            parser_context.peek().get_span(),
+        ));
+    }
+
+    parser_context.consume(
         TokenType::Type,
         String::from("Syntax error"),
         String::from("Expected 'type' keyword."),
     )?;
 
-    if !parser_ctx.is_main_scope() {
-        return Err(ThrushCompilerIssue::Error(
-            String::from("Syntax error"),
-            String::from("Types are only defined globally."),
-            None,
-            type_tk.get_span(),
-        ));
-    }
-
-    let name: &Token = parser_ctx.consume(
+    let name: &Token = parser_context.consume(
         TokenType::Identifier,
         String::from("Syntax error"),
         String::from("Expected type name."),
@@ -43,16 +43,16 @@ pub fn build_custom_type<'parser>(
 
     let span: Span = name.get_span();
 
-    parser_ctx.consume(
+    parser_context.consume(
         TokenType::Eq,
         String::from("Syntax error"),
         String::from("Expected '='."),
     )?;
 
-    let custom_type_attributes: ThrushAttributes =
-        attributes::build_attributes(parser_ctx, &[TokenType::LBrace])?;
+    let attributes: ThrushAttributes =
+        attributes::build_attributes(parser_context, &[TokenType::LBrace])?;
 
-    parser_ctx.consume(
+    parser_context.consume(
         TokenType::LBrace,
         String::from("Syntax error"),
         String::from("Expected '{'."),
@@ -60,24 +60,24 @@ pub fn build_custom_type<'parser>(
 
     let mut custom_type_fields: CustomTypeFields = Vec::with_capacity(10);
 
-    while parser_ctx.peek().kind != TokenType::RBrace {
-        let kind: Type = typegen::build_type(parser_ctx)?;
+    while !parser_context.check(TokenType::RBrace) {
+        let kind: Type = typegen::build_type(parser_context)?;
         custom_type_fields.push(kind);
     }
 
-    parser_ctx.consume(
+    parser_context.consume(
         TokenType::RBrace,
         String::from("Syntax error"),
         String::from("Expected '}'."),
     )?;
 
     if declare_forward {
-        if let Err(error) = parser_ctx.get_mut_symbols().new_custom_type(
+        if let Err(error) = parser_context.get_mut_symbols().new_custom_type(
             custom_type_name,
-            (custom_type_fields, custom_type_attributes),
+            (custom_type_fields, attributes),
             span,
         ) {
-            parser_ctx.add_error(error);
+            parser_context.add_error(error);
         }
     }
 

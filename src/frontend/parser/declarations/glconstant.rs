@@ -2,7 +2,7 @@ use crate::{
     core::errors::standard::ThrushCompilerIssue,
     frontend::{
         lexer::{span::Span, token::Token, tokentype::TokenType},
-        parser::{ParserContext, attributes, expression, typegen},
+        parser::{ParserContext, attributes, expr, typegen},
         types::{
             ast::{Ast, metadata::constant::ConstantMetadata},
             parser::stmts::{traits::TokenExtensions, types::ThrushAttributes},
@@ -40,12 +40,12 @@ pub fn build_global_const<'parser>(
 
     let const_type: Type = typegen::build_type(parser_context)?;
 
-    let const_attributes: ThrushAttributes =
+    let attributes: ThrushAttributes =
         attributes::build_attributes(parser_context, &[TokenType::Eq])?;
 
     parser_context.consume(TokenType::Eq, "Syntax error".into(), "Expected '='.".into())?;
 
-    let value: Ast = expression::build_expr(parser_context)?;
+    let value: Ast = expr::build_expr(parser_context)?;
 
     let expression_span: Span = value.get_span();
 
@@ -67,7 +67,7 @@ pub fn build_global_const<'parser>(
     if declare_forward {
         parser_context.get_mut_symbols().new_global_constant(
             name,
-            (const_type.clone(), const_attributes.clone()),
+            (const_type.clone(), attributes.clone()),
             span,
         )?;
     }
@@ -77,7 +77,7 @@ pub fn build_global_const<'parser>(
         ascii_name,
         kind: const_type,
         value: value.into(),
-        attributes: const_attributes,
+        attributes,
         metadata: ConstantMetadata::new(true),
         span,
     })

@@ -9,7 +9,7 @@ pub fn float(lexeme: &str, span: Span) -> Result<(Type, f64), ThrushCompilerIssu
     if dot_count > 1 {
         return Err(ThrushCompilerIssue::Error(
             "Syntax error".into(),
-            "Float values should only contain one dot.".into(),
+            "Only one decimal marker was expected.".into(),
             None,
             span,
         ));
@@ -25,7 +25,7 @@ pub fn float(lexeme: &str, span: Span) -> Result<(Type, f64), ThrushCompilerIssu
 
     Err(ThrushCompilerIssue::Error(
         "Syntax error".into(),
-        "Out of bounds.".into(),
+        "Float out of bounds.".into(),
         None,
         span,
     ))
@@ -65,7 +65,7 @@ pub fn integer(lexeme: &str, span: Span) -> Result<(Type, u64), ThrushCompilerIs
                 } else {
                     return Err(ThrushCompilerIssue::Error(
                         "Syntax error".into(),
-                        "Out of bounds signed hexadecimal format.".into(),
+                        "Integer out of bounds signed hexadecimal format.".into(),
                         None,
                         span,
                     ));
@@ -85,7 +85,7 @@ pub fn integer(lexeme: &str, span: Span) -> Result<(Type, u64), ThrushCompilerIs
                     } else {
                         return Err(ThrushCompilerIssue::Error(
                             "Syntax error".into(),
-                            "Out of bounds unsigned hexadecimal format.".into(),
+                            "Integer out of bounds unsigned hexadecimal format.".into(),
                             None,
                             span,
                         ));
@@ -94,7 +94,7 @@ pub fn integer(lexeme: &str, span: Span) -> Result<(Type, u64), ThrushCompilerIs
 
                 Err(_) => Err(ThrushCompilerIssue::Error(
                     "Syntax error".into(),
-                    "Invalid numeric hexadecimal format.".into(),
+                    "Integer invalid numeric hexadecimal format.".into(),
                     None,
                     span,
                 )),
@@ -120,8 +120,8 @@ pub fn integer(lexeme: &str, span: Span) -> Result<(Type, u64), ThrushCompilerIs
                     return Ok((Type::U64, number as u64));
                 } else {
                     return Err(ThrushCompilerIssue::Error(
-                        String::from("Syntax error"),
-                        String::from("Out of bounds signed binary format."),
+                        "Syntax error".into(),
+                        "Integer out of bounds signed binary format.".into(),
                         None,
                         span,
                     ));
@@ -140,8 +140,8 @@ pub fn integer(lexeme: &str, span: Span) -> Result<(Type, u64), ThrushCompilerIs
                         return Ok((Type::U64, number as u64));
                     } else {
                         return Err(ThrushCompilerIssue::Error(
-                            String::from("Syntax error"),
-                            String::from("Out of bounds unsigned binary format."),
+                            "Syntax error".into(),
+                            "Integer out of bounds unsigned binary format.".into(),
                             None,
                             span,
                         ));
@@ -149,8 +149,8 @@ pub fn integer(lexeme: &str, span: Span) -> Result<(Type, u64), ThrushCompilerIs
                 }
 
                 Err(_) => Err(ThrushCompilerIssue::Error(
-                    String::from("Syntax error"),
-                    String::from("Invalid binary format."),
+                    "Syntax error".into(),
+                    "Integer invalid binary format.".into(),
                     None,
                     span,
                 )),
@@ -170,8 +170,8 @@ pub fn integer(lexeme: &str, span: Span) -> Result<(Type, u64), ThrushCompilerIs
                 return Ok((Type::U64, number as u64));
             } else {
                 return Err(ThrushCompilerIssue::Error(
-                    String::from("Syntax error"),
-                    String::from("Out of bounds."),
+                    "Syntax error".into(),
+                    "Integer out of bounds.".into(),
                     None,
                     span,
                 ));
@@ -190,8 +190,8 @@ pub fn integer(lexeme: &str, span: Span) -> Result<(Type, u64), ThrushCompilerIs
                     Ok((Type::U64, number as u64))
                 } else {
                     Err(ThrushCompilerIssue::Error(
-                        String::from("Syntax error"),
-                        String::from("Out of bounds."),
+                        "Syntax error".into(),
+                        "Integer out of bounds.".into(),
                         None,
                         span,
                     ))
@@ -199,8 +199,8 @@ pub fn integer(lexeme: &str, span: Span) -> Result<(Type, u64), ThrushCompilerIs
             }
 
             Err(_) => Err(ThrushCompilerIssue::Error(
-                String::from("Syntax error"),
-                String::from("Out of bounds."),
+                "Syntax error".into(),
+                "Integer out of bounds.".into(),
                 None,
                 span,
             )),

@@ -2,7 +2,7 @@ use crate::{
     core::errors::{position::CompilationPosition, standard::ThrushCompilerIssue},
     frontend::{
         lexer::{span::Span, tokentype::TokenType},
-        parser::{ParserContext, expression},
+        parser::{ParserContext, expr},
         types::ast::{Ast, metadata::index::IndexMetadata, types::AstEitherExpression},
         typesystem::types::Type,
     },
@@ -54,7 +54,7 @@ pub fn build_index<'parser>(
             break;
         }
 
-        let indexe: Ast = expression::build_expr(parser_context)?;
+        let indexe: Ast = expr::build_expr(parser_context)?;
 
         indexes.push(indexe);
 

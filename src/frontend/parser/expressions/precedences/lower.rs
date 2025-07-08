@@ -4,7 +4,7 @@ use crate::{
     frontend::{
         lexer::{span::Span, token::Token, tokentype::TokenType},
         parser::{
-            ParserContext, attributes, builtins, expression,
+            ParserContext, attributes, builtins, expr,
             expressions::{
                 address, array, asm, call, constructor, deref, enumv, farray, index, property,
                 reference, sizeof,
@@ -137,7 +137,7 @@ pub fn lower_precedence<'parser>(
                 });
             }
 
-            let expression: Ast = expression::build_expr(parser_context)?;
+            let expression: Ast = expr::build_expr(parser_context)?;
 
             Ast::Load {
                 source: (None, Some(expression.into())),
@@ -164,7 +164,7 @@ pub fn lower_precedence<'parser>(
 
                 let write_type: Type = typegen::build_type(parser_context)?;
 
-                let value: Ast = expression::build_expr(parser_context)?;
+                let value: Ast = expr::build_expr(parser_context)?;
 
                 return Ok(Ast::Write {
                     source: (Some((name, reference.into())), None),
@@ -174,7 +174,7 @@ pub fn lower_precedence<'parser>(
                 });
             }
 
-            let expression: Ast = expression::build_expr(parser_context)?;
+            let expression: Ast = expr::build_expr(parser_context)?;
 
             parser_context.consume(
                 TokenType::Comma,
@@ -183,7 +183,7 @@ pub fn lower_precedence<'parser>(
             )?;
 
             let write_type: Type = typegen::build_type(parser_context)?;
-            let value: Ast = expression::build_expr(parser_context)?;
+            let value: Ast = expr::build_expr(parser_context)?;
 
             Ast::Write {
                 source: (None, Some(expression.into())),
@@ -215,7 +215,7 @@ pub fn lower_precedence<'parser>(
                 });
             }
 
-            let expr: Ast = expression::build_expr(parser_context)?;
+            let expr: Ast = expr::build_expr(parser_context)?;
             let expr_span: Span = expr.get_span();
 
             let indexes: Vec<Ast> = address::build_address_indexes(parser_context, expr_span)?;
@@ -231,7 +231,7 @@ pub fn lower_precedence<'parser>(
         TokenType::LParen => {
             let span: Span = parser_context.advance()?.get_span();
 
-            let expression: Ast = expression::build_expr(parser_context)?;
+            let expression: Ast = expr::build_expr(parser_context)?;
 
             let expression_type: &Type = expression.get_value_type()?;
 

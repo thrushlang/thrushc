@@ -1,8 +1,9 @@
 pub mod attributes;
 pub mod builtins;
+pub mod checks;
 pub mod contexts;
 pub mod declarations;
-pub mod expression;
+pub mod expr;
 pub mod expressions;
 pub mod parse;
 pub mod stmt;
@@ -12,7 +13,7 @@ pub mod typegen;
 
 use ahash::AHashMap as HashMap;
 
-use contexts::{ParserControlContext, ParserTypeContext, SyncPosition};
+use contexts::{sync::SyncPosition, typectx::ParserTypeContext};
 use symbols::SymbolsTable;
 
 use crate::core::compiler::options::CompilerFile;
@@ -21,6 +22,7 @@ use crate::core::diagnostic::diagnostician::Diagnostician;
 use crate::core::errors::standard::ThrushCompilerIssue;
 use crate::frontend::lexer::token::Token;
 use crate::frontend::lexer::tokentype::TokenType;
+use crate::frontend::parser::contexts::controlctx::ParserControlContext;
 use crate::frontend::types::ast::Ast;
 use crate::frontend::types::parser::symbols::types::{AssemblerFunctions, Functions};
 
@@ -60,7 +62,7 @@ impl<'parser> Parser<'parser> {
         parser_ctx.forward();
 
         while !parser_ctx.is_eof() {
-            match stmt::parse(&mut parser_ctx) {
+            match stmt::declaration(&mut parser_ctx) {
                 Ok(instr) => {
                     parser_ctx.add_stmt(instr);
                 }
@@ -171,8 +173,13 @@ impl<'parser> ParserContext<'parser> {
                 }
 
                 self.scope = 0;
+
+                self.control_ctx.set_inside_function(false);
                 self.symbols.clear_all_scopes();
+                self.symbols.end_parameters();
+                self.control_ctx.reset_loop_depth();
             }
+
             SyncPosition::Statement => {
                 if let Some((lbrace_count, rbrace_count, diff)) = self.get_peerless_scopes() {
                     if lbrace_count != rbrace_count {
@@ -189,7 +196,10 @@ impl<'parser> ParserContext<'parser> {
                 {
                     self.current += 1;
                 }
+
+                self.control_ctx.reset_loop_depth();
             }
+
             SyncPosition::Expression => {
                 if let Some((lbrace_count, rbrace_count, diff)) = self.get_peerless_scopes() {
                     if lbrace_count != rbrace_count {
@@ -225,59 +235,10 @@ impl<'parser> ParserContext<'parser> {
         }
 
         self.control_ctx.set_sync_position(SyncPosition::NoRelevant);
-
-        self.symbols.end_parameters();
-
-        self.control_ctx.set_inside_function(false);
-        self.control_ctx.reset_loop_depth();
     }
 
     pub fn is_unreacheable_code(&self) -> bool {
         self.control_ctx.get_unreacheable_code_scope() == self.scope && !self.is_main_scope()
-    }
-
-    pub fn get_symbols(&self) -> &SymbolsTable<'parser> {
-        &self.symbols
-    }
-
-    pub fn get_mut_symbols(&mut self) -> &mut SymbolsTable<'parser> {
-        &mut self.symbols
-    }
-
-    pub fn get_control_ctx(&mut self) -> &ParserControlContext {
-        &mut self.control_ctx
-    }
-
-    pub fn get_mut_control_ctx(&mut self) -> &mut ParserControlContext {
-        &mut self.control_ctx
-    }
-
-    pub fn get_type_ctx(&self) -> &ParserTypeContext {
-        &self.type_ctx
-    }
-
-    pub fn get_mut_type_ctx(&mut self) -> &mut ParserTypeContext {
-        &mut self.type_ctx
-    }
-
-    pub fn get_scope(&self) -> usize {
-        self.scope
-    }
-
-    pub fn get_mut_scope(&mut self) -> &mut usize {
-        &mut self.scope
-    }
-
-    pub fn add_stmt(&mut self, stmt: Ast<'parser>) {
-        self.ast.push(stmt);
-    }
-
-    pub fn add_error(&mut self, error: ThrushCompilerIssue) {
-        self.errors.push(error);
-    }
-
-    pub fn get_ast(&self) -> &[Ast<'parser>] {
-        &self.ast
     }
 
     #[must_use]
@@ -303,7 +264,7 @@ impl<'parser> ParserContext<'parser> {
     }
 
     #[must_use]
-    pub const fn is_main_scope(&self) -> bool {
+    pub fn is_main_scope(&self) -> bool {
         self.scope == 0
     }
 
@@ -370,5 +331,53 @@ impl<'parser> ParserContext<'parser> {
 
     pub fn forward(&mut self) {
         stmt::parse_forward(self);
+    }
+}
+
+impl<'parser> ParserContext<'parser> {
+    pub fn get_symbols(&self) -> &SymbolsTable<'parser> {
+        &self.symbols
+    }
+
+    pub fn get_mut_symbols(&mut self) -> &mut SymbolsTable<'parser> {
+        &mut self.symbols
+    }
+
+    pub fn get_control_ctx(&mut self) -> &ParserControlContext {
+        &mut self.control_ctx
+    }
+
+    pub fn get_mut_control_ctx(&mut self) -> &mut ParserControlContext {
+        &mut self.control_ctx
+    }
+
+    pub fn get_type_ctx(&self) -> &ParserTypeContext {
+        &self.type_ctx
+    }
+
+    pub fn get_mut_type_ctx(&mut self) -> &mut ParserTypeContext {
+        &mut self.type_ctx
+    }
+
+    pub fn get_scope(&self) -> usize {
+        self.scope
+    }
+
+    pub fn get_mut_scope(&mut self) -> &mut usize {
+        &mut self.scope
+    }
+
+    pub fn get_ast(&self) -> &[Ast<'parser>] {
+        &self.ast
+    }
+}
+
+impl<'parser> ParserContext<'parser> {
+    pub fn add_stmt(&mut self, stmt: Ast<'parser>) {
+        self.ast.push(stmt);
+    }
+
+    pub fn add_error(&mut self, error: ThrushCompilerIssue) {
+        self.errors.push(error);
     }
 }

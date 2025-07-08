@@ -2,16 +2,18 @@ use crate::{
     core::errors::standard::ThrushCompilerIssue,
     frontend::{
         lexer::{span::Span, token::Token, tokentype::TokenType},
-        parser::{ParserContext, expression},
+        parser::{ParserContext, expr},
         types::{ast::Ast, parser::stmts::traits::TokenExtensions},
         typesystem::types::Type,
     },
 };
 
 pub fn build_return<'parser>(
-    parser_ctx: &mut ParserContext<'parser>,
+    parser_context: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, ThrushCompilerIssue> {
-    let return_tk: &Token = parser_ctx.consume(
+    self::check_state(parser_context)?;
+
+    let return_tk: &Token = parser_context.consume(
         TokenType::Return,
         String::from("Syntax error"),
         String::from("Expected 'return' keyword."),
@@ -19,26 +21,12 @@ pub fn build_return<'parser>(
 
     let span: Span = return_tk.get_span();
 
-    if !parser_ctx.get_control_ctx().get_inside_function() {
-        return Err(ThrushCompilerIssue::Error(
-            String::from("Syntax error"),
-            String::from("Return outside of bind or function."),
-            None,
-            span,
-        ));
-    }
-
-    if parser_ctx.is_unreacheable_code() {
-        return Err(ThrushCompilerIssue::Error(
-            String::from("Syntax error"),
-            String::from("Unreacheable code."),
-            None,
-            span,
-        ));
-    }
-
-    if parser_ctx.match_token(TokenType::SemiColon)? {
-        if parser_ctx.get_type_ctx().get_function_type().is_void_type() {
+    if parser_context.match_token(TokenType::SemiColon)? {
+        if parser_context
+            .get_type_ctx()
+            .get_function_type()
+            .is_void_type()
+        {
             return Ok(Ast::Null { span });
         }
 
@@ -49,9 +37,9 @@ pub fn build_return<'parser>(
         });
     }
 
-    let value: Ast = expression::build_expr(parser_ctx)?;
+    let value: Ast = expr::build_expr(parser_context)?;
 
-    parser_ctx.consume(
+    parser_context.consume(
         TokenType::SemiColon,
         String::from("Syntax error"),
         String::from("Expected ';'."),
@@ -59,7 +47,29 @@ pub fn build_return<'parser>(
 
     Ok(Ast::Return {
         expression: Some(value.into()),
-        kind: parser_ctx.get_type_ctx().get_function_type().clone(),
+        kind: parser_context.get_type_ctx().get_function_type().clone(),
         span,
     })
+}
+
+fn check_state(parser_context: &mut ParserContext) -> Result<(), ThrushCompilerIssue> {
+    if parser_context.is_unreacheable_code() {
+        return Err(ThrushCompilerIssue::Error(
+            "Syntax error".into(),
+            "Unreachable for execution.".into(),
+            None,
+            parser_context.peek().get_span(),
+        ));
+    }
+
+    if !parser_context.get_control_ctx().get_inside_function() {
+        return Err(ThrushCompilerIssue::Error(
+            "Syntax error".into(),
+            "A function control flow must be inside a function.".into(),
+            None,
+            parser_context.peek().get_span(),
+        ));
+    }
+
+    Ok(())
 }

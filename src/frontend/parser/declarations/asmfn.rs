@@ -2,7 +2,7 @@ use crate::{
     core::errors::standard::ThrushCompilerIssue,
     frontend::{
         lexer::{span::Span, token::Token, tokentype::TokenType},
-        parser::{ParserContext, attributes, expression, typegen},
+        parser::{ParserContext, attributes, checks, expr, typegen},
         types::{
             ast::Ast,
             parser::{
@@ -21,6 +21,8 @@ pub fn build_assembler_function<'parser>(
     parser_context: &mut ParserContext<'parser>,
     declare_forward: bool,
 ) -> Result<Ast<'parser>, ThrushCompilerIssue> {
+    checks::check_main_scope_state(parser_context)?;
+
     parser_context.consume(
         TokenType::AsmFn,
         String::from("Syntax error"),
@@ -37,15 +39,6 @@ pub fn build_assembler_function<'parser>(
     let asm_function_ascii_name: &str = asm_function_name_tk.get_ascii_lexeme();
 
     let span: Span = asm_function_name_tk.get_span();
-
-    if !parser_context.is_main_scope() {
-        return Err(ThrushCompilerIssue::Error(
-            String::from("Syntax error"),
-            String::from("Assembler functions can only be defined globally."),
-            None,
-            span,
-        ));
-    }
 
     parser_context.consume(
         TokenType::LParen,
@@ -123,7 +116,7 @@ pub fn build_assembler_function<'parser>(
             break;
         }
 
-        let raw_str: Ast = expression::build_expr(parser_context)?;
+        let raw_str: Ast = expr::build_expr(parser_context)?;
         let raw_str_span: Span = raw_str.get_span();
 
         let assembly: &str = raw_str.get_str_content(raw_str_span)?;
@@ -167,7 +160,7 @@ pub fn build_assembler_function<'parser>(
             break;
         }
 
-        let raw_str: Ast = expression::build_expr(parser_context)?;
+        let raw_str: Ast = expr::build_expr(parser_context)?;
         let raw_str_span: Span = raw_str.get_span();
 
         let constraint: &str = raw_str.get_str_content(raw_str_span)?;

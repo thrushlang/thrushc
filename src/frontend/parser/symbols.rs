@@ -50,7 +50,9 @@ impl<'parser> SymbolsTable<'parser> {
             parameters: HashMap::with_capacity(255),
         }
     }
+}
 
+impl SymbolsTable<'_> {
     pub fn begin_scope(&mut self) {
         self.constants.push(HashMap::with_capacity(255));
         self.locals.push(HashMap::with_capacity(255));

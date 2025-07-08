@@ -2,7 +2,7 @@ use crate::{
     core::errors::standard::ThrushCompilerIssue,
     frontend::{
         lexer::{span::Span, token::Token, tokentype::TokenType},
-        parser::{ParserContext, expression},
+        parser::{ParserContext, expr},
         types::ast::Ast,
         typesystem::types::Type,
     },
@@ -21,13 +21,13 @@ pub fn build_dereference<'parser>(
             parser_context.consume(
                 TokenType::Deref,
                 "Syntax error".into(),
-                "Expected 'deref'.".into(),
+                "Expected 'deref' keyword.".into(),
             )?;
 
             deref_count += 1;
         }
 
-        let expr: Ast = expression::build_expr(parser_context)?;
+        let expr: Ast = expr::build_expr(parser_context)?;
 
         expr
     };

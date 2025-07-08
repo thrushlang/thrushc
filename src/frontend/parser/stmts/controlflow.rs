@@ -9,50 +9,24 @@ use crate::{
 };
 
 pub fn build_continue<'parser>(
-    parser_ctx: &mut ParserContext<'parser>,
+    parser_context: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, ThrushCompilerIssue> {
-    let continue_tk: &Token = parser_ctx.consume(
+    self::check_state(parser_context)?;
+
+    let continue_tk: &Token = parser_context.consume(
         TokenType::Continue,
         String::from("Syntax error"),
         String::from("Expected 'continue' keyword."),
     )?;
 
     let span: Span = continue_tk.span;
+    let scope: usize = parser_context.get_scope();
 
-    if parser_ctx.is_unreacheable_code() {
-        return Err(ThrushCompilerIssue::Error(
-            String::from("Syntax error"),
-            String::from("Unreacheable code."),
-            None,
-            span,
-        ));
-    }
-
-    if !parser_ctx.get_control_ctx().get_inside_function() {
-        return Err(ThrushCompilerIssue::Error(
-            String::from("Syntax error"),
-            String::from("Continue must be placed inside a function or a bind."),
-            None,
-            span,
-        ));
-    }
-
-    let scope: usize = parser_ctx.get_scope();
-
-    parser_ctx
+    parser_context
         .get_mut_control_ctx()
         .set_unreacheable_code_scope(scope);
 
-    if !parser_ctx.get_control_ctx().is_inside_loop() {
-        return Err(ThrushCompilerIssue::Error(
-            String::from("Syntax error"),
-            String::from("The flow changer of a loop must go inside one."),
-            None,
-            span,
-        ));
-    }
-
-    parser_ctx.consume(
+    parser_context.consume(
         TokenType::SemiColon,
         String::from("Syntax error"),
         String::from("Expected ';'."),
@@ -62,54 +36,59 @@ pub fn build_continue<'parser>(
 }
 
 pub fn build_break<'parser>(
-    parser_ctx: &mut ParserContext<'parser>,
+    parser_context: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, ThrushCompilerIssue> {
-    let break_tk: &Token = parser_ctx.consume(
+    self::check_state(parser_context)?;
+
+    let break_tk: &Token = parser_context.consume(
         TokenType::Break,
         String::from("Syntax error"),
         String::from("Expected 'break' keyword."),
     )?;
 
     let span: Span = break_tk.get_span();
+    let scope: usize = parser_context.get_scope();
 
-    if parser_ctx.is_unreacheable_code() {
-        return Err(ThrushCompilerIssue::Error(
-            String::from("Syntax error"),
-            String::from("Unreacheable code."),
-            None,
-            span,
-        ));
-    }
-
-    let scope: usize = parser_ctx.get_scope();
-
-    parser_ctx
+    parser_context
         .get_mut_control_ctx()
         .set_unreacheable_code_scope(scope);
 
-    if !parser_ctx.get_control_ctx().is_inside_loop() {
-        return Err(ThrushCompilerIssue::Error(
-            String::from("Syntax error"),
-            String::from("The flow changer of a loop must go inside one."),
-            None,
-            span,
-        ));
-    }
-
-    if !parser_ctx.get_control_ctx().get_inside_function() {
-        return Err(ThrushCompilerIssue::Error(
-            String::from("Syntax error"),
-            String::from("Break must be placed inside a function."),
-            None,
-            span,
-        ));
-    }
-
-    parser_ctx.consume(
+    parser_context.consume(
         TokenType::SemiColon,
         String::from("Syntax error"),
         String::from("Expected ';'."),
     )?;
 
     Ok(Ast::Break { span })
+}
+
+fn check_state(parser_context: &mut ParserContext) -> Result<(), ThrushCompilerIssue> {
+    if parser_context.is_unreacheable_code() {
+        return Err(ThrushCompilerIssue::Error(
+            "Syntax error".into(),
+            "Unreachable for execution.".into(),
+            None,
+            parser_context.peek().get_span(),
+        ));
+    }
+
+    if !parser_context.get_control_ctx().get_inside_function() {
+        return Err(ThrushCompilerIssue::Error(
+            "Syntax error".into(),
+            "A loop flow control must be inside a function.".into(),
+            None,
+            parser_context.peek().get_span(),
+        ));
+    }
+
+    if !parser_context.get_control_ctx().is_inside_loop() {
+        return Err(ThrushCompilerIssue::Error(
+            "Syntax error".into(),
+            "A loop flow control must be inside one.".into(),
+            None,
+            parser_context.peek().get_span(),
+        ));
+    }
+
+    Ok(())
 }

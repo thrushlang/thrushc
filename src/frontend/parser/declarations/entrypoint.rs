@@ -2,25 +2,17 @@ use crate::{
     core::errors::standard::ThrushCompilerIssue,
     frontend::{
         lexer::{span::Span, tokentype::TokenType},
-        parser::{ParserContext, stmts::block},
-        types::{ast::Ast, parser::stmts::traits::TokenExtensions},
+        parser::{ParserContext, checks, stmts::block},
+        types::ast::Ast,
         typesystem::types::Type,
     },
 };
 
-pub fn build_main<'parser>(
+pub fn build_entrypoint<'parser>(
     parser_context: &mut ParserContext<'parser>,
+    span: Span,
 ) -> Result<Ast<'parser>, ThrushCompilerIssue> {
-    let span: Span = parser_context.previous().span;
-
-    if parser_context.get_control_ctx().get_entrypoint() {
-        return Err(ThrushCompilerIssue::Error(
-            "Duplicated entrypoint".into(),
-            "The language not support two entrypoints. :>".into(),
-            None,
-            parser_context.previous().get_span(),
-        ));
-    }
+    checks::check_double_entrypoint_state(parser_context)?;
 
     parser_context.consume(
         TokenType::LParen,

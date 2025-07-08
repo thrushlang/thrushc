@@ -2,7 +2,7 @@ use crate::{
     core::errors::standard::ThrushCompilerIssue,
     frontend::{
         lexer::{span::Span, token::Token, tokentype::TokenType},
-        parser::{ParserContext, expressions::precedences::eq},
+        parser::{ParserContext, expressions::precedences::mutation},
         types::{ast::Ast, parser::stmts::traits::TokenExtensions},
         typesystem::types::Type,
     },
@@ -11,7 +11,7 @@ use crate::{
 pub fn factor<'parser>(
     parser_context: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, ThrushCompilerIssue> {
-    let mut expression: Ast = eq::equal_precedence(parser_context)?;
+    let mut expression: Ast = mutation::equal_precedence(parser_context)?;
 
     while parser_context.match_token(TokenType::Slash)?
         || parser_context.match_token(TokenType::Star)?
@@ -20,7 +20,7 @@ pub fn factor<'parser>(
         let operator: TokenType = operator_tk.get_type();
         let span: Span = operator_tk.get_span();
 
-        let right: Ast = eq::equal_precedence(parser_context)?;
+        let right: Ast = mutation::equal_precedence(parser_context)?;
 
         let left_type: &Type = expression.get_value_type()?;
         let right_type: &Type = right.get_value_type()?;

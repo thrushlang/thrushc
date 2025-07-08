@@ -2,7 +2,7 @@ use crate::{
     core::errors::standard::ThrushCompilerIssue,
     frontend::{
         lexer::{span::Span, token::Token, tokentype::TokenType},
-        parser::expression,
+        parser::expr,
         types::{
             ast::Ast,
             parser::stmts::{
@@ -27,93 +27,11 @@ pub fn build_type(parser_context: &mut ParserContext<'_>) -> Result<Type, Thrush
             let span: Span = tk.span;
 
             if tk_kind.is_mut() {
-                let inner_type: Type = self::build_type(parser_context)?;
-
-                if inner_type.is_mut_type() {
-                    return Err(ThrushCompilerIssue::Error(
-                        String::from("Syntax error"),
-                        "Nested mutable type 'mut mut T' ins't type.".into(),
-                        None,
-                        span,
-                    ));
-                }
-
-                if inner_type.is_ptr_type() {
-                    return Err(ThrushCompilerIssue::Error(
-                        String::from("Syntax error"),
-                        "Mutable pointer type 'mut ptr<T>', or 'mut ptr' isn't type.".into(),
-                        None,
-                        span,
-                    ));
-                }
-
-                return Ok(Type::Mut(inner_type.into()));
+                return self::build_mut_type(parser_context, span);
             }
 
             if tk_kind.is_array() {
-                parser_context.consume(
-                    TokenType::LBracket,
-                    String::from("Syntax error"),
-                    String::from("Expected '['."),
-                )?;
-
-                let array_type: Type = self::build_type(parser_context)?;
-
-                if parser_context.check(TokenType::SemiColon) {
-                    parser_context.consume(
-                        TokenType::SemiColon,
-                        String::from("Syntax error"),
-                        String::from("Expected ';'."),
-                    )?;
-
-                    let size: Ast = expression::build_expr(parser_context)?;
-
-                    if !size.is_integer() {
-                        return Err(ThrushCompilerIssue::Error(
-                            String::from("Syntax error"),
-                            "Expected integer value.".into(),
-                            None,
-                            span,
-                        ));
-                    }
-
-                    if !size.is_unsigned_integer()? || !size.is_lessu32bit_integer()? {
-                        return Err(ThrushCompilerIssue::Error(
-                            String::from("Syntax error"),
-                            "Expected any unsigned integer value less than or equal to 32 bits."
-                                .into(),
-                            None,
-                            span,
-                        ));
-                    }
-
-                    let raw_array_size: u64 = size.get_integer_value()?;
-
-                    if let Ok(array_size) = u32::try_from(raw_array_size) {
-                        parser_context.consume(
-                            TokenType::RBracket,
-                            String::from("Syntax error"),
-                            String::from("Expected ']'."),
-                        )?;
-
-                        return Ok(Type::FixedArray(array_type.into(), array_size));
-                    }
-
-                    return Err(ThrushCompilerIssue::Error(
-                        String::from("Syntax error"),
-                        "Expected any unsigned 32 bits integer value.".into(),
-                        None,
-                        span,
-                    ));
-                }
-
-                parser_context.consume(
-                    TokenType::RBracket,
-                    String::from("Syntax error"),
-                    String::from("Expected ']'."),
-                )?;
-
-                return Ok(Type::Array(array_type.into()));
+                return self::build_array_type(parser_context, span);
             }
 
             match tk_kind.as_type(span)? {
@@ -130,7 +48,7 @@ pub fn build_type(parser_context: &mut ParserContext<'_>) -> Result<Type, Thrush
 
                 what_heck => Err(ThrushCompilerIssue::Error(
                     String::from("Syntax error"),
-                    format!("Type '{}' ins't value.", what_heck),
+                    format!("Expected type, not '{}'", what_heck),
                     None,
                     span,
                 )),
@@ -191,6 +109,101 @@ pub fn build_type(parser_context: &mut ParserContext<'_>) -> Result<Type, Thrush
     };
 
     builded_type
+}
+
+fn build_array_type(
+    parser_context: &mut ParserContext<'_>,
+    span: Span,
+) -> Result<Type, ThrushCompilerIssue> {
+    parser_context.consume(
+        TokenType::LBracket,
+        String::from("Syntax error"),
+        String::from("Expected '['."),
+    )?;
+
+    let array_type: Type = self::build_type(parser_context)?;
+
+    if parser_context.check(TokenType::SemiColon) {
+        parser_context.consume(
+            TokenType::SemiColon,
+            String::from("Syntax error"),
+            String::from("Expected ';'."),
+        )?;
+
+        let size: Ast = expr::build_expr(parser_context)?;
+
+        if !size.is_integer() {
+            return Err(ThrushCompilerIssue::Error(
+                String::from("Syntax error"),
+                "Expected integer value.".into(),
+                None,
+                span,
+            ));
+        }
+
+        if !size.is_unsigned_integer()? || !size.is_lessu32bit_integer()? {
+            return Err(ThrushCompilerIssue::Error(
+                String::from("Syntax error"),
+                "Expected any unsigned integer value less than or equal to 32 bits.".into(),
+                None,
+                span,
+            ));
+        }
+
+        let raw_array_size: u64 = size.get_integer_value()?;
+
+        if let Ok(array_size) = u32::try_from(raw_array_size) {
+            parser_context.consume(
+                TokenType::RBracket,
+                String::from("Syntax error"),
+                String::from("Expected ']'."),
+            )?;
+
+            return Ok(Type::FixedArray(array_type.into(), array_size));
+        }
+
+        return Err(ThrushCompilerIssue::Error(
+            String::from("Syntax error"),
+            "Expected any unsigned 32 bits integer value.".into(),
+            None,
+            span,
+        ));
+    }
+
+    parser_context.consume(
+        TokenType::RBracket,
+        String::from("Syntax error"),
+        String::from("Expected ']'."),
+    )?;
+
+    Ok(Type::Array(array_type.into()))
+}
+
+fn build_mut_type(
+    parser_context: &mut ParserContext<'_>,
+    span: Span,
+) -> Result<Type, ThrushCompilerIssue> {
+    let inner_type: Type = self::build_type(parser_context)?;
+
+    if inner_type.is_mut_type() {
+        return Err(ThrushCompilerIssue::Error(
+            String::from("Syntax error"),
+            "Nested mutable type 'mut mut T' ins't type.".into(),
+            None,
+            span,
+        ));
+    }
+
+    if inner_type.is_ptr_type() {
+        return Err(ThrushCompilerIssue::Error(
+            String::from("Syntax error"),
+            "Mutable pointer type 'mut ptr<T>', or 'mut ptr' isn't type.".into(),
+            None,
+            span,
+        ));
+    }
+
+    Ok(Type::Mut(inner_type.into()))
 }
 
 fn build_recursive_type(

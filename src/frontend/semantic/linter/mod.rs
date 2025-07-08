@@ -1,6 +1,6 @@
 use ahash::AHashMap as HashMap;
 
-use table::LinterSymbolsTable;
+use symbols::LinterSymbolsTable;
 
 use crate::{
     core::{
@@ -10,8 +10,9 @@ use crate::{
         errors::standard::ThrushCompilerIssue,
     },
     frontend::{
-        lexer::span::Span, types::ast::Ast,
-        types::parser::stmts::traits::ThrushAttributesExtensions,
+        lexer::span::Span,
+        semantic::linter::expressions::deref,
+        types::{ast::Ast, parser::stmts::traits::ThrushAttributesExtensions},
     },
 };
 
@@ -21,15 +22,15 @@ mod builtins;
 mod casts;
 mod conditionals;
 mod constant;
-mod deref;
 mod enums;
+mod expr;
 mod expressions;
 mod functions;
 mod lli;
 mod local;
 mod loops;
 mod marks;
-mod table;
+mod symbols;
 mod terminator;
 
 #[derive(Debug)]
@@ -360,7 +361,7 @@ impl<'linter> Linter<'linter> {
     }
 
     pub fn analyze_ast_expr(&mut self, expr: &'linter Ast) {
-        expressions::analyze_expression(self, expr);
+        expr::analyze_expression(self, expr);
     }
 
     pub fn generate_scoped_warnings(&mut self) {

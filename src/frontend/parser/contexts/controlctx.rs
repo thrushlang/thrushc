@@ -1,12 +1,4 @@
-use crate::frontend::typesystem::types::Type;
-
-#[derive(Debug, Clone, Copy)]
-pub enum SyncPosition {
-    Statement,
-    Declaration,
-    Expression,
-    NoRelevant,
-}
+use crate::frontend::parser::contexts::sync::SyncPosition;
 
 #[derive(Debug)]
 pub struct ParserControlContext {
@@ -17,29 +9,6 @@ pub struct ParserControlContext {
     inside_function: bool,
     loop_depth: usize,
     unreacheable_code: usize,
-}
-
-#[derive(Debug)]
-pub struct ParserTypeContext {
-    function_type: Type,
-}
-
-impl ParserTypeContext {
-    pub fn new() -> Self {
-        Self {
-            function_type: Type::Void,
-        }
-    }
-
-    #[inline]
-    pub fn set_function_type(&mut self, new_type: Type) {
-        self.function_type = new_type;
-    }
-
-    #[inline]
-    pub fn get_function_type(&self) -> Type {
-        self.function_type.clone()
-    }
 }
 
 impl ParserControlContext {

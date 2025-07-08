@@ -39,8 +39,8 @@ pub fn check_integer_format(lexer: &Lexer, lexeme: &str) -> Result<(), ThrushCom
                 Ok(())
             } else {
                 Err(ThrushCompilerIssue::Error(
-                    String::from("Syntax error"),
-                    String::from("Out of bounds integer."),
+                    "Syntax error".into(),
+                    "Integer out of bounds.".into(),
                     None,
                     span,
                 ))
@@ -57,8 +57,8 @@ pub fn check_integer_format(lexer: &Lexer, lexeme: &str) -> Result<(), ThrushCom
                     Ok(())
                 } else {
                     Err(ThrushCompilerIssue::Error(
-                        String::from("Syntax error"),
-                        String::from("Out of bounds integer."),
+                        "Syntax error".into(),
+                        "Integer out of bounds.".into(),
                         None,
                         span,
                     ))
@@ -66,8 +66,8 @@ pub fn check_integer_format(lexer: &Lexer, lexeme: &str) -> Result<(), ThrushCom
             }
 
             Err(_) => Err(ThrushCompilerIssue::Error(
-                String::from("Syntax error"),
-                String::from("Out of bounds integer."),
+                "Syntax error".into(),
+                "Integer out of bounds.".into(),
                 None,
                 span,
             )),
@@ -91,8 +91,8 @@ fn check_integer_binary_format(lexeme: &str, span: Span) -> Result<(), ThrushCom
                 Ok(())
             } else {
                 Err(ThrushCompilerIssue::Error(
-                    String::from("Syntax error"),
-                    String::from("Out of bounds signed binary format."),
+                    "Syntax error".into(),
+                    "Integer out of bounds signed binary format.".into(),
                     None,
                     span,
                 ))
@@ -109,8 +109,8 @@ fn check_integer_binary_format(lexeme: &str, span: Span) -> Result<(), ThrushCom
                     Ok(())
                 } else {
                     Err(ThrushCompilerIssue::Error(
-                        String::from("Syntax error"),
-                        String::from("Out of bounds unsigned binary format."),
+                        "Syntax error".into(),
+                        "Integer out of bounds unsigned binary format.".into(),
                         None,
                         span,
                     ))
@@ -118,8 +118,8 @@ fn check_integer_binary_format(lexeme: &str, span: Span) -> Result<(), ThrushCom
             }
 
             Err(_) => Err(ThrushCompilerIssue::Error(
-                String::from("Syntax error"),
-                String::from("Invalid binary format."),
+                "Syntax error".into(),
+                "Integer invalid binary format.".into(),
                 None,
                 span,
             )),
@@ -143,8 +143,8 @@ fn check_integer_hex_format(lexeme: &str, span: Span) -> Result<(), ThrushCompil
                 Ok(())
             } else {
                 Err(ThrushCompilerIssue::Error(
-                    String::from("Syntax error"),
-                    String::from("Out of bounds signed hexadecimal format."),
+                    "Syntax error".into(),
+                    "Integer out of bounds signed hexadecimal format.".into(),
                     None,
                     span,
                 ))
@@ -161,8 +161,8 @@ fn check_integer_hex_format(lexeme: &str, span: Span) -> Result<(), ThrushCompil
                     Ok(())
                 } else {
                     Err(ThrushCompilerIssue::Error(
-                        String::from("Syntax error"),
-                        String::from("Out of bounds unsigned hexadecimal format."),
+                        "Syntax error".into(),
+                        "Integer out of bounds unsigned hexadecimal format.".into(),
                         None,
                         span,
                     ))
@@ -170,8 +170,8 @@ fn check_integer_hex_format(lexeme: &str, span: Span) -> Result<(), ThrushCompil
             }
 
             Err(_) => Err(ThrushCompilerIssue::Error(
-                String::from("Syntax error"),
-                String::from("Invalid numeric hexadecimal format."),
+                "Syntax error".into(),
+                "Integer invalid numeric hexadecimal format.".into(),
                 None,
                 span,
             )),

@@ -2,7 +2,7 @@ use crate::{
     core::errors::standard::ThrushCompilerIssue,
     frontend::{
         lexer::{span::Span, token::Token, tokentype::TokenType},
-        parser::{ParserContext, expression},
+        parser::{ParserContext, expr},
         types::{ast::Ast, parser::stmts::traits::TokenExtensions},
         typesystem::types::Type,
     },
@@ -27,7 +27,7 @@ pub fn build_array<'parser>(
             break;
         }
 
-        let item: Ast = expression::build_expr(parser_context)?;
+        let item: Ast = expr::build_expr(parser_context)?;
 
         items.push(item);
 

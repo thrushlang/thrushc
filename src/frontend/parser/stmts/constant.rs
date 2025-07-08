@@ -2,7 +2,7 @@ use crate::{
     core::errors::standard::ThrushCompilerIssue,
     frontend::{
         lexer::{span::Span, token::Token, tokentype::TokenType},
-        parser::{ParserContext, attributes, expression, typegen},
+        parser::{ParserContext, attributes, expr, typegen},
         types::{
             ast::{Ast, metadata::constant::ConstantMetadata},
             parser::stmts::{traits::TokenExtensions, types::ThrushAttributes},
@@ -44,7 +44,7 @@ pub fn build_const<'parser>(
 
     parser_ctx.consume(TokenType::Eq, "Syntax error".into(), "Expected '='.".into())?;
 
-    let value: Ast = expression::build_expr(parser_ctx)?;
+    let value: Ast = expr::build_expr(parser_ctx)?;
 
     let expression_span: Span = value.get_span();
 
