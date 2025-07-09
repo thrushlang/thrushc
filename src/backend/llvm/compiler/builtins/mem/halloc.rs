@@ -15,15 +15,14 @@ pub fn compile<'ctx>(
     let llvm_context: &Context = context.get_llvm_context();
     let llvm_builder: &Builder = context.get_llvm_builder();
 
-    let heap_alloc_abort = |_| {
+    let abort = |_| {
         self::codegen_abort("Failed to allocate heap memory with halloc builtin.");
-
         unreachable!()
     };
 
     llvm_builder
         .build_malloc(typegen::generate_type(llvm_context, alloc), "")
-        .unwrap_or_else(heap_alloc_abort)
+        .unwrap_or_else(abort)
         .into()
 }
 

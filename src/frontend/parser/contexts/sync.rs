@@ -1,7 +1,9 @@
-#[derive(Debug, Clone, Copy)]
-pub enum SyncPosition {
+#[derive(Debug, Clone, Copy, Default)]
+pub enum ParserSyncPosition {
     Statement,
     Declaration,
     Expression,
+
+    #[default]
     NoRelevant,
 }

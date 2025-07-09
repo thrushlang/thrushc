@@ -4,7 +4,7 @@ use crate::{
         lexer::{span::Span, token::Token, tokentype::TokenType},
         parser::ParserContext,
         types::{
-            ast::{Ast, types::AstEitherExpression},
+            ast::{Ast, metadata::property::PropertyMetadata, types::AstEitherExpression},
             parser::stmts::traits::TokenExtensions,
         },
         typesystem::{self, types::Type},
@@ -16,12 +16,12 @@ pub fn build_property<'parser>(
     source: AstEitherExpression<'parser>,
     span: Span,
 ) -> Result<Ast<'parser>, ThrushCompilerIssue> {
-    let source_type: &Type = match source {
+    let source_expr_extract: (&Type, &Ast) = match source {
         (Some(ref any_reference), None) => {
             let reference: &Ast = &any_reference.1;
-            reference.get_value_type()?
+            (reference.get_value_type()?, reference)
         }
-        (None, Some(ref expr)) => expr.get_value_type()?,
+        (None, Some(ref expr)) => (expr.get_value_type()?, expr),
         _ => {
             return Err(ThrushCompilerIssue::Bug(
                 String::from("Index not caught"),
@@ -32,6 +32,11 @@ pub fn build_property<'parser>(
             ));
         }
     };
+
+    let source_type: &Type = source_expr_extract.0;
+    let source_expr: &Ast = source_expr_extract.1;
+
+    let metadata: PropertyMetadata = PropertyMetadata::new(source_expr.is_allocated());
 
     let mut property_names: Vec<&str> = Vec::with_capacity(10);
 
@@ -74,6 +79,7 @@ pub fn build_property<'parser>(
         source,
         indexes,
         kind: property_type,
+        metadata,
         span,
     })
 }

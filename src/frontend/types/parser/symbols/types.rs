@@ -3,7 +3,9 @@ use ahash::AHashMap as HashMap;
 use crate::frontend::{
     lexer::span::Span,
     types::{
-        ast::metadata::staticvar::StaticMetadata,
+        ast::metadata::{
+            fnparam::FunctionParameterMetadata, local::LocalMetadata, staticvar::StaticMetadata,
+        },
         parser::stmts::types::{CustomTypeFields, EnumFields, ThrushAttributes},
     },
     typesystem::types::Type,
@@ -44,19 +46,20 @@ pub type FoundSymbolId<'parser> = (
 
 pub type CustomTypeSymbol<'ctx> = (CustomTypeFields<'ctx>, ThrushAttributes<'ctx>);
 pub type EnumSymbol<'ctx> = (EnumFields<'ctx>, ThrushAttributes<'ctx>);
-pub type ConstantSymbol<'parser> = (Type, ThrushAttributes<'parser>);
 pub type StaticSymbol<'parser> = (Type, StaticMetadata, ThrushAttributes<'parser>);
+pub type ConstantSymbol<'parser> = (Type, ThrushAttributes<'parser>);
 
 pub type LLISymbol<'parser> = (Type, Span);
-pub type LocalSymbol<'parser> = (Type, bool, bool, Span);
-pub type ParameterSymbol<'parser> = (Type, bool, bool, Span);
+pub type LocalSymbol<'parser> = (Type, LocalMetadata, Span);
+pub type ParameterSymbol<'parser> = (Type, FunctionParameterMetadata, Span);
 
 pub type CustomTypes<'parser> = HashMap<&'parser str, CustomTypeSymbol<'parser>>;
-pub type LocalConstants<'parser> = Vec<HashMap<&'parser str, ConstantSymbol<'parser>>>;
-pub type GlobalConstants<'parser> = HashMap<&'parser str, ConstantSymbol<'parser>>;
 
 pub type LocalStatics<'parser> = Vec<HashMap<&'parser str, StaticSymbol<'parser>>>;
 pub type GlobalStatics<'parser> = HashMap<&'parser str, StaticSymbol<'parser>>;
+
+pub type LocalConstants<'parser> = Vec<HashMap<&'parser str, ConstantSymbol<'parser>>>;
+pub type GlobalConstants<'parser> = HashMap<&'parser str, ConstantSymbol<'parser>>;
 
 pub type Parameters<'parser> = HashMap<&'parser str, ParameterSymbol<'parser>>;
 pub type Structs<'parser> = HashMap<&'parser str, Struct<'parser>>;

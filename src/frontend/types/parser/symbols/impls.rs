@@ -5,7 +5,9 @@ use crate::{
     frontend::{
         lexer::span::Span,
         types::{
-            ast::metadata::staticvar::StaticMetadata,
+            ast::metadata::{
+                fnparam::FunctionParameterMetadata, local::LocalMetadata, staticvar::StaticMetadata,
+            },
             parser::{
                 stmts::{
                     traits::{
@@ -15,8 +17,8 @@ use crate::{
                     types::{EnumField, EnumFields, StructFields},
                 },
                 symbols::{
-                    traits::StaticSymbolExtensions,
-                    types::{EnumSymbol, StaticSymbol},
+                    traits::{FunctionParameterSymbolExtensions, StaticSymbolExtensions},
+                    types::{EnumSymbol, ParameterSymbol, StaticSymbol},
                 },
             },
         },
@@ -52,7 +54,7 @@ impl<'parser> EnumExtensions<'parser> for EnumSymbol<'parser> {
 }
 
 impl LocalSymbolExtensions for LocalSymbol<'_> {
-    fn is_mutable(&self) -> bool {
+    fn get_metadata(&self) -> LocalMetadata {
         self.1
     }
 
@@ -74,6 +76,16 @@ impl StaticSymbolExtensions for StaticSymbol<'_> {
 impl ConstantSymbolExtensions for ConstantSymbol<'_> {
     fn get_type(&self) -> Type {
         self.0.clone()
+    }
+}
+
+impl FunctionParameterSymbolExtensions for ParameterSymbol<'_> {
+    fn get_type(&self) -> Type {
+        self.0.clone()
+    }
+
+    fn get_metadata(&self) -> FunctionParameterMetadata {
+        self.1
     }
 }
 

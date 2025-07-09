@@ -3,7 +3,7 @@ use crate::{
     frontend::{
         lexer::span::Span,
         types::{
-            ast::{Ast, metadata::fnparam::FunctionParameterMetadata},
+            ast::Ast,
             parser::symbols::types::{
                 AssemblerFunction, AssemblerFunctions, ConstantSymbol, CustomTypeSymbol,
                 CustomTypes, EnumSymbol, Enums, FoundSymbolId, Function, Functions,
@@ -96,8 +96,6 @@ impl<'parser> SymbolsTable<'parser> {
                 ..
             } = parameter
             {
-                let metadata: &FunctionParameterMetadata = metadata;
-
                 if self.parameters.contains_key(name) {
                     return Err(ThrushCompilerIssue::Error(
                         "Parameter already declared".into(),
@@ -108,7 +106,7 @@ impl<'parser> SymbolsTable<'parser> {
                 }
 
                 self.parameters
-                    .insert(name, (kind.clone(), metadata.is_mutable(), false, *span));
+                    .insert(name, (kind.clone(), *metadata, *span));
             }
         }
 

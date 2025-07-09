@@ -24,7 +24,7 @@ pub fn cast_precedence<'parser>(
 
         let is_constant: bool = expression.is_llvm_constant_value();
 
-        let is_allocated: bool = expression.is_allocated_ref()
+        let is_allocated: bool = expression.is_allocated()
             || expression_type.is_mut_type()
             || expression_type.is_ptr_type();
 

@@ -229,16 +229,20 @@ pub fn float<'ctx>(
 
 pub fn try_cast<'ctx>(
     context: &LLVMCodeGenContext<'_, 'ctx>,
-    target_type: &Type,
+    target_type: Option<&Type>,
     from_type: &Type,
     from: BasicValueEnum<'ctx>,
 ) -> Option<BasicValueEnum<'ctx>> {
-    if from.is_float_value() {
-        return float(context, target_type, from_type, from);
+    if from.is_float_value() && target_type.is_some() {
+        if let Some(target_type) = target_type {
+            return self::float(context, target_type, from_type, from);
+        }
     }
 
-    if from.is_int_value() {
-        return integer(context, target_type, from_type, from);
+    if from.is_int_value() && target_type.is_some() {
+        if let Some(target_type) = target_type {
+            return self::integer(context, target_type, from_type, from);
+        }
     }
 
     None

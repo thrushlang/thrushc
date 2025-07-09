@@ -42,10 +42,11 @@ impl Ast<'_> {
             kind,
             value,
             attributes,
+            metadata,
             ..
         } = self
         {
-            return (name, ascii_name, kind, &**value, attributes);
+            return (name, ascii_name, kind, &**value, *metadata, attributes);
         }
 
         unreachable!()

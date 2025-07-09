@@ -14,7 +14,7 @@ pub mod typegen;
 
 use ahash::AHashMap as HashMap;
 
-use contexts::{sync::SyncPosition, typectx::ParserTypeContext};
+use contexts::{sync::ParserSyncPosition, typectx::ParserTypeContext};
 use symbols::SymbolsTable;
 
 use crate::core::compiler::options::CompilerFile;
@@ -179,7 +179,7 @@ impl<'parser> ParserContext<'parser> {
 
     pub fn sync(&mut self) {
         match self.control_ctx.get_sync_position() {
-            SyncPosition::Declaration => {
+            ParserSyncPosition::Declaration => {
                 loop {
                     if self.is_eof() {
                         break;
@@ -196,7 +196,7 @@ impl<'parser> ParserContext<'parser> {
                 self.symbols.end_parameters();
             }
 
-            SyncPosition::Statement => loop {
+            ParserSyncPosition::Statement => loop {
                 if self.is_eof() {
                     break;
                 }
@@ -208,7 +208,7 @@ impl<'parser> ParserContext<'parser> {
                 let _ = self.only_advance();
             },
 
-            SyncPosition::Expression => loop {
+            ParserSyncPosition::Expression => loop {
                 if self.is_eof() {
                     break;
                 }
@@ -228,7 +228,8 @@ impl<'parser> ParserContext<'parser> {
             _ => {}
         }
 
-        self.control_ctx.set_sync_position(SyncPosition::NoRelevant);
+        self.control_ctx
+            .set_sync_position(ParserSyncPosition::NoRelevant);
     }
 
     pub fn is_unreacheable_code(&self) -> bool {

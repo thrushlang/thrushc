@@ -11,14 +11,14 @@ use crate::{
     },
 };
 
-use super::{ParserContext, contexts::sync::SyncPosition};
+use super::{ParserContext, contexts::sync::ParserSyncPosition};
 
 pub fn decl<'parser>(
     parser_context: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, ThrushCompilerIssue> {
     parser_context
         .get_mut_control_ctx()
-        .set_sync_position(SyncPosition::Declaration);
+        .set_sync_position(ParserSyncPosition::Declaration);
 
     let declaration: Result<Ast<'parser>, ThrushCompilerIssue> = match &parser_context.peek().kind {
         TokenType::Type => Ok(cstype::build_custom_type(parser_context, false)?),

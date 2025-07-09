@@ -2,13 +2,13 @@
 
 use std::fmt::Display;
 
-use crate::backend::llvm::compiler::loops::{self, forloop, infloop, whileloop};
 use crate::backend::llvm::compiler::{
-    binaryop, builtins, conditional, constgen, lli, mutation, ptrgen, terminator, unaryop,
+    binaryop, builtins, constgen, expressions, ptrgen, statements,
 };
 use crate::backend::types::{repr::LLVMFunction, traits::AssemblerFunctionExtensions};
 use crate::core::console::logging::{self, LoggingType};
 use crate::frontend::types::ast::metadata::local::LocalMetadata;
+use crate::frontend::types::ast::metadata::staticvar::StaticMetadata;
 use crate::frontend::types::parser::repr::{
     AssemblerFunctionRepresentation, ConstantRepresentation, FunctionParameter,
     FunctionRepresentation, StaticRepresentation,
@@ -25,7 +25,7 @@ use super::{
     attributes::{AttributeBuilder, LLVMAttributeApplicant},
     context::LLVMCodeGenContext,
     conventions::CallConvention,
-    local, typegen, valuegen,
+    typegen, valuegen,
 };
 
 use inkwell::InlineAsmDialect;
@@ -151,7 +151,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         ########################################################################*/
 
         match stmt {
-            Ast::If { .. } => conditional::compile(self, stmt),
+            Ast::If { .. } => statements::conditional::compile(self, stmt),
 
             stmt => self.codegen_loops(stmt),
         }
@@ -175,12 +175,12 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         ########################################################################*/
 
         match stmt {
-            Ast::While { .. } => whileloop::compile(self, stmt),
-            Ast::Loop { .. } => infloop::compile(self, stmt),
-            Ast::For { .. } => forloop::compile(self, stmt),
+            Ast::While { .. } => statements::loops::whileloop::compile(self, stmt),
+            Ast::Loop { .. } => statements::loops::infloop::compile(self, stmt),
+            Ast::For { .. } => statements::loops::forloop::compile(self, stmt),
 
-            Ast::Break { .. } => loops::controlflow::loopbreak::compile(self, stmt),
-            Ast::Continue { .. } => loops::controlflow::loopjump::compile(self, stmt),
+            Ast::Break { .. } => statements::loops::controlflow::loopbreak::compile(self, stmt),
+            Ast::Continue { .. } => statements::loops::controlflow::loopjump::compile(self, stmt),
 
             stmt => self.codegen_variables(stmt),
         }
@@ -218,7 +218,10 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 if metadata.is_undefined() {
                     self.context.new_local(name, ascii_name, kind, attributes);
                 } else {
-                    local::new(self.context, (name, ascii_name, kind, value, attributes));
+                    statements::local::compile(
+                        self.context,
+                        (name, ascii_name, kind, value, attributes),
+                    );
                 }
             }
 
@@ -245,6 +248,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 ascii_name,
                 kind,
                 value,
+                metadata,
                 ..
             } => {
                 let value_type: &Type = value.get_type_unwrapped();
@@ -255,13 +259,13 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                     constgen::cast(self.context, value, value_type, kind);
 
                 self.context
-                    .new_local_static(name, ascii_name, kind, casted_value);
+                    .new_local_static(name, ascii_name, kind, casted_value, *metadata);
             }
 
             Ast::LLI {
                 name, kind, value, ..
             } => {
-                lli::new(self.context, name, kind, value);
+                statements::lli::new(self.context, name, kind, value);
             }
 
             stmt => self.codegen_terminator(stmt),
@@ -287,7 +291,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
 
         match stmt {
             Ast::Return { .. } => {
-                terminator::compile(self, stmt);
+                statements::terminator::compile(self, stmt);
             }
 
             any => self.expressions(any),
@@ -322,7 +326,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 expression,
                 ..
             } => {
-                unaryop::unary_op(self.context, (operator, kind, expression), None);
+                expressions::unaryop::compile(self.context, (operator, kind, expression), None);
             }
 
             Ast::BinaryOp {
@@ -333,23 +337,19 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 ..
             } => {
                 if kind.is_integer_type() {
-                    binaryop::integer::integer_binaryop(
-                        self.context,
-                        (left, operator, right),
-                        None,
-                    );
+                    binaryop::integer::compile(self.context, (left, operator, right), None);
                 }
 
                 if kind.is_float_type() {
-                    binaryop::float::float_binaryop(self.context, (left, operator, right), None);
+                    binaryop::float::compile(self.context, (left, operator, right), None);
                 }
 
                 if kind.is_bool_type() {
-                    binaryop::boolean::bool_binaryop(self.context, (left, operator, right), None);
+                    binaryop::boolean::compile(self.context, (left, operator, right), None);
                 }
 
                 if kind.is_ptr_type() {
-                    binaryop::pointer::ptr_binaryop(self.context, (left, operator, right));
+                    binaryop::pointer::compile(self.context, (left, operator, right));
                 }
 
                 self::codegen_abort(format!(
@@ -359,7 +359,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
             }
 
             Ast::Mut { .. } => {
-                mutation::compile(self.context, stmt);
+                statements::mutation::compile(self.context, stmt);
             }
 
             Ast::Write { .. } => {
@@ -541,15 +541,16 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
 
         let kind: &Type = constant.2;
         let value: &Ast = constant.3;
-        let attributes: &ThrushAttributes = constant.4;
+        let metadata: StaticMetadata = constant.4;
+        let attributes: &ThrushAttributes = constant.5;
 
-        let constv: BasicValueEnum = constgen::compile(self.context, value, kind);
-        let constv_type: &Type = value.get_type_unwrapped();
+        let value_type: &Type = value.get_type_unwrapped();
+        let llvm_value: BasicValueEnum = constgen::compile(self.context, value, kind);
 
-        let value: BasicValueEnum = constgen::cast(self.context, constv, constv_type, kind);
+        let value: BasicValueEnum = constgen::cast(self.context, llvm_value, value_type, kind);
 
         self.context
-            .new_global_static(name, ascii_name, kind, value, attributes);
+            .new_global_static(name, ascii_name, kind, value, metadata, attributes);
     }
 
     fn declare_asm_function(&mut self, stmt: &'ctx Ast) {
@@ -678,7 +679,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         let function_attributes: &ThrushAttributes = function.6;
 
         let mut extern_name: Option<&str> = None;
-        let mut call_convention: u32 = CallConvention::Standard as u32;
+        let mut convention: u32 = CallConvention::Standard as u32;
 
         let ignore_args: bool = function_attributes.has_ignore_attribute();
         let is_public: bool = function_attributes.has_public_attribute();
@@ -690,8 +691,8 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                     extern_name = Some(name);
                 }
 
-                LLVMAttribute::Convention(call_conv, _) => {
-                    call_convention = (*call_conv) as u32;
+                LLVMAttribute::Convention(conv, _) => {
+                    convention = (*conv) as u32;
                 }
                 _ => (),
             });
@@ -718,7 +719,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
             LLVMAttributeApplicant::Function(llvm_function),
         );
 
-        attribute_builder.add_function_attributes(&mut call_convention);
+        attribute_builder.add_function_attributes(&mut convention);
 
         if !is_public && extern_name.is_none() {
             llvm_function.set_linkage(Linkage::LinkerPrivate);
@@ -728,7 +729,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
 
         self.context.new_function(
             function_name,
-            (llvm_function, function_parameters_types, call_convention),
+            (llvm_function, function_parameters_types, convention),
         );
     }
 }

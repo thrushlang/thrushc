@@ -66,10 +66,10 @@ pub fn float_operation<'ctx>(
     }
 }
 
-pub fn float_binaryop<'ctx>(
+pub fn compile<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     binary: BinaryOperation<'ctx>,
-    cast_type: Option<&Type>,
+    cast: Option<&Type>,
 ) -> BasicValueEnum<'ctx> {
     if let (
         _,
@@ -88,8 +88,8 @@ pub fn float_binaryop<'ctx>(
     {
         let operator: &TokenType = binary.1;
 
-        let left: BasicValueEnum = valuegen::compile(context, binary.0, cast_type);
-        let right: BasicValueEnum = valuegen::compile(context, binary.2, cast_type);
+        let left: BasicValueEnum = valuegen::compile(context, binary.0, cast);
+        let right: BasicValueEnum = valuegen::compile(context, binary.2, cast);
 
         return float_operation(
             context,

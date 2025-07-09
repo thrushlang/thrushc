@@ -52,7 +52,7 @@ pub fn ptr_operation<'ctx>(
     self::compile_null_ptr(context)
 }
 
-pub fn ptr_binaryop<'ctx>(
+pub fn compile<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     binary: BinaryOperation<'ctx>,
 ) -> BasicValueEnum<'ctx> {

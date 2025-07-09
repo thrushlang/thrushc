@@ -7,7 +7,7 @@ use crate::{
     },
 };
 
-use super::{ParserContext, contexts::sync::SyncPosition};
+use super::{ParserContext, contexts::sync::ParserSyncPosition};
 
 pub fn build_expression<'parser>(
     parser_context: &mut ParserContext<'parser>,
@@ -16,7 +16,7 @@ pub fn build_expression<'parser>(
 
     parser_context
         .get_mut_control_ctx()
-        .set_sync_position(SyncPosition::Expression);
+        .set_sync_position(ParserSyncPosition::Expression);
 
     let expression: Ast = or::or_precedence(parser_context)?;
 
@@ -36,7 +36,7 @@ pub fn build_expr<'parser>(
 
     parser_context
         .get_mut_control_ctx()
-        .set_sync_position(SyncPosition::Expression);
+        .set_sync_position(ParserSyncPosition::Expression);
 
     let expr: Ast = or::or_precedence(parser_context)?;
 

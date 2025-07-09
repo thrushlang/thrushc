@@ -13,13 +13,13 @@ use crate::{
 pub fn compile<'ctx>(
     context: &LLVMCodeGenContext<'_, 'ctx>,
     sizeof_type: &Type,
-    cast_type: Option<&Type>,
+    cast: Option<&Type>,
 ) -> BasicValueEnum<'ctx> {
     let llvm_context: &Context = context.get_llvm_context();
 
     let llvm_type: BasicTypeEnum = typegen::generate_type(llvm_context, sizeof_type);
 
-    let mut sizeof_value: BasicValueEnum = llvm_type
+    let sizeof_value: BasicValueEnum = llvm_type
         .size_of()
         .unwrap_or_else(|| {
             logging::log(
@@ -30,11 +30,5 @@ pub fn compile<'ctx>(
         })
         .into();
 
-    if let Some(cast_type) = cast_type {
-        if let Some(casted_size) = cast::try_cast(context, cast_type, sizeof_type, sizeof_value) {
-            sizeof_value = casted_size;
-        }
-    }
-
-    sizeof_value
+    cast::try_cast(context, cast, sizeof_type, sizeof_value).unwrap_or(sizeof_value)
 }

@@ -11,7 +11,7 @@ use crate::{
 mod builtins;
 mod checks;
 mod declarations;
-mod expression;
+mod expressions;
 mod metadata;
 mod position;
 mod statements;
@@ -46,12 +46,12 @@ impl<'type_checker> TypeChecker<'type_checker> {
     }
 
     pub fn check(&mut self) -> bool {
-        self.init();
+        self.declare_forward();
 
         while !self.is_eof() {
-            let current_stmt: &Ast = self.peek();
+            let node: &Ast = self.peek();
 
-            if let Err(error) = self.analyze_decl(current_stmt) {
+            if let Err(error) = self.analyze_decl(node) {
                 self.add_error(error);
             }
 
@@ -281,7 +281,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
         ########################################################################*/
 
         if let Ast::Deref { .. } = node {
-            return expression::deref::validate(self, node);
+            return expressions::deref::validate(self, node);
         }
 
         /* ######################################################################
@@ -301,7 +301,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
         ########################################################################*/
 
         if let Ast::As { .. } = node {
-            return expression::cast::validate(self, node);
+            return expressions::cast::validate(self, node);
         }
 
         /* ######################################################################
@@ -400,7 +400,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
 
         ########################################################################*/
 
-        expression::validate(self, node)
+        expressions::validate(self, node)
 
         /* ######################################################################
 
@@ -411,7 +411,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
         ########################################################################*/
     }
 
-    pub fn init(&mut self) {
+    pub fn declare_forward(&mut self) {
         self.ast
             .iter()
             .filter(|stmt| stmt.is_asm_function())

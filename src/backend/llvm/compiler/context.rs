@@ -16,7 +16,12 @@ use {
             },
         },
         core::diagnostic::diagnostician::Diagnostician,
-        frontend::{types::parser::stmts::types::ThrushAttributes, typesystem::types::Type},
+        frontend::{
+            types::{
+                ast::metadata::staticvar::StaticMetadata, parser::stmts::types::ThrushAttributes,
+            },
+            typesystem::types::Type,
+        },
     },
     ahash::AHashMap as HashMap,
     inkwell::{
@@ -187,12 +192,14 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
         ascii_name: &'ctx str,
         kind: &'ctx Type,
         value: BasicValueEnum<'ctx>,
+        metadata: StaticMetadata,
     ) {
         let ptr: PointerValue = alloc::local_static(
             self,
             ascii_name,
             typegen::generate_type(self.context, kind),
             value,
+            metadata,
         );
 
         let constant: SymbolAllocated = SymbolAllocated::new_static(ptr.into(), kind, value);
@@ -213,6 +220,7 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
         ascii_name: &'ctx str,
         kind: &'ctx Type,
         value: BasicValueEnum<'ctx>,
+        metadata: StaticMetadata,
         attributes: &'ctx ThrushAttributes<'ctx>,
     ) {
         let ptr: PointerValue = alloc::global_static(
@@ -220,6 +228,7 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
             ascii_name,
             typegen::generate_type(self.context, kind),
             value,
+            metadata,
             attributes,
         );
 

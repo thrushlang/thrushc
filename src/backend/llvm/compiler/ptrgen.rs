@@ -5,7 +5,7 @@ use super::typegen;
 use crate::backend::llvm::compiler::attributes::LLVMAttribute;
 use crate::backend::llvm::compiler::memory::{self, SymbolAllocated};
 use crate::backend::llvm::compiler::{
-    builtins, cast, codegen, indexes, lli, mutation, ptrgen, string, valuegen,
+    builtins, cast, codegen, expressions, indexes, ptrgen, statements, valuegen,
 };
 use crate::backend::types::LLVMEitherExpression;
 use crate::backend::types::repr::LLVMFunction;
@@ -28,28 +28,28 @@ use std::fmt::Display;
 pub fn compile<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     expr: &'ctx Ast,
-    cast_type: Option<&Type>,
+    cast: Option<&Type>,
 ) -> BasicValueEnum<'ctx> {
     match expr {
         // Compiles a null pointer literal
         Ast::NullPtr { .. } => self::compile_null_ptr(context),
 
         // Compiles a string literal
-        Ast::Str { bytes, .. } => self::compile_string(context, bytes),
+        Ast::Str { bytes, .. } => expressions::string::compile_str_constant(context, bytes).into(),
 
         // Compiles a function call
         Ast::Call {
             name, args, kind, ..
-        } => compile_function_call(context, name, args, kind, cast_type),
+        } => compile_function_call(context, name, args, kind, cast),
 
         // Compiles a grouped expression (e.g., parenthesized)
-        Ast::Group { expression, .. } => self::compile(context, expression, cast_type),
+        Ast::Group { expression, .. } => self::compile(context, expression, cast),
 
         // Compiles a type cast operation
         Ast::As { from, cast, .. } => self::compile_cast(context, from, cast),
 
         // Compiles a dereference operation (e.g., *pointer)
-        Ast::Deref { value, kind, .. } => self::compile_deref(context, value, kind, cast_type),
+        Ast::Deref { value, kind, .. } => self::compile_deref(context, value, kind, cast),
 
         // Compiles property access (e.g., struct field or array)
         Ast::Property {
@@ -57,7 +57,7 @@ pub fn compile<'ctx>(
         } => self::compile_property(context, source, indexes),
 
         // Compiles a built-in function
-        Ast::Builtin { builtin, .. } => builtins::compile(context, builtin, cast_type),
+        Ast::Builtin { builtin, .. } => builtins::compile(context, builtin, cast),
 
         // Compiles a reference to a variable or symbol
         Ast::Reference { name, .. } => self::compile_reference(context, name),
@@ -77,12 +77,9 @@ pub fn compile<'ctx>(
             source, indexes, ..
         } => self::compile_index(context, source, indexes),
 
-        // Value Mutation
-        Ast::Mut { .. } => mutation::compile(context, expr),
-
         // Low-Level Operations
-        Ast::Write { .. } | Ast::Load { .. } | Ast::Address { .. } | Ast::Alloc { .. } => {
-            lli::compile(context, expr, cast_type)
+        Ast::Load { .. } | Ast::Address { .. } | Ast::Alloc { .. } => {
+            statements::lli::compile(context, expr, cast)
         }
 
         // Fallback, Unknown expressions or statements
@@ -102,7 +99,7 @@ fn compile_function_call<'ctx>(
     name: &str,
     args: &'ctx [Ast],
     kind: &'ctx Type,
-    cast_type: Option<&Type>,
+    cast: Option<&Type>,
 ) -> BasicValueEnum<'ctx> {
     let function: LLVMFunction = context.get_function(name);
 
@@ -115,9 +112,9 @@ fn compile_function_call<'ctx>(
         .iter()
         .enumerate()
         .map(|(idx, expr)| {
-            let cast_type: Option<&Type> = function_arg_types.get(idx);
+            let cast: Option<&Type> = function_arg_types.get(idx);
 
-            codegen::compile_expr(context, expr, cast_type, true).into()
+            codegen::compile_expr(context, expr, cast, true).into()
         })
         .collect();
 
@@ -140,11 +137,7 @@ fn compile_function_call<'ctx>(
         }
     };
 
-    if let Some(cast) = cast_type {
-        cast::try_cast(context, cast, kind, fn_value).unwrap_or(fn_value)
-    } else {
-        fn_value
-    }
+    cast::try_cast(context, cast, kind, fn_value).unwrap_or(fn_value)
 }
 
 fn compile_cast<'ctx>(
@@ -221,7 +214,7 @@ fn compile_deref<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     value: &'ctx Ast,
     kind: &Type,
-    cast_type: Option<&Type>,
+    cast: Option<&Type>,
 ) -> BasicValueEnum<'ctx> {
     let val: BasicValueEnum = compile(context, value, Some(kind));
 
@@ -236,11 +229,7 @@ fn compile_deref<'ctx>(
         val
     };
 
-    if let Some(cast) = cast_type {
-        cast::try_cast(context, cast, kind, deref_value).unwrap_or(deref_value)
-    } else {
-        deref_value
-    }
+    cast::try_cast(context, cast, kind, deref_value).unwrap_or(deref_value)
 }
 
 fn compile_property<'ctx>(
@@ -273,7 +262,7 @@ fn compile_property<'ctx>(
                     Ok(new_ptr) => ptr = new_ptr,
                     Err(_) => {
                         self::codegen_abort(format!(
-                            "Failed to access property at index {} for '{}'.",
+                            "Failed to access property at index '{}' for '{}'.",
                             index.1, name
                         ));
 
@@ -298,7 +287,7 @@ fn compile_property<'ctx>(
                     Ok(new_ptr) => ptr = new_ptr,
                     Err(_) => {
                         self::codegen_abort(format!(
-                            "Failed to access property at index {} for expression.",
+                            "Failed to access property at index '{}' for a expression.",
                             index.1
                         ));
 
@@ -417,13 +406,6 @@ fn compile_index<'ctx>(
             self::compile_null_ptr(context)
         }
     }
-}
-
-fn compile_string<'ctx>(
-    context: &LLVMCodeGenContext<'_, 'ctx>,
-    bytes: &'ctx [u8],
-) -> BasicValueEnum<'ctx> {
-    string::compile_str_constant(context, bytes).into()
 }
 
 fn compile_null_ptr<'ctx>(context: &LLVMCodeGenContext<'_, 'ctx>) -> BasicValueEnum<'ctx> {

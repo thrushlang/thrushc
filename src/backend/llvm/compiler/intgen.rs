@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use inkwell::{context::Context, values::IntValue};
 
 use crate::{
@@ -5,12 +7,7 @@ use crate::{
     frontend::typesystem::types::Type,
 };
 
-pub fn integer<'ctx>(
-    context: &'ctx Context,
-    kind: &Type,
-    number: u64,
-    signed: bool,
-) -> IntValue<'ctx> {
+pub fn int<'ctx>(context: &'ctx Context, kind: &Type, number: u64, signed: bool) -> IntValue<'ctx> {
     match kind {
         Type::Char => context.i8_type().const_int(number, signed).const_neg(),
         Type::S8 if signed => context.i8_type().const_int(number, signed).const_neg(),
@@ -28,12 +25,12 @@ pub fn integer<'ctx>(
         Type::Bool => context.bool_type().const_int(number, false),
 
         what => {
-            logging::log(
-                LoggingType::BackendBug,
-                &format!("Unsupported integer type: '{:#?}'.", what),
-            );
-
+            self::codegen_abort(format!("Unsupported integer type: '{:#?}'.", what));
             unreachable!()
         }
     }
+}
+
+fn codegen_abort<T: Display>(message: T) {
+    logging::log(LoggingType::BackendBug, &format!("{}", message));
 }

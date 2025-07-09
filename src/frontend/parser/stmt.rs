@@ -14,7 +14,7 @@ use crate::{
     },
 };
 
-use super::{ParserContext, contexts::sync::SyncPosition, expr};
+use super::{ParserContext, contexts::sync::ParserSyncPosition, expr};
 
 pub fn statement<'parser>(
     parser_context: &mut ParserContext<'parser>,
@@ -23,7 +23,7 @@ pub fn statement<'parser>(
 
     parser_context
         .get_mut_control_ctx()
-        .set_sync_position(SyncPosition::Statement);
+        .set_sync_position(ParserSyncPosition::Statement);
 
     let statement: Result<Ast<'parser>, ThrushCompilerIssue> = match &parser_context.peek().kind {
         TokenType::LBrace => Ok(block::build_block(parser_context)?),

@@ -47,11 +47,11 @@ pub fn build_local<'parser>(
         attributes::build_attributes(parser_ctx, &[TokenType::SemiColon, TokenType::Eq])?;
 
     if parser_ctx.match_token(TokenType::SemiColon)? {
-        parser_ctx.get_mut_symbols().new_local(
-            name,
-            (local_type.clone(), is_mutable, true, span),
-            span,
-        )?;
+        let metadata: LocalMetadata = LocalMetadata::new(true, is_mutable);
+
+        parser_ctx
+            .get_mut_symbols()
+            .new_local(name, (local_type.clone(), metadata, span), span)?;
 
         return Ok(Ast::Local {
             name,
@@ -59,16 +59,16 @@ pub fn build_local<'parser>(
             kind: local_type,
             value: Ast::Null { span }.into(),
             attributes,
-            metadata: LocalMetadata::new(true, is_mutable),
+            metadata,
             span,
         });
     }
 
-    parser_ctx.get_mut_symbols().new_local(
-        name,
-        (local_type.clone(), is_mutable, false, span),
-        span,
-    )?;
+    let metadata: LocalMetadata = LocalMetadata::new(false, is_mutable);
+
+    parser_ctx
+        .get_mut_symbols()
+        .new_local(name, (local_type.clone(), metadata, span), span)?;
 
     parser_ctx.consume(
         TokenType::Eq,
@@ -84,7 +84,7 @@ pub fn build_local<'parser>(
         kind: local_type,
         value: value.into(),
         attributes,
-        metadata: LocalMetadata::new(false, is_mutable),
+        metadata,
         span,
     };
 

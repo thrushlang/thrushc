@@ -111,10 +111,10 @@ pub fn bool_operation<'ctx>(
     self::compile_null_ptr(context)
 }
 
-pub fn bool_binaryop<'ctx>(
+pub fn compile<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     binary: BinaryOperation<'ctx>,
-    cast_type: Option<&Type>,
+    cast: Option<&Type>,
 ) -> BasicValueEnum<'ctx> {
     if let (
         _,
@@ -131,8 +131,8 @@ pub fn bool_binaryop<'ctx>(
     {
         let operator: &TokenType = binary.1;
 
-        let left: BasicValueEnum = valuegen::compile(context, binary.0, cast_type);
-        let right: BasicValueEnum = valuegen::compile(context, binary.2, cast_type);
+        let left: BasicValueEnum = valuegen::compile(context, binary.0, cast);
+        let right: BasicValueEnum = valuegen::compile(context, binary.2, cast);
 
         return self::bool_operation(
             context,

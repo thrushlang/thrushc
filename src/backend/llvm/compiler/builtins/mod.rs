@@ -1,10 +1,9 @@
-use std::{fmt::Display, rc::Rc};
+use std::rc::Rc;
 
-use inkwell::{AddressSpace, values::BasicValueEnum};
+use inkwell::values::BasicValueEnum;
 
 use crate::{
     backend::llvm::compiler::context::LLVMCodeGenContext,
-    core::console::logging::{self, LoggingType},
     frontend::{types::ast::Ast, typesystem::types::Type},
 };
 
@@ -35,23 +34,6 @@ pub enum Builtin<'ctx> {
     AlignOf {
         align_of: Type,
     },
-
-    // Math Builtins
-    Sqrt {
-        value: Rc<Ast<'ctx>>,
-    },
-    Sin {
-        value: Rc<Ast<'ctx>>,
-    },
-    Cos {
-        value: Rc<Ast<'ctx>>,
-    },
-    Floor {
-        value: Rc<Ast<'ctx>>,
-    },
-    Trunc {
-        value: Rc<Ast<'ctx>>,
-    },
 }
 
 pub fn compile<'ctx>(
@@ -81,22 +63,5 @@ pub fn compile<'ctx>(
         } => mem::memset::compile(context, destination, new_size, size),
 
         Builtin::Halloc { alloc } => mem::halloc::compile(context, alloc),
-
-        _ => {
-            self::codegen_abort("Builtin not implemented.");
-            self::compile_null_ptr(context)
-        }
     }
-}
-
-fn codegen_abort<T: Display>(message: T) {
-    logging::log(LoggingType::BackendBug, &format!("{}", message));
-}
-
-fn compile_null_ptr<'ctx>(context: &LLVMCodeGenContext<'_, 'ctx>) -> BasicValueEnum<'ctx> {
-    context
-        .get_llvm_context()
-        .ptr_type(AddressSpace::default())
-        .const_null()
-        .into()
 }

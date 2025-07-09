@@ -19,7 +19,8 @@ use crate::{
                 metadata::{
                     cast::CastMetadata, constant::ConstantMetadata,
                     fnparam::FunctionParameterMetadata, index::IndexMetadata, local::LocalMetadata,
-                    reference::ReferenceMetadata, staticvar::StaticMetadata,
+                    property::PropertyMetadata, reference::ReferenceMetadata,
+                    staticvar::StaticMetadata,
                 },
                 types::AstEitherExpression,
             },
@@ -117,6 +118,7 @@ pub enum Ast<'ctx> {
     Property {
         source: AstEitherExpression<'ctx>,
         indexes: Vec<(Type, u32)>,
+        metadata: PropertyMetadata,
         kind: Type,
         span: Span,
     },

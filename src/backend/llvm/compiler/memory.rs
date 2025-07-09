@@ -379,12 +379,12 @@ pub fn store_anon<'ctx>(
 pub fn load_anon<'ctx>(
     context: &LLVMCodeGenContext<'_, 'ctx>,
     ptr: PointerValue<'ctx>,
-    kind: &Type,
+    ptr_type: &Type,
 ) -> BasicValueEnum<'ctx> {
     let llvm_context: &Context = context.get_llvm_context();
     let llvm_builder: &Builder = context.get_llvm_builder();
 
-    let llvm_type: BasicTypeEnum = typegen::generate_type(llvm_context, kind);
+    let llvm_type: BasicTypeEnum = typegen::generate_type(llvm_context, ptr_type);
 
     let preferred_alignment: u32 = context
         .get_target_data()

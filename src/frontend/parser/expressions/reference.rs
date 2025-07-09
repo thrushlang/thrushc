@@ -7,6 +7,8 @@ use crate::{
             ast::{
                 Ast,
                 metadata::{
+                    fnparam::FunctionParameterMetadata,
+                    local::LocalMetadata,
                     reference::{ReferenceMetadata, ReferenceType},
                     staticvar::StaticMetadata,
                 },
@@ -15,8 +17,8 @@ use crate::{
                 stmts::traits::{FoundSymbolEither, FoundSymbolExtension, TokenExtensions},
                 symbols::{
                     traits::{
-                        ConstantSymbolExtensions, LLISymbolExtensions, LocalSymbolExtensions,
-                        StaticSymbolExtensions,
+                        ConstantSymbolExtensions, FunctionParameterSymbolExtensions,
+                        LLISymbolExtensions, LocalSymbolExtensions, StaticSymbolExtensions,
                     },
                     types::{
                         ConstantSymbol, FoundSymbolId, LLISymbol, LocalSymbol, ParameterSymbol,
@@ -87,9 +89,10 @@ pub fn build_reference<'parser>(
             .get_symbols()
             .get_parameter_by_id(parameter_id, span)?;
 
-        let parameter_type: Type = parameter.get_type();
+        let metadata: FunctionParameterMetadata = parameter.get_metadata();
+        let is_mutable: bool = metadata.is_mutable();
 
-        let is_mutable: bool = parameter.is_mutable();
+        let parameter_type: Type = parameter.get_type();
 
         let is_allocated: bool = parameter_type.is_mut_type()
             || parameter_type.is_ptr_type()
@@ -104,14 +107,14 @@ pub fn build_reference<'parser>(
     }
 
     if symbol.is_lli() {
-        let lli_id: (&str, usize) = symbol.expected_lli(span)?;
+        let lli: (&str, usize) = symbol.expected_lli(span)?;
 
-        let lli_name: &str = lli_id.0;
-        let scope_idx: usize = lli_id.1;
+        let lli_id: &str = lli.0;
+        let scope_idx: usize = lli.1;
 
         let parameter: &LLISymbol = parser_context
             .get_symbols()
-            .get_lli_by_id(lli_name, scope_idx, span)?;
+            .get_lli_by_id(lli_id, scope_idx, span)?;
 
         let lli_type: Type = parameter.get_type();
 
@@ -132,7 +135,8 @@ pub fn build_reference<'parser>(
             .get_symbols()
             .get_local_by_id(local_position.0, local_position.1, span)?;
 
-    let is_mutable: bool = local.is_mutable();
+    let metadata: LocalMetadata = local.get_metadata();
+    let is_mutable: bool = metadata.is_mutable();
 
     let local_type: Type = local.get_type();
 

@@ -4,8 +4,13 @@ use inkwell::{AddressSpace, context::Context, types::BasicTypeEnum, values::Basi
 
 use crate::{
     backend::llvm::compiler::{
-        binaryop, constants, constgen, context::LLVMCodeGenContext, floatgen, intgen, string,
-        typegen,
+        constants::{
+            self, binaryop,
+            generation::{floatgen, intgen},
+        },
+        constgen,
+        context::LLVMCodeGenContext,
+        expressions, typegen,
     },
     core::console::logging::{self, LoggingType},
     frontend::{
@@ -29,7 +34,7 @@ pub fn compile<'ctx>(
             kind,
             signed,
             ..
-        } => self::compile_integer(context, kind, *value, *signed, cast),
+        } => self::compile_int(context, kind, *value, *signed, cast),
 
         // Character literal compilation
         Ast::Char { byte, .. } => self::compile_char(context, *byte),
@@ -49,7 +54,7 @@ pub fn compile<'ctx>(
         Ast::FixedArray { items, .. } => self::constant_fixed_array(context, cast, items),
 
         // String literal compilation
-        Ast::Str { bytes, .. } => string::compile_str(context, bytes).into(),
+        Ast::Str { bytes, .. } => expressions::string::compile_str(context, bytes).into(),
 
         // Struct constructor handling
         Ast::Constructor { args, kind, .. } => {
@@ -75,34 +80,19 @@ pub fn compile<'ctx>(
             ..
         } => {
             if binaryop_type.is_integer_type() {
-                return binaryop::constants::integer::const_integer_binaryop(
-                    context,
-                    (left, operator, right),
-                    cast,
-                );
+                return binaryop::integer::compile(context, (left, operator, right), cast);
             }
 
             if binaryop_type.is_bool_type() {
-                return binaryop::constants::boolean::const_bool_binaryop(
-                    context,
-                    (left, operator, right),
-                    cast,
-                );
+                return binaryop::boolean::compile(context, (left, operator, right), cast);
             }
 
             if binaryop_type.is_float_type() {
-                return binaryop::constants::float::const_float_binaryop(
-                    context,
-                    (left, operator, right),
-                    cast,
-                );
+                return binaryop::float::compile(context, (left, operator, right), cast);
             }
 
             if binaryop_type.is_ptr_type() {
-                return binaryop::constants::pointer::const_ptr_binaryop(
-                    context,
-                    (left, operator, right),
-                );
+                return binaryop::pointer::compile(context, (left, operator, right));
             }
 
             self::codegen_abort("Cannot perform constant binary expression.");
@@ -128,21 +118,25 @@ pub fn cast<'ctx>(
         (from_ty, cast_ty) if from_ty.is_str_type() && cast_ty.is_ptr_type() => {
             let cast: BasicTypeEnum = typegen::generate_type(llvm_context, cast_ty);
 
-            constants::cast::ptr_cast(context, value, cast)
+            constants::casts::ptr::const_ptr_cast(context, value, cast)
         }
 
         (_, cast_ty) if cast_ty.is_ptr_type() || cast_ty.is_mut_type() => {
             let cast: BasicTypeEnum = typegen::generate_type(llvm_context, cast_ty);
 
-            constants::cast::ptr_cast(context, value, cast)
+            constants::casts::ptr::const_ptr_cast(context, value, cast)
         }
 
         (_, cast_ty) if cast_ty.is_numeric() => {
             if value_type.llvm_is_same_bit_size(context, cast_ty) {
-                constants::bitcast::const_numeric_bitcast_cast(context, value, cast)
+                constants::casts::bitcast::const_numeric_bitcast_cast(context, value, cast)
             } else {
                 let cast: BasicTypeEnum = typegen::generate_subtype_with_all(llvm_context, cast_ty);
-                constants::cast::numeric_cast(value, cast, value_type.is_signed_integer_type())
+                constants::casts::numeric::numeric_cast(
+                    value,
+                    cast,
+                    value_type.is_signed_integer_type(),
+                )
             }
         }
 
@@ -264,7 +258,7 @@ fn compile_reference<'ctx>(
     context.get_symbol(name).get_value()
 }
 
-fn compile_integer<'ctx>(
+fn compile_int<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     kind: &Type,
     value: u64,
@@ -272,11 +266,11 @@ fn compile_integer<'ctx>(
     cast: &Type,
 ) -> BasicValueEnum<'ctx> {
     let int: BasicValueEnum =
-        intgen::integer(context.get_llvm_context(), kind, value, signed).into();
+        intgen::const_int(context.get_llvm_context(), kind, value, signed).into();
 
     let cast: BasicTypeEnum = typegen::generate_subtype_with_all(context.get_llvm_context(), cast);
 
-    constants::cast::numeric_cast(int, cast, signed)
+    constants::casts::numeric::numeric_cast(int, cast, signed)
 }
 
 fn compile_float<'ctx>(
@@ -286,18 +280,12 @@ fn compile_float<'ctx>(
     signed: bool,
     cast: &Type,
 ) -> BasicValueEnum<'ctx> {
-    let float: BasicValueEnum = floatgen::float(
-        context.get_llvm_builder(),
-        context.get_llvm_context(),
-        kind,
-        value,
-        signed,
-    )
-    .into();
+    let float: BasicValueEnum =
+        floatgen::const_float(context.get_llvm_context(), kind, value, signed).into();
 
     let cast: BasicTypeEnum = typegen::generate_subtype_with_all(context.get_llvm_context(), cast);
 
-    constants::cast::numeric_cast(float, cast, false)
+    constants::casts::numeric::numeric_cast(float, cast, signed)
 }
 
 fn compile_boolean<'ctx>(

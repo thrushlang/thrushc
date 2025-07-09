@@ -10,7 +10,7 @@ use crate::{
 pub fn compile<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     alingof_type: &'ctx Type,
-    cast_type: Option<&Type>,
+    cast: Option<&Type>,
 ) -> BasicValueEnum<'ctx> {
     let llvm_context: &Context = context.get_llvm_context();
 
@@ -18,19 +18,12 @@ pub fn compile<'ctx>(
 
     let target_data: &TargetData = context.get_target_data();
 
-    let alignment: u32 = target_data.get_preferred_alignment(&llvm_type);
+    let memory_alignment: u32 = target_data.get_preferred_alignment(&llvm_type);
 
-    let mut alignment: BasicValueEnum = llvm_context
+    let alignment: BasicValueEnum = llvm_context
         .i32_type()
-        .const_int(alignment.into(), false)
+        .const_int(memory_alignment.into(), false)
         .into();
 
-    if let Some(cast_type) = cast_type {
-        if let Some(casted_alignment) = cast::try_cast(context, cast_type, alingof_type, alignment)
-        {
-            alignment = casted_alignment;
-        }
-    }
-
-    alignment
+    cast::try_cast(context, cast, alingof_type, alignment).unwrap_or(alignment)
 }

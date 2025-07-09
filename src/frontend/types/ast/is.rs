@@ -192,8 +192,12 @@ impl Ast<'_> {
     }
 
     #[inline]
-    pub fn is_allocated_ref(&self) -> bool {
+    pub fn is_allocated(&self) -> bool {
         if let Ast::Reference { metadata, .. } = self {
+            return metadata.is_allocated();
+        }
+
+        if let Ast::Property { metadata, .. } = self {
             return metadata.is_allocated();
         }
 

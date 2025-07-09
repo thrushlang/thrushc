@@ -25,10 +25,7 @@ pub fn validate<'type_checker>(
             let value_type: &Type = value.get_value_type()?;
             let source_type: &Type = source.get_value_type()?;
 
-            if !source.is_allocated_ref()
-                && !source_type.is_ptr_type()
-                && !source_type.is_mut_type()
-            {
+            if !source.is_allocated() && !source_type.is_ptr_type() && !source_type.is_mut_type() {
                 typechecker.add_error(ThrushCompilerIssue::Error(
                     "Type error".into(),
                     "Expected raw typed pointer 'ptr[T]', raw pointer 'ptr', or high-level pointer 'mut T' type."

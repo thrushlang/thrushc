@@ -19,7 +19,7 @@ pub fn compile<'ctx>(
         .iter()
         .flat_map(|index| {
             if expr_type.is_fixed_array_type() || expr_type.is_mut_fixed_array_type() {
-                let base: IntValue = intgen::integer(llvm_context, &Type::U32, 0, false);
+                let base: IntValue = intgen::int(llvm_context, &Type::U32, 0, false);
 
                 let depth: IntValue =
                     valuegen::compile(context, index, Some(&Type::U32)).into_int_value();

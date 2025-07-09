@@ -5,8 +5,8 @@ use super::typegen;
 use crate::backend::llvm::compiler::attributes::LLVMAttribute;
 use crate::backend::llvm::compiler::memory::{self, SymbolAllocated};
 use crate::backend::llvm::compiler::{
-    array, binaryop, builtins, cast, codegen, farray, floatgen, indexes, intgen, lli, mutation,
-    ptrgen, string, structgen, unaryop,
+    binaryop, builtins, cast, codegen, expressions, floatgen, indexes, intgen, ptrgen, statements,
+    structgen,
 };
 
 use crate::backend::types::LLVMEitherExpression;
@@ -14,7 +14,6 @@ use crate::backend::types::traits::AssemblerFunctionExtensions;
 use crate::core::console::logging::{self, LoggingType};
 use crate::frontend::lexer::tokentype::TokenType;
 use crate::frontend::types::ast::Ast;
-use crate::frontend::types::ast::types::AstEitherExpression;
 use crate::frontend::types::parser::stmts::traits::ThrushAttributesExtensions;
 use crate::frontend::types::parser::stmts::types::ThrushAttributes;
 use crate::frontend::typesystem::traits::LLVMTypeExtensions;
@@ -32,7 +31,7 @@ use std::fmt::Display;
 pub fn compile<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     expr: &'ctx Ast,
-    cast_type: Option<&Type>,
+    cast: Option<&Type>,
 ) -> BasicValueEnum<'ctx> {
     match expr {
         // Literal Expressions
@@ -48,7 +47,7 @@ pub fn compile<'ctx>(
             value,
             signed,
             ..
-        } => self::compile_float(context, kind, *value, *signed, cast_type),
+        } => self::compile_float(context, kind, *value, *signed, cast),
 
         // Compiles an integer literal
         Ast::Integer {
@@ -56,7 +55,7 @@ pub fn compile<'ctx>(
             value,
             signed,
             ..
-        } => self::compile_integer(context, kind, *value, *signed, cast_type),
+        } => self::compile_integer(context, kind, *value, *signed, cast),
 
         // Compiles a character literal
         Ast::Char { byte, .. } => self::compile_char(context, *byte),
@@ -68,14 +67,14 @@ pub fn compile<'ctx>(
         // Compiles a function call
         Ast::Call {
             name, args, kind, ..
-        } => self::compile_function_call(context, name, args, kind, cast_type),
+        } => self::compile_function_call(context, name, args, kind, cast),
 
         // Compiles a sizeof operation
-        Ast::SizeOf { sizeof, .. } => builtins::sizeof::compile(context, sizeof, cast_type),
+        Ast::SizeOf { sizeof, .. } => builtins::sizeof::compile(context, sizeof, cast),
 
         // Type/Structural Operations
         // Compiles a grouped expression (e.g., parenthesized)
-        Ast::Group { expression, .. } => self::compile(context, expression, cast_type),
+        Ast::Group { expression, .. } => self::compile(context, expression, cast),
 
         // Operations
         // Compiles a binary operation (e.g., a + b)
@@ -85,7 +84,7 @@ pub fn compile<'ctx>(
             right,
             kind: binaryop_type,
             ..
-        } => self::compile_binary_op(context, left, operator, right, binaryop_type, cast_type),
+        } => self::compile_binary_op(context, left, operator, right, binaryop_type, cast),
 
         // Compiles a unary operation (e.g., -x)
         Ast::UnaryOp {
@@ -93,7 +92,7 @@ pub fn compile<'ctx>(
             kind,
             expression,
             ..
-        } => self::compile_unary_op(context, operator, kind, expression, cast_type),
+        } => expressions::unaryop::compile(context, (operator, kind, expression), cast),
 
         // Symbol/Property Access
         // Compiles a reference to a variable or symbol
@@ -105,7 +104,7 @@ pub fn compile<'ctx>(
             indexes,
             kind,
             ..
-        } => self::compile_property(context, source, indexes, kind),
+        } => expressions::property::compile_property_value(context, source, indexes, kind),
 
         // Memory Access Operations
         // Compiles an indexing operation (e.g., array access)
@@ -114,21 +113,21 @@ pub fn compile<'ctx>(
         } => self::compile_index(context, source, indexes),
 
         // Compiles a dereference operation (e.g., *pointer)
-        Ast::Deref { value, kind, .. } => self::compile_deref(context, value, kind, cast_type),
+        Ast::Deref { value, kind, .. } => self::compile_deref(context, value, kind, cast),
 
         // Array Operations
         // Compiles a fixed-size array
         Ast::FixedArray { items, kind, .. } => {
-            farray::compile_fixed_array(context, kind, items, cast_type)
+            expressions::farray::compile_fixed_array(context, kind, items, cast)
         }
 
         // Compiles a dynamic array
-        Ast::Array { items, kind, .. } => array::compile_array(context, kind, items, cast_type),
+        Ast::Array { items, kind, .. } => {
+            expressions::array::compile_array(context, kind, items, cast)
+        }
 
         // Compiles a struct constructor
-        Ast::Constructor { args, kind, .. } => {
-            structgen::compile_struct(context, args, kind, cast_type)
-        }
+        Ast::Constructor { args, kind, .. } => structgen::compile_struct(context, args, kind, cast),
 
         // Compiles a type cast operation
         Ast::As { from, cast, .. } => self::compile_cast(context, from, cast),
@@ -144,12 +143,9 @@ pub fn compile<'ctx>(
             ..
         } => self::compile_inline_asm(context, assembler, constraints, args, kind, attributes),
 
-        // Value Mutation
-        Ast::Mut { .. } => mutation::compile(context, expr),
-
         // Low-Level Operations
-        Ast::Write { .. } | Ast::Load { .. } | Ast::Address { .. } | Ast::Alloc { .. } => {
-            lli::compile(context, expr, cast_type)
+        Ast::Load { .. } | Ast::Address { .. } | Ast::Alloc { .. } => {
+            statements::lli::compile(context, expr, cast)
         }
 
         // Fallback, Unknown expressions or statements
@@ -169,19 +165,13 @@ fn compile_float<'ctx>(
     kind: &'ctx Type,
     value: f64,
     signed: bool,
-    cast_type: Option<&Type>,
+    cast: Option<&Type>,
 ) -> BasicValueEnum<'ctx> {
-    let mut float: BasicValueEnum = floatgen::float(
-        context.get_llvm_builder(),
-        context.get_llvm_context(),
-        kind,
-        value,
-        signed,
-    )
-    .into();
+    let mut float: BasicValueEnum =
+        floatgen::float(context.get_llvm_context(), kind, value, signed).into();
 
-    if let Some(cast_type) = cast_type {
-        if let Some(casted_float) = cast::float(context, cast_type, kind, float) {
+    if let Some(cast) = cast {
+        if let Some(casted_float) = cast::float(context, cast, kind, float) {
             float = casted_float;
         }
     }
@@ -194,13 +184,13 @@ fn compile_integer<'ctx>(
     kind: &'ctx Type,
     value: u64,
     signed: bool,
-    cast_type: Option<&Type>,
+    cast: Option<&Type>,
 ) -> BasicValueEnum<'ctx> {
     let mut int: BasicValueEnum =
-        intgen::integer(context.get_llvm_context(), kind, value, signed).into();
+        intgen::int(context.get_llvm_context(), kind, value, signed).into();
 
-    if let Some(cast_type) = cast_type {
-        if let Some(casted_int) = cast::integer(context, cast_type, kind, int) {
+    if let Some(cast) = cast {
+        if let Some(casted_int) = cast::integer(context, cast, kind, int) {
             int = casted_int;
         }
     }
@@ -232,7 +222,7 @@ fn compile_function_call<'ctx>(
     name: &str,
     args: &'ctx [Ast],
     kind: &Type,
-    cast_type: Option<&Type>,
+    cast: Option<&Type>,
 ) -> BasicValueEnum<'ctx> {
     let function: (FunctionValue, &[Type], u32) = context.get_function(name);
 
@@ -245,9 +235,9 @@ fn compile_function_call<'ctx>(
         .iter()
         .enumerate()
         .map(|(i, expr)| {
-            let cast_type: Option<&Type> = function_arg_types.get(i);
+            let cast: Option<&Type> = function_arg_types.get(i);
 
-            codegen::compile_expr(context, expr, cast_type, true).into()
+            codegen::compile_expr(context, expr, cast, true).into()
         })
         .collect();
 
@@ -269,11 +259,7 @@ fn compile_function_call<'ctx>(
         }
     };
 
-    if let Some(cast) = cast_type {
-        cast::try_cast(context, cast, kind, fn_value).unwrap_or(fn_value)
-    } else {
-        fn_value
-    }
+    cast::try_cast(context, cast, kind, fn_value).unwrap_or(fn_value)
 }
 
 fn compile_binary_op<'ctx>(
@@ -282,19 +268,15 @@ fn compile_binary_op<'ctx>(
     operator: &'ctx TokenType,
     right: &'ctx Ast,
     binaryop_type: &Type,
-    cast_type: Option<&Type>,
+    cast: Option<&Type>,
 ) -> BasicValueEnum<'ctx> {
     match binaryop_type {
-        t if t.is_float_type() => {
-            binaryop::float::float_binaryop(context, (left, operator, right), cast_type)
-        }
+        t if t.is_float_type() => binaryop::float::compile(context, (left, operator, right), cast),
         t if t.is_integer_type() => {
-            binaryop::integer::integer_binaryop(context, (left, operator, right), cast_type)
+            binaryop::integer::compile(context, (left, operator, right), cast)
         }
-        t if t.is_bool_type() => {
-            binaryop::boolean::bool_binaryop(context, (left, operator, right), cast_type)
-        }
-        t if t.is_ptr_type() => binaryop::pointer::ptr_binaryop(context, (left, operator, right)),
+        t if t.is_bool_type() => binaryop::boolean::compile(context, (left, operator, right), cast),
+        t if t.is_ptr_type() => binaryop::pointer::compile(context, (left, operator, right)),
 
         _ => {
             self::codegen_abort(format!(
@@ -305,16 +287,6 @@ fn compile_binary_op<'ctx>(
             self::compile_null_ptr(context)
         }
     }
-}
-
-fn compile_unary_op<'ctx>(
-    context: &mut LLVMCodeGenContext<'_, 'ctx>,
-    operator: &'ctx TokenType,
-    kind: &'ctx Type,
-    expression: &'ctx Ast,
-    cast_type: Option<&Type>,
-) -> BasicValueEnum<'ctx> {
-    unaryop::unary_op(context, (operator, kind, expression), cast_type)
 }
 
 fn compile_cast<'ctx>(
@@ -430,7 +402,7 @@ fn compile_deref<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     value: &'ctx Ast,
     kind: &Type,
-    cast_type: Option<&Type>,
+    cast: Option<&Type>,
 ) -> BasicValueEnum<'ctx> {
     let val: BasicValueEnum = self::compile(context, value, Some(kind));
 
@@ -440,83 +412,7 @@ fn compile_deref<'ctx>(
         val
     };
 
-    if let Some(cast) = cast_type {
-        cast::try_cast(context, cast, kind, deref_value).unwrap_or(deref_value)
-    } else {
-        deref_value
-    }
-}
-
-fn compile_property<'ctx>(
-    context: &mut LLVMCodeGenContext<'_, 'ctx>,
-    source: &'ctx AstEitherExpression<'ctx>,
-    indexes: &[(Type, u32)],
-    kind: &Type,
-) -> BasicValueEnum<'ctx> {
-    let llvm_context: &Context = context.get_llvm_context();
-    let llvm_builder: &Builder = context.get_llvm_builder();
-
-    match source {
-        (Some((name, _)), _) => {
-            let symbol: SymbolAllocated = context.get_symbol(name);
-
-            if symbol.is_pointer() {
-                let mut ptr: PointerValue =
-                    symbol.gep_struct(llvm_context, llvm_builder, indexes[0].1);
-
-                for index in indexes.iter().skip(1) {
-                    let index_type: BasicTypeEnum = typegen::generate_type(llvm_context, &index.0);
-
-                    match llvm_builder.build_struct_gep(index_type, ptr, index.1, "") {
-                        Ok(new_ptr) => ptr = new_ptr,
-                        Err(_) => {
-                            self::codegen_abort(format!(
-                                "Failed to access property at index {} for '{}'.",
-                                index.1, name
-                            ));
-
-                            return self::compile_null_ptr(context);
-                        }
-                    }
-                }
-
-                ptr.into()
-            } else {
-                let mut value: BasicValueEnum = symbol.extract_value(llvm_builder, indexes[0].1);
-
-                for index in indexes.iter().skip(1) {
-                    if value.is_struct_value() {
-                        match llvm_builder.build_extract_value(
-                            value.into_struct_value(),
-                            index.1,
-                            "",
-                        ) {
-                            Ok(new_value) => value = new_value,
-                            Err(_) => {
-                                self::codegen_abort(format!(
-                                    "Failed to extract value at index {} for '{}'.",
-                                    index.1, name
-                                ));
-
-                                return self::compile_null_ptr(context);
-                            }
-                        }
-                    }
-                }
-
-                value
-            }
-        }
-
-        (None, Some(expr)) => {
-            todo!()
-        }
-
-        _ => {
-            self::codegen_abort("Unable to get a value of an structure at memory manipulation.");
-            self::compile_null_ptr(context)
-        }
-    }
+    cast::try_cast(context, cast, kind, deref_value).unwrap_or(deref_value)
 }
 
 fn compile_reference<'ctx>(
@@ -625,8 +521,7 @@ fn compile_string<'ctx>(
     bytes: &'ctx [u8],
     kind: &Type,
 ) -> BasicValueEnum<'ctx> {
-    let ptr: PointerValue = string::compile_str_constant(context, bytes);
-
+    let ptr: PointerValue = expressions::string::compile_str_constant(context, bytes);
     memory::load_anon(context, ptr, kind)
 }
 

@@ -1,6 +1,9 @@
 use crate::frontend::{
     lexer::tokentype::TokenType,
-    types::{ast::Ast, parser::stmts::types::ThrushAttributes},
+    types::{
+        ast::{Ast, metadata::staticvar::StaticMetadata},
+        parser::stmts::types::ThrushAttributes,
+    },
     typesystem::types::Type,
 };
 
@@ -13,6 +16,7 @@ pub type StaticRepresentation<'ctx> = (
     &'ctx str,
     &'ctx Type,
     &'ctx Ast<'ctx>,
+    StaticMetadata,
     &'ctx ThrushAttributes<'ctx>,
 );
 

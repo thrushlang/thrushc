@@ -13,35 +13,44 @@ use crate::{
     backend::llvm::compiler::{context::LLVMCodeGenContext, typegen, utils},
     core::console::logging::{self, LoggingType},
     frontend::{
-        types::parser::stmts::{traits::ThrushAttributesExtensions, types::ThrushAttributes},
+        types::{
+            ast::metadata::staticvar::{LLVMStaticMetadata, StaticMetadata},
+            parser::stmts::{traits::ThrushAttributesExtensions, types::ThrushAttributes},
+        },
         typesystem::types::Type,
     },
 };
 
 pub fn alloc<'ctx>(
     context: &LLVMCodeGenContext<'_, 'ctx>,
-    name: &str,
+    ascii_name: &str,
     kind: &Type,
-    attributes: &'ctx ThrushAttributes<'ctx>,
+    attributes: &ThrushAttributes<'ctx>,
 ) -> PointerValue<'ctx> {
     let llvm_context: &Context = context.get_llvm_context();
 
     let llvm_type: BasicTypeEnum = typegen::generate_subtype(llvm_context, kind);
 
+    let formatted_ascii_name: String =
+        format!("{}.local.{}", utils::generate_random_string(), ascii_name);
+
     match (attributes.has_heap_attr(), attributes.has_stack_attr()) {
-        (true, _) => self::try_alloc_heap(context, llvm_type, name, kind),
-        (_, true) => self::try_alloc_stack(context, llvm_type, name, kind),
-        _ => self::try_alloc_stack(context, llvm_type, name, kind),
+        (true, _) => self::try_alloc_heap(context, llvm_type, &formatted_ascii_name, kind),
+        (_, true) => self::try_alloc_stack(context, llvm_type, &formatted_ascii_name, kind),
+        _ => self::try_alloc_stack(context, llvm_type, &formatted_ascii_name, kind),
     }
 }
 
 fn try_alloc_heap<'ctx>(
     context: &LLVMCodeGenContext<'_, 'ctx>,
     llvm_type: BasicTypeEnum<'ctx>,
-    name: &str,
+    ascii_name: &str,
     kind: &Type,
 ) -> PointerValue<'ctx> {
-    match context.get_llvm_builder().build_malloc(llvm_type, name) {
+    match context
+        .get_llvm_builder()
+        .build_malloc(llvm_type, ascii_name)
+    {
         Ok(ptr) => ptr,
         Err(_) => {
             self::codegen_abort(format!(
@@ -57,10 +66,13 @@ fn try_alloc_heap<'ctx>(
 fn try_alloc_stack<'ctx>(
     context: &LLVMCodeGenContext<'_, 'ctx>,
     llvm_type: BasicTypeEnum<'ctx>,
-    name: &str,
+    ascii_name: &str,
     kind: &Type,
 ) -> PointerValue<'ctx> {
-    match context.get_llvm_builder().build_alloca(llvm_type, name) {
+    match context
+        .get_llvm_builder()
+        .build_alloca(llvm_type, ascii_name)
+    {
         Ok(ptr) => ptr,
         Err(_) => {
             self::codegen_abort(format!(
@@ -88,9 +100,7 @@ pub fn local_constant<'ctx>(
     let global: GlobalValue =
         llvm_module.add_global(llvm_type, Some(AddressSpace::default()), &name);
 
-    let alignment: u32 = target_data.get_preferred_alignment_of_global(&global);
-
-    global.set_alignment(alignment);
+    global.set_alignment(target_data.get_preferred_alignment_of_global(&global));
     global.set_linkage(Linkage::LinkerPrivate);
 
     global.set_unnamed_addr(true);
@@ -114,16 +124,13 @@ pub fn global_constant<'ctx>(
     let global: GlobalValue =
         llvm_module.add_global(llvm_type, Some(AddressSpace::default()), ascii_name);
 
-    let alignment: u32 = target_data.get_preferred_alignment_of_global(&global);
-
-    global.set_alignment(alignment);
+    global.set_alignment(target_data.get_preferred_alignment_of_global(&global));
 
     if !attributes.has_public_attribute() {
         global.set_linkage(Linkage::LinkerPrivate);
     }
 
     global.set_unnamed_addr(true);
-    global.set_alignment(alignment);
     global.set_constant(true);
 
     global.set_initializer(&llvm_value);
@@ -136,8 +143,10 @@ pub fn local_static<'ctx>(
     ascii_name: &str,
     llvm_type: BasicTypeEnum<'ctx>,
     llvm_value: BasicValueEnum<'ctx>,
+    metadata: StaticMetadata,
 ) -> PointerValue<'ctx> {
     let llvm_module: &Module = context.get_llvm_module();
+    let llvm_metadata: LLVMStaticMetadata = metadata.get_llvm_metadata();
 
     let target_data: &TargetData = context.get_target_data();
 
@@ -149,9 +158,17 @@ pub fn local_static<'ctx>(
     let alignment: u32 = target_data.get_preferred_alignment_of_global(&global);
 
     global.set_alignment(alignment);
-    global.set_linkage(Linkage::LinkerPrivate);
+
+    if llvm_metadata.can_constant {
+        global.set_constant(true);
+    }
+
+    if llvm_metadata.can_unnamed_addr {
+        global.set_unnamed_addr(true);
+    }
 
     global.set_initializer(&llvm_value);
+    global.set_linkage(Linkage::LinkerPrivate);
 
     global.as_pointer_value()
 }
@@ -161,18 +178,26 @@ pub fn global_static<'ctx>(
     ascii_name: &str,
     llvm_type: BasicTypeEnum<'ctx>,
     llvm_value: BasicValueEnum<'ctx>,
+    metadata: StaticMetadata,
     attributes: &'ctx ThrushAttributes<'ctx>,
 ) -> PointerValue<'ctx> {
     let llvm_module: &Module = context.get_llvm_module();
+    let llvm_metadata: LLVMStaticMetadata = metadata.get_llvm_metadata();
 
     let target_data: &TargetData = context.get_target_data();
 
     let global: GlobalValue =
         llvm_module.add_global(llvm_type, Some(AddressSpace::default()), ascii_name);
 
-    let alignment: u32 = target_data.get_preferred_alignment_of_global(&global);
+    global.set_alignment(target_data.get_preferred_alignment_of_global(&global));
 
-    global.set_alignment(alignment);
+    if llvm_metadata.can_constant {
+        global.set_constant(true);
+    }
+
+    if llvm_metadata.can_unnamed_addr {
+        global.set_unnamed_addr(true);
+    }
 
     if !attributes.has_public_attribute() {
         global.set_linkage(Linkage::LinkerPrivate);
