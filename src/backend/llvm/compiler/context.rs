@@ -237,7 +237,7 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
         self.global_statics.insert(name, constant);
     }
 
-    pub fn new_fn_parameter(
+    pub fn new_parameter(
         &mut self,
         name: &'ctx str,
         ascii_name: &'ctx str,

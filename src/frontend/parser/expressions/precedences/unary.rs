@@ -2,7 +2,7 @@ use crate::{
     core::errors::standard::ThrushCompilerIssue,
     frontend::{
         lexer::{span::Span, token::Token, tokentype::TokenType},
-        parser::{ParserContext, expr, expressions::precedences::lower},
+        parser::{ParserContext, expr, expressions::precedences::cast},
         types::{ast::Ast, parser::stmts::traits::TokenExtensions},
         typesystem::{traits::CastTypeExtensions, types::Type},
     },
@@ -16,7 +16,7 @@ pub fn unary_precedence<'parser>(
         let operator: TokenType = operator_tk.kind;
         let span: Span = operator_tk.span;
 
-        let expression: Ast = lower::lower_precedence(parser_context)?;
+        let expression: Ast = cast::cast_precedence(parser_context)?;
 
         return Ok(Ast::UnaryOp {
             operator,
@@ -32,7 +32,7 @@ pub fn unary_precedence<'parser>(
         let operator: TokenType = operator_tk.get_type();
         let span: Span = operator_tk.get_span();
 
-        let expression: Ast = lower::lower_precedence(parser_context)?;
+        let expression: Ast = cast::cast_precedence(parser_context)?;
 
         let expression_type: &Type = expression.get_value_type()?;
         let kind: Type = expression_type.narrowing();
@@ -85,7 +85,7 @@ pub fn unary_precedence<'parser>(
         return Ok(unaryop);
     }
 
-    let instr: Ast = lower::lower_precedence(parser_context)?;
+    let instr: Ast = cast::cast_precedence(parser_context)?;
 
     Ok(instr)
 }

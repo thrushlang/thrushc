@@ -10,7 +10,7 @@ use crate::{
 };
 
 pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, stmt: &'ctx Ast<'ctx>) {
-    let whileloop_abort = |_| {
+    let abort = |_| {
         self::codegen_abort("Cannot compile while loop at code generation time.");
         unreachable!()
     };
@@ -26,7 +26,7 @@ pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, stmt: &'ctx Ast<'ctx>)
 
                 llvm_builder
                     .build_unconditional_branch(condition_block)
-                    .unwrap_or_else(whileloop_abort);
+                    .unwrap_or_else(abort);
 
                 llvm_builder.position_at_end(condition_block);
 
@@ -52,7 +52,7 @@ pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, stmt: &'ctx Ast<'ctx>)
 
                 llvm_builder
                     .build_conditional_branch(conditional, then_block, exit_block)
-                    .unwrap();
+                    .unwrap_or_else(abort);
 
                 llvm_builder.position_at_end(then_block);
 

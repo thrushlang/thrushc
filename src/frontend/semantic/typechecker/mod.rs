@@ -367,8 +367,8 @@ impl<'type_checker> TypeChecker<'type_checker> {
 
 
         ########################################################################*/
-        if let Ast::Builtin { builtin, span, .. } = node {
-            return builtins::validate_builtin(self, builtin, *span);
+        if let Ast::Builtin { builtin, .. } = node {
+            return builtins::validate_builtin(self, builtin);
         }
 
         if let Ast::SizeOf { sizeof, span, .. } = node {

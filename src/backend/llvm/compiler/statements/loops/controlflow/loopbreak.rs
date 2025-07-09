@@ -9,11 +9,18 @@ use crate::{
 };
 
 pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, stmt: &'ctx Ast<'ctx>) {
-    if let Ast::Break { .. } = stmt {
-        let llvm_builder: &Builder = codegen.get_context().get_llvm_builder();
+    let llvm_builder: &Builder = codegen.get_context().get_llvm_builder();
 
+    let abort = |_| {
+        self::codegen_abort("Cannot compile loop break at code generation time.");
+        unreachable!()
+    };
+
+    if let Ast::Break { .. } = stmt {
         if let Some(end_loop_block) = codegen.get_context().get_end_loop_block() {
-            let _ = llvm_builder.build_unconditional_branch(end_loop_block);
+            llvm_builder
+                .build_unconditional_branch(end_loop_block)
+                .unwrap_or_else(abort);
         } else {
             self::codegen_abort("Loop exit block could not be obtained at code generation time.");
         }

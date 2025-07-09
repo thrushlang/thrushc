@@ -4,7 +4,7 @@ use crate::{
         lexer::{span::Span, tokentype::TokenType},
         parser::{
             ParserContext,
-            expressions::{precedences::unary, property},
+            expressions::{precedences::lower, property},
         },
         types::{ast::Ast, parser::stmts::traits::TokenExtensions},
     },
@@ -13,7 +13,7 @@ use crate::{
 pub fn property_precedence<'parser>(
     parser_context: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, ThrushCompilerIssue> {
-    let mut expression: Ast = unary::unary_precedence(parser_context)?;
+    let mut expression: Ast = lower::lower_precedence(parser_context)?;
 
     if parser_context.match_token(TokenType::Dot)? {
         let span: Span = parser_context.previous().get_span();

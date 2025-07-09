@@ -10,6 +10,14 @@ use crate::{
 };
 
 pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, stmt: &'ctx Ast<'ctx>) {
+    let llvm_context: &Context = codegen.get_mut_context().get_llvm_context();
+    let llvm_builder: &Builder = codegen.get_mut_context().get_llvm_builder();
+
+    let abort = |_| {
+        self::codegen_abort("Failed to compile conditional statement.");
+        unreachable!()
+    };
+
     match codegen.get_mut_context().get_current_fn() {
         Some(function) => {
             if let Ast::If {
@@ -20,10 +28,7 @@ pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, stmt: &'ctx Ast<'ctx>)
                 ..
             } = stmt
             {
-                let llvm_context: &Context = codegen.get_mut_context().get_llvm_context();
-                let llvm_builder: &Builder = codegen.get_mut_context().get_llvm_builder();
-
-                let if_comparison: IntValue =
+                let comparison: IntValue =
                     valuegen::compile(codegen.get_mut_context(), condition, Some(&Type::Bool))
                         .into_int_value();
 
@@ -39,23 +44,17 @@ pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, stmt: &'ctx Ast<'ctx>)
                 let merge_block: BasicBlock = llvm_context.append_basic_block(function, "merge");
 
                 if !elseif.is_empty() {
-                    let _ = llvm_builder.build_conditional_branch(
-                        if_comparison,
-                        then_block,
-                        else_if_cond,
-                    );
+                    llvm_builder
+                        .build_conditional_branch(comparison, then_block, else_if_cond)
+                        .unwrap_or_else(abort);
                 } else if anyway.is_some() && elseif.is_empty() {
-                    let _ = llvm_builder.build_conditional_branch(
-                        if_comparison,
-                        then_block,
-                        else_block,
-                    );
+                    llvm_builder
+                        .build_conditional_branch(comparison, then_block, else_block)
+                        .unwrap_or_else(abort);
                 } else {
-                    let _ = llvm_builder.build_conditional_branch(
-                        if_comparison,
-                        then_block,
-                        merge_block,
-                    );
+                    llvm_builder
+                        .build_conditional_branch(comparison, then_block, merge_block)
+                        .unwrap_or_else(abort);
                 }
 
                 llvm_builder.position_at_end(then_block);
@@ -63,7 +62,9 @@ pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, stmt: &'ctx Ast<'ctx>)
                 codegen.codegen_code_block(block);
 
                 if !block.has_return() && !block.has_break() && !block.has_continue() {
-                    let _ = llvm_builder.build_unconditional_branch(merge_block);
+                    llvm_builder
+                        .build_unconditional_branch(merge_block)
+                        .unwrap_or_else(abort);
                 }
 
                 if !elseif.is_empty() {

@@ -417,12 +417,8 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         let parameter_position: u32 = parameter.3;
 
         if let Some(raw_value_llvm_parameter) = llvm_function.get_nth_param(parameter_position) {
-            self.context.new_fn_parameter(
-                name,
-                ascii_name,
-                parameter_type,
-                raw_value_llvm_parameter,
-            );
+            self.context
+                .new_parameter(name, ascii_name, parameter_type, raw_value_llvm_parameter);
         } else {
             self::codegen_abort(
                 "The value of a parameter of an LLVM function could not be obtained at code generation time.",

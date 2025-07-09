@@ -10,7 +10,10 @@ use crate::{
 };
 
 pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, stmt: &'ctx Ast<'ctx>) {
-    let forloop_abort = |_| {
+    let llvm_context: &Context = codegen.get_mut_context().get_llvm_context();
+    let llvm_builder: &Builder = codegen.get_mut_context().get_llvm_builder();
+
+    let abort = |_| {
         self::codegen_abort("Cannot compile for loop at code generation time.");
         unreachable!()
     };
@@ -25,14 +28,13 @@ pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, stmt: &'ctx Ast<'ctx>)
                 ..
             } = stmt
             {
-                let llvm_context: &Context = codegen.get_mut_context().get_llvm_context();
-                let llvm_builder: &Builder = codegen.get_mut_context().get_llvm_builder();
-
                 codegen.codegen_variables(local);
 
                 let start_block: BasicBlock = llvm_context.append_basic_block(function, "for");
 
-                let _ = llvm_builder.build_unconditional_branch(start_block);
+                llvm_builder
+                    .build_unconditional_branch(start_block)
+                    .unwrap_or_else(abort);
 
                 llvm_builder.position_at_end(start_block);
 
@@ -45,7 +47,7 @@ pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, stmt: &'ctx Ast<'ctx>)
 
                 llvm_builder
                     .build_conditional_branch(condition, then_block, exit_block)
-                    .unwrap_or_else(forloop_abort);
+                    .unwrap_or_else(abort);
 
                 if block.has_break() || block.has_return() {
                     codegen.get_mut_context().set_end_loop_block(exit_block);
@@ -66,7 +68,9 @@ pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, stmt: &'ctx Ast<'ctx>)
                 }
 
                 if !block.has_break() || !block.has_return() || !block.has_continue() {
-                    let _ = llvm_builder.build_unconditional_branch(start_block);
+                    llvm_builder
+                        .build_unconditional_branch(start_block)
+                        .unwrap_or_else(abort);
                 }
 
                 llvm_builder.position_at_end(exit_block);

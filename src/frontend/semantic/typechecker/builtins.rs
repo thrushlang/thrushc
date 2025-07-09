@@ -1,6 +1,6 @@
 use crate::{
     backend::llvm::compiler::builtins::Builtin,
-    core::errors::{position::CompilationPosition, standard::ThrushCompilerIssue},
+    core::errors::standard::ThrushCompilerIssue,
     frontend::{
         lexer::span::Span, semantic::typechecker::TypeChecker, types::ast::Ast,
         typesystem::types::Type,
@@ -10,7 +10,6 @@ use crate::{
 pub fn validate_builtin<'type_checker>(
     typechecker: &mut TypeChecker<'type_checker>,
     builtin: &'type_checker Builtin,
-    span: Span,
 ) -> Result<(), ThrushCompilerIssue> {
     match builtin {
         Builtin::MemSet {
@@ -32,18 +31,6 @@ pub fn validate_builtin<'type_checker>(
         } => self::validate_memcpy(typechecker, destination, source, size),
 
         Builtin::Halloc { .. } | Builtin::AlignOf { .. } => Ok(()),
-
-        _ => {
-            typechecker.add_bug(ThrushCompilerIssue::Bug(
-                "Expression not caught".into(),
-                "Expression could not be caught for processing.".into(),
-                span,
-                CompilationPosition::TypeChecker,
-                line!(),
-            ));
-
-            Ok(())
-        }
     }
 }
 
