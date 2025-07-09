@@ -13,10 +13,10 @@ pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, stmt: &'ctx Ast<'ctx>)
     match codegen.get_mut_context().get_current_fn() {
         Some(function) => {
             if let Ast::If {
-                cond,
+                condition,
                 block,
-                elfs,
-                otherwise,
+                elseif,
+                anyway,
                 ..
             } = stmt
             {
@@ -24,7 +24,7 @@ pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, stmt: &'ctx Ast<'ctx>)
                 let llvm_builder: &Builder = codegen.get_mut_context().get_llvm_builder();
 
                 let if_comparison: IntValue =
-                    valuegen::compile(codegen.get_mut_context(), cond, Some(&Type::Bool))
+                    valuegen::compile(codegen.get_mut_context(), condition, Some(&Type::Bool))
                         .into_int_value();
 
                 let then_block: BasicBlock = llvm_context.append_basic_block(function, "if");
@@ -38,13 +38,13 @@ pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, stmt: &'ctx Ast<'ctx>)
 
                 let merge_block: BasicBlock = llvm_context.append_basic_block(function, "merge");
 
-                if !elfs.is_empty() {
+                if !elseif.is_empty() {
                     let _ = llvm_builder.build_conditional_branch(
                         if_comparison,
                         then_block,
                         else_if_cond,
                     );
-                } else if otherwise.is_some() && elfs.is_empty() {
+                } else if anyway.is_some() && elseif.is_empty() {
                     let _ = llvm_builder.build_conditional_branch(
                         if_comparison,
                         then_block,
@@ -66,29 +66,33 @@ pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, stmt: &'ctx Ast<'ctx>)
                     let _ = llvm_builder.build_unconditional_branch(merge_block);
                 }
 
-                if !elfs.is_empty() {
+                if !elseif.is_empty() {
                     llvm_builder.position_at_end(else_if_cond);
                 } else {
                     llvm_builder.position_at_end(merge_block);
                 }
 
-                if !elfs.is_empty() {
+                if !elseif.is_empty() {
+                    let elseifs_len: usize = elseif.len();
                     let mut current_block: BasicBlock = else_if_body;
 
-                    for (index, instr) in elfs.iter().enumerate() {
-                        if let Ast::Elif { cond, block, .. } = instr {
+                    elseif.iter().enumerate().for_each(|(idx, ast)| {
+                        if let Ast::Elif {
+                            condition, block, ..
+                        } = ast
+                        {
                             let compiled_else_if_cond: IntValue = valuegen::compile(
                                 codegen.get_mut_context(),
-                                cond,
+                                condition,
                                 Some(&Type::Bool),
                             )
                             .into_int_value();
 
                             let elif_body: BasicBlock = current_block;
 
-                            let next_block: BasicBlock = if index + 1 < elfs.len() {
+                            let next_block: BasicBlock = if idx + 1 < elseifs_len {
                                 llvm_context.append_basic_block(function, "elseif_body")
-                            } else if otherwise.is_some() {
+                            } else if anyway.is_some() {
                                 else_block
                             } else {
                                 merge_block
@@ -110,17 +114,17 @@ pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, stmt: &'ctx Ast<'ctx>)
                                 let _ = llvm_builder.build_unconditional_branch(merge_block);
                             }
 
-                            if index + 1 < elfs.len() {
+                            if idx + 1 < elseifs_len {
                                 llvm_builder.position_at_end(next_block);
 
                                 current_block =
                                     llvm_context.append_basic_block(function, "elseif_body");
                             }
                         }
-                    }
+                    });
                 }
 
-                if let Some(otherwise) = otherwise {
+                if let Some(otherwise) = anyway {
                     if let Ast::Else { block, .. } = &**otherwise {
                         llvm_builder.position_at_end(else_block);
 
@@ -132,16 +136,16 @@ pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, stmt: &'ctx Ast<'ctx>)
                     }
                 }
 
-                if !elfs.is_empty() || otherwise.is_some() {
+                if !elseif.is_empty() || anyway.is_some() {
                     llvm_builder.position_at_end(merge_block);
                 }
 
-                if elfs.is_empty() {
+                if elseif.is_empty() {
                     let _ = else_if_cond.remove_from_function();
                     let _ = else_if_body.remove_from_function();
                 }
 
-                if otherwise.is_none() {
+                if anyway.is_none() {
                     let _ = else_block.remove_from_function();
                 }
             } else {

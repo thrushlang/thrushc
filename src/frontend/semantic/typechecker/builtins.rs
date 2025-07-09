@@ -92,9 +92,9 @@ pub fn validate_memmove<'type_checker>(
         ));
     }
 
-    typechecker.analyze_ast(source)?;
-    typechecker.analyze_ast(destination)?;
-    typechecker.analyze_ast(size)?;
+    typechecker.analyze_stmt(source)?;
+    typechecker.analyze_stmt(destination)?;
+    typechecker.analyze_stmt(size)?;
 
     Ok(())
 }
@@ -143,9 +143,9 @@ pub fn validate_memcpy<'type_checker>(
         ));
     }
 
-    typechecker.analyze_ast(source)?;
-    typechecker.analyze_ast(destination)?;
-    typechecker.analyze_ast(size)?;
+    typechecker.analyze_stmt(source)?;
+    typechecker.analyze_stmt(destination)?;
+    typechecker.analyze_stmt(size)?;
 
     Ok(())
 }
@@ -192,9 +192,9 @@ pub fn validate_memset<'type_checker>(
         ));
     }
 
-    typechecker.analyze_ast(destination)?;
-    typechecker.analyze_ast(new_size)?;
-    typechecker.analyze_ast(size)?;
+    typechecker.analyze_stmt(destination)?;
+    typechecker.analyze_stmt(new_size)?;
+    typechecker.analyze_stmt(size)?;
 
     Ok(())
 }

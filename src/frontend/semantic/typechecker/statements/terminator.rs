@@ -2,12 +2,12 @@ use crate::{
     core::errors::{position::CompilationPosition, standard::ThrushCompilerIssue},
     frontend::{
         lexer::span::Span,
-        semantic::typechecker::{TypeChecker, bounds, metadata::TypeCheckerExprMetadata},
+        semantic::typechecker::{TypeChecker, checks, metadata::TypeCheckerExprMetadata},
         types::ast::Ast,
     },
 };
 
-pub fn validate_terminator<'type_checker>(
+pub fn validate<'type_checker>(
     typechecker: &mut TypeChecker<'type_checker>,
     node: &'type_checker Ast,
 ) -> Result<(), ThrushCompilerIssue> {
@@ -21,17 +21,13 @@ pub fn validate_terminator<'type_checker>(
                 let metadata: TypeCheckerExprMetadata =
                     TypeCheckerExprMetadata::new(expr.is_literal(), None, span);
 
-                if let Err(error) = bounds::checking::type_check(
-                    kind,
-                    expr.get_value_type()?,
-                    Some(expr),
-                    None,
-                    metadata,
-                ) {
+                if let Err(error) =
+                    checks::type_check(kind, expr.get_value_type()?, Some(expr), None, metadata)
+                {
                     typechecker.add_error(error);
                 }
 
-                typechecker.analyze_ast(expr)?;
+                typechecker.analyze_stmt(expr)?;
             }
 
             Ok(())

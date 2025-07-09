@@ -3,20 +3,28 @@ use crate::{
     frontend::{lexer::span::Span, semantic::linter::Linter, types::ast::Ast},
 };
 
-pub fn analyze_function<'linter>(linter: &mut Linter<'linter>, node: &'linter Ast) {
+pub fn analyze<'linter>(linter: &mut Linter<'linter>, node: &'linter Ast) {
     match node {
-        Ast::EntryPoint { body, .. } => {
-            linter.analyze_ast_stmt(body);
+        Ast::For {
+            local,
+            actions,
+            cond,
+            block,
+            ..
+        } => {
+            linter.analyze_stmt(local);
+            linter.analyze_expr(actions);
+            linter.analyze_expr(cond);
+            linter.analyze_stmt(block);
         }
 
-        Ast::Function {
-            parameters, body, ..
-        } => {
-            if body.is_block() {
-                linter.symbols.bulk_declare_parameters(parameters);
+        Ast::While { cond, block, .. } => {
+            linter.analyze_expr(cond);
+            linter.analyze_stmt(block);
+        }
 
-                linter.analyze_ast_stmt(body);
-            }
+        Ast::Loop { block, .. } => {
+            linter.analyze_stmt(block);
         }
 
         _ => {

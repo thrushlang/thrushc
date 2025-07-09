@@ -3,13 +3,13 @@ use crate::{
     frontend::{lexer::span::Span, semantic::typechecker::TypeChecker, types::ast::Ast},
 };
 
-pub fn validate_function<'type_checker>(
+pub fn validate<'type_checker>(
     typechecker: &mut TypeChecker<'type_checker>,
     node: &'type_checker Ast,
 ) -> Result<(), ThrushCompilerIssue> {
     match node {
         Ast::EntryPoint { body, span, .. } => {
-            if let Err(type_error) = typechecker.analyze_ast(body) {
+            if let Err(type_error) = typechecker.analyze_stmt(body) {
                 typechecker.add_error(type_error);
             }
 
@@ -65,7 +65,7 @@ pub fn validate_function<'type_checker>(
             })?;
 
             if body.is_block() {
-                if let Err(type_error) = typechecker.analyze_ast(body) {
+                if let Err(type_error) = typechecker.analyze_stmt(body) {
                     typechecker.add_error(type_error);
                 }
 

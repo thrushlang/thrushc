@@ -3,13 +3,13 @@ use crate::{
     frontend::{lexer::span::Span, semantic::linter::Linter, types::ast::Ast},
 };
 
-pub fn analyze_constant<'linter>(linter: &mut Linter<'linter>, node: &'linter Ast) {
+pub fn analyze<'linter>(linter: &mut Linter<'linter>, node: &'linter Ast) {
     match node {
-        Ast::Const {
-            name, value, span, ..
-        } => {
-            linter.symbols.new_local_constant(name, (*span, false));
-            linter.analyze_ast_expr(value);
+        Ast::Enum { fields, .. } => {
+            fields.iter().for_each(|field| {
+                let expr: &Ast = &field.1;
+                linter.analyze_expr(expr);
+            });
         }
 
         _ => {

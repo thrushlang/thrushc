@@ -3,13 +3,10 @@ use crate::{
     frontend::{lexer::span::Span, semantic::linter::Linter, types::ast::Ast},
 };
 
-pub fn analyze_terminator<'linter>(linter: &mut Linter<'linter>, node: &'linter Ast) {
+pub fn analyze_cast<'linter>(linter: &mut Linter<'linter>, node: &'linter Ast) {
     match node {
-        Ast::Return {
-            expression: Some(expr),
-            ..
-        } => {
-            linter.analyze_ast_expr(expr);
+        Ast::As { from, .. } => {
+            linter.analyze_expr(from);
         }
 
         _ => {

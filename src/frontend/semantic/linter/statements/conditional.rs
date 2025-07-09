@@ -3,34 +3,36 @@ use crate::{
     frontend::{lexer::span::Span, semantic::linter::Linter, types::ast::Ast},
 };
 
-pub fn analyze_conditional<'linter>(linter: &mut Linter<'linter>, node: &'linter Ast) {
+pub fn analyze<'linter>(linter: &mut Linter<'linter>, node: &'linter Ast) {
     match node {
         Ast::If {
-            cond,
+            condition,
             block,
-            elfs,
-            otherwise,
+            elseif,
+            anyway,
             ..
         } => {
-            linter.analyze_ast_expr(cond);
-            linter.analyze_ast_stmt(block);
+            linter.analyze_expr(condition);
+            linter.analyze_stmt(block);
 
-            elfs.iter().for_each(|elif| {
-                linter.analyze_ast_stmt(elif);
+            elseif.iter().for_each(|elif| {
+                linter.analyze_stmt(elif);
             });
 
-            if let Some(otherwise) = otherwise {
-                linter.analyze_ast_stmt(otherwise);
+            if let Some(otherwise) = anyway {
+                linter.analyze_stmt(otherwise);
             }
         }
 
-        Ast::Elif { cond, block, .. } => {
-            linter.analyze_ast_expr(cond);
-            linter.analyze_ast_stmt(block);
+        Ast::Elif {
+            condition, block, ..
+        } => {
+            linter.analyze_expr(condition);
+            linter.analyze_stmt(block);
         }
 
         Ast::Else { block, .. } => {
-            linter.analyze_ast_stmt(block);
+            linter.analyze_stmt(block);
         }
 
         _ => {

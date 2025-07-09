@@ -3,9 +3,12 @@ use crate::{
     frontend::{lexer::span::Span, semantic::linter::Linter, types::ast::Ast},
 };
 
-pub fn analyze_dereference<'linter>(linter: &mut Linter<'linter>, node: &'linter Ast) {
+pub fn analyze<'linter>(linter: &mut Linter<'linter>, node: &'linter Ast) {
     match node {
-        Ast::Deref { value, .. } => {
+        Ast::Const {
+            name, value, span, ..
+        } => {
+            linter.symbols.new_local_constant(name, (*span, false));
             linter.analyze_expr(value);
         }
 

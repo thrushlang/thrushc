@@ -2,19 +2,19 @@ use crate::{
     core::errors::{position::CompilationPosition, standard::ThrushCompilerIssue},
     frontend::{
         lexer::span::Span,
-        semantic::typechecker::{TypeChecker, bounds, metadata::TypeCheckerExprMetadata},
+        semantic::typechecker::{TypeChecker, checks, metadata::TypeCheckerExprMetadata},
         types::ast::{Ast, traits::LLVMAstExtensions},
         typesystem::types::Type,
     },
 };
 
-pub fn validate_constant<'type_checker>(
+pub fn validate<'type_checker>(
     typechecker: &mut TypeChecker<'type_checker>,
     node: &'type_checker Ast,
 ) -> Result<(), ThrushCompilerIssue> {
     match node {
-        Ast::Const {
-            kind: target_type,
+        Ast::Static {
+            kind: static_type,
             value,
             span,
             ..
@@ -22,25 +22,21 @@ pub fn validate_constant<'type_checker>(
             let metadata: TypeCheckerExprMetadata =
                 TypeCheckerExprMetadata::new(value.is_literal(), None, *span);
 
-            let from_type: &Type = value.get_value_type()?;
-            let expression_span: Span = value.get_span();
+            let value_type: &Type = value.get_value_type()?;
+            let value_span: Span = value.get_span();
 
             if !value.is_llvm_constant_value() {
                 return Err(ThrushCompilerIssue::Error(
                     "Syntax error".into(),
                     "Expected integer, floating-point, boolean, string, fixed array, or char constant types.".into(),
                     None,
-                    expression_span,
+                    value_span,
                 ));
             }
 
-            if let Err(error) = bounds::checking::type_check(
-                target_type,
-                &Type::Const(from_type.clone().into()),
-                Some(value),
-                None,
-                metadata,
-            ) {
+            if let Err(error) =
+                checks::type_check(static_type, value_type, Some(value), None, metadata)
+            {
                 typechecker.add_error(error);
             }
 

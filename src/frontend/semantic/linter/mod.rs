@@ -19,20 +19,11 @@ use crate::{
 pub mod attributes;
 
 mod builtins;
-mod casts;
-mod conditionals;
-mod constant;
-mod enums;
-mod expr;
+mod declarations;
 mod expressions;
-mod functions;
-mod lli;
-mod local;
-mod loops;
 mod marks;
-mod staticvar;
+mod statements;
 mod symbols;
-mod terminator;
 
 #[derive(Debug)]
 pub struct Linter<'linter> {
@@ -60,9 +51,9 @@ impl<'linter> Linter<'linter> {
         self.forward_all();
 
         while !self.is_eof() {
-            let stmt: &Ast = self.peek();
+            let current_node: &Ast = self.peek();
 
-            self.analyze_ast(stmt);
+            self.analyze_decl(current_node);
 
             self.advance();
         }
@@ -79,7 +70,7 @@ impl<'linter> Linter<'linter> {
         });
     }
 
-    pub fn analyze_ast(&mut self, stmt: &'linter Ast) {
+    pub fn analyze_decl(&mut self, node: &'linter Ast) {
         /* ######################################################################
 
 
@@ -88,15 +79,15 @@ impl<'linter> Linter<'linter> {
 
         ########################################################################*/
 
-        if let Ast::EntryPoint { .. } | Ast::Function { .. } = stmt {
-            return functions::analyze_function(self, stmt);
+        if let Ast::EntryPoint { .. } | Ast::Function { .. } = node {
+            return declarations::functions::analyze(self, node);
         }
 
-        if let Ast::Enum { .. } = stmt {
-            enums::analyze_enum(self, stmt);
+        if let Ast::Enum { .. } = node {
+            return declarations::union::analyze(self, node);
         }
 
-        if let Ast::GlobalAssembler { .. } = stmt {}
+        if let Ast::GlobalAssembler { .. } = node {}
 
         /* ######################################################################
 
@@ -107,7 +98,7 @@ impl<'linter> Linter<'linter> {
         ########################################################################*/
     }
 
-    pub fn analyze_ast_stmt(&mut self, stmt: &'linter Ast) {
+    pub fn analyze_stmt(&mut self, node: &'linter Ast) {
         /* ######################################################################
 
 
@@ -116,19 +107,19 @@ impl<'linter> Linter<'linter> {
 
         ########################################################################*/
 
-        if let Ast::Static { .. } = stmt {
-            return staticvar::analyze_static(self, stmt);
+        if let Ast::Static { .. } = node {
+            return statements::staticvar::analyze(self, node);
         }
 
-        if let Ast::Const { .. } = stmt {
-            return constant::analyze_constant(self, stmt);
+        if let Ast::Const { .. } = node {
+            return statements::constant::analyze(self, node);
         }
 
-        if let Ast::Block { stmts, .. } = stmt {
+        if let Ast::Block { stmts, .. } = node {
             self.begin_scope();
 
-            stmts.iter().for_each(|stmt| {
-                self.analyze_ast_stmt(stmt);
+            stmts.iter().for_each(|node| {
+                self.analyze_stmt(node);
             });
 
             self.generate_scoped_warnings();
@@ -146,12 +137,12 @@ impl<'linter> Linter<'linter> {
 
         ########################################################################*/
 
-        if let Ast::LLI { .. } = stmt {
-            return lli::analyze_lli(self, stmt);
+        if let Ast::LLI { .. } = node {
+            return statements::lli::analyze(self, node);
         }
 
-        if let Ast::Local { .. } = stmt {
-            return local::analyze_local(self, stmt);
+        if let Ast::Local { .. } = node {
+            return statements::local::analyze(self, node);
         }
 
         /* ######################################################################
@@ -170,8 +161,8 @@ impl<'linter> Linter<'linter> {
 
         ########################################################################*/
 
-        if let Ast::Return { .. } = stmt {
-            return terminator::analyze_terminator(self, stmt);
+        if let Ast::Return { .. } = node {
+            return statements::terminator::analyze(self, node);
         }
 
         /* ######################################################################
@@ -190,16 +181,16 @@ impl<'linter> Linter<'linter> {
 
         ########################################################################*/
 
-        if let Ast::If { .. } = stmt {
-            return conditionals::analyze_conditional(self, stmt);
+        if let Ast::If { .. } = node {
+            return statements::conditional::analyze(self, node);
         }
 
-        if let Ast::Elif { .. } = stmt {
-            return conditionals::analyze_conditional(self, stmt);
+        if let Ast::Elif { .. } = node {
+            return statements::conditional::analyze(self, node);
         }
 
-        if let Ast::Else { .. } = stmt {
-            return conditionals::analyze_conditional(self, stmt);
+        if let Ast::Else { .. } = node {
+            return statements::conditional::analyze(self, node);
         }
 
         /* ######################################################################
@@ -218,16 +209,16 @@ impl<'linter> Linter<'linter> {
 
         ########################################################################*/
 
-        if let Ast::For { .. } = stmt {
-            return loops::analyze_loop(self, stmt);
+        if let Ast::For { .. } = node {
+            return statements::loops::analyze(self, node);
         }
 
-        if let Ast::While { .. } = stmt {
-            return loops::analyze_loop(self, stmt);
+        if let Ast::While { .. } = node {
+            return statements::loops::analyze(self, node);
         }
 
-        if let Ast::Loop { .. } = stmt {
-            return loops::analyze_loop(self, stmt);
+        if let Ast::Loop { .. } = node {
+            return statements::loops::analyze(self, node);
         }
 
         /* ######################################################################
@@ -246,7 +237,7 @@ impl<'linter> Linter<'linter> {
 
         ########################################################################*/
 
-        if let Ast::Continue { .. } | Ast::Break { .. } = stmt {
+        if let Ast::Continue { .. } | Ast::Break { .. } = node {
             return;
         }
 
@@ -266,8 +257,8 @@ impl<'linter> Linter<'linter> {
 
         ########################################################################*/
 
-        if let Ast::Deref { .. } = stmt {
-            return deref::analyze_dereference(self, stmt);
+        if let Ast::Deref { .. } = node {
+            return deref::analyze_dereference(self, node);
         }
 
         /* ######################################################################
@@ -286,16 +277,16 @@ impl<'linter> Linter<'linter> {
 
         ########################################################################*/
 
-        if let Ast::Write { .. } = stmt {
-            return lli::analyze_lli(self, stmt);
+        if let Ast::Write { .. } = node {
+            return statements::lli::analyze(self, node);
         }
 
-        if let Ast::Address { .. } = stmt {
-            return lli::analyze_lli(self, stmt);
+        if let Ast::Address { .. } = node {
+            return statements::lli::analyze(self, node);
         }
 
-        if let Ast::Load { .. } = stmt {
-            return lli::analyze_lli(self, stmt);
+        if let Ast::Load { .. } = node {
+            return statements::lli::analyze(self, node);
         }
 
         /* ######################################################################
@@ -314,8 +305,8 @@ impl<'linter> Linter<'linter> {
 
         ########################################################################*/
 
-        if let Ast::As { .. } = stmt {
-            return casts::analyze_cast(self, stmt);
+        if let Ast::As { .. } = node {
+            return expressions::cast::analyze_cast(self, node);
         }
 
         /* ######################################################################
@@ -334,7 +325,7 @@ impl<'linter> Linter<'linter> {
 
         ########################################################################*/
 
-        if let Ast::Builtin { builtin, .. } = stmt {
+        if let Ast::Builtin { builtin, .. } = node {
             return builtins::analyze_builtin(self, builtin);
         }
 
@@ -362,11 +353,11 @@ impl<'linter> Linter<'linter> {
 
         ########################################################################*/
 
-        self.analyze_ast_expr(stmt);
+        self.analyze_expr(node);
     }
 
-    pub fn analyze_ast_expr(&mut self, expr: &'linter Ast) {
-        expr::analyze_expression(self, expr);
+    pub fn analyze_expr(&mut self, expr: &'linter Ast) {
+        expressions::analyze(self, expr);
     }
 
     pub fn generate_scoped_warnings(&mut self) {

@@ -1,22 +1,28 @@
 use crate::{
     core::errors::{position::CompilationPosition, standard::ThrushCompilerIssue},
-    frontend::{lexer::span::Span, semantic::linter::Linter, types::ast::Ast},
+    frontend::{
+        lexer::span::Span,
+        semantic::linter::Linter,
+        types::ast::{Ast, metadata::local::LocalMetadata},
+    },
 };
 
-pub fn analyze_static<'linter>(linter: &mut Linter<'linter>, node: &'linter Ast) {
+pub fn analyze<'linter>(linter: &mut Linter<'linter>, node: &'linter Ast) {
     match node {
-        Ast::Static {
+        Ast::Local {
             name,
             value,
-            metadata,
             span,
+            metadata,
             ..
         } => {
+            let metadata: &LocalMetadata = metadata;
+
             linter
                 .symbols
-                .new_local_static(name, (*span, false, !metadata.is_mutable()));
+                .new_local(name, (*span, false, !metadata.is_mutable()));
 
-            linter.analyze_ast_expr(value);
+            linter.analyze_expr(value);
         }
 
         _ => {

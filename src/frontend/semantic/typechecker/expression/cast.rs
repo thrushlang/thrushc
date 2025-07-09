@@ -2,13 +2,13 @@ use crate::{
     core::errors::{position::CompilationPosition, standard::ThrushCompilerIssue},
     frontend::{
         lexer::span::Span,
-        semantic::typechecker::{TypeChecker, bounds},
+        semantic::typechecker::{TypeChecker, checks},
         types::ast::Ast,
         typesystem::types::Type,
     },
 };
 
-pub fn validate_cast_as<'type_checker>(
+pub fn validate<'type_checker>(
     typechecker: &mut TypeChecker<'type_checker>,
     node: &'type_checker Ast,
 ) -> Result<(), ThrushCompilerIssue> {
@@ -22,12 +22,11 @@ pub fn validate_cast_as<'type_checker>(
         } => {
             let from_type: &Type = from.get_value_type()?;
 
-            if let Err(error) = bounds::cast::check_type_cast(cast_type, from_type, metadata, span)
-            {
+            if let Err(error) = checks::check_type_cast(cast_type, from_type, metadata, span) {
                 typechecker.add_error(error);
             }
 
-            typechecker.analyze_ast(from)?;
+            typechecker.analyze_stmt(from)?;
 
             Ok(())
         }

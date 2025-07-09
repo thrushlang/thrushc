@@ -6,7 +6,7 @@ use crate::{
     },
 };
 
-pub fn validate_dereference<'type_checker>(
+pub fn validate<'type_checker>(
     typechecker: &mut TypeChecker<'type_checker>,
     node: &'type_checker Ast,
 ) -> Result<(), ThrushCompilerIssue> {
@@ -26,7 +26,7 @@ pub fn validate_dereference<'type_checker>(
                 ));
             }
 
-            typechecker.analyze_ast(value)?;
+            typechecker.analyze_stmt(value)?;
 
             Ok(())
         }

@@ -3,13 +3,13 @@ use crate::{
     frontend::{lexer::span::Span, semantic::linter::Linter, types::ast::Ast},
 };
 
-pub fn analyze_lli<'linter>(linter: &mut Linter<'linter>, node: &'linter Ast) {
+pub fn analyze<'linter>(linter: &mut Linter<'linter>, node: &'linter Ast) {
     match node {
         Ast::LLI {
             name, span, value, ..
         } => {
             linter.symbols.new_lli(name, (*span, false));
-            linter.analyze_ast_expr(value);
+            linter.analyze_expr(value);
         }
 
         Ast::Write {
@@ -19,41 +19,41 @@ pub fn analyze_lli<'linter>(linter: &mut Linter<'linter>, node: &'linter Ast) {
         } => {
             if let Some(any_reference) = &source.0 {
                 let reference: &Ast = &any_reference.1;
-                linter.analyze_ast_expr(reference);
+                linter.analyze_expr(reference);
             }
 
             if let Some(expr) = &source.1 {
-                linter.analyze_ast_expr(expr);
+                linter.analyze_expr(expr);
             }
 
-            linter.analyze_ast_expr(write_value);
+            linter.analyze_expr(write_value);
         }
 
         Ast::Address {
             source, indexes, ..
         } => {
             indexes.iter().for_each(|indexe| {
-                linter.analyze_ast_expr(indexe);
+                linter.analyze_expr(indexe);
             });
 
             if let Some(any_reference) = &source.0 {
                 let reference: &Ast = &any_reference.1;
-                linter.analyze_ast_expr(reference);
+                linter.analyze_expr(reference);
             }
 
             if let Some(expr) = &source.1 {
-                linter.analyze_ast_expr(expr);
+                linter.analyze_expr(expr);
             }
         }
 
         Ast::Load { source, .. } => {
             if let Some(any_reference) = &source.0 {
                 let reference: &Ast = &any_reference.1;
-                linter.analyze_ast_expr(reference);
+                linter.analyze_expr(reference);
             }
 
             if let Some(expr) = &source.1 {
-                linter.analyze_ast_expr(expr);
+                linter.analyze_expr(expr);
             }
         }
 

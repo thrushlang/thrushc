@@ -218,20 +218,20 @@ impl Display for Ast<'_> {
             }
 
             Ast::If {
-                cond,
+                condition,
                 block,
-                elfs,
-                otherwise,
+                elseif,
+                anyway,
                 ..
             } => {
-                write!(f, "if {} {}", cond, block)?;
+                write!(f, "if {} {}", condition, block)?;
 
-                for elif in elfs {
+                for elif in elseif {
                     write!(f, " elif {}", elif)?;
                 }
 
-                if let Some(otherwise) = otherwise {
-                    write!(f, " else {}", otherwise)?;
+                if let Some(anyway) = anyway {
+                    write!(f, " else {}", anyway)?;
                 }
 
                 Ok(())

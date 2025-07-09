@@ -123,14 +123,14 @@ pub enum Ast<'ctx> {
 
     // Conditionals
     If {
-        cond: Rc<Ast<'ctx>>,
+        condition: Rc<Ast<'ctx>>,
         block: Rc<Ast<'ctx>>,
-        elfs: Vec<Ast<'ctx>>,
-        otherwise: Option<Rc<Ast<'ctx>>>,
+        elseif: Vec<Ast<'ctx>>,
+        anyway: Option<Rc<Ast<'ctx>>>,
         span: Span,
     },
     Elif {
-        cond: Rc<Ast<'ctx>>,
+        condition: Rc<Ast<'ctx>>,
         block: Rc<Ast<'ctx>>,
         span: Span,
     },

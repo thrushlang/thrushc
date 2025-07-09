@@ -25,34 +25,33 @@ pub fn build_conditional<'parser>(
     let if_condition: Ast = expr::build_expr(parser_context)?;
     let if_body: Ast = block::build_block(parser_context)?;
 
-    let mut elfs: Vec<Ast> = Vec::with_capacity(10);
+    let mut elseif: Vec<Ast> = Vec::with_capacity(10);
 
     while parser_context.match_token(TokenType::Elif)? {
         let span: Span = parser_context.previous().span;
 
-        let elif_condition: Ast = expr::build_expr(parser_context)?;
+        let condition: Ast = expr::build_expr(parser_context)?;
+        let block: Ast = block::build_block(parser_context)?;
 
-        let elif_body: Ast = block::build_block(parser_context)?;
-
-        if !elif_body.has_block() {
+        if !block.has_block() {
             continue;
         }
 
-        elfs.push(Ast::Elif {
-            cond: elif_condition.into(),
-            block: elif_body.into(),
+        elseif.push(Ast::Elif {
+            condition: condition.into(),
+            block: block.into(),
             span,
         });
     }
 
-    let mut otherwise: Option<Rc<Ast>> = None;
+    let mut anyway: Option<Rc<Ast>> = None;
 
     if parser_context.match_token(TokenType::Else)? {
         let span: Span = parser_context.previous().span;
         let else_body: Ast = block::build_block(parser_context)?;
 
         if else_body.has_block() {
-            otherwise = Some(
+            anyway = Some(
                 Ast::Else {
                     block: else_body.into(),
                     span,
@@ -63,10 +62,10 @@ pub fn build_conditional<'parser>(
     }
 
     Ok(Ast::If {
-        cond: if_condition.into(),
+        condition: if_condition.into(),
         block: if_body.into(),
-        elfs,
-        otherwise,
+        elseif,
+        anyway,
         span,
     })
 }

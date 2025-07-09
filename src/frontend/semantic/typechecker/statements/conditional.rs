@@ -2,72 +2,78 @@ use crate::{
     core::errors::{position::CompilationPosition, standard::ThrushCompilerIssue},
     frontend::{
         lexer::span::Span,
-        semantic::typechecker::{TypeChecker, bounds, metadata::TypeCheckerExprMetadata},
+        semantic::typechecker::{TypeChecker, checks, metadata::TypeCheckerExprMetadata},
         types::ast::Ast,
         typesystem::types::Type,
     },
 };
 
-pub fn validate_conditional<'type_checker>(
+pub fn validate<'type_checker>(
     typechecker: &mut TypeChecker<'type_checker>,
     node: &'type_checker Ast,
 ) -> Result<(), ThrushCompilerIssue> {
     match node {
         Ast::If {
-            cond,
+            condition,
             block,
-            elfs,
-            otherwise,
+            elseif,
+            anyway,
             span,
         } => {
-            let metadata: TypeCheckerExprMetadata =
-                TypeCheckerExprMetadata::new(cond.is_literal(), None, *span);
+            typechecker.analyze_stmt(condition)?;
 
-            if let Err(error) = bounds::checking::type_check(
+            let metadata: TypeCheckerExprMetadata =
+                TypeCheckerExprMetadata::new(condition.is_literal(), None, *span);
+
+            if let Err(error) = checks::type_check(
                 &Type::Bool,
-                cond.get_value_type()?,
-                Some(cond),
+                condition.get_value_type()?,
+                Some(condition),
                 None,
                 metadata,
             ) {
                 typechecker.add_error(error);
             }
 
-            elfs.iter()
-                .try_for_each(|elif| typechecker.analyze_ast(elif))?;
+            elseif
+                .iter()
+                .try_for_each(|elif| typechecker.analyze_stmt(elif))?;
 
-            if let Some(otherwise) = otherwise {
-                typechecker.analyze_ast(otherwise)?;
+            if let Some(otherwise) = anyway {
+                typechecker.analyze_stmt(otherwise)?;
             }
 
-            typechecker.analyze_ast(cond)?;
-            typechecker.analyze_ast(block)?;
+            typechecker.analyze_stmt(block)?;
 
             Ok(())
         }
 
-        Ast::Elif { cond, block, span } => {
+        Ast::Elif {
+            condition,
+            block,
+            span,
+        } => {
             let metadata: TypeCheckerExprMetadata =
-                TypeCheckerExprMetadata::new(cond.is_literal(), None, *span);
+                TypeCheckerExprMetadata::new(condition.is_literal(), None, *span);
 
-            if let Err(error) = bounds::checking::type_check(
+            if let Err(error) = checks::type_check(
                 &Type::Bool,
-                cond.get_value_type()?,
-                Some(cond),
+                condition.get_value_type()?,
+                Some(condition),
                 None,
                 metadata,
             ) {
                 typechecker.add_error(error);
             }
 
-            typechecker.analyze_ast(cond)?;
-            typechecker.analyze_ast(block)?;
+            typechecker.analyze_stmt(condition)?;
+            typechecker.analyze_stmt(block)?;
 
             Ok(())
         }
 
         Ast::Else { block, .. } => {
-            typechecker.analyze_ast(block)?;
+            typechecker.analyze_stmt(block)?;
 
             Ok(())
         }

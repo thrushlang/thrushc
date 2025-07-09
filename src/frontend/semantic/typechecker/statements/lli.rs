@@ -2,13 +2,13 @@ use crate::{
     core::errors::{position::CompilationPosition, standard::ThrushCompilerIssue},
     frontend::{
         lexer::span::Span,
-        semantic::typechecker::{TypeChecker, bounds, metadata::TypeCheckerExprMetadata},
+        semantic::typechecker::{TypeChecker, checks, metadata::TypeCheckerExprMetadata},
         types::ast::Ast,
         typesystem::{traits::TypePointerExtensions, types::Type},
     },
 };
 
-pub fn validate_lli<'type_checker>(
+pub fn validate<'type_checker>(
     typechecker: &mut TypeChecker<'type_checker>,
     node: &'type_checker Ast,
 ) -> Result<(), ThrushCompilerIssue> {
@@ -37,12 +37,12 @@ pub fn validate_lli<'type_checker>(
             }
 
             if let Err(error) =
-                bounds::checking::type_check(lli_type, value_type, Some(value), None, metadata)
+                checks::type_check(lli_type, value_type, Some(value), None, metadata)
             {
                 typechecker.add_error(error);
             }
 
-            if let Err(type_error) = typechecker.analyze_ast(value) {
+            if let Err(type_error) = typechecker.analyze_stmt(value) {
                 typechecker.add_error(type_error);
             }
 
@@ -65,7 +65,7 @@ pub fn validate_lli<'type_checker>(
                     ));
                 }
 
-                typechecker.analyze_ast(reference)?;
+                typechecker.analyze_stmt(reference)?;
             }
 
             if let Some(expr) = &source.1 {
@@ -81,7 +81,7 @@ pub fn validate_lli<'type_checker>(
                     ));
                 }
 
-                typechecker.analyze_ast(expr)?;
+                typechecker.analyze_stmt(expr)?;
             }
 
             Ok(())
@@ -243,13 +243,9 @@ pub fn validate_lli<'type_checker>(
             let metadata: TypeCheckerExprMetadata =
                 TypeCheckerExprMetadata::new(write_value.is_literal(), None, span);
 
-            if let Err(error) = bounds::checking::type_check(
-                write_type,
-                value_type,
-                Some(write_value),
-                None,
-                metadata,
-            ) {
+            if let Err(error) =
+                checks::type_check(write_type, value_type, Some(write_value), None, metadata)
+            {
                 typechecker.add_error(error);
             }
 

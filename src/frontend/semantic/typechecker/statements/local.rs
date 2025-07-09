@@ -3,14 +3,14 @@ use crate::{
     frontend::{
         lexer::span::Span,
         semantic::typechecker::{
-            TypeChecker, bounds, metadata::TypeCheckerExprMetadata, position::TypeCheckerPosition,
+            TypeChecker, checks, metadata::TypeCheckerExprMetadata, position::TypeCheckerPosition,
         },
         types::ast::{Ast, metadata::local::LocalMetadata},
         typesystem::types::Type,
     },
 };
 
-pub fn validate_local<'type_checker>(
+pub fn validate<'type_checker>(
     typechecker: &mut TypeChecker<'type_checker>,
     node: &'type_checker Ast,
 ) -> Result<(), ThrushCompilerIssue> {
@@ -49,7 +49,7 @@ pub fn validate_local<'type_checker>(
                     local_value_type = Type::Ptr(Some(local_value_type.into()));
                 }
 
-                if let Err(error) = bounds::checking::type_check(
+                if let Err(error) = checks::type_check(
                     local_type,
                     &local_value_type,
                     Some(local_value),
@@ -59,7 +59,7 @@ pub fn validate_local<'type_checker>(
                     typechecker.add_error(error);
                 }
 
-                if let Err(type_error) = typechecker.analyze_ast(local_value) {
+                if let Err(type_error) = typechecker.analyze_stmt(local_value) {
                     typechecker.add_error(type_error);
                 }
             }
