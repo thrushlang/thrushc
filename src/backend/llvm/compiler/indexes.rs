@@ -1,7 +1,7 @@
 use inkwell::{context::Context, values::IntValue};
 
 use crate::{
-    backend::llvm::compiler::{context::LLVMCodeGenContext, intgen, valuegen},
+    backend::llvm::compiler::{context::LLVMCodeGenContext, generation::intgen, valuegen},
     frontend::{
         types::ast::Ast,
         typesystem::{traits::TypeMutableExtensions, types::Type},

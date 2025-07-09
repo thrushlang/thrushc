@@ -33,11 +33,8 @@ pub fn compile<'ctx>(
         (TokenType::Minus, _, expr) => self::compile_arithmetic_negation(context, expr, cast),
 
         _ => {
-            logging::log(
-                logging::LoggingType::Error,
-                "Unsupported unary operation pattern encountered.",
-            );
-            unreachable!()
+            self::codegen_abort("Unsupported unary operation pattern encountered.");
+            self::compile_null_ptr(context)
         }
     }
 }
@@ -58,47 +55,35 @@ fn compile_increment_decrement_ref<'ctx>(
         kind if kind.is_integer_type() => {
             let int: IntValue = symbol.load(context).into_int_value();
 
-            let modifier: IntValue =
-                typegen::integer_to_llvm_type(llvm_context, kind).const_int(1, false);
+            let modifier: IntValue = int.get_type().const_int(1, false);
 
-            let mut result: BasicValueEnum = match operator {
+            let result: BasicValueEnum = match operator {
                 TokenType::PlusPlus => match llvm_builder.build_int_nsw_add(int, modifier, "") {
                     Ok(result) => result.into(),
                     Err(_) => {
-                        logging::log(
-                            logging::LoggingType::Bug,
-                            "Failed to compile an incrementer.",
-                        );
-                        unreachable!()
+                        self::codegen_abort("Failed to compile an incrementer.");
+                        self::compile_null_ptr(context)
                     }
                 },
                 TokenType::MinusMinus => match llvm_builder.build_int_nsw_sub(int, modifier, "") {
                     Ok(result) => result.into(),
                     Err(_) => {
-                        logging::log(
-                            logging::LoggingType::Bug,
-                            "Failed to compile a decrementer.",
-                        );
-                        unreachable!()
+                        self::codegen_abort("Failed to compile a decrementer.");
+                        self::compile_null_ptr(context)
                     }
                 },
                 _ => {
-                    logging::log(
-                        LoggingType::Bug,
+                    self::codegen_abort(
                         "Unknown operator compared to reference increment and decrement in unary operation.",
                     );
-
-                    unreachable!()
+                    self::compile_null_ptr(context)
                 }
             };
 
-            symbol.store(context, result);
+            let result: BasicValueEnum =
+                cast::try_cast(context, cast, kind, result).unwrap_or(result);
 
-            if let Some(cast) = cast {
-                if let Some(casted_int) = cast::integer(context, cast, kind, result) {
-                    result = casted_int;
-                }
-            }
+            symbol.store(context, result);
 
             result
         }
@@ -108,7 +93,7 @@ fn compile_increment_decrement_ref<'ctx>(
             let modifier: FloatValue =
                 typegen::type_float_to_llvm_float_type(llvm_context, kind).const_float(1.0);
 
-            let mut result: BasicValueEnum = match operator {
+            let result: BasicValueEnum = match operator {
                 TokenType::PlusPlus => llvm_builder
                     .build_float_add(float, modifier, "")
                     .unwrap()
@@ -117,16 +102,20 @@ fn compile_increment_decrement_ref<'ctx>(
                     .build_float_sub(float, modifier, "")
                     .unwrap()
                     .into(),
-                _ => unreachable!(),
+
+                _ => {
+                    self::codegen_abort(
+                        "Unknown operator compared to reference increment and decrement in unary operation.",
+                    );
+                    self::compile_null_ptr(context)
+                }
             };
 
-            if let Some(cast) = cast {
-                if let Some(casted_float) = cast::float(context, cast, kind, result) {
-                    result = casted_float;
-                }
-            }
+            let result: BasicValueEnum =
+                cast::try_cast(context, cast, kind, result).unwrap_or(result);
 
             symbol.store(context, result);
+
             result
         }
     }
@@ -139,7 +128,6 @@ fn compile_increment_decrement<'ctx>(
     cast: Option<&Type>,
 ) -> BasicValueEnum<'ctx> {
     let llvm_builder: &Builder = context.get_llvm_builder();
-    let llvm_context: &Context = context.get_llvm_context();
 
     let value: BasicValueEnum = valuegen::compile(context, expression, cast);
     let kind: &Type = expression.get_type_unwrapped();
@@ -148,57 +136,40 @@ fn compile_increment_decrement<'ctx>(
         kind if kind.is_integer_type() => {
             let int: IntValue = value.into_int_value();
 
-            let modifier: IntValue =
-                typegen::integer_to_llvm_type(llvm_context, kind).const_int(1, false);
+            let modifier: IntValue = int.get_type().const_int(1, false);
 
-            let mut result: BasicValueEnum = match operator {
+            let result: BasicValueEnum = match operator {
                 TokenType::PlusPlus => match llvm_builder.build_int_nsw_add(int, modifier, "") {
                     Ok(result) => result.into(),
                     Err(_) => {
-                        logging::log(
-                            logging::LoggingType::Bug,
-                            "Failed to compile an incrementer.",
-                        );
-
-                        unreachable!()
+                        self::codegen_abort("Failed to compile an incrementer.");
+                        self::compile_null_ptr(context)
                     }
                 },
                 TokenType::MinusMinus => match llvm_builder.build_int_nsw_sub(int, modifier, "") {
                     Ok(result) => result.into(),
                     Err(_) => {
-                        logging::log(
-                            logging::LoggingType::Bug,
-                            "Failed to compile a decrementer.",
-                        );
-                        unreachable!()
+                        self::codegen_abort("Failed to compile a decrementer.");
+                        self::compile_null_ptr(context)
                     }
                 },
 
                 _ => {
-                    logging::log(
-                        LoggingType::Bug,
+                    self::codegen_abort(
                         "Unknown operator compared to increment and decrement in unary operation.",
                     );
-
-                    unreachable!()
+                    self::compile_null_ptr(context)
                 }
             };
 
-            if let Some(cast) = cast {
-                if let Some(casted_int) = cast::integer(context, cast, kind, result) {
-                    result = casted_int;
-                }
-            }
-
-            result
+            cast::try_cast(context, cast, kind, result).unwrap_or(result)
         }
         _ => {
             let float: FloatValue = value.into_float_value();
 
-            let modifier: FloatValue =
-                typegen::type_float_to_llvm_float_type(llvm_context, kind).const_float(1.0);
+            let modifier: FloatValue = float.get_type().const_float(1.0);
 
-            let mut result: BasicValueEnum = match operator {
+            let result: BasicValueEnum = match operator {
                 TokenType::PlusPlus => llvm_builder
                     .build_float_add(float, modifier, "")
                     .unwrap()
@@ -210,22 +181,14 @@ fn compile_increment_decrement<'ctx>(
                     .into(),
 
                 _ => {
-                    logging::log(
-                        LoggingType::Bug,
+                    self::codegen_abort(
                         "Unknown operator compared to increment and decrement in unary operation.",
                     );
-
-                    unreachable!()
+                    self::compile_null_ptr(context)
                 }
             };
 
-            if let Some(cast) = cast {
-                if let Some(casted_float) = cast::float(context, cast, kind, result) {
-                    result = casted_float;
-                }
-            }
-
-            result
+            cast::try_cast(context, cast, kind, result).unwrap_or(result)
         }
     }
 }
@@ -245,15 +208,9 @@ fn compile_logical_negation<'ctx>(
             let int: IntValue = value.into_int_value();
 
             if let Ok(result) = llvm_builder.build_not(int, "") {
-                let mut result: BasicValueEnum = result.into();
+                let result: BasicValueEnum = result.into();
 
-                if let Some(cast) = cast {
-                    if let Some(casted_int) = cast::integer(context, cast, kind, result) {
-                        result = casted_int;
-                    }
-                }
-
-                return result;
+                return cast::try_cast(context, cast, kind, result).unwrap_or(result);
             }
 
             int.into()
@@ -281,15 +238,9 @@ fn compile_arithmetic_negation<'ctx>(
             let int: IntValue = value.into_int_value();
 
             if let Ok(result) = llvm_builder.build_int_neg(int, "") {
-                let mut result: BasicValueEnum = result.into();
+                let result: BasicValueEnum = result.into();
 
-                if let Some(cast) = cast {
-                    if let Some(casted_int) = cast::integer(context, cast, kind, result) {
-                        result = casted_int;
-                    }
-                }
-
-                return result;
+                return cast::try_cast(context, cast, kind, result).unwrap_or(result);
             }
 
             int.into()
@@ -299,15 +250,9 @@ fn compile_arithmetic_negation<'ctx>(
             let float: FloatValue = value.into_float_value();
 
             if let Ok(result) = llvm_builder.build_float_neg(float, "") {
-                let mut result: BasicValueEnum = result.into();
+                let result: BasicValueEnum = result.into();
 
-                if let Some(cast) = cast {
-                    if let Some(casted_float) = cast::float(context, cast, kind, result) {
-                        result = casted_float;
-                    }
-                }
-
-                return result;
+                return cast::try_cast(context, cast, kind, result).unwrap_or(result);
             }
 
             float.into()

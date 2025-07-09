@@ -11,7 +11,7 @@ use inkwell::types::BasicTypeEnum;
 use inkwell::values::{BasicValueEnum, IntValue, PointerValue};
 use inkwell::{builder::Builder, context::Context};
 
-pub fn compile_array<'ctx>(
+pub fn compile<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     kind: &Type,
     items: &'ctx [Ast],

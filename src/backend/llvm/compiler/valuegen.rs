@@ -3,10 +3,10 @@
 use super::context::LLVMCodeGenContext;
 use super::typegen;
 use crate::backend::llvm::compiler::attributes::LLVMAttribute;
+use crate::backend::llvm::compiler::generation::{floatgen, intgen, structgen};
 use crate::backend::llvm::compiler::memory::{self, SymbolAllocated};
 use crate::backend::llvm::compiler::{
-    binaryop, builtins, cast, codegen, expressions, floatgen, indexes, intgen, ptrgen, statements,
-    structgen,
+    binaryop, builtins, cast, codegen, expressions, indexes, ptrgen, statements,
 };
 
 use crate::backend::types::LLVMEitherExpression;
@@ -118,16 +118,14 @@ pub fn compile<'ctx>(
         // Array Operations
         // Compiles a fixed-size array
         Ast::FixedArray { items, kind, .. } => {
-            expressions::farray::compile_fixed_array(context, kind, items, cast)
+            expressions::farray::compile(context, kind, items, cast)
         }
 
         // Compiles a dynamic array
-        Ast::Array { items, kind, .. } => {
-            expressions::array::compile_array(context, kind, items, cast)
-        }
+        Ast::Array { items, kind, .. } => expressions::array::compile(context, kind, items, cast),
 
         // Compiles a struct constructor
-        Ast::Constructor { args, kind, .. } => structgen::compile_struct(context, args, kind, cast),
+        Ast::Constructor { args, kind, .. } => structgen::compile(context, args, kind, cast),
 
         // Compiles a type cast operation
         Ast::As { from, cast, .. } => self::compile_cast(context, from, cast),
@@ -167,16 +165,10 @@ fn compile_float<'ctx>(
     signed: bool,
     cast: Option<&Type>,
 ) -> BasicValueEnum<'ctx> {
-    let mut float: BasicValueEnum =
+    let float: BasicValueEnum =
         floatgen::float(context.get_llvm_context(), kind, value, signed).into();
 
-    if let Some(cast) = cast {
-        if let Some(casted_float) = cast::float(context, cast, kind, float) {
-            float = casted_float;
-        }
-    }
-
-    float
+    cast::try_cast(context, cast, kind, float).unwrap_or(float)
 }
 
 fn compile_integer<'ctx>(
@@ -186,16 +178,9 @@ fn compile_integer<'ctx>(
     signed: bool,
     cast: Option<&Type>,
 ) -> BasicValueEnum<'ctx> {
-    let mut int: BasicValueEnum =
-        intgen::int(context.get_llvm_context(), kind, value, signed).into();
+    let int: BasicValueEnum = intgen::int(context.get_llvm_context(), kind, value, signed).into();
 
-    if let Some(cast) = cast {
-        if let Some(casted_int) = cast::integer(context, cast, kind, int) {
-            int = casted_int;
-        }
-    }
-
-    int
+    cast::try_cast(context, cast, kind, int).unwrap_or(int)
 }
 
 fn compile_char<'ctx>(context: &LLVMCodeGenContext<'_, 'ctx>, byte: u64) -> BasicValueEnum<'ctx> {

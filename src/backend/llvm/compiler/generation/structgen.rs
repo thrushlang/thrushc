@@ -1,12 +1,11 @@
 use std::fmt::Display;
 use std::sync::Arc;
 
-use super::context::LLVMCodeGenContext;
-use super::typegen;
 use crate::backend::llvm::compiler::anchors::PointerAnchor;
+use crate::backend::llvm::compiler::context::LLVMCodeGenContext;
 use crate::backend::llvm::compiler::memory::{self, LLVMAllocationSite};
 
-use crate::backend::llvm::compiler::valuegen;
+use crate::backend::llvm::compiler::{typegen, valuegen};
 use crate::core::console::logging::{self, LoggingType};
 use crate::frontend::types::parser::stmts::types::Constructor;
 use crate::frontend::typesystem::traits::TypeStructExtensions;
@@ -16,20 +15,20 @@ use inkwell::AddressSpace;
 use inkwell::types::BasicTypeEnum;
 use inkwell::values::{BasicValueEnum, PointerValue};
 
-pub fn compile_struct<'ctx>(
+pub fn compile<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     args: &'ctx Constructor,
     kind: &Type,
-    cast_type: Option<&Type>,
+    cast: Option<&Type>,
 ) -> BasicValueEnum<'ctx> {
     if let Some(anchor) = context.get_pointer_anchor() {
         if !anchor.is_triggered() {
-            self::compile_struct_with_anchor(context, args, kind, cast_type, anchor)
+            self::compile_struct_with_anchor(context, args, kind, cast, anchor)
         } else {
-            self::compile_struct_without_anchor(context, args, kind, cast_type)
+            self::compile_struct_without_anchor(context, args, kind, cast)
         }
     } else {
-        self::compile_struct_without_anchor(context, args, kind, cast_type)
+        self::compile_struct_without_anchor(context, args, kind, cast)
     }
 }
 
@@ -37,10 +36,10 @@ fn compile_struct_with_anchor<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     args: &'ctx Constructor,
     kind: &Type,
-    cast_type: Option<&Type>,
+    cast: Option<&Type>,
     anchor: PointerAnchor<'ctx>,
 ) -> BasicValueEnum<'ctx> {
-    let struct_type: &Type = cast_type.unwrap_or(kind);
+    let struct_type: &Type = cast.unwrap_or(kind);
 
     let struct_llvm_type: BasicTypeEnum =
         typegen::generate_type(context.get_llvm_context(), struct_type);
@@ -81,9 +80,9 @@ pub fn compile_struct_without_anchor<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     args: &'ctx Constructor,
     kind: &Type,
-    cast_type: Option<&Type>,
+    cast: Option<&Type>,
 ) -> BasicValueEnum<'ctx> {
-    let struct_type: &Type = cast_type.unwrap_or(kind);
+    let struct_type: &Type = cast.unwrap_or(kind);
 
     let struct_llvm_type: BasicTypeEnum =
         typegen::generate_type(context.get_llvm_context(), struct_type);

@@ -7,6 +7,7 @@ use crate::{
         constants::{
             self, binaryop,
             generation::{floatgen, intgen},
+            unaryop,
         },
         constgen,
         context::LLVMCodeGenContext,
@@ -98,6 +99,14 @@ pub fn compile<'ctx>(
             self::codegen_abort("Cannot perform constant binary expression.");
             self::compile_null_ptr(context)
         }
+
+        // Unary operation dispatch
+        Ast::UnaryOp {
+            operator,
+            expression,
+            kind,
+            ..
+        } => unaryop::compile(context, (operator, kind, expression), cast),
 
         // Fallback for unsupported AST nodes
         _ => {

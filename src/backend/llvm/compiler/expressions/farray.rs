@@ -10,7 +10,7 @@ use inkwell::AddressSpace;
 use inkwell::context::Context;
 use inkwell::values::{BasicValueEnum, IntValue, PointerValue};
 
-pub fn compile_fixed_array<'ctx>(
+pub fn compile<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     kind: &Type,
     items: &'ctx [Ast],
