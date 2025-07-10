@@ -275,12 +275,13 @@ impl<'thrushc> TheThrushCompiler<'thrushc> {
         self.validate_codegen(&llvm_module, file)?;
 
         if self.emit_before_optimization(
+            archive_time,
             llvm_backend,
             &llvm_module,
             &target_machine,
             build_dir,
             file,
-        ) {
+        )? {
             return self.finish_archive_compilation(archive_time, file);
         }
 
@@ -302,12 +303,13 @@ impl<'thrushc> TheThrushCompiler<'thrushc> {
         .optimize();
 
         if self.emit_after_optimization(
+            archive_time,
             llvm_backend,
             &llvm_module,
             &target_machine,
             build_dir,
             file,
-        ) {
+        )? {
             return self.finish_archive_compilation(archive_time, file);
         }
 
@@ -453,85 +455,117 @@ impl<'thrushc> TheThrushCompiler<'thrushc> {
     }
 
     fn emit_before_optimization(
-        &self,
+        &mut self,
+        archive_time: Instant,
         llvm_backend: &LLVMBackend,
         llvm_module: &Module,
         target_machine: &TargetMachine,
         build_dir: &Path,
         file: &CompilerFile,
-    ) -> bool {
+    ) -> Result<bool, ()> {
         emitters::cleaner::auto_clean(self.options);
 
         if llvm_backend.contains_emitable(Emitable::RawLLVMIR) {
-            return emitters::llvmir::emit_llvm_ir(llvm_module, build_dir, &file.name, true);
+            if let Err(error) =
+                emitters::llvmir::emit_llvm_ir(llvm_module, build_dir, &file.name, true)
+            {
+                logging::log(LoggingType::Error, &error.to_string());
+                self.interrupt_archive_compilation(archive_time, file)?;
+            }
+
+            return Ok(true);
         }
 
         if llvm_backend.contains_emitable(Emitable::RawLLVMBitcode) {
-            return emitters::llvmbitcode::emit_llvm_bitcode(
-                llvm_module,
-                build_dir,
-                &file.name,
-                true,
-            );
+            if !emitters::llvmbitcode::emit_llvm_bitcode(llvm_module, build_dir, &file.name, true) {
+                logging::log(LoggingType::Error, "Failed to emit LLVM bitcode.");
+                self.interrupt_archive_compilation(archive_time, file)?;
+            }
+
+            return Ok(true);
         }
 
         if llvm_backend.contains_emitable(Emitable::RawAssembly) {
-            return emitters::assembler::emit_llvm_assembler(
+            if let Err(error) = emitters::assembler::emit_llvm_assembler(
                 llvm_module,
                 target_machine,
                 build_dir,
                 &file.name,
                 true,
-            );
+            ) {
+                logging::log(LoggingType::Error, &error.to_string());
+                self.interrupt_archive_compilation(archive_time, file)?;
+            }
+
+            return Ok(true);
         }
 
-        false
+        Ok(false)
     }
 
     fn emit_after_optimization(
-        &self,
+        &mut self,
+        archive_time: Instant,
         llvm_backend: &LLVMBackend,
         llvm_module: &Module,
         target_machine: &TargetMachine,
         build_dir: &Path,
         file: &CompilerFile,
-    ) -> bool {
+    ) -> Result<bool, ()> {
         emitters::cleaner::auto_clean(self.options);
 
         if llvm_backend.contains_emitable(Emitable::LLVMBitcode) {
-            return emitters::llvmbitcode::emit_llvm_bitcode(
-                llvm_module,
-                build_dir,
-                &file.name,
-                false,
-            );
+            if !emitters::llvmbitcode::emit_llvm_bitcode(llvm_module, build_dir, &file.name, false)
+            {
+                logging::log(LoggingType::Error, "Failed to emit LLVM bitcode.");
+                self.interrupt_archive_compilation(archive_time, file)?;
+            }
+
+            return Ok(true);
         }
 
         if llvm_backend.contains_emitable(Emitable::LLVMIR) {
-            return emitters::llvmir::emit_llvm_ir(llvm_module, build_dir, &file.name, false);
+            if let Err(error) =
+                emitters::llvmir::emit_llvm_ir(llvm_module, build_dir, &file.name, false)
+            {
+                logging::log(LoggingType::Error, &error.to_string());
+                self.interrupt_archive_compilation(archive_time, file)?;
+            }
+
+            return Ok(true);
         }
 
         if llvm_backend.contains_emitable(Emitable::Assembly) {
-            return emitters::assembler::emit_llvm_assembler(
+            if let Err(error) = emitters::assembler::emit_llvm_assembler(
                 llvm_module,
                 target_machine,
                 build_dir,
                 &file.name,
                 false,
-            );
+            ) {
+                logging::log(LoggingType::Error, &error.to_string());
+                self.interrupt_archive_compilation(archive_time, file)?;
+            };
+
+            return Ok(true);
         }
 
         if llvm_backend.contains_emitable(Emitable::Object) {
-            return emitters::obj::emit_llvm_object(
+            if let Err(error) = emitters::obj::emit_llvm_object(
                 llvm_module,
                 target_machine,
                 build_dir,
                 &file.name,
                 false,
-            );
+            ) {
+                logging::log(LoggingType::Error, &error.to_string());
+                self.interrupt_archive_compilation(archive_time, file)?;
+            }
+
+            return Ok(true);
         }
 
-        false
+        Ok(false)
     }
 
     fn get_compiled_files(&self) -> &[PathBuf] {

@@ -99,44 +99,114 @@ impl Ast<'_> {
 
     pub fn has_return(&self) -> bool {
         if let Ast::Block { stmts, .. } = self {
-            return stmts.iter().any(|stmt| {
-                if let Ast::If { block, .. } = stmt {
-                    block.has_return()
-                } else {
-                    stmt.is_return()
-                }
-            });
+            return stmts.iter().any(|stmt| stmt.has_return());
         }
 
-        false
+        if let Ast::If {
+            block,
+            elseif,
+            anyway,
+            ..
+        } = self
+        {
+            return block.has_return()
+                || elseif.iter().any(|elif| elif.has_return())
+                || anyway.as_ref().is_some_and(|anyway| anyway.has_return());
+        }
+
+        if let Ast::Elif { block, .. } = self {
+            return block.has_return();
+        }
+
+        if let Ast::Else { block, .. } = self {
+            return block.has_return();
+        }
+
+        self.is_return()
+    }
+
+    pub fn has_return_for_function(&self) -> bool {
+        if let Ast::Block { stmts, .. } = self {
+            return stmts.iter().any(|stmt| stmt.has_return());
+        }
+
+        if let Ast::If {
+            block,
+            elseif,
+            anyway,
+            ..
+        } = self
+        {
+            return block.has_return()
+                || elseif.iter().all(|elif| elif.has_return())
+                || anyway.as_ref().is_some_and(|anyway| anyway.has_return());
+        }
+
+        if let Ast::Elif { block, .. } = self {
+            return block.has_return();
+        }
+
+        if let Ast::Else { block, .. } = self {
+            return block.has_return();
+        }
+
+        self.is_return()
     }
 
     pub fn has_break(&self) -> bool {
         if let Ast::Block { stmts, .. } = self {
-            return stmts.iter().any(|stmt| {
-                if let Ast::If { block, .. } = stmt {
-                    block.has_break()
-                } else {
-                    stmt.is_break()
-                }
-            });
+            return stmts.iter().any(|stmt| stmt.has_break());
         }
 
-        false
+        if let Ast::If {
+            block,
+            elseif,
+            anyway,
+            ..
+        } = self
+        {
+            return block.has_break()
+                || elseif.iter().any(|elif| elif.has_break())
+                || anyway.as_ref().is_some_and(|anyway| anyway.has_break());
+        }
+
+        if let Ast::Elif { block, .. } = self {
+            return block.has_break();
+        }
+
+        if let Ast::Else { block, .. } = self {
+            return block.has_break();
+        }
+
+        self.is_break()
     }
 
     pub fn has_continue(&self) -> bool {
         if let Ast::Block { stmts, .. } = self {
-            return stmts.iter().any(|stmt| {
-                if let Ast::If { block, .. } = stmt {
-                    block.has_continue()
-                } else {
-                    stmt.is_continue()
-                }
-            });
+            return stmts.iter().any(|stmt| stmt.has_continue());
         }
 
-        false
+        if let Ast::If {
+            block,
+            elseif,
+            anyway,
+            ..
+        } = self
+        {
+            return block.has_continue()
+                || elseif.iter().any(|elif| elif.has_continue())
+                || anyway.as_ref().is_some_and(|anyway| anyway.has_continue());
+        }
+
+        if let Ast::Elif { block, .. } = self {
+            return block.has_continue();
+        }
+
+        if let Ast::Else { block, .. } = self {
+            return block.has_continue();
+        }
+
+        self.is_continue()
     }
 }
 

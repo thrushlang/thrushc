@@ -11,7 +11,7 @@ pub type BinaryOperation<'ctx> = (&'ctx Ast<'ctx>, &'ctx TokenType, &'ctx Ast<'c
 
 pub type UnaryOperation<'ctx> = (&'ctx TokenType, &'ctx Type, &'ctx Ast<'ctx>);
 
-pub type StaticRepresentation<'ctx> = (
+pub type GlobalStatic<'ctx> = (
     &'ctx str,
     &'ctx str,
     &'ctx Type,
@@ -20,7 +20,27 @@ pub type StaticRepresentation<'ctx> = (
     &'ctx ThrushAttributes<'ctx>,
 );
 
-pub type ConstantRepresentation<'ctx> = (
+pub type LocalStatic<'ctx> = (
+    &'ctx str,
+    &'ctx str,
+    &'ctx Type,
+    &'ctx Ast<'ctx>,
+    StaticMetadata,
+);
+
+pub type GlobalConstant<'ctx> = (
+    &'ctx str,
+    &'ctx str,
+    &'ctx Type,
+    &'ctx Ast<'ctx>,
+    &'ctx ThrushAttributes<'ctx>,
+);
+
+pub type LocalConstant<'ctx> = (&'ctx str, &'ctx str, &'ctx Type, &'ctx Ast<'ctx>);
+
+pub type FunctionParameter<'ctx> = (&'ctx str, &'ctx str, &'ctx Type, u32);
+
+pub type Local<'ctx> = (
     &'ctx str,
     &'ctx str,
     &'ctx Type,
@@ -46,15 +66,5 @@ pub type AssemblerFunctionRepresentation<'ctx> = (
     &'ctx Type,
     &'ctx [Ast<'ctx>],
     &'ctx [Type],
-    &'ctx ThrushAttributes<'ctx>,
-);
-
-pub type FunctionParameter<'ctx> = (&'ctx str, &'ctx str, &'ctx Type, u32);
-
-pub type Local<'ctx> = (
-    &'ctx str,
-    &'ctx str,
-    &'ctx Type,
-    &'ctx Ast<'ctx>,
     &'ctx ThrushAttributes<'ctx>,
 );

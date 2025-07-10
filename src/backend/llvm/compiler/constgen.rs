@@ -264,7 +264,7 @@ fn compile_reference<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     name: &str,
 ) -> BasicValueEnum<'ctx> {
-    context.get_symbol(name).get_value()
+    context.get_table().get_symbol(name).get_value()
 }
 
 fn compile_int<'ctx>(

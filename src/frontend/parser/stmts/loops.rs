@@ -90,7 +90,12 @@ pub fn build_while_loop<'parser>(
     let span: Span = while_tk.get_span();
 
     let cond: Ast = expr::build_expr(parser_context)?;
+
+    parser_context.get_mut_control_ctx().increment_loop_depth();
+
     let block: Ast = block::build_block(parser_context)?;
+
+    parser_context.get_mut_control_ctx().decrement_loop_depth();
 
     Ok(Ast::While {
         cond: cond.into(),

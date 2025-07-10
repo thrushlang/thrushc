@@ -13,7 +13,7 @@ pub fn validate<'type_checker>(
                 typechecker.add_error(type_error);
             }
 
-            if !body.has_return() {
+            if !body.has_return_for_function() {
                 typechecker.add_error(ThrushCompilerIssue::Error(
                     "Type error".into(),
                     "Expected return with type 'u32'.".into(),
@@ -69,7 +69,7 @@ pub fn validate<'type_checker>(
                     typechecker.add_error(type_error);
                 }
 
-                if !body.has_return() && !return_type.is_void_type() {
+                if !body.has_return_for_function() && !return_type.is_void_type() {
                     typechecker.add_error(ThrushCompilerIssue::Error(
                         "Type error".into(),
                         format!("Expected return with type '{}'.", return_type),

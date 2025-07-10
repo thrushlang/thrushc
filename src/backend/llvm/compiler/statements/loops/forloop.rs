@@ -1,6 +1,11 @@
 use std::fmt::Display;
 
-use inkwell::{basic_block::BasicBlock, builder::Builder, context::Context, values::IntValue};
+use inkwell::{
+    basic_block::BasicBlock,
+    builder::Builder,
+    context::Context,
+    values::{FunctionValue, IntValue},
+};
 
 use crate::{
     backend::llvm::compiler::{codegen::LLVMCodegen, valuegen},
@@ -18,70 +23,73 @@ pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, stmt: &'ctx Ast<'ctx>)
         unreachable!()
     };
 
-    match codegen.get_mut_context().get_current_fn() {
-        Some(function) => {
-            if let Ast::For {
-                local,
-                cond,
-                actions,
-                block,
-                ..
-            } = stmt
-            {
-                codegen.codegen_variables(local);
+    let llvm_function: FunctionValue = codegen.get_mut_context().get_current_fn();
 
-                let start_block: BasicBlock = llvm_context.append_basic_block(function, "for");
+    if let Ast::For {
+        local,
+        cond,
+        actions,
+        block,
+        ..
+    } = stmt
+    {
+        let start: BasicBlock = llvm_context.append_basic_block(llvm_function, "for");
+        let condition: BasicBlock = llvm_context.append_basic_block(llvm_function, "for_condition");
+        let body: BasicBlock = llvm_context.append_basic_block(llvm_function, "for_body");
+        let exit: BasicBlock = llvm_context.append_basic_block(llvm_function, "for_exit");
 
-                llvm_builder
-                    .build_unconditional_branch(start_block)
-                    .unwrap_or_else(abort);
+        llvm_builder
+            .build_unconditional_branch(start)
+            .unwrap_or_else(abort);
 
-                llvm_builder.position_at_end(start_block);
+        llvm_builder.position_at_end(start);
 
-                let condition: IntValue =
-                    valuegen::compile(codegen.get_mut_context(), cond, Some(&Type::Bool))
-                        .into_int_value();
+        codegen.codegen_variables(local);
 
-                let then_block: BasicBlock = llvm_context.append_basic_block(function, "for_body");
-                let exit_block: BasicBlock = llvm_context.append_basic_block(function, "for_exit");
+        llvm_builder
+            .build_unconditional_branch(condition)
+            .unwrap_or_else(abort);
 
-                llvm_builder
-                    .build_conditional_branch(condition, then_block, exit_block)
-                    .unwrap_or_else(abort);
+        llvm_builder.position_at_end(condition);
 
-                if block.has_break() || block.has_return() {
-                    codegen.get_mut_context().set_end_loop_block(exit_block);
-                }
+        let comparison: IntValue =
+            valuegen::compile(codegen.get_mut_context(), cond, Some(&Type::Bool)).into_int_value();
 
-                if block.has_continue() {
-                    codegen.get_mut_context().set_begin_loop_block(start_block);
-                }
+        llvm_builder
+            .build_conditional_branch(comparison, body, exit)
+            .unwrap_or_else(abort);
 
-                llvm_builder.position_at_end(then_block);
+        llvm_builder.position_at_end(body);
 
-                if actions.is_before_unary() {
-                    codegen.codegen_code_block(block);
-                    let _ = valuegen::compile(codegen.get_mut_context(), actions, None);
-                } else {
-                    let _ = valuegen::compile(codegen.get_mut_context(), actions, None);
-                    codegen.codegen_code_block(block);
-                }
+        codegen
+            .get_mut_context()
+            .get_mut_loop_ctx()
+            .add_continue_branch(condition);
 
-                if !block.has_break() || !block.has_return() || !block.has_continue() {
-                    llvm_builder
-                        .build_unconditional_branch(start_block)
-                        .unwrap_or_else(abort);
-                }
+        codegen
+            .get_mut_context()
+            .get_mut_loop_ctx()
+            .add_break_branch(exit);
 
-                llvm_builder.position_at_end(exit_block);
-            } else {
-                self::codegen_abort("Expected for loop to compile.");
+        if actions.is_before_unary() {
+            codegen.codegen_block(block);
+            let _ = valuegen::compile(codegen.get_mut_context(), actions, None);
+        } else {
+            let _ = valuegen::compile(codegen.get_mut_context(), actions, None);
+            codegen.codegen_block(block);
+        }
+
+        if let Some(last_block) = llvm_builder.get_insert_block() {
+            if last_block.get_terminator().is_none() {
+                let _ = llvm_builder.build_unconditional_branch(condition);
             }
         }
 
-        None => {
-            self::codegen_abort("The function being compiled could not be obtained.");
-        }
+        codegen.get_mut_context().get_mut_loop_ctx().pop();
+
+        llvm_builder.position_at_end(exit);
+    } else {
+        self::codegen_abort("Expected for loop to compile.");
     }
 }
 

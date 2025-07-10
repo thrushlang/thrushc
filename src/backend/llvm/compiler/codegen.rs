@@ -3,15 +3,13 @@
 use std::fmt::Display;
 
 use crate::backend::llvm::compiler::{
-    binaryop, builtins, constgen, expressions, ptrgen, statements,
+    binaryop, builtins, constgen, declarations, expressions, ptrgen, statements,
 };
 use crate::backend::types::{repr::LLVMFunction, traits::AssemblerFunctionExtensions};
 use crate::core::console::logging::{self, LoggingType};
 use crate::frontend::types::ast::metadata::local::LocalMetadata;
-use crate::frontend::types::ast::metadata::staticvar::StaticMetadata;
 use crate::frontend::types::parser::repr::{
-    AssemblerFunctionRepresentation, ConstantRepresentation, FunctionParameter,
-    FunctionRepresentation, StaticRepresentation,
+    AssemblerFunctionRepresentation, FunctionParameter, FunctionRepresentation,
 };
 use crate::frontend::types::parser::stmts::traits::ThrushAttributesExtensions;
 use crate::frontend::types::parser::stmts::types::ThrushAttributes;
@@ -76,7 +74,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
 
                 self.context.set_current_fn(entrypoint);
 
-                self.codegen_code_block(body);
+                self.codegen_block(body);
             }
 
             Ast::Function { body, .. } => {
@@ -105,7 +103,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         ########################################################################*/
     }
 
-    pub fn codegen_code_block(&mut self, stmt: &'ctx Ast) {
+    pub fn codegen_block(&mut self, stmt: &'ctx Ast) {
         /* ######################################################################
 
 
@@ -119,7 +117,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 self.context.begin_scope();
 
                 stmts.iter().for_each(|stmt| {
-                    self.codegen_code_block(stmt);
+                    self.codegen_block(stmt);
                 });
 
                 self.context.end_scope();
@@ -175,10 +173,12 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         ########################################################################*/
 
         match stmt {
+            // Loops
             Ast::While { .. } => statements::loops::whileloop::compile(self, stmt),
             Ast::Loop { .. } => statements::loops::infloop::compile(self, stmt),
             Ast::For { .. } => statements::loops::forloop::compile(self, stmt),
 
+            // Control Flow
             Ast::Break { .. } => statements::loops::controlflow::loopbreak::compile(self, stmt),
             Ast::Continue { .. } => statements::loops::controlflow::loopjump::compile(self, stmt),
 
@@ -217,12 +217,13 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
 
                 if metadata.is_undefined() {
                     self.context.new_local(name, ascii_name, kind, attributes);
-                } else {
-                    statements::local::compile(
-                        self.context,
-                        (name, ascii_name, kind, value, attributes),
-                    );
+                    return;
                 }
+
+                statements::local::compile(
+                    self.context,
+                    (name, ascii_name, kind, value, attributes),
+                );
             }
 
             Ast::Const {
@@ -232,15 +233,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 value,
                 ..
             } => {
-                let value_type: &Type = value.get_type_unwrapped();
-
-                let value: BasicValueEnum = constgen::compile(self.context, value, kind);
-
-                let casted_value: BasicValueEnum =
-                    constgen::cast(self.context, value, value_type, kind);
-
-                self.context
-                    .new_local_constant(name, ascii_name, kind, casted_value);
+                statements::constant::compile_local(self.context, (name, ascii_name, kind, value));
             }
 
             Ast::Static {
@@ -251,21 +244,16 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 metadata,
                 ..
             } => {
-                let value_type: &Type = value.get_type_unwrapped();
-
-                let value: BasicValueEnum = constgen::compile(self.context, value, kind);
-
-                let casted_value: BasicValueEnum =
-                    constgen::cast(self.context, value, value_type, kind);
-
-                self.context
-                    .new_local_static(name, ascii_name, kind, casted_value, *metadata);
+                statements::staticvar::compile_local(
+                    self.context,
+                    (name, ascii_name, kind, value, *metadata),
+                );
             }
 
             Ast::LLI {
                 name, kind, value, ..
             } => {
-                statements::lli::new(self.context, name, kind, value);
+                statements::lli::compile(self.context, name, kind, value);
             }
 
             stmt => self.codegen_terminator(stmt),
@@ -413,12 +401,11 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         let name: &str = parameter.0;
         let ascii_name: &str = parameter.1;
 
-        let parameter_type: &Type = parameter.2;
-        let parameter_position: u32 = parameter.3;
+        let kind: &Type = parameter.2;
+        let position: u32 = parameter.3;
 
-        if let Some(raw_value_llvm_parameter) = llvm_function.get_nth_param(parameter_position) {
-            self.context
-                .new_parameter(name, ascii_name, parameter_type, raw_value_llvm_parameter);
+        if let Some(value) = llvm_function.get_nth_param(position) {
+            self.context.new_parameter(name, ascii_name, kind, value);
         } else {
             self::codegen_abort(
                 "The value of a parameter of an LLVM function could not be obtained at code generation time.",
@@ -432,12 +419,13 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
 
         let function: FunctionRepresentation = raw_function.as_function_representation();
 
-        let function_ascii_name: &str = function.1;
+        let name: &str = function.0;
         let function_type: &Type = function.2;
-        let function_parameters: &[Ast<'ctx>] = function.3;
-        let function_body: &Ast = function.5;
+        let parameters: &[Ast<'ctx>] = function.3;
+        let body: &Ast = function.5;
 
-        let get_llvm_function: LLVMFunction = self.context.get_function(function_ascii_name);
+        let get_llvm_function: LLVMFunction = self.context.get_table().get_function(name);
+
         let llvm_function_value: FunctionValue = get_llvm_function.0;
 
         let llvm_function: FunctionValue = llvm_function_value;
@@ -448,7 +436,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
 
         self.context.set_current_fn(llvm_function);
 
-        function_parameters.iter().for_each(|parameter| {
+        parameters.iter().for_each(|parameter| {
             if let Ast::FunctionParameter {
                 name,
                 ascii_name,
@@ -461,9 +449,9 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
             }
         });
 
-        self.codegen_code_block(function_body);
+        self.codegen_block(body);
 
-        if !function_body.has_return() && function_type.is_void_type() {
+        if !body.has_return() && function_type.is_void_type() {
             if llvm_builder.build_return(None).is_err() {
                 self::codegen_abort(
                     "Unable to build the return instruction at code generation time.",
@@ -471,7 +459,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
             }
         }
 
-        self.context.clear_current_fn();
+        self.context.unset_current_function();
     }
 
     /* ######################################################################
@@ -483,21 +471,21 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
     ########################################################################*/
 
     fn declare_forward(&mut self) {
-        self.ast.iter().for_each(|any_ast| {
-            if any_ast.is_asm_function() {
-                self.declare_asm_function(any_ast);
+        self.ast.iter().for_each(|ast| {
+            if ast.is_asm_function() {
+                self.declare_asm_function(ast);
             }
 
-            if any_ast.is_function() {
-                self.declare_function(any_ast);
+            if ast.is_function() {
+                self.declare_function(ast);
             }
 
-            if any_ast.is_constant() {
-                self.declare_global_constant(any_ast);
+            if ast.is_constant() {
+                declarations::constant::compile_global(self.context, ast.as_global_constant());
             }
 
-            if any_ast.is_static() {
-                self.declare_static(any_ast);
+            if ast.is_static() {
+                declarations::stativar::compile_global(self.context, ast.as_global_static());
             }
         });
     }
@@ -509,45 +497,6 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
 
 
     ########################################################################*/
-
-    fn declare_global_constant(&mut self, stmt: &'ctx Ast) {
-        let constant: ConstantRepresentation = stmt.as_constant_representation();
-
-        let name: &str = constant.0;
-        let ascii_name: &str = constant.1;
-
-        let kind: &Type = constant.2;
-        let value: &Ast = constant.3;
-        let attributes: &ThrushAttributes = constant.4;
-
-        let constv: BasicValueEnum = constgen::compile(self.context, value, kind);
-        let constv_type: &Type = value.get_type_unwrapped();
-
-        let value: BasicValueEnum = constgen::cast(self.context, constv, constv_type, kind);
-
-        self.context
-            .new_global_constant(name, ascii_name, kind, value, attributes);
-    }
-
-    fn declare_static(&mut self, stmt: &'ctx Ast) {
-        let constant: StaticRepresentation = stmt.as_static_representation();
-
-        let name: &str = constant.0;
-        let ascii_name: &str = constant.1;
-
-        let kind: &Type = constant.2;
-        let value: &Ast = constant.3;
-        let metadata: StaticMetadata = constant.4;
-        let attributes: &ThrushAttributes = constant.5;
-
-        let value_type: &Type = value.get_type_unwrapped();
-        let llvm_value: BasicValueEnum = constgen::compile(self.context, value, kind);
-
-        let value: BasicValueEnum = constgen::cast(self.context, llvm_value, value_type, kind);
-
-        self.context
-            .new_global_static(name, ascii_name, kind, value, metadata, attributes);
-    }
 
     fn declare_asm_function(&mut self, stmt: &'ctx Ast) {
         let llvm_module: &Module = self.context.get_llvm_module();
@@ -667,36 +616,34 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
 
         let function: FunctionRepresentation = stmt.as_function_representation();
 
-        let function_name: &str = function.0;
-        let function_ascii_name: &str = function.1;
+        let name: &str = function.0;
+        let ascii_name: &str = function.1;
         let function_type: &Type = function.2;
         let function_parameters: &[Ast<'ctx>] = function.3;
         let function_parameters_types: &[Type] = function.4;
-        let function_attributes: &ThrushAttributes = function.6;
+        let attributes: &ThrushAttributes = function.6;
+
+        let ignore_args: bool = attributes.has_ignore_attribute();
+        let is_public: bool = attributes.has_public_attribute();
 
         let mut extern_name: Option<&str> = None;
         let mut convention: u32 = CallConvention::Standard as u32;
 
-        let ignore_args: bool = function_attributes.has_ignore_attribute();
-        let is_public: bool = function_attributes.has_public_attribute();
+        attributes.iter().for_each(|attribute| match attribute {
+            LLVMAttribute::Extern(name, ..) => {
+                extern_name = Some(name);
+            }
 
-        function_attributes
-            .iter()
-            .for_each(|attribute| match attribute {
-                LLVMAttribute::Extern(name, ..) => {
-                    extern_name = Some(name);
-                }
+            LLVMAttribute::Convention(conv, _) => {
+                convention = (*conv) as u32;
+            }
+            _ => (),
+        });
 
-                LLVMAttribute::Convention(conv, _) => {
-                    convention = (*conv) as u32;
-                }
-                _ => (),
-            });
-
-        let llvm_function_name: &str = if let Some(ffi_name) = extern_name {
+        let external_name: &str = if let Some(ffi_name) = extern_name {
             ffi_name
         } else {
-            function_ascii_name
+            ascii_name
         };
 
         let function_type: FunctionType = typegen::function_type(
@@ -707,11 +654,11 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         );
 
         let llvm_function: FunctionValue =
-            llvm_module.add_function(llvm_function_name, function_type, None);
+            llvm_module.add_function(external_name, function_type, None);
 
         let mut attribute_builder: AttributeBuilder = AttributeBuilder::new(
             llvm_context,
-            function_attributes,
+            attributes,
             LLVMAttributeApplicant::Function(llvm_function),
         );
 
@@ -723,10 +670,8 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
 
         self.context.set_current_fn(llvm_function);
 
-        self.context.new_function(
-            function_name,
-            (llvm_function, function_parameters_types, convention),
-        );
+        self.context
+            .new_function(name, (llvm_function, function_parameters_types, convention));
     }
 }
 

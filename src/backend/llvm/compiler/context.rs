@@ -9,11 +9,10 @@ use {
             llvm::compiler::{
                 alloc::{self},
                 anchors::PointerAnchor,
+                control::LoopContext,
+                symbols::SymbolsTable,
             },
-            types::repr::{
-                LLVMFunction, LLVMFunctions, LLVMFunctionsParameters, LLVMGlobalConstants,
-                LLVMGlobalStatics, LLVMInstructions, LLVMLocalConstants, LLVMLocalStatics,
-            },
+            types::repr::LLVMFunction,
         },
         core::diagnostic::diagnostician::Diagnostician,
         frontend::{
@@ -23,9 +22,7 @@ use {
             typesystem::types::Type,
         },
     },
-    ahash::AHashMap as HashMap,
     inkwell::{
-        basic_block::BasicBlock,
         builder::Builder,
         context::Context,
         module::Module,
@@ -42,24 +39,12 @@ pub struct LLVMCodeGenContext<'a, 'ctx> {
     builder: &'ctx Builder<'ctx>,
     target_data: TargetData,
 
-    global_statics: LLVMGlobalStatics<'ctx>,
-    local_statics: LLVMLocalStatics<'ctx>,
+    table: SymbolsTable<'ctx>,
 
-    global_constants: LLVMGlobalConstants<'ctx>,
-    local_constants: LLVMLocalConstants<'ctx>,
-
-    functions: LLVMFunctions<'ctx>,
-    instructions: LLVMInstructions<'ctx>,
-    parameters: LLVMFunctionsParameters<'ctx>,
+    loop_ctx: LoopContext<'ctx>,
 
     ptr_anchor: Option<PointerAnchor<'ctx>>,
-
-    begin_loop_block: Option<BasicBlock<'ctx>>,
-    end_loop_block: Option<BasicBlock<'ctx>>,
-
     function: Option<FunctionValue<'ctx>>,
-
-    scope: usize,
 
     diagnostician: Diagnostician,
 }
@@ -78,24 +63,11 @@ impl<'a, 'ctx> LLVMCodeGenContext<'a, 'ctx> {
             builder,
             target_data,
 
-            global_statics: HashMap::with_capacity(1000),
-            local_statics: Vec::with_capacity(1000),
-
-            global_constants: HashMap::with_capacity(1000),
-            local_constants: Vec::with_capacity(1000),
-
-            functions: HashMap::with_capacity(1000),
-            instructions: Vec::with_capacity(1000),
-            parameters: HashMap::with_capacity(10),
+            table: SymbolsTable::new(),
+            loop_ctx: LoopContext::new(),
 
             ptr_anchor: None,
-
-            begin_loop_block: None,
-            end_loop_block: None,
-
             function: None,
-
-            scope: 0,
 
             diagnostician,
         }
@@ -115,7 +87,7 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
         let local: SymbolAllocated =
             SymbolAllocated::new(SymbolToAllocate::Local, kind, ptr.into());
 
-        if let Some(last_block) = self.instructions.last_mut() {
+        if let Some(last_block) = self.table.get_mut_locals().last_mut() {
             last_block.insert(name, local);
         } else {
             logging::log(
@@ -129,7 +101,7 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
         let lli: SymbolAllocated =
             SymbolAllocated::new(SymbolToAllocate::LowLevelInstruction, kind, value);
 
-        if let Some(last_block) = self.instructions.last_mut() {
+        if let Some(last_block) = self.table.get_mut_locals().last_mut() {
             last_block.insert(name, lli);
         } else {
             logging::log(
@@ -155,7 +127,7 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
 
         let constant: SymbolAllocated = SymbolAllocated::new_constant(ptr.into(), kind, value);
 
-        if let Some(last_block) = self.local_constants.last_mut() {
+        if let Some(last_block) = self.table.get_mut_local_constants().last_mut() {
             last_block.insert(name, constant);
         } else {
             logging::log(
@@ -183,7 +155,7 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
 
         let constant: SymbolAllocated = SymbolAllocated::new_constant(ptr.into(), kind, value);
 
-        self.global_constants.insert(name, constant);
+        self.table.get_mut_global_constants().insert(name, constant);
     }
 
     pub fn new_local_static(
@@ -204,7 +176,7 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
 
         let constant: SymbolAllocated = SymbolAllocated::new_static(ptr.into(), kind, value);
 
-        if let Some(last_block) = self.local_statics.last_mut() {
+        if let Some(last_block) = self.table.get_mut_local_statics().last_mut() {
             last_block.insert(name, constant);
         } else {
             logging::log(
@@ -234,7 +206,7 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
 
         let constant: SymbolAllocated = SymbolAllocated::new_static(ptr.into(), kind, value);
 
-        self.global_statics.insert(name, constant);
+        self.table.get_mut_global_statics().insert(name, constant);
     }
 
     pub fn new_parameter(
@@ -249,51 +221,23 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
         let symbol_allocated: SymbolAllocated =
             SymbolAllocated::new(SymbolToAllocate::Parameter, kind, value);
 
-        self.parameters.insert(name, symbol_allocated);
+        self.table
+            .get_mut_parameters()
+            .insert(name, symbol_allocated);
     }
 
     pub fn new_function(&mut self, name: &'ctx str, function: LLVMFunction<'ctx>) {
-        self.functions.insert(name, function);
+        self.table.get_mut_functions().insert(name, function);
     }
 }
 
 impl LLVMCodeGenContext<'_, '_> {
     pub fn begin_scope(&mut self) {
-        self.local_statics.push(HashMap::with_capacity(256));
-        self.local_constants.push(HashMap::with_capacity(256));
-        self.instructions.push(HashMap::with_capacity(256));
-
-        self.scope += 1;
+        self.table.begin_scope();
     }
 
     pub fn end_scope(&mut self) {
-        self.local_statics.pop();
-        self.local_constants.pop();
-        self.instructions.pop();
-
-        self.scope -= 1;
-
-        if self.scope == 0 {
-            self.parameters.clear();
-        }
-    }
-}
-
-impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
-    pub fn set_begin_loop_block(&mut self, block: BasicBlock<'ctx>) {
-        self.begin_loop_block = Some(block);
-    }
-
-    pub fn get_begin_loop_block(&self) -> Option<BasicBlock<'ctx>> {
-        self.begin_loop_block
-    }
-
-    pub fn set_end_loop_block(&mut self, block: BasicBlock<'ctx>) {
-        self.end_loop_block = Some(block);
-    }
-
-    pub fn get_end_loop_block(&self) -> Option<BasicBlock<'ctx>> {
-        self.end_loop_block
+        self.table.end_scope();
     }
 }
 
@@ -302,11 +246,14 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
         self.function = Some(new_function);
     }
 
-    pub fn get_current_fn(&mut self) -> Option<FunctionValue<'ctx>> {
-        self.function
+    pub fn get_current_fn(&mut self) -> FunctionValue<'ctx> {
+        self.function.unwrap_or_else(|| {
+            self::codegen_abort("The function currently being compiled could not be obtained.");
+            unreachable!()
+        })
     }
 
-    pub fn clear_current_fn(&mut self) {
+    pub fn unset_current_function(&mut self) {
         self.function = None;
     }
 }
@@ -325,59 +272,13 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
     }
 }
 
+impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
+    pub fn get_table(&self) -> &SymbolsTable<'ctx> {
+        &self.table
+    }
+}
+
 impl<'a, 'ctx> LLVMCodeGenContext<'a, 'ctx> {
-    pub fn get_symbol(&self, name: &str) -> SymbolAllocated<'ctx> {
-        if let Some(fn_parameter) = self.parameters.get(name) {
-            return *fn_parameter;
-        }
-
-        if let Some(global_constant) = self.global_constants.get(name) {
-            return *global_constant;
-        }
-
-        for position in (0..self.scope).rev() {
-            if let Some(local_constant) = self.local_constants[position].get(name) {
-                return *local_constant;
-            }
-        }
-
-        if let Some(global_constant) = self.global_statics.get(name) {
-            return *global_constant;
-        }
-
-        for position in (0..self.scope).rev() {
-            if let Some(local_constant) = self.local_statics[position].get(name) {
-                return *local_constant;
-            }
-        }
-
-        for position in (0..self.scope).rev() {
-            if let Some(instruction) = self.instructions[position].get(name) {
-                return *instruction;
-            }
-        }
-
-        self::codegen_abort(format!(
-            "Unable to get '{}' allocated object at frame pointer number #{}.",
-            name, self.scope
-        ));
-
-        unreachable!()
-    }
-
-    pub fn get_function(&self, name: &str) -> LLVMFunction<'ctx> {
-        if let Some(function) = self.functions.get(name) {
-            return *function;
-        }
-
-        self::codegen_abort(format!(
-            "Unable to get '{}' function in global frame.",
-            name
-        ));
-
-        unreachable!()
-    }
-
     #[inline]
     pub fn get_llvm_module(&self) -> &'a Module<'ctx> {
         self.module
@@ -396,6 +297,16 @@ impl<'a, 'ctx> LLVMCodeGenContext<'a, 'ctx> {
     #[inline]
     pub fn get_target_data(&self) -> &TargetData {
         &self.target_data
+    }
+
+    #[inline]
+    pub fn get_loop_ctx(&self) -> &LoopContext {
+        &self.loop_ctx
+    }
+
+    #[inline]
+    pub fn get_mut_loop_ctx(&mut self) -> &mut LoopContext<'ctx> {
+        &mut self.loop_ctx
     }
 
     #[inline]

@@ -143,7 +143,7 @@ pub fn compile<'ctx>(
 
         // Low-Level Operations
         Ast::Load { .. } | Ast::Address { .. } | Ast::Alloc { .. } => {
-            statements::lli::compile(context, expr, cast)
+            statements::lli::compile_advanced(context, expr, cast)
         }
 
         // Fallback, Unknown expressions or statements
@@ -209,7 +209,7 @@ fn compile_function_call<'ctx>(
     kind: &Type,
     cast: Option<&Type>,
 ) -> BasicValueEnum<'ctx> {
-    let function: (FunctionValue, &[Type], u32) = context.get_function(name);
+    let function: (FunctionValue, &[Type], u32) = context.get_table().get_function(name);
 
     let (llvm_function, function_arg_types, function_convention) =
         (function.0, function.1, function.2);
@@ -404,7 +404,7 @@ fn compile_reference<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     name: &str,
 ) -> BasicValueEnum<'ctx> {
-    context.get_symbol(name).load(context)
+    context.get_table().get_symbol(name).load(context)
 }
 
 fn compile_inline_asm<'ctx>(
@@ -477,7 +477,7 @@ fn compile_index<'ctx>(
 
     match source {
         (Some((name, _)), _) => {
-            let symbol: SymbolAllocated = context.get_symbol(name);
+            let symbol: SymbolAllocated = context.get_table().get_symbol(name);
             let symbol_type: &Type = symbol.get_type();
 
             let ordered_indexes: Vec<IntValue> = indexes::compile(context, indexes, symbol_type);

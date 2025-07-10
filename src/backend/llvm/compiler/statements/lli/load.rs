@@ -19,7 +19,7 @@ pub fn compile<'ctx>(
 ) -> BasicValueEnum<'ctx> {
     let value: BasicValueEnum = match source {
         (Some((name, _)), _) => {
-            let ptr: PointerValue = context.get_symbol(name).get_ptr();
+            let ptr: PointerValue = context.get_table().get_symbol(name).get_ptr();
 
             memory::load_anon(context, ptr, kind)
         }

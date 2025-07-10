@@ -49,7 +49,7 @@ fn compile_increment_decrement_ref<'ctx>(
     let llvm_builder: &Builder = context.get_llvm_builder();
     let llvm_context: &Context = context.get_llvm_context();
 
-    let symbol: SymbolAllocated = context.get_symbol(name);
+    let symbol: SymbolAllocated = context.get_table().get_symbol(name);
 
     match kind {
         kind if kind.is_integer_type() => {

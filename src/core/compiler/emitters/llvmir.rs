@@ -1,6 +1,6 @@
 use std::path::{Path, PathBuf};
 
-use inkwell::module::Module;
+use inkwell::{module::Module, support::LLVMString};
 
 use crate::core::utils::rand;
 
@@ -9,7 +9,7 @@ pub fn emit_llvm_ir(
     build_dir: &Path,
     file_name: &str,
     unoptimized: bool,
-) -> bool {
+) -> Result<(), LLVMString> {
     let llvmir_base_path: PathBuf = build_dir.join("emit").join("llvm-ir");
 
     if !llvmir_base_path.exists() {
@@ -27,5 +27,7 @@ pub fn emit_llvm_ir(
 
     let llvmir_file_path: PathBuf = llvmir_base_path.join(llvmir_file_name);
 
-    llvm_module.print_to_file(&llvmir_file_path).is_err()
+    llvm_module.print_to_file(&llvmir_file_path)?;
+
+    Ok(())
 }

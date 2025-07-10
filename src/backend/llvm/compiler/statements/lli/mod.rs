@@ -13,7 +13,7 @@ pub mod alloc;
 pub mod load;
 pub mod write;
 
-pub fn new<'ctx>(
+pub fn compile<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     name: &'ctx str,
     kind: &'ctx Type,
@@ -24,7 +24,7 @@ pub fn new<'ctx>(
     context.new_lli(name, kind, value);
 }
 
-pub fn compile<'ctx>(
+pub fn compile_advanced<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     expr: &'ctx Ast,
     cast_type: Option<&Type>,

@@ -1,6 +1,11 @@
 use std::fmt::Display;
 
-use inkwell::{basic_block::BasicBlock, builder::Builder, context::Context, values::IntValue};
+use inkwell::{
+    basic_block::BasicBlock,
+    builder::Builder,
+    context::Context,
+    values::{FunctionValue, IntValue},
+};
 
 use crate::{
     backend::llvm::compiler::{codegen::LLVMCodegen, valuegen},
@@ -13,149 +18,143 @@ pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, stmt: &'ctx Ast<'ctx>)
     let llvm_context: &Context = codegen.get_mut_context().get_llvm_context();
     let llvm_builder: &Builder = codegen.get_mut_context().get_llvm_builder();
 
+    let llvm_function: FunctionValue = codegen.get_mut_context().get_current_fn();
+
     let abort = |_| {
-        self::codegen_abort("Failed to compile conditional statement.");
+        self::codegen_abort("Cannot compile if conditional statement.");
         unreachable!()
     };
 
-    match codegen.get_mut_context().get_current_fn() {
-        Some(function) => {
-            if let Ast::If {
-                condition,
-                block,
-                elseif,
-                anyway,
-                ..
-            } = stmt
-            {
-                let comparison: IntValue =
-                    valuegen::compile(codegen.get_mut_context(), condition, Some(&Type::Bool))
-                        .into_int_value();
+    if let Ast::If {
+        condition,
+        block,
+        elseif,
+        anyway,
+        ..
+    } = stmt
+    {
+        let then: BasicBlock = llvm_context.append_basic_block(llvm_function, "if");
+        let merge: BasicBlock = llvm_context.append_basic_block(llvm_function, "merge");
 
-                let then_block: BasicBlock = llvm_context.append_basic_block(function, "if");
+        let next: BasicBlock = if !elseif.is_empty() {
+            llvm_context.append_basic_block(llvm_function, "elseif_cond")
+        } else if anyway.is_some() {
+            llvm_context.append_basic_block(llvm_function, "else")
+        } else {
+            merge
+        };
 
-                let else_if_cond: BasicBlock = llvm_context.append_basic_block(function, "elseif");
+        let cond_value: IntValue =
+            valuegen::compile(codegen.get_mut_context(), condition, Some(&Type::Bool))
+                .into_int_value();
 
-                let else_if_body: BasicBlock =
-                    llvm_context.append_basic_block(function, "elseif_body");
+        llvm_builder
+            .build_conditional_branch(cond_value, then, next)
+            .unwrap_or_else(abort);
 
-                let else_block: BasicBlock = llvm_context.append_basic_block(function, "else");
+        llvm_builder.position_at_end(then);
 
-                let merge_block: BasicBlock = llvm_context.append_basic_block(function, "merge");
+        codegen.codegen_block(block);
 
-                if !elseif.is_empty() {
-                    llvm_builder
-                        .build_conditional_branch(comparison, then_block, else_if_cond)
-                        .unwrap_or_else(abort);
-                } else if anyway.is_some() && elseif.is_empty() {
-                    llvm_builder
-                        .build_conditional_branch(comparison, then_block, else_block)
-                        .unwrap_or_else(abort);
-                } else {
-                    llvm_builder
-                        .build_conditional_branch(comparison, then_block, merge_block)
-                        .unwrap_or_else(abort);
-                }
-
-                llvm_builder.position_at_end(then_block);
-
-                codegen.codegen_code_block(block);
-
-                if !block.has_return() && !block.has_break() && !block.has_continue() {
-                    llvm_builder
-                        .build_unconditional_branch(merge_block)
-                        .unwrap_or_else(abort);
-                }
-
-                if !elseif.is_empty() {
-                    llvm_builder.position_at_end(else_if_cond);
-                } else {
-                    llvm_builder.position_at_end(merge_block);
-                }
-
-                if !elseif.is_empty() {
-                    let elseifs_len: usize = elseif.len();
-                    let mut current_block: BasicBlock = else_if_body;
-
-                    elseif.iter().enumerate().for_each(|(idx, ast)| {
-                        if let Ast::Elif {
-                            condition, block, ..
-                        } = ast
-                        {
-                            let compiled_else_if_cond: IntValue = valuegen::compile(
-                                codegen.get_mut_context(),
-                                condition,
-                                Some(&Type::Bool),
-                            )
-                            .into_int_value();
-
-                            let elif_body: BasicBlock = current_block;
-
-                            let next_block: BasicBlock = if idx + 1 < elseifs_len {
-                                llvm_context.append_basic_block(function, "elseif_body")
-                            } else if anyway.is_some() {
-                                else_block
-                            } else {
-                                merge_block
-                            };
-
-                            llvm_builder
-                                .build_conditional_branch(
-                                    compiled_else_if_cond,
-                                    elif_body,
-                                    next_block,
-                                )
-                                .unwrap();
-
-                            llvm_builder.position_at_end(elif_body);
-
-                            codegen.codegen_code_block(block);
-
-                            if !block.has_return() && !block.has_break() && !block.has_continue() {
-                                let _ = llvm_builder.build_unconditional_branch(merge_block);
-                            }
-
-                            if idx + 1 < elseifs_len {
-                                llvm_builder.position_at_end(next_block);
-
-                                current_block =
-                                    llvm_context.append_basic_block(function, "elseif_body");
-                            }
-                        }
-                    });
-                }
-
-                if let Some(otherwise) = anyway {
-                    if let Ast::Else { block, .. } = &**otherwise {
-                        llvm_builder.position_at_end(else_block);
-
-                        codegen.codegen_code_block(block);
-
-                        if !block.has_return() && !block.has_break() && !block.has_continue() {
-                            let _ = llvm_builder.build_unconditional_branch(merge_block);
-                        }
-                    }
-                }
-
-                if !elseif.is_empty() || anyway.is_some() {
-                    llvm_builder.position_at_end(merge_block);
-                }
-
-                if elseif.is_empty() {
-                    let _ = else_if_cond.remove_from_function();
-                    let _ = else_if_body.remove_from_function();
-                }
-
-                if anyway.is_none() {
-                    let _ = else_block.remove_from_function();
-                }
-            } else {
-                self::codegen_abort("Expected conditional to compile.");
+        if let Some(last_block) = llvm_builder.get_insert_block() {
+            if last_block.get_terminator().is_none() {
+                llvm_builder
+                    .build_unconditional_branch(merge)
+                    .unwrap_or_else(abort);
             }
         }
 
-        None => {
-            self::codegen_abort("No function is currently being compiled.");
+        if !elseif.is_empty() {
+            self::compile_elseif(codegen, elseif, next, merge);
+        }
+
+        if let Some(else_ast) = anyway {
+            self::compile_else(codegen, else_ast, next, merge);
+        }
+
+        llvm_builder.position_at_end(merge);
+    } else {
+        self::codegen_abort("Expected conditional to compile.");
+    }
+}
+
+fn compile_elseif<'ctx>(
+    codegen: &mut LLVMCodegen<'_, 'ctx>,
+    nested_elseif: &'ctx [Ast<'ctx>],
+    first_block: BasicBlock<'ctx>,
+    merge: BasicBlock<'ctx>,
+) {
+    let llvm_context: &Context = codegen.get_mut_context().get_llvm_context();
+    let llvm_builder: &Builder = codegen.get_mut_context().get_llvm_builder();
+    let llvm_function: FunctionValue = codegen.get_mut_context().get_current_fn();
+
+    let mut current: BasicBlock = first_block;
+
+    let abort = |_| {
+        self::codegen_abort("Cannot compile elif conditional statement.");
+        unreachable!()
+    };
+
+    for (idx, elseif) in nested_elseif.iter().enumerate() {
+        if let Ast::Elif {
+            condition, block, ..
+        } = elseif
+        {
+            let is_last: bool = idx == nested_elseif.len().saturating_sub(1);
+
+            llvm_builder.position_at_end(current);
+
+            let then: BasicBlock = llvm_context.append_basic_block(llvm_function, "elseif_body");
+            let next: BasicBlock = if is_last {
+                merge
+            } else {
+                llvm_context.append_basic_block(llvm_function, "elseif_cond")
+            };
+
+            let cond_value: IntValue =
+                valuegen::compile(codegen.get_mut_context(), condition, Some(&Type::Bool))
+                    .into_int_value();
+
+            llvm_builder
+                .build_conditional_branch(cond_value, then, next)
+                .unwrap_or_else(abort);
+
+            llvm_builder.position_at_end(then);
+
+            codegen.codegen_block(block);
+
+            if let Some(last_block) = llvm_builder.get_insert_block() {
+                if last_block.get_terminator().is_none() {
+                    llvm_builder
+                        .build_unconditional_branch(merge)
+                        .unwrap_or_else(abort);
+                }
+            }
+
+            current = next;
+        }
+    }
+
+    llvm_builder.position_at_end(current);
+}
+
+pub fn compile_else<'ctx>(
+    codegen: &mut LLVMCodegen<'_, 'ctx>,
+    anyway: &'ctx Ast<'ctx>,
+    next: BasicBlock<'ctx>,
+    merge: BasicBlock<'ctx>,
+) {
+    let llvm_builder: &Builder = codegen.get_mut_context().get_llvm_builder();
+
+    if let Ast::Else { block, .. } = anyway {
+        llvm_builder.position_at_end(next);
+
+        codegen.codegen_block(block);
+
+        if let Some(last_block) = llvm_builder.get_insert_block() {
+            if last_block.get_terminator().is_none() {
+                let _ = llvm_builder.build_unconditional_branch(merge);
+            }
         }
     }
 }

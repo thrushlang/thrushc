@@ -24,7 +24,7 @@ pub fn compile<'ctx>(context: &mut LLVMCodeGenContext<'_, 'ctx>, local: Local<'c
 
     context.new_local(name, ascii_name, local_type, attributes);
 
-    let symbol: SymbolAllocated = context.get_symbol(name);
+    let symbol: SymbolAllocated = context.get_table().get_symbol(name);
 
     context.set_pointer_anchor(PointerAnchor::new(symbol.get_ptr(), false));
 

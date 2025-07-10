@@ -2,6 +2,7 @@ use std::path::{Path, PathBuf};
 
 use inkwell::{
     module::Module,
+    support::LLVMString,
     targets::{FileType, TargetMachine},
 };
 
@@ -13,7 +14,7 @@ pub fn emit_llvm_assembler(
     build_dir: &Path,
     file_name: &str,
     unoptimized: bool,
-) -> bool {
+) -> Result<(), LLVMString> {
     let assembler_base_path: PathBuf = build_dir.join("emit").join("assembler");
 
     if !assembler_base_path.exists() {
@@ -30,7 +31,7 @@ pub fn emit_llvm_assembler(
     );
     let assembler_file_path: PathBuf = assembler_base_path.join(assembler_file_name);
 
-    target_machine
-        .write_to_file(llvm_module, FileType::Assembly, &assembler_file_path)
-        .is_err()
+    target_machine.write_to_file(llvm_module, FileType::Assembly, &assembler_file_path)?;
+
+    Ok(())
 }

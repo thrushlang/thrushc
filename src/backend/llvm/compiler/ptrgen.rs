@@ -79,7 +79,7 @@ pub fn compile<'ctx>(
 
         // Low-Level Operations
         Ast::Load { .. } | Ast::Address { .. } | Ast::Alloc { .. } => {
-            statements::lli::compile(context, expr, cast)
+            statements::lli::compile_advanced(context, expr, cast)
         }
 
         // Fallback, Unknown expressions or statements
@@ -101,12 +101,12 @@ fn compile_function_call<'ctx>(
     kind: &'ctx Type,
     cast: Option<&Type>,
 ) -> BasicValueEnum<'ctx> {
-    let function: LLVMFunction = context.get_function(name);
+    let llvm_builder: &Builder = context.get_llvm_builder();
+
+    let function: LLVMFunction = context.get_table().get_function(name);
 
     let (llvm_function, function_arg_types, function_convention) =
         (function.0, function.1, function.2);
-
-    let llvm_builder: &Builder = context.get_llvm_builder();
 
     let compiled_args: Vec<BasicMetadataValueEnum> = args
         .iter()
@@ -242,7 +242,7 @@ fn compile_property<'ctx>(
 
     match source {
         (Some((name, _)), _) => {
-            let symbol: SymbolAllocated = context.get_symbol(name);
+            let symbol: SymbolAllocated = context.get_table().get_symbol(name);
 
             if !symbol.is_pointer() {
                 self::codegen_abort(format!(
@@ -310,7 +310,7 @@ fn compile_reference<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     name: &str,
 ) -> BasicValueEnum<'ctx> {
-    let symbol: SymbolAllocated = context.get_symbol(name);
+    let symbol: SymbolAllocated = context.get_table().get_symbol(name);
     symbol.get_ptr().into()
 }
 
@@ -384,7 +384,7 @@ fn compile_index<'ctx>(
 
     match source {
         (Some((name, _)), _) => {
-            let symbol: SymbolAllocated = context.get_symbol(name);
+            let symbol: SymbolAllocated = context.get_table().get_symbol(name);
             let symbol_type: &Type = symbol.get_type();
 
             let ordered_indexes: Vec<IntValue> = indexes::compile(context, indexes, symbol_type);

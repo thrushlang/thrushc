@@ -35,7 +35,7 @@ pub fn compile<'ctx>(
 
     match source {
         (Some((name, _)), _) => {
-            let symbol: SymbolAllocated = context.get_symbol(name);
+            let symbol: SymbolAllocated = context.get_table().get_symbol(name);
 
             symbol.gep(llvm_context, llvm_builder, &indexes).into()
         }

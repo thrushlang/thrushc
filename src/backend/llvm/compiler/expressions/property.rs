@@ -26,7 +26,8 @@ pub fn compile_property_value<'ctx>(
 ) -> BasicValueEnum<'ctx> {
     match source {
         (Some((name, _)), _) => {
-            let symbol = context.get_symbol(name);
+            let symbol: SymbolAllocated = context.get_table().get_symbol(name);
+
             if symbol.is_pointer() {
                 self::compile_pointer_property(context, symbol, indexes)
             } else {

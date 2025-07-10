@@ -2,6 +2,7 @@ use std::path::{Path, PathBuf};
 
 use inkwell::{
     module::Module,
+    support::LLVMString,
     targets::{FileType, TargetMachine},
 };
 
@@ -13,7 +14,7 @@ pub fn emit_llvm_object(
     build_dir: &Path,
     file_name: &str,
     unoptimized: bool,
-) -> bool {
+) -> Result<(), LLVMString> {
     let objects_base_path: PathBuf = build_dir.join("emit").join("obj");
 
     if !objects_base_path.exists() {
@@ -31,7 +32,7 @@ pub fn emit_llvm_object(
 
     let object_file_path: PathBuf = objects_base_path.join(object_file_name);
 
-    target_machine
-        .write_to_file(llvm_module, FileType::Object, &object_file_path)
-        .is_err()
+    target_machine.write_to_file(llvm_module, FileType::Object, &object_file_path)?;
+
+    Ok(())
 }

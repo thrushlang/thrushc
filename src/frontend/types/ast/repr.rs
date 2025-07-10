@@ -1,8 +1,7 @@
 use crate::frontend::types::{
     ast::Ast,
     parser::repr::{
-        AssemblerFunctionRepresentation, ConstantRepresentation, FunctionRepresentation,
-        StaticRepresentation,
+        AssemblerFunctionRepresentation, FunctionRepresentation, GlobalConstant, GlobalStatic,
     },
 };
 
@@ -35,7 +34,7 @@ impl Ast<'_> {
         unreachable!()
     }
 
-    pub fn as_static_representation(&self) -> StaticRepresentation {
+    pub fn as_global_static(&self) -> GlobalStatic {
         if let Ast::Static {
             name,
             ascii_name,
@@ -52,7 +51,7 @@ impl Ast<'_> {
         unreachable!()
     }
 
-    pub fn as_constant_representation(&self) -> ConstantRepresentation {
+    pub fn as_global_constant(&self) -> GlobalConstant {
         if let Ast::Const {
             name,
             ascii_name,
