@@ -152,44 +152,6 @@ impl TokenType {
     }
 
     #[must_use]
-    pub fn is_sync_declaration(&self) -> bool {
-        matches!(
-            self,
-            TokenType::Import
-                | TokenType::Type
-                | TokenType::Struct
-                | TokenType::Fn
-                | TokenType::Enum
-                | TokenType::Const
-        )
-    }
-
-    #[must_use]
-    pub fn is_sync_statement(&self) -> bool {
-        matches!(
-            self,
-            TokenType::LBrace
-                | TokenType::Return
-                | TokenType::Local
-                | TokenType::For
-                | TokenType::New
-                | TokenType::If
-                | TokenType::While
-                | TokenType::Continue
-                | TokenType::Break
-                | TokenType::Loop
-        )
-    }
-
-    #[must_use]
-    pub fn is_sync_expression(&self) -> bool {
-        matches!(
-            self,
-            TokenType::SemiColon | TokenType::LBrace | TokenType::RBrace
-        )
-    }
-
-    #[must_use]
     pub fn is_logical_gate(&self) -> bool {
         matches!(self, TokenType::And | TokenType::Or)
     }

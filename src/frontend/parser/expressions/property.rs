@@ -23,7 +23,7 @@ pub fn build_property<'parser>(
         }
         (None, Some(ref expr)) => (expr.get_value_type()?, expr),
         _ => {
-            return Err(ThrushCompilerIssue::Bug(
+            return Err(ThrushCompilerIssue::FrontEndBug(
                 String::from("Index not caught"),
                 String::from("Expected a expression or reference."),
                 span,

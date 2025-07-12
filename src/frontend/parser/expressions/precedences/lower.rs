@@ -13,13 +13,7 @@ use crate::{
         },
         types::{
             ast::Ast,
-            parser::{
-                stmts::{
-                    sites::AllocationSite,
-                    traits::{FoundSymbolExtension, TokenExtensions},
-                },
-                symbols::types::FoundSymbolId,
-            },
+            parser::stmts::{sites::AllocationSite, traits::TokenExtensions},
         },
         typesystem::types::Type,
     },
@@ -304,8 +298,6 @@ pub fn lower_precedence<'parser>(
             let name: &str = identifier_tk.get_lexeme();
             let span: Span = identifier_tk.get_span();
 
-            let symbol: FoundSymbolId = parser_context.get_symbols().get_symbols_id(name, span)?;
-
             if parser_context.match_token(TokenType::LBracket)? {
                 let reference: Ast = reference::build_reference(parser_context, name, span)?;
 
@@ -331,7 +323,7 @@ pub fn lower_precedence<'parser>(
 
                 let property: Ast = property::build_property(
                     parser_context,
-                    (Some((name, reference.clone().into())), None),
+                    (Some((name, reference.into())), None),
                     span,
                 )?;
 
@@ -340,25 +332,6 @@ pub fn lower_precedence<'parser>(
                 }
 
                 return Ok(property);
-            }
-
-            if symbol.is_enum() {
-                return Err(ThrushCompilerIssue::Error(
-                    "Syntax error".into(),
-                    "Enums cannot be used as types; use properties instead with their types."
-                        .into(),
-                    None,
-                    span,
-                ));
-            }
-
-            if symbol.is_function() {
-                return Err(ThrushCompilerIssue::Error(
-                    "Syntax error".into(),
-                    "Functions cannot be used as types; call it instead.".into(),
-                    None,
-                    span,
-                ));
             }
 
             reference::build_reference(parser_context, name, span)?

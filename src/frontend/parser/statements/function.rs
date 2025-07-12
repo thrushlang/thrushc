@@ -3,7 +3,7 @@ use crate::{
     frontend::{
         lexer::{span::Span, token::Token, tokentype::TokenType},
         parser::{
-            ParserContext, attributes, checks, declarations::entrypoint, stmts::block, typegen,
+            ParserContext, attributes, checks, declarations::entrypoint, statements::block, typegen,
         },
         types::{
             ast::{Ast, metadata::fnparam::FunctionParameterMetadata},

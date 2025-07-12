@@ -28,7 +28,7 @@ pub fn analyze<'linter>(linter: &mut Linter<'linter>, node: &'linter Ast) {
         _ => {
             let span: Span = node.get_span();
 
-            linter.add_bug(ThrushCompilerIssue::Bug(
+            linter.add_bug(ThrushCompilerIssue::FrontEndBug(
                 "Expression not caught".into(),
                 "Expression could not be caught for processing.".into(),
                 span,

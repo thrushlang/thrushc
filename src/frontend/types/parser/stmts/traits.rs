@@ -36,11 +36,10 @@ pub trait FoundSymbolExtension {
     fn is_static(&self) -> bool;
     fn is_constant(&self) -> bool;
     fn is_structure(&self) -> bool;
-    fn is_enum(&self) -> bool;
-    fn is_function(&self) -> bool;
     fn is_function_asm(&self) -> bool;
     fn is_parameter(&self) -> bool;
     fn is_lli(&self) -> bool;
+    fn is_local(&self) -> bool;
 }
 
 pub trait StructExtensions<'parser> {

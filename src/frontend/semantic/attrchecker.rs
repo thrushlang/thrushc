@@ -304,7 +304,7 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
     fn peek(&self) -> &'attr_checker Ast<'attr_checker> {
         self.ast.get(self.currrent).unwrap_or_else(|| {
             logging::log(
-                LoggingType::Panic,
+                LoggingType::FrontEndPanic,
                 "Attemping to get a statement in invalid position at Attribute Checker.",
             );
 

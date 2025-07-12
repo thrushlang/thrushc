@@ -36,8 +36,8 @@ impl ParserControlContext {
     }
 
     #[inline]
-    pub fn set_entrypoint(&mut self, value: bool) {
-        self.entry_point = value;
+    pub fn set_has_entrypoint(&mut self) {
+        self.entry_point = true;
     }
 
     #[inline]

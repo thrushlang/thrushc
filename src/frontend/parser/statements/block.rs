@@ -2,7 +2,7 @@ use crate::{
     core::errors::standard::ThrushCompilerIssue,
     frontend::{
         lexer::{span::Span, token::Token, tokentype::TokenType},
-        parser::{ParserContext, checks, stmt},
+        parser::{ParserContext, checks, statement},
         types::{ast::Ast, parser::stmts::traits::TokenExtensions},
     },
 };
@@ -23,10 +23,10 @@ pub fn build_block<'parser>(
     *parser_context.get_mut_scope() += 1;
     parser_context.get_mut_symbols().begin_scope();
 
-    let mut stmts: Vec<Ast> = Vec::with_capacity(100);
+    let mut stmts: Vec<Ast> = Vec::with_capacity(256);
 
     while !parser_context.match_token(TokenType::RBrace)? {
-        let stmt: Ast = stmt::statement(parser_context)?;
+        let stmt: Ast = statement::parse(parser_context)?;
         stmts.push(stmt)
     }
 

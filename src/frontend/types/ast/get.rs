@@ -325,7 +325,7 @@ impl Ast<'_> {
             return Ok(*value);
         }
 
-        Err(ThrushCompilerIssue::Bug(
+        Err(ThrushCompilerIssue::FrontEndBug(
             String::from("Integer not caught"),
             String::from("Expected a integer value"),
             self.get_span(),

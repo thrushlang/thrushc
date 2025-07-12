@@ -46,7 +46,7 @@ impl TokenExtensions for Token {
 
                 idx += 1;
             } else {
-                return Err(ThrushCompilerIssue::Bug(
+                return Err(ThrushCompilerIssue::FrontEndBug(
                     "Byte not caught".into(),
                     "Unable to get byte for determinate next byte to parse at scape sequence parsing.".into(),
                     span,

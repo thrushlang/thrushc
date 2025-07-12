@@ -7,14 +7,15 @@ pub mod declarations;
 pub mod expr;
 pub mod expressions;
 pub mod parse;
-pub mod stmt;
-pub mod stmts;
+pub mod statement;
+pub mod statements;
 pub mod symbols;
+pub mod sync;
 pub mod typegen;
 
 use ahash::AHashMap as HashMap;
 
-use contexts::{sync::ParserSyncPosition, typectx::ParserTypeContext};
+use contexts::typectx::ParserTypeContext;
 use symbols::SymbolsTable;
 
 use crate::core::compiler::options::CompilerFile;
@@ -75,7 +76,9 @@ impl<'parser> Parser<'parser> {
                         parser_context.add_error(error);
                     }
 
-                    parser_context.sync();
+                    if let Err(error) = parser_context.sync() {
+                        parser_context.add_error(error);
+                    }
                 }
             }
         }
@@ -177,61 +180,6 @@ impl<'parser> ParserContext<'parser> {
         ))
     }
 
-    pub fn sync(&mut self) {
-        match self.control_ctx.get_sync_position() {
-            ParserSyncPosition::Declaration => {
-                loop {
-                    if self.is_eof() {
-                        break;
-                    }
-
-                    if self.peek().kind.is_sync_declaration() {
-                        break;
-                    }
-
-                    let _ = self.only_advance();
-                }
-
-                self.scope = 0;
-                self.symbols.end_parameters();
-            }
-
-            ParserSyncPosition::Statement => loop {
-                if self.is_eof() {
-                    break;
-                }
-
-                if self.peek().kind.is_sync_statement() || self.peek().kind.is_sync_declaration() {
-                    break;
-                }
-
-                let _ = self.only_advance();
-            },
-
-            ParserSyncPosition::Expression => loop {
-                if self.is_eof() {
-                    break;
-                }
-
-                if self.peek().kind.is_sync_statement() || self.peek().kind.is_sync_declaration() {
-                    break;
-                }
-
-                if self.peek().kind.is_sync_expression() {
-                    let _ = self.only_advance();
-                    break;
-                }
-
-                let _ = self.only_advance();
-            },
-
-            _ => {}
-        }
-
-        self.control_ctx
-            .set_sync_position(ParserSyncPosition::NoRelevant);
-    }
-
     pub fn is_unreacheable_code(&self) -> bool {
         self.control_ctx.get_unreacheable_code_scope() == self.scope && !self.is_main_scope()
     }
@@ -259,20 +207,10 @@ impl<'parser> ParserContext<'parser> {
     }
 
     #[must_use]
-    pub fn is_main_scope(&self) -> bool {
-        self.scope == 0
-    }
-
-    #[must_use]
-    pub fn is_eof(&self) -> bool {
-        self.peek().kind == TokenType::Eof
-    }
-
-    #[must_use]
     pub fn peek(&self) -> &'parser Token {
         self.tokens.get(self.current).unwrap_or_else(|| {
             logging::log(
-                LoggingType::Panic,
+                LoggingType::FrontEndPanic,
                 "Attempting to get token in invalid current position.",
             );
 
@@ -284,7 +222,7 @@ impl<'parser> ParserContext<'parser> {
     pub fn previous(&self) -> &'parser Token {
         self.tokens.get(self.current - 1).unwrap_or_else(|| {
             logging::log(
-                LoggingType::Panic,
+                LoggingType::FrontEndPanic,
                 &format!(
                     "Attempting to get token in invalid previous position in line '{}'.",
                     self.peek().span.get_line()
@@ -295,7 +233,19 @@ impl<'parser> ParserContext<'parser> {
     }
 
     pub fn declare_forward(&mut self) {
-        stmt::parse_forward(self);
+        declaration::parse_forward(self);
+    }
+}
+
+impl ParserContext<'_> {
+    #[must_use]
+    pub fn is_main_scope(&self) -> bool {
+        self.scope == 0
+    }
+
+    #[must_use]
+    pub fn is_eof(&self) -> bool {
+        self.peek().kind == TokenType::Eof
     }
 }
 

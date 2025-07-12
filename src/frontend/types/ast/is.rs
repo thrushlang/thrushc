@@ -89,9 +89,9 @@ impl Ast<'_> {
 }
 
 impl Ast<'_> {
-    pub fn has_block(&self) -> bool {
+    pub fn is_empty_block(&self) -> bool {
         if let Ast::Block { stmts, .. } = self {
-            return !stmts.is_empty();
+            return stmts.is_empty();
         }
 
         false

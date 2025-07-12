@@ -145,14 +145,6 @@ impl FoundSymbolExtension for FoundSymbolId<'_> {
         self.0.is_some()
     }
 
-    fn is_function(&self) -> bool {
-        self.1.is_some()
-    }
-
-    fn is_enum(&self) -> bool {
-        self.2.is_some()
-    }
-
     fn is_static(&self) -> bool {
         self.3.is_some()
     }
@@ -176,6 +168,10 @@ impl FoundSymbolExtension for FoundSymbolId<'_> {
     fn is_lli(&self) -> bool {
         self.8.is_some()
     }
+
+    fn is_local(&self) -> bool {
+        self.9.is_some()
+    }
 }
 
 impl<'parser> FoundSymbolEither<'parser> for FoundSymbolId<'parser> {
@@ -184,7 +180,7 @@ impl<'parser> FoundSymbolEither<'parser> for FoundSymbolId<'parser> {
             return Ok(name);
         }
 
-        Err(ThrushCompilerIssue::Bug(
+        Err(ThrushCompilerIssue::FrontEndBug(
             String::from("Expected struct reference"),
             String::from("Expected struct but found something else."),
             span,
@@ -198,7 +194,7 @@ impl<'parser> FoundSymbolEither<'parser> for FoundSymbolId<'parser> {
             return Ok(name);
         }
 
-        Err(ThrushCompilerIssue::Bug(
+        Err(ThrushCompilerIssue::FrontEndBug(
             String::from("Expected function reference"),
             String::from("Expected function but found something else."),
             span,
@@ -212,7 +208,7 @@ impl<'parser> FoundSymbolEither<'parser> for FoundSymbolId<'parser> {
             return Ok(name);
         }
 
-        Err(ThrushCompilerIssue::Bug(
+        Err(ThrushCompilerIssue::FrontEndBug(
             String::from("Expected enum reference"),
             String::from("Expected enum but found something else."),
             span,
@@ -226,7 +222,7 @@ impl<'parser> FoundSymbolEither<'parser> for FoundSymbolId<'parser> {
             return Ok(static_id);
         }
 
-        Err(ThrushCompilerIssue::Bug(
+        Err(ThrushCompilerIssue::FrontEndBug(
             String::from("Expected static reference"),
             String::from("Expected static but found something else."),
             span,
@@ -240,7 +236,7 @@ impl<'parser> FoundSymbolEither<'parser> for FoundSymbolId<'parser> {
             return Ok(const_id);
         }
 
-        Err(ThrushCompilerIssue::Bug(
+        Err(ThrushCompilerIssue::FrontEndBug(
             String::from("Expected constant reference"),
             String::from("Expected constant but found something else."),
             span,
@@ -254,7 +250,7 @@ impl<'parser> FoundSymbolEither<'parser> for FoundSymbolId<'parser> {
             return Ok(type_id);
         }
 
-        Err(ThrushCompilerIssue::Bug(
+        Err(ThrushCompilerIssue::FrontEndBug(
             String::from("Expected custom type reference"),
             String::from("Expected custom type but found something else."),
             span,
@@ -268,7 +264,7 @@ impl<'parser> FoundSymbolEither<'parser> for FoundSymbolId<'parser> {
             return Ok(name);
         }
 
-        Err(ThrushCompilerIssue::Bug(
+        Err(ThrushCompilerIssue::FrontEndBug(
             String::from("Expected parameter reference"),
             String::from("Expected parameter but found something else."),
             span,
@@ -282,7 +278,7 @@ impl<'parser> FoundSymbolEither<'parser> for FoundSymbolId<'parser> {
             return Ok(name);
         }
 
-        Err(ThrushCompilerIssue::Bug(
+        Err(ThrushCompilerIssue::FrontEndBug(
             String::from("Expected assembler function reference"),
             String::from("Expected assembler function but found something else."),
             span,
@@ -296,7 +292,7 @@ impl<'parser> FoundSymbolEither<'parser> for FoundSymbolId<'parser> {
             return Ok((name, scope_idx));
         }
 
-        Err(ThrushCompilerIssue::Bug(
+        Err(ThrushCompilerIssue::FrontEndBug(
             String::from("Expected low level instruction reference"),
             String::from("Expected LLI but found something else."),
             span,
@@ -310,7 +306,7 @@ impl<'parser> FoundSymbolEither<'parser> for FoundSymbolId<'parser> {
             return Ok((name, scope_idx));
         }
 
-        Err(ThrushCompilerIssue::Bug(
+        Err(ThrushCompilerIssue::FrontEndBug(
             String::from("Expected local reference"),
             String::from("Expected local but found something else."),
             span,

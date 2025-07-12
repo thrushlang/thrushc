@@ -4,7 +4,7 @@ use crate::{
     core::errors::standard::ThrushCompilerIssue,
     frontend::{
         lexer::{span::Span, token::Token, tokentype::TokenType},
-        parser::{ParserContext, checks, expr, stmts::block},
+        parser::{ParserContext, checks, expr, statements::block},
         types::{ast::Ast, parser::stmts::traits::TokenExtensions},
     },
 };
@@ -22,8 +22,8 @@ pub fn build_conditional<'parser>(
 
     let span: Span = if_tk.get_span();
 
-    let if_condition: Ast = expr::build_expr(parser_context)?;
-    let if_body: Ast = block::build_block(parser_context)?;
+    let condition: Ast = expr::build_expr(parser_context)?;
+    let block: Ast = block::build_block(parser_context)?;
 
     let mut elseif: Vec<Ast> = Vec::with_capacity(10);
 
@@ -33,7 +33,7 @@ pub fn build_conditional<'parser>(
         let condition: Ast = expr::build_expr(parser_context)?;
         let block: Ast = block::build_block(parser_context)?;
 
-        if !block.has_block() {
+        if block.is_empty_block() {
             continue;
         }
 
@@ -48,12 +48,12 @@ pub fn build_conditional<'parser>(
 
     if parser_context.match_token(TokenType::Else)? {
         let span: Span = parser_context.previous().span;
-        let else_body: Ast = block::build_block(parser_context)?;
+        let block: Ast = block::build_block(parser_context)?;
 
-        if else_body.has_block() {
+        if !block.is_empty_block() {
             anyway = Some(
                 Ast::Else {
-                    block: else_body.into(),
+                    block: block.into(),
                     span,
                 }
                 .into(),
@@ -62,8 +62,8 @@ pub fn build_conditional<'parser>(
     }
 
     Ok(Ast::If {
-        condition: if_condition.into(),
-        block: if_body.into(),
+        condition: condition.into(),
+        block: block.into(),
         elseif,
         anyway,
         span,

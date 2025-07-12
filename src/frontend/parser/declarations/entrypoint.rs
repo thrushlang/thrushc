@@ -2,7 +2,7 @@ use crate::{
     core::errors::standard::ThrushCompilerIssue,
     frontend::{
         lexer::{span::Span, tokentype::TokenType},
-        parser::{ParserContext, checks, stmts::block},
+        parser::{ParserContext, checks, statements::block},
         types::ast::Ast,
         typesystem::types::Type,
     },
@@ -32,7 +32,7 @@ pub fn build_entrypoint<'parser>(
         "Expected 'u32'.".into(),
     )?;
 
-    parser_context.get_mut_control_ctx().set_entrypoint(true);
+    parser_context.get_mut_control_ctx().set_has_entrypoint();
 
     parser_context
         .get_mut_type_ctx()

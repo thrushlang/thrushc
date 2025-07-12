@@ -6,11 +6,11 @@ use super::position::CompilationPosition;
 pub enum ThrushCompilerIssue {
     Error(String, String, Option<String>, Span),
     Warning(String, String, Span),
-    Bug(String, String, Span, CompilationPosition, u32),
+    FrontEndBug(String, String, Span, CompilationPosition, u32),
 }
 
 impl ThrushCompilerIssue {
     pub fn is_bug(&self) -> bool {
-        matches!(self, ThrushCompilerIssue::Bug(..))
+        matches!(self, ThrushCompilerIssue::FrontEndBug(..))
     }
 }

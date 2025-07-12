@@ -134,7 +134,7 @@ impl<'parser> SymbolsTable<'parser> {
             return Ok(());
         }
 
-        return Err(ThrushCompilerIssue::Bug(
+        return Err(ThrushCompilerIssue::FrontEndBug(
             String::from("Low level instruction not caught"),
             String::from("The final scope was not obtained."),
             span,
@@ -164,7 +164,7 @@ impl<'parser> SymbolsTable<'parser> {
             return Ok(());
         }
 
-        return Err(ThrushCompilerIssue::Bug(
+        return Err(ThrushCompilerIssue::FrontEndBug(
             String::from("Last scope not caught"),
             String::from("The last scope could not be obtained."),
             span,
@@ -214,7 +214,7 @@ impl<'parser> SymbolsTable<'parser> {
             return Ok(());
         }
 
-        return Err(ThrushCompilerIssue::Bug(
+        return Err(ThrushCompilerIssue::FrontEndBug(
             String::from("Last scope not caught"),
             String::from("The last scope could not be obtained."),
             span,
@@ -264,7 +264,7 @@ impl<'parser> SymbolsTable<'parser> {
             return Ok(());
         }
 
-        return Err(ThrushCompilerIssue::Bug(
+        return Err(ThrushCompilerIssue::FrontEndBug(
             String::from("Last scope not caught"),
             String::from("The last scope could not be obtained."),
             span,
@@ -722,7 +722,7 @@ impl<'parser> SymbolsTable<'parser> {
                 return Ok(static_var);
             }
         } else {
-            return Err(ThrushCompilerIssue::Bug(
+            return Err(ThrushCompilerIssue::FrontEndBug(
                 String::from("Last scope not caught"),
                 String::from("The last scope could not be obtained."),
                 span,
@@ -757,7 +757,7 @@ impl<'parser> SymbolsTable<'parser> {
                 return Ok(local_const);
             }
         } else {
-            return Err(ThrushCompilerIssue::Bug(
+            return Err(ThrushCompilerIssue::FrontEndBug(
                 String::from("Last scope not caught"),
                 String::from("The last scope could not be obtained."),
                 span,

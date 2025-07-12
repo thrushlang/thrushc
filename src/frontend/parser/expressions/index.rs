@@ -20,7 +20,7 @@ pub fn build_index<'parser>(
         }
         (None, Some(ref expr)) => expr.get_value_type()?,
         _ => {
-            return Err(ThrushCompilerIssue::Bug(
+            return Err(ThrushCompilerIssue::FrontEndBug(
                 String::from("Index not caught"),
                 String::from("Expected a expression or reference."),
                 span,
@@ -37,7 +37,7 @@ pub fn build_index<'parser>(
         }
         (None, Some(ref expr)) => expr.is_mutable(),
         _ => {
-            return Err(ThrushCompilerIssue::Bug(
+            return Err(ThrushCompilerIssue::FrontEndBug(
                 String::from("Index not caught"),
                 String::from("Expected a expression or reference."),
                 span,

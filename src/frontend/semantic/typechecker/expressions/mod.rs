@@ -202,7 +202,7 @@ pub fn validate<'type_checker>(
             } else if let Some(metadata) = typechecker.symbols.get_asm_function(name) {
                 return expressions::call::validate(typechecker, *metadata, args, span);
             } else {
-                typechecker.add_error(ThrushCompilerIssue::Bug(
+                typechecker.add_error(ThrushCompilerIssue::FrontEndBug(
                     "Function not found".into(),
                     "Function could not be found for processing.".into(),
                     *span,
@@ -230,7 +230,7 @@ pub fn validate<'type_checker>(
         _ => {
             let span: Span = node.get_span();
 
-            typechecker.add_bug(ThrushCompilerIssue::Bug(
+            typechecker.add_bug(ThrushCompilerIssue::FrontEndBug(
                 "Expression not caught".into(),
                 "Expression could not be caught for processing.".into(),
                 span,

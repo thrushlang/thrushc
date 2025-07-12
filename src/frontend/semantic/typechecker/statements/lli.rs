@@ -255,7 +255,7 @@ pub fn validate<'type_checker>(
         _ => {
             let span: Span = node.get_span();
 
-            typechecker.add_bug(ThrushCompilerIssue::Bug(
+            typechecker.add_bug(ThrushCompilerIssue::FrontEndBug(
                 "Expression not caught".into(),
                 "Expression could not be caught for processing.".into(),
                 span,

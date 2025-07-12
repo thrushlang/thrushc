@@ -15,7 +15,7 @@ use {
 #[derive(Debug, Clone, Copy)]
 pub enum NotificatorType {
     CommonHelp,
-    CompilerBug,
+    CompilerFronteEndBug,
 }
 
 #[derive(Debug, Clone)]
@@ -25,14 +25,14 @@ pub struct Diagnostician {
 }
 
 #[derive(Debug)]
-struct Diagnostic<'a> {
+pub struct Diagnostic<'a> {
     code: &'a str,
     signaler: String,
     span: Span,
 }
 
 #[derive(Debug)]
-struct CodePosition {
+pub struct CodePosition {
     line: usize,
     start: usize,
     end: usize,
@@ -63,14 +63,27 @@ impl Diagnostician {
             ThrushCompilerIssue::Error(title, help, note, span) => {
                 self.diagnose(title, help, note.as_deref(), *span, logging_type);
             }
+
             ThrushCompilerIssue::Warning(title, help, span) => {
                 self.diagnose(title, help, None, *span, logging_type);
             }
-            ThrushCompilerIssue::Bug(title, info, span, position, line) => {
-                Diagnostic::build(&self.code, *span, info, NotificatorType::CompilerBug)
-                    .print_compiler_bug(title, *position, LoggingType::Bug, &self.path, *line);
+
+            ThrushCompilerIssue::FrontEndBug(title, info, span, position, line) => {
+                Diagnostic::build(
+                    &self.code,
+                    *span,
+                    info,
+                    NotificatorType::CompilerFronteEndBug,
+                )
+                .print_compiler_frontend_bug(
+                    title,
+                    *position,
+                    LoggingType::Bug,
+                    &self.path,
+                    *line,
+                );
             }
-        }
+        };
     }
 
     fn diagnose(
@@ -187,7 +200,7 @@ impl<'a> Diagnostic<'a> {
         let line: usize = span.line;
 
         let code: &str = lines[line - 1].trim_start();
-        let mut signaler: String = String::with_capacity(200);
+        let mut signaler: String = String::with_capacity(100);
 
         for i in 0..=code.len() {
             if i == code.len() {
@@ -239,7 +252,7 @@ impl<'a> Diagnostic<'a> {
         }
     }
 
-    pub fn print_compiler_bug(
+    pub fn print_compiler_frontend_bug(
         self,
         title: &str,
         position: CompilationPosition,
@@ -266,7 +279,7 @@ impl<'a> Diagnostic<'a> {
             logging::OutputIn::Stderr,
             &format!(
                 "\n{} {} {} {}{}{}\n",
-                logging_type.to_styled(),
+                "FrontEnd bug".bright_red().bold(),
                 title.to_uppercase(),
                 "-".bold(),
                 position,
@@ -297,7 +310,7 @@ impl Display for NotificatorType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::CommonHelp => write!(f, "{}", "HELP: ".bright_green().bold()),
-            Self::CompilerBug => write!(f, "{}", "INFO: ".bright_red().bold()),
+            Self::CompilerFronteEndBug => write!(f, "{}", "BUG INFO: ".bright_red().bold()),
         }
     }
 }

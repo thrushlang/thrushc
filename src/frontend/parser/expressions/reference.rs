@@ -128,42 +128,52 @@ pub fn build_reference<'parser>(
         });
     }
 
-    let local_position: (&str, usize) = symbol.expected_local(span)?;
+    if symbol.is_local() {
+        let local_position: (&str, usize) = symbol.expected_local(span)?;
+        let local_id: &str = local_position.0;
+        let scope_idx: usize = local_position.1;
 
-    let local: &LocalSymbol =
-        parser_context
+        let local: &LocalSymbol = parser_context
             .get_symbols()
-            .get_local_by_id(local_position.0, local_position.1, span)?;
+            .get_local_by_id(local_id, scope_idx, span)?;
 
-    let metadata: LocalMetadata = local.get_metadata();
-    let is_mutable: bool = metadata.is_mutable();
+        let metadata: LocalMetadata = local.get_metadata();
+        let is_mutable: bool = metadata.is_mutable();
 
-    let local_type: Type = local.get_type();
+        let local_type: Type = local.get_type();
 
-    let reference: Ast = Ast::Reference {
-        name,
-        kind: local_type.clone(),
-        span,
-        metadata: ReferenceMetadata::new(true, is_mutable, ReferenceType::default()),
-    };
-
-    if parser_context.match_token(TokenType::PlusPlus)?
-        | parser_context.match_token(TokenType::MinusMinus)?
-    {
-        let operator_tk: &Token = parser_context.previous();
-        let operator: TokenType = operator_tk.get_type();
-        let span: Span = operator_tk.get_span();
-
-        let unaryop: Ast = Ast::UnaryOp {
-            operator,
-            expression: reference.into(),
-            kind: local_type,
-            is_pre: false,
+        let reference: Ast = Ast::Reference {
+            name,
+            kind: local_type.clone(),
             span,
+            metadata: ReferenceMetadata::new(true, is_mutable, ReferenceType::default()),
         };
 
-        return Ok(unaryop);
+        if parser_context.match_token(TokenType::PlusPlus)?
+            | parser_context.match_token(TokenType::MinusMinus)?
+        {
+            let operator_tk: &Token = parser_context.previous();
+            let operator: TokenType = operator_tk.get_type();
+            let span: Span = operator_tk.get_span();
+
+            let unaryop: Ast = Ast::UnaryOp {
+                operator,
+                expression: reference.into(),
+                kind: local_type,
+                is_pre: false,
+                span,
+            };
+
+            return Ok(unaryop);
+        }
+
+        return Ok(reference);
     }
 
-    Ok(reference)
+    Err(ThrushCompilerIssue::Error(
+        "Unknown reference".into(),
+        "It is not a valid reference.".into(),
+        None,
+        span,
+    ))
 }
