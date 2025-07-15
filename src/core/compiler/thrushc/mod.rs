@@ -1,6 +1,9 @@
+mod emit;
+mod finisher;
+mod interrupt;
+
 use std::{
-    fs::write,
-    path::{Path, PathBuf},
+    path::PathBuf,
     time::{Duration, Instant},
 };
 
@@ -11,7 +14,7 @@ use inkwell::{
     builder::Builder,
     context::Context,
     module::Module,
-    targets::{FileType, InitializationConfig, Target, TargetMachine, TargetTriple},
+    targets::{InitializationConfig, Target, TargetMachine, TargetTriple},
 };
 
 use crate::{
@@ -22,26 +25,26 @@ use crate::{
     core::{
         compiler::{
             backends::llvm::LLVMBackend,
-            emitters,
             linking::LinkingCompilersConfiguration,
-            options::{CompilerFile, CompilerOptions, Emitable, Emited, ThrushOptimization},
+            options::{CompilerFile, CompilerOptions, Emited, ThrushOptimization},
             reader,
         },
         console::logging::{self, LoggingType},
         diagnostic::diagnostician::Diagnostician,
-        utils::rand,
     },
     frontend::{
-        lexer::{self, Lexer, token::Token},
+        lexer::{Lexer, token::Token},
         parser::{Parser, ParserContext},
         semantic::SemanticAnalyzer,
         types::ast::Ast,
     },
 };
 
+#[derive(Debug)]
 pub struct TheThrushCompiler<'thrushc> {
-    compiled_files: Vec<PathBuf>,
-    files: &'thrushc [CompilerFile],
+    compiled: Vec<PathBuf>,
+    uncompiled: &'thrushc [CompilerFile],
+
     options: &'thrushc CompilerOptions,
     linking_time: Duration,
     thrushc_time: Duration,
@@ -50,8 +53,8 @@ pub struct TheThrushCompiler<'thrushc> {
 impl<'thrushc> TheThrushCompiler<'thrushc> {
     pub fn new(files: &'thrushc [CompilerFile], options: &'thrushc CompilerOptions) -> Self {
         Self {
-            compiled_files: Vec::with_capacity(files.len()),
-            files,
+            compiled: Vec::with_capacity(files.len()),
+            uncompiled: files,
             options,
             linking_time: Duration::default(),
             thrushc_time: Duration::default(),
@@ -61,7 +64,7 @@ impl<'thrushc> TheThrushCompiler<'thrushc> {
     pub fn compile(&mut self) -> (u128, u128) {
         let mut interrumped: bool = false;
 
-        if self.options.get_use_llvm() {
+        if self.get_options().get_use_llvm() {
             Target::initialize_all(&InitializationConfig::default());
         } else {
             logging::write(
@@ -75,13 +78,16 @@ impl<'thrushc> TheThrushCompiler<'thrushc> {
             );
         }
 
-        self.files.iter().for_each(|file| {
-            interrumped = self.compile_file_with_llvm(file).is_err();
+        self.uncompiled.iter().for_each(|file| {
+            interrumped = self.compile_with_llvm(file).is_err();
         });
 
         let llvm_backend: &LLVMBackend = self.options.get_llvm_backend_options();
 
-        if interrumped || llvm_backend.get_was_emited() || self.compiled_files.is_empty() {
+        if interrumped
+            || self.get_options().get_was_emited()
+            || self.get_compiled_files().is_empty()
+        {
             return (self.thrushc_time.as_millis(), self.linking_time.as_millis());
         }
 
@@ -172,7 +178,7 @@ impl<'thrushc> TheThrushCompiler<'thrushc> {
         (self.thrushc_time.as_millis(), self.linking_time.as_millis())
     }
 
-    fn compile_file_with_llvm(&mut self, file: &'thrushc CompilerFile) -> Result<(), ()> {
+    fn compile_with_llvm(&mut self, file: &'thrushc CompilerFile) -> Result<(), ()> {
         let archive_time: Instant = Instant::now();
 
         logging::write(
@@ -198,8 +204,8 @@ impl<'thrushc> TheThrushCompiler<'thrushc> {
             }
         };
 
-        if self.emit_after_frontend(llvm_backend, build_dir, file, Emited::Tokens(&tokens)) {
-            return self.finish_archive_compilation(archive_time, file);
+        if emit::after_frontend(self, build_dir, file, Emited::Tokens(&tokens)) {
+            return finisher::archive_compilation(self, archive_time, file);
         }
 
         let parser: (ParserContext, bool) = Parser::parse(&tokens, file);
@@ -215,11 +221,11 @@ impl<'thrushc> TheThrushCompiler<'thrushc> {
             SemanticAnalyzer::new(ast, file).check(parser_throwed_errors);
 
         if parser_throwed_errors || semantic_analysis_throwed_errors {
-            return self.interrupt_archive_compilation(archive_time, file);
+            return finisher::archive_compilation(self, archive_time, file);
         }
 
-        if self.emit_after_frontend(llvm_backend, build_dir, file, Emited::Ast(ast)) {
-            return self.finish_archive_compilation(archive_time, file);
+        if emit::after_frontend(self, build_dir, file, Emited::Ast(ast)) {
+            return finisher::archive_compilation(self, archive_time, file);
         }
 
         let llvm_context: Context = Context::create();
@@ -274,15 +280,15 @@ impl<'thrushc> TheThrushCompiler<'thrushc> {
 
         self.validate_codegen(&llvm_module, file)?;
 
-        if self.emit_before_optimization(
+        if emit::llvm_before_optimization(
+            self,
             archive_time,
-            llvm_backend,
             &llvm_module,
             &target_machine,
             build_dir,
             file,
         )? {
-            return self.finish_archive_compilation(archive_time, file);
+            return finisher::archive_compilation(self, archive_time, file);
         }
 
         if thrush_opt.is_none_opt() {
@@ -302,61 +308,21 @@ impl<'thrushc> TheThrushCompiler<'thrushc> {
         )
         .optimize();
 
-        if self.emit_after_optimization(
+        if emit::llvm_after_optimization(
+            self,
             archive_time,
-            llvm_backend,
             &llvm_module,
             &target_machine,
             build_dir,
             file,
         )? {
-            return self.finish_archive_compilation(archive_time, file);
+            return finisher::archive_compilation(self, archive_time, file);
         }
 
         let compiled_file: PathBuf =
-            self.finish_obj_compilation(&llvm_module, &target_machine, build_dir, &file.name);
+            finisher::obj_compilation(&llvm_module, &target_machine, build_dir, &file.name);
 
         self.add_compiled_file(compiled_file);
-
-        logging::write(
-            logging::OutputIn::Stdout,
-            &format!(
-                "{} {} {}\n",
-                "Compilation".custom_color((141, 141, 142)).bold(),
-                "FINISHED".bright_green().bold(),
-                &file.path.to_string_lossy()
-            ),
-        );
-
-        Ok(())
-    }
-
-    fn interrupt_archive_compilation(
-        &mut self,
-        archive_time: Instant,
-        file: &CompilerFile,
-    ) -> Result<(), ()> {
-        self.thrushc_time += archive_time.elapsed();
-
-        logging::write(
-            logging::OutputIn::Stderr,
-            &format!(
-                "{} {} {}\n",
-                "Compilation".custom_color((141, 141, 142)).bold(),
-                "FAILED".bright_red().bold(),
-                &file.path.to_string_lossy()
-            ),
-        );
-
-        Err(())
-    }
-
-    fn finish_archive_compilation(
-        &mut self,
-        archive_time: Instant,
-        file: &CompilerFile,
-    ) -> Result<(), ()> {
-        self.thrushc_time += archive_time.elapsed();
 
         logging::write(
             logging::OutputIn::Stdout,
@@ -393,186 +359,20 @@ impl<'thrushc> TheThrushCompiler<'thrushc> {
 
         Ok(())
     }
+}
 
-    fn finish_obj_compilation(
-        &mut self,
-        llvm_module: &Module,
-        target_machine: &TargetMachine,
-        build_dir: &Path,
-        file_name: &str,
-    ) -> PathBuf {
-        let obj_file_path: PathBuf = build_dir.join(format!(
-            "{}_{}.o",
-            rand::generate_random_string(),
-            file_name
-        ));
+impl TheThrushCompiler<'_> {
+    pub fn add_compiled_file(&mut self, path: PathBuf) {
+        self.compiled.push(path);
+    }
+}
 
-        target_machine
-            .write_to_file(llvm_module, FileType::Object, &obj_file_path)
-            .unwrap_or_else(|_| {
-                logging::log(
-                    logging::LoggingType::FrontEndPanic,
-                    &format!("'{}' cannot be emitted.", obj_file_path.display()),
-                );
-
-                unreachable!()
-            });
-
-        obj_file_path
+impl TheThrushCompiler<'_> {
+    pub fn get_compiled_files(&self) -> &[PathBuf] {
+        &self.compiled
     }
 
-    fn emit_after_frontend(
-        &self,
-        llvm_backend: &LLVMBackend,
-        build_dir: &Path,
-        file: &CompilerFile,
-        emited: Emited<'thrushc>,
-    ) -> bool {
-        emitters::cleaner::auto_clean(self.options);
-
-        if llvm_backend.contains_emitable(Emitable::Tokens) {
-            if let Emited::Tokens(tokens) = emited {
-                if lexer::printer::print_to_file(tokens, build_dir, &file.name).is_err() {
-                    return false;
-                }
-
-                return true;
-            }
-        }
-
-        if llvm_backend.contains_emitable(Emitable::AST) {
-            if let Emited::Ast(stmts) = emited {
-                let _ = write(
-                    build_dir.join(format!("{}.ast", file.name)),
-                    format!("{:#?}", stmts),
-                );
-
-                return true;
-            }
-        }
-
-        false
-    }
-
-    fn emit_before_optimization(
-        &mut self,
-        archive_time: Instant,
-        llvm_backend: &LLVMBackend,
-        llvm_module: &Module,
-        target_machine: &TargetMachine,
-        build_dir: &Path,
-        file: &CompilerFile,
-    ) -> Result<bool, ()> {
-        emitters::cleaner::auto_clean(self.options);
-
-        if llvm_backend.contains_emitable(Emitable::RawLLVMIR) {
-            if let Err(error) =
-                emitters::llvmir::emit_llvm_ir(llvm_module, build_dir, &file.name, true)
-            {
-                logging::log(LoggingType::Error, &error.to_string());
-                self.interrupt_archive_compilation(archive_time, file)?;
-            }
-
-            return Ok(true);
-        }
-
-        if llvm_backend.contains_emitable(Emitable::RawLLVMBitcode) {
-            if !emitters::llvmbitcode::emit_llvm_bitcode(llvm_module, build_dir, &file.name, true) {
-                logging::log(LoggingType::Error, "Failed to emit LLVM bitcode.");
-                self.interrupt_archive_compilation(archive_time, file)?;
-            }
-
-            return Ok(true);
-        }
-
-        if llvm_backend.contains_emitable(Emitable::RawAssembly) {
-            if let Err(error) = emitters::assembler::emit_llvm_assembler(
-                llvm_module,
-                target_machine,
-                build_dir,
-                &file.name,
-                true,
-            ) {
-                logging::log(LoggingType::Error, &error.to_string());
-                self.interrupt_archive_compilation(archive_time, file)?;
-            }
-
-            return Ok(true);
-        }
-
-        Ok(false)
-    }
-
-    fn emit_after_optimization(
-        &mut self,
-        archive_time: Instant,
-        llvm_backend: &LLVMBackend,
-        llvm_module: &Module,
-        target_machine: &TargetMachine,
-        build_dir: &Path,
-        file: &CompilerFile,
-    ) -> Result<bool, ()> {
-        emitters::cleaner::auto_clean(self.options);
-
-        if llvm_backend.contains_emitable(Emitable::LLVMBitcode) {
-            if !emitters::llvmbitcode::emit_llvm_bitcode(llvm_module, build_dir, &file.name, false)
-            {
-                logging::log(LoggingType::Error, "Failed to emit LLVM bitcode.");
-                self.interrupt_archive_compilation(archive_time, file)?;
-            }
-
-            return Ok(true);
-        }
-
-        if llvm_backend.contains_emitable(Emitable::LLVMIR) {
-            if let Err(error) =
-                emitters::llvmir::emit_llvm_ir(llvm_module, build_dir, &file.name, false)
-            {
-                logging::log(LoggingType::Error, &error.to_string());
-                self.interrupt_archive_compilation(archive_time, file)?;
-            }
-
-            return Ok(true);
-        }
-
-        if llvm_backend.contains_emitable(Emitable::Assembly) {
-            if let Err(error) = emitters::assembler::emit_llvm_assembler(
-                llvm_module,
-                target_machine,
-                build_dir,
-                &file.name,
-                false,
-            ) {
-                logging::log(LoggingType::Error, &error.to_string());
-                self.interrupt_archive_compilation(archive_time, file)?;
-            };
-
-            return Ok(true);
-        }
-
-        if llvm_backend.contains_emitable(Emitable::Object) {
-            if let Err(error) = emitters::obj::emit_llvm_object(
-                llvm_module,
-                target_machine,
-                build_dir,
-                &file.name,
-                false,
-            ) {
-                logging::log(LoggingType::Error, &error.to_string());
-                self.interrupt_archive_compilation(archive_time, file)?;
-            }
-
-            return Ok(true);
-        }
-
-        Ok(false)
-    }
-
-    fn get_compiled_files(&self) -> &[PathBuf] {
-        &self.compiled_files
-    }
-
-    fn add_compiled_file(&mut self, path: PathBuf) {
-        self.compiled_files.push(path);
+    pub fn get_options(&self) -> &CompilerOptions {
+        self.options
     }
 }

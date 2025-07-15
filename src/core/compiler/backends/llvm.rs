@@ -1,9 +1,7 @@
 use inkwell::targets::{CodeModel, RelocMode, TargetMachine, TargetTriple};
 
 use crate::core::compiler::{
-    jit::JITConfiguration,
-    linking::LinkingCompilersConfiguration,
-    options::{Emitable, ThrushOptimization},
+    jit::JITConfiguration, linking::LinkingCompilersConfiguration, options::ThrushOptimization,
     passes::LLVMModificatorPasses,
 };
 
@@ -12,7 +10,6 @@ pub struct LLVMBackend {
     target_cpu: String,
     target_triple: TargetTriple,
     optimization: ThrushOptimization,
-    emit: Vec<Emitable>,
     reloc_mode: RelocMode,
     code_model: CodeModel,
     modificator_passes: Vec<LLVMModificatorPasses>,
@@ -27,7 +24,6 @@ impl LLVMBackend {
             target_cpu: String::with_capacity(100),
             target_triple: TargetMachine::get_default_triple(),
             optimization: ThrushOptimization::None,
-            emit: Vec::with_capacity(10),
             reloc_mode: RelocMode::PIC,
             code_model: CodeModel::Default,
             modificator_passes: Vec::with_capacity(10),
@@ -51,14 +47,6 @@ impl LLVMBackend {
 
     pub fn get_optimization(&self) -> ThrushOptimization {
         self.optimization
-    }
-
-    pub fn get_was_emited(&self) -> bool {
-        !self.emit.is_empty()
-    }
-
-    pub fn contains_emitable(&self, emit: Emitable) -> bool {
-        self.emit.contains(&emit)
     }
 
     pub fn get_target_cpu(&self) -> &str {
@@ -123,9 +111,5 @@ impl LLVMBackend {
 
     pub fn set_jit_config(&mut self, jit: JITConfiguration) {
         self.jit_config = Some(jit);
-    }
-
-    pub fn add_emit_option(&mut self, emit: Emitable) {
-        self.emit.push(emit);
     }
 }

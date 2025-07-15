@@ -16,11 +16,14 @@ pub struct CompilerOptions {
     files: Vec<CompilerFile>,
     build_dir: PathBuf,
 
+    emit: Vec<Emitable>,
+
     clean_tokens: bool,
     clean_assembler: bool,
     clean_object: bool,
     clean_llvm_ir: bool,
     clean_llvm_bitcode: bool,
+    ofuscate_archive_names: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -86,14 +89,15 @@ impl CompilerOptions {
         Self {
             use_llvm_backend: false,
             llvm_backend: LLVMBackend::new(),
-            files: Vec::with_capacity(100),
+            files: Vec::with_capacity(1000),
+            emit: Vec::with_capacity(10),
             build_dir: PathBuf::new(),
-
             clean_tokens: false,
             clean_assembler: false,
             clean_object: false,
             clean_llvm_ir: false,
             clean_llvm_bitcode: false,
+            ofuscate_archive_names: true,
         }
     }
 }
@@ -135,6 +139,14 @@ impl CompilerOptions {
 
     pub fn set_clean_llvm_bitcode(&mut self) {
         self.clean_llvm_bitcode = true;
+    }
+
+    pub fn no_ofuscate_archive_names(&mut self) {
+        self.ofuscate_archive_names = false;
+    }
+
+    pub fn add_emit_option(&mut self, emit: Emitable) {
+        self.emit.push(emit);
     }
 }
 
@@ -181,5 +193,17 @@ impl CompilerOptions {
 
     pub fn is_build_dir_setted(&self) -> bool {
         self.build_dir.exists()
+    }
+
+    pub fn ofuscate_archive_names(&self) -> bool {
+        self.ofuscate_archive_names
+    }
+
+    pub fn get_was_emited(&self) -> bool {
+        !self.emit.is_empty()
+    }
+
+    pub fn contains_emitable(&self, emit: Emitable) -> bool {
+        self.emit.contains(&emit)
     }
 }

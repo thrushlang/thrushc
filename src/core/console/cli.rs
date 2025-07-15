@@ -65,7 +65,7 @@ impl CLI {
     pub fn parse(mut args: Vec<String>) -> CLI {
         let processed_args: Vec<String> = Self::preprocess_args(&mut args);
 
-        let mut command_line = Self {
+        let mut command_line: CLI = Self {
             options: CompilerOptions::new(),
             args: processed_args,
             current: 0,
@@ -316,9 +316,7 @@ impl CLI {
 
                 let emitable: Emitable = self.parse_emit_option(self.peek());
 
-                self.options
-                    .get_mut_llvm_backend_options()
-                    .add_emit_option(emitable);
+                self.options.add_emit_option(emitable);
 
                 self.advance();
             }
@@ -443,6 +441,11 @@ impl CLI {
             "--clean-objects" => {
                 self.advance();
                 self.options.set_clean_object();
+            }
+
+            "--no-obfuscate-archive-names" => {
+                self.advance();
+                self.options.no_ofuscate_archive_names();
             }
 
             possible_file_path if self.is_thrush_file(possible_file_path) => {
@@ -1047,10 +1050,22 @@ impl CLI {
         logging::write(
             logging::OutputIn::Stderr,
             &format!(
-                "{} {} {}\n",
+                "{} {} {}\n\n",
                 "•".bold(),
                 "--clean-objects".custom_color((141, 141, 142)).bold(),
                 "Clean the compiler folder containing emitted object files."
+            ),
+        );
+
+        logging::write(
+            logging::OutputIn::Stderr,
+            &format!(
+                "{} {} {}\n",
+                "•".bold(),
+                "--no-obfuscate-archive-names"
+                    .custom_color((141, 141, 142))
+                    .bold(),
+                "Stop generating name obfuscation for each file; this does not apply to the final build."
             ),
         );
 

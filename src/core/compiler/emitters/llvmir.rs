@@ -2,14 +2,21 @@ use std::path::{Path, PathBuf};
 
 use inkwell::{module::Module, support::LLVMString};
 
-use crate::core::utils::rand;
+use crate::core::{
+    compiler::{options::CompilerOptions, thrushc::TheThrushCompiler},
+    utils::rand,
+};
 
 pub fn emit_llvm_ir(
+    compiler: &TheThrushCompiler,
     llvm_module: &Module,
     build_dir: &Path,
     file_name: &str,
     unoptimized: bool,
 ) -> Result<(), LLVMString> {
+    let compiler_options: &CompilerOptions = compiler.get_options();
+    let obfuscate: bool = compiler_options.ofuscate_archive_names();
+
     let llvmir_base_path: PathBuf = build_dir.join("emit").join("llvm-ir");
 
     if !llvmir_base_path.exists() {
@@ -18,12 +25,16 @@ pub fn emit_llvm_ir(
 
     let optimization_name_modifier: &str = if unoptimized { "raw_" } else { "" };
 
-    let llvmir_file_name: String = format!(
-        "{}{}_{}.ll",
-        optimization_name_modifier,
-        rand::generate_random_string(),
-        file_name
-    );
+    let llvmir_file_name: String = if obfuscate {
+        format!(
+            "{}{}_{}.ll",
+            optimization_name_modifier,
+            rand::generate_random_string(),
+            file_name
+        )
+    } else {
+        format!("{}{}.ll", optimization_name_modifier, file_name)
+    };
 
     let llvmir_file_path: PathBuf = llvmir_base_path.join(llvmir_file_name);
 
