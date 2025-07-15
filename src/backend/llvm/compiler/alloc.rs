@@ -92,7 +92,6 @@ pub fn local_constant<'ctx>(
     llvm_value: BasicValueEnum<'ctx>,
 ) -> PointerValue<'ctx> {
     let llvm_module: &Module = context.get_llvm_module();
-
     let target_data: &TargetData = context.get_target_data();
 
     let name: String = format!("{}.const.{}", utils::generate_random_string(), ascii_name);
@@ -118,7 +117,6 @@ pub fn global_constant<'ctx>(
     attributes: &'ctx ThrushAttributes<'ctx>,
 ) -> PointerValue<'ctx> {
     let llvm_module: &Module = context.get_llvm_module();
-
     let target_data: &TargetData = context.get_target_data();
 
     let global: GlobalValue =
@@ -147,7 +145,6 @@ pub fn local_static<'ctx>(
 ) -> PointerValue<'ctx> {
     let llvm_module: &Module = context.get_llvm_module();
     let llvm_metadata: LLVMStaticMetadata = metadata.get_llvm_metadata();
-
     let target_data: &TargetData = context.get_target_data();
 
     let name: String = format!("{}.static.{}", utils::generate_random_string(), ascii_name);
@@ -183,7 +180,6 @@ pub fn global_static<'ctx>(
 ) -> PointerValue<'ctx> {
     let llvm_module: &Module = context.get_llvm_module();
     let llvm_metadata: LLVMStaticMetadata = metadata.get_llvm_metadata();
-
     let target_data: &TargetData = context.get_target_data();
 
     let global: GlobalValue =

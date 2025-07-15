@@ -25,7 +25,9 @@ impl<'ctx> LoopContext<'ctx> {
     pub fn add_continue_branch(&mut self, branch: BasicBlock<'ctx>) {
         self.continue_branches.push(branch);
     }
+}
 
+impl<'ctx> LoopContext<'ctx> {
     pub fn get_last_break_branch(&self) -> BasicBlock<'ctx> {
         *self.break_branches.last().unwrap_or_else(|| {
             self::codegen_abort("Break point branch couldn't be obtained.");
@@ -39,7 +41,9 @@ impl<'ctx> LoopContext<'ctx> {
             unreachable!()
         })
     }
+}
 
+impl LoopContext<'_> {
     pub fn pop(&mut self) {
         self.break_branches.pop();
         self.continue_branches.pop();

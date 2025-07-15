@@ -118,11 +118,11 @@ pub fn compile<'ctx>(
         // Array Operations
         // Compiles a fixed-size array
         Ast::FixedArray { items, kind, .. } => {
-            expressions::farray::compile(context, kind, items, cast)
+            expressions::farray::compile(context, items, kind, cast)
         }
 
         // Compiles a dynamic array
-        Ast::Array { items, kind, .. } => expressions::array::compile(context, kind, items, cast),
+        Ast::Array { items, kind, .. } => expressions::array::compile(context, items, kind, cast),
 
         // Compiles a struct constructor
         Ast::Constructor { args, kind, .. } => structgen::compile(context, args, kind, cast),

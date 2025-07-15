@@ -5,7 +5,9 @@ use inkwell::{AddressSpace, context::Context, types::BasicTypeEnum, values::Basi
 use crate::{
     backend::llvm::compiler::{
         constants::{
-            self, binaryop,
+            self,
+            arrays::farray,
+            binaryop, casts,
             generation::{floatgen, intgen},
             unaryop,
         },
@@ -16,10 +18,7 @@ use crate::{
     core::console::logging::{self, LoggingType},
     frontend::{
         types::ast::Ast,
-        typesystem::{
-            traits::{LLVMTypeExtensions, TypeStructExtensions},
-            types::Type,
-        },
+        typesystem::{traits::TypeStructExtensions, types::Type},
     },
 };
 
@@ -51,8 +50,8 @@ pub fn compile<'ctx>(
         // Boolean true/false cases
         Ast::Boolean { value, .. } => self::compile_boolean(context, *value),
 
-        // Fixed-size array initialization
-        Ast::FixedArray { items, .. } => self::constant_fixed_array(context, cast, items),
+        // Fixed-size array
+        Ast::FixedArray { items, .. } => farray::constant_fixed_array(context, items, cast),
 
         // String literal compilation
         Ast::Str { bytes, .. } => expressions::string::compile_str(context, bytes).into(),
@@ -115,43 +114,6 @@ pub fn compile<'ctx>(
         }
     }
 }
-pub fn cast<'ctx>(
-    context: &mut LLVMCodeGenContext<'_, 'ctx>,
-    value: BasicValueEnum<'ctx>,
-    value_type: &Type,
-    cast: &Type,
-) -> BasicValueEnum<'ctx> {
-    let llvm_context: &Context = context.get_llvm_context();
-
-    match (value_type, cast) {
-        (from_ty, cast_ty) if from_ty.is_str_type() && cast_ty.is_ptr_type() => {
-            let cast: BasicTypeEnum = typegen::generate_type(llvm_context, cast_ty);
-
-            constants::casts::ptr::const_ptr_cast(context, value, cast)
-        }
-
-        (_, cast_ty) if cast_ty.is_ptr_type() || cast_ty.is_mut_type() => {
-            let cast: BasicTypeEnum = typegen::generate_type(llvm_context, cast_ty);
-
-            constants::casts::ptr::const_ptr_cast(context, value, cast)
-        }
-
-        (_, cast_ty) if cast_ty.is_numeric() => {
-            if value_type.llvm_is_same_bit_size(context, cast_ty) {
-                constants::casts::bitcast::const_numeric_bitcast_cast(context, value, cast)
-            } else {
-                let cast: BasicTypeEnum = typegen::generate_subtype_with_all(llvm_context, cast_ty);
-                constants::casts::numeric::numeric_cast(
-                    value,
-                    cast,
-                    value_type.is_signed_integer_type(),
-                )
-            }
-        }
-
-        _ => value,
-    }
-}
 
 pub fn constant_struct<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
@@ -171,84 +133,6 @@ pub fn constant_struct<'ctx>(
     llvm_context.const_struct(&fields, false).into()
 }
 
-pub fn constant_fixed_array<'ctx>(
-    context: &mut LLVMCodeGenContext<'_, 'ctx>,
-    kind: &Type,
-    items: &'ctx [Ast],
-) -> BasicValueEnum<'ctx> {
-    let llvm_context: &Context = context.get_llvm_context();
-
-    let array_item_type: &Type = kind.get_fixed_array_base_type();
-
-    let array_type: BasicTypeEnum = typegen::generate_type(llvm_context, array_item_type);
-
-    let values: Vec<BasicValueEnum> = items
-        .iter()
-        .map(|item| {
-            let value_type: &Type = item.get_type_unwrapped();
-            let value: BasicValueEnum = constgen::compile(context, item, array_item_type);
-
-            self::cast(context, value, value_type, array_item_type)
-        })
-        .collect();
-
-    match array_type {
-        t if t.is_int_type() => t
-            .into_int_type()
-            .const_array(
-                &values
-                    .iter()
-                    .map(|v| v.into_int_value())
-                    .collect::<Vec<_>>(),
-            )
-            .into(),
-        t if t.is_float_type() => t
-            .into_float_type()
-            .const_array(
-                &values
-                    .iter()
-                    .map(|v| v.into_float_value())
-                    .collect::<Vec<_>>(),
-            )
-            .into(),
-        t if t.is_array_type() => t
-            .into_array_type()
-            .const_array(
-                &values
-                    .iter()
-                    .map(|v| v.into_array_value())
-                    .collect::<Vec<_>>(),
-            )
-            .into(),
-        t if t.is_struct_type() => t
-            .into_struct_type()
-            .const_array(
-                &values
-                    .iter()
-                    .map(|v| v.into_struct_value())
-                    .collect::<Vec<_>>(),
-            )
-            .into(),
-        t if t.is_pointer_type() => t
-            .into_pointer_type()
-            .const_array(
-                &values
-                    .iter()
-                    .map(|v| v.into_pointer_value())
-                    .collect::<Vec<_>>(),
-            )
-            .into(),
-        _ => {
-            self::codegen_abort(format!(
-                "Incompatible type '{}' for constant array",
-                array_item_type
-            ));
-
-            self::compile_null_ptr(context)
-        }
-    }
-}
-
 fn compile_as<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     from: &'ctx Ast,
@@ -257,7 +141,7 @@ fn compile_as<'ctx>(
     let value_type: &Type = from.get_type_unwrapped();
     let value: BasicValueEnum = constgen::compile(context, from, value_type);
 
-    self::cast(context, value, value_type, cast)
+    casts::try_one(context, value, value_type, cast)
 }
 
 fn compile_reference<'ctx>(

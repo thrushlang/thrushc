@@ -1,5 +1,5 @@
 use crate::{
-    backend::llvm::compiler::{constgen, context::LLVMCodeGenContext},
+    backend::llvm::compiler::{constants, constgen, context::LLVMCodeGenContext},
     frontend::{
         types::{ast::Ast, parser::repr::LocalConstant},
         typesystem::types::Type,
@@ -21,7 +21,7 @@ pub fn compile_local<'ctx>(
     let expr_type: &Type = expr.get_type_unwrapped();
 
     let compiled_value: BasicValueEnum = constgen::compile(context, expr, kind);
-    let value: BasicValueEnum = constgen::cast(context, compiled_value, expr_type, kind);
+    let value: BasicValueEnum = constants::casts::try_one(context, compiled_value, expr_type, kind);
 
     context.new_local_constant(name, ascii_name, kind, value);
 }

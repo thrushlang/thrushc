@@ -28,7 +28,7 @@ pub fn validate<'type_checker>(
             if !value.is_llvm_constant_value() {
                 return Err(ThrushCompilerIssue::Error(
                     "Syntax error".into(),
-                    "Expected integer, floating-point, boolean, string, fixed array, or char constant types.".into(),
+                    "Expected compile-time sized value.".into(),
                     None,
                     expression_span,
                 ));

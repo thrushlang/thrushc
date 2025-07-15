@@ -11,7 +11,7 @@ pub enum OutputIn {
     Stderr,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub enum LoggingType {
     BackendPanic,
     BackendBug,
@@ -26,7 +26,7 @@ pub enum LoggingType {
 pub fn log(ltype: LoggingType, msg: &str) {
     if ltype.is_bug() {
         io::stderr()
-            .write_all(format!("{} {}\n", ltype.to_styled(), msg).as_bytes())
+            .write_all(format!("{} {}\n", ltype.as_styled(), msg).as_bytes())
             .unwrap_or_default();
 
         io::stderr()
@@ -48,7 +48,7 @@ pub fn log(ltype: LoggingType, msg: &str) {
 
     if ltype.is_backend_bug() {
         io::stderr()
-            .write_all(format!("{} {}\n", ltype.to_styled(), msg).as_bytes())
+            .write_all(format!("{} {}\n", ltype.as_styled(), msg).as_bytes())
             .unwrap_or_default();
 
         io::stderr()
@@ -70,7 +70,7 @@ pub fn log(ltype: LoggingType, msg: &str) {
 
     if ltype.is_panic() {
         io::stderr()
-            .write_all(format!("{} {}\n", ltype.to_styled(), msg).as_bytes())
+            .write_all(format!("{} {}\n", ltype.as_styled(), msg).as_bytes())
             .unwrap_or_default();
 
         process::exit(1);
@@ -78,7 +78,7 @@ pub fn log(ltype: LoggingType, msg: &str) {
 
     if ltype.is_backend_panic() {
         io::stderr()
-            .write_all(format!("\n{} {}", ltype.to_styled(), msg).as_bytes())
+            .write_all(format!("\n{} {}", ltype.as_styled(), msg).as_bytes())
             .unwrap_or_default();
 
         io::stderr()
@@ -109,7 +109,7 @@ pub fn log(ltype: LoggingType, msg: &str) {
 
     if ltype.is_err() {
         io::stderr()
-            .write_all(format!("{} {}\n", ltype.to_styled(), msg).as_bytes())
+            .write_all(format!("{} {}\n", ltype.as_styled(), msg).as_bytes())
             .unwrap_or_default();
 
         return;
@@ -117,7 +117,7 @@ pub fn log(ltype: LoggingType, msg: &str) {
 
     if ltype.is_frontend_panic() {
         io::stderr()
-            .write_all(format!("\n{} {}", ltype.to_styled(), msg).as_bytes())
+            .write_all(format!("\n{} {}", ltype.as_styled(), msg).as_bytes())
             .unwrap_or_default();
 
         process::exit(1);
@@ -125,14 +125,14 @@ pub fn log(ltype: LoggingType, msg: &str) {
 
     if ltype.is_warn() || ltype.is_info() {
         io::stderr()
-            .write_all(format!("{} {}", ltype.to_styled(), msg).as_bytes())
+            .write_all(format!("{} {}", ltype.as_styled(), msg).as_bytes())
             .unwrap_or_default();
 
         return;
     }
 
     io::stdout()
-        .write_all(format!("{} {}", ltype.to_styled(), msg).as_bytes())
+        .write_all(format!("{} {}", ltype.as_styled(), msg).as_bytes())
         .unwrap_or_default();
 }
 
@@ -144,7 +144,7 @@ pub fn write(output_in: OutputIn, text: &str) {
 }
 
 impl LoggingType {
-    pub fn to_styled(&self) -> ColoredString {
+    pub fn as_styled(&self) -> ColoredString {
         match self {
             LoggingType::BackendPanic => "BACKEND PANIC".bright_red().bold(),
             LoggingType::BackendBug => "BACKEND BUG".bold().bright_red().underline(),

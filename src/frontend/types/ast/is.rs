@@ -102,26 +102,6 @@ impl Ast<'_> {
             return stmts.iter().any(|stmt| stmt.has_return());
         }
 
-        if let Ast::If {
-            block,
-            elseif,
-            anyway,
-            ..
-        } = self
-        {
-            return block.has_return()
-                || elseif.iter().any(|elif| elif.has_return())
-                || anyway.as_ref().is_some_and(|anyway| anyway.has_return());
-        }
-
-        if let Ast::Elif { block, .. } = self {
-            return block.has_return();
-        }
-
-        if let Ast::Else { block, .. } = self {
-            return block.has_return();
-        }
-
         self.is_return()
     }
 
@@ -130,52 +110,12 @@ impl Ast<'_> {
             return stmts.iter().any(|stmt| stmt.has_return());
         }
 
-        if let Ast::If {
-            block,
-            elseif,
-            anyway,
-            ..
-        } = self
-        {
-            return block.has_return()
-                || elseif.iter().all(|elif| elif.has_return())
-                || anyway.as_ref().is_some_and(|anyway| anyway.has_return());
-        }
-
-        if let Ast::Elif { block, .. } = self {
-            return block.has_return();
-        }
-
-        if let Ast::Else { block, .. } = self {
-            return block.has_return();
-        }
-
         self.is_return()
     }
 
     pub fn has_break(&self) -> bool {
         if let Ast::Block { stmts, .. } = self {
             return stmts.iter().any(|stmt| stmt.has_break());
-        }
-
-        if let Ast::If {
-            block,
-            elseif,
-            anyway,
-            ..
-        } = self
-        {
-            return block.has_break()
-                || elseif.iter().any(|elif| elif.has_break())
-                || anyway.as_ref().is_some_and(|anyway| anyway.has_break());
-        }
-
-        if let Ast::Elif { block, .. } = self {
-            return block.has_break();
-        }
-
-        if let Ast::Else { block, .. } = self {
-            return block.has_break();
         }
 
         self.is_break()

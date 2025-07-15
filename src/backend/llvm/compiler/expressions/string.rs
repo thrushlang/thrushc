@@ -11,6 +11,7 @@ use inkwell::{
 };
 
 use crate::backend::llvm::compiler::context::LLVMCodeGenContext;
+use crate::backend::llvm::compiler::utils;
 
 pub fn compile_str_constant<'ctx>(
     context: &LLVMCodeGenContext<'_, 'ctx>,
@@ -28,11 +29,13 @@ pub fn compile_str_constant<'ctx>(
     };
 
     let cstr_type: ArrayType = llvm_context.i8_type().array_type(fixed_cstr_size);
-    let cstr: GlobalValue = llvm_module.add_global(cstr_type, Some(AddressSpace::default()), "");
 
-    let alignment: u32 = target_data.get_preferred_alignment_of_global(&cstr);
+    let cstr_name: String = format!("cstr.constant.{}", utils::generate_random_string());
 
-    cstr.set_alignment(alignment);
+    let cstr: GlobalValue =
+        llvm_module.add_global(cstr_type, Some(AddressSpace::default()), &cstr_name);
+
+    cstr.set_alignment(target_data.get_preferred_alignment_of_global(&cstr));
     cstr.set_linkage(Linkage::LinkerPrivate);
     cstr.set_initializer(&llvm_context.const_string(bytes, true));
     cstr.set_constant(true);
@@ -40,12 +43,17 @@ pub fn compile_str_constant<'ctx>(
     let str_type: StructType = llvm_context.struct_type(
         &[
             llvm_context.ptr_type(AddressSpace::default()).into(),
-            llvm_context.i64_type().into(),
+            llvm_context.i32_type().into(),
         ],
         false,
     );
 
-    let str: GlobalValue = llvm_module.add_global(str_type, Some(AddressSpace::default()), "");
+    let str_name: String = format!("str.constant.{}", utils::generate_random_string());
+
+    let str: GlobalValue =
+        llvm_module.add_global(str_type, Some(AddressSpace::default()), &str_name);
+
+    str.set_alignment(target_data.get_preferred_alignment_of_global(&str));
 
     str.set_linkage(Linkage::LinkerPrivate);
 
@@ -54,7 +62,7 @@ pub fn compile_str_constant<'ctx>(
             &[
                 cstr.as_pointer_value().into(),
                 llvm_context
-                    .i64_type()
+                    .i32_type()
                     .const_int(fixed_cstr_size as u64, false)
                     .into(),
             ],
@@ -91,7 +99,7 @@ pub fn compile_str<'ctx>(
         &[
             cstr.as_pointer_value().into(),
             llvm_context
-                .i64_type()
+                .i32_type()
                 .const_int(fixed_cstr_size as u64, false)
                 .into(),
         ],

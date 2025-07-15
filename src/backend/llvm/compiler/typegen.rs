@@ -84,7 +84,7 @@ pub fn generate_type<'ctx>(llvm_context: &'ctx Context, kind: &Type) -> BasicTyp
             .struct_type(
                 &[
                     llvm_context.ptr_type(AddressSpace::default()).into(),
-                    llvm_context.i64_type().into(),
+                    llvm_context.i32_type().into(),
                 ],
                 false,
             )

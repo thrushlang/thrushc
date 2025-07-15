@@ -12,34 +12,34 @@ use inkwell::values::{BasicValueEnum, IntValue, PointerValue};
 
 pub fn compile<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
-    kind: &Type,
     items: &'ctx [Ast],
+    kind: &Type,
     cast: Option<&Type>,
 ) -> BasicValueEnum<'ctx> {
-    self::fixed_array(context, kind, items, cast)
+    self::fixed_array(context, items, kind, cast)
 }
 
 fn fixed_array<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
-    kind: &Type,
     items: &'ctx [Ast],
+    kind: &Type,
     cast: Option<&Type>,
 ) -> BasicValueEnum<'ctx> {
     if let Some(anchor) = context.get_pointer_anchor() {
         if !anchor.is_triggered() {
-            self::compile_fixed_array_with_anchor(context, kind, items, cast, anchor)
+            self::compile_fixed_array_with_anchor(context, items, kind, cast, anchor)
         } else {
-            self::compile_fixed_array_without_anchor(context, kind, items, cast)
+            self::compile_fixed_array_without_anchor(context, items, kind, cast)
         }
     } else {
-        self::compile_fixed_array_without_anchor(context, kind, items, cast)
+        self::compile_fixed_array_without_anchor(context, items, kind, cast)
     }
 }
 
 fn compile_fixed_array_with_anchor<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
-    kind: &Type,
     items: &'ctx [Ast],
+    kind: &Type,
     cast: Option<&Type>,
     anchor: PointerAnchor<'ctx>,
 ) -> BasicValueEnum<'ctx> {
@@ -75,8 +75,8 @@ fn compile_fixed_array_with_anchor<'ctx>(
 
 fn compile_fixed_array_without_anchor<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
-    kind: &Type,
     items: &'ctx [Ast],
+    kind: &Type,
     cast: Option<&Type>,
 ) -> BasicValueEnum<'ctx> {
     let llvm_context: &Context = context.get_llvm_context();

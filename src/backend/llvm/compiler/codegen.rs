@@ -3,7 +3,7 @@
 use std::fmt::Display;
 
 use crate::backend::llvm::compiler::{
-    binaryop, builtins, constgen, declarations, expressions, ptrgen, statements,
+    binaryop, builtins, declarations, expressions, ptrgen, statements,
 };
 use crate::backend::types::{repr::LLVMFunction, traits::AssemblerFunctionExtensions};
 use crate::core::console::logging::{self, LoggingType};

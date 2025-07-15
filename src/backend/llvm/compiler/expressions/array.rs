@@ -13,25 +13,25 @@ use inkwell::{builder::Builder, context::Context};
 
 pub fn compile<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
-    kind: &Type,
     items: &'ctx [Ast],
+    kind: &Type,
     cast: Option<&Type>,
 ) -> BasicValueEnum<'ctx> {
     if let Some(anchor) = context.get_pointer_anchor() {
         if !anchor.is_triggered() {
-            self::compile_fixed_array_with_anchor(context, kind, items, cast, anchor)
+            self::compile_array_with_anchor(context, items, kind, cast, anchor)
         } else {
-            self::compile_fixed_array_without_anchor(context, kind, items, cast)
+            self::compile_array_without_anchor(context, items, kind, cast)
         }
     } else {
-        self::compile_fixed_array_without_anchor(context, kind, items, cast)
+        self::compile_array_without_anchor(context, items, kind, cast)
     }
 }
 
-pub fn compile_fixed_array_without_anchor<'ctx>(
+fn compile_array_without_anchor<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
-    kind: &Type,
     items: &'ctx [Ast],
+    kind: &Type,
     cast: Option<&Type>,
 ) -> BasicValueEnum<'ctx> {
     let llvm_context: &Context = context.get_llvm_context();
@@ -72,11 +72,11 @@ pub fn compile_fixed_array_without_anchor<'ctx>(
         .build_struct_gep(array_wrapper_type, array_wrapper_ptr, 0, "")
         .unwrap();
 
-    memory::store_anon(context, array_ptr_gep, array_ptr.into());
-
     let array_size_gep: PointerValue = llvm_builder
         .build_struct_gep(array_wrapper_type, array_wrapper_ptr, 1, "")
         .unwrap();
+
+    memory::store_anon(context, array_ptr_gep, array_ptr.into());
 
     memory::store_anon(
         context,
@@ -90,10 +90,10 @@ pub fn compile_fixed_array_without_anchor<'ctx>(
     memory::load_anon(context, array_wrapper_ptr, base_array_type)
 }
 
-fn compile_fixed_array_with_anchor<'ctx>(
+fn compile_array_with_anchor<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
-    kind: &Type,
     items: &'ctx [Ast],
+    kind: &Type,
     cast: Option<&Type>,
     anchor: PointerAnchor<'ctx>,
 ) -> BasicValueEnum<'ctx> {
@@ -136,11 +136,11 @@ fn compile_fixed_array_with_anchor<'ctx>(
         .build_struct_gep(array_wrapper_type, array_wrapper_ptr, 0, "")
         .unwrap();
 
-    memory::store_anon(context, array_ptr_gep, array_ptr.into());
-
     let array_size_gep: PointerValue = llvm_builder
         .build_struct_gep(array_wrapper_type, array_wrapper_ptr, 1, "")
         .unwrap();
+
+    memory::store_anon(context, array_ptr_gep, array_ptr.into());
 
     memory::store_anon(
         context,
