@@ -23,6 +23,7 @@ use {
         },
     },
     inkwell::{
+        basic_block::BasicBlock,
         builder::Builder,
         context::Context,
         module::Module,
@@ -232,20 +233,24 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
 }
 
 impl LLVMCodeGenContext<'_, '_> {
+    #[inline]
     pub fn begin_scope(&mut self) {
         self.table.begin_scope();
     }
 
+    #[inline]
     pub fn end_scope(&mut self) {
         self.table.end_scope();
     }
 }
 
 impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
+    #[inline]
     pub fn set_current_fn(&mut self, new_function: FunctionValue<'ctx>) {
         self.function = Some(new_function);
     }
 
+    #[inline]
     pub fn get_current_fn(&mut self) -> FunctionValue<'ctx> {
         self.function.unwrap_or_else(|| {
             self::codegen_abort("The function currently being compiled could not be obtained.");
@@ -253,28 +258,41 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
         })
     }
 
+    #[inline]
     pub fn unset_current_function(&mut self) {
         self.function = None;
     }
 }
 
 impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
+    #[inline]
     pub fn set_pointer_anchor(&mut self, anchor: PointerAnchor<'ctx>) {
         self.ptr_anchor = Some(anchor);
     }
 
+    #[inline]
     pub fn get_pointer_anchor(&mut self) -> Option<PointerAnchor<'ctx>> {
         self.ptr_anchor
     }
 
+    #[inline]
     pub fn clear_pointer_anchor(&mut self) {
         self.ptr_anchor = None;
     }
 }
 
 impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
+    #[inline]
     pub fn get_table(&self) -> &SymbolsTable<'ctx> {
         &self.table
+    }
+
+    #[inline]
+    pub fn get_last_builder_block(&self) -> BasicBlock<'ctx> {
+        self.builder.get_insert_block().unwrap_or_else(|| {
+            self::codegen_abort("The last builder block could not be obtained.");
+            unreachable!()
+        })
     }
 }
 

@@ -1,5 +1,10 @@
-pub fn generate_random_string() -> String {
-    let length: usize = fastrand::usize(5..=10);
+use std::ops::RangeInclusive;
+
+pub const SHORT_RANGE_OBFUSCATION: RangeInclusive<usize> = 5..=10;
+pub const LONG_RANGE_OBFUSCATION: RangeInclusive<usize> = 15..=30;
+
+pub fn generate_random_string(range: RangeInclusive<usize>) -> String {
+    let length: usize = fastrand::usize(range);
     let mut random_string: String = String::with_capacity(length);
 
     for _ in 0..length {

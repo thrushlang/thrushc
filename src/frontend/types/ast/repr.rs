@@ -1,12 +1,10 @@
 use crate::frontend::types::{
     ast::Ast,
-    parser::repr::{
-        AssemblerFunctionRepresentation, FunctionRepresentation, GlobalConstant, GlobalStatic,
-    },
+    parser::repr::{GlobalAssemblerFunction, GlobalConstant, GlobalFunction, GlobalStatic},
 };
 
 impl Ast<'_> {
-    pub fn as_asm_function_representation(&self) -> AssemblerFunctionRepresentation {
+    pub fn as_global_asm_function(&self) -> GlobalAssemblerFunction {
         if let Ast::AssemblerFunction {
             name,
             ascii_name,
@@ -67,7 +65,7 @@ impl Ast<'_> {
         unreachable!()
     }
 
-    pub fn as_function_representation(&self) -> FunctionRepresentation {
+    pub fn as_global_function(&self) -> GlobalFunction {
         if let Ast::Function {
             name,
             ascii_name,

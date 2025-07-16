@@ -48,7 +48,7 @@ pub type Local<'ctx> = (
     &'ctx ThrushAttributes<'ctx>,
 );
 
-pub type FunctionRepresentation<'ctx> = (
+pub type GlobalFunction<'ctx> = (
     &'ctx str,
     &'ctx str,
     &'ctx Type,
@@ -58,7 +58,7 @@ pub type FunctionRepresentation<'ctx> = (
     &'ctx ThrushAttributes<'ctx>,
 );
 
-pub type AssemblerFunctionRepresentation<'ctx> = (
+pub type GlobalAssemblerFunction<'ctx> = (
     &'ctx str,
     &'ctx str,
     &'ctx str,

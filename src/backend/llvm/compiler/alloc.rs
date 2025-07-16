@@ -10,7 +10,11 @@ use inkwell::{
 };
 
 use crate::{
-    backend::llvm::compiler::{context::LLVMCodeGenContext, typegen, utils},
+    backend::llvm::compiler::{
+        context::LLVMCodeGenContext,
+        typegen,
+        utils::{self, SHORT_RANGE_OBFUSCATION},
+    },
     core::console::logging::{self, LoggingType},
     frontend::{
         types::{
@@ -31,13 +35,16 @@ pub fn alloc<'ctx>(
 
     let llvm_type: BasicTypeEnum = typegen::generate_subtype(llvm_context, kind);
 
-    let formatted_ascii_name: String =
-        format!("{}.local.{}", utils::generate_random_string(), ascii_name);
+    let formatted_name: String = format!(
+        "{}.local.{}",
+        utils::generate_random_string(SHORT_RANGE_OBFUSCATION),
+        ascii_name
+    );
 
     match (attributes.has_heap_attr(), attributes.has_stack_attr()) {
-        (true, _) => self::try_alloc_heap(context, llvm_type, &formatted_ascii_name, kind),
-        (_, true) => self::try_alloc_stack(context, llvm_type, &formatted_ascii_name, kind),
-        _ => self::try_alloc_stack(context, llvm_type, &formatted_ascii_name, kind),
+        (true, _) => self::try_alloc_heap(context, llvm_type, &formatted_name, kind),
+        (_, true) => self::try_alloc_stack(context, llvm_type, &formatted_name, kind),
+        _ => self::try_alloc_stack(context, llvm_type, &formatted_name, kind),
     }
 }
 
@@ -94,7 +101,11 @@ pub fn local_constant<'ctx>(
     let llvm_module: &Module = context.get_llvm_module();
     let target_data: &TargetData = context.get_target_data();
 
-    let name: String = format!("{}.const.{}", utils::generate_random_string(), ascii_name);
+    let name: String = format!(
+        "{}.const.{}",
+        utils::generate_random_string(SHORT_RANGE_OBFUSCATION),
+        ascii_name
+    );
 
     let global: GlobalValue =
         llvm_module.add_global(llvm_type, Some(AddressSpace::default()), &name);
@@ -147,7 +158,11 @@ pub fn local_static<'ctx>(
     let llvm_metadata: LLVMStaticMetadata = metadata.get_llvm_metadata();
     let target_data: &TargetData = context.get_target_data();
 
-    let name: String = format!("{}.static.{}", utils::generate_random_string(), ascii_name);
+    let name: String = format!(
+        "{}.static.{}",
+        utils::generate_random_string(SHORT_RANGE_OBFUSCATION),
+        ascii_name
+    );
 
     let global: GlobalValue =
         llvm_module.add_global(llvm_type, Some(AddressSpace::default()), &name);

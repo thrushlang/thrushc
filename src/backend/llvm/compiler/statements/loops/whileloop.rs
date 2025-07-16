@@ -57,10 +57,13 @@ pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, stmt: &'ctx Ast<'ctx>)
 
         codegen.codegen_block(block);
 
-        if let Some(last_block) = llvm_builder.get_insert_block() {
-            if last_block.get_terminator().is_none() {
-                let _ = llvm_builder.build_unconditional_branch(condition);
-            }
+        if codegen
+            .get_context()
+            .get_last_builder_block()
+            .get_terminator()
+            .is_none()
+        {
+            let _ = llvm_builder.build_unconditional_branch(condition);
         }
 
         llvm_builder.position_at_end(exit);

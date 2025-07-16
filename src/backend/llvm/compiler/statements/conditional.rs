@@ -56,12 +56,15 @@ pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, stmt: &'ctx Ast<'ctx>)
 
         codegen.codegen_block(block);
 
-        if let Some(last_block) = llvm_builder.get_insert_block() {
-            if last_block.get_terminator().is_none() {
-                llvm_builder
-                    .build_unconditional_branch(merge)
-                    .unwrap_or_else(abort);
-            }
+        if codegen
+            .get_context()
+            .get_last_builder_block()
+            .get_terminator()
+            .is_none()
+        {
+            llvm_builder
+                .build_unconditional_branch(merge)
+                .unwrap_or_else(abort);
         }
 
         if !elseif.is_empty() {
@@ -123,12 +126,15 @@ fn compile_elseif<'ctx>(
 
             codegen.codegen_block(block);
 
-            if let Some(last_block) = llvm_builder.get_insert_block() {
-                if last_block.get_terminator().is_none() {
-                    llvm_builder
-                        .build_unconditional_branch(merge)
-                        .unwrap_or_else(abort);
-                }
+            if codegen
+                .get_context()
+                .get_last_builder_block()
+                .get_terminator()
+                .is_none()
+            {
+                llvm_builder
+                    .build_unconditional_branch(merge)
+                    .unwrap_or_else(abort);
             }
 
             current = next;
@@ -151,10 +157,13 @@ pub fn compile_else<'ctx>(
 
         codegen.codegen_block(block);
 
-        if let Some(last_block) = llvm_builder.get_insert_block() {
-            if last_block.get_terminator().is_none() {
-                let _ = llvm_builder.build_unconditional_branch(merge);
-            }
+        if codegen
+            .get_context()
+            .get_last_builder_block()
+            .get_terminator()
+            .is_none()
+        {
+            let _ = llvm_builder.build_unconditional_branch(merge);
         }
     }
 }

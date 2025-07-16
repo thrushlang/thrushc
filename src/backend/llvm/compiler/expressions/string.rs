@@ -11,7 +11,7 @@ use inkwell::{
 };
 
 use crate::backend::llvm::compiler::context::LLVMCodeGenContext;
-use crate::backend::llvm::compiler::utils;
+use crate::backend::llvm::compiler::utils::{self, SHORT_RANGE_OBFUSCATION};
 
 pub fn compile_str_constant<'ctx>(
     context: &LLVMCodeGenContext<'_, 'ctx>,
@@ -30,7 +30,10 @@ pub fn compile_str_constant<'ctx>(
 
     let cstr_type: ArrayType = llvm_context.i8_type().array_type(fixed_cstr_size);
 
-    let cstr_name: String = format!("cstr.constant.{}", utils::generate_random_string());
+    let cstr_name: String = format!(
+        "cstr.constant.{}",
+        utils::generate_random_string(SHORT_RANGE_OBFUSCATION)
+    );
 
     let cstr: GlobalValue =
         llvm_module.add_global(cstr_type, Some(AddressSpace::default()), &cstr_name);
@@ -48,7 +51,10 @@ pub fn compile_str_constant<'ctx>(
         false,
     );
 
-    let str_name: String = format!("str.constant.{}", utils::generate_random_string());
+    let str_name: String = format!(
+        "str.constant.{}",
+        utils::generate_random_string(SHORT_RANGE_OBFUSCATION)
+    );
 
     let str: GlobalValue =
         llvm_module.add_global(str_type, Some(AddressSpace::default()), &str_name);
