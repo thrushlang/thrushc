@@ -1,20 +1,16 @@
 use crate::{
-    backend::llvm::compiler::attributes::LLVMAttribute,
     core::errors::standard::ThrushCompilerIssue,
     frontend::{
         lexer::{span::Span, token::Token, tokentype::TokenType},
         parser::{
-            ParserContext, attributes, builtins, expr,
+            ParserContext, builtins, expr,
             expressions::{
-                address, array, asm, call, constructor, deref, enumv, farray, index, property,
+                array, asm, call, constructor, deref, enumv, farray, index, lli, property,
                 reference, sizeof,
             },
-            parse, typegen,
+            parse,
         },
-        types::{
-            ast::Ast,
-            parser::stmts::{sites::AllocationSite, traits::TokenExtensions},
-        },
+        types::{ast::Ast, parser::stmts::traits::TokenExtensions},
         typesystem::types::Type,
     },
 };
@@ -40,190 +36,10 @@ pub fn lower_precedence<'parser>(
 
         TokenType::Asm => asm::build_asm_code_block(parser_context)?,
 
-        TokenType::Alloc => {
-            let alloc_tk: &Token = parser_context.advance()?;
-            let span: Span = alloc_tk.get_span();
-
-            let site_allocation: AllocationSite = match parser_context.peek().kind {
-                TokenType::Heap => {
-                    parser_context.only_advance()?;
-                    AllocationSite::Heap
-                }
-
-                TokenType::Stack => {
-                    parser_context.only_advance()?;
-                    AllocationSite::Stack
-                }
-
-                TokenType::Static => {
-                    parser_context.only_advance()?;
-                    AllocationSite::Static
-                }
-
-                _ => {
-                    return Err(ThrushCompilerIssue::Error(
-                        "Syntax error".into(),
-                        "Expected site allocation attribute.".into(),
-                        None,
-                        span,
-                    ));
-                }
-            };
-
-            parser_context.consume(
-                TokenType::LBrace,
-                "Syntax error".into(),
-                "Expected '{'.".into(),
-            )?;
-
-            let mut alloc_type: Type = typegen::build_type(parser_context)?;
-
-            alloc_type = Type::Ptr(Some(alloc_type.into()));
-
-            let attributes: Vec<LLVMAttribute> = if !parser_context.check(TokenType::RBrace) {
-                attributes::build_attributes(
-                    parser_context,
-                    &[TokenType::RBrace, TokenType::SemiColon],
-                )?
-            } else {
-                Vec::new()
-            };
-
-            parser_context.consume(
-                TokenType::RBrace,
-                "Syntax error".into(),
-                "Expected '}'.".into(),
-            )?;
-
-            Ast::Alloc {
-                alloc: alloc_type,
-                site_allocation,
-                attributes,
-                span,
-            }
-        }
-
-        TokenType::Load => {
-            let load_tk: &Token = parser_context.advance()?;
-            let span: Span = load_tk.get_span();
-
-            let load_type: Type = typegen::build_type(parser_context)?;
-
-            parser_context.consume(
-                TokenType::Comma,
-                "Syntax error".into(),
-                "Expected ','.".into(),
-            )?;
-
-            if parser_context.check(TokenType::Identifier) {
-                let identifier_tk: &Token = parser_context.consume(
-                    TokenType::Identifier,
-                    "Syntax error".into(),
-                    "Expected 'identifier'.".into(),
-                )?;
-
-                let reference_name: &str = identifier_tk.get_lexeme();
-
-                let reference: Ast =
-                    reference::build_reference(parser_context, reference_name, span)?;
-
-                return Ok(Ast::Load {
-                    source: (Some((reference_name, reference.into())), None),
-                    kind: load_type,
-                    span,
-                });
-            }
-
-            let expression: Ast = expr::build_expr(parser_context)?;
-
-            Ast::Load {
-                source: (None, Some(expression.into())),
-                kind: load_type,
-                span,
-            }
-        }
-
-        TokenType::Write => {
-            let write_tk: &Token = parser_context.advance()?;
-            let span: Span = write_tk.span;
-
-            if parser_context.match_token(TokenType::Identifier)? {
-                let identifier_tk: &Token = parser_context.previous();
-                let name: &str = identifier_tk.get_lexeme();
-
-                let reference: Ast = reference::build_reference(parser_context, name, span)?;
-
-                parser_context.consume(
-                    TokenType::Comma,
-                    "Syntax error".into(),
-                    "Expected ','.".into(),
-                )?;
-
-                let write_type: Type = typegen::build_type(parser_context)?;
-
-                let value: Ast = expr::build_expr(parser_context)?;
-
-                return Ok(Ast::Write {
-                    source: (Some((name, reference.into())), None),
-                    write_value: value.clone().into(),
-                    write_type,
-                    span,
-                });
-            }
-
-            let expression: Ast = expr::build_expr(parser_context)?;
-
-            parser_context.consume(
-                TokenType::Comma,
-                "Syntax error".into(),
-                "Expected ','.".into(),
-            )?;
-
-            let write_type: Type = typegen::build_type(parser_context)?;
-            let value: Ast = expr::build_expr(parser_context)?;
-
-            Ast::Write {
-                source: (None, Some(expression.into())),
-                write_value: value.clone().into(),
-                write_type,
-                span,
-            }
-        }
-
-        TokenType::Address => {
-            let address_tk: &Token = parser_context.advance()?;
-            let address_span: Span = address_tk.get_span();
-
-            if parser_context.match_token(TokenType::Identifier)? {
-                let identifier_tk: &Token = parser_context.previous();
-
-                let name: &str = identifier_tk.get_lexeme();
-                let span: Span = identifier_tk.get_span();
-
-                let reference: Ast = reference::build_reference(parser_context, name, span)?;
-
-                let indexes: Vec<Ast> = address::build_address_indexes(parser_context, span)?;
-
-                return Ok(Ast::Address {
-                    source: (Some((name, reference.into())), None),
-                    indexes,
-                    kind: Type::Addr,
-                    span: address_span,
-                });
-            }
-
-            let expr: Ast = expr::build_expr(parser_context)?;
-            let expr_span: Span = expr.get_span();
-
-            let indexes: Vec<Ast> = address::build_address_indexes(parser_context, expr_span)?;
-
-            return Ok(Ast::Address {
-                source: (None, Some(expr.into())),
-                indexes,
-                kind: Type::Addr,
-                span: address_span,
-            });
-        }
+        TokenType::Alloc => lli::alloc::build_alloc(parser_context)?,
+        TokenType::Load => lli::load::build_load(parser_context)?,
+        TokenType::Write => lli::write::build_write(parser_context)?,
+        TokenType::Address => lli::address::build_address(parser_context)?,
 
         TokenType::LParen => {
             let span: Span = parser_context.advance()?.get_span();
@@ -341,6 +157,9 @@ pub fn lower_precedence<'parser>(
         TokenType::False => Ast::new_boolean(Type::Bool, 0, parser_context.advance()?.span),
 
         TokenType::Pass => Ast::Pass {
+            span: parser_context.advance()?.get_span(),
+        },
+        TokenType::Unreachable => Ast::Unreachable {
             span: parser_context.advance()?.get_span(),
         },
 

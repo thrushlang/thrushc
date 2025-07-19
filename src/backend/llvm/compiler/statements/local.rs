@@ -4,7 +4,7 @@ use crate::{
     },
     frontend::{
         types::{
-            ast::Ast,
+            ast::{Ast, metadata::local::LocalMetadata},
             parser::{repr::Local, stmts::types::ThrushAttributes},
         },
         typesystem::types::Type,
@@ -21,8 +21,9 @@ pub fn compile<'ctx>(context: &mut LLVMCodeGenContext<'_, 'ctx>, local: Local<'c
     let expr: &Ast = local.3;
 
     let attributes: &ThrushAttributes = local.4;
+    let metadata: LocalMetadata = local.5;
 
-    context.new_local(name, ascii_name, local_type, attributes);
+    context.new_local(name, ascii_name, local_type, attributes, metadata);
 
     let symbol: SymbolAllocated = context.get_table().get_symbol(name);
 

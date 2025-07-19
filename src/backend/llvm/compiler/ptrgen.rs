@@ -40,7 +40,7 @@ pub fn compile<'ctx>(
         // Compiles a function call
         Ast::Call {
             name, args, kind, ..
-        } => compile_function_call(context, name, args, kind, cast),
+        } => self::compile_function_call(context, name, args, kind, cast),
 
         // Compiles a grouped expression (e.g., parenthesized)
         Ast::Group { expression, .. } => self::compile(context, expression, cast),

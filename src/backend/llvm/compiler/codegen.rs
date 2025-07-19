@@ -192,7 +192,6 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 name,
                 ascii_name,
                 kind,
-                value,
                 attributes,
                 metadata,
                 ..
@@ -200,38 +199,21 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 let metadata: &LocalMetadata = metadata;
 
                 if metadata.is_undefined() {
-                    self.context.new_local(name, ascii_name, kind, attributes);
+                    self.context
+                        .new_local(name, ascii_name, kind, attributes, *metadata);
+
                     return;
                 }
 
-                statements::local::compile(
-                    self.context,
-                    (name, ascii_name, kind, value, attributes),
-                );
+                statements::local::compile(self.context, stmt.as_local());
             }
 
-            Ast::Const {
-                name,
-                ascii_name,
-                kind,
-                value,
-                ..
-            } => {
-                statements::constant::compile_local(self.context, (name, ascii_name, kind, value));
+            Ast::Const { .. } => {
+                statements::constant::compile_local(self.context, stmt.as_local_constant());
             }
 
-            Ast::Static {
-                name,
-                ascii_name,
-                kind,
-                value,
-                metadata,
-                ..
-            } => {
-                statements::staticvar::compile_local(
-                    self.context,
-                    (name, ascii_name, kind, value, *metadata),
-                );
+            Ast::Static { .. } => {
+                statements::staticvar::compile_local(self.context, stmt.as_local_static());
             }
 
             Ast::LLI {
@@ -348,6 +330,10 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
 
             Ast::Builtin { builtin, .. } => {
                 builtins::compile(self.context, builtin, None);
+            }
+
+            Ast::Unreachable { .. } => {
+                let _ = self.context.get_llvm_builder().build_unreachable();
             }
 
             _ => (),

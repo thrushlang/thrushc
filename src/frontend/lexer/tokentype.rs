@@ -47,6 +47,8 @@ pub enum TokenType {
     Float,
 
     // --- Attributes ---
+    Heap,
+    Stack,
     Extern,
     Ignore,
     Public,
@@ -65,19 +67,26 @@ pub enum TokenType {
     AsmThrow,
     AsmSideEffects,
 
-    // --- Keywords ---
+    // --- Special ---
+    Unreachable,
+
+    // --- Modificators ---
+    Volatile,
+    LazyThread,
+
+    // --- LLI ---
     Alloc,
     Address,
     Instr,
     Load,
     Write,
+
+    // --- Keywords ---
     AsmFn,
     Asm,
     GlobalAsm,
     Deref,
     As,
-    Heap,
-    Stack,
     Static,
     New,
     Fixed,
@@ -89,7 +98,6 @@ pub enum TokenType {
     And,
     Struct,
     Else,
-    False,
     Fn,
     For,
     Continue,
@@ -98,11 +106,14 @@ pub enum TokenType {
     Elif,
     Or,
     Return,
-    True,
     Local,
     Const,
     While,
     Loop,
+
+    // --- Literals ---
+    True,
+    False,
     NullPtr,
 
     // -- Builtins --

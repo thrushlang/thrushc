@@ -21,13 +21,13 @@ pub fn compile_global<'ctx>(
     let kind: &Type = staticvar.2;
     let value: &Ast = staticvar.3;
 
-    let metadata: StaticMetadata = staticvar.4;
-    let attributes: &ThrushAttributes = staticvar.5;
+    let attributes: &ThrushAttributes = staticvar.4;
+    let metadata: StaticMetadata = staticvar.5;
 
     let value_type: &Type = value.get_type_unwrapped();
 
     let llvm_value: BasicValueEnum = constgen::compile(context, value, kind);
     let value: BasicValueEnum = constants::casts::try_one(context, llvm_value, value_type, kind);
 
-    context.new_global_static(name, ascii_name, kind, value, metadata, attributes);
+    context.new_global_static(name, ascii_name, kind, value, attributes, metadata);
 }

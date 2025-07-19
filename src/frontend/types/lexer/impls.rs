@@ -47,6 +47,14 @@ impl std::fmt::Display for TokenType {
             TokenType::U32 => write!(f, "u32"),
             TokenType::U64 => write!(f, "u64"),
             TokenType::Void => write!(f, "void"),
+
+            // Special
+            TokenType::Unreachable => write!(f, "unreachable"),
+
+            // Modificators
+            TokenType::LazyThread => write!(f, "lazythread"),
+            TokenType::Volatile => write!(f, "volatile"),
+
             // Attributes
             TokenType::Stack => write!(f, "@stack"),
             TokenType::Static => write!(f, "@static"),

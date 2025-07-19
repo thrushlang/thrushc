@@ -10,7 +10,6 @@ use crate::{
                 types::{CustomTypeFields, ThrushAttributes},
             },
         },
-        typesystem::types::Type,
     },
 };
 
@@ -54,8 +53,7 @@ pub fn build_custom_type<'parser>(
     let mut custom_type_fields: CustomTypeFields = Vec::with_capacity(10);
 
     while !parser_context.check(TokenType::RBrace) {
-        let kind: Type = typegen::build_type(parser_context)?;
-        custom_type_fields.push(kind);
+        custom_type_fields.push(typegen::build_type(parser_context)?);
     }
 
     parser_context.consume(

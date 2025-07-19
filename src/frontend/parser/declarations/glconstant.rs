@@ -21,6 +21,9 @@ pub fn build_global_const<'parser>(
         "Expected 'const' keyword.".into(),
     )?;
 
+    let is_lazy: bool = parser_context.match_token(TokenType::LazyThread)?;
+    let is_volatile: bool = parser_context.match_token(TokenType::Volatile)?;
+
     let const_tk: &Token = parser_context.consume(
         TokenType::Identifier,
         "Syntax error".into(),
@@ -61,7 +64,7 @@ pub fn build_global_const<'parser>(
         kind: const_type,
         value: value.into(),
         attributes,
-        metadata: ConstantMetadata::new(true),
+        metadata: ConstantMetadata::new(true, is_lazy, is_volatile),
         span,
     })
 }

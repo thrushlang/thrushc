@@ -17,7 +17,10 @@ use {
         core::diagnostic::diagnostician::Diagnostician,
         frontend::{
             types::{
-                ast::metadata::staticvar::StaticMetadata, parser::stmts::types::ThrushAttributes,
+                ast::metadata::{
+                    constant::ConstantMetadata, local::LocalMetadata, staticvar::StaticMetadata,
+                },
+                parser::stmts::types::ThrushAttributes,
             },
             typesystem::types::Type,
         },
@@ -76,17 +79,133 @@ impl<'a, 'ctx> LLVMCodeGenContext<'a, 'ctx> {
 }
 
 impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
+    pub fn new_local_constant(
+        &mut self,
+        name: &'ctx str,
+        ascii_name: &'ctx str,
+        kind: &'ctx Type,
+        value: BasicValueEnum<'ctx>,
+
+        metadata: ConstantMetadata,
+    ) {
+        let ptr: PointerValue = alloc::memstatic::local_constant(
+            self,
+            ascii_name,
+            typegen::generate_type(self.context, kind),
+            value,
+            metadata,
+        );
+
+        let constant: SymbolAllocated =
+            SymbolAllocated::new_constant(ptr.into(), kind, value, metadata.get_llvm_metadata());
+
+        if let Some(last_block) = self.table.get_mut_local_constants().last_mut() {
+            last_block.insert(name, constant);
+        } else {
+            logging::log(
+                LoggingType::BackendBug,
+                "The last frame of symbols could not be obtained.",
+            )
+        }
+    }
+
+    pub fn new_global_constant(
+        &mut self,
+        name: &'ctx str,
+        ascii_name: &'ctx str,
+        kind: &'ctx Type,
+        value: BasicValueEnum<'ctx>,
+        attributes: &'ctx ThrushAttributes<'ctx>,
+
+        metadata: ConstantMetadata,
+    ) {
+        let ptr: PointerValue = alloc::memstatic::global_constant(
+            self,
+            ascii_name,
+            typegen::generate_type(self.context, kind),
+            value,
+            attributes,
+            metadata,
+        );
+
+        let constant: SymbolAllocated =
+            SymbolAllocated::new_constant(ptr.into(), kind, value, metadata.get_llvm_metadata());
+
+        self.table.get_mut_global_constants().insert(name, constant);
+    }
+}
+
+impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
+    pub fn new_local_static(
+        &mut self,
+        name: &'ctx str,
+        ascii_name: &'ctx str,
+        kind: &'ctx Type,
+        value: BasicValueEnum<'ctx>,
+
+        metadata: StaticMetadata,
+    ) {
+        let ptr: PointerValue = alloc::memstatic::local_static(
+            self,
+            ascii_name,
+            typegen::generate_type(self.context, kind),
+            value,
+            metadata,
+        );
+
+        let constant: SymbolAllocated =
+            SymbolAllocated::new_static(ptr.into(), kind, value, metadata.get_llvm_metadata());
+
+        if let Some(last_block) = self.table.get_mut_local_statics().last_mut() {
+            last_block.insert(name, constant);
+        } else {
+            logging::log(
+                LoggingType::BackendBug,
+                "The last frame of symbols could not be obtained.",
+            )
+        }
+    }
+
+    pub fn new_global_static(
+        &mut self,
+        name: &'ctx str,
+        ascii_name: &'ctx str,
+        kind: &'ctx Type,
+        value: BasicValueEnum<'ctx>,
+        attributes: &'ctx ThrushAttributes<'ctx>,
+
+        metadata: StaticMetadata,
+    ) {
+        let ptr: PointerValue = alloc::memstatic::global_static(
+            self,
+            ascii_name,
+            typegen::generate_type(self.context, kind),
+            value,
+            attributes,
+            metadata,
+        );
+
+        let constant: SymbolAllocated =
+            SymbolAllocated::new_static(ptr.into(), kind, value, metadata.get_llvm_metadata());
+
+        self.table.get_mut_global_statics().insert(name, constant);
+    }
+}
+
+impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
     pub fn new_local(
         &mut self,
         name: &'ctx str,
         ascii_name: &'ctx str,
         kind: &'ctx Type,
         attributes: &'ctx ThrushAttributes<'ctx>,
+
+        metadata: LocalMetadata,
     ) {
         let ptr: PointerValue = alloc::alloc(self, ascii_name, kind, attributes);
 
         let local: SymbolAllocated =
-            SymbolAllocated::new(SymbolToAllocate::Local, kind, ptr.into());
+            SymbolAllocated::new_local(ptr, kind, metadata.get_llvm_metadata());
 
         if let Some(last_block) = self.table.get_mut_locals().last_mut() {
             last_block.insert(name, local);
@@ -110,104 +229,6 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
                 "The last frame of symbols could not be obtained.",
             );
         }
-    }
-
-    pub fn new_local_constant(
-        &mut self,
-        name: &'ctx str,
-        ascii_name: &'ctx str,
-        kind: &'ctx Type,
-        value: BasicValueEnum<'ctx>,
-    ) {
-        let ptr: PointerValue = alloc::local_constant(
-            self,
-            ascii_name,
-            typegen::generate_type(self.context, kind),
-            value,
-        );
-
-        let constant: SymbolAllocated = SymbolAllocated::new_constant(ptr.into(), kind, value);
-
-        if let Some(last_block) = self.table.get_mut_local_constants().last_mut() {
-            last_block.insert(name, constant);
-        } else {
-            logging::log(
-                LoggingType::BackendBug,
-                "The last frame of symbols could not be obtained.",
-            )
-        }
-    }
-
-    pub fn new_global_constant(
-        &mut self,
-        name: &'ctx str,
-        ascii_name: &'ctx str,
-        kind: &'ctx Type,
-        value: BasicValueEnum<'ctx>,
-        attributes: &'ctx ThrushAttributes<'ctx>,
-    ) {
-        let ptr: PointerValue = alloc::global_constant(
-            self,
-            ascii_name,
-            typegen::generate_type(self.context, kind),
-            value,
-            attributes,
-        );
-
-        let constant: SymbolAllocated = SymbolAllocated::new_constant(ptr.into(), kind, value);
-
-        self.table.get_mut_global_constants().insert(name, constant);
-    }
-
-    pub fn new_local_static(
-        &mut self,
-        name: &'ctx str,
-        ascii_name: &'ctx str,
-        kind: &'ctx Type,
-        value: BasicValueEnum<'ctx>,
-        metadata: StaticMetadata,
-    ) {
-        let ptr: PointerValue = alloc::local_static(
-            self,
-            ascii_name,
-            typegen::generate_type(self.context, kind),
-            value,
-            metadata,
-        );
-
-        let constant: SymbolAllocated = SymbolAllocated::new_static(ptr.into(), kind, value);
-
-        if let Some(last_block) = self.table.get_mut_local_statics().last_mut() {
-            last_block.insert(name, constant);
-        } else {
-            logging::log(
-                LoggingType::BackendBug,
-                "The last frame of symbols could not be obtained.",
-            )
-        }
-    }
-
-    pub fn new_global_static(
-        &mut self,
-        name: &'ctx str,
-        ascii_name: &'ctx str,
-        kind: &'ctx Type,
-        value: BasicValueEnum<'ctx>,
-        metadata: StaticMetadata,
-        attributes: &'ctx ThrushAttributes<'ctx>,
-    ) {
-        let ptr: PointerValue = alloc::global_static(
-            self,
-            ascii_name,
-            typegen::generate_type(self.context, kind),
-            value,
-            metadata,
-            attributes,
-        );
-
-        let constant: SymbolAllocated = SymbolAllocated::new_static(ptr.into(), kind, value);
-
-        self.table.get_mut_global_statics().insert(name, constant);
     }
 
     pub fn new_parameter(

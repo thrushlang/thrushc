@@ -1,7 +1,12 @@
 use crate::frontend::{
     lexer::tokentype::TokenType,
     types::{
-        ast::{Ast, metadata::staticvar::StaticMetadata},
+        ast::{
+            Ast,
+            metadata::{
+                constant::ConstantMetadata, local::LocalMetadata, staticvar::StaticMetadata,
+            },
+        },
         parser::stmts::types::ThrushAttributes,
     },
     typesystem::types::Type,
@@ -16,8 +21,8 @@ pub type GlobalStatic<'ctx> = (
     &'ctx str,
     &'ctx Type,
     &'ctx Ast<'ctx>,
-    StaticMetadata,
     &'ctx ThrushAttributes<'ctx>,
+    StaticMetadata,
 );
 
 pub type LocalStatic<'ctx> = (
@@ -34,9 +39,16 @@ pub type GlobalConstant<'ctx> = (
     &'ctx Type,
     &'ctx Ast<'ctx>,
     &'ctx ThrushAttributes<'ctx>,
+    ConstantMetadata,
 );
 
-pub type LocalConstant<'ctx> = (&'ctx str, &'ctx str, &'ctx Type, &'ctx Ast<'ctx>);
+pub type LocalConstant<'ctx> = (
+    &'ctx str,
+    &'ctx str,
+    &'ctx Type,
+    &'ctx Ast<'ctx>,
+    ConstantMetadata,
+);
 
 pub type FunctionParameter<'ctx> = (&'ctx str, &'ctx str, &'ctx Type, u32);
 
@@ -46,6 +58,7 @@ pub type Local<'ctx> = (
     &'ctx Type,
     &'ctx Ast<'ctx>,
     &'ctx ThrushAttributes<'ctx>,
+    LocalMetadata,
 );
 
 pub type GlobalFunction<'ctx> = (

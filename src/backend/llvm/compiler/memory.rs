@@ -12,9 +12,17 @@ use inkwell::{
 };
 
 use crate::{
-    backend::llvm::compiler::typegen,
+    backend::llvm::compiler::{
+        alloc::atomic::{self, LLVMAtomicModificators},
+        typegen,
+    },
     core::console::logging::{self, LoggingType},
-    frontend::typesystem::types::Type,
+    frontend::{
+        types::ast::metadata::{
+            constant::LLVMConstantMetadata, local::LLVMLocalMetadata, staticvar::LLVMStaticMetadata,
+        },
+        typesystem::types::Type,
+    },
 };
 
 use inkwell::{
@@ -29,16 +37,19 @@ pub enum SymbolAllocated<'ctx> {
     Local {
         ptr: PointerValue<'ctx>,
         kind: &'ctx Type,
+        metadata: LLVMLocalMetadata,
     },
     Static {
         ptr: PointerValue<'ctx>,
         value: BasicValueEnum<'ctx>,
         kind: &'ctx Type,
+        metadata: LLVMStaticMetadata,
     },
     Constant {
         ptr: PointerValue<'ctx>,
         value: BasicValueEnum<'ctx>,
         kind: &'ctx Type,
+        metadata: LLVMConstantMetadata,
     },
     LowLevelInstruction {
         value: BasicValueEnum<'ctx>,
@@ -52,7 +63,6 @@ pub enum SymbolAllocated<'ctx> {
 
 #[derive(Debug, Clone, Copy)]
 pub enum SymbolToAllocate {
-    Local,
     Parameter,
     LowLevelInstruction,
 }
@@ -67,12 +77,20 @@ pub enum LLVMAllocationSite {
 impl<'ctx> SymbolAllocated<'ctx> {
     pub fn new(allocate: SymbolToAllocate, kind: &'ctx Type, value: BasicValueEnum<'ctx>) -> Self {
         match allocate {
-            SymbolToAllocate::Local => Self::Local {
-                ptr: value.into_pointer_value(),
-                kind,
-            },
             SymbolToAllocate::Parameter => Self::Parameter { value, kind },
             SymbolToAllocate::LowLevelInstruction => Self::LowLevelInstruction { value, kind },
+        }
+    }
+
+    pub fn new_local(
+        ptr: PointerValue<'ctx>,
+        kind: &'ctx Type,
+        metadata: LLVMLocalMetadata,
+    ) -> Self {
+        Self::Local {
+            ptr,
+            kind,
+            metadata,
         }
     }
 
@@ -80,11 +98,13 @@ impl<'ctx> SymbolAllocated<'ctx> {
         ptr: BasicValueEnum<'ctx>,
         kind: &'ctx Type,
         value: BasicValueEnum<'ctx>,
+        metadata: LLVMConstantMetadata,
     ) -> Self {
         Self::Constant {
             ptr: ptr.into_pointer_value(),
             value,
             kind,
+            metadata,
         }
     }
 
@@ -92,11 +112,13 @@ impl<'ctx> SymbolAllocated<'ctx> {
         ptr: BasicValueEnum<'ctx>,
         kind: &'ctx Type,
         value: BasicValueEnum<'ctx>,
+        metadata: LLVMStaticMetadata,
     ) -> Self {
         Self::Static {
             ptr: ptr.into_pointer_value(),
             value,
             kind,
+            metadata,
         }
     }
 
@@ -113,13 +135,21 @@ impl<'ctx> SymbolAllocated<'ctx> {
         }
 
         let llvm_type: BasicTypeEnum = typegen::generate_subtype(llvm_context, thrush_type);
-        let mem_alignment: u32 = target_data.get_preferred_alignment(&llvm_type);
+        let alignment: u32 = target_data.get_preferred_alignment(&llvm_type);
 
         match self {
-            Self::Local { ptr, .. } => {
+            Self::Local { ptr, metadata, .. } => {
                 if let Ok(loaded_value) = llvm_builder.build_load(llvm_type, *ptr, "") {
-                    if let Some(load_instruction) = loaded_value.as_instruction_value() {
-                        let _ = load_instruction.set_alignment(mem_alignment);
+                    if let Some(instr) = loaded_value.as_instruction_value() {
+                        atomic::try_set_atomic_modificators(
+                            instr,
+                            LLVMAtomicModificators {
+                                atomic_volatile: metadata.volatile,
+                                atomic_ord: None,
+                            },
+                        );
+
+                        let _ = instr.set_alignment(alignment);
                     }
 
                     return loaded_value;
@@ -128,13 +158,14 @@ impl<'ctx> SymbolAllocated<'ctx> {
                 self::codegen_abort("Unable to load value at memory manipulation.");
                 unreachable!()
             }
+
             Self::Parameter { value, .. } => {
                 if value.is_pointer_value() {
                     let ptr: PointerValue = value.into_pointer_value();
 
                     if let Ok(loaded_value) = llvm_builder.build_load(llvm_type, ptr, "") {
-                        if let Some(load_instruction) = loaded_value.as_instruction_value() {
-                            let _ = load_instruction.set_alignment(mem_alignment);
+                        if let Some(instr) = loaded_value.as_instruction_value() {
+                            let _ = instr.set_alignment(alignment);
                         }
 
                         return loaded_value;
@@ -147,10 +178,18 @@ impl<'ctx> SymbolAllocated<'ctx> {
                 *value
             }
 
-            Self::Constant { ptr, .. } => {
+            Self::Constant { ptr, metadata, .. } => {
                 if let Ok(loaded_value) = llvm_builder.build_load(llvm_type, *ptr, "") {
-                    if let Some(load_instruction) = loaded_value.as_instruction_value() {
-                        let _ = load_instruction.set_alignment(mem_alignment);
+                    if let Some(instr) = loaded_value.as_instruction_value() {
+                        atomic::try_set_atomic_modificators(
+                            instr,
+                            LLVMAtomicModificators {
+                                atomic_volatile: metadata.volatile,
+                                atomic_ord: None,
+                            },
+                        );
+
+                        let _ = instr.set_alignment(alignment);
                     }
 
                     return loaded_value;
@@ -160,10 +199,18 @@ impl<'ctx> SymbolAllocated<'ctx> {
                 unreachable!()
             }
 
-            Self::Static { ptr, .. } => {
+            Self::Static { ptr, metadata, .. } => {
                 if let Ok(loaded_value) = llvm_builder.build_load(llvm_type, *ptr, "") {
-                    if let Some(load_instruction) = loaded_value.as_instruction_value() {
-                        let _ = load_instruction.set_alignment(mem_alignment);
+                    if let Some(instr) = loaded_value.as_instruction_value() {
+                        atomic::try_set_atomic_modificators(
+                            instr,
+                            LLVMAtomicModificators {
+                                atomic_volatile: metadata.volatile,
+                                atomic_ord: None,
+                            },
+                        );
+
+                        let _ = instr.set_alignment(alignment);
                     }
 
                     return loaded_value;
@@ -186,24 +233,24 @@ impl<'ctx> SymbolAllocated<'ctx> {
         let thrush_type: &Type = self.get_type();
         let llvm_type: BasicTypeEnum = typegen::generate_subtype(llvm_context, thrush_type);
 
-        let mem_alignment: u32 = target_data.get_preferred_alignment(&llvm_type);
+        let alignment: u32 = target_data.get_preferred_alignment(&llvm_type);
 
         match self {
             Self::Local { ptr, .. } => {
                 if let Ok(store) = llvm_builder.build_store(*ptr, new_value) {
-                    let _ = store.set_alignment(mem_alignment);
+                    let _ = store.set_alignment(alignment);
                 }
             }
 
             Self::Parameter { value, .. } if value.is_pointer_value() => {
                 if let Ok(store) = llvm_builder.build_store(value.into_pointer_value(), new_value) {
-                    let _ = store.set_alignment(mem_alignment);
+                    let _ = store.set_alignment(alignment);
                 }
             }
 
             Self::LowLevelInstruction { value, .. } if value.is_pointer_value() => {
                 if let Ok(store) = llvm_builder.build_store(value.into_pointer_value(), new_value) {
-                    let _ = store.set_alignment(mem_alignment);
+                    let _ = store.set_alignment(alignment);
                 }
             }
 
@@ -218,7 +265,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
         indexes: &[IntValue<'ctx>],
     ) -> PointerValue<'ctx> {
         match self {
-            Self::Local { ptr, kind }
+            Self::Local { ptr, kind, .. }
             | Self::Constant { ptr, kind, .. }
             | Self::Static { ptr, kind, .. } => unsafe {
                 builder
@@ -288,7 +335,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
         index: u32,
     ) -> PointerValue<'ctx> {
         match self {
-            Self::Local { ptr, kind }
+            Self::Local { ptr, kind, .. }
             | Self::Constant { ptr, kind, .. }
             | Self::Static { ptr, kind, .. } => builder
                 .build_struct_gep(
@@ -369,10 +416,10 @@ pub fn store_anon<'ctx>(
 
     let target_data: &TargetData = context.get_target_data();
 
-    let mem_alignment: u32 = target_data.get_preferred_alignment(&value.get_type());
+    let alignment: u32 = target_data.get_preferred_alignment(&value.get_type());
 
     if let Ok(store) = llvm_builder.build_store(ptr, value) {
-        let _ = store.set_alignment(mem_alignment);
+        let _ = store.set_alignment(alignment);
     }
 }
 
@@ -392,8 +439,8 @@ pub fn load_anon<'ctx>(
 
     let loaded_value: BasicValueEnum = llvm_builder.build_load(llvm_type, ptr, "").unwrap();
 
-    if let Some(load_instruction) = loaded_value.as_instruction_value() {
-        let _ = load_instruction.set_alignment(preferred_alignment);
+    if let Some(instr) = loaded_value.as_instruction_value() {
+        let _ = instr.set_alignment(preferred_alignment);
     }
 
     loaded_value
@@ -410,7 +457,7 @@ pub fn alloc_anon<'ctx>(
 
     let llvm_type: BasicTypeEnum = typegen::generate_subtype(llvm_context, kind);
 
-    let mem_alignment: u32 = context
+    let alignment: u32 = context
         .get_target_data()
         .get_preferred_alignment(&llvm_type);
 
@@ -418,7 +465,7 @@ pub fn alloc_anon<'ctx>(
         LLVMAllocationSite::Stack => {
             if let Ok(ptr) = llvm_builder.build_alloca(llvm_type, "") {
                 if let Some(instruction) = ptr.as_instruction() {
-                    let _ = instruction.set_alignment(mem_alignment);
+                    let _ = instruction.set_alignment(alignment);
                 }
 
                 return ptr;

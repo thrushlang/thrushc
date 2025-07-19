@@ -42,6 +42,11 @@ lazy_static! {
         keywords.insert("fixed", TokenType::Fixed);
         keywords.insert("static", TokenType::Static);
 
+        keywords.insert("volatile", TokenType::Volatile);
+        keywords.insert("lazythread", TokenType::LazyThread);
+
+        keywords.insert("unreachable", TokenType::Unreachable);
+
         keywords.insert("halloc", TokenType::Halloc);
         keywords.insert("sizeof", TokenType::SizeOf);
         keywords.insert("memset", TokenType::MemSet);

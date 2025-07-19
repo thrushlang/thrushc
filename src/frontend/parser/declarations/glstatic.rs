@@ -23,6 +23,9 @@ pub fn build_global_static<'parser>(
 
     let is_mutable: bool = parser_context.match_token(TokenType::Mut)?;
 
+    let is_lazy: bool = parser_context.match_token(TokenType::LazyThread)?;
+    let is_volatible: bool = parser_context.match_token(TokenType::Volatile)?;
+
     let static_tk: &Token = parser_context.consume(
         TokenType::Identifier,
         "Syntax error".into(),
@@ -49,7 +52,7 @@ pub fn build_global_static<'parser>(
 
     let value: Ast = expr::build_expression(parser_context)?;
 
-    let metadata: StaticMetadata = StaticMetadata::new(true, is_mutable);
+    let metadata: StaticMetadata = StaticMetadata::new(true, is_mutable, is_lazy, is_volatible);
 
     if declare_forward {
         parser_context.get_mut_symbols().new_global_static(

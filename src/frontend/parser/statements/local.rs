@@ -23,6 +23,7 @@ pub fn build_local<'parser>(
     )?;
 
     let is_mutable: bool = parser_ctx.match_token(TokenType::Mut)?;
+    let is_volatile: bool = parser_ctx.match_token(TokenType::Volatile)?;
 
     let local_tk: &Token = parser_ctx.consume(
         TokenType::Identifier,
@@ -47,7 +48,7 @@ pub fn build_local<'parser>(
         attributes::build_attributes(parser_ctx, &[TokenType::SemiColon, TokenType::Eq])?;
 
     if parser_ctx.match_token(TokenType::SemiColon)? {
-        let metadata: LocalMetadata = LocalMetadata::new(true, is_mutable);
+        let metadata: LocalMetadata = LocalMetadata::new(true, is_mutable, is_volatile);
 
         parser_ctx
             .get_mut_symbols()
@@ -64,7 +65,7 @@ pub fn build_local<'parser>(
         });
     }
 
-    let metadata: LocalMetadata = LocalMetadata::new(false, is_mutable);
+    let metadata: LocalMetadata = LocalMetadata::new(false, is_mutable, is_volatile);
 
     parser_ctx
         .get_mut_symbols()

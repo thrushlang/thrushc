@@ -391,6 +391,10 @@ pub enum Ast<'ctx> {
         span: Span,
     },
 
+    Unreachable {
+        span: Span,
+    },
+
     Null {
         span: Span,
     },

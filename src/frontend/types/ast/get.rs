@@ -87,6 +87,9 @@ impl Ast<'_> {
 
             // Ignored
             Ast::Pass { .. } => Ok(&Type::Void),
+
+            // Unreachable marker
+            Ast::Unreachable { .. } => Ok(&Type::Void),
         }
     }
 
@@ -142,6 +145,9 @@ impl Ast<'_> {
 
             // Ignored
             Ast::Pass { .. } => Ok(&Type::Void),
+
+            // Unreachable marker
+            Ast::Unreachable { .. } => Ok(&Type::Void),
 
             _ => Err(ThrushCompilerIssue::Error(
                 String::from("Syntax error"),
@@ -207,6 +213,9 @@ impl Ast<'_> {
 
             // Ignored
             Ast::Pass { .. } => &Type::Void,
+
+            // Unreachable marker
+            Ast::Unreachable { .. } => &Type::Void,
 
             any => {
                 logging::log(
@@ -292,13 +301,20 @@ impl Ast<'_> {
             // Low-level and special operations
             Ast::AsmValue { span, .. } => *span,
             Ast::LLI { span, .. } => *span,
-            Ast::Pass { span, .. } => *span,
 
             // Global Assembler
             Ast::GlobalAssembler { span, .. } => *span,
+
+            // Ignored
+            Ast::Pass { span, .. } => *span,
+
+            // Unreachable marker
+            Ast::Unreachable { span } => *span,
         }
     }
+}
 
+impl Ast<'_> {
     pub fn get_str_content(&self, span: Span) -> Result<&str, ThrushCompilerIssue> {
         if let Ast::Str { bytes, .. } = self {
             if let Ok(content) = std::str::from_utf8(bytes) {
