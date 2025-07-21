@@ -89,6 +89,7 @@ impl Ast<'_> {
 }
 
 impl Ast<'_> {
+    #[inline]
     pub fn is_empty_block(&self) -> bool {
         if let Ast::Block { stmts, .. } = self {
             return stmts.is_empty();
@@ -96,7 +97,9 @@ impl Ast<'_> {
 
         false
     }
+}
 
+impl Ast<'_> {
     pub fn has_return(&self) -> bool {
         if let Ast::Block { stmts, .. } = self {
             return stmts.iter().any(|stmt| stmt.has_return());

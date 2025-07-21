@@ -91,7 +91,7 @@ fn compile_increment_decrement_ref<'ctx>(
             let float: FloatValue = symbol.load(context).into_float_value();
 
             let modifier: FloatValue =
-                typegen::type_float_to_llvm_float_type(llvm_context, kind).const_float(1.0);
+                typegen::float_to_llvm_type(llvm_context, kind).const_float(1.0);
 
             let result: BasicValueEnum = match operator {
                 TokenType::PlusPlus => llvm_builder

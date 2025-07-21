@@ -5,8 +5,9 @@ use super::typegen;
 use crate::backend::llvm::compiler::attributes::LLVMAttribute;
 use crate::backend::llvm::compiler::generation::{floatgen, intgen, structgen};
 use crate::backend::llvm::compiler::memory::{self, SymbolAllocated};
+use crate::backend::llvm::compiler::statements::lli;
 use crate::backend::llvm::compiler::{
-    binaryop, builtins, cast, codegen, expressions, indexes, ptrgen, statements,
+    binaryop, builtins, cast, codegen, expressions, indexes, ptrgen,
 };
 
 use crate::backend::types::LLVMEitherExpression;
@@ -14,6 +15,7 @@ use crate::backend::types::traits::AssemblerFunctionExtensions;
 use crate::core::console::logging::{self, LoggingType};
 use crate::frontend::lexer::tokentype::TokenType;
 use crate::frontend::types::ast::Ast;
+use crate::frontend::types::ast::traits::AstExtensions;
 use crate::frontend::types::parser::stmts::traits::ThrushAttributesExtensions;
 use crate::frontend::types::parser::stmts::types::ThrushAttributes;
 use crate::frontend::typesystem::traits::LLVMTypeExtensions;
@@ -142,14 +144,12 @@ pub fn compile<'ctx>(
         } => self::compile_inline_asm(context, assembler, constraints, args, kind, attributes),
 
         // Low-Level Operations
-        Ast::Load { .. } | Ast::Address { .. } | Ast::Alloc { .. } => {
-            statements::lli::compile_advanced(context, expr, cast)
-        }
+        ast if ast.is_lli() => lli::compile_advanced(context, expr, cast),
 
         // Fallback, Unknown expressions or statements
         what => {
             self::codegen_abort(format!(
-                "Failed to compile. Unknown expression or statement '{}'.",
+                "Failed to compile. Unknown expression or statement '{:?}'.",
                 what
             ));
 
@@ -222,11 +222,12 @@ fn compile_function_call<'ctx>(
         .map(|(i, expr)| {
             let cast: Option<&Type> = function_arg_types.get(i);
 
-            codegen::compile_expr(context, expr, cast, true).into()
+            codegen::compile_expr(context, expr, cast).into()
         })
         .collect();
 
-    let fn_value = match llvm_builder.build_call(llvm_function, &compiled_args, "") {
+    let fn_value: BasicValueEnum = match llvm_builder.build_call(llvm_function, &compiled_args, "")
+    {
         Ok(call) => {
             call.set_call_convention(function_convention);
             if !kind.is_void_type() {
@@ -325,7 +326,7 @@ fn compile_cast<'ctx>(
                 }
             }
         }
-    } else if cast.is_ptr_type() || cast.is_mut_type() {
+    } else if cast.llvm_is_ptr_type() {
         let val: BasicValueEnum = ptrgen::compile(context, from, None);
 
         if val.is_pointer_value() {

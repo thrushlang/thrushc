@@ -4,8 +4,9 @@ use super::context::LLVMCodeGenContext;
 use super::typegen;
 use crate::backend::llvm::compiler::attributes::LLVMAttribute;
 use crate::backend::llvm::compiler::memory::{self, SymbolAllocated};
+use crate::backend::llvm::compiler::statements::lli;
 use crate::backend::llvm::compiler::{
-    builtins, cast, codegen, expressions, indexes, ptrgen, statements, valuegen,
+    builtins, cast, codegen, expressions, indexes, ptrgen, valuegen,
 };
 use crate::backend::types::LLVMEitherExpression;
 use crate::backend::types::repr::LLVMFunction;
@@ -13,6 +14,7 @@ use crate::backend::types::traits::AssemblerFunctionExtensions;
 use crate::core::console::logging::{self, LoggingType};
 
 use crate::frontend::types::ast::Ast;
+use crate::frontend::types::ast::traits::AstExtensions;
 use crate::frontend::types::ast::types::AstEitherExpression;
 use crate::frontend::types::parser::stmts::traits::ThrushAttributesExtensions;
 use crate::frontend::types::parser::stmts::types::ThrushAttributes;
@@ -78,14 +80,12 @@ pub fn compile<'ctx>(
         } => self::compile_index(context, source, indexes),
 
         // Low-Level Operations
-        Ast::Load { .. } | Ast::Address { .. } | Ast::Alloc { .. } => {
-            statements::lli::compile_advanced(context, expr, cast)
-        }
+        ast if ast.is_lli() => lli::compile_advanced(context, expr, cast),
 
         // Fallback, Unknown expressions or statements
         what => {
             self::codegen_abort(format!(
-                "Failed to compile. Unknown expression or statement '{}'.",
+                "Failed to compile. Unknown expression or statement '{:?}'.",
                 what
             ));
 
@@ -114,7 +114,7 @@ fn compile_function_call<'ctx>(
         .map(|(idx, expr)| {
             let cast: Option<&Type> = function_arg_types.get(idx);
 
-            codegen::compile_expr(context, expr, cast, true).into()
+            codegen::compile_expr(context, expr, cast).into()
         })
         .collect();
 

@@ -5,6 +5,7 @@ use crate::backend::llvm::compiler::{
 };
 use crate::core::console::logging::{self, LoggingType};
 use crate::frontend::types::ast::metadata::local::LocalMetadata;
+use crate::frontend::typesystem::traits::LLVMTypeExtensions;
 use crate::frontend::typesystem::types::Type;
 
 use crate::frontend::types::ast::Ast;
@@ -402,6 +403,20 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
     ########################################################################*/
 }
 
+pub fn compile_expr<'ctx>(
+    context: &mut LLVMCodeGenContext<'_, 'ctx>,
+    expr: &'ctx Ast,
+    cast_type: Option<&Type>,
+) -> BasicValueEnum<'ctx> {
+    let expr_type: &Type = expr.get_type_unwrapped();
+
+    if expr_type.llvm_is_ptr_type() {
+        return ptrgen::compile(context, expr, cast_type);
+    }
+
+    valuegen::compile(context, expr, cast_type)
+}
+
 impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
     pub fn get_mut_context(&mut self) -> &mut LLVMCodeGenContext<'a, 'ctx> {
         self.context
@@ -409,19 +424,6 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
 
     pub fn get_context(&self) -> &LLVMCodeGenContext<'a, 'ctx> {
         self.context
-    }
-}
-
-pub fn compile_expr<'ctx>(
-    context: &mut LLVMCodeGenContext<'_, 'ctx>,
-    expr: &'ctx Ast,
-    cast_type: Option<&Type>,
-    hl_ptr: bool,
-) -> BasicValueEnum<'ctx> {
-    if cast_type.is_some_and(|cast| cast.is_ptr_type() || (cast.is_mut_type() && hl_ptr)) {
-        ptrgen::compile(context, expr, cast_type)
-    } else {
-        valuegen::compile(context, expr, cast_type)
     }
 }
 

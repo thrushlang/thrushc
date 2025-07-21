@@ -4,7 +4,7 @@ use crate::{
     backend::llvm::compiler::{context::LLVMCodeGenContext, generation::intgen, valuegen},
     frontend::{
         types::ast::Ast,
-        typesystem::{traits::TypeMutableExtensions, types::Type},
+        typesystem::{traits::LLVMTypeExtensions, types::Type},
     },
 };
 
@@ -18,18 +18,18 @@ pub fn compile<'ctx>(
     indexes
         .iter()
         .flat_map(|index| {
-            if expr_type.is_fixed_array_type() || expr_type.is_mut_fixed_array_type() {
+            if expr_type.llvm_is_ptr_type() {
+                let depth: IntValue =
+                    valuegen::compile(context, index, Some(&Type::U64)).into_int_value();
+
+                vec![depth]
+            } else {
                 let base: IntValue = intgen::int(llvm_context, &Type::U32, 0, false);
 
                 let depth: IntValue =
                     valuegen::compile(context, index, Some(&Type::U32)).into_int_value();
 
                 vec![base, depth]
-            } else {
-                let depth: IntValue =
-                    valuegen::compile(context, index, Some(&Type::U64)).into_int_value();
-
-                vec![depth]
             }
         })
         .collect()

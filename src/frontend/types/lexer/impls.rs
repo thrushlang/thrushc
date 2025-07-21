@@ -77,6 +77,7 @@ impl std::fmt::Display for TokenType {
             TokenType::SafeStack => write!(f, "@safestack"),
             TokenType::StrongStack => write!(f, "@strongstack"),
             TokenType::WeakStack => write!(f, "@weakstack"),
+
             // Operators, Punctuation, and Special Constructs
             TokenType::Float => write!(f, "integer"),
             TokenType::Integer => write!(f, "float"),

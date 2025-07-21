@@ -110,12 +110,15 @@ pub fn validate<'type_checker>(
             }
 
             indexes.iter().try_for_each(|indexe| {
-                if !indexe.is_unsigned_integer()? {
+                let indexe_type: &Type = indexe.get_value_type()?;
+                let span: Span = indexe.get_span();
+
+                if !indexe_type.is_integer_type() {
                     typechecker.add_error(ThrushCompilerIssue::Error(
                         "Type error".into(),
-                        "Expected any unsigned integer value.".into(),
+                        "Expected integer value.".into(),
                         None,
-                        *span,
+                        span,
                     ));
                 }
 

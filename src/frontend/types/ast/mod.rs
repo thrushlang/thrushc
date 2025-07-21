@@ -1,6 +1,7 @@
 #![allow(clippy::upper_case_acronyms)]
 
 mod get;
+mod impls;
 mod is;
 pub mod metadata;
 mod new;
@@ -391,6 +392,7 @@ pub enum Ast<'ctx> {
         span: Span,
     },
 
+    // Unreachable
     Unreachable {
         span: Span,
     },

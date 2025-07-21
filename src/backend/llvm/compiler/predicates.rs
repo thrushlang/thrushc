@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use inkwell::{FloatPredicate, IntPredicate};
 
 use crate::{
@@ -28,13 +30,10 @@ pub fn integer(operator: &TokenType, left_signed: bool, right_signed: bool) -> I
         TokenType::LessEq if left_signed && right_signed => IntPredicate::SLE,
 
         _ => {
-            logging::log(
-                LoggingType::BackendBug,
-                &format!(
-                    "Operator precedence '{}' ins't compatible for integers.",
-                    operator
-                ),
-            );
+            self::codegen_abort(format!(
+                "Operator precedence '{}' ins't compatible for integers.",
+                operator
+            ));
 
             unreachable!()
         }
@@ -48,14 +47,10 @@ pub fn pointer(operator: &TokenType) -> IntPredicate {
         TokenType::BangEq => IntPredicate::NE,
 
         _ => {
-            logging::log(
-                LoggingType::BackendBug,
-                &format!(
-                    "Operator precedence '{}' ins't compatible for pointers.",
-                    operator
-                ),
-            );
-
+            self::codegen_abort(format!(
+                "Operator precedence '{}' ins't compatible for pointers.",
+                operator
+            ));
             unreachable!()
         }
     }
@@ -72,15 +67,12 @@ pub fn float(operator: &TokenType) -> FloatPredicate {
         TokenType::LessEq => FloatPredicate::OLE,
 
         _ => {
-            logging::log(
-                LoggingType::BackendBug,
-                &format!(
-                    "Operator precedence '{}' ins't compatible for floating points.",
-                    operator
-                ),
-            );
-
+            self::codegen_abort("Operator precedence '{}' ins't compatible for floating points.");
             unreachable!()
         }
     }
+}
+
+fn codegen_abort<T: Display>(message: T) {
+    logging::log(LoggingType::BackendBug, &format!("{}", message));
 }

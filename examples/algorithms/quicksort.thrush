@@ -15,9 +15,9 @@ fn print(fmt: ptr) s32 @public @ignore @extern("printf");
 //   i: The first index (signed 32-bit integer) for swapping.
 //   j: The second index (signed 32-bit integer) for swapping.
 fn swap(mut arr: mut array[u32; 7], i: s32, j: s32) void {
-    local temp: u32 = deref arr[i as u32]; // Store the value at arr[i] in a temporary variable
-    arr[i as u32] = deref arr[j as u32];  // Assign the value at arr[j] to arr[i]
-    arr[j as u32] = temp;                 // Assign the temporary value to arr[j]
+    local temp: u32 = deref arr[0, i]; // Store the value at arr[i] in a temporary variable
+    arr[0, i] = deref arr[0, j];  // Assign the value at arr[j] to arr[i]
+    arr[0, j] = temp;                 // Assign the temporary value to arr[j]
 }
 
 // Partitions the array around a pivot, placing elements less than or equal to the pivot
@@ -30,11 +30,11 @@ fn swap(mut arr: mut array[u32; 7], i: s32, j: s32) void {
 // Note: The loop iterates from low to high-1 to avoid comparing the pivot (arr[high]).
 // The ++j increment is performed at the end of the loop to match original syntax.
 fn partition(mut arr: mut array[u32; 7], low: s32, high: s32) s32 {
-    local pivot: u32 = deref arr[high as u32]; // Choose the last element as the pivot
+    local pivot: u32 = deref arr[0, high]; // Choose the last element as the pivot
     local mut i: s32 = low - 1;                // Initialize i to low-1 for tracking smaller elements
     
     for local mut j: s32 = low; j < high; ++j; { // Iterate from low to high-1
-        if (deref(arr[j as u32])) <= pivot {     // If current element is less than or equal to pivot
+        if (deref(arr[0, j])) <= pivot {     // If current element is less than or equal to pivot
             i++;                                 // Increment i to point to the next position for a smaller element
             swap(arr, i, j);                     // Swap elements at i and j
         }
@@ -64,7 +64,7 @@ fn quickSort(arr: mut array[u32; 7], low: s32, high: s32) void {
 fn printArray(arr: mut array[u32; 7], size: u32) void {
     for local mut idx: u32 = 0; idx < size; ++idx; { // Iterate over the array from index 0 to size-1
         local content_fmt: str = "%d ";              // Format string for printing an integer
-        print(content_fmt as ptr, deref arr[idx]);   // Print the current element
+        print(content_fmt as ptr, deref arr[0, idx]);   // Print the current element
     }
 
     local space: str = "\n";                       // Newline character

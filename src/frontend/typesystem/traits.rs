@@ -6,6 +6,9 @@ use crate::{
 
 pub trait LLVMTypeExtensions {
     fn llvm_is_same_bit_size(&self, context: &LLVMCodeGenContext<'_, '_>, other: &Type) -> bool;
+    fn llvm_is_ptr_type(&self) -> bool;
+    fn llvm_is_int_type(&self) -> bool;
+    fn llvm_is_float_type(&self) -> bool;
 }
 
 pub trait TypeExtensions {

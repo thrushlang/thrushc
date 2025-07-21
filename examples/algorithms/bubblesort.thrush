@@ -15,9 +15,9 @@ fn print(fmt: ptr) s32 @public @ignore @extern("printf");
 //   i: The first index (signed 32-bit integer) for swapping.
 //   j: The second index (signed 32-bit integer) for swapping.
 fn swap(mut arr: mut array[u32; 7], i: s32, j: s32) void {
-    local temp: u32 = deref arr[i as u32]; // Store the value at arr[i] in a temporary variable
-    arr[i as u32] = deref arr[j as u32];  // Assign the value at arr[j] to arr[i]
-    arr[j as u32] = temp;                 // Assign the temporary value to arr[j]
+    local temp: u32 = deref arr[0, i]; // Store the value at arr[i] in a temporary variable
+    arr[0, i as u64] = deref arr[0, j];  // Assign the value at arr[j] to arr[i]
+    arr[0, j as u64] = temp;                 // Assign the temporary value to arr[j]
 }
 
 // Sorts the array using the Bubble Sort algorithm.
@@ -30,7 +30,7 @@ fn bubbleSort(mut arr: mut array[u32; 7], size: s32) void {
         local mut swapped: bool = false;           // Flag to optimize for already sorted arrays
         
         for local mut j: s32 = 0; j < size - i - 1; ++j; { // Compare adjacent elements
-            if (deref arr[j as u32]) > (deref arr[(j + 1) as u32]) { // If current element is greater than next
+            if (deref arr[0, j]) > (deref arr[0, (j + 1)]) { // If current element is greater than next
                 swap(arr, j, j + 1);                 // Swap them
                 swapped = true;                      // Mark that a swap occurred
             }
@@ -50,7 +50,7 @@ fn bubbleSort(mut arr: mut array[u32; 7], size: s32) void {
 fn printArray(arr: mut array[u32; 7], size: u32) void {
     for local mut idx: u32 = 0; idx < size; ++idx; { // Iterate over the array from index 0 to size-1
         local content_fmt: str = "%d ";              // Format string for printing an integer
-        print(content_fmt as ptr, deref arr[idx]);   // Print the current element
+        print(content_fmt as ptr, deref arr[0, idx]);   // Print the current element
     }
 
     local space: str = "\n";                       // Newline character

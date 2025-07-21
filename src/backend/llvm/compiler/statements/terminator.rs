@@ -31,7 +31,6 @@ pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, stmt: &'ctx Ast<'ctx>)
                     codegen.get_mut_context(),
                     expr,
                     Some(kind),
-                    true,
                 )))
                 .is_err()
             {

@@ -211,7 +211,7 @@ pub fn float<'ctx>(
         llvm_builder
             .build_float_cast(
                 from.into_float_value(),
-                typegen::type_float_to_llvm_float_type(llvm_context, &target_type),
+                typegen::float_to_llvm_type(llvm_context, &target_type),
                 "",
             )
             .unwrap()

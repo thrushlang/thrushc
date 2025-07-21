@@ -55,7 +55,6 @@ pub fn build_index<'parser>(
         }
 
         let indexe: Ast = expr::build_expr(parser_context)?;
-
         indexes.push(indexe);
 
         if parser_context.check(TokenType::RBracket) {

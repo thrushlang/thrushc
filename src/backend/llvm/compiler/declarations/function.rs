@@ -133,10 +133,8 @@ pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, global_fn: GlobalFunct
 
     codegen.codegen_block(funcion_body);
 
-    if let Some(last_block) = llvm_function.get_last_basic_block() {
-        if last_block.get_terminator().is_none() && function_type.is_void_type() {
-            let _ = llvm_builder.build_return(None).is_err();
-        }
+    if function_type.is_void_type() && !funcion_body.has_return_for_function() {
+        let _ = llvm_builder.build_return(None).is_err();
     }
 
     codegen.get_mut_context().unset_current_function();

@@ -24,6 +24,21 @@ impl LLVMTypeExtensions for Type {
 
         target_data.get_bit_size(&a_llvm_type) == target_data.get_bit_size(&b_llvm_type)
     }
+
+    fn llvm_is_ptr_type(&self) -> bool {
+        matches!(
+            self,
+            Type::Ptr(_) | Type::Mut(_) | Type::Addr | Type::Array(_)
+        )
+    }
+
+    fn llvm_is_int_type(&self) -> bool {
+        self.is_integer_type() || self.is_bool_type() || self.is_char_type()
+    }
+
+    fn llvm_is_float_type(&self) -> bool {
+        self.is_float_type()
+    }
 }
 
 impl TypeExtensions for Type {
