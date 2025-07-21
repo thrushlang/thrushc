@@ -1,10 +1,9 @@
+.*/*
 /target
 /guide
 /tests
-.vscode/
-.github/
-.venv/
 build
 builder/target
 dist
 embedded
+Cargo.lock

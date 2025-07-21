@@ -3,22 +3,20 @@ name = "thrushc"
 description = "The Compiler for Thrush Programming Language."
 license = "GPL-3.0"
 version = "1.0.0"
-edition = "2024"
 authors = ["Kevin Benavides <https://github.com/DevCheckOG>"]
-readme = "README.md"
+homepage = "https://github.com/thrushlang/thrushc"
+repository = "https://github.com/thrushlang/thrushc"
+edition = "2024"
 
 [dependencies]
+llvm-sys = { path = "wrappers/llvm/llvm-sys", features = ["force-static"] }
+inkwell = { path = "wrappers/llvm/inkwell", features = ["llvm17-0", "llvm17-0-force-static"] }
+
 unicode_categories = "0.1.1"
 colored = "3.0.0"
 ahash = "0.8.11"
 lazy_static = "1.5.0"
 fastrand = "2.3.0"
-
-llvm-sys = { path = "wrappers/llvm/llvm-sys", features = ["force-static"] }
-inkwell = { path = "wrappers/llvm/inkwell", features = [
-    "llvm17-0",
-    "llvm17-0-force-static"
-]}
 
 [target.'cfg(target_os = "linux")'.dependencies]
 tar = "0.4.44"
