@@ -272,7 +272,7 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
     }
 
     #[inline]
-    pub fn get_current_fn(&mut self) -> FunctionValue<'ctx> {
+    pub fn get_current_fn(&self) -> FunctionValue<'ctx> {
         self.function.unwrap_or_else(|| {
             self::codegen_abort("The function currently being compiled could not be obtained.");
             unreachable!()

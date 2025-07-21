@@ -1,7 +1,7 @@
 use std::fmt::Display;
 
 use crate::backend::llvm::compiler::{
-    binaryop, builtins, declarations, expressions, ptrgen, statements,
+    binaryop, block, builtins, declarations, expressions, ptrgen, statements,
 };
 use crate::core::console::logging::{self, LoggingType};
 use crate::frontend::types::ast::metadata::local::LocalMetadata;
@@ -106,6 +106,8 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 });
 
                 self.context.end_scope();
+
+                block::move_terminator_to_end(self.get_context());
             }
 
             stmt => self.stmt(stmt),

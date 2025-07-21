@@ -1,4 +1,4 @@
-use std::cmp::Ordering;
+use std::{cmp::Ordering, fmt::Display};
 
 use inkwell::{
     builder::Builder,
@@ -7,7 +7,10 @@ use inkwell::{
     values::{BasicValueEnum, FloatValue, IntValue},
 };
 
-use crate::frontend::typesystem::{traits::DereferenceExtensions, types::Type};
+use crate::{
+    core::console::logging::{self, LoggingType},
+    frontend::typesystem::{traits::DereferenceExtensions, types::Type},
+};
 
 use super::{context::LLVMCodeGenContext, typegen};
 
@@ -52,6 +55,11 @@ pub fn integer_together<'ctx>(
     left: IntValue<'ctx>,
     right: IntValue<'ctx>,
 ) -> (IntValue<'ctx>, IntValue<'ctx>) {
+    let abort = |_| {
+        self::codegen_abort(format!("Failed to cast together '{}' & '{}'.", left, right));
+        unreachable!()
+    };
+
     let llvm_builder: &Builder = context.get_llvm_builder();
 
     match left
@@ -62,14 +70,14 @@ pub fn integer_together<'ctx>(
         Ordering::Greater => {
             let new_right: IntValue<'ctx> = llvm_builder
                 .build_int_cast_sign_flag(right, left.get_type(), false, "")
-                .unwrap();
+                .unwrap_or_else(abort);
 
             (left, new_right)
         }
         Ordering::Less => {
             let new_left: IntValue<'ctx> = llvm_builder
                 .build_int_cast_sign_flag(left, right.get_type(), false, "")
-                .unwrap();
+                .unwrap_or_else(abort);
 
             (new_left, right)
         }
@@ -116,6 +124,11 @@ pub fn float_together<'ctx>(
     left: FloatValue<'ctx>,
     right: FloatValue<'ctx>,
 ) -> (FloatValue<'ctx>, FloatValue<'ctx>) {
+    let abort = |_| {
+        self::codegen_abort(format!("Failed to cast together '{}' & '{}'.", left, right));
+        unreachable!()
+    };
+
     let llvm_builder: &Builder = context.get_llvm_builder();
 
     let left_type: FloatType = left.get_type();
@@ -126,13 +139,17 @@ pub fn float_together<'ctx>(
     }
 
     let new_left: FloatValue = if left_type != right_type {
-        llvm_builder.build_float_cast(left, right_type, "").unwrap()
+        llvm_builder
+            .build_float_cast(left, right_type, "")
+            .unwrap_or_else(abort)
     } else {
         left
     };
 
     let new_right: FloatValue = if right_type != left_type {
-        llvm_builder.build_float_cast(right, left_type, "").unwrap()
+        llvm_builder
+            .build_float_cast(right, left_type, "")
+            .unwrap_or_else(abort)
     } else {
         right
     };
@@ -154,6 +171,14 @@ pub fn integer<'ctx>(
     from_type: &Type,
     from: BasicValueEnum<'ctx>,
 ) -> Option<BasicValueEnum<'ctx>> {
+    let abort = |_| {
+        self::codegen_abort(format!(
+            "Failed to cast '{}' to '{}'.",
+            from_type, target_type
+        ));
+        unreachable!()
+    };
+
     let llvm_builder: &Builder = context.get_llvm_builder();
     let llvm_context: &Context = context.get_llvm_context();
 
@@ -175,7 +200,7 @@ pub fn integer<'ctx>(
                 from_type.is_signed_integer_type(),
                 "",
             )
-            .unwrap()
+            .unwrap_or_else(abort)
             .into(),
     )
 }
@@ -194,6 +219,14 @@ pub fn float<'ctx>(
     from_type: &Type,
     from: BasicValueEnum<'ctx>,
 ) -> Option<BasicValueEnum<'ctx>> {
+    let abort = |_| {
+        self::codegen_abort(format!(
+            "Failed to cast '{}' to '{}'.",
+            from_type, target_type
+        ));
+        unreachable!()
+    };
+
     let llvm_builder: &Builder = context.get_llvm_builder();
     let llvm_context: &Context = context.get_llvm_context();
 
@@ -214,7 +247,7 @@ pub fn float<'ctx>(
                 typegen::float_to_llvm_type(llvm_context, &target_type),
                 "",
             )
-            .unwrap()
+            .unwrap_or_else(abort)
             .into(),
     )
 }
@@ -246,4 +279,8 @@ pub fn try_cast<'ctx>(
     }
 
     None
+}
+
+fn codegen_abort<T: Display>(message: T) {
+    logging::log(LoggingType::BackendBug, &format!("{}", message));
 }

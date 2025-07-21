@@ -2,6 +2,7 @@ pub mod alloc;
 pub mod anchors;
 pub mod attributes;
 pub mod binaryop;
+pub mod block;
 pub mod builtins;
 pub mod cast;
 pub mod codegen;

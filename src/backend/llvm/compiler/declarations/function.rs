@@ -2,7 +2,7 @@ use std::fmt::Display;
 
 use crate::backend::llvm::compiler::attributes::{AttributeBuilder, LLVMAttributeApplicant};
 use crate::backend::llvm::compiler::codegen::LLVMCodegen;
-use crate::backend::llvm::compiler::typegen;
+use crate::backend::llvm::compiler::{block, typegen};
 use crate::backend::types::repr::LLVMFunction;
 use crate::core::console::logging::{self, LoggingType};
 use crate::frontend::types::parser::repr::{FunctionParameter, GlobalFunction};
