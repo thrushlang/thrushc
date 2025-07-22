@@ -432,7 +432,7 @@ impl Builder {
             }
         }
 
-        Err("No 'thrushc' found.".into())
+        Err("No 'thrushc' home found.".into())
     }
 
     fn decompress_file(&self, file_path: &Path) -> Result<(), String> {
@@ -442,7 +442,8 @@ impl Builder {
             .arg("-xf")
             .arg(file_path)
             .arg("-C")
-            .arg(&self.build_path);
+            .arg(&self.build_path)
+            .arg("--strip-components=1");
 
         if let Ok(tar_output) = tar_command.output() {
             let stderr: Cow<'_, str> = String::from_utf8_lossy(&tar_output.stderr);
