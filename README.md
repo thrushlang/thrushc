@@ -1,5 +1,19 @@
 <img src= "https://github.com/thrushlang/thrushc/blob/master/assets/thrushlang-logo-v1.5.png" alt= "logo" style= "width: 80%; height: 80%;"> </img>
 
+> [!NOTE]
+> # TEMPORARY ONE-MONTH HIATUS
+>
+> We have reached a point where we are faced with higher obligations that somewhat set this project aside.
+> Therefore, from ``8/5/25`` to ``9/6/25``, there will be a HIATUS in the development of the compiler and its plans moving forward.
+> ## What does it mean?
+>
+> Essentially, not much, just that `thrushc` won't be reflected with commits regularly or habitually.
+> The other projects or repositories of the organization will continue with the planned development pace, but with a little less frequency.
+>
+> If you'd like to be part of the team, please contact us through the organization's social media channels. They will continue as usual.
+> 
+> Without anything else to say, *Kevin Benavides*, see you next month.
+
 > [!WARNING]
 > The development of The **Thrush Compiler** (thrushc) is incomplete; build the program at your own risk, as it may contain errors.
 
