@@ -12,4 +12,4 @@ This folder contains everything that the Thrush compiler represents, from its co
 
 - ``core/`` Contains everything related to compiler control, command line, abstraction for code generators, and structures that represent the Thrush compiler from a high-level view.
 
-- ``frontend/`` It contains everything related to lexical analysis, parsing, and semantic analysis of the language. It should be noted that this language has its own implementation of its parser and lexer from scratch; commercials such as Larpop or ANTLR are not used.
+- ``frontend/`` It contains everything related to lexical analysis, parsing, and semantic analysis of the language. It should be noted that this language has its own implementation of its parser and lexer from scratch; commercials such as LarPoP or ANTLR are not used.
