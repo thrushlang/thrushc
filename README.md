@@ -94,8 +94,7 @@ Among the dependencies required by the compiler is the LLVM-C API, which you can
 Automatically:
 
 ```console
-cd builder
-cargo run
+cd builder && cargo run
 ```
 
 ## Build the Compiler
