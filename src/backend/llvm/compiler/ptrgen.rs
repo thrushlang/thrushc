@@ -319,7 +319,7 @@ fn compile_inline_asm<'ctx>(
 
     for attr in attributes {
         if let LLVMAttribute::AsmSyntax(new_syntax, ..) = *attr {
-            syntax = str::assembler_syntax_attr_to_inline_assembler_dialect(new_syntax);
+            syntax = str::to_inline_assembler_dialect(new_syntax);
         }
     }
 

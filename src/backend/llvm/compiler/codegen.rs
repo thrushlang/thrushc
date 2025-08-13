@@ -67,7 +67,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                     return;
                 }
 
-                declarations::function::compile(self, decl.as_global_function());
+                declarations::function::compile_body(self, decl.as_global_function());
             }
 
             Ast::GlobalAssembler { asm, .. } => {

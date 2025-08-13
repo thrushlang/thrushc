@@ -72,6 +72,7 @@ pub fn float(operator: &TokenType) -> FloatPredicate {
     }
 }
 
+#[inline]
 fn codegen_abort<T: Display>(message: T) -> ! {
     logging::print_backend_bug(LoggingType::BackendBug, &format!("{}", message));
 }

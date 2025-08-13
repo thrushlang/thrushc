@@ -21,14 +21,17 @@ impl LocalMetadata {
         }
     }
 
+    #[inline]
     pub fn is_undefined(&self) -> bool {
         self.is_undefined
     }
 
+    #[inline]
     pub fn is_mutable(&self) -> bool {
         self.is_mutable
     }
 
+    #[inline]
     pub fn get_llvm_metadata(&self) -> LLVMLocalMetadata {
         self.llvm_metadata
     }

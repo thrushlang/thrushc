@@ -3,6 +3,8 @@ use std::ops::RangeInclusive;
 pub const SHORT_RANGE_OBFUSCATION: RangeInclusive<usize> = 5..=10;
 pub const LONG_RANGE_OBFUSCATION: RangeInclusive<usize> = 15..=30;
 
+#[inline]
+#[must_use]
 pub fn generate_random_string(range: RangeInclusive<usize>) -> String {
     let length: usize = fastrand::usize(range);
     let mut random_string: String = String::with_capacity(length);

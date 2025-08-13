@@ -75,8 +75,6 @@ pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, stmt: &'ctx Ast<'ctx>)
         }
 
         llvm_builder.position_at_end(merge);
-    } else {
-        self::codegen_abort("Expected conditional to compile.");
     }
 }
 

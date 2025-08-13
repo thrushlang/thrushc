@@ -15,6 +15,7 @@ use crate::core::{
     utils::rand,
 };
 
+#[inline]
 pub fn archive_compilation(
     compiler: &mut TheThrushCompiler,
     archive_time: Instant,
@@ -35,6 +36,7 @@ pub fn archive_compilation(
     Ok(())
 }
 
+#[inline]
 pub fn obj_compilation(
     llvm_module: &Module,
     target_machine: &TargetMachine,

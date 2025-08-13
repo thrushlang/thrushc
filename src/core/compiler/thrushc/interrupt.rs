@@ -7,6 +7,7 @@ use crate::core::{
     console::logging,
 };
 
+#[inline]
 pub fn archive_compilation_unit(
     compiler: &mut TheThrushCompiler,
     archive_time: Instant,

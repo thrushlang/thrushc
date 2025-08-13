@@ -21,8 +21,6 @@ pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, stmt: &'ctx Ast<'ctx>)
         llvm_builder
             .build_unconditional_branch(break_block)
             .unwrap_or_else(abort);
-    } else {
-        self::codegen_abort("Expected break loop control flow to compile.");
     }
 }
 

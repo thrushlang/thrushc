@@ -256,6 +256,7 @@ pub fn float<'ctx>(
 
 ########################################################################*/
 
+#[inline]
 pub fn try_cast<'ctx>(
     context: &LLVMCodeGenContext<'_, 'ctx>,
     target_type: Option<&Type>,
@@ -277,6 +278,7 @@ pub fn try_cast<'ctx>(
     None
 }
 
+#[inline]
 fn codegen_abort<T: Display>(message: T) -> ! {
     logging::print_backend_bug(LoggingType::BackendBug, &format!("{}", message));
 }

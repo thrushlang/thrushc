@@ -12,10 +12,12 @@ impl CastMetadata {
         }
     }
 
+    #[inline]
     pub fn is_constant(&self) -> bool {
         self.is_constant
     }
 
+    #[inline]
     pub fn is_allocated(&self) -> bool {
         self.is_allocated
     }

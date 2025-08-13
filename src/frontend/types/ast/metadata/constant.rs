@@ -23,10 +23,12 @@ impl ConstantMetadata {
         }
     }
 
+    #[inline]
     pub fn is_global(&self) -> bool {
         self.is_global
     }
 
+    #[inline]
     pub fn get_llvm_metadata(&self) -> LLVMConstantMetadata {
         self.llvm_metadata
     }

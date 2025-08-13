@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use inkwell::{context::Context, values::FloatValue};
 
 use crate::{
@@ -18,12 +20,12 @@ pub fn const_float<'ctx>(
         Type::F64 => context.f64_type().const_float(iee),
 
         what => {
-            logging::log(
-                LoggingType::BackendBug,
-                &format!("Unsupported integer type: '{:#?}'.", what),
-            );
-
-            unreachable!()
+            self::codegen_abort(format!("Unsupported integer type: '{:#?}'.", what));
         }
     }
+}
+
+#[inline]
+fn codegen_abort<T: Display>(message: T) -> ! {
+    logging::print_backend_bug(LoggingType::BackendBug, &format!("{}", message));
 }

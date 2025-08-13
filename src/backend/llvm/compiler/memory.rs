@@ -542,6 +542,7 @@ pub fn gep_anon<'ctx>(
     self::codegen_abort("Unable to get pointer element at memory manipulation.");
 }
 
+#[inline]
 fn codegen_abort<T: Display>(message: T) -> ! {
     logging::print_backend_bug(LoggingType::BackendBug, &format!("{}", message));
 }

@@ -53,8 +53,6 @@ pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, stmt: &'ctx Ast<'ctx>)
         codegen.get_mut_context().get_mut_loop_ctx().pop();
 
         llvm_builder.position_at_end(exit);
-    } else {
-        self::codegen_abort("Expected loop to compile.");
     }
 }
 

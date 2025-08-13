@@ -8,6 +8,7 @@ impl FunctionParameterMetadata {
         Self { is_mutable }
     }
 
+    #[inline]
     pub fn is_mutable(&self) -> bool {
         self.is_mutable
     }

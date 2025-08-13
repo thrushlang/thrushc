@@ -151,6 +151,7 @@ pub fn generate_subtype_with_all<'ctx>(
     }
 }
 
+#[inline]
 fn codegen_abort<T: Display>(message: T) -> ! {
     logging::print_backend_bug(LoggingType::BackendBug, &format!("{}", message));
 }

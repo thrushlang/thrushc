@@ -22,10 +22,12 @@ impl ReferenceMetadata {
         }
     }
 
+    #[inline]
     pub fn is_allocated(&self) -> bool {
         self.is_allocated
     }
 
+    #[inline]
     pub fn is_mutable(&self) -> bool {
         self.is_mutable
     }

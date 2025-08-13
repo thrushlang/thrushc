@@ -23,9 +23,10 @@ pub enum LoggingType {
     Info,
 }
 
+#[inline]
 pub fn log(ltype: LoggingType, msg: &str) {
     if ltype.is_bug() {
-        return self::print_bug(ltype, msg);
+        self::print_bug(ltype, msg);
     }
 
     if ltype.is_backend_bug() {
@@ -33,7 +34,7 @@ pub fn log(ltype: LoggingType, msg: &str) {
     }
 
     if ltype.is_panic() {
-        return self::print_any_panic(ltype, msg);
+        self::print_any_panic(ltype, msg);
     }
 
     if ltype.is_backend_panic() {
@@ -49,14 +50,14 @@ pub fn log(ltype: LoggingType, msg: &str) {
     }
 
     if ltype.is_frontend_panic() {
-        return self::print_frontend_panic(ltype, msg);
+        self::print_frontend_panic(ltype, msg);
     }
 
     let _ = io::stdout().write_all(format!("{} {}", ltype.as_styled(), msg).as_bytes());
 }
 
 #[inline]
-pub fn print_frontend_panic(ltype: LoggingType, msg: &str) {
+pub fn print_frontend_panic(ltype: LoggingType, msg: &str) -> ! {
     let _ = io::stderr().write_all(format!("\n{} {}", ltype.as_styled(), msg).as_bytes());
     process::exit(1);
 }
@@ -72,7 +73,7 @@ pub fn print_error(ltype: LoggingType, msg: &str) {
 }
 
 #[inline]
-pub fn print_any_panic(ltype: LoggingType, msg: &str) {
+pub fn print_any_panic(ltype: LoggingType, msg: &str) -> ! {
     let _ = io::stderr().write_all(format!("{} {}\n", ltype.as_styled(), msg).as_bytes());
     process::exit(1);
 }
@@ -120,7 +121,7 @@ pub fn print_backend_bug(ltype: LoggingType, msg: &str) -> ! {
     process::exit(1);
 }
 
-pub fn print_bug(ltype: LoggingType, msg: &str) {
+pub fn print_bug(ltype: LoggingType, msg: &str) -> ! {
     let _ = io::stderr().write_all(format!("{} {}\n", ltype.as_styled(), msg).as_bytes());
 
     let _ = io::stderr().write_all(
@@ -138,6 +139,7 @@ pub fn print_bug(ltype: LoggingType, msg: &str) {
     process::exit(1);
 }
 
+#[inline]
 pub fn write(output_in: OutputIn, text: &str) {
     match output_in {
         OutputIn::Stdout => {
@@ -151,6 +153,7 @@ pub fn write(output_in: OutputIn, text: &str) {
 }
 
 impl LoggingType {
+    #[inline]
     pub fn as_styled(&self) -> ColoredString {
         match self {
             LoggingType::BackendPanic => "BACKEND PANIC".bright_red().bold(),
@@ -164,6 +167,7 @@ impl LoggingType {
         }
     }
 
+    #[inline]
     pub fn text_with_color(&self, msg: &str) -> ColoredString {
         match self {
             LoggingType::BackendPanic => msg.bright_red().bold(),

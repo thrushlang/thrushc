@@ -60,7 +60,7 @@ pub fn compile<'ctx>(
         }
 
         if let LLVMAttribute::AsmSyntax(new_syntax, ..) = *attribute {
-            syntax = str::assembler_syntax_attr_to_inline_assembler_dialect(new_syntax);
+            syntax = str::to_inline_assembler_dialect(new_syntax);
         }
     });
 

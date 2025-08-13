@@ -98,7 +98,7 @@ pub fn compile_decl<'ctx>(
     );
 }
 
-pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, global_fn: GlobalFunction<'ctx>) {
+pub fn compile_body<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, global_fn: GlobalFunction<'ctx>) {
     let llvm_context: &Context = codegen.get_context().get_llvm_context();
     let llvm_builder: &Builder = codegen.get_context().get_llvm_builder();
 
@@ -162,6 +162,7 @@ fn compile_parameter<'ctx>(
     }
 }
 
-fn codegen_abort<T: Display>(message: T) {
-    logging::log(LoggingType::BackendBug, &format!("{}", message));
+#[inline]
+fn codegen_abort<T: Display>(message: T) -> ! {
+    logging::print_backend_bug(LoggingType::BackendBug, &format!("{}", message));
 }

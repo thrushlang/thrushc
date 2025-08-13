@@ -14,10 +14,12 @@ impl JITConfiguration {
         }
     }
 
+    #[inline]
     pub fn set_libc_path(&mut self, value: PathBuf) {
         self.libc_path = Some(value);
     }
 
+    #[inline]
     pub fn add_jit_library(&mut self, value: PathBuf) {
         self.libraries.push(value);
     }

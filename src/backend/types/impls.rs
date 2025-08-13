@@ -55,20 +55,19 @@ impl Display for CallConvention {
 }
 
 impl AssemblerFunctionExtensions for str {
-    fn assembler_syntax_attr_to_inline_assembler_dialect(syntax: &str) -> InlineAsmDialect {
+    #[inline]
+    fn to_inline_assembler_dialect(syntax: &str) -> InlineAsmDialect {
         match syntax {
             "Intel" => InlineAsmDialect::Intel,
             "AT&T" => InlineAsmDialect::ATT,
             any => {
-                logging::log(
-                    LoggingType::Bug,
+                logging::print_backend_bug(
+                    LoggingType::BackendBug,
                     &format!(
                         "Unable to translate '{}' to proper inline assembler dialect.",
                         any
                     ),
                 );
-
-                unreachable!()
             }
         }
     }

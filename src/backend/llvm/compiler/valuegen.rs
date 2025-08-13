@@ -10,8 +10,9 @@ use crate::backend::llvm::compiler::{
     binaryop, builtins, cast, codegen, expressions, indexes, ptrgen,
 };
 
-use crate::backend::types::LLVMEitherExpression;
 use crate::backend::types::traits::AssemblerFunctionExtensions;
+
+use crate::backend::types::LLVMEitherExpression;
 use crate::core::console::logging::{self, LoggingType};
 use crate::frontend::lexer::tokentype::TokenType;
 use crate::frontend::types::ast::Ast;
@@ -374,7 +375,7 @@ fn compile_inline_asm<'ctx>(
 
     for attr in attributes {
         if let LLVMAttribute::AsmSyntax(new_syntax, ..) = *attr {
-            syntax = str::assembler_syntax_attr_to_inline_assembler_dialect(new_syntax);
+            syntax = str::to_inline_assembler_dialect(new_syntax);
         }
     }
 
@@ -503,6 +504,7 @@ fn compile_null_ptr<'ctx>(context: &LLVMCodeGenContext<'_, 'ctx>) -> BasicValueE
         .into()
 }
 
+#[inline]
 fn codegen_abort<T: Display>(message: T) {
     logging::log(LoggingType::BackendBug, &format!("{}", message));
 }

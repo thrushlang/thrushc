@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use inkwell::{context::Context, values::IntValue};
 
 use crate::{
@@ -28,12 +30,12 @@ pub fn const_int<'ctx>(
         Type::Bool => context.bool_type().const_int(number, false),
 
         what => {
-            logging::log(
-                LoggingType::BackendBug,
-                &format!("Unsupported integer type: '{:#?}'.", what),
-            );
-
-            unreachable!()
+            self::codegen_abort(format!("Unsupported integer type: '{:#?}'.", what));
         }
     }
+}
+
+#[inline]
+fn codegen_abort<T: Display>(message: T) -> ! {
+    logging::print_backend_bug(LoggingType::BackendBug, &format!("{}", message));
 }
