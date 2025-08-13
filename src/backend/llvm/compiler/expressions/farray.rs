@@ -16,15 +16,6 @@ pub fn compile<'ctx>(
     kind: &Type,
     cast: Option<&Type>,
 ) -> BasicValueEnum<'ctx> {
-    self::fixed_array(context, items, kind, cast)
-}
-
-fn fixed_array<'ctx>(
-    context: &mut LLVMCodeGenContext<'_, 'ctx>,
-    items: &'ctx [Ast],
-    kind: &Type,
-    cast: Option<&Type>,
-) -> BasicValueEnum<'ctx> {
     if let Some(anchor) = context.get_pointer_anchor() {
         if !anchor.is_triggered() {
             self::compile_fixed_array_with_anchor(context, items, kind, cast, anchor)
@@ -45,12 +36,12 @@ fn compile_fixed_array_with_anchor<'ctx>(
 ) -> BasicValueEnum<'ctx> {
     let llvm_context: &Context = context.get_llvm_context();
 
-    let array_ptr: PointerValue = anchor.get_pointer();
+    let anchor_ptr: PointerValue = anchor.get_pointer();
+
     let array_type: &Type = cast.unwrap_or(kind);
-
-    context.set_pointer_anchor(PointerAnchor::new(array_ptr, true));
-
     let array_items_type: &Type = array_type.get_fixed_array_base_type();
+
+    context.set_pointer_anchor(PointerAnchor::new(anchor_ptr, true));
 
     let items: Vec<BasicValueEnum> = items
         .iter()
@@ -62,7 +53,7 @@ fn compile_fixed_array_with_anchor<'ctx>(
 
         let ptr: PointerValue = memory::gep_anon(
             context,
-            array_ptr,
+            anchor_ptr,
             array_type,
             &[llvm_context.i32_type().const_zero(), idx],
         );

@@ -20,7 +20,6 @@ pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, stmt: &'ctx Ast<'ctx>)
 
     let abort = |_| {
         self::codegen_abort("Cannot compile for loop at code generation time.");
-        unreachable!()
     };
 
     let llvm_function: FunctionValue = codegen.get_mut_context().get_current_fn();
@@ -96,6 +95,7 @@ pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, stmt: &'ctx Ast<'ctx>)
     }
 }
 
-fn codegen_abort<T: Display>(message: T) {
-    logging::log(LoggingType::BackendBug, &format!("{}", message));
+#[inline]
+fn codegen_abort<T: Display>(message: T) -> ! {
+    logging::print_backend_bug(LoggingType::BackendBug, &format!("{}", message));
 }

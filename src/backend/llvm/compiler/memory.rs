@@ -75,6 +75,7 @@ pub enum LLVMAllocationSite {
 }
 
 impl<'ctx> SymbolAllocated<'ctx> {
+    #[inline]
     pub fn new(allocate: SymbolToAllocate, kind: &'ctx Type, value: BasicValueEnum<'ctx>) -> Self {
         match allocate {
             SymbolToAllocate::Parameter => Self::Parameter { value, kind },
@@ -82,6 +83,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
         }
     }
 
+    #[inline]
     pub fn new_local(
         ptr: PointerValue<'ctx>,
         kind: &'ctx Type,
@@ -94,6 +96,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
         }
     }
 
+    #[inline]
     pub fn new_constant(
         ptr: BasicValueEnum<'ctx>,
         kind: &'ctx Type,
@@ -108,6 +111,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
         }
     }
 
+    #[inline]
     pub fn new_static(
         ptr: BasicValueEnum<'ctx>,
         kind: &'ctx Type,
@@ -121,7 +125,9 @@ impl<'ctx> SymbolAllocated<'ctx> {
             metadata,
         }
     }
+}
 
+impl<'ctx> SymbolAllocated<'ctx> {
     pub fn load(&self, context: &LLVMCodeGenContext<'_, 'ctx>) -> BasicValueEnum<'ctx> {
         let llvm_context: &Context = context.get_llvm_context();
         let llvm_builder: &Builder = context.get_llvm_builder();
@@ -156,7 +162,6 @@ impl<'ctx> SymbolAllocated<'ctx> {
                 }
 
                 self::codegen_abort("Unable to load value at memory manipulation.");
-                unreachable!()
             }
 
             Self::Parameter { value, .. } => {
@@ -172,7 +177,6 @@ impl<'ctx> SymbolAllocated<'ctx> {
                     }
 
                     self::codegen_abort("Unable to load value at memory manipulation.");
-                    unreachable!()
                 }
 
                 *value
@@ -196,7 +200,6 @@ impl<'ctx> SymbolAllocated<'ctx> {
                 }
 
                 self::codegen_abort("Unable to load value at memory manipulation.");
-                unreachable!()
             }
 
             Self::Static { ptr, metadata, .. } => {
@@ -217,7 +220,6 @@ impl<'ctx> SymbolAllocated<'ctx> {
                 }
 
                 self::codegen_abort("Unable to load value at memory manipulation.");
-                unreachable!()
             }
 
             Self::LowLevelInstruction { value, .. } => *value,
@@ -264,6 +266,10 @@ impl<'ctx> SymbolAllocated<'ctx> {
         builder: &Builder<'ctx>,
         indexes: &[IntValue<'ctx>],
     ) -> PointerValue<'ctx> {
+        let abort = || {
+            self::codegen_abort("Unable to calculate pointer position at memory manipulation.");
+        };
+
         match self {
             Self::Local { ptr, kind, .. }
             | Self::Constant { ptr, kind, .. }
@@ -275,7 +281,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
                         indexes,
                         "",
                     )
-                    .unwrap()
+                    .unwrap_or_else(|_| abort())
             },
 
             Self::Parameter { value, kind } | Self::LowLevelInstruction { value, kind } => {
@@ -288,13 +294,11 @@ impl<'ctx> SymbolAllocated<'ctx> {
                                 indexes,
                                 "",
                             )
-                            .unwrap()
+                            .unwrap_or_else(|_| abort())
                     };
                 }
 
-                self::codegen_abort("Unable to calculate pointer position at memory manipulation.");
-
-                unreachable!()
+                abort()
             }
         }
     }
@@ -314,16 +318,12 @@ impl<'ctx> SymbolAllocated<'ctx> {
                 self::codegen_abort(
                     "Unable to get a value of an structure at memory manipulation.",
                 );
-
-                unreachable!()
             }
 
             _ => {
                 self::codegen_abort(
                     "Unable to get a value of an structure at memory manipulation.",
                 );
-
-                unreachable!()
             }
         }
     }
@@ -334,6 +334,12 @@ impl<'ctx> SymbolAllocated<'ctx> {
         builder: &Builder<'ctx>,
         index: u32,
     ) -> PointerValue<'ctx> {
+        let abort = || {
+            self::codegen_abort(
+                "Unable to get struct element pointer position at memory manipulation.",
+            );
+        };
+
         match self {
             Self::Local { ptr, kind, .. }
             | Self::Constant { ptr, kind, .. }
@@ -344,7 +350,8 @@ impl<'ctx> SymbolAllocated<'ctx> {
                     index,
                     "",
                 )
-                .unwrap(),
+                .unwrap_or_else(|_| abort()),
+
             Self::Parameter { value, kind } | Self::LowLevelInstruction { value, kind } => {
                 if value.is_pointer_value() {
                     return builder
@@ -354,18 +361,16 @@ impl<'ctx> SymbolAllocated<'ctx> {
                             index,
                             "",
                         )
-                        .unwrap();
+                        .unwrap_or_else(|_| abort());
                 }
 
-                self::codegen_abort(
-                    "Unable to get struct element pointer position at memory manipulation.",
-                );
-
-                unreachable!()
+                abort()
             }
         }
     }
+}
 
+impl<'ctx> SymbolAllocated<'ctx> {
     pub fn get_type(&self) -> &'ctx Type {
         match self {
             Self::Local { kind, .. } => kind,
@@ -395,7 +400,9 @@ impl<'ctx> SymbolAllocated<'ctx> {
             Self::LowLevelInstruction { value, .. } => *value,
         }
     }
+}
 
+impl SymbolAllocated<'_> {
     pub fn is_pointer(&self) -> bool {
         match self {
             Self::Local { .. } => true,
@@ -437,13 +444,18 @@ pub fn load_anon<'ctx>(
         .get_target_data()
         .get_preferred_alignment(&ptr.get_type());
 
-    let loaded_value: BasicValueEnum = llvm_builder.build_load(llvm_type, ptr, "").unwrap();
+    if let Ok(loaded_value) = llvm_builder.build_load(llvm_type, ptr, "") {
+        if let Some(instr) = loaded_value.as_instruction_value() {
+            let _ = instr.set_alignment(preferred_alignment);
+        }
 
-    if let Some(instr) = loaded_value.as_instruction_value() {
-        let _ = instr.set_alignment(preferred_alignment);
+        return loaded_value;
     }
 
-    loaded_value
+    self::codegen_abort(format!(
+        "Unable to load a value from memory, with pointer: '{}'.",
+        ptr
+    ));
 }
 
 pub fn alloc_anon<'ctx>(
@@ -472,7 +484,6 @@ pub fn alloc_anon<'ctx>(
             }
 
             self::codegen_abort(format!("Cannot assign type to stack: '{}'.", kind));
-            unreachable!()
         }
         LLVMAllocationSite::Heap => {
             if let Ok(ptr) = llvm_builder.build_malloc(llvm_type, "") {
@@ -480,7 +491,6 @@ pub fn alloc_anon<'ctx>(
             }
 
             self::codegen_abort(format!("Cannot assign type to heap: '{}'.", kind));
-            unreachable!()
         }
         LLVMAllocationSite::Static => llvm_module
             .add_global(llvm_type, Some(AddressSpace::default()), "")
@@ -507,7 +517,6 @@ pub fn get_struct_anon<'ctx>(
     }
 
     self::codegen_abort("Unable to get pointer element at memory manipulation.");
-    unreachable!()
 }
 
 pub fn gep_anon<'ctx>(
@@ -531,9 +540,8 @@ pub fn gep_anon<'ctx>(
     }
 
     self::codegen_abort("Unable to get pointer element at memory manipulation.");
-    unreachable!()
 }
 
-fn codegen_abort<T: Display>(message: T) {
-    logging::log(LoggingType::BackendBug, &format!("{}", message));
+fn codegen_abort<T: Display>(message: T) -> ! {
+    logging::print_backend_bug(LoggingType::BackendBug, &format!("{}", message));
 }

@@ -1,7 +1,6 @@
 use std::fmt::Display;
 
 use inkwell::{
-    AddressSpace,
     builder::Builder,
     context::Context,
     types::BasicTypeEnum,
@@ -39,7 +38,6 @@ pub fn compile_property_value<'ctx>(
         }
         _ => {
             self::codegen_abort("Unable to get a value of an structure at memory manipulation.");
-            self::compile_null_ptr(context)
         }
     }
 }
@@ -58,19 +56,9 @@ fn compile_pointer_property<'ctx>(
     for index in indexes.iter().skip(1) {
         let index_type: BasicTypeEnum = typegen::generate_type(llvm_context, &index.0);
 
-        match llvm_builder.build_struct_gep(index_type, ptr, index.1, "") {
-            Ok(new_ptr) => {
-                ptr = new_ptr;
-                ptr_type = &index.0;
-            }
-            Err(_) => {
-                self::codegen_abort(format!(
-                    "Failed to access property at index '{}' for symbol.",
-                    index.1
-                ));
-
-                return self::compile_null_ptr(context);
-            }
+        if let Ok(new_ptr) = llvm_builder.build_struct_gep(index_type, ptr, index.1, "") {
+            ptr = new_ptr;
+            ptr_type = &index.0;
         }
     }
 
@@ -88,16 +76,10 @@ fn compile_extract_value_property<'ctx>(
 
     for index in indexes.iter().skip(1) {
         if value.is_struct_value() {
-            match llvm_builder.build_extract_value(value.into_struct_value(), index.1, "") {
-                Ok(new_value) => value = new_value,
-                Err(_) => {
-                    self::codegen_abort(format!(
-                        "Failed to extract value at index '{}' for symbol.",
-                        index.1
-                    ));
-
-                    return self::compile_null_ptr(context);
-                }
+            if let Ok(new_value) =
+                llvm_builder.build_extract_value(value.into_struct_value(), index.1, "")
+            {
+                value = new_value;
             }
         }
     }
@@ -105,14 +87,7 @@ fn compile_extract_value_property<'ctx>(
     value
 }
 
-fn compile_null_ptr<'ctx>(context: &LLVMCodeGenContext<'_, 'ctx>) -> BasicValueEnum<'ctx> {
-    context
-        .get_llvm_context()
-        .ptr_type(AddressSpace::default())
-        .const_null()
-        .into()
-}
-
-fn codegen_abort<T: Display>(message: T) {
-    logging::log(LoggingType::BackendBug, &format!("{}", message));
+#[inline]
+fn codegen_abort<T: Display>(message: T) -> ! {
+    logging::print_backend_bug(LoggingType::BackendBug, &format!("{}", message));
 }

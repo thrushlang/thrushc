@@ -11,6 +11,7 @@ edition = "2024"
 [dependencies]
 llvm-sys = { path = "wrappers/llvm/llvm-sys-170.0.0", features = ["force-static"] }
 inkwell = { path = "wrappers/llvm/inkwell", features = ["llvm17-0", "llvm17-0-force-static"] }
+lld = { path = "wrappers/llvm/linkers/lld-wrapper" }
 
 unicode_categories = "0.1.1"
 colored = "3.0.0"

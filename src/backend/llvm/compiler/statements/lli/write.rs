@@ -43,13 +43,8 @@ pub fn compile<'ctx>(
         }
         _ => {
             self::codegen_abort("Invalid write target in expression");
-            self::compile_null_ptr(context)
         }
     }
-}
-
-fn codegen_abort<T: Display>(message: T) {
-    logging::log(LoggingType::BackendBug, &format!("{}", message));
 }
 
 fn compile_null_ptr<'ctx>(context: &LLVMCodeGenContext<'_, 'ctx>) -> BasicValueEnum<'ctx> {
@@ -58,4 +53,9 @@ fn compile_null_ptr<'ctx>(context: &LLVMCodeGenContext<'_, 'ctx>) -> BasicValueE
         .ptr_type(AddressSpace::default())
         .const_null()
         .into()
+}
+
+#[inline]
+fn codegen_abort<T: Display>(message: T) -> ! {
+    logging::print_backend_bug(LoggingType::BackendBug, &format!("{}", message));
 }

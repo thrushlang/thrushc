@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use inkwell::{AddressSpace, context::Context, types::BasicTypeEnum, values::BasicValueEnum};
+use inkwell::{context::Context, types::BasicTypeEnum, values::BasicValueEnum};
 
 use crate::{
     backend::llvm::compiler::{
@@ -20,16 +20,16 @@ pub fn constant_fixed_array<'ctx>(
 ) -> BasicValueEnum<'ctx> {
     let llvm_context: &Context = context.get_llvm_context();
 
-    let item_type: &Type = kind.get_fixed_array_base_type();
-    let array_type: BasicTypeEnum = typegen::generate_type(llvm_context, item_type);
+    let base_type: &Type = kind.get_fixed_array_base_type();
+    let array_type: BasicTypeEnum = typegen::generate_type(llvm_context, base_type);
 
     let values: Vec<BasicValueEnum> = items
         .iter()
         .map(|item| {
             let value_type: &Type = item.get_type_unwrapped();
-            let value: BasicValueEnum = constgen::compile(context, item, item_type);
+            let value: BasicValueEnum = constgen::compile(context, item, base_type);
 
-            casts::try_one(context, value, value_type, item_type)
+            casts::try_one(context, value, value_type, base_type)
         })
         .collect();
 
@@ -82,22 +82,13 @@ pub fn constant_fixed_array<'ctx>(
         _ => {
             self::codegen_abort(format!(
                 "Incompatible type '{}' for constant array.",
-                item_type
+                base_type
             ));
-
-            self::compile_null_ptr(context)
         }
     }
 }
 
-fn compile_null_ptr<'ctx>(context: &LLVMCodeGenContext<'_, 'ctx>) -> BasicValueEnum<'ctx> {
-    context
-        .get_llvm_context()
-        .ptr_type(AddressSpace::default())
-        .const_null()
-        .into()
-}
-
-fn codegen_abort<T: Display>(message: T) {
-    logging::log(LoggingType::BackendBug, &format!("{}", message));
+#[inline]
+fn codegen_abort<T: Display>(message: T) -> ! {
+    logging::print_backend_bug(LoggingType::BackendBug, &format!("{}", message));
 }

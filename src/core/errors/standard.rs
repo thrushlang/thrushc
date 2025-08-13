@@ -10,6 +10,7 @@ pub enum ThrushCompilerIssue {
 }
 
 impl ThrushCompilerIssue {
+    #[inline]
     pub fn is_bug(&self) -> bool {
         matches!(self, ThrushCompilerIssue::FrontEndBug(..))
     }

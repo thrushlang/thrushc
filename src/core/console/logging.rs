@@ -25,121 +25,128 @@ pub enum LoggingType {
 
 pub fn log(ltype: LoggingType, msg: &str) {
     if ltype.is_bug() {
-        io::stderr()
-            .write_all(format!("{} {}\n", ltype.as_styled(), msg).as_bytes())
-            .unwrap_or_default();
-
-        io::stderr()
-            .write_all(
-                format!(
-                    "\nThis is a {} at code generation time. Report it in: '{}'.\n",
-                    "critical issue".bold().bright_red().underline(),
-                    "https://github.com/thrushlang/thrushc/issues/"
-                        .bold()
-                        .bright_red()
-                        .underline(),
-                )
-                .as_bytes(),
-            )
-            .unwrap_or_default();
-
-        process::exit(1);
+        return self::print_bug(ltype, msg);
     }
 
     if ltype.is_backend_bug() {
-        io::stderr()
-            .write_all(format!("{} {}\n", ltype.as_styled(), msg).as_bytes())
-            .unwrap_or_default();
-
-        io::stderr()
-            .write_all(
-                format!(
-                    "\nThis is a {} at code generation time. Report it in: '{}'.\n",
-                    "critical issue".bold().bright_red().underline(),
-                    "https://github.com/thrushlang/thrushc/issues/"
-                        .bold()
-                        .bright_red()
-                        .underline(),
-                )
-                .as_bytes(),
-            )
-            .unwrap_or_default();
-
-        process::exit(1);
+        self::print_backend_bug(ltype, msg);
     }
 
     if ltype.is_panic() {
-        io::stderr()
-            .write_all(format!("{} {}\n", ltype.as_styled(), msg).as_bytes())
-            .unwrap_or_default();
-
-        process::exit(1);
+        return self::print_any_panic(ltype, msg);
     }
 
     if ltype.is_backend_panic() {
-        io::stderr()
-            .write_all(format!("\n{} {}", ltype.as_styled(), msg).as_bytes())
-            .unwrap_or_default();
-
-        io::stderr()
-            .write_all(
-                format!(
-                    "\n\nMaybe this is a issue... Report it in: '{}'.\n",
-                    "https://github.com/thrushlang/thrushc/issues/"
-                        .bold()
-                        .bright_red()
-                        .underline()
-                )
-                .as_bytes(),
-            )
-            .unwrap_or_default();
-
-        io::stderr()
-            .write_all(
-                format!(
-                    "\n{} It isn't a issue if:\n• Comes from the inline assembler thing.\n\n",
-                    "NOTE".bold().underline().bright_red()
-                )
-                .as_bytes(),
-            )
-            .unwrap_or_default();
-
-        return;
+        return self::print_backend_panic(ltype, msg);
     }
 
     if ltype.is_err() {
-        io::stderr()
-            .write_all(format!("{} {}\n", ltype.as_styled(), msg).as_bytes())
-            .unwrap_or_default();
-
-        return;
-    }
-
-    if ltype.is_frontend_panic() {
-        io::stderr()
-            .write_all(format!("\n{} {}", ltype.as_styled(), msg).as_bytes())
-            .unwrap_or_default();
-
-        process::exit(1);
+        return self::print_error(ltype, msg);
     }
 
     if ltype.is_warn() || ltype.is_info() {
-        io::stderr()
-            .write_all(format!("{} {}", ltype.as_styled(), msg).as_bytes())
-            .unwrap_or_default();
-
-        return;
+        return self::print_whatever_not_frontend(ltype, msg);
     }
 
-    io::stdout()
-        .write_all(format!("{} {}", ltype.as_styled(), msg).as_bytes())
-        .unwrap_or_default();
+    if ltype.is_frontend_panic() {
+        return self::print_frontend_panic(ltype, msg);
+    }
+
+    let _ = io::stdout().write_all(format!("{} {}", ltype.as_styled(), msg).as_bytes());
+}
+
+#[inline]
+pub fn print_frontend_panic(ltype: LoggingType, msg: &str) {
+    let _ = io::stderr().write_all(format!("\n{} {}", ltype.as_styled(), msg).as_bytes());
+    process::exit(1);
+}
+
+#[inline]
+pub fn print_whatever_not_frontend(ltype: LoggingType, msg: &str) {
+    let _ = io::stderr().write_all(format!("{} {}", ltype.as_styled(), msg).as_bytes());
+}
+
+#[inline]
+pub fn print_error(ltype: LoggingType, msg: &str) {
+    let _ = io::stderr().write_all(format!("{} {}\n", ltype.as_styled(), msg).as_bytes());
+}
+
+#[inline]
+pub fn print_any_panic(ltype: LoggingType, msg: &str) {
+    let _ = io::stderr().write_all(format!("{} {}\n", ltype.as_styled(), msg).as_bytes());
+    process::exit(1);
+}
+
+pub fn print_backend_panic(ltype: LoggingType, msg: &str) {
+    let _ = io::stderr().write_all(format!("\n{} {}", ltype.as_styled(), msg).as_bytes());
+
+    let _ = io::stderr().write_all(
+        format!(
+            "\n\nMaybe this is a issue... Report it in: '{}'.\n",
+            "https://github.com/thrushlang/thrushc/issues/"
+                .bold()
+                .bright_red()
+                .underline()
+        )
+        .as_bytes(),
+    );
+
+    let _ = io::stderr().write_all(
+        format!(
+            "\n{} It isn't a issue if:\n• Comes from the inline assembler thing.\n\n",
+            "NOTE".bold().underline().bright_red()
+        )
+        .as_bytes(),
+    );
+
+    process::exit(1);
+}
+
+pub fn print_backend_bug(ltype: LoggingType, msg: &str) -> ! {
+    let _ = io::stderr().write_all(format!("{} {}\n", ltype.as_styled(), msg).as_bytes());
+
+    let _ = io::stderr().write_all(
+        format!(
+            "\nThis is a {} at code generation time. Report it in: '{}'.\n",
+            "critical issue".bold().bright_red().underline(),
+            "https://github.com/thrushlang/thrushc/issues/"
+                .bold()
+                .bright_red()
+                .underline(),
+        )
+        .as_bytes(),
+    );
+
+    process::exit(1);
+}
+
+pub fn print_bug(ltype: LoggingType, msg: &str) {
+    let _ = io::stderr().write_all(format!("{} {}\n", ltype.as_styled(), msg).as_bytes());
+
+    let _ = io::stderr().write_all(
+        format!(
+            "\nThis is a {} at code generation time. Report it in: '{}'.\n",
+            "critical issue".bold().bright_red().underline(),
+            "https://github.com/thrushlang/thrushc/issues/"
+                .bold()
+                .bright_red()
+                .underline(),
+        )
+        .as_bytes(),
+    );
+
+    process::exit(1);
 }
 
 pub fn write(output_in: OutputIn, text: &str) {
     match output_in {
-        OutputIn::Stdout => io::stdout().write_all(text.as_bytes()).unwrap_or(()),
-        OutputIn::Stderr => io::stderr().write_all(text.as_bytes()).unwrap_or(()),
+        OutputIn::Stdout => {
+            let _ = io::stdout().write_all(text.as_bytes());
+        }
+
+        OutputIn::Stderr => {
+            let _ = io::stderr().write_all(text.as_bytes());
+        }
     };
 }
 

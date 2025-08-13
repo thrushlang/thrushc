@@ -29,14 +29,17 @@ impl<'a> Diagnostic<'a> {
 }
 
 impl Diagnostic<'_> {
+    #[inline]
     pub fn get_code(&self) -> &str {
         self.code
     }
 
+    #[inline]
     pub fn get_signaler(&self) -> &str {
         &self.signaler
     }
 
+    #[inline]
     pub fn get_span(&self) -> Span {
         self.span
     }

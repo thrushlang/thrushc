@@ -33,11 +33,11 @@ pub fn compile<'ctx>(
 
         _ => {
             self::codegen_abort("A mutation cannot be executed.");
-            self::compile_null_ptr(context)
         }
     }
 }
 
+#[inline]
 fn compile_null_ptr<'ctx>(context: &LLVMCodeGenContext<'_, 'ctx>) -> BasicValueEnum<'ctx> {
     context
         .get_llvm_context()
@@ -46,6 +46,7 @@ fn compile_null_ptr<'ctx>(context: &LLVMCodeGenContext<'_, 'ctx>) -> BasicValueE
         .into()
 }
 
-fn codegen_abort<T: Display>(message: T) {
-    logging::log(LoggingType::BackendBug, &format!("{}", message));
+#[inline]
+fn codegen_abort<T: Display>(message: T) -> ! {
+    logging::print_backend_bug(LoggingType::BackendBug, &format!("{}", message));
 }

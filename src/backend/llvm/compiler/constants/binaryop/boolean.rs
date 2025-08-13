@@ -7,15 +7,11 @@ use {
             typesystem::types::Type,
         },
     },
-    inkwell::{
-        AddressSpace,
-        values::{BasicValueEnum, FloatValue, IntValue},
-    },
+    inkwell::values::{BasicValueEnum, FloatValue, IntValue},
     std::fmt::Display,
 };
 
 pub fn const_bool_operation<'ctx>(
-    context: &LLVMCodeGenContext<'_, 'ctx>,
     lhs: BasicValueEnum<'ctx>,
     rhs: BasicValueEnum<'ctx>,
     operator: &TokenType,
@@ -50,15 +46,11 @@ pub fn const_bool_operation<'ctx>(
                 self::codegen_abort(
                     "Cannot perform constant boolean binary operation without a valid gate.",
                 );
-
-                self::compile_null_ptr(context)
             }
             _ => {
                 self::codegen_abort(
                     "Cannot perform constant boolean binary operation without a valid operator.",
                 );
-
-                self::compile_null_ptr(context)
             }
         };
     }
@@ -78,7 +70,6 @@ pub fn const_bool_operation<'ctx>(
                 self::codegen_abort(
                     "Cannot perform constant boolean binary operation without two float values.",
                 );
-                self::compile_null_ptr(context)
             }
         };
     }
@@ -86,8 +77,6 @@ pub fn const_bool_operation<'ctx>(
     self::codegen_abort(
         "Cannot perform constant boolean binary operation without two integer values.",
     );
-
-    self::compile_null_ptr(context)
 }
 
 pub fn compile<'ctx>(
@@ -114,7 +103,6 @@ pub fn compile<'ctx>(
         let rhs: BasicValueEnum = constgen::compile(context, binary.2, cast);
 
         return self::const_bool_operation(
-            context,
             lhs,
             rhs,
             operator,
@@ -129,18 +117,9 @@ pub fn compile<'ctx>(
         "Cannot perform process a constant boolean binary operation '{} {} {}'.",
         binary.0, binary.1, binary.2
     ));
-
-    self::compile_null_ptr(context)
 }
 
-fn codegen_abort<T: Display>(message: T) {
-    logging::log(LoggingType::BackendBug, &format!("{}", message));
-}
-
-fn compile_null_ptr<'ctx>(context: &LLVMCodeGenContext<'_, 'ctx>) -> BasicValueEnum<'ctx> {
-    context
-        .get_llvm_context()
-        .ptr_type(AddressSpace::default())
-        .const_null()
-        .into()
+#[inline]
+fn codegen_abort<T: Display>(message: T) -> ! {
+    logging::print_backend_bug(LoggingType::BackendBug, &format!("{}", message));
 }

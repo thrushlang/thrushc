@@ -11,7 +11,6 @@ use crate::{
 use super::super::{context::LLVMCodeGenContext, valuegen};
 
 use inkwell::{
-    AddressSpace,
     builder::Builder,
     values::{BasicValueEnum, FloatValue},
 };
@@ -28,12 +27,10 @@ pub fn float_operation<'ctx>(
 
     let cfloatgen_abort = |_| {
         self::codegen_abort("Cannot perform float binary operation.");
-        unreachable!()
     };
 
     let cintgen_abort = |_| {
         self::codegen_abort("Cannot perform float binary operation.");
-        unreachable!()
     };
 
     match operator {
@@ -61,7 +58,6 @@ pub fn float_operation<'ctx>(
 
         _ => {
             self::codegen_abort("Cannot perform float binary operation without a valid operator.");
-            self::compile_null_ptr(context)
         }
     }
 }
@@ -103,18 +99,9 @@ pub fn compile<'ctx>(
         "Cannot perform process a float binary operation '{} {} {}'.",
         binary.0, binary.1, binary.2
     ));
-
-    self::compile_null_ptr(context)
 }
 
-fn codegen_abort<T: Display>(message: T) {
-    logging::log(LoggingType::BackendBug, &format!("{}", message));
-}
-
-fn compile_null_ptr<'ctx>(context: &LLVMCodeGenContext<'_, 'ctx>) -> BasicValueEnum<'ctx> {
-    context
-        .get_llvm_context()
-        .ptr_type(AddressSpace::default())
-        .const_null()
-        .into()
+#[inline]
+fn codegen_abort<T: Display>(message: T) -> ! {
+    logging::print_backend_bug(LoggingType::BackendBug, &format!("{}", message));
 }

@@ -57,7 +57,6 @@ pub fn integer_together<'ctx>(
 ) -> (IntValue<'ctx>, IntValue<'ctx>) {
     let abort = |_| {
         self::codegen_abort(format!("Failed to cast together '{}' & '{}'.", left, right));
-        unreachable!()
     };
 
     let llvm_builder: &Builder = context.get_llvm_builder();
@@ -126,7 +125,6 @@ pub fn float_together<'ctx>(
 ) -> (FloatValue<'ctx>, FloatValue<'ctx>) {
     let abort = |_| {
         self::codegen_abort(format!("Failed to cast together '{}' & '{}'.", left, right));
-        unreachable!()
     };
 
     let llvm_builder: &Builder = context.get_llvm_builder();
@@ -176,7 +174,6 @@ pub fn integer<'ctx>(
             "Failed to cast '{}' to '{}'.",
             from_type, target_type
         ));
-        unreachable!()
     };
 
     let llvm_builder: &Builder = context.get_llvm_builder();
@@ -224,7 +221,6 @@ pub fn float<'ctx>(
             "Failed to cast '{}' to '{}'.",
             from_type, target_type
         ));
-        unreachable!()
     };
 
     let llvm_builder: &Builder = context.get_llvm_builder();
@@ -281,6 +277,6 @@ pub fn try_cast<'ctx>(
     None
 }
 
-fn codegen_abort<T: Display>(message: T) {
-    logging::log(LoggingType::BackendBug, &format!("{}", message));
+fn codegen_abort<T: Display>(message: T) -> ! {
+    logging::print_backend_bug(LoggingType::BackendBug, &format!("{}", message));
 }

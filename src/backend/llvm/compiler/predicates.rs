@@ -34,8 +34,6 @@ pub fn integer(operator: &TokenType, left_signed: bool, right_signed: bool) -> I
                 "Operator precedence '{}' ins't compatible for integers.",
                 operator
             ));
-
-            unreachable!()
         }
     }
 }
@@ -51,7 +49,6 @@ pub fn pointer(operator: &TokenType) -> IntPredicate {
                 "Operator precedence '{}' ins't compatible for pointers.",
                 operator
             ));
-            unreachable!()
         }
     }
 }
@@ -67,12 +64,14 @@ pub fn float(operator: &TokenType) -> FloatPredicate {
         TokenType::LessEq => FloatPredicate::OLE,
 
         _ => {
-            self::codegen_abort("Operator precedence '{}' ins't compatible for floating points.");
-            unreachable!()
+            self::codegen_abort(format!(
+                "Operator precedence '{}' ins't compatible for floating points.",
+                operator
+            ));
         }
     }
 }
 
-fn codegen_abort<T: Display>(message: T) {
-    logging::log(LoggingType::BackendBug, &format!("{}", message));
+fn codegen_abort<T: Display>(message: T) -> ! {
+    logging::print_backend_bug(LoggingType::BackendBug, &format!("{}", message));
 }

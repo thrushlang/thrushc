@@ -6,6 +6,7 @@ pub struct LLVMAtomicModificators {
     pub atomic_ord: Option<AtomicOrdering>,
 }
 
+#[inline]
 pub fn try_set_atomic_modificators(
     instr: InstructionValue<'_>,
     modificators: LLVMAtomicModificators,

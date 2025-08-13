@@ -17,12 +17,16 @@ pub fn apply(llvm_context: &Context, llvm_function: FunctionValue) {
                 AttributeLoc::Function,
                 attributes::create_always_inline_attribute(llvm_context),
             );
-        } else if instructions_count <= 30 {
+        }
+
+        if instructions_count <= 30 {
             llvm_function.add_attribute(
                 AttributeLoc::Function,
                 attributes::create_inline_hint_attribute(llvm_context),
             );
-        } else if instructions_count >= 80 {
+        }
+
+        if instructions_count >= 80 {
             llvm_function.add_attribute(
                 AttributeLoc::Function,
                 attributes::create_minsize_attribute(llvm_context),

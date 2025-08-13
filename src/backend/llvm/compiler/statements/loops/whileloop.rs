@@ -22,7 +22,6 @@ pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, stmt: &'ctx Ast<'ctx>)
 
     let abort = |_| {
         self::codegen_abort("Cannot compile while loop at code generation time.");
-        unreachable!()
     };
 
     if let Ast::While { cond, block, .. } = stmt {
@@ -74,6 +73,7 @@ pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, stmt: &'ctx Ast<'ctx>)
     }
 }
 
-fn codegen_abort<T: Display>(message: T) {
-    logging::log(LoggingType::BackendBug, &format!("{}", message));
+#[inline]
+fn codegen_abort<T: Display>(message: T) -> ! {
+    logging::print_backend_bug(LoggingType::BackendBug, &format!("{}", message));
 }

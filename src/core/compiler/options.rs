@@ -2,7 +2,10 @@
 
 use {
     crate::{
-        core::compiler::backends::llvm::LLVMBackend,
+        core::{
+            compiler::backends::llvm::LLVMBackend,
+            console::logging::{self, LoggingType},
+        },
         frontend::types::{ast::Ast, lexer::types::Tokens},
     },
     inkwell::OptimizationLevel,
@@ -105,6 +108,11 @@ impl CompilerOptions {
 impl CompilerOptions {
     pub fn new_file(&mut self, name: String, path: PathBuf) {
         if self.files.iter().any(|file| file.path == path) {
+            logging::log(
+                LoggingType::Warning,
+                &format!("File skipped due to repetition '{}'.", path.display()),
+            );
+
             return;
         }
 

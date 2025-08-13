@@ -103,7 +103,6 @@ pub fn integer_to_llvm_type<'ctx>(llvm_context: &'ctx Context, kind: &Type) -> I
                 "Unable to generate LLVM float type with type '{}'.",
                 any,
             ));
-            unreachable!()
         }
     }
 }
@@ -122,8 +121,6 @@ pub fn float_to_llvm_type<'ctx>(llvm_context: &'ctx Context, kind: &Type) -> Flo
                 "Unable to generate LLVM float type with type '{}'.",
                 any,
             ));
-
-            unreachable!()
         }
     }
 }
@@ -154,6 +151,6 @@ pub fn generate_subtype_with_all<'ctx>(
     }
 }
 
-fn codegen_abort<T: Display>(message: T) {
-    logging::log(LoggingType::BackendBug, &format!("{}", message));
+fn codegen_abort<T: Display>(message: T) -> ! {
+    logging::print_backend_bug(LoggingType::BackendBug, &format!("{}", message));
 }

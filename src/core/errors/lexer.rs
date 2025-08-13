@@ -11,6 +11,7 @@ impl ThrushLexerPanic {
             ThrushLexerPanic::TooBigFile(file_path) => {
                 format!("\"{}\" is too big file.", file_path.display())
             }
+
             ThrushLexerPanic::TooMuchTokens => {
                 String::from("The limit of 1 000 000 tokens has been exceeded.")
             }

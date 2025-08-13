@@ -13,7 +13,6 @@ use {
         },
     },
     inkwell::{
-        AddressSpace,
         builder::Builder,
         values::{BasicValueEnum, FloatValue, IntValue},
     },
@@ -34,7 +33,6 @@ pub fn bool_operation<'ctx>(
 
     let cintgen_abort = |_| {
         self::codegen_abort("Cannot perform boolean binary operation.");
-        unreachable!()
     };
 
     if left.is_int_value() && right.is_int_value() {
@@ -72,16 +70,12 @@ pub fn bool_operation<'ctx>(
                 self::codegen_abort(
                     "Cannot perform boolean binary operation without a valid gate.",
                 );
-
-                self::compile_null_ptr(context)
             }
 
             _ => {
                 self::codegen_abort(
                     "Cannot perform boolean binary operation without a valid operator.",
                 );
-
-                self::compile_null_ptr(context)
             }
         };
     }
@@ -102,13 +96,11 @@ pub fn bool_operation<'ctx>(
                 self::codegen_abort(
                     "Cannot perform boolean binary operation without two float values.",
                 );
-                self::compile_null_ptr(context)
             }
         };
     }
 
     self::codegen_abort("Cannot perform boolean binary operation without two integer values.");
-    self::compile_null_ptr(context)
 }
 
 pub fn compile<'ctx>(
@@ -150,18 +142,9 @@ pub fn compile<'ctx>(
         "Cannot perform process a boolean binary operation '{} {} {}'.",
         binary.0, binary.1, binary.2
     ));
-
-    self::compile_null_ptr(context)
 }
 
-fn codegen_abort<T: Display>(message: T) {
-    logging::log(LoggingType::BackendBug, &format!("{}", message));
-}
-
-fn compile_null_ptr<'ctx>(context: &LLVMCodeGenContext<'_, 'ctx>) -> BasicValueEnum<'ctx> {
-    context
-        .get_llvm_context()
-        .ptr_type(AddressSpace::default())
-        .const_null()
-        .into()
+#[inline]
+fn codegen_abort<T: Display>(message: T) -> ! {
+    logging::print_backend_bug(LoggingType::BackendBug, &format!("{}", message));
 }

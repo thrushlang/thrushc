@@ -37,32 +37,21 @@ pub fn compile<'ctx>(
 ) -> BasicValueEnum<'ctx> {
     match expr {
         // Literal Expressions
-        // Compiles a null pointer literal
         Ast::NullPtr { .. } => self::compile_null_ptr(context),
-
-        // Compiles a string literal
         Ast::Str { bytes, kind, .. } => self::compile_string(context, bytes, kind),
-
-        // Compiles a floating-point literal
         Ast::Float {
             kind,
             value,
             signed,
             ..
         } => self::compile_float(context, kind, *value, *signed, cast),
-
-        // Compiles an integer literal
         Ast::Integer {
             kind,
             value,
             signed,
             ..
         } => self::compile_integer(context, kind, *value, *signed, cast),
-
-        // Compiles a character literal
         Ast::Char { byte, .. } => self::compile_char(context, *byte),
-
-        // Compiles a boolean literal
         Ast::Boolean { value, .. } => self::compile_boolean(context, *value),
 
         // Function and Built-in Calls
@@ -74,12 +63,9 @@ pub fn compile<'ctx>(
         // Compiles a sizeof operation
         Ast::SizeOf { sizeof, .. } => builtins::sizeof::compile(context, sizeof, cast),
 
-        // Type/Structural Operations
+        // Expressions
         // Compiles a grouped expression (e.g., parenthesized)
         Ast::Group { expression, .. } => self::compile(context, expression, cast),
-
-        // Operations
-        // Compiles a binary operation (e.g., a + b)
         Ast::BinaryOp {
             left,
             operator,
@@ -87,8 +73,6 @@ pub fn compile<'ctx>(
             kind: binaryop_type,
             ..
         } => self::compile_binary_op(context, left, operator, right, binaryop_type, cast),
-
-        // Compiles a unary operation (e.g., -x)
         Ast::UnaryOp {
             operator,
             kind,
@@ -156,50 +140,6 @@ pub fn compile<'ctx>(
             self::compile_null_ptr(context)
         }
     }
-}
-
-fn compile_float<'ctx>(
-    context: &mut LLVMCodeGenContext<'_, 'ctx>,
-    kind: &'ctx Type,
-    value: f64,
-    signed: bool,
-    cast: Option<&Type>,
-) -> BasicValueEnum<'ctx> {
-    let float: BasicValueEnum =
-        floatgen::float(context.get_llvm_context(), kind, value, signed).into();
-
-    cast::try_cast(context, cast, kind, float).unwrap_or(float)
-}
-
-fn compile_integer<'ctx>(
-    context: &mut LLVMCodeGenContext<'_, 'ctx>,
-    kind: &'ctx Type,
-    value: u64,
-    signed: bool,
-    cast: Option<&Type>,
-) -> BasicValueEnum<'ctx> {
-    let int: BasicValueEnum = intgen::int(context.get_llvm_context(), kind, value, signed).into();
-
-    cast::try_cast(context, cast, kind, int).unwrap_or(int)
-}
-
-fn compile_char<'ctx>(context: &LLVMCodeGenContext<'_, 'ctx>, byte: u64) -> BasicValueEnum<'ctx> {
-    context
-        .get_llvm_context()
-        .i8_type()
-        .const_int(byte, false)
-        .into()
-}
-
-fn compile_boolean<'ctx>(
-    context: &LLVMCodeGenContext<'_, 'ctx>,
-    value: u64,
-) -> BasicValueEnum<'ctx> {
-    context
-        .get_llvm_context()
-        .bool_type()
-        .const_int(value, false)
-        .into()
 }
 
 fn compile_function_call<'ctx>(
@@ -509,6 +449,50 @@ fn compile_string<'ctx>(
 ) -> BasicValueEnum<'ctx> {
     let ptr: PointerValue = expressions::string::compile_str_constant(context, bytes);
     memory::load_anon(context, ptr, kind)
+}
+
+fn compile_float<'ctx>(
+    context: &mut LLVMCodeGenContext<'_, 'ctx>,
+    kind: &'ctx Type,
+    value: f64,
+    signed: bool,
+    cast: Option<&Type>,
+) -> BasicValueEnum<'ctx> {
+    let float: BasicValueEnum =
+        floatgen::float(context.get_llvm_context(), kind, value, signed).into();
+
+    cast::try_cast(context, cast, kind, float).unwrap_or(float)
+}
+
+fn compile_integer<'ctx>(
+    context: &mut LLVMCodeGenContext<'_, 'ctx>,
+    kind: &'ctx Type,
+    value: u64,
+    signed: bool,
+    cast: Option<&Type>,
+) -> BasicValueEnum<'ctx> {
+    let int: BasicValueEnum = intgen::int(context.get_llvm_context(), kind, value, signed).into();
+
+    cast::try_cast(context, cast, kind, int).unwrap_or(int)
+}
+
+fn compile_char<'ctx>(context: &LLVMCodeGenContext<'_, 'ctx>, byte: u64) -> BasicValueEnum<'ctx> {
+    context
+        .get_llvm_context()
+        .i8_type()
+        .const_int(byte, false)
+        .into()
+}
+
+fn compile_boolean<'ctx>(
+    context: &LLVMCodeGenContext<'_, 'ctx>,
+    value: u64,
+) -> BasicValueEnum<'ctx> {
+    context
+        .get_llvm_context()
+        .bool_type()
+        .const_int(value, false)
+        .into()
 }
 
 fn compile_null_ptr<'ctx>(context: &LLVMCodeGenContext<'_, 'ctx>) -> BasicValueEnum<'ctx> {

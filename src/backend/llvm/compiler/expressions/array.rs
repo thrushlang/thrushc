@@ -100,14 +100,14 @@ fn compile_array_with_anchor<'ctx>(
     let llvm_context: &Context = context.get_llvm_context();
     let llvm_builder: &Builder = context.get_llvm_builder();
 
+    let anchor_ptr: PointerValue = anchor.get_pointer();
+
     let base_array_type: &Type = cast.unwrap_or(kind);
     let array_items_type: &Type = base_array_type.get_fixed_array_base_type();
 
     let array_type: Type = Type::FixedArray(array_items_type.clone().into(), items.len() as u32);
 
-    let array_wrapper_ptr: PointerValue = anchor.get_pointer();
-
-    context.set_pointer_anchor(PointerAnchor::new(array_wrapper_ptr, true));
+    context.set_pointer_anchor(PointerAnchor::new(anchor_ptr, true));
 
     let array_ptr: PointerValue =
         memory::alloc_anon(LLVMAllocationSite::Stack, context, &array_type);
@@ -133,11 +133,11 @@ fn compile_array_with_anchor<'ctx>(
     }
 
     let array_ptr_gep: PointerValue = llvm_builder
-        .build_struct_gep(array_wrapper_type, array_wrapper_ptr, 0, "")
+        .build_struct_gep(array_wrapper_type, anchor_ptr, 0, "")
         .unwrap();
 
     let array_size_gep: PointerValue = llvm_builder
-        .build_struct_gep(array_wrapper_type, array_wrapper_ptr, 1, "")
+        .build_struct_gep(array_wrapper_type, anchor_ptr, 1, "")
         .unwrap();
 
     memory::store_anon(context, array_ptr_gep, array_ptr.into());

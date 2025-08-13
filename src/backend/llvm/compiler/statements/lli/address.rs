@@ -1,7 +1,6 @@
 use std::fmt::Display;
 
 use inkwell::{
-    AddressSpace,
     builder::Builder,
     context::Context,
     values::{BasicValueEnum, IntValue, PointerValue},
@@ -39,6 +38,7 @@ pub fn compile<'ctx>(
 
             symbol.gep(llvm_context, llvm_builder, &indexes).into()
         }
+
         (_, Some(expr)) => {
             let kind: &Type = expr.get_type_unwrapped();
             let ptr: PointerValue = ptrgen::compile(context, expr, None).into_pointer_value();
@@ -47,19 +47,11 @@ pub fn compile<'ctx>(
         }
         _ => {
             self::codegen_abort("Invalid address target in expression".to_string());
-            self::compile_null_ptr(context)
         }
     }
 }
 
-fn codegen_abort<T: Display>(message: T) {
-    logging::log(LoggingType::BackendBug, &format!("{}", message));
-}
-
-fn compile_null_ptr<'ctx>(context: &LLVMCodeGenContext<'_, 'ctx>) -> BasicValueEnum<'ctx> {
-    context
-        .get_llvm_context()
-        .ptr_type(AddressSpace::default())
-        .const_null()
-        .into()
+#[inline]
+fn codegen_abort<T: Display>(message: T) -> ! {
+    logging::print_backend_bug(LoggingType::BackendBug, &format!("{}", message));
 }

@@ -18,7 +18,7 @@ pub enum LLVMModificatorPasses {
 }
 
 impl LLVMModificatorPasses {
-    pub fn raw_str_into_llvm_modificator_passes(raw: &str) -> Vec<LLVMModificatorPasses> {
+    pub fn into_llvm_modificator_passes(raw: &str) -> Vec<LLVMModificatorPasses> {
         let mut passes: Vec<LLVMModificatorPasses> = Vec::with_capacity(10);
 
         raw.split(";").for_each(|pass| match pass {

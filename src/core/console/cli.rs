@@ -11,13 +11,15 @@ use crate::core::{
         options::{CompilerOptions, Emitable, ThrushOptimization},
         passes::LLVMModificatorPasses,
     },
-    console::logging::{self, LoggingType},
+    console::{
+        commands,
+        logging::{self, LoggingType},
+    },
 };
 
 use super::utils;
 
 use {
-    colored::Colorize,
     inkwell::targets::{CodeModel, RelocMode, TargetMachine, TargetTriple},
     std::{collections::HashMap, path::PathBuf, process},
 };
@@ -39,7 +41,7 @@ pub enum CommandLinePosition {
 }
 
 #[derive(Debug)]
-struct ParsedArg {
+pub struct ParsedArg {
     key: String,
     value: Option<String>,
 }
@@ -84,25 +86,28 @@ impl CLI {
             args.remove(0);
         }
 
-        for arg in args.iter() {
-            let parsed = ParsedArg::new(arg);
+        args.iter().for_each(|arg| {
+            let parsed: ParsedArg = ParsedArg::new(arg);
+
             processed.push(parsed.key);
 
             if let Some(value) = parsed.value {
                 processed.push(value);
             }
-        }
+        });
 
         processed
     }
+}
 
+impl CLI {
     fn build(&mut self) {
         if self.args.is_empty() {
-            self.show_help();
+            commands::help::show_help();
         }
 
         while !self.is_eof() {
-            let argument = self.args[self.current].clone();
+            let argument: String = self.args[self.current].clone();
             self.analyze(argument);
         }
 
@@ -119,7 +124,7 @@ impl CLI {
         match arg {
             "help" | "-h" | "--help" => {
                 self.advance();
-                self.show_help();
+                commands::help::show_help();
             }
 
             "version" | "-v" | "--version" => {
@@ -385,11 +390,9 @@ impl CLI {
                 self.advance();
                 self.validate_llvm_required(arg);
 
-                let raw_modificator_passes = self.peek();
-                let modificator_passes =
-                    LLVMModificatorPasses::raw_str_into_llvm_modificator_passes(
-                        raw_modificator_passes,
-                    );
+                let raw_modificator_passes: &str = self.peek();
+                let modificator_passes: Vec<LLVMModificatorPasses> =
+                    LLVMModificatorPasses::into_llvm_modificator_passes(raw_modificator_passes);
 
                 self.options
                     .get_mut_llvm_backend_options()
@@ -460,6 +463,146 @@ impl CLI {
         }
     }
 
+    fn is_thrush_file(&self, path: &str) -> bool {
+        let path: PathBuf = PathBuf::from(path);
+
+        if let Some(extension) = path.extension() {
+            if path.exists() && path.is_file() && (extension.eq("th") || extension.eq("thrush")) {
+                return true;
+            }
+        }
+
+        false
+    }
+
+    fn advance(&mut self) {
+        if self.is_eof() {
+            self.report_error("Expected value after flag or command.");
+        }
+        self.current += 1;
+    }
+
+    fn peek(&self) -> &str {
+        if self.is_eof() {
+            self.report_error("Expected value after flag or command.");
+        }
+        &self.args[self.current]
+    }
+
+    fn is_eof(&self) -> bool {
+        self.current >= self.args.len()
+    }
+
+    fn probe_as_command(&self, path: &Path) -> bool {
+        Command::new(path).output().is_ok()
+    }
+
+    fn report_error(&self, msg: &str) -> ! {
+        logging::log(LoggingType::Panic, msg);
+        unreachable!()
+    }
+}
+
+impl CLI {
+    fn handle_thrush_file(&mut self, file_path: &str) {
+        let mut path: PathBuf = PathBuf::from(file_path);
+
+        let file_name: String = path.file_name().map_or_else(
+            || {
+                logging::log(
+                    LoggingType::Panic,
+                    &format!("Unknown file name '{}'.", path.display()),
+                );
+
+                String::default()
+            },
+            |name| name.to_string_lossy().to_string(),
+        );
+
+        if let Ok(canonicalized_path) = path.canonicalize() {
+            path = canonicalized_path;
+        }
+
+        self.options.new_file(file_name, path);
+    }
+
+    fn handle_unknown_argument(&mut self, arg: &str) {
+        if self.position.at_any_other_compiler() && self.options.get_use_llvm() {
+            self.options
+                .get_mut_llvm_backend_options()
+                .get_mut_linking_compilers_configuration()
+                .add_compiler_arg(arg.to_string());
+
+            return;
+        }
+
+        logging::log(
+            LoggingType::Panic,
+            &format!("Unknown argument: \"{}\".", arg),
+        );
+    }
+}
+
+impl CLI {
+    fn parse_optimization_level(&self, opt: &str) -> ThrushOptimization {
+        match opt {
+            "O0" => ThrushOptimization::None,
+            "O1" => ThrushOptimization::Low,
+            "O2" => ThrushOptimization::Mid,
+            "size" => ThrushOptimization::Size,
+            "mcqueen" => ThrushOptimization::Mcqueen,
+
+            any => {
+                self.report_error(&format!("Unknown LLVM optimization level: '{}'.", any));
+            }
+        }
+    }
+
+    fn parse_emit_option(&self, emit: &str) -> Emitable {
+        match emit {
+            "llvm-bc" => Emitable::LLVMBitcode,
+            "llvm-ir" => Emitable::LLVMIR,
+            "asm" => Emitable::Assembly,
+            "raw-llvm-bc" => Emitable::RawLLVMBitcode,
+            "raw-llvm-ir" => Emitable::RawLLVMIR,
+            "raw-asm" => Emitable::RawAssembly,
+            "obj" => Emitable::Object,
+            "ast" => Emitable::AST,
+            "tokens" => Emitable::Tokens,
+
+            any => {
+                self.report_error(&format!("Unknown LLVM emit option: '{}'.", any));
+            }
+        }
+    }
+
+    fn parse_reloc_mode(&self, reloc: &str) -> RelocMode {
+        match reloc {
+            "dynamic-no-pic" => RelocMode::DynamicNoPic,
+            "pic" => RelocMode::PIC,
+            "static" => RelocMode::Static,
+
+            any => {
+                self.report_error(&format!("Unknown LLVM reloc mode: '{}'.", any));
+            }
+        }
+    }
+
+    fn parse_code_model(&self, model: &str) -> CodeModel {
+        match model {
+            "small" => CodeModel::Small,
+            "medium" => CodeModel::Medium,
+            "large" => CodeModel::Large,
+            "kernel" => CodeModel::Kernel,
+
+            any => {
+                self.report_error(&format!("Unknown LLVM code model: '{}'.", any));
+            }
+        }
+    }
+}
+
+impl CLI {
     fn validate_llvm_required(&self, arg: &str) {
         if !self.options.get_use_llvm() {
             self.report_error(&format!(
@@ -571,505 +714,11 @@ impl CLI {
 
         is_supported
     }
+}
 
-    fn parse_optimization_level(&self, opt_str: &str) -> ThrushOptimization {
-        match opt_str {
-            "O0" => ThrushOptimization::None,
-            "O1" => ThrushOptimization::Low,
-            "O2" => ThrushOptimization::Mid,
-            "size" => ThrushOptimization::Size,
-            "mcqueen" => ThrushOptimization::Mcqueen,
-            any => {
-                self.report_error(&format!("Unknown LLVM optimization level: '{}'.", any));
-            }
-        }
-    }
-
-    fn parse_emit_option(&self, emit_str: &str) -> Emitable {
-        match emit_str {
-            "llvm-bc" => Emitable::LLVMBitcode,
-            "llvm-ir" => Emitable::LLVMIR,
-            "asm" => Emitable::Assembly,
-            "raw-llvm-bc" => Emitable::RawLLVMBitcode,
-            "raw-llvm-ir" => Emitable::RawLLVMIR,
-            "raw-asm" => Emitable::RawAssembly,
-            "obj" => Emitable::Object,
-            "ast" => Emitable::AST,
-            "tokens" => Emitable::Tokens,
-            any => {
-                self.report_error(&format!("Unknown LLVM emit option: '{}'.", any));
-            }
-        }
-    }
-
-    fn parse_reloc_mode(&self, reloc_str: &str) -> RelocMode {
-        match reloc_str {
-            "dynamic-no-pic" => RelocMode::DynamicNoPic,
-            "pic" => RelocMode::PIC,
-            "static" => RelocMode::Static,
-            any => {
-                self.report_error(&format!("Unknown LLVM reloc mode: '{}'.", any));
-            }
-        }
-    }
-
-    fn parse_code_model(&self, model_str: &str) -> CodeModel {
-        match model_str {
-            "small" => CodeModel::Small,
-            "medium" => CodeModel::Medium,
-            "large" => CodeModel::Large,
-            "kernel" => CodeModel::Kernel,
-            any => {
-                self.report_error(&format!("Unknown LLVM code model: '{}'.", any));
-            }
-        }
-    }
-
-    fn is_thrush_file(&self, path: &str) -> bool {
-        let path: PathBuf = PathBuf::from(path);
-
-        if let Some(extension) = path.extension() {
-            if path.exists() && path.is_file() && (extension.eq("th") || extension.eq("thrush")) {
-                return true;
-            }
-        }
-
-        false
-    }
-
-    fn handle_thrush_file(&mut self, file_path: &str) {
-        let mut path: PathBuf = PathBuf::from(file_path);
-
-        let file_name: String = path.file_name().map_or_else(
-            || {
-                logging::log(
-                    LoggingType::Panic,
-                    &format!("Unknown file name '{}'.", path.display()),
-                );
-
-                String::default()
-            },
-            |name| name.to_string_lossy().to_string(),
-        );
-
-        if let Ok(canonicalized_path) = path.canonicalize() {
-            path = canonicalized_path;
-        }
-
-        self.options.new_file(file_name, path);
-    }
-
-    fn handle_unknown_argument(&mut self, arg: &str) {
-        if self.position.at_any_other_compiler() && self.options.get_use_llvm() {
-            self.options
-                .get_mut_llvm_backend_options()
-                .get_mut_linking_compilers_configuration()
-                .add_compiler_arg(arg.to_string());
-
-            return;
-        }
-
-        logging::log(
-            LoggingType::Panic,
-            &format!("Unknown argument: \"{}\".", arg),
-        );
-    }
-
-    fn advance(&mut self) {
-        if self.is_eof() {
-            self.report_error("Expected value after flag or command.");
-        }
-        self.current += 1;
-    }
-
-    fn peek(&self) -> &str {
-        if self.is_eof() {
-            self.report_error("Expected value after flag or command.");
-        }
-        &self.args[self.current]
-    }
-
-    fn is_eof(&self) -> bool {
-        self.current >= self.args.len()
-    }
-
-    fn probe_as_command(&self, path: &Path) -> bool {
-        Command::new(path).output().is_ok()
-    }
-
-    fn report_error(&self, msg: &str) -> ! {
-        logging::log(LoggingType::Panic, msg);
-        unreachable!()
-    }
-
+impl CLI {
     pub fn get_options(&self) -> &CompilerOptions {
         &self.options
-    }
-
-    fn show_help(&self) -> ! {
-        logging::write(
-            logging::OutputIn::Stderr,
-            &format!(
-                "{}",
-                "The Thrush Compiler".custom_color((141, 141, 142)).bold()
-            ),
-        );
-
-        logging::write(
-            logging::OutputIn::Stderr,
-            &format!(
-                "\n\n{} {} {}\n\n",
-                "Usage:".bold(),
-                "thrushc".custom_color((141, 141, 142)).bold(),
-                "[--flags] [files..]"
-            ),
-        );
-
-        logging::write(logging::OutputIn::Stderr, "General Commands:\n\n");
-
-        logging::write(
-            logging::OutputIn::Stderr,
-            &format!(
-                "{} {} {}\n",
-                "•".bold(),
-                "help".custom_color((141, 141, 142)).bold(),
-                "Show help message.",
-            ),
-        );
-
-        logging::write(
-            logging::OutputIn::Stderr,
-            &format!(
-                "{} {} {}\n\n",
-                "•".bold(),
-                "version".custom_color((141, 141, 142)).bold(),
-                "Show the version.",
-            ),
-        );
-
-        logging::write(logging::OutputIn::Stderr, "LLVM Commands:\n\n");
-
-        logging::write(
-            logging::OutputIn::Stderr,
-            &format!(
-                "{} {} {}\n",
-                "•".bold(),
-                "llvm-print-target-triples"
-                    .custom_color((141, 141, 142))
-                    .bold(),
-                "Show the current LLVM target triples supported."
-            ),
-        );
-
-        logging::write(
-            logging::OutputIn::Stderr,
-            &format!(
-                "{} {} {}\n",
-                "•".bold(),
-                "llvm-print-supported-cpus"
-                    .custom_color((141, 141, 142))
-                    .bold(),
-                "Show the current LLVM supported CPUs.",
-            ),
-        );
-
-        logging::write(
-            logging::OutputIn::Stderr,
-            &format!(
-                "{} {} {}\n",
-                "•".bold(),
-                "llvm-print-host-target-triple"
-                    .custom_color((141, 141, 142))
-                    .bold(),
-                "Show the host LLVM target-triple.",
-            ),
-        );
-
-        logging::write(logging::OutputIn::Stderr, "\nGeneral flags:\n\n");
-
-        logging::write(
-            logging::OutputIn::Stderr,
-            &format!(
-                "{} {} {}\n",
-                "•".bold(),
-                "-build-dir".custom_color((141, 141, 142)).bold(),
-                "Set the build directory.",
-            ),
-        );
-
-        logging::write(
-            logging::OutputIn::Stderr,
-            &format!(
-                "{} {} {}\n",
-                "•".bold(),
-                "-clang".custom_color((141, 141, 142)).bold(),
-                "Enable embedded Clang to link.",
-            ),
-        );
-
-        logging::write(
-            logging::OutputIn::Stderr,
-            &format!(
-                "{} {} [{}] {}\n",
-                "•".bold(),
-                "-gcc".custom_color((141, 141, 142)).bold(),
-                "\"/usr/bin/gcc\"",
-                "Speciefies GNU Compiler Collection (GCC) to link.",
-            ),
-        );
-
-        logging::write(
-            logging::OutputIn::Stderr,
-            &format!(
-                "{} {} [{}] {}\n",
-                "•".bold(),
-                "-custom-clang".custom_color((141, 141, 142)).bold(),
-                "\"/usr/bin/clang\"",
-                "Specifies the path for use of an external Clang to link.",
-            ),
-        );
-
-        logging::write(
-            logging::OutputIn::Stderr,
-            &format!(
-                "{} {} {}\n",
-                "•".bold(),
-                "-start".custom_color((141, 141, 142)).bold(),
-                "Marks the start of arguments to the active external or built-in linking compiler.",
-            ),
-        );
-
-        logging::write(
-            logging::OutputIn::Stderr,
-            &format!(
-                "{} {} {}\n",
-                "•".bold(),
-                "-end".custom_color((141, 141, 142)).bold(),
-                "Marks the end of arguments to the active external or built-in linker compiler.",
-            ),
-        );
-
-        logging::write(logging::OutputIn::Stderr, "\nCompiler flags:\n\n");
-
-        logging::write(
-            logging::OutputIn::Stderr,
-            &format!(
-                "{} {} {}\n",
-                "•".bold(),
-                "-llvm".custom_color((141, 141, 142)).bold(),
-                "Enable the usage of the LLVM backend infrastructure.",
-            ),
-        );
-
-        logging::write(
-            logging::OutputIn::Stderr,
-            &format!(
-                "{} {} [{}] {}\n",
-                "•".bold(),
-                "-cpu".custom_color((141, 141, 142)).bold(),
-                "\"haswell\"",
-                "Specify the CPU to optimize.",
-            ),
-        );
-
-        logging::write(
-            logging::OutputIn::Stderr,
-            &format!(
-                "{} {} [{}] {}\n",
-                "•".bold(),
-                "-target".custom_color((141, 141, 142)).bold(),
-                "\"x86_64-pc-linux-gnu\"",
-                "Set the target triple.",
-            ),
-        );
-
-        logging::write(
-            logging::OutputIn::Stderr,
-            &format!(
-                "{} {} [{}] {}\n",
-                "•".bold(),
-                "-emit".custom_color((141, 141, 142)).bold(),
-                "llvm-bc|llvm-ir|asm|raw-llvm-ir|raw-llvm-bc|raw-asm|obj|ast|tokens",
-                "Compile the code into specified representation.",
-            ),
-        );
-
-        logging::write(
-            logging::OutputIn::Stderr,
-            &format!(
-                "{} {} [{}] {}\n",
-                "•".bold(),
-                "-opt".custom_color((141, 141, 142)).bold(),
-                "O0|O1|O2|mcqueen",
-                "Optimization level.",
-            ),
-        );
-
-        /* logging::write(logging::OutputIn::Stderr, "\nJIT Compiler flags:\n\n");
-
-        logging::write(
-            logging::OutputIn::Stderr,
-            &format!(
-                "{} {} {}\n",
-                "•".bold(),
-                "-jit".custom_color((141, 141, 142)).bold(),
-                "Enables the use of the Just-In-Time Compiler and its settings."
-            ),
-        );
-
-        logging::write(
-            logging::OutputIn::Stderr,
-            &format!(
-                "{} {} [{}] {}\n",
-                "•".bold(),
-                "-jit-c".custom_color((141, 141, 142)).bold(),
-                "\"/usr/lib/libc.so\"",
-                "Specifies the path to the C Standard Library Interface for the JIT to use."
-            ),
-        );
-
-        logging::write(
-            logging::OutputIn::Stderr,
-            &format!(
-                "{} {} [{}] {}\n",
-                "•".bold(),
-                "-jit-lib".custom_color((141, 141, 142)).bold(),
-                "\"/usr/lib/my_lib.so\"",
-                "Specifies a path to a custom library for use by the JIT."
-            ),
-        ); */
-
-        logging::write(logging::OutputIn::Stderr, "\nExtra compiler flags:\n\n");
-
-        logging::write(
-            logging::OutputIn::Stderr,
-            &format!(
-                "{} {} {} {}\n",
-                "•".bold(),
-                "--opt-passes".custom_color((141, 141, 142)).bold(),
-                "[-p{passname}]",
-                "Pass a list of custom optimization passes to the LLVM optimizator.",
-            ),
-        );
-
-        logging::write(
-            logging::OutputIn::Stderr,
-            &format!(
-                "{} {} {} {}\n",
-                "•".bold(),
-                "--modificator-passes".custom_color((141, 141, 142)).bold(),
-                "[loopvectorization;loopunroll;loopinterleaving;loopsimplifyvectorization;mergefunctions]",
-                "Pass a list of custom modificator passes to the LLVM optimizator.",
-            ),
-        );
-
-        logging::write(
-            logging::OutputIn::Stderr,
-            &format!(
-                "{} {} {} {}\n",
-                "•".bold(),
-                "--reloc".custom_color((141, 141, 142)).bold(),
-                "[static|pic|dynamic]",
-                "Indicate how references to memory addresses and linkage symbols are handled."
-            ),
-        );
-
-        logging::write(
-            logging::OutputIn::Stderr,
-            &format!(
-                "{} {} {} {}\n",
-                "•".bold(),
-                "--codemodel".custom_color((141, 141, 142)).bold(),
-                "[small|medium|large|kernel]",
-                "Define how code is organized and accessed at machine code level."
-            ),
-        );
-
-        logging::write(logging::OutputIn::Stderr, "\nUseful flags:\n\n");
-
-        logging::write(
-            logging::OutputIn::Stderr,
-            &format!(
-                "{} {} {}\n",
-                "•".bold(),
-                "--debug-clang-command".custom_color((141, 141, 142)).bold(),
-                "Displays the generated command for Clang."
-            ),
-        );
-
-        logging::write(
-            logging::OutputIn::Stderr,
-            &format!(
-                "{} {} {}\n",
-                "•".bold(),
-                "--debug-gcc-commands".custom_color((141, 141, 142)).bold(),
-                "Displays the generated command for GCC.\n"
-            ),
-        );
-
-        logging::write(
-            logging::OutputIn::Stderr,
-            &format!(
-                "{} {} {}\n",
-                "•".bold(),
-                "--clean-tokens".custom_color((141, 141, 142)).bold(),
-                "Clean the compiler folder that holds the lexical analysis tokens."
-            ),
-        );
-
-        logging::write(
-            logging::OutputIn::Stderr,
-            &format!(
-                "{} {} {}\n",
-                "•".bold(),
-                "--clean-assembler".custom_color((141, 141, 142)).bold(),
-                "Clean the compiler folder containing emitted assembler."
-            ),
-        );
-
-        logging::write(
-            logging::OutputIn::Stderr,
-            &format!(
-                "{} {} {}\n",
-                "•".bold(),
-                "--clean-llvm-ir".custom_color((141, 141, 142)).bold(),
-                "Clean the compiler folder containing the emitted LLVM IR."
-            ),
-        );
-
-        logging::write(
-            logging::OutputIn::Stderr,
-            &format!(
-                "{} {} {}\n",
-                "•".bold(),
-                "--clean-llvm-bitcode".custom_color((141, 141, 142)).bold(),
-                "Clean the compiler folder containing emitted LLVM Bitcode."
-            ),
-        );
-
-        logging::write(
-            logging::OutputIn::Stderr,
-            &format!(
-                "{} {} {}\n\n",
-                "•".bold(),
-                "--clean-objects".custom_color((141, 141, 142)).bold(),
-                "Clean the compiler folder containing emitted object files."
-            ),
-        );
-
-        logging::write(
-            logging::OutputIn::Stderr,
-            &format!(
-                "{} {} {}\n",
-                "•".bold(),
-                "--no-obfuscate-archive-names"
-                    .custom_color((141, 141, 142))
-                    .bold(),
-                "Stop generating name obfuscation for each file; this does not apply to the final build."
-            ),
-        );
-
-        process::exit(1);
     }
 }
 

@@ -26,11 +26,11 @@ pub fn int<'ctx>(context: &'ctx Context, kind: &Type, number: u64, signed: bool)
 
         what => {
             self::codegen_abort(format!("Unsupported integer type: '{:#?}'.", what));
-            unreachable!()
         }
     }
 }
 
-fn codegen_abort<T: Display>(message: T) {
-    logging::log(LoggingType::BackendBug, &format!("{}", message));
+#[inline]
+fn codegen_abort<T: Display>(message: T) -> ! {
+    logging::print_backend_bug(LoggingType::BackendBug, &format!("{}", message));
 }

@@ -11,6 +11,7 @@ pub fn generate_random_string(range: RangeInclusive<usize>) -> String {
         match fastrand::u8(0..52) {
             n @ 0..=25 => random_string.push((b'A' + n) as char),
             n @ 26..=51 => random_string.push((b'a' + (n - 26)) as char),
+
             _ => random_string.push('_'),
         }
     }

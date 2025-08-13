@@ -33,10 +33,8 @@ pub fn compile<'ctx>(
     cast: Option<&Type>,
 ) -> BasicValueEnum<'ctx> {
     match expr {
-        // Compiles a null pointer literal
+        // Literals
         Ast::NullPtr { .. } => self::compile_null_ptr(context),
-
-        // Compiles a string literal
         Ast::Str { bytes, .. } => expressions::string::compile_str_constant(context, bytes).into(),
 
         // Compiles a function call
@@ -88,8 +86,6 @@ pub fn compile<'ctx>(
                 "Failed to compile. Unknown expression or statement '{:?}'.",
                 what
             ));
-
-            self::compile_null_ptr(context)
         }
     }
 }
@@ -125,7 +121,6 @@ fn compile_function_call<'ctx>(
             if !kind.is_void_type() {
                 call.try_as_basic_value().left().unwrap_or_else(|| {
                     self::codegen_abort(format!("Function call '{}' returned no value.", name));
-                    self::compile_null_ptr(context)
                 })
             } else {
                 self::compile_null_ptr(context)
@@ -133,7 +128,6 @@ fn compile_function_call<'ctx>(
         }
         Err(_) => {
             self::codegen_abort(format!("Failed to generate call to function '{}'.", name));
-            self::compile_null_ptr(context)
         }
     };
 
@@ -168,7 +162,6 @@ fn compile_cast<'ctx>(
                         "Failed to extract string value from '{}' in cast to '{}'.",
                         from_type, cast
                     ));
-                    self::compile_null_ptr(context)
                 }
             }
         }
@@ -186,7 +179,6 @@ fn compile_cast<'ctx>(
                             "Failed to cast pointer from '{}' to '{}'",
                             from_type, cast
                         ));
-                        self::compile_null_ptr(context)
                     }
                 }
             } else {
@@ -194,8 +186,6 @@ fn compile_cast<'ctx>(
                     "Expected pointer value for cast from '{}' to '{}'",
                     from_type, cast
                 ));
-
-                self::compile_null_ptr(context)
             }
         }
 
@@ -204,8 +194,6 @@ fn compile_cast<'ctx>(
                 "Unsupported cast from '{}' to '{}'",
                 from_type, cast
             ));
-
-            self::compile_null_ptr(context)
         }
     }
 }
@@ -225,8 +213,6 @@ fn compile_deref<'ctx>(
             "Cannot dereference non-pointer value in '{}'.",
             value
         ));
-
-        val
     };
 
     cast::try_cast(context, cast, kind, deref_value).unwrap_or(deref_value)
@@ -249,8 +235,6 @@ fn compile_property<'ctx>(
                     "Symbol '{}' is not a pointer for property access.",
                     name
                 ));
-
-                return self::compile_null_ptr(context);
             }
 
             let mut ptr: PointerValue = symbol.gep_struct(llvm_context, llvm_builder, indexes[0].1);
@@ -265,8 +249,6 @@ fn compile_property<'ctx>(
                             "Failed to access property at index '{}' for '{}'.",
                             index.1, name
                         ));
-
-                        return self::compile_null_ptr(context);
                     }
                 }
             }
@@ -290,8 +272,6 @@ fn compile_property<'ctx>(
                             "Failed to access property at index '{}' for a expression.",
                             index.1
                         ));
-
-                        return self::compile_null_ptr(context);
                     }
                 }
             }
@@ -301,7 +281,6 @@ fn compile_property<'ctx>(
 
         _ => {
             self::codegen_abort("Unable to compile property access.");
-            self::compile_null_ptr(context)
         }
     }
 }
@@ -362,14 +341,12 @@ fn compile_inline_asm<'ctx>(
     ) {
         Ok(call) if !kind.is_void_type() => call.try_as_basic_value().left().unwrap_or_else(|| {
             self::codegen_abort("Inline assembler returned no value.");
-            self::compile_null_ptr(context)
         }),
 
         Ok(_) => compile_null_ptr(context),
 
         Err(_) => {
             self::codegen_abort("Failed to build inline assembler.");
-            self::compile_null_ptr(context)
         }
     }
 }
@@ -403,7 +380,6 @@ fn compile_index<'ctx>(
         }
         _ => {
             self::codegen_abort("Invalid index target in expression.");
-            self::compile_null_ptr(context)
         }
     }
 }
@@ -416,6 +392,7 @@ fn compile_null_ptr<'ctx>(context: &LLVMCodeGenContext<'_, 'ctx>) -> BasicValueE
         .into()
 }
 
-fn codegen_abort<T: Display>(message: T) {
-    logging::log(LoggingType::BackendBug, &format!("{}", message));
+#[inline]
+fn codegen_abort<T: Display>(message: T) -> ! {
+    logging::print_backend_bug(LoggingType::BackendBug, &format!("{}", message))
 }

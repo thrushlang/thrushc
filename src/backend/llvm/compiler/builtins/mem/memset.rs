@@ -1,7 +1,6 @@
 use std::fmt::Display;
 
 use inkwell::{
-    AddressSpace,
     builder::Builder,
     context::Context,
     targets::TargetData,
@@ -42,17 +41,9 @@ pub fn compile<'ctx>(
     }
 
     self::codegen_abort("Failed to generate memset builtin call.");
-    self::compile_null_ptr(context)
 }
 
-fn codegen_abort<T: Display>(message: T) {
-    logging::log(LoggingType::BackendBug, &format!("{}", message));
-}
-
-fn compile_null_ptr<'ctx>(context: &LLVMCodeGenContext<'_, 'ctx>) -> BasicValueEnum<'ctx> {
-    context
-        .get_llvm_context()
-        .ptr_type(AddressSpace::default())
-        .const_null()
-        .into()
+#[inline]
+fn codegen_abort<T: Display>(message: T) -> ! {
+    logging::print_backend_bug(LoggingType::BackendBug, &format!("{}", message));
 }

@@ -1,6 +1,6 @@
 use std::{fmt::Display, sync::Arc};
 
-use inkwell::{AddressSpace, context::Context, types::BasicTypeEnum, values::BasicValueEnum};
+use inkwell::{context::Context, types::BasicTypeEnum, values::BasicValueEnum};
 
 use crate::{
     backend::llvm::compiler::{
@@ -96,7 +96,6 @@ pub fn compile<'ctx>(
             }
 
             self::codegen_abort("Cannot perform constant binary expression.");
-            self::compile_null_ptr(context)
         }
 
         // Unary operation dispatch
@@ -110,7 +109,6 @@ pub fn compile<'ctx>(
         // Fallback for unsupported AST nodes
         _ => {
             self::codegen_abort("Cannot perform constant expression.");
-            self::compile_null_ptr(context)
         }
     }
 }
@@ -200,14 +198,7 @@ fn compile_char<'ctx>(context: &LLVMCodeGenContext<'_, 'ctx>, byte: u64) -> Basi
         .into()
 }
 
-fn compile_null_ptr<'ctx>(context: &LLVMCodeGenContext<'_, 'ctx>) -> BasicValueEnum<'ctx> {
-    context
-        .get_llvm_context()
-        .ptr_type(AddressSpace::default())
-        .const_null()
-        .into()
-}
-
-fn codegen_abort<T: Display>(message: T) {
-    logging::log(LoggingType::BackendBug, &format!("{}", message));
+#[inline]
+fn codegen_abort<T: Display>(message: T) -> ! {
+    logging::print_backend_bug(LoggingType::BackendBug, &format!("{}", message));
 }

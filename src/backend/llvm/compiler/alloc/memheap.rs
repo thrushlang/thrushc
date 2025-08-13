@@ -15,22 +15,20 @@ pub fn try_alloc_heap<'ctx>(
     ascii_name: &str,
     kind: &Type,
 ) -> PointerValue<'ctx> {
-    match context
+    if let Ok(ptr) = context
         .get_llvm_builder()
         .build_malloc(llvm_type, ascii_name)
     {
-        Ok(ptr) => ptr,
-        Err(_) => {
-            self::codegen_abort(format!(
-                "Failed to allocate heap memory for type '{}'.",
-                kind
-            ));
-
-            unreachable!()
-        }
+        return ptr;
     }
+
+    self::codegen_abort(format!(
+        "Failed to allocate heap memory for type '{}'.",
+        kind
+    ));
 }
 
-fn codegen_abort<T: Display>(message: T) {
-    logging::log(LoggingType::BackendBug, &format!("{}", message));
+#[inline]
+fn codegen_abort<T: Display>(message: T) -> ! {
+    logging::print_backend_bug(LoggingType::BackendBug, &format!("{}", message));
 }

@@ -9,7 +9,6 @@ use crate::frontend::types::ast::Ast;
 use crate::frontend::types::parser::repr::UnaryOperation;
 use crate::frontend::typesystem::types::Type;
 
-use inkwell::AddressSpace;
 use inkwell::{
     builder::Builder,
     context::Context,
@@ -28,13 +27,11 @@ pub fn compile<'ctx>(
         (TokenType::PlusPlus | TokenType::MinusMinus, _, expr) => {
             self::compile_increment_decrement(context, unary.0, expr, cast)
         }
-
         (TokenType::Bang, _, expr) => self::compile_logical_negation(context, expr, cast),
         (TokenType::Minus, _, expr) => self::compile_arithmetic_negation(context, expr, cast),
 
         _ => {
             self::codegen_abort("Unsupported unary operation pattern encountered.");
-            self::compile_null_ptr(context)
         }
     }
 }
@@ -62,21 +59,18 @@ fn compile_increment_decrement_ref<'ctx>(
                     Ok(result) => result.into(),
                     Err(_) => {
                         self::codegen_abort("Failed to compile an incrementer.");
-                        self::compile_null_ptr(context)
                     }
                 },
                 TokenType::MinusMinus => match llvm_builder.build_int_nsw_sub(int, modifier, "") {
                     Ok(result) => result.into(),
                     Err(_) => {
                         self::codegen_abort("Failed to compile a decrementer.");
-                        self::compile_null_ptr(context)
                     }
                 },
                 _ => {
                     self::codegen_abort(
                         "Unknown operator compared to reference increment and decrement in unary operation.",
                     );
-                    self::compile_null_ptr(context)
                 }
             };
 
@@ -107,7 +101,6 @@ fn compile_increment_decrement_ref<'ctx>(
                     self::codegen_abort(
                         "Unknown operator compared to reference increment and decrement in unary operation.",
                     );
-                    self::compile_null_ptr(context)
                 }
             };
 
@@ -143,14 +136,12 @@ fn compile_increment_decrement<'ctx>(
                     Ok(result) => result.into(),
                     Err(_) => {
                         self::codegen_abort("Failed to compile an incrementer.");
-                        self::compile_null_ptr(context)
                     }
                 },
                 TokenType::MinusMinus => match llvm_builder.build_int_nsw_sub(int, modifier, "") {
                     Ok(result) => result.into(),
                     Err(_) => {
                         self::codegen_abort("Failed to compile a decrementer.");
-                        self::compile_null_ptr(context)
                     }
                 },
 
@@ -158,7 +149,6 @@ fn compile_increment_decrement<'ctx>(
                     self::codegen_abort(
                         "Unknown operator compared to increment and decrement in unary operation.",
                     );
-                    self::compile_null_ptr(context)
                 }
             };
 
@@ -184,7 +174,6 @@ fn compile_increment_decrement<'ctx>(
                     self::codegen_abort(
                         "Unknown operator compared to increment and decrement in unary operation.",
                     );
-                    self::compile_null_ptr(context)
                 }
             };
 
@@ -218,7 +207,6 @@ fn compile_logical_negation<'ctx>(
 
         _ => {
             self::codegen_abort("Cannot perform a logical negation.");
-            self::compile_null_ptr(context)
         }
     }
 }
@@ -260,14 +248,7 @@ fn compile_arithmetic_negation<'ctx>(
     }
 }
 
-fn compile_null_ptr<'ctx>(context: &LLVMCodeGenContext<'_, 'ctx>) -> BasicValueEnum<'ctx> {
-    context
-        .get_llvm_context()
-        .ptr_type(AddressSpace::default())
-        .const_null()
-        .into()
-}
-
-fn codegen_abort<T: Display>(message: T) {
-    logging::log(LoggingType::BackendBug, &format!("{}", message));
+#[inline]
+fn codegen_abort<T: Display>(message: T) -> ! {
+    logging::print_backend_bug(LoggingType::BackendBug, &format!("{}", message));
 }

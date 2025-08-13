@@ -1,7 +1,6 @@
 use std::fmt::Display;
 
 use inkwell::{
-    AddressSpace,
     builder::Builder,
     values::{BasicValueEnum, PointerValue},
 };
@@ -24,11 +23,6 @@ pub fn ptr_operation<'ctx>(
 ) -> BasicValueEnum<'ctx> {
     let llvm_builder: &Builder = context.get_llvm_builder();
 
-    let cintgen_abort = |_| {
-        self::codegen_abort("Cannot perform pointer binary operation.");
-        unreachable!()
-    };
-
     if left.is_pointer_value() && right.is_pointer_value() {
         let lhs: PointerValue = left.into_pointer_value();
         let rhs: PointerValue = right.into_pointer_value();
@@ -36,20 +30,20 @@ pub fn ptr_operation<'ctx>(
         return match operator {
             op if op.is_logical_operator() => llvm_builder
                 .build_int_compare(predicates::pointer(operator), lhs, rhs, "")
-                .unwrap_or_else(cintgen_abort)
+                .unwrap_or_else(|_| {
+                    self::codegen_abort("Cannot perform pointer binary operation.");
+                })
                 .into(),
 
             _ => {
                 self::codegen_abort(
                     "Cannot perform pointer binary operation without a valid operator.",
                 );
-                self::compile_null_ptr(context)
             }
         };
     }
 
     self::codegen_abort("Cannot perform pointer binary operation without two pointers.");
-    self::compile_null_ptr(context)
 }
 
 pub fn compile<'ctx>(
@@ -69,18 +63,9 @@ pub fn compile<'ctx>(
         "Cannot perform a pointer binary operation '{} {} {}'.",
         binary.0, binary.1, binary.2
     ));
-
-    self::compile_null_ptr(context)
 }
 
-fn codegen_abort<T: Display>(message: T) {
-    logging::log(LoggingType::BackendBug, &format!("{}", message));
-}
-
-fn compile_null_ptr<'ctx>(context: &LLVMCodeGenContext<'_, 'ctx>) -> BasicValueEnum<'ctx> {
-    context
-        .get_llvm_context()
-        .ptr_type(AddressSpace::default())
-        .const_null()
-        .into()
+#[inline]
+fn codegen_abort<T: Display>(message: T) -> ! {
+    logging::print_backend_bug(LoggingType::BackendBug, &format!("{}", message));
 }

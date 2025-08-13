@@ -84,8 +84,6 @@ impl<'ctx> SymbolsTable<'ctx> {
             "Unable to get '{}' allocated object at frame pointer number #{}.",
             name, self.scope
         ));
-
-        unreachable!()
     }
 
     pub fn get_function(&self, name: &str) -> LLVMFunction<'ctx> {
@@ -97,8 +95,6 @@ impl<'ctx> SymbolsTable<'ctx> {
             "Unable to get '{}' function in global frame.",
             name
         ));
-
-        unreachable!()
     }
 }
 
@@ -154,6 +150,6 @@ impl SymbolsTable<'_> {
     }
 }
 
-fn codegen_abort<T: Display>(message: T) {
-    logging::log(LoggingType::BackendBug, &format!("{}", message));
+fn codegen_abort<T: Display>(message: T) -> ! {
+    logging::print_backend_bug(LoggingType::BackendBug, &format!("{}", message));
 }

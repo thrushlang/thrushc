@@ -14,14 +14,17 @@ impl CodePosition {
 }
 
 impl CodePosition {
+    #[inline]
     pub fn get_line(&self) -> usize {
         self.line
     }
 
+    #[inline]
     pub fn get_start(&self) -> usize {
         self.start
     }
 
+    #[inline]
     pub fn get_end(&self) -> usize {
         self.end
     }

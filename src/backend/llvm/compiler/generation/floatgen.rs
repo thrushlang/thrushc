@@ -21,11 +21,11 @@ pub fn float<'ctx>(
 
         what => {
             self::codegen_abort(format!("Unsupported float type: '{:#?}'.", what));
-            unreachable!()
         }
     }
 }
 
-fn codegen_abort<T: Display>(message: T) {
-    logging::log(LoggingType::BackendBug, &format!("{}", message));
+#[inline]
+fn codegen_abort<T: Display>(message: T) -> ! {
+    logging::print_backend_bug(LoggingType::BackendBug, &format!("{}", message));
 }
