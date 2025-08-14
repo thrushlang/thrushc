@@ -727,3 +727,13 @@ impl CommandLinePosition {
         matches!(self, CommandLinePosition::ExternalCompiler)
     }
 }
+
+#[inline]
+pub fn set_up() {
+    #[cfg(target_os = "windows")]
+    {
+        control::set_virtual_terminal(true);
+    }
+
+    control::set_override(true);
+}

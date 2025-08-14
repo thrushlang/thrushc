@@ -49,6 +49,7 @@ impl SymbolsTable<'_> {
 }
 
 impl<'ctx> SymbolsTable<'ctx> {
+    #[must_use]
     pub fn get_symbol(&self, name: &str) -> SymbolAllocated<'ctx> {
         if let Some(parameter) = self.parameters.get(name) {
             return *parameter;
@@ -59,8 +60,10 @@ impl<'ctx> SymbolsTable<'ctx> {
         }
 
         for position in (0..self.scope).rev() {
-            if let Some(local_constant) = self.local_constants[position].get(name) {
-                return *local_constant;
+            if let Some(scope) = self.local_constants.get(position) {
+                if let Some(local_constant) = scope.get(name) {
+                    return *local_constant;
+                }
             }
         }
 
@@ -69,23 +72,28 @@ impl<'ctx> SymbolsTable<'ctx> {
         }
 
         for position in (0..self.scope).rev() {
-            if let Some(local_static) = self.local_statics[position].get(name) {
-                return *local_static;
+            if let Some(scope) = self.local_statics.get(position) {
+                if let Some(local_static) = scope.get(name) {
+                    return *local_static;
+                }
             }
         }
 
         for position in (0..self.scope).rev() {
-            if let Some(local) = self.locals[position].get(name) {
-                return *local;
+            if let Some(scope) = self.locals.get(position) {
+                if let Some(local) = scope.get(name) {
+                    return *local;
+                }
             }
         }
 
         self::codegen_abort(format!(
-            "Unable to get '{}' allocated object at frame pointer number #{}.",
+            "Unable to get '{}' allocated object at frame pointer number '#{}'.",
             name, self.scope
         ));
     }
 
+    #[must_use]
     pub fn get_function(&self, name: &str) -> LLVMFunction<'ctx> {
         if let Some(function) = self.functions.get(name) {
             return *function;
@@ -99,30 +107,37 @@ impl<'ctx> SymbolsTable<'ctx> {
 }
 
 impl<'ctx> SymbolsTable<'ctx> {
+    #[inline]
     pub fn get_mut_functions(&mut self) -> &mut LLVMFunctions<'ctx> {
         &mut self.functions
     }
 
+    #[inline]
     pub fn get_mut_global_constants(&mut self) -> &mut LLVMGlobalConstants<'ctx> {
         &mut self.global_constants
     }
 
+    #[inline]
     pub fn get_mut_local_constants(&mut self) -> &mut LLVMLocalConstants<'ctx> {
         &mut self.local_constants
     }
 
+    #[inline]
     pub fn get_mut_global_statics(&mut self) -> &mut LLVMGlobalStatics<'ctx> {
         &mut self.global_statics
     }
 
+    #[inline]
     pub fn get_mut_local_statics(&mut self) -> &mut LLVMLocalStatics<'ctx> {
         &mut self.local_statics
     }
 
+    #[inline]
     pub fn get_mut_locals(&mut self) -> &mut LLVMInstructions<'ctx> {
         &mut self.locals
     }
 
+    #[inline]
     pub fn get_mut_parameters(&mut self) -> &mut LLVMFunctionsParameters<'ctx> {
         &mut self.parameters
     }

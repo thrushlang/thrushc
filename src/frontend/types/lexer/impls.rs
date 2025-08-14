@@ -55,6 +55,14 @@ impl std::fmt::Display for TokenType {
             TokenType::LazyThread => write!(f, "lazythread"),
             TokenType::Volatile => write!(f, "volatile"),
 
+            TokenType::AtomNone => write!(f, "atomnone"),
+            TokenType::AtomFree => write!(f, "atomfree"),
+            TokenType::AtomRelax => write!(f, "atomrelax"),
+            TokenType::AtomGrab => write!(f, "atomgrab"),
+            TokenType::AtomDrop => write!(f, "atomdrop"),
+            TokenType::AtomSync => write!(f, "atomsync"),
+            TokenType::AtomStrict => write!(f, "atomstrict"),
+
             // Attributes
             TokenType::Stack => write!(f, "@stack"),
             TokenType::Static => write!(f, "@static"),

@@ -76,12 +76,7 @@ pub fn generate_type<'ctx>(llvm_context: &'ctx Context, kind: &Type) -> BasicTyp
         }
 
         any => {
-            logging::log(
-                LoggingType::BackendBug,
-                &format!("Unable to create a LLVM Type from '{}' type.", any),
-            );
-
-            unreachable!()
+            self::codegen_abort(format!("Unable to create a LLVM Type from '{}' type.", any));
         }
     }
 }

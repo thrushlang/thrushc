@@ -39,6 +39,7 @@ pub fn integer(operator: &TokenType, left_signed: bool, right_signed: bool) -> I
 }
 
 #[must_use]
+#[inline]
 pub fn pointer(operator: &TokenType) -> IntPredicate {
     match operator {
         TokenType::EqEq => IntPredicate::EQ,
@@ -54,6 +55,7 @@ pub fn pointer(operator: &TokenType) -> IntPredicate {
 }
 
 #[must_use]
+#[inline]
 pub fn float(operator: &TokenType) -> FloatPredicate {
     match operator {
         TokenType::EqEq => FloatPredicate::OEQ,

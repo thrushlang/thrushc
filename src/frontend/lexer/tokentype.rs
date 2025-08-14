@@ -74,6 +74,14 @@ pub enum TokenType {
     Volatile,
     LazyThread,
 
+    AtomNone,
+    AtomFree,
+    AtomRelax,
+    AtomGrab,
+    AtomDrop,
+    AtomSync,
+    AtomStrict,
+
     // --- LLI ---
     Alloc,
     Address,

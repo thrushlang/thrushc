@@ -283,7 +283,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 expression,
                 ..
             } => {
-                expressions::unaryop::compile(self.context, (operator, kind, expression), None);
+                expressions::unary::compile(self.context, (operator, kind, expression), None);
             }
 
             Ast::BinaryOp {

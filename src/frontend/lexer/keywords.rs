@@ -45,6 +45,14 @@ lazy_static! {
         keywords.insert("volatile", TokenType::Volatile);
         keywords.insert("lazythread", TokenType::LazyThread);
 
+        keywords.insert("atomnone", TokenType::AtomNone);
+        keywords.insert("atomfree", TokenType::AtomFree);
+        keywords.insert("atomrelax", TokenType::AtomRelax);
+        keywords.insert("atomgrab", TokenType::AtomGrab);
+        keywords.insert("atomdrop", TokenType::AtomDrop);
+        keywords.insert("atomsync", TokenType::AtomSync);
+        keywords.insert("atomstrict", TokenType::AtomStrict);
+
         keywords.insert("unreachable", TokenType::Unreachable);
 
         keywords.insert("halloc", TokenType::Halloc);

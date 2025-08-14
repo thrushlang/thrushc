@@ -2,6 +2,7 @@ pub mod diagnostician;
 pub mod errors;
 pub mod position;
 pub mod printers;
+pub mod traits;
 
 use colored::Colorize;
 use std::str::Lines;
@@ -19,6 +20,7 @@ pub struct Diagnostic<'a> {
 }
 
 impl<'a> Diagnostic<'a> {
+    #[inline]
     pub fn new(code: &'a str, signaler: String, span: Span) -> Self {
         Self {
             code,
@@ -26,9 +28,7 @@ impl<'a> Diagnostic<'a> {
             span,
         }
     }
-}
 
-impl Diagnostic<'_> {
     #[inline]
     pub fn get_code(&self) -> &str {
         self.code
@@ -45,80 +45,92 @@ impl Diagnostic<'_> {
     }
 }
 
+#[inline]
 pub fn build<'a>(
     code: &'a str,
     span: Span,
-    info: &'a str,
+    message: &'a str,
     notificator: Notificator,
 ) -> Diagnostic<'a> {
-    if let Some(code_position) = position::find_line_and_range(code, span) {
-        if let Some(diagnostic) = self::generate(code, code_position, info, notificator) {
-            return diagnostic;
-        }
+    match position::find_line_and_range(code, span) {
+        Some(code_position) => self::generate(code, code_position, message, notificator)
+            .unwrap_or_else(|| self::generate_basic(code, span, message)),
+        None => self::generate_basic(code, span, message),
     }
-
-    self::generate_basic(code, span, info)
 }
 
-pub fn generate_basic<'a>(code: &'a str, span: Span, info: &'a str) -> Diagnostic<'a> {
+pub fn generate_basic<'a>(code: &'a str, span: Span, message: &'a str) -> Diagnostic<'a> {
     let lines: Vec<&str> = code.lines().collect();
+    let line_idx: usize = span.line.saturating_sub(1);
 
-    let line: usize = span.line;
+    let code_line: &str = lines.get(line_idx).map(|s| s.trim_start()).unwrap_or("");
+    let mut signaler: String = String::with_capacity(128);
 
-    let code: &str = lines[line - 1].trim_start();
-    let mut signaler: String = String::with_capacity(100);
+    signaler.push_str(&format!(
+        "{:>4} │ {}\n",
+        span.line,
+        code_line.bright_white()
+    ));
 
-    for i in 0..=code.len() {
-        if i == code.len() {
-            signaler.push_str(&format!("\n\n{}{}\n", "HELP: ".bright_green().bold(), info));
-            break;
-        }
+    signaler.push_str(&format!(
+        "{:>4} │ {}\n",
+        "",
+        "^".repeat(code_line.len()).bright_red()
+    ));
 
-        signaler.push('^');
-    }
+    signaler.push_str(&format!(
+        "{} {}\n",
+        "HELP:".bright_green().bold(),
+        message.bright_yellow()
+    ));
 
-    Diagnostic::new(code, signaler, span)
+    Diagnostic::new(code_line, signaler, span)
 }
 
 pub fn generate<'a>(
     code: &'a str,
     position: CodePosition,
-    info: &str,
+    message: &'a str,
     notificator: Notificator,
 ) -> Option<Diagnostic<'a>> {
-    let mut lines: Lines = code.lines();
+    let lines: Lines = code.lines();
+    let line_idx: usize = position.get_line().saturating_sub(1);
 
-    let pivot_line: usize = position.get_line();
-    let code_line: &str = lines.nth(pivot_line.saturating_sub(1))?;
+    let code_line: &str = lines.clone().nth(line_idx)?.trim_start();
+    let code_before_trim: usize = lines.clone().nth(line_idx)?.len();
+    let trim_difference: usize = code_before_trim.saturating_sub(code_line.len());
 
     let line: usize = position.get_line();
-    let start: usize = position.get_start();
-    let end: usize = position.get_end();
+    let start: usize = position.get_start().saturating_sub(trim_difference);
+    let end: usize = position.get_end().saturating_sub(trim_difference);
 
-    let code_before_trim: usize = code_line.len();
-    let code: &str = code_line.trim_start();
-
-    let trim_diferrence: usize = code_before_trim - code.len();
-
-    let mut signaler: String = String::with_capacity(100);
-
-    let end_position: usize = end.saturating_sub(trim_diferrence).saturating_sub(1);
-
-    for pos in 0..=end_position {
-        if pos == end_position {
-            signaler.push('^');
-            signaler.push(' ');
-            signaler.push_str(&format!("{}{}", notificator, info));
-            signaler.push_str("\n\n");
-
-            break;
-        }
-
-        signaler.push(' ');
+    if start > end || end > code_line.len() {
+        return None;
     }
 
+    let mut signaler: String = String::with_capacity(128);
+
+    signaler.push_str(&format!("{:>4} │ {}\n", line, code_line.bright_white()));
+    signaler.push_str(&format!("{:>4} │ ", ""));
+
+    for i in 0..code_line.len() {
+        if i >= start && i < end {
+            signaler.push_str(&"^".bright_red());
+        } else {
+            signaler.push(' ');
+        }
+    }
+
+    signaler.push_str(&format!(
+        "{}{}\n",
+        notificator.to_string().bright_cyan().bold(),
+        message.bright_yellow()
+    ));
+
+    signaler.push('\n');
+
     Some(Diagnostic::new(
-        code,
+        code_line,
         signaler,
         Span::new(line, (start, end)),
     ))

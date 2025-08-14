@@ -10,11 +10,11 @@ use crate::{
 use super::types::{EnumField, EnumFields, StructFields};
 
 pub trait TokenExtensions {
+    fn scape(&self, span: Span) -> Result<Vec<u8>, ThrushCompilerIssue>;
     fn get_lexeme(&self) -> &str;
     fn get_span(&self) -> Span;
     fn get_type(&self) -> TokenType;
     fn get_ascii_lexeme(&self) -> &str;
-    fn fix_lexeme_scapes(&self, span: Span) -> Result<Vec<u8>, ThrushCompilerIssue>;
     fn get_lexeme_first_byte(&self) -> u64;
 }
 

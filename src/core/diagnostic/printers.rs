@@ -6,16 +6,17 @@ use crate::core::{
     console::logging::{self, LoggingType},
     diagnostic::{
         Diagnostic,
-        errors::{FrontendError, FrontendErrorDisassembler, Issue, IssueDisassembler},
+        errors::{Error, FrontendError},
+        traits::{FrontendErrorDisassembler, IssueDisassembler},
     },
     errors::position::CompilationPosition,
 };
 
-pub fn print(diagnostic: &Diagnostic, issue: Issue<'_>) {
-    let title: &str = issue.get_title();
-    let path: &Path = issue.get_path();
-    let note: Option<&str> = issue.get_note();
-    let logging_type: LoggingType = issue.get_logging_type();
+pub fn print(diagnostic: &Diagnostic, error: Error<'_>) {
+    let title: &str = error.get_title();
+    let path: &Path = error.get_path();
+    let note: Option<&str> = error.get_note();
+    let logging_type: LoggingType = error.get_logging_type();
 
     let code: &str = diagnostic.get_code();
     let signaler: &str = diagnostic.get_signaler();

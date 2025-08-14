@@ -34,8 +34,6 @@ pub fn lex(lexer: &mut Lexer) -> Result<(), ThrushCompilerIssue> {
         ));
     }
 
-    let lexeme: String = lexer.shrink_lexeme();
-
     lexer.tokens.push(Token {
         kind: TokenType::Char,
         ascii_lexeme: String::default(),

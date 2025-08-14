@@ -79,7 +79,7 @@ pub fn compile<'ctx>(
             kind,
             expression,
             ..
-        } => expressions::unaryop::compile(context, (operator, kind, expression), cast),
+        } => expressions::unary::compile(context, (operator, kind, expression), cast),
 
         // Symbol/Property Access
         // Compiles a reference to a variable or symbol
@@ -137,8 +137,6 @@ pub fn compile<'ctx>(
                 "Failed to compile. Unknown expression or statement '{:?}'.",
                 what
             ));
-
-            self::compile_null_ptr(context)
         }
     }
 }
@@ -174,7 +172,6 @@ fn compile_function_call<'ctx>(
             if !kind.is_void_type() {
                 call.try_as_basic_value().left().unwrap_or_else(|| {
                     self::codegen_abort(format!("Function call '{}' returned no value.", name));
-                    self::compile_null_ptr(context)
                 })
             } else {
                 self::compile_null_ptr(context)
@@ -182,7 +179,6 @@ fn compile_function_call<'ctx>(
         }
         Err(_) => {
             self::codegen_abort(format!("Failed to generate call to function '{}'.", name));
-            self::compile_null_ptr(context)
         }
     };
 
@@ -207,11 +203,9 @@ fn compile_binary_op<'ctx>(
 
         _ => {
             self::codegen_abort(format!(
-                "Invalid type '{}' for binary operation",
+                "Invalid type '{}' for binary operation.",
                 binaryop_type
             ));
-
-            self::compile_null_ptr(context)
         }
     }
 }
@@ -225,95 +219,71 @@ fn compile_cast<'ctx>(
     let llvm_context: &Context = context.get_llvm_context();
     let llvm_builder: &Builder = context.get_llvm_builder();
 
+    let abort_ptr =
+        |_| self::codegen_abort(format!("Failed to cast '{}' to '{}'.", from_type, cast));
+
     if from_type.is_str_type() && cast.is_ptr_type() {
         let val: BasicValueEnum = ptrgen::compile(context, from, None);
 
-        if val.is_pointer_value() {
-            let raw_str_ptr: PointerValue = val.into_pointer_value();
-            let str_loaded: BasicValueEnum = memory::load_anon(context, raw_str_ptr, from_type);
-            let str_structure: StructValue = str_loaded.into_struct_value();
+        let raw_str_ptr: PointerValue = val.into_pointer_value();
+        let str_loaded: BasicValueEnum = memory::load_anon(context, raw_str_ptr, from_type);
+        let str_structure: StructValue = str_loaded.into_struct_value();
 
-            match llvm_builder.build_extract_value(str_structure, 0, "") {
-                Ok(cstr) => {
-                    let to = typegen::generate_type(llvm_context, cast).into_pointer_type();
-                    match llvm_builder.build_pointer_cast(cstr.into_pointer_value(), to, "") {
-                        Ok(casted_ptr) => return casted_ptr.into(),
-                        Err(_) => self::codegen_abort(format!(
-                            "Failed to cast string pointer in '{}'.",
-                            from
-                        )),
+        match llvm_builder.build_extract_value(str_structure, 0, "") {
+            Ok(cstr) => {
+                let to = typegen::generate_type(llvm_context, cast).into_pointer_type();
+
+                match llvm_builder.build_pointer_cast(cstr.into_pointer_value(), to, "") {
+                    Ok(casted_ptr) => return casted_ptr.into(),
+                    Err(_) => {
+                        self::codegen_abort(format!("Failed to cast string pointer in '{}'.", from))
                     }
                 }
-                Err(_) => {
-                    self::codegen_abort(format!("Failed to extract string value in '{}'.", from))
-                }
             }
-        } else {
-            let str_structure: StructValue = val.into_struct_value();
 
-            match llvm_builder.build_extract_value(str_structure, 0, "") {
-                Ok(cstr) => {
-                    let to = typegen::generate_type(llvm_context, cast).into_pointer_type();
-                    match llvm_builder.build_pointer_cast(cstr.into_pointer_value(), to, "") {
-                        Ok(casted_ptr) => return casted_ptr.into(),
-                        Err(_) => self::codegen_abort(format!(
-                            "Failed to cast string pointer in '{}'.",
-                            from
-                        )),
-                    }
-                }
-                Err(_) => {
-                    self::codegen_abort(format!("Failed to extract string value in '{}'.", from))
-                }
-            }
+            Err(_) => self::codegen_abort(format!("Failed to extract string value in '{}'.", from)),
         }
-    } else if cast.llvm_is_ptr_type() {
+    }
+
+    if cast.llvm_is_ptr_type() {
         let val: BasicValueEnum = ptrgen::compile(context, from, None);
 
         if val.is_pointer_value() {
             let to: PointerType = typegen::generate_type(llvm_context, cast).into_pointer_type();
-            match llvm_builder.build_pointer_cast(val.into_pointer_value(), to, "") {
-                Ok(casted_ptr) => return casted_ptr.into(),
-                Err(_) => self::codegen_abort(format!("Failed to cast pointer in '{}'.", from)),
-            }
+
+            return llvm_builder
+                .build_pointer_cast(val.into_pointer_value(), to, "")
+                .unwrap_or_else(abort_ptr)
+                .into();
         }
-    } else {
+
         let val: BasicValueEnum = self::compile(context, from, None);
         let target_type: BasicTypeEnum = typegen::generate_type(llvm_context, cast);
 
         if from_type.llvm_is_same_bit_size(context, cast) {
-            match llvm_builder.build_bit_cast(val, target_type, "") {
-                Ok(casted_value) => return casted_value,
-                Err(_) => self::codegen_abort(format!(
-                    "Failed bit cast from '{}' to '{}'.",
-                    from_type, cast
-                )),
-            }
+            return llvm_builder
+                .build_bit_cast(val, target_type, "")
+                .unwrap_or_else(|_| {
+                    self::codegen_abort(format!("Failed to cast '{}' to '{}'.", from_type, cast))
+                });
         }
 
         if val.is_int_value() && target_type.is_int_type() {
-            match llvm_builder.build_int_cast(val.into_int_value(), target_type.into_int_type(), "")
-            {
-                Ok(casted_value) => return casted_value.into(),
-                Err(_) => self::codegen_abort(format!(
-                    "Failed integer cast from '{}' to '{}'.",
-                    from_type, cast
-                )),
-            }
+            return llvm_builder
+                .build_int_cast(val.into_int_value(), target_type.into_int_type(), "")
+                .unwrap_or_else(|_| {
+                    self::codegen_abort(format!("Failed to cast '{}' to '{}'.", from_type, cast))
+                })
+                .into();
         }
 
         if val.is_float_value() && target_type.is_float_type() {
-            match llvm_builder.build_float_cast(
-                val.into_float_value(),
-                target_type.into_float_type(),
-                "",
-            ) {
-                Ok(casted_value) => return casted_value.into(),
-                Err(_) => self::codegen_abort(format!(
-                    "Failed float cast from '{}' to '{}'.",
-                    from_type, cast
-                )),
-            }
+            return llvm_builder
+                .build_float_cast(val.into_float_value(), target_type.into_float_type(), "")
+                .unwrap_or_else(|_| {
+                    self::codegen_abort(format!("Failed to cast '{}' to '{}'.", from_type, cast))
+                })
+                .into();
         }
     }
 
@@ -321,8 +291,6 @@ fn compile_cast<'ctx>(
         "Unsupported cast from '{}' to '{}'.",
         from_type, cast
     ));
-
-    self::compile_null_ptr(context)
 }
 
 fn compile_deref<'ctx>(
@@ -397,14 +365,12 @@ fn compile_inline_asm<'ctx>(
     ) {
         Ok(call) if !kind.is_void_type() => call.try_as_basic_value().left().unwrap_or_else(|| {
             self::codegen_abort("Inline assembler returned no value.");
-
-            self::compile_null_ptr(context)
         }),
+
         Ok(_) => self::compile_null_ptr(context),
+
         Err(_) => {
             self::codegen_abort("Failed to build inline assembler.");
-
-            self::compile_null_ptr(context)
         }
     }
 }
@@ -436,9 +402,9 @@ fn compile_index<'ctx>(
 
             memory::gep_anon(context, expr_ptr, expr_type, &ordered_indexes).into()
         }
+
         _ => {
             self::codegen_abort("Invalid index target in expression.");
-            self::compile_null_ptr(context)
         }
     }
 }
@@ -505,6 +471,6 @@ fn compile_null_ptr<'ctx>(context: &LLVMCodeGenContext<'_, 'ctx>) -> BasicValueE
 }
 
 #[inline]
-fn codegen_abort<T: Display>(message: T) {
-    logging::log(LoggingType::BackendBug, &format!("{}", message));
+fn codegen_abort<T: Display>(message: T) -> ! {
+    logging::print_backend_bug(LoggingType::BackendBug, &format!("{}", message));
 }

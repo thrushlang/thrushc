@@ -144,6 +144,12 @@ fn compile_cast<'ctx>(
     let llvm_context: &Context = context.get_llvm_context();
     let llvm_builder: &Builder = context.get_llvm_builder();
 
+    let abort_value =
+        |_| self::codegen_abort(format!("Failed to cast '{}' to '{}'.", from_type, cast));
+
+    let abort_ptr =
+        |_| self::codegen_abort(format!("Failed to cast '{}' to '{}'.", from_type, cast));
+
     match (from_type, cast) {
         (from_type, cast) if from_type.is_str_type() && cast.is_ptr_type() => {
             let val: BasicValueEnum = ptrgen::compile(context, from, Some(cast));
@@ -155,16 +161,11 @@ fn compile_cast<'ctx>(
                 val.into_struct_value()
             };
 
-            match llvm_builder.build_extract_value(str_structure, 0, "") {
-                Ok(cstr) => cstr,
-                Err(_) => {
-                    self::codegen_abort(format!(
-                        "Failed to extract string value from '{}' in cast to '{}'.",
-                        from_type, cast
-                    ));
-                }
-            }
+            llvm_builder
+                .build_extract_value(str_structure, 0, "")
+                .unwrap_or_else(abort_value)
         }
+
         (from_type, cast) if cast.is_ptr_type() || cast.is_mut_type() => {
             let val: BasicValueEnum = ptrgen::compile(context, from, Some(cast));
 
@@ -172,18 +173,13 @@ fn compile_cast<'ctx>(
                 let to: PointerType =
                     typegen::generate_type(llvm_context, cast).into_pointer_type();
 
-                match llvm_builder.build_pointer_cast(val.into_pointer_value(), to, "") {
-                    Ok(casted_ptr) => casted_ptr.into(),
-                    Err(_) => {
-                        self::codegen_abort(format!(
-                            "Failed to cast pointer from '{}' to '{}'",
-                            from_type, cast
-                        ));
-                    }
-                }
+                llvm_builder
+                    .build_pointer_cast(val.into_pointer_value(), to, "")
+                    .unwrap_or_else(abort_ptr)
+                    .into()
             } else {
                 self::codegen_abort(format!(
-                    "Expected pointer value for cast from '{}' to '{}'",
+                    "Expected pointer value for cast from '{}' to '{}'.",
                     from_type, cast
                 ));
             }
@@ -191,7 +187,7 @@ fn compile_cast<'ctx>(
 
         (from_type, cast) => {
             self::codegen_abort(format!(
-                "Unsupported cast from '{}' to '{}'",
+                "Unsupported cast from '{}' to '{}'.",
                 from_type, cast
             ));
         }
@@ -204,7 +200,7 @@ fn compile_deref<'ctx>(
     kind: &Type,
     cast: Option<&Type>,
 ) -> BasicValueEnum<'ctx> {
-    let val: BasicValueEnum = compile(context, value, Some(kind));
+    let val: BasicValueEnum = self::compile(context, value, Some(kind));
 
     let deref_value: BasicValueEnum = if val.is_pointer_value() {
         memory::load_anon(context, val.into_pointer_value(), kind)
@@ -343,7 +339,7 @@ fn compile_inline_asm<'ctx>(
             self::codegen_abort("Inline assembler returned no value.");
         }),
 
-        Ok(_) => compile_null_ptr(context),
+        Ok(_) => self::compile_null_ptr(context),
 
         Err(_) => {
             self::codegen_abort("Failed to build inline assembler.");

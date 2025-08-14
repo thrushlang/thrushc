@@ -133,97 +133,98 @@ impl<'ctx> SymbolAllocated<'ctx> {
         let llvm_builder: &Builder = context.get_llvm_builder();
 
         let target_data: &TargetData = context.get_target_data();
-
         let thrush_type: &Type = self.get_type();
+
+        let llvm_type: BasicTypeEnum = typegen::generate_subtype(llvm_context, thrush_type);
+        let alignment: u32 = target_data.get_preferred_alignment(&llvm_type);
 
         if thrush_type.is_ptr_type() {
             return self.get_ptr().into();
         }
 
-        let llvm_type: BasicTypeEnum = typegen::generate_subtype(llvm_context, thrush_type);
-        let alignment: u32 = target_data.get_preferred_alignment(&llvm_type);
+        let abort = || self::codegen_abort("Unable to load value at memory manipulation.");
 
-        match self {
-            Self::Local { ptr, metadata, .. } => {
-                if let Ok(loaded_value) = llvm_builder.build_load(llvm_type, *ptr, "") {
-                    if let Some(instr) = loaded_value.as_instruction_value() {
-                        atomic::try_set_atomic_modificators(
-                            instr,
-                            LLVMAtomicModificators {
-                                atomic_volatile: metadata.volatile,
-                                atomic_ord: None,
-                            },
-                        );
+        if let Self::Local { ptr, metadata, .. } = self {
+            if let Ok(loaded_value) = llvm_builder.build_load(llvm_type, *ptr, "") {
+                if let Some(instr) = loaded_value.as_instruction_value() {
+                    atomic::try_set_atomic_modificators(
+                        instr,
+                        LLVMAtomicModificators {
+                            atomic_volatile: metadata.volatile,
+                            atomic_ord: None,
+                        },
+                    );
 
-                        let _ = instr.set_alignment(alignment);
-                    }
-
-                    return loaded_value;
+                    let _ = instr.set_alignment(alignment);
                 }
 
-                self::codegen_abort("Unable to load value at memory manipulation.");
+                return loaded_value;
             }
-
-            Self::Parameter { value, .. } => {
-                if value.is_pointer_value() {
-                    let ptr: PointerValue = value.into_pointer_value();
-
-                    if let Ok(loaded_value) = llvm_builder.build_load(llvm_type, ptr, "") {
-                        if let Some(instr) = loaded_value.as_instruction_value() {
-                            let _ = instr.set_alignment(alignment);
-                        }
-
-                        return loaded_value;
-                    }
-
-                    self::codegen_abort("Unable to load value at memory manipulation.");
-                }
-
-                *value
-            }
-
-            Self::Constant { ptr, metadata, .. } => {
-                if let Ok(loaded_value) = llvm_builder.build_load(llvm_type, *ptr, "") {
-                    if let Some(instr) = loaded_value.as_instruction_value() {
-                        atomic::try_set_atomic_modificators(
-                            instr,
-                            LLVMAtomicModificators {
-                                atomic_volatile: metadata.volatile,
-                                atomic_ord: None,
-                            },
-                        );
-
-                        let _ = instr.set_alignment(alignment);
-                    }
-
-                    return loaded_value;
-                }
-
-                self::codegen_abort("Unable to load value at memory manipulation.");
-            }
-
-            Self::Static { ptr, metadata, .. } => {
-                if let Ok(loaded_value) = llvm_builder.build_load(llvm_type, *ptr, "") {
-                    if let Some(instr) = loaded_value.as_instruction_value() {
-                        atomic::try_set_atomic_modificators(
-                            instr,
-                            LLVMAtomicModificators {
-                                atomic_volatile: metadata.volatile,
-                                atomic_ord: None,
-                            },
-                        );
-
-                        let _ = instr.set_alignment(alignment);
-                    }
-
-                    return loaded_value;
-                }
-
-                self::codegen_abort("Unable to load value at memory manipulation.");
-            }
-
-            Self::LowLevelInstruction { value, .. } => *value,
         }
+
+        if let Self::Parameter { value, .. } = self {
+            if value.is_pointer_value() {
+                let ptr: PointerValue = value.into_pointer_value();
+
+                if let Ok(loaded_value) = llvm_builder.build_load(llvm_type, ptr, "") {
+                    if let Some(instr) = loaded_value.as_instruction_value() {
+                        let _ = instr.set_alignment(alignment);
+                    }
+
+                    return loaded_value;
+                }
+
+                abort()
+            }
+
+            return *value;
+        }
+
+        if let Self::Constant { ptr, metadata, .. } = self {
+            if let Ok(loaded_value) = llvm_builder.build_load(llvm_type, *ptr, "") {
+                if let Some(instr) = loaded_value.as_instruction_value() {
+                    atomic::try_set_atomic_modificators(
+                        instr,
+                        LLVMAtomicModificators {
+                            atomic_volatile: metadata.volatile,
+                            atomic_ord: None,
+                        },
+                    );
+
+                    let _ = instr.set_alignment(alignment);
+                }
+
+                return loaded_value;
+            }
+
+            abort()
+        }
+
+        if let Self::Static { ptr, metadata, .. } = self {
+            if let Ok(loaded_value) = llvm_builder.build_load(llvm_type, *ptr, "") {
+                if let Some(instr) = loaded_value.as_instruction_value() {
+                    atomic::try_set_atomic_modificators(
+                        instr,
+                        LLVMAtomicModificators {
+                            atomic_volatile: metadata.volatile,
+                            atomic_ord: None,
+                        },
+                    );
+
+                    let _ = instr.set_alignment(alignment);
+                }
+
+                return loaded_value;
+            }
+
+            abort()
+        }
+
+        if let Self::LowLevelInstruction { value, .. } = self {
+            return *value;
+        }
+
+        self::codegen_abort("Unable to load value at memory manipulation.")
     }
 
     pub fn store(&self, context: &LLVMCodeGenContext<'_, 'ctx>, new_value: BasicValueEnum<'ctx>) {
@@ -237,26 +238,16 @@ impl<'ctx> SymbolAllocated<'ctx> {
 
         let alignment: u32 = target_data.get_preferred_alignment(&llvm_type);
 
-        match self {
-            Self::Local { ptr, .. } => {
-                if let Ok(store) = llvm_builder.build_store(*ptr, new_value) {
-                    let _ = store.set_alignment(alignment);
-                }
+        if let Self::Local { ptr, .. } = self {
+            if let Ok(store) = llvm_builder.build_store(*ptr, new_value) {
+                let _ = store.set_alignment(alignment);
             }
+        }
 
-            Self::Parameter { value, .. } if value.is_pointer_value() => {
-                if let Ok(store) = llvm_builder.build_store(value.into_pointer_value(), new_value) {
-                    let _ = store.set_alignment(alignment);
-                }
+        if let Self::LowLevelInstruction { value, .. } | Self::Parameter { value, .. } = self {
+            if let Ok(store) = llvm_builder.build_store(value.into_pointer_value(), new_value) {
+                let _ = store.set_alignment(alignment);
             }
-
-            Self::LowLevelInstruction { value, .. } if value.is_pointer_value() => {
-                if let Ok(store) = llvm_builder.build_store(value.into_pointer_value(), new_value) {
-                    let _ = store.set_alignment(alignment);
-                }
-            }
-
-            _ => (),
         }
     }
 
@@ -270,10 +261,11 @@ impl<'ctx> SymbolAllocated<'ctx> {
             self::codegen_abort("Unable to calculate pointer position at memory manipulation.");
         };
 
-        match self {
-            Self::Local { ptr, kind, .. }
-            | Self::Constant { ptr, kind, .. }
-            | Self::Static { ptr, kind, .. } => unsafe {
+        if let Self::Local { ptr, kind, .. }
+        | Self::Constant { ptr, kind, .. }
+        | Self::Static { ptr, kind, .. } = self
+        {
+            return unsafe {
                 builder
                     .build_in_bounds_gep(
                         typegen::generate_subtype_with_all(context, kind),
@@ -282,50 +274,38 @@ impl<'ctx> SymbolAllocated<'ctx> {
                         "",
                     )
                     .unwrap_or_else(|_| abort())
-            },
+            };
+        }
 
-            Self::Parameter { value, kind } | Self::LowLevelInstruction { value, kind } => {
-                if value.is_pointer_value() {
-                    return unsafe {
-                        builder
-                            .build_in_bounds_gep(
-                                typegen::generate_subtype_with_all(context, kind),
-                                (*value).into_pointer_value(),
-                                indexes,
-                                "",
-                            )
-                            .unwrap_or_else(|_| abort())
-                    };
-                }
-
-                abort()
+        if let Self::Parameter { value, kind } | Self::LowLevelInstruction { value, kind } = self {
+            if value.is_pointer_value() {
+                return unsafe {
+                    builder
+                        .build_in_bounds_gep(
+                            typegen::generate_subtype_with_all(context, kind),
+                            (*value).into_pointer_value(),
+                            indexes,
+                            "",
+                        )
+                        .unwrap_or_else(|_| abort())
+                };
             }
         }
+
+        abort()
     }
 
     pub fn extract_value(&self, builder: &Builder<'ctx>, index: u32) -> BasicValueEnum<'ctx> {
-        match self {
-            Self::Parameter { value, .. } | Self::LowLevelInstruction { value, .. } => {
-                if value.is_struct_value() {
-                    let struct_value: StructValue = value.into_struct_value();
-                    if let Ok(extracted_value) =
-                        builder.build_extract_value(struct_value, index, "")
-                    {
-                        return extracted_value;
-                    }
+        if let Self::Parameter { value, .. } | Self::LowLevelInstruction { value, .. } = self {
+            if value.is_struct_value() {
+                let struct_value: StructValue = value.into_struct_value();
+                if let Ok(extracted_value) = builder.build_extract_value(struct_value, index, "") {
+                    return extracted_value;
                 }
-
-                self::codegen_abort(
-                    "Unable to get a value of an structure at memory manipulation.",
-                );
-            }
-
-            _ => {
-                self::codegen_abort(
-                    "Unable to get a value of an structure at memory manipulation.",
-                );
             }
         }
+
+        self::codegen_abort("Unable to get a value of an structure at memory manipulation.");
     }
 
     pub fn gep_struct(
@@ -340,33 +320,34 @@ impl<'ctx> SymbolAllocated<'ctx> {
             );
         };
 
-        match self {
-            Self::Local { ptr, kind, .. }
-            | Self::Constant { ptr, kind, .. }
-            | Self::Static { ptr, kind, .. } => builder
+        if let Self::Local { ptr, kind, .. }
+        | Self::Constant { ptr, kind, .. }
+        | Self::Static { ptr, kind, .. } = self
+        {
+            return builder
                 .build_struct_gep(
                     typegen::generate_subtype_with_all(context, kind),
                     *ptr,
                     index,
                     "",
                 )
-                .unwrap_or_else(|_| abort()),
+                .unwrap_or_else(|_| abort());
+        }
 
-            Self::Parameter { value, kind } | Self::LowLevelInstruction { value, kind } => {
-                if value.is_pointer_value() {
-                    return builder
-                        .build_struct_gep(
-                            typegen::generate_subtype_with_all(context, kind),
-                            (*value).into_pointer_value(),
-                            index,
-                            "",
-                        )
-                        .unwrap_or_else(|_| abort());
-                }
-
-                abort()
+        if let Self::Parameter { value, kind } | Self::LowLevelInstruction { value, kind } = self {
+            if value.is_pointer_value() {
+                return builder
+                    .build_struct_gep(
+                        typegen::generate_subtype_with_all(context, kind),
+                        (*value).into_pointer_value(),
+                        index,
+                        "",
+                    )
+                    .unwrap_or_else(|_| abort());
             }
         }
+
+        abort()
     }
 }
 
@@ -485,6 +466,7 @@ pub fn alloc_anon<'ctx>(
 
             self::codegen_abort(format!("Cannot assign type to stack: '{}'.", kind));
         }
+
         LLVMAllocationSite::Heap => {
             if let Ok(ptr) = llvm_builder.build_malloc(llvm_type, "") {
                 return ptr;
@@ -492,6 +474,7 @@ pub fn alloc_anon<'ctx>(
 
             self::codegen_abort(format!("Cannot assign type to heap: '{}'.", kind));
         }
+
         LLVMAllocationSite::Static => llvm_module
             .add_global(llvm_type, Some(AddressSpace::default()), "")
             .as_pointer_value(),

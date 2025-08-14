@@ -14,7 +14,7 @@ pub struct Token {
 }
 
 impl TokenExtensions for Token {
-    fn fix_lexeme_scapes(&self, span: Span) -> Result<Vec<u8>, ThrushCompilerIssue> {
+    fn scape(&self, span: Span) -> Result<Vec<u8>, ThrushCompilerIssue> {
         let source: &[u8] = self.lexeme.as_bytes();
 
         let mut parsed_string: Vec<u8> = Vec::with_capacity(source.len());
@@ -59,22 +59,27 @@ impl TokenExtensions for Token {
         Ok(parsed_string)
     }
 
+    #[inline]
     fn get_lexeme(&self) -> &str {
         &self.lexeme
     }
 
+    #[inline]
     fn get_ascii_lexeme(&self) -> &str {
         &self.ascii_lexeme
     }
 
+    #[inline]
     fn get_span(&self) -> Span {
         self.span
     }
 
+    #[inline]
     fn get_type(&self) -> TokenType {
         self.kind
     }
 
+    #[inline]
     fn get_lexeme_first_byte(&self) -> u64 {
         self.lexeme.as_bytes()[0] as u64
     }

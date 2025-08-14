@@ -30,8 +30,8 @@ pub fn compile<'ctx>(
         (TokenType::Bang, _, expr) => self::compile_logical_negation(context, expr, cast),
         (TokenType::Minus, _, expr) => self::compile_arithmetic_negation(context, expr, cast),
 
-        _ => {
-            self::codegen_abort("Unsupported unary operation pattern encountered.");
+        what => {
+            self::codegen_abort(format!("Unsupported unary operation: '{:?}'.", what));
         }
     }
 }
@@ -48,6 +48,14 @@ fn compile_increment_decrement_ref<'ctx>(
 
     let symbol: SymbolAllocated = context.get_table().get_symbol(name);
 
+    let abort_int = || {
+        self::codegen_abort("Failed to compile an 'integer' reference incrementer or decrementer.")
+    };
+
+    let abort_float = || {
+        self::codegen_abort("Failed to compile an 'float' reference incrementer or decrementer.")
+    };
+
     match kind {
         kind if kind.is_integer_type() => {
             let int: IntValue = symbol.load(context).into_int_value();
@@ -55,18 +63,16 @@ fn compile_increment_decrement_ref<'ctx>(
             let modifier: IntValue = int.get_type().const_int(1, false);
 
             let result: BasicValueEnum = match operator {
-                TokenType::PlusPlus => match llvm_builder.build_int_nsw_add(int, modifier, "") {
-                    Ok(result) => result.into(),
-                    Err(_) => {
-                        self::codegen_abort("Failed to compile an incrementer.");
-                    }
-                },
-                TokenType::MinusMinus => match llvm_builder.build_int_nsw_sub(int, modifier, "") {
-                    Ok(result) => result.into(),
-                    Err(_) => {
-                        self::codegen_abort("Failed to compile a decrementer.");
-                    }
-                },
+                TokenType::PlusPlus => llvm_builder
+                    .build_int_nsw_add(int, modifier, "")
+                    .unwrap_or_else(|_| abort_int())
+                    .into(),
+
+                TokenType::MinusMinus => llvm_builder
+                    .build_int_nsw_sub(int, modifier, "")
+                    .unwrap_or_else(|_| abort_int())
+                    .into(),
+
                 _ => {
                     self::codegen_abort(
                         "Unknown operator compared to reference increment and decrement in unary operation.",
@@ -90,11 +96,11 @@ fn compile_increment_decrement_ref<'ctx>(
             let result: BasicValueEnum = match operator {
                 TokenType::PlusPlus => llvm_builder
                     .build_float_add(float, modifier, "")
-                    .unwrap()
+                    .unwrap_or_else(|_| abort_float())
                     .into(),
                 TokenType::MinusMinus => llvm_builder
                     .build_float_sub(float, modifier, "")
-                    .unwrap()
+                    .unwrap_or_else(|_| abort_float())
                     .into(),
 
                 _ => {
@@ -125,6 +131,12 @@ fn compile_increment_decrement<'ctx>(
     let value: BasicValueEnum = valuegen::compile(context, expression, cast);
     let kind: &Type = expression.get_type_unwrapped();
 
+    let abort_int =
+        || self::codegen_abort("Failed to compile an 'integer' incrementer or decrementer.");
+
+    let abort_float =
+        || self::codegen_abort("Failed to compile an 'float' incrementer or decrementer.");
+
     match kind {
         kind if kind.is_integer_type() => {
             let int: IntValue = value.into_int_value();
@@ -132,18 +144,15 @@ fn compile_increment_decrement<'ctx>(
             let modifier: IntValue = int.get_type().const_int(1, false);
 
             let result: BasicValueEnum = match operator {
-                TokenType::PlusPlus => match llvm_builder.build_int_nsw_add(int, modifier, "") {
-                    Ok(result) => result.into(),
-                    Err(_) => {
-                        self::codegen_abort("Failed to compile an incrementer.");
-                    }
-                },
-                TokenType::MinusMinus => match llvm_builder.build_int_nsw_sub(int, modifier, "") {
-                    Ok(result) => result.into(),
-                    Err(_) => {
-                        self::codegen_abort("Failed to compile a decrementer.");
-                    }
-                },
+                TokenType::PlusPlus => llvm_builder
+                    .build_int_nsw_add(int, modifier, "")
+                    .unwrap_or_else(|_| abort_int())
+                    .into(),
+
+                TokenType::MinusMinus => llvm_builder
+                    .build_int_nsw_sub(int, modifier, "")
+                    .unwrap_or_else(|_| abort_int())
+                    .into(),
 
                 _ => {
                     self::codegen_abort(
@@ -162,12 +171,12 @@ fn compile_increment_decrement<'ctx>(
             let result: BasicValueEnum = match operator {
                 TokenType::PlusPlus => llvm_builder
                     .build_float_add(float, modifier, "")
-                    .unwrap()
+                    .unwrap_or_else(|_| abort_float())
                     .into(),
 
                 TokenType::MinusMinus => llvm_builder
                     .build_float_sub(float, modifier, "")
-                    .unwrap()
+                    .unwrap_or_else(|_| abort_float())
                     .into(),
 
                 _ => {

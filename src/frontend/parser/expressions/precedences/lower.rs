@@ -65,7 +65,7 @@ pub fn lower_precedence<'parser>(
             let str_tk: &Token = parser_context.advance()?;
             let span: Span = str_tk.get_span();
 
-            let bytes: Vec<u8> = str_tk.fix_lexeme_scapes(span)?;
+            let bytes: Vec<u8> = str_tk.scape(span)?;
 
             Ast::new_str(bytes, Type::Str, span)
         }

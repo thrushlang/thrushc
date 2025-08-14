@@ -32,7 +32,7 @@ impl Display for Token {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "TOKEN TYPE '{:?}' literal '{}', ascii '{}' at {}",
+            "TOKEN TYPE '{:?}' literal '{}', ascii '{}' at '{}'.",
             self.kind, self.lexeme, self.ascii_lexeme, self.span
         )
     }

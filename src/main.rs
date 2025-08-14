@@ -5,30 +5,25 @@ mod frontend;
 use {
     crate::core::{
         compiler::thrushc::TheThrushCompiler,
-        console::{cli::CLI, logging},
+        console::{self, cli::CLI, logging},
     },
-    colored::{Colorize, control},
+    colored::Colorize,
     lazy_static::lazy_static,
     std::{env, process, time::Instant},
 };
 
 fn main() {
-    #[cfg(target_os = "windows")]
-    {
-        control::set_virtual_terminal(true);
-    }
-
-    control::set_override(true);
+    console::cli::set_up();
 
     let cli: CLI = CLI::parse(env::args().collect());
 
     let start_time: Instant = Instant::now();
 
-    let compile_time: (u128, u128) =
+    let time: (u128, u128) =
         TheThrushCompiler::new(cli.get_options().get_files(), cli.get_options()).compile();
 
-    let thrushc_time: u128 = compile_time.0;
-    let linking_time: u128 = compile_time.1;
+    let thrushc_time: u128 = time.0;
+    let linking_time: u128 = time.1;
 
     logging::write(
         logging::OutputIn::Stdout,
