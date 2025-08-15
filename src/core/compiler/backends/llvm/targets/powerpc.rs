@@ -1,0 +1,44 @@
+#[inline]
+pub fn print_all_supported_cpus() {
+    println!(
+        "440
+450
+601
+602
+603
+603e
+603ev
+604
+604e
+620
+7400
+7450
+750
+970
+a2
+e500
+e500mc
+e5500
+future
+g3
+g4
+g4+
+g5
+generic
+ppc
+ppc32
+ppc64
+ppc64le
+pwr10
+pwr11
+pwr3
+pwr4
+pwr5
+pwr5x
+pwr6
+pwr6x
+pwr7
+pwr8
+pwr9"
+    )
+}

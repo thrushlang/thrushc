@@ -1,0 +1,44 @@
+#[inline]
+pub fn print_all_supported_cpus() {
+    println!(
+        "generic
+generic-rv32
+generic-rv64
+mips-p8700
+rocket
+rocket-rv32
+rocket-rv64
+rp2350-hazard3
+sifive-7-series
+sifive-e20
+sifive-e21
+sifive-e24
+sifive-e31
+sifive-e34
+sifive-e76
+sifive-p450
+sifive-p470
+sifive-p550
+sifive-p670
+sifive-s21
+sifive-s51
+sifive-s54
+sifive-s76
+sifive-u54
+sifive-u74
+sifive-x280
+spacemit-x60
+syntacore-scr1-base
+syntacore-scr1-max
+syntacore-scr3-rv32
+syntacore-scr3-rv64
+syntacore-scr4-rv32
+syntacore-scr4-rv64
+syntacore-scr5-rv32
+syntacore-scr5-rv64
+syntacore-scr7
+tt-ascalon-d8
+veyron-v1
+xiangshan-nanhu"
+    )
+}

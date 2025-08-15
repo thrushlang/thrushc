@@ -8,6 +8,7 @@ homepage = "https://github.com/thrushlang/thrushc"
 repository = "https://github.com/thrushlang/thrushc"
 edition = "2024"
 build = "build.rs"
+rust-version = "1.85.0"
 
 [dependencies]
 llvm-sys = { path = "wrappers/llvm/llvm-sys-170.0.0", features = ["force-static"] }

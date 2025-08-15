@@ -1,0 +1,45 @@
+#[inline]
+pub fn print_all_supported_cpus() {
+    println!(
+        "at697e
+at697f
+f934
+generic
+gr712rc
+gr740
+hypersparc
+leon2
+leon3
+leon4
+ma2080
+ma2085
+ma2100
+ma2150
+ma2155
+ma2450
+ma2455
+ma2480
+ma2485
+ma2x5x
+ma2x8x
+myriad2
+myriad2.1
+myriad2.2
+myriad2.3
+niagara
+niagara2
+niagara3
+niagara4
+sparclet
+sparclite
+sparclite86x
+supersparc
+tsc701
+ultrasparc
+ultrasparc3
+ut699
+v7
+v8
+v9"
+    )
+}

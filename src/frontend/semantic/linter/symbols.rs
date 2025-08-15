@@ -161,7 +161,7 @@ impl<'linter> LinterSymbolsTable<'linter> {
         None
     }
 
-    pub fn get_lli_info(&mut self, name: &'linter str) -> Option<&mut LinterLLIInfo> {
+    pub fn get_lli_info(&mut self, name: &'linter str) -> Option<&mut LinterLLIInfo<'_>> {
         for scope in self.llis.iter_mut().rev() {
             if let Some(lli) = scope.get_mut(name) {
                 return Some(lli);
@@ -173,47 +173,58 @@ impl<'linter> LinterSymbolsTable<'linter> {
 }
 
 impl<'linter> LinterSymbolsTable<'linter> {
-    pub fn get_all_function_parameters(&self) -> &LinterFunctionParameters {
+    #[inline]
+    pub fn get_all_function_parameters(&self) -> &LinterFunctionParameters<'_> {
         &self.parameters
     }
 
-    pub fn get_all_locals(&self) -> &LinterLocals {
+    #[inline]
+    pub fn get_all_locals(&self) -> &LinterLocals<'_> {
         &self.locals
     }
 
-    pub fn get_all_llis(&self) -> &LinterLLIs {
+    #[inline]
+    pub fn get_all_llis(&self) -> &LinterLLIs<'_> {
         &self.llis
     }
 
+    #[inline]
     pub fn get_all_enums(&self) -> &LinterEnums<'linter> {
         &self.enums
     }
 
-    pub fn get_all_global_constants(&self) -> &LinterGlobalConstants {
+    #[inline]
+    pub fn get_all_global_constants(&self) -> &LinterGlobalConstants<'_> {
         &self.global_constants
     }
 
-    pub fn get_all_global_statics(&self) -> &LinterGlobalStatics {
+    #[inline]
+    pub fn get_all_global_statics(&self) -> &LinterGlobalStatics<'_> {
         &self.global_statics
     }
 
-    pub fn get_all_local_constants(&self) -> &LinterLocalConstants {
+    #[inline]
+    pub fn get_all_local_constants(&self) -> &LinterLocalConstants<'_> {
         &self.local_constants
     }
 
-    pub fn get_all_locals_statics(&self) -> &LinterLocalStatics {
+    #[inline]
+    pub fn get_all_locals_statics(&self) -> &LinterLocalStatics<'_> {
         &self.local_statics
     }
 
-    pub fn get_all_structs(&self) -> &LinterStructs {
+    #[inline]
+    pub fn get_all_structs(&self) -> &LinterStructs<'_> {
         &self.structs
     }
 
-    pub fn get_all_functions(&self) -> &LinterFunctions {
+    #[inline]
+    pub fn get_all_functions(&self) -> &LinterFunctions<'_> {
         &self.functions
     }
 
-    pub fn get_all_asm_functions(&self) -> &LinterAssemblerFunctions {
+    #[inline]
+    pub fn get_all_asm_functions(&self) -> &LinterAssemblerFunctions<'_> {
         &self.asm_functions
     }
 }

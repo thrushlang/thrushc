@@ -2,14 +2,14 @@ use inkwell::targets::TargetTriple;
 
 #[derive(Debug)]
 pub struct LLVMTarget {
-    pub name: String,
+    pub arch: String,
     pub target_triple: TargetTriple,
 }
 
 impl LLVMTarget {
     #[inline]
-    pub fn get_name(&self) -> &str {
-        &self.name
+    pub fn get_arch(&self) -> &str {
+        &self.arch
     }
 
     #[inline]
@@ -20,8 +20,8 @@ impl LLVMTarget {
 
 impl LLVMTarget {
     #[inline]
-    pub fn set_name(&mut self, name: String) {
-        self.name = name;
+    pub fn set_arch(&mut self, arch: String) {
+        self.arch = arch;
     }
 
     #[inline]

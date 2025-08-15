@@ -1,5 +1,6 @@
 pub mod cpu;
 pub mod target;
+pub mod targets;
 
 use inkwell::targets::{CodeModel, RelocMode, TargetMachine};
 
@@ -25,14 +26,23 @@ pub struct LLVMBackend {
 
 impl LLVMBackend {
     pub fn new() -> Self {
+        let arch: String = TargetMachine::get_default_triple()
+            .as_str()
+            .to_string_lossy()
+            .split("-")
+            .collect::<Vec<_>>()
+            .first()
+            .map_or("generic", |v| v)
+            .to_string();
+
         Self {
             target: LLVMTarget {
-                name: TargetMachine::get_host_cpu_name().to_string(),
+                arch,
                 target_triple: TargetMachine::get_default_triple(),
             },
 
             target_cpu: LLVMTargetCPU {
-                target_cpu: String::new(),
+                target_cpu: TargetMachine::get_host_cpu_name().to_string(),
                 target_cpu_feautures: TargetMachine::get_host_cpu_features().to_string(),
             },
 

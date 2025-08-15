@@ -68,10 +68,20 @@ pub fn show_help() -> ! {
         &format!(
             "{} {} {}\n",
             "•".bold(),
+            "llvm-print-targets".custom_color((141, 141, 142)).bold(),
+            "Show the current LLVM target supported."
+        ),
+    );
+
+    logging::write(
+        logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {}\n",
+            "•".bold(),
             "llvm-print-supported-cpus"
                 .custom_color((141, 141, 142))
                 .bold(),
-            "Show the current LLVM supported CPUs.",
+            "Show the current LLVM supported CPUs for the current LLVM Target.",
         ),
     );
 

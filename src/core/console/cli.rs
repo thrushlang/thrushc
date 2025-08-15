@@ -5,7 +5,7 @@ use std::process::Command;
 
 use crate::core::{
     compiler::{
-        backends::llvm::LLVMBackend,
+        backends::llvm::{self, LLVMBackend},
         linking::LinkingCompilersConfiguration,
         options::{CompilerOptions, Emitable, ThrushOptimization},
         passes::LLVMModificatorPasses,
@@ -137,27 +137,40 @@ impl CLI {
                 self.options.set_use_llvm_backend(true);
             }
 
+            "llvm-print-targets" => {
+                self.advance();
+                llvm::targets::info::print_all_targets();
+                process::exit(0);
+            }
+
             "llvm-print-target-triples" => {
                 self.advance();
-                utils::print_llvm_supported_targets_triples();
+                llvm::targets::info::print_all_target_triples();
                 process::exit(0);
             }
 
             "llvm-print-host-target-triple" => {
                 self.advance();
+
                 println!(
                     "{}",
                     TargetMachine::get_default_triple()
                         .as_str()
                         .to_string_lossy()
                 );
+
                 process::exit(0);
             }
 
             "llvm-print-supported-cpus" => {
                 self.advance();
-                utils::print_llvm_supported_cpus();
-                process::exit(0);
+
+                llvm::targets::info::print_specific_support_cpu(
+                    self.options
+                        .get_llvm_backend_options()
+                        .get_target()
+                        .get_arch(),
+                );
             }
 
             "-build-dir" => {
@@ -238,7 +251,7 @@ impl CLI {
                 self.options
                     .get_mut_llvm_backend_options()
                     .get_mut_target()
-                    .set_name(target);
+                    .set_arch(target);
 
                 self.advance();
             }
