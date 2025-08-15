@@ -508,7 +508,7 @@ impl CLI {
         let path: PathBuf = PathBuf::from(path);
 
         if let Some(extension) = path.extension() {
-            if path.exists() && path.is_file() && (extension.eq("th") || extension.eq("thrush")) {
+            if path.exists() && path.is_file() && (extension.eq("thrush") || extension.eq("🐦")) {
                 return true;
             }
         }
