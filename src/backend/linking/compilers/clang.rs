@@ -7,7 +7,7 @@ use std::{
 use inkwell::targets::TargetTriple;
 
 use crate::core::{
-    compiler::linking::LinkingCompilersConfiguration,
+    compiler::{backends::llvm::LLVMBackend, linking::LinkingCompilersConfiguration},
     console::logging::{self, LoggingType},
 };
 
@@ -32,19 +32,19 @@ pub static WINDOWS_X86_64_CLANG_MANIFEST: &str =
 pub struct Clang<'clang> {
     files: &'clang [PathBuf],
     config: &'clang LinkingCompilersConfiguration,
-    target: &'clang TargetTriple,
+    backend: &'clang LLVMBackend,
 }
 
 impl<'clang> Clang<'clang> {
     pub fn new(
         files: &'clang [PathBuf],
         config: &'clang LinkingCompilersConfiguration,
-        target: &'clang TargetTriple,
+        backend: &'clang LLVMBackend,
     ) -> Self {
         Self {
             files,
             config,
-            target,
+            backend,
         }
     }
 
@@ -144,8 +144,10 @@ impl<'clang> Clang<'clang> {
 
         clang_command.arg("-v");
 
+        let triple: &TargetTriple = self.backend.get_target().get_triple();
+
         clang_command.arg("-target");
-        clang_command.arg(self.target.as_str().to_string_lossy().into_owned());
+        clang_command.arg(triple.as_str().to_string_lossy().into_owned());
 
         clang_command.args(self.files.iter());
         clang_command.args(self.config.get_args().iter());
@@ -153,7 +155,7 @@ impl<'clang> Clang<'clang> {
         if self.config.get_debug_clang_commands() {
             logging::log(
                 LoggingType::Info,
-                &format!("Generated Clang Command: {:?}\n", clang_command),
+                &format!("Generated Clang Command: '{:?}'.\n", clang_command),
             );
         }
 

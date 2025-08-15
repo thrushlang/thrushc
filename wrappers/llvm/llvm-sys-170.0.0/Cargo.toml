@@ -41,6 +41,9 @@ prefer-static = []
 # Force static linking
 force-static = []
 
+[profile.dev]
+incremental = true
+
 [dependencies]
 libc = "0.2"
 clang-sys = { version = "1.2.2", optional = true }

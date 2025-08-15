@@ -168,6 +168,28 @@ pub fn show_help() -> ! {
         &format!(
             "{} {} [{}] {}\n",
             "•".bold(),
+            "-target".custom_color((141, 141, 142)).bold(),
+            "\"x86_64\"",
+            "Set the LLVM target.",
+        ),
+    );
+
+    logging::write(
+        logging::OutputIn::Stderr,
+        &format!(
+            "{} {} [{}] {}\n",
+            "•".bold(),
+            "-target-triple".custom_color((141, 141, 142)).bold(),
+            "\"x86_64-pc-linux-gnu\"",
+            "Set the LLVM target triple.",
+        ),
+    );
+
+    logging::write(
+        logging::OutputIn::Stderr,
+        &format!(
+            "{} {} [{}] {}\n",
+            "•".bold(),
             "-cpu".custom_color((141, 141, 142)).bold(),
             "\"haswell\"",
             "Specify the CPU to optimize.",
@@ -179,9 +201,9 @@ pub fn show_help() -> ! {
         &format!(
             "{} {} [{}] {}\n",
             "•".bold(),
-            "-target".custom_color((141, 141, 142)).bold(),
-            "\"x86_64-pc-linux-gnu\"",
-            "Set the target triple.",
+            "-cpu-features".custom_color((141, 141, 142)).bold(),
+            "\"+sse2,+cx16,+sahf,-tbm\"",
+            "Specify the new features of the CPU to use.",
         ),
     );
 

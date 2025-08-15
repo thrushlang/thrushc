@@ -162,6 +162,9 @@ thiserror = "1.0.48"
 static-alloc = { version = "0.2", optional = true }
 serde = { version = "1.0", default-features = false, features = ["derive"], optional = true }
 
+[profile.dev]
+incremental = true
+
 [dev-dependencies]
 regex = "1"
 

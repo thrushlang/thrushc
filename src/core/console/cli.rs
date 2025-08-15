@@ -6,7 +6,6 @@ use std::process::Command;
 use crate::core::{
     compiler::{
         backends::llvm::LLVMBackend,
-        jit::JITConfiguration,
         linking::LinkingCompilersConfiguration,
         options::{CompilerOptions, Emitable, ThrushOptimization},
         passes::LLVMModificatorPasses,
@@ -230,7 +229,44 @@ impl CLI {
                 self.advance();
             }
 
-            "-jit" => {
+            "-target" => {
+                self.advance();
+                self.validate_llvm_required(arg);
+
+                let target: String = self.peek().to_string();
+
+                self.options
+                    .get_mut_llvm_backend_options()
+                    .get_mut_target()
+                    .set_name(target);
+
+                self.advance();
+            }
+
+            "-target-triple" => {
+                self.advance();
+                self.validate_llvm_required(arg);
+
+                let raw_target_triple: &str = self.peek();
+
+                if !utils::is_supported_llvm_target_triple(raw_target_triple) {
+                    self.report_error(&format!(
+                        "Unknown LLVM target triple: '{}'.",
+                        raw_target_triple
+                    ));
+                }
+
+                let target_triple: TargetTriple = TargetTriple::create(raw_target_triple);
+
+                self.options
+                    .get_mut_llvm_backend_options()
+                    .get_mut_target()
+                    .set_target_triple(target_triple);
+
+                self.advance();
+            }
+
+            /*"-jit" => {
                 self.advance();
                 self.validate_llvm_required(arg);
 
@@ -280,24 +316,38 @@ impl CLI {
                 } else {
                     self.report_error("Couldn't get llvm jit configuration.");
                 }
-            }
-
+            }*/
             "-cpu" => {
                 self.advance();
                 self.validate_llvm_required(arg);
 
-                let target_cpu: String = self.peek().to_string();
+                let name: String = self.peek().to_string();
 
-                if !self.validate_llvm_cpu(&target_cpu) {
+                if !self.validate_llvm_cpu(&name) {
                     self.report_error(&format!(
                         "Unknown CPU target: '{}'. See 'llvm-print-supported-cpus' command.",
-                        target_cpu
+                        name
                     ));
                 }
 
                 self.options
                     .get_mut_llvm_backend_options()
-                    .set_target_cpu(target_cpu);
+                    .get_mut_target_cpu()
+                    .set_cpu_name(name);
+
+                self.advance();
+            }
+
+            "-cpu-features" => {
+                self.advance();
+                self.validate_llvm_required(arg);
+
+                let features: String = self.peek().to_string();
+
+                self.options
+                    .get_mut_llvm_backend_options()
+                    .get_mut_target_cpu()
+                    .set_processador_features(features);
 
                 self.advance();
             }
@@ -322,28 +372,6 @@ impl CLI {
                 let emitable: Emitable = self.parse_emit_option(self.peek());
 
                 self.options.add_emit_option(emitable);
-
-                self.advance();
-            }
-
-            "-target" => {
-                self.advance();
-                self.validate_llvm_required(arg);
-
-                let raw_target_triple: &str = self.peek();
-
-                if !utils::is_supported_llvm_target_triple(raw_target_triple) {
-                    self.report_error(&format!(
-                        "Unknown LLVM target triple: '{}'.",
-                        raw_target_triple
-                    ));
-                }
-
-                let target_triple: TargetTriple = TargetTriple::create(raw_target_triple);
-
-                self.options
-                    .get_mut_llvm_backend_options()
-                    .set_target_triple(target_triple);
 
                 self.advance();
             }
@@ -609,40 +637,6 @@ impl CLI {
                 "Can't use '{}' without '-llvm' flag previously.",
                 arg
             ));
-        }
-    }
-
-    fn validate_jit_required(&self, arg: &str) {
-        if self
-            .options
-            .get_llvm_backend_options()
-            .get_jit_config()
-            .is_none()
-        {
-            self.report_error(&format!(
-                "Can't use '{}' without '-jit' flag previously.",
-                arg
-            ));
-        }
-    }
-
-    fn validate_jit_path(&self, path: &Path) {
-        if !path.exists() {
-            self.report_error(&format!("The path '{}' does not exist.", path.display()))
-        }
-
-        if let Some(extension) = path.extension() {
-            if extension != "so" && extension != "dll" {
-                self.report_error(&format!(
-                    "The path '{}' must end with a file with the .so or .dll extension.",
-                    path.display()
-                ))
-            }
-        } else {
-            self.report_error(&format!(
-                "The path '{}' must contain a path to a file with an extension.",
-                path.display()
-            ))
         }
     }
 

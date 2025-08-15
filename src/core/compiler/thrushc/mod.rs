@@ -1,6 +1,7 @@
 mod emit;
 mod finisher;
 mod interrupt;
+mod validate;
 
 use std::{
     path::PathBuf,
@@ -24,7 +25,7 @@ use crate::{
     },
     core::{
         compiler::{
-            backends::llvm::LLVMBackend,
+            backends::llvm::{LLVMBackend, target::LLVMTarget},
             linking::LinkingCompilersConfiguration,
             options::{CompilerFile, CompilerOptions, Emited, ThrushOptimization},
             reader,
@@ -107,7 +108,7 @@ impl<'thrushc> TheThrushCompiler<'thrushc> {
             match Clang::new(
                 self.get_compiled_files(),
                 linking_compiler_configuration,
-                llvm_backend.get_target_triple(),
+                llvm_backend,
             )
             .link()
             {
@@ -196,13 +197,9 @@ impl<'thrushc> TheThrushCompiler<'thrushc> {
         let llvm_backend: &LLVMBackend = self.options.get_llvm_backend_options();
         let build_dir: &PathBuf = self.options.get_build_dir();
 
-        let tokens: Vec<Token> = match Lexer::lex(&source_code, file) {
-            Ok(tokens) => tokens,
-            Err(error) => {
-                logging::log(logging::LoggingType::FrontEndPanic, &error.display());
-                unreachable!()
-            }
-        };
+        let tokens: Vec<Token> = Lexer::lex(&source_code, file).unwrap_or_else(|error| {
+            logging::print_frontend_panic(logging::LoggingType::FrontEndPanic, &error.display())
+        });
 
         if emit::after_frontend(self, build_dir, file, Emited::Tokens(&tokens)) {
             return finisher::archive_compilation(self, archive_time, file);
@@ -232,38 +229,39 @@ impl<'thrushc> TheThrushCompiler<'thrushc> {
         let llvm_builder: Builder = llvm_context.create_builder();
         let llvm_module: Module = llvm_context.create_module(&file.name);
 
-        let target_triple: &TargetTriple = llvm_backend.get_target_triple();
-        let target_cpu: &str = llvm_backend.get_target_cpu();
+        let target: &LLVMTarget = llvm_backend.get_target();
+
+        let llvm_triple: &TargetTriple = target.get_triple();
+
+        let llvm_cpu_name: &str = llvm_backend.get_target_cpu().get_cpu_name();
+        let llvm_cpu_features: &str = llvm_backend.get_target_cpu().get_cpu_features();
+
         let thrush_opt: ThrushOptimization = llvm_backend.get_optimization();
         let llvm_opt: OptimizationLevel = thrush_opt.to_llvm_opt();
 
-        llvm_module.set_triple(target_triple);
+        llvm_module.set_triple(llvm_triple);
 
-        let target: Target = Target::from_triple(target_triple).unwrap_or_else(|_| {
-            logging::log(
+        let target: Target = Target::from_triple(llvm_triple).unwrap_or_else(|_| {
+            logging::print_frontend_panic(
                 logging::LoggingType::BackendPanic,
                 "Cannot generate a target from LLVM target triple.",
             );
-
-            unreachable!()
         });
 
         let target_machine: TargetMachine = target
             .create_target_machine(
-                target_triple,
-                target_cpu,
-                "",
+                llvm_triple,
+                llvm_cpu_name,
+                llvm_cpu_features,
                 llvm_opt,
                 llvm_backend.get_reloc_mode(),
                 llvm_backend.get_code_model(),
             )
             .unwrap_or_else(|| {
-                logging::log(
+                logging::print_frontend_panic(
                     logging::LoggingType::FrontEndPanic,
                     "Cannot generate a target machine from target.",
                 );
-
-                unreachable!()
             });
 
         llvm_module.set_data_layout(&target_machine.get_target_data().get_data_layout());
@@ -278,7 +276,7 @@ impl<'thrushc> TheThrushCompiler<'thrushc> {
 
         llvm::compiler::LLVMCompiler::compile(&mut llvm_codegen_context, ast);
 
-        self.validate_codegen(&llvm_module, file)?;
+        validate::llvm_codegen(&llvm_module, file)?;
 
         if emit::llvm_before_optimization(
             self,
@@ -333,29 +331,6 @@ impl<'thrushc> TheThrushCompiler<'thrushc> {
                 &file.path.to_string_lossy()
             ),
         );
-
-        Ok(())
-    }
-
-    fn validate_codegen(&self, llvm_module: &Module, file: &CompilerFile) -> Result<(), ()> {
-        if let Err(codegen_error) = llvm_module.verify() {
-            logging::log(
-                LoggingType::BackendPanic,
-                codegen_error.to_string().trim_end(),
-            );
-
-            logging::write(
-                logging::OutputIn::Stderr,
-                &format!(
-                    "\r{} {} {}\n",
-                    "Compilation".custom_color((141, 141, 142)).bold(),
-                    "FAILED".bright_red().bold(),
-                    &file.path.to_string_lossy()
-                ),
-            );
-
-            return Err(());
-        }
 
         Ok(())
     }

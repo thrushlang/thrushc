@@ -7,6 +7,7 @@ authors = ["Kevin Benavides <https://github.com/DevCheckOG>"]
 homepage = "https://github.com/thrushlang/thrushc"
 repository = "https://github.com/thrushlang/thrushc"
 edition = "2024"
+build = "build.rs"
 
 [dependencies]
 llvm-sys = { path = "wrappers/llvm/llvm-sys-170.0.0", features = ["force-static"] }
@@ -30,10 +31,10 @@ zip = "2.3.0"
 incremental = true
 
 [profile.release]
-opt-level = 3
+incremental = true
+opt-level = 'z'
 codegen-units = 1
 lto = true
 panic = "abort"
 debug = false
 strip = true
-incremental = true
