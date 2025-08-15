@@ -109,3 +109,11 @@ Now you need to compile the compiler with Rust.
 ```console
 cargo run -- --help
 ```
+
+# Frequent Questions
+
+#### > Why isn't the compiler designed to use it as a bootstrap compiler?
+
+Regarding the concept of bootstrapping in compilers (For more information: https://www.bootstrappable.org/).
+
+The decision was made to fully implement all the programming language functions in the compiler written in Rust, because it proposes a development approach similar to what Gleam Team did for Gleam Programming Language, and also to lighten the workload, given that we are already using LLVM.
