@@ -1,6 +1,9 @@
+use crate::core::console::logging;
+
 #[inline]
 pub fn print_all_supported_cpus() {
-    println!(
+    logging::write(
+        logging::OutputIn::Stdout,
         "arm1020e
 arm1020t
 arm1022e
@@ -95,6 +98,6 @@ strongarm110
 strongarm1100
 strongarm1110
 swift
-xscale"
-    )
+xscale",
+    );
 }

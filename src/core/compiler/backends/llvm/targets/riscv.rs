@@ -1,6 +1,9 @@
+use crate::core::console::logging;
+
 #[inline]
 pub fn print_all_supported_cpus() {
-    println!(
+    logging::write(
+        logging::OutputIn::Stdout,
         "generic
 generic-rv32
 generic-rv64
@@ -39,6 +42,6 @@ syntacore-scr5-rv64
 syntacore-scr7
 tt-ascalon-d8
 veyron-v1
-xiangshan-nanhu"
-    )
+xiangshan-nanhu",
+    );
 }

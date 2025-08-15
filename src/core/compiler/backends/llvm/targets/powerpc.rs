@@ -1,6 +1,9 @@
+use crate::core::console::logging;
+
 #[inline]
 pub fn print_all_supported_cpus() {
-    println!(
+    logging::write(
+        logging::OutputIn::Stdout,
         "440
 450
 601
@@ -39,6 +42,6 @@ pwr6
 pwr6x
 pwr7
 pwr8
-pwr9"
-    )
+pwr9",
+    );
 }

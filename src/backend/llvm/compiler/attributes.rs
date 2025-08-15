@@ -181,7 +181,7 @@ impl<'ctx> AttributeBuilder<'ctx> {
                                 AttributeLoc::Function,
                                 self.llvm_context.create_enum_attribute(
                                     Attribute::get_named_enum_kind_id("noinline"),
-                                    4,
+                                    0,
                                 ),
                             );
                         }
@@ -191,7 +191,7 @@ impl<'ctx> AttributeBuilder<'ctx> {
                                 AttributeLoc::Function,
                                 self.llvm_context.create_enum_attribute(
                                     Attribute::get_named_enum_kind_id("hot"),
-                                    2,
+                                    0,
                                 ),
                             );
                         }
@@ -201,7 +201,7 @@ impl<'ctx> AttributeBuilder<'ctx> {
                                 AttributeLoc::Function,
                                 self.llvm_context.create_enum_attribute(
                                     Attribute::get_named_enum_kind_id("optsize"),
-                                    3,
+                                    0,
                                 ),
                             );
                         }
@@ -211,7 +211,7 @@ impl<'ctx> AttributeBuilder<'ctx> {
                                 AttributeLoc::Function,
                                 self.llvm_context.create_enum_attribute(
                                     Attribute::get_named_enum_kind_id("safestack"),
-                                    5,
+                                    0,
                                 ),
                             );
                         }
@@ -221,7 +221,7 @@ impl<'ctx> AttributeBuilder<'ctx> {
                                 AttributeLoc::Function,
                                 self.llvm_context.create_enum_attribute(
                                     Attribute::get_named_enum_kind_id("ssp"),
-                                    5,
+                                    0,
                                 ),
                             );
                         }
@@ -231,7 +231,7 @@ impl<'ctx> AttributeBuilder<'ctx> {
                                 AttributeLoc::Function,
                                 self.llvm_context.create_enum_attribute(
                                     Attribute::get_named_enum_kind_id("sspstrong"),
-                                    5,
+                                    0,
                                 ),
                             );
                         }
@@ -241,7 +241,7 @@ impl<'ctx> AttributeBuilder<'ctx> {
                                 AttributeLoc::Function,
                                 self.llvm_context.create_enum_attribute(
                                     Attribute::get_named_enum_kind_id("strictfp"),
-                                    5,
+                                    0,
                                 ),
                             );
                         }
@@ -259,7 +259,7 @@ impl<'ctx> AttributeBuilder<'ctx> {
 
 #[inline]
 pub fn create_inline_hint_attribute(llvm_context: &Context) -> Attribute {
-    llvm_context.create_enum_attribute(Attribute::get_named_enum_kind_id("inlinehint"), 1)
+    llvm_context.create_enum_attribute(Attribute::get_named_enum_kind_id("inlinehint"), 0)
 }
 
 #[inline]
@@ -269,5 +269,5 @@ pub fn create_always_inline_attribute(llvm_context: &Context) -> Attribute {
 
 #[inline]
 pub fn create_minsize_attribute(llvm_context: &Context) -> Attribute {
-    llvm_context.create_enum_attribute(Attribute::get_named_enum_kind_id("optsize"), 3)
+    llvm_context.create_enum_attribute(Attribute::get_named_enum_kind_id("optsize"), 0)
 }

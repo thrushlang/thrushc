@@ -1,6 +1,9 @@
+use crate::core::console::logging;
+
 #[inline]
 pub fn print_all_supported_cpus() {
-    println!(
+    logging::write(
+        logging::OutputIn::Stdout,
         "sm_100
 sm_100a
 sm_101
@@ -26,6 +29,6 @@ sm_80
 sm_86
 sm_87
 sm_89
-sm_90"
-    )
+sm_90",
+    );
 }

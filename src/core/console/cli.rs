@@ -568,7 +568,7 @@ impl CLI {
     }
 
     fn handle_unknown_argument(&mut self, arg: &str) {
-        if self.position.at_any_other_compiler() && self.options.get_use_llvm() {
+        if self.position.at_any_other_compiler() && self.options.uses_llvm() {
             self.options
                 .get_mut_llvm_backend_options()
                 .get_mut_linking_compilers_configuration()
@@ -645,7 +645,7 @@ impl CLI {
 
 impl CLI {
     fn validate_llvm_required(&self, arg: &str) {
-        if !self.options.get_use_llvm() {
+        if !self.options.uses_llvm() {
             self.report_error(&format!(
                 "Can't use '{}' without '-llvm' flag previously.",
                 arg
@@ -654,7 +654,7 @@ impl CLI {
     }
 
     fn validate_emit_llvm_required(&self, arg: &str) {
-        if !self.options.get_use_llvm() {
+        if !self.options.uses_llvm() {
             let llvm_emit_options: [&'static str; 7] = [
                 "raw-llvm-ir",
                 "raw-llvm-bc",

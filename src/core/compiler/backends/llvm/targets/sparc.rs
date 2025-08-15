@@ -1,6 +1,9 @@
+use crate::core::console::logging;
+
 #[inline]
 pub fn print_all_supported_cpus() {
-    println!(
+    logging::write(
+        logging::OutputIn::Stdout,
         "at697e
 at697f
 f934
@@ -40,6 +43,6 @@ ultrasparc3
 ut699
 v7
 v8
-v9"
-    )
+v9",
+    );
 }

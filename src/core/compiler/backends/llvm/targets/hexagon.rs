@@ -1,6 +1,9 @@
+use crate::core::console::logging;
+
 #[inline]
 pub fn print_all_supported_cpus() {
-    println!(
+    logging::write(
+        logging::OutputIn::Stdout,
         "generic
 hexagonv5
 hexagonv55
@@ -16,6 +19,6 @@ hexagonv71
 hexagonv71t
 hexagonv73
 hexagonv75
-hexagonv79"
-    )
+hexagonv79",
+    );
 }

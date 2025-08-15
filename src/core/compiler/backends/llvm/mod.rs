@@ -54,7 +54,9 @@ impl LLVMBackend {
             linking_compilers_config: LinkingCompilersConfiguration::new(),
         }
     }
+}
 
+impl LLVMBackend {
     #[inline]
     pub fn get_reloc_mode(&self) -> RelocMode {
         self.reloc_mode
@@ -94,7 +96,9 @@ impl LLVMBackend {
     pub fn get_linking_compilers_configuration(&self) -> &LinkingCompilersConfiguration {
         &self.linking_compilers_config
     }
+}
 
+impl LLVMBackend {
     #[inline]
     pub fn get_mut_target(&mut self) -> &mut LLVMTarget {
         &mut self.target

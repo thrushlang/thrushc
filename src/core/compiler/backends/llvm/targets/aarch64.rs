@@ -1,6 +1,9 @@
+use crate::core::console::logging;
+
 #[inline]
 pub fn print_all_supported_cpus() {
-    println!(
+    logging::write(
+        logging::OutputIn::Stdout,
         "a64fx
 ampere1
 ampere1a
@@ -82,6 +85,6 @@ thunderx3t110
 thunderxt81
 thunderxt83
 thunderxt88
-tsv110"
-    )
+tsv110",
+    );
 }

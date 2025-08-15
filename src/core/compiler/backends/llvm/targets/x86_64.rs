@@ -1,6 +1,9 @@
+use crate::core::console::logging;
+
 #[inline]
 pub fn print_all_supported_cpus() {
-    println!(
+    logging::write(
+        logging::OutputIn::Stdout,
         "alderlake
 amdfam10
 arrowlake
@@ -129,6 +132,6 @@ znver1
 znver2
 znver3
 znver4
-znver5"
-    )
+znver5",
+    );
 }

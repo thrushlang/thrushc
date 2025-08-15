@@ -65,7 +65,7 @@ impl<'thrushc> TheThrushCompiler<'thrushc> {
     pub fn compile(&mut self) -> (u128, u128) {
         let mut interrumped: bool = false;
 
-        if self.get_options().get_use_llvm() {
+        if self.get_options().uses_llvm() {
             Target::initialize_all(&InitializationConfig::default());
         } else {
             logging::write(
@@ -337,17 +337,17 @@ impl<'thrushc> TheThrushCompiler<'thrushc> {
 }
 
 impl TheThrushCompiler<'_> {
-    pub fn add_compiled_file(&mut self, path: PathBuf) {
-        self.compiled.push(path);
-    }
-}
-
-impl TheThrushCompiler<'_> {
     pub fn get_compiled_files(&self) -> &[PathBuf] {
         &self.compiled
     }
 
     pub fn get_options(&self) -> &CompilerOptions {
         self.options
+    }
+}
+
+impl TheThrushCompiler<'_> {
+    pub fn add_compiled_file(&mut self, path: PathBuf) {
+        self.compiled.push(path);
     }
 }

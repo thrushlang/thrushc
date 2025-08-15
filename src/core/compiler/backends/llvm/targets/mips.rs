@@ -1,6 +1,9 @@
+use crate::core::console::logging;
+
 #[inline]
 pub fn print_all_supported_cpus() {
-    println!(
+    logging::write(
+        logging::OutputIn::Stdout,
         "generic
 mips1
 mips2
@@ -19,6 +22,6 @@ mips64r5
 mips64r6
 octeon
 octeon+
-p5600"
-    )
+p5600",
+    );
 }

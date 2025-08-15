@@ -1,6 +1,9 @@
+use crate::core::console::logging;
+
 #[inline]
 pub fn print_all_supported_cpus() {
-    println!(
+    logging::write(
+        logging::OutputIn::Stdout,
         "bonaire
 carrizo
 fiji
@@ -73,6 +76,6 @@ stoney
 tahiti
 tonga
 tongapro
-verde"
-    )
+verde",
+    );
 }

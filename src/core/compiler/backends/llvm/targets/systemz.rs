@@ -1,6 +1,9 @@
+use crate::core::console::logging;
+
 #[inline]
 pub fn print_all_supported_cpus() {
-    println!(
+    logging::write(
+        logging::OutputIn::Stdout,
         "arch10
 arch11
 arch12
@@ -17,6 +20,6 @@ z15
 z16
 z17
 z196
-zEC12"
-    )
+zEC12",
+    );
 }

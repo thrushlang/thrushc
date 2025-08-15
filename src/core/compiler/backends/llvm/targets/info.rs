@@ -1,10 +1,11 @@
 use std::process;
 
-use crate::core::compiler::backends::llvm::targets;
+use crate::core::{compiler::backends::llvm::targets, console::logging};
 
 #[inline]
 pub fn print_all_targets() {
-    println!(
+    logging::write(
+        logging::OutputIn::Stdout,
         "aarch64     - AArch64 (little endian)
 aarch64_32  - AArch64 (little endian ILP32)
 aarch64_be  - AArch64 (big endian)
@@ -45,8 +46,8 @@ wasm32      - WebAssembly 32-bit
 wasm64      - WebAssembly 64-bit
 x86         - 32-bit X86: Pentium-Pro and above
 x86-64      - 64-bit X86: EM64T and AMD64
-xcore       - XCore"
-    )
+xcore       - XCore",
+    );
 }
 
 #[inline]
@@ -113,7 +114,20 @@ pub fn print_specific_support_cpu(arch: &str) {
         }
 
         what => {
-            eprintln!("CPU support isn't available for '{}' architecture.", what);
+            if what.is_empty() {
+                logging::print_error(
+                    logging::LoggingType::Error,
+                    "Try to set the target architecture using the '-target' command line flag.",
+                );
+
+                process::exit(1)
+            }
+
+            logging::print_error(
+                logging::LoggingType::Error,
+                &format!("CPU support isn't available for '{}' architecture.", what),
+            );
+
             process::exit(1)
         }
     }
@@ -123,7 +137,8 @@ pub fn print_specific_support_cpu(arch: &str) {
 
 #[inline]
 pub fn print_all_target_triples() {
-    println!(
+    logging::write(
+        logging::OutputIn::Stdout,
         "aarch64-apple-darwin
 aarch64-apple-ios
 aarch64-apple-ios-macabi
@@ -357,6 +372,6 @@ x86_64-uwp-windows-msvc
 x86_64-win7-windows-gnu
 x86_64-win7-windows-msvc
 x86_64-wrs-vxworks
-x86_64h-apple-darwin"
-    )
+x86_64h-apple-darwin",
+    );
 }
