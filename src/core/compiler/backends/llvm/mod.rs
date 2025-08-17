@@ -1,4 +1,5 @@
 pub mod cpu;
+pub mod flavors;
 pub mod target;
 pub mod targets;
 

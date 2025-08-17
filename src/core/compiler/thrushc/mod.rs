@@ -20,12 +20,18 @@ use inkwell::{
 
 use crate::{
     backend::{
-        linking::compilers::{clang::Clang, gcc::GCC},
+        linking::{
+            compilers::{clang::Clang, gcc::GCC},
+            linkers::lld::LLVMLinker,
+        },
         llvm::{self, compiler::context::LLVMCodeGenContext},
     },
     core::{
         compiler::{
-            backends::llvm::{LLVMBackend, target::LLVMTarget},
+            backends::{
+                linkers::LinkerModeType,
+                llvm::{LLVMBackend, target::LLVMTarget},
+            },
             linking::LinkingCompilersConfiguration,
             options::{CompilerFile, CompilerOptions, Emited, ThrushOptimization},
             reader,
@@ -79,11 +85,19 @@ impl<'thrushc> TheThrushCompiler<'thrushc> {
             );
         }
 
+        let llvm_backend: &LLVMBackend = self.options.get_llvm_backend_options();
+
+        if self.get_options().get_linker_mode().get_status() {
+            if let LinkerModeType::LLVMLinker =
+                self.get_options().get_linker_mode().get_linker_type()
+            {
+                LLVMLinker::new(self.options).link();
+            }
+        }
+
         self.uncompiled.iter().for_each(|file| {
             interrumped = self.compile_with_llvm(file).is_err();
         });
-
-        let llvm_backend: &LLVMBackend = self.options.get_llvm_backend_options();
 
         if interrumped
             || self.get_options().get_was_emited()

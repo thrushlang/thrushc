@@ -285,6 +285,28 @@ pub fn show_help() -> ! {
         ),
     );
 
+    logging::write(logging::OutputIn::Stderr, "\nSpecial flags:\n\n");
+
+    logging::write(
+        logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {}\n",
+            "•".bold(),
+            "-llinker".custom_color((141, 141, 142)).bold(),
+            "Transform the compiler into the LLVM linker.",
+        ),
+    );
+
+    logging::write(
+        logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {}\n",
+            "•".bold(),
+            "-llinker-flavor".custom_color((141, 141, 142)).bold(),
+            "Specify the build flavor for the LLVM linker.",
+        ),
+    );
+
     logging::write(logging::OutputIn::Stderr, "\nUseful flags:\n\n");
 
     logging::write(

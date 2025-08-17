@@ -5,7 +5,10 @@ use std::process::Command;
 
 use crate::core::{
     compiler::{
-        backends::llvm::{self, LLVMBackend},
+        backends::{
+            linkers::{LinkerConfiguration, LinkerModeType},
+            llvm::{self, LLVMBackend, flavors::LLVMLinkerFlavor},
+        },
         linking::LinkingCompilersConfiguration,
         options::{CompilerOptions, Emitable, ThrushOptimization},
         passes::LLVMModificatorPasses,
@@ -13,10 +16,9 @@ use crate::core::{
     console::{
         commands,
         logging::{self, LoggingType},
+        position::CommandLinePosition,
     },
 };
-
-use super::utils;
 
 use {
     inkwell::targets::{CodeModel, RelocMode, TargetMachine, TargetTriple},
@@ -30,13 +32,6 @@ pub struct CLI {
     current: usize,
     position: CommandLinePosition,
     validation_cache: HashMap<String, bool>,
-}
-
-#[derive(Debug, Clone, Copy, Default)]
-pub enum CommandLinePosition {
-    #[default]
-    ThrushCompiler,
-    ExternalCompiler,
 }
 
 #[derive(Debug)]
@@ -179,6 +174,33 @@ impl CLI {
                 self.advance();
             }
 
+            "-llinker" => {
+                self.advance();
+                self.validate_llvm_required(arg);
+                self.validate_not_clang_active();
+                self.validate_not_gcc_active();
+
+                self.position = CommandLinePosition::InternalLinker;
+
+                self.options
+                    .get_mut_linker_mode()
+                    .turn_on(LinkerModeType::LLVMLinker);
+            }
+
+            "-llinker-flavor" => {
+                self.advance();
+                self.validate_llvm_required(arg);
+                self.validate_llvm_linker_required(arg);
+
+                let flavor: LLVMLinkerFlavor = LLVMLinkerFlavor::raw_to_lld_flavor(self.peek());
+
+                self.options
+                    .get_mut_linker_mode()
+                    .set_up_config(LinkerConfiguration::LLVMLinker(flavor));
+
+                self.advance();
+            }
+
             "-start" => {
                 self.advance();
                 self.position = CommandLinePosition::ExternalCompiler;
@@ -262,13 +284,6 @@ impl CLI {
 
                 let raw_target_triple: &str = self.peek();
 
-                if !utils::is_supported_llvm_target_triple(raw_target_triple) {
-                    self.report_error(&format!(
-                        "Unknown LLVM target triple: '{}'.",
-                        raw_target_triple
-                    ));
-                }
-
                 let target_triple: TargetTriple = TargetTriple::create(raw_target_triple);
 
                 self.options
@@ -279,57 +294,6 @@ impl CLI {
                 self.advance();
             }
 
-            /*"-jit" => {
-                self.advance();
-                self.validate_llvm_required(arg);
-
-                self.options
-                    .get_mut_llvm_backend_options()
-                    .set_jit_config(JITConfiguration::new());
-            }
-
-            "-jit-c" => {
-                self.advance();
-
-                self.validate_llvm_required(arg);
-                self.validate_jit_required(arg);
-
-                let raw_libc_path: &str = self.peek();
-                let libc_path: PathBuf = PathBuf::from(raw_libc_path);
-
-                self.validate_jit_path(&libc_path);
-
-                if let Some(jit_config) = self
-                    .options
-                    .get_mut_llvm_backend_options()
-                    .get_mut_jit_config()
-                {
-                    jit_config.set_libc_path(libc_path);
-                } else {
-                    self.report_error("Couldn't get llvm jit configuration.");
-                }
-            }
-
-            "-jit-lib" => {
-                self.advance();
-                self.validate_llvm_required(arg);
-                self.validate_jit_required(arg);
-
-                let raw_lib_path: &str = self.peek();
-                let lib_path: PathBuf = PathBuf::from(raw_lib_path);
-
-                self.validate_jit_path(&lib_path);
-
-                if let Some(jit_config) = self
-                    .options
-                    .get_mut_llvm_backend_options()
-                    .get_mut_jit_config()
-                {
-                    jit_config.add_jit_library(lib_path);
-                } else {
-                    self.report_error("Couldn't get llvm jit configuration.");
-                }
-            }*/
             "-cpu" => {
                 self.advance();
                 self.validate_llvm_required(arg);
@@ -520,6 +484,7 @@ impl CLI {
         if self.is_eof() {
             self.report_error("Expected value after flag or command.");
         }
+
         self.current += 1;
     }
 
@@ -527,20 +492,23 @@ impl CLI {
         if self.is_eof() {
             self.report_error("Expected value after flag or command.");
         }
+
         &self.args[self.current]
     }
 
+    #[inline]
     fn is_eof(&self) -> bool {
         self.current >= self.args.len()
     }
 
+    #[inline]
     fn probe_as_command(&self, path: &Path) -> bool {
         Command::new(path).output().is_ok()
     }
 
+    #[inline]
     fn report_error(&self, msg: &str) -> ! {
-        logging::log(LoggingType::Panic, msg);
-        unreachable!()
+        logging::print_any_panic(LoggingType::Panic, msg);
     }
 }
 
@@ -568,11 +536,17 @@ impl CLI {
     }
 
     fn handle_unknown_argument(&mut self, arg: &str) {
-        if self.position.at_any_other_compiler() && self.options.uses_llvm() {
+        if self.position.at_external_compiler() && self.options.uses_llvm() {
             self.options
                 .get_mut_llvm_backend_options()
                 .get_mut_linking_compilers_configuration()
                 .add_compiler_arg(arg.to_string());
+
+            return;
+        }
+
+        if self.position.at_internal_linker() && self.options.get_linker_mode().get_status() {
+            self.options.get_mut_linker_mode().add_arg(arg.to_string());
 
             return;
         }
@@ -653,6 +627,21 @@ impl CLI {
         }
     }
 
+    fn validate_llvm_linker_required(&self, arg: &str) {
+        if !self
+            .options
+            .get_linker_mode()
+            .get_linker_type()
+            .is_llvm_linker()
+            && self.options.get_linker_mode().get_status()
+        {
+            self.report_error(&format!(
+                "Can't use '{}' without '-llinker' flag previously.",
+                arg
+            ));
+        }
+    }
+
     fn validate_emit_llvm_required(&self, arg: &str) {
         if !self.options.uses_llvm() {
             let llvm_emit_options: [&'static str; 7] = [
@@ -681,7 +670,7 @@ impl CLI {
             .get_linking_compilers_configuration()
             .get_use_gcc()
         {
-            self.report_error("Can't use '-clang' with -gcc activated.");
+            self.report_error("Can't use '-clang' flag.");
         }
     }
 
@@ -692,7 +681,7 @@ impl CLI {
             .get_linking_compilers_configuration()
             .get_use_clang()
         {
-            self.report_error("Can't use '-gcc' with -clang activated.");
+            self.report_error("Can't use '-gcc' flag.");
         }
     }
 
@@ -715,23 +704,16 @@ impl CLI {
             return result;
         }
 
-        let is_supported: bool = utils::is_supported_llvm_cpu_target(cpu);
+        self.validation_cache.insert(cpu.to_string(), true);
 
-        self.validation_cache.insert(cpu.to_string(), is_supported);
-
-        is_supported
+        true
     }
 }
 
 impl CLI {
+    #[inline]
     pub fn get_options(&self) -> &CompilerOptions {
         &self.options
-    }
-}
-
-impl CommandLinePosition {
-    pub fn at_any_other_compiler(&self) -> bool {
-        matches!(self, CommandLinePosition::ExternalCompiler)
     }
 }
 

@@ -3,7 +3,7 @@
 use {
     crate::{
         core::{
-            compiler::backends::llvm::LLVMBackend,
+            compiler::backends::{linkers::LinkerMode, llvm::LLVMBackend},
             console::logging::{self, LoggingType},
         },
         frontend::types::{ast::Ast, lexer::types::Tokens},
@@ -27,6 +27,8 @@ pub struct CompilerOptions {
     clean_llvm_ir: bool,
     clean_llvm_bitcode: bool,
     ofuscate_archive_names: bool,
+
+    linker_mode: LinkerMode,
 }
 
 #[derive(Debug, Clone)]
@@ -95,12 +97,15 @@ impl CompilerOptions {
             files: Vec::with_capacity(1000),
             emit: Vec::with_capacity(10),
             build_dir: PathBuf::new(),
+
             clean_tokens: false,
             clean_assembler: false,
             clean_object: false,
             clean_llvm_ir: false,
             clean_llvm_bitcode: false,
             ofuscate_archive_names: true,
+
+            linker_mode: LinkerMode::new(Vec::with_capacity(50)),
         }
     }
 }
@@ -232,11 +237,21 @@ impl CompilerOptions {
     pub fn contains_emitable(&self, emit: Emitable) -> bool {
         self.emit.contains(&emit)
     }
+
+    #[inline]
+    pub fn get_linker_mode(&self) -> &LinkerMode {
+        &self.linker_mode
+    }
 }
 
 impl CompilerOptions {
     #[inline]
     pub fn get_mut_llvm_backend_options(&mut self) -> &mut LLVMBackend {
         &mut self.llvm_backend
+    }
+
+    #[inline]
+    pub fn get_mut_linker_mode(&mut self) -> &mut LinkerMode {
+        &mut self.linker_mode
     }
 }
