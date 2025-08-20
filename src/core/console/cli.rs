@@ -48,6 +48,12 @@ impl ParsedArg {
                 key: key.to_string(),
                 value: Some(value[1..].to_string()),
             }
+        } else if let Some(eq_pos) = arg.find(':') {
+            let (key, value) = arg.split_at(eq_pos);
+            Self {
+                key: key.to_string(),
+                value: Some(value[1..].to_string()),
+            }
         } else {
             Self {
                 key: arg.to_string(),
@@ -116,12 +122,12 @@ impl CLI {
         let arg: &str = argument.as_str();
 
         match arg {
-            "help" | "-h" | "--help" => {
+            "-h" | "--help" | "help" => {
                 self.advance();
                 commands::help::show_help();
             }
 
-            "version" | "-v" | "--version" => {
+            "-v" | "--version" | "version" => {
                 self.advance();
                 println!("{}", env!("CARGO_PKG_VERSION"));
                 process::exit(0);
@@ -299,13 +305,6 @@ impl CLI {
                 self.validate_llvm_required(arg);
 
                 let name: String = self.peek().to_string();
-
-                if !self.validate_llvm_cpu(&name) {
-                    self.report_error(&format!(
-                        "Unknown CPU target: '{}'. See 'llvm-print-supported-cpus' command.",
-                        name
-                    ));
-                }
 
                 self.options
                     .get_mut_llvm_backend_options()
@@ -559,6 +558,7 @@ impl CLI {
 }
 
 impl CLI {
+    #[inline]
     fn parse_optimization_level(&self, opt: &str) -> ThrushOptimization {
         match opt {
             "O0" => ThrushOptimization::None,
@@ -573,6 +573,7 @@ impl CLI {
         }
     }
 
+    #[inline]
     fn parse_emit_option(&self, emit: &str) -> Emitable {
         match emit {
             "llvm-bc" => Emitable::LLVMBitcode,
@@ -591,6 +592,7 @@ impl CLI {
         }
     }
 
+    #[inline]
     fn parse_reloc_mode(&self, reloc: &str) -> RelocMode {
         match reloc {
             "dynamic-no-pic" => RelocMode::DynamicNoPic,
@@ -603,6 +605,7 @@ impl CLI {
         }
     }
 
+    #[inline]
     fn parse_code_model(&self, model: &str) -> CodeModel {
         match model {
             "small" => CodeModel::Small,
@@ -697,16 +700,6 @@ impl CLI {
         self.validation_cache.insert(path_str, exists);
 
         exists
-    }
-
-    fn validate_llvm_cpu(&mut self, cpu: &str) -> bool {
-        if let Some(&result) = self.validation_cache.get(cpu) {
-            return result;
-        }
-
-        self.validation_cache.insert(cpu.to_string(), true);
-
-        true
     }
 }
 
