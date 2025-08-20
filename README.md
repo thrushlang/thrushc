@@ -51,9 +51,21 @@ Beyond the standard triple targets, the compiler also supports all architectures
 - ``SPIR-V``
 - ``WebAssembly``
 
+### GCC
+
+The GCC compiler backend is still under construction.
+
+In the future, you will be able to use it with the ``-gcc`` flag to use the GCC backend code generator instead of the default LLVM one.
+
+However, it is only available on **Linux**.
+
+You must also have ``libgccjit.so`` dynamically installed in your distribution so that the compiler doesn't get scared at runtime when using GCC.
+
 ## Syntax 
 
-You can see the syntax of the language properly in the repository: __https://github.com/thrushlang/syntax__
+The language syntax is under construction at the same time as the compiler. It may be outdated compared to the compiler, as the latter progresses more rapidly. This will be normalized once a valid and sufficiently stable beta is released.
+
+**[Thrush Programming Language - General Syntax](https://github.com/thrushlang/syntax)**
 
 # ¿How it works?
 
