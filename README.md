@@ -15,7 +15,7 @@
 > Without anything else to say, *Kevin Benavides*, see you next month.
 
 > [!WARNING]
-> The development of The **Thrush Compiler** (thrushc) is incomplete; build the program at your own risk, as it may contain errors.
+> The compiler is in an early development stage; it may contain bugs until a code fuzzer is developed for each backend code generator. Build it at your own risk.
 
 # The Thrush Compiler 
 
