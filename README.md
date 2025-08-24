@@ -21,12 +21,22 @@
 
 The **Thrush Compiler** efficiently transfers source code from Thrush files directly to the intended target. Beyond this, it serves as a flexible bridge, integrating with diverse code generators for both research and development purposes.
 
-### Target Architectures
-
-> [!WARNING]
-> While the compiler itself can theoretically generate code for these architectures, successful compilation into executable files (like .o files or final binaries) ultimately depends on your host system having the necessary toolchain components (e.g., assemblers, linkers, system libraries) for that specific target. The assembler should, however, produce output without issues.
-
 ### LLVM
+
+The LLVM backend infrastructure is the default code generator for the Thrush programming language. It offers full scope and portability across many architectures or targets.
+
+### LLVM Version
+
+- ``17.0.6``
+ 
+#### Why this specific version of LLVM for the compiler?
+
+Between version 16-17, the introduction to the change of typed pointers was made, which are now almost a standard in the backend. 
+
+Some programming languages like Swift tend to use versions lower than 16 of LLVM, for reasons of compatibility with code generation that differs between higher and lower versions of LLVM, and version 16 offers legacy support for languages that need it.
+
+We only need support for C and nothing else. We are not interested in FFI with C++ for the moment, nor in mangling with it either.
+17 is enough and from there on.
 
 #### LLVM Targets
 
