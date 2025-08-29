@@ -21,9 +21,46 @@
 
 The **Thrush Compiler** efficiently transfers source code from Thrush files directly to the intended target. Beyond this, it serves as a flexible bridge, integrating with diverse code generators for both research and development purposes.
 
-### LLVM
+# Getting Started
 
-The LLVM backend infrastructure is the default code generator for the Thrush programming language. It offers full scope and portability across many architectures or targets.
+## Start
+
+You must first clone the repository and access it locally. 
+
+```console
+git clone --depth 1 https://github.com/thrushlang/thrushc && cd thrushc
+```
+
+## Build dependencies 
+
+Among the dependencies required by the compiler is the LLVM-C API, which you can find pre-compiled for each operating system at **[Thrush Programming Language - Toolchains](https://github.com/thrushlang/toolchains)**.
+
+Automatically:
+
+```console
+cd builder && cargo run
+```
+
+## Build the Compiler
+
+Now you need to have Rust installed with a recent version.
+
+- \>= **[Rust](https://www.rust-lang.org/)** (v1.18.5) 
+- Rust 2024 Edition
+
+Now you need to compile the compiler with Rust. 
+
+```console
+cargo run -- --help
+```
+
+# Code Generators
+
+Code generators are generally backend compilers that accept the generation of intermediate code through an interface, which can then be used to transfer it to machine-specific assembler or directly to machine code for execution.
+
+## LLVM
+
+The LLVM backend infrastructure is the default code generator for the **[Thrush Programming Language](https://github.com/thrushlang/)**. It offers full scope and portability across many architectures or targets.
 
 ### LLVM Version
 
@@ -61,7 +98,7 @@ Beyond the standard triple targets, the compiler also supports all architectures
 - ``SPIR-V``
 - ``WebAssembly``
 
-### GCC
+## GCC
 
 The GCC compiler backend is still under construction.
 
@@ -71,13 +108,35 @@ However, it is only available on **Linux**.
 
 You must also have ``libgccjit.so`` dynamically installed in your distribution so that the compiler doesn't get scared at runtime when using GCC.
 
+### GCC backend installation
+
+The GCC backend, which is completely embeddable, of the JIT compiler type, can practically only be built dynamically and not statically. For this reason, it has been distributed in many package managers of Linux distributions.
+
+### Fedora 
+
+```console
+sudo dnf install libgccjit-devel
+```
+
+### Arch
+
+```console
+sudo pacman -S libgccjit
+```
+
+### Debian
+
+```console
+sudo apt install libgccjit-0-dev
+```
+
 ## Syntax 
 
 The language syntax is under construction at the same time as the compiler. It may be outdated compared to the compiler, as the latter progresses more rapidly. This will be normalized once a valid and sufficiently stable beta is released.
 
 **[Thrush Programming Language - General Syntax](https://github.com/thrushlang/syntax)**
 
-# ¿How it works?
+## ¿How it works?
 
 Currently, the only backend available for the thrush compiler to compile is the current LLVM, using the LLVM-C API. 
 
@@ -98,39 +157,6 @@ In summary:
 <p align="center">
   <img src= "https://github.com/thrushlang/thrushc/blob/master/assets/how%20it%20works%20(thrushc)%20v1.3.png" style= "width: 1hv; height: 1hv;"> </img>
 </p>
-
-# Getting Started
-
-## Start
-
-You must first clone the repository and access it locally. 
-
-```console
-git clone --depth 1 https://github.com/thrushlang/thrushc && cd thrushc
-```
-
-## Build dependencies 
-
-Among the dependencies required by the compiler is the LLVM-C API, which you can find pre-compiled for each operating system at **[Thrush Programming Language Toolchains](https://github.com/thrushlang/toolchains)**.
-
-Automatically:
-
-```console
-cd builder && cargo run
-```
-
-## Build the Compiler
-
-Now you need to have Rust installed with a recent version.
-
-- \>= **[Rust](https://www.rust-lang.org/)** (v1.18.5) 
-- Rust 2024 Edition
-
-Now you need to compile the compiler with Rust. 
-
-```console
-cargo run -- --help
-```
 
 # Frequent Questions
 
