@@ -54,7 +54,7 @@ Now you need to compile the compiler with Rust.
 cargo run -- --help
 ```
 
-# Code Generators
+# Code Generators 
 
 Code generators are generally backend compilers that accept the generation of intermediate code through an interface, which can then be used to transfer it to machine-specific assembler or directly to machine code for execution.
 
@@ -129,6 +129,24 @@ sudo pacman -S libgccjit
 ```console
 sudo apt install libgccjit-0-dev
 ```
+
+### Notes
+
+Currently, the very same Rust is using ``libgccjit`` as a library for an AOT backend prototype for Rust. Called ``rustc_codegen_gcc``. Thrush will integrate it in his own way for use in the language.
+
+For more information: [Rust - GCC AOT Code Generation](https://github.com/rust-lang/rustc_codegen_gcc)
+
+## QIR
+
+Unlike GCC, this target is only planned and not currently under construction.
+
+QIR is not a backend compiler as such or a code generator. Rather, it is a runtime prototyped in a version of LLVM that allows the execution of code on quantum executors available on Azure, Rigetti, Quantinuum, and much more.
+
+The very same [Q#](https://github.com/microsoft/qsharp/tree/main/source/compiler/qsc_codegen/src) uses it as a backend to execute and emulate code behavior in a "quantum" environment (real quantum computers). This infrastructure has executors and emulators of this behavior, written entirely in Rust, which will allow Thrush to generate code similar to [Q#](https://github.com/microsoft/qsharp/tree/main/source/compiler/qsc_codegen/src) during its execution.
+
+Projects like the **[bytecode-runner](https://github.com/qir-alliance/qir-runner)** from **[QIR Alliance](https://github.com/qir-alliance)**.
+
+It's a titanic job because it requires rewriting a good part of Thrush frontend, practically creating a new one and integrating it with that frontend with new rules.
 
 ## Syntax 
 
