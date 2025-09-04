@@ -19,7 +19,7 @@ use inkwell::{
 };
 
 use crate::{
-    backend::{
+    backends::classical::{
         linking::{
             compilers::{clang::Clang, gcc::GCC},
             linkers::lld::LLVMLinker,
@@ -39,7 +39,7 @@ use crate::{
         console::logging::{self, LoggingType},
         diagnostic::diagnostician::Diagnostician,
     },
-    frontend::{
+    frontends::classical::{
         lexer::{Lexer, token::Token},
         parser::{Parser, ParserContext},
         semantic::SemanticAnalyzer,

@@ -6,7 +6,7 @@ use {
             compiler::backends::{linkers::LinkerMode, llvm::LLVMBackend},
             console::logging::{self, LoggingType},
         },
-        frontend::types::{ast::Ast, lexer::types::Tokens},
+        frontends::classical::types::{ast::Ast, lexer::types::Tokens},
     },
     inkwell::OptimizationLevel,
     std::path::PathBuf,

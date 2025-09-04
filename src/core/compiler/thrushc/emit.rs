@@ -11,7 +11,7 @@ use crate::{
         },
         console::logging::{self, LoggingType},
     },
-    frontend::lexer,
+    frontends::classical::lexer,
 };
 
 pub fn llvm_after_optimization(

@@ -1,6 +1,6 @@
-mod backend;
+mod backends;
 mod core;
-mod frontend;
+mod frontends;
 
 use {
     crate::core::{

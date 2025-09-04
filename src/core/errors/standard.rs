@@ -1,4 +1,4 @@
-use crate::frontend::lexer::span::Span;
+use crate::frontends::classical::lexer::span::Span;
 
 use super::position::CompilationPosition;
 
