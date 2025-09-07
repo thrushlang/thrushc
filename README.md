@@ -95,6 +95,8 @@ You must also have ``libgccjit.so`` dynamically installed in your distribution s
 
 The GCC backend, which is completely embeddable, of the JIT compiler type, can practically only be built dynamically and not statically. For this reason, it has been distributed in many package managers of Linux distributions.
 
+If you need help finding a way to install libgccjit on your system, you can check: [GCC JIT - Documentation](https://gcc.gnu.org/onlinedocs/jit/internals/index.html#working-on-the-jit-library)
+
 ### Fedora 
 
 ```console
