@@ -4,6 +4,9 @@
 
 The **Thrush Compiler** efficiently transfers source code from Thrush files directly to the intended target. Beyond this, it serves as a flexible bridge, integrating with diverse code generators for both research and development purposes.
 
+> [!WARNING]  
+> The compiler is in an early development phase. It may contain bugs when testing certain syntax. Continue on your own.
+
 # Getting Started
 
 ## Start
