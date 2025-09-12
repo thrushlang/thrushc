@@ -14,7 +14,7 @@ use {
 };
 
 fn main() {
-    console::cli::set_up();
+    console::misc::set_up();
 
     let cli: CLI = CLI::parse(env::args().collect());
 

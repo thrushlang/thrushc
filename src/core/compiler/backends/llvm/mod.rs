@@ -7,7 +7,6 @@ use inkwell::targets::{CodeModel, RelocMode, TargetMachine};
 
 use crate::core::compiler::{
     backends::llvm::{cpu::LLVMTargetCPU, target::LLVMTarget},
-    linking::LinkingCompilersConfiguration,
     options::ThrushOptimization,
     passes::LLVMModificatorPasses,
 };
@@ -22,7 +21,6 @@ pub struct LLVMBackend {
     code_model: CodeModel,
     modificator_passes: Vec<LLVMModificatorPasses>,
     opt_passes: String,
-    linking_compilers_config: LinkingCompilersConfiguration,
 }
 
 impl LLVMBackend {
@@ -52,7 +50,6 @@ impl LLVMBackend {
             code_model: CodeModel::Default,
             modificator_passes: Vec::with_capacity(10),
             opt_passes: String::with_capacity(100),
-            linking_compilers_config: LinkingCompilersConfiguration::new(),
         }
     }
 }
@@ -92,11 +89,6 @@ impl LLVMBackend {
     pub fn get_modificator_passes(&self) -> &[LLVMModificatorPasses] {
         &self.modificator_passes
     }
-
-    #[inline]
-    pub fn get_linking_compilers_configuration(&self) -> &LinkingCompilersConfiguration {
-        &self.linking_compilers_config
-    }
 }
 
 impl LLVMBackend {
@@ -108,13 +100,6 @@ impl LLVMBackend {
     #[inline]
     pub fn get_mut_target_cpu(&mut self) -> &mut LLVMTargetCPU {
         &mut self.target_cpu
-    }
-
-    #[inline]
-    pub fn get_mut_linking_compilers_configuration(
-        &mut self,
-    ) -> &mut LinkingCompilersConfiguration {
-        &mut self.linking_compilers_config
     }
 }
 

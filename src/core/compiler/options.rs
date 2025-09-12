@@ -3,7 +3,10 @@
 use {
     crate::{
         core::{
-            compiler::backends::{linkers::LinkerMode, llvm::LLVMBackend},
+            compiler::{
+                backends::{linkers::LinkerMode, llvm::LLVMBackend},
+                linking::LinkingCompilersConfiguration,
+            },
             console::logging::{self, LoggingType},
         },
         frontends::classical::types::{ast::Ast, lexer::types::Tokens},
@@ -19,7 +22,8 @@ pub struct CompilerOptions {
     files: Vec<CompilerFile>,
     build_dir: PathBuf,
 
-    emit: Vec<Emitable>,
+    emit: Vec<EmitableUnit>,
+    printable: Vec<PrintableUnit>,
 
     clean_tokens: bool,
     clean_assembler: bool,
@@ -28,6 +32,7 @@ pub struct CompilerOptions {
     clean_llvm_bitcode: bool,
     ofuscate_archive_names: bool,
 
+    linking_compilers_config: LinkingCompilersConfiguration,
     linker_mode: LinkerMode,
 }
 
@@ -38,7 +43,7 @@ pub struct CompilerFile {
 }
 
 #[derive(Debug, PartialEq)]
-pub enum Emitable {
+pub enum EmitableUnit {
     RawLLVMIR,
     RawLLVMBitcode,
     LLVMBitcode,
@@ -47,6 +52,13 @@ pub enum Emitable {
     RawAssembly,
     Assembly,
     AST,
+    Tokens,
+}
+
+#[derive(Debug, PartialEq)]
+pub enum PrintableUnit {
+    RawLLVMIR,
+    LLVMIR,
     Tokens,
 }
 
@@ -95,7 +107,10 @@ impl CompilerOptions {
             use_llvm_backend: false,
             llvm_backend: LLVMBackend::new(),
             files: Vec::with_capacity(1000),
+
             emit: Vec::with_capacity(10),
+            printable: Vec::with_capacity(10),
+
             build_dir: PathBuf::new(),
 
             clean_tokens: false,
@@ -105,6 +120,7 @@ impl CompilerOptions {
             clean_llvm_bitcode: false,
             ofuscate_archive_names: true,
 
+            linking_compilers_config: LinkingCompilersConfiguration::new(),
             linker_mode: LinkerMode::new(Vec::with_capacity(50)),
         }
     }
@@ -167,8 +183,13 @@ impl CompilerOptions {
     }
 
     #[inline]
-    pub fn add_emit_option(&mut self, emit: Emitable) {
+    pub fn add_emit_option(&mut self, emit: EmitableUnit) {
         self.emit.push(emit);
+    }
+
+    #[inline]
+    pub fn add_print_option(&mut self, printable: PrintableUnit) {
+        self.printable.push(printable);
     }
 }
 
@@ -234,13 +255,28 @@ impl CompilerOptions {
     }
 
     #[inline]
-    pub fn contains_emitable(&self, emit: Emitable) -> bool {
+    pub fn get_was_printed(&self) -> bool {
+        !self.printable.is_empty()
+    }
+
+    #[inline]
+    pub fn contains_emitable(&self, emit: EmitableUnit) -> bool {
         self.emit.contains(&emit)
+    }
+
+    #[inline]
+    pub fn contains_printable(&self, printable: PrintableUnit) -> bool {
+        self.printable.contains(&printable)
     }
 
     #[inline]
     pub fn get_linker_mode(&self) -> &LinkerMode {
         &self.linker_mode
+    }
+
+    #[inline]
+    pub fn get_linking_compilers_configuration(&self) -> &LinkingCompilersConfiguration {
+        &self.linking_compilers_config
     }
 }
 
@@ -253,5 +289,12 @@ impl CompilerOptions {
     #[inline]
     pub fn get_mut_linker_mode(&mut self) -> &mut LinkerMode {
         &mut self.linker_mode
+    }
+
+    #[inline]
+    pub fn get_mut_linking_compilers_configuration(
+        &mut self,
+    ) -> &mut LinkingCompilersConfiguration {
+        &mut self.linking_compilers_config
     }
 }

@@ -1,6 +1,8 @@
 mod emit;
 mod finisher;
 mod interrupt;
+mod linking;
+mod print;
 mod validate;
 
 use std::{
@@ -20,10 +22,7 @@ use inkwell::{
 
 use crate::{
     backends::classical::{
-        linking::{
-            compilers::{clang::Clang, gcc::GCC},
-            linkers::lld::LLVMLinker,
-        },
+        linking::linkers::lld::LLVMLinker,
         llvm::{self, compiler::context::LLVMCodeGenContext},
     },
     core::{
@@ -36,7 +35,7 @@ use crate::{
             options::{CompilerFile, CompilerOptions, Emited, ThrushOptimization},
             reader,
         },
-        console::logging::{self, LoggingType},
+        console::logging::{self},
         diagnostic::diagnostician::Diagnostician,
     },
     frontends::classical::{
@@ -69,8 +68,6 @@ impl<'thrushc> TheThrushCompiler<'thrushc> {
     }
 
     pub fn compile(&mut self) -> (u128, u128) {
-        let mut interrumped: bool = false;
-
         if self.get_options().uses_llvm() {
             Target::initialize_all(&InitializationConfig::default());
         } else {
@@ -85,8 +82,6 @@ impl<'thrushc> TheThrushCompiler<'thrushc> {
             );
         }
 
-        let llvm_backend: &LLVMBackend = self.options.get_llvm_backend_options();
-
         if self.get_options().get_linker_mode().get_status() {
             if let LinkerModeType::LLVMLinker =
                 self.get_options().get_linker_mode().get_linker_type()
@@ -95,11 +90,14 @@ impl<'thrushc> TheThrushCompiler<'thrushc> {
             }
         }
 
+        let mut interrumped: bool = false;
+
         self.uncompiled.iter().for_each(|file| {
             interrumped = self.compile_with_llvm(file).is_err();
         });
 
         if interrumped
+            || self.get_options().get_was_printed()
             || self.get_options().get_was_emited()
             || self.get_compiled_files().is_empty()
         {
@@ -115,79 +113,15 @@ impl<'thrushc> TheThrushCompiler<'thrushc> {
             ),
         );
 
-        let linking_compiler_configuration: &LinkingCompilersConfiguration =
-            llvm_backend.get_linking_compilers_configuration();
+        let linking_compiler_config: &LinkingCompilersConfiguration =
+            self.options.get_linking_compilers_configuration();
 
-        if linking_compiler_configuration.get_use_clang() {
-            match Clang::new(
-                self.get_compiled_files(),
-                linking_compiler_configuration,
-                llvm_backend,
-            )
-            .link()
-            {
-                Ok(clang_time) => {
-                    self.linking_time += clang_time;
+        if linking_compiler_config.get_use_clang() {
+            linking::link_with_clang(self);
+        }
 
-                    logging::write(
-                        logging::OutputIn::Stdout,
-                        &format!(
-                            "{} {}\n",
-                            "Linking".custom_color((141, 141, 142)).bold(),
-                            "FINISHED".bright_green().bold()
-                        ),
-                    );
-                }
-                Err(_) => {
-                    logging::write(
-                        logging::OutputIn::Stderr,
-                        &format!(
-                            "\r{} {}\n",
-                            "Linking".custom_color((141, 141, 142)).bold(),
-                            "FAILED".bright_red().bold()
-                        ),
-                    );
-                }
-            }
-        } else if linking_compiler_configuration.get_use_gcc() {
-            match GCC::new(self.get_compiled_files(), linking_compiler_configuration).link() {
-                Ok(gcc_time) => {
-                    self.linking_time += gcc_time;
-
-                    logging::write(
-                        logging::OutputIn::Stdout,
-                        &format!(
-                            "{} {}\n",
-                            "Linking".custom_color((141, 141, 142)).bold(),
-                            "FINISHED".bright_green().bold()
-                        ),
-                    );
-                }
-                Err(_) => {
-                    logging::write(
-                        logging::OutputIn::Stderr,
-                        &format!(
-                            "\r{} {}\n",
-                            "Linking".custom_color((141, 141, 142)).bold(),
-                            "FAILED".bright_red().bold()
-                        ),
-                    );
-                }
-            }
-        } else {
-            logging::log(
-                LoggingType::Error,
-                "No compiler for linking was specified, use -clang or -gcc or see --help.",
-            );
-
-            logging::write(
-                logging::OutputIn::Stderr,
-                &format!(
-                    "\r{} {}\n",
-                    "Linking".custom_color((141, 141, 142)).bold(),
-                    "FAILED".bright_red().bold()
-                ),
-            );
+        if linking_compiler_config.get_use_gcc() {
+            linking::link_with_gcc(self);
         }
 
         (self.thrushc_time.as_millis(), self.linking_time.as_millis())
@@ -214,6 +148,10 @@ impl<'thrushc> TheThrushCompiler<'thrushc> {
         let tokens: Vec<Token> = Lexer::lex(&source_code, file).unwrap_or_else(|error| {
             logging::print_frontend_panic(logging::LoggingType::FrontEndPanic, &error.display())
         });
+
+        if print::after_frontend(self, file, Emited::Tokens(&tokens)) {
+            return finisher::archive_compilation(self, archive_time, file);
+        }
 
         if emit::after_frontend(self, build_dir, file, Emited::Tokens(&tokens)) {
             return finisher::archive_compilation(self, archive_time, file);
@@ -292,6 +230,10 @@ impl<'thrushc> TheThrushCompiler<'thrushc> {
 
         validate::llvm_codegen(&llvm_module, file)?;
 
+        if print::llvm_before_optimization(self, &llvm_module, file) {
+            return finisher::archive_compilation(self, archive_time, file);
+        }
+
         if emit::llvm_before_optimization(
             self,
             archive_time,
@@ -319,6 +261,10 @@ impl<'thrushc> TheThrushCompiler<'thrushc> {
             llvm_backend.get_modificator_passes(),
         )
         .optimize();
+
+        if print::llvm_after_optimization(self, &llvm_module, file) {
+            return finisher::archive_compilation(self, archive_time, file);
+        }
 
         if emit::llvm_after_optimization(
             self,

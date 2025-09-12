@@ -6,7 +6,7 @@ use crate::{
     core::{
         compiler::{
             emitters,
-            options::{CompilerFile, CompilerOptions, Emitable, Emited},
+            options::{CompilerFile, CompilerOptions, EmitableUnit, Emited},
             thrushc::{TheThrushCompiler, interrupt},
         },
         console::logging::{self, LoggingType},
@@ -26,7 +26,7 @@ pub fn llvm_after_optimization(
 
     emitters::cleaner::auto_clean(compiler_options);
 
-    if compiler_options.contains_emitable(Emitable::LLVMBitcode) {
+    if compiler_options.contains_emitable(EmitableUnit::LLVMBitcode) {
         if !emitters::llvmbitcode::emit_llvm_bitcode(
             compiler,
             llvm_module,
@@ -41,7 +41,7 @@ pub fn llvm_after_optimization(
         return Ok(true);
     }
 
-    if compiler_options.contains_emitable(Emitable::LLVMIR) {
+    if compiler_options.contains_emitable(EmitableUnit::LLVMIR) {
         if let Err(error) =
             emitters::llvmir::emit_llvm_ir(compiler, llvm_module, build_dir, &file.name, false)
         {
@@ -52,7 +52,7 @@ pub fn llvm_after_optimization(
         return Ok(true);
     }
 
-    if compiler_options.contains_emitable(Emitable::Assembly) {
+    if compiler_options.contains_emitable(EmitableUnit::Assembly) {
         if let Err(error) = emitters::assembler::emit_llvm_assembler(
             compiler,
             llvm_module,
@@ -68,7 +68,7 @@ pub fn llvm_after_optimization(
         return Ok(true);
     }
 
-    if compiler_options.contains_emitable(Emitable::Object) {
+    if compiler_options.contains_emitable(EmitableUnit::Object) {
         if let Err(error) = emitters::obj::emit_llvm_object(
             compiler,
             llvm_module,
@@ -99,7 +99,7 @@ pub fn llvm_before_optimization(
 
     emitters::cleaner::auto_clean(compiler_options);
 
-    if compiler_options.contains_emitable(Emitable::RawLLVMIR) {
+    if compiler_options.contains_emitable(EmitableUnit::RawLLVMIR) {
         if let Err(error) =
             emitters::llvmir::emit_llvm_ir(compiler, llvm_module, build_dir, &file.name, true)
         {
@@ -110,7 +110,7 @@ pub fn llvm_before_optimization(
         return Ok(true);
     }
 
-    if compiler_options.contains_emitable(Emitable::RawLLVMBitcode) {
+    if compiler_options.contains_emitable(EmitableUnit::RawLLVMBitcode) {
         if !emitters::llvmbitcode::emit_llvm_bitcode(
             compiler,
             llvm_module,
@@ -125,7 +125,7 @@ pub fn llvm_before_optimization(
         return Ok(true);
     }
 
-    if compiler_options.contains_emitable(Emitable::RawAssembly) {
+    if compiler_options.contains_emitable(EmitableUnit::RawAssembly) {
         if let Err(error) = emitters::assembler::emit_llvm_assembler(
             compiler,
             llvm_module,
@@ -154,7 +154,7 @@ pub fn after_frontend(
 
     emitters::cleaner::auto_clean(compiler.options);
 
-    if compiler_options.contains_emitable(Emitable::Tokens) {
+    if compiler_options.contains_emitable(EmitableUnit::Tokens) {
         if let Emited::Tokens(tokens) = emited {
             if lexer::printer::print_to_file(tokens, build_dir, &file.name).is_err() {
                 return false;
@@ -164,7 +164,7 @@ pub fn after_frontend(
         }
     }
 
-    if compiler_options.contains_emitable(Emitable::AST) {
+    if compiler_options.contains_emitable(EmitableUnit::AST) {
         if let Emited::Ast(stmts) = emited {
             let _ = write(
                 build_dir.join(format!("{}.ast", file.name)),

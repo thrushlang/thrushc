@@ -1,11 +1,16 @@
 use std::{
-    fmt::Display,
+    fmt::{self, Display, Write as WriteIO},
     fs::File,
     io::{self, Write},
     path::{Path, PathBuf},
 };
 
-use crate::frontends::classical::{lexer::token::Token, types::lexer::types::Tokens, utils::rand};
+use colored::Colorize;
+
+use crate::{
+    core::console::logging,
+    frontends::classical::{lexer::token::Token, types::lexer::types::Tokens, utils::rand},
+};
 
 pub fn print_to_file(tokens: &Tokens, build_path: &Path, file_name: &str) -> Result<(), io::Error> {
     let base_tokens_path: PathBuf = build_path.join("emit").join("tokens");
@@ -24,6 +29,34 @@ pub fn print_to_file(tokens: &Tokens, build_path: &Path, file_name: &str) -> Res
     tokens
         .iter()
         .try_for_each(|token| writeln!(file, "{}", token))?;
+
+    Ok(())
+}
+
+pub fn generate_string(tokens: &Tokens) -> Result<String, fmt::Error> {
+    let mut buffer: String = String::with_capacity(tokens.len());
+
+    tokens
+        .iter()
+        .try_for_each(|token| writeln!(buffer, "{}", token))?;
+
+    Ok(buffer)
+}
+
+pub fn print_to_stdout_fine(tokens: &Tokens, file_name: &str) -> Result<(), fmt::Error> {
+    let mut tokens_formatted: String = String::with_capacity(tokens.len());
+
+    tokens
+        .iter()
+        .try_for_each(|token| writeln!(tokens_formatted, "{}", token))?;
+
+    logging::write(
+        logging::OutputIn::Stdout,
+        &format!("\n{}\n\n", file_name.bright_green().bold()),
+    );
+
+    logging::write(logging::OutputIn::Stdout, &tokens_formatted);
+    logging::write(logging::OutputIn::Stdout, "\n");
 
     Ok(())
 }

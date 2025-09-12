@@ -7,10 +7,10 @@ use crate::core::{
     compiler::{
         backends::{
             linkers::{LinkerConfiguration, LinkerModeType},
-            llvm::{self, LLVMBackend, flavors::LLVMLinkerFlavor},
+            llvm::{self, flavors::LLVMLinkerFlavor},
         },
         linking::LinkingCompilersConfiguration,
-        options::{CompilerOptions, Emitable, ThrushOptimization},
+        options::{CompilerOptions, EmitableUnit, PrintableUnit, ThrushOptimization},
         passes::LLVMModificatorPasses,
     },
     console::{
@@ -223,7 +223,6 @@ impl CLI {
                 self.validate_not_gcc_active();
 
                 self.options
-                    .get_mut_llvm_backend_options()
                     .get_mut_linking_compilers_configuration()
                     .set_use_clang(true);
             }
@@ -240,7 +239,6 @@ impl CLI {
                 }
 
                 self.options
-                    .get_mut_llvm_backend_options()
                     .get_mut_linking_compilers_configuration()
                     .set_custom_clang(custom_clang_path);
 
@@ -259,10 +257,9 @@ impl CLI {
                         "Indicated external C compiler GNU Compiler Collection (GCC) doesn't exist.",
                     );
                 }
-
-                let backend_options: &mut LLVMBackend = self.options.get_mut_llvm_backend_options();
-                let compiler_config: &mut LinkingCompilersConfiguration =
-                    backend_options.get_mut_linking_compilers_configuration();
+                let compiler_config: &mut LinkingCompilersConfiguration = self
+                    .get_mut_options()
+                    .get_mut_linking_compilers_configuration();
 
                 compiler_config.set_custom_gcc(custom_gcc_path);
                 compiler_config.set_use_gcc(true);
@@ -345,9 +342,20 @@ impl CLI {
                 self.advance();
                 self.validate_emit_llvm_required(arg);
 
-                let emitable: Emitable = self.parse_emit_option(self.peek());
+                let emitable: EmitableUnit = self.parse_emit_option(self.peek());
 
                 self.options.add_emit_option(emitable);
+
+                self.advance();
+            }
+
+            "-print" => {
+                self.advance();
+                self.validate_emit_llvm_required(arg);
+
+                let pritable_unit: PrintableUnit = self.parse_print_option(self.peek());
+
+                self.options.add_print_option(pritable_unit);
 
                 self.advance();
             }
@@ -410,7 +418,6 @@ impl CLI {
                 self.validate_llvm_required(arg);
 
                 self.options
-                    .get_mut_llvm_backend_options()
                     .get_mut_linking_compilers_configuration()
                     .set_debug_clang_commands(true);
             }
@@ -420,7 +427,6 @@ impl CLI {
                 self.validate_llvm_required(arg);
 
                 self.options
-                    .get_mut_llvm_backend_options()
                     .get_mut_linking_compilers_configuration()
                     .set_debug_gcc_commands(true);
             }
@@ -537,7 +543,6 @@ impl CLI {
     fn handle_unknown_argument(&mut self, arg: &str) {
         if self.position.at_external_compiler() && self.options.uses_llvm() {
             self.options
-                .get_mut_llvm_backend_options()
                 .get_mut_linking_compilers_configuration()
                 .add_compiler_arg(arg.to_string());
 
@@ -574,20 +579,33 @@ impl CLI {
     }
 
     #[inline]
-    fn parse_emit_option(&self, emit: &str) -> Emitable {
+    fn parse_print_option(&self, emit: &str) -> PrintableUnit {
         match emit {
-            "llvm-bc" => Emitable::LLVMBitcode,
-            "llvm-ir" => Emitable::LLVMIR,
-            "asm" => Emitable::Assembly,
-            "raw-llvm-bc" => Emitable::RawLLVMBitcode,
-            "raw-llvm-ir" => Emitable::RawLLVMIR,
-            "raw-asm" => Emitable::RawAssembly,
-            "obj" => Emitable::Object,
-            "ast" => Emitable::AST,
-            "tokens" => Emitable::Tokens,
+            "llvm-ir" => PrintableUnit::LLVMIR,
+            "raw-llvm-ir" => PrintableUnit::RawLLVMIR,
+            "tokens" => PrintableUnit::Tokens,
 
             any => {
-                self.report_error(&format!("Unknown LLVM emit option: '{}'.", any));
+                self.report_error(&format!("Unknown print option: '{}'.", any));
+            }
+        }
+    }
+
+    #[inline]
+    fn parse_emit_option(&self, emit: &str) -> EmitableUnit {
+        match emit {
+            "llvm-bc" => EmitableUnit::LLVMBitcode,
+            "llvm-ir" => EmitableUnit::LLVMIR,
+            "asm" => EmitableUnit::Assembly,
+            "raw-llvm-bc" => EmitableUnit::RawLLVMBitcode,
+            "raw-llvm-ir" => EmitableUnit::RawLLVMIR,
+            "raw-asm" => EmitableUnit::RawAssembly,
+            "obj" => EmitableUnit::Object,
+            "ast" => EmitableUnit::AST,
+            "tokens" => EmitableUnit::Tokens,
+
+            any => {
+                self.report_error(&format!("Unknown emit option: '{}'.", any));
             }
         }
     }
@@ -669,7 +687,6 @@ impl CLI {
     fn validate_not_gcc_active(&self) {
         if self
             .options
-            .get_llvm_backend_options()
             .get_linking_compilers_configuration()
             .get_use_gcc()
         {
@@ -680,7 +697,6 @@ impl CLI {
     fn validate_not_clang_active(&self) {
         if self
             .options
-            .get_llvm_backend_options()
             .get_linking_compilers_configuration()
             .get_use_clang()
         {
@@ -708,14 +724,9 @@ impl CLI {
     pub fn get_options(&self) -> &CompilerOptions {
         &self.options
     }
-}
 
-#[inline]
-pub fn set_up() {
-    #[cfg(target_os = "windows")]
-    {
-        colored::control::set_virtual_terminal(true);
+    #[inline]
+    pub fn get_mut_options(&mut self) -> &mut CompilerOptions {
+        &mut self.options
     }
-
-    colored::control::set_override(true);
 }

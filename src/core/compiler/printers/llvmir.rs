@@ -1,0 +1,43 @@
+use colored::Colorize;
+use inkwell::module::Module;
+
+use crate::core::{
+    compiler::{options::CompilerOptions, thrushc::TheThrushCompiler},
+    console::logging,
+    utils::rand,
+};
+
+pub fn print_llvm_ir(
+    compiler: &TheThrushCompiler,
+    llvm_module: &Module,
+    file_name: &str,
+    unoptimized: bool,
+) {
+    let compiler_options: &CompilerOptions = compiler.get_options();
+    let obfuscate: bool = compiler_options.ofuscate_archive_names();
+
+    let optimization_name_modifier: &str = if unoptimized { "raw_" } else { "" };
+
+    let ir_file_name: String = if obfuscate {
+        format!(
+            "{}{}_{}.ll",
+            optimization_name_modifier,
+            rand::generate_random_string(),
+            file_name
+        )
+    } else {
+        format!("{}{}.ll", optimization_name_modifier, file_name)
+    };
+
+    let module_print: String = llvm_module.print_to_string().to_string();
+
+    let median: usize = module_print.len() / 2;
+
+    logging::write(
+        logging::OutputIn::Stdout,
+        &format!("{:>median$} {}\n\n", "", ir_file_name.bright_green().bold(),),
+    );
+
+    logging::write(logging::OutputIn::Stdout, &module_print);
+    logging::write(logging::OutputIn::Stdout, "\n");
+}

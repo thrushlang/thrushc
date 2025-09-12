@@ -1,11 +1,11 @@
-use std::path::{Path, PathBuf};
-
-use inkwell::module::Module;
-
 use crate::core::{
     compiler::{options::CompilerOptions, thrushc::TheThrushCompiler},
     utils::rand,
 };
+
+use inkwell::module::Module;
+
+use std::path::{Path, PathBuf};
 
 pub fn emit_llvm_bitcode(
     compiler: &TheThrushCompiler,

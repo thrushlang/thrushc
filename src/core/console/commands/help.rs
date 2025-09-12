@@ -125,7 +125,7 @@ pub fn show_help() -> ! {
             "{} {} [{}] {}\n",
             "•".bold(),
             "-gcc".custom_color((141, 141, 142)).bold(),
-            "\"/usr/bin/gcc\"",
+            "usr/bin/gcc",
             "Speciefies GNU Compiler Collection (GCC) to link.",
         ),
     );
@@ -136,7 +136,7 @@ pub fn show_help() -> ! {
             "{} {} [{}] {}\n",
             "•".bold(),
             "-custom-clang".custom_color((141, 141, 142)).bold(),
-            "\"/usr/bin/clang\"",
+            "/usr/bin/clang",
             "Specifies the path for use of an external Clang to link.",
         ),
     );
@@ -179,7 +179,7 @@ pub fn show_help() -> ! {
             "{} {} [{}] {}\n",
             "•".bold(),
             "-target".custom_color((141, 141, 142)).bold(),
-            "\"x86_64\"",
+            "x86_64",
             "Set the LLVM target.",
         ),
     );
@@ -190,7 +190,7 @@ pub fn show_help() -> ! {
             "{} {} [{}] {}\n",
             "•".bold(),
             "-target-triple".custom_color((141, 141, 142)).bold(),
-            "\"x86_64-pc-linux-gnu\"",
+            "x86_64-pc-linux-gnu",
             "Set the LLVM target triple.",
         ),
     );
@@ -201,7 +201,7 @@ pub fn show_help() -> ! {
             "{} {} [{}] {}\n",
             "•".bold(),
             "-cpu".custom_color((141, 141, 142)).bold(),
-            "\"haswell\"",
+            "haswell",
             "Specify the CPU to optimize.",
         ),
     );
@@ -212,7 +212,7 @@ pub fn show_help() -> ! {
             "{} {} [{}] {}\n",
             "•".bold(),
             "-cpu-features".custom_color((141, 141, 142)).bold(),
-            "\"+sse2,+cx16,+sahf,-tbm\"",
+            "+sse2,+cx16,+sahf,-tbm",
             "Specify the new features of the CPU to use.",
         ),
     );
@@ -225,6 +225,17 @@ pub fn show_help() -> ! {
             "-emit".custom_color((141, 141, 142)).bold(),
             "llvm-bc|llvm-ir|asm|raw-llvm-ir|raw-llvm-bc|raw-asm|obj|ast|tokens",
             "Compile the code into specified representation.",
+        ),
+    );
+
+    logging::write(
+        logging::OutputIn::Stderr,
+        &format!(
+            "{} {} [{}] {}\n",
+            "•".bold(),
+            "-print".custom_color((141, 141, 142)).bold(),
+            "llvm-ir|raw-llvm-ir|tokens",
+            "Displays the final compilation on stdout.",
         ),
     );
 
