@@ -40,7 +40,7 @@ Now you need to compile the compiler with Rust.
 cargo run -- --help
 ```
 
-If you just need to quickly see the commands, you can look at **[Thrush Compiler - Commands & Flags](https://github.com/thrushlang/thrushc/blob/master/COMMANDS.md)**
+If you just need to quickly see the commands, you can look at **[Thrush Compiler - Commands & Flags](https://github.com/thrushlang/thrushc/blob/master/COMMANDS.md)**.
 
 # Code Generators 
 
