@@ -40,6 +40,8 @@ Now you need to compile the compiler with Rust.
 cargo run -- --help
 ```
 
+If you just need to quickly see the commands, you can look at **[Thrush Compiler - Commands & Flags](https://github.com/thrushlang/thrushc/blob/master/COMMANDS.md)**
+
 # Code Generators 
 
 Code generators are generally backend compilers that accept the generation of intermediate code through an interface, which can then be used to transfer it to machine-specific assembler or directly to machine code for execution.
