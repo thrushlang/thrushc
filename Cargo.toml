@@ -13,7 +13,7 @@ rust-version = "1.85.0"
 [dependencies]
 llvm-sys = { path = "wrappers/llvm/17/llvm-sys", features = ["force-static"] }
 inkwell = { path = "wrappers/llvm/17/inkwell", features = ["llvm17-0", "llvm17-0-force-static"] }
-lld = { path = "wrappers/llvm/17/linkers/lld-wrapper" }
+lld = { git = "https://github.com/thrushlang/lld-wrapper", branch = "master" }
 
 unicode_categories = "0.1.1"
 colored = "3.0.0"
