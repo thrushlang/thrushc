@@ -1,4 +1,4 @@
-<img src= "https://github.com/thrushlang/.github/blob/master/assets/logos/thrushlang-logo.png" alt= "logo" style= "width: 80%; height: 80%;"> </img>
+<img src= "https://github.com/thrushlang/.github/blob/main/assets/logos/thrushlang-logo.png" alt= "logo" style= "width: 80%; height: 80%;"> </img>
 
 # The Thrush Compiler 
 
