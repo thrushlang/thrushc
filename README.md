@@ -1,4 +1,4 @@
-<img src= "https://github.com/thrushlang/thrushc/blob/master/assets/thrushlang-logo-v1.5.png" alt= "logo" style= "width: 80%; height: 80%;"> </img>
+<img src= "https://github.com/thrushlang/.github/blob/master/assets/logos/thrushlang-logo.png" alt= "logo" style= "width: 80%; height: 80%;"> </img>
 
 # The Thrush Compiler 
 
@@ -163,7 +163,7 @@ The code generation is in 3 phases.
 In summary:
 
 <p align="center">
-  <img src= "https://github.com/thrushlang/thrushc/blob/master/assets/how%20it%20works%20(thrushc)%20v1.3.png" style= "width: 1hv; height: 1hv;"> </img>
+  <img src= "https://github.com/thrushlang/.github/blob/main/assets/explanations/how%20it%20works%20(thrushc)%20v1.3.png" style= "width: 1hv; height: 1hv;"> </img>
 </p>
 
 # Frequent Questions
