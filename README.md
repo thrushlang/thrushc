@@ -42,6 +42,34 @@ cargo run -- --help
 
 If you just need to quickly see the commands, you can look at **[Thrush Compiler - Commands & Flags](https://github.com/thrushlang/thrushc/blob/master/COMMANDS.md)**.
 
+## Syntax 
+
+The language syntax is under construction at the same time as the compiler. It may be outdated compared to the compiler, as the latter progresses more rapidly. This will be normalized once a valid and sufficiently stable beta is released.
+
+**[Thrush Programming Language - General Syntax](https://github.com/thrushlang/syntax)**
+
+## ¿How it works?
+
+Currently, the only backend available for the thrush compiler to compile is the current LLVM, using the LLVM-C API. 
+
+#### Embedded Clang
+
+The compiler has Clang compiled for Linux & Windows inside the executable in case the programmer does not have access to it; however, you can specify a custom Clang & GCC.
+
+#### Code Generations Phases
+
+The code generation is in 3 phases. 
+
+- Intermediate Code Generation (``LLVM IR``).
+- Emit object files (``.o``). 
+- Linking with some linker through the ``Clang`` or ``GCC`` C compilers. ~ *Rust 2015 be like*
+
+In summary:
+
+<p align="center">
+  <img src= "https://github.com/thrushlang/.github/blob/main/assets/explanations/how%20it%20works%20(thrushc)%20v1.3.png" style= "width: 1hv; height: 1hv;"> </img>
+</p>
+
 # Code Generators 
 
 Code generators are generally backend compilers that accept the generation of intermediate code through an interface, which can then be used to transfer it to machine-specific assembler or directly to machine code for execution.
@@ -137,34 +165,6 @@ The very same [Q#](https://github.com/microsoft/qsharp/tree/main/source/compiler
 Projects like the **[bytecode-runner](https://github.com/qir-alliance/qir-runner)** from **[QIR Alliance](https://github.com/qir-alliance)**.
 
 It's a titanic job because it requires rewriting a good part of Thrush frontend, practically creating a new one and integrating it with that frontend with new rules.
-
-## Syntax 
-
-The language syntax is under construction at the same time as the compiler. It may be outdated compared to the compiler, as the latter progresses more rapidly. This will be normalized once a valid and sufficiently stable beta is released.
-
-**[Thrush Programming Language - General Syntax](https://github.com/thrushlang/syntax)**
-
-## ¿How it works?
-
-Currently, the only backend available for the thrush compiler to compile is the current LLVM, using the LLVM-C API. 
-
-#### Embedded Clang
-
-The compiler has Clang compiled for Linux & Windows inside the executable in case the programmer does not have access to it; however, you can specify a custom Clang & GCC.
-
-#### Code Generations Phases
-
-The code generation is in 3 phases. 
-
-- Intermediate Code Generation (``LLVM IR``).
-- Emit object files (``.o``). 
-- Linking with some linker through the ``Clang`` or ``GCC`` C compilers. ~ *Rust 2015 be like*
-
-In summary:
-
-<p align="center">
-  <img src= "https://github.com/thrushlang/.github/blob/main/assets/explanations/how%20it%20works%20(thrushc)%20v1.3.png" style= "width: 1hv; height: 1hv;"> </img>
-</p>
 
 # Frequent Questions
 
