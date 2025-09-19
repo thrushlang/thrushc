@@ -7,12 +7,12 @@ use inkwell::{
 };
 
 use crate::core::{
-    compiler::{options::CompilerOptions, thrushc::TheThrushCompiler},
-    utils::rand,
+    compiler::{options::CompilerOptions, thrushc::ThrushCompiler},
+    utils::{limits, rand},
 };
 
 pub fn emit_llvm_assembler(
-    compiler: &TheThrushCompiler,
+    compiler: &ThrushCompiler,
     llvm_module: &Module,
     target_machine: &TargetMachine,
     build_dir: &Path,
@@ -34,7 +34,7 @@ pub fn emit_llvm_assembler(
         format!(
             "{}{}_{}.s",
             optimization_name_modifier,
-            rand::generate_random_string(),
+            rand::generate_random_string(limits::HARD_FILE_NAME_OBFUSCATION),
             file_name
         )
     } else {

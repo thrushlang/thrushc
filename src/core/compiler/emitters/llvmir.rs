@@ -3,12 +3,12 @@ use std::path::{Path, PathBuf};
 use inkwell::{module::Module, support::LLVMString};
 
 use crate::core::{
-    compiler::{options::CompilerOptions, thrushc::TheThrushCompiler},
-    utils::rand,
+    compiler::{options::CompilerOptions, thrushc::ThrushCompiler},
+    utils::{limits, rand},
 };
 
 pub fn emit_llvm_ir(
-    compiler: &TheThrushCompiler,
+    compiler: &ThrushCompiler,
     llvm_module: &Module,
     build_dir: &Path,
     file_name: &str,
@@ -29,7 +29,7 @@ pub fn emit_llvm_ir(
         format!(
             "{}{}_{}.ll",
             optimization_name_modifier,
-            rand::generate_random_string(),
+            rand::generate_random_string(limits::HARD_FILE_NAME_OBFUSCATION),
             file_name
         )
     } else {

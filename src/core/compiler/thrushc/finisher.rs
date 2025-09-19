@@ -4,20 +4,21 @@ use std::{
 };
 
 use colored::Colorize;
+
 use inkwell::{
     module::Module,
     targets::{FileType, TargetMachine},
 };
 
 use crate::core::{
-    compiler::{options::CompilerFile, thrushc::TheThrushCompiler},
+    compiler::{options::CompilerFile, thrushc::ThrushCompiler},
     console::logging,
-    utils::rand,
+    utils::{limits, rand},
 };
 
 #[inline]
 pub fn archive_compilation(
-    compiler: &mut TheThrushCompiler,
+    compiler: &mut ThrushCompiler,
     archive_time: Instant,
     file: &CompilerFile,
 ) -> Result<(), ()> {
@@ -45,7 +46,7 @@ pub fn obj_compilation(
 ) -> PathBuf {
     let obj_file_path: PathBuf = build_dir.join(format!(
         "{}_{}.o",
-        rand::generate_random_string(),
+        rand::generate_random_string(limits::HARD_FILE_NAME_OBFUSCATION),
         file_name
     ));
 

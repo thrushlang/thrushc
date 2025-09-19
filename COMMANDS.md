@@ -10,7 +10,7 @@ A list of the commands supported by the Thrush Compiler command line.
 ```console
 The Thrush Compiler
 
-Usage: thrushc [--flags] [files..]
+Usage: thrushc [-flags | --flags] [files..]
 
 General Commands:
 
@@ -21,8 +21,8 @@ LLVM Commands:
 
 • llvm-print-target-triples Show the current LLVM target triples supported.
 • llvm-print-targets Show the current LLVM target supported.
-• llvm-print-supported-cpus Show the current LLVM supported CPUs for the current LLVM Target.
-• llvm-print-host-target-triple Show the host LLVM target-triple.
+• llvm-print-supported-cpus Show the current LLVM supported CPUs for the current LLVM target.
+• llvm-print-host-target-triple Show the host LLVM target triple.
 
 General flags:
 
@@ -35,11 +35,11 @@ General flags:
 
 Compiler flags:
 
-• -llvm Enable the usage of the LLVM backend infrastructure.
+• -llvm-backend Enable the usage of the LLVM backend infrastructure.
 • -target [x86_64] Set the LLVM target.
 • -target-triple [x86_64-pc-linux-gnu] Set the LLVM target triple.
-• -cpu [haswell] Specify the CPU to optimize.
-• -cpu-features [+sse2,+cx16,+sahf,-tbm] Specify the new features of the CPU to use.
+• -cpu [haswell] Specify in LLVM the CPU to optimize.
+• -cpu-features [+sse2,+cx16,+sahf,-tbm] Specify in LLVM the new features of the CPU to use.
 • -emit [llvm-bc|llvm-ir|asm|raw-llvm-ir|raw-llvm-bc|raw-asm|obj|ast|tokens] Compile the code into specified representation.
 • -print [llvm-ir|raw-llvm-ir|tokens] Displays the final compilation on stdout.
 • -opt [O0|O1|O2|mcqueen] Optimization level.
@@ -58,8 +58,8 @@ Special flags:
 
 Useful flags:
 
-• --debug-clang-command Displays the generated command for Clang.
-• --debug-gcc-commands Displays the generated command for GCC.
+• --debug-clang-command Displays the generated command for Clang in the phase of linking.
+• --debug-gcc-commands Displays the generated command for GCC in the phase of linking.
 
 • --clean-tokens Clean the compiler folder that holds the lexical analysis tokens.
 • --clean-assembler Clean the compiler folder containing emitted assembler.

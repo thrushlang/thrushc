@@ -47,7 +47,7 @@ use crate::{
 };
 
 #[derive(Debug)]
-pub struct TheThrushCompiler<'thrushc> {
+pub struct ThrushCompiler<'thrushc> {
     compiled: Vec<PathBuf>,
     uncompiled: &'thrushc [CompilerFile],
 
@@ -56,7 +56,7 @@ pub struct TheThrushCompiler<'thrushc> {
     thrushc_time: Duration,
 }
 
-impl<'thrushc> TheThrushCompiler<'thrushc> {
+impl<'thrushc> ThrushCompiler<'thrushc> {
     pub fn new(files: &'thrushc [CompilerFile], options: &'thrushc CompilerOptions) -> Self {
         Self {
             compiled: Vec::with_capacity(files.len()),
@@ -296,7 +296,7 @@ impl<'thrushc> TheThrushCompiler<'thrushc> {
     }
 }
 
-impl TheThrushCompiler<'_> {
+impl ThrushCompiler<'_> {
     pub fn get_compiled_files(&self) -> &[PathBuf] {
         &self.compiled
     }
@@ -306,7 +306,7 @@ impl TheThrushCompiler<'_> {
     }
 }
 
-impl TheThrushCompiler<'_> {
+impl ThrushCompiler<'_> {
     pub fn add_compiled_file(&mut self, path: PathBuf) {
         self.compiled.push(path);
     }

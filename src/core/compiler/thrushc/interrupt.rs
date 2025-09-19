@@ -3,13 +3,13 @@ use std::time::Instant;
 use colored::Colorize;
 
 use crate::core::{
-    compiler::{options::CompilerFile, thrushc::TheThrushCompiler},
+    compiler::{options::CompilerFile, thrushc::ThrushCompiler},
     console::logging,
 };
 
 #[inline]
 pub fn archive_compilation_unit(
-    compiler: &mut TheThrushCompiler,
+    compiler: &mut ThrushCompiler,
     archive_time: Instant,
     file: &CompilerFile,
 ) -> Result<(), ()> {

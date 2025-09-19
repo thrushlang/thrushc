@@ -4,14 +4,14 @@ use crate::{
     core::compiler::{
         options::{CompilerFile, CompilerOptions, Emited, PrintableUnit},
         printers,
-        thrushc::TheThrushCompiler,
+        thrushc::ThrushCompiler,
     },
     frontends::classical::lexer,
 };
 
 #[inline]
 pub fn llvm_before_optimization(
-    compiler: &mut TheThrushCompiler,
+    compiler: &mut ThrushCompiler,
     llvm_module: &Module,
     file: &CompilerFile,
 ) -> bool {
@@ -27,7 +27,7 @@ pub fn llvm_before_optimization(
 
 #[inline]
 pub fn llvm_after_optimization(
-    compiler: &mut TheThrushCompiler,
+    compiler: &mut ThrushCompiler,
     llvm_module: &Module,
     file: &CompilerFile,
 ) -> bool {
@@ -42,12 +42,7 @@ pub fn llvm_after_optimization(
     false
 }
 
-pub fn after_frontend(
-    compiler: &mut TheThrushCompiler,
-
-    file: &CompilerFile,
-    emited: Emited,
-) -> bool {
+pub fn after_frontend(compiler: &mut ThrushCompiler, file: &CompilerFile, emited: Emited) -> bool {
     let options: &CompilerOptions = compiler.get_options();
 
     if options.contains_printable(PrintableUnit::Tokens) {

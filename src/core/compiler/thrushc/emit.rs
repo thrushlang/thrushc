@@ -7,7 +7,7 @@ use crate::{
         compiler::{
             emitters,
             options::{CompilerFile, CompilerOptions, EmitableUnit, Emited},
-            thrushc::{TheThrushCompiler, interrupt},
+            thrushc::{ThrushCompiler, interrupt},
         },
         console::logging::{self, LoggingType},
     },
@@ -15,7 +15,7 @@ use crate::{
 };
 
 pub fn llvm_after_optimization(
-    compiler: &mut TheThrushCompiler,
+    compiler: &mut ThrushCompiler,
     archive_time: Instant,
     llvm_module: &Module,
     target_machine: &TargetMachine,
@@ -88,7 +88,7 @@ pub fn llvm_after_optimization(
 }
 
 pub fn llvm_before_optimization(
-    compiler: &mut TheThrushCompiler,
+    compiler: &mut ThrushCompiler,
     archive_time: Instant,
     llvm_module: &Module,
     target_machine: &TargetMachine,
@@ -145,7 +145,7 @@ pub fn llvm_before_optimization(
 }
 
 pub fn after_frontend(
-    compiler: &mut TheThrushCompiler,
+    compiler: &mut ThrushCompiler,
     build_dir: &Path,
     file: &CompilerFile,
     emited: Emited,

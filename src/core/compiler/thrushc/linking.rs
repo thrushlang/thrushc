@@ -5,7 +5,7 @@ use crate::{
     core::{
         compiler::{
             backends::llvm::LLVMBackend, linking::LinkingCompilersConfiguration,
-            thrushc::TheThrushCompiler,
+            thrushc::ThrushCompiler,
         },
         console::logging::{self},
     },
@@ -13,7 +13,7 @@ use crate::{
 
 use std::path::PathBuf;
 
-pub fn link_with_clang(compiler: &mut TheThrushCompiler) {
+pub fn link_with_clang(compiler: &mut ThrushCompiler) {
     let llvm_backend: &LLVMBackend = compiler.get_options().get_llvm_backend_options();
 
     let linking_compiler_config: &LinkingCompilersConfiguration =
@@ -48,7 +48,7 @@ pub fn link_with_clang(compiler: &mut TheThrushCompiler) {
     );
 }
 
-pub fn link_with_gcc(compiler: &mut TheThrushCompiler) {
+pub fn link_with_gcc(compiler: &mut ThrushCompiler) {
     let linking_compiler_configuration: &LinkingCompilersConfiguration =
         compiler.get_options().get_linking_compilers_configuration();
 

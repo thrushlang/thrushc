@@ -1,5 +1,5 @@
-pub fn generate_random_string() -> String {
-    let length: usize = fastrand::usize(5..=10);
+pub fn generate_random_string(max: usize) -> String {
+    let length: usize = fastrand::usize(5..=max);
 
     let mut random_string: String = String::with_capacity(length);
 

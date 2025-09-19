@@ -1,0 +1,2 @@
+pub const HARD_FILE_NAME_OBFUSCATION: usize = 30;
+pub const LOW_FILE_NAME_OBFUSCATION_LEVEL: usize = 15;

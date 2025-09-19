@@ -19,7 +19,7 @@ pub fn show_help() -> ! {
             "\n\n{} {} {}\n\n",
             "Usage:".bold(),
             "thrushc".custom_color((141, 141, 142)).bold(),
-            "[--flags] [files..]"
+            "[-flags | --flags] [files..]"
         ),
     );
 
@@ -81,7 +81,7 @@ pub fn show_help() -> ! {
             "llvm-print-supported-cpus"
                 .custom_color((141, 141, 142))
                 .bold(),
-            "Show the current LLVM supported CPUs for the current LLVM Target.",
+            "Show the current LLVM supported CPUs for the current LLVM target.",
         ),
     );
 
@@ -93,7 +93,7 @@ pub fn show_help() -> ! {
             "llvm-print-host-target-triple"
                 .custom_color((141, 141, 142))
                 .bold(),
-            "Show the host LLVM target-triple.",
+            "Show the host LLVM target triple.",
         ),
     );
 
@@ -168,7 +168,7 @@ pub fn show_help() -> ! {
         &format!(
             "{} {} {}\n",
             "•".bold(),
-            "-llvm".custom_color((141, 141, 142)).bold(),
+            "-llvm-backend".custom_color((141, 141, 142)).bold(),
             "Enable the usage of the LLVM backend infrastructure.",
         ),
     );
@@ -202,7 +202,7 @@ pub fn show_help() -> ! {
             "•".bold(),
             "-cpu".custom_color((141, 141, 142)).bold(),
             "haswell",
-            "Specify the CPU to optimize.",
+            "Specify in LLVM the CPU to optimize.",
         ),
     );
 
@@ -213,7 +213,7 @@ pub fn show_help() -> ! {
             "•".bold(),
             "-cpu-features".custom_color((141, 141, 142)).bold(),
             "+sse2,+cx16,+sahf,-tbm",
-            "Specify the new features of the CPU to use.",
+            "Specify in LLVM the new features of the CPU to use.",
         ),
     );
 
@@ -326,7 +326,7 @@ pub fn show_help() -> ! {
             "{} {} {}\n",
             "•".bold(),
             "--debug-clang-command".custom_color((141, 141, 142)).bold(),
-            "Displays the generated command for Clang."
+            "Displays the generated command for Clang in the phase of linking."
         ),
     );
 
@@ -336,7 +336,7 @@ pub fn show_help() -> ! {
             "{} {} {}\n",
             "•".bold(),
             "--debug-gcc-commands".custom_color((141, 141, 142)).bold(),
-            "Displays the generated command for GCC.\n"
+            "Displays the generated command for GCC in the phase of linking.\n"
         ),
     );
 

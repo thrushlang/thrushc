@@ -51,7 +51,7 @@ xcore       - XCore",
 }
 
 #[inline]
-pub fn print_specific_support_cpu(arch: &str) {
+pub fn print_specific_cpu_support(arch: &str) {
     match arch {
         "aarch64" | "aarch64_32" | "aarch64_be" => {
             targets::aarch64::print_all_supported_cpus();

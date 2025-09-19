@@ -1,6 +1,6 @@
 use crate::core::{
-    compiler::{options::CompilerOptions, thrushc::TheThrushCompiler},
-    utils::rand,
+    compiler::{options::CompilerOptions, thrushc::ThrushCompiler},
+    utils::{limits, rand},
 };
 
 use inkwell::module::Module;
@@ -8,7 +8,7 @@ use inkwell::module::Module;
 use std::path::{Path, PathBuf};
 
 pub fn emit_llvm_bitcode(
-    compiler: &TheThrushCompiler,
+    compiler: &ThrushCompiler,
     llvm_module: &Module,
     build_dir: &Path,
     file_name: &str,
@@ -29,7 +29,7 @@ pub fn emit_llvm_bitcode(
         format!(
             "{}{}_{}.bc",
             optimization_name_modifier,
-            rand::generate_random_string(),
+            rand::generate_random_string(limits::HARD_FILE_NAME_OBFUSCATION),
             file_name
         )
     } else {

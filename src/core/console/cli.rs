@@ -1,7 +1,6 @@
 #![allow(clippy::upper_case_acronyms)]
 
 use std::path::Path;
-use std::process::Command;
 
 use crate::core::{
     compiler::{
@@ -17,6 +16,7 @@ use crate::core::{
         commands,
         logging::{self, LoggingType},
         position::CommandLinePosition,
+        utils,
     },
 };
 
@@ -44,21 +44,25 @@ impl ParsedArg {
     fn new(arg: &str) -> Self {
         if let Some(eq_pos) = arg.find('=') {
             let (key, value) = arg.split_at(eq_pos);
-            Self {
+
+            return Self {
                 key: key.to_string(),
                 value: Some(value[1..].to_string()),
-            }
-        } else if let Some(eq_pos) = arg.find(':') {
+            };
+        }
+
+        if let Some(eq_pos) = arg.find(':') {
             let (key, value) = arg.split_at(eq_pos);
-            Self {
+
+            return Self {
                 key: key.to_string(),
                 value: Some(value[1..].to_string()),
-            }
-        } else {
-            Self {
-                key: arg.to_string(),
-                value: None,
-            }
+            };
+        }
+
+        Self {
+            key: arg.to_string(),
+            value: None,
         }
     }
 }
@@ -133,7 +137,7 @@ impl CLI {
                 process::exit(0);
             }
 
-            "-llvm" => {
+            "-llvm-backend" => {
                 self.advance();
                 self.options.set_use_llvm_backend(true);
             }
@@ -153,11 +157,12 @@ impl CLI {
             "llvm-print-host-target-triple" => {
                 self.advance();
 
-                println!(
-                    "{}",
+                logging::write(
+                    logging::OutputIn::Stdout,
                     TargetMachine::get_default_triple()
                         .as_str()
                         .to_string_lossy()
+                        .trim(),
                 );
 
                 process::exit(0);
@@ -166,7 +171,7 @@ impl CLI {
             "llvm-print-supported-cpus" => {
                 self.advance();
 
-                llvm::targets::info::print_specific_support_cpu(
+                llvm::targets::info::print_specific_cpu_support(
                     self.options
                         .get_llvm_backend_options()
                         .get_target()
@@ -235,7 +240,7 @@ impl CLI {
                 let custom_clang_path: PathBuf = PathBuf::from(custom_clang);
 
                 if !self.validate_compiler_path(&custom_clang_path) {
-                    self.report_error("Indicated external C compiler Clang doesn't exist.");
+                    self.report_error("Indicated external C & C++ compiler Clang doesn't exist.");
                 }
 
                 self.options
@@ -254,9 +259,10 @@ impl CLI {
 
                 if !self.validate_compiler_path(&custom_gcc_path) {
                     self.report_error(
-                        "Indicated external C compiler GNU Compiler Collection (GCC) doesn't exist.",
+                        "Indicated external C & C++ compiler GNU Compiler Collection (GCC) doesn't exist.",
                     );
                 }
+
                 let compiler_config: &mut LinkingCompilersConfiguration = self
                     .get_mut_options()
                     .get_mut_linking_compilers_configuration();
@@ -507,11 +513,6 @@ impl CLI {
     }
 
     #[inline]
-    fn probe_as_command(&self, path: &Path) -> bool {
-        Command::new(path).output().is_ok()
-    }
-
-    #[inline]
     fn report_error(&self, msg: &str) -> ! {
         logging::print_any_panic(LoggingType::Panic, msg);
     }
@@ -642,7 +643,7 @@ impl CLI {
     fn validate_llvm_required(&self, arg: &str) {
         if !self.options.uses_llvm() {
             self.report_error(&format!(
-                "Can't use '{}' without '-llvm' flag previously.",
+                "Can't use '{}' without '-llvm-backend' flag previously.",
                 arg
             ));
         }
@@ -677,7 +678,7 @@ impl CLI {
 
             if llvm_emit_options.contains(&self.peek()) {
                 self.report_error(&format!(
-                    "Can't use '{}' without '-llvm' flag previously.",
+                    "Can't use '{}' without '-llvm-backend' flag previously.",
                     arg
                 ));
             }
@@ -711,7 +712,7 @@ impl CLI {
             return result;
         }
 
-        let exists: bool = path.exists() || self.probe_as_command(path);
+        let exists: bool = path.exists() || utils::test_as_external_process(path);
 
         self.validation_cache.insert(path_str, exists);
 

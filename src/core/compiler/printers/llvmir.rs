@@ -2,13 +2,13 @@ use colored::Colorize;
 use inkwell::module::Module;
 
 use crate::core::{
-    compiler::{options::CompilerOptions, thrushc::TheThrushCompiler},
+    compiler::{options::CompilerOptions, thrushc::ThrushCompiler},
     console::logging,
-    utils::rand,
+    utils::{limits, rand},
 };
 
 pub fn print_llvm_ir(
-    compiler: &TheThrushCompiler,
+    compiler: &ThrushCompiler,
     llvm_module: &Module,
     file_name: &str,
     unoptimized: bool,
@@ -22,7 +22,7 @@ pub fn print_llvm_ir(
         format!(
             "{}{}_{}.ll",
             optimization_name_modifier,
-            rand::generate_random_string(),
+            rand::generate_random_string(limits::HARD_FILE_NAME_OBFUSCATION),
             file_name
         )
     } else {
