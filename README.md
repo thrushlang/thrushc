@@ -118,13 +118,13 @@ Beyond the standard triple targets, the compiler also supports all architectures
 
 The GCC compiler backend is still under construction.
 
-In the future, you will be able to use it with the ``-gcc`` flag to use the GCC backend code generator instead of the default LLVM one.
+In the future, you will be able to use it with the ``-gcc-backend`` flag to use the GCC backend code generator instead of the default LLVM one.
 
-However, it is only available on **Linux**.
+However, it is only available on **GNU/Linux**.
 
 You must also have ``libgccjit.so`` dynamically installed in your distribution so that the compiler doesn't get scared at runtime when using GCC.
 
-### GCC backend installation
+### GCC JIT backend installation
 
 The GCC backend, which is completely embeddable, of the JIT compiler type, can practically only be built dynamically and not statically. For this reason, it has been distributed in many package managers of Linux distributions.
 
