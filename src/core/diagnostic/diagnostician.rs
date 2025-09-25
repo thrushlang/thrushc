@@ -1,14 +1,11 @@
 use std::fmt::Display;
 
-use crate::core::compiler::options::CompilerFile;
-use crate::core::console::logging::{self, LoggingType};
+use crate::core::compiler::options::CompilationUnit;
+use crate::core::console::logging::LoggingType;
 use crate::core::diagnostic::{self, Diagnostic, printers};
 use crate::core::errors::standard::ThrushCompilerIssue;
 
-use {
-    colored::Colorize,
-    std::{fs, path::PathBuf},
-};
+use {colored::Colorize, std::path::PathBuf};
 
 #[derive(Debug, Clone, Copy)]
 pub enum Notificator {
@@ -23,22 +20,11 @@ pub struct Diagnostician {
 }
 
 impl Diagnostician {
-    pub fn new(file: &CompilerFile) -> Self {
-        let code: String = fs::read_to_string(&file.path).unwrap_or_else(|_| {
-            logging::log(
-                LoggingType::Panic,
-                &format!(
-                    "Unable to read '{}' file for a correct diagnostic.",
-                    file.path.display()
-                ),
-            );
-
-            unreachable!()
-        });
-
+    #[inline]
+    pub fn new(file: &CompilationUnit) -> Self {
         Self {
-            path: file.path.clone(),
-            code,
+            path: file.get_path().to_path_buf(),
+            code: file.get_unit_clone(),
         }
     }
 }
@@ -77,6 +63,7 @@ impl Diagnostician {
 }
 
 impl Diagnostician {
+    #[inline]
     pub fn get_file_path(&self) -> PathBuf {
         self.path.clone()
     }

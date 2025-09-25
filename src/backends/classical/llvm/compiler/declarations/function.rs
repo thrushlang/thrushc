@@ -6,9 +6,7 @@ use crate::backends::classical::llvm::compiler::attributes::LLVMAttribute;
 use crate::backends::classical::llvm::compiler::codegen::LLVMCodegen;
 use crate::backends::classical::llvm::compiler::context::LLVMCodeGenContext;
 use crate::backends::classical::llvm::compiler::conventions::CallConvention;
-use crate::backends::classical::llvm::compiler::typegen;
-use crate::backends::classical::llvm::compiler::utils;
-use crate::backends::classical::llvm::compiler::utils::LONG_RANGE_OBFUSCATION;
+use crate::backends::classical::llvm::compiler::{obfuscation, typegen};
 use crate::backends::classical::types::repr::LLVMFunction;
 
 use crate::core::console::logging;
@@ -70,7 +68,7 @@ pub fn compile_decl<'ctx>(
     } else {
         &format!(
             "__fn_{}_{}",
-            utils::generate_random_string(LONG_RANGE_OBFUSCATION),
+            obfuscation::generate_random_obfuscation_name(obfuscation::LONG_RANGE_OBFUSCATION),
             function_ascii_name
         )
     };

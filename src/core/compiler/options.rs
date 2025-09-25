@@ -12,14 +12,14 @@ use {
         frontends::classical::types::{ast::Ast, lexer::types::Tokens},
     },
     inkwell::OptimizationLevel,
-    std::path::PathBuf,
+    std::path::{Path, PathBuf},
 };
 
 #[derive(Debug)]
 pub struct CompilerOptions {
     use_llvm_backend: bool,
     llvm_backend: LLVMBackend,
-    files: Vec<CompilerFile>,
+    files: Vec<CompilationUnit>,
     build_dir: PathBuf,
 
     emit: Vec<EmitableUnit>,
@@ -37,9 +37,10 @@ pub struct CompilerOptions {
 }
 
 #[derive(Debug, Clone)]
-pub struct CompilerFile {
-    pub name: String,
-    pub path: PathBuf,
+pub struct CompilationUnit {
+    name: String,
+    path: PathBuf,
+    content: String,
 }
 
 #[derive(Debug, PartialEq)]
@@ -95,9 +96,14 @@ impl ThrushOptimization {
     }
 }
 
-impl CompilerFile {
-    pub fn new(name: String, path: PathBuf) -> Self {
-        Self { name, path }
+impl CompilationUnit {
+    #[inline]
+    pub fn new(name: String, path: PathBuf, content: String) -> Self {
+        Self {
+            name,
+            path,
+            content,
+        }
     }
 }
 
@@ -127,9 +133,10 @@ impl CompilerOptions {
 }
 
 impl CompilerOptions {
-    pub fn new_file(&mut self, name: String, path: PathBuf) {
+    #[inline]
+    pub fn add_compilation_unit(&mut self, name: String, path: PathBuf, content: String) {
         if self.files.iter().any(|file| file.path == path) {
-            logging::log(
+            logging::print_warn(
                 LoggingType::Warning,
                 &format!("File skipped due to repetition '{}'.", path.display()),
             );
@@ -137,7 +144,7 @@ impl CompilerOptions {
             return;
         }
 
-        self.files.push(CompilerFile::new(name, path));
+        self.files.push(CompilationUnit::new(name, path, content));
     }
 }
 
@@ -200,7 +207,7 @@ impl CompilerOptions {
     }
 
     #[inline]
-    pub fn get_files(&self) -> &[CompilerFile] {
+    pub fn get_files(&self) -> &[CompilationUnit] {
         self.files.as_slice()
     }
 
@@ -296,5 +303,32 @@ impl CompilerOptions {
         &mut self,
     ) -> &mut LinkingCompilersConfiguration {
         &mut self.linking_compilers_config
+    }
+}
+
+impl CompilationUnit {
+    #[inline]
+    pub fn get_name(&self) -> &str {
+        &self.name
+    }
+
+    #[inline]
+    pub fn get_name_clone(&self) -> String {
+        self.name.clone()
+    }
+
+    #[inline]
+    pub fn get_unit_content(&self) -> &str {
+        &self.content
+    }
+
+    #[inline]
+    pub fn get_unit_clone(&self) -> String {
+        self.content.clone()
+    }
+
+    #[inline]
+    pub fn get_path(&self) -> &Path {
+        &self.path
     }
 }

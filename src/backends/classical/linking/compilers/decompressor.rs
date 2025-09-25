@@ -28,8 +28,7 @@ pub fn dump_x86_64_clang_linux(
     output_path: PathBuf,
 ) -> Result<PathBuf, ()> {
     let raw_home_path: String = env::var("HOME").unwrap_or_else(|_| {
-        logging::log(LoggingType::Panic, "Unable to get %HOME% path at linux.");
-        unreachable!()
+        logging::print_any_panic(LoggingType::Panic, "Unable to get %HOME% path at linux.");
     });
 
     let home_path: PathBuf = PathBuf::from(raw_home_path);
@@ -65,7 +64,7 @@ pub fn dump_x86_64_clang_linux(
                     return Ok(output_path);
                 }
 
-                logging::log(
+                logging::print_error(
                     logging::LoggingType::Error,
                     "Failed to make Clang executable at linux.",
                 );
@@ -73,7 +72,7 @@ pub fn dump_x86_64_clang_linux(
                 return Err(());
             }
 
-            logging::log(
+            logging::print_error(
                 logging::LoggingType::Error,
                 "Failed to decompress Clang executable at linux.",
             );
@@ -81,7 +80,7 @@ pub fn dump_x86_64_clang_linux(
             return Err(());
         }
 
-        logging::log(
+        logging::print_error(
             logging::LoggingType::Error,
             "Failed to get Clang compressed at linux.",
         );
@@ -89,7 +88,7 @@ pub fn dump_x86_64_clang_linux(
         return Err(());
     }
 
-    logging::log(
+    logging::print_error(
         logging::LoggingType::Error,
         "%HOME% path not exist at linux.",
     );

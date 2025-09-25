@@ -10,15 +10,12 @@ use crate::frontends::classical::lexer::tokentype::TokenType;
 use crate::frontends::classical::types::parser::repr::BinaryOperation;
 use crate::frontends::classical::typesystem::types::Type;
 
-use inkwell::AddressSpace;
-
 use inkwell::values::BasicValueEnum;
 use inkwell::values::IntValue;
 
 use std::fmt::Display;
 
 fn const_int_operation<'ctx>(
-    context: &LLVMCodeGenContext<'_, 'ctx>,
     lhs: BasicValueEnum<'ctx>,
     rhs: BasicValueEnum<'ctx>,
     signatures: (bool, bool),
@@ -79,21 +76,17 @@ fn const_int_operation<'ctx>(
                 self::codegen_abort(
                     "Cannot perform constant integer binary operation without a valid logical gate.",
                 );
-
-                self::compile_null_ptr(context)
             }
 
             _ => {
                 self::codegen_abort(
                     "Cannot perform constant integer binary operation without a valid operator.",
                 );
-                self::compile_null_ptr(context)
             }
         };
     }
 
     self::codegen_abort("Cannot perform constant integer binary operation without integer values.");
-    self::compile_null_ptr(context)
 }
 
 pub fn compile<'ctx>(
@@ -126,7 +119,6 @@ pub fn compile<'ctx>(
         let rhs: BasicValueEnum = constgen::compile(context, binary.2, cast);
 
         return self::const_int_operation(
-            context,
             lhs,
             rhs,
             (
@@ -141,18 +133,8 @@ pub fn compile<'ctx>(
         "Cannot perform constant integer binary operation '{} {} {}'.",
         binary.0, binary.1, binary.2
     ));
-
-    self::compile_null_ptr(context)
 }
 
-fn codegen_abort<T: Display>(message: T) {
-    logging::log(LoggingType::BackendBug, &format!("{}", message));
-}
-
-fn compile_null_ptr<'ctx>(context: &LLVMCodeGenContext<'_, 'ctx>) -> BasicValueEnum<'ctx> {
-    context
-        .get_llvm_context()
-        .ptr_type(AddressSpace::default())
-        .const_null()
-        .into()
+fn codegen_abort<T: Display>(message: T) -> ! {
+    logging::print_backend_bug(LoggingType::BackendBug, &format!("{}", message));
 }

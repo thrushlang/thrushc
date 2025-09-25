@@ -10,12 +10,10 @@ pub fn get_file_source_code(file_path: &Path) -> String {
     match self::read_file_to_string_buffered(file_path) {
         Ok(code) => code,
         _ => {
-            logging::log(
+            logging::print_frontend_panic(
                 LoggingType::FrontEndPanic,
-                &format!("File '{}' can't be read.", file_path.display()),
+                &format!("File '{}' can't be read correctly.", file_path.display()),
             );
-
-            unreachable!()
         }
     }
 }

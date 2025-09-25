@@ -11,16 +11,20 @@ use crate::core::{
     console::logging::{self, LoggingType},
 };
 
-pub struct GCC<'clang> {
-    files: &'clang [PathBuf],
-    config: &'clang LinkingCompilersConfiguration,
+#[derive(Debug)]
+pub struct GCC<'gcc> {
+    files: &'gcc [PathBuf],
+    config: &'gcc LinkingCompilersConfiguration,
 }
 
-impl<'clang> GCC<'clang> {
-    pub fn new(files: &'clang [PathBuf], config: &'clang LinkingCompilersConfiguration) -> Self {
+impl<'gcc> GCC<'gcc> {
+    #[inline]
+    pub fn new(files: &'gcc [PathBuf], config: &'gcc LinkingCompilersConfiguration) -> Self {
         Self { files, config }
     }
+}
 
+impl<'gcc> GCC<'gcc> {
     pub fn link(&self) -> Result<Duration, ()> {
         let start_time: Instant = Instant::now();
 
@@ -59,9 +63,9 @@ impl<'clang> GCC<'clang> {
         gcc_command.args(self.config.get_args().iter());
 
         if self.config.get_debug_gcc_commands() {
-            logging::log(
-                LoggingType::Info,
-                &format!("Generated GCC Command: {:?}\n", gcc_command),
+            logging::print_debug(
+                LoggingType::Debug,
+                &format!("Generated GCC command: {:?}\n", gcc_command),
             );
         }
 
@@ -72,14 +76,14 @@ impl<'clang> GCC<'clang> {
         if let Ok(gcc) = command.output() {
             if !gcc.status.success() {
                 if !gcc.stderr.is_empty() {
-                    logging::log(
+                    logging::print_error(
                         logging::LoggingType::Error,
                         String::from_utf8_lossy(&gcc.stderr).trim_end(),
                     );
                 }
 
                 if !gcc.stdout.is_empty() {
-                    logging::log(
+                    logging::print_warn(
                         logging::LoggingType::Warning,
                         String::from_utf8_lossy(&gcc.stdout).trim_end(),
                     );

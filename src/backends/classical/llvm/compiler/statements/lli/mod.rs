@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use inkwell::{AddressSpace, values::BasicValueEnum};
+use inkwell::values::BasicValueEnum;
 
 use crate::{
     backends::classical::llvm::compiler::{context::LLVMCodeGenContext, valuegen},
@@ -51,19 +51,10 @@ pub fn compile_advanced<'ctx>(
 
         _ => {
             self::codegen_abort("Failed to compile low-level instruction. Unknown expression.");
-            self::compile_null_ptr(context)
         }
     }
 }
 
-fn codegen_abort<T: Display>(message: T) {
-    logging::log(LoggingType::BackendBug, &format!("{}", message));
-}
-
-fn compile_null_ptr<'ctx>(context: &LLVMCodeGenContext<'_, 'ctx>) -> BasicValueEnum<'ctx> {
-    context
-        .get_llvm_context()
-        .ptr_type(AddressSpace::default())
-        .const_null()
-        .into()
+fn codegen_abort<T: Display>(message: T) -> ! {
+    logging::print_backend_bug(LoggingType::BackendBug, &format!("{}", message));
 }

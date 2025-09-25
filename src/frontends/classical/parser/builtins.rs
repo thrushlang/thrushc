@@ -14,14 +14,14 @@ pub fn build_halloc<'parser>(
 ) -> Result<Ast<'parser>, ThrushCompilerIssue> {
     let memcpy_tk: &Token = parser_context.consume(
         TokenType::Halloc,
-        String::from("Syntax error"),
-        String::from("Expected 'halloc' keyword."),
+        "Syntax error".into(),
+        "Expected 'halloc' keyword.".into(),
     )?;
 
     parser_context.consume(
         TokenType::LParen,
-        String::from("Syntax error"),
-        String::from("Expected '('."),
+        "Syntax error".into(),
+        "Expected '('.".into(),
     )?;
 
     let span: Span = memcpy_tk.get_span();
@@ -30,8 +30,8 @@ pub fn build_halloc<'parser>(
 
     parser_context.consume(
         TokenType::RParen,
-        String::from("Syntax error"),
-        String::from("Expected ')'."),
+        "Syntax error".into(),
+        "Expected ')'.".into(),
     )?;
 
     Ok(Ast::Builtin {
@@ -54,8 +54,8 @@ pub fn build_memcpy<'parser>(
 
     parser_context.consume(
         TokenType::LParen,
-        String::from("Syntax error"),
-        String::from("Expected '('."),
+        "Syntax error".into(),
+        "Expected '('.".into(),
     )?;
 
     let span: Span = memcpy_tk.get_span();
@@ -64,24 +64,24 @@ pub fn build_memcpy<'parser>(
 
     parser_context.consume(
         TokenType::Comma,
-        String::from("Syntax error"),
-        String::from("Expected ','."),
+        "Syntax error".into(),
+        "Expected ','.".into(),
     )?;
 
     let destination: Ast = expr::build_expr(parser_context)?;
 
     parser_context.consume(
         TokenType::Comma,
-        String::from("Syntax error"),
-        String::from("Expected ','."),
+        "Syntax error".into(),
+        "Expected ','.".into(),
     )?;
 
     let size: Ast = expr::build_expr(parser_context)?;
 
     parser_context.consume(
         TokenType::RParen,
-        String::from("Syntax error"),
-        String::from("Expected ')'."),
+        "Syntax error".into(),
+        "Expected ')'.".into(),
     )?;
 
     Ok(Ast::Builtin {

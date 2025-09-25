@@ -44,21 +44,27 @@ pub fn parse_forward(parser_context: &mut ParserContext) {
             TokenType::Type if !entered_at_block => {
                 let _ = cstype::build_custom_type(parser_context, true);
             }
+
             TokenType::Struct if !entered_at_block => {
                 let _ = structure::build_structure(parser_context, true);
             }
+
             TokenType::Static if !entered_at_block => {
                 let _ = glstatic::build_global_static(parser_context, true);
             }
+
             TokenType::Const if !entered_at_block => {
                 let _ = glconstant::build_global_const(parser_context, true);
             }
+
             TokenType::Enum if !entered_at_block => {
                 let _ = union::build_enum(parser_context, true);
             }
+
             TokenType::Fn if !entered_at_block => {
                 let _ = function::build_function(parser_context, true);
             }
+
             TokenType::AsmFn if !entered_at_block => {
                 let _ = asmfn::build_assembler_function(parser_context, true);
             }

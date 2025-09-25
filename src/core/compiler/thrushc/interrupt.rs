@@ -3,7 +3,7 @@ use std::time::Instant;
 use colored::Colorize;
 
 use crate::core::{
-    compiler::{options::CompilerFile, thrushc::ThrushCompiler},
+    compiler::{options::CompilationUnit, thrushc::ThrushCompiler},
     console::logging,
 };
 
@@ -11,7 +11,7 @@ use crate::core::{
 pub fn archive_compilation_unit(
     compiler: &mut ThrushCompiler,
     archive_time: Instant,
-    file: &CompilerFile,
+    file: &CompilationUnit,
 ) -> Result<(), ()> {
     compiler.thrushc_time += archive_time.elapsed();
 
@@ -21,7 +21,7 @@ pub fn archive_compilation_unit(
             "{} {} {}\n",
             "Compilation".custom_color((141, 141, 142)).bold(),
             "FAILED".bright_red().bold(),
-            &file.path.to_string_lossy()
+            &file.get_path().to_string_lossy()
         ),
     );
 

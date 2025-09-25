@@ -31,9 +31,12 @@ impl LLVMModificatorPasses {
             "mergefunctions" => passes.push(LLVMModificatorPasses::MergeFunctions),
 
             _ => {
-                logging::log(
+                logging::print_warn(
                     logging::LoggingType::Warning,
-                    &format!("Unknown LLVM modificator pass '{}'.", pass),
+                    &format!(
+                        "Unknown LLVM modificator pass provided to LLVM Optimizator '{}'.",
+                        pass
+                    ),
                 );
             }
         });

@@ -11,7 +11,7 @@ use inkwell::{
 };
 
 use crate::core::{
-    compiler::{options::CompilerFile, thrushc::ThrushCompiler},
+    compiler::{options::CompilationUnit, thrushc::ThrushCompiler},
     console::logging,
     utils::{limits, rand},
 };
@@ -20,7 +20,7 @@ use crate::core::{
 pub fn archive_compilation(
     compiler: &mut ThrushCompiler,
     archive_time: Instant,
-    file: &CompilerFile,
+    file: &CompilationUnit,
 ) -> Result<(), ()> {
     compiler.thrushc_time += archive_time.elapsed();
 
@@ -30,7 +30,7 @@ pub fn archive_compilation(
             "{} {} {}\n",
             "Compilation".custom_color((141, 141, 142)).bold(),
             "FINISHED".bright_green().bold(),
-            &file.path.to_string_lossy()
+            &file.get_path().to_string_lossy()
         ),
     );
 
@@ -38,7 +38,7 @@ pub fn archive_compilation(
 }
 
 #[inline]
-pub fn obj_compilation(
+pub fn llvm_obj_compilation(
     llvm_module: &Module,
     target_machine: &TargetMachine,
     build_dir: &Path,
@@ -52,13 +52,15 @@ pub fn obj_compilation(
 
     target_machine
         .write_to_file(llvm_module, FileType::Object, &obj_file_path)
-        .unwrap_or_else(|_| {
-            logging::log(
-                logging::LoggingType::FrontEndPanic,
-                &format!("'{}' cannot be emitted.", obj_file_path.display()),
+        .unwrap_or_else(|error| {
+            logging::print_backend_panic(
+                logging::LoggingType::BackendPanic,
+                &format!(
+                    "'{}' cannot be emited as object file because LLVM: '{}'.",
+                    obj_file_path.display(),
+                    error
+                ),
             );
-
-            unreachable!()
         });
 
     obj_file_path

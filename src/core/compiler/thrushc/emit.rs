@@ -6,7 +6,7 @@ use crate::{
     core::{
         compiler::{
             emitters,
-            options::{CompilerFile, CompilerOptions, EmitableUnit, Emited},
+            options::{CompilationUnit, CompilerOptions, EmitableUnit, Emited},
             thrushc::{ThrushCompiler, interrupt},
         },
         console::logging::{self, LoggingType},
@@ -20,7 +20,7 @@ pub fn llvm_after_optimization(
     llvm_module: &Module,
     target_machine: &TargetMachine,
     build_dir: &Path,
-    file: &CompilerFile,
+    file: &CompilationUnit,
 ) -> Result<bool, ()> {
     let compiler_options: &CompilerOptions = compiler.get_options();
 
@@ -31,10 +31,17 @@ pub fn llvm_after_optimization(
             compiler,
             llvm_module,
             build_dir,
-            &file.name,
+            file.get_name(),
             false,
         ) {
-            logging::log(LoggingType::Error, "Failed to emit LLVM bitcode.");
+            logging::print_error(
+                LoggingType::Error,
+                &format!(
+                    "Failed to emit LLVM bitcode for file '{}'.",
+                    file.get_path().display()
+                ),
+            );
+
             interrupt::archive_compilation_unit(compiler, archive_time, file)?;
         }
 
@@ -43,9 +50,9 @@ pub fn llvm_after_optimization(
 
     if compiler_options.contains_emitable(EmitableUnit::LLVMIR) {
         if let Err(error) =
-            emitters::llvmir::emit_llvm_ir(compiler, llvm_module, build_dir, &file.name, false)
+            emitters::llvmir::emit_llvm_ir(compiler, llvm_module, build_dir, file.get_name(), false)
         {
-            logging::log(LoggingType::Error, &error.to_string());
+            logging::print_error(LoggingType::Error, &error.to_string());
             interrupt::archive_compilation_unit(compiler, archive_time, file)?;
         }
 
@@ -58,10 +65,10 @@ pub fn llvm_after_optimization(
             llvm_module,
             target_machine,
             build_dir,
-            &file.name,
+            file.get_name(),
             false,
         ) {
-            logging::log(LoggingType::Error, &error.to_string());
+            logging::print_error(LoggingType::Error, &error.to_string());
             interrupt::archive_compilation_unit(compiler, archive_time, file)?;
         };
 
@@ -74,10 +81,10 @@ pub fn llvm_after_optimization(
             llvm_module,
             target_machine,
             build_dir,
-            &file.name,
+            file.get_name(),
             false,
         ) {
-            logging::log(LoggingType::Error, &error.to_string());
+            logging::print_error(LoggingType::Error, &error.to_string());
             interrupt::archive_compilation_unit(compiler, archive_time, file)?;
         }
 
@@ -93,7 +100,7 @@ pub fn llvm_before_optimization(
     llvm_module: &Module,
     target_machine: &TargetMachine,
     build_dir: &Path,
-    file: &CompilerFile,
+    file: &CompilationUnit,
 ) -> Result<bool, ()> {
     let compiler_options: &CompilerOptions = compiler.get_options();
 
@@ -101,9 +108,9 @@ pub fn llvm_before_optimization(
 
     if compiler_options.contains_emitable(EmitableUnit::RawLLVMIR) {
         if let Err(error) =
-            emitters::llvmir::emit_llvm_ir(compiler, llvm_module, build_dir, &file.name, true)
+            emitters::llvmir::emit_llvm_ir(compiler, llvm_module, build_dir, file.get_name(), true)
         {
-            logging::log(LoggingType::Error, &error.to_string());
+            logging::print_error(LoggingType::Error, &error.to_string());
             interrupt::archive_compilation_unit(compiler, archive_time, file)?;
         }
 
@@ -115,10 +122,16 @@ pub fn llvm_before_optimization(
             compiler,
             llvm_module,
             build_dir,
-            &file.name,
+            file.get_name(),
             true,
         ) {
-            logging::log(LoggingType::Error, "Failed to emit LLVM bitcode.");
+            logging::print_error(
+                LoggingType::Error,
+                &format!(
+                    "Failed to emit LLVM bitcode for file '{}'.",
+                    file.get_path().display()
+                ),
+            );
             interrupt::archive_compilation_unit(compiler, archive_time, file)?;
         }
 
@@ -131,10 +144,10 @@ pub fn llvm_before_optimization(
             llvm_module,
             target_machine,
             build_dir,
-            &file.name,
+            file.get_name(),
             true,
         ) {
-            logging::log(LoggingType::Error, &error.to_string());
+            logging::print_error(LoggingType::Error, &error.to_string());
             interrupt::archive_compilation_unit(compiler, archive_time, file)?;
         }
 
@@ -147,7 +160,7 @@ pub fn llvm_before_optimization(
 pub fn after_frontend(
     compiler: &mut ThrushCompiler,
     build_dir: &Path,
-    file: &CompilerFile,
+    file: &CompilationUnit,
     emited: Emited,
 ) -> bool {
     let compiler_options: &CompilerOptions = compiler.get_options();
@@ -156,7 +169,7 @@ pub fn after_frontend(
 
     if compiler_options.contains_emitable(EmitableUnit::Tokens) {
         if let Emited::Tokens(tokens) = emited {
-            if lexer::printer::print_to_file(tokens, build_dir, &file.name).is_err() {
+            if lexer::printer::print_to_file(tokens, build_dir, file.get_name()).is_err() {
                 return false;
             }
 
@@ -167,7 +180,7 @@ pub fn after_frontend(
     if compiler_options.contains_emitable(EmitableUnit::AST) {
         if let Emited::Ast(stmts) = emited {
             let _ = write(
-                build_dir.join(format!("{}.ast", file.name)),
+                build_dir.join(format!("{}.ast", file.get_name())),
                 format!("{:#?}", stmts),
             );
 

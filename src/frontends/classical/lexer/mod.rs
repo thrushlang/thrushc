@@ -6,8 +6,8 @@ use unicode_categories::UnicodeCategories;
 
 use crate::{
     core::{
-        compiler::options::CompilerFile,
-        console::logging::LoggingType,
+        compiler::options::CompilationUnit,
+        console::logging::{self, LoggingType},
         diagnostic::diagnostician::Diagnostician,
         errors::{lexer::ThrushLexerPanic, standard::ThrushCompilerIssue},
     },
@@ -18,6 +18,9 @@ pub mod keywords;
 pub mod printer;
 pub mod span;
 pub mod token;
+pub mod tokenattr;
+pub mod tokenis;
+pub mod tokentransform;
 pub mod tokentype;
 
 mod character;
@@ -28,21 +31,25 @@ mod string;
 
 const MAXIMUM_TOKENS_CAPACITY: usize = 1_000_000;
 const MAXIMUM_BYTES_TO_LEX: usize = 1_000_000;
+const MAX_ERRORS: usize = 50;
 
+#[derive(Debug)]
 pub struct Lexer {
     tokens: Vec<Token>,
     errors: Vec<ThrushCompilerIssue>,
     code: Vec<char>,
+
     start: usize,
     current: usize,
     line: usize,
     span: (usize, usize),
+
     diagnostician: Diagnostician,
 }
 
 impl Lexer {
-    pub fn lex(raw_code: &str, file: &CompilerFile) -> Result<Tokens, ThrushLexerPanic> {
-        let code: Vec<char> = raw_code.chars().collect();
+    pub fn lex(file: &CompilationUnit) -> Result<Tokens, ThrushLexerPanic> {
+        let code: Vec<char> = file.get_unit_content().chars().collect();
 
         Self {
             tokens: Vec::with_capacity(MAXIMUM_TOKENS_CAPACITY),
@@ -64,13 +71,24 @@ impl Lexer {
             ));
         }
 
-        while !self.end() {
+        while !self.is_eof() {
             if self.tokens.len() >= MAXIMUM_TOKENS_CAPACITY {
                 return Err(ThrushLexerPanic::TooMuchTokens);
             }
 
             self.start = self.current;
             self.start_span();
+
+            let total_issues: usize = self.errors.len();
+
+            if total_issues >= MAX_ERRORS {
+                logging::print_warn(
+                    LoggingType::Warning,
+                    "Too many issues. Stopping compilation.",
+                );
+
+                break;
+            }
 
             if let Err(error) = lex::analyze(self) {
                 self.add_error(error);
@@ -117,8 +135,9 @@ impl Lexer {
         });
     }
 
+    #[must_use]
     pub fn char_match(&mut self, char: char) -> bool {
-        if !self.end() && self.code[self.current] == char {
+        if !self.is_eof() && self.code[self.current] == char {
             self.current += 1;
             return true;
         }
@@ -126,6 +145,7 @@ impl Lexer {
         false
     }
 
+    #[must_use]
     pub fn advance(&mut self) -> char {
         let byte: char = self.code[self.current];
         self.current += 1;
@@ -134,23 +154,8 @@ impl Lexer {
     }
 
     #[inline]
-    pub fn lexeme(&self) -> String {
-        String::from_iter(&self.code[self.start..self.current])
-    }
-
-    #[inline]
-    pub fn shrink_lexeme(&self) -> String {
-        String::from_iter(&self.code[self.start + 1..self.current - 1])
-    }
-
-    #[inline]
-    pub fn start_span(&mut self) {
-        self.span.0 = self.start;
-    }
-
-    #[inline]
-    pub fn end_span(&mut self) {
-        self.span.1 = self.current;
+    pub fn advance_only(&mut self) {
+        self.current += 1;
     }
 
     #[inline]
@@ -170,13 +175,55 @@ impl Lexer {
     #[must_use]
     #[inline]
     pub fn peek(&self) -> char {
-        if self.end() {
+        if self.is_eof() {
             return '\0';
         }
 
         self.code[self.current]
     }
 
+    #[inline]
+    pub fn add_error(&mut self, error: ThrushCompilerIssue) {
+        self.errors.push(error);
+    }
+}
+
+impl Lexer {
+    #[must_use]
+    pub fn fix_unicode_lexeme(&self, lexeme: &str) -> String {
+        let mut scaped_unicode_string: String = String::with_capacity(lexeme.len());
+
+        lexeme.chars().for_each(|char| {
+            if self.is_ascii_char(char) {
+                scaped_unicode_string.push(char);
+            } else {
+                let mut utf8_buf: [u8; 4] = [0u8; 4];
+
+                let utf8_bytes: &[u8] = char.encode_utf8(&mut utf8_buf).as_bytes();
+
+                utf8_bytes.iter().for_each(|byte| {
+                    scaped_unicode_string.push_str(&format!("{:02X}", byte));
+                });
+            }
+        });
+
+        scaped_unicode_string
+    }
+}
+
+impl Lexer {
+    #[inline]
+    pub fn lexeme(&self) -> String {
+        String::from_iter(&self.code[self.start..self.current])
+    }
+
+    #[inline]
+    pub fn shrink_lexeme(&self) -> String {
+        String::from_iter(&self.code[self.start + 1..self.current - 1])
+    }
+}
+
+impl Lexer {
     #[must_use]
     #[inline]
     pub fn is_number_boundary(&self, is_hexadecimal: bool, is_binary: bool) -> bool {
@@ -195,26 +242,8 @@ impl Lexer {
         peeked.is_alphanumeric() || peeked.is_symbol_other() || peeked == '_' || peeked == '@'
     }
 
-    pub fn fix_unicode_lexeme(&self, lexeme: &str) -> String {
-        let mut scaped_unicode_string: String = String::with_capacity(100);
-
-        lexeme.chars().for_each(|char| {
-            if self.is_ascii_char(char) {
-                scaped_unicode_string.push(char);
-            } else {
-                let mut utf8_buf: [u8; 4] = [0u8; 4];
-
-                let utf8_bytes: &[u8] = char.encode_utf8(&mut utf8_buf).as_bytes();
-
-                utf8_bytes.iter().for_each(|byte| {
-                    scaped_unicode_string.push_str(&format!("{:02X}", byte));
-                });
-            }
-        });
-
-        scaped_unicode_string
-    }
-
+    #[must_use]
+    #[inline]
     pub fn is_ascii_char(&self, peeked: char) -> bool {
         self.is_alpha_char(peeked) || peeked.is_ascii_digit() || peeked == '_' || peeked == '@'
     }
@@ -222,13 +251,7 @@ impl Lexer {
     #[must_use]
     #[inline]
     pub fn is_char_boundary(&self) -> bool {
-        self.peek() != '\'' && !self.end()
-    }
-
-    #[must_use]
-    #[inline]
-    pub fn end(&self) -> bool {
-        self.current >= self.code.len()
+        self.peek() != '\'' && !self.is_eof()
     }
 
     #[must_use]
@@ -237,8 +260,21 @@ impl Lexer {
         char.is_ascii_lowercase() || char.is_ascii_uppercase()
     }
 
+    #[must_use]
     #[inline]
-    pub fn add_error(&mut self, error: ThrushCompilerIssue) {
-        self.errors.push(error);
+    pub fn is_eof(&self) -> bool {
+        self.current >= self.code.len()
+    }
+}
+
+impl Lexer {
+    #[inline]
+    pub fn start_span(&mut self) {
+        self.span.0 = self.start;
+    }
+
+    #[inline]
+    pub fn end_span(&mut self) {
+        self.span.1 = self.current;
     }
 }

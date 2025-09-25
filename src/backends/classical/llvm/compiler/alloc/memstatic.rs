@@ -1,7 +1,6 @@
 use crate::backends::classical::llvm::compiler::context::LLVMCodeGenContext;
-use crate::backends::classical::llvm::compiler::utils;
-use crate::backends::classical::llvm::compiler::utils::SHORT_RANGE_OBFUSCATION;
 
+use crate::backends::classical::llvm::compiler::obfuscation;
 use crate::frontends::classical::types::ast::metadata::constant::ConstantMetadata;
 use crate::frontends::classical::types::ast::metadata::constant::LLVMConstantMetadata;
 use crate::frontends::classical::types::ast::metadata::staticvar::LLVMStaticMetadata;
@@ -31,7 +30,7 @@ pub fn local_constant<'ctx>(
 
     let name: String = format!(
         "{}.const.{}",
-        utils::generate_random_string(SHORT_RANGE_OBFUSCATION),
+        obfuscation::generate_random_obfuscation_name(obfuscation::LONG_RANGE_OBFUSCATION),
         name
     );
 
@@ -101,7 +100,7 @@ pub fn local_static<'ctx>(
 
     let name: String = format!(
         "{}.static.{}",
-        utils::generate_random_string(SHORT_RANGE_OBFUSCATION),
+        obfuscation::generate_random_obfuscation_name(obfuscation::LONG_RANGE_OBFUSCATION),
         name
     );
 

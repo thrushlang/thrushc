@@ -5,7 +5,7 @@ use crate::{
 
 pub fn lex(lexer: &mut Lexer) -> Result<(), ThrushCompilerIssue> {
     while lexer.is_identifier_boundary(lexer.peek()) {
-        lexer.advance();
+        lexer.advance_only();
     }
 
     if let Some(keyword) = KEYWORDS.get(lexer.lexeme().as_str()) {

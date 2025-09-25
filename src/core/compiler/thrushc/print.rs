@@ -2,7 +2,7 @@ use inkwell::module::Module;
 
 use crate::{
     core::compiler::{
-        options::{CompilerFile, CompilerOptions, Emited, PrintableUnit},
+        options::{CompilationUnit, CompilerOptions, Emited, PrintableUnit},
         printers,
         thrushc::ThrushCompiler,
     },
@@ -13,12 +13,12 @@ use crate::{
 pub fn llvm_before_optimization(
     compiler: &mut ThrushCompiler,
     llvm_module: &Module,
-    file: &CompilerFile,
+    file: &CompilationUnit,
 ) -> bool {
     let compiler_options: &CompilerOptions = compiler.get_options();
 
     if compiler_options.contains_printable(PrintableUnit::RawLLVMIR) {
-        printers::llvmir::print_llvm_ir(compiler, llvm_module, &file.name, true);
+        printers::llvmir::print_llvm_ir(compiler, llvm_module, file.get_name(), true);
         return true;
     }
 
@@ -29,12 +29,12 @@ pub fn llvm_before_optimization(
 pub fn llvm_after_optimization(
     compiler: &mut ThrushCompiler,
     llvm_module: &Module,
-    file: &CompilerFile,
+    file: &CompilationUnit,
 ) -> bool {
     let compiler_options: &CompilerOptions = compiler.get_options();
 
     if compiler_options.contains_printable(PrintableUnit::LLVMIR) {
-        printers::llvmir::print_llvm_ir(compiler, llvm_module, &file.name, false);
+        printers::llvmir::print_llvm_ir(compiler, llvm_module, file.get_name(), false);
 
         return true;
     }
@@ -42,12 +42,16 @@ pub fn llvm_after_optimization(
     false
 }
 
-pub fn after_frontend(compiler: &mut ThrushCompiler, file: &CompilerFile, emited: Emited) -> bool {
+pub fn after_frontend(
+    compiler: &mut ThrushCompiler,
+    file: &CompilationUnit,
+    emited: Emited,
+) -> bool {
     let options: &CompilerOptions = compiler.get_options();
 
     if options.contains_printable(PrintableUnit::Tokens) {
         if let Emited::Tokens(tokens) = emited {
-            if lexer::printer::print_to_stdout_fine(tokens, &file.name).is_err() {
+            if lexer::printer::print_to_stdout_fine(tokens, file.get_name()).is_err() {
                 return false;
             }
 

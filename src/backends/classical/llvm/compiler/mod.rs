@@ -16,13 +16,13 @@ pub mod expressions;
 pub mod generation;
 pub mod indexes;
 pub mod memory;
+pub mod obfuscation;
 pub mod optimizations;
 pub mod predicates;
 pub mod ptrgen;
 pub mod statements;
 pub mod symbols;
 pub mod typegen;
-pub mod utils;
 pub mod valuegen;
 
 use {

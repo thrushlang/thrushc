@@ -11,7 +11,7 @@ use inkwell::{
 };
 
 use crate::backends::classical::llvm::compiler::context::LLVMCodeGenContext;
-use crate::backends::classical::llvm::compiler::utils::{self, SHORT_RANGE_OBFUSCATION};
+use crate::backends::classical::llvm::compiler::obfuscation;
 
 pub fn compile_str_constant<'ctx>(
     context: &LLVMCodeGenContext<'_, 'ctx>,
@@ -32,7 +32,7 @@ pub fn compile_str_constant<'ctx>(
 
     let cstr_name: String = format!(
         "cstr.constant.{}",
-        utils::generate_random_string(SHORT_RANGE_OBFUSCATION)
+        obfuscation::generate_random_obfuscation_name(obfuscation::LONG_RANGE_OBFUSCATION)
     );
 
     let cstr: GlobalValue =
@@ -53,7 +53,7 @@ pub fn compile_str_constant<'ctx>(
 
     let str_name: String = format!(
         "str.constant.{}",
-        utils::generate_random_string(SHORT_RANGE_OBFUSCATION)
+        obfuscation::generate_random_obfuscation_name(obfuscation::LONG_RANGE_OBFUSCATION)
     );
 
     let str: GlobalValue =

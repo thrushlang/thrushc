@@ -18,7 +18,7 @@ pub fn float<'ctx>(
         Type::F64 => context.f64_type().const_float(iee),
 
         what => {
-            self::codegen_abort(format!("Unsupported float type: '{:#?}'.", what));
+            self::codegen_abort(format!("Unsupported float type: '{}'.", what));
         }
     }
 }

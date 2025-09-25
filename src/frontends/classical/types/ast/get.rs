@@ -218,12 +218,10 @@ impl Ast<'_> {
             Ast::Unreachable { .. } => &Type::Void,
 
             any => {
-                logging::log(
+                logging::print_any_panic(
                     LoggingType::Panic,
-                    &format!("Unable to get type of stmt: '{}'.", any),
+                    &format!("Unable to get type of ast: '{}'.", any),
                 );
-
-                unreachable!()
             }
         }
     }

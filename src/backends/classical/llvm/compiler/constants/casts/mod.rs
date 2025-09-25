@@ -21,13 +21,13 @@ pub fn try_one<'ctx>(
         (from_ty, cast_ty) if from_ty.is_str_type() && cast_ty.is_ptr_type() => {
             let cast: BasicTypeEnum = typegen::generate_type(llvm_context, cast_ty);
 
-            constants::casts::ptr::const_ptr_cast(context, value, cast)
+            constants::casts::ptr::const_ptr_cast(value, cast)
         }
 
         (_, cast_ty) if cast_ty.is_ptr_type() || cast_ty.is_mut_type() => {
             let cast: BasicTypeEnum = typegen::generate_type(llvm_context, cast_ty);
 
-            constants::casts::ptr::const_ptr_cast(context, value, cast)
+            constants::casts::ptr::const_ptr_cast(value, cast)
         }
 
         (_, cast_ty) if cast_ty.is_numeric() => {

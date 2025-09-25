@@ -10,8 +10,8 @@ pub fn check_unreacheable_state(
         parser_context.only_advance()?;
 
         return Err(ThrushCompilerIssue::Error(
-            String::from("Syntax error"),
-            String::from("Unreachable for execution."),
+            "Syntax error".into(),
+            "Unreachable for execution.".into(),
             None,
             parser_context.previous().get_span(),
         ));
@@ -27,8 +27,8 @@ pub fn check_inside_loop_state(
         parser_context.only_advance()?;
 
         return Err(ThrushCompilerIssue::Error(
-            String::from("Syntax error"),
-            String::from("It must be contained within a loop block."),
+            "Syntax error".into(),
+            "It must be contained within a loop block.".into(),
             None,
             parser_context.previous().get_span(),
         ));
@@ -44,8 +44,8 @@ pub fn check_inside_function_state(
         parser_context.only_advance()?;
 
         return Err(ThrushCompilerIssue::Error(
-            String::from("Syntax error"),
-            String::from("It must be contained within a function block."),
+            "Syntax error".into(),
+            "It must be contained within a function block.".into(),
             None,
             parser_context.previous().get_span(),
         ));
@@ -59,8 +59,8 @@ pub fn check_main_scope_state(
 ) -> Result<(), ThrushCompilerIssue> {
     if !parser_context.is_main_scope() {
         return Err(ThrushCompilerIssue::Error(
-            String::from("Syntax error"),
-            String::from("It must be contained within the main scope."),
+            "Syntax error".into(),
+            "It must be contained within the main scope.".into(),
             None,
             parser_context.previous().get_span(),
         ));

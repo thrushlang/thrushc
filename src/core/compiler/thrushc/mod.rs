@@ -20,36 +20,27 @@ use inkwell::{
     targets::{InitializationConfig, Target, TargetMachine, TargetTriple},
 };
 
-use crate::{
-    backends::classical::{
-        linking::linkers::lld::LLVMLinker,
-        llvm::{self, compiler::context::LLVMCodeGenContext},
-    },
-    core::{
-        compiler::{
-            backends::{
-                linkers::LinkerModeType,
-                llvm::{LLVMBackend, target::LLVMTarget},
-            },
-            linking::LinkingCompilersConfiguration,
-            options::{CompilerFile, CompilerOptions, Emited, ThrushOptimization},
-            reader,
-        },
-        console::logging::{self},
-        diagnostic::diagnostician::Diagnostician,
-    },
-    frontends::classical::{
-        lexer::{Lexer, token::Token},
-        parser::{Parser, ParserContext},
-        semantic::SemanticAnalyzer,
-        types::ast::Ast,
-    },
+use crate::backends::classical::linking::linkers::lld::LLVMLinker;
+use crate::backends::classical::llvm::{self, compiler::context::LLVMCodeGenContext};
+
+use crate::core::compiler::backends::linkers::LinkerModeType;
+use crate::core::compiler::backends::llvm::{LLVMBackend, target::LLVMTarget};
+use crate::core::compiler::linking::LinkingCompilersConfiguration;
+use crate::core::compiler::options::{
+    CompilationUnit, CompilerOptions, Emited, ThrushOptimization,
 };
+use crate::core::console::logging::{self, LoggingType};
+use crate::core::diagnostic::diagnostician::Diagnostician;
+
+use crate::frontends::classical::lexer::{Lexer, token::Token};
+use crate::frontends::classical::parser::{Parser, ParserContext};
+use crate::frontends::classical::semantic::SemanticAnalyzer;
+use crate::frontends::classical::types::ast::Ast;
 
 #[derive(Debug)]
 pub struct ThrushCompiler<'thrushc> {
     compiled: Vec<PathBuf>,
-    uncompiled: &'thrushc [CompilerFile],
+    uncompiled: &'thrushc [CompilationUnit],
 
     options: &'thrushc CompilerOptions,
     linking_time: Duration,
@@ -57,11 +48,13 @@ pub struct ThrushCompiler<'thrushc> {
 }
 
 impl<'thrushc> ThrushCompiler<'thrushc> {
-    pub fn new(files: &'thrushc [CompilerFile], options: &'thrushc CompilerOptions) -> Self {
+    pub fn new(files: &'thrushc [CompilationUnit], options: &'thrushc CompilerOptions) -> Self {
         Self {
             compiled: Vec::with_capacity(files.len()),
             uncompiled: files,
+
             options,
+
             linking_time: Duration::default(),
             thrushc_time: Duration::default(),
         }
@@ -77,7 +70,7 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
                     "{} {} {}\n",
                     "Compilation".custom_color((141, 141, 142)).bold(),
                     "FAILED".bright_red().bold(),
-                    "GCC is not supported yet. Please use LLVM Infrastructure with '-llvm' flag."
+                    "GCC is not supported yet. Please use LLVM Infrastructure with '-llvm-backend' flag."
                 ),
             );
         }
@@ -127,7 +120,7 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
         (self.thrushc_time.as_millis(), self.linking_time.as_millis())
     }
 
-    fn compile_with_llvm(&mut self, file: &'thrushc CompilerFile) -> Result<(), ()> {
+    fn compile_with_llvm(&mut self, file: &'thrushc CompilationUnit) -> Result<(), ()> {
         let archive_time: Instant = Instant::now();
 
         logging::write(
@@ -136,17 +129,15 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
                 "{} {} {}\n",
                 "Compilation".custom_color((141, 141, 142)).bold(),
                 "RUNNING".bright_green().bold(),
-                &file.path.to_string_lossy()
+                &file.get_path().to_string_lossy()
             ),
         );
-
-        let source_code: String = reader::get_file_source_code(&file.path);
 
         let llvm_backend: &LLVMBackend = self.options.get_llvm_backend_options();
         let build_dir: &PathBuf = self.options.get_build_dir();
 
-        let tokens: Vec<Token> = Lexer::lex(&source_code, file).unwrap_or_else(|error| {
-            logging::print_frontend_panic(logging::LoggingType::FrontEndPanic, &error.display())
+        let tokens: Vec<Token> = Lexer::lex(file).unwrap_or_else(|error| {
+            logging::print_frontend_panic(LoggingType::FrontEndPanic, &error.display())
         });
 
         if print::after_frontend(self, file, Emited::Tokens(&tokens)) {
@@ -179,7 +170,7 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
 
         let llvm_context: Context = Context::create();
         let llvm_builder: Builder = llvm_context.create_builder();
-        let llvm_module: Module = llvm_context.create_module(&file.name);
+        let llvm_module: Module = llvm_context.create_module(file.get_name());
 
         let target: &LLVMTarget = llvm_backend.get_target();
 
@@ -277,10 +268,14 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
             return finisher::archive_compilation(self, archive_time, file);
         }
 
-        let compiled_file: PathBuf =
-            finisher::obj_compilation(&llvm_module, &target_machine, build_dir, &file.name);
+        let compiled_file: PathBuf = finisher::llvm_obj_compilation(
+            &llvm_module,
+            &target_machine,
+            build_dir,
+            file.get_name(),
+        );
 
-        self.add_compiled_file(compiled_file);
+        self.add_compiled_unit(compiled_file);
 
         logging::write(
             logging::OutputIn::Stdout,
@@ -288,7 +283,7 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
                 "{} {} {}\n",
                 "Compilation".custom_color((141, 141, 142)).bold(),
                 "FINISHED".bright_green().bold(),
-                &file.path.to_string_lossy()
+                file.get_path().to_string_lossy()
             ),
         );
 
@@ -297,17 +292,19 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
 }
 
 impl ThrushCompiler<'_> {
+    #[inline]
     pub fn get_compiled_files(&self) -> &[PathBuf] {
         &self.compiled
     }
 
+    #[inline]
     pub fn get_options(&self) -> &CompilerOptions {
         self.options
     }
 }
 
 impl ThrushCompiler<'_> {
-    pub fn add_compiled_file(&mut self, path: PathBuf) {
+    pub fn add_compiled_unit(&mut self, path: PathBuf) {
         self.compiled.push(path);
     }
 }

@@ -25,7 +25,7 @@ pub fn int<'ctx>(context: &'ctx Context, kind: &Type, number: u64, signed: bool)
         Type::Bool => context.bool_type().const_int(number, false),
 
         what => {
-            self::codegen_abort(format!("Unsupported integer type: '{:#?}'.", what));
+            self::codegen_abort(format!("Unsupported integer type: '{}'.", what));
         }
     }
 }

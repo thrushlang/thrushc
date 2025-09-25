@@ -30,6 +30,7 @@ impl<'a, 'ctx> LLVMOptimizer<'a, 'ctx> {
         }
     }
 
+    #[inline]
     pub fn optimize(&self) {
         if !self.custom_passes.is_empty() {
             if let Err(error) = self.module.run_passes(
@@ -37,10 +38,10 @@ impl<'a, 'ctx> LLVMOptimizer<'a, 'ctx> {
                 self.target_machine,
                 self.create_passes_builder(),
             ) {
-                logging::log(
+                logging::print_warn(
                     logging::LoggingType::Warning,
                     &format!(
-                        "Some optimizations passes could not be performed because: '{:?}'.",
+                        "Some optimizations passes couldn't be performed because: '{}'.",
                         error
                     ),
                 );
@@ -60,10 +61,10 @@ impl<'a, 'ctx> LLVMOptimizer<'a, 'ctx> {
                     self.target_machine,
                     self.create_passes_builder(),
                 ) {
-                    logging::log(
+                    logging::print_warn(
                         logging::LoggingType::Warning,
                         &format!(
-                            "Some optimizations passes could not be performed because: '{:?}'.",
+                            "Some optimizations passes couldn't be performed because: '{}'.",
                             error
                         ),
                     );
@@ -76,10 +77,10 @@ impl<'a, 'ctx> LLVMOptimizer<'a, 'ctx> {
                     self.target_machine,
                     self.create_passes_builder(),
                 ) {
-                    logging::log(
+                    logging::print_warn(
                         logging::LoggingType::Warning,
                         &format!(
-                            "Some optimizations passes could not be performed because: '{:?}'.",
+                            "Some optimizations passes couldn't be performed because: '{}'.",
                             error
                         ),
                     );
@@ -92,10 +93,10 @@ impl<'a, 'ctx> LLVMOptimizer<'a, 'ctx> {
                     self.target_machine,
                     self.create_passes_builder(),
                 ) {
-                    logging::log(
+                    logging::print_warn(
                         logging::LoggingType::Warning,
                         &format!(
-                            "Some optimizations passes could not be performed because: '{:?}'.",
+                            "Some optimizations passes couldn't be performed because: '{:?}'.",
                             error
                         ),
                     );
@@ -111,19 +112,15 @@ impl<'a, 'ctx> LLVMOptimizer<'a, 'ctx> {
             LLVMModificatorPasses::LoopVectorization => {
                 passes_builder.set_loop_vectorization(true);
             }
-
             LLVMModificatorPasses::LoopUnroll => {
                 passes_builder.set_loop_unrolling(true);
             }
-
             LLVMModificatorPasses::LoopInterleaving => {
                 passes_builder.set_loop_interleaving(true);
             }
-
             LLVMModificatorPasses::LoopSimplifyVectorization => {
                 passes_builder.set_loop_slp_vectorization(true);
             }
-
             LLVMModificatorPasses::MergeFunctions => {
                 passes_builder.set_merge_functions(true);
             }

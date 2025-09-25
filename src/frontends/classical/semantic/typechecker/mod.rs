@@ -2,7 +2,7 @@ use symbols::TypeCheckerSymbolsTable;
 
 use crate::{
     core::{
-        compiler::options::CompilerFile, console::logging::LoggingType,
+        compiler::options::CompilationUnit, console::logging::LoggingType,
         diagnostic::diagnostician::Diagnostician, errors::standard::ThrushCompilerIssue,
     },
     frontends::classical::types::{ast::Ast, parser::stmts::traits::ThrushAttributesExtensions},
@@ -32,7 +32,7 @@ pub struct TypeChecker<'type_checker> {
 impl<'type_checker> TypeChecker<'type_checker> {
     pub fn new(
         ast: &'type_checker [Ast<'type_checker>],
-        file: &'type_checker CompilerFile,
+        file: &'type_checker CompilationUnit,
     ) -> Self {
         Self {
             ast,
@@ -444,41 +444,51 @@ impl<'type_checker> TypeChecker<'type_checker> {
                 }
             });
     }
+}
 
+impl<'type_checker> TypeChecker<'type_checker> {
+    #[inline]
     pub fn advance(&mut self) {
         if !self.is_eof() {
             self.position += 1;
         }
     }
 
+    #[inline]
     pub fn peek(&self) -> &'type_checker Ast<'type_checker> {
         &self.ast[self.position]
     }
 
+    #[inline]
     pub fn is_eof(&self) -> bool {
         self.position >= self.ast.len()
     }
 }
 
 impl TypeChecker<'_> {
+    #[inline]
     pub fn add_warning(&mut self, warning: ThrushCompilerIssue) {
         self.warnings.push(warning);
     }
 
+    #[inline]
     pub fn add_error(&mut self, error: ThrushCompilerIssue) {
         self.errors.push(error);
     }
 
+    #[inline]
     pub fn add_bug(&mut self, error: ThrushCompilerIssue) {
         self.bugs.push(error);
     }
 }
 
 impl TypeChecker<'_> {
+    #[inline]
     pub fn begin_scope(&mut self) {
         self.symbols.begin_scope();
     }
 
+    #[inline]
     pub fn end_scope(&mut self) {
         self.symbols.end_scope();
     }

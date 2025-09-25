@@ -6,9 +6,9 @@ use crate::{
 pub fn lex(lexer: &mut Lexer) -> Result<(), ThrushCompilerIssue> {
     let mut found_end_quote: bool = false;
 
-    while !lexer.end() {
+    while !lexer.is_eof() {
         if lexer.peek() == '"' {
-            lexer.advance();
+            lexer.advance_only();
             found_end_quote = true;
 
             break;
@@ -26,9 +26,9 @@ pub fn lex(lexer: &mut Lexer) -> Result<(), ThrushCompilerIssue> {
 }
 
 fn handle_escape_sequence(lexer: &mut Lexer) -> Result<char, ThrushCompilerIssue> {
-    lexer.advance();
+    lexer.advance_only();
 
-    if lexer.end() {
+    if lexer.is_eof() {
         lexer.end_span();
 
         let span: Span = Span::new(lexer.line, lexer.span);

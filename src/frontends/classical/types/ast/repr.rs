@@ -11,7 +11,7 @@ use crate::{
 
 impl Ast<'_> {
     #[inline]
-    pub fn as_global_asm_function(&self) -> GlobalAssemblerFunction {
+    pub fn as_global_asm_function(&self) -> GlobalAssemblerFunction<'_> {
         if let Ast::AssemblerFunction {
             name,
             ascii_name,
@@ -36,16 +36,14 @@ impl Ast<'_> {
             );
         }
 
-        logging::log(
+        logging::print_backend_bug(
             logging::LoggingType::BackendBug,
             "Expected assembler function for transformation to GlobalAssemblerFunction.",
         );
-
-        unreachable!()
     }
 
     #[inline]
-    pub fn as_global_static(&self) -> GlobalStatic {
+    pub fn as_global_static(&self) -> GlobalStatic<'_> {
         if let Ast::Static {
             name,
             ascii_name,
@@ -59,16 +57,14 @@ impl Ast<'_> {
             return (name, ascii_name, kind, &**value, attributes, *metadata);
         }
 
-        logging::log(
+        logging::print_backend_bug(
             logging::LoggingType::BackendBug,
             "Expected static for transformation to GlobalStatic.",
         );
-
-        unreachable!()
     }
 
     #[inline]
-    pub fn as_global_constant(&self) -> GlobalConstant {
+    pub fn as_global_constant(&self) -> GlobalConstant<'_> {
         if let Ast::Const {
             name,
             ascii_name,
@@ -82,16 +78,14 @@ impl Ast<'_> {
             return (name, ascii_name, kind, &**value, attributes, *metadata);
         }
 
-        logging::log(
+        logging::print_backend_bug(
             logging::LoggingType::BackendBug,
             "Expected constant for transformation to GlobalConstant.",
         );
-
-        unreachable!()
     }
 
     #[inline]
-    pub fn as_global_function(&self) -> GlobalFunction {
+    pub fn as_global_function(&self) -> GlobalFunction<'_> {
         if let Ast::Function {
             name,
             ascii_name,
@@ -114,17 +108,15 @@ impl Ast<'_> {
             );
         }
 
-        logging::log(
+        logging::print_backend_bug(
             logging::LoggingType::BackendBug,
             "Expected function for transformation to GlobalFunction.",
         );
-
-        unreachable!()
     }
 }
 
 impl Ast<'_> {
-    pub fn as_local(&self) -> Local {
+    pub fn as_local(&self) -> Local<'_> {
         if let Ast::Local {
             name,
             ascii_name,
@@ -138,16 +130,14 @@ impl Ast<'_> {
             return (name, ascii_name, kind, &**value, attributes, *metadata);
         }
 
-        logging::log(
+        logging::print_backend_bug(
             logging::LoggingType::BackendBug,
             "Expected local for transformation to Local.",
         );
-
-        unreachable!()
     }
 
     #[inline]
-    pub fn as_local_constant(&self) -> LocalConstant {
+    pub fn as_local_constant(&self) -> LocalConstant<'_> {
         if let Ast::Const {
             name,
             ascii_name,
@@ -160,16 +150,14 @@ impl Ast<'_> {
             return (name, ascii_name, kind, &**value, *metadata);
         }
 
-        logging::log(
+        logging::print_backend_bug(
             logging::LoggingType::BackendBug,
             "Expected constant for transformation to LocalConstant.",
         );
-
-        unreachable!()
     }
 
     #[inline]
-    pub fn as_local_static(&self) -> LocalStatic {
+    pub fn as_local_static(&self) -> LocalStatic<'_> {
         if let Ast::Static {
             name,
             ascii_name,
@@ -182,11 +170,9 @@ impl Ast<'_> {
             return (name, ascii_name, kind, &**value, *metadata);
         }
 
-        logging::log(
+        logging::print_backend_bug(
             logging::LoggingType::BackendBug,
             "Expected static for transformation to LocalStatic.",
         );
-
-        unreachable!()
     }
 }

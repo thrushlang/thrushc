@@ -4,6 +4,7 @@ use std::path::Path;
 
 use crate::core::{
     compiler::{
+        self,
         backends::{
             linkers::{LinkerConfiguration, LinkerModeType},
             llvm::{self, flavors::LLVMLinkerFlavor},
@@ -478,27 +479,10 @@ impl CLI {
             }
         }
     }
+}
 
-    fn is_thrush_file(&self, path: &str) -> bool {
-        let path: PathBuf = PathBuf::from(path);
-
-        if let Some(extension) = path.extension() {
-            if path.exists() && path.is_file() && (extension.eq("thrush") || extension.eq("🐦")) {
-                return true;
-            }
-        }
-
-        false
-    }
-
-    fn advance(&mut self) {
-        if self.is_eof() {
-            self.report_error("Expected value after flag or command.");
-        }
-
-        self.current += 1;
-    }
-
+impl CLI {
+    #[inline]
     fn peek(&self) -> &str {
         if self.is_eof() {
             self.report_error("Expected value after flag or command.");
@@ -508,13 +492,17 @@ impl CLI {
     }
 
     #[inline]
-    fn is_eof(&self) -> bool {
-        self.current >= self.args.len()
+    fn advance(&mut self) {
+        if self.is_eof() {
+            self.report_error("Expected value after flag or command.");
+        }
+
+        self.current += 1;
     }
 
     #[inline]
     fn report_error(&self, msg: &str) -> ! {
-        logging::print_any_panic(LoggingType::Panic, msg);
+        logging::print_critical_error(LoggingType::Error, msg);
     }
 }
 
@@ -524,12 +512,10 @@ impl CLI {
 
         let file_name: String = path.file_name().map_or_else(
             || {
-                logging::log(
-                    LoggingType::Panic,
+                logging::print_critical_error(
+                    LoggingType::Error,
                     &format!("Unknown file name '{}'.", path.display()),
                 );
-
-                String::default()
             },
             |name| name.to_string_lossy().to_string(),
         );
@@ -538,7 +524,9 @@ impl CLI {
             path = canonicalized_path;
         }
 
-        self.options.new_file(file_name, path);
+        let content: String = compiler::reader::get_file_source_code(&path);
+
+        self.options.add_compilation_unit(file_name, path, content);
     }
 
     fn handle_unknown_argument(&mut self, arg: &str) {
@@ -556,8 +544,8 @@ impl CLI {
             return;
         }
 
-        logging::log(
-            LoggingType::Panic,
+        logging::print_critical_error(
+            LoggingType::Error,
             &format!("Unknown argument: \"{}\".", arg),
         );
     }
@@ -717,6 +705,25 @@ impl CLI {
         self.validation_cache.insert(path_str, exists);
 
         exists
+    }
+}
+
+impl CLI {
+    fn is_thrush_file(&self, path: &str) -> bool {
+        let path: PathBuf = PathBuf::from(path);
+
+        if let Some(extension) = path.extension() {
+            if path.exists() && path.is_file() && (extension.eq("thrush") || extension.eq("🐦")) {
+                return true;
+            }
+        }
+
+        false
+    }
+
+    #[inline]
+    fn is_eof(&self) -> bool {
+        self.current >= self.args.len()
     }
 }
 

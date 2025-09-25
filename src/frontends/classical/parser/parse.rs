@@ -163,18 +163,18 @@ pub fn integer(lexeme: &str, span: Span) -> Result<(Type, u64), ThrushCompilerIs
             if (U8_MIN..=U8_MAX).contains(&number) {
                 Ok((Type::U8, number as u64))
             } else if (U16_MIN..=U16_MAX).contains(&number) {
-                return Ok((Type::U16, number as u64));
+                Ok((Type::U16, number as u64))
             } else if (U32_MIN..=U32_MAX).contains(&number) {
-                return Ok((Type::U32, number as u64));
+                Ok((Type::U32, number as u64))
             } else if (usize::MIN..=usize::MAX).contains(&number) {
-                return Ok((Type::U64, number as u64));
+                Ok((Type::U64, number as u64))
             } else {
-                return Err(ThrushCompilerIssue::Error(
+                Err(ThrushCompilerIssue::Error(
                     "Syntax error".into(),
                     "Integer out of bounds.".into(),
                     None,
                     span,
-                ));
+                ))
             }
         }
 

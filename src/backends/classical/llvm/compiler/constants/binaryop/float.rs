@@ -12,13 +12,9 @@ use crate::frontends::classical::typesystem::types::Type;
 
 use std::fmt::Display;
 
-use inkwell::{
-    AddressSpace,
-    values::{BasicValueEnum, FloatValue},
-};
+use inkwell::values::{BasicValueEnum, FloatValue};
 
 pub fn const_float_operation<'ctx>(
-    context: &mut LLVMCodeGenContext<'_, 'ctx>,
     left: FloatValue<'ctx>,
     right: FloatValue<'ctx>,
     operator: &TokenType,
@@ -98,8 +94,6 @@ pub fn const_float_operation<'ctx>(
             self::codegen_abort(
                 "Cannot perform constant float binary operation without a valid operator.",
             );
-
-            self::compile_null_ptr(context)
         }
     }
 }
@@ -129,30 +123,15 @@ pub fn compile<'ctx>(
         let lhs: BasicValueEnum = constgen::compile(context, binary.0, cast);
         let rhs: BasicValueEnum = constgen::compile(context, binary.2, cast);
 
-        return const_float_operation(
-            context,
-            lhs.into_float_value(),
-            rhs.into_float_value(),
-            operator,
-        );
+        return const_float_operation(lhs.into_float_value(), rhs.into_float_value(), operator);
     }
 
     self::codegen_abort(format!(
         "Cannot perform process a constant float binary operation '{} {} {}'.",
         binary.0, binary.1, binary.2
     ));
-
-    self::compile_null_ptr(context)
 }
 
-fn codegen_abort<T: Display>(message: T) {
-    logging::log(LoggingType::BackendBug, &format!("{}", message));
-}
-
-fn compile_null_ptr<'ctx>(context: &LLVMCodeGenContext<'_, 'ctx>) -> BasicValueEnum<'ctx> {
-    context
-        .get_llvm_context()
-        .ptr_type(AddressSpace::default())
-        .const_null()
-        .into()
+fn codegen_abort<T: Display>(message: T) -> ! {
+    logging::print_backend_bug(LoggingType::BackendBug, &format!("{}", message));
 }

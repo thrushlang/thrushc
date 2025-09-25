@@ -20,18 +20,18 @@ pub fn analyze(lexer: &mut Lexer) -> Result<(), ThrushCompilerIssue> {
         '%' => lexer.make(TokenType::Arith),
         '*' => lexer.make(TokenType::Star),
         '/' if lexer.char_match('/') => loop {
-            if lexer.peek() == '\n' || lexer.end() {
+            if lexer.peek() == '\n' || lexer.is_eof() {
                 break;
             }
 
-            lexer.advance();
+            lexer.advance_only();
         },
         '/' if lexer.char_match('*') => loop {
             if lexer.char_match('*') {
                 continue;
             } else if lexer.char_match('/') {
                 break;
-            } else if lexer.end() {
+            } else if lexer.is_eof() {
                 lexer.end_span();
 
                 let span: Span = Span::new(lexer.line, lexer.span);
@@ -44,7 +44,7 @@ pub fn analyze(lexer: &mut Lexer) -> Result<(), ThrushCompilerIssue> {
                 ));
             }
 
-            lexer.advance();
+            lexer.advance_only();
         },
         '/' => lexer.make(TokenType::Slash),
         ';' => lexer.make(TokenType::SemiColon),

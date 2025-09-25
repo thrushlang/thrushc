@@ -29,6 +29,7 @@ pub static WINDOWS_X86_64_CLANG: &[u8] =
 pub static WINDOWS_X86_64_CLANG_MANIFEST: &str =
     include_str!("../../../../embedded/compilers/windows/clang/clang-manifest.json");
 
+#[derive(Debug)]
 pub struct Clang<'clang> {
     files: &'clang [PathBuf],
     config: &'clang LinkingCompilersConfiguration,
@@ -47,7 +48,9 @@ impl<'clang> Clang<'clang> {
             backend,
         }
     }
+}
 
+impl<'clang> Clang<'clang> {
     pub fn link(&self) -> Result<Duration, ()> {
         let start_time: Instant = Instant::now();
 
@@ -153,9 +156,9 @@ impl<'clang> Clang<'clang> {
         clang_command.args(self.config.get_args().iter());
 
         if self.config.get_debug_clang_commands() {
-            logging::log(
-                LoggingType::Info,
-                &format!("Generated Clang Command: '{:?}'.\n", clang_command),
+            logging::print_debug(
+                LoggingType::Debug,
+                &format!("Generated Clang command: '{:?}'.\n", clang_command),
             );
         }
 
@@ -166,14 +169,14 @@ impl<'clang> Clang<'clang> {
         if let Ok(clang) = command.output() {
             if !clang.status.success() {
                 if !clang.stderr.is_empty() {
-                    logging::log(
+                    logging::print_error(
                         logging::LoggingType::Error,
                         String::from_utf8_lossy(&clang.stderr).trim_end(),
                     );
                 }
 
                 if !clang.stdout.is_empty() {
-                    logging::log(
+                    logging::print_warn(
                         logging::LoggingType::Warning,
                         String::from_utf8_lossy(&clang.stdout).trim_end(),
                     );

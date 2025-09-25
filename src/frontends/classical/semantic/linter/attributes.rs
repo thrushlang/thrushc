@@ -1,6 +1,6 @@
 use crate::{
     core::{
-        compiler::options::CompilerFile,
+        compiler::options::CompilationUnit,
         console::logging::{self, LoggingType},
         diagnostic::diagnostician::Diagnostician,
         errors::standard::ThrushCompilerIssue,
@@ -24,7 +24,10 @@ pub struct AttributesLinter<'attr_linter> {
 }
 
 impl<'attr_linter> AttributesLinter<'attr_linter> {
-    pub fn new(ast: &'attr_linter [Ast<'attr_linter>], file: &'attr_linter CompilerFile) -> Self {
+    pub fn new(
+        ast: &'attr_linter [Ast<'attr_linter>],
+        file: &'attr_linter CompilationUnit,
+    ) -> Self {
         Self {
             ast,
             warnings: Vec::with_capacity(100),
@@ -117,28 +120,32 @@ impl<'attr_linter> AttributesLinter<'attr_linter> {
             })
             .collect()
     }
+}
 
+impl<'attr_linter> AttributesLinter<'attr_linter> {
+    #[inline]
+    fn peek(&self) -> &'attr_linter Ast<'attr_linter> {
+        self.ast.get(self.current).unwrap_or_else(|| {
+            logging::print_frontend_panic(
+                LoggingType::FrontEndPanic,
+                "Attemping to get a statement in invalid position at attributes linter.",
+            );
+        })
+    }
+
+    #[inline]
     fn add_warning(&mut self, warn: ThrushCompilerIssue) {
         self.warnings.push(warn);
     }
 
+    #[inline]
     fn advance(&mut self) {
         if !self.is_eof() {
             self.current += 1;
         }
     }
 
-    fn peek(&self) -> &'attr_linter Ast<'attr_linter> {
-        self.ast.get(self.current).unwrap_or_else(|| {
-            logging::log(
-                LoggingType::Panic,
-                "Attemping to get a statement in invalid position at attributes linter.",
-            );
-
-            unreachable!()
-        })
-    }
-
+    #[inline]
     fn is_eof(&self) -> bool {
         self.current >= self.ast.len()
     }

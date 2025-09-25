@@ -6,11 +6,7 @@ pub mod memstatic;
 use inkwell::{context::Context, types::BasicTypeEnum, values::PointerValue};
 
 use crate::{
-    backends::classical::llvm::compiler::{
-        context::LLVMCodeGenContext,
-        typegen,
-        utils::{self, SHORT_RANGE_OBFUSCATION},
-    },
+    backends::classical::llvm::compiler::{context::LLVMCodeGenContext, obfuscation, typegen},
     frontends::classical::{
         types::parser::stmts::{traits::ThrushAttributesExtensions, types::ThrushAttributes},
         typesystem::types::Type,
@@ -29,7 +25,7 @@ pub fn alloc<'ctx>(
 
     let formatted_name: String = format!(
         "{}.local.{}",
-        utils::generate_random_string(SHORT_RANGE_OBFUSCATION),
+        obfuscation::generate_random_obfuscation_name(obfuscation::LONG_RANGE_OBFUSCATION),
         ascii_name
     );
 

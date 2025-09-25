@@ -97,7 +97,7 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
         if let Some(last_block) = self.table.get_mut_local_constants().last_mut() {
             last_block.insert(name, constant);
         } else {
-            logging::log(
+            logging::print_backend_bug(
                 LoggingType::BackendBug,
                 "The last frame of symbols could not be obtained.",
             )
@@ -154,7 +154,7 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
         if let Some(last_block) = self.table.get_mut_local_statics().last_mut() {
             last_block.insert(name, constant);
         } else {
-            logging::log(
+            logging::print_backend_bug(
                 LoggingType::BackendBug,
                 "The last frame of symbols could not be obtained.",
             )
@@ -205,7 +205,7 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
         if let Some(last_block) = self.table.get_mut_locals().last_mut() {
             last_block.insert(name, local);
         } else {
-            logging::log(
+            logging::print_backend_bug(
                 LoggingType::BackendBug,
                 "The last frame of symbols could not be obtained.",
             );
@@ -219,7 +219,7 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
         if let Some(last_block) = self.table.get_mut_locals().last_mut() {
             last_block.insert(name, lli);
         } else {
-            logging::log(
+            logging::print_backend_bug(
                 LoggingType::BackendBug,
                 "The last frame of symbols could not be obtained.",
             );
@@ -270,7 +270,6 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
     pub fn get_current_fn(&self) -> FunctionValue<'ctx> {
         self.function.unwrap_or_else(|| {
             self::codegen_abort("The function currently being compiled could not be obtained.");
-            unreachable!()
         })
     }
 
@@ -307,7 +306,6 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
     pub fn get_last_builder_block(&self) -> BasicBlock<'ctx> {
         self.builder.get_insert_block().unwrap_or_else(|| {
             self::codegen_abort("The last builder block could not be obtained.");
-            unreachable!()
         })
     }
 }
@@ -349,6 +347,6 @@ impl<'a, 'ctx> LLVMCodeGenContext<'a, 'ctx> {
     }
 }
 
-fn codegen_abort<T: Display>(message: T) {
-    logging::log(LoggingType::BackendBug, &format!("{}", message));
+fn codegen_abort<T: Display>(message: T) -> ! {
+    logging::print_backend_bug(LoggingType::BackendBug, &format!("{}", message));
 }

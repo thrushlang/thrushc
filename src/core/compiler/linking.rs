@@ -16,9 +16,12 @@ impl LinkingCompilersConfiguration {
         Self {
             use_clang: false,
             use_gcc: false,
+
             compiler_args: Vec::with_capacity(50),
+
             custom_gcc: None,
             custom_clang: None,
+
             debug_clang_commands: false,
             debug_gcc_commands: false,
         }

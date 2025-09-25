@@ -2,7 +2,7 @@ use ahash::AHashSet;
 
 use crate::{
     core::{
-        compiler::options::CompilerFile,
+        compiler::options::CompilationUnit,
         console::logging::{self, LoggingType},
         diagnostic::diagnostician::Diagnostician,
         errors::standard::ThrushCompilerIssue,
@@ -28,7 +28,7 @@ pub struct AttributeChecker<'attr_checker> {
 impl<'attr_checker> AttributeChecker<'attr_checker> {
     pub fn new(
         ast: &'attr_checker [Ast<'attr_checker>],
-        file: &'attr_checker CompilerFile,
+        file: &'attr_checker CompilationUnit,
     ) -> Self {
         Self {
             ast,
@@ -290,28 +290,32 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
 
         repeated_attrs
     }
+}
 
+impl<'attr_checker> AttributeChecker<'attr_checker> {
+    #[inline]
     fn add_error(&mut self, error: ThrushCompilerIssue) {
         self.errors.push(error);
     }
 
+    #[inline]
     fn advance(&mut self) {
         if !self.is_eof() {
             self.currrent += 1;
         }
     }
 
+    #[inline]
     fn peek(&self) -> &'attr_checker Ast<'attr_checker> {
         self.ast.get(self.currrent).unwrap_or_else(|| {
-            logging::log(
+            logging::print_frontend_panic(
                 LoggingType::FrontEndPanic,
-                "Attemping to get a statement in invalid position at Attribute Checker.",
+                "Attemping to get a statement in invalid position at attribute checker.",
             );
-
-            unreachable!()
         })
     }
 
+    #[inline]
     fn is_eof(&self) -> bool {
         self.currrent >= self.ast.len()
     }

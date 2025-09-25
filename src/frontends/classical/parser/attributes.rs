@@ -123,8 +123,8 @@ fn build_assembler_syntax_attribute<'parser>(
 
     let syntax_tk: &Token = parser_ctx.consume(
         TokenType::Str,
-        String::from("Syntax error"),
-        String::from("Expected a string literal for @asmsyntax(\"Intel\")."),
+        "Syntax error".into(),
+        "Expected a string literal for @asmsyntax(\"Intel\").".into(),
     )?;
 
     let specified_syntax: &str = syntax_tk.get_lexeme();
@@ -146,8 +146,8 @@ fn build_assembler_syntax_attribute<'parser>(
 
     parser_ctx.consume(
         TokenType::RParen,
-        String::from("Syntax error"),
-        String::from("Expected ')'."),
+        "Syntax error".into(),
+        "Expected ')'.".into(),
     )?;
 
     Ok(specified_syntax)
@@ -160,14 +160,14 @@ fn build_call_convention_attribute(
 
     parser_ctx.consume(
         TokenType::LParen,
-        String::from("Syntax error"),
-        String::from("Expected '('."),
+        "Syntax error".into(),
+        "Expected '('.".into(),
     )?;
 
     let convention_tk: &Token = parser_ctx.consume(
         TokenType::Str,
-        String::from("Syntax error"),
-        String::from("Expected a literal 'str' for @convention(\"CONVENTION NAME\")."),
+        "Syntax error".into(),
+        "Expected a literal 'str' for @convention(\"CONVENTION NAME\").".into(),
     )?;
 
     let span: Span = convention_tk.span;
@@ -176,8 +176,8 @@ fn build_call_convention_attribute(
     if let Some(call_convention) = CALL_CONVENTIONS.get(name) {
         parser_ctx.consume(
             TokenType::RParen,
-            String::from("Syntax error"),
-            String::from("Expected ')'."),
+            "Syntax error".into(),
+            "Expected ')'.".into(),
         )?;
 
         return Ok(*call_convention);
@@ -185,8 +185,8 @@ fn build_call_convention_attribute(
 
     parser_ctx.consume(
         TokenType::RParen,
-        String::from("Syntax error"),
-        String::from("Expected ')'."),
+        "Syntax error".into(),
+        "Expected ')'.".into(),
     )?;
 
     Err(ThrushCompilerIssue::Error(

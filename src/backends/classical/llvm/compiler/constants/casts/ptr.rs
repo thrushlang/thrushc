@@ -12,7 +12,6 @@ use crate::{
 };
 
 pub fn const_ptr_cast<'ctx>(
-    context: &LLVMCodeGenContext<'_, 'ctx>,
     value: BasicValueEnum<'ctx>,
     cast: BasicTypeEnum<'ctx>,
 ) -> BasicValueEnum<'ctx> {
@@ -23,17 +22,8 @@ pub fn const_ptr_cast<'ctx>(
     }
 
     self::codegen_abort("Cannot cast constant pointer value to non-basic type.");
-    self::compile_null_ptr(context)
 }
 
-fn compile_null_ptr<'ctx>(context: &LLVMCodeGenContext<'_, 'ctx>) -> BasicValueEnum<'ctx> {
-    context
-        .get_llvm_context()
-        .ptr_type(AddressSpace::default())
-        .const_null()
-        .into()
-}
-
-fn codegen_abort<T: Display>(message: T) {
-    logging::log(LoggingType::BackendBug, &format!("{}", message));
+fn codegen_abort<T: Display>(message: T) -> ! {
+    logging::print_backend_bug(LoggingType::BackendBug, &format!("{}", message));
 }

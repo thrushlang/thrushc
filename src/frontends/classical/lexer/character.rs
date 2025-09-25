@@ -5,7 +5,7 @@ use crate::{
 
 pub fn lex(lexer: &mut Lexer) -> Result<(), ThrushCompilerIssue> {
     while lexer.is_char_boundary() {
-        lexer.advance();
+        lexer.advance_only();
     }
 
     lexer.end_span();
@@ -21,7 +21,7 @@ pub fn lex(lexer: &mut Lexer) -> Result<(), ThrushCompilerIssue> {
         ));
     }
 
-    lexer.advance();
+    lexer.advance_only();
 
     let lexeme: String = lexer.shrink_lexeme();
 

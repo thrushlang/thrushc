@@ -4,7 +4,7 @@ use symbols::LinterSymbolsTable;
 
 use crate::{
     core::{
-        compiler::options::CompilerFile,
+        compiler::options::CompilationUnit,
         console::logging::{self, LoggingType},
         diagnostic::diagnostician::Diagnostician,
         errors::standard::ThrushCompilerIssue,
@@ -36,7 +36,7 @@ pub struct Linter<'linter> {
 }
 
 impl<'linter> Linter<'linter> {
-    pub fn new(ast: &'linter [Ast], file: &'linter CompilerFile) -> Self {
+    pub fn new(ast: &'linter [Ast], file: &'linter CompilationUnit) -> Self {
         Self {
             ast,
             current: 0,
@@ -702,15 +702,15 @@ impl<'linter> Linter<'linter> {
                 }
             });
     }
+}
 
-    fn add_bug(&mut self, bug: ThrushCompilerIssue) {
-        self.bugs.push(bug);
-    }
-
+impl<'linter> Linter<'linter> {
+    #[inline]
     fn begin_scope(&mut self) {
         self.symbols.begin_scope();
     }
 
+    #[inline]
     fn end_scope(&mut self) {
         self.symbols.end_scope();
     }
@@ -721,18 +721,23 @@ impl<'linter> Linter<'linter> {
         }
     }
 
+    #[inline]
     fn peek(&self) -> &'linter Ast<'linter> {
         self.ast.get(self.current).unwrap_or_else(|| {
-            logging::log(
-                LoggingType::Panic,
-                "Attempting to get instruction in invalid current position.",
+            logging::print_frontend_panic(
+                LoggingType::FrontEndPanic,
+                "Attempting to get ast in invalid current position.",
             );
-
-            unreachable!()
         })
     }
 
+    #[inline]
     fn is_eof(&self) -> bool {
         self.current >= self.ast.len()
+    }
+
+    #[inline]
+    fn add_bug(&mut self, bug: ThrushCompilerIssue) {
+        self.bugs.push(bug);
     }
 }
