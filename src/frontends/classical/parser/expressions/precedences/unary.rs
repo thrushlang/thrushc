@@ -46,6 +46,23 @@ pub fn unary_precedence<'parser>(
         });
     }
 
+    if parser_context.match_token(TokenType::Not)? {
+        let operator_tk: &Token = parser_context.previous();
+        let operator: TokenType = operator_tk.kind;
+        let span: Span = operator_tk.span;
+
+        let expression: Ast = cast::cast_precedence(parser_context)?;
+        let expression_type: &Type = expression.get_value_type()?;
+
+        return Ok(Ast::UnaryOp {
+            operator,
+            expression: expression.clone().into(),
+            kind: expression_type.clone(),
+            is_pre: false,
+            span,
+        });
+    }
+
     if parser_context.match_token(TokenType::PlusPlus)? {
         let operator_tk: &Token = parser_context.previous();
         let operator: TokenType = operator_tk.get_type();

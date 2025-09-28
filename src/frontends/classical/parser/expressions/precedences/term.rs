@@ -17,6 +17,8 @@ pub fn term_precedence<'parser>(
         || parser_context.match_token(TokenType::Minus)?
         || parser_context.match_token(TokenType::LShift)?
         || parser_context.match_token(TokenType::RShift)?
+        || parser_context.match_token(TokenType::Xor)?
+        || parser_context.match_token(TokenType::Bor)?
     {
         let operator_tk: &Token = parser_context.previous();
         let operator: TokenType = operator_tk.get_type();

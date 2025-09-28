@@ -19,6 +19,8 @@ pub fn analyze(lexer: &mut Lexer) -> Result<(), ThrushCompilerIssue> {
         '.' => lexer.make(TokenType::Dot),
         '%' => lexer.make(TokenType::Arith),
         '*' => lexer.make(TokenType::Star),
+        '^' => lexer.make(TokenType::Xor),
+        '~' => lexer.make(TokenType::Not),
         '/' if lexer.char_match('/') => loop {
             if lexer.peek() == '\n' || lexer.is_eof() {
                 break;
@@ -67,7 +69,9 @@ pub fn analyze(lexer: &mut Lexer) -> Result<(), ThrushCompilerIssue> {
         '>' if lexer.char_match('=') => lexer.make(TokenType::GreaterEq),
         '>' if lexer.char_match('>') => lexer.make(TokenType::RShift),
         '>' => lexer.make(TokenType::Greater),
+
         '|' if lexer.char_match('|') => lexer.make(TokenType::Or),
+        '|' => lexer.make(TokenType::Bor),
         '&' if lexer.char_match('&') => lexer.make(TokenType::And),
         ' ' | '\r' | '\t' => {}
         '\n' => lexer.line += 1,

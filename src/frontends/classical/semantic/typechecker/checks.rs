@@ -122,9 +122,31 @@ pub fn type_check(
             Ok(())
         }
 
-        (Type::Ptr(None), Type::Ptr(None), None) => Ok(()),
+        (
+            Type::Ptr(None),
+            Type::Ptr(None),
+            Some(
+                TokenType::Xor
+                | TokenType::Bor
+                | TokenType::Not
+                | TokenType::EqEq
+                | TokenType::BangEq,
+            )
+            | None,
+        ) => Ok(()),
 
-        (Type::Ptr(Some(lhs)), Type::Ptr(Some(rhs)), None) => {
+        (
+            Type::Ptr(Some(lhs)),
+            Type::Ptr(Some(rhs)),
+            Some(
+                TokenType::Xor
+                | TokenType::Bor
+                | TokenType::Not
+                | TokenType::EqEq
+                | TokenType::BangEq,
+            )
+            | None,
+        ) => {
             self::type_check(lhs, rhs, expr, op, metadata)?;
 
             Ok(())
@@ -158,7 +180,10 @@ pub fn type_check(
                 | TokenType::LShift
                 | TokenType::RShift
                 | TokenType::PlusPlus
-                | TokenType::MinusMinus,
+                | TokenType::MinusMinus
+                | TokenType::Xor
+                | TokenType::Bor
+                | TokenType::Not,
             )
             | None,
         ) => Ok(()),
@@ -174,7 +199,10 @@ pub fn type_check(
                 | TokenType::LShift
                 | TokenType::RShift
                 | TokenType::PlusPlus
-                | TokenType::MinusMinus,
+                | TokenType::MinusMinus
+                | TokenType::Xor
+                | TokenType::Bor
+                | TokenType::Not,
             )
             | None,
         ) => Ok(()),
@@ -190,7 +218,10 @@ pub fn type_check(
                 | TokenType::LShift
                 | TokenType::RShift
                 | TokenType::PlusPlus
-                | TokenType::MinusMinus,
+                | TokenType::MinusMinus
+                | TokenType::Xor
+                | TokenType::Bor
+                | TokenType::Not,
             )
             | None,
         ) => Ok(()),
@@ -206,7 +237,10 @@ pub fn type_check(
                 | TokenType::LShift
                 | TokenType::RShift
                 | TokenType::PlusPlus
-                | TokenType::MinusMinus,
+                | TokenType::MinusMinus
+                | TokenType::Xor
+                | TokenType::Bor
+                | TokenType::Not,
             )
             | None,
         ) => Ok(()),
@@ -222,7 +256,10 @@ pub fn type_check(
                 | TokenType::LShift
                 | TokenType::RShift
                 | TokenType::PlusPlus
-                | TokenType::MinusMinus,
+                | TokenType::MinusMinus
+                | TokenType::Xor
+                | TokenType::Bor
+                | TokenType::Not,
             )
             | None,
         ) => Ok(()),
@@ -238,7 +275,10 @@ pub fn type_check(
                 | TokenType::LShift
                 | TokenType::RShift
                 | TokenType::PlusPlus
-                | TokenType::MinusMinus,
+                | TokenType::MinusMinus
+                | TokenType::Xor
+                | TokenType::Bor
+                | TokenType::Not,
             )
             | None,
         ) => Ok(()),
@@ -254,7 +294,10 @@ pub fn type_check(
                 | TokenType::LShift
                 | TokenType::RShift
                 | TokenType::PlusPlus
-                | TokenType::MinusMinus,
+                | TokenType::MinusMinus
+                | TokenType::Xor
+                | TokenType::Bor
+                | TokenType::Not,
             )
             | None,
         ) => Ok(()),
@@ -270,7 +313,10 @@ pub fn type_check(
                 | TokenType::LShift
                 | TokenType::RShift
                 | TokenType::PlusPlus
-                | TokenType::MinusMinus,
+                | TokenType::MinusMinus
+                | TokenType::Xor
+                | TokenType::Bor
+                | TokenType::Not,
             )
             | None,
         ) => Ok(()),
@@ -318,7 +364,10 @@ pub fn type_check(
                 | TokenType::LShift
                 | TokenType::RShift
                 | TokenType::PlusPlus
-                | TokenType::MinusMinus,
+                | TokenType::MinusMinus
+                | TokenType::Xor
+                | TokenType::Bor
+                | TokenType::Not,
             )
             | None,
         ) if metadata.is_literal() => Ok(()),
@@ -334,7 +383,10 @@ pub fn type_check(
                 | TokenType::LShift
                 | TokenType::RShift
                 | TokenType::PlusPlus
-                | TokenType::MinusMinus,
+                | TokenType::MinusMinus
+                | TokenType::Xor
+                | TokenType::Bor
+                | TokenType::Not,
             )
             | None,
         ) if metadata.is_literal() => Ok(()),
@@ -350,7 +402,10 @@ pub fn type_check(
                 | TokenType::LShift
                 | TokenType::RShift
                 | TokenType::PlusPlus
-                | TokenType::MinusMinus,
+                | TokenType::MinusMinus
+                | TokenType::Xor
+                | TokenType::Bor
+                | TokenType::Not,
             )
             | None,
         ) if metadata.is_literal() => Ok(()),
@@ -366,7 +421,10 @@ pub fn type_check(
                 | TokenType::LShift
                 | TokenType::RShift
                 | TokenType::PlusPlus
-                | TokenType::MinusMinus,
+                | TokenType::MinusMinus
+                | TokenType::Xor
+                | TokenType::Bor
+                | TokenType::Not,
             )
             | None,
         ) if metadata.is_literal() => Ok(()),

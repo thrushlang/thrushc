@@ -12,6 +12,7 @@ use crate::frontends::classical::types::ast::Ast;
 use crate::frontends::classical::types::parser::repr::UnaryOperation;
 use crate::frontends::classical::typesystem::types::Type;
 
+use inkwell::values::PointerValue;
 use inkwell::{
     builder::Builder,
     context::Context,
@@ -36,6 +37,8 @@ pub fn compile<'ctx>(
         (TokenType::Bang, _, expr) => self::compile_logical_negation(context, expr, cast),
 
         (TokenType::Minus, _, expr) => self::compile_arithmetic_negation(context, expr, cast),
+
+        (TokenType::Not, _, expr) => self::compile_bitwise_not(context, expr, cast),
 
         what => {
             self::codegen_abort(format!("Unsupported unary operation: '{:?}'.", what));
@@ -265,6 +268,45 @@ fn compile_arithmetic_negation<'ctx>(
             }
 
             float.into()
+        }
+    }
+}
+
+fn compile_bitwise_not<'ctx>(
+    context: &mut LLVMCodeGenContext<'_, 'ctx>,
+    expr: &'ctx Ast,
+    cast: Option<&Type>,
+) -> BasicValueEnum<'ctx> {
+    let llvm_builder: &Builder = context.get_llvm_builder();
+
+    let value: BasicValueEnum = value::compile(context, expr, cast);
+    let kind: &Type = expr.get_type_unwrapped();
+
+    match kind {
+        kind if kind.is_integer_type() => {
+            let int: IntValue = value.into_int_value();
+
+            if let Ok(result) = llvm_builder.build_not(int, "") {
+                let result: BasicValueEnum = result.into();
+
+                return compiler::generation::cast::try_cast(context, cast, kind, result)
+                    .unwrap_or(result);
+            }
+
+            int.into()
+        }
+
+        _ => {
+            let ptr: PointerValue = value.into_pointer_value();
+
+            if let Ok(result) = llvm_builder.build_not(ptr, "") {
+                let result: BasicValueEnum = result.into();
+
+                return compiler::generation::cast::try_cast(context, cast, kind, result)
+                    .unwrap_or(result);
+            }
+
+            ptr.into()
         }
     }
 }

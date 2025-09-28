@@ -68,6 +68,14 @@ fn int_operation<'ctx>(
                 .build_right_shift(left, right, signatures.0 || signatures.1, "")
                 .unwrap_or_else(cintgen_abort)
                 .into(),
+            TokenType::Xor => llvm_builder
+                .build_xor(left, right, "")
+                .unwrap_or_else(cintgen_abort)
+                .into(),
+            TokenType::Bor => llvm_builder
+                .build_or(left, right, "")
+                .unwrap_or_else(cintgen_abort)
+                .into(),
 
             op if op.is_logical_operator() => llvm_builder
                 .build_int_compare(
@@ -132,7 +140,9 @@ pub fn compile<'ctx>(
         | TokenType::LShift
         | TokenType::RShift
         | TokenType::And
-        | TokenType::Or,
+        | TokenType::Or
+        | TokenType::Xor
+        | TokenType::Bor,
         _,
     ) = binary
     {

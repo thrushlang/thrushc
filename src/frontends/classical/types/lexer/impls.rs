@@ -132,6 +132,9 @@ impl std::fmt::Display for TokenType {
             TokenType::RShift => write!(f, ">>"),
             TokenType::SemiColon => write!(f, ";"),
             TokenType::Slash => write!(f, "/"),
+            TokenType::Xor => write!(f, "^"),
+            TokenType::Not => write!(f, "~"),
+            TokenType::Bor => write!(f, "|"),
             TokenType::Star => write!(f, "*"),
             TokenType::SizeOf => write!(f, "sizeof"),
 

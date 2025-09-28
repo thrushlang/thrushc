@@ -17,17 +17,31 @@ use inkwell::{
 
 pub fn ptr_operation<'ctx>(
     context: &LLVMCodeGenContext<'_, 'ctx>,
-    left: BasicValueEnum<'ctx>,
-    right: BasicValueEnum<'ctx>,
+
+    lhs: BasicValueEnum<'ctx>,
+    rhs: BasicValueEnum<'ctx>,
     operator: &TokenType,
 ) -> BasicValueEnum<'ctx> {
     let llvm_builder: &Builder = context.get_llvm_builder();
 
-    if left.is_pointer_value() && right.is_pointer_value() {
-        let lhs: PointerValue = left.into_pointer_value();
-        let rhs: PointerValue = right.into_pointer_value();
+    if lhs.is_pointer_value() && rhs.is_pointer_value() {
+        let lhs: PointerValue = lhs.into_pointer_value();
+        let rhs: PointerValue = rhs.into_pointer_value();
 
         return match operator {
+            TokenType::Xor => llvm_builder
+                .build_xor(lhs, rhs, "")
+                .unwrap_or_else(|_| {
+                    self::codegen_abort("Cannot perform pointer binary operation.");
+                })
+                .into(),
+            TokenType::Bor => llvm_builder
+                .build_or(lhs, rhs, "")
+                .unwrap_or_else(|_| {
+                    self::codegen_abort("Cannot perform pointer binary operation.");
+                })
+                .into(),
+
             op if op.is_logical_operator() => llvm_builder
                 .build_int_compare(predicates::pointer(operator), lhs, rhs, "")
                 .unwrap_or_else(|_| {
@@ -50,7 +64,7 @@ pub fn compile<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     binary: BinaryOperation<'ctx>,
 ) -> BasicValueEnum<'ctx> {
-    if let (_, TokenType::EqEq | TokenType::BangEq, _) = binary {
+    if let (_, TokenType::EqEq | TokenType::BangEq | TokenType::Xor | TokenType::Bor, _) = binary {
         let operator: &TokenType = binary.1;
 
         let left: BasicValueEnum = value::compile(context, binary.0, None);

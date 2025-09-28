@@ -57,6 +57,8 @@ fn const_int_operation<'ctx>(
             }
             TokenType::LShift => left.const_shl(right).into(),
             TokenType::RShift => left.const_rshr(right).into(),
+            TokenType::Xor => left.const_xor(right).into(),
+            TokenType::Bor => left.const_or(right).into(),
 
             op if op.is_logical_operator() => left
                 .const_int_compare(
@@ -110,7 +112,9 @@ pub fn compile<'ctx>(
         | TokenType::LShift
         | TokenType::RShift
         | TokenType::And
-        | TokenType::Or,
+        | TokenType::Or
+        | TokenType::Xor
+        | TokenType::Bor,
         _,
     ) = binary
     {

@@ -89,7 +89,7 @@ pub fn print_compiler_frontend_bug(diagnostic: &Diagnostic, error: FrontendError
         logging::OutputIn::Stderr,
         &format!(
             "\n{} {} {} {}{}{}\n",
-            "FrontEnd bug".bright_red().bold(),
+            "FRONTEND BUG".bright_red().bold(),
             title.to_uppercase(),
             "-".bold(),
             position,

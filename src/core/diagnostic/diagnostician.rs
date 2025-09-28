@@ -74,7 +74,7 @@ impl Display for Notificator {
         match self {
             Self::CommonHelp => write!(f, "{}", "HELP: ".bright_green().bold()),
             Self::CompilerFronteEndBug => {
-                write!(f, "{}", "COMPILER BUG INFO: ".bright_red().bold())
+                write!(f, "{}", "INFO: ".bright_red().bold())
             }
         }
     }
