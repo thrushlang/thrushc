@@ -19,9 +19,9 @@ use crate::{
             ast::{
                 metadata::{
                     cast::CastMetadata, constant::ConstantMetadata,
-                    fnparam::FunctionParameterMetadata, index::IndexMetadata, local::LocalMetadata,
-                    property::PropertyMetadata, reference::ReferenceMetadata,
-                    staticvar::StaticMetadata,
+                    dereference::DereferenceMetadata, fnparam::FunctionParameterMetadata,
+                    index::IndexMetadata, local::LocalMetadata, property::PropertyMetadata,
+                    reference::ReferenceMetadata, staticvar::StaticMetadata,
                 },
                 types::AstEitherExpression,
             },
@@ -193,6 +193,7 @@ pub enum Ast<'ctx> {
     // Entrypoint
     EntryPoint {
         body: Rc<Ast<'ctx>>,
+        parameters: Vec<Ast<'ctx>>,
         span: Span,
     },
     AssemblerFunction {
@@ -324,6 +325,7 @@ pub enum Ast<'ctx> {
     Deref {
         value: Rc<Ast<'ctx>>,
         kind: Type,
+        metadata: DereferenceMetadata,
         span: Span,
     },
 

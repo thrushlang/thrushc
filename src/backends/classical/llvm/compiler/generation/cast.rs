@@ -331,7 +331,27 @@ pub fn compile<'ctx>(
 
     let lhs_type: &Type = lhs.get_type_unwrapped();
 
+    let abort_ptrtoint =
+        |_| self::codegen_abort(format!("Failed to cast '{}' to '{}'.", lhs_type, rhs));
     let abort_ptr = |_| self::codegen_abort(format!("Failed to cast '{}' to '{}'.", lhs_type, rhs));
+
+    if lhs_type.is_ptr_type() && rhs.is_integer_type() {
+        let val: BasicValueEnum = ptr::compile(context, lhs, None);
+
+        if val.is_pointer_value() {
+            let integer_type: BasicTypeEnum = typegen::generate_type(llvm_context, rhs);
+
+            return llvm_builder
+                .build_ptr_to_int(val.into_pointer_value(), integer_type.into_int_type(), "")
+                .unwrap_or_else(abort_ptrtoint)
+                .into();
+        };
+
+        self::codegen_abort(format!(
+            "Failed to cast pointer '{}' to integer '{}'.",
+            lhs, rhs
+        ));
+    }
 
     if lhs_type.is_str_type() && rhs.is_ptr_type() {
         let val: BasicValueEnum = ptr::compile(context, lhs, None);

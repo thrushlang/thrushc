@@ -1,5 +1,6 @@
 pub mod cast;
 pub mod constant;
+pub mod dereference;
 pub mod fnparam;
 pub mod index;
 pub mod local;

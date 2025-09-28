@@ -1,8 +1,10 @@
+use inkwell::AtomicOrdering;
+
 use crate::{
     core::errors::standard::ThrushCompilerIssue,
     frontends::classical::{
         lexer::{span::Span, token::Token, tokentype::TokenType},
-        parser::{ParserContext, attributes, expr, typegen},
+        parser::{ParserContext, attributes, builder, expr, typegen},
         types::{
             ast::{Ast, metadata::staticvar::StaticMetadata},
             parser::stmts::{traits::TokenExtensions, types::ThrushAttributes},
@@ -23,7 +25,9 @@ pub fn build_global_static<'parser>(
 
     let is_mutable: bool = ctx.match_token(TokenType::Mut)?;
     let is_lazy: bool = ctx.match_token(TokenType::LazyThread)?;
-    let is_volatible: bool = ctx.match_token(TokenType::Volatile)?;
+    let is_volatile: bool = ctx.match_token(TokenType::Volatile)?;
+
+    let atom_ord: Option<AtomicOrdering> = builder::build_atomic_ord(ctx)?;
 
     let static_tk: &Token = ctx.consume(
         TokenType::Identifier,
@@ -50,7 +54,8 @@ pub fn build_global_static<'parser>(
 
     let value: Ast = expr::build_expression(ctx)?;
 
-    let metadata: StaticMetadata = StaticMetadata::new(true, is_mutable, is_lazy, is_volatible);
+    let metadata: StaticMetadata =
+        StaticMetadata::new(true, is_mutable, is_lazy, is_volatile, atom_ord);
 
     if declare_forward {
         if let Err(error) = ctx.get_mut_symbols().new_global_static(

@@ -120,16 +120,7 @@ pub fn compile_body<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, global_fn: Global
     codegen.get_mut_context().set_current_fn(llvm_function);
 
     function_parameters.iter().for_each(|parameter| {
-        if let Ast::FunctionParameter {
-            name,
-            ascii_name,
-            kind,
-            position,
-            ..
-        } = parameter
-        {
-            self::compile_parameter(codegen, llvm_function, (name, ascii_name, kind, *position));
-        }
+        self::compile_parameter(codegen, llvm_function, parameter.as_function_parameter());
     });
 
     codegen.codegen_block(funcion_body);
@@ -141,7 +132,7 @@ pub fn compile_body<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, global_fn: Global
     codegen.get_mut_context().unset_current_function();
 }
 
-fn compile_parameter<'ctx>(
+pub fn compile_parameter<'ctx>(
     codegen: &mut LLVMCodegen<'_, 'ctx>,
     llvm_fn: FunctionValue<'ctx>,
     parameter: FunctionParameter<'ctx>,
@@ -158,7 +149,7 @@ fn compile_parameter<'ctx>(
             .new_parameter(name, ascii_name, kind, value);
     } else {
         self::codegen_abort(
-            "The value of a parameter of an LLVM function could not be obtained at code generation time.",
+            "The value of a parameter of an LLVM function couldn't be obtained at code generation time.",
         );
     }
 }

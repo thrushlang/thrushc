@@ -27,7 +27,7 @@ fn validate_not_unary(op: &TokenType, a: &Type, span: Span) -> Result<(), Thrush
     }
 
     Err(ThrushCompilerIssue::Error(
-        String::from("IncompatibleTypeOperation"),
+        String::from("Incompatible Type Operation"),
         format!("'{}{}' isn't valid operation.", op, a),
         None,
         span,
@@ -41,7 +41,7 @@ fn validate_general_unary(op: &TokenType, a: &Type, span: Span) -> Result<(), Th
     }
 
     Err(ThrushCompilerIssue::Error(
-        String::from("IncompatibleTypeOperation"),
+        String::from("Incompatible Type Operation"),
         format!("'{}{}' isn't valid operation.", op, a),
         None,
         span,
@@ -55,7 +55,7 @@ fn validate_bang_unary(op: &TokenType, a: &Type, span: Span) -> Result<(), Thrus
     }
 
     Err(ThrushCompilerIssue::Error(
-        String::from("IncompatibleTypeOperation"),
+        String::from("Incompatible Type Operation"),
         format!("'{}{}' isn't valid operation.", op, a),
         None,
         span,

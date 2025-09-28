@@ -1,4 +1,5 @@
 pub mod attributes;
+pub mod builder;
 pub mod builtins;
 pub mod checks;
 pub mod contexts;
@@ -6,7 +7,6 @@ pub mod declaration;
 pub mod declarations;
 pub mod expr;
 pub mod expressions;
-pub mod generators;
 pub mod parse;
 pub mod statement;
 pub mod statements;

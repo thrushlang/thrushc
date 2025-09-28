@@ -1,3 +1,5 @@
+use inkwell::AtomicOrdering;
+
 #[derive(Debug, Clone, Copy)]
 pub struct StaticMetadata {
     is_global: bool,
@@ -12,10 +14,18 @@ pub struct LLVMStaticMetadata {
     pub constant: bool,
     pub thread_local: bool,
     pub volatile: bool,
+    pub atomic_ord: Option<AtomicOrdering>,
 }
 
 impl StaticMetadata {
-    pub fn new(is_global: bool, is_mutable: bool, thread_local: bool, volatile: bool) -> Self {
+    #[inline]
+    pub fn new(
+        is_global: bool,
+        is_mutable: bool,
+        thread_local: bool,
+        volatile: bool,
+        atomic_ord: Option<AtomicOrdering>,
+    ) -> Self {
         Self {
             is_global,
             is_mutable,
@@ -25,10 +35,13 @@ impl StaticMetadata {
                 constant: !is_mutable,
                 thread_local,
                 volatile,
+                atomic_ord,
             },
         }
     }
+}
 
+impl StaticMetadata {
     #[inline]
     pub fn is_mutable(&self) -> bool {
         self.is_mutable

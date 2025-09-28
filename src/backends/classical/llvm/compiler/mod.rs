@@ -6,7 +6,6 @@ pub mod binaryop;
 pub mod block;
 pub mod builtins;
 pub mod codegen;
-pub mod constants;
 pub mod constgen;
 pub mod context;
 pub mod control;

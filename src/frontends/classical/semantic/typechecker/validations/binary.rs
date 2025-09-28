@@ -45,7 +45,7 @@ fn validate_bor(op: &TokenType, a: &Type, b: &Type, span: Span) -> Result<(), Th
     }
 
     Err(ThrushCompilerIssue::Error(
-        String::from("IncompatibleTypeOperation"),
+        String::from("Incompatible Type Operation"),
         format!("'{} {} {}' isn't valid operation.", a, op, b),
         None,
         span,
@@ -67,7 +67,7 @@ fn validate_xor(op: &TokenType, a: &Type, b: &Type, span: Span) -> Result<(), Th
     }
 
     Err(ThrushCompilerIssue::Error(
-        String::from("IncompatibleTypeOperation"),
+        String::from("Incompatible Type Operation"),
         format!("'{} {} {}' isn't valid operation.", a, op, b),
         None,
         span,
@@ -86,7 +86,7 @@ fn validate_binary_gate(
     }
 
     Err(ThrushCompilerIssue::Error(
-        String::from("IncompatibleTypeOperation"),
+        String::from("Incompatible Type Operation"),
         format!("'{} {} {}' isn't valid operation.", a, op, b),
         None,
         span,
@@ -109,7 +109,7 @@ fn validate_binary_shift(
     }
 
     Err(ThrushCompilerIssue::Error(
-        String::from("IncompatibleTypeOperation"),
+        String::from("Incompatible Type Operation"),
         format!("'{} {} {}' is not allowed.", a, op, b),
         None,
         span,
@@ -134,7 +134,7 @@ fn validate_binary_comparasion(
     }
 
     Err(ThrushCompilerIssue::Error(
-        String::from("IncompatibleTypeOperation"),
+        String::from("Incompatible Type Operation"),
         format!("'{} {} {}' isn't valid operation.", a, op, b),
         None,
         span,
@@ -179,7 +179,7 @@ fn validate_binary_equality(
     }
 
     Err(ThrushCompilerIssue::Error(
-        String::from("IncompatibleTypeOperation"),
+        String::from("Incompatible Type Operation"),
         format!("'{} {} {}' isn't valid operation.", a, op, b),
         None,
         span,
@@ -216,7 +216,7 @@ fn validate_binary_arithmetic(
         (Type::F32 | Type::F64, Type::F32 | Type::F64) => Ok(()),
 
         _ => Err(ThrushCompilerIssue::Error(
-            String::from("IncompatibleTypeOperation"),
+            String::from("Incompatible Type Operation"),
             format!("'{} {} {}' isn't valid operation.", a, op, b),
             None,
             span,

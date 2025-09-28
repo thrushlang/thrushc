@@ -1,8 +1,10 @@
+use inkwell::AtomicOrdering;
+
 use crate::{
     core::errors::standard::ThrushCompilerIssue,
     frontends::classical::{
         lexer::{span::Span, token::Token, tokentype::TokenType},
-        parser::{ParserContext, attributes, checks, expr, typegen},
+        parser::{ParserContext, attributes, builder, checks, expr, typegen},
         types::{
             ast::{Ast, metadata::constant::ConstantMetadata},
             parser::stmts::{traits::TokenExtensions, types::ThrushAttributes},
@@ -24,6 +26,8 @@ pub fn build_const<'parser>(
 
     let is_lazy: bool = ctx.match_token(TokenType::LazyThread)?;
     let is_volatile: bool = ctx.match_token(TokenType::Volatile)?;
+
+    let atom_ord: Option<AtomicOrdering> = builder::build_atomic_ord(ctx)?;
 
     let const_tk: &Token = ctx.consume(
         TokenType::Identifier,
@@ -63,7 +67,7 @@ pub fn build_const<'parser>(
         kind: const_type,
         value: value.into(),
         attributes,
-        metadata: ConstantMetadata::new(false, is_lazy, is_volatile),
+        metadata: ConstantMetadata::new(false, is_lazy, is_volatile, atom_ord),
         span,
     })
 }

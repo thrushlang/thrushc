@@ -20,18 +20,18 @@ use crate::{
 };
 
 pub fn build_function<'parser>(
-    parser_ctx: &mut ParserContext<'parser>,
+    ctx: &mut ParserContext<'parser>,
     declare_forward: bool,
 ) -> Result<Ast<'parser>, ThrushCompilerIssue> {
-    checks::check_main_scope_state(parser_ctx)?;
+    checks::check_main_scope_state(ctx)?;
 
-    parser_ctx.consume(
+    ctx.consume(
         TokenType::Fn,
         String::from("Syntax error"),
         String::from("Expected 'fn' keyword."),
     )?;
 
-    let function_name_tk: &Token = parser_ctx.consume(
+    let function_name_tk: &Token = ctx.consume(
         TokenType::Identifier,
         String::from("Syntax error"),
         String::from("Expected identifier."),
@@ -47,17 +47,16 @@ pub fn build_function<'parser>(
             return Ok(Ast::Null { span });
         }
 
-        parser_ctx.get_mut_control_ctx().set_inside_function(true);
+        ctx.get_mut_control_ctx().set_inside_function(true);
 
-        let entrypoint: Result<Ast, ThrushCompilerIssue> =
-            entrypoint::build_entrypoint(parser_ctx, span);
+        let entrypoint: Result<Ast, ThrushCompilerIssue> = entrypoint::build_entrypoint(ctx, span);
 
-        parser_ctx.get_mut_control_ctx().set_inside_function(false);
+        ctx.get_mut_control_ctx().set_inside_function(false);
 
         return entrypoint;
     }
 
-    parser_ctx.consume(
+    ctx.consume(
         TokenType::LParen,
         String::from("Syntax error"),
         String::from("Expected '('."),
@@ -69,13 +68,13 @@ pub fn build_function<'parser>(
     let mut parameter_position: u32 = 0;
 
     loop {
-        if parser_ctx.check(TokenType::RParen) {
+        if ctx.check(TokenType::RParen) {
             break;
         }
 
-        let is_mutable: bool = parser_ctx.match_token(TokenType::Mut)?;
+        let is_mutable: bool = ctx.match_token(TokenType::Mut)?;
 
-        let parameter_tk: &Token = parser_ctx.consume(
+        let parameter_tk: &Token = ctx.consume(
             TokenType::Identifier,
             String::from("Syntax error"),
             String::from("Expected identifier."),
@@ -86,13 +85,13 @@ pub fn build_function<'parser>(
 
         let span: Span = parameter_tk.get_span();
 
-        parser_ctx.consume(
+        ctx.consume(
             TokenType::Colon,
             String::from("Syntax error"),
             String::from("Expected ':'."),
         )?;
 
-        let parameter_type: Type = typegen::build_type(parser_ctx)?;
+        let parameter_type: Type = typegen::build_type(ctx)?;
 
         parameters_types.push(parameter_type.clone());
 
@@ -107,10 +106,10 @@ pub fn build_function<'parser>(
 
         parameter_position += 1;
 
-        if parser_ctx.check(TokenType::RParen) {
+        if ctx.check(TokenType::RParen) {
             break;
         } else {
-            parser_ctx.consume(
+            ctx.consume(
                 TokenType::Comma,
                 String::from("Syntax error"),
                 String::from("Expected ','."),
@@ -118,16 +117,16 @@ pub fn build_function<'parser>(
         }
     }
 
-    parser_ctx.consume(
+    ctx.consume(
         TokenType::RParen,
         String::from("Syntax error"),
         String::from("Expected ')'."),
     )?;
 
-    let return_type: Type = typegen::build_type(parser_ctx)?;
+    let return_type: Type = typegen::build_type(ctx)?;
 
     let attributes: ThrushAttributes =
-        attributes::build_attributes(parser_ctx, &[TokenType::SemiColon, TokenType::LBrace])?;
+        attributes::build_attributes(ctx, &[TokenType::SemiColon, TokenType::LBrace])?;
 
     let function_has_ignore: bool = attributes.has_ignore_attribute();
 
@@ -143,7 +142,7 @@ pub fn build_function<'parser>(
     };
 
     if declare_forward {
-        if let Err(error) = parser_ctx.get_mut_symbols().new_function(
+        if let Err(error) = ctx.get_mut_symbols().new_function(
             function_name,
             (
                 return_type,
@@ -152,34 +151,33 @@ pub fn build_function<'parser>(
             ),
             span,
         ) {
-            parser_ctx.add_silent_error(error);
+            ctx.add_silent_error(error);
         }
 
-        if parser_ctx.match_token(TokenType::SemiColon)? {
+        if ctx.match_token(TokenType::SemiColon)? {
             return Ok(function);
         }
 
         return Ok(Ast::Null { span });
     }
 
-    if parser_ctx.match_token(TokenType::SemiColon)? {
+    if ctx.match_token(TokenType::SemiColon)? {
         return Ok(function);
     }
 
-    parser_ctx.get_mut_control_ctx().set_inside_function(true);
+    ctx.get_mut_control_ctx().set_inside_function(true);
 
-    parser_ctx
-        .get_mut_type_ctx()
+    ctx.get_mut_type_ctx()
         .set_function_type(return_type.clone());
 
-    if let Err(error) = parser_ctx.get_mut_symbols().start_parameters(&parameters) {
-        parser_ctx.add_silent_error(error);
+    if let Err(error) = ctx.get_mut_symbols().start_parameters(&parameters) {
+        ctx.add_silent_error(error);
     }
 
-    let function_body: Ast = block::build_block(parser_ctx)?;
+    let function_body: Ast = block::build_block(ctx)?;
 
-    parser_ctx.get_mut_symbols().end_parameters();
-    parser_ctx.get_mut_control_ctx().set_inside_function(false);
+    ctx.get_mut_symbols().end_parameters();
+    ctx.get_mut_control_ctx().set_inside_function(false);
 
     if let Ast::Function { body, .. } = &mut function {
         *body = function_body.into();

@@ -3,8 +3,8 @@ use crate::{
     frontends::classical::types::{
         ast::Ast,
         parser::repr::{
-            GlobalAssemblerFunction, GlobalConstant, GlobalFunction, GlobalStatic, Local,
-            LocalConstant, LocalStatic,
+            FunctionParameter, GlobalAssemblerFunction, GlobalConstant, GlobalFunction,
+            GlobalStatic, Local, LocalConstant, LocalStatic,
         },
     },
 };
@@ -36,8 +36,8 @@ impl Ast<'_> {
             );
         }
 
-        logging::print_backend_bug(
-            logging::LoggingType::BackendBug,
+        logging::print_bug(
+            logging::LoggingType::Bug,
             "Expected assembler function for transformation to GlobalAssemblerFunction.",
         );
     }
@@ -57,8 +57,8 @@ impl Ast<'_> {
             return (name, ascii_name, kind, &**value, attributes, *metadata);
         }
 
-        logging::print_backend_bug(
-            logging::LoggingType::BackendBug,
+        logging::print_bug(
+            logging::LoggingType::Bug,
             "Expected static for transformation to GlobalStatic.",
         );
     }
@@ -78,8 +78,8 @@ impl Ast<'_> {
             return (name, ascii_name, kind, &**value, attributes, *metadata);
         }
 
-        logging::print_backend_bug(
-            logging::LoggingType::BackendBug,
+        logging::print_bug(
+            logging::LoggingType::Bug,
             "Expected constant for transformation to GlobalConstant.",
         );
     }
@@ -108,8 +108,8 @@ impl Ast<'_> {
             );
         }
 
-        logging::print_backend_bug(
-            logging::LoggingType::BackendBug,
+        logging::print_bug(
+            logging::LoggingType::Bug,
             "Expected function for transformation to GlobalFunction.",
         );
     }
@@ -130,8 +130,8 @@ impl Ast<'_> {
             return (name, ascii_name, kind, &**value, attributes, *metadata);
         }
 
-        logging::print_backend_bug(
-            logging::LoggingType::BackendBug,
+        logging::print_bug(
+            logging::LoggingType::Bug,
             "Expected local for transformation to Local.",
         );
     }
@@ -150,9 +150,28 @@ impl Ast<'_> {
             return (name, ascii_name, kind, &**value, *metadata);
         }
 
-        logging::print_backend_bug(
-            logging::LoggingType::BackendBug,
+        logging::print_bug(
+            logging::LoggingType::Bug,
             "Expected constant for transformation to LocalConstant.",
+        );
+    }
+
+    #[inline]
+    pub fn as_function_parameter(&self) -> FunctionParameter<'_> {
+        if let Ast::FunctionParameter {
+            name,
+            ascii_name,
+            kind,
+            position,
+            ..
+        } = self
+        {
+            return (name, ascii_name, kind, *position);
+        }
+
+        logging::print_bug(
+            logging::LoggingType::Bug,
+            "Expected function parameter for transformation to FunctionParameter.",
         );
     }
 
@@ -170,8 +189,8 @@ impl Ast<'_> {
             return (name, ascii_name, kind, &**value, *metadata);
         }
 
-        logging::print_backend_bug(
-            logging::LoggingType::BackendBug,
+        logging::print_bug(
+            logging::LoggingType::Bug,
             "Expected static for transformation to LocalStatic.",
         );
     }

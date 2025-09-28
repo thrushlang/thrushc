@@ -460,6 +460,10 @@ pub fn check_type_cast(
         ))
     };
 
+    if from_type.is_ptr_type() && cast_type.is_integer_type() {
+        return Ok(());
+    }
+
     if from_type.is_integer_type() && cast_type.is_integer_type() {
         return Ok(());
     }

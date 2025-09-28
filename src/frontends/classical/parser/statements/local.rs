@@ -1,8 +1,10 @@
+use inkwell::AtomicOrdering;
+
 use crate::{
     core::errors::standard::ThrushCompilerIssue,
     frontends::classical::{
         lexer::{span::Span, token::Token, tokentype::TokenType},
-        parser::{ParserContext, attributes, checks, expr, typegen},
+        parser::{ParserContext, attributes, builder, checks, expr, typegen},
         types::{
             ast::{Ast, metadata::local::LocalMetadata},
             parser::stmts::{traits::TokenExtensions, types::ThrushAttributes},
@@ -24,6 +26,8 @@ pub fn build_local<'parser>(
 
     let is_mutable: bool = ctx.match_token(TokenType::Mut)?;
     let is_volatile: bool = ctx.match_token(TokenType::Volatile)?;
+
+    let atom_ord: Option<AtomicOrdering> = builder::build_atomic_ord(ctx)?;
 
     let local_tk: &Token = ctx.consume(
         TokenType::Identifier,
@@ -47,7 +51,7 @@ pub fn build_local<'parser>(
         attributes::build_attributes(ctx, &[TokenType::SemiColon, TokenType::Eq])?;
 
     if ctx.match_token(TokenType::SemiColon)? {
-        let metadata: LocalMetadata = LocalMetadata::new(true, is_mutable, is_volatile);
+        let metadata: LocalMetadata = LocalMetadata::new(true, is_mutable, is_volatile, atom_ord);
 
         ctx.get_mut_symbols()
             .new_local(name, (local_type.clone(), metadata, span), span)?;
@@ -63,7 +67,7 @@ pub fn build_local<'parser>(
         });
     }
 
-    let metadata: LocalMetadata = LocalMetadata::new(false, is_mutable, is_volatile);
+    let metadata: LocalMetadata = LocalMetadata::new(false, is_mutable, is_volatile, atom_ord);
 
     if let Err(error) =
         ctx.get_mut_symbols()

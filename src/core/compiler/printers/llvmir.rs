@@ -34,8 +34,8 @@ pub fn print_llvm_ir(
     logging::write(
         logging::OutputIn::Stdout,
         &format!(
-            "{} - {}\n\n",
-            "FILE - ".bold(),
+            "{}{}\n\n",
+            "LLVM IR FILE - ".bold(),
             ir_file_name.bright_green().bold(),
         ),
     );

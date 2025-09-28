@@ -47,11 +47,21 @@ pub fn compile<'ctx>(
         Ast::As { from, cast, .. } => compiler::generation::cast::compile(context, from, cast),
 
         // Compiles a dereference operation (e.g., *pointer)
-        Ast::Deref { value, kind, .. } => {
-            let val: BasicValueEnum = self::compile(context, value, Some(kind));
+        Ast::Deref {
+            value,
+            kind,
+            metadata,
+            ..
+        } => {
+            let value: BasicValueEnum = self::compile(context, value, Some(kind));
 
-            let deref_value: BasicValueEnum = if val.is_pointer_value() {
-                memory::load_anon(context, val.into_pointer_value(), kind)
+            let deref_value: BasicValueEnum = if value.is_pointer_value() {
+                memory::dereference(
+                    context,
+                    value.into_pointer_value(),
+                    kind,
+                    metadata.get_llvm_metadata(),
+                )
             } else {
                 self::codegen_abort(format!(
                     "Cannot dereference non-pointer value in '{}'.",

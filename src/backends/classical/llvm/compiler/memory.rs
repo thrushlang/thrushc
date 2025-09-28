@@ -3,6 +3,7 @@
 use crate::backends::classical::llvm::compiler::alloc::atomic;
 use crate::backends::classical::llvm::compiler::alloc::atomic::LLVMAtomicModificators;
 use crate::backends::classical::llvm::compiler::typegen;
+use crate::frontends::classical::types::ast::metadata::dereference::LLVMDereferenceMetadata;
 
 use crate::frontends::classical::types::ast::metadata::constant::LLVMConstantMetadata;
 use crate::frontends::classical::types::ast::metadata::local::LLVMLocalMetadata;
@@ -145,7 +146,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
                         instr,
                         LLVMAtomicModificators {
                             atomic_volatile: metadata.volatile,
-                            atomic_ord: None,
+                            atomic_ord: metadata.atomic_ord,
                         },
                     );
 
@@ -181,7 +182,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
                         instr,
                         LLVMAtomicModificators {
                             atomic_volatile: metadata.volatile,
-                            atomic_ord: None,
+                            atomic_ord: metadata.atomic_ord,
                         },
                     );
 
@@ -201,7 +202,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
                         instr,
                         LLVMAtomicModificators {
                             atomic_volatile: metadata.volatile,
-                            atomic_ord: None,
+                            atomic_ord: metadata.atomic_ord,
                         },
                     );
 
@@ -408,6 +409,43 @@ pub fn load_anon<'ctx>(
 
     if let Ok(loaded_value) = llvm_builder.build_load(llvm_type, ptr, "") {
         if let Some(instr) = loaded_value.as_instruction_value() {
+            let _ = instr.set_alignment(preferred_alignment);
+        }
+
+        return loaded_value;
+    }
+
+    self::codegen_abort(format!(
+        "Unable to load a value from memory, with pointer: '{}'.",
+        ptr
+    ));
+}
+
+pub fn dereference<'ctx>(
+    context: &LLVMCodeGenContext<'_, 'ctx>,
+    ptr: PointerValue<'ctx>,
+    ptr_type: &Type,
+    metadata: LLVMDereferenceMetadata,
+) -> BasicValueEnum<'ctx> {
+    let llvm_context: &Context = context.get_llvm_context();
+    let llvm_builder: &Builder = context.get_llvm_builder();
+
+    let llvm_type: BasicTypeEnum = typegen::generate_type(llvm_context, ptr_type);
+
+    let preferred_alignment: u32 = context
+        .get_target_data()
+        .get_preferred_alignment(&ptr.get_type());
+
+    if let Ok(loaded_value) = llvm_builder.build_load(llvm_type, ptr, "") {
+        if let Some(instr) = loaded_value.as_instruction_value() {
+            atomic::try_set_atomic_modificators(
+                instr,
+                LLVMAtomicModificators {
+                    atomic_volatile: metadata.volatile,
+                    atomic_ord: metadata.atomic_ord,
+                },
+            );
+
             let _ = instr.set_alignment(preferred_alignment);
         }
 

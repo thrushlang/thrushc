@@ -2,7 +2,7 @@ use crate::{
     core::errors::standard::ThrushCompilerIssue,
     frontends::classical::{
         lexer::{span::Span, token::Token, tokentype::TokenType},
-        parser::{ParserContext, attributes, checks, generators, typegen},
+        parser::{ParserContext, attributes, builder, checks, typegen},
         types::{
             ast::Ast,
             parser::stmts::{
@@ -33,8 +33,7 @@ pub fn build_structure<'parser>(
     )?;
 
     let attributes: ThrushAttributes = attributes::build_attributes(ctx, &[TokenType::LBrace])?;
-    let modificator: StructureTypeModificator =
-        generators::generate_structure_modificator(&attributes);
+    let modificator: StructureTypeModificator = builder::build_structure_modificator(&attributes);
 
     ctx.consume(
         TokenType::LBrace,
