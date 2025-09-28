@@ -10,15 +10,15 @@ use crate::{
 };
 
 pub fn build_halloc<'parser>(
-    parser_context: &mut ParserContext<'parser>,
+    ctx: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, ThrushCompilerIssue> {
-    let memcpy_tk: &Token = parser_context.consume(
+    let memcpy_tk: &Token = ctx.consume(
         TokenType::Halloc,
         "Syntax error".into(),
         "Expected 'halloc' keyword.".into(),
     )?;
 
-    parser_context.consume(
+    ctx.consume(
         TokenType::LParen,
         "Syntax error".into(),
         "Expected '('.".into(),
@@ -26,9 +26,9 @@ pub fn build_halloc<'parser>(
 
     let span: Span = memcpy_tk.get_span();
 
-    let alloc: Type = typegen::build_type(parser_context)?;
+    let alloc: Type = typegen::build_type(ctx)?;
 
-    parser_context.consume(
+    ctx.consume(
         TokenType::RParen,
         "Syntax error".into(),
         "Expected ')'.".into(),
@@ -44,15 +44,15 @@ pub fn build_halloc<'parser>(
 }
 
 pub fn build_memcpy<'parser>(
-    parser_context: &mut ParserContext<'parser>,
+    ctx: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, ThrushCompilerIssue> {
-    let memcpy_tk: &Token = parser_context.consume(
+    let memcpy_tk: &Token = ctx.consume(
         TokenType::MemCpy,
         String::from("Syntax error"),
         String::from("Expected 'memcpy' keyword."),
     )?;
 
-    parser_context.consume(
+    ctx.consume(
         TokenType::LParen,
         "Syntax error".into(),
         "Expected '('.".into(),
@@ -60,25 +60,25 @@ pub fn build_memcpy<'parser>(
 
     let span: Span = memcpy_tk.get_span();
 
-    let source: Ast = expr::build_expr(parser_context)?;
+    let source: Ast = expr::build_expr(ctx)?;
 
-    parser_context.consume(
+    ctx.consume(
         TokenType::Comma,
         "Syntax error".into(),
         "Expected ','.".into(),
     )?;
 
-    let destination: Ast = expr::build_expr(parser_context)?;
+    let destination: Ast = expr::build_expr(ctx)?;
 
-    parser_context.consume(
+    ctx.consume(
         TokenType::Comma,
         "Syntax error".into(),
         "Expected ','.".into(),
     )?;
 
-    let size: Ast = expr::build_expr(parser_context)?;
+    let size: Ast = expr::build_expr(ctx)?;
 
-    parser_context.consume(
+    ctx.consume(
         TokenType::RParen,
         "Syntax error".into(),
         "Expected ')'.".into(),
@@ -96,15 +96,15 @@ pub fn build_memcpy<'parser>(
 }
 
 pub fn build_memmove<'parser>(
-    parser_context: &mut ParserContext<'parser>,
+    ctx: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, ThrushCompilerIssue> {
-    let memcpy_tk: &Token = parser_context.consume(
+    let memcpy_tk: &Token = ctx.consume(
         TokenType::MemMove,
         String::from("Syntax error"),
         String::from("Expected 'memmove' keyword."),
     )?;
 
-    parser_context.consume(
+    ctx.consume(
         TokenType::LParen,
         String::from("Syntax error"),
         String::from("Expected '('."),
@@ -112,25 +112,25 @@ pub fn build_memmove<'parser>(
 
     let span: Span = memcpy_tk.get_span();
 
-    let source: Ast = expr::build_expr(parser_context)?;
+    let source: Ast = expr::build_expr(ctx)?;
 
-    parser_context.consume(
+    ctx.consume(
         TokenType::Comma,
         String::from("Syntax error"),
         String::from("Expected ','."),
     )?;
 
-    let destination: Ast = expr::build_expr(parser_context)?;
+    let destination: Ast = expr::build_expr(ctx)?;
 
-    parser_context.consume(
+    ctx.consume(
         TokenType::Comma,
         String::from("Syntax error"),
         String::from("Expected ','."),
     )?;
 
-    let size: Ast = expr::build_expr(parser_context)?;
+    let size: Ast = expr::build_expr(ctx)?;
 
-    parser_context.consume(
+    ctx.consume(
         TokenType::RParen,
         String::from("Syntax error"),
         String::from("Expected ')'."),
@@ -148,15 +148,15 @@ pub fn build_memmove<'parser>(
 }
 
 pub fn build_memset<'parser>(
-    parser_context: &mut ParserContext<'parser>,
+    ctx: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, ThrushCompilerIssue> {
-    let memcpy_tk: &Token = parser_context.consume(
+    let memcpy_tk: &Token = ctx.consume(
         TokenType::MemSet,
         String::from("Syntax error"),
         String::from("Expected 'memset' keyword."),
     )?;
 
-    parser_context.consume(
+    ctx.consume(
         TokenType::LParen,
         String::from("Syntax error"),
         String::from("Expected '('."),
@@ -164,25 +164,25 @@ pub fn build_memset<'parser>(
 
     let span: Span = memcpy_tk.get_span();
 
-    let destination: Ast = expr::build_expr(parser_context)?;
+    let destination: Ast = expr::build_expr(ctx)?;
 
-    parser_context.consume(
+    ctx.consume(
         TokenType::Comma,
         String::from("Syntax error"),
         String::from("Expected ','."),
     )?;
 
-    let new_size: Ast = expr::build_expr(parser_context)?;
+    let new_size: Ast = expr::build_expr(ctx)?;
 
-    parser_context.consume(
+    ctx.consume(
         TokenType::Comma,
         String::from("Syntax error"),
         String::from("Expected ','."),
     )?;
 
-    let size: Ast = expr::build_expr(parser_context)?;
+    let size: Ast = expr::build_expr(ctx)?;
 
-    parser_context.consume(
+    ctx.consume(
         TokenType::RParen,
         String::from("Syntax error"),
         String::from("Expected ')'."),
@@ -200,15 +200,15 @@ pub fn build_memset<'parser>(
 }
 
 pub fn build_alignof<'parser>(
-    parser_context: &mut ParserContext<'parser>,
+    ctx: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, ThrushCompilerIssue> {
-    let sizeof_tk: &Token = parser_context.consume(
+    let sizeof_tk: &Token = ctx.consume(
         TokenType::AlignOf,
         "Syntax error".into(),
         "Expected 'alignof' keyword.".into(),
     )?;
 
-    parser_context.consume(
+    ctx.consume(
         TokenType::LParen,
         "Syntax error".into(),
         "Expected '('.".into(),
@@ -216,17 +216,17 @@ pub fn build_alignof<'parser>(
 
     let span: Span = sizeof_tk.get_span();
 
-    if parser_context.match_token(TokenType::Identifier)? {
-        let identifier_tk: &Token = parser_context.previous();
+    if ctx.match_token(TokenType::Identifier)? {
+        let identifier_tk: &Token = ctx.previous();
 
         let name: &str = identifier_tk.get_lexeme();
         let span: Span = identifier_tk.get_span();
 
-        let reference: Ast = reference::build_reference(parser_context, name, span)?;
+        let reference: Ast = reference::build_reference(ctx, name, span)?;
 
         let reference_type: &Type = reference.get_value_type()?;
 
-        parser_context.consume(
+        ctx.consume(
             TokenType::RParen,
             String::from("Syntax error"),
             String::from("Expected ')'."),
@@ -241,9 +241,9 @@ pub fn build_alignof<'parser>(
         });
     }
 
-    let alignof_type: Type = typegen::build_type(parser_context)?;
+    let alignof_type: Type = typegen::build_type(ctx)?;
 
-    parser_context.consume(
+    ctx.consume(
         TokenType::RParen,
         "Syntax error".into(),
         "Expected ')'.".into(),

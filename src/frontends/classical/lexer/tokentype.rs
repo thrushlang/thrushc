@@ -59,6 +59,7 @@ pub enum TokenType {
     StrongStack,
     PreciseFloats,
     Convention,
+    Packed,
     AsmAlignStack,
     AsmSyntax,
     AsmThrow,

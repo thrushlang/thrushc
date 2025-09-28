@@ -3,7 +3,7 @@ use crate::{
     frontends::classical::{
         lexer::{span::Span, tokentype::TokenType},
         types::semantic::linter::types::LLVMAttributeComparator,
-        typesystem::types::Type,
+        typesystem::{modificators::StructureTypeModificator, types::Type},
     },
 };
 
@@ -44,8 +44,10 @@ pub trait FoundSymbolExtension {
 
 pub trait StructExtensions<'parser> {
     fn contains_field(&self, name: &str) -> bool;
+
     fn get_field_type(&self, name: &str) -> Option<Type>;
     fn get_fields(&self) -> StructFields<'parser>;
+    fn get_modificator(&self) -> StructureTypeModificator;
 }
 
 pub trait FoundSymbolEither<'parser> {
@@ -63,10 +65,11 @@ pub trait FoundSymbolEither<'parser> {
 
 pub trait StructFieldsExtensions {
     fn get_type(&self) -> Type;
+    fn get_modificator(&self) -> StructureTypeModificator;
 }
 
 pub trait ConstructorExtensions {
-    fn get_type(&self, name: &str) -> Type;
+    fn get_type(&self, name: &str, modificator: StructureTypeModificator) -> Type;
 }
 
 pub trait ThrushAttributesExtensions {

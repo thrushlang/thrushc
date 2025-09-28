@@ -9,11 +9,11 @@ use crate::{
 };
 
 pub fn build_return<'parser>(
-    parser_context: &mut ParserContext<'parser>,
+    ctx: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, ThrushCompilerIssue> {
-    self::check_state(parser_context)?;
+    self::check_state(ctx)?;
 
-    let return_tk: &Token = parser_context.consume(
+    let return_tk: &Token = ctx.consume(
         TokenType::Return,
         String::from("Syntax error"),
         String::from("Expected 'return' keyword."),
@@ -21,12 +21,8 @@ pub fn build_return<'parser>(
 
     let span: Span = return_tk.get_span();
 
-    if parser_context.match_token(TokenType::SemiColon)? {
-        if parser_context
-            .get_type_ctx()
-            .get_function_type()
-            .is_void_type()
-        {
+    if ctx.match_token(TokenType::SemiColon)? {
+        if ctx.get_type_ctx().get_function_type().is_void_type() {
             return Ok(Ast::Null { span });
         }
 
@@ -37,9 +33,9 @@ pub fn build_return<'parser>(
         });
     }
 
-    let value: Ast = expr::build_expr(parser_context)?;
+    let value: Ast = expr::build_expr(ctx)?;
 
-    parser_context.consume(
+    ctx.consume(
         TokenType::SemiColon,
         String::from("Syntax error"),
         String::from("Expected ';'."),
@@ -47,12 +43,12 @@ pub fn build_return<'parser>(
 
     Ok(Ast::Return {
         expression: Some(value.into()),
-        kind: parser_context.get_type_ctx().get_function_type().clone(),
+        kind: ctx.get_type_ctx().get_function_type().clone(),
         span,
     })
 }
 
-fn check_state(parser_context: &mut ParserContext) -> Result<(), ThrushCompilerIssue> {
-    checks::check_unreacheable_state(parser_context)?;
-    checks::check_inside_function_state(parser_context)
+fn check_state(ctx: &mut ParserContext) -> Result<(), ThrushCompilerIssue> {
+    checks::check_unreacheable_state(ctx)?;
+    checks::check_inside_function_state(ctx)
 }

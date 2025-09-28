@@ -20,6 +20,9 @@ pub enum LLVMAttribute<'ctx> {
     WeakStack(Span),
     PreciseFloats(Span),
 
+    // LLVM Structure Modificator
+    Packed(Span),
+
     // Memory Management
     Stack(Span),
     Heap(Span),
@@ -96,6 +99,11 @@ impl LLVMAttribute<'_> {
     pub fn is_asmalingstack_attribute(&self) -> bool {
         matches!(self, LLVMAttribute::AsmAlignStack(..))
     }
+
+    #[inline]
+    pub fn is_packed(&self) -> bool {
+        matches!(self, LLVMAttribute::Packed(..))
+    }
 }
 
 impl LLVMAttribute<'_> {
@@ -121,6 +129,7 @@ impl LLVMAttribute<'_> {
             LLVMAttribute::AsmAlignStack(span) => *span,
             LLVMAttribute::Stack(span) => *span,
             LLVMAttribute::Heap(span) => *span,
+            LLVMAttribute::Packed(span) => *span,
         }
     }
 }

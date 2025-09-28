@@ -12,20 +12,20 @@ use crate::{
 };
 
 pub fn build_const<'parser>(
-    parser_context: &mut ParserContext<'parser>,
+    ctx: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, ThrushCompilerIssue> {
-    self::check_state(parser_context)?;
+    self::check_state(ctx)?;
 
-    parser_context.consume(
+    ctx.consume(
         TokenType::Const,
         "Syntax error".into(),
         "Expected 'const' keyword.".into(),
     )?;
 
-    let is_lazy: bool = parser_context.match_token(TokenType::LazyThread)?;
-    let is_volatile: bool = parser_context.match_token(TokenType::Volatile)?;
+    let is_lazy: bool = ctx.match_token(TokenType::LazyThread)?;
+    let is_volatile: bool = ctx.match_token(TokenType::Volatile)?;
 
-    let const_tk: &Token = parser_context.consume(
+    let const_tk: &Token = ctx.consume(
         TokenType::Identifier,
         "Syntax error".into(),
         "Expected name.".into(),
@@ -36,26 +36,26 @@ pub fn build_const<'parser>(
 
     let span: Span = const_tk.get_span();
 
-    parser_context.consume(
+    ctx.consume(
         TokenType::Colon,
         "Syntax error".into(),
         "Expected ':'.".into(),
     )?;
 
-    let const_type: Type = typegen::build_type(parser_context)?;
+    let const_type: Type = typegen::build_type(ctx)?;
 
-    let attributes: ThrushAttributes =
-        attributes::build_attributes(parser_context, &[TokenType::Eq])?;
+    let attributes: ThrushAttributes = attributes::build_attributes(ctx, &[TokenType::Eq])?;
 
-    parser_context.consume(TokenType::Eq, "Syntax error".into(), "Expected '='.".into())?;
+    ctx.consume(TokenType::Eq, "Syntax error".into(), "Expected '='.".into())?;
 
-    let value: Ast = expr::build_expression(parser_context)?;
+    let value: Ast = expr::build_expression(ctx)?;
 
-    parser_context.get_mut_symbols().new_constant(
-        name,
-        (const_type.clone(), attributes.clone()),
-        span,
-    )?;
+    if let Err(error) =
+        ctx.get_mut_symbols()
+            .new_constant(name, (const_type.clone(), attributes.clone()), span)
+    {
+        ctx.add_silent_error(error);
+    }
 
     Ok(Ast::Const {
         name,
@@ -68,7 +68,7 @@ pub fn build_const<'parser>(
     })
 }
 
-fn check_state(parser_context: &mut ParserContext) -> Result<(), ThrushCompilerIssue> {
-    checks::check_unreacheable_state(parser_context)?;
-    checks::check_inside_function_state(parser_context)
+fn check_state(ctx: &mut ParserContext) -> Result<(), ThrushCompilerIssue> {
+    checks::check_unreacheable_state(ctx)?;
+    checks::check_inside_function_state(ctx)
 }

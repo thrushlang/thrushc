@@ -8,11 +8,11 @@ use crate::{
 };
 
 pub fn build_global_assembler<'parser>(
-    parser_context: &mut ParserContext<'parser>,
+    ctx: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, ThrushCompilerIssue> {
-    checks::check_double_global_assembler_state(parser_context)?;
+    checks::check_double_global_assembler_state(ctx)?;
 
-    let glasm_keyword_tk: &Token = parser_context.consume(
+    let glasm_keyword_tk: &Token = ctx.consume(
         TokenType::GlobalAsm,
         "Syntax error".into(),
         "Expected 'glasm' keyword.".into(),
@@ -20,28 +20,28 @@ pub fn build_global_assembler<'parser>(
 
     let span: Span = glasm_keyword_tk.get_span();
 
-    parser_context.consume(
+    ctx.consume(
         TokenType::LParen,
         "Syntax error".into(),
         "Expected '('.".into(),
     )?;
 
-    let assembler: Ast = expr::build_expr(parser_context)?;
+    let assembler: Ast = expr::build_expr(ctx)?;
     let asssembler_span: Span = assembler.get_span();
 
-    parser_context.consume(
+    ctx.consume(
         TokenType::RParen,
         "Syntax error".into(),
         "Expected ')'.".into(),
     )?;
 
-    parser_context.consume(
+    ctx.consume(
         TokenType::SemiColon,
         "Syntax error".into(),
         "Expected ';'.".into(),
     )?;
 
-    parser_context.get_mut_control_ctx().set_global_asm(true);
+    ctx.get_mut_control_ctx().set_global_asm(true);
 
     let asm: &str = assembler.get_str_content(asssembler_span)?;
 

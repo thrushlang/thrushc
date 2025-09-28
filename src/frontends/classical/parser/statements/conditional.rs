@@ -10,11 +10,11 @@ use crate::{
 };
 
 pub fn build_conditional<'parser>(
-    parser_context: &mut ParserContext<'parser>,
+    ctx: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, ThrushCompilerIssue> {
-    self::check_state(parser_context)?;
+    self::check_state(ctx)?;
 
-    let if_tk: &Token = parser_context.consume(
+    let if_tk: &Token = ctx.consume(
         TokenType::If,
         String::from("Syntax error"),
         String::from("Expected 'if' keyword."),
@@ -22,16 +22,16 @@ pub fn build_conditional<'parser>(
 
     let span: Span = if_tk.get_span();
 
-    let condition: Ast = expr::build_expr(parser_context)?;
-    let block: Ast = block::build_block(parser_context)?;
+    let condition: Ast = expr::build_expr(ctx)?;
+    let block: Ast = block::build_block(ctx)?;
 
     let mut elseif: Vec<Ast> = Vec::with_capacity(10);
 
-    while parser_context.match_token(TokenType::Elif)? {
-        let span: Span = parser_context.previous().span;
+    while ctx.match_token(TokenType::Elif)? {
+        let span: Span = ctx.previous().span;
 
-        let condition: Ast = expr::build_expr(parser_context)?;
-        let block: Ast = block::build_block(parser_context)?;
+        let condition: Ast = expr::build_expr(ctx)?;
+        let block: Ast = block::build_block(ctx)?;
 
         if block.is_empty_block() {
             continue;
@@ -46,9 +46,9 @@ pub fn build_conditional<'parser>(
 
     let mut anyway: Option<Rc<Ast>> = None;
 
-    if parser_context.match_token(TokenType::Else)? {
-        let span: Span = parser_context.previous().span;
-        let block: Ast = block::build_block(parser_context)?;
+    if ctx.match_token(TokenType::Else)? {
+        let span: Span = ctx.previous().span;
+        let block: Ast = block::build_block(ctx)?;
 
         if !block.is_empty_block() {
             anyway = Some(
@@ -70,7 +70,7 @@ pub fn build_conditional<'parser>(
     })
 }
 
-fn check_state(parser_context: &mut ParserContext) -> Result<(), ThrushCompilerIssue> {
-    checks::check_unreacheable_state(parser_context)?;
-    checks::check_inside_function_state(parser_context)
+fn check_state(ctx: &mut ParserContext) -> Result<(), ThrushCompilerIssue> {
+    checks::check_unreacheable_state(ctx)?;
+    checks::check_inside_function_state(ctx)
 }

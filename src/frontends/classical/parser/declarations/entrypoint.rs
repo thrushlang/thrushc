@@ -9,37 +9,34 @@ use crate::{
 };
 
 pub fn build_entrypoint<'parser>(
-    parser_context: &mut ParserContext<'parser>,
+    ctx: &mut ParserContext<'parser>,
     span: Span,
 ) -> Result<Ast<'parser>, ThrushCompilerIssue> {
-    checks::check_double_entrypoint_state(parser_context)?;
+    checks::check_double_entrypoint_state(ctx)?;
 
-    parser_context.consume(
+    ctx.consume(
         TokenType::LParen,
         "Syntax error".into(),
         "Expected '('.".into(),
     )?;
 
-    parser_context.consume(
+    ctx.consume(
         TokenType::RParen,
         "Syntax error".into(),
         "Expected ')'.".into(),
     )?;
 
-    parser_context.consume(
+    ctx.consume(
         TokenType::U32,
         "Syntax error".into(),
         "Expected 'u32'.".into(),
     )?;
 
-    parser_context.get_mut_control_ctx().set_has_entrypoint();
-
-    parser_context
-        .get_mut_type_ctx()
-        .set_function_type(Type::U32);
+    ctx.get_mut_control_ctx().set_has_entrypoint();
+    ctx.get_mut_type_ctx().set_function_type(Type::U32);
 
     Ok(Ast::EntryPoint {
-        body: block::build_block(parser_context)?.into(),
+        body: block::build_block(ctx)?.into(),
         span,
     })
 }

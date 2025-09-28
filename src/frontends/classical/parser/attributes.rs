@@ -14,6 +14,8 @@ use {
     lazy_static::lazy_static,
 };
 
+const ASSEMBLER_SYNTAXES: [&str; 2] = ["Intel", "AT&T"];
+
 lazy_static! {
     pub static ref CALL_CONVENTIONS: HashMap<&'static [u8], CallConvention> = {
         let mut call_conventions: HashMap<&'static [u8], CallConvention> =
@@ -34,44 +36,45 @@ lazy_static! {
 }
 
 pub fn build_attributes<'parser>(
-    parser_ctx: &mut ParserContext<'parser>,
+    ctx: &mut ParserContext<'parser>,
+
     limits: &[TokenType],
 ) -> Result<ThrushAttributes<'parser>, ThrushCompilerIssue> {
     let mut attributes: ThrushAttributes = Vec::with_capacity(10);
 
-    while !limits.contains(&parser_ctx.peek().kind) {
-        let current_tk: &Token = parser_ctx.peek();
+    while !limits.contains(&ctx.peek().kind) {
+        let current_tk: &Token = ctx.peek();
         let span: Span = current_tk.span;
 
         match current_tk.kind {
             TokenType::Extern => {
                 attributes.push(LLVMAttribute::Extern(
-                    self::build_external_attribute(parser_ctx)?,
+                    self::build_external_attribute(ctx)?,
                     span,
                 ));
             }
 
             TokenType::Convention => {
                 attributes.push(LLVMAttribute::Convention(
-                    self::build_call_convention_attribute(parser_ctx)?,
+                    self::build_call_convention_attribute(ctx)?,
                     span,
                 ));
             }
 
             TokenType::Public => {
                 attributes.push(self::LLVMAttribute::Public(span));
-                parser_ctx.only_advance()?;
+                ctx.only_advance()?;
             }
 
             TokenType::AsmSyntax => attributes.push(LLVMAttribute::AsmSyntax(
-                self::build_assembler_syntax_attribute(parser_ctx)?,
+                self::build_assembler_syntax_attribute(ctx)?,
                 span,
             )),
 
             attribute if attribute.is_attribute() => {
                 if let Some(compiler_attribute) = attribute.as_attribute(span) {
                     attributes.push(compiler_attribute);
-                    parser_ctx.only_advance()?;
+                    ctx.only_advance()?;
                 }
             }
 
@@ -83,17 +86,17 @@ pub fn build_attributes<'parser>(
 }
 
 fn build_external_attribute<'parser>(
-    parser_ctx: &mut ParserContext<'parser>,
+    ctx: &mut ParserContext<'parser>,
 ) -> Result<&'parser str, ThrushCompilerIssue> {
-    parser_ctx.only_advance()?;
+    ctx.only_advance()?;
 
-    parser_ctx.consume(
+    ctx.consume(
         TokenType::LParen,
         String::from("Syntax error"),
         String::from("Expected '('."),
     )?;
 
-    let name: &Token = parser_ctx.consume(
+    let name: &Token = ctx.consume(
         TokenType::Str,
         String::from("Syntax error"),
         String::from("Expected a string literal for @extern(\"FFI NAME\")."),
@@ -101,7 +104,7 @@ fn build_external_attribute<'parser>(
 
     let ffi_name: &str = name.get_lexeme();
 
-    parser_ctx.consume(
+    ctx.consume(
         TokenType::RParen,
         String::from("Syntax error"),
         String::from("Expected ')'."),
@@ -111,17 +114,17 @@ fn build_external_attribute<'parser>(
 }
 
 fn build_assembler_syntax_attribute<'parser>(
-    parser_ctx: &mut ParserContext<'parser>,
+    ctx: &mut ParserContext<'parser>,
 ) -> Result<&'parser str, ThrushCompilerIssue> {
-    parser_ctx.only_advance()?;
+    ctx.only_advance()?;
 
-    parser_ctx.consume(
+    ctx.consume(
         TokenType::LParen,
         String::from("Syntax error"),
         String::from("Expected '('."),
     )?;
 
-    let syntax_tk: &Token = parser_ctx.consume(
+    let syntax_tk: &Token = ctx.consume(
         TokenType::Str,
         "Syntax error".into(),
         "Expected a string literal for @asmsyntax(\"Intel\").".into(),
@@ -130,41 +133,39 @@ fn build_assembler_syntax_attribute<'parser>(
     let specified_syntax: &str = syntax_tk.get_lexeme();
     let syntax_span: Span = syntax_tk.get_span();
 
-    let syntaxes: [&'static str; 2] = ["Intel", "AT&T"];
+    ctx.consume(
+        TokenType::RParen,
+        "Syntax error".into(),
+        "Expected ')'.".into(),
+    )?;
 
-    if !syntaxes.contains(&specified_syntax) {
+    if !ASSEMBLER_SYNTAXES.contains(&specified_syntax) {
         return Err(ThrushCompilerIssue::Error(
             "Syntax error".into(),
             format!(
                 "Unknown assembler syntax, valid are '{}'.",
-                syntaxes.join(", ")
+                ASSEMBLER_SYNTAXES.join(", ")
             ),
             None,
             syntax_span,
         ));
     }
 
-    parser_ctx.consume(
-        TokenType::RParen,
-        "Syntax error".into(),
-        "Expected ')'.".into(),
-    )?;
-
     Ok(specified_syntax)
 }
 
 fn build_call_convention_attribute(
-    parser_ctx: &mut ParserContext,
+    ctx: &mut ParserContext,
 ) -> Result<CallConvention, ThrushCompilerIssue> {
-    parser_ctx.only_advance()?;
+    ctx.only_advance()?;
 
-    parser_ctx.consume(
+    ctx.consume(
         TokenType::LParen,
         "Syntax error".into(),
         "Expected '('.".into(),
     )?;
 
-    let convention_tk: &Token = parser_ctx.consume(
+    let convention_tk: &Token = ctx.consume(
         TokenType::Str,
         "Syntax error".into(),
         "Expected a literal 'str' for @convention(\"CONVENTION NAME\").".into(),
@@ -174,7 +175,7 @@ fn build_call_convention_attribute(
     let name: &[u8] = convention_tk.lexeme.as_bytes();
 
     if let Some(call_convention) = CALL_CONVENTIONS.get(name) {
-        parser_ctx.consume(
+        ctx.consume(
             TokenType::RParen,
             "Syntax error".into(),
             "Expected ')'.".into(),
@@ -183,7 +184,7 @@ fn build_call_convention_attribute(
         return Ok(*call_convention);
     }
 
-    parser_ctx.consume(
+    ctx.consume(
         TokenType::RParen,
         "Syntax error".into(),
         "Expected ')'.".into(),

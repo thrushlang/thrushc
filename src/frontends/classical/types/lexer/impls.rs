@@ -64,6 +64,7 @@ impl std::fmt::Display for TokenType {
             TokenType::AtomStrict => write!(f, "atomstrict"),
 
             // Attributes
+            TokenType::Packed => write!(f, "@packed"),
             TokenType::Stack => write!(f, "@stack"),
             TokenType::Static => write!(f, "@static"),
             TokenType::Heap => write!(f, "@heap"),

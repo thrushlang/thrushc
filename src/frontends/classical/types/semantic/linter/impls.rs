@@ -3,6 +3,7 @@ use crate::backends::classical::llvm::compiler::attributes::LLVMAttribute;
 use super::{traits::LLVMAttributeComparatorExtensions, types::LLVMAttributeComparator};
 
 impl LLVMAttributeComparatorExtensions for LLVMAttribute<'_> {
+    #[inline]
     fn into_llvm_attr_cmp(self) -> LLVMAttributeComparator {
         match self {
             LLVMAttribute::Extern(..) => LLVMAttributeComparator::Extern,
@@ -24,6 +25,7 @@ impl LLVMAttributeComparatorExtensions for LLVMAttribute<'_> {
             LLVMAttribute::AsmSyntax(..) => LLVMAttributeComparator::AsmSyntax,
             LLVMAttribute::AsmThrow(..) => LLVMAttributeComparator::AsmThrow,
             LLVMAttribute::AsmSideEffects(..) => LLVMAttributeComparator::AsmSideEffects,
+            LLVMAttribute::Packed(..) => LLVMAttributeComparator::Packed,
         }
     }
 }

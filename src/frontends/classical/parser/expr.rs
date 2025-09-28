@@ -10,17 +10,16 @@ use crate::{
 use super::{ParserContext, contexts::sync::ParserSyncPosition};
 
 pub fn build_expression<'parser>(
-    parser_context: &mut ParserContext<'parser>,
+    ctx: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, ThrushCompilerIssue> {
-    self::check_state(parser_context)?;
+    self::check_state(ctx)?;
 
-    parser_context
-        .get_mut_control_ctx()
+    ctx.get_mut_control_ctx()
         .set_sync_position(ParserSyncPosition::Expression);
 
-    let expression: Ast = or::or_precedence(parser_context)?;
+    let expression: Ast = or::or_precedence(ctx)?;
 
-    parser_context.consume(
+    ctx.consume(
         TokenType::SemiColon,
         String::from("Syntax error"),
         String::from("Expected ';'."),
@@ -30,19 +29,18 @@ pub fn build_expression<'parser>(
 }
 
 pub fn build_expr<'parser>(
-    parser_context: &mut ParserContext<'parser>,
+    ctx: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, ThrushCompilerIssue> {
-    self::check_state(parser_context)?;
+    self::check_state(ctx)?;
 
-    parser_context
-        .get_mut_control_ctx()
+    ctx.get_mut_control_ctx()
         .set_sync_position(ParserSyncPosition::Expression);
 
-    let expr: Ast = or::or_precedence(parser_context)?;
+    let expr: Ast = or::or_precedence(ctx)?;
 
     Ok(expr)
 }
 
-fn check_state(parser_context: &mut ParserContext) -> Result<(), ThrushCompilerIssue> {
-    checks::check_unreacheable_state(parser_context)
+fn check_state(ctx: &mut ParserContext) -> Result<(), ThrushCompilerIssue> {
+    checks::check_unreacheable_state(ctx)
 }

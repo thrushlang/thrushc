@@ -9,22 +9,22 @@ use crate::{
 };
 
 pub fn term_precedence<'parser>(
-    parser_context: &mut ParserContext<'parser>,
+    ctx: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, ThrushCompilerIssue> {
-    let mut expression: Ast = factor::factor(parser_context)?;
+    let mut expression: Ast = factor::factor(ctx)?;
 
-    while parser_context.match_token(TokenType::Plus)?
-        || parser_context.match_token(TokenType::Minus)?
-        || parser_context.match_token(TokenType::LShift)?
-        || parser_context.match_token(TokenType::RShift)?
-        || parser_context.match_token(TokenType::Xor)?
-        || parser_context.match_token(TokenType::Bor)?
+    while ctx.match_token(TokenType::Plus)?
+        || ctx.match_token(TokenType::Minus)?
+        || ctx.match_token(TokenType::LShift)?
+        || ctx.match_token(TokenType::RShift)?
+        || ctx.match_token(TokenType::Xor)?
+        || ctx.match_token(TokenType::Bor)?
     {
-        let operator_tk: &Token = parser_context.previous();
+        let operator_tk: &Token = ctx.previous();
         let operator: TokenType = operator_tk.get_type();
         let span: Span = operator_tk.get_span();
 
-        let right: Ast = factor::factor(parser_context)?;
+        let right: Ast = factor::factor(ctx)?;
 
         let left_type: &Type = expression.get_value_type()?;
         let right_type: &Type = right.get_value_type()?;

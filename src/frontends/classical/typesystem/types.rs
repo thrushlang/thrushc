@@ -9,6 +9,7 @@ use crate::{
             stmts::{traits::StructExtensions, types::StructFields},
             symbols::types::Struct,
         },
+        typesystem::modificators::StructureTypeModificator,
     },
 };
 
@@ -49,7 +50,7 @@ pub enum Type {
     Ptr(Option<Arc<Type>>),
 
     // Struct Type
-    Struct(String, Vec<Arc<Type>>),
+    Struct(String, Vec<Arc<Type>>, StructureTypeModificator),
 
     // Fixed FixedArray
     FixedArray(Arc<Type>, u32),
@@ -66,53 +67,21 @@ pub enum Type {
 }
 
 impl Type {
-    pub fn get_fixed_array_base_type(&self) -> &Type {
-        if let Type::FixedArray(inner, ..) = self {
-            return inner;
-        }
-
-        if let Type::Mut(inner) = self {
-            return inner.get_fixed_array_base_type();
-        }
-
-        if let Type::Ptr(Some(inner)) = self {
-            return inner.get_fixed_array_base_type();
-        }
-
-        if let Type::Const(inner) = self {
-            return inner.get_fixed_array_base_type();
-        }
-
-        self
-    }
-
-    pub fn get_array_base_type(&self) -> &Type {
-        if let Type::Array(inner, ..) = self {
-            return inner;
-        }
-
-        if let Type::Mut(inner) = self {
-            return inner.get_array_base_type();
-        }
-
-        if let Type::Ptr(Some(inner)) = self {
-            return inner.get_array_base_type();
-        }
-
-        if let Type::Const(inner) = self {
-            return inner.get_array_base_type();
-        }
-
-        self
-    }
-
-    pub fn create_structure_type(name: String, fields: &[Type]) -> Type {
+    #[inline]
+    pub fn create_structure_type(
+        name: String,
+        fields: &[Type],
+        modificator: StructureTypeModificator,
+    ) -> Type {
         Type::Struct(
             name,
             fields.iter().map(|field| Arc::new(field.clone())).collect(),
+            modificator,
         )
     }
+}
 
+impl Type {
     #[inline(always)]
     pub fn is_char_type(&self) -> bool {
         matches!(self, Type::Char)
@@ -198,6 +167,50 @@ impl Type {
                 | Type::Char
         )
     }
+}
+
+impl Type {
+    #[inline]
+    pub fn get_fixed_array_base_type(&self) -> &Type {
+        if let Type::FixedArray(inner, ..) = self {
+            return inner;
+        }
+
+        if let Type::Mut(inner) = self {
+            return inner.get_fixed_array_base_type();
+        }
+
+        if let Type::Ptr(Some(inner)) = self {
+            return inner.get_fixed_array_base_type();
+        }
+
+        if let Type::Const(inner) = self {
+            return inner.get_fixed_array_base_type();
+        }
+
+        self
+    }
+
+    #[inline]
+    pub fn get_array_base_type(&self) -> &Type {
+        if let Type::Array(inner, ..) = self {
+            return inner;
+        }
+
+        if let Type::Mut(inner) = self {
+            return inner.get_array_base_type();
+        }
+
+        if let Type::Ptr(Some(inner)) = self {
+            return inner.get_array_base_type();
+        }
+
+        if let Type::Const(inner) = self {
+            return inner.get_array_base_type();
+        }
+
+        self
+    }
 
     #[inline]
     pub fn get_array_type_herarchy(&self) -> u8 {
@@ -238,13 +251,14 @@ impl Type {
 impl PartialEq for Type {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
-            (Type::Struct(a, fields1), Type::Struct(b, fields2)) => {
+            (Type::Struct(a, fields1, mod1), Type::Struct(b, fields2, mod2)) => {
                 fields1.len() == fields2.len()
                     && a == b
                     && fields1
                         .iter()
                         .zip(fields2.iter())
                         .all(|(f1, f2)| f1.as_ref() == f2.as_ref())
+                    && mod1 == mod2
             }
 
             (Type::FixedArray(type_a, size_a), Type::FixedArray(type_b, size_b)) => {
@@ -317,7 +331,7 @@ pub fn decompose_property(
         _ => base_type,
     };
 
-    if let Type::Struct(name, _) = current_type {
+    if let Type::Struct(name, _, _) = current_type {
         let structure: Struct = symbols_table.get_struct(name, span)?;
         let fields: StructFields = structure.get_fields();
 

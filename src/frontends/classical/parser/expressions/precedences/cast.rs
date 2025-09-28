@@ -12,15 +12,15 @@ use crate::{
 };
 
 pub fn cast_precedence<'parser>(
-    parser_context: &mut ParserContext<'parser>,
+    ctx: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, ThrushCompilerIssue> {
-    let mut expression: Ast = mutation::equal_precedence(parser_context)?;
+    let mut expression: Ast = mutation::equal_precedence(ctx)?;
 
-    if parser_context.match_token(TokenType::As)? {
-        let span: Span = parser_context.previous().get_span();
+    if ctx.match_token(TokenType::As)? {
+        let span: Span = ctx.previous().get_span();
         let expression_type: &Type = expression.get_value_type()?;
 
-        let cast: Type = typegen::build_type(parser_context)?;
+        let cast: Type = typegen::build_type(ctx)?;
 
         let is_constant: bool = expression.is_llvm_constant_value();
 

@@ -9,18 +9,16 @@ use crate::{
 };
 
 pub fn equality_precedence<'parser>(
-    parser_context: &mut ParserContext<'parser>,
+    ctx: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, ThrushCompilerIssue> {
-    let mut expression: Ast = cmp::cmp_precedence(parser_context)?;
+    let mut expression: Ast = cmp::cmp_precedence(ctx)?;
 
-    if parser_context.match_token(TokenType::BangEq)?
-        || parser_context.match_token(TokenType::EqEq)?
-    {
-        let operator_tk: &Token = parser_context.previous();
+    if ctx.match_token(TokenType::BangEq)? || ctx.match_token(TokenType::EqEq)? {
+        let operator_tk: &Token = ctx.previous();
         let operator: TokenType = operator_tk.kind;
         let span: Span = operator_tk.get_span();
 
-        let right: Ast = cmp::cmp_precedence(parser_context)?;
+        let right: Ast = cmp::cmp_precedence(ctx)?;
 
         expression = Ast::BinaryOp {
             left: expression.into(),

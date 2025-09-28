@@ -1,9 +1,17 @@
 use crate::{
     backends::classical::llvm::compiler::attributes::LLVMAttribute,
-    frontends::classical::{lexer::span::Span, types::ast::Ast, typesystem::types::Type},
+    frontends::classical::{
+        lexer::span::Span,
+        types::ast::Ast,
+        typesystem::{modificators::StructureTypeModificator, types::Type},
+    },
 };
 
-pub type StructFields<'ctx> = (&'ctx str, Vec<(&'ctx str, Type, u32, Span)>);
+pub type StructFields<'ctx> = (
+    &'ctx str,
+    Vec<(&'ctx str, Type, u32, Span)>,
+    StructureTypeModificator,
+);
 
 pub type EnumFields<'ctx> = Vec<(&'ctx str, Ast<'ctx>)>;
 pub type EnumField<'ctx> = (&'ctx str, Ast<'ctx>);

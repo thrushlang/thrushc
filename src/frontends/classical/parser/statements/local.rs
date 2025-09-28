@@ -12,20 +12,20 @@ use crate::{
 };
 
 pub fn build_local<'parser>(
-    parser_ctx: &mut ParserContext<'parser>,
+    ctx: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, ThrushCompilerIssue> {
-    self::check_state(parser_ctx)?;
+    self::check_state(ctx)?;
 
-    parser_ctx.consume(
+    ctx.consume(
         TokenType::Local,
         String::from("Syntax error"),
         String::from("Expected 'local' keyword."),
     )?;
 
-    let is_mutable: bool = parser_ctx.match_token(TokenType::Mut)?;
-    let is_volatile: bool = parser_ctx.match_token(TokenType::Volatile)?;
+    let is_mutable: bool = ctx.match_token(TokenType::Mut)?;
+    let is_volatile: bool = ctx.match_token(TokenType::Volatile)?;
 
-    let local_tk: &Token = parser_ctx.consume(
+    let local_tk: &Token = ctx.consume(
         TokenType::Identifier,
         String::from("Syntax error"),
         String::from("Expected identifier."),
@@ -33,25 +33,23 @@ pub fn build_local<'parser>(
 
     let name: &str = local_tk.get_lexeme();
     let ascii_name: &str = local_tk.get_ascii_lexeme();
-
     let span: Span = local_tk.get_span();
 
-    parser_ctx.consume(
+    ctx.consume(
         TokenType::Colon,
         String::from("Syntax error"),
         String::from("Expected ':'."),
     )?;
 
-    let local_type: Type = typegen::build_type(parser_ctx)?;
+    let local_type: Type = typegen::build_type(ctx)?;
 
     let attributes: ThrushAttributes =
-        attributes::build_attributes(parser_ctx, &[TokenType::SemiColon, TokenType::Eq])?;
+        attributes::build_attributes(ctx, &[TokenType::SemiColon, TokenType::Eq])?;
 
-    if parser_ctx.match_token(TokenType::SemiColon)? {
+    if ctx.match_token(TokenType::SemiColon)? {
         let metadata: LocalMetadata = LocalMetadata::new(true, is_mutable, is_volatile);
 
-        parser_ctx
-            .get_mut_symbols()
+        ctx.get_mut_symbols()
             .new_local(name, (local_type.clone(), metadata, span), span)?;
 
         return Ok(Ast::Local {
@@ -67,17 +65,20 @@ pub fn build_local<'parser>(
 
     let metadata: LocalMetadata = LocalMetadata::new(false, is_mutable, is_volatile);
 
-    parser_ctx
-        .get_mut_symbols()
-        .new_local(name, (local_type.clone(), metadata, span), span)?;
+    if let Err(error) =
+        ctx.get_mut_symbols()
+            .new_local(name, (local_type.clone(), metadata, span), span)
+    {
+        ctx.add_silent_error(error);
+    }
 
-    parser_ctx.consume(
+    ctx.consume(
         TokenType::Eq,
         String::from("Syntax error"),
         String::from("Expected '='."),
     )?;
 
-    let value: Ast = expr::build_expression(parser_ctx)?;
+    let value: Ast = expr::build_expression(ctx)?;
 
     let local: Ast = Ast::Local {
         name,
@@ -92,7 +93,7 @@ pub fn build_local<'parser>(
     Ok(local)
 }
 
-fn check_state(parser_ctx: &mut ParserContext<'_>) -> Result<(), ThrushCompilerIssue> {
-    checks::check_unreacheable_state(parser_ctx)?;
-    checks::check_inside_function_state(parser_ctx)
+fn check_state(ctx: &mut ParserContext<'_>) -> Result<(), ThrushCompilerIssue> {
+    checks::check_unreacheable_state(ctx)?;
+    checks::check_inside_function_state(ctx)
 }

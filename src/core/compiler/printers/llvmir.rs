@@ -33,7 +33,11 @@ pub fn print_llvm_ir(
 
     logging::write(
         logging::OutputIn::Stdout,
-        &format!("{}\n\n", ir_file_name.bright_green().bold()),
+        &format!(
+            "{} - {}\n\n",
+            "FILE - ".bold(),
+            ir_file_name.bright_green().bold(),
+        ),
     );
 
     logging::write(logging::OutputIn::Stdout, &module_print);

@@ -13,9 +13,9 @@ use crate::{
 };
 
 pub fn build_alloc<'parser>(
-    parser_context: &mut ParserContext<'parser>,
+    ctx: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, ThrushCompilerIssue> {
-    let alloc_tk: &Token = parser_context.consume(
+    let alloc_tk: &Token = ctx.consume(
         TokenType::Alloc,
         "Syntax error".into(),
         "Expected 'alloc' keyword.".into(),
@@ -23,19 +23,19 @@ pub fn build_alloc<'parser>(
 
     let span: Span = alloc_tk.get_span();
 
-    let site_allocation: AllocationSite = match parser_context.peek().kind {
+    let site_allocation: AllocationSite = match ctx.peek().kind {
         TokenType::Heap => {
-            parser_context.only_advance()?;
+            ctx.only_advance()?;
             AllocationSite::Heap
         }
 
         TokenType::Stack => {
-            parser_context.only_advance()?;
+            ctx.only_advance()?;
             AllocationSite::Stack
         }
 
         TokenType::Static => {
-            parser_context.only_advance()?;
+            ctx.only_advance()?;
             AllocationSite::Static
         }
 
@@ -49,23 +49,23 @@ pub fn build_alloc<'parser>(
         }
     };
 
-    parser_context.consume(
+    ctx.consume(
         TokenType::LBrace,
         "Syntax error".into(),
         "Expected '{'.".into(),
     )?;
 
-    let mut alloc_type: Type = typegen::build_type(parser_context)?;
+    let mut alloc_type: Type = typegen::build_type(ctx)?;
 
     alloc_type = Type::Ptr(Some(alloc_type.into()));
 
-    let attributes: Vec<LLVMAttribute> = if !parser_context.check(TokenType::RBrace) {
-        attributes::build_attributes(parser_context, &[TokenType::RBrace, TokenType::SemiColon])?
+    let attributes: Vec<LLVMAttribute> = if !ctx.check(TokenType::RBrace) {
+        attributes::build_attributes(ctx, &[TokenType::RBrace, TokenType::SemiColon])?
     } else {
         Vec::new()
     };
 
-    parser_context.consume(
+    ctx.consume(
         TokenType::RBrace,
         "Syntax error".into(),
         "Expected '}'.".into(),

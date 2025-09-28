@@ -9,20 +9,20 @@ use crate::{
 };
 
 pub fn build_address<'parser>(
-    parser_context: &mut ParserContext<'parser>,
+    ctx: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, ThrushCompilerIssue> {
-    let address_tk: &Token = parser_context.advance()?;
+    let address_tk: &Token = ctx.advance()?;
     let address_span: Span = address_tk.get_span();
 
-    if parser_context.match_token(TokenType::Identifier)? {
-        let identifier_tk: &Token = parser_context.previous();
+    if ctx.match_token(TokenType::Identifier)? {
+        let identifier_tk: &Token = ctx.previous();
 
         let name: &str = identifier_tk.get_lexeme();
         let span: Span = identifier_tk.get_span();
 
-        let reference: Ast = reference::build_reference(parser_context, name, span)?;
+        let reference: Ast = reference::build_reference(ctx, name, span)?;
 
-        let indexes: Vec<Ast> = self::build_address_indexes(parser_context, span)?;
+        let indexes: Vec<Ast> = self::build_address_indexes(ctx, span)?;
 
         return Ok(Ast::Address {
             source: (Some((name, reference.into())), None),
@@ -32,10 +32,10 @@ pub fn build_address<'parser>(
         });
     }
 
-    let expr: Ast = expr::build_expr(parser_context)?;
+    let expr: Ast = expr::build_expr(ctx)?;
     let expr_span: Span = expr.get_span();
 
-    let indexes: Vec<Ast> = self::build_address_indexes(parser_context, expr_span)?;
+    let indexes: Vec<Ast> = self::build_address_indexes(ctx, expr_span)?;
 
     Ok(Ast::Address {
         source: (None, Some(expr.into())),
@@ -46,10 +46,10 @@ pub fn build_address<'parser>(
 }
 
 fn build_address_indexes<'parser>(
-    parser_context: &mut ParserContext<'parser>,
+    ctx: &mut ParserContext<'parser>,
     span: Span,
 ) -> Result<Vec<Ast<'parser>>, ThrushCompilerIssue> {
-    parser_context.consume(
+    ctx.consume(
         TokenType::LBrace,
         String::from("Syntax error"),
         String::from("Expected '{'."),
@@ -58,18 +58,18 @@ fn build_address_indexes<'parser>(
     let mut indexes: Vec<Ast> = Vec::with_capacity(10);
 
     loop {
-        if parser_context.check(TokenType::RBrace) {
+        if ctx.check(TokenType::RBrace) {
             break;
         }
 
-        let index: Ast = expr::build_expr(parser_context)?;
+        let index: Ast = expr::build_expr(ctx)?;
 
         indexes.push(index);
 
-        if parser_context.check(TokenType::RBrace) {
+        if ctx.check(TokenType::RBrace) {
             break;
         } else {
-            parser_context.consume(
+            ctx.consume(
                 TokenType::Comma,
                 String::from("Syntax error"),
                 String::from("Expected ','."),
@@ -77,7 +77,7 @@ fn build_address_indexes<'parser>(
         }
     }
 
-    parser_context.consume(
+    ctx.consume(
         TokenType::RBrace,
         String::from("Syntax error"),
         String::from("Expected '}'."),

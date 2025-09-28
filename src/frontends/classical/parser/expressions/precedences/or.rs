@@ -9,17 +9,17 @@ use crate::{
 };
 
 pub fn or_precedence<'instr>(
-    parser_context: &mut ParserContext<'instr>,
+    ctx: &mut ParserContext<'instr>,
 ) -> Result<Ast<'instr>, ThrushCompilerIssue> {
-    let mut expression: Ast = and::and_precedence(parser_context)?;
+    let mut expression: Ast = and::and_precedence(ctx)?;
 
-    while parser_context.match_token(TokenType::Or)? {
-        let operator_tk: &Token = parser_context.previous();
+    while ctx.match_token(TokenType::Or)? {
+        let operator_tk: &Token = ctx.previous();
 
         let operator: TokenType = operator_tk.kind;
         let span: Span = operator_tk.get_span();
 
-        let right: Ast = and::and_precedence(parser_context)?;
+        let right: Ast = and::and_precedence(ctx)?;
 
         expression = Ast::BinaryOp {
             left: expression.into(),

@@ -9,18 +9,16 @@ use crate::{
 };
 
 pub fn factor<'parser>(
-    parser_context: &mut ParserContext<'parser>,
+    ctx: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, ThrushCompilerIssue> {
-    let mut expression: Ast = unary::unary_precedence(parser_context)?;
+    let mut expression: Ast = unary::unary_precedence(ctx)?;
 
-    while parser_context.match_token(TokenType::Slash)?
-        || parser_context.match_token(TokenType::Star)?
-    {
-        let operator_tk: &Token = parser_context.previous();
+    while ctx.match_token(TokenType::Slash)? || ctx.match_token(TokenType::Star)? {
+        let operator_tk: &Token = ctx.previous();
         let operator: TokenType = operator_tk.get_type();
         let span: Span = operator_tk.get_span();
 
-        let right: Ast = unary::unary_precedence(parser_context)?;
+        let right: Ast = unary::unary_precedence(ctx)?;
 
         let left_type: &Type = expression.get_value_type()?;
         let right_type: &Type = right.get_value_type()?;

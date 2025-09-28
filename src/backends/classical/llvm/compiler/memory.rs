@@ -21,7 +21,7 @@ use inkwell::{
     module::Module,
     targets::TargetData,
     types::BasicTypeEnum,
-    values::{BasicValue, BasicValueEnum, IntValue, PointerValue, StructValue},
+    values::{BasicValue, BasicValueEnum, IntValue, PointerValue},
 };
 
 use super::context::LLVMCodeGenContext;
@@ -287,19 +287,6 @@ impl<'ctx> SymbolAllocated<'ctx> {
         }
 
         abort()
-    }
-
-    pub fn extract_value(&self, builder: &Builder<'ctx>, index: u32) -> BasicValueEnum<'ctx> {
-        if let Self::Parameter { value, .. } | Self::LowLevelInstruction { value, .. } = self {
-            if value.is_struct_value() {
-                let struct_value: StructValue = value.into_struct_value();
-                if let Ok(extracted_value) = builder.build_extract_value(struct_value, index, "") {
-                    return extracted_value;
-                }
-            }
-        }
-
-        self::codegen_abort("Unable to get a value of an structure at memory manipulation.");
     }
 
     pub fn gep_struct(

@@ -22,7 +22,7 @@ use crate::{
                 },
             },
         },
-        typesystem::types::Type,
+        typesystem::{modificators::StructureTypeModificator, types::Type},
     },
 };
 
@@ -126,6 +126,10 @@ impl<'parser> StructExtensions<'parser> for Struct<'parser> {
         self.1.iter().any(|field| field.0 == name)
     }
 
+    fn get_modificator(&self) -> StructureTypeModificator {
+        self.3
+    }
+
     fn get_field_type(&self, name: &str) -> Option<Type> {
         if let Some(field) = self.1.iter().find(|field| field.0 == name) {
             let field_type: Type = field.1.clone();
@@ -136,7 +140,7 @@ impl<'parser> StructExtensions<'parser> for Struct<'parser> {
     }
 
     fn get_fields(&self) -> StructFields<'parser> {
-        (self.0, self.1.clone())
+        (self.0, self.1.clone(), self.3)
     }
 }
 

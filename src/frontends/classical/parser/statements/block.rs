@@ -8,11 +8,11 @@ use crate::{
 };
 
 pub fn build_block<'parser>(
-    parser_context: &mut ParserContext<'parser>,
+    ctx: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, ThrushCompilerIssue> {
-    self::check_state(parser_context)?;
+    self::check_state(ctx)?;
 
-    let block_tk: &Token = parser_context.consume(
+    let block_tk: &Token = ctx.consume(
         TokenType::LBrace,
         String::from("Syntax error"),
         String::from("Expected '{'."),
@@ -20,23 +20,23 @@ pub fn build_block<'parser>(
 
     let span: Span = block_tk.get_span();
 
-    *parser_context.get_mut_scope() += 1;
-    parser_context.get_mut_symbols().begin_scope();
+    *ctx.get_mut_scope() += 1;
+    ctx.get_mut_symbols().begin_scope();
 
     let mut stmts: Vec<Ast> = Vec::with_capacity(256);
 
-    while !parser_context.match_token(TokenType::RBrace)? {
-        let stmt: Ast = statement::parse(parser_context)?;
+    while !ctx.match_token(TokenType::RBrace)? {
+        let stmt: Ast = statement::parse(ctx)?;
         stmts.push(stmt)
     }
 
-    parser_context.get_mut_symbols().end_scope();
-    *parser_context.get_mut_scope() -= 1;
+    ctx.get_mut_symbols().end_scope();
+    *ctx.get_mut_scope() -= 1;
 
     Ok(Ast::Block { stmts, span })
 }
 
-pub fn check_state(parser_context: &mut ParserContext) -> Result<(), ThrushCompilerIssue> {
-    checks::check_unreacheable_state(parser_context)?;
-    checks::check_inside_function_state(parser_context)
+pub fn check_state(ctx: &mut ParserContext) -> Result<(), ThrushCompilerIssue> {
+    checks::check_unreacheable_state(ctx)?;
+    checks::check_inside_function_state(ctx)
 }

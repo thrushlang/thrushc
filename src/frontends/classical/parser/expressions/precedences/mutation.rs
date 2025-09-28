@@ -9,14 +9,14 @@ use crate::{
 };
 
 pub fn equal_precedence<'parser>(
-    parser_context: &mut ParserContext<'parser>,
+    ctx: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, ThrushCompilerIssue> {
-    let mut expression: Ast = property::property_precedence(parser_context)?;
+    let mut expression: Ast = property::property_precedence(ctx)?;
 
-    if parser_context.match_token(TokenType::Eq)? {
-        let span: Span = parser_context.previous().get_span();
+    if ctx.match_token(TokenType::Eq)? {
+        let span: Span = ctx.previous().get_span();
 
-        let expr: Ast = expr::build_expr(parser_context)?;
+        let expr: Ast = expr::build_expr(ctx)?;
 
         expression = Ast::Mut {
             source: expression.into(),

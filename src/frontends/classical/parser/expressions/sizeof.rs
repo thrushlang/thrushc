@@ -9,15 +9,15 @@ use crate::{
 };
 
 pub fn build_sizeof<'parser>(
-    parser_context: &mut ParserContext<'parser>,
+    ctx: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, ThrushCompilerIssue> {
-    let sizeof_tk: &Token = parser_context.consume(
+    let sizeof_tk: &Token = ctx.consume(
         TokenType::SizeOf,
         String::from("Syntax error"),
         String::from("Expected 'sizeof' keyword."),
     )?;
 
-    parser_context.consume(
+    ctx.consume(
         TokenType::LParen,
         String::from("Syntax error"),
         String::from("Expected '('."),
@@ -25,17 +25,17 @@ pub fn build_sizeof<'parser>(
 
     let sizeof_span: Span = sizeof_tk.get_span();
 
-    if parser_context.match_token(TokenType::Identifier)? {
-        let identifier_tk: &Token = parser_context.previous();
+    if ctx.match_token(TokenType::Identifier)? {
+        let identifier_tk: &Token = ctx.previous();
 
         let name: &str = identifier_tk.get_lexeme();
         let span: Span = identifier_tk.get_span();
 
-        let reference: Ast = reference::build_reference(parser_context, name, span)?;
+        let reference: Ast = reference::build_reference(ctx, name, span)?;
 
         let reference_type: &Type = reference.get_value_type()?;
 
-        parser_context.consume(
+        ctx.consume(
             TokenType::RParen,
             String::from("Syntax error"),
             String::from("Expected ')'."),
@@ -48,9 +48,9 @@ pub fn build_sizeof<'parser>(
         });
     }
 
-    let sizeof_type: Type = typegen::build_type(parser_context)?;
+    let sizeof_type: Type = typegen::build_type(ctx)?;
 
-    parser_context.consume(
+    ctx.consume(
         TokenType::RParen,
         String::from("Syntax error"),
         String::from("Expected ')'."),

@@ -3,9 +3,10 @@ use crate::{
     frontends::classical::{
         lexer::tokentype::TokenType,
         parser::{
-            declarations::{asmfn, glasm, glconstant, glstatic, structure, union},
+            declarations::{
+                asmfn, cstype, function, glasm, glconstant, glstatic, structure, union,
+            },
             statement,
-            statements::{cstype, function},
         },
         types::ast::Ast,
     },
@@ -14,76 +15,75 @@ use crate::{
 use super::{ParserContext, contexts::sync::ParserSyncPosition};
 
 pub fn decl<'parser>(
-    parser_context: &mut ParserContext<'parser>,
+    ctx: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, ThrushCompilerIssue> {
-    parser_context
-        .get_mut_control_ctx()
+    ctx.get_mut_control_ctx()
         .set_sync_position(ParserSyncPosition::Declaration);
 
-    let declaration: Result<Ast<'parser>, ThrushCompilerIssue> = match &parser_context.peek().kind {
-        TokenType::Type => Ok(cstype::build_custom_type(parser_context, false)?),
-        TokenType::Struct => Ok(structure::build_structure(parser_context, false)?),
-        TokenType::Const => Ok(glconstant::build_global_const(parser_context, false)?),
-        TokenType::Static => Ok(glstatic::build_global_static(parser_context, false)?),
-        TokenType::Enum => Ok(union::build_enum(parser_context, false)?),
-        TokenType::Fn => Ok(function::build_function(parser_context, false)?),
-        TokenType::AsmFn => Ok(asmfn::build_assembler_function(parser_context, false)?),
-        TokenType::GlobalAsm => Ok(glasm::build_global_assembler(parser_context)?),
+    let declaration: Result<Ast<'parser>, ThrushCompilerIssue> = match &ctx.peek().kind {
+        TokenType::Type => Ok(cstype::build_custom_type(ctx, false)?),
+        TokenType::Struct => Ok(structure::build_structure(ctx, false)?),
+        TokenType::Const => Ok(glconstant::build_global_const(ctx, false)?),
+        TokenType::Static => Ok(glstatic::build_global_static(ctx, false)?),
+        TokenType::Enum => Ok(union::build_enum(ctx, false)?),
+        TokenType::Fn => Ok(function::build_function(ctx, false)?),
+        TokenType::AsmFn => Ok(asmfn::build_assembler_function(ctx, false)?),
+        TokenType::GlobalAsm => Ok(glasm::build_global_assembler(ctx)?),
 
-        _ => Ok(statement::parse(parser_context)?),
+        _ => Ok(statement::parse(ctx)?),
     };
 
     declaration
 }
 
-pub fn parse_forward(parser_context: &mut ParserContext) {
+pub fn parse_forward(ctx: &mut ParserContext) {
     let mut entered_at_block: bool = false;
 
-    while !parser_context.is_eof() {
-        match &parser_context.peek().kind {
+    while !ctx.is_eof() {
+        match &ctx.peek().kind {
             TokenType::Type if !entered_at_block => {
-                let _ = cstype::build_custom_type(parser_context, true);
+                let _ = cstype::build_custom_type(ctx, true);
             }
 
             TokenType::Struct if !entered_at_block => {
-                let _ = structure::build_structure(parser_context, true);
+                let _ = structure::build_structure(ctx, true);
             }
 
             TokenType::Static if !entered_at_block => {
-                let _ = glstatic::build_global_static(parser_context, true);
+                let _ = glstatic::build_global_static(ctx, true);
             }
 
             TokenType::Const if !entered_at_block => {
-                let _ = glconstant::build_global_const(parser_context, true);
+                let _ = glconstant::build_global_const(ctx, true);
             }
 
             TokenType::Enum if !entered_at_block => {
-                let _ = union::build_enum(parser_context, true);
+                let _ = union::build_enum(ctx, true);
             }
 
             TokenType::Fn if !entered_at_block => {
-                let _ = function::build_function(parser_context, true);
+                let _ = function::build_function(ctx, true);
             }
 
             TokenType::AsmFn if !entered_at_block => {
-                let _ = asmfn::build_assembler_function(parser_context, true);
+                let _ = asmfn::build_assembler_function(ctx, true);
             }
 
             TokenType::LBrace => {
                 entered_at_block = true;
-                let _ = parser_context.only_advance();
+                let _ = ctx.only_advance();
             }
 
             TokenType::RBrace => {
                 entered_at_block = false;
-                let _ = parser_context.only_advance();
+                let _ = ctx.only_advance();
             }
 
             _ => {
-                let _ = parser_context.only_advance();
+                let _ = ctx.only_advance();
             }
         }
     }
 
-    parser_context.current = 0;
+    ctx.current = 0;
 }

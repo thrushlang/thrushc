@@ -8,7 +8,7 @@ use crate::frontends::classical::{
             traits::LLVMAttributeComparatorExtensions, types::LLVMAttributeComparator,
         },
     },
-    typesystem::types::Type,
+    typesystem::{modificators::StructureTypeModificator, types::Type},
 };
 
 use super::{
@@ -84,20 +84,25 @@ impl ThrushAttributesExtensions for ThrushAttributes<'_> {
 impl StructFieldsExtensions for StructFields<'_> {
     fn get_type(&self) -> Type {
         let types: Vec<Type> = self.1.iter().map(|field| field.1.clone()).collect();
-        Type::create_structure_type(self.0.to_string(), types.as_slice())
+
+        Type::create_structure_type(self.0.to_string(), types.as_slice(), self.get_modificator())
+    }
+
+    fn get_modificator(&self) -> StructureTypeModificator {
+        self.2
     }
 }
 
 impl ConstructorExtensions for Constructor<'_> {
-    fn get_type(&self, name: &str) -> Type {
+    fn get_type(&self, name: &str, modificator: StructureTypeModificator) -> Type {
         let types: Vec<Type> = self.iter().map(|field| field.2.clone()).collect();
-        Type::create_structure_type(name.to_string(), types.as_slice())
+        Type::create_structure_type(name.to_string(), types.as_slice(), modificator)
     }
 }
 
 impl CustomTypeFieldsExtensions for CustomTypeFields<'_> {
     fn get_type(&self) -> Type {
-        Type::create_structure_type(String::new(), self)
+        Type::create_structure_type(String::new(), self, StructureTypeModificator::default())
     }
 }
 

@@ -13,57 +13,59 @@ use crate::{
                 symbols::types::Struct,
             },
         },
+        typesystem::modificators::StructureTypeModificator,
     },
 };
 
 pub fn build_constructor<'parser>(
-    parser_context: &mut ParserContext<'parser>,
+    ctx: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, ThrushCompilerIssue> {
-    parser_context.consume(
+    ctx.consume(
         TokenType::New,
         "Syntax error".into(),
         "Expected 'new' keyword.".into(),
     )?;
 
-    let struct_tk: &Token = parser_context.consume(
+    let identifier_tk: &Token = ctx.consume(
         TokenType::Identifier,
         "Syntax error".into(),
         "Expected 'identifier' keyword.".into(),
     )?;
 
-    let name: &str = struct_tk.get_lexeme();
-    let span: Span = struct_tk.get_span();
-
-    let struct_found: Struct = parser_context.get_symbols().get_struct(name, span)?;
-    let fields_required: usize = struct_found.get_fields().1.len();
-
-    parser_context.consume(
+    ctx.consume(
         TokenType::LBrace,
         String::from("Syntax error"),
         String::from("Expected '{'."),
     )?;
 
-    let mut args: Constructor = Vec::with_capacity(10);
+    let name: &str = identifier_tk.get_lexeme();
+    let span: Span = identifier_tk.get_span();
 
+    let structure: Struct = ctx.get_symbols().get_struct(name, span)?;
+    let modificator: StructureTypeModificator = structure.get_modificator();
+
+    let required: usize = structure.get_fields().1.len();
+
+    let mut args: Constructor = Vec::with_capacity(10);
     let mut amount: usize = 0;
 
     loop {
-        if parser_context.check(TokenType::RBrace) {
+        if ctx.check(TokenType::RBrace) {
             break;
         }
 
-        if parser_context.match_token(TokenType::Identifier)? {
-            let field_tk: &Token = parser_context.previous();
+        if ctx.match_token(TokenType::Identifier)? {
+            let field_tk: &Token = ctx.previous();
             let field_span: Span = field_tk.span;
             let field_name: &str = field_tk.get_lexeme();
 
-            parser_context.consume(
+            ctx.consume(
                 TokenType::Colon,
                 String::from("Syntax error"),
                 String::from("Expected ':'."),
             )?;
 
-            if !struct_found.contains_field(field_name) {
+            if !structure.contains_field(field_name) {
                 return Err(ThrushCompilerIssue::Error(
                     String::from("Syntax error"),
                     String::from("Expected existing structure field name."),
@@ -72,33 +74,33 @@ pub fn build_constructor<'parser>(
                 ));
             }
 
-            if amount >= fields_required {
+            if amount >= required {
                 return Err(ThrushCompilerIssue::Error(
                     String::from("Too many fields in structure"),
-                    format!("Expected '{}' fields, not '{}'.", fields_required, amount),
+                    format!("Expected '{}' fields, not '{}'.", required, amount),
                     None,
                     span,
                 ));
             }
 
-            let expression: Ast = expr::build_expr(parser_context)?;
+            let expression: Ast = expr::build_expr(ctx)?;
 
-            if let Some(target_type) = struct_found.get_field_type(field_name) {
+            if let Some(target_type) = structure.get_field_type(field_name) {
                 args.push((field_name, expression, target_type, amount as u32));
             }
 
             amount += 1;
 
-            if parser_context.check(TokenType::RBrace) {
+            if ctx.check(TokenType::RBrace) {
                 break;
             }
 
-            if parser_context.match_token(TokenType::Comma)? {
-                if parser_context.check(TokenType::RBrace) {
+            if ctx.match_token(TokenType::Comma)? {
+                if ctx.check(TokenType::RBrace) {
                     break;
                 }
-            } else if parser_context.check_to(TokenType::Identifier, 0) {
-                parser_context.consume(
+            } else if ctx.check_to(TokenType::Identifier, 0) {
+                ctx.consume(
                     TokenType::Comma,
                     String::from("Syntax error"),
                     String::from("Expected ','."),
@@ -108,7 +110,7 @@ pub fn build_constructor<'parser>(
                     String::from("Syntax error"),
                     String::from("Expected identifier."),
                     None,
-                    parser_context.previous().get_span(),
+                    ctx.previous().get_span(),
                 ));
             }
         } else {
@@ -121,21 +123,21 @@ pub fn build_constructor<'parser>(
         }
     }
 
-    let amount_fields: usize = args.len();
+    let provided: usize = args.len();
 
-    if amount_fields != fields_required {
+    if provided != required {
         return Err(ThrushCompilerIssue::Error(
             String::from("Missing fields in structure"),
             format!(
                 "Expected '{}' arguments, but '{}' was gived.",
-                fields_required, amount_fields
+                required, provided
             ),
             None,
             span,
         ));
     }
 
-    parser_context.consume(
+    ctx.consume(
         TokenType::RBrace,
         String::from("Syntax error"),
         String::from("Expected '}'."),
@@ -144,7 +146,7 @@ pub fn build_constructor<'parser>(
     Ok(Ast::Constructor {
         name,
         args: args.clone(),
-        kind: args.get_type(name),
+        kind: args.get_type(name, modificator),
         span,
     })
 }

@@ -57,7 +57,7 @@ impl TypeExtensions for Type {
             Type::Mut(inner_type) => inner_type.get_type_with_depth(base_depth - 1),
             Type::Const(inner_type) => inner_type.get_type_with_depth(base_depth - 1),
             Type::Ptr(Some(inner_type)) => inner_type.get_type_with_depth(base_depth - 1),
-            Type::Struct(_, _) => self,
+            Type::Struct(..) => self,
             Type::S8
             | Type::S16
             | Type::S32
@@ -90,7 +90,7 @@ impl IndexTypeExtensions for Type {
             Type::Mut(inner_type) => inner_type.get_aprox_type(depth),
             Type::Const(inner_type) => inner_type.get_aprox_type(depth),
             Type::Ptr(Some(inner_type)) => inner_type.get_aprox_type(depth - 1),
-            Type::Struct(_, _) => self,
+            Type::Struct(..) => self,
             Type::S8
             | Type::S16
             | Type::S32
@@ -160,7 +160,7 @@ impl TypePointerExtensions for Type {
 impl TypeStructExtensions for Type {
     #[inline]
     fn get_struct_fields(&self) -> &[Arc<Type>] {
-        if let Type::Struct(_, fields) = self {
+        if let Type::Struct(_, fields, ..) = self {
             return fields;
         }
 
@@ -293,8 +293,14 @@ impl std::fmt::Display for Type {
             Type::Array(kind) => {
                 write!(f, "[{}]", kind)
             }
-            Type::Struct(name, fields) => {
-                write!(f, "struct {} {{ ", name)?;
+            Type::Struct(name, fields, modificator) => {
+                let is_llvm_packed: &str = if modificator.llvm().is_packed() {
+                    "<packed>"
+                } else {
+                    ""
+                };
+
+                write!(f, "struct {} {} {{ ", name, is_llvm_packed)?;
 
                 fields.iter().for_each(|field| {
                     let _ = write!(f, "{} ", field);

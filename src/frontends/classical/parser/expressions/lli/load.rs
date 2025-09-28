@@ -9,9 +9,9 @@ use crate::{
 };
 
 pub fn build_load<'parser>(
-    parser_context: &mut ParserContext<'parser>,
+    ctx: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, ThrushCompilerIssue> {
-    let load_tk: &Token = parser_context.consume(
+    let load_tk: &Token = ctx.consume(
         TokenType::Load,
         "Syntax error".into(),
         "Expected 'load' keyword.".into(),
@@ -19,16 +19,16 @@ pub fn build_load<'parser>(
 
     let span: Span = load_tk.get_span();
 
-    let load_type: Type = typegen::build_type(parser_context)?;
+    let load_type: Type = typegen::build_type(ctx)?;
 
-    parser_context.consume(
+    ctx.consume(
         TokenType::Comma,
         "Syntax error".into(),
         "Expected ','.".into(),
     )?;
 
-    if parser_context.check(TokenType::Identifier) {
-        let identifier_tk: &Token = parser_context.consume(
+    if ctx.check(TokenType::Identifier) {
+        let identifier_tk: &Token = ctx.consume(
             TokenType::Identifier,
             "Syntax error".into(),
             "Expected 'identifier'.".into(),
@@ -36,7 +36,7 @@ pub fn build_load<'parser>(
 
         let reference_name: &str = identifier_tk.get_lexeme();
 
-        let reference: Ast = reference::build_reference(parser_context, reference_name, span)?;
+        let reference: Ast = reference::build_reference(ctx, reference_name, span)?;
 
         return Ok(Ast::Load {
             source: (Some((reference_name, reference.into())), None),
@@ -45,7 +45,7 @@ pub fn build_load<'parser>(
         });
     }
 
-    let expression: Ast = expr::build_expr(parser_context)?;
+    let expression: Ast = expr::build_expr(ctx)?;
 
     Ok(Ast::Load {
         source: (None, Some(expression.into())),

@@ -63,6 +63,7 @@ impl<'parser> SymbolsTable<'parser> {
 }
 
 impl SymbolsTable<'_> {
+    #[inline]
     pub fn begin_scope(&mut self) {
         self.statics.push(HashMap::with_capacity(255));
         self.constants.push(HashMap::with_capacity(255));
@@ -70,6 +71,7 @@ impl SymbolsTable<'_> {
         self.llis.push(HashMap::with_capacity(255));
     }
 
+    #[inline]
     pub fn end_scope(&mut self) {
         self.statics.pop();
         self.constants.pop();
@@ -77,6 +79,7 @@ impl SymbolsTable<'_> {
         self.llis.pop();
     }
 
+    #[inline]
     pub fn end_parameters(&mut self) {
         self.parameters.clear();
     }

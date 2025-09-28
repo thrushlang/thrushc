@@ -78,7 +78,7 @@ pub fn build_function<'parser>(
         let parameter_tk: &Token = parser_ctx.consume(
             TokenType::Identifier,
             String::from("Syntax error"),
-            String::from("Expected parameter name."),
+            String::from("Expected identifier."),
         )?;
 
         let name: &str = parameter_tk.get_lexeme();
@@ -152,7 +152,7 @@ pub fn build_function<'parser>(
             ),
             span,
         ) {
-            parser_ctx.add_error(error);
+            parser_ctx.add_silent_error(error);
         }
 
         if parser_ctx.match_token(TokenType::SemiColon)? {
@@ -172,7 +172,9 @@ pub fn build_function<'parser>(
         .get_mut_type_ctx()
         .set_function_type(return_type.clone());
 
-    parser_ctx.get_mut_symbols().start_parameters(&parameters)?;
+    if let Err(error) = parser_ctx.get_mut_symbols().start_parameters(&parameters) {
+        parser_ctx.add_silent_error(error);
+    }
 
     let function_body: Ast = block::build_block(parser_ctx)?;
 

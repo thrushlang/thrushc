@@ -12,21 +12,20 @@ use crate::{
 };
 
 pub fn build_global_static<'parser>(
-    parser_context: &mut ParserContext<'parser>,
+    ctx: &mut ParserContext<'parser>,
     declare_forward: bool,
 ) -> Result<Ast<'parser>, ThrushCompilerIssue> {
-    parser_context.consume(
+    ctx.consume(
         TokenType::Static,
         "Syntax error".into(),
         "Expected 'static' keyword.".into(),
     )?;
 
-    let is_mutable: bool = parser_context.match_token(TokenType::Mut)?;
+    let is_mutable: bool = ctx.match_token(TokenType::Mut)?;
+    let is_lazy: bool = ctx.match_token(TokenType::LazyThread)?;
+    let is_volatible: bool = ctx.match_token(TokenType::Volatile)?;
 
-    let is_lazy: bool = parser_context.match_token(TokenType::LazyThread)?;
-    let is_volatible: bool = parser_context.match_token(TokenType::Volatile)?;
-
-    let static_tk: &Token = parser_context.consume(
+    let static_tk: &Token = ctx.consume(
         TokenType::Identifier,
         "Syntax error".into(),
         "Expected name.".into(),
@@ -37,29 +36,30 @@ pub fn build_global_static<'parser>(
 
     let span: Span = static_tk.get_span();
 
-    parser_context.consume(
+    ctx.consume(
         TokenType::Colon,
         "Syntax error".into(),
         "Expected ':'.".into(),
     )?;
 
-    let static_type: Type = typegen::build_type(parser_context)?;
+    let static_type: Type = typegen::build_type(ctx)?;
 
-    let attributes: ThrushAttributes =
-        attributes::build_attributes(parser_context, &[TokenType::Eq])?;
+    let attributes: ThrushAttributes = attributes::build_attributes(ctx, &[TokenType::Eq])?;
 
-    parser_context.consume(TokenType::Eq, "Syntax error".into(), "Expected '='.".into())?;
+    ctx.consume(TokenType::Eq, "Syntax error".into(), "Expected '='.".into())?;
 
-    let value: Ast = expr::build_expression(parser_context)?;
+    let value: Ast = expr::build_expression(ctx)?;
 
     let metadata: StaticMetadata = StaticMetadata::new(true, is_mutable, is_lazy, is_volatible);
 
     if declare_forward {
-        parser_context.get_mut_symbols().new_global_static(
+        if let Err(error) = ctx.get_mut_symbols().new_global_static(
             name,
             (static_type.clone(), metadata, attributes.clone()),
             span,
-        )?;
+        ) {
+            ctx.add_silent_error(error);
+        }
     }
 
     Ok(Ast::Static {

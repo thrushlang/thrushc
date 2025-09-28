@@ -9,16 +9,16 @@ use crate::{
 };
 
 pub fn build_dereference<'parser>(
-    parser_context: &mut ParserContext<'parser>,
+    ctx: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, ThrushCompilerIssue> {
-    let initial_deref_tk: &Token = parser_context.advance()?;
+    let initial_deref_tk: &Token = ctx.advance()?;
     let span: Span = initial_deref_tk.span;
 
     let mut deref_count: u64 = 1;
 
     let mut current_expr: Ast = {
-        while parser_context.check(TokenType::Deref) {
-            parser_context.consume(
+        while ctx.check(TokenType::Deref) {
+            ctx.consume(
                 TokenType::Deref,
                 "Syntax error".into(),
                 "Expected 'deref' keyword.".into(),
@@ -27,7 +27,7 @@ pub fn build_dereference<'parser>(
             deref_count += 1;
         }
 
-        let expr: Ast = expr::build_expr(parser_context)?;
+        let expr: Ast = expr::build_expr(ctx)?;
 
         expr
     };

@@ -3,98 +3,94 @@ use crate::{
     frontends::classical::{parser::ParserContext, types::parser::stmts::traits::TokenExtensions},
 };
 
-pub fn check_unreacheable_state(
-    parser_context: &mut ParserContext,
-) -> Result<(), ThrushCompilerIssue> {
-    if parser_context.is_unreacheable_code() {
-        parser_context.only_advance()?;
+#[inline]
+pub fn check_unreacheable_state(ctx: &mut ParserContext) -> Result<(), ThrushCompilerIssue> {
+    if ctx.is_unreacheable_code() {
+        ctx.only_advance()?;
 
         return Err(ThrushCompilerIssue::Error(
             "Syntax error".into(),
             "Unreachable for execution.".into(),
             None,
-            parser_context.previous().get_span(),
+            ctx.previous().get_span(),
         ));
     }
 
     Ok(())
 }
 
-pub fn check_inside_loop_state(
-    parser_context: &mut ParserContext,
-) -> Result<(), ThrushCompilerIssue> {
-    if !parser_context.get_control_ctx().is_inside_loop() {
-        parser_context.only_advance()?;
+#[inline]
+pub fn check_inside_loop_state(ctx: &mut ParserContext) -> Result<(), ThrushCompilerIssue> {
+    if !ctx.get_control_ctx().is_inside_loop() {
+        ctx.only_advance()?;
 
         return Err(ThrushCompilerIssue::Error(
             "Syntax error".into(),
             "It must be contained within a loop block.".into(),
             None,
-            parser_context.previous().get_span(),
+            ctx.previous().get_span(),
         ));
     }
 
     Ok(())
 }
 
-pub fn check_inside_function_state(
-    parser_context: &mut ParserContext,
-) -> Result<(), ThrushCompilerIssue> {
-    if !parser_context.get_control_ctx().get_inside_function() {
-        parser_context.only_advance()?;
+#[inline]
+pub fn check_inside_function_state(ctx: &mut ParserContext) -> Result<(), ThrushCompilerIssue> {
+    if !ctx.get_control_ctx().get_inside_function() {
+        ctx.only_advance()?;
 
         return Err(ThrushCompilerIssue::Error(
             "Syntax error".into(),
             "It must be contained within a function block.".into(),
             None,
-            parser_context.previous().get_span(),
+            ctx.previous().get_span(),
         ));
     }
 
     Ok(())
 }
 
-pub fn check_main_scope_state(
-    parser_context: &mut ParserContext,
-) -> Result<(), ThrushCompilerIssue> {
-    if !parser_context.is_main_scope() {
+#[inline]
+pub fn check_main_scope_state(ctx: &mut ParserContext) -> Result<(), ThrushCompilerIssue> {
+    if !ctx.is_main_scope() {
         return Err(ThrushCompilerIssue::Error(
             "Syntax error".into(),
             "It must be contained within the main scope.".into(),
             None,
-            parser_context.previous().get_span(),
+            ctx.previous().get_span(),
         ));
     }
 
     Ok(())
 }
 
-pub fn check_double_entrypoint_state(
-    parser_context: &mut ParserContext,
-) -> Result<(), ThrushCompilerIssue> {
-    if parser_context.get_control_ctx().get_entrypoint() {
+#[inline]
+pub fn check_double_entrypoint_state(ctx: &mut ParserContext) -> Result<(), ThrushCompilerIssue> {
+    if ctx.get_control_ctx().get_entrypoint() {
         return Err(ThrushCompilerIssue::Error(
             "Duplicated entrypoint".into(),
             "The language not support two entrypoints.".into(),
             None,
-            parser_context.previous().get_span(),
+            ctx.previous().get_span(),
         ));
     }
 
     Ok(())
 }
 
+#[inline]
 pub fn check_double_global_assembler_state(
-    parser_context: &mut ParserContext,
+    ctx: &mut ParserContext,
 ) -> Result<(), ThrushCompilerIssue> {
-    if parser_context.get_control_ctx().get_global_asm() {
-        parser_context.only_advance()?;
+    if ctx.get_control_ctx().get_global_asm() {
+        ctx.only_advance()?;
 
         return Err(ThrushCompilerIssue::Error(
             "Syntax error".into(),
             "The global assembler is per-file.".into(),
             None,
-            parser_context.previous().get_span(),
+            ctx.previous().get_span(),
         ));
     }
 

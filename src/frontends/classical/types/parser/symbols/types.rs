@@ -8,13 +8,14 @@ use crate::frontends::classical::{
         },
         parser::stmts::types::{CustomTypeFields, EnumFields, ThrushAttributes},
     },
-    typesystem::types::Type,
+    typesystem::{modificators::StructureTypeModificator, types::Type},
 };
 
 pub type Struct<'parser> = (
     &'parser str,
     Vec<(&'parser str, Type, u32, Span)>,
     ThrushAttributes<'parser>,
+    StructureTypeModificator,
 );
 
 pub type Function<'parser> = (Type, ParametersTypes, bool);

@@ -56,9 +56,21 @@ pub fn type_check(
 
         (Type::Str, Type::Str, None) => Ok(()),
 
-        (Type::Struct(_, lhs), Type::Struct(_, rhs), None) => {
+        (Type::Struct(_, lhs, mod1), Type::Struct(_, rhs, mod2), None) => {
             if lhs.len() != rhs.len() {
                 return Err(error);
+            }
+
+            if mod1 != mod2 {
+                return Err(ThrushCompilerIssue::Error(
+                    "Mismatched structure metadata".into(),
+                    format!(
+                        "Expected structure metadata '{}' but found '{}'.",
+                        mod1, mod2
+                    ),
+                    None,
+                    span,
+                ));
             }
 
             lhs.iter()
@@ -87,7 +99,6 @@ pub fn type_check(
 
         (Type::Array(lhs), Type::Array(rhs), None) => {
             self::type_check(lhs, rhs, None, None, metadata)?;
-
             Ok(())
         }
 
@@ -99,7 +110,6 @@ pub fn type_check(
                 && !rhs.is_ptr_type() =>
         {
             self::type_check(lhs, rhs, expr, op, metadata)?;
-
             Ok(())
         }
 
@@ -118,7 +128,6 @@ pub fn type_check(
 
         (Type::Mut(lhs), Type::Mut(rhs), None) => {
             self::type_check(lhs, rhs, expr, op, metadata)?;
-
             Ok(())
         }
 
@@ -148,7 +157,6 @@ pub fn type_check(
             | None,
         ) => {
             self::type_check(lhs, rhs, expr, op, metadata)?;
-
             Ok(())
         }
 

@@ -12,7 +12,7 @@ use crate::{
 };
 
 pub fn build_property<'parser>(
-    parser_context: &mut ParserContext<'parser>,
+    ctx: &mut ParserContext<'parser>,
     source: AstEitherExpression<'parser>,
     span: Span,
 ) -> Result<Ast<'parser>, ThrushCompilerIssue> {
@@ -40,7 +40,7 @@ pub fn build_property<'parser>(
 
     let mut property_names: Vec<&str> = Vec::with_capacity(10);
 
-    let first_property: &Token = parser_context.consume(
+    let first_property: &Token = ctx.consume(
         TokenType::Identifier,
         String::from("Syntax error"),
         String::from("Expected property name."),
@@ -50,8 +50,8 @@ pub fn build_property<'parser>(
 
     property_names.push(first_property.get_lexeme());
 
-    while parser_context.match_token(TokenType::Dot)? {
-        let property: &Token = parser_context.consume(
+    while ctx.match_token(TokenType::Dot)? {
+        let property: &Token = ctx.consume(
             TokenType::Identifier,
             String::from("Syntax error"),
             String::from("Expected property name."),
@@ -68,7 +68,7 @@ pub fn build_property<'parser>(
         0,
         property_names,
         source_type,
-        parser_context.get_symbols(),
+        ctx.get_symbols(),
         span,
     )?;
 

@@ -59,14 +59,16 @@ pub fn generate_type<'ctx>(llvm_context: &'ctx Context, kind: &Type) -> BasicTyp
             )
             .into(),
 
-        Type::Struct(_, fields) => {
+        Type::Struct(_, fields, modificator) => {
             let mut field_types: Vec<BasicTypeEnum> = Vec::with_capacity(10);
+
+            let packed: bool = modificator.llvm().is_packed();
 
             fields.iter().for_each(|field| {
                 field_types.push(self::generate_type(llvm_context, field));
             });
 
-            llvm_context.struct_type(&field_types, false).into()
+            llvm_context.struct_type(&field_types, packed).into()
         }
 
         Type::FixedArray(kind, size) => {

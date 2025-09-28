@@ -67,4 +67,6 @@ pub enum LLVMAttributeComparator {
     AsmSyntax,
     AsmAlignStack,
     AsmSideEffects,
+
+    Packed,
 }

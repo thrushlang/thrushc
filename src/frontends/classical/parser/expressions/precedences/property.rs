@@ -11,15 +11,14 @@ use crate::{
 };
 
 pub fn property_precedence<'parser>(
-    parser_context: &mut ParserContext<'parser>,
+    ctx: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, ThrushCompilerIssue> {
-    let mut expression: Ast = lower::lower_precedence(parser_context)?;
+    let mut expression: Ast = lower::lower_precedence(ctx)?;
 
-    if parser_context.match_token(TokenType::Dot)? {
-        let span: Span = parser_context.previous().get_span();
+    if ctx.match_token(TokenType::Dot)? {
+        let span: Span = ctx.previous().get_span();
 
-        expression =
-            property::build_property(parser_context, (None, Some(expression.into())), span)?;
+        expression = property::build_property(ctx, (None, Some(expression.into())), span)?;
     }
 
     Ok(expression)

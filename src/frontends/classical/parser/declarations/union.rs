@@ -15,18 +15,18 @@ use crate::{
 };
 
 pub fn build_enum<'parser>(
-    parser_context: &mut ParserContext<'parser>,
+    ctx: &mut ParserContext<'parser>,
     declare_forward: bool,
 ) -> Result<Ast<'parser>, ThrushCompilerIssue> {
-    checks::check_main_scope_state(parser_context)?;
+    checks::check_main_scope_state(ctx)?;
 
-    parser_context.consume(
+    ctx.consume(
         TokenType::Enum,
         String::from("Syntax error"),
         String::from("Expected 'enum'."),
     )?;
 
-    let name: &Token = parser_context.consume(
+    let name: &Token = ctx.consume(
         TokenType::Identifier,
         String::from("Syntax error"),
         String::from("Expected enum name."),
@@ -36,9 +36,9 @@ pub fn build_enum<'parser>(
     let span: Span = name.get_span();
 
     let enum_attributes: ThrushAttributes =
-        attributes::build_attributes(parser_context, &[TokenType::LBrace])?;
+        attributes::build_attributes(ctx, &[TokenType::LBrace])?;
 
-    parser_context.consume(
+    ctx.consume(
         TokenType::LBrace,
         String::from("Syntax error"),
         String::from("Expected '{'."),
@@ -50,23 +50,23 @@ pub fn build_enum<'parser>(
     let mut default_integer_value: u64 = 0;
 
     loop {
-        if parser_context.check(TokenType::RBrace) {
+        if ctx.check(TokenType::RBrace) {
             break;
         }
 
-        if parser_context.match_token(TokenType::Identifier)? {
-            let field_tk: &Token = parser_context.previous();
+        if ctx.match_token(TokenType::Identifier)? {
+            let field_tk: &Token = ctx.previous();
 
             let name: &str = field_tk.get_lexeme();
             let span: Span = field_tk.get_span();
 
-            parser_context.consume(
+            ctx.consume(
                 TokenType::Colon,
                 String::from("Syntax error"),
                 String::from("Expected ':'."),
             )?;
 
-            let field_type: Type = typegen::build_type(parser_context)?;
+            let field_type: Type = typegen::build_type(ctx)?;
 
             if !field_type.is_numeric() {
                 return Err(ThrushCompilerIssue::Error(
@@ -77,7 +77,7 @@ pub fn build_enum<'parser>(
                 ));
             }
 
-            if parser_context.match_token(TokenType::SemiColon)? {
+            if ctx.match_token(TokenType::SemiColon)? {
                 let field_value: Ast = if field_type.is_integer_type() {
                     Ast::new_integer(field_type, default_integer_value, false, span)
                 } else if field_type.is_float_type() {
@@ -112,9 +112,9 @@ pub fn build_enum<'parser>(
                 continue;
             }
 
-            parser_context.consume(TokenType::Eq, "Syntax error".into(), "Expected '='.".into())?;
+            ctx.consume(TokenType::Eq, "Syntax error".into(), "Expected '='.".into())?;
 
-            let expression: Ast = expr::build_expr(parser_context)?;
+            let expression: Ast = expr::build_expr(ctx)?;
             let expression_type: &Type = expression.get_value_type()?;
             let expression_span: Span = expression.get_span();
 
@@ -131,7 +131,7 @@ pub fn build_enum<'parser>(
                 ));
             }
 
-            parser_context.consume(
+            ctx.consume(
                 TokenType::SemiColon,
                 String::from("Syntax error"),
                 String::from("Expected ';'."),
@@ -146,29 +146,28 @@ pub fn build_enum<'parser>(
             "Syntax error".into(),
             "Expected identifier in enum field.".into(),
             None,
-            parser_context.advance()?.get_span(),
+            ctx.advance()?.get_span(),
         ));
     }
 
-    parser_context.consume(
+    ctx.consume(
         TokenType::RBrace,
         "Syntax error".into(),
         "Expected '}'.".into(),
     )?;
 
-    parser_context.consume(
+    ctx.consume(
         TokenType::SemiColon,
         "Syntax error".into(),
         "Expected ';'.".into(),
     )?;
 
     if declare_forward {
-        if let Err(error) = parser_context.get_mut_symbols().new_enum(
-            enum_name,
-            (enum_fields, enum_attributes),
-            span,
-        ) {
-            parser_context.add_error(error);
+        if let Err(error) =
+            ctx.get_mut_symbols()
+                .new_enum(enum_name, (enum_fields, enum_attributes), span)
+        {
+            ctx.add_silent_error(error);
         }
 
         return Ok(Ast::Null { span });

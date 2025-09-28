@@ -9,17 +9,17 @@ use crate::{
 };
 
 pub fn and_precedence<'parser>(
-    parser_context: &mut ParserContext<'parser>,
+    ctx: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, ThrushCompilerIssue> {
-    let mut expression: Ast = equality::equality_precedence(parser_context)?;
+    let mut expression: Ast = equality::equality_precedence(ctx)?;
 
-    while parser_context.match_token(TokenType::And)? {
-        let operator_tk: &Token = parser_context.previous();
+    while ctx.match_token(TokenType::And)? {
+        let operator_tk: &Token = ctx.previous();
 
         let operator: TokenType = operator_tk.kind;
         let span: Span = operator_tk.span;
 
-        let right: Ast = equality::equality_precedence(parser_context)?;
+        let right: Ast = equality::equality_precedence(ctx)?;
 
         expression = Ast::BinaryOp {
             left: expression.into(),

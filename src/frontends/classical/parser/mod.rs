@@ -6,6 +6,7 @@ pub mod declaration;
 pub mod declarations;
 pub mod expr;
 pub mod expressions;
+pub mod generators;
 pub mod parse;
 pub mod statement;
 pub mod statements;
@@ -38,6 +39,7 @@ pub struct ParserContext<'parser> {
     tokens: &'parser [Token],
     ast: Vec<Ast<'parser>>,
 
+    silent_errors: Vec<ThrushCompilerIssue>,
     errors: Vec<ThrushCompilerIssue>,
     bugs: Vec<ThrushCompilerIssue>,
 
@@ -120,6 +122,7 @@ impl<'parser> ParserContext<'parser> {
             tokens,
             ast: Vec::with_capacity(MINIMAL_AST_CAPACITY),
 
+            silent_errors: Vec::with_capacity(100),
             errors: Vec::with_capacity(100),
             bugs: Vec::with_capacity(100),
 
@@ -135,10 +138,17 @@ impl<'parser> ParserContext<'parser> {
     }
 
     pub fn verify(&mut self) -> bool {
-        if !self.errors.is_empty() || !self.bugs.is_empty() {
+        if !self.errors.is_empty() || !self.bugs.is_empty() || !self.silent_errors.is_empty() {
             self.bugs.iter().for_each(|bug: &ThrushCompilerIssue| {
                 self.diagnostician.build_diagnostic(bug, LoggingType::Bug);
             });
+
+            self.silent_errors
+                .iter()
+                .for_each(|error: &ThrushCompilerIssue| {
+                    self.diagnostician
+                        .build_diagnostic(error, LoggingType::Error);
+                });
 
             self.errors.iter().for_each(|error: &ThrushCompilerIssue| {
                 self.diagnostician
@@ -327,6 +337,11 @@ impl<'parser> ParserContext<'parser> {
     #[inline]
     pub fn add_error(&mut self, error: ThrushCompilerIssue) {
         self.errors.push(error);
+    }
+
+    #[inline]
+    pub fn add_silent_error(&mut self, error: ThrushCompilerIssue) {
+        self.silent_errors.push(error);
     }
 
     #[inline]

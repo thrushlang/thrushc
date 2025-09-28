@@ -9,7 +9,7 @@ use crate::{
 };
 
 pub fn build_index<'parser>(
-    parser_context: &mut ParserContext<'parser>,
+    ctx: &mut ParserContext<'parser>,
     source: AstEitherExpression<'parser>,
     span: Span,
 ) -> Result<Ast<'parser>, ThrushCompilerIssue> {
@@ -50,17 +50,17 @@ pub fn build_index<'parser>(
     let mut indexes: Vec<Ast> = Vec::with_capacity(50);
 
     loop {
-        if parser_context.check(TokenType::RBracket) {
+        if ctx.check(TokenType::RBracket) {
             break;
         }
 
-        let indexe: Ast = expr::build_expr(parser_context)?;
+        let indexe: Ast = expr::build_expr(ctx)?;
         indexes.push(indexe);
 
-        if parser_context.check(TokenType::RBracket) {
+        if ctx.check(TokenType::RBracket) {
             break;
         } else {
-            parser_context.consume(
+            ctx.consume(
                 TokenType::Comma,
                 String::from("Syntax error"),
                 String::from("Expected ','."),
@@ -68,7 +68,7 @@ pub fn build_index<'parser>(
         }
     }
 
-    parser_context.consume(
+    ctx.consume(
         TokenType::RBracket,
         String::from("Syntax error"),
         String::from("Expected ']'."),

@@ -18,21 +18,27 @@ use crate::{
 };
 
 pub fn build_assembler_function<'parser>(
-    parser_context: &mut ParserContext<'parser>,
+    ctx: &mut ParserContext<'parser>,
     declare_forward: bool,
 ) -> Result<Ast<'parser>, ThrushCompilerIssue> {
-    checks::check_main_scope_state(parser_context)?;
+    checks::check_main_scope_state(ctx)?;
 
-    parser_context.consume(
+    ctx.consume(
         TokenType::AsmFn,
         String::from("Syntax error"),
         String::from("Expected 'asmfn' keyword."),
     )?;
 
-    let asm_function_name_tk: &Token = parser_context.consume(
+    let asm_function_name_tk: &Token = ctx.consume(
         TokenType::Identifier,
         String::from("Syntax error"),
-        String::from("Expected name to the function."),
+        String::from("Expected identifier."),
+    )?;
+
+    ctx.consume(
+        TokenType::LParen,
+        String::from("Syntax error"),
+        String::from("Expected '('."),
     )?;
 
     let asm_function_name: &str = asm_function_name_tk.get_lexeme();
@@ -40,23 +46,17 @@ pub fn build_assembler_function<'parser>(
 
     let span: Span = asm_function_name_tk.get_span();
 
-    parser_context.consume(
-        TokenType::LParen,
-        String::from("Syntax error"),
-        String::from("Expected '('."),
-    )?;
-
     let mut parameters: Vec<Ast> = Vec::with_capacity(10);
     let mut parameters_types: Vec<Type> = Vec::with_capacity(10);
 
     let mut parameter_position: u32 = 0;
 
     loop {
-        if parser_context.check(TokenType::RParen) {
+        if ctx.check(TokenType::RParen) {
             break;
         }
 
-        let parameter_name_tk: &'parser Token = parser_context.consume(
+        let parameter_name_tk: &'parser Token = ctx.consume(
             TokenType::Identifier,
             String::from("Syntax error"),
             String::from("Expected 'identifier'."),
@@ -65,7 +65,7 @@ pub fn build_assembler_function<'parser>(
         let parameter_name: &str = parameter_name_tk.get_lexeme();
         let parameter_span: Span = parameter_name_tk.get_span();
 
-        let parameter_type: Type = typegen::build_type(parser_context)?;
+        let parameter_type: Type = typegen::build_type(ctx)?;
 
         parameters_types.push(parameter_type.clone());
 
@@ -78,10 +78,10 @@ pub fn build_assembler_function<'parser>(
 
         parameter_position += 1;
 
-        if parser_context.check(TokenType::RParen) {
+        if ctx.check(TokenType::RParen) {
             break;
         } else {
-            parser_context.consume(
+            ctx.consume(
                 TokenType::Comma,
                 String::from("Syntax error"),
                 String::from("Expected ','."),
@@ -89,20 +89,19 @@ pub fn build_assembler_function<'parser>(
         }
     }
 
-    parser_context.consume(
+    ctx.consume(
         TokenType::RParen,
         String::from("Syntax error"),
         String::from("Expected ')'."),
     )?;
 
-    let return_type: Type = typegen::build_type(parser_context)?;
+    let return_type: Type = typegen::build_type(ctx)?;
 
-    let attributes: ThrushAttributes =
-        attributes::build_attributes(parser_context, &[TokenType::LBrace])?;
+    let attributes: ThrushAttributes = attributes::build_attributes(ctx, &[TokenType::LBrace])?;
 
     let is_public: bool = attributes.has_public_attribute();
 
-    parser_context.consume(
+    ctx.consume(
         TokenType::LBrace,
         String::from("Syntax error"),
         String::from("Expected '{'."),
@@ -112,11 +111,11 @@ pub fn build_assembler_function<'parser>(
     let mut assembler_pos: usize = 0;
 
     loop {
-        if parser_context.check(TokenType::RBrace) {
+        if ctx.check(TokenType::RBrace) {
             break;
         }
 
-        let raw_str: Ast = expr::build_expr(parser_context)?;
+        let raw_str: Ast = expr::build_expr(ctx)?;
         let raw_str_span: Span = raw_str.get_span();
 
         let assembly: &str = raw_str.get_str_content(raw_str_span)?;
@@ -127,10 +126,10 @@ pub fn build_assembler_function<'parser>(
 
         assembler.push_str(assembly);
 
-        if parser_context.check(TokenType::RBrace) {
+        if ctx.check(TokenType::RBrace) {
             break;
         } else {
-            parser_context.consume(
+            ctx.consume(
                 TokenType::Comma,
                 String::from("Syntax error"),
                 String::from("Expected ','."),
@@ -140,13 +139,13 @@ pub fn build_assembler_function<'parser>(
         assembler_pos += 1;
     }
 
-    parser_context.consume(
+    ctx.consume(
         TokenType::RBrace,
         String::from("Syntax error"),
         String::from("Expected '}'."),
     )?;
 
-    parser_context.consume(
+    ctx.consume(
         TokenType::LBrace,
         String::from("Syntax error"),
         String::from("Expected '{'."),
@@ -156,11 +155,11 @@ pub fn build_assembler_function<'parser>(
     let mut constraint_pos: usize = 0;
 
     loop {
-        if parser_context.check(TokenType::RBrace) {
+        if ctx.check(TokenType::RBrace) {
             break;
         }
 
-        let raw_str: Ast = expr::build_expr(parser_context)?;
+        let raw_str: Ast = expr::build_expr(ctx)?;
         let raw_str_span: Span = raw_str.get_span();
 
         let constraint: &str = raw_str.get_str_content(raw_str_span)?;
@@ -171,10 +170,10 @@ pub fn build_assembler_function<'parser>(
 
         constraints.push_str(constraint);
 
-        if parser_context.check(TokenType::RBrace) {
+        if ctx.check(TokenType::RBrace) {
             break;
         } else {
-            parser_context.consume(
+            ctx.consume(
                 TokenType::Comma,
                 String::from("Syntax error"),
                 String::from("Expected ','."),
@@ -184,14 +183,14 @@ pub fn build_assembler_function<'parser>(
         constraint_pos += 1;
     }
 
-    parser_context.consume(
+    ctx.consume(
         TokenType::RBrace,
         String::from("Syntax error"),
         String::from("Expected '}'."),
     )?;
 
     if declare_forward {
-        if let Err(error) = parser_context.get_mut_symbols().new_asm_function(
+        if let Err(error) = ctx.get_mut_symbols().new_asm_function(
             asm_function_name,
             (
                 return_type,
@@ -200,7 +199,7 @@ pub fn build_assembler_function<'parser>(
             ),
             span,
         ) {
-            parser_context.add_error(error);
+            ctx.add_silent_error(error);
         }
 
         return Ok(Ast::Null { span });

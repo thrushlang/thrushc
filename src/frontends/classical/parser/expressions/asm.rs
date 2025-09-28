@@ -12,37 +12,37 @@ use crate::{
 };
 
 pub fn build_asm_code_block<'parser>(
-    parser_context: &mut ParserContext<'parser>,
+    ctx: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, ThrushCompilerIssue> {
-    let asm_tk: &Token = parser_context.consume(
+    let asm_tk: &Token = ctx.consume(
         TokenType::Asm,
         String::from("Syntax error"),
         String::from("Expected 'asm' keyword."),
     )?;
 
-    let asm_type: Type = typegen::build_type(parser_context)?;
+    let asm_type: Type = typegen::build_type(ctx)?;
 
     let span: Span = asm_tk.get_span();
 
     let mut args: Vec<Ast> = Vec::with_capacity(10);
 
     let attributes: ThrushAttributes =
-        attributes::build_attributes(parser_context, &[TokenType::LParen, TokenType::LBrace])?;
+        attributes::build_attributes(ctx, &[TokenType::LParen, TokenType::LBrace])?;
 
-    if parser_context.match_token(TokenType::LParen)? {
+    if ctx.match_token(TokenType::LParen)? {
         loop {
-            if parser_context.check(TokenType::RParen) {
+            if ctx.check(TokenType::RParen) {
                 break;
             }
 
-            let expr: Ast = expr::build_expression(parser_context)?;
+            let expr: Ast = expr::build_expression(ctx)?;
 
             args.push(expr);
 
-            if parser_context.check(TokenType::RParen) {
+            if ctx.check(TokenType::RParen) {
                 break;
             } else {
-                parser_context.consume(
+                ctx.consume(
                     TokenType::Colon,
                     String::from("Syntax error"),
                     String::from("Expected ','."),
@@ -50,14 +50,14 @@ pub fn build_asm_code_block<'parser>(
             }
         }
 
-        parser_context.consume(
+        ctx.consume(
             TokenType::RParen,
             String::from("Syntax error"),
             String::from("Expected ')'."),
         )?;
     }
 
-    parser_context.consume(
+    ctx.consume(
         TokenType::LBrace,
         String::from("Syntax error"),
         String::from("Expected '{'."),
@@ -67,11 +67,11 @@ pub fn build_asm_code_block<'parser>(
     let mut assembler_pos: usize = 0;
 
     loop {
-        if parser_context.check(TokenType::RBrace) {
+        if ctx.check(TokenType::RBrace) {
             break;
         }
 
-        let raw_str: Ast = expr::build_expr(parser_context)?;
+        let raw_str: Ast = expr::build_expr(ctx)?;
         let raw_str_span: Span = raw_str.get_span();
 
         if !raw_str.is_str() {
@@ -91,10 +91,10 @@ pub fn build_asm_code_block<'parser>(
 
         assembler.push_str(assembly);
 
-        if parser_context.check(TokenType::RBrace) {
+        if ctx.check(TokenType::RBrace) {
             break;
         } else {
-            parser_context.consume(
+            ctx.consume(
                 TokenType::Comma,
                 String::from("Syntax error"),
                 String::from("Expected ','."),
@@ -104,13 +104,13 @@ pub fn build_asm_code_block<'parser>(
         assembler_pos += 1;
     }
 
-    parser_context.consume(
+    ctx.consume(
         TokenType::RBrace,
         String::from("Syntax error"),
         String::from("Expected '}'."),
     )?;
 
-    parser_context.consume(
+    ctx.consume(
         TokenType::LBrace,
         String::from("Syntax error"),
         String::from("Expected '{'."),
@@ -120,11 +120,11 @@ pub fn build_asm_code_block<'parser>(
     let mut constraint_pos: usize = 0;
 
     loop {
-        if parser_context.check(TokenType::RBrace) {
+        if ctx.check(TokenType::RBrace) {
             break;
         }
 
-        let raw_str: Ast = expr::build_expr(parser_context)?;
+        let raw_str: Ast = expr::build_expr(ctx)?;
         let raw_str_span: Span = raw_str.get_span();
 
         let constraint: &str = raw_str.get_str_content(raw_str_span)?;
@@ -135,10 +135,10 @@ pub fn build_asm_code_block<'parser>(
 
         constraints.push_str(constraint);
 
-        if parser_context.check(TokenType::RBrace) {
+        if ctx.check(TokenType::RBrace) {
             break;
         } else {
-            parser_context.consume(
+            ctx.consume(
                 TokenType::Comma,
                 String::from("Syntax error"),
                 String::from("Expected ','."),
@@ -148,7 +148,7 @@ pub fn build_asm_code_block<'parser>(
         constraint_pos += 1;
     }
 
-    parser_context.consume(
+    ctx.consume(
         TokenType::RBrace,
         String::from("Syntax error"),
         String::from("Expected '}'."),

@@ -69,6 +69,7 @@ lazy_static! {
         keywords.insert("@asmthrow", TokenType::AsmThrow);
         keywords.insert("@asmeffects", TokenType::AsmSideEffects);
 
+        keywords.insert("@packed", TokenType::Packed);
         keywords.insert("@heap", TokenType::Heap);
         keywords.insert("@stack", TokenType::Stack);
         keywords.insert("@public", TokenType::Public);
@@ -84,6 +85,7 @@ lazy_static! {
         keywords.insert("@strongstack", TokenType::StrongStack);
         keywords.insert("@precisefp", TokenType::PreciseFloats);
         keywords.insert("@convention", TokenType::Convention);
+
         keywords.insert("new", TokenType::New);
 
         keywords.insert("s8", TokenType::S8);

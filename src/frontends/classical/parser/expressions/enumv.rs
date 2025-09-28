@@ -20,19 +20,19 @@ use crate::{
 };
 
 pub fn build_enum_value<'parser>(
-    parser_context: &mut ParserContext<'parser>,
+    ctx: &mut ParserContext<'parser>,
     name: &'parser str,
     span: Span,
 ) -> Result<Ast<'parser>, ThrushCompilerIssue> {
-    let object: FoundSymbolId = parser_context.get_symbols().get_symbols_id(name, span)?;
+    let object: FoundSymbolId = ctx.get_symbols().get_symbols_id(name, span)?;
     let enum_id: &str = object.expected_enum(span)?;
 
-    let union: EnumFields = parser_context
+    let union: EnumFields = ctx
         .get_symbols()
         .get_enum_by_id(enum_id, span)?
         .get_fields();
 
-    let field_tk: &Token = parser_context.consume(
+    let field_tk: &Token = ctx.consume(
         TokenType::Identifier,
         String::from("Syntax error"),
         String::from("Expected enum name."),

@@ -32,11 +32,11 @@ use crate::{
 };
 
 pub fn build_reference<'parser>(
-    parser_context: &mut ParserContext<'parser>,
+    ctx: &mut ParserContext<'parser>,
     name: &'parser str,
     span: Span,
 ) -> Result<Ast<'parser>, ThrushCompilerIssue> {
-    let symbol: FoundSymbolId = parser_context.get_symbols().get_symbols_id(name, span)?;
+    let symbol: FoundSymbolId = ctx.get_symbols().get_symbols_id(name, span)?;
 
     if symbol.is_static() {
         let static_var: (&str, usize) = symbol.expected_static(span)?;
@@ -44,7 +44,7 @@ pub fn build_reference<'parser>(
         let static_id: &str = static_var.0;
         let scope_idx: usize = static_var.1;
 
-        let static_var: StaticSymbol = parser_context
+        let static_var: StaticSymbol = ctx
             .get_symbols()
             .get_static_by_id(static_id, scope_idx, span)?;
 
@@ -68,7 +68,7 @@ pub fn build_reference<'parser>(
         let const_id: &str = constant.0;
         let scope_idx: usize = constant.1;
 
-        let constant: ConstantSymbol = parser_context
+        let constant: ConstantSymbol = ctx
             .get_symbols()
             .get_const_by_id(const_id, scope_idx, span)?;
 
@@ -85,9 +85,8 @@ pub fn build_reference<'parser>(
     if symbol.is_parameter() {
         let parameter_id: &str = symbol.expected_parameter(span)?;
 
-        let parameter: ParameterSymbol = parser_context
-            .get_symbols()
-            .get_parameter_by_id(parameter_id, span)?;
+        let parameter: ParameterSymbol =
+            ctx.get_symbols().get_parameter_by_id(parameter_id, span)?;
 
         let metadata: FunctionParameterMetadata = parameter.get_metadata();
         let is_mutable: bool = metadata.is_mutable();
@@ -112,9 +111,7 @@ pub fn build_reference<'parser>(
         let lli_id: &str = lli.0;
         let scope_idx: usize = lli.1;
 
-        let parameter: &LLISymbol = parser_context
-            .get_symbols()
-            .get_lli_by_id(lli_id, scope_idx, span)?;
+        let parameter: &LLISymbol = ctx.get_symbols().get_lli_by_id(lli_id, scope_idx, span)?;
 
         let lli_type: Type = parameter.get_type();
 
@@ -133,7 +130,7 @@ pub fn build_reference<'parser>(
         let local_id: &str = local_position.0;
         let scope_idx: usize = local_position.1;
 
-        let local: &LocalSymbol = parser_context
+        let local: &LocalSymbol = ctx
             .get_symbols()
             .get_local_by_id(local_id, scope_idx, span)?;
 
@@ -149,10 +146,8 @@ pub fn build_reference<'parser>(
             metadata: ReferenceMetadata::new(true, is_mutable, ReferenceType::default()),
         };
 
-        if parser_context.match_token(TokenType::PlusPlus)?
-            | parser_context.match_token(TokenType::MinusMinus)?
-        {
-            let operator_tk: &Token = parser_context.previous();
+        if ctx.match_token(TokenType::PlusPlus)? | ctx.match_token(TokenType::MinusMinus)? {
+            let operator_tk: &Token = ctx.previous();
             let operator: TokenType = operator_tk.get_type();
             let span: Span = operator_tk.get_span();
 

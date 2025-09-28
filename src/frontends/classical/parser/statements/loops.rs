@@ -11,11 +11,11 @@ use crate::{
 };
 
 pub fn build_for_loop<'parser>(
-    parser_context: &mut ParserContext<'parser>,
+    ctx: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, ThrushCompilerIssue> {
-    self::check_state(parser_context)?;
+    self::check_state(ctx)?;
 
-    let for_tk: &Token = parser_context.consume(
+    let for_tk: &Token = ctx.consume(
         TokenType::For,
         String::from("Syntax error"),
         String::from("Expected 'for' keyword."),
@@ -23,16 +23,16 @@ pub fn build_for_loop<'parser>(
 
     let span: Span = for_tk.span;
 
-    let local: Ast = local::build_local(parser_context)?;
+    let local: Ast = local::build_local(ctx)?;
 
-    let cond: Ast = expr::build_expression(parser_context)?;
-    let actions: Ast = expr::build_expression(parser_context)?;
+    let cond: Ast = expr::build_expression(ctx)?;
+    let actions: Ast = expr::build_expression(ctx)?;
 
-    parser_context.get_mut_control_ctx().increment_loop_depth();
+    ctx.get_mut_control_ctx().increment_loop_depth();
 
-    let body: Ast = block::build_block(parser_context)?;
+    let body: Ast = block::build_block(ctx)?;
 
-    parser_context.get_mut_control_ctx().decrement_loop_depth();
+    ctx.get_mut_control_ctx().decrement_loop_depth();
 
     Ok(Ast::For {
         local: local.into(),
@@ -44,11 +44,11 @@ pub fn build_for_loop<'parser>(
 }
 
 pub fn build_loop<'parser>(
-    parser_context: &mut ParserContext<'parser>,
+    ctx: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, ThrushCompilerIssue> {
-    self::check_state(parser_context)?;
+    self::check_state(ctx)?;
 
-    let loop_tk: &Token = parser_context.consume(
+    let loop_tk: &Token = ctx.consume(
         TokenType::Loop,
         String::from("Syntax error"),
         String::from("Expected 'loop' keyword."),
@@ -56,19 +56,17 @@ pub fn build_loop<'parser>(
 
     let loop_span: Span = loop_tk.span;
 
-    parser_context.get_mut_control_ctx().increment_loop_depth();
+    ctx.get_mut_control_ctx().increment_loop_depth();
 
-    let block: Ast = block::build_block(parser_context)?;
+    let block: Ast = block::build_block(ctx)?;
 
-    let scope: usize = parser_context.get_scope();
+    let scope: usize = ctx.get_scope();
 
     if !block.has_break() && !block.has_return() && !block.has_continue() {
-        parser_context
-            .get_mut_control_ctx()
-            .set_unreacheable_code_scope(scope);
+        ctx.get_mut_control_ctx().set_unreacheable_code_scope(scope);
     }
 
-    parser_context.get_mut_control_ctx().decrement_loop_depth();
+    ctx.get_mut_control_ctx().decrement_loop_depth();
 
     Ok(Ast::Loop {
         block: block.into(),
@@ -77,11 +75,11 @@ pub fn build_loop<'parser>(
 }
 
 pub fn build_while_loop<'parser>(
-    parser_context: &mut ParserContext<'parser>,
+    ctx: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, ThrushCompilerIssue> {
-    self::check_state(parser_context)?;
+    self::check_state(ctx)?;
 
-    let while_tk: &Token = parser_context.consume(
+    let while_tk: &Token = ctx.consume(
         TokenType::While,
         String::from("Syntax error"),
         String::from("Expected 'while' keyword."),
@@ -89,13 +87,13 @@ pub fn build_while_loop<'parser>(
 
     let span: Span = while_tk.get_span();
 
-    let cond: Ast = expr::build_expr(parser_context)?;
+    let cond: Ast = expr::build_expr(ctx)?;
 
-    parser_context.get_mut_control_ctx().increment_loop_depth();
+    ctx.get_mut_control_ctx().increment_loop_depth();
 
-    let block: Ast = block::build_block(parser_context)?;
+    let block: Ast = block::build_block(ctx)?;
 
-    parser_context.get_mut_control_ctx().decrement_loop_depth();
+    ctx.get_mut_control_ctx().decrement_loop_depth();
 
     Ok(Ast::While {
         cond: cond.into(),
@@ -104,7 +102,7 @@ pub fn build_while_loop<'parser>(
     })
 }
 
-fn check_state(parser_context: &mut ParserContext) -> Result<(), ThrushCompilerIssue> {
-    checks::check_unreacheable_state(parser_context)?;
-    checks::check_inside_function_state(parser_context)
+fn check_state(ctx: &mut ParserContext) -> Result<(), ThrushCompilerIssue> {
+    checks::check_unreacheable_state(ctx)?;
+    checks::check_inside_function_state(ctx)
 }

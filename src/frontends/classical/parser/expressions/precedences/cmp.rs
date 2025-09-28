@@ -9,21 +9,21 @@ use crate::{
 };
 
 pub fn cmp_precedence<'parser>(
-    parser_context: &mut ParserContext<'parser>,
+    ctx: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, ThrushCompilerIssue> {
-    let mut expression: Ast = term::term_precedence(parser_context)?;
+    let mut expression: Ast = term::term_precedence(ctx)?;
 
-    if parser_context.match_token(TokenType::Greater)?
-        || parser_context.match_token(TokenType::GreaterEq)?
-        || parser_context.match_token(TokenType::Less)?
-        || parser_context.match_token(TokenType::LessEq)?
+    if ctx.match_token(TokenType::Greater)?
+        || ctx.match_token(TokenType::GreaterEq)?
+        || ctx.match_token(TokenType::Less)?
+        || ctx.match_token(TokenType::LessEq)?
     {
-        let operator_tk: &Token = parser_context.previous();
+        let operator_tk: &Token = ctx.previous();
 
         let operator: TokenType = operator_tk.get_type();
         let span: Span = operator_tk.get_span();
 
-        let right: Ast = term::term_precedence(parser_context)?;
+        let right: Ast = term::term_precedence(ctx)?;
 
         expression = Ast::BinaryOp {
             left: expression.into(),

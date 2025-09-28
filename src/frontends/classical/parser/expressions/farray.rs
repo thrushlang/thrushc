@@ -10,15 +10,15 @@ use crate::{
 };
 
 pub fn build_fixed_array<'parser>(
-    parser_context: &mut ParserContext<'parser>,
+    ctx: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, ThrushCompilerIssue> {
-    parser_context.consume(
+    ctx.consume(
         TokenType::Fixed,
         String::from("Syntax error"),
         String::from("Expected 'fixed' keyword."),
     )?;
 
-    let array_start_tk: &Token = parser_context.consume(
+    let array_start_tk: &Token = ctx.consume(
         TokenType::LBracket,
         String::from("Syntax error"),
         String::from("Expected '['."),
@@ -30,18 +30,18 @@ pub fn build_fixed_array<'parser>(
     let mut items: Vec<Ast> = Vec::with_capacity(100);
 
     loop {
-        if parser_context.check(TokenType::RBracket) {
+        if ctx.check(TokenType::RBracket) {
             break;
         }
 
-        let item: Ast = expr::build_expr(parser_context)?;
+        let item: Ast = expr::build_expr(ctx)?;
 
         items.push(item);
 
-        if parser_context.check(TokenType::RBracket) {
+        if ctx.check(TokenType::RBracket) {
             break;
         } else {
-            parser_context.consume(
+            ctx.consume(
                 TokenType::Comma,
                 String::from("Syntax error"),
                 String::from("Expected ','."),
@@ -49,7 +49,7 @@ pub fn build_fixed_array<'parser>(
         }
     }
 
-    parser_context.consume(
+    ctx.consume(
         TokenType::RBracket,
         String::from("Syntax error"),
         String::from("Expected ']'."),

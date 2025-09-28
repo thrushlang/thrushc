@@ -9,14 +9,14 @@ use crate::{
 };
 
 pub fn unary_precedence<'parser>(
-    parser_context: &mut ParserContext<'parser>,
+    ctx: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, ThrushCompilerIssue> {
-    if parser_context.match_token(TokenType::Bang)? {
-        let operator_tk: &Token = parser_context.previous();
+    if ctx.match_token(TokenType::Bang)? {
+        let operator_tk: &Token = ctx.previous();
         let operator: TokenType = operator_tk.kind;
         let span: Span = operator_tk.span;
 
-        let expression: Ast = cast::cast_precedence(parser_context)?;
+        let expression: Ast = cast::cast_precedence(ctx)?;
 
         return Ok(Ast::UnaryOp {
             operator,
@@ -27,12 +27,12 @@ pub fn unary_precedence<'parser>(
         });
     }
 
-    if parser_context.match_token(TokenType::Minus)? {
-        let operator_tk: &Token = parser_context.previous();
+    if ctx.match_token(TokenType::Minus)? {
+        let operator_tk: &Token = ctx.previous();
         let operator: TokenType = operator_tk.get_type();
         let span: Span = operator_tk.get_span();
 
-        let expression: Ast = cast::cast_precedence(parser_context)?;
+        let expression: Ast = cast::cast_precedence(ctx)?;
 
         let expression_type: &Type = expression.get_value_type()?;
         let kind: Type = expression_type.narrowing();
@@ -46,12 +46,12 @@ pub fn unary_precedence<'parser>(
         });
     }
 
-    if parser_context.match_token(TokenType::Not)? {
-        let operator_tk: &Token = parser_context.previous();
+    if ctx.match_token(TokenType::Not)? {
+        let operator_tk: &Token = ctx.previous();
         let operator: TokenType = operator_tk.kind;
         let span: Span = operator_tk.span;
 
-        let expression: Ast = cast::cast_precedence(parser_context)?;
+        let expression: Ast = cast::cast_precedence(ctx)?;
         let expression_type: &Type = expression.get_value_type()?;
 
         return Ok(Ast::UnaryOp {
@@ -63,12 +63,12 @@ pub fn unary_precedence<'parser>(
         });
     }
 
-    if parser_context.match_token(TokenType::PlusPlus)? {
-        let operator_tk: &Token = parser_context.previous();
+    if ctx.match_token(TokenType::PlusPlus)? {
+        let operator_tk: &Token = ctx.previous();
         let operator: TokenType = operator_tk.get_type();
         let span: Span = operator_tk.get_span();
 
-        let expression: Ast = expr::build_expr(parser_context)?;
+        let expression: Ast = expr::build_expr(ctx)?;
 
         let expression_type: &Type = expression.get_value_type()?;
 
@@ -83,12 +83,12 @@ pub fn unary_precedence<'parser>(
         return Ok(unaryop);
     }
 
-    if parser_context.match_token(TokenType::MinusMinus)? {
-        let operator_tk: &Token = parser_context.previous();
+    if ctx.match_token(TokenType::MinusMinus)? {
+        let operator_tk: &Token = ctx.previous();
         let operator: TokenType = operator_tk.get_type();
         let span: Span = operator_tk.get_span();
 
-        let expression: Ast = expr::build_expr(parser_context)?;
+        let expression: Ast = expr::build_expr(ctx)?;
         let expression_type: &Type = expression.get_value_type()?;
 
         let unaryop: Ast = Ast::UnaryOp {
@@ -102,7 +102,7 @@ pub fn unary_precedence<'parser>(
         return Ok(unaryop);
     }
 
-    let instr: Ast = cast::cast_precedence(parser_context)?;
+    let instr: Ast = cast::cast_precedence(ctx)?;
 
     Ok(instr)
 }

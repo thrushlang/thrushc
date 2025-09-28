@@ -34,6 +34,7 @@ impl Display for LLVMAttribute<'_> {
             LLVMAttribute::AsmSyntax(..) => write!(f, "@asmsyntax"),
             LLVMAttribute::AsmSideEffects(..) => write!(f, "@asmeffects"),
             LLVMAttribute::AsmAlignStack(..) => write!(f, "@asmalingstack"),
+            LLVMAttribute::Packed(..) => write!(f, "@packed"),
         }
     }
 }
