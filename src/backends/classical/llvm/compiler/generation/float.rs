@@ -5,7 +5,7 @@ use crate::frontends::classical::typesystem::types::Type;
 use inkwell::{context::Context, values::FloatValue};
 use std::fmt::Display;
 
-pub fn const_float<'ctx>(
+pub fn generate<'ctx>(
     context: &'ctx Context,
     kind: &Type,
     iee: f64,
@@ -18,7 +18,7 @@ pub fn const_float<'ctx>(
         Type::F64 => context.f64_type().const_float(iee),
 
         what => {
-            self::codegen_abort(format!("Unsupported integer type: '{:#?}'.", what));
+            self::codegen_abort(format!("Unsupported float type: '{}'.", what));
         }
     }
 }

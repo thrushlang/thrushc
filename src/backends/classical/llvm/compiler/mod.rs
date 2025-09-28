@@ -1,10 +1,10 @@
 pub mod alloc;
 pub mod anchors;
+pub mod attrbuilder;
 pub mod attributes;
 pub mod binaryop;
 pub mod block;
 pub mod builtins;
-pub mod cast;
 pub mod codegen;
 pub mod constants;
 pub mod constgen;
@@ -12,18 +12,17 @@ pub mod context;
 pub mod control;
 pub mod conventions;
 pub mod declarations;
-pub mod expressions;
 pub mod generation;
 pub mod indexes;
 pub mod memory;
 pub mod obfuscation;
 pub mod optimizations;
 pub mod predicates;
-pub mod ptrgen;
+pub mod ptr;
 pub mod statements;
 pub mod symbols;
 pub mod typegen;
-pub mod valuegen;
+pub mod value;
 
 use {
     crate::{

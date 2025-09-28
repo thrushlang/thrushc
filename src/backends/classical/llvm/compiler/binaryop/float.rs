@@ -1,14 +1,14 @@
 use std::fmt::Display;
 
 use crate::{
-    backends::classical::llvm::compiler::{cast, predicates},
+    backends::classical::llvm::compiler::{self, predicates},
     core::console::logging::{self, LoggingType},
     frontends::classical::{
         lexer::tokentype::TokenType, types::parser::repr::BinaryOperation, typesystem::types::Type,
     },
 };
 
-use super::super::{context::LLVMCodeGenContext, valuegen};
+use super::super::{context::LLVMCodeGenContext, value};
 
 use inkwell::{
     builder::Builder,
@@ -23,7 +23,7 @@ pub fn float_operation<'ctx>(
 ) -> BasicValueEnum<'ctx> {
     let llvm_builder: &Builder = context.get_llvm_builder();
 
-    let (left, right) = cast::float_together(context, left, right);
+    let (left, right) = compiler::generation::cast::float_together(context, left, right);
 
     let cfloatgen_abort = |_| {
         self::codegen_abort("Cannot perform float binary operation.");
@@ -84,8 +84,8 @@ pub fn compile<'ctx>(
     {
         let operator: &TokenType = binary.1;
 
-        let left: BasicValueEnum = valuegen::compile(context, binary.0, cast);
-        let right: BasicValueEnum = valuegen::compile(context, binary.2, cast);
+        let left: BasicValueEnum = value::compile(context, binary.0, cast);
+        let right: BasicValueEnum = value::compile(context, binary.2, cast);
 
         return float_operation(
             context,

@@ -31,11 +31,9 @@ pub fn print_llvm_ir(
 
     let module_print: String = llvm_module.print_to_string().to_string();
 
-    let median: usize = module_print.len() / 2;
-
     logging::write(
         logging::OutputIn::Stdout,
-        &format!("{:>median$} {}\n\n", "", ir_file_name.bright_green().bold(),),
+        &format!("{}\n\n", ir_file_name.bright_green().bold()),
     );
 
     logging::write(logging::OutputIn::Stdout, &module_print);

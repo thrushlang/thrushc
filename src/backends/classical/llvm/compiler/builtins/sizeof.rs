@@ -1,6 +1,5 @@
-use crate::backends::classical::llvm::compiler::cast;
-use crate::backends::classical::llvm::compiler::context::LLVMCodeGenContext;
 use crate::backends::classical::llvm::compiler::typegen;
+use crate::backends::classical::llvm::compiler::{self, context::LLVMCodeGenContext};
 
 use crate::core::console::logging;
 use crate::core::console::logging::LoggingType;
@@ -31,7 +30,8 @@ pub fn compile<'ctx>(
         })
         .into();
 
-    cast::try_cast(context, cast, sizeof_type, sizeof_value).unwrap_or(sizeof_value)
+    compiler::generation::cast::try_cast(context, cast, sizeof_type, sizeof_value)
+        .unwrap_or(sizeof_value)
 }
 
 #[inline]

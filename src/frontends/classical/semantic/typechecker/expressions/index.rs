@@ -28,7 +28,7 @@ pub fn validate<'type_checker>(
                 if !reference.is_allocated() {
                     typechecker.add_error(ThrushCompilerIssue::Error(
                         "Type error".into(),
-                        "An assigned value was expected, such as ptr[T], ptr, addr, or high-level pointer mut T.".into(),
+                        "Expected memory reference, such as ptr[T], ptr, addr, or high-level pointer mut T.".into(),
                         None,
                         *span,
                     ));
@@ -55,9 +55,7 @@ pub fn validate<'type_checker>(
                             *span,
                         ));
                     }
-                }
-
-                if !reference_type.is_mut_array_type()
+                } else if !reference_type.is_mut_array_type()
                     && !reference_type.is_mut_fixed_array_type()
                     && !reference_type.is_array_type()
                     && !reference_type.is_fixed_array_type()

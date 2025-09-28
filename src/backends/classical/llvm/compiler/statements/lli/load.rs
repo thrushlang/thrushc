@@ -3,7 +3,7 @@ use std::fmt::Display;
 use inkwell::values::{BasicValueEnum, PointerValue};
 
 use crate::{
-    backends::classical::llvm::compiler::{cast, context::LLVMCodeGenContext, memory, ptrgen},
+    backends::classical::llvm::compiler::{self, context::LLVMCodeGenContext, memory, ptr},
     core::console::logging::{self, LoggingType},
     frontends::classical::{types::ast::types::AstEitherExpression, typesystem::types::Type},
 };
@@ -21,7 +21,7 @@ pub fn compile<'ctx>(
             memory::load_anon(context, ptr, kind)
         }
         (_, Some(expr)) => {
-            let ptr: PointerValue = ptrgen::compile(context, expr, None).into_pointer_value();
+            let ptr: PointerValue = ptr::compile(context, expr, None).into_pointer_value();
 
             memory::load_anon(context, ptr, kind)
         }
@@ -30,7 +30,7 @@ pub fn compile<'ctx>(
         }
     };
 
-    cast::try_cast(context, cast, kind, value).unwrap_or(value)
+    compiler::generation::cast::try_cast(context, cast, kind, value).unwrap_or(value)
 }
 
 #[inline]

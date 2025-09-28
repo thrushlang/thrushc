@@ -74,6 +74,7 @@ impl<'a, 'ctx> LLVMCodeGenContext<'a, 'ctx> {
 }
 
 impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
+    #[inline]
     pub fn new_local_constant(
         &mut self,
         name: &'ctx str,
@@ -99,11 +100,12 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
         } else {
             logging::print_backend_bug(
                 LoggingType::BackendBug,
-                "The last frame of symbols could not be obtained.",
+                "The last frame of symbols couldn't be obtained.",
             )
         }
     }
 
+    #[inline]
     pub fn new_global_constant(
         &mut self,
         name: &'ctx str,
@@ -131,6 +133,7 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
 }
 
 impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
+    #[inline]
     pub fn new_local_static(
         &mut self,
         name: &'ctx str,
@@ -156,11 +159,12 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
         } else {
             logging::print_backend_bug(
                 LoggingType::BackendBug,
-                "The last frame of symbols could not be obtained.",
+                "The last frame of symbols couldn't be obtained.",
             )
         }
     }
 
+    #[inline]
     pub fn new_global_static(
         &mut self,
         name: &'ctx str,
@@ -188,6 +192,7 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
 }
 
 impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
+    #[inline]
     pub fn new_local(
         &mut self,
         name: &'ctx str,
@@ -207,11 +212,12 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
         } else {
             logging::print_backend_bug(
                 LoggingType::BackendBug,
-                "The last frame of symbols could not be obtained.",
+                "The last frame of symbols couldn't be obtained.",
             );
         }
     }
 
+    #[inline]
     pub fn new_lli(&mut self, name: &'ctx str, kind: &'ctx Type, value: BasicValueEnum<'ctx>) {
         let lli: SymbolAllocated =
             SymbolAllocated::new(SymbolToAllocate::LowLevelInstruction, kind, value);
@@ -221,11 +227,12 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
         } else {
             logging::print_backend_bug(
                 LoggingType::BackendBug,
-                "The last frame of symbols could not be obtained.",
+                "The last frame of symbols couldn't be obtained.",
             );
         }
     }
 
+    #[inline]
     pub fn new_parameter(
         &mut self,
         name: &'ctx str,
@@ -243,6 +250,7 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
             .insert(name, symbol_allocated);
     }
 
+    #[inline]
     pub fn new_function(&mut self, name: &'ctx str, function: LLVMFunction<'ctx>) {
         self.table.get_mut_functions().insert(name, function);
     }
@@ -269,7 +277,7 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
     #[inline]
     pub fn get_current_fn(&self) -> FunctionValue<'ctx> {
         self.function.unwrap_or_else(|| {
-            self::codegen_abort("The function currently being compiled could not be obtained.");
+            self::codegen_abort("The function currently being compiled couldn't be obtained.");
         })
     }
 
@@ -305,7 +313,7 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
     #[inline]
     pub fn get_last_builder_block(&self) -> BasicBlock<'ctx> {
         self.builder.get_insert_block().unwrap_or_else(|| {
-            self::codegen_abort("The last builder block could not be obtained.");
+            self::codegen_abort("The last builder block couldn't be obtained.");
         })
     }
 }
@@ -332,18 +340,20 @@ impl<'a, 'ctx> LLVMCodeGenContext<'a, 'ctx> {
     }
 
     #[inline]
-    pub fn get_loop_ctx(&self) -> &LoopContext {
+    pub fn get_diagnostician(&self) -> &Diagnostician {
+        &self.diagnostician
+    }
+}
+
+impl<'a, 'ctx> LLVMCodeGenContext<'a, 'ctx> {
+    #[inline]
+    pub fn get_loop_ctx(&self) -> &LoopContext<'ctx> {
         &self.loop_ctx
     }
 
     #[inline]
     pub fn get_mut_loop_ctx(&mut self) -> &mut LoopContext<'ctx> {
         &mut self.loop_ctx
-    }
-
-    #[inline]
-    pub fn get_diagnostician(&self) -> &Diagnostician {
-        &self.diagnostician
     }
 }
 

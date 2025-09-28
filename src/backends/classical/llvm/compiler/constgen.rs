@@ -2,16 +2,13 @@ use std::{fmt::Display, sync::Arc};
 
 use inkwell::{context::Context, types::BasicTypeEnum, values::BasicValueEnum};
 
-use crate::backends::classical::llvm::compiler::constants;
-use crate::backends::classical::llvm::compiler::constants::arrays::farray;
+use crate::backends::classical::llvm::compiler;
 use crate::backends::classical::llvm::compiler::constants::binaryop;
-use crate::backends::classical::llvm::compiler::constants::casts;
-use crate::backends::classical::llvm::compiler::constants::generation::floatgen;
-use crate::backends::classical::llvm::compiler::constants::generation::intgen;
 use crate::backends::classical::llvm::compiler::constants::unaryop;
 use crate::backends::classical::llvm::compiler::constgen;
 use crate::backends::classical::llvm::compiler::context::LLVMCodeGenContext;
-use crate::backends::classical::llvm::compiler::expressions;
+use crate::backends::classical::llvm::compiler::generation::float;
+use crate::backends::classical::llvm::compiler::generation::int;
 use crate::backends::classical::llvm::compiler::typegen;
 
 use crate::frontends::classical::types::ast::Ast;
@@ -33,10 +30,21 @@ pub fn compile<'ctx>(
             kind,
             signed,
             ..
-        } => self::compile_int(context, kind, *value, *signed, cast),
+        } => {
+            let int: BasicValueEnum =
+                int::generate(context.get_llvm_context(), kind, *value, *signed).into();
+
+            let cast: BasicTypeEnum = typegen::generate_type(context.get_llvm_context(), cast);
+
+            compiler::generation::cast::numeric_cast(int, cast, *signed)
+        }
 
         // Character literal compilation
-        Ast::Char { byte, .. } => self::compile_char(context, *byte),
+        Ast::Char { byte, .. } => context
+            .get_llvm_context()
+            .i8_type()
+            .const_int(*byte, false)
+            .into(),
 
         // Floating-point constant handling
         Ast::Float {
@@ -44,28 +52,59 @@ pub fn compile<'ctx>(
             kind,
             signed,
             ..
-        } => self::compile_float(context, kind, *value, *signed, cast),
+        } => {
+            let float: BasicValueEnum =
+                float::generate(context.get_llvm_context(), kind, *value, *signed).into();
+
+            let cast: BasicTypeEnum = typegen::generate_type(context.get_llvm_context(), cast);
+
+            compiler::generation::cast::numeric_cast(float, cast, *signed)
+        }
 
         // Boolean true/false cases
-        Ast::Boolean { value, .. } => self::compile_boolean(context, *value),
+        Ast::Boolean { value, .. } => context
+            .get_llvm_context()
+            .bool_type()
+            .const_int(*value, false)
+            .into(),
 
         // Fixed-size array
-        Ast::FixedArray { items, .. } => farray::constant_fixed_array(context, items, cast),
+        Ast::FixedArray { items, .. } => {
+            compiler::generation::expressions::farray::compile_const(context, items, cast)
+        }
 
         // String literal compilation
-        Ast::Str { bytes, .. } => expressions::string::compile_str(context, bytes).into(),
+        Ast::Str { bytes, .. } => {
+            compiler::generation::expressions::string::compile_str(context, bytes).into()
+        }
 
         // Struct constructor handling
         Ast::Constructor { args, kind, .. } => {
             let fields: Vec<&Ast> = args.iter().map(|raw_arg| &raw_arg.1).collect();
-            self::constant_struct(context, kind, fields)
+
+            let llvm_context: &Context = context.get_llvm_context();
+
+            let struct_fields_types: &[Arc<Type>] = kind.get_struct_fields();
+
+            let fields: Vec<BasicValueEnum> = fields
+                .iter()
+                .zip(struct_fields_types)
+                .map(|(field, kind)| constgen::compile(context, field, kind))
+                .collect();
+
+            llvm_context.const_struct(&fields, false).into()
         }
 
         // Type casting operations
-        Ast::As { from, cast, .. } => self::compile_as(context, from, cast),
+        Ast::As { from, cast, .. } => {
+            let lhs_type: &Type = from.get_type_unwrapped();
+            let lhs: BasicValueEnum = constgen::compile(context, from, lhs_type);
+
+            compiler::generation::cast::try_cast_const(context, lhs, lhs_type, cast)
+        }
 
         // Variable reference resolution
-        Ast::Reference { name, .. } => self::compile_reference(context, name),
+        Ast::Reference { name, .. } => context.get_table().get_symbol(name).get_value(),
 
         // Grouped expression compilation
         Ast::Group { expression, .. } => self::compile(context, expression, cast),
@@ -110,91 +149,6 @@ pub fn compile<'ctx>(
             self::codegen_abort("Cannot perform constant expression.");
         }
     }
-}
-
-pub fn constant_struct<'ctx>(
-    context: &mut LLVMCodeGenContext<'_, 'ctx>,
-    kind: &Type,
-    fields: Vec<&'ctx Ast>,
-) -> BasicValueEnum<'ctx> {
-    let llvm_context: &Context = context.get_llvm_context();
-
-    let struct_fields_types: &[Arc<Type>] = kind.get_struct_fields();
-
-    let fields: Vec<BasicValueEnum> = fields
-        .iter()
-        .zip(struct_fields_types)
-        .map(|(field, kind)| constgen::compile(context, field, kind))
-        .collect();
-
-    llvm_context.const_struct(&fields, false).into()
-}
-
-fn compile_as<'ctx>(
-    context: &mut LLVMCodeGenContext<'_, 'ctx>,
-    from: &'ctx Ast,
-    cast: &Type,
-) -> BasicValueEnum<'ctx> {
-    let value_type: &Type = from.get_type_unwrapped();
-    let value: BasicValueEnum = constgen::compile(context, from, value_type);
-
-    casts::try_one(context, value, value_type, cast)
-}
-
-fn compile_reference<'ctx>(
-    context: &mut LLVMCodeGenContext<'_, 'ctx>,
-    name: &str,
-) -> BasicValueEnum<'ctx> {
-    context.get_table().get_symbol(name).get_value()
-}
-
-fn compile_int<'ctx>(
-    context: &mut LLVMCodeGenContext<'_, 'ctx>,
-    kind: &Type,
-    value: u64,
-    signed: bool,
-    cast: &Type,
-) -> BasicValueEnum<'ctx> {
-    let int: BasicValueEnum =
-        intgen::const_int(context.get_llvm_context(), kind, value, signed).into();
-
-    let cast: BasicTypeEnum = typegen::generate_subtype_with_all(context.get_llvm_context(), cast);
-
-    constants::casts::numeric::numeric_cast(int, cast, signed)
-}
-
-fn compile_float<'ctx>(
-    context: &mut LLVMCodeGenContext<'_, 'ctx>,
-    kind: &Type,
-    value: f64,
-    signed: bool,
-    cast: &Type,
-) -> BasicValueEnum<'ctx> {
-    let float: BasicValueEnum =
-        floatgen::const_float(context.get_llvm_context(), kind, value, signed).into();
-
-    let cast: BasicTypeEnum = typegen::generate_subtype_with_all(context.get_llvm_context(), cast);
-
-    constants::casts::numeric::numeric_cast(float, cast, signed)
-}
-
-fn compile_boolean<'ctx>(
-    context: &LLVMCodeGenContext<'_, 'ctx>,
-    value: u64,
-) -> BasicValueEnum<'ctx> {
-    context
-        .get_llvm_context()
-        .bool_type()
-        .const_int(value, false)
-        .into()
-}
-
-fn compile_char<'ctx>(context: &LLVMCodeGenContext<'_, 'ctx>, byte: u64) -> BasicValueEnum<'ctx> {
-    context
-        .get_llvm_context()
-        .i8_type()
-        .const_int(byte, false)
-        .into()
 }
 
 #[inline]

@@ -57,6 +57,24 @@ pub fn print_any_panic(ltype: LoggingType, msg: &str) -> ! {
 }
 
 #[inline]
+pub fn print_bug(ltype: LoggingType, msg: &str) -> ! {
+    let _ = io::stderr().write_all(format!("{} {}\n", ltype.as_styled(), msg).as_bytes());
+
+    let _ = io::stderr().write_all(
+        format!(
+            "\n\nMaybe this is a issue... Report it in: '{}'.\n",
+            "https://github.com/thrushlang/thrushc/issues/"
+                .bold()
+                .bright_red()
+                .underline()
+        )
+        .as_bytes(),
+    );
+
+    process::exit(1);
+}
+
+#[inline]
 pub fn print_backend_panic_not_exit(ltype: LoggingType, msg: &str) {
     let _ = io::stderr().write_all(format!("\n{} {}", ltype.as_styled(), msg).as_bytes());
 

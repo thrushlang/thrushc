@@ -14,6 +14,7 @@ use crate::{
 };
 
 impl LLVMTypeExtensions for Type {
+    #[inline]
     fn llvm_is_same_bit_size(&self, context: &LLVMCodeGenContext<'_, '_>, other: &Type) -> bool {
         let llvm_context: &Context = context.get_llvm_context();
 
@@ -25,6 +26,7 @@ impl LLVMTypeExtensions for Type {
         target_data.get_bit_size(&a_llvm_type) == target_data.get_bit_size(&b_llvm_type)
     }
 
+    #[inline]
     fn llvm_is_ptr_type(&self) -> bool {
         matches!(
             self,
@@ -32,10 +34,12 @@ impl LLVMTypeExtensions for Type {
         )
     }
 
+    #[inline]
     fn llvm_is_int_type(&self) -> bool {
         self.is_integer_type() || self.is_bool_type() || self.is_char_type()
     }
 
+    #[inline]
     fn llvm_is_float_type(&self) -> bool {
         self.is_float_type()
     }
@@ -48,11 +52,11 @@ impl TypeExtensions for Type {
         }
 
         match self {
-            Type::FixedArray(element_type, _) => element_type.get_aprox_type(base_depth - 1),
-            Type::Array(element_type) => element_type.get_aprox_type(base_depth - 1),
-            Type::Mut(inner_type) => inner_type.get_aprox_type(base_depth - 1),
-            Type::Const(inner_type) => inner_type.get_aprox_type(base_depth - 1),
-            Type::Ptr(Some(inner_type)) => inner_type.get_aprox_type(base_depth - 1),
+            Type::FixedArray(element_type, _) => element_type.get_type_with_depth(base_depth - 1),
+            Type::Array(element_type) => element_type.get_type_with_depth(base_depth - 1),
+            Type::Mut(inner_type) => inner_type.get_type_with_depth(base_depth - 1),
+            Type::Const(inner_type) => inner_type.get_type_with_depth(base_depth - 1),
+            Type::Ptr(Some(inner_type)) => inner_type.get_type_with_depth(base_depth - 1),
             Type::Struct(_, _) => self,
             Type::S8
             | Type::S16
@@ -108,6 +112,7 @@ impl IndexTypeExtensions for Type {
 }
 
 impl TypePointerExtensions for Type {
+    #[inline]
     fn is_all_ptr_type(&self) -> bool {
         if let Type::Ptr(Some(ptr)) = self {
             return ptr.is_all_ptr_type();
@@ -120,6 +125,7 @@ impl TypePointerExtensions for Type {
         false
     }
 
+    #[inline]
     fn is_typed_ptr_type(&self) -> bool {
         if let Type::Ptr(Some(inner)) = self {
             return inner.is_typed_ptr_type();
@@ -132,6 +138,7 @@ impl TypePointerExtensions for Type {
         true
     }
 
+    #[inline]
     fn is_ptr_struct_type(&self) -> bool {
         if let Type::Ptr(Some(inner)) = self {
             return inner.is_struct_type();
@@ -140,6 +147,7 @@ impl TypePointerExtensions for Type {
         false
     }
 
+    #[inline]
     fn is_ptr_fixed_array_type(&self) -> bool {
         if let Type::Ptr(Some(inner)) = self {
             return inner.is_fixed_array_type();
@@ -150,6 +158,7 @@ impl TypePointerExtensions for Type {
 }
 
 impl TypeStructExtensions for Type {
+    #[inline]
     fn get_struct_fields(&self) -> &[Arc<Type>] {
         if let Type::Struct(_, fields) = self {
             return fields;
@@ -160,6 +169,7 @@ impl TypeStructExtensions for Type {
 }
 
 impl TypeMutableExtensions for Type {
+    #[inline]
     fn is_mut_fixed_array_type(&self) -> bool {
         if let Type::Mut(inner) = self {
             return inner.is_fixed_array_type();
@@ -168,6 +178,7 @@ impl TypeMutableExtensions for Type {
         false
     }
 
+    #[inline]
     fn is_mut_array_type(&self) -> bool {
         if let Type::Mut(inner) = self {
             return inner.is_array_type();
@@ -176,6 +187,7 @@ impl TypeMutableExtensions for Type {
         false
     }
 
+    #[inline]
     fn is_mut_struct_type(&self) -> bool {
         if let Type::Mut(inner) = self {
             return inner.is_struct_type();

@@ -1,7 +1,7 @@
-use crate::backends::classical::llvm::compiler::cast;
+use crate::backends::classical::llvm::compiler;
 use crate::backends::classical::llvm::compiler::context::LLVMCodeGenContext;
 use crate::backends::classical::llvm::compiler::predicates;
-use crate::backends::classical::llvm::compiler::valuegen;
+use crate::backends::classical::llvm::compiler::value;
 
 use crate::core::console::logging;
 use crate::core::console::logging::LoggingType;
@@ -37,7 +37,7 @@ pub fn bool_operation<'ctx>(
         let left: IntValue = left.into_int_value();
         let right: IntValue = right.into_int_value();
 
-        let (left, right) = cast::integer_together(context, left, right);
+        let (left, right) = compiler::generation::cast::integer_together(context, left, right);
 
         return match operator {
             op if op.is_logical_operator() => llvm_builder
@@ -82,7 +82,7 @@ pub fn bool_operation<'ctx>(
         let left: FloatValue = left.into_float_value();
         let right: FloatValue = right.into_float_value();
 
-        let (left, right) = cast::float_together(context, left, right);
+        let (left, right) = compiler::generation::cast::float_together(context, left, right);
 
         return match operator {
             op if op.is_logical_operator() => llvm_builder
@@ -121,8 +121,8 @@ pub fn compile<'ctx>(
     {
         let operator: &TokenType = binary.1;
 
-        let left: BasicValueEnum = valuegen::compile(context, binary.0, cast);
-        let right: BasicValueEnum = valuegen::compile(context, binary.2, cast);
+        let left: BasicValueEnum = value::compile(context, binary.0, cast);
+        let right: BasicValueEnum = value::compile(context, binary.2, cast);
 
         return self::bool_operation(
             context,

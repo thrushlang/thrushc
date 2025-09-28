@@ -1,6 +1,5 @@
-use crate::backends::classical::llvm::compiler::cast;
-use crate::backends::classical::llvm::compiler::context::LLVMCodeGenContext;
 use crate::backends::classical::llvm::compiler::typegen;
+use crate::backends::classical::llvm::compiler::{self, context::LLVMCodeGenContext};
 
 use crate::frontends::classical::typesystem::types::Type;
 
@@ -26,5 +25,6 @@ pub fn compile<'ctx>(
         .const_int(memory_alignment.into(), false)
         .into();
 
-    cast::try_cast(context, cast, alingof_type, alignment).unwrap_or(alignment)
+    compiler::generation::cast::try_cast(context, cast, alingof_type, alignment)
+        .unwrap_or(alignment)
 }

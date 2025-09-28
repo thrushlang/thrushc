@@ -9,7 +9,7 @@ use crate::{
     backends::classical::llvm::compiler::{
         context::LLVMCodeGenContext,
         memory::{self, SymbolAllocated},
-        ptrgen, valuegen,
+        ptr, value,
     },
     core::console::logging::{self, LoggingType},
     frontends::classical::{
@@ -24,7 +24,7 @@ pub fn compile<'ctx>(
     write_type: &'ctx Type,
     write_value: &'ctx Ast,
 ) -> BasicValueEnum<'ctx> {
-    let value: BasicValueEnum = valuegen::compile(context, write_value, Some(write_type));
+    let value: BasicValueEnum = value::compile(context, write_value, Some(write_type));
 
     match source {
         (Some((name, _)), _) => {
@@ -35,7 +35,7 @@ pub fn compile<'ctx>(
             self::compile_null_ptr(context)
         }
         (_, Some(expr)) => {
-            let ptr: PointerValue = ptrgen::compile(context, expr, None).into_pointer_value();
+            let ptr: PointerValue = ptr::compile(context, expr, None).into_pointer_value();
 
             memory::store_anon(context, ptr, value);
 

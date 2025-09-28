@@ -4,7 +4,7 @@ use crate::{
         lexer::span::Span,
         semantic::typechecker::{TypeChecker, checks, metadata::TypeCheckerExprMetadata},
         types::ast::Ast,
-        typesystem::{traits::DereferenceExtensions, types::Type},
+        typesystem::{traits::TypeExtensions, types::Type},
     },
 };
 
@@ -45,19 +45,21 @@ pub fn validate<'type_checker>(
             }
 
             if source_type.is_mut_type() {
-                if let Err(error) = checks::type_check(
-                    &source_type.dereference_high_level_type(),
-                    value_type,
-                    Some(value),
-                    None,
-                    metadata,
-                ) {
+                let lhs_type: &Type = source_type.get_type_with_depth(1);
+                let rhs_type: &Type = value_type;
+
+                if let Err(error) = checks::type_check(lhs_type, rhs_type, None, None, metadata) {
                     typechecker.add_error(error);
                 }
-            } else if let Err(error) =
-                checks::type_check(source_type, value_type, Some(value), None, metadata)
-            {
-                typechecker.add_error(error);
+            }
+
+            if source_type.is_ptr_type() {
+                let lhs_type: &Type = source_type.get_type_with_depth(1);
+                let rhs_type: &Type = value_type;
+
+                if let Err(error) = checks::type_check(lhs_type, rhs_type, None, None, metadata) {
+                    typechecker.add_error(error);
+                }
             }
 
             typechecker.analyze_stmt(value)?;

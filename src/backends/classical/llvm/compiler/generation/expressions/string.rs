@@ -32,7 +32,7 @@ pub fn compile_str_constant<'ctx>(
 
     let cstr_name: String = format!(
         "cstr.constant.{}",
-        obfuscation::generate_random_obfuscation_name(obfuscation::LONG_RANGE_OBFUSCATION)
+        obfuscation::generate_obfuscation_name(obfuscation::SHORT_RANGE_OBFUSCATION)
     );
 
     let cstr: GlobalValue =
@@ -53,7 +53,7 @@ pub fn compile_str_constant<'ctx>(
 
     let str_name: String = format!(
         "str.constant.{}",
-        obfuscation::generate_random_obfuscation_name(obfuscation::LONG_RANGE_OBFUSCATION)
+        obfuscation::generate_obfuscation_name(obfuscation::SHORT_RANGE_OBFUSCATION)
     );
 
     let str: GlobalValue =

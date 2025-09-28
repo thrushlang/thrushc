@@ -2,7 +2,7 @@ use std::fmt::Display;
 
 use crate::backends::classical::llvm::compiler::context::LLVMCodeGenContext;
 use crate::backends::classical::llvm::compiler::memory::SymbolAllocated;
-use crate::backends::classical::llvm::compiler::{cast, typegen, valuegen};
+use crate::backends::classical::llvm::compiler::{self, typegen, value};
 
 use crate::core::console::logging::{self, LoggingType};
 
@@ -20,6 +20,7 @@ use inkwell::{
 
 pub fn compile<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
+
     unary: UnaryOperation<'ctx>,
     cast: Option<&Type>,
 ) -> BasicValueEnum<'ctx> {
@@ -27,10 +28,13 @@ pub fn compile<'ctx>(
         (TokenType::PlusPlus | TokenType::MinusMinus, _, Ast::Reference { name, kind, .. }) => {
             self::compile_increment_decrement_ref(context, name, unary.0, kind, cast)
         }
+
         (TokenType::PlusPlus | TokenType::MinusMinus, _, expr) => {
             self::compile_increment_decrement(context, unary.0, expr, cast)
         }
+
         (TokenType::Bang, _, expr) => self::compile_logical_negation(context, expr, cast),
+
         (TokenType::Minus, _, expr) => self::compile_arithmetic_negation(context, expr, cast),
 
         what => {
@@ -41,6 +45,7 @@ pub fn compile<'ctx>(
 
 fn compile_increment_decrement_ref<'ctx>(
     context: &LLVMCodeGenContext<'_, 'ctx>,
+
     name: &str,
     operator: &TokenType,
     kind: &Type,
@@ -84,7 +89,7 @@ fn compile_increment_decrement_ref<'ctx>(
             };
 
             let result: BasicValueEnum =
-                cast::try_cast(context, cast, kind, result).unwrap_or(result);
+                compiler::generation::cast::try_cast(context, cast, kind, result).unwrap_or(result);
 
             symbol.store(context, result);
 
@@ -114,7 +119,7 @@ fn compile_increment_decrement_ref<'ctx>(
             };
 
             let result: BasicValueEnum =
-                cast::try_cast(context, cast, kind, result).unwrap_or(result);
+                compiler::generation::cast::try_cast(context, cast, kind, result).unwrap_or(result);
 
             symbol.store(context, result);
 
@@ -125,13 +130,14 @@ fn compile_increment_decrement_ref<'ctx>(
 
 fn compile_increment_decrement<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
+
     operator: &TokenType,
     expression: &'ctx Ast,
     cast: Option<&Type>,
 ) -> BasicValueEnum<'ctx> {
     let llvm_builder: &Builder = context.get_llvm_builder();
 
-    let value: BasicValueEnum = valuegen::compile(context, expression, cast);
+    let value: BasicValueEnum = value::compile(context, expression, cast);
     let kind: &Type = expression.get_type_unwrapped();
 
     let abort_int =
@@ -164,7 +170,7 @@ fn compile_increment_decrement<'ctx>(
                 }
             };
 
-            cast::try_cast(context, cast, kind, result).unwrap_or(result)
+            compiler::generation::cast::try_cast(context, cast, kind, result).unwrap_or(result)
         }
         _ => {
             let float: FloatValue = value.into_float_value();
@@ -189,7 +195,7 @@ fn compile_increment_decrement<'ctx>(
                 }
             };
 
-            cast::try_cast(context, cast, kind, result).unwrap_or(result)
+            compiler::generation::cast::try_cast(context, cast, kind, result).unwrap_or(result)
         }
     }
 }
@@ -201,7 +207,7 @@ fn compile_logical_negation<'ctx>(
 ) -> BasicValueEnum<'ctx> {
     let llvm_builder: &Builder = context.get_llvm_builder();
 
-    let value: BasicValueEnum = valuegen::compile(context, expr, cast);
+    let value: BasicValueEnum = value::compile(context, expr, cast);
     let kind: &Type = expr.get_type_unwrapped();
 
     match kind {
@@ -211,7 +217,8 @@ fn compile_logical_negation<'ctx>(
             if let Ok(result) = llvm_builder.build_not(int, "") {
                 let result: BasicValueEnum = result.into();
 
-                return cast::try_cast(context, cast, kind, result).unwrap_or(result);
+                return compiler::generation::cast::try_cast(context, cast, kind, result)
+                    .unwrap_or(result);
             }
 
             int.into()
@@ -230,7 +237,7 @@ fn compile_arithmetic_negation<'ctx>(
 ) -> BasicValueEnum<'ctx> {
     let llvm_builder: &Builder = context.get_llvm_builder();
 
-    let value: BasicValueEnum = valuegen::compile(context, expr, cast);
+    let value: BasicValueEnum = value::compile(context, expr, cast);
     let kind: &Type = expr.get_type_unwrapped();
 
     match kind {
@@ -240,7 +247,8 @@ fn compile_arithmetic_negation<'ctx>(
             if let Ok(result) = llvm_builder.build_int_neg(int, "") {
                 let result: BasicValueEnum = result.into();
 
-                return cast::try_cast(context, cast, kind, result).unwrap_or(result);
+                return compiler::generation::cast::try_cast(context, cast, kind, result)
+                    .unwrap_or(result);
             }
 
             int.into()
@@ -252,7 +260,8 @@ fn compile_arithmetic_negation<'ctx>(
             if let Ok(result) = llvm_builder.build_float_neg(float, "") {
                 let result: BasicValueEnum = result.into();
 
-                return cast::try_cast(context, cast, kind, result).unwrap_or(result);
+                return compiler::generation::cast::try_cast(context, cast, kind, result)
+                    .unwrap_or(result);
             }
 
             float.into()

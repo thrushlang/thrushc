@@ -2,7 +2,7 @@ use crate::backends::classical::llvm::compiler::context::LLVMCodeGenContext;
 use crate::backends::classical::llvm::compiler::conventions::CallConvention;
 use crate::backends::classical::llvm::compiler::{attributes::LLVMAttribute, obfuscation};
 
-use crate::backends::classical::llvm::compiler::typegen;
+use crate::backends::classical::llvm::compiler::{block, typegen};
 use crate::backends::classical::types::traits::AssemblerFunctionExtensions;
 
 use crate::core::console::logging;
@@ -67,7 +67,7 @@ pub fn compile<'ctx>(
     } else {
         format!(
             "__asm_fn_{}_{}",
-            obfuscation::generate_random_obfuscation_name(obfuscation::LONG_RANGE_OBFUSCATION),
+            obfuscation::generate_obfuscation_name(obfuscation::LONG_RANGE_OBFUSCATION),
             asm_function_ascii_name
         )
     };
@@ -92,15 +92,15 @@ pub fn compile<'ctx>(
     let llvm_asm_function: FunctionValue =
         llvm_module.add_function(&llvm_function_name, asm_function_type, None);
 
+    let last_block: BasicBlock = context.get_last_builder_block();
+
+    let asm_function_block: BasicBlock = block::append_block(llvm_context, llvm_asm_function);
+
+    llvm_builder.position_at_end(asm_function_block);
+
     if !is_public {
         llvm_asm_function.set_linkage(Linkage::LinkerPrivate);
     }
-
-    let original_block: BasicBlock = context.get_last_builder_block();
-
-    let entry: BasicBlock = llvm_context.append_basic_block(llvm_asm_function, "");
-
-    llvm_builder.position_at_end(entry);
 
     let args: Vec<BasicMetadataValueEnum> = llvm_asm_function
         .get_param_iter()
@@ -134,7 +134,7 @@ pub fn compile<'ctx>(
         self::codegen_abort("Unable to create indirect call for call assembly function.");
     }
 
-    llvm_builder.position_at_end(original_block);
+    llvm_builder.position_at_end(last_block);
 
     context.new_function(
         asm_function_name,

@@ -10,7 +10,7 @@ use crate::{
     backends::classical::llvm::compiler::{
         context::LLVMCodeGenContext,
         memory::{self, SymbolAllocated},
-        ptrgen, valuegen,
+        ptr, value,
     },
     core::console::logging::{self, LoggingType},
     frontends::classical::{
@@ -29,7 +29,7 @@ pub fn compile<'ctx>(
 
     let indexes: Vec<IntValue> = indexes
         .iter()
-        .map(|index| valuegen::compile(context, index, Some(&Type::U32)).into_int_value())
+        .map(|index| value::compile(context, index, Some(&Type::U32)).into_int_value())
         .collect();
 
     match source {
@@ -41,7 +41,7 @@ pub fn compile<'ctx>(
 
         (_, Some(expr)) => {
             let kind: &Type = expr.get_type_unwrapped();
-            let ptr: PointerValue = ptrgen::compile(context, expr, None).into_pointer_value();
+            let ptr: PointerValue = ptr::compile(context, expr, None).into_pointer_value();
 
             memory::gep_anon(context, ptr, kind, &indexes).into()
         }

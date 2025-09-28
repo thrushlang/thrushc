@@ -1,7 +1,6 @@
-use crate::backends::classical::llvm::compiler::cast;
-use crate::backends::classical::llvm::compiler::constgen;
 use crate::backends::classical::llvm::compiler::context::LLVMCodeGenContext;
 use crate::backends::classical::llvm::compiler::predicates;
+use crate::backends::classical::llvm::compiler::{self, constgen};
 
 use crate::core::console::logging;
 use crate::core::console::logging::LoggingType;
@@ -14,12 +13,13 @@ use std::fmt::Display;
 
 use inkwell::values::{BasicValueEnum, FloatValue};
 
+#[inline]
 pub fn const_float_operation<'ctx>(
     left: FloatValue<'ctx>,
     right: FloatValue<'ctx>,
     operator: &TokenType,
 ) -> BasicValueEnum<'ctx> {
-    let (left, right) = cast::const_float_together(left, right);
+    let (left, right) = compiler::generation::cast::const_float_together(left, right);
 
     match operator {
         TokenType::Plus => {

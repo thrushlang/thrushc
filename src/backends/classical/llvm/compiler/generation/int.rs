@@ -7,7 +7,12 @@ use std::fmt::Display;
 
 use inkwell::{context::Context, values::IntValue};
 
-pub fn int<'ctx>(context: &'ctx Context, kind: &Type, number: u64, signed: bool) -> IntValue<'ctx> {
+pub fn generate<'ctx>(
+    context: &'ctx Context,
+    kind: &Type,
+    number: u64,
+    signed: bool,
+) -> IntValue<'ctx> {
     match kind {
         Type::Char => context.i8_type().const_int(number, signed).const_neg(),
         Type::S8 if signed => context.i8_type().const_int(number, signed).const_neg(),

@@ -1,12 +1,11 @@
-use crate::backends::classical::llvm::compiler::attributes::{
+use crate::backends::classical::llvm::compiler::attrbuilder::{
     AttributeBuilder, LLVMAttributeApplicant,
 };
-
 use crate::backends::classical::llvm::compiler::attributes::LLVMAttribute;
 use crate::backends::classical::llvm::compiler::codegen::LLVMCodegen;
 use crate::backends::classical::llvm::compiler::context::LLVMCodeGenContext;
 use crate::backends::classical::llvm::compiler::conventions::CallConvention;
-use crate::backends::classical::llvm::compiler::{obfuscation, typegen};
+use crate::backends::classical::llvm::compiler::{block, obfuscation, typegen};
 use crate::backends::classical::types::repr::LLVMFunction;
 
 use crate::core::console::logging;
@@ -21,6 +20,7 @@ use crate::frontends::classical::typesystem::types::Type;
 
 use std::fmt::Display;
 
+use inkwell::basic_block::BasicBlock;
 use inkwell::builder::Builder;
 
 use inkwell::{
@@ -68,7 +68,7 @@ pub fn compile_decl<'ctx>(
     } else {
         &format!(
             "__fn_{}_{}",
-            obfuscation::generate_random_obfuscation_name(obfuscation::LONG_RANGE_OBFUSCATION),
+            obfuscation::generate_obfuscation_name(obfuscation::LONG_RANGE_OBFUSCATION),
             function_ascii_name
         )
     };
@@ -113,8 +113,9 @@ pub fn compile_body<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, global_fn: Global
         .get_function(function_name);
 
     let llvm_function: FunctionValue = represented_llvm_function.0;
+    let llvm_function_block: BasicBlock = block::append_block(llvm_context, llvm_function);
 
-    llvm_builder.position_at_end(llvm_context.append_basic_block(llvm_function, ""));
+    llvm_builder.position_at_end(llvm_function_block);
 
     codegen.get_mut_context().set_current_fn(llvm_function);
 

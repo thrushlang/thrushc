@@ -218,8 +218,8 @@ impl Ast<'_> {
             Ast::Unreachable { .. } => &Type::Void,
 
             any => {
-                logging::print_any_panic(
-                    LoggingType::Panic,
+                logging::print_bug(
+                    LoggingType::BackendBug,
                     &format!("Unable to get type of ast: '{}'.", any),
                 );
             }
@@ -313,6 +313,7 @@ impl Ast<'_> {
 }
 
 impl Ast<'_> {
+    #[inline]
     pub fn get_str_content(&self, span: Span) -> Result<&str, ThrushCompilerIssue> {
         if let Ast::Str { bytes, .. } = self {
             if let Ok(content) = std::str::from_utf8(bytes) {
@@ -335,6 +336,7 @@ impl Ast<'_> {
         ))
     }
 
+    #[inline]
     pub fn get_integer_value(&self) -> Result<u64, ThrushCompilerIssue> {
         if let Ast::Integer { value, .. } = self {
             return Ok(*value);

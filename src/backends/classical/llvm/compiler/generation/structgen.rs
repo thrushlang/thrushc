@@ -4,7 +4,7 @@ use crate::backends::classical::llvm::compiler::anchors::PointerAnchor;
 use crate::backends::classical::llvm::compiler::context::LLVMCodeGenContext;
 use crate::backends::classical::llvm::compiler::memory;
 use crate::backends::classical::llvm::compiler::memory::LLVMAllocationSite;
-use crate::backends::classical::llvm::compiler::{typegen, valuegen};
+use crate::backends::classical::llvm::compiler::{typegen, value};
 
 use crate::frontends::classical::types::parser::stmts::types::Constructor;
 use crate::frontends::classical::typesystem::traits::TypeStructExtensions;
@@ -22,16 +22,16 @@ pub fn compile<'ctx>(
 ) -> BasicValueEnum<'ctx> {
     if let Some(anchor) = context.get_pointer_anchor() {
         if !anchor.is_triggered() {
-            self::compile_struct_with_anchor(context, args, kind, cast, anchor)
+            self::compile_with_anchor(context, args, kind, cast, anchor)
         } else {
-            self::compile_struct_without_anchor(context, args, kind, cast)
+            self::compile_without_anchor(context, args, kind, cast)
         }
     } else {
-        self::compile_struct_without_anchor(context, args, kind, cast)
+        self::compile_without_anchor(context, args, kind, cast)
     }
 }
 
-fn compile_struct_with_anchor<'ctx>(
+fn compile_with_anchor<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     args: &'ctx Constructor,
     kind: &Type,
@@ -52,7 +52,7 @@ fn compile_struct_with_anchor<'ctx>(
     let fields: Vec<BasicValueEnum> = args
         .iter()
         .zip(struct_fields_types)
-        .map(|((_, field, _, _), kind)| valuegen::compile(context, field, Some(kind)))
+        .map(|((_, field, _, _), kind)| value::compile(context, field, Some(kind)))
         .collect();
 
     for (idx, field) in fields.iter().enumerate() {
@@ -69,7 +69,7 @@ fn compile_struct_with_anchor<'ctx>(
     self::compile_null_ptr(context)
 }
 
-pub fn compile_struct_without_anchor<'ctx>(
+fn compile_without_anchor<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     args: &'ctx Constructor,
     kind: &Type,
@@ -88,7 +88,7 @@ pub fn compile_struct_without_anchor<'ctx>(
     let fields: Vec<BasicValueEnum> = args
         .iter()
         .zip(struct_fields_types)
-        .map(|((_, field, _, _), kind)| valuegen::compile(context, field, Some(kind)))
+        .map(|((_, field, _, _), kind)| value::compile(context, field, Some(kind)))
         .collect();
 
     for (idx, field) in fields.iter().enumerate() {

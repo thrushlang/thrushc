@@ -1,4 +1,4 @@
-use crate::backends::classical::llvm::compiler::constants;
+use crate::backends::classical::llvm::compiler;
 use crate::backends::classical::llvm::compiler::constgen;
 use crate::backends::classical::llvm::compiler::context::LLVMCodeGenContext;
 
@@ -25,7 +25,8 @@ pub fn compile_global<'ctx>(
     let llvm_value: BasicValueEnum = constgen::compile(context, value, kind);
     let value_type: &Type = value.get_type_unwrapped();
 
-    let value: BasicValueEnum = constants::casts::try_one(context, llvm_value, value_type, kind);
+    let value: BasicValueEnum =
+        compiler::generation::cast::try_cast_const(context, llvm_value, value_type, kind);
 
     context.new_global_constant(name, ascii_name, kind, value, attributes, metadata);
 }

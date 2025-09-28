@@ -1,7 +1,7 @@
 use crate::backends::classical::llvm::compiler::context::LLVMCodeGenContext;
-use crate::backends::classical::llvm::compiler::ptrgen;
+use crate::backends::classical::llvm::compiler::ptr;
 use crate::backends::classical::llvm::compiler::typegen;
-use crate::backends::classical::llvm::compiler::valuegen;
+use crate::backends::classical::llvm::compiler::value;
 
 use crate::core::console::logging;
 use crate::core::console::logging::LoggingType;
@@ -29,10 +29,10 @@ pub fn compile<'ctx>(
     let llvm_builder: &Builder = context.get_llvm_builder();
 
     let dest: PointerValue =
-        ptrgen::compile(context, destination, Some(&Type::Ptr(None))).into_pointer_value();
+        ptr::compile(context, destination, Some(&Type::Ptr(None))).into_pointer_value();
 
-    let new_size: IntValue = valuegen::compile(context, new_size, None).into_int_value();
-    let size: IntValue = valuegen::compile(context, size, None).into_int_value();
+    let new_size: IntValue = value::compile(context, new_size, None).into_int_value();
+    let size: IntValue = value::compile(context, size, None).into_int_value();
 
     let target_data: &TargetData = context.get_target_data();
 

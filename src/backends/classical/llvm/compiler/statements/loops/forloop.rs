@@ -8,10 +8,9 @@ use inkwell::{
 };
 
 use crate::{
-    backends::classical::llvm::compiler::{codegen::LLVMCodegen, valuegen},
+    backends::classical::llvm::compiler::{block, codegen::LLVMCodegen, value},
     core::console::logging::{self, LoggingType},
-    frontends::classical::types::ast::Ast,
-    frontends::classical::typesystem::types::Type,
+    frontends::classical::{types::ast::Ast, typesystem::types::Type},
 };
 
 pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, stmt: &'ctx Ast<'ctx>) {
@@ -32,10 +31,10 @@ pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, stmt: &'ctx Ast<'ctx>)
         ..
     } = stmt
     {
-        let start: BasicBlock = llvm_context.append_basic_block(llvm_function, "for");
-        let condition: BasicBlock = llvm_context.append_basic_block(llvm_function, "for_condition");
-        let body: BasicBlock = llvm_context.append_basic_block(llvm_function, "for_body");
-        let exit: BasicBlock = llvm_context.append_basic_block(llvm_function, "for_exit");
+        let start: BasicBlock = block::append_block(llvm_context, llvm_function);
+        let condition: BasicBlock = block::append_block(llvm_context, llvm_function);
+        let body: BasicBlock = block::append_block(llvm_context, llvm_function);
+        let exit: BasicBlock = block::append_block(llvm_context, llvm_function);
 
         llvm_builder
             .build_unconditional_branch(start)
@@ -52,7 +51,7 @@ pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, stmt: &'ctx Ast<'ctx>)
         llvm_builder.position_at_end(condition);
 
         let comparison: IntValue =
-            valuegen::compile(codegen.get_mut_context(), cond, Some(&Type::Bool)).into_int_value();
+            value::compile(codegen.get_mut_context(), cond, Some(&Type::Bool)).into_int_value();
 
         llvm_builder
             .build_conditional_branch(comparison, body, exit)
@@ -72,9 +71,9 @@ pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, stmt: &'ctx Ast<'ctx>)
 
         if actions.is_before_unary() {
             codegen.codegen_block(block);
-            let _ = valuegen::compile(codegen.get_mut_context(), actions, None);
+            let _ = value::compile(codegen.get_mut_context(), actions, None);
         } else {
-            let _ = valuegen::compile(codegen.get_mut_context(), actions, None);
+            let _ = value::compile(codegen.get_mut_context(), actions, None);
             codegen.codegen_block(block);
         }
 

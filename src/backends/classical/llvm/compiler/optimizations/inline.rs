@@ -1,6 +1,6 @@
 use inkwell::{attributes::AttributeLoc, context::Context, module::Linkage, values::FunctionValue};
 
-use crate::backends::classical::llvm::compiler::attributes;
+use crate::backends::classical::llvm::compiler::attrbuilder;
 
 pub fn apply(llvm_context: &Context, llvm_function: FunctionValue) {
     let mut instructions_count: usize = 0;
@@ -15,21 +15,21 @@ pub fn apply(llvm_context: &Context, llvm_function: FunctionValue) {
         if instructions_count <= 5 {
             llvm_function.add_attribute(
                 AttributeLoc::Function,
-                attributes::create_always_inline_attribute(llvm_context),
+                attrbuilder::create_always_inline_attribute(llvm_context),
             );
         }
 
         if instructions_count <= 30 {
             llvm_function.add_attribute(
                 AttributeLoc::Function,
-                attributes::create_inline_hint_attribute(llvm_context),
+                attrbuilder::create_inline_hint_attribute(llvm_context),
             );
         }
 
         if instructions_count >= 80 {
             llvm_function.add_attribute(
                 AttributeLoc::Function,
-                attributes::create_minsize_attribute(llvm_context),
+                attrbuilder::create_minsize_attribute(llvm_context),
             );
         }
     }

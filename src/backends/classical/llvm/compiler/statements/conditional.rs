@@ -1,3 +1,5 @@
+#![allow(clippy::if_same_then_else)]
+
 use std::fmt::Display;
 
 use inkwell::{
@@ -8,10 +10,9 @@ use inkwell::{
 };
 
 use crate::{
-    backends::classical::llvm::compiler::{codegen::LLVMCodegen, valuegen},
+    backends::classical::llvm::compiler::{block, codegen::LLVMCodegen, value},
     core::console::logging::{self, LoggingType},
-    frontends::classical::types::ast::Ast,
-    frontends::classical::typesystem::types::Type,
+    frontends::classical::{types::ast::Ast, typesystem::types::Type},
 };
 
 pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, stmt: &'ctx Ast<'ctx>) {
@@ -32,19 +33,19 @@ pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, stmt: &'ctx Ast<'ctx>)
         ..
     } = stmt
     {
-        let then: BasicBlock = llvm_context.append_basic_block(llvm_function, "if");
-        let merge: BasicBlock = llvm_context.append_basic_block(llvm_function, "merge");
+        let then: BasicBlock = block::append_block(llvm_context, llvm_function);
+        let merge: BasicBlock = block::append_block(llvm_context, llvm_function);
 
         let next: BasicBlock = if !elseif.is_empty() {
-            llvm_context.append_basic_block(llvm_function, "elseif_cond")
+            block::append_block(llvm_context, llvm_function)
         } else if anyway.is_some() {
-            llvm_context.append_basic_block(llvm_function, "else")
+            block::append_block(llvm_context, llvm_function)
         } else {
             merge
         };
 
         let cond_value: IntValue =
-            valuegen::compile(codegen.get_mut_context(), condition, Some(&Type::Bool))
+            value::compile(codegen.get_mut_context(), condition, Some(&Type::Bool))
                 .into_int_value();
 
         llvm_builder
@@ -103,15 +104,16 @@ fn compile_elseif<'ctx>(
 
             llvm_builder.position_at_end(current);
 
-            let then: BasicBlock = llvm_context.append_basic_block(llvm_function, "elseif_body");
+            let then: BasicBlock = block::append_block(llvm_context, llvm_function);
+
             let next: BasicBlock = if is_last {
                 merge
             } else {
-                llvm_context.append_basic_block(llvm_function, "elseif_cond")
+                block::append_block(llvm_context, llvm_function)
             };
 
             let cond_value: IntValue =
-                valuegen::compile(codegen.get_mut_context(), condition, Some(&Type::Bool))
+                value::compile(codegen.get_mut_context(), condition, Some(&Type::Bool))
                     .into_int_value();
 
             llvm_builder

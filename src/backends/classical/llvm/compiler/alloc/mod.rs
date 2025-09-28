@@ -25,7 +25,7 @@ pub fn alloc<'ctx>(
 
     let formatted_name: String = format!(
         "{}.local.{}",
-        obfuscation::generate_random_obfuscation_name(obfuscation::LONG_RANGE_OBFUSCATION),
+        obfuscation::generate_obfuscation_name(obfuscation::SHORT_RANGE_OBFUSCATION),
         ascii_name
     );
 

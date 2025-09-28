@@ -1,7 +1,7 @@
-use crate::backends::classical::llvm::compiler::cast;
+use crate::backends::classical::llvm::compiler;
 use crate::backends::classical::llvm::compiler::context::LLVMCodeGenContext;
 use crate::backends::classical::llvm::compiler::predicates;
-use crate::backends::classical::llvm::compiler::valuegen;
+use crate::backends::classical::llvm::compiler::value;
 
 use crate::core::console::logging;
 use crate::core::console::logging::LoggingType;
@@ -37,7 +37,7 @@ fn int_operation<'ctx>(
         let left: IntValue = left.into_int_value();
         let right: IntValue = right.into_int_value();
 
-        let (left, right) = cast::integer_together(context, left, right);
+        let (left, right) = compiler::generation::cast::integer_together(context, left, right);
 
         return match operator {
             TokenType::Plus => llvm_builder
@@ -138,8 +138,8 @@ pub fn compile<'ctx>(
     {
         let operator: &TokenType = binary.1;
 
-        let left: BasicValueEnum = valuegen::compile(context, binary.0, cast);
-        let right: BasicValueEnum = valuegen::compile(context, binary.2, cast);
+        let left: BasicValueEnum = value::compile(context, binary.0, cast);
+        let right: BasicValueEnum = value::compile(context, binary.2, cast);
 
         return int_operation(
             context,

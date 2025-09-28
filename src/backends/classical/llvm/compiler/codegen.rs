@@ -2,20 +2,19 @@ use std::fmt::Display;
 
 use crate::core::console::logging::{self, LoggingType};
 
-use crate::backends::classical::llvm::compiler::binaryop;
 use crate::backends::classical::llvm::compiler::block;
 use crate::backends::classical::llvm::compiler::builtins;
 use crate::backends::classical::llvm::compiler::declarations;
-use crate::backends::classical::llvm::compiler::expressions;
-use crate::backends::classical::llvm::compiler::ptrgen;
+use crate::backends::classical::llvm::compiler::ptr;
 use crate::backends::classical::llvm::compiler::statements;
+use crate::backends::classical::llvm::compiler::{binaryop, generation};
 
 use crate::frontends::classical::types::ast::Ast;
 use crate::frontends::classical::types::ast::metadata::local::LocalMetadata;
 use crate::frontends::classical::typesystem::traits::LLVMTypeExtensions;
 use crate::frontends::classical::typesystem::types::Type;
 
-use super::{context::LLVMCodeGenContext, valuegen};
+use super::{context::LLVMCodeGenContext, value};
 
 use inkwell::{
     basic_block::BasicBlock,
@@ -288,7 +287,11 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 expression,
                 ..
             } => {
-                expressions::unary::compile(self.context, (operator, kind, expression), None);
+                generation::expressions::unary::compile(
+                    self.context,
+                    (operator, kind, expression),
+                    None,
+                );
             }
 
             Ast::BinaryOp {
@@ -325,15 +328,15 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
             }
 
             Ast::Write { .. } => {
-                valuegen::compile(self.context, stmt, None);
+                value::compile(self.context, stmt, None);
             }
 
             Ast::Call { .. } => {
-                valuegen::compile(self.context, stmt, None);
+                value::compile(self.context, stmt, None);
             }
 
             Ast::AsmValue { .. } => {
-                valuegen::compile(self.context, stmt, None);
+                value::compile(self.context, stmt, None);
             }
 
             Ast::Builtin { builtin, .. } => {
@@ -364,7 +367,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         let main_type: FunctionType = llvm_context.i32_type().fn_type(&[], false);
         let main: FunctionValue = llvm_module.add_function("main", main_type, None);
 
-        let main_block: BasicBlock = llvm_context.append_basic_block(main, "");
+        let main_block: BasicBlock = block::append_block(llvm_context, main);
 
         llvm_builder.position_at_end(main_block);
 
@@ -418,10 +421,10 @@ pub fn compile_expr<'ctx>(
     let expr_type: &Type = expr.get_type_unwrapped();
 
     if expr_type.llvm_is_ptr_type() {
-        return ptrgen::compile(context, expr, cast_type);
+        return ptr::compile(context, expr, cast_type);
     }
 
-    valuegen::compile(context, expr, cast_type)
+    value::compile(context, expr, cast_type)
 }
 
 impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {

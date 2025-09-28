@@ -3,7 +3,7 @@ use crate::backends::classical::llvm::compiler::context::LLVMCodeGenContext;
 use crate::backends::classical::llvm::compiler::memory;
 use crate::backends::classical::llvm::compiler::memory::LLVMAllocationSite;
 use crate::backends::classical::llvm::compiler::typegen;
-use crate::backends::classical::llvm::compiler::valuegen;
+use crate::backends::classical::llvm::compiler::value;
 
 use crate::frontends::classical::types::ast::Ast;
 use crate::frontends::classical::typesystem::types::Type;
@@ -13,25 +13,28 @@ use inkwell::types::BasicTypeEnum;
 use inkwell::values::{BasicValueEnum, IntValue, PointerValue};
 use inkwell::{builder::Builder, context::Context};
 
+#[inline]
 pub fn compile<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
+
     items: &'ctx [Ast],
     kind: &Type,
     cast: Option<&Type>,
 ) -> BasicValueEnum<'ctx> {
     if let Some(anchor) = context.get_pointer_anchor() {
         if !anchor.is_triggered() {
-            self::compile_array_with_anchor(context, items, kind, cast, anchor)
+            self::compile_with_anchor(context, items, kind, cast, anchor)
         } else {
-            self::compile_array_without_anchor(context, items, kind, cast)
+            self::compile_without_anchor(context, items, kind, cast)
         }
     } else {
-        self::compile_array_without_anchor(context, items, kind, cast)
+        self::compile_without_anchor(context, items, kind, cast)
     }
 }
 
-fn compile_array_without_anchor<'ctx>(
+fn compile_without_anchor<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
+
     items: &'ctx [Ast],
     kind: &Type,
     cast: Option<&Type>,
@@ -54,7 +57,7 @@ fn compile_array_without_anchor<'ctx>(
 
     let items: Vec<BasicValueEnum> = items
         .iter()
-        .map(|item| valuegen::compile(context, item, Some(array_items_type)))
+        .map(|item| value::compile(context, item, Some(array_items_type)))
         .collect();
 
     for (idx, item) in items.iter().enumerate() {
@@ -92,8 +95,9 @@ fn compile_array_without_anchor<'ctx>(
     memory::load_anon(context, array_wrapper_ptr, base_array_type)
 }
 
-fn compile_array_with_anchor<'ctx>(
+fn compile_with_anchor<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
+
     items: &'ctx [Ast],
     kind: &Type,
     cast: Option<&Type>,
@@ -118,7 +122,7 @@ fn compile_array_with_anchor<'ctx>(
 
     let items: Vec<BasicValueEnum> = items
         .iter()
-        .map(|item| valuegen::compile(context, item, Some(array_items_type)))
+        .map(|item| value::compile(context, item, Some(array_items_type)))
         .collect();
 
     for (idx, item) in items.iter().enumerate() {

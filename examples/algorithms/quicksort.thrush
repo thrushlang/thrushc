@@ -14,7 +14,7 @@ fn print(fmt: ptr) s32 @public @ignore @extern("printf");
 //   arr: A mutable array of 7 unsigned 32-bit integers.
 //   i: The first index (signed 32-bit integer) for swapping.
 //   j: The second index (signed 32-bit integer) for swapping.
-fn swap(mut arr: mut array[u32; 7], i: s32, j: s32) void {
+fn swap(mut arr: ptr[array[u32; 7]], i: s32, j: s32) void {
     local temp: u32 = deref arr[0, i]; // Store the value at arr[i] in a temporary variable
     arr[0, i] = deref arr[0, j];  // Assign the value at arr[j] to arr[i]
     arr[0, j] = temp;                 // Assign the temporary value to arr[j]
@@ -29,7 +29,7 @@ fn swap(mut arr: mut array[u32; 7], i: s32, j: s32) void {
 // Returns: The index where the pivot is placed after partitioning.
 // Note: The loop iterates from low to high-1 to avoid comparing the pivot (arr[high]).
 // The ++j increment is performed at the end of the loop to match original syntax.
-fn partition(mut arr: mut array[u32; 7], low: s32, high: s32) s32 {
+fn partition(mut arr: ptr[array[u32; 7]], low: s32, high: s32) s32 {
     local pivot: u32 = deref arr[0, high]; // Choose the last element as the pivot
     local mut i: s32 = low - 1;                // Initialize i to low-1 for tracking smaller elements
     
@@ -49,7 +49,7 @@ fn partition(mut arr: mut array[u32; 7], low: s32, high: s32) s32 {
 //   arr: A mutable array of 7 unsigned 32-bit integers.
 //   low: The starting index of the subarray (inclusive, signed 32-bit integer).
 //   high: The ending index of the subarray (inclusive, signed 32-bit integer).
-fn quickSort(arr: mut array[u32; 7], low: s32, high: s32) void {
+fn quickSort(arr: ptr[array[u32; 7]], low: s32, high: s32) void {
     if (low < high) {                          // Proceed only if the subarray has more than one element
         local pi: s32 = partition(arr, low, high); // Partition the array and get the pivot index
         quickSort(arr, low, pi - 1);           // Recursively sort the left subarray
@@ -61,7 +61,7 @@ fn quickSort(arr: mut array[u32; 7], low: s32, high: s32) void {
 // Parameters:
 //   arr: A mutable array of 7 unsigned 32-bit integers.
 //   size: The number of elements to print (unsigned 32-bit integer).
-fn printArray(arr: mut array[u32; 7], size: u32) void {
+fn printArray(arr: ptr[array[u32; 7]], size: u32) void {
     for local mut idx: u32 = 0; idx < size; ++idx; { // Iterate over the array from index 0 to size-1
         local content_fmt: str = "%d ";              // Format string for printing an integer
         print(content_fmt as ptr, deref arr[0, idx]);   // Print the current element
@@ -73,15 +73,15 @@ fn printArray(arr: mut array[u32; 7], size: u32) void {
 
 fn main() u32 {
 
-    local unsorted_array: mut array[u32; 7] = fixed[64, 34, 25, 12, 22, 11, 90]; // Initialize array with 7 elements
+    local unsorted_array: array[u32; 7] = fixed[64, 34, 25, 12, 22, 11, 90]; // Initialize array with 7 elements
     local unsorted_array_fmt: str = "Original array: "; // String for the unsorted array
     local sorted_array_fmt: str = "Sorted array: ";     // String for the sorted array
 
     print(unsorted_array_fmt as ptr);      // Print "Original array: "
-    printArray(unsorted_array, 7);         // Print the unsorted array
-    quickSort(unsorted_array, 0, 6);       // Sort the array (indices 0 to 6)
+    printArray(unsorted_array as ptr[array[u32; 7]], 7);         // Print the unsorted array
+    quickSort(unsorted_array as ptr[array[u32; 7]], 0, 6);       // Sort the array (indices 0 to 6)
     print(sorted_array_fmt as ptr);        // Print "Sorted array: "
-    printArray(unsorted_array, 7);         // Print the sorted array
+    printArray(unsorted_array as ptr[array[u32; 7]], 7);         // Print the sorted array
 
     return 0;
 

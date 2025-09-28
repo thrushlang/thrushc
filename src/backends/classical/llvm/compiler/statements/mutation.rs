@@ -6,7 +6,7 @@ use crate::{
     backends::classical::llvm::compiler::{
         context::LLVMCodeGenContext,
         memory::{self},
-        ptrgen, valuegen,
+        ptr, value,
     },
     core::console::logging::{self, LoggingType},
     frontends::classical::{
@@ -23,8 +23,8 @@ pub fn compile<'ctx>(
         Ast::Mut { source, value, .. } => {
             let cast: &Type = source.get_type_unwrapped().get_type_with_depth(1);
 
-            let ptr: BasicValueEnum = ptrgen::compile(context, source, None);
-            let value: BasicValueEnum = valuegen::compile(context, value, Some(cast));
+            let ptr: BasicValueEnum = ptr::compile(context, source, None);
+            let value: BasicValueEnum = value::compile(context, value, Some(cast));
 
             memory::store_anon(context, ptr.into_pointer_value(), value);
 

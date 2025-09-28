@@ -1,6 +1,6 @@
 use crate::backends::classical::llvm::compiler::context::LLVMCodeGenContext;
 use crate::backends::classical::llvm::compiler::predicates;
-use crate::backends::classical::llvm::compiler::valuegen;
+use crate::backends::classical::llvm::compiler::value;
 
 use crate::core::console::logging;
 use crate::core::console::logging::LoggingType;
@@ -53,8 +53,8 @@ pub fn compile<'ctx>(
     if let (_, TokenType::EqEq | TokenType::BangEq, _) = binary {
         let operator: &TokenType = binary.1;
 
-        let left: BasicValueEnum = valuegen::compile(context, binary.0, None);
-        let right: BasicValueEnum = valuegen::compile(context, binary.2, None);
+        let left: BasicValueEnum = value::compile(context, binary.0, None);
+        let right: BasicValueEnum = value::compile(context, binary.2, None);
 
         return ptr_operation(context, left, right, operator);
     }

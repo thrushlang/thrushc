@@ -30,7 +30,7 @@ pub fn local_constant<'ctx>(
 
     let name: String = format!(
         "{}.const.{}",
-        obfuscation::generate_random_obfuscation_name(obfuscation::LONG_RANGE_OBFUSCATION),
+        obfuscation::generate_obfuscation_name(obfuscation::SHORT_RANGE_OBFUSCATION),
         name
     );
 
@@ -100,7 +100,7 @@ pub fn local_static<'ctx>(
 
     let name: String = format!(
         "{}.static.{}",
-        obfuscation::generate_random_obfuscation_name(obfuscation::LONG_RANGE_OBFUSCATION),
+        obfuscation::generate_obfuscation_name(obfuscation::SHORT_RANGE_OBFUSCATION),
         name
     );
 

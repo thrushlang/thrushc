@@ -1,4 +1,4 @@
-use crate::backends::classical::llvm::compiler::cast;
+use crate::backends::classical::llvm::compiler;
 use crate::backends::classical::llvm::compiler::constgen;
 use crate::backends::classical::llvm::compiler::context::LLVMCodeGenContext;
 use crate::backends::classical::llvm::compiler::predicates;
@@ -25,7 +25,8 @@ fn const_int_operation<'ctx>(
         let left: IntValue = lhs.into_int_value();
         let right: IntValue = rhs.into_int_value();
 
-        let (left, right) = cast::const_integer_together(left, right, signatures);
+        let (left, right) =
+            compiler::generation::cast::const_integer_together(left, right, signatures);
 
         return match operator {
             TokenType::Plus => left.const_nsw_add(right).into(),

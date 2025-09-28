@@ -1,7 +1,10 @@
-use crate::backends::classical::llvm::compiler::context::LLVMCodeGenContext;
-use crate::backends::classical::llvm::compiler::typegen;
+use crate::backends::classical::llvm::compiler::{memory, ptr, typegen, value};
+use crate::{
+    backends::classical::llvm::compiler::context::LLVMCodeGenContext,
+    frontends::classical::types::ast::Ast,
+};
 
-use crate::frontends::classical::typesystem::traits::DereferenceExtensions;
+use crate::frontends::classical::typesystem::traits::{DereferenceExtensions, LLVMTypeExtensions};
 use crate::frontends::classical::typesystem::types::Type;
 
 use crate::core::console::logging;
@@ -9,6 +12,8 @@ use crate::core::console::logging::LoggingType;
 
 use std::{cmp::Ordering, fmt::Display};
 
+use inkwell::types::{BasicTypeEnum, PointerType};
+use inkwell::values::{PointerValue, StructValue};
 use inkwell::{
     builder::Builder,
     context::Context,
@@ -278,6 +283,202 @@ pub fn try_cast<'ctx>(
     }
 
     None
+}
+
+#[inline]
+pub fn try_cast_const<'ctx>(
+    context: &LLVMCodeGenContext<'_, 'ctx>,
+
+    lhs: BasicValueEnum<'ctx>,
+    lhs_type: &Type,
+    rhs: &Type,
+) -> BasicValueEnum<'ctx> {
+    let llvm_context: &Context = context.get_llvm_context();
+
+    match (lhs, rhs) {
+        (lhs, rhs) if rhs.is_numeric() => {
+            if lhs_type.llvm_is_same_bit_size(context, rhs) {
+                self::const_numeric_bitcast_cast(context, lhs, rhs)
+            } else {
+                let cast: BasicTypeEnum = typegen::generate_type(llvm_context, rhs);
+                self::numeric_cast(lhs, cast, lhs_type.is_signed_integer_type())
+            }
+        }
+
+        (lhs, rhs) if rhs.is_ptr_type() => {
+            let cast: BasicTypeEnum = typegen::generate_type(llvm_context, rhs);
+            self::const_ptr_cast(lhs, cast)
+        }
+
+        _ => lhs,
+    }
+}
+
+/* ######################################################################
+
+    UNIVERSAL CAST (COMPILE CAST)
+
+########################################################################*/
+
+pub fn compile<'ctx>(
+    context: &mut LLVMCodeGenContext<'_, 'ctx>,
+
+    lhs: &'ctx Ast,
+    rhs: &Type,
+) -> BasicValueEnum<'ctx> {
+    let llvm_context: &Context = context.get_llvm_context();
+    let llvm_builder: &Builder = context.get_llvm_builder();
+
+    let lhs_type: &Type = lhs.get_type_unwrapped();
+
+    let abort_ptr = |_| self::codegen_abort(format!("Failed to cast '{}' to '{}'.", lhs_type, rhs));
+
+    if lhs_type.is_str_type() && rhs.is_ptr_type() {
+        let val: BasicValueEnum = ptr::compile(context, lhs, None);
+
+        let raw_str_ptr: PointerValue = val.into_pointer_value();
+        let str_loaded: BasicValueEnum = memory::load_anon(context, raw_str_ptr, lhs_type);
+        let str_structure: StructValue = str_loaded.into_struct_value();
+
+        match llvm_builder.build_extract_value(str_structure, 0, "") {
+            Ok(cstr) => {
+                let to = typegen::generate_type(llvm_context, rhs).into_pointer_type();
+
+                match llvm_builder.build_pointer_cast(cstr.into_pointer_value(), to, "") {
+                    Ok(casted_ptr) => return casted_ptr.into(),
+                    Err(_) => {
+                        self::codegen_abort(format!("Failed to cast string pointer in '{}'.", lhs))
+                    }
+                }
+            }
+
+            Err(_) => self::codegen_abort(format!("Failed to extract string value in '{}'.", lhs)),
+        }
+    }
+
+    if rhs.is_numeric() {
+        let value: BasicValueEnum = value::compile(context, lhs, None);
+        let target_type: BasicTypeEnum = typegen::generate_type(llvm_context, rhs);
+
+        if lhs_type.llvm_is_same_bit_size(context, rhs) {
+            return llvm_builder
+                .build_bit_cast(value, target_type, "")
+                .unwrap_or_else(|_| {
+                    self::codegen_abort(format!("Failed to cast '{}' to '{}'.", lhs_type, rhs))
+                });
+        }
+
+        if value.is_int_value() && target_type.is_int_type() {
+            return llvm_builder
+                .build_int_cast(value.into_int_value(), target_type.into_int_type(), "")
+                .unwrap_or_else(|_| {
+                    self::codegen_abort(format!("Failed to cast '{}' to '{}'.", lhs_type, rhs))
+                })
+                .into();
+        }
+
+        if value.is_float_value() && target_type.is_float_type() {
+            return llvm_builder
+                .build_float_cast(value.into_float_value(), target_type.into_float_type(), "")
+                .unwrap_or_else(|_| {
+                    self::codegen_abort(format!("Failed to cast '{}' to '{}'.", lhs_type, rhs))
+                })
+                .into();
+        }
+    }
+
+    if rhs.is_ptr_type() {
+        let value: BasicValueEnum = ptr::compile(context, lhs, None);
+
+        if value.is_pointer_value() {
+            let to: PointerType = typegen::generate_type(llvm_context, rhs).into_pointer_type();
+
+            return llvm_builder
+                .build_pointer_cast(value.into_pointer_value(), to, "")
+                .unwrap_or_else(abort_ptr)
+                .into();
+        };
+    }
+
+    self::codegen_abort(format!(
+        "Unsupported cast from '{}' to '{}'.",
+        lhs_type, lhs_type
+    ));
+}
+
+/* ######################################################################
+
+    NUMERIC BITCAST CAST
+
+########################################################################*/
+
+pub fn const_numeric_bitcast_cast<'ctx>(
+    context: &LLVMCodeGenContext<'_, 'ctx>,
+    value: BasicValueEnum<'ctx>,
+    cast: &Type,
+) -> BasicValueEnum<'ctx> {
+    let llvm_context: &Context = context.get_llvm_context();
+
+    let llvm_type: BasicTypeEnum = typegen::generate_type(llvm_context, cast);
+
+    if value.is_int_value() && cast.is_integer_type() {
+        let integer: IntValue = value.into_int_value();
+
+        return integer.const_bit_cast(llvm_type.into_int_type()).into();
+    }
+
+    if value.is_float_value() && cast.is_float_type() {
+        let float: FloatValue = value.into_float_value();
+
+        return float.const_cast(llvm_type.into_float_type()).into();
+    }
+
+    value
+}
+
+/* ######################################################################
+
+    POINTER BITCAST CAST
+
+########################################################################*/
+
+pub fn const_ptr_cast<'ctx>(
+    value: BasicValueEnum<'ctx>,
+    cast: BasicTypeEnum<'ctx>,
+) -> BasicValueEnum<'ctx> {
+    if value.is_pointer_value() {
+        let pointer: PointerValue = value.into_pointer_value();
+
+        return pointer.const_cast(cast.into_pointer_type()).into();
+    }
+
+    self::codegen_abort("Cannot cast constant pointer value to non-basic type.");
+}
+
+/* ######################################################################
+
+    NUMERIC CAST (FLOAT & INT)
+
+########################################################################*/
+
+pub fn numeric_cast<'ctx>(
+    value: BasicValueEnum<'ctx>,
+    cast: BasicTypeEnum<'ctx>,
+    is_signed: bool,
+) -> BasicValueEnum<'ctx> {
+    if value.is_int_value() && cast.is_int_type() {
+        let integer: IntValue = value.into_int_value();
+
+        return integer.const_cast(cast.into_int_type(), is_signed).into();
+    }
+
+    if value.is_float_value() && cast.is_float_type() {
+        let float: FloatValue = value.into_float_value();
+
+        return float.const_cast(cast.into_float_type()).into();
+    }
+
+    value
 }
 
 #[inline]

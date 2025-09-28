@@ -3,7 +3,7 @@ use std::fmt::Display;
 use inkwell::values::BasicValueEnum;
 
 use crate::{
-    backends::classical::llvm::compiler::{context::LLVMCodeGenContext, valuegen},
+    backends::classical::llvm::compiler::{context::LLVMCodeGenContext, value},
     core::console::logging::{self, LoggingType},
     frontends::classical::{types::ast::Ast, typesystem::types::Type},
 };
@@ -19,7 +19,7 @@ pub fn compile<'ctx>(
     kind: &'ctx Type,
     expr: &'ctx Ast,
 ) {
-    let value: BasicValueEnum = valuegen::compile(context, expr, Some(kind));
+    let value: BasicValueEnum = value::compile(context, expr, Some(kind));
 
     context.new_lli(name, kind, value);
 }

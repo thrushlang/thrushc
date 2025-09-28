@@ -1,4 +1,4 @@
-use crate::backends::classical::llvm::compiler::cast;
+use crate::backends::classical::llvm::compiler;
 use crate::backends::classical::llvm::compiler::constgen;
 use crate::backends::classical::llvm::compiler::context::LLVMCodeGenContext;
 use crate::backends::classical::llvm::compiler::predicates;
@@ -29,7 +29,8 @@ pub fn const_bool_operation<'ctx>(
         let left: IntValue = lhs.into_int_value();
         let right: IntValue = rhs.into_int_value();
 
-        let (left, right) = cast::const_integer_together(left, right, signatures);
+        let (left, right) =
+            compiler::generation::cast::const_integer_together(left, right, signatures);
 
         return match operator {
             op if op.is_logical_operator() => left
@@ -64,7 +65,7 @@ pub fn const_bool_operation<'ctx>(
         let left: FloatValue = lhs.into_float_value();
         let right: FloatValue = rhs.into_float_value();
 
-        let (left, right) = cast::const_float_together(left, right);
+        let (left, right) = compiler::generation::cast::const_float_together(left, right);
 
         return match operator {
             op if op.is_logical_operator() => left
