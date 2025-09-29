@@ -137,6 +137,16 @@ impl<'ctx> AttributeBuilder<'ctx> {
                             );
                         }
 
+                        LLVMAttribute::OptFuzzing(..) => {
+                            function.add_attribute(
+                                AttributeLoc::Function,
+                                self.llvm_context.create_enum_attribute(
+                                    Attribute::get_named_enum_kind_id("optforfuzzing"),
+                                    0,
+                                ),
+                            );
+                        }
+
                         LLVMAttribute::Convention(new_call_convention, ..) => {
                             *call_convention = *new_call_convention as u32;
                         }

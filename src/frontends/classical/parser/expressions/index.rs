@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use crate::{
     core::errors::{position::CompilationPosition, standard::ThrushCompilerIssue},
     frontends::classical::{
@@ -25,6 +27,7 @@ pub fn build_index<'parser>(
                 String::from("Expected a expression or reference."),
                 span,
                 CompilationPosition::Parser,
+                PathBuf::from(file!()),
                 line!(),
             ));
         }
@@ -42,6 +45,7 @@ pub fn build_index<'parser>(
                 String::from("Expected a expression or reference."),
                 span,
                 CompilationPosition::Parser,
+                PathBuf::from(file!()),
                 line!(),
             ));
         }

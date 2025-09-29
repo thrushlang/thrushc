@@ -6,7 +6,7 @@ use crate::frontends::classical::{
         ast::metadata::{
             fnparam::FunctionParameterMetadata, local::LocalMetadata, staticvar::StaticMetadata,
         },
-        parser::stmts::types::{CustomTypeFields, EnumFields, ThrushAttributes},
+        parser::stmts::types::{EnumFields, ThrushAttributes},
     },
     typesystem::{modificators::StructureTypeModificator, types::Type},
 };
@@ -45,7 +45,7 @@ pub type FoundSymbolId<'parser> = (
     Option<(&'parser str, usize)>,
 );
 
-pub type CustomTypeSymbol<'ctx> = (CustomTypeFields<'ctx>, ThrushAttributes<'ctx>);
+pub type CustomTypeSymbol<'ctx> = (Type, ThrushAttributes<'ctx>);
 pub type EnumSymbol<'ctx> = (EnumFields<'ctx>, ThrushAttributes<'ctx>);
 pub type StaticSymbol<'parser> = (Type, StaticMetadata, ThrushAttributes<'parser>);
 pub type ConstantSymbol<'parser> = (Type, ThrushAttributes<'parser>);

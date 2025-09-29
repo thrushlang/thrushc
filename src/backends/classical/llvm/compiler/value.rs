@@ -1,8 +1,11 @@
 #![allow(clippy::upper_case_acronyms)]
 
+use std::path::PathBuf;
+
 use super::context::LLVMCodeGenContext;
 
 use crate::backends::classical::llvm::compiler;
+use crate::backends::classical::llvm::compiler::abort;
 use crate::backends::classical::llvm::compiler::binaryop;
 use crate::backends::classical::llvm::compiler::builtins;
 use crate::backends::classical::llvm::compiler::generation::{float, int};
@@ -13,11 +16,8 @@ use crate::frontends::classical::types::ast::Ast;
 use crate::frontends::classical::types::ast::traits::AstExtensions;
 use crate::frontends::classical::typesystem::types::Type;
 
-use crate::core::console::logging::{self, LoggingType};
-
 use inkwell::AddressSpace;
 use inkwell::values::{BasicValueEnum, PointerValue};
-use std::fmt::Display;
 
 pub fn compile<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
@@ -94,24 +94,30 @@ pub fn compile<'ctx>(
             operator,
             right,
             kind: binaryop_type,
+            span,
             ..
         } => match binaryop_type {
             t if t.is_float_type() => {
-                binaryop::float::compile(context, (left, operator, right), cast)
+                binaryop::float::compile(context, (left, operator, right, *span), cast)
             }
             t if t.is_integer_type() => {
-                binaryop::integer::compile(context, (left, operator, right), cast)
+                binaryop::integer::compile(context, (left, operator, right, *span), cast)
             }
             t if t.is_bool_type() => {
-                binaryop::boolean::compile(context, (left, operator, right), cast)
+                binaryop::boolean::compile(context, (left, operator, right, *span), cast)
             }
-            t if t.is_ptr_type() => binaryop::pointer::compile(context, (left, operator, right)),
+            t if t.is_ptr_type() => {
+                binaryop::pointer::compile(context, (left, operator, right, *span))
+            }
 
             _ => {
-                self::codegen_abort(format!(
-                    "Invalid type '{}' for binary operation.",
-                    binaryop_type
-                ));
+                abort::abort_codegen(
+                    context,
+                    "Can't be compiled!.",
+                    *span,
+                    PathBuf::from(file!()),
+                    line!(),
+                );
             }
         },
 
@@ -207,15 +213,13 @@ pub fn compile<'ctx>(
 
         // Fallback, Unknown expressions or statements
         what => {
-            self::codegen_abort(format!(
-                "Failed to compile. Unknown expression or statement '{:?}'.",
-                what
-            ));
+            abort::abort_codegen(
+                context,
+                "Unknown expression or statement!",
+                what.get_span(),
+                PathBuf::from(file!()),
+                line!(),
+            );
         }
     }
-}
-
-#[inline]
-fn codegen_abort<T: Display>(message: T) -> ! {
-    logging::print_backend_bug(LoggingType::BackendBug, &format!("{}", message));
 }

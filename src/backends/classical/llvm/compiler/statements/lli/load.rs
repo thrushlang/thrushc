@@ -15,11 +15,11 @@ pub fn compile<'ctx>(
     cast: Option<&Type>,
 ) -> BasicValueEnum<'ctx> {
     let value: BasicValueEnum = match source {
-        (Some((name, _)), _) => {
+        (Some((name, _)), ..) => {
             let ptr: PointerValue = context.get_table().get_symbol(name).get_ptr();
             memory::load_anon(context, ptr, kind)
         }
-        (_, Some(expr)) => {
+        (_, Some(expr), ..) => {
             let ptr: PointerValue = ptr::compile(context, expr, None).into_pointer_value();
             memory::load_anon(context, ptr, kind)
         }

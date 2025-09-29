@@ -1,8 +1,10 @@
-use std::{fmt::Display, sync::Arc};
+use std::path::PathBuf;
+use std::sync::Arc;
 
 use inkwell::{context::Context, types::BasicTypeEnum, values::BasicValueEnum};
 
 use crate::backends::classical::llvm::compiler;
+use crate::backends::classical::llvm::compiler::abort;
 use crate::backends::classical::llvm::compiler::binaryop;
 use crate::backends::classical::llvm::compiler::constgen;
 use crate::backends::classical::llvm::compiler::context::LLVMCodeGenContext;
@@ -14,9 +16,6 @@ use crate::backends::classical::llvm::compiler::typegen;
 use crate::frontends::classical::types::ast::Ast;
 use crate::frontends::classical::typesystem::traits::TypeStructExtensions;
 use crate::frontends::classical::typesystem::types::Type;
-
-use crate::core::console::logging;
-use crate::core::console::logging::LoggingType;
 
 pub fn compile<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
@@ -115,25 +114,44 @@ pub fn compile<'ctx>(
             operator,
             right,
             kind: binaryop_type,
+            span,
             ..
         } => {
             if binaryop_type.is_integer_type() {
-                return binaryop::integer::compile_const(context, (left, operator, right), cast);
+                return binaryop::integer::compile_const(
+                    context,
+                    (left, operator, right, *span),
+                    cast,
+                );
             }
 
             if binaryop_type.is_bool_type() {
-                return binaryop::boolean::compile_const(context, (left, operator, right), cast);
+                return binaryop::boolean::compile_const(
+                    context,
+                    (left, operator, right, *span),
+                    cast,
+                );
             }
 
             if binaryop_type.is_float_type() {
-                return binaryop::float::compile_const(context, (left, operator, right), cast);
+                return binaryop::float::compile_const(
+                    context,
+                    (left, operator, right, *span),
+                    cast,
+                );
             }
 
             if binaryop_type.is_ptr_type() {
-                return binaryop::pointer::compile_const(context, (left, operator, right));
+                return binaryop::pointer::compile_const(context, (left, operator, right, *span));
             }
 
-            self::codegen_abort("Cannot perform constant binary expression.");
+            abort::abort_codegen(
+                context,
+                "Can't be compiled!.",
+                *span,
+                PathBuf::from(file!()),
+                line!(),
+            );
         }
 
         // Unary operation dispatch
@@ -145,13 +163,12 @@ pub fn compile<'ctx>(
         } => unary::compile_const(context, (operator, kind, expression), cast),
 
         // Fallback for unsupported AST nodes
-        _ => {
-            self::codegen_abort("Cannot perform constant expression.");
-        }
+        what => abort::abort_codegen(
+            context,
+            "Unknown expression or statement!",
+            what.get_span(),
+            PathBuf::from(file!()),
+            line!(),
+        ),
     }
-}
-
-#[inline]
-fn codegen_abort<T: Display>(message: T) -> ! {
-    logging::print_backend_bug(LoggingType::BackendBug, &format!("{}", message));
 }

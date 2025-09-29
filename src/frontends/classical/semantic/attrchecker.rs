@@ -50,7 +50,7 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
         if !self.errors.is_empty() {
             self.errors.iter().for_each(|error| {
                 self.dignostician
-                    .build_diagnostic(error, LoggingType::Error);
+                    .dispatch_diagnostic(error, LoggingType::Error);
             });
 
             return true;

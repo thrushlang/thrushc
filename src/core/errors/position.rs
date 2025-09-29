@@ -9,6 +9,8 @@ pub enum CompilationPosition {
     TypeChecker,
     Analyzer,
     Linter,
+
+    LLVMBackend,
 }
 
 impl Display for CompilationPosition {
@@ -19,6 +21,8 @@ impl Display for CompilationPosition {
             Self::TypeChecker => write!(f, "{}", "Type Checker".bright_yellow().bold()),
             Self::Analyzer => write!(f, "{}", "Analyzer".bright_blue().bold()),
             Self::Linter => write!(f, "{}", "Linter".bright_magenta().bold()),
+
+            Self::LLVMBackend => write!(f, "{}", "LLVMBackend".bright_red().bold()),
         }
     }
 }

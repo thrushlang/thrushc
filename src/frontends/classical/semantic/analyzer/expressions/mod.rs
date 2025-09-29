@@ -5,11 +5,13 @@ pub mod deref;
 mod index;
 mod property;
 
+use std::path::PathBuf;
+
 use crate::{
     core::errors::{position::CompilationPosition, standard::ThrushCompilerIssue},
     frontends::classical::{
         lexer::span::Span,
-        semantic::{analyzer::Analyzer, analyzer::expressions},
+        semantic::analyzer::{Analyzer, expressions},
         types::{ast::Ast, parser::stmts::types::Constructor},
     },
 };
@@ -94,6 +96,7 @@ pub fn validate<'analyzer>(
                 "Expression could not be caught for processing.".into(),
                 span,
                 CompilationPosition::Analyzer,
+                PathBuf::from(file!()),
                 line!(),
             ));
 

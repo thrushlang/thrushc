@@ -1,4 +1,4 @@
-use std::fmt::Display;
+use std::{fmt::Display, path::PathBuf};
 
 use crate::{
     core::errors::{position::CompilationPosition, standard::ThrushCompilerIssue},
@@ -189,6 +189,7 @@ impl<'parser> FoundSymbolEither<'parser> for FoundSymbolId<'parser> {
             String::from("Expected struct but found something else."),
             span,
             CompilationPosition::Parser,
+            PathBuf::from(file!()),
             line!(),
         ))
     }
@@ -203,6 +204,7 @@ impl<'parser> FoundSymbolEither<'parser> for FoundSymbolId<'parser> {
             String::from("Expected function but found something else."),
             span,
             CompilationPosition::Parser,
+            PathBuf::from(file!()),
             line!(),
         ))
     }
@@ -217,6 +219,7 @@ impl<'parser> FoundSymbolEither<'parser> for FoundSymbolId<'parser> {
             String::from("Expected enum but found something else."),
             span,
             CompilationPosition::Parser,
+            PathBuf::from(file!()),
             line!(),
         ))
     }
@@ -231,6 +234,7 @@ impl<'parser> FoundSymbolEither<'parser> for FoundSymbolId<'parser> {
             String::from("Expected static but found something else."),
             span,
             CompilationPosition::Parser,
+            PathBuf::from(file!()),
             line!(),
         ))
     }
@@ -245,6 +249,7 @@ impl<'parser> FoundSymbolEither<'parser> for FoundSymbolId<'parser> {
             String::from("Expected constant but found something else."),
             span,
             CompilationPosition::Parser,
+            PathBuf::from(file!()),
             line!(),
         ))
     }
@@ -259,6 +264,7 @@ impl<'parser> FoundSymbolEither<'parser> for FoundSymbolId<'parser> {
             String::from("Expected custom type but found something else."),
             span,
             CompilationPosition::Parser,
+            PathBuf::from(file!()),
             line!(),
         ))
     }
@@ -273,6 +279,7 @@ impl<'parser> FoundSymbolEither<'parser> for FoundSymbolId<'parser> {
             String::from("Expected parameter but found something else."),
             span,
             CompilationPosition::Parser,
+            PathBuf::from(file!()),
             line!(),
         ))
     }
@@ -287,6 +294,7 @@ impl<'parser> FoundSymbolEither<'parser> for FoundSymbolId<'parser> {
             String::from("Expected assembler function but found something else."),
             span,
             CompilationPosition::Parser,
+            PathBuf::from(file!()),
             line!(),
         ))
     }
@@ -301,6 +309,7 @@ impl<'parser> FoundSymbolEither<'parser> for FoundSymbolId<'parser> {
             String::from("Expected LLI but found something else."),
             span,
             CompilationPosition::Parser,
+            PathBuf::from(file!()),
             line!(),
         ))
     }
@@ -315,6 +324,7 @@ impl<'parser> FoundSymbolEither<'parser> for FoundSymbolId<'parser> {
             String::from("Expected local but found something else."),
             span,
             CompilationPosition::Parser,
+            PathBuf::from(file!()),
             line!(),
         ))
     }

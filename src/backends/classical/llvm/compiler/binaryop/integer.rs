@@ -1,4 +1,7 @@
+use std::path::PathBuf;
+
 use crate::backends::classical::llvm::compiler;
+use crate::backends::classical::llvm::compiler::abort;
 use crate::backends::classical::llvm::compiler::constgen;
 use crate::backends::classical::llvm::compiler::context::LLVMCodeGenContext;
 use crate::backends::classical::llvm::compiler::predicates;
@@ -7,6 +10,7 @@ use crate::backends::classical::llvm::compiler::value;
 use crate::core::console::logging;
 use crate::core::console::logging::LoggingType;
 
+use crate::frontends::classical::lexer::span::Span;
 use crate::frontends::classical::lexer::tokentype::TokenType;
 use crate::frontends::classical::types::parser::repr::BinaryOperation;
 use crate::frontends::classical::typesystem::types::Type;
@@ -126,6 +130,8 @@ pub fn compile<'ctx>(
     binary: BinaryOperation<'ctx>,
     cast: Option<&Type>,
 ) -> BasicValueEnum<'ctx> {
+    let span: Span = binary.3;
+
     if let (
         _,
         TokenType::Plus
@@ -144,7 +150,7 @@ pub fn compile<'ctx>(
         | TokenType::Or
         | TokenType::Xor
         | TokenType::Bor,
-        _,
+        ..,
     ) = binary
     {
         let operator: &TokenType = binary.1;
@@ -164,10 +170,13 @@ pub fn compile<'ctx>(
         );
     }
 
-    self::codegen_abort(format!(
-        "Cannot perform integer binary operation '{} {} {}'.",
-        binary.0, binary.1, binary.2
-    ));
+    abort::abort_codegen(
+        context,
+        "Failed to compile integer binary operation!",
+        span,
+        PathBuf::from(file!()),
+        line!(),
+    );
 }
 
 fn const_int_operation<'ctx>(
@@ -252,6 +261,8 @@ pub fn compile_const<'ctx>(
     binary: BinaryOperation<'ctx>,
     cast: &Type,
 ) -> BasicValueEnum<'ctx> {
+    let span: Span = binary.3;
+
     if let (
         _,
         TokenType::Plus
@@ -270,7 +281,7 @@ pub fn compile_const<'ctx>(
         | TokenType::Or
         | TokenType::Xor
         | TokenType::Bor,
-        _,
+        ..,
     ) = binary
     {
         let operator: &TokenType = binary.1;
@@ -289,10 +300,13 @@ pub fn compile_const<'ctx>(
         );
     }
 
-    self::codegen_abort(format!(
-        "Cannot perform constant integer binary operation '{} {} {}'.",
-        binary.0, binary.1, binary.2
-    ));
+    abort::abort_codegen(
+        context,
+        "Failed to compile constant integer binary operation!",
+        span,
+        PathBuf::from(file!()),
+        line!(),
+    );
 }
 
 #[inline]

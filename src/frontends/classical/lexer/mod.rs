@@ -98,7 +98,7 @@ impl Lexer {
         if !self.errors.is_empty() {
             self.errors.iter().for_each(|error| {
                 self.diagnostician
-                    .build_diagnostic(error, LoggingType::Error);
+                    .dispatch_diagnostic(error, LoggingType::Error);
             });
 
             process::exit(1);

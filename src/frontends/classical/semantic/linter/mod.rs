@@ -61,12 +61,13 @@ impl<'linter> Linter<'linter> {
         self.generate_warnings();
 
         self.bugs.iter().for_each(|bug: &ThrushCompilerIssue| {
-            self.diagnostician.build_diagnostic(bug, LoggingType::Bug);
+            self.diagnostician
+                .dispatch_diagnostic(bug, LoggingType::Bug);
         });
 
         self.warnings.iter().for_each(|warn: &ThrushCompilerIssue| {
             self.diagnostician
-                .build_diagnostic(warn, LoggingType::Warning);
+                .dispatch_diagnostic(warn, LoggingType::Warning);
         });
     }
 

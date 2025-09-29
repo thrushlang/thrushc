@@ -5,6 +5,8 @@ pub mod deref;
 mod index;
 mod property;
 
+use std::path::PathBuf;
+
 use crate::{
     core::errors::{position::CompilationPosition, standard::ThrushCompilerIssue},
     frontends::classical::{
@@ -29,13 +31,13 @@ pub fn validate<'type_checker>(
             span,
             ..
         } => {
-            if let Err(mismatch_type_error) = validations::binary::validate_binary(
+            if let Err(error) = validations::binary::validate_binary(
                 operator,
                 left.get_value_type()?,
                 right.get_value_type()?,
                 *span,
             ) {
-                typechecker.add_error(mismatch_type_error);
+                typechecker.add_error(error);
             }
 
             typechecker.analyze_stmt(left)?;
@@ -200,6 +202,7 @@ pub fn validate<'type_checker>(
                     "Function could not be found for processing.".into(),
                     *span,
                     CompilationPosition::TypeChecker,
+                    PathBuf::from(file!()),
                     line!(),
                 ));
             }
@@ -228,6 +231,7 @@ pub fn validate<'type_checker>(
                 "Expression could not be caught for processing.".into(),
                 span,
                 CompilationPosition::TypeChecker,
+                PathBuf::from(file!()),
                 line!(),
             ));
 

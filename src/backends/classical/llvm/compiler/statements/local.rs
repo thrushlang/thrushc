@@ -3,6 +3,7 @@ use crate::{
         anchors::PointerAnchor, codegen, context::LLVMCodeGenContext, memory::SymbolAllocated,
     },
     frontends::classical::{
+        lexer::span::Span,
         types::{
             ast::{Ast, metadata::local::LocalMetadata},
             parser::{repr::Local, stmts::types::ThrushAttributes},
@@ -23,7 +24,9 @@ pub fn compile<'ctx>(context: &mut LLVMCodeGenContext<'_, 'ctx>, local: Local<'c
     let attributes: &ThrushAttributes = local.4;
     let metadata: LocalMetadata = local.5;
 
-    context.new_local(name, ascii_name, kind, attributes, metadata);
+    let span: Span = local.6;
+
+    context.new_local(name, ascii_name, kind, attributes, metadata, span);
 
     let symbol: SymbolAllocated = context.get_table().get_symbol(name);
 

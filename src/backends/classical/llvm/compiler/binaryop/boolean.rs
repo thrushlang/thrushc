@@ -1,4 +1,5 @@
 use crate::backends::classical::llvm::compiler;
+use crate::backends::classical::llvm::compiler::abort;
 use crate::backends::classical::llvm::compiler::constgen;
 use crate::backends::classical::llvm::compiler::context::LLVMCodeGenContext;
 use crate::backends::classical::llvm::compiler::predicates;
@@ -7,6 +8,7 @@ use crate::backends::classical::llvm::compiler::value;
 use crate::core::console::logging;
 use crate::core::console::logging::LoggingType;
 
+use crate::frontends::classical::lexer::span::Span;
 use crate::frontends::classical::lexer::tokentype::TokenType;
 use crate::frontends::classical::types::parser::repr::BinaryOperation;
 use crate::frontends::classical::typesystem::types::Type;
@@ -17,6 +19,7 @@ use inkwell::{
 };
 
 use std::fmt::Display;
+use std::path::PathBuf;
 
 pub fn bool_operation<'ctx>(
     context: &LLVMCodeGenContext<'_, 'ctx>,
@@ -107,6 +110,8 @@ pub fn compile<'ctx>(
     binary: BinaryOperation<'ctx>,
     cast: Option<&Type>,
 ) -> BasicValueEnum<'ctx> {
+    let span: Span = binary.3;
+
     if let (
         _,
         TokenType::BangEq
@@ -117,7 +122,7 @@ pub fn compile<'ctx>(
         | TokenType::GreaterEq
         | TokenType::And
         | TokenType::Or,
-        _,
+        ..,
     ) = binary
     {
         let operator: &TokenType = binary.1;
@@ -137,10 +142,13 @@ pub fn compile<'ctx>(
         );
     }
 
-    self::codegen_abort(format!(
-        "Cannot perform process a boolean binary operation '{} {} {}'.",
-        binary.0, binary.1, binary.2
-    ));
+    abort::abort_codegen(
+        context,
+        "Failed to compile boolean binary operation!",
+        span,
+        PathBuf::from(file!()),
+        line!(),
+    );
 }
 
 pub fn const_bool_operation<'ctx>(
@@ -217,6 +225,8 @@ pub fn compile_const<'ctx>(
     binary: BinaryOperation<'ctx>,
     cast: &Type,
 ) -> BasicValueEnum<'ctx> {
+    let span: Span = binary.3;
+
     if let (
         _,
         TokenType::BangEq
@@ -227,7 +237,7 @@ pub fn compile_const<'ctx>(
         | TokenType::GreaterEq
         | TokenType::And
         | TokenType::Or,
-        _,
+        ..,
     ) = binary
     {
         let operator: &TokenType = binary.1;
@@ -246,10 +256,13 @@ pub fn compile_const<'ctx>(
         );
     }
 
-    self::codegen_abort(format!(
-        "Cannot perform process a constant boolean binary operation '{} {} {}'.",
-        binary.0, binary.1, binary.2
-    ));
+    abort::abort_codegen(
+        context,
+        "Failed to compile constant boolean binary operation!",
+        span,
+        PathBuf::from(file!()),
+        line!(),
+    );
 }
 
 #[inline]

@@ -60,6 +60,7 @@ pub enum LLVMAttributeComparator {
     WeakStack,
     PreciseFloats,
     NoUnwind,
+    OptFuzzing,
 
     Stack,
     Heap,

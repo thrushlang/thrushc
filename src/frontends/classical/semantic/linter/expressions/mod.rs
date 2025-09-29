@@ -1,6 +1,8 @@
 pub mod cast;
 pub mod deref;
 
+use std::path::PathBuf;
+
 use crate::{
     core::errors::{position::CompilationPosition, standard::ThrushCompilerIssue},
     frontends::classical::{
@@ -90,6 +92,7 @@ pub fn analyze<'linter>(linter: &mut Linter<'linter>, expr: &'linter Ast) {
                 format!("Could not get named struct with name '{}'.", name),
                 *span,
                 CompilationPosition::Linter,
+                PathBuf::from(file!()),
                 line!(),
             ));
         }
@@ -121,6 +124,7 @@ pub fn analyze<'linter>(linter: &mut Linter<'linter>, expr: &'linter Ast) {
                 format!("Could not get named function '{}'.", name),
                 *span,
                 CompilationPosition::Linter,
+                PathBuf::from(file!()),
                 line!(),
             ));
         }
@@ -162,6 +166,7 @@ pub fn analyze<'linter>(linter: &mut Linter<'linter>, expr: &'linter Ast) {
                 format!("Could not get correct name of the enum field '{}'.", name),
                 *span,
                 CompilationPosition::Linter,
+                PathBuf::from(file!()),
                 line!(),
             ));
         }
@@ -188,6 +193,7 @@ pub fn analyze<'linter>(linter: &mut Linter<'linter>, expr: &'linter Ast) {
                 "Expression could not be caught for processing.".into(),
                 span,
                 CompilationPosition::Linter,
+                PathBuf::from(file!()),
                 line!(),
             ));
         }

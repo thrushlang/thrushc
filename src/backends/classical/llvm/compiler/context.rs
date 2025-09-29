@@ -1,3 +1,4 @@
+use crate::frontends::classical::lexer::span::Span;
 use crate::logging::{self, LoggingType};
 
 use crate::backends::classical::types::repr::LLVMFunction;
@@ -98,8 +99,8 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
         if let Some(last_block) = self.table.get_mut_local_constants().last_mut() {
             last_block.insert(name, constant);
         } else {
-            logging::print_backend_bug(
-                LoggingType::BackendBug,
+            logging::print_backend_panic(
+                LoggingType::BackendPanic,
                 "The last frame of symbols couldn't be obtained.",
             )
         }
@@ -157,8 +158,8 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
         if let Some(last_block) = self.table.get_mut_local_statics().last_mut() {
             last_block.insert(name, constant);
         } else {
-            logging::print_backend_bug(
-                LoggingType::BackendBug,
+            logging::print_backend_panic(
+                LoggingType::BackendPanic,
                 "The last frame of symbols couldn't be obtained.",
             )
         }
@@ -201,8 +202,10 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
         attributes: &'ctx ThrushAttributes<'ctx>,
 
         metadata: LocalMetadata,
+
+        span: Span,
     ) {
-        let ptr: PointerValue = alloc::alloc(self, ascii_name, kind, attributes);
+        let ptr: PointerValue = alloc::alloc(self, ascii_name, kind, attributes, span);
 
         let local: SymbolAllocated =
             SymbolAllocated::new_local(ptr, kind, metadata.get_llvm_metadata());
@@ -210,8 +213,8 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
         if let Some(last_block) = self.table.get_mut_locals().last_mut() {
             last_block.insert(name, local);
         } else {
-            logging::print_backend_bug(
-                LoggingType::BackendBug,
+            logging::print_backend_panic(
+                LoggingType::BackendPanic,
                 "The last frame of symbols couldn't be obtained.",
             );
         }
@@ -225,8 +228,8 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
         if let Some(last_block) = self.table.get_mut_locals().last_mut() {
             last_block.insert(name, lli);
         } else {
-            logging::print_backend_bug(
-                LoggingType::BackendBug,
+            logging::print_backend_panic(
+                LoggingType::BackendPanic,
                 "The last frame of symbols couldn't be obtained.",
             );
         }
@@ -343,6 +346,11 @@ impl<'a, 'ctx> LLVMCodeGenContext<'a, 'ctx> {
     pub fn get_diagnostician(&self) -> &Diagnostician {
         &self.diagnostician
     }
+
+    #[inline]
+    pub fn get_mut_diagnostician(&mut self) -> &mut Diagnostician {
+        &mut self.diagnostician
+    }
 }
 
 impl<'a, 'ctx> LLVMCodeGenContext<'a, 'ctx> {
@@ -358,5 +366,5 @@ impl<'a, 'ctx> LLVMCodeGenContext<'a, 'ctx> {
 }
 
 fn codegen_abort<T: Display>(message: T) -> ! {
-    logging::print_backend_bug(LoggingType::BackendBug, &format!("{}", message));
+    logging::print_backend_panic(LoggingType::BackendPanic, &format!("{}", message));
 }

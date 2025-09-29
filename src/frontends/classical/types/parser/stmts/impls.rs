@@ -12,11 +12,8 @@ use crate::frontends::classical::{
 };
 
 use super::{
-    traits::{
-        ConstructorExtensions, CustomTypeFieldsExtensions, StructFieldsExtensions,
-        ThrushAttributesExtensions,
-    },
-    types::{Constructor, CustomTypeFields, StructFields, ThrushAttributes},
+    traits::{ConstructorExtensions, StructFieldsExtensions, ThrushAttributesExtensions},
+    types::{Constructor, StructFields, ThrushAttributes},
 };
 
 impl ThrushAttributesExtensions for ThrushAttributes<'_> {
@@ -97,12 +94,6 @@ impl ConstructorExtensions for Constructor<'_> {
     fn get_type(&self, name: &str, modificator: StructureTypeModificator) -> Type {
         let types: Vec<Type> = self.iter().map(|field| field.2.clone()).collect();
         Type::create_structure_type(name.to_string(), types.as_slice(), modificator)
-    }
-}
-
-impl CustomTypeFieldsExtensions for CustomTypeFields<'_> {
-    fn get_type(&self) -> Type {
-        Type::create_structure_type(String::new(), self, StructureTypeModificator::default())
     }
 }
 

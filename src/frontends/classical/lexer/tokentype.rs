@@ -65,6 +65,7 @@ pub enum TokenType {
     AsmSyntax,
     AsmThrow,
     AsmSideEffects,
+    OptFuzzing,
 
     // --- Special ---
     Unreachable,

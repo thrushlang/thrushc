@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use crate::{
     core::errors::{position::CompilationPosition, standard::ThrushCompilerIssue},
     frontends::classical::{
@@ -142,6 +144,7 @@ impl<'parser> SymbolsTable<'parser> {
             String::from("The final scope was not obtained."),
             span,
             CompilationPosition::Parser,
+            PathBuf::from(file!()),
             line!(),
         ));
     }
@@ -172,6 +175,7 @@ impl<'parser> SymbolsTable<'parser> {
             String::from("The last scope could not be obtained."),
             span,
             CompilationPosition::Parser,
+            PathBuf::from(file!()),
             line!(),
         ));
     }
@@ -222,6 +226,7 @@ impl<'parser> SymbolsTable<'parser> {
             String::from("The last scope could not be obtained."),
             span,
             CompilationPosition::Parser,
+            PathBuf::from(file!()),
             line!(),
         ));
     }
@@ -272,6 +277,7 @@ impl<'parser> SymbolsTable<'parser> {
             String::from("The last scope could not be obtained."),
             span,
             CompilationPosition::Parser,
+            PathBuf::from(file!()),
             line!(),
         ));
     }
@@ -730,6 +736,7 @@ impl<'parser> SymbolsTable<'parser> {
                 String::from("The last scope could not be obtained."),
                 span,
                 CompilationPosition::Parser,
+                PathBuf::from(file!()),
                 line!(),
             ));
         }
@@ -765,6 +772,7 @@ impl<'parser> SymbolsTable<'parser> {
                 String::from("The last scope could not be obtained."),
                 span,
                 CompilationPosition::Parser,
+                PathBuf::from(file!()),
                 line!(),
             ));
         }

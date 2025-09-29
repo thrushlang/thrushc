@@ -27,10 +27,6 @@ pub trait EnumExtensions<'parser> {
     fn get_fields(&self) -> EnumFields<'parser>;
 }
 
-pub trait CustomTypeFieldsExtensions {
-    fn get_type(&self) -> Type;
-}
-
 pub trait FoundSymbolExtension {
     fn is_custom_type(&self) -> bool;
     fn is_static(&self) -> bool;

@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use crate::{
     core::errors::{position::CompilationPosition, standard::ThrushCompilerIssue},
     frontends::classical::{
@@ -33,6 +35,7 @@ pub fn analyze<'linter>(linter: &mut Linter<'linter>, node: &'linter Ast) {
                 "Expression could not be caught for processing.".into(),
                 span,
                 CompilationPosition::Linter,
+                PathBuf::from(file!()),
                 line!(),
             ));
         }

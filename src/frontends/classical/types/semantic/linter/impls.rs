@@ -27,6 +27,7 @@ impl LLVMAttributeComparatorExtensions for LLVMAttribute<'_> {
             LLVMAttribute::AsmSideEffects(..) => LLVMAttributeComparator::AsmSideEffects,
             LLVMAttribute::Packed(..) => LLVMAttributeComparator::Packed,
             LLVMAttribute::NoUnwind(..) => LLVMAttributeComparator::NoUnwind,
+            LLVMAttribute::OptFuzzing(..) => LLVMAttributeComparator::OptFuzzing,
         }
     }
 }

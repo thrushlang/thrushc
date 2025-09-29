@@ -1,3 +1,4 @@
+use crate::backends::classical::llvm::compiler::abort;
 use crate::backends::classical::llvm::compiler::context::LLVMCodeGenContext;
 use crate::backends::classical::llvm::compiler::predicates;
 use crate::backends::classical::llvm::compiler::value;
@@ -5,10 +6,12 @@ use crate::backends::classical::llvm::compiler::value;
 use crate::core::console::logging;
 use crate::core::console::logging::LoggingType;
 
+use crate::frontends::classical::lexer::span::Span;
 use crate::frontends::classical::lexer::tokentype::TokenType;
 use crate::frontends::classical::types::parser::repr::BinaryOperation;
 
 use std::fmt::Display;
+use std::path::PathBuf;
 
 use inkwell::context::Context;
 use inkwell::{
@@ -64,7 +67,9 @@ pub fn compile<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     binary: BinaryOperation<'ctx>,
 ) -> BasicValueEnum<'ctx> {
-    if let (_, TokenType::EqEq | TokenType::BangEq | TokenType::Xor | TokenType::Bor, _) = binary {
+    let span: Span = binary.3;
+
+    if let (_, TokenType::EqEq | TokenType::BangEq | TokenType::Xor | TokenType::Bor, ..) = binary {
         let operator: &TokenType = binary.1;
 
         let left: BasicValueEnum = value::compile(context, binary.0, None);
@@ -73,10 +78,13 @@ pub fn compile<'ctx>(
         return ptr_operation(context, left, right, operator);
     }
 
-    self::codegen_abort(format!(
-        "Cannot perform a pointer binary operation '{} {} {}'.",
-        binary.0, binary.1, binary.2
-    ));
+    abort::abort_codegen(
+        context,
+        "Failed to compile pointer binary operation!",
+        span,
+        PathBuf::from(file!()),
+        line!(),
+    );
 }
 
 pub fn const_ptr_operation<'ctx>(
@@ -121,7 +129,9 @@ pub fn compile_const<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     binary: BinaryOperation<'ctx>,
 ) -> BasicValueEnum<'ctx> {
-    if let (_, TokenType::EqEq | TokenType::BangEq, _) = binary {
+    let span: Span = binary.3;
+
+    if let (_, TokenType::EqEq | TokenType::BangEq, ..) = binary {
         let operator: &TokenType = binary.1;
 
         let left: BasicValueEnum = value::compile(context, binary.0, None);
@@ -130,10 +140,13 @@ pub fn compile_const<'ctx>(
         return const_ptr_operation(context, left, right, operator);
     }
 
-    self::codegen_abort(format!(
-        "Cannot perform a constant pointer binary operation '{} {} {}'.",
-        binary.0, binary.1, binary.2
-    ));
+    abort::abort_codegen(
+        context,
+        "Failed to compile constant pointer binary operation!",
+        span,
+        PathBuf::from(file!()),
+        line!(),
+    );
 }
 
 #[inline]

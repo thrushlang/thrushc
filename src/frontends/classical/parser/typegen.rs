@@ -7,10 +7,10 @@ use crate::{
             ast::Ast,
             parser::stmts::{
                 traits::{
-                    CustomTypeFieldsExtensions, FoundSymbolEither, FoundSymbolExtension,
-                    StructExtensions, StructFieldsExtensions, TokenExtensions,
+                    FoundSymbolEither, FoundSymbolExtension, StructExtensions,
+                    StructFieldsExtensions, TokenExtensions,
                 },
-                types::{CustomTypeFields, StructFields},
+                types::StructFields,
             },
             parser::symbols::types::{CustomTypeSymbol, Struct},
         },
@@ -80,9 +80,9 @@ pub fn build_type(ctx: &mut ParserContext<'_>) -> Result<Type, ThrushCompilerIss
                     let custom: CustomTypeSymbol =
                         ctx.get_symbols().get_custom_type_by_id(custom_id, span)?;
 
-                    let custom_type_fields: CustomTypeFields = custom.0;
+                    let custom_type: Type = custom.0;
 
-                    return Ok(custom_type_fields.get_type());
+                    return Ok(custom_type);
                 } else {
                     return Err(ThrushCompilerIssue::Error(
                         String::from("Syntax error"),

@@ -20,6 +20,7 @@ pub enum LLVMAttribute<'ctx> {
     WeakStack(Span),
     PreciseFloats(Span),
     NoUnwind(Span),
+    OptFuzzing(Span),
 
     // LLVM Structure Modificator
     Packed(Span),
@@ -132,6 +133,7 @@ impl LLVMAttribute<'_> {
             LLVMAttribute::Heap(span) => *span,
             LLVMAttribute::Packed(span) => *span,
             LLVMAttribute::NoUnwind(span) => *span,
+            LLVMAttribute::OptFuzzing(span) => *span,
         }
     }
 }

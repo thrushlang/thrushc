@@ -13,6 +13,16 @@ pub trait FrontendErrorDisassembler {
     fn get_title(&self) -> &str;
     fn get_position(&self) -> CompilationPosition;
     fn get_logging_type(&self) -> LoggingType;
-    fn get_path(&self) -> &Path;
+    fn get_source_path(&self) -> &Path;
+    fn get_compiler_source_path(&self) -> &Path;
+    fn get_line(&self) -> u32;
+}
+
+pub trait BackendErrorDisassembler {
+    fn get_title(&self) -> &str;
+    fn get_position(&self) -> CompilationPosition;
+    fn get_logging_type(&self) -> LoggingType;
+    fn get_source_path(&self) -> &Path;
+    fn get_compiler_source_path(&self) -> &Path;
     fn get_line(&self) -> u32;
 }

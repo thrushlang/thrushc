@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use crate::frontends::classical::lexer::span::Span;
 
 use super::position::CompilationPosition;
@@ -6,12 +8,16 @@ use super::position::CompilationPosition;
 pub enum ThrushCompilerIssue {
     Error(String, String, Option<String>, Span),
     Warning(String, String, Span),
-    FrontEndBug(String, String, Span, CompilationPosition, u32),
+    FrontEndBug(String, String, Span, CompilationPosition, PathBuf, u32),
+    BackenEndBug(String, String, Span, CompilationPosition, PathBuf, u32),
 }
 
 impl ThrushCompilerIssue {
     #[inline]
     pub fn is_bug(&self) -> bool {
-        matches!(self, ThrushCompilerIssue::FrontEndBug(..))
+        matches!(
+            self,
+            ThrushCompilerIssue::FrontEndBug(..) | ThrushCompilerIssue::BackenEndBug(..)
+        )
     }
 }

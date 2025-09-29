@@ -198,13 +198,14 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 kind,
                 attributes,
                 metadata,
+                span,
                 ..
             } => {
                 let metadata: &LocalMetadata = metadata;
 
                 if metadata.is_undefined() {
                     self.context
-                        .new_local(name, ascii_name, kind, attributes, *metadata);
+                        .new_local(name, ascii_name, kind, attributes, *metadata, *span);
 
                     return;
                 }
@@ -296,22 +297,22 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 operator,
                 right,
                 kind,
-                ..
+                span,
             } => {
                 if kind.is_integer_type() {
-                    binaryop::integer::compile(self.context, (left, operator, right), None);
+                    binaryop::integer::compile(self.context, (left, operator, right, *span), None);
                 }
 
                 if kind.is_float_type() {
-                    binaryop::float::compile(self.context, (left, operator, right), None);
+                    binaryop::float::compile(self.context, (left, operator, right, *span), None);
                 }
 
                 if kind.is_bool_type() {
-                    binaryop::boolean::compile(self.context, (left, operator, right), None);
+                    binaryop::boolean::compile(self.context, (left, operator, right, *span), None);
                 }
 
                 if kind.is_ptr_type() {
-                    binaryop::pointer::compile(self.context, (left, operator, right));
+                    binaryop::pointer::compile(self.context, (left, operator, right, *span));
                 }
 
                 self::codegen_abort(format!(

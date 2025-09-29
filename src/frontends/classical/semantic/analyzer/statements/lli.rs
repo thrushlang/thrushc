@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use crate::{
     core::errors::{position::CompilationPosition, standard::ThrushCompilerIssue},
     frontends::classical::{
@@ -104,6 +106,7 @@ pub fn validate<'analyzer>(
                 "Expression could not be caught for processing.".into(),
                 span,
                 CompilationPosition::Analyzer,
+                PathBuf::from(file!()),
                 line!(),
             ));
 

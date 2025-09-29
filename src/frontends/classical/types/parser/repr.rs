@@ -13,7 +13,7 @@ use crate::frontends::classical::{
     typesystem::types::Type,
 };
 
-pub type BinaryOperation<'ctx> = (&'ctx Ast<'ctx>, &'ctx TokenType, &'ctx Ast<'ctx>);
+pub type BinaryOperation<'ctx> = (&'ctx Ast<'ctx>, &'ctx TokenType, &'ctx Ast<'ctx>, Span);
 
 pub type UnaryOperation<'ctx> = (&'ctx TokenType, &'ctx Type, &'ctx Ast<'ctx>);
 
@@ -67,6 +67,7 @@ pub type Local<'ctx> = (
     &'ctx Ast<'ctx>,
     &'ctx ThrushAttributes<'ctx>,
     LocalMetadata,
+    Span,
 );
 
 pub type GlobalFunction<'ctx> = (

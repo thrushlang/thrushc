@@ -1,10 +1,12 @@
-use std::fmt::Display;
+use std::{fmt::Display, path::PathBuf};
 
 use crate::{
-    backends::classical::llvm::compiler::{self, constgen, predicates},
+    backends::classical::llvm::compiler::{self, abort, constgen, predicates},
     core::console::logging::{self, LoggingType},
     frontends::classical::{
-        lexer::tokentype::TokenType, types::parser::repr::BinaryOperation, typesystem::types::Type,
+        lexer::{span::Span, tokentype::TokenType},
+        types::parser::repr::BinaryOperation,
+        typesystem::types::Type,
     },
 };
 
@@ -67,6 +69,8 @@ pub fn compile<'ctx>(
     binary: BinaryOperation<'ctx>,
     cast: Option<&Type>,
 ) -> BasicValueEnum<'ctx> {
+    let span: Span = binary.3;
+
     if let (
         _,
         TokenType::Plus
@@ -79,7 +83,7 @@ pub fn compile<'ctx>(
         | TokenType::Less
         | TokenType::Greater
         | TokenType::GreaterEq,
-        _,
+        ..,
     ) = binary
     {
         let operator: &TokenType = binary.1;
@@ -95,10 +99,13 @@ pub fn compile<'ctx>(
         );
     }
 
-    self::codegen_abort(format!(
-        "Cannot perform process a float binary operation '{} {} {}'.",
-        binary.0, binary.1, binary.2
-    ));
+    abort::abort_codegen(
+        context,
+        "Failed to compile float binary operation!",
+        span,
+        PathBuf::from(file!()),
+        line!(),
+    );
 }
 
 #[inline]
@@ -191,6 +198,8 @@ pub fn compile_const<'ctx>(
     binary: BinaryOperation<'ctx>,
     cast: &Type,
 ) -> BasicValueEnum<'ctx> {
+    let span: Span = binary.3;
+
     if let (
         _,
         TokenType::Plus
@@ -203,7 +212,7 @@ pub fn compile_const<'ctx>(
         | TokenType::Less
         | TokenType::Greater
         | TokenType::GreaterEq,
-        _,
+        ..,
     ) = binary
     {
         let operator: &TokenType = binary.1;
@@ -214,10 +223,13 @@ pub fn compile_const<'ctx>(
         return const_float_operation(lhs.into_float_value(), rhs.into_float_value(), operator);
     }
 
-    self::codegen_abort(format!(
-        "Cannot perform process a constant float binary operation '{} {} {}'.",
-        binary.0, binary.1, binary.2
-    ));
+    abort::abort_codegen(
+        context,
+        "Failed to compile constant float binary operation!",
+        span,
+        PathBuf::from(file!()),
+        line!(),
+    );
 }
 
 #[inline]

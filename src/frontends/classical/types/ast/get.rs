@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use crate::{
     core::{
         console::logging::{self, LoggingType},
@@ -347,6 +349,7 @@ impl Ast<'_> {
             String::from("Expected a integer value"),
             self.get_span(),
             CompilationPosition::Parser,
+            PathBuf::from(file!()),
             line!(),
         ))
     }

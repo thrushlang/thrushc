@@ -73,6 +73,7 @@ lazy_static! {
         keywords.insert("@asmthrow", TokenType::AsmThrow);
         keywords.insert("@asmeffects", TokenType::AsmSideEffects);
 
+        keywords.insert("@optfuzzing", TokenType::OptFuzzing);
         keywords.insert("@nounwind", TokenType::NoUnwind);
         keywords.insert("@packed", TokenType::Packed);
         keywords.insert("@heap", TokenType::Heap);

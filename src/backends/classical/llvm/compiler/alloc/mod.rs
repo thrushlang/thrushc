@@ -8,16 +8,18 @@ use inkwell::{context::Context, types::BasicTypeEnum, values::PointerValue};
 use crate::{
     backends::classical::llvm::compiler::{context::LLVMCodeGenContext, obfuscation, typegen},
     frontends::classical::{
+        lexer::span::Span,
         types::parser::stmts::{traits::ThrushAttributesExtensions, types::ThrushAttributes},
         typesystem::types::Type,
     },
 };
 
 pub fn alloc<'ctx>(
-    context: &LLVMCodeGenContext<'_, 'ctx>,
+    context: &mut LLVMCodeGenContext<'_, 'ctx>,
     ascii_name: &str,
     kind: &Type,
     attributes: &ThrushAttributes<'ctx>,
+    span: Span,
 ) -> PointerValue<'ctx> {
     let llvm_context: &Context = context.get_llvm_context();
 
@@ -30,8 +32,8 @@ pub fn alloc<'ctx>(
     );
 
     match (attributes.has_heap_attr(), attributes.has_stack_attr()) {
-        (true, _) => memheap::try_alloc_heap(context, llvm_type, &formatted_name, kind),
-        (_, true) => memstack::try_alloc_stack(context, llvm_type, &formatted_name, kind),
-        _ => memstack::try_alloc_stack(context, llvm_type, &formatted_name, kind),
+        (true, _) => memheap::try_alloc_heap(context, llvm_type, &formatted_name, span),
+        (_, true) => memstack::try_alloc_stack(context, llvm_type, &formatted_name, span),
+        _ => memstack::try_alloc_stack(context, llvm_type, &formatted_name, span),
     }
 }

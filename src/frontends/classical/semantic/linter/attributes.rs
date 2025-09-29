@@ -47,7 +47,7 @@ impl<'attr_linter> AttributesLinter<'attr_linter> {
 
         self.warnings.iter().for_each(|warn: &ThrushCompilerIssue| {
             self.dignostician
-                .build_diagnostic(warn, LoggingType::Warning);
+                .dispatch_diagnostic(warn, LoggingType::Warning);
         });
     }
 

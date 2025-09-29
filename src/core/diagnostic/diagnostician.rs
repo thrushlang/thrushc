@@ -10,7 +10,8 @@ use {colored::Colorize, std::path::PathBuf};
 #[derive(Debug, Clone, Copy)]
 pub enum Notificator {
     CommonHelp,
-    CompilerFronteEndBug,
+    CompilerFrontendBug,
+    CompilerBackendBug,
 }
 
 #[derive(Debug, Clone)]
@@ -30,7 +31,7 @@ impl Diagnostician {
 }
 
 impl Diagnostician {
-    pub fn build_diagnostic(&mut self, error: &ThrushCompilerIssue, logging_type: LoggingType) {
+    pub fn dispatch_diagnostic(&mut self, error: &ThrushCompilerIssue, logging_type: LoggingType) {
         match error {
             ThrushCompilerIssue::Error(title, help, note, span) => {
                 let diagnostic: Diagnostic =
@@ -49,13 +50,23 @@ impl Diagnostician {
                 printers::print(&diagnostic, (title, &self.path, None, logging_type));
             }
 
-            ThrushCompilerIssue::FrontEndBug(title, info, span, position, line) => {
+            ThrushCompilerIssue::FrontEndBug(title, info, span, position, path, line) => {
                 let diagnostic: Diagnostic =
-                    diagnostic::build(&self.code, *span, info, Notificator::CompilerFronteEndBug);
+                    diagnostic::build(&self.code, *span, info, Notificator::CompilerFrontendBug);
 
                 printers::print_compiler_frontend_bug(
                     &diagnostic,
-                    (title, *position, logging_type, &self.path, *line),
+                    (title, *position, logging_type, &self.path, path, *line),
+                );
+            }
+
+            ThrushCompilerIssue::BackenEndBug(title, info, span, position, path, line) => {
+                let diagnostic: Diagnostic =
+                    diagnostic::build(&self.code, *span, info, Notificator::CompilerBackendBug);
+
+                printers::print_compiler_backend_bug(
+                    &diagnostic,
+                    (title, *position, logging_type, &self.path, path, *line),
                 );
             }
         };
@@ -73,7 +84,7 @@ impl Display for Notificator {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::CommonHelp => write!(f, "{}", "HELP: ".bright_green().bold()),
-            Self::CompilerFronteEndBug => {
+            Self::CompilerFrontendBug | Self::CompilerBackendBug => {
                 write!(f, "{}", "INFO: ".bright_red().bold())
             }
         }

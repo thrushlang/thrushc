@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use crate::{
     core::errors::{position::CompilationPosition, standard::ThrushCompilerIssue},
     frontends::classical::{
@@ -53,6 +55,7 @@ impl TokenExtensions for Token {
                     "Unable to get byte for determinate next byte to parse at scape sequence parsing.".into(),
                     span,
                     CompilationPosition::Lexer,
+                    PathBuf::from(file!()),
                     line!()
                 ));
             }

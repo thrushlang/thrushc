@@ -1,8 +1,9 @@
 use std::fmt::Display;
+use std::path::PathBuf;
 
 use crate::backends::classical::llvm::compiler::context::LLVMCodeGenContext;
 use crate::backends::classical::llvm::compiler::memory::SymbolAllocated;
-use crate::backends::classical::llvm::compiler::{self, constgen, typegen, value};
+use crate::backends::classical::llvm::compiler::{self, abort, constgen, typegen, value};
 
 use crate::core::console::logging::{self, LoggingType};
 
@@ -29,20 +30,21 @@ pub fn compile<'ctx>(
         (TokenType::PlusPlus | TokenType::MinusMinus, _, Ast::Reference { name, kind, .. }) => {
             self::compile_increment_decrement_ref(context, name, unary.0, kind, cast)
         }
-
         (TokenType::PlusPlus | TokenType::MinusMinus, _, expr) => {
             self::compile_increment_decrement(context, unary.0, expr, cast)
         }
 
         (TokenType::Bang, _, expr) => self::compile_logical_negation(context, expr, cast),
-
         (TokenType::Minus, _, expr) => self::compile_arithmetic_negation(context, expr, cast),
-
         (TokenType::Not, _, expr) => self::compile_bitwise_not(context, expr, cast),
 
-        what => {
-            self::codegen_abort(format!("Unsupported unary operation: '{:?}'.", what));
-        }
+        what => abort::abort_codegen(
+            context,
+            "Unknown unary operation!",
+            what.2.get_span(),
+            PathBuf::from(file!()),
+            line!(),
+        ),
     }
 }
 
@@ -57,10 +59,17 @@ pub fn compile_const<'ctx>(
         }
         (TokenType::Bang, _, expr) => self::compile_logical_negation_const(context, expr, cast),
         (TokenType::Minus, _, expr) => self::compile_arithmetic_negation_const(context, expr, cast),
-
-        _ => {
-            self::codegen_abort("Unsupported unary operation pattern encountered.");
+        (TokenType::Not, _, expr) => {
+            self::compile_arithmetic_bitwise_not_const(context, expr, cast)
         }
+
+        what => abort::abort_codegen(
+            context,
+            "Unknown unary operation!",
+            what.2.get_span(),
+            PathBuf::from(file!()),
+            line!(),
+        ),
     }
 }
 
@@ -431,6 +440,26 @@ fn compile_arithmetic_negation_const<'ctx>(
 
             float.into()
         }
+    }
+}
+
+fn compile_arithmetic_bitwise_not_const<'ctx>(
+    context: &mut LLVMCodeGenContext<'_, 'ctx>,
+    expr: &'ctx Ast,
+    cast: &Type,
+) -> BasicValueEnum<'ctx> {
+    let value: BasicValueEnum = constgen::compile(context, expr, cast);
+    let kind: &Type = expr.get_type_unwrapped();
+
+    match kind {
+        kind if kind.is_integer_type() => value.into_int_value().const_not().into(),
+        _ => abort::abort_codegen(
+            context,
+            "Failed to compile not bitwise operation!",
+            expr.get_span(),
+            PathBuf::from(file!()),
+            line!(),
+        ),
     }
 }
 

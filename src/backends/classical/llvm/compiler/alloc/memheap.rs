@@ -1,20 +1,19 @@
-use crate::backends::classical::llvm::compiler::context::LLVMCodeGenContext;
+use std::path::PathBuf;
 
-use crate::core::console::logging;
-use crate::core::console::logging::LoggingType;
-
-use crate::frontends::classical::typesystem::types::Type;
-
-use std::fmt::Display;
+use crate::backends::classical::llvm::compiler::abort;
+use crate::{
+    backends::classical::llvm::compiler::context::LLVMCodeGenContext,
+    frontends::classical::lexer::span::Span,
+};
 
 use inkwell::{types::BasicTypeEnum, values::PointerValue};
 
 #[inline]
 pub fn try_alloc_heap<'ctx>(
-    context: &LLVMCodeGenContext<'_, 'ctx>,
+    context: &mut LLVMCodeGenContext<'_, 'ctx>,
     llvm_type: BasicTypeEnum<'ctx>,
     ascii_name: &str,
-    kind: &Type,
+    span: Span,
 ) -> PointerValue<'ctx> {
     if let Ok(ptr) = context
         .get_llvm_builder()
@@ -23,13 +22,11 @@ pub fn try_alloc_heap<'ctx>(
         return ptr;
     }
 
-    self::codegen_abort(format!(
-        "Failed to allocate heap memory for type '{}'.",
-        kind
-    ));
-}
-
-#[inline]
-fn codegen_abort<T: Display>(message: T) -> ! {
-    logging::print_backend_bug(LoggingType::BackendBug, &format!("{}", message));
+    abort::abort_codegen(
+        context,
+        "Failed to allocate!",
+        span,
+        PathBuf::from(file!()),
+        line!(),
+    );
 }

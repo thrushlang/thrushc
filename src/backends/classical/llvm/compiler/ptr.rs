@@ -1,21 +1,19 @@
 #![allow(clippy::upper_case_acronyms)]
 
+use std::path::PathBuf;
+
 use super::context::LLVMCodeGenContext;
-use crate::backends::classical::llvm::compiler::builtins;
 use crate::backends::classical::llvm::compiler::memory::SymbolAllocated;
 use crate::backends::classical::llvm::compiler::statements::lli;
 use crate::backends::classical::llvm::compiler::{self, memory};
+use crate::backends::classical::llvm::compiler::{abort, builtins};
 
 use crate::frontends::classical::types::ast::Ast;
 use crate::frontends::classical::types::ast::traits::AstExtensions;
 use crate::frontends::classical::typesystem::types::Type;
 
-use crate::core::console::logging::{self, LoggingType};
-
 use inkwell::AddressSpace;
 use inkwell::values::BasicValueEnum;
-
-use std::fmt::Display;
 
 pub fn compile<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
@@ -53,20 +51,23 @@ pub fn compile<'ctx>(
             metadata,
             ..
         } => {
-            let value: BasicValueEnum = self::compile(context, value, Some(kind));
+            let compiled_value: BasicValueEnum = self::compile(context, value, Some(kind));
 
-            let deref_value: BasicValueEnum = if value.is_pointer_value() {
+            let deref_value: BasicValueEnum = if compiled_value.is_pointer_value() {
                 memory::dereference(
                     context,
-                    value.into_pointer_value(),
+                    compiled_value.into_pointer_value(),
                     kind,
                     metadata.get_llvm_metadata(),
                 )
             } else {
-                self::codegen_abort(format!(
-                    "Cannot dereference non-pointer value in '{}'.",
-                    value
-                ));
+                abort::abort_codegen(
+                    context,
+                    "Cannot dereference non-pointer value!",
+                    value.get_span(),
+                    PathBuf::from(file!()),
+                    line!(),
+                );
             };
 
             compiler::generation::cast::try_cast(context, cast, kind, deref_value)
@@ -113,16 +114,12 @@ pub fn compile<'ctx>(
         ast if ast.is_lli() => lli::compile_advanced(context, expr, cast),
 
         // Fallback, Unknown expressions or statements
-        what => {
-            self::codegen_abort(format!(
-                "Failed to compile. Unknown expression or statement '{:?}'.",
-                what
-            ));
-        }
+        what => abort::abort_codegen(
+            context,
+            "Unknown expression or statement!",
+            what.get_span(),
+            PathBuf::from(file!()),
+            line!(),
+        ),
     }
-}
-
-#[inline]
-fn codegen_abort<T: Display>(message: T) -> ! {
-    logging::print_backend_bug(LoggingType::BackendBug, &format!("{}", message))
 }

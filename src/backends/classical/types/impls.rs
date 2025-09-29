@@ -36,6 +36,7 @@ impl Display for LLVMAttribute<'_> {
             LLVMAttribute::AsmSideEffects(..) => write!(f, "@asmeffects"),
             LLVMAttribute::AsmAlignStack(..) => write!(f, "@asmalingstack"),
             LLVMAttribute::Packed(..) => write!(f, "@packed"),
+            LLVMAttribute::OptFuzzing(..) => write!(f, "@optfuzzing"),
         }
     }
 }

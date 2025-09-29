@@ -66,17 +66,18 @@ impl<'type_checker> TypeChecker<'type_checker> {
 
         self.warnings.iter().for_each(|warn| {
             self.diagnostician
-                .build_diagnostic(warn, LoggingType::Warning);
+                .dispatch_diagnostic(warn, LoggingType::Warning);
         });
 
         if !self.errors.is_empty() || !self.bugs.is_empty() {
             self.bugs.iter().for_each(|warn| {
-                self.diagnostician.build_diagnostic(warn, LoggingType::Bug);
+                self.diagnostician
+                    .dispatch_diagnostic(warn, LoggingType::Bug);
             });
 
             self.errors.iter().for_each(|error| {
                 self.diagnostician
-                    .build_diagnostic(error, LoggingType::Error);
+                    .dispatch_diagnostic(error, LoggingType::Error);
             });
 
             return true;

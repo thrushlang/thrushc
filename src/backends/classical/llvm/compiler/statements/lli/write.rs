@@ -27,14 +27,14 @@ pub fn compile<'ctx>(
     let value: BasicValueEnum = value::compile(context, write_value, Some(write_type));
 
     match source {
-        (Some((name, _)), _) => {
+        (Some((name, _)), ..) => {
             let symbol: SymbolAllocated = context.get_table().get_symbol(name);
 
             symbol.store(context, value);
 
             self::compile_null_ptr(context)
         }
-        (_, Some(expr)) => {
+        (_, Some(expr), ..) => {
             let ptr: PointerValue = ptr::compile(context, expr, None).into_pointer_value();
 
             memory::store_anon(context, ptr, value);

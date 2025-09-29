@@ -253,7 +253,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
         indexes: &[IntValue<'ctx>],
     ) -> PointerValue<'ctx> {
         let abort = || {
-            self::codegen_abort("Unable to calculate pointer position at memory manipulation.");
+            self::codegen_abort("Unable to calculate pointer position.");
         };
 
         if let Self::Local { ptr, kind, .. }
@@ -297,9 +297,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
         index: u32,
     ) -> PointerValue<'ctx> {
         let abort = || {
-            self::codegen_abort(
-                "Unable to get struct element pointer position at memory manipulation.",
-            );
+            self::codegen_abort("Unable to get struct element.");
         };
 
         if let Self::Local { ptr, kind, .. }

@@ -140,19 +140,20 @@ impl<'parser> ParserContext<'parser> {
     pub fn verify(&mut self) -> bool {
         if !self.errors.is_empty() || !self.bugs.is_empty() || !self.silent_errors.is_empty() {
             self.bugs.iter().for_each(|bug: &ThrushCompilerIssue| {
-                self.diagnostician.build_diagnostic(bug, LoggingType::Bug);
+                self.diagnostician
+                    .dispatch_diagnostic(bug, LoggingType::Bug);
             });
 
             self.silent_errors
                 .iter()
                 .for_each(|error: &ThrushCompilerIssue| {
                     self.diagnostician
-                        .build_diagnostic(error, LoggingType::Error);
+                        .dispatch_diagnostic(error, LoggingType::Error);
                 });
 
             self.errors.iter().for_each(|error: &ThrushCompilerIssue| {
                 self.diagnostician
-                    .build_diagnostic(error, LoggingType::Error);
+                    .dispatch_diagnostic(error, LoggingType::Error);
             });
 
             return true;

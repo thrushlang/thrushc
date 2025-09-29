@@ -16,7 +16,12 @@ pub fn validate_unary(op: &TokenType, a: &Type, span: Span) -> Result<(), Thrush
         TokenType::Not => self::validate_not_unary(op, a, span),
         TokenType::Bang => self::validate_bang_unary(op, a, span),
 
-        _ => Ok(()),
+        _ => Err(ThrushCompilerIssue::Error(
+            String::from("Unknown Type Operation"),
+            format!("'{}{}' isn't valid operation.", op, a),
+            None,
+            span,
+        )),
     }
 }
 

@@ -24,6 +24,7 @@ impl TokenType {
             TokenType::AsmAlignStack => Some(LLVMAttribute::AsmAlignStack(span)),
             TokenType::Packed => Some(LLVMAttribute::Packed(span)),
             TokenType::NoUnwind => Some(LLVMAttribute::NoUnwind(span)),
+            TokenType::OptFuzzing => Some(LLVMAttribute::OptFuzzing(span)),
 
             _ => None,
         }
@@ -50,6 +51,7 @@ impl TokenType {
                 | TokenType::AsmAlignStack
                 | TokenType::Packed
                 | TokenType::NoUnwind
+                | TokenType::OptFuzzing
         )
     }
 }

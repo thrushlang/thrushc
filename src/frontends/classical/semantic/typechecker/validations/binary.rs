@@ -26,7 +26,12 @@ pub fn validate_binary(
         TokenType::LShift | TokenType::RShift => self::validate_binary_shift(op, a, b, span),
         TokenType::And | TokenType::Or => self::validate_binary_gate(op, a, b, span),
 
-        _ => Ok(()),
+        _ => Err(ThrushCompilerIssue::Error(
+            String::from("Unknown Type Operation"),
+            format!("'{}{}' isn't valid operation.", op, a),
+            None,
+            span,
+        )),
     }
 }
 
