@@ -333,6 +333,10 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 value::compile(self.context, stmt, None);
             }
 
+            Ast::Indirect { .. } => {
+                value::compile(self.context, stmt, None);
+            }
+
             Ast::AsmValue { .. } => {
                 value::compile(self.context, stmt, None);
             }

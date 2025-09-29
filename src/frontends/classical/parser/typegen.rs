@@ -38,6 +38,10 @@ pub fn build_type(ctx: &mut ParserContext<'_>) -> Result<Type, ThrushCompilerIss
                 return self::build_const_type(ctx);
             }
 
+            if tk_kind.is_fn_ref() {
+                return self::build_fn_ref_type(ctx);
+            }
+
             match tk_kind.as_type(span)? {
                 ty if ty.is_integer_type() => Ok(ty),
                 ty if ty.is_float_type() => Ok(ty),
@@ -134,6 +138,52 @@ fn build_mut_type(ctx: &mut ParserContext<'_>, span: Span) -> Result<Type, Thrus
     }
 
     Ok(Type::Mut(inner_type.into()))
+}
+
+fn build_fn_ref_type(ctx: &mut ParserContext<'_>) -> Result<Type, ThrushCompilerIssue> {
+    ctx.consume(
+        TokenType::LBracket,
+        String::from("Syntax error"),
+        String::from("Expected '['."),
+    )?;
+
+    let mut parameter_types: Vec<Type> = Vec::with_capacity(10);
+
+    loop {
+        if ctx.check(TokenType::RBracket) {
+            break;
+        }
+
+        let parameter_type: Type = self::build_type(ctx)?;
+
+        parameter_types.push(parameter_type);
+
+        if ctx.check(TokenType::RBracket) {
+            break;
+        } else {
+            ctx.consume(
+                TokenType::Comma,
+                String::from("Syntax error"),
+                String::from("Expected ','."),
+            )?;
+        }
+    }
+
+    ctx.consume(
+        TokenType::RBracket,
+        String::from("Syntax error"),
+        String::from("Expected ']'."),
+    )?;
+
+    ctx.consume(
+        TokenType::Arrow,
+        String::from("Syntax error"),
+        String::from("Expected '->'."),
+    )?;
+
+    let return_type: Type = self::build_type(ctx)?;
+
+    Ok(Type::Fn(parameter_types, return_type.into()))
 }
 
 fn build_const_type(ctx: &mut ParserContext<'_>) -> Result<Type, ThrushCompilerIssue> {

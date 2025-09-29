@@ -2,7 +2,7 @@ use std::path::Path;
 
 use crate::core::{
     console::logging::LoggingType,
-    diagnostic::traits::{BackendErrorDisassembler, FrontendErrorDisassembler, IssueDisassembler},
+    diagnostic::traits::{ErrorDisassembler, IssueDisassembler},
     errors::position::CompilationPosition,
 };
 
@@ -26,7 +26,7 @@ pub type BackendError<'a> = (
     u32,
 );
 
-impl FrontendErrorDisassembler for FrontendError<'_> {
+impl ErrorDisassembler for FrontendError<'_> {
     #[inline]
     fn get_title(&self) -> &str {
         self.0
@@ -77,37 +77,5 @@ impl IssueDisassembler for Error<'_> {
     #[inline]
     fn get_logging_type(&self) -> LoggingType {
         self.3
-    }
-}
-
-impl BackendErrorDisassembler for BackendError<'_> {
-    #[inline]
-    fn get_title(&self) -> &str {
-        self.0
-    }
-
-    #[inline]
-    fn get_position(&self) -> CompilationPosition {
-        self.1
-    }
-
-    #[inline]
-    fn get_logging_type(&self) -> LoggingType {
-        self.2
-    }
-
-    #[inline]
-    fn get_source_path(&self) -> &Path {
-        self.3
-    }
-
-    #[inline]
-    fn get_compiler_source_path(&self) -> &Path {
-        self.4
-    }
-
-    #[inline]
-    fn get_line(&self) -> u32 {
-        self.5
     }
 }

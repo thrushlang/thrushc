@@ -42,6 +42,8 @@ lazy_static! {
         keywords.insert("fixed", TokenType::Fixed);
         keywords.insert("static", TokenType::Static);
 
+        keywords.insert("indirect", TokenType::Indirect);
+
         keywords.insert("volatile", TokenType::Volatile);
         keywords.insert("lazythread", TokenType::LazyThread);
 
@@ -110,6 +112,7 @@ lazy_static! {
         keywords.insert("str", TokenType::Str);
         keywords.insert("array", TokenType::Array);
         keywords.insert("void", TokenType::Void);
+        keywords.insert("Fn", TokenType::FnRef);
 
         keywords
     };

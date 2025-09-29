@@ -76,11 +76,26 @@ pub fn compile<'ctx>(
             .const_int(*value, false)
             .into(),
 
-        // Function and Built-in Calls
+        // Function
         // Compiles a function call
         Ast::Call {
             name, args, kind, ..
-        } => compiler::generation::value::call::compile(context, name, args, kind, cast),
+        } => compiler::generation::expressions::call::compile(context, name, args, kind, cast),
+
+        // Function
+        // Compiles a indirect function call
+        Ast::Indirect {
+            pointer,
+            function_type,
+            args,
+            ..
+        } => compiler::generation::expressions::indirect::compile(
+            context,
+            pointer,
+            args,
+            function_type,
+            cast,
+        ),
 
         // Compiles a sizeof operation
         Ast::SizeOf { sizeof, .. } => builtins::sizeof::compile(context, sizeof, cast),

@@ -21,8 +21,8 @@ use crate::{
                         LLISymbolExtensions, LocalSymbolExtensions, StaticSymbolExtensions,
                     },
                     types::{
-                        ConstantSymbol, FoundSymbolId, LLISymbol, LocalSymbol, ParameterSymbol,
-                        StaticSymbol,
+                        ConstantSymbol, FoundSymbolId, Function, LLISymbol, LocalSymbol,
+                        ParameterSymbol, StaticSymbol,
                     },
                 },
             },
@@ -37,6 +37,22 @@ pub fn build_reference<'parser>(
     span: Span,
 ) -> Result<Ast<'parser>, ThrushCompilerIssue> {
     let symbol: FoundSymbolId = ctx.get_symbols().get_symbols_id(name, span)?;
+
+    if symbol.is_function() {
+        let function_id: &str = symbol.expected_function(span)?;
+
+        let function: Function = ctx.get_symbols().get_function_by_id(span, function_id)?;
+
+        let function_type: Type = function.0;
+        let function_parameter_types: Vec<Type> = function.1.0;
+
+        return Ok(Ast::Reference {
+            name,
+            kind: Type::Fn(function_parameter_types, function_type.into()),
+            span,
+            metadata: ReferenceMetadata::new(true, false, ReferenceType::default()),
+        });
+    }
 
     if symbol.is_static() {
         let static_var: (&str, usize) = symbol.expected_static(span)?;

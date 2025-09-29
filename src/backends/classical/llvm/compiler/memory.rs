@@ -54,6 +54,9 @@ pub enum SymbolAllocated<'ctx> {
         value: BasicValueEnum<'ctx>,
         kind: &'ctx Type,
     },
+    Function {
+        ptr: PointerValue<'ctx>,
+    },
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -76,6 +79,11 @@ impl<'ctx> SymbolAllocated<'ctx> {
             SymbolToAllocate::Parameter => Self::Parameter { value, kind },
             SymbolToAllocate::LowLevelInstruction => Self::LowLevelInstruction { value, kind },
         }
+    }
+
+    #[inline]
+    pub fn new_function(ptr: PointerValue<'ctx>) -> Self {
+        Self::Function { ptr }
     }
 
     #[inline]
@@ -334,11 +342,16 @@ impl<'ctx> SymbolAllocated<'ctx> {
             Self::Static { kind, .. } => kind,
             Self::Parameter { kind, .. } => kind,
             Self::LowLevelInstruction { kind, .. } => kind,
+
+            _ => {
+                self::codegen_abort("Unable to get type of a allocated symbol.");
+            }
         }
     }
 
     pub fn get_ptr(&self) -> PointerValue<'ctx> {
         match self {
+            Self::Function { ptr, .. } => *ptr,
             Self::Local { ptr, .. } => *ptr,
             Self::Constant { ptr, .. } => *ptr,
             Self::Static { ptr, .. } => *ptr,
@@ -350,6 +363,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
     pub fn get_value(&self) -> BasicValueEnum<'ctx> {
         match self {
             Self::Local { ptr, .. } => (*ptr).into(),
+            Self::Function { ptr, .. } => (*ptr).into(),
             Self::Constant { value, .. } => *value,
             Self::Static { value, .. } => *value,
             Self::Parameter { value, .. } => *value,
@@ -364,6 +378,7 @@ impl SymbolAllocated<'_> {
             Self::Local { .. } => true,
             Self::Constant { .. } => true,
             Self::Static { .. } => true,
+            Self::Function { .. } => true,
             Self::Parameter { value, .. } => value.is_pointer_value(),
             Self::LowLevelInstruction { value, .. } => value.is_pointer_value(),
         }

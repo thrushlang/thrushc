@@ -87,6 +87,9 @@ impl Ast<'_> {
             // Global Assembler
             Ast::GlobalAssembler { .. } => Ok(&Type::Void),
 
+            // Indirect Call
+            Ast::Indirect { kind, .. } => Ok(kind),
+
             // Ignored
             Ast::Pass { .. } => Ok(&Type::Void),
 
@@ -210,6 +213,9 @@ impl Ast<'_> {
             // ASM Code Block
             Ast::AsmValue { kind, .. } => kind,
 
+            // Indirect Call
+            Ast::Indirect { kind, .. } => kind,
+
             // Global Assembler
             Ast::GlobalAssembler { .. } => &Type::Void,
 
@@ -304,6 +310,9 @@ impl Ast<'_> {
 
             // Global Assembler
             Ast::GlobalAssembler { span, .. } => *span,
+
+            // Indirect Call
+            Ast::Indirect { span, .. } => *span,
 
             // Ignored
             Ast::Pass { span, .. } => *span,

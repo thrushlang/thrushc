@@ -1,4 +1,3 @@
-pub mod call;
 pub mod cast;
 pub mod deref;
 
@@ -11,7 +10,7 @@ use crate::{
     core::errors::{position::CompilationPosition, standard::ThrushCompilerIssue},
     frontends::classical::{
         lexer::span::Span,
-        semantic::analyzer::{Analyzer, expressions},
+        semantic::analyzer::Analyzer,
         types::{ast::Ast, parser::stmts::types::Constructor},
     },
 };
@@ -73,7 +72,11 @@ pub fn validate<'analyzer>(
             Ok(())
         }
 
-        Ast::Call { args, .. } => expressions::call::validate(analyzer, args),
+        Ast::Call { args, .. } => args.iter().try_for_each(|arg| analyzer.analyze_stmt(arg)),
+        Ast::Indirect { pointer, args, .. } => {
+            analyzer.analyze_stmt(pointer)?;
+            args.iter().try_for_each(|arg| analyzer.analyze_stmt(arg))
+        }
 
         Ast::AsmValue { .. }
         | Ast::Alloc { .. }

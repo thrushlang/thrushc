@@ -7,7 +7,7 @@ use crate::core::{
     diagnostic::{
         Diagnostic,
         errors::{BackendError, Error, FrontendError},
-        traits::{FrontendErrorDisassembler, IssueDisassembler},
+        traits::{ErrorDisassembler, IssueDisassembler},
     },
     errors::position::CompilationPosition,
 };
@@ -89,13 +89,12 @@ pub fn print_compiler_frontend_bug(diagnostic: &Diagnostic, error: FrontendError
     logging::write(
         logging::OutputIn::Stderr,
         &format!(
-            "\n{} {} {} {}{}{}{}{}\n",
+            "\n{} {} {} {} {}{}{}\n",
             "FRONTEND BUG".bright_red().bold(),
             title.to_uppercase(),
             "-".bold(),
-            compiler_source_path.display(),
-            ":".bold(),
             position,
+            compiler_source_path.display(),
             ":".bold(),
             compiler_line.to_string().red().underline().bold()
         ),
@@ -150,12 +149,11 @@ pub fn print_compiler_backend_bug(diagnostic: &Diagnostic, error: BackendError<'
     logging::write(
         logging::OutputIn::Stderr,
         &format!(
-            "\n{} {} {} {}{}{}{}{}\n",
+            "\n{} {} {} {} {}{}{}\n",
             "BACKEND BUG".bright_red().bold(),
             title.to_uppercase(),
             "-".bold(),
             position,
-            ":".bold(),
             compiler_source_path.display(),
             ":".bold(),
             compiler_line.to_string().red().underline().bold()

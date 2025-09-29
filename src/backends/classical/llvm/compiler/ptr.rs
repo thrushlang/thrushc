@@ -33,10 +33,26 @@ pub fn compile<'ctx>(
             compiler::generation::expressions::string::compile_str_constant(context, bytes).into()
         }
 
+        // Function
         // Compiles a function call
         Ast::Call {
             name, args, kind, ..
-        } => compiler::generation::pointer::call::compile(context, name, args, kind, cast),
+        } => compiler::generation::expressions::call::compile(context, name, args, kind, cast),
+
+        // Function
+        // Compiles a indirect function call
+        Ast::Indirect {
+            pointer,
+            function_type,
+            args,
+            ..
+        } => compiler::generation::expressions::indirect::compile(
+            context,
+            pointer,
+            args,
+            function_type,
+            cast,
+        ),
 
         // Compiles a grouped expression (e.g., parenthesized)
         Ast::Group { expression, .. } => self::compile(context, expression, cast),

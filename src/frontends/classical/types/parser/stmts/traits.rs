@@ -29,6 +29,7 @@ pub trait EnumExtensions<'parser> {
 
 pub trait FoundSymbolExtension {
     fn is_custom_type(&self) -> bool;
+    fn is_function(&self) -> bool;
     fn is_static(&self) -> bool;
     fn is_constant(&self) -> bool;
     fn is_structure(&self) -> bool;

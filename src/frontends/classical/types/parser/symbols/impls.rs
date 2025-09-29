@@ -148,6 +148,9 @@ impl FoundSymbolExtension for FoundSymbolId<'_> {
     fn is_structure(&self) -> bool {
         self.0.is_some()
     }
+    fn is_function(&self) -> bool {
+        self.1.is_some()
+    }
 
     fn is_static(&self) -> bool {
         self.3.is_some()

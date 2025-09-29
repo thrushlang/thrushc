@@ -12,6 +12,7 @@ use crate::core::console::logging;
 use crate::core::console::logging::LoggingType;
 
 use ahash::AHashMap as HashMap;
+use inkwell::values::FunctionValue;
 use std::fmt::Display;
 
 #[derive(Debug)]
@@ -86,6 +87,14 @@ impl<'ctx> SymbolsTable<'ctx> {
                     return *local;
                 }
             }
+        }
+
+        if let Some(function) = self.functions.get(name) {
+            let llvm_function: FunctionValue = function.0;
+
+            return SymbolAllocated::new_function(
+                llvm_function.as_global_value().as_pointer_value(),
+            );
         }
 
         self::codegen_abort(format!(

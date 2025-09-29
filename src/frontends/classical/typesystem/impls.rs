@@ -30,7 +30,7 @@ impl LLVMTypeExtensions for Type {
     fn llvm_is_ptr_type(&self) -> bool {
         matches!(
             self,
-            Type::Ptr(_) | Type::Mut(_) | Type::Addr | Type::Array(_)
+            Type::Ptr(_) | Type::Mut(_) | Type::Addr | Type::Array(_) | Type::Fn(..)
         )
     }
 
@@ -73,8 +73,17 @@ impl TypeExtensions for Type {
             | Type::Str
             | Type::Addr
             | Type::Void
-            | Type::Ptr(None) => self,
+            | Type::Ptr(None)
+            | Type::Fn(..) => self,
         }
+    }
+
+    fn get_type_fn_ref(&self) -> &Type {
+        if let Type::Fn(_, kind) = self {
+            return kind;
+        }
+
+        self
     }
 }
 
@@ -106,7 +115,8 @@ impl IndexTypeExtensions for Type {
             | Type::Str
             | Type::Addr
             | Type::Void
-            | Type::Ptr(None) => self,
+            | Type::Ptr(None)
+            | Type::Fn(..) => self,
         }
     }
 }
@@ -283,6 +293,18 @@ impl std::fmt::Display for Type {
             Type::Bool => write!(f, "bool"),
             Type::Str => write!(f, "str"),
             Type::Char => write!(f, "char"),
+            Type::Fn(params, kind) => {
+                write!(
+                    f,
+                    "Fn[{}] -> {}",
+                    params
+                        .iter()
+                        .map(|param| param.to_string())
+                        .collect::<Vec<_>>()
+                        .join(", "),
+                    kind
+                )
+            }
 
             Type::Mut(inner_type) => write!(f, "mut {}", inner_type),
             Type::Const(inner_type) => write!(f, "const {}", inner_type),

@@ -1,6 +1,7 @@
 pub mod call;
 pub mod cast;
 pub mod deref;
+pub mod indirect;
 
 mod index;
 mod property;
@@ -129,7 +130,7 @@ pub fn validate<'type_checker>(
             items, kind, span, ..
         } => {
             if kind.is_void_type() {
-                return Err(ThrushCompilerIssue::Error(
+                typechecker.add_error(ThrushCompilerIssue::Error(
                     "Type error".into(),
                     "An element is expected.".into(),
                     None,
@@ -209,6 +210,8 @@ pub fn validate<'type_checker>(
 
             Ok(())
         }
+
+        Ast::Indirect { .. } => expressions::indirect::validate(typechecker, node),
 
         Ast::AsmValue { .. }
         | Ast::Alloc { .. }

@@ -345,6 +345,14 @@ pub enum Ast<'ctx> {
         span: Span,
     },
 
+    Indirect {
+        pointer: Rc<Ast<'ctx>>,
+        function_type: Type,
+        args: Vec<Ast<'ctx>>,
+        kind: Type,
+        span: Span,
+    },
+
     AsmValue {
         assembler: String,
         constraints: String,

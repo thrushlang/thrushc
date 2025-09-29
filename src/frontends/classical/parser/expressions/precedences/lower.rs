@@ -5,8 +5,8 @@ use crate::{
         parser::{
             ParserContext, builtins, expr,
             expressions::{
-                array, asm, call, constructor, deref, enumv, farray, index, lli, property,
-                reference, sizeof,
+                array, asm, call, constructor, deref, enumv, farray, index, indirect, lli,
+                property, reference, sizeof,
             },
             parse,
         },
@@ -40,6 +40,8 @@ pub fn lower_precedence<'parser>(
         TokenType::Load => lli::load::build_load(ctx)?,
         TokenType::Write => lli::write::build_write(ctx)?,
         TokenType::Address => lli::address::build_address(ctx)?,
+
+        TokenType::Indirect => indirect::build_indirect(ctx)?,
 
         TokenType::LParen => {
             let span: Span = ctx.advance()?.get_span();

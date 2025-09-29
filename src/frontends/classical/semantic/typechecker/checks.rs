@@ -53,7 +53,6 @@ pub fn type_check(
 
     match (lhs, rhs, op) {
         (Type::Char, Type::Char, None) => Ok(()),
-
         (Type::Str, Type::Str, None) => Ok(()),
 
         (Type::Struct(_, lhs, mod1), Type::Struct(_, rhs, mod2), None) => {
@@ -81,6 +80,22 @@ pub fn type_check(
         }
 
         (Type::Addr, Type::Addr, None) => Ok(()),
+
+        (Type::Fn(lhs, ret1), Type::Fn(rhs, ret2), None) => {
+            if lhs.len() != rhs.len() {
+                return Err(error);
+            }
+
+            if ret1 != ret2 {
+                return Err(error);
+            }
+
+            lhs.iter()
+                .zip(rhs.iter())
+                .try_for_each(|(lhs, rhs)| self::type_check(lhs, rhs, None, None, metadata))?;
+
+            Ok(())
+        }
 
         (Type::Const(lhs), Type::Const(rhs), None) => {
             self::type_check(lhs, rhs, None, None, metadata)

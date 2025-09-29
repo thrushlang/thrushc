@@ -40,6 +40,29 @@ pub fn function_type<'ctx>(
     self::generate_type(llvm_context, kind).fn_type(&parameters_types, ignore_args)
 }
 
+pub fn function_type_from_type<'ctx>(
+    context: &LLVMCodeGenContext<'_, 'ctx>,
+    kind: &Type,
+    parameters: &[Type],
+    ignore_args: bool,
+) -> FunctionType<'ctx> {
+    let llvm_context: &Context = context.get_llvm_context();
+
+    let mut parameters_types: Vec<BasicMetadataTypeEnum> = Vec::with_capacity(parameters.len());
+
+    parameters.iter().for_each(|parameter_type| {
+        parameters_types.push(self::generate_type(llvm_context, parameter_type).into());
+    });
+
+    if kind.is_void_type() {
+        return llvm_context
+            .void_type()
+            .fn_type(&parameters_types, ignore_args);
+    }
+
+    self::generate_type(llvm_context, kind).fn_type(&parameters_types, ignore_args)
+}
+
 #[inline]
 pub fn generate_type<'ctx>(llvm_context: &'ctx Context, kind: &Type) -> BasicTypeEnum<'ctx> {
     match kind {

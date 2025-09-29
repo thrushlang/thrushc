@@ -93,6 +93,9 @@ pub enum TokenType {
     Load,
     Write,
 
+    // -- Indirect Call
+    Indirect,
+
     // --- Keywords ---
     AsmFn,
     Asm,
@@ -156,6 +159,8 @@ pub enum TokenType {
     Void,
     Addr,
     Array,
+
+    FnRef,
 
     Eof,
 }

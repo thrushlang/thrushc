@@ -61,6 +61,9 @@ pub enum Type {
     // Address
     Addr,
 
+    // Function Referece
+    Fn(Vec<Type>, Arc<Type>),
+
     // Void Type
     #[default]
     Void,
@@ -140,6 +143,11 @@ impl Type {
     #[inline(always)]
     pub fn is_const_type(&self) -> bool {
         matches!(self, Type::Const(_))
+    }
+
+    #[inline(always)]
+    pub fn is_fnref_type(&self) -> bool {
+        matches!(self, Type::Fn(..))
     }
 
     #[inline(always)]
@@ -244,6 +252,8 @@ impl Type {
             Type::FixedArray(..) => 16,
             Type::Array(..) => 17,
             Type::Struct(..) => 18,
+
+            Type::Fn(..) => 19,
         }
     }
 }

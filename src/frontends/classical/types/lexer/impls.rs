@@ -29,6 +29,9 @@ impl std::fmt::Display for TokenType {
             TokenType::Asm => write!(f, "asm"),
             TokenType::GlobalAsm => write!(f, "global_asm"),
 
+            // Indirect Call
+            TokenType::Indirect => write!(f, "indirect"),
+
             // Types
             TokenType::Address => write!(f, "address"),
             TokenType::Bool => write!(f, "bool"),
@@ -46,6 +49,7 @@ impl std::fmt::Display for TokenType {
             TokenType::U16 => write!(f, "u16"),
             TokenType::U32 => write!(f, "u32"),
             TokenType::U64 => write!(f, "u64"),
+            TokenType::FnRef => write!(f, "Fn"),
             TokenType::Void => write!(f, "void"),
 
             // Special

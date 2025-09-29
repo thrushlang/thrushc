@@ -6,6 +6,7 @@ pub mod deref;
 pub mod enumv;
 pub mod farray;
 pub mod index;
+pub mod indirect;
 pub mod lli;
 pub mod precedences;
 pub mod property;

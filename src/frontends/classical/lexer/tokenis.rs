@@ -74,6 +74,11 @@ impl TokenType {
     }
 
     #[must_use]
+    pub fn is_fn_ref(&self) -> bool {
+        matches!(self, TokenType::FnRef)
+    }
+
+    #[must_use]
     pub fn is_integer(&self) -> bool {
         matches!(
             self,
@@ -101,6 +106,7 @@ impl TokenType {
             || self.is_mut()
             || self.is_address()
             || self.is_const()
+            || self.is_fn_ref()
     }
 
     #[must_use]
