@@ -28,7 +28,7 @@ pub fn validate<'type_checker>(
             if !value.is_llvm_constant_value() {
                 return Err(ThrushCompilerIssue::Error(
                     "Syntax error".into(),
-                    "Expected compile-time sized value.".into(),
+                    "Expected compile-time known value.".into(),
                     None,
                     expression_span,
                 ));
@@ -43,6 +43,8 @@ pub fn validate<'type_checker>(
             ) {
                 typechecker.add_error(error);
             }
+
+            typechecker.analyze_stmt(value)?;
 
             Ok(())
         }

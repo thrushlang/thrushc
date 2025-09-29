@@ -42,9 +42,7 @@ pub fn validate<'type_checker>(
                 typechecker.add_error(error);
             }
 
-            if let Err(type_error) = typechecker.analyze_stmt(value) {
-                typechecker.add_error(type_error);
-            }
+            typechecker.analyze_stmt(value)?;
 
             Ok(())
         }
@@ -128,14 +126,6 @@ pub fn validate<'type_checker>(
                         span,
                     ));
                 }
-
-                if reference_type.is_address_type() {
-                    typechecker.add_warning(ThrushCompilerIssue::Warning(
-                        "Undefined behavior".into(), 
-                        "*Maybe* this value at runtime causes undefined behavior because it is anything at runtime, and memory calculation needs valid pointers or deep types.".into(), 
-                       span
-                    ));
-                }
             }
 
             if let Some(expr) = &source.1 {
@@ -170,14 +160,6 @@ pub fn validate<'type_checker>(
                         span,
                     ));
                 }
-
-                if expr_type.is_address_type() {
-                    typechecker.add_warning(ThrushCompilerIssue::Warning(
-                        "Undefined behavior".into(), 
-                        "*Maybe* this value at runtime causes undefined behavior because it is anything at runtime, and memory calculation needs valid pointers or deep types.".into(), 
-                        span
-                    ));
-                }
             }
 
             indexes.iter().try_for_each(|indexe| {
@@ -189,6 +171,8 @@ pub fn validate<'type_checker>(
                         *span,
                     ));
                 }
+
+                typechecker.analyze_stmt(indexe)?;
 
                 Ok(())
             })?;
@@ -218,6 +202,8 @@ pub fn validate<'type_checker>(
                         span,
                     ));
                 }
+
+                typechecker.analyze_stmt(reference)?;
             }
 
             if let Some(expr) = &source.1 {
@@ -235,6 +221,8 @@ pub fn validate<'type_checker>(
                         span,
                     ));
                 }
+
+                typechecker.analyze_stmt(expr)?;
             }
 
             let value_type: &Type = write_value.get_value_type()?;

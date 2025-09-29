@@ -1,4 +1,4 @@
-use symbols::TypeCheckerSymbolsTable;
+use symbols::AnalyzerSymbolsTable;
 
 use crate::{
     core::{
@@ -19,23 +19,20 @@ mod symbols;
 mod validations;
 
 #[derive(Debug)]
-pub struct TypeChecker<'type_checker> {
-    ast: &'type_checker [Ast<'type_checker>],
+pub struct Analyzer<'analyzer> {
+    ast: &'analyzer [Ast<'analyzer>],
     position: usize,
 
     bugs: Vec<ThrushCompilerIssue>,
     errors: Vec<ThrushCompilerIssue>,
     warnings: Vec<ThrushCompilerIssue>,
 
-    symbols: TypeCheckerSymbolsTable<'type_checker>,
+    symbols: AnalyzerSymbolsTable<'analyzer>,
     diagnostician: Diagnostician,
 }
 
-impl<'type_checker> TypeChecker<'type_checker> {
-    pub fn new(
-        ast: &'type_checker [Ast<'type_checker>],
-        file: &'type_checker CompilationUnit,
-    ) -> Self {
+impl<'analyzer> Analyzer<'analyzer> {
+    pub fn new(ast: &'analyzer [Ast<'analyzer>], file: &'analyzer CompilationUnit) -> Self {
         Self {
             ast,
             position: 0,
@@ -44,13 +41,13 @@ impl<'type_checker> TypeChecker<'type_checker> {
             errors: Vec::with_capacity(100),
             warnings: Vec::with_capacity(100),
 
-            symbols: TypeCheckerSymbolsTable::new(),
+            symbols: AnalyzerSymbolsTable::new(),
             diagnostician: Diagnostician::new(file),
         }
     }
 }
 
-impl<'type_checker> TypeChecker<'type_checker> {
+impl<'analyzer> Analyzer<'analyzer> {
     pub fn check(&mut self) -> bool {
         self.declare_forward();
 
@@ -85,7 +82,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
         false
     }
 
-    pub fn analyze_decl(&mut self, node: &'type_checker Ast) -> Result<(), ThrushCompilerIssue> {
+    pub fn analyze_decl(&mut self, node: &'analyzer Ast) -> Result<(), ThrushCompilerIssue> {
         /* ######################################################################
 
 
@@ -129,7 +126,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
         Ok(())
     }
 
-    pub fn analyze_stmt(&mut self, node: &'type_checker Ast) -> Result<(), ThrushCompilerIssue> {
+    pub fn analyze_stmt(&mut self, node: &'analyzer Ast) -> Result<(), ThrushCompilerIssue> {
         /* ######################################################################
 
 
@@ -452,7 +449,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
     }
 }
 
-impl<'type_checker> TypeChecker<'type_checker> {
+impl<'analyzer> Analyzer<'analyzer> {
     #[inline]
     pub fn advance(&mut self) {
         if !self.is_eof() {
@@ -461,7 +458,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
     }
 
     #[inline]
-    pub fn peek(&self) -> &'type_checker Ast<'type_checker> {
+    pub fn peek(&self) -> &'analyzer Ast<'analyzer> {
         &self.ast[self.position]
     }
 
@@ -471,7 +468,12 @@ impl<'type_checker> TypeChecker<'type_checker> {
     }
 }
 
-impl TypeChecker<'_> {
+impl Analyzer<'_> {
+    #[inline]
+    pub fn add_warning(&mut self, warning: ThrushCompilerIssue) {
+        self.warnings.push(warning);
+    }
+
     #[inline]
     pub fn add_error(&mut self, error: ThrushCompilerIssue) {
         self.errors.push(error);
@@ -483,7 +485,7 @@ impl TypeChecker<'_> {
     }
 }
 
-impl TypeChecker<'_> {
+impl Analyzer<'_> {
     #[inline]
     pub fn begin_scope(&mut self) {
         self.symbols.begin_scope();

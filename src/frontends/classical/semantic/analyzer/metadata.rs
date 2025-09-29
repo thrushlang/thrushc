@@ -1,5 +1,5 @@
 use crate::frontends::classical::{
-    lexer::span::Span, semantic::typechecker::position::TypeCheckerPosition,
+    lexer::span::Span, semantic::analyzer::position::TypeCheckerPosition,
 };
 
 #[derive(Debug, Clone, Copy)]
@@ -10,6 +10,7 @@ pub struct TypeCheckerExprMetadata {
 }
 
 impl TypeCheckerExprMetadata {
+    #[inline]
     pub fn new(is_literal: bool, position: Option<TypeCheckerPosition>, span: Span) -> Self {
         Self {
             is_literal,

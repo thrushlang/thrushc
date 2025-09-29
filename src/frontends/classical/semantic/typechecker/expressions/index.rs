@@ -4,12 +4,7 @@ use crate::{
         lexer::span::Span,
         semantic::typechecker::TypeChecker,
         types::ast::Ast,
-        typesystem::{
-            traits::{
-                LLVMTypeExtensions, TypeExtensions, TypeMutableExtensions, TypePointerExtensions,
-            },
-            types::Type,
-        },
+        typesystem::{traits::TypeMutableExtensions, types::Type},
     },
 };
 
@@ -30,7 +25,7 @@ pub fn validate<'type_checker>(
                 if !reference.is_allocated() {
                     typechecker.add_error(ThrushCompilerIssue::Error(
                         "Type error".into(),
-                        "Expected memory reference, such as ptr[T], ptr, addr, or high-level pointer mut T.".into(),
+                        "Expected memory reference, such as ptr[T], ptr, addr, high-level pointer mut T or direct reference to variable.".into(),
                         None,
                         *span,
                     ));
@@ -38,26 +33,15 @@ pub fn validate<'type_checker>(
 
                 let reference_type: &Type = reference.get_value_type()?;
 
-                if reference_type.is_ptr_type() {
-                    let subtype: &Type = reference_type.get_type_with_depth(1);
-
-                    if subtype.llvm_is_ptr_type() && indexes.len() > 1 {
-                        typechecker.add_error(ThrushCompilerIssue::Error(
-                            "Type error".into(),
-                            "Consecutive indexing isn't allowed while it's using a pointer-to-pointer type."
-                                .into(),
-                            None,
-                            *span,
-                        ));
-                    }
-                } else if !reference_type.is_mut_array_type()
+                if !reference_type.is_ptr_type()
+                    && !reference_type.is_mut_array_type()
                     && !reference_type.is_mut_fixed_array_type()
                     && !reference_type.is_array_type()
                     && !reference_type.is_fixed_array_type()
                 {
                     typechecker.add_error(ThrushCompilerIssue::Error(
                         "Type error".into(),
-                        "Expected deep type, array, or fixed array.".into(),
+                        "Expected raw typed pointer ptr[T], raw pointer ptr, array[T], or fixed array[T; N].".into(),
                         None,
                         *span,
                     ));
@@ -67,33 +51,15 @@ pub fn validate<'type_checker>(
             if let Some(expr) = &source.1 {
                 let expr_type: &Type = expr.get_any_type()?;
 
-                if expr_type.is_ptr_type() {
-                    if !expr_type.is_typed_ptr_type() {
-                        typechecker.add_error(ThrushCompilerIssue::Error(
-                            "Type error".into(),
-                            "Expected raw typed pointer ptr[T].".into(),
-                            None,
-                            *span,
-                        ));
-                    }
-
-                    if expr_type.is_typed_ptr_type() && expr_type.is_all_ptr_type() {
-                        typechecker.add_error(ThrushCompilerIssue::Error(
-                            "Type error".into(),
-                            "A raw typed pointer type was expected, with a typed internal type."
-                                .into(),
-                            None,
-                            *span,
-                        ));
-                    }
-                } else if !expr_type.is_mut_array_type()
+                if !expr_type.is_ptr_type()
+                    && !expr_type.is_mut_array_type()
                     && !expr_type.is_mut_fixed_array_type()
                     && !expr_type.is_array_type()
                     && !expr_type.is_fixed_array_type()
                 {
                     typechecker.add_error(ThrushCompilerIssue::Error(
                         "Type error".into(),
-                        "Expected deep type, array, or fixed array.".into(),
+                        "Expected raw typed pointer ptr[T], raw pointer ptr, array[T], or fixed array[T; N].".into(),
                         None,
                         *span,
                     ));

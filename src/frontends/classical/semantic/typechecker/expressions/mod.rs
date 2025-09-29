@@ -38,13 +38,8 @@ pub fn validate<'type_checker>(
                 typechecker.add_error(mismatch_type_error);
             }
 
-            if let Err(type_error) = typechecker.analyze_stmt(left) {
-                typechecker.add_error(type_error);
-            }
-
-            if let Err(type_error) = typechecker.analyze_stmt(right) {
-                typechecker.add_error(type_error);
-            }
+            typechecker.analyze_stmt(left)?;
+            typechecker.analyze_stmt(right)?;
 
             Ok(())
         }
@@ -81,9 +76,7 @@ pub fn validate<'type_checker>(
                 }
             }
 
-            if let Err(type_error) = typechecker.analyze_stmt(expression) {
-                typechecker.add_error(type_error);
-            }
+            typechecker.analyze_stmt(expression)?;
 
             Ok(())
         }

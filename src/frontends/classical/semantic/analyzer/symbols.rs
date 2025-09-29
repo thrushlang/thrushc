@@ -1,41 +1,43 @@
 use ahash::AHashMap as HashMap;
 
-use crate::frontends::classical::types::semantic::typechecker::types::{
-    TypeCheckerAssemblerFunction, TypeCheckerAssemblerFunctions, TypeCheckerFunction,
-    TypeCheckerFunctions, TypeCheckerLLI, TypeCheckerLLIs, TypeCheckerLocal, TypeCheckerLocals,
+use crate::frontends::classical::types::semantic::analyzer::types::{
+    AnalyzerAssemblerFunction, AnalyzerAssemblerFunctions, AnalyzerFunction, AnalyzerFunctions,
+    AnalyzerLLI, AnalyzerLLIs, AnalyzerLocal, AnalyzerLocals,
 };
 
 #[derive(Debug)]
-pub struct TypeCheckerSymbolsTable<'symbol> {
-    functions: TypeCheckerFunctions<'symbol>,
+pub struct AnalyzerSymbolsTable<'symbol> {
+    functions: AnalyzerFunctions<'symbol>,
+    asm_functions: AnalyzerAssemblerFunctions<'symbol>,
 
-    asm_functions: TypeCheckerAssemblerFunctions<'symbol>,
-    locals: TypeCheckerLocals<'symbol>,
-    llis: TypeCheckerLLIs<'symbol>,
+    locals: AnalyzerLocals<'symbol>,
+    llis: AnalyzerLLIs<'symbol>,
 
     scope: usize,
 }
 
-impl<'symbol> TypeCheckerSymbolsTable<'symbol> {
+impl<'symbol> AnalyzerSymbolsTable<'symbol> {
     pub fn new() -> Self {
         Self {
             functions: HashMap::with_capacity(100),
             asm_functions: HashMap::with_capacity(100),
+
             locals: Vec::with_capacity(255),
             llis: Vec::with_capacity(255),
+
             scope: 0,
         }
     }
 }
 
-impl<'symbol> TypeCheckerSymbolsTable<'symbol> {
+impl<'symbol> AnalyzerSymbolsTable<'symbol> {
     #[inline]
-    pub fn new_local(&mut self, name: &'symbol str, local: TypeCheckerLocal<'symbol>) {
+    pub fn new_local(&mut self, name: &'symbol str, local: AnalyzerLocal<'symbol>) {
         self.locals.last_mut().unwrap().insert(name, local);
     }
 
     #[inline]
-    pub fn new_lli(&mut self, name: &'symbol str, lli: TypeCheckerLLI<'symbol>) {
+    pub fn new_lli(&mut self, name: &'symbol str, lli: AnalyzerLLI<'symbol>) {
         self.llis.last_mut().unwrap().insert(name, lli);
     }
 
@@ -43,20 +45,20 @@ impl<'symbol> TypeCheckerSymbolsTable<'symbol> {
     pub fn new_asm_function(
         &mut self,
         name: &'symbol str,
-        function: TypeCheckerAssemblerFunction<'symbol>,
+        function: AnalyzerAssemblerFunction<'symbol>,
     ) {
         self.asm_functions.insert(name, function);
     }
 
     #[inline]
-    pub fn new_function(&mut self, name: &'symbol str, function: TypeCheckerFunction<'symbol>) {
+    pub fn new_function(&mut self, name: &'symbol str, function: AnalyzerFunction<'symbol>) {
         self.functions.insert(name, function);
     }
 }
 
-impl<'symbol> TypeCheckerSymbolsTable<'symbol> {
+impl<'symbol> AnalyzerSymbolsTable<'symbol> {
     #[inline]
-    pub fn get_function(&self, name: &'symbol str) -> Option<&TypeCheckerFunction<'symbol>> {
+    pub fn get_function(&self, name: &'symbol str) -> Option<&AnalyzerFunction<'symbol>> {
         self.functions.get(name)
     }
 
@@ -64,12 +66,12 @@ impl<'symbol> TypeCheckerSymbolsTable<'symbol> {
     pub fn get_asm_function(
         &self,
         name: &'symbol str,
-    ) -> Option<&TypeCheckerAssemblerFunction<'symbol>> {
+    ) -> Option<&AnalyzerAssemblerFunction<'symbol>> {
         self.asm_functions.get(name)
     }
 }
 
-impl TypeCheckerSymbolsTable<'_> {
+impl AnalyzerSymbolsTable<'_> {
     #[inline]
     pub fn begin_scope(&mut self) {
         self.llis.push(HashMap::with_capacity(255));

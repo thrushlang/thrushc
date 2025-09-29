@@ -1,0 +1,31 @@
+use crate::{
+    core::errors::{position::CompilationPosition, standard::ThrushCompilerIssue},
+    frontends::classical::{lexer::span::Span, semantic::analyzer::Analyzer, types::ast::Ast},
+};
+
+pub fn validate<'analyzer>(
+    analyzer: &mut Analyzer<'analyzer>,
+    node: &'analyzer Ast,
+) -> Result<(), ThrushCompilerIssue> {
+    match node {
+        Ast::As { from, .. } => {
+            analyzer.analyze_stmt(from)?;
+
+            Ok(())
+        }
+
+        _ => {
+            let span: Span = node.get_span();
+
+            analyzer.add_bug(ThrushCompilerIssue::FrontEndBug(
+                "Expression not caught".into(),
+                "Expression could not be caught for processing.".into(),
+                span,
+                CompilationPosition::Analyzer,
+                line!(),
+            ));
+
+            Ok(())
+        }
+    }
+}

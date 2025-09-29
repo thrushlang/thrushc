@@ -40,6 +40,8 @@ pub fn validate<'type_checker>(
                 typechecker.add_error(error);
             }
 
+            typechecker.analyze_stmt(value)?;
+
             Ok(())
         }
 

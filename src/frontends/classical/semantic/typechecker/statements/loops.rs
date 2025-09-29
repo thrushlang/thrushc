@@ -20,21 +20,10 @@ pub fn validate<'type_checker>(
             block,
             ..
         } => {
-            if let Err(error) = typechecker.analyze_stmt(local) {
-                typechecker.add_error(error);
-            }
-
-            if let Err(error) = typechecker.analyze_stmt(cond) {
-                typechecker.add_error(error);
-            }
-
-            if let Err(error) = typechecker.analyze_stmt(actions) {
-                typechecker.add_error(error);
-            }
-
-            if let Err(error) = typechecker.analyze_stmt(block) {
-                typechecker.add_error(error);
-            }
+            typechecker.analyze_stmt(local)?;
+            typechecker.analyze_stmt(cond)?;
+            typechecker.analyze_stmt(actions)?;
+            typechecker.analyze_stmt(block)?;
 
             Ok(())
         }
@@ -55,6 +44,7 @@ pub fn validate<'type_checker>(
                 typechecker.add_error(error);
             }
 
+            typechecker.analyze_stmt(cond)?;
             typechecker.analyze_stmt(block)?;
 
             Ok(())

@@ -51,7 +51,7 @@ pub fn lex(lexer: &mut Lexer) -> Result<(), ThrushCompilerIssue> {
             is_binary = true;
         }
 
-        lexer.advance();
+        let _ = lexer.advance();
     }
 
     lexer.end_span();

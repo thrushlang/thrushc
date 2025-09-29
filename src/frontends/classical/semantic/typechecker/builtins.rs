@@ -36,6 +36,7 @@ pub fn validate_builtin<'type_checker>(
 
 pub fn validate_memmove<'type_checker>(
     typechecker: &mut TypeChecker<'type_checker>,
+
     destination: &'type_checker Ast,
     source: &'type_checker Ast,
     size: &'type_checker Ast,
@@ -88,6 +89,7 @@ pub fn validate_memmove<'type_checker>(
 
 pub fn validate_memcpy<'type_checker>(
     typechecker: &mut TypeChecker<'type_checker>,
+
     destination: &'type_checker Ast,
     source: &'type_checker Ast,
     size: &'type_checker Ast,
@@ -139,6 +141,7 @@ pub fn validate_memcpy<'type_checker>(
 
 pub fn validate_memset<'type_checker>(
     typechecker: &mut TypeChecker<'type_checker>,
+
     destination: &'type_checker Ast,
     new_size: &'type_checker Ast,
     size: &'type_checker Ast,

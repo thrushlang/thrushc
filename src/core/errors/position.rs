@@ -7,6 +7,7 @@ pub enum CompilationPosition {
     Lexer,
     Parser,
     TypeChecker,
+    Analyzer,
     Linter,
 }
 
@@ -16,6 +17,7 @@ impl Display for CompilationPosition {
             Self::Lexer => write!(f, "{}", "Lexer".bright_blue().bold()),
             Self::Parser => write!(f, "{}", "Parser".red().bold()),
             Self::TypeChecker => write!(f, "{}", "Type Checker".bright_yellow().bold()),
+            Self::Analyzer => write!(f, "{}", "Analyzer".bright_blue().bold()),
             Self::Linter => write!(f, "{}", "Linter".bright_magenta().bold()),
         }
     }
