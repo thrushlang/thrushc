@@ -3,6 +3,7 @@ pub mod cast;
 pub mod cmp;
 pub mod equality;
 pub mod factor;
+pub mod index;
 pub mod lower;
 pub mod mutation;
 pub mod or;

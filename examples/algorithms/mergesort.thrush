@@ -15,7 +15,7 @@ fn print(fmt: ptr) s32 @public @ignore @extern("printf");
 //   left: The starting index of the first subarray (inclusive, signed 32-bit integer).
 //   mid: The ending index of the first subarray (inclusive, signed 32-bit integer).
 //   right: The ending index of the second subarray (inclusive, signed 32-bit integer).
-fn merge(mut arr: array[u32; 7], left: s32, mid: s32, right: s32) void {
+fn merge(mut arr: mut array[u32; 7], left: s32, mid: s32, right: s32) void {
     local n1: s32 = mid - left + 1; // Size of the left subarray
     local n2: s32 = right - mid;    // Size of the right subarray
 

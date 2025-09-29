@@ -5,7 +5,9 @@ use crate::{
         semantic::typechecker::TypeChecker,
         types::ast::Ast,
         typesystem::{
-            traits::{TypeMutableExtensions, TypePointerExtensions},
+            traits::{
+                LLVMTypeExtensions, TypeExtensions, TypeMutableExtensions, TypePointerExtensions,
+            },
             types::Type,
         },
     },
@@ -37,19 +39,12 @@ pub fn validate<'type_checker>(
                 let reference_type: &Type = reference.get_value_type()?;
 
                 if reference_type.is_ptr_type() {
-                    if !reference_type.is_typed_ptr_type() {
-                        typechecker.add_error(ThrushCompilerIssue::Error(
-                            "Type error".into(),
-                            "Expected raw typed pointer ptr[T].".into(),
-                            None,
-                            *span,
-                        ));
-                    }
+                    let subtype: &Type = reference_type.get_type_with_depth(1);
 
-                    if reference_type.is_typed_ptr_type() && reference_type.is_all_ptr_type() {
+                    if subtype.llvm_is_ptr_type() && indexes.len() > 1 {
                         typechecker.add_error(ThrushCompilerIssue::Error(
                             "Type error".into(),
-                            "A raw typed pointer type was expected, with a typed internal type."
+                            "Consecutive indexing isn't allowed while it's using a pointer-to-pointer type."
                                 .into(),
                             None,
                             *span,
@@ -91,9 +86,7 @@ pub fn validate<'type_checker>(
                             *span,
                         ));
                     }
-                }
-
-                if !expr_type.is_mut_array_type()
+                } else if !expr_type.is_mut_array_type()
                     && !expr_type.is_mut_fixed_array_type()
                     && !expr_type.is_array_type()
                     && !expr_type.is_fixed_array_type()

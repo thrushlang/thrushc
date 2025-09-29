@@ -3,7 +3,7 @@ use std::fmt::Display;
 use inkwell::{basic_block::BasicBlock, builder::Builder, context::Context, values::FunctionValue};
 
 use crate::{
-    backends::classical::llvm::compiler::codegen::LLVMCodegen,
+    backends::classical::llvm::compiler::{block, codegen::LLVMCodegen},
     core::console::logging::{self, LoggingType},
     frontends::classical::types::ast::Ast,
 };
@@ -19,8 +19,8 @@ pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, stmt: &'ctx Ast<'ctx>)
     let llvm_function: FunctionValue = codegen.get_mut_context().get_current_fn();
 
     if let Ast::Loop { block, .. } = stmt {
-        let start: BasicBlock = llvm_context.append_basic_block(llvm_function, "loop");
-        let exit: BasicBlock = llvm_context.append_basic_block(llvm_function, "loop_exit");
+        let start: BasicBlock = block::append_block(llvm_context, llvm_function);
+        let exit: BasicBlock = block::append_block(llvm_context, llvm_function);
 
         llvm_builder
             .build_unconditional_branch(start)

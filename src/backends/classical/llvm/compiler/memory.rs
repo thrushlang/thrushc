@@ -157,24 +157,6 @@ impl<'ctx> SymbolAllocated<'ctx> {
             }
         }
 
-        if let Self::Parameter { value, .. } = self {
-            if value.is_pointer_value() {
-                let ptr: PointerValue = value.into_pointer_value();
-
-                if let Ok(loaded_value) = llvm_builder.build_load(llvm_type, ptr, "") {
-                    if let Some(instr) = loaded_value.as_instruction_value() {
-                        let _ = instr.set_alignment(alignment);
-                    }
-
-                    return loaded_value;
-                }
-
-                abort()
-            }
-
-            return *value;
-        }
-
         if let Self::Constant { ptr, metadata, .. } = self {
             if let Ok(loaded_value) = llvm_builder.build_load(llvm_type, *ptr, "") {
                 if let Some(instr) = loaded_value.as_instruction_value() {
@@ -216,6 +198,24 @@ impl<'ctx> SymbolAllocated<'ctx> {
         }
 
         if let Self::LowLevelInstruction { value, .. } = self {
+            return *value;
+        }
+
+        if let Self::Parameter { value, .. } = self {
+            if value.is_pointer_value() {
+                let ptr: PointerValue = value.into_pointer_value();
+
+                if let Ok(loaded_value) = llvm_builder.build_load(llvm_type, ptr, "") {
+                    if let Some(instr) = loaded_value.as_instruction_value() {
+                        let _ = instr.set_alignment(alignment);
+                    }
+
+                    return loaded_value;
+                }
+
+                abort()
+            }
+
             return *value;
         }
 
@@ -263,7 +263,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
             return unsafe {
                 builder
                     .build_in_bounds_gep(
-                        typegen::generate_subtype_with_all(context, kind),
+                        typegen::generate_subtype(context, kind),
                         *ptr,
                         indexes,
                         "",
@@ -277,7 +277,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
                 return unsafe {
                     builder
                         .build_in_bounds_gep(
-                            typegen::generate_subtype_with_all(context, kind),
+                            typegen::generate_subtype(context, kind),
                             (*value).into_pointer_value(),
                             indexes,
                             "",
@@ -307,12 +307,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
         | Self::Static { ptr, kind, .. } = self
         {
             return builder
-                .build_struct_gep(
-                    typegen::generate_subtype_with_all(context, kind),
-                    *ptr,
-                    index,
-                    "",
-                )
+                .build_struct_gep(typegen::generate_subtype(context, kind), *ptr, index, "")
                 .unwrap_or_else(|_| abort());
         }
 
@@ -320,7 +315,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
             if value.is_pointer_value() {
                 return builder
                     .build_struct_gep(
-                        typegen::generate_subtype_with_all(context, kind),
+                        typegen::generate_subtype(context, kind),
                         (*value).into_pointer_value(),
                         index,
                         "",
@@ -510,7 +505,7 @@ pub fn get_struct_anon<'ctx>(
     let llvm_builder: &Builder = context.get_llvm_builder();
 
     if let Ok(ptr) = llvm_builder.build_struct_gep(
-        typegen::generate_subtype_with_all(llvm_context, kind),
+        typegen::generate_subtype(llvm_context, kind),
         ptr,
         index,
         "",
@@ -532,7 +527,7 @@ pub fn gep_anon<'ctx>(
 
     if let Ok(ptr) = unsafe {
         llvm_builder.build_gep(
-            typegen::generate_subtype_with_all(llvm_context, kind),
+            typegen::generate_subtype(llvm_context, kind),
             ptr,
             indexes,
             "",

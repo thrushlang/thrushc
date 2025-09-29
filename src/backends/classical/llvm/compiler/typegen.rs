@@ -126,7 +126,7 @@ pub fn generate_subtype<'ctx>(llvm_context: &'ctx Context, kind: &Type) -> Basic
     match kind {
         Type::Mut(subtype) => self::generate_subtype(llvm_context, subtype),
         Type::Const(subtype) => self::generate_subtype(llvm_context, subtype),
-        Type::Array(subtype, ..) => self::generate_subtype(llvm_context, subtype),
+        Type::Array(..) => llvm_context.ptr_type(AddressSpace::default()).into(),
 
         _ => self::generate_type(llvm_context, kind),
     }
@@ -141,7 +141,7 @@ pub fn generate_subtype_with_all<'ctx>(
         Type::Ptr(Some(subtype)) => self::generate_subtype_with_all(llvm_context, subtype),
         Type::Mut(subtype) => self::generate_subtype_with_all(llvm_context, subtype),
         Type::Const(subtype) => self::generate_subtype_with_all(llvm_context, subtype),
-        Type::Array(subtype, ..) => self::generate_subtype_with_all(llvm_context, subtype),
+        Type::Array(..) => llvm_context.ptr_type(AddressSpace::default()).into(),
 
         _ => self::generate_type(llvm_context, kind),
     }

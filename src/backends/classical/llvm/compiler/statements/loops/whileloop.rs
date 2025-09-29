@@ -8,10 +8,9 @@ use inkwell::{
 };
 
 use crate::{
-    backends::classical::llvm::compiler::{codegen::LLVMCodegen, value},
+    backends::classical::llvm::compiler::{block, codegen::LLVMCodegen, value},
     core::console::logging::{self, LoggingType},
-    frontends::classical::types::ast::Ast,
-    frontends::classical::typesystem::types::Type,
+    frontends::classical::{types::ast::Ast, typesystem::types::Type},
 };
 
 pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, stmt: &'ctx Ast<'ctx>) {
@@ -25,9 +24,9 @@ pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, stmt: &'ctx Ast<'ctx>)
     };
 
     if let Ast::While { cond, block, .. } = stmt {
-        let condition: BasicBlock = llvm_context.append_basic_block(llvm_function, "while");
-        let body: BasicBlock = llvm_context.append_basic_block(llvm_function, "while_body");
-        let exit: BasicBlock = llvm_context.append_basic_block(llvm_function, "while_exit");
+        let condition: BasicBlock = block::append_block(llvm_context, llvm_function);
+        let body: BasicBlock = block::append_block(llvm_context, llvm_function);
+        let exit: BasicBlock = block::append_block(llvm_context, llvm_function);
 
         llvm_builder
             .build_unconditional_branch(condition)
