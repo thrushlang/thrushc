@@ -30,6 +30,7 @@ impl Display for LLVMAttribute<'_> {
             LLVMAttribute::MinSize(..) => write!(f, "@minsize"),
             LLVMAttribute::Hot(..) => write!(f, "@hot"),
             LLVMAttribute::Ignore(..) => write!(f, "@ignore"),
+            LLVMAttribute::NoUnwind(..) => write!(f, "@nounwind"),
             LLVMAttribute::AsmThrow(..) => write!(f, "@asmthrow"),
             LLVMAttribute::AsmSyntax(..) => write!(f, "@asmsyntax"),
             LLVMAttribute::AsmSideEffects(..) => write!(f, "@asmeffects"),

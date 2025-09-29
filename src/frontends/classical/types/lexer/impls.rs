@@ -63,7 +63,12 @@ impl std::fmt::Display for TokenType {
             TokenType::AtomSync => write!(f, "atomsync"),
             TokenType::AtomStrict => write!(f, "atomstrict"),
 
+            TokenType::ThreadDynamic => write!(f, "threaddyn"),
+            TokenType::ThreadExec => write!(f, "threadexec"),
+            TokenType::ThreadInit => write!(f, "threadinit"),
+
             // Attributes
+            TokenType::NoUnwind => write!(f, "@nounwind"),
             TokenType::Packed => write!(f, "@packed"),
             TokenType::Stack => write!(f, "@stack"),
             TokenType::Static => write!(f, "@static"),

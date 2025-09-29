@@ -163,10 +163,11 @@ impl Ast<'_> {
             ascii_name,
             kind,
             position,
-            ..
+            metadata,
+            span,
         } = self
         {
-            return (name, ascii_name, kind, *position);
+            return (name, ascii_name, kind, *position, *span, *metadata);
         }
 
         logging::print_bug(

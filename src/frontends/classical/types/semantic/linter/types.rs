@@ -59,6 +59,7 @@ pub enum LLVMAttributeComparator {
     StrongStack,
     WeakStack,
     PreciseFloats,
+    NoUnwind,
 
     Stack,
     Heap,

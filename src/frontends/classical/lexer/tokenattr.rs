@@ -23,6 +23,7 @@ impl TokenType {
             TokenType::AsmSideEffects => Some(LLVMAttribute::AsmSideEffects(span)),
             TokenType::AsmAlignStack => Some(LLVMAttribute::AsmAlignStack(span)),
             TokenType::Packed => Some(LLVMAttribute::Packed(span)),
+            TokenType::NoUnwind => Some(LLVMAttribute::NoUnwind(span)),
 
             _ => None,
         }
@@ -48,6 +49,7 @@ impl TokenType {
                 | TokenType::AsmSideEffects
                 | TokenType::AsmAlignStack
                 | TokenType::Packed
+                | TokenType::NoUnwind
         )
     }
 }

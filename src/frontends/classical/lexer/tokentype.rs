@@ -59,6 +59,7 @@ pub enum TokenType {
     StrongStack,
     PreciseFloats,
     Convention,
+    NoUnwind,
     Packed,
     AsmAlignStack,
     AsmSyntax,
@@ -79,6 +80,10 @@ pub enum TokenType {
     AtomDrop,
     AtomSync,
     AtomStrict,
+
+    ThreadDynamic,
+    ThreadExec,
+    ThreadInit,
 
     // --- LLI ---
     Alloc,

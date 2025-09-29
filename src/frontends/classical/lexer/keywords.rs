@@ -53,6 +53,10 @@ lazy_static! {
         keywords.insert("atomsync", TokenType::AtomSync);
         keywords.insert("atomstrict", TokenType::AtomStrict);
 
+        keywords.insert("threadinit", TokenType::ThreadInit);
+        keywords.insert("threaddyn", TokenType::ThreadDynamic);
+        keywords.insert("threadexec", TokenType::ThreadExec);
+
         keywords.insert("unreachable", TokenType::Unreachable);
 
         keywords.insert("halloc", TokenType::Halloc);
@@ -62,13 +66,14 @@ lazy_static! {
         keywords.insert("memcpy", TokenType::MemCpy);
         keywords.insert("alignof", TokenType::AlignOf);
 
-        keywords.insert("@import", TokenType::Import);
+        keywords.insert("import", TokenType::Import);
 
         keywords.insert("@asmalingstack", TokenType::AsmAlignStack);
         keywords.insert("@asmsyntax", TokenType::AsmSyntax);
         keywords.insert("@asmthrow", TokenType::AsmThrow);
         keywords.insert("@asmeffects", TokenType::AsmSideEffects);
 
+        keywords.insert("@nounwind", TokenType::NoUnwind);
         keywords.insert("@packed", TokenType::Packed);
         keywords.insert("@heap", TokenType::Heap);
         keywords.insert("@stack", TokenType::Stack);

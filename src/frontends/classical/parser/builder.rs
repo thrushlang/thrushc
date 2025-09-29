@@ -1,4 +1,4 @@
-use inkwell::AtomicOrdering;
+use inkwell::{AtomicOrdering, ThreadLocalMode};
 
 use crate::{
     core::errors::standard::ThrushCompilerIssue,
@@ -20,6 +20,25 @@ pub fn build_structure_modificator(attributes: &ThrushAttributes) -> StructureTy
         LLVMStructureTypeModificator::new(llvm_packed_modificator),
         GCCStructureTypeModificator::new(),
     )
+}
+
+#[inline]
+pub fn build_thread_local_mode<'parser>(
+    ctx: &mut ParserContext<'parser>,
+) -> Result<Option<ThreadLocalMode>, ThrushCompilerIssue> {
+    if ctx.match_token(TokenType::ThreadDynamic)? {
+        return Ok(Some(ThreadLocalMode::GeneralDynamicTLSModel));
+    }
+
+    if ctx.match_token(TokenType::ThreadExec)? {
+        return Ok(Some(ThreadLocalMode::LocalExecTLSModel));
+    }
+
+    if ctx.match_token(TokenType::ThreadInit)? {
+        return Ok(Some(ThreadLocalMode::InitialExecTLSModel));
+    }
+
+    Ok(None)
 }
 
 #[inline]

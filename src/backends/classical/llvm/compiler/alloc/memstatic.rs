@@ -123,6 +123,7 @@ pub fn local_static<'ctx>(
         global.set_thread_local(true);
     }
 
+    global.set_thread_local_mode(llvm_metadata.thread_mode);
     global.set_initializer(&llvm_value);
     global.set_linkage(Linkage::LinkerPrivate);
 
@@ -163,6 +164,7 @@ pub fn global_static<'ctx>(
         global.set_thread_local(true);
     }
 
+    global.set_thread_local_mode(llvm_metadata.thread_mode);
     global.set_initializer(&llvm_value);
 
     global.as_pointer_value()

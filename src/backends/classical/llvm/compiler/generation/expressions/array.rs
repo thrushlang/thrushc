@@ -16,7 +16,6 @@ use inkwell::{builder::Builder, context::Context};
 #[inline]
 pub fn compile<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
-
     items: &'ctx [Ast],
     kind: &Type,
     cast: Option<&Type>,
@@ -34,7 +33,6 @@ pub fn compile<'ctx>(
 
 fn compile_without_anchor<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
-
     items: &'ctx [Ast],
     kind: &Type,
     cast: Option<&Type>,
@@ -97,7 +95,6 @@ fn compile_without_anchor<'ctx>(
 
 fn compile_with_anchor<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
-
     items: &'ctx [Ast],
     kind: &Type,
     cast: Option<&Type>,

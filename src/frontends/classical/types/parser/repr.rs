@@ -1,10 +1,11 @@
 use crate::frontends::classical::{
-    lexer::tokentype::TokenType,
+    lexer::{span::Span, tokentype::TokenType},
     types::{
         ast::{
             Ast,
             metadata::{
-                constant::ConstantMetadata, local::LocalMetadata, staticvar::StaticMetadata,
+                constant::ConstantMetadata, fnparam::FunctionParameterMetadata,
+                local::LocalMetadata, staticvar::StaticMetadata,
             },
         },
         parser::stmts::types::ThrushAttributes,
@@ -50,7 +51,14 @@ pub type LocalConstant<'ctx> = (
     ConstantMetadata,
 );
 
-pub type FunctionParameter<'ctx> = (&'ctx str, &'ctx str, &'ctx Type, u32);
+pub type FunctionParameter<'ctx> = (
+    &'ctx str,
+    &'ctx str,
+    &'ctx Type,
+    u32,
+    Span,
+    FunctionParameterMetadata,
+);
 
 pub type Local<'ctx> = (
     &'ctx str,

@@ -1,4 +1,4 @@
-use inkwell::AtomicOrdering;
+use inkwell::{AtomicOrdering, ThreadLocalMode};
 
 use crate::{
     core::errors::standard::ThrushCompilerIssue,
@@ -28,6 +28,7 @@ pub fn build_global_static<'parser>(
     let is_volatile: bool = ctx.match_token(TokenType::Volatile)?;
 
     let atom_ord: Option<AtomicOrdering> = builder::build_atomic_ord(ctx)?;
+    let thread_mode: Option<ThreadLocalMode> = builder::build_thread_local_mode(ctx)?;
 
     let static_tk: &Token = ctx.consume(
         TokenType::Identifier,
@@ -54,8 +55,14 @@ pub fn build_global_static<'parser>(
 
     let value: Ast = expr::build_expression(ctx)?;
 
-    let metadata: StaticMetadata =
-        StaticMetadata::new(true, is_mutable, is_lazy, is_volatile, atom_ord);
+    let metadata: StaticMetadata = StaticMetadata::new(
+        true,
+        is_mutable,
+        is_lazy,
+        is_volatile,
+        atom_ord,
+        thread_mode,
+    );
 
     if declare_forward {
         if let Err(error) = ctx.get_mut_symbols().new_global_static(

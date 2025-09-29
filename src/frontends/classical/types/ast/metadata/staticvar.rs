@@ -1,4 +1,4 @@
-use inkwell::AtomicOrdering;
+use inkwell::{AtomicOrdering, ThreadLocalMode};
 
 #[derive(Debug, Clone, Copy)]
 pub struct StaticMetadata {
@@ -13,6 +13,7 @@ pub struct LLVMStaticMetadata {
     pub unnamed_addr: bool,
     pub constant: bool,
     pub thread_local: bool,
+    pub thread_mode: Option<ThreadLocalMode>,
     pub volatile: bool,
     pub atomic_ord: Option<AtomicOrdering>,
 }
@@ -25,6 +26,7 @@ impl StaticMetadata {
         thread_local: bool,
         volatile: bool,
         atomic_ord: Option<AtomicOrdering>,
+        thread_mode: Option<ThreadLocalMode>,
     ) -> Self {
         Self {
             is_global,
@@ -34,6 +36,7 @@ impl StaticMetadata {
                 unnamed_addr: !is_mutable,
                 constant: !is_mutable,
                 thread_local,
+                thread_mode,
                 volatile,
                 atomic_ord,
             },
