@@ -1,0 +1,282 @@
+/*
+
+Copyright (c) 2025 Stevens Benavides 
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+GLIBC MATH - 2.42 | https://sourceware.org/glibc/manual/2.42 
+
+*/
+
+
+/* ######################################
+
+    MATHEMATICAL CONSTANTS
+
+######################################## */
+
+const M_E: const f64 @public = 2.7182818284590452354; /* e */
+const M_LOG2E: const f64 @public = 1.4426950408889634074; /* log_2 e */
+const M_LOG10E: const f64 @public = 0.43429448190325182765; /* log_10 e */
+const M_LN2: const f64 @public = 0.69314718055994530942; /* log_e 2 */
+const M_LN10: const f64 @public = 2.30258509299404568402; /* log_e 10 */
+const M_PI: const f64 @public = 3.14159265358979323846; /* pi */
+const M_PI_2: const f64 @public = 1.57079632679489661923; /* pi/2 */
+const M_PI_4: const f64 @public = 0.78539816339744830962; /* pi/4 */
+const M_1_PI: const f64 @public = 0.31830988618379067154; /* 1/pi */
+const M_2_PI: const f64 @public = 0.63661977236758134308; /* 2/pi */
+const M_2_SQRTPI: const f64 @public = 1.12837916709551257390; /* 2/sqrt(pi) */
+const M_SQRT2: const f64 @public = 1.41421356237309504880; /* sqrt(2) */
+const M_SQRT1_2: const f64 @public = 0.70710678118654752440; /* 1/sqrt(2) */
+
+const M_Ef64: const f64 @public = 2.718281828459045235360287471352662498; /* e */
+const M_LOG2Ef64: const f64 @public = 1.442695040888963407359924681001892137; /* log_2 e */
+const M_LOG10Ef64: const f64 @public = 0.434294481903251827651128918916605082; /* log_10 e */
+const M_LN2f64: const f64 @public = 0.693147180559945309417232121458176568; /* log_e 2 */
+const M_LN10f64: const f64 @public = 2.302585092994045684017991454684364208; /* log_e 10 */
+const M_PIf64: const f64 @public = 3.141592653589793238462643383279502884; /* pi */
+const M_PI_2f64: const f64 @public = 1.570796326794896619231321691639751442; /* pi/2 */
+const M_PI_4f64: const f64 @public = 0.785398163397448309615660845819875721; /* pi/4 */
+const M_1_PIf64: const f64 @public = 0.318309886183790671537767526745028724; /* 1/pi */
+const M_2_PIf64: const f64 @public = 0.636619772367581343075535053490057448; /* 2/pi */
+const M_2_SQRTPIf64: const f64 @public = 1.128379167095512573896158903121545172; /* 2/sqrt(pi) */
+const M_SQRT2f64: const f64 @public = 1.414213562373095048801688724209698079; /* sqrt(2) */
+const M_SQRT1_2f64: const f64 @public = 0.707106781186547524400844362104849039; /* 1/sqrt(2) */
+
+const M_Ef64: const f64 @public = 2.718281828459045235360287471352662498; /* e */
+const M_LOG2Ef64: const f64 @public = 1.442695040888963407359924681001892137; /* log_2 e */
+const M_LOG10Ef64: const f64 @public = 0.434294481903251827651128918916605082; /* log_10 e */
+const M_LN2f64: const f64 @public = 0.693147180559945309417232121458176568; /* log_e 2 */
+const M_LN10f64: const f64 @public = 2.302585092994045684017991454684364208; /* log_e 10 */
+const M_PIf64: const f64 @public = 3.141592653589793238462643383279502884; /* pi */
+const M_PI_2f64: const f64 @public = 1.570796326794896619231321691639751442; /* pi/2 */
+const M_PI_4f64: const f64 @public = 0.785398163397448309615660845819875721; /* pi/4 */
+const M_1_PIf64: const f64 @public = 0.318309886183790671537767526745028724; /* 1/pi */
+const M_2_PIf64: const f64 @public = 0.636619772367581343075535053490057448; /* 2/pi */
+const M_2_SQRTPIf64: const f64 @public = 1.128379167095512573896158903121545172; /* 2/sqrt(pi) */
+const M_SQRT2f64: const f64 @public = 1.414213562373095048801688724209698079; /* sqrt(2) */
+const M_SQRT1_2f64: const f64 @public = 0.707106781186547524400844362104849039; /* 1/sqrt(2) */
+
+
+const M_Ef: const f32 @public = 2.7182818284590452354; /* e */
+const M_LOG2Ef: const f32 @public = 1.4426950408889634074; /* log_2 e */
+const M_LOG10Ef: const f32 @public = 0.43429448190325182765; /* log_10 e */
+const M_LN2f: const f32 @public = 0.69314718055994530942; /* log_e 2 */
+const M_LN10f: const f32 @public = 2.30258509299404568402; /* log_e 10 */
+const M_PIf: const f32 @public = 3.14159265358979323846; /* pi */
+const M_PI_2f: const f32 @public = 1.57079632679489661923; /* pi/2 */
+const M_PI_4f: const f32 @public = 0.78539816339744830962; /* pi/4 */
+const M_1_PIf: const f32 @public = 0.31830988618379067154; /* 1/pi */
+const M_2_PIf: const f32 @public = 0.63661977236758134308; /* 2/pi */
+const M_2_SQRTPIf: const f32 @public = 1.12837916709551257390; /* 2/sqrt(pi) */
+const M_SQRT2f: const f32 @public = 1.41421356237309504880; /* sqrt(2) */
+const M_SQRT1_2f: const f32 @public = 0.70710678118654752440; /* 1/sqrt(2) */
+
+const M_Ef32: const f32 @public = 2.718281828459045235360287471352662498; /* e */
+const M_LOG2Ef32: const f32 @public = 1.442695040888963407359924681001892137; /* log_2 e */
+const M_LOG10Ef32: const f32 @public = 0.434294481903251827651128918916605082; /* log_10 e */
+const M_LN2f32: const f32 @public = 0.693147180559945309417232121458176568; /* log_e 2 */
+const M_LN10f32: const f32 @public = 2.302585092994045684017991454684364208; /* log_e 10 */
+const M_PIf32: const f32 @public = 3.141592653589793238462643383279502884; /* pi */
+const M_PI_2f32: const f32 @public = 1.570796326794896619231321691639751442; /* pi/2 */
+const M_PI_4f32: const f32 @public = 0.785398163397448309615660845819875721; /* pi/4 */
+const M_1_PIf32: const f32 @public = 0.318309886183790671537767526745028724; /* 1/pi */
+const M_2_PIf32: const f32 @public = 0.636619772367581343075535053490057448; /* 2/pi */
+const M_2_SQRTPIf32: const f32 @public = 1.128379167095512573896158903121545172; /* 2/sqrt(pi) */
+const M_SQRT2f32: const f32 @public = 1.414213562373095048801688724209698079; /* sqrt(2) */
+const M_SQRT1_2f32: const f32 @public = 0.707106781186547524400844362104849039; /* 1/sqrt(2) */
+
+
+/* ######################################
+
+    TRIGONOMETRIC FUNCTIONS
+
+######################################## */
+
+fn sin(x: f64) f64 @public @extern("sin") @convention("C");
+fn sinf(x: f32) f32 @public @extern("sinf") @convention("C");
+
+fn cos(x: f64) f64 @public @extern("cos") @convention("C");
+fn cosf(x: f32) f32 @public @extern("cosf") @convention("C");
+
+fn tan(x: f64) f64 @public @extern("tan") @convention("C");
+fn tanf(x: f32) f32 @public @extern("tanf") @convention("C");
+
+fn sincos(x: f64, sinx: ptr[f64], cosx: ptr[f64]) void @public @extern("sincos") @convention("C");
+fn sincosf(x: f32, sinx: ptr[f32], cosx: ptr[f32]) void @public @extern("sincosf") @convention("C");
+
+fn sinpi(x: f64) f64 @public @extern("sinpi") @convention("C");
+fn sinpif(x: f32) f32 @public @extern("sinpif") @convention("C");
+
+fn cospi(x: f64) f64 @public @extern("cospi") @convention("C");
+fn cospif(x: f32) f32 @public @extern("cospif") @convention("C");
+
+fn tanpi(x: f64) f64 @public @extern("tanpi") @convention("C");
+fn tanpif(x: f32) f32 @public @extern("tanpif") @convention("C");
+
+/* ######################################
+
+    INVERSE TRIGONOMETRIC FUNCTIONS
+
+######################################## */
+
+fn asin(x: f64) f64 @public @extern("asin") @convention("C");
+fn asinf(x: f32) f32 @public @extern("asinf") @convention("C");
+
+fn acos(x: f64) f64 @public @extern("acos") @convention("C");
+fn acosf(x: f32) f32 @public @extern("acosf") @convention("C");
+
+fn atan(x: f64) f64 @public @extern("atan") @convention("C");
+fn atanf(x: f32) f32 @public @extern("atanf") @convention("C");
+
+fn asinpi(x: f64) f64 @public @extern("asinpi") @convention("C");
+fn asinpif(x: f32) f32 @public @extern("asinpif") @convention("C");
+
+fn acospi(x: f64) f64 @public @extern("acospi") @convention("C");
+fn acospif(x: f32) f32 @public @extern("acospif") @convention("C");
+
+fn atanpi(x: f64) f64 @public @extern("atanpi") @convention("C");
+fn atanpif(x: f32) f32 @public @extern("atanpif") @convention("C");
+
+/* ######################################
+
+    EXPONENTIATION AND LOGARITHMS
+
+######################################## */
+
+fn exp(x: f64) f64 @public @extern("exp") @convention("C");
+fn expf(x: f32) f32 @public @extern("expf") @convention("C");
+
+fn exp2(x: f64) f64 @public @extern("exp2") @convention("C");
+fn exp2f(x: f32) f32 @public @extern("exp2f") @convention("C");
+
+fn exp10(x: f64) f64 @public @extern("exp10") @convention("C");
+fn exp10f(x: f32) f32 @public @extern("exp10f") @convention("C");
+
+fn log(x: f64) f64 @public @extern("log") @convention("C");
+fn logf(x: f32) f32 @public @extern("logf") @convention("C");
+
+fn log10(x: f64) f64 @public @extern("log10") @convention("C");
+fn log10f(x: f32) f32 @public @extern("log10f") @convention("C");
+
+fn log2(x: f64) f64 @public @extern("log2") @convention("C");
+fn log2f(x: f32) f32 @public @extern("log2f") @convention("C");
+
+fn logb(x: f64) f64 @public @extern("logb") @convention("C");
+fn logbf(x: f32) f32 @public @extern("logbf") @convention("C");
+
+fn ilogb(x: f64) s32 @public @extern("ilogb") @convention("C");
+fn ilogbf(x: f32) s32 @public @extern("ilogbf") @convention("C");
+
+fn pow(base: f64, power: f64) f64 @public @extern("pow") @convention("C");
+fn powf(base: f32, power: f32) f32 @public @extern("powf") @convention("C");
+
+fn powr(base: f64, power: f64) f64 @public @extern("powr") @convention("C");
+fn powrf(base: f32, power: f32) f32 @public @extern("powrf") @convention("C");
+
+fn pown(base: f64, power: s64) f64 @public @extern("pown") @convention("C");
+fn pownf(base: f32, power: s64) f32 @public @extern("pownf") @convention("C");
+
+fn compoundn(x: f64, power: s64) f64 @public @extern("compoundn") @convention("C");
+fn compoundnf(x: f32, power: s64) f32 @public @extern("compoundnf") @convention("C");
+
+fn sqrt(x: f64) f64 @public @extern("sqrt") @convention("C");
+fn sqrtf(x: f32) f32 @public @extern("sqrtf") @convention("C");
+
+fn rsqrt(x: f64) f64 @public @extern("rsqrt") @convention("C");
+fn rsqrtf(x: f32) f32 @public @extern("rsqrtf") @convention("C");
+
+fn cbrt(x: f64) f64 @public @extern("cbrt") @convention("C");
+fn cbrtf(x: f32) f32 @public @extern("cbrtf") @convention("C");
+
+fn hypot(x: f64, y: f64) f64 @public @extern("hypot") @convention("C");
+fn hypotf(x: f64, y: f64) f32 @public @extern("hypotf") @convention("C");
+
+fn rootn(x: f64, n: s64) f64 @public @extern("rootn") @convention("C");
+fn rootnf(x: f32, n: s64) f32 @public @extern("rootnf") @convention("C");
+
+fn expm1(x: f64) f64 @public @extern("expm1") @convention("C");
+fn expm1f(x: f32) f32 @public @extern("expm1f") @convention("C");
+
+fn exp2m1(x: f64) f64 @public @extern("exp2m1") @convention("C");
+fn exp2m1f(x: f32) f32 @public @extern("exp2m1f") @convention("C");
+
+fn exp10m1(x: f64) f64 @public @extern("exp10m1") @convention("C");
+fn exp10m1f(x: f32) f32 @public @extern("exp10m1f") @convention("C");
+
+fn log1p(x: f64) f64 @public @extern("log1p") @convention("C");
+fn log1pf(x: f32) f32 @public @extern("log1pf") @convention("C");
+
+fn log2p1(x: f64) f64 @public @extern("log2p1") @convention("C");
+fn log2p1f(x: f32) f32 @public @extern("log2p1f") @convention("C");
+
+fn log10p1(x: f64) f64 @public @extern("log10p1") @convention("C");
+fn log10p1f(x: f32) f32 @public @extern("log10p1f") @convention("C");
+
+/* ######################################
+
+    HYPERBOLIC FUNCTIONS
+
+######################################## */
+
+fn sinh(x: f64) f64 @public @extern("sinh") @convention("C");
+fn sinhf(x: f32) f32 @public @extern("sinhf") @convention("C");
+
+fn cosh(x: f64) f64 @public @extern("cosh") @convention("C");
+fn coshf(x: f32) f32 @public @extern("coshf") @convention("C");
+
+fn tanh(x: f64) f64 @public @extern("tanh") @convention("C");
+fn tanhf(x: f32) f32 @public @extern("tanhf") @convention("C");
+
+fn asinh(x: f64) f64 @public @extern("asinh") @convention("C");
+fn asinhf(x: f32) f32 @public @extern("asinhf") @convention("C");
+
+fn acosh(x: f64) f64 @public @extern("acosh") @convention("C");
+fn acoshf(x: f32) f32 @public @extern("acoshf") @convention("C");
+
+fn atanh(x: f64) f64 @public @extern("atanh") @convention("C");
+fn atanhf(x: f32) f32 @public @extern("atanhf") @convention("C");
+
+/* ######################################
+
+    SPECIAL FUNCTIONS
+
+######################################## */
+
+fn erf(x: f64) f64 @public @extern("erf") @convention("C");
+fn erff(x: f32) f32 @public @extern("erff") @convention("C");
+
+fn erfc(x: f64) f64 @public @extern("erfc") @convention("C");
+fn erfcf(x: f32) f32 @public @extern("erfcf") @convention("C");
+
+fn lgamma(x: f64) f64 @public @extern("lgamma") @convention("C");
+fn lgammaf(x: f32) f32 @public @extern("lgammaf") @convention("C");
+
+fn lgamma_r(x: f64, signp: ptr[s32]) f64 @public @extern("lgamma") @convention("C");
+fn lgammaf_r(x: f32, signp: ptr[s32]) f32 @public @extern("lgammaf") @convention("C");
+
+fn gamma(x: f64) f64 @public @extern("gamma") @convention("C");
+fn gammaf(x: f32) f32 @public @extern("gammaf") @convention("C");
+
+fn tgamma(x: f64) f64 @public @extern("tgamma") @convention("C");
+fn tgammaf(x: f32) f32 @public @extern("tgammaf") @convention("C");
+
+fn j0(x: f64) f64 @public @extern("j0") @convention("C");
+fn j0f(x: f32) f32 @public @extern("j0f") @convention("C");
+
+fn j1(x: f64) f64 @public @extern("j1") @convention("C");
+fn j1f(x: f32) f32 @public @extern("j1f") @convention("C");
+
+fn jn(n: s32, x: f64) f64 @public @extern("jn") @convention("C");
+fn jnf(n: s32, x: f32) f32 @public @extern("jnf") @convention("C");
+
+fn y0(x: f64) f64 @public @extern("y0") @convention("C");
+fn y0f(x: f32) f32 @public @extern("y0f") @convention("C");
+
+fn y1(x: f64) f64 @public @extern("y1") @convention("C");
+fn y1f(x: f32) f32 @public @extern("y1f") @convention("C");
+
+fn yn(n: s32, x: f64) f64 @public @extern("yn") @convention("C");
+fn ynf(n: s32, x: f32) f32 @public @extern("ynf") @convention("C");

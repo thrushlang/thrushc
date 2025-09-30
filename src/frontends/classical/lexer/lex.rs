@@ -29,9 +29,7 @@ pub fn analyze(lexer: &mut Lexer) -> Result<(), ThrushCompilerIssue> {
             lexer.advance_only();
         },
         '/' if lexer.char_match('*') => loop {
-            if lexer.char_match('*') {
-                continue;
-            } else if lexer.char_match('/') {
+            if lexer.char_match('*') && lexer.char_match('/') {
                 break;
             } else if lexer.is_eof() {
                 lexer.end_span();
