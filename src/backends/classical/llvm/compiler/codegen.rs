@@ -299,18 +299,17 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
             } => {
                 if kind.is_integer_type() {
                     binaryop::integer::compile(self.context, (left, operator, right, *span), None);
+                    return;
                 }
 
                 if kind.is_float_type() {
                     binaryop::float::compile(self.context, (left, operator, right, *span), None);
+                    return;
                 }
 
                 if kind.is_bool_type() {
                     binaryop::boolean::compile(self.context, (left, operator, right, *span), None);
-                }
-
-                if kind.is_ptr_type() {
-                    binaryop::pointer::compile(self.context, (left, operator, right, *span));
+                    return;
                 }
 
                 self::codegen_abort(format!(

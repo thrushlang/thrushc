@@ -117,9 +117,6 @@ pub fn compile<'ctx>(
             t if t.is_bool_type() => {
                 binaryop::boolean::compile(context, (left, operator, right, *span), cast)
             }
-            t if t.is_ptr_type() => {
-                binaryop::pointer::compile(context, (left, operator, right, *span))
-            }
 
             _ => {
                 abort::abort_codegen(

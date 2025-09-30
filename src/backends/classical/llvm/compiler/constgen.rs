@@ -140,10 +140,6 @@ pub fn compile<'ctx>(
                 );
             }
 
-            if binaryop_type.is_ptr_type() {
-                return binaryop::pointer::compile_const(context, (left, operator, right, *span));
-            }
-
             abort::abort_codegen(
                 context,
                 "Can't be compiled!.",

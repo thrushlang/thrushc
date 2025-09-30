@@ -13,6 +13,8 @@ use crate::frontends::classical::lexer::tokentype::TokenType;
 use crate::frontends::classical::types::parser::repr::BinaryOperation;
 use crate::frontends::classical::typesystem::types::Type;
 
+use inkwell::context::Context;
+use inkwell::values::PointerValue;
 use inkwell::{
     builder::Builder,
     values::{BasicValueEnum, FloatValue, IntValue},
@@ -102,6 +104,26 @@ pub fn bool_operation<'ctx>(
         };
     }
 
+    if left.is_pointer_value() && right.is_pointer_value() {
+        let lhs: PointerValue = left.into_pointer_value();
+        let rhs: PointerValue = right.into_pointer_value();
+
+        return match operator {
+            op if op.is_logical_operator() => llvm_builder
+                .build_int_compare(predicates::pointer(operator), lhs, rhs, "")
+                .unwrap_or_else(|_| {
+                    self::codegen_abort("Cannot perform pointer binary operation.");
+                })
+                .into(),
+
+            _ => {
+                self::codegen_abort(
+                    "Cannot perform pointer binary operation without a valid operator.",
+                );
+            }
+        };
+    }
+
     self::codegen_abort("Cannot perform boolean binary operation without two integer values.");
 }
 
@@ -152,11 +174,14 @@ pub fn compile<'ctx>(
 }
 
 pub fn const_bool_operation<'ctx>(
+    context: &LLVMCodeGenContext<'_, 'ctx>,
     lhs: BasicValueEnum<'ctx>,
     rhs: BasicValueEnum<'ctx>,
     operator: &TokenType,
     signatures: (bool, bool),
 ) -> BasicValueEnum<'ctx> {
+    let llvm_context: &Context = context.get_llvm_context();
+
     let left_signed: bool = signatures.0;
     let right_signed: bool = signatures.1;
 
@@ -215,6 +240,33 @@ pub fn const_bool_operation<'ctx>(
         };
     }
 
+    if lhs.is_pointer_value() && rhs.is_pointer_value() {
+        let lhs: PointerValue = lhs.into_pointer_value();
+        let rhs: PointerValue = rhs.into_pointer_value();
+
+        return match operator {
+            op if op.is_logical_operator() => match op {
+                TokenType::EqEq => llvm_context
+                    .bool_type()
+                    .const_int((lhs.is_null() == rhs.is_null()) as u64, false)
+                    .into(),
+
+                TokenType::BangEq => llvm_context
+                    .bool_type()
+                    .const_int((lhs.is_null() != rhs.is_null()) as u64, false)
+                    .into(),
+
+                _ => llvm_context.bool_type().const_zero().into(),
+            },
+
+            _ => {
+                self::codegen_abort(
+                    "Cannot perform pointer binary operation without a valid operator.",
+                );
+            }
+        };
+    }
+
     self::codegen_abort(
         "Cannot perform constant boolean binary operation without two integer values.",
     );
@@ -246,6 +298,7 @@ pub fn compile_const<'ctx>(
         let rhs: BasicValueEnum = constgen::compile(context, binary.2, cast);
 
         return self::const_bool_operation(
+            context,
             lhs,
             rhs,
             operator,
