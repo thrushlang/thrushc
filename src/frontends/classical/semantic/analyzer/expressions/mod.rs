@@ -87,7 +87,6 @@ pub fn validate<'analyzer>(
         | Ast::Boolean { .. }
         | Ast::Str { .. }
         | Ast::Float { .. }
-        | Ast::Null { .. }
         | Ast::NullPtr { .. }
         | Ast::Char { .. }
         | Ast::Pass { .. } => Ok(()),

@@ -17,17 +17,17 @@ pub fn validate<'analyzer>(
         Ast::Local {
             name,
             kind: local_type,
-            value: local_value,
+            value,
             metadata,
             ..
         } => {
             analyzer.symbols.new_local(name, local_type);
 
-            let metadata: &LocalMetadata = metadata;
+            if let Some(value) = value {
+                let metadata: &LocalMetadata = metadata;
 
-            if !metadata.is_undefined() {
-                if let Err(type_error) = analyzer.analyze_stmt(local_value) {
-                    analyzer.add_error(type_error);
+                if !metadata.is_undefined() {
+                    analyzer.analyze_stmt(value)?;
                 }
             }
 

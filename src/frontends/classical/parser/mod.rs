@@ -2,6 +2,7 @@ pub mod attributes;
 pub mod builder;
 pub mod builtins;
 pub mod checks;
+pub mod constants;
 pub mod contexts;
 pub mod declaration;
 pub mod declarations;
@@ -26,13 +27,12 @@ use crate::core::errors::standard::ThrushCompilerIssue;
 
 use crate::frontends::classical::lexer::token::Token;
 use crate::frontends::classical::lexer::tokentype::TokenType;
+use crate::frontends::classical::parser::constants::{
+    PARSER_MAX_ERRORS, PARSER_MINIMAL_AST_CAPACITY, PARSER_MINIMAL_GLOBAL_CAPACITY,
+};
 use crate::frontends::classical::parser::contexts::controlctx::ParserControlContext;
 use crate::frontends::classical::types::ast::Ast;
 use crate::frontends::classical::types::parser::symbols::types::{AssemblerFunctions, Functions};
-
-const MINIMAL_AST_CAPACITY: usize = 100_000;
-const MINIMAL_GLOBAL_CAPACITY: usize = 2024;
-const MAX_ERRORS: usize = 50;
 
 #[derive(Debug)]
 pub struct ParserContext<'parser> {
@@ -85,7 +85,7 @@ impl<'parser> Parser<'parser> {
                     let total_issues: usize =
                         parser_context.errors.len() + parser_context.bugs.len();
 
-                    if total_issues >= MAX_ERRORS {
+                    if total_issues >= PARSER_MAX_ERRORS {
                         logging::print_warn(
                             LoggingType::Warning,
                             "Too many issues. Stopping compilation.",
@@ -115,12 +115,13 @@ impl<'parser> Parser<'parser> {
 
 impl<'parser> ParserContext<'parser> {
     pub fn new(tokens: &'parser [Token], file: &'parser CompilationUnit) -> Self {
-        let functions: Functions = HashMap::with_capacity(MINIMAL_GLOBAL_CAPACITY);
-        let asm_functions: AssemblerFunctions = HashMap::with_capacity(MINIMAL_GLOBAL_CAPACITY);
+        let functions: Functions = HashMap::with_capacity(PARSER_MINIMAL_GLOBAL_CAPACITY);
+        let asm_functions: AssemblerFunctions =
+            HashMap::with_capacity(PARSER_MINIMAL_GLOBAL_CAPACITY);
 
         Self {
             tokens,
-            ast: Vec::with_capacity(MINIMAL_AST_CAPACITY),
+            ast: Vec::with_capacity(PARSER_MINIMAL_AST_CAPACITY),
 
             silent_errors: Vec::with_capacity(100),
             errors: Vec::with_capacity(100),

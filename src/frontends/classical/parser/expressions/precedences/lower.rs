@@ -26,12 +26,10 @@ pub fn lower_precedence<'parser>(
         TokenType::Deref => deref::build_dereference(ctx)?,
 
         TokenType::SizeOf => sizeof::build_sizeof(ctx)?,
-
         TokenType::Halloc => builtins::build_halloc(ctx)?,
         TokenType::MemSet => builtins::build_memset(ctx)?,
         TokenType::MemMove => builtins::build_memmove(ctx)?,
         TokenType::MemCpy => builtins::build_memcpy(ctx)?,
-
         TokenType::AlignOf => builtins::build_alignof(ctx)?,
 
         TokenType::Asm => asm::build_asm_code_block(ctx)?,
@@ -69,7 +67,11 @@ pub fn lower_precedence<'parser>(
 
             let bytes: Vec<u8> = str_tk.scape(span)?;
 
-            Ast::new_str(bytes, Type::Str, span)
+            Ast::new_str(
+                bytes,
+                Type::Const(Type::Ptr(Some(Type::Array(Type::Char.into()).into())).into()),
+                span,
+            )
         }
 
         TokenType::Char => {
@@ -79,9 +81,7 @@ pub fn lower_precedence<'parser>(
             Ast::new_char(Type::Char, char_tk.get_lexeme_first_byte(), span)
         }
 
-        TokenType::NullPtr => Ast::NullPtr {
-            span: ctx.advance()?.span,
-        },
+        TokenType::NullPtr => Ast::new_nullptr(ctx.advance()?.span),
 
         TokenType::Integer => {
             let integer_tk: &Token = ctx.advance()?;

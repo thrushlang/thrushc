@@ -105,7 +105,7 @@ pub fn compile_body<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, global_fn: Global
     let function_name: &str = global_fn.0;
     let function_type: &Type = global_fn.2;
     let function_parameters: &[Ast<'ctx>] = global_fn.3;
-    let funcion_body: &Ast = global_fn.5;
+    let function_body: Option<&Ast> = global_fn.5;
 
     let represented_llvm_function: LLVMFunction = codegen
         .get_context()
@@ -123,10 +123,12 @@ pub fn compile_body<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, global_fn: Global
         self::compile_parameter(codegen, llvm_function, parameter.as_function_parameter());
     });
 
-    codegen.codegen_block(funcion_body);
+    if let Some(function_body) = function_body {
+        codegen.codegen_block(function_body);
 
-    if function_type.is_void_type() && !funcion_body.has_return_for_function() {
-        let _ = llvm_builder.build_return(None).is_err();
+        if function_type.is_void_type() && !function_body.has_return_for_function() {
+            let _ = llvm_builder.build_return(None).is_err();
+        }
     }
 
     codegen.get_mut_context().unset_current_function();

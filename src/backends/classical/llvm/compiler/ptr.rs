@@ -9,7 +9,6 @@ use crate::backends::classical::llvm::compiler::{self, memory};
 use crate::backends::classical::llvm::compiler::{abort, builtins};
 
 use crate::frontends::classical::types::ast::Ast;
-use crate::frontends::classical::types::ast::traits::AstExtensions;
 use crate::frontends::classical::typesystem::types::Type;
 
 use inkwell::AddressSpace;

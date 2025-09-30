@@ -112,7 +112,6 @@ impl PartialEq for Ast<'_> {
 impl Display for Ast<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Ast::Null { .. } => write!(f, "null"),
             Ast::Pass { .. } => write!(f, "pass"),
             Ast::Char { byte, .. } => write!(f, "{}", byte),
             Ast::Integer { value, .. } => write!(f, "{}", value),
@@ -148,7 +147,7 @@ impl Display for Ast<'_> {
                     .iter()
                     .try_for_each(|attr| write!(f, "{}", attr))?;
 
-                if body.is_block() {
+                if let Some(body) = body {
                     write!(f, "{}", body)?;
                 }
 
@@ -251,11 +250,19 @@ impl Display for Ast<'_> {
             } => {
                 let local_metadata: &LocalMetadata = metadata;
 
-                if local_metadata.is_mutable() {
-                    write!(f, "let mut {} : {} = {}", name, kind, value)
+                if let Some(value) = value {
+                    if local_metadata.is_mutable() {
+                        write!(f, "let mut {} : {} = {}", name, kind, value)?;
+                    } else {
+                        write!(f, "let {} : {} = {}", name, kind, value)?;
+                    }
+                } else if local_metadata.is_mutable() {
+                    write!(f, "let mut {} : {};", name, kind)?;
                 } else {
-                    write!(f, "let {} : {} = {}", name, kind, value)
+                    write!(f, "let {} : {};", name, kind)?;
                 }
+
+                Ok(())
             }
 
             Ast::Mut { source, value, .. } => {

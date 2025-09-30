@@ -56,21 +56,6 @@ impl<'symbol> AnalyzerSymbolsTable<'symbol> {
     }
 }
 
-impl<'symbol> AnalyzerSymbolsTable<'symbol> {
-    #[inline]
-    pub fn get_function(&self, name: &'symbol str) -> Option<&AnalyzerFunction<'symbol>> {
-        self.functions.get(name)
-    }
-
-    #[inline]
-    pub fn get_asm_function(
-        &self,
-        name: &'symbol str,
-    ) -> Option<&AnalyzerAssemblerFunction<'symbol>> {
-        self.asm_functions.get(name)
-    }
-}
-
 impl AnalyzerSymbolsTable<'_> {
     #[inline]
     pub fn begin_scope(&mut self) {

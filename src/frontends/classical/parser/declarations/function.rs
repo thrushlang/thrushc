@@ -44,7 +44,7 @@ pub fn build_function<'parser>(
 
     if function_name == "main" {
         if declare_forward {
-            return Ok(Ast::Null { span });
+            return Ok(Ast::new_nullptr(span));
         }
 
         ctx.get_mut_control_ctx().set_inside_function(true);
@@ -135,7 +135,7 @@ pub fn build_function<'parser>(
         ascii_name: function_ascii_name,
         parameters: parameters.clone(),
         parameter_types: parameters_types.clone(),
-        body: Ast::Null { span }.into(),
+        body: None,
         return_type: return_type.clone(),
         attributes,
         span,
@@ -158,7 +158,7 @@ pub fn build_function<'parser>(
             return Ok(function);
         }
 
-        return Ok(Ast::Null { span });
+        return Ok(Ast::new_nullptr(span));
     }
 
     if ctx.match_token(TokenType::SemiColon)? {
@@ -170,17 +170,17 @@ pub fn build_function<'parser>(
     ctx.get_mut_type_ctx()
         .set_function_type(return_type.clone());
 
-    if let Err(error) = ctx.get_mut_symbols().start_parameters(&parameters) {
+    if let Err(error) = ctx.get_mut_symbols().declare_parameters(&parameters) {
         ctx.add_silent_error(error);
     }
 
     let function_body: Ast = block::build_block(ctx)?;
 
-    ctx.get_mut_symbols().end_parameters();
+    ctx.get_mut_symbols().finish_parameters();
     ctx.get_mut_control_ctx().set_inside_function(false);
 
     if let Ast::Function { body, .. } = &mut function {
-        *body = function_body.into();
+        *body = Some(function_body.into());
     }
 
     Ok(function)

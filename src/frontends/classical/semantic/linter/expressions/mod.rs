@@ -188,7 +188,6 @@ pub fn analyze<'linter>(linter: &mut Linter<'linter>, expr: &'linter Ast) {
         | Ast::Boolean { .. }
         | Ast::Str { .. }
         | Ast::Float { .. }
-        | Ast::Null { .. }
         | Ast::NullPtr { .. }
         | Ast::Char { .. }
         | Ast::Pass { .. }

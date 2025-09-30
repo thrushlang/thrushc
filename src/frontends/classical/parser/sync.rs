@@ -59,7 +59,7 @@ fn sync_with_declaration(parser_context: &mut ParserContext) -> Result<(), Thrus
     }
 
     parser_context.scope = 0;
-    parser_context.symbols.end_parameters();
+    parser_context.symbols.finish_parameters();
 
     Ok(())
 }

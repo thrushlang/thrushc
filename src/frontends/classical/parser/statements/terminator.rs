@@ -23,7 +23,7 @@ pub fn build_return<'parser>(
 
     if ctx.match_token(TokenType::SemiColon)? {
         if ctx.get_type_ctx().get_function_type().is_void_type() {
-            return Ok(Ast::Null { span });
+            return Ok(Ast::new_nullptr(span));
         }
 
         return Ok(Ast::Return {

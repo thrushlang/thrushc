@@ -28,9 +28,6 @@ pub enum Type {
     // Char Type
     Char,
 
-    // Str Type
-    Str,
-
     // Constant Type
     Const(Arc<Type>),
 

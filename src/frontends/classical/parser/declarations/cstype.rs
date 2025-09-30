@@ -58,5 +58,5 @@ pub fn build_custom_type<'parser>(
         }
     }
 
-    Ok(Ast::Null { span })
+    Ok(Ast::new_nullptr(span))
 }

@@ -32,19 +32,6 @@ pub fn ptr_operation<'ctx>(
         let rhs: PointerValue = rhs.into_pointer_value();
 
         return match operator {
-            TokenType::Xor => llvm_builder
-                .build_xor(lhs, rhs, "")
-                .unwrap_or_else(|_| {
-                    self::codegen_abort("Cannot perform pointer binary operation.");
-                })
-                .into(),
-            TokenType::Bor => llvm_builder
-                .build_or(lhs, rhs, "")
-                .unwrap_or_else(|_| {
-                    self::codegen_abort("Cannot perform pointer binary operation.");
-                })
-                .into(),
-
             op if op.is_logical_operator() => llvm_builder
                 .build_int_compare(predicates::pointer(operator), lhs, rhs, "")
                 .unwrap_or_else(|_| {
@@ -69,7 +56,7 @@ pub fn compile<'ctx>(
 ) -> BasicValueEnum<'ctx> {
     let span: Span = binary.3;
 
-    if let (_, TokenType::EqEq | TokenType::BangEq | TokenType::Xor | TokenType::Bor, ..) = binary {
+    if let (_, TokenType::EqEq | TokenType::BangEq, ..) = binary {
         let operator: &TokenType = binary.1;
 
         let left: BasicValueEnum = value::compile(context, binary.0, None);

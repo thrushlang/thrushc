@@ -19,6 +19,7 @@ use crate::{
 pub mod attributes;
 
 mod builtins;
+mod constants;
 mod declarations;
 mod expressions;
 mod marks;
@@ -48,13 +49,12 @@ impl<'linter> Linter<'linter> {
     }
 
     pub fn check(&mut self) {
-        self.forward_all();
+        self.declare_forward();
 
         while !self.is_eof() {
             let current_node: &Ast = self.peek();
 
             self.analyze_decl(current_node);
-
             self.advance();
         }
 
@@ -360,7 +360,122 @@ impl<'linter> Linter<'linter> {
     pub fn analyze_expr(&mut self, expr: &'linter Ast) {
         expressions::analyze(self, expr);
     }
+}
 
+impl Linter<'_> {
+    pub fn declare_forward(&mut self) {
+        self.ast
+            .iter()
+            .filter(|ast| ast.is_static())
+            .for_each(|ast| {
+                if let Ast::Static {
+                    name,
+                    metadata,
+                    span,
+                    ..
+                } = ast
+                {
+                    self.symbols
+                        .new_global_static(name, (*span, false, !metadata.is_mutable()));
+                }
+            });
+
+        self.ast
+            .iter()
+            .filter(|ast| ast.is_constant())
+            .for_each(|ast| {
+                if let Ast::Const { name, span, .. } = ast {
+                    self.symbols.new_global_constant(name, (*span, false));
+                }
+            });
+
+        self.ast
+            .iter()
+            .filter(|stmt| stmt.is_struct())
+            .for_each(|stmt| {
+                if let Ast::Struct {
+                    name,
+                    fields,
+                    span,
+                    attributes,
+                    ..
+                } = stmt
+                {
+                    let mut converted_fields: HashMap<&str, (Span, bool)> =
+                        HashMap::with_capacity(100);
+
+                    for field in fields.1.iter() {
+                        let field_name: &str = field.0;
+                        let span: Span = field.3;
+
+                        converted_fields.insert(field_name, (span, false));
+                    }
+
+                    self.symbols.new_struct(
+                        name,
+                        (converted_fields, *span, attributes.has_public_attribute()),
+                    );
+                }
+            });
+
+        self.ast
+            .iter()
+            .filter(|stmt| stmt.is_enum())
+            .for_each(|stmt| {
+                if let Ast::Enum {
+                    name, fields, span, ..
+                } = stmt
+                {
+                    let mut converted_fields: HashMap<&str, (Span, bool)> =
+                        HashMap::with_capacity(100);
+
+                    for field in fields.iter() {
+                        let field_name: &str = field.0;
+                        let expr_span: Span = field.1.get_span();
+
+                        converted_fields.insert(field_name, (expr_span, false));
+                    }
+
+                    self.symbols
+                        .new_enum(name, (converted_fields, *span, false));
+                }
+            });
+
+        self.ast
+            .iter()
+            .filter(|stmt| stmt.is_function())
+            .for_each(|stmt| {
+                if let Ast::Function {
+                    name,
+                    span,
+                    attributes,
+                    ..
+                } = stmt
+                {
+                    self.symbols
+                        .new_function(name, (*span, attributes.has_public_attribute()));
+                }
+            });
+
+        self.ast
+            .iter()
+            .filter(|stmt| stmt.is_asm_function())
+            .for_each(|stmt| {
+                if let Ast::AssemblerFunction {
+                    name,
+                    span,
+                    attributes,
+                    ..
+                } = stmt
+                {
+                    self.symbols
+                        .new_asm_function(name, (*span, attributes.has_public_attribute()));
+                }
+            });
+    }
+}
+
+impl Linter<'_> {
     pub fn generate_scoped_warnings(&mut self) {
         if let Some(last_scope) = self.symbols.get_all_locals().last() {
             last_scope.iter().for_each(|(name, info)| {
@@ -439,9 +554,13 @@ impl<'linter> Linter<'linter> {
                 }
             });
         }
+    }
 
-        if let Some(last_scope) = self.symbols.get_all_function_parameters().last() {
-            last_scope.iter().for_each(|(name, info)| {
+    pub fn generate_scoped_function_warnings(&mut self) {
+        self.symbols
+            .get_all_function_parameters()
+            .iter()
+            .for_each(|(name, info)| {
                 let span: Span = info.0;
                 let used: bool = info.1;
                 let is_mutable_used: bool = info.2;
@@ -462,7 +581,6 @@ impl<'linter> Linter<'linter> {
                     ));
                 }
             });
-        }
     }
 
     pub fn generate_warnings(&mut self) {
@@ -590,117 +708,6 @@ impl<'linter> Linter<'linter> {
                         ));
                     }
                 });
-            });
-    }
-
-    pub fn forward_all(&mut self) {
-        self.ast
-            .iter()
-            .filter(|ast| ast.is_static())
-            .for_each(|ast| {
-                if let Ast::Static {
-                    name,
-                    metadata,
-                    span,
-                    ..
-                } = ast
-                {
-                    self.symbols
-                        .new_global_static(name, (*span, false, !metadata.is_mutable()));
-                }
-            });
-
-        self.ast
-            .iter()
-            .filter(|ast| ast.is_constant())
-            .for_each(|ast| {
-                if let Ast::Const { name, span, .. } = ast {
-                    self.symbols.new_global_constant(name, (*span, false));
-                }
-            });
-
-        self.ast
-            .iter()
-            .filter(|stmt| stmt.is_struct())
-            .for_each(|stmt| {
-                if let Ast::Struct {
-                    name,
-                    fields,
-                    span,
-                    attributes,
-                    ..
-                } = stmt
-                {
-                    let mut converted_fields: HashMap<&str, (Span, bool)> =
-                        HashMap::with_capacity(100);
-
-                    for field in fields.1.iter() {
-                        let field_name: &str = field.0;
-                        let span: Span = field.3;
-
-                        converted_fields.insert(field_name, (span, false));
-                    }
-
-                    self.symbols.new_struct(
-                        name,
-                        (converted_fields, *span, attributes.has_public_attribute()),
-                    );
-                }
-            });
-
-        self.ast
-            .iter()
-            .filter(|stmt| stmt.is_enum())
-            .for_each(|stmt| {
-                if let Ast::Enum {
-                    name, fields, span, ..
-                } = stmt
-                {
-                    let mut converted_fields: HashMap<&str, (Span, bool)> =
-                        HashMap::with_capacity(100);
-
-                    for field in fields.iter() {
-                        let field_name: &str = field.0;
-                        let expr_span: Span = field.1.get_span();
-
-                        converted_fields.insert(field_name, (expr_span, false));
-                    }
-
-                    self.symbols
-                        .new_enum(name, (converted_fields, *span, false));
-                }
-            });
-
-        self.ast
-            .iter()
-            .filter(|stmt| stmt.is_function())
-            .for_each(|stmt| {
-                if let Ast::Function {
-                    name,
-                    span,
-                    attributes,
-                    ..
-                } = stmt
-                {
-                    self.symbols
-                        .new_function(name, (*span, attributes.has_public_attribute()));
-                }
-            });
-
-        self.ast
-            .iter()
-            .filter(|stmt| stmt.is_asm_function())
-            .for_each(|stmt| {
-                if let Ast::AssemblerFunction {
-                    name,
-                    span,
-                    attributes,
-                    ..
-                } = stmt
-                {
-                    self.symbols
-                        .new_asm_function(name, (*span, attributes.has_public_attribute()));
-                }
             });
     }
 }

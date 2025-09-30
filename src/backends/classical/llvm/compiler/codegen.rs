@@ -64,7 +64,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
             }
 
             Ast::Function { body, .. } => {
-                if body.is_null() {
+                if body.is_none() {
                     return;
                 }
 
@@ -72,9 +72,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
             }
 
             Ast::GlobalAssembler { asm, .. } => {
-                let llvm_module: &Module = self.context.get_llvm_module();
-
-                llvm_module.set_inline_assembly(asm);
+                self.context.get_llvm_module().set_inline_assembly(asm);
             }
 
             _ => (),

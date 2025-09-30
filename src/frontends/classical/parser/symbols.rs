@@ -4,6 +4,9 @@ use crate::{
     core::errors::{position::CompilationPosition, standard::ThrushCompilerIssue},
     frontends::classical::{
         lexer::span::Span,
+        parser::constants::{
+            PARSER_SYMBOLS_MINIMAL_GLOBAL_CAPACITY, PARSER_SYMBOLS_MINIMAL_LOCAL_CAPACITY,
+        },
         types::{
             ast::Ast,
             parser::symbols::types::{
@@ -21,19 +24,17 @@ use ahash::AHashMap as HashMap;
 #[derive(Clone, Debug, Default)]
 pub struct SymbolsTable<'parser> {
     custom_types: CustomTypes<'parser>,
-
     global_statics: GlobalStatics<'parser>,
     statics: LocalStatics<'parser>,
-
     global_constants: GlobalConstants<'parser>,
     constants: LocalConstants<'parser>,
-
     locals: Locals<'parser>,
     llis: LLIs<'parser>,
     structs: Structs<'parser>,
     functions: Functions<'parser>,
     asm_functions: AssemblerFunctions<'parser>,
     enums: Enums<'parser>,
+
     parameters: Parameters<'parser>,
 }
 
@@ -43,23 +44,19 @@ impl<'parser> SymbolsTable<'parser> {
         asm_functions: AssemblerFunctions<'parser>,
     ) -> Self {
         Self {
-            custom_types: HashMap::with_capacity(255),
-
-            global_statics: HashMap::with_capacity(255),
-            statics: Vec::with_capacity(255),
-
-            global_constants: HashMap::with_capacity(255),
-            constants: Vec::with_capacity(255),
-
-            locals: Vec::with_capacity(255),
-            llis: Vec::with_capacity(255),
-
+            custom_types: HashMap::with_capacity(PARSER_SYMBOLS_MINIMAL_GLOBAL_CAPACITY),
+            global_statics: HashMap::with_capacity(PARSER_SYMBOLS_MINIMAL_GLOBAL_CAPACITY),
+            statics: Vec::with_capacity(PARSER_SYMBOLS_MINIMAL_LOCAL_CAPACITY),
+            global_constants: HashMap::with_capacity(PARSER_SYMBOLS_MINIMAL_GLOBAL_CAPACITY),
+            constants: Vec::with_capacity(PARSER_SYMBOLS_MINIMAL_LOCAL_CAPACITY),
+            locals: Vec::with_capacity(PARSER_SYMBOLS_MINIMAL_LOCAL_CAPACITY),
+            llis: Vec::with_capacity(PARSER_SYMBOLS_MINIMAL_LOCAL_CAPACITY),
             functions,
             asm_functions,
+            structs: HashMap::with_capacity(PARSER_SYMBOLS_MINIMAL_GLOBAL_CAPACITY),
+            enums: HashMap::with_capacity(PARSER_SYMBOLS_MINIMAL_GLOBAL_CAPACITY),
 
-            structs: HashMap::with_capacity(255),
-            enums: HashMap::with_capacity(255),
-            parameters: HashMap::with_capacity(255),
+            parameters: HashMap::with_capacity(10),
         }
     }
 }
@@ -67,10 +64,19 @@ impl<'parser> SymbolsTable<'parser> {
 impl SymbolsTable<'_> {
     #[inline]
     pub fn begin_scope(&mut self) {
-        self.statics.push(HashMap::with_capacity(255));
-        self.constants.push(HashMap::with_capacity(255));
-        self.locals.push(HashMap::with_capacity(255));
-        self.llis.push(HashMap::with_capacity(255));
+        self.statics.push(HashMap::with_capacity(
+            PARSER_SYMBOLS_MINIMAL_LOCAL_CAPACITY,
+        ));
+        self.constants.push(HashMap::with_capacity(
+            PARSER_SYMBOLS_MINIMAL_LOCAL_CAPACITY,
+        ));
+
+        self.locals.push(HashMap::with_capacity(
+            PARSER_SYMBOLS_MINIMAL_LOCAL_CAPACITY,
+        ));
+        self.llis.push(HashMap::with_capacity(
+            PARSER_SYMBOLS_MINIMAL_LOCAL_CAPACITY,
+        ));
     }
 
     #[inline]
@@ -82,17 +88,17 @@ impl SymbolsTable<'_> {
     }
 
     #[inline]
-    pub fn end_parameters(&mut self) {
+    pub fn finish_parameters(&mut self) {
         self.parameters.clear();
     }
 }
 
 impl<'parser> SymbolsTable<'parser> {
-    pub fn start_parameters(
+    pub fn declare_parameters(
         &mut self,
         parameters: &[Ast<'parser>],
     ) -> Result<(), ThrushCompilerIssue> {
-        for parameter in parameters.iter() {
+        parameters.iter().try_for_each(|parameter| {
             if let Ast::FunctionParameter {
                 name,
                 kind,
@@ -113,7 +119,9 @@ impl<'parser> SymbolsTable<'parser> {
                 self.parameters
                     .insert(name, (kind.clone(), *metadata, *span));
             }
-        }
+
+            Ok(())
+        })?;
 
         Ok(())
     }
@@ -389,160 +397,6 @@ impl<'parser> SymbolsTable<'parser> {
         name: &'parser str,
         span: Span,
     ) -> Result<FoundSymbolId<'parser>, ThrushCompilerIssue> {
-        if self.structs.contains_key(name) {
-            return Ok((
-                Some(name),
-                None,
-                None,
-                None,
-                None,
-                None,
-                None,
-                None,
-                None,
-                None,
-            ));
-        }
-
-        if self.functions.contains_key(name) {
-            return Ok((
-                None,
-                Some(name),
-                None,
-                None,
-                None,
-                None,
-                None,
-                None,
-                None,
-                None,
-            ));
-        }
-
-        if self.enums.contains_key(name) {
-            return Ok((
-                None,
-                None,
-                Some(name),
-                None,
-                None,
-                None,
-                None,
-                None,
-                None,
-                None,
-            ));
-        }
-
-        for (idx, scope) in self.statics.iter().enumerate().rev() {
-            if scope.contains_key(name) {
-                return Ok((
-                    None,
-                    None,
-                    None,
-                    Some((name, idx)),
-                    None,
-                    None,
-                    None,
-                    None,
-                    None,
-                    None,
-                ));
-            }
-        }
-
-        if self.global_statics.contains_key(name) {
-            return Ok((
-                None,
-                None,
-                None,
-                Some((name, 0)),
-                None,
-                None,
-                None,
-                None,
-                None,
-                None,
-            ));
-        }
-
-        for (idx, scope) in self.constants.iter().enumerate().rev() {
-            if scope.contains_key(name) {
-                return Ok((
-                    None,
-                    None,
-                    None,
-                    None,
-                    Some((name, idx)),
-                    None,
-                    None,
-                    None,
-                    None,
-                    None,
-                ));
-            }
-        }
-
-        if self.global_constants.contains_key(name) {
-            return Ok((
-                None,
-                None,
-                None,
-                None,
-                Some((name, 0)),
-                None,
-                None,
-                None,
-                None,
-                None,
-            ));
-        }
-
-        if self.custom_types.contains_key(name) {
-            return Ok((
-                None,
-                None,
-                None,
-                None,
-                None,
-                Some(name),
-                None,
-                None,
-                None,
-                None,
-            ));
-        }
-
-        if self.parameters.contains_key(name) {
-            return Ok((
-                None,
-                None,
-                None,
-                None,
-                None,
-                None,
-                Some(name),
-                None,
-                None,
-                None,
-            ));
-        }
-
-        if self.asm_functions.contains_key(name) {
-            return Ok((
-                None,
-                None,
-                None,
-                None,
-                None,
-                None,
-                None,
-                Some(name),
-                None,
-                None,
-            ));
-        }
-
         for (idx, scope) in self.llis.iter().enumerate().rev() {
             if scope.contains_key(name) {
                 return Ok((
@@ -575,6 +429,158 @@ impl<'parser> SymbolsTable<'parser> {
                     Some((name, idx)),
                 ));
             }
+        }
+
+        if self.parameters.contains_key(name) {
+            return Ok((
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                Some(name),
+                None,
+                None,
+                None,
+            ));
+        }
+
+        if self.structs.contains_key(name) {
+            return Ok((
+                Some(name),
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+            ));
+        }
+
+        if self.enums.contains_key(name) {
+            return Ok((
+                None,
+                None,
+                Some(name),
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+            ));
+        }
+
+        if self.custom_types.contains_key(name) {
+            return Ok((
+                None,
+                None,
+                None,
+                None,
+                None,
+                Some(name),
+                None,
+                None,
+                None,
+                None,
+            ));
+        }
+
+        if self.functions.contains_key(name) {
+            return Ok((
+                None,
+                Some(name),
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+            ));
+        }
+
+        if self.asm_functions.contains_key(name) {
+            return Ok((
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                Some(name),
+                None,
+                None,
+            ));
+        }
+
+        for (idx, scope) in self.constants.iter().enumerate().rev() {
+            if scope.contains_key(name) {
+                return Ok((
+                    None,
+                    None,
+                    None,
+                    None,
+                    Some((name, idx)),
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                ));
+            }
+        }
+        if self.global_constants.contains_key(name) {
+            return Ok((
+                None,
+                None,
+                None,
+                None,
+                Some((name, 0)),
+                None,
+                None,
+                None,
+                None,
+                None,
+            ));
+        }
+
+        for (idx, scope) in self.statics.iter().enumerate().rev() {
+            if scope.contains_key(name) {
+                return Ok((
+                    None,
+                    None,
+                    None,
+                    Some((name, idx)),
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                ));
+            }
+        }
+        if self.global_statics.contains_key(name) {
+            return Ok((
+                None,
+                None,
+                None,
+                Some((name, 0)),
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+            ));
         }
 
         Err(ThrushCompilerIssue::Error(

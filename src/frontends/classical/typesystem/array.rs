@@ -29,7 +29,6 @@ impl TypeArrayEntensions for Type {
 
             Type::Bool => 1,
             Type::Char => 2,
-            Type::Str => 3,
 
             Type::S8 => 4,
             Type::S16 => 5,

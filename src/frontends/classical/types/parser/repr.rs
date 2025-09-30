@@ -64,7 +64,7 @@ pub type Local<'ctx> = (
     &'ctx str,
     &'ctx str,
     &'ctx Type,
-    &'ctx Ast<'ctx>,
+    Option<&'ctx Ast<'ctx>>,
     &'ctx ThrushAttributes<'ctx>,
     LocalMetadata,
     Span,
@@ -76,7 +76,7 @@ pub type GlobalFunction<'ctx> = (
     &'ctx Type,
     &'ctx [Ast<'ctx>],
     &'ctx [Type],
-    &'ctx Ast<'ctx>,
+    Option<&'ctx Ast<'ctx>>,
     &'ctx ThrushAttributes<'ctx>,
 );
 

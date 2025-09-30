@@ -13,11 +13,10 @@ use crate::backends::classical::llvm::compiler::memory::{self};
 use crate::backends::classical::llvm::compiler::statements::lli;
 
 use crate::frontends::classical::types::ast::Ast;
-use crate::frontends::classical::types::ast::traits::AstExtensions;
 use crate::frontends::classical::typesystem::types::Type;
 
 use inkwell::AddressSpace;
-use inkwell::values::{BasicValueEnum, PointerValue};
+use inkwell::values::BasicValueEnum;
 
 pub fn compile<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
@@ -57,11 +56,8 @@ pub fn compile<'ctx>(
             .const_null()
             .into(),
 
-        Ast::Str { bytes, kind, .. } => {
-            let ptr: PointerValue =
-                compiler::generation::expressions::string::compile_str_constant(context, bytes);
-
-            memory::load_anon(context, ptr, kind)
+        Ast::Str { bytes, .. } => {
+            compiler::generation::expressions::string::compile_str_constant(context, bytes).into()
         }
 
         Ast::Char { byte, .. } => context

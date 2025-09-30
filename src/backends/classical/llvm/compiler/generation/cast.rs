@@ -1,4 +1,4 @@
-use crate::backends::classical::llvm::compiler::{memory, ptr, typegen, value};
+use crate::backends::classical::llvm::compiler::{ptr, typegen, value};
 use crate::{
     backends::classical::llvm::compiler::context::LLVMCodeGenContext,
     frontends::classical::types::ast::Ast,
@@ -13,7 +13,7 @@ use crate::core::console::logging::LoggingType;
 use std::{cmp::Ordering, fmt::Display};
 
 use inkwell::types::{BasicTypeEnum, PointerType};
-use inkwell::values::{PointerValue, StructValue};
+use inkwell::values::PointerValue;
 use inkwell::{
     builder::Builder,
     context::Context,
@@ -351,29 +351,6 @@ pub fn compile<'ctx>(
             "Failed to cast pointer '{}' to integer '{}'.",
             lhs, rhs
         ));
-    }
-
-    if lhs_type.is_str_type() && rhs.is_ptr_type() {
-        let val: BasicValueEnum = ptr::compile(context, lhs, None);
-
-        let raw_str_ptr: PointerValue = val.into_pointer_value();
-        let str_loaded: BasicValueEnum = memory::load_anon(context, raw_str_ptr, lhs_type);
-        let str_structure: StructValue = str_loaded.into_struct_value();
-
-        match llvm_builder.build_extract_value(str_structure, 0, "") {
-            Ok(cstr) => {
-                let to = typegen::generate_type(llvm_context, rhs).into_pointer_type();
-
-                match llvm_builder.build_pointer_cast(cstr.into_pointer_value(), to, "") {
-                    Ok(casted_ptr) => return casted_ptr.into(),
-                    Err(_) => {
-                        self::codegen_abort(format!("Failed to cast string pointer in '{}'.", lhs))
-                    }
-                }
-            }
-
-            Err(_) => self::codegen_abort(format!("Failed to extract string value in '{}'.", lhs)),
-        }
     }
 
     if rhs.is_numeric() {

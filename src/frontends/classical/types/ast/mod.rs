@@ -1,8 +1,8 @@
 #![allow(clippy::upper_case_acronyms)]
 
 mod get;
-mod impls;
 mod is;
+mod llvm;
 pub mod metadata;
 mod new;
 mod repr;
@@ -39,18 +39,21 @@ pub enum Ast<'ctx> {
     Str {
         bytes: Vec<u8>,
         kind: Type,
+
         span: Span,
     },
 
     Char {
         kind: Type,
         byte: u64,
+
         span: Span,
     },
 
     Boolean {
         kind: Type,
         value: u64,
+
         span: Span,
     },
 
@@ -58,6 +61,7 @@ pub enum Ast<'ctx> {
         kind: Type,
         value: u64,
         signed: bool,
+
         span: Span,
     },
 
@@ -65,7 +69,13 @@ pub enum Ast<'ctx> {
         kind: Type,
         value: f64,
         signed: bool,
+
         span: Span,
+    },
+
+    NullPtr {
+        span: Span,
+        kind: Type,
     },
 
     // Global Assembler
@@ -78,6 +88,7 @@ pub enum Ast<'ctx> {
     FixedArray {
         items: Vec<Ast<'ctx>>,
         kind: Type,
+
         span: Span,
     },
 
@@ -85,18 +96,15 @@ pub enum Ast<'ctx> {
     Array {
         items: Vec<Ast<'ctx>>,
         kind: Type,
+
         span: Span,
     },
-
     Index {
         source: AstEitherExpression<'ctx>,
         indexes: Vec<Ast<'ctx>>,
         kind: Type,
         metadata: IndexMetadata,
-        span: Span,
-    },
 
-    NullPtr {
         span: Span,
     },
 
@@ -113,6 +121,7 @@ pub enum Ast<'ctx> {
         name: &'ctx str,
         args: Constructor<'ctx>,
         kind: Type,
+
         span: Span,
     },
 
@@ -121,6 +130,7 @@ pub enum Ast<'ctx> {
         indexes: Vec<(Type, u32)>,
         metadata: PropertyMetadata,
         kind: Type,
+
         span: Span,
     },
 
@@ -130,11 +140,13 @@ pub enum Ast<'ctx> {
         block: Rc<Ast<'ctx>>,
         elseif: Vec<Ast<'ctx>>,
         anyway: Option<Rc<Ast<'ctx>>>,
+
         span: Span,
     },
     Elif {
         condition: Rc<Ast<'ctx>>,
         block: Rc<Ast<'ctx>>,
+
         span: Span,
     },
     Else {
@@ -148,11 +160,13 @@ pub enum Ast<'ctx> {
         cond: Rc<Ast<'ctx>>,
         actions: Rc<Ast<'ctx>>,
         block: Rc<Ast<'ctx>>,
+
         span: Span,
     },
     While {
         cond: Rc<Ast<'ctx>>,
         block: Rc<Ast<'ctx>>,
+
         span: Span,
     },
     Loop {
@@ -179,12 +193,14 @@ pub enum Ast<'ctx> {
         name: &'ctx str,
         fields: EnumFields<'ctx>,
         attributes: ThrushAttributes<'ctx>,
+
         span: Span,
     },
     EnumValue {
         name: String,
         value: Rc<Ast<'ctx>>,
         kind: Type,
+
         span: Span,
     },
 
@@ -194,6 +210,7 @@ pub enum Ast<'ctx> {
     EntryPoint {
         body: Rc<Ast<'ctx>>,
         parameters: Vec<Ast<'ctx>>,
+
         span: Span,
     },
     AssemblerFunction {
@@ -205,12 +222,14 @@ pub enum Ast<'ctx> {
         constraints: String,
         return_type: Type,
         attributes: ThrushAttributes<'ctx>,
+
         span: Span,
     },
     AssemblerFunctionParameter {
         name: &'ctx str,
         kind: Type,
         position: u32,
+
         span: Span,
     },
     Function {
@@ -218,9 +237,10 @@ pub enum Ast<'ctx> {
         ascii_name: &'ctx str,
         parameters: Vec<Ast<'ctx>>,
         parameter_types: Vec<Type>,
-        body: Rc<Ast<'ctx>>,
+        body: Option<Rc<Ast<'ctx>>>,
         return_type: Type,
         attributes: ThrushAttributes<'ctx>,
+
         span: Span,
     },
     FunctionParameter {
@@ -229,11 +249,13 @@ pub enum Ast<'ctx> {
         kind: Type,
         position: u32,
         metadata: FunctionParameterMetadata,
+
         span: Span,
     },
     Return {
         expression: Option<Rc<Ast<'ctx>>>,
         kind: Type,
+
         span: Span,
     },
 
@@ -245,6 +267,7 @@ pub enum Ast<'ctx> {
         value: Rc<Ast<'ctx>>,
         attributes: ThrushAttributes<'ctx>,
         metadata: StaticMetadata,
+
         span: Span,
     },
 
@@ -256,6 +279,7 @@ pub enum Ast<'ctx> {
         value: Rc<Ast<'ctx>>,
         attributes: ThrushAttributes<'ctx>,
         metadata: ConstantMetadata,
+
         span: Span,
     },
 
@@ -264,9 +288,10 @@ pub enum Ast<'ctx> {
         name: &'ctx str,
         ascii_name: &'ctx str,
         kind: Type,
-        value: Rc<Ast<'ctx>>,
+        value: Option<Rc<Ast<'ctx>>>,
         attributes: ThrushAttributes<'ctx>,
         metadata: LocalMetadata,
+
         span: Span,
     },
 
@@ -275,6 +300,7 @@ pub enum Ast<'ctx> {
         name: &'ctx str,
         kind: Type,
         metadata: ReferenceMetadata,
+
         span: Span,
     },
 
@@ -283,6 +309,7 @@ pub enum Ast<'ctx> {
         source: Rc<Ast<'ctx>>,
         value: Rc<Ast<'ctx>>,
         kind: Type,
+
         span: Span,
     },
 
@@ -291,6 +318,7 @@ pub enum Ast<'ctx> {
         name: &'ctx str,
         kind: Type,
         value: Rc<Ast<'ctx>>,
+
         span: Span,
     },
 
@@ -299,6 +327,7 @@ pub enum Ast<'ctx> {
         alloc: Type,
         site_allocation: AllocationSite,
         attributes: ThrushAttributes<'ctx>,
+
         span: Span,
     },
 
@@ -306,6 +335,7 @@ pub enum Ast<'ctx> {
         source: AstEitherExpression<'ctx>,
         indexes: Vec<Ast<'ctx>>,
         kind: Type,
+
         span: Span,
     },
 
@@ -319,6 +349,7 @@ pub enum Ast<'ctx> {
     Load {
         source: AstEitherExpression<'ctx>,
         kind: Type,
+
         span: Span,
     },
 
@@ -326,6 +357,7 @@ pub enum Ast<'ctx> {
         value: Rc<Ast<'ctx>>,
         kind: Type,
         metadata: DereferenceMetadata,
+
         span: Span,
     },
 
@@ -334,6 +366,7 @@ pub enum Ast<'ctx> {
         from: Rc<Ast<'ctx>>,
         cast: Type,
         metadata: CastMetadata,
+
         span: Span,
     },
 
@@ -342,6 +375,7 @@ pub enum Ast<'ctx> {
         name: &'ctx str,
         args: Vec<Ast<'ctx>>,
         kind: Type,
+
         span: Span,
     },
 
@@ -350,6 +384,7 @@ pub enum Ast<'ctx> {
         function_type: Type,
         args: Vec<Ast<'ctx>>,
         kind: Type,
+
         span: Span,
     },
 
@@ -359,6 +394,7 @@ pub enum Ast<'ctx> {
         args: Vec<Ast<'ctx>>,
         kind: Type,
         attributes: ThrushAttributes<'ctx>,
+
         span: Span,
     },
 
@@ -367,6 +403,7 @@ pub enum Ast<'ctx> {
         operator: TokenType,
         right: Rc<Ast<'ctx>>,
         kind: Type,
+
         span: Span,
     },
 
@@ -375,12 +412,14 @@ pub enum Ast<'ctx> {
         kind: Type,
         expression: Rc<Ast<'ctx>>,
         is_pre: bool,
+
         span: Span,
     },
 
     Group {
         expression: Rc<Ast<'ctx>>,
         kind: Type,
+
         span: Span,
     },
 
@@ -388,12 +427,14 @@ pub enum Ast<'ctx> {
     SizeOf {
         sizeof: Type,
         kind: Type,
+
         span: Span,
     },
 
     Builtin {
         builtin: Builtin<'ctx>,
         kind: Type,
+
         span: Span,
     },
 
@@ -404,10 +445,6 @@ pub enum Ast<'ctx> {
 
     // Unreachable
     Unreachable {
-        span: Span,
-    },
-
-    Null {
         span: Span,
     },
 }

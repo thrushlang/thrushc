@@ -53,7 +53,6 @@ pub fn check_types(
 
     match (lhs, rhs, op) {
         (Type::Char, Type::Char, None) => Ok(()),
-        (Type::Str, Type::Str, None) => Ok(()),
 
         (Type::Struct(_, lhs, mod1), Type::Struct(_, rhs, mod2), None) => {
             if lhs.len() != rhs.len() {
@@ -499,12 +498,7 @@ pub fn check_type_cast(
         return Ok(());
     }
 
-    if from_type.is_str_type() && cast_type.is_ptr_type() {
-        return Ok(());
-    }
-
-    if (from_type.is_str_type()
-        || from_type.is_float_type()
+    if (from_type.is_float_type()
         || from_type.is_integer_type()
         || from_type.is_struct_type()
         || from_type.is_array_type()

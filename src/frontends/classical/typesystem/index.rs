@@ -25,7 +25,6 @@ impl IndexTypeExtensions for Type {
             | Type::F64
             | Type::Bool
             | Type::Char
-            | Type::Str
             | Type::Addr
             | Type::Void
             | Type::Ptr(None)

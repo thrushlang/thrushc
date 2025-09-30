@@ -20,20 +20,12 @@ pub fn validate<'type_checker>(
         Ast::Local {
             name,
             kind: local_type,
-            value: local_value,
+            value,
             span,
             metadata,
             ..
         } => {
             typechecker.symbols.new_local(name, local_type);
-
-            let metadata: &LocalMetadata = metadata;
-
-            let type_metadata: TypeCheckerExprMetadata = TypeCheckerExprMetadata::new(
-                local_value.is_literal(),
-                Some(TypeCheckerPosition::Local),
-                *span,
-            );
 
             if local_type.is_void_type() {
                 typechecker.add_error(ThrushCompilerIssue::Error(
@@ -44,23 +36,42 @@ pub fn validate<'type_checker>(
                 ));
             }
 
-            if !metadata.is_undefined() {
-                let mut local_value_type: Type = local_value.get_value_type()?.clone();
+            if let Some(local_value) = value {
+                let metadata: &LocalMetadata = metadata;
 
-                if local_value_type.is_ptr_type() {
-                    local_value_type = Type::Ptr(Some(local_value_type.into()));
+                let type_metadata: TypeCheckerExprMetadata = TypeCheckerExprMetadata::new(
+                    local_value.is_literal(),
+                    Some(TypeCheckerPosition::Local),
+                    *span,
+                );
+
+                if local_type.is_void_type() {
+                    typechecker.add_error(ThrushCompilerIssue::Error(
+                        "Type error".into(),
+                        "The void type isn't a value.".into(),
+                        None,
+                        *span,
+                    ));
                 }
 
-                checks::check_types(
-                    local_type,
-                    &local_value_type,
-                    Some(local_value),
-                    None,
-                    type_metadata,
-                )?;
+                if !metadata.is_undefined() {
+                    let mut local_value_type: Type = local_value.get_value_type()?.clone();
 
-                if let Err(type_error) = typechecker.analyze_stmt(local_value) {
-                    typechecker.add_error(type_error);
+                    if local_value_type.is_ptr_type() {
+                        local_value_type = Type::Ptr(Some(local_value_type.into()));
+                    }
+
+                    checks::check_types(
+                        local_type,
+                        &local_value_type,
+                        Some(local_value),
+                        None,
+                        type_metadata,
+                    )?;
+
+                    if let Err(type_error) = typechecker.analyze_stmt(local_value) {
+                        typechecker.add_error(type_error);
+                    }
                 }
             }
 

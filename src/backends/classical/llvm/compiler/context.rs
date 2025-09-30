@@ -82,7 +82,6 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
         ascii_name: &'ctx str,
         kind: &'ctx Type,
         value: BasicValueEnum<'ctx>,
-
         metadata: ConstantMetadata,
     ) {
         let ptr: PointerValue = alloc::memstatic::local_constant(
@@ -96,7 +95,7 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
         let constant: SymbolAllocated =
             SymbolAllocated::new_constant(ptr.into(), kind, value, metadata.get_llvm_metadata());
 
-        if let Some(last_block) = self.table.get_mut_local_constants().last_mut() {
+        if let Some(last_block) = self.table.get_mut_all_local_constants().last_mut() {
             last_block.insert(name, constant);
         } else {
             logging::print_backend_panic(
@@ -129,7 +128,9 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
         let constant: SymbolAllocated =
             SymbolAllocated::new_constant(ptr.into(), kind, value, metadata.get_llvm_metadata());
 
-        self.table.get_mut_global_constants().insert(name, constant);
+        self.table
+            .get_mut_all_global_constants()
+            .insert(name, constant);
     }
 }
 
@@ -155,7 +156,7 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
         let constant: SymbolAllocated =
             SymbolAllocated::new_static(ptr.into(), kind, value, metadata.get_llvm_metadata());
 
-        if let Some(last_block) = self.table.get_mut_local_statics().last_mut() {
+        if let Some(last_block) = self.table.get_mut_all_local_statics().last_mut() {
             last_block.insert(name, constant);
         } else {
             logging::print_backend_panic(
@@ -188,7 +189,9 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
         let constant: SymbolAllocated =
             SymbolAllocated::new_static(ptr.into(), kind, value, metadata.get_llvm_metadata());
 
-        self.table.get_mut_global_statics().insert(name, constant);
+        self.table
+            .get_mut_all_global_statics()
+            .insert(name, constant);
     }
 }
 
@@ -200,9 +203,7 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
         ascii_name: &'ctx str,
         kind: &'ctx Type,
         attributes: &'ctx ThrushAttributes<'ctx>,
-
         metadata: LocalMetadata,
-
         span: Span,
     ) {
         let ptr: PointerValue = alloc::alloc(self, ascii_name, kind, attributes, span);
@@ -210,7 +211,7 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
         let local: SymbolAllocated =
             SymbolAllocated::new_local(ptr, kind, metadata.get_llvm_metadata());
 
-        if let Some(last_block) = self.table.get_mut_locals().last_mut() {
+        if let Some(last_block) = self.table.get_mut_all_locals().last_mut() {
             last_block.insert(name, local);
         } else {
             logging::print_backend_panic(
@@ -225,7 +226,7 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
         let lli: SymbolAllocated =
             SymbolAllocated::new(SymbolToAllocate::LowLevelInstruction, kind, value);
 
-        if let Some(last_block) = self.table.get_mut_locals().last_mut() {
+        if let Some(last_block) = self.table.get_mut_all_locals().last_mut() {
             last_block.insert(name, lli);
         } else {
             logging::print_backend_panic(
@@ -249,13 +250,13 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
             SymbolAllocated::new(SymbolToAllocate::Parameter, kind, value);
 
         self.table
-            .get_mut_parameters()
+            .get_mut_all_parameters()
             .insert(name, symbol_allocated);
     }
 
     #[inline]
     pub fn new_function(&mut self, name: &'ctx str, function: LLVMFunction<'ctx>) {
-        self.table.get_mut_functions().insert(name, function);
+        self.table.get_mut_all_functions().insert(name, function);
     }
 }
 

@@ -47,11 +47,6 @@ impl Type {
     }
 
     #[inline(always)]
-    pub fn is_str_type(&self) -> bool {
-        matches!(self, Type::Str)
-    }
-
-    #[inline(always)]
     pub fn is_mut_type(&self) -> bool {
         matches!(self, Type::Mut(_))
     }
@@ -118,7 +113,6 @@ impl TypeExtensions for Type {
             | Type::F64
             | Type::Bool
             | Type::Char
-            | Type::Str
             | Type::Addr
             | Type::Void
             | Type::Ptr(None)
@@ -174,7 +168,6 @@ impl PartialEq for Type {
             (Type::Ptr(None), Type::Ptr(None)) => true,
             (Type::Ptr(Some(target)), Type::Ptr(Some(from))) => target == from,
             (Type::Void, Type::Void) => true,
-            (Type::Str, Type::Str) => true,
             (Type::Bool, Type::Bool) => true,
             (Type::Addr, Type::Addr) => true,
 

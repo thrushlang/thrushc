@@ -207,7 +207,6 @@ pub fn validate<'check_typeser>(
         | Ast::Boolean { .. }
         | Ast::Str { .. }
         | Ast::Float { .. }
-        | Ast::Null { .. }
         | Ast::NullPtr { .. }
         | Ast::Char { .. }
         | Ast::Pass { .. } => Ok(()),

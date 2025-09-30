@@ -29,10 +29,8 @@ pub fn validate<'analyzer>(
         }
 
         Ast::Function { body, .. } => {
-            if body.is_block() {
-                if let Err(error) = analyzer.analyze_stmt(body) {
-                    analyzer.add_error(error);
-                }
+            if let Some(body) = body {
+                analyzer.analyze_stmt(body)?;
             }
 
             Ok(())

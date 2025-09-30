@@ -68,10 +68,8 @@ pub fn validate<'type_checker>(
                 Ok(())
             })?;
 
-            if body.is_block() {
-                if let Err(type_error) = typechecker.analyze_stmt(body) {
-                    typechecker.add_error(type_error);
-                }
+            if let Some(body) = body {
+                typechecker.analyze_stmt(body)?;
 
                 if !body.has_return_for_function() && !return_type.is_void_type() {
                     typechecker.add_error(ThrushCompilerIssue::Error(

@@ -54,7 +54,6 @@ pub fn build_type(ctx: &mut ParserContext<'_>) -> Result<Type, ThrushCompilerIss
                 ty if ty.is_integer_type() => Ok(ty),
                 ty if ty.is_float_type() => Ok(ty),
                 ty if ty.is_bool_type() => Ok(ty),
-                ty if ty.is_str_type() => Ok(ty),
                 ty if ty.is_address_type() => Ok(ty),
                 ty if ty.is_ptr_type() && ctx.check(TokenType::LBracket) => {
                     Ok(self::build_recursive_type(ctx, Type::Ptr(None))?)

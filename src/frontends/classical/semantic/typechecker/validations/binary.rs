@@ -45,10 +45,6 @@ fn validate_bor(op: &TokenType, a: &Type, b: &Type, span: Span) -> Result<(), Th
         return Ok(());
     }
 
-    if let (Type::Ptr(_), Type::Ptr(_)) = (a, b) {
-        return Ok(());
-    }
-
     Err(ThrushCompilerIssue::Error(
         String::from("Incompatible Type Operation"),
         format!("'{} {} {}' isn't valid operation.", a, op, b),
@@ -64,10 +60,6 @@ fn validate_xor(op: &TokenType, a: &Type, b: &Type, span: Span) -> Result<(), Th
         Type::S8 | Type::S16 | Type::S32 | Type::S64 | Type::U8 | Type::U16 | Type::U32 | Type::U64,
     ) = (a, b)
     {
-        return Ok(());
-    }
-
-    if let (Type::Ptr(_), Type::Ptr(_)) = (a, b) {
         return Ok(());
     }
 

@@ -14,7 +14,6 @@ impl std::fmt::Display for Type {
             Type::F32 => write!(f, "f32"),
             Type::F64 => write!(f, "f64"),
             Type::Bool => write!(f, "bool"),
-            Type::Str => write!(f, "str"),
             Type::Char => write!(f, "char"),
             Type::Fn(params, kind, modificator) => {
                 let has_llvm_ignore: &str = if modificator.llvm().has_ignore() {
@@ -35,15 +34,13 @@ impl std::fmt::Display for Type {
                     kind
                 )
             }
-
             Type::Mut(inner_type) => write!(f, "mut {}", inner_type),
             Type::Const(inner_type) => write!(f, "const {}", inner_type),
-
             Type::FixedArray(kind, size) => {
-                write!(f, "[{}; {}]", kind, size)
+                write!(f, "array[{}; {}]", kind, size)
             }
             Type::Array(kind) => {
-                write!(f, "[{}]", kind)
+                write!(f, "array[{}]", kind)
             }
             Type::Struct(name, fields, modificator) => {
                 let is_llvm_packed: &str = if modificator.llvm().is_packed() {

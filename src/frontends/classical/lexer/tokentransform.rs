@@ -26,8 +26,6 @@ impl TokenType {
             TokenType::F32 => Ok(Type::F32),
             TokenType::F64 => Ok(Type::F64),
 
-            TokenType::Str => Ok(Type::Str),
-
             TokenType::Ptr => Ok(Type::Ptr(None)),
             TokenType::Addr => Ok(Type::Addr),
             TokenType::Void => Ok(Type::Void),

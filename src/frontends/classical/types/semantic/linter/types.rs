@@ -34,8 +34,7 @@ pub type LinterStructFieldsInfo<'linter> =
 pub type LinterStructs<'linter> = HashMap<&'linter str, LinterStructFieldsInfo<'linter>>;
 
 pub type LinterFunctionParameterInfo = (Span, bool, bool);
-pub type LinterFunctionParameters<'linter> =
-    Vec<HashMap<&'linter str, LinterFunctionParameterInfo>>;
+pub type LinterFunctionParameters<'linter> = HashMap<&'linter str, LinterFunctionParameterInfo>;
 
 #[derive(Debug, Clone, Copy)]
 pub enum LinterAttributeApplicant {

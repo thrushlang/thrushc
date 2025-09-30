@@ -17,8 +17,7 @@ impl Ast<'_> {
             Ast::Boolean { kind, .. } => Ok(kind),
             Ast::Char { kind, .. } => Ok(kind),
             Ast::Str { kind, .. } => Ok(kind),
-            Ast::NullPtr { .. } => Ok(&Type::Ptr(None)),
-            Ast::Null { .. } => Ok(&Type::Void),
+            Ast::NullPtr { kind, .. } => Ok(kind),
 
             // Static
             Ast::Static { kind, .. } => Ok(kind),
@@ -106,7 +105,7 @@ impl Ast<'_> {
             Ast::Boolean { kind, .. } => Ok(kind),
             Ast::Char { kind, .. } => Ok(kind),
             Ast::Str { kind, .. } => Ok(kind),
-            Ast::NullPtr { .. } => Ok(&Type::Ptr(None)),
+            Ast::NullPtr { kind, .. } => Ok(kind),
 
             // Variables and references
             Ast::Local { kind, .. } => Ok(kind),
@@ -243,7 +242,6 @@ impl Ast<'_> {
             Ast::Char { span, .. } => *span,
             Ast::Str { span, .. } => *span,
             Ast::NullPtr { span, .. } => *span,
-            Ast::Null { span, .. } => *span,
 
             // Static
             Ast::Static { span, .. } => *span,

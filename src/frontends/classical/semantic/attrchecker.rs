@@ -79,7 +79,7 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
             ..
         } = ast
         {
-            if !body.is_null() && attributes.has_extern_attribute() {
+            if body.is_some() && attributes.has_extern_attribute() {
                 if let Some(span) = attributes.match_attr(LLVMAttributeComparator::Extern) {
                     self.add_error(ThrushCompilerIssue::Error(
                         "Attribute error".into(),
@@ -97,7 +97,7 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
                 }
             }
 
-            if !body.is_null() {
+            if let Some(body) = body {
                 self.analyze_ast(body);
             }
 

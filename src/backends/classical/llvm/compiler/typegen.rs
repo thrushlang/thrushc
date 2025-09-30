@@ -76,16 +76,6 @@ pub fn generate_type<'ctx>(llvm_context: &'ctx Context, kind: &Type) -> BasicTyp
 
         Type::Const(any) => self::generate_type(llvm_context, any),
 
-        Type::Str => llvm_context
-            .struct_type(
-                &[
-                    llvm_context.ptr_type(AddressSpace::default()).into(),
-                    llvm_context.i32_type().into(),
-                ],
-                false,
-            )
-            .into(),
-
         Type::Struct(_, fields, modificator) => {
             let mut field_types: Vec<BasicTypeEnum> = Vec::with_capacity(10);
 

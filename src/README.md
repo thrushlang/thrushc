@@ -1,6 +1,4 @@
-<p align="center">
-  <img src= "https://github.com/thrushlang/.github/blob/main/assets/logos/thrushlang-logo.png" alt= "logo" style= "width: 2hv; height: 2hv;"> </img>
-</p>
+<img src= "https://github.com/thrushlang/.github/blob/main/assets/logos/thrushlang-logo.png" alt= "logo" style= "width: 80%; height: 80%;"></img>
 
 ## Thrush Programming Language | TCSCT (Thrush Compiler Source Code Tree)
 

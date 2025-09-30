@@ -14,10 +14,12 @@ pub fn analyze<'linter>(linter: &mut Linter<'linter>, node: &'linter Ast) {
         Ast::Function {
             parameters, body, ..
         } => {
-            if body.is_block() {
-                linter.symbols.bulk_declare_parameters(parameters);
-
+            if let Some(body) = body {
+                linter.symbols.declare_parameters(parameters);
                 linter.analyze_stmt(body);
+                linter.symbols.finish_parameters();
+
+                linter.generate_scoped_function_warnings();
             }
         }
 

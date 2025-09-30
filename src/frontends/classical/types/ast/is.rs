@@ -1,20 +1,12 @@
 use crate::{
     core::errors::standard::ThrushCompilerIssue,
-    frontends::classical::{
-        types::ast::{Ast, traits::LLVMAstExtensions},
-        typesystem::types::Type,
-    },
+    frontends::classical::{types::ast::Ast, typesystem::types::Type},
 };
 
 impl Ast<'_> {
     #[inline]
     pub fn is_literal(&self) -> bool {
         matches!(self, Ast::Integer { .. } | Ast::Float { .. })
-    }
-
-    #[inline]
-    pub fn is_block(&self) -> bool {
-        matches!(self, Ast::Block { .. })
     }
 
     #[inline]
@@ -63,11 +55,6 @@ impl Ast<'_> {
     }
 
     #[inline]
-    pub fn is_null(&self) -> bool {
-        matches!(self, Ast::Null { .. })
-    }
-
-    #[inline]
     pub fn is_integer(&self) -> bool {
         matches!(self, Ast::Integer { .. })
     }
@@ -85,6 +72,16 @@ impl Ast<'_> {
     #[inline]
     pub fn is_continue(&self) -> bool {
         matches!(self, Ast::Continue { .. })
+    }
+}
+
+impl Ast<'_> {
+    #[inline]
+    pub fn is_lli(&self) -> bool {
+        matches!(
+            self,
+            Ast::Write { .. } | Ast::Load { .. } | Ast::Address { .. } | Ast::Alloc { .. }
+        )
     }
 }
 
@@ -212,51 +209,6 @@ impl Ast<'_> {
 
         if let Ast::Property { metadata, .. } = self {
             return metadata.is_allocated();
-        }
-
-        false
-    }
-}
-
-impl LLVMAstExtensions for Ast<'_> {
-    fn is_llvm_constant_value(&self) -> bool {
-        if matches!(
-            self,
-            Ast::Integer { .. }
-                | Ast::Float { .. }
-                | Ast::Boolean { .. }
-                | Ast::Char { .. }
-                | Ast::Str { .. }
-        ) {
-            return true;
-        }
-
-        if let Ast::Group { expression, .. } = self {
-            return expression.is_llvm_constant_value();
-        }
-
-        if let Ast::BinaryOp { left, right, .. } = self {
-            return left.is_llvm_constant_value() && right.is_llvm_constant_value();
-        }
-
-        if let Ast::UnaryOp { expression, .. } = self {
-            return expression.is_llvm_constant_value();
-        }
-
-        if let Ast::Reference { metadata, .. } = self {
-            return metadata.is_constant();
-        }
-
-        if let Ast::As { metadata, .. } = self {
-            return metadata.is_constant();
-        }
-
-        if let Ast::FixedArray { items, .. } = self {
-            return items.iter().all(|item| item.is_llvm_constant_value());
-        }
-
-        if let Ast::Constructor { args, .. } = self {
-            return args.iter().all(|arg| arg.1.is_llvm_constant_value());
         }
 
         false

@@ -35,4 +35,12 @@ impl<'ctx> Ast<'ctx> {
     pub fn new_str(bytes: Vec<u8>, kind: Type, span: Span) -> Ast<'ctx> {
         Ast::Str { bytes, kind, span }
     }
+
+    #[inline]
+    pub fn new_nullptr(span: Span) -> Ast<'ctx> {
+        Ast::NullPtr {
+            span,
+            kind: Type::Ptr(None),
+        }
+    }
 }

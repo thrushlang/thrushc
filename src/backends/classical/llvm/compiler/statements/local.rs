@@ -19,7 +19,7 @@ pub fn compile<'ctx>(context: &mut LLVMCodeGenContext<'_, 'ctx>, local: Local<'c
     let ascii_name: &str = local.1;
 
     let kind: &Type = local.2;
-    let expr: &Ast = local.3;
+    let expr: Option<&Ast> = local.3;
 
     let attributes: &ThrushAttributes = local.4;
     let metadata: LocalMetadata = local.5;
@@ -28,19 +28,21 @@ pub fn compile<'ctx>(context: &mut LLVMCodeGenContext<'_, 'ctx>, local: Local<'c
 
     context.new_local(name, ascii_name, kind, attributes, metadata, span);
 
-    let symbol: SymbolAllocated = context.get_table().get_symbol(name);
+    if let Some(expr) = expr {
+        let symbol: SymbolAllocated = context.get_table().get_symbol(name);
 
-    context.set_pointer_anchor(PointerAnchor::new(symbol.get_ptr(), false));
+        context.set_pointer_anchor(PointerAnchor::new(symbol.get_ptr(), false));
 
-    let value: BasicValueEnum = codegen::compile_expr(context, expr, Some(kind));
+        let value: BasicValueEnum = codegen::compile_expr(context, expr, Some(kind));
 
-    if let Some(anchor) = context.get_pointer_anchor() {
-        if !anchor.is_triggered() {
+        if let Some(anchor) = context.get_pointer_anchor() {
+            if !anchor.is_triggered() {
+                symbol.store(context, value);
+            }
+        } else {
             symbol.store(context, value);
         }
-    } else {
-        symbol.store(context, value);
-    }
 
-    context.clear_pointer_anchor();
+        context.clear_pointer_anchor();
+    }
 }

@@ -103,7 +103,7 @@ impl Ast<'_> {
                 return_type,
                 parameters,
                 parameter_types,
-                body,
+                body.as_deref(),
                 attributes,
             );
         }
@@ -129,7 +129,13 @@ impl Ast<'_> {
         } = self
         {
             return (
-                name, ascii_name, kind, &**value, attributes, *metadata, *span,
+                name,
+                ascii_name,
+                kind,
+                value.as_deref(),
+                attributes,
+                *metadata,
+                *span,
             );
         }
 

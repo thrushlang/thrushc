@@ -202,7 +202,7 @@ pub fn build_assembler_function<'parser>(
             ctx.add_silent_error(error);
         }
 
-        return Ok(Ast::Null { span });
+        return Ok(Ast::new_nullptr(span));
     }
 
     Ok(Ast::AssemblerFunction {

@@ -123,7 +123,7 @@ pub fn build_structure<'parser>(
             ctx.add_silent_error(error);
         }
 
-        return Ok(Ast::Null { span });
+        return Ok(Ast::new_nullptr(span));
     }
 
     Ok(Ast::Struct {

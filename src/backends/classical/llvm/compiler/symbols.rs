@@ -1,3 +1,5 @@
+use crate::backends::classical::llvm::compiler::constants::LLVM_COMPILER_SYMBOLS_GLOBAL_MINIMAL_CAPACITY;
+use crate::backends::classical::llvm::compiler::constants::LLVM_COMPILER_SYMBOLS_LOCAL_MINIMAL_CAPACITY;
 use crate::backends::classical::llvm::compiler::memory::SymbolAllocated;
 use crate::backends::classical::types::repr::LLVMFunction;
 use crate::backends::classical::types::repr::LLVMFunctions;
@@ -18,13 +20,10 @@ use std::fmt::Display;
 #[derive(Debug)]
 pub struct SymbolsTable<'ctx> {
     functions: LLVMFunctions<'ctx>,
-
     global_statics: LLVMGlobalStatics<'ctx>,
     local_statics: LLVMLocalStatics<'ctx>,
-
     global_constants: LLVMGlobalConstants<'ctx>,
     local_constants: LLVMLocalConstants<'ctx>,
-
     locals: LLVMInstructions<'ctx>,
     parameters: LLVMFunctionsParameters<'ctx>,
 
@@ -32,18 +31,17 @@ pub struct SymbolsTable<'ctx> {
 }
 
 impl SymbolsTable<'_> {
+    #[inline]
     pub fn new() -> Self {
         Self {
-            functions: HashMap::with_capacity(1000),
+            functions: HashMap::with_capacity(LLVM_COMPILER_SYMBOLS_GLOBAL_MINIMAL_CAPACITY),
+            global_statics: HashMap::with_capacity(LLVM_COMPILER_SYMBOLS_GLOBAL_MINIMAL_CAPACITY),
+            local_statics: Vec::with_capacity(LLVM_COMPILER_SYMBOLS_LOCAL_MINIMAL_CAPACITY),
+            global_constants: HashMap::with_capacity(LLVM_COMPILER_SYMBOLS_GLOBAL_MINIMAL_CAPACITY),
+            local_constants: Vec::with_capacity(LLVM_COMPILER_SYMBOLS_LOCAL_MINIMAL_CAPACITY),
+            locals: Vec::with_capacity(LLVM_COMPILER_SYMBOLS_LOCAL_MINIMAL_CAPACITY),
 
-            global_statics: HashMap::with_capacity(1000),
-            local_statics: Vec::with_capacity(1000),
-
-            global_constants: HashMap::with_capacity(1000),
-            local_constants: Vec::with_capacity(1000),
-
-            locals: Vec::with_capacity(1000),
-            parameters: HashMap::with_capacity(10),
+            parameters: HashMap::with_capacity(15),
 
             scope: 0,
         }
@@ -57,10 +55,17 @@ impl<'ctx> SymbolsTable<'ctx> {
             return *parameter;
         }
 
+        for position in (0..self.scope).rev() {
+            if let Some(scope) = self.locals.get(position) {
+                if let Some(local) = scope.get(name) {
+                    return *local;
+                }
+            }
+        }
+
         if let Some(global_constant) = self.global_constants.get(name) {
             return *global_constant;
         }
-
         for position in (0..self.scope).rev() {
             if let Some(scope) = self.local_constants.get(position) {
                 if let Some(local_constant) = scope.get(name) {
@@ -72,19 +77,10 @@ impl<'ctx> SymbolsTable<'ctx> {
         if let Some(global_static) = self.global_statics.get(name) {
             return *global_static;
         }
-
         for position in (0..self.scope).rev() {
             if let Some(scope) = self.local_statics.get(position) {
                 if let Some(local_static) = scope.get(name) {
                     return *local_static;
-                }
-            }
-        }
-
-        for position in (0..self.scope).rev() {
-            if let Some(scope) = self.locals.get(position) {
-                if let Some(local) = scope.get(name) {
-                    return *local;
                 }
             }
         }
@@ -118,37 +114,37 @@ impl<'ctx> SymbolsTable<'ctx> {
 
 impl<'ctx> SymbolsTable<'ctx> {
     #[inline]
-    pub fn get_mut_functions(&mut self) -> &mut LLVMFunctions<'ctx> {
+    pub fn get_mut_all_functions(&mut self) -> &mut LLVMFunctions<'ctx> {
         &mut self.functions
     }
 
     #[inline]
-    pub fn get_mut_global_constants(&mut self) -> &mut LLVMGlobalConstants<'ctx> {
+    pub fn get_mut_all_global_constants(&mut self) -> &mut LLVMGlobalConstants<'ctx> {
         &mut self.global_constants
     }
 
     #[inline]
-    pub fn get_mut_local_constants(&mut self) -> &mut LLVMLocalConstants<'ctx> {
+    pub fn get_mut_all_local_constants(&mut self) -> &mut LLVMLocalConstants<'ctx> {
         &mut self.local_constants
     }
 
     #[inline]
-    pub fn get_mut_global_statics(&mut self) -> &mut LLVMGlobalStatics<'ctx> {
+    pub fn get_mut_all_global_statics(&mut self) -> &mut LLVMGlobalStatics<'ctx> {
         &mut self.global_statics
     }
 
     #[inline]
-    pub fn get_mut_local_statics(&mut self) -> &mut LLVMLocalStatics<'ctx> {
+    pub fn get_mut_all_local_statics(&mut self) -> &mut LLVMLocalStatics<'ctx> {
         &mut self.local_statics
     }
 
     #[inline]
-    pub fn get_mut_locals(&mut self) -> &mut LLVMInstructions<'ctx> {
+    pub fn get_mut_all_locals(&mut self) -> &mut LLVMInstructions<'ctx> {
         &mut self.locals
     }
 
     #[inline]
-    pub fn get_mut_parameters(&mut self) -> &mut LLVMFunctionsParameters<'ctx> {
+    pub fn get_mut_all_parameters(&mut self) -> &mut LLVMFunctionsParameters<'ctx> {
         &mut self.parameters
     }
 }
