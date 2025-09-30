@@ -72,7 +72,7 @@ pub fn compile<'ctx>(
         )
     };
 
-    let asm_function_type: FunctionType = typegen::function_type(
+    let asm_function_type: FunctionType = typegen::generate_fn_type(
         context,
         asm_function_return_type,
         asm_function_parameters,

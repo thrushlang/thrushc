@@ -97,11 +97,11 @@ pub fn analyze<'linter>(linter: &mut Linter<'linter>, expr: &'linter Ast) {
             ));
         }
 
-        Ast::Indirect { pointer, args, .. } => {
-            linter.analyze_expr(pointer);
+        Ast::Indirect { function, args, .. } => {
+            linter.analyze_expr(function);
 
-            args.iter().for_each(|arg| {
-                linter.analyze_expr(arg);
+            args.iter().for_each(|expr| {
+                linter.analyze_expr(expr);
             });
         }
 

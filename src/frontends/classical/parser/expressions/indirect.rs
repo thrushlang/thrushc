@@ -35,9 +35,9 @@ pub fn build_indirect<'parser>(
             break;
         }
 
-        let expression: Ast = expr::build_expr(ctx)?;
+        let expr: Ast = expr::build_expr(ctx)?;
 
-        args.push(expression);
+        args.push(expr);
 
         if ctx.check(TokenType::RParen) {
             break;
@@ -57,7 +57,7 @@ pub fn build_indirect<'parser>(
     )?;
 
     Ok(Ast::Indirect {
-        pointer: expression.clone().into(),
+        function: expression.clone().into(),
         function_type: expression_type.clone(),
         args,
         kind: expression_type.get_type_fn_ref().clone(),

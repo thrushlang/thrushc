@@ -36,11 +36,7 @@ pub fn validate<'type_checker>(
                 ));
             }
 
-            if let Err(error) =
-                checks::type_check(static_type, value_type, Some(value), None, metadata)
-            {
-                typechecker.add_error(error);
-            }
+            checks::check_types(static_type, value_type, Some(value), None, metadata)?;
 
             typechecker.analyze_stmt(value)?;
 

@@ -59,11 +59,7 @@ pub fn validate<'type_checker>(
             let metadata: TypeCheckerExprMetadata =
                 TypeCheckerExprMetadata::new(expr.is_literal(), None, span);
 
-            if let Err(error) =
-                checks::type_check(target_type, from_type, Some(expr), None, metadata)
-            {
-                typechecker.add_error(error);
-            }
+            checks::check_types(target_type, from_type, Some(expr), None, metadata)?;
 
             Ok(())
         })?;

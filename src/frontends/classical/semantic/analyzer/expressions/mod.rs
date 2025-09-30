@@ -73,8 +73,9 @@ pub fn validate<'analyzer>(
         }
 
         Ast::Call { args, .. } => args.iter().try_for_each(|arg| analyzer.analyze_stmt(arg)),
-        Ast::Indirect { pointer, args, .. } => {
-            analyzer.analyze_stmt(pointer)?;
+
+        Ast::Indirect { function, args, .. } => {
+            analyzer.analyze_stmt(function)?;
             args.iter().try_for_each(|arg| analyzer.analyze_stmt(arg))
         }
 

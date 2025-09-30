@@ -50,18 +50,14 @@ pub fn validate<'type_checker>(
                 let lhs_type: &Type = source_type.get_type_with_depth(1);
                 let rhs_type: &Type = value_type;
 
-                if let Err(error) = checks::type_check(lhs_type, rhs_type, None, None, metadata) {
-                    typechecker.add_error(error);
-                }
+                checks::check_types(lhs_type, rhs_type, None, None, metadata)?;
             }
 
             if source_type.is_ptr_type() {
                 let lhs_type: &Type = source_type.get_type_with_depth(1);
                 let rhs_type: &Type = value_type;
 
-                if let Err(error) = checks::type_check(lhs_type, rhs_type, None, None, metadata) {
-                    typechecker.add_error(error);
-                }
+                checks::check_types(lhs_type, rhs_type, None, None, metadata)?;
             }
 
             typechecker.analyze_stmt(value)?;

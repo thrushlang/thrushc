@@ -2,24 +2,26 @@ use std::fmt::Display;
 
 use crate::backends::classical::llvm::compiler::attributes::LLVMAttribute;
 use crate::backends::classical::llvm::compiler::context::LLVMCodeGenContext;
-use crate::backends::classical::llvm::compiler::typegen;
-use crate::backends::classical::llvm::compiler::value;
 
-use crate::backends::classical::types::traits::AssemblerFunctionExtensions;
-use crate::core::console::logging::{self, LoggingType};
+use crate::backends::classical::llvm::compiler::{typegen, value};
 use crate::frontends::classical::types::ast::Ast;
 use crate::frontends::classical::types::parser::stmts::traits::ThrushAttributesExtensions;
 use crate::frontends::classical::types::parser::stmts::types::ThrushAttributes;
 use crate::frontends::classical::typesystem::types::Type;
 
-use inkwell::AddressSpace;
-use inkwell::InlineAsmDialect;
+use crate::backends::classical::types::traits::AssemblerFunctionExtensions;
+
+use crate::core::console::logging::{self, LoggingType};
+
+use inkwell::builder::Builder;
+use inkwell::context::Context;
 use inkwell::types::FunctionType;
 use inkwell::values::{BasicMetadataValueEnum, BasicValueEnum, PointerValue};
-use inkwell::{builder::Builder, context::Context};
+use inkwell::{AddressSpace, InlineAsmDialect};
 
 pub fn compile<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
+
     assembler: &str,
     constraints: &str,
     args: &'ctx [Ast],
@@ -29,11 +31,11 @@ pub fn compile<'ctx>(
     let llvm_context: &Context = context.get_llvm_context();
     let llvm_builder: &Builder = context.get_llvm_builder();
 
-    let asm_function_type: FunctionType = typegen::function_type(context, kind, args, false);
+    let asm_function_type: FunctionType = typegen::generate_fn_type(context, kind, args, false);
 
     let compiled_args: Vec<BasicMetadataValueEnum> = args
         .iter()
-        .map(|arg| value::compile(context, arg, None).into()) // Recursive
+        .map(|arg| value::compile(context, arg, None).into())
         .collect();
 
     let mut syntax: InlineAsmDialect = InlineAsmDialect::Intel;
@@ -86,5 +88,5 @@ fn compile_null_ptr<'ctx>(context: &LLVMCodeGenContext<'_, 'ctx>) -> BasicValueE
 
 #[inline]
 fn codegen_abort<T: Display>(message: T) -> ! {
-    logging::print_backend_bug(LoggingType::BackendBug, &format!("{}", message))
+    logging::print_backend_bug(LoggingType::BackendBug, &format!("{}", message));
 }

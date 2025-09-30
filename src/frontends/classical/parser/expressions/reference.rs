@@ -27,7 +27,13 @@ use crate::{
                 },
             },
         },
-        typesystem::types::Type,
+        typesystem::{
+            modificators::{
+                FunctionReferenceTypeModificator, GCCFunctionReferenceTypeModificator,
+                LLVMFunctionReferenceTypeModificator,
+            },
+            types::Type,
+        },
     },
 };
 
@@ -45,10 +51,18 @@ pub fn build_reference<'parser>(
 
         let function_type: Type = function.0;
         let function_parameter_types: Vec<Type> = function.1.0;
+        let has_ignore_attr: bool = function.2;
 
         return Ok(Ast::Reference {
             name,
-            kind: Type::Fn(function_parameter_types, function_type.into()),
+            kind: Type::Fn(
+                function_parameter_types,
+                function_type.into(),
+                FunctionReferenceTypeModificator::new(
+                    LLVMFunctionReferenceTypeModificator::new(has_ignore_attr),
+                    GCCFunctionReferenceTypeModificator::new(),
+                ),
+            ),
             span,
             metadata: ReferenceMetadata::new(true, false, ReferenceType::default()),
         });

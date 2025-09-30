@@ -3,6 +3,59 @@
 use std::fmt::Display;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct FunctionReferenceTypeModificator {
+    llvm: LLVMFunctionReferenceTypeModificator,
+    gcc: GCCFunctionReferenceTypeModificator,
+}
+
+impl FunctionReferenceTypeModificator {
+    #[inline]
+    pub fn new(
+        llvm: LLVMFunctionReferenceTypeModificator,
+        gcc: GCCFunctionReferenceTypeModificator,
+    ) -> Self {
+        Self { llvm, gcc }
+    }
+
+    #[inline]
+    pub fn llvm(&self) -> &LLVMFunctionReferenceTypeModificator {
+        &self.llvm
+    }
+
+    #[inline]
+    pub fn gcc(&self) -> &GCCFunctionReferenceTypeModificator {
+        &self.gcc
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct LLVMFunctionReferenceTypeModificator {
+    ignore_args: bool,
+}
+
+impl LLVMFunctionReferenceTypeModificator {
+    #[inline]
+    pub fn new(ignore_args: bool) -> Self {
+        Self { ignore_args }
+    }
+
+    #[inline]
+    pub fn has_ignore(&self) -> bool {
+        self.ignore_args
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct GCCFunctionReferenceTypeModificator {}
+
+impl GCCFunctionReferenceTypeModificator {
+    #[allow(dead_code)]
+    pub fn new() -> Self {
+        Self {}
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct StructureTypeModificator {
     llvm: LLVMStructureTypeModificator,
     gcc: GCCStructureTypeModificator,
@@ -54,6 +107,20 @@ impl LLVMStructureTypeModificator {
 
 impl Display for StructureTypeModificator {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "LLVM: packed = {}, GCC: <none>", self.llvm.packed)
+        if self.llvm.packed {
+            write!(f, "@packed;")?;
+        }
+
+        Ok(())
+    }
+}
+
+impl Display for FunctionReferenceTypeModificator {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if self.llvm.ignore_args {
+            write!(f, "@ignore;")?;
+        }
+
+        Ok(())
     }
 }

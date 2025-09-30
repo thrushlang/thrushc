@@ -36,15 +36,13 @@ pub fn validate<'type_checker>(
             let metadata: TypeCheckerExprMetadata =
                 TypeCheckerExprMetadata::new(cond.is_literal(), None, span);
 
-            if let Err(error) = checks::type_check(
+            checks::check_types(
                 &Type::Bool,
                 cond.get_value_type()?,
                 Some(cond),
                 None,
                 metadata,
-            ) {
-                typechecker.add_error(error);
-            }
+            )?;
 
             typechecker.analyze_stmt(cond)?;
             typechecker.analyze_stmt(block)?;

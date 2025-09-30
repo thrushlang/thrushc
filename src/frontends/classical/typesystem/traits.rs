@@ -1,8 +1,6 @@
-use std::sync::Arc;
-
 use crate::{
     backends::classical::llvm::compiler::context::LLVMCodeGenContext,
-    frontends::classical::typesystem::types::Type,
+    frontends::classical::typesystem::{modificators::StructureTypeModificator, types::Type},
 };
 
 pub trait LLVMTypeExtensions {
@@ -23,15 +21,28 @@ pub trait TypeMutableExtensions {
     fn is_mut_struct_type(&self) -> bool;
 }
 
+pub trait TypeFixedArrayEntensions {
+    fn get_farray_base_type(&self) -> &Type;
+}
+
+pub trait TypeArrayEntensions {
+    fn get_array_base_type(&self) -> &Type;
+    fn get_array_type_herarchy(&self) -> u8;
+}
+
 pub trait TypePointerExtensions {
     fn is_typed_ptr_type(&self) -> bool;
-    fn is_all_ptr_type(&self) -> bool;
     fn is_ptr_struct_type(&self) -> bool;
     fn is_ptr_fixed_array_type(&self) -> bool;
 }
 
 pub trait TypeStructExtensions {
-    fn get_struct_fields(&self) -> &[Arc<Type>];
+    fn get_struct_fields(&self) -> &[Type];
+    fn create_struct_type(
+        name: String,
+        fields: &[Type],
+        modificator: StructureTypeModificator,
+    ) -> Type;
 }
 
 pub trait IndexTypeExtensions {

@@ -8,7 +8,7 @@ use crate::{
     },
 };
 
-pub fn type_check(
+pub fn check_types(
     lhs: &Type,
     rhs: &Type,
     expr: Option<&Ast>,
@@ -30,7 +30,7 @@ pub fn type_check(
         ..
     }) = expr
     {
-        return self::type_check(lhs, expression_type, None, Some(op), metadata);
+        return self::check_types(lhs, expression_type, None, Some(op), metadata);
     }
 
     if let Some(Ast::UnaryOp {
@@ -39,7 +39,7 @@ pub fn type_check(
         ..
     }) = expr
     {
-        return self::type_check(lhs, expression_type, None, Some(op), metadata);
+        return self::check_types(lhs, expression_type, None, Some(op), metadata);
     }
 
     if let Some(Ast::Group {
@@ -48,7 +48,7 @@ pub fn type_check(
         ..
     }) = expr
     {
-        return self::type_check(lhs, expression_type, Some(expression), None, metadata);
+        return self::check_types(lhs, expression_type, Some(expression), None, metadata);
     }
 
     match (lhs, rhs, op) {
@@ -62,9 +62,9 @@ pub fn type_check(
 
             if mod1 != mod2 {
                 return Err(ThrushCompilerIssue::Error(
-                    "Mismatched structure metadata".into(),
+                    "Mismatched structure type modificator".into(),
                     format!(
-                        "Expected structure metadata '{}' but found '{}'.",
+                        "Expected structure type with '{}' attributes but found '{}'.",
                         mod1, mod2
                     ),
                     None,
@@ -74,14 +74,14 @@ pub fn type_check(
 
             lhs.iter()
                 .zip(rhs.iter())
-                .try_for_each(|(lhs, rhs)| self::type_check(lhs, rhs, None, None, metadata))?;
+                .try_for_each(|(lhs, rhs)| self::check_types(lhs, rhs, None, None, metadata))?;
 
             Ok(())
         }
 
         (Type::Addr, Type::Addr, None) => Ok(()),
 
-        (Type::Fn(lhs, ret1), Type::Fn(rhs, ret2), None) => {
+        (Type::Fn(lhs, ret1, mod1), Type::Fn(rhs, ret2, mod2), None) => {
             if lhs.len() != rhs.len() {
                 return Err(error);
             }
@@ -90,22 +90,34 @@ pub fn type_check(
                 return Err(error);
             }
 
+            if mod1 != mod2 {
+                return Err(ThrushCompilerIssue::Error(
+                    "Mismatched function reference type modificator".into(),
+                    format!(
+                        "Expected function reference type with '{}' attributes but found '{}'.",
+                        mod1, mod2
+                    ),
+                    None,
+                    span,
+                ));
+            }
+
             lhs.iter()
                 .zip(rhs.iter())
-                .try_for_each(|(lhs, rhs)| self::type_check(lhs, rhs, None, None, metadata))?;
+                .try_for_each(|(lhs, rhs)| self::check_types(lhs, rhs, None, None, metadata))?;
 
             Ok(())
         }
 
         (Type::Const(lhs), Type::Const(rhs), None) => {
-            self::type_check(lhs, rhs, None, None, metadata)
+            self::check_types(lhs, rhs, None, None, metadata)
         }
 
-        (Type::Const(lhs), rhs, None) => self::type_check(lhs, rhs, None, None, metadata),
+        (Type::Const(lhs), rhs, None) => self::check_types(lhs, rhs, None, None, metadata),
 
         (Type::FixedArray(lhs, lhs_size), Type::FixedArray(rhs, rhs_size), None) => {
             if lhs_size == rhs_size {
-                self::type_check(lhs, rhs, None, None, metadata)?;
+                self::check_types(lhs, rhs, None, None, metadata)?;
                 return Ok(());
             }
 
@@ -113,7 +125,7 @@ pub fn type_check(
         }
 
         (Type::Array(lhs), Type::Array(rhs), None) => {
-            self::type_check(lhs, rhs, None, None, metadata)?;
+            self::check_types(lhs, rhs, None, None, metadata)?;
             Ok(())
         }
 
@@ -124,7 +136,7 @@ pub fn type_check(
                 && !rhs.is_mut_type()
                 && !rhs.is_ptr_type() =>
         {
-            self::type_check(lhs, rhs, expr, op, metadata)?;
+            self::check_types(lhs, rhs, expr, op, metadata)?;
             Ok(())
         }
 
@@ -142,7 +154,7 @@ pub fn type_check(
         }
 
         (Type::Mut(lhs), Type::Mut(rhs), None) => {
-            self::type_check(lhs, rhs, expr, op, metadata)?;
+            self::check_types(lhs, rhs, expr, op, metadata)?;
             Ok(())
         }
 
@@ -171,7 +183,7 @@ pub fn type_check(
             )
             | None,
         ) => {
-            self::type_check(lhs, rhs, expr, op, metadata)?;
+            self::check_types(lhs, rhs, expr, op, metadata)?;
             Ok(())
         }
 

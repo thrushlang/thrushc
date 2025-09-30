@@ -24,9 +24,7 @@ pub fn validate<'type_checker>(
         } => {
             let from_type: &Type = from.get_value_type()?;
 
-            if let Err(error) = checks::check_type_cast(cast_type, from_type, metadata, span) {
-                typechecker.add_error(error);
-            }
+            checks::check_type_cast(cast_type, from_type, metadata, span)?;
 
             typechecker.analyze_stmt(from)?;
 

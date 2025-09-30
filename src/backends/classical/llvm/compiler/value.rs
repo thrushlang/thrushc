@@ -85,13 +85,13 @@ pub fn compile<'ctx>(
         // Function
         // Compiles a indirect function call
         Ast::Indirect {
-            pointer,
+            function,
             function_type,
             args,
             ..
         } => compiler::generation::expressions::indirect::compile(
             context,
-            pointer,
+            function,
             args,
             function_type,
             cast,
@@ -199,7 +199,7 @@ pub fn compile<'ctx>(
 
         // Compiles a struct constructor
         Ast::Constructor { args, kind, .. } => {
-            compiler::generation::structgen::compile(context, args, kind, cast)
+            compiler::generation::expressions::structure::compile(context, args, kind, cast)
         }
 
         // Compiles a type cast operation
@@ -214,7 +214,7 @@ pub fn compile<'ctx>(
             kind,
             attributes,
             ..
-        } => compiler::generation::value::inlineasm::compile(
+        } => compiler::generation::expressions::inlineasm::compile(
             context,
             assembler,
             constraints,

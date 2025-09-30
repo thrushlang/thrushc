@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use crate::backends::classical::llvm::compiler::anchors::PointerAnchor;
 use crate::backends::classical::llvm::compiler::context::LLVMCodeGenContext;
 use crate::backends::classical::llvm::compiler::memory;
@@ -47,7 +45,7 @@ fn compile_with_anchor<'ctx>(
 
     context.set_pointer_anchor(PointerAnchor::new(struct_ptr, true));
 
-    let struct_fields_types: &[Arc<Type>] = struct_type.get_struct_fields();
+    let struct_fields_types: &[Type] = struct_type.get_struct_fields();
 
     let fields: Vec<BasicValueEnum> = args
         .iter()
@@ -83,7 +81,7 @@ fn compile_without_anchor<'ctx>(
     let struct_ptr: PointerValue =
         memory::alloc_anon(LLVMAllocationSite::Stack, context, struct_type);
 
-    let struct_fields_types: &[Arc<Type>] = struct_type.get_struct_fields();
+    let struct_fields_types: &[Type] = struct_type.get_struct_fields();
 
     let fields: Vec<BasicValueEnum> = args
         .iter()

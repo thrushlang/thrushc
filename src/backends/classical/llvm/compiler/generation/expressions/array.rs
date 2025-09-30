@@ -1,11 +1,15 @@
+use std::fmt::Display;
+
 use crate::backends::classical::llvm::compiler::anchors::PointerAnchor;
+use crate::backends::classical::llvm::compiler::codegen;
 use crate::backends::classical::llvm::compiler::context::LLVMCodeGenContext;
 use crate::backends::classical::llvm::compiler::memory;
 use crate::backends::classical::llvm::compiler::memory::LLVMAllocationSite;
 use crate::backends::classical::llvm::compiler::typegen;
-use crate::backends::classical::llvm::compiler::value;
 
+use crate::core::console::logging::{self, LoggingType};
 use crate::frontends::classical::types::ast::Ast;
+use crate::frontends::classical::typesystem::traits::TypeArrayEntensions;
 use crate::frontends::classical::typesystem::types::Type;
 
 use inkwell::AddressSpace;
@@ -55,7 +59,7 @@ fn compile_without_anchor<'ctx>(
 
     let items: Vec<BasicValueEnum> = items
         .iter()
-        .map(|item| value::compile(context, item, Some(array_items_type)))
+        .map(|item| codegen::compile_expr(context, item, Some(array_items_type)))
         .collect();
 
     for (idx, item) in items.iter().enumerate() {
@@ -73,11 +77,11 @@ fn compile_without_anchor<'ctx>(
 
     let array_ptr_gep: PointerValue = llvm_builder
         .build_struct_gep(array_wrapper_type, array_wrapper_ptr, 0, "")
-        .unwrap();
+        .unwrap_or_else(|_| self::codegen_abort("Failed to build pointer array gep."));
 
     let array_size_gep: PointerValue = llvm_builder
         .build_struct_gep(array_wrapper_type, array_wrapper_ptr, 1, "")
-        .unwrap();
+        .unwrap_or_else(|_| self::codegen_abort("Failed to build pointer array gep."));
 
     memory::store_anon(context, array_ptr_gep, array_ptr.into());
 
@@ -106,7 +110,7 @@ fn compile_with_anchor<'ctx>(
     let anchor_ptr: PointerValue = anchor.get_pointer();
 
     let base_array_type: &Type = cast.unwrap_or(kind);
-    let array_items_type: &Type = base_array_type.get_fixed_array_base_type();
+    let array_items_type: &Type = base_array_type.get_array_base_type();
 
     let array_type: Type = Type::FixedArray(array_items_type.clone().into(), items.len() as u32);
 
@@ -119,7 +123,7 @@ fn compile_with_anchor<'ctx>(
 
     let items: Vec<BasicValueEnum> = items
         .iter()
-        .map(|item| value::compile(context, item, Some(array_items_type)))
+        .map(|item| codegen::compile_expr(context, item, Some(array_items_type)))
         .collect();
 
     for (idx, item) in items.iter().enumerate() {
@@ -137,11 +141,11 @@ fn compile_with_anchor<'ctx>(
 
     let array_ptr_gep: PointerValue = llvm_builder
         .build_struct_gep(array_wrapper_type, anchor_ptr, 0, "")
-        .unwrap();
+        .unwrap_or_else(|_| self::codegen_abort("Failed to build pointer array gep."));
 
     let array_size_gep: PointerValue = llvm_builder
         .build_struct_gep(array_wrapper_type, anchor_ptr, 1, "")
-        .unwrap();
+        .unwrap_or_else(|_| self::codegen_abort("Failed to build pointer array gep."));
 
     memory::store_anon(context, array_ptr_gep, array_ptr.into());
 
@@ -163,4 +167,9 @@ fn compile_null_ptr<'ctx>(context: &LLVMCodeGenContext<'_, 'ctx>) -> BasicValueE
         .ptr_type(AddressSpace::default())
         .const_null()
         .into()
+}
+
+#[inline]
+fn codegen_abort<T: Display>(message: T) -> ! {
+    logging::print_backend_bug(LoggingType::BackendBug, &format!("{}", message));
 }

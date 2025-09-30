@@ -14,8 +14,10 @@ use inkwell::{
     types::{BasicMetadataTypeEnum, BasicType, BasicTypeEnum, FloatType, FunctionType, IntType},
 };
 
-pub fn function_type<'ctx>(
+#[inline]
+pub fn generate_fn_type<'ctx>(
     context: &LLVMCodeGenContext<'_, 'ctx>,
+
     kind: &Type,
     parameters: &[Ast],
     ignore_args: bool,
@@ -40,8 +42,10 @@ pub fn function_type<'ctx>(
     self::generate_type(llvm_context, kind).fn_type(&parameters_types, ignore_args)
 }
 
-pub fn function_type_from_type<'ctx>(
+#[inline]
+pub fn generate_fn_type_from_type<'ctx>(
     context: &LLVMCodeGenContext<'_, 'ctx>,
+
     kind: &Type,
     parameters: &[Type],
     ignore_args: bool,
@@ -149,21 +153,6 @@ pub fn generate_subtype<'ctx>(llvm_context: &'ctx Context, kind: &Type) -> Basic
     match kind {
         Type::Mut(subtype) => self::generate_subtype(llvm_context, subtype),
         Type::Const(subtype) => self::generate_subtype(llvm_context, subtype),
-        Type::Array(..) => llvm_context.ptr_type(AddressSpace::default()).into(),
-
-        _ => self::generate_type(llvm_context, kind),
-    }
-}
-
-#[inline]
-pub fn generate_subtype_with_all<'ctx>(
-    llvm_context: &'ctx Context,
-    kind: &Type,
-) -> BasicTypeEnum<'ctx> {
-    match kind {
-        Type::Ptr(Some(subtype)) => self::generate_subtype_with_all(llvm_context, subtype),
-        Type::Mut(subtype) => self::generate_subtype_with_all(llvm_context, subtype),
-        Type::Const(subtype) => self::generate_subtype_with_all(llvm_context, subtype),
         Type::Array(..) => llvm_context.ptr_type(AddressSpace::default()).into(),
 
         _ => self::generate_type(llvm_context, kind),

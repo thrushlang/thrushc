@@ -367,7 +367,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         let llvm_builder: &Builder = self.context.get_llvm_builder();
 
         let entrypoint_type: FunctionType =
-            typegen::function_type(self.context, &Type::U32, parameters, false);
+            typegen::generate_fn_type(self.context, &Type::U32, parameters, false);
 
         let entrypoint: FunctionValue = llvm_module.add_function("main", entrypoint_type, None);
 

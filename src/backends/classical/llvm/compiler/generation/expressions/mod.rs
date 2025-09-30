@@ -2,6 +2,8 @@ pub mod array;
 pub mod call;
 pub mod farray;
 pub mod indirect;
+pub mod inlineasm;
 pub mod property;
 pub mod string;
+pub mod structure;
 pub mod unary;

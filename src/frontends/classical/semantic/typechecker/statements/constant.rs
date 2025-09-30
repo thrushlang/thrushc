@@ -36,15 +36,13 @@ pub fn validate<'type_checker>(
                 ));
             }
 
-            if let Err(error) = checks::type_check(
+            checks::check_types(
                 target_type,
                 &Type::Const(from_type.clone().into()),
                 Some(value),
                 None,
                 metadata,
-            ) {
-                typechecker.add_error(error);
-            }
+            )?;
 
             typechecker.analyze_stmt(value)?;
 

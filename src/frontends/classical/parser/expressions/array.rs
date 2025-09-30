@@ -4,7 +4,7 @@ use crate::{
         lexer::{span::Span, token::Token, tokentype::TokenType},
         parser::{ParserContext, expr},
         types::{ast::Ast, parser::stmts::traits::TokenExtensions},
-        typesystem::types::Type,
+        typesystem::{traits::TypeArrayEntensions, types::Type},
     },
 };
 

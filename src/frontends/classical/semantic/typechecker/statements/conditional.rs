@@ -27,15 +27,13 @@ pub fn validate<'type_checker>(
             let metadata: TypeCheckerExprMetadata =
                 TypeCheckerExprMetadata::new(condition.is_literal(), None, *span);
 
-            if let Err(error) = checks::type_check(
+            checks::check_types(
                 &Type::Bool,
                 condition.get_value_type()?,
                 Some(condition),
                 None,
                 metadata,
-            ) {
-                typechecker.add_error(error);
-            }
+            )?;
 
             elseif
                 .iter()
@@ -58,15 +56,13 @@ pub fn validate<'type_checker>(
             let metadata: TypeCheckerExprMetadata =
                 TypeCheckerExprMetadata::new(condition.is_literal(), None, *span);
 
-            if let Err(error) = checks::type_check(
+            checks::check_types(
                 &Type::Bool,
                 condition.get_value_type()?,
                 Some(condition),
                 None,
                 metadata,
-            ) {
-                typechecker.add_error(error);
-            }
+            )?;
 
             typechecker.analyze_stmt(condition)?;
             typechecker.analyze_stmt(block)?;

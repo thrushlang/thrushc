@@ -27,9 +27,11 @@ pub fn compile<'ctx>(
     let function_ptr: PointerValue = ptr::compile(context, pointer, cast).into_pointer_value();
 
     match function_type {
-        Type::Fn(parameters, kind) => {
+        Type::Fn(parameters, kind, modificator) => {
+            let need_ignore: bool = modificator.llvm().has_ignore();
+
             let function_type: FunctionType =
-                typegen::function_type_from_type(context, kind, parameters, false);
+                typegen::generate_fn_type_from_type(context, kind, parameters, need_ignore);
 
             let compiled_args: Vec<BasicMetadataValueEnum> = args
                 .iter()
@@ -61,6 +63,7 @@ pub fn compile<'ctx>(
                             .into()
                     }
                 }
+
                 Err(_) => {
                     self::codegen_abort("Failed to generate indirect call.");
                 }

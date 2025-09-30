@@ -17,15 +17,15 @@ pub fn validate<'type_checker>(
 ) -> Result<(), ThrushCompilerIssue> {
     match node {
         Ast::Indirect {
-            pointer,
+            function,
             function_type,
             args,
             span,
             ..
         } => {
-            let function_pointer_type: &Type = pointer.get_value_type()?;
+            let function_ref: &Type = function.get_value_type()?;
 
-            if !function_pointer_type.is_fnref_type() {
+            if !function_ref.is_fnref_type() {
                 typechecker.add_error(ThrushCompilerIssue::Error(
                     "Type error".into(),
                     "Expected function reference 'Fn[..] -> T' type.".into(),
@@ -75,11 +75,7 @@ pub fn validate<'type_checker>(
                         let metadata: TypeCheckerExprMetadata =
                             TypeCheckerExprMetadata::new(expr.is_literal(), None, span);
 
-                        if let Err(error) =
-                            checks::type_check(target_type, from_type, Some(expr), None, metadata)
-                        {
-                            typechecker.add_error(error);
-                        }
+                        checks::check_types(target_type, from_type, Some(expr), None, metadata)?;
 
                         Ok(())
                     })?;

@@ -1,4 +1,15 @@
+pub mod array;
+pub mod cast;
+pub mod dereference;
+pub mod display;
+pub mod farray;
 pub mod impls;
+pub mod index;
+pub mod llvm;
 pub mod modificators;
+pub mod mutable;
+pub mod property;
+pub mod ptr;
+pub mod structure;
 pub mod traits;
 pub mod types;

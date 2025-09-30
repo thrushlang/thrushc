@@ -38,11 +38,7 @@ pub fn validate<'type_checker>(
                 ));
             }
 
-            if let Err(error) =
-                checks::type_check(lli_type, value_type, Some(value), None, metadata)
-            {
-                typechecker.add_error(error);
-            }
+            checks::check_types(lli_type, value_type, Some(value), None, metadata)?;
 
             typechecker.analyze_stmt(value)?;
 
@@ -233,11 +229,7 @@ pub fn validate<'type_checker>(
             let metadata: TypeCheckerExprMetadata =
                 TypeCheckerExprMetadata::new(write_value.is_literal(), None, span);
 
-            if let Err(error) =
-                checks::type_check(write_type, value_type, Some(write_value), None, metadata)
-            {
-                typechecker.add_error(error);
-            }
+            checks::check_types(write_type, value_type, Some(write_value), None, metadata)?;
 
             Ok(())
         }

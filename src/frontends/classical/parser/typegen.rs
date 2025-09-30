@@ -2,19 +2,27 @@ use crate::{
     core::errors::standard::ThrushCompilerIssue,
     frontends::classical::{
         lexer::{span::Span, token::Token, tokentype::TokenType},
-        parser::expr,
+        parser::{attributes, expr},
         types::{
             ast::Ast,
-            parser::stmts::{
-                traits::{
-                    FoundSymbolEither, FoundSymbolExtension, StructExtensions,
-                    StructFieldsExtensions, TokenExtensions,
+            parser::{
+                stmts::{
+                    traits::{
+                        FoundSymbolEither, FoundSymbolExtension, StructExtensions,
+                        StructFieldsExtensions, ThrushAttributesExtensions, TokenExtensions,
+                    },
+                    types::{StructFields, ThrushAttributes},
                 },
-                types::StructFields,
+                symbols::types::{CustomTypeSymbol, Struct},
             },
-            parser::symbols::types::{CustomTypeSymbol, Struct},
         },
-        typesystem::types::Type,
+        typesystem::{
+            modificators::{
+                FunctionReferenceTypeModificator, GCCFunctionReferenceTypeModificator,
+                LLVMFunctionReferenceTypeModificator,
+            },
+            types::Type,
+        },
     },
 };
 
@@ -175,6 +183,10 @@ fn build_fn_ref_type(ctx: &mut ParserContext<'_>) -> Result<Type, ThrushCompiler
         String::from("Expected ']'."),
     )?;
 
+    let attributes: ThrushAttributes = attributes::build_attributes(ctx, &[TokenType::Arrow])?;
+
+    let has_ignore: bool = attributes.has_ignore_attribute();
+
     ctx.consume(
         TokenType::Arrow,
         String::from("Syntax error"),
@@ -183,7 +195,14 @@ fn build_fn_ref_type(ctx: &mut ParserContext<'_>) -> Result<Type, ThrushCompiler
 
     let return_type: Type = self::build_type(ctx)?;
 
-    Ok(Type::Fn(parameter_types, return_type.into()))
+    Ok(Type::Fn(
+        parameter_types,
+        return_type.into(),
+        FunctionReferenceTypeModificator::new(
+            LLVMFunctionReferenceTypeModificator::new(has_ignore),
+            GCCFunctionReferenceTypeModificator::default(),
+        ),
+    ))
 }
 
 fn build_const_type(ctx: &mut ParserContext<'_>) -> Result<Type, ThrushCompilerIssue> {

@@ -1,47 +1,95 @@
-use std::sync::Arc;
+use crate::frontends::classical::typesystem::{traits::TypeExtensions, types::Type};
 
-use inkwell::{context::Context, targets::TargetData, types::BasicTypeEnum};
-
-use crate::{
-    backends::classical::llvm::compiler::{context::LLVMCodeGenContext, typegen},
-    frontends::classical::typesystem::{
-        traits::{
-            CastTypeExtensions, DereferenceExtensions, IndexTypeExtensions, LLVMTypeExtensions,
-            TypeExtensions, TypeMutableExtensions, TypePointerExtensions, TypeStructExtensions,
-        },
-        types::Type,
-    },
-};
-
-impl LLVMTypeExtensions for Type {
-    #[inline]
-    fn llvm_is_same_bit_size(&self, context: &LLVMCodeGenContext<'_, '_>, other: &Type) -> bool {
-        let llvm_context: &Context = context.get_llvm_context();
-
-        let a_llvm_type: BasicTypeEnum = typegen::generate_type(llvm_context, self);
-        let b_llvm_type: BasicTypeEnum = typegen::generate_type(llvm_context, other);
-
-        let target_data: &TargetData = context.get_target_data();
-
-        target_data.get_bit_size(&a_llvm_type) == target_data.get_bit_size(&b_llvm_type)
+impl Type {
+    #[inline(always)]
+    pub fn is_char_type(&self) -> bool {
+        matches!(self, Type::Char)
     }
 
-    #[inline]
-    fn llvm_is_ptr_type(&self) -> bool {
+    #[inline(always)]
+    pub fn is_void_type(&self) -> bool {
+        matches!(self, Type::Void)
+    }
+
+    #[inline(always)]
+    pub fn is_bool_type(&self) -> bool {
+        matches!(self, Type::Bool)
+    }
+
+    #[inline(always)]
+    pub fn is_struct_type(&self) -> bool {
+        matches!(self, Type::Struct(..))
+    }
+
+    #[inline(always)]
+    pub fn is_fixed_array_type(&self) -> bool {
+        matches!(self, Type::FixedArray(..))
+    }
+
+    #[inline(always)]
+    pub fn is_array_type(&self) -> bool {
+        matches!(self, Type::Array(..))
+    }
+
+    #[inline(always)]
+    pub fn is_float_type(&self) -> bool {
+        matches!(self, Type::F32 | Type::F64)
+    }
+
+    #[inline(always)]
+    pub fn is_ptr_type(&self) -> bool {
+        matches!(self, Type::Ptr(_))
+    }
+
+    #[inline(always)]
+    pub fn is_address_type(&self) -> bool {
+        matches!(self, Type::Addr)
+    }
+
+    #[inline(always)]
+    pub fn is_str_type(&self) -> bool {
+        matches!(self, Type::Str)
+    }
+
+    #[inline(always)]
+    pub fn is_mut_type(&self) -> bool {
+        matches!(self, Type::Mut(_))
+    }
+
+    #[inline(always)]
+    pub fn is_const_type(&self) -> bool {
+        matches!(self, Type::Const(_))
+    }
+
+    #[inline(always)]
+    pub fn is_fnref_type(&self) -> bool {
+        matches!(self, Type::Fn(..))
+    }
+
+    #[inline(always)]
+    pub fn is_numeric(&self) -> bool {
+        self.is_integer_type() || self.is_float_type() || self.is_char_type() || self.is_bool_type()
+    }
+
+    #[inline(always)]
+    pub fn is_signed_integer_type(&self) -> bool {
+        matches!(self, Type::S8 | Type::S16 | Type::S32 | Type::S64)
+    }
+
+    #[inline(always)]
+    pub fn is_integer_type(&self) -> bool {
         matches!(
             self,
-            Type::Ptr(_) | Type::Mut(_) | Type::Addr | Type::Array(_) | Type::Fn(..)
+            Type::S8
+                | Type::S16
+                | Type::S32
+                | Type::S64
+                | Type::U8
+                | Type::U16
+                | Type::U32
+                | Type::U64
+                | Type::Char
         )
-    }
-
-    #[inline]
-    fn llvm_is_int_type(&self) -> bool {
-        self.is_integer_type() || self.is_bool_type() || self.is_char_type()
-    }
-
-    #[inline]
-    fn llvm_is_float_type(&self) -> bool {
-        self.is_float_type()
     }
 }
 
@@ -79,7 +127,7 @@ impl TypeExtensions for Type {
     }
 
     fn get_type_fn_ref(&self) -> &Type {
-        if let Type::Fn(_, kind) = self {
+        if let Type::Fn(_, kind, ..) = self {
             return kind;
         }
 
@@ -87,263 +135,50 @@ impl TypeExtensions for Type {
     }
 }
 
-impl IndexTypeExtensions for Type {
-    fn get_aprox_type(&self, depth: usize) -> &Type {
-        if depth == 0 {
-            return self;
-        }
-
-        match self {
-            Type::FixedArray(element_type, _) => element_type.get_aprox_type(depth),
-            Type::Array(element_type) => element_type.get_aprox_type(depth),
-            Type::Mut(inner_type) => inner_type.get_aprox_type(depth),
-            Type::Const(inner_type) => inner_type.get_aprox_type(depth),
-            Type::Ptr(Some(inner_type)) => inner_type.get_aprox_type(depth - 1),
-            Type::Struct(..) => self,
-            Type::S8
-            | Type::S16
-            | Type::S32
-            | Type::S64
-            | Type::U8
-            | Type::U16
-            | Type::U32
-            | Type::U64
-            | Type::F32
-            | Type::F64
-            | Type::Bool
-            | Type::Char
-            | Type::Str
-            | Type::Addr
-            | Type::Void
-            | Type::Ptr(None)
-            | Type::Fn(..) => self,
-        }
-    }
-}
-
-impl TypePointerExtensions for Type {
-    #[inline]
-    fn is_all_ptr_type(&self) -> bool {
-        if let Type::Ptr(Some(ptr)) = self {
-            return ptr.is_all_ptr_type();
-        }
-
-        if let Type::Ptr(None) = self {
-            return true;
-        }
-
-        false
-    }
-
-    #[inline]
-    fn is_typed_ptr_type(&self) -> bool {
-        if let Type::Ptr(Some(inner)) = self {
-            return inner.is_typed_ptr_type();
-        }
-
-        if let Type::Ptr(None) = self {
-            return false;
-        }
-
-        true
-    }
-
-    #[inline]
-    fn is_ptr_struct_type(&self) -> bool {
-        if let Type::Ptr(Some(inner)) = self {
-            return inner.is_struct_type();
-        }
-
-        false
-    }
-
-    #[inline]
-    fn is_ptr_fixed_array_type(&self) -> bool {
-        if let Type::Ptr(Some(inner)) = self {
-            return inner.is_fixed_array_type();
-        }
-
-        false
-    }
-}
-
-impl TypeStructExtensions for Type {
-    #[inline]
-    fn get_struct_fields(&self) -> &[Arc<Type>] {
-        if let Type::Struct(_, fields, ..) = self {
-            return fields;
-        }
-
-        &[]
-    }
-}
-
-impl TypeMutableExtensions for Type {
-    #[inline]
-    fn is_mut_fixed_array_type(&self) -> bool {
-        if let Type::Mut(inner) = self {
-            return inner.is_fixed_array_type();
-        }
-
-        false
-    }
-
-    #[inline]
-    fn is_mut_array_type(&self) -> bool {
-        if let Type::Mut(inner) = self {
-            return inner.is_array_type();
-        }
-
-        false
-    }
-
-    #[inline]
-    fn is_mut_struct_type(&self) -> bool {
-        if let Type::Mut(inner) = self {
-            return inner.is_struct_type();
-        }
-
-        false
-    }
-}
-
-impl CastTypeExtensions for Type {
-    fn narrowing(&self) -> Type {
-        match self {
-            Type::U8 => Type::S8,
-            Type::U16 => Type::S16,
-            Type::U32 => Type::S32,
-            Type::U64 => Type::S64,
-
-            Type::S8 => Type::U8,
-            Type::S16 => Type::U16,
-            Type::S32 => Type::U32,
-            Type::S64 => Type::U64,
-
-            _ => self.clone(),
-        }
-    }
-
-    fn precompute(&self, other: &Type) -> Type {
+impl PartialEq for Type {
+    fn eq(&self, other: &Self) -> bool {
         match (self, other) {
-            (Type::S64, _) | (_, Type::S64) => Type::S64,
-            (Type::S32, _) | (_, Type::S32) => Type::S32,
-            (Type::S16, _) | (_, Type::S16) => Type::S16,
-            (Type::S8, _) | (_, Type::S8) => Type::S8,
-
-            (Type::U64, _) | (_, Type::U64) => Type::U64,
-            (Type::U32, _) | (_, Type::U32) => Type::U32,
-            (Type::U16, _) | (_, Type::U16) => Type::U16,
-            (Type::U8, _) | (_, Type::U8) => Type::U8,
-
-            (Type::F64, _) | (_, Type::F64) => Type::F64,
-            (Type::F32, _) | (_, Type::F32) => Type::F32,
-
-            (Type::Mut(lhs), Type::Mut(rhs)) => lhs.precompute(rhs),
-            (Type::Const(lhs), Type::Const(rhs)) => lhs.precompute(rhs),
-
-            _ => self.clone(),
-        }
-    }
-}
-
-impl DereferenceExtensions for Type {
-    fn dereference(&self) -> Type {
-        if let Type::Ptr(Some(any)) = self {
-            return (**any).clone();
-        }
-
-        if let Type::Mut(any) = self {
-            return (**any).clone();
-        }
-
-        if let Type::Const(any) = self {
-            return (**any).clone();
-        }
-
-        self.clone()
-    }
-
-    fn dereference_high_level_type(&self) -> Type {
-        if let Type::Mut(inner_type) = self {
-            return (**inner_type).clone();
-        }
-
-        if let Type::Const(inner_type) = self {
-            return inner_type.dereference_high_level_type();
-        }
-
-        self.clone()
-    }
-}
-
-impl std::fmt::Display for Type {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Type::S8 => write!(f, "s8"),
-            Type::S16 => write!(f, "s16"),
-            Type::S32 => write!(f, "s32"),
-            Type::S64 => write!(f, "s64"),
-            Type::U8 => write!(f, "u8"),
-            Type::U16 => write!(f, "u16"),
-            Type::U32 => write!(f, "u32"),
-            Type::U64 => write!(f, "u64"),
-            Type::F32 => write!(f, "f32"),
-            Type::F64 => write!(f, "f64"),
-            Type::Bool => write!(f, "bool"),
-            Type::Str => write!(f, "str"),
-            Type::Char => write!(f, "char"),
-            Type::Fn(params, kind) => {
-                write!(
-                    f,
-                    "Fn[{}] -> {}",
-                    params
-                        .iter()
-                        .map(|param| param.to_string())
-                        .collect::<Vec<_>>()
-                        .join(", "),
-                    kind
-                )
+            (Type::Fn(lhs, retlhs, mod1), Type::Fn(rhs, retrhs, mod2)) => {
+                lhs.len() == rhs.len()
+                    && lhs.iter().zip(lhs.iter()).all(|(f1, f2)| f1 == f2)
+                    && retlhs == retrhs
+                    && mod1 == mod2
             }
 
-            Type::Mut(inner_type) => write!(f, "mut {}", inner_type),
-            Type::Const(inner_type) => write!(f, "const {}", inner_type),
-
-            Type::FixedArray(kind, size) => {
-                write!(f, "[{}; {}]", kind, size)
+            (Type::Struct(a, fields1, mod1), Type::Struct(b, fields2, mod2)) => {
+                fields1.len() == fields2.len()
+                    && a == b
+                    && fields1.iter().zip(fields2.iter()).all(|(f1, f2)| f1 == f2)
+                    && mod1 == mod2
             }
-            Type::Array(kind) => {
-                write!(f, "[{}]", kind)
+
+            (Type::FixedArray(type_a, size_a), Type::FixedArray(type_b, size_b)) => {
+                type_a == type_b && size_a == size_b
             }
-            Type::Struct(name, fields, modificator) => {
-                let is_llvm_packed: &str = if modificator.llvm().is_packed() {
-                    "<packed>"
-                } else {
-                    ""
-                };
 
-                write!(f, "struct {} {} {{ ", name, is_llvm_packed)?;
+            (Type::Mut(target), Type::Mut(from)) => target == from,
+            (Type::Array(target), Type::Array(from)) => target == from,
+            (Type::Const(target), Type::Const(from)) => target == from,
 
-                fields.iter().for_each(|field| {
-                    let _ = write!(f, "{} ", field);
-                });
+            (Type::Char, Type::Char) => true,
+            (Type::S8, Type::S8) => true,
+            (Type::S16, Type::S16) => true,
+            (Type::S32, Type::S32) => true,
+            (Type::S64, Type::S64) => true,
+            (Type::U8, Type::U8) => true,
+            (Type::U16, Type::U16) => true,
+            (Type::U32, Type::U32) => true,
+            (Type::U64, Type::U64) => true,
+            (Type::F32, Type::F32) => true,
+            (Type::F64, Type::F64) => true,
+            (Type::Ptr(None), Type::Ptr(None)) => true,
+            (Type::Ptr(Some(target)), Type::Ptr(Some(from))) => target == from,
+            (Type::Void, Type::Void) => true,
+            (Type::Str, Type::Str) => true,
+            (Type::Bool, Type::Bool) => true,
+            (Type::Addr, Type::Addr) => true,
 
-                write!(f, "}}")
-            }
-            Type::Ptr(nested_type) => {
-                if let Some(nested_type) = nested_type {
-                    let _ = write!(f, "ptr[");
-                    let _ = write!(f, "{}", nested_type);
-
-                    return write!(f, "]");
-                }
-
-                write!(f, "ptr")
-            }
-            Type::Addr => {
-                write!(f, "memory address")
-            }
-            Type::Void => write!(f, "void"),
+            _ => false,
         }
     }
 }

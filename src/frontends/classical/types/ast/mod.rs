@@ -346,7 +346,7 @@ pub enum Ast<'ctx> {
     },
 
     Indirect {
-        pointer: Rc<Ast<'ctx>>,
+        function: Rc<Ast<'ctx>>,
         function_type: Type,
         args: Vec<Ast<'ctx>>,
         kind: Type,

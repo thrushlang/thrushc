@@ -3,11 +3,12 @@ use std::fmt::Display;
 use crate::backends::classical::llvm::compiler::anchors::PointerAnchor;
 use crate::backends::classical::llvm::compiler::context::LLVMCodeGenContext;
 use crate::backends::classical::llvm::compiler::memory::LLVMAllocationSite;
-use crate::backends::classical::llvm::compiler::{self, constgen, memory};
-use crate::backends::classical::llvm::compiler::{typegen, value};
+use crate::backends::classical::llvm::compiler::typegen;
+use crate::backends::classical::llvm::compiler::{self, codegen, constgen, memory};
 
 use crate::core::console::logging::{self, LoggingType};
 use crate::frontends::classical::types::ast::Ast;
+use crate::frontends::classical::typesystem::traits::TypeFixedArrayEntensions;
 use crate::frontends::classical::typesystem::types::Type;
 
 use inkwell::AddressSpace;
@@ -17,13 +18,12 @@ use inkwell::values::{BasicValueEnum, IntValue, PointerValue};
 
 pub fn compile_const<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
-
     items: &'ctx [Ast],
     kind: &Type,
 ) -> BasicValueEnum<'ctx> {
     let llvm_context: &Context = context.get_llvm_context();
 
-    let base_type: &Type = kind.get_fixed_array_base_type();
+    let base_type: &Type = kind.get_farray_base_type();
     let array_type: BasicTypeEnum = typegen::generate_type(llvm_context, base_type);
 
     let values: Vec<BasicValueEnum> = items
@@ -120,13 +120,13 @@ fn compile_fixed_array_with_anchor<'ctx>(
     let anchor_ptr: PointerValue = anchor.get_pointer();
 
     let array_type: &Type = cast.unwrap_or(kind);
-    let array_items_type: &Type = array_type.get_fixed_array_base_type();
+    let array_items_type: &Type = array_type.get_farray_base_type();
 
     context.set_pointer_anchor(PointerAnchor::new(anchor_ptr, true));
 
     let items: Vec<BasicValueEnum> = items
         .iter()
-        .map(|item| value::compile(context, item, Some(array_items_type)))
+        .map(|item| codegen::compile_expr(context, item, Some(array_items_type)))
         .collect();
 
     for (idx, item) in items.iter().enumerate() {
@@ -154,14 +154,14 @@ fn compile_fixed_array_without_anchor<'ctx>(
     let llvm_context: &Context = context.get_llvm_context();
 
     let array_type: &Type = cast.unwrap_or(kind);
-    let array_items_type: &Type = array_type.get_fixed_array_base_type();
+    let array_items_type: &Type = array_type.get_farray_base_type();
 
     let array_ptr: PointerValue =
         memory::alloc_anon(LLVMAllocationSite::Stack, context, array_type);
 
     let items: Vec<BasicValueEnum> = items
         .iter()
-        .map(|item| value::compile(context, item, Some(array_items_type)))
+        .map(|item| codegen::compile_expr(context, item, Some(array_items_type)))
         .collect();
 
     for (idx, item) in items.iter().enumerate() {

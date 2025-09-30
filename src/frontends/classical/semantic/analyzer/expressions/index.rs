@@ -29,7 +29,7 @@ pub fn validate<'analyzer>(
 
                 let reference_type: &Type = reference.get_value_type()?;
 
-                if reference_type.is_ptr_type() {
+                if reference_type.llvm_is_ptr_type() {
                     let subtype: &Type = reference_type.get_type_with_depth(1);
 
                     if subtype.llvm_is_ptr_type() && indexes.len() > 1 {
@@ -47,7 +47,7 @@ pub fn validate<'analyzer>(
             if let Some(expr) = &source.1 {
                 let expr_type: &Type = expr.get_any_type()?;
 
-                if expr_type.is_ptr_type() {
+                if expr_type.llvm_is_ptr_type() {
                     let subtype: &Type = expr_type.get_type_with_depth(1);
 
                     if subtype.llvm_is_ptr_type() && indexes.len() > 1 {

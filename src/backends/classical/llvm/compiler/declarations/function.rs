@@ -74,7 +74,7 @@ pub fn compile_decl<'ctx>(
     };
 
     let function_type: FunctionType =
-        typegen::function_type(context, function_type, function_parameters, ignore_args);
+        typegen::generate_fn_type(context, function_type, function_parameters, ignore_args);
 
     let llvm_function: FunctionValue = llvm_module.add_function(llvm_name, function_type, None);
 

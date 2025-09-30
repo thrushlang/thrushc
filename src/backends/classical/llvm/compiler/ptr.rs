@@ -42,13 +42,13 @@ pub fn compile<'ctx>(
         // Function
         // Compiles a indirect function call
         Ast::Indirect {
-            pointer,
+            function,
             function_type,
             args,
             ..
         } => compiler::generation::expressions::indirect::compile(
             context,
-            pointer,
+            function,
             args,
             function_type,
             cast,
@@ -112,7 +112,7 @@ pub fn compile<'ctx>(
             kind,
             attributes,
             ..
-        } => compiler::generation::pointer::inlineasm::compile(
+        } => compiler::generation::expressions::inlineasm::compile(
             context,
             assembler,
             constraints,

@@ -1,5 +1,4 @@
 use std::path::PathBuf;
-use std::sync::Arc;
 
 use inkwell::{context::Context, types::BasicTypeEnum, values::BasicValueEnum};
 
@@ -83,7 +82,7 @@ pub fn compile<'ctx>(
 
             let llvm_context: &Context = context.get_llvm_context();
 
-            let struct_fields_types: &[Arc<Type>] = kind.get_struct_fields();
+            let struct_fields_types: &[Type] = kind.get_struct_fields();
 
             let fields: Vec<BasicValueEnum> = fields
                 .iter()

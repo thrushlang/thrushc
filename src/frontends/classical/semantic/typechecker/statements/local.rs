@@ -51,15 +51,13 @@ pub fn validate<'type_checker>(
                     local_value_type = Type::Ptr(Some(local_value_type.into()));
                 }
 
-                if let Err(error) = checks::type_check(
+                checks::check_types(
                     local_type,
                     &local_value_type,
                     Some(local_value),
                     None,
                     type_metadata,
-                ) {
-                    typechecker.add_error(error);
-                }
+                )?;
 
                 if let Err(type_error) = typechecker.analyze_stmt(local_value) {
                     typechecker.add_error(type_error);
