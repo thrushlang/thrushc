@@ -5,7 +5,7 @@ use std::path::PathBuf;
 use super::context::LLVMCodeGenContext;
 use crate::backends::classical::llvm::compiler::memory::SymbolAllocated;
 use crate::backends::classical::llvm::compiler::statements::lli;
-use crate::backends::classical::llvm::compiler::{self, memory};
+use crate::backends::classical::llvm::compiler::{self, binaryop, memory};
 use crate::backends::classical::llvm::compiler::{abort, builtins};
 
 use crate::frontends::classical::types::ast::Ast;
@@ -55,6 +55,40 @@ pub fn compile<'ctx>(
 
         // Compiles a grouped expression (e.g., parenthesized)
         Ast::Group { expression, .. } => self::compile(context, expression, cast),
+
+        Ast::BinaryOp {
+            left,
+            operator,
+            right,
+            kind: binaryop_type,
+            span,
+            ..
+        } => match binaryop_type {
+            t if t.is_ptr_type() => {
+                binaryop::pointer::compile(context, (left, operator, right, *span))
+            }
+
+            _ => {
+                abort::abort_codegen(
+                    context,
+                    "Can't be compiled!.",
+                    *span,
+                    PathBuf::from(file!()),
+                    line!(),
+                );
+            }
+        },
+
+        Ast::UnaryOp {
+            operator,
+            kind,
+            expression,
+            ..
+        } => compiler::generation::expressions::unary::compile(
+            context,
+            (operator, kind, expression),
+            cast,
+        ),
 
         // Compiles a type cast operation
         Ast::As { from, cast, .. } => compiler::generation::cast::compile(context, from, cast),
