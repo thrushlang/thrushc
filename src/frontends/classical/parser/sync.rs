@@ -33,6 +33,7 @@ impl ParserContext<'_> {
             ParserSyncPosition::Declaration => self::sync_with_declaration(self)?,
             ParserSyncPosition::Statement => self::sync_with_statement(self)?,
             ParserSyncPosition::Expression => self::sync_with_expression(self)?,
+
             ParserSyncPosition::NoRelevant => (),
         }
 
@@ -43,76 +44,76 @@ impl ParserContext<'_> {
     }
 }
 
-fn sync_with_declaration(parser_context: &mut ParserContext) -> Result<(), ThrushCompilerIssue> {
+fn sync_with_declaration(ctx: &mut ParserContext) -> Result<(), ThrushCompilerIssue> {
     loop {
-        if parser_context.is_eof() {
+        if ctx.is_eof() {
             break;
         }
 
-        let peeked: &Token = parser_context.peek();
+        let peeked: &Token = ctx.peek();
 
         if SYNC_DECLARATIONS.contains(&peeked.kind) {
             break;
         }
 
-        parser_context.only_advance()?;
+        ctx.only_advance()?;
     }
 
-    parser_context.scope = 0;
-    parser_context.symbols.finish_parameters();
+    ctx.scope = 0;
+    ctx.symbols.finish_parameters();
 
     Ok(())
 }
 
-fn sync_with_statement(parser_context: &mut ParserContext) -> Result<(), ThrushCompilerIssue> {
+fn sync_with_statement(ctx: &mut ParserContext) -> Result<(), ThrushCompilerIssue> {
     loop {
-        if parser_context.is_eof() {
+        if ctx.is_eof() {
             break;
         }
 
-        if parser_context.check(TokenType::RBrace) {
+        if ctx.check(TokenType::RBrace) {
             break;
         }
 
-        if parser_context.check(TokenType::SemiColon) {
-            let _ = parser_context.only_advance();
+        if ctx.check(TokenType::SemiColon) {
+            let _ = ctx.only_advance();
             break;
         }
 
-        let peeked: &Token = parser_context.peek();
+        let peeked: &Token = ctx.peek();
 
         if SYNC_STATEMENTS.contains(&peeked.kind) || SYNC_DECLARATIONS.contains(&peeked.kind) {
             break;
         }
 
-        parser_context.only_advance()?;
+        ctx.only_advance()?;
     }
 
     Ok(())
 }
 
-fn sync_with_expression(parser_context: &mut ParserContext) -> Result<(), ThrushCompilerIssue> {
+fn sync_with_expression(ctx: &mut ParserContext) -> Result<(), ThrushCompilerIssue> {
     loop {
-        if parser_context.is_eof() {
+        if ctx.is_eof() {
             break;
         }
 
-        if parser_context.check(TokenType::RBrace) {
+        if ctx.check(TokenType::RBrace) {
             break;
         }
 
-        if parser_context.check(TokenType::SemiColon) {
-            let _ = parser_context.only_advance();
+        if ctx.check(TokenType::SemiColon) {
+            let _ = ctx.only_advance();
             break;
         }
 
-        let peeked: &Token = parser_context.peek();
+        let peeked: &Token = ctx.peek();
 
         if SYNC_STATEMENTS.contains(&peeked.kind) || SYNC_DECLARATIONS.contains(&peeked.kind) {
             break;
         }
 
-        parser_context.only_advance()?;
+        ctx.only_advance()?;
     }
 
     Ok(())

@@ -2,8 +2,8 @@
 name = "thrushc"
 description = "The Compiler for Thrush Programming Language."
 license = "GPL-3.0"
-version = "1.0.0"
-authors = ["Kevin Benavides <https://github.com/DevCheckOG>"]
+version = "0.1.0"
+authors = ["Stevens Benavides <https://github.com/DevCheckOG>"]
 homepage = "https://github.com/thrushlang/thrushc"
 repository = "https://github.com/thrushlang/thrushc"
 edition = "2024"
@@ -23,13 +23,20 @@ lazy_static = "1.5.0"
 fastrand = "2.3.0"
 
 [target.'cfg(target_os = "linux")'.dependencies]
-gcc = { path = "wrappers/gcc/gccjit" }
+gcc = { path = "wrappers/gcc/gccjit",  optional = true }
 
 tar = "0.4.44"
 xz2 = "0.1.7"
 
 [target.'cfg(target_os = "windows")'.dependencies]
 zip = "2.3.0"
+
+[features]
+gcc_enabled = ["gcc"] 
+gcc_disabled = [] 
+
+[build-dependencies]
+libloading = "0.8.9"
 
 [profile.dev]
 incremental = true

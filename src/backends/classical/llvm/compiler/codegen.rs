@@ -35,7 +35,9 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
     pub fn generate(context: &'a mut LLVMCodeGenContext<'a, 'ctx>, ast: &'ctx [Ast<'ctx>]) {
         Self { context, ast }.compile();
     }
+}
 
+impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
     fn compile(&mut self) {
         self.declare_forward();
 
@@ -48,7 +50,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         self.codegen_declaration(decl);
     }
 
-    pub fn codegen_declaration(&mut self, decl: &'ctx Ast) {
+    fn codegen_declaration(&mut self, decl: &'ctx Ast) {
         /* ######################################################################
 
 
@@ -126,7 +128,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         self.codegen_conditionals(stmt);
     }
 
-    pub fn codegen_conditionals(&mut self, stmt: &'ctx Ast) {
+    fn codegen_conditionals(&mut self, stmt: &'ctx Ast) {
         /* ######################################################################
 
 
@@ -150,7 +152,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         ########################################################################*/
     }
 
-    pub fn codegen_loops(&mut self, stmt: &'ctx Ast) {
+    fn codegen_loops(&mut self, stmt: &'ctx Ast) {
         /* ######################################################################
 
 
@@ -266,7 +268,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         ########################################################################*/
     }
 
-    pub fn codegen_terminator(&mut self, stmt: &'ctx Ast) {
+    fn codegen_terminator(&mut self, stmt: &'ctx Ast) {
         /* ######################################################################
 
 
@@ -328,7 +330,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         self.codegen_loose(stmt);
     }
 
-    pub fn codegen_loose(&mut self, stmt: &'ctx Ast) {
+    fn codegen_loose(&mut self, stmt: &'ctx Ast) {
         /* ######################################################################
 
 

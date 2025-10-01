@@ -11,17 +11,13 @@ pub fn validate<'analyzer>(
 ) -> Result<(), ThrushCompilerIssue> {
     match node {
         Ast::EntryPoint { body, .. } => {
-            if let Err(type_error) = analyzer.analyze_stmt(body) {
-                analyzer.add_error(type_error);
-            }
-
+            analyzer.analyze_stmt(body)?;
             Ok(())
         }
 
         Ast::AssemblerFunction { parameters, .. } => {
             parameters.iter().try_for_each(|parameter| {
                 analyzer.analyze_stmt(parameter)?;
-
                 Ok(())
             })?;
 

@@ -154,9 +154,15 @@ impl<'ctx> SymbolsTable<'ctx> {
 
 impl SymbolsTable<'_> {
     pub fn begin_scope(&mut self) {
-        self.local_statics.push(HashMap::with_capacity(256));
-        self.local_constants.push(HashMap::with_capacity(256));
-        self.locals.push(HashMap::with_capacity(256));
+        self.local_statics.push(HashMap::with_capacity(
+            LLVM_COMPILER_SYMBOLS_LOCAL_MINIMAL_CAPACITY,
+        ));
+        self.local_constants.push(HashMap::with_capacity(
+            LLVM_COMPILER_SYMBOLS_LOCAL_MINIMAL_CAPACITY,
+        ));
+        self.locals.push(HashMap::with_capacity(
+            LLVM_COMPILER_SYMBOLS_LOCAL_MINIMAL_CAPACITY,
+        ));
 
         self.scope += 1;
     }

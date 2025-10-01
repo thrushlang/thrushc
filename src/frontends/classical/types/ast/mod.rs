@@ -2,11 +2,9 @@
 
 mod get;
 mod is;
-mod llvm;
 pub mod metadata;
 mod new;
 mod repr;
-pub mod traits;
 pub mod types;
 
 use std::rc::Rc;

@@ -1,7 +1,7 @@
 use crate::{
     core::errors::standard::ThrushCompilerIssue,
     frontends::classical::lexer::{
-        Lexer, character, identifier, lex, number, span::Span, string, tokentype::TokenType,
+        Lexer, character, identifier, number, span::Span, string, tokentype::TokenType,
     },
 };
 

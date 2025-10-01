@@ -115,7 +115,7 @@ pub fn show_help() -> ! {
             "{} {} {}\n",
             "•".bold(),
             "-clang".custom_color((141, 141, 142)).bold(),
-            "Enable embedded Clang to link.",
+            "Enable embedded Clang for linking.",
         ),
     );
 
@@ -126,7 +126,7 @@ pub fn show_help() -> ! {
             "•".bold(),
             "-gcc".custom_color((141, 141, 142)).bold(),
             "usr/bin/gcc",
-            "Speciefies GNU Compiler Collection (GCC) to link.",
+            "Speciefies GNU Compiler Collection (GCC) for linking.",
         ),
     );
 
@@ -137,7 +137,7 @@ pub fn show_help() -> ! {
             "•".bold(),
             "-custom-clang".custom_color((141, 141, 142)).bold(),
             "/usr/bin/clang",
-            "Specifies the path for use of an external Clang to link.",
+            "Specifies the path for use of an external Clang for linking.",
         ),
     );
 

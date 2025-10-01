@@ -5,7 +5,7 @@ use crate::{
     frontends::classical::{
         lexer::span::Span,
         semantic::typechecker::{TypeChecker, checks, metadata::TypeCheckerExprMetadata},
-        types::ast::{Ast, traits::LLVMAstExtensions},
+        types::ast::Ast,
         typesystem::types::Type,
     },
 };
@@ -27,7 +27,7 @@ pub fn validate<'type_checker>(
             let value_type: &Type = value.get_value_type()?;
             let value_span: Span = value.get_span();
 
-            if !value.is_llvm_constant_value() {
+            if !value.is_constant_value() {
                 return Err(ThrushCompilerIssue::Error(
                     "Syntax error".into(),
                     "Expected compile-time sized value.".into(),

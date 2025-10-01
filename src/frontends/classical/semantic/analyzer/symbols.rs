@@ -1,8 +1,13 @@
 use ahash::AHashMap as HashMap;
 
-use crate::frontends::classical::types::semantic::analyzer::types::{
-    AnalyzerAssemblerFunction, AnalyzerAssemblerFunctions, AnalyzerFunction, AnalyzerFunctions,
-    AnalyzerLLI, AnalyzerLLIs, AnalyzerLocal, AnalyzerLocals,
+use crate::frontends::classical::{
+    semantic::analyzer::constants::{
+        ANALYZER_SYMBOLS_MINIMAL_GLOBAL_CAPACITY, ANALYZER_SYMBOLS_MINIMAL_LOCAL_CAPACITY,
+    },
+    types::semantic::analyzer::types::{
+        AnalyzerAssemblerFunction, AnalyzerAssemblerFunctions, AnalyzerFunction, AnalyzerFunctions,
+        AnalyzerLLI, AnalyzerLLIs, AnalyzerLocal, AnalyzerLocals,
+    },
 };
 
 #[derive(Debug)]
@@ -19,11 +24,11 @@ pub struct AnalyzerSymbolsTable<'symbol> {
 impl<'symbol> AnalyzerSymbolsTable<'symbol> {
     pub fn new() -> Self {
         Self {
-            functions: HashMap::with_capacity(100),
-            asm_functions: HashMap::with_capacity(100),
+            functions: HashMap::with_capacity(ANALYZER_SYMBOLS_MINIMAL_GLOBAL_CAPACITY),
+            asm_functions: HashMap::with_capacity(ANALYZER_SYMBOLS_MINIMAL_GLOBAL_CAPACITY),
 
-            locals: Vec::with_capacity(255),
-            llis: Vec::with_capacity(255),
+            locals: Vec::with_capacity(ANALYZER_SYMBOLS_MINIMAL_LOCAL_CAPACITY),
+            llis: Vec::with_capacity(ANALYZER_SYMBOLS_MINIMAL_LOCAL_CAPACITY),
 
             scope: 0,
         }
@@ -33,12 +38,16 @@ impl<'symbol> AnalyzerSymbolsTable<'symbol> {
 impl<'symbol> AnalyzerSymbolsTable<'symbol> {
     #[inline]
     pub fn new_local(&mut self, name: &'symbol str, local: AnalyzerLocal<'symbol>) {
-        self.locals.last_mut().unwrap().insert(name, local);
+        if let Some(last_scope) = self.locals.last_mut() {
+            last_scope.insert(name, local);
+        }
     }
 
     #[inline]
     pub fn new_lli(&mut self, name: &'symbol str, lli: AnalyzerLLI<'symbol>) {
-        self.llis.last_mut().unwrap().insert(name, lli);
+        if let Some(last_scope) = self.llis.last_mut() {
+            last_scope.insert(name, lli);
+        }
     }
 
     #[inline]
@@ -59,8 +68,12 @@ impl<'symbol> AnalyzerSymbolsTable<'symbol> {
 impl AnalyzerSymbolsTable<'_> {
     #[inline]
     pub fn begin_scope(&mut self) {
-        self.llis.push(HashMap::with_capacity(255));
-        self.locals.push(HashMap::with_capacity(255));
+        self.llis.push(HashMap::with_capacity(
+            ANALYZER_SYMBOLS_MINIMAL_LOCAL_CAPACITY,
+        ));
+        self.locals.push(HashMap::with_capacity(
+            ANALYZER_SYMBOLS_MINIMAL_LOCAL_CAPACITY,
+        ));
 
         self.scope += 1;
     }

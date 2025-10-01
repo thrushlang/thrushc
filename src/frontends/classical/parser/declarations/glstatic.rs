@@ -24,10 +24,10 @@ pub fn build_global_static<'parser>(
     )?;
 
     let is_mutable: bool = ctx.match_token(TokenType::Mut)?;
-    let is_lazy: bool = ctx.match_token(TokenType::LazyThread)?;
+    let thread_local: bool = ctx.match_token(TokenType::LazyThread)?;
     let is_volatile: bool = ctx.match_token(TokenType::Volatile)?;
 
-    let atom_ord: Option<AtomicOrdering> = builder::build_atomic_ord(ctx)?;
+    let atomic_ord: Option<AtomicOrdering> = builder::build_atomic_ord(ctx)?;
     let thread_mode: Option<ThreadLocalMode> = builder::build_thread_local_mode(ctx)?;
 
     let static_tk: &Token = ctx.consume(
@@ -58,9 +58,9 @@ pub fn build_global_static<'parser>(
     let metadata: StaticMetadata = StaticMetadata::new(
         true,
         is_mutable,
-        is_lazy,
+        thread_local,
         is_volatile,
-        atom_ord,
+        atomic_ord,
         thread_mode,
     );
 

@@ -9,6 +9,7 @@ use crate::{
 };
 
 mod builtins;
+mod constants;
 mod declarations;
 mod expressions;
 mod statements;
