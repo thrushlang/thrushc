@@ -4,7 +4,6 @@ pub mod dereference;
 pub mod display;
 pub mod farray;
 pub mod impls;
-pub mod index;
 pub mod llvm;
 pub mod modificators;
 pub mod mutable;

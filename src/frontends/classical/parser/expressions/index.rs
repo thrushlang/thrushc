@@ -6,7 +6,7 @@ use crate::{
         lexer::{span::Span, tokentype::TokenType},
         parser::{ParserContext, expr},
         types::ast::{Ast, metadata::index::IndexMetadata, types::AstEitherExpression},
-        typesystem::{traits::IndexTypeExtensions, types::Type},
+        typesystem::{traits::TypeExtensions, types::Type},
     },
 };
 
@@ -59,6 +59,7 @@ pub fn build_index<'parser>(
         }
 
         let indexe: Ast = expr::build_expr(ctx)?;
+
         indexes.push(indexe);
 
         if ctx.check(TokenType::RBracket) {
@@ -78,13 +79,9 @@ pub fn build_index<'parser>(
         String::from("Expected ']'."),
     )?;
 
-    let index_type: Type = if index_type.is_ptr_type() {
-        Type::Ptr(Some(
-            index_type.get_aprox_type(indexes.len()).clone().into(),
-        ))
-    } else {
-        Type::Mut(index_type.get_aprox_type(indexes.len()).clone().into())
-    };
+    let index_type: Type = Type::Ptr(Some(
+        index_type.get_type_with_depth(indexes.len()).clone().into(),
+    ));
 
     Ok(Ast::Index {
         source,

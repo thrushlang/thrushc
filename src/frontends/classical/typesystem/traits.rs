@@ -45,10 +45,6 @@ pub trait TypeStructExtensions {
     ) -> Type;
 }
 
-pub trait IndexTypeExtensions {
-    fn get_aprox_type(&self, base_depth: usize) -> &Type;
-}
-
 pub trait CastTypeExtensions {
     fn narrowing(&self) -> Type;
     fn precompute(&self, other: &Type) -> Type;

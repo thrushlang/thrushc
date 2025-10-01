@@ -42,6 +42,7 @@ fn compile_without_anchor<'ctx>(
     let items_type: &Type = base_type.get_array_base_type();
 
     let array_type: Type = Type::FixedArray(items_type.clone().into(), items.len() as u32);
+
     let array_ptr: PointerValue =
         memory::alloc_anon(LLVMAllocationSite::Stack, context, &array_type);
 

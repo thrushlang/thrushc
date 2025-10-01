@@ -70,7 +70,6 @@ pub fn generate<'ctx>(llvm_context: &'ctx Context, kind: &Type) -> BasicTypeEnum
     match kind {
         t if t.llvm_is_int_type() => self::integer(llvm_context, kind).into(),
         t if t.llvm_is_float_type() => self::float(llvm_context, kind).into(),
-
         t if t.llvm_is_ptr_type() => llvm_context.ptr_type(AddressSpace::default()).into(),
 
         Type::Const(any) => self::generate(llvm_context, any),
@@ -112,8 +111,8 @@ pub fn generate_subtype<'ctx>(llvm_context: &'ctx Context, kind: &Type) -> Basic
 #[inline]
 pub fn generate_gep<'ctx>(llvm_context: &'ctx Context, kind: &Type) -> BasicTypeEnum<'ctx> {
     match kind {
-        Type::Mut(subtype) => self::generate_subtype(llvm_context, subtype),
-        Type::Const(subtype) => self::generate_subtype(llvm_context, subtype),
+        Type::Mut(subtype) => self::generate_gep(llvm_context, subtype),
+        Type::Const(subtype) => self::generate_gep(llvm_context, subtype),
         Type::Array(..) => llvm_context.ptr_type(AddressSpace::default()).into(),
 
         _ => self::generate(llvm_context, kind),
@@ -146,7 +145,7 @@ pub fn generate_for_local_variable<'ctx>(
 }
 
 #[inline]
-fn integer<'ctx>(llvm_context: &'ctx Context, kind: &Type) -> IntType<'ctx> {
+pub fn integer<'ctx>(llvm_context: &'ctx Context, kind: &Type) -> IntType<'ctx> {
     match kind {
         Type::S8 | Type::U8 | Type::Char => llvm_context.i8_type(),
         Type::S16 | Type::U16 => llvm_context.i16_type(),
@@ -167,7 +166,7 @@ fn integer<'ctx>(llvm_context: &'ctx Context, kind: &Type) -> IntType<'ctx> {
 }
 
 #[inline]
-fn float<'ctx>(llvm_context: &'ctx Context, kind: &Type) -> FloatType<'ctx> {
+pub fn float<'ctx>(llvm_context: &'ctx Context, kind: &Type) -> FloatType<'ctx> {
     match kind {
         Type::F32 => llvm_context.f32_type(),
         Type::F64 => llvm_context.f64_type(),

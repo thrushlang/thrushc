@@ -17,7 +17,6 @@ use crate::{
 
 pub fn build_call<'parser>(
     ctx: &mut ParserContext<'parser>,
-
     name: &'parser str,
     span: Span,
 ) -> Result<Ast<'parser>, ThrushCompilerIssue> {
