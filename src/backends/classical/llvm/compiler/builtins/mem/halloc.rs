@@ -18,7 +18,7 @@ pub fn compile<'ctx>(
     let llvm_builder: &Builder = context.get_llvm_builder();
 
     llvm_builder
-        .build_malloc(typegen::generate_type(llvm_context, alloc), "")
+        .build_malloc(typegen::generate(llvm_context, alloc), "")
         .unwrap_or_else(|_| {
             self::codegen_abort("Failed to allocate heap memory with halloc builtin.")
         })

@@ -32,7 +32,7 @@ pub fn compile<'ctx>(
             let int: BasicValueEnum =
                 int::generate(context.get_llvm_context(), kind, *value, *signed).into();
 
-            let cast: BasicTypeEnum = typegen::generate_type(context.get_llvm_context(), cast);
+            let cast: BasicTypeEnum = typegen::generate(context.get_llvm_context(), cast);
 
             compiler::generation::cast::numeric_cast(int, cast, *signed)
         }
@@ -54,7 +54,7 @@ pub fn compile<'ctx>(
             let float: BasicValueEnum =
                 float::generate(context.get_llvm_context(), kind, *value, *signed).into();
 
-            let cast: BasicTypeEnum = typegen::generate_type(context.get_llvm_context(), cast);
+            let cast: BasicTypeEnum = typegen::generate(context.get_llvm_context(), cast);
 
             compiler::generation::cast::numeric_cast(float, cast, *signed)
         }

@@ -270,12 +270,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
         {
             return unsafe {
                 builder
-                    .build_in_bounds_gep(
-                        typegen::generate_subtype(context, kind),
-                        *ptr,
-                        indexes,
-                        "",
-                    )
+                    .build_in_bounds_gep(typegen::generate_gep(context, kind), *ptr, indexes, "")
                     .unwrap_or_else(|_| abort())
             };
         }
@@ -285,7 +280,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
                 return unsafe {
                     builder
                         .build_in_bounds_gep(
-                            typegen::generate_subtype(context, kind),
+                            typegen::generate_gep(context, kind),
                             (*value).into_pointer_value(),
                             indexes,
                             "",
@@ -313,7 +308,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
         | Self::Static { ptr, kind, .. } = self
         {
             return builder
-                .build_struct_gep(typegen::generate_subtype(context, kind), *ptr, index, "")
+                .build_struct_gep(typegen::generate_gep(context, kind), *ptr, index, "")
                 .unwrap_or_else(|_| abort());
         }
 
@@ -321,7 +316,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
             if value.is_pointer_value() {
                 return builder
                     .build_struct_gep(
-                        typegen::generate_subtype(context, kind),
+                        typegen::generate_gep(context, kind),
                         (*value).into_pointer_value(),
                         index,
                         "",
@@ -409,7 +404,7 @@ pub fn load_anon<'ctx>(
     let llvm_context: &Context = context.get_llvm_context();
     let llvm_builder: &Builder = context.get_llvm_builder();
 
-    let llvm_type: BasicTypeEnum = typegen::generate_type(llvm_context, ptr_type);
+    let llvm_type: BasicTypeEnum = typegen::generate(llvm_context, ptr_type);
 
     let preferred_alignment: u32 = context
         .get_target_data()
@@ -438,7 +433,7 @@ pub fn dereference<'ctx>(
     let llvm_context: &Context = context.get_llvm_context();
     let llvm_builder: &Builder = context.get_llvm_builder();
 
-    let llvm_type: BasicTypeEnum = typegen::generate_type(llvm_context, ptr_type);
+    let llvm_type: BasicTypeEnum = typegen::generate(llvm_context, ptr_type);
 
     let preferred_alignment: u32 = context
         .get_target_data()
@@ -517,12 +512,9 @@ pub fn get_struct_anon<'ctx>(
     let llvm_context: &Context = context.get_llvm_context();
     let llvm_builder: &Builder = context.get_llvm_builder();
 
-    if let Ok(ptr) = llvm_builder.build_struct_gep(
-        typegen::generate_subtype(llvm_context, kind),
-        ptr,
-        index,
-        "",
-    ) {
+    if let Ok(ptr) =
+        llvm_builder.build_struct_gep(typegen::generate_gep(llvm_context, kind), ptr, index, "")
+    {
         return ptr;
     }
 
@@ -539,12 +531,7 @@ pub fn gep_anon<'ctx>(
     let llvm_builder: &Builder = context.get_llvm_builder();
 
     if let Ok(ptr) = unsafe {
-        llvm_builder.build_gep(
-            typegen::generate_subtype(llvm_context, kind),
-            ptr,
-            indexes,
-            "",
-        )
+        llvm_builder.build_gep(typegen::generate_gep(llvm_context, kind), ptr, indexes, "")
     } {
         return ptr;
     }

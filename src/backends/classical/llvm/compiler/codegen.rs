@@ -190,20 +190,11 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         ########################################################################*/
 
         match stmt {
-            Ast::Local {
-                name,
-                ascii_name,
-                kind,
-                attributes,
-                metadata,
-                span,
-                ..
-            } => {
+            Ast::Local { metadata, .. } => {
                 let metadata: &LocalMetadata = metadata;
 
                 if metadata.is_undefined() {
-                    self.context
-                        .new_local(name, ascii_name, kind, attributes, *metadata, *span);
+                    self.context.new_local(stmt.as_local());
 
                     return;
                 }

@@ -19,12 +19,12 @@ use inkwell::values::{BasicValueEnum, IntValue, PointerValue};
 pub fn compile_const<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     items: &'ctx [Ast],
-    kind: &Type,
+    array_type: &Type,
 ) -> BasicValueEnum<'ctx> {
     let llvm_context: &Context = context.get_llvm_context();
 
-    let base_type: &Type = kind.get_farray_base_type();
-    let array_type: BasicTypeEnum = typegen::generate_type(llvm_context, base_type);
+    let base_type: &Type = array_type.get_farray_base_type();
+    let array_type: BasicTypeEnum = typegen::generate(llvm_context, base_type);
 
     let values: Vec<BasicValueEnum> = items
         .iter()
@@ -94,24 +94,24 @@ pub fn compile_const<'ctx>(
 pub fn compile<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     items: &'ctx [Ast],
-    kind: &Type,
+    array_type: &Type,
     cast: Option<&Type>,
 ) -> BasicValueEnum<'ctx> {
     if let Some(anchor) = context.get_pointer_anchor() {
         if !anchor.is_triggered() {
-            self::compile_fixed_array_with_anchor(context, items, kind, cast, anchor)
+            self::compile_fixed_array_with_anchor(context, items, array_type, cast, anchor)
         } else {
-            self::compile_fixed_array_without_anchor(context, items, kind, cast)
+            self::compile_fixed_array_without_anchor(context, items, array_type, cast)
         }
     } else {
-        self::compile_fixed_array_without_anchor(context, items, kind, cast)
+        self::compile_fixed_array_without_anchor(context, items, array_type, cast)
     }
 }
 
 fn compile_fixed_array_with_anchor<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     items: &'ctx [Ast],
-    kind: &Type,
+    array_type: &Type,
     cast: Option<&Type>,
     anchor: PointerAnchor<'ctx>,
 ) -> BasicValueEnum<'ctx> {
@@ -119,24 +119,24 @@ fn compile_fixed_array_with_anchor<'ctx>(
 
     let anchor_ptr: PointerValue = anchor.get_pointer();
 
-    let array_type: &Type = cast.unwrap_or(kind);
-    let array_items_type: &Type = array_type.get_farray_base_type();
+    let array_type: &Type = cast.unwrap_or(array_type);
+    let items_type: &Type = array_type.get_farray_base_type();
 
     context.set_pointer_anchor(PointerAnchor::new(anchor_ptr, true));
 
     let items: Vec<BasicValueEnum> = items
         .iter()
-        .map(|item| codegen::compile_expr(context, item, Some(array_items_type)))
+        .map(|item| codegen::compile_expr(context, item, Some(items_type)))
         .collect();
 
     for (idx, item) in items.iter().enumerate() {
-        let idx: IntValue = llvm_context.i32_type().const_int(idx as u64, false);
+        let index: IntValue = llvm_context.i32_type().const_int(idx as u64, false);
 
         let ptr: PointerValue = memory::gep_anon(
             context,
             anchor_ptr,
             array_type,
-            &[llvm_context.i32_type().const_zero(), idx],
+            &[llvm_context.i32_type().const_zero(), index],
         );
 
         memory::store_anon(context, ptr, *item);
@@ -148,30 +148,30 @@ fn compile_fixed_array_with_anchor<'ctx>(
 fn compile_fixed_array_without_anchor<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     items: &'ctx [Ast],
-    kind: &Type,
+    array_type: &Type,
     cast: Option<&Type>,
 ) -> BasicValueEnum<'ctx> {
     let llvm_context: &Context = context.get_llvm_context();
 
-    let array_type: &Type = cast.unwrap_or(kind);
-    let array_items_type: &Type = array_type.get_farray_base_type();
+    let array_type: &Type = cast.unwrap_or(array_type);
+    let items_type: &Type = array_type.get_farray_base_type();
 
     let array_ptr: PointerValue =
         memory::alloc_anon(LLVMAllocationSite::Stack, context, array_type);
 
     let items: Vec<BasicValueEnum> = items
         .iter()
-        .map(|item| codegen::compile_expr(context, item, Some(array_items_type)))
+        .map(|item| codegen::compile_expr(context, item, Some(items_type)))
         .collect();
 
     for (idx, item) in items.iter().enumerate() {
-        let idx: IntValue = llvm_context.i32_type().const_int(idx as u64, false);
+        let index: IntValue = llvm_context.i32_type().const_int(idx as u64, false);
 
         let ptr: PointerValue = memory::gep_anon(
             context,
             array_ptr,
             array_type,
-            &[llvm_context.i32_type().const_zero(), idx],
+            &[llvm_context.i32_type().const_zero(), index],
         );
 
         memory::store_anon(context, ptr, *item);

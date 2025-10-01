@@ -136,6 +136,11 @@ pub fn compile<'ctx>(
             source, indexes, ..
         } => compiler::generation::pointer::index::compile(context, source, indexes),
 
+        // Compiles a dynamic array
+        Ast::Array { items, kind, .. } => {
+            compiler::generation::expressions::array::compile(context, items, kind, cast)
+        }
+
         // Low-Level Operations
         ast if ast.is_lli() => lli::compile_advanced(context, expr, cast),
 

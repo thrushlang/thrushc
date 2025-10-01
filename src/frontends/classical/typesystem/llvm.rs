@@ -10,13 +10,12 @@ impl LLVMTypeExtensions for Type {
     fn llvm_is_same_bit_size(&self, context: &LLVMCodeGenContext<'_, '_>, other: &Type) -> bool {
         let llvm_context: &Context = context.get_llvm_context();
 
-        let a_llvm_type: BasicTypeEnum = llvm::compiler::typegen::generate_type(llvm_context, self);
-        let b_llvm_type: BasicTypeEnum =
-            llvm::compiler::typegen::generate_type(llvm_context, other);
+        let lhs: BasicTypeEnum = llvm::compiler::typegen::generate(llvm_context, self);
+        let rhs: BasicTypeEnum = llvm::compiler::typegen::generate(llvm_context, other);
 
         let target_data: &TargetData = context.get_target_data();
 
-        target_data.get_bit_size(&a_llvm_type) == target_data.get_bit_size(&b_llvm_type)
+        target_data.get_bit_size(&lhs) == target_data.get_bit_size(&rhs)
     }
 
     #[inline]

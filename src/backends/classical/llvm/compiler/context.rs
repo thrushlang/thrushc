@@ -1,4 +1,6 @@
 use crate::frontends::classical::lexer::span::Span;
+use crate::frontends::classical::types::ast::Ast;
+use crate::frontends::classical::types::parser::repr::Local;
 use crate::logging::{self, LoggingType};
 
 use crate::backends::classical::types::repr::LLVMFunction;
@@ -87,7 +89,7 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
         let ptr: PointerValue = alloc::memstatic::local_constant(
             self,
             ascii_name,
-            typegen::generate_type(self.context, kind),
+            typegen::generate(self.context, kind),
             value,
             metadata,
         );
@@ -119,7 +121,7 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
         let ptr: PointerValue = alloc::memstatic::global_constant(
             self,
             ascii_name,
-            typegen::generate_type(self.context, kind),
+            typegen::generate(self.context, kind),
             value,
             attributes,
             metadata,
@@ -148,7 +150,7 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
         let ptr: PointerValue = alloc::memstatic::local_static(
             self,
             ascii_name,
-            typegen::generate_type(self.context, kind),
+            typegen::generate(self.context, kind),
             value,
             metadata,
         );
@@ -180,7 +182,7 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
         let ptr: PointerValue = alloc::memstatic::global_static(
             self,
             ascii_name,
-            typegen::generate_type(self.context, kind),
+            typegen::generate(self.context, kind),
             value,
             attributes,
             metadata,
@@ -197,16 +199,20 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
 
 impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
     #[inline]
-    pub fn new_local(
-        &mut self,
-        name: &'ctx str,
-        ascii_name: &'ctx str,
-        kind: &'ctx Type,
-        attributes: &'ctx ThrushAttributes<'ctx>,
-        metadata: LocalMetadata,
-        span: Span,
-    ) {
-        let ptr: PointerValue = alloc::alloc(self, ascii_name, kind, attributes, span);
+    pub fn new_local(&mut self, local: Local<'ctx>) {
+        let name: &str = local.0;
+        let ascii_name: &str = local.1;
+
+        let kind: &Type = local.2;
+        let value: Option<&Ast> = local.3;
+
+        let attributes: &ThrushAttributes = local.4;
+        let metadata: LocalMetadata = local.5;
+
+        let span: Span = local.6;
+
+        let ptr: PointerValue =
+            alloc::local_variable(self, ascii_name, kind, value, attributes, span);
 
         let local: SymbolAllocated =
             SymbolAllocated::new_local(ptr, kind, metadata.get_llvm_metadata());

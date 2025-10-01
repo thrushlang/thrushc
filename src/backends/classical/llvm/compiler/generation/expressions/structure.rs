@@ -39,7 +39,7 @@ fn compile_with_anchor<'ctx>(
     let struct_type: &Type = cast.unwrap_or(kind);
 
     let struct_llvm_type: BasicTypeEnum =
-        typegen::generate_type(context.get_llvm_context(), struct_type);
+        typegen::generate(context.get_llvm_context(), struct_type);
 
     let struct_ptr: PointerValue = anchor.get_pointer();
 
@@ -76,7 +76,7 @@ fn compile_without_anchor<'ctx>(
     let struct_type: &Type = cast.unwrap_or(kind);
 
     let struct_llvm_type: BasicTypeEnum =
-        typegen::generate_type(context.get_llvm_context(), struct_type);
+        typegen::generate(context.get_llvm_context(), struct_type);
 
     let struct_ptr: PointerValue =
         memory::alloc_anon(LLVMAllocationSite::Stack, context, struct_type);

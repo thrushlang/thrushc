@@ -75,7 +75,6 @@ pub fn compile_const<'ctx>(
 
 fn compile_increment_decrement_ref<'ctx>(
     context: &LLVMCodeGenContext<'_, 'ctx>,
-
     name: &str,
     operator: &TokenType,
     kind: &Type,
@@ -128,8 +127,9 @@ fn compile_increment_decrement_ref<'ctx>(
         _ => {
             let float: FloatValue = symbol.load(context).into_float_value();
 
-            let modifier: FloatValue =
-                typegen::float_to_llvm_type(llvm_context, kind).const_float(1.0);
+            let modifier: FloatValue = typegen::generate(llvm_context, kind)
+                .into_float_type()
+                .const_float(1.0);
 
             let result: BasicValueEnum = match operator {
                 TokenType::PlusPlus => llvm_builder
@@ -160,7 +160,6 @@ fn compile_increment_decrement_ref<'ctx>(
 
 fn compile_increment_decrement<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
-
     operator: &TokenType,
     expression: &'ctx Ast,
     cast: Option<&Type>,
