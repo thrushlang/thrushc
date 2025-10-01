@@ -27,6 +27,8 @@ pub fn generate<'ctx>(
         Type::U16 => context.i16_type().const_int(number, false),
         Type::U32 => context.i32_type().const_int(number, false),
         Type::U64 => context.i64_type().const_int(number, false),
+        Type::U128 if signed => context.i128_type().const_int(number, signed).const_neg(),
+        Type::U128 => context.i128_type().const_int(number, signed),
         Type::Bool => context.bool_type().const_int(number, false),
 
         what => {

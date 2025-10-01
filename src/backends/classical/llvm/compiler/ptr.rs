@@ -71,7 +71,7 @@ pub fn compile<'ctx>(
         Ast::As { from, cast, .. } => compiler::generation::cast::compile(context, from, cast),
 
         // Compiles a dereference operation (e.g., *pointer)
-        Ast::Deref {
+        Ast::Defer {
             value,
             kind,
             metadata,
@@ -79,7 +79,7 @@ pub fn compile<'ctx>(
         } => {
             let compiled_value: BasicValueEnum = self::compile(context, value, Some(kind));
 
-            let deref_value: BasicValueEnum = if compiled_value.is_pointer_value() {
+            let defer_value: BasicValueEnum = if compiled_value.is_pointer_value() {
                 memory::dereference(
                     context,
                     compiled_value.into_pointer_value(),
@@ -96,8 +96,8 @@ pub fn compile<'ctx>(
                 );
             };
 
-            compiler::generation::cast::try_cast(context, cast, kind, deref_value)
-                .unwrap_or(deref_value)
+            compiler::generation::cast::try_cast(context, cast, kind, defer_value)
+                .unwrap_or(defer_value)
         }
 
         // Compiles property access (e.g., struct field or array)

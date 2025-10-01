@@ -4,6 +4,7 @@ use crate::backends::classical::llvm::compiler;
 use crate::backends::classical::llvm::compiler::codegen;
 use crate::backends::classical::llvm::compiler::context::LLVMCodeGenContext;
 
+use crate::backends::classical::types::repr::LLVMFunction;
 use crate::frontends::classical::types::ast::Ast;
 use crate::frontends::classical::typesystem::types::Type;
 
@@ -11,7 +12,7 @@ use crate::core::console::logging::{self, LoggingType};
 
 use inkwell::AddressSpace;
 use inkwell::builder::Builder;
-use inkwell::values::{BasicMetadataValueEnum, BasicValueEnum, FunctionValue};
+use inkwell::values::{BasicMetadataValueEnum, BasicValueEnum};
 
 pub fn compile<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
@@ -23,7 +24,7 @@ pub fn compile<'ctx>(
 ) -> BasicValueEnum<'ctx> {
     let llvm_builder: &Builder = context.get_llvm_builder();
 
-    let function: (FunctionValue, &[Type], u32) = context.get_table().get_function(name);
+    let function: LLVMFunction = context.get_table().get_function(name);
 
     let (llvm_function, function_arg_types, function_convention) =
         (function.0, function.1, function.2);

@@ -1,6 +1,6 @@
 pub mod call;
 pub mod cast;
-pub mod deref;
+pub mod defer;
 pub mod indirect;
 
 mod index;
@@ -102,7 +102,7 @@ pub fn validate<'check_typeser>(
                 let span: Span = item.get_span();
 
                 let metadata: TypeCheckerExprMetadata =
-                    TypeCheckerExprMetadata::new(item.is_literal(), None, span);
+                    TypeCheckerExprMetadata::new(item.is_literal(), span);
 
                 checks::check_types(
                     array_type,
@@ -136,7 +136,7 @@ pub fn validate<'check_typeser>(
                 let span: Span = item.get_span();
 
                 let metadata: TypeCheckerExprMetadata =
-                    TypeCheckerExprMetadata::new(item.is_literal(), None, span);
+                    TypeCheckerExprMetadata::new(item.is_literal(), span);
 
                 checks::check_types(
                     array_type,
@@ -166,7 +166,7 @@ pub fn validate<'check_typeser>(
                 let from_type: &Type = expr.get_value_type()?;
 
                 let metadata: TypeCheckerExprMetadata =
-                    TypeCheckerExprMetadata::new(expr.is_literal(), None, span);
+                    TypeCheckerExprMetadata::new(expr.is_literal(), span);
 
                 checks::check_types(target_type, from_type, Some(expr), None, metadata)?;
 

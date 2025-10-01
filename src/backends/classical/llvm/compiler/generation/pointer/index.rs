@@ -25,17 +25,17 @@ pub fn compile<'ctx>(
     let llvm_builder: &Builder = context.get_llvm_builder();
 
     match source {
-        (Some((name, _)), _) => {
+        (Some((name, _)), ..) => {
             let symbol: SymbolAllocated = context.get_table().get_symbol(name);
             let symbol_type: &Type = symbol.get_type();
 
             let ordered_indexes: Vec<IntValue> = indexes::compile(context, indexes, symbol_type);
 
             symbol
-                .gep(llvm_context, llvm_builder, &ordered_indexes)
+                .gep(context, llvm_context, llvm_builder, &ordered_indexes)
                 .into()
         }
-        (_, Some(expr)) => {
+        (_, Some(expr), ..) => {
             let expr_ptr: PointerValue = ptr::compile(context, expr, None).into_pointer_value();
             let expr_type: &Type = expr.get_type_unwrapped();
 

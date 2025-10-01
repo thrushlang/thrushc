@@ -20,11 +20,13 @@ impl TokenType {
             TokenType::U16 => Ok(Type::U16),
             TokenType::U32 => Ok(Type::U32),
             TokenType::U64 => Ok(Type::U64),
+            TokenType::U128 => Ok(Type::U128),
 
             TokenType::Bool => Ok(Type::Bool),
 
             TokenType::F32 => Ok(Type::F32),
             TokenType::F64 => Ok(Type::F64),
+            TokenType::FX8680 => Ok(Type::FX8680),
 
             TokenType::Ptr => Ok(Type::Ptr(None)),
             TokenType::Addr => Ok(Type::Addr),

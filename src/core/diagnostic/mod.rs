@@ -79,7 +79,7 @@ pub fn generate_basic<'a>(code: &'a str, span: Span, message: &'a str) -> Diagno
     ));
 
     signaler.push_str(&format!(
-        "{} {}\n",
+        "{} {}\n\n",
         "HELP:".bright_green().bold(),
         message.bright_yellow()
     ));

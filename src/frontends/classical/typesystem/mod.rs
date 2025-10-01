@@ -6,7 +6,6 @@ pub mod farray;
 pub mod impls;
 pub mod llvm;
 pub mod modificators;
-pub mod mutable;
 pub mod property;
 pub mod ptr;
 pub mod structure;

@@ -21,6 +21,7 @@ impl Ast<'_> {
             parameters,
             return_type,
             attributes,
+            span,
             ..
         } = self
         {
@@ -33,6 +34,7 @@ impl Ast<'_> {
                 parameters,
                 parameters_types,
                 attributes,
+                *span,
             );
         }
 
@@ -51,10 +53,13 @@ impl Ast<'_> {
             value,
             attributes,
             metadata,
+            span,
             ..
         } = self
         {
-            return (name, ascii_name, kind, &**value, attributes, *metadata);
+            return (
+                name, ascii_name, kind, &**value, attributes, *metadata, *span,
+            );
         }
 
         logging::print_bug(
@@ -72,10 +77,13 @@ impl Ast<'_> {
             value,
             attributes,
             metadata,
+            span,
             ..
         } = self
         {
-            return (name, ascii_name, kind, &**value, attributes, *metadata);
+            return (
+                name, ascii_name, kind, &**value, attributes, *metadata, *span,
+            );
         }
 
         logging::print_bug(
@@ -94,6 +102,7 @@ impl Ast<'_> {
             body,
             return_type,
             attributes,
+            span,
             ..
         } = self
         {
@@ -105,6 +114,7 @@ impl Ast<'_> {
                 parameter_types,
                 body.as_deref(),
                 attributes,
+                *span,
             );
         }
 
@@ -153,10 +163,11 @@ impl Ast<'_> {
             kind,
             value,
             metadata,
+            span,
             ..
         } = self
         {
-            return (name, ascii_name, kind, &**value, *metadata);
+            return (name, ascii_name, kind, &**value, *metadata, *span);
         }
 
         logging::print_bug(
@@ -193,10 +204,11 @@ impl Ast<'_> {
             kind,
             value,
             metadata,
+            span,
             ..
         } = self
         {
-            return (name, ascii_name, kind, &**value, *metadata);
+            return (name, ascii_name, kind, &**value, *metadata, *span);
         }
 
         logging::print_bug(

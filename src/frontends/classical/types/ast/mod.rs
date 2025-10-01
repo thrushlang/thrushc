@@ -317,7 +317,7 @@ pub enum Ast<'ctx> {
     LLI {
         name: &'ctx str,
         kind: Type,
-        value: Rc<Ast<'ctx>>,
+        expr: Rc<Ast<'ctx>>,
 
         span: Span,
     },
@@ -353,7 +353,7 @@ pub enum Ast<'ctx> {
         span: Span,
     },
 
-    Deref {
+    Defer {
         value: Rc<Ast<'ctx>>,
         kind: Type,
         metadata: DereferenceMetadata,

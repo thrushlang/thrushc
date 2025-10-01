@@ -16,11 +16,11 @@ pub fn build_index<'parser>(
     span: Span,
 ) -> Result<Ast<'parser>, ThrushCompilerIssue> {
     let index_type: &Type = match source {
-        (Some(ref any_reference), None) => {
+        (Some(ref any_reference), None, ..) => {
             let reference: &Ast = &any_reference.1;
             reference.get_value_type()?
         }
-        (None, Some(ref expr)) => expr.get_value_type()?,
+        (None, Some(ref expr), ..) => expr.get_value_type()?,
         _ => {
             return Err(ThrushCompilerIssue::FrontEndBug(
                 String::from("Index not caught"),
@@ -34,11 +34,11 @@ pub fn build_index<'parser>(
     };
 
     let is_mutable: bool = match source {
-        (Some(ref any_reference), None) => {
+        (Some(ref any_reference), None, ..) => {
             let reference: &Ast = &any_reference.1;
             reference.is_mutable()
         }
-        (None, Some(ref expr)) => expr.is_mutable(),
+        (None, Some(ref expr), ..) => expr.is_mutable(),
         _ => {
             return Err(ThrushCompilerIssue::FrontEndBug(
                 String::from("Index not caught"),

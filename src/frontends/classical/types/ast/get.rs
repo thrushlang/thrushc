@@ -29,7 +29,7 @@ impl Ast<'_> {
             Ast::Address { kind, .. } => Ok(kind),
             Ast::Load { kind, .. } => Ok(kind),
             Ast::Alloc { alloc: kind, .. } => Ok(kind),
-            Ast::Deref { kind, .. } => Ok(kind),
+            Ast::Defer { kind, .. } => Ok(kind),
             Ast::Write {
                 write_type: kind, ..
             } => Ok(kind),
@@ -117,7 +117,7 @@ impl Ast<'_> {
             // Memory operations
             Ast::Load { kind, .. } => Ok(kind),
             Ast::Address { kind, .. } => Ok(kind),
-            Ast::Deref { kind, .. } => Ok(kind),
+            Ast::Defer { kind, .. } => Ok(kind),
             Ast::Alloc { alloc: kind, .. } => Ok(kind),
 
             // Composite types
@@ -185,7 +185,7 @@ impl Ast<'_> {
             // Memory operations
             Ast::Load { kind, .. } => kind,
             Ast::Address { kind, .. } => kind,
-            Ast::Deref { kind, .. } => kind,
+            Ast::Defer { kind, .. } => kind,
             Ast::Alloc { alloc: kind, .. } => kind,
 
             // Composite types
@@ -257,7 +257,7 @@ impl Ast<'_> {
             Ast::Reference { span, .. } => *span,
             Ast::Address { span, .. } => *span,
             Ast::Load { span, .. } => *span,
-            Ast::Deref { span, .. } => *span,
+            Ast::Defer { span, .. } => *span,
             Ast::Write { span, .. } => *span,
             Ast::Alloc { span, .. } => *span,
 

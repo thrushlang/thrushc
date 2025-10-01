@@ -8,6 +8,7 @@ use crate::backends::classical::types::traits::AssemblerFunctionExtensions;
 use crate::core::console::logging;
 use crate::core::console::logging::LoggingType;
 
+use crate::frontends::classical::lexer::span::Span;
 use crate::frontends::classical::types::ast::Ast;
 use crate::frontends::classical::types::parser::stmts::traits::ThrushAttributesExtensions;
 use crate::frontends::classical::types::parser::stmts::types::ThrushAttributes;
@@ -43,6 +44,8 @@ pub fn compile<'ctx>(
     let asm_function_parameters: &[Ast] = asm_fn.5;
     let asm_function_parameters_types: &[Type] = asm_fn.6;
     let asm_function_attributes: &ThrushAttributes = asm_fn.7;
+
+    let asm_span: Span = asm_fn.8;
 
     let sideeffects: bool = asm_function_attributes.has_asmsideffects_attribute();
     let align_stack: bool = asm_function_attributes.has_asmalignstack_attribute();
@@ -142,6 +145,7 @@ pub fn compile<'ctx>(
             llvm_asm_function,
             asm_function_parameters_types,
             call_convention,
+            asm_span,
         ),
     );
 }

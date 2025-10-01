@@ -1,7 +1,7 @@
 use crate::{
     core::errors::standard::ThrushCompilerIssue,
     frontends::classical::lexer::{
-        Lexer, character, identifier, number, span::Span, string, tokentype::TokenType,
+        Lexer, character, identifier, lex, number, span::Span, string, tokentype::TokenType,
     },
 };
 
@@ -44,6 +44,10 @@ pub fn analyze(lexer: &mut Lexer) -> Result<(), ThrushCompilerIssue> {
                 ));
             }
 
+            if lexer.peek() == '\n' {
+                lexer.line += 1;
+            }
+
             lexer.advance_only();
         },
         '/' => lexer.make(TokenType::Slash),
@@ -72,6 +76,7 @@ pub fn analyze(lexer: &mut Lexer) -> Result<(), ThrushCompilerIssue> {
         '|' => lexer.make(TokenType::Bor),
         '&' if lexer.char_match('&') => lexer.make(TokenType::And),
         ' ' | '\r' | '\t' => {}
+
         '\n' => lexer.line += 1,
 
         '\'' => character::lex(lexer)?,

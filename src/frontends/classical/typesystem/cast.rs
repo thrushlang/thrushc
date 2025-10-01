@@ -34,7 +34,8 @@ impl CastTypeExtensions for Type {
             (Type::F64, _) | (_, Type::F64) => Type::F64,
             (Type::F32, _) | (_, Type::F32) => Type::F32,
 
-            (Type::Mut(lhs), Type::Mut(rhs)) => lhs.precompute(rhs),
+            (Type::FX8680, _) | (_, Type::FX8680) => Type::FX8680,
+
             (Type::Const(lhs), Type::Const(rhs)) => lhs.precompute(rhs),
 
             _ => self.clone(),

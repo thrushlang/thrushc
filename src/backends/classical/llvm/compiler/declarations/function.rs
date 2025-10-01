@@ -11,6 +11,7 @@ use crate::backends::classical::types::repr::LLVMFunction;
 use crate::core::console::logging;
 use crate::core::console::logging::LoggingType;
 
+use crate::frontends::classical::lexer::span::Span;
 use crate::frontends::classical::types::ast::Ast;
 use crate::frontends::classical::types::parser::repr::FunctionParameter;
 use crate::frontends::classical::types::parser::repr::GlobalFunction;
@@ -37,12 +38,15 @@ pub fn compile_decl<'ctx>(
     let llvm_module: &Module = context.get_llvm_module();
     let llvm_context: &Context = context.get_llvm_context();
 
-    let funcion_name: &str = global_fn.0;
-    let function_ascii_name: &str = global_fn.1;
+    let name: &str = global_fn.0;
+    let ascii_name: &str = global_fn.1;
+
     let function_type: &Type = global_fn.2;
-    let function_parameters: &[Ast<'ctx>] = global_fn.3;
-    let function_parameters_types: &[Type] = global_fn.4;
+
+    let parameters: &[Ast<'ctx>] = global_fn.3;
+    let parameters_types: &[Type] = global_fn.4;
     let attributes: &ThrushAttributes = global_fn.6;
+    let span: Span = global_fn.7;
 
     let ignore_args: bool = attributes.has_ignore_attribute();
     let is_public: bool = attributes.has_public_attribute();
@@ -61,22 +65,23 @@ pub fn compile_decl<'ctx>(
         _ => (),
     });
 
-    let llvm_name: &str = if let Some(ffi_name) = extern_name {
+    let canonical_name: &str = if let Some(ffi_name) = extern_name {
         ffi_name
     } else if is_public {
-        function_ascii_name
+        ascii_name
     } else {
         &format!(
             "__fn_{}_{}",
             obfuscation::generate_obfuscation_name(obfuscation::LONG_RANGE_OBFUSCATION),
-            function_ascii_name
+            ascii_name
         )
     };
 
     let function_type: FunctionType =
-        typegen::generate_fn_type(context, function_type, function_parameters, ignore_args);
+        typegen::generate_fn_type(context, function_type, parameters, ignore_args);
 
-    let llvm_function: FunctionValue = llvm_module.add_function(llvm_name, function_type, None);
+    let llvm_function: FunctionValue =
+        llvm_module.add_function(canonical_name, function_type, None);
 
     if !is_public && extern_name.is_none() {
         llvm_function.set_linkage(Linkage::LinkerPrivate);
@@ -92,10 +97,7 @@ pub fn compile_decl<'ctx>(
 
     context.set_current_fn(llvm_function);
 
-    context.new_function(
-        funcion_name,
-        (llvm_function, function_parameters_types, convention),
-    );
+    context.new_function(name, (llvm_function, parameters_types, convention, span));
 }
 
 pub fn compile_body<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, global_fn: GlobalFunction<'ctx>) {
@@ -145,10 +147,12 @@ pub fn compile_parameter<'ctx>(
     let kind: &Type = parameter.2;
     let position: u32 = parameter.3;
 
+    let span: Span = parameter.4;
+
     if let Some(value) = llvm_fn.get_nth_param(position) {
         codegen
             .get_mut_context()
-            .new_parameter(name, ascii_name, kind, value);
+            .new_parameter(name, ascii_name, kind, value, span);
     } else {
         self::codegen_abort(
             "The value of a parameter of an LLVM function couldn't be obtained at code generation time.",

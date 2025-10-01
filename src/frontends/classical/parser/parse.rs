@@ -46,6 +46,9 @@ pub fn integer(lexeme: &str, span: Span) -> Result<(Type, u64), ThrushCompilerIs
     const U32_MIN: usize = 0;
     const U32_MAX: usize = 4294967295;
 
+    const U64_MIN: usize = 0;
+    const U64_MAX: usize = 18446744073709551615;
+
     if lexeme.starts_with("0x") {
         let cleaned_lexeme: String = lexeme
             .strip_prefix("0x")
@@ -80,8 +83,10 @@ pub fn integer(lexeme: &str, span: Span) -> Result<(Type, u64), ThrushCompilerIs
                         return Ok((Type::U16, number as u64));
                     } else if (U32_MIN..=U32_MAX).contains(&number) {
                         return Ok((Type::U32, number as u64));
-                    } else if (usize::MIN..=usize::MAX).contains(&number) {
+                    } else if (U64_MIN..=U64_MAX).contains(&number) {
                         return Ok((Type::U64, number as u64));
+                    } else if (u128::MIN..=u128::MAX).contains(&(number as u128)) {
+                        return Ok((Type::U128, number as u64));
                     } else {
                         return Err(ThrushCompilerIssue::Error(
                             "Syntax error".into(),
@@ -111,13 +116,13 @@ pub fn integer(lexeme: &str, span: Span) -> Result<(Type, u64), ThrushCompilerIs
         return match isize::from_str_radix(&cleaned_lexeme, 2) {
             Ok(number) => {
                 if (I8_MIN..=I8_MAX).contains(&number) {
-                    return Ok((Type::U8, number as u64));
+                    return Ok((Type::S8, number as u64));
                 } else if (I16_MIN..=I16_MAX).contains(&number) {
-                    return Ok((Type::U16, number as u64));
+                    return Ok((Type::S16, number as u64));
                 } else if (I32_MIN..=I32_MAX).contains(&number) {
-                    return Ok((Type::U32, number as u64));
+                    return Ok((Type::S32, number as u64));
                 } else if (isize::MIN..=isize::MAX).contains(&number) {
-                    return Ok((Type::U64, number as u64));
+                    return Ok((Type::S64, number as u64));
                 } else {
                     return Err(ThrushCompilerIssue::Error(
                         "Syntax error".into(),
@@ -136,8 +141,10 @@ pub fn integer(lexeme: &str, span: Span) -> Result<(Type, u64), ThrushCompilerIs
                         return Ok((Type::U16, number as u64));
                     } else if (U32_MIN..=U32_MAX).contains(&number) {
                         return Ok((Type::U32, number as u64));
-                    } else if (usize::MIN..=usize::MAX).contains(&number) {
+                    } else if (U64_MIN..=U64_MAX).contains(&number) {
                         return Ok((Type::U64, number as u64));
+                    } else if (u128::MIN..=u128::MAX).contains(&(number as u128)) {
+                        return Ok((Type::U128, number as u64));
                     } else {
                         return Err(ThrushCompilerIssue::Error(
                             "Syntax error".into(),
@@ -166,8 +173,10 @@ pub fn integer(lexeme: &str, span: Span) -> Result<(Type, u64), ThrushCompilerIs
                 Ok((Type::U16, number as u64))
             } else if (U32_MIN..=U32_MAX).contains(&number) {
                 Ok((Type::U32, number as u64))
-            } else if (usize::MIN..=usize::MAX).contains(&number) {
+            } else if (U64_MIN..=U64_MAX).contains(&number) {
                 Ok((Type::U64, number as u64))
+            } else if (u128::MIN..=u128::MAX).contains(&(number as u128)) {
+                Ok((Type::U128, number as u64))
             } else {
                 Err(ThrushCompilerIssue::Error(
                     "Syntax error".into(),

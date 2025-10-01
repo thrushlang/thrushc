@@ -13,15 +13,14 @@ pub fn validate<'type_checker>(
     node: &'type_checker Ast,
 ) -> Result<(), ThrushCompilerIssue> {
     match node {
-        Ast::Deref { value, .. } => {
+        Ast::Defer { value, .. } => {
             let value_type: &Type = value.get_value_type()?;
             let value_span: Span = value.get_span();
 
-            if !value_type.is_ptr_type() && !value_type.is_mut_type() && !value_type.is_const_type()
-            {
+            if !value_type.is_ptr_type() && !value_type.is_const_type() {
                 typechecker.add_error(ThrushCompilerIssue::Error(
                     "Type error".into(),
-                    "Expected raw typed pointer 'ptr[T]' type, raw pointer 'ptr' type, high-level pointer 'mut T' type, or constant 'const T' type,  for dereference."
+                    "Expected raw typed pointer 'ptr[T]' type, raw pointer 'ptr' type,  or constant 'const T' type,  for defererence."
                         .into(),
                     None,
                     value_span,

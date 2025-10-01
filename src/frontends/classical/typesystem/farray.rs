@@ -7,10 +7,6 @@ impl TypeFixedArrayEntensions for Type {
             return inner;
         }
 
-        if let Type::Mut(inner) = self {
-            return inner.get_farray_base_type();
-        }
-
         if let Type::Ptr(Some(inner)) = self {
             return inner.get_farray_base_type();
         }

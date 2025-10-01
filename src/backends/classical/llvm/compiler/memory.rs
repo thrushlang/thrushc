@@ -1,9 +1,11 @@
 #![allow(clippy::enum_variant_names)]
 
-use crate::backends::classical::llvm::compiler::alloc::atomic;
 use crate::backends::classical::llvm::compiler::alloc::atomic::LLVMAtomicModificators;
-use crate::backends::classical::llvm::compiler::typegen;
+use crate::backends::classical::llvm::compiler::{abort, typegen};
 use crate::frontends::classical::types::ast::metadata::dereference::LLVMDereferenceMetadata;
+use crate::{
+    backends::classical::llvm::compiler::alloc::atomic, frontends::classical::lexer::span::Span,
+};
 
 use crate::frontends::classical::types::ast::metadata::constant::LLVMConstantMetadata;
 use crate::frontends::classical::types::ast::metadata::local::LLVMLocalMetadata;
@@ -14,6 +16,7 @@ use crate::core::console::logging;
 use crate::core::console::logging::LoggingType;
 
 use std::fmt::Display;
+use std::path::PathBuf;
 
 use inkwell::{
     AddressSpace,
@@ -33,29 +36,35 @@ pub enum SymbolAllocated<'ctx> {
         ptr: PointerValue<'ctx>,
         kind: &'ctx Type,
         metadata: LLVMLocalMetadata,
+        span: Span,
     },
     Static {
         ptr: PointerValue<'ctx>,
         value: BasicValueEnum<'ctx>,
         kind: &'ctx Type,
         metadata: LLVMStaticMetadata,
+        span: Span,
     },
     Constant {
         ptr: PointerValue<'ctx>,
         value: BasicValueEnum<'ctx>,
         kind: &'ctx Type,
         metadata: LLVMConstantMetadata,
+        span: Span,
     },
     LowLevelInstruction {
         value: BasicValueEnum<'ctx>,
         kind: &'ctx Type,
+        span: Span,
     },
     Parameter {
         value: BasicValueEnum<'ctx>,
         kind: &'ctx Type,
+        span: Span,
     },
     Function {
         ptr: PointerValue<'ctx>,
+        span: Span,
     },
 }
 
@@ -74,16 +83,23 @@ pub enum LLVMAllocationSite {
 
 impl<'ctx> SymbolAllocated<'ctx> {
     #[inline]
-    pub fn new(allocate: SymbolToAllocate, kind: &'ctx Type, value: BasicValueEnum<'ctx>) -> Self {
+    pub fn new(
+        allocate: SymbolToAllocate,
+        kind: &'ctx Type,
+        value: BasicValueEnum<'ctx>,
+        span: Span,
+    ) -> Self {
         match allocate {
-            SymbolToAllocate::Parameter => Self::Parameter { value, kind },
-            SymbolToAllocate::LowLevelInstruction => Self::LowLevelInstruction { value, kind },
+            SymbolToAllocate::Parameter => Self::Parameter { value, kind, span },
+            SymbolToAllocate::LowLevelInstruction => {
+                Self::LowLevelInstruction { value, kind, span }
+            }
         }
     }
 
     #[inline]
-    pub fn new_function(ptr: PointerValue<'ctx>) -> Self {
-        Self::Function { ptr }
+    pub fn new_function(ptr: PointerValue<'ctx>, span: Span) -> Self {
+        Self::Function { ptr, span }
     }
 
     #[inline]
@@ -91,11 +107,13 @@ impl<'ctx> SymbolAllocated<'ctx> {
         ptr: PointerValue<'ctx>,
         kind: &'ctx Type,
         metadata: LLVMLocalMetadata,
+        span: Span,
     ) -> Self {
         Self::Local {
             ptr,
             kind,
             metadata,
+            span,
         }
     }
 
@@ -105,12 +123,14 @@ impl<'ctx> SymbolAllocated<'ctx> {
         kind: &'ctx Type,
         value: BasicValueEnum<'ctx>,
         metadata: LLVMConstantMetadata,
+        span: Span,
     ) -> Self {
         Self::Constant {
             ptr: ptr.into_pointer_value(),
             value,
             kind,
             metadata,
+            span,
         }
     }
 
@@ -120,12 +140,14 @@ impl<'ctx> SymbolAllocated<'ctx> {
         kind: &'ctx Type,
         value: BasicValueEnum<'ctx>,
         metadata: LLVMStaticMetadata,
+        span: Span,
     ) -> Self {
         Self::Static {
             ptr: ptr.into_pointer_value(),
             value,
             kind,
             metadata,
+            span,
         }
     }
 }
@@ -256,80 +278,163 @@ impl<'ctx> SymbolAllocated<'ctx> {
 
     pub fn gep(
         &self,
-        context: &'ctx Context,
-        builder: &Builder<'ctx>,
+        context: &mut LLVMCodeGenContext<'_, '_>,
+        llvm_context: &'ctx Context,
+        llvm_builder: &Builder<'ctx>,
         indexes: &[IntValue<'ctx>],
     ) -> PointerValue<'ctx> {
-        let abort = || {
-            self::codegen_abort("Unable to calculate pointer position.");
-        };
-
-        if let Self::Local { ptr, kind, .. }
-        | Self::Constant { ptr, kind, .. }
-        | Self::Static { ptr, kind, .. } = self
-        {
-            return unsafe {
-                builder
-                    .build_in_bounds_gep(typegen::generate_gep(context, kind), *ptr, indexes, "")
-                    .unwrap_or_else(|_| abort())
-            };
-        }
-
-        if let Self::Parameter { value, kind } | Self::LowLevelInstruction { value, kind } = self {
-            if value.is_pointer_value() {
-                return unsafe {
-                    builder
-                        .build_in_bounds_gep(
-                            typegen::generate_gep(context, kind),
-                            (*value).into_pointer_value(),
-                            indexes,
-                            "",
-                        )
-                        .unwrap_or_else(|_| abort())
-                };
+        match self {
+            Self::Local {
+                ptr, kind, span, ..
             }
-        }
+            | Self::Constant {
+                ptr, kind, span, ..
+            }
+            | Self::Static {
+                ptr, kind, span, ..
+            } => unsafe {
+                llvm_builder
+                    .build_in_bounds_gep(
+                        typegen::generate_gep(llvm_context, kind),
+                        *ptr,
+                        indexes,
+                        "",
+                    )
+                    .unwrap_or_else(|_| {
+                        abort::abort_codegen(
+                            context,
+                            "Failed to calculate memory address!",
+                            *span,
+                            PathBuf::from(file!()),
+                            line!(),
+                        )
+                    })
+            },
 
-        abort()
+            Self::Parameter { value, kind, span }
+            | Self::LowLevelInstruction { value, kind, span } => {
+                if value.is_pointer_value() {
+                    return unsafe {
+                        llvm_builder
+                            .build_in_bounds_gep(
+                                typegen::generate_gep(llvm_context, kind),
+                                (*value).into_pointer_value(),
+                                indexes,
+                                "",
+                            )
+                            .unwrap_or_else(|_| {
+                                abort::abort_codegen(
+                                    context,
+                                    "Failed to calculate memory address!",
+                                    *span,
+                                    PathBuf::from(file!()),
+                                    line!(),
+                                )
+                            })
+                    };
+                }
+
+                abort::abort_codegen(
+                    context,
+                    "Failed to calculate memory address, it's not a pointer!",
+                    *span,
+                    PathBuf::from(file!()),
+                    line!(),
+                )
+            }
+
+            what => abort::abort_codegen(
+                context,
+                "Failed to calculate memory address, it's not a valid symbol!",
+                what.get_span(),
+                PathBuf::from(file!()),
+                line!(),
+            ),
+        }
     }
 
     pub fn gep_struct(
         &self,
-        context: &'ctx Context,
-        builder: &Builder<'ctx>,
+        context: &mut LLVMCodeGenContext<'_, '_>,
+        llvm_context: &'ctx Context,
+        llvm_builder: &Builder<'ctx>,
         index: u32,
     ) -> PointerValue<'ctx> {
-        let abort = || {
-            self::codegen_abort("Unable to get struct element.");
-        };
-
-        if let Self::Local { ptr, kind, .. }
-        | Self::Constant { ptr, kind, .. }
-        | Self::Static { ptr, kind, .. } = self
-        {
-            return builder
-                .build_struct_gep(typegen::generate_gep(context, kind), *ptr, index, "")
-                .unwrap_or_else(|_| abort());
-        }
-
-        if let Self::Parameter { value, kind } | Self::LowLevelInstruction { value, kind } = self {
-            if value.is_pointer_value() {
-                return builder
-                    .build_struct_gep(
-                        typegen::generate_gep(context, kind),
-                        (*value).into_pointer_value(),
-                        index,
-                        "",
-                    )
-                    .unwrap_or_else(|_| abort());
+        match self {
+            Self::Local {
+                ptr, kind, span, ..
             }
-        }
+            | Self::Constant {
+                ptr, kind, span, ..
+            }
+            | Self::Static {
+                ptr, kind, span, ..
+            } => llvm_builder
+                .build_struct_gep(typegen::generate_gep(llvm_context, kind), *ptr, index, "")
+                .unwrap_or_else(|_| {
+                    abort::abort_codegen(
+                        context,
+                        "Failed to calculate memory address!",
+                        *span,
+                        PathBuf::from(file!()),
+                        line!(),
+                    )
+                }),
+            Self::Parameter { value, kind, span }
+            | Self::LowLevelInstruction { value, kind, span } => {
+                if value.is_pointer_value() {
+                    return llvm_builder
+                        .build_struct_gep(
+                            typegen::generate_gep(llvm_context, kind),
+                            (*value).into_pointer_value(),
+                            index,
+                            "Failed to ",
+                        )
+                        .unwrap_or_else(|_| {
+                            abort::abort_codegen(
+                                context,
+                                "Failed to calculate memory address!",
+                                *span,
+                                PathBuf::from(file!()),
+                                line!(),
+                            )
+                        });
+                }
 
-        abort()
+                abort::abort_codegen(
+                    context,
+                    "Failed to calculate memory address, it's not a pointer!",
+                    *span,
+                    PathBuf::from(file!()),
+                    line!(),
+                )
+            }
+
+            what => abort::abort_codegen(
+                context,
+                "Failed to calculate memory address, it's not a valid symbol!",
+                what.get_span(),
+                PathBuf::from(file!()),
+                line!(),
+            ),
+        }
     }
 }
 
 impl<'ctx> SymbolAllocated<'ctx> {
+    #[inline]
+    pub fn get_span(&self) -> Span {
+        match self {
+            Self::Local { span, .. } => *span,
+            Self::Constant { span, .. } => *span,
+            Self::Static { span, .. } => *span,
+            Self::Parameter { span, .. } => *span,
+            Self::LowLevelInstruction { span, .. } => *span,
+            Self::Function { span, .. } => *span,
+        }
+    }
+
+    #[inline]
     pub fn get_type(&self) -> &'ctx Type {
         match self {
             Self::Local { kind, .. } => kind,
@@ -344,6 +449,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
         }
     }
 
+    #[inline]
     pub fn get_ptr(&self) -> PointerValue<'ctx> {
         match self {
             Self::Function { ptr, .. } => *ptr,
@@ -355,6 +461,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
         }
     }
 
+    #[inline]
     pub fn get_value(&self) -> BasicValueEnum<'ctx> {
         match self {
             Self::Local { ptr, .. } => (*ptr).into(),

@@ -49,22 +49,20 @@ pub fn validate_memmove<'type_checker>(
 
     let size_span: Span = size.get_span();
 
-    if !source_type.is_ptr_type() && !source_type.is_address_type() && !source_type.is_mut_type() {
+    if !source_type.is_ptr_type() && !source_type.is_address_type() {
         typechecker.add_error(ThrushCompilerIssue::Error(
             "Type error".into(),
-            "Expected raw typed pointer 'ptr[T]', raw pointer 'ptr', memory address 'addr', or high-level pointer 'mut T' type.".into(),
+            "Expected raw typed pointer 'ptr[T]', raw pointer 'ptr', memory address 'addr' type."
+                .into(),
             None,
             source_span,
         ));
     }
 
-    if !destination_type.is_ptr_type()
-        && !destination_type.is_address_type()
-        && !destination_type.is_mut_type()
-    {
+    if !destination_type.is_ptr_type() && !destination_type.is_address_type() {
         typechecker.add_error(ThrushCompilerIssue::Error(
             "Type error".into(),
-            "Expected raw typed pointer 'ptr[T]', raw pointer 'ptr', memory address 'addr', or high-level pointer 'mut T' type."
+            "Expected raw typed pointer 'ptr[T]', raw pointer 'ptr', memory address 'addr' type."
                 .into(),
             None,
             destination_span,
@@ -102,22 +100,21 @@ pub fn validate_memcpy<'type_checker>(
 
     let size_span: Span = size.get_span();
 
-    if !source_type.is_ptr_type() && !source_type.is_address_type() && !source_type.is_mut_type() {
+    if !source_type.is_ptr_type() && !source_type.is_address_type() {
         typechecker.add_error(ThrushCompilerIssue::Error(
             "Type error".into(),
-            "Expected raw typed pointer 'ptr[T]', raw pointer 'ptr', memory address 'addr', or high-level pointer 'mut T' type.".into(),
+            "Expected raw typed pointer 'ptr[T]', raw pointer 'ptr', memory address 'addr'  type."
+                .into(),
             None,
             source_span,
         ));
     }
 
-    if !destination_type.is_ptr_type()
-        && !destination_type.is_address_type()
-        && !destination_type.is_mut_type()
-    {
+    if !destination_type.is_ptr_type() && !destination_type.is_address_type() {
         typechecker.add_error(ThrushCompilerIssue::Error(
             "Type error".into(),
-            "Expected raw typed pointer 'ptr[T]', raw pointer 'ptr', memory address 'addr', or high-level pointer 'mut T' type.".into(),
+            "Expected raw typed pointer 'ptr[T]', raw pointer 'ptr', memory address 'addr' type."
+                .into(),
             None,
             destination_span,
         ));
@@ -152,13 +149,11 @@ pub fn validate_memset<'type_checker>(
     let new_size_span: Span = new_size.get_span();
     let size_span: Span = size.get_span();
 
-    if !destination_type.is_ptr_type()
-        && !destination_type.is_address_type()
-        && !destination_type.is_mut_type()
-    {
+    if !destination_type.is_ptr_type() && !destination_type.is_address_type() {
         typechecker.add_error(ThrushCompilerIssue::Error(
             "Type error".into(),
-            "Expected raw typed pointer 'ptr[T]', raw pointer 'ptr', memory address 'addr', or high-level pointer 'mut T' type.".into(),
+            "Expected raw typed pointer 'ptr[T]', raw pointer 'ptr', memory address 'addr' type."
+                .into(),
             None,
             destination_span,
         ));

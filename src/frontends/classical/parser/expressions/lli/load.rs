@@ -39,7 +39,7 @@ pub fn build_load<'parser>(
         let reference: Ast = reference::build_reference(ctx, reference_name, span)?;
 
         return Ok(Ast::Load {
-            source: (Some((reference_name, reference.into())), None),
+            source: (Some((reference_name, reference.into())), None, span),
             kind: load_type,
             span,
         });
@@ -48,7 +48,7 @@ pub fn build_load<'parser>(
     let expression: Ast = expr::build_expr(ctx)?;
 
     Ok(Ast::Load {
-        source: (None, Some(expression.into())),
+        source: (None, Some(expression.into()), span),
         kind: load_type,
         span,
     })

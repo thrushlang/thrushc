@@ -3,10 +3,8 @@ use std::path::PathBuf;
 use crate::{
     core::errors::{position::CompilationPosition, standard::ThrushCompilerIssue},
     frontends::classical::{
-        lexer::span::Span,
-        semantic::typechecker::TypeChecker,
-        types::ast::Ast,
-        typesystem::{traits::TypeMutableExtensions, types::Type},
+        lexer::span::Span, semantic::typechecker::TypeChecker, types::ast::Ast,
+        typesystem::types::Type,
     },
 };
 
@@ -27,7 +25,7 @@ pub fn validate<'type_checker>(
                 if !reference.is_allocated() {
                     typechecker.add_error(ThrushCompilerIssue::Error(
                         "Type error".into(),
-                        "Expected memory reference, such as ptr[T], ptr, addr, high-level pointer mut T or direct reference to variable.".into(),
+                        "Expected memory reference, such as ptr[T], ptr, addr or direct reference to variable.".into(),
                         None,
                         *span,
                     ));
@@ -36,8 +34,6 @@ pub fn validate<'type_checker>(
                 let reference_type: &Type = reference.get_value_type()?;
 
                 if !reference_type.is_ptr_type()
-                    && !reference_type.is_mut_array_type()
-                    && !reference_type.is_mut_fixed_array_type()
                     && !reference_type.is_array_type()
                     && !reference_type.is_fixed_array_type()
                 {
@@ -54,8 +50,6 @@ pub fn validate<'type_checker>(
                 let expr_type: &Type = expr.get_any_type()?;
 
                 if !expr_type.is_ptr_type()
-                    && !expr_type.is_mut_array_type()
-                    && !expr_type.is_mut_fixed_array_type()
                     && !expr_type.is_array_type()
                     && !expr_type.is_fixed_array_type()
                 {

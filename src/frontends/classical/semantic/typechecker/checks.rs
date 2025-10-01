@@ -128,35 +128,6 @@ pub fn check_types(
             Ok(())
         }
 
-        (Type::Mut(lhs), rhs, None)
-            if metadata
-                .get_position()
-                .is_some_and(|position| position.at_local())
-                && !rhs.is_mut_type()
-                && !rhs.is_ptr_type() =>
-        {
-            self::check_types(lhs, rhs, expr, op, metadata)?;
-            Ok(())
-        }
-
-        (Type::Mut(..), Type::Mut(..), _)
-            if metadata
-                .get_position()
-                .is_some_and(|position| position.at_local()) =>
-        {
-            Err(ThrushCompilerIssue::Error(
-                "Syntax error".into(),
-                "Memory aliasing isn't allowed at high-level pointers.".into(),
-                None,
-                span,
-            ))
-        }
-
-        (Type::Mut(lhs), Type::Mut(rhs), None) => {
-            self::check_types(lhs, rhs, expr, op, metadata)?;
-            Ok(())
-        }
-
         (
             Type::Ptr(None),
             Type::Ptr(None),
@@ -356,6 +327,25 @@ pub fn check_types(
         ) => Ok(()),
 
         (
+            Type::U128,
+            Type::U128 | Type::U64 | Type::U32 | Type::U16 | Type::U8,
+            Some(
+                TokenType::Plus
+                | TokenType::Minus
+                | TokenType::Slash
+                | TokenType::Star
+                | TokenType::LShift
+                | TokenType::RShift
+                | TokenType::PlusPlus
+                | TokenType::MinusMinus
+                | TokenType::Xor
+                | TokenType::Bor
+                | TokenType::Not,
+            )
+            | None,
+        ) => Ok(()),
+
+        (
             Type::F32,
             Type::F32,
             Some(
@@ -374,6 +364,22 @@ pub fn check_types(
         (
             Type::F64,
             Type::F64 | Type::F32,
+            Some(
+                TokenType::Plus
+                | TokenType::Minus
+                | TokenType::Slash
+                | TokenType::Star
+                | TokenType::LShift
+                | TokenType::RShift
+                | TokenType::PlusPlus
+                | TokenType::MinusMinus,
+            )
+            | None,
+        ) => Ok(()),
+
+        (
+            Type::FX8680,
+            Type::FX8680,
             Some(
                 TokenType::Plus
                 | TokenType::Minus
@@ -506,24 +512,6 @@ pub fn check_type_cast(
         && is_allocated
         && cast_type.is_ptr_type()
     {
-        return Ok(());
-    }
-
-    if from_type.is_mut_type() && cast_type.is_mut_type() {
-        let lhs_type: &Type = cast_type.get_type_with_depth(1);
-        let rhs_type: &Type = from_type.get_type_with_depth(1);
-
-        self::check_type_cast(lhs_type, rhs_type, metadata, span)?;
-
-        return Ok(());
-    }
-
-    if from_type.is_mut_type() && cast_type.is_ptr_type() {
-        let lhs_type: &Type = cast_type.get_type_with_depth(1);
-        let rhs_type: &Type = from_type.get_type_with_depth(1);
-
-        self::check_type_cast(lhs_type, rhs_type, metadata, span)?;
-
         return Ok(());
     }
 

@@ -1,10 +1,9 @@
-use std::fmt::Display;
+use std::path::PathBuf;
 
 use inkwell::{basic_block::BasicBlock, builder::Builder, context::Context, values::FunctionValue};
 
 use crate::{
-    backends::classical::llvm::compiler::{block, codegen::LLVMCodegen},
-    core::console::logging::{self, LoggingType},
+    backends::classical::llvm::compiler::{abort, block, codegen::LLVMCodegen},
     frontends::classical::types::ast::Ast,
 };
 
@@ -12,19 +11,23 @@ pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, stmt: &'ctx Ast<'ctx>)
     let llvm_context: &Context = codegen.get_mut_context().get_llvm_context();
     let llvm_builder: &Builder = codegen.get_mut_context().get_llvm_builder();
 
-    let abort = |_| {
-        self::codegen_abort("Cannot compile loop at code generation time.");
-    };
-
     let llvm_function: FunctionValue = codegen.get_mut_context().get_current_fn();
 
-    if let Ast::Loop { block, .. } = stmt {
+    if let Ast::Loop { block, span, .. } = stmt {
         let start: BasicBlock = block::append_block(llvm_context, llvm_function);
         let exit: BasicBlock = block::append_block(llvm_context, llvm_function);
 
         llvm_builder
             .build_unconditional_branch(start)
-            .unwrap_or_else(abort);
+            .unwrap_or_else(|_| {
+                abort::abort_codegen(
+                    codegen.get_mut_context(),
+                    "Failed to compile starter block!",
+                    *span,
+                    PathBuf::from(file!()),
+                    line!(),
+                )
+            });
 
         llvm_builder.position_at_end(start);
 
@@ -53,8 +56,4 @@ pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, stmt: &'ctx Ast<'ctx>)
 
         llvm_builder.position_at_end(exit);
     }
-}
-
-fn codegen_abort<T: Display>(message: T) -> ! {
-    logging::print_backend_bug(LoggingType::BackendBug, &format!("{}", message));
 }

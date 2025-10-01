@@ -38,8 +38,24 @@ pub fn validate_binary(
 #[inline]
 fn validate_bor(op: &TokenType, a: &Type, b: &Type, span: Span) -> Result<(), ThrushCompilerIssue> {
     if let (
-        Type::S8 | Type::S16 | Type::S32 | Type::S64 | Type::U8 | Type::U16 | Type::U32 | Type::U64,
-        Type::S8 | Type::S16 | Type::S32 | Type::S64 | Type::U8 | Type::U16 | Type::U32 | Type::U64,
+        Type::S8
+        | Type::S16
+        | Type::S32
+        | Type::S64
+        | Type::U8
+        | Type::U16
+        | Type::U32
+        | Type::U64
+        | Type::U128,
+        Type::S8
+        | Type::S16
+        | Type::S32
+        | Type::S64
+        | Type::U8
+        | Type::U16
+        | Type::U32
+        | Type::U64
+        | Type::U128,
     ) = (a, b)
     {
         return Ok(());
@@ -98,8 +114,24 @@ fn validate_binary_shift(
     span: Span,
 ) -> Result<(), ThrushCompilerIssue> {
     if let (
-        Type::S8 | Type::S16 | Type::S32 | Type::S64 | Type::U8 | Type::U16 | Type::U32 | Type::U64,
-        Type::S8 | Type::S16 | Type::S32 | Type::S64 | Type::U8 | Type::U16 | Type::U32 | Type::U64,
+        Type::S8
+        | Type::S16
+        | Type::S32
+        | Type::S64
+        | Type::U8
+        | Type::U16
+        | Type::U32
+        | Type::U64
+        | Type::U128,
+        Type::S8
+        | Type::S16
+        | Type::S32
+        | Type::S64
+        | Type::U8
+        | Type::U16
+        | Type::U32
+        | Type::U64
+        | Type::U128,
     ) = (a, b)
     {
         return Ok(());
@@ -121,10 +153,28 @@ fn validate_binary_comparasion(
     span: Span,
 ) -> Result<(), ThrushCompilerIssue> {
     if let (
-        Type::S8 | Type::S16 | Type::S32 | Type::S64 | Type::U8 | Type::U16 | Type::U32 | Type::U64,
-        Type::S8 | Type::S16 | Type::S32 | Type::S64 | Type::U8 | Type::U16 | Type::U32 | Type::U64,
+        Type::S8
+        | Type::S16
+        | Type::S32
+        | Type::S64
+        | Type::U8
+        | Type::U16
+        | Type::U32
+        | Type::U64
+        | Type::U128,
+        Type::S8
+        | Type::S16
+        | Type::S32
+        | Type::S64
+        | Type::U8
+        | Type::U16
+        | Type::U32
+        | Type::U64
+        | Type::U128,
     ) = (a, b)
     {
+        return Ok(());
+    } else if let (Type::FX8680, Type::FX8680) = (a, b) {
         return Ok(());
     } else if let (Type::F32 | Type::F64, Type::F32 | Type::F64) = (a, b) {
         return Ok(());
@@ -155,7 +205,8 @@ fn validate_binary_equality(
                 | Type::U8
                 | Type::U16
                 | Type::U32
-                | Type::U64,
+                | Type::U64
+                | Type::U128,
             Type::S8
                 | Type::S16
                 | Type::S32
@@ -163,7 +214,8 @@ fn validate_binary_equality(
                 | Type::U8
                 | Type::U16
                 | Type::U32
-                | Type::U64,
+                | Type::U64
+                | Type::U128,
         ) | (Type::F32 | Type::F64, Type::F32 | Type::F64)
             | (Type::Bool, Type::Bool)
             | (Type::Char, Type::Char)

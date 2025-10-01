@@ -3,9 +3,9 @@ use std::fmt::Display;
 use inkwell::values::BasicValueEnum;
 
 use crate::{
-    backends::classical::llvm::compiler::{context::LLVMCodeGenContext, value},
+    backends::classical::llvm::compiler::{codegen, context::LLVMCodeGenContext},
     core::console::logging::{self, LoggingType},
-    frontends::classical::{types::ast::Ast, typesystem::types::Type},
+    frontends::classical::{lexer::span::Span, types::ast::Ast, typesystem::types::Type},
 };
 
 pub mod address;
@@ -18,10 +18,10 @@ pub fn compile<'ctx>(
     name: &'ctx str,
     kind: &'ctx Type,
     expr: &'ctx Ast,
+    span: Span,
 ) {
-    let value: BasicValueEnum = value::compile(context, expr, Some(kind));
-
-    context.new_lli(name, kind, value);
+    let value: BasicValueEnum = codegen::compile_expr(context, expr, Some(kind));
+    context.new_lli(name, kind, value, span);
 }
 
 pub fn compile_advanced<'ctx>(
@@ -36,13 +36,10 @@ pub fn compile_advanced<'ctx>(
             write_value,
             ..
         } => self::write::compile(context, source, write_type, write_value),
-
         Ast::Load { source, kind, .. } => self::load::compile(context, source, kind, cast_type),
-
         Ast::Address {
             source, indexes, ..
         } => self::address::compile(context, source, indexes),
-
         Ast::Alloc {
             alloc,
             site_allocation,

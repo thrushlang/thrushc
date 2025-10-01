@@ -22,16 +22,15 @@ pub fn validate<'type_checker>(
             ..
         } => {
             let metadata: TypeCheckerExprMetadata =
-                TypeCheckerExprMetadata::new(value.is_literal(), None, *span);
+                TypeCheckerExprMetadata::new(value.is_literal(), *span);
 
             let value_type: &Type = value.get_value_type()?;
             let source_type: &Type = source.get_value_type()?;
 
-            if !source.is_allocated() && !source_type.is_ptr_type() && !source_type.is_mut_type() {
+            if !source.is_allocated() && !source_type.is_ptr_type() {
                 typechecker.add_error(ThrushCompilerIssue::Error(
                     "Type error".into(),
-                    "Expected raw typed pointer 'ptr[T]', raw pointer 'ptr', or high-level pointer 'mut T' type."
-                        .into(),
+                    "Expected raw typed pointer 'ptr[T]', raw pointer 'ptr' type.".into(),
                     None,
                     *span,
                 ));
@@ -46,15 +45,13 @@ pub fn validate<'type_checker>(
                 ));
             }
 
-            if source_type.is_mut_type() {
-                let lhs_type: &Type = source_type.get_type_with_depth(1);
-                let rhs_type: &Type = value_type;
-
-                checks::check_types(lhs_type, rhs_type, None, None, metadata)?;
-            }
-
             if source_type.is_ptr_type() {
-                let lhs_type: &Type = source_type.get_type_with_depth(1);
+                let lhs_type: &Type = if value_type.is_ptr_type() && source_type == value_type {
+                    source_type
+                } else {
+                    source_type.get_type_with_depth(1)
+                };
+
                 let rhs_type: &Type = value_type;
 
                 checks::check_types(lhs_type, rhs_type, None, None, metadata)?;

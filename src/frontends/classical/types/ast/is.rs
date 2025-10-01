@@ -97,6 +97,7 @@ impl Ast<'_> {
 }
 
 impl Ast<'_> {
+    #[must_use]
     pub fn has_return(&self) -> bool {
         if let Ast::Block { stmts, .. } = self {
             return stmts.iter().any(|stmt| stmt.has_return());
@@ -105,6 +106,7 @@ impl Ast<'_> {
         self.is_return()
     }
 
+    #[must_use]
     pub fn has_return_for_function(&self) -> bool {
         if let Ast::Block { stmts, .. } = self {
             return stmts.iter().any(|stmt| stmt.has_return());
@@ -113,6 +115,7 @@ impl Ast<'_> {
         self.is_return()
     }
 
+    #[must_use]
     pub fn has_break(&self) -> bool {
         if let Ast::Block { stmts, .. } = self {
             return stmts.iter().any(|stmt| stmt.has_break());
@@ -121,6 +124,7 @@ impl Ast<'_> {
         self.is_break()
     }
 
+    #[must_use]
     pub fn has_continue(&self) -> bool {
         if let Ast::Block { stmts, .. } = self {
             return stmts.iter().any(|stmt| stmt.has_continue());
@@ -186,10 +190,18 @@ impl Ast<'_> {
 
 impl Ast<'_> {
     #[inline]
-    pub fn is_unsigned_integer(&self) -> Result<bool, ThrushCompilerIssue> {
+    pub fn is_unsigned_integer_for_index(&self) -> Result<bool, ThrushCompilerIssue> {
         Ok(matches!(
             self.get_value_type()?,
             Type::U8 | Type::U16 | Type::U32 | Type::U64
+        ))
+    }
+
+    #[inline]
+    pub fn is_unsigned_integer(&self) -> Result<bool, ThrushCompilerIssue> {
+        Ok(matches!(
+            self.get_value_type()?,
+            Type::U8 | Type::U16 | Type::U32 | Type::U64 | Type::U128,
         ))
     }
 
@@ -200,7 +212,9 @@ impl Ast<'_> {
             Type::U8 | Type::U16 | Type::U32
         ))
     }
+}
 
+impl Ast<'_> {
     #[inline]
     pub fn is_allocated(&self) -> bool {
         if let Ast::Reference { metadata, .. } = self {

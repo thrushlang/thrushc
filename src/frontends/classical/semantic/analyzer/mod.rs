@@ -280,7 +280,7 @@ impl<'analyzer> Analyzer<'analyzer> {
 
         ########################################################################*/
 
-        if let Ast::Deref { .. } = node {
+        if let Ast::Defer { .. } = node {
             return expressions::deref::validate(self, node);
         }
 

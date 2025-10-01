@@ -24,7 +24,7 @@ pub fn compile<'ctx>(
     let llvm_builder: &Builder = context.get_llvm_builder();
 
     match source {
-        (Some((name, _)), _) => {
+        (Some((name, _)), ..) => {
             let symbol: SymbolAllocated = context.get_table().get_symbol(name);
 
             if !symbol.is_pointer() {
@@ -34,12 +34,13 @@ pub fn compile<'ctx>(
                 ));
             }
 
-            let mut ptr: PointerValue = symbol.gep_struct(llvm_context, llvm_builder, indexes[0].1);
+            let mut ptr: PointerValue =
+                symbol.gep_struct(context, llvm_context, llvm_builder, indexes[0].1);
 
             for index in indexes.iter().skip(1) {
-                let index_type: BasicTypeEnum = typegen::generate(llvm_context, &index.0);
+                let idx_type: BasicTypeEnum = typegen::generate(llvm_context, &index.0);
 
-                match llvm_builder.build_struct_gep(index_type, ptr, index.1, "") {
+                match llvm_builder.build_struct_gep(idx_type, ptr, index.1, "") {
                     Ok(new_ptr) => ptr = new_ptr,
                     Err(_) => {
                         self::codegen_abort(format!(
@@ -53,7 +54,7 @@ pub fn compile<'ctx>(
             ptr.into()
         }
 
-        (_, Some(expr)) => {
+        (_, Some(expr), ..) => {
             let kind: &Type = expr.get_type_unwrapped();
             let ptr: PointerValue = ptr::compile(context, expr, None).into_pointer_value();
 

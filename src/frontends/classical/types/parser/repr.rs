@@ -24,6 +24,7 @@ pub type GlobalStatic<'ctx> = (
     &'ctx Ast<'ctx>,
     &'ctx ThrushAttributes<'ctx>,
     StaticMetadata,
+    Span,
 );
 
 pub type LocalStatic<'ctx> = (
@@ -32,6 +33,7 @@ pub type LocalStatic<'ctx> = (
     &'ctx Type,
     &'ctx Ast<'ctx>,
     StaticMetadata,
+    Span,
 );
 
 pub type GlobalConstant<'ctx> = (
@@ -41,6 +43,7 @@ pub type GlobalConstant<'ctx> = (
     &'ctx Ast<'ctx>,
     &'ctx ThrushAttributes<'ctx>,
     ConstantMetadata,
+    Span,
 );
 
 pub type LocalConstant<'ctx> = (
@@ -49,6 +52,7 @@ pub type LocalConstant<'ctx> = (
     &'ctx Type,
     &'ctx Ast<'ctx>,
     ConstantMetadata,
+    Span,
 );
 
 pub type FunctionParameter<'ctx> = (
@@ -78,6 +82,7 @@ pub type GlobalFunction<'ctx> = (
     &'ctx [Type],
     Option<&'ctx Ast<'ctx>>,
     &'ctx ThrushAttributes<'ctx>,
+    Span,
 );
 
 pub type GlobalAssemblerFunction<'ctx> = (
@@ -89,4 +94,5 @@ pub type GlobalAssemblerFunction<'ctx> = (
     &'ctx [Ast<'ctx>],
     &'ctx [Type],
     &'ctx ThrushAttributes<'ctx>,
+    Span,
 );

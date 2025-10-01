@@ -7,7 +7,7 @@ use crate::{
 
 pub fn analyze_dereference<'linter>(linter: &mut Linter<'linter>, node: &'linter Ast) {
     match node {
-        Ast::Deref { value, .. } => {
+        Ast::Defer { value, .. } => {
             linter.analyze_expr(value);
         }
 

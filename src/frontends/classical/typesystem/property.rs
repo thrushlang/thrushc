@@ -22,7 +22,6 @@ pub fn decompose(
 ) -> Result<(Type, Vec<(Type, u32)>), ThrushCompilerIssue> {
     let mut gep_indices: Vec<(Type, u32)> = Vec::with_capacity(10);
 
-    let mut is_parent_mut: bool = false;
     let mut is_parent_ptr: bool = false;
 
     if position >= property_names.len() {
@@ -30,11 +29,6 @@ pub fn decompose(
     }
 
     let current_type: &Type = match &base_type {
-        Type::Mut(inner_type) => {
-            is_parent_mut = true;
-            inner_type
-        }
-
         Type::Ptr(inner_ptr) => {
             is_parent_ptr = true;
 
@@ -68,9 +62,7 @@ pub fn decompose(
         if let Some((index, (_, field_type, ..))) = field_with_index {
             let mut adjusted_field_type: Type = field_type.clone();
 
-            if is_parent_mut {
-                adjusted_field_type = Type::Mut(adjusted_field_type.into());
-            } else if is_parent_ptr {
+            if is_parent_ptr {
                 adjusted_field_type = Type::Ptr(Some(adjusted_field_type.into()));
             }
 
@@ -84,9 +76,7 @@ pub fn decompose(
             for (ty, _) in &mut nested_indices {
                 let mut adjusted_ty: Type = ty.clone();
 
-                if is_parent_mut {
-                    adjusted_ty = Type::Mut(adjusted_ty.into());
-                } else if is_parent_ptr {
+                if is_parent_ptr {
                     adjusted_ty = Type::Ptr(Some(adjusted_ty.into()));
                 }
 
@@ -95,9 +85,7 @@ pub fn decompose(
 
             gep_indices.append(&mut nested_indices);
 
-            let final_result_type = if is_parent_mut {
-                Type::Mut(result_type.into())
-            } else if is_parent_ptr {
+            let final_result_type = if is_parent_ptr {
                 Type::Ptr(Some(result_type.into()))
             } else {
                 result_type

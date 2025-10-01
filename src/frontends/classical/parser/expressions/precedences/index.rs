@@ -19,7 +19,7 @@ pub fn index_precedence<'parser>(
     while ctx.match_token(TokenType::LBracket)? {
         let span: Span = ctx.previous().span;
 
-        expression = index::build_index(ctx, (None, Some(expression.into())), span)?;
+        expression = index::build_index(ctx, (None, Some(expression.into()), span), span)?;
     }
 
     Ok(expression)

@@ -36,7 +36,7 @@ pub fn build_write<'parser>(
         let value: Ast = expr::build_expr(ctx)?;
 
         return Ok(Ast::Write {
-            source: (Some((name, reference.into())), None),
+            source: (Some((name, reference.into())), None, span),
             write_value: value.clone().into(),
             write_type,
             span,
@@ -55,7 +55,7 @@ pub fn build_write<'parser>(
     let value: Ast = expr::build_expr(ctx)?;
 
     Ok(Ast::Write {
-        source: (None, Some(expression.into())),
+        source: (None, Some(expression.into()), span),
         write_value: value.clone().into(),
         write_type,
         span,

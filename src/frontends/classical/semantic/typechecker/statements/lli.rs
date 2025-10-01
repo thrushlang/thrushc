@@ -18,16 +18,16 @@ pub fn validate<'type_checker>(
         Ast::LLI {
             name,
             kind: lli_type,
-            value,
+            expr,
             span,
             ..
         } => {
             typechecker.symbols.new_lli(name, (lli_type, *span));
 
             let metadata: TypeCheckerExprMetadata =
-                TypeCheckerExprMetadata::new(value.is_literal(), None, *span);
+                TypeCheckerExprMetadata::new(expr.is_literal(), *span);
 
-            let value_type: &Type = value.get_value_type()?;
+            let value_type: &Type = expr.get_value_type()?;
 
             if lli_type.is_void_type() {
                 typechecker.add_error(ThrushCompilerIssue::Error(
@@ -38,9 +38,9 @@ pub fn validate<'type_checker>(
                 ));
             }
 
-            checks::check_types(lli_type, value_type, Some(value), None, metadata)?;
+            checks::check_types(lli_type, value_type, Some(expr), None, metadata)?;
 
-            typechecker.analyze_stmt(value)?;
+            typechecker.analyze_stmt(expr)?;
 
             Ok(())
         }
@@ -161,7 +161,7 @@ pub fn validate<'type_checker>(
             }
 
             indexes.iter().try_for_each(|indexe| {
-                if !indexe.is_unsigned_integer()? {
+                if !indexe.is_unsigned_integer_for_index()? {
                     typechecker.add_error(ThrushCompilerIssue::Error(
                         "Type error".into(),
                         "Expected any unsigned integer value.".into(),
@@ -189,13 +189,10 @@ pub fn validate<'type_checker>(
                 let reference_type: &Type = reference.get_value_type()?;
                 let span: Span = reference.get_span();
 
-                if !reference_type.is_ptr_type()
-                    && !reference_type.is_address_type()
-                    && !reference_type.is_mut_type()
-                {
+                if !reference_type.is_ptr_type() && !reference_type.is_address_type() {
                     typechecker.add_error(ThrushCompilerIssue::Error(
                         "Type error".into(),
-                        "Expected 'ptr<T>', 'ptr', 'addr', or 'mut T' type.".into(),
+                        "Expected 'ptr<T>', 'ptr', 'addr' type.".into(),
                         None,
                         span,
                     ));
@@ -208,13 +205,10 @@ pub fn validate<'type_checker>(
                 let expr_type: &Type = expr.get_value_type()?;
                 let span: Span = expr.get_span();
 
-                if !expr_type.is_ptr_type()
-                    && !expr_type.is_address_type()
-                    && !expr_type.is_mut_type()
-                {
+                if !expr_type.is_ptr_type() && !expr_type.is_address_type() {
                     typechecker.add_error(ThrushCompilerIssue::Error(
                         "Type error".into(),
-                        "Expected 'ptr<T>', 'ptr', 'addr', or 'mut T' type.".into(),
+                        "Expected 'ptr<T>', 'ptr', 'addr' type.".into(),
                         None,
                         span,
                     ));
@@ -227,7 +221,7 @@ pub fn validate<'type_checker>(
             let span: Span = write_value.get_span();
 
             let metadata: TypeCheckerExprMetadata =
-                TypeCheckerExprMetadata::new(write_value.is_literal(), None, span);
+                TypeCheckerExprMetadata::new(write_value.is_literal(), span);
 
             checks::check_types(write_type, value_type, Some(write_value), None, metadata)?;
 

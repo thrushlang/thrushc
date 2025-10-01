@@ -100,7 +100,7 @@ pub enum TokenType {
     AsmFn,
     Asm,
     GlobalAsm,
-    Deref,
+    Defer,
     As,
     Static,
     New,
@@ -148,9 +148,11 @@ pub enum TokenType {
     U16,
     U32,
     U64,
+    U128,
 
     F32,
     F64,
+    FX8680,
 
     Bool,
     Char,

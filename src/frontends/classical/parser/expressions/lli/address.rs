@@ -25,7 +25,7 @@ pub fn build_address<'parser>(
         let indexes: Vec<Ast> = self::build_address_indexes(ctx, span)?;
 
         return Ok(Ast::Address {
-            source: (Some((name, reference.into())), None),
+            source: (Some((name, reference.into())), None, span),
             indexes,
             kind: Type::Addr,
             span: address_span,
@@ -38,7 +38,7 @@ pub fn build_address<'parser>(
     let indexes: Vec<Ast> = self::build_address_indexes(ctx, expr_span)?;
 
     Ok(Ast::Address {
-        source: (None, Some(expr.into())),
+        source: (None, Some(expr.into()), expr_span),
         indexes,
         kind: Type::Addr,
         span: address_span,

@@ -19,11 +19,11 @@ pub fn build_property<'parser>(
     span: Span,
 ) -> Result<Ast<'parser>, ThrushCompilerIssue> {
     let source_expr_extract: (&Type, &Ast) = match source {
-        (Some(ref any_reference), None) => {
+        (Some(ref any_reference), None, ..) => {
             let reference: &Ast = &any_reference.1;
             (reference.get_value_type()?, reference)
         }
-        (None, Some(ref expr)) => (expr.get_value_type()?, expr),
+        (None, Some(ref expr), ..) => (expr.get_value_type()?, expr),
         _ => {
             return Err(ThrushCompilerIssue::FrontEndBug(
                 String::from("Index not caught"),

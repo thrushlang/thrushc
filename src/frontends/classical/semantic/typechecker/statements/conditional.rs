@@ -25,7 +25,7 @@ pub fn validate<'type_checker>(
             typechecker.analyze_stmt(condition)?;
 
             let metadata: TypeCheckerExprMetadata =
-                TypeCheckerExprMetadata::new(condition.is_literal(), None, *span);
+                TypeCheckerExprMetadata::new(condition.is_literal(), *span);
 
             checks::check_types(
                 &Type::Bool,
@@ -54,7 +54,7 @@ pub fn validate<'type_checker>(
             span,
         } => {
             let metadata: TypeCheckerExprMetadata =
-                TypeCheckerExprMetadata::new(condition.is_literal(), None, *span);
+                TypeCheckerExprMetadata::new(condition.is_literal(), *span);
 
             checks::check_types(
                 &Type::Bool,

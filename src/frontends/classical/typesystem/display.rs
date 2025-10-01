@@ -11,8 +11,10 @@ impl std::fmt::Display for Type {
             Type::U16 => write!(f, "u16"),
             Type::U32 => write!(f, "u32"),
             Type::U64 => write!(f, "u64"),
+            Type::U128 => write!(f, "u128"),
             Type::F32 => write!(f, "f32"),
             Type::F64 => write!(f, "f64"),
+            Type::FX8680 => write!(f, "f86_80"),
             Type::Bool => write!(f, "bool"),
             Type::Char => write!(f, "char"),
             Type::Fn(params, kind, modificator) => {
@@ -34,7 +36,6 @@ impl std::fmt::Display for Type {
                     kind
                 )
             }
-            Type::Mut(inner_type) => write!(f, "mut {}", inner_type),
             Type::Const(inner_type) => write!(f, "const {}", inner_type),
             Type::FixedArray(kind, size) => {
                 write!(f, "array[{}; {}]", kind, size)

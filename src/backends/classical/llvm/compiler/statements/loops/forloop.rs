@@ -1,4 +1,4 @@
-use std::fmt::Display;
+use std::path::PathBuf;
 
 use inkwell::{
     basic_block::BasicBlock,
@@ -8,18 +8,13 @@ use inkwell::{
 };
 
 use crate::{
-    backends::classical::llvm::compiler::{block, codegen::LLVMCodegen, value},
-    core::console::logging::{self, LoggingType},
+    backends::classical::llvm::compiler::{abort, block, codegen::LLVMCodegen, value},
     frontends::classical::{types::ast::Ast, typesystem::types::Type},
 };
 
 pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, stmt: &'ctx Ast<'ctx>) {
     let llvm_context: &Context = codegen.get_mut_context().get_llvm_context();
     let llvm_builder: &Builder = codegen.get_mut_context().get_llvm_builder();
-
-    let abort = |_| {
-        self::codegen_abort("Cannot compile for loop at code generation time.");
-    };
 
     let llvm_function: FunctionValue = codegen.get_mut_context().get_current_fn();
 
@@ -28,6 +23,7 @@ pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, stmt: &'ctx Ast<'ctx>)
         cond,
         actions,
         block,
+        span,
         ..
     } = stmt
     {
@@ -38,7 +34,19 @@ pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, stmt: &'ctx Ast<'ctx>)
 
         llvm_builder
             .build_unconditional_branch(start)
-            .unwrap_or_else(abort);
+            .unwrap_or_else(|_| {
+                llvm_builder
+                    .build_unconditional_branch(start)
+                    .unwrap_or_else(|_| {
+                        abort::abort_codegen(
+                            codegen.get_mut_context(),
+                            "Failed to compile of starter!",
+                            *span,
+                            PathBuf::from(file!()),
+                            line!(),
+                        )
+                    })
+            });
 
         llvm_builder.position_at_end(start);
 
@@ -46,7 +54,15 @@ pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, stmt: &'ctx Ast<'ctx>)
 
         llvm_builder
             .build_unconditional_branch(condition)
-            .unwrap_or_else(abort);
+            .unwrap_or_else(|_| {
+                abort::abort_codegen(
+                    codegen.get_mut_context(),
+                    "Failed to compile brancher to condition!",
+                    block.get_span(),
+                    PathBuf::from(file!()),
+                    line!(),
+                )
+            });
 
         llvm_builder.position_at_end(condition);
 
@@ -55,7 +71,15 @@ pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, stmt: &'ctx Ast<'ctx>)
 
         llvm_builder
             .build_conditional_branch(comparison, body, exit)
-            .unwrap_or_else(abort);
+            .unwrap_or_else(|_| {
+                abort::abort_codegen(
+                    codegen.get_mut_context(),
+                    "Failed to compile comparison!",
+                    cond.get_span(),
+                    PathBuf::from(file!()),
+                    line!(),
+                )
+            });
 
         llvm_builder.position_at_end(body);
 
@@ -90,9 +114,4 @@ pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, stmt: &'ctx Ast<'ctx>)
 
         llvm_builder.position_at_end(exit);
     }
-}
-
-#[inline]
-fn codegen_abort<T: Display>(message: T) -> ! {
-    logging::print_backend_bug(LoggingType::BackendBug, &format!("{}", message));
 }

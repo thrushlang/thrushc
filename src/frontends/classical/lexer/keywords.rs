@@ -31,7 +31,7 @@ lazy_static! {
         keywords.insert("asmfn", TokenType::AsmFn);
         keywords.insert("asm", TokenType::Asm);
         keywords.insert("global_asm", TokenType::GlobalAsm);
-        keywords.insert("deref", TokenType::Deref);
+        keywords.insert("defer", TokenType::Defer);
         keywords.insert("type", TokenType::Type);
         keywords.insert("enum", TokenType::Enum);
         keywords.insert("alloc", TokenType::Alloc);
@@ -104,12 +104,13 @@ lazy_static! {
         keywords.insert("u16", TokenType::U16);
         keywords.insert("u32", TokenType::U32);
         keywords.insert("u64", TokenType::U64);
+        keywords.insert("u128", TokenType::U128);
         keywords.insert("f32", TokenType::F32);
         keywords.insert("f64", TokenType::F64);
+        keywords.insert("fx86_80", TokenType::FX8680);
         keywords.insert("bool", TokenType::Bool);
         keywords.insert("char", TokenType::Char);
         keywords.insert("ptr", TokenType::Ptr);
-        keywords.insert("str", TokenType::Str);
         keywords.insert("array", TokenType::Array);
         keywords.insert("void", TokenType::Void);
         keywords.insert("Fn", TokenType::FnRef);

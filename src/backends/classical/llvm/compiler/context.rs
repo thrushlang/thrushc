@@ -1,13 +1,15 @@
 use crate::frontends::classical::lexer::span::Span;
 use crate::frontends::classical::types::ast::Ast;
-use crate::frontends::classical::types::parser::repr::Local;
+use crate::frontends::classical::types::parser::repr::{
+    GlobalConstant, GlobalStatic, Local, LocalConstant, LocalStatic,
+};
 use crate::logging::{self, LoggingType};
 
 use crate::backends::classical::types::repr::LLVMFunction;
 
 use crate::backends::classical::llvm::compiler::memory::SymbolAllocated;
 use crate::backends::classical::llvm::compiler::memory::SymbolToAllocate;
-use crate::backends::classical::llvm::compiler::typegen;
+use crate::backends::classical::llvm::compiler::{self, constgen, typegen};
 
 use crate::backends::classical::llvm::compiler::alloc;
 use crate::backends::classical::llvm::compiler::anchors::PointerAnchor;
@@ -77,15 +79,22 @@ impl<'a, 'ctx> LLVMCodeGenContext<'a, 'ctx> {
 }
 
 impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
-    #[inline]
-    pub fn new_local_constant(
-        &mut self,
-        name: &'ctx str,
-        ascii_name: &'ctx str,
-        kind: &'ctx Type,
-        value: BasicValueEnum<'ctx>,
-        metadata: ConstantMetadata,
-    ) {
+    pub fn new_local_constant(&mut self, constant: LocalConstant<'ctx>) {
+        let name: &str = constant.0;
+        let ascii_name: &str = constant.1;
+
+        let kind: &Type = constant.2;
+        let expr: &Ast = constant.3;
+        let metadata: ConstantMetadata = constant.4;
+        let span: Span = constant.5;
+
+        let expr_type: &Type = expr.get_type_unwrapped();
+
+        let compiled_value: BasicValueEnum = compiler::constgen::compile(self, expr, kind);
+
+        let value: BasicValueEnum =
+            compiler::generation::cast::try_cast_const(self, compiled_value, expr_type, kind);
+
         let ptr: PointerValue = alloc::memstatic::local_constant(
             self,
             ascii_name,
@@ -94,8 +103,13 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
             metadata,
         );
 
-        let constant: SymbolAllocated =
-            SymbolAllocated::new_constant(ptr.into(), kind, value, metadata.get_llvm_metadata());
+        let constant: SymbolAllocated = SymbolAllocated::new_constant(
+            ptr.into(),
+            kind,
+            value,
+            metadata.get_llvm_metadata(),
+            span,
+        );
 
         if let Some(last_block) = self.table.get_mut_all_local_constants().last_mut() {
             last_block.insert(name, constant);
@@ -107,17 +121,22 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
         }
     }
 
-    #[inline]
-    pub fn new_global_constant(
-        &mut self,
-        name: &'ctx str,
-        ascii_name: &'ctx str,
-        kind: &'ctx Type,
-        value: BasicValueEnum<'ctx>,
-        attributes: &'ctx ThrushAttributes<'ctx>,
+    pub fn new_global_constant(&mut self, constant: GlobalConstant<'ctx>) {
+        let name: &str = constant.0;
+        let ascii_name: &str = constant.1;
 
-        metadata: ConstantMetadata,
-    ) {
+        let kind: &Type = constant.2;
+        let value: &Ast = constant.3;
+        let attributes: &ThrushAttributes = constant.4;
+        let metadata: ConstantMetadata = constant.5;
+        let span: Span = constant.6;
+
+        let llvm_value: BasicValueEnum = constgen::compile(self, value, kind);
+        let value_type: &Type = value.get_type_unwrapped();
+
+        let value: BasicValueEnum =
+            compiler::generation::cast::try_cast_const(self, llvm_value, value_type, kind);
+
         let ptr: PointerValue = alloc::memstatic::global_constant(
             self,
             ascii_name,
@@ -127,8 +146,13 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
             metadata,
         );
 
-        let constant: SymbolAllocated =
-            SymbolAllocated::new_constant(ptr.into(), kind, value, metadata.get_llvm_metadata());
+        let constant: SymbolAllocated = SymbolAllocated::new_constant(
+            ptr.into(),
+            kind,
+            value,
+            metadata.get_llvm_metadata(),
+            span,
+        );
 
         self.table
             .get_mut_all_global_constants()
@@ -137,16 +161,21 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
 }
 
 impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
-    #[inline]
-    pub fn new_local_static(
-        &mut self,
-        name: &'ctx str,
-        ascii_name: &'ctx str,
-        kind: &'ctx Type,
-        value: BasicValueEnum<'ctx>,
+    pub fn new_local_static(&mut self, staticvar: LocalStatic<'ctx>) {
+        let name: &str = staticvar.0;
+        let ascii_name: &str = staticvar.1;
 
-        metadata: StaticMetadata,
-    ) {
+        let kind: &Type = staticvar.2;
+        let expr: &Ast = staticvar.3;
+        let metadata: StaticMetadata = staticvar.4;
+        let span = staticvar.5;
+
+        let expr_type: &Type = expr.get_type_unwrapped();
+
+        let llvm_value: BasicValueEnum = compiler::constgen::compile(self, expr, kind);
+        let value: BasicValueEnum =
+            compiler::generation::cast::try_cast_const(self, llvm_value, expr_type, kind);
+
         let ptr: PointerValue = alloc::memstatic::local_static(
             self,
             ascii_name,
@@ -155,8 +184,13 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
             metadata,
         );
 
-        let constant: SymbolAllocated =
-            SymbolAllocated::new_static(ptr.into(), kind, value, metadata.get_llvm_metadata());
+        let constant: SymbolAllocated = SymbolAllocated::new_static(
+            ptr.into(),
+            kind,
+            value,
+            metadata.get_llvm_metadata(),
+            span,
+        );
 
         if let Some(last_block) = self.table.get_mut_all_local_statics().last_mut() {
             last_block.insert(name, constant);
@@ -168,17 +202,23 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
         }
     }
 
-    #[inline]
-    pub fn new_global_static(
-        &mut self,
-        name: &'ctx str,
-        ascii_name: &'ctx str,
-        kind: &'ctx Type,
-        value: BasicValueEnum<'ctx>,
-        attributes: &'ctx ThrushAttributes<'ctx>,
+    pub fn new_global_static(&mut self, staticvar: GlobalStatic<'ctx>) {
+        let name: &str = staticvar.0;
+        let ascii_name: &str = staticvar.1;
 
-        metadata: StaticMetadata,
-    ) {
+        let kind: &Type = staticvar.2;
+        let value: &Ast = staticvar.3;
+
+        let attributes: &ThrushAttributes = staticvar.4;
+        let metadata: StaticMetadata = staticvar.5;
+        let span: Span = staticvar.6;
+
+        let value_type: &Type = value.get_type_unwrapped();
+
+        let llvm_value: BasicValueEnum = compiler::constgen::compile(self, value, kind);
+        let value: BasicValueEnum =
+            compiler::generation::cast::try_cast_const(self, llvm_value, value_type, kind);
+
         let ptr: PointerValue = alloc::memstatic::global_static(
             self,
             ascii_name,
@@ -188,8 +228,13 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
             metadata,
         );
 
-        let constant: SymbolAllocated =
-            SymbolAllocated::new_static(ptr.into(), kind, value, metadata.get_llvm_metadata());
+        let constant: SymbolAllocated = SymbolAllocated::new_static(
+            ptr.into(),
+            kind,
+            value,
+            metadata.get_llvm_metadata(),
+            span,
+        );
 
         self.table
             .get_mut_all_global_statics()
@@ -215,7 +260,7 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
             alloc::local_variable(self, ascii_name, kind, value, attributes, span);
 
         let local: SymbolAllocated =
-            SymbolAllocated::new_local(ptr, kind, metadata.get_llvm_metadata());
+            SymbolAllocated::new_local(ptr, kind, metadata.get_llvm_metadata(), span);
 
         if let Some(last_block) = self.table.get_mut_all_locals().last_mut() {
             last_block.insert(name, local);
@@ -228,9 +273,15 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
     }
 
     #[inline]
-    pub fn new_lli(&mut self, name: &'ctx str, kind: &'ctx Type, value: BasicValueEnum<'ctx>) {
+    pub fn new_lli(
+        &mut self,
+        name: &'ctx str,
+        kind: &'ctx Type,
+        value: BasicValueEnum<'ctx>,
+        span: Span,
+    ) {
         let lli: SymbolAllocated =
-            SymbolAllocated::new(SymbolToAllocate::LowLevelInstruction, kind, value);
+            SymbolAllocated::new(SymbolToAllocate::LowLevelInstruction, kind, value, span);
 
         if let Some(last_block) = self.table.get_mut_all_locals().last_mut() {
             last_block.insert(name, lli);
@@ -249,11 +300,12 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
         ascii_name: &'ctx str,
         kind: &'ctx Type,
         value: BasicValueEnum<'ctx>,
+        span: Span,
     ) {
         value.set_name(ascii_name);
 
         let symbol_allocated: SymbolAllocated =
-            SymbolAllocated::new(SymbolToAllocate::Parameter, kind, value);
+            SymbolAllocated::new(SymbolToAllocate::Parameter, kind, value, span);
 
         self.table
             .get_mut_all_parameters()

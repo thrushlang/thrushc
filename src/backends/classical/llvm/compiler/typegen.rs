@@ -100,9 +100,8 @@ pub fn generate<'ctx>(llvm_context: &'ctx Context, kind: &Type) -> BasicTypeEnum
 #[inline]
 pub fn generate_subtype<'ctx>(llvm_context: &'ctx Context, kind: &Type) -> BasicTypeEnum<'ctx> {
     match kind {
-        Type::Mut(subtype) => self::generate_subtype(llvm_context, subtype),
         Type::Const(subtype) => self::generate_subtype(llvm_context, subtype),
-        Type::Array(..) => llvm_context.ptr_type(AddressSpace::default()).into(),
+        Type::Ptr(Some(subtype)) => self::generate_subtype(llvm_context, subtype),
 
         _ => self::generate(llvm_context, kind),
     }
@@ -111,9 +110,8 @@ pub fn generate_subtype<'ctx>(llvm_context: &'ctx Context, kind: &Type) -> Basic
 #[inline]
 pub fn generate_gep<'ctx>(llvm_context: &'ctx Context, kind: &Type) -> BasicTypeEnum<'ctx> {
     match kind {
-        Type::Mut(subtype) => self::generate_gep(llvm_context, subtype),
         Type::Const(subtype) => self::generate_gep(llvm_context, subtype),
-        Type::Array(..) => llvm_context.ptr_type(AddressSpace::default()).into(),
+        Type::Ptr(Some(subtype)) => self::generate_gep(llvm_context, subtype),
 
         _ => self::generate(llvm_context, kind),
     }
@@ -126,7 +124,6 @@ pub fn generate_for_local_variable<'ctx>(
     value: Option<&Ast>,
 ) -> BasicTypeEnum<'ctx> {
     match kind {
-        Type::Mut(subtype) => self::generate_for_local_variable(llvm_context, subtype, value),
         Type::Const(subtype) => self::generate_for_local_variable(llvm_context, subtype, value),
         Type::Array(subtype) if matches!(value, Some(Ast::Array { .. })) => {
             if let Some(Ast::Array { items, .. }) = value {
@@ -151,9 +148,10 @@ pub fn integer<'ctx>(llvm_context: &'ctx Context, kind: &Type) -> IntType<'ctx> 
         Type::S16 | Type::U16 => llvm_context.i16_type(),
         Type::S32 | Type::U32 => llvm_context.i32_type(),
         Type::S64 | Type::U64 => llvm_context.i64_type(),
+        Type::U128 => llvm_context.i128_type(),
+
         Type::Bool => llvm_context.bool_type(),
 
-        Type::Mut(any) => self::integer(llvm_context, any),
         Type::Const(any) => self::integer(llvm_context, any),
 
         any => {
@@ -170,8 +168,8 @@ pub fn float<'ctx>(llvm_context: &'ctx Context, kind: &Type) -> FloatType<'ctx> 
     match kind {
         Type::F32 => llvm_context.f32_type(),
         Type::F64 => llvm_context.f64_type(),
+        Type::FX8680 => llvm_context.x86_f80_type(),
 
-        Type::Mut(any) => self::float(llvm_context, any),
         Type::Const(any) => self::float(llvm_context, any),
 
         any => {

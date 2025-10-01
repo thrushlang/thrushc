@@ -12,6 +12,7 @@ use crate::backends::classical::types::repr::LLVMLocalStatics;
 
 use crate::core::console::logging;
 use crate::core::console::logging::LoggingType;
+use crate::frontends::classical::lexer::span::Span;
 
 use ahash::AHashMap as HashMap;
 use inkwell::values::FunctionValue;
@@ -87,9 +88,11 @@ impl<'ctx> SymbolsTable<'ctx> {
 
         if let Some(function) = self.functions.get(name) {
             let llvm_function: FunctionValue = function.0;
+            let span: Span = function.3;
 
             return SymbolAllocated::new_function(
                 llvm_function.as_global_value().as_pointer_value(),
+                span,
             );
         }
 

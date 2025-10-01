@@ -17,10 +17,12 @@ pub enum Type {
     U16,
     U32,
     U64,
+    U128,
 
     // Floating Point Type
     F32,
     F64,
+    FX8680,
 
     // Boolean Type
     Bool,
@@ -30,9 +32,6 @@ pub enum Type {
 
     // Constant Type
     Const(Arc<Type>),
-
-    // Mutable Type
-    Mut(Arc<Type>),
 
     // Ptr Type
     Ptr(Option<Arc<Type>>),
@@ -46,7 +45,7 @@ pub enum Type {
     // Array Type
     Array(Arc<Type>),
 
-    // Address
+    // Memory Address
     Addr,
 
     // Function Referece

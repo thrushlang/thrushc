@@ -11,7 +11,7 @@ use crate::{
     },
     frontends::classical::{
         lexer::span::Span,
-        semantic::linter::expressions::deref,
+        semantic::linter::expressions::defer,
         types::{ast::Ast, parser::stmts::traits::ThrushAttributesExtensions},
     },
 };
@@ -258,8 +258,8 @@ impl<'linter> Linter<'linter> {
 
         ########################################################################*/
 
-        if let Ast::Deref { .. } = node {
-            return deref::analyze_dereference(self, node);
+        if let Ast::Defer { .. } = node {
+            return defer::analyze_dereference(self, node);
         }
 
         /* ######################################################################

@@ -10,10 +10,10 @@ use crate::{
 
 mod builtins;
 mod checks;
+mod constants;
 mod declarations;
 mod expressions;
 mod metadata;
-mod position;
 mod statements;
 mod symbols;
 mod validations;
@@ -287,8 +287,8 @@ impl<'type_checker> TypeChecker<'type_checker> {
 
         ########################################################################*/
 
-        if let Ast::Deref { .. } = node {
-            return expressions::deref::validate(self, node);
+        if let Ast::Defer { .. } = node {
+            return expressions::defer::validate(self, node);
         }
 
         /* ######################################################################

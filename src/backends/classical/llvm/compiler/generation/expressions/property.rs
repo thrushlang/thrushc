@@ -14,12 +14,11 @@ use inkwell::{builder::Builder, values::BasicValueEnum};
 
 pub fn compile<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
-
     source: &'ctx AstEitherExpression<'ctx>,
     indexes: &[(Type, u32)],
 ) -> BasicValueEnum<'ctx> {
     match source {
-        (Some((name, _)), _) => {
+        (Some((name, _)), ..) => {
             let symbol: SymbolAllocated = context.get_table().get_symbol(name);
 
             if symbol.is_pointer() {
@@ -28,7 +27,7 @@ pub fn compile<'ctx>(
                 self::compile_extract_value_property(context, symbol.load(context), indexes)
             }
         }
-        (None, Some(expr)) => {
+        (None, Some(expr), ..) => {
             let value: BasicValueEnum = value::compile(context, expr, None);
 
             if value.is_pointer_value() {

@@ -33,7 +33,7 @@ impl Type {
 
     #[inline(always)]
     pub fn is_float_type(&self) -> bool {
-        matches!(self, Type::F32 | Type::F64)
+        matches!(self, Type::F32 | Type::F64 | Type::FX8680)
     }
 
     #[inline(always)]
@@ -44,11 +44,6 @@ impl Type {
     #[inline(always)]
     pub fn is_address_type(&self) -> bool {
         matches!(self, Type::Addr)
-    }
-
-    #[inline(always)]
-    pub fn is_mut_type(&self) -> bool {
-        matches!(self, Type::Mut(_))
     }
 
     #[inline(always)]
@@ -83,6 +78,7 @@ impl Type {
                 | Type::U16
                 | Type::U32
                 | Type::U64
+                | Type::U128
                 | Type::Char
         )
     }
@@ -97,7 +93,6 @@ impl TypeExtensions for Type {
         match self {
             Type::FixedArray(element_type, _) => element_type.get_type_with_depth(base_depth - 1),
             Type::Array(element_type) => element_type.get_type_with_depth(base_depth - 1),
-            Type::Mut(inner_type) => inner_type.get_type_with_depth(base_depth - 1),
             Type::Const(inner_type) => inner_type.get_type_with_depth(base_depth - 1),
             Type::Ptr(Some(inner_type)) => inner_type.get_type_with_depth(base_depth - 1),
             Type::Struct(..) => self,
@@ -109,8 +104,10 @@ impl TypeExtensions for Type {
             | Type::U16
             | Type::U32
             | Type::U64
+            | Type::U128
             | Type::F32
             | Type::F64
+            | Type::FX8680
             | Type::Bool
             | Type::Char
             | Type::Addr
@@ -150,7 +147,6 @@ impl PartialEq for Type {
                 type_a == type_b && size_a == size_b
             }
 
-            (Type::Mut(target), Type::Mut(from)) => target == from,
             (Type::Array(target), Type::Array(from)) => target == from,
             (Type::Const(target), Type::Const(from)) => target == from,
 
@@ -163,8 +159,10 @@ impl PartialEq for Type {
             (Type::U16, Type::U16) => true,
             (Type::U32, Type::U32) => true,
             (Type::U64, Type::U64) => true,
+            (Type::U128, Type::U128) => true,
             (Type::F32, Type::F32) => true,
             (Type::F64, Type::F64) => true,
+            (Type::FX8680, Type::FX8680) => true,
             (Type::Ptr(None), Type::Ptr(None)) => true,
             (Type::Ptr(Some(target)), Type::Ptr(Some(from))) => target == from,
             (Type::Void, Type::Void) => true,

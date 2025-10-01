@@ -1,5 +1,5 @@
 pub mod cast;
-pub mod deref;
+pub mod defer;
 
 use std::path::PathBuf;
 
@@ -181,7 +181,7 @@ pub fn analyze<'linter>(linter: &mut Linter<'linter>, expr: &'linter Ast) {
         }
 
         Ast::As { .. } => expressions::cast::analyze_cast(linter, expr),
-        Ast::Deref { .. } => deref::analyze_dereference(linter, expr),
+        Ast::Defer { .. } => defer::analyze_dereference(linter, expr),
 
         Ast::Alloc { .. }
         | Ast::Integer { .. }

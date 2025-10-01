@@ -15,12 +15,6 @@ pub trait TypeExtensions {
     fn get_type_fn_ref(&self) -> &Type;
 }
 
-pub trait TypeMutableExtensions {
-    fn is_mut_fixed_array_type(&self) -> bool;
-    fn is_mut_array_type(&self) -> bool;
-    fn is_mut_struct_type(&self) -> bool;
-}
-
 pub trait TypeFixedArrayEntensions {
     fn get_farray_base_type(&self) -> &Type;
 }
@@ -52,5 +46,4 @@ pub trait CastTypeExtensions {
 
 pub trait DereferenceExtensions {
     fn dereference(&self) -> Type;
-    fn dereference_high_level_type(&self) -> Type;
 }

@@ -34,10 +34,6 @@ pub fn build_type(ctx: &mut ParserContext<'_>) -> Result<Type, ThrushCompilerIss
             let tk: &Token = ctx.advance()?;
             let span: Span = tk.span;
 
-            if tk_kind.is_mut() {
-                return self::build_mut_type(ctx, span);
-            }
-
             if tk_kind.is_array() {
                 return self::build_array_type(ctx, span);
             }
@@ -121,30 +117,6 @@ pub fn build_type(ctx: &mut ParserContext<'_>) -> Result<Type, ThrushCompilerIss
     };
 
     builded_type
-}
-
-fn build_mut_type(ctx: &mut ParserContext<'_>, span: Span) -> Result<Type, ThrushCompilerIssue> {
-    let inner_type: Type = self::build_type(ctx)?;
-
-    if inner_type.is_mut_type() {
-        return Err(ThrushCompilerIssue::Error(
-            String::from("Syntax error"),
-            "Nested mutable type 'mut mut T' ins't allowed.".into(),
-            None,
-            span,
-        ));
-    }
-
-    if inner_type.is_ptr_type() {
-        return Err(ThrushCompilerIssue::Error(
-            String::from("Syntax error"),
-            "Mutable pointer type 'mut ptr<T>', or 'mut ptr' isn't allowed.".into(),
-            None,
-            span,
-        ));
-    }
-
-    Ok(Type::Mut(inner_type.into()))
 }
 
 fn build_fn_ref_type(ctx: &mut ParserContext<'_>) -> Result<Type, ThrushCompilerIssue> {

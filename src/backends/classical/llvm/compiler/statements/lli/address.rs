@@ -33,13 +33,15 @@ pub fn compile<'ctx>(
         .collect();
 
     match source {
-        (Some((name, _)), _) => {
+        (Some((name, _)), ..) => {
             let symbol: SymbolAllocated = context.get_table().get_symbol(name);
 
-            symbol.gep(llvm_context, llvm_builder, &indexes).into()
+            symbol
+                .gep(context, llvm_context, llvm_builder, &indexes)
+                .into()
         }
 
-        (_, Some(expr)) => {
+        (_, Some(expr), ..) => {
             let kind: &Type = expr.get_type_unwrapped();
             let ptr: PointerValue = ptr::compile(context, expr, None).into_pointer_value();
 

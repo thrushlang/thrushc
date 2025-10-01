@@ -156,7 +156,7 @@ pub fn compile<'ctx>(
         } => compiler::generation::value::index::compile(context, source, indexes),
 
         // Compiles a dereference operation (e.g., *pointer)
-        Ast::Deref {
+        Ast::Defer {
             value,
             kind,
             metadata,
@@ -164,7 +164,7 @@ pub fn compile<'ctx>(
         } => {
             let value: BasicValueEnum = self::compile(context, value, Some(kind));
 
-            let deref_value: BasicValueEnum = if value.is_pointer_value() {
+            let defer_value: BasicValueEnum = if value.is_pointer_value() {
                 memory::dereference(
                     context,
                     value.into_pointer_value(),
@@ -175,8 +175,8 @@ pub fn compile<'ctx>(
                 value
             };
 
-            compiler::generation::cast::try_cast(context, cast, kind, deref_value)
-                .unwrap_or(deref_value)
+            compiler::generation::cast::try_cast(context, cast, kind, defer_value)
+                .unwrap_or(defer_value)
         }
 
         // Array Operations
@@ -192,7 +192,7 @@ pub fn compile<'ctx>(
 
         // Compiles a struct constructor
         Ast::Constructor { args, kind, .. } => {
-            compiler::generation::expressions::structure::compile(context, args, kind, cast)
+            compiler::generation::expressions::structure::compile(context, args, kind)
         }
 
         // Compiles a type cast operation

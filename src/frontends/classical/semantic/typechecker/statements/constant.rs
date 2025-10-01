@@ -22,7 +22,7 @@ pub fn validate<'type_checker>(
             ..
         } => {
             let metadata: TypeCheckerExprMetadata =
-                TypeCheckerExprMetadata::new(value.is_literal(), None, *span);
+                TypeCheckerExprMetadata::new(value.is_literal(), *span);
 
             let from_type: &Type = value.get_value_type()?;
             let expression_span: Span = value.get_span();

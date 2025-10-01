@@ -10,7 +10,7 @@ use crate::{
     },
 };
 
-pub fn build_dereference<'parser>(
+pub fn build_deference<'parser>(
     ctx: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, ThrushCompilerIssue> {
     let initial_deref_tk: &Token = ctx.advance()?;
@@ -22,11 +22,11 @@ pub fn build_dereference<'parser>(
     let mut deref_count: u64 = 1;
 
     let mut current_expr: Ast = {
-        while ctx.check(TokenType::Deref) {
+        while ctx.check(TokenType::Defer) {
             ctx.consume(
-                TokenType::Deref,
+                TokenType::Defer,
                 "Syntax error".into(),
-                "Expected 'deref' keyword.".into(),
+                "Expected 'defer' keyword.".into(),
             )?;
 
             deref_count += 1;
@@ -40,7 +40,7 @@ pub fn build_dereference<'parser>(
     let mut current_type: Type = current_expr.get_value_type()?.clone();
 
     (0..deref_count).for_each(|_| {
-        current_expr = Ast::Deref {
+        current_expr = Ast::Defer {
             value: current_expr.clone().into(),
             kind: current_type.dereference(),
             metadata: DereferenceMetadata::new(is_volatile, atomic_ord),

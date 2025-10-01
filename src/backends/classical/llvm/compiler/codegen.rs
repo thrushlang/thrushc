@@ -1,11 +1,11 @@
-use std::fmt::Display;
+#![allow(clippy::collapsible_if)]
 
-use crate::core::console::logging::{self, LoggingType};
+use std::path::PathBuf;
 
 use crate::backends::classical::llvm::compiler::declarations::{self};
-use crate::backends::classical::llvm::compiler::ptr;
 use crate::backends::classical::llvm::compiler::statements;
 use crate::backends::classical::llvm::compiler::{self, builtins};
+use crate::backends::classical::llvm::compiler::{abort, ptr};
 use crate::backends::classical::llvm::compiler::{binaryop, generation};
 use crate::backends::classical::llvm::compiler::{block, typegen};
 
@@ -16,6 +16,7 @@ use crate::frontends::classical::typesystem::types::Type;
 
 use super::{context::LLVMCodeGenContext, value};
 
+use inkwell::basic_block::BasicBlock;
 use inkwell::{
     builder::Builder,
     context::Context,
@@ -165,8 +166,41 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
             Ast::For { .. } => statements::loops::forloop::compile(self, stmt),
 
             // Control Flow
-            Ast::Break { .. } => statements::loops::controlflow::loopbreak::compile(self, stmt),
-            Ast::Continue { .. } => statements::loops::controlflow::loopjump::compile(self, stmt),
+            Ast::Break { span } => {
+                let llvm_builder: &Builder = self.context.get_llvm_builder();
+
+                let break_block: BasicBlock = self.context.get_loop_ctx().get_last_break_branch();
+
+                llvm_builder
+                    .build_unconditional_branch(break_block)
+                    .unwrap_or_else(|_| {
+                        abort::abort_codegen(
+                            self.context,
+                            "Failed to compile 'break' loop control flow!",
+                            *span,
+                            PathBuf::from(file!()),
+                            line!(),
+                        )
+                    });
+            }
+            Ast::Continue { span } => {
+                let llvm_builder: &Builder = self.context.get_llvm_builder();
+
+                let continue_block: BasicBlock =
+                    self.context.get_loop_ctx().get_last_continue_branch();
+
+                llvm_builder
+                    .build_unconditional_branch(continue_block)
+                    .unwrap_or_else(|_| {
+                        abort::abort_codegen(
+                            self.context,
+                            "Failed to compile 'continue' loop control flow!",
+                            *span,
+                            PathBuf::from(file!()),
+                            line!(),
+                        )
+                    });
+            }
 
             stmt => self.codegen_variables(stmt),
         }
@@ -203,17 +237,21 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
             }
 
             Ast::Const { .. } => {
-                statements::constant::compile_local(self.context, stmt.as_local_constant());
+                self.context.new_local_constant(stmt.as_local_constant());
             }
 
             Ast::Static { .. } => {
-                statements::staticvar::compile_local(self.context, stmt.as_local_static());
+                self.context.new_local_static(stmt.as_local_static());
             }
 
             Ast::LLI {
-                name, kind, value, ..
+                name,
+                kind,
+                expr,
+                span,
+                ..
             } => {
-                statements::lli::compile(self.context, name, kind, value);
+                statements::lli::compile(self.context, name, kind, expr, *span);
             }
 
             stmt => self.codegen_terminator(stmt),
@@ -238,8 +276,40 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         ########################################################################*/
 
         match stmt {
-            Ast::Return { .. } => {
-                statements::terminator::compile(self, stmt);
+            Ast::Return {
+                expression,
+                kind,
+                span,
+                ..
+            } => {
+                let llvm_builder: &Builder = self.context.get_llvm_builder();
+
+                if expression.is_none() {
+                    if llvm_builder.build_return(None).is_err() {
+                        abort::abort_codegen(
+                            self.context,
+                            "Failed to compile 'return'!",
+                            *span,
+                            PathBuf::from(file!()),
+                            line!(),
+                        );
+                    }
+                }
+
+                if let Some(expr) = expression {
+                    if llvm_builder
+                        .build_return(Some(&self::compile_expr(self.context, expr, Some(kind))))
+                        .is_err()
+                    {
+                        abort::abort_codegen(
+                            self.context,
+                            "Failed to compile 'return'!",
+                            *span,
+                            PathBuf::from(file!()),
+                            line!(),
+                        );
+                    }
+                }
             }
 
             any => self.expressions(any),
@@ -303,10 +373,13 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                     return;
                 }
 
-                self::codegen_abort(format!(
-                    "Could not compile binary operation with type '{}'.",
-                    kind
-                ));
+                abort::abort_codegen(
+                    self.context,
+                    "Failed to compile binary operation!",
+                    *span,
+                    PathBuf::from(file!()),
+                    line!(),
+                )
             }
 
             Ast::Mut { .. } => {
@@ -387,17 +460,15 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
             Ast::AssemblerFunction { .. } => {
                 declarations::asmfunction::compile(self.context, ast.as_global_asm_function())
             }
-
             Ast::Function { .. } => {
                 declarations::function::compile_decl(self.context, ast.as_global_function())
             }
 
             Ast::Const { .. } => {
-                declarations::constant::compile_global(self.context, ast.as_global_constant())
+                self.context.new_global_constant(ast.as_global_constant());
             }
-
             Ast::Static { .. } => {
-                declarations::stativar::compile_global(self.context, ast.as_global_static())
+                self.context.new_global_static(ast.as_global_static());
             }
 
             _ => (),
@@ -428,16 +499,13 @@ pub fn compile_expr<'ctx>(
 }
 
 impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
+    #[inline]
     pub fn get_mut_context(&mut self) -> &mut LLVMCodeGenContext<'a, 'ctx> {
         self.context
     }
 
+    #[inline]
     pub fn get_context(&self) -> &LLVMCodeGenContext<'a, 'ctx> {
         self.context
     }
-}
-
-#[inline]
-fn codegen_abort<T: Display>(message: T) -> ! {
-    logging::print_backend_bug(LoggingType::BackendBug, &format!("{}", message));
 }

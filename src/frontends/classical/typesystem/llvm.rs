@@ -22,7 +22,7 @@ impl LLVMTypeExtensions for Type {
     fn llvm_is_ptr_type(&self) -> bool {
         matches!(
             self,
-            Type::Ptr(..) | Type::Mut(..) | Type::Addr | Type::Array(..) | Type::Fn(..)
+            Type::Ptr(..) | Type::Addr | Type::Array(..) | Type::Fn(..)
         )
     }
 

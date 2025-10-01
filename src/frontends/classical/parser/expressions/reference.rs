@@ -123,9 +123,7 @@ pub fn build_reference<'parser>(
 
         let parameter_type: Type = parameter.get_type();
 
-        let is_allocated: bool = parameter_type.is_mut_type()
-            || parameter_type.is_ptr_type()
-            || parameter_type.is_address_type();
+        let is_allocated: bool = parameter_type.is_ptr_type() || parameter_type.is_address_type();
 
         return Ok(Ast::Reference {
             name,

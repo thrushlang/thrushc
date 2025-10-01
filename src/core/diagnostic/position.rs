@@ -8,6 +8,7 @@ pub struct CodePosition {
 }
 
 impl CodePosition {
+    #[inline]
     pub fn new(line: usize, start: usize, end: usize) -> Self {
         Self { line, start, end }
     }
@@ -42,7 +43,7 @@ pub fn find_line_and_range(code: &str, span: Span) -> Option<CodePosition> {
             break;
         }
         if c == '\n' {
-            line_start = i + 1;
+            line_start = i;
             line_num += 1;
         }
     }

@@ -5,7 +5,7 @@ use crate::{
         parser::{
             ParserContext, builtins, expr,
             expressions::{
-                array, asm, call, constructor, deref, enumv, farray, index, indirect, lli,
+                array, asm, call, constructor, defer, enumv, farray, index, indirect, lli,
                 property, reference, sizeof,
             },
             parse,
@@ -23,7 +23,7 @@ pub fn lower_precedence<'parser>(
 
         TokenType::Fixed => farray::build_fixed_array(ctx)?,
         TokenType::LBracket => array::build_array(ctx)?,
-        TokenType::Deref => deref::build_dereference(ctx)?,
+        TokenType::Defer => defer::build_deference(ctx)?,
 
         TokenType::SizeOf => sizeof::build_sizeof(ctx)?,
         TokenType::Halloc => builtins::build_halloc(ctx)?,
@@ -119,8 +119,11 @@ pub fn lower_precedence<'parser>(
             if ctx.match_token(TokenType::LBracket)? {
                 let reference: Ast = reference::build_reference(ctx, name, span)?;
 
-                let index: Ast =
-                    index::build_index(ctx, (Some((name, reference.into())), None), span)?;
+                let index: Ast = index::build_index(
+                    ctx,
+                    (Some((name, reference.clone().into())), None, span),
+                    span,
+                )?;
 
                 return Ok(index);
             }
@@ -136,11 +139,14 @@ pub fn lower_precedence<'parser>(
             if ctx.match_token(TokenType::Dot)? {
                 let reference: Ast = reference::build_reference(ctx, name, span)?;
 
-                let property: Ast =
-                    property::build_property(ctx, (Some((name, reference.into())), None), span)?;
+                let property: Ast = property::build_property(
+                    ctx,
+                    (Some((name, reference.into())), None, span),
+                    span,
+                )?;
 
                 if ctx.match_token(TokenType::LBracket)? {
-                    return index::build_index(ctx, (None, Some(property.into())), span);
+                    return index::build_index(ctx, (None, Some(property.into()), span), span);
                 }
 
                 return Ok(property);

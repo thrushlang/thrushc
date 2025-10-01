@@ -4,7 +4,7 @@ use crate::{
     frontends::classical::types::ast::Ast,
 };
 
-use crate::frontends::classical::typesystem::traits::{DereferenceExtensions, LLVMTypeExtensions};
+use crate::frontends::classical::typesystem::traits::LLVMTypeExtensions;
 use crate::frontends::classical::typesystem::types::Type;
 
 use crate::core::console::logging;
@@ -186,13 +186,11 @@ pub fn integer<'ctx>(
     let llvm_builder: &Builder = context.get_llvm_builder();
     let llvm_context: &Context = context.get_llvm_context();
 
-    let target_type: Type = target_type.dereference_high_level_type();
-
     if !from_type.is_integer_type() || !target_type.is_integer_type() {
         return None;
     }
 
-    if *from_type == target_type {
+    if *from_type == *target_type {
         return None;
     }
 
@@ -200,7 +198,7 @@ pub fn integer<'ctx>(
         llvm_builder
             .build_int_cast_sign_flag(
                 from.into_int_value(),
-                typegen::generate(llvm_context, &target_type).into_int_type(),
+                typegen::generate(llvm_context, target_type).into_int_type(),
                 from_type.is_signed_integer_type(),
                 "",
             )
@@ -233,13 +231,11 @@ pub fn float<'ctx>(
     let llvm_builder: &Builder = context.get_llvm_builder();
     let llvm_context: &Context = context.get_llvm_context();
 
-    let target_type: Type = target_type.dereference_high_level_type();
-
     if !from_type.is_float_type() || !target_type.is_float_type() {
         return None;
     }
 
-    if *from_type == target_type {
+    if *from_type == *target_type {
         return None;
     }
 
@@ -247,7 +243,7 @@ pub fn float<'ctx>(
         llvm_builder
             .build_float_cast(
                 from.into_float_value(),
-                typegen::generate(llvm_context, &target_type).into_float_type(),
+                typegen::generate(llvm_context, target_type).into_float_type(),
                 "",
             )
             .unwrap_or_else(abort)

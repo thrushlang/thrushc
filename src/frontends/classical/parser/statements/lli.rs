@@ -42,7 +42,7 @@ pub fn build_lli<'parser>(
         String::from("Expected '='."),
     )?;
 
-    let value: Ast = expr::build_expr(ctx)?;
+    let expr: Ast = expr::build_expr(ctx)?;
 
     ctx.consume(
         TokenType::SemiColon,
@@ -53,14 +53,12 @@ pub fn build_lli<'parser>(
     ctx.get_mut_symbols()
         .new_lli(name, (instr_type.clone(), span), span)?;
 
-    let lli: Ast = Ast::LLI {
+    Ok(Ast::LLI {
         name,
         kind: instr_type,
-        value: value.into(),
+        expr: expr.into(),
         span,
-    };
-
-    Ok(lli)
+    })
 }
 
 fn check_state(ctx: &mut ParserContext<'_>) -> Result<(), ThrushCompilerIssue> {

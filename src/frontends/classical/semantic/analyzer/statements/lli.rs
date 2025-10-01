@@ -15,15 +15,12 @@ pub fn validate<'analyzer>(
         Ast::LLI {
             name,
             kind: lli_type,
-            value,
+            expr,
             span,
             ..
         } => {
             analyzer.symbols.new_lli(name, (lli_type, *span));
-
-            if let Err(type_error) = analyzer.analyze_stmt(value) {
-                analyzer.add_error(type_error);
-            }
+            analyzer.analyze_stmt(expr)?;
 
             Ok(())
         }

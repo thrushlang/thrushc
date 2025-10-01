@@ -18,7 +18,7 @@ pub fn property_precedence<'parser>(
     if ctx.match_token(TokenType::Dot)? {
         let span: Span = ctx.previous().get_span();
 
-        expression = property::build_property(ctx, (None, Some(expression.into())), span)?;
+        expression = property::build_property(ctx, (None, Some(expression.into()), span), span)?;
     }
 
     Ok(expression)

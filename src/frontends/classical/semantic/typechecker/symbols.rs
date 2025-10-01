@@ -1,8 +1,13 @@
 use ahash::AHashMap as HashMap;
 
-use crate::frontends::classical::types::semantic::typechecker::types::{
-    TypeCheckerAssemblerFunction, TypeCheckerAssemblerFunctions, TypeCheckerFunction,
-    TypeCheckerFunctions, TypeCheckerLLI, TypeCheckerLLIs, TypeCheckerLocal, TypeCheckerLocals,
+use crate::frontends::classical::{
+    semantic::typechecker::constants::{
+        TYPECHECKER_SYMBOLS_GLOBAL_MINIMAL_CAPACITY, TYPECHECKER_SYMBOLS_LOCAL_MINIMAL_CAPACITY,
+    },
+    types::semantic::typechecker::types::{
+        TypeCheckerAssemblerFunction, TypeCheckerAssemblerFunctions, TypeCheckerFunction,
+        TypeCheckerFunctions, TypeCheckerLLI, TypeCheckerLLIs, TypeCheckerLocal, TypeCheckerLocals,
+    },
 };
 
 #[derive(Debug)]
@@ -19,10 +24,11 @@ pub struct TypeCheckerSymbolsTable<'symbol> {
 impl<'symbol> TypeCheckerSymbolsTable<'symbol> {
     pub fn new() -> Self {
         Self {
-            functions: HashMap::with_capacity(100),
-            asm_functions: HashMap::with_capacity(100),
-            locals: Vec::with_capacity(255),
-            llis: Vec::with_capacity(255),
+            functions: HashMap::with_capacity(TYPECHECKER_SYMBOLS_GLOBAL_MINIMAL_CAPACITY),
+            asm_functions: HashMap::with_capacity(TYPECHECKER_SYMBOLS_GLOBAL_MINIMAL_CAPACITY),
+
+            locals: Vec::with_capacity(TYPECHECKER_SYMBOLS_LOCAL_MINIMAL_CAPACITY),
+            llis: Vec::with_capacity(TYPECHECKER_SYMBOLS_LOCAL_MINIMAL_CAPACITY),
             scope: 0,
         }
     }
@@ -72,8 +78,13 @@ impl<'symbol> TypeCheckerSymbolsTable<'symbol> {
 impl TypeCheckerSymbolsTable<'_> {
     #[inline]
     pub fn begin_scope(&mut self) {
-        self.llis.push(HashMap::with_capacity(255));
-        self.locals.push(HashMap::with_capacity(255));
+        self.llis.push(HashMap::with_capacity(
+            TYPECHECKER_SYMBOLS_LOCAL_MINIMAL_CAPACITY,
+        ));
+
+        self.locals.push(HashMap::with_capacity(
+            TYPECHECKER_SYMBOLS_LOCAL_MINIMAL_CAPACITY,
+        ));
 
         self.scope += 1;
     }

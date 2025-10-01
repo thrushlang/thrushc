@@ -8,10 +8,10 @@ use crate::{
 pub fn analyze<'linter>(linter: &mut Linter<'linter>, node: &'linter Ast) {
     match node {
         Ast::LLI {
-            name, span, value, ..
+            name, span, expr, ..
         } => {
             linter.symbols.new_lli(name, (*span, false));
-            linter.analyze_expr(value);
+            linter.analyze_expr(expr);
         }
 
         Ast::Write {

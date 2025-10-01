@@ -34,7 +34,7 @@ pub fn validate<'type_checker>(
             let span: Span = cond.get_span();
 
             let metadata: TypeCheckerExprMetadata =
-                TypeCheckerExprMetadata::new(cond.is_literal(), None, span);
+                TypeCheckerExprMetadata::new(cond.is_literal(), span);
 
             checks::check_types(
                 &Type::Bool,

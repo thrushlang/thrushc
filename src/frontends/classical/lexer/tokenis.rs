@@ -49,6 +49,7 @@ impl TokenType {
         matches!(self, TokenType::Bool)
     }
 
+    #[must_use]
     pub fn is_str(&self) -> bool {
         matches!(self, TokenType::Str)
     }
@@ -65,7 +66,7 @@ impl TokenType {
 
     #[must_use]
     pub fn is_float(&self) -> bool {
-        matches!(self, TokenType::F32 | TokenType::F64)
+        matches!(self, TokenType::F32 | TokenType::F64 | TokenType::FX8680)
     }
 
     #[must_use]
@@ -90,6 +91,7 @@ impl TokenType {
                 | TokenType::U16
                 | TokenType::U32
                 | TokenType::U64
+                | TokenType::U128
                 | TokenType::Char
         )
     }

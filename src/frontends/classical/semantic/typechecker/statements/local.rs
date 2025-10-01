@@ -4,9 +4,7 @@ use crate::{
     core::errors::{position::CompilationPosition, standard::ThrushCompilerIssue},
     frontends::classical::{
         lexer::span::Span,
-        semantic::typechecker::{
-            TypeChecker, checks, metadata::TypeCheckerExprMetadata, position::TypeCheckerPosition,
-        },
+        semantic::typechecker::{TypeChecker, checks, metadata::TypeCheckerExprMetadata},
         types::ast::{Ast, metadata::local::LocalMetadata},
         typesystem::types::Type,
     },
@@ -39,11 +37,8 @@ pub fn validate<'type_checker>(
             if let Some(local_value) = value {
                 let metadata: &LocalMetadata = metadata;
 
-                let type_metadata: TypeCheckerExprMetadata = TypeCheckerExprMetadata::new(
-                    local_value.is_literal(),
-                    Some(TypeCheckerPosition::Local),
-                    *span,
-                );
+                let type_metadata: TypeCheckerExprMetadata =
+                    TypeCheckerExprMetadata::new(local_value.is_literal(), *span);
 
                 if local_type.is_void_type() {
                     typechecker.add_error(ThrushCompilerIssue::Error(

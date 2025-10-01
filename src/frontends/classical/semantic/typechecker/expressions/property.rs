@@ -6,10 +6,7 @@ use crate::{
         lexer::span::Span,
         semantic::typechecker::TypeChecker,
         types::ast::Ast,
-        typesystem::{
-            traits::{TypeMutableExtensions, TypePointerExtensions},
-            types::Type,
-        },
+        typesystem::{traits::TypePointerExtensions, types::Type},
     },
 };
 
@@ -25,13 +22,10 @@ pub fn validate<'type_checker>(
                 let reference_type: &Type = reference.get_value_type()?;
                 let reference_span: Span = reference.get_span();
 
-                if !reference_type.is_struct_type()
-                    && !reference_type.is_mut_struct_type()
-                    && !reference_type.is_ptr_struct_type()
-                {
+                if !reference_type.is_struct_type() && !reference_type.is_ptr_struct_type() {
                     typechecker.add_error(ThrushCompilerIssue::Error(
                         "Type error".into(),
-                        "A structure type was expected within the high-level pointer 'mut T', the raw typed pointer 'mut T', or a structure 'struct T'.".into(),
+                        "A structure type was expected within the raw typed pointer 'ptr[T]', or a structure 'struct T'.".into(),
                         None,
                         reference_span,
                     ));
@@ -46,13 +40,10 @@ pub fn validate<'type_checker>(
                 let expr_type: &Type = expr.get_value_type()?;
                 let expr_span: Span = expr.get_span();
 
-                if !expr_type.is_struct_type()
-                    && !expr_type.is_mut_struct_type()
-                    && !expr_type.is_ptr_struct_type()
-                {
+                if !expr_type.is_struct_type() && !expr_type.is_ptr_struct_type() {
                     typechecker.add_error(ThrushCompilerIssue::Error(
                         "Type error".into(),
-                        "A structure type was expected within the high-level pointer 'mut T', the raw typed pointer 'mut T', or a structure 'struct T'.".into(),
+                        "A structure type was expected within the raw typed pointer 'ptr[T]', or a structure 'struct T'.".into(),
                         None,
                         expr_span,
                     ));
