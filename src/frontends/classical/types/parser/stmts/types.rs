@@ -13,6 +13,8 @@ pub type StructFields<'ctx> = (
     StructureTypeModificator,
 );
 
+pub type StructField<'ctx> = (usize, &'ctx (&'ctx str, Type, u32, Span));
+
 pub type EnumFields<'ctx> = Vec<(&'ctx str, Ast<'ctx>)>;
 pub type EnumField<'ctx> = (&'ctx str, Ast<'ctx>);
 
