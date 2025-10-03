@@ -20,7 +20,7 @@ pub fn compile<'ctx>(
     expr: &'ctx Ast,
     span: Span,
 ) {
-    let value: BasicValueEnum = codegen::compile_expr(context, expr, Some(kind));
+    let value: BasicValueEnum = codegen::compile(context, expr, Some(kind));
     context.new_lli(name, kind, value, span);
 }
 
@@ -34,12 +34,18 @@ pub fn compile_advanced<'ctx>(
             source,
             write_type,
             write_value,
+            span,
             ..
-        } => self::write::compile(context, source, write_type, write_value),
-        Ast::Load { source, kind, .. } => self::load::compile(context, source, kind, cast_type),
+        } => self::write::compile(context, source, write_type, write_value, *span),
+
+        Ast::Load {
+            source, kind, span, ..
+        } => self::load::compile(context, source, kind, *span, cast_type),
+
         Ast::Address {
             source, indexes, ..
         } => self::address::compile(context, source, indexes),
+
         Ast::Alloc {
             alloc,
             site_allocation,

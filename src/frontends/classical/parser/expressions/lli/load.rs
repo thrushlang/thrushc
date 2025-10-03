@@ -2,7 +2,7 @@ use crate::{
     core::errors::standard::ThrushCompilerIssue,
     frontends::classical::{
         lexer::{span::Span, token::Token, tokentype::TokenType},
-        parser::{ParserContext, expr, expressions::reference, typegen},
+        parser::{ParserContext, expr, typegen},
         types::{ast::Ast, parser::stmts::traits::TokenExtensions},
         typesystem::types::Type,
     },
@@ -27,28 +27,10 @@ pub fn build_load<'parser>(
         "Expected ','.".into(),
     )?;
 
-    if ctx.check(TokenType::Identifier) {
-        let identifier_tk: &Token = ctx.consume(
-            TokenType::Identifier,
-            "Syntax error".into(),
-            "Expected 'identifier'.".into(),
-        )?;
-
-        let reference_name: &str = identifier_tk.get_lexeme();
-
-        let reference: Ast = reference::build_reference(ctx, reference_name, span)?;
-
-        return Ok(Ast::Load {
-            source: (Some((reference_name, reference.into())), None, span),
-            kind: load_type,
-            span,
-        });
-    }
-
-    let expression: Ast = expr::build_expr(ctx)?;
+    let source: Ast = expr::build_expr(ctx)?;
 
     Ok(Ast::Load {
-        source: (None, Some(expression.into()), span),
+        source: source.into(),
         kind: load_type,
         span,
     })

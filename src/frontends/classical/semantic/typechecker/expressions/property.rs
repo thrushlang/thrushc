@@ -16,43 +16,19 @@ pub fn validate<'type_checker>(
 ) -> Result<(), ThrushCompilerIssue> {
     match node {
         Ast::Property { source, .. } => {
-            if let Some(any_reference) = &source.0 {
-                let reference: &Ast = &any_reference.1;
+            let source_type: &Type = source.get_value_type()?;
+            let source_span: Span = source.get_span();
 
-                let reference_type: &Type = reference.get_value_type()?;
-                let reference_span: Span = reference.get_span();
-
-                if !reference_type.is_struct_type() && !reference_type.is_ptr_struct_type() {
-                    typechecker.add_error(ThrushCompilerIssue::Error(
-                        "Type error".into(),
-                        "A structure type was expected within the raw typed pointer 'ptr[T]', or a structure 'struct T'.".into(),
-                        None,
-                        reference_span,
-                    ));
-                }
-
-                typechecker.analyze_stmt(reference)?;
-
-                return Ok(());
+            if !source_type.is_struct_type() && !source_type.is_ptr_struct_type() {
+                typechecker.add_error(ThrushCompilerIssue::Error(
+                    "Type error".into(),
+                    "A structure type was expected within the raw typed pointer 'ptr[T]', or a structure 'struct T'.".into(),
+                    None,
+                    source_span,
+                ));
             }
 
-            if let Some(expr) = &source.1 {
-                let expr_type: &Type = expr.get_value_type()?;
-                let expr_span: Span = expr.get_span();
-
-                if !expr_type.is_struct_type() && !expr_type.is_ptr_struct_type() {
-                    typechecker.add_error(ThrushCompilerIssue::Error(
-                        "Type error".into(),
-                        "A structure type was expected within the raw typed pointer 'ptr[T]', or a structure 'struct T'.".into(),
-                        None,
-                        expr_span,
-                    ));
-                }
-
-                typechecker.analyze_stmt(expr)?;
-
-                return Ok(());
-            }
+            typechecker.analyze_stmt(source)?;
 
             Ok(())
         }

@@ -5,8 +5,8 @@ use crate::{
         parser::{
             ParserContext, builtins, expr,
             expressions::{
-                array, asm, call, constructor, defer, enumv, farray, index, indirect, lli,
-                property, reference, sizeof,
+                array, asm, call, constructor, defer, enumv, farray, indirect, lli, reference,
+                sizeof,
             },
             parse,
         },
@@ -116,40 +116,12 @@ pub fn lower_precedence<'parser>(
             let name: &str = identifier_tk.get_lexeme();
             let span: Span = identifier_tk.get_span();
 
-            if ctx.match_token(TokenType::LBracket)? {
-                let reference: Ast = reference::build_reference(ctx, name, span)?;
-
-                let index: Ast = index::build_index(
-                    ctx,
-                    (Some((name, reference.clone().into())), None, span),
-                    span,
-                )?;
-
-                return Ok(index);
-            }
-
             if ctx.match_token(TokenType::Arrow)? {
                 return enumv::build_enum_value(ctx, name, span);
             }
 
             if ctx.match_token(TokenType::LParen)? {
                 return call::build_call(ctx, name, span);
-            }
-
-            if ctx.match_token(TokenType::Dot)? {
-                let reference: Ast = reference::build_reference(ctx, name, span)?;
-
-                let property: Ast = property::build_property(
-                    ctx,
-                    (Some((name, reference.into())), None, span),
-                    span,
-                )?;
-
-                if ctx.match_token(TokenType::LBracket)? {
-                    return index::build_index(ctx, (None, Some(property.into()), span), span);
-                }
-
-                return Ok(property);
             }
 
             reference::build_reference(ctx, name, span)?

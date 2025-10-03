@@ -22,7 +22,7 @@ pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, stmt: &'ctx Ast<'ctx>)
             .unwrap_or_else(|_| {
                 abort::abort_codegen(
                     codegen.get_mut_context(),
-                    "Failed to compile starter block!",
+                    "Failed to compile loop terminator to start!",
                     *span,
                     PathBuf::from(file!()),
                     line!(),
@@ -49,7 +49,17 @@ pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, stmt: &'ctx Ast<'ctx>)
             .get_terminator()
             .is_none()
         {
-            let _ = llvm_builder.build_unconditional_branch(start);
+            llvm_builder
+                .build_unconditional_branch(start)
+                .unwrap_or_else(|_| {
+                    abort::abort_codegen(
+                        codegen.get_mut_context(),
+                        "Failed to compile loop body terminator to start!",
+                        *span,
+                        PathBuf::from(file!()),
+                        line!(),
+                    )
+                });
         }
 
         codegen.get_mut_context().get_mut_loop_ctx().pop();

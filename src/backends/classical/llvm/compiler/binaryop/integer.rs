@@ -2,10 +2,10 @@ use std::path::PathBuf;
 
 use crate::backends::classical::llvm::compiler;
 use crate::backends::classical::llvm::compiler::abort;
+use crate::backends::classical::llvm::compiler::codegen;
 use crate::backends::classical::llvm::compiler::constgen;
 use crate::backends::classical::llvm::compiler::context::LLVMCodeGenContext;
 use crate::backends::classical::llvm::compiler::predicates;
-use crate::backends::classical::llvm::compiler::value;
 
 use crate::core::console::logging;
 use crate::core::console::logging::LoggingType;
@@ -26,8 +26,8 @@ use {
 
 fn int_operation<'ctx>(
     context: &LLVMCodeGenContext<'_, 'ctx>,
-    left: BasicValueEnum<'ctx>,
-    right: BasicValueEnum<'ctx>,
+    lhs: BasicValueEnum<'ctx>,
+    rhs: BasicValueEnum<'ctx>,
     signatures: (bool, bool),
     operator: &TokenType,
 ) -> BasicValueEnum<'ctx> {
@@ -38,55 +38,55 @@ fn int_operation<'ctx>(
         self::codegen_abort("Cannot perform integer binary operation.");
     };
 
-    if left.is_int_value() && right.is_int_value() {
-        let left: IntValue = left.into_int_value();
-        let right: IntValue = right.into_int_value();
+    if lhs.is_int_value() && rhs.is_int_value() {
+        let lhs: IntValue = lhs.into_int_value();
+        let rhs: IntValue = rhs.into_int_value();
 
-        let (left, right) = compiler::generation::cast::integer_together(context, left, right);
+        let (lhs, rhs) = compiler::generation::cast::integer_together(context, lhs, rhs);
 
         return match operator {
             TokenType::Plus => llvm_builder
-                .build_int_nsw_add(left, right, "")
+                .build_int_nsw_add(lhs, rhs, "")
                 .unwrap_or_else(cintgen_abort)
                 .into(),
             TokenType::Minus => llvm_builder
-                .build_int_nsw_sub(left, right, "")
+                .build_int_nsw_sub(lhs, rhs, "")
                 .unwrap_or_else(cintgen_abort)
                 .into(),
             TokenType::Star => llvm_builder
-                .build_int_nsw_mul(left, right, "")
+                .build_int_nsw_mul(lhs, rhs, "")
                 .unwrap_or_else(cintgen_abort)
                 .into(),
             TokenType::Slash if signatures.0 || signatures.1 => llvm_builder
-                .build_int_signed_div(left, right, "")
+                .build_int_signed_div(lhs, rhs, "")
                 .unwrap_or_else(cintgen_abort)
                 .into(),
             TokenType::Slash if !signatures.0 && !signatures.1 => llvm_builder
-                .build_int_unsigned_div(left, right, "")
+                .build_int_unsigned_div(lhs, rhs, "")
                 .unwrap_or_else(cintgen_abort)
                 .into(),
             TokenType::LShift => llvm_builder
-                .build_left_shift(left, right, "")
+                .build_left_shift(lhs, rhs, "")
                 .unwrap_or_else(cintgen_abort)
                 .into(),
             TokenType::RShift => llvm_builder
-                .build_right_shift(left, right, signatures.0 || signatures.1, "")
+                .build_right_shift(lhs, rhs, signatures.0 || signatures.1, "")
                 .unwrap_or_else(cintgen_abort)
                 .into(),
             TokenType::Xor => llvm_builder
-                .build_xor(left, right, "")
+                .build_xor(lhs, rhs, "")
                 .unwrap_or_else(cintgen_abort)
                 .into(),
             TokenType::Bor => llvm_builder
-                .build_or(left, right, "")
+                .build_or(lhs, rhs, "")
                 .unwrap_or_else(cintgen_abort)
                 .into(),
 
             op if op.is_logical_operator() => llvm_builder
                 .build_int_compare(
                     predicates::integer(operator, signatures.0, signatures.1),
-                    left,
-                    right,
+                    lhs,
+                    rhs,
                     "",
                 )
                 .unwrap_or_else(cintgen_abort)
@@ -94,7 +94,7 @@ fn int_operation<'ctx>(
 
             op if op.is_logical_gate() => {
                 if let TokenType::And = op {
-                    if let Ok(and) = llvm_builder.build_and(left, right, "") {
+                    if let Ok(and) = llvm_builder.build_and(lhs, rhs, "") {
                         return and.into();
                     }
 
@@ -102,7 +102,7 @@ fn int_operation<'ctx>(
                 }
 
                 if let TokenType::Or = op {
-                    if let Ok(or) = llvm_builder.build_or(left, right, "") {
+                    if let Ok(or) = llvm_builder.build_or(lhs, rhs, "") {
                         return or.into();
                     }
 
@@ -155,13 +155,13 @@ pub fn compile<'ctx>(
     {
         let operator: &TokenType = binary.1;
 
-        let left: BasicValueEnum = value::compile(context, binary.0, cast);
-        let right: BasicValueEnum = value::compile(context, binary.2, cast);
+        let lhs: BasicValueEnum = codegen::compile(context, binary.0, cast);
+        let rhs: BasicValueEnum = codegen::compile(context, binary.2, cast);
 
         return int_operation(
             context,
-            left,
-            right,
+            lhs,
+            rhs,
             (
                 binary.0.get_type_unwrapped().is_signed_integer_type(),
                 binary.2.get_type_unwrapped().is_signed_integer_type(),
@@ -186,58 +186,57 @@ fn const_int_operation<'ctx>(
     operator: &TokenType,
 ) -> BasicValueEnum<'ctx> {
     if lhs.is_int_value() && rhs.is_int_value() {
-        let left: IntValue = lhs.into_int_value();
-        let right: IntValue = rhs.into_int_value();
+        let lhs: IntValue = lhs.into_int_value();
+        let rhs: IntValue = rhs.into_int_value();
 
-        let (left, right) =
-            compiler::generation::cast::const_integer_together(left, right, signatures);
+        let (lhs, rhs) = compiler::generation::cast::const_integer_together(lhs, rhs, signatures);
 
         return match operator {
-            TokenType::Plus => left.const_nsw_add(right).into(),
-            TokenType::Minus => left.const_nsw_sub(right).into(),
-            TokenType::Star => left.const_nsw_mul(right).into(),
+            TokenType::Plus => lhs.const_nsw_add(rhs).into(),
+            TokenType::Minus => lhs.const_nsw_sub(rhs).into(),
+            TokenType::Star => lhs.const_nsw_mul(rhs).into(),
             TokenType::Slash => {
                 if signatures.0 || signatures.1 {
-                    if let Some(left_number) = left.get_sign_extended_constant() {
-                        if let Some(right_number) = right.get_sign_extended_constant() {
-                            return left
+                    if let Some(lhs_number) = lhs.get_sign_extended_constant() {
+                        if let Some(rhs_number) = rhs.get_sign_extended_constant() {
+                            return lhs
                                 .get_type()
-                                .const_int((left_number / right_number) as u64, true)
+                                .const_int((lhs_number / rhs_number) as u64, true)
                                 .into();
                         }
                     }
                 }
 
-                if let Some(left_number) = left.get_zero_extended_constant() {
-                    if let Some(right_number) = right.get_zero_extended_constant() {
-                        return left
+                if let Some(lhs_number) = lhs.get_zero_extended_constant() {
+                    if let Some(rhs_number) = rhs.get_zero_extended_constant() {
+                        return lhs
                             .get_type()
-                            .const_int(left_number / right_number, false)
+                            .const_int(lhs_number / rhs_number, false)
                             .into();
                     }
                 }
 
-                left.get_type().const_zero().into()
+                lhs.get_type().const_zero().into()
             }
-            TokenType::LShift => left.const_shl(right).into(),
-            TokenType::RShift => left.const_rshr(right).into(),
-            TokenType::Xor => left.const_xor(right).into(),
-            TokenType::Bor => left.const_or(right).into(),
+            TokenType::LShift => lhs.const_shl(rhs).into(),
+            TokenType::RShift => lhs.const_rshr(rhs).into(),
+            TokenType::Xor => lhs.const_xor(rhs).into(),
+            TokenType::Bor => lhs.const_or(rhs).into(),
 
-            op if op.is_logical_operator() => left
+            op if op.is_logical_operator() => lhs
                 .const_int_compare(
                     predicates::integer(operator, signatures.0, signatures.1),
-                    right,
+                    rhs,
                 )
                 .into(),
 
             op if op.is_logical_gate() => {
                 if let TokenType::And = op {
-                    return left.const_and(right).into();
+                    return lhs.const_and(rhs).into();
                 }
 
                 if let TokenType::Or = op {
-                    return left.const_or(right).into();
+                    return lhs.const_or(rhs).into();
                 }
 
                 self::codegen_abort(

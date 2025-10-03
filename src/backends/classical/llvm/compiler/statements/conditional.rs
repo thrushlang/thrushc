@@ -1,6 +1,6 @@
 #![allow(clippy::if_same_then_else)]
 
-use std::fmt::Display;
+use std::path::PathBuf;
 
 use inkwell::{
     basic_block::BasicBlock,
@@ -10,8 +10,10 @@ use inkwell::{
 };
 
 use crate::{
-    backends::classical::llvm::compiler::{block, codegen::LLVMCodegen, value},
-    core::console::logging::{self, LoggingType},
+    backends::classical::llvm::compiler::{
+        abort, block,
+        codegen::{self, LLVMCodegen},
+    },
     frontends::classical::{types::ast::Ast, typesystem::types::Type},
 };
 
@@ -20,10 +22,6 @@ pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, stmt: &'ctx Ast<'ctx>)
     let llvm_builder: &Builder = codegen.get_mut_context().get_llvm_builder();
 
     let llvm_function: FunctionValue = codegen.get_mut_context().get_current_fn();
-
-    let abort = |_| {
-        self::codegen_abort("Cannot compile if conditional statement.");
-    };
 
     if let Ast::If {
         condition,
@@ -45,12 +43,20 @@ pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, stmt: &'ctx Ast<'ctx>)
         };
 
         let cond_value: IntValue =
-            value::compile(codegen.get_mut_context(), condition, Some(&Type::Bool))
+            codegen::compile(codegen.get_mut_context(), condition, Some(&Type::Bool))
                 .into_int_value();
 
         llvm_builder
             .build_conditional_branch(cond_value, then, next)
-            .unwrap_or_else(abort);
+            .unwrap_or_else(|_| {
+                abort::abort_codegen(
+                    codegen.get_mut_context(),
+                    "Failed to if comparison!",
+                    condition.get_span(),
+                    PathBuf::from(file!()),
+                    line!(),
+                )
+            });
 
         llvm_builder.position_at_end(then);
 
@@ -64,7 +70,15 @@ pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, stmt: &'ctx Ast<'ctx>)
         {
             llvm_builder
                 .build_unconditional_branch(merge)
-                .unwrap_or_else(abort);
+                .unwrap_or_else(|_| {
+                    abort::abort_codegen(
+                        codegen.get_mut_context(),
+                        "Failed to if terminator!",
+                        block.get_span(),
+                        PathBuf::from(file!()),
+                        line!(),
+                    )
+                });
         }
 
         if !elseif.is_empty() {
@@ -91,10 +105,6 @@ fn compile_elseif<'ctx>(
 
     let mut current: BasicBlock = first_block;
 
-    let abort = |_| {
-        self::codegen_abort("Cannot compile elif conditional statement.");
-    };
-
     for (idx, elseif) in nested_elseif.iter().enumerate() {
         if let Ast::Elif {
             condition, block, ..
@@ -113,12 +123,20 @@ fn compile_elseif<'ctx>(
             };
 
             let cond_value: IntValue =
-                value::compile(codegen.get_mut_context(), condition, Some(&Type::Bool))
+                codegen::compile(codegen.get_mut_context(), condition, Some(&Type::Bool))
                     .into_int_value();
 
             llvm_builder
                 .build_conditional_branch(cond_value, then, next)
-                .unwrap_or_else(abort);
+                .unwrap_or_else(|_| {
+                    abort::abort_codegen(
+                        codegen.get_mut_context(),
+                        "Failed to elif comparison!",
+                        condition.get_span(),
+                        PathBuf::from(file!()),
+                        line!(),
+                    )
+                });
 
             llvm_builder.position_at_end(then);
 
@@ -132,7 +150,15 @@ fn compile_elseif<'ctx>(
             {
                 llvm_builder
                     .build_unconditional_branch(merge)
-                    .unwrap_or_else(abort);
+                    .unwrap_or_else(|_| {
+                        abort::abort_codegen(
+                            codegen.get_mut_context(),
+                            "Failed to elif terminator!",
+                            block.get_span(),
+                            PathBuf::from(file!()),
+                            line!(),
+                        )
+                    });
             }
 
             current = next;
@@ -164,9 +190,4 @@ pub fn compile_else<'ctx>(
             let _ = llvm_builder.build_unconditional_branch(merge);
         }
     }
-}
-
-#[inline]
-fn codegen_abort<T: Display>(message: T) -> ! {
-    logging::print_backend_bug(LoggingType::BackendBug, &format!("{}", message));
 }

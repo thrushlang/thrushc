@@ -1,9 +1,9 @@
 use crate::backends::classical::llvm::compiler;
 use crate::backends::classical::llvm::compiler::abort;
+use crate::backends::classical::llvm::compiler::codegen;
 use crate::backends::classical::llvm::compiler::constgen;
 use crate::backends::classical::llvm::compiler::context::LLVMCodeGenContext;
 use crate::backends::classical::llvm::compiler::predicates;
-use crate::backends::classical::llvm::compiler::value;
 
 use crate::core::console::logging;
 use crate::core::console::logging::LoggingType;
@@ -25,32 +25,32 @@ use std::path::PathBuf;
 
 pub fn bool_operation<'ctx>(
     context: &LLVMCodeGenContext<'_, 'ctx>,
-    left: BasicValueEnum<'ctx>,
-    right: BasicValueEnum<'ctx>,
+    lhs: BasicValueEnum<'ctx>,
+    rhs: BasicValueEnum<'ctx>,
     operator: &TokenType,
     signatures: (bool, bool),
 ) -> BasicValueEnum<'ctx> {
     let llvm_builder: &Builder = context.get_llvm_builder();
 
-    let left_signed: bool = signatures.0;
-    let right_signed: bool = signatures.1;
+    let lhs_signed: bool = signatures.0;
+    let rhs_signed: bool = signatures.1;
 
     let cintgen_abort = |_| {
         self::codegen_abort("Cannot perform boolean binary operation.");
     };
 
-    if left.is_int_value() && right.is_int_value() {
-        let left: IntValue = left.into_int_value();
-        let right: IntValue = right.into_int_value();
+    if lhs.is_int_value() && rhs.is_int_value() {
+        let lhs: IntValue = lhs.into_int_value();
+        let rhs: IntValue = rhs.into_int_value();
 
-        let (left, right) = compiler::generation::cast::integer_together(context, left, right);
+        let (lhs, rhs) = compiler::generation::cast::integer_together(context, lhs, rhs);
 
         return match operator {
             op if op.is_logical_operator() => llvm_builder
                 .build_int_compare(
-                    predicates::integer(operator, left_signed, right_signed),
-                    left,
-                    right,
+                    predicates::integer(operator, lhs_signed, rhs_signed),
+                    lhs,
+                    rhs,
                     "",
                 )
                 .unwrap_or_else(cintgen_abort)
@@ -59,14 +59,14 @@ pub fn bool_operation<'ctx>(
             op if op.is_logical_gate() => {
                 if let TokenType::And = op {
                     return llvm_builder
-                        .build_and(left, right, "")
+                        .build_and(lhs, rhs, "")
                         .unwrap_or_else(cintgen_abort)
                         .into();
                 }
 
                 if let TokenType::Or = op {
                     return llvm_builder
-                        .build_or(left, right, "")
+                        .build_or(lhs, rhs, "")
                         .unwrap_or_else(cintgen_abort)
                         .into();
                 }
@@ -84,15 +84,15 @@ pub fn bool_operation<'ctx>(
         };
     }
 
-    if left.is_float_value() && right.is_float_value() {
-        let left: FloatValue = left.into_float_value();
-        let right: FloatValue = right.into_float_value();
+    if lhs.is_float_value() && rhs.is_float_value() {
+        let lhs: FloatValue = lhs.into_float_value();
+        let rhs: FloatValue = rhs.into_float_value();
 
-        let (left, right) = compiler::generation::cast::float_together(context, left, right);
+        let (lhs, rhs) = compiler::generation::cast::float_together(context, lhs, rhs);
 
         return match operator {
             op if op.is_logical_operator() => llvm_builder
-                .build_float_compare(predicates::float(operator), left, right, "")
+                .build_float_compare(predicates::float(operator), lhs, rhs, "")
                 .unwrap_or_else(cintgen_abort)
                 .into(),
 
@@ -104,9 +104,9 @@ pub fn bool_operation<'ctx>(
         };
     }
 
-    if left.is_pointer_value() && right.is_pointer_value() {
-        let lhs: PointerValue = left.into_pointer_value();
-        let rhs: PointerValue = right.into_pointer_value();
+    if lhs.is_pointer_value() && rhs.is_pointer_value() {
+        let lhs: PointerValue = lhs.into_pointer_value();
+        let rhs: PointerValue = rhs.into_pointer_value();
 
         return match operator {
             op if op.is_logical_operator() => llvm_builder
@@ -149,13 +149,13 @@ pub fn compile<'ctx>(
     {
         let operator: &TokenType = binary.1;
 
-        let left: BasicValueEnum = value::compile(context, binary.0, cast);
-        let right: BasicValueEnum = value::compile(context, binary.2, cast);
+        let lhs: BasicValueEnum = codegen::compile(context, binary.0, cast);
+        let rhs: BasicValueEnum = codegen::compile(context, binary.2, cast);
 
         return self::bool_operation(
             context,
-            left,
-            right,
+            lhs,
+            rhs,
             operator,
             (
                 binary.0.get_type_unwrapped().is_signed_integer_type(),
@@ -182,31 +182,27 @@ pub fn const_bool_operation<'ctx>(
 ) -> BasicValueEnum<'ctx> {
     let llvm_context: &Context = context.get_llvm_context();
 
-    let left_signed: bool = signatures.0;
-    let right_signed: bool = signatures.1;
+    let lhs_signed: bool = signatures.0;
+    let rhs_signed: bool = signatures.1;
 
     if lhs.is_int_value() && rhs.is_int_value() {
-        let left: IntValue = lhs.into_int_value();
-        let right: IntValue = rhs.into_int_value();
+        let lhs: IntValue = lhs.into_int_value();
+        let rhs: IntValue = rhs.into_int_value();
 
-        let (left, right) =
-            compiler::generation::cast::const_integer_together(left, right, signatures);
+        let (lhs, rhs) = compiler::generation::cast::const_integer_together(lhs, rhs, signatures);
 
         return match operator {
-            op if op.is_logical_operator() => left
-                .const_int_compare(
-                    predicates::integer(operator, left_signed, right_signed),
-                    right,
-                )
+            op if op.is_logical_operator() => lhs
+                .const_int_compare(predicates::integer(operator, lhs_signed, rhs_signed), rhs)
                 .into(),
 
             op if op.is_logical_gate() => {
                 if let TokenType::And = op {
-                    return left.const_and(right).into();
+                    return lhs.const_and(rhs).into();
                 }
 
                 if let TokenType::Or = op {
-                    return left.const_or(right).into();
+                    return lhs.const_or(rhs).into();
                 }
 
                 self::codegen_abort(
@@ -222,15 +218,15 @@ pub fn const_bool_operation<'ctx>(
     }
 
     if lhs.is_float_value() && rhs.is_float_value() {
-        let left: FloatValue = lhs.into_float_value();
-        let right: FloatValue = rhs.into_float_value();
+        let lhs: FloatValue = lhs.into_float_value();
+        let rhs: FloatValue = rhs.into_float_value();
 
-        let (left, right) = compiler::generation::cast::const_float_together(left, right);
+        let (lhs, rhs) = compiler::generation::cast::const_float_together(lhs, rhs);
 
         return match operator {
-            op if op.is_logical_operator() => left
-                .const_compare(predicates::float(operator), right)
-                .into(),
+            op if op.is_logical_operator() => {
+                lhs.const_compare(predicates::float(operator), rhs).into()
+            }
 
             _ => {
                 self::codegen_abort(

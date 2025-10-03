@@ -19,47 +19,18 @@ pub fn validate<'type_checker>(
             span,
             ..
         } => {
-            if let Some(any_reference) = &source.0 {
-                let reference: &Ast = &any_reference.1;
+            let source_type: &Type = source.get_any_type()?;
 
-                if !reference.is_allocated() {
-                    typechecker.add_error(ThrushCompilerIssue::Error(
-                        "Type error".into(),
-                        "Expected memory reference, such as ptr[T], ptr, addr or direct reference to variable.".into(),
-                        None,
-                        *span,
-                    ));
-                }
-
-                let reference_type: &Type = reference.get_value_type()?;
-
-                if !reference_type.is_ptr_type()
-                    && !reference_type.is_array_type()
-                    && !reference_type.is_fixed_array_type()
-                {
-                    typechecker.add_error(ThrushCompilerIssue::Error(
-                        "Type error".into(),
-                        "Expected raw typed pointer ptr[T], raw pointer ptr, array[T], or fixed array[T; N].".into(),
-                        None,
-                        *span,
-                    ));
-                }
-            }
-
-            if let Some(expr) = &source.1 {
-                let expr_type: &Type = expr.get_any_type()?;
-
-                if !expr_type.is_ptr_type()
-                    && !expr_type.is_array_type()
-                    && !expr_type.is_fixed_array_type()
-                {
-                    typechecker.add_error(ThrushCompilerIssue::Error(
-                        "Type error".into(),
-                        "Expected raw typed pointer ptr[T], raw pointer ptr, array[T], or fixed array[T; N].".into(),
-                        None,
-                        *span,
-                    ));
-                }
+            if !source_type.is_ptr_type()
+                && !source_type.is_array_type()
+                && !source_type.is_fixed_array_type()
+            {
+                typechecker.add_error(ThrushCompilerIssue::Error(
+                    "Type error".into(),
+                    "Expected raw typed pointer ptr[T], raw pointer ptr, array[T], or fixed array[T; N].".into(),
+                    None,
+                    *span,
+                ));
             }
 
             indexes.iter().try_for_each(|indexe| {

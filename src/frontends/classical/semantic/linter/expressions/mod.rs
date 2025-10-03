@@ -54,22 +54,11 @@ pub fn analyze<'linter>(linter: &mut Linter<'linter>, expr: &'linter Ast) {
         Ast::Index {
             source, indexes, ..
         } => {
+            linter.analyze_expr(source);
+
             indexes.iter().for_each(|indexe| {
                 linter.analyze_expr(indexe);
             });
-
-            if let Some(any_reference) = &source.0 {
-                let name: &str = any_reference.0;
-                let reference: &Ast = &any_reference.1;
-
-                linter.analyze_expr(reference);
-
-                used::mark_as_used(linter, name);
-            }
-
-            if let Some(expr) = &source.1 {
-                linter.analyze_expr(expr);
-            }
         }
 
         Ast::Constructor {

@@ -174,14 +174,7 @@ impl Ast<'_> {
         }
 
         if let Ast::Property { source, .. } = self {
-            if let Some(any_reference) = &source.0 {
-                let reference: &Ast = &any_reference.1;
-                return reference.is_mutable();
-            }
-
-            if let Some(expr) = &source.1 {
-                return expr.is_mutable();
-            }
+            return source.is_reference();
         }
 
         false

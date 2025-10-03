@@ -16,7 +16,6 @@ use inkwell::values::{BasicMetadataValueEnum, BasicValueEnum};
 
 pub fn compile<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
-
     name: &str,
     args: &'ctx [Ast],
     kind: &Type,
@@ -34,8 +33,7 @@ pub fn compile<'ctx>(
         .enumerate()
         .map(|(i, expr)| {
             let cast: Option<&Type> = function_arg_types.get(i);
-
-            codegen::compile_expr(context, expr, cast).into()
+            codegen::compile(context, expr, cast).into()
         })
         .collect();
 

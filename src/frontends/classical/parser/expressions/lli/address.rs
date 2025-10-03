@@ -2,7 +2,7 @@ use crate::{
     core::errors::standard::ThrushCompilerIssue,
     frontends::classical::{
         lexer::{span::Span, token::Token, tokentype::TokenType},
-        parser::{ParserContext, expr, expressions::reference},
+        parser::{ParserContext, expr},
         types::{ast::Ast, parser::stmts::traits::TokenExtensions},
         typesystem::types::Type,
     },
@@ -14,31 +14,13 @@ pub fn build_address<'parser>(
     let address_tk: &Token = ctx.advance()?;
     let address_span: Span = address_tk.get_span();
 
-    if ctx.match_token(TokenType::Identifier)? {
-        let identifier_tk: &Token = ctx.previous();
-
-        let name: &str = identifier_tk.get_lexeme();
-        let span: Span = identifier_tk.get_span();
-
-        let reference: Ast = reference::build_reference(ctx, name, span)?;
-
-        let indexes: Vec<Ast> = self::build_address_indexes(ctx, span)?;
-
-        return Ok(Ast::Address {
-            source: (Some((name, reference.into())), None, span),
-            indexes,
-            kind: Type::Addr,
-            span: address_span,
-        });
-    }
-
-    let expr: Ast = expr::build_expr(ctx)?;
-    let expr_span: Span = expr.get_span();
+    let source: Ast = expr::build_expr(ctx)?;
+    let expr_span: Span = source.get_span();
 
     let indexes: Vec<Ast> = self::build_address_indexes(ctx, expr_span)?;
 
     Ok(Ast::Address {
-        source: (None, Some(expr.into()), expr_span),
+        source: source.into(),
         indexes,
         kind: Type::Addr,
         span: address_span,

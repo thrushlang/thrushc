@@ -1,7 +1,7 @@
 use std::{fmt::Display, path::PathBuf};
 
 use crate::{
-    backends::classical::llvm::compiler::{self, abort, constgen, predicates},
+    backends::classical::llvm::compiler::{self, abort, codegen, constgen, predicates},
     core::console::logging::{self, LoggingType},
     frontends::classical::{
         lexer::{span::Span, tokentype::TokenType},
@@ -10,7 +10,7 @@ use crate::{
     },
 };
 
-use super::super::{context::LLVMCodeGenContext, value};
+use super::super::context::LLVMCodeGenContext;
 
 use inkwell::{
     builder::Builder,
@@ -19,13 +19,13 @@ use inkwell::{
 
 pub fn float_operation<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
-    left: FloatValue<'ctx>,
-    right: FloatValue<'ctx>,
+    lhs: FloatValue<'ctx>,
+    rhs: FloatValue<'ctx>,
     operator: &TokenType,
 ) -> BasicValueEnum<'ctx> {
     let llvm_builder: &Builder = context.get_llvm_builder();
 
-    let (left, right) = compiler::generation::cast::float_together(context, left, right);
+    let (lhs, rhs) = compiler::generation::cast::float_together(context, lhs, rhs);
 
     let cfloatgen_abort = |_| {
         self::codegen_abort("Cannot perform float binary operation.");
@@ -37,24 +37,24 @@ pub fn float_operation<'ctx>(
 
     match operator {
         TokenType::Plus => llvm_builder
-            .build_float_add(left, right, "")
+            .build_float_add(lhs, rhs, "")
             .unwrap_or_else(cfloatgen_abort)
             .into(),
         TokenType::Minus => llvm_builder
-            .build_float_sub(left, right, "")
+            .build_float_sub(lhs, rhs, "")
             .unwrap_or_else(cfloatgen_abort)
             .into(),
         TokenType::Star => llvm_builder
-            .build_float_mul(left, right, "")
+            .build_float_mul(lhs, rhs, "")
             .unwrap_or_else(cfloatgen_abort)
             .into(),
         TokenType::Slash => llvm_builder
-            .build_float_div(left, right, "")
+            .build_float_div(lhs, rhs, "")
             .unwrap_or_else(cfloatgen_abort)
             .into(),
 
         op if op.is_logical_operator() => llvm_builder
-            .build_float_compare(predicates::float(operator), left, right, "")
+            .build_float_compare(predicates::float(operator), lhs, rhs, "")
             .unwrap_or_else(cintgen_abort)
             .into(),
 
@@ -88,13 +88,13 @@ pub fn compile<'ctx>(
     {
         let operator: &TokenType = binary.1;
 
-        let left: BasicValueEnum = value::compile(context, binary.0, cast);
-        let right: BasicValueEnum = value::compile(context, binary.2, cast);
+        let lhs: BasicValueEnum = codegen::compile(context, binary.0, cast);
+        let rhs: BasicValueEnum = codegen::compile(context, binary.2, cast);
 
         return float_operation(
             context,
-            left.into_float_value(),
-            right.into_float_value(),
+            lhs.into_float_value(),
+            rhs.into_float_value(),
             operator,
         );
     }
@@ -110,80 +110,68 @@ pub fn compile<'ctx>(
 
 #[inline]
 pub fn const_float_operation<'ctx>(
-    left: FloatValue<'ctx>,
-    right: FloatValue<'ctx>,
+    lhs: FloatValue<'ctx>,
+    rhs: FloatValue<'ctx>,
     operator: &TokenType,
 ) -> BasicValueEnum<'ctx> {
-    let (left, right) = compiler::generation::cast::const_float_together(left, right);
+    let (lhs, rhs) = compiler::generation::cast::const_float_together(lhs, rhs);
 
     match operator {
         TokenType::Plus => {
-            if let Some(left_constant) = left.get_constant() {
-                if let Some(right_constant) = right.get_constant() {
-                    let left_number: f64 = left_constant.0;
-                    let right_number: f64 = right_constant.0;
+            if let Some(lhs_constant) = lhs.get_constant() {
+                if let Some(rhs_constant) = rhs.get_constant() {
+                    let lhs_number: f64 = lhs_constant.0;
+                    let rhs_number: f64 = rhs_constant.0;
 
-                    return left
-                        .get_type()
-                        .const_float(left_number + right_number)
-                        .into();
+                    return lhs.get_type().const_float(lhs_number + rhs_number).into();
                 }
             }
 
-            left.get_type().const_zero().into()
+            lhs.get_type().const_zero().into()
         }
 
         TokenType::Minus => {
-            if let Some(left_constant) = left.get_constant() {
-                if let Some(right_constant) = right.get_constant() {
-                    let left_number: f64 = left_constant.0;
-                    let right_number: f64 = right_constant.0;
+            if let Some(lhs_constant) = lhs.get_constant() {
+                if let Some(rhs_constant) = rhs.get_constant() {
+                    let lhs_number: f64 = lhs_constant.0;
+                    let rhs_number: f64 = rhs_constant.0;
 
-                    return left
-                        .get_type()
-                        .const_float(left_number - right_number)
-                        .into();
+                    return lhs.get_type().const_float(lhs_number - rhs_number).into();
                 }
             }
 
-            left.get_type().const_zero().into()
+            lhs.get_type().const_zero().into()
         }
 
         TokenType::Star => {
-            if let Some(left_constant) = left.get_constant() {
-                if let Some(right_constant) = right.get_constant() {
-                    let left_number: f64 = left_constant.0;
-                    let right_number: f64 = right_constant.0;
+            if let Some(lhs_constant) = lhs.get_constant() {
+                if let Some(rhs_constant) = rhs.get_constant() {
+                    let lhs_number: f64 = lhs_constant.0;
+                    let rhs_number: f64 = rhs_constant.0;
 
-                    return left
-                        .get_type()
-                        .const_float(left_number * right_number)
-                        .into();
+                    return lhs.get_type().const_float(lhs_number * rhs_number).into();
                 }
             }
 
-            left.get_type().const_zero().into()
+            lhs.get_type().const_zero().into()
         }
 
         TokenType::Slash => {
-            if let Some(left_constant) = left.get_constant() {
-                if let Some(right_constant) = right.get_constant() {
-                    let left_number: f64 = left_constant.0;
-                    let right_number: f64 = right_constant.0;
+            if let Some(lhs_constant) = lhs.get_constant() {
+                if let Some(rhs_constant) = rhs.get_constant() {
+                    let lhs_number: f64 = lhs_constant.0;
+                    let rhs_number: f64 = rhs_constant.0;
 
-                    return left
-                        .get_type()
-                        .const_float(left_number / right_number)
-                        .into();
+                    return lhs.get_type().const_float(lhs_number / rhs_number).into();
                 }
             }
 
-            left.get_type().const_zero().into()
+            lhs.get_type().const_zero().into()
         }
 
-        op if op.is_logical_operator() => left
-            .const_compare(predicates::float(operator), right)
-            .into(),
+        op if op.is_logical_operator() => {
+            lhs.const_compare(predicates::float(operator), rhs).into()
+        }
 
         _ => {
             self::codegen_abort(

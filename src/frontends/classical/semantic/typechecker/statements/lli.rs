@@ -46,127 +46,68 @@ pub fn validate<'type_checker>(
         }
 
         Ast::Load { source, .. } => {
-            if let Some(left) = &source.0 {
-                let reference: &Ast = &left.1;
+            let source_type: &Type = source.get_value_type()?;
+            let span: Span = source.get_span();
 
-                let reference_type: &Type = reference.get_value_type()?;
-                let span: Span = reference.get_span();
-
-                if !reference_type.is_ptr_type() && !reference_type.is_address_type() {
-                    typechecker.add_error(ThrushCompilerIssue::Error(
-                        "Type error".into(),
-                        "Expected 'ptr<T>', 'ptr', or 'addr' type.".into(),
-                        None,
-                        span,
-                    ));
-                }
-
-                typechecker.analyze_stmt(reference)?;
+            if !source_type.is_ptr_type() && !source_type.is_address_type() {
+                typechecker.add_error(ThrushCompilerIssue::Error(
+                    "Type error".into(),
+                    "Expected 'ptr<T>', 'ptr' or 'addr' type.".into(),
+                    None,
+                    span,
+                ));
             }
 
-            if let Some(expr) = &source.1 {
-                let expr_type: &Type = expr.get_value_type()?;
-                let span: Span = expr.get_span();
-
-                if !expr_type.is_ptr_type() && !expr_type.is_address_type() {
-                    typechecker.add_error(ThrushCompilerIssue::Error(
-                        "Type error".into(),
-                        "Expected 'ptr<T>', 'ptr' or 'addr' type.".into(),
-                        None,
-                        span,
-                    ));
-                }
-
-                typechecker.analyze_stmt(expr)?;
-            }
+            typechecker.analyze_stmt(source)?;
 
             Ok(())
         }
 
         Ast::Address {
-            source,
-            indexes,
-            span,
-            ..
+            source, indexes, ..
         } => {
-            if let Some(reference_any) = &source.0 {
-                let reference: &Ast = &reference_any.1;
+            let source_type: &Type = source.get_value_type()?;
+            let span: Span = source.get_span();
 
-                let reference_type: &Type = reference.get_value_type()?;
-                let span: Span = reference.get_span();
-
-                if !reference_type.is_ptr_type() && !reference_type.is_address_type() {
-                    typechecker.add_error(ThrushCompilerIssue::Error(
-                        "Type error".into(),
-                        "Expected 'ptr<T>', 'ptr', or 'addr' type.".into(),
-                        None,
-                        span,
-                    ));
-                }
-
-                if reference_type.is_ptr_type() && !reference_type.is_typed_ptr_type() {
-                    typechecker.add_error(ThrushCompilerIssue::Error(
-                        "Type error".into(),
-                        "Expected raw typed pointer ptr<T>.".into(),
-                        None,
-                        span,
-                    ));
-                } else if reference_type.is_ptr_type()
-                    && reference_type.is_typed_ptr_type()
-                    && !reference_type.is_ptr_struct_type()
-                    && !reference_type.is_ptr_fixed_array_type()
-                {
-                    typechecker.add_error(ThrushCompilerIssue::Error(
-                        "Type error".into(),
-                        "Expected raw typed pointer type with deep type 'struct T', or 'array[T; N]'."
-                            .into(),
-                        None,
-                        span,
-                    ));
-                }
+            if !source_type.is_ptr_type() && !source_type.is_address_type() {
+                typechecker.add_error(ThrushCompilerIssue::Error(
+                    "Type error".into(),
+                    "Expected 'ptr<T>', 'ptr', or 'addr' type.".into(),
+                    None,
+                    span,
+                ));
             }
 
-            if let Some(expr) = &source.1 {
-                let expr_type: &Type = expr.get_value_type()?;
-                let span: Span = expr.get_span();
-
-                if !expr_type.is_ptr_type() && !expr_type.is_address_type() {
-                    typechecker.add_error(ThrushCompilerIssue::Error(
-                        "Type error".into(),
-                        "Expected 'ptr<T>', 'ptr', or 'addr' type.".into(),
-                        None,
-                        span,
-                    ));
-                }
-
-                if expr_type.is_ptr_type() && !expr_type.is_typed_ptr_type() {
-                    typechecker.add_error(ThrushCompilerIssue::Error(
-                        "Type error".into(),
-                        "Expected raw typed pointer ptr<T>.".into(),
-                        None,
-                        span,
-                    ));
-                } else if expr_type.is_ptr_type()
-                    && expr_type.is_typed_ptr_type()
-                    && !expr_type.is_ptr_struct_type()
-                    && !expr_type.is_ptr_fixed_array_type()
-                {
-                    typechecker.add_error(ThrushCompilerIssue::Error(
-                        "Type error".into(),
-                        "Expected raw typed pointer type with deep type 'struct T', or 'array[T; N]'.".into(),
-                        None,
-                        span,
-                    ));
-                }
+            if source_type.is_ptr_type() && !source_type.is_typed_ptr_type() {
+                typechecker.add_error(ThrushCompilerIssue::Error(
+                    "Type error".into(),
+                    "Expected raw typed pointer ptr<T>.".into(),
+                    None,
+                    span,
+                ));
+            } else if source_type.is_ptr_type()
+                && source_type.is_typed_ptr_type()
+                && !source_type.is_ptr_struct_type()
+                && !source_type.is_ptr_fixed_array_type()
+            {
+                typechecker.add_error(ThrushCompilerIssue::Error(
+                    "Type error".into(),
+                    "Expected raw typed pointer type with deep type 'struct T', or 'array[T; N]'."
+                        .into(),
+                    None,
+                    span,
+                ));
             }
 
             indexes.iter().try_for_each(|indexe| {
+                let span: Span = indexe.get_span();
+
                 if !indexe.is_unsigned_integer_for_index()? {
                     typechecker.add_error(ThrushCompilerIssue::Error(
                         "Type error".into(),
                         "Expected any unsigned integer value.".into(),
                         None,
-                        *span,
+                        span,
                     ));
                 }
 
@@ -184,38 +125,19 @@ pub fn validate<'type_checker>(
             write_type,
             ..
         } => {
-            if let Some(any_reference) = &source.0 {
-                let reference: &Ast = &any_reference.1;
-                let reference_type: &Type = reference.get_value_type()?;
-                let span: Span = reference.get_span();
+            let source_type: &Type = source.get_value_type()?;
+            let span: Span = source.get_span();
 
-                if !reference_type.is_ptr_type() && !reference_type.is_address_type() {
-                    typechecker.add_error(ThrushCompilerIssue::Error(
-                        "Type error".into(),
-                        "Expected 'ptr<T>', 'ptr', 'addr' type.".into(),
-                        None,
-                        span,
-                    ));
-                }
-
-                typechecker.analyze_stmt(reference)?;
+            if !source_type.is_ptr_type() && !source_type.is_address_type() {
+                typechecker.add_error(ThrushCompilerIssue::Error(
+                    "Type error".into(),
+                    "Expected 'ptr<T>', 'ptr', 'addr' type.".into(),
+                    None,
+                    span,
+                ));
             }
 
-            if let Some(expr) = &source.1 {
-                let expr_type: &Type = expr.get_value_type()?;
-                let span: Span = expr.get_span();
-
-                if !expr_type.is_ptr_type() && !expr_type.is_address_type() {
-                    typechecker.add_error(ThrushCompilerIssue::Error(
-                        "Type error".into(),
-                        "Expected 'ptr<T>', 'ptr', 'addr' type.".into(),
-                        None,
-                        span,
-                    ));
-                }
-
-                typechecker.analyze_stmt(expr)?;
-            }
+            typechecker.analyze_stmt(source)?;
 
             let value_type: &Type = write_value.get_value_type()?;
             let span: Span = write_value.get_span();

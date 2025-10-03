@@ -1,4 +1,4 @@
-use crate::backends::classical::llvm::compiler::{ptr, typegen, value};
+use crate::backends::classical::llvm::compiler::{codegen, ptr, typegen};
 use crate::{
     backends::classical::llvm::compiler::context::LLVMCodeGenContext,
     frontends::classical::types::ast::Ast,
@@ -13,7 +13,6 @@ use crate::core::console::logging::LoggingType;
 use std::{cmp::Ordering, fmt::Display};
 
 use inkwell::types::{BasicTypeEnum, PointerType};
-use inkwell::values::PointerValue;
 use inkwell::{
     builder::Builder,
     context::Context,
@@ -284,29 +283,22 @@ pub fn try_cast<'ctx>(
 #[inline]
 pub fn try_cast_const<'ctx>(
     context: &LLVMCodeGenContext<'_, 'ctx>,
-
-    lhs: BasicValueEnum<'ctx>,
-    lhs_type: &Type,
-    rhs: &Type,
+    from: BasicValueEnum<'ctx>,
+    from_type: &Type,
+    target_type: &Type,
 ) -> BasicValueEnum<'ctx> {
-    let llvm_context: &Context = context.get_llvm_context();
-
-    match (lhs, rhs) {
+    match (from, target_type) {
         (lhs, rhs) if rhs.is_numeric() => {
-            if lhs_type.llvm_is_same_bit_size(context, rhs) {
+            if from_type.llvm_is_same_bit_size(context, rhs) {
                 self::const_numeric_bitcast_cast(context, lhs, rhs)
             } else {
-                let cast: BasicTypeEnum = typegen::generate(llvm_context, rhs);
-                self::numeric_cast(lhs, cast, lhs_type.is_signed_integer_type())
+                self::numeric_cast(context, lhs, rhs, from_type.is_signed_integer_type())
             }
         }
 
-        (lhs, rhs) if rhs.is_ptr_type() => {
-            let cast: BasicTypeEnum = typegen::generate(llvm_context, rhs);
-            self::const_ptr_cast(lhs, cast)
-        }
+        (lhs, rhs) if rhs.is_ptr_type() => self::const_ptr_cast(context, lhs, rhs),
 
-        _ => lhs,
+        _ => from,
     }
 }
 
@@ -318,7 +310,6 @@ pub fn try_cast_const<'ctx>(
 
 pub fn compile<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
-
     lhs: &'ctx Ast,
     rhs: &Type,
 ) -> BasicValueEnum<'ctx> {
@@ -350,7 +341,7 @@ pub fn compile<'ctx>(
     }
 
     if rhs.is_numeric() {
-        let value: BasicValueEnum = value::compile(context, lhs, None);
+        let value: BasicValueEnum = codegen::compile(context, lhs, None);
         let target_type: BasicTypeEnum = typegen::generate(llvm_context, rhs);
 
         if lhs_type.llvm_is_same_bit_size(context, rhs) {
@@ -436,13 +427,19 @@ pub fn const_numeric_bitcast_cast<'ctx>(
 ########################################################################*/
 
 pub fn const_ptr_cast<'ctx>(
+    context: &LLVMCodeGenContext<'_, 'ctx>,
     value: BasicValueEnum<'ctx>,
-    cast: BasicTypeEnum<'ctx>,
+    target: &Type,
 ) -> BasicValueEnum<'ctx> {
     if value.is_pointer_value() {
-        let pointer: PointerValue = value.into_pointer_value();
+        let llvm_context: &Context = context.get_llvm_context();
 
-        return pointer.const_cast(cast.into_pointer_type()).into();
+        let cast: BasicTypeEnum = typegen::generate(llvm_context, target);
+
+        return value
+            .into_pointer_value()
+            .const_cast(cast.into_pointer_type())
+            .into();
     }
 
     self::codegen_abort("Cannot cast constant pointer value to non-basic type.");
@@ -455,10 +452,15 @@ pub fn const_ptr_cast<'ctx>(
 ########################################################################*/
 
 pub fn numeric_cast<'ctx>(
+    context: &LLVMCodeGenContext<'_, 'ctx>,
     value: BasicValueEnum<'ctx>,
-    cast: BasicTypeEnum<'ctx>,
+    target: &Type,
     is_signed: bool,
 ) -> BasicValueEnum<'ctx> {
+    let llvm_context: &Context = context.get_llvm_context();
+
+    let cast: BasicTypeEnum = typegen::generate(llvm_context, target);
+
     if value.is_int_value() && cast.is_int_type() {
         let integer: IntValue = value.into_int_value();
 

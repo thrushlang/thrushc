@@ -11,19 +11,7 @@ pub fn validate<'analyzer>(
 ) -> Result<(), ThrushCompilerIssue> {
     match node {
         Ast::Property { source, .. } => {
-            if let Some(any_reference) = &source.0 {
-                let reference: &Ast = &any_reference.1;
-
-                analyzer.analyze_stmt(reference)?;
-
-                return Ok(());
-            }
-
-            if let Some(expr) = &source.1 {
-                analyzer.analyze_stmt(expr)?;
-
-                return Ok(());
-            }
+            analyzer.analyze_stmt(source)?;
 
             Ok(())
         }

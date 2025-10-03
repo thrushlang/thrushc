@@ -1,12 +1,10 @@
-use std::path::PathBuf;
-
 use crate::{
-    core::errors::{position::CompilationPosition, standard::ThrushCompilerIssue},
+    core::errors::standard::ThrushCompilerIssue,
     frontends::classical::{
         lexer::{span::Span, token::Token, tokentype::TokenType},
         parser::ParserContext,
         types::{
-            ast::{Ast, metadata::property::PropertyMetadata, types::AstEitherExpression},
+            ast::{Ast, metadata::property::PropertyMetadata},
             parser::stmts::traits::TokenExtensions,
         },
         typesystem::{self, types::Type},
@@ -15,31 +13,10 @@ use crate::{
 
 pub fn build_property<'parser>(
     ctx: &mut ParserContext<'parser>,
-    source: AstEitherExpression<'parser>,
-    span: Span,
+    source: Ast<'parser>,
 ) -> Result<Ast<'parser>, ThrushCompilerIssue> {
-    let source_expr_extract: (&Type, &Ast) = match source {
-        (Some(ref any_reference), None, ..) => {
-            let reference: &Ast = &any_reference.1;
-            (reference.get_value_type()?, reference)
-        }
-        (None, Some(ref expr), ..) => (expr.get_value_type()?, expr),
-        _ => {
-            return Err(ThrushCompilerIssue::FrontEndBug(
-                String::from("Index not caught"),
-                String::from("Expected a expression or reference."),
-                span,
-                CompilationPosition::Parser,
-                PathBuf::from(file!()),
-                line!(),
-            ));
-        }
-    };
-
-    let source_type: &Type = source_expr_extract.0;
-    let source_expr: &Ast = source_expr_extract.1;
-
-    let metadata: PropertyMetadata = PropertyMetadata::new(source_expr.is_allocated());
+    let source_type: &Type = source.get_value_type()?;
+    let metadata: PropertyMetadata = PropertyMetadata::new(source.is_allocated());
 
     let mut property_names: Vec<&str> = Vec::with_capacity(10);
 
@@ -74,7 +51,7 @@ pub fn build_property<'parser>(
     let indexes: Vec<(Type, u32)> = decomposed.1;
 
     Ok(Ast::Property {
-        source,
+        source: source.into(),
         indexes,
         kind: property_type,
         metadata,

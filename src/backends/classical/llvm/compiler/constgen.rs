@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use inkwell::{context::Context, types::BasicTypeEnum, values::BasicValueEnum};
+use inkwell::{context::Context, values::BasicValueEnum};
 
 use crate::backends::classical::llvm::compiler;
 use crate::backends::classical::llvm::compiler::abort;
@@ -10,7 +10,6 @@ use crate::backends::classical::llvm::compiler::context::LLVMCodeGenContext;
 use crate::backends::classical::llvm::compiler::generation::expressions::unary;
 use crate::backends::classical::llvm::compiler::generation::float;
 use crate::backends::classical::llvm::compiler::generation::int;
-use crate::backends::classical::llvm::compiler::typegen;
 
 use crate::frontends::classical::types::ast::Ast;
 use crate::frontends::classical::typesystem::traits::TypeStructExtensions;
@@ -19,7 +18,7 @@ use crate::frontends::classical::typesystem::types::Type;
 pub fn compile<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     ast: &'ctx Ast,
-    cast: &Type,
+    cast_type: &Type,
 ) -> BasicValueEnum<'ctx> {
     match ast {
         // Handle integer literals
@@ -32,9 +31,7 @@ pub fn compile<'ctx>(
             let int: BasicValueEnum =
                 int::generate(context.get_llvm_context(), kind, *value, *signed).into();
 
-            let cast: BasicTypeEnum = typegen::generate(context.get_llvm_context(), cast);
-
-            compiler::generation::cast::numeric_cast(int, cast, *signed)
+            compiler::generation::cast::numeric_cast(context, int, cast_type, *signed)
         }
 
         // Character literal compilation
@@ -54,9 +51,7 @@ pub fn compile<'ctx>(
             let float: BasicValueEnum =
                 float::generate(context.get_llvm_context(), kind, *value, *signed).into();
 
-            let cast: BasicTypeEnum = typegen::generate(context.get_llvm_context(), cast);
-
-            compiler::generation::cast::numeric_cast(float, cast, *signed)
+            compiler::generation::cast::numeric_cast(context, float, cast_type, *signed)
         }
 
         // Boolean true/false cases
@@ -68,12 +63,12 @@ pub fn compile<'ctx>(
 
         // Fixed-size array
         Ast::FixedArray { items, .. } => {
-            compiler::generation::expressions::farray::compile_const(context, items, cast)
+            compiler::generation::expressions::farray::compile_const(context, items, cast_type)
         }
 
         // String literal compilation
         Ast::Str { bytes, .. } => {
-            compiler::generation::expressions::string::compile_str(context, bytes).into()
+            compiler::generation::expressions::string::compile_str_constant(context, bytes).into()
         }
 
         // Struct constructor handling
@@ -93,7 +88,7 @@ pub fn compile<'ctx>(
             llvm_context.const_struct(&fields, false).into()
         }
 
-        // Type casting operations
+        // Type cast_typeing operations
         Ast::As { from, cast, .. } => {
             let lhs_type: &Type = from.get_type_unwrapped();
             let lhs: BasicValueEnum = constgen::compile(context, from, lhs_type);
@@ -105,7 +100,7 @@ pub fn compile<'ctx>(
         Ast::Reference { name, .. } => context.get_table().get_symbol(name).get_value(),
 
         // Grouped expression compilation
-        Ast::Group { expression, .. } => self::compile(context, expression, cast),
+        Ast::Group { expression, .. } => self::compile(context, expression, cast_type),
 
         // Binary operation dispatch
         Ast::BinaryOp {
@@ -120,7 +115,7 @@ pub fn compile<'ctx>(
                 return binaryop::integer::compile_const(
                     context,
                     (left, operator, right, *span),
-                    cast,
+                    cast_type,
                 );
             }
 
@@ -128,7 +123,7 @@ pub fn compile<'ctx>(
                 return binaryop::boolean::compile_const(
                     context,
                     (left, operator, right, *span),
-                    cast,
+                    cast_type,
                 );
             }
 
@@ -136,7 +131,7 @@ pub fn compile<'ctx>(
                 return binaryop::float::compile_const(
                     context,
                     (left, operator, right, *span),
-                    cast,
+                    cast_type,
                 );
             }
 
@@ -155,7 +150,7 @@ pub fn compile<'ctx>(
             expression,
             kind,
             ..
-        } => unary::compile_const(context, (operator, kind, expression), cast),
+        } => unary::compile_const(context, (operator, kind, expression), cast_type),
 
         // Fallback for unsupported AST nodes
         what => abort::abort_codegen(

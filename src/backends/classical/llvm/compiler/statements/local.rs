@@ -23,7 +23,7 @@ pub fn compile<'ctx>(context: &mut LLVMCodeGenContext<'_, 'ctx>, local: Local<'c
 
         context.set_pointer_anchor(PointerAnchor::new(symbol.get_ptr(), false));
 
-        let value: BasicValueEnum = codegen::compile_expr(context, expr, Some(kind));
+        let value: BasicValueEnum = codegen::compile(context, expr, Some(kind));
 
         if let Some(anchor) = context.get_pointer_anchor() {
             if !anchor.is_triggered() {

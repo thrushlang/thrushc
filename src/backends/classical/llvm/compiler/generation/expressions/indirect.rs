@@ -38,7 +38,7 @@ pub fn compile<'ctx>(
                 .enumerate()
                 .map(|(i, expr)| {
                     let cast: Option<&Type> = parameters.get(i);
-                    codegen::compile_expr(context, expr, cast).into()
+                    codegen::compile(context, expr, cast).into()
                 })
                 .collect();
 

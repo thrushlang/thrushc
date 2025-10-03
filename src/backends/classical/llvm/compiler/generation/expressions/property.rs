@@ -1,8 +1,7 @@
-use crate::backends::classical::llvm::compiler::memory::SymbolAllocated;
-use crate::backends::classical::llvm::compiler::value;
-use crate::backends::classical::llvm::compiler::{self, context::LLVMCodeGenContext};
+use crate::backends::classical::llvm::compiler::context::LLVMCodeGenContext;
+use crate::backends::classical::llvm::compiler::{codegen, memory, typegen};
 
-use crate::frontends::classical::types::ast::types::AstEitherExpression;
+use crate::frontends::classical::types::ast::Ast;
 use crate::frontends::classical::typesystem::types::Type;
 
 use crate::core::console::logging;
@@ -10,41 +9,27 @@ use crate::core::console::logging::LoggingType;
 
 use std::fmt::Display;
 
+use inkwell::context::Context;
+use inkwell::types::BasicTypeEnum;
+use inkwell::values::PointerValue;
 use inkwell::{builder::Builder, values::BasicValueEnum};
 
 pub fn compile<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
-    source: &'ctx AstEitherExpression<'ctx>,
+    source: &'ctx Ast<'ctx>,
     indexes: &[(Type, u32)],
 ) -> BasicValueEnum<'ctx> {
-    match source {
-        (Some((name, _)), ..) => {
-            let symbol: SymbolAllocated = context.get_table().get_symbol(name);
+    let value: BasicValueEnum = codegen::compile(context, source, None);
 
-            if symbol.is_pointer() {
-                compiler::generation::pointer::property::compile(context, source, indexes)
-            } else {
-                self::compile_extract_value_property(context, symbol.load(context), indexes)
-            }
-        }
-        (None, Some(expr), ..) => {
-            let value: BasicValueEnum = value::compile(context, expr, None);
-
-            if value.is_pointer_value() {
-                compiler::generation::pointer::property::compile(context, source, indexes)
-            } else {
-                self::compile_extract_value_property(context, value, indexes)
-            }
-        }
-        _ => {
-            self::codegen_abort("Unable to get a value of an structure at memory manipulation.");
-        }
+    if source.is_allocated() {
+        self::compile_ptr_property(context, source, indexes)
+    } else {
+        self::compile_value_property(context, value, indexes)
     }
 }
 
-fn compile_extract_value_property<'ctx>(
+fn compile_value_property<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
-
     value: BasicValueEnum<'ctx>,
     indexes: &[(Type, u32)],
 ) -> BasicValueEnum<'ctx> {
@@ -70,6 +55,36 @@ fn compile_extract_value_property<'ctx>(
     }
 
     last_value
+}
+
+fn compile_ptr_property<'ctx>(
+    context: &mut LLVMCodeGenContext<'_, 'ctx>,
+    source: &'ctx Ast<'ctx>,
+    indexes: &[(Type, u32)],
+) -> BasicValueEnum<'ctx> {
+    let llvm_context: &Context = context.get_llvm_context();
+    let llvm_builder: &Builder = context.get_llvm_builder();
+
+    let ptr: PointerValue = codegen::compile(context, source, None).into_pointer_value();
+    let ptr_type: &Type = source.get_type_unwrapped();
+
+    let mut property: PointerValue = memory::gep_struct_anon(context, ptr, ptr_type, indexes[0].1);
+
+    for idx in indexes.iter().skip(1) {
+        let idx_type: BasicTypeEnum = typegen::generate(llvm_context, &idx.0);
+
+        match llvm_builder.build_struct_gep(idx_type, property, idx.1, "") {
+            Ok(new_ptr) => property = new_ptr,
+            Err(_) => {
+                self::codegen_abort(format!(
+                    "Failed to access property at index '{}' for a expression.",
+                    idx.1
+                ));
+            }
+        }
+    }
+
+    property.into()
 }
 
 #[inline]

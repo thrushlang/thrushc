@@ -5,7 +5,6 @@ mod is;
 pub mod metadata;
 mod new;
 mod repr;
-pub mod types;
 
 use std::rc::Rc;
 
@@ -14,14 +13,11 @@ use crate::{
     frontends::classical::{
         lexer::{span::Span, tokentype::TokenType},
         types::{
-            ast::{
-                metadata::{
-                    cast::CastMetadata, constant::ConstantMetadata,
-                    dereference::DereferenceMetadata, fnparam::FunctionParameterMetadata,
-                    index::IndexMetadata, local::LocalMetadata, property::PropertyMetadata,
-                    reference::ReferenceMetadata, staticvar::StaticMetadata,
-                },
-                types::AstEitherExpression,
+            ast::metadata::{
+                cast::CastMetadata, constant::ConstantMetadata, dereference::DereferenceMetadata,
+                fnparam::FunctionParameterMetadata, index::IndexMetadata, local::LocalMetadata,
+                property::PropertyMetadata, reference::ReferenceMetadata,
+                staticvar::StaticMetadata,
             },
             parser::stmts::{
                 sites::AllocationSite,
@@ -98,7 +94,7 @@ pub enum Ast<'ctx> {
         span: Span,
     },
     Index {
-        source: AstEitherExpression<'ctx>,
+        source: Rc<Ast<'ctx>>,
         indexes: Vec<Ast<'ctx>>,
         kind: Type,
         metadata: IndexMetadata,
@@ -124,7 +120,7 @@ pub enum Ast<'ctx> {
     },
 
     Property {
-        source: AstEitherExpression<'ctx>,
+        source: Rc<Ast<'ctx>>,
         indexes: Vec<(Type, u32)>,
         metadata: PropertyMetadata,
         kind: Type,
@@ -330,7 +326,7 @@ pub enum Ast<'ctx> {
     },
 
     Address {
-        source: AstEitherExpression<'ctx>,
+        source: Rc<Ast<'ctx>>,
         indexes: Vec<Ast<'ctx>>,
         kind: Type,
 
@@ -338,14 +334,14 @@ pub enum Ast<'ctx> {
     },
 
     Write {
-        source: AstEitherExpression<'ctx>,
+        source: Rc<Ast<'ctx>>,
         write_value: Rc<Ast<'ctx>>,
         write_type: Type,
         span: Span,
     },
 
     Load {
-        source: AstEitherExpression<'ctx>,
+        source: Rc<Ast<'ctx>>,
         kind: Type,
 
         span: Span,

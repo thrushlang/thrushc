@@ -8,7 +8,10 @@ use inkwell::{
 };
 
 use crate::{
-    backends::classical::llvm::compiler::{abort, block, codegen::LLVMCodegen, value},
+    backends::classical::llvm::compiler::{
+        abort, block,
+        codegen::{self, LLVMCodegen},
+    },
     frontends::classical::{types::ast::Ast, typesystem::types::Type},
 };
 
@@ -28,7 +31,7 @@ pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, stmt: &'ctx Ast<'ctx>)
             .unwrap_or_else(|_| {
                 abort::abort_codegen(
                     codegen.get_mut_context(),
-                    "Failed to compile brancher condition block!",
+                    "Failed to compile while loop terminator to condition!",
                     cond.get_span(),
                     PathBuf::from(file!()),
                     line!(),
@@ -38,14 +41,14 @@ pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, stmt: &'ctx Ast<'ctx>)
         llvm_builder.position_at_end(condition);
 
         let comparison: IntValue =
-            value::compile(codegen.get_mut_context(), cond, Some(&Type::Bool)).into_int_value();
+            codegen::compile(codegen.get_mut_context(), cond, Some(&Type::Bool)).into_int_value();
 
         llvm_builder
             .build_conditional_branch(comparison, body, exit)
             .unwrap_or_else(|_| {
                 abort::abort_codegen(
                     codegen.get_mut_context(),
-                    "Failed to compile loop comparison!",
+                    "Failed to compile while loop comparison to body!",
                     cond.get_span(),
                     PathBuf::from(file!()),
                     line!(),
@@ -72,7 +75,17 @@ pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, stmt: &'ctx Ast<'ctx>)
             .get_terminator()
             .is_none()
         {
-            let _ = llvm_builder.build_unconditional_branch(condition);
+            llvm_builder
+                .build_unconditional_branch(condition)
+                .unwrap_or_else(|_| {
+                    abort::abort_codegen(
+                        codegen.get_mut_context(),
+                        "Failed to compile while loop body terminator to comparison!",
+                        cond.get_span(),
+                        PathBuf::from(file!()),
+                        line!(),
+                    )
+                });
         }
 
         llvm_builder.position_at_end(exit);

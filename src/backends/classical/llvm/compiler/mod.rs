@@ -23,7 +23,6 @@ pub mod ptr;
 pub mod statements;
 pub mod symbols;
 pub mod typegen;
-pub mod value;
 
 use {
     crate::{

@@ -2,7 +2,10 @@ use std::fmt::Display;
 
 use inkwell::basic_block::BasicBlock;
 
-use crate::core::console::logging::{self, LoggingType};
+use crate::{
+    backends::classical::llvm::compiler::constants::LLVM_COMPILER_BRANCHERS_CAPACITY,
+    core::console::logging::{self, LoggingType},
+};
 
 #[derive(Debug)]
 pub struct LoopContext<'ctx> {
@@ -14,11 +17,13 @@ impl<'ctx> LoopContext<'ctx> {
     #[inline]
     pub fn new() -> LoopContext<'ctx> {
         LoopContext {
-            break_branches: Vec::with_capacity(256),
-            continue_branches: Vec::with_capacity(256),
+            break_branches: Vec::with_capacity(LLVM_COMPILER_BRANCHERS_CAPACITY),
+            continue_branches: Vec::with_capacity(LLVM_COMPILER_BRANCHERS_CAPACITY),
         }
     }
+}
 
+impl<'ctx> LoopContext<'ctx> {
     #[inline]
     pub fn add_break_branch(&mut self, branch: BasicBlock<'ctx>) {
         self.break_branches.push(branch);

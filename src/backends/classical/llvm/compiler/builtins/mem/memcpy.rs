@@ -1,7 +1,7 @@
+use crate::backends::classical::llvm::compiler::codegen;
 use crate::backends::classical::llvm::compiler::context::LLVMCodeGenContext;
 use crate::backends::classical::llvm::compiler::ptr;
 use crate::backends::classical::llvm::compiler::typegen;
-use crate::backends::classical::llvm::compiler::value;
 
 use crate::core::console::logging;
 use crate::core::console::logging::LoggingType;
@@ -34,7 +34,7 @@ pub fn compile<'ctx>(
     let dest: PointerValue =
         ptr::compile(context, destination, Some(&Type::Ptr(None))).into_pointer_value();
 
-    let size: IntValue = value::compile(context, size, None).into_int_value();
+    let size: IntValue = codegen::compile(context, size, None).into_int_value();
 
     let target_data: &TargetData = context.get_target_data();
 

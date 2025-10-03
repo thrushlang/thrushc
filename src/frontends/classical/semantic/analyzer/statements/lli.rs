@@ -26,14 +26,7 @@ pub fn validate<'analyzer>(
         }
 
         Ast::Load { source, .. } => {
-            if let Some(left) = &source.0 {
-                let reference: &Ast = &left.1;
-                analyzer.analyze_stmt(reference)?;
-            }
-
-            if let Some(expr) = &source.1 {
-                analyzer.analyze_stmt(expr)?;
-            }
+            analyzer.analyze_stmt(source)?;
 
             Ok(())
         }
@@ -41,36 +34,18 @@ pub fn validate<'analyzer>(
         Ast::Address {
             source, indexes, ..
         } => {
-            if let Some(reference_any) = &source.0 {
-                let reference: &Ast = &reference_any.1;
-                let reference_type: &Type = reference.get_value_type()?;
-                let span: Span = reference.get_span();
+            let source_type: &Type = source.get_value_type()?;
+            let span: Span = source.get_span();
 
-                if reference_type.is_address_type() {
-                    analyzer.add_warning(ThrushCompilerIssue::Warning(
-                        "Undefined behavior".into(), 
-                        "*Maybe* this value at runtime causes undefined behavior because it is anything at runtime, and memory calculation needs valid pointers or deep types.".into(), 
-                       span
-                    ));
-                }
-
-                analyzer.analyze_stmt(reference)?;
+            if source_type.is_address_type() {
+                analyzer.add_warning(ThrushCompilerIssue::Warning(
+                    "Undefined behavior".into(), 
+                    "*Maybe* this value at runtime causes undefined behavior because it is anything at runtime, and memory calculation needs valid pointers or deep types.".into(), 
+                    span
+                ));
             }
 
-            if let Some(expr) = &source.1 {
-                let expr_type: &Type = expr.get_value_type()?;
-                let span: Span = expr.get_span();
-
-                if expr_type.is_address_type() {
-                    analyzer.add_warning(ThrushCompilerIssue::Warning(
-                        "Undefined behavior".into(), 
-                        "*Maybe* this value at runtime causes undefined behavior because it is anything at runtime, and memory calculation needs valid pointers or deep types.".into(), 
-                        span
-                    ));
-                }
-
-                analyzer.analyze_stmt(expr)?;
-            }
+            analyzer.analyze_stmt(source)?;
 
             indexes.iter().try_for_each(|indexe| {
                 analyzer.analyze_stmt(indexe)?;
@@ -82,15 +57,7 @@ pub fn validate<'analyzer>(
         }
 
         Ast::Write { source, .. } => {
-            if let Some(any_reference) = &source.0 {
-                let reference: &Ast = &any_reference.1;
-
-                analyzer.analyze_stmt(reference)?;
-            }
-
-            if let Some(expr) = &source.1 {
-                analyzer.analyze_stmt(expr)?;
-            }
+            analyzer.analyze_stmt(source)?;
 
             Ok(())
         }

@@ -3,6 +3,7 @@
 use crate::backends::classical::llvm::compiler::alloc::atomic::LLVMAtomicModificators;
 use crate::backends::classical::llvm::compiler::{abort, typegen};
 use crate::frontends::classical::types::ast::metadata::dereference::LLVMDereferenceMetadata;
+use crate::frontends::classical::typesystem::traits::LLVMTypeExtensions;
 use crate::{
     backends::classical::llvm::compiler::alloc::atomic, frontends::classical::lexer::span::Span,
 };
@@ -153,21 +154,20 @@ impl<'ctx> SymbolAllocated<'ctx> {
 }
 
 impl<'ctx> SymbolAllocated<'ctx> {
-    pub fn load(&self, context: &LLVMCodeGenContext<'_, 'ctx>) -> BasicValueEnum<'ctx> {
+    pub fn load(&self, context: &mut LLVMCodeGenContext<'_, 'ctx>) -> BasicValueEnum<'ctx> {
         let llvm_context: &Context = context.get_llvm_context();
         let llvm_builder: &Builder = context.get_llvm_builder();
 
         let target_data: &TargetData = context.get_target_data();
-        let thrush_type: &Type = self.get_type();
 
-        let llvm_type: BasicTypeEnum = typegen::generate_subtype(llvm_context, thrush_type);
-        let alignment: u32 = target_data.get_preferred_alignment(&llvm_type);
+        let kind: &Type = self.get_type();
 
-        if thrush_type.is_ptr_type() {
+        if kind.llvm_is_ptr_type() {
             return self.get_ptr().into();
         }
 
-        let abort = || self::codegen_abort("Unable to load value at memory manipulation.");
+        let llvm_type: BasicTypeEnum = typegen::generate_subtype(llvm_context, kind);
+        let alignment: u32 = target_data.get_preferred_alignment(&llvm_type);
 
         if let Self::Local { ptr, metadata, .. } = self {
             if let Ok(loaded_value) = llvm_builder.build_load(llvm_type, *ptr, "") {
@@ -203,8 +203,6 @@ impl<'ctx> SymbolAllocated<'ctx> {
 
                 return loaded_value;
             }
-
-            abort()
         }
 
         if let Self::Static { ptr, metadata, .. } = self {
@@ -223,8 +221,6 @@ impl<'ctx> SymbolAllocated<'ctx> {
 
                 return loaded_value;
             }
-
-            abort()
         }
 
         if let Self::LowLevelInstruction { value, .. } = self {
@@ -242,17 +238,25 @@ impl<'ctx> SymbolAllocated<'ctx> {
 
                     return loaded_value;
                 }
-
-                abort()
+            } else {
+                return *value;
             }
-
-            return *value;
         }
 
-        self::codegen_abort("Unable to load value at memory manipulation.")
+        abort::abort_codegen(
+            context,
+            "Failed to load a value from memory!",
+            self.get_span(),
+            PathBuf::from(file!()),
+            line!(),
+        );
     }
 
-    pub fn store(&self, context: &LLVMCodeGenContext<'_, 'ctx>, new_value: BasicValueEnum<'ctx>) {
+    pub fn store(
+        &self,
+        context: &mut LLVMCodeGenContext<'_, 'ctx>,
+        new_value: BasicValueEnum<'ctx>,
+    ) {
         let llvm_context: &Context = context.get_llvm_context();
         let llvm_builder: &Builder = context.get_llvm_builder();
 
@@ -266,158 +270,24 @@ impl<'ctx> SymbolAllocated<'ctx> {
         if let Self::Local { ptr, .. } = self {
             if let Ok(store) = llvm_builder.build_store(*ptr, new_value) {
                 let _ = store.set_alignment(alignment);
+                return;
             }
         }
 
         if let Self::LowLevelInstruction { value, .. } | Self::Parameter { value, .. } = self {
             if let Ok(store) = llvm_builder.build_store(value.into_pointer_value(), new_value) {
                 let _ = store.set_alignment(alignment);
+                return;
             }
         }
-    }
 
-    pub fn gep(
-        &self,
-        context: &mut LLVMCodeGenContext<'_, '_>,
-        llvm_context: &'ctx Context,
-        llvm_builder: &Builder<'ctx>,
-        indexes: &[IntValue<'ctx>],
-    ) -> PointerValue<'ctx> {
-        match self {
-            Self::Local {
-                ptr, kind, span, ..
-            }
-            | Self::Constant {
-                ptr, kind, span, ..
-            }
-            | Self::Static {
-                ptr, kind, span, ..
-            } => unsafe {
-                llvm_builder
-                    .build_in_bounds_gep(
-                        typegen::generate_gep(llvm_context, kind),
-                        *ptr,
-                        indexes,
-                        "",
-                    )
-                    .unwrap_or_else(|_| {
-                        abort::abort_codegen(
-                            context,
-                            "Failed to calculate memory address!",
-                            *span,
-                            PathBuf::from(file!()),
-                            line!(),
-                        )
-                    })
-            },
-
-            Self::Parameter { value, kind, span }
-            | Self::LowLevelInstruction { value, kind, span } => {
-                if value.is_pointer_value() {
-                    return unsafe {
-                        llvm_builder
-                            .build_in_bounds_gep(
-                                typegen::generate_gep(llvm_context, kind),
-                                (*value).into_pointer_value(),
-                                indexes,
-                                "",
-                            )
-                            .unwrap_or_else(|_| {
-                                abort::abort_codegen(
-                                    context,
-                                    "Failed to calculate memory address!",
-                                    *span,
-                                    PathBuf::from(file!()),
-                                    line!(),
-                                )
-                            })
-                    };
-                }
-
-                abort::abort_codegen(
-                    context,
-                    "Failed to calculate memory address, it's not a pointer!",
-                    *span,
-                    PathBuf::from(file!()),
-                    line!(),
-                )
-            }
-
-            what => abort::abort_codegen(
-                context,
-                "Failed to calculate memory address, it's not a valid symbol!",
-                what.get_span(),
-                PathBuf::from(file!()),
-                line!(),
-            ),
-        }
-    }
-
-    pub fn gep_struct(
-        &self,
-        context: &mut LLVMCodeGenContext<'_, '_>,
-        llvm_context: &'ctx Context,
-        llvm_builder: &Builder<'ctx>,
-        index: u32,
-    ) -> PointerValue<'ctx> {
-        match self {
-            Self::Local {
-                ptr, kind, span, ..
-            }
-            | Self::Constant {
-                ptr, kind, span, ..
-            }
-            | Self::Static {
-                ptr, kind, span, ..
-            } => llvm_builder
-                .build_struct_gep(typegen::generate_gep(llvm_context, kind), *ptr, index, "")
-                .unwrap_or_else(|_| {
-                    abort::abort_codegen(
-                        context,
-                        "Failed to calculate memory address!",
-                        *span,
-                        PathBuf::from(file!()),
-                        line!(),
-                    )
-                }),
-            Self::Parameter { value, kind, span }
-            | Self::LowLevelInstruction { value, kind, span } => {
-                if value.is_pointer_value() {
-                    return llvm_builder
-                        .build_struct_gep(
-                            typegen::generate_gep(llvm_context, kind),
-                            (*value).into_pointer_value(),
-                            index,
-                            "Failed to ",
-                        )
-                        .unwrap_or_else(|_| {
-                            abort::abort_codegen(
-                                context,
-                                "Failed to calculate memory address!",
-                                *span,
-                                PathBuf::from(file!()),
-                                line!(),
-                            )
-                        });
-                }
-
-                abort::abort_codegen(
-                    context,
-                    "Failed to calculate memory address, it's not a pointer!",
-                    *span,
-                    PathBuf::from(file!()),
-                    line!(),
-                )
-            }
-
-            what => abort::abort_codegen(
-                context,
-                "Failed to calculate memory address, it's not a valid symbol!",
-                what.get_span(),
-                PathBuf::from(file!()),
-                line!(),
-            ),
-        }
+        abort::abort_codegen(
+            context,
+            "Failed to store a value in memory!",
+            self.get_span(),
+            PathBuf::from(file!()),
+            line!(),
+        );
     }
 }
 
@@ -474,23 +344,11 @@ impl<'ctx> SymbolAllocated<'ctx> {
     }
 }
 
-impl SymbolAllocated<'_> {
-    pub fn is_pointer(&self) -> bool {
-        match self {
-            Self::Local { .. } => true,
-            Self::Constant { .. } => true,
-            Self::Static { .. } => true,
-            Self::Function { .. } => true,
-            Self::Parameter { value, .. } => value.is_pointer_value(),
-            Self::LowLevelInstruction { value, .. } => value.is_pointer_value(),
-        }
-    }
-}
-
 pub fn store_anon<'ctx>(
-    context: &LLVMCodeGenContext<'_, '_>,
+    context: &mut LLVMCodeGenContext<'_, '_>,
     ptr: PointerValue<'ctx>,
     value: BasicValueEnum<'ctx>,
+    span: Span,
 ) {
     let llvm_builder: &Builder = context.get_llvm_builder();
 
@@ -500,13 +358,23 @@ pub fn store_anon<'ctx>(
 
     if let Ok(store) = llvm_builder.build_store(ptr, value) {
         let _ = store.set_alignment(alignment);
+        return;
     }
+
+    abort::abort_codegen(
+        context,
+        "Failed to store a value in memory!",
+        span,
+        PathBuf::from(file!()),
+        line!(),
+    );
 }
 
 pub fn load_anon<'ctx>(
-    context: &LLVMCodeGenContext<'_, 'ctx>,
+    context: &mut LLVMCodeGenContext<'_, 'ctx>,
     ptr: PointerValue<'ctx>,
     ptr_type: &Type,
+    span: Span,
 ) -> BasicValueEnum<'ctx> {
     let llvm_context: &Context = context.get_llvm_context();
     let llvm_builder: &Builder = context.get_llvm_builder();
@@ -525,13 +393,16 @@ pub fn load_anon<'ctx>(
         return loaded_value;
     }
 
-    self::codegen_abort(format!(
-        "Unable to load a value from memory, with pointer: '{}'.",
-        ptr
-    ));
+    abort::abort_codegen(
+        context,
+        "Failed to load a value from memory!",
+        span,
+        PathBuf::from(file!()),
+        line!(),
+    );
 }
 
-pub fn dereference<'ctx>(
+pub fn deference<'ctx>(
     context: &LLVMCodeGenContext<'_, 'ctx>,
     ptr: PointerValue<'ctx>,
     ptr_type: &Type,
@@ -610,18 +481,21 @@ pub fn alloc_anon<'ctx>(
     }
 }
 
-pub fn get_struct_anon<'ctx>(
+pub fn gep_struct_anon<'ctx>(
     context: &LLVMCodeGenContext<'_, 'ctx>,
     ptr: PointerValue<'ctx>,
-    kind: &Type,
+    ptr_type: &Type,
     index: u32,
 ) -> PointerValue<'ctx> {
     let llvm_context: &Context = context.get_llvm_context();
     let llvm_builder: &Builder = context.get_llvm_builder();
 
-    if let Ok(ptr) =
-        llvm_builder.build_struct_gep(typegen::generate_gep(llvm_context, kind), ptr, index, "")
-    {
+    if let Ok(ptr) = llvm_builder.build_struct_gep(
+        typegen::generate_gep(llvm_context, ptr_type),
+        ptr,
+        index,
+        "",
+    ) {
         return ptr;
     }
 
@@ -631,14 +505,19 @@ pub fn get_struct_anon<'ctx>(
 pub fn gep_anon<'ctx>(
     context: &LLVMCodeGenContext<'_, 'ctx>,
     ptr: PointerValue<'ctx>,
-    kind: &Type,
+    ptr_type: &Type,
     indexes: &[IntValue<'ctx>],
 ) -> PointerValue<'ctx> {
     let llvm_context: &Context = context.get_llvm_context();
     let llvm_builder: &Builder = context.get_llvm_builder();
 
     if let Ok(ptr) = unsafe {
-        llvm_builder.build_gep(typegen::generate_gep(llvm_context, kind), ptr, indexes, "")
+        llvm_builder.build_gep(
+            typegen::generate_gep(llvm_context, ptr_type),
+            ptr,
+            indexes,
+            "",
+        )
     } {
         return ptr;
     }

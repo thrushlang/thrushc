@@ -4,6 +4,7 @@ use crate::backends::classical::llvm::compiler::context::LLVMCodeGenContext;
 use crate::backends::classical::llvm::compiler::memory;
 use crate::backends::classical::llvm::compiler::memory::LLVMAllocationSite;
 
+use crate::frontends::classical::lexer::span::Span;
 use crate::frontends::classical::types::ast::Ast;
 use crate::frontends::classical::typesystem::traits::TypeArrayEntensions;
 use crate::frontends::classical::typesystem::types::Type;
@@ -17,16 +18,17 @@ pub fn compile<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     items: &'ctx [Ast],
     array_type: &Type,
-    cast: Option<&Type>,
+    span: Span,
+    cast_type: Option<&Type>,
 ) -> BasicValueEnum<'ctx> {
     if let Some(anchor) = context.get_pointer_anchor() {
         if !anchor.is_triggered() {
-            self::compile_with_anchor(context, items, array_type, cast, anchor)
+            self::compile_with_anchor(context, items, array_type, span, cast_type, anchor)
         } else {
-            self::compile_without_anchor(context, items, array_type, cast)
+            self::compile_without_anchor(context, items, array_type, span, cast_type)
         }
     } else {
-        self::compile_without_anchor(context, items, array_type, cast)
+        self::compile_without_anchor(context, items, array_type, span, cast_type)
     }
 }
 
@@ -34,11 +36,12 @@ fn compile_without_anchor<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     items: &'ctx [Ast],
     array_type: &Type,
-    cast: Option<&Type>,
+    span: Span,
+    cast_type: Option<&Type>,
 ) -> BasicValueEnum<'ctx> {
     let llvm_context: &Context = context.get_llvm_context();
 
-    let base_type: &Type = cast.unwrap_or(array_type);
+    let base_type: &Type = cast_type.unwrap_or(array_type);
     let items_type: &Type = base_type.get_array_base_type();
 
     let array_type: Type = Type::FixedArray(items_type.clone().into(), items.len() as u32);
@@ -48,10 +51,10 @@ fn compile_without_anchor<'ctx>(
 
     let items: Vec<BasicValueEnum> = items
         .iter()
-        .map(|item| codegen::compile_expr(context, item, Some(items_type)))
+        .map(|item| codegen::compile(context, item, Some(items_type)))
         .collect();
 
-    for (idx, item) in items.iter().enumerate() {
+    for (idx, value) in items.iter().enumerate() {
         let index: IntValue = llvm_context.i32_type().const_int(idx as u64, false);
 
         let ptr: PointerValue = memory::gep_anon(
@@ -61,24 +64,25 @@ fn compile_without_anchor<'ctx>(
             &[llvm_context.i32_type().const_zero(), index],
         );
 
-        memory::store_anon(context, ptr, *item);
+        memory::store_anon(context, ptr, *value, span);
     }
 
-    memory::load_anon(context, array_ptr, base_type)
+    array_ptr.into()
 }
 
 fn compile_with_anchor<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     items: &'ctx [Ast],
     array_type: &Type,
-    cast: Option<&Type>,
+    span: Span,
+    cast_type: Option<&Type>,
     anchor: PointerAnchor<'ctx>,
 ) -> BasicValueEnum<'ctx> {
     let llvm_context: &Context = context.get_llvm_context();
 
     let anchor_ptr: PointerValue = anchor.get_pointer();
 
-    let base_type: &Type = cast.unwrap_or(array_type);
+    let base_type: &Type = cast_type.unwrap_or(array_type);
     let items_type: &Type = base_type.get_array_base_type();
 
     let array_type: Type = Type::FixedArray(items_type.clone().into(), items.len() as u32);
@@ -87,23 +91,30 @@ fn compile_with_anchor<'ctx>(
 
     let items: Vec<BasicValueEnum> = items
         .iter()
-        .map(|item| codegen::compile_expr(context, item, Some(items_type)))
+        .map(|item| codegen::compile(context, item, Some(items_type)))
         .collect();
 
-    for (idx, item) in items.iter().enumerate() {
-        let index: IntValue = llvm_context.i32_type().const_int(idx as u64, false);
+    let ptr: Option<PointerValue> = items
+        .iter()
+        .enumerate()
+        .map(|(idx, value)| {
+            let index: IntValue = llvm_context.i32_type().const_int(idx as u64, false);
 
-        let ptr: PointerValue = memory::gep_anon(
-            context,
-            anchor_ptr,
-            &array_type,
-            &[llvm_context.i32_type().const_zero(), index],
-        );
+            let ptr: PointerValue = memory::gep_anon(
+                context,
+                anchor_ptr,
+                &array_type,
+                &[llvm_context.i32_type().const_zero(), index],
+            );
 
-        memory::store_anon(context, ptr, *item);
-    }
+            memory::store_anon(context, ptr, *value, span);
 
-    self::compile_null_ptr(context)
+            ptr
+        })
+        .last();
+
+    ptr.unwrap_or(self::compile_null_ptr(context).into_pointer_value())
+        .into()
 }
 
 fn compile_null_ptr<'ctx>(context: &LLVMCodeGenContext<'_, 'ctx>) -> BasicValueEnum<'ctx> {

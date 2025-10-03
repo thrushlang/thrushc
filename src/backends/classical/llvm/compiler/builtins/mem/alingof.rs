@@ -18,11 +18,11 @@ pub fn compile<'ctx>(
 
     let target_data: &TargetData = context.get_target_data();
 
-    let memory_alignment: u32 = target_data.get_preferred_alignment(&llvm_type);
+    let alignment: u32 = target_data.get_preferred_alignment(&llvm_type);
 
     let alignment: BasicValueEnum = llvm_context
         .i32_type()
-        .const_int(memory_alignment.into(), false)
+        .const_int(alignment.into(), false)
         .into();
 
     compiler::generation::cast::try_cast(context, cast, alingof_type, alignment)

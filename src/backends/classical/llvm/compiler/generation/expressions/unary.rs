@@ -3,7 +3,7 @@ use std::path::PathBuf;
 
 use crate::backends::classical::llvm::compiler::context::LLVMCodeGenContext;
 use crate::backends::classical::llvm::compiler::memory::SymbolAllocated;
-use crate::backends::classical::llvm::compiler::{self, abort, constgen, typegen, value};
+use crate::backends::classical::llvm::compiler::{self, abort, codegen, constgen, typegen};
 
 use crate::core::console::logging::{self, LoggingType};
 
@@ -74,7 +74,7 @@ pub fn compile_const<'ctx>(
 }
 
 fn compile_increment_decrement_ref<'ctx>(
-    context: &LLVMCodeGenContext<'_, 'ctx>,
+    context: &mut LLVMCodeGenContext<'_, 'ctx>,
     name: &str,
     operator: &TokenType,
     kind: &Type,
@@ -166,7 +166,7 @@ fn compile_increment_decrement<'ctx>(
 ) -> BasicValueEnum<'ctx> {
     let llvm_builder: &Builder = context.get_llvm_builder();
 
-    let value: BasicValueEnum = value::compile(context, expression, cast);
+    let value: BasicValueEnum = codegen::compile(context, expression, cast);
     let kind: &Type = expression.get_type_unwrapped();
 
     let abort_int =
@@ -236,7 +236,7 @@ fn compile_logical_negation<'ctx>(
 ) -> BasicValueEnum<'ctx> {
     let llvm_builder: &Builder = context.get_llvm_builder();
 
-    let value: BasicValueEnum = value::compile(context, expr, cast);
+    let value: BasicValueEnum = codegen::compile(context, expr, cast);
     let kind: &Type = expr.get_type_unwrapped();
 
     match kind {
@@ -266,7 +266,7 @@ fn compile_arithmetic_negation<'ctx>(
 ) -> BasicValueEnum<'ctx> {
     let llvm_builder: &Builder = context.get_llvm_builder();
 
-    let value: BasicValueEnum = value::compile(context, expr, cast);
+    let value: BasicValueEnum = codegen::compile(context, expr, cast);
     let kind: &Type = expr.get_type_unwrapped();
 
     match kind {
@@ -305,7 +305,7 @@ fn compile_bitwise_not<'ctx>(
 ) -> BasicValueEnum<'ctx> {
     let llvm_builder: &Builder = context.get_llvm_builder();
 
-    let value: BasicValueEnum = value::compile(context, expr, cast);
+    let value: BasicValueEnum = codegen::compile(context, expr, cast);
     let kind: &Type = expr.get_type_unwrapped();
 
     match kind {

@@ -14,13 +14,13 @@ use crate::{
 pub fn index_precedence<'parser>(
     ctx: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, ThrushCompilerIssue> {
-    let mut expression: Ast = property::property_precedence(ctx)?;
+    let mut expr: Ast = property::property_precedence(ctx)?;
 
     while ctx.match_token(TokenType::LBracket)? {
         let span: Span = ctx.previous().span;
 
-        expression = index::build_index(ctx, (None, Some(expression.into()), span), span)?;
+        expr = index::build_index(ctx, expr, span)?;
     }
 
-    Ok(expression)
+    Ok(expr)
 }

@@ -3,19 +3,22 @@
 use std::path::PathBuf;
 
 use crate::backends::classical::llvm::compiler::declarations::{self};
-use crate::backends::classical::llvm::compiler::statements;
-use crate::backends::classical::llvm::compiler::{self, builtins};
-use crate::backends::classical::llvm::compiler::{abort, ptr};
+use crate::backends::classical::llvm::compiler::generation::{float, int};
+use crate::backends::classical::llvm::compiler::statements::lli;
+use crate::backends::classical::llvm::compiler::{self, builtins, codegen};
+use crate::backends::classical::llvm::compiler::{abort, memory};
 use crate::backends::classical::llvm::compiler::{binaryop, generation};
 use crate::backends::classical::llvm::compiler::{block, typegen};
+use crate::backends::classical::llvm::compiler::{ptr, statements};
 
 use crate::frontends::classical::types::ast::Ast;
 use crate::frontends::classical::types::ast::metadata::local::LocalMetadata;
-use crate::frontends::classical::typesystem::traits::LLVMTypeExtensions;
+use crate::frontends::classical::typesystem::traits::TypeExtensions;
 use crate::frontends::classical::typesystem::types::Type;
 
-use super::{context::LLVMCodeGenContext, value};
+use super::context::LLVMCodeGenContext;
 
+use inkwell::AddressSpace;
 use inkwell::basic_block::BasicBlock;
 use inkwell::{
     builder::Builder,
@@ -300,7 +303,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
 
                 if let Some(expr) = expression {
                     if llvm_builder
-                        .build_return(Some(&self::compile_expr(self.context, expr, Some(kind))))
+                        .build_return(Some(&self::compile(self.context, expr, Some(kind))))
                         .is_err()
                     {
                         abort::abort_codegen(
@@ -384,24 +387,41 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 )
             }
 
-            Ast::Mut { .. } => {
-                statements::mutation::compile(self.context, stmt);
+            Ast::Mut {
+                source,
+                value,
+                span,
+                ..
+            } => {
+                let source_type: &Type = source.get_type_unwrapped();
+                let value_type: &Type = value.get_type_unwrapped();
+
+                let cast_type: &Type = if value_type.is_ptr_type() && source_type == value_type {
+                    source_type
+                } else {
+                    source_type.get_type_with_depth(1)
+                };
+
+                let ptr: BasicValueEnum = ptr::compile(self.context, source, None);
+                let value: BasicValueEnum = codegen::compile(self.context, value, Some(cast_type));
+
+                memory::store_anon(self.context, ptr.into_pointer_value(), value, *span);
             }
 
             Ast::Write { .. } => {
-                value::compile(self.context, stmt, None);
+                self::compile(self.context, stmt, None);
             }
 
             Ast::Call { .. } => {
-                value::compile(self.context, stmt, None);
+                self::compile(self.context, stmt, None);
             }
 
             Ast::Indirect { .. } => {
-                value::compile(self.context, stmt, None);
+                self::compile(self.context, stmt, None);
             }
 
             Ast::AsmValue { .. } => {
-                value::compile(self.context, stmt, None);
+                self::compile(self.context, stmt, None);
             }
 
             Ast::Builtin { builtin, .. } => {
@@ -486,20 +506,6 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
     ########################################################################*/
 }
 
-pub fn compile_expr<'ctx>(
-    context: &mut LLVMCodeGenContext<'_, 'ctx>,
-    expr: &'ctx Ast,
-    cast_type: Option<&Type>,
-) -> BasicValueEnum<'ctx> {
-    let expr_type: &Type = expr.get_type_unwrapped();
-
-    if expr_type.llvm_is_ptr_type() {
-        return ptr::compile(context, expr, cast_type);
-    }
-
-    value::compile(context, expr, cast_type)
-}
-
 impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
     #[inline]
     pub fn get_mut_context(&mut self) -> &mut LLVMCodeGenContext<'a, 'ctx> {
@@ -509,5 +515,230 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
     #[inline]
     pub fn get_context(&self) -> &LLVMCodeGenContext<'a, 'ctx> {
         self.context
+    }
+}
+
+/* ######################################################################
+
+
+                    COMPILER - EXPRESSION CODEGEN
+
+
+########################################################################*/
+
+pub fn compile<'ctx>(
+    context: &mut LLVMCodeGenContext<'_, 'ctx>,
+    expr: &'ctx Ast,
+    cast_type: Option<&Type>,
+) -> BasicValueEnum<'ctx> {
+    match expr {
+        // Literal Expressions
+        Ast::Float {
+            kind,
+            value,
+            signed,
+            ..
+        } => {
+            let float: BasicValueEnum =
+                float::generate(context.get_llvm_context(), kind, *value, *signed).into();
+
+            compiler::generation::cast::try_cast(context, cast_type, kind, float).unwrap_or(float)
+        }
+
+        Ast::Integer {
+            kind,
+            value,
+            signed,
+            ..
+        } => {
+            let int: BasicValueEnum =
+                int::generate(context.get_llvm_context(), kind, *value, *signed).into();
+
+            compiler::generation::cast::try_cast(context, cast_type, kind, int).unwrap_or(int)
+        }
+
+        Ast::NullPtr { .. } => context
+            .get_llvm_context()
+            .ptr_type(AddressSpace::default())
+            .const_null()
+            .into(),
+
+        Ast::Str { bytes, .. } => {
+            compiler::generation::expressions::string::compile_str(context, bytes).into()
+        }
+
+        Ast::Char { byte, .. } => context
+            .get_llvm_context()
+            .i8_type()
+            .const_int(*byte, false)
+            .into(),
+
+        Ast::Boolean { value, .. } => context
+            .get_llvm_context()
+            .bool_type()
+            .const_int(*value, false)
+            .into(),
+
+        // Function
+        // Compiles a function call
+        Ast::Call {
+            name, args, kind, ..
+        } => compiler::generation::expressions::call::compile(context, name, args, kind, cast_type),
+
+        // Function
+        // Compiles a indirect function call
+        Ast::Indirect {
+            function,
+            function_type,
+            args,
+            ..
+        } => compiler::generation::expressions::indirect::compile(
+            context,
+            function,
+            args,
+            function_type,
+            cast_type,
+        ),
+
+        // Compiles a sizeof operation
+        Ast::SizeOf { sizeof, .. } => builtins::sizeof::compile(context, sizeof, cast_type),
+
+        // Expressions
+        // Compiles a grouped expression (e.g., parenthesized)
+        Ast::Group { expression, .. } => self::compile(context, expression, cast_type),
+
+        Ast::BinaryOp {
+            left,
+            operator,
+            right,
+            kind: binaryop_type,
+            span,
+            ..
+        } => match binaryop_type {
+            t if t.is_float_type() => {
+                binaryop::float::compile(context, (left, operator, right, *span), cast_type)
+            }
+            t if t.is_integer_type() => {
+                binaryop::integer::compile(context, (left, operator, right, *span), cast_type)
+            }
+            t if t.is_bool_type() => {
+                binaryop::boolean::compile(context, (left, operator, right, *span), cast_type)
+            }
+
+            _ => {
+                abort::abort_codegen(
+                    context,
+                    "Can't be compiled!.",
+                    *span,
+                    PathBuf::from(file!()),
+                    line!(),
+                );
+            }
+        },
+
+        Ast::UnaryOp {
+            operator,
+            kind,
+            expression,
+            ..
+        } => compiler::generation::expressions::unary::compile(
+            context,
+            (operator, kind, expression),
+            cast_type,
+        ),
+
+        // Symbol/Property Access
+        // Compiles a reference to a variable or symbol
+        Ast::Reference { name, .. } => context.get_table().get_symbol(name).load(context),
+
+        // Compiles property access (e.g., struct field or array)
+        Ast::Property {
+            source, indexes, ..
+        } => compiler::generation::expressions::property::compile(context, source, indexes),
+
+        // Memory Access Operations
+        // Compiles an indexing operation (e.g., array access)
+        Ast::Index {
+            source, indexes, ..
+        } => compiler::generation::expressions::index::compile(context, source, indexes),
+
+        // Compiles a dereference operation (e.g., *pointer)
+        Ast::Defer {
+            value,
+            kind,
+            metadata,
+            ..
+        } => {
+            let value: BasicValueEnum = ptr::compile(context, value, Some(kind));
+
+            let defer_value: BasicValueEnum = if value.is_pointer_value() {
+                memory::deference(
+                    context,
+                    value.into_pointer_value(),
+                    kind,
+                    metadata.get_llvm_metadata(),
+                )
+            } else {
+                value
+            };
+
+            compiler::generation::cast::try_cast(context, cast_type, kind, defer_value)
+                .unwrap_or(defer_value)
+        }
+
+        // Array Operations
+        // Compiles a fixed-size array
+        Ast::FixedArray {
+            items, kind, span, ..
+        } => compiler::generation::expressions::farray::compile(
+            context, items, kind, *span, cast_type,
+        ),
+
+        // Compiles a dynamic array
+        Ast::Array {
+            items, kind, span, ..
+        } => compiler::generation::expressions::array::compile(
+            context, items, kind, *span, cast_type,
+        ),
+
+        // Compiles a struct constructor
+        Ast::Constructor {
+            args, kind, span, ..
+        } => compiler::generation::expressions::structure::compile(context, args, kind, *span),
+
+        // Compiles a type cast_type operation
+        Ast::As { from, cast, .. } => compiler::generation::cast::compile(context, from, cast),
+
+        // Low-Level Operations
+        // Compiles inline assembly code
+        Ast::AsmValue {
+            assembler,
+            constraints,
+            args,
+            kind,
+            attributes,
+            ..
+        } => compiler::generation::expressions::inlineasm::compile(
+            context,
+            assembler,
+            constraints,
+            args,
+            kind,
+            attributes,
+        ),
+
+        // Low-Level Operations
+        ast if ast.is_lli() => lli::compile_advanced(context, expr, cast_type),
+
+        // Fallback, Unknown expressions or statements
+        what => {
+            abort::abort_codegen(
+                context,
+                "Unknown expression or statement!",
+                what.get_span(),
+                PathBuf::from(file!()),
+                line!(),
+            );
+        }
     }
 }

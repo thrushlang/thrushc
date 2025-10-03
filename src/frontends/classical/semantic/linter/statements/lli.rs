@@ -19,44 +19,22 @@ pub fn analyze<'linter>(linter: &mut Linter<'linter>, node: &'linter Ast) {
             write_value,
             ..
         } => {
-            if let Some(any_reference) = &source.0 {
-                let reference: &Ast = &any_reference.1;
-                linter.analyze_expr(reference);
-            }
-
-            if let Some(expr) = &source.1 {
-                linter.analyze_expr(expr);
-            }
-
+            linter.analyze_expr(source);
             linter.analyze_expr(write_value);
         }
 
         Ast::Address {
             source, indexes, ..
         } => {
+            linter.analyze_expr(source);
+
             indexes.iter().for_each(|indexe| {
                 linter.analyze_expr(indexe);
             });
-
-            if let Some(any_reference) = &source.0 {
-                let reference: &Ast = &any_reference.1;
-                linter.analyze_expr(reference);
-            }
-
-            if let Some(expr) = &source.1 {
-                linter.analyze_expr(expr);
-            }
         }
 
         Ast::Load { source, .. } => {
-            if let Some(any_reference) = &source.0 {
-                let reference: &Ast = &any_reference.1;
-                linter.analyze_expr(reference);
-            }
-
-            if let Some(expr) = &source.1 {
-                linter.analyze_expr(expr);
-            }
+            linter.analyze_expr(source);
         }
 
         _ => {

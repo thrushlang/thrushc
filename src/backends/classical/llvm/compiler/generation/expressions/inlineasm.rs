@@ -3,7 +3,7 @@ use std::fmt::Display;
 use crate::backends::classical::llvm::compiler::attributes::LLVMAttribute;
 use crate::backends::classical::llvm::compiler::context::LLVMCodeGenContext;
 
-use crate::backends::classical::llvm::compiler::{typegen, value};
+use crate::backends::classical::llvm::compiler::{codegen, typegen};
 use crate::frontends::classical::types::ast::Ast;
 use crate::frontends::classical::types::parser::stmts::traits::ThrushAttributesExtensions;
 use crate::frontends::classical::types::parser::stmts::types::ThrushAttributes;
@@ -21,7 +21,6 @@ use inkwell::{AddressSpace, InlineAsmDialect};
 
 pub fn compile<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
-
     assembler: &str,
     constraints: &str,
     args: &'ctx [Ast],
@@ -35,7 +34,7 @@ pub fn compile<'ctx>(
 
     let compiled_args: Vec<BasicMetadataValueEnum> = args
         .iter()
-        .map(|arg| value::compile(context, arg, None).into())
+        .map(|arg| codegen::compile(context, arg, None).into())
         .collect();
 
     let mut syntax: InlineAsmDialect = InlineAsmDialect::Intel;
