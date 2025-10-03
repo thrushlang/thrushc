@@ -33,8 +33,10 @@ impl CastTypeExtensions for Type {
 
             (Type::F64, _) | (_, Type::F64) => Type::F64,
             (Type::F32, _) | (_, Type::F32) => Type::F32,
+            (Type::F128, _) | (_, Type::F128) => Type::F128,
 
             (Type::FX8680, _) | (_, Type::FX8680) => Type::FX8680,
+            (Type::FPPC128, _) | (_, Type::FPPC128) => Type::FPPC128,
 
             (Type::Const(lhs), Type::Const(rhs)) => lhs.precompute(rhs),
 

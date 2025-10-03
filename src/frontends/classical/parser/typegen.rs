@@ -47,22 +47,11 @@ pub fn build_type(ctx: &mut ParserContext<'_>) -> Result<Type, ThrushCompilerIss
             }
 
             match tk_kind.as_type(span)? {
-                ty if ty.is_integer_type() => Ok(ty),
-                ty if ty.is_float_type() => Ok(ty),
-                ty if ty.is_bool_type() => Ok(ty),
-                ty if ty.is_address_type() => Ok(ty),
                 ty if ty.is_ptr_type() && ctx.check(TokenType::LBracket) => {
                     Ok(self::build_recursive_type(ctx, Type::Ptr(None))?)
                 }
                 ty if ty.is_ptr_type() => Ok(ty),
-                ty if ty.is_void_type() => Ok(ty),
-
-                what_heck => Err(ThrushCompilerIssue::Error(
-                    String::from("Syntax error"),
-                    format!("Expected type, not '{}'", what_heck),
-                    None,
-                    span,
-                )),
+                ty => Ok(ty),
             }
         }
 

@@ -33,7 +33,10 @@ impl Type {
 
     #[inline(always)]
     pub fn is_float_type(&self) -> bool {
-        matches!(self, Type::F32 | Type::F64 | Type::FX8680)
+        matches!(
+            self,
+            Type::F32 | Type::F64 | Type::F128 | Type::FX8680 | Type::FPPC128
+        )
     }
 
     #[inline(always)]
@@ -107,7 +110,9 @@ impl TypeExtensions for Type {
             | Type::U128
             | Type::F32
             | Type::F64
+            | Type::F128
             | Type::FX8680
+            | Type::FPPC128
             | Type::Bool
             | Type::Char
             | Type::Addr
@@ -162,7 +167,9 @@ impl PartialEq for Type {
             (Type::U128, Type::U128) => true,
             (Type::F32, Type::F32) => true,
             (Type::F64, Type::F64) => true,
+            (Type::F128, Type::F128) => true,
             (Type::FX8680, Type::FX8680) => true,
+            (Type::FPPC128, Type::FPPC128) => true,
             (Type::Ptr(None), Type::Ptr(None)) => true,
             (Type::Ptr(Some(target)), Type::Ptr(Some(from))) => target == from,
             (Type::Void, Type::Void) => true,

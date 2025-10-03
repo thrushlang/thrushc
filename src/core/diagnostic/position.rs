@@ -43,7 +43,7 @@ pub fn find_line_and_range(code: &str, span: Span) -> Option<CodePosition> {
             break;
         }
         if c == '\n' {
-            line_start = i;
+            line_start = i + 1;
             line_num += 1;
         }
     }

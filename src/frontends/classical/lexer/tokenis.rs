@@ -66,7 +66,14 @@ impl TokenType {
 
     #[must_use]
     pub fn is_float(&self) -> bool {
-        matches!(self, TokenType::F32 | TokenType::F64 | TokenType::FX8680)
+        matches!(
+            self,
+            TokenType::F32
+                | TokenType::F64
+                | TokenType::F128
+                | TokenType::FX8680
+                | TokenType::FPPC128
+        )
     }
 
     #[must_use]

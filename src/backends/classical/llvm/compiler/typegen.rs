@@ -168,7 +168,9 @@ pub fn float<'ctx>(llvm_context: &'ctx Context, kind: &Type) -> FloatType<'ctx> 
     match kind {
         Type::F32 => llvm_context.f32_type(),
         Type::F64 => llvm_context.f64_type(),
+        Type::F128 => llvm_context.f128_type(),
         Type::FX8680 => llvm_context.x86_f80_type(),
+        Type::FPPC128 => llvm_context.ppc_f128_type(),
 
         Type::Const(any) => self::float(llvm_context, any),
 

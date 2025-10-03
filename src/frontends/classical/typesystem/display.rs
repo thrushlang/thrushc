@@ -14,7 +14,9 @@ impl std::fmt::Display for Type {
             Type::U128 => write!(f, "u128"),
             Type::F32 => write!(f, "f32"),
             Type::F64 => write!(f, "f64"),
-            Type::FX8680 => write!(f, "f86_80"),
+            Type::F128 => write!(f, "f128"),
+            Type::FX8680 => write!(f, "fx86_80"),
+            Type::FPPC128 => write!(f, "fppc_128"),
             Type::Bool => write!(f, "bool"),
             Type::Char => write!(f, "char"),
             Type::Fn(params, kind, modificator) => {

@@ -174,9 +174,12 @@ fn validate_binary_comparasion(
     ) = (a, b)
     {
         return Ok(());
+    } else if let (Type::FPPC128, Type::FPPC128) = (a, b) {
+        return Ok(());
     } else if let (Type::FX8680, Type::FX8680) = (a, b) {
         return Ok(());
-    } else if let (Type::F32 | Type::F64, Type::F32 | Type::F64) = (a, b) {
+    } else if let (Type::F32 | Type::F64 | Type::F128, Type::F32 | Type::F64 | Type::F128) = (a, b)
+    {
         return Ok(());
     }
 
@@ -216,9 +219,13 @@ fn validate_binary_equality(
                 | Type::U32
                 | Type::U64
                 | Type::U128,
-        ) | (Type::F32 | Type::F64, Type::F32 | Type::F64)
-            | (Type::Bool, Type::Bool)
+        ) | (
+            Type::F32 | Type::F64 | Type::F128,
+            Type::F32 | Type::F64 | Type::F128
+        ) | (Type::Bool, Type::Bool)
             | (Type::Char, Type::Char)
+            | (Type::FX8680, Type::FX8680)
+            | (Type::FPPC128, Type::FPPC128)
     ) {
         return Ok(());
     }
@@ -262,7 +269,9 @@ fn validate_binary_arithmetic(
             | Type::U64,
         ) => Ok(()),
 
-        (Type::F32 | Type::F64, Type::F32 | Type::F64) => Ok(()),
+        (Type::FPPC128, Type::FPPC128) => Ok(()),
+        (Type::FX8680, Type::FX8680) => Ok(()),
+        (Type::F32 | Type::F64 | Type::F128, Type::F32 | Type::F64 | Type::F128) => Ok(()),
 
         _ => Err(ThrushCompilerIssue::Error(
             String::from("Incompatible Type Operation"),

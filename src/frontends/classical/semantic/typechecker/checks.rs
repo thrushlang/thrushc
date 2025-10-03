@@ -378,8 +378,40 @@ pub fn check_types(
         ) => Ok(()),
 
         (
+            Type::F128,
+            Type::F128 | Type::F64 | Type::F32,
+            Some(
+                TokenType::Plus
+                | TokenType::Minus
+                | TokenType::Slash
+                | TokenType::Star
+                | TokenType::LShift
+                | TokenType::RShift
+                | TokenType::PlusPlus
+                | TokenType::MinusMinus,
+            )
+            | None,
+        ) => Ok(()),
+
+        (
             Type::FX8680,
             Type::FX8680,
+            Some(
+                TokenType::Plus
+                | TokenType::Minus
+                | TokenType::Slash
+                | TokenType::Star
+                | TokenType::LShift
+                | TokenType::RShift
+                | TokenType::PlusPlus
+                | TokenType::MinusMinus,
+            )
+            | None,
+        ) => Ok(()),
+
+        (
+            Type::FPPC128,
+            Type::FPPC128,
             Some(
                 TokenType::Plus
                 | TokenType::Minus

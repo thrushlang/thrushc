@@ -23,7 +23,6 @@ pub mod span;
 pub mod token;
 pub mod tokenattr;
 pub mod tokenis;
-pub mod tokentransform;
 pub mod tokentype;
 pub mod types;
 

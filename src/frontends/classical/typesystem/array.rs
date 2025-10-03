@@ -39,19 +39,21 @@ impl TypeArrayEntensions for Type {
 
             Type::F32 => 13,
             Type::F64 => 14,
-            Type::FX8680 => 15,
+            Type::F128 => 15,
+            Type::FX8680 => 16,
+            Type::FPPC128 => 17,
 
             Type::Const(subtype) => subtype.get_array_type_herarchy(),
 
-            Type::Addr => 16,
+            Type::Addr => 18,
             Type::Ptr(Some(subtype)) => subtype.get_array_type_herarchy(),
-            Type::Ptr(None) => 17,
+            Type::Ptr(None) => 19,
 
-            Type::FixedArray(..) => 18,
-            Type::Array(..) => 19,
-            Type::Struct(..) => 20,
+            Type::FixedArray(..) => 20,
+            Type::Array(..) => 21,
+            Type::Struct(..) => 22,
 
-            Type::Fn(..) => 21,
+            Type::Fn(..) => 23,
         }
     }
 }

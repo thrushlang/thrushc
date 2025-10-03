@@ -22,7 +22,9 @@ pub enum Type {
     // Floating Point Type
     F32,
     F64,
+    F128,
     FX8680,
+    FPPC128,
 
     // Boolean Type
     Bool,

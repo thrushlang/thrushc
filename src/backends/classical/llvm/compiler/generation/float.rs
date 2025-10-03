@@ -18,6 +18,10 @@ pub fn generate<'ctx>(
         Type::F64 => context.f64_type().const_float(iee),
         Type::FX8680 if signed => context.x86_f80_type().const_float(-iee),
         Type::FX8680 => context.x86_f80_type().const_float(iee),
+        Type::F128 if signed => context.f128_type().const_float(-iee),
+        Type::F128 => context.f128_type().const_float(iee),
+        Type::FPPC128 if signed => context.ppc_f128_type().const_float(-iee),
+        Type::FPPC128 => context.ppc_f128_type().const_float(iee),
 
         what => {
             self::codegen_abort(format!("Unsupported float type: '{}'.", what));

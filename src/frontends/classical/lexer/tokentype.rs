@@ -153,6 +153,8 @@ pub enum TokenType {
     F32,
     F64,
     FX8680,
+    F128,
+    FPPC128,
 
     Bool,
     Char,
