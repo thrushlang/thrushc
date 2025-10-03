@@ -31,6 +31,7 @@ enum LoggingType {
 }
 
 impl LoggingType {
+    #[inline]
     fn to_styled(&self) -> ColoredString {
         match self {
             LoggingType::Error => "ERROR".bright_red().bold(),
@@ -38,11 +39,15 @@ impl LoggingType {
             LoggingType::Log => "LOG".custom_color((141, 141, 142)).bold(),
         }
     }
+}
 
+impl LoggingType {
+    #[inline]
     fn is_panic(&self) -> bool {
         matches!(self, LoggingType::Panic)
     }
 
+    #[inline]
     fn is_err(&self) -> bool {
         matches!(self, LoggingType::Error)
     }
@@ -161,8 +166,9 @@ impl Builder {
                     0
                 };
 
-                let left_version = extract_version_sum(left);
-                let right_version = extract_version_sum(right);
+                let left_version: u8 = extract_version_sum(left);
+                let right_version: u8 = extract_version_sum(right);
+
                 left_version.cmp(&right_version)
             });
 
@@ -250,8 +256,9 @@ impl Builder {
                     0
                 };
 
-                let left_version = extract_version(left);
-                let right_version = extract_version(right);
+                let left_version: u8 = extract_version(left);
+                let right_version: u8 = extract_version(right);
+
                 left_version.cmp(&right_version)
             });
 
@@ -496,7 +503,14 @@ impl Builder {
 fn main() {
     unsafe { env::set_var("CARGO_TERM_VERBOSE", "true") };
 
-    if cfg!(target_os = "windows") {
+    #[cfg(target_os = "windows")]
+    {
+        colored::control::set_virtual_terminal(true);
+        colored::control::set_override(true);
+    }
+
+    #[cfg(target_os = "linux")]
+    {
         colored::control::set_override(true);
     }
 

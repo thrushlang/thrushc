@@ -667,6 +667,7 @@ pub fn compile<'ctx>(
             value,
             kind,
             metadata,
+            span,
             ..
         } => {
             let value: BasicValueEnum = ptr::compile(context, value, Some(kind));
@@ -677,6 +678,7 @@ pub fn compile<'ctx>(
                     value.into_pointer_value(),
                     kind,
                     metadata.get_llvm_metadata(),
+                    *span,
                 )
             } else {
                 value

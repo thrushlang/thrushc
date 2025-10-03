@@ -14,6 +14,9 @@ use crate::{
     frontends::classical::{lexer::tokentype::TokenType, types::lexer::types::Tokens},
 };
 
+pub mod atomic;
+pub mod attributes;
+pub mod builtins;
 pub mod keywords;
 pub mod printer;
 pub mod span;
@@ -22,6 +25,7 @@ pub mod tokenattr;
 pub mod tokenis;
 pub mod tokentransform;
 pub mod tokentype;
+pub mod types;
 
 mod character;
 mod identifier;

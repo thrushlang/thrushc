@@ -41,79 +41,10 @@ lazy_static! {
         keywords.insert("write", TokenType::Write);
         keywords.insert("fixed", TokenType::Fixed);
         keywords.insert("static", TokenType::Static);
-
         keywords.insert("indirect", TokenType::Indirect);
-
-        keywords.insert("volatile", TokenType::Volatile);
-        keywords.insert("lazythread", TokenType::LazyThread);
-
-        keywords.insert("atomnone", TokenType::AtomNone);
-        keywords.insert("atomfree", TokenType::AtomFree);
-        keywords.insert("atomrelax", TokenType::AtomRelax);
-        keywords.insert("atomgrab", TokenType::AtomGrab);
-        keywords.insert("atomdrop", TokenType::AtomDrop);
-        keywords.insert("atomsync", TokenType::AtomSync);
-        keywords.insert("atomstrict", TokenType::AtomStrict);
-
-        keywords.insert("threadinit", TokenType::ThreadInit);
-        keywords.insert("threaddyn", TokenType::ThreadDynamic);
-        keywords.insert("threadexec", TokenType::ThreadExec);
-
         keywords.insert("unreachable", TokenType::Unreachable);
-
-        keywords.insert("halloc", TokenType::Halloc);
-        keywords.insert("sizeof", TokenType::SizeOf);
-        keywords.insert("memset", TokenType::MemSet);
-        keywords.insert("memmove", TokenType::MemMove);
-        keywords.insert("memcpy", TokenType::MemCpy);
-        keywords.insert("alignof", TokenType::AlignOf);
-
         keywords.insert("import", TokenType::Import);
-
-        keywords.insert("@asmalingstack", TokenType::AsmAlignStack);
-        keywords.insert("@asmsyntax", TokenType::AsmSyntax);
-        keywords.insert("@asmthrow", TokenType::AsmThrow);
-        keywords.insert("@asmeffects", TokenType::AsmSideEffects);
-
-        keywords.insert("@optfuzzing", TokenType::OptFuzzing);
-        keywords.insert("@nounwind", TokenType::NoUnwind);
-        keywords.insert("@packed", TokenType::Packed);
-        keywords.insert("@heap", TokenType::Heap);
-        keywords.insert("@stack", TokenType::Stack);
-        keywords.insert("@public", TokenType::Public);
-        keywords.insert("@extern", TokenType::Extern);
-        keywords.insert("@ignore", TokenType::Ignore);
-        keywords.insert("@hot", TokenType::Hot);
-        keywords.insert("@minsize", TokenType::MinSize);
-        keywords.insert("@alwaysinline", TokenType::AlwaysInline);
-        keywords.insert("@noinline", TokenType::NoInline);
-        keywords.insert("@inline", TokenType::InlineHint);
-        keywords.insert("@safestack", TokenType::SafeStack);
-        keywords.insert("@weakstack", TokenType::WeakStack);
-        keywords.insert("@strongstack", TokenType::StrongStack);
-        keywords.insert("@precisefp", TokenType::PreciseFloats);
-        keywords.insert("@convention", TokenType::Convention);
-
         keywords.insert("new", TokenType::New);
-
-        keywords.insert("s8", TokenType::S8);
-        keywords.insert("s16", TokenType::S16);
-        keywords.insert("s32", TokenType::S32);
-        keywords.insert("s64", TokenType::S64);
-        keywords.insert("u8", TokenType::U8);
-        keywords.insert("u16", TokenType::U16);
-        keywords.insert("u32", TokenType::U32);
-        keywords.insert("u64", TokenType::U64);
-        keywords.insert("u128", TokenType::U128);
-        keywords.insert("f32", TokenType::F32);
-        keywords.insert("f64", TokenType::F64);
-        keywords.insert("fx86_80", TokenType::FX8680);
-        keywords.insert("bool", TokenType::Bool);
-        keywords.insert("char", TokenType::Char);
-        keywords.insert("ptr", TokenType::Ptr);
-        keywords.insert("array", TokenType::Array);
-        keywords.insert("void", TokenType::Void);
-        keywords.insert("Fn", TokenType::FnRef);
 
         keywords
     };

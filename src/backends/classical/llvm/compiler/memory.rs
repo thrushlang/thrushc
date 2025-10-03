@@ -403,10 +403,11 @@ pub fn load_anon<'ctx>(
 }
 
 pub fn deference<'ctx>(
-    context: &LLVMCodeGenContext<'_, 'ctx>,
+    context: &mut LLVMCodeGenContext<'_, 'ctx>,
     ptr: PointerValue<'ctx>,
     ptr_type: &Type,
     metadata: LLVMDereferenceMetadata,
+    span: Span,
 ) -> BasicValueEnum<'ctx> {
     let llvm_context: &Context = context.get_llvm_context();
     let llvm_builder: &Builder = context.get_llvm_builder();
@@ -433,10 +434,13 @@ pub fn deference<'ctx>(
         return loaded_value;
     }
 
-    self::codegen_abort(format!(
-        "Unable to load a value from memory, with pointer: '{}'.",
-        ptr
-    ));
+    abort::abort_codegen(
+        context,
+        "Failed to deference a pointer!",
+        span,
+        PathBuf::from(file!()),
+        line!(),
+    );
 }
 
 pub fn alloc_anon<'ctx>(

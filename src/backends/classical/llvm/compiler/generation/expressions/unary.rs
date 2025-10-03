@@ -7,6 +7,7 @@ use crate::backends::classical::llvm::compiler::{self, abort, codegen, constgen,
 
 use crate::core::console::logging::{self, LoggingType};
 
+use crate::frontends::classical::lexer::span::Span;
 use crate::frontends::classical::lexer::tokentype::TokenType;
 
 use crate::frontends::classical::types::ast::Ast;
@@ -169,11 +170,7 @@ fn compile_increment_decrement<'ctx>(
     let value: BasicValueEnum = codegen::compile(context, expression, cast);
     let kind: &Type = expression.get_type_unwrapped();
 
-    let abort_int =
-        || self::codegen_abort("Failed to compile an 'integer' incrementer or decrementer.");
-
-    let abort_float =
-        || self::codegen_abort("Failed to compile an 'float' incrementer or decrementer.");
+    let span: Span = expression.get_span();
 
     match kind {
         kind if kind.is_integer_type() => {
@@ -184,19 +181,37 @@ fn compile_increment_decrement<'ctx>(
             let result: BasicValueEnum = match operator {
                 TokenType::PlusPlus => llvm_builder
                     .build_int_nsw_add(int, modifier, "")
-                    .unwrap_or_else(|_| abort_int())
+                    .unwrap_or_else(|_| {
+                        abort::abort_codegen(
+                            context,
+                            "Failed to compile '++' operation!",
+                            span,
+                            PathBuf::from(file!()),
+                            line!(),
+                        )
+                    })
                     .into(),
 
                 TokenType::MinusMinus => llvm_builder
                     .build_int_nsw_sub(int, modifier, "")
-                    .unwrap_or_else(|_| abort_int())
+                    .unwrap_or_else(|_| {
+                        abort::abort_codegen(
+                            context,
+                            "Failed to compile '--' operation!",
+                            span,
+                            PathBuf::from(file!()),
+                            line!(),
+                        )
+                    })
                     .into(),
 
-                _ => {
-                    self::codegen_abort(
-                        "Unknown operator compared to increment and decrement in unary operation.",
-                    );
-                }
+                _ => abort::abort_codegen(
+                    context,
+                    "Unknown operator in unary operation!",
+                    span,
+                    PathBuf::from(file!()),
+                    line!(),
+                ),
             };
 
             compiler::generation::cast::try_cast(context, cast, kind, result).unwrap_or(result)
@@ -209,19 +224,37 @@ fn compile_increment_decrement<'ctx>(
             let result: BasicValueEnum = match operator {
                 TokenType::PlusPlus => llvm_builder
                     .build_float_add(float, modifier, "")
-                    .unwrap_or_else(|_| abort_float())
+                    .unwrap_or_else(|_| {
+                        abort::abort_codegen(
+                            context,
+                            "Failed to compile '++' operation!",
+                            span,
+                            PathBuf::from(file!()),
+                            line!(),
+                        )
+                    })
                     .into(),
 
                 TokenType::MinusMinus => llvm_builder
                     .build_float_sub(float, modifier, "")
-                    .unwrap_or_else(|_| abort_float())
+                    .unwrap_or_else(|_| {
+                        abort::abort_codegen(
+                            context,
+                            "Failed to compile '--' operation!",
+                            span,
+                            PathBuf::from(file!()),
+                            line!(),
+                        )
+                    })
                     .into(),
 
-                _ => {
-                    self::codegen_abort(
-                        "Unknown operator compared to increment and decrement in unary operation.",
-                    );
-                }
+                _ => abort::abort_codegen(
+                    context,
+                    "Unknown operator in unary operation!",
+                    span,
+                    PathBuf::from(file!()),
+                    line!(),
+                ),
             };
 
             compiler::generation::cast::try_cast(context, cast, kind, result).unwrap_or(result)
@@ -239,6 +272,8 @@ fn compile_logical_negation<'ctx>(
     let value: BasicValueEnum = codegen::compile(context, expr, cast);
     let kind: &Type = expr.get_type_unwrapped();
 
+    let span: Span = expr.get_span();
+
     match kind {
         kind if kind.is_bool_type() => {
             let int: IntValue = value.into_int_value();
@@ -253,9 +288,13 @@ fn compile_logical_negation<'ctx>(
             int.into()
         }
 
-        _ => {
-            self::codegen_abort("Cannot perform a logical negation.");
-        }
+        _ => abort::abort_codegen(
+            context,
+            "Unknown type for logical negation!",
+            span,
+            PathBuf::from(file!()),
+            line!(),
+        ),
     }
 }
 
@@ -344,7 +383,9 @@ fn compile_increment_decrement_const<'ctx>(
     cast: &Type,
 ) -> BasicValueEnum<'ctx> {
     let value: BasicValueEnum = constgen::compile(context, expression, cast);
+
     let kind: &Type = expression.get_type_unwrapped();
+    let span: Span = expression.get_span();
 
     match kind {
         kind if kind.is_integer_type() => {
@@ -356,11 +397,13 @@ fn compile_increment_decrement_const<'ctx>(
                 TokenType::PlusPlus => int.const_add(modifier).into(),
                 TokenType::MinusMinus => int.const_sub(modifier).into(),
 
-                _ => {
-                    self::codegen_abort(
-                        "Unknown operator compared to increment and decrement in unary operation.",
-                    );
-                }
+                _ => abort::abort_codegen(
+                    context,
+                    "Expected '++' or '--' operation!",
+                    span,
+                    PathBuf::from(file!()),
+                    line!(),
+                ),
             }
         }
         _ => {
@@ -389,11 +432,13 @@ fn compile_increment_decrement_const<'ctx>(
                     float.into()
                 }
 
-                _ => {
-                    self::codegen_abort(
-                        "Unknown operator compared to increment and decrement in unary operation.",
-                    );
-                }
+                _ => abort::abort_codegen(
+                    context,
+                    "Expected '++' or '--' operation!",
+                    span,
+                    PathBuf::from(file!()),
+                    line!(),
+                ),
             }
         }
     }
@@ -405,17 +450,22 @@ fn compile_logical_negation_const<'ctx>(
     cast: &Type,
 ) -> BasicValueEnum<'ctx> {
     let value: BasicValueEnum = constgen::compile(context, expr, cast);
+
     let kind: &Type = expr.get_type_unwrapped();
+    let span: Span = expr.get_span();
 
     match kind {
         kind if kind.is_bool_type() => {
             let int: IntValue = value.into_int_value();
             int.const_not().into()
         }
-
-        _ => {
-            self::codegen_abort("Cannot perform a logical negation.");
-        }
+        _ => abort::abort_codegen(
+            context,
+            "Unknown type for logical negation!",
+            span,
+            PathBuf::from(file!()),
+            line!(),
+        ),
     }
 }
 
