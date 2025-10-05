@@ -1,3 +1,4 @@
+use crate::backends::classical::llvm::compiler::generation::cast;
 use crate::backends::classical::llvm::compiler::{
     self, abort, codegen, constgen, context::LLVMCodeGenContext, predicates,
 };
@@ -27,11 +28,8 @@ pub fn bool_operation<'ctx>(
     let (lhs_signed, rhs_signed) = signatures;
 
     if lhs.is_int_value() && rhs.is_int_value() {
-        let (lhs, rhs) = compiler::generation::cast::integer_together(
-            context,
-            lhs.into_int_value(),
-            rhs.into_int_value(),
-        );
+        let (lhs, rhs) =
+            cast::integer_together(context, lhs.into_int_value(), rhs.into_int_value(), span);
 
         return match operator {
             op if op.is_logical_operator() => llvm_builder
@@ -95,10 +93,11 @@ pub fn bool_operation<'ctx>(
     }
 
     if lhs.is_float_value() && rhs.is_float_value() {
-        let (lhs, rhs) = compiler::generation::cast::float_together(
+        let (lhs, rhs) = cast::float_together(
             context,
             lhs.into_float_value(),
             rhs.into_float_value(),
+            span,
         );
 
         return match operator {

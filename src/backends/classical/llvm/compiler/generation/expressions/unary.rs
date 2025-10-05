@@ -1,8 +1,9 @@
 use std::path::PathBuf;
 
 use crate::backends::classical::llvm::compiler::context::LLVMCodeGenContext;
+use crate::backends::classical::llvm::compiler::generation::cast;
 use crate::backends::classical::llvm::compiler::memory::SymbolAllocated;
-use crate::backends::classical::llvm::compiler::{self, abort, codegen, constgen, typegen};
+use crate::backends::classical::llvm::compiler::{abort, codegen, constgen, typegen};
 
 use crate::frontends::classical::lexer::span::Span;
 use crate::frontends::classical::lexer::tokentype::TokenType;
@@ -135,8 +136,7 @@ fn compile_increment_decrement_ref<'ctx>(
             };
 
             let result: BasicValueEnum =
-                compiler::generation::cast::try_cast(context, cast_type, kind, result)
-                    .unwrap_or(result);
+                cast::try_cast(context, cast_type, kind, result, span).unwrap_or(result);
 
             symbol.store(context, result);
 
@@ -185,8 +185,7 @@ fn compile_increment_decrement_ref<'ctx>(
             };
 
             let result: BasicValueEnum =
-                compiler::generation::cast::try_cast(context, cast_type, kind, result)
-                    .unwrap_or(result);
+                cast::try_cast(context, cast_type, kind, result, span).unwrap_or(result);
 
             symbol.store(context, result);
 
@@ -250,7 +249,7 @@ fn compile_increment_decrement<'ctx>(
                 ),
             };
 
-            compiler::generation::cast::try_cast(context, cast_type, kind, result).unwrap_or(result)
+            cast::try_cast(context, cast_type, kind, result, span).unwrap_or(result)
         }
         _ => {
             let float: FloatValue = value.into_float_value();
@@ -293,7 +292,7 @@ fn compile_increment_decrement<'ctx>(
                 ),
             };
 
-            compiler::generation::cast::try_cast(context, cast_type, kind, result).unwrap_or(result)
+            cast::try_cast(context, cast_type, kind, result, span).unwrap_or(result)
         }
     }
 }
@@ -317,8 +316,7 @@ fn compile_logical_negation<'ctx>(
             if let Ok(result) = llvm_builder.build_not(int, "") {
                 let result: BasicValueEnum = result.into();
 
-                return compiler::generation::cast::try_cast(context, cast_type, kind, result)
-                    .unwrap_or(result);
+                return cast::try_cast(context, cast_type, kind, result, span).unwrap_or(result);
             }
 
             int.into()
@@ -344,6 +342,8 @@ fn compile_arithmetic_negation<'ctx>(
     let value: BasicValueEnum = codegen::compile(context, expr, cast_type);
     let kind: &Type = expr.llvm_get_type(context);
 
+    let span: Span = expr.get_span();
+
     match kind {
         kind if kind.is_integer_type() => {
             let int: IntValue = value.into_int_value();
@@ -351,8 +351,7 @@ fn compile_arithmetic_negation<'ctx>(
             if let Ok(result) = llvm_builder.build_int_neg(int, "") {
                 let result: BasicValueEnum = result.into();
 
-                return compiler::generation::cast::try_cast(context, cast_type, kind, result)
-                    .unwrap_or(result);
+                return cast::try_cast(context, cast_type, kind, result, span).unwrap_or(result);
             }
 
             int.into()
@@ -364,8 +363,7 @@ fn compile_arithmetic_negation<'ctx>(
             if let Ok(result) = llvm_builder.build_float_neg(float, "") {
                 let result: BasicValueEnum = result.into();
 
-                return compiler::generation::cast::try_cast(context, cast_type, kind, result)
-                    .unwrap_or(result);
+                return cast::try_cast(context, cast_type, kind, result, span).unwrap_or(result);
             }
 
             float.into()
@@ -383,6 +381,8 @@ fn compile_bitwise_not<'ctx>(
     let value: BasicValueEnum = codegen::compile(context, expr, cast_type);
     let kind: &Type = expr.llvm_get_type(context);
 
+    let span: Span = expr.get_span();
+
     match kind {
         kind if kind.is_integer_type() => {
             let int: IntValue = value.into_int_value();
@@ -390,8 +390,7 @@ fn compile_bitwise_not<'ctx>(
             if let Ok(result) = llvm_builder.build_not(int, "") {
                 let result: BasicValueEnum = result.into();
 
-                return compiler::generation::cast::try_cast(context, cast_type, kind, result)
-                    .unwrap_or(result);
+                return cast::try_cast(context, cast_type, kind, result, span).unwrap_or(result);
             }
 
             int.into()
@@ -403,8 +402,7 @@ fn compile_bitwise_not<'ctx>(
             if let Ok(result) = llvm_builder.build_not(ptr, "") {
                 let result: BasicValueEnum = result.into();
 
-                return compiler::generation::cast::try_cast(context, cast_type, kind, result)
-                    .unwrap_or(result);
+                return cast::try_cast(context, cast_type, kind, result, span).unwrap_or(result);
             }
 
             ptr.into()

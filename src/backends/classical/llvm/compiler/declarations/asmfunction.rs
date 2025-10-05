@@ -2,11 +2,8 @@ use crate::backends::classical::llvm::compiler::context::LLVMCodeGenContext;
 use crate::backends::classical::llvm::compiler::conventions::CallConvention;
 use crate::backends::classical::llvm::compiler::{attributes::LLVMAttribute, obfuscation};
 
-use crate::backends::classical::llvm::compiler::{block, typegen};
+use crate::backends::classical::llvm::compiler::{abort, block, typegen};
 use crate::backends::classical::types::traits::AssemblerFunctionExtensions;
-
-use crate::core::console::logging;
-use crate::core::console::logging::LoggingType;
 
 use crate::frontends::classical::lexer::span::Span;
 use crate::frontends::classical::types::ast::Ast;
@@ -16,7 +13,7 @@ use crate::frontends::classical::typesystem::types::Type;
 
 use crate::frontends::classical::types::parser::repr::GlobalAssemblerFunction;
 
-use std::fmt::Display;
+use std::path::PathBuf;
 
 use inkwell::{
     InlineAsmDialect,
@@ -45,7 +42,7 @@ pub fn compile<'ctx>(
     let asm_function_parameters_types: &[Type] = asm_fn.6;
     let asm_function_attributes: &ThrushAttributes = asm_fn.7;
 
-    let asm_span: Span = asm_fn.8;
+    let span: Span = asm_fn.8;
 
     let sideeffects: bool = asm_function_attributes.has_asmsideffects_attribute();
     let align_stack: bool = asm_function_attributes.has_asmalignstack_attribute();
@@ -118,23 +115,42 @@ pub fn compile<'ctx>(
             asm_fn_call.try_as_basic_value().left(),
         ) {
             (false, Some(return_value)) => {
-                llvm_builder.build_return(Some(&return_value))
-            .map_err(|_| {
-                self::codegen_abort(
-                    "Failed to create return terminator with value in assembly function generation.");
-            })
-            .ok();
+                llvm_builder
+                    .build_return(Some(&return_value))
+                    .map_err(|_| {
+                        abort::abort_codegen(
+                            context,
+                            "Failed to compile assembly function!",
+                            span,
+                            PathBuf::from(file!()),
+                            line!(),
+                        );
+                    })
+                    .ok();
             }
             _ => {
-                llvm_builder.build_return(None)
-            .map_err(|_| {
-                self::codegen_abort("Failed to create void return terminator in assembly function generation.",);
-            })
-            .ok();
+                llvm_builder
+                    .build_return(None)
+                    .map_err(|_| {
+                        abort::abort_codegen(
+                            context,
+                            "Failed to compile assembly function!",
+                            span,
+                            PathBuf::from(file!()),
+                            line!(),
+                        );
+                    })
+                    .ok();
             }
         }
     } else {
-        self::codegen_abort("Unable to create indirect call for call assembly function.");
+        abort::abort_codegen(
+            context,
+            "Failed to compile indirect call for assembly function!",
+            span,
+            PathBuf::from(file!()),
+            line!(),
+        );
     }
 
     llvm_builder.position_at_end(last_block);
@@ -145,12 +161,7 @@ pub fn compile<'ctx>(
             llvm_asm_function,
             asm_function_parameters_types,
             call_convention,
-            asm_span,
+            span,
         ),
     );
-}
-
-#[inline]
-fn codegen_abort<T: Display>(message: T) -> ! {
-    logging::print_backend_bug(LoggingType::BackendBug, &format!("{}", message));
 }

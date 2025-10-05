@@ -1,14 +1,13 @@
-use std::fmt::Display;
+use std::path::PathBuf;
 
-use crate::backends::classical::llvm::compiler;
+use crate::backends::classical::llvm::compiler::abort;
 use crate::backends::classical::llvm::compiler::codegen;
 use crate::backends::classical::llvm::compiler::context::LLVMCodeGenContext;
+use crate::backends::classical::llvm::compiler::generation::cast;
 
 use crate::backends::classical::types::repr::LLVMFunction;
 use crate::frontends::classical::types::ast::Ast;
 use crate::frontends::classical::typesystem::types::Type;
-
-use crate::core::console::logging::{self, LoggingType};
 
 use inkwell::AddressSpace;
 use inkwell::builder::Builder;
@@ -25,8 +24,8 @@ pub fn compile<'ctx>(
 
     let function: LLVMFunction = context.get_table().get_function(name);
 
-    let (llvm_function, function_arg_types, function_convention) =
-        (function.0, function.1, function.2);
+    let (llvm_function, function_arg_types, function_convention, span) =
+        (function.0, function.1, function.2, function.3);
 
     let compiled_args: Vec<BasicMetadataValueEnum> = args
         .iter()
@@ -43,7 +42,13 @@ pub fn compile<'ctx>(
             call.set_call_convention(function_convention);
             if !kind.is_void_type() {
                 call.try_as_basic_value().left().unwrap_or_else(|| {
-                    self::codegen_abort(format!("Function call '{}' returned no value.", name));
+                    abort::abort_codegen(
+                        context,
+                        "Failed to compile function call!",
+                        span,
+                        PathBuf::from(file!()),
+                        line!(),
+                    )
                 })
             } else {
                 context
@@ -53,15 +58,14 @@ pub fn compile<'ctx>(
                     .into()
             }
         }
-        Err(_) => {
-            self::codegen_abort(format!("Failed to generate call to function '{}'.", name));
-        }
+        Err(_) => abort::abort_codegen(
+            context,
+            "Failed to compile function call!",
+            span,
+            PathBuf::from(file!()),
+            line!(),
+        ),
     };
 
-    compiler::generation::cast::try_cast(context, cast, kind, fn_value).unwrap_or(fn_value)
-}
-
-#[inline]
-fn codegen_abort<T: Display>(message: T) -> ! {
-    logging::print_backend_bug(LoggingType::BackendBug, &format!("{}", message));
+    cast::try_cast(context, cast, kind, fn_value, span).unwrap_or(fn_value)
 }

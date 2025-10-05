@@ -8,9 +8,6 @@ use crate::backends::classical::llvm::compiler::conventions::CallConvention;
 use crate::backends::classical::llvm::compiler::{block, obfuscation, typegen};
 use crate::backends::classical::types::repr::LLVMFunction;
 
-use crate::core::console::logging;
-use crate::core::console::logging::LoggingType;
-
 use crate::frontends::classical::lexer::span::Span;
 use crate::frontends::classical::types::ast::Ast;
 use crate::frontends::classical::types::parser::repr::FunctionParameter;
@@ -18,8 +15,6 @@ use crate::frontends::classical::types::parser::repr::GlobalFunction;
 use crate::frontends::classical::types::parser::stmts::traits::ThrushAttributesExtensions;
 use crate::frontends::classical::types::parser::stmts::types::ThrushAttributes;
 use crate::frontends::classical::typesystem::types::Type;
-
-use std::fmt::Display;
 
 use inkwell::basic_block::BasicBlock;
 use inkwell::builder::Builder;
@@ -153,14 +148,5 @@ pub fn compile_parameter<'ctx>(
         codegen
             .get_mut_context()
             .new_parameter(name, ascii_name, kind, value, span);
-    } else {
-        self::codegen_abort(
-            "The value of a parameter of an LLVM function couldn't be obtained at code generation time.",
-        );
     }
-}
-
-#[inline]
-fn codegen_abort<T: Display>(message: T) -> ! {
-    logging::print_backend_bug(LoggingType::BackendBug, &format!("{}", message));
 }

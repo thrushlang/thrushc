@@ -5,6 +5,7 @@ use crate::backends::classical::llvm::compiler::abort;
 use crate::backends::classical::llvm::compiler::codegen;
 use crate::backends::classical::llvm::compiler::constgen;
 use crate::backends::classical::llvm::compiler::context::LLVMCodeGenContext;
+use crate::backends::classical::llvm::compiler::generation::cast;
 use crate::backends::classical::llvm::compiler::predicates;
 
 use crate::frontends::classical::lexer::span::Span;
@@ -31,7 +32,7 @@ fn int_operation<'ctx>(
         let lhs: IntValue = lhs.into_int_value();
         let rhs: IntValue = rhs.into_int_value();
 
-        let (lhs, rhs) = compiler::generation::cast::integer_together(context, lhs, rhs);
+        let (lhs, rhs) = cast::integer_together(context, lhs, rhs, span);
 
         return match operator {
             TokenType::Plus => llvm_builder

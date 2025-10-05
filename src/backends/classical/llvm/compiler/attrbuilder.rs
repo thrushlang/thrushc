@@ -162,13 +162,3 @@ impl<'ctx> AttributeBuilder<'ctx> {
 pub fn create_inline_hint_attribute(llvm_context: &Context) -> Attribute {
     llvm_context.create_enum_attribute(Attribute::get_named_enum_kind_id("inlinehint"), 0)
 }
-
-#[inline]
-pub fn create_always_inline_attribute(llvm_context: &Context) -> Attribute {
-    llvm_context.create_enum_attribute(Attribute::get_named_enum_kind_id("alwaysinline"), 0)
-}
-
-#[inline]
-pub fn create_minsize_attribute(llvm_context: &Context) -> Attribute {
-    llvm_context.create_enum_attribute(Attribute::get_named_enum_kind_id("optsize"), 0)
-}

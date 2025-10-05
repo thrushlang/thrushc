@@ -236,6 +236,15 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
             return finisher::archive_compilation(self, archive_time, file);
         }
 
+        llvm::compiler::optimization::LLVMOptimizer::new(
+            &llvm_module,
+            &target_machine,
+            llvm_opt,
+            llvm_backend.get_opt_passes(),
+            llvm_backend.get_modificator_passes(),
+        )
+        .optimize();
+
         if print::llvm_after_optimization(self, &llvm_module, file) {
             return finisher::archive_compilation(self, archive_time, file);
         }

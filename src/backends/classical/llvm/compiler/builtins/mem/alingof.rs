@@ -1,6 +1,8 @@
+use crate::backends::classical::llvm::compiler::context::LLVMCodeGenContext;
+use crate::backends::classical::llvm::compiler::generation::cast;
 use crate::backends::classical::llvm::compiler::typegen;
-use crate::backends::classical::llvm::compiler::{self, context::LLVMCodeGenContext};
 
+use crate::frontends::classical::lexer::span::Span;
 use crate::frontends::classical::typesystem::types::Type;
 
 use inkwell::{
@@ -10,7 +12,8 @@ use inkwell::{
 pub fn compile<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     alingof_type: &'ctx Type,
-    cast: Option<&Type>,
+    span: Span,
+    cast_type: Option<&Type>,
 ) -> BasicValueEnum<'ctx> {
     let llvm_context: &Context = context.get_llvm_context();
     let llvm_type: BasicTypeEnum = typegen::generate(llvm_context, alingof_type);
@@ -24,6 +27,5 @@ pub fn compile<'ctx>(
         .const_int(alignment.into(), false)
         .into();
 
-    compiler::generation::cast::try_cast(context, cast, alingof_type, alignment)
-        .unwrap_or(alignment)
+    cast::try_cast(context, cast_type, alingof_type, alignment, span).unwrap_or(alignment)
 }

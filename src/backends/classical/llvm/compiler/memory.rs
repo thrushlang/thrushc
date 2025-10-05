@@ -449,7 +449,7 @@ pub fn alloc_anon<'ctx>(
     let llvm_context: &Context = context.get_llvm_context();
     let llvm_builder: &Builder = context.get_llvm_builder();
 
-    let llvm_type: BasicTypeEnum = typegen::generate_subtype(llvm_context, kind);
+    let llvm_type: BasicTypeEnum = typegen::generate(llvm_context, kind);
 
     let alignment: u32 = context
         .get_target_data()

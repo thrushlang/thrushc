@@ -1,4 +1,5 @@
-use crate::backends::classical::llvm::compiler::{codegen, ptr, typegen};
+use crate::backends::classical::llvm::compiler::{abort, codegen, ptr, typegen};
+use crate::frontends::classical::lexer::span::Span;
 use crate::{
     backends::classical::llvm::compiler::context::LLVMCodeGenContext,
     frontends::classical::types::ast::Ast,
@@ -10,6 +11,7 @@ use crate::frontends::classical::typesystem::types::Type;
 use crate::core::console::logging;
 use crate::core::console::logging::LoggingType;
 
+use std::path::PathBuf;
 use std::{cmp::Ordering, fmt::Display};
 
 use inkwell::types::{BasicTypeEnum, PointerType};
@@ -57,14 +59,11 @@ pub fn const_integer_together<'ctx>(
 }
 
 pub fn integer_together<'ctx>(
-    context: &LLVMCodeGenContext<'_, 'ctx>,
+    context: &mut LLVMCodeGenContext<'_, 'ctx>,
     left: IntValue<'ctx>,
     right: IntValue<'ctx>,
+    span: Span,
 ) -> (IntValue<'ctx>, IntValue<'ctx>) {
-    let abort = |_| {
-        self::codegen_abort(format!("Failed to cast together '{}' & '{}'.", left, right));
-    };
-
     let llvm_builder: &Builder = context.get_llvm_builder();
 
     match left
@@ -75,14 +74,30 @@ pub fn integer_together<'ctx>(
         Ordering::Greater => {
             let new_right: IntValue<'ctx> = llvm_builder
                 .build_int_cast_sign_flag(right, left.get_type(), false, "")
-                .unwrap_or_else(abort);
+                .unwrap_or_else(|_| {
+                    abort::abort_codegen(
+                        context,
+                        "Failed to cast integers together!",
+                        span,
+                        PathBuf::from(file!()),
+                        line!(),
+                    )
+                });
 
             (left, new_right)
         }
         Ordering::Less => {
             let new_left: IntValue<'ctx> = llvm_builder
                 .build_int_cast_sign_flag(left, right.get_type(), false, "")
-                .unwrap_or_else(abort);
+                .unwrap_or_else(|_| {
+                    abort::abort_codegen(
+                        context,
+                        "Failed to cast integers together!",
+                        span,
+                        PathBuf::from(file!()),
+                        line!(),
+                    )
+                });
 
             (new_left, right)
         }
@@ -125,14 +140,11 @@ pub fn const_float_together<'ctx>(
 }
 
 pub fn float_together<'ctx>(
-    context: &LLVMCodeGenContext<'_, 'ctx>,
+    context: &mut LLVMCodeGenContext<'_, 'ctx>,
     left: FloatValue<'ctx>,
     right: FloatValue<'ctx>,
+    span: Span,
 ) -> (FloatValue<'ctx>, FloatValue<'ctx>) {
-    let abort = |_| {
-        self::codegen_abort(format!("Failed to cast together '{}' & '{}'.", left, right));
-    };
-
     let llvm_builder: &Builder = context.get_llvm_builder();
 
     let left_type: FloatType = left.get_type();
@@ -145,7 +157,15 @@ pub fn float_together<'ctx>(
     let new_left: FloatValue = if left_type != right_type {
         llvm_builder
             .build_float_cast(left, right_type, "")
-            .unwrap_or_else(abort)
+            .unwrap_or_else(|_| {
+                abort::abort_codegen(
+                    context,
+                    "Failed to cast floats together!",
+                    span,
+                    PathBuf::from(file!()),
+                    line!(),
+                )
+            })
     } else {
         left
     };
@@ -153,7 +173,15 @@ pub fn float_together<'ctx>(
     let new_right: FloatValue = if right_type != left_type {
         llvm_builder
             .build_float_cast(right, left_type, "")
-            .unwrap_or_else(abort)
+            .unwrap_or_else(|_| {
+                abort::abort_codegen(
+                    context,
+                    "Failed to cast floats together!",
+                    span,
+                    PathBuf::from(file!()),
+                    line!(),
+                )
+            })
     } else {
         right
     };
@@ -170,18 +198,12 @@ pub fn float_together<'ctx>(
 ########################################################################*/
 
 pub fn integer<'ctx>(
-    context: &LLVMCodeGenContext<'_, 'ctx>,
+    context: &mut LLVMCodeGenContext<'_, 'ctx>,
     target_type: &Type,
     from_type: &Type,
     from: BasicValueEnum<'ctx>,
+    span: Span,
 ) -> Option<BasicValueEnum<'ctx>> {
-    let abort = |_| {
-        self::codegen_abort(format!(
-            "Failed to cast '{}' to '{}'.",
-            from_type, target_type
-        ));
-    };
-
     let llvm_builder: &Builder = context.get_llvm_builder();
     let llvm_context: &Context = context.get_llvm_context();
 
@@ -201,7 +223,15 @@ pub fn integer<'ctx>(
                 from_type.is_signed_integer_type(),
                 "",
             )
-            .unwrap_or_else(abort)
+            .unwrap_or_else(|_| {
+                abort::abort_codegen(
+                    context,
+                    "Failed to cast integer!",
+                    span,
+                    PathBuf::from(file!()),
+                    line!(),
+                )
+            })
             .into(),
     )
 }
@@ -215,18 +245,12 @@ pub fn integer<'ctx>(
 ########################################################################*/
 
 pub fn float<'ctx>(
-    context: &LLVMCodeGenContext<'_, 'ctx>,
+    context: &mut LLVMCodeGenContext<'_, 'ctx>,
     target_type: &Type,
     from_type: &Type,
     from: BasicValueEnum<'ctx>,
+    span: Span,
 ) -> Option<BasicValueEnum<'ctx>> {
-    let abort = |_| {
-        self::codegen_abort(format!(
-            "Failed to cast '{}' to '{}'.",
-            from_type, target_type
-        ));
-    };
-
     let llvm_builder: &Builder = context.get_llvm_builder();
     let llvm_context: &Context = context.get_llvm_context();
 
@@ -245,7 +269,15 @@ pub fn float<'ctx>(
                 typegen::generate(llvm_context, target_type).into_float_type(),
                 "",
             )
-            .unwrap_or_else(abort)
+            .unwrap_or_else(|_| {
+                abort::abort_codegen(
+                    context,
+                    "Failed to cast float!",
+                    span,
+                    PathBuf::from(file!()),
+                    line!(),
+                )
+            })
             .into(),
     )
 }
@@ -260,20 +292,21 @@ pub fn float<'ctx>(
 
 #[inline]
 pub fn try_cast<'ctx>(
-    context: &LLVMCodeGenContext<'_, 'ctx>,
+    context: &mut LLVMCodeGenContext<'_, 'ctx>,
     target_type: Option<&Type>,
     from_type: &Type,
     from: BasicValueEnum<'ctx>,
+    span: Span,
 ) -> Option<BasicValueEnum<'ctx>> {
     if from.is_float_value() && target_type.is_some() {
         if let Some(target_type) = target_type {
-            return self::float(context, target_type, from_type, from);
+            return self::float(context, target_type, from_type, from, span);
         }
     }
 
     if from.is_int_value() && target_type.is_some() {
         if let Some(target_type) = target_type {
-            return self::integer(context, target_type, from_type, from);
+            return self::integer(context, target_type, from_type, from, span);
         }
     }
 

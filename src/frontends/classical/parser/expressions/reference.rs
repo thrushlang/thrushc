@@ -174,7 +174,7 @@ pub fn build_reference<'parser>(
             metadata: ReferenceMetadata::new(true, is_mutable, ReferenceType::default()),
         };
 
-        if ctx.match_token(TokenType::PlusPlus)? | ctx.match_token(TokenType::MinusMinus)? {
+        if ctx.match_token(TokenType::PlusPlus)? || ctx.match_token(TokenType::MinusMinus)? {
             let operator_tk: &Token = ctx.previous();
             let operator: TokenType = operator_tk.get_type();
             let span: Span = operator_tk.get_span();

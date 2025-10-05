@@ -29,90 +29,79 @@ use crate::{
 use super::ParserContext;
 
 pub fn build_type(ctx: &mut ParserContext<'_>) -> Result<Type, ThrushCompilerIssue> {
-    let builded_type: Result<Type, ThrushCompilerIssue> = match ctx.peek().kind {
+    match ctx.peek().kind {
         tk_kind if tk_kind.is_type() => {
-            let tk: &Token = ctx.advance()?;
-            let span: Span = tk.span;
+            let tk = ctx.advance()?;
+            let span = tk.span;
 
             if tk_kind.is_array() {
-                return self::build_array_type(ctx, span);
+                return build_array_type(ctx, span);
             }
-
             if tk_kind.is_const() {
-                return self::build_const_type(ctx);
+                return build_const_type(ctx);
             }
-
             if tk_kind.is_fn_ref() {
-                return self::build_fn_ref_type(ctx);
+                return build_fn_ref_type(ctx);
             }
 
             match tk_kind.as_type(span)? {
                 ty if ty.is_ptr_type() && ctx.check(TokenType::LBracket) => {
-                    Ok(self::build_recursive_type(ctx, Type::Ptr(None))?)
+                    self::build_recursive_type(ctx, Type::Ptr(None))
                 }
-                ty if ty.is_ptr_type() => Ok(ty),
                 ty => Ok(ty),
             }
         }
 
         TokenType::Identifier => {
             let identifier_tk: &Token = ctx.advance()?;
-
             let name: &str = identifier_tk.get_lexeme();
             let span: Span = identifier_tk.get_span();
 
             if let Ok(object) = ctx.get_symbols().get_symbols_id(name, span) {
                 if object.is_structure() {
                     let struct_id: &str = object.expected_struct(span)?;
-
                     let structure: Struct = ctx.get_symbols().get_struct_by_id(struct_id, span)?;
-
                     let fields: StructFields = structure.get_fields();
 
-                    return Ok(fields.get_type());
+                    Ok(fields.get_type())
                 } else if object.is_custom_type() {
                     let custom_id: &str = object.expected_custom_type(span)?;
-
                     let custom: CustomTypeSymbol =
                         ctx.get_symbols().get_custom_type_by_id(custom_id, span)?;
 
-                    let custom_type: Type = custom.0;
-
-                    return Ok(custom_type);
+                    Ok(custom.0)
                 } else {
-                    return Err(ThrushCompilerIssue::Error(
-                        String::from("Syntax error"),
+                    Err(ThrushCompilerIssue::Error(
+                        "Syntax error".into(),
                         format!("Not found type '{}'.", name),
                         None,
                         span,
-                    ));
+                    ))
                 }
+            } else {
+                Err(ThrushCompilerIssue::Error(
+                    "Syntax error".into(),
+                    format!("Expected type, not '{}'", name),
+                    None,
+                    ctx.previous().span,
+                ))
             }
-
-            return Err(ThrushCompilerIssue::Error(
-                String::from("Syntax error"),
-                format!("Expected type, not '{}'", name),
-                None,
-                ctx.previous().span,
-            ));
         }
 
         what_heck => Err(ThrushCompilerIssue::Error(
-            String::from("Syntax error"),
+            "Syntax error".into(),
             format!("Expected type, not '{}'", what_heck),
             None,
             ctx.previous().span,
         )),
-    };
-
-    builded_type
+    }
 }
 
 fn build_fn_ref_type(ctx: &mut ParserContext<'_>) -> Result<Type, ThrushCompilerIssue> {
     ctx.consume(
         TokenType::LBracket,
-        String::from("Syntax error"),
-        String::from("Expected '['."),
+        "Syntax error".into(),
+        "Expected '['.".into(),
     )?;
 
     let mut parameter_types: Vec<Type> = Vec::with_capacity(10);
@@ -122,38 +111,35 @@ fn build_fn_ref_type(ctx: &mut ParserContext<'_>) -> Result<Type, ThrushCompiler
             break;
         }
 
-        let parameter_type: Type = self::build_type(ctx)?;
-
-        parameter_types.push(parameter_type);
+        parameter_types.push(build_type(ctx)?);
 
         if ctx.check(TokenType::RBracket) {
             break;
-        } else {
-            ctx.consume(
-                TokenType::Comma,
-                String::from("Syntax error"),
-                String::from("Expected ','."),
-            )?;
         }
+
+        ctx.consume(
+            TokenType::Comma,
+            "Syntax error".into(),
+            "Expected ','.".into(),
+        )?;
     }
 
     ctx.consume(
         TokenType::RBracket,
-        String::from("Syntax error"),
-        String::from("Expected ']'."),
+        "Syntax error".into(),
+        "Expected ']'.".into(),
     )?;
 
     let attributes: ThrushAttributes = attributes::build_attributes(ctx, &[TokenType::Arrow])?;
-
     let has_ignore: bool = attributes.has_ignore_attribute();
 
     ctx.consume(
         TokenType::Arrow,
-        String::from("Syntax error"),
-        String::from("Expected '->'."),
+        "Syntax error".into(),
+        "Expected '->'.".into(),
     )?;
 
-    let return_type: Type = self::build_type(ctx)?;
+    let return_type: Type = build_type(ctx)?;
 
     Ok(Type::Fn(
         parameter_types,
@@ -166,32 +152,30 @@ fn build_fn_ref_type(ctx: &mut ParserContext<'_>) -> Result<Type, ThrushCompiler
 }
 
 fn build_const_type(ctx: &mut ParserContext<'_>) -> Result<Type, ThrushCompilerIssue> {
-    let inner_type: Type = self::build_type(ctx)?;
-
-    Ok(Type::Const(inner_type.into()))
+    Ok(Type::Const(build_type(ctx)?.into()))
 }
 
 fn build_array_type(ctx: &mut ParserContext<'_>, span: Span) -> Result<Type, ThrushCompilerIssue> {
     ctx.consume(
         TokenType::LBracket,
-        String::from("Syntax error"),
-        String::from("Expected '['."),
+        "Syntax error".into(),
+        "Expected '['.".into(),
     )?;
 
-    let array_type: Type = self::build_type(ctx)?;
+    let array_type: Type = build_type(ctx)?;
 
     if ctx.check(TokenType::SemiColon) {
         ctx.consume(
             TokenType::SemiColon,
-            String::from("Syntax error"),
-            String::from("Expected ';'."),
+            "Syntax error".into(),
+            "Expected ';'.".into(),
         )?;
 
         let size: Ast = expr::build_expr(ctx)?;
 
         if !size.is_integer() {
             return Err(ThrushCompilerIssue::Error(
-                String::from("Syntax error"),
+                "Syntax error".into(),
                 "Expected integer value.".into(),
                 None,
                 span,
@@ -200,7 +184,7 @@ fn build_array_type(ctx: &mut ParserContext<'_>, span: Span) -> Result<Type, Thr
 
         if !size.is_unsigned_integer()? || !size.is_lessu32bit_integer()? {
             return Err(ThrushCompilerIssue::Error(
-                String::from("Syntax error"),
+                "Syntax error".into(),
                 "Expected any unsigned integer value less than or equal to 32 bits.".into(),
                 None,
                 span,
@@ -212,15 +196,15 @@ fn build_array_type(ctx: &mut ParserContext<'_>, span: Span) -> Result<Type, Thr
         if let Ok(array_size) = u32::try_from(raw_array_size) {
             ctx.consume(
                 TokenType::RBracket,
-                String::from("Syntax error"),
-                String::from("Expected ']'."),
+                "Syntax error".into(),
+                "Expected ']'.".into(),
             )?;
 
             return Ok(Type::FixedArray(array_type.into(), array_size));
         }
 
         return Err(ThrushCompilerIssue::Error(
-            String::from("Syntax error"),
+            "Syntax error".into(),
             "Expected any unsigned 32 bits integer value.".into(),
             None,
             span,
@@ -229,10 +213,9 @@ fn build_array_type(ctx: &mut ParserContext<'_>, span: Span) -> Result<Type, Thr
 
     ctx.consume(
         TokenType::RBracket,
-        String::from("Syntax error"),
-        String::from("Expected ']'."),
+        "Syntax error".into(),
+        "Expected ']'.".into(),
     )?;
-
     Ok(Type::Array(array_type.into()))
 }
 
@@ -242,30 +225,30 @@ fn build_recursive_type(
 ) -> Result<Type, ThrushCompilerIssue> {
     ctx.consume(
         TokenType::LBracket,
-        String::from("Syntax error"),
-        String::from("Expected '['."),
+        "Syntax error".into(),
+        "Expected '['.".into(),
     )?;
 
     if let Type::Ptr(_) = &mut before_type {
-        let mut inner_type: Type = self::build_type(ctx)?;
+        let mut inner_type: Type = build_type(ctx)?;
 
         while ctx.check(TokenType::LBracket) {
-            inner_type = self::build_recursive_type(ctx, inner_type)?;
+            inner_type = build_recursive_type(ctx, inner_type)?;
         }
 
         ctx.consume(
             TokenType::RBracket,
-            String::from("Syntax error"),
-            String::from("Expected ']'."),
+            "Syntax error".into(),
+            "Expected ']'.".into(),
         )?;
 
-        return Ok(Type::Ptr(Some(inner_type.into())));
+        Ok(Type::Ptr(Some(inner_type.into())))
+    } else {
+        Err(ThrushCompilerIssue::Error(
+            "Syntax error".into(),
+            format!("Expected pointer type, not '{}'", before_type),
+            None,
+            ctx.previous().span,
+        ))
     }
-
-    Err(ThrushCompilerIssue::Error(
-        String::from("Syntax error"),
-        format!("Expected pointer type, not '{}'", before_type),
-        None,
-        ctx.previous().span,
-    ))
 }

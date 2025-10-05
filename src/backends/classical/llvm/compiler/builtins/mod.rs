@@ -12,7 +12,6 @@ pub mod mem;
 
 #[derive(Debug, Clone)]
 pub enum Builtin<'ctx> {
-    // Memory Builtins
     Halloc {
         alloc: Type,
         span: Span,
@@ -37,6 +36,7 @@ pub enum Builtin<'ctx> {
     },
     AlignOf {
         align_of: Type,
+        span: Span,
     },
     SizeOf {
         size_of: Type,
@@ -50,7 +50,9 @@ pub fn compile<'ctx>(
     cast_type: Option<&Type>,
 ) -> BasicValueEnum<'ctx> {
     match builtin {
-        Builtin::AlignOf { align_of } => mem::alingof::compile(context, align_of, cast_type),
+        Builtin::AlignOf { align_of, span } => {
+            mem::alingof::compile(context, align_of, *span, cast_type)
+        }
         Builtin::MemCpy {
             source,
             destination,

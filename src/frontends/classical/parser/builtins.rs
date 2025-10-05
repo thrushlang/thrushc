@@ -207,6 +207,7 @@ pub fn build_alignof<'parser>(
     Ok(Ast::Builtin {
         builtin: Builtin::AlignOf {
             align_of: alignof_type,
+            span,
         },
         kind: Type::U32,
         span,

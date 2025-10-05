@@ -78,10 +78,7 @@ impl<'parser> Parser<'parser> {
 
         while !ctx.is_eof() {
             match declaration::decl(&mut ctx) {
-                Ok(ast) => {
-                    ctx.add_ast(ast);
-                }
-
+                Ok(ast) => ctx.add_ast(ast),
                 Err(error) => {
                     let total_issues: usize = ctx.errors.len() + ctx.bugs.len();
 
@@ -90,7 +87,6 @@ impl<'parser> Parser<'parser> {
                             LoggingType::Warning,
                             "Too many issues. Stopping compilation.",
                         );
-
                         break;
                     }
 
@@ -100,9 +96,7 @@ impl<'parser> Parser<'parser> {
                         ctx.add_error(error);
                     }
 
-                    if let Err(error) = ctx.sync() {
-                        ctx.add_error(error);
-                    }
+                    ctx.sync();
 
                     if ctx.need_abort() {
                         break;

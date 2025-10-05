@@ -26,9 +26,9 @@ pub fn compile<'ctx>(
 ) -> BasicValueEnum<'ctx> {
     match context.get_pointer_anchor() {
         Some(anchor) if !anchor.is_triggered() => {
-            compile_with_anchor(context, args, struct_type, span, anchor)
+            self::compile_with_anchor(context, args, struct_type, span, anchor)
         }
-        _ => compile_without_anchor(context, args, struct_type, span),
+        _ => self::compile_without_anchor(context, args, struct_type, span),
     }
 }
 
@@ -61,7 +61,7 @@ fn compile_with_anchor<'ctx>(
         }
     }
 
-    compile_null_ptr(context)
+    self::compile_null_ptr(context)
 }
 
 fn compile_without_anchor<'ctx>(

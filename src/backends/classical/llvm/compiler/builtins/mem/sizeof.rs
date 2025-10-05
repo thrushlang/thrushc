@@ -1,4 +1,5 @@
-use crate::backends::classical::llvm::compiler::{self, context::LLVMCodeGenContext};
+use crate::backends::classical::llvm::compiler::context::LLVMCodeGenContext;
+use crate::backends::classical::llvm::compiler::generation::cast;
 use crate::backends::classical::llvm::compiler::{abort, typegen};
 
 use crate::frontends::classical::lexer::span::Span;
@@ -35,6 +36,5 @@ pub fn compile<'ctx>(
         })
         .into();
 
-    compiler::generation::cast::try_cast(context, cast, sizeof_type, sizeof_value)
-        .unwrap_or(sizeof_value)
+    cast::try_cast(context, cast, sizeof_type, sizeof_value, span).unwrap_or(sizeof_value)
 }

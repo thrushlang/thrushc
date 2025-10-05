@@ -3,7 +3,7 @@
 use std::path::PathBuf;
 
 use crate::backends::classical::llvm::compiler::declarations::{self};
-use crate::backends::classical::llvm::compiler::generation::{float, integer};
+use crate::backends::classical::llvm::compiler::generation::{cast, float, integer};
 use crate::backends::classical::llvm::compiler::statements::lli;
 use crate::backends::classical::llvm::compiler::{self, builtins, codegen};
 use crate::backends::classical::llvm::compiler::{abort, memory};
@@ -537,7 +537,7 @@ pub fn compile<'ctx>(
             let float: BasicValueEnum =
                 float::generate(context, kind, *value, *signed, *span).into();
 
-            compiler::generation::cast::try_cast(context, cast_type, kind, float).unwrap_or(float)
+            cast::try_cast(context, cast_type, kind, float, *span).unwrap_or(float)
         }
 
         Ast::Integer {
@@ -550,8 +550,7 @@ pub fn compile<'ctx>(
             let integer: BasicValueEnum =
                 integer::generate(context, kind, *value, *signed, *span).into();
 
-            compiler::generation::cast::try_cast(context, cast_type, kind, integer)
-                .unwrap_or(integer)
+            cast::try_cast(context, cast_type, kind, integer, *span).unwrap_or(integer)
         }
 
         Ast::NullPtr { .. } => context
@@ -588,12 +587,14 @@ pub fn compile<'ctx>(
             function,
             function_type,
             args,
+            span,
             ..
         } => compiler::generation::expressions::indirect::compile(
             context,
             function,
             args,
             function_type,
+            *span,
             cast_type,
         ),
 
@@ -681,8 +682,7 @@ pub fn compile<'ctx>(
                 value
             };
 
-            compiler::generation::cast::try_cast(context, cast_type, kind, defer_value)
-                .unwrap_or(defer_value)
+            cast::try_cast(context, cast_type, kind, defer_value, *span).unwrap_or(defer_value)
         }
 
         // Array Operations

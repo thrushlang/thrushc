@@ -1,13 +1,13 @@
-use std::fmt::Display;
+use std::path::PathBuf;
 
 use crate::backends::classical::llvm::compiler::context::LLVMCodeGenContext;
-use crate::backends::classical::llvm::compiler::{self, ptr};
+use crate::backends::classical::llvm::compiler::generation::cast;
+use crate::backends::classical::llvm::compiler::{abort, ptr};
 use crate::backends::classical::llvm::compiler::{codegen, typegen};
 
+use crate::frontends::classical::lexer::span::Span;
 use crate::frontends::classical::types::ast::Ast;
 use crate::frontends::classical::typesystem::types::Type;
-
-use crate::core::console::logging::{self, LoggingType};
 
 use inkwell::AddressSpace;
 use inkwell::builder::Builder;
@@ -16,44 +16,43 @@ use inkwell::values::{BasicMetadataValueEnum, BasicValueEnum, PointerValue};
 
 pub fn compile<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
-
     pointer: &'ctx Ast,
     args: &'ctx [Ast],
     function_type: &Type,
-    cast: Option<&Type>,
+    span: Span,
+    cast_type: Option<&Type>,
 ) -> BasicValueEnum<'ctx> {
-    let llvm_builder: &Builder = context.get_llvm_builder();
+    let llvm_builder: &Builder<'_> = context.get_llvm_builder();
+    let function_ptr: PointerValue<'_> =
+        ptr::compile(context, pointer, cast_type).into_pointer_value();
 
-    let function_ptr: PointerValue = ptr::compile(context, pointer, cast).into_pointer_value();
+    if let Type::Fn(parameters, kind, modificator) = function_type {
+        let need_ignore: bool = modificator.llvm().has_ignore();
+        let function_type: FunctionType<'_> =
+            typegen::generate_fn_type_from_type(context, kind, parameters, need_ignore);
 
-    match function_type {
-        Type::Fn(parameters, kind, modificator) => {
-            let need_ignore: bool = modificator.llvm().has_ignore();
+        let compiled_args: Vec<BasicMetadataValueEnum> = args
+            .iter()
+            .enumerate()
+            .map(|(i, expr)| {
+                let cast_type = parameters.get(i);
+                codegen::compile(context, expr, cast_type).into()
+            })
+            .collect();
 
-            let function_type: FunctionType =
-                typegen::generate_fn_type_from_type(context, kind, parameters, need_ignore);
-
-            let compiled_args: Vec<BasicMetadataValueEnum> = args
-                .iter()
-                .enumerate()
-                .map(|(i, expr)| {
-                    let cast: Option<&Type> = parameters.get(i);
-                    codegen::compile(context, expr, cast).into()
-                })
-                .collect();
-
-            let fn_value: BasicValueEnum = match llvm_builder.build_indirect_call(
-                function_type,
-                function_ptr,
-                &compiled_args,
-                "",
-            ) {
+        let fn_value: BasicValueEnum<'_> =
+            match llvm_builder.build_indirect_call(function_type, function_ptr, &compiled_args, "")
+            {
                 Ok(call) => {
                     if !kind.is_void_type() {
                         call.try_as_basic_value().left().unwrap_or_else(|| {
-                            self::codegen_abort(
-                                "Function indirect reference call not returned a value.",
-                            );
+                            abort::abort_codegen(
+                                context,
+                                "Failed to compile indirect function call!",
+                                span,
+                                PathBuf::from(file!()),
+                                line!(),
+                            )
                         })
                     } else {
                         context
@@ -63,21 +62,23 @@ pub fn compile<'ctx>(
                             .into()
                     }
                 }
-
-                Err(_) => {
-                    self::codegen_abort("Failed to generate indirect call.");
-                }
+                Err(_) => abort::abort_codegen(
+                    context,
+                    "Failed to compile indirect function call!",
+                    span,
+                    PathBuf::from(file!()),
+                    line!(),
+                ),
             };
 
-            compiler::generation::cast::try_cast(context, cast, kind, fn_value).unwrap_or(fn_value)
-        }
-        _ => {
-            self::codegen_abort("Expected function reference.");
-        }
+        cast::try_cast(context, cast_type, kind, fn_value, span).unwrap_or(fn_value)
+    } else {
+        abort::abort_codegen(
+            context,
+            "Failed to compile indirect function call!",
+            span,
+            PathBuf::from(file!()),
+            line!(),
+        )
     }
-}
-
-#[inline]
-fn codegen_abort<T: Display>(message: T) -> ! {
-    logging::print_backend_bug(LoggingType::BackendBug, &format!("{}", message));
 }

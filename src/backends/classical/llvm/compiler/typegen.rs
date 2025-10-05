@@ -98,20 +98,10 @@ pub fn generate<'ctx>(llvm_context: &'ctx Context, kind: &Type) -> BasicTypeEnum
 }
 
 #[inline]
-pub fn generate_subtype<'ctx>(llvm_context: &'ctx Context, kind: &Type) -> BasicTypeEnum<'ctx> {
-    match kind {
-        Type::Const(subtype) => self::generate_subtype(llvm_context, subtype),
-        Type::Ptr(Some(subtype)) => self::generate_subtype(llvm_context, subtype),
-
-        _ => self::generate(llvm_context, kind),
-    }
-}
-
-#[inline]
 pub fn generate_gep<'ctx>(llvm_context: &'ctx Context, kind: &Type) -> BasicTypeEnum<'ctx> {
     match kind {
         Type::Const(subtype) => self::generate_gep(llvm_context, subtype),
-        Type::Ptr(Some(subtype)) => self::generate_gep(llvm_context, subtype),
+        Type::Ptr(Some(subtype)) => self::generate(llvm_context, subtype),
 
         _ => self::generate(llvm_context, kind),
     }

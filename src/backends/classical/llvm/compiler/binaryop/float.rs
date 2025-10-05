@@ -1,7 +1,9 @@
 use std::path::PathBuf;
 
 use crate::{
-    backends::classical::llvm::compiler::{self, abort, codegen, constgen, predicates},
+    backends::classical::llvm::compiler::{
+        self, abort, codegen, constgen, generation::cast, predicates,
+    },
     frontends::classical::{
         lexer::{span::Span, tokentype::TokenType},
         types::parser::repr::BinaryOperation,
@@ -25,7 +27,7 @@ pub fn float_operation<'ctx>(
 ) -> BasicValueEnum<'ctx> {
     let llvm_builder: &Builder = context.get_llvm_builder();
 
-    let (lhs, rhs) = compiler::generation::cast::float_together(context, lhs, rhs);
+    let (lhs, rhs) = cast::float_together(context, lhs, rhs, span);
 
     match operator {
         TokenType::Plus => llvm_builder
