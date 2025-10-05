@@ -1,35 +1,40 @@
-use crate::core::console::logging;
-use crate::core::console::logging::LoggingType;
+use crate::backends::classical::llvm::compiler::abort;
+use crate::backends::classical::llvm::compiler::context::LLVMCodeGenContext;
+
+use crate::frontends::classical::lexer::span::Span;
 use crate::frontends::classical::typesystem::types::Type;
 
 use inkwell::{context::Context, values::FloatValue};
-use std::fmt::Display;
+
+use std::path::PathBuf;
 
 pub fn generate<'ctx>(
-    context: &'ctx Context,
+    context: &mut LLVMCodeGenContext<'_, 'ctx>,
     kind: &Type,
     iee: f64,
     signed: bool,
+    span: Span,
 ) -> FloatValue<'ctx> {
+    let llvm_context: &Context = context.get_llvm_context();
+
     match kind {
-        Type::F32 if signed => context.f32_type().const_float(-iee),
-        Type::F32 => context.f32_type().const_float(iee),
-        Type::F64 if signed => context.f64_type().const_float(-iee),
-        Type::F64 => context.f64_type().const_float(iee),
-        Type::FX8680 if signed => context.x86_f80_type().const_float(-iee),
-        Type::FX8680 => context.x86_f80_type().const_float(iee),
-        Type::F128 if signed => context.f128_type().const_float(-iee),
-        Type::F128 => context.f128_type().const_float(iee),
-        Type::FPPC128 if signed => context.ppc_f128_type().const_float(-iee),
-        Type::FPPC128 => context.ppc_f128_type().const_float(iee),
+        Type::F32 if signed => llvm_context.f32_type().const_float(-iee),
+        Type::F32 => llvm_context.f32_type().const_float(iee),
+        Type::F64 if signed => llvm_context.f64_type().const_float(-iee),
+        Type::F64 => llvm_context.f64_type().const_float(iee),
+        Type::FX8680 if signed => llvm_context.x86_f80_type().const_float(-iee),
+        Type::FX8680 => llvm_context.x86_f80_type().const_float(iee),
+        Type::F128 if signed => llvm_context.f128_type().const_float(-iee),
+        Type::F128 => llvm_context.f128_type().const_float(iee),
+        Type::FPPC128 if signed => llvm_context.ppc_f128_type().const_float(-iee),
+        Type::FPPC128 => llvm_context.ppc_f128_type().const_float(iee),
 
-        what => {
-            self::codegen_abort(format!("Unsupported float type: '{}'.", what));
-        }
+        what => abort::abort_codegen(
+            context,
+            &format!("Failed to compile '{}' float type!", what),
+            span,
+            PathBuf::from(file!()),
+            line!(),
+        ),
     }
-}
-
-#[inline]
-fn codegen_abort<T: Display>(message: T) -> ! {
-    logging::print_backend_bug(LoggingType::BackendBug, &format!("{}", message));
 }

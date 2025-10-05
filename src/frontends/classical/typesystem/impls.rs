@@ -1,4 +1,7 @@
-use crate::frontends::classical::typesystem::{traits::TypeExtensions, types::Type};
+use crate::frontends::classical::typesystem::{
+    traits::{LLVMTypeExtensions, TypeExtensions},
+    types::Type,
+};
 
 impl Type {
     #[inline(always)]
@@ -129,6 +132,14 @@ impl TypeExtensions for Type {
         }
 
         self
+    }
+
+    fn get_directref_type(&self) -> Type {
+        if self.llvm_is_ptr_type() {
+            self.clone()
+        } else {
+            Type::Ptr(Some(self.clone().into()))
+        }
     }
 }
 

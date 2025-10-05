@@ -1,8 +1,7 @@
-use std::{fmt::Display, path::PathBuf};
+use std::path::PathBuf;
 
 use crate::{
     backends::classical::llvm::compiler::{self, abort, codegen, constgen, predicates},
-    core::console::logging::{self, LoggingType},
     frontends::classical::{
         lexer::{span::Span, tokentype::TokenType},
         types::parser::repr::BinaryOperation,
@@ -22,45 +21,95 @@ pub fn float_operation<'ctx>(
     lhs: FloatValue<'ctx>,
     rhs: FloatValue<'ctx>,
     operator: &TokenType,
+    span: Span,
 ) -> BasicValueEnum<'ctx> {
     let llvm_builder: &Builder = context.get_llvm_builder();
 
     let (lhs, rhs) = compiler::generation::cast::float_together(context, lhs, rhs);
 
-    let cfloatgen_abort = |_| {
-        self::codegen_abort("Cannot perform float binary operation.");
-    };
-
-    let cintgen_abort = |_| {
-        self::codegen_abort("Cannot perform float binary operation.");
-    };
-
     match operator {
         TokenType::Plus => llvm_builder
             .build_float_add(lhs, rhs, "")
-            .unwrap_or_else(cfloatgen_abort)
+            .unwrap_or_else(|_| {
+                abort::abort_codegen(
+                    context,
+                    "Failed to compile '+' operation!",
+                    span,
+                    PathBuf::from(file!()),
+                    line!(),
+                )
+            })
             .into(),
         TokenType::Minus => llvm_builder
             .build_float_sub(lhs, rhs, "")
-            .unwrap_or_else(cfloatgen_abort)
+            .unwrap_or_else(|_| {
+                abort::abort_codegen(
+                    context,
+                    "Failed to compile '-' operation!",
+                    span,
+                    PathBuf::from(file!()),
+                    line!(),
+                )
+            })
             .into(),
         TokenType::Star => llvm_builder
             .build_float_mul(lhs, rhs, "")
-            .unwrap_or_else(cfloatgen_abort)
+            .unwrap_or_else(|_| {
+                abort::abort_codegen(
+                    context,
+                    "Failed to compile '*' operation!",
+                    span,
+                    PathBuf::from(file!()),
+                    line!(),
+                )
+            })
             .into(),
         TokenType::Slash => llvm_builder
             .build_float_div(lhs, rhs, "")
-            .unwrap_or_else(cfloatgen_abort)
+            .unwrap_or_else(|_| {
+                abort::abort_codegen(
+                    context,
+                    "Failed to compile '/' operation!",
+                    span,
+                    PathBuf::from(file!()),
+                    line!(),
+                )
+            })
+            .into(),
+
+        TokenType::Arith => llvm_builder
+            .build_float_rem(lhs, rhs, "")
+            .unwrap_or_else(|_| {
+                abort::abort_codegen(
+                    context,
+                    "Failed to compile '%' operation!",
+                    span,
+                    PathBuf::from(file!()),
+                    line!(),
+                )
+            })
             .into(),
 
         op if op.is_logical_operator() => llvm_builder
-            .build_float_compare(predicates::float(operator), lhs, rhs, "")
-            .unwrap_or_else(cintgen_abort)
+            .build_float_compare(predicates::float(context, operator, span), lhs, rhs, "")
+            .unwrap_or_else(|_| {
+                abort::abort_codegen(
+                    context,
+                    "Failed to compile comparison!",
+                    span,
+                    PathBuf::from(file!()),
+                    line!(),
+                )
+            })
             .into(),
 
-        _ => {
-            self::codegen_abort("Cannot perform float binary operation without a valid operator.");
-        }
+        _ => abort::abort_codegen(
+            context,
+            "Failed to compile without a valid operator!",
+            span,
+            PathBuf::from(file!()),
+            line!(),
+        ),
     }
 }
 
@@ -77,6 +126,7 @@ pub fn compile<'ctx>(
         | TokenType::Slash
         | TokenType::Minus
         | TokenType::Star
+        | TokenType::Arith
         | TokenType::BangEq
         | TokenType::EqEq
         | TokenType::LessEq
@@ -96,6 +146,7 @@ pub fn compile<'ctx>(
             lhs.into_float_value(),
             rhs.into_float_value(),
             operator,
+            span,
         );
     }
 
@@ -110,9 +161,11 @@ pub fn compile<'ctx>(
 
 #[inline]
 pub fn const_float_operation<'ctx>(
+    context: &mut LLVMCodeGenContext<'_, 'ctx>,
     lhs: FloatValue<'ctx>,
     rhs: FloatValue<'ctx>,
     operator: &TokenType,
+    span: Span,
 ) -> BasicValueEnum<'ctx> {
     let (lhs, rhs) = compiler::generation::cast::const_float_together(lhs, rhs);
 
@@ -169,13 +222,30 @@ pub fn const_float_operation<'ctx>(
             lhs.get_type().const_zero().into()
         }
 
-        op if op.is_logical_operator() => {
-            lhs.const_compare(predicates::float(operator), rhs).into()
+        TokenType::Arith => {
+            if let Some(lhs_constant) = lhs.get_constant() {
+                if let Some(rhs_constant) = rhs.get_constant() {
+                    let lhs_number: f64 = lhs_constant.0;
+                    let rhs_number: f64 = rhs_constant.0;
+
+                    return lhs.get_type().const_float(lhs_number % rhs_number).into();
+                }
+            }
+
+            lhs.get_type().const_zero().into()
         }
 
+        op if op.is_logical_operator() => lhs
+            .const_compare(predicates::float(context, operator, span), rhs)
+            .into(),
+
         _ => {
-            self::codegen_abort(
-                "Cannot perform constant float binary operation without a valid operator.",
+            abort::abort_codegen(
+                context,
+                "Failed to compile constant float binary operation!",
+                span,
+                PathBuf::from(file!()),
+                line!(),
             );
         }
     }
@@ -208,7 +278,13 @@ pub fn compile_const<'ctx>(
         let lhs: BasicValueEnum = constgen::compile(context, binary.0, cast);
         let rhs: BasicValueEnum = constgen::compile(context, binary.2, cast);
 
-        return const_float_operation(lhs.into_float_value(), rhs.into_float_value(), operator);
+        return const_float_operation(
+            context,
+            lhs.into_float_value(),
+            rhs.into_float_value(),
+            operator,
+            span,
+        );
     }
 
     abort::abort_codegen(
@@ -218,9 +294,4 @@ pub fn compile_const<'ctx>(
         PathBuf::from(file!()),
         line!(),
     );
-}
-
-#[inline]
-fn codegen_abort<T: Display>(message: T) -> ! {
-    logging::print_backend_bug(LoggingType::BackendBug, &format!("{}", message));
 }

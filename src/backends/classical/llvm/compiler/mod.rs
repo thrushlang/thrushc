@@ -17,7 +17,6 @@ pub mod generation;
 pub mod indexes;
 pub mod memory;
 pub mod obfuscation;
-pub mod optimizations;
 pub mod predicates;
 pub mod ptr;
 pub mod statements;

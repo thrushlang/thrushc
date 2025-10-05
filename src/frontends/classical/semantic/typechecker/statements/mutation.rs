@@ -6,7 +6,7 @@ use crate::{
         lexer::span::Span,
         semantic::typechecker::{TypeChecker, checks, metadata::TypeCheckerExprMetadata},
         types::ast::Ast,
-        typesystem::{traits::TypeExtensions, types::Type},
+        typesystem::types::Type,
     },
 };
 
@@ -30,7 +30,7 @@ pub fn validate<'type_checker>(
             if !source.is_allocated() && !source_type.is_ptr_type() {
                 typechecker.add_error(ThrushCompilerIssue::Error(
                     "Type error".into(),
-                    "Expected raw typed pointer 'ptr[T]', raw pointer 'ptr' type.".into(),
+                    "Expected raw typed pointer 'ptr[T]', raw pointer 'ptr' type or allocated reference.".into(),
                     None,
                     *span,
                 ));
@@ -45,16 +45,11 @@ pub fn validate<'type_checker>(
                 ));
             }
 
-            if source_type.is_ptr_type() {
-                let lhs_type: &Type = if value_type.is_ptr_type() && source_type == value_type {
-                    source_type
-                } else {
-                    source_type.get_type_with_depth(1)
-                };
-
+            if !source_type.is_ptr_type() {
+                let lhs_type: &Type = source_type;
                 let rhs_type: &Type = value_type;
 
-                checks::check_types(lhs_type, rhs_type, None, None, metadata)?;
+                checks::check_types(lhs_type, rhs_type, Some(value), None, metadata)?;
             }
 
             typechecker.analyze_stmt(value)?;

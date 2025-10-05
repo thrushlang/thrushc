@@ -9,6 +9,7 @@ pub fn analyze_builtin<'linter>(linter: &mut Linter<'linter>, builtin: &'linter 
             source,
             destination,
             size,
+            ..
         } => {
             linter.analyze_expr(source);
             linter.analyze_expr(destination);
@@ -19,6 +20,7 @@ pub fn analyze_builtin<'linter>(linter: &mut Linter<'linter>, builtin: &'linter 
             source,
             destination,
             size,
+            ..
         } => {
             linter.analyze_expr(source);
             linter.analyze_expr(destination);
@@ -29,6 +31,7 @@ pub fn analyze_builtin<'linter>(linter: &mut Linter<'linter>, builtin: &'linter 
             destination,
             new_size,
             size,
+            ..
         } => {
             linter.analyze_expr(destination);
             linter.analyze_expr(new_size);

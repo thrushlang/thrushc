@@ -79,7 +79,6 @@ pub trait ThrushAttributesExtensions {
     fn has_minsize_attr(&self) -> bool;
     fn has_inlinealways_attr(&self) -> bool;
 
-    fn has_stack_attr(&self) -> bool;
     fn has_heap_attr(&self) -> bool;
 
     fn has_asmalignstack_attribute(&self) -> bool;

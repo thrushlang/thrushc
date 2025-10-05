@@ -19,58 +19,67 @@ use super::{
 };
 
 impl ThrushAttributesExtensions for ThrushAttributes<'_> {
+    #[inline]
     fn has_extern_attribute(&self) -> bool {
         self.iter().any(|attr| attr.is_extern_attribute())
     }
 
+    #[inline]
     fn has_ignore_attribute(&self) -> bool {
         self.iter().any(|attr| attr.is_ignore_attribute())
     }
 
+    #[inline]
     fn has_heap_attr(&self) -> bool {
         self.iter().any(|attr| attr.is_heap_attribute())
     }
 
-    fn has_stack_attr(&self) -> bool {
-        self.iter().any(|attr| attr.is_stack_attribute())
-    }
-
+    #[inline]
     fn has_public_attribute(&self) -> bool {
         self.iter().any(|attr| attr.is_public_attribute())
     }
 
+    #[inline]
     fn has_hot_attr(&self) -> bool {
         self.iter().any(|attr| attr.is_hot_attribute())
     }
 
+    #[inline]
     fn has_inline_attr(&self) -> bool {
         self.iter().any(|attr| attr.is_inline_attribute())
     }
 
+    #[inline]
     fn has_minsize_attr(&self) -> bool {
         self.iter().any(|attr| attr.is_minsize_attribute())
     }
 
+    #[inline]
     fn has_inlinealways_attr(&self) -> bool {
         self.iter().any(|attr| attr.is_alwaysinline_attribute())
     }
 
+    #[inline]
     fn has_noinline_attr(&self) -> bool {
         self.iter().any(|attr| attr.is_noinline_attribute())
     }
 
+    #[inline]
     fn has_asmalignstack_attribute(&self) -> bool {
         self.iter().any(|attr| attr.is_asmalingstack_attribute())
     }
 
+    #[inline]
     fn has_asmsideffects_attribute(&self) -> bool {
         self.iter().any(|attr| attr.is_asmsideeffects_attribute())
     }
 
+    #[inline]
     fn has_asmthrow_attribute(&self) -> bool {
         self.iter().any(|attr| attr.is_asmthrow_attribute())
     }
 
+    #[inline]
     fn match_attr(&self, cmp: LLVMAttributeComparator) -> Option<Span> {
         if let Some(attr_found) = self.iter().find(|attr| attr.into_llvm_attr_cmp() == cmp) {
             return Some(attr_found.get_span());
@@ -81,17 +90,20 @@ impl ThrushAttributesExtensions for ThrushAttributes<'_> {
 }
 
 impl StructFieldsExtensions for StructFields<'_> {
+    #[inline]
     fn get_type(&self) -> Type {
         let types: Vec<Type> = self.1.iter().map(|field| field.1.clone()).collect();
         Type::create_struct_type(self.0.to_string(), types.as_slice(), self.get_modificator())
     }
 
+    #[inline]
     fn get_modificator(&self) -> StructureTypeModificator {
         self.2
     }
 }
 
 impl ConstructorExtensions for Constructor<'_> {
+    #[inline]
     fn get_type(&self, name: &str, modificator: StructureTypeModificator) -> Type {
         let types: Vec<Type> = self.iter().map(|field| field.2.clone()).collect();
         Type::create_struct_type(name.to_string(), types.as_slice(), modificator)

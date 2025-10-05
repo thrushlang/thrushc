@@ -13,6 +13,7 @@ pub trait LLVMTypeExtensions {
 pub trait TypeExtensions {
     fn get_type_with_depth(&self, base_depth: usize) -> &Type;
     fn get_type_fn_ref(&self) -> &Type;
+    fn get_directref_type(&self) -> Type;
 }
 
 pub trait TypeFixedArrayEntensions {

@@ -4,7 +4,7 @@ use crate::{
         lexer::{span::Span, tokentype::TokenType},
         semantic::typechecker::metadata::TypeCheckerExprMetadata,
         types::ast::{Ast, metadata::cast::CastMetadata},
-        typesystem::{traits::TypeExtensions, types::Type},
+        typesystem::types::Type,
     },
 };
 
@@ -172,6 +172,7 @@ pub fn check_types(
                 | TokenType::Minus
                 | TokenType::Slash
                 | TokenType::Star
+                | TokenType::Arith
                 | TokenType::LShift
                 | TokenType::RShift
                 | TokenType::PlusPlus
@@ -192,6 +193,7 @@ pub fn check_types(
                 | TokenType::Minus
                 | TokenType::Slash
                 | TokenType::Star
+                | TokenType::Arith
                 | TokenType::LShift
                 | TokenType::RShift
                 | TokenType::PlusPlus
@@ -212,6 +214,7 @@ pub fn check_types(
                 | TokenType::Minus
                 | TokenType::Slash
                 | TokenType::Star
+                | TokenType::Arith
                 | TokenType::LShift
                 | TokenType::RShift
                 | TokenType::PlusPlus
@@ -231,6 +234,7 @@ pub fn check_types(
                 TokenType::Plus
                 | TokenType::Minus
                 | TokenType::Slash
+                | TokenType::Arith
                 | TokenType::Star
                 | TokenType::LShift
                 | TokenType::RShift
@@ -252,6 +256,7 @@ pub fn check_types(
                 | TokenType::Minus
                 | TokenType::Slash
                 | TokenType::Star
+                | TokenType::Arith
                 | TokenType::LShift
                 | TokenType::RShift
                 | TokenType::PlusPlus
@@ -272,6 +277,7 @@ pub fn check_types(
                 | TokenType::Minus
                 | TokenType::Slash
                 | TokenType::Star
+                | TokenType::Arith
                 | TokenType::LShift
                 | TokenType::RShift
                 | TokenType::PlusPlus
@@ -292,6 +298,7 @@ pub fn check_types(
                 | TokenType::Minus
                 | TokenType::Slash
                 | TokenType::Star
+                | TokenType::Arith
                 | TokenType::LShift
                 | TokenType::RShift
                 | TokenType::PlusPlus
@@ -312,6 +319,7 @@ pub fn check_types(
                 | TokenType::Minus
                 | TokenType::Slash
                 | TokenType::Star
+                | TokenType::Arith
                 | TokenType::LShift
                 | TokenType::RShift
                 | TokenType::PlusPlus
@@ -332,6 +340,7 @@ pub fn check_types(
                 | TokenType::Minus
                 | TokenType::Slash
                 | TokenType::Star
+                | TokenType::Arith
                 | TokenType::LShift
                 | TokenType::RShift
                 | TokenType::PlusPlus
@@ -352,8 +361,7 @@ pub fn check_types(
                 | TokenType::Minus
                 | TokenType::Slash
                 | TokenType::Star
-                | TokenType::LShift
-                | TokenType::RShift
+                | TokenType::Arith
                 | TokenType::PlusPlus
                 | TokenType::MinusMinus,
             )
@@ -368,8 +376,7 @@ pub fn check_types(
                 | TokenType::Minus
                 | TokenType::Slash
                 | TokenType::Star
-                | TokenType::LShift
-                | TokenType::RShift
+                | TokenType::Arith
                 | TokenType::PlusPlus
                 | TokenType::MinusMinus,
             )
@@ -384,8 +391,7 @@ pub fn check_types(
                 | TokenType::Minus
                 | TokenType::Slash
                 | TokenType::Star
-                | TokenType::LShift
-                | TokenType::RShift
+                | TokenType::Arith
                 | TokenType::PlusPlus
                 | TokenType::MinusMinus,
             )
@@ -400,6 +406,7 @@ pub fn check_types(
                 | TokenType::Minus
                 | TokenType::Slash
                 | TokenType::Star
+                | TokenType::Arith
                 | TokenType::LShift
                 | TokenType::RShift
                 | TokenType::PlusPlus
@@ -416,6 +423,7 @@ pub fn check_types(
                 | TokenType::Minus
                 | TokenType::Slash
                 | TokenType::Star
+                | TokenType::Arith
                 | TokenType::LShift
                 | TokenType::RShift
                 | TokenType::PlusPlus
@@ -432,6 +440,7 @@ pub fn check_types(
                 | TokenType::Minus
                 | TokenType::Slash
                 | TokenType::Star
+                | TokenType::Arith
                 | TokenType::LShift
                 | TokenType::RShift
                 | TokenType::PlusPlus
@@ -455,6 +464,7 @@ pub fn check_types(
                 | TokenType::LShift
                 | TokenType::RShift
                 | TokenType::PlusPlus
+                | TokenType::Arith
                 | TokenType::MinusMinus
                 | TokenType::Xor
                 | TokenType::Bor
@@ -474,6 +484,7 @@ pub fn check_types(
                 | TokenType::Star
                 | TokenType::LShift
                 | TokenType::RShift
+                | TokenType::Arith
                 | TokenType::PlusPlus
                 | TokenType::MinusMinus
                 | TokenType::Xor
@@ -492,6 +503,7 @@ pub fn check_types(
                 | TokenType::Minus
                 | TokenType::Slash
                 | TokenType::Star
+                | TokenType::Arith
                 | TokenType::LShift
                 | TokenType::RShift
                 | TokenType::PlusPlus
@@ -539,6 +551,10 @@ pub fn check_type_cast(
         return Ok(());
     }
 
+    if from_type.is_ptr_type() && cast_type.is_ptr_type() {
+        return Ok(());
+    }
+
     if (from_type.is_float_type()
         || from_type.is_integer_type()
         || from_type.is_struct_type()
@@ -547,24 +563,6 @@ pub fn check_type_cast(
         && is_allocated
         && cast_type.is_ptr_type()
     {
-        return Ok(());
-    }
-
-    if from_type.is_const_type() && cast_type.is_ptr_type() {
-        let lhs_type: &Type = cast_type.get_type_with_depth(1);
-        let rhs_type: &Type = from_type.get_type_with_depth(1);
-
-        self::check_type_cast(lhs_type, rhs_type, metadata, span)?;
-
-        return Ok(());
-    }
-
-    if from_type.is_ptr_type() && cast_type.is_ptr_type() {
-        let lhs_type: &Type = cast_type.get_type_with_depth(1);
-        let rhs_type: &Type = from_type.get_type_with_depth(1);
-
-        self::check_type_cast(lhs_type, rhs_type, metadata, span)?;
-
         return Ok(());
     }
 

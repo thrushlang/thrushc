@@ -50,11 +50,7 @@ pub fn validate<'type_checker>(
                 }
 
                 if !metadata.is_undefined() {
-                    let mut local_value_type: Type = local_value.get_value_type()?.clone();
-
-                    if local_value_type.is_ptr_type() {
-                        local_value_type = Type::Ptr(Some(local_value_type.into()));
-                    }
+                    let local_value_type: Type = local_value.get_value_type()?.clone();
 
                     checks::check_types(
                         local_type,
@@ -64,9 +60,7 @@ pub fn validate<'type_checker>(
                         type_metadata,
                     )?;
 
-                    if let Err(type_error) = typechecker.analyze_stmt(local_value) {
-                        typechecker.add_error(type_error);
-                    }
+                    typechecker.analyze_stmt(local_value)?;
                 }
             }
 

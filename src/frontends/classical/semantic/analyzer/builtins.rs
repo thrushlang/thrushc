@@ -13,18 +13,21 @@ pub fn validate_builtin<'analyzer>(
             destination,
             new_size,
             size,
+            ..
         } => self::validate_memset(analyzer, destination, new_size, size),
 
         Builtin::MemMove {
             destination,
             source,
             size,
+            ..
         } => self::validate_memmove(analyzer, destination, source, size),
 
         Builtin::MemCpy {
             destination,
             source,
             size,
+            ..
         } => self::validate_memcpy(analyzer, destination, source, size),
 
         Builtin::Halloc { .. } | Builtin::AlignOf { .. } | Builtin::SizeOf { .. } => Ok(()),

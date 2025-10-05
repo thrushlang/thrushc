@@ -209,7 +209,8 @@ pub fn validate<'check_typeser>(
         | Ast::Float { .. }
         | Ast::NullPtr { .. }
         | Ast::Char { .. }
-        | Ast::Pass { .. } => Ok(()),
+        | Ast::Pass { .. }
+        | Ast::DirectRef { .. } => Ok(()),
 
         _ => {
             let span: Span = node.get_span();

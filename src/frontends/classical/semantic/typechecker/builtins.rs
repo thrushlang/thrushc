@@ -16,18 +16,21 @@ pub fn validate_builtin<'type_checker>(
             destination,
             new_size,
             size,
+            ..
         } => self::validate_memset(typechecker, destination, new_size, size),
 
         Builtin::MemMove {
             destination,
             source,
             size,
+            ..
         } => self::validate_memmove(typechecker, destination, source, size),
 
         Builtin::MemCpy {
             destination,
             source,
             size,
+            ..
         } => self::validate_memcpy(typechecker, destination, source, size),
 
         Builtin::Halloc { .. } | Builtin::AlignOf { .. } | Builtin::SizeOf { .. } => Ok(()),

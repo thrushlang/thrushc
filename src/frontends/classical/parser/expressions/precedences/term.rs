@@ -15,6 +15,7 @@ pub fn term_precedence<'parser>(
 
     while ctx.match_token(TokenType::Plus)?
         || ctx.match_token(TokenType::Minus)?
+        || ctx.match_token(TokenType::Arith)?
         || ctx.match_token(TokenType::LShift)?
         || ctx.match_token(TokenType::RShift)?
         || ctx.match_token(TokenType::Xor)?

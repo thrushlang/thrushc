@@ -39,7 +39,6 @@ pub struct ParserContext<'parser> {
     tokens: &'parser [Token],
     ast: Vec<Ast<'parser>>,
 
-    silent_errors: Vec<ThrushCompilerIssue>,
     errors: Vec<ThrushCompilerIssue>,
     bugs: Vec<ThrushCompilerIssue>,
 
@@ -51,6 +50,8 @@ pub struct ParserContext<'parser> {
 
     current: usize,
     scope: usize,
+
+    abort: bool,
 }
 
 #[derive(Debug)]
@@ -71,19 +72,18 @@ impl<'parser> Parser<'parser> {
 
 impl<'parser> Parser<'parser> {
     fn start(&mut self) -> (ParserContext<'parser>, bool) {
-        let mut parser_context: ParserContext = ParserContext::new(self.tokens, self.file);
+        let mut ctx: ParserContext = ParserContext::new(self.tokens, self.file);
 
-        declaration::parse_forward(&mut parser_context);
+        declaration::parse_forward(&mut ctx);
 
-        while !parser_context.is_eof() {
-            match declaration::decl(&mut parser_context) {
+        while !ctx.is_eof() {
+            match declaration::decl(&mut ctx) {
                 Ok(ast) => {
-                    parser_context.add_ast(ast);
+                    ctx.add_ast(ast);
                 }
 
                 Err(error) => {
-                    let total_issues: usize =
-                        parser_context.errors.len() + parser_context.bugs.len();
+                    let total_issues: usize = ctx.errors.len() + ctx.bugs.len();
 
                     if total_issues >= PARSER_MAX_ERRORS {
                         logging::print_warn(
@@ -95,21 +95,26 @@ impl<'parser> Parser<'parser> {
                     }
 
                     if error.is_bug() {
-                        parser_context.add_bug(error);
+                        ctx.add_bug(error);
                     } else {
-                        parser_context.add_error(error);
+                        ctx.add_error(error);
                     }
 
-                    if let Err(error) = parser_context.sync() {
-                        parser_context.add_error(error);
+                    if let Err(error) = ctx.sync() {
+                        ctx.add_error(error);
+                    }
+
+                    if ctx.need_abort() {
+                        break;
                     }
                 }
             }
         }
 
-        let throwed_errors: bool = parser_context.verify();
+        let abort: bool = ctx.need_abort();
+        let throwed_errors: bool = ctx.verify();
 
-        (parser_context, throwed_errors)
+        (ctx, throwed_errors || abort)
     }
 }
 
@@ -123,7 +128,6 @@ impl<'parser> ParserContext<'parser> {
             tokens,
             ast: Vec::with_capacity(PARSER_MINIMAL_AST_CAPACITY),
 
-            silent_errors: Vec::with_capacity(100),
             errors: Vec::with_capacity(100),
             bugs: Vec::with_capacity(100),
 
@@ -135,22 +139,17 @@ impl<'parser> ParserContext<'parser> {
 
             current: 0,
             scope: 0,
+
+            abort: false,
         }
     }
 
     pub fn verify(&mut self) -> bool {
-        if !self.errors.is_empty() || !self.bugs.is_empty() || !self.silent_errors.is_empty() {
+        if !self.errors.is_empty() || !self.bugs.is_empty() {
             self.bugs.iter().for_each(|bug: &ThrushCompilerIssue| {
                 self.diagnostician
                     .dispatch_diagnostic(bug, LoggingType::Bug);
             });
-
-            self.silent_errors
-                .iter()
-                .for_each(|error: &ThrushCompilerIssue| {
-                    self.diagnostician
-                        .dispatch_diagnostic(error, LoggingType::Error);
-                });
 
             self.errors.iter().for_each(|error: &ThrushCompilerIssue| {
                 self.diagnostician
@@ -193,6 +192,11 @@ impl<'parser> ParserContext<'parser> {
     #[inline]
     pub fn is_unreacheable_code(&self) -> bool {
         self.control_ctx.get_unreacheable_code_scope() == self.scope && !self.is_main_scope()
+    }
+
+    #[inline]
+    pub fn need_abort(&self) -> bool {
+        self.abort
     }
 }
 
@@ -278,6 +282,11 @@ impl<'parser> ParserContext<'parser> {
             None,
             self.peek().span,
         ))
+    }
+
+    #[inline]
+    pub fn set_force_abort(&mut self) {
+        self.abort = true;
     }
 }
 

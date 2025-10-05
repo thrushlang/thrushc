@@ -1,12 +1,10 @@
-use crate::backends::classical::llvm::compiler::typegen;
 use crate::backends::classical::llvm::compiler::{self, context::LLVMCodeGenContext};
+use crate::backends::classical::llvm::compiler::{abort, typegen};
 
-use crate::core::console::logging;
-use crate::core::console::logging::LoggingType;
-
+use crate::frontends::classical::lexer::span::Span;
 use crate::frontends::classical::typesystem::types::Type;
 
-use std::fmt::Display;
+use std::path::PathBuf;
 
 use inkwell::{
     context::Context,
@@ -15,9 +13,10 @@ use inkwell::{
 };
 
 pub fn compile<'ctx>(
-    context: &LLVMCodeGenContext<'_, 'ctx>,
+    context: &mut LLVMCodeGenContext<'_, 'ctx>,
     sizeof_type: &Type,
     cast: Option<&Type>,
+    span: Span,
 ) -> BasicValueEnum<'ctx> {
     let llvm_context: &Context = context.get_llvm_context();
 
@@ -26,15 +25,16 @@ pub fn compile<'ctx>(
     let sizeof_value: BasicValueEnum = llvm_type
         .size_of()
         .unwrap_or_else(|| {
-            self::codegen_abort("Unable to get size of type at executation of the sizeof builtin.")
+            abort::abort_codegen(
+                context,
+                "Failed to compile 'sizeof' builtin!",
+                span,
+                PathBuf::from(file!()),
+                line!(),
+            )
         })
         .into();
 
     compiler::generation::cast::try_cast(context, cast, sizeof_type, sizeof_value)
         .unwrap_or(sizeof_value)
-}
-
-#[inline]
-fn codegen_abort<T: Display>(message: T) -> ! {
-    logging::print_backend_bug(LoggingType::BackendBug, &format!("{}", message));
 }

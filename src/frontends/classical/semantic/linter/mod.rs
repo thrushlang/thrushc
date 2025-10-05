@@ -11,7 +11,7 @@ use crate::{
     },
     frontends::classical::{
         lexer::span::Span,
-        semantic::linter::expressions::defer,
+        semantic::linter::{expressions::defer, statements::mutation},
         types::{ast::Ast, parser::stmts::traits::ThrushAttributesExtensions},
     },
 };
@@ -226,6 +226,26 @@ impl<'linter> Linter<'linter> {
 
 
             LINTER LOOPS | END
+
+
+        ########################################################################*/
+
+        /* ######################################################################
+
+
+            MUTATION | START
+
+
+        ########################################################################*/
+
+        if let Ast::Mut { .. } = node {
+            return mutation::analyze(self, node);
+        }
+
+        /* ######################################################################
+
+
+            MUTATION | END
 
 
         ########################################################################*/

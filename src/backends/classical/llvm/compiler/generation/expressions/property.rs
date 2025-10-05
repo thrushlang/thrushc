@@ -1,5 +1,5 @@
 use crate::backends::classical::llvm::compiler::context::LLVMCodeGenContext;
-use crate::backends::classical::llvm::compiler::{abort, codegen, memory, ptr, typegen};
+use crate::backends::classical::llvm::compiler::{abort, codegen, memory, typegen};
 
 use crate::backends::classical::types::LLVMGEPIndexes;
 use crate::frontends::classical::lexer::span::Span;
@@ -19,7 +19,7 @@ pub fn compile<'ctx>(
     source: &'ctx Ast<'ctx>,
     indexes: LLVMGEPIndexes<'ctx>,
 ) -> BasicValueEnum<'ctx> {
-    if source.is_allocated() || source.get_type_unwrapped().llvm_is_ptr_type() {
+    if source.is_allocated() || source.llvm_get_type(context).llvm_is_ptr_type() {
         return self::compile_gep_property(context, source, indexes);
     }
 
@@ -78,8 +78,8 @@ fn compile_gep_property<'ctx>(
 
     let span: Span = source.get_span();
 
-    let ptr: PointerValue = ptr::compile(context, source, None).into_pointer_value();
-    let ptr_type: &Type = source.get_type_unwrapped();
+    let ptr: PointerValue = codegen::compile(context, source, None).into_pointer_value();
+    let ptr_type: &Type = source.llvm_get_type(context);
 
     let mut property: PointerValue = memory::gep_struct_anon(context, ptr, ptr_type, indexes[0].1);
 

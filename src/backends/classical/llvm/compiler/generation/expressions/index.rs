@@ -14,7 +14,7 @@ pub fn compile<'ctx>(
     indexes: &'ctx [Ast],
 ) -> BasicValueEnum<'ctx> {
     let ptr: PointerValue = ptr::compile(context, source, None).into_pointer_value();
-    let ptr_type: &Type = source.get_type_unwrapped();
+    let ptr_type: &Type = source.llvm_get_type(context);
 
     let ordered_indexes: Vec<IntValue> = indexes::compile(context, indexes, ptr_type);
 

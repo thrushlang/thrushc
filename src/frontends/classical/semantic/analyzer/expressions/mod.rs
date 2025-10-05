@@ -79,6 +79,22 @@ pub fn validate<'analyzer>(
             args.iter().try_for_each(|arg| analyzer.analyze_stmt(arg))
         }
 
+        Ast::DirectRef { expr, span, .. } => {
+            if !expr.is_reference() && !expr.is_allocated() {
+                analyzer.add_error(ThrushCompilerIssue::Error(
+                    "Expected allocated value".into(),
+                    "Expected allocated value reference or value type with raw typed pointer 'ptr[T]', raw pointer 'ptr', array type 'array[T]', memory address 'addr', or function reference pointer 'Fn[..] -> T'."
+                        .into(),
+                    None,
+                    *span,
+                ));
+            }
+
+            analyzer.analyze_stmt(expr)?;
+
+            Ok(())
+        }
+
         Ast::AsmValue { .. }
         | Ast::Alloc { .. }
         | Ast::EnumValue { .. }

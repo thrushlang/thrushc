@@ -236,23 +236,6 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
             return finisher::archive_compilation(self, archive_time, file);
         }
 
-        if thrush_opt.is_none_opt() {
-            llvm::compiler::optimizations::optimizator::LLVMCompilerOptimizer::new(
-                &llvm_module,
-                &llvm_context,
-            )
-            .optimize();
-        }
-
-        llvm::compiler::optimizations::passes::LLVMOptimizer::new(
-            &llvm_module,
-            &target_machine,
-            llvm_opt,
-            llvm_backend.get_opt_passes(),
-            llvm_backend.get_modificator_passes(),
-        )
-        .optimize();
-
         if print::llvm_after_optimization(self, &llvm_module, file) {
             return finisher::archive_compilation(self, archive_time, file);
         }

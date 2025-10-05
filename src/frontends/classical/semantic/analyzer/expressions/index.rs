@@ -31,12 +31,12 @@ pub fn validate<'analyzer>(
 
                 if subtype.llvm_is_ptr_type() && indexes.len() > 1 {
                     analyzer.add_error(ThrushCompilerIssue::Error(
-                            "Invalid consecutive indexing".into(),
-                            "Consecutive indexing isn't allowed while it's using a pointer-to-pointer type."
-                                .into(),
-                            None,
-                            *span,
-                        ));
+                        "Invalid consecutive indexing".into(),
+                        "Consecutive indexing isn't allowed while it's using a pointer-to-pointer type."
+                            .into(),
+                        None,
+                        *span,
+                    ));
                 }
             }
 

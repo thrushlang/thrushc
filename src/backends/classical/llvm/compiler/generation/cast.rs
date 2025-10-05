@@ -316,10 +316,11 @@ pub fn compile<'ctx>(
     let llvm_context: &Context = context.get_llvm_context();
     let llvm_builder: &Builder = context.get_llvm_builder();
 
-    let lhs_type: &Type = lhs.get_type_unwrapped();
+    let lhs_type: &Type = lhs.llvm_get_type(context);
 
     let abort_ptrtoint =
         |_| self::codegen_abort(format!("Failed to cast '{}' to '{}'.", lhs_type, rhs));
+
     let abort_ptr = |_| self::codegen_abort(format!("Failed to cast '{}' to '{}'.", lhs_type, rhs));
 
     if lhs_type.is_ptr_type() && rhs.is_integer_type() {

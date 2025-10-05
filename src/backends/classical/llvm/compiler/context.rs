@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use crate::frontends::classical::lexer::span::Span;
 use crate::frontends::classical::types::ast::Ast;
 use crate::frontends::classical::types::parser::repr::{
@@ -9,7 +11,7 @@ use crate::backends::classical::types::repr::LLVMFunction;
 
 use crate::backends::classical::llvm::compiler::memory::SymbolAllocated;
 use crate::backends::classical::llvm::compiler::memory::SymbolToAllocate;
-use crate::backends::classical::llvm::compiler::{self, constgen, typegen};
+use crate::backends::classical::llvm::compiler::{self, abort, constgen, typegen};
 
 use crate::backends::classical::llvm::compiler::alloc;
 use crate::backends::classical::llvm::compiler::anchors::PointerAnchor;
@@ -88,7 +90,7 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
         let metadata: ConstantMetadata = constant.4;
         let span: Span = constant.5;
 
-        let expr_type: &Type = expr.get_type_unwrapped();
+        let expr_type: &Type = expr.llvm_get_type(self);
 
         let compiled_value: BasicValueEnum = compiler::constgen::compile(self, expr, kind);
 
@@ -132,7 +134,7 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
         let span: Span = constant.6;
 
         let llvm_value: BasicValueEnum = constgen::compile(self, value, kind);
-        let value_type: &Type = value.get_type_unwrapped();
+        let value_type: &Type = value.llvm_get_type(self);
 
         let value: BasicValueEnum =
             compiler::generation::cast::try_cast_const(self, llvm_value, value_type, kind);
@@ -171,7 +173,7 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
         let span: Span = staticvar.5;
 
         if let Some(value) = value {
-            let value_type: &Type = value.get_type_unwrapped();
+            let value_type: &Type = value.llvm_get_type(self);
             let llvm_value: BasicValueEnum = compiler::constgen::compile(self, value, kind);
 
             let value: BasicValueEnum =
@@ -193,18 +195,18 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
                 span,
             );
 
-            self.table
-                .get_mut_all_local_statics()
-                .last_mut()
-                .unwrap_or_else(|| {
-                    logging::print_backend_panic(
-                        LoggingType::BackendPanic,
-                        "The last frame of symbols couldn't be obtained.",
-                    )
-                })
-                .insert(name, staticvar);
+            if let Some(scope) = self.table.get_mut_all_local_statics().last_mut() {
+                scope.insert(name, staticvar);
+                return;
+            }
 
-            return;
+            abort::abort_codegen(
+                self,
+                "Failed to get the scope!",
+                span,
+                PathBuf::from(file!()),
+                line!(),
+            );
         }
 
         let ptr: PointerValue = alloc::memstatic::local_static(
@@ -218,16 +220,18 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
         let staticvar: SymbolAllocated =
             SymbolAllocated::new_static(ptr.into(), kind, None, metadata.get_llvm_metadata(), span);
 
-        self.table
-            .get_mut_all_local_statics()
-            .last_mut()
-            .unwrap_or_else(|| {
-                logging::print_backend_panic(
-                    LoggingType::BackendPanic,
-                    "The last frame of symbols couldn't be obtained.",
-                )
-            })
-            .insert(name, staticvar);
+        if let Some(scope) = self.table.get_mut_all_local_statics().last_mut() {
+            scope.insert(name, staticvar);
+            return;
+        }
+
+        abort::abort_codegen(
+            self,
+            "Failed to get the scope!",
+            span,
+            PathBuf::from(file!()),
+            line!(),
+        )
     }
 
     pub fn new_global_static(&mut self, staticvar: GlobalStatic<'ctx>) {
@@ -242,7 +246,7 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
         let span: Span = staticvar.6;
 
         if let Some(value) = value {
-            let value_type: &Type = value.get_type_unwrapped();
+            let value_type: &Type = value.llvm_get_type(self);
             let llvm_value: BasicValueEnum = compiler::constgen::compile(self, value, kind);
 
             let value: BasicValueEnum =
@@ -313,10 +317,13 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
         if let Some(last_block) = self.table.get_mut_all_locals().last_mut() {
             last_block.insert(name, local);
         } else {
-            logging::print_backend_panic(
-                LoggingType::BackendPanic,
-                "The last frame of symbols couldn't be obtained.",
-            );
+            abort::abort_codegen(
+                self,
+                "Failed to get the scope!",
+                span,
+                PathBuf::from(file!()),
+                line!(),
+            )
         }
     }
 
@@ -334,10 +341,13 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
         if let Some(last_block) = self.table.get_mut_all_locals().last_mut() {
             last_block.insert(name, lli);
         } else {
-            logging::print_backend_panic(
-                LoggingType::BackendPanic,
-                "The last frame of symbols couldn't be obtained.",
-            );
+            abort::abort_codegen(
+                self,
+                "Failed to get the scope!",
+                span,
+                PathBuf::from(file!()),
+                line!(),
+            )
         }
     }
 
@@ -447,11 +457,6 @@ impl<'a, 'ctx> LLVMCodeGenContext<'a, 'ctx> {
     #[inline]
     pub fn get_target_data(&self) -> &TargetData {
         &self.target_data
-    }
-
-    #[inline]
-    pub fn get_diagnostician(&self) -> &Diagnostician {
-        &self.diagnostician
     }
 
     #[inline]

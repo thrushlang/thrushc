@@ -365,6 +365,13 @@ pub enum Ast<'ctx> {
     },
 
     // Expressions
+    DirectRef {
+        expr: Rc<Ast<'ctx>>,
+        kind: Type,
+
+        span: Span,
+    },
+
     Call {
         name: &'ctx str,
         args: Vec<Ast<'ctx>>,

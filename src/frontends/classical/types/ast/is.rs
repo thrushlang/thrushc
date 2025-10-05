@@ -238,6 +238,14 @@ impl Ast<'_> {
             return true;
         }
 
+        if let Ast::EnumValue { value, .. } = self {
+            return value.is_constant_value();
+        }
+
+        if let Ast::DirectRef { expr, .. } = self {
+            return expr.is_constant_value();
+        }
+
         if let Ast::Group { expression, .. } = self {
             return expression.is_constant_value();
         }

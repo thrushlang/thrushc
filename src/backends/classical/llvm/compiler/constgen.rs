@@ -3,14 +3,14 @@ use std::path::PathBuf;
 use inkwell::AddressSpace;
 use inkwell::{context::Context, values::BasicValueEnum};
 
-use crate::backends::classical::llvm::compiler::abort;
 use crate::backends::classical::llvm::compiler::binaryop;
 use crate::backends::classical::llvm::compiler::constgen;
 use crate::backends::classical::llvm::compiler::context::LLVMCodeGenContext;
 use crate::backends::classical::llvm::compiler::generation::expressions::unary;
 use crate::backends::classical::llvm::compiler::generation::float;
-use crate::backends::classical::llvm::compiler::generation::int;
+use crate::backends::classical::llvm::compiler::generation::integer;
 use crate::backends::classical::llvm::compiler::{self, builtins};
+use crate::backends::classical::llvm::compiler::{abort, ptr};
 
 use crate::frontends::classical::types::ast::Ast;
 use crate::frontends::classical::typesystem::traits::TypeStructExtensions;
@@ -29,18 +29,6 @@ pub fn compile<'ctx>(
             .const_null()
             .into(),
 
-        Ast::Integer {
-            value,
-            kind,
-            signed,
-            ..
-        } => {
-            let int: BasicValueEnum =
-                int::generate(context.get_llvm_context(), kind, *value, *signed).into();
-
-            compiler::generation::cast::numeric_cast(context, int, cast_type, *signed)
-        }
-
         // Character literal compilation
         Ast::Char { byte, .. } => context
             .get_llvm_context()
@@ -53,12 +41,26 @@ pub fn compile<'ctx>(
             value,
             kind,
             signed,
+            span,
             ..
         } => {
             let float: BasicValueEnum =
-                float::generate(context.get_llvm_context(), kind, *value, *signed).into();
+                float::generate(context, kind, *value, *signed, *span).into();
 
             compiler::generation::cast::numeric_cast(context, float, cast_type, *signed)
+        }
+
+        Ast::Integer {
+            value,
+            kind,
+            signed,
+            span,
+            ..
+        } => {
+            let integer: BasicValueEnum =
+                integer::generate(context, kind, *value, *signed, *span).into();
+
+            compiler::generation::cast::numeric_cast(context, integer, cast_type, *signed)
         }
 
         // Boolean true/false cases
@@ -97,7 +99,7 @@ pub fn compile<'ctx>(
 
         // Type cast_typeing operations
         Ast::As { from, cast, .. } => {
-            let lhs_type: &Type = from.get_type_unwrapped();
+            let lhs_type: &Type = from.llvm_get_type(context);
             let lhs: BasicValueEnum = constgen::compile(context, from, lhs_type);
 
             compiler::generation::cast::try_cast_const(context, lhs, lhs_type, cast)
@@ -159,8 +161,14 @@ pub fn compile<'ctx>(
             ..
         } => unary::compile_const(context, (operator, kind, expression), cast_type),
 
+        // Direct Reference
+        Ast::DirectRef { expr, .. } => ptr::compile(context, expr, None),
+
         // Builtins
         Ast::Builtin { builtin, .. } => builtins::compile(context, builtin, Some(cast_type)),
+
+        // Enum Value Access
+        Ast::EnumValue { value, .. } => self::compile(context, value, cast_type),
 
         // Fallback for unsupported AST nodes
         what => abort::abort_codegen(

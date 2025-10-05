@@ -1,17 +1,22 @@
-use crate::backends::classical::llvm::compiler::anchors::PointerAnchor;
-use crate::backends::classical::llvm::compiler::context::LLVMCodeGenContext;
-use crate::backends::classical::llvm::compiler::memory::LLVMAllocationSite;
-use crate::backends::classical::llvm::compiler::typegen;
-use crate::backends::classical::llvm::compiler::{codegen, memory};
+use crate::backends::classical::llvm::compiler::{
+    anchors::PointerAnchor,
+    codegen,
+    context::LLVMCodeGenContext,
+    memory::{self, LLVMAllocationSite},
+    typegen,
+};
 
-use crate::frontends::classical::lexer::span::Span;
-use crate::frontends::classical::types::parser::stmts::types::Constructor;
-use crate::frontends::classical::typesystem::traits::TypeStructExtensions;
-use crate::frontends::classical::typesystem::types::Type;
+use crate::frontends::classical::{
+    lexer::span::Span,
+    types::parser::stmts::types::Constructor,
+    typesystem::{traits::TypeStructExtensions, types::Type},
+};
 
-use inkwell::AddressSpace;
-use inkwell::types::BasicTypeEnum;
-use inkwell::values::{BasicValueEnum, PointerValue};
+use inkwell::{
+    AddressSpace,
+    types::BasicTypeEnum,
+    values::{BasicValueEnum, PointerValue},
+};
 
 pub fn compile<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
@@ -19,14 +24,11 @@ pub fn compile<'ctx>(
     struct_type: &Type,
     span: Span,
 ) -> BasicValueEnum<'ctx> {
-    if let Some(anchor) = context.get_pointer_anchor() {
-        if !anchor.is_triggered() {
-            self::compile_with_anchor(context, args, struct_type, span, anchor)
-        } else {
-            self::compile_without_anchor(context, args, struct_type, span)
+    match context.get_pointer_anchor() {
+        Some(anchor) if !anchor.is_triggered() => {
+            compile_with_anchor(context, args, struct_type, span, anchor)
         }
-    } else {
-        self::compile_without_anchor(context, args, struct_type, span)
+        _ => compile_without_anchor(context, args, struct_type, span),
     }
 }
 
@@ -37,29 +39,29 @@ fn compile_with_anchor<'ctx>(
     span: Span,
     anchor: PointerAnchor<'ctx>,
 ) -> BasicValueEnum<'ctx> {
-    let ptr_type: BasicTypeEnum = typegen::generate(context.get_llvm_context(), struct_type);
-    let ptr: PointerValue = anchor.get_pointer();
+    let ptr_type: BasicTypeEnum<'_> = typegen::generate(context.get_llvm_context(), struct_type);
+    let ptr: PointerValue<'_> = anchor.get_pointer();
 
     context.set_pointer_anchor(PointerAnchor::new(ptr, true));
 
     let fields_types: &[Type] = struct_type.get_struct_fields();
 
-    let fields: Vec<BasicValueEnum> = args
+    let fields: Vec<_> = args
         .iter()
         .zip(fields_types)
         .map(|((_, field, _, _), kind)| codegen::compile(context, field, Some(kind)))
         .collect();
 
     for (idx, value) in fields.iter().enumerate() {
-        if let Ok(ptr) = context
+        if let Ok(field_ptr) = context
             .get_llvm_builder()
             .build_struct_gep(ptr_type, ptr, idx as u32, "")
         {
-            memory::store_anon(context, ptr, *value, span);
+            memory::store_anon(context, field_ptr, *value, span);
         }
     }
 
-    self::compile_null_ptr(context)
+    compile_null_ptr(context)
 }
 
 fn compile_without_anchor<'ctx>(
@@ -68,23 +70,23 @@ fn compile_without_anchor<'ctx>(
     struct_type: &Type,
     span: Span,
 ) -> BasicValueEnum<'ctx> {
-    let ptr_type: BasicTypeEnum = typegen::generate(context.get_llvm_context(), struct_type);
-    let ptr: PointerValue = memory::alloc_anon(LLVMAllocationSite::Stack, context, struct_type);
+    let ptr_type: BasicTypeEnum<'_> = typegen::generate(context.get_llvm_context(), struct_type);
+    let ptr: PointerValue<'_> = memory::alloc_anon(LLVMAllocationSite::Stack, context, struct_type);
 
     let fields_types: &[Type] = struct_type.get_struct_fields();
 
-    let fields: Vec<BasicValueEnum> = args
+    let fields: Vec<_> = args
         .iter()
         .zip(fields_types)
         .map(|((_, field, _, _), kind)| codegen::compile(context, field, Some(kind)))
         .collect();
 
     for (idx, value) in fields.iter().enumerate() {
-        if let Ok(ptr) = context
+        if let Ok(field_ptr) = context
             .get_llvm_builder()
             .build_struct_gep(ptr_type, ptr, idx as u32, "")
         {
-            memory::store_anon(context, ptr, *value, span);
+            memory::store_anon(context, field_ptr, *value, span);
         }
     }
 

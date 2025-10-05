@@ -1,10 +1,8 @@
 use std::path::PathBuf;
 
 use crate::{
-    core::{
-        console::logging::{self, LoggingType},
-        errors::{position::CompilationPosition, standard::ThrushCompilerIssue},
-    },
+    backends::{self, classical::llvm::compiler::context::LLVMCodeGenContext},
+    core::errors::{position::CompilationPosition, standard::ThrushCompilerIssue},
     frontends::classical::{lexer::span::Span, types::ast::Ast, typesystem::types::Type},
 };
 
@@ -26,6 +24,7 @@ impl Ast<'_> {
             Ast::Local { kind, .. } => Ok(kind),
             Ast::Mut { kind, .. } => Ok(kind),
             Ast::Reference { kind, .. } => Ok(kind),
+            Ast::DirectRef { kind, .. } => Ok(kind),
             Ast::Address { kind, .. } => Ok(kind),
             Ast::Load { kind, .. } => Ok(kind),
             Ast::Alloc { alloc: kind, .. } => Ok(kind),
@@ -110,6 +109,7 @@ impl Ast<'_> {
             Ast::Local { kind, .. } => Ok(kind),
             Ast::Mut { kind, .. } => Ok(kind),
             Ast::Reference { kind, .. } => Ok(kind),
+            Ast::DirectRef { kind, .. } => Ok(kind),
             Ast::FunctionParameter { kind, .. } => Ok(kind),
             Ast::AssemblerFunctionParameter { kind, .. } => Ok(kind),
 
@@ -160,76 +160,6 @@ impl Ast<'_> {
         }
     }
 
-    pub fn get_type_unwrapped(&self) -> &Type {
-        match self {
-            // Primitive values
-            Ast::Integer { kind, .. } => kind,
-            Ast::Float { kind, .. } => kind,
-            Ast::Boolean { kind, .. } => kind,
-            Ast::Char { kind, .. } => kind,
-            Ast::Str { kind, .. } => kind,
-            Ast::NullPtr { .. } => &Type::Ptr(None),
-
-            // Static
-            Ast::Static { kind, .. } => kind,
-
-            // Variables and references
-            Ast::Local { kind, .. } => kind,
-            Ast::Mut { kind, .. } => kind,
-            Ast::Reference { kind, .. } => kind,
-            Ast::FunctionParameter { kind, .. } => kind,
-            Ast::AssemblerFunctionParameter { kind, .. } => kind,
-
-            // Memory operations
-            Ast::Load { kind, .. } => kind,
-            Ast::Address { kind, .. } => kind,
-            Ast::Defer { kind, .. } => kind,
-            Ast::Alloc { alloc: kind, .. } => kind,
-
-            // Composite types
-            Ast::FixedArray { kind, .. } => kind,
-            Ast::Array { kind, .. } => kind,
-            Ast::Constructor { kind, .. } => kind,
-            Ast::Property { kind, .. } => kind,
-            Ast::EnumValue { kind, .. } => kind,
-
-            // Expressions
-            Ast::Call { kind, .. } => kind,
-            Ast::BinaryOp { kind, .. } => kind,
-            Ast::UnaryOp { kind, .. } => kind,
-            Ast::Group { kind, .. } => kind,
-            Ast::Index { kind, .. } => kind,
-
-            // Type operations
-            Ast::As { cast: kind, .. } => kind,
-
-            // Builtins
-            Ast::Builtin { kind, .. } => kind,
-
-            // ASM Code Block
-            Ast::AsmValue { kind, .. } => kind,
-
-            // Indirect Call
-            Ast::Indirect { kind, .. } => kind,
-
-            // Global Assembler
-            Ast::GlobalAssembler { .. } => &Type::Void,
-
-            // Ignored
-            Ast::Pass { .. } => &Type::Void,
-
-            // Unreachable marker
-            Ast::Unreachable { .. } => &Type::Void,
-
-            any => {
-                logging::print_bug(
-                    LoggingType::BackendBug,
-                    &format!("Unable to get type of ast: '{}'.", any),
-                );
-            }
-        }
-    }
-
     pub fn get_span(&self) -> Span {
         match self {
             // Primitive values and literals
@@ -252,6 +182,7 @@ impl Ast<'_> {
             // Memory operations
             Ast::Mut { span, .. } => *span,
             Ast::Reference { span, .. } => *span,
+            Ast::DirectRef { span, .. } => *span,
             Ast::Address { span, .. } => *span,
             Ast::Load { span, .. } => *span,
             Ast::Defer { span, .. } => *span,
@@ -313,6 +244,80 @@ impl Ast<'_> {
 
             // Unreachable marker
             Ast::Unreachable { span } => *span,
+        }
+    }
+}
+
+impl Ast<'_> {
+    pub fn llvm_get_type(&self, context: &mut LLVMCodeGenContext<'_, '_>) -> &Type {
+        match self {
+            // Primitive values
+            Ast::Integer { kind, .. } => kind,
+            Ast::Float { kind, .. } => kind,
+            Ast::Boolean { kind, .. } => kind,
+            Ast::Char { kind, .. } => kind,
+            Ast::Str { kind, .. } => kind,
+            Ast::NullPtr { .. } => &Type::Ptr(None),
+
+            // Static
+            Ast::Static { kind, .. } => kind,
+
+            // Variables and references
+            Ast::Local { kind, .. } => kind,
+            Ast::Mut { kind, .. } => kind,
+            Ast::Reference { kind, .. } => kind,
+            Ast::DirectRef { kind, .. } => kind,
+            Ast::FunctionParameter { kind, .. } => kind,
+            Ast::AssemblerFunctionParameter { kind, .. } => kind,
+
+            // Memory operations
+            Ast::Load { kind, .. } => kind,
+            Ast::Address { kind, .. } => kind,
+            Ast::Defer { kind, .. } => kind,
+            Ast::Alloc { alloc: kind, .. } => kind,
+
+            // Composite types
+            Ast::FixedArray { kind, .. } => kind,
+            Ast::Array { kind, .. } => kind,
+            Ast::Constructor { kind, .. } => kind,
+            Ast::Property { kind, .. } => kind,
+            Ast::EnumValue { kind, .. } => kind,
+
+            // Expressions
+            Ast::Call { kind, .. } => kind,
+            Ast::BinaryOp { kind, .. } => kind,
+            Ast::UnaryOp { kind, .. } => kind,
+            Ast::Group { kind, .. } => kind,
+            Ast::Index { kind, .. } => kind,
+
+            // Type operations
+            Ast::As { cast: kind, .. } => kind,
+
+            // Builtins
+            Ast::Builtin { kind, .. } => kind,
+
+            // ASM Code Block
+            Ast::AsmValue { kind, .. } => kind,
+
+            // Indirect Call
+            Ast::Indirect { kind, .. } => kind,
+
+            // Global Assembler
+            Ast::GlobalAssembler { .. } => &Type::Void,
+
+            // Ignored
+            Ast::Pass { .. } => &Type::Void,
+
+            // Unreachable marker
+            Ast::Unreachable { .. } => &Type::Void,
+
+            any => backends::classical::llvm::compiler::abort::abort_codegen(
+                context,
+                "Failed to compile get the type!",
+                any.get_span(),
+                PathBuf::from(file!()),
+                line!(),
+            ),
         }
     }
 }

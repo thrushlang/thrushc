@@ -10,7 +10,7 @@ use crate::{
             parse,
         },
         types::{ast::Ast, parser::stmts::traits::TokenExtensions},
-        typesystem::types::Type,
+        typesystem::{traits::TypeExtensions, types::Type},
     },
 };
 
@@ -126,25 +126,42 @@ pub fn lower_precedence<'parser>(
             reference::build_reference(ctx, name, span)?
         }
 
+        TokenType::DirectRef => {
+            let span: Span = ctx.advance()?.span;
+            let expr: Ast = expr::build_expr(ctx)?;
+
+            Ast::DirectRef {
+                expr: expr.clone().into(),
+                kind: expr.get_value_type()?.get_directref_type(),
+                span,
+            }
+        }
+
         TokenType::True => Ast::new_boolean(Type::Bool, 1, ctx.advance()?.span),
         TokenType::False => Ast::new_boolean(Type::Bool, 0, ctx.advance()?.span),
 
         TokenType::Pass => Ast::Pass {
             span: ctx.advance()?.get_span(),
         },
-        TokenType::Unreachable => Ast::Unreachable {
-            span: ctx.advance()?.get_span(),
-        },
+
+        TokenType::Unreachable => {
+            let scope: usize = ctx.get_scope();
+
+            ctx.get_mut_control_ctx().set_unreacheable_code_scope(scope);
+
+            Ast::Unreachable {
+                span: ctx.advance()?.get_span(),
+            }
+        }
 
         _ => {
+            ctx.set_force_abort();
+
             let previous: &Token = ctx.advance()?;
 
             return Err(ThrushCompilerIssue::Error(
                 "Syntax error".into(),
-                format!(
-                    "Statement '{}' don't allowed for previous errors.",
-                    previous.lexeme
-                ),
+                format!("Expression '{}' don't allowed.", previous.lexeme),
                 None,
                 previous.span,
             ));

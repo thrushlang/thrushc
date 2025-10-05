@@ -11,7 +11,9 @@ impl<'ctx> PointerAnchor<'ctx> {
     pub fn new(pointer: PointerValue<'ctx>, triggered: bool) -> PointerAnchor<'ctx> {
         Self { pointer, triggered }
     }
+}
 
+impl<'ctx> PointerAnchor<'ctx> {
     #[inline]
     pub fn get_pointer(&self) -> PointerValue<'ctx> {
         self.pointer

@@ -40,6 +40,7 @@ lazy_static! {
         keywords.insert("load", TokenType::Load);
         keywords.insert("write", TokenType::Write);
         keywords.insert("fixed", TokenType::Fixed);
+        keywords.insert("ref", TokenType::DirectRef);
         keywords.insert("static", TokenType::Static);
         keywords.insert("indirect", TokenType::Indirect);
         keywords.insert("unreachable", TokenType::Unreachable);

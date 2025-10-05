@@ -156,12 +156,6 @@ pub fn build_enum<'parser>(
         "Expected '}'.".into(),
     )?;
 
-    ctx.consume(
-        TokenType::SemiColon,
-        "Syntax error".into(),
-        "Expected ';'.".into(),
-    )?;
-
     if declare_forward {
         ctx.get_mut_symbols()
             .new_enum(enum_name, (enum_fields, enum_attributes), span)?;

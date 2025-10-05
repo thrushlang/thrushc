@@ -30,7 +30,7 @@ pub fn compile_const<'ctx>(
     let values: Vec<BasicValueEnum> = items
         .iter()
         .map(|item| {
-            let value_type: &Type = item.get_type_unwrapped();
+            let value_type: &Type = item.llvm_get_type(context);
             let value: BasicValueEnum = constgen::compile(context, item, base_type);
 
             compiler::generation::cast::try_cast_const(context, value, value_type, base_type)

@@ -20,7 +20,7 @@ pub fn compile<'ctx>(
         .map(|index| codegen::compile(context, index, Some(&Type::U32)).into_int_value())
         .collect();
 
-    let kind: &Type = source.get_type_unwrapped();
+    let kind: &Type = source.llvm_get_type(context);
     let ptr: PointerValue = ptr::compile(context, source, None).into_pointer_value();
 
     memory::gep_anon(context, ptr, kind, &indexes).into()

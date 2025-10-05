@@ -3,7 +3,6 @@
 use crate::backends::classical::llvm::compiler::alloc::atomic::LLVMAtomicModificators;
 use crate::backends::classical::llvm::compiler::{abort, typegen};
 use crate::frontends::classical::types::ast::metadata::dereference::LLVMDereferenceMetadata;
-use crate::frontends::classical::typesystem::traits::LLVMTypeExtensions;
 use crate::{
     backends::classical::llvm::compiler::alloc::atomic, frontends::classical::lexer::span::Span,
 };
@@ -160,13 +159,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
 
         let target_data: &TargetData = context.get_target_data();
 
-        let kind: &Type = self.get_type();
-
-        if kind.llvm_is_ptr_type() {
-            return self.get_ptr().into();
-        }
-
-        let llvm_type: BasicTypeEnum = typegen::generate_subtype(llvm_context, kind);
+        let llvm_type: BasicTypeEnum = typegen::generate(llvm_context, self.get_type());
         let alignment: u32 = target_data.get_preferred_alignment(&llvm_type);
 
         if let Self::Local { ptr, metadata, .. } = self {
@@ -257,15 +250,11 @@ impl<'ctx> SymbolAllocated<'ctx> {
         context: &mut LLVMCodeGenContext<'_, 'ctx>,
         new_value: BasicValueEnum<'ctx>,
     ) {
-        let llvm_context: &Context = context.get_llvm_context();
         let llvm_builder: &Builder = context.get_llvm_builder();
 
         let target_data: &TargetData = context.get_target_data();
 
-        let thrush_type: &Type = self.get_type();
-        let llvm_type: BasicTypeEnum = typegen::generate_subtype(llvm_context, thrush_type);
-
-        let alignment: u32 = target_data.get_preferred_alignment(&llvm_type);
+        let alignment: u32 = target_data.get_preferred_alignment(&new_value.get_type());
 
         if let Self::Local { ptr, .. } = self {
             if let Ok(store) = llvm_builder.build_store(*ptr, new_value) {
@@ -355,16 +344,16 @@ impl<'ctx> SymbolAllocated<'ctx> {
 pub fn store_anon<'ctx>(
     context: &mut LLVMCodeGenContext<'_, '_>,
     ptr: PointerValue<'ctx>,
-    value: BasicValueEnum<'ctx>,
+    new_value: BasicValueEnum<'ctx>,
     span: Span,
 ) {
     let llvm_builder: &Builder = context.get_llvm_builder();
 
     let target_data: &TargetData = context.get_target_data();
 
-    let alignment: u32 = target_data.get_preferred_alignment(&value.get_type());
+    let alignment: u32 = target_data.get_preferred_alignment(&new_value.get_type());
 
-    if let Ok(store) = llvm_builder.build_store(ptr, value) {
+    if let Ok(store) = llvm_builder.build_store(ptr, new_value) {
         let _ = store.set_alignment(alignment);
         return;
     }

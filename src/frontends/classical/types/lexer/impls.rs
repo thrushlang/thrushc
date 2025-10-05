@@ -4,7 +4,6 @@ impl std::fmt::Display for TokenType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             // Keywords
-            TokenType::And => write!(f, "and"),
             TokenType::Break => write!(f, "break"),
             TokenType::Const => write!(f, "const"),
             TokenType::Continue => write!(f, "continue"),
@@ -18,7 +17,6 @@ impl std::fmt::Display for TokenType {
             TokenType::Loop => write!(f, "loop"),
             TokenType::Mut => write!(f, "mut"),
             TokenType::New => write!(f, "new"),
-            TokenType::Or => write!(f, "or"),
             TokenType::Return => write!(f, "return"),
             TokenType::Struct => write!(f, "struct"),
             TokenType::True => write!(f, "true"),
@@ -28,6 +26,9 @@ impl std::fmt::Display for TokenType {
             TokenType::Local => write!(f, "local"),
             TokenType::Asm => write!(f, "asm"),
             TokenType::GlobalAsm => write!(f, "global_asm"),
+
+            // Direct Reference
+            TokenType::DirectRef => write!(f, "ref"),
 
             // Indirect Call
             TokenType::Indirect => write!(f, "indirect"),
@@ -102,6 +103,8 @@ impl std::fmt::Display for TokenType {
             TokenType::WeakStack => write!(f, "@weakstack"),
 
             // Operators, Punctuation, and Special Constructs
+            TokenType::Or => write!(f, "||"),
+            TokenType::And => write!(f, "&&"),
             TokenType::Float => write!(f, "integer"),
             TokenType::Integer => write!(f, "float"),
             TokenType::Addr => write!(f, "addr"),

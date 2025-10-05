@@ -89,11 +89,6 @@ impl ThrushOptimization {
             ThrushOptimization::Mcqueen | ThrushOptimization::Size => OptimizationLevel::Aggressive,
         }
     }
-
-    #[inline]
-    pub fn is_none_opt(self) -> bool {
-        matches!(self, ThrushOptimization::None)
-    }
 }
 
 impl CompilationUnit {
@@ -310,11 +305,6 @@ impl CompilationUnit {
     #[inline]
     pub fn get_name(&self) -> &str {
         &self.name
-    }
-
-    #[inline]
-    pub fn get_name_clone(&self) -> String {
-        self.name.clone()
     }
 
     #[inline]

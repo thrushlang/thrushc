@@ -32,13 +32,11 @@ pub fn analyze<'linter>(linter: &mut Linter<'linter>, expr: &'linter Ast) {
             expression,
             ..
         } => {
-            if expression.is_reference() {
-                if let Ast::Reference { name, .. } = &**expression {
-                    used::mark_as_used(linter, name);
+            if let Ast::Reference { name, .. } = &**expression {
+                used::mark_as_used(linter, name);
 
-                    if operator.is_minus_minus_operator() || operator.is_plus_plus_operator() {
-                        mutable::mark_as_mutated(linter, name);
-                    }
+                if operator.is_minus_minus_operator() || operator.is_plus_plus_operator() {
+                    mutable::mark_as_mutated(linter, name);
                 }
             }
 
@@ -175,6 +173,9 @@ pub fn analyze<'linter>(linter: &mut Linter<'linter>, expr: &'linter Ast) {
 
         Ast::As { .. } => expressions::cast::analyze_cast(linter, expr),
         Ast::Defer { .. } => defer::analyze_deference(linter, expr),
+        Ast::DirectRef { expr, .. } => {
+            linter.analyze_expr(expr);
+        }
 
         Ast::Alloc { .. }
         | Ast::Integer { .. }

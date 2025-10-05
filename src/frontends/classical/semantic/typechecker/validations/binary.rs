@@ -14,9 +14,11 @@ pub fn validate_binary(
     span: Span,
 ) -> Result<(), ThrushCompilerIssue> {
     match op {
-        TokenType::Star | TokenType::Slash | TokenType::Minus | TokenType::Plus => {
-            self::validate_binary_arithmetic(op, a, b, span)
-        }
+        TokenType::Arith
+        | TokenType::Star
+        | TokenType::Slash
+        | TokenType::Minus
+        | TokenType::Plus => self::validate_binary_arithmetic(op, a, b, span),
         TokenType::Xor => self::validate_xor(op, a, b, span),
         TokenType::Bor => self::validate_bor(op, a, b, span),
         TokenType::BAnd => self::validate_band(op, a, b, span),

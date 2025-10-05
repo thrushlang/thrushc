@@ -83,11 +83,6 @@ impl LLVMAttribute<'_> {
     }
 
     #[inline]
-    pub fn is_stack_attribute(&self) -> bool {
-        matches!(self, LLVMAttribute::Stack(..))
-    }
-
-    #[inline]
     pub fn is_asmsideeffects_attribute(&self) -> bool {
         matches!(self, LLVMAttribute::AsmSideEffects(..))
     }

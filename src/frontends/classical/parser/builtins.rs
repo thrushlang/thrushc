@@ -12,31 +12,20 @@ use crate::{
 pub fn build_halloc<'parser>(
     ctx: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, ThrushCompilerIssue> {
-    let memcpy_tk: &Token = ctx.consume(
+    let halloc_tk: &Token = ctx.consume(
         TokenType::Halloc,
         "Syntax error".into(),
         "Expected 'halloc' keyword.".into(),
     )?;
 
-    ctx.consume(
-        TokenType::LParen,
-        "Syntax error".into(),
-        "Expected '('.".into(),
-    )?;
-
-    let span: Span = memcpy_tk.get_span();
+    let span: Span = halloc_tk.get_span();
 
     let alloc: Type = typegen::build_type(ctx)?;
-
-    ctx.consume(
-        TokenType::RParen,
-        "Syntax error".into(),
-        "Expected ')'.".into(),
-    )?;
 
     Ok(Ast::Builtin {
         builtin: Builtin::Halloc {
             alloc: alloc.clone(),
+            span,
         },
         kind: Type::Ptr(Some(alloc.into())),
         span,
@@ -89,6 +78,7 @@ pub fn build_memcpy<'parser>(
             source: source.into(),
             destination: destination.into(),
             size: size.into(),
+            span,
         },
         kind: Type::Ptr(None),
         span,
@@ -141,6 +131,7 @@ pub fn build_memmove<'parser>(
             source: source.into(),
             destination: destination.into(),
             size: size.into(),
+            span,
         },
         kind: Type::Ptr(None),
         span,
@@ -193,6 +184,7 @@ pub fn build_memset<'parser>(
             destination: destination.into(),
             new_size: new_size.into(),
             size: size.into(),
+            span,
         },
         kind: Type::Ptr(None),
         span,
@@ -237,6 +229,7 @@ pub fn build_sizeof<'parser>(
     Ok(Ast::Builtin {
         builtin: Builtin::SizeOf {
             size_of: sizeof_type,
+            span,
         },
         kind: Type::U64,
         span,

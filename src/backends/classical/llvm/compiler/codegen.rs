@@ -3,7 +3,7 @@
 use std::path::PathBuf;
 
 use crate::backends::classical::llvm::compiler::declarations::{self};
-use crate::backends::classical::llvm::compiler::generation::{float, int};
+use crate::backends::classical::llvm::compiler::generation::{float, integer};
 use crate::backends::classical::llvm::compiler::statements::lli;
 use crate::backends::classical::llvm::compiler::{self, builtins, codegen};
 use crate::backends::classical::llvm::compiler::{abort, memory};
@@ -13,7 +13,6 @@ use crate::backends::classical::llvm::compiler::{ptr, statements};
 
 use crate::frontends::classical::types::ast::Ast;
 use crate::frontends::classical::types::ast::metadata::local::LocalMetadata;
-use crate::frontends::classical::typesystem::traits::TypeExtensions;
 use crate::frontends::classical::typesystem::types::Type;
 
 use super::context::LLVMCodeGenContext;
@@ -393,17 +392,12 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 span,
                 ..
             } => {
-                let source_type: &Type = source.get_type_unwrapped();
-                let value_type: &Type = value.get_type_unwrapped();
-
-                let cast_type: &Type = if value_type.is_ptr_type() && source_type == value_type {
-                    source_type
-                } else {
-                    source_type.get_type_with_depth(1)
-                };
+                let source_type: &Type = source.llvm_get_type(self.context);
 
                 let ptr: BasicValueEnum = ptr::compile(self.context, source, None);
-                let value: BasicValueEnum = codegen::compile(self.context, value, Some(cast_type));
+
+                let value: BasicValueEnum =
+                    codegen::compile(self.context, value, Some(source_type));
 
                 memory::store_anon(self.context, ptr.into_pointer_value(), value, *span);
             }
@@ -537,10 +531,11 @@ pub fn compile<'ctx>(
             kind,
             value,
             signed,
+            span,
             ..
         } => {
             let float: BasicValueEnum =
-                float::generate(context.get_llvm_context(), kind, *value, *signed).into();
+                float::generate(context, kind, *value, *signed, *span).into();
 
             compiler::generation::cast::try_cast(context, cast_type, kind, float).unwrap_or(float)
         }
@@ -549,12 +544,14 @@ pub fn compile<'ctx>(
             kind,
             value,
             signed,
+            span,
             ..
         } => {
-            let int: BasicValueEnum =
-                int::generate(context.get_llvm_context(), kind, *value, *signed).into();
+            let integer: BasicValueEnum =
+                integer::generate(context, kind, *value, *signed, *span).into();
 
-            compiler::generation::cast::try_cast(context, cast_type, kind, int).unwrap_or(int)
+            compiler::generation::cast::try_cast(context, cast_type, kind, integer)
+                .unwrap_or(integer)
         }
 
         Ast::NullPtr { .. } => context
@@ -644,6 +641,9 @@ pub fn compile<'ctx>(
             cast_type,
         ),
 
+        // Direct Reference
+        Ast::DirectRef { expr, .. } => ptr::compile(context, expr, cast_type),
+
         // Symbol/Property Access
         // Compiles a reference to a variable or symbol
         Ast::Reference { name, .. } => context.get_table().get_symbol(name).load(context),
@@ -725,6 +725,9 @@ pub fn compile<'ctx>(
             kind,
             attributes,
         ),
+
+        // Enum Value Access
+        Ast::EnumValue { value, .. } => self::compile(context, value, cast_type),
 
         // Builtins
         Ast::Builtin { builtin, .. } => builtins::compile(context, builtin, cast_type),

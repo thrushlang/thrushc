@@ -36,11 +36,11 @@ fn partition(mut arr: ptr[array[u32; 7]], low: s32, high: s32) s32 {
     for local mut j: s32 = low; j < high; ++j; { // Iterate from low to high-1
         if (defer(arr[0, j])) <= pivot {     // If current element is less than or equal to pivot
             i++;                                 // Increment i to point to the next position for a smaller element
-            swap(arr, i, j);                     // Swap elements at i and j
+            swap(ref arr, i, j);                     // Swap elements at i and j
         }
     }
     
-    swap(arr, i + 1, high);                    // Place the pivot in its final position
+    swap(ref arr, i + 1, high);                    // Place the pivot in its final position
     return i + 1;                              // Return the pivot's index
 }
 
@@ -51,9 +51,9 @@ fn partition(mut arr: ptr[array[u32; 7]], low: s32, high: s32) s32 {
 //   high: The ending index of the subarray (inclusive, signed 32-bit integer).
 fn quickSort(arr: ptr[array[u32; 7]], low: s32, high: s32) void {
     if (low < high) {                          // Proceed only if the subarray has more than one element
-        local pi: s32 = partition(arr, low, high); // Partition the array and get the pivot index
-        quickSort(arr, low, pi - 1);           // Recursively sort the left subarray
-        quickSort(arr, pi + 1, high);          // Recursively sort the right subarray
+        local pi: s32 = partition(ref arr, low, high); // Partition the array and get the pivot index
+        quickSort(ref arr, low, pi - 1);           // Recursively sort the left subarray
+        quickSort(ref arr, pi + 1, high);          // Recursively sort the right subarray
     }
 }
 
@@ -74,10 +74,10 @@ fn main() u32 {
     local unsorted_array: array[u32; 7] = fixed[64, 34, 25, 12, 22, 11, 90]; // Initialize array with 7 elements
 
     print("Original array: ");      // Print "Original array: "
-    printArray(unsorted_array as ptr[array[u32; 7]], 7);         // Print the unsorted array
-    quickSort(unsorted_array as ptr[array[u32; 7]], 0, 6);       // Sort the array (indices 0 to 6)
+    printArray(ref unsorted_array, 7);         // Print the unsorted array
+    quickSort(ref unsorted_array, 0, 6);       // Sort the array (indices 0 to 6)
     print("Sorted array: ");        // Print "Sorted array: "
-    printArray(unsorted_array as ptr[array[u32; 7]], 7);         // Print the sorted array
+    printArray(ref unsorted_array, 7);         // Print the sorted array
 
     return 0;
 

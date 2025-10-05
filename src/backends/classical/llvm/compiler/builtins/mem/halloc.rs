@@ -1,18 +1,19 @@
-use crate::backends::classical::llvm::compiler::context::LLVMCodeGenContext;
-use crate::backends::classical::llvm::compiler::typegen;
-
-use crate::core::console::logging;
-use crate::core::console::logging::LoggingType;
+use crate::backends::classical::llvm::compiler::{abort, typegen};
+use crate::{
+    backends::classical::llvm::compiler::context::LLVMCodeGenContext,
+    frontends::classical::lexer::span::Span,
+};
 
 use crate::frontends::classical::typesystem::types::Type;
 
-use std::fmt::Display;
+use std::path::PathBuf;
 
 use inkwell::{builder::Builder, context::Context, values::BasicValueEnum};
 
 pub fn compile<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     alloc: &'ctx Type,
+    span: Span,
 ) -> BasicValueEnum<'ctx> {
     let llvm_context: &Context = context.get_llvm_context();
     let llvm_builder: &Builder = context.get_llvm_builder();
@@ -20,12 +21,13 @@ pub fn compile<'ctx>(
     llvm_builder
         .build_malloc(typegen::generate(llvm_context, alloc), "")
         .unwrap_or_else(|_| {
-            self::codegen_abort("Failed to allocate heap memory with halloc builtin.")
+            abort::abort_codegen(
+                context,
+                "Failed to compile 'halloc' builtin!",
+                span,
+                PathBuf::from(file!()),
+                line!(),
+            )
         })
         .into()
-}
-
-#[inline]
-fn codegen_abort<T: Display>(message: T) -> ! {
-    logging::print_backend_bug(LoggingType::BackendBug, &format!("{}", message));
 }
