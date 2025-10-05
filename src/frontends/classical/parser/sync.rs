@@ -6,7 +6,7 @@ use crate::{
     },
 };
 
-pub const SYNC_STATEMENTS: [TokenType; 9] = [
+pub const SYNC_STATEMENTS: [TokenType; 11] = [
     TokenType::Return,
     TokenType::Local,
     TokenType::For,
@@ -16,6 +16,8 @@ pub const SYNC_STATEMENTS: [TokenType; 9] = [
     TokenType::Continue,
     TokenType::Break,
     TokenType::Loop,
+    TokenType::Const,
+    TokenType::Static,
 ];
 
 pub const SYNC_DECLARATIONS: [TokenType; 6] = [
@@ -29,16 +31,17 @@ pub const SYNC_DECLARATIONS: [TokenType; 6] = [
 
 impl ParserContext<'_> {
     pub fn sync(&mut self) -> Result<(), ThrushCompilerIssue> {
-        match self.control_ctx.get_sync_position() {
-            ParserSyncPosition::Declaration => self::sync_with_declaration(self)?,
-            ParserSyncPosition::Statement => self::sync_with_statement(self)?,
-            ParserSyncPosition::Expression => self::sync_with_expression(self)?,
+        if let Some(position) = self.control_ctx.get_sync_position() {
+            match position {
+                ParserSyncPosition::Declaration => self::sync_with_declaration(self)?,
+                ParserSyncPosition::Statement => self::sync_with_statement(self)?,
+                ParserSyncPosition::Expression => self::sync_with_expression(self)?,
 
-            ParserSyncPosition::NoRelevant => (),
+                ParserSyncPosition::NoRelevant => (),
+            }
+
+            self.control_ctx.pop_sync_position();
         }
-
-        self.control_ctx
-            .set_sync_position(ParserSyncPosition::NoRelevant);
 
         Ok(())
     }
@@ -59,8 +62,10 @@ fn sync_with_declaration(ctx: &mut ParserContext) -> Result<(), ThrushCompilerIs
         ctx.only_advance()?;
     }
 
+    ctx.get_mut_control_ctx().set_inside_function(false);
+    ctx.get_mut_symbols().finish_parameters();
+
     ctx.scope = 0;
-    ctx.symbols.finish_parameters();
 
     Ok(())
 }
@@ -71,12 +76,11 @@ fn sync_with_statement(ctx: &mut ParserContext) -> Result<(), ThrushCompilerIssu
             break;
         }
 
-        if ctx.check(TokenType::RBrace) {
+        if ctx.match_token(TokenType::RBrace)? {
             break;
         }
 
-        if ctx.check(TokenType::SemiColon) {
-            let _ = ctx.only_advance();
+        if ctx.match_token(TokenType::SemiColon)? {
             break;
         }
 
@@ -98,12 +102,11 @@ fn sync_with_expression(ctx: &mut ParserContext) -> Result<(), ThrushCompilerIss
             break;
         }
 
-        if ctx.check(TokenType::RBrace) {
+        if ctx.match_token(TokenType::RBrace)? {
             break;
         }
 
-        if ctx.check(TokenType::SemiColon) {
-            let _ = ctx.only_advance();
+        if ctx.match_token(TokenType::SemiColon)? {
             break;
         }
 

@@ -14,6 +14,7 @@ pub enum TokenType {
     Xor,        // ' ^ '
     Not,        // ' ~ '
     Bor,        // ' | '
+    BAnd,       // ' & '
     Colon,      // ' : '
     SemiColon,  // ' ; '
     RBracket,   // ' ] '

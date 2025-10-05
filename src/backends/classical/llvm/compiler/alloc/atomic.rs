@@ -7,15 +7,12 @@ pub struct LLVMAtomicModificators {
 }
 
 #[inline]
-pub fn try_set_atomic_modificators(
-    instr: InstructionValue<'_>,
-    modificators: LLVMAtomicModificators,
-) {
+pub fn try_set_atomic_modificators(instr: InstructionValue, modificators: LLVMAtomicModificators) {
     if modificators.atomic_volatile {
         let _ = instr.set_volatile(true);
     }
 
-    if let Some(ord) = modificators.atomic_ord {
-        let _ = instr.set_atomic_ordering(ord);
+    if let Some(ordering) = modificators.atomic_ord {
+        let _ = instr.set_atomic_ordering(ordering);
     }
 }

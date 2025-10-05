@@ -51,6 +51,36 @@ pub fn build_global_static<'parser>(
 
     let attributes: ThrushAttributes = attributes::build_attributes(ctx, &[TokenType::Eq])?;
 
+    if ctx.match_token(TokenType::SemiColon)? {
+        let metadata: StaticMetadata = StaticMetadata::new(
+            true,
+            is_mutable,
+            true,
+            thread_local,
+            is_volatile,
+            atomic_ord,
+            thread_mode,
+        );
+
+        if declare_forward {
+            ctx.get_mut_symbols().new_global_static(
+                name,
+                (static_type.clone(), metadata, attributes.clone()),
+                span,
+            )?;
+        }
+
+        return Ok(Ast::Static {
+            name,
+            ascii_name,
+            kind: static_type,
+            value: None,
+            attributes,
+            metadata,
+            span,
+        });
+    }
+
     ctx.consume(TokenType::Eq, "Syntax error".into(), "Expected '='.".into())?;
 
     let value: Ast = expr::build_expression(ctx)?;
@@ -58,6 +88,7 @@ pub fn build_global_static<'parser>(
     let metadata: StaticMetadata = StaticMetadata::new(
         true,
         is_mutable,
+        false,
         thread_local,
         is_volatile,
         atomic_ord,
@@ -65,20 +96,18 @@ pub fn build_global_static<'parser>(
     );
 
     if declare_forward {
-        if let Err(error) = ctx.get_mut_symbols().new_global_static(
+        ctx.get_mut_symbols().new_global_static(
             name,
             (static_type.clone(), metadata, attributes.clone()),
             span,
-        ) {
-            ctx.add_silent_error(error);
-        }
+        )?;
     }
 
     Ok(Ast::Static {
         name,
         ascii_name,
         kind: static_type,
-        value: value.into(),
+        value: Some(value.into()),
         attributes,
         metadata,
         span,

@@ -600,9 +600,6 @@ pub fn compile<'ctx>(
             cast_type,
         ),
 
-        // Compiles a sizeof operation
-        Ast::SizeOf { sizeof, .. } => builtins::sizeof::compile(context, sizeof, cast_type),
-
         // Expressions
         // Compiles a grouped expression (e.g., parenthesized)
         Ast::Group { expression, .. } => self::compile(context, expression, cast_type),
@@ -729,7 +726,10 @@ pub fn compile<'ctx>(
             attributes,
         ),
 
-        // Low-Level Operations
+        // Builtins
+        Ast::Builtin { builtin, .. } => builtins::compile(context, builtin, cast_type),
+
+        // Low-Level Instructions
         ast if ast.is_lli() => lli::compile_advanced(context, expr, cast_type),
 
         // Fallback, Unknown expressions or statements

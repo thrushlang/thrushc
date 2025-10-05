@@ -11,4 +11,3 @@ pub mod lli;
 pub mod precedences;
 pub mod property;
 pub mod reference;
-pub mod sizeof;

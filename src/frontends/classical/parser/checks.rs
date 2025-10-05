@@ -26,7 +26,7 @@ pub fn check_inside_loop_state(ctx: &mut ParserContext) -> Result<(), ThrushComp
 
         return Err(ThrushCompilerIssue::Error(
             "Syntax error".into(),
-            "It must be contained within a loop block.".into(),
+            "It must be contained inside loop.".into(),
             None,
             ctx.previous().get_span(),
         ));
@@ -42,7 +42,7 @@ pub fn check_inside_function_state(ctx: &mut ParserContext) -> Result<(), Thrush
 
         return Err(ThrushCompilerIssue::Error(
             "Syntax error".into(),
-            "It must be contained within a function block.".into(),
+            "It must be contained inside a function.".into(),
             None,
             ctx.previous().get_span(),
         ));
@@ -56,7 +56,7 @@ pub fn check_main_scope_state(ctx: &mut ParserContext) -> Result<(), ThrushCompi
     if !ctx.is_main_scope() {
         return Err(ThrushCompilerIssue::Error(
             "Syntax error".into(),
-            "It must be contained within the main scope.".into(),
+            "It must be contained in the main scope.".into(),
             None,
             ctx.previous().get_span(),
         ));
@@ -88,7 +88,7 @@ pub fn check_double_global_assembler_state(
 
         return Err(ThrushCompilerIssue::Error(
             "Syntax error".into(),
-            "The global assembler is per-file.".into(),
+            "Global assembler is one per-file.".into(),
             None,
             ctx.previous().get_span(),
         ));

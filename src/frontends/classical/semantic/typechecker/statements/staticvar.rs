@@ -21,24 +21,26 @@ pub fn validate<'type_checker>(
             span,
             ..
         } => {
-            let metadata: TypeCheckerExprMetadata =
-                TypeCheckerExprMetadata::new(value.is_literal(), *span);
+            if let Some(value) = value {
+                let metadata: TypeCheckerExprMetadata =
+                    TypeCheckerExprMetadata::new(value.is_literal(), *span);
 
-            let value_type: &Type = value.get_value_type()?;
-            let value_span: Span = value.get_span();
+                let value_type: &Type = value.get_value_type()?;
+                let value_span: Span = value.get_span();
 
-            if !value.is_constant_value() {
-                return Err(ThrushCompilerIssue::Error(
-                    "Syntax error".into(),
-                    "Expected compile-time sized value.".into(),
-                    None,
-                    value_span,
-                ));
+                if !value.is_constant_value() {
+                    return Err(ThrushCompilerIssue::Error(
+                        "Syntax error".into(),
+                        "Expected compile-time sized value.".into(),
+                        None,
+                        value_span,
+                    ));
+                }
+
+                checks::check_types(static_type, value_type, Some(value), None, metadata)?;
+
+                typechecker.analyze_stmt(value)?;
             }
-
-            checks::check_types(static_type, value_type, Some(value), None, metadata)?;
-
-            typechecker.analyze_stmt(value)?;
 
             Ok(())
         }

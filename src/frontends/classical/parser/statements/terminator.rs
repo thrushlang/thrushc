@@ -22,10 +22,6 @@ pub fn build_return<'parser>(
     let span: Span = return_tk.get_span();
 
     if ctx.match_token(TokenType::SemiColon)? {
-        if ctx.get_type_ctx().get_function_type().is_void_type() {
-            return Ok(Ast::new_nullptr(span));
-        }
-
         return Ok(Ast::Return {
             expression: None,
             kind: Type::Void,

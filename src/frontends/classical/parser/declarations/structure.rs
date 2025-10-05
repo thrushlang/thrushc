@@ -115,13 +115,11 @@ pub fn build_structure<'parser>(
     )?;
 
     if declare_forward {
-        if let Err(error) = ctx.get_mut_symbols().new_struct(
+        ctx.get_mut_symbols().new_struct(
             name,
             (name, fields_types.1, attributes, modificator),
             span,
-        ) {
-            ctx.add_silent_error(error);
-        }
+        )?;
 
         return Ok(Ast::new_nullptr(span));
     }

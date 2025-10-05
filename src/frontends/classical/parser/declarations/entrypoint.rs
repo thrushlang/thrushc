@@ -92,9 +92,7 @@ pub fn build_entrypoint<'parser>(
     ctx.get_mut_control_ctx().set_has_entrypoint();
     ctx.get_mut_type_ctx().set_function_type(Type::U32);
 
-    if let Err(error) = ctx.get_mut_symbols().declare_parameters(&parameters) {
-        ctx.add_silent_error(error);
-    }
+    ctx.get_mut_symbols().declare_parameters(&parameters)?;
 
     let body: Rc<Ast> = block::build_block(ctx)?.into();
 

@@ -1,31 +1,68 @@
-use crate::backends::classical::llvm::compiler::context::LLVMCodeGenContext;
+#![allow(clippy::too_many_arguments)]
 
+use crate::backends::classical::llvm::compiler::context::LLVMCodeGenContext;
 use crate::backends::classical::llvm::compiler::obfuscation;
-use crate::frontends::classical::types::ast::metadata::constant::ConstantMetadata;
-use crate::frontends::classical::types::ast::metadata::constant::LLVMConstantMetadata;
-use crate::frontends::classical::types::ast::metadata::staticvar::LLVMStaticMetadata;
-use crate::frontends::classical::types::ast::metadata::staticvar::StaticMetadata;
+use crate::frontends::classical::types::ast::metadata::constant::{
+    ConstantMetadata, LLVMConstantMetadata,
+};
+use crate::frontends::classical::types::ast::metadata::staticvar::{
+    LLVMStaticMetadata, StaticMetadata,
+};
 use crate::frontends::classical::types::parser::stmts::traits::ThrushAttributesExtensions;
 use crate::frontends::classical::types::parser::stmts::types::ThrushAttributes;
 
+use inkwell::ThreadLocalMode;
+use inkwell::module::Module;
 use inkwell::{
     AddressSpace,
-    module::{Linkage, Module},
+    module::Linkage,
     targets::TargetData,
     types::BasicTypeEnum,
     values::{BasicValueEnum, GlobalValue, PointerValue},
 };
 
+fn set_global_common<'ctx>(
+    global: &GlobalValue<'ctx>,
+    constant: bool,
+    unnamed_addr: bool,
+    thread_local: bool,
+    thread_mode: Option<ThreadLocalMode>,
+    initializer: Option<&BasicValueEnum<'ctx>>,
+    alignment: Option<u32>,
+    linkage: Option<Linkage>,
+) {
+    if let Some(align) = alignment {
+        global.set_alignment(align);
+    }
+    if let Some(link) = linkage {
+        global.set_linkage(link);
+    }
+    if constant {
+        global.set_constant(true);
+    }
+    if unnamed_addr {
+        global.set_unnamed_addr(true);
+    }
+    if thread_local {
+        global.set_thread_local(true);
+    }
+    if let Some(mode) = thread_mode {
+        global.set_thread_local_mode(Some(mode));
+    }
+    if let Some(init) = initializer {
+        global.set_initializer(init);
+    }
+}
+
 pub fn local_constant<'ctx>(
     context: &LLVMCodeGenContext<'_, 'ctx>,
     name: &str,
     llvm_type: BasicTypeEnum<'ctx>,
-    llvm_value: BasicValueEnum<'ctx>,
+    value: BasicValueEnum<'ctx>,
     metadata: ConstantMetadata,
 ) -> PointerValue<'ctx> {
     let llvm_module: &Module = context.get_llvm_module();
     let target_data: &TargetData = context.get_target_data();
-
     let llvm_metadata: LLVMConstantMetadata = metadata.get_llvm_metadata();
 
     let name: String = format!(
@@ -37,17 +74,16 @@ pub fn local_constant<'ctx>(
     let global: GlobalValue =
         llvm_module.add_global(llvm_type, Some(AddressSpace::default()), &name);
 
-    global.set_alignment(target_data.get_preferred_alignment_of_global(&global));
-    global.set_linkage(Linkage::LinkerPrivate);
-
-    global.set_unnamed_addr(true);
-    global.set_constant(true);
-
-    if llvm_metadata.thread_local {
-        global.set_thread_local(true);
-    }
-
-    global.set_initializer(&llvm_value);
+    self::set_global_common(
+        &global,
+        true,
+        true,
+        llvm_metadata.thread_local,
+        None,
+        Some(&value),
+        Some(target_data.get_preferred_alignment_of_global(&global)),
+        Some(Linkage::LinkerPrivate),
+    );
 
     global.as_pointer_value()
 }
@@ -56,32 +92,31 @@ pub fn global_constant<'ctx>(
     context: &LLVMCodeGenContext<'_, 'ctx>,
     name: &str,
     llvm_type: BasicTypeEnum<'ctx>,
-    llvm_value: BasicValueEnum<'ctx>,
+    value: BasicValueEnum<'ctx>,
     attributes: &'ctx ThrushAttributes<'ctx>,
     metadata: ConstantMetadata,
 ) -> PointerValue<'ctx> {
     let llvm_module: &Module = context.get_llvm_module();
     let target_data: &TargetData = context.get_target_data();
-
     let llvm_metadata: LLVMConstantMetadata = metadata.get_llvm_metadata();
 
     let global: GlobalValue =
         llvm_module.add_global(llvm_type, Some(AddressSpace::default()), name);
 
-    global.set_alignment(target_data.get_preferred_alignment_of_global(&global));
-
-    if !attributes.has_public_attribute() {
-        global.set_linkage(Linkage::LinkerPrivate);
-    }
-
-    global.set_unnamed_addr(true);
-    global.set_constant(true);
-
-    if llvm_metadata.thread_local {
-        global.set_thread_local(true);
-    }
-
-    global.set_initializer(&llvm_value);
+    self::set_global_common(
+        &global,
+        true,
+        true,
+        llvm_metadata.thread_local,
+        None,
+        Some(&value),
+        Some(target_data.get_preferred_alignment_of_global(&global)),
+        if !attributes.has_public_attribute() {
+            Some(Linkage::LinkerPrivate)
+        } else {
+            None
+        },
+    );
 
     global.as_pointer_value()
 }
@@ -90,12 +125,11 @@ pub fn local_static<'ctx>(
     context: &LLVMCodeGenContext<'_, 'ctx>,
     name: &str,
     llvm_type: BasicTypeEnum<'ctx>,
-    llvm_value: BasicValueEnum<'ctx>,
+    value: Option<BasicValueEnum<'ctx>>,
     metadata: StaticMetadata,
 ) -> PointerValue<'ctx> {
     let llvm_module: &Module = context.get_llvm_module();
     let target_data: &TargetData = context.get_target_data();
-
     let llvm_metadata: LLVMStaticMetadata = metadata.get_llvm_metadata();
 
     let name: String = format!(
@@ -107,25 +141,16 @@ pub fn local_static<'ctx>(
     let global: GlobalValue =
         llvm_module.add_global(llvm_type, Some(AddressSpace::default()), &name);
 
-    let alignment: u32 = target_data.get_preferred_alignment_of_global(&global);
-
-    global.set_alignment(alignment);
-
-    if llvm_metadata.constant {
-        global.set_constant(true);
-    }
-
-    if llvm_metadata.unnamed_addr {
-        global.set_unnamed_addr(true);
-    }
-
-    if llvm_metadata.thread_local {
-        global.set_thread_local(true);
-    }
-
-    global.set_thread_local_mode(llvm_metadata.thread_mode);
-    global.set_initializer(&llvm_value);
-    global.set_linkage(Linkage::LinkerPrivate);
+    self::set_global_common(
+        &global,
+        llvm_metadata.constant,
+        llvm_metadata.unnamed_addr,
+        llvm_metadata.thread_local,
+        llvm_metadata.thread_mode,
+        value.as_ref(),
+        Some(target_data.get_preferred_alignment_of_global(&global)),
+        Some(Linkage::LinkerPrivate),
+    );
 
     global.as_pointer_value()
 }
@@ -134,38 +159,31 @@ pub fn global_static<'ctx>(
     context: &LLVMCodeGenContext<'_, 'ctx>,
     name: &str,
     llvm_type: BasicTypeEnum<'ctx>,
-    llvm_value: BasicValueEnum<'ctx>,
+    value: Option<BasicValueEnum<'ctx>>,
     attributes: &'ctx ThrushAttributes<'ctx>,
     metadata: StaticMetadata,
 ) -> PointerValue<'ctx> {
     let llvm_module: &Module = context.get_llvm_module();
     let target_data: &TargetData = context.get_target_data();
-
     let llvm_metadata: LLVMStaticMetadata = metadata.get_llvm_metadata();
 
     let global: GlobalValue =
         llvm_module.add_global(llvm_type, Some(AddressSpace::default()), name);
 
-    global.set_alignment(target_data.get_preferred_alignment_of_global(&global));
-
-    if !attributes.has_public_attribute() {
-        global.set_linkage(Linkage::LinkerPrivate);
-    }
-
-    if llvm_metadata.constant {
-        global.set_constant(true);
-    }
-
-    if llvm_metadata.unnamed_addr {
-        global.set_unnamed_addr(true);
-    }
-
-    if llvm_metadata.thread_local {
-        global.set_thread_local(true);
-    }
-
-    global.set_thread_local_mode(llvm_metadata.thread_mode);
-    global.set_initializer(&llvm_value);
+    self::set_global_common(
+        &global,
+        llvm_metadata.constant,
+        llvm_metadata.unnamed_addr,
+        llvm_metadata.thread_local,
+        llvm_metadata.thread_mode,
+        value.as_ref(),
+        Some(target_data.get_preferred_alignment_of_global(&global)),
+        if !attributes.has_public_attribute() {
+            Some(Linkage::LinkerPrivate)
+        } else {
+            None
+        },
+    );
 
     global.as_pointer_value()
 }

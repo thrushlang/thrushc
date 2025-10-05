@@ -190,7 +190,7 @@ pub fn build_assembler_function<'parser>(
     )?;
 
     if declare_forward {
-        if let Err(error) = ctx.get_mut_symbols().new_asm_function(
+        ctx.get_mut_symbols().new_asm_function(
             asm_function_name,
             (
                 return_type,
@@ -198,9 +198,7 @@ pub fn build_assembler_function<'parser>(
                 is_public,
             ),
             span,
-        ) {
-            ctx.add_silent_error(error);
-        }
+        )?;
 
         return Ok(Ast::new_nullptr(span));
     }

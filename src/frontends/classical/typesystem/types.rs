@@ -56,4 +56,9 @@ pub enum Type {
     // Void Type
     #[default]
     Void,
+
+    // Internal Compiler Types
+
+    // NullPtr
+    NullPtr,
 }

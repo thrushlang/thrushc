@@ -3,7 +3,7 @@ use crate::{
     core::errors::standard::ThrushCompilerIssue,
     frontends::classical::{
         lexer::{span::Span, token::Token, tokentype::TokenType},
-        parser::{ParserContext, expr, expressions::reference, typegen},
+        parser::{ParserContext, expr, typegen},
         types::{ast::Ast, parser::stmts::traits::TokenExtensions},
         typesystem::types::Type,
     },
@@ -208,52 +208,37 @@ pub fn build_alignof<'parser>(
         "Expected 'alignof' keyword.".into(),
     )?;
 
-    ctx.consume(
-        TokenType::LParen,
-        "Syntax error".into(),
-        "Expected '('.".into(),
-    )?;
-
     let span: Span = sizeof_tk.get_span();
 
-    if ctx.match_token(TokenType::Identifier)? {
-        let identifier_tk: &Token = ctx.previous();
-
-        let name: &str = identifier_tk.get_lexeme();
-        let span: Span = identifier_tk.get_span();
-
-        let reference: Ast = reference::build_reference(ctx, name, span)?;
-
-        let reference_type: &Type = reference.get_value_type()?;
-
-        ctx.consume(
-            TokenType::RParen,
-            String::from("Syntax error"),
-            String::from("Expected ')'."),
-        )?;
-
-        return Ok(Ast::Builtin {
-            builtin: Builtin::AlignOf {
-                align_of: reference_type.clone(),
-            },
-            kind: Type::Ptr(None),
-            span,
-        });
-    }
-
     let alignof_type: Type = typegen::build_type(ctx)?;
-
-    ctx.consume(
-        TokenType::RParen,
-        "Syntax error".into(),
-        "Expected ')'.".into(),
-    )?;
 
     Ok(Ast::Builtin {
         builtin: Builtin::AlignOf {
             align_of: alignof_type,
         },
-        kind: Type::Ptr(None),
+        kind: Type::U32,
+        span,
+    })
+}
+
+pub fn build_sizeof<'parser>(
+    ctx: &mut ParserContext<'parser>,
+) -> Result<Ast<'parser>, ThrushCompilerIssue> {
+    let sizeof_tk: &Token = ctx.consume(
+        TokenType::SizeOf,
+        String::from("Syntax error"),
+        String::from("Expected 'sizeof' keyword."),
+    )?;
+
+    let span: Span = sizeof_tk.get_span();
+
+    let sizeof_type: Type = typegen::build_type(ctx)?;
+
+    Ok(Ast::Builtin {
+        builtin: Builtin::SizeOf {
+            size_of: sizeof_type,
+        },
+        kind: Type::U64,
         span,
     })
 }

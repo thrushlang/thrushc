@@ -1,4 +1,5 @@
 use crate::{
+    backends::classical::llvm::compiler::builtins::Builtin,
     core::errors::standard::ThrushCompilerIssue,
     frontends::classical::{types::ast::Ast, typesystem::types::Type},
 };
@@ -231,7 +232,9 @@ impl Ast<'_> {
                 | Ast::Boolean { .. }
                 | Ast::Char { .. }
                 | Ast::Str { .. }
-        ) {
+                | Ast::NullPtr { .. }
+        ) || self.is_constant_builtin()
+        {
             return true;
         }
 
@@ -264,5 +267,16 @@ impl Ast<'_> {
         }
 
         false
+    }
+
+    #[inline]
+    pub fn is_constant_builtin(&self) -> bool {
+        matches!(
+            self,
+            Self::Builtin {
+                builtin: Builtin::AlignOf { .. } | Builtin::SizeOf { .. },
+                ..
+            }
+        )
     }
 }

@@ -37,12 +37,16 @@ impl<'symbol> TypeCheckerSymbolsTable<'symbol> {
 impl<'symbol> TypeCheckerSymbolsTable<'symbol> {
     #[inline]
     pub fn new_local(&mut self, name: &'symbol str, local: TypeCheckerLocal<'symbol>) {
-        self.locals.last_mut().unwrap().insert(name, local);
+        if let Some(scope) = self.locals.last_mut() {
+            scope.insert(name, local);
+        }
     }
 
     #[inline]
     pub fn new_lli(&mut self, name: &'symbol str, lli: TypeCheckerLLI<'symbol>) {
-        self.llis.last_mut().unwrap().insert(name, lli);
+        if let Some(scope) = self.llis.last_mut() {
+            scope.insert(name, lli);
+        }
     }
 
     #[inline]

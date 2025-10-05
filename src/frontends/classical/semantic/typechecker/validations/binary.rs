@@ -19,6 +19,7 @@ pub fn validate_binary(
         }
         TokenType::Xor => self::validate_xor(op, a, b, span),
         TokenType::Bor => self::validate_bor(op, a, b, span),
+        TokenType::BAnd => self::validate_band(op, a, b, span),
         TokenType::BangEq | TokenType::EqEq => self::validate_binary_equality(op, a, b, span),
         TokenType::LessEq | TokenType::Less | TokenType::GreaterEq | TokenType::Greater => {
             self::validate_binary_comparasion(op, a, b, span)
@@ -33,6 +34,45 @@ pub fn validate_binary(
             span,
         )),
     }
+}
+
+#[inline]
+fn validate_band(
+    op: &TokenType,
+    a: &Type,
+    b: &Type,
+    span: Span,
+) -> Result<(), ThrushCompilerIssue> {
+    if let (
+        Type::S8
+        | Type::S16
+        | Type::S32
+        | Type::S64
+        | Type::U8
+        | Type::U16
+        | Type::U32
+        | Type::U64
+        | Type::U128,
+        Type::S8
+        | Type::S16
+        | Type::S32
+        | Type::S64
+        | Type::U8
+        | Type::U16
+        | Type::U32
+        | Type::U64
+        | Type::U128,
+    ) = (a, b)
+    {
+        return Ok(());
+    }
+
+    Err(ThrushCompilerIssue::Error(
+        String::from("Incompatible Type Operation"),
+        format!("'{} {} {}' isn't valid operation.", a, op, b),
+        None,
+        span,
+    ))
 }
 
 #[inline]

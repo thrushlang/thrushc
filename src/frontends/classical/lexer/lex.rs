@@ -75,8 +75,12 @@ pub fn analyze(lexer: &mut Lexer) -> Result<(), ThrushCompilerIssue> {
         '|' if lexer.char_match('|') => lexer.make(TokenType::Or),
         '|' => lexer.make(TokenType::Bor),
         '&' if lexer.char_match('&') => lexer.make(TokenType::And),
-        ' ' | '\r' | '\t' => {}
+        '&' => lexer.make(TokenType::BAnd),
+        '\r' | '\t' => {}
 
+        ' ' => {
+            lexer.start_span();
+        }
         '\n' => lexer.line += 1,
 
         '\'' => character::lex(lexer)?,

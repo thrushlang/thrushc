@@ -342,11 +342,6 @@ impl<'parser> ParserContext<'parser> {
     }
 
     #[inline]
-    pub fn add_silent_error(&mut self, error: ThrushCompilerIssue) {
-        self.silent_errors.push(error);
-    }
-
-    #[inline]
     pub fn add_bug(&mut self, error: ThrushCompilerIssue) {
         self.bugs.push(error);
     }

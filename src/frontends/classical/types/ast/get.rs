@@ -51,7 +51,6 @@ impl Ast<'_> {
             Ast::AsmValue { kind, .. } => Ok(kind),
 
             // Builtins
-            Ast::SizeOf { kind, .. } => Ok(kind),
             Ast::Builtin { kind, .. } => Ok(kind),
 
             // Composite Types
@@ -138,7 +137,6 @@ impl Ast<'_> {
             Ast::As { cast: kind, .. } => Ok(kind),
 
             // Builtins
-            Ast::SizeOf { kind, .. } => Ok(kind),
             Ast::Builtin { kind, .. } => Ok(kind),
 
             // ASM Code Block
@@ -206,7 +204,6 @@ impl Ast<'_> {
             Ast::As { cast: kind, .. } => kind,
 
             // Builtins
-            Ast::SizeOf { kind, .. } => kind,
             Ast::Builtin { kind, .. } => kind,
 
             // ASM Code Block
@@ -282,7 +279,6 @@ impl Ast<'_> {
             Ast::As { span, .. } => *span,
 
             // Builtins
-            Ast::SizeOf { span, .. } => *span,
             Ast::Builtin { span, .. } => *span,
 
             // Control flow

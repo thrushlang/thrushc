@@ -21,7 +21,7 @@ pub type GlobalStatic<'ctx> = (
     &'ctx str,
     &'ctx str,
     &'ctx Type,
-    &'ctx Ast<'ctx>,
+    Option<&'ctx Ast<'ctx>>,
     &'ctx ThrushAttributes<'ctx>,
     StaticMetadata,
     Span,
@@ -31,7 +31,7 @@ pub type LocalStatic<'ctx> = (
     &'ctx str,
     &'ctx str,
     &'ctx Type,
-    &'ctx Ast<'ctx>,
+    Option<&'ctx Ast<'ctx>>,
     StaticMetadata,
     Span,
 );

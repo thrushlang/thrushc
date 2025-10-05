@@ -30,7 +30,7 @@ pub fn validate_builtin<'type_checker>(
             size,
         } => self::validate_memcpy(typechecker, destination, source, size),
 
-        Builtin::Halloc { .. } | Builtin::AlignOf { .. } => Ok(()),
+        Builtin::Halloc { .. } | Builtin::AlignOf { .. } | Builtin::SizeOf { .. } => Ok(()),
     }
 }
 

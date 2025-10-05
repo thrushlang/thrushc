@@ -69,12 +69,8 @@ pub fn build_local<'parser>(
 
     let metadata: LocalMetadata = LocalMetadata::new(false, is_mutable, is_volatile, atom_ord);
 
-    if let Err(error) =
-        ctx.get_mut_symbols()
-            .new_local(name, (local_type.clone(), metadata, span), span)
-    {
-        ctx.add_silent_error(error);
-    }
+    ctx.get_mut_symbols()
+        .new_local(name, (local_type.clone(), metadata, span), span)?;
 
     ctx.consume(
         TokenType::Eq,

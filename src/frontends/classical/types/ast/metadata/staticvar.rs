@@ -4,6 +4,7 @@ use inkwell::{AtomicOrdering, ThreadLocalMode};
 pub struct StaticMetadata {
     is_global: bool,
     is_mutable: bool,
+    is_unitialized: bool,
 
     llvm_metadata: LLVMStaticMetadata,
 }
@@ -23,6 +24,7 @@ impl StaticMetadata {
     pub fn new(
         is_global: bool,
         is_mutable: bool,
+        is_unitialized: bool,
         thread_local: bool,
         volatile: bool,
         atomic_ord: Option<AtomicOrdering>,
@@ -31,6 +33,7 @@ impl StaticMetadata {
         Self {
             is_global,
             is_mutable,
+            is_unitialized,
 
             llvm_metadata: LLVMStaticMetadata {
                 unnamed_addr: !is_mutable,
@@ -48,6 +51,11 @@ impl StaticMetadata {
     #[inline]
     pub fn is_mutable(&self) -> bool {
         self.is_mutable
+    }
+
+    #[inline]
+    pub fn is_unitialized(&self) -> bool {
+        self.is_unitialized
     }
 
     #[inline]

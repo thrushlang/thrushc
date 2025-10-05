@@ -18,7 +18,7 @@ pub fn decl<'parser>(
     ctx: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, ThrushCompilerIssue> {
     ctx.get_mut_control_ctx()
-        .set_sync_position(ParserSyncPosition::Declaration);
+        .add_sync_position(ParserSyncPosition::Declaration);
 
     let declaration: Result<Ast<'parser>, ThrushCompilerIssue> = match &ctx.peek().kind {
         TokenType::Type => Ok(cstype::build_custom_type(ctx, false)?),
@@ -32,6 +32,8 @@ pub fn decl<'parser>(
 
         _ => Ok(statement::parse(ctx)?),
     };
+
+    ctx.get_mut_control_ctx().pop_sync_position();
 
     declaration
 }

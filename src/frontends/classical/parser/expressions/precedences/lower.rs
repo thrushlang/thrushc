@@ -6,7 +6,6 @@ use crate::{
             ParserContext, builtins, expr,
             expressions::{
                 array, asm, call, constructor, defer, enumv, farray, indirect, lli, reference,
-                sizeof,
             },
             parse,
         },
@@ -25,7 +24,7 @@ pub fn lower_precedence<'parser>(
         TokenType::LBracket => array::build_array(ctx)?,
         TokenType::Defer => defer::build_deference(ctx)?,
 
-        TokenType::SizeOf => sizeof::build_sizeof(ctx)?,
+        TokenType::SizeOf => builtins::build_sizeof(ctx)?,
         TokenType::Halloc => builtins::build_halloc(ctx)?,
         TokenType::MemSet => builtins::build_memset(ctx)?,
         TokenType::MemMove => builtins::build_memmove(ctx)?,
@@ -142,7 +141,10 @@ pub fn lower_precedence<'parser>(
 
             return Err(ThrushCompilerIssue::Error(
                 "Syntax error".into(),
-                format!("Statement '{}' don't allowed.", previous.lexeme),
+                format!(
+                    "Statement '{}' don't allowed for previous errors.",
+                    previous.lexeme
+                ),
                 None,
                 previous.span,
             ));

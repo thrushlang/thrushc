@@ -81,6 +81,10 @@ fn int_operation<'ctx>(
                 .build_or(lhs, rhs, "")
                 .unwrap_or_else(cintgen_abort)
                 .into(),
+            TokenType::BAnd => llvm_builder
+                .build_and(lhs, rhs, "")
+                .unwrap_or_else(cintgen_abort)
+                .into(),
 
             op if op.is_logical_operator() => llvm_builder
                 .build_int_compare(
@@ -149,7 +153,8 @@ pub fn compile<'ctx>(
         | TokenType::And
         | TokenType::Or
         | TokenType::Xor
-        | TokenType::Bor,
+        | TokenType::Bor
+        | TokenType::BAnd,
         ..,
     ) = binary
     {
@@ -222,6 +227,7 @@ fn const_int_operation<'ctx>(
             TokenType::RShift => lhs.const_rshr(rhs).into(),
             TokenType::Xor => lhs.const_xor(rhs).into(),
             TokenType::Bor => lhs.const_or(rhs).into(),
+            TokenType::BAnd => lhs.const_and(rhs).into(),
 
             op if op.is_logical_operator() => lhs
                 .const_int_compare(
@@ -279,7 +285,8 @@ pub fn compile_const<'ctx>(
         | TokenType::And
         | TokenType::Or
         | TokenType::Xor
-        | TokenType::Bor,
+        | TokenType::Bor
+        | TokenType::BAnd,
         ..,
     ) = binary
     {

@@ -35,9 +35,9 @@ pub fn local_variable<'ctx>(
         ascii_name
     );
 
-    match (attributes.has_heap_attr(), attributes.has_stack_attr()) {
-        (true, _) => memheap::try_alloc_heap(context, llvm_type, &formatted_ascii_name, span),
-        (_, true) => memstack::try_alloc_stack(context, llvm_type, &formatted_ascii_name, span),
-        _ => memstack::try_alloc_stack(context, llvm_type, &formatted_ascii_name, span),
+    if attributes.has_heap_attr() {
+        memheap::try_alloc_heap(context, llvm_type, &formatted_ascii_name, span)
+    } else {
+        memstack::try_alloc_stack(context, llvm_type, &formatted_ascii_name, span)
     }
 }

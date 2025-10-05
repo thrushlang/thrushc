@@ -100,7 +100,7 @@ pub fn decompose(
 
         return Err(ThrushCompilerIssue::Error(
             "Syntax error".into(),
-            format!("Expected existing property, not '{}'.", field_name),
+            format!("Expected property, not '{}'.", field_name),
             None,
             span,
         ));
@@ -109,7 +109,7 @@ pub fn decompose(
     if position < property_names.len() {
         return Err(ThrushCompilerIssue::Error(
             "Syntax error".into(),
-            format!("Existing property '{}' is not a structure.", field_name),
+            format!("Property source of '{}' isn't a structure.", field_name),
             None,
             span,
         ));

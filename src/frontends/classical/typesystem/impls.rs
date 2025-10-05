@@ -41,7 +41,7 @@ impl Type {
 
     #[inline(always)]
     pub fn is_ptr_type(&self) -> bool {
-        matches!(self, Type::Ptr(_))
+        matches!(self, Type::Ptr(_) | Type::NullPtr)
     }
 
     #[inline(always)]
@@ -118,6 +118,7 @@ impl TypeExtensions for Type {
             | Type::Addr
             | Type::Void
             | Type::Ptr(None)
+            | Type::NullPtr
             | Type::Fn(..) => self,
         }
     }
@@ -172,6 +173,7 @@ impl PartialEq for Type {
             (Type::FPPC128, Type::FPPC128) => true,
             (Type::Ptr(None), Type::Ptr(None)) => true,
             (Type::Ptr(Some(target)), Type::Ptr(Some(from))) => target == from,
+            (Type::Ptr(..) | Type::NullPtr, Type::Ptr(..) | Type::NullPtr) => true,
             (Type::Void, Type::Void) => true,
             (Type::Bool, Type::Bool) => true,
             (Type::Addr, Type::Addr) => true,

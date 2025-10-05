@@ -58,7 +58,13 @@ impl Ast<'_> {
         } = self
         {
             return (
-                name, ascii_name, kind, &**value, attributes, *metadata, *span,
+                name,
+                ascii_name,
+                kind,
+                value.as_deref(),
+                attributes,
+                *metadata,
+                *span,
             );
         }
 
@@ -208,7 +214,7 @@ impl Ast<'_> {
             ..
         } = self
         {
-            return (name, ascii_name, kind, &**value, *metadata, *span);
+            return (name, ascii_name, kind, value.as_deref(), *metadata, *span);
         }
 
         logging::print_bug(

@@ -128,34 +128,24 @@ pub fn check_types(
             Ok(())
         }
 
-        (
-            Type::Ptr(None),
-            Type::Ptr(None),
-            Some(
-                TokenType::Xor
-                | TokenType::Bor
-                | TokenType::Not
-                | TokenType::EqEq
-                | TokenType::BangEq,
-            )
-            | None,
-        ) => Ok(()),
+        (Type::Ptr(None), Type::Ptr(None), Some(TokenType::EqEq | TokenType::BangEq) | None) => {
+            Ok(())
+        }
 
         (
             Type::Ptr(Some(lhs)),
             Type::Ptr(Some(rhs)),
-            Some(
-                TokenType::Xor
-                | TokenType::Bor
-                | TokenType::Not
-                | TokenType::EqEq
-                | TokenType::BangEq,
-            )
-            | None,
+            Some(TokenType::EqEq | TokenType::BangEq) | None,
         ) => {
             self::check_types(lhs, rhs, expr, op, metadata)?;
             Ok(())
         }
+
+        (
+            Type::Ptr(..) | Type::NullPtr,
+            Type::Ptr(..) | Type::NullPtr,
+            Some(TokenType::EqEq | TokenType::BangEq) | None,
+        ) => Ok(()),
 
         (
             Type::Bool,
@@ -188,7 +178,8 @@ pub fn check_types(
                 | TokenType::MinusMinus
                 | TokenType::Xor
                 | TokenType::Bor
-                | TokenType::Not,
+                | TokenType::Not
+                | TokenType::BAnd,
             )
             | None,
         ) => Ok(()),
@@ -207,7 +198,8 @@ pub fn check_types(
                 | TokenType::MinusMinus
                 | TokenType::Xor
                 | TokenType::Bor
-                | TokenType::Not,
+                | TokenType::Not
+                | TokenType::BAnd,
             )
             | None,
         ) => Ok(()),
@@ -226,7 +218,8 @@ pub fn check_types(
                 | TokenType::MinusMinus
                 | TokenType::Xor
                 | TokenType::Bor
-                | TokenType::Not,
+                | TokenType::Not
+                | TokenType::BAnd,
             )
             | None,
         ) => Ok(()),
@@ -245,7 +238,8 @@ pub fn check_types(
                 | TokenType::MinusMinus
                 | TokenType::Xor
                 | TokenType::Bor
-                | TokenType::Not,
+                | TokenType::Not
+                | TokenType::BAnd,
             )
             | None,
         ) => Ok(()),
@@ -264,7 +258,8 @@ pub fn check_types(
                 | TokenType::MinusMinus
                 | TokenType::Xor
                 | TokenType::Bor
-                | TokenType::Not,
+                | TokenType::Not
+                | TokenType::BAnd,
             )
             | None,
         ) => Ok(()),
@@ -283,7 +278,8 @@ pub fn check_types(
                 | TokenType::MinusMinus
                 | TokenType::Xor
                 | TokenType::Bor
-                | TokenType::Not,
+                | TokenType::Not
+                | TokenType::BAnd,
             )
             | None,
         ) => Ok(()),
@@ -302,7 +298,8 @@ pub fn check_types(
                 | TokenType::MinusMinus
                 | TokenType::Xor
                 | TokenType::Bor
-                | TokenType::Not,
+                | TokenType::Not
+                | TokenType::BAnd,
             )
             | None,
         ) => Ok(()),
@@ -321,7 +318,8 @@ pub fn check_types(
                 | TokenType::MinusMinus
                 | TokenType::Xor
                 | TokenType::Bor
-                | TokenType::Not,
+                | TokenType::Not
+                | TokenType::BAnd,
             )
             | None,
         ) => Ok(()),
@@ -340,7 +338,8 @@ pub fn check_types(
                 | TokenType::MinusMinus
                 | TokenType::Xor
                 | TokenType::Bor
-                | TokenType::Not,
+                | TokenType::Not
+                | TokenType::BAnd,
             )
             | None,
         ) => Ok(()),
@@ -439,7 +438,8 @@ pub fn check_types(
                 | TokenType::MinusMinus
                 | TokenType::Xor
                 | TokenType::Bor
-                | TokenType::Not,
+                | TokenType::Not
+                | TokenType::BAnd,
             )
             | None,
         ) if metadata.is_literal() => Ok(()),
@@ -458,7 +458,8 @@ pub fn check_types(
                 | TokenType::MinusMinus
                 | TokenType::Xor
                 | TokenType::Bor
-                | TokenType::Not,
+                | TokenType::Not
+                | TokenType::BAnd,
             )
             | None,
         ) if metadata.is_literal() => Ok(()),
@@ -477,7 +478,8 @@ pub fn check_types(
                 | TokenType::MinusMinus
                 | TokenType::Xor
                 | TokenType::Bor
-                | TokenType::Not,
+                | TokenType::Not
+                | TokenType::BAnd,
             )
             | None,
         ) if metadata.is_literal() => Ok(()),
@@ -496,7 +498,8 @@ pub fn check_types(
                 | TokenType::MinusMinus
                 | TokenType::Xor
                 | TokenType::Bor
-                | TokenType::Not,
+                | TokenType::Not
+                | TokenType::BAnd,
             )
             | None,
         ) if metadata.is_literal() => Ok(()),

@@ -46,14 +46,15 @@ impl TypeArrayEntensions for Type {
             Type::Const(subtype) => subtype.get_array_type_herarchy(),
 
             Type::Addr => 18,
+            Type::NullPtr => 19,
             Type::Ptr(Some(subtype)) => subtype.get_array_type_herarchy(),
-            Type::Ptr(None) => 19,
+            Type::Ptr(None) => 20,
 
-            Type::FixedArray(..) => 20,
-            Type::Array(..) => 21,
-            Type::Struct(..) => 22,
+            Type::FixedArray(..) => 21,
+            Type::Array(..) => 22,
+            Type::Struct(..) => 23,
 
-            Type::Fn(..) => 23,
+            Type::Fn(..) => 24,
         }
     }
 }

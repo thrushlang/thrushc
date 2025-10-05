@@ -15,7 +15,7 @@ pub fn build_expression<'parser>(
     self::check_state(ctx)?;
 
     ctx.get_mut_control_ctx()
-        .set_sync_position(ParserSyncPosition::Expression);
+        .add_sync_position(ParserSyncPosition::Expression);
 
     let expression: Ast = or::or_precedence(ctx)?;
 
@@ -24,6 +24,8 @@ pub fn build_expression<'parser>(
         String::from("Syntax error"),
         String::from("Expected ';'."),
     )?;
+
+    ctx.get_mut_control_ctx().pop_sync_position();
 
     Ok(expression)
 }
@@ -34,9 +36,11 @@ pub fn build_expr<'parser>(
     self::check_state(ctx)?;
 
     ctx.get_mut_control_ctx()
-        .set_sync_position(ParserSyncPosition::Expression);
+        .add_sync_position(ParserSyncPosition::Expression);
 
     let expr: Ast = or::or_precedence(ctx)?;
+
+    ctx.get_mut_control_ctx().pop_sync_position();
 
     Ok(expr)
 }

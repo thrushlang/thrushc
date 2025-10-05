@@ -288,7 +288,7 @@ impl Display for Ast<'_> {
             }
 
             Ast::NullPtr { .. } => {
-                write!(f, "null")
+                write!(f, "nullptr")
             }
 
             Ast::Group { expression, .. } => {

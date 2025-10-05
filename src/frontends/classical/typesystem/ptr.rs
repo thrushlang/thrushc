@@ -3,11 +3,11 @@ use crate::frontends::classical::typesystem::{traits::TypePointerExtensions, typ
 impl TypePointerExtensions for Type {
     #[inline]
     fn is_typed_ptr_type(&self) -> bool {
-        if let Type::Ptr(Some(inner)) = self {
+        if let Type::Ptr(Some(inner), ..) = self {
             return inner.is_typed_ptr_type();
         }
 
-        if let Type::Ptr(None) = self {
+        if let Type::Ptr(None, ..) = self {
             return false;
         }
 
@@ -16,7 +16,7 @@ impl TypePointerExtensions for Type {
 
     #[inline]
     fn is_ptr_struct_type(&self) -> bool {
-        if let Type::Ptr(Some(inner)) = self {
+        if let Type::Ptr(Some(inner), ..) = self {
             return inner.is_struct_type();
         }
 
@@ -25,7 +25,7 @@ impl TypePointerExtensions for Type {
 
     #[inline]
     fn is_ptr_fixed_array_type(&self) -> bool {
-        if let Type::Ptr(Some(inner)) = self {
+        if let Type::Ptr(Some(inner), ..) = self {
             return inner.is_fixed_array_type();
         }
 

@@ -2,7 +2,7 @@ use crate::frontends::classical::parser::contexts::sync::ParserSyncPosition;
 
 #[derive(Debug)]
 pub struct ParserControlContext {
-    sync_position: ParserSyncPosition,
+    sync_position: Vec<ParserSyncPosition>,
 
     entry_point: bool,
     global_asm: bool,
@@ -14,7 +14,7 @@ pub struct ParserControlContext {
 impl ParserControlContext {
     pub fn new() -> Self {
         Self {
-            sync_position: ParserSyncPosition::NoRelevant,
+            sync_position: Vec::with_capacity(100),
             entry_point: false,
             global_asm: false,
             inside_function: false,
@@ -26,10 +26,17 @@ impl ParserControlContext {
 
 impl ParserControlContext {
     #[inline]
-    pub fn set_sync_position(&mut self, new_sync_position: ParserSyncPosition) {
-        self.sync_position = new_sync_position;
+    pub fn add_sync_position(&mut self, other: ParserSyncPosition) {
+        self.sync_position.push(other);
     }
 
+    #[inline]
+    pub fn pop_sync_position(&mut self) {
+        self.sync_position.pop();
+    }
+}
+
+impl ParserControlContext {
     #[inline]
     pub fn set_global_asm(&mut self, value: bool) {
         self.global_asm = value;
@@ -63,8 +70,8 @@ impl ParserControlContext {
 
 impl ParserControlContext {
     #[inline]
-    pub fn get_sync_position(&self) -> ParserSyncPosition {
-        self.sync_position
+    pub fn get_sync_position(&self) -> Option<&ParserSyncPosition> {
+        self.sync_position.last()
     }
 
     #[inline]

@@ -19,6 +19,7 @@ impl std::fmt::Display for Type {
             Type::FPPC128 => write!(f, "fppc_128"),
             Type::Bool => write!(f, "bool"),
             Type::Char => write!(f, "char"),
+            Type::NullPtr => write!(f, "nullptr"),
             Type::Fn(params, kind, modificator) => {
                 let has_llvm_ignore: &str = if modificator.llvm().has_ignore() {
                     "<ignore>"
@@ -52,7 +53,7 @@ impl std::fmt::Display for Type {
                     ""
                 };
 
-                write!(f, "struct{} {} {{ ", name, is_llvm_packed)?;
+                write!(f, "struct {}{} {{ ", name, is_llvm_packed)?;
 
                 fields.iter().for_each(|field| {
                     let _ = write!(f, "{} ", field);

@@ -11,7 +11,9 @@ pub fn validate<'analyzer>(
 ) -> Result<(), ThrushCompilerIssue> {
     match node {
         Ast::Static { value, .. } => {
-            analyzer.analyze_stmt(value)?;
+            if let Some(value) = value {
+                analyzer.analyze_stmt(value)?;
+            }
 
             Ok(())
         }

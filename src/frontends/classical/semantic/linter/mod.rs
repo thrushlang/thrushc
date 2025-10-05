@@ -259,7 +259,7 @@ impl<'linter> Linter<'linter> {
         ########################################################################*/
 
         if let Ast::Defer { .. } = node {
-            return defer::analyze_dereference(self, node);
+            return defer::analyze_deference(self, node);
         }
 
         /* ######################################################################

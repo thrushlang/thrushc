@@ -378,19 +378,6 @@ impl<'type_checker> TypeChecker<'type_checker> {
             return builtins::validate_builtin(self, builtin);
         }
 
-        if let Ast::SizeOf { sizeof, span, .. } = node {
-            if sizeof.is_void_type() {
-                self.add_error(ThrushCompilerIssue::Error(
-                    "Type error".into(),
-                    "The void type isn't a value.".into(),
-                    None,
-                    *span,
-                ));
-            }
-
-            return Ok(());
-        }
-
         /* ######################################################################
 
 

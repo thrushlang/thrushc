@@ -163,12 +163,8 @@ pub fn build_enum<'parser>(
     )?;
 
     if declare_forward {
-        if let Err(error) =
-            ctx.get_mut_symbols()
-                .new_enum(enum_name, (enum_fields, enum_attributes), span)
-        {
-            ctx.add_silent_error(error);
-        }
+        ctx.get_mut_symbols()
+            .new_enum(enum_name, (enum_fields, enum_attributes), span)?;
 
         return Ok(Ast::new_nullptr(span));
     }

@@ -41,7 +41,7 @@ pub enum SymbolAllocated<'ctx> {
     },
     Static {
         ptr: PointerValue<'ctx>,
-        value: BasicValueEnum<'ctx>,
+        value: Option<BasicValueEnum<'ctx>>,
         kind: &'ctx Type,
         metadata: LLVMStaticMetadata,
         span: Span,
@@ -139,7 +139,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
     pub fn new_static(
         ptr: BasicValueEnum<'ctx>,
         kind: &'ctx Type,
-        value: BasicValueEnum<'ctx>,
+        value: Option<BasicValueEnum<'ctx>>,
         metadata: LLVMStaticMetadata,
         span: Span,
     ) -> Self {
@@ -332,12 +332,20 @@ impl<'ctx> SymbolAllocated<'ctx> {
     }
 
     #[inline]
-    pub fn get_value(&self) -> BasicValueEnum<'ctx> {
+    pub fn get_value(&self, context: &mut LLVMCodeGenContext<'_, '_>) -> BasicValueEnum<'ctx> {
         match self {
             Self::Local { ptr, .. } => (*ptr).into(),
             Self::Function { ptr, .. } => (*ptr).into(),
             Self::Constant { value, .. } => *value,
-            Self::Static { value, .. } => *value,
+            Self::Static { value, .. } => value.unwrap_or_else(|| {
+                abort::abort_codegen(
+                    context,
+                    "Failed to get a value from static reference!",
+                    self.get_span(),
+                    PathBuf::from(file!()),
+                    line!(),
+                );
+            }),
             Self::Parameter { value, .. } => *value,
             Self::LowLevelInstruction { value, .. } => *value,
         }

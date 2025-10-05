@@ -18,7 +18,9 @@ pub fn analyze<'linter>(linter: &mut Linter<'linter>, node: &'linter Ast) {
                 .symbols
                 .new_local_static(name, (*span, false, !metadata.is_mutable()));
 
-            linter.analyze_expr(value);
+            if let Some(value) = value {
+                linter.analyze_expr(value);
+            }
         }
 
         _ => {

@@ -47,13 +47,7 @@ pub fn build_function<'parser>(
             return Ok(Ast::new_nullptr(span));
         }
 
-        ctx.get_mut_control_ctx().set_inside_function(true);
-
-        let entrypoint: Result<Ast, ThrushCompilerIssue> = entrypoint::build_entrypoint(ctx, span);
-
-        ctx.get_mut_control_ctx().set_inside_function(false);
-
-        return entrypoint;
+        return entrypoint::build_entrypoint(ctx, span);
     }
 
     ctx.consume(
@@ -142,7 +136,7 @@ pub fn build_function<'parser>(
     };
 
     if declare_forward {
-        if let Err(error) = ctx.get_mut_symbols().new_function(
+        ctx.get_mut_symbols().new_function(
             function_name,
             (
                 return_type,
@@ -150,9 +144,7 @@ pub fn build_function<'parser>(
                 function_has_ignore,
             ),
             span,
-        ) {
-            ctx.add_silent_error(error);
-        }
+        )?;
 
         if ctx.match_token(TokenType::SemiColon)? {
             return Ok(function);
@@ -170,9 +162,7 @@ pub fn build_function<'parser>(
     ctx.get_mut_type_ctx()
         .set_function_type(return_type.clone());
 
-    if let Err(error) = ctx.get_mut_symbols().declare_parameters(&parameters) {
-        ctx.add_silent_error(error);
-    }
+    ctx.get_mut_symbols().declare_parameters(&parameters)?;
 
     let function_body: Ast = block::build_block(ctx)?;
 

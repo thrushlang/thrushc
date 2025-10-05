@@ -20,7 +20,7 @@ pub fn parse<'parser>(
     self::check_statement_state(ctx)?;
 
     ctx.get_mut_control_ctx()
-        .set_sync_position(ParserSyncPosition::Statement);
+        .add_sync_position(ParserSyncPosition::Statement);
 
     let statement: Result<Ast<'parser>, ThrushCompilerIssue> = match &ctx.peek().kind {
         TokenType::LBrace => Ok(block::build_block(ctx)?),
@@ -42,6 +42,8 @@ pub fn parse<'parser>(
 
         _ => Ok(expr::build_expression(ctx)?),
     };
+
+    ctx.get_mut_control_ctx().pop_sync_position();
 
     statement
 }

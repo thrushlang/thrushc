@@ -1,8 +1,8 @@
 use std::path::PathBuf;
 
+use inkwell::AddressSpace;
 use inkwell::{context::Context, values::BasicValueEnum};
 
-use crate::backends::classical::llvm::compiler;
 use crate::backends::classical::llvm::compiler::abort;
 use crate::backends::classical::llvm::compiler::binaryop;
 use crate::backends::classical::llvm::compiler::constgen;
@@ -10,6 +10,7 @@ use crate::backends::classical::llvm::compiler::context::LLVMCodeGenContext;
 use crate::backends::classical::llvm::compiler::generation::expressions::unary;
 use crate::backends::classical::llvm::compiler::generation::float;
 use crate::backends::classical::llvm::compiler::generation::int;
+use crate::backends::classical::llvm::compiler::{self, builtins};
 
 use crate::frontends::classical::types::ast::Ast;
 use crate::frontends::classical::typesystem::traits::TypeStructExtensions;
@@ -22,6 +23,12 @@ pub fn compile<'ctx>(
 ) -> BasicValueEnum<'ctx> {
     match ast {
         // Handle integer literals
+        Ast::NullPtr { .. } => context
+            .get_llvm_context()
+            .ptr_type(AddressSpace::default())
+            .const_null()
+            .into(),
+
         Ast::Integer {
             value,
             kind,
@@ -97,7 +104,7 @@ pub fn compile<'ctx>(
         }
 
         // Variable reference resolution
-        Ast::Reference { name, .. } => context.get_table().get_symbol(name).get_value(),
+        Ast::Reference { name, .. } => context.get_table().get_symbol(name).get_value(context),
 
         // Grouped expression compilation
         Ast::Group { expression, .. } => self::compile(context, expression, cast_type),
@@ -151,6 +158,9 @@ pub fn compile<'ctx>(
             kind,
             ..
         } => unary::compile_const(context, (operator, kind, expression), cast_type),
+
+        // Builtins
+        Ast::Builtin { builtin, .. } => builtins::compile(context, builtin, Some(cast_type)),
 
         // Fallback for unsupported AST nodes
         what => abort::abort_codegen(

@@ -5,7 +5,7 @@ use crate::{
     frontends::classical::{lexer::span::Span, semantic::linter::Linter, types::ast::Ast},
 };
 
-pub fn analyze_dereference<'linter>(linter: &mut Linter<'linter>, node: &'linter Ast) {
+pub fn analyze_deference<'linter>(linter: &mut Linter<'linter>, node: &'linter Ast) {
     match node {
         Ast::Defer { value, .. } => {
             linter.analyze_expr(value);

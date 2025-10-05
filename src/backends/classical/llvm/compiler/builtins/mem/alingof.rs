@@ -13,7 +13,6 @@ pub fn compile<'ctx>(
     cast: Option<&Type>,
 ) -> BasicValueEnum<'ctx> {
     let llvm_context: &Context = context.get_llvm_context();
-
     let llvm_type: BasicTypeEnum = typegen::generate(llvm_context, alingof_type);
 
     let target_data: &TargetData = context.get_target_data();

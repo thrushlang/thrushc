@@ -61,6 +61,10 @@ pub fn analyze<'linter>(linter: &mut Linter<'linter>, expr: &'linter Ast) {
             });
         }
 
+        Ast::Property { source, .. } => {
+            linter.analyze_expr(source);
+        }
+
         Ast::Constructor {
             name, args, span, ..
         } => {
@@ -170,7 +174,7 @@ pub fn analyze<'linter>(linter: &mut Linter<'linter>, expr: &'linter Ast) {
         }
 
         Ast::As { .. } => expressions::cast::analyze_cast(linter, expr),
-        Ast::Defer { .. } => defer::analyze_dereference(linter, expr),
+        Ast::Defer { .. } => defer::analyze_deference(linter, expr),
 
         Ast::Alloc { .. }
         | Ast::Integer { .. }
@@ -179,8 +183,7 @@ pub fn analyze<'linter>(linter: &mut Linter<'linter>, expr: &'linter Ast) {
         | Ast::Float { .. }
         | Ast::NullPtr { .. }
         | Ast::Char { .. }
-        | Ast::Pass { .. }
-        | Ast::SizeOf { .. } => (),
+        | Ast::Pass { .. } => (),
 
         _ => {
             let span: Span = expr.get_span();

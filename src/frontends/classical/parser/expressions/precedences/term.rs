@@ -19,6 +19,7 @@ pub fn term_precedence<'parser>(
         || ctx.match_token(TokenType::RShift)?
         || ctx.match_token(TokenType::Xor)?
         || ctx.match_token(TokenType::Bor)?
+        || ctx.match_token(TokenType::BAnd)?
     {
         let operator_tk: &Token = ctx.previous();
         let operator: TokenType = operator_tk.get_type();

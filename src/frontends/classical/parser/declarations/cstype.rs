@@ -50,12 +50,8 @@ pub fn build_custom_type<'parser>(
     )?;
 
     if declare_forward {
-        if let Err(error) =
-            ctx.get_mut_symbols()
-                .new_custom_type(custom_type_name, (custom_type, attributes), span)
-        {
-            ctx.add_error(error);
-        }
+        ctx.get_mut_symbols()
+            .new_custom_type(custom_type_name, (custom_type, attributes), span)?;
     }
 
     Ok(Ast::new_nullptr(span))

@@ -54,13 +54,11 @@ pub fn build_global_const<'parser>(
     let value: Ast = expr::build_expression(ctx)?;
 
     if declare_forward {
-        if let Err(error) = ctx.get_mut_symbols().new_global_constant(
+        ctx.get_mut_symbols().new_global_constant(
             name,
             (const_type.clone(), attributes.clone()),
             span,
-        ) {
-            ctx.add_silent_error(error);
-        }
+        )?;
     }
 
     Ok(Ast::Const {

@@ -166,40 +166,68 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
         let ascii_name: &str = staticvar.1;
 
         let kind: &Type = staticvar.2;
-        let expr: &Ast = staticvar.3;
+        let value: Option<&Ast> = staticvar.3;
         let metadata: StaticMetadata = staticvar.4;
-        let span = staticvar.5;
+        let span: Span = staticvar.5;
 
-        let expr_type: &Type = expr.get_type_unwrapped();
+        if let Some(value) = value {
+            let value_type: &Type = value.get_type_unwrapped();
+            let llvm_value: BasicValueEnum = compiler::constgen::compile(self, value, kind);
 
-        let llvm_value: BasicValueEnum = compiler::constgen::compile(self, expr, kind);
-        let value: BasicValueEnum =
-            compiler::generation::cast::try_cast_const(self, llvm_value, expr_type, kind);
+            let value: BasicValueEnum =
+                compiler::generation::cast::try_cast_const(self, llvm_value, value_type, kind);
+
+            let ptr: PointerValue = alloc::memstatic::local_static(
+                self,
+                ascii_name,
+                typegen::generate(self.context, kind),
+                Some(value),
+                metadata,
+            );
+
+            let staticvar: SymbolAllocated = SymbolAllocated::new_static(
+                ptr.into(),
+                kind,
+                Some(value),
+                metadata.get_llvm_metadata(),
+                span,
+            );
+
+            self.table
+                .get_mut_all_local_statics()
+                .last_mut()
+                .unwrap_or_else(|| {
+                    logging::print_backend_panic(
+                        LoggingType::BackendPanic,
+                        "The last frame of symbols couldn't be obtained.",
+                    )
+                })
+                .insert(name, staticvar);
+
+            return;
+        }
 
         let ptr: PointerValue = alloc::memstatic::local_static(
             self,
             ascii_name,
             typegen::generate(self.context, kind),
-            value,
+            None,
             metadata,
         );
 
-        let constant: SymbolAllocated = SymbolAllocated::new_static(
-            ptr.into(),
-            kind,
-            value,
-            metadata.get_llvm_metadata(),
-            span,
-        );
+        let staticvar: SymbolAllocated =
+            SymbolAllocated::new_static(ptr.into(), kind, None, metadata.get_llvm_metadata(), span);
 
-        if let Some(last_block) = self.table.get_mut_all_local_statics().last_mut() {
-            last_block.insert(name, constant);
-        } else {
-            logging::print_backend_panic(
-                LoggingType::BackendPanic,
-                "The last frame of symbols couldn't be obtained.",
-            )
-        }
+        self.table
+            .get_mut_all_local_statics()
+            .last_mut()
+            .unwrap_or_else(|| {
+                logging::print_backend_panic(
+                    LoggingType::BackendPanic,
+                    "The last frame of symbols couldn't be obtained.",
+                )
+            })
+            .insert(name, staticvar);
     }
 
     pub fn new_global_static(&mut self, staticvar: GlobalStatic<'ctx>) {
@@ -207,38 +235,58 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
         let ascii_name: &str = staticvar.1;
 
         let kind: &Type = staticvar.2;
-        let value: &Ast = staticvar.3;
+        let value: Option<&Ast> = staticvar.3;
 
         let attributes: &ThrushAttributes = staticvar.4;
         let metadata: StaticMetadata = staticvar.5;
         let span: Span = staticvar.6;
 
-        let value_type: &Type = value.get_type_unwrapped();
+        if let Some(value) = value {
+            let value_type: &Type = value.get_type_unwrapped();
+            let llvm_value: BasicValueEnum = compiler::constgen::compile(self, value, kind);
 
-        let llvm_value: BasicValueEnum = compiler::constgen::compile(self, value, kind);
-        let value: BasicValueEnum =
-            compiler::generation::cast::try_cast_const(self, llvm_value, value_type, kind);
+            let value: BasicValueEnum =
+                compiler::generation::cast::try_cast_const(self, llvm_value, value_type, kind);
+
+            let ptr: PointerValue = alloc::memstatic::global_static(
+                self,
+                ascii_name,
+                typegen::generate(self.context, kind),
+                Some(value),
+                attributes,
+                metadata,
+            );
+
+            let staticvar: SymbolAllocated = SymbolAllocated::new_static(
+                ptr.into(),
+                kind,
+                Some(value),
+                metadata.get_llvm_metadata(),
+                span,
+            );
+
+            self.table
+                .get_mut_all_global_statics()
+                .insert(name, staticvar);
+
+            return;
+        }
 
         let ptr: PointerValue = alloc::memstatic::global_static(
             self,
             ascii_name,
             typegen::generate(self.context, kind),
-            value,
+            None,
             attributes,
             metadata,
         );
 
-        let constant: SymbolAllocated = SymbolAllocated::new_static(
-            ptr.into(),
-            kind,
-            value,
-            metadata.get_llvm_metadata(),
-            span,
-        );
+        let staticvar: SymbolAllocated =
+            SymbolAllocated::new_static(ptr.into(), kind, None, metadata.get_llvm_metadata(), span);
 
         self.table
             .get_mut_all_global_statics()
-            .insert(name, constant);
+            .insert(name, staticvar);
     }
 }
 

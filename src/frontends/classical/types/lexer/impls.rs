@@ -150,6 +150,7 @@ impl std::fmt::Display for TokenType {
             TokenType::Xor => write!(f, "^"),
             TokenType::Not => write!(f, "~"),
             TokenType::Bor => write!(f, "|"),
+            TokenType::BAnd => write!(f, "&"),
             TokenType::Star => write!(f, "*"),
             TokenType::SizeOf => write!(f, "sizeof"),
 

@@ -169,6 +169,18 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
                 ));
             }
 
+            if metadata.is_global()
+                && metadata.is_unitialized()
+                && !attributes.has_public_attribute()
+            {
+                self.add_error(ThrushCompilerIssue::Error(
+                    "Attribute error".into(),
+                    "Uninitialized global static must have public visibility.".into(),
+                    None,
+                    *span,
+                ));
+            }
+
             self.analyze_attrs(attributes, AttributeCheckerAttributeApplicant::Static);
         }
 

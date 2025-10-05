@@ -258,7 +258,7 @@ pub enum Ast<'ctx> {
         name: &'ctx str,
         ascii_name: &'ctx str,
         kind: Type,
-        value: Rc<Ast<'ctx>>,
+        value: Option<Rc<Ast<'ctx>>>,
         attributes: ThrushAttributes<'ctx>,
         metadata: StaticMetadata,
 
@@ -418,13 +418,6 @@ pub enum Ast<'ctx> {
     },
 
     // Builtins
-    SizeOf {
-        sizeof: Type,
-        kind: Type,
-
-        span: Span,
-    },
-
     Builtin {
         builtin: Builtin<'ctx>,
         kind: Type,

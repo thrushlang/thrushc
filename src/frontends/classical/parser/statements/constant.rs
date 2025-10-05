@@ -54,12 +54,8 @@ pub fn build_const<'parser>(
 
     let value: Ast = expr::build_expression(ctx)?;
 
-    if let Err(error) =
-        ctx.get_mut_symbols()
-            .new_constant(name, (const_type.clone(), attributes.clone()), span)
-    {
-        ctx.add_silent_error(error);
-    }
+    ctx.get_mut_symbols()
+        .new_constant(name, (const_type.clone(), attributes.clone()), span)?;
 
     Ok(Ast::Const {
         name,
