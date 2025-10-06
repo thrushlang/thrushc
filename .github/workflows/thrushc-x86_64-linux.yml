@@ -6,8 +6,8 @@ on:
       - 'thrushc-x86_64-linux-v*.*.*'
 
 jobs:
-  build-mlir-linux:
-    runs-on: ubuntu-2022
+  build-thrushc-linux:
+    runs-on: ubuntu-latest
 
     permissions:
       contents: write

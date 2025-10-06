@@ -6,7 +6,7 @@ on:
       - 'thrushc-x86_64-windows-v*.*.*'
 
 jobs:
-  build-mlir-windows:
+  build-thrushc-windows:
     runs-on: windows-2022
 
     permissions:
