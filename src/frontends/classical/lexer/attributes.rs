@@ -6,7 +6,7 @@ lazy_static! {
     pub static ref ATTRIBUTES: HashMap<&'static str, TokenType> = {
         let mut attributes: HashMap<&'static str, TokenType> = HashMap::with_capacity(100);
 
-        attributes.insert("@asmalingstack", TokenType::AsmAlignStack);
+        attributes.insert("@asmalignstack", TokenType::AsmAlignStack);
         attributes.insert("@asmsyntax", TokenType::AsmSyntax);
         attributes.insert("@asmthrow", TokenType::AsmThrow);
         attributes.insert("@asmeffects", TokenType::AsmSideEffects);
