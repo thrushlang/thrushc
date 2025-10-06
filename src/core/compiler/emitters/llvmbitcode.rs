@@ -15,7 +15,7 @@ pub fn emit_llvm_bitcode(
     unoptimized: bool,
 ) -> bool {
     let compiler_options: &CompilerOptions = compiler.get_options();
-    let obfuscate: bool = compiler_options.ofuscate_archive_names();
+    let obfuscate: bool = compiler_options.need_obfuscate_archive_names();
 
     let bitcode_base_path: PathBuf = build_dir.join("emit").join("llvm-bitcode");
 

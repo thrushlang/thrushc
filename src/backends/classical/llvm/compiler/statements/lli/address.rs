@@ -7,7 +7,7 @@ use crate::{
         memory::{self},
         ptr,
     },
-    frontends::classical::{types::ast::Ast, typesystem::types::Type},
+    frontends::classical::{lexer::span::Span, types::ast::Ast, typesystem::types::Type},
 };
 
 pub fn compile<'ctx>(
@@ -20,8 +20,9 @@ pub fn compile<'ctx>(
         .map(|index| codegen::compile(context, index, Some(&Type::U32)).into_int_value())
         .collect();
 
+    let span: Span = source.get_span();
     let kind: &Type = source.llvm_get_type(context);
     let ptr: PointerValue = ptr::compile(context, source, None).into_pointer_value();
 
-    memory::gep_anon(context, ptr, kind, &indexes).into()
+    memory::gep_anon(context, ptr, kind, &indexes, span).into()
 }

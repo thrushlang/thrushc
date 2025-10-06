@@ -15,12 +15,15 @@ use {
 fn main() -> ! {
     console::set_up();
 
-    let cli: CLI = CLI::parse(env::args().collect());
+    let command_line: CLI = CLI::parse(env::args().collect());
 
     let start_time: Instant = Instant::now();
 
-    let comptime: (u128, u128) =
-        ThrushCompiler::new(cli.get_options().get_files(), cli.get_options()).compile();
+    let comptime: (u128, u128) = ThrushCompiler::new(
+        command_line.get_options().get_files(),
+        command_line.get_options(),
+    )
+    .compile();
 
     console::report_comptime(start_time, comptime)
 }

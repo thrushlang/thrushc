@@ -71,7 +71,8 @@ fn compile_without_anchor<'ctx>(
     span: Span,
 ) -> BasicValueEnum<'ctx> {
     let ptr_type: BasicTypeEnum<'_> = typegen::generate(context.get_llvm_context(), struct_type);
-    let ptr: PointerValue<'_> = memory::alloc_anon(LLVMAllocationSite::Stack, context, struct_type);
+    let ptr: PointerValue<'_> =
+        memory::alloc_anon(context, LLVMAllocationSite::Stack, struct_type, span);
 
     let fields_types: &[Type] = struct_type.get_struct_fields();
 

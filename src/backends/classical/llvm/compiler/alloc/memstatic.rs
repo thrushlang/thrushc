@@ -66,8 +66,8 @@ pub fn local_constant<'ctx>(
     let llvm_metadata: LLVMConstantMetadata = metadata.get_llvm_metadata();
 
     let name: String = format!(
-        "{}.const.{}",
-        obfuscation::generate_obfuscation_name(obfuscation::SHORT_RANGE_OBFUSCATION),
+        "local.{}.const{}",
+        obfuscation::generate_obfuscation_name(context, obfuscation::SHORT_RANGE_OBFUSCATION),
         name
     );
 
@@ -133,8 +133,8 @@ pub fn local_static<'ctx>(
     let llvm_metadata: LLVMStaticMetadata = metadata.get_llvm_metadata();
 
     let name: String = format!(
-        "{}.static.{}",
-        obfuscation::generate_obfuscation_name(obfuscation::SHORT_RANGE_OBFUSCATION),
+        "local.{}.static{}",
+        obfuscation::generate_obfuscation_name(context, obfuscation::SHORT_RANGE_OBFUSCATION),
         name
     );
 

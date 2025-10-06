@@ -215,6 +215,7 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
             &llvm_builder,
             target_machine.get_target_data(),
             Diagnostician::new(file),
+            self.options,
         );
 
         llvm::compiler::LLVMCompiler::compile(&mut llvm_codegen_context, ast);

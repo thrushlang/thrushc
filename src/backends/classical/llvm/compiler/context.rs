@@ -1,5 +1,6 @@
 use std::path::PathBuf;
 
+use crate::core::compiler::options::CompilerOptions;
 use crate::frontends::classical::lexer::span::Span;
 use crate::frontends::classical::types::ast::Ast;
 use crate::frontends::classical::types::parser::repr::{
@@ -53,6 +54,7 @@ pub struct LLVMCodeGenContext<'a, 'ctx> {
     function: Option<FunctionValue<'ctx>>,
 
     diagnostician: Diagnostician,
+    options: &'ctx CompilerOptions,
 }
 
 impl<'a, 'ctx> LLVMCodeGenContext<'a, 'ctx> {
@@ -62,6 +64,7 @@ impl<'a, 'ctx> LLVMCodeGenContext<'a, 'ctx> {
         builder: &'ctx Builder<'ctx>,
         target_data: TargetData,
         diagnostician: Diagnostician,
+        options: &'ctx CompilerOptions,
     ) -> Self {
         Self {
             module,
@@ -76,6 +79,7 @@ impl<'a, 'ctx> LLVMCodeGenContext<'a, 'ctx> {
             function: None,
 
             diagnostician,
+            options,
         }
     }
 }
@@ -459,6 +463,13 @@ impl<'a, 'ctx> LLVMCodeGenContext<'a, 'ctx> {
         &self.target_data
     }
 
+    #[inline]
+    pub fn get_compiler_options(&self) -> &CompilerOptions {
+        self.options
+    }
+}
+
+impl<'a, 'ctx> LLVMCodeGenContext<'a, 'ctx> {
     #[inline]
     pub fn get_mut_diagnostician(&mut self) -> &mut Diagnostician {
         &mut self.diagnostician

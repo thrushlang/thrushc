@@ -21,7 +21,6 @@ use inkwell::AddressSpace;
 use inkwell::basic_block::BasicBlock;
 use inkwell::{
     builder::Builder,
-    context::Context,
     module::Module,
     types::FunctionType,
     values::{BasicValueEnum, FunctionValue},
@@ -439,26 +438,23 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
     }
 
     fn build_entrypoint(&mut self, parameters: &'ctx [Ast], body: &'ctx Ast) {
-        let llvm_module: &Module = self.context.get_llvm_module();
-        let llvm_context: &Context = self.context.get_llvm_context();
-        let llvm_builder: &Builder = self.context.get_llvm_builder();
+        let llvm_module: &Module<'_> = self.context.get_llvm_module();
+        let llvm_builder: &Builder<'_> = self.context.get_llvm_builder();
 
-        let entrypoint_type: FunctionType =
+        let entrypoint_type: FunctionType<'_> =
             typegen::generate_fn_type(self.context, &Type::U32, parameters, false);
+        let entrypoint: FunctionValue<'_> = llvm_module.add_function("main", entrypoint_type, None);
 
-        let entrypoint: FunctionValue = llvm_module.add_function("main", entrypoint_type, None);
-
-        llvm_builder.position_at_end(block::append_block(llvm_context, entrypoint));
-
+        llvm_builder.position_at_end(block::append_block(self.context, entrypoint));
         self.context.set_current_fn(entrypoint);
 
-        parameters.iter().for_each(|parameter| {
+        for parameter in parameters {
             compiler::declarations::function::compile_parameter(
                 self,
                 entrypoint,
                 parameter.as_function_parameter(),
             );
-        });
+        }
 
         self.codegen_block(body);
     }

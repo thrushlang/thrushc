@@ -14,7 +14,7 @@ pub fn print_llvm_ir(
     unoptimized: bool,
 ) {
     let compiler_options: &CompilerOptions = compiler.get_options();
-    let obfuscate: bool = compiler_options.ofuscate_archive_names();
+    let obfuscate: bool = compiler_options.need_obfuscate_archive_names();
 
     let optimization_name_modifier: &str = if unoptimized { "raw_" } else { "" };
 

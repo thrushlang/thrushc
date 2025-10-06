@@ -67,7 +67,7 @@ pub fn compile<'ctx>(
     } else {
         format!(
             "__asm_fn_{}_{}",
-            obfuscation::generate_obfuscation_name(obfuscation::LONG_RANGE_OBFUSCATION),
+            obfuscation::generate_obfuscation_name(context, obfuscation::LONG_RANGE_OBFUSCATION),
             asm_function_ascii_name
         )
     };
@@ -94,7 +94,7 @@ pub fn compile<'ctx>(
 
     let last_block: BasicBlock = context.get_last_builder_block();
 
-    let asm_function_block: BasicBlock = block::append_block(llvm_context, llvm_asm_function);
+    let asm_function_block: BasicBlock = block::append_block(context, llvm_asm_function);
 
     llvm_builder.position_at_end(asm_function_block);
 

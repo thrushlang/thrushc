@@ -67,7 +67,7 @@ pub fn compile_decl<'ctx>(
     } else {
         &format!(
             "__fn_{}_{}",
-            obfuscation::generate_obfuscation_name(obfuscation::LONG_RANGE_OBFUSCATION),
+            obfuscation::generate_obfuscation_name(context, obfuscation::LONG_RANGE_OBFUSCATION),
             ascii_name
         )
     };
@@ -96,7 +96,6 @@ pub fn compile_decl<'ctx>(
 }
 
 pub fn compile_body<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, global_fn: GlobalFunction<'ctx>) {
-    let llvm_context: &Context = codegen.get_context().get_llvm_context();
     let llvm_builder: &Builder = codegen.get_context().get_llvm_builder();
 
     let function_name: &str = global_fn.0;
@@ -110,7 +109,7 @@ pub fn compile_body<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, global_fn: Global
         .get_function(function_name);
 
     let llvm_function: FunctionValue = represented_llvm_function.0;
-    let llvm_function_block: BasicBlock = block::append_block(llvm_context, llvm_function);
+    let llvm_function_block: BasicBlock = block::append_block(codegen.get_context(), llvm_function);
 
     llvm_builder.position_at_end(llvm_function_block);
 

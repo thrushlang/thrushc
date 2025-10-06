@@ -4,7 +4,7 @@ use crate::{
         lexer::{span::Span, tokentype::TokenType},
         semantic::typechecker::metadata::TypeCheckerExprMetadata,
         types::ast::{Ast, metadata::cast::CastMetadata},
-        typesystem::types::Type,
+        typesystem::{traits::TypeExtensions, types::Type},
     },
 };
 
@@ -563,6 +563,14 @@ pub fn check_type_cast(
         && is_allocated
         && cast_type.is_ptr_type()
     {
+        return Ok(());
+    }
+
+    if from_type.is_ptr_type() && cast_type.is_const_type() {
+        let lhs: &Type = cast_type.get_type_with_depth(1);
+
+        self::check_type_cast(lhs, from_type, metadata, span)?;
+
         return Ok(());
     }
 

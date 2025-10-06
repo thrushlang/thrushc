@@ -6,7 +6,7 @@ pub mod memstatic;
 use inkwell::{context::Context, types::BasicTypeEnum, values::PointerValue};
 
 use crate::{
-    backends::classical::llvm::compiler::{context::LLVMCodeGenContext, obfuscation, typegen},
+    backends::classical::llvm::compiler::{context::LLVMCodeGenContext, typegen},
     frontends::classical::{
         lexer::span::Span,
         types::{
@@ -29,11 +29,7 @@ pub fn local_variable<'ctx>(
 
     let llvm_type: BasicTypeEnum = typegen::generate_for_local_variable(llvm_context, kind, value);
 
-    let formatted_ascii_name: String = format!(
-        "{}.local.{}",
-        obfuscation::generate_obfuscation_name(obfuscation::SHORT_RANGE_OBFUSCATION),
-        ascii_name
-    );
+    let formatted_ascii_name: String = format!("local.{}", ascii_name);
 
     if attributes.has_heap_attr() {
         memheap::try_alloc_heap(context, llvm_type, &formatted_ascii_name, span)

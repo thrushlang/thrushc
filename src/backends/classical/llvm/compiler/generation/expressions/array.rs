@@ -45,9 +45,8 @@ fn compile_without_anchor<'ctx>(
     let items_type: &Type = base_type.get_array_base_type();
 
     let array_type: Type = Type::FixedArray(items_type.clone().into(), items.len() as u32);
-
     let array_ptr: PointerValue =
-        memory::alloc_anon(LLVMAllocationSite::Stack, context, &array_type);
+        memory::alloc_anon(context, LLVMAllocationSite::Stack, &array_type, span);
 
     let items: Vec<BasicValueEnum> = items
         .iter()
@@ -62,6 +61,7 @@ fn compile_without_anchor<'ctx>(
             array_ptr,
             &array_type,
             &[llvm_context.i32_type().const_zero(), index],
+            span,
         );
 
         memory::store_anon(context, ptr, *value, span);
@@ -105,6 +105,7 @@ fn compile_with_anchor<'ctx>(
                 anchor_ptr,
                 &array_type,
                 &[llvm_context.i32_type().const_zero(), index],
+                span,
             );
 
             memory::store_anon(context, ptr, *value, span);

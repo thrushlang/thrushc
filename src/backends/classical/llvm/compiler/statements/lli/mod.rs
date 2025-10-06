@@ -49,8 +49,9 @@ pub fn compile_advanced<'ctx>(
         Ast::Alloc {
             alloc,
             site_allocation,
+            span,
             ..
-        } => self::alloc::compile(context, alloc, site_allocation),
+        } => self::alloc::compile(context, alloc, site_allocation, *span),
 
         _ => {
             self::codegen_abort("Failed to compile low-level instruction. Unknown expression.");

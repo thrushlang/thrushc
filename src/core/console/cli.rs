@@ -465,7 +465,12 @@ impl CLI {
 
             "--no-obfuscate-archive-names" => {
                 self.advance();
-                self.options.no_ofuscate_archive_names();
+                self.options.set_no_obfuscate_archive_names();
+            }
+
+            "--no-obfuscate-ir" => {
+                self.advance();
+                self.options.set_no_obfuscate_ir();
             }
 
             possible_file_path if self.is_thrush_file(possible_file_path) => {

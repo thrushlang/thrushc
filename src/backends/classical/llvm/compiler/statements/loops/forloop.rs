@@ -3,7 +3,6 @@ use std::path::PathBuf;
 use inkwell::{
     basic_block::BasicBlock,
     builder::Builder,
-    context::Context,
     values::{FunctionValue, IntValue},
 };
 
@@ -16,7 +15,6 @@ use crate::{
 };
 
 pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, stmt: &'ctx Ast<'ctx>) {
-    let llvm_context: &Context = codegen.get_mut_context().get_llvm_context();
     let llvm_builder: &Builder = codegen.get_mut_context().get_llvm_builder();
 
     let llvm_function: FunctionValue = codegen.get_mut_context().get_current_fn();
@@ -30,10 +28,10 @@ pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, stmt: &'ctx Ast<'ctx>)
         ..
     } = stmt
     {
-        let start: BasicBlock = block::append_block(llvm_context, llvm_function);
-        let condition: BasicBlock = block::append_block(llvm_context, llvm_function);
-        let body: BasicBlock = block::append_block(llvm_context, llvm_function);
-        let exit: BasicBlock = block::append_block(llvm_context, llvm_function);
+        let start: BasicBlock = block::append_block(codegen.get_context(), llvm_function);
+        let condition: BasicBlock = block::append_block(codegen.get_context(), llvm_function);
+        let body: BasicBlock = block::append_block(codegen.get_context(), llvm_function);
+        let exit: BasicBlock = block::append_block(codegen.get_context(), llvm_function);
 
         llvm_builder
             .build_unconditional_branch(start)

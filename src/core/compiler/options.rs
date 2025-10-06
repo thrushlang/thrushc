@@ -30,7 +30,8 @@ pub struct CompilerOptions {
     clean_object: bool,
     clean_llvm_ir: bool,
     clean_llvm_bitcode: bool,
-    ofuscate_archive_names: bool,
+    obfuscate_archive_names: bool,
+    obfuscate_ir: bool,
 
     linking_compilers_config: LinkingCompilersConfiguration,
     linker_mode: LinkerMode,
@@ -119,7 +120,8 @@ impl CompilerOptions {
             clean_object: false,
             clean_llvm_ir: false,
             clean_llvm_bitcode: false,
-            ofuscate_archive_names: true,
+            obfuscate_archive_names: true,
+            obfuscate_ir: true,
 
             linking_compilers_config: LinkingCompilersConfiguration::new(),
             linker_mode: LinkerMode::new(Vec::with_capacity(50)),
@@ -180,8 +182,13 @@ impl CompilerOptions {
     }
 
     #[inline]
-    pub fn no_ofuscate_archive_names(&mut self) {
-        self.ofuscate_archive_names = false;
+    pub fn set_no_obfuscate_archive_names(&mut self) {
+        self.obfuscate_archive_names = false;
+    }
+
+    #[inline]
+    pub fn set_no_obfuscate_ir(&mut self) {
+        self.obfuscate_ir = false;
     }
 
     #[inline]
@@ -247,8 +254,13 @@ impl CompilerOptions {
     }
 
     #[inline]
-    pub fn ofuscate_archive_names(&self) -> bool {
-        self.ofuscate_archive_names
+    pub fn need_obfuscate_archive_names(&self) -> bool {
+        self.obfuscate_archive_names
+    }
+
+    #[inline]
+    pub fn need_obfuscate_ir(&self) -> bool {
+        self.obfuscate_ir
     }
 
     #[inline]

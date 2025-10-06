@@ -15,11 +15,13 @@ pub fn move_terminator_to_end(context: &LLVMCodeGenContext) {
 
 #[inline]
 pub fn append_block<'ctx>(
-    llvm_context: &'ctx Context,
+    context: &LLVMCodeGenContext<'_, 'ctx>,
     function: FunctionValue<'ctx>,
 ) -> BasicBlock<'ctx> {
+    let llvm_context: &Context = context.get_llvm_context();
+
     let obfuscated_name: &str =
-        &obfuscation::generate_obfuscation_name(obfuscation::SHORT_RANGE_OBFUSCATION);
+        &obfuscation::generate_obfuscation_name(context, obfuscation::SHORT_RANGE_OBFUSCATION);
 
     llvm_context.append_basic_block(function, obfuscated_name)
 }

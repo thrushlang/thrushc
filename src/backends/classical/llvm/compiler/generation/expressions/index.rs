@@ -3,6 +3,7 @@ use crate::backends::classical::llvm::compiler::indexes;
 use crate::backends::classical::llvm::compiler::memory;
 use crate::backends::classical::llvm::compiler::ptr;
 
+use crate::frontends::classical::lexer::span::Span;
 use crate::frontends::classical::types::ast::Ast;
 use crate::frontends::classical::typesystem::types::Type;
 
@@ -18,5 +19,7 @@ pub fn compile<'ctx>(
 
     let ordered_indexes: Vec<IntValue> = indexes::compile(context, indexes, ptr_type);
 
-    memory::gep_anon(context, ptr, ptr_type, &ordered_indexes).into()
+    let span: Span = source.get_span();
+
+    memory::gep_anon(context, ptr, ptr_type, &ordered_indexes, span).into()
 }

@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use inkwell::{basic_block::BasicBlock, builder::Builder, context::Context, values::FunctionValue};
+use inkwell::{basic_block::BasicBlock, builder::Builder, values::FunctionValue};
 
 use crate::{
     backends::classical::llvm::compiler::{abort, block, codegen::LLVMCodegen},
@@ -8,14 +8,13 @@ use crate::{
 };
 
 pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, stmt: &'ctx Ast<'ctx>) {
-    let llvm_context: &Context = codegen.get_mut_context().get_llvm_context();
     let llvm_builder: &Builder = codegen.get_mut_context().get_llvm_builder();
 
     let llvm_function: FunctionValue = codegen.get_mut_context().get_current_fn();
 
     if let Ast::Loop { block, span, .. } = stmt {
-        let start: BasicBlock = block::append_block(llvm_context, llvm_function);
-        let exit: BasicBlock = block::append_block(llvm_context, llvm_function);
+        let start: BasicBlock = block::append_block(codegen.get_context(), llvm_function);
+        let exit: BasicBlock = block::append_block(codegen.get_context(), llvm_function);
 
         llvm_builder
             .build_unconditional_branch(start)

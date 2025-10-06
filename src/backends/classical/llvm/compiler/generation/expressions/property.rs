@@ -81,7 +81,8 @@ fn compile_gep_property<'ctx>(
     let ptr: PointerValue = codegen::compile(context, source, None).into_pointer_value();
     let ptr_type: &Type = source.llvm_get_type(context);
 
-    let mut property: PointerValue = memory::gep_struct_anon(context, ptr, ptr_type, indexes[0].1);
+    let mut property: PointerValue =
+        memory::gep_struct_anon(context, ptr, ptr_type, indexes[0].1, span);
 
     for idx in indexes.iter().skip(1) {
         let idx_type: BasicTypeEnum = typegen::generate(llvm_context, &idx.0);

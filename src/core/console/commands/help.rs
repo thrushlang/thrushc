@@ -402,5 +402,15 @@ pub fn show_help() -> ! {
         ),
     );
 
+    logging::write(
+        logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {}\n",
+            "•".bold(),
+            "--no-obfuscate-ir".custom_color((141, 141, 142)).bold(),
+            "Stop generating name obfuscation in the emitted IR code."
+        ),
+    );
+
     process::exit(1);
 }

@@ -378,13 +378,13 @@ pub fn load_anon<'ctx>(
 
     let llvm_type: BasicTypeEnum = typegen::generate(llvm_context, ptr_type);
 
-    let preferred_alignment: u32 = context
+    let alignment: u32 = context
         .get_target_data()
-        .get_preferred_alignment(&ptr.get_type());
+        .get_preferred_alignment(&llvm_type);
 
     if let Ok(loaded_value) = llvm_builder.build_load(llvm_type, ptr, "") {
         if let Some(instr) = loaded_value.as_instruction_value() {
-            let _ = instr.set_alignment(preferred_alignment);
+            let _ = instr.set_alignment(alignment);
         }
 
         return loaded_value;
@@ -411,9 +411,9 @@ pub fn deference<'ctx>(
 
     let llvm_type: BasicTypeEnum = typegen::generate(llvm_context, ptr_type);
 
-    let preferred_alignment: u32 = context
+    let alignment: u32 = context
         .get_target_data()
-        .get_preferred_alignment(&ptr.get_type());
+        .get_preferred_alignment(&llvm_type);
 
     if let Ok(loaded_value) = llvm_builder.build_load(llvm_type, ptr, "") {
         if let Some(instr) = loaded_value.as_instruction_value() {
@@ -425,7 +425,7 @@ pub fn deference<'ctx>(
                 },
             );
 
-            let _ = instr.set_alignment(preferred_alignment);
+            let _ = instr.set_alignment(alignment);
         }
 
         return loaded_value;
@@ -441,9 +441,10 @@ pub fn deference<'ctx>(
 }
 
 pub fn alloc_anon<'ctx>(
+    context: &mut LLVMCodeGenContext<'_, 'ctx>,
     site: LLVMAllocationSite,
-    context: &LLVMCodeGenContext<'_, 'ctx>,
     kind: &Type,
+    span: Span,
 ) -> PointerValue<'ctx> {
     let llvm_module: &Module = context.get_llvm_module();
     let llvm_context: &Context = context.get_llvm_context();
@@ -465,7 +466,13 @@ pub fn alloc_anon<'ctx>(
                 return ptr;
             }
 
-            self::codegen_abort(format!("Cannot assign type to stack: '{}'.", kind));
+            abort::abort_codegen(
+                context,
+                "Failed to allocate in the stack!",
+                span,
+                PathBuf::from(file!()),
+                line!(),
+            );
         }
 
         LLVMAllocationSite::Heap => {
@@ -473,7 +480,13 @@ pub fn alloc_anon<'ctx>(
                 return ptr;
             }
 
-            self::codegen_abort(format!("Cannot assign type to heap: '{}'.", kind));
+            abort::abort_codegen(
+                context,
+                "Failed to allocate in the heap!",
+                span,
+                PathBuf::from(file!()),
+                line!(),
+            );
         }
 
         LLVMAllocationSite::Static => llvm_module
@@ -483,10 +496,11 @@ pub fn alloc_anon<'ctx>(
 }
 
 pub fn gep_struct_anon<'ctx>(
-    context: &LLVMCodeGenContext<'_, 'ctx>,
+    context: &mut LLVMCodeGenContext<'_, 'ctx>,
     ptr: PointerValue<'ctx>,
     ptr_type: &Type,
     index: u32,
+    span: Span,
 ) -> PointerValue<'ctx> {
     let llvm_context: &Context = context.get_llvm_context();
     let llvm_builder: &Builder = context.get_llvm_builder();
@@ -500,20 +514,27 @@ pub fn gep_struct_anon<'ctx>(
         return ptr;
     }
 
-    self::codegen_abort("Unable to get pointer element at memory manipulation.");
+    abort::abort_codegen(
+        context,
+        "Failed to calculate memory address of an structure!",
+        span,
+        PathBuf::from(file!()),
+        line!(),
+    );
 }
 
 pub fn gep_anon<'ctx>(
-    context: &LLVMCodeGenContext<'_, 'ctx>,
+    context: &mut LLVMCodeGenContext<'_, 'ctx>,
     ptr: PointerValue<'ctx>,
     ptr_type: &Type,
     indexes: &[IntValue<'ctx>],
+    span: Span,
 ) -> PointerValue<'ctx> {
     let llvm_context: &Context = context.get_llvm_context();
     let llvm_builder: &Builder = context.get_llvm_builder();
 
     if let Ok(ptr) = unsafe {
-        llvm_builder.build_gep(
+        llvm_builder.build_in_bounds_gep(
             typegen::generate_gep(llvm_context, ptr_type),
             ptr,
             indexes,
@@ -523,7 +544,13 @@ pub fn gep_anon<'ctx>(
         return ptr;
     }
 
-    self::codegen_abort("Unable to get pointer element at memory manipulation.");
+    abort::abort_codegen(
+        context,
+        "Failed to calculate memory address of an pointer!",
+        span,
+        PathBuf::from(file!()),
+        line!(),
+    );
 }
 
 #[inline]

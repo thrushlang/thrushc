@@ -5,7 +5,6 @@ use std::path::PathBuf;
 use inkwell::{
     basic_block::BasicBlock,
     builder::Builder,
-    context::Context,
     values::{FunctionValue, IntValue},
 };
 
@@ -18,7 +17,6 @@ use crate::{
 };
 
 pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, stmt: &'ctx Ast<'ctx>) {
-    let llvm_context: &Context = codegen.get_mut_context().get_llvm_context();
     let llvm_builder: &Builder = codegen.get_mut_context().get_llvm_builder();
 
     let llvm_function: FunctionValue = codegen.get_mut_context().get_current_fn();
@@ -31,13 +29,13 @@ pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, stmt: &'ctx Ast<'ctx>)
         ..
     } = stmt
     {
-        let then: BasicBlock = block::append_block(llvm_context, llvm_function);
-        let merge: BasicBlock = block::append_block(llvm_context, llvm_function);
+        let then: BasicBlock = block::append_block(codegen.get_context(), llvm_function);
+        let merge: BasicBlock = block::append_block(codegen.get_context(), llvm_function);
 
         let next: BasicBlock = if !elseif.is_empty() {
-            block::append_block(llvm_context, llvm_function)
+            block::append_block(codegen.get_context(), llvm_function)
         } else if anyway.is_some() {
-            block::append_block(llvm_context, llvm_function)
+            block::append_block(codegen.get_context(), llvm_function)
         } else {
             merge
         };
@@ -99,7 +97,6 @@ fn compile_elseif<'ctx>(
     first_block: BasicBlock<'ctx>,
     merge: BasicBlock<'ctx>,
 ) {
-    let llvm_context: &Context = codegen.get_mut_context().get_llvm_context();
     let llvm_builder: &Builder = codegen.get_mut_context().get_llvm_builder();
     let llvm_function: FunctionValue = codegen.get_mut_context().get_current_fn();
 
@@ -114,12 +111,12 @@ fn compile_elseif<'ctx>(
 
             llvm_builder.position_at_end(current);
 
-            let then: BasicBlock = block::append_block(llvm_context, llvm_function);
+            let then: BasicBlock = block::append_block(codegen.get_context(), llvm_function);
 
             let next: BasicBlock = if is_last {
                 merge
             } else {
-                block::append_block(llvm_context, llvm_function)
+                block::append_block(codegen.get_context(), llvm_function)
             };
 
             let cond_value: IntValue =
