@@ -55,24 +55,16 @@ impl LoggingType {
 
 fn log(ltype: LoggingType, msg: &str) {
     if ltype.is_panic() {
-        io::stderr()
-            .write_all(format!("{} {}\n  ", ltype.to_styled(), msg.bold()).as_bytes())
-            .unwrap();
-
+        let _ = io::stderr().write_all(format!("{} {}", ltype.to_styled(), msg.bold()).as_bytes());
         process::exit(1);
     }
 
     if ltype.is_err() {
-        io::stderr()
-            .write_all(format!("{} {}\n  ", ltype.to_styled(), msg.bold()).as_bytes())
-            .unwrap();
-
+        let _ = io::stderr().write_all(format!("{} {}", ltype.to_styled(), msg.bold()).as_bytes());
         return;
     }
 
-    io::stdout()
-        .write_all(format!("{} {}", ltype.to_styled(), msg.bold()).as_bytes())
-        .unwrap();
+    let _ = io::stdout().write_all(format!("{} {}", ltype.to_styled(), msg.bold()).as_bytes());
 }
 
 #[derive(Debug)]
@@ -83,10 +75,11 @@ pub struct Builder {
 impl Builder {
     pub fn new(home: PathBuf) -> Self {
         let build_path: PathBuf = home.join("thrushlang/backends/llvm/build");
-
         Self { build_path }
     }
+}
 
+impl Builder {
     pub fn install(&self) {
         self.reset_build_path();
 
@@ -143,8 +136,8 @@ impl Builder {
         let latest_embedded_compiler: Option<&Map<String, Value>> = raw_releases_json
             .iter()
             .filter_map(|release| {
-                let release_obj = release.as_object()?;
-                let tag_name = release_obj.get("tag_name")?.as_str()?;
+                let release_obj: &Map<String, Value> = release.as_object()?;
+                let tag_name: &str = release_obj.get("tag_name")?.as_str()?;
 
                 if tag_name.starts_with(tag_to_find) {
                     Some(release_obj)
@@ -449,8 +442,11 @@ impl Builder {
             .arg("-xf")
             .arg(file_path)
             .arg("-C")
-            .arg(&self.build_path)
-            .arg("--strip-components=1");
+            .arg(&self.build_path);
+
+        if cfg!(target_os = "windows") {
+            tar_command.arg("--strip-components=1");
+        }
 
         if let Ok(tar_output) = tar_command.output() {
             let stderr: Cow<'_, str> = String::from_utf8_lossy(&tar_output.stderr);
