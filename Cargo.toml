@@ -3,7 +3,12 @@ name = "thrushc"
 description = "The Compiler for Thrush Programming Language."
 license = "GPL-3.0"
 version = "0.1.0"
-authors = ["Stevens Benavides <https://github.com/DevCheckOG>"]
+
+authors = [
+    "Thrush Team <thrushlangproject@gmail.com>",
+    "Stevens Benavides <foss.stevens.benavides@gmail.com>"
+]
+
 homepage = "https://github.com/thrushlang/thrushc"
 repository = "https://github.com/thrushlang/thrushc"
 edition = "2024"

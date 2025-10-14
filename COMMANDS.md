@@ -27,9 +27,9 @@ LLVM Commands:
 General flags:
 
 • -build-dir Set the build directory.
-• -clang Enable embedded Clang to link.
-• -gcc [usr/bin/gcc] Speciefies GNU Compiler Collection (GCC) to link.
-• -custom-clang [/usr/bin/clang] Specifies the path for use of an external Clang to link.
+• -clang Enable embedded Clang for linking.
+• -gcc [usr/bin/gcc] Speciefies GNU Compiler Collection (GCC) for linking.
+• -custom-clang [/usr/bin/clang] Specifies the path for use of an external Clang for linking.
 • -start Marks the start of arguments to the active external or built-in linking compiler.
 • -end Marks the end of arguments to the active external or built-in linker compiler.
 
@@ -68,4 +68,5 @@ Useful flags:
 • --clean-objects Clean the compiler folder containing emitted object files.
 
 • --no-obfuscate-archive-names Stop generating name obfuscation for each file; this does not apply to the final build.
+• --no-obfuscate-ir Stop generating name obfuscation in the emitted IR code.
 ```
