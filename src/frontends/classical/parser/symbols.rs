@@ -88,6 +88,14 @@ impl SymbolsTable<'_> {
     }
 
     #[inline]
+    pub fn finish_scopes(&mut self) {
+        self.statics.clear();
+        self.constants.clear();
+        self.locals.clear();
+        self.llis.clear();
+    }
+
+    #[inline]
     pub fn finish_parameters(&mut self) {
         self.parameters.clear();
     }

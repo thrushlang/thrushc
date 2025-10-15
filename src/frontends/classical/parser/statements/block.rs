@@ -20,7 +20,7 @@ pub fn build_block<'parser>(
 
     let span: Span = block_tk.get_span();
 
-    *ctx.get_mut_scope() += 1;
+    ctx.begin_scope();
     ctx.get_mut_symbols().begin_scope();
 
     let mut stmts: Vec<Ast> = Vec::with_capacity(256);
@@ -31,7 +31,7 @@ pub fn build_block<'parser>(
     }
 
     ctx.get_mut_symbols().end_scope();
-    *ctx.get_mut_scope() -= 1;
+    ctx.end_scope();
 
     Ok(Ast::Block { stmts, span })
 }

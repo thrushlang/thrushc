@@ -27,7 +27,7 @@ pub fn validate<'analyzer>(
                 let metadata: &LocalMetadata = metadata;
 
                 if !metadata.is_undefined() {
-                    analyzer.analyze_stmt(value)?;
+                    analyzer.analyze_expr(value)?;
                 }
             }
 

@@ -6,7 +6,7 @@
 *
 ******************************************************************************************* */
 
-fn InitWindow(width: u32, height: u32, title: ptr) void @public @extern("InitWindow");
+fn InitWindow(width: u32, height: u32, title: const ptr[array[char]]) void @public @extern("InitWindow");
 fn WindowShouldClose() bool @public @extern("WindowShouldClose");
 fn SetTargetFPS(fps: u32) void @public @extern("SetTargetFPS");
 
@@ -26,9 +26,7 @@ fn main() u32 {
     const screenWidth: u32 = 800;
     const screenHeight: u32 = 450;
 
-    local window_title: str = "Hello Raylib! From Thrush 🐦!";
-
-    InitWindow(screenWidth, screenHeight, window_title as ptr);
+    InitWindow(screenWidth, screenHeight, "Hello Raylib! From Thrush 🐦!");
 
     SetTargetFPS(60);                // Set our game to run at 60 frames-per-second
     //--------------------------------------------------------------------------------------
@@ -55,4 +53,5 @@ fn main() u32 {
     //--------------------------------------------------------------------------------------
 
     return 0;
+
 }

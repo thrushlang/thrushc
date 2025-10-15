@@ -21,20 +21,20 @@ pub fn validate<'analyzer>(
 ) -> Result<(), ThrushCompilerIssue> {
     match node {
         Ast::BinaryOp { left, right, .. } => {
-            analyzer.analyze_stmt(left)?;
-            analyzer.analyze_stmt(right)?;
+            analyzer.analyze_expr(left)?;
+            analyzer.analyze_expr(right)?;
 
             Ok(())
         }
 
         Ast::UnaryOp { expression, .. } => {
-            analyzer.analyze_stmt(expression)?;
+            analyzer.analyze_expr(expression)?;
 
             Ok(())
         }
 
         Ast::Group { expression, .. } => {
-            analyzer.analyze_stmt(expression)?;
+            analyzer.analyze_expr(expression)?;
 
             Ok(())
         }
@@ -42,7 +42,7 @@ pub fn validate<'analyzer>(
         Ast::FixedArray { items, .. } => {
             items
                 .iter()
-                .try_for_each(|item| analyzer.analyze_stmt(item))?;
+                .try_for_each(|item| analyzer.analyze_expr(item))?;
 
             Ok(())
         }
@@ -50,7 +50,7 @@ pub fn validate<'analyzer>(
         Ast::Array { items, .. } => {
             items
                 .iter()
-                .try_for_each(|item| analyzer.analyze_stmt(item))?;
+                .try_for_each(|item| analyzer.analyze_expr(item))?;
 
             Ok(())
         }
@@ -64,7 +64,7 @@ pub fn validate<'analyzer>(
             args.iter().try_for_each(|arg| {
                 let expr: &Ast = &arg.1;
 
-                analyzer.analyze_stmt(expr)?;
+                analyzer.analyze_expr(expr)?;
 
                 Ok(())
             })?;
@@ -72,11 +72,11 @@ pub fn validate<'analyzer>(
             Ok(())
         }
 
-        Ast::Call { args, .. } => args.iter().try_for_each(|arg| analyzer.analyze_stmt(arg)),
+        Ast::Call { args, .. } => args.iter().try_for_each(|arg| analyzer.analyze_expr(arg)),
 
         Ast::Indirect { function, args, .. } => {
-            analyzer.analyze_stmt(function)?;
-            args.iter().try_for_each(|arg| analyzer.analyze_stmt(arg))
+            analyzer.analyze_expr(function)?;
+            args.iter().try_for_each(|arg| analyzer.analyze_expr(arg))
         }
 
         Ast::DirectRef { expr, span, .. } => {
@@ -90,7 +90,7 @@ pub fn validate<'analyzer>(
                 ));
             }
 
-            analyzer.analyze_stmt(expr)?;
+            analyzer.analyze_expr(expr)?;
 
             Ok(())
         }

@@ -380,25 +380,15 @@ impl<'analyzer> Analyzer<'analyzer> {
 
         ########################################################################*/
 
-        /* ######################################################################
-
-
-            TYPE CHECKER EXPRESSIONS - START
-
-
-        ########################################################################*/
-
-        expressions::validate(self, node)
-
-        /* ######################################################################
-
-
-            TYPE CHECKER EXPRESSIONS - END
-
-
-        ########################################################################*/
+        Ok(())
     }
 
+    pub fn analyze_expr(&mut self, node: &'analyzer Ast) -> Result<(), ThrushCompilerIssue> {
+        expressions::validate(self, node)
+    }
+}
+
+impl<'analyzer> Analyzer<'analyzer> {
     pub fn declare_forward(&mut self) {
         self.ast
             .iter()

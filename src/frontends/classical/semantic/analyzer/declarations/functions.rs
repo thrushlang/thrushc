@@ -15,14 +15,7 @@ pub fn validate<'analyzer>(
             Ok(())
         }
 
-        Ast::AssemblerFunction { parameters, .. } => {
-            parameters.iter().try_for_each(|parameter| {
-                analyzer.analyze_stmt(parameter)?;
-                Ok(())
-            })?;
-
-            Ok(())
-        }
+        Ast::AssemblerFunction { .. } => Ok(()),
 
         Ast::Function { body, .. } => {
             if let Some(body) = body {

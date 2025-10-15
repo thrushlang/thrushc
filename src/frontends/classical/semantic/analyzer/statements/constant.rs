@@ -11,7 +11,7 @@ pub fn validate<'analyzer>(
 ) -> Result<(), ThrushCompilerIssue> {
     match node {
         Ast::Const { value, .. } => {
-            analyzer.analyze_stmt(value)?;
+            analyzer.analyze_expr(value)?;
             Ok(())
         }
 

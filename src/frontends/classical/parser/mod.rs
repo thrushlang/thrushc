@@ -284,6 +284,23 @@ impl<'parser> ParserContext<'parser> {
     }
 }
 
+impl ParserContext<'_> {
+    #[inline]
+    pub fn reset_scope(&mut self) {
+        self.scope = 0;
+    }
+
+    #[inline]
+    pub fn begin_scope(&mut self) {
+        self.scope += 1;
+    }
+
+    #[inline]
+    pub fn end_scope(&mut self) {
+        self.scope -= 1;
+    }
+}
+
 impl<'parser> ParserContext<'parser> {
     #[inline]
     pub fn get_symbols(&self) -> &SymbolsTable<'parser> {
@@ -325,11 +342,6 @@ impl<'parser> ParserContext<'parser> {
     #[inline]
     pub fn get_mut_control_ctx(&mut self) -> &mut ParserControlContext {
         &mut self.control_ctx
-    }
-
-    #[inline]
-    pub fn get_mut_scope(&mut self) -> &mut usize {
-        &mut self.scope
     }
 }
 

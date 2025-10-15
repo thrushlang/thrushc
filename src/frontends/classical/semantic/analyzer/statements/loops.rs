@@ -17,27 +17,17 @@ pub fn validate<'analyzer>(
             block,
             ..
         } => {
-            if let Err(error) = analyzer.analyze_stmt(local) {
-                analyzer.add_error(error);
-            }
+            analyzer.analyze_stmt(local)?;
+            analyzer.analyze_expr(cond)?;
 
-            if let Err(error) = analyzer.analyze_stmt(cond) {
-                analyzer.add_error(error);
-            }
-
-            if let Err(error) = analyzer.analyze_stmt(actions) {
-                analyzer.add_error(error);
-            }
-
-            if let Err(error) = analyzer.analyze_stmt(block) {
-                analyzer.add_error(error);
-            }
+            analyzer.analyze_expr(actions)?;
+            analyzer.analyze_stmt(block)?;
 
             Ok(())
         }
 
         Ast::While { cond, block, .. } => {
-            analyzer.analyze_stmt(cond)?;
+            analyzer.analyze_expr(cond)?;
             analyzer.analyze_stmt(block)?;
 
             Ok(())

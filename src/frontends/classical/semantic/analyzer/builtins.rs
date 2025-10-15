@@ -41,9 +41,9 @@ pub fn validate_memmove<'analyzer>(
     source: &'analyzer Ast,
     size: &'analyzer Ast,
 ) -> Result<(), ThrushCompilerIssue> {
-    analyzer.analyze_stmt(source)?;
-    analyzer.analyze_stmt(destination)?;
-    analyzer.analyze_stmt(size)?;
+    analyzer.analyze_expr(source)?;
+    analyzer.analyze_expr(destination)?;
+    analyzer.analyze_expr(size)?;
 
     Ok(())
 }
@@ -55,9 +55,9 @@ pub fn validate_memcpy<'analyzer>(
     source: &'analyzer Ast,
     size: &'analyzer Ast,
 ) -> Result<(), ThrushCompilerIssue> {
-    analyzer.analyze_stmt(source)?;
-    analyzer.analyze_stmt(destination)?;
-    analyzer.analyze_stmt(size)?;
+    analyzer.analyze_expr(source)?;
+    analyzer.analyze_expr(destination)?;
+    analyzer.analyze_expr(size)?;
 
     Ok(())
 }
@@ -69,9 +69,9 @@ pub fn validate_memset<'analyzer>(
     new_size: &'analyzer Ast,
     size: &'analyzer Ast,
 ) -> Result<(), ThrushCompilerIssue> {
-    analyzer.analyze_stmt(destination)?;
-    analyzer.analyze_stmt(new_size)?;
-    analyzer.analyze_stmt(size)?;
+    analyzer.analyze_expr(destination)?;
+    analyzer.analyze_expr(new_size)?;
+    analyzer.analyze_expr(size)?;
 
     Ok(())
 }

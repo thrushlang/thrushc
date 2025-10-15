@@ -17,7 +17,7 @@ pub fn validate<'analyzer>(
             anyway,
             ..
         } => {
-            analyzer.analyze_stmt(condition)?;
+            analyzer.analyze_expr(condition)?;
 
             elseif
                 .iter()
@@ -35,7 +35,7 @@ pub fn validate<'analyzer>(
         Ast::Elif {
             condition, block, ..
         } => {
-            analyzer.analyze_stmt(condition)?;
+            analyzer.analyze_expr(condition)?;
             analyzer.analyze_stmt(block)?;
 
             Ok(())

@@ -20,13 +20,13 @@ pub fn validate<'analyzer>(
             ..
         } => {
             analyzer.symbols.new_lli(name, (lli_type, *span));
-            analyzer.analyze_stmt(expr)?;
+            analyzer.analyze_expr(expr)?;
 
             Ok(())
         }
 
         Ast::Load { source, .. } => {
-            analyzer.analyze_stmt(source)?;
+            analyzer.analyze_expr(source)?;
 
             Ok(())
         }
@@ -45,11 +45,10 @@ pub fn validate<'analyzer>(
                 ));
             }
 
-            analyzer.analyze_stmt(source)?;
+            analyzer.analyze_expr(source)?;
 
             indexes.iter().try_for_each(|indexe| {
-                analyzer.analyze_stmt(indexe)?;
-
+                analyzer.analyze_expr(indexe)?;
                 Ok(())
             })?;
 
@@ -57,8 +56,7 @@ pub fn validate<'analyzer>(
         }
 
         Ast::Write { source, .. } => {
-            analyzer.analyze_stmt(source)?;
-
+            analyzer.analyze_expr(source)?;
             Ok(())
         }
 

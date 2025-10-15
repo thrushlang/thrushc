@@ -12,7 +12,7 @@ pub fn validate<'analyzer>(
     match node {
         Ast::Static { value, .. } => {
             if let Some(value) = value {
-                analyzer.analyze_stmt(value)?;
+                analyzer.analyze_expr(value)?;
             }
 
             Ok(())

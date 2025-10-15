@@ -35,7 +35,7 @@ pub fn validate<'analyzer>(
 
             indexes
                 .iter()
-                .try_for_each(|indexe| analyzer.analyze_stmt(indexe))?;
+                .try_for_each(|indexe| analyzer.analyze_expr(indexe))?;
 
             Ok(())
         }

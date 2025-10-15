@@ -17,5 +17,6 @@ pub fn compile<'ctx>(
     span: Span,
 ) -> BasicValueEnum<'ctx> {
     let site: LLVMAllocationSite = site.to_llvm_allocation_site();
+
     memory::alloc_anon(context, site, alloc_type, span).into()
 }

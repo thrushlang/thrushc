@@ -12,7 +12,7 @@ pub fn validate<'type_checker>(
     match node {
         Ast::Return { expression, .. } => {
             if let Some(expr) = expression {
-                analyzer.analyze_stmt(expr)?;
+                analyzer.analyze_expr(expr)?;
             }
 
             Ok(())

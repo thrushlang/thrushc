@@ -59,8 +59,9 @@ fn sync_with_declaration(ctx: &mut ParserContext) {
 
     ctx.get_mut_control_ctx().set_inside_function(false);
     ctx.get_mut_symbols().finish_parameters();
+    ctx.get_mut_symbols().finish_scopes();
 
-    ctx.scope = 0;
+    ctx.reset_scope();
 }
 
 fn sync_with_statement(ctx: &mut ParserContext) {
@@ -71,6 +72,14 @@ fn sync_with_statement(ctx: &mut ParserContext) {
 
         if ctx.check(TokenType::RBrace) {
             let _ = ctx.only_advance();
+
+            ctx.get_mut_symbols().end_scope();
+            ctx.end_scope();
+
+            if ctx.is_main_scope() {
+                ctx.get_mut_symbols().finish_parameters();
+            }
+
             break;
         }
 
@@ -97,6 +106,14 @@ fn sync_with_expression(ctx: &mut ParserContext) {
 
         if ctx.check(TokenType::RBrace) {
             let _ = ctx.only_advance();
+
+            ctx.get_mut_symbols().end_scope();
+            ctx.end_scope();
+
+            if ctx.is_main_scope() {
+                ctx.get_mut_symbols().finish_parameters();
+            }
+
             break;
         }
 
