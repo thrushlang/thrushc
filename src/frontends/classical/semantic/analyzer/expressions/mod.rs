@@ -95,6 +95,9 @@ pub fn validate<'analyzer>(
             Ok(())
         }
 
+        Ast::Defer { .. } => deref::validate(analyzer, node),
+        Ast::As { .. } => cast::validate(analyzer, node),
+
         Ast::AsmValue { .. }
         | Ast::Alloc { .. }
         | Ast::EnumValue { .. }

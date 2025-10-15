@@ -29,10 +29,10 @@ pub fn check_integer_format(lexer: &Lexer, lexeme: &str) -> Result<(), ThrushCom
     let cleaned: String = lexeme.replace('_', "");
 
     match cleaned.parse::<usize>() {
-        Ok(num) if num <= U8_MAX || num <= U16_MAX || num <= U32_MAX => Ok(()),
+        Ok(num) if num <= U8_MAX || num <= U16_MAX || num <= U32_MAX || num < usize::MAX => Ok(()),
         Ok(_) => Err(ThrushCompilerIssue::Error(
             "Syntax error".into(),
-            "Integer out of bounds.".into(),
+            "Integer literal is too large to be represented in a integer type.".into(),
             None,
             span,
         )),
@@ -47,13 +47,13 @@ pub fn check_integer_format(lexer: &Lexer, lexeme: &str) -> Result<(), ThrushCom
             }
             Ok(_) => Err(ThrushCompilerIssue::Error(
                 "Syntax error".into(),
-                "Integer out of bounds.".into(),
+                "Integer literal is too large to be represented in a integer type.".into(),
                 None,
                 span,
             )),
             Err(_) => Err(ThrushCompilerIssue::Error(
                 "Syntax error".into(),
-                "Integer out of bounds.".into(),
+                "Integer literal is too large to be represented in a integer type.".into(),
                 None,
                 span,
             )),
@@ -87,7 +87,9 @@ fn check_integer_radix_format(
             span,
         )),
         Err(_) => match usize::from_str_radix(&cleaned, radix) {
-            Ok(num) if num <= U8_MAX || num <= U16_MAX || num <= U32_MAX => Ok(()),
+            Ok(num) if num <= U8_MAX || num <= U16_MAX || num <= U32_MAX || num < usize::MAX => {
+                Ok(())
+            }
             Ok(_) => Err(ThrushCompilerIssue::Error(
                 "Syntax error".into(),
                 format!(

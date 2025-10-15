@@ -45,21 +45,29 @@ pub fn integer(lexeme: &str, span: Span) -> Result<(Type, u64), ThrushCompilerIs
             n if (I16_MIN..=I16_MAX).contains(&n) => Ok((Type::S16, n as u64)),
             n if (I32_MIN..=I32_MAX).contains(&n) => Ok((Type::S32, n as u64)),
             n if (isize::MIN..=isize::MAX).contains(&n) => Ok((Type::S64, n as u64)),
+
             _ => Err(ThrushCompilerIssue::Error(
                 "Syntax error".into(),
-                "Integer out of bounds signed format.".into(),
+                "Integer literal is too large to be represented in a integer type.".into(),
                 None,
                 span,
             )),
         }
     }
 
-    fn match_unsigned(number: usize) -> Result<(Type, u64), ThrushCompilerIssue> {
+    fn match_unsigned(number: usize, span: Span) -> Result<(Type, u64), ThrushCompilerIssue> {
         match number {
-            n if n <= U8_MAX => Ok((Type::U8, n as u64)),
-            n if n <= U16_MAX => Ok((Type::U16, n as u64)),
-            n if n <= U32_MAX => Ok((Type::U32, n as u64)),
-            n => Ok((Type::U64, n as u64)),
+            n if (0..=U8_MAX).contains(&n) => Ok((Type::U8, n as u64)),
+            n if (0..=U16_MAX).contains(&n) => Ok((Type::U16, n as u64)),
+            n if (0..=U32_MAX).contains(&n) => Ok((Type::U32, n as u64)),
+            n if (0..=usize::MAX).contains(&n) => Ok((Type::U64, n as u64)),
+
+            _ => Err(ThrushCompilerIssue::Error(
+                "Syntax error".into(),
+                "Integer literal is too large to be represented in a integer type.".into(),
+                None,
+                span,
+            )),
         }
     }
 
@@ -72,19 +80,20 @@ pub fn integer(lexeme: &str, span: Span) -> Result<(Type, u64), ThrushCompilerIs
     };
 
     if radix != 10 {
-        let cleaned = lexeme
+        let cleaned: String = lexeme
             .strip_prefix(prefix)
             .unwrap_or(lexeme)
             .replace('_', "");
+
         return isize::from_str_radix(&cleaned, radix)
             .map(|n| match_signed(n, span))
             .unwrap_or_else(|_| {
                 usize::from_str_radix(&cleaned, radix)
-                    .map(match_unsigned)
+                    .map(|n| match_unsigned(n, span))
                     .unwrap_or_else(|_| {
                         Err(ThrushCompilerIssue::Error(
                             "Syntax error".into(),
-                            format!("Integer invalid numeric {} format.", base),
+                            format!("Integer invalid numeric '{}' format.", base),
                             None,
                             span,
                         ))
@@ -94,12 +103,12 @@ pub fn integer(lexeme: &str, span: Span) -> Result<(Type, u64), ThrushCompilerIs
 
     lexeme
         .parse::<usize>()
-        .map(match_unsigned)
+        .map(|n| match_unsigned(n, span))
         .or_else(|_| lexeme.parse::<isize>().map(|n| match_signed(n, span)))
         .unwrap_or_else(|_| {
             Err(ThrushCompilerIssue::Error(
                 "Syntax error".into(),
-                "Integer out of bounds.".into(),
+                "Integer literal is too large to be represented in a integer type.".into(),
                 None,
                 span,
             ))
