@@ -16,11 +16,11 @@ use crate::{
 
 pub fn llvm_after_optimization(
     compiler: &mut ThrushCompiler,
-    archive_time: Instant,
     llvm_module: &Module,
     target_machine: &TargetMachine,
     build_dir: &Path,
     file: &CompilationUnit,
+    file_time: Instant,
 ) -> Result<bool, ()> {
     let compiler_options: &CompilerOptions = compiler.get_options();
 
@@ -42,7 +42,7 @@ pub fn llvm_after_optimization(
                 ),
             );
 
-            interrupt::archive_compilation_unit(compiler, archive_time, file)?;
+            interrupt::archive_compilation_unit(compiler, file_time, file)?;
         }
 
         return Ok(true);
@@ -53,7 +53,7 @@ pub fn llvm_after_optimization(
             emitters::llvmir::emit_llvm_ir(compiler, llvm_module, build_dir, file.get_name(), false)
         {
             logging::print_error(LoggingType::Error, &error.to_string());
-            interrupt::archive_compilation_unit(compiler, archive_time, file)?;
+            interrupt::archive_compilation_unit(compiler, file_time, file)?;
         }
 
         return Ok(true);
@@ -69,7 +69,7 @@ pub fn llvm_after_optimization(
             false,
         ) {
             logging::print_error(LoggingType::Error, &error.to_string());
-            interrupt::archive_compilation_unit(compiler, archive_time, file)?;
+            interrupt::archive_compilation_unit(compiler, file_time, file)?;
         };
 
         return Ok(true);
@@ -85,7 +85,7 @@ pub fn llvm_after_optimization(
             false,
         ) {
             logging::print_error(LoggingType::Error, &error.to_string());
-            interrupt::archive_compilation_unit(compiler, archive_time, file)?;
+            interrupt::archive_compilation_unit(compiler, file_time, file)?;
         }
 
         return Ok(true);
@@ -96,11 +96,11 @@ pub fn llvm_after_optimization(
 
 pub fn llvm_before_optimization(
     compiler: &mut ThrushCompiler,
-    archive_time: Instant,
     llvm_module: &Module,
     target_machine: &TargetMachine,
     build_dir: &Path,
     file: &CompilationUnit,
+    file_time: Instant,
 ) -> Result<bool, ()> {
     let compiler_options: &CompilerOptions = compiler.get_options();
 
@@ -111,7 +111,7 @@ pub fn llvm_before_optimization(
             emitters::llvmir::emit_llvm_ir(compiler, llvm_module, build_dir, file.get_name(), true)
         {
             logging::print_error(LoggingType::Error, &error.to_string());
-            interrupt::archive_compilation_unit(compiler, archive_time, file)?;
+            interrupt::archive_compilation_unit(compiler, file_time, file)?;
         }
 
         return Ok(true);
@@ -132,7 +132,7 @@ pub fn llvm_before_optimization(
                     file.get_path().display()
                 ),
             );
-            interrupt::archive_compilation_unit(compiler, archive_time, file)?;
+            interrupt::archive_compilation_unit(compiler, file_time, file)?;
         }
 
         return Ok(true);
@@ -148,7 +148,7 @@ pub fn llvm_before_optimization(
             true,
         ) {
             logging::print_error(LoggingType::Error, &error.to_string());
-            interrupt::archive_compilation_unit(compiler, archive_time, file)?;
+            interrupt::archive_compilation_unit(compiler, file_time, file)?;
         }
 
         return Ok(true);

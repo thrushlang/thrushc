@@ -121,7 +121,7 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
     }
 
     fn compile_with_llvm(&mut self, file: &'thrushc CompilationUnit) -> Result<(), ()> {
-        let archive_time: Instant = Instant::now();
+        let file_time: Instant = Instant::now();
 
         logging::write(
             logging::OutputIn::Stdout,
@@ -141,11 +141,11 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
         });
 
         if print::after_frontend(self, file, Emited::Tokens(&tokens)) {
-            return finisher::archive_compilation(self, archive_time, file);
+            return finisher::archive_compilation(self, file_time, file);
         }
 
         if emit::after_frontend(self, build_dir, file, Emited::Tokens(&tokens)) {
-            return finisher::archive_compilation(self, archive_time, file);
+            return finisher::archive_compilation(self, file_time, file);
         }
 
         let parser: (ParserContext, bool) = Parser::parse(&tokens, file);
@@ -161,11 +161,11 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
             SemanticAnalyzer::new(ast, file).check(parser_throwed_errors);
 
         if parser_throwed_errors || semantic_analysis_throwed_errors {
-            return finisher::archive_compilation(self, archive_time, file);
+            return finisher::archive_compilation(self, file_time, file);
         }
 
         if emit::after_frontend(self, build_dir, file, Emited::Ast(ast)) {
-            return finisher::archive_compilation(self, archive_time, file);
+            return finisher::archive_compilation(self, file_time, file);
         }
 
         let llvm_context: Context = Context::create();
@@ -222,19 +222,19 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
 
         validate::llvm_codegen(&llvm_module, file)?;
 
-        if print::llvm_before_optimization(self, &llvm_module, file) {
-            return finisher::archive_compilation(self, archive_time, file);
+        if print::llvm_before_optimization(self, &llvm_module, &target_machine, file, file_time)? {
+            return finisher::archive_compilation(self, file_time, file);
         }
 
         if emit::llvm_before_optimization(
             self,
-            archive_time,
             &llvm_module,
             &target_machine,
             build_dir,
             file,
+            file_time,
         )? {
-            return finisher::archive_compilation(self, archive_time, file);
+            return finisher::archive_compilation(self, file_time, file);
         }
 
         llvm::compiler::optimization::LLVMOptimizer::new(
@@ -246,19 +246,19 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
         )
         .optimize();
 
-        if print::llvm_after_optimization(self, &llvm_module, file) {
-            return finisher::archive_compilation(self, archive_time, file);
+        if print::llvm_after_optimization(self, &llvm_module, &target_machine, file, file_time)? {
+            return finisher::archive_compilation(self, file_time, file);
         }
 
         if emit::llvm_after_optimization(
             self,
-            archive_time,
             &llvm_module,
             &target_machine,
             build_dir,
             file,
+            file_time,
         )? {
-            return finisher::archive_compilation(self, archive_time, file);
+            return finisher::archive_compilation(self, file_time, file);
         }
 
         let compiled_file: PathBuf = finisher::llvm_obj_compilation(

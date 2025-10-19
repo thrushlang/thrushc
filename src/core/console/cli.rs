@@ -577,6 +577,8 @@ impl CLI {
         match emit {
             "llvm-ir" => PrintableUnit::LLVMIR,
             "raw-llvm-ir" => PrintableUnit::RawLLVMIR,
+            "asm" => PrintableUnit::Assembly,
+            "raw-asm" => PrintableUnit::RawAssembly,
             "tokens" => PrintableUnit::Tokens,
 
             any => {

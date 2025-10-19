@@ -61,6 +61,8 @@ pub enum EmitableUnit {
 pub enum PrintableUnit {
     RawLLVMIR,
     LLVMIR,
+    RawAssembly,
+    Assembly,
     Tokens,
 }
 
