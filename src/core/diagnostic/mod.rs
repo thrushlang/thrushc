@@ -9,7 +9,7 @@ use std::str::Lines;
 
 use crate::{
     core::diagnostic::{diagnostician::Notificator, position::CodePosition},
-    frontends::classical::lexer::span::Span,
+    frontend::lexer::span::Span,
 };
 
 #[derive(Debug)]

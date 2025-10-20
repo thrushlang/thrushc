@@ -20,8 +20,8 @@ use inkwell::{
     targets::{InitializationConfig, Target, TargetMachine, TargetTriple},
 };
 
-use crate::backends::classical::linking::linkers::lld::LLVMLinker;
-use crate::backends::classical::llvm::{self, compiler::context::LLVMCodeGenContext};
+use crate::backend::linking::linkers::lld::LLVMLinker;
+use crate::backend::llvm::{self, compiler::context::LLVMCodeGenContext};
 
 use crate::core::compiler::backends::linkers::LinkerModeType;
 use crate::core::compiler::backends::llvm::{LLVMBackend, target::LLVMTarget};
@@ -32,10 +32,10 @@ use crate::core::compiler::options::{
 use crate::core::console::logging::{self, LoggingType};
 use crate::core::diagnostic::diagnostician::Diagnostician;
 
-use crate::frontends::classical::lexer::{Lexer, token::Token};
-use crate::frontends::classical::parser::{Parser, ParserContext};
-use crate::frontends::classical::semantic::SemanticAnalyzer;
-use crate::frontends::classical::types::ast::Ast;
+use crate::frontend::lexer::{Lexer, token::Token};
+use crate::frontend::parser::{Parser, ParserContext};
+use crate::frontend::semantic::SemanticAnalyzer;
+use crate::frontend::types::ast::Ast;
 
 #[derive(Debug)]
 pub struct ThrushCompiler<'thrushc> {

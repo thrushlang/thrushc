@@ -1,4 +1,4 @@
-use crate::frontends::classical::lexer::span::Span;
+use crate::frontend::lexer::span::Span;
 
 #[derive(Debug)]
 pub struct CodePosition {

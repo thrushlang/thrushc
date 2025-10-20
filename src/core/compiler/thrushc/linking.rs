@@ -1,7 +1,7 @@
 use colored::Colorize;
 
 use crate::{
-    backends::classical::linking::compilers::{clang::Clang, gcc::GCC},
+    backend::linking::compilers::{clang::Clang, gcc::GCC},
     core::{
         compiler::{
             backends::llvm::LLVMBackend, linking::LinkingCompilersConfiguration,

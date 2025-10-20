@@ -9,7 +9,7 @@ use {
             },
             console::logging::{self, LoggingType},
         },
-        frontends::classical::types::{ast::Ast, lexer::types::Tokens},
+        frontend::types::{ast::Ast, lexer::types::Tokens},
     },
     inkwell::OptimizationLevel,
     std::path::{Path, PathBuf},

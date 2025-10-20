@@ -11,7 +11,7 @@ use crate::{
         },
         console::logging::{self, LoggingType},
     },
-    frontends::classical::lexer,
+    frontend::lexer,
 };
 
 #[inline]
