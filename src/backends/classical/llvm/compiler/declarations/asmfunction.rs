@@ -3,7 +3,7 @@ use crate::backends::classical::llvm::compiler::conventions::CallConvention;
 use crate::backends::classical::llvm::compiler::{attributes::LLVMAttribute, obfuscation};
 
 use crate::backends::classical::llvm::compiler::{abort, block, typegen};
-use crate::backends::classical::types::traits::AssemblerFunctionExtensions;
+use crate::backends::classical::llvm::types::traits::AssemblerFunctionExtensions;
 
 use crate::frontends::classical::lexer::span::Span;
 use crate::frontends::classical::types::ast::Ast;

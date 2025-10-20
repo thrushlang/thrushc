@@ -11,8 +11,6 @@ use crate::core::{
     console::logging::{self, LoggingType},
 };
 
-use super::decompressor;
-
 #[cfg(target_os = "linux")]
 pub static LINUX_X86_64_CLANG: &[u8] =
     include_bytes!("../../../../../embedded/compilers/linux/clang/clang-linux-x86_64.tar.xz");
@@ -57,6 +55,8 @@ impl<'clang> Clang<'clang> {
         #[cfg(target_os = "linux")]
         {
             if self.config.get_use_clang() {
+                use crate::backends::classical::linking::decompressor;
+
                 if let Some(custom_clang) = self.config.get_custom_clang() {
                     if self.handle_command(&mut self.build_clang_command(custom_clang)) {
                         return Ok(start_time.elapsed());

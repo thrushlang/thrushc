@@ -8,7 +8,7 @@ use crate::frontends::classical::types::parser::repr::{
 };
 use crate::logging::{self, LoggingType};
 
-use crate::backends::classical::types::repr::LLVMFunction;
+use crate::backends::classical::llvm::types::repr::LLVMFunction;
 
 use crate::backends::classical::llvm::compiler::memory::SymbolAllocated;
 use crate::backends::classical::llvm::compiler::memory::SymbolToAllocate;

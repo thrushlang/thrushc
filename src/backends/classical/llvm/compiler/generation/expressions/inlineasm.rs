@@ -2,14 +2,14 @@ use std::fmt::Display;
 
 use crate::backends::classical::llvm::compiler::attributes::LLVMAttribute;
 use crate::backends::classical::llvm::compiler::context::LLVMCodeGenContext;
-
 use crate::backends::classical::llvm::compiler::{codegen, typegen};
+
+use crate::backends::classical::llvm::types::traits::AssemblerFunctionExtensions;
+
 use crate::frontends::classical::types::ast::Ast;
 use crate::frontends::classical::types::parser::stmts::traits::ThrushAttributesExtensions;
 use crate::frontends::classical::types::parser::stmts::types::ThrushAttributes;
 use crate::frontends::classical::typesystem::types::Type;
-
-use crate::backends::classical::types::traits::AssemblerFunctionExtensions;
 
 use crate::core::console::logging::{self, LoggingType};
 

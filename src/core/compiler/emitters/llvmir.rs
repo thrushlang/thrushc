@@ -4,7 +4,8 @@ use inkwell::{module::Module, support::LLVMString};
 
 use crate::core::{
     compiler::{options::CompilerOptions, thrushc::ThrushCompiler},
-    utils::{limits, rand},
+    constants,
+    utils::rand,
 };
 
 pub fn emit_llvm_ir(
@@ -29,7 +30,7 @@ pub fn emit_llvm_ir(
         format!(
             "{}{}_{}.ll",
             optimization_name_modifier,
-            rand::generate_random_string(limits::HARD_FILE_NAME_OBFUSCATION),
+            rand::generate_random_string(constants::COMPILER_HARD_OBFUSCATION_LEVEL),
             file_name
         )
     } else {

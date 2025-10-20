@@ -5,7 +5,8 @@ use crate::backends::classical::llvm::compiler::codegen;
 use crate::backends::classical::llvm::compiler::context::LLVMCodeGenContext;
 use crate::backends::classical::llvm::compiler::generation::cast;
 
-use crate::backends::classical::types::repr::LLVMFunction;
+use crate::backends::classical::llvm::types::repr::LLVMFunction;
+
 use crate::frontends::classical::types::ast::Ast;
 use crate::frontends::classical::typesystem::types::Type;
 

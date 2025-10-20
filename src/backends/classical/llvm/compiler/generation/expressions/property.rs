@@ -1,7 +1,8 @@
 use crate::backends::classical::llvm::compiler::context::LLVMCodeGenContext;
 use crate::backends::classical::llvm::compiler::{abort, codegen, memory, typegen};
 
-use crate::backends::classical::types::LLVMGEPIndexes;
+use crate::backends::classical::llvm::types::LLVMGEPIndexes;
+
 use crate::frontends::classical::lexer::span::Span;
 use crate::frontends::classical::types::ast::Ast;
 use crate::frontends::classical::typesystem::traits::LLVMTypeExtensions;

@@ -5,7 +5,7 @@ use inkwell::InlineAsmDialect;
 use crate::{
     backends::classical::{
         llvm::compiler::{attributes::LLVMAttribute, conventions::CallConvention},
-        types::traits::AssemblerFunctionExtensions,
+        llvm::types::traits::AssemblerFunctionExtensions,
     },
     core::console::logging::{self, LoggingType},
 };

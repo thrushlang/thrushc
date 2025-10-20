@@ -1,6 +1,7 @@
 use crate::core::{
     compiler::{options::CompilerOptions, thrushc::ThrushCompiler},
-    utils::{limits, rand},
+    constants,
+    utils::rand,
 };
 
 use inkwell::module::Module;
@@ -29,7 +30,7 @@ pub fn emit_llvm_bitcode(
         format!(
             "{}{}_{}.bc",
             optimization_name_modifier,
-            rand::generate_random_string(limits::HARD_FILE_NAME_OBFUSCATION),
+            rand::generate_random_string(constants::COMPILER_HARD_OBFUSCATION_LEVEL),
             file_name
         )
     } else {

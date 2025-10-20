@@ -13,7 +13,8 @@ use inkwell::{
 use crate::core::{
     compiler::{options::CompilationUnit, thrushc::ThrushCompiler},
     console::logging,
-    utils::{limits, rand},
+    constants,
+    utils::rand,
 };
 
 #[inline]
@@ -46,7 +47,7 @@ pub fn llvm_obj_compilation(
 ) -> PathBuf {
     let obj_file_path: PathBuf = build_dir.join(format!(
         "{}_{}.o",
-        rand::generate_random_string(limits::HARD_FILE_NAME_OBFUSCATION),
+        rand::generate_random_string(constants::COMPILER_HARD_OBFUSCATION_LEVEL),
         file_name
     ));
 

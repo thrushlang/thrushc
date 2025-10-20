@@ -1,8 +1,10 @@
 [package]
 name = "thrushc"
 description = "The Compiler for Thrush Programming Language."
+edition = "2024"
 license = "GPL-3.0"
 version = "0.1.0"
+rust-version = "1.85.0"
 
 authors = [
     "Thrush Team <thrushlangproject@gmail.com>",
@@ -11,9 +13,7 @@ authors = [
 
 homepage = "https://github.com/thrushlang/thrushc"
 repository = "https://github.com/thrushlang/thrushc"
-edition = "2024"
 build = "build.rs"
-rust-version = "1.85.0"
 
 [dependencies]
 llvm-sys = { path = "wrappers/llvm/17/llvm-sys", features = ["force-static"] }

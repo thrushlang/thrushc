@@ -6,7 +6,7 @@ use crate::backends::classical::llvm::compiler::codegen::LLVMCodegen;
 use crate::backends::classical::llvm::compiler::context::LLVMCodeGenContext;
 use crate::backends::classical::llvm::compiler::conventions::CallConvention;
 use crate::backends::classical::llvm::compiler::{block, obfuscation, typegen};
-use crate::backends::classical::types::repr::LLVMFunction;
+use crate::backends::classical::llvm::types::repr::LLVMFunction;
 
 use crate::frontends::classical::lexer::span::Span;
 use crate::frontends::classical::types::ast::Ast;

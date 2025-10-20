@@ -1,0 +1,2 @@
+pub const COMPILER_HARD_OBFUSCATION_LEVEL: usize = 30;
+pub const COMPILER_LOW_OBFUSCATION_LEVEL: usize = 15;

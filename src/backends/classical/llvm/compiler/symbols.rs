@@ -1,14 +1,15 @@
 use crate::backends::classical::llvm::compiler::constants::LLVM_COMPILER_SYMBOLS_GLOBAL_MINIMAL_CAPACITY;
 use crate::backends::classical::llvm::compiler::constants::LLVM_COMPILER_SYMBOLS_LOCAL_MINIMAL_CAPACITY;
 use crate::backends::classical::llvm::compiler::memory::SymbolAllocated;
-use crate::backends::classical::types::repr::LLVMFunction;
-use crate::backends::classical::types::repr::LLVMFunctions;
-use crate::backends::classical::types::repr::LLVMFunctionsParameters;
-use crate::backends::classical::types::repr::LLVMGlobalConstants;
-use crate::backends::classical::types::repr::LLVMGlobalStatics;
-use crate::backends::classical::types::repr::LLVMInstructions;
-use crate::backends::classical::types::repr::LLVMLocalConstants;
-use crate::backends::classical::types::repr::LLVMLocalStatics;
+
+use crate::backends::classical::llvm::types::repr::LLVMFunction;
+use crate::backends::classical::llvm::types::repr::LLVMFunctions;
+use crate::backends::classical::llvm::types::repr::LLVMFunctionsParameters;
+use crate::backends::classical::llvm::types::repr::LLVMGlobalConstants;
+use crate::backends::classical::llvm::types::repr::LLVMGlobalStatics;
+use crate::backends::classical::llvm::types::repr::LLVMInstructions;
+use crate::backends::classical::llvm::types::repr::LLVMLocalConstants;
+use crate::backends::classical::llvm::types::repr::LLVMLocalStatics;
 
 use crate::core::console::logging;
 use crate::core::console::logging::LoggingType;
