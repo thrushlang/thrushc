@@ -1,32 +1,31 @@
 #![allow(clippy::upper_case_acronyms)]
 
-mod get;
-mod is;
+pub mod get;
+pub mod is;
 pub mod metadata;
-mod new;
-mod repr;
+pub mod new;
+pub mod repr;
 
 use std::rc::Rc;
 
-use crate::{
-    backend::llvm::compiler::builtins::Builtin,
-    frontend::{
-        lexer::{span::Span, tokentype::TokenType},
-        types::{
-            ast::metadata::{
-                cast::CastMetadata, constant::ConstantMetadata, dereference::DereferenceMetadata,
-                fnparam::FunctionParameterMetadata, index::IndexMetadata, local::LocalMetadata,
-                property::PropertyMetadata, reference::ReferenceMetadata,
-                staticvar::StaticMetadata,
-            },
-            parser::stmts::{
-                sites::AllocationSite,
-                types::{Constructor, EnumFields, StructFields, ThrushAttributes},
-            },
-        },
-        typesystem::types::Type,
-    },
-};
+use crate::backend::llvm::compiler::builtins::Builtin;
+use crate::frontend::lexer::span::Span;
+use crate::frontend::lexer::tokentype::TokenType;
+use crate::frontend::types::ast::metadata::cast::CastMetadata;
+use crate::frontend::types::ast::metadata::constant::ConstantMetadata;
+use crate::frontend::types::ast::metadata::dereference::DereferenceMetadata;
+use crate::frontend::types::ast::metadata::fnparam::FunctionParameterMetadata;
+use crate::frontend::types::ast::metadata::index::IndexMetadata;
+use crate::frontend::types::ast::metadata::local::LocalMetadata;
+use crate::frontend::types::ast::metadata::property::PropertyMetadata;
+use crate::frontend::types::ast::metadata::reference::ReferenceMetadata;
+use crate::frontend::types::ast::metadata::staticvar::StaticMetadata;
+use crate::frontend::types::parser::stmts::sites::AllocationSite;
+use crate::frontend::types::parser::stmts::types::Constructor;
+use crate::frontend::types::parser::stmts::types::EnumFields;
+use crate::frontend::types::parser::stmts::types::StructFields;
+use crate::frontend::types::parser::stmts::types::ThrushAttributes;
+use crate::frontend::typesystem::types::Type;
 
 #[derive(Debug, Clone)]
 pub enum Ast<'ctx> {

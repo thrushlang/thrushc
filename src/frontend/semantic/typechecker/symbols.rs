@@ -1,14 +1,16 @@
 use ahash::AHashMap as HashMap;
 
-use crate::frontend::{
-    semantic::typechecker::constants::{
-        TYPECHECKER_SYMBOLS_GLOBAL_MINIMAL_CAPACITY, TYPECHECKER_SYMBOLS_LOCAL_MINIMAL_CAPACITY,
-    },
-    types::semantic::typechecker::types::{
-        TypeCheckerAssemblerFunction, TypeCheckerAssemblerFunctions, TypeCheckerFunction,
-        TypeCheckerFunctions, TypeCheckerLLI, TypeCheckerLLIs, TypeCheckerLocal, TypeCheckerLocals,
-    },
-};
+use crate::frontend::semantic::typechecker::constants::TYPECHECKER_SYMBOLS_GLOBAL_MINIMAL_CAPACITY;
+use crate::frontend::semantic::typechecker::constants::TYPECHECKER_SYMBOLS_LOCAL_MINIMAL_CAPACITY;
+
+use crate::frontend::types::semantic::typechecker::types::TypeCheckerAssemblerFunction;
+use crate::frontend::types::semantic::typechecker::types::TypeCheckerAssemblerFunctions;
+use crate::frontend::types::semantic::typechecker::types::TypeCheckerFunction;
+use crate::frontend::types::semantic::typechecker::types::TypeCheckerFunctions;
+use crate::frontend::types::semantic::typechecker::types::TypeCheckerLLI;
+use crate::frontend::types::semantic::typechecker::types::TypeCheckerLLIs;
+use crate::frontend::types::semantic::typechecker::types::TypeCheckerLocal;
+use crate::frontend::types::semantic::typechecker::types::TypeCheckerLocals;
 
 #[derive(Debug)]
 pub struct TypeCheckerSymbolsTable<'symbol> {

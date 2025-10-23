@@ -1,13 +1,12 @@
-use crate::{
-    core::errors::standard::ThrushCompilerIssue,
-    frontend::{
-        lexer::{span::Span, tokentype::TokenType},
-        types::semantic::linter::types::LLVMAttributeComparator,
-        typesystem::{modificators::StructureTypeModificator, types::Type},
-    },
-};
+use crate::core::errors::standard::ThrushCompilerIssue;
 
-use super::types::{EnumField, EnumFields, StructFields};
+use crate::frontend::lexer::span::Span;
+use crate::frontend::lexer::tokentype::TokenType;
+use crate::frontend::types::semantic::linter::types::LLVMAttributeComparator;
+use crate::frontend::typesystem::modificators::StructureTypeModificator;
+use crate::frontend::typesystem::types::Type;
+
+use crate::frontend::types::parser::stmts::types::{EnumField, EnumFields, StructFields};
 
 pub trait TokenExtensions {
     fn scape(&self, span: Span) -> Result<Vec<u8>, ThrushCompilerIssue>;

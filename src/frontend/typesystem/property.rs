@@ -1,21 +1,12 @@
-use crate::{
-    core::errors::standard::ThrushCompilerIssue,
-    frontend::{
-        lexer::span::Span,
-        parser::symbols::SymbolsTable,
-        types::{
-            ast::Ast,
-            parser::{
-                stmts::{
-                    traits::StructExtensions,
-                    types::{StructField, StructFields},
-                },
-                symbols::types::Struct,
-            },
-        },
-        typesystem::types::Type,
-    },
-};
+use crate::core::errors::standard::ThrushCompilerIssue;
+
+use crate::frontend::lexer::span::Span;
+use crate::frontend::parser::symbols::SymbolsTable;
+use crate::frontend::types::ast::Ast;
+use crate::frontend::types::parser::stmts::traits::StructExtensions;
+use crate::frontend::types::parser::stmts::types::{StructField, StructFields};
+use crate::frontend::types::parser::symbols::types::Struct;
+use crate::frontend::typesystem::types::Type;
 
 pub fn decompose(
     mut position: usize,

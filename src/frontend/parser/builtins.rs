@@ -1,13 +1,16 @@
-use crate::{
-    backend::llvm::compiler::builtins::Builtin,
-    core::errors::standard::ThrushCompilerIssue,
-    frontend::{
-        lexer::{span::Span, token::Token, tokentype::TokenType},
-        parser::{ParserContext, expr, typegen},
-        types::{ast::Ast, parser::stmts::traits::TokenExtensions},
-        typesystem::types::Type,
-    },
-};
+use crate::backend::llvm::compiler::builtins::Builtin;
+
+use crate::core::errors::standard::ThrushCompilerIssue;
+
+use crate::frontend::lexer::span::Span;
+use crate::frontend::lexer::token::Token;
+use crate::frontend::lexer::tokentype::TokenType;
+use crate::frontend::parser::ParserContext;
+use crate::frontend::parser::expr;
+use crate::frontend::parser::typegen;
+use crate::frontend::types::ast::Ast;
+use crate::frontend::types::parser::stmts::traits::TokenExtensions;
+use crate::frontend::typesystem::types::Type;
 
 pub fn build_halloc<'parser>(
     ctx: &mut ParserContext<'parser>,

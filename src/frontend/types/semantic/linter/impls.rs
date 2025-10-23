@@ -1,6 +1,7 @@
 use crate::backend::llvm::compiler::attributes::LLVMAttribute;
 
-use super::{traits::LLVMAttributeComparatorExtensions, types::LLVMAttributeComparator};
+use super::traits::LLVMAttributeComparatorExtensions;
+use super::types::LLVMAttributeComparator;
 
 impl LLVMAttributeComparatorExtensions for LLVMAttribute<'_> {
     #[inline]

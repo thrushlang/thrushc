@@ -1,21 +1,35 @@
 use ahash::AHashMap as HashMap;
 
-use crate::frontend::{
-    lexer::span::Span,
-    semantic::linter::constants::{LINTER_MINIMAL_GLOBAL_CAPACITY, LINTER_MINIMAL_LOCAL_CAPACITY},
-    types::{
-        ast::{Ast, metadata::fnparam::FunctionParameterMetadata},
-        parser::repr::FunctionParameter,
-        semantic::linter::types::{
-            LinterAssemblerFunctionInfo, LinterAssemblerFunctions, LinterConstantInfo,
-            LinterEnumFieldInfo, LinterEnums, LinterEnumsFieldsInfo, LinterFunctionInfo,
-            LinterFunctionParameterInfo, LinterFunctionParameters, LinterFunctions,
-            LinterGlobalConstants, LinterGlobalStatics, LinterLLIInfo, LinterLLIs,
-            LinterLocalConstants, LinterLocalInfo, LinterLocalStatics, LinterLocals,
-            LinterStaticInfo, LinterStructFieldsInfo, LinterStructs,
-        },
-    },
-};
+use crate::frontend::lexer::span::Span;
+
+use crate::frontend::semantic::linter::constants::LINTER_MINIMAL_GLOBAL_CAPACITY;
+use crate::frontend::semantic::linter::constants::LINTER_MINIMAL_LOCAL_CAPACITY;
+
+use crate::frontend::types::ast::Ast;
+use crate::frontend::types::ast::metadata::fnparam::FunctionParameterMetadata;
+use crate::frontend::types::parser::repr::FunctionParameter;
+
+use crate::frontend::types::semantic::linter::types::LinterAssemblerFunctionInfo;
+use crate::frontend::types::semantic::linter::types::LinterAssemblerFunctions;
+use crate::frontend::types::semantic::linter::types::LinterConstantInfo;
+use crate::frontend::types::semantic::linter::types::LinterEnumFieldInfo;
+use crate::frontend::types::semantic::linter::types::LinterEnums;
+use crate::frontend::types::semantic::linter::types::LinterEnumsFieldsInfo;
+use crate::frontend::types::semantic::linter::types::LinterFunctionInfo;
+use crate::frontend::types::semantic::linter::types::LinterFunctionParameterInfo;
+use crate::frontend::types::semantic::linter::types::LinterFunctionParameters;
+use crate::frontend::types::semantic::linter::types::LinterFunctions;
+use crate::frontend::types::semantic::linter::types::LinterGlobalConstants;
+use crate::frontend::types::semantic::linter::types::LinterGlobalStatics;
+use crate::frontend::types::semantic::linter::types::LinterLLIInfo;
+use crate::frontend::types::semantic::linter::types::LinterLLIs;
+use crate::frontend::types::semantic::linter::types::LinterLocalConstants;
+use crate::frontend::types::semantic::linter::types::LinterLocalInfo;
+use crate::frontend::types::semantic::linter::types::LinterLocalStatics;
+use crate::frontend::types::semantic::linter::types::LinterLocals;
+use crate::frontend::types::semantic::linter::types::LinterStaticInfo;
+use crate::frontend::types::semantic::linter::types::LinterStructFieldsInfo;
+use crate::frontend::types::semantic::linter::types::LinterStructs;
 
 #[derive(Debug)]
 pub struct LinterSymbolsTable<'linter> {

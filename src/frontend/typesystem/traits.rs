@@ -1,7 +1,7 @@
-use crate::{
-    backend::llvm::compiler::context::LLVMCodeGenContext,
-    frontend::typesystem::{modificators::StructureTypeModificator, types::Type},
-};
+use crate::backend::llvm::compiler::context::LLVMCodeGenContext;
+
+use crate::frontend::typesystem::modificators::StructureTypeModificator;
+use crate::frontend::typesystem::types::Type;
 
 pub trait LLVMTypeExtensions {
     fn llvm_is_same_bit_size(&self, context: &LLVMCodeGenContext<'_, '_>, other: &Type) -> bool;

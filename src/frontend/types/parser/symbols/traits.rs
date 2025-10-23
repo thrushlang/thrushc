@@ -1,9 +1,7 @@
-use crate::frontend::{
-    types::ast::metadata::{
-        fnparam::FunctionParameterMetadata, local::LocalMetadata, staticvar::StaticMetadata,
-    },
-    typesystem::types::Type,
-};
+use crate::frontend::types::ast::metadata::fnparam::FunctionParameterMetadata;
+use crate::frontend::types::ast::metadata::local::LocalMetadata;
+use crate::frontend::types::ast::metadata::staticvar::StaticMetadata;
+use crate::frontend::typesystem::types::Type;
 
 pub trait LocalSymbolExtensions {
     fn get_metadata(&self) -> LocalMetadata;

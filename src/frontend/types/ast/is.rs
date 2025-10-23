@@ -1,8 +1,9 @@
-use crate::{
-    backend::llvm::compiler::builtins::Builtin,
-    core::errors::standard::ThrushCompilerIssue,
-    frontend::{types::ast::Ast, typesystem::types::Type},
-};
+use crate::backend::llvm::compiler::builtins::Builtin;
+
+use crate::core::errors::standard::ThrushCompilerIssue;
+
+use crate::frontend::types::ast::Ast;
+use crate::frontend::typesystem::types::Type;
 
 impl Ast<'_> {
     #[inline]

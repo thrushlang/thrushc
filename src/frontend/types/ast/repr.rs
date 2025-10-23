@@ -1,13 +1,14 @@
-use crate::{
-    core::console::logging,
-    frontend::types::{
-        ast::Ast,
-        parser::repr::{
-            FunctionParameter, GlobalAssemblerFunction, GlobalConstant, GlobalFunction,
-            GlobalStatic, Local, LocalConstant, LocalStatic,
-        },
-    },
-};
+use crate::core::console::logging;
+
+use crate::frontend::types::ast::Ast;
+use crate::frontend::types::parser::repr::FunctionParameter;
+use crate::frontend::types::parser::repr::GlobalAssemblerFunction;
+use crate::frontend::types::parser::repr::GlobalConstant;
+use crate::frontend::types::parser::repr::GlobalFunction;
+use crate::frontend::types::parser::repr::GlobalStatic;
+use crate::frontend::types::parser::repr::Local;
+use crate::frontend::types::parser::repr::LocalConstant;
+use crate::frontend::types::parser::repr::LocalStatic;
 
 impl Ast<'_> {
     #[inline]

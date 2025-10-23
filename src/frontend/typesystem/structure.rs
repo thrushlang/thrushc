@@ -1,6 +1,6 @@
-use crate::frontend::typesystem::{
-    modificators::StructureTypeModificator, traits::TypeStructExtensions, types::Type,
-};
+use crate::frontend::typesystem::modificators::StructureTypeModificator;
+use crate::frontend::typesystem::traits::TypeStructExtensions;
+use crate::frontend::typesystem::types::Type;
 
 impl TypeStructExtensions for Type {
     #[inline]

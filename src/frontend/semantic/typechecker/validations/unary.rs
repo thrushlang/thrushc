@@ -1,10 +1,7 @@
-use crate::{
-    core::errors::standard::ThrushCompilerIssue,
-    frontend::{
-        lexer::{span::Span, tokentype::TokenType},
-        typesystem::types::Type,
-    },
-};
+use crate::core::errors::standard::ThrushCompilerIssue;
+use crate::frontend::lexer::span::Span;
+use crate::frontend::lexer::tokentype::TokenType;
+use crate::frontend::typesystem::types::Type;
 
 #[inline]
 pub fn validate_unary(op: &TokenType, a: &Type, span: Span) -> Result<(), ThrushCompilerIssue> {

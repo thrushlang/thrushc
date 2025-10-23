@@ -1,16 +1,14 @@
-use inkwell::{AtomicOrdering, ThreadLocalMode};
+use inkwell::AtomicOrdering;
+use inkwell::ThreadLocalMode;
 
-use crate::{
-    core::errors::standard::ThrushCompilerIssue,
-    frontend::{
-        lexer::tokentype::TokenType,
-        parser::ParserContext,
-        types::parser::stmts::types::ThrushAttributes,
-        typesystem::modificators::{
-            GCCStructureTypeModificator, LLVMStructureTypeModificator, StructureTypeModificator,
-        },
-    },
-};
+use crate::core::errors::standard::ThrushCompilerIssue;
+
+use crate::frontend::lexer::tokentype::TokenType;
+use crate::frontend::parser::ParserContext;
+use crate::frontend::types::parser::stmts::types::ThrushAttributes;
+use crate::frontend::typesystem::modificators::GCCStructureTypeModificator;
+use crate::frontend::typesystem::modificators::LLVMStructureTypeModificator;
+use crate::frontend::typesystem::modificators::StructureTypeModificator;
 
 #[inline]
 pub fn build_structure_modificator(attributes: &ThrushAttributes) -> StructureTypeModificator {

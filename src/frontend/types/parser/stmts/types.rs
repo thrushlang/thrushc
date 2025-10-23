@@ -1,11 +1,9 @@
-use crate::{
-    backend::llvm::compiler::attributes::LLVMAttribute,
-    frontend::{
-        lexer::span::Span,
-        types::ast::Ast,
-        typesystem::{modificators::StructureTypeModificator, types::Type},
-    },
-};
+use crate::backend::llvm::compiler::attributes::LLVMAttribute;
+
+use crate::frontend::lexer::span::Span;
+use crate::frontend::types::ast::Ast;
+use crate::frontend::typesystem::modificators::StructureTypeModificator;
+use crate::frontend::typesystem::types::Type;
 
 pub type StructFields<'ctx> = (
     &'ctx str,

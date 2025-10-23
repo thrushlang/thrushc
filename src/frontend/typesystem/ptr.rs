@@ -1,4 +1,5 @@
-use crate::frontend::typesystem::{traits::TypePointerExtensions, types::Type};
+use crate::frontend::typesystem::traits::TypePointerExtensions;
+use crate::frontend::typesystem::types::Type;
 
 impl TypePointerExtensions for Type {
     #[inline]

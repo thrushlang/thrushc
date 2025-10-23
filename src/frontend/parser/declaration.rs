@@ -1,18 +1,18 @@
-use crate::{
-    core::errors::standard::ThrushCompilerIssue,
-    frontend::{
-        lexer::tokentype::TokenType,
-        parser::{
-            declarations::{
-                asmfn, cstype, function, glasm, glconstant, glstatic, structure, union,
-            },
-            statement,
-        },
-        types::ast::Ast,
-    },
-};
-
 use super::{ParserContext, contexts::sync::ParserSyncPosition};
+
+use crate::core::errors::standard::ThrushCompilerIssue;
+
+use crate::frontend::lexer::tokentype::TokenType;
+use crate::frontend::parser::declarations::asmfn;
+use crate::frontend::parser::declarations::cstype;
+use crate::frontend::parser::declarations::function;
+use crate::frontend::parser::declarations::glasm;
+use crate::frontend::parser::declarations::glconstant;
+use crate::frontend::parser::declarations::glstatic;
+use crate::frontend::parser::declarations::structure;
+use crate::frontend::parser::declarations::union;
+use crate::frontend::parser::statement;
+use crate::frontend::types::ast::Ast;
 
 pub fn decl<'parser>(
     ctx: &mut ParserContext<'parser>,

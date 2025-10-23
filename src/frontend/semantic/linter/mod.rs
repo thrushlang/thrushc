@@ -1,21 +1,3 @@
-use ahash::AHashMap as HashMap;
-
-use symbols::LinterSymbolsTable;
-
-use crate::{
-    core::{
-        compiler::options::CompilationUnit,
-        console::logging::{self, LoggingType},
-        diagnostic::diagnostician::Diagnostician,
-        errors::standard::ThrushCompilerIssue,
-    },
-    frontend::{
-        lexer::span::Span,
-        semantic::linter::{expressions::defer, statements::mutation},
-        types::{ast::Ast, parser::stmts::traits::ThrushAttributesExtensions},
-    },
-};
-
 pub mod attributes;
 
 mod builtins;
@@ -25,6 +7,21 @@ mod expressions;
 mod marks;
 mod statements;
 mod symbols;
+
+use ahash::AHashMap as HashMap;
+
+use symbols::LinterSymbolsTable;
+
+use crate::core::compiler::options::CompilationUnit;
+use crate::core::console::logging::{self, LoggingType};
+use crate::core::diagnostic::diagnostician::Diagnostician;
+use crate::core::errors::standard::ThrushCompilerIssue;
+
+use crate::frontend::lexer::span::Span;
+use crate::frontend::semantic::linter::expressions::defer;
+use crate::frontend::semantic::linter::statements::mutation;
+use crate::frontend::types::ast::Ast;
+use crate::frontend::types::parser::stmts::traits::ThrushAttributesExtensions;
 
 #[derive(Debug)]
 pub struct Linter<'linter> {
@@ -47,7 +44,9 @@ impl<'linter> Linter<'linter> {
             symbols: LinterSymbolsTable::new(),
         }
     }
+}
 
+impl<'linter> Linter<'linter> {
     pub fn check(&mut self) {
         self.declare_forward();
 

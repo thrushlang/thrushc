@@ -1,9 +1,12 @@
-use inkwell::{context::Context, targets::TargetData, types::BasicTypeEnum};
+use inkwell::context::Context;
+use inkwell::targets::TargetData;
+use inkwell::types::BasicTypeEnum;
 
-use crate::{
-    backend::llvm::{self, compiler::context::LLVMCodeGenContext},
-    frontend::typesystem::{traits::LLVMTypeExtensions, types::Type},
-};
+use crate::backend::llvm;
+use crate::backend::llvm::compiler::context::LLVMCodeGenContext;
+
+use crate::frontend::typesystem::traits::LLVMTypeExtensions;
+use crate::frontend::typesystem::types::Type;
 
 impl LLVMTypeExtensions for Type {
     #[inline]

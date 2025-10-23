@@ -1,4 +1,6 @@
-use crate::frontend::{lexer::span::Span, types::ast::Ast, typesystem::types::Type};
+use crate::frontend::lexer::span::Span;
+use crate::frontend::types::ast::Ast;
+use crate::frontend::typesystem::types::Type;
 
 impl<'ctx> Ast<'ctx> {
     #[inline]

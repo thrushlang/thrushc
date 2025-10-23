@@ -1,10 +1,8 @@
 use std::path::PathBuf;
 
-use crate::{
-    backend::{self, llvm::compiler::context::LLVMCodeGenContext},
-    core::errors::{position::CompilationPosition, standard::ThrushCompilerIssue},
-    frontend::{lexer::span::Span, types::ast::Ast, typesystem::types::Type},
-};
+use crate::backend::{self, llvm::compiler::context::LLVMCodeGenContext};
+use crate::core::errors::{position::CompilationPosition, standard::ThrushCompilerIssue};
+use crate::frontend::{lexer::span::Span, types::ast::Ast, typesystem::types::Type};
 
 impl Ast<'_> {
     pub fn get_any_type(&self) -> Result<&Type, ThrushCompilerIssue> {

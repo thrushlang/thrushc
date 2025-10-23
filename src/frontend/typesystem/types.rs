@@ -1,8 +1,7 @@
 use std::sync::Arc;
 
-use crate::frontend::typesystem::modificators::{
-    FunctionReferenceTypeModificator, StructureTypeModificator,
-};
+use crate::frontend::typesystem::modificators::FunctionReferenceTypeModificator;
+use crate::frontend::typesystem::modificators::StructureTypeModificator;
 
 #[derive(Debug, Clone, Default)]
 pub enum Type {

@@ -1,38 +1,34 @@
 use std::{fmt::Display, path::PathBuf};
 
-use crate::{
-    core::errors::{position::CompilationPosition, standard::ThrushCompilerIssue},
-    frontend::{
-        lexer::span::Span,
-        types::{
-            ast::metadata::{
-                fnparam::FunctionParameterMetadata, local::LocalMetadata, staticvar::StaticMetadata,
-            },
-            parser::{
-                stmts::{
-                    traits::{
-                        EnumExtensions, EnumFieldsExtensions, FoundSymbolEither,
-                        FoundSymbolExtension, StructExtensions,
-                    },
-                    types::{EnumField, EnumFields, StructFields},
-                },
-                symbols::{
-                    traits::{FunctionParameterSymbolExtensions, StaticSymbolExtensions},
-                    types::{EnumSymbol, ParameterSymbol, StaticSymbol},
-                },
-            },
-        },
-        typesystem::{modificators::StructureTypeModificator, types::Type},
-    },
+use crate::core::errors::position::CompilationPosition;
+use crate::core::errors::standard::ThrushCompilerIssue;
+
+use crate::frontend::lexer::span::Span;
+use crate::frontend::types::ast::metadata::fnparam::FunctionParameterMetadata;
+use crate::frontend::types::ast::metadata::local::LocalMetadata;
+use crate::frontend::types::ast::metadata::staticvar::StaticMetadata;
+use crate::frontend::types::parser::stmts::traits::EnumExtensions;
+use crate::frontend::types::parser::stmts::traits::EnumFieldsExtensions;
+use crate::frontend::types::parser::stmts::traits::FoundSymbolEither;
+use crate::frontend::types::parser::stmts::traits::FoundSymbolExtension;
+use crate::frontend::types::parser::stmts::traits::StructExtensions;
+use crate::frontend::types::parser::stmts::types::EnumField;
+use crate::frontend::types::parser::stmts::types::EnumFields;
+use crate::frontend::types::parser::stmts::types::StructFields;
+use crate::frontend::types::parser::symbols::traits::FunctionParameterSymbolExtensions;
+use crate::frontend::types::parser::symbols::traits::StaticSymbolExtensions;
+use crate::frontend::types::parser::symbols::types::EnumSymbol;
+use crate::frontend::types::parser::symbols::types::ParameterSymbol;
+use crate::frontend::types::parser::symbols::types::StaticSymbol;
+use crate::frontend::typesystem::modificators::StructureTypeModificator;
+use crate::frontend::typesystem::types::Type;
+
+use crate::frontend::types::parser::symbols::traits::{
+    ConstantSymbolExtensions, FunctionExtensions, LLISymbolExtensions, LocalSymbolExtensions,
 };
 
-use super::{
-    traits::{
-        ConstantSymbolExtensions, FunctionExtensions, LLISymbolExtensions, LocalSymbolExtensions,
-    },
-    types::{
-        ConstantSymbol, FoundSymbolId, Function, LLISymbol, LocalSymbol, ParametersTypes, Struct,
-    },
+use crate::frontend::types::parser::symbols::types::{
+    ConstantSymbol, FoundSymbolId, Function, LLISymbol, LocalSymbol, ParametersTypes, Struct,
 };
 
 impl<'parser> EnumFieldsExtensions<'parser> for EnumFields<'parser> {

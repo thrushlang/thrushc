@@ -1,15 +1,13 @@
 use ahash::AHashMap as HashMap;
 
-use crate::frontend::{
-    lexer::span::Span,
-    types::{
-        ast::metadata::{
-            fnparam::FunctionParameterMetadata, local::LocalMetadata, staticvar::StaticMetadata,
-        },
-        parser::stmts::types::{EnumFields, ThrushAttributes},
-    },
-    typesystem::{modificators::StructureTypeModificator, types::Type},
-};
+use crate::frontend::lexer::span::Span;
+use crate::frontend::types::ast::metadata::fnparam::FunctionParameterMetadata;
+use crate::frontend::types::ast::metadata::local::LocalMetadata;
+use crate::frontend::types::ast::metadata::staticvar::StaticMetadata;
+use crate::frontend::types::parser::stmts::types::EnumFields;
+use crate::frontend::types::parser::stmts::types::ThrushAttributes;
+use crate::frontend::typesystem::modificators::StructureTypeModificator;
+use crate::frontend::typesystem::types::Type;
 
 pub type Struct<'parser> = (
     &'parser str,

@@ -1,21 +1,17 @@
 use ahash::AHashSet;
 
-use crate::{
-    core::{
-        compiler::options::CompilationUnit,
-        console::logging::{self, LoggingType},
-        diagnostic::diagnostician::Diagnostician,
-        errors::standard::ThrushCompilerIssue,
-    },
-    frontend::types::{
-        ast::Ast,
-        parser::stmts::{traits::ThrushAttributesExtensions, types::ThrushAttributes},
-        semantic::{
-            attrchecker::types::AttributeCheckerAttributeApplicant,
-            linter::{traits::LLVMAttributeComparatorExtensions, types::LLVMAttributeComparator},
-        },
-    },
-};
+use crate::core::compiler::options::CompilationUnit;
+use crate::core::console::logging;
+use crate::core::console::logging::LoggingType;
+use crate::core::diagnostic::diagnostician::Diagnostician;
+use crate::core::errors::standard::ThrushCompilerIssue;
+
+use crate::frontend::types::ast::Ast;
+use crate::frontend::types::parser::stmts::traits::ThrushAttributesExtensions;
+use crate::frontend::types::parser::stmts::types::ThrushAttributes;
+use crate::frontend::types::semantic::attrchecker::types::AttributeCheckerAttributeApplicant;
+use crate::frontend::types::semantic::linter::traits::LLVMAttributeComparatorExtensions;
+use crate::frontend::types::semantic::linter::types::LLVMAttributeComparator;
 
 #[derive(Debug)]
 pub struct AttributeChecker<'attr_checker> {
@@ -37,7 +33,9 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
             dignostician: Diagnostician::new(file),
         }
     }
+}
 
+impl<'attr_checker> AttributeChecker<'attr_checker> {
     pub fn check(&mut self) -> bool {
         while !self.is_eof() {
             let ast: &Ast = self.peek();

@@ -1,23 +1,35 @@
 use std::path::PathBuf;
 
-use crate::{
-    core::errors::{position::CompilationPosition, standard::ThrushCompilerIssue},
-    frontend::{
-        lexer::span::Span,
-        parser::constants::{
-            PARSER_SYMBOLS_MINIMAL_GLOBAL_CAPACITY, PARSER_SYMBOLS_MINIMAL_LOCAL_CAPACITY,
-        },
-        types::{
-            ast::Ast,
-            parser::symbols::types::{
-                AssemblerFunction, AssemblerFunctions, ConstantSymbol, CustomTypeSymbol,
-                CustomTypes, EnumSymbol, Enums, FoundSymbolId, Function, Functions,
-                GlobalConstants, GlobalStatics, LLISymbol, LLIs, LocalConstants, LocalStatics,
-                LocalSymbol, Locals, ParameterSymbol, Parameters, StaticSymbol, Struct, Structs,
-            },
-        },
-    },
-};
+use crate::core::errors::position::CompilationPosition;
+use crate::core::errors::standard::ThrushCompilerIssue;
+
+use crate::frontend::lexer::span::Span;
+use crate::frontend::parser::constants::PARSER_SYMBOLS_MINIMAL_GLOBAL_CAPACITY;
+use crate::frontend::parser::constants::PARSER_SYMBOLS_MINIMAL_LOCAL_CAPACITY;
+use crate::frontend::types::ast::Ast;
+use crate::frontend::types::parser::symbols::types::AssemblerFunction;
+use crate::frontend::types::parser::symbols::types::AssemblerFunctions;
+use crate::frontend::types::parser::symbols::types::ConstantSymbol;
+use crate::frontend::types::parser::symbols::types::CustomTypeSymbol;
+use crate::frontend::types::parser::symbols::types::CustomTypes;
+use crate::frontend::types::parser::symbols::types::EnumSymbol;
+use crate::frontend::types::parser::symbols::types::Enums;
+use crate::frontend::types::parser::symbols::types::FoundSymbolId;
+use crate::frontend::types::parser::symbols::types::Function;
+use crate::frontend::types::parser::symbols::types::Functions;
+use crate::frontend::types::parser::symbols::types::GlobalConstants;
+use crate::frontend::types::parser::symbols::types::GlobalStatics;
+use crate::frontend::types::parser::symbols::types::LLISymbol;
+use crate::frontend::types::parser::symbols::types::LLIs;
+use crate::frontend::types::parser::symbols::types::LocalConstants;
+use crate::frontend::types::parser::symbols::types::LocalStatics;
+use crate::frontend::types::parser::symbols::types::LocalSymbol;
+use crate::frontend::types::parser::symbols::types::Locals;
+use crate::frontend::types::parser::symbols::types::ParameterSymbol;
+use crate::frontend::types::parser::symbols::types::Parameters;
+use crate::frontend::types::parser::symbols::types::StaticSymbol;
+use crate::frontend::types::parser::symbols::types::Struct;
+use crate::frontend::types::parser::symbols::types::Structs;
 
 use ahash::AHashMap as HashMap;
 

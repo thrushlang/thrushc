@@ -1,19 +1,3 @@
-use std::{mem, process};
-
-use span::Span;
-use token::Token;
-use unicode_categories::UnicodeCategories;
-
-use crate::{
-    core::{
-        compiler::options::CompilationUnit,
-        console::logging::{self, LoggingType},
-        diagnostic::diagnostician::Diagnostician,
-        errors::{lexer::ThrushLexerPanic, standard::ThrushCompilerIssue},
-    },
-    frontend::{lexer::tokentype::TokenType, types::lexer::types::Tokens},
-};
-
 pub mod atomic;
 pub mod attributes;
 pub mod builtins;
@@ -31,6 +15,21 @@ mod identifier;
 mod lex;
 mod number;
 mod string;
+
+use std::{mem, process};
+
+use unicode_categories::UnicodeCategories;
+
+use crate::core::compiler::options::CompilationUnit;
+use crate::core::console::logging::{self, LoggingType};
+use crate::core::diagnostic::diagnostician::Diagnostician;
+use crate::core::errors::lexer::ThrushLexerPanic;
+use crate::core::errors::standard::ThrushCompilerIssue;
+
+use crate::frontend::lexer::span::Span;
+use crate::frontend::lexer::token::Token;
+use crate::frontend::lexer::tokentype::TokenType;
+use crate::frontend::types::lexer::types::Tokens;
 
 const MAXIMUM_TOKENS_CAPACITY: usize = 1_000_000;
 const MAXIMUM_BYTES_TO_LEX: usize = 1_000_000;

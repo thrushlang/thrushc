@@ -1,22 +1,19 @@
 use std::fmt::Display;
 
-use crate::frontend::{
-    lexer::span::Span,
-    types::{
-        ast::{Ast, metadata::local::LocalMetadata},
-        semantic::linter::{
-            traits::LLVMAttributeComparatorExtensions, types::LLVMAttributeComparator,
-        },
-    },
-    typesystem::{
-        modificators::StructureTypeModificator, traits::TypeStructExtensions, types::Type,
-    },
+use crate::frontend::lexer::span::Span;
+use crate::frontend::types::ast::{Ast, metadata::local::LocalMetadata};
+use crate::frontend::types::semantic::linter::traits::LLVMAttributeComparatorExtensions;
+use crate::frontend::types::semantic::linter::types::LLVMAttributeComparator;
+
+use crate::frontend::typesystem::modificators::StructureTypeModificator;
+use crate::frontend::typesystem::traits::TypeStructExtensions;
+use crate::frontend::typesystem::types::Type;
+
+use crate::frontend::types::parser::stmts::traits::{
+    ConstructorExtensions, StructFieldsExtensions, ThrushAttributesExtensions,
 };
 
-use super::{
-    traits::{ConstructorExtensions, StructFieldsExtensions, ThrushAttributesExtensions},
-    types::{Constructor, StructFields, ThrushAttributes},
-};
+use crate::frontend::types::parser::stmts::types::{Constructor, StructFields, ThrushAttributes};
 
 impl ThrushAttributesExtensions for ThrushAttributes<'_> {
     #[inline]

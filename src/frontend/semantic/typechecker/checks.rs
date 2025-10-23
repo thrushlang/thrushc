@@ -1,12 +1,12 @@
-use crate::{
-    core::errors::standard::ThrushCompilerIssue,
-    frontend::{
-        lexer::{span::Span, tokentype::TokenType},
-        semantic::typechecker::metadata::TypeCheckerExprMetadata,
-        types::ast::{Ast, metadata::cast::CastMetadata},
-        typesystem::{traits::TypeExtensions, types::Type},
-    },
-};
+use crate::core::errors::standard::ThrushCompilerIssue;
+
+use crate::frontend::lexer::span::Span;
+use crate::frontend::lexer::tokentype::TokenType;
+use crate::frontend::semantic::typechecker::metadata::TypeCheckerExprMetadata;
+use crate::frontend::types::ast::Ast;
+use crate::frontend::types::ast::metadata::cast::CastMetadata;
+use crate::frontend::typesystem::traits::TypeExtensions;
+use crate::frontend::typesystem::types::Type;
 
 pub fn check_types(
     lhs: &Type,
