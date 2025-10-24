@@ -223,7 +223,7 @@ impl CLI {
                 self.position = CommandLinePosition::ThrushCompiler;
             }
 
-            "-clang" => {
+            "-clang-link" => {
                 self.advance();
                 self.validate_llvm_required(arg);
                 self.validate_not_gcc_active();
@@ -233,7 +233,7 @@ impl CLI {
                     .set_use_clang(true);
             }
 
-            "-custom-clang" => {
+            "-custom-clang-link" => {
                 self.advance();
                 self.validate_llvm_required(arg);
 
@@ -251,7 +251,7 @@ impl CLI {
                 self.advance();
             }
 
-            "-gcc" => {
+            "-gcc-link" => {
                 self.advance();
                 self.validate_not_clang_active();
 
@@ -260,7 +260,7 @@ impl CLI {
 
                 if !self.validate_compiler_path(&custom_gcc_path) {
                     self.report_error(
-                        "Indicated external C & C++ compiler GNU Compiler Collection (GCC) doesn't exist.",
+                        "Indicated external GNU Compiler Collection (GCC) doesn't exist.",
                     );
                 }
 

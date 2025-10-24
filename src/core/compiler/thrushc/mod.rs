@@ -20,8 +20,8 @@ use inkwell::{
     targets::{InitializationConfig, Target, TargetMachine, TargetTriple},
 };
 
-use crate::backend::linking::linkers::lld::LLVMLinker;
 use crate::backend::llvm::{self, compiler::context::LLVMCodeGenContext};
+use crate::linkage::linkers::lld::LLVMLinker;
 
 use crate::core::compiler::backends::linkers::LinkerModeType;
 use crate::core::compiler::backends::llvm::{LLVMBackend, target::LLVMTarget};

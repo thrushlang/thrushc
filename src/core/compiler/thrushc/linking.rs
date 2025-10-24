@@ -1,17 +1,15 @@
-use colored::Colorize;
+use ::colored::Colorize;
 
-use crate::{
-    backend::linking::compilers::{clang::Clang, gcc::GCC},
-    core::{
-        compiler::{
-            backends::llvm::LLVMBackend, linking::LinkingCompilersConfiguration,
-            thrushc::ThrushCompiler,
-        },
-        console::logging::{self},
-    },
-};
+use crate::linkage::compilers::clang::Clang;
+use crate::linkage::compilers::gcc::GCC;
 
-use std::path::PathBuf;
+use crate::core::compiler::backends::llvm::LLVMBackend;
+use crate::core::compiler::linking::LinkingCompilersConfiguration;
+use crate::core::compiler::thrushc::ThrushCompiler;
+
+use crate::core::console::logging;
+
+use ::std::path::PathBuf;
 
 pub fn link_with_clang(compiler: &mut ThrushCompiler) {
     let llvm_backend: &LLVMBackend = compiler.get_options().get_llvm_backend_options();

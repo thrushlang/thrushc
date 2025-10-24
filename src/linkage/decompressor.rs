@@ -1,20 +1,15 @@
-#[cfg(target_os = "linux")]
-use {fs::Permissions, std::os::unix::fs::PermissionsExt};
+use std::env;
+use std::fs::{self, File, Permissions, write};
+use std::io::BufReader;
+use std::path::{Path, PathBuf};
 
-use std::{
-    env,
-    fs::{self, File, write},
-    io::BufReader,
-    path::{Path, PathBuf},
-};
+#[cfg(target_family = "unix")]
+use std::os::unix::fs::PermissionsExt;
 
-use tar::Archive;
-use xz2::bufread::XzDecoder;
+#[cfg(target_family = "unix")]
+use {tar::Archive, xz2::bufread::XzDecoder};
 
-#[cfg(target_os = "windows")]
-use std::io::{self};
-
-#[cfg(target_os = "windows")]
+#[cfg(target_family = "windows")]
 use zip::{ZipArchive, read::ZipFile};
 
 use crate::core::console::logging::{self, LoggingType};
@@ -28,72 +23,78 @@ pub fn dump_x86_64_clang_linux(
     output_path: PathBuf,
 ) -> Result<PathBuf, ()> {
     let raw_home_path: String = env::var("HOME").unwrap_or_else(|_| {
-        logging::print_any_panic(LoggingType::Panic, "Unable to get %HOME% path at linux.");
+        logging::print_any_panic(
+            LoggingType::Panic,
+            "Unable to get $HOME path on this Linux-based system.",
+        )
     });
 
     let home_path: PathBuf = PathBuf::from(raw_home_path);
 
-    if home_path.exists() {
-        let llvm_backend: PathBuf = home_path.join("thrushlang/backends/llvm/linux");
-
-        if !llvm_backend.exists() {
-            let _ = fs::create_dir_all(&llvm_backend);
-        }
-
-        let compressed_file: PathBuf = llvm_backend.join(compressed_file_path);
-        let output_path: PathBuf = llvm_backend.join(output_path);
-        let manifest_path: PathBuf = llvm_backend.join(clang_manifest_path);
-
-        if !manifest_path.exists() {
-            let _ = write(manifest_path, clang_raw_manifest);
-        }
-
-        if output_path.exists() {
-            return Ok(output_path);
-        }
-
-        let _ = write(&compressed_file, clang_raw_bytes);
-
-        if let Ok(file) = File::open(&compressed_file) {
-            let buff_reader: BufReader<File> = BufReader::new(file);
-            let xz_decoded: XzDecoder<BufReader<File>> = XzDecoder::new(buff_reader);
-            let mut tar_file: Archive<XzDecoder<BufReader<File>>> = Archive::new(xz_decoded);
-
-            if tar_file.unpack(llvm_backend).is_ok() {
-                if self::make_linux_executable(&output_path).is_ok() {
-                    return Ok(output_path);
-                }
-
-                logging::print_error(
-                    logging::LoggingType::Error,
-                    "Failed to make Clang executable at linux.",
-                );
-
-                return Err(());
-            }
-
-            logging::print_error(
-                logging::LoggingType::Error,
-                "Failed to decompress Clang executable at linux.",
-            );
-
-            return Err(());
-        }
-
+    if !home_path.exists() {
         logging::print_error(
-            logging::LoggingType::Error,
-            "Failed to get Clang compressed at linux.",
+            LoggingType::Error,
+            "$HOME path does not exist on this Linux-based system.",
         );
 
         return Err(());
     }
 
-    logging::print_error(
-        logging::LoggingType::Error,
-        "%HOME% path not exist at linux.",
-    );
+    let llvm_backend: PathBuf = home_path.join("thrushlang/backends/llvm/linux");
 
-    Err(())
+    if !llvm_backend.exists() {
+        let _ = fs::create_dir_all(&llvm_backend);
+    }
+
+    let compressed_file: PathBuf = llvm_backend.join(compressed_file_path);
+    let output_path: PathBuf = llvm_backend.join(output_path);
+    let manifest_path: PathBuf = llvm_backend.join(clang_manifest_path);
+
+    if !manifest_path.exists() {
+        let _ = write(&manifest_path, clang_raw_manifest);
+    }
+
+    if output_path.exists() {
+        return Ok(output_path);
+    }
+
+    let _ = write(&compressed_file, clang_raw_bytes);
+
+    let file: File = match File::open(&compressed_file) {
+        Ok(f) => f,
+        Err(_) => {
+            logging::print_error(
+                LoggingType::Error,
+                "Failed to open Clang compressed file on Linux-based system.",
+            );
+
+            return Err(());
+        }
+    };
+
+    let buff_reader: BufReader<File> = BufReader::new(file);
+    let xz_decoded: XzDecoder<BufReader<File>> = XzDecoder::new(buff_reader);
+    let mut archive: Archive<XzDecoder<BufReader<File>>> = Archive::new(xz_decoded);
+
+    if archive.unpack(&llvm_backend).is_err() {
+        logging::print_error(
+            LoggingType::Error,
+            "Failed to decompress C & C++ Clang compiler source archive on Linux-based system.",
+        );
+
+        return Err(());
+    }
+
+    if self::make_linux_executable(&output_path).is_err() {
+        logging::print_error(
+            LoggingType::Error,
+            "Failed to make C & C++ Clang compiler executable on Linux-based system.",
+        );
+
+        return Err(());
+    }
+
+    Ok(output_path)
 }
 
 #[cfg(target_os = "windows")]
@@ -178,8 +179,10 @@ pub fn dump_x86_64_clang_windows(
 #[cfg(target_os = "linux")]
 fn make_linux_executable(path: &Path) -> Result<(), Box<dyn std::error::Error>> {
     let mut perms: Permissions = fs::metadata(path)?.permissions();
+
     perms.set_mode(0o755);
     fs::set_permissions(path, perms)?;
+
     Ok(())
 }
 
