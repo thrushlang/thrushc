@@ -1,14 +1,15 @@
-use crate::{
-    core::errors::standard::ThrushCompilerIssue,
-    frontend::{
-        lexer::{span::Span, token::Token, tokentype::TokenType},
-        parser::{
-            ParserContext, checks, expr,
-            statements::{block, local},
-        },
-        types::{ast::Ast, parser::stmts::traits::TokenExtensions},
-    },
-};
+use crate::core::errors::standard::ThrushCompilerIssue;
+
+use crate::frontend::lexer::span::Span;
+use crate::frontend::lexer::token::Token;
+use crate::frontend::lexer::tokentype::TokenType;
+use crate::frontend::parser::ParserContext;
+use crate::frontend::parser::checks;
+use crate::frontend::parser::expr;
+use crate::frontend::parser::statements::block;
+use crate::frontend::parser::statements::local;
+use crate::frontend::types::ast::Ast;
+use crate::frontend::types::parser::stmts::traits::TokenExtensions;
 
 pub fn build_for_loop<'parser>(
     ctx: &mut ParserContext<'parser>,
@@ -17,8 +18,8 @@ pub fn build_for_loop<'parser>(
 
     let for_tk: &Token = ctx.consume(
         TokenType::For,
-        String::from("Syntax error"),
-        String::from("Expected 'for' keyword."),
+        "Syntax error".into(),
+        "Expected 'for' keyword.".into(),
     )?;
 
     let span: Span = for_tk.span;
@@ -50,8 +51,8 @@ pub fn build_loop<'parser>(
 
     let loop_tk: &Token = ctx.consume(
         TokenType::Loop,
-        String::from("Syntax error"),
-        String::from("Expected 'loop' keyword."),
+        "Syntax error".into(),
+        "Expected 'loop' keyword.".into(),
     )?;
 
     let loop_span: Span = loop_tk.span;
@@ -81,8 +82,8 @@ pub fn build_while_loop<'parser>(
 
     let while_tk: &Token = ctx.consume(
         TokenType::While,
-        String::from("Syntax error"),
-        String::from("Expected 'while' keyword."),
+        "Syntax error".into(),
+        "Expected 'while' keyword.".into(),
     )?;
 
     let span: Span = while_tk.get_span();

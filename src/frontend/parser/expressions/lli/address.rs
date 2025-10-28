@@ -1,12 +1,9 @@
-use crate::{
-    core::errors::standard::ThrushCompilerIssue,
-    frontend::{
-        lexer::{span::Span, token::Token, tokentype::TokenType},
-        parser::{ParserContext, expr},
-        types::{ast::Ast, parser::stmts::traits::TokenExtensions},
-        typesystem::types::Type,
-    },
-};
+use crate::core::errors::standard::ThrushCompilerIssue;
+
+use crate::frontend::lexer::{span::Span, token::Token, tokentype::TokenType};
+use crate::frontend::parser::{ParserContext, expr};
+use crate::frontend::types::{ast::Ast, parser::stmts::traits::TokenExtensions};
+use crate::frontend::typesystem::types::Type;
 
 pub fn build_address<'parser>(
     ctx: &mut ParserContext<'parser>,
@@ -33,8 +30,8 @@ fn build_address_indexes<'parser>(
 ) -> Result<Vec<Ast<'parser>>, ThrushCompilerIssue> {
     ctx.consume(
         TokenType::LBrace,
-        String::from("Syntax error"),
-        String::from("Expected '{'."),
+        "Syntax error".into(),
+        "Expected '{'.".into(),
     )?;
 
     let mut indexes: Vec<Ast> = Vec::with_capacity(10);
@@ -53,21 +50,21 @@ fn build_address_indexes<'parser>(
         } else {
             ctx.consume(
                 TokenType::Comma,
-                String::from("Syntax error"),
-                String::from("Expected ','."),
+                "Syntax error".into(),
+                "Expected ','.".into(),
             )?;
         }
     }
 
     ctx.consume(
         TokenType::RBrace,
-        String::from("Syntax error"),
-        String::from("Expected '}'."),
+        "Syntax error".into(),
+        "Expected '}'.".into(),
     )?;
 
     if indexes.is_empty() {
         return Err(ThrushCompilerIssue::Error(
-            String::from("Syntax error"),
+            "Syntax error".into(),
             "At least one index was expected.".into(),
             None,
             span,

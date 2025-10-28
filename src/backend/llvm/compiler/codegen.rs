@@ -5,7 +5,7 @@ use std::path::PathBuf;
 use crate::backend::llvm::compiler::declarations::{self};
 use crate::backend::llvm::compiler::generation::{cast, float, integer};
 use crate::backend::llvm::compiler::statements::lli;
-use crate::backend::llvm::compiler::{self, builtins, codegen};
+use crate::backend::llvm::compiler::{self, builtins, codegen, constgen};
 use crate::backend::llvm::compiler::{abort, memory};
 use crate::backend::llvm::compiler::{binaryop, generation};
 use crate::backend::llvm::compiler::{block, typegen};
@@ -723,7 +723,10 @@ pub fn compile<'ctx>(
         ),
 
         // Enum Value Access
-        Ast::EnumValue { value, .. } => self::compile(context, value, cast_type),
+        Ast::EnumValue { value, .. } => {
+            let cast_type: &Type = cast_type.unwrap_or(value.llvm_get_type(context));
+            constgen::compile(context, value, cast_type)
+        }
 
         // Builtins
         Ast::Builtin { builtin, .. } => builtins::compile(context, builtin, cast_type),

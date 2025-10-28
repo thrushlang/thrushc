@@ -1,47 +1,40 @@
-use crate::{
-    core::errors::standard::ThrushCompilerIssue,
-    frontend::{
-        lexer::{span::Span, token::Token, tokentype::TokenType},
-        parser::{attributes, expr},
-        types::{
-            ast::Ast,
-            parser::{
-                stmts::{
-                    traits::{
-                        FoundSymbolEither, FoundSymbolExtension, StructExtensions,
-                        StructFieldsExtensions, ThrushAttributesExtensions, TokenExtensions,
-                    },
-                    types::{StructFields, ThrushAttributes},
-                },
-                symbols::types::{CustomTypeSymbol, Struct},
-            },
-        },
-        typesystem::{
-            modificators::{
-                FunctionReferenceTypeModificator, GCCFunctionReferenceTypeModificator,
-                LLVMFunctionReferenceTypeModificator,
-            },
-            types::Type,
-        },
-    },
+use crate::core::errors::standard::ThrushCompilerIssue;
+
+use crate::frontend::lexer::span::Span;
+use crate::frontend::lexer::token::Token;
+use crate::frontend::lexer::tokentype::TokenType;
+use crate::frontend::parser::attributes;
+use crate::frontend::parser::expr;
+use crate::frontend::types::ast::Ast;
+
+use crate::frontend::types::parser::stmts::traits::{
+    FoundSymbolEither, FoundSymbolExtension, StructExtensions, StructFieldsExtensions,
+    ThrushAttributesExtensions, TokenExtensions,
 };
+use crate::frontend::types::parser::stmts::types::{StructFields, ThrushAttributes};
+use crate::frontend::types::parser::symbols::types::{CustomTypeSymbol, Struct};
+use crate::frontend::typesystem::modificators::{
+    FunctionReferenceTypeModificator, GCCFunctionReferenceTypeModificator,
+    LLVMFunctionReferenceTypeModificator,
+};
+use crate::frontend::typesystem::types::Type;
 
 use super::ParserContext;
 
 pub fn build_type(ctx: &mut ParserContext<'_>) -> Result<Type, ThrushCompilerIssue> {
     match ctx.peek().kind {
         tk_kind if tk_kind.is_type() => {
-            let tk = ctx.advance()?;
-            let span = tk.span;
+            let tk: &Token = ctx.advance()?;
+            let span: Span = tk.span;
 
             if tk_kind.is_array() {
-                return build_array_type(ctx, span);
+                return self::build_array_type(ctx, span);
             }
             if tk_kind.is_const() {
-                return build_const_type(ctx);
+                return self::build_const_type(ctx);
             }
             if tk_kind.is_fn_ref() {
-                return build_fn_ref_type(ctx);
+                return self::build_fn_ref_type(ctx);
             }
 
             match tk_kind.as_type(span)? {

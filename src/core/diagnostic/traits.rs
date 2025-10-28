@@ -1,6 +1,7 @@
 use std::path::Path;
 
-use crate::core::{console::logging::LoggingType, errors::position::CompilationPosition};
+use crate::core::console::logging::LoggingType;
+use crate::core::errors::position::CompilationPosition;
 
 pub trait IssueDisassembler {
     fn get_title(&self) -> &str;

@@ -1,7 +1,7 @@
-use crate::frontend::{
-    lexer::{token::Token, tokentype::TokenType},
-    parser::{ParserContext, contexts::sync::ParserSyncPosition},
-};
+use crate::frontend::lexer::token::Token;
+use crate::frontend::lexer::tokentype::TokenType;
+use crate::frontend::parser::ParserContext;
+use crate::frontend::parser::contexts::sync::ParserSyncPosition;
 
 pub const SYNC_STATEMENTS: [TokenType; 11] = [
     TokenType::Return,

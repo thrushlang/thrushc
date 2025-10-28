@@ -1,17 +1,17 @@
 use std::rc::Rc;
 
-use crate::{
-    core::errors::standard::ThrushCompilerIssue,
-    frontend::{
-        lexer::{span::Span, token::Token, tokentype::TokenType},
-        parser::{ParserContext, checks, statements::block, typegen},
-        types::{
-            ast::{Ast, metadata::fnparam::FunctionParameterMetadata},
-            parser::stmts::traits::TokenExtensions,
-        },
-        typesystem::types::Type,
-    },
-};
+use crate::core::errors::standard::ThrushCompilerIssue;
+use crate::frontend::lexer::span::Span;
+use crate::frontend::lexer::token::Token;
+use crate::frontend::lexer::tokentype::TokenType;
+use crate::frontend::parser::ParserContext;
+use crate::frontend::parser::checks;
+use crate::frontend::parser::statements::block;
+use crate::frontend::parser::typegen;
+use crate::frontend::types::ast::Ast;
+use crate::frontend::types::ast::metadata::fnparam::FunctionParameterMetadata;
+use crate::frontend::types::parser::stmts::traits::TokenExtensions;
+use crate::frontend::typesystem::types::Type;
 
 pub fn build_entrypoint<'parser>(
     ctx: &mut ParserContext<'parser>,
@@ -37,8 +37,8 @@ pub fn build_entrypoint<'parser>(
 
         let parameter_tk: &Token = ctx.consume(
             TokenType::Identifier,
-            String::from("Syntax error"),
-            String::from("Expected identifier."),
+            "Syntax error".into(),
+            "Expected identifier.".into(),
         )?;
 
         let name: &str = parameter_tk.get_lexeme();
@@ -48,8 +48,8 @@ pub fn build_entrypoint<'parser>(
 
         ctx.consume(
             TokenType::Colon,
-            String::from("Syntax error"),
-            String::from("Expected ':'."),
+            "Syntax error".into(),
+            "Expected ':'.".into(),
         )?;
 
         let parameter_type: Type = typegen::build_type(ctx)?;
@@ -70,8 +70,8 @@ pub fn build_entrypoint<'parser>(
         } else {
             ctx.consume(
                 TokenType::Comma,
-                String::from("Syntax error"),
-                String::from("Expected ','."),
+                "Syntax error".into(),
+                "Expected ','.".into(),
             )?;
         }
     }

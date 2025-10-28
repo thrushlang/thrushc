@@ -1,18 +1,18 @@
-use crate::{
-    core::errors::standard::ThrushCompilerIssue,
-    frontend::{
-        lexer::{span::Span, token::Token, tokentype::TokenType},
-        parser::{ParserContext, attributes, builder, checks, typegen},
-        types::{
-            ast::Ast,
-            parser::stmts::{
-                traits::{StructFieldsExtensions, TokenExtensions},
-                types::{StructFields, ThrushAttributes},
-            },
-        },
-        typesystem::{modificators::StructureTypeModificator, types::Type},
-    },
-};
+use crate::core::errors::standard::ThrushCompilerIssue;
+
+use crate::frontend::lexer::span::Span;
+use crate::frontend::lexer::token::Token;
+use crate::frontend::lexer::tokentype::TokenType;
+use crate::frontend::parser::ParserContext;
+use crate::frontend::parser::attributes;
+use crate::frontend::parser::builder;
+use crate::frontend::parser::checks;
+use crate::frontend::parser::typegen;
+use crate::frontend::types::ast::Ast;
+use crate::frontend::types::parser::stmts::traits::{StructFieldsExtensions, TokenExtensions};
+use crate::frontend::types::parser::stmts::types::{StructFields, ThrushAttributes};
+use crate::frontend::typesystem::modificators::StructureTypeModificator;
+use crate::frontend::typesystem::types::Type;
 
 pub fn build_structure<'parser>(
     ctx: &mut ParserContext<'parser>,
@@ -22,14 +22,14 @@ pub fn build_structure<'parser>(
 
     ctx.consume(
         TokenType::Struct,
-        String::from("Syntax error"),
-        String::from("Expected 'struct' keyword."),
+        "Syntax error".into(),
+        "Expected 'struct' keyword.".into(),
     )?;
 
     let name_tk: &Token = ctx.consume(
         TokenType::Identifier,
-        String::from("Syntax error"),
-        String::from("Expected identifier."),
+        "Syntax error".into(),
+        "Expected identifier.".into(),
     )?;
 
     let attributes: ThrushAttributes = attributes::build_attributes(ctx, &[TokenType::LBrace])?;
@@ -37,8 +37,8 @@ pub fn build_structure<'parser>(
 
     ctx.consume(
         TokenType::LBrace,
-        String::from("Syntax error"),
-        String::from("Expected '{'."),
+        "Syntax error".into(),
+        "Expected '{'.".into(),
     )?;
 
     let name: &str = name_tk.get_lexeme();
@@ -55,8 +55,8 @@ pub fn build_structure<'parser>(
         if ctx.check(TokenType::Identifier) {
             let field_tk: &Token = ctx.consume(
                 TokenType::Identifier,
-                String::from("Syntax error"),
-                String::from("Expected identifier."),
+                "Syntax error".into(),
+                "Expected identifier.".into(),
             )?;
 
             let field_name: &str = field_tk.get_lexeme();
@@ -64,8 +64,8 @@ pub fn build_structure<'parser>(
 
             ctx.consume(
                 TokenType::Colon,
-                String::from("Syntax error"),
-                String::from("Expected ':'."),
+                "Syntax error".into(),
+                "Expected ':'.".into(),
             )?;
 
             let field_type: Type = typegen::build_type(ctx)?;
@@ -85,13 +85,13 @@ pub fn build_structure<'parser>(
             } else if ctx.check_to(TokenType::Identifier, 0) {
                 ctx.consume(
                     TokenType::Comma,
-                    String::from("Syntax error"),
-                    String::from("Expected ','."),
+                    "Syntax error".into(),
+                    "Expected ','.".into(),
                 )?;
             } else {
                 return Err(ThrushCompilerIssue::Error(
-                    String::from("Syntax error"),
-                    String::from("Expected identifier."),
+                    "Syntax error".into(),
+                    "Expected identifier.".into(),
                     None,
                     ctx.previous().get_span(),
                 ));
@@ -100,8 +100,8 @@ pub fn build_structure<'parser>(
             ctx.only_advance()?;
 
             return Err(ThrushCompilerIssue::Error(
-                String::from("Syntax error"),
-                String::from("Expected structure fields identifiers."),
+                "Syntax error".into(),
+                "Expected structure fields identifiers.".into(),
                 None,
                 ctx.previous().get_span(),
             ));

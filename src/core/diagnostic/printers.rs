@@ -2,15 +2,15 @@ use std::path::Path;
 
 use colored::Colorize;
 
-use crate::core::{
-    console::logging::{self, LoggingType},
-    diagnostic::{
-        Diagnostic,
-        errors::{BackendError, Error, FrontendError},
-        traits::{ErrorDisassembler, IssueDisassembler},
-    },
-    errors::position::CompilationPosition,
-};
+use crate::core::console::logging;
+use crate::core::console::logging::LoggingType;
+use crate::core::diagnostic::Diagnostic;
+use crate::core::diagnostic::errors::BackendError;
+use crate::core::diagnostic::errors::Error;
+use crate::core::diagnostic::errors::FrontendError;
+use crate::core::diagnostic::traits::ErrorDisassembler;
+use crate::core::diagnostic::traits::IssueDisassembler;
+use crate::core::errors::position::CompilationPosition;
 
 pub fn print(diagnostic: &Diagnostic, error: Error<'_>) {
     let title: &str = error.get_title();

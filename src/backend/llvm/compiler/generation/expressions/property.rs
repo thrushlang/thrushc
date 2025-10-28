@@ -4,7 +4,6 @@ use crate::backend::llvm::types::LLVMGEPIndexes;
 
 use crate::frontend::lexer::span::Span;
 use crate::frontend::types::ast::Ast;
-use crate::frontend::typesystem::traits::LLVMTypeExtensions;
 use crate::frontend::typesystem::types::Type;
 
 use std::path::PathBuf;
@@ -19,7 +18,7 @@ pub fn compile<'ctx>(
     source: &'ctx Ast<'ctx>,
     indexes: LLVMGEPIndexes<'ctx>,
 ) -> BasicValueEnum<'ctx> {
-    if source.is_allocated() || source.llvm_get_type(context).llvm_is_ptr_type() {
+    if source.is_allocated() || source.llvm_get_type(context).is_ptr_type() {
         return self::compile_gep_property(context, source, indexes);
     }
 

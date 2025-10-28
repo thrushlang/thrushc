@@ -1,13 +1,16 @@
 use std::rc::Rc;
 
-use crate::{
-    core::errors::standard::ThrushCompilerIssue,
-    frontend::{
-        lexer::{span::Span, token::Token, tokentype::TokenType},
-        parser::{ParserContext, checks, expr, statements::block},
-        types::{ast::Ast, parser::stmts::traits::TokenExtensions},
-    },
-};
+use crate::core::errors::standard::ThrushCompilerIssue;
+
+use crate::frontend::lexer::span::Span;
+use crate::frontend::lexer::token::Token;
+use crate::frontend::lexer::tokentype::TokenType;
+use crate::frontend::parser::ParserContext;
+use crate::frontend::parser::checks;
+use crate::frontend::parser::expr;
+use crate::frontend::parser::statements::block;
+use crate::frontend::types::ast::Ast;
+use crate::frontend::types::parser::stmts::traits::TokenExtensions;
 
 pub fn build_conditional<'parser>(
     ctx: &mut ParserContext<'parser>,
@@ -16,8 +19,8 @@ pub fn build_conditional<'parser>(
 
     let if_tk: &Token = ctx.consume(
         TokenType::If,
-        String::from("Syntax error"),
-        String::from("Expected 'if' keyword."),
+        "Syntax error".into(),
+        "Expected 'if' keyword.".into(),
     )?;
 
     let span: Span = if_tk.get_span();

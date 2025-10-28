@@ -15,26 +15,21 @@ pub fn validate<'type_checker>(
     node: &'type_checker Ast,
 ) -> Result<(), ThrushCompilerIssue> {
     match node {
-        Ast::Const {
-            kind: target_type,
-            value,
-            span,
-            ..
-        } => {
-            let metadata: TypeCheckerExprMetadata =
-                TypeCheckerExprMetadata::new(value.is_literal(), *span);
+        Ast::Enum { fields, .. } => {
+            fields.iter().try_for_each(|field| {
+                let target_type: Type = field.1.clone();
+                let value: &Ast = &field.2;
+                let span: Span = value.get_span();
 
-            let from_type: &Type = value.get_value_type()?;
+                let from_type: &Type = value.get_value_type()?;
 
-            checks::check_types(
-                target_type,
-                &Type::Const(from_type.clone().into()),
-                Some(value),
-                None,
-                metadata,
-            )?;
+                let metadata: TypeCheckerExprMetadata =
+                    TypeCheckerExprMetadata::new(value.is_literal(), span);
 
-            typechecker.analyze_stmt(value)?;
+                checks::check_types(&target_type, from_type, Some(value), None, metadata)?;
+
+                Ok(())
+            })?;
 
             Ok(())
         }

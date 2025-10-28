@@ -1,11 +1,12 @@
-use crate::{
-    core::errors::standard::ThrushCompilerIssue,
-    frontend::{
-        lexer::{span::Span, token::Token, tokentype::TokenType},
-        parser::{ParserContext, checks},
-        types::{ast::Ast, parser::stmts::traits::TokenExtensions},
-    },
-};
+use crate::core::errors::standard::ThrushCompilerIssue;
+
+use crate::frontend::lexer::span::Span;
+use crate::frontend::lexer::token::Token;
+use crate::frontend::lexer::tokentype::TokenType;
+use crate::frontend::parser::ParserContext;
+use crate::frontend::parser::checks;
+use crate::frontend::types::ast::Ast;
+use crate::frontend::types::parser::stmts::traits::TokenExtensions;
 
 pub fn build_continue<'parser>(
     ctx: &mut ParserContext<'parser>,
@@ -14,8 +15,8 @@ pub fn build_continue<'parser>(
 
     let continue_tk: &Token = ctx.consume(
         TokenType::Continue,
-        String::from("Syntax error"),
-        String::from("Expected 'continue' keyword."),
+        "Syntax error".into(),
+        "Expected 'continue' keyword.".into(),
     )?;
 
     let span: Span = continue_tk.span;
@@ -25,8 +26,8 @@ pub fn build_continue<'parser>(
 
     ctx.consume(
         TokenType::SemiColon,
-        String::from("Syntax error"),
-        String::from("Expected ';'."),
+        "Syntax error".into(),
+        "Expected ';'.".into(),
     )?;
 
     Ok(Ast::Continue { span })
@@ -39,8 +40,8 @@ pub fn build_break<'parser>(
 
     let break_tk: &Token = ctx.consume(
         TokenType::Break,
-        String::from("Syntax error"),
-        String::from("Expected 'break' keyword."),
+        "Syntax error".into(),
+        "Expected 'break' keyword.".into(),
     )?;
 
     let span: Span = break_tk.get_span();
@@ -50,8 +51,8 @@ pub fn build_break<'parser>(
 
     ctx.consume(
         TokenType::SemiColon,
-        String::from("Syntax error"),
-        String::from("Expected ';'."),
+        "Syntax error".into(),
+        "Expected ';'.".into(),
     )?;
 
     Ok(Ast::Break { span })

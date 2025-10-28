@@ -1,14 +1,13 @@
 use std::path::PathBuf;
 
-use crate::{
-    core::errors::{position::CompilationPosition, standard::ThrushCompilerIssue},
-    frontend::{
-        lexer::span::Span,
-        semantic::typechecker::{TypeChecker, checks, metadata::TypeCheckerExprMetadata},
-        types::ast::Ast,
-        typesystem::types::Type,
-    },
+use crate::core::errors::{position::CompilationPosition, standard::ThrushCompilerIssue};
+
+use crate::frontend::lexer::span::Span;
+use crate::frontend::semantic::typechecker::{
+    TypeChecker, checks, metadata::TypeCheckerExprMetadata,
 };
+use crate::frontend::types::ast::Ast;
+use crate::frontend::typesystem::types::Type;
 
 pub fn validate<'type_checker>(
     typechecker: &mut TypeChecker<'type_checker>,

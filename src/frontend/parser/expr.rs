@@ -1,11 +1,9 @@
-use crate::{
-    core::errors::standard::ThrushCompilerIssue,
-    frontend::{
-        lexer::tokentype::TokenType,
-        parser::{checks, expressions::precedences::or},
-        types::ast::Ast,
-    },
-};
+use crate::core::errors::standard::ThrushCompilerIssue;
+
+use crate::frontend::lexer::tokentype::TokenType;
+use crate::frontend::parser::checks;
+use crate::frontend::parser::expressions::precedences::or;
+use crate::frontend::types::ast::Ast;
 
 use super::{ParserContext, contexts::sync::ParserSyncPosition};
 

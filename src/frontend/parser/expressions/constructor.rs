@@ -1,21 +1,14 @@
-use crate::{
-    core::errors::standard::ThrushCompilerIssue,
-    frontend::{
-        lexer::{span::Span, token::Token, tokentype::TokenType},
-        parser::{ParserContext, expr},
-        types::{
-            ast::Ast,
-            parser::{
-                stmts::{
-                    traits::{ConstructorExtensions, StructExtensions, TokenExtensions},
-                    types::Constructor,
-                },
-                symbols::types::Struct,
-            },
-        },
-        typesystem::modificators::StructureTypeModificator,
-    },
+use crate::core::errors::standard::ThrushCompilerIssue;
+
+use crate::frontend::lexer::{span::Span, token::Token, tokentype::TokenType};
+use crate::frontend::parser::{ParserContext, expr};
+use crate::frontend::types::ast::Ast;
+use crate::frontend::types::parser::stmts::{
+    traits::{ConstructorExtensions, StructExtensions, TokenExtensions},
+    types::Constructor,
 };
+use crate::frontend::types::parser::symbols::types::Struct;
+use crate::frontend::typesystem::modificators::StructureTypeModificator;
 
 pub fn build_constructor<'parser>(
     ctx: &mut ParserContext<'parser>,
@@ -34,8 +27,8 @@ pub fn build_constructor<'parser>(
 
     ctx.consume(
         TokenType::LBrace,
-        String::from("Syntax error"),
-        String::from("Expected '{'."),
+        "Syntax error".into(),
+        "Expected '{'.".into(),
     )?;
 
     let name: &str = identifier_tk.get_lexeme();
@@ -67,8 +60,8 @@ pub fn build_constructor<'parser>(
 
             if !structure.contains_field(field_name) {
                 return Err(ThrushCompilerIssue::Error(
-                    String::from("Syntax error"),
-                    String::from("Expected existing structure field name."),
+                    "Syntax error".into(),
+                    "Expected existing field name.".into(),
                     None,
                     field_span,
                 ));
@@ -76,8 +69,8 @@ pub fn build_constructor<'parser>(
 
             if amount >= required {
                 return Err(ThrushCompilerIssue::Error(
-                    String::from("Too many fields in structure"),
-                    format!("Expected '{}' fields, not '{}'.", required, amount),
+                    "Too many fields in structure".into(),
+                    format!("Expected '{}' fields, not '{}' fields.", required, amount),
                     None,
                     span,
                 ));
@@ -102,21 +95,21 @@ pub fn build_constructor<'parser>(
             } else if ctx.check_to(TokenType::Identifier, 0) {
                 ctx.consume(
                     TokenType::Comma,
-                    String::from("Syntax error"),
-                    String::from("Expected ','."),
+                    "Syntax error".into(),
+                    "Expected ','.".into(),
                 )?;
             } else {
                 return Err(ThrushCompilerIssue::Error(
-                    String::from("Syntax error"),
-                    String::from("Expected identifier."),
+                    "Syntax error".into(),
+                    "Expected identifier.".into(),
                     None,
                     ctx.previous().get_span(),
                 ));
             }
         } else {
             return Err(ThrushCompilerIssue::Error(
-                String::from("Syntax error"),
-                String::from("Expected field name."),
+                "Syntax error".into(),
+                "Expected field name.".into(),
                 None,
                 span,
             ));
@@ -127,7 +120,7 @@ pub fn build_constructor<'parser>(
 
     if provided != required {
         return Err(ThrushCompilerIssue::Error(
-            String::from("Missing fields in structure"),
+            "Missing fields in structure".into(),
             format!(
                 "Expected '{}' arguments, but '{}' was gived.",
                 required, provided
@@ -139,8 +132,8 @@ pub fn build_constructor<'parser>(
 
     ctx.consume(
         TokenType::RBrace,
-        String::from("Syntax error"),
-        String::from("Expected '}'."),
+        "Syntax error".into(),
+        "Expected '}'.".into(),
     )?;
 
     Ok(Ast::Constructor {

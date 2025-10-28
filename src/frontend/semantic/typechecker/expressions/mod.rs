@@ -1,26 +1,21 @@
 pub mod call;
 pub mod cast;
 pub mod defer;
+pub mod index;
 pub mod indirect;
-
-mod index;
-mod property;
+pub mod property;
 
 use std::path::PathBuf;
 
-use crate::{
-    core::errors::{position::CompilationPosition, standard::ThrushCompilerIssue},
-    frontend::{
-        lexer::span::Span,
-        semantic::typechecker::{
-            TypeChecker, checks, expressions, metadata::TypeCheckerExprMetadata, validations,
-        },
-        types::{ast::Ast, parser::stmts::types::Constructor},
-        typesystem::{
-            traits::{TypeArrayEntensions, TypeFixedArrayEntensions},
-            types::Type,
-        },
-    },
+use crate::core::errors::{position::CompilationPosition, standard::ThrushCompilerIssue};
+use crate::frontend::lexer::span::Span;
+use crate::frontend::semantic::typechecker::{
+    TypeChecker, checks, expressions, metadata::TypeCheckerExprMetadata, validations,
+};
+use crate::frontend::types::{ast::Ast, parser::stmts::types::Constructor};
+use crate::frontend::typesystem::{
+    traits::{TypeArrayEntensions, TypeFixedArrayEntensions},
+    types::Type,
 };
 
 pub fn validate<'check_typeser>(

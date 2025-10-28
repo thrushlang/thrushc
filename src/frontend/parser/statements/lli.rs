@@ -1,12 +1,15 @@
-use crate::{
-    core::errors::standard::ThrushCompilerIssue,
-    frontend::{
-        lexer::{span::Span, token::Token, tokentype::TokenType},
-        parser::{ParserContext, checks, expr, typegen},
-        types::{ast::Ast, parser::stmts::traits::TokenExtensions},
-        typesystem::types::Type,
-    },
-};
+use crate::core::errors::standard::ThrushCompilerIssue;
+
+use crate::frontend::lexer::span::Span;
+use crate::frontend::lexer::token::Token;
+use crate::frontend::lexer::tokentype::TokenType;
+use crate::frontend::parser::ParserContext;
+use crate::frontend::parser::checks;
+use crate::frontend::parser::expr;
+use crate::frontend::parser::typegen;
+use crate::frontend::types::ast::Ast;
+use crate::frontend::types::parser::stmts::traits::TokenExtensions;
+use crate::frontend::typesystem::types::Type;
 
 pub fn build_lli<'parser>(
     ctx: &mut ParserContext<'parser>,
@@ -15,14 +18,14 @@ pub fn build_lli<'parser>(
 
     ctx.consume(
         TokenType::Instr,
-        String::from("Syntax error"),
-        String::from("Expected 'instr' keyword."),
+        "Syntax error".into(),
+        "Expected 'instr' keyword.".into(),
     )?;
 
     let instr_tk: &Token = ctx.consume(
         TokenType::Identifier,
-        String::from("Syntax error"),
-        String::from("Expected name."),
+        "Syntax error".into(),
+        "Expected name.".into(),
     )?;
 
     let name: &str = instr_tk.get_lexeme();
@@ -30,24 +33,20 @@ pub fn build_lli<'parser>(
 
     ctx.consume(
         TokenType::Colon,
-        String::from("Syntax error"),
-        String::from("Expected ':'."),
+        "Syntax error".into(),
+        "Expected ':'.".into(),
     )?;
 
     let instr_type: Type = typegen::build_type(ctx)?;
 
-    ctx.consume(
-        TokenType::Eq,
-        String::from("Syntax error"),
-        String::from("Expected '='."),
-    )?;
+    ctx.consume(TokenType::Eq, "Syntax error".into(), "Expected '='.".into())?;
 
     let expr: Ast = expr::build_expr(ctx)?;
 
     ctx.consume(
         TokenType::SemiColon,
-        String::from("Syntax error"),
-        String::from("Expected ';'."),
+        "Syntax error".into(),
+        "Expected ';'.".into(),
     )?;
 
     ctx.get_mut_symbols()

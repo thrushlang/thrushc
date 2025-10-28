@@ -1,12 +1,9 @@
-use crate::{
-    core::errors::standard::ThrushCompilerIssue,
-    frontend::{
-        lexer::{span::Span, token::Token, tokentype::TokenType},
-        parser::{ParserContext, expressions::precedences::equality},
-        types::ast::Ast,
-        typesystem::types::Type,
-    },
-};
+use crate::core::errors::standard::ThrushCompilerIssue;
+
+use crate::frontend::lexer::{span::Span, token::Token, tokentype::TokenType};
+use crate::frontend::parser::{ParserContext, expressions::precedences::equality};
+use crate::frontend::types::ast::Ast;
+use crate::frontend::typesystem::types::Type;
 
 pub fn and_precedence<'parser>(
     ctx: &mut ParserContext<'parser>,

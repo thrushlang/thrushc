@@ -34,8 +34,8 @@ pub fn build_enum_value<'parser>(
 
     let field_tk: &Token = ctx.consume(
         TokenType::Identifier,
-        String::from("Syntax error"),
-        String::from("Expected enum name."),
+        "Syntax error".into(),
+        "Expected enum name.".into(),
     )?;
 
     let field_name: &str = field_tk.get_lexeme();
@@ -50,8 +50,9 @@ pub fn build_enum_value<'parser>(
     }
 
     let field: EnumField = union.get_field(field_name);
-    let field_value: Ast = field.1;
-    let field_type: Type = field_value.get_value_type()?.clone();
+
+    let field_type: Type = field.1;
+    let field_value: Ast = field.2;
 
     let canonical_name: String = format!("{}.{}", name, field_name);
 

@@ -1,12 +1,9 @@
-use crate::{
-    core::errors::standard::ThrushCompilerIssue,
-    frontend::{
-        lexer::{span::Span, tokentype::TokenType},
-        parser::{ParserContext, expr, expressions::precedences::index},
-        types::{ast::Ast, parser::stmts::traits::TokenExtensions},
-        typesystem::types::Type,
-    },
-};
+use crate::core::errors::standard::ThrushCompilerIssue;
+
+use crate::frontend::lexer::{span::Span, tokentype::TokenType};
+use crate::frontend::parser::{ParserContext, expr, expressions::precedences::index};
+use crate::frontend::types::{ast::Ast, parser::stmts::traits::TokenExtensions};
+use crate::frontend::typesystem::types::Type;
 
 pub fn equal_precedence<'parser>(
     ctx: &mut ParserContext<'parser>,

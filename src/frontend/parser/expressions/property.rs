@@ -1,15 +1,13 @@
-use crate::{
-    core::errors::standard::ThrushCompilerIssue,
-    frontend::{
-        lexer::{span::Span, token::Token, tokentype::TokenType},
-        parser::ParserContext,
-        types::{
-            ast::{Ast, metadata::property::PropertyMetadata},
-            parser::stmts::traits::TokenExtensions,
-        },
-        typesystem::{self, types::Type},
-    },
-};
+use crate::core::errors::standard::ThrushCompilerIssue;
+
+use crate::frontend::lexer::span::Span;
+use crate::frontend::lexer::token::Token;
+use crate::frontend::lexer::tokentype::TokenType;
+use crate::frontend::parser::ParserContext;
+use crate::frontend::types::ast::Ast;
+use crate::frontend::types::ast::metadata::property::PropertyMetadata;
+use crate::frontend::types::parser::stmts::traits::TokenExtensions;
+use crate::frontend::typesystem::{self, types::Type};
 
 pub fn build_property<'parser>(
     ctx: &mut ParserContext<'parser>,
@@ -22,8 +20,8 @@ pub fn build_property<'parser>(
 
     let first_property: &Token = ctx.consume(
         TokenType::Identifier,
-        String::from("Syntax error"),
-        String::from("Expected property name."),
+        "Syntax error".into(),
+        "Expected property name.".into(),
     )?;
 
     let mut span: Span = first_property.span;
@@ -33,8 +31,8 @@ pub fn build_property<'parser>(
     while ctx.match_token(TokenType::Dot)? {
         let property: &Token = ctx.consume(
             TokenType::Identifier,
-            String::from("Syntax error"),
-            String::from("Expected property name."),
+            "Syntax error".into(),
+            "Expected property name.".into(),
         )?;
 
         span = property.span;

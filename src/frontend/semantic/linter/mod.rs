@@ -84,10 +84,16 @@ impl<'linter> Linter<'linter> {
         }
 
         if let Ast::Enum { .. } = node {
-            return declarations::union::analyze(self, node);
+            return declarations::enums::analyze(self, node);
         }
 
-        if let Ast::GlobalAssembler { .. } = node {}
+        if let Ast::Static { .. } = node {
+            return declarations::glstatic::analyze(self, node);
+        }
+
+        if let Ast::Const { .. } = node {
+            declarations::glconstant::analyze(self, node);
+        }
 
         /* ######################################################################
 
@@ -450,7 +456,7 @@ impl Linter<'_> {
 
                     for field in fields.iter() {
                         let field_name: &str = field.0;
-                        let expr_span: Span = field.1.get_span();
+                        let expr_span: Span = field.2.get_span();
 
                         converted_fields.insert(field_name, (expr_span, false));
                     }

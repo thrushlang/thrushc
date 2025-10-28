@@ -1,19 +1,12 @@
-use crate::{
-    core::errors::standard::ThrushCompilerIssue,
-    frontend::{
-        lexer::{span::Span, tokentype::TokenType},
-        parser::{ParserContext, expr},
-        types::ast::Ast,
-        types::parser::{
-            stmts::traits::{FoundSymbolEither, FoundSymbolExtension},
-            symbols::{
-                traits::FunctionExtensions,
-                types::{AssemblerFunction, FoundSymbolId, Function},
-            },
-        },
-        typesystem::types::Type,
-    },
-};
+use crate::core::errors::standard::ThrushCompilerIssue;
+
+use crate::frontend::lexer::{span::Span, tokentype::TokenType};
+use crate::frontend::parser::{ParserContext, expr};
+use crate::frontend::types::ast::Ast;
+use crate::frontend::types::parser::stmts::traits::{FoundSymbolEither, FoundSymbolExtension};
+use crate::frontend::types::parser::symbols::traits::FunctionExtensions;
+use crate::frontend::types::parser::symbols::types::{AssemblerFunction, FoundSymbolId, Function};
+use crate::frontend::typesystem::types::Type;
 
 pub fn build_call<'parser>(
     ctx: &mut ParserContext<'parser>,
@@ -52,16 +45,16 @@ pub fn build_call<'parser>(
         } else {
             ctx.consume(
                 TokenType::Comma,
-                String::from("Syntax error"),
-                String::from("Expected ','."),
+                "Syntax error".into(),
+                "Expected ','.".into(),
             )?;
         }
     }
 
     ctx.consume(
         TokenType::RParen,
-        String::from("Syntax error"),
-        String::from("Expected ')'."),
+        "Syntax error".into(),
+        "Expected ')'.".into(),
     )?;
 
     Ok(Ast::Call {

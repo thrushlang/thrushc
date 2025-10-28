@@ -1,16 +1,12 @@
-use crate::{
-    backend::llvm::compiler::attributes::LLVMAttribute,
-    core::errors::standard::ThrushCompilerIssue,
-    frontend::{
-        lexer::{span::Span, token::Token, tokentype::TokenType},
-        parser::{ParserContext, attributes, typegen},
-        types::{
-            ast::Ast,
-            parser::stmts::{sites::AllocationSite, traits::TokenExtensions},
-        },
-        typesystem::types::Type,
-    },
-};
+use crate::backend::llvm::compiler::attributes::LLVMAttribute;
+
+use crate::core::errors::standard::ThrushCompilerIssue;
+
+use crate::frontend::lexer::{span::Span, token::Token, tokentype::TokenType};
+use crate::frontend::parser::{ParserContext, attributes, typegen};
+use crate::frontend::types::ast::Ast;
+use crate::frontend::types::parser::stmts::{sites::AllocationSite, traits::TokenExtensions};
+use crate::frontend::typesystem::types::Type;
 
 pub fn build_alloc<'parser>(
     ctx: &mut ParserContext<'parser>,

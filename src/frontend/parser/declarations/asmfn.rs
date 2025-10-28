@@ -25,20 +25,20 @@ pub fn build_assembler_function<'parser>(
 
     ctx.consume(
         TokenType::AsmFn,
-        String::from("Syntax error"),
-        String::from("Expected 'asmfn' keyword."),
+        "Syntax error".into(),
+        "Expected 'asmfn' keyword.".into(),
     )?;
 
     let asm_function_name_tk: &Token = ctx.consume(
         TokenType::Identifier,
-        String::from("Syntax error"),
-        String::from("Expected identifier."),
+        "Syntax error".into(),
+        "Expected identifier.".into(),
     )?;
 
     ctx.consume(
         TokenType::LParen,
-        String::from("Syntax error"),
-        String::from("Expected '('."),
+        "Syntax error".into(),
+        "Expected '('.".into(),
     )?;
 
     let asm_function_name: &str = asm_function_name_tk.get_lexeme();
@@ -56,10 +56,10 @@ pub fn build_assembler_function<'parser>(
             break;
         }
 
-        let parameter_name_tk: &'parser Token = ctx.consume(
+        let parameter_name_tk: &Token = ctx.consume(
             TokenType::Identifier,
-            String::from("Syntax error"),
-            String::from("Expected 'identifier'."),
+            "Syntax error".into(),
+            "Expected 'identifier'.".into(),
         )?;
 
         let parameter_name: &str = parameter_name_tk.get_lexeme();
@@ -83,16 +83,16 @@ pub fn build_assembler_function<'parser>(
         } else {
             ctx.consume(
                 TokenType::Comma,
-                String::from("Syntax error"),
-                String::from("Expected ','."),
+                "Syntax error".into(),
+                "Expected ','.".into(),
             )?;
         }
     }
 
     ctx.consume(
         TokenType::RParen,
-        String::from("Syntax error"),
-        String::from("Expected ')'."),
+        "Syntax error".into(),
+        "Expected ')'.".into(),
     )?;
 
     let return_type: Type = typegen::build_type(ctx)?;
@@ -103,8 +103,8 @@ pub fn build_assembler_function<'parser>(
 
     ctx.consume(
         TokenType::LBrace,
-        String::from("Syntax error"),
-        String::from("Expected '{'."),
+        "Syntax error".into(),
+        "Expected '{'.".into(),
     )?;
 
     let mut assembler: String = String::with_capacity(100);
@@ -131,8 +131,8 @@ pub fn build_assembler_function<'parser>(
         } else {
             ctx.consume(
                 TokenType::Comma,
-                String::from("Syntax error"),
-                String::from("Expected ','."),
+                "Syntax error".into(),
+                "Expected ','.".into(),
             )?;
         }
 
@@ -141,14 +141,14 @@ pub fn build_assembler_function<'parser>(
 
     ctx.consume(
         TokenType::RBrace,
-        String::from("Syntax error"),
-        String::from("Expected '}'."),
+        "Syntax error".into(),
+        "Expected '}'.".into(),
     )?;
 
     ctx.consume(
         TokenType::LBrace,
-        String::from("Syntax error"),
-        String::from("Expected '{'."),
+        "Syntax error".into(),
+        "Expected '{'.".into(),
     )?;
 
     let mut constraints: String = String::with_capacity(100);
@@ -175,8 +175,8 @@ pub fn build_assembler_function<'parser>(
         } else {
             ctx.consume(
                 TokenType::Comma,
-                String::from("Syntax error"),
-                String::from("Expected ','."),
+                "Syntax error".into(),
+                "Expected ','.".into(),
             )?;
         }
 
@@ -185,8 +185,8 @@ pub fn build_assembler_function<'parser>(
 
     ctx.consume(
         TokenType::RBrace,
-        String::from("Syntax error"),
-        String::from("Expected '}'."),
+        "Syntax error".into(),
+        "Expected '}'.".into(),
     )?;
 
     if declare_forward {

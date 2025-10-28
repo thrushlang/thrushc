@@ -1,16 +1,17 @@
-use crate::{
-    core::errors::standard::ThrushCompilerIssue,
-    frontend::{
-        lexer::tokentype::TokenType,
-        parser::{
-            checks,
-            statements::{
-                block, conditional, constant, controlflow, lli, local, loops, lstatic, terminator,
-            },
-        },
-        types::ast::Ast,
-    },
-};
+use crate::core::errors::standard::ThrushCompilerIssue;
+
+use crate::frontend::lexer::tokentype::TokenType;
+use crate::frontend::parser::checks;
+use crate::frontend::parser::statements::block;
+use crate::frontend::parser::statements::conditional;
+use crate::frontend::parser::statements::constant;
+use crate::frontend::parser::statements::controlflow;
+use crate::frontend::parser::statements::lli;
+use crate::frontend::parser::statements::local;
+use crate::frontend::parser::statements::loops;
+use crate::frontend::parser::statements::lstatic;
+use crate::frontend::parser::statements::terminator;
+use crate::frontend::types::ast::Ast;
 
 use super::{ParserContext, contexts::sync::ParserSyncPosition, expr};
 

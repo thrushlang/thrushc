@@ -1,10 +1,9 @@
 use std::path::Path;
 
-use crate::core::{
-    console::logging::LoggingType,
-    diagnostic::traits::{ErrorDisassembler, IssueDisassembler},
-    errors::position::CompilationPosition,
-};
+use crate::core::console::logging::LoggingType;
+use crate::core::diagnostic::traits::ErrorDisassembler;
+use crate::core::diagnostic::traits::IssueDisassembler;
+use crate::core::errors::position::CompilationPosition;
 
 pub type Error<'a> = (&'a str, &'a Path, Option<&'a str>, LoggingType);
 

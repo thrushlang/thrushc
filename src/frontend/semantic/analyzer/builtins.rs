@@ -1,8 +1,9 @@
-use crate::{
-    backend::llvm::compiler::builtins::Builtin,
-    core::errors::standard::ThrushCompilerIssue,
-    frontend::{semantic::analyzer::Analyzer, types::ast::Ast},
-};
+use crate::backend::llvm::compiler::builtins::Builtin;
+
+use crate::core::errors::standard::ThrushCompilerIssue;
+
+use crate::frontend::semantic::analyzer::Analyzer;
+use crate::frontend::types::ast::Ast;
 
 pub fn validate_builtin<'analyzer>(
     analyzer: &mut Analyzer<'analyzer>,

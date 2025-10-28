@@ -1,19 +1,17 @@
 pub mod cast;
 pub mod deref;
-
-mod index;
-mod property;
+pub mod index;
+pub mod property;
 
 use std::path::PathBuf;
 
-use crate::{
-    core::errors::{position::CompilationPosition, standard::ThrushCompilerIssue},
-    frontend::{
-        lexer::span::Span,
-        semantic::analyzer::Analyzer,
-        types::{ast::Ast, parser::stmts::types::Constructor},
-    },
-};
+use crate::core::errors::position::CompilationPosition;
+use crate::core::errors::standard::ThrushCompilerIssue;
+
+use crate::frontend::lexer::span::Span;
+use crate::frontend::semantic::analyzer::Analyzer;
+use crate::frontend::types::ast::Ast;
+use crate::frontend::types::parser::stmts::types::Constructor;
 
 pub fn validate<'analyzer>(
     analyzer: &mut Analyzer<'analyzer>,

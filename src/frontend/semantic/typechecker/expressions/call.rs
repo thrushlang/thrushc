@@ -1,15 +1,13 @@
-use {
-    crate::{
-        core::errors::standard::ThrushCompilerIssue,
-        frontend::{
-            lexer::span::Span,
-            semantic::typechecker::{TypeChecker, checks, metadata::TypeCheckerExprMetadata},
-            types::ast::Ast,
-            typesystem::types::Type,
-        },
-    },
-    std::fmt::Write,
+use std::fmt::Write;
+
+use crate::core::errors::standard::ThrushCompilerIssue;
+
+use crate::frontend::lexer::span::Span;
+use crate::frontend::semantic::typechecker::{
+    TypeChecker, checks, metadata::TypeCheckerExprMetadata,
 };
+use crate::frontend::types::ast::Ast;
+use crate::frontend::typesystem::types::Type;
 
 pub fn validate<'type_checker>(
     typechecker: &mut TypeChecker<'type_checker>,

@@ -3,7 +3,6 @@ use crate::backend::llvm::compiler::context::LLVMCodeGenContext;
 use crate::backend::llvm::compiler::generation::integer;
 
 use crate::frontend::types::ast::Ast;
-use crate::frontend::typesystem::traits::LLVMTypeExtensions;
 use crate::frontend::typesystem::types::Type;
 
 use inkwell::values::IntValue;
@@ -14,16 +13,14 @@ pub fn compile<'ctx>(
     indexes: &'ctx [Ast],
     expr_type: &'ctx Type,
 ) -> Vec<IntValue<'ctx>> {
-    let index_type: &Type = if expr_type.llvm_is_ptr_type() {
-        &Type::U64
-    } else {
-        &Type::U32
-    };
+    let is_ptr_type: bool = expr_type.is_ptr_like_type();
+
+    let index_type: &Type = if is_ptr_type { &Type::U64 } else { &Type::U32 };
 
     indexes
         .iter()
         .flat_map(|index| {
-            if expr_type.llvm_is_ptr_type() {
+            if is_ptr_type {
                 let depth: IntValue =
                     codegen::compile(context, index, Some(index_type)).into_int_value();
 

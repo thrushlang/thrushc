@@ -1,14 +1,17 @@
 use inkwell::AtomicOrdering;
 
-use crate::{
-    core::errors::standard::ThrushCompilerIssue,
-    frontend::{
-        lexer::{span::Span, token::Token, tokentype::TokenType},
-        parser::{ParserContext, builder, expr},
-        types::ast::{Ast, metadata::dereference::DereferenceMetadata},
-        typesystem::{traits::DereferenceExtensions, types::Type},
-    },
-};
+use crate::core::errors::standard::ThrushCompilerIssue;
+
+use crate::frontend::lexer::span::Span;
+use crate::frontend::lexer::token::Token;
+use crate::frontend::lexer::tokentype::TokenType;
+use crate::frontend::parser::ParserContext;
+use crate::frontend::parser::builder;
+use crate::frontend::parser::expr;
+use crate::frontend::types::ast::Ast;
+use crate::frontend::types::ast::metadata::dereference::DereferenceMetadata;
+use crate::frontend::typesystem::traits::DereferenceExtensions;
+use crate::frontend::typesystem::types::Type;
 
 pub fn build_deference<'parser>(
     ctx: &mut ParserContext<'parser>,

@@ -1,12 +1,13 @@
-use crate::{
-    core::errors::standard::ThrushCompilerIssue,
-    frontend::{
-        lexer::{span::Span, tokentype::TokenType},
-        parser::{ParserContext, expr},
-        types::ast::{Ast, metadata::index::IndexMetadata},
-        typesystem::{traits::TypeExtensions, types::Type},
-    },
-};
+use crate::core::errors::standard::ThrushCompilerIssue;
+
+use crate::frontend::lexer::span::Span;
+use crate::frontend::lexer::tokentype::TokenType;
+use crate::frontend::parser::ParserContext;
+use crate::frontend::parser::expr;
+use crate::frontend::types::ast::Ast;
+use crate::frontend::types::ast::metadata::index::IndexMetadata;
+use crate::frontend::typesystem::traits::TypeExtensions;
+use crate::frontend::typesystem::types::Type;
 
 pub fn build_index<'parser>(
     ctx: &mut ParserContext<'parser>,
@@ -32,16 +33,16 @@ pub fn build_index<'parser>(
         } else {
             ctx.consume(
                 TokenType::Comma,
-                String::from("Syntax error"),
-                String::from("Expected ','."),
+                "Syntax error".into(),
+                "Expected ','.".into(),
             )?;
         }
     }
 
     ctx.consume(
         TokenType::RBracket,
-        String::from("Syntax error"),
-        String::from("Expected ']'."),
+        "Syntax error".into(),
+        "Expected ']'.".into(),
     )?;
 
     let index_type: Type = Type::Ptr(Some(

@@ -1,14 +1,13 @@
 use std::path::PathBuf;
 
-use crate::{
-    core::errors::{position::CompilationPosition, standard::ThrushCompilerIssue},
-    frontend::{
-        lexer::span::Span,
-        semantic::analyzer::Analyzer,
-        types::ast::Ast,
-        typesystem::{traits::LLVMTypeExtensions, types::Type},
-    },
-};
+use crate::core::errors::position::CompilationPosition;
+use crate::core::errors::standard::ThrushCompilerIssue;
+
+use crate::frontend::lexer::span::Span;
+use crate::frontend::semantic::analyzer::Analyzer;
+use crate::frontend::types::ast::Ast;
+use crate::frontend::typesystem::traits::TypeExtensions;
+use crate::frontend::typesystem::types::Type;
 
 pub fn validate<'analyzer>(
     analyzer: &mut Analyzer<'analyzer>,
@@ -23,14 +22,18 @@ pub fn validate<'analyzer>(
         } => {
             let source_type: &Type = source.get_any_type()?;
 
-            if source_type.llvm_is_ptr_type() && indexes.len() > 1 {
-                analyzer.add_error(ThrushCompilerIssue::Error(
-                    "Invalid consecutive indexing".into(),
-                    "Consecutive indexing isn't allowed while it's using a pointer-to-pointer type."
-                        .into(),
-                    None,
-                    *span,
-                ));
+            if indexes.len() > 1 {
+                let subtype: &Type = source_type.get_type_with_depth(1);
+
+                if subtype.is_ptr_like_type() {
+                    analyzer.add_error(ThrushCompilerIssue::Error(
+                        "Invalid consecutive indexing".into(),
+                        "Consecutive indexing isn't allowed while it's using a pointer-to-pointer type."
+                            .into(),
+                        None,
+                        *span,
+                    ));
+                }
             }
 
             indexes

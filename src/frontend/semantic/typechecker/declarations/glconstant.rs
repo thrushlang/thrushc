@@ -7,28 +7,37 @@ use crate::frontend::semantic::typechecker::{
     TypeChecker, checks, metadata::TypeCheckerExprMetadata,
 };
 use crate::frontend::types::ast::Ast;
+use crate::frontend::typesystem::types::Type;
 
 pub fn validate<'type_checker>(
     typechecker: &mut TypeChecker<'type_checker>,
     node: &'type_checker Ast,
 ) -> Result<(), ThrushCompilerIssue> {
     match node {
-        Ast::Return {
-            expression, kind, ..
+        Ast::Const {
+            kind: target_type,
+            value,
+            span,
+            ..
         } => {
-            if let Some(expr) = expression {
-                let span: Span = expr.get_span();
+            let metadata: TypeCheckerExprMetadata =
+                TypeCheckerExprMetadata::new(value.is_literal(), *span);
 
-                let metadata: TypeCheckerExprMetadata =
-                    TypeCheckerExprMetadata::new(expr.is_literal(), span);
+            let from_type: &Type = value.get_value_type()?;
 
-                checks::check_types(kind, expr.get_value_type()?, Some(expr), None, metadata)?;
+            checks::check_types(
+                target_type,
+                &Type::Const(from_type.clone().into()),
+                Some(value),
+                None,
+                metadata,
+            )?;
 
-                typechecker.analyze_stmt(expr)?;
-            }
+            typechecker.analyze_stmt(value)?;
 
             Ok(())
         }
+
         _ => {
             let span: Span = node.get_span();
 

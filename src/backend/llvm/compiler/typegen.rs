@@ -1,7 +1,6 @@
 use crate::backend::llvm::compiler::context::LLVMCodeGenContext;
 
 use crate::frontend::types::ast::Ast;
-use crate::frontend::typesystem::traits::LLVMTypeExtensions;
 use crate::frontend::typesystem::types::Type;
 
 use crate::core::console::logging::{self, LoggingType};
@@ -68,9 +67,12 @@ pub fn generate_fn_type_from_type<'ctx>(
 #[inline]
 pub fn generate<'ctx>(llvm_context: &'ctx Context, kind: &Type) -> BasicTypeEnum<'ctx> {
     match kind {
-        t if t.llvm_is_int_type() => self::integer(llvm_context, kind).into(),
-        t if t.llvm_is_float_type() => self::float(llvm_context, kind).into(),
-        t if t.llvm_is_ptr_type() => llvm_context.ptr_type(AddressSpace::default()).into(),
+        t if t.is_integer_type() || t.is_char_type() || t.is_bool_type() => {
+            self::integer(llvm_context, kind).into()
+        }
+
+        t if t.is_float_type() => self::float(llvm_context, kind).into(),
+        t if t.is_ptr_like_type() => llvm_context.ptr_type(AddressSpace::default()).into(),
 
         Type::Const(any) => self::generate(llvm_context, any),
 

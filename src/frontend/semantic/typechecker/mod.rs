@@ -107,16 +107,20 @@ impl<'type_checker> TypeChecker<'type_checker> {
             return declarations::functions::validate(self, node);
         }
 
-        if let Ast::Enum { .. } | Ast::Struct { .. } | Ast::GlobalAssembler { .. } = node {
+        if let Ast::Struct { .. } | Ast::GlobalAssembler { .. } = node {
             return Ok(());
         }
 
+        if let Ast::Enum { .. } = node {
+            return declarations::enums::validate(self, node);
+        }
+
         if let Ast::Static { .. } = node {
-            return statements::staticvar::validate(self, node);
+            return declarations::glstatic::validate(self, node);
         }
 
         if let Ast::Const { .. } = node {
-            return statements::constant::validate(self, node);
+            return declarations::glconstant::validate(self, node);
         }
 
         /* ######################################################################

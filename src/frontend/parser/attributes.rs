@@ -1,16 +1,17 @@
-use {
-    crate::{
-        backend::llvm::compiler::{attributes::LLVMAttribute, conventions::CallConvention},
-        core::errors::standard::ThrushCompilerIssue,
-        frontend::{
-            lexer::{span::Span, token::Token, tokentype::TokenType},
-            parser::ParserContext,
-            types::parser::stmts::{traits::TokenExtensions, types::ThrushAttributes},
-        },
-    },
-    ahash::AHashMap as HashMap,
-    lazy_static::lazy_static,
-};
+use crate::backend::llvm::compiler::attributes::LLVMAttribute;
+use crate::backend::llvm::compiler::conventions::CallConvention;
+
+use crate::core::errors::standard::ThrushCompilerIssue;
+
+use crate::frontend::lexer::span::Span;
+use crate::frontend::lexer::token::Token;
+use crate::frontend::lexer::tokentype::TokenType;
+use crate::frontend::parser::ParserContext;
+use crate::frontend::types::parser::stmts::traits::TokenExtensions;
+use crate::frontend::types::parser::stmts::types::ThrushAttributes;
+
+use ahash::AHashMap as HashMap;
+use lazy_static::lazy_static;
 
 const ASSEMBLER_SYNTAXES: [&str; 2] = ["Intel", "AT&T"];
 
@@ -90,22 +91,22 @@ fn build_external_attribute<'parser>(
 
     ctx.consume(
         TokenType::LParen,
-        String::from("Syntax error"),
-        String::from("Expected '('."),
+        "Syntax error".into(),
+        "Expected '('.".into(),
     )?;
 
     let name: &Token = ctx.consume(
         TokenType::Str,
-        String::from("Syntax error"),
-        String::from("Expected a string literal for @extern(\"FFI NAME\")."),
+        "Syntax error".into(),
+        "Expected a string literal for @extern(\"FFI NAME\").".into(),
     )?;
 
     let ffi_name: &str = name.get_lexeme();
 
     ctx.consume(
         TokenType::RParen,
-        String::from("Syntax error"),
-        String::from("Expected ')'."),
+        "Syntax error".into(),
+        "Expected ')'.".into(),
     )?;
 
     Ok(ffi_name)
@@ -118,8 +119,8 @@ fn build_assembler_syntax_attribute<'parser>(
 
     ctx.consume(
         TokenType::LParen,
-        String::from("Syntax error"),
-        String::from("Expected '('."),
+        "Syntax error".into(),
+        "Expected '('.".into(),
     )?;
 
     let syntax_tk: &Token = ctx.consume(
@@ -189,8 +190,8 @@ fn build_call_convention_attribute(
     )?;
 
     Err(ThrushCompilerIssue::Error(
-        String::from("Syntax error"),
-        String::from("Unknown call convention."),
+        "Syntax error".into(),
+        "Unknown call convention.".into(),
         None,
         span,
     ))

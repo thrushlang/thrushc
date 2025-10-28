@@ -1,14 +1,11 @@
-use crate::{
-    core::errors::standard::ThrushCompilerIssue,
-    frontend::{
-        lexer::tokentype::TokenType,
-        parser::{
-            ParserContext,
-            expressions::{precedences::lower, property},
-        },
-        types::ast::Ast,
-    },
+use crate::core::errors::standard::ThrushCompilerIssue;
+
+use crate::frontend::lexer::tokentype::TokenType;
+use crate::frontend::parser::{
+    ParserContext,
+    expressions::{precedences::lower, property},
 };
+use crate::frontend::types::ast::Ast;
 
 pub fn property_precedence<'parser>(
     ctx: &mut ParserContext<'parser>,

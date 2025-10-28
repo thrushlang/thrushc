@@ -1,41 +1,29 @@
-use crate::{
-    core::errors::standard::ThrushCompilerIssue,
-    frontend::{
-        lexer::{span::Span, token::Token, tokentype::TokenType},
-        parser::ParserContext,
-        types::{
-            ast::{
-                Ast,
-                metadata::{
-                    fnparam::FunctionParameterMetadata,
-                    local::LocalMetadata,
-                    reference::{ReferenceMetadata, ReferenceType},
-                    staticvar::StaticMetadata,
-                },
-            },
-            parser::{
-                stmts::traits::{FoundSymbolEither, FoundSymbolExtension, TokenExtensions},
-                symbols::{
-                    traits::{
-                        ConstantSymbolExtensions, FunctionParameterSymbolExtensions,
-                        LLISymbolExtensions, LocalSymbolExtensions, StaticSymbolExtensions,
-                    },
-                    types::{
-                        ConstantSymbol, FoundSymbolId, Function, LLISymbol, LocalSymbol,
-                        ParameterSymbol, StaticSymbol,
-                    },
-                },
-            },
-        },
-        typesystem::{
-            modificators::{
-                FunctionReferenceTypeModificator, GCCFunctionReferenceTypeModificator,
-                LLVMFunctionReferenceTypeModificator,
-            },
-            types::Type,
-        },
-    },
+use crate::core::errors::standard::ThrushCompilerIssue;
+
+use crate::frontend::lexer::span::Span;
+use crate::frontend::lexer::token::Token;
+use crate::frontend::lexer::tokentype::TokenType;
+use crate::frontend::parser::ParserContext;
+use crate::frontend::types::ast::Ast;
+use crate::frontend::types::ast::metadata::fnparam::FunctionParameterMetadata;
+use crate::frontend::types::ast::metadata::local::LocalMetadata;
+use crate::frontend::types::ast::metadata::reference::{ReferenceMetadata, ReferenceType};
+use crate::frontend::types::ast::metadata::staticvar::StaticMetadata;
+use crate::frontend::types::parser::stmts::traits::{
+    FoundSymbolEither, FoundSymbolExtension, TokenExtensions,
 };
+use crate::frontend::types::parser::symbols::traits::{
+    ConstantSymbolExtensions, FunctionParameterSymbolExtensions, LLISymbolExtensions,
+    LocalSymbolExtensions, StaticSymbolExtensions,
+};
+use crate::frontend::types::parser::symbols::types::{
+    ConstantSymbol, FoundSymbolId, Function, LLISymbol, LocalSymbol, ParameterSymbol, StaticSymbol,
+};
+use crate::frontend::typesystem::modificators::{
+    FunctionReferenceTypeModificator, GCCFunctionReferenceTypeModificator,
+    LLVMFunctionReferenceTypeModificator,
+};
+use crate::frontend::typesystem::types::Type;
 
 pub fn build_reference<'parser>(
     ctx: &mut ParserContext<'parser>,

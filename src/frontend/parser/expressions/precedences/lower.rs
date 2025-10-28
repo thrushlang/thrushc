@@ -1,18 +1,13 @@
-use crate::{
-    core::errors::standard::ThrushCompilerIssue,
-    frontend::{
-        lexer::{span::Span, token::Token, tokentype::TokenType},
-        parser::{
-            ParserContext, builtins, expr,
-            expressions::{
-                array, asm, call, constructor, defer, enumv, farray, indirect, lli, reference,
-            },
-            parse,
-        },
-        types::{ast::Ast, parser::stmts::traits::TokenExtensions},
-        typesystem::{traits::TypeExtensions, types::Type},
-    },
+use crate::core::errors::standard::ThrushCompilerIssue;
+
+use crate::frontend::lexer::{span::Span, token::Token, tokentype::TokenType};
+use crate::frontend::parser::{
+    ParserContext, builtins, expr,
+    expressions::{array, asm, call, constructor, defer, enumv, farray, indirect, lli, reference},
+    parse,
 };
+use crate::frontend::types::{ast::Ast, parser::stmts::traits::TokenExtensions};
+use crate::frontend::typesystem::{traits::TypeExtensions, types::Type};
 
 pub fn lower_precedence<'parser>(
     ctx: &mut ParserContext<'parser>,
@@ -25,11 +20,12 @@ pub fn lower_precedence<'parser>(
         TokenType::Defer => defer::build_deference(ctx)?,
 
         TokenType::SizeOf => builtins::build_sizeof(ctx)?,
+        TokenType::AlignOf => builtins::build_alignof(ctx)?,
+
         TokenType::Halloc => builtins::build_halloc(ctx)?,
         TokenType::MemSet => builtins::build_memset(ctx)?,
         TokenType::MemMove => builtins::build_memmove(ctx)?,
         TokenType::MemCpy => builtins::build_memcpy(ctx)?,
-        TokenType::AlignOf => builtins::build_alignof(ctx)?,
 
         TokenType::Asm => asm::build_asm_code_block(ctx)?,
 
@@ -43,9 +39,8 @@ pub fn lower_precedence<'parser>(
         TokenType::LParen => {
             let span: Span = ctx.advance()?.get_span();
 
-            let expression: Ast = expr::build_expr(ctx)?;
-
-            let expression_type: &Type = expression.get_value_type()?;
+            let expr: Ast = expr::build_expr(ctx)?;
+            let expr_type: &Type = expr.get_value_type()?;
 
             ctx.consume(
                 TokenType::RParen,
@@ -54,8 +49,8 @@ pub fn lower_precedence<'parser>(
             )?;
 
             return Ok(Ast::Group {
-                expression: expression.clone().into(),
-                kind: expression_type.clone(),
+                expression: expr.clone().into(),
+                kind: expr_type.clone(),
                 span,
             });
         }

@@ -1,14 +1,11 @@
-use crate::{
-    core::errors::standard::ThrushCompilerIssue,
-    frontend::{
-        lexer::{span::Span, tokentype::TokenType},
-        parser::{
-            ParserContext,
-            expressions::{index, precedences::property},
-        },
-        types::ast::Ast,
-    },
+use crate::core::errors::standard::ThrushCompilerIssue;
+
+use crate::frontend::lexer::{span::Span, tokentype::TokenType};
+use crate::frontend::parser::{
+    ParserContext,
+    expressions::{index, precedences::property},
 };
+use crate::frontend::types::ast::Ast;
 
 #[inline]
 pub fn index_precedence<'parser>(

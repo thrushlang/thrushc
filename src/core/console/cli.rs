@@ -1,30 +1,31 @@
 #![allow(clippy::upper_case_acronyms)]
 
+use std::collections::HashMap;
 use std::path::Path;
+use std::path::PathBuf;
+use std::process;
 
-use crate::core::{
-    compiler::{
-        self,
-        backends::{
-            linkers::{LinkerConfiguration, LinkerModeType},
-            llvm::{self, flavors::LLVMLinkerFlavor},
-        },
-        linking::LinkingCompilersConfiguration,
-        options::{CompilerOptions, EmitableUnit, PrintableUnit, ThrushOptimization},
-        passes::LLVMModificatorPasses,
-    },
-    console::{
-        commands,
-        logging::{self, LoggingType},
-        position::CommandLinePosition,
-        utils,
-    },
-};
+use crate::core::compiler;
+use crate::core::compiler::backends::linkers::LinkerConfiguration;
+use crate::core::compiler::backends::linkers::LinkerModeType;
+use crate::core::compiler::backends::llvm;
+use crate::core::compiler::backends::llvm::flavors::LLVMLinkerFlavor;
+use crate::core::compiler::linking::LinkingCompilersConfiguration;
+use crate::core::compiler::options::CompilerOptions;
+use crate::core::compiler::options::EmitableUnit;
+use crate::core::compiler::options::PrintableUnit;
+use crate::core::compiler::options::ThrushOptimization;
+use crate::core::compiler::passes::LLVMModificatorPasses;
+use crate::core::console::commands;
+use crate::core::console::logging;
+use crate::core::console::logging::LoggingType;
+use crate::core::console::position::CommandLinePosition;
+use crate::core::console::utils;
 
-use {
-    inkwell::targets::{CodeModel, RelocMode, TargetMachine, TargetTriple},
-    std::{collections::HashMap, path::PathBuf, process},
-};
+use inkwell::targets::CodeModel;
+use inkwell::targets::RelocMode;
+use inkwell::targets::TargetMachine;
+use inkwell::targets::TargetTriple;
 
 #[derive(Debug)]
 pub struct CLI {

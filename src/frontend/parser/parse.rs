@@ -1,7 +1,7 @@
-use crate::{
-    core::errors::standard::ThrushCompilerIssue,
-    frontend::{lexer::span::Span, typesystem::types::Type},
-};
+use crate::core::errors::standard::ThrushCompilerIssue;
+
+use crate::frontend::lexer::span::Span;
+use crate::frontend::typesystem::types::Type;
 
 pub fn float(lexeme: &str, span: Span) -> Result<(Type, f64), ThrushCompilerIssue> {
     if lexeme.bytes().filter(|&b| b == b'.').count() > 1 {

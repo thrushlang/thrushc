@@ -1,7 +1,6 @@
-use crate::{
-    core::errors::standard::ThrushCompilerIssue,
-    frontend::{parser::ParserContext, types::parser::stmts::traits::TokenExtensions},
-};
+use crate::core::errors::standard::ThrushCompilerIssue;
+use crate::frontend::parser::ParserContext;
+use crate::frontend::types::parser::stmts::traits::TokenExtensions;
 
 #[inline]
 pub fn check_unreacheable_state(ctx: &mut ParserContext) -> Result<(), ThrushCompilerIssue> {

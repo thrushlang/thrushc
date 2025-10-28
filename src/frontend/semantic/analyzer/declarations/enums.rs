@@ -10,19 +10,24 @@ pub fn validate<'analyzer>(
     node: &'analyzer Ast,
 ) -> Result<(), ThrushCompilerIssue> {
     match node {
-        Ast::Const { value, .. } => {
-            let span: Span = value.get_span();
+        Ast::Enum { fields, .. } => {
+            fields.iter().try_for_each(|field| {
+                let expr: &Ast = &field.2;
+                let span: Span = expr.get_span();
 
-            if !value.is_constant_value() {
-                analyzer.add_error(ThrushCompilerIssue::Error(
-                    "Syntax error".into(),
-                    "Expected compile-time known value.".into(),
-                    None,
-                    span,
-                ));
-            }
+                if !expr.is_constant_value() {
+                    analyzer.add_error(ThrushCompilerIssue::Error(
+                        "Syntax error".into(),
+                        "Expected compile-time known value.".into(),
+                        None,
+                        span,
+                    ));
+                }
 
-            analyzer.analyze_expr(value)?;
+                analyzer.analyze_expr(expr)?;
+
+                Ok(())
+            })?;
 
             Ok(())
         }

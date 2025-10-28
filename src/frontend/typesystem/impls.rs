@@ -1,7 +1,4 @@
-use crate::frontend::typesystem::{
-    traits::{LLVMTypeExtensions, TypeExtensions},
-    types::Type,
-};
+use crate::frontend::typesystem::{traits::TypeExtensions, types::Type};
 
 impl Type {
     #[inline(always)]
@@ -45,6 +42,14 @@ impl Type {
     #[inline(always)]
     pub fn is_ptr_type(&self) -> bool {
         matches!(self, Type::Ptr(_) | Type::NullPtr)
+    }
+
+    #[inline(always)]
+    pub fn is_ptr_like_type(&self) -> bool {
+        matches!(
+            self,
+            Type::Ptr(..) | Type::Addr | Type::Array(..) | Type::Fn(..)
+        )
     }
 
     #[inline(always)]
@@ -135,7 +140,7 @@ impl TypeExtensions for Type {
     }
 
     fn get_directref_type(&self) -> Type {
-        if self.llvm_is_ptr_type() {
+        if self.is_ptr_like_type() {
             self.clone()
         } else {
             Type::Ptr(Some(self.clone().into()))

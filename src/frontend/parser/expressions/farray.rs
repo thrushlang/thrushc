@@ -1,26 +1,28 @@
-use crate::{
-    core::errors::standard::ThrushCompilerIssue,
-    frontend::{
-        lexer::{span::Span, token::Token, tokentype::TokenType},
-        parser::{ParserContext, expr},
-        types::{ast::Ast, parser::stmts::traits::TokenExtensions},
-        typesystem::{traits::TypeArrayEntensions, types::Type},
-    },
-};
+use crate::core::errors::standard::ThrushCompilerIssue;
+
+use crate::frontend::lexer::span::Span;
+use crate::frontend::lexer::token::Token;
+use crate::frontend::lexer::tokentype::TokenType;
+use crate::frontend::parser::ParserContext;
+use crate::frontend::parser::expr;
+use crate::frontend::types::ast::Ast;
+use crate::frontend::types::parser::stmts::traits::TokenExtensions;
+use crate::frontend::typesystem::traits::TypeArrayEntensions;
+use crate::frontend::typesystem::types::Type;
 
 pub fn build_fixed_array<'parser>(
     ctx: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, ThrushCompilerIssue> {
     ctx.consume(
         TokenType::Fixed,
-        String::from("Syntax error"),
-        String::from("Expected 'fixed' keyword."),
+        "Syntax error".into(),
+        "Expected 'fixed' keyword.".into(),
     )?;
 
     let array_start_tk: &Token = ctx.consume(
         TokenType::LBracket,
-        String::from("Syntax error"),
-        String::from("Expected '['."),
+        "Syntax error".into(),
+        "Expected '['.".into(),
     )?;
 
     let span: Span = array_start_tk.get_span();
@@ -42,36 +44,43 @@ pub fn build_fixed_array<'parser>(
         } else {
             ctx.consume(
                 TokenType::Comma,
-                String::from("Syntax error"),
-                String::from("Expected ','."),
+                "Syntax error".into(),
+                "Expected ','.".into(),
             )?;
         }
     }
 
     ctx.consume(
         TokenType::RBracket,
-        String::from("Syntax error"),
-        String::from("Expected ']'."),
+        "Syntax error".into(),
+        "Expected ']'.".into(),
     )?;
 
-    if let Some(item) = items.iter().max_by(|a, b| {
-        let a_type: &Type = a.get_value_type().unwrap_or(&Type::Void);
-        let b_type: &Type = b.get_value_type().unwrap_or(&Type::Void);
+    if let Some(item) = items.iter().try_fold(None::<&Ast>, |acc, item| {
+        let item_type: &Type = item.get_value_type()?;
 
-        a_type
-            .get_array_type_herarchy()
-            .cmp(&b_type.get_array_type_herarchy())
-    }) {
-        if let Ok(size) = u32::try_from(items.len()) {
-            array_type = Type::FixedArray(item.get_value_type()?.clone().into(), size)
-        } else {
-            return Err(ThrushCompilerIssue::Error(
+        Ok(match acc {
+            None => Some(item),
+            Some(current) => {
+                let current_type: &Type = current.get_value_type()?;
+                if item_type.get_array_type_herarchy() > current_type.get_array_type_herarchy() {
+                    Some(item)
+                } else {
+                    Some(current)
+                }
+            }
+        })
+    })? {
+        let size: u32 = u32::try_from(items.len()).map_err(|_| {
+            ThrushCompilerIssue::Error(
                 "Syntax error".into(),
                 "The size limit of an array was exceeded.".into(),
                 None,
                 span,
-            ));
-        }
+            )
+        })?;
+
+        array_type = Type::FixedArray(item.get_value_type()?.clone().into(), size);
     }
 
     Ok(Ast::FixedArray {

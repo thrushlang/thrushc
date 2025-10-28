@@ -1,23 +1,18 @@
-use crate::{
-    core::errors::standard::ThrushCompilerIssue,
-    frontend::{
-        lexer::{span::Span, token::Token, tokentype::TokenType},
-        parser::{ParserContext, attributes, expr, typegen},
-        types::{
-            ast::Ast,
-            parser::stmts::{traits::TokenExtensions, types::ThrushAttributes},
-        },
-        typesystem::types::Type,
-    },
-};
+use crate::core::errors::standard::ThrushCompilerIssue;
+
+use crate::frontend::lexer::{span::Span, token::Token, tokentype::TokenType};
+use crate::frontend::parser::{ParserContext, attributes, expr, typegen};
+use crate::frontend::types::ast::Ast;
+use crate::frontend::types::parser::stmts::{traits::TokenExtensions, types::ThrushAttributes};
+use crate::frontend::typesystem::types::Type;
 
 pub fn build_asm_code_block<'parser>(
     ctx: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, ThrushCompilerIssue> {
     let asm_tk: &Token = ctx.consume(
         TokenType::Asm,
-        String::from("Syntax error"),
-        String::from("Expected 'asm' keyword."),
+        "Syntax error".into(),
+        "Expected 'asm' keyword.".into(),
     )?;
 
     let asm_type: Type = typegen::build_type(ctx)?;
@@ -44,23 +39,23 @@ pub fn build_asm_code_block<'parser>(
             } else {
                 ctx.consume(
                     TokenType::Colon,
-                    String::from("Syntax error"),
-                    String::from("Expected ','."),
+                    "Syntax error".into(),
+                    "Expected ','.".into(),
                 )?;
             }
         }
 
         ctx.consume(
             TokenType::RParen,
-            String::from("Syntax error"),
-            String::from("Expected ')'."),
+            "Syntax error".into(),
+            "Expected ')'.".into(),
         )?;
     }
 
     ctx.consume(
         TokenType::LBrace,
-        String::from("Syntax error"),
-        String::from("Expected '{'."),
+        "Syntax error".into(),
+        "Expected '{'.".into(),
     )?;
 
     let mut assembler: String = String::with_capacity(100);
@@ -96,8 +91,8 @@ pub fn build_asm_code_block<'parser>(
         } else {
             ctx.consume(
                 TokenType::Comma,
-                String::from("Syntax error"),
-                String::from("Expected ','."),
+                "Syntax error".into(),
+                "Expected ','.".into(),
             )?;
         }
 
@@ -106,14 +101,14 @@ pub fn build_asm_code_block<'parser>(
 
     ctx.consume(
         TokenType::RBrace,
-        String::from("Syntax error"),
-        String::from("Expected '}'."),
+        "Syntax error".into(),
+        "Expected '}'.".into(),
     )?;
 
     ctx.consume(
         TokenType::LBrace,
-        String::from("Syntax error"),
-        String::from("Expected '{'."),
+        "Syntax error".into(),
+        "Expected '{'.".into(),
     )?;
 
     let mut constraints: String = String::with_capacity(100);
@@ -140,8 +135,8 @@ pub fn build_asm_code_block<'parser>(
         } else {
             ctx.consume(
                 TokenType::Comma,
-                String::from("Syntax error"),
-                String::from("Expected ','."),
+                "Syntax error".into(),
+                "Expected ','.".into(),
             )?;
         }
 
@@ -150,8 +145,8 @@ pub fn build_asm_code_block<'parser>(
 
     ctx.consume(
         TokenType::RBrace,
-        String::from("Syntax error"),
-        String::from("Expected '}'."),
+        "Syntax error".into(),
+        "Expected '}'.".into(),
     )?;
 
     Ok(Ast::AsmValue {

@@ -1,12 +1,9 @@
-use crate::{
-    core::errors::standard::ThrushCompilerIssue,
-    frontend::{
-        lexer::{span::Span, token::Token, tokentype::TokenType},
-        parser::{ParserContext, expr, expressions::precedences::cast},
-        types::{ast::Ast, parser::stmts::traits::TokenExtensions},
-        typesystem::{traits::CastTypeExtensions, types::Type},
-    },
-};
+use crate::core::errors::standard::ThrushCompilerIssue;
+
+use crate::frontend::lexer::{span::Span, token::Token, tokentype::TokenType};
+use crate::frontend::parser::{ParserContext, expr, expressions::precedences::cast};
+use crate::frontend::types::{ast::Ast, parser::stmts::traits::TokenExtensions};
+use crate::frontend::typesystem::{traits::CastTypeExtensions, types::Type};
 
 pub fn unary_precedence<'parser>(
     ctx: &mut ParserContext<'parser>,

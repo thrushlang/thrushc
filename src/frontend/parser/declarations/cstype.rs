@@ -1,15 +1,15 @@
-use crate::{
-    core::errors::standard::ThrushCompilerIssue,
-    frontend::{
-        lexer::{span::Span, token::Token, tokentype::TokenType},
-        parser::{ParserContext, attributes, checks, typegen},
-        types::{
-            ast::Ast,
-            parser::stmts::{traits::TokenExtensions, types::ThrushAttributes},
-        },
-        typesystem::types::Type,
-    },
-};
+use crate::core::errors::standard::ThrushCompilerIssue;
+use crate::frontend::lexer::span::Span;
+use crate::frontend::lexer::token::Token;
+use crate::frontend::lexer::tokentype::TokenType;
+use crate::frontend::parser::ParserContext;
+use crate::frontend::parser::attributes;
+use crate::frontend::parser::checks;
+use crate::frontend::parser::typegen;
+use crate::frontend::types::ast::Ast;
+use crate::frontend::types::parser::stmts::traits::TokenExtensions;
+use crate::frontend::types::parser::stmts::types::ThrushAttributes;
+use crate::frontend::typesystem::types::Type;
 
 pub fn build_custom_type<'parser>(
     ctx: &mut ParserContext<'parser>,
@@ -19,19 +19,18 @@ pub fn build_custom_type<'parser>(
 
     ctx.consume(
         TokenType::Type,
-        String::from("Syntax error"),
-        String::from("Expected 'type' keyword."),
+        "Syntax error".into(),
+        "Expected 'type' keyword.".into(),
     )?;
 
-    let name: &Token = ctx.consume(
+    let name_tk: &Token = ctx.consume(
         TokenType::Identifier,
-        String::from("Syntax error"),
-        String::from("Expected type name."),
+        "Syntax error".into(),
+        "Expected type name.".into(),
     )?;
 
-    let custom_type_name: &str = name.get_lexeme();
-
-    let span: Span = name.get_span();
+    let name: &str = name_tk.get_lexeme();
+    let span: Span = name_tk.get_span();
 
     ctx.consume(
         TokenType::Eq,
@@ -45,13 +44,13 @@ pub fn build_custom_type<'parser>(
 
     ctx.consume(
         TokenType::SemiColon,
-        String::from("Syntax error"),
-        String::from("Expected ';'."),
+        "Syntax error".into(),
+        "Expected ';'.".into(),
     )?;
 
     if declare_forward {
         ctx.get_mut_symbols()
-            .new_custom_type(custom_type_name, (custom_type, attributes), span)?;
+            .new_custom_type(name, (custom_type, attributes), span)?;
     }
 
     Ok(Ast::new_nullptr(span))

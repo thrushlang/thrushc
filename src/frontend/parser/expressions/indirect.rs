@@ -1,20 +1,21 @@
-use crate::{
-    core::errors::standard::ThrushCompilerIssue,
-    frontend::{
-        lexer::{span::Span, tokentype::TokenType},
-        parser::{ParserContext, expr},
-        types::{ast::Ast, parser::stmts::traits::TokenExtensions},
-        typesystem::{traits::TypeExtensions, types::Type},
-    },
-};
+use crate::core::errors::standard::ThrushCompilerIssue;
+
+use crate::frontend::lexer::span::Span;
+use crate::frontend::lexer::tokentype::TokenType;
+use crate::frontend::parser::ParserContext;
+use crate::frontend::parser::expr;
+use crate::frontend::types::ast::Ast;
+use crate::frontend::types::parser::stmts::traits::TokenExtensions;
+use crate::frontend::typesystem::traits::TypeExtensions;
+use crate::frontend::typesystem::types::Type;
 
 pub fn build_indirect<'parser>(
     ctx: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, ThrushCompilerIssue> {
     ctx.consume(
         TokenType::Indirect,
-        String::from("Syntax error"),
-        String::from("Expected 'indirect' keyword."),
+        "Syntax error".into(),
+        "Expected 'indirect' keyword.".into(),
     )?;
 
     let span: Span = ctx.previous().get_span();
@@ -26,8 +27,8 @@ pub fn build_indirect<'parser>(
 
     ctx.consume(
         TokenType::LParen,
-        String::from("Syntax error"),
-        String::from("Expected '('."),
+        "Syntax error".into(),
+        "Expected '('.".into(),
     )?;
 
     loop {
@@ -44,16 +45,16 @@ pub fn build_indirect<'parser>(
         } else {
             ctx.consume(
                 TokenType::Comma,
-                String::from("Syntax error"),
-                String::from("Expected ','."),
+                "Syntax error".into(),
+                "Expected ','.".into(),
             )?;
         }
     }
 
     ctx.consume(
         TokenType::RParen,
-        String::from("Syntax error"),
-        String::from("Expected ')'."),
+        "Syntax error".into(),
+        "Expected ')'.".into(),
     )?;
 
     Ok(Ast::Indirect {
