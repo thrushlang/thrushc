@@ -10,12 +10,12 @@ use crate::core::compiler::backends::linkers::LinkerConfiguration;
 use crate::core::compiler::backends::linkers::LinkerModeType;
 use crate::core::compiler::backends::llvm;
 use crate::core::compiler::backends::llvm::flavors::LLVMLinkerFlavor;
+use crate::core::compiler::backends::llvm::passes::LLVMModificatorPasses;
 use crate::core::compiler::linking::LinkingCompilersConfiguration;
 use crate::core::compiler::options::CompilerOptions;
 use crate::core::compiler::options::EmitableUnit;
 use crate::core::compiler::options::PrintableUnit;
 use crate::core::compiler::options::ThrushOptimization;
-use crate::core::compiler::passes::LLVMModificatorPasses;
 use crate::core::console::commands;
 use crate::core::console::logging;
 use crate::core::console::logging::LoggingType;
@@ -177,6 +177,12 @@ impl CLI {
                         .get_target()
                         .get_arch(),
                 );
+            }
+
+            "llvm-print-opt-passes" => {
+                self.advance();
+
+                llvm::info::print_all_available_opt_passes();
             }
 
             "-build-dir" => {

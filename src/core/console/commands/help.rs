@@ -85,6 +85,16 @@ pub fn show_help() -> ! {
         ),
     );
 
+    logging::write(
+        logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {}\n",
+            "•".bold(),
+            "llvm-print-opt-passes".custom_color((141, 141, 142)).bold(),
+            "Show all available optimization passes through '--opt-passes=p{passname, passname}' in the compiler for the LLVM backend.",
+        ),
+    );
+
     logging::write(logging::OutputIn::Stderr, "\nGeneral flags:\n\n");
 
     logging::write(
@@ -246,8 +256,8 @@ pub fn show_help() -> ! {
             "{} {} {} {}\n",
             "•".bold(),
             "--opt-passes".custom_color((141, 141, 142)).bold(),
-            "[-p{passname}]",
-            "Pass a list of custom optimization passes to the LLVM optimizator.",
+            "[-p{passname,passname}]",
+            "Pass a list of custom optimization passes to the LLVM backend. For more information, see: 'https://releases.llvm.org/17.0.1/docs/CommandGuide/opt.html#cmdoption-opt-passname'.",
         ),
     );
 
@@ -257,8 +267,8 @@ pub fn show_help() -> ! {
             "{} {} {} {}\n",
             "•".bold(),
             "--modificator-passes".custom_color((141, 141, 142)).bold(),
-            "[loopvectorization;loopunroll;loopinterleaving;loopsimplifyvectorization;mergefunctions]",
-            "Pass a list of custom modificator passes to the LLVM optimizator.",
+            "[loopvectorization;loopunroll;loopinterleaving;loopsimplifyvectorization;mergefunctions;callgraphprofile;forgetallscevinloopunroll;licmmssaaccpromcap=0;licmmssaoptcap=0;]",
+            "Pass a list of custom modificator optimization passes to the LLVM backend.",
         ),
     );
 

@@ -58,7 +58,9 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
             thrushc_time: Duration::default(),
         }
     }
+}
 
+impl ThrushCompiler<'_> {
     pub fn compile(&mut self) -> (u128, u128) {
         if self.get_options().uses_llvm() {
             Target::initialize_all(&InitializationConfig::default());
@@ -103,7 +105,9 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
 
         (self.thrushc_time.as_millis(), self.linking_time.as_millis())
     }
+}
 
+impl<'thrushc> ThrushCompiler<'thrushc> {
     fn compile_file_with_llvm(&mut self, file: &'thrushc CompilationUnit) -> Result<(), ()> {
         let file_time: Instant = Instant::now();
 

@@ -1,14 +1,15 @@
 pub mod cpu;
 pub mod flavors;
+pub mod info;
+pub mod passes;
 pub mod target;
 pub mod targets;
 
 use inkwell::targets::{CodeModel, RelocMode, TargetMachine};
 
 use crate::core::compiler::{
-    backends::llvm::{cpu::LLVMTargetCPU, target::LLVMTarget},
+    backends::llvm::{cpu::LLVMTargetCPU, passes::LLVMModificatorPasses, target::LLVMTarget},
     options::ThrushOptimization,
-    passes::LLVMModificatorPasses,
 };
 
 #[derive(Debug)]

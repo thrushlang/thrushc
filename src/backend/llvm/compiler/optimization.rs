@@ -1,4 +1,4 @@
-use crate::core::{compiler::passes::LLVMModificatorPasses, console::logging};
+use crate::core::{compiler::backends::llvm::passes::LLVMModificatorPasses, console::logging};
 
 use inkwell::{
     OptimizationLevel, module::Module, passes::PassBuilderOptions, targets::TargetMachine,
@@ -123,6 +123,18 @@ impl<'a, 'ctx> LLVMOptimizer<'a, 'ctx> {
             }
             LLVMModificatorPasses::MergeFunctions => {
                 passes_builder.set_merge_functions(true);
+            }
+            LLVMModificatorPasses::CallGraphProfile => {
+                passes_builder.set_call_graph_profile(true);
+            }
+            LLVMModificatorPasses::ForgetAllScevInLoopUnroll => {
+                passes_builder.set_forget_all_scev_in_loop_unroll(true);
+            }
+            LLVMModificatorPasses::LicmMssaNoAccForPromotionCap(value) => {
+                passes_builder.set_licm_mssa_no_acc_for_promotion_cap(*value);
+            }
+            LLVMModificatorPasses::LicmMssaOptCap(value) => {
+                passes_builder.set_licm_mssa_opt_cap(*value);
             }
         });
 
