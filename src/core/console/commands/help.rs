@@ -248,6 +248,8 @@ pub fn show_help() -> ! {
         ),
     );
 
+    logging::write(logging::OutputIn::Stderr, "\nJIT Compiler flags:\n\n");
+
     logging::write(
         logging::OutputIn::Stderr,
         &format!(
@@ -274,7 +276,7 @@ pub fn show_help() -> ! {
             "{} {} {}\n",
             "•".bold(),
             "-jit-link".custom_color((141, 141, 142)).bold(),
-            "Add a specific library to the Just-In-Time Compiler.",
+            "Add a specific library to the Just-In-Time compiler.",
         ),
     );
 

@@ -19,35 +19,41 @@ General Commands:
 
 LLVM Commands:
 
-• llvm-print-target-triples Show the current LLVM target triples supported.
 • llvm-print-targets Show the current LLVM target supported.
 • llvm-print-supported-cpus Show the current LLVM supported CPUs for the current LLVM target.
 • llvm-print-host-target-triple Show the host LLVM target triple.
+• llvm-print-opt-passes Show all available optimization passes through '--opt-passes=p{passname, passname}' in the compiler for the LLVM backend.
 
 General flags:
 
 • -build-dir Set the build directory.
-• -clang Enable embedded Clang for linking.
-• -gcc [usr/bin/gcc] Speciefies GNU Compiler Collection (GCC) for linking.
-• -custom-clang [/usr/bin/clang] Specifies the path for use of an external Clang for linking.
+• -clang-link Enable embedded Clang for linking.
+• -gcc-link [usr/bin/gcc] Specifies GNU Compiler Collection (GCC) for linking.
+• -custom-clang-link [/usr/bin/clang] Specifies the path for use of an external Clang for linking.
 • -start Marks the start of arguments to the active external or built-in linking compiler.
 • -end Marks the end of arguments to the active external or built-in linker compiler.
 
 Compiler flags:
 
 • -llvm-backend Enable the usage of the LLVM backend infrastructure.
-• -target [x86_64] Set the LLVM target.
-• -target-triple [x86_64-pc-linux-gnu] Set the LLVM target triple.
+• -target [x86_64] Set the LLVM target arquitecture.
+• -target-triple [x86_64-pc-linux-gnu] Set the LLVM backend target triple. For more information, see 'https://clang.llvm.org/docs/CrossCompilation.html'.
 • -cpu [haswell] Specify in LLVM the CPU to optimize.
 • -cpu-features [+sse2,+cx16,+sahf,-tbm] Specify in LLVM the new features of the CPU to use.
 • -emit [llvm-bc|llvm-ir|asm|raw-llvm-ir|raw-llvm-bc|raw-asm|obj|ast|tokens] Compile the code into specified representation.
 • -print [llvm-ir|raw-llvm-ir|tokens] Displays the final compilation on stdout.
 • -opt [O0|O1|O2|mcqueen] Optimization level.
 
+JIT Compiler flags:
+
+• -jit Enables the Just-In-Time Compiler.
+• -jit-libc Specifies the path to the C runtime.
+• -jit-link Add a specific library to the Just-In-Time compiler.
+
 Extra compiler flags:
 
-• --opt-passes [-p{passname}] Pass a list of custom optimization passes to the LLVM optimizator.
-• --modificator-passes [loopvectorization;loopunroll;loopinterleaving;loopsimplifyvectorization;mergefunctions] Pass a list of custom modificator passes to the LLVM optimizator.
+• --opt-passes [-p{passname,passname}] Pass a list of custom optimization passes to the LLVM backend. For more information, see: 'https://releases.llvm.org/17.0.1/docs/CommandGuide/opt.html#cmdoption-opt-passname'.
+• --modificator-passes [loopvectorization;loopunroll;loopinterleaving;loopsimplifyvectorization;mergefunctions;callgraphprofile;forgetallscevinloopunroll;licmmssaaccpromcap=0;licmmssaoptcap=0;] Pass a list of custom modificator optimization passes to the LLVM backend.
 • --reloc [static|pic|dynamic] Indicate how references to memory addresses and linkage symbols are handled.
 • --codemodel [small|medium|large|kernel] Define how code is organized and accessed at machine code level.
 
