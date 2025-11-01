@@ -117,6 +117,10 @@ impl CLI {
             self.analyze(argument);
         }
 
+        if !self.options.uses_llvm() {
+            self.report_error("Compiler backend is not setted. Try again with '-llvm-backend'.");
+        }
+
         if !self.options.is_build_dir_setted() {
             self.report_error(
                 "Compiler build-dir is not setted or not exist. Try again with '-build-dir \"PATH\"'.",
@@ -147,12 +151,6 @@ impl CLI {
             "llvm-print-targets" => {
                 self.advance();
                 llvm::targets::info::print_all_targets();
-                process::exit(0);
-            }
-
-            "llvm-print-target-triples" => {
-                self.advance();
-                llvm::targets::info::print_all_target_triples();
                 process::exit(0);
             }
 
@@ -536,7 +534,7 @@ impl CLI {
     }
 
     fn handle_unknown_argument(&mut self, arg: &str) {
-        if self.position.at_external_compiler() && self.options.uses_llvm() {
+        if self.position.at_external_linking_compiler() {
             self.options
                 .get_mut_linking_compilers_configuration()
                 .add_compiler_arg(arg.to_string());

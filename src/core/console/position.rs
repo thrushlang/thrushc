@@ -9,7 +9,7 @@ pub enum CommandLinePosition {
 
 impl CommandLinePosition {
     #[inline]
-    pub fn at_external_compiler(&self) -> bool {
+    pub fn at_external_linking_compiler(&self) -> bool {
         matches!(self, CommandLinePosition::ExternalCompiler)
     }
 

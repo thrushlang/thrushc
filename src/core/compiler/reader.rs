@@ -1,10 +1,10 @@
-use std::{
-    fs::File,
-    io::{BufReader, Read},
-    path::Path,
-};
+use std::fs::File;
+use std::io::BufReader;
+use std::io::Read;
+use std::path::Path;
 
-use crate::core::console::logging::{self, LoggingType};
+use crate::core::console::logging;
+use crate::core::console::logging::LoggingType;
 
 pub fn get_file_source_code(file_path: &Path) -> String {
     match self::read_file_to_string_buffered(file_path) {

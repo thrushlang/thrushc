@@ -1,12 +1,11 @@
 use colored::Colorize;
 use inkwell::module::Module;
 
-use crate::core::{
-    compiler::{options::CompilerOptions, thrushc::ThrushCompiler},
-    console::logging,
-    constants,
-    utils::rand,
-};
+use crate::core::compiler::options::CompilerOptions;
+use crate::core::compiler::thrushc::ThrushCompiler;
+use crate::core::console::logging;
+use crate::core::constants;
+use crate::core::utils::rand;
 
 pub fn print_llvm_ir(
     compiler: &ThrushCompiler,

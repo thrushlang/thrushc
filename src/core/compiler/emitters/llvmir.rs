@@ -1,12 +1,13 @@
-use std::path::{Path, PathBuf};
+use std::path::Path;
+use std::path::PathBuf;
 
-use inkwell::{module::Module, support::LLVMString};
+use inkwell::module::Module;
+use inkwell::support::LLVMString;
 
-use crate::core::{
-    compiler::{options::CompilerOptions, thrushc::ThrushCompiler},
-    constants,
-    utils::rand,
-};
+use crate::core::compiler::options::CompilerOptions;
+use crate::core::compiler::thrushc::ThrushCompiler;
+use crate::core::constants;
+use crate::core::utils::rand;
 
 pub fn emit_llvm_ir(
     compiler: &ThrushCompiler,

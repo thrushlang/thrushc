@@ -1,14 +1,16 @@
 use ahash::AHashMap as HashMap;
 
-use crate::frontend::{
-    semantic::analyzer::constants::{
-        ANALYZER_SYMBOLS_MINIMAL_GLOBAL_CAPACITY, ANALYZER_SYMBOLS_MINIMAL_LOCAL_CAPACITY,
-    },
-    types::semantic::analyzer::types::{
-        AnalyzerAssemblerFunction, AnalyzerAssemblerFunctions, AnalyzerFunction, AnalyzerFunctions,
-        AnalyzerLLI, AnalyzerLLIs, AnalyzerLocal, AnalyzerLocals,
-    },
-};
+use crate::frontend::semantic::analyzer::constants::ANALYZER_SYMBOLS_MINIMAL_GLOBAL_CAPACITY;
+use crate::frontend::semantic::analyzer::constants::ANALYZER_SYMBOLS_MINIMAL_LOCAL_CAPACITY;
+
+use crate::frontend::types::semantic::analyzer::types::AnalyzerAssemblerFunction;
+use crate::frontend::types::semantic::analyzer::types::AnalyzerAssemblerFunctions;
+use crate::frontend::types::semantic::analyzer::types::AnalyzerFunction;
+use crate::frontend::types::semantic::analyzer::types::AnalyzerFunctions;
+use crate::frontend::types::semantic::analyzer::types::AnalyzerLLI;
+use crate::frontend::types::semantic::analyzer::types::AnalyzerLLIs;
+use crate::frontend::types::semantic::analyzer::types::AnalyzerLocal;
+use crate::frontend::types::semantic::analyzer::types::AnalyzerLocals;
 
 #[derive(Debug)]
 pub struct AnalyzerSymbolsTable<'symbol> {

@@ -38,7 +38,7 @@ pub fn llvm_before_optimization(
             true,
         ) {
             logging::print_error(LoggingType::Error, &error.to_string());
-            interrupt::archive_compilation_unit(compiler, file_time, file)?;
+            interrupt::archive_compilation_unit(compiler, file, file_time)?;
         }
 
         return Ok(true);
@@ -71,7 +71,7 @@ pub fn llvm_after_optimization(
             false,
         ) {
             logging::print_error(LoggingType::Error, &error.to_string());
-            interrupt::archive_compilation_unit(compiler, file_time, file)?;
+            interrupt::archive_compilation_unit(compiler, file, file_time)?;
         }
 
         return Ok(true);

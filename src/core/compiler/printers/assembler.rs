@@ -1,19 +1,17 @@
 use std::borrow::Cow;
 
 use colored::Colorize;
-use inkwell::{
-    memory_buffer::MemoryBuffer,
-    module::Module,
-    support::LLVMString,
-    targets::{FileType, TargetMachine},
-};
+use inkwell::memory_buffer::MemoryBuffer;
+use inkwell::module::Module;
+use inkwell::support::LLVMString;
+use inkwell::targets::FileType;
+use inkwell::targets::TargetMachine;
 
-use crate::core::{
-    compiler::{options::CompilerOptions, thrushc::ThrushCompiler},
-    console::logging,
-    constants,
-    utils::rand,
-};
+use crate::core::compiler::options::CompilerOptions;
+use crate::core::compiler::thrushc::ThrushCompiler;
+use crate::core::console::logging;
+use crate::core::constants;
+use crate::core::utils::rand;
 
 pub fn print_llvm_assembler(
     compiler: &ThrushCompiler,

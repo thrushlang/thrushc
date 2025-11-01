@@ -3,14 +3,13 @@ mod finisher;
 mod interrupt;
 mod linking;
 mod print;
+mod starter;
 mod validate;
 
 use std::{
     path::PathBuf,
     time::{Duration, Instant},
 };
-
-use colored::Colorize;
 
 use inkwell::{
     OptimizationLevel,
@@ -23,7 +22,6 @@ use inkwell::{
 use crate::backend::llvm::{self, compiler::context::LLVMCodeGenContext};
 use crate::linkage::linkers::lld::LLVMLinker;
 
-use crate::core::compiler::backends::linkers::LinkerModeType;
 use crate::core::compiler::backends::llvm::{LLVMBackend, target::LLVMTarget};
 use crate::core::compiler::linking::LinkingCompilersConfiguration;
 use crate::core::compiler::options::{
@@ -43,6 +41,7 @@ pub struct ThrushCompiler<'thrushc> {
     uncompiled: &'thrushc [CompilationUnit],
 
     options: &'thrushc CompilerOptions,
+
     linking_time: Duration,
     thrushc_time: Duration,
 }
@@ -63,30 +62,22 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
     pub fn compile(&mut self) -> (u128, u128) {
         if self.get_options().uses_llvm() {
             Target::initialize_all(&InitializationConfig::default());
-        } else {
-            logging::write(
-                logging::OutputIn::Stderr,
-                &format!(
-                    "{} {} {}\n",
-                    "Compilation".custom_color((141, 141, 142)).bold(),
-                    "FAILED".bright_red().bold(),
-                    "GCC is not supported yet. Please use LLVM Infrastructure with '-llvm-backend' flag."
-                ),
-            );
         }
 
-        if self.get_options().get_linker_mode().get_status() {
-            if let LinkerModeType::LLVMLinker =
-                self.get_options().get_linker_mode().get_linker_type()
-            {
-                LLVMLinker::new(self.options).link();
-            }
+        if self.get_options().get_linker_mode().get_status()
+            && self
+                .get_options()
+                .get_linker_mode()
+                .get_linker_type()
+                .is_llvm_linker()
+        {
+            LLVMLinker::new(self.options).link();
         }
 
         let mut interrumped: bool = false;
 
         self.uncompiled.iter().for_each(|file| {
-            interrumped = self.compile_with_llvm(file).is_err();
+            interrumped = self.compile_file_with_llvm(file).is_err();
         });
 
         if interrumped
@@ -97,14 +88,7 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
             return (self.thrushc_time.as_millis(), self.linking_time.as_millis());
         }
 
-        logging::write(
-            logging::OutputIn::Stdout,
-            &format!(
-                "{} {}\n",
-                "Linking".custom_color((141, 141, 142)).bold(),
-                "RUNNING".bright_green().bold()
-            ),
-        );
+        starter::linking_phase(self.get_compiled_files());
 
         let linking_compiler_config: &LinkingCompilersConfiguration =
             self.options.get_linking_compilers_configuration();
@@ -120,18 +104,10 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
         (self.thrushc_time.as_millis(), self.linking_time.as_millis())
     }
 
-    fn compile_with_llvm(&mut self, file: &'thrushc CompilationUnit) -> Result<(), ()> {
+    fn compile_file_with_llvm(&mut self, file: &'thrushc CompilationUnit) -> Result<(), ()> {
         let file_time: Instant = Instant::now();
 
-        logging::write(
-            logging::OutputIn::Stdout,
-            &format!(
-                "{} {} {}\n",
-                "Compilation".custom_color((141, 141, 142)).bold(),
-                "RUNNING".bright_green().bold(),
-                &file.get_path().to_string_lossy()
-            ),
-        );
+        starter::archive_compilation_unit(file);
 
         let llvm_backend: &LLVMBackend = self.options.get_llvm_backend_options();
         let build_dir: &PathBuf = self.options.get_build_dir();
@@ -184,12 +160,15 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
 
         llvm_module.set_triple(llvm_triple);
 
-        let target: Target = Target::from_triple(llvm_triple).unwrap_or_else(|_| {
-            logging::print_frontend_panic(
-                logging::LoggingType::BackendPanic,
-                "Cannot generate a target from LLVM target triple.",
+        let target: Target = Target::from_triple(llvm_triple).map_err(|_| {
+            let _ = interrupt::archive_compilation_unit_with_message(
+                self,
+                LoggingType::LLVMBackend,
+                "Target-triple could not be built correctly. Maybe this target triple is invalid. Try another.",
+                file,
+                file_time,
             );
-        });
+        })?;
 
         let target_machine: TargetMachine = target
             .create_target_machine(
@@ -200,12 +179,15 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
                 llvm_backend.get_reloc_mode(),
                 llvm_backend.get_code_model(),
             )
-            .unwrap_or_else(|| {
-                logging::print_frontend_panic(
-                    logging::LoggingType::FrontEndPanic,
-                    "Cannot generate a target machine from target.",
+            .ok_or_else(|| {
+                let _ = interrupt::archive_compilation_unit_with_message(
+                    self,
+                    LoggingType::LLVMBackend,
+                    "Target machine could not be built correctly.",
+                    file,
+                    file_time,
                 );
-            });
+            })?;
 
         llvm_module.set_data_layout(&target_machine.get_target_data().get_data_layout());
 
@@ -270,15 +252,7 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
 
         self.add_compiled_unit(compiled_file);
 
-        logging::write(
-            logging::OutputIn::Stdout,
-            &format!(
-                "{} {} {}\n",
-                "Compilation".custom_color((141, 141, 142)).bold(),
-                "FINISHED".bright_green().bold(),
-                file.get_path().to_string_lossy()
-            ),
-        );
+        finisher::archive_compilation(self, file_time, file)?;
 
         Ok(())
     }

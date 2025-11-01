@@ -20,10 +20,10 @@ use crate::core::{
 #[inline]
 pub fn archive_compilation(
     compiler: &mut ThrushCompiler,
-    archive_time: Instant,
+    file_time: Instant,
     file: &CompilationUnit,
 ) -> Result<(), ()> {
-    compiler.thrushc_time += archive_time.elapsed();
+    compiler.thrushc_time += file_time.elapsed();
 
     logging::write(
         logging::OutputIn::Stdout,

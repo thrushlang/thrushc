@@ -1,3 +1,5 @@
+#![allow(clippy::deprecated_semver)]
+
 //! Input of the LLVM bitcode format.
 
 use super::prelude::*;

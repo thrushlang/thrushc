@@ -1,3 +1,5 @@
+#![allow(clippy::deprecated_semver)]
+
 //! The LLVM intermediate representation.
 
 use super::*;

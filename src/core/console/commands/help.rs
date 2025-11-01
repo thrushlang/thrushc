@@ -56,18 +56,6 @@ pub fn show_help() -> ! {
         &format!(
             "{} {} {}\n",
             "•".bold(),
-            "llvm-print-target-triples"
-                .custom_color((141, 141, 142))
-                .bold(),
-            "Show the current LLVM target triples supported."
-        ),
-    );
-
-    logging::write(
-        logging::OutputIn::Stderr,
-        &format!(
-            "{} {} {}\n",
-            "•".bold(),
             "llvm-print-targets".custom_color((141, 141, 142)).bold(),
             "Show the current LLVM target supported."
         ),
@@ -180,7 +168,7 @@ pub fn show_help() -> ! {
             "•".bold(),
             "-target".custom_color((141, 141, 142)).bold(),
             "x86_64",
-            "Set the LLVM target.",
+            "Set the LLVM target arquitecture.",
         ),
     );
 
@@ -191,7 +179,7 @@ pub fn show_help() -> ! {
             "•".bold(),
             "-target-triple".custom_color((141, 141, 142)).bold(),
             "x86_64-pc-linux-gnu",
-            "Set the LLVM target triple.",
+            "Set the LLVM backend target triple. For more information, see 'https://clang.llvm.org/docs/CrossCompilation.html'.",
         ),
     );
 

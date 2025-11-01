@@ -1,12 +1,12 @@
 use symbols::AnalyzerSymbolsTable;
 
-use crate::{
-    core::{
-        compiler::options::CompilationUnit, console::logging::LoggingType,
-        diagnostic::diagnostician::Diagnostician, errors::standard::ThrushCompilerIssue,
-    },
-    frontend::types::{ast::Ast, parser::stmts::traits::ThrushAttributesExtensions},
-};
+use crate::core::compiler::options::CompilationUnit;
+use crate::core::console::logging::LoggingType;
+use crate::core::diagnostic::diagnostician::Diagnostician;
+use crate::core::errors::standard::ThrushCompilerIssue;
+
+use crate::frontend::types::ast::Ast;
+use crate::frontend::types::parser::stmts::traits::ThrushAttributesExtensions;
 
 mod builtins;
 mod constants;

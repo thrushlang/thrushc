@@ -1,3 +1,5 @@
+#![allow(clippy::deprecated_semver)]
+
 //! Object file reading and writing
 
 use super::prelude::*;

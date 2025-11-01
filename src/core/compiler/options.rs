@@ -1,19 +1,17 @@
 #![allow(non_camel_case_types, clippy::upper_case_acronyms)]
 
-use {
-    crate::{
-        core::{
-            compiler::{
-                backends::{linkers::LinkerMode, llvm::LLVMBackend},
-                linking::LinkingCompilersConfiguration,
-            },
-            console::logging::{self, LoggingType},
-        },
-        frontend::types::{ast::Ast, lexer::types::Tokens},
-    },
-    inkwell::OptimizationLevel,
-    std::path::{Path, PathBuf},
-};
+use std::path::Path;
+use std::path::PathBuf;
+
+use inkwell::OptimizationLevel;
+
+use crate::core::compiler::backends::linkers::LinkerMode;
+use crate::core::compiler::backends::llvm::LLVMBackend;
+use crate::core::compiler::linking::LinkingCompilersConfiguration;
+use crate::core::console::logging;
+use crate::core::console::logging::LoggingType;
+use crate::frontend::types::ast::Ast;
+use crate::frontend::types::lexer::types::Tokens;
 
 #[derive(Debug)]
 pub struct CompilerOptions {
