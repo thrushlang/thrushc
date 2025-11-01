@@ -402,8 +402,8 @@ impl<'ctx> ExecutionEngine<'ctx> {
     // TODOC: Marked as unsafe because input function could very well do something unsafe. It's up to the caller
     // to ensure that doesn't happen by defining their function correctly.
     // SubType: Only for JIT EEs?
-    pub unsafe fn run_function_as_main(&self, function: FunctionValue<'ctx>, args: &[&str]) -> c_int {
-        let cstring_args: Vec<_> = args.iter().map(|&arg| to_c_str(arg)).collect();
+    pub unsafe fn run_function_as_main(&self, function: FunctionValue<'ctx>, args: &[String]) -> c_int {
+        let cstring_args: Vec<_> = args.iter().map(|arg| to_c_str(&arg)).collect();
         let raw_args: Vec<*const _> = cstring_args.iter().map(|arg| arg.as_ptr()).collect();
 
         let environment_variables = []; // TODO: Support envp. Likely needs to be null terminated

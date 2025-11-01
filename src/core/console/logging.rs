@@ -14,6 +14,7 @@ pub enum OutputIn {
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum LoggingType {
     LLVMBackend,
+    JITCompiler,
 
     BackendPanic,
     BackendBug,
@@ -163,6 +164,8 @@ impl LoggingType {
     pub fn as_styled(&self) -> ColoredString {
         match self {
             LoggingType::LLVMBackend => "LLVM Backend".bright_red().bold().underline(),
+            LoggingType::JITCompiler => "JIT Compiler".bright_red().bold().underline(),
+
             LoggingType::BackendPanic => "BACKEND PANIC".bright_red().bold(),
             LoggingType::BackendBug => "BACKEND BUG".bold().bright_red().underline(),
             LoggingType::FrontEndPanic => "FRONTEND PANIC".bright_red().bold(),
@@ -178,6 +181,7 @@ impl LoggingType {
     pub fn text_with_color(&self, msg: &str) -> ColoredString {
         match self {
             LoggingType::LLVMBackend => msg.bright_red().bold(),
+            LoggingType::JITCompiler => msg.bright_red().bold(),
 
             LoggingType::BackendPanic => msg.bright_red().bold(),
             LoggingType::BackendBug => msg.bold().bright_red().underline(),

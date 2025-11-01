@@ -5,7 +5,9 @@ use std::{
 
 use colored::Colorize;
 
+use either::Either;
 use inkwell::{
+    memory_buffer::MemoryBuffer,
     module::Module,
     targets::{FileType, TargetMachine},
 };
@@ -36,6 +38,27 @@ pub fn archive_compilation(
     );
 
     Ok(())
+}
+
+#[inline]
+pub fn archive_compilation_module_jit(
+    compiler: &mut ThrushCompiler,
+    file_time: Instant,
+    file: &CompilationUnit,
+) -> Result<Either<MemoryBuffer, ()>, ()> {
+    compiler.thrushc_time += file_time.elapsed();
+
+    logging::write(
+        logging::OutputIn::Stdout,
+        &format!(
+            "{} {} {}\n",
+            "Compilation".custom_color((141, 141, 142)).bold(),
+            "FINISHED".bright_green().bold(),
+            &file.get_path().to_string_lossy()
+        ),
+    );
+
+    Ok(Either::Right(()))
 }
 
 #[inline]

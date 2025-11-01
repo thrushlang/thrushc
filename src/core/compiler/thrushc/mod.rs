@@ -8,19 +8,26 @@ mod validate;
 
 use std::{
     path::PathBuf,
+    process,
     time::{Duration, Instant},
 };
 
+use either::Either;
 use inkwell::{
     OptimizationLevel,
     builder::Builder,
     context::Context,
+    execution_engine::ExecutionEngine,
+    memory_buffer::MemoryBuffer,
     module::Module,
     targets::{InitializationConfig, Target, TargetMachine, TargetTriple},
 };
 
-use crate::backend::llvm::{self, compiler::context::LLVMCodeGenContext};
-use crate::linkage::linkers::lld::LLVMLinker;
+use crate::{backend::llvm::compiler::jit::LLVMJITCompiler, linkage::linkers::lld::LLVMLinker};
+use crate::{
+    backend::llvm::{self, compiler::context::LLVMCodeGenContext},
+    core::compiler::backends::llvm::jit::JITConfiguration,
+};
 
 use crate::core::compiler::backends::llvm::{LLVMBackend, target::LLVMTarget};
 use crate::core::compiler::linking::LinkingCompilersConfiguration;
@@ -62,10 +69,6 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
 
 impl ThrushCompiler<'_> {
     pub fn compile(&mut self) -> (u128, u128) {
-        if self.get_options().uses_llvm() {
-            Target::initialize_all(&InitializationConfig::default());
-        }
-
         if self.get_options().get_linker_mode().get_status()
             && self
                 .get_options()
@@ -76,10 +79,26 @@ impl ThrushCompiler<'_> {
             LLVMLinker::new(self.options).link();
         }
 
+        if self.get_options().uses_llvm() {
+            Target::initialize_all(&InitializationConfig::default());
+
+            if self.get_options().get_llvm_backend_options().is_jit() {
+                return self.compile_jit();
+            }
+
+            return self.compile_aot();
+        }
+
+        (self.thrushc_time.as_millis(), self.linking_time.as_millis())
+    }
+}
+
+impl<'thrushc> ThrushCompiler<'thrushc> {
+    fn compile_aot(&mut self) -> (u128, u128) {
         let mut interrumped: bool = false;
 
         self.uncompiled.iter().for_each(|file| {
-            interrumped = self.compile_file_with_llvm(file).is_err();
+            interrumped = self.compile_file_with_llvm_aot(file).is_err();
         });
 
         if interrumped
@@ -105,10 +124,8 @@ impl ThrushCompiler<'_> {
 
         (self.thrushc_time.as_millis(), self.linking_time.as_millis())
     }
-}
 
-impl<'thrushc> ThrushCompiler<'thrushc> {
-    fn compile_file_with_llvm(&mut self, file: &'thrushc CompilationUnit) -> Result<(), ()> {
+    fn compile_file_with_llvm_aot(&mut self, file: &'thrushc CompilationUnit) -> Result<(), ()> {
         let file_time: Instant = Instant::now();
 
         starter::archive_compilation_unit(file);
@@ -259,6 +276,214 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
         finisher::archive_compilation(self, file_time, file)?;
 
         Ok(())
+    }
+}
+
+impl<'thrushc> ThrushCompiler<'thrushc> {
+    fn compile_jit(&mut self) -> (u128, u128) {
+        let context: Context = Context::create();
+
+        let mut interrumped: bool = false;
+        let mut modules: Vec<Module> = Vec::with_capacity(100_000);
+
+        self.uncompiled.iter().for_each(|file| {
+            let compiled_file: Result<Either<MemoryBuffer, ()>, ()> =
+                self.compile_file_with_llvm_jit(file);
+
+            interrumped = compiled_file.is_err();
+
+            if let Some(module) = compiled_file
+                .ok()
+                .and_then(|either| either.left())
+                .and_then(|memory_buffer| context.create_module_from_ir(memory_buffer).ok())
+            {
+                modules.push(module)
+            }
+        });
+
+        if interrumped
+            || self.get_options().get_was_printed()
+            || self.get_options().get_was_emited()
+            || modules.is_empty()
+        {
+            return (self.thrushc_time.as_millis(), self.linking_time.as_millis());
+        }
+
+        modules.reverse();
+
+        if let Some(module) = modules.first() {
+            let llvm_backend: &LLVMBackend = self.options.get_llvm_backend_options();
+            let config: &JITConfiguration = llvm_backend.get_jit_config();
+            let opt_level: OptimizationLevel = llvm_backend.get_optimization().to_llvm_opt();
+
+            let engine: ExecutionEngine = match module.create_jit_execution_engine(opt_level) {
+                Ok(engine) => engine,
+                Err(_) => {
+                    logging::print_error(
+                        LoggingType::LLVMBackend,
+                        "The compiler just in time could not be created correctly.",
+                    );
+
+                    return (self.thrushc_time.as_millis(), self.linking_time.as_millis());
+                }
+            };
+
+            let llvm_jit: LLVMJITCompiler =
+                llvm::compiler::jit::LLVMJITCompiler::new(engine, config, modules);
+
+            let llvm_jit_result: i32 = llvm_jit.compile_and_run().unwrap_or(1);
+
+            process::exit(llvm_jit_result)
+        }
+
+        (self.thrushc_time.as_millis(), self.linking_time.as_millis())
+    }
+
+    fn compile_file_with_llvm_jit(
+        &mut self,
+        file: &'thrushc CompilationUnit,
+    ) -> Result<Either<MemoryBuffer, ()>, ()> {
+        let file_time: Instant = Instant::now();
+
+        starter::archive_compilation_unit(file);
+
+        let llvm_backend: &LLVMBackend = self.options.get_llvm_backend_options();
+        let build_dir: &PathBuf = self.options.get_build_dir();
+
+        let tokens: Vec<Token> = Lexer::lex(file).unwrap_or_else(|error| {
+            logging::print_frontend_panic(LoggingType::FrontEndPanic, &error.display())
+        });
+
+        if print::after_frontend(self, file, Emited::Tokens(&tokens)) {
+            return finisher::archive_compilation_module_jit(self, file_time, file);
+        }
+
+        if emit::after_frontend(self, build_dir, file, Emited::Tokens(&tokens)) {
+            return finisher::archive_compilation_module_jit(self, file_time, file);
+        }
+
+        let parser: (ParserContext, bool) = Parser::parse(&tokens, file);
+
+        let parser_result: (ParserContext, bool) = parser;
+        let parser_throwed_errors: bool = parser_result.1;
+
+        let parser_context: ParserContext = parser_result.0;
+
+        let ast: &[Ast] = parser_context.get_ast();
+
+        let semantic_analysis_throwed_errors: bool =
+            SemanticAnalyzer::new(ast, file).check(parser_throwed_errors);
+
+        if parser_throwed_errors || semantic_analysis_throwed_errors {
+            return finisher::archive_compilation_module_jit(self, file_time, file);
+        }
+
+        if emit::after_frontend(self, build_dir, file, Emited::Ast(ast)) {
+            return finisher::archive_compilation_module_jit(self, file_time, file);
+        }
+
+        let llvm_context: Context = Context::create();
+        let llvm_builder: Builder = llvm_context.create_builder();
+        let llvm_module: Module = llvm_context.create_module(file.get_name());
+
+        let target: &LLVMTarget = llvm_backend.get_target();
+
+        let llvm_triple: &TargetTriple = target.get_triple();
+
+        let llvm_cpu_name: &str = llvm_backend.get_target_cpu().get_cpu_name();
+        let llvm_cpu_features: &str = llvm_backend.get_target_cpu().get_cpu_features();
+
+        let thrush_opt: ThrushOptimization = llvm_backend.get_optimization();
+        let llvm_opt: OptimizationLevel = thrush_opt.to_llvm_opt();
+
+        llvm_module.set_triple(llvm_triple);
+
+        let target: Target = Target::from_triple(llvm_triple).map_err(|_| {
+            let _ = interrupt::archive_compilation_unit_with_message(
+                self,
+                LoggingType::LLVMBackend,
+                "Target-triple could not be built correctly. Maybe this target triple is invalid. Try another.",
+                file,
+                file_time,
+            );
+        })?;
+
+        let target_machine: TargetMachine = target
+            .create_target_machine(
+                llvm_triple,
+                llvm_cpu_name,
+                llvm_cpu_features,
+                llvm_opt,
+                llvm_backend.get_reloc_mode(),
+                llvm_backend.get_code_model(),
+            )
+            .ok_or_else(|| {
+                let _ = interrupt::archive_compilation_unit_with_message(
+                    self,
+                    LoggingType::LLVMBackend,
+                    "Target machine could not be built correctly.",
+                    file,
+                    file_time,
+                );
+            })?;
+
+        llvm_module.set_data_layout(&target_machine.get_target_data().get_data_layout());
+
+        let mut llvm_codegen_context: LLVMCodeGenContext = LLVMCodeGenContext::new(
+            &llvm_module,
+            &llvm_context,
+            &llvm_builder,
+            target_machine.get_target_data(),
+            Diagnostician::new(file),
+            self.options,
+        );
+
+        llvm::compiler::LLVMCompiler::compile(&mut llvm_codegen_context, ast);
+
+        validate::llvm_codegen(&llvm_module, file)?;
+
+        if print::llvm_before_optimization(self, &llvm_module, &target_machine, file, file_time)? {
+            return finisher::archive_compilation_module_jit(self, file_time, file);
+        }
+
+        if emit::llvm_before_optimization(
+            self,
+            &llvm_module,
+            &target_machine,
+            build_dir,
+            file,
+            file_time,
+        )? {
+            return finisher::archive_compilation_module_jit(self, file_time, file);
+        }
+
+        llvm::compiler::optimization::LLVMOptimizer::new(
+            &llvm_module,
+            &target_machine,
+            llvm_opt,
+            llvm_backend.get_opt_passes(),
+            llvm_backend.get_modificator_passes(),
+        )
+        .optimize();
+
+        if print::llvm_after_optimization(self, &llvm_module, &target_machine, file, file_time)? {
+            return finisher::archive_compilation_module_jit(self, file_time, file);
+        }
+
+        if emit::llvm_after_optimization(
+            self,
+            &llvm_module,
+            &target_machine,
+            build_dir,
+            file,
+            file_time,
+        )? {
+            return finisher::archive_compilation_module_jit(self, file_time, file);
+        }
+
+        finisher::archive_compilation(self, file_time, file)?;
+
+        Ok(Either::Left(llvm_module.write_bitcode_to_memory()))
     }
 }
 

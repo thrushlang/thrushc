@@ -95,11 +95,11 @@ pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, stmt: &'ctx Ast<'ctx>)
             .add_break_branch(exit);
 
         if actions.is_before_unary() {
-            codegen.codegen_block(block);
             let _ = codegen::compile(codegen.get_mut_context(), actions, None);
+            codegen.codegen_block(block);
         } else {
-            let _ = codegen::compile(codegen.get_mut_context(), actions, None);
             codegen.codegen_block(block);
+            let _ = codegen::compile(codegen.get_mut_context(), actions, None);
         }
 
         if codegen

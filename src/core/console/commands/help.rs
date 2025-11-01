@@ -248,6 +248,36 @@ pub fn show_help() -> ! {
         ),
     );
 
+    logging::write(
+        logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {}\n",
+            "•".bold(),
+            "-jit".custom_color((141, 141, 142)).bold(),
+            "Enables the Just-In-Time Compiler.",
+        ),
+    );
+
+    logging::write(
+        logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {}\n",
+            "•".bold(),
+            "-jit-libc".custom_color((141, 141, 142)).bold(),
+            "Specifies the path to the C runtime.",
+        ),
+    );
+
+    logging::write(
+        logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {}\n",
+            "•".bold(),
+            "-jit-link".custom_color((141, 141, 142)).bold(),
+            "Add a specific library to the Just-In-Time Compiler.",
+        ),
+    );
+
     logging::write(logging::OutputIn::Stderr, "\nExtra compiler flags:\n\n");
 
     logging::write(

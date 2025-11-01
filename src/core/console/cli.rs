@@ -218,9 +218,61 @@ impl CLI {
                 self.advance();
             }
 
+            "-jit" => {
+                self.advance();
+                self.validate_llvm_required(arg);
+
+                self.get_mut_options()
+                    .get_mut_llvm_backend_options()
+                    .set_jit(true);
+            }
+
+            "-jit-libc" => {
+                self.advance();
+                self.validate_llvm_required(arg);
+                self.validate_jit_required(arg);
+
+                let libc: PathBuf = PathBuf::from(self.peek());
+
+                if (libc.to_string_lossy().contains("/") || libc.to_string_lossy().contains("\\"))
+                    && (!libc.exists() || !libc.is_file())
+                {
+                    self.report_error("A indicated C runtime doesn't exist.");
+                }
+
+                self.get_mut_options()
+                    .get_mut_llvm_backend_options()
+                    .get_mut_jit_config()
+                    .set_libc_path(libc);
+
+                self.advance();
+            }
+
+            "-jit-link" => {
+                self.advance();
+                self.validate_llvm_required(arg);
+                self.validate_jit_required(arg);
+
+                let library: PathBuf = PathBuf::from(self.peek());
+
+                if (library.to_string_lossy().contains("/")
+                    || library.to_string_lossy().contains("\\"))
+                    && (!library.exists() || !library.is_file())
+                {
+                    self.report_error("A indicated dynamic library doesn't exist.");
+                }
+
+                self.get_mut_options()
+                    .get_mut_llvm_backend_options()
+                    .get_mut_jit_config()
+                    .add_library(library);
+
+                self.advance();
+            }
+
             "-start" => {
                 self.advance();
-                self.position = CommandLinePosition::ExternalCompiler;
+                self.position = CommandLinePosition::External;
             }
 
             "-end" => {
@@ -540,7 +592,16 @@ impl CLI {
     }
 
     fn handle_unknown_argument(&mut self, arg: &str) {
-        if self.position.at_external_linking_compiler() {
+        if self.position.at_external() {
+            if self.options.get_llvm_backend_options().is_jit() {
+                self.options
+                    .get_mut_llvm_backend_options()
+                    .get_mut_jit_config()
+                    .add_arg(arg.to_string());
+
+                return;
+            }
+
             self.options
                 .get_mut_linking_compilers_configuration()
                 .add_compiler_arg(arg.to_string());
@@ -644,6 +705,15 @@ impl CLI {
         if !self.options.uses_llvm() {
             self.report_error(&format!(
                 "Can't use '{}' without '-llvm-backend' flag previously.",
+                arg
+            ));
+        }
+    }
+
+    fn validate_jit_required(&self, arg: &str) {
+        if !self.options.get_llvm_backend_options().is_jit() {
+            self.report_error(&format!(
+                "Can't use '{}' without '-jit' flag previously.",
                 arg
             ));
         }

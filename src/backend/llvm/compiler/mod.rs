@@ -15,6 +15,7 @@ pub mod conventions;
 pub mod declarations;
 pub mod generation;
 pub mod indexes;
+pub mod jit;
 pub mod memory;
 pub mod obfuscation;
 pub mod optimization;

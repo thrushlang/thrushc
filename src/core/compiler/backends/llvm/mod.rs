@@ -1,14 +1,19 @@
 pub mod cpu;
 pub mod flavors;
 pub mod info;
+pub mod jit;
 pub mod passes;
 pub mod target;
 pub mod targets;
+mod utils;
 
 use inkwell::targets::{CodeModel, RelocMode, TargetMachine};
 
 use crate::core::compiler::{
-    backends::llvm::{cpu::LLVMTargetCPU, passes::LLVMModificatorPasses, target::LLVMTarget},
+    backends::llvm::{
+        cpu::LLVMTargetCPU, jit::JITConfiguration, passes::LLVMModificatorPasses,
+        target::LLVMTarget,
+    },
     options::ThrushOptimization,
 };
 
@@ -22,6 +27,9 @@ pub struct LLVMBackend {
     code_model: CodeModel,
     modificator_passes: Vec<LLVMModificatorPasses>,
     opt_passes: String,
+
+    use_jit: bool,
+    jit_config: JITConfiguration,
 }
 
 impl LLVMBackend {
@@ -51,6 +59,8 @@ impl LLVMBackend {
             code_model: CodeModel::Default,
             modificator_passes: Vec::with_capacity(10),
             opt_passes: String::with_capacity(100),
+            use_jit: false,
+            jit_config: JITConfiguration::new(),
         }
     }
 }
@@ -90,6 +100,16 @@ impl LLVMBackend {
     pub fn get_modificator_passes(&self) -> &[LLVMModificatorPasses] {
         &self.modificator_passes
     }
+
+    #[inline]
+    pub fn get_jit_config(&self) -> &JITConfiguration {
+        &self.jit_config
+    }
+
+    #[inline]
+    pub fn is_jit(&self) -> bool {
+        self.use_jit
+    }
 }
 
 impl LLVMBackend {
@@ -101,6 +121,11 @@ impl LLVMBackend {
     #[inline]
     pub fn get_mut_target_cpu(&mut self) -> &mut LLVMTargetCPU {
         &mut self.target_cpu
+    }
+
+    #[inline]
+    pub fn get_mut_jit_config(&mut self) -> &mut JITConfiguration {
+        &mut self.jit_config
     }
 }
 
@@ -128,5 +153,10 @@ impl LLVMBackend {
     #[inline]
     pub fn set_modificator_passes(&mut self, modificator_passes: Vec<LLVMModificatorPasses>) {
         self.modificator_passes = modificator_passes;
+    }
+
+    #[inline]
+    pub fn set_jit(&mut self, use_jit: bool) {
+        self.use_jit = use_jit;
     }
 }

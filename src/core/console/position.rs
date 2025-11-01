@@ -4,13 +4,13 @@ pub enum CommandLinePosition {
     ThrushCompiler,
 
     InternalLinker,
-    ExternalCompiler,
+    External,
 }
 
 impl CommandLinePosition {
     #[inline]
-    pub fn at_external_linking_compiler(&self) -> bool {
-        matches!(self, CommandLinePosition::ExternalCompiler)
+    pub fn at_external(&self) -> bool {
+        matches!(self, CommandLinePosition::External)
     }
 
     #[inline]
