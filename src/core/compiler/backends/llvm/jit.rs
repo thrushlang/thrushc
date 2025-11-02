@@ -1,6 +1,8 @@
 use std::path::PathBuf;
 
-use crate::core::compiler::backends::llvm::utils;
+use inkwell::targets::Target;
+
+use crate::core::{compiler::backends::llvm::utils, console::logging};
 
 #[derive(Debug)]
 pub struct JITConfiguration {
@@ -14,8 +16,8 @@ impl JITConfiguration {
     pub fn new() -> Self {
         Self {
             libc_path: PathBuf::from(utils::get_default_dynamic_c_runtime()),
-            libraries: Vec::with_capacity(10),
-            args: Vec::with_capacity(10),
+            libraries: Vec::with_capacity(100),
+            args: Vec::with_capacity(100),
         }
     }
 }
@@ -52,4 +54,21 @@ impl JITConfiguration {
     pub fn add_arg(&mut self, value: String) {
         self.args.push(value);
     }
+}
+
+#[inline]
+pub fn has_jit_available(target: &Target) -> Result<(), ()> {
+    if !target.has_jit() {
+        logging::print_error(
+            logging::LoggingType::JITCompiler,
+            &format!(
+                "The Just-In-Time Compiler is not available for the target: '{}'.",
+                target.get_name().to_string_lossy()
+            ),
+        );
+
+        return Err(());
+    }
+
+    Ok(())
 }

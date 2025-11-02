@@ -117,15 +117,7 @@ impl CLI {
             self.analyze(argument);
         }
 
-        if !self.options.uses_llvm() {
-            self.report_error("Compiler backend is not setted. Try again with '-llvm-backend'.");
-        }
-
-        if !self.options.is_build_dir_setted() {
-            self.report_error(
-                "Compiler build-dir is not setted or not exist. Try again with '-build-dir \"PATH\"'.",
-            );
-        }
+        self.check_extra_requirements();
     }
 
     fn analyze(&mut self, argument: String) {
@@ -787,6 +779,21 @@ impl CLI {
         self.validation_cache.insert(path_str, exists);
 
         exists
+    }
+}
+
+impl CLI {
+    fn check_extra_requirements(&self) {
+        if !self.options.uses_llvm() {
+            self.report_error("Compiler backend is not setted. Try again with '-llvm-backend'.");
+        }
+
+        if !self.options.is_build_dir_setted() && !self.options.get_llvm_backend_options().is_jit()
+        {
+            self.report_error(
+                "AOT compiler build directory is not setted or not exist. Try again with '-build-dir \"PATH\"'.",
+            );
+        }
     }
 }
 

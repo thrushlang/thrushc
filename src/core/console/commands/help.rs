@@ -256,7 +256,7 @@ pub fn show_help() -> ! {
             "{} {} {}\n",
             "•".bold(),
             "-jit".custom_color((141, 141, 142)).bold(),
-            "Enables the Just-In-Time Compiler.",
+            "Enable the use of the Just-In-Time Compiler for code execution.",
         ),
     );
 
@@ -266,7 +266,7 @@ pub fn show_help() -> ! {
             "{} {} {}\n",
             "•".bold(),
             "-jit-libc".custom_color((141, 141, 142)).bold(),
-            "Specifies the path to the C runtime.",
+            "Specify the C runtime to link for code execution via the Just-In-Time Compiler.",
         ),
     );
 
@@ -276,7 +276,7 @@ pub fn show_help() -> ! {
             "{} {} {}\n",
             "•".bold(),
             "-jit-link".custom_color((141, 141, 142)).bold(),
-            "Add a specific library to the Just-In-Time compiler.",
+            "Specify, add, and link an external dynamic library for code execution via the Just-In-Time Compiler.",
         ),
     );
 

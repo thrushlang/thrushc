@@ -23,7 +23,10 @@ use inkwell::{
     targets::{InitializationConfig, Target, TargetMachine, TargetTriple},
 };
 
-use crate::{backend::llvm::compiler::jit::LLVMJITCompiler, linkage::linkers::lld::LLVMLinker};
+use crate::{
+    backend::llvm::compiler::jit::LLVMJITCompiler, core::compiler::backends::llvm::jit,
+    linkage::linkers::lld::LLVMLinker,
+};
 use crate::{
     backend::llvm::{self, compiler::context::LLVMCodeGenContext},
     core::compiler::backends::llvm::jit::JITConfiguration,
@@ -428,6 +431,8 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
             })?;
 
         llvm_module.set_data_layout(&target_machine.get_target_data().get_data_layout());
+
+        jit::has_jit_available(&target)?;
 
         let mut llvm_codegen_context: LLVMCodeGenContext = LLVMCodeGenContext::new(
             &llvm_module,

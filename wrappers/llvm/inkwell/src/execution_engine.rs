@@ -406,7 +406,7 @@ impl<'ctx> ExecutionEngine<'ctx> {
         let cstring_args: Vec<_> = args.iter().map(|arg| to_c_str(&arg)).collect();
         let raw_args: Vec<*const _> = cstring_args.iter().map(|arg| arg.as_ptr()).collect();
 
-        let environment_variables = []; // TODO: Support envp. Likely needs to be null terminated
+        let environment_variables: [*const i8; 0] = []; // TODO: Support envp. Likely needs to be null terminated
 
         LLVMRunFunctionAsMain(
             self.execution_engine_inner(),
