@@ -73,10 +73,6 @@ In summary:
   <img src= "https://github.com/thrushlang/.github/blob/main/assets/explanations/how%20it%20works%20(thrushc)%20v1.3.png" style= "width: 1hv; height: 1hv;"> </img>
 </p>
 
-# Code Generators 
-
-Code generators are generally backend compilers that accept the generation of intermediate code through an interface, which can then be used to transfer it to machine-specific assembler or directly to machine code for execution.
-
 ## LLVM
 
 The LLVM backend infrastructure is the default code generator for the **[Thrush Programming Language](https://github.com/thrushlang/)**. It offers full scope and portability across many architectures or targets.
@@ -149,6 +145,21 @@ sudo pacman -S libgccjit
 
 ```console
 sudo apt install libgccjit-0-dev
+```
+
+### Building from source
+
+```console
+$ git clone --depth 1 https://gcc.gnu.org/git/gcc.git
+$ cd gcc
+$ mkdir build && cd build
+$ ../configure \
+  --enable-languages=jit \
+  --enable-host-shared \
+  --disable-multilib \
+  --disable-bootstrap
+$ make -j$(nproc)
+$ make install
 ```
 
 ### Notes
