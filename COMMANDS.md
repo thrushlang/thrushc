@@ -1,4 +1,4 @@
-<img src= "https://github.com/thrushlang/thrushc/blob/master/assets/thrushlang-logo-v1.5.png" alt= "logo" style= "width: 80%; height: 80%;"> </img>
+<img src= "https://github.com/thrushlang/.github/blob/main/assets/logos/thrushlang-logo.png" alt= "logo" style= "width: 80%; height: 80%;"></img>
 
 # The Thrush Compiler | Commands & Flags
 
@@ -46,9 +46,9 @@ Compiler flags:
 
 JIT Compiler flags:
 
-• -jit Enables the Just-In-Time Compiler.
-• -jit-libc Specifies the path to the C runtime.
-• -jit-link Add a specific library to the Just-In-Time compiler.
+• -jit Enable the use of the Just-In-Time Compiler for code execution.
+• -jit-libc Specify the C runtime to link for code execution via the Just-In-Time Compiler.
+• -jit-link Specify, add, and link an external dynamic library for code execution via the Just-In-Time Compiler.
 
 Extra compiler flags:
 

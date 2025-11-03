@@ -17,7 +17,8 @@ The **Thrush Compiler** efficiently transfers source code from Thrush files dire
 You must first clone the repository and access it locally. 
 
 ```console
-git clone --depth 1 https://github.com/thrushlang/thrushc && cd thrushc
+$ git clone --depth 1 https://github.com/thrushlang/thrushc 
+$ cd thrushc
 ```
 
 ## Build dependencies 
@@ -27,7 +28,9 @@ Among the dependencies required by the compiler is the LLVM-C API, which you can
 Automatically:
 
 ```console
-cd builder && cargo run && cd ..
+$ cd builder 
+$ cargo run 
+$ cd ..
 ```
 
 ## Build the Compiler
@@ -40,7 +43,7 @@ Now you need to have Rust installed with a recent version.
 Now you need to compile the compiler with Rust. 
 
 ```console
-cargo run -- --help
+$ cargo run -- --help
 ```
 
 If you just need to quickly see the commands, you can look at **[Thrush Compiler - Commands & Flags](https://github.com/thrushlang/thrushc/blob/master/COMMANDS.md)**.
