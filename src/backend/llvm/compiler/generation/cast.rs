@@ -415,6 +415,19 @@ pub fn compile<'ctx>(
         };
     }
 
+    if lhs_type.is_ptr_type() && rhs.is_const_type() {
+        let value: BasicValueEnum = ptr::compile(context, lhs, None);
+
+        if value.is_pointer_value() {
+            let to: PointerType = typegen::generate(llvm_context, rhs).into_pointer_type();
+
+            return llvm_builder
+                .build_pointer_cast(value.into_pointer_value(), to, "")
+                .unwrap_or_else(abort_ptr)
+                .into();
+        };
+    }
+
     self::codegen_abort(format!(
         "Unsupported cast from '{}' to '{}'.",
         lhs_type, lhs_type

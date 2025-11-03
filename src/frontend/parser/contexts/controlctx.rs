@@ -12,6 +12,7 @@ pub struct ParserControlContext {
 }
 
 impl ParserControlContext {
+    #[inline]
     pub fn new() -> Self {
         Self {
             sync_position: Vec::with_capacity(100),

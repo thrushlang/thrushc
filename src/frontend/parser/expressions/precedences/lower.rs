@@ -122,12 +122,14 @@ pub fn lower_precedence<'parser>(
         }
 
         TokenType::DirectRef => {
-            let span: Span = ctx.advance()?.span;
+            let span: Span = ctx.advance()?.get_span();
+
             let expr: Ast = expr::build_expr(ctx)?;
+            let expr_type: &Type = expr.get_value_type()?;
 
             Ast::DirectRef {
                 expr: expr.clone().into(),
-                kind: expr.get_value_type()?.get_directref_type(),
+                kind: expr_type.get_type_ref(),
                 span,
             }
         }

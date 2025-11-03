@@ -114,7 +114,7 @@ fn build_fn_ref_type(ctx: &mut ParserContext<'_>) -> Result<Type, ThrushCompiler
             break;
         }
 
-        parameter_types.push(build_type(ctx)?);
+        parameter_types.push(self::build_type(ctx)?);
 
         if ctx.check(TokenType::RBracket) {
             break;

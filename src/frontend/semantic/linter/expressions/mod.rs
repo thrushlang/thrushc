@@ -11,8 +11,7 @@ use crate::frontend::lexer::span::Span;
 use crate::frontend::semantic::linter::Linter;
 use crate::frontend::semantic::linter::builtins;
 use crate::frontend::semantic::linter::expressions;
-use crate::frontend::semantic::linter::marks::mutable;
-use crate::frontend::semantic::linter::marks::used;
+use crate::frontend::semantic::linter::marks;
 use crate::frontend::types::ast::Ast;
 use crate::frontend::types::parser::stmts::types::Constructor;
 
@@ -33,10 +32,10 @@ pub fn analyze<'linter>(linter: &mut Linter<'linter>, expr: &'linter Ast) {
             ..
         } => {
             if let Ast::Reference { name, .. } = &**expression {
-                used::mark_as_used(linter, name);
+                marks::mark_as_used(linter, name);
 
                 if operator.is_minus_minus_operator() || operator.is_plus_plus_operator() {
-                    mutable::mark_as_mutated(linter, name);
+                    marks::mark_as_mutated(linter, name);
                 }
             }
 
@@ -130,7 +129,7 @@ pub fn analyze<'linter>(linter: &mut Linter<'linter>, expr: &'linter Ast) {
         }
 
         Ast::Reference { name, .. } => {
-            used::mark_as_used(linter, name);
+            marks::mark_as_used(linter, name);
         }
 
         Ast::FixedArray { items, .. } | Ast::Array { items, .. } => {

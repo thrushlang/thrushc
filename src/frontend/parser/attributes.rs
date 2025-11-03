@@ -13,7 +13,7 @@ use crate::frontend::types::parser::stmts::types::ThrushAttributes;
 use ahash::AHashMap as HashMap;
 use lazy_static::lazy_static;
 
-const ASSEMBLER_SYNTAXES: [&str; 2] = ["Intel", "AT&T"];
+const INLINE_ASSEMBLER_SYNTAXES: [&str; 2] = ["Intel", "AT&T"];
 
 lazy_static! {
     pub static ref CALL_CONVENTIONS: HashMap<&'static [u8], CallConvention> = {
@@ -26,9 +26,9 @@ lazy_static! {
         call_conventions.insert(b"cold", CallConvention::Cold);
         call_conventions.insert(b"weakReg", CallConvention::PreserveMost);
         call_conventions.insert(b"strongReg", CallConvention::PreserveAll);
-        call_conventions.insert(b"swift", CallConvention::Swift);
-        call_conventions.insert(b"haskell", CallConvention::GHC);
-        call_conventions.insert(b"erlang", CallConvention::HiPE);
+        call_conventions.insert(b"Swift", CallConvention::Swift);
+        call_conventions.insert(b"Haskell", CallConvention::GHC);
+        call_conventions.insert(b"Erlang", CallConvention::HiPE);
 
         call_conventions
     };
@@ -36,7 +36,6 @@ lazy_static! {
 
 pub fn build_attributes<'parser>(
     ctx: &mut ParserContext<'parser>,
-
     limits: &[TokenType],
 ) -> Result<ThrushAttributes<'parser>, ThrushCompilerIssue> {
     let mut attributes: ThrushAttributes = Vec::with_capacity(10);
@@ -138,12 +137,12 @@ fn build_assembler_syntax_attribute<'parser>(
         "Expected ')'.".into(),
     )?;
 
-    if !ASSEMBLER_SYNTAXES.contains(&specified_syntax) {
+    if !INLINE_ASSEMBLER_SYNTAXES.contains(&specified_syntax) {
         return Err(ThrushCompilerIssue::Error(
             "Syntax error".into(),
             format!(
                 "Unknown assembler syntax, valid are '{}'.",
-                ASSEMBLER_SYNTAXES.join(", ")
+                INLINE_ASSEMBLER_SYNTAXES.join(", ")
             ),
             None,
             syntax_span,

@@ -6,12 +6,15 @@ pub struct ParserTypeContext {
 }
 
 impl ParserTypeContext {
+    #[inline]
     pub fn new() -> Self {
         Self {
             function_type: Type::Void,
         }
     }
+}
 
+impl ParserTypeContext {
     #[inline]
     pub fn set_function_type(&mut self, new_type: Type) {
         self.function_type = new_type;

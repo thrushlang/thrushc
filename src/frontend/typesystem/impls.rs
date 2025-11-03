@@ -139,7 +139,7 @@ impl TypeExtensions for Type {
         self
     }
 
-    fn get_directref_type(&self) -> Type {
+    fn get_type_ref(&self) -> Type {
         if self.is_ptr_like_type() {
             self.clone()
         } else {

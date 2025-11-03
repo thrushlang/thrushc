@@ -13,6 +13,7 @@ use crate::frontend::lexer::span::Span;
 use crate::frontend::semantic::analyzer::{Analyzer, builtins};
 use crate::frontend::types::ast::Ast;
 use crate::frontend::types::parser::stmts::types::Constructor;
+use crate::frontend::typesystem::types::Type;
 
 pub fn validate<'analyzer>(
     analyzer: &mut Analyzer<'analyzer>,
@@ -79,11 +80,19 @@ pub fn validate<'analyzer>(
         }
 
         Ast::DirectRef { expr, span, .. } => {
-            if !expr.is_reference() && !expr.is_allocated() {
+            let expr_type: &Type = expr.get_value_type()?;
+
+            if expr.is_reference() && !expr.is_allocated() {
+                analyzer.add_error(ThrushCompilerIssue::Error(
+                    "Expected allocated reference".into(),
+                    "An reference with direction was expected.".into(),
+                    None,
+                    *span,
+                ));
+            } else if !expr.is_reference() && !expr_type.is_ptr_like_type() {
                 analyzer.add_error(ThrushCompilerIssue::Error(
                     "Expected allocated value".into(),
-                    "Expected allocated value reference or value type with raw typed pointer 'ptr[T]', raw pointer 'ptr', array type 'array[T]', memory address 'addr', or function reference pointer 'Fn[..] -> T'."
-                        .into(),
+                    "An value with direction was expected.".into(),
                     None,
                     *span,
                 ));
