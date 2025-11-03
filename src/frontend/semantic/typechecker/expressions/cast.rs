@@ -23,7 +23,7 @@ pub fn validate<'type_checker>(
 
             checks::check_type_cast(cast_type, from_type, metadata, span)?;
 
-            typechecker.analyze_stmt(from)?;
+            typechecker.analyze_expr(from)?;
 
             Ok(())
         }

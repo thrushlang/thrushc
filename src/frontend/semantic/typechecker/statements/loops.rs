@@ -22,8 +22,8 @@ pub fn validate<'type_checker>(
             ..
         } => {
             typechecker.analyze_stmt(local)?;
-            typechecker.analyze_stmt(cond)?;
-            typechecker.analyze_stmt(actions)?;
+            typechecker.analyze_expr(cond)?;
+            typechecker.analyze_expr(actions)?;
             typechecker.analyze_stmt(block)?;
 
             Ok(())
@@ -43,7 +43,7 @@ pub fn validate<'type_checker>(
                 metadata,
             )?;
 
-            typechecker.analyze_stmt(cond)?;
+            typechecker.analyze_expr(cond)?;
             typechecker.analyze_stmt(block)?;
 
             Ok(())

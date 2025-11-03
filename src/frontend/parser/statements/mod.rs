@@ -1,9 +1,12 @@
 pub mod block;
 pub mod conditional;
-pub mod constant;
 pub mod controlflow;
+pub mod lconstant;
+pub mod lctype;
+pub mod lenum;
 pub mod lli;
 pub mod local;
 pub mod loops;
 pub mod lstatic;
+pub mod lstructure;
 pub mod terminator;

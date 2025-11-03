@@ -1,19 +1,19 @@
 use crate::core::errors::standard::ThrushCompilerIssue;
 
 use crate::frontend::lexer::span::Span;
-use crate::frontend::parser::symbols::SymbolsTable;
+use crate::frontend::parser::ParserContext;
 use crate::frontend::types::ast::Ast;
-use crate::frontend::types::parser::stmts::traits::StructExtensions;
+use crate::frontend::types::parser::stmts::traits::{FoundSymbolEither, StructExtensions};
 use crate::frontend::types::parser::stmts::types::{StructField, StructFields};
-use crate::frontend::types::parser::symbols::types::Struct;
+use crate::frontend::types::parser::symbols::types::{FoundSymbolId, Struct};
 use crate::frontend::typesystem::types::Type;
 
-pub fn decompose(
+pub fn decompose<'parser>(
+    ctx: &ParserContext<'parser>,
     mut position: usize,
     source: &Ast,
     property_names: Vec<&str>,
     base_type: &Type,
-    symbols_table: &SymbolsTable,
     span: Span,
 ) -> Result<(Type, Vec<(Type, u32)>), ThrushCompilerIssue> {
     let mut indices: Vec<(Type, u32)> = Vec::with_capacity(50);
@@ -41,7 +41,12 @@ pub fn decompose(
     let field_name: &str = property_names[position];
 
     if let Type::Struct(name, _, _) = current_type {
-        let structure: Struct = symbols_table.get_struct(name, span)?;
+        let object: FoundSymbolId = ctx.get_symbols().get_symbols_id(name, span)?;
+        let structure_id: (&str, usize) = object.expected_struct(span)?;
+        let id: &str = structure_id.0;
+        let scope_idx: usize = structure_id.1;
+
+        let structure: Struct = ctx.get_symbols().get_struct_by_id(id, scope_idx, span)?;
         let fields: StructFields = structure.get_fields();
 
         let field: Option<StructField> = fields
@@ -61,14 +66,8 @@ pub fn decompose(
 
             position += 1;
 
-            let (field_inner_type, mut nested_indices) = self::decompose(
-                position,
-                source,
-                property_names,
-                field_type,
-                symbols_table,
-                span,
-            )?;
+            let (field_inner_type, mut nested_indices) =
+                self::decompose(ctx, position, source, property_names, field_type, span)?;
 
             nested_indices.iter_mut().for_each(|(ty, ..)| {
                 *ty = if is_parent_ptr || source.is_allocated() {

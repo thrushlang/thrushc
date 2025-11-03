@@ -39,7 +39,7 @@ pub fn validate<'type_checker>(
 
             checks::check_types(lli_type, value_type, Some(expr), None, metadata)?;
 
-            typechecker.analyze_stmt(expr)?;
+            typechecker.analyze_expr(expr)?;
 
             Ok(())
         }
@@ -57,7 +57,7 @@ pub fn validate<'type_checker>(
                 ));
             }
 
-            typechecker.analyze_stmt(source)?;
+            typechecker.analyze_expr(source)?;
 
             Ok(())
         }
@@ -110,7 +110,7 @@ pub fn validate<'type_checker>(
                     ));
                 }
 
-                typechecker.analyze_stmt(indexe)?;
+                typechecker.analyze_expr(indexe)?;
 
                 Ok(())
             })?;
@@ -136,7 +136,7 @@ pub fn validate<'type_checker>(
                 ));
             }
 
-            typechecker.analyze_stmt(source)?;
+            typechecker.analyze_expr(source)?;
 
             let value_type: &Type = write_value.get_value_type()?;
             let span: Span = write_value.get_span();

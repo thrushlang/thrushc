@@ -11,41 +11,49 @@ use crate::frontend::types::parser::symbols::types::AssemblerFunction;
 use crate::frontend::types::parser::symbols::types::AssemblerFunctions;
 use crate::frontend::types::parser::symbols::types::ConstantSymbol;
 use crate::frontend::types::parser::symbols::types::CustomTypeSymbol;
-use crate::frontend::types::parser::symbols::types::CustomTypes;
 use crate::frontend::types::parser::symbols::types::EnumSymbol;
-use crate::frontend::types::parser::symbols::types::Enums;
 use crate::frontend::types::parser::symbols::types::FoundSymbolId;
 use crate::frontend::types::parser::symbols::types::Function;
 use crate::frontend::types::parser::symbols::types::Functions;
 use crate::frontend::types::parser::symbols::types::GlobalConstants;
+use crate::frontend::types::parser::symbols::types::GlobalCustomTypes;
+use crate::frontend::types::parser::symbols::types::GlobalEnums;
 use crate::frontend::types::parser::symbols::types::GlobalStatics;
+use crate::frontend::types::parser::symbols::types::GlobalStructs;
 use crate::frontend::types::parser::symbols::types::LLISymbol;
 use crate::frontend::types::parser::symbols::types::LLIs;
 use crate::frontend::types::parser::symbols::types::LocalConstants;
+use crate::frontend::types::parser::symbols::types::LocalCustomTypes;
+use crate::frontend::types::parser::symbols::types::LocalEnums;
 use crate::frontend::types::parser::symbols::types::LocalStatics;
+use crate::frontend::types::parser::symbols::types::LocalStructs;
 use crate::frontend::types::parser::symbols::types::LocalSymbol;
 use crate::frontend::types::parser::symbols::types::Locals;
 use crate::frontend::types::parser::symbols::types::ParameterSymbol;
 use crate::frontend::types::parser::symbols::types::Parameters;
 use crate::frontend::types::parser::symbols::types::StaticSymbol;
 use crate::frontend::types::parser::symbols::types::Struct;
-use crate::frontend::types::parser::symbols::types::Structs;
 
 use ahash::AHashMap as HashMap;
 
 #[derive(Clone, Debug, Default)]
 pub struct SymbolsTable<'parser> {
-    custom_types: CustomTypes<'parser>,
+    global_custom_types: GlobalCustomTypes<'parser>,
     global_statics: GlobalStatics<'parser>,
-    statics: LocalStatics<'parser>,
+    global_structs: GlobalStructs<'parser>,
     global_constants: GlobalConstants<'parser>,
-    constants: LocalConstants<'parser>,
+    global_enums: GlobalEnums<'parser>,
+
+    local_structs: LocalStructs<'parser>,
+    local_statics: LocalStatics<'parser>,
+    local_constants: LocalConstants<'parser>,
+    local_custom_types: LocalCustomTypes<'parser>,
+    local_enums: LocalEnums<'parser>,
+
     locals: Locals<'parser>,
     llis: LLIs<'parser>,
-    structs: Structs<'parser>,
     functions: Functions<'parser>,
     asm_functions: AssemblerFunctions<'parser>,
-    enums: Enums<'parser>,
 
     parameters: Parameters<'parser>,
 }
@@ -56,17 +64,21 @@ impl<'parser> SymbolsTable<'parser> {
         asm_functions: AssemblerFunctions<'parser>,
     ) -> Self {
         Self {
-            custom_types: HashMap::with_capacity(PARSER_SYMBOLS_MINIMAL_GLOBAL_CAPACITY),
-            global_statics: HashMap::with_capacity(PARSER_SYMBOLS_MINIMAL_GLOBAL_CAPACITY),
-            statics: Vec::with_capacity(PARSER_SYMBOLS_MINIMAL_LOCAL_CAPACITY),
-            global_constants: HashMap::with_capacity(PARSER_SYMBOLS_MINIMAL_GLOBAL_CAPACITY),
-            constants: Vec::with_capacity(PARSER_SYMBOLS_MINIMAL_LOCAL_CAPACITY),
-            locals: Vec::with_capacity(PARSER_SYMBOLS_MINIMAL_LOCAL_CAPACITY),
-            llis: Vec::with_capacity(PARSER_SYMBOLS_MINIMAL_LOCAL_CAPACITY),
             functions,
             asm_functions,
-            structs: HashMap::with_capacity(PARSER_SYMBOLS_MINIMAL_GLOBAL_CAPACITY),
-            enums: HashMap::with_capacity(PARSER_SYMBOLS_MINIMAL_GLOBAL_CAPACITY),
+            global_structs: HashMap::with_capacity(PARSER_SYMBOLS_MINIMAL_GLOBAL_CAPACITY),
+            global_statics: HashMap::with_capacity(PARSER_SYMBOLS_MINIMAL_GLOBAL_CAPACITY),
+            global_constants: HashMap::with_capacity(PARSER_SYMBOLS_MINIMAL_GLOBAL_CAPACITY),
+            global_custom_types: HashMap::with_capacity(PARSER_SYMBOLS_MINIMAL_GLOBAL_CAPACITY),
+            global_enums: HashMap::with_capacity(PARSER_SYMBOLS_MINIMAL_GLOBAL_CAPACITY),
+
+            local_structs: Vec::with_capacity(PARSER_SYMBOLS_MINIMAL_LOCAL_CAPACITY),
+            local_statics: Vec::with_capacity(PARSER_SYMBOLS_MINIMAL_LOCAL_CAPACITY),
+            local_constants: Vec::with_capacity(PARSER_SYMBOLS_MINIMAL_LOCAL_CAPACITY),
+            local_custom_types: Vec::with_capacity(PARSER_SYMBOLS_MINIMAL_GLOBAL_CAPACITY),
+            local_enums: Vec::with_capacity(PARSER_SYMBOLS_MINIMAL_GLOBAL_CAPACITY),
+            locals: Vec::with_capacity(PARSER_SYMBOLS_MINIMAL_LOCAL_CAPACITY),
+            llis: Vec::with_capacity(PARSER_SYMBOLS_MINIMAL_LOCAL_CAPACITY),
 
             parameters: HashMap::with_capacity(10),
         }
@@ -76,10 +88,19 @@ impl<'parser> SymbolsTable<'parser> {
 impl SymbolsTable<'_> {
     #[inline]
     pub fn begin_scope(&mut self) {
-        self.statics.push(HashMap::with_capacity(
+        self.local_structs.push(HashMap::with_capacity(
             PARSER_SYMBOLS_MINIMAL_LOCAL_CAPACITY,
         ));
-        self.constants.push(HashMap::with_capacity(
+        self.local_custom_types.push(HashMap::with_capacity(
+            PARSER_SYMBOLS_MINIMAL_LOCAL_CAPACITY,
+        ));
+        self.local_statics.push(HashMap::with_capacity(
+            PARSER_SYMBOLS_MINIMAL_LOCAL_CAPACITY,
+        ));
+        self.local_constants.push(HashMap::with_capacity(
+            PARSER_SYMBOLS_MINIMAL_LOCAL_CAPACITY,
+        ));
+        self.local_enums.push(HashMap::with_capacity(
             PARSER_SYMBOLS_MINIMAL_LOCAL_CAPACITY,
         ));
 
@@ -93,16 +114,24 @@ impl SymbolsTable<'_> {
 
     #[inline]
     pub fn end_scope(&mut self) {
-        self.statics.pop();
-        self.constants.pop();
+        self.local_statics.pop();
+        self.local_constants.pop();
+        self.local_structs.pop();
+        self.local_custom_types.pop();
+        self.local_enums.pop();
+
         self.locals.pop();
         self.llis.pop();
     }
 
     #[inline]
     pub fn finish_scopes(&mut self) {
-        self.statics.clear();
-        self.constants.clear();
+        self.local_statics.clear();
+        self.local_constants.clear();
+        self.local_structs.clear();
+        self.local_custom_types.clear();
+        self.local_enums.clear();
+
         self.locals.clear();
         self.llis.clear();
     }
@@ -120,24 +149,23 @@ impl<'parser> SymbolsTable<'parser> {
     ) -> Result<(), ThrushCompilerIssue> {
         parameters.iter().try_for_each(|parameter| {
             if let Ast::FunctionParameter {
-                name,
+                name: id,
                 kind,
                 span,
                 metadata,
                 ..
             } = parameter
             {
-                if self.parameters.contains_key(name) {
+                if self.parameters.contains_key(id) {
                     return Err(ThrushCompilerIssue::Error(
                         "Parameter already declared".into(),
-                        format!("'{}' parameter already declared before.", name),
+                        format!("'{}' parameter already declared before.", id),
                         None,
                         *span,
                     ));
                 }
 
-                self.parameters
-                    .insert(name, (kind.clone(), *metadata, *span));
+                self.parameters.insert(id, (kind.clone(), *metadata, *span));
             }
 
             Ok(())
@@ -145,24 +173,26 @@ impl<'parser> SymbolsTable<'parser> {
 
         Ok(())
     }
+}
 
+impl<'parser> SymbolsTable<'parser> {
     pub fn new_lli(
         &mut self,
-        name: &'parser str,
+        id: &'parser str,
         lli: LLISymbol<'parser>,
         span: Span,
     ) -> Result<(), ThrushCompilerIssue> {
         if let Some(last_scope) = self.llis.last_mut() {
-            if last_scope.contains_key(name) {
+            if last_scope.contains_key(id) {
                 return Err(ThrushCompilerIssue::Error(
                     String::from("Low level instruction already declared"),
-                    format!("Low level instruction '{}' already declared before.", name),
+                    format!("Low level instruction '{}' already declared before.", id),
                     None,
                     span,
                 ));
             }
 
-            last_scope.insert(name, lli);
+            last_scope.insert(id, lli);
 
             return Ok(());
         }
@@ -179,21 +209,21 @@ impl<'parser> SymbolsTable<'parser> {
 
     pub fn new_local(
         &mut self,
-        name: &'parser str,
+        id: &'parser str,
         local: LocalSymbol<'parser>,
         span: Span,
     ) -> Result<(), ThrushCompilerIssue> {
         if let Some(last_scope) = self.locals.last_mut() {
-            if last_scope.contains_key(name) || self.parameters.contains_key(name) {
+            if last_scope.contains_key(id) || self.parameters.contains_key(id) {
                 return Err(ThrushCompilerIssue::Error(
                     String::from("Local variable already declared"),
-                    format!("'{}' local variable already declared before.", name),
+                    format!("'{}' local variable already declared before.", id),
                     None,
                     span,
                 ));
             }
 
-            last_scope.insert(name, local);
+            last_scope.insert(id, local);
 
             return Ok(());
         }
@@ -210,41 +240,41 @@ impl<'parser> SymbolsTable<'parser> {
 
     pub fn new_global_static(
         &mut self,
-        name: &'parser str,
+        id: &'parser str,
         static_: StaticSymbol<'parser>,
         span: Span,
     ) -> Result<(), ThrushCompilerIssue> {
-        if self.global_statics.contains_key(name) {
+        if self.global_statics.contains_key(id) {
             return Err(ThrushCompilerIssue::Error(
                 "Static already declared".into(),
-                format!("'{}' static already declared before.", name),
+                format!("'{}' static already declared before.", id),
                 None,
                 span,
             ));
         }
 
-        self.global_statics.insert(name, static_);
+        self.global_statics.insert(id, static_);
 
         Ok(())
     }
 
     pub fn new_static(
         &mut self,
-        name: &'parser str,
+        id: &'parser str,
         static_: StaticSymbol<'parser>,
         span: Span,
     ) -> Result<(), ThrushCompilerIssue> {
-        if let Some(last_scope) = self.statics.last_mut() {
-            if last_scope.contains_key(name) {
+        if let Some(last_scope) = self.local_statics.last_mut() {
+            if last_scope.contains_key(id) {
                 return Err(ThrushCompilerIssue::Error(
                     String::from("Static already declared"),
-                    format!("'{}' static already declared before.", name),
+                    format!("'{}' static already declared before.", id),
                     None,
                     span,
                 ));
             }
 
-            last_scope.insert(name, static_);
+            last_scope.insert(id, static_);
 
             return Ok(());
         }
@@ -261,41 +291,41 @@ impl<'parser> SymbolsTable<'parser> {
 
     pub fn new_global_constant(
         &mut self,
-        name: &'parser str,
+        id: &'parser str,
         constant: ConstantSymbol<'parser>,
         span: Span,
     ) -> Result<(), ThrushCompilerIssue> {
-        if self.global_constants.contains_key(name) {
+        if self.global_constants.contains_key(id) {
             return Err(ThrushCompilerIssue::Error(
                 "Constant already declared".into(),
-                format!("'{}' constant already declared before.", name),
+                format!("'{}' constant already declared before.", id),
                 None,
                 span,
             ));
         }
 
-        self.global_constants.insert(name, constant);
+        self.global_constants.insert(id, constant);
 
         Ok(())
     }
 
     pub fn new_constant(
         &mut self,
-        name: &'parser str,
+        id: &'parser str,
         constant: ConstantSymbol<'parser>,
         span: Span,
     ) -> Result<(), ThrushCompilerIssue> {
-        if let Some(last_scope) = self.constants.last_mut() {
-            if last_scope.contains_key(name) {
+        if let Some(last_scope) = self.local_constants.last_mut() {
+            if last_scope.contains_key(id) {
                 return Err(ThrushCompilerIssue::Error(
                     String::from("Constant already declared"),
-                    format!("'{}' constant already declared before.", name),
+                    format!("'{}' constant already declared before.", id),
                     None,
                     span,
                 ));
             }
 
-            last_scope.insert(name, constant);
+            last_scope.insert(id, constant);
 
             return Ok(());
         }
@@ -310,102 +340,195 @@ impl<'parser> SymbolsTable<'parser> {
         ));
     }
 
-    pub fn new_custom_type(
+    pub fn new_global_custom_type(
         &mut self,
-        name: &'parser str,
-        custom_type: CustomTypeSymbol<'parser>,
+        id: &'parser str,
+        ctype: CustomTypeSymbol<'parser>,
         span: Span,
     ) -> Result<(), ThrushCompilerIssue> {
-        if self.custom_types.contains_key(name) {
+        if self.global_custom_types.contains_key(id) {
             return Err(ThrushCompilerIssue::Error(
                 String::from("Custom type already declared"),
-                format!("'{}' custom type already declared before.", name),
+                format!("'{}' custom type already declared before.", id),
                 None,
                 span,
             ));
         }
 
-        self.custom_types.insert(name, custom_type);
+        self.global_custom_types.insert(id, ctype);
+
+        Ok(())
+    }
+
+    pub fn new_custom_type(
+        &mut self,
+        id: &'parser str,
+        ctype: CustomTypeSymbol<'parser>,
+        span: Span,
+    ) -> Result<(), ThrushCompilerIssue> {
+        if let Some(last_scope) = self.local_custom_types.last_mut() {
+            if last_scope.contains_key(id) {
+                return Err(ThrushCompilerIssue::Error(
+                    String::from("Custom already declared"),
+                    format!("'{}' Custom already declared before.", id),
+                    None,
+                    span,
+                ));
+            }
+
+            last_scope.insert(id, ctype);
+
+            return Ok(());
+        }
+
+        return Err(ThrushCompilerIssue::FrontEndBug(
+            String::from("Last scope not caught"),
+            String::from("The last scope could not be obtained."),
+            span,
+            CompilationPosition::Parser,
+            PathBuf::from(file!()),
+            line!(),
+        ));
+    }
+
+    pub fn new_global_struct(
+        &mut self,
+        id: &'parser str,
+        fields: Struct<'parser>,
+        span: Span,
+    ) -> Result<(), ThrushCompilerIssue> {
+        if self.global_structs.contains_key(id) {
+            return Err(ThrushCompilerIssue::Error(
+                String::from("Structure already declared"),
+                format!("'{}' structure already declared before.", id),
+                None,
+                span,
+            ));
+        }
+
+        self.global_structs.insert(id, fields);
 
         Ok(())
     }
 
     pub fn new_struct(
         &mut self,
-        name: &'parser str,
-        field_types: Struct<'parser>,
+        id: &'parser str,
+        fields: Struct<'parser>,
         span: Span,
     ) -> Result<(), ThrushCompilerIssue> {
-        if self.structs.contains_key(name) {
+        if let Some(last_scope) = self.local_structs.last_mut() {
+            if last_scope.contains_key(id) {
+                return Err(ThrushCompilerIssue::Error(
+                    String::from("Structure already declared"),
+                    format!("'{}' structure already declared before.", id),
+                    None,
+                    span,
+                ));
+            }
+
+            last_scope.insert(id, fields);
+
+            return Ok(());
+        }
+
+        return Err(ThrushCompilerIssue::FrontEndBug(
+            String::from("Last scope not caught"),
+            String::from("The last scope could not be obtained."),
+            span,
+            CompilationPosition::Parser,
+            PathBuf::from(file!()),
+            line!(),
+        ));
+    }
+
+    pub fn new_global_enum(
+        &mut self,
+        id: &'parser str,
+        union: EnumSymbol<'parser>,
+        span: Span,
+    ) -> Result<(), ThrushCompilerIssue> {
+        if self.global_enums.contains_key(id) {
             return Err(ThrushCompilerIssue::Error(
-                String::from("Structure already declared"),
-                format!("'{}' structure already declared before.", name),
+                String::from("Enum already declared"),
+                format!("'{}' enum already declared before.", id),
                 None,
                 span,
             ));
         }
 
-        self.structs.insert(name, field_types);
+        self.global_enums.insert(id, union);
 
         Ok(())
     }
 
     pub fn new_enum(
         &mut self,
-        name: &'parser str,
+        id: &'parser str,
         union: EnumSymbol<'parser>,
         span: Span,
     ) -> Result<(), ThrushCompilerIssue> {
-        if self.enums.contains_key(name) {
-            return Err(ThrushCompilerIssue::Error(
-                String::from("Enum already declared"),
-                format!("'{}' enum already declared before.", name),
-                None,
-                span,
-            ));
+        if let Some(last_scope) = self.local_enums.last_mut() {
+            if last_scope.contains_key(id) {
+                return Err(ThrushCompilerIssue::Error(
+                    String::from("Enum already declared"),
+                    format!("'{}' enum already declared before.", id),
+                    None,
+                    span,
+                ));
+            }
+
+            last_scope.insert(id, union);
+
+            return Ok(());
         }
 
-        self.enums.insert(name, union);
-
-        Ok(())
+        return Err(ThrushCompilerIssue::FrontEndBug(
+            String::from("Last scope not caught"),
+            String::from("The last scope could not be obtained."),
+            span,
+            CompilationPosition::Parser,
+            PathBuf::from(file!()),
+            line!(),
+        ));
     }
 
     pub fn new_asm_function(
         &mut self,
-        name: &'parser str,
+        id: &'parser str,
         function: AssemblerFunction<'parser>,
         span: Span,
     ) -> Result<(), ThrushCompilerIssue> {
-        if self.asm_functions.contains_key(name) {
+        if self.asm_functions.contains_key(id) {
             return Err(ThrushCompilerIssue::Error(
                 String::from("Assembly function already declared"),
-                format!("'{}' assembler function already declared before.", name),
+                format!("'{}' assembler function already declared before.", id),
                 None,
                 span,
             ));
         }
 
-        self.asm_functions.insert(name, function);
+        self.asm_functions.insert(id, function);
 
         Ok(())
     }
 
     pub fn new_function(
         &mut self,
-        name: &'parser str,
+        id: &'parser str,
         function: Function<'parser>,
         span: Span,
     ) -> Result<(), ThrushCompilerIssue> {
-        if self.functions.contains_key(name) {
+        if self.functions.contains_key(id) {
             return Err(ThrushCompilerIssue::Error(
                 String::from("Function already declared"),
-                format!("'{}' function already declared before.", name),
+                format!("'{}' function already declared before.", id),
                 None,
                 span,
             ));
         }
 
-        self.functions.insert(name, function);
+        self.functions.insert(id, function);
 
         Ok(())
     }
@@ -414,11 +537,11 @@ impl<'parser> SymbolsTable<'parser> {
 impl<'parser> SymbolsTable<'parser> {
     pub fn get_symbols_id(
         &self,
-        name: &'parser str,
+        id: &'parser str,
         span: Span,
     ) -> Result<FoundSymbolId<'parser>, ThrushCompilerIssue> {
         for (idx, scope) in self.llis.iter().enumerate().rev() {
-            if scope.contains_key(name) {
+            if scope.contains_key(id) {
                 return Ok((
                     None,
                     None,
@@ -428,14 +551,14 @@ impl<'parser> SymbolsTable<'parser> {
                     None,
                     None,
                     None,
-                    Some((name, idx)),
+                    Some((id, idx)),
                     None,
                 ));
             }
         }
 
         for (idx, scope) in self.locals.iter().enumerate().rev() {
-            if scope.contains_key(name) {
+            if scope.contains_key(id) {
                 return Ok((
                     None,
                     None,
@@ -446,12 +569,12 @@ impl<'parser> SymbolsTable<'parser> {
                     None,
                     None,
                     None,
-                    Some((name, idx)),
+                    Some((id, idx)),
                 ));
             }
         }
 
-        if self.parameters.contains_key(name) {
+        if self.parameters.contains_key(id) {
             return Ok((
                 None,
                 None,
@@ -459,62 +582,33 @@ impl<'parser> SymbolsTable<'parser> {
                 None,
                 None,
                 None,
-                Some(name),
+                Some(id),
                 None,
                 None,
                 None,
             ));
         }
 
-        if self.structs.contains_key(name) {
-            return Ok((
-                Some(name),
-                None,
-                None,
-                None,
-                None,
-                None,
-                None,
-                None,
-                None,
-                None,
-            ));
+        for (idx, scope) in self.local_structs.iter().enumerate().rev() {
+            if scope.contains_key(id) {
+                return Ok((
+                    Some((id, idx)),
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                ));
+            }
         }
-
-        if self.enums.contains_key(name) {
+        if self.global_structs.contains_key(id) {
             return Ok((
+                Some((id, 0)),
                 None,
-                None,
-                Some(name),
-                None,
-                None,
-                None,
-                None,
-                None,
-                None,
-                None,
-            ));
-        }
-
-        if self.custom_types.contains_key(name) {
-            return Ok((
-                None,
-                None,
-                None,
-                None,
-                None,
-                Some(name),
-                None,
-                None,
-                None,
-                None,
-            ));
-        }
-
-        if self.functions.contains_key(name) {
-            return Ok((
-                None,
-                Some(name),
                 None,
                 None,
                 None,
@@ -526,30 +620,46 @@ impl<'parser> SymbolsTable<'parser> {
             ));
         }
 
-        if self.asm_functions.contains_key(name) {
+        for (idx, scope) in self.local_enums.iter().enumerate().rev() {
+            if scope.contains_key(id) {
+                return Ok((
+                    None,
+                    None,
+                    Some((id, idx)),
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                ));
+            }
+        }
+        if self.global_enums.contains_key(id) {
             return Ok((
                 None,
                 None,
+                Some((id, 0)),
                 None,
                 None,
                 None,
                 None,
                 None,
-                Some(name),
                 None,
                 None,
             ));
         }
 
-        for (idx, scope) in self.constants.iter().enumerate().rev() {
-            if scope.contains_key(name) {
+        for (idx, scope) in self.local_custom_types.iter().enumerate().rev() {
+            if scope.contains_key(id) {
                 return Ok((
                     None,
                     None,
                     None,
                     None,
-                    Some((name, idx)),
                     None,
+                    Some((id, idx)),
                     None,
                     None,
                     None,
@@ -557,13 +667,28 @@ impl<'parser> SymbolsTable<'parser> {
                 ));
             }
         }
-        if self.global_constants.contains_key(name) {
+        if self.global_custom_types.contains_key(id) {
             return Ok((
                 None,
                 None,
                 None,
                 None,
-                Some((name, 0)),
+                None,
+                Some((id, 0)),
+                None,
+                None,
+                None,
+                None,
+            ));
+        }
+
+        if self.functions.contains_key(id) {
+            return Ok((
+                None,
+                Some(id),
+                None,
+                None,
+                None,
                 None,
                 None,
                 None,
@@ -572,13 +697,60 @@ impl<'parser> SymbolsTable<'parser> {
             ));
         }
 
-        for (idx, scope) in self.statics.iter().enumerate().rev() {
-            if scope.contains_key(name) {
+        if self.asm_functions.contains_key(id) {
+            return Ok((
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                Some(id),
+                None,
+                None,
+            ));
+        }
+
+        for (idx, scope) in self.local_constants.iter().enumerate().rev() {
+            if scope.contains_key(id) {
                 return Ok((
                     None,
                     None,
                     None,
-                    Some((name, idx)),
+                    None,
+                    Some((id, idx)),
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                ));
+            }
+        }
+
+        if self.global_constants.contains_key(id) {
+            return Ok((
+                None,
+                None,
+                None,
+                None,
+                Some((id, 0)),
+                None,
+                None,
+                None,
+                None,
+                None,
+            ));
+        }
+
+        for (idx, scope) in self.local_statics.iter().enumerate().rev() {
+            if scope.contains_key(id) {
+                return Ok((
+                    None,
+                    None,
+                    None,
+                    Some((id, idx)),
                     None,
                     None,
                     None,
@@ -588,12 +760,12 @@ impl<'parser> SymbolsTable<'parser> {
                 ));
             }
         }
-        if self.global_statics.contains_key(name) {
+        if self.global_statics.contains_key(id) {
             return Ok((
                 None,
                 None,
                 None,
-                Some((name, 0)),
+                Some((id, 0)),
                 None,
                 None,
                 None,
@@ -605,12 +777,14 @@ impl<'parser> SymbolsTable<'parser> {
 
         Err(ThrushCompilerIssue::Error(
             String::from("Not found"),
-            format!("'{}' isn't declared or defined.", name),
+            format!("'{}' isn't declared or defined.", id),
             None,
             span,
         ))
     }
+}
 
+impl<'parser> SymbolsTable<'parser> {
     #[inline]
     pub fn get_lli_by_id(
         &self,
@@ -618,31 +792,24 @@ impl<'parser> SymbolsTable<'parser> {
         scope_idx: usize,
         span: Span,
     ) -> Result<&LLISymbol<'parser>, ThrushCompilerIssue> {
-        if let Some(lli) = self.llis[scope_idx].get(lli_id) {
-            return Ok(lli);
+        if let Some(scope) = self.llis.get(scope_idx) {
+            if let Some(lli) = scope.get(lli_id) {
+                return Ok(lli);
+            }
+        } else {
+            return Err(ThrushCompilerIssue::FrontEndBug(
+                String::from("Scope not caught"),
+                String::from("The scope could not be obtained."),
+                span,
+                CompilationPosition::Parser,
+                PathBuf::from(file!()),
+                line!(),
+            ));
         }
 
         Err(ThrushCompilerIssue::Error(
             String::from("Not found"),
             String::from("LLI not found."),
-            None,
-            span,
-        ))
-    }
-
-    #[inline]
-    pub fn get_struct_by_id(
-        &self,
-        struct_id: &'parser str,
-        span: Span,
-    ) -> Result<Struct<'parser>, ThrushCompilerIssue> {
-        if let Some(structure) = self.structs.get(struct_id).cloned() {
-            return Ok(structure);
-        }
-
-        Err(ThrushCompilerIssue::Error(
-            String::from("Not found"),
-            String::from("Struct not found."),
             None,
             span,
         ))
@@ -687,16 +854,34 @@ impl<'parser> SymbolsTable<'parser> {
     #[inline]
     pub fn get_enum_by_id(
         &self,
-        enum_id: &'parser str,
+        id: &'parser str,
+        scope_idx: usize,
         span: Span,
     ) -> Result<EnumSymbol<'parser>, ThrushCompilerIssue> {
-        if let Some(enum_found) = self.enums.get(enum_id).cloned() {
-            return Ok(enum_found);
+        if scope_idx == 0 {
+            if let Some(lenum) = self.global_enums.get(id).cloned() {
+                return Ok(lenum);
+            }
+        }
+
+        if let Some(scope) = self.local_enums.get(scope_idx) {
+            if let Some(lenum) = scope.get(id).cloned() {
+                return Ok(lenum);
+            }
+        } else {
+            return Err(ThrushCompilerIssue::FrontEndBug(
+                String::from("Last scope not caught"),
+                String::from("The last scope could not be obtained."),
+                span,
+                CompilationPosition::Parser,
+                PathBuf::from(file!()),
+                line!(),
+            ));
         }
 
         Err(ThrushCompilerIssue::Error(
             "Not found".into(),
-            "Enum not found.".into(),
+            "Enum reference not found.".into(),
             None,
             span,
         ))
@@ -705,16 +890,34 @@ impl<'parser> SymbolsTable<'parser> {
     #[inline]
     pub fn get_custom_type_by_id(
         &self,
-        custom_type_id: &'parser str,
+        id: &'parser str,
+        scope_idx: usize,
         span: Span,
     ) -> Result<CustomTypeSymbol<'parser>, ThrushCompilerIssue> {
-        if let Some(custom_type) = self.custom_types.get(custom_type_id).cloned() {
-            return Ok(custom_type);
+        if scope_idx == 0 {
+            if let Some(ctype) = self.global_custom_types.get(id).cloned() {
+                return Ok(ctype);
+            }
+        }
+
+        if let Some(scope) = self.local_custom_types.get(scope_idx) {
+            if let Some(ctype) = scope.get(id).cloned() {
+                return Ok(ctype);
+            }
+        } else {
+            return Err(ThrushCompilerIssue::FrontEndBug(
+                String::from("Last scope not caught"),
+                String::from("The last scope could not be obtained."),
+                span,
+                CompilationPosition::Parser,
+                PathBuf::from(file!()),
+                line!(),
+            ));
         }
 
         Err(ThrushCompilerIssue::Error(
             "Not found".into(),
-            "Custom type not found.".into(),
+            "Custom type reference not found.".into(),
             None,
             span,
         ))
@@ -727,8 +930,19 @@ impl<'parser> SymbolsTable<'parser> {
         scope_idx: usize,
         span: Span,
     ) -> Result<&LocalSymbol<'parser>, ThrushCompilerIssue> {
-        if let Some(local) = self.locals[scope_idx].get(local_id) {
-            return Ok(local);
+        if let Some(scope) = self.locals.get(scope_idx) {
+            if let Some(local) = scope.get(local_id) {
+                return Ok(local);
+            }
+        } else {
+            return Err(ThrushCompilerIssue::FrontEndBug(
+                String::from("Scope not caught"),
+                String::from("The scope could not be obtained."),
+                span,
+                CompilationPosition::Parser,
+                PathBuf::from(file!()),
+                line!(),
+            ));
         }
 
         Err(ThrushCompilerIssue::Error(
@@ -752,7 +966,7 @@ impl<'parser> SymbolsTable<'parser> {
             }
         }
 
-        if let Some(scope) = self.statics.get(scope_idx) {
+        if let Some(scope) = self.local_statics.get(scope_idx) {
             if let Some(static_var) = scope.get(static_id).cloned() {
                 return Ok(static_var);
             }
@@ -788,7 +1002,7 @@ impl<'parser> SymbolsTable<'parser> {
             }
         }
 
-        if let Some(scope) = self.constants.get(scope_idx) {
+        if let Some(scope) = self.local_constants.get(scope_idx) {
             if let Some(local_const) = scope.get(const_id).cloned() {
                 return Ok(local_const);
             }
@@ -830,18 +1044,36 @@ impl<'parser> SymbolsTable<'parser> {
     }
 
     #[inline]
-    pub fn get_struct(
+    pub fn get_struct_by_id(
         &self,
-        name: &str,
+        id: &str,
+        scope_idx: usize,
         span: Span,
     ) -> Result<Struct<'parser>, ThrushCompilerIssue> {
-        if let Some(struct_fields) = self.structs.get(name).cloned() {
-            return Ok(struct_fields);
+        if scope_idx == 0 {
+            if let Some(structure) = self.global_structs.get(id).cloned() {
+                return Ok(structure);
+            }
+        }
+
+        if let Some(scope) = self.local_structs.get(scope_idx) {
+            if let Some(local_struct) = scope.get(id).cloned() {
+                return Ok(local_struct);
+            }
+        } else {
+            return Err(ThrushCompilerIssue::FrontEndBug(
+                String::from("Last scope not caught"),
+                String::from("The last scope could not be obtained."),
+                span,
+                CompilationPosition::Parser,
+                PathBuf::from(file!()),
+                line!(),
+            ));
         }
 
         Err(ThrushCompilerIssue::Error(
             String::from("Structure not found"),
-            format!("'{}' structure not defined.", name),
+            format!("'{}' structure not defined.", id),
             None,
             span,
         ))

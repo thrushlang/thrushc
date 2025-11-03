@@ -15,6 +15,9 @@ impl Ast<'_> {
             Ast::Str { kind, .. } => Ok(kind),
             Ast::NullPtr { kind, .. } => Ok(kind),
 
+            // Custom Type
+            Ast::CustomType { kind, .. } => Ok(kind),
+
             // Static
             Ast::Static { kind, .. } => Ok(kind),
 
@@ -168,6 +171,9 @@ impl Ast<'_> {
             Ast::Str { span, .. } => *span,
             Ast::NullPtr { span, .. } => *span,
 
+            // Custom Type
+            Ast::CustomType { span, .. } => *span,
+
             // Static
             Ast::Static { span, .. } => *span,
 
@@ -256,6 +262,9 @@ impl Ast<'_> {
             Ast::Char { kind, .. } => kind,
             Ast::Str { kind, .. } => kind,
             Ast::NullPtr { .. } => &Type::Ptr(None),
+
+            // Custom Type
+            Ast::CustomType { kind, .. } => kind,
 
             // Static
             Ast::Static { kind, .. } => kind,

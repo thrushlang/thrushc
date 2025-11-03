@@ -1,23 +1,18 @@
-use crate::{
-    core::errors::standard::ThrushCompilerIssue,
-    frontend::{
-        lexer::{span::Span, token::Token, tokentype::TokenType},
-        parser::ParserContext,
-        types::{
-            ast::Ast,
-            parser::{
-                stmts::{
-                    traits::{
-                        EnumExtensions, EnumFieldsExtensions, FoundSymbolEither, TokenExtensions,
-                    },
-                    types::{EnumField, EnumFields},
-                },
-                symbols::types::FoundSymbolId,
-            },
-        },
-        typesystem::types::Type,
-    },
-};
+use crate::core::errors::standard::ThrushCompilerIssue;
+
+use crate::frontend::lexer::span::Span;
+use crate::frontend::lexer::token::Token;
+use crate::frontend::lexer::tokentype::TokenType;
+use crate::frontend::parser::ParserContext;
+use crate::frontend::types::ast::Ast;
+use crate::frontend::types::parser::stmts::traits::EnumExtensions;
+use crate::frontend::types::parser::stmts::traits::EnumFieldsExtensions;
+use crate::frontend::types::parser::stmts::traits::FoundSymbolEither;
+use crate::frontend::types::parser::stmts::traits::TokenExtensions;
+use crate::frontend::types::parser::stmts::types::EnumField;
+use crate::frontend::types::parser::stmts::types::EnumFields;
+use crate::frontend::types::parser::symbols::types::FoundSymbolId;
+use crate::frontend::typesystem::types::Type;
 
 pub fn build_enum_value<'parser>(
     ctx: &mut ParserContext<'parser>,
@@ -25,11 +20,13 @@ pub fn build_enum_value<'parser>(
     span: Span,
 ) -> Result<Ast<'parser>, ThrushCompilerIssue> {
     let object: FoundSymbolId = ctx.get_symbols().get_symbols_id(name, span)?;
-    let enum_id: &str = object.expected_enum(span)?;
+    let enum_id: (&str, usize) = object.expected_enum(span)?;
+    let id: &str = enum_id.0;
+    let scope_idx: usize = enum_id.1;
 
     let union: EnumFields = ctx
         .get_symbols()
-        .get_enum_by_id(enum_id, span)?
+        .get_enum_by_id(id, scope_idx, span)?
         .get_fields();
 
     let field_tk: &Token = ctx.consume(

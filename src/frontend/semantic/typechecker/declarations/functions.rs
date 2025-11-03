@@ -12,9 +12,7 @@ pub fn validate<'type_checker>(
 ) -> Result<(), ThrushCompilerIssue> {
     match node {
         Ast::EntryPoint { body, span, .. } => {
-            if let Err(type_error) = typechecker.analyze_stmt(body) {
-                typechecker.add_error(type_error);
-            }
+            typechecker.analyze_stmt(body)?;
 
             if !body.has_return_for_function() {
                 typechecker.add_error(ThrushCompilerIssue::Error(

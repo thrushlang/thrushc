@@ -25,7 +25,7 @@ pub fn validate<'type_checker>(
                 ));
             }
 
-            typechecker.analyze_stmt(source)?;
+            typechecker.analyze_expr(source)?;
 
             Ok(())
         }

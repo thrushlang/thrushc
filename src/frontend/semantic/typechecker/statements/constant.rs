@@ -34,7 +34,7 @@ pub fn validate<'type_checker>(
                 metadata,
             )?;
 
-            typechecker.analyze_stmt(value)?;
+            typechecker.analyze_expr(value)?;
 
             Ok(())
         }

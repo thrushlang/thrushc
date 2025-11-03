@@ -29,7 +29,7 @@ pub fn validate<'type_checker>(
                 ));
             }
 
-            typechecker.analyze_stmt(value)?;
+            typechecker.analyze_expr(value)?;
 
             Ok(())
         }

@@ -47,20 +47,30 @@ pub fn build_type(ctx: &mut ParserContext<'_>) -> Result<Type, ThrushCompilerIss
 
         TokenType::Identifier => {
             let identifier_tk: &Token = ctx.advance()?;
+
             let name: &str = identifier_tk.get_lexeme();
             let span: Span = identifier_tk.get_span();
 
             if let Ok(object) = ctx.get_symbols().get_symbols_id(name, span) {
                 if object.is_structure() {
-                    let struct_id: &str = object.expected_struct(span)?;
-                    let structure: Struct = ctx.get_symbols().get_struct_by_id(struct_id, span)?;
+                    let structure_id: (&str, usize) = object.expected_struct(span)?;
+                    let id: &str = structure_id.0;
+                    let scope_idx: usize = structure_id.1;
+
+                    let structure: Struct =
+                        ctx.get_symbols().get_struct_by_id(id, scope_idx, span)?;
+
                     let fields: StructFields = structure.get_fields();
 
                     Ok(fields.get_type())
                 } else if object.is_custom_type() {
-                    let custom_id: &str = object.expected_custom_type(span)?;
-                    let custom: CustomTypeSymbol =
-                        ctx.get_symbols().get_custom_type_by_id(custom_id, span)?;
+                    let custom_id: (&str, usize) = object.expected_custom_type(span)?;
+                    let id: &str = custom_id.0;
+                    let scope_idx: usize = custom_id.1;
+
+                    let custom: CustomTypeSymbol = ctx
+                        .get_symbols()
+                        .get_custom_type_by_id(id, scope_idx, span)?;
 
                     Ok(custom.0)
                 } else {

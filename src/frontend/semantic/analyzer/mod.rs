@@ -101,12 +101,20 @@ impl<'analyzer> Analyzer<'analyzer> {
             return declarations::functions::validate(self, node);
         }
 
-        if let Ast::Struct { .. } | Ast::GlobalAssembler { .. } = node {
+        if let Ast::Struct { .. } = node {
+            return Ok(());
+        }
+
+        if let Ast::GlobalAssembler { .. } = node {
+            return Ok(());
+        }
+
+        if let Ast::CustomType { .. } = node {
             return Ok(());
         }
 
         if let Ast::Enum { .. } = node {
-            return declarations::enums::validate(self, node);
+            return declarations::glenum::validate(self, node);
         }
 
         if let Ast::Static { .. } = node {
@@ -137,6 +145,18 @@ impl<'analyzer> Analyzer<'analyzer> {
 
         ########################################################################*/
 
+        if let Ast::CustomType { .. } = node {
+            return Ok(());
+        }
+
+        if let Ast::Struct { .. } = node {
+            return Ok(());
+        }
+
+        if let Ast::Enum { .. } = node {
+            return statements::lenum::validate(self, node);
+        }
+
         if let Ast::Static { .. } = node {
             return statements::staticvar::validate(self, node);
         }
@@ -147,10 +167,6 @@ impl<'analyzer> Analyzer<'analyzer> {
 
         if let Ast::Local { .. } = node {
             return statements::local::validate(self, node);
-        }
-
-        if let Ast::LLI { .. } = node {
-            return statements::lli::validate(self, node);
         }
 
         /* ######################################################################
@@ -297,54 +313,7 @@ impl<'analyzer> Analyzer<'analyzer> {
 
         ########################################################################*/
 
-        /* ######################################################################
-
-
-            TYPE CHECKER LLI - START
-
-
-        ########################################################################*/
-
-        if let Ast::Write { .. } = node {
-            return statements::lli::validate(self, node);
-        }
-
-        if let Ast::Address { .. } = node {
-            return statements::lli::validate(self, node);
-        }
-
-        if let Ast::Load { .. } = node {
-            return statements::lli::validate(self, node);
-        }
-
-        /* ######################################################################
-
-
-            TYPE CHECKER LLI - END
-
-
-        ########################################################################*/
-
-        /* ######################################################################
-
-
-            TYPE CHECKER BUILTINS - START
-
-
-        ########################################################################*/
-        if let Ast::Builtin { builtin, .. } = node {
-            return builtins::validate_builtin(self, builtin);
-        }
-
-        /* ######################################################################
-
-
-            TYPE CHECKER BUILTINS - END
-
-
-        ########################################################################*/
-
-        Ok(())
+        self.analyze_expr(node)
     }
 
     pub fn analyze_expr(&mut self, node: &'analyzer Ast) -> Result<(), ThrushCompilerIssue> {

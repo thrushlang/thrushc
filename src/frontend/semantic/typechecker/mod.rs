@@ -107,12 +107,20 @@ impl<'type_checker> TypeChecker<'type_checker> {
             return declarations::functions::validate(self, node);
         }
 
-        if let Ast::Struct { .. } | Ast::GlobalAssembler { .. } = node {
+        if let Ast::CustomType { .. } = node {
+            return Ok(());
+        }
+
+        if let Ast::GlobalAssembler { .. } = node {
+            return Ok(());
+        }
+
+        if let Ast::Struct { .. } = node {
             return Ok(());
         }
 
         if let Ast::Enum { .. } = node {
-            return declarations::enums::validate(self, node);
+            return declarations::glenum::validate(self, node);
         }
 
         if let Ast::Static { .. } = node {
@@ -143,6 +151,18 @@ impl<'type_checker> TypeChecker<'type_checker> {
 
         ########################################################################*/
 
+        if let Ast::CustomType { .. } = node {
+            return Ok(());
+        }
+
+        if let Ast::Struct { .. } = node {
+            return Ok(());
+        }
+
+        if let Ast::Enum { .. } = node {
+            return statements::lenum::validate(self, node);
+        }
+
         if let Ast::Static { .. } = node {
             return statements::staticvar::validate(self, node);
         }
@@ -153,10 +173,6 @@ impl<'type_checker> TypeChecker<'type_checker> {
 
         if let Ast::Local { .. } = node {
             return statements::local::validate(self, node);
-        }
-
-        if let Ast::LLI { .. } = node {
-            return statements::lli::validate(self, node);
         }
 
         /* ######################################################################
@@ -286,46 +302,6 @@ impl<'type_checker> TypeChecker<'type_checker> {
         /* ######################################################################
 
 
-            TYPE CHECKER DEREFERENCE - START
-
-
-        ########################################################################*/
-
-        if let Ast::Defer { .. } = node {
-            return expressions::defer::validate(self, node);
-        }
-
-        /* ######################################################################
-
-
-            TYPE CHECKER DEREFERENCE - END
-
-
-        ########################################################################*/
-
-        /* ######################################################################
-
-
-            TYPE CHECKER CASTS - START
-
-
-        ########################################################################*/
-
-        if let Ast::As { .. } = node {
-            return expressions::cast::validate(self, node);
-        }
-
-        /* ######################################################################
-
-
-            TYPE CHECKER CASTS - END
-
-
-        ########################################################################*/
-
-        /* ######################################################################
-
-
             TYPE CHECKER MUTATION - START
 
 
@@ -343,72 +319,15 @@ impl<'type_checker> TypeChecker<'type_checker> {
 
         ########################################################################*/
 
-        /* ######################################################################
-
-
-            TYPE CHECKER LLI - START
-
-
-        ########################################################################*/
-
-        if let Ast::Write { .. } = node {
-            return statements::lli::validate(self, node);
-        }
-
-        if let Ast::Address { .. } = node {
-            return statements::lli::validate(self, node);
-        }
-
-        if let Ast::Load { .. } = node {
-            return statements::lli::validate(self, node);
-        }
-
-        /* ######################################################################
-
-
-            TYPE CHECKER LLI - END
-
-
-        ########################################################################*/
-
-        /* ######################################################################
-
-
-            TYPE CHECKER BUILTINS - START
-
-
-        ########################################################################*/
-        if let Ast::Builtin { builtin, .. } = node {
-            return builtins::validate_builtin(self, builtin);
-        }
-
-        /* ######################################################################
-
-
-            TYPE CHECKER BUILTINS - END
-
-
-        ########################################################################*/
-
-        /* ######################################################################
-
-
-            TYPE CHECKER EXPRESSIONS - START
-
-
-        ########################################################################*/
-
-        expressions::validate(self, node)
-
-        /* ######################################################################
-
-
-            TYPE CHECKER EXPRESSIONS - END
-
-
-        ########################################################################*/
+        self.analyze_expr(node)
     }
 
+    pub fn analyze_expr(&mut self, node: &'type_checker Ast) -> Result<(), ThrushCompilerIssue> {
+        expressions::validate(self, node)
+    }
+}
+
+impl TypeChecker<'_> {
     pub fn declare_forward(&mut self) {
         self.ast
             .iter()

@@ -63,7 +63,7 @@ pub fn validate<'type_checker>(
         })?;
 
     args.iter()
-        .try_for_each(|arg| typechecker.analyze_stmt(arg))?;
+        .try_for_each(|arg| typechecker.analyze_expr(arg))?;
 
     Ok(())
 }

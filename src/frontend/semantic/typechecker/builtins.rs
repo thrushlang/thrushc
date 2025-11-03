@@ -7,7 +7,7 @@ use crate::frontend::semantic::typechecker::TypeChecker;
 use crate::frontend::types::ast::Ast;
 use crate::frontend::typesystem::types::Type;
 
-pub fn validate_builtin<'type_checker>(
+pub fn validate<'type_checker>(
     typechecker: &mut TypeChecker<'type_checker>,
     builtin: &'type_checker Builtin,
 ) -> Result<(), ThrushCompilerIssue> {
@@ -81,9 +81,9 @@ pub fn validate_memmove<'type_checker>(
         ));
     }
 
-    typechecker.analyze_stmt(source)?;
-    typechecker.analyze_stmt(destination)?;
-    typechecker.analyze_stmt(size)?;
+    typechecker.analyze_expr(source)?;
+    typechecker.analyze_expr(destination)?;
+    typechecker.analyze_expr(size)?;
 
     Ok(())
 }
@@ -132,9 +132,9 @@ pub fn validate_memcpy<'type_checker>(
         ));
     }
 
-    typechecker.analyze_stmt(source)?;
-    typechecker.analyze_stmt(destination)?;
-    typechecker.analyze_stmt(size)?;
+    typechecker.analyze_expr(source)?;
+    typechecker.analyze_expr(destination)?;
+    typechecker.analyze_expr(size)?;
 
     Ok(())
 }
@@ -180,9 +180,9 @@ pub fn validate_memset<'type_checker>(
         ));
     }
 
-    typechecker.analyze_stmt(destination)?;
-    typechecker.analyze_stmt(new_size)?;
-    typechecker.analyze_stmt(size)?;
+    typechecker.analyze_expr(destination)?;
+    typechecker.analyze_expr(new_size)?;
+    typechecker.analyze_expr(size)?;
 
     Ok(())
 }

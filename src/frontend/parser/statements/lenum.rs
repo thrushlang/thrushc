@@ -5,7 +5,6 @@ use crate::frontend::lexer::token::Token;
 use crate::frontend::lexer::tokentype::TokenType;
 use crate::frontend::parser::ParserContext;
 use crate::frontend::parser::attributes;
-use crate::frontend::parser::checks;
 use crate::frontend::parser::expr;
 use crate::frontend::parser::typegen;
 use crate::frontend::types::ast::Ast;
@@ -15,10 +14,7 @@ use crate::frontend::typesystem::types::Type;
 
 pub fn build_enum<'parser>(
     ctx: &mut ParserContext<'parser>,
-    declare_forward: bool,
 ) -> Result<Ast<'parser>, ThrushCompilerIssue> {
-    checks::check_main_scope_state(ctx)?;
-
     ctx.consume(
         TokenType::Enum,
         "Syntax error".into(),
@@ -91,12 +87,11 @@ pub fn build_enum<'parser>(
         "Expected '}'.".into(),
     )?;
 
-    if declare_forward {
-        ctx.get_mut_symbols()
-            .new_enum(enum_name, (enum_fields, enum_attributes), span)?;
-
-        return Ok(Ast::new_nullptr(span));
-    }
+    ctx.get_mut_symbols().new_enum(
+        enum_name,
+        (enum_fields.clone(), enum_attributes.clone()),
+        span,
+    )?;
 
     Ok(Ast::Enum {
         name: enum_name,

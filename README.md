@@ -135,19 +135,19 @@ If you need help finding a way to install libgccjit on your system, you can chec
 ### Fedora 
 
 ```console
-sudo dnf install libgccjit-devel
+$ sudo dnf install libgccjit-devel
 ```
 
 ### Arch
 
 ```console
-sudo pacman -S libgccjit
+$ sudo pacman -S libgccjit
 ```
 
 ### Debian
 
 ```console
-sudo apt install libgccjit-0-dev
+$ sudo apt install libgccjit-0-dev
 ```
 
 ### Building from source

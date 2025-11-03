@@ -24,7 +24,7 @@ pub fn validate<'type_checker>(
 
                 checks::check_types(kind, expr.get_value_type()?, Some(expr), None, metadata)?;
 
-                typechecker.analyze_stmt(expr)?;
+                typechecker.analyze_expr(expr)?;
             }
 
             Ok(())

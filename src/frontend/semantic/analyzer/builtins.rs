@@ -5,7 +5,7 @@ use crate::core::errors::standard::ThrushCompilerIssue;
 use crate::frontend::semantic::analyzer::Analyzer;
 use crate::frontend::types::ast::Ast;
 
-pub fn validate_builtin<'analyzer>(
+pub fn validate<'analyzer>(
     analyzer: &mut Analyzer<'analyzer>,
     builtin: &'analyzer Builtin,
 ) -> Result<(), ThrushCompilerIssue> {

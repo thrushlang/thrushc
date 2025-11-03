@@ -181,6 +181,12 @@ pub enum Ast<'ctx> {
         span: Span,
     },
 
+    // Custom Type
+    CustomType {
+        kind: Type,
+        span: Span,
+    },
+
     // Enums
     Enum {
         name: &'ctx str,

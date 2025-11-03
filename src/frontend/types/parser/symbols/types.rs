@@ -31,12 +31,12 @@ pub struct ParametersTypes(pub Vec<Type>);
 ########################################################################*/
 
 pub type FoundSymbolId<'parser> = (
-    Option<&'parser str>,
-    Option<&'parser str>,
+    Option<(&'parser str, usize)>,
     Option<&'parser str>,
     Option<(&'parser str, usize)>,
     Option<(&'parser str, usize)>,
-    Option<&'parser str>,
+    Option<(&'parser str, usize)>,
+    Option<(&'parser str, usize)>,
     Option<&'parser str>,
     Option<&'parser str>,
     Option<(&'parser str, usize)>,
@@ -52,7 +52,11 @@ pub type LLISymbol<'parser> = (Type, Span);
 pub type LocalSymbol<'parser> = (Type, LocalMetadata, Span);
 pub type ParameterSymbol<'parser> = (Type, FunctionParameterMetadata, Span);
 
-pub type CustomTypes<'parser> = HashMap<&'parser str, CustomTypeSymbol<'parser>>;
+pub type GlobalCustomTypes<'parser> = HashMap<&'parser str, CustomTypeSymbol<'parser>>;
+pub type LocalCustomTypes<'parser> = Vec<HashMap<&'parser str, CustomTypeSymbol<'parser>>>;
+
+pub type GlobalStructs<'parser> = HashMap<&'parser str, Struct<'parser>>;
+pub type LocalStructs<'parser> = Vec<HashMap<&'parser str, Struct<'parser>>>;
 
 pub type LocalStatics<'parser> = Vec<HashMap<&'parser str, StaticSymbol<'parser>>>;
 pub type GlobalStatics<'parser> = HashMap<&'parser str, StaticSymbol<'parser>>;
@@ -60,9 +64,11 @@ pub type GlobalStatics<'parser> = HashMap<&'parser str, StaticSymbol<'parser>>;
 pub type LocalConstants<'parser> = Vec<HashMap<&'parser str, ConstantSymbol<'parser>>>;
 pub type GlobalConstants<'parser> = HashMap<&'parser str, ConstantSymbol<'parser>>;
 
+pub type GlobalEnums<'parser> = HashMap<&'parser str, EnumSymbol<'parser>>;
+pub type LocalEnums<'parser> = Vec<HashMap<&'parser str, EnumSymbol<'parser>>>;
+
 pub type Parameters<'parser> = HashMap<&'parser str, ParameterSymbol<'parser>>;
-pub type Structs<'parser> = HashMap<&'parser str, Struct<'parser>>;
-pub type Enums<'parser> = HashMap<&'parser str, EnumSymbol<'parser>>;
+
 pub type Functions<'parser> = HashMap<&'parser str, Function<'parser>>;
 pub type AssemblerFunctions<'parser> = HashMap<&'parser str, AssemblerFunction<'parser>>;
 

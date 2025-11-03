@@ -42,17 +42,11 @@ pub fn build_property<'parser>(
 
     property_names.reverse();
 
-    let decomposed: (Type, Vec<(Type, u32)>) = typesystem::property::decompose(
-        0,
-        &source,
-        property_names,
-        source_type,
-        ctx.get_symbols(),
-        span,
-    )?;
+    let decomposed_property: (Type, Vec<(Type, u32)>) =
+        typesystem::property::decompose(ctx, 0, &source, property_names, source_type, span)?;
 
-    let property_type: Type = decomposed.0;
-    let indexes: Vec<(Type, u32)> = decomposed.1;
+    let property_type: Type = decomposed_property.0;
+    let indexes: Vec<(Type, u32)> = decomposed_property.1;
 
     Ok(Ast::Property {
         source: source.into(),

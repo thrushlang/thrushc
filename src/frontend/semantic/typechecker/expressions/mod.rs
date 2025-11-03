@@ -3,24 +3,30 @@ pub mod cast;
 pub mod defer;
 pub mod index;
 pub mod indirect;
+pub mod lli;
 pub mod property;
 
 use std::path::PathBuf;
 
-use crate::core::errors::{position::CompilationPosition, standard::ThrushCompilerIssue};
-use crate::frontend::lexer::span::Span;
-use crate::frontend::semantic::typechecker::{
-    TypeChecker, checks, expressions, metadata::TypeCheckerExprMetadata, validations,
-};
-use crate::frontend::types::{ast::Ast, parser::stmts::types::Constructor};
-use crate::frontend::typesystem::{
-    traits::{TypeArrayEntensions, TypeFixedArrayEntensions},
-    types::Type,
-};
+use crate::core::errors::position::CompilationPosition;
+use crate::core::errors::standard::ThrushCompilerIssue;
 
-pub fn validate<'check_typeser>(
-    typechecker: &mut TypeChecker<'check_typeser>,
-    node: &'check_typeser Ast,
+use crate::frontend::lexer::span::Span;
+use crate::frontend::semantic::typechecker::TypeChecker;
+use crate::frontend::semantic::typechecker::builtins;
+use crate::frontend::semantic::typechecker::checks;
+use crate::frontend::semantic::typechecker::expressions;
+use crate::frontend::semantic::typechecker::metadata::TypeCheckerExprMetadata;
+use crate::frontend::semantic::typechecker::validations;
+use crate::frontend::types::ast::Ast;
+use crate::frontend::types::parser::stmts::types::Constructor;
+use crate::frontend::typesystem::traits::TypeArrayEntensions;
+use crate::frontend::typesystem::traits::TypeFixedArrayEntensions;
+use crate::frontend::typesystem::types::Type;
+
+pub fn validate<'type_checker>(
+    typechecker: &mut TypeChecker<'type_checker>,
+    node: &'type_checker Ast,
 ) -> Result<(), ThrushCompilerIssue> {
     match node {
         Ast::BinaryOp {
@@ -37,8 +43,8 @@ pub fn validate<'check_typeser>(
                 *span,
             )?;
 
-            typechecker.analyze_stmt(left)?;
-            typechecker.analyze_stmt(right)?;
+            typechecker.analyze_expr(left)?;
+            typechecker.analyze_expr(right)?;
 
             Ok(())
         }
@@ -71,13 +77,13 @@ pub fn validate<'check_typeser>(
                 }
             }
 
-            typechecker.analyze_stmt(expression)?;
+            typechecker.analyze_expr(expression)?;
 
             Ok(())
         }
 
         Ast::Group { expression, .. } => {
-            typechecker.analyze_stmt(expression)?;
+            typechecker.analyze_expr(expression)?;
             Ok(())
         }
 
@@ -107,7 +113,7 @@ pub fn validate<'check_typeser>(
                     metadata,
                 )?;
 
-                typechecker.analyze_stmt(item)
+                typechecker.analyze_expr(item)
             })?;
 
             Ok(())
@@ -141,7 +147,7 @@ pub fn validate<'check_typeser>(
                     metadata,
                 )?;
 
-                typechecker.analyze_stmt(item)
+                typechecker.analyze_expr(item)
             })?;
 
             Ok(())
@@ -164,6 +170,8 @@ pub fn validate<'check_typeser>(
                     TypeCheckerExprMetadata::new(expr.is_literal(), span);
 
                 checks::check_types(target_type, from_type, Some(expr), None, metadata)?;
+
+                typechecker.analyze_expr(expr)?;
 
                 Ok(())
             })?;
@@ -192,7 +200,13 @@ pub fn validate<'check_typeser>(
             Ok(())
         }
 
+        ast if ast.is_lli() => expressions::lli::validate(typechecker, node),
+
         Ast::Indirect { .. } => expressions::indirect::validate(typechecker, node),
+
+        Ast::Defer { .. } => expressions::defer::validate(typechecker, node),
+        Ast::As { .. } => expressions::cast::validate(typechecker, node),
+        Ast::Builtin { builtin, .. } => builtins::validate(typechecker, builtin),
 
         Ast::AsmValue { .. }
         | Ast::Alloc { .. }

@@ -18,7 +18,6 @@ use crate::core::diagnostic::diagnostician::Diagnostician;
 use crate::core::errors::standard::ThrushCompilerIssue;
 
 use crate::frontend::lexer::span::Span;
-use crate::frontend::semantic::linter::expressions::defer;
 use crate::frontend::semantic::linter::statements::mutation;
 use crate::frontend::types::ast::Ast;
 use crate::frontend::types::parser::stmts::traits::ThrushAttributesExtensions;
@@ -83,8 +82,16 @@ impl<'linter> Linter<'linter> {
             return declarations::functions::analyze(self, node);
         }
 
+        if let Ast::CustomType { .. } = node {
+            return;
+        }
+
+        if let Ast::Struct { .. } = node {
+            return;
+        }
+
         if let Ast::Enum { .. } = node {
-            return declarations::enums::analyze(self, node);
+            return declarations::glenum::analyze(self, node);
         }
 
         if let Ast::Static { .. } = node {
@@ -112,6 +119,18 @@ impl<'linter> Linter<'linter> {
 
 
         ########################################################################*/
+
+        if let Ast::CustomType { .. } = node {
+            return;
+        }
+
+        if let Ast::Struct { .. } = node {
+            return;
+        }
+
+        if let Ast::Enum { .. } = node {
+            return statements::lenum::analyze(self, node);
+        }
 
         if let Ast::Static { .. } = node {
             return statements::staticvar::analyze(self, node);
@@ -142,10 +161,6 @@ impl<'linter> Linter<'linter> {
 
 
         ########################################################################*/
-
-        if let Ast::LLI { .. } = node {
-            return statements::lli::analyze(self, node);
-        }
 
         if let Ast::Local { .. } = node {
             return statements::local::analyze(self, node);
@@ -271,94 +286,6 @@ impl<'linter> Linter<'linter> {
 
 
             TYPE CHECKER LOOP CONTROL FLOW - END
-
-
-        ########################################################################*/
-
-        /* ######################################################################
-
-
-            LINTER DEREFERENCE | START
-
-
-        ########################################################################*/
-
-        if let Ast::Defer { .. } = node {
-            return defer::analyze_deference(self, node);
-        }
-
-        /* ######################################################################
-
-
-            LINTER DEREFERENCE | END
-
-
-        ########################################################################*/
-
-        /* ######################################################################
-
-
-            LINTER LLI | START
-
-
-        ########################################################################*/
-
-        if let Ast::Write { .. } = node {
-            return statements::lli::analyze(self, node);
-        }
-
-        if let Ast::Address { .. } = node {
-            return statements::lli::analyze(self, node);
-        }
-
-        if let Ast::Load { .. } = node {
-            return statements::lli::analyze(self, node);
-        }
-
-        /* ######################################################################
-
-
-            LINTER LLI | END
-
-
-        ########################################################################*/
-
-        /* ######################################################################
-
-
-            LINTER CASTS | START
-
-
-        ########################################################################*/
-
-        if let Ast::As { .. } = node {
-            return expressions::cast::analyze_cast(self, node);
-        }
-
-        /* ######################################################################
-
-
-            LINTER CASTS | END
-
-
-        ########################################################################*/
-
-        /* ######################################################################
-
-
-            LINTER BUILTINS | START
-
-
-        ########################################################################*/
-
-        if let Ast::Builtin { builtin, .. } = node {
-            return builtins::analyze_builtin(self, builtin);
-        }
-
-        /* ######################################################################
-
-
-            LINTER BUILTINS | END
 
 
         ########################################################################*/

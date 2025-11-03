@@ -1,5 +1,6 @@
 pub mod cast;
 pub mod defer;
+pub mod lli;
 
 use std::path::PathBuf;
 
@@ -8,6 +9,7 @@ use crate::core::errors::standard::ThrushCompilerIssue;
 
 use crate::frontend::lexer::span::Span;
 use crate::frontend::semantic::linter::Linter;
+use crate::frontend::semantic::linter::builtins;
 use crate::frontend::semantic::linter::expressions;
 use crate::frontend::semantic::linter::marks::mutable;
 use crate::frontend::semantic::linter::marks::used;
@@ -169,6 +171,13 @@ pub fn analyze<'linter>(linter: &mut Linter<'linter>, expr: &'linter Ast) {
             ));
         }
 
+        ast if ast.is_lli() => {
+            expressions::lli::analyze(linter, expr);
+        }
+
+        Ast::Builtin { builtin, .. } => {
+            builtins::analyze_builtin(linter, builtin);
+        }
         Ast::As { .. } => expressions::cast::analyze_cast(linter, expr),
         Ast::Defer { .. } => defer::analyze_deference(linter, expr),
         Ast::DirectRef { expr, .. } => {

@@ -178,9 +178,9 @@ impl FoundSymbolExtension for FoundSymbolId<'_> {
 }
 
 impl<'parser> FoundSymbolEither<'parser> for FoundSymbolId<'parser> {
-    fn expected_struct(&self, span: Span) -> Result<&'parser str, ThrushCompilerIssue> {
-        if let Some(name) = self.0 {
-            return Ok(name);
+    fn expected_struct(&self, span: Span) -> Result<(&'parser str, usize), ThrushCompilerIssue> {
+        if let Some(struct_id) = self.0 {
+            return Ok(struct_id);
         }
 
         Err(ThrushCompilerIssue::FrontEndBug(
@@ -208,7 +208,7 @@ impl<'parser> FoundSymbolEither<'parser> for FoundSymbolId<'parser> {
         ))
     }
 
-    fn expected_enum(&self, span: Span) -> Result<&'parser str, ThrushCompilerIssue> {
+    fn expected_enum(&self, span: Span) -> Result<(&'parser str, usize), ThrushCompilerIssue> {
         if let Some(name) = self.2 {
             return Ok(name);
         }
@@ -253,7 +253,10 @@ impl<'parser> FoundSymbolEither<'parser> for FoundSymbolId<'parser> {
         ))
     }
 
-    fn expected_custom_type(&self, span: Span) -> Result<&'parser str, ThrushCompilerIssue> {
+    fn expected_custom_type(
+        &self,
+        span: Span,
+    ) -> Result<(&'parser str, usize), ThrushCompilerIssue> {
         if let Some(type_id) = self.5 {
             return Ok(type_id);
         }

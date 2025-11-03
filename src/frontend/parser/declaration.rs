@@ -4,13 +4,13 @@ use crate::core::errors::standard::ThrushCompilerIssue;
 
 use crate::frontend::lexer::tokentype::TokenType;
 use crate::frontend::parser::declarations::asmfn;
-use crate::frontend::parser::declarations::cstype;
 use crate::frontend::parser::declarations::function;
 use crate::frontend::parser::declarations::glasm;
 use crate::frontend::parser::declarations::glconstant;
+use crate::frontend::parser::declarations::glcstype;
+use crate::frontend::parser::declarations::glenum;
 use crate::frontend::parser::declarations::glstatic;
-use crate::frontend::parser::declarations::structure;
-use crate::frontend::parser::declarations::union;
+use crate::frontend::parser::declarations::glstructure;
 use crate::frontend::parser::statement;
 use crate::frontend::types::ast::Ast;
 
@@ -21,11 +21,11 @@ pub fn decl<'parser>(
         .add_sync_position(ParserSyncPosition::Declaration);
 
     let declaration: Result<Ast<'parser>, ThrushCompilerIssue> = match &ctx.peek().kind {
-        TokenType::Type => Ok(cstype::build_custom_type(ctx, false)?),
-        TokenType::Struct => Ok(structure::build_structure(ctx, false)?),
+        TokenType::Type => Ok(glcstype::build_custom_type(ctx, false)?),
+        TokenType::Struct => Ok(glstructure::build_structure(ctx, false)?),
         TokenType::Const => Ok(glconstant::build_global_const(ctx, false)?),
         TokenType::Static => Ok(glstatic::build_global_static(ctx, false)?),
-        TokenType::Enum => Ok(union::build_enum(ctx, false)?),
+        TokenType::Enum => Ok(glenum::build_enum(ctx, false)?),
         TokenType::Fn => Ok(function::build_function(ctx, false)?),
         TokenType::AsmFn => Ok(asmfn::build_assembler_function(ctx, false)?),
         TokenType::GlobalAsm => Ok(glasm::build_global_assembler(ctx)?),
@@ -44,11 +44,11 @@ pub fn parse_forward(ctx: &mut ParserContext) {
     while !ctx.is_eof() {
         match &ctx.peek().kind {
             TokenType::Type if !entered_at_block => {
-                let _ = cstype::build_custom_type(ctx, true);
+                let _ = glcstype::build_custom_type(ctx, true);
             }
 
             TokenType::Struct if !entered_at_block => {
-                let _ = structure::build_structure(ctx, true);
+                let _ = glstructure::build_structure(ctx, true);
             }
 
             TokenType::Static if !entered_at_block => {
@@ -60,7 +60,7 @@ pub fn parse_forward(ctx: &mut ParserContext) {
             }
 
             TokenType::Enum if !entered_at_block => {
-                let _ = union::build_enum(ctx, true);
+                let _ = glenum::build_enum(ctx, true);
             }
 
             TokenType::Fn if !entered_at_block => {

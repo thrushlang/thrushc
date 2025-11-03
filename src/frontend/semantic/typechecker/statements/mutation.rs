@@ -51,7 +51,7 @@ pub fn validate<'type_checker>(
                 checks::check_types(lhs_type, rhs_type, Some(value), None, metadata)?;
             }
 
-            typechecker.analyze_stmt(value)?;
+            typechecker.analyze_expr(value)?;
 
             Ok(())
         }

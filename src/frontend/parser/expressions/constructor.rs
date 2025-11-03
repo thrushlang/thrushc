@@ -3,11 +3,12 @@ use crate::core::errors::standard::ThrushCompilerIssue;
 use crate::frontend::lexer::{span::Span, token::Token, tokentype::TokenType};
 use crate::frontend::parser::{ParserContext, expr};
 use crate::frontend::types::ast::Ast;
+use crate::frontend::types::parser::stmts::traits::FoundSymbolEither;
 use crate::frontend::types::parser::stmts::{
     traits::{ConstructorExtensions, StructExtensions, TokenExtensions},
     types::Constructor,
 };
-use crate::frontend::types::parser::symbols::types::Struct;
+use crate::frontend::types::parser::symbols::types::{FoundSymbolId, Struct};
 use crate::frontend::typesystem::modificators::StructureTypeModificator;
 
 pub fn build_constructor<'parser>(
@@ -34,7 +35,12 @@ pub fn build_constructor<'parser>(
     let name: &str = identifier_tk.get_lexeme();
     let span: Span = identifier_tk.get_span();
 
-    let structure: Struct = ctx.get_symbols().get_struct(name, span)?;
+    let object: FoundSymbolId = ctx.get_symbols().get_symbols_id(name, span)?;
+    let structure_id: (&str, usize) = object.expected_struct(span)?;
+    let id: &str = structure_id.0;
+    let scope_idx: usize = structure_id.1;
+
+    let structure: Struct = ctx.get_symbols().get_struct_by_id(id, scope_idx, span)?;
     let modificator: StructureTypeModificator = structure.get_modificator();
 
     let required: usize = structure.get_fields().1.len();

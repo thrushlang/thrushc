@@ -59,7 +59,7 @@ pub fn validate<'type_checker>(
                         type_metadata,
                     )?;
 
-                    typechecker.analyze_stmt(local_value)?;
+                    typechecker.analyze_expr(local_value)?;
                 }
             }
 

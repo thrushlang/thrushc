@@ -115,7 +115,7 @@ pub fn build_structure<'parser>(
     )?;
 
     if declare_forward {
-        ctx.get_mut_symbols().new_struct(
+        ctx.get_mut_symbols().new_global_struct(
             name,
             (name, fields_types.1, attributes, modificator),
             span,

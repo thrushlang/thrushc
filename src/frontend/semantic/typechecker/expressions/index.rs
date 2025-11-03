@@ -45,7 +45,7 @@ pub fn validate<'type_checker>(
                     ));
                 }
 
-                typechecker.analyze_stmt(indexe)
+                typechecker.analyze_expr(indexe)
             })?;
 
             Ok(())
