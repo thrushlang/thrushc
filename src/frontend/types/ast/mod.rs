@@ -437,6 +437,11 @@ pub enum Ast<'ctx> {
         span: Span,
     },
 
+    // Module Import
+    Import {
+        span: Span,
+    },
+
     // Extra
     Pass {
         span: Span,

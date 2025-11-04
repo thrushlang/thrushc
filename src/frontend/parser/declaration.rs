@@ -11,6 +11,7 @@ use crate::frontend::parser::declarations::glcstype;
 use crate::frontend::parser::declarations::glenum;
 use crate::frontend::parser::declarations::glstatic;
 use crate::frontend::parser::declarations::glstructure;
+use crate::frontend::parser::declarations::import;
 use crate::frontend::parser::statement;
 use crate::frontend::types::ast::Ast;
 
@@ -29,6 +30,7 @@ pub fn decl<'parser>(
         TokenType::Fn => Ok(function::build_function(ctx, false)?),
         TokenType::AsmFn => Ok(asmfn::build_assembler_function(ctx, false)?),
         TokenType::GlobalAsm => Ok(glasm::build_global_assembler(ctx)?),
+        TokenType::Import => Ok(import::build_import(ctx)?),
 
         _ => Ok(statement::parse(ctx)?),
     };

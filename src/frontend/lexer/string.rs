@@ -4,6 +4,8 @@ use crate::{
 };
 
 pub fn lex(lexer: &mut Lexer) -> Result<(), ThrushCompilerIssue> {
+    lexer.start_span();
+
     let mut found_end_quote: bool = false;
 
     while !lexer.is_eof() {
@@ -16,6 +18,8 @@ pub fn lex(lexer: &mut Lexer) -> Result<(), ThrushCompilerIssue> {
 
         self::advance_string_char(lexer)?;
     }
+
+    lexer.end_span();
 
     let string_span: Span = Span::new(lexer.line, lexer.span);
     let raw_lexeme: String = lexer.shrink_lexeme();

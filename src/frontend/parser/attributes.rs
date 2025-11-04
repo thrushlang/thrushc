@@ -13,7 +13,7 @@ use crate::frontend::types::parser::stmts::types::ThrushAttributes;
 use ahash::AHashMap as HashMap;
 use lazy_static::lazy_static;
 
-const INLINE_ASSEMBLER_SYNTAXES: [&str; 2] = ["Intel", "AT&T"];
+pub const INLINE_ASSEMBLER_SYNTAXES: [&str; 2] = ["Intel", "AT&T"];
 
 lazy_static! {
     pub static ref CALL_CONVENTIONS: HashMap<&'static [u8], CallConvention> = {

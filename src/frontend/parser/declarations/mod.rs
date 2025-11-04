@@ -7,3 +7,4 @@ pub mod glcstype;
 pub mod glenum;
 pub mod glstatic;
 pub mod glstructure;
+pub mod import;

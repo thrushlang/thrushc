@@ -8,7 +8,7 @@ pub struct Span {
 
 impl Display for Span {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}:{}", self.line, self.span.0)
+        write!(f, "{}:{}:{}", self.line, self.span.0, self.span.1)
     }
 }
 

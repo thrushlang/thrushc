@@ -24,7 +24,9 @@ use inkwell::{
 };
 
 use crate::{
-    backend::llvm::compiler::jit::LLVMJITCompiler, core::compiler::backends::llvm::jit,
+    backend::llvm::compiler::jit::LLVMJITCompiler,
+    core::compiler::backends::llvm::jit,
+    frontend::preprocessor::{self, Preprocessor},
     linkage::linkers::lld::LLVMLinker,
 };
 use crate::{
@@ -148,7 +150,10 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
             return finisher::archive_compilation(self, file_time, file);
         }
 
-        let parser: (ParserContext, bool) = Parser::parse(&tokens, file);
+        let mut preprocessor: Preprocessor = Preprocessor::new(&tokens, file);
+        let modules: Vec<preprocessor::module::Module> = preprocessor.generate_modules()?;
+
+        let parser: (ParserContext, bool) = Parser::parse(&tokens, file, modules);
 
         let parser_result: (ParserContext, bool) = parser;
         let parser_throwed_errors: bool = parser_result.1;
@@ -365,7 +370,10 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
             return finisher::archive_compilation_module_jit(self, file_time, file);
         }
 
-        let parser: (ParserContext, bool) = Parser::parse(&tokens, file);
+        let mut preprocessor: Preprocessor = Preprocessor::new(&tokens, file);
+        let modules: Vec<preprocessor::module::Module> = preprocessor.generate_modules()?;
+
+        let parser: (ParserContext, bool) = Parser::parse(&tokens, file, modules);
 
         let parser_result: (ParserContext, bool) = parser;
         let parser_throwed_errors: bool = parser_result.1;

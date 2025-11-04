@@ -1,9 +1,13 @@
 use std::fmt::Display;
+use std::path::Path;
 
+use crate::core::compiler;
 use crate::core::compiler::options::CompilationUnit;
 use crate::core::console::logging::LoggingType;
 use crate::core::diagnostic::{self, Diagnostic, printers};
 use crate::core::errors::standard::ThrushCompilerIssue;
+use crate::frontend::lexer::span::Span;
+use crate::frontend::preprocessor::errors::PreprocessorIssue;
 
 use {colored::Colorize, std::path::PathBuf};
 
@@ -70,6 +74,26 @@ impl Diagnostician {
                 );
             }
         };
+    }
+}
+
+impl Diagnostician {
+    pub fn dispatch_preprocessor_diagnostic(
+        &mut self,
+        error: &PreprocessorIssue,
+        logging_type: LoggingType,
+    ) {
+        let path: &Path = error.get_path();
+        let title: &str = error.get_title();
+        let description: &str = error.get_description();
+        let span: Span = error.get_span();
+
+        let source: String = compiler::reader::get_file_source_code(path);
+
+        let diagnostic: Diagnostic =
+            diagnostic::build(&source, span, description, Notificator::CommonHelp);
+
+        printers::print(&diagnostic, (title, path, None, logging_type));
     }
 }
 

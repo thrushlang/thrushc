@@ -88,6 +88,9 @@ impl Ast<'_> {
             // Indirect Call
             Ast::Indirect { kind, .. } => Ok(kind),
 
+            // Module Import
+            Ast::Import { .. } => Ok(&Type::Void),
+
             // Ignored
             Ast::Pass { .. } => Ok(&Type::Void),
 
@@ -240,6 +243,9 @@ impl Ast<'_> {
             // Global Assembler
             Ast::GlobalAssembler { span, .. } => *span,
 
+            // Module Import
+            Ast::Import { span, .. } => *span,
+
             // Indirect Call
             Ast::Indirect { span, .. } => *span,
 
@@ -311,6 +317,9 @@ impl Ast<'_> {
 
             // Global Assembler
             Ast::GlobalAssembler { .. } => &Type::Void,
+
+            // Module Import
+            Ast::Import { .. } => &Type::Void,
 
             // Ignored
             Ast::Pass { .. } => &Type::Void,

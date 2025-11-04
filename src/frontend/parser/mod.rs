@@ -31,6 +31,7 @@ use crate::frontend::parser::constants::{
     PARSER_MAX_ERRORS, PARSER_MINIMAL_AST_CAPACITY, PARSER_MINIMAL_GLOBAL_CAPACITY,
 };
 use crate::frontend::parser::contexts::controlctx::ParserControlContext;
+use crate::frontend::preprocessor::module::Module;
 use crate::frontend::types::ast::Ast;
 use crate::frontend::types::parser::symbols::types::{AssemblerFunctions, Functions};
 
@@ -58,6 +59,7 @@ pub struct ParserContext<'parser> {
 pub struct Parser<'parser> {
     tokens: &'parser [Token],
     file: &'parser CompilationUnit,
+    modules: Vec<Module<'parser>>,
 }
 
 impl<'parser> Parser<'parser> {
@@ -65,8 +67,14 @@ impl<'parser> Parser<'parser> {
     pub fn parse(
         tokens: &'parser [Token],
         file: &'parser CompilationUnit,
+        modules: Vec<Module<'parser>>,
     ) -> (ParserContext<'parser>, bool) {
-        Self { tokens, file }.start()
+        Self {
+            tokens,
+            file,
+            modules,
+        }
+        .start()
     }
 }
 
@@ -137,7 +145,9 @@ impl<'parser> ParserContext<'parser> {
             abort: false,
         }
     }
+}
 
+impl<'parser> ParserContext<'parser> {
     pub fn verify(&mut self) -> bool {
         if !self.errors.is_empty() || !self.bugs.is_empty() {
             self.bugs.iter().for_each(|bug: &ThrushCompilerIssue| {
