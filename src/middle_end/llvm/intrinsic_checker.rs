@@ -1,0 +1,79 @@
+use inkwell::intrinsics::Intrinsic;
+
+use crate::{
+    core::{
+        compiler::options::CompilationUnit, console::logging::LoggingType,
+        diagnostic::diagnostician::Diagnostician, errors::standard::ThrushCompilerIssue,
+    },
+    front_end::types::ast::Ast,
+};
+
+#[derive(Debug)]
+pub struct IntrinsicChecker<'llvm> {
+    ast: &'llvm [Ast<'llvm>],
+
+    errors: Vec<ThrushCompilerIssue>,
+
+    diagnostician: Diagnostician,
+}
+
+impl<'llvm> IntrinsicChecker<'llvm> {
+    #[inline]
+    pub fn new(ast: &'llvm [Ast<'llvm>], file: &'llvm CompilationUnit) -> Self {
+        Self {
+            ast,
+            errors: Vec::with_capacity(100),
+            diagnostician: Diagnostician::new(file),
+        }
+    }
+}
+
+impl<'llvm> IntrinsicChecker<'llvm> {
+    pub fn check(&mut self) -> Result<(), ()> {
+        for ast in self.ast {
+            match ast {
+                Ast::Intrinsic {
+                    external_name,
+                    span,
+                    ..
+                } if Intrinsic::find(external_name).is_none() => {
+                    self.add_error(ThrushCompilerIssue::Error(
+                        "Intrinsic not found".into(),
+                        "This intrinsic is not recognized by the compiler as existing. Try another name.".into(),
+                        None,
+                        *span,
+                    ));
+                }
+
+                _ => {}
+            }
+        }
+
+        self.verify()?;
+
+        Ok(())
+    }
+}
+
+impl IntrinsicChecker<'_> {
+    #[inline]
+    pub fn verify(&mut self) -> Result<(), ()> {
+        if !self.errors.is_empty() {
+            self.errors.iter().for_each(|error| {
+                self.diagnostician
+                    .dispatch_diagnostic(error, LoggingType::Error);
+            });
+
+            return Err(());
+        }
+
+        Ok(())
+    }
+}
+
+impl<'llvm> IntrinsicChecker<'llvm> {
+    #[inline]
+    pub fn add_error(&mut self, error: ThrushCompilerIssue) {
+        self.errors.push(error);
+    }
+}

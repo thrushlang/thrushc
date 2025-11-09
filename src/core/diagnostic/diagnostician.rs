@@ -6,8 +6,8 @@ use crate::core::compiler::options::CompilationUnit;
 use crate::core::console::logging::LoggingType;
 use crate::core::diagnostic::{self, Diagnostic, printers};
 use crate::core::errors::standard::ThrushCompilerIssue;
-use crate::frontend::lexer::span::Span;
-use crate::frontend::preprocessor::errors::PreprocessorIssue;
+use crate::front_end::lexer::span::Span;
+use crate::front_end::preprocessor::errors::PreprocessorIssue;
 
 use {colored::Colorize, std::path::PathBuf};
 

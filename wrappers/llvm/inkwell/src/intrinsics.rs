@@ -45,7 +45,7 @@ impl Intrinsic {
     /// builder.build_call(trap_function, &[], "trap_call");
     /// ```
     pub fn find(name: &str) -> Option<Self> {
-        let id = unsafe { LLVMLookupIntrinsicID(name.as_ptr() as *const ::libc::c_char, name.len()) };
+        let id: u32 = unsafe { LLVMLookupIntrinsicID(name.as_ptr() as *const ::libc::c_char, name.len()) };
 
         if id == 0 {
             return None;

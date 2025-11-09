@@ -10,8 +10,8 @@ use crate::core::compiler::backends::llvm::LLVMBackend;
 use crate::core::compiler::linking::LinkingCompilersConfiguration;
 use crate::core::console::logging;
 use crate::core::console::logging::LoggingType;
-use crate::frontend::types::ast::Ast;
-use crate::frontend::types::lexer::types::Tokens;
+use crate::front_end::types::ast::Ast;
+use crate::front_end::types::lexer::types::Tokens;
 
 #[derive(Debug)]
 pub struct CompilerOptions {
@@ -38,6 +38,7 @@ pub struct CompilerOptions {
 #[derive(Debug, Clone)]
 pub struct CompilationUnit {
     name: String,
+    base_name: String,
     path: PathBuf,
     content: String,
 }
@@ -94,11 +95,12 @@ impl ThrushOptimization {
 
 impl CompilationUnit {
     #[inline]
-    pub fn new(name: String, path: PathBuf, content: String) -> Self {
+    pub fn new(name: String, path: PathBuf, content: String, base_name: String) -> Self {
         Self {
             name,
             path,
             content,
+            base_name,
         }
     }
 }
@@ -131,7 +133,13 @@ impl CompilerOptions {
 
 impl CompilerOptions {
     #[inline]
-    pub fn add_compilation_unit(&mut self, name: String, path: PathBuf, content: String) {
+    pub fn add_compilation_unit(
+        &mut self,
+        name: String,
+        path: PathBuf,
+        content: String,
+        base_name: String,
+    ) {
         if self.files.iter().any(|file| file.path == path) {
             logging::print_warn(
                 LoggingType::Warning,
@@ -141,7 +149,8 @@ impl CompilerOptions {
             return;
         }
 
-        self.files.push(CompilationUnit::new(name, path, content));
+        self.files
+            .push(CompilationUnit::new(name, path, content, base_name));
     }
 }
 
@@ -332,5 +341,10 @@ impl CompilationUnit {
     #[inline]
     pub fn get_path(&self) -> &Path {
         &self.path
+    }
+
+    #[inline]
+    pub fn get_base_name(&self) -> String {
+        self.base_name.clone()
     }
 }

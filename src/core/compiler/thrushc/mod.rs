@@ -24,13 +24,14 @@ use inkwell::{
 };
 
 use crate::{
-    backend::llvm::compiler::jit::LLVMJITCompiler,
+    back_end::llvm::compiler::jit::LLVMJITCompiler,
     core::compiler::backends::llvm::jit,
-    frontend::preprocessor::{self, Preprocessor},
+    front_end::preprocessor::{self, Preprocessor},
     linkage::linkers::lld::LLVMLinker,
+    middle_end,
 };
 use crate::{
-    backend::llvm::{self, compiler::context::LLVMCodeGenContext},
+    back_end::llvm::{self, compiler::context::LLVMCodeGenContext},
     core::compiler::backends::llvm::jit::JITConfiguration,
 };
 
@@ -42,10 +43,10 @@ use crate::core::compiler::options::{
 use crate::core::console::logging::{self, LoggingType};
 use crate::core::diagnostic::diagnostician::Diagnostician;
 
-use crate::frontend::lexer::{Lexer, token::Token};
-use crate::frontend::parser::{Parser, ParserContext};
-use crate::frontend::semantic::SemanticAnalyzer;
-use crate::frontend::types::ast::Ast;
+use crate::front_end::lexer::{Lexer, token::Token};
+use crate::front_end::parser::{Parser, ParserContext};
+use crate::front_end::semantic::SemanticAnalyzer;
+use crate::front_end::types::ast::Ast;
 
 #[derive(Debug)]
 pub struct ThrushCompiler<'thrushc> {
@@ -168,6 +169,11 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
         if parser_throwed_errors || semantic_analysis_throwed_errors {
             return finisher::archive_compilation(self, file_time, file);
         }
+
+        let mut intrinsic_checker: middle_end::llvm::intrinsic_checker::IntrinsicChecker =
+            middle_end::llvm::intrinsic_checker::IntrinsicChecker::new(ast, file);
+
+        intrinsic_checker.check()?;
 
         if emit::after_frontend(self, build_dir, file, Emited::Ast(ast)) {
             return finisher::archive_compilation(self, file_time, file);
@@ -388,6 +394,11 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
         if parser_throwed_errors || semantic_analysis_throwed_errors {
             return finisher::archive_compilation_module_jit(self, file_time, file);
         }
+
+        let mut intrinsic_checker: middle_end::llvm::intrinsic_checker::IntrinsicChecker =
+            middle_end::llvm::intrinsic_checker::IntrinsicChecker::new(ast, file);
+
+        intrinsic_checker.check()?;
 
         if emit::after_frontend(self, build_dir, file, Emited::Ast(ast)) {
             return finisher::archive_compilation_module_jit(self, file_time, file);

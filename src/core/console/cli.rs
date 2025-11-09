@@ -564,11 +564,21 @@ impl CLI {
     fn handle_thrush_file(&mut self, file_path: &str) {
         let mut path: PathBuf = PathBuf::from(file_path);
 
-        let file_name: String = path.file_name().map_or_else(
+        let name: String = path.file_name().map_or_else(
             || {
                 logging::print_critical_error(
                     LoggingType::Error,
                     &format!("Unknown file name '{}'.", path.display()),
+                );
+            },
+            |name| name.to_string_lossy().to_string(),
+        );
+
+        let base_name: String = path.file_stem().map_or_else(
+            || {
+                logging::print_critical_error(
+                    LoggingType::Error,
+                    &format!("Unknown base file name '{}'.", path.display()),
                 );
             },
             |name| name.to_string_lossy().to_string(),
@@ -580,7 +590,8 @@ impl CLI {
 
         let content: String = compiler::reader::get_file_source_code(&path);
 
-        self.options.add_compilation_unit(file_name, path, content);
+        self.options
+            .add_compilation_unit(name, path, content, base_name);
     }
 
     fn handle_unknown_argument(&mut self, arg: &str) {
