@@ -22,7 +22,7 @@ pub fn print(diagnostic: &Diagnostic, error: Error<'_>) {
     let signaler: &str = diagnostic.get_signaler();
 
     let line: usize = diagnostic.get_span().get_line();
-    let start: usize = diagnostic.get_span().get_span_start();
+    let end: usize = diagnostic.get_span().get_span_end();
 
     logging::write(
         logging::OutputIn::Stderr,
@@ -35,7 +35,7 @@ pub fn print(diagnostic: &Diagnostic, error: Error<'_>) {
                     .underline()
             ),
             logging_type.text_with_color(&line.to_string()),
-            logging_type.text_with_color(&start.to_string()),
+            logging_type.text_with_color(&end.to_string()),
         ),
     );
 

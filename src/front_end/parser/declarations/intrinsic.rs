@@ -38,7 +38,7 @@ pub fn build_intrinsic<'parser>(
         "Expected string literal.".into(),
     )?;
 
-    let external_name: &str = external_name_tk.get_lexeme();
+    let external_name: &str = external_name_tk.get_lexeme().trim();
 
     ctx.consume(
         TokenType::RParen,

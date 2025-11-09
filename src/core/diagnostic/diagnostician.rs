@@ -38,8 +38,13 @@ impl Diagnostician {
     pub fn dispatch_diagnostic(&mut self, error: &ThrushCompilerIssue, logging_type: LoggingType) {
         match error {
             ThrushCompilerIssue::Error(title, help, note, span) => {
-                let diagnostic: Diagnostic =
-                    diagnostic::build(&self.code, *span, help, Notificator::CommonHelp);
+                let diagnostic: Diagnostic = diagnostic::build(
+                    &self.code,
+                    *span,
+                    help,
+                    Notificator::CommonHelp,
+                    logging_type,
+                );
 
                 printers::print(
                     &diagnostic,
@@ -48,15 +53,25 @@ impl Diagnostician {
             }
 
             ThrushCompilerIssue::Warning(title, help, span) => {
-                let diagnostic: Diagnostic =
-                    diagnostic::build(&self.code, *span, help, Notificator::CommonHelp);
+                let diagnostic: Diagnostic = diagnostic::build(
+                    &self.code,
+                    *span,
+                    help,
+                    Notificator::CommonHelp,
+                    logging_type,
+                );
 
                 printers::print(&diagnostic, (title, &self.path, None, logging_type));
             }
 
             ThrushCompilerIssue::FrontEndBug(title, info, span, position, path, line) => {
-                let diagnostic: Diagnostic =
-                    diagnostic::build(&self.code, *span, info, Notificator::CompilerFrontendBug);
+                let diagnostic: Diagnostic = diagnostic::build(
+                    &self.code,
+                    *span,
+                    info,
+                    Notificator::CompilerFrontendBug,
+                    logging_type,
+                );
 
                 printers::print_compiler_frontend_bug(
                     &diagnostic,
@@ -65,8 +80,13 @@ impl Diagnostician {
             }
 
             ThrushCompilerIssue::BackenEndBug(title, info, span, position, path, line) => {
-                let diagnostic: Diagnostic =
-                    diagnostic::build(&self.code, *span, info, Notificator::CompilerBackendBug);
+                let diagnostic: Diagnostic = diagnostic::build(
+                    &self.code,
+                    *span,
+                    info,
+                    Notificator::CompilerBackendBug,
+                    logging_type,
+                );
 
                 printers::print_compiler_backend_bug(
                     &diagnostic,
@@ -90,8 +110,13 @@ impl Diagnostician {
 
         let source: String = compiler::reader::get_file_source_code(path);
 
-        let diagnostic: Diagnostic =
-            diagnostic::build(&source, span, description, Notificator::CommonHelp);
+        let diagnostic: Diagnostic = diagnostic::build(
+            &source,
+            span,
+            description,
+            Notificator::CommonHelp,
+            logging_type,
+        );
 
         printers::print(&diagnostic, (title, path, None, logging_type));
     }

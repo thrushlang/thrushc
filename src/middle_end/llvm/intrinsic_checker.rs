@@ -31,12 +31,18 @@ impl<'llvm> IntrinsicChecker<'llvm> {
 impl<'llvm> IntrinsicChecker<'llvm> {
     pub fn check(&mut self) -> Result<(), ()> {
         for ast in self.ast {
-            match ast {
-                Ast::Intrinsic {
-                    external_name,
-                    span,
-                    ..
-                } if Intrinsic::find(external_name).is_none() => {
+            if let Ast::Intrinsic {
+                external_name,
+                span,
+                ..
+            } = ast
+            {
+                let intrinsic: Option<Intrinsic> = Intrinsic::find(external_name);
+
+                if intrinsic.is_none()
+                    || (intrinsic.is_some_and(|intrinsic| intrinsic.is_overloaded())
+                        && external_name.split(".").count() <= 2)
+                {
                     self.add_error(ThrushCompilerIssue::Error(
                         "Intrinsic not found".into(),
                         "This intrinsic is not recognized by the compiler as existing. Try another name.".into(),
@@ -44,8 +50,6 @@ impl<'llvm> IntrinsicChecker<'llvm> {
                         *span,
                     ));
                 }
-
-                _ => {}
             }
         }
 
