@@ -28,6 +28,7 @@ lazy_static = "1.5.0"
 fastrand = "2.3.0"
 libloading = "0.8.9"
 either = "1.15.0"
+object = { version = "0.37.0", features = ["read"] }
 
 [target.'cfg(target_os = "linux")'.dependencies]
 gcc = { path = "wrappers/gcc/gccjit",  optional = true }

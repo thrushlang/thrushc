@@ -416,6 +416,12 @@ impl CLI {
                 self.advance();
             }
 
+            "--link-check" => {
+                self.advance();
+                self.validate_llvm_required(arg);
+                self.validate_aot_is_enable(arg);
+            }
+
             "--reloc" => {
                 self.advance();
                 self.validate_llvm_required(arg);
@@ -717,6 +723,15 @@ impl CLI {
         if !self.options.get_llvm_backend_options().is_jit() {
             self.report_error(&format!(
                 "Can't use '{}' without '-jit' flag previously.",
+                arg
+            ));
+        }
+    }
+
+    fn validate_aot_is_enable(&self, arg: &str) {
+        if self.options.get_llvm_backend_options().is_jit() {
+            self.report_error(&format!(
+                "Can't use '{}' if the '-jit' flag was enabled previously.",
                 arg
             ));
         }

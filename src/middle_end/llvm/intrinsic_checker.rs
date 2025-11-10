@@ -1,12 +1,11 @@
 use inkwell::intrinsics::Intrinsic;
 
-use crate::{
-    core::{
-        compiler::options::CompilationUnit, console::logging::LoggingType,
-        diagnostic::diagnostician::Diagnostician, errors::standard::ThrushCompilerIssue,
-    },
-    front_end::types::ast::Ast,
-};
+use crate::core::compiler::options::CompilationUnit;
+use crate::core::console::logging::LoggingType;
+use crate::core::diagnostic::diagnostician::Diagnostician;
+use crate::core::errors::standard::ThrushCompilerIssue;
+
+use crate::front_end::types::ast::Ast;
 
 #[derive(Debug)]
 pub struct IntrinsicChecker<'llvm> {
