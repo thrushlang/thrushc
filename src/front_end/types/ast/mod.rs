@@ -194,6 +194,7 @@ pub enum Ast<'ctx> {
     EntryPoint {
         body: Rc<Ast<'ctx>>,
         parameters: Vec<Ast<'ctx>>,
+        kind: Type,
         span: Span,
     },
     Intrinsic {

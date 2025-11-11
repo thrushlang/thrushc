@@ -62,9 +62,12 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
 
         match node {
             Ast::EntryPoint {
-                body, parameters, ..
+                body,
+                parameters,
+                kind,
+                ..
             } => {
-                self.build_entrypoint(parameters, body);
+                self.build_standard_entrypoint(kind, parameters, body);
             }
 
             Ast::Function { body, .. } => {
@@ -437,24 +440,26 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         ########################################################################*/
     }
 
-    fn build_entrypoint(&mut self, parameters: &'ctx [Ast], body: &'ctx Ast) {
+    fn build_standard_entrypoint(&mut self, kind: &Type, parameters: &'ctx [Ast], body: &'ctx Ast) {
         let llvm_module: &Module = self.context.get_llvm_module();
         let llvm_builder: &Builder = self.context.get_llvm_builder();
 
         let entrypoint_type: FunctionType =
-            typegen::generate_fn_type(self.context, &Type::S32, parameters, false);
+            typegen::generate_fn_type(self.context, kind, parameters, false);
+
         let entrypoint: FunctionValue = llvm_module.add_function("main", entrypoint_type, None);
 
         llvm_builder.position_at_end(block::append_block(self.context, entrypoint));
+
         self.context.set_current_fn(entrypoint);
 
-        for parameter in parameters {
+        parameters.iter().for_each(|parameter| {
             compiler::declarations::function::compile_parameter(
                 self,
                 entrypoint,
                 parameter.as_function_parameter(),
             );
-        }
+        });
 
         self.codegen_block(body);
     }

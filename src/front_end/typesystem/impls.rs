@@ -76,6 +76,14 @@ impl Type {
     }
 
     #[inline(always)]
+    pub fn is_unsigned_integer_type(&self) -> bool {
+        matches!(
+            self,
+            Type::U8 | Type::U16 | Type::U32 | Type::U64 | Type::U128
+        )
+    }
+
+    #[inline(always)]
     pub fn is_signed_integer_type(&self) -> bool {
         matches!(self, Type::S8 | Type::S16 | Type::S32 | Type::S64)
     }
@@ -106,7 +114,7 @@ impl IndexExtensions for Type {
 
         match self {
             Type::FixedArray(inner_type, _) => inner_type.get_type_with_depth(depth - 1),
-            Type::Array(inner_type) => inner_type.get_type_with_depth(depth),
+            Type::Array(inner_type) => inner_type.get_type_with_depth(depth - 1),
             Type::Const(inner_type) => inner_type.get_type_with_depth(depth - 1),
             Type::Ptr(Some(inner_type)) => inner_type.get_type_with_depth(depth),
             Type::Struct(..) => self,

@@ -83,15 +83,12 @@ pub fn build_entrypoint<'parser>(
         "Expected ')'.".into(),
     )?;
 
-    ctx.consume(
-        TokenType::S32,
-        "Syntax error".into(),
-        "Expected 's32' type.".into(),
-    )?;
+    let return_type: Type = typegen::build_type(ctx)?;
 
     ctx.get_mut_control_ctx().set_inside_function(true);
     ctx.get_mut_control_ctx().set_has_entrypoint();
-    ctx.get_mut_type_ctx().set_function_type(Type::S32);
+    ctx.get_mut_type_ctx()
+        .set_function_type(return_type.clone());
 
     ctx.get_mut_symbols().declare_parameters(&parameters)?;
 
@@ -103,6 +100,7 @@ pub fn build_entrypoint<'parser>(
     Ok(Ast::EntryPoint {
         body,
         parameters,
+        kind: return_type,
         span,
     })
 }

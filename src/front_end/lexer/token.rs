@@ -1,8 +1,5 @@
-use std::path::PathBuf;
-
-use crate::{
-    core::errors::{position::CompilationPosition, standard::ThrushCompilerIssue},
-    front_end::{lexer::tokentype::TokenType, types::parser::stmts::traits::TokenExtensions},
+use crate::front_end::{
+    lexer::tokentype::TokenType, types::parser::stmts::traits::TokenExtensions,
 };
 
 use super::span::Span;

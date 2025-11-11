@@ -11,13 +11,24 @@ pub fn validate<'type_checker>(
     node: &'type_checker Ast,
 ) -> Result<(), ThrushCompilerIssue> {
     match node {
-        Ast::EntryPoint { body, span, .. } => {
+        Ast::EntryPoint {
+            body, kind, span, ..
+        } => {
+            if !kind.is_signed_integer_type() {
+                typechecker.add_error(ThrushCompilerIssue::Error(
+                    "Type error".into(),
+                    "Expected signed integer type 's8, s16, s32, s64'.".into(),
+                    None,
+                    *span,
+                ));
+            }
+
             typechecker.analyze_stmt(body)?;
 
             if !body.has_return_for_function() {
                 typechecker.add_error(ThrushCompilerIssue::Error(
                     "Type error".into(),
-                    "Expected return with type 'u32'.".into(),
+                    format!("Expected return with type '{}'.", kind),
                     None,
                     *span,
                 ));

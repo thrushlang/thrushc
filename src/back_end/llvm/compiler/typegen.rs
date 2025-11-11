@@ -18,7 +18,7 @@ pub fn generate_fn_type<'ctx>(
     context: &LLVMCodeGenContext<'_, 'ctx>,
     kind: &Type,
     parameters: &[Ast],
-    ignore_args: bool,
+    is_var_args: bool,
 ) -> FunctionType<'ctx> {
     let llvm_context: &Context = context.get_llvm_context();
 
@@ -44,10 +44,10 @@ pub fn generate_fn_type<'ctx>(
     if kind.is_void_type() {
         return llvm_context
             .void_type()
-            .fn_type(&parameters_types, ignore_args);
+            .fn_type(&parameters_types, is_var_args);
     }
 
-    self::generate(llvm_context, kind).fn_type(&parameters_types, ignore_args)
+    self::generate(llvm_context, kind).fn_type(&parameters_types, is_var_args)
 }
 
 #[inline]
@@ -55,7 +55,7 @@ pub fn generate_fn_type_from_type<'ctx>(
     context: &LLVMCodeGenContext<'_, 'ctx>,
     kind: &Type,
     parameters: &[Type],
-    ignore_args: bool,
+    is_var_args: bool,
 ) -> FunctionType<'ctx> {
     let llvm_context: &Context = context.get_llvm_context();
 
@@ -68,10 +68,10 @@ pub fn generate_fn_type_from_type<'ctx>(
     if kind.is_void_type() {
         return llvm_context
             .void_type()
-            .fn_type(&parameters_types, ignore_args);
+            .fn_type(&parameters_types, is_var_args);
     }
 
-    self::generate(llvm_context, kind).fn_type(&parameters_types, ignore_args)
+    self::generate(llvm_context, kind).fn_type(&parameters_types, is_var_args)
 }
 
 #[inline]
@@ -114,7 +114,6 @@ pub fn generate_gep<'ctx>(llvm_context: &'ctx Context, kind: &Type) -> BasicType
     match kind {
         Type::Const(subtype) => self::generate_gep(llvm_context, subtype),
         Type::Array(subtype) => self::generate(llvm_context, subtype),
-
         Type::Ptr(Some(subtype)) => self::generate(llvm_context, subtype),
 
         _ => self::generate(llvm_context, kind),
