@@ -8,6 +8,10 @@ pub trait LLVMTypeExtensions {
     fn llvm_is_intrinsic_available(&self, name: &str) -> bool;
 }
 
+pub trait IndexExtensions {
+    fn calculate_index_type(&self, depth: usize) -> &Type;
+}
+
 pub trait TypeExtensions {
     fn get_type_with_depth(&self, base_depth: usize) -> &Type;
     fn get_type_fn_ref(&self) -> &Type;

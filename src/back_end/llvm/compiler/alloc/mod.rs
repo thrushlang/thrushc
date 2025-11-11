@@ -5,17 +5,14 @@ pub mod memstatic;
 
 use inkwell::{context::Context, types::BasicTypeEnum, values::PointerValue};
 
-use crate::{
-    back_end::llvm::compiler::{context::LLVMCodeGenContext, typegen},
-    front_end::{
-        lexer::span::Span,
-        types::{
-            ast::Ast,
-            parser::stmts::{traits::ThrushAttributesExtensions, types::ThrushAttributes},
-        },
-        typesystem::types::Type,
-    },
-};
+use crate::back_end::llvm::compiler::context::LLVMCodeGenContext;
+use crate::back_end::llvm::compiler::typegen;
+
+use crate::front_end::lexer::span::Span;
+use crate::front_end::types::ast::Ast;
+use crate::front_end::types::parser::stmts::traits::ThrushAttributesExtensions;
+use crate::front_end::types::parser::stmts::types::ThrushAttributes;
+use crate::front_end::typesystem::types::Type;
 
 pub fn local_variable<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
@@ -27,7 +24,7 @@ pub fn local_variable<'ctx>(
 ) -> PointerValue<'ctx> {
     let llvm_context: &Context = context.get_llvm_context();
 
-    let llvm_type: BasicTypeEnum = typegen::generate_for_local_variable(llvm_context, kind, value);
+    let llvm_type: BasicTypeEnum = typegen::generate_local(llvm_context, kind, value);
 
     let formatted_ascii_name: String = format!("local.{}", ascii_name);
 

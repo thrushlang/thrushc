@@ -138,6 +138,10 @@ pub fn local_static<'ctx>(
     let global: GlobalValue =
         llvm_module.add_global(llvm_type, Some(AddressSpace::default()), &name);
 
+    if value.is_none() {
+        global.set_initializer(&llvm_type.const_zero());
+    }
+
     self::set_global_common(
         &global,
         llvm_metadata.constant,
@@ -166,6 +170,10 @@ pub fn global_static<'ctx>(
 
     let global: GlobalValue =
         llvm_module.add_global(llvm_type, Some(AddressSpace::default()), name);
+
+    if !attributes.has_public_attribute() && value.is_none() {
+        global.set_initializer(&llvm_type.const_zero());
+    }
 
     self::set_global_common(
         &global,

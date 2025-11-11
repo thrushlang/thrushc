@@ -3,6 +3,7 @@ pub mod attributes;
 pub mod builtins;
 pub mod keywords;
 pub mod printer;
+pub mod scapes;
 pub mod span;
 pub mod token;
 pub mod tokenattr;

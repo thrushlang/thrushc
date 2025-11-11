@@ -6,7 +6,7 @@ use crate::front_end::parser::ParserContext;
 use crate::front_end::parser::expr;
 use crate::front_end::types::ast::Ast;
 use crate::front_end::types::ast::metadata::index::IndexMetadata;
-use crate::front_end::typesystem::traits::TypeExtensions;
+use crate::front_end::typesystem::traits::IndexExtensions;
 use crate::front_end::typesystem::types::Type;
 
 pub fn build_index<'parser>(
@@ -46,7 +46,10 @@ pub fn build_index<'parser>(
     )?;
 
     let index_type: Type = Type::Ptr(Some(
-        index_type.get_type_with_depth(indexes.len()).clone().into(),
+        index_type
+            .calculate_index_type(indexes.len())
+            .clone()
+            .into(),
     ));
 
     Ok(Ast::Index {

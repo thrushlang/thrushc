@@ -48,6 +48,8 @@ pub fn validate<'type_checker>(
                 typechecker.analyze_expr(indexe)
             })?;
 
+            typechecker.analyze_expr(source)?;
+
             Ok(())
         }
 

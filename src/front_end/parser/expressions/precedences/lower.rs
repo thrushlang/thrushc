@@ -1,5 +1,6 @@
 use crate::core::errors::standard::ThrushCompilerIssue;
 
+use crate::front_end::lexer;
 use crate::front_end::lexer::{span::Span, token::Token, tokentype::TokenType};
 use crate::front_end::parser::{
     ParserContext, builtins, expr,
@@ -56,10 +57,12 @@ pub fn lower_precedence<'parser>(
         }
 
         TokenType::Str => {
-            let str_tk: &Token = ctx.advance()?;
-            let span: Span = str_tk.get_span();
+            let tk: &Token = ctx.advance()?;
 
-            let bytes: Vec<u8> = str_tk.scape(span)?;
+            let content: &str = tk.get_lexeme();
+            let span: Span = tk.get_span();
+
+            let bytes: Vec<u8> = lexer::scapes::parse_scapes(content, span)?;
 
             Ast::new_str(
                 bytes,
@@ -69,18 +72,20 @@ pub fn lower_precedence<'parser>(
         }
 
         TokenType::Char => {
-            let char_tk: &Token = ctx.advance()?;
-            let span: Span = char_tk.get_span();
+            let tk: &Token = ctx.advance()?;
 
-            Ast::new_char(Type::Char, char_tk.get_lexeme_first_byte(), span)
+            let span: Span = tk.get_span();
+
+            Ast::new_char(Type::Char, tk.get_lexeme_first_byte(), span)
         }
 
         TokenType::NullPtr => Ast::new_nullptr(ctx.advance()?.span),
 
         TokenType::Integer => {
-            let integer_tk: &Token = ctx.advance()?;
-            let integer: &str = integer_tk.get_lexeme();
-            let span: Span = integer_tk.get_span();
+            let tk: &Token = ctx.advance()?;
+
+            let integer: &str = tk.get_lexeme();
+            let span: Span = tk.get_span();
 
             let parsed_integer: (Type, u64) = parse::integer(integer, span)?;
 
@@ -91,10 +96,10 @@ pub fn lower_precedence<'parser>(
         }
 
         TokenType::Float => {
-            let float_tk: &Token = ctx.advance()?;
+            let tk: &Token = ctx.advance()?;
 
-            let float: &str = float_tk.get_lexeme();
-            let span: Span = float_tk.get_span();
+            let float: &str = tk.get_lexeme();
+            let span: Span = tk.get_span();
 
             let parsed_float: (Type, f64) = parse::float(float, span)?;
 
@@ -105,10 +110,10 @@ pub fn lower_precedence<'parser>(
         }
 
         TokenType::Identifier => {
-            let identifier_tk: &Token = ctx.advance()?;
+            let tk: &Token = ctx.advance()?;
 
-            let name: &str = identifier_tk.get_lexeme();
-            let span: Span = identifier_tk.get_span();
+            let name: &str = tk.get_lexeme();
+            let span: Span = tk.get_span();
 
             if ctx.match_token(TokenType::Arrow)? {
                 return enumv::build_enum_value(ctx, name, span);

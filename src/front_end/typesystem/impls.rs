@@ -1,4 +1,7 @@
-use crate::front_end::typesystem::{traits::TypeExtensions, types::Type};
+use crate::front_end::typesystem::{
+    traits::{IndexExtensions, TypeExtensions},
+    types::Type,
+};
 
 impl Type {
     #[inline(always)]
@@ -68,7 +71,7 @@ impl Type {
     }
 
     #[inline(always)]
-    pub fn is_numeric(&self) -> bool {
+    pub fn is_numeric_type(&self) -> bool {
         self.is_integer_type() || self.is_float_type() || self.is_char_type() || self.is_bool_type()
     }
 
@@ -92,6 +95,43 @@ impl Type {
                 | Type::U128
                 | Type::Char
         )
+    }
+}
+
+impl IndexExtensions for Type {
+    fn calculate_index_type(&self, depth: usize) -> &Type {
+        if depth == 0 {
+            return self;
+        }
+
+        match self {
+            Type::FixedArray(inner_type, _) => inner_type.get_type_with_depth(depth - 1),
+            Type::Array(inner_type) => inner_type.get_type_with_depth(depth),
+            Type::Const(inner_type) => inner_type.get_type_with_depth(depth - 1),
+            Type::Ptr(Some(inner_type)) => inner_type.get_type_with_depth(depth),
+            Type::Struct(..) => self,
+            Type::S8
+            | Type::S16
+            | Type::S32
+            | Type::S64
+            | Type::U8
+            | Type::U16
+            | Type::U32
+            | Type::U64
+            | Type::U128
+            | Type::F32
+            | Type::F64
+            | Type::F128
+            | Type::FX8680
+            | Type::FPPC128
+            | Type::Bool
+            | Type::Char
+            | Type::Addr
+            | Type::Void
+            | Type::Ptr(None)
+            | Type::NullPtr
+            | Type::Fn(..) => self,
+        }
     }
 }
 

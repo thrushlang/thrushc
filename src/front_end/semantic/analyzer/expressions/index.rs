@@ -25,7 +25,7 @@ pub fn validate<'analyzer>(
             if indexes.len() > 1 {
                 let subtype: &Type = source_type.get_type_with_depth(1);
 
-                if subtype.is_ptr_like_type() {
+                if subtype.is_ptr_like_type() || source_type.is_ptr_like_type() {
                     analyzer.add_error(ThrushCompilerIssue::Error(
                         "Invalid consecutive indexing".into(),
                         "Consecutive indexing isn't allowed while it's using a pointer-to-pointer type."

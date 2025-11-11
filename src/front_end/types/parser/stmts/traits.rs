@@ -9,7 +9,6 @@ use crate::front_end::typesystem::types::Type;
 use crate::front_end::types::parser::stmts::types::{EnumField, EnumFields, StructFields};
 
 pub trait TokenExtensions {
-    fn scape(&self, span: Span) -> Result<Vec<u8>, ThrushCompilerIssue>;
     fn get_lexeme(&self) -> &str;
     fn get_span(&self) -> Span;
     fn get_type(&self) -> TokenType;

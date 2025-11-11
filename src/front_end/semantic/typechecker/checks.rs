@@ -555,8 +555,7 @@ pub fn check_type_cast(
         return Ok(());
     }
 
-    if (from_type.is_float_type()
-        || from_type.is_integer_type()
+    if (from_type.is_numeric_type()
         || from_type.is_struct_type()
         || from_type.is_array_type()
         || from_type.is_fixed_array_type())
@@ -566,10 +565,31 @@ pub fn check_type_cast(
         return Ok(());
     }
 
+    if from_type.is_const_type()
+        && (cast_type.is_numeric_type()
+            || cast_type.is_struct_type()
+            || cast_type.is_array_type()
+            || cast_type.is_fixed_array_type())
+    {
+        let rhs: &Type = from_type.get_type_with_depth(1);
+
+        self::check_type_cast(cast_type, rhs, metadata, span)?;
+
+        return Ok(());
+    }
+
     if from_type.is_ptr_type() && cast_type.is_const_type() {
         let lhs: &Type = cast_type.get_type_with_depth(1);
 
         self::check_type_cast(lhs, from_type, metadata, span)?;
+
+        return Ok(());
+    }
+
+    if from_type.is_const_type() && cast_type.is_ptr_type() {
+        let rhs: &Type = from_type.get_type_with_depth(1);
+
+        self::check_type_cast(cast_type, rhs, metadata, span)?;
 
         return Ok(());
     }

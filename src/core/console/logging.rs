@@ -95,7 +95,7 @@ pub fn print_backend_panic_not_exit(ltype: LoggingType, msg: &str) {
     let _ = io::stderr().write_all(
         format!(
             "\n{} It isn't a issue if:\n• Comes from the inline assembler thing.\n\n",
-            "NOTE".bold().underline().bright_red()
+            "IMPORTANT NOTE".bold().underline().bright_red()
         )
         .as_bytes(),
     );
@@ -119,7 +119,7 @@ pub fn print_backend_panic(ltype: LoggingType, msg: &str) -> ! {
     let _ = io::stderr().write_all(
         format!(
             "\n{} It isn't a issue if:\n• Comes from the inline assembler thing.\n\n",
-            "NOTE".bold().underline().bright_red()
+            "IMPORTANT NOTE".bold().underline().bright_red()
         )
         .as_bytes(),
     );

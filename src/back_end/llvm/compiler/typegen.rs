@@ -113,6 +113,8 @@ pub fn generate<'ctx>(llvm_context: &'ctx Context, kind: &Type) -> BasicTypeEnum
 pub fn generate_gep<'ctx>(llvm_context: &'ctx Context, kind: &Type) -> BasicTypeEnum<'ctx> {
     match kind {
         Type::Const(subtype) => self::generate_gep(llvm_context, subtype),
+        Type::Array(subtype) => self::generate(llvm_context, subtype),
+
         Type::Ptr(Some(subtype)) => self::generate(llvm_context, subtype),
 
         _ => self::generate(llvm_context, kind),
@@ -120,16 +122,16 @@ pub fn generate_gep<'ctx>(llvm_context: &'ctx Context, kind: &Type) -> BasicType
 }
 
 #[inline]
-pub fn generate_for_local_variable<'ctx>(
+pub fn generate_local<'ctx>(
     llvm_context: &'ctx Context,
     kind: &Type,
     value: Option<&Ast>,
 ) -> BasicTypeEnum<'ctx> {
     match kind {
-        Type::Const(subtype) => self::generate_for_local_variable(llvm_context, subtype, value),
+        Type::Const(subtype) => self::generate_local(llvm_context, subtype, value),
         Type::Array(subtype) if matches!(value, Some(Ast::Array { .. })) => {
             if let Some(Ast::Array { items, .. }) = value {
-                self::generate_for_local_variable(
+                self::generate_local(
                     llvm_context,
                     &Type::FixedArray(subtype.clone(), items.len() as u32),
                     value,

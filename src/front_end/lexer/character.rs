@@ -1,18 +1,29 @@
-use crate::{
-    core::errors::standard::ThrushCompilerIssue,
-    front_end::lexer::{Lexer, span::Span, token::Token, tokentype::TokenType},
-};
+use crate::core::errors::standard::ThrushCompilerIssue;
+
+use crate::front_end::lexer::Lexer;
+use crate::front_end::lexer::span::Span;
+use crate::front_end::lexer::token::Token;
+use crate::front_end::lexer::tokentype::TokenType;
 
 pub fn lex(lexer: &mut Lexer) -> Result<(), ThrushCompilerIssue> {
-    while lexer.is_char_boundary() {
-        lexer.advance_only();
-    }
+    let char: char = match lexer.advance() {
+        '\\' => {
+            lexer.end_span();
+            let span: Span = Span::new(lexer.line, lexer.span);
+
+            self::handle_char_scape_sequence(lexer, span)?
+        }
+
+        c => c,
+    };
 
     lexer.end_span();
 
     let span: Span = Span::new(lexer.line, lexer.span);
 
-    if lexer.peek() != '\'' {
+    lexer.advance_only();
+
+    if lexer.previous() != '\'' {
         return Err(ThrushCompilerIssue::Error(
             "Syntax error".into(),
             "Unclosed char. Did you forget to close the char with a '\''?.".into(),
@@ -21,25 +32,31 @@ pub fn lex(lexer: &mut Lexer) -> Result<(), ThrushCompilerIssue> {
         ));
     }
 
-    lexer.advance_only();
-
-    let lexeme: String = lexer.shrink_lexeme();
-
-    if lexeme.len() > 1 {
-        return Err(ThrushCompilerIssue::Error(
-            "Syntax error".into(),
-            "A character can only contain one byte.".into(),
-            None,
-            span,
-        ));
-    }
-
     lexer.tokens.push(Token {
         kind: TokenType::Char,
         ascii_lexeme: String::default(),
-        lexeme,
+        lexeme: char.to_string(),
         span,
     });
 
     Ok(())
+}
+
+fn handle_char_scape_sequence(lexer: &mut Lexer, span: Span) -> Result<char, ThrushCompilerIssue> {
+    match lexer.advance() {
+        'n' => Ok('\n'),
+        't' => Ok('\t'),
+        'r' => Ok('\r'),
+        '\\' => Ok('\\'),
+        '0' => Ok('\0'),
+        '\'' => Ok('\''),
+        '"' => Ok('"'),
+
+        _ => Err(ThrushCompilerIssue::Error(
+            "Syntax error".into(),
+            "Invalid escape sequence. Valid escapes are '\\n', '\\t', '\\r', '\\0', '\\\\', '\\'', and '\\\"'.".into(),
+            None,
+            span,
+        )),
+    }
 }

@@ -318,7 +318,7 @@ pub fn try_cast_const<'ctx>(
     target_type: &Type,
 ) -> BasicValueEnum<'ctx> {
     match (from, target_type) {
-        (lhs, rhs) if rhs.is_numeric() => {
+        (lhs, rhs) if rhs.is_numeric_type() => {
             if from_type.llvm_is_same_bit_size(context, rhs) {
                 self::const_numeric_bitcast_cast(context, lhs, rhs)
             } else {
@@ -371,7 +371,7 @@ pub fn compile<'ctx>(
         ));
     }
 
-    if rhs.is_numeric() {
+    if rhs.is_numeric_type() {
         let value: BasicValueEnum = codegen::compile(context, lhs, None);
         let target_type: BasicTypeEnum = typegen::generate(llvm_context, rhs);
 
