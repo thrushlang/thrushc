@@ -48,14 +48,9 @@ pub fn analyze<'linter>(linter: &mut Linter<'linter>, expr: &'linter Ast) {
             });
         }
 
-        Ast::Index {
-            source, indexes, ..
-        } => {
+        Ast::Index { source, index, .. } => {
             linter.analyze_expr(source);
-
-            indexes.iter().for_each(|indexe| {
-                linter.analyze_expr(indexe);
-            });
+            linter.analyze_expr(index);
         }
 
         Ast::Property { source, .. } => {

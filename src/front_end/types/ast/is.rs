@@ -227,6 +227,19 @@ impl Ast<'_> {
 
         false
     }
+
+    #[inline]
+    pub fn is_allocated_value(&self) -> Result<bool, ThrushCompilerIssue> {
+        if let Ast::Reference { metadata, .. } = self {
+            return Ok(metadata.is_allocated());
+        }
+
+        if let Ast::Property { metadata, .. } = self {
+            return Ok(metadata.is_allocated());
+        }
+
+        Ok(self.get_value_type()?.is_ptr_like_type())
+    }
 }
 
 impl Ast<'_> {

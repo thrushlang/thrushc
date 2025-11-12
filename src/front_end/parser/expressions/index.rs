@@ -17,27 +17,7 @@ pub fn build_index<'parser>(
     let index_type: &Type = source.get_value_type()?;
     let is_mutable: bool = source.is_mutable();
 
-    let mut indexes: Vec<Ast> = Vec::with_capacity(50);
-
-    loop {
-        if ctx.check(TokenType::RBracket) {
-            break;
-        }
-
-        let indexe: Ast = expr::build_expr(ctx)?;
-
-        indexes.push(indexe);
-
-        if ctx.check(TokenType::RBracket) {
-            break;
-        } else {
-            ctx.consume(
-                TokenType::Comma,
-                "Syntax error".into(),
-                "Expected ','.".into(),
-            )?;
-        }
-    }
+    let index: Ast = expr::build_expr(ctx)?;
 
     ctx.consume(
         TokenType::RBracket,
@@ -45,16 +25,11 @@ pub fn build_index<'parser>(
         "Expected ']'.".into(),
     )?;
 
-    let index_type: Type = Type::Ptr(Some(
-        index_type
-            .calculate_index_type(indexes.len())
-            .clone()
-            .into(),
-    ));
+    let index_type: Type = Type::Ptr(Some(index_type.calculate_index_type(1).clone().into()));
 
     Ok(Ast::Index {
         source: source.into(),
-        indexes,
+        index: index.into(),
         kind: index_type,
         metadata: IndexMetadata::new(is_mutable),
         span,

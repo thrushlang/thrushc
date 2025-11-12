@@ -14,7 +14,7 @@ pub fn validate<'type_checker>(
     match node {
         Ast::Index {
             source,
-            indexes,
+            index,
             span,
             ..
         } => {
@@ -32,22 +32,28 @@ pub fn validate<'type_checker>(
                 ));
             }
 
-            indexes.iter().try_for_each(|indexe| {
-                let indexe_type: &Type = indexe.get_value_type()?;
-                let span: Span = indexe.get_span();
+            if source.is_reference() && !source.is_allocated() {
+                typechecker.add_error(ThrushCompilerIssue::Error(
+                    "Type error".into(),
+                    "Expected raw typed pointer ptr[T], raw pointer ptr, array[T], or fixed array[T; N].".into(),
+                    None,
+                    *span,
+                ));
+            }
 
-                if !indexe_type.is_integer_type() {
-                    typechecker.add_error(ThrushCompilerIssue::Error(
-                        "Type error".into(),
-                        "Expected integer value.".into(),
-                        None,
-                        span,
-                    ));
-                }
+            let index_type: &Type = index.get_value_type()?;
+            let span: Span = index.get_span();
 
-                typechecker.analyze_expr(indexe)
-            })?;
+            if !index_type.is_integer_type() {
+                typechecker.add_error(ThrushCompilerIssue::Error(
+                    "Type error".into(),
+                    format!("Expected integer value, but got '{}'.", index_type),
+                    None,
+                    span,
+                ));
+            }
 
+            typechecker.analyze_expr(index)?;
             typechecker.analyze_expr(source)?;
 
             Ok(())

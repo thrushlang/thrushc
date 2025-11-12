@@ -12,12 +12,12 @@ use inkwell::values::{BasicValueEnum, IntValue, PointerValue};
 pub fn compile<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     source: &'ctx Ast<'ctx>,
-    indexes: &'ctx [Ast],
+    index: &'ctx Ast<'ctx>,
 ) -> BasicValueEnum<'ctx> {
     let ptr: PointerValue = ptr::compile(context, source, None).into_pointer_value();
     let ptr_type: &Type = source.llvm_get_type(context);
 
-    let ordered_indexes: Vec<IntValue> = indexes::compile(context, indexes, ptr_type);
+    let ordered_indexes: Vec<IntValue> = indexes::compile(context, index, ptr_type);
 
     let span: Span = source.get_span();
 

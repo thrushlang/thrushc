@@ -116,7 +116,10 @@ impl IndexExtensions for Type {
             Type::FixedArray(inner_type, _) => inner_type.get_type_with_depth(depth - 1),
             Type::Array(inner_type) => inner_type.get_type_with_depth(depth - 1),
             Type::Const(inner_type) => inner_type.get_type_with_depth(depth - 1),
-            Type::Ptr(Some(inner_type)) => inner_type.get_type_with_depth(depth),
+            Type::Ptr(Some(inner_type)) if !inner_type.is_ptr_like_type() => {
+                inner_type.get_type_with_depth(depth)
+            }
+            Type::Ptr(Some(inner_type)) => inner_type.get_type_with_depth(depth - 1),
             Type::Struct(..) => self,
             Type::S8
             | Type::S16
@@ -144,6 +147,23 @@ impl IndexExtensions for Type {
 }
 
 impl TypeExtensions for Type {
+    #[inline]
+    fn is_value(&self) -> bool {
+        self.is_numeric_type()
+            || self.is_fixed_array_type()
+            || self.is_struct_type()
+            || self.is_const_value()
+    }
+
+    #[inline]
+    fn is_const_value(&self) -> bool {
+        if let Type::Const(inner) = self {
+            return inner.is_const_value();
+        }
+
+        self.is_numeric_type() || self.is_fixed_array_type() || self.is_struct_type()
+    }
+
     fn get_type_with_depth(&self, base_depth: usize) -> &Type {
         if base_depth == 0 {
             return self;
@@ -179,6 +199,7 @@ impl TypeExtensions for Type {
         }
     }
 
+    #[inline]
     fn get_type_fn_ref(&self) -> &Type {
         if let Type::Fn(_, kind, ..) = self {
             return kind;
@@ -187,6 +208,7 @@ impl TypeExtensions for Type {
         self
     }
 
+    #[inline]
     fn get_type_ref(&self) -> Type {
         if self.is_ptr_like_type() {
             self.clone()

@@ -88,7 +88,7 @@ pub enum Ast<'ctx> {
     },
     Index {
         source: Rc<Ast<'ctx>>,
-        indexes: Vec<Ast<'ctx>>,
+        index: Rc<Ast<'ctx>>,
         kind: Type,
         metadata: IndexMetadata,
         span: Span,

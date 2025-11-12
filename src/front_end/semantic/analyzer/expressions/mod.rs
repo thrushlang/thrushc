@@ -84,14 +84,14 @@ pub fn validate<'analyzer>(
 
             if expr.is_reference() && !expr.is_allocated() {
                 analyzer.add_error(ThrushCompilerIssue::Error(
-                    "Expected allocated reference".into(),
+                    "Invalid reference".into(),
                     "An reference with direction was expected.".into(),
                     None,
                     *span,
                 ));
             } else if !expr.is_reference() && !expr_type.is_ptr_like_type() {
                 analyzer.add_error(ThrushCompilerIssue::Error(
-                    "Expected allocated value".into(),
+                    "Invalid reference".into(),
                     "An value with direction was expected.".into(),
                     None,
                     *span,

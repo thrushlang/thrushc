@@ -663,9 +663,9 @@ pub fn compile<'ctx>(
 
         // Memory Access Operations
         // Compiles an indexing operation (e.g., array access)
-        Ast::Index {
-            source, indexes, ..
-        } => compiler::generation::expressions::index::compile(context, source, indexes),
+        Ast::Index { source, index, .. } => {
+            compiler::generation::expressions::index::compile(context, source, index)
+        }
 
         // Compiles a dereference operation (e.g., *pointer)
         Ast::Defer {

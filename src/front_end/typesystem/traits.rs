@@ -16,6 +16,8 @@ pub trait TypeExtensions {
     fn get_type_with_depth(&self, base_depth: usize) -> &Type;
     fn get_type_fn_ref(&self) -> &Type;
     fn get_type_ref(&self) -> Type;
+    fn is_value(&self) -> bool;
+    fn is_const_value(&self) -> bool;
 }
 
 pub trait TypeFixedArrayEntensions {
@@ -28,9 +30,15 @@ pub trait TypeArrayEntensions {
 }
 
 pub trait TypePointerExtensions {
+    fn is_ptr_aggregate_value_like_type(&self) -> bool;
+    fn is_ptr_aggregate_like_type(&self) -> bool;
+    fn is_ptr_value_like_type(&self) -> bool;
     fn is_typed_ptr_type(&self) -> bool;
+
     fn is_ptr_struct_type(&self) -> bool;
     fn is_ptr_fixed_array_type(&self) -> bool;
+    fn is_ptr_array_type(&self) -> bool;
+    fn is_ptr_numeric_type(&self) -> bool;
 }
 
 pub trait TypeStructExtensions {
