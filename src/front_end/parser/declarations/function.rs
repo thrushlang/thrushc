@@ -6,6 +6,7 @@ use crate::front_end::lexer::tokentype::TokenType;
 use crate::front_end::parser::ParserContext;
 use crate::front_end::parser::attributes;
 use crate::front_end::parser::checks;
+use crate::front_end::parser::constants::PARSER_STANDARD_ENTRYPOINT_MAIN_NAME;
 use crate::front_end::parser::declarations::entrypoint;
 use crate::front_end::parser::statements::block;
 use crate::front_end::parser::typegen;
@@ -36,10 +37,13 @@ pub fn build_function<'parser>(
     )?;
 
     let name: &str = function_name_tk.get_lexeme();
+
     let ascii_name: &str = function_name_tk.get_ascii_lexeme();
+    let bytes_name: &[u8] = function_name_tk.get_bytes_lexeme();
+
     let span: Span = function_name_tk.get_span();
 
-    if name == "main" {
+    if bytes_name == PARSER_STANDARD_ENTRYPOINT_MAIN_NAME {
         if declare_forward {
             return Ok(Ast::new_nullptr(span));
         }

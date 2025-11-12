@@ -33,9 +33,10 @@ pub fn lex(lexer: &mut Lexer) -> Result<(), ThrushCompilerIssue> {
     }
 
     lexer.tokens.push(Token {
-        kind: TokenType::Char,
-        ascii_lexeme: String::default(),
         lexeme: char.to_string(),
+        ascii: String::default(),
+        bytes: Vec::default(),
+        kind: TokenType::Char,
         span,
     });
 

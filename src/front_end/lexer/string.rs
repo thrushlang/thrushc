@@ -97,9 +97,10 @@ fn validate_and_finalize_string(
     }
 
     lexer.tokens.push(Token {
-        kind: TokenType::Str,
-        ascii_lexeme: String::default(),
         lexeme,
+        ascii: String::default(),
+        bytes: Vec::default(),
+        kind: TokenType::Str,
         span,
     });
 

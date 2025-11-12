@@ -41,6 +41,7 @@ pub struct Lexer {
     tokens: Vec<Token>,
     errors: Vec<ThrushCompilerIssue>,
     code: Vec<char>,
+    bytes: Vec<u8>,
 
     start: usize,
     current: usize,
@@ -53,11 +54,13 @@ pub struct Lexer {
 impl Lexer {
     pub fn lex(file: &CompilationUnit) -> Result<Tokens, ThrushLexerPanic> {
         let code: Vec<char> = file.get_unit_content().chars().collect();
+        let bytes: Vec<u8> = file.get_unit_content().as_bytes().to_vec();
 
         Self {
             tokens: Vec::with_capacity(MAXIMUM_TOKENS_CAPACITY),
             errors: Vec::with_capacity(100),
             code,
+            bytes,
             start: 0,
             current: 0,
             line: 1,
@@ -66,7 +69,9 @@ impl Lexer {
         }
         .start()
     }
+}
 
+impl Lexer {
     fn start(&mut self) -> Result<Tokens, ThrushLexerPanic> {
         if self.code.len() > MAXIMUM_BYTES_TO_LEX {
             return Err(ThrushLexerPanic::TooBigFile(
@@ -108,31 +113,36 @@ impl Lexer {
         };
 
         self.tokens.push(Token {
-            lexeme: String::new(),
-            ascii_lexeme: String::new(),
+            lexeme: String::default(),
+            bytes: Vec::default(),
+            ascii: String::default(),
             kind: TokenType::Eof,
             span: Span::new(self.line, self.span),
         });
 
         Ok(mem::take(&mut self.tokens))
     }
+}
 
+impl Lexer {
     pub fn make(&mut self, kind: TokenType) {
         self.end_span();
 
         let span: Span = Span::new(self.line, self.span);
 
         let lexeme: String = self.lexeme();
+        let bytes: Vec<u8> = self.lexeme_bytes();
 
-        let ascii_lexeme: String = if kind.is_identifier() {
-            self.fix_unicode_lexeme(&lexeme)
+        let ascii: String = if kind.is_identifier() {
+            self.as_ascii_lexeme(&lexeme)
         } else {
             String::default()
         };
 
         self.tokens.push(Token {
             lexeme,
-            ascii_lexeme,
+            ascii,
+            bytes,
             kind,
             span,
         });
@@ -193,7 +203,7 @@ impl Lexer {
 
 impl Lexer {
     #[must_use]
-    pub fn fix_unicode_lexeme(&self, lexeme: &str) -> String {
+    pub fn as_ascii_lexeme(&self, lexeme: &str) -> String {
         let mut scaped_unicode_string: String = String::with_capacity(lexeme.len());
 
         lexeme.chars().for_each(|char| {
@@ -217,12 +227,58 @@ impl Lexer {
 impl Lexer {
     #[inline]
     pub fn lexeme(&self) -> String {
-        String::from_iter(&self.code[self.start..self.current])
+        if let Some(chars) = self.code.get(self.start..self.current) {
+            return String::from_iter(chars);
+        }
+
+        logging::print_warn(
+            LoggingType::Warning,
+            "Couldn't get some lexeme at lexical analysis phase.",
+        );
+
+        String::default()
     }
 
     #[inline]
     pub fn shrink_lexeme(&self) -> String {
-        String::from_iter(&self.code[self.start + 1..self.current - 1])
+        if let Some(chars) = self.code.get(self.start + 1..self.current - 1) {
+            return String::from_iter(chars);
+        }
+
+        logging::print_warn(
+            LoggingType::Warning,
+            "Couldn't shrink some lexeme at lexical analysis phase.",
+        );
+
+        String::default()
+    }
+
+    #[inline]
+    pub fn shrink_lexeme_bytes(&self) -> Vec<u8> {
+        if let Some(bytes) = self.bytes.get(self.start + 1..self.current - 1) {
+            return bytes.to_vec();
+        }
+
+        logging::print_warn(
+            LoggingType::Warning,
+            "Couldn't shrink some lexeme bytes at lexical analysis phase.",
+        );
+
+        Vec::default()
+    }
+
+    #[inline]
+    pub fn lexeme_bytes(&self) -> Vec<u8> {
+        if let Some(bytes) = self.bytes.get(self.start..self.current) {
+            return bytes.to_vec();
+        }
+
+        logging::print_warn(
+            LoggingType::Warning,
+            "Couldn't get lexeme bytes at lexical analysis phase.",
+        );
+
+        Vec::default()
     }
 }
 
@@ -249,12 +305,6 @@ impl Lexer {
     #[inline]
     pub fn is_ascii_char(&self, peeked: char) -> bool {
         self.is_alpha_char(peeked) || peeked.is_ascii_digit() || peeked == '_' || peeked == '@'
-    }
-
-    #[must_use]
-    #[inline]
-    pub fn is_char_boundary(&self) -> bool {
-        self.peek() != '\'' && !self.is_eof()
     }
 
     #[must_use]

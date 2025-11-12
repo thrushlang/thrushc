@@ -66,7 +66,7 @@ impl Display for Token {
         write!(
             f,
             "TOKEN TYPE '{:?}' literal '{}', ascii '{}' at '{}'.",
-            self.kind, self.lexeme, self.ascii_lexeme, self.span
+            self.kind, self.lexeme, self.ascii, self.span
         )
     }
 }
