@@ -19,7 +19,7 @@ pub fn check_types(
 
     let error: ThrushCompilerIssue = ThrushCompilerIssue::Error(
         "Mismatched types".into(),
-        format!("Expected '{}' but found '{}'.", lhs, rhs),
+        format!("Expected '{}', got '{}'.", lhs, rhs),
         None,
         span,
     );

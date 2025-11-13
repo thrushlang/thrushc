@@ -25,7 +25,7 @@ pub fn compile_const<'ctx>(
 ) -> BasicValueEnum<'ctx> {
     let llvm_context: &Context = context.get_llvm_context();
 
-    let base_type: &Type = array_type.get_farray_base_type();
+    let base_type: &Type = array_type.get_fixed_array_base_type();
     let array_type: BasicTypeEnum = typegen::generate(llvm_context, base_type);
 
     let values: Vec<BasicValueEnum> = items
@@ -86,7 +86,7 @@ pub fn compile_const<'ctx>(
             .into(),
         _ => {
             self::codegen_abort(format!(
-                "Incompatible type '{}' for constant array.",
+                "Incompatible type '{}' for the construction of constant fixed array.",
                 base_type
             ));
         }
@@ -126,7 +126,7 @@ fn compile_fixed_array_with_anchor<'ctx>(
     let anchor_ptr: PointerValue = anchor.get_pointer();
 
     let array_type: &Type = cast_type.unwrap_or(array_type);
-    let items_type: &Type = array_type.get_farray_base_type();
+    let items_type: &Type = array_type.get_fixed_array_base_type();
 
     context.set_pointer_anchor(PointerAnchor::new(anchor_ptr, true));
 
@@ -162,7 +162,7 @@ fn compile_fixed_array_without_anchor<'ctx>(
     let llvm_context: &Context = context.get_llvm_context();
 
     let array_type: &Type = cast_type.unwrap_or(array_type);
-    let items_type: &Type = array_type.get_farray_base_type();
+    let items_type: &Type = array_type.get_fixed_array_base_type();
 
     let array_ptr: PointerValue =
         memory::alloc_anon(context, LLVMAllocationSite::Stack, array_type, span);

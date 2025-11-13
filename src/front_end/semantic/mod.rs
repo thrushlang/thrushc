@@ -23,6 +23,7 @@ pub struct SemanticAnalyzer<'semantic_analyzer> {
 }
 
 impl<'semantic_analyzer> SemanticAnalyzer<'semantic_analyzer> {
+    #[inline]
     pub fn new(
         ast: &'semantic_analyzer [Ast<'semantic_analyzer>],
         file: &'semantic_analyzer CompilationUnit,

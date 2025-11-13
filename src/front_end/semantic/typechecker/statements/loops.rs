@@ -30,10 +30,10 @@ pub fn validate<'type_checker>(
         }
 
         Ast::While { cond, block, .. } => {
-            let span: Span = cond.get_span();
+            let condition_span: Span = cond.get_span();
 
             let metadata: TypeCheckerExprMetadata =
-                TypeCheckerExprMetadata::new(cond.is_literal(), span);
+                TypeCheckerExprMetadata::new(cond.is_literal_value(), condition_span);
 
             checks::check_types(
                 &Type::Bool,

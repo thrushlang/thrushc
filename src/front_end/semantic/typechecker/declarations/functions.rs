@@ -17,7 +17,7 @@ pub fn validate<'type_checker>(
             if !kind.is_signed_integer_type() {
                 typechecker.add_error(ThrushCompilerIssue::Error(
                     "Type error".into(),
-                    "Expected signed integer type 's8, s16, s32, s64'.".into(),
+                    format!("Expected signed integer, got '{}'.", kind),
                     None,
                     *span,
                 ));

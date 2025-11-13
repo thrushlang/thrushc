@@ -3,6 +3,11 @@ use crate::front_end::typesystem::types::Type;
 
 impl TypePointerExtensions for Type {
     #[inline]
+    fn is_ptr_indexable_like_type(&self) -> bool {
+        self.is_ptr_struct_type() || self.is_fixed_array_type() || self.is_ptr_array_type()
+    }
+
+    #[inline]
     fn is_ptr_aggregate_value_like_type(&self) -> bool {
         self.is_ptr_fixed_array_type()
     }

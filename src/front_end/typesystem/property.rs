@@ -26,6 +26,7 @@ pub fn decompose<'parser>(
     let current_type: &Type = match base_type {
         Type::Ptr(inner_ptr) => {
             is_parent_ptr = true;
+
             inner_ptr.as_ref().ok_or_else(|| {
                 ThrushCompilerIssue::Error(
                     "Type error".into(),

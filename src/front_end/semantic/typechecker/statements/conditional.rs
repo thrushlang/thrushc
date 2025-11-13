@@ -20,12 +20,14 @@ pub fn validate<'type_checker>(
             block,
             elseif,
             anyway,
-            span,
+            ..
         } => {
             typechecker.analyze_expr(condition)?;
 
+            let condition_span: Span = condition.get_span();
+
             let metadata: TypeCheckerExprMetadata =
-                TypeCheckerExprMetadata::new(condition.is_literal(), *span);
+                TypeCheckerExprMetadata::new(condition.is_literal_value(), condition_span);
 
             checks::check_types(
                 &Type::Bool,
@@ -49,12 +51,14 @@ pub fn validate<'type_checker>(
         }
 
         Ast::Elif {
-            condition,
-            block,
-            span,
+            condition, block, ..
         } => {
+            typechecker.analyze_expr(condition)?;
+
+            let condition_span: Span = condition.get_span();
+
             let metadata: TypeCheckerExprMetadata =
-                TypeCheckerExprMetadata::new(condition.is_literal(), *span);
+                TypeCheckerExprMetadata::new(condition.is_literal_value(), condition_span);
 
             checks::check_types(
                 &Type::Bool,
@@ -64,7 +68,6 @@ pub fn validate<'type_checker>(
                 metadata,
             )?;
 
-            typechecker.analyze_expr(condition)?;
             typechecker.analyze_stmt(block)?;
 
             Ok(())

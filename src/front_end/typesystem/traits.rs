@@ -21,7 +21,8 @@ pub trait TypeExtensions {
 }
 
 pub trait TypeFixedArrayEntensions {
-    fn get_farray_base_type(&self) -> &Type;
+    fn get_fixed_array_base_type(&self) -> &Type;
+    fn get_fixed_array_type_herarchy(&self) -> u8;
 }
 
 pub trait TypeArrayEntensions {
@@ -32,6 +33,7 @@ pub trait TypeArrayEntensions {
 pub trait TypePointerExtensions {
     fn is_ptr_aggregate_value_like_type(&self) -> bool;
     fn is_ptr_aggregate_like_type(&self) -> bool;
+    fn is_ptr_indexable_like_type(&self) -> bool;
     fn is_ptr_value_like_type(&self) -> bool;
     fn is_typed_ptr_type(&self) -> bool;
 

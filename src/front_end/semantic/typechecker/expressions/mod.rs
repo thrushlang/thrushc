@@ -91,19 +91,19 @@ pub fn validate<'type_checker>(
             if kind.is_void_type() {
                 typechecker.add_error(ThrushCompilerIssue::Error(
                     "Type error".into(),
-                    "An element is expected.".into(),
+                    "An element is expected for inference.".into(),
                     None,
                     *span,
                 ));
             }
 
-            let array_type: &Type = kind.get_farray_base_type();
+            let array_type: &Type = kind.get_fixed_array_base_type();
 
             items.iter().try_for_each(|item| {
                 let span: Span = item.get_span();
 
                 let metadata: TypeCheckerExprMetadata =
-                    TypeCheckerExprMetadata::new(item.is_literal(), span);
+                    TypeCheckerExprMetadata::new(item.is_literal_value(), span);
 
                 checks::check_types(
                     array_type,
@@ -125,7 +125,7 @@ pub fn validate<'type_checker>(
             if kind.is_void_type() {
                 typechecker.add_error(ThrushCompilerIssue::Error(
                     "Type error".into(),
-                    "An element is expected.".into(),
+                    "An element is expected for inference.".into(),
                     None,
                     *span,
                 ));
@@ -137,7 +137,7 @@ pub fn validate<'type_checker>(
                 let span: Span = item.get_span();
 
                 let metadata: TypeCheckerExprMetadata =
-                    TypeCheckerExprMetadata::new(item.is_literal(), span);
+                    TypeCheckerExprMetadata::new(item.is_literal_value(), span);
 
                 checks::check_types(
                     array_type,
@@ -167,7 +167,7 @@ pub fn validate<'type_checker>(
                 let from_type: &Type = expr.get_value_type()?;
 
                 let metadata: TypeCheckerExprMetadata =
-                    TypeCheckerExprMetadata::new(expr.is_literal(), span);
+                    TypeCheckerExprMetadata::new(expr.is_literal_value(), span);
 
                 checks::check_types(target_type, from_type, Some(expr), None, metadata)?;
 

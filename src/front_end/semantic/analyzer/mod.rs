@@ -29,6 +29,7 @@ pub struct Analyzer<'analyzer> {
 }
 
 impl<'analyzer> Analyzer<'analyzer> {
+    #[inline]
     pub fn new(ast: &'analyzer [Ast<'analyzer>], file: &'analyzer CompilationUnit) -> Self {
         Self {
             ast,

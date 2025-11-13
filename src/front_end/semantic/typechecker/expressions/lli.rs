@@ -23,8 +23,10 @@ pub fn validate<'type_checker>(
         } => {
             typechecker.symbols.new_lli(name, (lli_type, *span));
 
+            let expr_span: Span = expr.get_span();
+
             let metadata: TypeCheckerExprMetadata =
-                TypeCheckerExprMetadata::new(expr.is_literal(), *span);
+                TypeCheckerExprMetadata::new(expr.is_literal_value(), expr_span);
 
             let value_type: &Type = expr.get_value_type()?;
 
@@ -51,7 +53,10 @@ pub fn validate<'type_checker>(
             if !source_type.is_ptr_type() && !source_type.is_address_type() {
                 typechecker.add_error(ThrushCompilerIssue::Error(
                     "Type error".into(),
-                    "Expected 'ptr<T>', 'ptr' or 'addr' type.".into(),
+                    format!(
+                        "Expected raw typed pointer 'ptr[T]', pointer 'ptr' or memory address 'addr' type, got '{}'.",
+                        source_type
+                    ),
                     None,
                     span,
                 ));
@@ -71,40 +76,45 @@ pub fn validate<'type_checker>(
             if !source_type.is_ptr_type() && !source_type.is_address_type() {
                 typechecker.add_error(ThrushCompilerIssue::Error(
                     "Type error".into(),
-                    "Expected 'ptr<T>', 'ptr', or 'addr' type.".into(),
+                    format!(
+                        "Expected raw typed pointer 'ptr[T]', pointer 'ptr' or memory address 'addr' type, got '{}'.",
+                        source_type
+                    ),
                     None,
                     span,
                 ));
             }
 
-            if source_type.is_ptr_type() && !source_type.is_typed_ptr_type() {
+            if source_type.is_ptr_type() && !source_type.is_typed_ptr_type() && indexes.len() > 1 {
                 typechecker.add_error(ThrushCompilerIssue::Error(
                     "Type error".into(),
-                    "Expected raw typed pointer ptr<T>.".into(),
+                    format!(
+                        "Expected raw typed pointer ptr[T] instead, got '{}'.",
+                        source_type
+                    ),
                     None,
                     span,
                 ));
             } else if source_type.is_ptr_type()
                 && source_type.is_typed_ptr_type()
-                && !source_type.is_ptr_struct_type()
-                && !source_type.is_ptr_fixed_array_type()
+                && !source_type.is_ptr_indexable_like_type()
             {
                 typechecker.add_error(ThrushCompilerIssue::Error(
                     "Type error".into(),
-                    "Expected raw typed pointer type with deep type 'struct T', or 'array[T; N]'."
-                        .into(),
+                    format!("Expected raw typed pointer type with indexable type 'struct T', or 'array[T; N]', got '{}'.", source_type),
                     None,
                     span,
                 ));
             }
 
             indexes.iter().try_for_each(|indexe| {
+                let indexe_type: &Type = indexe.get_value_type()?;
                 let span: Span = indexe.get_span();
 
-                if !indexe.is_unsigned_integer_for_index()? {
+                if !indexe_type.is_unsigned_integer_type() {
                     typechecker.add_error(ThrushCompilerIssue::Error(
                         "Type error".into(),
-                        "Expected any unsigned integer value.".into(),
+                        format!("Expected unsigned integer type, got '{}'.", indexe_type),
                         None,
                         span,
                     ));
@@ -130,7 +140,10 @@ pub fn validate<'type_checker>(
             if !source_type.is_ptr_type() && !source_type.is_address_type() {
                 typechecker.add_error(ThrushCompilerIssue::Error(
                     "Type error".into(),
-                    "Expected 'ptr<T>', 'ptr', 'addr' type.".into(),
+                     format!(
+                        "Expected raw typed pointer 'ptr[T]', pointer 'ptr' or memory address 'addr' type, got '{}'.",
+                        source_type
+                    ),
                     None,
                     span,
                 ));
@@ -142,7 +155,7 @@ pub fn validate<'type_checker>(
             let span: Span = write_value.get_span();
 
             let metadata: TypeCheckerExprMetadata =
-                TypeCheckerExprMetadata::new(write_value.is_literal(), span);
+                TypeCheckerExprMetadata::new(write_value.is_literal_value(), span);
 
             checks::check_types(write_type, value_type, Some(write_value), None, metadata)?;
 

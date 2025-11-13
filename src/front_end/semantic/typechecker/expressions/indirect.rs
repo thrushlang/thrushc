@@ -1,12 +1,10 @@
-use std::fmt::Write;
 use std::path::PathBuf;
 
 use crate::core::errors::{position::CompilationPosition, standard::ThrushCompilerIssue};
 
 use crate::front_end::lexer::span::Span;
-use crate::front_end::semantic::typechecker::{
-    TypeChecker, checks, metadata::TypeCheckerExprMetadata,
-};
+use crate::front_end::semantic::typechecker::{TypeChecker, expressions};
+
 use crate::front_end::types::ast::Ast;
 use crate::front_end::typesystem::types::Type;
 
@@ -27,57 +25,32 @@ pub fn validate<'type_checker>(
             if !function_ref.is_fnref_type() {
                 typechecker.add_error(ThrushCompilerIssue::Error(
                     "Type error".into(),
-                    "Expected function reference 'Fn[..] -> T' type.".into(),
+                    format!(
+                        "Expected function reference 'Fn[..] -> T' type, got '{}'.",
+                        function_ref
+                    ),
                     None,
                     *span,
                 ));
             }
 
-            if let Type::Fn(parameter_types, ..) = function_type {
-                let required_size: usize = parameter_types.len();
-                let provided_size: usize = args.len();
-
-                let mut types_display: String = String::with_capacity(100);
-
-                parameter_types.iter().for_each(|parameter_type| {
-                    let _ = write!(types_display, "{}", parameter_type);
-                });
-
-                if required_size != provided_size {
-                    typechecker.add_error(ThrushCompilerIssue::Error(
-                        "Type error".into(),
-                        format!(
-                            "Expected arguments total '{}', not '{}'.",
-                            required_size, provided_size
-                        ),
-                        None,
-                        *span,
-                    ));
-
-                    typechecker.add_error(ThrushCompilerIssue::Error(
-                        "Type error".into(),
-                        format!("Arguments were expected in the order: '{}'.", types_display),
-                        None,
-                        *span,
-                    ));
-
-                    return Ok(());
-                }
-
-                parameter_types
-                    .iter()
-                    .zip(args.iter())
-                    .try_for_each(|(target_type, expr)| {
-                        let from_type: &Type = expr.get_value_type()?;
-                        let span: Span = expr.get_span();
-
-                        let metadata: TypeCheckerExprMetadata =
-                            TypeCheckerExprMetadata::new(expr.is_literal(), span);
-
-                        checks::check_types(target_type, from_type, Some(expr), None, metadata)?;
-
-                        Ok(())
-                    })?;
+            if let Type::Fn(parameter_types, _, modificator) = function_type {
+                expressions::call::validate(
+                    typechecker,
+                    (parameter_types, modificator.llvm().has_ignore()),
+                    args,
+                    span,
+                )?;
+            } else {
+                typechecker.add_error(ThrushCompilerIssue::Error(
+                    "Type error".into(),
+                    format!(
+                        "Expected function reference 'Fn[..] -> T' type, got '{}'.",
+                        function_type
+                    ),
+                    None,
+                    *span,
+                ));
             }
 
             args.iter()

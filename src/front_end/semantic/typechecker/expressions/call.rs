@@ -1,5 +1,3 @@
-use std::fmt::Write;
-
 use crate::core::errors::standard::ThrushCompilerIssue;
 
 use crate::front_end::lexer::span::Span;
@@ -56,7 +54,7 @@ pub fn validate<'type_checker>(
             let span: Span = expr.get_span();
 
             let metadata: TypeCheckerExprMetadata =
-                TypeCheckerExprMetadata::new(expr.is_literal(), span);
+                TypeCheckerExprMetadata::new(expr.is_literal_value(), span);
 
             checks::check_types(target_type, from_type, Some(expr), None, metadata)?;
 

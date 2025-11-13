@@ -14,6 +14,7 @@ pub enum ReferenceType {
 }
 
 impl ReferenceMetadata {
+    #[inline]
     pub fn new(is_allocated: bool, is_mutable: bool, reference_type: ReferenceType) -> Self {
         Self {
             is_allocated,
@@ -21,7 +22,9 @@ impl ReferenceMetadata {
             reference_type,
         }
     }
+}
 
+impl ReferenceMetadata {
     #[inline]
     pub fn is_allocated(&self) -> bool {
         self.is_allocated

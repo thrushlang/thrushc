@@ -26,7 +26,7 @@ pub fn validate<'type_checker>(
             {
                 typechecker.add_error(ThrushCompilerIssue::Error(
                     "Type error".into(),
-                    "Expected raw typed pointer ptr[T], raw pointer ptr, array[T], or fixed array[T; N].".into(),
+                    format!("Expected raw typed pointer ptr[T], raw pointer ptr, array[T], or fixed array[T; N], got '{}'.", source_type),
                     None,
                     *span,
                 ));
@@ -35,7 +35,7 @@ pub fn validate<'type_checker>(
             if source.is_reference() && !source.is_allocated() {
                 typechecker.add_error(ThrushCompilerIssue::Error(
                     "Type error".into(),
-                    "Expected raw typed pointer ptr[T], raw pointer ptr, array[T], or fixed array[T; N].".into(),
+                    format!("Expected raw typed pointer ptr[T], raw pointer ptr, array[T], or fixed array[T; N], got '{}'.", source_type),
                     None,
                     *span,
                 ));
@@ -47,7 +47,7 @@ pub fn validate<'type_checker>(
             if !index_type.is_integer_type() {
                 typechecker.add_error(ThrushCompilerIssue::Error(
                     "Type error".into(),
-                    format!("Expected integer value, but got '{}'.", index_type),
+                    format!("Expected integer value, got '{}'.", index_type),
                     None,
                     span,
                 ));

@@ -16,7 +16,9 @@ impl FunctionReferenceTypeModificator {
     ) -> Self {
         Self { llvm, gcc }
     }
+}
 
+impl FunctionReferenceTypeModificator {
     #[inline]
     pub fn llvm(&self) -> &LLVMFunctionReferenceTypeModificator {
         &self.llvm

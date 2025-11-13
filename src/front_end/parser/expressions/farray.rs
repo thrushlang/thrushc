@@ -7,7 +7,7 @@ use crate::front_end::parser::ParserContext;
 use crate::front_end::parser::expr;
 use crate::front_end::types::ast::Ast;
 use crate::front_end::types::parser::stmts::traits::TokenExtensions;
-use crate::front_end::typesystem::traits::TypeArrayEntensions;
+use crate::front_end::typesystem::traits::TypeFixedArrayEntensions;
 use crate::front_end::typesystem::types::Type;
 
 pub fn build_fixed_array<'parser>(
@@ -63,7 +63,9 @@ pub fn build_fixed_array<'parser>(
             None => Some(item),
             Some(current) => {
                 let current_type: &Type = current.get_value_type()?;
-                if item_type.get_array_type_herarchy() > current_type.get_array_type_herarchy() {
+                if item_type.get_fixed_array_type_herarchy()
+                    > current_type.get_fixed_array_type_herarchy()
+                {
                     Some(item)
                 } else {
                     Some(current)

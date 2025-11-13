@@ -27,6 +27,7 @@ pub struct TypeCheckerSymbolsTable<'symbol> {
 }
 
 impl<'symbol> TypeCheckerSymbolsTable<'symbol> {
+    #[inline]
     pub fn new() -> Self {
         Self {
             functions: HashMap::with_capacity(TYPECHECKER_SYMBOLS_GLOBAL_MINIMAL_CAPACITY),

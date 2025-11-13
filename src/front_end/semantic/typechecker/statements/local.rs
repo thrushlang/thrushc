@@ -37,7 +37,7 @@ pub fn validate<'type_checker>(
                 let metadata: &LocalMetadata = metadata;
 
                 let type_metadata: TypeCheckerExprMetadata =
-                    TypeCheckerExprMetadata::new(local_value.is_literal(), *span);
+                    TypeCheckerExprMetadata::new(local_value.is_literal_value(), *span);
 
                 if local_type.is_void_type() {
                     typechecker.add_error(ThrushCompilerIssue::Error(

@@ -7,7 +7,7 @@ use crate::front_end::typesystem::types::Type;
 
 impl Ast<'_> {
     #[inline]
-    pub fn is_literal(&self) -> bool {
+    pub fn is_literal_value(&self) -> bool {
         matches!(self, Ast::Integer { .. } | Ast::Float { .. })
     }
 
@@ -189,14 +189,6 @@ impl Ast<'_> {
 }
 
 impl Ast<'_> {
-    #[inline]
-    pub fn is_unsigned_integer_for_index(&self) -> Result<bool, ThrushCompilerIssue> {
-        Ok(matches!(
-            self.get_value_type()?,
-            Type::U8 | Type::U16 | Type::U32 | Type::U64
-        ))
-    }
-
     #[inline]
     pub fn is_unsigned_integer(&self) -> Result<bool, ThrushCompilerIssue> {
         Ok(matches!(

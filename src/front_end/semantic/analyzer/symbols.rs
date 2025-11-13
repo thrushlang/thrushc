@@ -24,6 +24,7 @@ pub struct AnalyzerSymbolsTable<'symbol> {
 }
 
 impl<'symbol> AnalyzerSymbolsTable<'symbol> {
+    #[inline]
     pub fn new() -> Self {
         Self {
             functions: HashMap::with_capacity(ANALYZER_SYMBOLS_MINIMAL_GLOBAL_CAPACITY),
