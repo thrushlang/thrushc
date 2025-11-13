@@ -16,8 +16,6 @@ pub fn generate_obfuscation_name(
 
     if !context.get_compiler_options().need_obfuscate_ir() {
         return String::new();
-    } else {
-        random_string.push('.');
     }
 
     for _ in 0..length {

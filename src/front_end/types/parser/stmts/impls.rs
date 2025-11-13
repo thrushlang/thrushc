@@ -1,5 +1,6 @@
 use std::fmt::Display;
 
+use crate::back_end::llvm::compiler::attributes::LLVMAttribute;
 use crate::front_end::lexer::span::Span;
 use crate::front_end::types::ast::{Ast, metadata::local::LocalMetadata};
 use crate::front_end::types::semantic::linter::traits::LLVMAttributeComparatorExtensions;
@@ -80,6 +81,15 @@ impl ThrushAttributesExtensions for ThrushAttributes<'_> {
     fn match_attr(&self, cmp: LLVMAttributeComparator) -> Option<Span> {
         if let Some(attr_found) = self.iter().find(|attr| attr.into_llvm_attr_cmp() == cmp) {
             return Some(attr_found.get_span());
+        }
+
+        None
+    }
+
+    #[inline]
+    fn get_attr(&self, cmp: LLVMAttributeComparator) -> Option<LLVMAttribute<'_>> {
+        if let Some(attr_found) = self.iter().find(|attr| attr.into_llvm_attr_cmp() == cmp) {
+            return Some(*attr_found);
         }
 
         None

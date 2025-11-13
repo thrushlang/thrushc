@@ -1,5 +1,6 @@
 #![allow(clippy::too_many_arguments)]
 
+use crate::back_end::llvm::compiler::attributes::LLVMAttribute;
 use crate::back_end::llvm::compiler::context::LLVMCodeGenContext;
 use crate::back_end::llvm::compiler::obfuscation;
 
@@ -7,6 +8,7 @@ use crate::front_end::types::ast::metadata::constant::{ConstantMetadata, LLVMCon
 use crate::front_end::types::ast::metadata::staticvar::{LLVMStaticMetadata, StaticMetadata};
 use crate::front_end::types::parser::stmts::traits::ThrushAttributesExtensions;
 use crate::front_end::types::parser::stmts::types::ThrushAttributes;
+use crate::front_end::types::semantic::linter::types::LLVMAttributeComparator;
 
 use inkwell::ThreadLocalMode;
 use inkwell::module::Module;
@@ -63,7 +65,7 @@ pub fn local_constant<'ctx>(
     let llvm_metadata: LLVMConstantMetadata = metadata.get_llvm_metadata();
 
     let name: String = format!(
-        "local.{}.const{}",
+        "local.const.{}{}",
         obfuscation::generate_obfuscation_name(context, obfuscation::SHORT_RANGE_OBFUSCATION),
         name
     );
@@ -97,6 +99,16 @@ pub fn global_constant<'ctx>(
     let target_data: &TargetData = context.get_target_data();
     let llvm_metadata: LLVMConstantMetadata = metadata.get_llvm_metadata();
 
+    let name: &str = if attributes.has_public_attribute() {
+        name
+    } else {
+        &format!(
+            "global.constant.{}{}",
+            obfuscation::generate_obfuscation_name(context, obfuscation::SHORT_RANGE_OBFUSCATION),
+            name
+        )
+    };
+
     let global: GlobalValue =
         llvm_module.add_global(llvm_type, Some(AddressSpace::default()), name);
 
@@ -127,10 +139,11 @@ pub fn local_static<'ctx>(
 ) -> PointerValue<'ctx> {
     let llvm_module: &Module = context.get_llvm_module();
     let target_data: &TargetData = context.get_target_data();
+
     let llvm_metadata: LLVMStaticMetadata = metadata.get_llvm_metadata();
 
     let name: String = format!(
-        "local.{}.static{}",
+        "local.static.{}{}",
         obfuscation::generate_obfuscation_name(context, obfuscation::SHORT_RANGE_OBFUSCATION),
         name
     );
@@ -168,10 +181,24 @@ pub fn global_static<'ctx>(
     let target_data: &TargetData = context.get_target_data();
     let llvm_metadata: LLVMStaticMetadata = metadata.get_llvm_metadata();
 
+    let name: &str = if let Some(LLVMAttribute::Extern(extern_name, ..)) =
+        attributes.get_attr(LLVMAttributeComparator::Extern)
+    {
+        extern_name
+    } else if attributes.has_public_attribute() {
+        name
+    } else {
+        &format!(
+            "global.static.{}{}",
+            obfuscation::generate_obfuscation_name(context, obfuscation::SHORT_RANGE_OBFUSCATION),
+            name
+        )
+    };
+
     let global: GlobalValue =
         llvm_module.add_global(llvm_type, Some(AddressSpace::default()), name);
 
-    if !attributes.has_public_attribute() && value.is_none() {
+    if !attributes.has_public_attribute() && !attributes.has_extern_attribute() && value.is_none() {
         global.set_initializer(&llvm_type.const_zero());
     }
 
@@ -183,7 +210,7 @@ pub fn global_static<'ctx>(
         llvm_metadata.thread_mode,
         value.as_ref(),
         Some(target_data.get_preferred_alignment_of_global(&global)),
-        if !attributes.has_public_attribute() {
+        if !attributes.has_public_attribute() && !attributes.has_extern_attribute() {
             Some(Linkage::LinkerPrivate)
         } else {
             None

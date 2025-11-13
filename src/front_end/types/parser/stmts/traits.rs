@@ -1,3 +1,4 @@
+use crate::back_end::llvm::compiler::attributes::LLVMAttribute;
 use crate::core::errors::standard::ThrushCompilerIssue;
 
 use crate::front_end::lexer::span::Span;
@@ -90,4 +91,5 @@ pub trait ThrushAttributesExtensions {
     fn has_asmsideffects_attribute(&self) -> bool;
 
     fn match_attr(&self, cmp: LLVMAttributeComparator) -> Option<Span>;
+    fn get_attr(&self, cmp: LLVMAttributeComparator) -> Option<LLVMAttribute<'_>>;
 }
