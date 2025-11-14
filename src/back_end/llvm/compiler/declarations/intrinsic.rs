@@ -9,6 +9,7 @@ use crate::front_end::types::ast::Ast;
 use crate::front_end::types::parser::repr::Intrinsic;
 use crate::front_end::types::parser::stmts::traits::ThrushAttributesExtensions;
 use crate::front_end::types::parser::stmts::types::ThrushAttributes;
+use crate::front_end::types::semantic::linter::types::LLVMAttributeComparator;
 use crate::front_end::typesystem::types::Type;
 
 use inkwell::{context::Context, module::Module, types::FunctionType, values::FunctionValue};
@@ -19,9 +20,7 @@ pub fn compile<'ctx>(context: &mut LLVMCodeGenContext<'_, 'ctx>, intrinsic: Intr
 
     let name: &str = intrinsic.0;
     let external_name: &str = intrinsic.1;
-
-    let function_type: &Type = intrinsic.2;
-
+    let return_type: &Type = intrinsic.2;
     let parameters: &[Ast<'ctx>] = intrinsic.3;
     let parameters_types: &[Type] = intrinsic.4;
     let attributes: &ThrushAttributes = intrinsic.5;
@@ -30,16 +29,16 @@ pub fn compile<'ctx>(context: &mut LLVMCodeGenContext<'_, 'ctx>, intrinsic: Intr
 
     let ignore_args: bool = attributes.has_ignore_attribute();
 
-    let mut convention: u32 = CallConvention::Standard as u32;
-
-    attributes.iter().for_each(|attribute| {
-        if let LLVMAttribute::Convention(conv, _) = attribute {
-            convention = (*conv) as u32;
-        }
-    });
+    let mut convention: u32 = if let Some(LLVMAttribute::Convention(conv, ..)) =
+        attributes.get_attr(LLVMAttributeComparator::Convention)
+    {
+        conv as u32
+    } else {
+        CallConvention::Standard as u32
+    };
 
     let function_type: FunctionType =
-        typegen::generate_fn_type(context, function_type, parameters, ignore_args);
+        typegen::generate_fn_type(context, return_type, parameters, ignore_args);
 
     let llvm_function: FunctionValue = llvm_module.add_function(external_name, function_type, None);
 

@@ -25,12 +25,11 @@ pub fn local_variable<'ctx>(
     let llvm_context: &Context = context.get_llvm_context();
 
     let llvm_type: BasicTypeEnum = typegen::generate_local(llvm_context, kind, value);
-
-    let formatted_ascii_name: String = format!("local.{}", ascii_name);
+    let name: String = format!("local.{}", ascii_name);
 
     if attributes.has_heap_attr() {
-        memheap::try_alloc_heap(context, llvm_type, &formatted_ascii_name, span)
+        memheap::try_alloc_heap(context, llvm_type, &name, span)
     } else {
-        memstack::try_alloc_stack(context, llvm_type, &formatted_ascii_name, span)
+        memstack::try_alloc_stack(context, llvm_type, &name, span)
     }
 }

@@ -122,7 +122,10 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
         }
 
         if let Ast::AssemblerFunction { attributes, .. } = ast {
-            self.analyze_attrs(attributes, AttributeCheckerAttributeApplicant::Function);
+            self.analyze_attrs(
+                attributes,
+                AttributeCheckerAttributeApplicant::AssemblerFunction,
+            );
         }
 
         if let Ast::Struct { attributes, .. } = ast {
@@ -148,12 +151,6 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
 
 
         ########################################################################*/
-
-        if let Ast::Block { stmts, .. } = ast {
-            stmts.iter().for_each(|stmt| {
-                self.analyze_ast(stmt);
-            });
-        }
 
         if let Ast::Const {
             attributes,
@@ -191,6 +188,12 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
             }
 
             self.analyze_attrs(attributes, AttributeCheckerAttributeApplicant::Static);
+        }
+
+        if let Ast::Block { stmts, .. } = ast {
+            stmts.iter().for_each(|stmt| {
+                self.analyze_ast(stmt);
+            });
         }
 
         /* ######################################################################
@@ -286,6 +289,30 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
                         self.add_error(ThrushCompilerIssue::Error(
                             "Missing attribute".into(),
                             "A external static symbol always have public visibility. Add the '@public' attribute.".into(),
+                            None,
+                            span,
+                        ));
+                    }
+                }
+
+                let repeated_attrs: ThrushAttributes = self.get_repeated_attrs(attributes);
+
+                repeated_attrs.iter().for_each(|attr| {
+                    self.add_error(ThrushCompilerIssue::Error(
+                        "Repeated attribute".into(),
+                        "Repetitive attributes are disallowed.".into(),
+                        None,
+                        attr.get_span(),
+                    ));
+                });
+            }
+
+            AttributeCheckerAttributeApplicant::AssemblerFunction => {
+                if !attributes.has_asmsyntax_attribute() {
+                    if let Some(span) = attributes.match_attr(LLVMAttributeComparator::Extern) {
+                        self.add_error(ThrushCompilerIssue::Error(
+                            "Missing attribute".into(),
+                            "A pure assembler function always have syntax mode. Add the '@asmsyntax' attribute.".into(),
                             None,
                             span,
                         ));

@@ -98,6 +98,11 @@ impl LLVMAttribute<'_> {
     }
 
     #[inline]
+    pub fn is_asmsyntax_attribute(&self) -> bool {
+        matches!(self, LLVMAttribute::AsmSyntax(..))
+    }
+
+    #[inline]
     pub fn is_packed(&self) -> bool {
         matches!(self, LLVMAttribute::Packed(..))
     }

@@ -20,6 +20,31 @@ use inkwell::{
     values::{BasicValueEnum, GlobalValue, PointerValue},
 };
 
+fn generate_name(
+    context: &LLVMCodeGenContext,
+    base_name: &str,
+    prefix: &str,
+    attributes: Option<&ThrushAttributes>,
+) -> String {
+    if let Some(attrs) = attributes {
+        if let Some(LLVMAttribute::Extern(extern_name, ..)) =
+            attrs.get_attr(LLVMAttributeComparator::Extern)
+        {
+            return extern_name.to_string();
+        }
+        if attrs.has_public_attribute() {
+            return base_name.to_string();
+        }
+    }
+
+    format!(
+        "{}.{}{}",
+        prefix,
+        obfuscation::generate_obfuscation_name(context, obfuscation::SHORT_RANGE_OBFUSCATION),
+        base_name
+    )
+}
+
 fn set_global_common<'ctx>(
     global: &GlobalValue<'ctx>,
     constant: bool,
@@ -64,11 +89,7 @@ pub fn local_constant<'ctx>(
     let target_data: &TargetData = context.get_target_data();
     let llvm_metadata: LLVMConstantMetadata = metadata.get_llvm_metadata();
 
-    let name: String = format!(
-        "local.const.{}{}",
-        obfuscation::generate_obfuscation_name(context, obfuscation::SHORT_RANGE_OBFUSCATION),
-        name
-    );
+    let name: String = self::generate_name(context, name, "local.const", None);
 
     let global: GlobalValue =
         llvm_module.add_global(llvm_type, Some(AddressSpace::default()), &name);
@@ -99,18 +120,10 @@ pub fn global_constant<'ctx>(
     let target_data: &TargetData = context.get_target_data();
     let llvm_metadata: LLVMConstantMetadata = metadata.get_llvm_metadata();
 
-    let name: &str = if attributes.has_public_attribute() {
-        name
-    } else {
-        &format!(
-            "global.constant.{}{}",
-            obfuscation::generate_obfuscation_name(context, obfuscation::SHORT_RANGE_OBFUSCATION),
-            name
-        )
-    };
+    let name: String = self::generate_name(context, name, "global.constant", Some(attributes));
 
     let global: GlobalValue =
-        llvm_module.add_global(llvm_type, Some(AddressSpace::default()), name);
+        llvm_module.add_global(llvm_type, Some(AddressSpace::default()), &name);
 
     self::set_global_common(
         &global,
@@ -142,11 +155,7 @@ pub fn local_static<'ctx>(
 
     let llvm_metadata: LLVMStaticMetadata = metadata.get_llvm_metadata();
 
-    let name: String = format!(
-        "local.static.{}{}",
-        obfuscation::generate_obfuscation_name(context, obfuscation::SHORT_RANGE_OBFUSCATION),
-        name
-    );
+    let name: String = self::generate_name(context, name, "local.static", None);
 
     let global: GlobalValue =
         llvm_module.add_global(llvm_type, Some(AddressSpace::default()), &name);
@@ -181,22 +190,10 @@ pub fn global_static<'ctx>(
     let target_data: &TargetData = context.get_target_data();
     let llvm_metadata: LLVMStaticMetadata = metadata.get_llvm_metadata();
 
-    let name: &str = if let Some(LLVMAttribute::Extern(extern_name, ..)) =
-        attributes.get_attr(LLVMAttributeComparator::Extern)
-    {
-        extern_name
-    } else if attributes.has_public_attribute() {
-        name
-    } else {
-        &format!(
-            "global.static.{}{}",
-            obfuscation::generate_obfuscation_name(context, obfuscation::SHORT_RANGE_OBFUSCATION),
-            name
-        )
-    };
+    let name: String = self::generate_name(context, name, "global.static", Some(attributes));
 
     let global: GlobalValue =
-        llvm_module.add_global(llvm_type, Some(AddressSpace::default()), name);
+        llvm_module.add_global(llvm_type, Some(AddressSpace::default()), &name);
 
     if !attributes.has_public_attribute() && !attributes.has_extern_attribute() && value.is_none() {
         global.set_initializer(&llvm_type.const_zero());

@@ -12,6 +12,7 @@ use crate::front_end::types::parser::repr::Function;
 use crate::front_end::types::parser::repr::FunctionParameter;
 use crate::front_end::types::parser::stmts::traits::ThrushAttributesExtensions;
 use crate::front_end::types::parser::stmts::types::ThrushAttributes;
+use crate::front_end::types::semantic::linter::types::LLVMAttributeComparator;
 use crate::front_end::typesystem::types::Type;
 
 use inkwell::basic_block::BasicBlock;
@@ -41,22 +42,18 @@ pub fn compile_decl<'ctx>(context: &mut LLVMCodeGenContext<'_, 'ctx>, function: 
     let ignore_args: bool = attributes.has_ignore_attribute();
     let is_public: bool = attributes.has_public_attribute();
 
-    let mut extern_name: Option<&str> = None;
-    let mut convention: u32 = CallConvention::Standard as u32;
+    let mut call_convention: u32 = if let Some(LLVMAttribute::Convention(conv, ..)) =
+        attributes.get_attr(LLVMAttributeComparator::Convention)
+    {
+        conv as u32
+    } else {
+        CallConvention::Standard as u32
+    };
 
-    attributes.iter().for_each(|attribute| match attribute {
-        LLVMAttribute::Extern(name, ..) => {
-            extern_name = Some(name);
-        }
-
-        LLVMAttribute::Convention(conv, _) => {
-            convention = (*conv) as u32;
-        }
-        _ => (),
-    });
-
-    let canonical_name: &str = if let Some(ffi_name) = extern_name {
-        ffi_name
+    let canonical_name: &str = if let Some(LLVMAttribute::Extern(extern_name, ..)) =
+        attributes.get_attr(LLVMAttributeComparator::Extern)
+    {
+        extern_name
     } else if is_public {
         ascii_name
     } else {
@@ -73,7 +70,7 @@ pub fn compile_decl<'ctx>(context: &mut LLVMCodeGenContext<'_, 'ctx>, function: 
     let llvm_function: FunctionValue =
         llvm_module.add_function(canonical_name, function_type, None);
 
-    if !is_public && extern_name.is_none() {
+    if !is_public {
         llvm_function.set_linkage(Linkage::LinkerPrivate);
     }
 
@@ -83,11 +80,14 @@ pub fn compile_decl<'ctx>(context: &mut LLVMCodeGenContext<'_, 'ctx>, function: 
         LLVMAttributeApplicant::Function(llvm_function),
     );
 
-    attribute_builder.add_function_attributes(&mut convention);
+    attribute_builder.add_function_attributes(&mut call_convention);
 
     context.set_current_fn(llvm_function);
 
-    context.new_function(name, (llvm_function, parameters_types, convention, span));
+    context.new_function(
+        name,
+        (llvm_function, parameters_types, call_convention, span),
+    );
 }
 
 pub fn compile_body<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, function: Function<'ctx>) {

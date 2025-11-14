@@ -78,6 +78,11 @@ impl ThrushAttributesExtensions for ThrushAttributes<'_> {
     }
 
     #[inline]
+    fn has_asmsyntax_attribute(&self) -> bool {
+        self.iter().any(|attr| attr.is_asmsyntax_attribute())
+    }
+
+    #[inline]
     fn match_attr(&self, cmp: LLVMAttributeComparator) -> Option<Span> {
         if let Some(attr_found) = self.iter().find(|attr| attr.into_llvm_attr_cmp() == cmp) {
             return Some(attr_found.get_span());
