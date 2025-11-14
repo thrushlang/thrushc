@@ -50,13 +50,13 @@ pub fn validate_memmove<'type_checker>(
     let destination_type: &Type = destination.get_value_type()?;
     let destination_span: Span = destination.get_span();
 
+    let size_type: &Type = size.get_value_type()?;
     let size_span: Span = size.get_span();
 
     if !source_type.is_ptr_type() && !source_type.is_address_type() {
         typechecker.add_error(ThrushCompilerIssue::Error(
             "Type error".into(),
-            "Expected raw typed pointer 'ptr[T]', raw pointer 'ptr', memory address 'addr' type."
-                .into(),
+            format!("Expected raw typed pointer 'ptr[T]', raw pointer 'ptr', memory address 'addr' type, got '{}'.", source_type),
             None,
             source_span,
         ));
@@ -65,17 +65,17 @@ pub fn validate_memmove<'type_checker>(
     if !destination_type.is_ptr_type() && !destination_type.is_address_type() {
         typechecker.add_error(ThrushCompilerIssue::Error(
             "Type error".into(),
-            "Expected raw typed pointer 'ptr[T]', raw pointer 'ptr', memory address 'addr' type."
-                .into(),
+            format!("Expected raw typed pointer 'ptr[T]', raw pointer 'ptr', memory address 'addr' type, got '{}'.", destination_type)
+                ,
             None,
             destination_span,
         ));
     }
 
-    if !size.is_unsigned_integer()? {
+    if !size_type.is_unsigned_integer_type() {
         typechecker.add_error(ThrushCompilerIssue::Error(
             "Type error".into(),
-            "Expected unsigned integer value.".into(),
+            format!("Expected unsigned integer type, got '{}'.", size_type),
             None,
             size_span,
         ));
@@ -101,13 +101,13 @@ pub fn validate_memcpy<'type_checker>(
     let destination_type: &Type = destination.get_value_type()?;
     let destination_span: Span = destination.get_span();
 
+    let size_type: &Type = size.get_value_type()?;
     let size_span: Span = size.get_span();
 
     if !source_type.is_ptr_type() && !source_type.is_address_type() {
         typechecker.add_error(ThrushCompilerIssue::Error(
             "Type error".into(),
-            "Expected raw typed pointer 'ptr[T]', raw pointer 'ptr', memory address 'addr'  type."
-                .into(),
+            format!("Expected raw typed pointer 'ptr[T]', raw pointer 'ptr', memory address 'addr'  type, got '{}'.", source_type),
             None,
             source_span,
         ));
@@ -123,10 +123,10 @@ pub fn validate_memcpy<'type_checker>(
         ));
     }
 
-    if !size.is_unsigned_integer()? {
+    if size_type.is_unsigned_integer_type() {
         typechecker.add_error(ThrushCompilerIssue::Error(
             "Type error".into(),
-            "Expected unsigned integer value.".into(),
+            format!("Expected unsigned integer type, got '{}'.", size_type),
             None,
             size_span,
         ));
@@ -149,32 +149,34 @@ pub fn validate_memset<'type_checker>(
     let destination_type: &Type = destination.get_value_type()?;
     let destination_span: Span = destination.get_span();
 
+    let new_size_type: &Type = new_size.get_value_type()?;
     let new_size_span: Span = new_size.get_span();
+
+    let size_type: &Type = size.get_value_type()?;
     let size_span: Span = size.get_span();
 
     if !destination_type.is_ptr_type() && !destination_type.is_address_type() {
         typechecker.add_error(ThrushCompilerIssue::Error(
             "Type error".into(),
-            "Expected raw typed pointer 'ptr[T]', raw pointer 'ptr', memory address 'addr' type."
-                .into(),
+            format!("Expected raw typed pointer 'ptr[T]', raw pointer 'ptr', memory address 'addr' type, got '{}'.", size_type),
             None,
             destination_span,
         ));
     }
 
-    if !new_size.is_unsigned_integer()? {
+    if !new_size_type.is_unsigned_integer_type() {
         typechecker.add_error(ThrushCompilerIssue::Error(
             "Type error".into(),
-            "Expected unsigned integer value.".into(),
+            format!("Expected unsigned integer type, got '{}'.", new_size_type),
             None,
             new_size_span,
         ));
     }
 
-    if !size.is_unsigned_integer()? {
+    if !size_type.is_unsigned_integer_type() {
         typechecker.add_error(ThrushCompilerIssue::Error(
             "Type error".into(),
-            "Expected unsigned integer value.".into(),
+            format!("Expected unsigned integer type, got '{}'.", size_type),
             None,
             size_span,
         ));

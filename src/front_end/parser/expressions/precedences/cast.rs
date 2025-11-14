@@ -1,7 +1,8 @@
 use crate::core::errors::standard::ThrushCompilerIssue;
 
 use crate::front_end::lexer::{span::Span, tokentype::TokenType};
-use crate::front_end::parser::{ParserContext, expressions::precedences::mutation, typegen};
+use crate::front_end::parser::expressions::precedences::index;
+use crate::front_end::parser::{ParserContext, typegen};
 use crate::front_end::types::ast::{Ast, metadata::cast::CastMetadata};
 use crate::front_end::types::parser::stmts::traits::TokenExtensions;
 use crate::front_end::typesystem::types::Type;
@@ -9,7 +10,7 @@ use crate::front_end::typesystem::types::Type;
 pub fn cast_precedence<'parser>(
     ctx: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, ThrushCompilerIssue> {
-    let mut expression: Ast = mutation::equal_precedence(ctx)?;
+    let mut expression: Ast = index::index_precedence(ctx)?;
 
     if ctx.match_token(TokenType::As)? {
         let span: Span = ctx.previous().get_span();

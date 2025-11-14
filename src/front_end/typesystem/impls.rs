@@ -1,7 +1,6 @@
-use crate::front_end::typesystem::{
-    traits::{IndexExtensions, TypeExtensions},
-    types::Type,
-};
+use crate::front_end::typesystem::traits::IndexExtensions;
+use crate::front_end::typesystem::traits::TypeExtensions;
+use crate::front_end::typesystem::types::Type;
 
 impl Type {
     #[inline(always)]
@@ -86,6 +85,11 @@ impl Type {
     #[inline(always)]
     pub fn is_signed_integer_type(&self) -> bool {
         matches!(self, Type::S8 | Type::S16 | Type::S32 | Type::S64)
+    }
+
+    #[inline(always)]
+    pub fn is_lesseq_unsigned32bit_integer(&self) -> bool {
+        matches!(self, Type::U8 | Type::U16 | Type::U32)
     }
 
     #[inline(always)]
@@ -197,15 +201,6 @@ impl TypeExtensions for Type {
             | Type::NullPtr
             | Type::Fn(..) => self,
         }
-    }
-
-    #[inline]
-    fn get_type_fn_ref(&self) -> &Type {
-        if let Type::Fn(_, kind, ..) = self {
-            return kind;
-        }
-
-        self
     }
 
     #[inline]

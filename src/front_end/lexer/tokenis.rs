@@ -35,11 +35,6 @@ impl TokenType {
     }
 
     #[must_use]
-    pub fn is_mut(&self) -> bool {
-        matches!(self, TokenType::Mut)
-    }
-
-    #[must_use]
     pub fn is_void(&self) -> bool {
         matches!(self, TokenType::Void)
     }
@@ -47,11 +42,6 @@ impl TokenType {
     #[must_use]
     pub fn is_bool(&self) -> bool {
         matches!(self, TokenType::Bool)
-    }
-
-    #[must_use]
-    pub fn is_str(&self) -> bool {
-        matches!(self, TokenType::Str)
     }
 
     #[must_use]
@@ -110,9 +100,7 @@ impl TokenType {
             || self.is_bool()
             || self.is_array()
             || self.is_ptr()
-            || self.is_str()
             || self.is_void()
-            || self.is_mut()
             || self.is_address()
             || self.is_const()
             || self.is_fn_ref()

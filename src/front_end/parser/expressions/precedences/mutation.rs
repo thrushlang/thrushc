@@ -1,14 +1,15 @@
 use crate::core::errors::standard::ThrushCompilerIssue;
 
 use crate::front_end::lexer::{span::Span, tokentype::TokenType};
-use crate::front_end::parser::{ParserContext, expr, expressions::precedences::index};
+use crate::front_end::parser::expressions::precedences::cast;
+use crate::front_end::parser::{ParserContext, expr};
 use crate::front_end::types::{ast::Ast, parser::stmts::traits::TokenExtensions};
 use crate::front_end::typesystem::types::Type;
 
 pub fn equal_precedence<'parser>(
     ctx: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, ThrushCompilerIssue> {
-    let mut expression: Ast = index::index_precedence(ctx)?;
+    let mut expression: Ast = cast::cast_precedence(ctx)?;
 
     if ctx.match_token(TokenType::Eq)? {
         let span: Span = ctx.previous().get_span();

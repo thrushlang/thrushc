@@ -155,7 +155,7 @@ fn build_fn_ref_type(ctx: &mut ParserContext<'_>) -> Result<Type, ThrushCompiler
 }
 
 fn build_const_type(ctx: &mut ParserContext<'_>) -> Result<Type, ThrushCompilerIssue> {
-    Ok(Type::Const(build_type(ctx)?.into()))
+    Ok(Type::Const(self::build_type(ctx)?.into()))
 }
 
 fn build_array_type(ctx: &mut ParserContext<'_>, span: Span) -> Result<Type, ThrushCompilerIssue> {
@@ -175,20 +175,21 @@ fn build_array_type(ctx: &mut ParserContext<'_>, span: Span) -> Result<Type, Thr
         )?;
 
         let size: Ast = expr::build_expr(ctx)?;
+        let size_type: &Type = size.get_value_type()?;
 
         if !size.is_integer() {
             return Err(ThrushCompilerIssue::Error(
                 "Syntax error".into(),
-                "Expected integer value.".into(),
+                "Expected literal integer value.".into(),
                 None,
                 span,
             ));
         }
 
-        if !size.is_unsigned_integer()? || !size.is_lessu32bit_integer()? {
+        if !size_type.is_unsigned_integer_type() || !size_type.is_lesseq_unsigned32bit_integer() {
             return Err(ThrushCompilerIssue::Error(
                 "Syntax error".into(),
-                "Expected any unsigned integer value less than or equal to 32 bits.".into(),
+                "Expected unsigned integer value less than or equal to 32 bits.".into(),
                 None,
                 span,
             ));

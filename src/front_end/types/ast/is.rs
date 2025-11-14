@@ -3,7 +3,6 @@ use crate::back_end::llvm::compiler::builtins::Builtin;
 use crate::core::errors::standard::ThrushCompilerIssue;
 
 use crate::front_end::types::ast::Ast;
-use crate::front_end::typesystem::types::Type;
 
 impl Ast<'_> {
     #[inline]
@@ -185,24 +184,6 @@ impl Ast<'_> {
         }
 
         false
-    }
-}
-
-impl Ast<'_> {
-    #[inline]
-    pub fn is_unsigned_integer(&self) -> Result<bool, ThrushCompilerIssue> {
-        Ok(matches!(
-            self.get_value_type()?,
-            Type::U8 | Type::U16 | Type::U32 | Type::U64 | Type::U128,
-        ))
-    }
-
-    #[inline]
-    pub fn is_lessu32bit_integer(&self) -> Result<bool, ThrushCompilerIssue> {
-        Ok(matches!(
-            self.get_value_type()?,
-            Type::U8 | Type::U16 | Type::U32
-        ))
     }
 }
 

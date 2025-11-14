@@ -1,9 +1,10 @@
 use crate::back_end::llvm::compiler::context::LLVMCodeGenContext;
-use crate::back_end::llvm::compiler::{abort, codegen, memory, typegen};
+use crate::back_end::llvm::compiler::{abort, codegen, memory, ptr, typegen};
 use crate::back_end::llvm::types::LLVMGEPIndexes;
 
 use crate::front_end::lexer::span::Span;
 use crate::front_end::types::ast::Ast;
+use crate::front_end::typesystem::traits::TypePointerExtensions;
 use crate::front_end::typesystem::types::Type;
 
 use std::path::PathBuf;
@@ -18,7 +19,11 @@ pub fn compile<'ctx>(
     source: &'ctx Ast<'ctx>,
     indexes: LLVMGEPIndexes<'ctx>,
 ) -> BasicValueEnum<'ctx> {
-    if source.is_allocated() || source.llvm_get_type(context).is_ptr_type() {
+    let source_type: &Type = source.llvm_get_type(context);
+
+    if (source.is_allocated() && source_type.is_struct_type())
+        || source_type.is_ptr_composite_type()
+    {
         return self::compile_gep_property(context, source, indexes);
     }
 
@@ -77,7 +82,7 @@ fn compile_gep_property<'ctx>(
 
     let span: Span = source.get_span();
 
-    let ptr: PointerValue = codegen::compile(context, source, None).into_pointer_value();
+    let ptr: PointerValue = ptr::compile(context, source, None).into_pointer_value();
     let ptr_type: &Type = source.llvm_get_type(context);
 
     let mut property: PointerValue =

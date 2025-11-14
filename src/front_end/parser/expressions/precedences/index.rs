@@ -1,10 +1,8 @@
 use crate::core::errors::standard::ThrushCompilerIssue;
 
 use crate::front_end::lexer::{span::Span, tokentype::TokenType};
-use crate::front_end::parser::{
-    ParserContext,
-    expressions::{index, precedences::property},
-};
+use crate::front_end::parser::expressions::precedences::property;
+use crate::front_end::parser::{ParserContext, expressions::index};
 use crate::front_end::types::ast::Ast;
 
 #[inline]

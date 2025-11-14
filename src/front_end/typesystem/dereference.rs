@@ -6,10 +6,6 @@ impl DereferenceExtensions for Type {
             return (**any).clone();
         }
 
-        if let Type::Const(any) = self {
-            return (**any).clone();
-        }
-
         self.clone()
     }
 }

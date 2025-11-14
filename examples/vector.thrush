@@ -1,0 +1,48 @@
+/* ******************************************************************************************
+*
+*   Simple Vector
+*
+*   Copyright (c) 2025 Stevens Benavides
+*
+******************************************************************************************* */
+
+fn print(fmt: const ptr[array[char]]) s32 @public @ignore @extern("printf") @convention("C");
+
+fn free(pointer: ptr) void @public @extern("free");
+fn realloc(pointer: ptr, size: u64) ptr @public @extern("realloc");
+fn malloc(size: u32) ptr @public @extern("malloc");
+
+struct Vector {
+    data: ptr[u32],
+    size: u64,
+    capacity: u64
+}
+
+fn main(argc: u32, argv: ptr[array[char]]) s32 {
+
+    local mut vector: Vector @heap;
+
+    vector.data = malloc(sizeof u32 as u32) as ptr[u32];
+    vector.size = 0;
+    vector.capacity = 2;
+
+    for local mut idx: u32 = 0; idx < 10; idx++; {
+        if (defer vector.size) >= (defer vector.capacity) {
+            vector.capacity = (defer vector.capacity) * 2;
+            vector.data = realloc((defer vector.data) as ptr, sizeof u32 * (defer vector.capacity));
+        } 
+
+        (defer vector.data)[defer vector.size] = idx;
+        vector.size++;
+    } 
+
+    for local mut z: u64 = 0; z < 10; z++; {
+        print("%ld\n", defer (defer vector.data)[z]);
+    }
+
+    free((defer vector.data) as ptr);
+    free(vector as ptr);
+
+    return 0;
+
+}

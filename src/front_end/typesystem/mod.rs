@@ -3,6 +3,7 @@ pub mod cast;
 pub mod dereference;
 pub mod display;
 pub mod farray;
+pub mod functionref;
 pub mod impls;
 pub mod llvm;
 pub mod modificators;

@@ -1,7 +1,8 @@
 use crate::core::errors::standard::ThrushCompilerIssue;
 
 use crate::front_end::lexer::{span::Span, token::Token, tokentype::TokenType};
-use crate::front_end::parser::{ParserContext, expr, expressions::precedences::cast};
+use crate::front_end::parser::expressions::precedences::lower;
+use crate::front_end::parser::{ParserContext, expr};
 use crate::front_end::types::{ast::Ast, parser::stmts::traits::TokenExtensions};
 use crate::front_end::typesystem::{traits::CastTypeExtensions, types::Type};
 
@@ -13,7 +14,7 @@ pub fn unary_precedence<'parser>(
         let operator: TokenType = operator_tk.kind;
         let span: Span = operator_tk.span;
 
-        let expression: Ast = cast::cast_precedence(ctx)?;
+        let expression: Ast = lower::lower_precedence(ctx)?;
 
         return Ok(Ast::UnaryOp {
             operator,
@@ -29,7 +30,7 @@ pub fn unary_precedence<'parser>(
         let operator: TokenType = operator_tk.get_type();
         let span: Span = operator_tk.get_span();
 
-        let expression: Ast = cast::cast_precedence(ctx)?;
+        let expression: Ast = lower::lower_precedence(ctx)?;
 
         let expression_type: &Type = expression.get_value_type()?;
         let kind: Type = expression_type.narrowing();
@@ -48,7 +49,7 @@ pub fn unary_precedence<'parser>(
         let operator: TokenType = operator_tk.kind;
         let span: Span = operator_tk.span;
 
-        let expression: Ast = cast::cast_precedence(ctx)?;
+        let expression: Ast = lower::lower_precedence(ctx)?;
         let expression_type: &Type = expression.get_value_type()?;
 
         return Ok(Ast::UnaryOp {
@@ -99,7 +100,7 @@ pub fn unary_precedence<'parser>(
         return Ok(unaryop);
     }
 
-    let instr: Ast = cast::cast_precedence(ctx)?;
+    let instr: Ast = lower::lower_precedence(ctx)?;
 
     Ok(instr)
 }

@@ -6,7 +6,7 @@ use crate::front_end::parser::ParserContext;
 use crate::front_end::parser::expr;
 use crate::front_end::types::ast::Ast;
 use crate::front_end::types::parser::stmts::traits::TokenExtensions;
-use crate::front_end::typesystem::traits::TypeExtensions;
+use crate::front_end::typesystem::traits::FunctionReferenceExtensions;
 use crate::front_end::typesystem::types::Type;
 
 pub fn build_indirect<'parser>(
@@ -61,7 +61,7 @@ pub fn build_indirect<'parser>(
         function: expression.clone().into(),
         function_type: expression_type.clone(),
         args,
-        kind: expression_type.get_type_fn_ref().clone(),
+        kind: expression_type.get_fn_ref_type().clone(),
         span,
     })
 }

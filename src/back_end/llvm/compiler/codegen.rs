@@ -13,6 +13,7 @@ use crate::back_end::llvm::compiler::{ptr, statements};
 
 use crate::front_end::types::ast::Ast;
 use crate::front_end::types::ast::metadata::local::LocalMetadata;
+use crate::front_end::typesystem::traits::DereferenceExtensions;
 use crate::front_end::typesystem::types::Type;
 
 use super::context::LLVMCodeGenContext;
@@ -394,12 +395,18 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 span,
                 ..
             } => {
+                let value_type: &Type = value.llvm_get_type(self.context);
                 let source_type: &Type = source.llvm_get_type(self.context);
+
+                let cast_type: Type = if source_type != value_type {
+                    source_type.dereference()
+                } else {
+                    source_type.clone()
+                };
 
                 let ptr: BasicValueEnum = ptr::compile(self.context, source, None);
 
-                let value: BasicValueEnum =
-                    codegen::compile(self.context, value, Some(source_type));
+                let value: BasicValueEnum = codegen::compile(self.context, value, Some(&cast_type));
 
                 memory::store_anon(self.context, ptr.into_pointer_value(), value, *span);
             }

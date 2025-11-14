@@ -35,15 +35,6 @@ pub fn validate<'type_checker>(
                 ));
             }
 
-            if !source.is_mutable() {
-                typechecker.add_error(ThrushCompilerIssue::Error(
-                    "Type error".into(),
-                    "The reference must be marked as mutable.".into(),
-                    None,
-                    source.get_span(),
-                ));
-            }
-
             if !source_type.is_ptr_type() {
                 let lhs_type: &Type = source_type;
                 let rhs_type: &Type = value_type;

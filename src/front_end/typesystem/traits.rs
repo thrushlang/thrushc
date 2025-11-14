@@ -8,13 +8,16 @@ pub trait LLVMTypeExtensions {
     fn llvm_is_intrinsic_available(&self, name: &str) -> bool;
 }
 
+pub trait FunctionReferenceExtensions {
+    fn get_fn_ref_type(&self) -> &Type;
+}
+
 pub trait IndexExtensions {
     fn calculate_index_type(&self, depth: usize) -> &Type;
 }
 
 pub trait TypeExtensions {
     fn get_type_with_depth(&self, base_depth: usize) -> &Type;
-    fn get_type_fn_ref(&self) -> &Type;
     fn get_type_ref(&self) -> Type;
     fn is_value(&self) -> bool;
     fn is_const_value(&self) -> bool;
@@ -31,6 +34,7 @@ pub trait TypeArrayEntensions {
 }
 
 pub trait TypePointerExtensions {
+    fn is_ptr_composite_type(&self) -> bool;
     fn is_ptr_aggregate_value_like_type(&self) -> bool;
     fn is_ptr_aggregate_like_type(&self) -> bool;
     fn is_ptr_indexable_like_type(&self) -> bool;

@@ -16,10 +16,10 @@ pub fn validate<'type_checker>(
             let value_type: &Type = value.get_value_type()?;
             let value_span: Span = value.get_span();
 
-            if !value_type.is_ptr_type() && !value_type.is_array_type() {
+            if !value_type.is_ptr_type() {
                 typechecker.add_error(ThrushCompilerIssue::Error(
                     "Type error".into(),
-                    format!("Expected raw typed pointer 'ptr[T]' type, raw pointer 'ptr' type, array type 'array[T]' for defererence, got '{}'.", value_type),
+                    format!("Expected raw typed pointer 'ptr[T]' type, raw pointer 'ptr' type for defererence, got '{}'.", value_type),
                     None,
                     value_span,
                 ));
