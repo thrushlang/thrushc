@@ -1,30 +1,30 @@
-use crate::{
-    back_end::llvm::compiler::attributes::LLVMAttribute,
-    front_end::lexer::{span::Span, tokentype::TokenType},
+use crate::front_end::{
+    lexer::{span::Span, tokentype::TokenType},
+    types::attributes::ThrushAttribute,
 };
 
 impl TokenType {
     #[must_use]
-    pub fn as_attribute<'ctx>(self, span: Span) -> Option<LLVMAttribute<'ctx>> {
+    pub fn as_attribute(self, span: Span) -> Option<ThrushAttribute> {
         match self {
-            TokenType::Ignore => Some(LLVMAttribute::Ignore(span)),
-            TokenType::MinSize => Some(LLVMAttribute::MinSize(span)),
-            TokenType::NoInline => Some(LLVMAttribute::NoInline(span)),
-            TokenType::AlwaysInline => Some(LLVMAttribute::AlwaysInline(span)),
-            TokenType::InlineHint => Some(LLVMAttribute::InlineHint(span)),
-            TokenType::Hot => Some(LLVMAttribute::Hot(span)),
-            TokenType::SafeStack => Some(LLVMAttribute::SafeStack(span)),
-            TokenType::WeakStack => Some(LLVMAttribute::WeakStack(span)),
-            TokenType::StrongStack => Some(LLVMAttribute::StrongStack(span)),
-            TokenType::PreciseFloats => Some(LLVMAttribute::PreciseFloats(span)),
-            TokenType::Stack => Some(LLVMAttribute::Stack(span)),
-            TokenType::Heap => Some(LLVMAttribute::Heap(span)),
-            TokenType::AsmThrow => Some(LLVMAttribute::AsmThrow(span)),
-            TokenType::AsmSideEffects => Some(LLVMAttribute::AsmSideEffects(span)),
-            TokenType::AsmAlignStack => Some(LLVMAttribute::AsmAlignStack(span)),
-            TokenType::Packed => Some(LLVMAttribute::Packed(span)),
-            TokenType::NoUnwind => Some(LLVMAttribute::NoUnwind(span)),
-            TokenType::OptFuzzing => Some(LLVMAttribute::OptFuzzing(span)),
+            TokenType::Ignore => Some(ThrushAttribute::Ignore(span)),
+            TokenType::MinSize => Some(ThrushAttribute::MinSize(span)),
+            TokenType::NoInline => Some(ThrushAttribute::NoInline(span)),
+            TokenType::AlwaysInline => Some(ThrushAttribute::AlwaysInline(span)),
+            TokenType::InlineHint => Some(ThrushAttribute::InlineHint(span)),
+            TokenType::Hot => Some(ThrushAttribute::Hot(span)),
+            TokenType::SafeStack => Some(ThrushAttribute::SafeStack(span)),
+            TokenType::WeakStack => Some(ThrushAttribute::WeakStack(span)),
+            TokenType::StrongStack => Some(ThrushAttribute::StrongStack(span)),
+            TokenType::PreciseFloats => Some(ThrushAttribute::PreciseFloats(span)),
+            TokenType::Stack => Some(ThrushAttribute::Stack(span)),
+            TokenType::Heap => Some(ThrushAttribute::Heap(span)),
+            TokenType::AsmThrow => Some(ThrushAttribute::AsmThrow(span)),
+            TokenType::AsmSideEffects => Some(ThrushAttribute::AsmSideEffects(span)),
+            TokenType::AsmAlignStack => Some(ThrushAttribute::AsmAlignStack(span)),
+            TokenType::Packed => Some(ThrushAttribute::Packed(span)),
+            TokenType::NoUnwind => Some(ThrushAttribute::NoUnwind(span)),
+            TokenType::OptFuzzing => Some(ThrushAttribute::OptFuzzing(span)),
 
             _ => None,
         }

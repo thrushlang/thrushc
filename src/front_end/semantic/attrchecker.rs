@@ -6,18 +6,23 @@ use crate::core::console::logging::LoggingType;
 use crate::core::diagnostic::diagnostician::Diagnostician;
 use crate::core::errors::standard::ThrushCompilerIssue;
 
+use crate::front_end::parser::attributes::INLINE_ASSEMBLER_SYNTAXES;
 use crate::front_end::types::ast::Ast;
+use crate::front_end::types::attributes::ThrushAttribute;
+use crate::front_end::types::attributes::callconventions::CALL_CONVENTIONS;
 use crate::front_end::types::parser::stmts::traits::ThrushAttributesExtensions;
 use crate::front_end::types::parser::stmts::types::ThrushAttributes;
 use crate::front_end::types::semantic::attrchecker::types::AttributeCheckerAttributeApplicant;
-use crate::front_end::types::semantic::linter::traits::LLVMAttributeComparatorExtensions;
-use crate::front_end::types::semantic::linter::types::LLVMAttributeComparator;
+use crate::front_end::types::semantic::linter::traits::ThrushAttributeComparatorExtensions;
+use crate::front_end::types::semantic::linter::types::ThrushAttributeComparator;
 
 #[derive(Debug)]
 pub struct AttributeChecker<'attr_checker> {
     ast: &'attr_checker [Ast<'attr_checker>],
+
     errors: Vec<ThrushCompilerIssue>,
     currrent: usize,
+
     dignostician: Diagnostician,
 }
 
@@ -31,6 +36,7 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
             ast,
             errors: Vec::with_capacity(100),
             currrent: 0,
+
             dignostician: Diagnostician::new(file),
         }
     }
@@ -81,7 +87,7 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
         } = ast
         {
             if body.is_some() && attributes.has_extern_attribute() {
-                if let Some(span) = attributes.match_attr(LLVMAttributeComparator::Extern) {
+                if let Some(span) = attributes.match_attr(ThrushAttributeComparator::Extern) {
                     self.add_error(ThrushCompilerIssue::Error(
                         "Attribute error".into(),
                         "External functions cannot have a body.".into(),
@@ -217,7 +223,7 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
                 let repeated_attrs: ThrushAttributes = self.get_repeated_attrs(attributes);
 
                 if attributes.has_extern_attribute() && !attributes.has_public_attribute() {
-                    if let Some(span) = attributes.match_attr(LLVMAttributeComparator::Extern) {
+                    if let Some(span) = attributes.match_attr(ThrushAttributeComparator::Extern) {
                         self.add_error(ThrushCompilerIssue::Error(
                             "Missing attribute".into(),
                             "A external function always have public visibility. Add the '@public' attribute.".into(),
@@ -228,7 +234,7 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
                 }
 
                 if !attributes.has_extern_attribute() && attributes.has_ignore_attribute() {
-                    if let Some(span) = attributes.match_attr(LLVMAttributeComparator::Ignore) {
+                    if let Some(span) = attributes.match_attr(ThrushAttributeComparator::Ignore) {
                         self.add_error(ThrushCompilerIssue::Error(
                             "Attribute error".into(),
                             "The @ignore attribute requires the function to be annotated with @extern(\"something\").".into(),
@@ -239,7 +245,8 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
                 }
 
                 if attributes.has_inlinealways_attr() && attributes.has_inline_attr() {
-                    if let Some(span) = attributes.match_attr(LLVMAttributeComparator::InlineHint) {
+                    if let Some(span) = attributes.match_attr(ThrushAttributeComparator::InlineHint)
+                    {
                         self.add_error(ThrushCompilerIssue::Error(
                             "Illogical attribute".into(),
                             "The attribute is not valid. Use either '@alwaysinline' or '@inline' attribute.".into(),
@@ -250,7 +257,7 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
                 }
 
                 if attributes.has_inline_attr() && attributes.has_noinline_attr() {
-                    if let Some(span) = attributes.match_attr(LLVMAttributeComparator::NoInline) {
+                    if let Some(span) = attributes.match_attr(ThrushAttributeComparator::NoInline) {
                         self.add_error(ThrushCompilerIssue::Error(
                             "Illogical attribute".into(),
                             "The attribute is not valid. Use either '@noinline' or '@inline' attribute.".into(),
@@ -261,13 +268,23 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
                 }
 
                 if attributes.has_inlinealways_attr() && attributes.has_noinline_attr() {
-                    if let Some(span) = attributes.match_attr(LLVMAttributeComparator::NoInline) {
+                    if let Some(span) = attributes.match_attr(ThrushAttributeComparator::NoInline) {
                         self.add_error(ThrushCompilerIssue::Error(
-                            String::from("Illogical attribute"),
-                            String::from(
-                                "The attribute is not valid. Use either '@alwaysinline' or '@inline' attribute.",
-                            ),
+                            "Illogical attribute".into(),
+                            "The attribute is not valid. Use either '@alwaysinline' or '@inline' attribute.".into(),
                             None,
+                            span,
+                        ));
+                    }
+                }
+
+                if let Some(ThrushAttribute::Convention(convention, span)) =
+                    attributes.get_attr(ThrushAttributeComparator::Convention)
+                {
+                    if !CALL_CONVENTIONS.contains_key(convention.as_bytes()) {
+                        self.add_error(ThrushCompilerIssue::Warning(
+                            "Invalid attribute syntax".into(),
+                            format!("Unknown calling convention, got '{}'.", convention),
                             span,
                         ));
                     }
@@ -285,7 +302,7 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
 
             AttributeCheckerAttributeApplicant::Static => {
                 if attributes.has_extern_attribute() && !attributes.has_public_attribute() {
-                    if let Some(span) = attributes.match_attr(LLVMAttributeComparator::Extern) {
+                    if let Some(span) = attributes.match_attr(ThrushAttributeComparator::Extern) {
                         self.add_error(ThrushCompilerIssue::Error(
                             "Missing attribute".into(),
                             "A external static symbol always have public visibility. Add the '@public' attribute.".into(),
@@ -309,11 +326,36 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
 
             AttributeCheckerAttributeApplicant::AssemblerFunction => {
                 if !attributes.has_asmsyntax_attribute() {
-                    if let Some(span) = attributes.match_attr(LLVMAttributeComparator::Extern) {
+                    if let Some(span) = attributes.match_attr(ThrushAttributeComparator::Extern) {
                         self.add_error(ThrushCompilerIssue::Error(
                             "Missing attribute".into(),
                             "A pure assembler function always have syntax mode. Add the '@asmsyntax' attribute.".into(),
                             None,
+                            span,
+                        ));
+                    }
+                }
+
+                if let Some(ThrushAttribute::AsmSyntax(syntax, span)) =
+                    attributes.get_attr(ThrushAttributeComparator::AsmSyntax)
+                {
+                    if !INLINE_ASSEMBLER_SYNTAXES.contains(&syntax.as_str()) {
+                        self.add_error(ThrushCompilerIssue::Error(
+                            "Invalid attribute syntax".into(),
+                            format!("Expected valid assembler syntax, got '{}'.", syntax),
+                            None,
+                            span,
+                        ));
+                    }
+                }
+
+                if let Some(ThrushAttribute::Convention(convention, span)) =
+                    attributes.get_attr(ThrushAttributeComparator::Convention)
+                {
+                    if !CALL_CONVENTIONS.contains_key(convention.as_bytes()) {
+                        self.add_error(ThrushCompilerIssue::Warning(
+                            "Invalid attribute syntax".into(),
+                            format!("Expected valid calling convention, got '{}'.", convention),
                             span,
                         ));
                     }
@@ -350,16 +392,13 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
 }
 
 impl<'attr_checker> AttributeChecker<'attr_checker> {
-    fn get_repeated_attrs(
-        &self,
-        attributes: &'attr_checker ThrushAttributes,
-    ) -> ThrushAttributes<'attr_checker> {
-        let mut storage: AHashSet<LLVMAttributeComparator> = AHashSet::with_capacity(20);
+    fn get_repeated_attrs(&self, attributes: &'attr_checker ThrushAttributes) -> ThrushAttributes {
+        let mut storage: AHashSet<ThrushAttributeComparator> = AHashSet::with_capacity(20);
         let mut repeated_attrs: ThrushAttributes = Vec::with_capacity(20);
 
         attributes.iter().for_each(|attr| {
-            if !storage.insert(attr.into_llvm_attr_cmp()) {
-                repeated_attrs.push(*attr);
+            if !storage.insert(attr.into_attr_cmp()) {
+                repeated_attrs.push(attr.clone());
             }
         });
 

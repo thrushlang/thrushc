@@ -1,16 +1,16 @@
+use crate::back_end::llvm::compiler::attributes::LLVMAttributeComparator;
 use crate::back_end::llvm::compiler::context::LLVMCodeGenContext;
 use crate::back_end::llvm::compiler::conventions::CallConvention;
 use crate::back_end::llvm::compiler::{attributes::LLVMAttribute, obfuscation};
 
 use crate::back_end::llvm::compiler::{abort, block, typegen};
-use crate::back_end::llvm::types::traits::AssemblerFunctionExtensions;
+use crate::back_end::llvm::types::repr::LLVMAttributes;
+use crate::back_end::llvm::types::traits::{AssemblerFunctionExtensions, LLVMAttributesExtensions};
 
 use crate::front_end::lexer::span::Span;
 use crate::front_end::types::ast::Ast;
 use crate::front_end::types::parser::repr::AssemblerFunction;
 use crate::front_end::types::parser::stmts::traits::ThrushAttributesExtensions;
-use crate::front_end::types::parser::stmts::types::ThrushAttributes;
-use crate::front_end::types::semantic::linter::types::LLVMAttributeComparator;
 use crate::front_end::typesystem::types::Type;
 
 use std::path::PathBuf;
@@ -38,7 +38,7 @@ pub fn compile<'ctx>(context: &mut LLVMCodeGenContext<'_, 'ctx>, asm_fn: Assembl
     let return_type: &Type = asm_fn.4;
     let parameters: &[Ast] = asm_fn.5;
     let parameters_types: &[Type] = asm_fn.6;
-    let attributes: &ThrushAttributes = asm_fn.7;
+    let attributes: LLVMAttributes = asm_fn.7.as_llvm_attributes();
 
     let span: Span = asm_fn.8;
 

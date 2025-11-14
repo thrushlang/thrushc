@@ -1,9 +1,10 @@
-use crate::back_end::llvm::compiler::attributes::LLVMAttribute;
+use crate::back_end::llvm::types::repr::LLVMAttributes;
 use crate::core::errors::standard::ThrushCompilerIssue;
 
 use crate::front_end::lexer::span::Span;
 use crate::front_end::lexer::tokentype::TokenType;
-use crate::front_end::types::semantic::linter::types::LLVMAttributeComparator;
+use crate::front_end::types::attributes::ThrushAttribute;
+use crate::front_end::types::semantic::linter::types::ThrushAttributeComparator;
 use crate::front_end::typesystem::modificators::StructureTypeModificator;
 use crate::front_end::typesystem::types::Type;
 
@@ -91,6 +92,8 @@ pub trait ThrushAttributesExtensions {
     fn has_asmsideffects_attribute(&self) -> bool;
     fn has_asmsyntax_attribute(&self) -> bool;
 
-    fn match_attr(&self, cmp: LLVMAttributeComparator) -> Option<Span>;
-    fn get_attr(&self, cmp: LLVMAttributeComparator) -> Option<LLVMAttribute<'_>>;
+    fn match_attr(&self, cmp: ThrushAttributeComparator) -> Option<Span>;
+    fn get_attr(&self, cmp: ThrushAttributeComparator) -> Option<ThrushAttribute>;
+
+    fn as_llvm_attributes(&self) -> LLVMAttributes<'_>;
 }

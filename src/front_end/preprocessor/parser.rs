@@ -16,8 +16,8 @@ use crate::{
 };
 
 #[derive(Debug)]
-pub struct ModuleParser<'module_parser> {
-    symbols: Vec<ExternalSymbol<'module_parser>>,
+pub struct ModuleParser {
+    symbols: Vec<ExternalSymbol>,
     tokens: Vec<Token>,
     errors: Vec<PreprocessorIssue>,
     table: ModuleSymbolTable,
@@ -25,7 +25,7 @@ pub struct ModuleParser<'module_parser> {
     current: usize,
 }
 
-impl<'module_parser> ModuleParser<'module_parser> {
+impl ModuleParser {
     #[inline]
     pub fn new(tokens: Vec<Token>) -> Self {
         Self {
@@ -39,11 +39,8 @@ impl<'module_parser> ModuleParser<'module_parser> {
     }
 }
 
-impl<'module_parser> ModuleParser<'module_parser> {
-    pub fn parse(
-        &mut self,
-        file: CompilationUnit,
-    ) -> Result<Module<'module_parser>, Vec<PreprocessorIssue>> {
+impl ModuleParser {
+    pub fn parse(&mut self, file: CompilationUnit) -> Result<Module, Vec<PreprocessorIssue>> {
         let mut module: Module = Module::new(file);
 
         while !self.is_eof() {
@@ -74,16 +71,16 @@ impl<'module_parser> ModuleParser<'module_parser> {
     }
 }
 
-impl ModuleParser<'_> {
+impl ModuleParser {
     #[inline]
     pub fn get_table(&self) -> &ModuleSymbolTable {
         &self.table
     }
 }
 
-impl<'module_parser> ModuleParser<'module_parser> {
+impl ModuleParser {
     #[inline]
-    pub fn add_symbol(&mut self, symbol: ExternalSymbol<'module_parser>) {
+    pub fn add_symbol(&mut self, symbol: ExternalSymbol) {
         self.symbols.push(symbol);
     }
 
@@ -93,14 +90,14 @@ impl<'module_parser> ModuleParser<'module_parser> {
     }
 }
 
-impl<'module_parser> ModuleParser<'module_parser> {
+impl ModuleParser {
     #[inline]
     pub fn merge_errors(&mut self, errors: Vec<PreprocessorIssue>) {
         self.errors.extend(errors);
     }
 }
 
-impl<'module_parser> ModuleParser<'module_parser> {
+impl ModuleParser {
     #[inline]
     pub fn consume(&mut self, kind: TokenType) -> Result<&Token, ()> {
         if self.peek().kind == kind {
@@ -110,7 +107,7 @@ impl<'module_parser> ModuleParser<'module_parser> {
         Err(())
     }
 }
-impl<'module_parser> ModuleParser<'module_parser> {
+impl ModuleParser {
     #[must_use]
     pub fn peek(&self) -> &Token {
         self.tokens.get(self.current).unwrap_or_else(|| {
@@ -135,7 +132,7 @@ impl<'module_parser> ModuleParser<'module_parser> {
     }
 }
 
-impl<'module_parser> ModuleParser<'module_parser> {
+impl ModuleParser {
     #[must_use]
     pub fn check(&self, kind: TokenType) -> bool {
         if self.is_eof() {
@@ -159,7 +156,7 @@ impl<'module_parser> ModuleParser<'module_parser> {
     }
 }
 
-impl<'module_parser> ModuleParser<'module_parser> {
+impl ModuleParser {
     #[inline]
     pub fn match_token(&mut self, kind: TokenType) -> Result<bool, ()> {
         if self.peek().kind == kind {
@@ -171,7 +168,7 @@ impl<'module_parser> ModuleParser<'module_parser> {
     }
 }
 
-impl<'module_parser> ModuleParser<'module_parser> {
+impl ModuleParser {
     #[inline]
     pub fn advance_until(&mut self, kind: TokenType) -> Result<(), ()> {
         while !self.match_token(kind)? {
@@ -211,7 +208,7 @@ impl<'module_parser> ModuleParser<'module_parser> {
     }
 }
 
-impl<'module_parser> ModuleParser<'module_parser> {
+impl ModuleParser {
     #[inline]
     pub fn only_advance(&mut self) -> Result<(), ()> {
         if !self.is_eof() {
@@ -233,7 +230,7 @@ impl<'module_parser> ModuleParser<'module_parser> {
     }
 }
 
-impl<'module_parser> ModuleParser<'module_parser> {
+impl ModuleParser {
     #[must_use]
     pub fn is_eof(&self) -> bool {
         self.peek().kind == TokenType::Eof

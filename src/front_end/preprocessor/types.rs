@@ -10,7 +10,7 @@ pub type EnumFieldsSignature = Vec<(Type, Span)>;
 pub type FunctionParameterSignature = (Type, Span);
 pub type EnumFieldSignature = (Type, Span);
 
-pub type ExternalSymbols<'symbol> = Vec<ExternalSymbol<'symbol>>;
+pub type ExternalSymbols = Vec<ExternalSymbol>;
 
 pub type FoundModuleSymbolId = (Option<String>, Option<String>);
 

@@ -1,11 +1,12 @@
 use std::fmt::Display;
 
-use crate::back_end::llvm::compiler::attributes::LLVMAttribute;
+use crate::back_end::llvm::types::repr::LLVMAttributes;
 use crate::front_end::lexer::span::Span;
 use crate::front_end::types::ast::{Ast, metadata::local::LocalMetadata};
-use crate::front_end::types::semantic::linter::traits::LLVMAttributeComparatorExtensions;
-use crate::front_end::types::semantic::linter::types::LLVMAttributeComparator;
 
+use crate::front_end::types::attributes::ThrushAttribute;
+use crate::front_end::types::semantic::linter::traits::ThrushAttributeComparatorExtensions;
+use crate::front_end::types::semantic::linter::types::ThrushAttributeComparator;
 use crate::front_end::typesystem::modificators::StructureTypeModificator;
 use crate::front_end::typesystem::traits::TypeStructExtensions;
 use crate::front_end::typesystem::types::Type;
@@ -16,7 +17,7 @@ use crate::front_end::types::parser::stmts::traits::{
 
 use crate::front_end::types::parser::stmts::types::{Constructor, StructFields, ThrushAttributes};
 
-impl ThrushAttributesExtensions for ThrushAttributes<'_> {
+impl ThrushAttributesExtensions for ThrushAttributes {
     #[inline]
     fn has_extern_attribute(&self) -> bool {
         self.iter().any(|attr| attr.is_extern_attribute())
@@ -83,8 +84,8 @@ impl ThrushAttributesExtensions for ThrushAttributes<'_> {
     }
 
     #[inline]
-    fn match_attr(&self, cmp: LLVMAttributeComparator) -> Option<Span> {
-        if let Some(attr_found) = self.iter().find(|attr| attr.into_llvm_attr_cmp() == cmp) {
+    fn match_attr(&self, cmp: ThrushAttributeComparator) -> Option<Span> {
+        if let Some(attr_found) = self.iter().find(|attr| attr.into_attr_cmp() == cmp) {
             return Some(attr_found.get_span());
         }
 
@@ -92,12 +93,25 @@ impl ThrushAttributesExtensions for ThrushAttributes<'_> {
     }
 
     #[inline]
-    fn get_attr(&self, cmp: LLVMAttributeComparator) -> Option<LLVMAttribute<'_>> {
-        if let Some(attr_found) = self.iter().find(|attr| attr.into_llvm_attr_cmp() == cmp) {
-            return Some(*attr_found);
+    fn get_attr(&self, cmp: ThrushAttributeComparator) -> Option<ThrushAttribute> {
+        if let Some(attr_found) = self.iter().find(|attr| attr.into_attr_cmp() == cmp) {
+            return Some(attr_found.clone());
         }
 
         None
+    }
+
+    #[inline]
+    fn as_llvm_attributes(&self) -> LLVMAttributes<'_> {
+        let mut llvm_attributes: LLVMAttributes = Vec::with_capacity(self.len());
+
+        for attribute in self {
+            if let Some(llvm_attribute) = attribute.as_llvm_attribute() {
+                llvm_attributes.push(llvm_attribute);
+            }
+        }
+
+        llvm_attributes
     }
 }
 

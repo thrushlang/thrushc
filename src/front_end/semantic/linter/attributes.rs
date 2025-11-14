@@ -8,9 +8,10 @@ use crate::core::errors::standard::ThrushCompilerIssue;
 use crate::front_end::types::ast::Ast;
 use crate::front_end::types::parser::stmts::traits::ThrushAttributesExtensions;
 use crate::front_end::types::parser::stmts::types::ThrushAttributes;
-use crate::front_end::types::semantic::linter::traits::LLVMAttributeComparatorExtensions;
-use crate::front_end::types::semantic::linter::types::LLVMAttributeComparator;
-use crate::front_end::types::semantic::linter::types::LinterAttributeApplicant;
+use crate::front_end::types::semantic::linter::traits::ThrushAttributeComparatorExtensions;
+use crate::front_end::types::semantic::linter::types::{
+    LinterAttributeApplicant, ThrushAttributeComparator,
+};
 
 #[derive(Debug)]
 pub struct AttributesLinter<'attr_linter> {
@@ -75,7 +76,7 @@ impl<'attr_linter> AttributesLinter<'attr_linter> {
                     && attributes.has_hot_attr()
                     && attributes.has_minsize_attr()
                 {
-                    if let Some(attr_span) = attributes.match_attr(LLVMAttributeComparator::Hot) {
+                    if let Some(attr_span) = attributes.match_attr(ThrushAttributeComparator::Hot) {
                         self.add_warning(ThrushCompilerIssue::Warning(
                             String::from("Possible undefined behavior"),
                             String::from(
@@ -92,7 +93,7 @@ impl<'attr_linter> AttributesLinter<'attr_linter> {
                 if attributes.has_public_attribute() && attributes.len() > 1 || attributes.len() > 1
                 {
                     let organized_contrary_attrs: ThrushAttributes =
-                        self.get_contrary_attrs(attributes, LLVMAttributeComparator::Public);
+                        self.get_contrary_attrs(attributes, ThrushAttributeComparator::Public);
 
                     organized_contrary_attrs.iter().for_each(|attr| {
                         self.add_warning(ThrushCompilerIssue::Warning(
@@ -109,12 +110,12 @@ impl<'attr_linter> AttributesLinter<'attr_linter> {
     fn get_contrary_attrs(
         &self,
         attributes: &'attr_linter ThrushAttributes,
-        point_attr: LLVMAttributeComparator,
-    ) -> ThrushAttributes<'attr_linter> {
+        point_attr: ThrushAttributeComparator,
+    ) -> ThrushAttributes {
         attributes
             .iter()
             .filter_map(|attr| match attr {
-                attr if attr.into_llvm_attr_cmp() != point_attr => Some(*attr),
+                attr if attr.into_attr_cmp() != point_attr => Some(attr.clone()),
                 _ => None,
             })
             .collect()

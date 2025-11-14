@@ -13,7 +13,7 @@ use crate::front_end::typesystem::modificators::{
 };
 use crate::front_end::typesystem::types::Type;
 
-pub fn build_type<'module_parser>(parser: &mut ModuleParser<'module_parser>) -> Result<Type, ()> {
+pub fn build_type(parser: &mut ModuleParser) -> Result<Type, ()> {
     match parser.peek().kind {
         tk_kind if tk_kind.is_type() => {
             parser.only_advance()?;
@@ -66,7 +66,7 @@ pub fn build_type<'module_parser>(parser: &mut ModuleParser<'module_parser>) -> 
     }
 }
 
-fn build_fn_ref_type(parser: &mut ModuleParser<'_>) -> Result<Type, ()> {
+fn build_fn_ref_type(parser: &mut ModuleParser) -> Result<Type, ()> {
     parser.consume(TokenType::LBracket)?;
 
     let mut parameter_types: Vec<Type> = Vec::with_capacity(10);
@@ -104,11 +104,11 @@ fn build_fn_ref_type(parser: &mut ModuleParser<'_>) -> Result<Type, ()> {
     ))
 }
 
-fn build_const_type(parser: &mut ModuleParser<'_>) -> Result<Type, ()> {
+fn build_const_type(parser: &mut ModuleParser) -> Result<Type, ()> {
     Ok(Type::Const(self::build_type(parser)?.into()))
 }
 
-fn build_array_type(parser: &mut ModuleParser<'_>) -> Result<Type, ()> {
+fn build_array_type(parser: &mut ModuleParser) -> Result<Type, ()> {
     parser.consume(TokenType::LBracket)?;
 
     let array_type: Type = self::build_type(parser)?;
@@ -139,7 +139,7 @@ fn build_array_type(parser: &mut ModuleParser<'_>) -> Result<Type, ()> {
     Ok(Type::Array(array_type.into()))
 }
 
-fn build_recursive_type(parser: &mut ModuleParser<'_>, mut before_type: Type) -> Result<Type, ()> {
+fn build_recursive_type(parser: &mut ModuleParser, mut before_type: Type) -> Result<Type, ()> {
     parser.consume(TokenType::LBracket)?;
 
     if let Type::Ptr(_) = &mut before_type {

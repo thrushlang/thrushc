@@ -12,7 +12,7 @@ use crate::front_end::typesystem::types::Type;
 pub type Struct<'parser> = (
     &'parser str,
     Vec<(&'parser str, Type, u32, Span)>,
-    ThrushAttributes<'parser>,
+    ThrushAttributes,
     StructureTypeModificator,
 );
 
@@ -45,10 +45,10 @@ pub type FoundSymbolId<'parser> = (
     Option<&'parser str>,
 );
 
-pub type CustomTypeSymbol<'ctx> = (Type, ThrushAttributes<'ctx>);
-pub type EnumSymbol<'ctx> = (EnumFields<'ctx>, ThrushAttributes<'ctx>);
-pub type StaticSymbol<'parser> = (Type, StaticMetadata, ThrushAttributes<'parser>);
-pub type ConstantSymbol<'parser> = (Type, ThrushAttributes<'parser>);
+pub type CustomTypeSymbol<'ctx> = (Type, ThrushAttributes);
+pub type EnumSymbol<'ctx> = (EnumFields<'ctx>, ThrushAttributes);
+pub type StaticSymbol<'parser> = (Type, StaticMetadata, ThrushAttributes);
+pub type ConstantSymbol<'parser> = (Type, ThrushAttributes);
 
 pub type LLISymbol<'parser> = (Type, Span);
 pub type LocalSymbol<'parser> = (Type, LocalMetadata, Span);

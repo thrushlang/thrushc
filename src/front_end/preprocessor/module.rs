@@ -3,14 +3,14 @@ use crate::{
 };
 
 #[derive(Debug)]
-pub struct Module<'module> {
+pub struct Module {
     file: CompilationUnit,
-    symbols: ExternalSymbols<'module>,
-    submodules: Vec<Module<'module>>,
+    symbols: ExternalSymbols,
+    submodules: Vec<Module>,
     id: usize,
 }
 
-impl<'module> Module<'module> {
+impl Module {
     #[inline]
     pub fn new(file: CompilationUnit) -> Self {
         Self {
@@ -22,30 +22,30 @@ impl<'module> Module<'module> {
     }
 }
 
-impl<'module> Module<'module> {
+impl Module {
     #[inline]
-    pub fn append_symbols(&mut self, symbols: &mut ExternalSymbols<'module>) {
+    pub fn append_symbols(&mut self, symbols: &mut ExternalSymbols) {
         self.symbols.append(symbols);
     }
 }
 
-impl<'module> Module<'module> {
+impl Module {
     #[inline]
-    pub fn add_submodule(&mut self, other: Module<'module>) {
+    pub fn add_submodule(&mut self, other: Module) {
         self.submodules.push(other);
     }
 }
 
-impl<'module> Module<'module> {
+impl Module {
     #[inline]
-    pub fn get_mut_symbols(&mut self) -> &mut ExternalSymbols<'module> {
+    pub fn get_mut_symbols(&mut self) -> &mut ExternalSymbols {
         &mut self.symbols
     }
 }
 
-impl<'module> Module<'module> {
+impl Module {
     #[inline]
-    pub fn get_symbols(&self) -> &ExternalSymbols<'module> {
+    pub fn get_symbols(&self) -> &ExternalSymbols {
         &self.symbols
     }
 

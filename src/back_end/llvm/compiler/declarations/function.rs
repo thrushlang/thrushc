@@ -1,18 +1,17 @@
 use crate::back_end::llvm::compiler::attrbuilder::{AttributeBuilder, LLVMAttributeApplicant};
-use crate::back_end::llvm::compiler::attributes::LLVMAttribute;
+use crate::back_end::llvm::compiler::attributes::{LLVMAttribute, LLVMAttributeComparator};
 use crate::back_end::llvm::compiler::codegen::LLVMCodegen;
 use crate::back_end::llvm::compiler::context::LLVMCodeGenContext;
 use crate::back_end::llvm::compiler::conventions::CallConvention;
 use crate::back_end::llvm::compiler::{block, obfuscation, typegen};
-use crate::back_end::llvm::types::repr::LLVMFunction;
+use crate::back_end::llvm::types::repr::{LLVMAttributes, LLVMFunction};
 
+use crate::back_end::llvm::types::traits::LLVMAttributesExtensions;
 use crate::front_end::lexer::span::Span;
 use crate::front_end::types::ast::Ast;
 use crate::front_end::types::parser::repr::Function;
 use crate::front_end::types::parser::repr::FunctionParameter;
 use crate::front_end::types::parser::stmts::traits::ThrushAttributesExtensions;
-use crate::front_end::types::parser::stmts::types::ThrushAttributes;
-use crate::front_end::types::semantic::linter::types::LLVMAttributeComparator;
 use crate::front_end::typesystem::types::Type;
 
 use inkwell::basic_block::BasicBlock;
@@ -36,7 +35,7 @@ pub fn compile_decl<'ctx>(context: &mut LLVMCodeGenContext<'_, 'ctx>, function: 
 
     let parameters: &[Ast<'ctx>] = function.3;
     let parameters_types: &[Type] = function.4;
-    let attributes: &ThrushAttributes = function.6;
+    let attributes: LLVMAttributes = function.6.as_llvm_attributes();
     let span: Span = function.7;
 
     let ignore_args: bool = attributes.has_ignore_attribute();
@@ -76,7 +75,7 @@ pub fn compile_decl<'ctx>(context: &mut LLVMCodeGenContext<'_, 'ctx>, function: 
 
     let mut attribute_builder: AttributeBuilder = AttributeBuilder::new(
         llvm_context,
-        attributes,
+        &attributes,
         LLVMAttributeApplicant::Function(llvm_function),
     );
 

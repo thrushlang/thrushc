@@ -1,5 +1,5 @@
-use super::types::LLVMAttributeComparator;
+use super::types::ThrushAttributeComparator;
 
-pub trait LLVMAttributeComparatorExtensions {
-    fn into_llvm_attr_cmp(self) -> LLVMAttributeComparator;
+pub trait ThrushAttributeComparatorExtensions {
+    fn into_attr_cmp(&self) -> ThrushAttributeComparator;
 }

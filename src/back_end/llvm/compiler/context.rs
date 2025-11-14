@@ -3,6 +3,7 @@ use std::path::PathBuf;
 use crate::back_end::llvm::compiler::memory::SymbolAllocated;
 use crate::back_end::llvm::compiler::memory::SymbolToAllocate;
 use crate::back_end::llvm::compiler::{self, abort, constgen, typegen};
+use crate::back_end::llvm::types::repr::LLVMAttributes;
 use crate::back_end::llvm::types::repr::LLVMFunction;
 
 use crate::back_end::llvm::compiler::alloc;
@@ -23,6 +24,7 @@ use crate::logging::{self, LoggingType};
 use crate::front_end::types::ast::metadata::constant::ConstantMetadata;
 use crate::front_end::types::ast::metadata::local::LocalMetadata;
 use crate::front_end::types::ast::metadata::staticvar::StaticMetadata;
+use crate::front_end::types::parser::stmts::traits::ThrushAttributesExtensions;
 use crate::front_end::types::parser::stmts::types::ThrushAttributes;
 use crate::front_end::typesystem::types::Type;
 
@@ -132,7 +134,7 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
 
         let kind: &Type = constant.2;
         let value: &Ast = constant.3;
-        let attributes: &ThrushAttributes = constant.4;
+        let attributes: LLVMAttributes = constant.4.as_llvm_attributes();
         let metadata: ConstantMetadata = constant.5;
         let span: Span = constant.6;
 
@@ -147,7 +149,7 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
             ascii_name,
             typegen::generate(self.context, kind),
             value,
-            attributes,
+            &attributes,
             metadata,
         );
 
@@ -244,7 +246,7 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
         let kind: &Type = staticvar.2;
         let value: Option<&Ast> = staticvar.3;
 
-        let attributes: &ThrushAttributes = staticvar.4;
+        let attributes: LLVMAttributes = staticvar.4.as_llvm_attributes();
         let metadata: StaticMetadata = staticvar.5;
         let span: Span = staticvar.6;
 
@@ -260,7 +262,7 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
                 ascii_name,
                 typegen::generate(self.context, kind),
                 Some(value),
-                attributes,
+                &attributes,
                 metadata,
             );
 
@@ -284,7 +286,7 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
             ascii_name,
             typegen::generate(self.context, kind),
             None,
-            attributes,
+            &attributes,
             metadata,
         );
 

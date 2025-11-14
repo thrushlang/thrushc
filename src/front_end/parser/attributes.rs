@@ -1,4 +1,3 @@
-use crate::back_end::llvm::compiler::attributes::LLVMAttribute;
 use crate::back_end::llvm::compiler::conventions::CallConvention;
 
 use crate::core::errors::standard::ThrushCompilerIssue;
@@ -7,6 +6,7 @@ use crate::front_end::lexer::span::Span;
 use crate::front_end::lexer::token::Token;
 use crate::front_end::lexer::tokentype::TokenType;
 use crate::front_end::parser::ParserContext;
+use crate::front_end::types::attributes::ThrushAttribute;
 use crate::front_end::types::parser::stmts::traits::TokenExtensions;
 use crate::front_end::types::parser::stmts::types::ThrushAttributes;
 
@@ -37,7 +37,7 @@ lazy_static! {
 pub fn build_attributes<'parser>(
     ctx: &mut ParserContext<'parser>,
     limits: &[TokenType],
-) -> Result<ThrushAttributes<'parser>, ThrushCompilerIssue> {
+) -> Result<ThrushAttributes, ThrushCompilerIssue> {
     let mut attributes: ThrushAttributes = Vec::with_capacity(10);
 
     while !limits.contains(&ctx.peek().kind) {
@@ -46,25 +46,25 @@ pub fn build_attributes<'parser>(
 
         match current_tk.kind {
             TokenType::Extern => {
-                attributes.push(LLVMAttribute::Extern(
+                attributes.push(ThrushAttribute::Extern(
                     self::build_external_attribute(ctx)?,
                     span,
                 ));
             }
 
             TokenType::Convention => {
-                attributes.push(LLVMAttribute::Convention(
+                attributes.push(ThrushAttribute::Convention(
                     self::build_call_convention_attribute(ctx)?,
                     span,
                 ));
             }
 
             TokenType::Public => {
-                attributes.push(self::LLVMAttribute::Public(span));
+                attributes.push(ThrushAttribute::Public(span));
                 ctx.only_advance()?;
             }
 
-            TokenType::AsmSyntax => attributes.push(LLVMAttribute::AsmSyntax(
+            TokenType::AsmSyntax => attributes.push(ThrushAttribute::AsmSyntax(
                 self::build_assembler_syntax_attribute(ctx)?,
                 span,
             )),
@@ -85,7 +85,7 @@ pub fn build_attributes<'parser>(
 
 fn build_external_attribute<'parser>(
     ctx: &mut ParserContext<'parser>,
-) -> Result<&'parser str, ThrushCompilerIssue> {
+) -> Result<String, ThrushCompilerIssue> {
     ctx.only_advance()?;
 
     ctx.consume(
@@ -97,10 +97,10 @@ fn build_external_attribute<'parser>(
     let name: &Token = ctx.consume(
         TokenType::Str,
         "Syntax error".into(),
-        "Expected a string literal for @extern(\"FFI NAME\").".into(),
+        "Expected a string literal.".into(),
     )?;
 
-    let ffi_name: &str = name.get_lexeme();
+    let name: String = name.get_lexeme().to_string();
 
     ctx.consume(
         TokenType::RParen,
@@ -108,12 +108,12 @@ fn build_external_attribute<'parser>(
         "Expected ')'.".into(),
     )?;
 
-    Ok(ffi_name)
+    Ok(name)
 }
 
 fn build_assembler_syntax_attribute<'parser>(
     ctx: &mut ParserContext<'parser>,
-) -> Result<&'parser str, ThrushCompilerIssue> {
+) -> Result<String, ThrushCompilerIssue> {
     ctx.only_advance()?;
 
     ctx.consume(
@@ -125,11 +125,10 @@ fn build_assembler_syntax_attribute<'parser>(
     let syntax_tk: &Token = ctx.consume(
         TokenType::Str,
         "Syntax error".into(),
-        "Expected a string literal for @asmsyntax(\"Intel\").".into(),
+        "Expected a string literal.".into(),
     )?;
 
-    let specified_syntax: &str = syntax_tk.get_lexeme();
-    let syntax_span: Span = syntax_tk.get_span();
+    let syntax: String = syntax_tk.get_lexeme().to_string();
 
     ctx.consume(
         TokenType::RParen,
@@ -137,24 +136,10 @@ fn build_assembler_syntax_attribute<'parser>(
         "Expected ')'.".into(),
     )?;
 
-    if !INLINE_ASSEMBLER_SYNTAXES.contains(&specified_syntax) {
-        return Err(ThrushCompilerIssue::Error(
-            "Syntax error".into(),
-            format!(
-                "Unknown assembler syntax, valid are '{}'.",
-                INLINE_ASSEMBLER_SYNTAXES.join(", ")
-            ),
-            None,
-            syntax_span,
-        ));
-    }
-
-    Ok(specified_syntax)
+    Ok(syntax)
 }
 
-fn build_call_convention_attribute(
-    ctx: &mut ParserContext,
-) -> Result<CallConvention, ThrushCompilerIssue> {
+fn build_call_convention_attribute(ctx: &mut ParserContext) -> Result<String, ThrushCompilerIssue> {
     ctx.only_advance()?;
 
     ctx.consume(
@@ -166,21 +151,10 @@ fn build_call_convention_attribute(
     let convention_tk: &Token = ctx.consume(
         TokenType::Str,
         "Syntax error".into(),
-        "Expected a literal 'str' for @convention(\"CONVENTION NAME\").".into(),
+        "Expected a string literal.".into(),
     )?;
 
-    let span: Span = convention_tk.span;
-    let name: &[u8] = convention_tk.lexeme.as_bytes();
-
-    if let Some(call_convention) = CALL_CONVENTIONS.get(name) {
-        ctx.consume(
-            TokenType::RParen,
-            "Syntax error".into(),
-            "Expected ')'.".into(),
-        )?;
-
-        return Ok(*call_convention);
-    }
+    let name: String = convention_tk.get_lexeme().to_string();
 
     ctx.consume(
         TokenType::RParen,
@@ -188,10 +162,31 @@ fn build_call_convention_attribute(
         "Expected ')'.".into(),
     )?;
 
-    Err(ThrushCompilerIssue::Error(
+    Ok(name)
+}
+
+fn build_linkage(ctx: &mut ParserContext) -> Result<String, ThrushCompilerIssue> {
+    ctx.only_advance()?;
+
+    ctx.consume(
+        TokenType::LParen,
         "Syntax error".into(),
-        "Unknown call convention.".into(),
-        None,
-        span,
-    ))
+        "Expected '('.".into(),
+    )?;
+
+    let linkage_tk: &Token = ctx.consume(
+        TokenType::Str,
+        "Syntax error".into(),
+        "Expected a string literal.".into(),
+    )?;
+
+    let linkage: String = linkage_tk.get_lexeme().to_string();
+
+    ctx.consume(
+        TokenType::RParen,
+        "Syntax error".into(),
+        "Expected ')'.".into(),
+    )?;
+
+    Ok(linkage)
 }

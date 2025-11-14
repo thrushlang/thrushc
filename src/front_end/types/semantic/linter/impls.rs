@@ -1,34 +1,34 @@
-use crate::back_end::llvm::compiler::attributes::LLVMAttribute;
+use crate::front_end::types::attributes::ThrushAttribute;
 
-use super::traits::LLVMAttributeComparatorExtensions;
-use super::types::LLVMAttributeComparator;
+use super::traits::ThrushAttributeComparatorExtensions;
+use super::types::ThrushAttributeComparator;
 
-impl LLVMAttributeComparatorExtensions for LLVMAttribute<'_> {
+impl ThrushAttributeComparatorExtensions for ThrushAttribute {
     #[inline]
-    fn into_llvm_attr_cmp(self) -> LLVMAttributeComparator {
+    fn into_attr_cmp(&self) -> ThrushAttributeComparator {
         match self {
-            LLVMAttribute::Extern(..) => LLVMAttributeComparator::Extern,
-            LLVMAttribute::Convention(..) => LLVMAttributeComparator::Convention,
-            LLVMAttribute::Stack(..) => LLVMAttributeComparator::Stack,
-            LLVMAttribute::Heap(..) => LLVMAttributeComparator::Heap,
-            LLVMAttribute::Public(..) => LLVMAttributeComparator::Public,
-            LLVMAttribute::Ignore(..) => LLVMAttributeComparator::Ignore,
-            LLVMAttribute::Hot(..) => LLVMAttributeComparator::Hot,
-            LLVMAttribute::NoInline(..) => LLVMAttributeComparator::NoInline,
-            LLVMAttribute::InlineHint(..) => LLVMAttributeComparator::InlineHint,
-            LLVMAttribute::MinSize(..) => LLVMAttributeComparator::MinSize,
-            LLVMAttribute::AlwaysInline(..) => LLVMAttributeComparator::AlwaysInline,
-            LLVMAttribute::SafeStack(_) => LLVMAttributeComparator::SafeStack,
-            LLVMAttribute::StrongStack(..) => LLVMAttributeComparator::StrongStack,
-            LLVMAttribute::WeakStack(..) => LLVMAttributeComparator::WeakStack,
-            LLVMAttribute::PreciseFloats(..) => LLVMAttributeComparator::PreciseFloats,
-            LLVMAttribute::AsmAlignStack(..) => LLVMAttributeComparator::AsmAlignStack,
-            LLVMAttribute::AsmSyntax(..) => LLVMAttributeComparator::AsmSyntax,
-            LLVMAttribute::AsmThrow(..) => LLVMAttributeComparator::AsmThrow,
-            LLVMAttribute::AsmSideEffects(..) => LLVMAttributeComparator::AsmSideEffects,
-            LLVMAttribute::Packed(..) => LLVMAttributeComparator::Packed,
-            LLVMAttribute::NoUnwind(..) => LLVMAttributeComparator::NoUnwind,
-            LLVMAttribute::OptFuzzing(..) => LLVMAttributeComparator::OptFuzzing,
+            ThrushAttribute::Extern(..) => ThrushAttributeComparator::Extern,
+            ThrushAttribute::Convention(..) => ThrushAttributeComparator::Convention,
+            ThrushAttribute::Stack(..) => ThrushAttributeComparator::Stack,
+            ThrushAttribute::Heap(..) => ThrushAttributeComparator::Heap,
+            ThrushAttribute::Public(..) => ThrushAttributeComparator::Public,
+            ThrushAttribute::Ignore(..) => ThrushAttributeComparator::Ignore,
+            ThrushAttribute::Hot(..) => ThrushAttributeComparator::Hot,
+            ThrushAttribute::NoInline(..) => ThrushAttributeComparator::NoInline,
+            ThrushAttribute::InlineHint(..) => ThrushAttributeComparator::InlineHint,
+            ThrushAttribute::MinSize(..) => ThrushAttributeComparator::MinSize,
+            ThrushAttribute::AlwaysInline(..) => ThrushAttributeComparator::AlwaysInline,
+            ThrushAttribute::SafeStack(_) => ThrushAttributeComparator::SafeStack,
+            ThrushAttribute::StrongStack(..) => ThrushAttributeComparator::StrongStack,
+            ThrushAttribute::WeakStack(..) => ThrushAttributeComparator::WeakStack,
+            ThrushAttribute::PreciseFloats(..) => ThrushAttributeComparator::PreciseFloats,
+            ThrushAttribute::AsmAlignStack(..) => ThrushAttributeComparator::AsmAlignStack,
+            ThrushAttribute::AsmSyntax(..) => ThrushAttributeComparator::AsmSyntax,
+            ThrushAttribute::AsmThrow(..) => ThrushAttributeComparator::AsmThrow,
+            ThrushAttribute::AsmSideEffects(..) => ThrushAttributeComparator::AsmSideEffects,
+            ThrushAttribute::Packed(..) => ThrushAttributeComparator::Packed,
+            ThrushAttribute::NoUnwind(..) => ThrushAttributeComparator::NoUnwind,
+            ThrushAttribute::OptFuzzing(..) => ThrushAttributeComparator::OptFuzzing,
         }
     }
 }

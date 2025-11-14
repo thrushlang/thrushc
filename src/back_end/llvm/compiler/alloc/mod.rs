@@ -19,7 +19,7 @@ pub fn local_variable<'ctx>(
     ascii_name: &str,
     kind: &Type,
     value: Option<&Ast>,
-    attributes: &ThrushAttributes<'ctx>,
+    attributes: &ThrushAttributes,
     span: Span,
 ) -> PointerValue<'ctx> {
     let llvm_context: &Context = context.get_llvm_context();

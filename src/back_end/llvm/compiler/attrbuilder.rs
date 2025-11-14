@@ -40,7 +40,7 @@ impl<'ctx> AttributeBuilder<'ctx> {
                 self.attributes
                     .iter()
                     .for_each(|attribute| match attribute {
-                        LLVMAttribute::AlwaysInline(..) => {
+                        LLVMAttribute::AlwaysInline => {
                             function.add_attribute(
                                 AttributeLoc::Function,
                                 self.llvm_context.create_enum_attribute(
@@ -50,14 +50,14 @@ impl<'ctx> AttributeBuilder<'ctx> {
                             );
                         }
 
-                        LLVMAttribute::InlineHint(..) => {
+                        LLVMAttribute::InlineHint => {
                             function.add_attribute(
                                 AttributeLoc::Function,
                                 self::create_inline_hint_attribute(self.llvm_context),
                             );
                         }
 
-                        LLVMAttribute::NoInline(..) => {
+                        LLVMAttribute::NoInline => {
                             function.add_attribute(
                                 AttributeLoc::Function,
                                 self.llvm_context.create_enum_attribute(
@@ -67,7 +67,7 @@ impl<'ctx> AttributeBuilder<'ctx> {
                             );
                         }
 
-                        LLVMAttribute::Hot(..) => {
+                        LLVMAttribute::Hot => {
                             function.add_attribute(
                                 AttributeLoc::Function,
                                 self.llvm_context.create_enum_attribute(
@@ -77,7 +77,7 @@ impl<'ctx> AttributeBuilder<'ctx> {
                             );
                         }
 
-                        LLVMAttribute::MinSize(..) => {
+                        LLVMAttribute::MinSize => {
                             function.add_attribute(
                                 AttributeLoc::Function,
                                 self.llvm_context.create_enum_attribute(
@@ -87,7 +87,7 @@ impl<'ctx> AttributeBuilder<'ctx> {
                             );
                         }
 
-                        LLVMAttribute::SafeStack(..) => {
+                        LLVMAttribute::SafeStack => {
                             function.add_attribute(
                                 AttributeLoc::Function,
                                 self.llvm_context.create_enum_attribute(
@@ -97,7 +97,7 @@ impl<'ctx> AttributeBuilder<'ctx> {
                             );
                         }
 
-                        LLVMAttribute::WeakStack(..) => {
+                        LLVMAttribute::WeakStack => {
                             function.add_attribute(
                                 AttributeLoc::Function,
                                 self.llvm_context.create_enum_attribute(
@@ -107,7 +107,7 @@ impl<'ctx> AttributeBuilder<'ctx> {
                             );
                         }
 
-                        LLVMAttribute::StrongStack(..) => {
+                        LLVMAttribute::StrongStack => {
                             function.add_attribute(
                                 AttributeLoc::Function,
                                 self.llvm_context.create_enum_attribute(
@@ -117,7 +117,7 @@ impl<'ctx> AttributeBuilder<'ctx> {
                             );
                         }
 
-                        LLVMAttribute::PreciseFloats(..) => {
+                        LLVMAttribute::PreciseFloats => {
                             function.add_attribute(
                                 AttributeLoc::Function,
                                 self.llvm_context.create_enum_attribute(
@@ -127,7 +127,7 @@ impl<'ctx> AttributeBuilder<'ctx> {
                             );
                         }
 
-                        LLVMAttribute::NoUnwind(..) => {
+                        LLVMAttribute::NoUnwind => {
                             function.add_attribute(
                                 AttributeLoc::Function,
                                 self.llvm_context.create_enum_attribute(
@@ -137,7 +137,7 @@ impl<'ctx> AttributeBuilder<'ctx> {
                             );
                         }
 
-                        LLVMAttribute::OptFuzzing(..) => {
+                        LLVMAttribute::OptFuzzing => {
                             function.add_attribute(
                                 AttributeLoc::Function,
                                 self.llvm_context.create_enum_attribute(

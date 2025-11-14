@@ -14,7 +14,7 @@ use crate::{
 
 pub fn build_import<'preprocessor>(
     ctx: &mut PreprocessorContext<'preprocessor>,
-) -> Result<Module<'preprocessor>, ()> {
+) -> Result<Module, ()> {
     ctx.consume(TokenType::Import)?;
 
     let path_tk: &Token = ctx.consume(TokenType::Str)?;

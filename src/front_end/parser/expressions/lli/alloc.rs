@@ -1,10 +1,9 @@
-use crate::back_end::llvm::compiler::attributes::LLVMAttribute;
-
 use crate::core::errors::standard::ThrushCompilerIssue;
 
 use crate::front_end::lexer::{span::Span, token::Token, tokentype::TokenType};
 use crate::front_end::parser::{ParserContext, attributes, typegen};
 use crate::front_end::types::ast::Ast;
+use crate::front_end::types::parser::stmts::types::ThrushAttributes;
 use crate::front_end::types::parser::stmts::{sites::AllocationSite, traits::TokenExtensions};
 use crate::front_end::typesystem::types::Type;
 
@@ -55,7 +54,7 @@ pub fn build_alloc<'parser>(
 
     alloc_type = Type::Ptr(Some(alloc_type.into()));
 
-    let attributes: Vec<LLVMAttribute> = if !ctx.check(TokenType::RBrace) {
+    let attributes: ThrushAttributes = if !ctx.check(TokenType::RBrace) {
         attributes::build_attributes(ctx, &[TokenType::RBrace, TokenType::SemiColon])?
     } else {
         Vec::new()

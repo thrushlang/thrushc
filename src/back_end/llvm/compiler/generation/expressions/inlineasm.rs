@@ -1,13 +1,12 @@
 use std::fmt::Display;
 
-use crate::back_end::llvm::compiler::attributes::LLVMAttribute;
+use crate::back_end::llvm::compiler::attributes::{LLVMAttribute, LLVMAttributeComparator};
 use crate::back_end::llvm::compiler::context::LLVMCodeGenContext;
 use crate::back_end::llvm::compiler::{codegen, typegen};
-use crate::back_end::llvm::types::traits::AssemblerFunctionExtensions;
+use crate::back_end::llvm::types::repr::LLVMAttributes;
+use crate::back_end::llvm::types::traits::{AssemblerFunctionExtensions, LLVMAttributesExtensions};
 
 use crate::front_end::types::ast::Ast;
-use crate::front_end::types::parser::stmts::traits::ThrushAttributesExtensions;
-use crate::front_end::types::parser::stmts::types::ThrushAttributes;
 use crate::front_end::typesystem::types::Type;
 
 use crate::core::console::logging::{self, LoggingType};
@@ -24,7 +23,7 @@ pub fn compile<'ctx>(
     constraints: &str,
     args: &'ctx [Ast],
     kind: &Type,
-    attributes: &ThrushAttributes,
+    attributes: LLVMAttributes,
 ) -> BasicValueEnum<'ctx> {
     let llvm_context: &Context = context.get_llvm_context();
     let llvm_builder: &Builder = context.get_llvm_builder();
@@ -42,11 +41,11 @@ pub fn compile<'ctx>(
     let align_stack: bool = attributes.has_asmalignstack_attribute();
     let can_throw: bool = attributes.has_asmthrow_attribute();
 
-    attributes.iter().for_each(|attr| {
-        if let LLVMAttribute::AsmSyntax(new_syntax, ..) = *attr {
-            syntax = str::to_inline_assembler_dialect(new_syntax);
-        }
-    });
+    if let Some(LLVMAttribute::AsmSyntax(new_syntax, ..)) =
+        attributes.get_attr(LLVMAttributeComparator::AsmSyntax)
+    {
+        syntax = str::to_inline_assembler_dialect(new_syntax);
+    }
 
     let fn_inline_assembler: PointerValue = llvm_context.create_inline_asm(
         asm_function_type,

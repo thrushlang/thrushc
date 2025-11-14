@@ -33,7 +33,7 @@ impl<'preprocessor> Preprocessor<'preprocessor> {
 }
 
 impl<'preprocessor> Preprocessor<'preprocessor> {
-    pub fn generate_modules(&mut self) -> Result<Vec<Module<'preprocessor>>, ()> {
+    pub fn generate_modules(&mut self) -> Result<Vec<Module>, ()> {
         let mut ctx: PreprocessorContext =
             PreprocessorContext::new(self.tokens, Diagnostician::new(self.file));
 

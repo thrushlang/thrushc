@@ -1,14 +1,13 @@
 #![allow(clippy::too_many_arguments)]
 
-use crate::back_end::llvm::compiler::attributes::LLVMAttribute;
+use crate::back_end::llvm::compiler::attributes::{LLVMAttribute, LLVMAttributeComparator};
 use crate::back_end::llvm::compiler::context::LLVMCodeGenContext;
 use crate::back_end::llvm::compiler::obfuscation;
 
+use crate::back_end::llvm::types::repr::LLVMAttributes;
+use crate::back_end::llvm::types::traits::LLVMAttributesExtensions;
 use crate::front_end::types::ast::metadata::constant::{ConstantMetadata, LLVMConstantMetadata};
 use crate::front_end::types::ast::metadata::staticvar::{LLVMStaticMetadata, StaticMetadata};
-use crate::front_end::types::parser::stmts::traits::ThrushAttributesExtensions;
-use crate::front_end::types::parser::stmts::types::ThrushAttributes;
-use crate::front_end::types::semantic::linter::types::LLVMAttributeComparator;
 
 use inkwell::ThreadLocalMode;
 use inkwell::module::Module;
@@ -24,7 +23,7 @@ fn generate_name(
     context: &LLVMCodeGenContext,
     base_name: &str,
     prefix: &str,
-    attributes: Option<&ThrushAttributes>,
+    attributes: Option<&LLVMAttributes>,
 ) -> String {
     if let Some(attrs) = attributes {
         if let Some(LLVMAttribute::Extern(extern_name, ..)) =
@@ -113,7 +112,7 @@ pub fn global_constant<'ctx>(
     name: &str,
     llvm_type: BasicTypeEnum<'ctx>,
     value: BasicValueEnum<'ctx>,
-    attributes: &'ctx ThrushAttributes<'ctx>,
+    attributes: &LLVMAttributes<'ctx>,
     metadata: ConstantMetadata,
 ) -> PointerValue<'ctx> {
     let llvm_module: &Module = context.get_llvm_module();
@@ -183,7 +182,7 @@ pub fn global_static<'ctx>(
     name: &str,
     llvm_type: BasicTypeEnum<'ctx>,
     value: Option<BasicValueEnum<'ctx>>,
-    attributes: &'ctx ThrushAttributes<'ctx>,
+    attributes: &LLVMAttributes<'ctx>,
     metadata: StaticMetadata,
 ) -> PointerValue<'ctx> {
     let llvm_module: &Module = context.get_llvm_module();

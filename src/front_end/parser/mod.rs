@@ -59,7 +59,7 @@ pub struct ParserContext<'parser> {
 pub struct Parser<'parser> {
     tokens: &'parser [Token],
     file: &'parser CompilationUnit,
-    modules: Vec<Module<'parser>>,
+    modules: Vec<Module>,
 }
 
 impl<'parser> Parser<'parser> {
@@ -67,7 +67,7 @@ impl<'parser> Parser<'parser> {
     pub fn parse(
         tokens: &'parser [Token],
         file: &'parser CompilationUnit,
-        modules: Vec<Module<'parser>>,
+        modules: Vec<Module>,
     ) -> (ParserContext<'parser>, bool) {
         Self {
             tokens,

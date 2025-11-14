@@ -9,10 +9,7 @@ use crate::{
     },
 };
 
-pub fn build_import<'preprocessor>(
-    ctx: &mut ModuleParser<'preprocessor>,
-    module: &mut Module<'preprocessor>,
-) -> Result<(), ()> {
+pub fn build_import(ctx: &mut ModuleParser, module: &mut Module) -> Result<(), ()> {
     let unit: &CompilationUnit = module.get_unit();
 
     ctx.consume(TokenType::Import)?;

@@ -100,7 +100,7 @@ pub enum Ast<'ctx> {
         fields: StructFields<'ctx>,
         kind: Type,
         span: Span,
-        attributes: ThrushAttributes<'ctx>,
+        attributes: ThrushAttributes,
     },
 
     Constructor {
@@ -178,7 +178,7 @@ pub enum Ast<'ctx> {
     Enum {
         name: &'ctx str,
         fields: EnumFields<'ctx>,
-        attributes: ThrushAttributes<'ctx>,
+        attributes: ThrushAttributes,
         span: Span,
     },
     EnumValue {
@@ -203,7 +203,7 @@ pub enum Ast<'ctx> {
         parameters: Vec<Ast<'ctx>>,
         parameters_types: Vec<Type>,
         return_type: Type,
-        attributes: ThrushAttributes<'ctx>,
+        attributes: ThrushAttributes,
         span: Span,
     },
     IntrinsicParameter {
@@ -218,7 +218,7 @@ pub enum Ast<'ctx> {
         assembler: String,
         constraints: String,
         return_type: Type,
-        attributes: ThrushAttributes<'ctx>,
+        attributes: ThrushAttributes,
         span: Span,
     },
     AssemblerFunctionParameter {
@@ -234,7 +234,7 @@ pub enum Ast<'ctx> {
         parameter_types: Vec<Type>,
         body: Option<Rc<Ast<'ctx>>>,
         return_type: Type,
-        attributes: ThrushAttributes<'ctx>,
+        attributes: ThrushAttributes,
         span: Span,
     },
     FunctionParameter {
@@ -257,7 +257,7 @@ pub enum Ast<'ctx> {
         ascii_name: &'ctx str,
         kind: Type,
         value: Option<Rc<Ast<'ctx>>>,
-        attributes: ThrushAttributes<'ctx>,
+        attributes: ThrushAttributes,
         metadata: StaticMetadata,
         span: Span,
     },
@@ -268,7 +268,7 @@ pub enum Ast<'ctx> {
         ascii_name: &'ctx str,
         kind: Type,
         value: Rc<Ast<'ctx>>,
-        attributes: ThrushAttributes<'ctx>,
+        attributes: ThrushAttributes,
         metadata: ConstantMetadata,
         span: Span,
     },
@@ -279,7 +279,7 @@ pub enum Ast<'ctx> {
         ascii_name: &'ctx str,
         kind: Type,
         value: Option<Rc<Ast<'ctx>>>,
-        attributes: ThrushAttributes<'ctx>,
+        attributes: ThrushAttributes,
         metadata: LocalMetadata,
         span: Span,
     },
@@ -312,7 +312,7 @@ pub enum Ast<'ctx> {
     Alloc {
         alloc: Type,
         site_allocation: AllocationSite,
-        attributes: ThrushAttributes<'ctx>,
+        attributes: ThrushAttributes,
         span: Span,
     },
 
@@ -378,7 +378,7 @@ pub enum Ast<'ctx> {
         constraints: String,
         args: Vec<Ast<'ctx>>,
         kind: Type,
-        attributes: ThrushAttributes<'ctx>,
+        attributes: ThrushAttributes,
         span: Span,
     },
 

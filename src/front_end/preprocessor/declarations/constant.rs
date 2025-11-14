@@ -13,9 +13,7 @@ use crate::front_end::{
     typesystem::types::Type,
 };
 
-pub fn build_constant<'module_parser>(
-    parser: &mut ModuleParser<'module_parser>,
-) -> Result<Option<ExternalSymbol<'module_parser>>, ()> {
+pub fn build_constant(parser: &mut ModuleParser) -> Result<Option<ExternalSymbol>, ()> {
     parser.consume(TokenType::Const)?;
     parser.advance_until_check(TokenType::Identifier)?;
 

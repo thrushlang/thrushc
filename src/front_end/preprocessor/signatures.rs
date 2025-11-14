@@ -6,9 +6,9 @@ use crate::front_end::{
 };
 
 #[derive(Debug)]
-pub struct ExternalSymbol<'signature> {
+pub struct ExternalSymbol {
     pub name: String,
-    pub signature: Signature<'signature>,
+    pub signature: Signature,
     pub variant: Variant,
 }
 
@@ -24,22 +24,22 @@ pub enum Variant {
 }
 
 #[derive(Debug)]
-pub enum Signature<'signature> {
+pub enum Signature {
     Function {
         kind: Type,
         parameters: FunctionParametersSignature,
         span: Span,
-        attributes: ThrushAttributes<'signature>,
+        attributes: ThrushAttributes,
     },
     Constant {
         kind: Type,
         span: Span,
-        attributes: ThrushAttributes<'signature>,
+        attributes: ThrushAttributes,
     },
     Static {
         kind: Type,
         span: Span,
-        attributes: ThrushAttributes<'signature>,
+        attributes: ThrushAttributes,
     },
     Struct {
         kind: Type,

@@ -1,15 +1,16 @@
 use crate::back_end::llvm::compiler::attrbuilder::{AttributeBuilder, LLVMAttributeApplicant};
-use crate::back_end::llvm::compiler::attributes::LLVMAttribute;
+use crate::back_end::llvm::compiler::attributes::{LLVMAttribute, LLVMAttributeComparator};
 use crate::back_end::llvm::compiler::context::LLVMCodeGenContext;
 use crate::back_end::llvm::compiler::conventions::CallConvention;
 use crate::back_end::llvm::compiler::typegen;
 
+use crate::back_end::llvm::types::repr::LLVMAttributes;
+use crate::back_end::llvm::types::traits::LLVMAttributesExtensions;
 use crate::front_end::lexer::span::Span;
 use crate::front_end::types::ast::Ast;
 use crate::front_end::types::parser::repr::Intrinsic;
 use crate::front_end::types::parser::stmts::traits::ThrushAttributesExtensions;
-use crate::front_end::types::parser::stmts::types::ThrushAttributes;
-use crate::front_end::types::semantic::linter::types::LLVMAttributeComparator;
+
 use crate::front_end::typesystem::types::Type;
 
 use inkwell::{context::Context, module::Module, types::FunctionType, values::FunctionValue};
@@ -23,7 +24,7 @@ pub fn compile<'ctx>(context: &mut LLVMCodeGenContext<'_, 'ctx>, intrinsic: Intr
     let return_type: &Type = intrinsic.2;
     let parameters: &[Ast<'ctx>] = intrinsic.3;
     let parameters_types: &[Type] = intrinsic.4;
-    let attributes: &ThrushAttributes = intrinsic.5;
+    let attributes: LLVMAttributes = intrinsic.5.as_llvm_attributes();
 
     let span: Span = intrinsic.6;
 
@@ -44,7 +45,7 @@ pub fn compile<'ctx>(context: &mut LLVMCodeGenContext<'_, 'ctx>, intrinsic: Intr
 
     let mut attribute_builder: AttributeBuilder = AttributeBuilder::new(
         llvm_context,
-        attributes,
+        &attributes,
         LLVMAttributeApplicant::Function(llvm_function),
     );
 

@@ -1,39 +1,38 @@
 #![allow(clippy::upper_case_acronyms)]
 
 use crate::back_end::llvm::compiler::conventions::CallConvention;
-use crate::front_end::lexer::span::Span;
 
 #[derive(Debug, Clone, Copy)]
 pub enum LLVMAttribute<'ctx> {
     // Function Attributes
-    Extern(&'ctx str, Span),
-    Convention(CallConvention, Span),
-    Public(Span),
-    Ignore(Span),
-    Hot(Span),
-    NoInline(Span),
-    InlineHint(Span),
-    MinSize(Span),
-    AlwaysInline(Span),
-    SafeStack(Span),
-    StrongStack(Span),
-    WeakStack(Span),
-    PreciseFloats(Span),
-    NoUnwind(Span),
-    OptFuzzing(Span),
+    Extern(&'ctx str),
+    Convention(CallConvention),
+    Public,
+    Ignore,
+    Hot,
+    NoInline,
+    InlineHint,
+    MinSize,
+    AlwaysInline,
+    SafeStack,
+    StrongStack,
+    WeakStack,
+    PreciseFloats,
+    NoUnwind,
+    OptFuzzing,
 
     // LLVM Structure Modificator
-    Packed(Span),
+    Packed,
 
     // Memory Management
-    Stack(Span),
-    Heap(Span),
+    Stack,
+    Heap,
 
     // Assembler Attributes
-    AsmThrow(Span),
-    AsmSyntax(&'ctx str, Span),
-    AsmAlignStack(Span),
-    AsmSideEffects(Span),
+    AsmThrow,
+    AsmSyntax(&'ctx str),
+    AsmAlignStack,
+    AsmSideEffects,
 }
 
 impl LLVMAttribute<'_> {
@@ -44,57 +43,57 @@ impl LLVMAttribute<'_> {
 
     #[inline]
     pub fn is_hot_attribute(&self) -> bool {
-        matches!(self, LLVMAttribute::Hot(..))
+        matches!(self, LLVMAttribute::Hot)
     }
 
     #[inline]
     pub fn is_ignore_attribute(&self) -> bool {
-        matches!(self, LLVMAttribute::Ignore(..))
+        matches!(self, LLVMAttribute::Ignore)
     }
 
     #[inline]
     pub fn is_public_attribute(&self) -> bool {
-        matches!(self, LLVMAttribute::Public(..))
+        matches!(self, LLVMAttribute::Public)
     }
 
     #[inline]
     pub fn is_noinline_attribute(&self) -> bool {
-        matches!(self, LLVMAttribute::NoInline(..))
+        matches!(self, LLVMAttribute::NoInline)
     }
 
     #[inline]
     pub fn is_inline_attribute(&self) -> bool {
-        matches!(self, LLVMAttribute::InlineHint(..))
+        matches!(self, LLVMAttribute::InlineHint)
     }
 
     #[inline]
     pub fn is_alwaysinline_attribute(&self) -> bool {
-        matches!(self, LLVMAttribute::AlwaysInline(..))
+        matches!(self, LLVMAttribute::AlwaysInline)
     }
 
     #[inline]
     pub fn is_minsize_attribute(&self) -> bool {
-        matches!(self, LLVMAttribute::MinSize(..))
+        matches!(self, LLVMAttribute::MinSize)
     }
 
     #[inline]
     pub fn is_heap_attribute(&self) -> bool {
-        matches!(self, LLVMAttribute::Heap(..))
+        matches!(self, LLVMAttribute::Heap)
     }
 
     #[inline]
     pub fn is_asmsideeffects_attribute(&self) -> bool {
-        matches!(self, LLVMAttribute::AsmSideEffects(..))
+        matches!(self, LLVMAttribute::AsmSideEffects)
     }
 
     #[inline]
     pub fn is_asmthrow_attribute(&self) -> bool {
-        matches!(self, LLVMAttribute::AsmThrow(..))
+        matches!(self, LLVMAttribute::AsmThrow)
     }
 
     #[inline]
     pub fn is_asmalingstack_attribute(&self) -> bool {
-        matches!(self, LLVMAttribute::AsmAlignStack(..))
+        matches!(self, LLVMAttribute::AsmAlignStack)
     }
 
     #[inline]
@@ -104,36 +103,35 @@ impl LLVMAttribute<'_> {
 
     #[inline]
     pub fn is_packed(&self) -> bool {
-        matches!(self, LLVMAttribute::Packed(..))
+        matches!(self, LLVMAttribute::Packed)
     }
 }
 
-impl LLVMAttribute<'_> {
-    #[inline]
-    pub fn get_span(&self) -> Span {
-        match self {
-            LLVMAttribute::Extern(_, span) => *span,
-            LLVMAttribute::Convention(_, span) => *span,
-            LLVMAttribute::Public(span) => *span,
-            LLVMAttribute::Ignore(span) => *span,
-            LLVMAttribute::Hot(span) => *span,
-            LLVMAttribute::NoInline(span) => *span,
-            LLVMAttribute::InlineHint(span) => *span,
-            LLVMAttribute::MinSize(span) => *span,
-            LLVMAttribute::AlwaysInline(span) => *span,
-            LLVMAttribute::SafeStack(span) => *span,
-            LLVMAttribute::StrongStack(span) => *span,
-            LLVMAttribute::WeakStack(span) => *span,
-            LLVMAttribute::PreciseFloats(span) => *span,
-            LLVMAttribute::AsmThrow(span) => *span,
-            LLVMAttribute::AsmSyntax(_, span) => *span,
-            LLVMAttribute::AsmSideEffects(span) => *span,
-            LLVMAttribute::AsmAlignStack(span) => *span,
-            LLVMAttribute::Stack(span) => *span,
-            LLVMAttribute::Heap(span) => *span,
-            LLVMAttribute::Packed(span) => *span,
-            LLVMAttribute::NoUnwind(span) => *span,
-            LLVMAttribute::OptFuzzing(span) => *span,
-        }
-    }
+#[derive(Debug, Clone, PartialEq, Hash, Eq)]
+pub enum LLVMAttributeComparator {
+    Extern,
+    Convention,
+    Public,
+    Ignore,
+    Hot,
+    NoInline,
+    InlineHint,
+    MinSize,
+    AlwaysInline,
+    SafeStack,
+    StrongStack,
+    WeakStack,
+    PreciseFloats,
+    NoUnwind,
+    OptFuzzing,
+
+    Stack,
+    Heap,
+
+    AsmThrow,
+    AsmSyntax,
+    AsmAlignStack,
+    AsmSideEffects,
+
+    Packed,
 }

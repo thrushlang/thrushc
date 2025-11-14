@@ -47,7 +47,7 @@ pub enum LinterAttributeApplicant {
 }
 
 #[derive(Debug, Clone, PartialEq, Hash, Eq)]
-pub enum LLVMAttributeComparator {
+pub enum ThrushAttributeComparator {
     Extern,
     Convention,
     Public,

@@ -1,16 +1,13 @@
-use crate::{
-    back_end::llvm::compiler::attributes::LLVMAttribute,
-    front_end::{
-        lexer::{span::Span, token::Token, tokentype::TokenType},
-        preprocessor::parser::ModuleParser,
-        types::parser::stmts::types::ThrushAttributes,
-    },
+use crate::front_end::{
+    lexer::{span::Span, token::Token, tokentype::TokenType},
+    preprocessor::parser::ModuleParser,
+    types::{attributes::ThrushAttribute, parser::stmts::types::ThrushAttributes},
 };
 
-pub fn build_attributes<'module_parser>(
-    ctx: &mut ModuleParser<'module_parser>,
+pub fn build_attributes(
+    ctx: &mut ModuleParser,
     limits: &[TokenType],
-) -> Result<ThrushAttributes<'module_parser>, ()> {
+) -> Result<ThrushAttributes, ()> {
     let mut attributes: ThrushAttributes = Vec::with_capacity(10);
 
     while !limits.contains(&ctx.peek().kind) {
@@ -29,7 +26,7 @@ pub fn build_attributes<'module_parser>(
             }
 
             TokenType::Public => {
-                attributes.push(LLVMAttribute::Public(span));
+                attributes.push(ThrushAttribute::Public(span));
                 ctx.only_advance()?;
             }
 
