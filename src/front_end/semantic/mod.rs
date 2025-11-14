@@ -50,9 +50,9 @@ impl<'semantic_analyzer> SemanticAnalyzer<'semantic_analyzer> {
             return true;
         }
 
-        let type_checker_errors: bool = self.type_checker.check();
-        let analyzer_errors: bool = self.analyzer.check();
-        let attr_checker_errors: bool = self.attr_checker.check();
+        let type_checker_errors: bool = self.type_checker.start();
+        let analyzer_errors: bool = self.analyzer.start();
+        let attr_checker_errors: bool = self.attr_checker.start();
 
         if !type_checker_errors && !analyzer_errors && !attr_checker_errors {
             self.linter.check();

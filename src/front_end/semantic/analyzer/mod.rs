@@ -46,7 +46,7 @@ impl<'analyzer> Analyzer<'analyzer> {
 }
 
 impl<'analyzer> Analyzer<'analyzer> {
-    pub fn check(&mut self) -> bool {
+    pub fn start(&mut self) -> bool {
         self.declare_forward();
 
         while !self.is_eof() {
@@ -59,6 +59,12 @@ impl<'analyzer> Analyzer<'analyzer> {
             self.advance();
         }
 
+        self.check()
+    }
+}
+
+impl<'analyzer> Analyzer<'analyzer> {
+    fn check(&mut self) -> bool {
         self.warnings.iter().for_each(|warn| {
             self.diagnostician
                 .dispatch_diagnostic(warn, LoggingType::Warning);

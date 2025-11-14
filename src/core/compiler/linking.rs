@@ -12,6 +12,7 @@ pub struct LinkingCompilersConfiguration {
 }
 
 impl LinkingCompilersConfiguration {
+    #[inline]
     pub fn new() -> Self {
         Self {
             use_clang: false,
@@ -26,7 +27,9 @@ impl LinkingCompilersConfiguration {
             debug_gcc_commands: false,
         }
     }
+}
 
+impl LinkingCompilersConfiguration {
     #[inline]
     pub fn get_args(&self) -> &[String] {
         &self.compiler_args

@@ -51,7 +51,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
 }
 
 impl<'type_checker> TypeChecker<'type_checker> {
-    pub fn check(&mut self) -> bool {
+    pub fn start(&mut self) -> bool {
         self.declare_forward();
 
         while !self.is_eof() {
@@ -64,6 +64,12 @@ impl<'type_checker> TypeChecker<'type_checker> {
             self.advance();
         }
 
+        self.check()
+    }
+}
+
+impl<'type_checker> TypeChecker<'type_checker> {
+    fn check(&mut self) -> bool {
         self.warnings.iter().for_each(|warn| {
             self.diagnostician
                 .dispatch_diagnostic(warn, LoggingType::Warning);
