@@ -4,14 +4,11 @@ mod front_end;
 mod linkage;
 mod middle_end;
 
-use {
-    crate::core::{
-        compiler::thrushc::ThrushCompiler,
-        console::{self, cli::CLI, logging},
-    },
-    lazy_static::lazy_static,
-    std::{env, time::Instant},
-};
+use crate::core::compiler::thrushc::ThrushCompiler;
+use crate::core::console::{self, cli::CLI, logging};
+
+use lazy_static::lazy_static;
+use std::{env, time::Instant};
 
 fn main() -> ! {
     console::set_up();
