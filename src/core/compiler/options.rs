@@ -28,6 +28,7 @@ pub struct CompilerOptions {
     clean_object: bool,
     clean_llvm_ir: bool,
     clean_llvm_bitcode: bool,
+    clean_build: bool,
     obfuscate_archive_names: bool,
     obfuscate_ir: bool,
 
@@ -106,6 +107,7 @@ impl CompilationUnit {
 }
 
 impl CompilerOptions {
+    #[inline]
     pub fn new() -> Self {
         Self {
             use_llvm_backend: false,
@@ -122,6 +124,7 @@ impl CompilerOptions {
             clean_object: false,
             clean_llvm_ir: false,
             clean_llvm_bitcode: false,
+            clean_build: false,
             obfuscate_archive_names: true,
             obfuscate_ir: true,
 
@@ -191,6 +194,11 @@ impl CompilerOptions {
     }
 
     #[inline]
+    pub fn set_clean_build(&mut self) {
+        self.clean_build = true;
+    }
+
+    #[inline]
     pub fn set_no_obfuscate_archive_names(&mut self) {
         self.obfuscate_archive_names = false;
     }
@@ -255,6 +263,11 @@ impl CompilerOptions {
     #[inline]
     pub fn get_clean_llvm_bitcode(&self) -> bool {
         self.clean_llvm_bitcode
+    }
+
+    #[inline]
+    pub fn get_clean_build(&self) -> bool {
+        self.clean_build
     }
 
     #[inline]

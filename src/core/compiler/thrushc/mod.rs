@@ -25,7 +25,7 @@ use inkwell::{
 
 use crate::{
     back_end::llvm::compiler::jit::LLVMJITCompiler,
-    core::compiler::backends::llvm::jit,
+    core::compiler::{backends::llvm::jit, emitters::cleaner},
     front_end::preprocessor::{self, Preprocessor},
     linkage::linkers::lld::LLVMLinker,
     middle_end,
@@ -89,10 +89,10 @@ impl ThrushCompiler<'_> {
             Target::initialize_all(&InitializationConfig::default());
 
             if self.get_options().get_llvm_backend_options().is_jit() {
-                return self.compile_jit();
+                return self.compile_jit_llvm();
+            } else {
+                return self.compile_aot_llvm();
             }
-
-            return self.compile_aot();
         }
 
         (self.thrushc_time.as_millis(), self.linking_time.as_millis())
@@ -100,7 +100,9 @@ impl ThrushCompiler<'_> {
 }
 
 impl<'thrushc> ThrushCompiler<'thrushc> {
-    fn compile_aot(&mut self) -> (u128, u128) {
+    fn compile_aot_llvm(&mut self) -> (u128, u128) {
+        cleaner::auto_clean(self.get_options());
+
         let mut interrumped: bool = false;
 
         self.uncompiled.iter().for_each(|file| {
@@ -294,7 +296,9 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
 }
 
 impl<'thrushc> ThrushCompiler<'thrushc> {
-    fn compile_jit(&mut self) -> (u128, u128) {
+    fn compile_jit_llvm(&mut self) -> (u128, u128) {
+        cleaner::auto_clean(self.get_options());
+
         let context: Context = Context::create();
 
         let mut interrumped: bool = false;

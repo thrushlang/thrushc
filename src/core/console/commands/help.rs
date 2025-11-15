@@ -375,6 +375,16 @@ pub fn show_help() -> ! {
         &format!(
             "{} {} {}\n",
             "•".bold(),
+            "--clean-build".custom_color((141, 141, 142)).bold(),
+            "Clean the compiler build folder that holds everything."
+        ),
+    );
+
+    logging::write(
+        logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {}\n",
+            "•".bold(),
             "--clean-tokens".custom_color((141, 141, 142)).bold(),
             "Clean the compiler folder that holds the lexical analysis tokens."
         ),

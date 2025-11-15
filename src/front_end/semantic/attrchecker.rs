@@ -230,6 +230,13 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
             );
         }
 
+        if let Ast::Local {
+            attributes, span, ..
+        } = ast
+        {
+            self.analyze_attrs(attributes, AttributeCheckerAttributeApplicant::Local, *span);
+        }
+
         if let Ast::Block { stmts, .. } = ast {
             stmts.iter().for_each(|stmt| {
                 self.analyze_ast(stmt);
@@ -357,7 +364,8 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
 
             AttributeCheckerAttributeApplicant::Constant
             | AttributeCheckerAttributeApplicant::Struct
-            | AttributeCheckerAttributeApplicant::Enum => {
+            | AttributeCheckerAttributeApplicant::Enum
+            | AttributeCheckerAttributeApplicant::Local => {
                 self.check_irrelevant_attributes(attributes, applicant);
                 self.check_illogical_attributes(attributes);
 
@@ -434,6 +442,9 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
             ThrushAttributeComparator::Packed,
         ];
 
+        const VALID_LOCAL_ATTRIBUTES: &[ThrushAttributeComparator] =
+            &[ThrushAttributeComparator::Heap];
+
         match applicant {
             AttributeCheckerAttributeApplicant::Function => {
                 attributes.iter().for_each(|attr| {
@@ -507,6 +518,17 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
                         self.add_warning(ThrushCompilerIssue::Warning(
                             "Irrelevant attribute".into(),
                             "This attribute is not applicable for structures.".into(),
+                            attr.get_span(),
+                        ));
+                    }
+                });
+            }
+            AttributeCheckerAttributeApplicant::Local => {
+                attributes.iter().for_each(|attr| {
+                    if !VALID_LOCAL_ATTRIBUTES.contains(&attr.into_attr_cmp()) {
+                        self.add_warning(ThrushCompilerIssue::Warning(
+                            "Irrelevant attribute".into(),
+                            "This attribute is not applicable for local variable.".into(),
                             attr.get_span(),
                         ));
                     }

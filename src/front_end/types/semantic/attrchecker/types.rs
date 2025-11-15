@@ -7,4 +7,5 @@ pub enum AttributeCheckerAttributeApplicant {
     Static,
     Struct,
     Enum,
+    Local,
 }

@@ -1,8 +1,12 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use crate::core::compiler::options::CompilerOptions;
 
 pub fn auto_clean(options: &CompilerOptions) {
+    if options.get_clean_build() {
+        self::clean_build(options);
+    }
+
     if options.get_clean_assembler() {
         self::clean_assembler(options);
     }
@@ -22,6 +26,14 @@ pub fn auto_clean(options: &CompilerOptions) {
     if options.get_clean_tokens() {
         self::clean_tokens(options);
     }
+}
+
+#[inline]
+fn clean_build(options: &CompilerOptions) {
+    let build_path: &Path = options.get_build_dir();
+
+    let _ = std::fs::remove_dir_all(build_path);
+    let _ = std::fs::create_dir_all(build_path);
 }
 
 #[inline]

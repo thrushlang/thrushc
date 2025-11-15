@@ -24,8 +24,6 @@ pub fn llvm_after_optimization(
 ) -> Result<bool, ()> {
     let compiler_options: &CompilerOptions = compiler.get_options();
 
-    emitters::cleaner::auto_clean(compiler_options);
-
     if compiler_options.contains_emitable(EmitableUnit::LLVMBitcode) {
         if !emitters::llvmbitcode::emit_llvm_bitcode(
             compiler,
@@ -104,8 +102,6 @@ pub fn llvm_before_optimization(
 ) -> Result<bool, ()> {
     let compiler_options: &CompilerOptions = compiler.get_options();
 
-    emitters::cleaner::auto_clean(compiler_options);
-
     if compiler_options.contains_emitable(EmitableUnit::RawLLVMIR) {
         if let Err(error) =
             emitters::llvmir::emit_llvm_ir(compiler, llvm_module, build_dir, file.get_name(), true)
@@ -164,8 +160,6 @@ pub fn after_frontend(
     emited: Emited,
 ) -> bool {
     let compiler_options: &CompilerOptions = compiler.get_options();
-
-    emitters::cleaner::auto_clean(compiler.options);
 
     if compiler_options.contains_emitable(EmitableUnit::Tokens) {
         if let Emited::Tokens(tokens) = emited {

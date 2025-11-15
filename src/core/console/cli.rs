@@ -493,6 +493,11 @@ impl CLI {
                     .set_debug_gcc_commands(true);
             }
 
+            "--clean-build" => {
+                self.advance();
+                self.options.set_clean_build();
+            }
+
             "--clean-tokens" => {
                 self.advance();
                 self.options.set_clean_tokens();
