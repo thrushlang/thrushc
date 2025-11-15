@@ -1,2 +1,0 @@
-@echo off
-cross build --target aarch64-unknown-linux-musl
