@@ -92,6 +92,17 @@ impl ThrushOptimization {
             ThrushOptimization::Mcqueen | ThrushOptimization::Size => OptimizationLevel::Aggressive,
         }
     }
+
+    #[inline]
+    pub fn is_opt(self) -> bool {
+        matches!(
+            self,
+            ThrushOptimization::Low
+                | ThrushOptimization::Mid
+                | ThrushOptimization::Mcqueen
+                | ThrushOptimization::Size
+        )
+    }
 }
 
 impl CompilationUnit {

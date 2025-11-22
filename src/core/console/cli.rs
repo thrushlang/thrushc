@@ -21,6 +21,7 @@ use crate::core::console::logging;
 use crate::core::console::logging::LoggingType;
 use crate::core::console::position::CommandLinePosition;
 use crate::core::console::utils;
+use crate::core::constants::COMPILER_VERSION;
 
 use inkwell::targets::CodeModel;
 use inkwell::targets::RelocMode;
@@ -131,7 +132,7 @@ impl CLI {
 
             "-v" | "--version" | "version" => {
                 self.advance();
-                println!("{}", env!("CARGO_PKG_VERSION"));
+                logging::write(logging::OutputIn::Stdout, COMPILER_VERSION);
                 process::exit(0);
             }
 
@@ -173,7 +174,6 @@ impl CLI {
 
             "llvm-print-opt-passes" => {
                 self.advance();
-
                 llvm::info::print_all_available_opt_passes();
             }
 
@@ -420,6 +420,24 @@ impl CLI {
                 self.advance();
                 self.validate_llvm_required(arg);
                 self.validate_aot_is_enable(arg);
+            }
+
+            "--omit-frame-pointer" => {
+                self.advance();
+                self.validate_llvm_required(arg);
+
+                self.get_mut_options()
+                    .get_mut_llvm_backend_options()
+                    .set_omit_frame_pointer();
+            }
+
+            "--omit-uwtable" => {
+                self.advance();
+                self.validate_llvm_required(arg);
+
+                self.get_mut_options()
+                    .get_mut_llvm_backend_options()
+                    .set_omit_uwtable();
             }
 
             "--reloc" => {

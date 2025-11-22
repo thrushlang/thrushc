@@ -27,6 +27,8 @@ pub struct LLVMBackend {
     code_model: CodeModel,
     modificator_passes: Vec<LLVMModificatorPasses>,
     opt_passes: String,
+    omit_frame_pointer: bool,
+    omit_uwtable: bool,
 
     use_jit: bool,
     jit_config: JITConfiguration,
@@ -59,6 +61,8 @@ impl LLVMBackend {
             code_model: CodeModel::Default,
             modificator_passes: Vec::with_capacity(10),
             opt_passes: String::with_capacity(100),
+            omit_frame_pointer: false,
+            omit_uwtable: false,
             use_jit: false,
             jit_config: JITConfiguration::new(),
         }
@@ -107,6 +111,16 @@ impl LLVMBackend {
     }
 
     #[inline]
+    pub fn omit_frame_pointer(&self) -> bool {
+        self.omit_frame_pointer
+    }
+
+    #[inline]
+    pub fn omit_uwtable(&self) -> bool {
+        self.omit_uwtable
+    }
+
+    #[inline]
     pub fn is_jit(&self) -> bool {
         self.use_jit
     }
@@ -143,6 +157,16 @@ impl LLVMBackend {
     #[inline]
     pub fn set_code_model(&mut self, code_model: CodeModel) {
         self.code_model = code_model;
+    }
+
+    #[inline]
+    pub fn set_omit_frame_pointer(&mut self) {
+        self.omit_frame_pointer = true;
+    }
+
+    #[inline]
+    pub fn set_omit_uwtable(&mut self) {
+        self.omit_uwtable = true;
     }
 
     #[inline]

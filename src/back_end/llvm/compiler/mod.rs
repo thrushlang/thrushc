@@ -17,6 +17,7 @@ pub mod generation;
 pub mod indexes;
 pub mod jit;
 pub mod memory;
+pub mod metadata;
 pub mod obfuscation;
 pub mod optimization;
 pub mod predicates;
@@ -26,7 +27,10 @@ pub mod symbols;
 pub mod typegen;
 
 use {
-    crate::{back_end::llvm::compiler::context::LLVMCodeGenContext, front_end::types::ast::Ast},
+    crate::{
+        back_end::llvm::compiler::{context::LLVMCodeGenContext, metadata::LLVMMetadata},
+        front_end::types::ast::Ast,
+    },
     codegen::LLVMCodegen,
 };
 
@@ -35,6 +39,7 @@ pub struct LLVMCompiler;
 impl<'a, 'ctx> LLVMCompiler {
     #[inline]
     pub fn compile(context: &'a mut LLVMCodeGenContext<'a, 'ctx>, ast: &'ctx [Ast<'ctx>]) {
+        LLVMMetadata::setup(context);
         LLVMCodegen::generate(context, ast);
     }
 }

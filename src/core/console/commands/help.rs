@@ -103,9 +103,11 @@ pub fn show_help() -> ! {
             "{} {} {}\n",
             "•".bold(),
             "-build-dir".custom_color((141, 141, 142)).bold(),
-            "Set the build directory.",
+            "Configure the build directory for the AOT compiler.",
         ),
     );
+
+    logging::write(logging::OutputIn::Stderr, "\nLinkage flags:\n\n");
 
     logging::write(
         logging::OutputIn::Stderr,
@@ -233,7 +235,7 @@ pub fn show_help() -> ! {
             "•".bold(),
             "-print".custom_color((141, 141, 142)).bold(),
             "llvm-ir|raw-llvm-ir|tokens",
-            "Displays the final compilation on stdout.",
+            "Displays the final compilation on standard output.",
         ),
     );
 
@@ -256,7 +258,7 @@ pub fn show_help() -> ! {
             "{} {} {}\n",
             "•".bold(),
             "-jit".custom_color((141, 141, 142)).bold(),
-            "Enable the use of the Just-In-Time Compiler for code execution.",
+            "Enable the use of the JIT Compiler for code execution.",
         ),
     );
 
@@ -266,7 +268,7 @@ pub fn show_help() -> ! {
             "{} {} {}\n",
             "•".bold(),
             "-jit-libc".custom_color((141, 141, 142)).bold(),
-            "Specify the C runtime to link for code execution via the Just-In-Time Compiler.",
+            "Specify the C runtime to link for code execution via the JIT Compiler.",
         ),
     );
 
@@ -276,7 +278,7 @@ pub fn show_help() -> ! {
             "{} {} {}\n",
             "•".bold(),
             "-jit-link".custom_color((141, 141, 142)).bold(),
-            "Specify, add, and link an external dynamic library for code execution via the Just-In-Time Compiler.",
+            "Specify, add, and link an external dynamic library for code execution via the JIT Compiler.",
         ),
     );
 
@@ -323,6 +325,26 @@ pub fn show_help() -> ! {
             "--codemodel".custom_color((141, 141, 142)).bold(),
             "[small|medium|large|kernel]",
             "Define how code is organized and accessed at machine code level."
+        ),
+    );
+
+    logging::write(
+        logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {}\n",
+            "•".bold(),
+            "--omit-frame-pointer".custom_color((141, 141, 142)).bold(),
+            "Regardless of the optimization level, it omits the emission of the frame pointer.",
+        ),
+    );
+
+    logging::write(
+        logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {}\n",
+            "•".bold(),
+            "--omit-uwtable".custom_color((141, 141, 142)).bold(),
+            "It omits the unwind table required for exception handling and stack tracing.",
         ),
     );
 

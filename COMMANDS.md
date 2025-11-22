@@ -26,7 +26,10 @@ LLVM Commands:
 
 General flags:
 
-• -build-dir Set the build directory.
+• -build-dir Configure the build directory for the AOT compiler.
+
+Linkage flags:
+
 • -clang-link Enable embedded Clang for linking.
 • -gcc-link [usr/bin/gcc] Specifies GNU Compiler Collection (GCC) for linking.
 • -custom-clang-link [/usr/bin/clang] Specifies the path for use of an external Clang for linking.
@@ -41,14 +44,14 @@ Compiler flags:
 • -cpu [haswell] Specify in LLVM the CPU to optimize.
 • -cpu-features [+sse2,+cx16,+sahf,-tbm] Specify in LLVM the new features of the CPU to use.
 • -emit [llvm-bc|llvm-ir|asm|raw-llvm-ir|raw-llvm-bc|raw-asm|obj|ast|tokens] Compile the code into specified representation.
-• -print [llvm-ir|raw-llvm-ir|tokens] Displays the final compilation on stdout.
+• -print [llvm-ir|raw-llvm-ir|tokens] Displays the final compilation on standard output.
 • -opt [O0|O1|O2|mcqueen] Optimization level.
 
 JIT Compiler flags:
 
-• -jit Enable the use of the Just-In-Time Compiler for code execution.
-• -jit-libc Specify the C runtime to link for code execution via the Just-In-Time Compiler.
-• -jit-link Specify, add, and link an external dynamic library for code execution via the Just-In-Time Compiler.
+• -jit Enable the use of the JIT Compiler for code execution.
+• -jit-libc Specify the C runtime to link for code execution via the JIT Compiler.
+• -jit-link Specify, add, and link an external dynamic library for code execution via the JIT Compiler.
 
 Extra compiler flags:
 
@@ -56,6 +59,8 @@ Extra compiler flags:
 • --modificator-passes [loopvectorization;loopunroll;loopinterleaving;loopsimplifyvectorization;mergefunctions;callgraphprofile;forgetallscevinloopunroll;licmmssaaccpromcap=0;licmmssaoptcap=0;] Pass a list of custom modificator optimization passes to the LLVM backend.
 • --reloc [static|pic|dynamic] Indicate how references to memory addresses and linkage symbols are handled.
 • --codemodel [small|medium|large|kernel] Define how code is organized and accessed at machine code level.
+• --omit-frame-pointer Regardless of the optimization level, it omits the emission of the frame pointer.
+• --omit-uwtable It omits the unwind table required for exception handling and stack tracing.
 
 Special flags:
 
@@ -67,6 +72,7 @@ Useful flags:
 • --debug-clang-command Displays the generated command for Clang in the phase of linking.
 • --debug-gcc-commands Displays the generated command for GCC in the phase of linking.
 
+• --clean-build Clean the compiler build folder that holds everything.
 • --clean-tokens Clean the compiler folder that holds the lexical analysis tokens.
 • --clean-assembler Clean the compiler folder containing emitted assembler.
 • --clean-llvm-ir Clean the compiler folder containing the emitted LLVM IR.

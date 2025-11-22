@@ -1,2 +1,4 @@
 pub const COMPILER_HARD_OBFUSCATION_LEVEL: usize = 30;
 pub const COMPILER_LOW_OBFUSCATION_LEVEL: usize = 15;
+
+pub const COMPILER_VERSION: &str = env!("CARGO_PKG_VERSION");

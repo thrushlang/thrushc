@@ -56,9 +56,6 @@ impl LinkageChecker<'_> {
         let libraries: Vec<PathBuf> = self.prepare();
 
         while !self.is_eof() {
-
-            
-
             self.advance_file();
         }
 
