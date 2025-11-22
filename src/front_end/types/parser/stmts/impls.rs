@@ -1,119 +1,16 @@
 use std::fmt::Display;
 
-use crate::back_end::llvm::types::repr::LLVMAttributes;
-use crate::front_end::lexer::span::Span;
 use crate::front_end::types::ast::{Ast, metadata::local::LocalMetadata};
 
-use crate::front_end::types::attributes::ThrushAttribute;
-use crate::front_end::types::semantic::linter::traits::ThrushAttributeComparatorExtensions;
-use crate::front_end::types::semantic::linter::types::ThrushAttributeComparator;
 use crate::front_end::typesystem::modificators::StructureTypeModificator;
 use crate::front_end::typesystem::traits::TypeStructExtensions;
 use crate::front_end::typesystem::types::Type;
 
 use crate::front_end::types::parser::stmts::traits::{
-    ConstructorExtensions, StructFieldsExtensions, ThrushAttributesExtensions,
+    ConstructorExtensions, StructFieldsExtensions,
 };
 
-use crate::front_end::types::parser::stmts::types::{Constructor, StructFields, ThrushAttributes};
-
-impl ThrushAttributesExtensions for ThrushAttributes {
-    #[inline]
-    fn has_extern_attribute(&self) -> bool {
-        self.iter().any(|attr| attr.is_extern_attribute())
-    }
-
-    #[inline]
-    fn has_ignore_attribute(&self) -> bool {
-        self.iter().any(|attr| attr.is_ignore_attribute())
-    }
-
-    #[inline]
-    fn has_heap_attr(&self) -> bool {
-        self.iter().any(|attr| attr.is_heap_attribute())
-    }
-
-    #[inline]
-    fn has_public_attribute(&self) -> bool {
-        self.iter().any(|attr| attr.is_public_attribute())
-    }
-
-    #[inline]
-    fn has_hot_attr(&self) -> bool {
-        self.iter().any(|attr| attr.is_hot_attribute())
-    }
-
-    #[inline]
-    fn has_inline_attr(&self) -> bool {
-        self.iter().any(|attr| attr.is_inline_attribute())
-    }
-
-    #[inline]
-    fn has_minsize_attr(&self) -> bool {
-        self.iter().any(|attr| attr.is_minsize_attribute())
-    }
-
-    #[inline]
-    fn has_inlinealways_attr(&self) -> bool {
-        self.iter().any(|attr| attr.is_alwaysinline_attribute())
-    }
-
-    #[inline]
-    fn has_noinline_attr(&self) -> bool {
-        self.iter().any(|attr| attr.is_noinline_attribute())
-    }
-
-    #[inline]
-    fn has_asmalignstack_attribute(&self) -> bool {
-        self.iter().any(|attr| attr.is_asmalingstack_attribute())
-    }
-
-    #[inline]
-    fn has_asmsideffects_attribute(&self) -> bool {
-        self.iter().any(|attr| attr.is_asmsideeffects_attribute())
-    }
-
-    #[inline]
-    fn has_asmthrow_attribute(&self) -> bool {
-        self.iter().any(|attr| attr.is_asmthrow_attribute())
-    }
-
-    #[inline]
-    fn has_asmsyntax_attribute(&self) -> bool {
-        self.iter().any(|attr| attr.is_asmsyntax_attribute())
-    }
-
-    #[inline]
-    fn match_attr(&self, cmp: ThrushAttributeComparator) -> Option<Span> {
-        if let Some(attr_found) = self.iter().find(|attr| attr.into_attr_cmp() == cmp) {
-            return Some(attr_found.get_span());
-        }
-
-        None
-    }
-
-    #[inline]
-    fn get_attr(&self, cmp: ThrushAttributeComparator) -> Option<ThrushAttribute> {
-        if let Some(attr_found) = self.iter().find(|attr| attr.into_attr_cmp() == cmp) {
-            return Some(attr_found.clone());
-        }
-
-        None
-    }
-
-    #[inline]
-    fn as_llvm_attributes(&self) -> LLVMAttributes<'_> {
-        let mut llvm_attributes: LLVMAttributes = Vec::with_capacity(self.len());
-
-        for attribute in self {
-            if let Some(llvm_attribute) = attribute.as_llvm_attribute() {
-                llvm_attributes.push(llvm_attribute);
-            }
-        }
-
-        llvm_attributes
-    }
-}
+use crate::front_end::types::parser::stmts::types::{Constructor, StructFields};
 
 impl StructFieldsExtensions for StructFields<'_> {
     #[inline]

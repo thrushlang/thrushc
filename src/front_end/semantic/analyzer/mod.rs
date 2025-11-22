@@ -6,7 +6,7 @@ use crate::core::diagnostic::diagnostician::Diagnostician;
 use crate::core::errors::standard::ThrushCompilerIssue;
 
 use crate::front_end::types::ast::Ast;
-use crate::front_end::types::parser::stmts::traits::ThrushAttributesExtensions;
+use crate::front_end::types::attributes::traits::ThrushAttributesExtensions;
 
 mod builtins;
 mod constants;

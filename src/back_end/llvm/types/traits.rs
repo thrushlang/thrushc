@@ -3,13 +3,14 @@ use inkwell::InlineAsmDialect;
 use crate::back_end::llvm::compiler::attributes::{LLVMAttribute, LLVMAttributeComparator};
 
 pub trait AssemblerFunctionExtensions {
-    fn to_inline_assembler_dialect(syntax: &str) -> InlineAsmDialect;
+    fn as_inline_assembler_dialect(syntax: &str) -> InlineAsmDialect;
 }
 
 pub trait LLVMAttributesExtensions {
     fn has_extern_attribute(&self) -> bool;
     fn has_ignore_attribute(&self) -> bool;
     fn has_public_attribute(&self) -> bool;
+    fn has_linkage_attribute(&self) -> bool;
     fn has_hot_attr(&self) -> bool;
     fn has_inline_attr(&self) -> bool;
     fn has_noinline_attr(&self) -> bool;
@@ -28,4 +29,8 @@ pub trait LLVMAttributesExtensions {
 
 pub trait LLVMAttributeComparatorExtensions {
     fn as_attr_cmp(&self) -> LLVMAttributeComparator;
+}
+
+pub trait LLVMLinkageExtensions {
+    fn fmt(&self) -> &'static str;
 }

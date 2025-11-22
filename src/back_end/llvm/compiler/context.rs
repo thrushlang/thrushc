@@ -16,6 +16,7 @@ use crate::core::diagnostic::diagnostician::Diagnostician;
 use crate::core::compiler::options::CompilerOptions;
 use crate::front_end::lexer::span::Span;
 use crate::front_end::types::ast::Ast;
+use crate::front_end::types::attributes::traits::ThrushAttributesExtensions;
 use crate::front_end::types::parser::repr::{
     GlobalConstant, GlobalStatic, Local, LocalConstant, LocalStatic,
 };
@@ -24,7 +25,6 @@ use crate::logging::{self, LoggingType};
 use crate::front_end::types::ast::metadata::constant::ConstantMetadata;
 use crate::front_end::types::ast::metadata::local::LocalMetadata;
 use crate::front_end::types::ast::metadata::staticvar::StaticMetadata;
-use crate::front_end::types::parser::stmts::traits::ThrushAttributesExtensions;
 use crate::front_end::types::parser::stmts::types::ThrushAttributes;
 use crate::front_end::typesystem::types::Type;
 

@@ -134,7 +134,7 @@ impl Lexer {
         let bytes: Vec<u8> = self.lexeme_bytes();
 
         let ascii: String = if kind.is_identifier() {
-            self.as_ascii_lexeme(&lexeme)
+            string::convert_to_ascii(self, &lexeme)
         } else {
             String::default()
         };
@@ -198,29 +198,6 @@ impl Lexer {
     #[inline]
     pub fn add_error(&mut self, error: ThrushCompilerIssue) {
         self.errors.push(error);
-    }
-}
-
-impl Lexer {
-    #[must_use]
-    pub fn as_ascii_lexeme(&self, lexeme: &str) -> String {
-        let mut scaped_unicode_string: String = String::with_capacity(lexeme.len());
-
-        lexeme.chars().for_each(|char| {
-            if self.is_ascii_char(char) {
-                scaped_unicode_string.push(char);
-            } else {
-                let mut utf8_buf: [u8; 4] = [0u8; 4];
-
-                let utf8_bytes: &[u8] = char.encode_utf8(&mut utf8_buf).as_bytes();
-
-                utf8_bytes.iter().for_each(|byte| {
-                    scaped_unicode_string.push_str(&format!("{:02X}", byte));
-                });
-            }
-        });
-
-        scaped_unicode_string
     }
 }
 

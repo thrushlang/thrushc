@@ -13,7 +13,7 @@ use crate::back_end::llvm::compiler::{ptr, statements};
 
 use crate::front_end::types::ast::Ast;
 use crate::front_end::types::ast::metadata::local::LocalMetadata;
-use crate::front_end::types::parser::stmts::traits::ThrushAttributesExtensions;
+use crate::front_end::types::attributes::traits::ThrushAttributesExtensions;
 use crate::front_end::typesystem::traits::DereferenceExtensions;
 use crate::front_end::typesystem::types::Type;
 

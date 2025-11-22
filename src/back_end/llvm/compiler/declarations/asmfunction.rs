@@ -1,3 +1,4 @@
+use crate::back_end::llvm::compiler::attrbuilder::{AttributeBuilder, LLVMAttributeApplicant};
 use crate::back_end::llvm::compiler::attributes::LLVMAttributeComparator;
 use crate::back_end::llvm::compiler::context::LLVMCodeGenContext;
 use crate::back_end::llvm::compiler::conventions::CallConvention;
@@ -9,8 +10,8 @@ use crate::back_end::llvm::types::traits::{AssemblerFunctionExtensions, LLVMAttr
 
 use crate::front_end::lexer::span::Span;
 use crate::front_end::types::ast::Ast;
+use crate::front_end::types::attributes::traits::ThrushAttributesExtensions;
 use crate::front_end::types::parser::repr::AssemblerFunction;
-use crate::front_end::types::parser::stmts::traits::ThrushAttributesExtensions;
 use crate::front_end::typesystem::types::Type;
 
 use std::path::PathBuf;
@@ -58,7 +59,7 @@ pub fn compile<'ctx>(context: &mut LLVMCodeGenContext<'_, 'ctx>, asm_fn: Assembl
     let syntax: InlineAsmDialect = if let Some(LLVMAttribute::AsmSyntax(new_syntax, ..)) =
         attributes.get_attr(LLVMAttributeComparator::AsmSyntax)
     {
-        str::to_inline_assembler_dialect(new_syntax)
+        str::as_inline_assembler_dialect(new_syntax)
     } else {
         InlineAsmDialect::Intel
     };
@@ -89,15 +90,22 @@ pub fn compile<'ctx>(context: &mut LLVMCodeGenContext<'_, 'ctx>, asm_fn: Assembl
     let asm_function: FunctionValue =
         llvm_module.add_function(&llvm_function_name, asm_function_type, None);
 
+    if !is_public {
+        asm_function.set_linkage(Linkage::LinkerPrivate);
+    }
+
+    AttributeBuilder::new(
+        llvm_context,
+        &attributes,
+        LLVMAttributeApplicant::Function(asm_function),
+    )
+    .add_function_attributes();
+
     let last_block: BasicBlock = context.get_last_builder_block();
 
     let asm_function_block: BasicBlock = block::append_block(context, asm_function);
 
     llvm_builder.position_at_end(asm_function_block);
-
-    if !is_public {
-        asm_function.set_linkage(Linkage::LinkerPrivate);
-    }
 
     let args: Vec<BasicMetadataValueEnum> = asm_function
         .get_param_iter()

@@ -7,9 +7,10 @@ use crate::front_end::parser::attributes;
 use crate::front_end::parser::expr;
 use crate::front_end::types::ast::Ast;
 
+use crate::front_end::types::attributes::traits::ThrushAttributesExtensions;
 use crate::front_end::types::parser::stmts::traits::{
     FoundSymbolEither, FoundSymbolExtension, StructExtensions, StructFieldsExtensions,
-    ThrushAttributesExtensions, TokenExtensions,
+    TokenExtensions,
 };
 use crate::front_end::types::parser::stmts::types::{StructFields, ThrushAttributes};
 use crate::front_end::types::parser::symbols::types::{CustomTypeSymbol, Struct};

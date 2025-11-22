@@ -21,10 +21,13 @@ pub fn lex(lexer: &mut Lexer) -> Result<(), ThrushCompilerIssue> {
 
     lexer.end_span();
 
-    let string_span: Span = Span::new(lexer.line, lexer.span);
-    let raw_lexeme: String = lexer.shrink_lexeme();
+    let span: Span = Span::new(lexer.line, lexer.span);
 
-    self::validate_and_finalize_string(lexer, found_end_quote, string_span, raw_lexeme)?;
+    let lexeme: String = lexer.shrink_lexeme();
+    let bytes: Vec<u8> = lexer.shrink_lexeme_bytes();
+    let ascii: String = self::convert_to_ascii(lexer, &lexeme);
+
+    self::validate_and_finalize_string(lexer, found_end_quote, span, lexeme, ascii, bytes)?;
 
     Ok(())
 }
@@ -86,6 +89,8 @@ fn validate_and_finalize_string(
     found_end_quote: bool,
     span: Span,
     lexeme: String,
+    ascii: String,
+    bytes: Vec<u8>,
 ) -> Result<(), ThrushCompilerIssue> {
     if !found_end_quote {
         return Err(ThrushCompilerIssue::Error(
@@ -98,11 +103,32 @@ fn validate_and_finalize_string(
 
     lexer.tokens.push(Token {
         lexeme,
-        ascii: String::default(),
-        bytes: Vec::default(),
+        ascii,
+        bytes,
         kind: TokenType::Str,
         span,
     });
 
     Ok(())
+}
+
+#[must_use]
+pub fn convert_to_ascii(lexer: &Lexer, lexeme: &str) -> String {
+    let mut scaped_unicode_string: String = String::with_capacity(lexeme.len());
+
+    lexeme.chars().for_each(|char| {
+        if lexer.is_ascii_char(char) {
+            scaped_unicode_string.push(char);
+        } else {
+            let mut utf8_buf: [u8; 4] = [0u8; 4];
+
+            let utf8_bytes: &[u8] = char.encode_utf8(&mut utf8_buf).as_bytes();
+
+            utf8_bytes.iter().for_each(|byte| {
+                scaped_unicode_string.push_str(&format!("{:02X}", byte));
+            });
+        }
+    });
+
+    scaped_unicode_string
 }

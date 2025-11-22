@@ -12,7 +12,7 @@ use crate::front_end::parser::statements::block;
 use crate::front_end::parser::typegen;
 use crate::front_end::types::ast::Ast;
 use crate::front_end::types::ast::metadata::fnparam::FunctionParameterMetadata;
-use crate::front_end::types::parser::stmts::traits::ThrushAttributesExtensions;
+use crate::front_end::types::attributes::traits::ThrushAttributesExtensions;
 use crate::front_end::types::parser::stmts::traits::TokenExtensions;
 use crate::front_end::types::parser::stmts::types::ThrushAttributes;
 use crate::front_end::types::parser::symbols::types::ParametersTypes;

@@ -3,7 +3,8 @@ use crate::front_end::lexer::tokentype::TokenType;
 use crate::front_end::preprocessor::attributes;
 use crate::front_end::preprocessor::parser::ModuleParser;
 
-use crate::front_end::types::parser::stmts::traits::{ThrushAttributesExtensions, TokenExtensions};
+use crate::front_end::types::attributes::traits::ThrushAttributesExtensions;
+use crate::front_end::types::parser::stmts::traits::TokenExtensions;
 use crate::front_end::types::parser::stmts::types::ThrushAttributes;
 use crate::front_end::types::preprocessor::symbols::traits::FoundModuleSymbolEither;
 use crate::front_end::types::preprocessor::symbols::traits::FoundModuleSymbolEntension;

@@ -1,17 +1,16 @@
-use crate::front_end::{
-    lexer::{span::Span, token::Token, tokentype::TokenType},
-    preprocessor::{
-        attributes,
-        parser::ModuleParser,
-        signatures::{ExternalSymbol, Signature, Variant},
-        typegen,
-    },
-    types::parser::stmts::{
-        traits::{ThrushAttributesExtensions, TokenExtensions},
-        types::ThrushAttributes,
-    },
-    typesystem::types::Type,
-};
+use crate::front_end::lexer::span::Span;
+use crate::front_end::lexer::token::Token;
+use crate::front_end::lexer::tokentype::TokenType;
+
+use crate::front_end::preprocessor::attributes;
+use crate::front_end::preprocessor::parser::ModuleParser;
+use crate::front_end::preprocessor::signatures::{ExternalSymbol, Signature, Variant};
+use crate::front_end::preprocessor::typegen;
+
+use crate::front_end::types::attributes::traits::ThrushAttributesExtensions;
+use crate::front_end::types::parser::stmts::traits::TokenExtensions;
+use crate::front_end::types::parser::stmts::types::ThrushAttributes;
+use crate::front_end::typesystem::types::Type;
 
 pub fn build_constant(parser: &mut ModuleParser) -> Result<Option<ExternalSymbol>, ()> {
     parser.consume(TokenType::Const)?;

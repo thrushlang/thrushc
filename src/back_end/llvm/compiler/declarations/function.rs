@@ -9,9 +9,9 @@ use crate::back_end::llvm::types::repr::{LLVMAttributes, LLVMFunction};
 use crate::back_end::llvm::types::traits::LLVMAttributesExtensions;
 use crate::front_end::lexer::span::Span;
 use crate::front_end::types::ast::Ast;
+use crate::front_end::types::attributes::traits::ThrushAttributesExtensions;
 use crate::front_end::types::parser::repr::Function;
 use crate::front_end::types::parser::repr::FunctionParameter;
-use crate::front_end::types::parser::stmts::traits::ThrushAttributesExtensions;
 use crate::front_end::typesystem::types::Type;
 
 use inkwell::basic_block::BasicBlock;
@@ -41,7 +41,7 @@ pub fn compile_decl<'ctx>(context: &mut LLVMCodeGenContext<'_, 'ctx>, function: 
     let ignore_args: bool = attributes.has_ignore_attribute();
     let is_public: bool = attributes.has_public_attribute();
 
-    let mut call_convention: u32 = if let Some(LLVMAttribute::Convention(conv, ..)) =
+    let call_convention: u32 = if let Some(LLVMAttribute::Convention(conv, ..)) =
         attributes.get_attr(LLVMAttributeComparator::Convention)
     {
         conv as u32
@@ -73,13 +73,12 @@ pub fn compile_decl<'ctx>(context: &mut LLVMCodeGenContext<'_, 'ctx>, function: 
         llvm_function.set_linkage(Linkage::LinkerPrivate);
     }
 
-    let mut attribute_builder: AttributeBuilder = AttributeBuilder::new(
+    AttributeBuilder::new(
         llvm_context,
         &attributes,
         LLVMAttributeApplicant::Function(llvm_function),
-    );
-
-    attribute_builder.add_function_attributes(&mut call_convention);
+    )
+    .add_function_attributes();
 
     context.set_current_fn(llvm_function);
 

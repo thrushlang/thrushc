@@ -1,17 +1,20 @@
 use std::fmt::Display;
 
 use crate::{
-    back_end::llvm::{compiler::attributes::LLVMAttribute, types::repr::LLVMAttributes},
-    front_end::lexer::span::Span,
+    back_end::llvm::compiler::attributes::LLVMAttribute,
+    front_end::{lexer::span::Span, types::attributes::linkage::ThrushLinkage},
 };
 
 pub mod callconventions;
+pub mod impls;
 pub mod linkage;
+pub mod traits;
 
 #[derive(Debug, Clone)]
 pub enum ThrushAttribute {
     Extern(String, Span),
     Convention(String, Span),
+    Linkage(ThrushLinkage, String, Span),
     Public(Span),
     Ignore(Span),
     Hot(Span),
@@ -37,6 +40,36 @@ pub enum ThrushAttribute {
     AsmSyntax(String, Span),
     AsmAlignStack(Span),
     AsmSideEffects(Span),
+}
+
+#[derive(Debug, Clone, PartialEq, Hash, Eq)]
+pub enum ThrushAttributeComparator {
+    Extern,
+    Convention,
+    Linkage,
+    Public,
+    Ignore,
+    Hot,
+    NoInline,
+    InlineHint,
+    MinSize,
+    AlwaysInline,
+    SafeStack,
+    StrongStack,
+    WeakStack,
+    PreciseFloats,
+    NoUnwind,
+    OptFuzzing,
+
+    Stack,
+    Heap,
+
+    AsmThrow,
+    AsmSyntax,
+    AsmAlignStack,
+    AsmSideEffects,
+
+    Packed,
 }
 
 impl ThrushAttribute {
@@ -109,6 +142,11 @@ impl ThrushAttribute {
     pub fn is_packed(&self) -> bool {
         matches!(self, ThrushAttribute::Packed(..))
     }
+
+    #[inline]
+    pub fn is_linkage_attribute(&self) -> bool {
+        matches!(self, ThrushAttribute::Linkage(..))
+    }
 }
 
 impl ThrushAttribute {
@@ -117,6 +155,7 @@ impl ThrushAttribute {
         match self {
             ThrushAttribute::Extern(_, span) => *span,
             ThrushAttribute::Convention(_, span) => *span,
+            ThrushAttribute::Linkage(.., span) => *span,
             ThrushAttribute::Public(span) => *span,
             ThrushAttribute::Ignore(span) => *span,
             ThrushAttribute::Hot(span) => *span,
@@ -147,6 +186,9 @@ impl ThrushAttribute {
         match self {
             ThrushAttribute::Extern(external_name, ..) => {
                 Some(LLVMAttribute::Extern(external_name))
+            }
+            ThrushAttribute::Linkage(linkage, ..) => {
+                Some(LLVMAttribute::Linkage(linkage.get_llvm_linkage()))
             }
             ThrushAttribute::Convention(name, ..) => Some(LLVMAttribute::Convention(
                 callconventions::get_call_convention(name.as_bytes()),
@@ -181,7 +223,8 @@ impl Display for ThrushAttribute {
             ThrushAttribute::AlwaysInline(..) => write!(f, "@alwaysinline"),
             ThrushAttribute::NoInline(..) => write!(f, "@noinline"),
             ThrushAttribute::InlineHint(..) => write!(f, "@inline"),
-            ThrushAttribute::Extern(name, ..) => write!(f, "@extern({})", name),
+            ThrushAttribute::Linkage(linkage, ..) => write!(f, "@linkage(\"{}\")", linkage),
+            ThrushAttribute::Extern(name, ..) => write!(f, "@extern(\"{}\")", name),
             ThrushAttribute::Convention(convention, ..) => {
                 write!(f, "@convention(\"{}\")", convention)
             }

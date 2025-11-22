@@ -1,5 +1,5 @@
 use attrchecker::AttributeChecker;
-use linter::{Linter, attributes::AttributesLinter};
+use linter::Linter;
 use typechecker::TypeChecker;
 
 use crate::{
@@ -17,7 +17,6 @@ pub struct SemanticAnalyzer<'semantic_analyzer> {
     type_checker: TypeChecker<'semantic_analyzer>,
     analyzer: Analyzer<'semantic_analyzer>,
     attr_checker: AttributeChecker<'semantic_analyzer>,
-    attr_linter: AttributesLinter<'semantic_analyzer>,
 
     linter: Linter<'semantic_analyzer>,
 }
@@ -32,14 +31,12 @@ impl<'semantic_analyzer> SemanticAnalyzer<'semantic_analyzer> {
         let analyzer: Analyzer = Analyzer::new(ast, file);
         let attr_checker: AttributeChecker = AttributeChecker::new(ast, file);
         let linter: Linter = Linter::new(ast, file);
-        let attr_linter: AttributesLinter = AttributesLinter::new(ast, file);
 
         Self {
             type_checker,
             analyzer,
             attr_checker,
             linter,
-            attr_linter,
         }
     }
 }
@@ -56,7 +53,6 @@ impl<'semantic_analyzer> SemanticAnalyzer<'semantic_analyzer> {
 
         if !type_checker_errors && !analyzer_errors && !attr_checker_errors {
             self.linter.check();
-            self.attr_linter.check();
         }
 
         type_checker_errors || analyzer_errors || attr_checker_errors

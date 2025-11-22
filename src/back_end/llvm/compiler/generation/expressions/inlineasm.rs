@@ -44,7 +44,7 @@ pub fn compile<'ctx>(
     if let Some(LLVMAttribute::AsmSyntax(new_syntax, ..)) =
         attributes.get_attr(LLVMAttributeComparator::AsmSyntax)
     {
-        syntax = str::to_inline_assembler_dialect(new_syntax);
+        syntax = str::as_inline_assembler_dialect(new_syntax);
     }
 
     let fn_inline_assembler: PointerValue = llvm_context.create_inline_asm(

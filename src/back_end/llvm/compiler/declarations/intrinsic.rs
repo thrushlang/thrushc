@@ -8,8 +8,8 @@ use crate::back_end::llvm::types::repr::LLVMAttributes;
 use crate::back_end::llvm::types::traits::LLVMAttributesExtensions;
 use crate::front_end::lexer::span::Span;
 use crate::front_end::types::ast::Ast;
+use crate::front_end::types::attributes::traits::ThrushAttributesExtensions;
 use crate::front_end::types::parser::repr::Intrinsic;
-use crate::front_end::types::parser::stmts::traits::ThrushAttributesExtensions;
 
 use crate::front_end::typesystem::types::Type;
 
@@ -30,7 +30,7 @@ pub fn compile<'ctx>(context: &mut LLVMCodeGenContext<'_, 'ctx>, intrinsic: Intr
 
     let ignore_args: bool = attributes.has_ignore_attribute();
 
-    let mut convention: u32 = if let Some(LLVMAttribute::Convention(conv, ..)) =
+    let convention: u32 = if let Some(LLVMAttribute::Convention(conv, ..)) =
         attributes.get_attr(LLVMAttributeComparator::Convention)
     {
         conv as u32
@@ -43,13 +43,12 @@ pub fn compile<'ctx>(context: &mut LLVMCodeGenContext<'_, 'ctx>, intrinsic: Intr
 
     let llvm_function: FunctionValue = llvm_module.add_function(external_name, function_type, None);
 
-    let mut attribute_builder: AttributeBuilder = AttributeBuilder::new(
+    AttributeBuilder::new(
         llvm_context,
         &attributes,
         LLVMAttributeApplicant::Function(llvm_function),
-    );
-
-    attribute_builder.add_function_attributes(&mut convention);
+    )
+    .add_function_attributes();
 
     context.new_function(name, (llvm_function, parameters_types, convention, span));
 }

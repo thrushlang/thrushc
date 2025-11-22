@@ -1,5 +1,6 @@
 #![allow(clippy::too_many_arguments)]
 
+use crate::back_end::llvm::compiler::attrbuilder::{AttributeBuilder, LLVMAttributeApplicant};
 use crate::back_end::llvm::compiler::attributes::{LLVMAttribute, LLVMAttributeComparator};
 use crate::back_end::llvm::compiler::context::LLVMCodeGenContext;
 use crate::back_end::llvm::compiler::obfuscation;
@@ -10,6 +11,7 @@ use crate::front_end::types::ast::metadata::constant::{ConstantMetadata, LLVMCon
 use crate::front_end::types::ast::metadata::staticvar::{LLVMStaticMetadata, StaticMetadata};
 
 use inkwell::ThreadLocalMode;
+use inkwell::context::Context;
 use inkwell::module::Module;
 use inkwell::{
     AddressSpace,
@@ -116,6 +118,8 @@ pub fn global_constant<'ctx>(
     metadata: ConstantMetadata,
 ) -> PointerValue<'ctx> {
     let llvm_module: &Module = context.get_llvm_module();
+    let llvm_context: &Context = context.get_llvm_context();
+
     let target_data: &TargetData = context.get_target_data();
     let llvm_metadata: LLVMConstantMetadata = metadata.get_llvm_metadata();
 
@@ -123,6 +127,13 @@ pub fn global_constant<'ctx>(
 
     let global: GlobalValue =
         llvm_module.add_global(llvm_type, Some(AddressSpace::default()), &name);
+
+    AttributeBuilder::new(
+        llvm_context,
+        attributes,
+        LLVMAttributeApplicant::Global(global),
+    )
+    .add_global_attributes();
 
     self::set_global_common(
         &global,
@@ -132,7 +143,7 @@ pub fn global_constant<'ctx>(
         None,
         Some(&value),
         Some(target_data.get_preferred_alignment_of_global(&global)),
-        if !attributes.has_public_attribute() {
+        if !attributes.has_public_attribute() && !attributes.has_linkage_attribute() {
             Some(Linkage::LinkerPrivate)
         } else {
             None
@@ -186,6 +197,8 @@ pub fn global_static<'ctx>(
     metadata: StaticMetadata,
 ) -> PointerValue<'ctx> {
     let llvm_module: &Module = context.get_llvm_module();
+    let llvm_context: &Context = context.get_llvm_context();
+
     let target_data: &TargetData = context.get_target_data();
     let llvm_metadata: LLVMStaticMetadata = metadata.get_llvm_metadata();
 
@@ -194,7 +207,14 @@ pub fn global_static<'ctx>(
     let global: GlobalValue =
         llvm_module.add_global(llvm_type, Some(AddressSpace::default()), &name);
 
-    if !attributes.has_public_attribute() && !attributes.has_extern_attribute() && value.is_none() {
+    AttributeBuilder::new(
+        llvm_context,
+        attributes,
+        LLVMAttributeApplicant::Global(global),
+    )
+    .add_global_attributes();
+
+    if !attributes.has_extern_attribute() && value.is_none() {
         global.set_initializer(&llvm_type.const_zero());
     }
 
@@ -206,7 +226,10 @@ pub fn global_static<'ctx>(
         llvm_metadata.thread_mode,
         value.as_ref(),
         Some(target_data.get_preferred_alignment_of_global(&global)),
-        if !attributes.has_public_attribute() && !attributes.has_extern_attribute() {
+        if !attributes.has_public_attribute()
+            && !attributes.has_extern_attribute()
+            && !attributes.has_linkage_attribute()
+        {
             Some(Linkage::LinkerPrivate)
         } else {
             None

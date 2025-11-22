@@ -16,7 +16,7 @@ use crate::core::diagnostic::diagnostician::Diagnostician;
 use crate::core::errors::standard::ThrushCompilerIssue;
 
 use crate::front_end::types::ast::Ast;
-use crate::front_end::types::parser::stmts::traits::ThrushAttributesExtensions;
+use crate::front_end::types::attributes::traits::ThrushAttributesExtensions;
 
 #[derive(Debug)]
 pub struct TypeChecker<'type_checker> {

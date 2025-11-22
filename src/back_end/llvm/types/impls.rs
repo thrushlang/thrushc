@@ -1,28 +1,25 @@
 use std::fmt::Display;
 
-use inkwell::InlineAsmDialect;
+use inkwell::{InlineAsmDialect, module::Linkage};
 
-use crate::{
-    back_end::llvm::{
-        compiler::{
-            attributes::{LLVMAttribute, LLVMAttributeComparator},
-            conventions::CallConvention,
-        },
-        types::{
-            repr::LLVMAttributes,
-            traits::{
-                AssemblerFunctionExtensions, LLVMAttributeComparatorExtensions,
-                LLVMAttributesExtensions,
-            },
-        },
-    },
-    core::console::logging::{self, LoggingType},
-};
+use crate::back_end::llvm::compiler::attributes::{LLVMAttribute, LLVMAttributeComparator};
+use crate::back_end::llvm::compiler::conventions::CallConvention;
+use crate::back_end::llvm::types::repr::LLVMAttributes;
+
+use crate::back_end::llvm::types::traits::AssemblerFunctionExtensions;
+use crate::back_end::llvm::types::traits::LLVMAttributeComparatorExtensions;
+use crate::back_end::llvm::types::traits::LLVMAttributesExtensions;
+use crate::back_end::llvm::types::traits::LLVMLinkageExtensions;
 
 impl LLVMAttributesExtensions for LLVMAttributes<'_> {
     #[inline]
     fn has_extern_attribute(&self) -> bool {
         self.iter().any(|attr| attr.is_extern_attribute())
+    }
+
+    #[inline]
+    fn has_linkage_attribute(&self) -> bool {
+        self.iter().any(|attr| attr.is_linkage_attribute())
     }
 
     #[inline]
@@ -99,6 +96,7 @@ impl LLVMAttributeComparatorExtensions for LLVMAttribute<'_> {
     fn as_attr_cmp(&self) -> LLVMAttributeComparator {
         match self {
             LLVMAttribute::Extern(..) => LLVMAttributeComparator::Extern,
+            LLVMAttribute::Linkage(..) => LLVMAttributeComparator::Linkage,
             LLVMAttribute::Convention(..) => LLVMAttributeComparator::Convention,
             LLVMAttribute::Stack => LLVMAttributeComparator::Stack,
             LLVMAttribute::Heap => LLVMAttributeComparator::Heap,
@@ -131,6 +129,7 @@ impl Display for LLVMAttribute<'_> {
             LLVMAttribute::NoInline => write!(f, "@noinline"),
             LLVMAttribute::InlineHint => write!(f, "@inline"),
             LLVMAttribute::Extern(name, ..) => write!(f, "@extern({})", name),
+            LLVMAttribute::Linkage(linkage, ..) => write!(f, "@linkage(\"{}\")", linkage.fmt()),
             LLVMAttribute::Convention(convention, ..) => {
                 write!(f, "@convention(\"{}\")", convention)
             }
@@ -173,19 +172,35 @@ impl Display for CallConvention {
 
 impl AssemblerFunctionExtensions for str {
     #[inline]
-    fn to_inline_assembler_dialect(syntax: &str) -> InlineAsmDialect {
+    fn as_inline_assembler_dialect(syntax: &str) -> InlineAsmDialect {
         match syntax {
             "Intel" => InlineAsmDialect::Intel,
             "AT&T" => InlineAsmDialect::ATT,
-            any => {
-                logging::print_backend_bug(
-                    LoggingType::BackendBug,
-                    &format!(
-                        "Unable to translate '{}' to proper inline assembler dialect.",
-                        any
-                    ),
-                );
-            }
+
+            _ => InlineAsmDialect::Intel,
+        }
+    }
+}
+
+impl LLVMLinkageExtensions for Linkage {
+    fn fmt(&self) -> &'static str {
+        match self {
+            Linkage::Appending => "Appending",
+            Linkage::Common => "Common",
+            Linkage::AvailableExternally => "AvailableExternally",
+            Linkage::External => "External",
+            Linkage::ExternalWeak => "ExternalWeak",
+            Linkage::Internal => "Internal",
+            Linkage::LinkOnceAny => "LinkOnceAny",
+            Linkage::LinkOnceODR => "LinkOnceODR",
+            Linkage::LinkOnceODRAutoHide => "LinkOnceODRAutoHide",
+            Linkage::Private => "Private",
+            Linkage::WeakAny => "WeakAny",
+            Linkage::WeakODR => "WeakODR",
+            Linkage::DLLExport => "DLLExport",
+            Linkage::DLLImport => "DLLImport",
+
+            _ => "unknown",
         }
     }
 }

@@ -17,6 +17,7 @@ lazy_static! {
         attributes.insert("@heap", TokenType::Heap);
         attributes.insert("@stack", TokenType::Stack);
         attributes.insert("@public", TokenType::Public);
+        attributes.insert("@linkage", TokenType::Linkage);
         attributes.insert("@extern", TokenType::Extern);
         attributes.insert("@ignore", TokenType::Ignore);
         attributes.insert("@hot", TokenType::Hot);

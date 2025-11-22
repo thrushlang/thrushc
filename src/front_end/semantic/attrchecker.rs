@@ -9,13 +9,13 @@ use crate::core::errors::standard::ThrushCompilerIssue;
 use crate::front_end::lexer::span::Span;
 use crate::front_end::parser::attributes::INLINE_ASSEMBLER_SYNTAXES;
 use crate::front_end::types::ast::Ast;
-use crate::front_end::types::attributes::ThrushAttribute;
 use crate::front_end::types::attributes::callconventions::CALL_CONVENTIONS;
-use crate::front_end::types::parser::stmts::traits::ThrushAttributesExtensions;
+use crate::front_end::types::attributes::traits::{
+    ThrushAttributeComparatorExtensions, ThrushAttributesExtensions,
+};
+use crate::front_end::types::attributes::{ThrushAttribute, ThrushAttributeComparator, linkage};
 use crate::front_end::types::parser::stmts::types::ThrushAttributes;
 use crate::front_end::types::semantic::attrchecker::types::AttributeCheckerAttributeApplicant;
-use crate::front_end::types::semantic::linter::traits::ThrushAttributeComparatorExtensions;
-use crate::front_end::types::semantic::linter::types::ThrushAttributeComparator;
 
 #[derive(Debug)]
 pub struct AttributeChecker<'attr_checker> {
@@ -70,6 +70,13 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
             });
 
             return true;
+        }
+
+        if !self.warnings.is_empty() {
+            self.warnings.iter().for_each(|warning| {
+                self.dignostician
+                    .dispatch_diagnostic(warning, LoggingType::Warning);
+            });
         }
 
         false
@@ -403,10 +410,26 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
             ThrushAttributeComparator::WeakStack,
             ThrushAttributeComparator::StrongStack,
             ThrushAttributeComparator::PreciseFloats,
+            ThrushAttributeComparator::Linkage,
         ];
 
-        const VALID_INTRINSIC_ATTRIBUTES: &[ThrushAttributeComparator] =
-            &[ThrushAttributeComparator::Public];
+        const VALID_INTRINSIC_ATTRIBUTES: &[ThrushAttributeComparator] = &[
+            ThrushAttributeComparator::AlwaysInline,
+            ThrushAttributeComparator::InlineHint,
+            ThrushAttributeComparator::NoInline,
+            ThrushAttributeComparator::Convention,
+            ThrushAttributeComparator::Extern,
+            ThrushAttributeComparator::Ignore,
+            ThrushAttributeComparator::Public,
+            ThrushAttributeComparator::Hot,
+            ThrushAttributeComparator::NoUnwind,
+            ThrushAttributeComparator::OptFuzzing,
+            ThrushAttributeComparator::MinSize,
+            ThrushAttributeComparator::WeakStack,
+            ThrushAttributeComparator::StrongStack,
+            ThrushAttributeComparator::PreciseFloats,
+            ThrushAttributeComparator::Linkage,
+        ];
 
         const VALID_ASSEMBLER_FUNCTION_ATTRIBUTES: &[ThrushAttributeComparator] = &[
             ThrushAttributeComparator::AlwaysInline,
@@ -422,16 +445,19 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
             ThrushAttributeComparator::WeakStack,
             ThrushAttributeComparator::StrongStack,
             ThrushAttributeComparator::PreciseFloats,
+            ThrushAttributeComparator::Linkage,
         ];
 
         const VALID_STATIC_ATTRIBUTES: &[ThrushAttributeComparator] = &[
             ThrushAttributeComparator::Public,
             ThrushAttributeComparator::Extern,
+            ThrushAttributeComparator::Linkage,
         ];
 
         const VALID_CONSTANT_ATTRIBUTES: &[ThrushAttributeComparator] = &[
             ThrushAttributeComparator::Public,
             ThrushAttributeComparator::Extern,
+            ThrushAttributeComparator::Linkage,
         ];
 
         const VALID_ENUM_ATTRIBUTES: &[ThrushAttributeComparator] =
@@ -448,7 +474,7 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
         match applicant {
             AttributeCheckerAttributeApplicant::Function => {
                 attributes.iter().for_each(|attr| {
-                    if !VALID_FUNCTION_ATTRIBUTES.contains(&attr.into_attr_cmp()) {
+                    if !VALID_FUNCTION_ATTRIBUTES.contains(&attr.as_attr_cmp()) {
                         self.add_warning(ThrushCompilerIssue::Warning(
                             "Irrelevant attribute".into(),
                             "This attribute is not applicable for functions.".into(),
@@ -459,7 +485,7 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
             }
             AttributeCheckerAttributeApplicant::Intrinsic => {
                 attributes.iter().for_each(|attr| {
-                    if !VALID_INTRINSIC_ATTRIBUTES.contains(&attr.into_attr_cmp()) {
+                    if !VALID_INTRINSIC_ATTRIBUTES.contains(&attr.as_attr_cmp()) {
                         self.add_warning(ThrushCompilerIssue::Warning(
                             "Irrelevant attribute".into(),
                             "This attribute is not applicable for a intrinsic.".into(),
@@ -470,7 +496,7 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
             }
             AttributeCheckerAttributeApplicant::Constant => {
                 attributes.iter().for_each(|attr| {
-                    if !VALID_CONSTANT_ATTRIBUTES.contains(&attr.into_attr_cmp()) {
+                    if !VALID_CONSTANT_ATTRIBUTES.contains(&attr.as_attr_cmp()) {
                         self.add_warning(ThrushCompilerIssue::Warning(
                             "Irrelevant attribute".into(),
                             "This attribute is not applicable for constants.".into(),
@@ -481,7 +507,7 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
             }
             AttributeCheckerAttributeApplicant::AssemblerFunction => {
                 attributes.iter().for_each(|attr| {
-                    if !VALID_ASSEMBLER_FUNCTION_ATTRIBUTES.contains(&attr.into_attr_cmp()) {
+                    if !VALID_ASSEMBLER_FUNCTION_ATTRIBUTES.contains(&attr.as_attr_cmp()) {
                         self.add_warning(ThrushCompilerIssue::Warning(
                             "Irrelevant attribute".into(),
                             "This attribute is not applicable for assembler functions.".into(),
@@ -492,7 +518,7 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
             }
             AttributeCheckerAttributeApplicant::Enum => {
                 attributes.iter().for_each(|attr| {
-                    if !VALID_ENUM_ATTRIBUTES.contains(&attr.into_attr_cmp()) {
+                    if !VALID_ENUM_ATTRIBUTES.contains(&attr.as_attr_cmp()) {
                         self.add_warning(ThrushCompilerIssue::Warning(
                             "Irrelevant attribute".into(),
                             "This attribute is not applicable for enumerations.".into(),
@@ -503,7 +529,7 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
             }
             AttributeCheckerAttributeApplicant::Static => {
                 attributes.iter().for_each(|attr| {
-                    if !VALID_STATIC_ATTRIBUTES.contains(&attr.into_attr_cmp()) {
+                    if !VALID_STATIC_ATTRIBUTES.contains(&attr.as_attr_cmp()) {
                         self.add_warning(ThrushCompilerIssue::Warning(
                             "Irrelevant attribute".into(),
                             "This attribute is not applicable for static symbols.".into(),
@@ -514,7 +540,7 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
             }
             AttributeCheckerAttributeApplicant::Struct => {
                 attributes.iter().for_each(|attr| {
-                    if !VALID_STRUCTS_ATTRIBUTES.contains(&attr.into_attr_cmp()) {
+                    if !VALID_STRUCTS_ATTRIBUTES.contains(&attr.as_attr_cmp()) {
                         self.add_warning(ThrushCompilerIssue::Warning(
                             "Irrelevant attribute".into(),
                             "This attribute is not applicable for structures.".into(),
@@ -525,7 +551,7 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
             }
             AttributeCheckerAttributeApplicant::Local => {
                 attributes.iter().for_each(|attr| {
-                    if !VALID_LOCAL_ATTRIBUTES.contains(&attr.into_attr_cmp()) {
+                    if !VALID_LOCAL_ATTRIBUTES.contains(&attr.as_attr_cmp()) {
                         self.add_warning(ThrushCompilerIssue::Warning(
                             "Irrelevant attribute".into(),
                             "This attribute is not applicable for local variable.".into(),
@@ -547,6 +573,76 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
                     None,
                     span,
                 ));
+            }
+        }
+
+        if attributes.has_linkage_attribute() {
+            if let Some(ThrushAttribute::Linkage(linkage, linkage_raw, span)) =
+                attributes.get_attr(ThrushAttributeComparator::Linkage)
+            {
+                if !linkage::LINKAGES.contains(&linkage_raw.as_str()) {
+                    self.add_warning(ThrushCompilerIssue::Warning(
+                        "Unknown linkage".into(),
+                        "Unknown linking, assuming non-proprietary C (External) standard.".into(),
+                        span,
+                    ));
+                }
+
+                if attributes.has_public_attribute() && linkage.is_standard() {
+                    self.add_warning(ThrushCompilerIssue::Warning(
+                        "Irrelevant attribute".into(),
+                        "This attribute is meaningless; the linkage is the same as @public.".into(),
+                        span,
+                    ));
+                }
+
+                if attributes.has_public_attribute() && linkage.is_linker_private() {
+                    self.add_warning(ThrushCompilerIssue::Warning(
+                        "Irrelevant attribute".into(),
+                        "This will cause a linking failure; the '@public' attribute requires non-proprietary linking.".into(),
+                        span,
+                    ));
+                }
+
+                if attributes.has_public_attribute() && linkage.is_linker_private_weak() {
+                    self.add_warning(ThrushCompilerIssue::Warning(
+                        "Irrelevant attribute".into(),
+                        "This will cause a linking failure; the '@public' attribute requires non-proprietary linking.".into(),
+                        span,
+                    ));
+                }
+
+                if attributes.has_public_attribute() && linkage.is_internal() {
+                    self.add_warning(ThrushCompilerIssue::Warning(
+                        "Irrelevant attribute".into(),
+                        "This will cause a linking failure; the '@public' attribute requires non-proprietary linking.".into(),
+                        span,
+                    ));
+                }
+
+                if attributes.has_extern_attribute() && linkage.is_linker_private() {
+                    self.add_warning(ThrushCompilerIssue::Warning(
+                        "Irrelevant attribute".into(),
+                        "This will cause a linking failure; the '@extern' attribute requires non-proprietary linking.".into(),
+                        span,
+                    ));
+                }
+
+                if attributes.has_extern_attribute() && linkage.is_linker_private_weak() {
+                    self.add_warning(ThrushCompilerIssue::Warning(
+                        "Irrelevant attribute".into(),
+                        "This will cause a linking failure; the '@extern' attribute requires non-proprietary linking.".into(),
+                        span,
+                    ));
+                }
+
+                if attributes.has_extern_attribute() && linkage.is_internal() {
+                    self.add_warning(ThrushCompilerIssue::Warning(
+                        "Irrelevant attribute".into(),
+                        "This will cause a linking failure; the '@extern' attribute requires non-proprietary linking.".into(),
+                        span,
+                    ));
+                }
             }
         }
 
@@ -603,7 +699,7 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
         let mut repeated_attrs: ThrushAttributes = Vec::with_capacity(20);
 
         attributes.iter().for_each(|attr| {
-            if !storage.insert(attr.into_attr_cmp()) {
+            if !storage.insert(attr.as_attr_cmp()) {
                 repeated_attrs.push(attr.clone());
             }
         });

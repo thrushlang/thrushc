@@ -78,6 +78,7 @@ impl std::fmt::Display for TokenType {
             TokenType::ThreadInit => write!(f, "threadinit"),
 
             // Attributes
+            TokenType::Linkage => write!(f, "@linkage"),
             TokenType::OptFuzzing => write!(f, "@optfuzzing"),
             TokenType::NoUnwind => write!(f, "@nounwind"),
             TokenType::Packed => write!(f, "@packed"),

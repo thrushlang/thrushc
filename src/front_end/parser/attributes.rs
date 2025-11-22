@@ -7,6 +7,7 @@ use crate::front_end::lexer::token::Token;
 use crate::front_end::lexer::tokentype::TokenType;
 use crate::front_end::parser::ParserContext;
 use crate::front_end::types::attributes::ThrushAttribute;
+use crate::front_end::types::attributes::linkage::ThrushLinkage;
 use crate::front_end::types::parser::stmts::traits::TokenExtensions;
 use crate::front_end::types::parser::stmts::types::ThrushAttributes;
 
@@ -59,6 +60,15 @@ pub fn build_attributes<'parser>(
                 ));
             }
 
+            TokenType::Linkage => {
+                let result: (ThrushLinkage, String) = self::build_linkage_attribute(ctx)?;
+
+                let linkage: ThrushLinkage = result.0;
+                let id: String = result.1;
+
+                attributes.push(ThrushAttribute::Linkage(linkage, id, span));
+            }
+
             TokenType::Public => {
                 attributes.push(ThrushAttribute::Public(span));
                 ctx.only_advance()?;
@@ -76,11 +86,42 @@ pub fn build_attributes<'parser>(
                 }
             }
 
-            _ => break,
+            _ => {
+                break;
+            }
         }
     }
 
     Ok(attributes)
+}
+
+fn build_linkage_attribute<'parser>(
+    ctx: &mut ParserContext<'parser>,
+) -> Result<(ThrushLinkage, String), ThrushCompilerIssue> {
+    ctx.only_advance()?;
+
+    ctx.consume(
+        TokenType::LParen,
+        "Syntax error".into(),
+        "Expected '('.".into(),
+    )?;
+
+    let linkage_tk: &Token = ctx.consume(
+        TokenType::Str,
+        "Syntax error".into(),
+        "Expected a string literal.".into(),
+    )?;
+
+    let id: String = linkage_tk.get_ascii_lexeme().to_string();
+    let linkage: ThrushLinkage = ThrushLinkage::get_linkage(&id);
+
+    ctx.consume(
+        TokenType::RParen,
+        "Syntax error".into(),
+        "Expected ')'.".into(),
+    )?;
+
+    Ok((linkage, id))
 }
 
 fn build_external_attribute<'parser>(
@@ -163,30 +204,4 @@ fn build_call_convention_attribute(ctx: &mut ParserContext) -> Result<String, Th
     )?;
 
     Ok(name)
-}
-
-fn build_linkage(ctx: &mut ParserContext) -> Result<String, ThrushCompilerIssue> {
-    ctx.only_advance()?;
-
-    ctx.consume(
-        TokenType::LParen,
-        "Syntax error".into(),
-        "Expected '('.".into(),
-    )?;
-
-    let linkage_tk: &Token = ctx.consume(
-        TokenType::Str,
-        "Syntax error".into(),
-        "Expected a string literal.".into(),
-    )?;
-
-    let linkage: String = linkage_tk.get_lexeme().to_string();
-
-    ctx.consume(
-        TokenType::RParen,
-        "Syntax error".into(),
-        "Expected ')'.".into(),
-    )?;
-
-    Ok(linkage)
 }

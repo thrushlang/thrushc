@@ -1,5 +1,7 @@
 #![allow(clippy::upper_case_acronyms)]
 
+use inkwell::module::Linkage;
+
 use crate::back_end::llvm::compiler::conventions::CallConvention;
 
 #[derive(Debug, Clone, Copy)]
@@ -7,6 +9,7 @@ pub enum LLVMAttribute<'ctx> {
     // Function Attributes
     Extern(&'ctx str),
     Convention(CallConvention),
+    Linkage(Linkage),
     Public,
     Ignore,
     Hot,
@@ -102,8 +105,13 @@ impl LLVMAttribute<'_> {
     }
 
     #[inline]
-    pub fn is_packed(&self) -> bool {
+    pub fn is_packed_attribute(&self) -> bool {
         matches!(self, LLVMAttribute::Packed)
+    }
+
+    #[inline]
+    pub fn is_linkage_attribute(&self) -> bool {
+        matches!(self, LLVMAttribute::Linkage(..))
     }
 }
 
@@ -124,6 +132,7 @@ pub enum LLVMAttributeComparator {
     PreciseFloats,
     NoUnwind,
     OptFuzzing,
+    Linkage,
 
     Stack,
     Heap,

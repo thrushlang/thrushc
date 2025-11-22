@@ -1,5 +1,3 @@
-pub mod attributes;
-
 mod builtins;
 mod constants;
 mod declarations;
@@ -20,7 +18,7 @@ use crate::core::errors::standard::ThrushCompilerIssue;
 use crate::front_end::lexer::span::Span;
 use crate::front_end::semantic::linter::statements::mutation;
 use crate::front_end::types::ast::Ast;
-use crate::front_end::types::parser::stmts::traits::ThrushAttributesExtensions;
+use crate::front_end::types::attributes::traits::ThrushAttributesExtensions;
 
 #[derive(Debug)]
 pub struct Linter<'linter> {

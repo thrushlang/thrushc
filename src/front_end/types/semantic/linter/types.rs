@@ -45,32 +45,3 @@ pub enum LinterAttributeApplicant {
     Struct,
     Constant,
 }
-
-#[derive(Debug, Clone, PartialEq, Hash, Eq)]
-pub enum ThrushAttributeComparator {
-    Extern,
-    Convention,
-    Public,
-    Ignore,
-    Hot,
-    NoInline,
-    InlineHint,
-    MinSize,
-    AlwaysInline,
-    SafeStack,
-    StrongStack,
-    WeakStack,
-    PreciseFloats,
-    NoUnwind,
-    OptFuzzing,
-
-    Stack,
-    Heap,
-
-    AsmThrow,
-    AsmSyntax,
-    AsmAlignStack,
-    AsmSideEffects,
-
-    Packed,
-}

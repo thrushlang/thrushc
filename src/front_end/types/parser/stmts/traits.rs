@@ -1,10 +1,7 @@
-use crate::back_end::llvm::types::repr::LLVMAttributes;
 use crate::core::errors::standard::ThrushCompilerIssue;
 
 use crate::front_end::lexer::span::Span;
 use crate::front_end::lexer::tokentype::TokenType;
-use crate::front_end::types::attributes::ThrushAttribute;
-use crate::front_end::types::semantic::linter::types::ThrushAttributeComparator;
 use crate::front_end::typesystem::modificators::StructureTypeModificator;
 use crate::front_end::typesystem::types::Type;
 
@@ -73,27 +70,4 @@ pub trait StructFieldsExtensions {
 
 pub trait ConstructorExtensions {
     fn get_type(&self, name: &str, modificator: StructureTypeModificator) -> Type;
-}
-
-pub trait ThrushAttributesExtensions {
-    fn has_extern_attribute(&self) -> bool;
-    fn has_ignore_attribute(&self) -> bool;
-    fn has_public_attribute(&self) -> bool;
-    fn has_hot_attr(&self) -> bool;
-    fn has_inline_attr(&self) -> bool;
-    fn has_noinline_attr(&self) -> bool;
-    fn has_minsize_attr(&self) -> bool;
-    fn has_inlinealways_attr(&self) -> bool;
-
-    fn has_heap_attr(&self) -> bool;
-
-    fn has_asmalignstack_attribute(&self) -> bool;
-    fn has_asmthrow_attribute(&self) -> bool;
-    fn has_asmsideffects_attribute(&self) -> bool;
-    fn has_asmsyntax_attribute(&self) -> bool;
-
-    fn match_attr(&self, cmp: ThrushAttributeComparator) -> Option<Span>;
-    fn get_attr(&self, cmp: ThrushAttributeComparator) -> Option<ThrushAttribute>;
-
-    fn as_llvm_attributes(&self) -> LLVMAttributes<'_>;
 }
