@@ -258,6 +258,7 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
 
         llvm::compiler::optimization::LLVMOptimizer::new(
             &llvm_module,
+            &llvm_context,
             &target_machine,
             llvm_opt,
             llvm_backend.get_opt_passes(),
@@ -487,6 +488,7 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
 
         llvm::compiler::optimization::LLVMOptimizer::new(
             &llvm_module,
+            &llvm_context,
             &target_machine,
             llvm_opt,
             llvm_backend.get_opt_passes(),

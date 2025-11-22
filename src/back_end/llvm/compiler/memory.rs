@@ -157,6 +157,10 @@ impl<'ctx> SymbolAllocated<'ctx> {
 
         let target_data: &TargetData = context.get_target_data();
 
+        if self.get_type().is_ptr_like_type() {
+            return self.get_value(context);
+        }
+
         let llvm_type: BasicTypeEnum = typegen::generate(llvm_context, self.get_type());
         let alignment: u32 = target_data.get_preferred_alignment(&llvm_type);
 
