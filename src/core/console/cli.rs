@@ -138,7 +138,7 @@ impl CLI {
 
             "-llvm-backend" => {
                 self.advance();
-                self.options.set_use_llvm_backend(true);
+                self.get_mut_options().set_use_llvm_backend(true);
             }
 
             "llvm-print-targets" => {
@@ -165,7 +165,7 @@ impl CLI {
                 self.advance();
 
                 llvm::targets::info::print_specific_cpu_support(
-                    self.options
+                    self.get_options()
                         .get_llvm_backend_options()
                         .get_target()
                         .get_arch(),
@@ -179,7 +179,11 @@ impl CLI {
 
             "-build-dir" => {
                 self.advance();
-                self.options.set_build_dir(self.peek().into());
+
+                let build_dir: PathBuf = self.peek().into();
+
+                self.get_mut_options().set_build_dir(build_dir);
+
                 self.advance();
             }
 
@@ -191,7 +195,7 @@ impl CLI {
 
                 self.position = CommandLinePosition::InternalLinker;
 
-                self.options
+                self.get_mut_options()
                     .get_mut_linker_mode()
                     .turn_on(LinkerModeType::LLVMLinker);
             }
@@ -203,7 +207,7 @@ impl CLI {
 
                 let flavor: LLVMLinkerFlavor = LLVMLinkerFlavor::raw_to_lld_flavor(self.peek());
 
-                self.options
+                self.get_mut_options()
                     .get_mut_linker_mode()
                     .set_up_config(LinkerConfiguration::LLVMLinker(flavor));
 
@@ -224,7 +228,7 @@ impl CLI {
                 self.validate_llvm_required(arg);
                 self.validate_jit_required(arg);
 
-                let libc: PathBuf = PathBuf::from(self.peek());
+                let libc: PathBuf = self.peek().into();
 
                 if (libc.to_string_lossy().contains("/") || libc.to_string_lossy().contains("\\"))
                     && (!libc.exists() || !libc.is_file())
@@ -245,7 +249,7 @@ impl CLI {
                 self.validate_llvm_required(arg);
                 self.validate_jit_required(arg);
 
-                let library: PathBuf = PathBuf::from(self.peek());
+                let library: PathBuf = self.peek().into();
 
                 if (library.to_string_lossy().contains("/")
                     || library.to_string_lossy().contains("\\"))
@@ -277,7 +281,7 @@ impl CLI {
                 self.validate_llvm_required(arg);
                 self.validate_not_gcc_active();
 
-                self.options
+                self.get_mut_options()
                     .get_mut_linking_compilers_configuration()
                     .set_use_clang(true);
             }
@@ -286,16 +290,15 @@ impl CLI {
                 self.advance();
                 self.validate_llvm_required(arg);
 
-                let custom_clang: &str = self.peek();
-                let custom_clang_path: PathBuf = PathBuf::from(custom_clang);
+                let path: PathBuf = self.peek().into();
 
-                if !self.validate_compiler_path(&custom_clang_path) {
+                if !self.validate_compiler_path(&path) {
                     self.report_error("Indicated external C & C++ compiler Clang doesn't exist.");
                 }
 
-                self.options
+                self.get_mut_options()
                     .get_mut_linking_compilers_configuration()
-                    .set_custom_clang(custom_clang_path);
+                    .set_custom_clang(path);
 
                 self.advance();
             }
@@ -304,10 +307,9 @@ impl CLI {
                 self.advance();
                 self.validate_not_clang_active();
 
-                let custom_gcc: &str = self.peek();
-                let custom_gcc_path: PathBuf = PathBuf::from(custom_gcc);
+                let path: PathBuf = self.peek().into();
 
-                if !self.validate_compiler_path(&custom_gcc_path) {
+                if !self.validate_compiler_path(&path) {
                     self.report_error(
                         "Indicated external GNU Compiler Collection (GCC) doesn't exist.",
                     );
@@ -317,7 +319,7 @@ impl CLI {
                     .get_mut_options()
                     .get_mut_linking_compilers_configuration();
 
-                compiler_config.set_custom_gcc(custom_gcc_path);
+                compiler_config.set_custom_gcc(path);
                 compiler_config.set_use_gcc(true);
 
                 self.advance();
@@ -329,7 +331,7 @@ impl CLI {
 
                 let target: String = self.peek().to_string();
 
-                self.options
+                self.get_mut_options()
                     .get_mut_llvm_backend_options()
                     .get_mut_target()
                     .set_arch(target);
@@ -345,7 +347,7 @@ impl CLI {
 
                 let target_triple: TargetTriple = TargetTriple::create(raw_target_triple);
 
-                self.options
+                self.get_mut_options()
                     .get_mut_llvm_backend_options()
                     .get_mut_target()
                     .set_target_triple(target_triple);
@@ -359,7 +361,7 @@ impl CLI {
 
                 let name: String = self.peek().to_string();
 
-                self.options
+                self.get_mut_options()
                     .get_mut_llvm_backend_options()
                     .get_mut_target_cpu()
                     .set_cpu_name(name);
@@ -373,7 +375,7 @@ impl CLI {
 
                 let features: String = self.peek().to_string();
 
-                self.options
+                self.get_mut_options()
                     .get_mut_llvm_backend_options()
                     .get_mut_target_cpu()
                     .set_processador_features(features);
@@ -387,7 +389,7 @@ impl CLI {
 
                 let opt: ThrushOptimization = self.parse_optimization_level(self.peek());
 
-                self.options
+                self.get_mut_options()
                     .get_mut_llvm_backend_options()
                     .set_optimization(opt);
 
@@ -400,7 +402,7 @@ impl CLI {
 
                 let emitable: EmitableUnit = self.parse_emit_option(self.peek());
 
-                self.options.add_emit_option(emitable);
+                self.get_mut_options().add_emit_option(emitable);
 
                 self.advance();
             }
@@ -411,7 +413,7 @@ impl CLI {
 
                 let pritable_unit: PrintableUnit = self.parse_print_option(self.peek());
 
-                self.options.add_print_option(pritable_unit);
+                self.get_mut_options().add_print_option(pritable_unit);
 
                 self.advance();
             }
@@ -453,7 +455,7 @@ impl CLI {
 
                 let reloc_mode: RelocMode = self.parse_reloc_mode(self.peek());
 
-                self.options
+                self.get_mut_options()
                     .get_mut_llvm_backend_options()
                     .set_reloc_mode(reloc_mode);
 
@@ -465,7 +467,7 @@ impl CLI {
 
                 let code_model: CodeModel = self.parse_code_model(self.peek());
 
-                self.options
+                self.get_mut_options()
                     .get_mut_llvm_backend_options()
                     .set_code_model(code_model);
 
@@ -478,7 +480,7 @@ impl CLI {
 
                 let extra_opt_passes: String = self.peek().to_string();
 
-                self.options
+                self.get_mut_options()
                     .get_mut_llvm_backend_options()
                     .set_opt_passes(extra_opt_passes);
 
@@ -493,7 +495,7 @@ impl CLI {
                 let modificator_passes: Vec<LLVMModificatorPasses> =
                     LLVMModificatorPasses::into_llvm_modificator_passes(raw_modificator_passes);
 
-                self.options
+                self.get_mut_options()
                     .get_mut_llvm_backend_options()
                     .set_modificator_passes(modificator_passes);
 
@@ -504,7 +506,7 @@ impl CLI {
                 self.advance();
                 self.validate_llvm_required(arg);
 
-                self.options
+                self.get_mut_options()
                     .get_mut_linking_compilers_configuration()
                     .set_debug_clang_commands(true);
             }
@@ -513,19 +515,19 @@ impl CLI {
                 self.advance();
                 self.validate_llvm_required(arg);
 
-                self.options
+                self.get_mut_options()
                     .get_mut_linking_compilers_configuration()
                     .set_debug_gcc_commands(true);
             }
 
             "--clean-build" => {
                 self.advance();
-                self.options.set_clean_build();
+                self.get_mut_options().set_clean_build();
             }
 
             "--clean-tokens" => {
                 self.advance();
-                self.options.set_clean_tokens();
+                self.get_mut_options().set_clean_tokens();
             }
 
             "--clean-assembler" => {
@@ -540,22 +542,27 @@ impl CLI {
 
             "--clean-llvm-bitcode" => {
                 self.advance();
-                self.options.set_clean_llvm_bitcode();
+                self.get_mut_options().set_clean_llvm_bitcode();
             }
 
             "--clean-objects" => {
                 self.advance();
-                self.options.set_clean_object();
+                self.get_mut_options().set_clean_object();
             }
 
             "--no-obfuscate-archive-names" => {
                 self.advance();
-                self.options.set_no_obfuscate_archive_names();
+                self.get_mut_options().set_no_obfuscate_archive_names();
             }
 
             "--no-obfuscate-ir" => {
                 self.advance();
-                self.options.set_no_obfuscate_ir();
+                self.get_mut_options().set_no_obfuscate_ir();
+            }
+
+            "--enable-ansi-color" => {
+                self.advance();
+                self.get_mut_options().set_enable_ansi_colors();
             }
 
             possible_file_path if self.is_thrush_file(possible_file_path) => {

@@ -61,6 +61,8 @@ Extra compiler flags:
 • --codemodel [small|medium|large|kernel] Define how code is organized and accessed at machine code level.
 • --omit-frame-pointer Regardless of the optimization level, it omits the emission of the frame pointer.
 • --omit-uwtable It omits the unwind table required for exception handling and stack tracing.
+• --disable-default-opt Disable default optimization that occurs even without specified optimization.
+• --enable-ansi-color It allows ANSI color formatting in compiler diagnostics.
 
 Special flags:
 

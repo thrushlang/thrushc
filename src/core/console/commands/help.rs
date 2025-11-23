@@ -348,6 +348,26 @@ pub fn show_help() -> ! {
         ),
     );
 
+    logging::write(
+        logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {}\n",
+            "•".bold(),
+            "--disable-default-opt".custom_color((141, 141, 142)).bold(),
+            "It disable default optimization that occurs even without specified optimization.",
+        ),
+    );
+
+    logging::write(
+        logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {}\n",
+            "•".bold(),
+            "--enable-ansi-color".custom_color((141, 141, 142)).bold(),
+            "It allows ANSI color formatting in compiler diagnostics.",
+        ),
+    );
+
     logging::write(logging::OutputIn::Stderr, "\nSpecial flags:\n\n");
 
     logging::write(

@@ -23,7 +23,9 @@ pub struct CompilerOptions {
     emit: Vec<EmitableUnit>,
     printable: Vec<PrintableUnit>,
 
+    enable_ansi_colors: bool,
     disable_default_opt: bool,
+
     clean_tokens: bool,
     clean_assembler: bool,
     clean_object: bool,
@@ -131,7 +133,9 @@ impl CompilerOptions {
 
             build_dir: PathBuf::new(),
 
+            enable_ansi_colors: false,
             disable_default_opt: false,
+
             clean_tokens: false,
             clean_assembler: false,
             clean_object: false,
@@ -227,6 +231,11 @@ impl CompilerOptions {
     }
 
     #[inline]
+    pub fn set_enable_ansi_colors(&mut self) {
+        self.enable_ansi_colors = true;
+    }
+
+    #[inline]
     pub fn add_emit_option(&mut self, emit: EmitableUnit) {
         self.emit.push(emit);
     }
@@ -301,6 +310,11 @@ impl CompilerOptions {
     #[inline]
     pub fn need_obfuscate_ir(&self) -> bool {
         self.obfuscate_ir
+    }
+
+    #[inline]
+    pub fn need_ansi_colors(&self) -> bool {
+        self.enable_ansi_colors
     }
 
     #[inline]

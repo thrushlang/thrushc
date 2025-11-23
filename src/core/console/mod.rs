@@ -8,17 +8,26 @@ use colored::Colorize;
 
 use std::{process, time::Instant};
 
-#[inline]
-pub fn set_up() {
-    #[cfg(target_os = "windows")]
-    {
-        colored::control::set_virtual_terminal(true);
-        colored::control::set_override(true);
-    }
+use crate::core::compiler::options::CompilerOptions;
 
-    #[cfg(target_os = "linux")]
-    {
-        colored::control::set_override(true);
+#[inline]
+pub fn set_up_basic() {
+    colored::control::set_override(false);
+}
+
+#[inline]
+pub fn ansi(options: &CompilerOptions) {
+    if options.need_ansi_colors() {
+        #[cfg(target_os = "windows")]
+        {
+            colored::control::set_virtual_terminal(true);
+            colored::control::set_override(true);
+        }
+
+        #[cfg(target_os = "linux")]
+        {
+            colored::control::set_override(true);
+        }
     }
 }
 

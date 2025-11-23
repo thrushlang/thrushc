@@ -11,9 +11,11 @@ use lazy_static::lazy_static;
 use std::{env, time::Instant};
 
 fn main() -> ! {
-    console::set_up();
+    console::set_up_basic();
 
     let command_line: CLI = CLI::parse(env::args().collect());
+
+    console::ansi(command_line.get_options());
 
     let start_time: Instant = Instant::now();
 
