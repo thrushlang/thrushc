@@ -1,24 +1,26 @@
-use crate::core::{compiler::backends::llvm::passes::LLVMModificatorPasses, console::logging};
+use crate::core::compiler::backends::llvm::passes::LLVMModificatorPasses;
+use crate::core::console::logging;
 
-use inkwell::{
-    OptimizationLevel,
-    attributes::{Attribute, AttributeLoc},
-    basic_block::BasicBlock,
-    context::Context,
-    module::Module,
-    passes::PassBuilderOptions,
-    targets::TargetMachine,
-    values::{
-        AsValueRef, BasicValueEnum, CallSiteValue, FunctionValue, InstructionOpcode,
-        InstructionValue,
-    },
-};
-use llvm_sys::core::LLVMGetOperand;
+use inkwell::OptimizationLevel;
+use inkwell::attributes::Attribute;
+use inkwell::attributes::AttributeLoc;
+use inkwell::basic_block::BasicBlock;
+use inkwell::context::Context;
+use inkwell::module::Module;
+use inkwell::passes::PassBuilderOptions;
+use inkwell::targets::TargetMachine;
+use inkwell::values::AsValueRef;
+use inkwell::values::BasicValueEnum;
+use inkwell::values::CallSiteValue;
+use inkwell::values::FunctionValue;
+use inkwell::values::InstructionOpcode;
+use inkwell::values::InstructionValue;
 
 #[derive(Debug)]
 pub struct LLVMOptimizer<'a, 'ctx> {
     module: &'a Module<'ctx>,
     context: &'ctx Context,
+    flags: LLVMOptimizerFlags,
     target_machine: &'a TargetMachine,
     opt_level: OptimizationLevel,
     custom_passes: &'ctx str,
@@ -29,6 +31,7 @@ impl<'a, 'ctx> LLVMOptimizer<'a, 'ctx> {
     pub fn new(
         module: &'a Module<'ctx>,
         context: &'ctx Context,
+        flags: LLVMOptimizerFlags,
         target_machine: &'a TargetMachine,
         opt_level: OptimizationLevel,
         custom_passes: &'ctx str,
@@ -36,6 +39,7 @@ impl<'a, 'ctx> LLVMOptimizer<'a, 'ctx> {
     ) -> Self {
         Self {
             module,
+            flags,
             context,
             target_machine,
             opt_level,
@@ -49,7 +53,7 @@ impl<'a, 'ctx> LLVMOptimizer<'a, 'ctx> {
     #[inline]
     pub fn optimize(&self) {
         if !self.custom_passes.is_empty() {
-            if let Err(error) = self.module.run_passes(
+            if let Err(error) = self.get_module().run_passes(
                 self.custom_passes,
                 self.target_machine,
                 self.create_passes_builder(),
@@ -70,14 +74,16 @@ impl<'a, 'ctx> LLVMOptimizer<'a, 'ctx> {
 
         match self.opt_level {
             OptimizationLevel::None => {
-                let mut param_opt: LLVMParameterOptimizer =
-                    LLVMParameterOptimizer::new(self.module, self.context);
+                if !self.get_flags().get_disable_default_opt() {
+                    let mut param_opt: LLVMParameterOptimizer =
+                        LLVMParameterOptimizer::new(self.get_module(), self.get_context());
 
-                param_opt.start();
+                    param_opt.start();
+                }
             }
 
             OptimizationLevel::Default => {
-                if let Err(error) = self.module.run_passes(
+                if let Err(error) = self.get_module().run_passes(
                     "default<O1>",
                     self.target_machine,
                     self.create_passes_builder(),
@@ -93,7 +99,7 @@ impl<'a, 'ctx> LLVMOptimizer<'a, 'ctx> {
             }
 
             OptimizationLevel::Less => {
-                if let Err(error) = self.module.run_passes(
+                if let Err(error) = self.get_module().run_passes(
                     "default<O2>",
                     self.target_machine,
                     self.create_passes_builder(),
@@ -109,7 +115,7 @@ impl<'a, 'ctx> LLVMOptimizer<'a, 'ctx> {
             }
 
             OptimizationLevel::Aggressive => {
-                if let Err(error) = self.module.run_passes(
+                if let Err(error) = self.get_module().run_passes(
                     "default<O3>",
                     self.target_machine,
                     self.create_passes_builder(),
@@ -124,6 +130,23 @@ impl<'a, 'ctx> LLVMOptimizer<'a, 'ctx> {
                 }
             }
         }
+    }
+}
+
+impl<'a, 'ctx> LLVMOptimizer<'a, 'ctx> {
+    #[inline]
+    pub fn get_module(&self) -> &Module<'ctx> {
+        self.module
+    }
+
+    #[inline]
+    pub fn get_context(&self) -> &'ctx Context {
+        self.context
+    }
+
+    #[inline]
+    pub fn get_flags(&self) -> &LLVMOptimizerFlags {
+        &self.flags
     }
 }
 
@@ -165,6 +188,27 @@ impl<'a, 'ctx> LLVMOptimizer<'a, 'ctx> {
     }
 }
 
+#[derive(Debug, Clone, Copy)]
+pub struct LLVMOptimizerFlags {
+    disable_default_opt: bool,
+}
+
+impl LLVMOptimizerFlags {
+    #[inline]
+    pub fn new(disable_default_opt: bool) -> Self {
+        Self {
+            disable_default_opt,
+        }
+    }
+}
+
+impl LLVMOptimizerFlags {
+    #[inline]
+    pub fn get_disable_default_opt(&self) -> bool {
+        self.disable_default_opt
+    }
+}
+
 #[derive(Debug)]
 pub struct LLVMParameterOptimizer<'a, 'ctx> {
     module: &'a Module<'ctx>,
@@ -194,18 +238,40 @@ impl<'a, 'ctx> LLVMParameterOptimizer<'a, 'ctx> {
 impl<'a, 'ctx> LLVMParameterOptimizer<'a, 'ctx> {
     pub fn start(&mut self) {
         self.module.get_functions().for_each(|function_value| {
-            self.visit_function(function_value);
+            self.visit_function_once(function_value);
         });
     }
 }
 
 impl<'a, 'ctx> LLVMParameterOptimizer<'a, 'ctx> {
     fn optimize(&mut self) {
-        if let Some(optimizations) = self.optimizations {
-            if optimizations.has_nocapture() {
-                let kind_id: u32 = Attribute::get_named_enum_kind_id("nocapture");
+        if let Some(optimizations) = self.get_optimizations() {
+            if optimizations.has_deferenceable() {
+                let kind_id: u32 = Attribute::get_named_enum_kind_id("dereferenceable");
 
+                let attribute: Attribute = self.context.create_enum_attribute(kind_id, 1);
+
+                if let Some(function) = self.function {
+                    if let Some(target_pos) = self.target_position {
+                        function.add_attribute(AttributeLoc::Param(target_pos), attribute);
+                    }
+                }
+            }
+
+            if optimizations.has_noundef() {
+                let kind_id: u32 = Attribute::get_named_enum_kind_id("noundef");
                 let attribute: Attribute = self.context.create_enum_attribute(kind_id, 0);
+
+                if let Some(function) = self.function {
+                    if let Some(target_pos) = self.target_position {
+                        function.add_attribute(AttributeLoc::Param(target_pos), attribute);
+                    }
+                }
+            }
+
+            if optimizations.has_align() {
+                let kind_id: u32 = Attribute::get_named_enum_kind_id("align");
+                let attribute: Attribute = self.context.create_enum_attribute(kind_id, 1);
 
                 if let Some(function) = self.function {
                     if let Some(target_pos) = self.target_position {
@@ -218,7 +284,7 @@ impl<'a, 'ctx> LLVMParameterOptimizer<'a, 'ctx> {
 }
 
 impl<'a, 'ctx> LLVMParameterOptimizer<'a, 'ctx> {
-    fn visit_function(&mut self, function: FunctionValue<'ctx>) {
+    fn visit_function_once(&mut self, function: FunctionValue<'ctx>) {
         if function.get_first_basic_block().is_none() {
             return;
         }
@@ -230,10 +296,10 @@ impl<'a, 'ctx> LLVMParameterOptimizer<'a, 'ctx> {
             .enumerate()
             .for_each(|(idx, parameter)| {
                 self.set_target(parameter, idx as u32);
-                self.set_optimizations();
+                self.set_optimizations(function);
 
                 function.get_basic_block_iter().for_each(|basic_block| {
-                    self.visit_basic_block(basic_block);
+                    self.visit_basic_block_once(basic_block);
                 });
 
                 self.optimize();
@@ -245,114 +311,33 @@ impl<'a, 'ctx> LLVMParameterOptimizer<'a, 'ctx> {
         self.reset_function();
     }
 
-    fn visit_basic_block(&mut self, basic_block: BasicBlock<'ctx>) {
+    fn visit_basic_block_once(&mut self, basic_block: BasicBlock<'ctx>) {
         basic_block.get_instructions().for_each(|instruction| {
-            if self.target.is_some_and(|target| target.is_pointer_value()) {
-                self.visit_instruction_for_nocapture(instruction);
-            }
+            self.visit_instruction_once(instruction);
         });
     }
 
-    fn visit_instruction_for_nocapture(&mut self, instruction: InstructionValue<'ctx>) {
-        match instruction.get_opcode() {
-            InstructionOpcode::Store => {
-                if let Some(store_dest) = instruction.get_operand(0) {
-                    if let Some(left) = store_dest.left() {
-                        if let Some(target) = self.target {
-                            if left == target {
-                                if let Some(opts) = self.get_optimizations() {
-                                    opts.set_nocapture(false);
-                                }
-                            }
-                        }
-                    }
-                }
+    fn visit_instruction_once(&mut self, instruction: InstructionValue<'ctx>) {
+        if instruction.get_opcode() == InstructionOpcode::Call {
+            let callsite: CallSiteValue = unsafe { CallSiteValue::new(instruction.as_value_ref()) };
+
+            let callfn: FunctionValue = callsite.get_called_fn_value();
+
+            if !callsite.is_tail_call() && self.function.is_some_and(|function| function == callfn)
+            {
+                callsite.set_tail_call(true);
             }
-            InstructionOpcode::Return => {
-                if let Some(return_value) = instruction.get_operand(0) {
-                    if let Some(left) = return_value.left() {
-                        if let Some(target) = self.target {
-                            if left == target {
-                                if let Some(opts) = self.get_optimizations() {
-                                    opts.set_nocapture(false);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            InstructionOpcode::Call => {
-                let Ok(callsite) = CallSiteValue::try_from(instruction) else {
-                    return;
-                };
-
-                let called_fn: FunctionValue = callsite.get_called_fn_value();
-
-                if self.function.is_some_and(|function| function != called_fn) {
-                    self.visit_function(called_fn);
-                }
-
-                let num_args: u32 = callsite.count_arguments();
-                let mut passed_index: Option<u32> = None;
-
-                for i in 0..num_args {
-                    if let Some(operand) = self::get_call_operand(callsite, i) {
-                        if let Some(target) = self.target {
-                            if operand.is_pointer_value() && operand.into_pointer_value() == target
-                            {
-                                passed_index = Some(i);
-                                break;
-                            }
-                        }
-                    }
-                }
-
-                let Some(idx) = passed_index else {
-                    return;
-                };
-
-                let kind_id: u32 =
-                    inkwell::attributes::Attribute::get_named_enum_kind_id("nocapture");
-
-                let has_nocapture: bool = called_fn
-                    .get_enum_attribute(inkwell::attributes::AttributeLoc::Param(idx), kind_id)
-                    .is_some();
-
-                if !has_nocapture {
-                    if let Some(opts) = self.get_optimizations() {
-                        opts.set_nocapture(false);
-                    }
-                }
-            }
-
-            _ => (),
         }
     }
 }
 
-pub fn get_call_operand<'ctx>(
-    callsite: CallSiteValue<'ctx>,
-    index: u32,
-) -> Option<BasicValueEnum<'ctx>> {
-    if index >= callsite.count_arguments() {
-        return None;
-    }
-
-    let operand_ref: *mut llvm_sys::LLVMValue =
-        unsafe { LLVMGetOperand(callsite.as_value_ref(), index) };
-
-    if operand_ref.is_null() {
-        None
-    } else {
-        unsafe { Some(BasicValueEnum::new(operand_ref)) }
-    }
-}
-
 impl<'a, 'ctx> LLVMParameterOptimizer<'a, 'ctx> {
-    pub fn set_optimizations(&mut self) {
+    pub fn set_optimizations(&mut self, function: FunctionValue<'ctx>) {
         if let Some(target) = self.target {
             self.optimizations = Some(LLVMParameterOptimizations {
-                nocapture: target.is_pointer_value(),
+                deferenceable: target.is_pointer_value(),
+                noundef: !function.get_type().is_var_arg(),
+                align: target.is_pointer_value() && !function.get_type().is_var_arg(),
             });
         }
     }
@@ -387,26 +372,31 @@ impl<'a, 'ctx> LLVMParameterOptimizer<'a, 'ctx> {
 
 impl<'a, 'ctx> LLVMParameterOptimizer<'a, 'ctx> {
     #[inline]
-    pub fn get_optimizations(&mut self) -> Option<&mut LLVMParameterOptimizations> {
-        self.optimizations.as_mut()
+    pub fn get_optimizations(&self) -> Option<&LLVMParameterOptimizations> {
+        self.optimizations.as_ref()
     }
 }
 
 #[derive(Debug, Clone, Copy)]
 pub struct LLVMParameterOptimizations {
-    nocapture: bool,
+    deferenceable: bool,
+    noundef: bool,
+    align: bool,
 }
 
 impl LLVMParameterOptimizations {
     #[inline]
-    pub fn has_nocapture(&self) -> bool {
-        self.nocapture
+    pub fn has_deferenceable(&self) -> bool {
+        self.deferenceable
     }
-}
 
-impl LLVMParameterOptimizations {
     #[inline]
-    pub fn set_nocapture(&mut self, value: bool) {
-        self.nocapture = value;
+    pub fn has_noundef(&self) -> bool {
+        self.noundef
+    }
+
+    #[inline]
+    pub fn has_align(&self) -> bool {
+        self.align
     }
 }

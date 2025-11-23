@@ -5,17 +5,16 @@ pub mod jit;
 pub mod passes;
 pub mod target;
 pub mod targets;
-mod utils;
+pub mod utils;
 
 use inkwell::targets::{CodeModel, RelocMode, TargetMachine};
 
-use crate::core::compiler::{
-    backends::llvm::{
-        cpu::LLVMTargetCPU, jit::JITConfiguration, passes::LLVMModificatorPasses,
-        target::LLVMTarget,
-    },
-    options::ThrushOptimization,
-};
+use crate::core::compiler::backends::llvm::cpu::LLVMTargetCPU;
+use crate::core::compiler::backends::llvm::jit::JITConfiguration;
+use crate::core::compiler::backends::llvm::passes::LLVMModificatorPasses;
+use crate::core::compiler::backends::llvm::target::LLVMTarget;
+
+use crate::core::compiler::options::ThrushOptimization;
 
 #[derive(Debug)]
 pub struct LLVMBackend {

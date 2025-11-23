@@ -440,6 +440,13 @@ impl CLI {
                     .set_omit_uwtable();
             }
 
+            "--disable-default-opt" => {
+                self.advance();
+                self.validate_llvm_required(arg);
+
+                self.get_mut_options().set_disable_default_opt();
+            }
+
             "--reloc" => {
                 self.advance();
                 self.validate_llvm_required(arg);

@@ -23,6 +23,7 @@ pub struct CompilerOptions {
     emit: Vec<EmitableUnit>,
     printable: Vec<PrintableUnit>,
 
+    disable_default_opt: bool,
     clean_tokens: bool,
     clean_assembler: bool,
     clean_object: bool,
@@ -130,6 +131,7 @@ impl CompilerOptions {
 
             build_dir: PathBuf::new(),
 
+            disable_default_opt: false,
             clean_tokens: false,
             clean_assembler: false,
             clean_object: false,
@@ -207,6 +209,11 @@ impl CompilerOptions {
     #[inline]
     pub fn set_clean_build(&mut self) {
         self.clean_build = true;
+    }
+
+    #[inline]
+    pub fn set_disable_default_opt(&mut self) {
+        self.disable_default_opt = true;
     }
 
     #[inline]
@@ -304,6 +311,11 @@ impl CompilerOptions {
     #[inline]
     pub fn get_was_printed(&self) -> bool {
         !self.printable.is_empty()
+    }
+
+    #[inline]
+    pub fn disable_default_opt(&self) -> bool {
+        self.disable_default_opt
     }
 
     #[inline]

@@ -6,47 +6,54 @@ mod print;
 mod starter;
 mod validate;
 
-use std::{
-    path::PathBuf,
-    process,
-    time::{Duration, Instant},
-};
-
 use either::Either;
-use inkwell::{
-    OptimizationLevel,
-    builder::Builder,
-    context::Context,
-    execution_engine::ExecutionEngine,
-    memory_buffer::MemoryBuffer,
-    module::Module,
-    targets::{InitializationConfig, Target, TargetMachine, TargetTriple},
-};
+use std::path::PathBuf;
+use std::process;
+use std::time::Duration;
+use std::time::Instant;
 
-use crate::{
-    back_end::llvm::compiler::jit::LLVMJITCompiler,
-    core::compiler::{backends::llvm::jit, emitters::cleaner},
-    front_end::preprocessor::{self, Preprocessor},
-    linkage::linkers::lld::LLVMLinker,
-    middle_end,
-};
-use crate::{
-    back_end::llvm::{self, compiler::context::LLVMCodeGenContext},
-    core::compiler::backends::llvm::jit::JITConfiguration,
-};
+use crate::back_end::llvm;
+use crate::back_end::llvm::compiler::context::LLVMCodeGenContext;
+use crate::back_end::llvm::compiler::jit::LLVMJITCompiler;
+use crate::back_end::llvm::compiler::optimization::LLVMOptimizerFlags;
 
-use crate::core::compiler::backends::llvm::{LLVMBackend, target::LLVMTarget};
+use crate::middle_end;
+
+use crate::front_end::preprocessor;
+use crate::front_end::preprocessor::Preprocessor;
+use crate::linkage::linkers::lld::LLVMLinker;
+
+use crate::core::compiler::backends::llvm::LLVMBackend;
+use crate::core::compiler::backends::llvm::jit;
+use crate::core::compiler::backends::llvm::jit::JITConfiguration;
+use crate::core::compiler::backends::llvm::target::LLVMTarget;
+use crate::core::compiler::emitters::cleaner;
 use crate::core::compiler::linking::LinkingCompilersConfiguration;
-use crate::core::compiler::options::{
-    CompilationUnit, CompilerOptions, Emited, ThrushOptimization,
-};
-use crate::core::console::logging::{self, LoggingType};
+use crate::core::compiler::options::CompilationUnit;
+use crate::core::compiler::options::CompilerOptions;
+use crate::core::compiler::options::Emited;
+use crate::core::compiler::options::ThrushOptimization;
+use crate::core::console::logging;
+use crate::core::console::logging::LoggingType;
 use crate::core::diagnostic::diagnostician::Diagnostician;
 
-use crate::front_end::lexer::{Lexer, token::Token};
-use crate::front_end::parser::{Parser, ParserContext};
+use crate::front_end::lexer::Lexer;
+use crate::front_end::lexer::token::Token;
+use crate::front_end::parser::Parser;
+use crate::front_end::parser::ParserContext;
 use crate::front_end::semantic::SemanticAnalyzer;
 use crate::front_end::types::ast::Ast;
+
+use inkwell::OptimizationLevel;
+use inkwell::builder::Builder;
+use inkwell::context::Context;
+use inkwell::execution_engine::ExecutionEngine;
+use inkwell::memory_buffer::MemoryBuffer;
+use inkwell::module::Module;
+use inkwell::targets::InitializationConfig;
+use inkwell::targets::Target;
+use inkwell::targets::TargetMachine;
+use inkwell::targets::TargetTriple;
 
 #[derive(Debug)]
 pub struct ThrushCompiler<'thrushc> {
@@ -259,6 +266,7 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
         llvm::compiler::optimization::LLVMOptimizer::new(
             &llvm_module,
             &llvm_context,
+            LLVMOptimizerFlags::new(self.options.disable_default_opt()),
             &target_machine,
             llvm_opt,
             llvm_backend.get_opt_passes(),
@@ -489,6 +497,7 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
         llvm::compiler::optimization::LLVMOptimizer::new(
             &llvm_module,
             &llvm_context,
+            LLVMOptimizerFlags::new(self.options.disable_default_opt()),
             &target_machine,
             llvm_opt,
             llvm_backend.get_opt_passes(),
