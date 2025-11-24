@@ -39,6 +39,5 @@ pub fn build_block<'parser>(
 }
 
 pub fn check_state(ctx: &mut ParserContext) -> Result<(), ThrushCompilerIssue> {
-    checks::check_unreacheable_state(ctx)?;
     checks::check_inside_function_state(ctx)
 }

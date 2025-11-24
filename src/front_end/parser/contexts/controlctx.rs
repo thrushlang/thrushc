@@ -8,7 +8,6 @@ pub struct ParserControlContext {
     global_asm: bool,
     inside_function: bool,
     loop_depth: usize,
-    unreacheable_code: usize,
 }
 
 impl ParserControlContext {
@@ -20,7 +19,6 @@ impl ParserControlContext {
             global_asm: false,
             inside_function: false,
             loop_depth: 0,
-            unreacheable_code: 0,
         }
     }
 }
@@ -62,11 +60,6 @@ impl ParserControlContext {
     pub fn decrement_loop_depth(&mut self) {
         self.loop_depth -= 1;
     }
-
-    #[inline]
-    pub fn set_unreacheable_code_scope(&mut self, scope: usize) {
-        self.unreacheable_code = scope;
-    }
 }
 
 impl ParserControlContext {
@@ -93,10 +86,5 @@ impl ParserControlContext {
     #[inline]
     pub fn is_inside_loop(&self) -> bool {
         self.loop_depth > 0
-    }
-
-    #[inline]
-    pub fn get_unreacheable_code_scope(&self) -> usize {
-        self.unreacheable_code
     }
 }

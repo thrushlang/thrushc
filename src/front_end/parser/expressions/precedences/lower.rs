@@ -146,15 +146,9 @@ pub fn lower_precedence<'parser>(
             span: ctx.advance()?.get_span(),
         },
 
-        TokenType::Unreachable => {
-            let scope: usize = ctx.get_scope();
-
-            ctx.get_mut_control_ctx().set_unreacheable_code_scope(scope);
-
-            Ast::Unreachable {
-                span: ctx.advance()?.get_span(),
-            }
-        }
+        TokenType::Unreachable => Ast::Unreachable {
+            span: ctx.advance()?.get_span(),
+        },
 
         _ => {
             ctx.set_force_abort();

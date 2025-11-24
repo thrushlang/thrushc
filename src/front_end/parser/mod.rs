@@ -194,11 +194,6 @@ impl<'parser> ParserContext<'parser> {
 
 impl<'parser> ParserContext<'parser> {
     #[inline]
-    pub fn is_unreacheable_code(&self) -> bool {
-        self.control_ctx.get_unreacheable_code_scope() == self.scope && !self.is_main_scope()
-    }
-
-    #[inline]
     pub fn need_abort(&self) -> bool {
         self.abort
     }

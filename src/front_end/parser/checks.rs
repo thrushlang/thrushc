@@ -3,22 +3,6 @@ use crate::front_end::parser::ParserContext;
 use crate::front_end::types::parser::stmts::traits::TokenExtensions;
 
 #[inline]
-pub fn check_unreacheable_state(ctx: &mut ParserContext) -> Result<(), ThrushCompilerIssue> {
-    if ctx.is_unreacheable_code() {
-        ctx.only_advance()?;
-
-        return Err(ThrushCompilerIssue::Error(
-            "Syntax error".into(),
-            "Unreachable for execution.".into(),
-            None,
-            ctx.previous().get_span(),
-        ));
-    }
-
-    Ok(())
-}
-
-#[inline]
 pub fn check_inside_loop_state(ctx: &mut ParserContext) -> Result<(), ThrushCompilerIssue> {
     if !ctx.get_control_ctx().is_inside_loop() {
         ctx.only_advance()?;

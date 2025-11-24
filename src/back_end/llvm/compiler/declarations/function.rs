@@ -115,7 +115,7 @@ pub fn compile_body<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, function: Functio
     if let Some(function_body) = function_body {
         codegen.codegen_block(function_body);
 
-        if function_type.is_void_type() && !function_body.has_return_for_function() {
+        if function_type.is_void_type() && !function_body.has_terminator() {
             let _ = llvm_builder.build_return(None).is_err();
         }
     }

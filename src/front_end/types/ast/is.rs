@@ -66,7 +66,7 @@ impl Ast<'_> {
     }
 
     #[inline]
-    pub fn is_return(&self) -> bool {
+    pub fn is_terminator(&self) -> bool {
         matches!(self, Ast::Return { .. })
     }
 
@@ -94,69 +94,22 @@ impl Ast<'_> {
 impl Ast<'_> {
     #[inline]
     pub fn is_empty_block(&self) -> bool {
-        if let Ast::Block { stmts, .. } = self {
-            return stmts.is_empty();
-        }
+        let Ast::Block { stmts, .. } = self else {
+            return false;
+        };
 
-        false
+        stmts.is_empty()
     }
 }
 
 impl Ast<'_> {
     #[must_use]
-    pub fn has_return(&self) -> bool {
-        if let Ast::Block { stmts, .. } = self {
-            return stmts.iter().any(|stmt| stmt.has_return());
-        }
+    pub fn has_terminator(&self) -> bool {
+        let Ast::Block { stmts, .. } = self else {
+            return false;
+        };
 
-        self.is_return()
-    }
-
-    #[must_use]
-    pub fn has_return_for_function(&self) -> bool {
-        if let Ast::Block { stmts, .. } = self {
-            return stmts.iter().any(|stmt| stmt.has_return());
-        }
-
-        self.is_return()
-    }
-
-    #[must_use]
-    pub fn has_break(&self) -> bool {
-        if let Ast::Block { stmts, .. } = self {
-            return stmts.iter().any(|stmt| stmt.has_break());
-        }
-
-        self.is_break()
-    }
-
-    #[must_use]
-    pub fn has_continue(&self) -> bool {
-        if let Ast::Block { stmts, .. } = self {
-            return stmts.iter().any(|stmt| stmt.has_continue());
-        }
-
-        if let Ast::If {
-            block,
-            elseif,
-            anyway,
-            ..
-        } = self
-        {
-            return block.has_continue()
-                || elseif.iter().any(|elif| elif.has_continue())
-                || anyway.as_ref().is_some_and(|anyway| anyway.has_continue());
-        }
-
-        if let Ast::Elif { block, .. } = self {
-            return block.has_continue();
-        }
-
-        if let Ast::Else { block, .. } = self {
-            return block.has_continue();
-        }
-
-        self.is_continue()
+        stmts.iter().any(|stmt| stmt.is_terminator())
     }
 }
 

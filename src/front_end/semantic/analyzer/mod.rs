@@ -9,6 +9,7 @@ use crate::front_end::types::ast::Ast;
 use crate::front_end::types::attributes::traits::ThrushAttributesExtensions;
 
 mod builtins;
+mod checks;
 mod constants;
 mod declarations;
 mod expressions;
@@ -192,6 +193,9 @@ impl<'analyzer> Analyzer<'analyzer> {
 
         if let Ast::Block { stmts, .. } = node {
             self.begin_scope();
+
+            checks::check_for_multiple_terminators(self, node);
+            checks::check_for_unreachable_code_instructions(self, node);
 
             stmts.iter().try_for_each(|stmt| self.analyze_stmt(stmt))?;
 

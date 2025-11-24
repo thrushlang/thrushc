@@ -63,10 +63,6 @@ pub fn build_loop<'parser>(
 
     let scope: usize = ctx.get_scope();
 
-    if !block.has_break() && !block.has_return() && !block.has_continue() {
-        ctx.get_mut_control_ctx().set_unreacheable_code_scope(scope);
-    }
-
     ctx.get_mut_control_ctx().decrement_loop_depth();
 
     Ok(Ast::Loop {
@@ -104,6 +100,5 @@ pub fn build_while_loop<'parser>(
 }
 
 fn check_state(ctx: &mut ParserContext) -> Result<(), ThrushCompilerIssue> {
-    checks::check_unreacheable_state(ctx)?;
     checks::check_inside_function_state(ctx)
 }

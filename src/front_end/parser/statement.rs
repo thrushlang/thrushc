@@ -21,8 +21,6 @@ use super::{ParserContext, contexts::sync::ParserSyncPosition, expr};
 pub fn parse<'parser>(
     ctx: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, ThrushCompilerIssue> {
-    self::check_statement_state(ctx)?;
-
     ctx.get_mut_control_ctx()
         .add_sync_position(ParserSyncPosition::Statement);
 
@@ -54,8 +52,4 @@ pub fn parse<'parser>(
     ctx.get_mut_control_ctx().pop_sync_position();
 
     statement
-}
-
-fn check_statement_state(ctx: &mut ParserContext) -> Result<(), ThrushCompilerIssue> {
-    checks::check_unreacheable_state(ctx)
 }

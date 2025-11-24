@@ -25,7 +25,7 @@ pub fn validate<'type_checker>(
 
             typechecker.analyze_stmt(body)?;
 
-            if !body.has_return_for_function() {
+            if !body.has_terminator() {
                 typechecker.add_error(ThrushCompilerIssue::Error(
                     "Type error".into(),
                     format!("Expected return with type '{}'.", kind),
@@ -94,7 +94,7 @@ pub fn validate<'type_checker>(
             if let Some(body) = body {
                 typechecker.analyze_stmt(body)?;
 
-                if !body.has_return_for_function() && !return_type.is_void_type() {
+                if !body.has_terminator() && !return_type.is_void_type() {
                     typechecker.add_error(ThrushCompilerIssue::Error(
                         "Type error".into(),
                         format!("Expected return with type '{}'.", return_type),
