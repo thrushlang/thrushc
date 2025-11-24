@@ -13,7 +13,7 @@ const BOARD_CAP: const s32 = 30;
 static mut board: array[u32; 30];
 static mut stdout: ptr @public;
 
-fn main() s32 {
+fn main() s32 @public {
 
     board[BOARD_CAP - 2] = 1;
 

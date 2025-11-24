@@ -93,10 +93,6 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
 
         ########################################################################*/
 
-        if let Ast::EntryPoint { body, .. } = ast {
-            self.analyze_ast(body);
-        }
-
         if let Ast::Function {
             attributes,
             body,

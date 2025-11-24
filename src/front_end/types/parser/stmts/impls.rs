@@ -218,10 +218,6 @@ impl Display for Ast<'_> {
                 write!(f, "while {} {}", cond, block)
             }
 
-            Ast::EntryPoint { body, .. } => {
-                write!(f, "fn main() {}", body)
-            }
-
             Ast::NullPtr { .. } => {
                 write!(f, "nullptr")
             }

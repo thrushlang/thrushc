@@ -5,6 +5,7 @@ pub mod is;
 pub mod metadata;
 pub mod new;
 pub mod repr;
+pub mod traits;
 
 use std::rc::Rc;
 
@@ -190,14 +191,6 @@ pub enum Ast<'ctx> {
     },
 
     // Functions
-
-    // Entrypoint
-    EntryPoint {
-        body: Rc<Ast<'ctx>>,
-        parameters: Vec<Ast<'ctx>>,
-        kind: Type,
-        span: Span,
-    },
     Intrinsic {
         name: &'ctx str,
         external_name: &'ctx str,

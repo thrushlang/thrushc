@@ -23,7 +23,19 @@ pub fn build_halloc<'parser>(
 
     let span: Span = halloc_tk.get_span();
 
+    ctx.consume(
+        TokenType::LParen,
+        "Syntax error".into(),
+        "Expected '('.".into(),
+    )?;
+
     let alloc: Type = typegen::build_type(ctx)?;
+
+    ctx.consume(
+        TokenType::RParen,
+        "Syntax error".into(),
+        "Expected ')'.".into(),
+    )?;
 
     Ok(Ast::Builtin {
         builtin: Builtin::Halloc {
@@ -205,7 +217,19 @@ pub fn build_alignof<'parser>(
 
     let span: Span = sizeof_tk.get_span();
 
+    ctx.consume(
+        TokenType::LParen,
+        "Syntax error".into(),
+        "Expected '('.".into(),
+    )?;
+
     let alignof_type: Type = typegen::build_type(ctx)?;
+
+    ctx.consume(
+        TokenType::RParen,
+        "Syntax error".into(),
+        "Expected ')'.".into(),
+    )?;
 
     Ok(Ast::Builtin {
         builtin: Builtin::AlignOf {
@@ -228,7 +252,19 @@ pub fn build_sizeof<'parser>(
 
     let span: Span = sizeof_tk.get_span();
 
+    ctx.consume(
+        TokenType::LParen,
+        "Syntax error".into(),
+        "Expected '('.".into(),
+    )?;
+
     let sizeof_type: Type = typegen::build_type(ctx)?;
+
+    ctx.consume(
+        TokenType::RParen,
+        "Syntax error".into(),
+        "Expected ')'.".into(),
+    )?;
 
     Ok(Ast::Builtin {
         builtin: Builtin::SizeOf {

@@ -69,7 +69,7 @@ fn printArray(arr: ptr[array[u32; 7]], size: u32) void {
     print("\n");                           // Print a newline after the array
 }
 
-fn main() s32 {
+fn main() s32 @public {
 
     local unsorted_array: array[u32; 7] = fixed[64, 34, 25, 12, 22, 11, 90]; // Initialize array with 7 elements
 

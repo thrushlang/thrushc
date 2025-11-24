@@ -103,10 +103,6 @@ impl<'type_checker> TypeChecker<'type_checker> {
 
         ########################################################################*/
 
-        if let Ast::EntryPoint { .. } = node {
-            return declarations::functions::validate(self, node);
-        }
-
         if let Ast::Intrinsic { .. } = node {
             return declarations::functions::validate(self, node);
         }

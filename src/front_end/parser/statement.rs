@@ -1,7 +1,6 @@
 use crate::core::errors::standard::ThrushCompilerIssue;
 
 use crate::front_end::lexer::tokentype::TokenType;
-use crate::front_end::parser::checks;
 use crate::front_end::parser::statements::block;
 use crate::front_end::parser::statements::conditional;
 use crate::front_end::parser::statements::controlflow;

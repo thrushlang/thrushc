@@ -2,13 +2,13 @@
 
 use std::path::PathBuf;
 
+use crate::back_end::llvm::compiler::block;
 use crate::back_end::llvm::compiler::declarations::{self};
 use crate::back_end::llvm::compiler::generation::{cast, float, integer};
 use crate::back_end::llvm::compiler::statements::lli;
 use crate::back_end::llvm::compiler::{self, builtins, codegen, constgen};
 use crate::back_end::llvm::compiler::{abort, memory};
 use crate::back_end::llvm::compiler::{binaryop, generation};
-use crate::back_end::llvm::compiler::{block, typegen};
 use crate::back_end::llvm::compiler::{ptr, statements};
 
 use crate::front_end::types::ast::Ast;
@@ -21,12 +21,7 @@ use super::context::LLVMCodeGenContext;
 
 use inkwell::AddressSpace;
 use inkwell::basic_block::BasicBlock;
-use inkwell::{
-    builder::Builder,
-    module::Module,
-    types::FunctionType,
-    values::{BasicValueEnum, FunctionValue},
-};
+use inkwell::{builder::Builder, values::BasicValueEnum};
 
 #[derive(Debug)]
 pub struct LLVMCodegen<'a, 'ctx> {
@@ -63,15 +58,6 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         ########################################################################*/
 
         match node {
-            Ast::EntryPoint {
-                body,
-                parameters,
-                kind,
-                ..
-            } => {
-                self.build_standard_entrypoint(kind, parameters, body);
-            }
-
             Ast::Function { body, .. } => {
                 if body.is_none() {
                     return;
@@ -446,30 +432,6 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
 
 
         ########################################################################*/
-    }
-
-    fn build_standard_entrypoint(&mut self, kind: &Type, parameters: &'ctx [Ast], body: &'ctx Ast) {
-        let llvm_module: &Module = self.context.get_llvm_module();
-        let llvm_builder: &Builder = self.context.get_llvm_builder();
-
-        let entrypoint_type: FunctionType =
-            typegen::generate_fn_type(self.context, kind, parameters, false);
-
-        let entrypoint: FunctionValue = llvm_module.add_function("main", entrypoint_type, None);
-
-        llvm_builder.position_at_end(block::append_block(self.context, entrypoint));
-
-        self.context.set_current_fn(entrypoint);
-
-        parameters.iter().for_each(|parameter| {
-            compiler::declarations::function::compile_parameter(
-                self,
-                entrypoint,
-                parameter.as_function_parameter(),
-            );
-        });
-
-        self.codegen_block(body);
     }
 
     /* ######################################################################

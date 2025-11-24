@@ -3,6 +3,7 @@ use crate::back_end::llvm::compiler::builtins::Builtin;
 use crate::core::errors::standard::ThrushCompilerIssue;
 
 use crate::front_end::types::ast::Ast;
+use crate::front_end::types::ast::traits::AstStatementExtentions;
 
 impl Ast<'_> {
     #[inline]
@@ -78,6 +79,35 @@ impl Ast<'_> {
     #[inline]
     pub fn is_continue(&self) -> bool {
         matches!(self, Ast::Continue { .. })
+    }
+}
+
+impl AstStatementExtentions for Ast<'_> {
+    fn is_statement(&self) -> bool {
+        matches!(
+            self,
+            Ast::Block { .. }
+                | Ast::If { .. }
+                | Ast::While { .. }
+                | Ast::For { .. }
+                | Ast::Return { .. }
+                | Ast::Break { .. }
+                | Ast::Continue { .. }
+                | Ast::Local { .. }
+                | Ast::FunctionParameter { .. }
+                | Ast::Index { .. }
+                | Ast::Reference { .. }
+                | Ast::Property { .. }
+                | Ast::Struct { .. }
+                | Ast::Enum { .. }
+                | Ast::Const { .. }
+                | Ast::Static { .. }
+                | Ast::Integer { .. }
+                | Ast::Function { .. }
+                | Ast::Intrinsic { .. }
+                | Ast::AssemblerFunction { .. }
+                | Ast::Builtin { .. }
+        ) || self.is_lli()
     }
 }
 

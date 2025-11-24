@@ -45,7 +45,6 @@ impl Ast<'_> {
             Ast::AssemblerFunctionParameter { kind, .. } => Ok(kind),
             Ast::Call { kind, .. } => Ok(kind),
             Ast::Return { kind, .. } => Ok(kind),
-            Ast::EntryPoint { .. } => Ok(&Type::Void),
             Ast::Function { return_type, .. } => Ok(return_type),
             Ast::AssemblerFunction { return_type, .. } => Ok(return_type),
 
@@ -251,7 +250,6 @@ impl Ast<'_> {
             // Functions
             Ast::Function { span, .. } => *span,
             Ast::AssemblerFunction { span, .. } => *span,
-            Ast::EntryPoint { span, .. } => *span,
             Ast::Return { span, .. } => *span,
 
             // Low-level and special operations
@@ -368,7 +366,7 @@ impl Ast<'_> {
 
 impl Ast<'_> {
     #[inline]
-    pub fn get_str_content(&self, span: Span) -> Result<&str, ThrushCompilerIssue> {
+    pub fn get_str_literal_content(&self, span: Span) -> Result<&str, ThrushCompilerIssue> {
         if let Ast::Str { bytes, .. } = self {
             if let Ok(content) = std::str::from_utf8(bytes) {
                 return Ok(content);

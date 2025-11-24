@@ -11,32 +11,6 @@ pub fn validate<'type_checker>(
     node: &'type_checker Ast,
 ) -> Result<(), ThrushCompilerIssue> {
     match node {
-        Ast::EntryPoint {
-            body, kind, span, ..
-        } => {
-            if !kind.is_signed_integer_type() {
-                typechecker.add_error(ThrushCompilerIssue::Error(
-                    "Type error".into(),
-                    format!("Expected signed integer, got '{}'.", kind),
-                    None,
-                    *span,
-                ));
-            }
-
-            typechecker.analyze_stmt(body)?;
-
-            if !body.has_terminator() {
-                typechecker.add_error(ThrushCompilerIssue::Error(
-                    "Type error".into(),
-                    format!("Expected return with type '{}'.", kind),
-                    None,
-                    *span,
-                ));
-            }
-
-            Ok(())
-        }
-
         Ast::AssemblerFunction { parameters, .. } => {
             parameters.iter().try_for_each(|parameter| {
                 if parameter.get_value_type()?.is_void_type() {

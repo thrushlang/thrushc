@@ -20,7 +20,6 @@ pub fn build_continue<'parser>(
     )?;
 
     let span: Span = continue_tk.span;
-    let scope: usize = ctx.get_scope();
 
     ctx.consume(
         TokenType::SemiColon,
@@ -43,7 +42,6 @@ pub fn build_break<'parser>(
     )?;
 
     let span: Span = break_tk.get_span();
-    let scope: usize = ctx.get_scope();
 
     ctx.consume(
         TokenType::SemiColon,
@@ -55,6 +53,5 @@ pub fn build_break<'parser>(
 }
 
 fn check_state(ctx: &mut ParserContext) -> Result<(), ThrushCompilerIssue> {
-    checks::check_inside_function_state(ctx)?;
-    checks::check_inside_loop_state(ctx)
+    checks::check_inside_function_state(ctx)
 }

@@ -22,18 +22,14 @@ pub fn build_for_loop<'parser>(
         "Expected 'for' keyword.".into(),
     )?;
 
-    let span: Span = for_tk.span;
+    let span: Span = for_tk.get_span();
 
     let local: Ast = local::build_local(ctx)?;
 
     let cond: Ast = expr::build_expression(ctx)?;
     let actions: Ast = expr::build_expression(ctx)?;
 
-    ctx.get_mut_control_ctx().increment_loop_depth();
-
     let body: Ast = block::build_block(ctx)?;
-
-    ctx.get_mut_control_ctx().decrement_loop_depth();
 
     Ok(Ast::For {
         local: local.into(),
@@ -55,19 +51,13 @@ pub fn build_loop<'parser>(
         "Expected 'loop' keyword.".into(),
     )?;
 
-    let loop_span: Span = loop_tk.span;
-
-    ctx.get_mut_control_ctx().increment_loop_depth();
+    let span: Span = loop_tk.get_span();
 
     let block: Ast = block::build_block(ctx)?;
 
-    let scope: usize = ctx.get_scope();
-
-    ctx.get_mut_control_ctx().decrement_loop_depth();
-
     Ok(Ast::Loop {
         block: block.into(),
-        span: loop_span,
+        span,
     })
 }
 
@@ -85,12 +75,7 @@ pub fn build_while_loop<'parser>(
     let span: Span = while_tk.get_span();
 
     let cond: Ast = expr::build_expr(ctx)?;
-
-    ctx.get_mut_control_ctx().increment_loop_depth();
-
     let block: Ast = block::build_block(ctx)?;
-
-    ctx.get_mut_control_ctx().decrement_loop_depth();
 
     Ok(Ast::While {
         cond: cond.into(),

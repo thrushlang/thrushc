@@ -5,12 +5,14 @@ use crate::core::console::logging::LoggingType;
 use crate::core::diagnostic::diagnostician::Diagnostician;
 use crate::core::errors::standard::ThrushCompilerIssue;
 
+use crate::front_end::semantic::analyzer::context::AnalyzerContext;
 use crate::front_end::types::ast::Ast;
 use crate::front_end::types::attributes::traits::ThrushAttributesExtensions;
 
 mod builtins;
 mod checks;
 mod constants;
+mod context;
 mod declarations;
 mod expressions;
 mod statements;
@@ -27,6 +29,8 @@ pub struct Analyzer<'analyzer> {
 
     symbols: AnalyzerSymbolsTable<'analyzer>,
     diagnostician: Diagnostician,
+
+    context: AnalyzerContext,
 }
 
 impl<'analyzer> Analyzer<'analyzer> {
@@ -42,6 +46,8 @@ impl<'analyzer> Analyzer<'analyzer> {
 
             symbols: AnalyzerSymbolsTable::new(),
             diagnostician: Diagnostician::new(file),
+
+            context: AnalyzerContext::new(),
         }
     }
 }
@@ -99,10 +105,6 @@ impl<'analyzer> Analyzer<'analyzer> {
 
         ########################################################################*/
 
-        if let Ast::EntryPoint { .. } = node {
-            return declarations::functions::validate(self, node);
-        }
-
         if let Ast::Function { .. } = node {
             return declarations::functions::validate(self, node);
         }
@@ -112,7 +114,7 @@ impl<'analyzer> Analyzer<'analyzer> {
         }
 
         if let Ast::GlobalAssembler { .. } = node {
-            return Ok(());
+            return declarations::glasm::validate(self, node);
         }
 
         if let Ast::CustomType { .. } = node {
@@ -271,6 +273,17 @@ impl<'analyzer> Analyzer<'analyzer> {
         ########################################################################*/
 
         if let Ast::Continue { .. } | Ast::Break { .. } = node {
+            if !self.get_context().is_inside_loop() {
+                self.add_error(
+                    ThrushCompilerIssue::Error(
+                        "Syntax Error".into(),
+                        "Only loop control flow terminators can be inside a loop. The instruction inside a loop was expected.".into(),
+                        None,
+                        node.get_span(),
+                    )
+                );
+            }
+
             return Ok(());
         }
 
@@ -411,5 +424,17 @@ impl Analyzer<'_> {
     #[inline]
     pub fn end_scope(&mut self) {
         self.symbols.end_scope();
+    }
+}
+
+impl Analyzer<'_> {
+    #[inline]
+    pub fn get_context(&self) -> &AnalyzerContext {
+        &self.context
+    }
+
+    #[inline]
+    pub fn get_mut_context(&mut self) -> &mut AnalyzerContext {
+        &mut self.context
     }
 }

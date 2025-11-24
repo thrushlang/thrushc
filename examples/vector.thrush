@@ -18,7 +18,7 @@ struct Vector {
     capacity: u64
 }
 
-fn main(argc: u32, argv: ptr[array[char]]) s32 {
+fn main(argc: u32, argv: ptr[array[char]]) s32 @public {
 
     local mut vector: Vector @heap;
 
@@ -29,7 +29,7 @@ fn main(argc: u32, argv: ptr[array[char]]) s32 {
     for local mut idx: u32 = 0; idx < 10; idx++; {
         if (defer vector.size) >= (defer vector.capacity) {
             vector.capacity = (defer vector.capacity) * 2;
-            vector.data = realloc((defer vector.data) as ptr, sizeof u32 * (defer vector.capacity));
+            vector.data = realloc((defer vector.data) as ptr, sizeof(u32) * (defer vector.capacity));
         } 
 
         (defer vector.data)[defer vector.size] = idx;

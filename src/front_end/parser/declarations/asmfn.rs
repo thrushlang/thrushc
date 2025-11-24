@@ -113,7 +113,7 @@ pub fn build_assembler_function<'parser>(
         let raw_str: Ast = expr::build_expr(ctx)?;
         let raw_str_span: Span = raw_str.get_span();
 
-        let assembly: &str = raw_str.get_str_content(raw_str_span)?;
+        let assembly: &str = raw_str.get_str_literal_content(raw_str_span)?;
 
         if assembler_pos != 0 {
             assembler.push('\n');
@@ -157,7 +157,7 @@ pub fn build_assembler_function<'parser>(
         let raw_str: Ast = expr::build_expr(ctx)?;
         let raw_str_span: Span = raw_str.get_span();
 
-        let constraint: &str = raw_str.get_str_content(raw_str_span)?;
+        let constraint: &str = raw_str.get_str_literal_content(raw_str_span)?;
 
         if constraint_pos != 0 {
             constraints.push('\n');

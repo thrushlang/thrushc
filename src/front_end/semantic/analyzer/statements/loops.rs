@@ -18,24 +18,36 @@ pub fn validate<'analyzer>(
             block,
             ..
         } => {
+            analyzer.get_mut_context().increment_loop_depth();
+
             analyzer.analyze_stmt(local)?;
             analyzer.analyze_expr(cond)?;
 
             analyzer.analyze_expr(actions)?;
             analyzer.analyze_stmt(block)?;
 
+            analyzer.get_mut_context().decrement_loop_depth();
+
             Ok(())
         }
 
         Ast::While { cond, block, .. } => {
+            analyzer.get_mut_context().increment_loop_depth();
+
             analyzer.analyze_expr(cond)?;
             analyzer.analyze_stmt(block)?;
+
+            analyzer.get_mut_context().decrement_loop_depth();
 
             Ok(())
         }
 
         Ast::Loop { block, .. } => {
+            analyzer.get_mut_context().increment_loop_depth();
+
             analyzer.analyze_stmt(block)?;
+
+            analyzer.get_mut_context().decrement_loop_depth();
 
             Ok(())
         }

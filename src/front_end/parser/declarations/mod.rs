@@ -1,5 +1,4 @@
 pub mod asmfn;
-pub mod entrypoint;
 pub mod function;
 pub mod glasm;
 pub mod glconstant;

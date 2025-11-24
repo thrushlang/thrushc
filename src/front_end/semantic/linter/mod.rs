@@ -78,10 +78,6 @@ impl<'linter> Linter<'linter> {
 
         ########################################################################*/
 
-        if let Ast::EntryPoint { .. } | Ast::Function { .. } = node {
-            return declarations::functions::analyze(self, node);
-        }
-
         if let Ast::CustomType { .. } = node {
             return;
         }

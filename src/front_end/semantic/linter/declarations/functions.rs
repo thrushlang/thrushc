@@ -8,10 +8,6 @@ use crate::front_end::types::ast::Ast;
 
 pub fn analyze<'linter>(linter: &mut Linter<'linter>, node: &'linter Ast) {
     match node {
-        Ast::EntryPoint { body, .. } => {
-            linter.analyze_stmt(body);
-        }
-
         Ast::Function {
             parameters, body, ..
         } => {
