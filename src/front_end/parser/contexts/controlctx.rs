@@ -30,6 +30,7 @@ impl ParserControlContext {
 }
 
 impl ParserControlContext {
+    #[inline]
     pub fn set_inside_function(&mut self, value: bool) {
         self.inside_function = value;
     }

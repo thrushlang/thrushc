@@ -1,5 +1,6 @@
 use std::process::Command;
 
+#[cfg(target_os = "linux")]
 fn linux_link_gccjit_if_exist() {
     let libgccjit: Result<libloading::os::unix::Library, libloading::Error> =
         unsafe { libloading::os::unix::Library::new("libgccjit") };
@@ -11,15 +12,13 @@ fn linux_link_gccjit_if_exist() {
 }
 
 fn main() {
-    if cfg!(target_os = "linux")
-        && self::exist_clang_installation()
-        && self::exist_llvm_linker_installation()
+    #[cfg(target_os = "linux")]
     {
-        println!("cargo:rustc-linker=clang");
-        println!("cargo:rustc-link-arg=-fuse-ld=lld");
-    }
+        if self::exist_clang_installation() && self::exist_llvm_linker_installation() {
+            println!("cargo:rustc-linker=clang");
+            println!("cargo:rustc-link-arg=-fuse-ld=lld");
+        }
 
-    if cfg!(target_os = "linux") {
         self::linux_link_gccjit_if_exist();
     }
 }

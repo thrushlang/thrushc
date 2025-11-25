@@ -4,7 +4,12 @@ description = "The compiler builder for Thrush Programming Language."
 license = "GPL-3.0"
 version = "1.0.0"
 edition = "2024"
-authors = ["Kevin Benavides <https://github.com/DevCheckOG>"]
+
+authors = [
+    "Thrush Team <thrushlangproject@gmail.com>",
+    "Stevens Benavides <foss.stevens.benavides@gmail.com>"
+]
+
 readme = "README.md"
 rust-version = "1.85.0"
 
@@ -13,4 +18,3 @@ isahc = { version = "1.7.2", features = ["json"] }
 serde = { version = "1.0.219", features = ["derive"] }
 lazy_static = "1.5.0"
 serde_json =  "1.0.140"
-colored = "3.0.0"

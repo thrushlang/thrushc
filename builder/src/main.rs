@@ -1,27 +1,28 @@
-use std::{
-    borrow::Cow,
-    env,
-    fs::{self, File},
-    path::{Path, PathBuf},
-    process::Command,
-};
+use std::borrow::Cow;
+use std::env;
+use std::fmt::Display;
+use std::fs;
+use std::fs::File;
+use std::io;
+use std::io::Write;
+use std::path::Path;
+use std::path::PathBuf;
+use std::process;
+use std::process::Command;
 
-use colored::{ColoredString, Colorize};
-use isahc::{
-    Body, HttpClient, ReadResponseExt, Response,
-    config::{Configurable, RedirectPolicy},
-};
+use isahc::Body;
+use isahc::HttpClient;
+use isahc::ReadResponseExt;
+use isahc::Response;
+use isahc::config::Configurable;
+use isahc::config::RedirectPolicy;
 
-use serde_json::{Map, Value};
+use serde_json::Map;
+use serde_json::Value;
 
-use std::{
-    io::{self, Write},
-    process,
-};
+pub mod utils;
 
-mod utils;
-
-const GITHUB_RELEASES: &str = "https://api.github.com/repos/thrushlang/toolchains/releases";
+const TOOLCHAINS: &str = "https://api.github.com/repos/thrushlang/toolchains/releases";
 
 #[derive(Debug, PartialEq)]
 enum LoggingType {
@@ -30,13 +31,12 @@ enum LoggingType {
     Log,
 }
 
-impl LoggingType {
-    #[inline]
-    fn to_styled(&self) -> ColoredString {
+impl Display for LoggingType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            LoggingType::Error => "ERROR".bright_red().bold(),
-            LoggingType::Panic => "PANIC".bold().bright_red().underline(),
-            LoggingType::Log => "LOG".custom_color((141, 141, 142)).bold(),
+            LoggingType::Error => write!(f, "ERROR"),
+            LoggingType::Panic => write!(f, "PANIC"),
+            LoggingType::Log => write!(f, "LOG"),
         }
     }
 }
@@ -55,16 +55,16 @@ impl LoggingType {
 
 fn log(ltype: LoggingType, msg: &str) {
     if ltype.is_panic() {
-        let _ = io::stderr().write_all(format!("{} {}", ltype.to_styled(), msg.bold()).as_bytes());
+        let _ = io::stderr().write_all(format!("{} {}", ltype, msg).as_bytes());
         process::exit(1);
     }
 
     if ltype.is_err() {
-        let _ = io::stderr().write_all(format!("{} {}", ltype.to_styled(), msg.bold()).as_bytes());
+        let _ = io::stderr().write_all(format!("{} {}", ltype, msg).as_bytes());
         return;
     }
 
-    let _ = io::stdout().write_all(format!("{} {}", ltype.to_styled(), msg.bold()).as_bytes());
+    let _ = io::stdout().write_all(format!("{} {}", ltype, msg).as_bytes());
 }
 
 #[derive(Debug)]
@@ -73,6 +73,7 @@ pub struct Builder {
 }
 
 impl Builder {
+    #[inline]
     pub fn new(home: PathBuf) -> Self {
         let build_path: PathBuf = home.join("thrushlang/backends/llvm/build");
         Self { build_path }
@@ -92,7 +93,7 @@ impl Builder {
         if let Ok(thrushc_home) = self.get_thrushc_home() {
             self.reset_embedded_path(thrushc_home.join("embedded"));
 
-            if let Err(error) = self.install_embedded_compilers() {
+            if let Err(error) = self.install_linking_embedded_compilers() {
                 self::log(LoggingType::Panic, &error);
             }
 
@@ -106,12 +107,14 @@ impl Builder {
             "The Thrush Compiler dependencies are succesfully installed.\n",
         );
     }
+}
 
-    fn install_embedded_compilers(&self) -> Result<(), String> {
+impl Builder {
+    fn install_linking_embedded_compilers(&self) -> Result<(), String> {
         log(LoggingType::Log, "Installing embedded compilers...\n");
 
-        let mut releases: Response<Body> = isahc::get(GITHUB_RELEASES)
-            .map_err(|_| "Unable to get releases of embedded compilers.")?;
+        let mut releases: Response<Body> =
+            isahc::get(TOOLCHAINS).map_err(|_| "Unable to get releases of embedded compilers.")?;
 
         let releases_json: Value = releases
             .json::<Value>()
@@ -194,13 +197,13 @@ impl Builder {
             return Err("No valid assets found in the latest embedded compiler release.".into());
         }
 
-        self.download_and_install_embedded_compilers(links, names)
+        self.download_and_install_linking_embedded_compilers(links, names)
     }
 
     fn install_llvm_c_api(&self) -> Result<(), String> {
         log(LoggingType::Log, "Installing LLVM C API...\n");
 
-        let mut llvm_c_apis: Response<Body> = isahc::get(GITHUB_RELEASES)
+        let mut llvm_c_apis: Response<Body> = isahc::get(TOOLCHAINS)
             .map_err(|_| "Could not make request to GitHub releases API.".to_string())?;
 
         let llvm_c_apis_json: Value = llvm_c_apis
@@ -285,7 +288,7 @@ impl Builder {
         Err("No compatible LLVM-C API releases found.".to_string())
     }
 
-    fn download_and_install_embedded_compilers(
+    fn download_and_install_linking_embedded_compilers(
         &self,
         links: Vec<&str>,
         names: Vec<&str>,
@@ -499,20 +502,9 @@ impl Builder {
 fn main() {
     unsafe { env::set_var("CARGO_TERM_VERBOSE", "true") };
 
-    #[cfg(target_os = "windows")]
-    {
-        colored::control::set_virtual_terminal(true);
-        colored::control::set_override(true);
-    }
-
-    #[cfg(target_os = "linux")]
-    {
-        colored::control::set_override(true);
-    }
-
     self::log(
         LoggingType::Log,
-        "Starting to build dependencies for The Thrush Compiler...\n\n",
+        "Starting to build dependencies for the Thrush Compiler...\n\n",
     );
 
     self::log(LoggingType::Log, "Checking requirements...\n");
