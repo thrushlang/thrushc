@@ -13,7 +13,7 @@ The **Thrush Compiler** efficiently transfers source code from Thrush files dire
 
 It represents the objectives where it is fully known that Rust will have no problems compiling the compiler.
 
-- ``x86-64-pc-linux-glibc``
+- ``x86-64-pc-linux-gnu``
 - ``x86-64-pc-windows-msvc``
 
 ## Start
