@@ -1,3 +1,5 @@
+#![allow(unnecessary_transmutes)]
+
 use crate::back_end::llvm::compiler::{abort, codegen, ptr, typegen};
 use crate::front_end::lexer::span::Span;
 use crate::{back_end::llvm::compiler::context::LLVMCodeGenContext, front_end::types::ast::Ast};
@@ -28,30 +30,55 @@ use inkwell::{
 ########################################################################*/
 
 pub fn const_integer_together<'ctx>(
-    left: IntValue<'ctx>,
-    right: IntValue<'ctx>,
+    lhs: IntValue<'ctx>,
+    rhs: IntValue<'ctx>,
     signatures: (bool, bool),
 ) -> (IntValue<'ctx>, IntValue<'ctx>) {
-    let left_is_signed: bool = signatures.0;
-    let right_is_signed: bool = signatures.1;
-
-    match left
+    match lhs
         .get_type()
         .get_bit_width()
-        .cmp(&right.get_type().get_bit_width())
+        .cmp(&rhs.get_type().get_bit_width())
     {
         Ordering::Greater => {
-            let new_right: IntValue<'ctx> = right.const_cast(left.get_type(), right_is_signed);
+            if signatures.0 || signatures.1 {
+                if let Some(lhs_number) = lhs.get_sign_extended_constant() {
+                    return (
+                        rhs.get_type().const_int(
+                            unsafe { std::mem::transmute::<i64, u64>(lhs_number) },
+                            true,
+                        ),
+                        rhs,
+                    );
+                }
+            }
 
-            (left, new_right)
+            if let Some(lhs_number) = lhs.get_zero_extended_constant() {
+                return (rhs.get_type().const_int(lhs_number, true), rhs);
+            }
+
+            (rhs.get_type().const_zero(), rhs.get_type().const_zero())
         }
         Ordering::Less => {
-            let new_left: IntValue<'ctx> = left.const_cast(right.get_type(), left_is_signed);
+            if signatures.0 || signatures.1 {
+                if let Some(rhs_number) = rhs.get_sign_extended_constant() {
+                    return (
+                        lhs,
+                        lhs.get_type().const_int(
+                            unsafe { std::mem::transmute::<i64, u64>(rhs_number) },
+                            true,
+                        ),
+                    );
+                }
+            }
 
-            (new_left, right)
+            if let Some(rhs_number) = rhs.get_zero_extended_constant() {
+                return (lhs, lhs.get_type().const_int(rhs_number, true));
+            }
+
+            (rhs.get_type().const_zero(), rhs.get_type().const_zero())
         }
 
-        _ => (left, right),
+        _ => (lhs, rhs),
     }
 }
 
@@ -122,13 +149,21 @@ pub fn const_float_together<'ctx>(
     }
 
     let new_left: FloatValue = if left_type != right_type {
-        left.const_cast(right_type)
+        if let Some((left_number, ..)) = left.get_constant() {
+            right.get_type().const_float(left_number)
+        } else {
+            left
+        }
     } else {
         left
     };
 
     let new_right: FloatValue = if right_type != left_type {
-        right.const_cast(left_type)
+        if let Some((right_number, ..)) = right.get_constant() {
+            left.get_type().const_float(right_number)
+        } else {
+            right
+        }
     } else {
         right
     };
@@ -326,7 +361,9 @@ pub fn try_cast_const<'ctx>(
             }
         }
 
-        (lhs, rhs) if rhs.is_ptr_type() => self::const_ptr_cast(context, lhs, rhs),
+        (lhs, rhs) if lhs.is_pointer_value() && rhs.is_ptr_type() => {
+            lhs.into_pointer_value().into()
+        }
 
         _ => from,
     }
@@ -447,46 +484,35 @@ pub fn const_numeric_bitcast_cast<'ctx>(
 ) -> BasicValueEnum<'ctx> {
     let llvm_context: &Context = context.get_llvm_context();
 
-    let llvm_type: BasicTypeEnum = typegen::generate(llvm_context, cast);
+    let cast: BasicTypeEnum = typegen::generate(llvm_context, cast);
 
-    if value.is_int_value() && cast.is_integer_type() {
+    if value.is_int_value() && cast.is_int_type() {
         let integer: IntValue = value.into_int_value();
 
-        return integer.const_bit_cast(llvm_type.into_int_type()).into();
+        if let Some(number) = integer.get_sign_extended_constant() {
+            return cast
+                .into_int_type()
+                .const_int(unsafe { std::mem::transmute::<i64, u64>(number) }, true)
+                .into();
+        }
+
+        if let Some(number) = integer.get_zero_extended_constant() {
+            return cast.into_int_type().const_int(number, false).into();
+        }
+
+        return cast.into_int_type().const_int(0, false).into();
     }
 
     if value.is_float_value() && cast.is_float_type() {
         let float: FloatValue = value.into_float_value();
 
-        return float.const_cast(llvm_type.into_float_type()).into();
-    }
-
-    value
-}
-
-/* ######################################################################
-
-    POINTER BITCAST CAST
-
-########################################################################*/
-
-pub fn const_ptr_cast<'ctx>(
-    context: &LLVMCodeGenContext<'_, 'ctx>,
-    value: BasicValueEnum<'ctx>,
-    target: &Type,
-) -> BasicValueEnum<'ctx> {
-    if value.is_pointer_value() {
-        let llvm_context: &Context = context.get_llvm_context();
-
-        let cast: BasicTypeEnum = typegen::generate(llvm_context, target);
-
-        return value
-            .into_pointer_value()
-            .const_cast(cast.into_pointer_type())
+        return cast
+            .into_float_type()
+            .const_float(float.get_constant().unwrap_or((0.0, false)).0)
             .into();
     }
 
-    self::codegen_abort("Cannot cast constant pointer value to non-basic type.");
+    value
 }
 
 /* ######################################################################
@@ -508,13 +534,29 @@ pub fn numeric_cast<'ctx>(
     if value.is_int_value() && cast.is_int_type() {
         let integer: IntValue = value.into_int_value();
 
-        return integer.const_cast(cast.into_int_type(), is_signed).into();
+        if is_signed {
+            if let Some(number) = integer.get_sign_extended_constant() {
+                return cast
+                    .into_int_type()
+                    .const_int(unsafe { std::mem::transmute::<i64, u64>(number) }, true)
+                    .into();
+            }
+        }
+
+        if let Some(number) = integer.get_zero_extended_constant() {
+            return cast.into_int_type().const_int(number, false).into();
+        }
+
+        return cast.into_int_type().const_int(0, false).into();
     }
 
     if value.is_float_value() && cast.is_float_type() {
         let float: FloatValue = value.into_float_value();
 
-        return float.const_cast(cast.into_float_type()).into();
+        return cast
+            .into_float_type()
+            .const_float(float.get_constant().unwrap_or((0.0, false)).0)
+            .into();
     }
 
     value

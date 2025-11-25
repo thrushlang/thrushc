@@ -1,3 +1,6 @@
+#![allow(unnecessary_transmutes)]
+#![allow(clippy::incompatible_msrv)]
+
 use std::path::PathBuf;
 
 use crate::back_end::llvm::compiler;
@@ -343,7 +346,14 @@ fn const_int_operation<'ctx>(
                         if let Some(rhs_number) = rhs.get_sign_extended_constant() {
                             return lhs
                                 .get_type()
-                                .const_int((lhs_number / rhs_number) as u64, true)
+                                .const_int(
+                                    unsafe {
+                                        std::mem::transmute::<i64, u64>(
+                                            lhs_number.overflowing_div(rhs_number).0,
+                                        )
+                                    },
+                                    true,
+                                )
                                 .into();
                         }
                     }
@@ -353,15 +363,79 @@ fn const_int_operation<'ctx>(
                     if let Some(rhs_number) = rhs.get_zero_extended_constant() {
                         return lhs
                             .get_type()
-                            .const_int(lhs_number / rhs_number, false)
+                            .const_int(lhs_number.overflowing_div(rhs_number).0, false)
                             .into();
                     }
                 }
 
                 lhs.get_type().const_zero().into()
             }
-            TokenType::LShift => lhs.const_shl(rhs).into(),
-            TokenType::RShift => lhs.const_rshr(rhs).into(),
+            TokenType::LShift => {
+                if signatures.0 || signatures.1 {
+                    if let Some(lhs_number) = lhs.get_sign_extended_constant() {
+                        if let Some(rhs_number) = rhs.get_sign_extended_constant() {
+                            return lhs
+                                .get_type()
+                                .const_int(
+                                    unsafe {
+                                        std::mem::transmute::<i64, u64>(lhs_number.unbounded_shl(
+                                            rhs_number.try_into().unwrap_or_default(),
+                                        ))
+                                    },
+                                    true,
+                                )
+                                .into();
+                        }
+                    }
+                }
+
+                if let Some(lhs_number) = lhs.get_zero_extended_constant() {
+                    if let Some(rhs_number) = rhs.get_zero_extended_constant() {
+                        return lhs
+                            .get_type()
+                            .const_int(
+                                lhs_number.unbounded_shl(rhs_number.try_into().unwrap_or_default()),
+                                false,
+                            )
+                            .into();
+                    }
+                }
+
+                lhs.get_type().const_zero().into()
+            }
+            TokenType::RShift => {
+                if signatures.0 || signatures.1 {
+                    if let Some(lhs_number) = lhs.get_sign_extended_constant() {
+                        if let Some(rhs_number) = rhs.get_sign_extended_constant() {
+                            return lhs
+                                .get_type()
+                                .const_int(
+                                    unsafe {
+                                        std::mem::transmute::<i64, u64>(lhs_number.unbounded_shr(
+                                            rhs_number.try_into().unwrap_or_default(),
+                                        ))
+                                    },
+                                    true,
+                                )
+                                .into();
+                        }
+                    }
+                }
+
+                if let Some(lhs_number) = lhs.get_zero_extended_constant() {
+                    if let Some(rhs_number) = rhs.get_zero_extended_constant() {
+                        return lhs
+                            .get_type()
+                            .const_int(
+                                lhs_number.unbounded_shr(rhs_number.try_into().unwrap_or_default()),
+                                false,
+                            )
+                            .into();
+                    }
+                }
+
+                lhs.get_type().const_zero().into()
+            }
             TokenType::Arith => {
                 if signatures.0 || signatures.1 {
                     if let Some(lhs_number) = lhs.get_sign_extended_constant() {
@@ -386,8 +460,64 @@ fn const_int_operation<'ctx>(
                 lhs.get_type().const_zero().into()
             }
             TokenType::Xor => lhs.const_xor(rhs).into(),
-            TokenType::Bor => lhs.const_or(rhs).into(),
-            TokenType::BAnd => lhs.const_and(rhs).into(),
+
+            TokenType::Bor => {
+                if signatures.0 || signatures.1 {
+                    if let Some(lhs_number) = lhs.get_sign_extended_constant() {
+                        if let Some(rhs_number) = rhs.get_sign_extended_constant() {
+                            return lhs
+                                .get_type()
+                                .const_int(
+                                    unsafe {
+                                        std::mem::transmute::<i64, u64>(lhs_number | rhs_number)
+                                    },
+                                    true,
+                                )
+                                .into();
+                        }
+                    }
+                }
+
+                if let Some(lhs_number) = lhs.get_zero_extended_constant() {
+                    if let Some(rhs_number) = rhs.get_zero_extended_constant() {
+                        return lhs
+                            .get_type()
+                            .const_int(lhs_number | rhs_number, false)
+                            .into();
+                    }
+                }
+
+                lhs.get_type().const_zero().into()
+            }
+
+            TokenType::BAnd => {
+                if signatures.0 || signatures.1 {
+                    if let Some(lhs_number) = lhs.get_sign_extended_constant() {
+                        if let Some(rhs_number) = rhs.get_sign_extended_constant() {
+                            return lhs
+                                .get_type()
+                                .const_int(
+                                    unsafe {
+                                        std::mem::transmute::<i64, u64>(lhs_number & rhs_number)
+                                    },
+                                    true,
+                                )
+                                .into();
+                        }
+                    }
+                }
+
+                if let Some(lhs_number) = lhs.get_zero_extended_constant() {
+                    if let Some(rhs_number) = rhs.get_zero_extended_constant() {
+                        return lhs
+                            .get_type()
+                            .const_int(lhs_number & rhs_number, false)
+                            .into();
+                    }
+                }
+
+                lhs.get_type().const_zero().into()
+            }
 
             op if op.is_logical_operator() => lhs
                 .const_int_compare(
@@ -398,11 +528,57 @@ fn const_int_operation<'ctx>(
 
             op if op.is_logical_gate() => {
                 if let TokenType::And = op {
-                    return lhs.const_and(rhs).into();
+                    if signatures.0 || signatures.1 {
+                        if let Some(lhs_number) = lhs.get_sign_extended_constant() {
+                            if let Some(rhs_number) = rhs.get_sign_extended_constant() {
+                                return lhs
+                                    .get_type()
+                                    .const_int(
+                                        ((lhs_number != 0) && (rhs_number != 0)) as u64,
+                                        false,
+                                    )
+                                    .into();
+                            }
+                        }
+                    }
+
+                    if let Some(lhs_number) = lhs.get_zero_extended_constant() {
+                        if let Some(rhs_number) = rhs.get_zero_extended_constant() {
+                            return lhs
+                                .get_type()
+                                .const_int(((lhs_number != 0) && (rhs_number != 0)) as u64, false)
+                                .into();
+                        }
+                    }
+
+                    return lhs.get_type().const_zero().into();
                 }
 
                 if let TokenType::Or = op {
-                    return lhs.const_or(rhs).into();
+                    if signatures.0 || signatures.1 {
+                        if let Some(lhs_number) = lhs.get_sign_extended_constant() {
+                            if let Some(rhs_number) = rhs.get_sign_extended_constant() {
+                                return lhs
+                                    .get_type()
+                                    .const_int(
+                                        ((lhs_number != 0) || (rhs_number != 0)) as u64,
+                                        false,
+                                    )
+                                    .into();
+                            }
+                        }
+                    }
+
+                    if let Some(lhs_number) = lhs.get_zero_extended_constant() {
+                        if let Some(rhs_number) = rhs.get_zero_extended_constant() {
+                            return lhs
+                                .get_type()
+                                .const_int(((lhs_number != 0) || (rhs_number != 0)) as u64, false)
+                                .into();
+                        }
+                    }
+
+                    return lhs.get_type().const_zero().into();
                 }
 
                 abort::abort_codegen(

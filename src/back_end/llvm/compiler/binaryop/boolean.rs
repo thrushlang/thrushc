@@ -237,8 +237,59 @@ pub fn const_bool_operation<'ctx>(
                 )
                 .into(),
             op if op.is_logical_gate() => match op {
-                TokenType::And => lhs.const_and(rhs).into(),
-                TokenType::Or => lhs.const_or(rhs).into(),
+                TokenType::And => {
+                    if signatures.0 || signatures.1 {
+                        if let Some(lhs_number) = lhs.get_sign_extended_constant() {
+                            if let Some(rhs_number) = rhs.get_sign_extended_constant() {
+                                return lhs
+                                    .get_type()
+                                    .const_int(
+                                        ((lhs_number != 0) && (rhs_number != 0)) as u64,
+                                        false,
+                                    )
+                                    .into();
+                            }
+                        }
+                    }
+
+                    if let Some(lhs_number) = lhs.get_zero_extended_constant() {
+                        if let Some(rhs_number) = rhs.get_zero_extended_constant() {
+                            return lhs
+                                .get_type()
+                                .const_int(((lhs_number != 0) && (rhs_number != 0)) as u64, false)
+                                .into();
+                        }
+                    }
+
+                    return lhs.get_type().const_zero().into();
+                }
+                TokenType::Or => {
+                    if signatures.0 || signatures.1 {
+                        if let Some(lhs_number) = lhs.get_sign_extended_constant() {
+                            if let Some(rhs_number) = rhs.get_sign_extended_constant() {
+                                return lhs
+                                    .get_type()
+                                    .const_int(
+                                        ((lhs_number != 0) || (rhs_number != 0)) as u64,
+                                        false,
+                                    )
+                                    .into();
+                            }
+                        }
+                    }
+
+                    if let Some(lhs_number) = lhs.get_zero_extended_constant() {
+                        if let Some(rhs_number) = rhs.get_zero_extended_constant() {
+                            return lhs
+                                .get_type()
+                                .const_int(((lhs_number != 0) || (rhs_number != 0)) as u64, false)
+                                .into();
+                        }
+                    }
+
+                    return lhs.get_type().const_zero().into();
+                }
+
                 _ => abort::abort_codegen(
                     context,
                     "Failed to compile without a valid logical operator!",
@@ -291,6 +342,7 @@ pub fn const_bool_operation<'ctx>(
                     .bool_type()
                     .const_int((lhs.is_null() != rhs.is_null()) as u64, false)
                     .into(),
+
                 _ => abort::abort_codegen(
                     context,
                     "Failed to compile a valid logical operator!",

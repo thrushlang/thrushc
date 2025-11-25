@@ -124,7 +124,7 @@ impl Builder {
             .as_array()
             .ok_or("Unable to convert github releases json format to array.")?;
 
-        let tag_to_find: &'static str = if cfg!(target_os = "windows") {
+        let tag_name_to_find: &'static str = if cfg!(target_os = "windows") {
             "CLANG-WINDOWS"
         } else {
             "CLANG-LINUX"
@@ -142,7 +142,7 @@ impl Builder {
                 let release_obj: &Map<String, Value> = release.as_object()?;
                 let tag_name: &str = release_obj.get("tag_name")?.as_str()?;
 
-                if tag_name.starts_with(tag_to_find) {
+                if tag_name.starts_with(tag_name_to_find) {
                     Some(release_obj)
                 } else {
                     None
@@ -176,6 +176,20 @@ impl Builder {
             .and_then(|v| v.as_array())
             .ok_or("Unable to get assets from the latest embedded compiler.")?;
 
+        let version_tag_name: Option<&str> =
+            embedded_compiler.get("tag_name").and_then(|v| v.as_str());
+
+        if let Some(tag) = version_tag_name {
+            self::log(
+                LoggingType::Log,
+                &format!(
+                    "Installing embedded link compiler '{} v{}'.",
+                    tag_name_to_find,
+                    tag.trim_start_matches("v")
+                ),
+            );
+        }
+
         let mut links: Vec<&str> = Vec::with_capacity(10);
         let mut names: Vec<&str> = Vec::with_capacity(10);
 
@@ -201,7 +215,7 @@ impl Builder {
     }
 
     fn install_llvm_c_api(&self) -> Result<(), String> {
-        log(LoggingType::Log, "Installing LLVM C API...\n");
+        log(LoggingType::Log, "Installing LLVM...\n");
 
         let mut llvm_c_apis: Response<Body> = isahc::get(TOOLCHAINS)
             .map_err(|_| "Could not make request to GitHub releases API.".to_string())?;
@@ -259,6 +273,22 @@ impl Builder {
             });
 
         if let Some(latest_llvm_c_api) = latest_llvm_c_api {
+            let version_tag_name: Option<&str> = latest_llvm_c_api
+                .as_object()
+                .and_then(|obj| obj.get("tag_name"))
+                .and_then(|v| v.as_str());
+
+            if let Some(tag) = version_tag_name {
+                self::log(
+                    LoggingType::Log,
+                    &format!(
+                        "Installing LLVM '{} v{}'.",
+                        tag_name_to_find,
+                        tag.trim_start_matches("v")
+                    ),
+                );
+            }
+
             if let Some(llvm_c_api) = latest_llvm_c_api.as_object() {
                 if let Some(assets) = llvm_c_api.get("assets").and_then(|v| v.as_array()) {
                     let mut links: Vec<&str> = Vec::with_capacity(10);
