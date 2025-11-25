@@ -79,7 +79,9 @@ impl<'clang> Clang<'clang> {
 
         #[cfg(target_os = "windows")]
         {
-            if self.config.use_clang() {
+            use crate::linkage::decompressor;
+
+            if self.config.get_use_clang() {
                 if let Some(custom_clang) = self.config.get_custom_clang() {
                     if self.handle_command(&mut self.build_clang_command(custom_clang)) {
                         return Ok(start_time.elapsed());
@@ -199,9 +201,11 @@ pub fn get_x86_64_linux_clang() -> (&'static [u8], &'static str, PathBuf, PathBu
 
 #[cfg(target_os = "windows")]
 pub fn get_x86_64_windows_clang() -> (&'static [u8], &'static str, PathBuf, PathBuf, PathBuf) {
+    use crate::linkage;
+
     (
-        linking::embedded::WINDOWS_X86_64_CLANG,
-        linking::embedded::WINDOWS_X86_64_CLANG_MANIFEST,
+        linkage::embedded::WINDOWS_X86_64_CLANG,
+        linkage::embedded::WINDOWS_X86_64_CLANG_MANIFEST,
         PathBuf::from("clang-manifest.json"),
         PathBuf::from("clang-windows-x86_64.zip"),
         PathBuf::from("bin"),

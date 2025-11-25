@@ -1,6 +1,6 @@
 use std::env;
-use std::fs::{self, File, Permissions, write};
-use std::io::BufReader;
+use std::fs::{File, Permissions, write};
+
 use std::path::{Path, PathBuf};
 
 #[cfg(target_family = "unix")]
@@ -43,7 +43,7 @@ pub fn dump_x86_64_clang_linux(
     let llvm_backend: PathBuf = home_path.join("thrushlang/backends/llvm/linux");
 
     if !llvm_backend.exists() {
-        let _ = fs::create_dir_all(&llvm_backend);
+        let _ = std::fs::create_dir_all(&llvm_backend);
     }
 
     let compressed_file: PathBuf = llvm_backend.join(compressed_file_path);
@@ -72,9 +72,9 @@ pub fn dump_x86_64_clang_linux(
         }
     };
 
-    let buff_reader: BufReader<File> = BufReader::new(file);
-    let xz_decoded: XzDecoder<BufReader<File>> = XzDecoder::new(buff_reader);
-    let mut archive: Archive<XzDecoder<BufReader<File>>> = Archive::new(xz_decoded);
+    let buff_reader: std::io::BufReader<File> = std::io::BufReader::new(file);
+    let xz_decoded: XzDecoder<std::io::BufReader<File>> = XzDecoder::new(buff_reader);
+    let mut archive: Archive<XzDecoder<std::io::BufReader<File>>> = Archive::new(xz_decoded);
 
     if archive.unpack(&llvm_backend).is_err() {
         logging::print_error(
@@ -106,11 +106,10 @@ pub fn dump_x86_64_clang_windows(
     output_path: PathBuf,
 ) -> Result<PathBuf, ()> {
     let raw_home_path: String = env::var("APPDATA").unwrap_or_else(|_| {
-        logging::log(
+        logging::print_any_panic(
             LoggingType::Panic,
             "Unable to get %APPDATA% path at windows.",
-        );
-        unreachable!()
+        )
     });
 
     let home_path: PathBuf = PathBuf::from(raw_home_path);
@@ -144,7 +143,7 @@ pub fn dump_x86_64_clang_windows(
                     return Ok(canonical_windows_clang_path);
                 }
 
-                logging::log(
+                logging::print_error(
                     logging::LoggingType::Error,
                     "Failed to get Clang executable at windows.",
                 );
@@ -152,7 +151,7 @@ pub fn dump_x86_64_clang_windows(
                 return Err(());
             }
 
-            logging::log(
+            logging::print_error(
                 logging::LoggingType::Error,
                 "Failed to decompress Clang at windows.",
             );
@@ -160,7 +159,7 @@ pub fn dump_x86_64_clang_windows(
             return Err(());
         }
 
-        logging::log(
+        logging::print_error(
             logging::LoggingType::Error,
             "Failed to open Clang compressed at windows.",
         );
@@ -168,7 +167,7 @@ pub fn dump_x86_64_clang_windows(
         return Err(());
     }
 
-    logging::log(
+    logging::print_error(
         logging::LoggingType::Error,
         "%APPDATA% path not exist at windows.",
     );
@@ -178,10 +177,10 @@ pub fn dump_x86_64_clang_windows(
 
 #[cfg(target_os = "linux")]
 fn make_linux_executable(path: &Path) -> Result<(), Box<dyn std::error::Error>> {
-    let mut perms: Permissions = fs::metadata(path)?.permissions();
+    let mut perms: Permissions = std::fs::metadata(path)?.permissions();
 
     perms.set_mode(0o755);
-    fs::set_permissions(path, perms)?;
+    std::fs::set_permissions(path, perms)?;
 
     Ok(())
 }
@@ -191,7 +190,7 @@ fn decompress_zip(zip_path: PathBuf, extract_to: PathBuf) -> zip::result::ZipRes
     let file: File = File::open(zip_path)?;
     let mut archive: ZipArchive<File> = ZipArchive::new(file)?;
 
-    fs::create_dir_all(&extract_to)?;
+    std::fs::create_dir_all(&extract_to)?;
 
     for i in 0..archive.len() {
         let mut file: ZipFile = archive.by_index(i)?;
@@ -206,7 +205,7 @@ fn decompress_zip(zip_path: PathBuf, extract_to: PathBuf) -> zip::result::ZipRes
 
             let mut outfile: File = File::create(&outpath)?;
 
-            io::copy(&mut file, &mut outfile)?;
+            std::io::copy(&mut file, &mut outfile)?;
         }
     }
 

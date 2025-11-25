@@ -1,15 +1,14 @@
 #![allow(clippy::upper_case_acronyms)]
 
-use std::{
-    path::{Path, PathBuf},
-    process::Command,
-    time::{Duration, Instant},
-};
+use std::path::Path;
+use std::path::PathBuf;
+use std::process::Command;
+use std::time::Duration;
+use std::time::Instant;
 
-use crate::core::{
-    compiler::linking::LinkingCompilersConfiguration,
-    console::logging::{self, LoggingType},
-};
+use crate::core::compiler::linking::LinkingCompilersConfiguration;
+use crate::core::console::logging;
+use crate::core::console::logging::LoggingType;
 
 #[derive(Debug)]
 pub struct GCC<'gcc> {
@@ -28,34 +27,22 @@ impl<'gcc> GCC<'gcc> {
     pub fn link(&self) -> Result<Duration, ()> {
         let start_time: Instant = Instant::now();
 
-        #[cfg(target_os = "linux")]
-        {
-            if !self.config.get_use_gcc() {
-                return Err(());
-            }
-
-            let gcc_path = match self.config.get_custom_gcc() {
-                Some(p) => p,
-                None => return Err(()),
-            };
-
-            let mut cmd = self.build_gcc_command(gcc_path);
-            if self.handle_command(&mut cmd) {
-                return Ok(start_time.elapsed());
-            }
-
-            Err(())
+        if !self.config.get_use_gcc() {
+            return Err(());
         }
 
-        #[cfg(not(target_os = "linux"))]
-        {
-            logging::log(
-                LoggingType::Error,
-                "GNU Compiler Collection is not supported for the current operating system.",
-            );
+        let gcc_path: &PathBuf = match self.config.get_custom_gcc() {
+            Some(p) => p,
+            None => return Err(()),
+        };
 
-            Err(())
+        let mut cmd: Command = self.build_gcc_command(gcc_path);
+
+        if self.handle_command(&mut cmd) {
+            return Ok(start_time.elapsed());
         }
+
+        Ok(start_time.elapsed())
     }
 }
 
