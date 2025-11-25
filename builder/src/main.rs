@@ -447,10 +447,6 @@ impl Builder {
             .arg("-C")
             .arg(&self.build_path);
 
-        if cfg!(target_os = "windows") {
-            tar_command.arg("--strip-components=1");
-        }
-
         if let Ok(tar_output) = tar_command.output() {
             let stderr: Cow<'_, str> = String::from_utf8_lossy(&tar_output.stderr);
 

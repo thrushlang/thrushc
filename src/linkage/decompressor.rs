@@ -118,7 +118,7 @@ pub fn dump_x86_64_clang_windows(
         let llvm_backend: PathBuf = home_path.join("thrushlang/backends/llvm/windows");
 
         if !llvm_backend.exists() {
-            let _ = fs::create_dir_all(&llvm_backend);
+            let _ = std::fs::create_dir_all(&llvm_backend);
         }
 
         let compressed_file: PathBuf = llvm_backend.join(compressed_file_path);
@@ -197,10 +197,10 @@ fn decompress_zip(zip_path: PathBuf, extract_to: PathBuf) -> zip::result::ZipRes
         let outpath: PathBuf = Path::new(&extract_to).join(file.name());
 
         if file.name().ends_with('/') {
-            fs::create_dir_all(&outpath)?;
+            std::fs::create_dir_all(&outpath)?;
         } else {
             if let Some(parent) = outpath.parent() {
-                fs::create_dir_all(parent)?;
+                std::fs::create_dir_all(parent)?;
             }
 
             let mut outfile: File = File::create(&outpath)?;
