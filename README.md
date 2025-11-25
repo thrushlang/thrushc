@@ -4,9 +4,6 @@
 
 The **Thrush Compiler** efficiently transfers source code from Thrush files directly to the intended target. The process involves static type analysis, code generation, target-specific optimizations, specific machine-compiled code, and finally, emission or linking.
 
-> [!IMPORTANT]  
-> We're very close to releasing a beta version of the compiler, and we're working on the documentation.
-
 > [!WARNING]  
 > The compiler is in an early development phase. It may contain bugs when testing certain syntax. Continue on your own.
 
