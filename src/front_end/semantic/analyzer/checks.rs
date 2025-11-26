@@ -2,6 +2,7 @@ use crate::core::errors::standard::ThrushCompilerIssue;
 
 use crate::front_end::semantic::analyzer::Analyzer;
 use crate::front_end::types::ast::Ast;
+use crate::front_end::types::ast::traits::AstStandardExtensions;
 
 pub fn check_for_multiple_terminators(analyzer: &mut Analyzer, node: &Ast) {
     let Ast::Block { stmts, .. } = node else {

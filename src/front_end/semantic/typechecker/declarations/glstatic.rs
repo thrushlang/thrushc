@@ -7,6 +7,7 @@ use crate::front_end::semantic::typechecker::{
     TypeChecker, checks, metadata::TypeCheckerExprMetadata,
 };
 use crate::front_end::types::ast::Ast;
+use crate::front_end::types::ast::traits::AstStandardExtensions;
 use crate::front_end::typesystem::types::Type;
 
 pub fn validate<'type_checker>(

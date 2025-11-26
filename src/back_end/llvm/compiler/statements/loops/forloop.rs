@@ -4,6 +4,7 @@ use crate::back_end::llvm::compiler::codegen;
 use crate::back_end::llvm::compiler::codegen::LLVMCodegen;
 
 use crate::front_end::types::ast::Ast;
+use crate::front_end::types::ast::traits::AstStandardExtensions;
 use crate::front_end::typesystem::types::Type;
 
 use std::path::PathBuf;

@@ -10,6 +10,7 @@ use crate::front_end::parser::checks;
 use crate::front_end::parser::expr;
 use crate::front_end::parser::statements::block;
 use crate::front_end::types::ast::Ast;
+use crate::front_end::types::ast::traits::AstCodeBlockEntensions;
 use crate::front_end::types::parser::stmts::traits::TokenExtensions;
 
 pub fn build_conditional<'parser>(

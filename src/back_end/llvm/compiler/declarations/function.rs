@@ -14,6 +14,7 @@ use crate::back_end::llvm::types::traits::LLVMAttributesExtensions;
 
 use crate::front_end::lexer::span::Span;
 use crate::front_end::types::ast::Ast;
+use crate::front_end::types::ast::traits::AstCodeBlockEntensions;
 use crate::front_end::types::attributes::traits::ThrushAttributesExtensions;
 use crate::front_end::types::parser::repr::Function;
 use crate::front_end::types::parser::repr::FunctionParameter;

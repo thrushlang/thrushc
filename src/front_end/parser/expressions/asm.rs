@@ -3,6 +3,7 @@ use crate::core::errors::standard::ThrushCompilerIssue;
 use crate::front_end::lexer::{span::Span, token::Token, tokentype::TokenType};
 use crate::front_end::parser::{ParserContext, attributes, expr, typegen};
 use crate::front_end::types::ast::Ast;
+use crate::front_end::types::ast::traits::AstStandardExtensions;
 use crate::front_end::types::parser::stmts::{traits::TokenExtensions, types::ThrushAttributes};
 use crate::front_end::typesystem::types::Type;
 

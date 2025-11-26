@@ -1,13 +1,13 @@
-use inkwell::context::Context;
-use inkwell::intrinsics::Intrinsic;
-use inkwell::targets::TargetData;
-use inkwell::types::BasicTypeEnum;
-
 use crate::back_end::llvm;
 use crate::back_end::llvm::compiler::context::LLVMCodeGenContext;
 
 use crate::front_end::typesystem::traits::LLVMTypeExtensions;
 use crate::front_end::typesystem::types::Type;
+
+use inkwell::context::Context;
+use inkwell::intrinsics::Intrinsic;
+use inkwell::targets::TargetData;
+use inkwell::types::BasicTypeEnum;
 
 impl LLVMTypeExtensions for Type {
     #[inline]

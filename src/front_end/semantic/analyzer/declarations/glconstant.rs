@@ -4,6 +4,7 @@ use crate::core::errors::standard::ThrushCompilerIssue;
 use crate::front_end::lexer::span::Span;
 use crate::front_end::semantic::analyzer::Analyzer;
 use crate::front_end::types::ast::Ast;
+use crate::front_end::types::ast::traits::AstConstantExtensions;
 
 use std::path::PathBuf;
 

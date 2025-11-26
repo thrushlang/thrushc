@@ -6,6 +6,7 @@ use crate::front_end::parser::ParserContext;
 use crate::front_end::parser::expr;
 use crate::front_end::types::ast::Ast;
 use crate::front_end::types::ast::metadata::index::IndexMetadata;
+use crate::front_end::types::ast::traits::AstMutabilityExtensions;
 use crate::front_end::typesystem::traits::IndexExtensions;
 use crate::front_end::typesystem::types::Type;
 

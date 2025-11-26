@@ -6,6 +6,7 @@ use crate::front_end::semantic::typechecker::TypeChecker;
 use crate::front_end::semantic::typechecker::checks;
 use crate::front_end::semantic::typechecker::metadata::TypeCheckerExprMetadata;
 use crate::front_end::types::ast::Ast;
+use crate::front_end::types::ast::traits::AstStandardExtensions;
 
 use std::path::PathBuf;
 
@@ -18,10 +19,8 @@ pub fn validate<'type_checker>(
             expression, kind, ..
         } => {
             if let Some(expr) = expression {
-                let span: Span = expr.get_span();
-
                 let metadata: TypeCheckerExprMetadata =
-                    TypeCheckerExprMetadata::new(expr.is_literal_value(), span);
+                    TypeCheckerExprMetadata::new(expr.is_literal_value(), expr.get_span());
 
                 checks::check_types(kind, expr.get_value_type()?, Some(expr), None, metadata)?;
 

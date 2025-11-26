@@ -11,6 +11,8 @@ use crate::front_end::lexer::span::Span;
 use crate::front_end::semantic::analyzer::Analyzer;
 use crate::front_end::semantic::analyzer::builtins;
 use crate::front_end::types::ast::Ast;
+use crate::front_end::types::ast::traits::AstMemoryExtensions;
+use crate::front_end::types::ast::traits::AstStandardExtensions;
 use crate::front_end::types::parser::stmts::types::Constructor;
 use crate::front_end::typesystem::types::Type;
 

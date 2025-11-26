@@ -8,6 +8,7 @@ use crate::front_end::parser::attributes;
 use crate::front_end::parser::expr;
 use crate::front_end::types::ast::Ast;
 
+use crate::front_end::types::ast::traits::AstStandardExtensions;
 use crate::front_end::types::attributes::traits::ThrushAttributesExtensions;
 use crate::front_end::types::parser::stmts::traits::FoundSymbolEither;
 use crate::front_end::types::parser::stmts::traits::FoundSymbolExtension;

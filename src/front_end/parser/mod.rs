@@ -15,11 +15,6 @@ pub mod symbols;
 pub mod sync;
 pub mod typegen;
 
-use ahash::AHashMap as HashMap;
-
-use contexts::typectx::ParserTypeContext;
-use symbols::SymbolsTable;
-
 use crate::core::compiler::options::CompilationUnit;
 use crate::core::console::logging::{self, LoggingType};
 use crate::core::diagnostic::diagnostician::Diagnostician;
@@ -31,9 +26,13 @@ use crate::front_end::parser::constants::{
     PARSER_MAX_ERRORS, PARSER_MINIMAL_AST_CAPACITY, PARSER_MINIMAL_GLOBAL_CAPACITY,
 };
 use crate::front_end::parser::contexts::controlctx::ParserControlContext;
+use crate::front_end::parser::contexts::typectx::ParserTypeContext;
+use crate::front_end::parser::symbols::SymbolsTable;
 use crate::front_end::preprocessor::module::Module;
 use crate::front_end::types::ast::Ast;
 use crate::front_end::types::parser::symbols::types::{AssemblerFunctions, Functions};
+
+use ahash::AHashMap as HashMap;
 
 #[derive(Debug)]
 pub struct ParserContext<'parser> {

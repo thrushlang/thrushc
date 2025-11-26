@@ -15,6 +15,7 @@ use crate::core::errors::standard::ThrushCompilerIssue;
 
 use crate::front_end::semantic::typechecker::symbols::TypeCheckerSymbolsTable;
 use crate::front_end::types::ast::Ast;
+use crate::front_end::types::ast::traits::AstStandardExtensions;
 use crate::front_end::types::attributes::traits::ThrushAttributesExtensions;
 
 #[derive(Debug)]

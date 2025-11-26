@@ -17,6 +17,7 @@ use crate::front_end::semantic::typechecker::expressions;
 use crate::front_end::semantic::typechecker::metadata::TypeCheckerExprMetadata;
 use crate::front_end::semantic::typechecker::validations;
 use crate::front_end::types::ast::Ast;
+use crate::front_end::types::ast::traits::AstStandardExtensions;
 use crate::front_end::types::parser::stmts::types::Constructor;
 use crate::front_end::typesystem::traits::TypeArrayEntensions;
 use crate::front_end::typesystem::traits::TypeFixedArrayEntensions;

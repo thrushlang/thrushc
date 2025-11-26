@@ -6,6 +6,7 @@ use crate::front_end::semantic::typechecker::TypeChecker;
 use crate::front_end::semantic::typechecker::checks;
 use crate::front_end::semantic::typechecker::metadata::TypeCheckerExprMetadata;
 use crate::front_end::types::ast::Ast;
+use crate::front_end::types::ast::traits::AstStandardExtensions;
 use crate::front_end::typesystem::types::Type;
 
 use std::path::PathBuf;
@@ -18,10 +19,9 @@ pub fn validate<'type_checker>(
         Ast::Enum { fields, .. } => {
             fields.iter().try_for_each(|field| {
                 let target_type: Type = field.1.clone();
+                let from_type: &Type = field.2.get_value_type()?;
 
                 let value: &Ast = &field.2;
-
-                let from_type: &Type = value.get_value_type()?;
 
                 let metadata: TypeCheckerExprMetadata =
                     TypeCheckerExprMetadata::new(value.is_literal_value(), value.get_span());

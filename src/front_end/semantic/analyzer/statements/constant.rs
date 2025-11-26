@@ -2,7 +2,11 @@ use std::path::PathBuf;
 
 use crate::{
     core::errors::{position::CompilationPosition, standard::ThrushCompilerIssue},
-    front_end::{lexer::span::Span, semantic::analyzer::Analyzer, types::ast::Ast},
+    front_end::{
+        lexer::span::Span,
+        semantic::analyzer::Analyzer,
+        types::ast::{Ast, traits::AstConstantExtensions},
+    },
 };
 
 pub fn validate<'analyzer>(

@@ -3,6 +3,7 @@ use crate::core::errors::standard::ThrushCompilerIssue;
 use crate::front_end::lexer::span::Span;
 use crate::front_end::parser::ParserContext;
 use crate::front_end::types::ast::Ast;
+use crate::front_end::types::ast::traits::AstMemoryExtensions;
 use crate::front_end::types::parser::stmts::traits::{FoundSymbolEither, StructExtensions};
 use crate::front_end::types::parser::stmts::types::{StructField, StructFields};
 use crate::front_end::types::parser::symbols::types::{FoundSymbolId, Struct};

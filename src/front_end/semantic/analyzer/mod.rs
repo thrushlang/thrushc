@@ -7,16 +7,17 @@ use crate::core::errors::standard::ThrushCompilerIssue;
 
 use crate::front_end::semantic::analyzer::context::AnalyzerContext;
 use crate::front_end::types::ast::Ast;
+use crate::front_end::types::ast::traits::AstStandardExtensions;
 use crate::front_end::types::attributes::traits::ThrushAttributesExtensions;
 
-mod builtins;
-mod checks;
-mod constants;
-mod context;
-mod declarations;
-mod expressions;
-mod statements;
-mod symbols;
+pub mod builtins;
+pub mod checks;
+pub mod constants;
+pub mod context;
+pub mod declarations;
+pub mod expressions;
+pub mod statements;
+pub mod symbols;
 
 #[derive(Debug)]
 pub struct Analyzer<'analyzer> {

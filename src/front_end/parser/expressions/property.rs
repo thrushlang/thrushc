@@ -6,6 +6,7 @@ use crate::front_end::lexer::tokentype::TokenType;
 use crate::front_end::parser::ParserContext;
 use crate::front_end::types::ast::Ast;
 use crate::front_end::types::ast::metadata::property::PropertyMetadata;
+use crate::front_end::types::ast::traits::AstMemoryExtensions;
 use crate::front_end::types::parser::stmts::traits::TokenExtensions;
 use crate::front_end::typesystem::{self, types::Type};
 
