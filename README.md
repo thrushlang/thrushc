@@ -11,10 +11,16 @@ The **Thrush Compiler** efficiently transfers source code from Thrush files dire
 
 ## Compiler supported hosts
 
-It represents the objectives where it is fully known that Rust will have no problems compiling the compiler.
+This represents the target environment where it is fully known that Rust will have no problems compiling the compiler. If your operating system matches the target environment's convention, it will likely compile the compiler with all backends successfully.
 
 - ``x86-64-pc-linux-gnu``
+- ``x86-64-unknown-linux-gnu``
 - ``x86-64-pc-windows-msvc``
+
+Unstable targets, which are under construction, designed to ensure that the backends and compiler are compiled for operating systems that follow the triple target convention. They are not yet available or are unstable.
+
+- ``x86_64-unknown-linux-musl``
+- ``x86_64-pc-windows-gnu``
 
 ## Start
 
