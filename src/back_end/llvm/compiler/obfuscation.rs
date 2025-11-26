@@ -1,6 +1,6 @@
-use std::ops::RangeInclusive;
-
 use crate::back_end::llvm::compiler::context::LLVMCodeGenContext;
+
+use std::ops::RangeInclusive;
 
 pub const SHORT_RANGE_OBFUSCATION: RangeInclusive<usize> = 5..=12;
 pub const LONG_RANGE_OBFUSCATION: RangeInclusive<usize> = 10..=30;

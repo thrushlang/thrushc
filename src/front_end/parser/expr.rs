@@ -1,10 +1,10 @@
 use crate::core::errors::standard::ThrushCompilerIssue;
 
 use crate::front_end::lexer::tokentype::TokenType;
+use crate::front_end::parser::ParserContext;
+use crate::front_end::parser::contexts::sync::ParserSyncPosition;
 use crate::front_end::parser::expressions::precedences::or;
 use crate::front_end::types::ast::Ast;
-
-use super::{ParserContext, contexts::sync::ParserSyncPosition};
 
 pub fn build_expression<'parser>(
     ctx: &mut ParserContext<'parser>,

@@ -1,32 +1,34 @@
 #![allow(clippy::enum_variant_names)]
 
+use crate::back_end::llvm::compiler::abort;
+use crate::back_end::llvm::compiler::alloc::atomic;
 use crate::back_end::llvm::compiler::alloc::atomic::LLVMAtomicModificators;
-use crate::back_end::llvm::compiler::{abort, typegen};
-use crate::front_end::types::ast::metadata::dereference::LLVMDereferenceMetadata;
-use crate::{back_end::llvm::compiler::alloc::atomic, front_end::lexer::span::Span};
-
-use crate::front_end::types::ast::metadata::constant::LLVMConstantMetadata;
-use crate::front_end::types::ast::metadata::local::LLVMLocalMetadata;
-use crate::front_end::types::ast::metadata::staticvar::LLVMStaticMetadata;
-use crate::front_end::typesystem::types::Type;
+use crate::back_end::llvm::compiler::context::LLVMCodeGenContext;
+use crate::back_end::llvm::compiler::typegen;
 
 use crate::core::console::logging;
 use crate::core::console::logging::LoggingType;
 
+use crate::front_end::lexer::span::Span;
+use crate::front_end::types::ast::metadata::constant::LLVMConstantMetadata;
+use crate::front_end::types::ast::metadata::dereference::LLVMDereferenceMetadata;
+use crate::front_end::types::ast::metadata::local::LLVMLocalMetadata;
+use crate::front_end::types::ast::metadata::staticvar::LLVMStaticMetadata;
+use crate::front_end::typesystem::types::Type;
+
 use std::fmt::Display;
 use std::path::PathBuf;
 
-use inkwell::{
-    AddressSpace,
-    builder::Builder,
-    context::Context,
-    module::Module,
-    targets::TargetData,
-    types::BasicTypeEnum,
-    values::{BasicValue, BasicValueEnum, IntValue, PointerValue},
-};
-
-use super::context::LLVMCodeGenContext;
+use inkwell::AddressSpace;
+use inkwell::builder::Builder;
+use inkwell::context::Context;
+use inkwell::module::Module;
+use inkwell::targets::TargetData;
+use inkwell::types::BasicTypeEnum;
+use inkwell::values::BasicValue;
+use inkwell::values::BasicValueEnum;
+use inkwell::values::IntValue;
+use inkwell::values::PointerValue;
 
 #[derive(Debug, Clone, Copy)]
 pub enum SymbolAllocated<'ctx> {
@@ -158,7 +160,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
         let target_data: &TargetData = context.get_target_data();
 
         if self.get_type().is_ptr_like_type() {
-            return self.get_value(context);
+            return self.get_ptr().into();
         }
 
         let llvm_type: BasicTypeEnum = typegen::generate(llvm_context, self.get_type());

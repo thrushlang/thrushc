@@ -1,5 +1,3 @@
-use ahash::AHashMap as HashMap;
-
 use crate::front_end::lexer::span::Span;
 use crate::front_end::types::ast::metadata::fnparam::FunctionParameterMetadata;
 use crate::front_end::types::ast::metadata::local::LocalMetadata;
@@ -8,6 +6,8 @@ use crate::front_end::types::parser::stmts::types::EnumFields;
 use crate::front_end::types::parser::stmts::types::ThrushAttributes;
 use crate::front_end::typesystem::modificators::StructureTypeModificator;
 use crate::front_end::typesystem::types::Type;
+
+use ahash::AHashMap as HashMap;
 
 pub type Struct<'parser> = (
     &'parser str,

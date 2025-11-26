@@ -18,7 +18,7 @@ pub fn validate<'analyzer>(
                 if !value.is_constant_value() {
                     analyzer.add_error(ThrushCompilerIssue::Error(
                         "Syntax error".into(),
-                        "Expected compile-time sized value.".into(),
+                        "Expected constant value or reference constant value.".into(),
                         None,
                         span,
                     ));

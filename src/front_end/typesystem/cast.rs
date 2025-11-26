@@ -1,4 +1,5 @@
-use crate::front_end::typesystem::{traits::CastTypeExtensions, types::Type};
+use crate::front_end::typesystem::traits::CastTypeExtensions;
+use crate::front_end::typesystem::types::Type;
 
 impl CastTypeExtensions for Type {
     #[inline]

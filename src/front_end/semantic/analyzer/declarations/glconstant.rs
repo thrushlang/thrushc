@@ -1,10 +1,11 @@
-use std::path::PathBuf;
-
 use crate::core::errors::position::CompilationPosition;
 use crate::core::errors::standard::ThrushCompilerIssue;
+
 use crate::front_end::lexer::span::Span;
 use crate::front_end::semantic::analyzer::Analyzer;
 use crate::front_end::types::ast::Ast;
+
+use std::path::PathBuf;
 
 pub fn validate<'analyzer>(
     analyzer: &mut Analyzer<'analyzer>,
@@ -17,7 +18,7 @@ pub fn validate<'analyzer>(
             if !value.is_constant_value() {
                 analyzer.add_error(ThrushCompilerIssue::Error(
                     "Syntax error".into(),
-                    "Expected compile-time known value.".into(),
+                    "Expected constant value or reference constant value.".into(),
                     None,
                     span,
                 ));

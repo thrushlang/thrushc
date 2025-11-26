@@ -1,44 +1,47 @@
-use std::path::PathBuf;
-
+use crate::back_end::llvm::compiler;
+use crate::back_end::llvm::compiler::abort;
+use crate::back_end::llvm::compiler::alloc;
+use crate::back_end::llvm::compiler::anchors::PointerAnchor;
+use crate::back_end::llvm::compiler::constgen;
+use crate::back_end::llvm::compiler::control::LoopContext;
 use crate::back_end::llvm::compiler::memory::SymbolAllocated;
 use crate::back_end::llvm::compiler::memory::SymbolToAllocate;
-use crate::back_end::llvm::compiler::{self, abort, constgen, typegen};
+use crate::back_end::llvm::compiler::symbols::SymbolsTable;
+use crate::back_end::llvm::compiler::typegen;
 use crate::back_end::llvm::types::repr::LLVMAttributes;
 use crate::back_end::llvm::types::repr::LLVMFunction;
 
-use crate::back_end::llvm::compiler::alloc;
-use crate::back_end::llvm::compiler::anchors::PointerAnchor;
-use crate::back_end::llvm::compiler::control::LoopContext;
-use crate::back_end::llvm::compiler::symbols::SymbolsTable;
-
+use crate::core::compiler::options::CompilerOptions;
 use crate::core::diagnostic::diagnostician::Diagnostician;
 
-use crate::core::compiler::options::CompilerOptions;
 use crate::front_end::lexer::span::Span;
 use crate::front_end::types::ast::Ast;
-use crate::front_end::types::attributes::traits::ThrushAttributesExtensions;
-use crate::front_end::types::parser::repr::{
-    GlobalConstant, GlobalStatic, Local, LocalConstant, LocalStatic,
-};
-use crate::logging::{self, LoggingType};
-
 use crate::front_end::types::ast::metadata::constant::ConstantMetadata;
 use crate::front_end::types::ast::metadata::local::LocalMetadata;
 use crate::front_end::types::ast::metadata::staticvar::StaticMetadata;
+use crate::front_end::types::attributes::traits::ThrushAttributesExtensions;
+use crate::front_end::types::parser::repr::GlobalConstant;
+use crate::front_end::types::parser::repr::GlobalStatic;
+use crate::front_end::types::parser::repr::Local;
+use crate::front_end::types::parser::repr::LocalConstant;
+use crate::front_end::types::parser::repr::LocalStatic;
 use crate::front_end::types::parser::stmts::types::ThrushAttributes;
 use crate::front_end::typesystem::types::Type;
 
-use {
-    inkwell::{
-        basic_block::BasicBlock,
-        builder::Builder,
-        context::Context,
-        module::Module,
-        targets::TargetData,
-        values::{BasicValueEnum, FunctionValue, PointerValue},
-    },
-    std::fmt::Display,
-};
+use crate::logging;
+use crate::logging::LoggingType;
+
+use std::fmt::Display;
+use std::path::PathBuf;
+
+use inkwell::basic_block::BasicBlock;
+use inkwell::builder::Builder;
+use inkwell::context::Context;
+use inkwell::module::Module;
+use inkwell::targets::TargetData;
+use inkwell::values::BasicValueEnum;
+use inkwell::values::FunctionValue;
+use inkwell::values::PointerValue;
 
 #[derive(Debug)]
 pub struct LLVMCodeGenContext<'a, 'ctx> {

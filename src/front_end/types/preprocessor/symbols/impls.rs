@@ -1,7 +1,7 @@
-use crate::front_end::{
-    preprocessor::types::FoundModuleSymbolId,
-    types::preprocessor::symbols::traits::{FoundModuleSymbolEither, FoundModuleSymbolEntension},
-};
+use crate::front_end::preprocessor::types::FoundModuleSymbolId;
+
+use crate::front_end::types::preprocessor::symbols::traits::FoundModuleSymbolEither;
+use crate::front_end::types::preprocessor::symbols::traits::FoundModuleSymbolEntension;
 
 impl FoundModuleSymbolEntension for FoundModuleSymbolId {
     fn is_structure(&self) -> bool {

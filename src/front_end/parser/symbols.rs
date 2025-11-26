@@ -1,5 +1,3 @@
-use std::path::PathBuf;
-
 use crate::core::errors::position::CompilationPosition;
 use crate::core::errors::standard::ThrushCompilerIssue;
 
@@ -37,6 +35,7 @@ use crate::front_end::types::parser::symbols::types::StaticSymbol;
 use crate::front_end::types::parser::symbols::types::Struct;
 
 use ahash::AHashMap as HashMap;
+use std::path::PathBuf;
 
 #[derive(Clone, Debug, Default)]
 pub struct SymbolsTable<'parser> {

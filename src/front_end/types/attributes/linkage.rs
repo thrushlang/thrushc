@@ -1,6 +1,5 @@
-use std::fmt::Display;
-
 use inkwell::module::Linkage;
+use std::fmt::Display;
 
 pub const LINKAGES: &[&str] = &[
     "standard",

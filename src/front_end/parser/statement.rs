@@ -1,6 +1,9 @@
 use crate::core::errors::standard::ThrushCompilerIssue;
 
 use crate::front_end::lexer::tokentype::TokenType;
+use crate::front_end::parser::ParserContext;
+use crate::front_end::parser::contexts::sync::ParserSyncPosition;
+use crate::front_end::parser::expr;
 use crate::front_end::parser::statements::block;
 use crate::front_end::parser::statements::conditional;
 use crate::front_end::parser::statements::controlflow;
@@ -14,8 +17,6 @@ use crate::front_end::parser::statements::lstatic;
 use crate::front_end::parser::statements::lstructure;
 use crate::front_end::parser::statements::terminator;
 use crate::front_end::types::ast::Ast;
-
-use super::{ParserContext, contexts::sync::ParserSyncPosition, expr};
 
 pub fn parse<'parser>(
     ctx: &mut ParserContext<'parser>,

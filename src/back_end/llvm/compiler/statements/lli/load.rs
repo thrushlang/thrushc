@@ -1,9 +1,14 @@
-use inkwell::values::{BasicValueEnum, PointerValue};
+use inkwell::values::BasicValueEnum;
+use inkwell::values::PointerValue;
 
-use crate::{
-    back_end::llvm::compiler::{context::LLVMCodeGenContext, generation::cast, memory, ptr},
-    front_end::{lexer::span::Span, types::ast::Ast, typesystem::types::Type},
-};
+use crate::back_end::llvm::compiler::context::LLVMCodeGenContext;
+use crate::back_end::llvm::compiler::generation::cast;
+use crate::back_end::llvm::compiler::memory;
+use crate::back_end::llvm::compiler::ptr;
+
+use crate::front_end::lexer::span::Span;
+use crate::front_end::types::ast::Ast;
+use crate::front_end::typesystem::types::Type;
 
 pub fn compile<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,

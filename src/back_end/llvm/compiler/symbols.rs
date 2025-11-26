@@ -16,9 +16,10 @@ use crate::core::console::logging::LoggingType;
 
 use crate::front_end::lexer::span::Span;
 
+use std::fmt::Display;
+
 use ahash::AHashMap as HashMap;
 use inkwell::values::FunctionValue;
-use std::fmt::Display;
 
 #[derive(Debug)]
 pub struct SymbolsTable<'ctx> {

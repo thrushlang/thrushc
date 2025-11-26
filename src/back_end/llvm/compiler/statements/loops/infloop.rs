@@ -1,18 +1,21 @@
+use crate::back_end::llvm::compiler::abort;
+use crate::back_end::llvm::compiler::block;
+use crate::back_end::llvm::compiler::codegen::LLVMCodegen;
+
+use crate::front_end::types::ast::Ast;
+
 use std::path::PathBuf;
 
-use inkwell::{basic_block::BasicBlock, builder::Builder, values::FunctionValue};
+use inkwell::basic_block::BasicBlock;
+use inkwell::builder::Builder;
+use inkwell::values::FunctionValue;
 
-use crate::{
-    back_end::llvm::compiler::{abort, block, codegen::LLVMCodegen},
-    front_end::types::ast::Ast,
-};
-
-pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, stmt: &'ctx Ast<'ctx>) {
+pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, node: &'ctx Ast<'ctx>) {
     let llvm_builder: &Builder = codegen.get_mut_context().get_llvm_builder();
 
     let llvm_function: FunctionValue = codegen.get_mut_context().get_current_fn();
 
-    if let Ast::Loop { block, span, .. } = stmt {
+    if let Ast::Loop { block, span, .. } = node {
         let start: BasicBlock = block::append_block(codegen.get_context(), llvm_function);
         let exit: BasicBlock = block::append_block(codegen.get_context(), llvm_function);
 

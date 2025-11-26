@@ -47,7 +47,7 @@ pub fn compile<'ctx>(
             let float: BasicValueEnum =
                 float::generate(context, kind, *value, *signed, *span).into();
 
-            compiler::generation::cast::numeric_cast(context, float, cast_type, *signed)
+            compiler::generation::cast::const_numeric_cast(context, float, cast_type, *signed)
         }
 
         Ast::Integer {
@@ -60,7 +60,7 @@ pub fn compile<'ctx>(
             let integer: BasicValueEnum =
                 integer::generate(context, kind, *value, *signed, *span).into();
 
-            compiler::generation::cast::numeric_cast(context, integer, cast_type, *signed)
+            compiler::generation::cast::const_numeric_cast(context, integer, cast_type, *signed)
         }
 
         // Boolean true/false cases

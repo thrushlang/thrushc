@@ -7,8 +7,8 @@ mod middle_end;
 use crate::core::compiler::thrushc::ThrushCompiler;
 use crate::core::console::{self, cli::CLI, logging};
 
-use lazy_static::lazy_static;
-use std::{env, time::Instant};
+use std::env;
+use std::time::Instant;
 
 fn main() -> ! {
     console::set_up_basic();

@@ -1,9 +1,9 @@
-use std::fmt::Display;
+use crate::back_end::llvm::compiler::attributes::LLVMAttribute;
+use crate::front_end::lexer::span::Span;
 
-use crate::{
-    back_end::llvm::compiler::attributes::LLVMAttribute,
-    front_end::{lexer::span::Span, types::attributes::linkage::ThrushLinkage},
-};
+use crate::front_end::types::attributes::linkage::ThrushLinkage;
+
+use std::fmt::Display;
 
 pub mod callconventions;
 pub mod impls;

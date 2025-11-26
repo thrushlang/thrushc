@@ -1,12 +1,12 @@
-use inkwell::support;
-use inkwell::values::BasicMetadataValueEnum;
-use inkwell::values::MetadataValue;
-
 use crate::back_end::llvm::compiler::context::LLVMCodeGenContext;
 
 use crate::core::compiler::backends::llvm::LLVMBackend;
 use crate::core::compiler::options::CompilerOptions;
 use crate::core::constants::COMPILER_VERSION;
+
+use inkwell::support;
+use inkwell::values::BasicMetadataValueEnum;
+use inkwell::values::MetadataValue;
 
 #[derive(Debug)]
 pub struct LLVMMetadata<'a, 'ctx> {

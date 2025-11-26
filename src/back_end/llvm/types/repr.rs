@@ -1,9 +1,11 @@
-use ahash::AHashMap as HashMap;
-use inkwell::values::FunctionValue;
-
 use crate::back_end::llvm::compiler::attributes::LLVMAttribute;
 use crate::back_end::llvm::compiler::memory::SymbolAllocated;
-use crate::front_end::{lexer::span::Span, typesystem::types::Type};
+
+use crate::front_end::lexer::span::Span;
+use crate::front_end::typesystem::types::Type;
+
+use ahash::AHashMap as HashMap;
+use inkwell::values::FunctionValue;
 
 pub type LLVMGlobalConstants<'ctx> = HashMap<&'ctx str, SymbolAllocated<'ctx>>;
 pub type LLVMLocalConstants<'ctx> = Vec<HashMap<&'ctx str, SymbolAllocated<'ctx>>>;

@@ -1,8 +1,8 @@
-use super::{ParserContext, contexts::sync::ParserSyncPosition};
-
 use crate::core::errors::standard::ThrushCompilerIssue;
 
 use crate::front_end::lexer::tokentype::TokenType;
+use crate::front_end::parser::ParserContext;
+use crate::front_end::parser::contexts::sync::ParserSyncPosition;
 use crate::front_end::parser::declarations::asmfn;
 use crate::front_end::parser::declarations::function;
 use crate::front_end::parser::declarations::glasm;

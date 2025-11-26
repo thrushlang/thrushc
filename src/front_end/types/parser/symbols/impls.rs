@@ -1,5 +1,3 @@
-use std::{fmt::Display, path::PathBuf};
-
 use crate::core::errors::position::CompilationPosition;
 use crate::core::errors::standard::ThrushCompilerIssue;
 
@@ -25,13 +23,20 @@ use crate::front_end::types::parser::symbols::types::StaticSymbol;
 use crate::front_end::typesystem::modificators::StructureTypeModificator;
 use crate::front_end::typesystem::types::Type;
 
-use crate::front_end::types::parser::symbols::traits::{
-    ConstantSymbolExtensions, FunctionExtensions, LLISymbolExtensions, LocalSymbolExtensions,
-};
+use crate::front_end::types::parser::symbols::traits::ConstantSymbolExtensions;
+use crate::front_end::types::parser::symbols::traits::FunctionExtensions;
+use crate::front_end::types::parser::symbols::traits::LLISymbolExtensions;
+use crate::front_end::types::parser::symbols::traits::LocalSymbolExtensions;
+use crate::front_end::types::parser::symbols::types::ConstantSymbol;
+use crate::front_end::types::parser::symbols::types::FoundSymbolId;
+use crate::front_end::types::parser::symbols::types::Function;
+use crate::front_end::types::parser::symbols::types::LLISymbol;
+use crate::front_end::types::parser::symbols::types::LocalSymbol;
+use crate::front_end::types::parser::symbols::types::ParametersTypes;
+use crate::front_end::types::parser::symbols::types::Struct;
 
-use crate::front_end::types::parser::symbols::types::{
-    ConstantSymbol, FoundSymbolId, Function, LLISymbol, LocalSymbol, ParametersTypes, Struct,
-};
+use std::fmt::Display;
+use std::path::PathBuf;
 
 impl<'parser> EnumFieldsExtensions<'parser> for EnumFields<'parser> {
     fn contain_field(&self, name: &'parser str) -> bool {

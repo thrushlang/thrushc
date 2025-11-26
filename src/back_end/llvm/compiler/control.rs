@@ -1,11 +1,10 @@
-use std::fmt::Display;
+use crate::back_end::llvm::compiler::constants::LLVM_COMPILER_BRANCHERS_CAPACITY;
+
+use crate::core::console::logging;
+use crate::core::console::logging::LoggingType;
 
 use inkwell::basic_block::BasicBlock;
-
-use crate::{
-    back_end::llvm::compiler::constants::LLVM_COMPILER_BRANCHERS_CAPACITY,
-    core::console::logging::{self, LoggingType},
-};
+use std::fmt::Display;
 
 #[derive(Debug)]
 pub struct LoopContext<'ctx> {

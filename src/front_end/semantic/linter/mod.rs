@@ -1,17 +1,14 @@
-mod builtins;
-mod constants;
-mod declarations;
-mod expressions;
-mod marks;
-mod statements;
-mod symbols;
-
-use ahash::AHashMap as HashMap;
-
-use symbols::LinterSymbolsTable;
+pub mod builtins;
+pub mod constants;
+pub mod declarations;
+pub mod expressions;
+pub mod marks;
+pub mod statements;
+pub mod symbols;
 
 use crate::core::compiler::options::CompilationUnit;
-use crate::core::console::logging::{self, LoggingType};
+use crate::core::console::logging;
+use crate::core::console::logging::LoggingType;
 use crate::core::diagnostic::diagnostician::Diagnostician;
 use crate::core::errors::standard::ThrushCompilerIssue;
 
@@ -19,6 +16,9 @@ use crate::front_end::lexer::span::Span;
 use crate::front_end::semantic::linter::statements::mutation;
 use crate::front_end::types::ast::Ast;
 use crate::front_end::types::attributes::traits::ThrushAttributesExtensions;
+
+use ahash::AHashMap as HashMap;
+use symbols::LinterSymbolsTable;
 
 #[derive(Debug)]
 pub struct Linter<'linter> {
@@ -78,24 +78,20 @@ impl<'linter> Linter<'linter> {
 
         ########################################################################*/
 
-        if let Ast::CustomType { .. } = node {
-            return;
-        }
-
-        if let Ast::Struct { .. } = node {
-            return;
-        }
-
         if let Ast::Enum { .. } = node {
-            return declarations::glenum::analyze(self, node);
+            declarations::glenum::analyze(self, node);
         }
 
         if let Ast::Static { .. } = node {
-            return declarations::glstatic::analyze(self, node);
+            declarations::glstatic::analyze(self, node);
         }
 
         if let Ast::Const { .. } = node {
             declarations::glconstant::analyze(self, node);
+        }
+
+        if let Ast::Function { .. } = node {
+            declarations::functions::analyze(self, node);
         }
 
         /* ######################################################################

@@ -2,10 +2,9 @@ use attrchecker::AttributeChecker;
 use linter::Linter;
 use typechecker::TypeChecker;
 
-use crate::{
-    core::compiler::options::CompilationUnit,
-    front_end::{semantic::analyzer::Analyzer, types::ast::Ast},
-};
+use crate::core::compiler::options::CompilationUnit;
+use crate::front_end::semantic::analyzer::Analyzer;
+use crate::front_end::types::ast::Ast;
 
 pub mod analyzer;
 pub mod attrchecker;

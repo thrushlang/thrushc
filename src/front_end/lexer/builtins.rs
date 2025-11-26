@@ -1,6 +1,7 @@
-use crate::{front_end::lexer::tokentype::TokenType, lazy_static};
+use crate::front_end::lexer::tokentype::TokenType;
 
 use ahash::AHashMap as HashMap;
+use lazy_static::lazy_static;
 
 lazy_static! {
     pub static ref BUILTINS: HashMap<&'static str, TokenType> = {

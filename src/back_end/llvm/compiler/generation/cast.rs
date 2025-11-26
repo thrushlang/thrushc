@@ -1,25 +1,32 @@
 #![allow(unnecessary_transmutes)]
 
-use crate::back_end::llvm::compiler::{abort, codegen, ptr, typegen};
-use crate::front_end::lexer::span::Span;
-use crate::{back_end::llvm::compiler::context::LLVMCodeGenContext, front_end::types::ast::Ast};
+use crate::back_end::llvm::compiler::abort;
+use crate::back_end::llvm::compiler::codegen;
+use crate::back_end::llvm::compiler::ptr;
+use crate::back_end::llvm::compiler::typegen;
 
-use crate::front_end::typesystem::traits::LLVMTypeExtensions;
-use crate::front_end::typesystem::types::Type;
+use crate::back_end::llvm::compiler::context::LLVMCodeGenContext;
+use crate::front_end::lexer::span::Span;
 
 use crate::core::console::logging;
 use crate::core::console::logging::LoggingType;
 
-use std::path::PathBuf;
-use std::{cmp::Ordering, fmt::Display};
+use crate::front_end::types::ast::Ast;
+use crate::front_end::typesystem::traits::LLVMTypeExtensions;
+use crate::front_end::typesystem::types::Type;
 
-use inkwell::types::{BasicTypeEnum, PointerType};
-use inkwell::{
-    builder::Builder,
-    context::Context,
-    types::FloatType,
-    values::{BasicValueEnum, FloatValue, IntValue},
-};
+use std::cmp::Ordering;
+use std::fmt::Display;
+use std::path::PathBuf;
+
+use inkwell::builder::Builder;
+use inkwell::context::Context;
+use inkwell::types::BasicTypeEnum;
+use inkwell::types::FloatType;
+use inkwell::types::PointerType;
+use inkwell::values::BasicValueEnum;
+use inkwell::values::FloatValue;
+use inkwell::values::IntValue;
 
 /* ######################################################################
 
@@ -42,13 +49,10 @@ pub fn const_integer_together<'ctx>(
         Ordering::Greater => {
             if signatures.0 || signatures.1 {
                 if let Some(lhs_number) = lhs.get_sign_extended_constant() {
-                    return (
-                        rhs.get_type().const_int(
-                            unsafe { std::mem::transmute::<i64, u64>(lhs_number) },
-                            true,
-                        ),
-                        rhs,
-                    );
+                    let lhs_number_transmuted: u64 =
+                        unsafe { std::mem::transmute::<i64, u64>(lhs_number) };
+
+                    return (rhs.get_type().const_int(lhs_number_transmuted, true), rhs);
                 }
             }
 
@@ -61,13 +65,10 @@ pub fn const_integer_together<'ctx>(
         Ordering::Less => {
             if signatures.0 || signatures.1 {
                 if let Some(rhs_number) = rhs.get_sign_extended_constant() {
-                    return (
-                        lhs,
-                        lhs.get_type().const_int(
-                            unsafe { std::mem::transmute::<i64, u64>(rhs_number) },
-                            true,
-                        ),
-                    );
+                    let rhs_number_transmuted: u64 =
+                        unsafe { std::mem::transmute::<i64, u64>(rhs_number) };
+
+                    return (lhs, lhs.get_type().const_int(rhs_number_transmuted, true));
                 }
             }
 
@@ -96,7 +97,7 @@ pub fn integer_together<'ctx>(
         .cmp(&right.get_type().get_bit_width())
     {
         Ordering::Greater => {
-            let new_right: IntValue<'ctx> = llvm_builder
+            let new_right: IntValue = llvm_builder
                 .build_int_cast_sign_flag(right, left.get_type(), false, "")
                 .unwrap_or_else(|_| {
                     abort::abort_codegen(
@@ -111,7 +112,7 @@ pub fn integer_together<'ctx>(
             (left, new_right)
         }
         Ordering::Less => {
-            let new_left: IntValue<'ctx> = llvm_builder
+            let new_left: IntValue = llvm_builder
                 .build_int_cast_sign_flag(left, right.get_type(), false, "")
                 .unwrap_or_else(|_| {
                     abort::abort_codegen(
@@ -149,8 +150,8 @@ pub fn const_float_together<'ctx>(
     }
 
     let new_left: FloatValue = if left_type != right_type {
-        if let Some((left_number, ..)) = left.get_constant() {
-            right.get_type().const_float(left_number)
+        if let Some((n, ..)) = left.get_constant() {
+            right.get_type().const_float(n)
         } else {
             left
         }
@@ -159,8 +160,8 @@ pub fn const_float_together<'ctx>(
     };
 
     let new_right: FloatValue = if right_type != left_type {
-        if let Some((right_number, ..)) = right.get_constant() {
-            left.get_type().const_float(right_number)
+        if let Some((n, ..)) = right.get_constant() {
+            left.get_type().const_float(n)
         } else {
             right
         }
@@ -354,11 +355,7 @@ pub fn try_cast_const<'ctx>(
 ) -> BasicValueEnum<'ctx> {
     match (from, target_type) {
         (lhs, rhs) if rhs.is_numeric_type() => {
-            if from_type.llvm_is_same_bit_size(context, rhs) {
-                self::const_numeric_bitcast_cast(context, lhs, rhs)
-            } else {
-                self::numeric_cast(context, lhs, rhs, from_type.is_signed_integer_type())
-            }
+            self::const_numeric_cast(context, lhs, rhs, from_type.is_signed_integer_type())
         }
 
         (lhs, rhs) if lhs.is_pointer_value() && rhs.is_ptr_type() => {
@@ -473,55 +470,11 @@ pub fn compile<'ctx>(
 
 /* ######################################################################
 
-    NUMERIC BITCAST CAST
-
-########################################################################*/
-
-pub fn const_numeric_bitcast_cast<'ctx>(
-    context: &LLVMCodeGenContext<'_, 'ctx>,
-    value: BasicValueEnum<'ctx>,
-    cast: &Type,
-) -> BasicValueEnum<'ctx> {
-    let llvm_context: &Context = context.get_llvm_context();
-
-    let cast: BasicTypeEnum = typegen::generate(llvm_context, cast);
-
-    if value.is_int_value() && cast.is_int_type() {
-        let integer: IntValue = value.into_int_value();
-
-        if let Some(number) = integer.get_sign_extended_constant() {
-            return cast
-                .into_int_type()
-                .const_int(unsafe { std::mem::transmute::<i64, u64>(number) }, true)
-                .into();
-        }
-
-        if let Some(number) = integer.get_zero_extended_constant() {
-            return cast.into_int_type().const_int(number, false).into();
-        }
-
-        return cast.into_int_type().const_int(0, false).into();
-    }
-
-    if value.is_float_value() && cast.is_float_type() {
-        let float: FloatValue = value.into_float_value();
-
-        return cast
-            .into_float_type()
-            .const_float(float.get_constant().unwrap_or((0.0, false)).0)
-            .into();
-    }
-
-    value
-}
-
-/* ######################################################################
-
     NUMERIC CAST (FLOAT & INT)
 
 ########################################################################*/
 
-pub fn numeric_cast<'ctx>(
+pub fn const_numeric_cast<'ctx>(
     context: &LLVMCodeGenContext<'_, 'ctx>,
     value: BasicValueEnum<'ctx>,
     target: &Type,
@@ -533,13 +486,12 @@ pub fn numeric_cast<'ctx>(
 
     if value.is_int_value() && cast.is_int_type() {
         let integer: IntValue = value.into_int_value();
+        let default_v: IntValue = cast.into_int_type().const_int(0, false);
 
         if is_signed {
-            if let Some(number) = integer.get_sign_extended_constant() {
-                return cast
-                    .into_int_type()
-                    .const_int(unsafe { std::mem::transmute::<i64, u64>(number) }, true)
-                    .into();
+            if let Some(n) = integer.get_sign_extended_constant() {
+                let transmuted_n: u64 = unsafe { std::mem::transmute::<i64, u64>(n) };
+                return cast.into_int_type().const_int(transmuted_n, true).into();
             }
         }
 
@@ -547,7 +499,7 @@ pub fn numeric_cast<'ctx>(
             return cast.into_int_type().const_int(number, false).into();
         }
 
-        return cast.into_int_type().const_int(0, false).into();
+        return default_v.into();
     }
 
     if value.is_float_value() && cast.is_float_type() {

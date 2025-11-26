@@ -1,6 +1,3 @@
-use inkwell::AtomicOrdering;
-use inkwell::ThreadLocalMode;
-
 use crate::core::errors::standard::ThrushCompilerIssue;
 
 use crate::front_end::lexer::tokentype::TokenType;
@@ -9,6 +6,9 @@ use crate::front_end::types::parser::stmts::types::ThrushAttributes;
 use crate::front_end::typesystem::modificators::GCCStructureTypeModificator;
 use crate::front_end::typesystem::modificators::LLVMStructureTypeModificator;
 use crate::front_end::typesystem::modificators::StructureTypeModificator;
+
+use inkwell::AtomicOrdering;
+use inkwell::ThreadLocalMode;
 
 #[inline]
 pub fn build_structure_modificator(attributes: &ThrushAttributes) -> StructureTypeModificator {

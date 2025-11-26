@@ -1,20 +1,22 @@
+use crate::back_end::llvm::compiler;
+use crate::back_end::llvm::compiler::abort;
+use crate::back_end::llvm::compiler::codegen;
+use crate::back_end::llvm::compiler::constgen;
+use crate::back_end::llvm::compiler::context::LLVMCodeGenContext;
 use crate::back_end::llvm::compiler::generation::cast;
-use crate::back_end::llvm::compiler::{
-    self, abort, codegen, constgen, context::LLVMCodeGenContext, predicates,
-};
+use crate::back_end::llvm::compiler::predicates;
 
-use crate::front_end::{
-    lexer::{span::Span, tokentype::TokenType},
-    types::parser::repr::BinaryOperation,
-    typesystem::types::Type,
-};
+use crate::front_end::lexer::span::Span;
+use crate::front_end::lexer::tokentype::TokenType;
+use crate::front_end::types::parser::repr::BinaryOperation;
+use crate::front_end::typesystem::types::Type;
 
-use inkwell::{
-    builder::Builder,
-    context::Context,
-    values::{BasicValueEnum, PointerValue},
-};
 use std::path::PathBuf;
+
+use inkwell::builder::Builder;
+use inkwell::context::Context;
+use inkwell::values::BasicValueEnum;
+use inkwell::values::PointerValue;
 
 pub fn bool_operation<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,

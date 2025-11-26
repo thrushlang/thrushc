@@ -1,12 +1,17 @@
-use crate::back_end::llvm::compiler::attrbuilder::{AttributeBuilder, LLVMAttributeApplicant};
-use crate::back_end::llvm::compiler::attributes::{LLVMAttribute, LLVMAttributeComparator};
+use crate::back_end::llvm::compiler::attrbuilder::AttributeBuilder;
+use crate::back_end::llvm::compiler::attrbuilder::LLVMAttributeApplicant;
+use crate::back_end::llvm::compiler::attributes::LLVMAttribute;
+use crate::back_end::llvm::compiler::attributes::LLVMAttributeComparator;
+use crate::back_end::llvm::compiler::block;
 use crate::back_end::llvm::compiler::codegen::LLVMCodegen;
 use crate::back_end::llvm::compiler::context::LLVMCodeGenContext;
 use crate::back_end::llvm::compiler::conventions::CallConvention;
-use crate::back_end::llvm::compiler::{block, obfuscation, typegen};
-use crate::back_end::llvm::types::repr::{LLVMAttributes, LLVMFunction};
-
+use crate::back_end::llvm::compiler::obfuscation;
+use crate::back_end::llvm::compiler::typegen;
+use crate::back_end::llvm::types::repr::LLVMAttributes;
+use crate::back_end::llvm::types::repr::LLVMFunction;
 use crate::back_end::llvm::types::traits::LLVMAttributesExtensions;
+
 use crate::front_end::lexer::span::Span;
 use crate::front_end::types::ast::Ast;
 use crate::front_end::types::attributes::traits::ThrushAttributesExtensions;
@@ -16,13 +21,11 @@ use crate::front_end::typesystem::types::Type;
 
 use inkwell::basic_block::BasicBlock;
 use inkwell::builder::Builder;
-
-use inkwell::{
-    context::Context,
-    module::{Linkage, Module},
-    types::FunctionType,
-    values::FunctionValue,
-};
+use inkwell::context::Context;
+use inkwell::module::Linkage;
+use inkwell::module::Module;
+use inkwell::types::FunctionType;
+use inkwell::values::FunctionValue;
 
 pub fn compile_decl<'ctx>(context: &mut LLVMCodeGenContext<'_, 'ctx>, function: Function<'ctx>) {
     let llvm_module: &Module = context.get_llvm_module();

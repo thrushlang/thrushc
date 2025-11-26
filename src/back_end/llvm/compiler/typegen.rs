@@ -3,15 +3,19 @@ use crate::back_end::llvm::compiler::context::LLVMCodeGenContext;
 use crate::front_end::types::ast::Ast;
 use crate::front_end::typesystem::types::Type;
 
-use crate::core::console::logging::{self, LoggingType};
+use crate::core::console::logging;
+use crate::core::console::logging::LoggingType;
 
 use std::fmt::Display;
 
-use inkwell::{
-    AddressSpace,
-    context::Context,
-    types::{BasicMetadataTypeEnum, BasicType, BasicTypeEnum, FloatType, FunctionType, IntType},
-};
+use inkwell::AddressSpace;
+use inkwell::context::Context;
+use inkwell::types::BasicMetadataTypeEnum;
+use inkwell::types::BasicType;
+use inkwell::types::BasicTypeEnum;
+use inkwell::types::FloatType;
+use inkwell::types::FunctionType;
+use inkwell::types::IntType;
 
 #[inline]
 pub fn generate_fn_type<'ctx>(

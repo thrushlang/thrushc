@@ -1,14 +1,14 @@
-use std::{path::PathBuf, process};
+use crate::back_end::llvm::compiler::context::LLVMCodeGenContext;
 
-use crate::{
-    back_end::llvm::compiler::context::LLVMCodeGenContext,
-    core::{
-        console::logging::LoggingType,
-        diagnostic::diagnostician::Diagnostician,
-        errors::{position::CompilationPosition, standard::ThrushCompilerIssue},
-    },
-    front_end::lexer::span::Span,
-};
+use crate::core::console::logging::LoggingType;
+use crate::core::diagnostic::diagnostician::Diagnostician;
+use crate::core::errors::position::CompilationPosition;
+use crate::core::errors::standard::ThrushCompilerIssue;
+
+use crate::front_end::lexer::span::Span;
+
+use std::path::PathBuf;
+use std::process;
 
 pub fn abort_codegen<'ctx>(
     context: &mut LLVMCodeGenContext<'ctx, '_>,

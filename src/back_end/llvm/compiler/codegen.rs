@@ -1,8 +1,7 @@
 #![allow(clippy::collapsible_if)]
 
-use std::path::PathBuf;
-
 use crate::back_end::llvm::compiler::block;
+use crate::back_end::llvm::compiler::context::LLVMCodeGenContext;
 use crate::back_end::llvm::compiler::declarations::{self};
 use crate::back_end::llvm::compiler::generation::{cast, float, integer};
 use crate::back_end::llvm::compiler::statements::lli;
@@ -17,7 +16,7 @@ use crate::front_end::types::attributes::traits::ThrushAttributesExtensions;
 use crate::front_end::typesystem::traits::DereferenceExtensions;
 use crate::front_end::typesystem::types::Type;
 
-use super::context::LLVMCodeGenContext;
+use std::path::PathBuf;
 
 use inkwell::AddressSpace;
 use inkwell::basic_block::BasicBlock;

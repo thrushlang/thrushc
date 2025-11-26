@@ -6,7 +6,8 @@ use crate::front_end::lexer::tokentype::TokenType;
 
 use std::path::PathBuf;
 
-use inkwell::{FloatPredicate, IntPredicate};
+use inkwell::FloatPredicate;
+use inkwell::IntPredicate;
 
 #[must_use]
 pub fn integer(

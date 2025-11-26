@@ -1,6 +1,6 @@
-use ahash::AHashMap as HashMap;
-
 use crate::front_end::lexer::span::Span;
+
+use ahash::AHashMap as HashMap;
 
 pub type LinterStaticInfo = (Span, bool, bool);
 pub type LinterGlobalStatics<'linter> = HashMap<&'linter str, LinterStaticInfo>;
@@ -38,10 +38,3 @@ pub type LinterStructs<'linter> = HashMap<&'linter str, LinterStructFieldsInfo<'
 
 pub type LinterFunctionParameterInfo = (Span, bool, bool);
 pub type LinterFunctionParameters<'linter> = HashMap<&'linter str, LinterFunctionParameterInfo>;
-
-#[derive(Debug, Clone, Copy)]
-pub enum LinterAttributeApplicant {
-    Function,
-    Struct,
-    Constant,
-}

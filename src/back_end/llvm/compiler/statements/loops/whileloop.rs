@@ -1,25 +1,24 @@
+use crate::back_end::llvm::compiler::abort;
+use crate::back_end::llvm::compiler::block;
+use crate::back_end::llvm::compiler::codegen;
+use crate::back_end::llvm::compiler::codegen::LLVMCodegen;
+
+use crate::front_end::types::ast::Ast;
+use crate::front_end::typesystem::types::Type;
+
 use std::path::PathBuf;
 
-use inkwell::{
-    basic_block::BasicBlock,
-    builder::Builder,
-    values::{FunctionValue, IntValue},
-};
+use inkwell::basic_block::BasicBlock;
+use inkwell::builder::Builder;
+use inkwell::values::FunctionValue;
+use inkwell::values::IntValue;
 
-use crate::{
-    back_end::llvm::compiler::{
-        abort, block,
-        codegen::{self, LLVMCodegen},
-    },
-    front_end::{types::ast::Ast, typesystem::types::Type},
-};
-
-pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, stmt: &'ctx Ast<'ctx>) {
+pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, node: &'ctx Ast<'ctx>) {
     let llvm_builder: &Builder = codegen.get_mut_context().get_llvm_builder();
 
     let llvm_function: FunctionValue = codegen.get_mut_context().get_current_fn();
 
-    if let Ast::While { cond, block, .. } = stmt {
+    if let Ast::While { cond, block, .. } = node {
         let condition: BasicBlock = block::append_block(codegen.get_context(), llvm_function);
         let body: BasicBlock = block::append_block(codegen.get_context(), llvm_function);
         let exit: BasicBlock = block::append_block(codegen.get_context(), llvm_function);

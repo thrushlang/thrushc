@@ -1,12 +1,15 @@
-use std::fmt::Display;
+use crate::back_end::llvm::compiler::codegen;
+use crate::back_end::llvm::compiler::context::LLVMCodeGenContext;
+
+use crate::core::console::logging;
+use crate::core::console::logging::LoggingType;
+
+use crate::front_end::lexer::span::Span;
+use crate::front_end::types::ast::Ast;
+use crate::front_end::typesystem::types::Type;
 
 use inkwell::values::BasicValueEnum;
-
-use crate::{
-    back_end::llvm::compiler::{codegen, context::LLVMCodeGenContext},
-    core::console::logging::{self, LoggingType},
-    front_end::{lexer::span::Span, types::ast::Ast, typesystem::types::Type},
-};
+use std::fmt::Display;
 
 pub mod address;
 pub mod alloc;

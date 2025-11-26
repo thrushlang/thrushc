@@ -25,7 +25,7 @@ pub fn validate<'analyzer>(
             if source.is_reference() && !source.is_allocated() {
                 analyzer.add_error(ThrushCompilerIssue::Error(
                     "Invalid reference".into(),
-                    "An reference with direction was expected.".into(),
+                    "An reference with memory address was expected. Try to allocate it.".into(),
                     None,
                     *span,
                 ));
@@ -35,7 +35,7 @@ pub fn validate<'analyzer>(
                 analyzer.add_error(ThrushCompilerIssue::Error(
                     "Invalid value".into(),
                     format!(
-                        "An value with direction was expected, got '{}'.",
+                        "An value with memory address was expected, got '{}'. Try to allocate it.",
                         source_type
                     ),
                     None,

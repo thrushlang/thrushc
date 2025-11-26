@@ -1,16 +1,14 @@
 use std::fmt::Display;
 
-use crate::front_end::types::ast::{Ast, metadata::local::LocalMetadata};
-
+use crate::front_end::types::ast::Ast;
+use crate::front_end::types::ast::metadata::local::LocalMetadata;
+use crate::front_end::types::parser::stmts::traits::ConstructorExtensions;
+use crate::front_end::types::parser::stmts::traits::StructFieldsExtensions;
+use crate::front_end::types::parser::stmts::types::Constructor;
+use crate::front_end::types::parser::stmts::types::StructFields;
 use crate::front_end::typesystem::modificators::StructureTypeModificator;
 use crate::front_end::typesystem::traits::TypeStructExtensions;
 use crate::front_end::typesystem::types::Type;
-
-use crate::front_end::types::parser::stmts::traits::{
-    ConstructorExtensions, StructFieldsExtensions,
-};
-
-use crate::front_end::types::parser::stmts::types::{Constructor, StructFields};
 
 impl StructFieldsExtensions for StructFields<'_> {
     #[inline]

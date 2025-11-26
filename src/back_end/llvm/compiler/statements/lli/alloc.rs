@@ -1,14 +1,12 @@
-use inkwell::values::BasicValueEnum;
+use crate::back_end::llvm::compiler::context::LLVMCodeGenContext;
+use crate::back_end::llvm::compiler::memory;
+use crate::back_end::llvm::compiler::memory::LLVMAllocationSite;
 
-use crate::{
-    back_end::llvm::compiler::{
-        context::LLVMCodeGenContext,
-        memory::{self, LLVMAllocationSite},
-    },
-    front_end::{
-        lexer::span::Span, types::parser::stmts::sites::AllocationSite, typesystem::types::Type,
-    },
-};
+use crate::front_end::lexer::span::Span;
+use crate::front_end::types::parser::stmts::sites::AllocationSite;
+use crate::front_end::typesystem::types::Type;
+
+use inkwell::values::BasicValueEnum;
 
 pub fn compile<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,

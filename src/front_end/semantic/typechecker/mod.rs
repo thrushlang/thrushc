@@ -1,20 +1,19 @@
-mod builtins;
-mod checks;
-mod constants;
-mod declarations;
-mod expressions;
-mod metadata;
-mod statements;
-mod symbols;
-mod validations;
-
-use symbols::TypeCheckerSymbolsTable;
+pub mod builtins;
+pub mod checks;
+pub mod constants;
+pub mod declarations;
+pub mod expressions;
+pub mod metadata;
+pub mod statements;
+pub mod symbols;
+pub mod validations;
 
 use crate::core::compiler::options::CompilationUnit;
 use crate::core::console::logging::LoggingType;
 use crate::core::diagnostic::diagnostician::Diagnostician;
 use crate::core::errors::standard::ThrushCompilerIssue;
 
+use crate::front_end::semantic::typechecker::symbols::TypeCheckerSymbolsTable;
 use crate::front_end::types::ast::Ast;
 use crate::front_end::types::attributes::traits::ThrushAttributesExtensions;
 

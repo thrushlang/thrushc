@@ -1,9 +1,9 @@
-use std::path::PathBuf;
+use crate::core::errors::position::CompilationPosition;
+use crate::core::errors::standard::ThrushCompilerIssue;
 
-use crate::{
-    core::errors::{position::CompilationPosition, standard::ThrushCompilerIssue},
-    front_end::lexer::span::Span,
-};
+use crate::front_end::lexer::span::Span;
+
+use std::path::PathBuf;
 
 pub fn parse_scapes(content: &str, span: Span) -> Result<Vec<u8>, ThrushCompilerIssue> {
     let source: &[u8] = content.as_bytes();

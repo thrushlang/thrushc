@@ -1,5 +1,3 @@
-use ahash::AHashMap as HashMap;
-
 use crate::front_end::semantic::typechecker::constants::TYPECHECKER_SYMBOLS_GLOBAL_MINIMAL_CAPACITY;
 use crate::front_end::semantic::typechecker::constants::TYPECHECKER_SYMBOLS_LOCAL_MINIMAL_CAPACITY;
 
@@ -14,6 +12,7 @@ use crate::front_end::types::semantic::typechecker::types::TypeCheckerLLIs;
 use crate::front_end::types::semantic::typechecker::types::TypeCheckerLocal;
 use crate::front_end::types::semantic::typechecker::types::TypeCheckerLocals;
 
+use ahash::AHashMap as HashMap;
 #[derive(Debug)]
 pub struct TypeCheckerSymbolsTable<'symbol> {
     functions: TypeCheckerFunctions<'symbol>,

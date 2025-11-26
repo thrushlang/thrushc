@@ -20,7 +20,7 @@ pub fn validate<'analyzer>(
                 if !expr.is_constant_value() {
                     analyzer.add_error(ThrushCompilerIssue::Error(
                         "Syntax error".into(),
-                        "Expected compile-time known value.".into(),
+                        "Expected constant value or reference constant value.".into(),
                         None,
                         span,
                     ));

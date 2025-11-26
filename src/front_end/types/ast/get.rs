@@ -1,5 +1,3 @@
-use std::path::PathBuf;
-
 use crate::back_end;
 use crate::back_end::llvm::compiler::context::LLVMCodeGenContext;
 
@@ -9,6 +7,8 @@ use crate::core::errors::standard::ThrushCompilerIssue;
 use crate::front_end::lexer::span::Span;
 use crate::front_end::types::ast::Ast;
 use crate::front_end::typesystem::types::Type;
+
+use std::path::PathBuf;
 
 impl Ast<'_> {
     pub fn get_any_type(&self) -> Result<&Type, ThrushCompilerIssue> {

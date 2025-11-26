@@ -1,12 +1,16 @@
-use crate::back_end::llvm::compiler::attrbuilder::{AttributeBuilder, LLVMAttributeApplicant};
+use crate::back_end::llvm::compiler::abort;
+use crate::back_end::llvm::compiler::attrbuilder::AttributeBuilder;
+use crate::back_end::llvm::compiler::attrbuilder::LLVMAttributeApplicant;
+use crate::back_end::llvm::compiler::attributes::LLVMAttribute;
 use crate::back_end::llvm::compiler::attributes::LLVMAttributeComparator;
+use crate::back_end::llvm::compiler::block;
 use crate::back_end::llvm::compiler::context::LLVMCodeGenContext;
 use crate::back_end::llvm::compiler::conventions::CallConvention;
-use crate::back_end::llvm::compiler::{attributes::LLVMAttribute, obfuscation};
-
-use crate::back_end::llvm::compiler::{abort, block, typegen};
+use crate::back_end::llvm::compiler::obfuscation;
+use crate::back_end::llvm::compiler::typegen;
 use crate::back_end::llvm::types::repr::LLVMAttributes;
-use crate::back_end::llvm::types::traits::{AssemblerFunctionExtensions, LLVMAttributesExtensions};
+use crate::back_end::llvm::types::traits::AssemblerFunctionExtensions;
+use crate::back_end::llvm::types::traits::LLVMAttributesExtensions;
 
 use crate::front_end::lexer::span::Span;
 use crate::front_end::types::ast::Ast;
@@ -16,15 +20,16 @@ use crate::front_end::typesystem::types::Type;
 
 use std::path::PathBuf;
 
-use inkwell::{
-    InlineAsmDialect,
-    basic_block::BasicBlock,
-    builder::Builder,
-    context::Context,
-    module::{Linkage, Module},
-    types::FunctionType,
-    values::{BasicMetadataValueEnum, FunctionValue, PointerValue},
-};
+use inkwell::InlineAsmDialect;
+use inkwell::basic_block::BasicBlock;
+use inkwell::builder::Builder;
+use inkwell::context::Context;
+use inkwell::module::Linkage;
+use inkwell::module::Module;
+use inkwell::types::FunctionType;
+use inkwell::values::BasicMetadataValueEnum;
+use inkwell::values::FunctionValue;
+use inkwell::values::PointerValue;
 
 pub fn compile<'ctx>(context: &mut LLVMCodeGenContext<'_, 'ctx>, asm_fn: AssemblerFunction<'ctx>) {
     let llvm_module: &Module = context.get_llvm_module();

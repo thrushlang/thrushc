@@ -85,14 +85,17 @@ pub fn validate<'analyzer>(
             if expr.is_reference() && !expr.is_allocated() {
                 analyzer.add_error(ThrushCompilerIssue::Error(
                     "Invalid reference".into(),
-                    "An reference with direction was expected.".into(),
+                    "An reference with memory address was expected. Try to allocate it.".into(),
                     None,
                     *span,
                 ));
             } else if !expr.is_reference() && !expr_type.is_ptr_like_type() {
                 analyzer.add_error(ThrushCompilerIssue::Error(
-                    "Invalid reference".into(),
-                    "An value with direction was expected.".into(),
+                    "Invalid value".into(),
+                    format!(
+                        "An value with memory address was expected, got '{}'. Try to allocate it.",
+                        expr_type
+                    ),
                     None,
                     *span,
                 ));

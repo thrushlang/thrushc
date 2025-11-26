@@ -1,4 +1,5 @@
-use crate::front_end::typesystem::{traits::DereferenceExtensions, types::Type};
+use crate::front_end::typesystem::traits::DereferenceExtensions;
+use crate::front_end::typesystem::types::Type;
 
 impl DereferenceExtensions for Type {
     fn dereference(&self) -> Type {

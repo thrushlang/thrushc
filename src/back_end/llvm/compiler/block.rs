@@ -1,6 +1,9 @@
-use inkwell::{basic_block::BasicBlock, context::Context, values::FunctionValue};
+use crate::back_end::llvm::compiler::context::LLVMCodeGenContext;
+use crate::back_end::llvm::compiler::obfuscation;
 
-use crate::back_end::llvm::compiler::{context::LLVMCodeGenContext, obfuscation};
+use inkwell::basic_block::BasicBlock;
+use inkwell::context::Context;
+use inkwell::values::FunctionValue;
 
 #[inline]
 pub fn move_terminator_to_end(context: &LLVMCodeGenContext) {

@@ -1,9 +1,12 @@
-use crate::{
-    core::errors::standard::ThrushCompilerIssue,
-    front_end::lexer::{
-        Lexer, character, identifier, number, span::Span, string, tokentype::TokenType,
-    },
-};
+use crate::core::errors::standard::ThrushCompilerIssue;
+
+use crate::front_end::lexer::Lexer;
+use crate::front_end::lexer::character;
+use crate::front_end::lexer::identifier;
+use crate::front_end::lexer::number;
+use crate::front_end::lexer::span::Span;
+use crate::front_end::lexer::string;
+use crate::front_end::lexer::tokentype::TokenType;
 
 pub fn analyze(lexer: &mut Lexer) -> Result<(), ThrushCompilerIssue> {
     match lexer.advance() {

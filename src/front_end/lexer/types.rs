@@ -1,13 +1,11 @@
-use crate::{
-    core::errors::standard::ThrushCompilerIssue,
-    front_end::{
-        lexer::{span::Span, tokentype::TokenType},
-        typesystem::types::Type,
-    },
-    lazy_static,
-};
+use crate::core::errors::standard::ThrushCompilerIssue;
+
+use crate::front_end::lexer::span::Span;
+use crate::front_end::lexer::tokentype::TokenType;
+use crate::front_end::typesystem::types::Type;
 
 use ahash::AHashMap as HashMap;
+use lazy_static::lazy_static;
 
 lazy_static! {
     pub static ref TYPES: HashMap<&'static str, TokenType> = {

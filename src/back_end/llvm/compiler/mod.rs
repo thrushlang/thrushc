@@ -26,13 +26,11 @@ pub mod statements;
 pub mod symbols;
 pub mod typegen;
 
-use {
-    crate::{
-        back_end::llvm::compiler::{context::LLVMCodeGenContext, metadata::LLVMMetadata},
-        front_end::types::ast::Ast,
-    },
-    codegen::LLVMCodegen,
-};
+use crate::back_end::llvm::compiler::codegen::LLVMCodegen;
+use crate::back_end::llvm::compiler::context::LLVMCodeGenContext;
+use crate::back_end::llvm::compiler::metadata::LLVMMetadata;
+
+use crate::front_end::types::ast::Ast;
 
 pub struct LLVMCompiler;
 

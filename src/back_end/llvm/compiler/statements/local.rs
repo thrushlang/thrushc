@@ -1,12 +1,11 @@
-use crate::{
-    back_end::llvm::compiler::{
-        anchors::PointerAnchor, codegen, context::LLVMCodeGenContext, memory::SymbolAllocated,
-    },
-    front_end::{
-        types::{ast::Ast, parser::repr::Local},
-        typesystem::types::Type,
-    },
-};
+use crate::back_end::llvm::compiler::anchors::PointerAnchor;
+use crate::back_end::llvm::compiler::codegen;
+use crate::back_end::llvm::compiler::context::LLVMCodeGenContext;
+use crate::back_end::llvm::compiler::memory::SymbolAllocated;
+
+use crate::front_end::types::ast::Ast;
+use crate::front_end::types::parser::repr::Local;
+use crate::front_end::typesystem::types::Type;
 
 use inkwell::values::BasicValueEnum;
 

@@ -1,10 +1,12 @@
-use crate::{
-    core::errors::standard::ThrushCompilerIssue,
-    front_end::lexer::{
-        Lexer, atomic::ATOMIC, attributes::ATTRIBUTES, builtins::BUILTINS, keywords::KEYWORDS,
-        tokentype::TokenType, types::TYPES,
-    },
-};
+use crate::core::errors::standard::ThrushCompilerIssue;
+
+use crate::front_end::lexer::Lexer;
+use crate::front_end::lexer::atomic::ATOMIC;
+use crate::front_end::lexer::attributes::ATTRIBUTES;
+use crate::front_end::lexer::builtins::BUILTINS;
+use crate::front_end::lexer::keywords::KEYWORDS;
+use crate::front_end::lexer::tokentype::TokenType;
+use crate::front_end::lexer::types::TYPES;
 
 pub fn lex(lexer: &mut Lexer) -> Result<(), ThrushCompilerIssue> {
     while lexer.is_identifier_boundary(lexer.peek()) {

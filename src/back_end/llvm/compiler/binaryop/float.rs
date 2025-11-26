@@ -1,20 +1,21 @@
+use crate::back_end::llvm::compiler;
+use crate::back_end::llvm::compiler::abort;
+use crate::back_end::llvm::compiler::codegen;
+use crate::back_end::llvm::compiler::constgen;
+use crate::back_end::llvm::compiler::context::LLVMCodeGenContext;
+use crate::back_end::llvm::compiler::generation::cast;
+use crate::back_end::llvm::compiler::predicates;
+
+use crate::front_end::lexer::span::Span;
+use crate::front_end::lexer::tokentype::TokenType;
+use crate::front_end::types::parser::repr::BinaryOperation;
+use crate::front_end::typesystem::types::Type;
+
 use std::path::PathBuf;
 
-use crate::{
-    back_end::llvm::compiler::{self, abort, codegen, constgen, generation::cast, predicates},
-    front_end::{
-        lexer::{span::Span, tokentype::TokenType},
-        types::parser::repr::BinaryOperation,
-        typesystem::types::Type,
-    },
-};
-
-use super::super::context::LLVMCodeGenContext;
-
-use inkwell::{
-    builder::Builder,
-    values::{BasicValueEnum, FloatValue},
-};
+use inkwell::builder::Builder;
+use inkwell::values::BasicValueEnum;
+use inkwell::values::FloatValue;
 
 pub fn float_operation<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,

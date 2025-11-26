@@ -1,5 +1,3 @@
-use ahash::AHashSet;
-
 use crate::core::compiler::options::CompilationUnit;
 use crate::core::console::logging;
 use crate::core::console::logging::LoggingType;
@@ -9,13 +7,16 @@ use crate::core::errors::standard::ThrushCompilerIssue;
 use crate::front_end::lexer::span::Span;
 use crate::front_end::parser::attributes::INLINE_ASSEMBLER_SYNTAXES;
 use crate::front_end::types::ast::Ast;
+use crate::front_end::types::attributes::ThrushAttribute;
+use crate::front_end::types::attributes::ThrushAttributeComparator;
 use crate::front_end::types::attributes::callconventions::CALL_CONVENTIONS;
-use crate::front_end::types::attributes::traits::{
-    ThrushAttributeComparatorExtensions, ThrushAttributesExtensions,
-};
-use crate::front_end::types::attributes::{ThrushAttribute, ThrushAttributeComparator, linkage};
+use crate::front_end::types::attributes::linkage;
+use crate::front_end::types::attributes::traits::ThrushAttributeComparatorExtensions;
+use crate::front_end::types::attributes::traits::ThrushAttributesExtensions;
 use crate::front_end::types::parser::stmts::types::ThrushAttributes;
 use crate::front_end::types::semantic::attrchecker::types::AttributeCheckerAttributeApplicant;
+
+use ahash::AHashSet;
 
 #[derive(Debug)]
 pub struct AttributeChecker<'attr_checker> {

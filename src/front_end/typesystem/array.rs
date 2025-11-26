@@ -1,4 +1,5 @@
-use crate::front_end::typesystem::{traits::TypeArrayEntensions, types::Type};
+use crate::front_end::typesystem::traits::TypeArrayEntensions;
+use crate::front_end::typesystem::types::Type;
 
 impl TypeArrayEntensions for Type {
     #[inline]

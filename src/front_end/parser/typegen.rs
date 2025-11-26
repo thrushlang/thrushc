@@ -3,24 +3,25 @@ use crate::core::errors::standard::ThrushCompilerIssue;
 use crate::front_end::lexer::span::Span;
 use crate::front_end::lexer::token::Token;
 use crate::front_end::lexer::tokentype::TokenType;
+use crate::front_end::parser::ParserContext;
 use crate::front_end::parser::attributes;
 use crate::front_end::parser::expr;
 use crate::front_end::types::ast::Ast;
 
 use crate::front_end::types::attributes::traits::ThrushAttributesExtensions;
-use crate::front_end::types::parser::stmts::traits::{
-    FoundSymbolEither, FoundSymbolExtension, StructExtensions, StructFieldsExtensions,
-    TokenExtensions,
-};
-use crate::front_end::types::parser::stmts::types::{StructFields, ThrushAttributes};
-use crate::front_end::types::parser::symbols::types::{CustomTypeSymbol, Struct};
-use crate::front_end::typesystem::modificators::{
-    FunctionReferenceTypeModificator, GCCFunctionReferenceTypeModificator,
-    LLVMFunctionReferenceTypeModificator,
-};
+use crate::front_end::types::parser::stmts::traits::FoundSymbolEither;
+use crate::front_end::types::parser::stmts::traits::FoundSymbolExtension;
+use crate::front_end::types::parser::stmts::traits::StructExtensions;
+use crate::front_end::types::parser::stmts::traits::StructFieldsExtensions;
+use crate::front_end::types::parser::stmts::traits::TokenExtensions;
+use crate::front_end::types::parser::stmts::types::StructFields;
+use crate::front_end::types::parser::stmts::types::ThrushAttributes;
+use crate::front_end::types::parser::symbols::types::CustomTypeSymbol;
+use crate::front_end::types::parser::symbols::types::Struct;
+use crate::front_end::typesystem::modificators::FunctionReferenceTypeModificator;
+use crate::front_end::typesystem::modificators::GCCFunctionReferenceTypeModificator;
+use crate::front_end::typesystem::modificators::LLVMFunctionReferenceTypeModificator;
 use crate::front_end::typesystem::types::Type;
-
-use super::ParserContext;
 
 pub fn build_type(ctx: &mut ParserContext<'_>) -> Result<Type, ThrushCompilerIssue> {
     match ctx.peek().kind {

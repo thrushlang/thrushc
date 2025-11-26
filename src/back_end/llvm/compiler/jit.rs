@@ -1,14 +1,16 @@
+use crate::core::compiler::backends::llvm::jit::JITConfiguration;
+use crate::core::console::logging;
+use crate::core::console::logging::LoggingType;
+
 use std::env;
 use std::path::PathBuf;
 
 use inkwell::execution_engine::ExecutionEngine;
-use inkwell::module::{Linkage, Module};
+use inkwell::module::Linkage;
+use inkwell::module::Module;
 use inkwell::values::FunctionValue;
 
 use ahash::AHashSet as HashSet;
-
-use crate::core::compiler::backends::llvm::jit::JITConfiguration;
-use crate::core::console::logging::{self, LoggingType};
 
 #[derive(Debug)]
 pub struct LLVMJITCompiler<'ctx> {

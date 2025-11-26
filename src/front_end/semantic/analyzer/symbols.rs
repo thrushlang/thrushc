@@ -1,5 +1,3 @@
-use ahash::AHashMap as HashMap;
-
 use crate::front_end::semantic::analyzer::constants::ANALYZER_SYMBOLS_MINIMAL_GLOBAL_CAPACITY;
 use crate::front_end::semantic::analyzer::constants::ANALYZER_SYMBOLS_MINIMAL_LOCAL_CAPACITY;
 
@@ -11,6 +9,8 @@ use crate::front_end::types::semantic::analyzer::types::AnalyzerLLI;
 use crate::front_end::types::semantic::analyzer::types::AnalyzerLLIs;
 use crate::front_end::types::semantic::analyzer::types::AnalyzerLocal;
 use crate::front_end::types::semantic::analyzer::types::AnalyzerLocals;
+
+use ahash::AHashMap as HashMap;
 
 #[derive(Debug)]
 pub struct AnalyzerSymbolsTable<'symbol> {

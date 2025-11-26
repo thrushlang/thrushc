@@ -1,15 +1,16 @@
-use std::fmt::Display;
-
-use inkwell::{InlineAsmDialect, module::Linkage};
-
-use crate::back_end::llvm::compiler::attributes::{LLVMAttribute, LLVMAttributeComparator};
+use crate::back_end::llvm::compiler::attributes::LLVMAttribute;
+use crate::back_end::llvm::compiler::attributes::LLVMAttributeComparator;
 use crate::back_end::llvm::compiler::conventions::CallConvention;
 use crate::back_end::llvm::types::repr::LLVMAttributes;
-
 use crate::back_end::llvm::types::traits::AssemblerFunctionExtensions;
 use crate::back_end::llvm::types::traits::LLVMAttributeComparatorExtensions;
 use crate::back_end::llvm::types::traits::LLVMAttributesExtensions;
 use crate::back_end::llvm::types::traits::LLVMLinkageExtensions;
+
+use std::fmt::Display;
+
+use inkwell::InlineAsmDialect;
+use inkwell::module::Linkage;
 
 impl LLVMAttributesExtensions for LLVMAttributes<'_> {
     #[inline]

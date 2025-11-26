@@ -1,25 +1,20 @@
 pub mod atomic;
 pub mod attributes;
 pub mod builtins;
+pub mod character;
+pub mod identifier;
 pub mod keywords;
+pub mod lex;
+pub mod number;
 pub mod printer;
 pub mod scapes;
 pub mod span;
+pub mod string;
 pub mod token;
 pub mod tokenattr;
 pub mod tokenis;
 pub mod tokentype;
 pub mod types;
-
-mod character;
-mod identifier;
-mod lex;
-mod number;
-mod string;
-
-use std::{mem, process};
-
-use unicode_categories::UnicodeCategories;
 
 use crate::core::compiler::options::CompilationUnit;
 use crate::core::console::logging::{self, LoggingType};
@@ -31,6 +26,10 @@ use crate::front_end::lexer::span::Span;
 use crate::front_end::lexer::token::Token;
 use crate::front_end::lexer::tokentype::TokenType;
 use crate::front_end::types::lexer::types::Tokens;
+
+use std::{mem, process};
+
+use unicode_categories::UnicodeCategories;
 
 const MAXIMUM_TOKENS_CAPACITY: usize = 1_000_000;
 const MAXIMUM_BYTES_TO_LEX: usize = 1_000_000;

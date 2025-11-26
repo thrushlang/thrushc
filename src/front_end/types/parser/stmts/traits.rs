@@ -5,7 +5,9 @@ use crate::front_end::lexer::tokentype::TokenType;
 use crate::front_end::typesystem::modificators::StructureTypeModificator;
 use crate::front_end::typesystem::types::Type;
 
-use crate::front_end::types::parser::stmts::types::{EnumField, EnumFields, StructFields};
+use crate::front_end::types::parser::stmts::types::EnumField;
+use crate::front_end::types::parser::stmts::types::EnumFields;
+use crate::front_end::types::parser::stmts::types::StructFields;
 
 pub trait TokenExtensions {
     fn get_lexeme(&self) -> &str;

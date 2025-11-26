@@ -1,7 +1,6 @@
-use crate::front_end::{
-    lexer::{span::Span, tokentype::TokenType},
-    types::attributes::ThrushAttribute,
-};
+use crate::front_end::lexer::span::Span;
+use crate::front_end::lexer::tokentype::TokenType;
+use crate::front_end::types::attributes::ThrushAttribute;
 
 impl TokenType {
     #[must_use]
