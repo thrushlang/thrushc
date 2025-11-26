@@ -23,7 +23,6 @@ pub fn validate<'analyzer>(
                         None,
                         span,
                     ));
-                    s
                 }
 
                 analyzer.analyze_expr(value)?;
