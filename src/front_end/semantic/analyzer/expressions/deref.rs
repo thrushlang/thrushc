@@ -12,7 +12,7 @@ pub fn validate<'analyzer>(
     node: &'analyzer Ast,
 ) -> Result<(), ThrushCompilerIssue> {
     match node {
-        Ast::Derefs { value, .. } => {
+        Ast::Deref { value, .. } => {
             analyzer.analyze_expr(value)?;
 
             Ok(())
