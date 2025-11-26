@@ -18,12 +18,11 @@ pub fn validate<'type_checker>(
         Ast::Static {
             kind: static_type,
             value,
-            span,
             ..
         } => {
             if let Some(value) = value {
                 let metadata: TypeCheckerExprMetadata =
-                    TypeCheckerExprMetadata::new(value.is_literal_value(), *span);
+                    TypeCheckerExprMetadata::new(value.is_literal_value(), value.get_span());
 
                 let value_type: &Type = value.get_value_type()?;
 

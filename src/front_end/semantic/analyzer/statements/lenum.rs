@@ -15,14 +15,13 @@ pub fn validate<'analyzer>(
         Ast::Enum { fields, .. } => {
             fields.iter().try_for_each(|field| {
                 let expr: &Ast = &field.2;
-                let span: Span = expr.get_span();
 
                 if !expr.is_constant_value() {
                     analyzer.add_error(ThrushCompilerIssue::Error(
                         "Syntax error".into(),
-                        "Expected constant value or reference constant value.".into(),
+                        "Expected constant value or reference constant value. Verify that it is an SSA value.".into(),
                         None,
-                        span,
+                        expr.get_span(),
                     ));
                 }
 

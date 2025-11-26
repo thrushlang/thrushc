@@ -302,7 +302,7 @@ pub enum Ast<'ctx> {
         span: Span,
     },
 
-    // Pointer Manipulation
+    // LLI
     Alloc {
         alloc: Type,
         site_allocation: AllocationSite,
@@ -323,14 +323,14 @@ pub enum Ast<'ctx> {
         write_type: Type,
         span: Span,
     },
-
     Load {
         source: Rc<Ast<'ctx>>,
         kind: Type,
         span: Span,
     },
 
-    Defer {
+    // Pointer Manipulation
+    Deref {
         value: Rc<Ast<'ctx>>,
         kind: Type,
         metadata: DereferenceMetadata,

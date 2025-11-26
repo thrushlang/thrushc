@@ -19,7 +19,7 @@ pub fn validate<'type_checker>(
             if !source_type.is_struct_type() && !source_type.is_ptr_struct_type() {
                 typechecker.add_error(ThrushCompilerIssue::Error(
                     "Type error".into(),
-                    format!("A structure type was expected within a structure 'struct T' type, or raw typed pointer 'ptr[T]', got '{}'.", source_type),
+                    format!("A structure type was expected within a structure 'struct T' type, or raw typed pointer structure pointer 'ptr[struct T]', got '{}'.", source_type),
                     None,
                     source_span,
                 ));

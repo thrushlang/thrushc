@@ -22,7 +22,7 @@ pub fn validate<'type_checker>(
         typechecker.add_error(ThrushCompilerIssue::Error(
             "Type error".into(),
             format!(
-                "Expected arguments total '{}', not '{}'.",
+                "Expected arguments total '{}', not '{}'. You should try to fill it in.",
                 required_size, provided_size
             ),
             None,
@@ -32,7 +32,7 @@ pub fn validate<'type_checker>(
         typechecker.add_error(ThrushCompilerIssue::Error(
             "Type error".into(),
             format!(
-                "Arguments were expected in the order: '{}'.",
+                "Arguments were expected in the order '{}'. You must reorder it.",
                 parameter_types
                     .iter()
                     .map(|t| t.to_string())
@@ -51,10 +51,9 @@ pub fn validate<'type_checker>(
         .zip(args.iter())
         .try_for_each(|(target_type, expr)| {
             let from_type: &Type = expr.get_value_type()?;
-            let span: Span = expr.get_span();
 
             let metadata: TypeCheckerExprMetadata =
-                TypeCheckerExprMetadata::new(expr.is_literal_value(), span);
+                TypeCheckerExprMetadata::new(expr.is_literal_value(), expr.get_span());
 
             checks::check_types(target_type, from_type, Some(expr), None, metadata)?;
 

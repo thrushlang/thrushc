@@ -120,7 +120,7 @@ impl std::fmt::Display for TokenType {
             TokenType::Colon => write!(f, ":"),
             TokenType::ColonColon => write!(f, "::"),
             TokenType::Comma => write!(f, ","),
-            TokenType::Defer => write!(f, "defer"),
+            TokenType::Deref => write!(f, "deref"),
             TokenType::Dot => write!(f, "."),
             TokenType::Eof => write!(f, "EOF"),
             TokenType::Eq => write!(f, "="),

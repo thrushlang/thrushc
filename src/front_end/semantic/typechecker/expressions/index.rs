@@ -12,35 +12,7 @@ pub fn validate<'type_checker>(
     node: &'type_checker Ast,
 ) -> Result<(), ThrushCompilerIssue> {
     match node {
-        Ast::Index {
-            source,
-            index,
-            span,
-            ..
-        } => {
-            let source_type: &Type = source.get_any_type()?;
-
-            if !source_type.is_ptr_type()
-                && !source_type.is_array_type()
-                && !source_type.is_fixed_array_type()
-            {
-                typechecker.add_error(ThrushCompilerIssue::Error(
-                    "Type error".into(),
-                    format!("Expected raw typed pointer ptr[T], raw pointer ptr, array[T], or fixed array[T; N], got '{}'.", source_type),
-                    None,
-                    *span,
-                ));
-            }
-
-            if source.is_reference() && !source.is_allocated() {
-                typechecker.add_error(ThrushCompilerIssue::Error(
-                    "Type error".into(),
-                    format!("Expected raw typed pointer ptr[T], raw pointer ptr, array[T], or fixed array[T; N], got '{}'.", source_type),
-                    None,
-                    *span,
-                ));
-            }
-
+        Ast::Index { source, index, .. } => {
             let index_type: &Type = index.get_value_type()?;
             let span: Span = index.get_span();
 

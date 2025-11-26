@@ -17,11 +17,10 @@ pub fn validate<'type_checker>(
         Ast::Const {
             kind: target_type,
             value,
-            span,
             ..
         } => {
             let metadata: TypeCheckerExprMetadata =
-                TypeCheckerExprMetadata::new(value.is_literal_value(), *span);
+                TypeCheckerExprMetadata::new(value.is_literal_value(), value.get_span());
 
             let from_type: &Type = value.get_value_type()?;
 

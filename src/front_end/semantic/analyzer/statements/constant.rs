@@ -16,7 +16,7 @@ pub fn validate<'analyzer>(
             if !value.is_constant_value() {
                 analyzer.add_error(ThrushCompilerIssue::Error(
                     "Syntax error".into(),
-                    "Expected constant value or reference constant value.".into(),
+                    "Expected constant value or reference constant value. Verify that it is an SSA value.".into(),
                     None,
                     span,
                 ));

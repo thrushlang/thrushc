@@ -14,12 +14,7 @@ pub fn validate<'analyzer>(
     node: &'analyzer Ast,
 ) -> Result<(), ThrushCompilerIssue> {
     match node {
-        Ast::Index {
-            source,
-            index,
-            span,
-            ..
-        } => {
+        Ast::Index { source, index, .. } => {
             let source_type: &Type = source.get_any_type()?;
 
             if source.is_reference() && !source.is_allocated() {
@@ -27,7 +22,7 @@ pub fn validate<'analyzer>(
                     "Invalid reference".into(),
                     "An reference with memory address was expected. Try to allocate it.".into(),
                     None,
-                    *span,
+                    source.get_span(),
                 ));
             }
 
@@ -39,7 +34,7 @@ pub fn validate<'analyzer>(
                         source_type
                     ),
                     None,
-                    *span,
+                    source.get_span(),
                 ));
             }
 

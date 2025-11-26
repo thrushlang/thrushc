@@ -13,14 +13,12 @@ pub fn validate<'analyzer>(
     match node {
         Ast::Static { value, .. } => {
             if let Some(value) = value {
-                let span: Span = value.get_span();
-
                 if !value.is_constant_value() {
                     analyzer.add_error(ThrushCompilerIssue::Error(
                         "Syntax error".into(),
-                        "Expected constant value or reference constant value.".into(),
+                        "Expected constant value or reference constant value. Verify that it is an SSA value.".into(),
                         None,
-                        span,
+                        value.get_span(),
                     ));
                 }
 

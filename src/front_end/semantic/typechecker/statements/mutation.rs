@@ -15,26 +15,12 @@ pub fn validate<'type_checker>(
     node: &'type_checker Ast,
 ) -> Result<(), ThrushCompilerIssue> {
     match node {
-        Ast::Mut {
-            source,
-            value,
-            span,
-            ..
-        } => {
+        Ast::Mut { source, value, .. } => {
             let metadata: TypeCheckerExprMetadata =
-                TypeCheckerExprMetadata::new(value.is_literal_value(), *span);
+                TypeCheckerExprMetadata::new(value.is_literal_value(), value.get_span());
 
             let value_type: &Type = value.get_value_type()?;
             let source_type: &Type = source.get_value_type()?;
-
-            if !source.is_allocated() && !source_type.is_ptr_type() {
-                typechecker.add_error(ThrushCompilerIssue::Error(
-                    "Type error".into(),
-                    "Expected raw typed pointer 'ptr[T]', raw pointer 'ptr' type or allocated reference.".into(),
-                    None,
-                    *span,
-                ));
-            }
 
             if !source_type.is_ptr_type() {
                 let lhs_type: &Type = source_type;

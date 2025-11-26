@@ -20,12 +20,11 @@ pub fn validate<'type_checker>(
                 let target_type: Type = field.1.clone();
 
                 let value: &Ast = &field.2;
-                let span: Span = value.get_span();
 
                 let from_type: &Type = value.get_value_type()?;
 
                 let metadata: TypeCheckerExprMetadata =
-                    TypeCheckerExprMetadata::new(value.is_literal_value(), span);
+                    TypeCheckerExprMetadata::new(value.is_literal_value(), value.get_span());
 
                 checks::check_types(&target_type, from_type, Some(value), None, metadata)?;
 

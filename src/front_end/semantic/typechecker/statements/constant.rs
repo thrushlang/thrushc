@@ -20,10 +20,8 @@ pub fn validate<'type_checker>(
             value,
             ..
         } => {
-            let span: Span = value.get_span();
-
             let metadata: TypeCheckerExprMetadata =
-                TypeCheckerExprMetadata::new(value.is_literal_value(), span);
+                TypeCheckerExprMetadata::new(value.is_literal_value(), value.get_span());
 
             let from_type: &Type = value.get_value_type()?;
 

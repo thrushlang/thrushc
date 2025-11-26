@@ -1,12 +1,10 @@
 pub mod call;
 pub mod cast;
-pub mod defer;
+pub mod deref;
 pub mod index;
 pub mod indirect;
 pub mod lli;
 pub mod property;
-
-use std::path::PathBuf;
 
 use crate::core::errors::position::CompilationPosition;
 use crate::core::errors::standard::ThrushCompilerIssue;
@@ -23,6 +21,8 @@ use crate::front_end::types::parser::stmts::types::Constructor;
 use crate::front_end::typesystem::traits::TypeArrayEntensions;
 use crate::front_end::typesystem::traits::TypeFixedArrayEntensions;
 use crate::front_end::typesystem::types::Type;
+
+use std::path::PathBuf;
 
 pub fn validate<'type_checker>(
     typechecker: &mut TypeChecker<'type_checker>,
@@ -56,26 +56,6 @@ pub fn validate<'type_checker>(
             ..
         } => {
             validations::unary::validate_unary(operator, expression.get_value_type()?, *span)?;
-
-            if operator.is_plus_plus_operator() || operator.is_minus_minus_operator() {
-                if !expression.is_reference() {
-                    typechecker.add_error(ThrushCompilerIssue::Error(
-                        "Type error".into(),
-                        "Expected a reference.".into(),
-                        None,
-                        *span,
-                    ));
-                }
-
-                if !expression.is_mutable() {
-                    typechecker.add_error(ThrushCompilerIssue::Error(
-                        "Type error".into(),
-                        "Expected a mutable reference.".into(),
-                        None,
-                        *span,
-                    ));
-                }
-            }
 
             typechecker.analyze_expr(expression)?;
 
@@ -206,7 +186,7 @@ pub fn validate<'type_checker>(
 
         Ast::Indirect { .. } => expressions::indirect::validate(typechecker, node),
 
-        Ast::Defer { .. } => expressions::defer::validate(typechecker, node),
+        Ast::Deref { .. } => expressions::deref::validate(typechecker, node),
         Ast::As { .. } => expressions::cast::validate(typechecker, node),
         Ast::Builtin { builtin, .. } => builtins::validate(typechecker, builtin),
 

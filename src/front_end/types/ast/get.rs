@@ -27,15 +27,19 @@ impl Ast<'_> {
             // Static
             Ast::Static { kind, .. } => Ok(kind),
 
-            // Variables & Memory Operations
+            // Variables & mutation
             Ast::Local { kind, .. } => Ok(kind),
             Ast::Mut { kind, .. } => Ok(kind),
+
+            // Reference
             Ast::Reference { kind, .. } => Ok(kind),
             Ast::DirectRef { kind, .. } => Ok(kind),
+            Ast::Deref { kind, .. } => Ok(kind),
+
+            // LLIT
+            Ast::Alloc { alloc: kind, .. } => Ok(kind),
             Ast::Address { kind, .. } => Ok(kind),
             Ast::Load { kind, .. } => Ok(kind),
-            Ast::Alloc { alloc: kind, .. } => Ok(kind),
-            Ast::Defer { kind, .. } => Ok(kind),
             Ast::Write {
                 write_type: kind, ..
             } => Ok(kind),
@@ -126,11 +130,13 @@ impl Ast<'_> {
             Ast::FunctionParameter { kind, .. } => Ok(kind),
             Ast::AssemblerFunctionParameter { kind, .. } => Ok(kind),
 
-            // Memory operations
+            // LLI
             Ast::Load { kind, .. } => Ok(kind),
             Ast::Address { kind, .. } => Ok(kind),
-            Ast::Defer { kind, .. } => Ok(kind),
             Ast::Alloc { alloc: kind, .. } => Ok(kind),
+
+            // Memory operations
+            Ast::Deref { kind, .. } => Ok(kind),
 
             // Composite types
             Ast::FixedArray { kind, .. } => Ok(kind),
@@ -203,15 +209,21 @@ impl Ast<'_> {
             Ast::FunctionParameter { span, .. } => *span,
             Ast::AssemblerFunctionParameter { span, .. } => *span,
 
-            // Memory operations
+            // Mutation
             Ast::Mut { span, .. } => *span,
+
+            // References variants
             Ast::Reference { span, .. } => *span,
             Ast::DirectRef { span, .. } => *span,
+
+            // LLI
             Ast::Address { span, .. } => *span,
             Ast::Load { span, .. } => *span,
-            Ast::Defer { span, .. } => *span,
             Ast::Write { span, .. } => *span,
             Ast::Alloc { span, .. } => *span,
+
+            // Memory operations
+            Ast::Deref { span, .. } => *span,
 
             // Composite types
             Ast::FixedArray { span, .. } => *span,
@@ -306,8 +318,10 @@ impl Ast<'_> {
             // Memory operations
             Ast::Load { kind, .. } => kind,
             Ast::Address { kind, .. } => kind,
-            Ast::Defer { kind, .. } => kind,
             Ast::Alloc { alloc: kind, .. } => kind,
+
+            // Memory operations
+            Ast::Deref { kind, .. } => kind,
 
             // Composite types
             Ast::FixedArray { kind, .. } => kind,

@@ -19,15 +19,15 @@ fn main() s32 @public {
 
     for local mut i: u32 = 0; i < BOARD_CAP as s32 - 2; ++i; {
         for local mut j: u32 = 0; j < BOARD_CAP as s32; ++j; {
-            fputc((defer ((" *" as ptr[char])[defer board[j]])) as u32, stdout);
+            fputc((deref ((" *" as ptr[char])[deref board[j]])) as u32, stdout);
         }
 
         fputc('\n' as u32, stdout);
 
-        local mut pattern: u32 = ((defer board[0]) << 1) | defer board[1];
+        local mut pattern: u32 = ((deref board[0]) << 1) | deref board[1];
 
         for local mut p: u32 = 0; p < BOARD_CAP as s32 - 1; ++p; {
-            pattern = (((pattern << 1) & 7)) | (defer board[p + 1]);
+            pattern = (((pattern << 1) & 7)) | (deref board[p + 1]);
             board[p] = (110 >> pattern) & 1;
         }
     }

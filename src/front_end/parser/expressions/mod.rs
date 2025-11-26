@@ -2,7 +2,7 @@ pub mod array;
 pub mod asm;
 pub mod call;
 pub mod constructor;
-pub mod defer;
+pub mod deref;
 pub mod enumv;
 pub mod farray;
 pub mod index;

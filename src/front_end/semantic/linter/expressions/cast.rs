@@ -7,7 +7,7 @@ use crate::front_end::lexer::span::Span;
 use crate::front_end::semantic::linter::Linter;
 use crate::front_end::types::ast::Ast;
 
-pub fn analyze_cast<'linter>(linter: &mut Linter<'linter>, node: &'linter Ast) {
+pub fn analyze<'linter>(linter: &mut Linter<'linter>, node: &'linter Ast) {
     match node {
         Ast::As { from, .. } => {
             linter.analyze_expr(from);

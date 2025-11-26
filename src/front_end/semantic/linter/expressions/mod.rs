@@ -1,8 +1,6 @@
 pub mod cast;
-pub mod defer;
+pub mod deref;
 pub mod lli;
-
-use std::path::PathBuf;
 
 use crate::core::errors::position::CompilationPosition;
 use crate::core::errors::standard::ThrushCompilerIssue;
@@ -14,6 +12,8 @@ use crate::front_end::semantic::linter::expressions;
 use crate::front_end::semantic::linter::marks;
 use crate::front_end::types::ast::Ast;
 use crate::front_end::types::parser::stmts::types::Constructor;
+
+use std::path::PathBuf;
 
 pub fn analyze<'linter>(linter: &mut Linter<'linter>, expr: &'linter Ast) {
     match expr {
@@ -183,11 +183,9 @@ pub fn analyze<'linter>(linter: &mut Linter<'linter>, expr: &'linter Ast) {
             expressions::lli::analyze(linter, expr);
         }
 
-        Ast::Builtin { builtin, .. } => {
-            builtins::analyze_builtin(linter, builtin);
-        }
-        Ast::As { .. } => expressions::cast::analyze_cast(linter, expr),
-        Ast::Defer { .. } => defer::analyze_deference(linter, expr),
+        Ast::Builtin { builtin, .. } => builtins::analyze(linter, builtin),
+        Ast::As { .. } => expressions::cast::analyze(linter, expr),
+        Ast::Deref { .. } => deref::analyze(linter, expr),
         Ast::DirectRef { expr, .. } => {
             linter.analyze_expr(expr);
         }

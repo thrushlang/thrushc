@@ -4,16 +4,17 @@ pub mod index;
 pub mod lli;
 pub mod property;
 
-use std::path::PathBuf;
-
 use crate::core::errors::position::CompilationPosition;
 use crate::core::errors::standard::ThrushCompilerIssue;
 
 use crate::front_end::lexer::span::Span;
-use crate::front_end::semantic::analyzer::{Analyzer, builtins};
+use crate::front_end::semantic::analyzer::Analyzer;
+use crate::front_end::semantic::analyzer::builtins;
 use crate::front_end::types::ast::Ast;
 use crate::front_end::types::parser::stmts::types::Constructor;
 use crate::front_end::typesystem::types::Type;
+
+use std::path::PathBuf;
 
 pub fn validate<'analyzer>(
     analyzer: &mut Analyzer<'analyzer>,
@@ -108,7 +109,7 @@ pub fn validate<'analyzer>(
 
         ast if ast.is_lli() => lli::validate(analyzer, node),
 
-        Ast::Defer { .. } => deref::validate(analyzer, node),
+        Ast::Deref { .. } => deref::validate(analyzer, node),
         Ast::As { .. } => cast::validate(analyzer, node),
         Ast::Builtin { builtin, .. } => builtins::validate(analyzer, builtin),
 

@@ -27,20 +27,20 @@ fn main(argc: u32, argv: ptr[array[char]]) s32 @public {
     vector.capacity = 2;
 
     for local mut idx: u32 = 0; idx < 10; idx++; {
-        if (defer vector.size) >= (defer vector.capacity) {
-            vector.capacity = (defer vector.capacity) * 2;
-            vector.data = realloc((defer vector.data) as ptr, sizeof(u32) * (defer vector.capacity));
+        if (deref vector.size) >= (deref vector.capacity) {
+            vector.capacity = (deref vector.capacity) * 2;
+            vector.data = realloc((deref vector.data) as ptr, sizeof(u32) * (deref vector.capacity));
         } 
 
-        (defer vector.data)[defer vector.size] = idx;
+        (deref vector.data)[deref vector.size] = idx;
         vector.size++;
     } 
 
     for local mut z: u64 = 0; z < 10; z++; {
-        print("%ld\n", defer (defer vector.data)[z]);
+        print("%ld\n", deref (deref vector.data)[z]);
     }
 
-    free((defer vector.data) as ptr);
+    free((deref vector.data) as ptr);
     free(vector as ptr);
 
     return 0;

@@ -18,14 +18,12 @@ pub fn validate<'type_checker>(
         Ast::Enum { fields, .. } => {
             fields.iter().try_for_each(|field| {
                 let target_type: Type = field.1.clone();
+                let from_type: &Type = field.2.get_value_type()?;
 
                 let value: &Ast = &field.2;
-                let span: Span = value.get_span();
-
-                let from_type: &Type = value.get_value_type()?;
 
                 let metadata: TypeCheckerExprMetadata =
-                    TypeCheckerExprMetadata::new(value.is_literal_value(), span);
+                    TypeCheckerExprMetadata::new(value.is_literal_value(), value.get_span());
 
                 checks::check_types(&target_type, from_type, Some(value), None, metadata)?;
 

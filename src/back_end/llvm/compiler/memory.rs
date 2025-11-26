@@ -403,7 +403,7 @@ pub fn load_anon<'ctx>(
     );
 }
 
-pub fn deference<'ctx>(
+pub fn dereference<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     ptr: PointerValue<'ctx>,
     ptr_type: &Type,

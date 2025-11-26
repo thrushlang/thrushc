@@ -1,7 +1,7 @@
 use crate::back_end::llvm::compiler::builtins::Builtin;
 use crate::front_end::semantic::linter::Linter;
 
-pub fn analyze_builtin<'linter>(linter: &mut Linter<'linter>, builtin: &'linter Builtin) {
+pub fn analyze<'linter>(linter: &mut Linter<'linter>, builtin: &'linter Builtin) {
     match builtin {
         Builtin::MemCpy {
             source,

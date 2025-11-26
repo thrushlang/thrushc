@@ -1,5 +1,6 @@
 use crate::core::errors::position::CompilationPosition;
 use crate::core::errors::standard::ThrushCompilerIssue;
+
 use crate::front_end::lexer::span::Span;
 use crate::front_end::semantic::typechecker::TypeChecker;
 use crate::front_end::semantic::typechecker::checks;
@@ -30,10 +31,8 @@ pub fn validate<'type_checker>(
         }
 
         Ast::While { cond, block, .. } => {
-            let condition_span: Span = cond.get_span();
-
             let metadata: TypeCheckerExprMetadata =
-                TypeCheckerExprMetadata::new(cond.is_literal_value(), condition_span);
+                TypeCheckerExprMetadata::new(cond.is_literal_value(), cond.get_span());
 
             checks::check_types(
                 &Type::Bool,

@@ -24,10 +24,8 @@ pub fn validate<'type_checker>(
         } => {
             typechecker.analyze_expr(condition)?;
 
-            let condition_span: Span = condition.get_span();
-
             let metadata: TypeCheckerExprMetadata =
-                TypeCheckerExprMetadata::new(condition.is_literal_value(), condition_span);
+                TypeCheckerExprMetadata::new(condition.is_literal_value(), condition.get_span());
 
             checks::check_types(
                 &Type::Bool,

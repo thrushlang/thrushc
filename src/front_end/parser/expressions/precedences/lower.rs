@@ -4,7 +4,7 @@ use crate::front_end::lexer;
 use crate::front_end::lexer::{span::Span, token::Token, tokentype::TokenType};
 use crate::front_end::parser::{
     ParserContext, builtins, expr,
-    expressions::{array, asm, call, constructor, defer, enumv, farray, indirect, lli, reference},
+    expressions::{array, asm, call, constructor, deref, enumv, farray, indirect, lli, reference},
     parse,
 };
 use crate::front_end::types::{ast::Ast, parser::stmts::traits::TokenExtensions};
@@ -18,7 +18,7 @@ pub fn lower_precedence<'parser>(
 
         TokenType::Fixed => farray::build_fixed_array(ctx)?,
         TokenType::LBracket => array::build_array(ctx)?,
-        TokenType::Defer => defer::build_deference(ctx)?,
+        TokenType::Deref => deref::build_dereference(ctx)?,
 
         TokenType::SizeOf => builtins::build_sizeof(ctx)?,
         TokenType::AlignOf => builtins::build_alignof(ctx)?,

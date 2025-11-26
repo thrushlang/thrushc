@@ -32,7 +32,7 @@ lazy_static! {
         keywords.insert("asmfn", TokenType::AsmFn);
         keywords.insert("asm", TokenType::Asm);
         keywords.insert("global_asm", TokenType::GlobalAsm);
-        keywords.insert("defer", TokenType::Defer);
+        keywords.insert("deref", TokenType::Deref);
         keywords.insert("type", TokenType::Type);
         keywords.insert("enum", TokenType::Enum);
         keywords.insert("alloc", TokenType::Alloc);

@@ -637,7 +637,7 @@ pub fn compile<'ctx>(
         }
 
         // Compiles a dereference operation (e.g., *pointer)
-        Ast::Defer {
+        Ast::Deref {
             value,
             kind,
             metadata,
@@ -646,8 +646,8 @@ pub fn compile<'ctx>(
         } => {
             let value: BasicValueEnum = ptr::compile(context, value, Some(kind));
 
-            let defer_value: BasicValueEnum = if value.is_pointer_value() {
-                memory::deference(
+            let deref_value: BasicValueEnum = if value.is_pointer_value() {
+                memory::dereference(
                     context,
                     value.into_pointer_value(),
                     kind,
@@ -658,7 +658,7 @@ pub fn compile<'ctx>(
                 value
             };
 
-            cast::try_cast(context, cast_type, kind, defer_value, *span).unwrap_or(defer_value)
+            cast::try_cast(context, cast_type, kind, deref_value, *span).unwrap_or(deref_value)
         }
 
         // Array Operations

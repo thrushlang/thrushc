@@ -105,7 +105,7 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
                 if let Some(span) = attributes.match_attr(ThrushAttributeComparator::Extern) {
                     self.add_error(ThrushCompilerIssue::Error(
                         "Attribute error".into(),
-                        "External functions cannot have a body.".into(),
+                        "External functions cannot have a body. Remove it.".into(),
                         None,
                         span,
                     ));

@@ -103,7 +103,7 @@ pub enum TokenType {
     Asm,
     Intrinsic,
     GlobalAsm,
-    Defer,
+    Deref,
     As,
     Static,
     New,
